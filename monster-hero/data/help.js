@@ -1007,6 +1007,8 @@ const HELP_SCREEN_COVERAGE = {
   // 限界突破★テストは開発用だが、本番と同じ★を確認するため限界突破の説明へ対応させる。
   BREAKTHROUGH_STAR_DEBUG:'masu/rebirth',
   REINCARNATE_DISPLAY_DEBUG:'masu/reincarnate',
+  // 超越テストも開発用だが、本番と同じマーク・演出を確認するため超越の説明へ対応させる。
+  TRANSCEND_DEBUG:'masu/transcendence',
   EXTREME_DIFFICULTY_SELECT: 'basics/extreme-challenge',
   // 対象外: DEBUG_SETTINGS は開発用の隠し画面。TRAINING_* は別担当のため触らない
   DEBUG_SETTINGS:   null,

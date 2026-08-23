@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-23 22:21",
+    date: "2026-08-23 23:09",
     type: 'update',
     title: '新育成システム「超越」を追加しました',
     assistantNotice: { id:'update_notice_transcendence_v1', type:'feature' },

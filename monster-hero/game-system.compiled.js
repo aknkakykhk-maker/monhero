@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e2337d713f0571b
+// source-sha256: acdde87c40c9127c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 23:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12898,6 +12898,8 @@ function MonsterHeroGame() {
   const [transcendAnimation, setTranscendAnimation] = useState(null);
   const [transcendPlan, setTranscendPlan] = useState(null);
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
+  // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
+  const [transcendDebugId, setTranscendDebugId] = useState(null);
   const transcendProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
@@ -17139,6 +17141,109 @@ function MonsterHeroGame() {
     } finally {
       transcendProcessingRef.current = false;
     }
+  };
+  // ===== 超越のデバッグ(DEBUG_SETTINGS からだけ開ける) =====
+  // 超越はLv400・35凸という到達点のうえに乗る機能なので、ふつうに遊んで条件を満たすまで
+  // 動作を確かめられない。ここで「条件を満たした状態」「費用」「超越ポイント」を用意し、
+  // 本番と同じ画面・同じ処理で最後まで通せるようにする。
+  // 保存キーは既存の mh_masu_mons / mh_gold / mh_owned_items だけで、新しいキーは作らない。
+  const debugSaveMasu = async (id, makeNext) => {
+    const masu = masuMonsRef.current.find(m => String(m.id) === String(id));
+    if (!masu) {
+      window.alert('対象のマスモンが見つかりません。');
+      return null;
+    }
+    const nextMasu = makeNext(normalizeMasuProgression(masu));
+    const next = masuMonsRef.current.map(m => String(m.id) === String(masu.id) ? nextMasu : m);
+    try {
+      await storeSet('mh_masu_mons', next, false);
+      masuMonsRef.current = next;
+      setMasuMons(next);
+      setMasuMonDetail(prev => prev && String(prev.id) === String(masu.id) ? nextMasu : prev);
+      return nextMasu;
+    } catch {
+      window.alert('保存できませんでした。');
+      return null;
+    }
+  };
+  // 超越の解放条件(Lv400・虹★5)だけを満たさせる。絆XPは上限ぶんまで引き上げるので、
+  // 次回の読み込みで通常の強化ポイントも本物のLv400と同じだけ補填される
+  const debugTranscendPrepare = async () => {
+    if (!transcendDebugId) return;
+    if (!window.confirm(`このマスモンを「Lv.${MAX_MASU_LEVEL_CAP}・限界突破${FINAL_BREAKTHROUGH_COUNT}回」の状態にします。セーブデータを書き換えます。よろしいですか？`)) return;
+    const saved = await debugSaveMasu(transcendDebugId, masu => ({
+      ...masu,
+      rebirthCount: FINAL_BREAKTHROUGH_COUNT,
+      levelCap: MAX_MASU_LEVEL_CAP,
+      bondXp: Math.max(donationDiamondValue(masu.bondXp), totalBondXpForLevel(MAX_MASU_LEVEL_CAP))
+    }));
+    if (saved) window.alert(`Lv.${MAX_MASU_LEVEL_CAP}・虹★${BREAKTHROUGH_STARS_PER_TIER}にしました。神殿の「超越」から進めます。`);
+  };
+  // 超越にかかる費用ぶんだけ配る(不足ぶんを足すのではなく、確実に足りる量にする)
+  const debugTranscendGrantCost = async () => {
+    if (!window.confirm(`虹のプシュケーを${TRANSCEND_PSYCHE_COST.toLocaleString()}個以上・ダイヤを${TRANSCEND_DIAMOND_COST.toLocaleString()}以上にします。よろしいですか？`)) return;
+    const nextPsyche = Math.max(ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID), TRANSCEND_PSYCHE_COST + TRANSCEND_PSYCHE_PER_POINT * 10);
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [BREAKTHROUGH_ITEM_ID]: nextPsyche
+    };
+    const nextGold = Math.max(gold, TRANSCEND_DIAMOND_COST);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+      await storeSet('mh_gold', nextGold, false);
+      ownedItemsRef.current = nextItems;
+      setOwnedItems(nextItems);
+      setGold(nextGold);
+      window.alert(`虹のプシュケー ${nextPsyche.toLocaleString()}個 / ダイヤ ${nextGold.toLocaleString()} にしました。`);
+    } catch {
+      window.alert('保存できませんでした。');
+    }
+  };
+  // 超越ポイントだけを足す(Lv401以降まで上げなくても、振り分け画面を確かめられるように)
+  const debugTranscendGrantPoints = async (amount = 10) => {
+    if (!transcendDebugId) return;
+    const saved = await debugSaveMasu(transcendDebugId, masu => masu.transcended ? {
+      ...masu,
+      transcendPoints: masu.transcendPoints + amount
+    } : masu);
+    if (saved && !saved.transcended) window.alert('まだ超越していない個体には超越ポイントを足せません。');else if (saved) window.alert(`超越ポイントを+${amount}しました（現在 ${saved.transcendPoints}）。`);
+  };
+  // 超越を取り消して未超越へ戻す。絆XPは消さず、Lv上限を400へ戻すだけなので
+  // (cappedBondXp が上限で頭打ちにする)、もう一度超越すればLv401以降がそのまま戻る
+  const debugTranscendReset = async () => {
+    if (!transcendDebugId) return;
+    if (!window.confirm('この個体の超越を取り消し、超越ポイントと超越で上げた基礎値を0へ戻します。絆経験値は消えません。よろしいですか？')) return;
+    const saved = await debugSaveMasu(transcendDebugId, masu => ({
+      ...masu,
+      transcended: false,
+      transcendPoints: 0,
+      transcendStatPoints: normalizeTranscendStatPoints(null),
+      transcendAptBoosts: normalizeTranscendAptBoosts(null),
+      levelCap: Math.min(MAX_MASU_LEVEL_CAP, masu.levelCap)
+    }));
+    if (saved) window.alert('未超越へ戻しました。');
+  };
+  // 演出だけを再生する。保存にも所持データにも触れない
+  const debugPlayTranscendAnimation = () => {
+    const base = Object.values(ALL_PLAYER_MONSTERS)[0];
+    if (!base) return;
+    const masu = {
+      id: 'transcend-preview',
+      baseId: base.id,
+      name: base.name,
+      bondXp: 0,
+      rebirthCount: FINAL_BREAKTHROUGH_COUNT,
+      reincarnateCount: 0,
+      colors: [],
+      transcended: true
+    };
+    setTranscendAnimation({
+      masu,
+      base,
+      fromLevelCap: MAX_MASU_LEVEL_CAP,
+      toLevelCap: TRANSCEND_LEVEL_CAP
+    });
+    setTimeout(() => setTranscendAnimation(null), prefersReducedMotion() ? 900 : 4400);
   };
   // 転生: レベルを99ぶん返して、振った強化をすべて振り直す
   const executeMasuReincarnation = async () => {
@@ -26886,6 +26991,201 @@ function MonsterHeroGame() {
         },
         className: "min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black"
       }, "\u8A2D\u5B9A\u5024\u3092\u30B3\u30D4\u30FC"))));
+    })(), gameState === 'TRANSCEND_DEBUG' && (() => {
+      const previewBase = Object.values(ALL_PLAYER_MONSTERS)[0];
+      const previewMasu = transcended => ({
+        id: `transcend-preview-${transcended}`,
+        baseId: previewBase?.id,
+        name: previewBase?.name,
+        bondXp: 0,
+        rebirthCount: FINAL_BREAKTHROUGH_COUNT,
+        reincarnateCount: 3,
+        colors: [],
+        transcended
+      });
+      const selected = masuMons.find(m => String(m.id) === String(transcendDebugId)) || null;
+      const norm = selected ? normalizeMasuProgression(selected) : null;
+      const level = selected ? masuBondLevelInfo(selected).level : 0;
+      const eligible = selected ? canTranscendMasu(selected) : null;
+      const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+      const xpRows = [MAX_MASU_LEVEL_CAP, MAX_MASU_LEVEL_CAP + 1, MAX_MASU_LEVEL_CAP + 10, MAX_MASU_LEVEL_CAP + 50, TRANSCEND_LEVEL_CAP - 1];
+      return /*#__PURE__*/React.createElement("main", {
+        className: "flex-1 flex flex-col h-full min-h-0 p-4",
+        style: {
+          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "flex items-center gap-2 mb-3 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setGameState('DEBUG_SETTINGS'),
+        className: "p-3 text-slate-400"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px] font-black text-amber-300"
+      }, "DEBUG\u30FB\u672C\u756A\u3068\u540C\u3058 TranscendenceBadge / \u8D85\u8D8A\u6F14\u51FA"), /*#__PURE__*/React.createElement("h2", {
+        className: "text-sm font-black"
+      }, "\u8D85\u8D8A\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4"
+      }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[9px] font-black text-amber-300"
+      }, "1. \u8D85\u8D8A\u30DE\u30FC\u30AF\uFF08\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("p", {
+        className: "mb-2 text-[9px] leading-relaxed text-slate-400"
+      }, "\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\u30FB\u8EE2\u751F3\u56DE\u3068\u91CD\u306D\u3066\u3001\u96A0\u308C\u3066\u3044\u306A\u3044\u304B\u3092\u898B\u307E\u3059\u3002\u8868\u793A\u7528\u306E\u4E00\u6642\u30C7\u30FC\u30BF\u3060\u3051\u3092\u4F7F\u3044\u307E\u3059\u3002"), previewBase && /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-3"
+      }, [false, true].map(on => {
+        const masu = previewMasu(on);
+        return /*#__PURE__*/React.createElement("article", {
+          key: String(on),
+          className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "relative mx-auto w-16 h-16 mh-reincarnate-stack"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-amber-400/40"
+        }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+          baseId: masu.baseId,
+          src: previewBase.iconUrl || previewBase.imgUrl,
+          alt: previewBase.name,
+          masuColors: [],
+          className: "w-full h-full object-cover"
+        })), /*#__PURE__*/React.createElement(ReincarnateAura, {
+          count: 3
+        }), /*#__PURE__*/React.createElement(RebirthStars, {
+          count: FINAL_BREAKTHROUGH_COUNT,
+          className: "mh-rebirth-stars-overlay"
+        }), /*#__PURE__*/React.createElement(TranscendenceBadge, {
+          transcended: on
+        })), /*#__PURE__*/React.createElement("b", {
+          className: "mt-3 block text-[11px] text-white"
+        }, on ? '超越済み' : '未超越'));
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 flex items-center justify-center gap-4 rounded-2xl border border-white/10 bg-slate-900/90 py-3"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "relative inline-block w-10 h-10"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block w-10 h-10 rounded-full bg-slate-800"
+      }), /*#__PURE__*/React.createElement(TranscendenceBadge, {
+        transcended: true,
+        small: true
+      })), /*#__PURE__*/React.createElement("span", {
+        className: "relative inline-block w-10 h-10"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block w-10 h-10 rounded-full bg-slate-800"
+      }), /*#__PURE__*/React.createElement(TranscendenceBadge, {
+        transcended: true
+      })), /*#__PURE__*/React.createElement("small", {
+        className: "text-[9px] text-slate-400"
+      }, "small / \u901A\u5E38")), /*#__PURE__*/React.createElement("button", {
+        onClick: debugPlayTranscendAnimation,
+        className: "mt-2 w-full min-h-[52px] rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-fuchsia-700 to-amber-600 text-sm font-black text-white active:scale-95"
+      }, "\u8D85\u8D8A\u6F14\u51FA\u3092\u518D\u751F")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[9px] font-black text-slate-300"
+      }, "2. \u6570\u5024\u306E\u78BA\u8A8D\uFF08\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", null, "\u89E3\u653E\u6761\u4EF6"), /*#__PURE__*/React.createElement("b", {
+        className: "text-white"
+      }, "Lv.", MAX_MASU_LEVEL_CAP, "\u30FB\u9650\u754C\u7A81\u7834", FINAL_BREAKTHROUGH_COUNT, "\u56DE")), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", null, "\u8CBB\u7528"), /*#__PURE__*/React.createElement("b", {
+        className: "text-white"
+      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC ", TRANSCEND_PSYCHE_COST.toLocaleString(), " \uFF0B \u30C0\u30A4\u30E4 ", TRANSCEND_DIAMOND_COST.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", null, "Lv\u4E0A\u9650"), /*#__PURE__*/React.createElement("b", {
+        className: "text-white"
+      }, MAX_MASU_LEVEL_CAP, " \u2192 ", TRANSCEND_LEVEL_CAP)), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", null, "\u4EA4\u63DB\u30EC\u30FC\u30C8"), /*#__PURE__*/React.createElement("b", {
+        className: "text-white"
+      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC ", TRANSCEND_PSYCHE_PER_POINT, " \u2192 \u8D85\u8D8AP 1")), /*#__PURE__*/React.createElement("div", {
+        className: "pt-1 border-t border-white/10"
+      }, xpRows.map(lv => /*#__PURE__*/React.createElement("div", {
+        key: lv,
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", null, "Lv.", lv, " \u2192 ", lv + 1), /*#__PURE__*/React.createElement("b", {
+        className: "text-white font-mono"
+      }, xpForBondLevelAt(lv).toLocaleString())))), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between pt-1 border-t border-white/10"
+      }, /*#__PURE__*/React.createElement("span", null, "Lv.", MAX_MASU_LEVEL_CAP, " \u2192 ", TRANSCEND_LEVEL_CAP, " \u7D2F\u8A08"), /*#__PURE__*/React.createElement("b", {
+        className: "text-white font-mono"
+      }, (totalBondXpForLevel(TRANSCEND_LEVEL_CAP) - totalBondXpForLevel(MAX_MASU_LEVEL_CAP)).toLocaleString())))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[9px] font-black text-rose-300"
+      }, "3. \u5B9F\u969B\u306B\u8A66\u3059\u6E96\u5099\uFF08\u30BB\u30FC\u30D6\u30C7\u30FC\u30BF\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("p", {
+        className: "mb-2 text-[9px] leading-relaxed text-slate-400"
+      }, "\u9078\u3093\u3060\u500B\u4F53\u306E\u7D46\u7D4C\u9A13\u5024\u30FB\u9650\u754C\u7A81\u7834\u56DE\u6570\u3068\u3001\u5171\u901A\u306E\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u30FB\u30C0\u30A4\u30E4\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059\u3002\u62BC\u3059\u305F\u3073\u306B\u78BA\u8A8D\u304C\u51FA\u307E\u3059\u3002"), masuMons.length === 0 ? /*#__PURE__*/React.createElement("p", {
+        className: "rounded-2xl border border-white/10 bg-slate-900/90 p-4 text-center text-[10px] text-slate-400"
+      }, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3042\u308A\u307E\u305B\u3093\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-1.5"
+      }, masuMons.map(m => /*#__PURE__*/React.createElement("button", {
+        key: m.id,
+        "data-transcend-debug-candidate": true,
+        onClick: () => setTranscendDebugId(m.id),
+        className: `min-h-[62px] rounded-xl p-1 text-[8px] font-black ${String(m.id) === String(transcendDebugId) ? 'bg-amber-900 border-2 border-amber-300 text-amber-100' : 'bg-slate-900 border border-white/10 text-slate-400'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "relative mx-auto block w-8 h-8"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block w-8 h-8 overflow-hidden rounded-full"
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: m.baseId,
+        src: ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl,
+        alt: m.name,
+        masuColors: getMasuColors(m),
+        className: "w-full h-full object-cover"
+      })), /*#__PURE__*/React.createElement(TranscendenceBadge, {
+        transcended: normalizeMasuProgression(m).transcended,
+        small: true
+      })), /*#__PURE__*/React.createElement("b", {
+        className: "mt-1 block truncate"
+      }, m.name), /*#__PURE__*/React.createElement("small", {
+        className: "block"
+      }, "Lv.", masuBondLevelInfo(m).level, "\uFF0F", normalizeMasuProgression(m).rebirthCount, "\u51F8")))), selected && /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", null, selected.name), /*#__PURE__*/React.createElement("b", {
+        className: "text-white"
+      }, "Lv.", level, "\uFF0F\u4E0A\u9650", norm.levelCap, "\uFF0F", norm.rebirthCount, "\u51F8")), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", null, "\u8D85\u8D8A"), /*#__PURE__*/React.createElement("b", {
+        className: "text-white"
+      }, norm.transcended ? '済み' : 'まだ', "\uFF0F\u8D85\u8D8AP ", norm.transcendPoints, "\uFF0F\u57FA\u790E+\u9069\u6027 ", transcendAptBoostTotal(selected), "\u6BB5\u968E")), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", null, "\u6240\u6301"), /*#__PURE__*/React.createElement("b", {
+        className: "text-white"
+      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC ", psycheHave.toLocaleString(), "\uFF0F\u30C0\u30A4\u30E4 ", gold.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "pt-1 border-t border-white/10 text-[9px] text-amber-200"
+      }, eligible.ok ? 'いまの状態で超越できます。' : eligible.reason)), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        "data-transcend-debug-prepare": true,
+        disabled: !selected,
+        onClick: debugTranscendPrepare,
+        className: "col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30"
+      }, "\u89E3\u653E\u6761\u4EF6\u3092\u6E80\u305F\u3059\uFF08Lv.", MAX_MASU_LEVEL_CAP, "\u30FB", FINAL_BREAKTHROUGH_COUNT, "\u51F8\uFF09"), /*#__PURE__*/React.createElement("button", {
+        "data-transcend-debug-cost": true,
+        onClick: debugTranscendGrantCost,
+        className: "col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95"
+      }, "\u8CBB\u7528\u3076\u3093\u3092\u914D\u308B\uFF08\u30D7\u30B7\u30E5\u30B1\u30FC\u30FB\u30C0\u30A4\u30E4\uFF09"), /*#__PURE__*/React.createElement("button", {
+        "data-transcend-debug-points": true,
+        disabled: !selected,
+        onClick: () => debugTranscendGrantPoints(10),
+        className: "min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-200 text-[10px] font-black active:scale-95 disabled:opacity-30"
+      }, "\u8D85\u8D8AP\u3092+10"), /*#__PURE__*/React.createElement("button", {
+        "data-transcend-debug-reset": true,
+        disabled: !selected,
+        onClick: debugTranscendReset,
+        className: "min-h-[46px] rounded-xl bg-rose-950/70 border border-rose-500/50 text-rose-100 text-[10px] font-black active:scale-95 disabled:opacity-30"
+      }, "\u8D85\u8D8A\u3092\u53D6\u308A\u6D88\u3059"), /*#__PURE__*/React.createElement("button", {
+        disabled: !selected,
+        onClick: () => {
+          setTranscendSelectedId(transcendDebugId);
+          setTranscendError('');
+          setGameState('MASU_TRANSCENDENCE');
+        },
+        className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-900/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30"
+      }, "\u795E\u6BBF\u306E\u300C\u8D85\u8D8A\u300D\u3092\u958B\u304F"))))));
     })(), gameState === 'BREAKTHROUGH_STAR_DEBUG' && /*#__PURE__*/React.createElement("main", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
@@ -27473,6 +27773,15 @@ function MonsterHeroGame() {
     }, "\u2B50 \u9650\u754C\u7A81\u7834\u2605\u8868\u793A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-amber-300"
     }, "\u5168\u8272\u6BB5\u968E\u3092\u672C\u756A\u3068\u540C\u3058\u2605\u3067\u6BD4\u8F03")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-transcend": true,
+      onClick: () => {
+        setTranscendDebugId(null);
+        setGameState('TRANSCEND_DEBUG');
+      },
+      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black"
+    }, "\uD83C\uDF1F \u8D85\u8D8A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-amber-200"
+    }, "\u30DE\u30FC\u30AF\u30FB\u6F14\u51FA\u30FB\u5FC5\u8981XP\u306E\u78BA\u8A8D\u3068\u3001\u8A66\u3059\u305F\u3081\u306E\u6E96\u5099")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('MONSTER_IMAGE_DEBUG'),
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
     }, "\uD83D\uDDBC\uFE0F \u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {

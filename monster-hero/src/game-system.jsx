@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 23:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7073,6 +7073,8 @@ function MonsterHeroGame() {
   const [transcendAnimation, setTranscendAnimation] = useState(null);
   const [transcendPlan, setTranscendPlan] = useState(null);
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
+  // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
+  const [transcendDebugId, setTranscendDebugId] = useState(null);
   const transcendProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
@@ -9893,6 +9895,80 @@ function MonsterHeroGame() {
     } finally {
       transcendProcessingRef.current = false;
     }
+  };
+  // ===== 超越のデバッグ(DEBUG_SETTINGS からだけ開ける) =====
+  // 超越はLv400・35凸という到達点のうえに乗る機能なので、ふつうに遊んで条件を満たすまで
+  // 動作を確かめられない。ここで「条件を満たした状態」「費用」「超越ポイント」を用意し、
+  // 本番と同じ画面・同じ処理で最後まで通せるようにする。
+  // 保存キーは既存の mh_masu_mons / mh_gold / mh_owned_items だけで、新しいキーは作らない。
+  const debugSaveMasu = async (id, makeNext) => {
+    const masu = masuMonsRef.current.find(m=>String(m.id)===String(id));
+    if (!masu) { window.alert('対象のマスモンが見つかりません。'); return null; }
+    const nextMasu = makeNext(normalizeMasuProgression(masu));
+    const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?nextMasu:m);
+    try {
+      await storeSet('mh_masu_mons', next, false);
+      masuMonsRef.current = next; setMasuMons(next);
+      setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?nextMasu:prev);
+      return nextMasu;
+    } catch { window.alert('保存できませんでした。'); return null; }
+  };
+  // 超越の解放条件(Lv400・虹★5)だけを満たさせる。絆XPは上限ぶんまで引き上げるので、
+  // 次回の読み込みで通常の強化ポイントも本物のLv400と同じだけ補填される
+  const debugTranscendPrepare = async () => {
+    if (!transcendDebugId) return;
+    if (!window.confirm(`このマスモンを「Lv.${MAX_MASU_LEVEL_CAP}・限界突破${FINAL_BREAKTHROUGH_COUNT}回」の状態にします。セーブデータを書き換えます。よろしいですか？`)) return;
+    const saved = await debugSaveMasu(transcendDebugId, (masu) => ({
+      ...masu,
+      rebirthCount: FINAL_BREAKTHROUGH_COUNT,
+      levelCap: MAX_MASU_LEVEL_CAP,
+      bondXp: Math.max(donationDiamondValue(masu.bondXp), totalBondXpForLevel(MAX_MASU_LEVEL_CAP)),
+    }));
+    if (saved) window.alert(`Lv.${MAX_MASU_LEVEL_CAP}・虹★${BREAKTHROUGH_STARS_PER_TIER}にしました。神殿の「超越」から進めます。`);
+  };
+  // 超越にかかる費用ぶんだけ配る(不足ぶんを足すのではなく、確実に足りる量にする)
+  const debugTranscendGrantCost = async () => {
+    if (!window.confirm(`虹のプシュケーを${TRANSCEND_PSYCHE_COST.toLocaleString()}個以上・ダイヤを${TRANSCEND_DIAMOND_COST.toLocaleString()}以上にします。よろしいですか？`)) return;
+    const nextPsyche = Math.max(ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID), TRANSCEND_PSYCHE_COST + TRANSCEND_PSYCHE_PER_POINT * 10);
+    const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: nextPsyche };
+    const nextGold = Math.max(gold, TRANSCEND_DIAMOND_COST);
+    try {
+      await storeSet('mh_owned_items', nextItems, false);
+      await storeSet('mh_gold', nextGold, false);
+      ownedItemsRef.current = nextItems; setOwnedItems(nextItems); setGold(nextGold);
+      window.alert(`虹のプシュケー ${nextPsyche.toLocaleString()}個 / ダイヤ ${nextGold.toLocaleString()} にしました。`);
+    } catch { window.alert('保存できませんでした。'); }
+  };
+  // 超越ポイントだけを足す(Lv401以降まで上げなくても、振り分け画面を確かめられるように)
+  const debugTranscendGrantPoints = async (amount = 10) => {
+    if (!transcendDebugId) return;
+    const saved = await debugSaveMasu(transcendDebugId, (masu) => masu.transcended
+      ? { ...masu, transcendPoints: masu.transcendPoints + amount } : masu);
+    if (saved && !saved.transcended) window.alert('まだ超越していない個体には超越ポイントを足せません。');
+    else if (saved) window.alert(`超越ポイントを+${amount}しました（現在 ${saved.transcendPoints}）。`);
+  };
+  // 超越を取り消して未超越へ戻す。絆XPは消さず、Lv上限を400へ戻すだけなので
+  // (cappedBondXp が上限で頭打ちにする)、もう一度超越すればLv401以降がそのまま戻る
+  const debugTranscendReset = async () => {
+    if (!transcendDebugId) return;
+    if (!window.confirm('この個体の超越を取り消し、超越ポイントと超越で上げた基礎値を0へ戻します。絆経験値は消えません。よろしいですか？')) return;
+    const saved = await debugSaveMasu(transcendDebugId, (masu) => ({
+      ...masu,
+      transcended: false,
+      transcendPoints: 0,
+      transcendStatPoints: normalizeTranscendStatPoints(null),
+      transcendAptBoosts: normalizeTranscendAptBoosts(null),
+      levelCap: Math.min(MAX_MASU_LEVEL_CAP, masu.levelCap),
+    }));
+    if (saved) window.alert('未超越へ戻しました。');
+  };
+  // 演出だけを再生する。保存にも所持データにも触れない
+  const debugPlayTranscendAnimation = () => {
+    const base = Object.values(ALL_PLAYER_MONSTERS)[0];
+    if (!base) return;
+    const masu = { id:'transcend-preview', baseId:base.id, name:base.name, bondXp:0, rebirthCount:FINAL_BREAKTHROUGH_COUNT, reincarnateCount:0, colors:[], transcended:true };
+    setTranscendAnimation({ masu, base, fromLevelCap:MAX_MASU_LEVEL_CAP, toLevelCap:TRANSCEND_LEVEL_CAP });
+    setTimeout(()=>setTranscendAnimation(null), prefersReducedMotion()?900:4400);
   };
   // 転生: レベルを99ぶん返して、振った強化をすべて振り直す
   const executeMasuReincarnation = async () => {
@@ -14089,6 +14165,65 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
+        {/* ===== 超越デバッグ(デバッグ専用) =====
+            上は「保存しない確認」、下は「セーブデータを書き換える準備」。
+            準備のほうは押すたびに確認を出し、何が変わるかを画面にも書いておく。 */}
+        {gameState==='TRANSCEND_DEBUG'&&(()=>{
+          const previewBase=Object.values(ALL_PLAYER_MONSTERS)[0];
+          const previewMasu=(transcended)=>({id:`transcend-preview-${transcended}`,baseId:previewBase?.id,name:previewBase?.name,bondXp:0,rebirthCount:FINAL_BREAKTHROUGH_COUNT,reincarnateCount:3,colors:[],transcended});
+          const selected=masuMons.find(m=>String(m.id)===String(transcendDebugId))||null;
+          const norm=selected?normalizeMasuProgression(selected):null;
+          const level=selected?masuBondLevelInfo(selected).level:0;
+          const eligible=selected?canTranscendMasu(selected):null;
+          const psycheHave=ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+          const xpRows=[MAX_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP+1,MAX_MASU_LEVEL_CAP+10,MAX_MASU_LEVEL_CAP+50,TRANSCEND_LEVEL_CAP-1];
+          return <main className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-300">DEBUG・本番と同じ TranscendenceBadge / 超越演出</small><h2 className="text-sm font-black">超越確認</h2></div></header>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4">
+              <section>
+                <h3 className="mb-2 text-[9px] font-black text-amber-300">1. 超越マーク（保存しません）</h3>
+                <p className="mb-2 text-[9px] leading-relaxed text-slate-400">虹★{BREAKTHROUGH_STARS_PER_TIER}・転生3回と重ねて、隠れていないかを見ます。表示用の一時データだけを使います。</p>
+                {previewBase&&<div className="grid grid-cols-2 gap-3">{[false,true].map(on=>{const masu=previewMasu(on);return <article key={String(on)} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-amber-400/40"><DyedMonsterImage baseId={masu.baseId} src={previewBase.iconUrl||previewBase.imgUrl} alt={previewBase.name} masuColors={[]} className="w-full h-full object-cover"/></div><ReincarnateAura count={3}/><RebirthStars count={FINAL_BREAKTHROUGH_COUNT} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={on}/></div><b className="mt-3 block text-[11px] text-white">{on?'超越済み':'未超越'}</b></article>})}</div>}
+                <div className="mt-2 flex items-center justify-center gap-4 rounded-2xl border border-white/10 bg-slate-900/90 py-3"><span className="relative inline-block w-10 h-10"><span className="block w-10 h-10 rounded-full bg-slate-800"/><TranscendenceBadge transcended small/></span><span className="relative inline-block w-10 h-10"><span className="block w-10 h-10 rounded-full bg-slate-800"/><TranscendenceBadge transcended/></span><small className="text-[9px] text-slate-400">small / 通常</small></div>
+                <button onClick={debugPlayTranscendAnimation} className="mt-2 w-full min-h-[52px] rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-fuchsia-700 to-amber-600 text-sm font-black text-white active:scale-95">超越演出を再生</button>
+              </section>
+              <section>
+                <h3 className="mb-2 text-[9px] font-black text-slate-300">2. 数値の確認（保存しません）</h3>
+                <div className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300">
+                  <div className="flex justify-between"><span>解放条件</span><b className="text-white">Lv.{MAX_MASU_LEVEL_CAP}・限界突破{FINAL_BREAKTHROUGH_COUNT}回</b></div>
+                  <div className="flex justify-between"><span>費用</span><b className="text-white">虹のプシュケー {TRANSCEND_PSYCHE_COST.toLocaleString()} ＋ ダイヤ {TRANSCEND_DIAMOND_COST.toLocaleString()}</b></div>
+                  <div className="flex justify-between"><span>Lv上限</span><b className="text-white">{MAX_MASU_LEVEL_CAP} → {TRANSCEND_LEVEL_CAP}</b></div>
+                  <div className="flex justify-between"><span>交換レート</span><b className="text-white">虹のプシュケー {TRANSCEND_PSYCHE_PER_POINT} → 超越P 1</b></div>
+                  <div className="pt-1 border-t border-white/10">{xpRows.map(lv=><div key={lv} className="flex justify-between"><span>Lv.{lv} → {lv+1}</span><b className="text-white font-mono">{xpForBondLevelAt(lv).toLocaleString()}</b></div>)}</div>
+                  <div className="flex justify-between pt-1 border-t border-white/10"><span>Lv.{MAX_MASU_LEVEL_CAP} → {TRANSCEND_LEVEL_CAP} 累計</span><b className="text-white font-mono">{(totalBondXpForLevel(TRANSCEND_LEVEL_CAP)-totalBondXpForLevel(MAX_MASU_LEVEL_CAP)).toLocaleString()}</b></div>
+                </div>
+              </section>
+              <section>
+                <h3 className="mb-2 text-[9px] font-black text-rose-300">3. 実際に試す準備（セーブデータを書き換えます）</h3>
+                <p className="mb-2 text-[9px] leading-relaxed text-slate-400">選んだ個体の絆経験値・限界突破回数と、共通の虹のプシュケー・ダイヤを書き換えます。押すたびに確認が出ます。</p>
+                {masuMons.length===0
+                  ? <p className="rounded-2xl border border-white/10 bg-slate-900/90 p-4 text-center text-[10px] text-slate-400">所持マスモンがありません。</p>
+                  : <>
+                    <div className="grid grid-cols-3 gap-1.5">{masuMons.map(m=><button key={m.id} data-transcend-debug-candidate onClick={()=>setTranscendDebugId(m.id)} className={`min-h-[62px] rounded-xl p-1 text-[8px] font-black ${String(m.id)===String(transcendDebugId)?'bg-amber-900 border-2 border-amber-300 text-amber-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><span className="relative mx-auto block w-8 h-8"><span className="block w-8 h-8 overflow-hidden rounded-full"><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)} className="w-full h-full object-cover"/></span><TranscendenceBadge transcended={normalizeMasuProgression(m).transcended} small/></span><b className="mt-1 block truncate">{m.name}</b><small className="block">Lv.{masuBondLevelInfo(m).level}／{normalizeMasuProgression(m).rebirthCount}凸</small></button>)}</div>
+                    {selected&&<div className="mt-2 rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300">
+                      <div className="flex justify-between"><span>{selected.name}</span><b className="text-white">Lv.{level}／上限{norm.levelCap}／{norm.rebirthCount}凸</b></div>
+                      <div className="flex justify-between"><span>超越</span><b className="text-white">{norm.transcended?'済み':'まだ'}／超越P {norm.transcendPoints}／基礎+適性 {transcendAptBoostTotal(selected)}段階</b></div>
+                      <div className="flex justify-between"><span>所持</span><b className="text-white">虹のプシュケー {psycheHave.toLocaleString()}／ダイヤ {gold.toLocaleString()}</b></div>
+                      <div className="pt-1 border-t border-white/10 text-[9px] text-amber-200">{eligible.ok?'いまの状態で超越できます。':eligible.reason}</div>
+                    </div>}
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button data-transcend-debug-prepare disabled={!selected} onClick={debugTranscendPrepare} className="col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30">解放条件を満たす（Lv.{MAX_MASU_LEVEL_CAP}・{FINAL_BREAKTHROUGH_COUNT}凸）</button>
+                      <button data-transcend-debug-cost onClick={debugTranscendGrantCost} className="col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95">費用ぶんを配る（プシュケー・ダイヤ）</button>
+                      <button data-transcend-debug-points disabled={!selected} onClick={()=>debugTranscendGrantPoints(10)} className="min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-200 text-[10px] font-black active:scale-95 disabled:opacity-30">超越Pを+10</button>
+                      <button data-transcend-debug-reset disabled={!selected} onClick={debugTranscendReset} className="min-h-[46px] rounded-xl bg-rose-950/70 border border-rose-500/50 text-rose-100 text-[10px] font-black active:scale-95 disabled:opacity-30">超越を取り消す</button>
+                      <button disabled={!selected} onClick={()=>{setTranscendSelectedId(transcendDebugId);setTranscendError('');setGameState('MASU_TRANSCENDENCE');}} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-900/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30">神殿の「超越」を開く</button>
+                    </div>
+                  </>}
+              </section>
+            </div>
+          </main>;
+        })()}
+
         {gameState==='BREAKTHROUGH_STAR_DEBUG'&&(
           <main className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-400">DEBUG・本番と同じ RebirthStars</small><h2 className="text-sm font-black">限界突破★表示確認</h2></div></header>
@@ -14421,7 +14556,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black">🌟 超越確認<small className="block text-[8px] text-amber-200">マーク・演出・必要XPの確認と、試すための準備</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
               {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                   通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
               <button data-debug-rpg-battle onClick={()=>{setRpgBattle(null);setGameState('RPG_DEBUG_SETUP');}} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black">⚔️ ダンジョンRPG戦闘テスト<small className="block text-[8px] text-emerald-300">コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません</small></button>
