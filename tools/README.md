@@ -106,6 +106,7 @@ node tools/build.js --check
 | `node run/auto-full-run-check.js` | WAVE結果・Quick成長結果・Quick加入結果が既存handlerとWAVE後AUTOロックを使って1回だけ進み、WAVE10の終了順序、自動再挑戦・マスモン自動登録を追加していないことを確認する。 |
 | `node run/auto-repeat-template-check.js` | AUTO∞第5Aの再周回テンプレートが安定IDだけを保持し、個体消失・Pro制約違反を安全に失敗させ、未接続のまま正規の新規ラン初期化を再利用することを確認する。 |
 | `node run/auto-repeat-ui-check.js` | ∞周回ONで通常AUTOもON、∞周回単独OFFで通常AUTO維持、通常AUTO OFFで`stopAllAuto()`が使われることと、状態を保存しないことを確認する。 |
+| `node run/eco-mode-internal-check.js` | 省エネモードの初期OFF・3段階cycle・入力制限・AUTO∞/`stopAllAuto()`との停止連動・非永続化と、表示や戦闘処理へ未接続であることを確認する。 |
 | `node battle/battle-carousel-check.js` | 難易度カードの順序・スワイプ/矢印・敵生成共通化・全WAVE詳細・挑戦導線を確認する。 |
 | `node battle/battle-menu-browser-check.js` | 390×844の実ブラウザでHOMEから難易度画面へ入り、例外ゼロ・矢印/スワイプ・全WAVE詳細・戻る/再入場・勇者選択を確認する。 |
 | `node battle/battle-mode-check.js` | チャレンジ／クイック／プロの報酬と記録を確認する。クイックの育成・プシュケー優先・ダイヤ優先の各方針、他モードへの非適用、ランキング分離、WAVEごとの自動成長、伴モン加入、画面・BGM設定の結線を見る。 |
