@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f89dddb124661172
+// source-sha256: 918e0e8473993435
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 07:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 08:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8497,6 +8497,15 @@ const chooseAutoTeachingCard = (candidates, owned, isInitial, rng = Math.random)
   const preferred = isInitial ? [] : candidates.filter(card => owned.some(item => item.id === card.id && item.evoLevel < 2));
   const choices = preferred.length > 0 ? preferred : candidates;
   return choices[Math.floor(rng() * choices.length)] || choices[0] || null;
+};
+// AUTO∞の周回で、ラン開始時の最初のアシストカードをそろえるための解決。
+// 1周目で実際に確定したカードのID(手動でもAUTOでもよい)を repeatRunTemplate が覚えており、
+// 2周目以降の最初の PICK_TEACHING でそのカードを選び直す。
+// 覚えたIDが今の候補から見つからないときは null を返し、呼び出し側は
+// これまでどおり chooseAutoTeachingCard のランダム選択へ落とす(AUTOを止めない)。
+const resolveRepeatInitialTeaching = (candidates, teachingId) => {
+  if (!Array.isArray(candidates) || !teachingId) return null;
+  return candidates.find(card => card && card.id === teachingId) || null;
 };
 const trainingOptionOf = id => TRAINING_OPTIONS.find(option => option.id === id) || null;
 // トレーニング1回ぶんを適用する。掛かり方は次の順:
@@ -18225,6 +18234,9 @@ function MonsterHeroGame() {
   }) => Object.freeze({
     runMode,
     difficulty,
+    // ラン開始時の最初のアシストカード。1周目で確定したときに入れ、∞周回の間そろえる。
+    // 入れるのは安定したIDだけで、カードそのものや強化状態は持ち越さない
+    initialTeachingId: null,
     heroRosterEntry: joinRosterEntry(hero),
     initialDistance: initialBattleDistanceRef.current,
     quickRewardPolicy: isQuickMode(runMode) ? normalizeQuickRewardPolicy(quickRewardPolicyRunRef.current) : null,
@@ -18272,7 +18284,8 @@ function MonsterHeroGame() {
       quickRewardPolicy: isQuickMode(mode) ? normalizeQuickRewardPolicy(template.quickRewardPolicy) : QUICK_REWARD_POLICY_GROWTH,
       proAllies,
       extremeRun: !!template.extremeRun,
-      extremeDifficulty: template.extremeDifficulty || null
+      extremeDifficulty: template.extremeDifficulty || null,
+      initialTeachingId: typeof template.initialTeachingId === 'string' && template.initialTeachingId ? template.initialTeachingId : null
     };
   };
 
@@ -18316,8 +18329,11 @@ function MonsterHeroGame() {
     setDef(resolved.hero.baseDef);
     setDistAptPct(getMonsterAptPct(resolved.hero, specialRuleDifficultyForRun(resolved.runMode, resolved.difficulty, resolved.extremeRun, resolved.extremeDifficulty)));
     setProAllyPool(resolved.proAllies);
+    // 次の周回へ持ち越すのは元のテンプレートそのまま。初回アシストカードだけは
+    // 読み込み時の正規化(文字列のIDでなければnull)を通した値を使う
     repeatRunTemplateRef.current = Object.freeze({
-      ...template
+      ...template,
+      initialTeachingId: resolved.initialTeachingId
     });
     setTeachingPool([...getActiveTeachingCards()]);
     setGameState('PICK_TEACHING');
@@ -21465,6 +21481,16 @@ function MonsterHeroGame() {
   const confirmPickTeaching = (explicitTeaching = null) => {
     const teaching = explicitTeaching || selectedTeachingCard;
     if (!teaching) return;
+    // ラン開始時の最初のアシストカード(既存の !enemy 判定)だけを、AUTO∞の周回条件として覚える。
+    // 手動で選んでもAUTOが選んでも「実際に確定したカード」が正本。
+    // WAVE途中で取ったカードでは書き換えない。あとから∞をONにしても使えるよう、
+    // autoRepeat の状態は見ずに、テンプレートがあるランなら覚えておく。
+    if (!enemy && repeatRunTemplateRef.current && !repeatRunTemplateRef.current.initialTeachingId && teaching.id) {
+      repeatRunTemplateRef.current = Object.freeze({
+        ...repeatRunTemplateRef.current,
+        initialTeachingId: teaching.id
+      });
+    }
     const alreadyOwned = ownedTeachings.find(t => t.id === teaching.id);
     let nextTeachings = [...ownedTeachings];
     let isUpgrade = false;
@@ -21651,7 +21677,11 @@ function MonsterHeroGame() {
         if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
         autoPostWaveRunningRef.current = true;
         // confirmPickTeachingと同じ既存判定(!enemy)を使って、初回とWAVE後を区別する。
-        const choice = chooseAutoTeachingCard(teachingPool, ownedTeachings, !enemy);
+        // ラン開始時の1枚だけは、∞周回で覚えたカードがあればそれを選び直す。
+        // 見つからなければ(データが変わった等)これまでどおりランダムへ落とす。
+        // WAVE途中の選択は今までどおり chooseAutoTeachingCard に任せる。
+        const fixedInitial = !enemy ? resolveRepeatInitialTeaching(teachingPool, repeatRunTemplateRef.current?.initialTeachingId) : null;
+        const choice = fixedInitial || chooseAutoTeachingCard(teachingPool, ownedTeachings, !enemy);
         if (!choice) {
           stopAllAuto();
           addPopup('AUTO停止：アシストカードを選べません', 'hero', 'text-amber-300 font-black text-sm');
