@@ -7,7 +7,7 @@ const assert = require('assert');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const processStart = source.indexOf('const processTurn = async (explicitEntries = null) =>');
 const autoStart = source.indexOf('const runAutoTurnOnce = () =>', processStart);
-const autoEnd = source.indexOf('// WAVE 10', autoStart);
+const autoEnd = source.indexOf('const setAutoBattleEnabled =', autoStart);
 
 assert(processStart >= 0, 'processTurnの明示entries引数が見つかりません');
 assert(autoStart > processStart && autoEnd > autoStart, 'runAutoTurnOnceの定義が見つかりません');
@@ -27,7 +27,7 @@ for (const input of ['hand', 'slots', 'guts', 'cardLimit', 'strategy:autoSetting
   'getCardGuts', 'cardNeedsMonster', 'slotMaxUses']) {
   assert(autoSource.includes(input), `chooseAutoTurnへ${input}を渡していません`);
 }
-assert(autoSource.includes('if (entries.length>0) processTurn(entries)'), '明示entriesを空でない場合だけprocessTurnへ渡していません');
+assert(autoSource.includes('return entries.length>0 ? processTurn(entries) : null'), '明示entriesのPromiseまたは合法行動なしを呼び出し元へ返していません');
 assert(!/setSelectedCards|setCardAssignments|setPendingCard/.test(autoSource),
   'runAutoTurnOnceが選択stateの更新を経由しています');
 assert(source.includes('onClick={()=>processTurn()}'), 'ACTIONがclick eventをprocessTurnへ直接渡します');
