@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-23 08:54",
+    date: "2026-08-23 08:58",
     type: 'update',
     title: 'AUTO用の事前設定を追加しました',
     items: [
@@ -31,7 +31,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-23 00:36",
+    date: "2026-08-23 08:33",
     type: 'update',
     title: '「ブリーダーカード」を「アシストカード」という名前に変えました',
     items: [

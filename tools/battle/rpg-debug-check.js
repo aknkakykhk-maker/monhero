@@ -55,7 +55,8 @@ const EXPORTS = [
   'rpgDamage', 'rpgVarianceRoll', 'rpgActionValue', 'rpgEvadeRate', 'rpgCritRate', 'rpgRollPercent',
   'rpgStartGuts', 'rpgTurnGutsRegen', 'rpgMonsterList', 'rpgMonsterById',
   'rpgCreateBattle', 'rpgSetCommand', 'rpgResolveStep', 'rpgAliveIndexes', 'rpgSpeedOrder', 'rpgUnitAt',
-  'rpgLowestHpEnemy', 'rpgStepDelay', 'rpgSteppedOnce', 'rpgBeginInput', 'RPG_FINISH_MS', 'RPG_STEP_MS', 'RPG_SPECIAL_STEP_MS', 'RPG_SPECIAL_MS',
+  'rpgLowestHpEnemy', 'rpgStepDelay', 'rpgSteppedOnce', 'rpgBeginInput', 'RPG_FINISH_MS',
+  'rpgUndoCommand', 'rpgCanUndo', 'RPG_COMMAND_LABELS', 'RPG_STEP_MS', 'RPG_SPECIAL_STEP_MS', 'RPG_SPECIAL_MS',
 ];
 // index.html と同じ順でデータを流し込む(ALL_PLAYER_MONSTERS を本物のまま使う)
 const sandbox = { console, Math, JSON, Number, Object, Array, String, Boolean, isNaN, isFinite };
@@ -542,6 +543,61 @@ check('会心・回避・戦闘不能が数字だけで見分けられる',
   check('数字を消すまでの時間がアニメーションと揃っている',
     source.includes(`setTimeout(() => setRpgHits(null), ${ms});`), `${ms}ms`);
 }
+
+// --- コマンドのやり直し ---
+// 次の味方へ進んだあとでも、前の味方まで戻って選び直せる。
+// 戻せるのは入力中だけで、行動の実行が始まったあとは戻せない
+{
+  const mons = R.rpgMonsterList();
+  const party = [0, 1, 2].map(i => ({ monId: mons[i].id, level: 30, alloc: R.rpgNormalizeAlloc({ guts: 29 }, 30) }));
+  const foes = [{ monId: mons[5].id, level: 30, typeId: 'normal' }, { monId: mons[6].id, level: 30, typeId: 'red' }];
+  const rng = constRng(0.5);
+  let b = R.rpgCreateBattle(party, foes);
+  check('はじめは誰も決めていないので戻せない',
+    !R.rpgCanUndo(b, 0) && !R.rpgCanUndo(b, 1) && !R.rpgCanUndo(b, 2));
+  b = R.rpgSetCommand(b, 'attack', 0, rng);
+  check('1体決めると次の味方へ進む', b.inputIndex === 1 && !!b.inputs[0], `いま ${b.inputIndex}番目`);
+  check('決めた味方は戻せて、まだの味方は戻せない',
+    R.rpgCanUndo(b, 0) && !R.rpgCanUndo(b, 1) && !R.rpgCanUndo(b, 2));
+  b = R.rpgSetCommand(b, 'guard', -1, rng);
+  const before = JSON.parse(JSON.stringify(b));
+  const undone = R.rpgUndoCommand(b, 0);
+  check('戻すとその味方の番に戻る', undone.inputIndex === 0 && undone.phase === 'command');
+  check('戻した味方の入力だけが消える',
+    !undone.inputs[0] && JSON.stringify(undone.inputs[1]) === JSON.stringify(before.inputs[1]),
+    JSON.stringify(undone.inputs));
+  check('戻してもライフ・ガッツ・ターン数は変わらない',
+    undone.turn === before.turn
+    && undone.allies.every((u, i) => u.hp === before.allies[i].hp && u.guts === before.allies[i].guts)
+    && undone.enemies.every((u, i) => u.hp === before.enemies[i].hp && u.guts === before.enemies[i].guts));
+  check('戻す前の状態を書き換えない（別のオブジェクトを返す）',
+    b !== undone && !!b.inputs[0] && b.inputIndex === before.inputIndex);
+  // 戻したあと選び直すと、すでに決まっている味方はそのままで、まだの味方へ進む
+  const redo = R.rpgSetCommand(undone, 'skill', 1, rng);
+  check('やり直したあとは、まだ決めていない味方へ進む',
+    redo.inputIndex === 2 && redo.inputs[0].command === 'skill' && redo.inputs[0].targetIndex === 1
+    && JSON.stringify(redo.inputs[1]) === JSON.stringify(before.inputs[1]),
+    `いま ${redo.inputIndex}番目 / 0番目=${redo.inputs[0].command}`);
+  // 3体目まで決めると行動順の実行へ入る。そこからは戻せない
+  const all = R.rpgSetCommand(R.rpgSetCommand(undone, 'attack', 0, rng), 'attack', 0, rng);
+  check('全員決めると実行へ進む', all.phase === 'resolve', all.phase);
+  check('実行が始まったら戻せない',
+    !R.rpgCanUndo(all, 0) && !R.rpgCanUndo(all, 1) && !R.rpgCanUndo(all, 2)
+    && JSON.stringify(R.rpgUndoCommand(all, 0).inputs) === JSON.stringify(all.inputs));
+  check('決めていない味方を戻そうとしても何も起きない',
+    JSON.stringify(R.rpgUndoCommand(undone, 2)) === JSON.stringify(undone));
+  check('居ない味方を指しても落ちない',
+    JSON.stringify(R.rpgUndoCommand(undone, 9)) === JSON.stringify(undone)
+    && JSON.stringify(R.rpgUndoCommand(undone, -1)) === JSON.stringify(undone));
+}
+check('コマンドの呼び名は1か所にまとめてある',
+  R.RPG_COMMAND_LABELS.attack === 'こうげき' && R.RPG_COMMAND_LABELS.skill === '技' && R.RPG_COMMAND_LABELS.guard === '防御');
+check('決めた味方のカードを押すとやり直せる',
+  rpgUi.includes('const canUndo=rpgCanUndo(battle,index);') && rpgUi.includes('onClick={()=>rpgUndo(index)}')
+  && rpgUi.includes('disabled={!canUndo}') && source.includes('const rpgUndo = (index) =>'));
+check('カードには選んだコマンドを出す',
+  rpgUi.includes('{!isActor&&chosen&&<em className="done">{RPG_COMMAND_LABELS[chosen.command]||chosen.command}'));
+check('やり直せることを画面に書いてある', rpgUi.includes('決めた味方をタップでやり直し'));
 
 // --- 演出・ダメージ表示の取りこぼし ---
 // rpgResolveStep() は3通りの抜け方をする(まだ続く / 決着 / そのターンの最後)。
