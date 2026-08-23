@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2f4190c54c90ad94
+// source-sha256: 73fe803d02640c46
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 13:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 13:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -31397,18 +31397,29 @@ function MonsterHeroGame() {
       size: 9
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px]"
-    }, "VIEW")), /*#__PURE__*/React.createElement("button", {
+    }, "VIEW")), /*#__PURE__*/React.createElement("div", {
+      className: "w-[44px] shrink-0 flex flex-col gap-0.5"
+    }, /*#__PURE__*/React.createElement("button", {
       type: "button",
       disabled: !!battleScenarioRef.current || battleTutorialStep != null,
       onClick: cycleBattleAuto,
       "aria-pressed": autoBattle,
       "aria-label": `AUTO ${autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF'}`,
-      className: `h-8 min-w-[44px] shrink-0 px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat ? 'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]' : autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
+      className: `h-8 w-full px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat ? 'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]' : autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "block"
     }, "AUTO"), /*#__PURE__*/React.createElement("span", {
       className: "block text-[7px]"
-    }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), (() => {
+    }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: cycleEcoMode,
+      "aria-label": `省エネ ${ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'}`,
+      className: `min-h-[24px] w-full rounded-md border font-black text-[7px] leading-[9px] active:scale-90 ${ecoMode === 'lite' ? 'border-emerald-300 bg-emerald-700 text-emerald-50' : ecoMode === 'ultra' ? 'border-lime-200 bg-lime-500 text-slate-950' : 'border-slate-500 bg-slate-700 text-slate-200'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'))), (() => {
       const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
       const canAct = !autoBattle && !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
       return /*#__PURE__*/React.createElement("button", {
