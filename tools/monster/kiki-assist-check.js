@@ -43,11 +43,11 @@ assert(gameSource.includes("0.3+comboDmgBonus")&&gameSource.includes("0.2+comboD
 assert(!/globalComboDmgPct[^\n]*comboDmgPct|comboDmgPct[^\n]*globalComboDmgPct/.test(gameSource),'ザン補正と全体連撃を混ぜない');
 const actionHeaderStart=gameSource.indexOf('flex-1 min-w-0 flex flex-wrap');
 const actionHeader=gameSource.slice(actionHeaderStart,gameSource.indexOf('使うカードが決まっている番は',actionHeaderStart));
-['flex-1 min-w-0 flex flex-wrap','gap-y-0.5','flex items-center gap-0.5 shrink-0','min-w-[52px] shrink-0'].forEach(text=>
+['flex-1 min-w-0 flex flex-wrap','gap-y-0.5','flex items-center gap-0.5 shrink-0','min-h-[44px] min-w-[84px] shrink-0'].forEach(text=>
   assert(actionHeader.includes(text),`ACTION操作列を守るレイアウトが不足: ${text}`));
 for(const width of [320,390,430]) {
-  // 右側はVIEW約40px + AUTO44px + ∞44px + ACTION52px + gap。最小幅でも固定領域が収まる。
-  assert(width-16-(40+44+44+52+6)>=100,`${width}pxで左側の折り返し領域を確保できない`);
+  // 右側はVIEW約40px + 統合AUTO44px + ACTION84px + gap。ACTIONを縮めず左側だけを折り返す。
+  assert(width-16-(40+44+84+4)>=100,`${width}pxで左側の折り返し領域を確保できない`);
 }
 for(const [hero,kiki] of [[0,0],[1,0],[0,1],[1,1]]) {
   assert((hero?gameSource.includes('heroCardBonus>0'):true)&&(kiki?gameSource.includes('kikiCardBonus>0'):true),
