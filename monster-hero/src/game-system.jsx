@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 13:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 13:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6447,7 +6447,7 @@ function MonsterHeroGame() {
   const [autoRepeat, setAutoRepeat] = useState(false);
   const autoRepeatRef = useRef(false);
   const autoRepeatStartingRef = useRef(false);
-  // 省エネ設定はAUTO∞中だけ有効な一時状態。表示・演出への接続は後続段階で行う。
+  // 省エネ設定はAUTO∞中だけ有効な一時状態。liteだけをBATTLEの描画へ接続する。
   const ECO_MODES = ['off','lite','ultra'];
   const [ecoMode, setEcoMode] = useState('off');
   const ecoModeRef = useRef('off');
@@ -6461,6 +6461,8 @@ function MonsterHeroGame() {
     const currentIndex=ECO_MODES.indexOf(ecoModeRef.current);
     return setEcoModeSafe(ECO_MODES[(currentIndex+1)%ECO_MODES.length]);
   };
+  // ultraは後続段階まで従来描画のままにし、簡易省エネの判定へ混ぜない。
+  const liteBattleView = gameState==='BATTLE'&&ecoMode==='lite';
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
@@ -12982,7 +12984,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         ))}
       </div>
       {updateNotice}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!liteBattleView?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
@@ -15481,7 +15483,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* BATTLE */}
         {gameState==='BATTLE'&&(
-          <div className="flex-1 flex flex-col h-full" data-battle-speed={battleSpeed}>
+          <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={liteBattleView?'lite':'off'}>
+            {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
             <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
               <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
               <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
@@ -15517,7 +15520,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
               <div className="mt-1 relative flex flex-col items-center">
                 {enemySkillName&&(
-                  <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:'skillNamePop 350ms ease-out forwards'}}>
+                  <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                     <div className="px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"><span>{cardIconNode(enemySkillName.icon,16)}</span>{enemySkillName.label}</div>
                   </div>
                 )}
@@ -15551,11 +15554,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 )}
                 {slotSkill&&(
-                  <div className="fixed -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{left:`${12.5+slotSkill.slotIndex*25}%`,bottom:'30%',zIndex:65000,animation:'skillNamePop 350ms ease-out forwards'}}>
+                  <div className="fixed -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{left:`${12.5+slotSkill.slotIndex*25}%`,bottom:'30%',zIndex:65000,animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'}}>
                     <div className={`px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type==='unique'?'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]':slotSkill.type==='special'?'bg-amber-600 border-amber-200 text-white':'bg-red-700 border-red-200 text-white'}`}>{slotSkill.name}</div>
                   </div>
                 )}
-                {guardFx&&(
+                {!liteBattleView&&guardFx&&(
                   <div className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:64000}}>
                     <div className="absolute" style={{animation:'guardShine 550ms ease-out forwards'}}>
                       <div className="text-[120px] drop-shadow-[0_0_30px_rgba(56,189,248,1)]">🛡️</div>
@@ -15569,7 +15572,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',animation:'guardFlash 350ms ease-out forwards'}}></div>
                   </div>
                 )}
-                {teachingFx&&TEACHING_FX_STYLE[teachingFx.id]&&(()=>{
+                {!liteBattleView&&teachingFx&&TEACHING_FX_STYLE[teachingFx.id]&&(()=>{
                   const fx=TEACHING_FX_STYLE[teachingFx.id];
                   return (
                     <div key={teachingFx.fxId} className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:63000}}>
@@ -15588,11 +15591,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 })()}
                 {enemy?.id==='Moo'&&enemy?.imgUrl&&(
                   <div className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
-                    <img src={enemy.imgUrl} alt="ムー" style={{width:'100%',height:'100%',animation:enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite',imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
+                    <img src={enemy.imgUrl} alt="ムー" style={{width:'100%',height:'100%',animation:liteBattleView?undefined:(enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite'),imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className={`relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/>
                   </div>
                 )}
                 {/* ムー攻撃時: 全画面の破壊的演出 */}
-                {enemy?.id==='Moo'&&enemyAttackFx?.kind==='moo'&&(
+                {!liteBattleView&&enemy?.id==='Moo'&&enemyAttackFx?.kind==='moo'&&(
                   <div className="fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden" style={{zIndex:25}}>
                     <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 34%, rgba(168,85,247,0.55) 0%, rgba(239,68,68,0.4) 30%, rgba(251,191,36,0.25) 48%, rgba(0,0,0,0) 70%)', animation:'auraPulse 450ms ease-out infinite'}}></div>
                     <div className="absolute inset-0" style={{animation:'specialFlash 400ms ease-out infinite', background:'radial-gradient(circle at 50% 34%, rgba(255,255,255,0.45) 0%, rgba(168,85,247,0.15) 35%, rgba(255,255,255,0) 60%)'}}></div>
@@ -15606,17 +15609,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 )}
                 {/* 行動予測ラベルはmain下部に移動 */}
-                <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim?{padding:'clamp(8px,2.2dvh,28px)',animation:(enemyAttackFx?.kind==='move'?(enemy?.id==='Moo'?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(enemy?.id==='Moo'&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(enemy?.id!=='Moo'&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(8px,2.2dvh,28px)',...(enemy?.id==='Moo'?{transform:'translateY(3dvh)'}:{})}}>
+                <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim&&!liteBattleView?{padding:'clamp(8px,2.2dvh,28px)',animation:(enemyAttackFx?.kind==='move'?(enemy?.id==='Moo'?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(enemy?.id==='Moo'&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(enemy?.id!=='Moo'&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(8px,2.2dvh,28px)',...(enemy?.id==='Moo'?{transform:'translateY(3dvh)'}:{})}}>
                   {enemy?.imgUrl?(enemy?.id==='Moo'?<div style={{width:'clamp(70px,12dvh,120px)',height:'clamp(80px,16dvh,150px)'}}/>:<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''} style={{width:'clamp(70px,12dvh,120px)',height:'clamp(80px,16dvh,150px)'}}><img src={enemy.imgUrl} alt={enemy?.name} className={`relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}/></span>):(<span className={extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?'mh-nightmare-enemy-aura-shell':'mh-extreme-enemy-aura-shell'):''}><div style={{fontSize:'clamp(58px,11dvh,104px)',lineHeight:1}} className={`relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun?(extremeDifficulty===NIGHTMARE_SETTING.id?' mh-nightmare-enemy-image':' mh-extreme-enemy-image'):''}`}>{enemy?.emoji}</div></span>)}
                   {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
-                  {enemy?.id==='Moo'&&(
+                  {!liteBattleView&&enemy?.id==='Moo'&&(
                     <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible" style={{zIndex:1}}>
                       <div className="absolute -inset-8 rounded-full" style={{background:'radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(139,0,139,0.32) 45%, rgba(0,0,0,0) 72%)', animation:'auraPulse 1500ms ease-in-out infinite'}}></div>
                       <div className="absolute -inset-3 rounded-full border-2 border-purple-500/60" style={{animation:'idleAuraPulse 1700ms ease-in-out infinite'}}></div>
                     </div>
                   )}
                   {/* Move: dash effect with motion marks */}
-                  {enemyAttackFx?.kind==='move'&&(
+                  {!liteBattleView&&enemyAttackFx?.kind==='move'&&(
                     <div className="absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center overflow-visible">
                       <div className="absolute -inset-2 rounded-full border-4 border-cyan-300/80" style={{animation:'shockRing 600ms ease-out forwards'}}></div>
                       <div className="absolute -inset-5 rounded-full border-2 border-sky-400/50" style={{animation:'shockRing 600ms ease-out 100ms forwards'}}></div>
@@ -15625,14 +15628,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </div>
                   )}
                   {/* Normal attack: surprised exclamation burst */}
-                  {enemyAttackFx?.kind==='normal'&&(
+                  {!liteBattleView&&enemyAttackFx?.kind==='normal'&&(
                     <div className="absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center" style={{animation:'enemyExclaim 500ms ease-out forwards'}}>
                       <div className="absolute -top-3 -right-2 text-5xl font-black text-yellow-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]" style={{animation:'exclaimPop 500ms cubic-bezier(.2,1.4,.4,1) forwards'}}>❗</div>
                       <div className="absolute inset-0 rounded-full border-4 border-yellow-300/80" style={{animation:'shockRing 500ms ease-out forwards'}}></div>
                     </div>
                   )}
                   {/* Special attack: crackling aura + lightning burst */}
-                  {enemyAttackFx?.kind==='special'&&(
+                  {!liteBattleView&&enemyAttackFx?.kind==='special'&&(
                     <div className="absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center overflow-visible">
                       <div className="absolute -inset-10 rounded-full" style={{background:'radial-gradient(circle, rgba(251,191,36,0.55) 0%, rgba(239,68,68,0.45) 40%, rgba(168,85,247,0.25) 60%, rgba(0,0,0,0) 75%)', animation:'auraPulse 600ms ease-out infinite'}}></div>
                       <div className="absolute -inset-3 rounded-full border-4 border-amber-300" style={{animation:'auraRing 600ms ease-out infinite'}}></div>
@@ -15647,13 +15650,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   )}
                   {/* MOO (last boss): catastrophic aura + lightning storm */}
                   {/* IDLE telegraph (player's turn): show what the enemy is about to do. Hidden while an attack is actually firing. */}
-                  {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='ATTACK'&&(
+                  {!liteBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='ATTACK'&&(
                     <div className="absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center">
                       <div className="absolute -top-2 -right-1 text-4xl font-black text-yellow-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" style={{animation:'idleExclaim 1100ms ease-in-out infinite'}}>❗</div>
                     </div>
                   )}
                   {/* ためている最中は、敵の周りにオーラが集まる */}
-                  {enemy&&enemyAttackFx?.kind==='charge'&&(
+                  {!liteBattleView&&enemy&&enemyAttackFx?.kind==='charge'&&(
                     <div className="absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible">
                       <div className="absolute -inset-6 rounded-full" style={{background:'radial-gradient(circle, rgba(251,191,36,0.45) 0%, rgba(251,191,36,0.2) 45%, rgba(0,0,0,0) 70%)', animation:'auraPulse 700ms ease-out infinite'}}></div>
                       {[0,1,2,3,4,5,6,7].map(k=>(
@@ -15662,7 +15665,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="absolute inset-0 rounded-full border-4 border-amber-300/80" style={{animation:'auraRing 700ms ease-out infinite'}}></div>
                     </div>
                   )}
-                  {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&(enemyIntent.type==='SPECIAL'||(enemy?.id==='Moo'&&enemyIntent.type==='ATTACK'))&&(()=>{
+                  {!liteBattleView&&enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&(enemyIntent.type==='SPECIAL'||(enemy?.id==='Moo'&&enemyIntent.type==='ATTACK'))&&(()=>{
                     // ためる(CHARGE)の予告にはこのオーラを出さない。必殺技の予告と同じ見た目になり、
                     // 「準備なのか、いま撃たれるのか」が見分けられなくなるため
                     const isSpecial = enemyIntent.type==='SPECIAL';
@@ -15703,7 +15706,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   })()}
                 </div>
                 {getTurnBuff('stunEnemy',false)&&<div className="absolute inset-0 flex items-center justify-center text-3xl bg-indigo-500/20 rounded-full border-4 border-indigo-500 animate-pulse">💫</div>}
-                <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5">{popups.filter(p=>p.side==='enemy').map(p=>(<div key={p.id} className={`text-center ${p.color} font-black drop-shadow-[0_0_15px_rgba(0,0,0,1)] whitespace-nowrap px-4`}>{p.text}</div>))}</div>
+                <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5">{popups.filter(p=>p.side==='enemy').map(p=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}</div>
               </div>
               <div className="w-full max-w-[180px] mt-2 mb-1 shrink-0 relative z-[40]">
                 <div className="h-2"></div>
@@ -15762,7 +15765,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             </main>
             <div className="shrink-0 py-2 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative">
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} className={`${p.color} font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] leading-tight px-2 py-0.5 rounded-lg`} style={{backgroundColor:'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView?'border border-white/20 text-base':'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`} style={{backgroundColor:liteBattleView?'rgba(2,6,23,0.95)':'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
               <div className="w-full space-y-1 px-2 py-1 bg-black/40 rounded-xl border border-white/5">
                 <div className="flex items-center gap-2 relative"><Heart className="text-pink-500 shrink-0" size={12}/><div className="flex-1"><div className="flex justify-between text-[7px] font-bold text-pink-400 mb-0.5 uppercase tracking-widest"><span>Ally Life</span><span className="font-mono">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"><div className="h-full bg-gradient-to-r from-pink-700 to-rose-400 transition-all duration-1000" style={{width:`${(hp/effectiveMaxHp)*100}%`,backgroundImage:'linear-gradient(to right, #be185d, #fb7185)'}}></div></div></div><div className="absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>{popups.filter(p=>p.side==='life').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}</div></div>
                 <div className="flex items-center gap-2 relative"><Zap className="text-amber-500 shrink-0" size={10}/><div className="flex-1"><div className="flex justify-between text-[7px] font-bold text-amber-400 mb-0.5 uppercase tracking-widest"><span>Ally Guts</span><span className="font-mono">{Math.floor(guts).toLocaleString()} / {effectiveMaxGuts.toLocaleString()}</span></div><div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"><div className="h-full bg-gradient-to-r from-amber-600 to-yellow-300 transition-all duration-500" style={{width:`${(guts/effectiveMaxGuts)*100}%`,backgroundImage:'linear-gradient(to right, #d97706, #fde047)'}}></div></div></div><div className="absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>{popups.filter(p=>p.side==='guts').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}</div></div>
@@ -15914,7 +15917,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       if(isPenalty)globalPenaltyCnt++;
                     });
                   }
-                  const isAnimating = attackAnim && attackAnim.slotIndex === i;
+                  const isAnimating = !liteBattleView && attackAnim && attackAnim.slotIndex === i;
                   // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
                   const hasUniqueSet = selectedCards.some(idx=>cardAssignments[idx]===i && hand[idx]?.type==='unique');
                   // このスロットに表示する選択中カード: 攻撃系は割当先スロット、全体系(ガード/バフ/回復等)は全スロット
@@ -15977,7 +15980,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           })}
                         </div>
                       )}
-                      {hasUniqueSet&&(
+                      {!liteBattleView&&hasUniqueSet&&(
                         <div className="absolute inset-0 pointer-events-none z-40 flex items-center justify-center overflow-visible">
                           <div className="absolute inset-0 rounded-xl" style={{background:'radial-gradient(circle, rgba(168,85,247,0.45) 0%, rgba(99,102,241,0.28) 50%, rgba(0,0,0,0) 75%)', animation:'idleAuraPulse 1200ms ease-in-out infinite'}}></div>
                           <div className="absolute -inset-0.5 rounded-xl border-2 border-purple-400/80" style={{animation:'idleAuraPulse 1200ms ease-in-out infinite'}}></div>

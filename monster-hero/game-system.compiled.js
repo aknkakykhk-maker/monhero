@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 60b46efe611ddf6b
+// source-sha256: 41d96e14c11197c6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 13:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 13:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12140,7 +12140,7 @@ function MonsterHeroGame() {
   const [autoRepeat, setAutoRepeat] = useState(false);
   const autoRepeatRef = useRef(false);
   const autoRepeatStartingRef = useRef(false);
-  // 省エネ設定はAUTO∞中だけ有効な一時状態。表示・演出への接続は後続段階で行う。
+  // 省エネ設定はAUTO∞中だけ有効な一時状態。liteだけをBATTLEの描画へ接続する。
   const ECO_MODES = ['off', 'lite', 'ultra'];
   const [ecoMode, setEcoMode] = useState('off');
   const ecoModeRef = useRef('off');
@@ -12154,6 +12154,8 @@ function MonsterHeroGame() {
     const currentIndex = ECO_MODES.indexOf(ecoModeRef.current);
     return setEcoModeSafe(ECO_MODES[(currentIndex + 1) % ECO_MODES.length]);
   };
+  // ultraは後続段階まで従来描画のままにし、簡易省エネの判定へ混ぜない。
+  const liteBattleView = gameState === 'BATTLE' && ecoMode === 'lite';
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
@@ -22472,7 +22474,7 @@ function MonsterHeroGame() {
       }
     }))), updateNotice, /*#__PURE__*/React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake ? {
+      style: screenShake && !liteBattleView ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && /*#__PURE__*/React.createElement("main", {
@@ -30131,9 +30133,17 @@ function MonsterHeroGame() {
       onClick: () => setShowBackup(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs mt-3"
     }, "\u9589\u3058\u308B"))), gameState === 'BATTLE' && /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex flex-col h-full",
-      "data-battle-speed": battleSpeed
-    }, /*#__PURE__*/React.createElement("header", {
+      className: "flex-1 flex flex-col h-full relative",
+      "data-battle-speed": battleSpeed,
+      "data-eco-view": liteBattleView ? 'lite' : 'off'
+    }, liteBattleView && /*#__PURE__*/React.createElement("div", {
+      "data-lite-eco-dimmer": true,
+      className: "absolute inset-0 bg-black/20 pointer-events-none",
+      style: {
+        zIndex: 89999
+      },
+      "aria-hidden": "true"
+    }), /*#__PURE__*/React.createElement("header", {
       "data-battle-header": true,
       className: "h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden"
     }, /*#__PURE__*/React.createElement("div", {
@@ -30285,7 +30295,7 @@ function MonsterHeroGame() {
       style: {
         top: '14%',
         zIndex: 65000,
-        animation: 'skillNamePop 350ms ease-out forwards'
+        animation: liteBattleView ? undefined : 'skillNamePop 350ms ease-out forwards'
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"
@@ -30332,11 +30342,11 @@ function MonsterHeroGame() {
         left: `${12.5 + slotSkill.slotIndex * 25}%`,
         bottom: '30%',
         zIndex: 65000,
-        animation: 'skillNamePop 350ms ease-out forwards'
+        animation: liteBattleView ? undefined : 'skillNamePop 350ms ease-out forwards'
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: `px-3 py-1 rounded-xl font-black text-[12px] border-2 shadow-[0_2px_16px_rgba(0,0,0,0.9)] ${slotSkill.type === 'unique' ? 'bg-purple-700 border-purple-200 text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.9)]' : slotSkill.type === 'special' ? 'bg-amber-600 border-amber-200 text-white' : 'bg-red-700 border-red-200 text-white'}`
-    }, slotSkill.name)), guardFx && /*#__PURE__*/React.createElement("div", {
+    }, slotSkill.name)), !liteBattleView && guardFx && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 pointer-events-none flex items-center justify-center",
       style: {
         zIndex: 64000
@@ -30373,7 +30383,7 @@ function MonsterHeroGame() {
         background: 'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',
         animation: 'guardFlash 350ms ease-out forwards'
       }
-    })), teachingFx && TEACHING_FX_STYLE[teachingFx.id] && (() => {
+    })), !liteBattleView && teachingFx && TEACHING_FX_STYLE[teachingFx.id] && (() => {
       const fx = TEACHING_FX_STYLE[teachingFx.id];
       return /*#__PURE__*/React.createElement("div", {
         key: teachingFx.fxId,
@@ -30429,13 +30439,13 @@ function MonsterHeroGame() {
       style: {
         width: '100%',
         height: '100%',
-        animation: enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
+        animation: liteBattleView ? undefined : enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
         imageRendering: 'auto',
         WebkitMaskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',
         maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
       },
       className: `relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
-    })), enemy?.id === 'Moo' && enemyAttackFx?.kind === 'moo' && /*#__PURE__*/React.createElement("div", {
+    })), !liteBattleView && enemy?.id === 'Moo' && enemyAttackFx?.kind === 'moo' && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden",
       style: {
         zIndex: 25
@@ -30481,7 +30491,7 @@ function MonsterHeroGame() {
       }
     }))), /*#__PURE__*/React.createElement("div", {
       className: `rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
-      style: enemyAttackAnim ? {
+      style: enemyAttackAnim && !liteBattleView ? {
         padding: 'clamp(8px,2.2dvh,28px)',
         animation: enemyAttackFx?.kind === 'move' ? enemy?.id === 'Moo' ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
         ...(enemy?.id === 'Moo' && enemyAttackFx?.kind !== 'move' ? {
@@ -30519,7 +30529,7 @@ function MonsterHeroGame() {
         lineHeight: 1
       },
       className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
-    }, enemy?.emoji)), enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
+    }, enemy?.emoji)), !liteBattleView && enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
       style: {
         zIndex: 1
@@ -30535,7 +30545,7 @@ function MonsterHeroGame() {
       style: {
         animation: 'idleAuraPulse 1700ms ease-in-out infinite'
       }
-    })), enemyAttackFx?.kind === 'move' && /*#__PURE__*/React.createElement("div", {
+    })), !liteBattleView && enemyAttackFx?.kind === 'move' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute -inset-2 rounded-full border-4 border-cyan-300/80",
@@ -30557,7 +30567,7 @@ function MonsterHeroGame() {
       style: {
         animation: 'exclaimPop 600ms cubic-bezier(.2,1.4,.4,1) forwards'
       }
-    }, "\uD83C\uDFC3")), enemyAttackFx?.kind === 'normal' && /*#__PURE__*/React.createElement("div", {
+    }, "\uD83C\uDFC3")), !liteBattleView && enemyAttackFx?.kind === 'normal' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center",
       style: {
         animation: 'enemyExclaim 500ms ease-out forwards'
@@ -30572,7 +30582,7 @@ function MonsterHeroGame() {
       style: {
         animation: 'shockRing 500ms ease-out forwards'
       }
-    })), enemyAttackFx?.kind === 'special' && /*#__PURE__*/React.createElement("div", {
+    })), !liteBattleView && enemyAttackFx?.kind === 'special' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute -inset-10 rounded-full",
@@ -30614,14 +30624,14 @@ function MonsterHeroGame() {
         animation: 'specialFlash 600ms ease-out infinite',
         background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%)'
       }
-    })), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'ATTACK' && /*#__PURE__*/React.createElement("div", {
+    })), !liteBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'ATTACK' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute -top-2 -right-1 text-4xl font-black text-yellow-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]",
       style: {
         animation: 'idleExclaim 1100ms ease-in-out infinite'
       }
-    }, "\u2757")), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+    }, "\u2757")), !liteBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute -inset-6 rounded-full",
@@ -30641,7 +30651,7 @@ function MonsterHeroGame() {
       style: {
         animation: 'auraRing 700ms ease-out infinite'
       }
-    })), enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'SPECIAL' || enemy?.id === 'Moo' && enemyIntent.type === 'ATTACK') && (() => {
+    })), !liteBattleView && enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'SPECIAL' || enemy?.id === 'Moo' && enemyIntent.type === 'ATTACK') && (() => {
       // ためる(CHARGE)の予告にはこのオーラを出さない。必殺技の予告と同じ見た目になり、
       // 「準備なのか、いま撃たれるのか」が見分けられなくなるため
       const isSpecial = enemyIntent.type === 'SPECIAL';
@@ -30728,7 +30738,8 @@ function MonsterHeroGame() {
       className: "absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5"
     }, popups.filter(p => p.side === 'enemy').map(p => /*#__PURE__*/React.createElement("div", {
       key: p.id,
-      className: `text-center ${p.color} font-black drop-shadow-[0_0_15px_rgba(0,0,0,1)] whitespace-nowrap px-4`
+      "data-lite-damage": liteBattleView ? 'true' : undefined,
+      className: `text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView ? 'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base' : 'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`
     }, p.text)))), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-[180px] mt-2 mb-1 shrink-0 relative z-[40]"
     }, /*#__PURE__*/React.createElement("div", {
@@ -30876,9 +30887,10 @@ function MonsterHeroGame() {
       }
     }, popups.filter(p => p.side === 'hero').map(p => /*#__PURE__*/React.createElement("div", {
       key: p.id,
-      className: `${p.color} font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] leading-tight px-2 py-0.5 rounded-lg`,
+      "data-lite-damage": liteBattleView ? 'true' : undefined,
+      className: `${p.color} font-black leading-tight px-2 py-0.5 rounded-lg ${liteBattleView ? 'border border-white/20 text-base' : 'drop-shadow-[0_2px_8px_rgba(0,0,0,1)]'}`,
       style: {
-        backgroundColor: 'rgba(2,6,23,0.55)'
+        backgroundColor: liteBattleView ? 'rgba(2,6,23,0.95)' : 'rgba(2,6,23,0.55)'
       }
     }, p.text))), /*#__PURE__*/React.createElement("div", {
       className: "w-full space-y-1 px-2 py-1 bg-black/40 rounded-xl border border-white/5"
@@ -31138,7 +31150,7 @@ function MonsterHeroGame() {
           if (isPenalty) globalPenaltyCnt++;
         });
       }
-      const isAnimating = attackAnim && attackAnim.slotIndex === i;
+      const isAnimating = !liteBattleView && attackAnim && attackAnim.slotIndex === i;
       // このスロットに固有技カードが割り当てられているか（セット中は常時エフェクト）
       const hasUniqueSet = selectedCards.some(idx => cardAssignments[idx] === i && hand[idx]?.type === 'unique');
       // このスロットに表示する選択中カード: 攻撃系は割当先スロット、全体系(ガード/バフ/回復等)は全スロット
@@ -31290,7 +31302,7 @@ function MonsterHeroGame() {
           },
           className: "font-black text-emerald-100 leading-none shrink-0"
         }, "-", gv));
-      })), hasUniqueSet && /*#__PURE__*/React.createElement("div", {
+      })), !liteBattleView && hasUniqueSet && /*#__PURE__*/React.createElement("div", {
         className: "absolute inset-0 pointer-events-none z-40 flex items-center justify-center overflow-visible"
       }, /*#__PURE__*/React.createElement("div", {
         className: "absolute inset-0 rounded-xl",
