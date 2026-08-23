@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 12:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 12:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6447,6 +6447,20 @@ function MonsterHeroGame() {
   const [autoRepeat, setAutoRepeat] = useState(false);
   const autoRepeatRef = useRef(false);
   const autoRepeatStartingRef = useRef(false);
+  // 省エネ設定はAUTO∞中だけ有効な一時状態。表示・演出への接続は後続段階で行う。
+  const ECO_MODES = ['off','lite','ultra'];
+  const [ecoMode, setEcoMode] = useState('off');
+  const ecoModeRef = useRef('off');
+  const setEcoModeSafe = (mode) => {
+    const next=autoRepeatRef.current===true&&ECO_MODES.includes(mode)?mode:'off';
+    ecoModeRef.current=next;
+    setEcoMode(next);
+    return next;
+  };
+  const cycleEcoMode = () => {
+    const currentIndex=ECO_MODES.indexOf(ecoModeRef.current);
+    return setEcoModeSafe(ECO_MODES[(currentIndex+1)%ECO_MODES.length]);
+  };
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
@@ -6461,6 +6475,7 @@ function MonsterHeroGame() {
     autoRepeatRef.current = false;
     autoRepeatStartingRef.current = false;
     setAutoRepeat(false);
+    setEcoModeSafe('off');
   };
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
@@ -11433,6 +11448,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setAutoRepeat(next);
     if(next)setAutoBattleEnabled(true);
     else autoRepeatStartingRef.current=false;
+    if(!next)setEcoModeSafe('off');
   };
 
   // 特殊ルール説明を閉じる正規経路。手動タップとAUTOの自動通過で同じ処理を使う。
