@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 10:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 10:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12057,12 +12057,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setGameState('PICK_TEACHING');
   };
 
-  // AUTO中にWAVE後の選択画面へ入ったときだけ、決めた対象をstateを経由せず直接確定する。
-  // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ報酬を二重処理しない。
+  // AUTO中にWAVE後の画面へ入ったときだけ、各画面の既存handlerを1回だけ呼んで進める。
+  // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ処理を二重に開始しない。
   useEffect(()=>{
-    if(gameState!=='REWARD_PICK'&&gameState!=='PICK_ALLY'&&gameState!=='PICK_TEACHING'&&gameState!=='UPGRADE_SKILL'){
+    if(gameState!=='WAVE_RESULT'&&gameState!=='REWARD_PICK'&&gameState!=='QUICK_GROWTH'&&gameState!=='PICK_ALLY'&&gameState!=='QUICK_JOIN'&&gameState!=='PICK_TEACHING'&&gameState!=='UPGRADE_SKILL'){
       autoPostWaveRunningRef.current=false;
       autoPostWaveScheduledRef.current=false;
+      return;
+    }
+    if(gameState==='WAVE_RESULT'||gameState==='QUICK_GROWTH'||gameState==='QUICK_JOIN'){
+      autoPostWaveRunningRef.current=false;
+      autoPostWaveScheduledRef.current=false;
+      if(!autoBattleRef.current)return;
+      autoPostWaveScheduledRef.current=true;
+      Promise.resolve().then(()=>{
+        autoPostWaveScheduledRef.current=false;
+        if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;
+        autoPostWaveRunningRef.current=true;
+        if(gameState==='WAVE_RESULT') handleNextWave();
+        else if(gameState==='QUICK_GROWTH') finishQuickGrowth();
+        else finishQuickJoin();
+      });
       return;
     }
     if(gameState==='PICK_ALLY'){

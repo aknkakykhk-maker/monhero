@@ -34,7 +34,7 @@ assert(has("setSelectedCards([]);setCardAssignments({});setPendingCard(null);set
 assert(has('const stopAutoBattle = () => {'), 'AUTO停止helperがありません');
 assert(has('autoBattleRef.current = false;\n    autoTurnScheduledRef.current = false;\n    autoPostWaveScheduledRef.current = false;\n    setAutoBattle(false);'), 'AUTO停止helperがref・予約・stateを停止していません');
 assert(has('autoPostWaveScheduledRef.current = false;'), 'AUTO停止helperがWAVE後の予約を停止していません');
-assert(has("if(gameState!=='REWARD_PICK'&&gameState!=='PICK_ALLY'&&gameState!=='PICK_TEACHING'&&gameState!=='UPGRADE_SKILL')"), 'PICK_TEACHINGとUPGRADE_SKILLが既存WAVE後AUTOロックを再利用していません');
+assert(has("if(gameState!=='WAVE_RESULT'&&gameState!=='REWARD_PICK'&&gameState!=='QUICK_GROWTH'&&gameState!=='PICK_ALLY'&&gameState!=='QUICK_JOIN'&&gameState!=='PICK_TEACHING'&&gameState!=='UPGRADE_SKILL')"), 'WAVE結果・Quick結果・既存選択画面がWAVE後AUTOロックを再利用していません');
 assert(has('const choice=chooseAutoTeachingCard(teachingPool,ownedTeachings,!enemy);'), 'AUTOが現在の提示候補と既存の初回判定を使用していません');
 assert(has('confirmPickTeaching(choice);'), 'AUTOが既存のアシストカード確定処理を明示候補付きで再利用していません');
 assert(has('const confirmPickTeaching = (explicitTeaching=null) => {\n    const teaching=explicitTeaching||selectedTeachingCard;'), '確定処理にstale state対策がありません');
