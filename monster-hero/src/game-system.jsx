@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 11:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 11:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -288,11 +288,27 @@ const battleModeAssistantScene = (mode) => mode === EXTREME_MODE.id ? 'extremeCh
 // activeIds で外れるが、そこに頼ると取りこぼしたときに自分自身が候補として出てしまうため、
 // 種idでも明示的に外している。
 // プロモードは pool に「始める前に選んだ5体」が入るので、そこからランダムに offerSize 体だけ出る。
+const joinRosterEntry = (mon) => mon?.masuId != null ? `masu:${mon.masuId}` : mon?.id || null;
 const pickJoinCandidates = (pool, activeIds, heroId, offerSize) => {
   const used = new Set([...(Array.isArray(activeIds) ? activeIds : []), heroId].filter(Boolean));
-  const list = (Array.isArray(pool) ? pool : []).filter(m => m && m.id && !used.has(m.id));
+  const list = (Array.isArray(pool) ? pool : []).filter(m => m && m.id && m.id !== heroId && !used.has(joinRosterEntry(m)));
   const shuffled = [...list].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.max(0, Number(offerSize) || 0));
+};
+
+// AUTOの供モンと配置先だけを決める。候補の合法判定は手動と同じpickJoinCandidatesを通し、
+// 実際の加入ボーナスやモード別処理は既存のsetupMonへ任せる。
+const chooseAutoAllyJoin = ({ pool, activeMons, heroId, setting, slots }, rng = Math.random) => {
+  const activeEntries = (Array.isArray(activeMons) ? activeMons : []).map(joinRosterEntry).filter(Boolean);
+  const legal = pickJoinCandidates(pool, activeEntries, heroId, Array.isArray(pool) ? pool.length : 0);
+  const desired = setting?.rosterEntry;
+  const mon = (desired ? legal.find(candidate => joinRosterEntry(candidate) === desired) : null)
+    || legal[Math.floor(rng() * legal.length)];
+  const emptySlots = (Array.isArray(slots) ? slots : []).map((value, index) => value == null ? index : null).filter(index => index != null);
+  if (!mon || emptySlots.length === 0) return null;
+  const preferred = Number.isInteger(setting?.slot) && emptySlots.includes(setting.slot) ? setting.slot : null;
+  const slotIdx = preferred ?? emptySlots[Math.floor(rng() * emptySlots.length)];
+  return { mon, slotIdx };
 };
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
@@ -365,6 +381,33 @@ const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 最大ガッツそのものは増やさず、最大までの範囲で現在値だけを回復する。
 const GUTS_RECOVERY_POINT_COST = 1; // 1回に使う強化ポイント
 const GUTS_RECOVERY_AMOUNT = 10;    // 1回で戻る現在ガッツ
+// UPGRADE_SKILLのAUTO配分を同期的に決める。画面に並んだ合法な技だけを受け取り、
+// 1Pごとに候補を引き直すため、途中で上限へ達した技は以後の抽選から外れる。
+const chooseAutoUniqueUpgradePlan = (uniques, upgradePoints, maxLevel = MAX_UNIQUE_SKILL_LEVEL, rng = Math.random) => {
+  if (!Array.isArray(uniques) || !Number.isInteger(upgradePoints) || upgradePoints < 0
+    || !Number.isInteger(maxLevel) || maxLevel < 0 || typeof rng !== 'function') return null;
+  const levels = {};
+  const allocations = {};
+  for (const entry of uniques) {
+    const key = typeof entry?.key === 'string' ? entry.key : '';
+    const level = entry?.level;
+    if (!key || Object.prototype.hasOwnProperty.call(levels, key)
+      || !Number.isInteger(level) || level < 0 || level > maxLevel) return null;
+    levels[key] = level;
+  }
+  let remainingPoints = upgradePoints;
+  while (remainingPoints > 0) {
+    const candidates = Object.keys(levels).filter(key => levels[key] < maxLevel);
+    if (candidates.length === 0) break;
+    const roll = rng();
+    if (!Number.isFinite(roll) || roll < 0 || roll >= 1) return null;
+    const key = candidates[Math.floor(roll * candidates.length)];
+    levels[key] += 1;
+    allocations[key] = (allocations[key] || 0) + 1;
+    remainingPoints -= 1;
+  }
+  return { allocations, levels, remainingPoints };
+};
 const INHERITED_UNIQUE_LEVEL_KEY_PREFIX = 'inhId:';
 let inheritedUniqueIdSequence = 0;
 const createInheritedUniqueId = () => {
@@ -3991,6 +4034,13 @@ const chooseAutoTurn = ({
   return picked;
 };
 
+// 現在の配置・手札では合法だが、ガッツだけが足りない行動があるかを確認する。
+// 方針や合法判定はchooseAutoTurnへ一本化し、存在確認なので固定rngを使う。
+const hasAutoTurnWithEnoughGuts = options => chooseAutoTurn({
+  ...options,
+  guts:Number.MAX_SAFE_INTEGER,
+}, () => 0).length > 0;
+
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
 // bg=選んだときの背景色 / text=選んでいないときの文字色(難易度の雰囲気に合わせた色)。
 // Tailwindの動的なクラス生成は稀に失敗して色が出ないことがあるため、実際の色はinline styleで指定する
@@ -4147,6 +4197,23 @@ const TRAINING_OPTIONS = Object.freeze([
   Object.freeze({ id:'def',  name:'丸太うけ',   stat:'def',  flat:0, rate:0.20, statLabel:'丈夫さ',  effect:'丈夫さ +20%' }),
   Object.freeze({ id:'guts', name:'猛勉強',     stat:'guts', flat:5, rate:0.05, statLabel:'ガッツ',  effect:'ガッツ +5 ＆ +5%' }),
 ]);
+const chooseAutoTrainingPicks = (strategy, rng=Math.random) => {
+  const fixed={offense:['atk','guts'],defense:['hp','def'],guts:['guts','guts']}[strategy];
+  if(fixed)return [...fixed];
+  return Array.from({length:TRAINING_PICK_COUNT},()=>{
+    const roll=Math.max(0,Math.min(0.999999999999,Number(rng())||0));
+    return TRAINING_OPTIONS[Math.floor(roll*TRAINING_OPTIONS.length)].id;
+  });
+};
+
+// 手動画面へ実際に提示された合法候補だけから選ぶ。ラン開始時は全候補、
+// WAVE後は所持済みかつLv2未満の候補を優先し、同条件内はランダムにする。
+const chooseAutoTeachingCard = (candidates, owned, isInitial, rng=Math.random) => {
+  if (!Array.isArray(candidates) || candidates.length===0) return null;
+  const preferred=isInitial?[]:candidates.filter(card=>owned.some(item=>item.id===card.id&&item.evoLevel<2));
+  const choices=preferred.length>0?preferred:candidates;
+  return choices[Math.floor(rng()*choices.length)]||choices[0]||null;
+};
 const trainingOptionOf = (id) => TRAINING_OPTIONS.find(option=>option.id===id) || null;
 // トレーニング1回ぶんを適用する。丸め方と特殊ルールの掛かり方は旧「能力覚醒」と同じ:
 //   ・割合はULTIMATEのペナルティぶんだけ下がる(max(0, 効果 - ペナルティ))
@@ -6354,6 +6421,21 @@ function MonsterHeroGame() {
   const initialBattleDistanceRef = useRef(2);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
+  // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
+  const [autoBattle, setAutoBattle] = useState(false);
+  const autoBattleRef = useRef(false);
+  const autoTurnRunningRef = useRef(false);
+  const autoTurnScheduledRef = useRef(false);
+  const autoPostWaveRunningRef = useRef(false);
+  const autoPostWaveScheduledRef = useRef(false);
+  const [autoTurnCycle, setAutoTurnCycle] = useState(0);
+  // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
+  const stopAutoBattle = () => {
+    autoBattleRef.current = false;
+    autoTurnScheduledRef.current = false;
+    autoPostWaveScheduledRef.current = false;
+    setAutoBattle(false);
+  };
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
   // プロモードで、始める前に選んだ供モンの候補(ベースモンだけ)。
@@ -7797,7 +7879,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     // 画面が見えなくなったらBGMを止める(他のアプリに切り替えたあとも鳴り続けないように)。
     // 戻ってきたら、止まっているAudioContextを復帰させて鳴らし直す
-    const onHidden = () => Audio_.setPageHidden(true);
+    const onHidden = () => { Audio_.setPageHidden(true); stopAutoBattle(); };
     const onVisible = () => { Audio_.setPageHidden(false); Audio_.resumeIfNeeded(); };
     const onVisibilityChange = () => (document.visibilityState === 'hidden' ? onHidden() : onVisible());
     document.addEventListener('visibilitychange', onVisibilityChange);
@@ -10103,6 +10185,7 @@ function MonsterHeroGame() {
   };
 
   const returnToHome = () => {
+    stopAutoBattle();
     debugBattleRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
@@ -10271,6 +10354,7 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
+    stopAutoBattle();
     if (debugBattleRef.current) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
@@ -10296,6 +10380,7 @@ function MonsterHeroGame() {
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
   const handleRetry = () => {
+    stopAutoBattle();
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
     const s = resetAllState();
@@ -10428,7 +10513,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
   const selectCardAt = (i, showDetail = true) => {
-    if(isBusy) return;
+    if(isBusy||autoBattleRef.current) return;
     const c=hand[i]; if(!c) return;
     const focus=(card)=>setFocusedCard(showDetail?card:null);
     if(pendingCard!==null && pendingCard!==i){ focus(c); return; }
@@ -10455,7 +10540,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // スワイプ操作ではカード効果のパネルを出さない(出したままだと合計DMG・合計軽減が隠れるため)。
   // 効果を見たいときはカードをタップする。
   const dragAssignToSlot = (cardIndex, slotIdx) => {
-    if(isBusy) return;
+    if(isBusy||autoBattleRef.current) return;
     const c=hand[cardIndex]; if(!c) return;
     const targetMon=slots[slotIdx];
     // 攻撃カード: モンスターのいるスロットに割り当て
@@ -11167,10 +11252,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else { await battleWait(100); }
 
     const drawCount=usedCards.filter(c=>c.type==='draw').length;
-    let nextHand=hand.filter((_,i)=>!selectedCards.includes(i));
+    const usedHandIndexes=new Set(usedCardEntries.map(entry=>entry.handIndex));
+    let nextHand=hand.filter((_,i)=>!usedHandIndexes.has(i));
     let nextDeck=[...deck], nextGraveyard=[...graveyard,...usedCards];
     const replenish=(count)=>{for(let i=0;i<count;i++){if(nextDeck.length===0){if(nextGraveyard.length===0)break; nextDeck=[...nextGraveyard].sort(()=>Math.random()-0.5); nextGraveyard=[];} if(nextDeck.length>0)nextHand.push(nextDeck.pop());}};
-    replenish(selectedCards.length+drawCount);
+    replenish(usedCardEntries.length+drawCount);
     while(nextHand.length<5&&(nextDeck.length>0||nextGraveyard.length>0))replenish(1);
     if(getTurnBuff('zeroGuts',false)) setImmediateTurnBuff('zeroGuts',false);
     writePermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
@@ -11208,8 +11294,63 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       hand, slots, guts, cardLimit, strategy:autoSettings.strategy,
       getCardGuts, cardNeedsMonster, slotMaxUses,
     });
-    if (entries.length>0) processTurn(entries);
+    if(entries.length>0)return processTurn(entries);
+    const lacksOnlyGuts=hasAutoTurnWithEnoughGuts({
+      hand, slots, cardLimit, strategy:autoSettings.strategy,
+      getCardGuts, cardNeedsMonster, slotMaxUses,
+    });
+    if(lacksOnlyGuts&&autoBattleRef.current&&gameState==='BATTLE'&&enemy&&enemy.hp>0&&hp>0
+        &&!battleScenarioRef.current&&battleTutorialStep==null)return useEmergency();
+    return null;
   };
+
+  const setAutoBattleEnabled = (enabled) => {
+    const next=!!enabled;
+    if(!next){stopAutoBattle();return;}
+    autoBattleRef.current=next;
+    setAutoBattle(next);
+    if(next){
+      // 手動操作の途中状態はAUTOの明示entriesと混ぜず、開始時にまとめて破棄する。
+      setSelectedCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);
+      setDragState(null);cardDragActiveRef.current=false;
+      setAutoTurnCycle(n=>n+1);
+    }
+  };
+
+  // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
+  // 通常のWAVE結果・選択画面ではOFFにしない。
+  useEffect(()=>{
+    if(hp<=0||gaveUp||gameState==='CHAMPION'||gameState==='PICK_HERO')stopAutoBattle();
+  },[hp,gaveUp,gameState]);
+
+  // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
+  // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
+  useEffect(()=>{
+    const blocked=gameState!=='BATTLE'||!enemy||enemy.hp<=0||isBusy||
+      autoTurnRunningRef.current||autoTurnScheduledRef.current||!!battleScenarioRef.current||battleTutorialStep!=null||
+      !!skillPicker||!!showDeckInfo||!!showEnemyInfo||!!showHeroInfo||!!showQuitConfirm||!!skillEffectDetail||
+      !!ultimateDistanceBreakReveal||!!extremeRuleOpen||!!effect;
+    if(!autoBattleRef.current||blocked)return;
+    autoTurnScheduledRef.current=true;
+    Promise.resolve().then(async()=>{
+      autoTurnScheduledRef.current=false;
+      if(!autoBattleRef.current||autoTurnRunningRef.current)return;
+      autoTurnRunningRef.current=true;
+      try{
+        const turnPromise=runAutoTurnOnce();
+        if(!turnPromise){
+          autoBattleRef.current=false;setAutoBattle(false);
+          addPopup('AUTO停止：使えるカードがありません','hero','text-amber-300 text-sm font-black');
+          return;
+        }
+        await turnPromise;
+      } finally {
+        autoTurnRunningRef.current=false;
+        // processTurn完了後のstateが操作可能になった描画を、次の1回の判定へつなぐ。
+        if(autoBattleRef.current)setAutoTurnCycle(n=>n+1);
+      }
+    });
+  },[autoBattle,autoTurnCycle,gameState,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,skillEffectDetail,ultimateDistanceBreakReveal,extremeRuleOpen,effect,battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -11229,6 +11370,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (runFinalizingRef.current) return;
     setEffect(null);
     if (wave === 10) {
+      stopAutoBattle();
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
       runFinalizingRef.current = true;
       setRunFinalizing(true);
@@ -11290,7 +11432,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const nextStats = quickGrowth?.nextStats;
     setQuickGrowth(null);
     const joinWaves = [2, 4, 6];
-    const activeIds = slots.filter(s => s).map(s => s.id);
+    const activeIds = slots.filter(Boolean).map(joinRosterEntry);
     const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
     if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
       setMonSelection(avail);
@@ -11597,6 +11739,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // variant は 'v2'(いまの本番。新しいモード選択から始まる)と
   // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
+    stopAutoBattle();
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
@@ -11631,6 +11774,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
   // 戻してしまうので、練習中は必ずこちらを通してビギナー・チャレンジ・保存なしを保つ
   const beginBattleTutorialRun = () => {
+    stopAutoBattle();
     debugBattleRef.current = true;
     debugResultRef.current = false;
     setDebugBattle(true); setDebugOutcome(null);
@@ -11762,6 +11906,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   }, [battleTutorialStep, gameState, currentPickingMon]);
 
   const startDebugBattle = (extreme=false) => {
+    stopAutoBattle();
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
     const savedParty = getActiveMonsterList();
     const party = (debugStrongestHero
@@ -11881,9 +12026,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setGameState('PICK_TEACHING');
   };
 
-  const confirmPickTeaching = () => {
-    if (!selectedTeachingCard) return;
-    const teaching=selectedTeachingCard; const alreadyOwned=ownedTeachings.find(t=>t.id===teaching.id);
+  const confirmPickTeaching = (explicitTeaching=null) => {
+    const teaching=explicitTeaching||selectedTeachingCard;
+    if (!teaching) return;
+    const alreadyOwned=ownedTeachings.find(t=>t.id===teaching.id);
     let nextTeachings=[...ownedTeachings]; let isUpgrade=false;
     if (alreadyOwned) {
       nextTeachings=nextTeachings.map(t=>{if(t.id===teaching.id){const nextEvo=Math.min(2,t.evoLevel+1); return {...t,evoLevel:nextEvo,baseValue:t.baseValue+t.step};} return t;}); isUpgrade=true;
@@ -11915,7 +12061,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setTimeout(()=>{
       setEffect(null);
       const joinWaves=[2,4,6];
-      const activeIds=slots.filter(s=>s).map(s=>s.id);
+      const activeIds=slots.filter(Boolean).map(joinRosterEntry);
       const avail=pickJoinCandidates(joinCandidatePool(),activeIds,mainHero?.id,joinOfferSize());
       if(joinWaves.includes(wave)&&slots.filter(s=>s).length<4&&avail.length>0){
         setMonSelection(avail); setGameState('PICK_ALLY');
@@ -11932,6 +12078,135 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       } else { initBattle(wave+1,slots,ownedUniques,ownedTeachings,nDef); }
     },battleMs(900));
   };
+
+  // UPGRADE_SKILL画面の手動ボタンとAUTOが共有する既存の次画面処理。
+  const continueAfterUniqueUpgrade = () => {
+    const availableTeachings=getActiveTeachingCards().filter(tc=>{const owned=ownedTeachings.find(ot=>ot.id===tc.id); return!owned||owned.evoLevel<2;});
+    setTeachingPool(availableTeachings.sort(()=>Math.random()-0.5).slice(0,4));
+    setGameState('PICK_TEACHING');
+  };
+
+  // AUTO中にWAVE後の画面へ入ったときだけ、各画面の既存handlerを1回だけ呼んで進める。
+  // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ処理を二重に開始しない。
+  useEffect(()=>{
+    if(gameState!=='WAVE_RESULT'&&gameState!=='REWARD_PICK'&&gameState!=='QUICK_GROWTH'&&gameState!=='PICK_ALLY'&&gameState!=='QUICK_JOIN'&&gameState!=='PICK_TEACHING'&&gameState!=='UPGRADE_SKILL'){
+      autoPostWaveRunningRef.current=false;
+      autoPostWaveScheduledRef.current=false;
+      return;
+    }
+    if(gameState==='WAVE_RESULT'||gameState==='QUICK_GROWTH'||gameState==='QUICK_JOIN'){
+      autoPostWaveRunningRef.current=false;
+      autoPostWaveScheduledRef.current=false;
+      if(!autoBattleRef.current)return;
+      autoPostWaveScheduledRef.current=true;
+      Promise.resolve().then(()=>{
+        autoPostWaveScheduledRef.current=false;
+        if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;
+        autoPostWaveRunningRef.current=true;
+        if(gameState==='WAVE_RESULT') handleNextWave();
+        else if(gameState==='QUICK_GROWTH') finishQuickGrowth();
+        else finishQuickJoin();
+      });
+      return;
+    }
+    if(gameState==='REWARD_PICK'){
+      // WAVE_RESULTの処理中ロックを引き継がず、このトレーニング画面を独立した1回として予約する。
+      autoPostWaveRunningRef.current=false;
+      autoPostWaveScheduledRef.current=false;
+      if(!autoBattleRef.current)return;
+      autoPostWaveScheduledRef.current=true;
+      Promise.resolve().then(()=>{
+        autoPostWaveScheduledRef.current=false;
+        if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;
+        autoPostWaveRunningRef.current=true;
+        const picks=chooseAutoTrainingPicks(autoSettings.strategy);
+        handleTraining(picks);
+      });
+      return;
+    }
+    if(gameState==='PICK_ALLY'){
+      // REWARD_PICKの処理中ロックをこの画面への遷移時に引き継がず、同じロックで加入を1回だけ予約する。
+      autoPostWaveRunningRef.current=false;
+      autoPostWaveScheduledRef.current=false;
+      if(!autoBattleRef.current)return;
+      autoPostWaveScheduledRef.current=true;
+      Promise.resolve().then(()=>{
+        autoPostWaveScheduledRef.current=false;
+        if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;
+        autoPostWaveRunningRef.current=true;
+        const settingIndex=[2,4,6].indexOf(wave);
+        const choice=settingIndex>=0?chooseAutoAllyJoin({
+          pool:joinCandidatePool(), activeMons:slots.filter(Boolean), heroId:mainHero?.id,
+          setting:autoSettings.allies[settingIndex], slots,
+        }):null;
+        if(!choice){
+          stopAutoBattle();
+          addPopup('AUTO停止：供モンを選べません','hero','text-amber-300 font-black text-sm');
+          return;
+        }
+        setupMon(choice.mon,choice.slotIdx);
+      });
+      return;
+    }
+    if(gameState==='PICK_TEACHING'){
+      autoPostWaveRunningRef.current=false;
+      autoPostWaveScheduledRef.current=false;
+      if(!autoBattleRef.current)return;
+      autoPostWaveScheduledRef.current=true;
+      Promise.resolve().then(()=>{
+        autoPostWaveScheduledRef.current=false;
+        if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;
+        autoPostWaveRunningRef.current=true;
+        // confirmPickTeachingと同じ既存判定(!enemy)を使って、初回とWAVE後を区別する。
+        const choice=chooseAutoTeachingCard(teachingPool,ownedTeachings,!enemy);
+        if(!choice){
+          stopAutoBattle();
+          addPopup('AUTO停止：アシストカードを選べません','hero','text-amber-300 font-black text-sm');
+          return;
+        }
+        confirmPickTeaching(choice);
+      });
+      return;
+    }
+    if(gameState==='UPGRADE_SKILL'){
+      autoPostWaveRunningRef.current=false;
+      autoPostWaveScheduledRef.current=false;
+      if(!autoBattleRef.current)return;
+      autoPostWaveScheduledRef.current=true;
+      Promise.resolve().then(()=>{
+        autoPostWaveScheduledRef.current=false;
+        if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;
+        autoPostWaveRunningRef.current=true;
+        const entries=uniqueUpgradeEntries();
+        const plan=chooseAutoUniqueUpgradePlan(
+          entries.map(entry=>({key:entry.rowKey,level:entry.u.evoLevel||0})),
+          upgradePoints,
+          MAX_UNIQUE_SKILL_LEVEL,
+        );
+        if(!plan){
+          stopAutoBattle();
+          autoPostWaveRunningRef.current=false;
+          addPopup('AUTO停止：固有技を強化できません','hero','text-amber-300 font-black text-sm');
+          return;
+        }
+        // 最終値を先に確定し、技・残りポイントを一括反映してから共通の進行処理を1回だけ呼ぶ。
+        const nextOwnedUniques=ownedUniques.map(u=>{
+          const level=plan.levels[`own:${u.monId}`];
+          return level==null?u:{...u,evoLevel:level};
+        });
+        const nextInheritedUniqueEvo={...inheritedUniqueEvo};
+        entries.filter(entry=>entry.inherited).forEach(entry=>{
+          const match=/^inh:(\d+):(\d+)$/.exec(entry.rowKey);
+          if(match) nextInheritedUniqueEvo[inhEvoKey(Number(match[1]),Number(match[2]))]=plan.levels[entry.rowKey];
+        });
+        setOwnedUniques(nextOwnedUniques);
+        setInheritedUniqueEvo(nextInheritedUniqueEvo);
+        setUpgradePoints(plan.remainingPoints);
+        continueAfterUniqueUpgrade();
+      });
+      return;
+    }
+  },[autoBattle,gameState]);
 
   const upgradeUnique = (monId, diff) => {
     setOwnedUniques(prev=>prev.map(u=>{
@@ -15064,7 +15339,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 移動の吹き出し(画面の上から22%)と重なるため、左の「緊急」と同じ高さまで下げている */}
               <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">解析</span></button>
               <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">ステータス</span></button>
-              <button onClick={useEmergency} disabled={isBusy||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
+              <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
               <div className="mt-1 relative flex flex-col items-center">
                 {enemySkillName&&(
                   <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:'skillNamePop 350ms ease-out forwards'}}>
@@ -15478,7 +15753,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   const distanceBreakPercent=100*(0.5**distanceBreakLevel);
                   const distanceBreakRoman=['','I','II','III','IV'][distanceBreakLevel]||String(distanceBreakLevel);
                   return(<button key={i} data-slot-index={i} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
-                    if(isBusy)return;
+                    if(isBusy||autoBattleRef.current)return;
                     if(pendingCard!=null && canAssign){
                       setCardAssignments(p=>({...p,[pendingCard]:i}));
                       setPendingCard(null);
@@ -15487,7 +15762,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       setSlotSettle(i);
                       setTimeout(()=>{ setSlotSettle(null); }, 500);
                     }
-                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
+                  }} disabled={isBusy||autoBattle} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
                     {distanceBroken&&<>
                       <div className="absolute inset-0 rounded-lg pointer-events-none z-[15]" style={{background:`repeating-linear-gradient(${135+distanceBreakLevel*12}deg,rgba(0,0,0,.12) 0 ${Math.max(3,8-distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8,.28+distanceBreakLevel*.14)}) ${Math.max(4,9-distanceBreakLevel)}px ${Math.max(5,10-distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel>=2?'69,10,10':'88,28,135'},.55),rgba(5,0,2,.9))`}}></div>
                       <div className="absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]" style={{boxShadow:'inset 0 0 12px rgba(239,68,68,.7)'}}></div>
@@ -15498,7 +15773,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                     <div className={`h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[7px] font-black text-indigo-300">×{assignedCount}</span>}</div>
                     {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=slotUniqueChoice[i]||'own'; const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
-                      return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy)return; cycleActiveUniqueForSlot(i);}} className="shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95">
+                      return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                         <RefreshCcw size={7} className="text-white"/><span className="text-[6px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
                       </div>);
                     })()}
@@ -15551,9 +15826,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                     「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
                 <span className={`shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`}>Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}</span>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1 shrink-0 min-w-0">
                   <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={10}/><span className="text-[7px]">VIEW</span></button>
-                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
+                  <button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={()=>setAutoBattleEnabled(!autoBattleRef.current)} aria-pressed={autoBattle} className={`h-8 min-w-[48px] px-1.5 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoBattle?'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]':'border-slate-500 bg-slate-800 text-slate-300'}`}><span className="block text-[7px]">{autoBattle?'ON':'OFF'}</span>AUTO{autoBattle?' ON':''}</button>
+                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!autoBattle&&!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`h-9 min-w-0 px-3 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={12}/> Action</button>);})()}
                 </div>
               </div>
               {/* 使うカードが決まっている番は、その種類だけを光らせる(枠全体は光らせない) */}
@@ -15569,14 +15845,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
                   const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
                   return(<div key={c.uid} className="flex-1 min-w-0 max-w-[20%] flex"><button onPointerDown={(e)=>{
-                    if(isBusy||!tutorialAllowed)return;
+                    if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                     const pt=e.touches?e.touches[0]:e;
                     cardDragActiveRef.current=false;
                     setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
                   }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                     {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                     {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[9px]">{assignedMon.emoji}</span>}</div>)}
-                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
+                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
                 })}
               </div>
             </div>
@@ -16064,7 +16340,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[7px] bg-amber-600 text-white px-1.5 rounded">強化後</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
                   })}
                 </div>
-                <div className="flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={confirmPickTeaching} className="flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
+                <div className="flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={()=>confirmPickTeaching()} className="flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
               </div>
             </div>
           )}
@@ -16564,7 +16840,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="w-full max-w-sm space-y-3 mb-2 min-h-0 overflow-y-auto mh-scroll flex-1 p-1 flex flex-col justify-start pt-2">
             {uniqueUpgradeEntries().map(e=>uniqueUpgradeRow(e))}
           </div>
-          <button onClick={()=>{const availableTeachings=getActiveTeachingCards().filter(tc=>{const owned=ownedTeachings.find(ot=>ot.id===tc.id); return!owned||owned.evoLevel<2;}); setTeachingPool(availableTeachings.sort(()=>Math.random()-0.5).slice(0,4)); setGameState('PICK_TEACHING');}} className="w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0">ブリーダー継承へ</button>
+          <button onClick={continueAfterUniqueUpgrade} className="w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0">ブリーダー継承へ</button>
         </div>
       )}
 

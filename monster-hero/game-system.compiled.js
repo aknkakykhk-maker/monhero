@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f66b1dfcd4508277
+// source-sha256: 6927f6ce5845c375
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 11:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 11:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -326,11 +326,35 @@ const battleModeAssistantScene = mode => mode === EXTREME_MODE.id ? 'extremeChal
 // activeIds で外れるが、そこに頼ると取りこぼしたときに自分自身が候補として出てしまうため、
 // 種idでも明示的に外している。
 // プロモードは pool に「始める前に選んだ5体」が入るので、そこからランダムに offerSize 体だけ出る。
+const joinRosterEntry = mon => mon?.masuId != null ? `masu:${mon.masuId}` : mon?.id || null;
 const pickJoinCandidates = (pool, activeIds, heroId, offerSize) => {
   const used = new Set([...(Array.isArray(activeIds) ? activeIds : []), heroId].filter(Boolean));
-  const list = (Array.isArray(pool) ? pool : []).filter(m => m && m.id && !used.has(m.id));
+  const list = (Array.isArray(pool) ? pool : []).filter(m => m && m.id && m.id !== heroId && !used.has(joinRosterEntry(m)));
   const shuffled = [...list].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.max(0, Number(offerSize) || 0));
+};
+
+// AUTOの供モンと配置先だけを決める。候補の合法判定は手動と同じpickJoinCandidatesを通し、
+// 実際の加入ボーナスやモード別処理は既存のsetupMonへ任せる。
+const chooseAutoAllyJoin = ({
+  pool,
+  activeMons,
+  heroId,
+  setting,
+  slots
+}, rng = Math.random) => {
+  const activeEntries = (Array.isArray(activeMons) ? activeMons : []).map(joinRosterEntry).filter(Boolean);
+  const legal = pickJoinCandidates(pool, activeEntries, heroId, Array.isArray(pool) ? pool.length : 0);
+  const desired = setting?.rosterEntry;
+  const mon = (desired ? legal.find(candidate => joinRosterEntry(candidate) === desired) : null) || legal[Math.floor(rng() * legal.length)];
+  const emptySlots = (Array.isArray(slots) ? slots : []).map((value, index) => value == null ? index : null).filter(index => index != null);
+  if (!mon || emptySlots.length === 0) return null;
+  const preferred = Number.isInteger(setting?.slot) && emptySlots.includes(setting.slot) ? setting.slot : null;
+  const slotIdx = preferred ?? emptySlots[Math.floor(rng() * emptySlots.length)];
+  return {
+    mon,
+    slotIdx
+  };
 };
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
@@ -419,6 +443,35 @@ const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 最大ガッツそのものは増やさず、最大までの範囲で現在値だけを回復する。
 const GUTS_RECOVERY_POINT_COST = 1; // 1回に使う強化ポイント
 const GUTS_RECOVERY_AMOUNT = 10; // 1回で戻る現在ガッツ
+// UPGRADE_SKILLのAUTO配分を同期的に決める。画面に並んだ合法な技だけを受け取り、
+// 1Pごとに候補を引き直すため、途中で上限へ達した技は以後の抽選から外れる。
+const chooseAutoUniqueUpgradePlan = (uniques, upgradePoints, maxLevel = MAX_UNIQUE_SKILL_LEVEL, rng = Math.random) => {
+  if (!Array.isArray(uniques) || !Number.isInteger(upgradePoints) || upgradePoints < 0 || !Number.isInteger(maxLevel) || maxLevel < 0 || typeof rng !== 'function') return null;
+  const levels = {};
+  const allocations = {};
+  for (const entry of uniques) {
+    const key = typeof entry?.key === 'string' ? entry.key : '';
+    const level = entry?.level;
+    if (!key || Object.prototype.hasOwnProperty.call(levels, key) || !Number.isInteger(level) || level < 0 || level > maxLevel) return null;
+    levels[key] = level;
+  }
+  let remainingPoints = upgradePoints;
+  while (remainingPoints > 0) {
+    const candidates = Object.keys(levels).filter(key => levels[key] < maxLevel);
+    if (candidates.length === 0) break;
+    const roll = rng();
+    if (!Number.isFinite(roll) || roll < 0 || roll >= 1) return null;
+    const key = candidates[Math.floor(roll * candidates.length)];
+    levels[key] += 1;
+    allocations[key] = (allocations[key] || 0) + 1;
+    remainingPoints -= 1;
+  }
+  return {
+    allocations,
+    levels,
+    remainingPoints
+  };
+};
 const INHERITED_UNIQUE_LEVEL_KEY_PREFIX = 'inhId:';
 let inheritedUniqueIdSequence = 0;
 const createInheritedUniqueId = () => {
@@ -7677,6 +7730,13 @@ const chooseAutoTurn = ({
   return picked;
 };
 
+// 現在の配置・手札では合法だが、ガッツだけが足りない行動があるかを確認する。
+// 方針や合法判定はchooseAutoTurnへ一本化し、存在確認なので固定rngを使う。
+const hasAutoTurnWithEnoughGuts = options => chooseAutoTurn({
+  ...options,
+  guts: Number.MAX_SAFE_INTEGER
+}, () => 0).length > 0;
+
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
 // bg=選んだときの背景色 / text=選んでいないときの文字色(難易度の雰囲気に合わせた色)。
 // Tailwindの動的なクラス生成は稀に失敗して色が出ないことがあるため、実際の色はinline styleで指定する
@@ -8022,6 +8082,29 @@ const TRAINING_OPTIONS = Object.freeze([Object.freeze({
   statLabel: 'ガッツ',
   effect: 'ガッツ +5 ＆ +5%'
 })]);
+const chooseAutoTrainingPicks = (strategy, rng = Math.random) => {
+  const fixed = {
+    offense: ['atk', 'guts'],
+    defense: ['hp', 'def'],
+    guts: ['guts', 'guts']
+  }[strategy];
+  if (fixed) return [...fixed];
+  return Array.from({
+    length: TRAINING_PICK_COUNT
+  }, () => {
+    const roll = Math.max(0, Math.min(0.999999999999, Number(rng()) || 0));
+    return TRAINING_OPTIONS[Math.floor(roll * TRAINING_OPTIONS.length)].id;
+  });
+};
+
+// 手動画面へ実際に提示された合法候補だけから選ぶ。ラン開始時は全候補、
+// WAVE後は所持済みかつLv2未満の候補を優先し、同条件内はランダムにする。
+const chooseAutoTeachingCard = (candidates, owned, isInitial, rng = Math.random) => {
+  if (!Array.isArray(candidates) || candidates.length === 0) return null;
+  const preferred = isInitial ? [] : candidates.filter(card => owned.some(item => item.id === card.id && item.evoLevel < 2));
+  const choices = preferred.length > 0 ? preferred : candidates;
+  return choices[Math.floor(rng() * choices.length)] || choices[0] || null;
+};
 const trainingOptionOf = id => TRAINING_OPTIONS.find(option => option.id === id) || null;
 // トレーニング1回ぶんを適用する。丸め方と特殊ルールの掛かり方は旧「能力覚醒」と同じ:
 //   ・割合はULTIMATEのペナルティぶんだけ下がる(max(0, 効果 - ペナルティ))
@@ -12025,6 +12108,21 @@ function MonsterHeroGame() {
   const initialBattleDistanceRef = useRef(2);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
+  // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
+  const [autoBattle, setAutoBattle] = useState(false);
+  const autoBattleRef = useRef(false);
+  const autoTurnRunningRef = useRef(false);
+  const autoTurnScheduledRef = useRef(false);
+  const autoPostWaveRunningRef = useRef(false);
+  const autoPostWaveScheduledRef = useRef(false);
+  const [autoTurnCycle, setAutoTurnCycle] = useState(0);
+  // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
+  const stopAutoBattle = () => {
+    autoBattleRef.current = false;
+    autoTurnScheduledRef.current = false;
+    autoPostWaveScheduledRef.current = false;
+    setAutoBattle(false);
+  };
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
   // プロモードで、始める前に選んだ供モンの候補(ベースモンだけ)。
@@ -14031,7 +14129,10 @@ function MonsterHeroGame() {
   useEffect(() => {
     // 画面が見えなくなったらBGMを止める(他のアプリに切り替えたあとも鳴り続けないように)。
     // 戻ってきたら、止まっているAudioContextを復帰させて鳴らし直す
-    const onHidden = () => Audio_.setPageHidden(true);
+    const onHidden = () => {
+      Audio_.setPageHidden(true);
+      stopAutoBattle();
+    };
     const onVisible = () => {
       Audio_.setPageHidden(false);
       Audio_.resumeIfNeeded();
@@ -17520,6 +17621,7 @@ function MonsterHeroGame() {
     window.alert('アップデート通知テストを未読へ戻しました。');
   };
   const returnToHome = () => {
+    stopAutoBattle();
     debugBattleRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
@@ -17824,6 +17926,7 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
+    stopAutoBattle();
     if (debugBattleRef.current) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
@@ -17850,6 +17953,7 @@ function MonsterHeroGame() {
     setResultProcessing(false);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
   const handleRetry = () => {
+    stopAutoBattle();
     beginNewRankingRun({
       runIdRef,
       scoreSubmittedRef,
@@ -18050,7 +18154,7 @@ function MonsterHeroGame() {
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
   const selectCardAt = (i, showDetail = true) => {
-    if (isBusy) return;
+    if (isBusy || autoBattleRef.current) return;
     const c = hand[i];
     if (!c) return;
     const focus = card => setFocusedCard(showDetail ? card : null);
@@ -18091,7 +18195,7 @@ function MonsterHeroGame() {
   // スワイプ操作ではカード効果のパネルを出さない(出したままだと合計DMG・合計軽減が隠れるため)。
   // 効果を見たいときはカードをタップする。
   const dragAssignToSlot = (cardIndex, slotIdx) => {
-    if (isBusy) return;
+    if (isBusy || autoBattleRef.current) return;
     const c = hand[cardIndex];
     if (!c) return;
     const targetMon = slots[slotIdx];
@@ -19247,7 +19351,8 @@ function MonsterHeroGame() {
       await battleWait(100);
     }
     const drawCount = usedCards.filter(c => c.type === 'draw').length;
-    let nextHand = hand.filter((_, i) => !selectedCards.includes(i));
+    const usedHandIndexes = new Set(usedCardEntries.map(entry => entry.handIndex));
+    let nextHand = hand.filter((_, i) => !usedHandIndexes.has(i));
     let nextDeck = [...deck],
       nextGraveyard = [...graveyard, ...usedCards];
     const replenish = count => {
@@ -19260,7 +19365,7 @@ function MonsterHeroGame() {
         if (nextDeck.length > 0) nextHand.push(nextDeck.pop());
       }
     };
-    replenish(selectedCards.length + drawCount);
+    replenish(usedCardEntries.length + drawCount);
     while (nextHand.length < 5 && (nextDeck.length > 0 || nextGraveyard.length > 0)) replenish(1);
     if (getTurnBuff('zeroGuts', false)) setImmediateTurnBuff('zeroGuts', false);
     writePermaBuffs(p => p.kikiCardBonusTurns > 0 ? {
@@ -19331,8 +19436,72 @@ function MonsterHeroGame() {
       cardNeedsMonster,
       slotMaxUses
     });
-    if (entries.length > 0) processTurn(entries);
+    if (entries.length > 0) return processTurn(entries);
+    const lacksOnlyGuts = hasAutoTurnWithEnoughGuts({
+      hand,
+      slots,
+      cardLimit,
+      strategy: autoSettings.strategy,
+      getCardGuts,
+      cardNeedsMonster,
+      slotMaxUses
+    });
+    if (lacksOnlyGuts && autoBattleRef.current && gameState === 'BATTLE' && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
+    return null;
   };
+  const setAutoBattleEnabled = enabled => {
+    const next = !!enabled;
+    if (!next) {
+      stopAutoBattle();
+      return;
+    }
+    autoBattleRef.current = next;
+    setAutoBattle(next);
+    if (next) {
+      // 手動操作の途中状態はAUTOの明示entriesと混ぜず、開始時にまとめて破棄する。
+      setSelectedCards([]);
+      setCardAssignments({});
+      setPendingCard(null);
+      setFocusedCard(null);
+      setSkillPicker(null);
+      setDragState(null);
+      cardDragActiveRef.current = false;
+      setAutoTurnCycle(n => n + 1);
+    }
+  };
+
+  // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
+  // 通常のWAVE結果・選択画面ではOFFにしない。
+  useEffect(() => {
+    if (hp <= 0 || gaveUp || gameState === 'CHAMPION' || gameState === 'PICK_HERO') stopAutoBattle();
+  }, [hp, gaveUp, gameState]);
+
+  // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
+  // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
+  useEffect(() => {
+    const blocked = gameState !== 'BATTLE' || !enemy || enemy.hp <= 0 || isBusy || autoTurnRunningRef.current || autoTurnScheduledRef.current || !!battleScenarioRef.current || battleTutorialStep != null || !!skillPicker || !!showDeckInfo || !!showEnemyInfo || !!showHeroInfo || !!showQuitConfirm || !!skillEffectDetail || !!ultimateDistanceBreakReveal || !!extremeRuleOpen || !!effect;
+    if (!autoBattleRef.current || blocked) return;
+    autoTurnScheduledRef.current = true;
+    Promise.resolve().then(async () => {
+      autoTurnScheduledRef.current = false;
+      if (!autoBattleRef.current || autoTurnRunningRef.current) return;
+      autoTurnRunningRef.current = true;
+      try {
+        const turnPromise = runAutoTurnOnce();
+        if (!turnPromise) {
+          autoBattleRef.current = false;
+          setAutoBattle(false);
+          addPopup('AUTO停止：使えるカードがありません', 'hero', 'text-amber-300 text-sm font-black');
+          return;
+        }
+        await turnPromise;
+      } finally {
+        autoTurnRunningRef.current = false;
+        // processTurn完了後のstateが操作可能になった描画を、次の1回の判定へつなぐ。
+        if (autoBattleRef.current) setAutoTurnCycle(n => n + 1);
+      }
+    });
+  }, [autoBattle, autoTurnCycle, gameState, enemy?.hp, isBusy, skillPicker, showDeckInfo, showEnemyInfo, showHeroInfo, showQuitConfirm, skillEffectDetail, ultimateDistanceBreakReveal, extremeRuleOpen, effect, battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -19354,6 +19523,7 @@ function MonsterHeroGame() {
     if (runFinalizingRef.current) return;
     setEffect(null);
     if (wave === 10) {
+      stopAutoBattle();
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
       runFinalizingRef.current = true;
       setRunFinalizing(true);
@@ -19441,7 +19611,7 @@ function MonsterHeroGame() {
     const nextStats = quickGrowth?.nextStats;
     setQuickGrowth(null);
     const joinWaves = [2, 4, 6];
-    const activeIds = slots.filter(s => s).map(s => s.id);
+    const activeIds = slots.filter(Boolean).map(joinRosterEntry);
     const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
     if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
       setMonSelection(avail);
@@ -19919,6 +20089,7 @@ function MonsterHeroGame() {
   // variant は 'v2'(いまの本番。新しいモード選択から始まる)と
   // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
+    stopAutoBattle();
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
@@ -19980,6 +20151,7 @@ function MonsterHeroGame() {
   // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
   // 戻してしまうので、練習中は必ずこちらを通してビギナー・チャレンジ・保存なしを保つ
   const beginBattleTutorialRun = () => {
+    stopAutoBattle();
     debugBattleRef.current = true;
     debugResultRef.current = false;
     setDebugBattle(true);
@@ -20135,6 +20307,7 @@ function MonsterHeroGame() {
     };
   }, [battleTutorialStep, gameState, currentPickingMon]);
   const startDebugBattle = (extreme = false) => {
+    stopAutoBattle();
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
     const savedParty = getActiveMonsterList();
     const party = (debugStrongestHero ? [makeDebugStrongestMonster(), ...savedParty.filter(mon => mon?.id !== 'Mocchi')] : savedParty).slice(0, 4);
@@ -20347,9 +20520,9 @@ function MonsterHeroGame() {
     setTeachingPool([...getActiveTeachingCards()]);
     setGameState('PICK_TEACHING');
   };
-  const confirmPickTeaching = () => {
-    if (!selectedTeachingCard) return;
-    const teaching = selectedTeachingCard;
+  const confirmPickTeaching = (explicitTeaching = null) => {
+    const teaching = explicitTeaching || selectedTeachingCard;
+    if (!teaching) return;
     const alreadyOwned = ownedTeachings.find(t => t.id === teaching.id);
     let nextTeachings = [...ownedTeachings];
     let isUpgrade = false;
@@ -20427,7 +20600,7 @@ function MonsterHeroGame() {
     setTimeout(() => {
       setEffect(null);
       const joinWaves = [2, 4, 6];
-      const activeIds = slots.filter(s => s).map(s => s.id);
+      const activeIds = slots.filter(Boolean).map(joinRosterEntry);
       const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
       if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
         setMonSelection(avail);
@@ -20452,6 +20625,143 @@ function MonsterHeroGame() {
       }
     }, battleMs(900));
   };
+
+  // UPGRADE_SKILL画面の手動ボタンとAUTOが共有する既存の次画面処理。
+  const continueAfterUniqueUpgrade = () => {
+    const availableTeachings = getActiveTeachingCards().filter(tc => {
+      const owned = ownedTeachings.find(ot => ot.id === tc.id);
+      return !owned || owned.evoLevel < 2;
+    });
+    setTeachingPool(availableTeachings.sort(() => Math.random() - 0.5).slice(0, 4));
+    setGameState('PICK_TEACHING');
+  };
+
+  // AUTO中にWAVE後の画面へ入ったときだけ、各画面の既存handlerを1回だけ呼んで進める。
+  // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ処理を二重に開始しない。
+  useEffect(() => {
+    if (gameState !== 'WAVE_RESULT' && gameState !== 'REWARD_PICK' && gameState !== 'QUICK_GROWTH' && gameState !== 'PICK_ALLY' && gameState !== 'QUICK_JOIN' && gameState !== 'PICK_TEACHING' && gameState !== 'UPGRADE_SKILL') {
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      return;
+    }
+    if (gameState === 'WAVE_RESULT' || gameState === 'QUICK_GROWTH' || gameState === 'QUICK_JOIN') {
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      if (!autoBattleRef.current) return;
+      autoPostWaveScheduledRef.current = true;
+      Promise.resolve().then(() => {
+        autoPostWaveScheduledRef.current = false;
+        if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
+        autoPostWaveRunningRef.current = true;
+        if (gameState === 'WAVE_RESULT') handleNextWave();else if (gameState === 'QUICK_GROWTH') finishQuickGrowth();else finishQuickJoin();
+      });
+      return;
+    }
+    if (gameState === 'REWARD_PICK') {
+      // WAVE_RESULTの処理中ロックを引き継がず、このトレーニング画面を独立した1回として予約する。
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      if (!autoBattleRef.current) return;
+      autoPostWaveScheduledRef.current = true;
+      Promise.resolve().then(() => {
+        autoPostWaveScheduledRef.current = false;
+        if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
+        autoPostWaveRunningRef.current = true;
+        const picks = chooseAutoTrainingPicks(autoSettings.strategy);
+        handleTraining(picks);
+      });
+      return;
+    }
+    if (gameState === 'PICK_ALLY') {
+      // REWARD_PICKの処理中ロックをこの画面への遷移時に引き継がず、同じロックで加入を1回だけ予約する。
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      if (!autoBattleRef.current) return;
+      autoPostWaveScheduledRef.current = true;
+      Promise.resolve().then(() => {
+        autoPostWaveScheduledRef.current = false;
+        if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
+        autoPostWaveRunningRef.current = true;
+        const settingIndex = [2, 4, 6].indexOf(wave);
+        const choice = settingIndex >= 0 ? chooseAutoAllyJoin({
+          pool: joinCandidatePool(),
+          activeMons: slots.filter(Boolean),
+          heroId: mainHero?.id,
+          setting: autoSettings.allies[settingIndex],
+          slots
+        }) : null;
+        if (!choice) {
+          stopAutoBattle();
+          addPopup('AUTO停止：供モンを選べません', 'hero', 'text-amber-300 font-black text-sm');
+          return;
+        }
+        setupMon(choice.mon, choice.slotIdx);
+      });
+      return;
+    }
+    if (gameState === 'PICK_TEACHING') {
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      if (!autoBattleRef.current) return;
+      autoPostWaveScheduledRef.current = true;
+      Promise.resolve().then(() => {
+        autoPostWaveScheduledRef.current = false;
+        if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
+        autoPostWaveRunningRef.current = true;
+        // confirmPickTeachingと同じ既存判定(!enemy)を使って、初回とWAVE後を区別する。
+        const choice = chooseAutoTeachingCard(teachingPool, ownedTeachings, !enemy);
+        if (!choice) {
+          stopAutoBattle();
+          addPopup('AUTO停止：アシストカードを選べません', 'hero', 'text-amber-300 font-black text-sm');
+          return;
+        }
+        confirmPickTeaching(choice);
+      });
+      return;
+    }
+    if (gameState === 'UPGRADE_SKILL') {
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      if (!autoBattleRef.current) return;
+      autoPostWaveScheduledRef.current = true;
+      Promise.resolve().then(() => {
+        autoPostWaveScheduledRef.current = false;
+        if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
+        autoPostWaveRunningRef.current = true;
+        const entries = uniqueUpgradeEntries();
+        const plan = chooseAutoUniqueUpgradePlan(entries.map(entry => ({
+          key: entry.rowKey,
+          level: entry.u.evoLevel || 0
+        })), upgradePoints, MAX_UNIQUE_SKILL_LEVEL);
+        if (!plan) {
+          stopAutoBattle();
+          autoPostWaveRunningRef.current = false;
+          addPopup('AUTO停止：固有技を強化できません', 'hero', 'text-amber-300 font-black text-sm');
+          return;
+        }
+        // 最終値を先に確定し、技・残りポイントを一括反映してから共通の進行処理を1回だけ呼ぶ。
+        const nextOwnedUniques = ownedUniques.map(u => {
+          const level = plan.levels[`own:${u.monId}`];
+          return level == null ? u : {
+            ...u,
+            evoLevel: level
+          };
+        });
+        const nextInheritedUniqueEvo = {
+          ...inheritedUniqueEvo
+        };
+        entries.filter(entry => entry.inherited).forEach(entry => {
+          const match = /^inh:(\d+):(\d+)$/.exec(entry.rowKey);
+          if (match) nextInheritedUniqueEvo[inhEvoKey(Number(match[1]), Number(match[2]))] = plan.levels[entry.rowKey];
+        });
+        setOwnedUniques(nextOwnedUniques);
+        setInheritedUniqueEvo(nextInheritedUniqueEvo);
+        setUpgradePoints(plan.remainingPoints);
+        continueAfterUniqueUpgrade();
+      });
+      return;
+    }
+  }, [autoBattle, gameState]);
   const upgradeUnique = (monId, diff) => {
     setOwnedUniques(prev => prev.map(u => {
       if (u.monId === monId) {
@@ -29722,7 +30032,7 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-white"
     }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
       onClick: useEmergency,
-      disabled: isBusy || !battleTutorialAllowsEmergency,
+      disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
       className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
     }, /*#__PURE__*/React.createElement(Activity, {
       className: "text-blue-400 mb-0.5",
@@ -30613,7 +30923,7 @@ function MonsterHeroGame() {
         "data-distance-break-level": distanceBroken ? distanceBreakLevel : undefined,
         "aria-label": `${RANGE_LABELS[i]}距離${distanceBroken ? `（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）` : ''}`,
         onClick: () => {
-          if (isBusy) return;
+          if (isBusy || autoBattleRef.current) return;
           if (pendingCard != null && canAssign) {
             setCardAssignments(p => ({
               ...p,
@@ -30628,7 +30938,7 @@ function MonsterHeroGame() {
             }, 500);
           }
         },
-        disabled: isBusy,
+        disabled: isBusy || autoBattle,
         className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
         style: isAnimating ? {
           zIndex: 9999,
@@ -30673,10 +30983,10 @@ function MonsterHeroGame() {
           onPointerDown: e => e.stopPropagation(),
           onClick: e => {
             e.stopPropagation();
-            if (isBusy) return;
+            if (isBusy || autoBattleRef.current) return;
             cycleActiveUniqueForSlot(i);
           },
-          className: "shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95"
+          className: `shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle ? ' opacity-40' : ''}`
         }, /*#__PURE__*/React.createElement(RefreshCcw, {
           size: 7,
           className: "text-white"
@@ -30806,7 +31116,7 @@ function MonsterHeroGame() {
     }), "+", heroCardBonus), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
       className: "px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
     }, "\u5FDC\u63F4+1")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 shrink-0"
+      className: "flex items-center gap-1 shrink-0 min-w-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(true),
       className: `flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`
@@ -30814,16 +31124,24 @@ function MonsterHeroGame() {
       size: 10
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px]"
-    }, "VIEW")), (() => {
+    }, "VIEW")), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      disabled: !!battleScenarioRef.current || battleTutorialStep != null,
+      onClick: () => setAutoBattleEnabled(!autoBattleRef.current),
+      "aria-pressed": autoBattle,
+      className: `h-8 min-w-[48px] px-1.5 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[7px]"
+    }, autoBattle ? 'ON' : 'OFF'), "AUTO", autoBattle ? ' ON' : ''), (() => {
       const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
-      const canAct = !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
+      const canAct = !autoBattle && !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => processTurn(),
         disabled: !canAct,
-        className: `h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
+        className: `h-9 min-w-0 px-3 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
       }, /*#__PURE__*/React.createElement(Play, {
         fill: "currentColor",
-        size: 13
+        size: 12
       }), " Action");
     })())), /*#__PURE__*/React.createElement("div", {
       className: `flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget ? '' : battleTutorialSpotClass('cards')}`
@@ -30845,7 +31163,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-w-0 max-w-[20%] flex"
       }, /*#__PURE__*/React.createElement("button", {
         onPointerDown: e => {
-          if (isBusy || !tutorialAllowed) return;
+          if (isBusy || autoBattleRef.current || !tutorialAllowed) return;
           const pt = e.touches ? e.touches[0] : e;
           cardDragActiveRef.current = false;
           setDragState({
@@ -30895,7 +31213,7 @@ function MonsterHeroGame() {
       }, ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
         onClick: ev => {
           ev.stopPropagation();
-          if (isBusy || Date.now() <= suppressCardClickRef.current) return;
+          if (isBusy || autoBattleRef.current || Date.now() <= suppressCardClickRef.current) return;
           setSkillPicker({
             handIndex: i
           });
@@ -31970,7 +32288,7 @@ function MonsterHeroGame() {
       onClick: () => setSelectedTeachingCard(null),
       className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      onClick: confirmPickTeaching,
+      onClick: () => confirmPickTeaching(),
       className: "flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs"
     }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する"))))), gameState === 'QUICK_GROWTH' && quickGrowth && /*#__PURE__*/React.createElement(QuickStepScreen, {
       onDone: finishQuickGrowth,
@@ -33008,14 +33326,7 @@ function MonsterHeroGame() {
     })(), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm space-y-3 mb-2 min-h-0 overflow-y-auto mh-scroll flex-1 p-1 flex flex-col justify-start pt-2"
     }, uniqueUpgradeEntries().map(e => uniqueUpgradeRow(e))), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        const availableTeachings = getActiveTeachingCards().filter(tc => {
-          const owned = ownedTeachings.find(ot => ot.id === tc.id);
-          return !owned || owned.evoLevel < 2;
-        });
-        setTeachingPool(availableTeachings.sort(() => Math.random() - 0.5).slice(0, 4));
-        setGameState('PICK_TEACHING');
-      },
+      onClick: continueAfterUniqueUpgrade,
       className: "w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0"
     }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D99\u627F\u3078")), gameState === 'WAVE_RESULT' && waveResult &&
     /*#__PURE__*/

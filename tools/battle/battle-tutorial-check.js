@@ -255,7 +255,7 @@ check('アシストカードは押せるカードだけ光らせる',
     && !has("content-center${battleTutorialSpotClass('teachings')}"));
 check('手札は使わせたい種類だけ押せる',
   has('const battleTutorialCardAllowed = (card) => {')
-    && has('if(isBusy||!tutorialAllowed)return;')
+    && has('if(isBusy||autoBattleRef.current||!tutorialAllowed)return;')
     && has('return !battleTutorialCardTarget || battleTutorialCardKind(card) === battleTutorialCardTarget;'));
 check('手札は使わせたい種類だけ光らせる',
   has("${tutorialTargeted?' is-battle-tutorial-spot':''}")
@@ -271,7 +271,7 @@ check('技変更の番はACTIONを押せない',
 check('押す場所は説明中から光っている',
   steps.some(s => s.wait === 'next' && s.needCard));
 check('緊急回復はその番だけ押せる',
-  has('const battleTutorialAllowsEmergency = !battleTutorialNeed') && has('disabled={isBusy||!battleTutorialAllowsEmergency}'));
+  has('const battleTutorialAllowsEmergency = !battleTutorialNeed') && has('disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency}'));
 // 押してほしい場所を光らせる
 const SPOTS = ['modeTabs', 'rankingBtn', 'difficulty', 'battleStart',
   'monCards', 'monDecide', 'slots', 'teachings',

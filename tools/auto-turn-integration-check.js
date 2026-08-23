@@ -7,7 +7,7 @@ const assert = require('assert');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const processStart = source.indexOf('const processTurn = async (explicitEntries = null) =>');
 const autoStart = source.indexOf('const runAutoTurnOnce = () =>', processStart);
-const autoEnd = source.indexOf('// WAVE 10', autoStart);
+const autoEnd = source.indexOf('const setAutoBattleEnabled =', autoStart);
 
 assert(processStart >= 0, 'processTurnの明示entries引数が見つかりません');
 assert(autoStart > processStart && autoEnd > autoStart, 'runAutoTurnOnceの定義が見つかりません');
@@ -27,7 +27,10 @@ for (const input of ['hand', 'slots', 'guts', 'cardLimit', 'strategy:autoSetting
   'getCardGuts', 'cardNeedsMonster', 'slotMaxUses']) {
   assert(autoSource.includes(input), `chooseAutoTurnへ${input}を渡していません`);
 }
-assert(autoSource.includes('if (entries.length>0) processTurn(entries)'), '明示entriesを空でない場合だけprocessTurnへ渡していません');
+assert(autoSource.includes('if(entries.length>0)return processTurn(entries);'), '合法なカードを通常のターン処理へ渡していません');
+assert(autoSource.includes('const lacksOnlyGuts=hasAutoTurnWithEnoughGuts({'), '十分なガッツなら合法行動があるか確認していません');
+assert(autoSource.includes('return useEmergency();'), 'ガッツだけが不足する場合に既存の緊急回復を返していません');
+assert(autoSource.includes('return null;'), '解決不能な合法行動なしを呼び出し元へ返していません');
 assert(!/setSelectedCards|setCardAssignments|setPendingCard/.test(autoSource),
   'runAutoTurnOnceが選択stateの更新を経由しています');
 assert(source.includes('onClick={()=>processTurn()}'), 'ACTIONがclick eventをprocessTurnへ直接渡します');
