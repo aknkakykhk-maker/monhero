@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-23 13:13",
+    date: "2026-08-23 13:20",
     type: 'update',
     title: '呼び方を決められるようになったことを助手が教えてくれます',
     assistantNotice: { id:'update_notice_assistant_call_style_guide_v1', type:'feature' },

@@ -16,40 +16,45 @@ for(const token of [
   "autoRepeatRef.current===true&&ECO_MODES.includes(mode)?mode:'off'",
   'const cycleEcoMode = () =>',
   "const liteBattleView = gameState==='BATTLE'&&ecoMode==='lite'",
+  "const ultraBattleView = gameState==='BATTLE'&&ecoMode==='ultra'",
+  'const ecoBattleView = liteBattleView||ultraBattleView',
 ])if(!eco.includes(token))fail(`省エネ状態に ${token} がありません`);
-if(/ecoMode==='ultra'|ecoMode!=='off'/.test(source))fail('ultraが表示へ接続されています');
 const stopAll=between('const stopAllAuto = () => {','const [monSelection');
 if(!stopAll.includes("setEcoModeSafe('off')"))fail('stopAllAutoで省エネをOFFにしていません');
 
-const battle=between("{gameState==='BATTLE'&&(",'{/* スキップ: 勇者モンと供モン3体を選ぶ */}');
+const battle=between("{gameState==='BATTLE'&&(",' {/* スキップ: 勇者モンと供モン3体を選ぶ */}'.trimStart());
 for(const token of [
-  "data-eco-view={liteBattleView?'lite':'off'}",
-  'data-lite-eco-dimmer','pointer-events-none',
-  'WAVE {wave}/10','{turnCount}/20','{enemy.name}',
-  'enemy.hp','Ally Life','Ally Guts','slots.map((s,i)=>','Action Cards',
-  '{slotSkill.name}','{enemySkillName.label}','data-lite-damage',
-])if(!battle.includes(token))fail(`liteでも残す戦闘表示 ${token} がありません`);
+  "data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}",
+  'data-lite-eco-dimmer','bg-black/20','data-ultra-eco-dimmer','bg-black/45',
+  '[data-eco-view="ultra"] *','animation:none!important','transition:none!important',
+  'WAVE {wave}/10','{turnCount}/20','{enemy.name}','enemy.hp',
+  'Ally Life','Ally Guts','slots.map((s,i)=>','Action Cards',
+  '{slotSkill.name}','{enemySkillName.label}','popups.filter',
+])if(!battle.includes(token))fail(`省エネでも残す戦闘表示 ${token} がありません`);
 for(const token of [
-  '!liteBattleView&&guardFx','!liteBattleView&&teachingFx',
-  "!liteBattleView&&enemyAttackFx?.kind==='move'",
-  "!liteBattleView&&enemyAttackFx?.kind==='normal'",
-  "!liteBattleView&&enemyAttackFx?.kind==='special'",
-  'const isAnimating = !liteBattleView && attackAnim',
-  'screenShake&&!liteBattleView',
-])if(!has(token))fail(`liteの重い描画省略 ${token} がありません`);
+  '!ecoBattleView&&guardFx','!ecoBattleView&&teachingFx',
+  "!ecoBattleView&&enemyAttackFx?.kind==='move'",
+  "!ecoBattleView&&enemyAttackFx?.kind==='normal'",
+  "!ecoBattleView&&enemyAttackFx?.kind==='special'",
+  'const isAnimating = !ecoBattleView && attackAnim',
+  'screenShake&&!ecoBattleView','enemyAttackAnim&&!ecoBattleView',
+])if(!has(token))fail(`ultraのアクション描画省略 ${token} がありません`);
+// liteは従来の個別分岐と20%遮光を保ち、ultra専用の全アニメ停止を混ぜない。
+if(!battle.includes("animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'"))fail('liteの静的な技名表示が維持されていません');
 
 // 省エネは描画分岐だけ。ターン処理・待機・速度・報酬へ判定を持ち込ませない。
 const turn=between('const processTurn = async','// 今回はUIやeffectから呼ばず');
-if(/liteBattleView|ecoMode|ecoModeRef/.test(turn))fail('戦闘計算へ省エネ判定が混入しています');
+if(/(?:lite|ultra|eco)BattleView|ecoMode|ecoModeRef/.test(turn))fail('戦闘計算へ省エネ判定が混入しています');
 for(const token of ['return processTurn(entries)','const battleWait = useCallback((baseMs)','BATTLE_SPEEDS','cycleBattleSpeed'])if(!has(token))fail(`既存wait/速度処理 ${token} がありません`);
 const championStart=source.indexOf("{gameState==='CHAMPION'");
 if(championStart<0)fail('CHAMPION画面を取得できません');
 const champion=source.slice(championStart,championStart+5000);
-if(/liteBattleView|ecoMode|data-lite/.test(champion))fail('CHAMPION報酬演出へ省エネが接続されています');
+if(/(?:lite|ultra|eco)BattleView|ecoMode|data-(?:lite|ultra)/.test(champion))fail('CHAMPION報酬演出へ省エネが接続されています');
 
 const repeatToggle=between('const setAutoRepeatEnabled = (enabled) => {','// 特殊ルール説明を閉じる正規経路');
 if(!repeatToggle.includes('const next=!!enabled&&isQuickMode(runMode)'))fail('∞周回のクイック限定が維持されていません');
 if(!repeatToggle.includes("if(!next)setEcoModeSafe('off')"))fail('AUTO∞ OFF時に省エネをOFFにしていません');
 for(const token of ['flex-1 min-w-0 flex flex-wrap','min-w-[52px] shrink-0'])if(!battle.includes(token))fail('ACTION見切れ防止レイアウトが維持されていません');
 if(/['"]mh_[^'"]*eco/i.test(source)||/localStorage[\s\S]{0,160}(?:ecoMode|eco_mode)/i.test(source))fail('省エネ状態を永続化しています');
-console.log('eco mode battle render check passed');
+if(battle.includes('onClick={cycleEcoMode}')||battle.includes('onClick={()=>cycleEcoMode'))fail('未実装の省エネ切替ボタンがあります');
+console.log('eco mode ultra battle render check passed');
