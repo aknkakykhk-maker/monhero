@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 09:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 09:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6352,6 +6352,12 @@ function MonsterHeroGame() {
   const autoTurnRunningRef = useRef(false);
   const autoTurnScheduledRef = useRef(false);
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
+  // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
+  const stopAutoBattle = () => {
+    autoBattleRef.current = false;
+    autoTurnScheduledRef.current = false;
+    setAutoBattle(false);
+  };
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
   // プロモードで、始める前に選んだ供モンの候補(ベースモンだけ)。
@@ -7795,7 +7801,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     // 画面が見えなくなったらBGMを止める(他のアプリに切り替えたあとも鳴り続けないように)。
     // 戻ってきたら、止まっているAudioContextを復帰させて鳴らし直す
-    const onHidden = () => Audio_.setPageHidden(true);
+    const onHidden = () => { Audio_.setPageHidden(true); stopAutoBattle(); };
     const onVisible = () => { Audio_.setPageHidden(false); Audio_.resumeIfNeeded(); };
     const onVisibilityChange = () => (document.visibilityState === 'hidden' ? onHidden() : onVisible());
     document.addEventListener('visibilitychange', onVisibilityChange);
@@ -10094,6 +10100,7 @@ function MonsterHeroGame() {
   };
 
   const returnToHome = () => {
+    stopAutoBattle();
     debugBattleRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
@@ -10262,6 +10269,7 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
+    stopAutoBattle();
     if (debugBattleRef.current) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
@@ -10287,6 +10295,7 @@ function MonsterHeroGame() {
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
   const handleRetry = () => {
+    stopAutoBattle();
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
     const s = resetAllState();
@@ -11205,6 +11214,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   const setAutoBattleEnabled = (enabled) => {
     const next=!!enabled;
+    if(!next){stopAutoBattle();return;}
     autoBattleRef.current=next;
     setAutoBattle(next);
     if(next){
@@ -11214,6 +11224,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setAutoTurnCycle(n=>n+1);
     }
   };
+
+  // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
+  // 通常のWAVE結果・選択画面ではOFFにしない。
+  useEffect(()=>{
+    if(hp<=0||gaveUp||gameState==='CHAMPION'||gameState==='PICK_HERO')stopAutoBattle();
+  },[hp,gaveUp,gameState]);
 
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
   // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
@@ -11262,6 +11278,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (runFinalizingRef.current) return;
     setEffect(null);
     if (wave === 10) {
+      stopAutoBattle();
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
       runFinalizingRef.current = true;
       setRunFinalizing(true);
@@ -11630,6 +11647,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // variant は 'v2'(いまの本番。新しいモード選択から始まる)と
   // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
+    stopAutoBattle();
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
@@ -11664,6 +11682,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
   // 戻してしまうので、練習中は必ずこちらを通してビギナー・チャレンジ・保存なしを保つ
   const beginBattleTutorialRun = () => {
+    stopAutoBattle();
     debugBattleRef.current = true;
     debugResultRef.current = false;
     setDebugBattle(true); setDebugOutcome(null);
@@ -11795,6 +11814,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   }, [battleTutorialStep, gameState, currentPickingMon]);
 
   const startDebugBattle = (extreme=false) => {
+    stopAutoBattle();
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
     const savedParty = getActiveMonsterList();
     const party = (debugStrongestHero
