@@ -23,13 +23,17 @@ assert(has('const autoPostWaveRunningRef = useRef(false);'), 'WAVE後AUTO実行�
 assert(has('const autoPostWaveScheduledRef = useRef(false);'), 'WAVE後AUTO予約ロックがありません');
 assert(!/setInterval\s*\(/.test(source.slice(source.indexOf('const setAutoBattleEnabled'), source.indexOf('// WAVE 10'))), 'AUTOがsetIntervalを使用しています');
 assert(has('const turnPromise=runAutoTurnOnce();'), '連続AUTOがrunAutoTurnOnceを使用していません');
-assert(has('return entries.length>0 ? processTurn(entries) : null'), 'AUTOが明示entriesのPromiseを返していません');
+assert(has('if(entries.length>0)return processTurn(entries);'), 'AUTOが合法なカードを明示entriesとして処理していません');
+assert(has('const lacksOnlyGuts=hasAutoTurnWithEnoughGuts({'), 'AUTOがガッツ不足だけの行動不能を判定していません');
+assert(has("if(lacksOnlyGuts&&autoBattleRef.current&&gameState==='BATTLE'&&enemy&&enemy.hp>0&&hp>0"), '緊急回復前にAUTO・戦闘・生存状態を再確認していません');
+assert(has('&&!battleScenarioRef.current&&battleTutorialStep==null)return useEmergency();'), '練習を除外して既存の緊急回復を再利用していません');
 assert(has("const blocked=gameState!=='BATTLE'||!enemy||enemy.hp<=0||isBusy||"), 'BATTLE・敵・busyの実行条件がありません');
 assert(has('!!battleScenarioRef.current||battleTutorialStep!=null||'), 'バトル練習のAUTO禁止がありません');
 assert(has("addPopup('AUTO停止：使えるカードがありません'"), '合法行動なしのAUTO停止がありません');
 assert(has('if(isBusy||autoBattleRef.current) return;'), '手動カード選択・割当のAUTOガードがありません');
 assert(has('const canAct=!autoBattle&&!isBusy'), 'AUTO中のACTION無効化がありません');
 assert(has('disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency}'), 'AUTO中の緊急回復無効化がありません');
+assert(has('await turnPromise;'), 'AUTOが緊急回復を含むターン処理の完了を待っていません');
 assert(has("setSelectedCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);"), 'AUTO開始時に手動選択を破棄していません');
 assert(has('const stopAutoBattle = () => {'), 'AUTO停止helperがありません');
 assert(has('autoBattleRef.current = false;\n    autoTurnScheduledRef.current = false;\n    autoPostWaveScheduledRef.current = false;\n    setAutoBattle(false);'), 'AUTO停止helperがref・予約・stateを停止していません');

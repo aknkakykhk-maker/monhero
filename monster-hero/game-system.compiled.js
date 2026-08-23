@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ea72d8dc038ac5da
+// source-sha256: df58bb1a917110ac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 10:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 11:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7721,6 +7721,13 @@ const chooseAutoTurn = ({
   }
   return picked;
 };
+
+// 現在の配置・手札では合法だが、ガッツだけが足りない行動があるかを確認する。
+// 方針や合法判定はchooseAutoTurnへ一本化し、存在確認なので固定rngを使う。
+const hasAutoTurnWithEnoughGuts = options => chooseAutoTurn({
+  ...options,
+  guts: Number.MAX_SAFE_INTEGER
+}, () => 0).length > 0;
 
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
 // bg=選んだときの背景色 / text=選んでいないときの文字色(難易度の雰囲気に合わせた色)。
@@ -19415,7 +19422,18 @@ function MonsterHeroGame() {
       cardNeedsMonster,
       slotMaxUses
     });
-    return entries.length > 0 ? processTurn(entries) : null;
+    if (entries.length > 0) return processTurn(entries);
+    const lacksOnlyGuts = hasAutoTurnWithEnoughGuts({
+      hand,
+      slots,
+      cardLimit,
+      strategy: autoSettings.strategy,
+      getCardGuts,
+      cardNeedsMonster,
+      slotMaxUses
+    });
+    if (lacksOnlyGuts && autoBattleRef.current && gameState === 'BATTLE' && enemy && enemy.hp > 0 && hp > 0 && !battleScenarioRef.current && battleTutorialStep == null) return useEmergency();
+    return null;
   };
   const setAutoBattleEnabled = enabled => {
     const next = !!enabled;
@@ -20625,6 +20643,21 @@ function MonsterHeroGame() {
       });
       return;
     }
+    if (gameState === 'REWARD_PICK') {
+      // WAVE_RESULTの処理中ロックを引き継がず、このトレーニング画面を独立した1回として予約する。
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      if (!autoBattleRef.current) return;
+      autoPostWaveScheduledRef.current = true;
+      Promise.resolve().then(() => {
+        autoPostWaveScheduledRef.current = false;
+        if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
+        autoPostWaveRunningRef.current = true;
+        const picks = chooseAutoTrainingPicks(autoSettings.strategy);
+        handleTraining(picks);
+      });
+      return;
+    }
     if (gameState === 'PICK_ALLY') {
       // REWARD_PICKの処理中ロックをこの画面への遷移時に引き継がず、同じロックで加入を1回だけ予約する。
       autoPostWaveRunningRef.current = false;
@@ -20714,15 +20747,6 @@ function MonsterHeroGame() {
       });
       return;
     }
-    if (!autoBattleRef.current || autoPostWaveRunningRef.current || autoPostWaveScheduledRef.current) return;
-    autoPostWaveScheduledRef.current = true;
-    Promise.resolve().then(() => {
-      autoPostWaveScheduledRef.current = false;
-      if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
-      autoPostWaveRunningRef.current = true;
-      const picks = chooseAutoTrainingPicks(autoSettings.strategy);
-      handleTraining(picks);
-    });
   }, [autoBattle, gameState]);
   const upgradeUnique = (monId, diff) => {
     setOwnedUniques(prev => prev.map(u => {
