@@ -39,7 +39,11 @@ assert(has('const stopAutoBattle = () => {'), 'AUTO停止helperがありませ�
 assert(has('autoBattleRef.current = false;\n    autoTurnScheduledRef.current = false;\n    autoPostWaveScheduledRef.current = false;\n    setAutoBattle(false);'), 'AUTO停止helperがref・予約・stateを停止していません');
 assert(has('autoPostWaveScheduledRef.current = false;'), 'AUTO停止helperがWAVE後の予約を停止していません');
 assert(has("if(gameState!=='WAVE_RESULT'&&gameState!=='REWARD_PICK'&&gameState!=='QUICK_GROWTH'&&gameState!=='PICK_ALLY'&&gameState!=='QUICK_JOIN'&&gameState!=='PICK_TEACHING'&&gameState!=='UPGRADE_SKILL')"), 'WAVE結果・Quick結果・既存選択画面がWAVE後AUTOロックを再利用していません');
-assert(has('const choice=chooseAutoTeachingCard(teachingPool,ownedTeachings,!enemy);'), 'AUTOが現在の提示候補と既存の初回判定を使用していません');
+// ラン開始時の1枚だけはAUTO∞で覚えたカードを選び直す。覚えていない・見つからないときは
+// これまでどおり現在の提示候補と既存の初回判定(!enemy)でランダムに選ぶ
+assert(has('const choice=fixedInitial||chooseAutoTeachingCard(teachingPool,ownedTeachings,!enemy);'), 'AUTOが現在の提示候補と既存の初回判定を使用していません');
+assert(has("resolveRepeatInitialTeaching(teachingPool, repeatRunTemplateRef.current?.initialTeachingId)"), 'AUTOの初回アシカがAUTO∞の記録を見ていません');
+assert(has('const fixedInitial=!enemy'), 'AUTO∞の初回アシカ固定を既存の初回判定(!enemy)で分けていません');
 assert(has('confirmPickTeaching(choice);'), 'AUTOが既存のアシストカード確定処理を明示候補付きで再利用していません');
 assert(has('const confirmPickTeaching = (explicitTeaching=null) => {\n    const teaching=explicitTeaching||selectedTeachingCard;'), '確定処理にstale state対策がありません');
 assert(has('onClick={()=>confirmPickTeaching()}'), '手動確定ボタンがイベントを候補として渡す可能性があります');
