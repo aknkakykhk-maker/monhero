@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9dbe5724b37d06e
+// source-sha256: 60b46efe611ddf6b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 12:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 13:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19653,7 +19653,8 @@ function MonsterHeroGame() {
 
   // ∞周回は通常AUTOに上乗せする。∞だけをOFFにしても通常AUTOは続ける。
   const setAutoRepeatEnabled = enabled => {
-    const next = !!enabled;
+    // ランキング対象モードで意図せず再周回しないよう、内部状態からクイック限定にする。
+    const next = !!enabled && isQuickMode(runMode);
     autoRepeatRef.current = next;
     setAutoRepeat(next);
     if (next) setAutoBattleEnabled(true);else autoRepeatStartingRef.current = false;
@@ -19682,9 +19683,18 @@ function MonsterHeroGame() {
     if (hp <= 0 || gaveUp || gameState === 'PICK_HERO') stopAllAuto();
   }, [hp, gaveUp, gameState]);
 
+  // 古い描画や将来の呼び出し経路から不正な状態が入っても、通常AUTOは残して∞だけ解除する。
+  useEffect(() => {
+    if (autoRepeatRef.current && !isQuickMode(runMode)) setAutoRepeatEnabled(false);
+  }, [runMode, autoRepeat]);
+
   // 正規リザルトの全報酬演出が完了した場合だけ、AUTO∞の次周開始handlerへ進む。
   useEffect(() => {
     if (gameState !== 'CHAMPION' || !championPresentationComplete || !autoRepeatRef.current || autoRepeatStartingRef.current) return;
+    if (!isQuickMode(runMode)) {
+      setAutoRepeatEnabled(false);
+      return;
+    }
     if (document.visibilityState === 'hidden') return;
     autoRepeatStartingRef.current = true;
     const repeatResult = startRunFromRepeatTemplate(repeatRunTemplateRef.current);
@@ -19694,7 +19704,7 @@ function MonsterHeroGame() {
       setAutoBattle(true);
       setAutoTurnCycle(n => n + 1);
     } else stopAllAuto();
-  }, [gameState, championPresentationComplete, autoRepeat, autoBattle]);
+  }, [gameState, championPresentationComplete, autoRepeat, autoBattle, runMode]);
 
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
   // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
@@ -31333,19 +31343,21 @@ function MonsterHeroGame() {
     }))), /*#__PURE__*/React.createElement("div", {
       className: "h-[24%] shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-2"
+      className: "text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1"
     }, /*#__PURE__*/React.createElement("span", {
-      className: `shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`
-    }, "Action Cards ", /*#__PURE__*/React.createElement("span", {
-      className: "bg-white/10 text-white px-2 py-0.5 rounded-full font-mono"
+      className: `flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "whitespace-nowrap"
+    }, "Action Cards"), " ", /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono"
     }, selectedCards.length, "/", cardLimit), heroCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"
+      className: "shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"
     }, /*#__PURE__*/React.createElement(Crown, {
       size: 8
     }), "+", heroCardBonus), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
+      className: "shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
     }, "\u5FDC\u63F4+1")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-0.5 shrink-0 min-w-0"
+      className: "flex items-center gap-0.5 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(true),
       className: `flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`
@@ -31361,7 +31373,7 @@ function MonsterHeroGame() {
       className: `h-8 min-w-[44px] px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-[7px]"
-    }, autoBattle ? 'ON' : 'OFF'), "AUTO"), /*#__PURE__*/React.createElement("button", {
+    }, autoBattle ? 'ON' : 'OFF'), "AUTO"), isQuickMode(runMode) && /*#__PURE__*/React.createElement("button", {
       type: "button",
       disabled: !!battleScenarioRef.current || battleTutorialStep != null,
       onClick: () => setAutoRepeatEnabled(!autoRepeatRef.current),
@@ -31375,7 +31387,7 @@ function MonsterHeroGame() {
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => processTurn(),
         disabled: !canAct,
-        className: `h-9 min-w-0 px-2 sm:px-5 rounded-full font-black text-[10px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-0.5 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
+        className: `h-9 min-w-[52px] shrink-0 px-1 sm:px-5 rounded-full font-black text-[10px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-0.5 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
       }, /*#__PURE__*/React.createElement(Play, {
         fill: "currentColor",
         size: 11
@@ -35109,7 +35121,7 @@ function MonsterHeroGame() {
       scene: "resultWin",
       condition: runHighlights.firstWin ? 'firstWin' : runHighlights.newRecord ? 'newRecord' : runHighlights.firstClear ? 'firstClear' : null,
       compact: true
-    })))), autoRepeat && /*#__PURE__*/React.createElement("div", {
+    })))), isQuickMode(runMode) && autoRepeat && /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2 w-full max-w-xs mt-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setAutoRepeatEnabled(false),
