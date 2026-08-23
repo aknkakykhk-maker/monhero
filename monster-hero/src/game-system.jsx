@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 09:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 09:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3905,6 +3905,82 @@ const normalizeAutoSettings = (value, validRosterEntries = null) => {
     return { rosterEntry, slot:Number.isInteger(slot) && slot >= 0 && slot <= 3 ? slot : null };
   });
   return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies };
+};
+
+// AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、
+// 手動操作と同じ判定関数を呼び出し側から受け取ることで、カードルールを二重管理しない。
+const chooseAutoTurn = ({
+  hand = [], slots = [], guts = 0, cardLimit = 0, strategy = 'random',
+  getCardGuts, cardNeedsMonster, slotMaxUses,
+}, rng = Math.random) => {
+  if (!Array.isArray(hand) || !Array.isArray(slots) || typeof getCardGuts !== 'function'
+      || typeof cardNeedsMonster !== 'function' || typeof slotMaxUses !== 'function') return [];
+  const limit = Math.max(0, Math.floor(Number(cardLimit) || 0));
+  const availableGuts = Math.max(0, Number(guts) || 0);
+  const picked = [];
+  const usedHandIndexes = new Set();
+  const slotUseCounts = Array(slots.length).fill(0);
+  let usedGuts = 0;
+
+  const legalActions = () => {
+    const actions = [];
+    hand.forEach((card, handIndex) => {
+      if (!card || usedHandIndexes.has(handIndex)) return;
+      const cost = Math.max(0, Number(getCardGuts(card)) || 0);
+      if (usedGuts + cost > availableGuts) return;
+      if (!cardNeedsMonster(card)) {
+        actions.push({ handIndex, card, slotIdx:null, cost });
+        return;
+      }
+      slots.forEach((monster, slotIdx) => {
+        if (!monster) return;
+        if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
+        const maxUses = Math.max(0, Math.floor(Number(slotMaxUses(monster)) || 0));
+        if (slotUseCounts[slotIdx] >= maxUses) return;
+        actions.push({ handIndex, card, slotIdx, cost });
+      });
+    });
+    return actions;
+  };
+  const attackCard = card => !!card && cardNeedsMonster(card);
+  const priorityOf = card => {
+    if (strategy === 'offense') {
+      if (card.type === 'unique') return 0;
+      if (attackCard(card)) return 1;
+      if (card.type === 'guard' || card.type === 'heal') return 3;
+      return 2;
+    }
+    if (strategy === 'defense') {
+      if (card.type === 'heal') return 0;
+      if (card.type === 'guard') return 1;
+      return attackCard(card) ? 3 : 2;
+    }
+    return 0;
+  };
+  const randomIndex = length => Math.min(length - 1, Math.max(0, Math.floor((Number(rng()) || 0) * length)));
+
+  while (picked.length < limit) {
+    let actions = legalActions();
+    if (strategy === 'guts') {
+      const attacks = actions.filter(action => attackCard(action.card));
+      actions = attacks.length ? attacks : actions;
+      if (!actions.length) break;
+      const lowestCost = Math.min(...actions.map(action => action.cost));
+      actions = actions.filter(action => action.cost === lowestCost);
+    } else if (strategy !== 'random') {
+      if (!actions.length) break;
+      const bestPriority = Math.min(...actions.map(action => priorityOf(action.card)));
+      actions = actions.filter(action => priorityOf(action.card) === bestPriority);
+    }
+    if (!actions.length) break;
+    const action = actions[randomIndex(actions.length)];
+    picked.push({ handIndex:action.handIndex, card:action.card, slotIdx:action.slotIdx });
+    usedHandIndexes.add(action.handIndex);
+    usedGuts += action.cost;
+    if (action.slotIdx != null) slotUseCounts[action.slotIdx]++;
+    if (strategy === 'guts') break;
+  }
+  return picked;
 };
 
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
@@ -10774,11 +10850,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (scenario) setBattleTutorialLastAction('emergency');
   };
 
-  const processTurn = async () => {
-    if (isBusy||!enemy||selectedCards.length===0) return;
+  const processTurn = async (explicitEntries = null) => {
+    const hasExplicitEntries=Array.isArray(explicitEntries);
+    const usedCardEntries=hasExplicitEntries
+      ? explicitEntries.filter(entry=>entry&&Number.isInteger(entry.handIndex)&&hand[entry.handIndex]&&entry.card===hand[entry.handIndex])
+        .map(entry=>({card:entry.card,handIndex:entry.handIndex,slotIdx:entry.slotIdx!=null?entry.slotIdx:null}))
+      : selectedCards.map(i=>({card:hand[i],handIndex:i,slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
+    if (isBusy||!enemy||usedCardEntries.length===0) return;
     setFocusedCard(null); setPendingCard(null);
-    // Build list of {card, handIndex, slotIdx} pairs
-    const usedCardEntries=selectedCards.map(i=>({card:hand[i], handIndex:i, slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
     const usedCards=usedCardEntries.map(e=>e.card);
     // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う。
     // 合図を出すのはターンがすべて終わってから(このあとの敵の行動まで見せてから進める)
@@ -11105,6 +11184,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setEnemyLastIntent(enemyActionPerformedRef.current?executedIntent:null); advanceEnemyIntents(executedIntent,distForNextPredict,enemyActionPerformedRef.current);
     // ここまで来てはじめて「1ターンぶんを見終わった」ので、練習を次へ進める
     if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(','));
+  };
+
+  // AUTOの判断結果をstateへ書き戻さず、同じターン処理へ明示的に渡す。
+  // 今回はUIやeffectから呼ばず、1ターン接続用の内部処理だけを用意する。
+  const runAutoTurnOnce = () => {
+    const entries=chooseAutoTurn({
+      hand, slots, guts, cardLimit, strategy:autoSettings.strategy,
+      getCardGuts, cardNeedsMonster, slotMaxUses,
+    });
+    if (entries.length>0) processTurn(entries);
   };
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
@@ -15449,7 +15538,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <span className={`shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`}>Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}</span>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={10}/><span className="text-[7px]">VIEW</span></button>
-                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={processTurn} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
+                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
                 </div>
               </div>
               {/* 使うカードが決まっている番は、その種類だけを光らせる(枠全体は光らせない) */}

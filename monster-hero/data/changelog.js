@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-23 09:27",
+    date: "2026-08-23 09:34",
     type: 'issue',
     title: 'BGMが途中から鳴らなくなることがある問題を修正',
     items: [
@@ -10,7 +10,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-23 09:27",
+    date: "2026-08-23 09:34",
     type: 'update',
     title: 'AUTO用の事前設定を追加しました',
     items: [
