@@ -10,8 +10,9 @@ const start = source.indexOf('const chooseAutoTurn =');
 const end = source.indexOf('// 難易度。', start);
 if (start < 0 || end < 0) throw new Error('chooseAutoTurnの定義が見つかりません');
 const context = { Math };
-vm.runInNewContext(`${source.slice(start, end)};this.chooseAutoTurn=chooseAutoTurn;`, context);
+vm.runInNewContext(`${source.slice(start, end)};this.chooseAutoTurn=chooseAutoTurn;this.hasAutoTurnWithEnoughGuts=hasAutoTurnWithEnoughGuts;`, context);
 const chooseAutoTurn = context.chooseAutoTurn;
+const hasAutoTurnWithEnoughGuts = context.hasAutoTurnWithEnoughGuts;
 
 const needsMonster = card => ['atk','range_atk','unique'].includes(card.type)
   || (card.type === 'debuff' && card.subType === 'stun_atsu');
@@ -76,6 +77,12 @@ assert.strictEqual(act([card('buff','buff',15),card('guard','guard',0)], {strate
 // 11. 合法行動なし
 assert.deepStrictEqual(act([card('hit','atk',10)], {slots:[null,null],cardLimit:2}), [],
   '合法行動がないのに空配列を返しません');
+assert.strictEqual(hasAutoTurnWithEnoughGuts({...base,hand:[card('heavy','atk',101)]}), true,
+  'ガッツだけが不足する合法行動を検出できません');
+assert.strictEqual(hasAutoTurnWithEnoughGuts({...base,hand:[card('hit','atk',10)],slots:[null,null]}), false,
+  '配置が原因の行動不能をガッツ不足と誤判定しました');
+assert.strictEqual(hasAutoTurnWithEnoughGuts({...base,hand:[card('special','unique',10,{ownerSlotIdx:1})]}), false,
+  'owner不一致をガッツ不足と誤判定しました');
 
 // 12. 注入した固定rngで再現でき、入力stateを書き換えない
 const state = {...base, hand:[card('a','guard',0),card('b','guard',0)], strategy:'random', cardLimit:1};

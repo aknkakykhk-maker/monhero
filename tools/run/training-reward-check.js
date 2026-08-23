@@ -128,12 +128,16 @@ check('クイックはトレーニング画面へ行かず自動成長する',
 check('トレーニングを開くのはクイック以外の分岐だけ',
   (source.match(/setGameState\('REWARD_PICK'\)/g) || []).length === 1);
 check('開くたびに前回の選択を空へ戻す', has('setTrainingPicks([]);\n      setGameState(\'REWARD_PICK\');'));
-check('AUTO OFFではREWARD_PICKを自動処理しない', has("if(!autoBattleRef.current||autoPostWaveRunningRef.current||autoPostWaveScheduledRef.current)return;"));
+const rewardAuto = slice("    if(gameState==='REWARD_PICK'){", "    if(gameState==='PICK_ALLY'){");
+check('AUTO OFFではREWARD_PICKを自動処理しない', rewardAuto.includes('if(!autoBattleRef.current)return;'));
 check('AUTO ONのREWARD_PICKは専用ロックで1回だけ処理する',
   has('const autoPostWaveRunningRef = useRef(false);') && has('const autoPostWaveScheduledRef = useRef(false);')
-    && has('autoPostWaveRunningRef.current=true;'));
+    && rewardAuto.includes('autoPostWaveRunningRef.current=false;')
+    && rewardAuto.includes('autoPostWaveScheduledRef.current=false;')
+    && rewardAuto.includes('if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;')
+    && rewardAuto.includes('autoPostWaveRunningRef.current=true;'));
 check('AUTOトレーニングは決めたpicksをhandleTrainingへ直接渡す',
-  has('const picks=chooseAutoTrainingPicks(autoSettings.strategy);\n      handleTraining(picks);'));
+  /const picks=chooseAutoTrainingPicks\(autoSettings\.strategy\);\s*handleTraining\(picks\);/.test(rewardAuto));
 check('AUTO後も供モン等の既存遷移を自動選択しない',
   !slice('// AUTO中にREWARD_PICKへ入ったときだけ', 'const upgradeUnique').includes("setGameState('PICK_ALLY')"));
 
