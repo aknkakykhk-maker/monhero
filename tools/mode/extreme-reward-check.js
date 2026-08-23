@@ -32,7 +32,7 @@ vm.runInContext([
   grab('const DIFFICULTY_SETTINGS', 'const CLEAR_PSYCHE_REWARD'),
   grab('const createBattleEnemy', 'const collectBondRankingEntries'),
   'globalThis.__m={DIFFICULTY_SETTINGS,EXTREME_DIFFICULTIES,EXTREME_SETTING,extremeSpecialRule,'
-  + 'EXTREME_UNLOCK_DIFFICULTIES,isExtremeUnlocked,NIGHTMARE_SETTING,isNightmareUnlocked,isChaosUnlocked,isUltimateUnlocked,normalizeBattleDifficulty,createBattleEnemy};',
+  + 'EXTREME_UNLOCK_DIFFICULTIES,isExtremeUnlocked,NIGHTMARE_SETTING,isNightmareUnlocked,isChaosUnlocked,isUltimateUnlocked,isInfinityUnlocked,normalizeBattleDifficulty,createBattleEnemy};',
 ].join('\n'), ctx);
 const m = ctx.__m;
 
@@ -87,8 +87,12 @@ check('ULTIMATEは正式公開の数値を持つ',
     && ultimate.xp === 40 && ultimate.gold === 20 && ultimate.psyche === 60
     && ultimate.unlockRequirement === 'CHAOS');
 const infinity = m.EXTREME_DIFFICULTIES.find(s => s.id === 'INFINITY');
-check('INFINITYは未実装のまま数値を持たない',
-  infinity.available === false && infinity.power === undefined && infinity.score === undefined);
+check('INFINITYの倍率と解放条件',
+  infinity.available === true && infinity.power === 50 && infinity.score === 20
+  && infinity.xp === 45 && infinity.gold === 30 && infinity.psyche === 80
+  && infinity.unlockRequirement === 'ULTIMATE');
+check('INFINITYはULTIMATEを1回以上クリア済みなら解放判定',
+  m.isInfinityUnlocked(0) === false && m.isInfinityUnlocked(1) === true && m.isInfinityUnlocked('2') === true);
 check('NIGHTMAREはEXTREMEを1回以上クリア済みなら解放判定',
   m.isNightmareUnlocked(1) === true && m.isNightmareUnlocked('2') === true);
 check('NIGHTMAREはEXTREME未クリアなら未解放判定',

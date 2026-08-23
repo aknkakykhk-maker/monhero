@@ -54,16 +54,21 @@ check('NIGHTMAREの適性半減を詳細側にも反映できる(aptDeltaPct)',
   has('aptDeltaPct = null } = opts;') && has('const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade);'));
 
 check('ULTIMATE補正率は共通倍率を小数精度で表示し、カードは本来値と実際値を比較する',
-  has('data-ultimate-join-status') && has('const multiplier=ultimateAllyJoinMultiplier(totalTurns);')
+  has('data-ultimate-join-status={joinRule}') && has('const multiplier=ultimateAllyJoinMultiplier(totalTurns,joinRule);')
     && has('加入ボーナス {precisePercent(multiplier)}（-{precisePercent(1-multiplier)}）')
     && has('stat.normalDiff!==stat.diff') && has('実際 +${stat.diff}'));
+// 加入B低下はULTIMATE専用ではなく、その率を持つ難易度(INFINITYを含む)で共通に出す
+check('加入B低下の表示は難易度名ではなくルールの有無で出す',
+  has("if(extremeRuleNumber(joinRule,'allyJoinPenaltyRate')==null)return null;")
+    && has("const floorValue=extremeRuleNumber(joinRule,'minimumAllyJoinBonus');")
+    && has('／最低${specialRulePercent(floorValue)}'));
 const aptitudeCards = slice('{preview.apt.map(range=>(', "<div className=\"min-h-[32px]");
 check('間合い適性の比較表示はNIGHTMAREだけに限定する',
   aptitudeCards.includes("===NIGHTMARE_SETTING.id&&range.normalDiff!==range.diff") && !aptitudeCards.includes('ULTIMATE_SETTING.id'));
 check('NIGHTMAREは間合い適性だけ通常値と実値を比較する',
   has('data-nightmare-join-status') && aptitudeCards.includes('通常 {formatAptPct(range.normalDiff)} →') && aptitudeCards.includes("'実際 ':''"));
 check('CHAOSは4ステータスの加入ボーナスだけ通常値と実値を比較する',
-  has('data-chaos-join-status') && has("[ULTIMATE_SETTING.id,CHAOS_SETTING.id].includes") && !aptitudeCards.includes('CHAOS_SETTING.id'));
+  has('data-chaos-join-status') && has("[ULTIMATE_SETTING.id,CHAOS_SETTING.id,INFINITY_SETTING.id].includes") && !aptitudeCards.includes('CHAOS_SETTING.id'));
 
 // ---- ④ スクロールで全部たどれること ----
 const listArea = slice('flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0', 'バトルチュートリアル中は');
