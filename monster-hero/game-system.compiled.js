@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2abf7f09d71849b5
+// source-sha256: 801ea15b03b8de34
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 08:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 09:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7527,6 +7527,99 @@ const normalizeAutoSettings = (value, validRosterEntries = null) => {
     strategy: AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random',
     allies
   };
+};
+
+// AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、
+// 手動操作と同じ判定関数を呼び出し側から受け取ることで、カードルールを二重管理しない。
+const chooseAutoTurn = ({
+  hand = [],
+  slots = [],
+  guts = 0,
+  cardLimit = 0,
+  strategy = 'random',
+  getCardGuts,
+  cardNeedsMonster,
+  slotMaxUses
+}, rng = Math.random) => {
+  if (!Array.isArray(hand) || !Array.isArray(slots) || typeof getCardGuts !== 'function' || typeof cardNeedsMonster !== 'function' || typeof slotMaxUses !== 'function') return [];
+  const limit = Math.max(0, Math.floor(Number(cardLimit) || 0));
+  const availableGuts = Math.max(0, Number(guts) || 0);
+  const picked = [];
+  const usedHandIndexes = new Set();
+  const slotUseCounts = Array(slots.length).fill(0);
+  let usedGuts = 0;
+  const legalActions = () => {
+    const actions = [];
+    hand.forEach((card, handIndex) => {
+      if (!card || usedHandIndexes.has(handIndex)) return;
+      const cost = Math.max(0, Number(getCardGuts(card)) || 0);
+      if (usedGuts + cost > availableGuts) return;
+      if (!cardNeedsMonster(card)) {
+        actions.push({
+          handIndex,
+          card,
+          slotIdx: null,
+          cost
+        });
+        return;
+      }
+      slots.forEach((monster, slotIdx) => {
+        if (!monster) return;
+        if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
+        const maxUses = Math.max(0, Math.floor(Number(slotMaxUses(monster)) || 0));
+        if (slotUseCounts[slotIdx] >= maxUses) return;
+        actions.push({
+          handIndex,
+          card,
+          slotIdx,
+          cost
+        });
+      });
+    });
+    return actions;
+  };
+  const attackCard = card => !!card && cardNeedsMonster(card);
+  const priorityOf = card => {
+    if (strategy === 'offense') {
+      if (card.type === 'unique') return 0;
+      if (attackCard(card)) return 1;
+      if (card.type === 'guard' || card.type === 'heal') return 3;
+      return 2;
+    }
+    if (strategy === 'defense') {
+      if (card.type === 'heal') return 0;
+      if (card.type === 'guard') return 1;
+      return attackCard(card) ? 3 : 2;
+    }
+    return 0;
+  };
+  const randomIndex = length => Math.min(length - 1, Math.max(0, Math.floor((Number(rng()) || 0) * length)));
+  while (picked.length < limit) {
+    let actions = legalActions();
+    if (strategy === 'guts') {
+      const attacks = actions.filter(action => attackCard(action.card));
+      actions = attacks.length ? attacks : actions;
+      if (!actions.length) break;
+      const lowestCost = Math.min(...actions.map(action => action.cost));
+      actions = actions.filter(action => action.cost === lowestCost);
+    } else if (strategy !== 'random') {
+      if (!actions.length) break;
+      const bestPriority = Math.min(...actions.map(action => priorityOf(action.card)));
+      actions = actions.filter(action => priorityOf(action.card) === bestPriority);
+    }
+    if (!actions.length) break;
+    const action = actions[randomIndex(actions.length)];
+    picked.push({
+      handIndex: action.handIndex,
+      card: action.card,
+      slotIdx: action.slotIdx
+    });
+    usedHandIndexes.add(action.handIndex);
+    usedGuts += action.cost;
+    if (action.slotIdx != null) slotUseCounts[action.slotIdx]++;
+    if (strategy === 'guts') break;
+  }
+  return picked;
 };
 
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。

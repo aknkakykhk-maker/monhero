@@ -98,6 +98,7 @@ node tools/build.js --check
 | `node battle/battle-scenario-check.js` | バトルのれんしゅう(台本どおりに動くバトル)の数値を、実際の計算式で検算する。 |
 | `node battle/battle-damage-preview-check.js` | 味方の連撃・追撃を含む共通予測と、選択中ガードを反映した敵の予定ダメージ表示を確認する。おりょう・ゴーレム・モッチー/ミタラシ・ききのように「使ったターンからすぐ効く」カードを攻撃カードより先に選んだとき、カード選択中の「合計DMG」がその上乗せぶんを正しく含むかを、実際の処理(processTurn)と同じ並び順で検算する。 |
 | `node battle/battle-card-gesture-check.js` | カード名を含むカード全体から約10pxでスワイプへ切り替わり、終了後のclickを無効化しつつ通常タップと技変更を維持することを確認する。 |
+| `node auto-turn-check.js` | AUTOの1ターン判断helperについて、ガッツ・枚数・割当先・固有技の所有枠・スロット上限の合法判定、4方針、固定乱数、入力stateの非破壊性を確認する。 |
 | `node battle/battle-carousel-check.js` | 難易度カードの順序・スワイプ/矢印・敵生成共通化・全WAVE詳細・挑戦導線を確認する。 |
 | `node battle/battle-menu-browser-check.js` | 390×844の実ブラウザでHOMEから難易度画面へ入り、例外ゼロ・矢印/スワイプ・全WAVE詳細・戻る/再入場・勇者選択を確認する。 |
 | `node battle/battle-mode-check.js` | チャレンジ／クイック／プロの報酬と記録を確認する。クイックの育成・プシュケー優先・ダイヤ優先の各方針、他モードへの非適用、ランキング分離、WAVEごとの自動成長、伴モン加入、画面・BGM設定の結線を見る。 |
