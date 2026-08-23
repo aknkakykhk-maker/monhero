@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 10:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 10:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4162,6 +4162,15 @@ const chooseAutoTrainingPicks = (strategy, rng=Math.random) => {
     const roll=Math.max(0,Math.min(0.999999999999,Number(rng())||0));
     return TRAINING_OPTIONS[Math.floor(roll*TRAINING_OPTIONS.length)].id;
   });
+};
+
+// 手動画面へ実際に提示された合法候補だけから選ぶ。ラン開始時は全候補、
+// WAVE後は所持済みかつLv2未満の候補を優先し、同条件内はランダムにする。
+const chooseAutoTeachingCard = (candidates, owned, isInitial, rng=Math.random) => {
+  if (!Array.isArray(candidates) || candidates.length===0) return null;
+  const preferred=isInitial?[]:candidates.filter(card=>owned.some(item=>item.id===card.id&&item.evoLevel<2));
+  const choices=preferred.length>0?preferred:candidates;
+  return choices[Math.floor(rng()*choices.length)]||choices[0]||null;
 };
 const trainingOptionOf = (id) => TRAINING_OPTIONS.find(option=>option.id===id) || null;
 // トレーニング1回ぶんを適用する。丸め方と特殊ルールの掛かり方は旧「能力覚醒」と同じ:
@@ -11961,9 +11970,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setGameState('PICK_TEACHING');
   };
 
-  const confirmPickTeaching = () => {
-    if (!selectedTeachingCard) return;
-    const teaching=selectedTeachingCard; const alreadyOwned=ownedTeachings.find(t=>t.id===teaching.id);
+  const confirmPickTeaching = (explicitTeaching=null) => {
+    const teaching=explicitTeaching||selectedTeachingCard;
+    if (!teaching) return;
+    const alreadyOwned=ownedTeachings.find(t=>t.id===teaching.id);
     let nextTeachings=[...ownedTeachings]; let isUpgrade=false;
     if (alreadyOwned) {
       nextTeachings=nextTeachings.map(t=>{if(t.id===teaching.id){const nextEvo=Math.min(2,t.evoLevel+1); return {...t,evoLevel:nextEvo,baseValue:t.baseValue+t.step};} return t;}); isUpgrade=true;
@@ -12013,10 +12023,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     },battleMs(900));
   };
 
-  // AUTO中にREWARD_PICKへ入ったときだけ、決めた配列をstateを経由せず直接確定する。
+  // AUTO中にWAVE後の選択画面へ入ったときだけ、決めた対象をstateを経由せず直接確定する。
   // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ報酬を二重処理しない。
   useEffect(()=>{
-    if(gameState!=='REWARD_PICK'&&gameState!=='PICK_ALLY'){
+    if(gameState!=='REWARD_PICK'&&gameState!=='PICK_ALLY'&&gameState!=='PICK_TEACHING'){
       autoPostWaveRunningRef.current=false;
       autoPostWaveScheduledRef.current=false;
       return;
@@ -12042,6 +12052,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return;
         }
         setupMon(choice.mon,choice.slotIdx);
+      });
+      return;
+    }
+    if(gameState==='PICK_TEACHING'){
+      autoPostWaveRunningRef.current=false;
+      autoPostWaveScheduledRef.current=false;
+      if(!autoBattleRef.current)return;
+      autoPostWaveScheduledRef.current=true;
+      Promise.resolve().then(()=>{
+        autoPostWaveScheduledRef.current=false;
+        if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;
+        autoPostWaveRunningRef.current=true;
+        // confirmPickTeachingと同じ既存判定(!enemy)を使って、初回とWAVE後を区別する。
+        const choice=chooseAutoTeachingCard(teachingPool,ownedTeachings,!enemy);
+        if(!choice){
+          stopAutoBattle();
+          addPopup('AUTO停止：アシストカードを選べません','hero','text-amber-300 font-black text-sm');
+          return;
+        }
+        confirmPickTeaching(choice);
       });
       return;
     }
@@ -16188,7 +16218,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{isNext&&<span className="text-[7px] bg-amber-600 text-white px-1.5 rounded">強化後</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
                   })}
                 </div>
-                <div className="flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={confirmPickTeaching} className="flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
+                <div className="flex gap-2 w-full mt-auto shrink-0"><button onClick={()=>setSelectedTeachingCard(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={()=>confirmPickTeaching()} className="flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs">{ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id)?"強化する":"習得する"}</button></div>
               </div>
             </div>
           )}
