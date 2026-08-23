@@ -41,7 +41,10 @@ for (const use of [
 ]) assert(source.includes(use), `${use} must use the shared run rule difficulty`);
 assert(source.includes('quick&&hasExtremeSpecialRules(key)') && source.includes('特殊ルールあり'));
 assert(source.includes('const groups=extremeRuleDetailGroups(specialDifficulty,isQuickMode(runMode));'), 'Quick ULTIMATE intro must describe automatic growth without changing the extreme training label');
-assert(source.includes("[quick?'自動成長':'トレーニング',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`]"), 'Quick ULTIMATE rule detail must call the WAVE effect automatic growth');
+assert(source.includes("? ['自動成長',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`]"), 'Quick ULTIMATE rule detail must call the WAVE effect automatic growth');
+// クイックの自動成長は成長率そのものから引く(pt)、トレーニングは増える量へ掛ける(%)。
+// 掛かり方が違うので、ルール詳細の言い方も分ける
+assert(source.includes(": ['トレーニング',`強化量が WAVE Tごと-${precisePercent(rules.awakeningPenaltyRate)}`]"), 'training reduction must be described as a multiplier on the gain');
 assert(source.includes("['与ダメ倍率',`経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`]")&&!source.includes('経過累計T×0.75%（最低25%）'), 'Quick ULTIMATE rule detail must explain the damage floor as a stopping point');
 assert(source.includes('extremeRuleSummaryText(setting.id)')&&source.includes('data-extreme-rule-detail-open={setting.id}'), 'official card must point at the shared rule-detail sheet instead of listing rules');
 assert(source.includes('const enemyTurnMultiplier=ultimateEnemyTurnMultiplier(totalTurnCount,specialRuleDifficulty);'), 'ULTIMATE enemy turn scaling must use the shared run rule difficulty');
