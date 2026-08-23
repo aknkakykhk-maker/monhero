@@ -242,6 +242,71 @@ const assistantCallStylesOf = (assistantId) => ASSISTANT_CALL_STYLE_SETS[assista
 const ASSISTANT_CALL_STYLE_UNLOCK_LEVEL = 6;
 const ASSISTANT_CALL_STYLE_MAX_LEN = 16;
 
+// ---------- 解放の案内(その画面を開いたとき、一度だけ出す説明) ----------
+// 「仲良し度がここまで上がると、こんなことができるようになる」を、
+// できるようになった画面で1回だけ知らせるための入れ物。
+// 更新の案内(ASSISTANT_UPDATE_NOTICES)がログイン時に出る全体向けの告知なのに対し、
+// こちらは「その人の進み具合しだいで出る」ものなので、条件と場面を持たせている。
+//
+// 【1件の書き方】
+//   { id:'一意な名前',            … 既読の記録に使う。あとから文面を直してもidは変えない
+//     scene:'profile',            … どの画面で出すか(AssistantBubbleのsceneと同じキー)
+//     expression:'excited',       … 表情(省略すると happy)
+//     when:(ctx)=>真偽,           … 出す条件。ctx = { bondLevel, assistantId, callStyles }
+//     title:'…', pages:[ '…' ] }  … 見出しと本文(本文は1ページ1文が読みやすい)
+//
+// 本文へ数字を直接書かないこと。解放Lvや呼び方の例は ctx から作る
+// (Lvを変えたときに案内だけ古いままになるため)。
+const ASSISTANT_UNLOCK_NOTICES = [
+  {
+    id: 'unlock_call_style_v1',
+    scene: 'profile',
+    expression: 'excited',
+    when: (ctx) => Number(ctx && ctx.bondLevel) >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL,
+    title: '呼び方を決められるようになったよ',
+    pages: (ctx) => {
+      const styles = (ctx && Array.isArray(ctx.callStyles) && ctx.callStyles.length)
+        ? ctx.callStyles : ASSISTANT_CALL_STYLES;
+      return [
+        `仲良し度がLv${ASSISTANT_CALL_STYLE_UNLOCK_LEVEL}になったから、あたしの呼び方を自分で決められるようになったよ♪`,
+        `プロフィールの助手のところから変えられるんだ。${styles.map(st => st.label).join('・')}みたいな例もあるから、選ぶだけでもOK！`,
+        '「{name}」って書くと、そこがプレイヤー名になるよ。書かなければ入れた文字がそのまま呼び方になるんだ。',
+        '決めなくても大丈夫。そのままなら、いまの仲良し度に合わせた呼び方が続くよ。',
+      ];
+    },
+  },
+];
+// 本文はそのときの状況(解放Lv・助手ごとの呼び方の例)から作るので、関数でも配列でも書ける
+const assistantUnlockNoticePages = (notice, ctx) => {
+  const pages = typeof notice?.pages === 'function' ? notice.pages(ctx) : notice?.pages;
+  return Array.isArray(pages) ? pages.filter(page => typeof page === 'string' && page.trim()) : [];
+};
+// 既読の記録。壊れた値・古い形が入っていても必ず文字列の配列へ落とす
+// (保存キーは新しく足すので、既存のセーブデータには一切触らない)
+const ASSISTANT_UNLOCK_NOTICE_SEEN_KEY = 'mh_assistant_unlock_seen_v1';
+const normalizeAssistantUnlockSeen = (value) => {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+};
+// その画面で出すべき案内を1件だけ返す(まだ無ければ null)。
+// 画面側はこれを呼んで、返ってきたら吹き出しの代わりに案内を出し、
+// 閉じたら id を既読へ足して保存する
+const assistantUnlockNoticeFor = (scene, ctx, seen) => {
+  const done = new Set(normalizeAssistantUnlockSeen(seen));
+  const found = ASSISTANT_UNLOCK_NOTICES.find(notice => notice
+    && notice.scene === scene
+    && !done.has(notice.id)
+    && (typeof notice.when !== 'function' || notice.when(ctx || {}))
+    && assistantUnlockNoticePages(notice, ctx || {}).length > 0);
+  if (!found) return null;
+  return {
+    id: found.id,
+    title: found.title || '',
+    expression: found.expression || 'happy',
+    pages: assistantUnlockNoticePages(found, ctx || {}),
+  };
+};
+
 // 仲良し度(数値) → その段階の定義。壊れた値でも必ず最初の段階へ落ちる
 const assistantBondStage = (points) => {
   const p = Number.isFinite(points) ? points : 0;
@@ -1869,6 +1934,30 @@ addAssistantLinePack({
         { e:'happy',    t:'お疲れさまでつ。ゆっくり休みましょ。' },
       ],
     },
+  },
+});
+
+// ---------- セリフを増やすとき、ここへ足す ----------
+// 場面ごとのセリフは「多いほど、遊んでいて飽きない」ので、思いついたら
+// この束へ足していく。ASSISTANT_SCENES の定義そのものを触らずに増やせるので、
+// 元の場面がどう作られているかを気にしなくてよい。
+//
+// 【足し方】
+//   下の lines へ、場面キーごとに配列で足すだけ。
+//     home: [ { e:'happy', t:'…' }, { e:'wink', t:'…', bond:6 } ],
+//   ・e … 表情(normal / happy / wink / excited / troubled …)
+//   ・t … セリフ。{name} はそのときの呼び方(さん付け・呼び捨て・ちん付け)に置き換わる
+//   ・bond … その仲良し度以上のときだけ出す(省略すると、いつでも出る)
+//   ・w … 出やすさ(省略すると1)
+//   ・who … きき用にするなら 'kiki'(省略するとみゅあ)
+//
+// どの場面がいま何本あるかは `node tools/assistant/assistant-line-report.js` で見られる。
+// 少ない場面から足していくと、体感が変わりやすい。
+addAssistantLinePack({
+  id: 'linesExtra',
+  label: 'あとから足したセリフ(ここへどんどん足す)',
+  lines: {
+    // ここへ場面キーごとに足す。いまは空(足す場所を先に用意してある)
   },
 });
 
