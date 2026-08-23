@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 12:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6775,6 +6775,10 @@ function MonsterHeroGame() {
   // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
   const [assistantCallStyles, setAssistantCallStylesState] = useState({});
   const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
+  // 「仲良し度が上がってできるようになったこと」を、その画面で一度だけ知らせる。
+  // 見た案内のidを新しいキーへ覚えるので、既存のセーブデータには触らない
+  const [assistantUnlockSeen, setAssistantUnlockSeen] = useState([]);
+  const [assistantUnlockPage, setAssistantUnlockPage] = useState(0);
   const [showCallStylePicker, setShowCallStylePicker] = useState(false);
   const [tempCallStyle, setTempCallStyle] = useState(''); // 呼び方入力欄の一時値(保存を押すまで確定しない)
   const [showAssistantPicker, setShowAssistantPicker] = useState(false); // プロフィールからの助手変更
@@ -8052,6 +8056,7 @@ function MonsterHeroGame() {
       if (savedAudioMuted) Audio_.setEnabled(false);
       const savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
       setBgmArrangement(savedBgmArrangement);
+      setAssistantUnlockSeen(normalizeAssistantUnlockSeen(await storeGet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, [], false)));
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
@@ -8968,6 +8973,25 @@ function MonsterHeroGame() {
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
+  // その画面で出すべき「解放の案内」。無ければ null。
+  // 出す条件・本文はすべて data/assistants.js 側が持つので、ここは渡して受け取るだけ
+  const assistantUnlockNoticeOf = (scene) => (typeof assistantUnlockNoticeFor === 'function')
+    ? assistantUnlockNoticeFor(scene, {
+        bondLevel: assistantBondLevelNow,
+        assistantId: selectedAssistantId,
+        callStyles: (typeof assistantCallStylesOf === 'function') ? assistantCallStylesOf(selectedAssistantId) : null,
+      }, assistantUnlockSeen)
+    : null;
+  // 読み終わったら既読へ足して保存する。同じ案内は二度と出ない
+  const finishAssistantUnlockNotice = (id) => {
+    setAssistantUnlockPage(0);
+    if (!id) return;
+    setAssistantUnlockSeen(prev => {
+      const next = normalizeAssistantUnlockSeen([...prev, id]);
+      storeSet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, next, false);
+      return next;
+    });
+  };
   // 吹き出しを使わず、その場面のセリフを直接並べたいとき(日次アドバイスなど)。
   // いま選んでいる助手のぶんだけを返すので、画面側に助手ごとの分岐を書かなくてよい
   const assistantSceneLinesFor = (scene) => (typeof assistantSceneLines === 'function')
@@ -16553,6 +16577,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
             <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
             {!last?<button onClick={()=>setUpdateGuidePage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>:<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>{notice.destination&&<button onClick={()=>finishUpdateGuide(notice.destination)} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950">{notice.buttonLabel||'見に行く'}</button>}<button onClick={()=>finishUpdateGuide()} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white">{notice.destination?'あとで':'閉じる'}</button></div>}
+          </div>
+        </div>);})()}
+
+      {/* 解放の案内。プロフィールを開いたとき、仲良し度で新しくできるようになったことを一度だけ知らせる。
+          見た目はアップデートの案内と同じにして、覚えることを増やさない。
+          出す条件と本文は data/assistants.js が持っているので、ここは出すだけ */}
+      {bootPhase==='GAME'&&gameState==='PROFILE'&&onboarded&&!onboardingPreview&&tutorialStep==null&&kikiIntroStep==null&&!eventReplay&&(()=>{
+        const notice=assistantUnlockNoticeOf('profile');
+        if(!notice)return null;
+        const pages=notice.pages;
+        const page=Math.min(assistantUnlockPage,pages.length-1);
+        const last=page===pages.length-1;
+        const who=activeAssistant;
+        return(
+        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title}>
+          <div className="w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
+            <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
+            {!last
+              ?<button onClick={()=>setAssistantUnlockPage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>
+              :<button onClick={()=>finishAssistantUnlockNotice(notice.id)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">閉じる</button>}
           </div>
         </div>);})()}
 

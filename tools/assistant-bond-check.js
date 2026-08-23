@@ -33,6 +33,8 @@ globalThis.__a = {
   assistantSpeak, assistantSceneLines, pickAssistantLine, assistantLineMatchesBond,
   ASSISTANT_LINE_PACKS, ASSISTANTS, assistantBondLevelsOf, assistantBondStageByLevel,
   assistantCallStylesOf, ASSISTANT_CALL_STYLE_UNLOCK_LEVEL,
+  ASSISTANT_UNLOCK_NOTICES, assistantUnlockNoticeFor, normalizeAssistantUnlockSeen,
+  ASSISTANT_UNLOCK_NOTICE_SEEN_KEY,
 };`, ctx);
 const A = ctx.__a;
 
@@ -623,4 +625,83 @@ check('更新履歴に書いてある',
   changelogSrc.includes('仲良し度') && changelogSrc.includes('助手のアシストカード'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
+
+// --- 解放の案内(その画面で一度だけ出す説明)の土台 ---
+// 「仲良し度がここまで上がると、こんなことができる」を、できるようになった画面で
+// 1回だけ知らせるための入れ物。画面への結線はこれから行うが、
+// データと判定だけ先に用意してある。壊れると案内が出っぱなし・二度出しになる
+check('解放の案内がデータで定義されている',
+  Array.isArray(A.ASSISTANT_UNLOCK_NOTICES) && A.ASSISTANT_UNLOCK_NOTICES.length >= 1
+    && A.ASSISTANT_UNLOCK_NOTICES.every(n => n && typeof n.id === 'string' && n.id.trim() && typeof n.scene === 'string'),
+  `${(A.ASSISTANT_UNLOCK_NOTICES || []).map(n => n.id).join(', ')}`);
+check('案内のidが重なっていない',
+  new Set((A.ASSISTANT_UNLOCK_NOTICES || []).map(n => n.id)).size === (A.ASSISTANT_UNLOCK_NOTICES || []).length);
+check('呼び方の案内がプロフィールに用意してある',
+  (A.ASSISTANT_UNLOCK_NOTICES || []).some(n => n.id === 'unlock_call_style_v1' && n.scene === 'profile'));
+{
+  const styles = A.assistantCallStylesOf('mua');
+  const below = A.assistantUnlockNoticeFor('profile', { bondLevel: A.ASSISTANT_CALL_STYLE_UNLOCK_LEVEL - 1, callStyles: styles }, []);
+  const at = A.assistantUnlockNoticeFor('profile', { bondLevel: A.ASSISTANT_CALL_STYLE_UNLOCK_LEVEL, callStyles: styles }, []);
+  check('解放Lvに届くまでは案内を出さない', below === null);
+  check('解放Lvになったら案内を出す', !!at && at.id === 'unlock_call_style_v1' && at.pages.length >= 2,
+    at ? `${at.pages.length}ページ` : '出ない');
+  check('案内の本文に解放Lvが入る（数字を直書きしていない）',
+    !!at && at.pages.some(page => page.includes(`Lv${A.ASSISTANT_CALL_STYLE_UNLOCK_LEVEL}`)));
+  check('案内の本文が助手ごとの呼び方の例に合わせて変わる', (() => {
+    const kiki = A.assistantUnlockNoticeFor('profile', { bondLevel: 20, callStyles: A.assistantCallStylesOf('kiki') }, []);
+    const mua = A.assistantUnlockNoticeFor('profile', { bondLevel: 20, callStyles: A.assistantCallStylesOf('mua') }, []);
+    return !!kiki && !!mua && JSON.stringify(kiki.pages) !== JSON.stringify(mua.pages);
+  })());
+  check('一度見たら二度と出ない', A.assistantUnlockNoticeFor('profile', { bondLevel: 20, callStyles: styles }, ['unlock_call_style_v1']) === null);
+  check('別の画面では出ない', A.assistantUnlockNoticeFor('home', { bondLevel: 20, callStyles: styles }, []) === null);
+  check('壊れた状態を渡しても落ちない',
+    A.assistantUnlockNoticeFor('profile', null, null) !== undefined
+      && A.assistantUnlockNoticeFor(null, {}, 'こわれた値') === null);
+}
+check('既読の記録は文字列の配列へ必ず落とす',
+  JSON.stringify(A.normalizeAssistantUnlockSeen(['a', null, 'a', 3, ' b ', ''])) === JSON.stringify(['a', 'b'])
+    && JSON.stringify(A.normalizeAssistantUnlockSeen('こわれた値')) === '[]'
+    && JSON.stringify(A.normalizeAssistantUnlockSeen(undefined)) === '[]');
+// 既存のセーブデータへ触らないよう、記録は新しいキーへ分ける
+check('既読の記録は新しい保存キーへ分けてある',
+  A.ASSISTANT_UNLOCK_NOTICE_SEEN_KEY === 'mh_assistant_unlock_seen_v1'
+    && !/mh_assistant_bond_v1[^\n]*unlock/.test(assistantsSrc));
+
+// --- 画面へつないであるか ---
+// データだけ用意しても、画面から呼んでいなければ誰も見られない。
+// 実際に「プロフィールを開いたときに出す」ところまで書けているかを見る。
+const unlockBlock = (() => {
+  const at = source.indexOf("assistantUnlockNoticeOf('profile')");
+  return at < 0 ? '' : source.slice(Math.max(0, at - 900), at + 2200);
+})();
+check('プロフィール画面から案内を呼び出している',
+  !!unlockBlock && /gameState==='PROFILE'/.test(unlockBlock));
+check('本文はdata側から受け取る（画面へ直接書いていない）',
+  !!unlockBlock && /notice\.pages/.test(unlockBlock) && !/[ぁ-んァ-ヶ一-龠]/.test(
+    (unlockBlock.match(/const notice=assistantUnlockNoticeOf[\s\S]*?閉じる/) || [''])[0]
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/次へ|閉じる/g, '')));
+check('起動時に既読を読み込んでいる',
+  new RegExp(`setAssistantUnlockSeen\\(normalizeAssistantUnlockSeen\\(await storeGet\\(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY`).test(source));
+check('読み終えたら既読として保存している',
+  /storeSet\(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY/.test(source));
+// アップデートの案内と重ならないよう、出す画面を分けてある(あちらはHOME)
+check('アップデートの案内とは別の画面に出る',
+  /updateGuideQueue\.length>0/.test(source)
+    && /gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&updateGuideQueue\.length>0/.test(source));
+// ヘルプにも書いておく(プレイヤーが仕様を確かめられる唯一の場所のため)
+check('ヘルプに案内が出ることが書いてある',
+  /解放されたことは助手が教えてくれます/.test(helpSrc));
+check('更新履歴に書いてある',
+  /呼び方を決められるようになったことを助手が教えてくれます/.test(changelogSrc));
+
+// --- セリフを増やす土台 ---
+// 場面ごとのセリフは多いほど飽きない。あとから足すための束を1つ空けてある
+check('あとからセリフを足すための束が用意してある',
+  (A.ASSISTANT_LINE_PACKS || []).some(pack => pack && pack.id === 'linesExtra'));
+check('どの場面も5本以上ある', (() => {
+  const few = Object.keys(A.ASSISTANT_SCENES).filter(scene => (A.assistantSceneLines(scene) || []).length < 5);
+  if (few.length) console.log(`     少ない場面: ${few.join(', ')}`);
+  return few.length === 0;
+})());
+
 process.exit(failed ? 1 : 0);

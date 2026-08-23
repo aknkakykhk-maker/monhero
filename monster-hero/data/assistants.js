@@ -242,6 +242,71 @@ const assistantCallStylesOf = (assistantId) => ASSISTANT_CALL_STYLE_SETS[assista
 const ASSISTANT_CALL_STYLE_UNLOCK_LEVEL = 6;
 const ASSISTANT_CALL_STYLE_MAX_LEN = 16;
 
+// ---------- 解放の案内(その画面を開いたとき、一度だけ出す説明) ----------
+// 「仲良し度がここまで上がると、こんなことができるようになる」を、
+// できるようになった画面で1回だけ知らせるための入れ物。
+// 更新の案内(ASSISTANT_UPDATE_NOTICES)がログイン時に出る全体向けの告知なのに対し、
+// こちらは「その人の進み具合しだいで出る」ものなので、条件と場面を持たせている。
+//
+// 【1件の書き方】
+//   { id:'一意な名前',            … 既読の記録に使う。あとから文面を直してもidは変えない
+//     scene:'profile',            … どの画面で出すか(AssistantBubbleのsceneと同じキー)
+//     expression:'excited',       … 表情(省略すると happy)
+//     when:(ctx)=>真偽,           … 出す条件。ctx = { bondLevel, assistantId, callStyles }
+//     title:'…', pages:[ '…' ] }  … 見出しと本文(本文は1ページ1文が読みやすい)
+//
+// 本文へ数字を直接書かないこと。解放Lvや呼び方の例は ctx から作る
+// (Lvを変えたときに案内だけ古いままになるため)。
+const ASSISTANT_UNLOCK_NOTICES = [
+  {
+    id: 'unlock_call_style_v1',
+    scene: 'profile',
+    expression: 'excited',
+    when: (ctx) => Number(ctx && ctx.bondLevel) >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL,
+    title: '呼び方を決められるようになったよ',
+    pages: (ctx) => {
+      const styles = (ctx && Array.isArray(ctx.callStyles) && ctx.callStyles.length)
+        ? ctx.callStyles : ASSISTANT_CALL_STYLES;
+      return [
+        `仲良し度がLv${ASSISTANT_CALL_STYLE_UNLOCK_LEVEL}になったから、あたしの呼び方を自分で決められるようになったよ♪`,
+        `プロフィールの助手のところから変えられるんだ。${styles.map(st => st.label).join('・')}みたいな例もあるから、選ぶだけでもOK！`,
+        '「{name}」って書くと、そこがプレイヤー名になるよ。書かなければ入れた文字がそのまま呼び方になるんだ。',
+        '決めなくても大丈夫。そのままなら、いまの仲良し度に合わせた呼び方が続くよ。',
+      ];
+    },
+  },
+];
+// 本文はそのときの状況(解放Lv・助手ごとの呼び方の例)から作るので、関数でも配列でも書ける
+const assistantUnlockNoticePages = (notice, ctx) => {
+  const pages = typeof notice?.pages === 'function' ? notice.pages(ctx) : notice?.pages;
+  return Array.isArray(pages) ? pages.filter(page => typeof page === 'string' && page.trim()) : [];
+};
+// 既読の記録。壊れた値・古い形が入っていても必ず文字列の配列へ落とす
+// (保存キーは新しく足すので、既存のセーブデータには一切触らない)
+const ASSISTANT_UNLOCK_NOTICE_SEEN_KEY = 'mh_assistant_unlock_seen_v1';
+const normalizeAssistantUnlockSeen = (value) => {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+};
+// その画面で出すべき案内を1件だけ返す(まだ無ければ null)。
+// 画面側はこれを呼んで、返ってきたら吹き出しの代わりに案内を出し、
+// 閉じたら id を既読へ足して保存する
+const assistantUnlockNoticeFor = (scene, ctx, seen) => {
+  const done = new Set(normalizeAssistantUnlockSeen(seen));
+  const found = ASSISTANT_UNLOCK_NOTICES.find(notice => notice
+    && notice.scene === scene
+    && !done.has(notice.id)
+    && (typeof notice.when !== 'function' || notice.when(ctx || {}))
+    && assistantUnlockNoticePages(notice, ctx || {}).length > 0);
+  if (!found) return null;
+  return {
+    id: found.id,
+    title: found.title || '',
+    expression: found.expression || 'happy',
+    pages: assistantUnlockNoticePages(found, ctx || {}),
+  };
+};
+
 // 仲良し度(数値) → その段階の定義。壊れた値でも必ず最初の段階へ落ちる
 const assistantBondStage = (points) => {
   const p = Number.isFinite(points) ? points : 0;
@@ -1869,6 +1934,114 @@ addAssistantLinePack({
         { e:'happy',    t:'お疲れさまでつ。ゆっくり休みましょ。' },
       ],
     },
+  },
+});
+
+// ---------- セリフを増やすとき、ここへ足す ----------
+// 場面ごとのセリフは「多いほど、遊んでいて飽きない」ので、思いついたら
+// この束へ足していく。ASSISTANT_SCENES の定義そのものを触らずに増やせるので、
+// 元の場面がどう作られているかを気にしなくてよい。
+//
+// 【足し方】
+//   下の lines へ、場面キーごとに配列で足すだけ。
+//     home: [ { e:'happy', t:'…' }, { e:'wink', t:'…', bond:6 } ],
+//   ・e … 表情(normal / happy / wink / excited / troubled …)
+//   ・t … セリフ。{name} はそのときの呼び方(さん付け・呼び捨て・ちん付け)に置き換わる
+//   ・bond … その仲良し度以上のときだけ出す(省略すると、いつでも出る)
+//   ・w … 出やすさ(省略すると1)
+//   ・who … きき用にするなら 'kiki'(省略するとみゅあ)
+//
+// どの場面がいま何本あるかは `node tools/assistant/assistant-line-report.js` で見られる。
+// 少ない場面から足していくと、体感が変わりやすい。
+addAssistantLinePack({
+  id: 'linesExtra',
+  label: 'あとから足したセリフ(ここへどんどん足す)',
+  lines: {
+    // ---- 本数が5本しかなかった場面を10本ずつへ ----
+    battleHelp: [
+      { e:'normal',  t:'手札が渋いときは、削りに徹するのも手だよ。' },
+      { e:'wink',    t:'距離を合わせるだけで、ダメージがぜんぜん違うんだ！' },
+      { e:'troubled', t:'危ないと思ったら、無理せず守りに寄せよ！' },
+      { e:'excited', t:'連撃が乗ったときの気持ちよさ、たまんないよね♪' },
+      { e:'happy',   t:'焦らなくて大丈夫。1ターンずつ積み上げていこ！' },
+    ],
+    chaosDifficulty: [
+      { e:'troubled', t:'ここまで来たら、装備も編成も全部見直したいところ！' },
+      { e:'normal',  t:'消費ガッツが重いから、撃つ手を1つ減らす勇気も要るよ。' },
+      { e:'excited', t:'CHAOSを抜けた人だけがULTIMATEへ行けるんだ！' },
+      { e:'wink',    t:'半減されるぶん、素の火力を上げておくと戦いやすいよ♪' },
+      { e:'surprise', t:'×20の敵って、想像するだけでちょっと震えちゃう…！' },
+    ],
+    dailyMasuAdvice: [
+      { e:'normal',  t:'登録したい子を勇者モンにするのを忘れずにね。' },
+      { e:'happy',   t:'絆経験値が入ってないと登録できないから、WAVE2までは進も！' },
+      { e:'excited', t:'マスモンが増えると、編成の幅がぐっと広がるよ♪' },
+      { e:'wink',    t:'難易度は低くていいんだ。回数がものを言うやつだね！' },
+      { e:'normal',  t:'8体そろうまでは、この方法がいちばん早いと思うよ。' },
+    ],
+    infinityDifficulty: [
+      { e:'normal',  t:'INFINITYまでの道のりは長いけど、育てた分はぜんぶ残るよ。' },
+      { e:'happy',   t:'今できることを積み重ねてれば、いつかここに立てるはず♪' },
+      { e:'excited', t:'どんな敵が出るのか、あたしもすっごく気になる！' },
+      { e:'wink',    t:'先にULTIMATEを味わっておくと、心の準備になるかもね♪' },
+      { e:'surprise', t:'名前からして果てが無さそう…どこまで行けるんだろ！' },
+    ],
+    onboarding: [
+      { e:'wink',    t:'アイコンもあとで増やせるから、今は好きなのでいこ♪' },
+      { e:'excited', t:'モンスターを育てて、バトルして、また育てて…楽しいよ！' },
+      { e:'normal',  t:'難しそうに見えても、やってるうちに手が覚えるやつだよ。' },
+      { e:'happy',   t:'最初の1体を決めるとこから始めよ♪ ワクワクするね！' },
+      { e:'wink',    t:'困ったら画面の中のあたしをタップ！ そこに答えがあるよ。' },
+    ],
+    pickAlly: [
+      { e:'normal',  t:'手薄な距離を埋める子がいたら、その子が本命かも。' },
+      { e:'wink',    t:'固有技の相性も見ておくと、あとで効いてくるよ♪' },
+      { e:'happy',   t:'迷ったら、育ってる子を素直に選ぶのもアリ！' },
+      { e:'excited', t:'いい仲間が来ると、一気に景色が変わるんだよね！' },
+      { e:'troubled', t:'ここで悩む時間、あたしはけっこう好きだったりする。' },
+    ],
+    pickSlot: [
+      { e:'wink',    t:'零・近・中・遠、それぞれ得意な子がいるんだ♪' },
+      { e:'happy',   t:'前に出るか、後ろで支えるか。性格が出るとこだね！' },
+      { e:'normal',  t:'敵の間合いを見てから決めても遅くないよ。' },
+      { e:'excited', t:'ぴったりハマったときの火力、ほんと気持ちいい！' },
+      { e:'troubled', t:'苦手な距離に置くと伸び悩むから、そこだけ気をつけて。' },
+    ],
+    pickTeaching: [
+      { e:'happy',   t:'今のバトルを乗り切るなら、効果の広いやつが安心だよ♪' },
+      { e:'normal',  t:'先を見るなら、同じ教えを重ねる形が伸びるね。' },
+      { e:'wink',    t:'ガッツと相談しながら選ぶと、失敗しにくいよ！' },
+      { e:'excited' , t:'噛み合ったときのコンボ、見てて楽しいんだよね♪' },
+      { e:'troubled', t:'欲張りすぎると持て余すから、ほどほどが吉かも。' },
+    ],
+    rewardPick: [
+      { e:'wink',    t:'ライフを厚くしておくと、後半がぐっとラクになるよ♪' },
+      { e:'normal',  t:'ちからに寄せると、短いターンで倒しきれるようになるね。' },
+      { e:'happy',   t:'その時いちばん困ってるところを埋めるのが正解だと思う！' },
+      { e:'excited', t:'ここで伸ばしたぶんは、このプレイ中ずっと効いてくるよ！' },
+      { e:'troubled', t:'2つとも同じにするか散らすか…毎回まよっちゃうよね。' },
+    ],
+    skipPick: [
+      { e:'happy',   t:'育てたい子を勇者モンにすると、絆経験値がしっかり入るよ♪' },
+      { e:'normal',  t:'供モンにもちゃんと分けて入るから、3枠とも埋めておこ。' },
+      { e:'wink',    t:'報酬方針が「育成」のときだけ使えるやつだよ！' },
+      { e:'excited', t:'まとめ使いで一気にレベルを上げるの、けっこう快感♪' },
+      { e:'troubled', t:'マスモン登録はできないから、そこだけ覚えといてね。' },
+    ],
+    skipResult: [
+      { e:'wink',    t:'絆レベルの伸びも見てみて♪ 強化ポイントが増えてるかも！' },
+      { e:'excited', t:'この勢いで、次の難易度に手が届きそうじゃん！' },
+      { e:'normal',  t:'チケットの残りも見ておくと、使いどころを決めやすいよ。' },
+      { e:'happy',   t:'コツコツ育てた子が伸びると、うれしくなっちゃうね♪' },
+      { e:'troubled', t:'スコアは出ないから、記録を狙うときは普通に戦お！' },
+    ],
+    ultimateDifficulty: [
+      { e:'normal',  t:'長引くほど不利になるから、短期決戦の組み方が要るよ。' },
+      { e:'wink',    t:'距離を散らしておくと、DISTANCE BREAKで慌てずに済むよ♪' },
+      { e:'excited', t:'ここを越えた人だけが、その先を見られるんだ！' },
+      { e:'troubled', t:'加入ボーナスも下がるから、序盤のWAVEが勝負どころかも。' },
+      { e:'surprise', t:'×35って…もう数字の意味がわかんなくなってきた！' },
+    ],
   },
 });
 
