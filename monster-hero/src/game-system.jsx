@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 11:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 11:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6419,6 +6419,9 @@ function MonsterHeroGame() {
   // 勇者モンを配置した間合いを、最初のWAVE開始時の内部距離にも使用する。
   // state更新直後にバトルへ進んでも取りこぼさないよう同期的なrefで保持する。
   const initialBattleDistanceRef = useRef(2);
+  // 次の通常周回を同じ出撃条件で組み直すための一時情報。育成途中のmon objectは入れず、
+  // rosterと同じ安定IDだけを正式なラン開始時に記録する（AUTO∞からの利用は5B以降）。
+  const repeatRunTemplateRef = useRef(null);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
   // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
@@ -9990,6 +9993,79 @@ function MonsterHeroGame() {
     focusedCard:null, enemyIntent:null, enemyLastIntent:null, enemyNextIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
+  const applyResetAllState = () => {
+    const s = resetAllState();
+    setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
+    setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
+    setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
+    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice); setInheritedUniqueEvo(s.inheritedUniqueEvo);
+    setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel); setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
+    ultimateDistanceBreakLevelsRef.current=s.ultimateDistanceBreakLevels; setUltimateDistanceBreakLevels(s.ultimateDistanceBreakLevels);
+    ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
+    writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
+    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage); setDistDmgBonus(s.distDmgBonus); setDistAptPct(s.distAptPct); setTotalDistDamage(s.totalDistDamage); setTotalAllDamage(s.totalAllDamage); setTotalRecoveryDelta(s.totalRecoveryDelta);
+    setWaveResult(s.waveResult); setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent); reserveEnemyNextIntent(s.enemyNextIntent); setEffect(s.effect); setTrainingPicks([]); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory); setGaveUp(s.gaveUp);
+    setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
+    setRunHighlights({ newRecord:false, firstClear:false, firstWin:false, firstLose:false });
+    return s;
+  };
+
+  const createRepeatRunTemplate = ({ hero, allies=[] }) => Object.freeze({
+    runMode,
+    difficulty,
+    heroRosterEntry:joinRosterEntry(hero),
+    initialDistance:initialBattleDistanceRef.current,
+    quickRewardPolicy:isQuickMode(runMode) ? normalizeQuickRewardPolicy(quickRewardPolicyRunRef.current) : null,
+    proAllyRosterEntries:isProMode(runMode) ? allies.map(joinRosterEntry) : [],
+    extremeRun:!!extremeRunRef.current,
+    extremeDifficulty:extremeRunRef.current ? extremeDifficulty : null,
+  });
+
+  // 保存したIDを毎回いまのroster/マスモン正本へ引き直す。消失・利用不可・Pro制約違反は
+  // 別個体で補完せず、5BがAUTO∞を停止できる失敗値として返す。
+  const resolveRepeatRunTemplate = (template) => {
+    if (!template || !Number.isInteger(template.initialDistance) || template.initialDistance < 0 || template.initialDistance > 3) return { ok:false, reason:'invalid-template' };
+    const mode=template.runMode === EXTREME_MODE.id ? EXTREME_MODE.id : normalizeBattleMode(template.runMode);
+    const pro=isProMode(mode);
+    const allowed=pro ? getUnlockedBaseMonsterList() : [...getActiveMonsterList(), ...getUnlockedBaseMonsterList()];
+    const allowedEntries=new Set(allowed.map(joinRosterEntry).filter(Boolean));
+    if (!allowedEntries.has(template.heroRosterEntry)) return { ok:false, reason:'hero-unavailable' };
+    const hero=resolveRosterEntryToMon(template.heroRosterEntry);
+    if (!hero || (pro && hero.masuId != null)) return { ok:false, reason:'hero-unavailable' };
+    const allyEntries=Array.isArray(template.proAllyRosterEntries) ? template.proAllyRosterEntries : [];
+    if (pro && (allyEntries.length !== PRO_ALLY_POOL_SIZE || new Set(allyEntries).size !== allyEntries.length || allyEntries.includes(template.heroRosterEntry))) return { ok:false, reason:'invalid-pro-party' };
+    const proAllies=pro ? allyEntries.map(entry => allowedEntries.has(entry) ? resolveRosterEntryToMon(entry) : null) : [];
+    if (pro && proAllies.some(mon => !mon || mon.masuId != null)) return { ok:false, reason:'pro-ally-unavailable' };
+    return { ok:true, runMode:mode, difficulty:template.difficulty, hero, initialDistance:template.initialDistance,
+      quickRewardPolicy:isQuickMode(mode) ? normalizeQuickRewardPolicy(template.quickRewardPolicy) : QUICK_REWARD_POLICY_GROWTH,
+      proAllies, extremeRun:!!template.extremeRun, extremeDifficulty:template.extremeDifficulty || null };
+  };
+
+  // まだ本番のWAVE10/CHAMPIONには接続しない。5Bから呼べる、新しいrunIdと完全な初期状態を
+  // 作ったうえで既存の初回アシストカード選択へ合流する内部入口だけを用意する。
+  const startRunFromRepeatTemplate = (template) => {
+    const resolved=resolveRepeatRunTemplate(template);
+    if (!resolved.ok) return resolved;
+    stopAutoBattle();
+    beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
+    setRunFinalizing(false);
+    applyResetAllState();
+    setRunMode(resolved.runMode); setDifficulty(resolved.difficulty);
+    quickRewardPolicyRunRef.current=resolved.quickRewardPolicy;
+    extremeRunRef.current=resolved.extremeRun; setExtremeRun(resolved.extremeRun);
+    if (resolved.extremeRun && resolved.extremeDifficulty) setExtremeDifficulty(resolved.extremeDifficulty);
+    initialBattleDistanceRef.current=resolved.initialDistance;
+    const initialSlots=[null,null,null,null]; initialSlots[resolved.initialDistance]={...resolved.hero};
+    const initialUnique={...resolved.hero.unique,evoLevel:Math.max(0,resolved.hero.unique?.evoLevel||0)};
+    setSlots(initialSlots); setMainHero(resolved.hero); setOwnedUniques([initialUnique]);
+    setMaxHp(resolved.hero.baseHp); setHp(resolved.hero.baseHp); setMaxGuts(resolved.hero.baseGuts); setGuts(Math.floor(resolved.hero.baseGuts*0.5)); setAtk(resolved.hero.baseAtk); setDef(resolved.hero.baseDef);
+    setDistAptPct(getMonsterAptPct(resolved.hero,specialRuleDifficultyForRun(resolved.runMode,resolved.difficulty,resolved.extremeRun,resolved.extremeDifficulty)));
+    setProAllyPool(resolved.proAllies);
+    repeatRunTemplateRef.current=Object.freeze({ ...template });
+    setTeachingPool([...getActiveTeachingCards()]); setGameState('PICK_TEACHING');
+    return { ok:true, runId:runIdRef.current };
+  };
+
   // 自動案内の優先順位判定でも使うため、描画部より前で確定する。
   const updateNoticeVisible = updateAvailable && (!latestBuild || latestBuild !== dismissedUpdateBuild);
 
@@ -10383,21 +10459,7 @@ function MonsterHeroGame() {
     stopAutoBattle();
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
-    const s = resetAllState();
-    setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
-    setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
-    setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
-    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{}); setInheritedUniqueEvo(s.inheritedUniqueEvo||{});
-    setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
-    setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
-    ultimateDistanceBreakLevelsRef.current=s.ultimateDistanceBreakLevels; setUltimateDistanceBreakLevels(s.ultimateDistanceBreakLevels);
-    ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
-    writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
-    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
-    setWaveResult(s.waveResult);
-    setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setTrainingPicks([]); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
-    setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
+    applyResetAllState();
     setGameState('PICK_HERO');
   };
 
@@ -11966,6 +12028,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         setGameState('PICK_PRO_ALLIES');
         return;
       }
+      repeatRunTemplateRef.current=createRepeatRunTemplate({ hero:m, allies:[] });
       setTeachingPool([...getActiveTeachingCards()]); setGameState('PICK_TEACHING');
     } else {
       const bonus=m.plusStats||{};
@@ -12022,6 +12085,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }, getUnlockedBaseMonsterList().map(mon=>mon.id));
     setLastProParty(confirmedParty);
     storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
+    repeatRunTemplateRef.current=createRepeatRunTemplate({ hero:mainHero, allies:proAllyPool });
     setTeachingPool([...getActiveTeachingCards()]);
     setGameState('PICK_TEACHING');
   };
