@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 05:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 07:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -670,6 +670,8 @@ const breakthroughStarStyle = (star) => ({
 // 必要数は限界突破1回ごとに増える。1回目5個・以降+1個で、
 //   30回目 = 5 + 29×1 = 34個 / 最終限界突破(31回目) = 5 + 30×1 = 35個
 const BREAKTHROUGH_ITEM_ID = 'rainbow_psyche';
+// 超越ポイントリセットの書。マーケット(data/breeder.js)の同じIDを指す
+const TRANSCEND_RESET_ITEM_ID = 'transcend_reset_scroll';
 const BREAKTHROUGH_ITEM_BASE = 5;
 const BREAKTHROUGH_ITEM_STEP = 1;
 // nextCount は「これから行う限界突破が何回目か」(rebirthCount + 1)
@@ -1555,6 +1557,30 @@ const applyTranscendPlanToMasu = (masu, plan) => {
 // 超越で上げた基礎の合計段階数(表示・検査用)
 const transcendAptBoostTotal = (masu) => normalizeTranscendAptBoosts(masu?.transcendAptBoosts)
   .reduce((sum, value) => sum + value, 0);
+// 超越強化へ使った超越ポイントの合計。ステータスは1Pあたりの上昇量で割って本数へ戻す
+const transcendSpentPoints = (masu) => {
+  const stat = normalizeTranscendStatPoints(masu?.transcendStatPoints);
+  const statSpent = TRANSCEND_STAT_KEYS.reduce((sum, key) => sum + Math.ceil((stat[key] || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
+  return statSpent + transcendAptBoostTotal(masu);
+};
+// 【超越ポイントリセットの書】使った超越Pをすべて未使用へ戻す。
+// 戻すのは超越Pだけで、絆Lv・絆XP・Lv上限・超越済みかどうか・限界突破・転生回数・
+// 通常の強化ポイント・固有技・染色・虹のプシュケーには一切触れない。
+// 1Pも使っていなければ null を返し、呼び出し側でアイテムを消費させない。
+const buildMasuTranscendReset = (masu) => {
+  const normalized = normalizeMasuProgression(masu);
+  const refunded = transcendSpentPoints(normalized);
+  if (refunded <= 0) return null;
+  return {
+    refundedPoints: refunded,
+    nextMasu: {
+      ...normalized,
+      transcendStatPoints: normalizeTranscendStatPoints(null),
+      transcendAptBoosts: normalizeTranscendAptBoosts(null),
+      transcendPoints: normalized.transcendPoints + refunded,
+    },
+  };
+};
 // リセット直前の「ポイントで上げた分」だけを、同じ個体の保存値へ小さなスナップショットとして残す。
 // 絆XP・絆Lv・固有技などは含めず、旧形式の個体でも現行の下書き(plan)へ直せる形にそろえる。
 const buildBondResetAllocationSnapshot = (masu, base) => {
@@ -7078,6 +7104,10 @@ function MonsterHeroGame() {
   const [transcendDebugId, setTranscendDebugId] = useState(null);
   // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / MAX
   const [transcendBulkUnit, setTranscendBulkUnit] = useState(1);
+  // 超越ポイントリセットの書。確認シートの開閉と、連打で2冊消費しないためのロック
+  const [transcendResetOpen, setTranscendResetOpen] = useState(false);
+  const [transcendResetError, setTranscendResetError] = useState('');
+  const transcendResetProcessingRef = useRef(false);
   // 虹のプシュケーの変換シート。開いているあいだだけ、欲しい超越ポイント数を下書きする
   const [transcendExchangeOpen, setTranscendExchangeOpen] = useState(false);
   const [transcendExchangeWant, setTranscendExchangeWant] = useState(1);
@@ -9637,6 +9667,37 @@ function MonsterHeroGame() {
     });
     setOwnedItems(prev => { const next = { ...prev, bond_reset_scroll: (prev.bond_reset_scroll || 0) - 1 }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.tap();
+  };
+  // 超越ポイントリセットの書: 超越強化へ使った超越Pをすべて未使用の超越Pへ戻す。
+  // 絆Lv・絆XP・Lv上限・超越済みかどうか・限界突破・転生回数・通常の強化・虹のプシュケーは変えない。
+  // 保存が済んでからアイテムを減らすので、途中で失敗しても「本だけ減る」状態にはならない。
+  const useTranscendResetScroll = async (masuId) => {
+    if (transcendResetProcessingRef.current) return null;
+    if (ownedItemCount(ownedItemsRef.current, TRANSCEND_RESET_ITEM_ID) <= 0) return null;
+    const masu = getMasuMon(masuId);
+    if (!masu) return null;
+    const reset = buildMasuTranscendReset(masu);
+    if (!reset) { setTranscendResetError('リセットする超越強化がありません'); return null; }
+    transcendResetProcessingRef.current = true;
+    try {
+      const nextMasuMons = masuMonsRef.current.map(m => String(m.id) === String(masuId) ? reset.nextMasu : m);
+      const nextItems = { ...ownedItemsRef.current,
+        [TRANSCEND_RESET_ITEM_ID]: ownedItemCount(ownedItemsRef.current, TRANSCEND_RESET_ITEM_ID) - 1 };
+      await storeSet('mh_masu_mons', nextMasuMons, false);
+      await storeSet('mh_owned_items', nextItems, false);
+      masuMonsRef.current = nextMasuMons; ownedItemsRef.current = nextItems;
+      setMasuMons(nextMasuMons); setOwnedItems(nextItems);
+      setMasuMonDetail(prev => prev && String(prev.id) === String(masuId) ? reset.nextMasu : prev);
+      setTranscendPlan(null);
+      setTranscendResetError('');
+      Audio_.se.tap();
+      return reset;
+    } catch {
+      setTranscendResetError('リセットを保存できませんでした。もう一度お試しください。');
+      return null;
+    } finally {
+      transcendResetProcessingRef.current = false;
+    }
   };
   // 絆経験値のチケット(トレーニング/修行)をまとめて使う。
   // 1枚あたりの絆経験値はアイテム側(bondXp)が持つので、枚数ぶんをまとめて加算する
@@ -15512,6 +15573,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         ? <div className="shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2">神殿の<br/>限界突破で<br/>使用</div>
                         : item.usage==='uniqueSkillReset'
                         ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>固有技強化で<br/>使用</div>
+                        : item.usage==='transcendReset'
+                        ? <div className="shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
                         : <button onClick={()=>setPendingItemUse(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>}
                     </div>
                   ))}
@@ -15821,6 +15884,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const exchangeQuote = transcendPsycheExchange(psycheHave, exchangeWant);
           const setWant = (n) => setTranscendExchangeWant(Math.max(1, Math.min(Math.max(1, exchangeMax), n)));
           const openExchange = () => { setTranscendExchangeError(''); setTranscendExchangeWant(exchangeMax>0?1:1); setTranscendExchangeOpen(true); };
+          // 超越ポイントリセットの書。振り分け直したいときに、使った超越Pを全部戻す
+          const resetScrollHave = ownedItemCount(ownedItems, TRANSCEND_RESET_ITEM_ID);
+          const spentPoints = transcendSpentPoints(normalized);
+          const openReset = () => { setTranscendResetError(''); setTranscendResetOpen(true); };
+          const runReset = async () => {
+            const done = await useTranscendResetScroll(masu.id);
+            if (done) setTranscendResetOpen(false);
+          };
           const runExchange = async () => {
             const applied = await commitTranscendExchange(masu, exchangeWant);
             if (applied) { setTranscendExchangeOpen(false); setTranscendExchangeWant(1); }
@@ -15861,6 +15932,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span aria-hidden="true">🌈</span>虹のプシュケーを変換
                     <span className="text-[9px] font-mono text-slate-300">所持 {psycheHave.toLocaleString()}</span>
                   </button>
+                  {/* 振り直し。使った超越Pが1つも無いときは押せない(本を無駄に減らさない) */}
+                  <button data-transcend-reset-open disabled={spentPoints<=0||resetScrollHave<=0} onClick={openReset} className="mt-2 w-full min-h-[42px] rounded-2xl border border-amber-400/50 bg-amber-950/30 text-amber-100 text-[11px] font-black active:scale-95 disabled:opacity-35 flex items-center justify-center gap-2">
+                    <span aria-hidden="true">🌠</span>超越ポイントリセット
+                    <span className="text-[9px] font-mono text-slate-300">書 ×{resetScrollHave}</span>
+                  </button>
+                  {spentPoints<=0&&<div className="mt-1 text-[9px] font-bold text-slate-500 text-center">リセットする超越強化がありません</div>}
+                  {spentPoints>0&&resetScrollHave<=0&&<div className="mt-1 text-[9px] font-bold text-slate-500 text-center">「超越ポイントリセットの書」はマーケットで買えます</div>}
                 </div>
                 {/* 振り分け。通常強化(まとめて強化)とまったく同じ並び・同じ操作にそろえている */}
                 <div className="bg-slate-900 border border-sky-500/40 rounded-3xl p-3 shadow-xl">
@@ -15899,6 +15977,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs disabled:opacity-35 active:scale-95">キャンセル</button>
                 <button data-transcend-commit disabled={planUsed<=0} onClick={()=>commitTranscendPlan(masu, plan)} className="min-h-[48px] rounded-2xl bg-sky-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95">この配分で確定（{planUsed}P）</button>
               </div>
+              {/* 超越ポイントのリセット。何が何点戻るのかを出してから確定させる */}
+              {transcendResetOpen&&(
+                <div data-transcend-reset-sheet role="dialog" aria-modal="true" aria-label="超越ポイントをリセット" className="absolute inset-0 flex items-end justify-center" style={{zIndex:30500,backgroundColor:'rgba(2,6,23,0.86)'}} onClick={()=>setTranscendResetOpen(false)}>
+                  <div className="w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-amber-400/40 bg-slate-900 p-4 space-y-3" style={{maxHeight:'calc(100% - env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} onClick={e=>e.stopPropagation()}>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-black text-amber-200 flex items-center gap-1.5"><span aria-hidden="true">🌠</span>超越ポイントをリセットしますか？</h3>
+                      <button aria-label="閉じる" onClick={()=>setTranscendResetOpen(false)} className="p-2 text-slate-400 active:scale-90"><X size={18}/></button>
+                    </div>
+                    <div className="rounded-2xl border border-amber-400/30 bg-amber-950/25 p-3 space-y-1 text-[10px] font-black">
+                      <div className="flex justify-between"><span className="text-slate-300">使用済み超越P</span><span className="font-mono text-white">{spentPoints}P</span></div>
+                      <div className="flex justify-between"><span className="text-slate-300">未使用超越P</span><span className="font-mono text-white">{points}P</span></div>
+                      <div className="flex justify-between pt-1 border-t border-white/10"><span className="text-slate-300">リセット後の未使用超越P</span><span className="font-mono text-amber-200">{points + spentPoints}P</span></div>
+                      <div className="flex justify-between"><span className="text-slate-300">超越ポイントリセットの書</span><span className="font-mono text-white">×{resetScrollHave} → ×{Math.max(0, resetScrollHave - 1)}</span></div>
+                    </div>
+                    <div className="text-[9px] font-bold text-slate-400 leading-relaxed">超越で上げた基礎ステータスと基礎の間合い適性が元へ戻り、そのぶんの超越ポイントが未使用へ返ります。絆レベル・絆経験値・Lv上限・超越済みかどうか・限界突破・転生回数・通常の強化は変わりません。<b className="text-amber-200">交換に使った虹のプシュケーは戻りません。</b></div>
+                    {transcendResetError&&<div className="text-[10px] font-black text-red-400">{transcendResetError}</div>}
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={()=>setTranscendResetOpen(false)} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95">やめる</button>
+                      <button data-transcend-reset-commit disabled={spentPoints<=0||resetScrollHave<=0} onClick={runReset} className="min-h-[48px] rounded-2xl bg-amber-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95">書を1冊使ってリセット</button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* 虹のプシュケーの変換。振り分けの画面と混ざるとごちゃつくので、専用のシートへ分けている */}
               {transcendExchangeOpen&&(
                 <div data-transcend-exchange-sheet role="dialog" aria-modal="true" aria-label="虹のプシュケーを変換" className="absolute inset-0 flex items-end justify-center" style={{zIndex:30500,backgroundColor:'rgba(2,6,23,0.86)'}} onClick={()=>setTranscendExchangeOpen(false)}>

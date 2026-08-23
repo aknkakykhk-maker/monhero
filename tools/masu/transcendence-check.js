@@ -24,6 +24,8 @@ const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx
 const help = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 const changelog = fs.readFileSync(path.join(root, 'monster-hero/data/changelog.js'), 'utf8');
 const assistants = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
+const breeder = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8');
+const TRANSCEND_STAT_KEYS_ALL = ['hp', 'atk', 'def', 'guts'];
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -312,6 +314,40 @@ check('未超越の超越強化も、通常リセット相当で消えない', (
   return normalize(reset).transcendStatPoints.hp === 10 && merge(reset).distAptitude[0] === 'B'
     && normalize(reset).transcendPoints === 1 && normalize(reset).transcended === false;
 })());
+// 転生は超越Pの振り直し手段ではない。使用済みを未使用へ戻してはいけない
+check('転生しても使用済み超越Pを未使用へ戻さない', (() => {
+  // ライフ20P・ちから10P・適性5Pを使い、未使用15Pを残した状態から転生する
+  const spent = applyPlan(transcended({ transcendPoints: 50 }),
+    { apt: [5, 0, 0, 0], stat: { hp: 20, atk: 10 } }).masu;
+  const before = normalize(spent);
+  const reborn = normalize(resetForRebirth(before, { toLevel: 351 }));
+  return before.transcendPoints === 15
+    && reborn.transcendPoints === 15
+    && reborn.transcendStatPoints.hp === 20 * 10 && reborn.transcendStatPoints.atk === 10 * 3
+    && reborn.transcendAptBoosts[0] === 5;
+})());
+check('転生では通常強化だけが振り直される', (() => {
+  const grown = applyEnhance(applyPlan(transcended({ transcendPoints: 20, distAptPoints: 30 }),
+    { apt: [1, 0, 0, 0], stat: { hp: 1 } }).masu, { apt: [2, 0, 0, 0], stat: { hp: 3 } }).masu;
+  const reborn = resetForRebirth(normalize(grown), { toLevel: 351, distAptPoints: 400 });
+  return reborn.statPoints.hp === 0 && reborn.distAptBoosts[0] === 0 && reborn.distAptPoints === 400
+    && reborn.transcendStatPoints.hp === 10 && reborn.transcendAptBoosts[0] === 1;
+})());
+check('転生後にLv401以降を育て直すと、上がったぶんだけ超越Pを再獲得する', (() => {
+  // Lv450 → 転生 → Lv351。351→450 で 400を超えたぶん(50レベル)だけ超越Pが入る
+  const grown = transcended({ bondXp: totalXp(450), transcendPoints: 0 });
+  const reborn = resetForRebirth(normalize(grown), { toLevel: 351 });
+  const relevel = applyBondXp(reborn, totalXp(450) - totalXp(351));
+  const ok450 = levelOf(relevel.masu).level === 450 && normalize(relevel.masu).transcendPoints === 50;
+  // Lv500 → 転生 → Lv401。401→500 は 99レベルぶん
+  const reborn2 = resetForRebirth(normalize(transcended({ bondXp: totalXp(500) })), { toLevel: 401 });
+  const relevel2 = applyBondXp(reborn2, totalXp(500) - totalXp(401));
+  return ok450 && levelOf(relevel2.masu).level === 500 && normalize(relevel2.masu).transcendPoints === 99;
+})());
+check('転生した瞬間には超越Pを配り直さない', (() => {
+  const reborn = resetForRebirth(normalize(transcended({ bondXp: totalXp(450), transcendPoints: 3 })), { toLevel: 351 });
+  return normalize(reborn).transcendPoints === 3;
+})());
 check('未超越の超越強化も、転生・限界突破で消えない', (() => {
   const enhanced = applyPlan(masu({ transcendPoints: 3, rebirthCount: 3, bondXp: totalXp(200), levelCap: 200 }),
     { apt: [1, 0, 0, 0], stat: { hp: 1 } }).masu;
@@ -330,6 +366,78 @@ check('正式超越後のLv401以降は、既存の超越Pへ足される', (() 
   return normalize(after).transcendPoints === 5 && normalize(leveled).transcendPoints === 8
     && levelOf(leveled).level === 403;
 })());
+
+// ---- ⑥-2 超越ポイントリセットの書 ----
+const buildReset = G('buildMasuTranscendReset');
+const spentOf = G('transcendSpentPoints');
+check('超越Pを1つも使っていなければリセットできない（本を減らさない）',
+  buildReset(transcended({ transcendPoints: 9 })) === null && buildReset(masu()) === null);
+check('使用済み超越Pをすべて未使用へ戻す', (() => {
+  // ライフ20P・距離5P・未使用15P → リセット後は未使用40P
+  const spent = applyPlan(transcended({ transcendPoints: 40 }), { apt: [5, 0, 0, 0], stat: { hp: 20 } }).masu;
+  const before = normalize(spent);
+  const reset = buildReset(spent);
+  const after = normalize(reset.nextMasu);
+  return before.transcendPoints === 15 && spentOf(before) === 25 && reset.refundedPoints === 25
+    && after.transcendPoints === 40
+    && TRANSCEND_STAT_KEYS_ALL.every(key => after.transcendStatPoints[key] === 0)
+    && after.transcendAptBoosts.every(value => value === 0);
+})());
+check('リセットしても超越済み・Lv・XP・通常強化・限界突破・転生回数は変わらない', (() => {
+  const grown = applyEnhance(applyPlan(transcended({ transcendPoints: 10, distAptPoints: 20, reincarnateCount: 2 }),
+    { apt: [1, 0, 0, 0], stat: { hp: 2 } }).masu, { apt: [3, 0, 0, 0], stat: { hp: 4 } }).masu;
+  const before = normalize(grown);
+  const after = normalize(buildReset(grown).nextMasu);
+  return after.transcended === true && after.levelCap === before.levelCap
+    && after.bondXp === before.bondXp && levelOf(after).level === levelOf(before).level
+    && after.statPoints.hp === before.statPoints.hp && after.distAptBoosts[0] === before.distAptBoosts[0]
+    && after.distAptPoints === before.distAptPoints
+    && after.rebirthCount === before.rebirthCount && after.reincarnateCount === before.reincarnateCount;
+})());
+check('リセットで能力・適性・総合力が超越前の値へ戻る', (() => {
+  const plain = transcended({ transcendPoints: 6 });
+  const spent = applyPlan(plain, { apt: [2, 0, 0, 0], stat: { hp: 2 } }).masu;
+  const after = buildReset(spent).nextMasu;
+  return merge(spent).baseHp - merge(plain).baseHp === 20
+    && merge(after).baseHp === merge(plain).baseHp
+    && merge(after).distAptitude[0] === merge(plain).distAptitude[0]
+    && powerOf(after) === powerOf(plain);
+})());
+check('正式超越していない個体でもリセットできる', (() => {
+  const plain = masu({ transcendPoints: 5, rebirthCount: 0, bondXp: 0, levelCap: 30 });
+  const spent = applyPlan(plain, { apt: [1, 0, 0, 0], stat: { hp: 1 } }).masu;
+  const after = normalize(buildReset(spent).nextMasu);
+  return after.transcendPoints === 5 && after.transcended === false && after.levelCap === 30;
+})());
+// UI・保存のつくり
+check('リセットの入口と確認シートが超越強化の画面にある',
+  source.includes('data-transcend-reset-open') && source.includes('data-transcend-reset-sheet')
+  && source.includes('data-transcend-reset-commit')
+  && source.includes('リセットする超越強化がありません'));
+check('確認シートに使用済み・リセット後・所持数を出す',
+  source.includes('使用済み超越P') && source.includes('リセット後の未使用超越P')
+  && source.includes('超越ポイントリセットの書'));
+check('虹のプシュケーは返さないと明記している', source.includes('交換に使った虹のプシュケーは戻りません'));
+check('連打しても2冊消費しない（処理ロック）',
+  source.includes('transcendResetProcessingRef.current = true')
+  && source.includes('if (transcendResetProcessingRef.current) return null;'));
+check('保存が済んでからアイテムを減らす（片方だけの状態を作らない）', (() => {
+  const from = source.indexOf('const useTranscendResetScroll');
+  const body = source.slice(from, source.indexOf('// 絆経験値のチケット', from));
+  return body.indexOf("await storeSet('mh_masu_mons'") < body.indexOf("await storeSet('mh_owned_items'")
+    && body.indexOf("await storeSet('mh_owned_items'") < body.indexOf('setOwnedItems(nextItems)')
+    && !/storeSet\('mh_gold'|BREAKTHROUGH_ITEM_ID/.test(body);
+})());
+check('新しい保存キーを作っていない（mh_masu_mons と mh_owned_items だけ）', (() => {
+  const from = source.indexOf('const useTranscendResetScroll');
+  const body = source.slice(from, source.indexOf('// 絆経験値のチケット', from));
+  const keys = [...new Set((body.match(/storeSet\('([^']+)'/g) || []).map(t => t.slice(10, -1)))].sort();
+  return keys.length === 2 && keys[0] === 'mh_masu_mons' && keys[1] === 'mh_owned_items';
+})());
+check('マーケットに超越ポイントリセットの書がある（10,000ダイヤ）',
+  breeder.includes("id:'transcend_reset_scroll'") && breeder.includes('name:"超越ポイントリセットの書"')
+  && /transcend_reset_scroll[^}]*cost:10000/.test(breeder)
+  && /transcend_reset_scroll[^}]*usage:'transcendReset'/.test(breeder));
 
 // ---- ⑦ 旧セーブ ----
 check('超越項目が無い既存マスモンは未超越として読める', (() => {
