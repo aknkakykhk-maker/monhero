@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 13:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15495,9 +15495,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* BATTLE */}
         {gameState==='BATTLE'&&(
           <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}>
-            {ultraBattleView&&<style>{`[data-eco-view="ultra"] *,[data-eco-view="ultra"] *::before,[data-eco-view="ultra"] *::after{animation:none!important;transition:none!important}`}</style>}
             {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
-            {ultraBattleView&&<div data-ultra-eco-dimmer className="absolute inset-0 bg-black/45 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
             <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
               <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
               <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
@@ -15506,6 +15504,39 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
               <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:opacity-50" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}</button><button onClick={toggleQuickMute} aria-label="音量" className="shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
             </header>
+            {ultraBattleView?(
+              <div data-ultra-battle-view className="flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100">
+                <div className="flex-1 min-h-0 px-2 py-1.5 flex flex-col gap-1.5 overflow-y-auto">
+                  {enemy&&(
+                    <section className="rounded-xl border border-red-900/70 bg-slate-900/95 px-2 py-1.5">
+                      <div className="flex items-center justify-between gap-2 text-[10px] font-black"><span className="min-w-0 truncate text-red-200">{enemy.name}</span><span className="shrink-0 font-mono text-red-300">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span></div>
+                      <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-red-600" style={{width:`${(Math.max(0,enemy.hp)/enemy.maxHp)*100}%`}}/></div>
+                      <div className="mt-1 flex items-center justify-center gap-3">
+                        <div className="h-[clamp(82px,16dvh,132px)] w-[clamp(82px,16dvh,132px)] flex items-center justify-center">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} className="w-full h-full object-contain"/>:<span style={{fontSize:'clamp(58px,11dvh,104px)',lineHeight:1}}>{enemy.emoji}</span>}</div>
+                        <div className="text-center"><div className="text-[8px] font-black text-slate-400">現在距離</div><div className={`mt-1 rounded-full border px-3 py-1 text-[11px] font-black ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}距離</div></div>
+                      </div>
+                      {(enemySkillName||popups.some(p=>p.side==='enemy'))&&<div className="mt-1 min-h-[38px] rounded-lg border border-red-800/60 bg-black/50 px-2 py-1 text-center">{enemySkillName&&<div className="text-[11px] font-black text-red-200">{enemySkillName.label}</div>}{popups.filter(p=>p.side==='enemy').map(p=><div key={p.id} className={`${p.color} text-base font-black`}>{p.text}</div>)}</div>}
+                    </section>
+                  )}
+                  <section className="rounded-xl border border-indigo-900/70 bg-slate-900/95 px-2 py-1.5">
+                    <div className="grid grid-cols-4 gap-1">{slots.map((s,i)=><div key={i} className={`min-w-0 rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`}><div className="truncate text-[7px] font-black text-white">{s?.name||'---'}</div><div className="mx-auto flex h-12 w-full items-center justify-center">{s?.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="w-full h-full object-contain"/>:<span className="text-3xl">{s?.emoji||''}</span>}</div><div className="text-[7px] font-black">{RANGE_LABELS[i]}距離</div></div>)}</div>
+                    <div className="mt-1.5 space-y-1">
+                      <div><div className="flex justify-between text-[8px] font-black text-pink-300"><span>味方HP</span><span className="font-mono">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-pink-500" style={{width:`${(hp/effectiveMaxHp)*100}%`}}/></div></div>
+                      <div><div className="flex justify-between text-[8px] font-black text-amber-300"><span>ガッツ</span><span className="font-mono">{Math.floor(guts).toLocaleString()} / {effectiveMaxGuts.toLocaleString()}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full bg-amber-400" style={{width:`${(guts/effectiveMaxGuts)*100}%`}}/></div></div>
+                    </div>
+                    {(slotSkill||popups.some(p=>['hero','life','guts'].includes(p.side)))&&<div className="mt-1 min-h-[38px] rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center">{slotSkill&&<div className="text-[11px] font-black text-indigo-200">{slotSkill.name}</div>}{popups.filter(p=>['hero','life','guts'].includes(p.side)).map(p=><div key={p.id} className={`${p.color} text-base font-black`}>{p.text}</div>)}</div>}
+                  </section>
+                </div>
+                <div className="shrink-0 border-t border-white/10 bg-slate-900 p-1">
+                  <div className="flex items-center justify-between gap-1 px-1">
+                    <div className="min-w-0 flex-1"><div className="text-[8px] font-black uppercase tracking-wider text-indigo-300">Action Cards</div><div className="truncate text-[9px] font-bold text-slate-300">AUTO∞で進行中</div></div>
+                    <button onClick={()=>setShowDeckInfo(true)} className="flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"><Layers size={9}/>VIEW</button>
+                    <div className="w-[44px] shrink-0 flex flex-col gap-0.5"><button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={cycleBattleAuto} aria-pressed={autoBattle} aria-label={`AUTO ${autoRepeat?'∞':autoBattle?'ON':'OFF'}`} className="h-8 w-full rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-[8px] font-black leading-tight text-slate-950"><span className="block">AUTO</span><span className="block text-[7px]">{autoRepeat?'∞':autoBattle?'ON':'OFF'}</span></button><button type="button" onClick={cycleEcoMode} aria-label="省エネ 超" className="min-h-[24px] w-full rounded-md border border-lime-200 bg-lime-500 text-[7px] font-black leading-[9px] text-slate-950"><span className="block">省エネ</span><span className="block">超</span></button></div>
+                    <button disabled className="min-h-[44px] min-w-[84px] shrink-0 rounded-full border-2 border-black bg-slate-700 px-2 text-[11px] font-black uppercase text-slate-400 opacity-50"><Play fill="currentColor" size={12} className="inline mr-1"/>Action</button>
+                  </div>
+                </div>
+              </div>
+            ):(<>
             {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===ULTIMATE_SETTING.id&&(()=>{
               const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
               const enemyMultiplier=ultimateEnemyTurnMultiplier(totalTurnCount);
@@ -16050,6 +16081,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 })}
               </div>
             </div>
+            </>)}
           </div>
         )}
       </div>
