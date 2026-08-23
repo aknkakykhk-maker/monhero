@@ -39,6 +39,9 @@ const slice = (from, to) => {
 const calcSrc = `
 const ULTIMATE_SETTING={id:'ULTIMATE',specialRules:{awakeningPenaltyRate:0.0075}};
 const extremeSpecialRule=(d,r)=>(d==='NIGHTMARE'&&r==='waveEnhancement')?0.5:1;
+// トレーニング低下は難易度名ではなく「その難易度がawakeningPenaltyRateを持つか」で効く。
+// ここではULTIMATE / INFINITYだけが持つ状態を再現する(本体の表と同じ0.75%)。
+const extremeRuleNumber=(d,r)=>(['ULTIMATE','INFINITY'].includes(d)&&r==='awakeningPenaltyRate')?0.0075:null;
 ${slice('const applyNightmareWaveEnhancement', 'const ultimateEnemyTurnMultiplier')}
 ${slice('const TRAINING_PICK_COUNT', '// 整数で扱うバトル値の特殊ルール倍率')}
 module.exports={TRAINING_PICK_COUNT,TRAINING_OPTIONS,chooseAutoTrainingPicks,trainingOptionOf,resolveTrainingStep,resolveTrainingStats};`;
@@ -152,7 +155,7 @@ if (from >= 0 && to > from) {
   check('確定するまで選び直せる', jsx.includes('setTrainingPicks([])') && jsx.includes('選び直す'));
   const transformed = babel.transformSync(
     'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
-    + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, compactPercent,\n'
+    + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
     + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass,\n'
     + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => (<>\n'
     + jsx + '\n</>);\nmodule.exports = { Screen };',
@@ -165,6 +168,9 @@ if (from >= 0 && to > from) {
     atk: 100, def: 100, maxHp: 500, maxGuts: 100, waveResult: { turn: 0 }, effect: null,
     runMode: 'challenge', difficulty: 'Normal', extremeRun: false, extremeDifficulty: null,
     specialRuleDifficultyForRun: () => null, ULTIMATE_SETTING: { id: 'ULTIMATE' }, compactPercent: value => `${Number((value*100).toFixed(1))}%`,
+    // トレーニング低下は難易度名ではなく specialRules の有無で効く。通常チャレンジなので常にnull
+    extremeRuleNumber: () => null, specialRulePercent: value => `${Math.round(value*100)}%`,
+    extremeSpecialRule: () => 1, quickGrowthRateForRun: () => 0.1, isQuickMode: () => false,
     resolveTrainingStats: T.resolveTrainingStats, resolveTrainingStep: T.resolveTrainingStep,
     TRAINING_PICK_COUNT: T.TRAINING_PICK_COUNT, TRAINING_OPTIONS: T.TRAINING_OPTIONS,
     handleTraining: () => {}, AssistantBubble: () => null, battleTutorialSpotClass: () => '',

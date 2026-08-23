@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c9c8ad78fab86bc3
+// source-sha256: db7e929e9a552823
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 15:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 17:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7845,7 +7845,8 @@ const DIFFICULTY_SETTINGS = {
 };
 // 極限チャレンジ。チャレンジモードの上位高難易度版で、DIFFICULTY_SETTINGS(通常の難易度)とは
 // 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
-// ULTIMATEまで正式に実戦可能。INFINITYは公開準備が整うまで選択不可にする。
+// INFINITYまで正式に実戦可能。難易度を足すときは、ここへ1行足して specialRules を書けば
+// バトル側は「そのルールを持っているか」で判定するので、難易度名の分岐を増やさなくてよい。
 const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'EXTREME',
   label: 'EXTREME',
@@ -7919,16 +7920,51 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
       persistsForRun: true
     })
   })
-}, {
+},
+// INFINITYは既存4難易度の特徴を統合した10WAVEの最終難易度。ただし役割が重なるルールは
+// 重ねない(CHAOSの与ダメ50%・加入B50%はULTIMATE系のターン低下と重複するため入れない。
+// NIGHTMAREのwaveEnhancementも、トレーニングまで50%になってターン低下と重なるため入れず、
+// 距離強化だけを下げる distanceEnhancement を使う)。
+{
   id: 'INFINITY',
   label: 'INFINITY',
-  available: false
+  japanese: 'インフィニティ',
+  available: true,
+  power: 50,
+  score: 20,
+  xp: 45,
+  gold: 30,
+  psyche: 80,
+  unlockRequirement: 'ULTIMATE',
+  description: 'これまでの極限ルールを統合し、ターン経過による圧力がさらに強化された10WAVE最終難易度。',
+  cardDescription: '極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。',
+  specialRules: Object.freeze({
+    assistCardEffect: 0.5,
+    positiveModifier: 0.5,
+    negativeModifier: 2.0,
+    distanceEnhancement: 0.5,
+    gutsCost: 1.5,
+    enemyTurnRate: 0.0075,
+    allyJoinPenaltyRate: 0.0075,
+    minimumAllyJoinBonus: 0.10,
+    damageTurnRate: 0.01,
+    minimumDamageDealt: 0.30,
+    awakeningPenaltyRate: 0.0075,
+    awakeningPenaltyExcludes: Object.freeze(['distance']),
+    distanceBreak: Object.freeze({
+      interval: 25,
+      damageDealtPerLevel: 0.5,
+      safeDistanceCount: 1,
+      persistsForRun: true
+    })
+  })
 }]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
 // 正式プレイとデバッグ戦で同じ定義を参照し、数値と特殊ルールを二重管理しない。
 const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3];
+const INFINITY_SETTING = EXTREME_DIFFICULTIES[4];
 const extremeRuleSetting = difficultyId => EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId) || null;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
@@ -7982,6 +8018,18 @@ const hasExtremeSpecialRules = difficultyId => {
   const rules = extremeDifficultySetting(difficultyId)?.specialRules;
   return !!rules && Object.keys(rules).length > 0;
 };
+// 「その難易度がそのルールを持っているか」で効かせるための取り出し口。
+// 難易度名でハードコードすると、難易度を足すたびに同じ判定を書き足すことになるため、
+// ターン系ルール(敵強化・加入B低下・与ダメ低下・トレーニング低下・DISTANCE BREAK)は
+// すべてここを通す。持っていない難易度では null が返り、既存の挙動は変わらない。
+const extremeRuleNumber = (difficultyId, rule) => {
+  const value = extremeDifficultySetting(difficultyId)?.specialRules?.[rule];
+  return Number.isFinite(value) ? value : null;
+};
+const extremeDistanceBreakRule = difficultyId => {
+  const rule = extremeDifficultySetting(difficultyId)?.specialRules?.distanceBreak;
+  return rule && Number.isFinite(rule.interval) && rule.interval > 0 ? rule : null;
+};
 // 極限本体だけでなく、同名のクイック極限難易度も同じspecialRulesを参照する。
 // これにより今後の難易度もEXTREME_DIFFICULTIESへ定義を足すだけでクイックへ引き継がれる。
 const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun = false, extremeDifficultyId = null) => {
@@ -7992,14 +8040,17 @@ const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun = false, 
 // 低下率はULTIMATE本体のspecialRulesを参照し、クイック側には数値を重複定義しない。
 const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) => {
   const specialDifficulty = specialRuleDifficultyForRun(runMode, difficultyId);
-  if (specialDifficulty !== ULTIMATE_SETTING.id) return QUICK_GROWTH_MULT - 1;
-  return Math.max(0, QUICK_GROWTH_MULT - 1 - Math.max(0, Number(waveTurnCount) || 0) * ULTIMATE_SETTING.specialRules.awakeningPenaltyRate);
+  const penaltyRate = extremeRuleNumber(specialDifficulty, 'awakeningPenaltyRate');
+  if (penaltyRate == null) return QUICK_GROWTH_MULT - 1;
+  return Math.max(0, QUICK_GROWTH_MULT - 1 - Math.max(0, Number(waveTurnCount) || 0) * penaltyRate);
 };
 const specialRulePercent = value => `${Math.round((Number(value) || 0) * 100)}%`;
 const compactPercent = value => `${Number(((Number(value) || 0) * 100).toFixed(1))}%`;
 const precisePercent = value => `${Number(((Number(value) || 0) * 100).toFixed(2))}%`;
-const extremeSpecialRuleLines = (difficultyId, quick = false) => {
-  if (difficultyId === ULTIMATE_SETTING.id) return [['敵HP/攻撃', '累計Tごと+0.75%'], ['加入B倍率', '累計Tごと-0.75pt'], ['与ダメ倍率', '経過Tごと-0.75pt（25%で停止）'], [quick ? '自動成長' : 'トレーニング', 'WAVE Tごと-0.75pt'], ['距離BREAK', '35Tごと1距離の弱体Lv上昇']];
+// バトル中の細い帯に並べる短い1行表記。静的な倍率だけを持つ難易度で使う。
+// ターンで動く難易度(ULTIMATE / INFINITY)はこの帯を使わず、現在値を出す専用表示と
+// 「ルール詳細」(extremeRuleDetailGroups)を使うので、ここに数値を書き写さない。
+const extremeSpecialRuleLines = difficultyId => {
   if (difficultyId === NIGHTMARE_SETTING.id) return [['強化', specialRulePercent(extremeSpecialRule(difficultyId, 'waveEnhancement'))], ['＋補正', specialRulePercent(extremeSpecialRule(difficultyId, 'positiveModifier'))], ['－補正', specialRulePercent(extremeSpecialRule(difficultyId, 'negativeModifier'))]];
   if (difficultyId === CHAOS_SETTING.id) return [['与ダメ', specialRulePercent(extremeSpecialRule(difficultyId, 'damageDealt'))], ['消費ガッツ', specialRulePercent(extremeSpecialRule(difficultyId, 'gutsCost'))], ['加入B', specialRulePercent(extremeSpecialRule(difficultyId, 'allyJoinBonus'))]];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
@@ -8014,18 +8065,60 @@ const extremeSpecialRuleLines = (difficultyId, quick = false) => {
   if (rules.allyJoinBonus != null) lines.push(['供モン加入ボーナス', specialRulePercent(rules.allyJoinBonus)]);
   if (rules.gutsCost != null) lines.push(['消費ガッツ', specialRulePercent(rules.gutsCost)]);
   const known = new Set(['assistCardEffect', 'waveEnhancement', 'positiveModifier', 'negativeModifier', 'damageDealt', 'allyJoinBonus', 'gutsCost']);
-  Object.entries(rules).filter(([rule]) => !known.has(rule)).forEach(([rule, value]) => lines.push([rule, specialRulePercent(value)]));
+  // 倍率以外(ターン率・DISTANCE BREAKの設定など)はこの1行表記では表せないので、ここへ混ぜない
+  Object.entries(rules).filter(([rule, value]) => !known.has(rule) && Number.isFinite(value)).forEach(([rule, value]) => lines.push([rule, specialRulePercent(value)]));
   return lines;
 };
+// 「1Tごと-0.75pt」のような表記。0.0075→0.75pt、0.01→1.0pt。
+const turnPointText = rate => {
+  const point = Number(((Number(rate) || 0) * 100).toFixed(2));
+  return `${Number.isInteger(point) ? point.toFixed(1) : point}pt`;
+};
+// ルール詳細・バトル開始案内・ヘルプが同じ本文を使うための正本。
+// 難易度カードは「特殊ルールがある」ことだけを出し、中身はここから作った詳細で読ませる。
+// 値はすべて specialRules から組み立てるので、数値を別の場所へ書き写さない。
+const extremeRuleDetailGroups = (difficultyId, quick = false) => {
+  const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
+  const groups = [];
+  const push = (title, lines) => {
+    const kept = lines.filter(Boolean);
+    if (kept.length) groups.push({
+      title,
+      lines: kept
+    });
+  };
+  push('カード', [rules.assistCardEffect != null && ['アシストカード効果', specialRulePercent(rules.assistCardEffect)]]);
+  push('補正', [rules.waveEnhancement != null && ['WAVE後強化', specialRulePercent(rules.waveEnhancement)], rules.positiveModifier != null && ['＋補正', specialRulePercent(rules.positiveModifier)], rules.negativeModifier != null && ['－補正', specialRulePercent(rules.negativeModifier)], rules.distanceEnhancement != null && ['距離強化', specialRulePercent(rules.distanceEnhancement)]]);
+  push('ダメージ・ガッツ', [rules.damageDealt != null && ['与ダメージ', specialRulePercent(rules.damageDealt)], rules.allyJoinBonus != null && ['供モン加入ボーナス', specialRulePercent(rules.allyJoinBonus)], rules.gutsCost != null && ['消費ガッツ', specialRulePercent(rules.gutsCost)]]);
+  push('累計ターン', [rules.enemyTurnRate != null && ['敵HP/攻撃', `累計Tごと+${precisePercent(rules.enemyTurnRate)}`], rules.allyJoinPenaltyRate != null && ['加入B倍率', `累計Tごと-${turnPointText(rules.allyJoinPenaltyRate)}${rules.minimumAllyJoinBonus != null ? `（最低${specialRulePercent(rules.minimumAllyJoinBonus)}）` : ''}`], rules.damageTurnRate != null && ['与ダメ倍率', `経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt ?? 0)}で停止）`]]);
+  push('WAVEターン', [rules.awakeningPenaltyRate != null && [quick ? '自動成長' : 'トレーニング', `WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`], rules.awakeningPenaltyRate != null && Array.isArray(rules.awakeningPenaltyExcludes) && rules.awakeningPenaltyExcludes.includes('distance') && ['対象外', '距離強化は下がらない']]);
+  const breakRule = extremeDistanceBreakRule(difficultyId);
+  if (breakRule) push('DISTANCE BREAK', [['進行', `累計${breakRule.interval}Tごと1距離の弱体Lv上昇`], ['弱体倍率', `Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel ** 2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel ** 3)}（以降も半減）`], ['安全距離', `${breakRule.safeDistanceCount}距離は最後まで弱体化しない`]]);
+  return groups;
+};
+// カードには中身を並べず、特殊ルールがあることだけを出す(INFINITYは種類が多いので複合と書く)
+const extremeRuleSummaryText = difficultyId => extremeRuleDetailGroups(difficultyId).length >= 4 ? '複合特殊ルールあり' : '特殊ルールあり';
 // 特殊倍率は、既存式が出した最終的な獲得量・補正値へだけ掛ける。
 const applyNightmareSignedModifier = (value, specialDifficulty = null) => value * (specialDifficulty ? extremeSpecialRule(specialDifficulty, value >= 0 ? 'positiveModifier' : 'negativeModifier') : 1);
 const applyNightmareWaveEnhancement = (value, specialDifficulty = null) => value * (specialDifficulty ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty = null) => before + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
-const ultimateEnemyTurnMultiplier = turns => 1 + Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.enemyTurnRate;
+// WAVE後に増える「距離強化」だけへ掛ける倍率。
+// NIGHTMAREは waveEnhancement でWAVE後強化そのものが50%になるのでそれをそのまま使う。
+// INFINITYは距離強化だけを50%にし、通常トレーニングへは重ねないので専用ルールを持つ
+// (ここで分けておかないと、ULTIMATE由来のトレーニング低下と50%が二重に掛かってしまう)。
+const applyDistanceEnhancement = (value, specialDifficulty = null) => {
+  const distanceRate = extremeRuleNumber(specialDifficulty, 'distanceEnhancement');
+  return distanceRate != null ? value * distanceRate : applyNightmareWaveEnhancement(value, specialDifficulty);
+};
+const ultimateEnemyTurnMultiplier = (turns, specialDifficulty = ULTIMATE_SETTING.id) => {
+  const rate = extremeRuleNumber(specialDifficulty, 'enemyTurnRate');
+  return rate == null ? 1 : 1 + Math.max(0, Number(turns) || 0) * rate;
+};
 const pendingUltimateDistanceBreak = (totalTurns, breakLevels, waveNumber, specialDifficulty = null) => {
-  if (specialDifficulty !== ULTIMATE_SETTING.id || Number(waveNumber) >= 10) return null;
+  const breakRule = extremeDistanceBreakRule(specialDifficulty);
+  if (!breakRule || Number(waveNumber) >= 10) return null;
   const appliedCount = Array.isArray(breakLevels) ? breakLevels.reduce((sum, level) => sum + (Number(level) || 0), 0) : 0;
-  const threshold = (appliedCount + 1) * ULTIMATE_SETTING.specialRules.distanceBreak.interval;
+  const threshold = (appliedCount + 1) * breakRule.interval;
   return (Number(totalTurns) || 0) >= threshold ? threshold : null;
 };
 const drawUltimateDistanceBreak = (breakLevels, random = Math.random) => {
@@ -8038,12 +8131,23 @@ const drawUltimateDistanceBreak = (breakLevels, random = Math.random) => {
   return candidates[Math.floor(roll * candidates.length)];
 };
 const applyUltimateDistanceBreak = (damage, slotIndex, breakLevels, specialDifficulty = null, cardType = null) => {
+  const breakRule = extremeDistanceBreakRule(specialDifficulty);
   const isMonsterAttack = ['atk', 'range_atk', 'unique'].includes(cardType);
   const level = Math.max(0, Number(breakLevels?.[slotIndex]) || 0);
-  return specialDifficulty === ULTIMATE_SETTING.id && isMonsterAttack && level > 0 ? Math.floor((Number(damage) || 0) * ULTIMATE_SETTING.specialRules.distanceBreak.damageDealtPerLevel ** level) : damage;
+  return breakRule && isMonsterAttack && level > 0 ? Math.floor((Number(damage) || 0) * breakRule.damageDealtPerLevel ** level) : damage;
 };
-const ultimateDamageTurnMultiplier = (turns, specialDifficulty = null) => specialDifficulty === ULTIMATE_SETTING.id ? Math.max(ULTIMATE_SETTING.specialRules.minimumDamageDealt, 1 - Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.damageTurnRate) : 1;
-const ultimateAllyJoinMultiplier = turns => Math.max(0, 1 - Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
+// 与ダメ低下・加入B低下はどちらも「1 - 経過T×率」で、下限だけ難易度ごとに違う。
+// 下限を書いていない難易度(ULTIMATE の加入B)は0止まりで、これまでどおりの挙動になる。
+const ultimateDamageTurnMultiplier = (turns, specialDifficulty = null) => {
+  const rate = extremeRuleNumber(specialDifficulty, 'damageTurnRate');
+  if (rate == null) return 1;
+  return Math.max(extremeRuleNumber(specialDifficulty, 'minimumDamageDealt') ?? 0, 1 - Math.max(0, Number(turns) || 0) * rate);
+};
+const ultimateAllyJoinMultiplier = (turns, specialDifficulty = ULTIMATE_SETTING.id) => {
+  const rate = extremeRuleNumber(specialDifficulty, 'allyJoinPenaltyRate');
+  if (rate == null) return 1;
+  return Math.max(extremeRuleNumber(specialDifficulty, 'minimumAllyJoinBonus') ?? 0, 1 - Math.max(0, Number(turns) || 0) * rate);
+};
 // ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
 // 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
 // 2回目をかける(2回分をまとめて足す別計算にはしない)。
@@ -8120,10 +8224,10 @@ const resolveTrainingStep = (stats, optionId, turns, specialDifficulty = null) =
   };
   const option = trainingOptionOf(optionId);
   if (!option) return before;
-  const ultimate = specialDifficulty === ULTIMATE_SETTING.id;
+  const penaltyRate = extremeRuleNumber(specialDifficulty, 'awakeningPenaltyRate');
   const safeTurns = Math.max(0, Math.min(20, Number(turns) || 0));
-  const penalty = ultimate ? safeTurns * ULTIMATE_SETTING.specialRules.awakeningPenaltyRate : 0;
-  const fixedScale = ultimate ? Math.max(0, 1 - safeTurns / 20) : 1;
+  const penalty = penaltyRate != null ? safeTurns * penaltyRate : 0;
+  const fixedScale = penaltyRate != null ? Math.max(0, 1 - safeTurns / 20) : 1;
   const base = before[option.stat];
   const after = Math.floor((base + option.flat * fixedScale) * (1 + Math.max(0, option.rate - penalty)));
   return {
@@ -8144,8 +8248,8 @@ const applyExtremeIntegerRule = (value, specialDifficulty = null, rule) => Math.
 // 供モン加入時のステータス加算だけを難易度別に丸める。ULTIMATEは加入直前の
 // WAVE結果に確定済みの累計ターンを使い、CHAOSの固定50%とは重ねない。
 const applyAllyJoinBonus = (value, specialDifficulty = null, totalTurns = 0) => {
-  if (specialDifficulty === ULTIMATE_SETTING.id) {
-    return Math.floor((Number(value) || 0) * ultimateAllyJoinMultiplier(totalTurns));
+  if (extremeRuleNumber(specialDifficulty, 'allyJoinPenaltyRate') != null) {
+    return Math.floor((Number(value) || 0) * ultimateAllyJoinMultiplier(totalTurns, specialDifficulty));
   }
   return applyExtremeIntegerRule(value, specialDifficulty, 'allyJoinBonus');
 };
@@ -8179,11 +8283,16 @@ const CHAOS_BEST_SCORE_KEY = extremeBestScoreKey('CHAOS');
 const CHAOS_CLEAR_COUNT_KEY = extremeClearCountKey('CHAOS');
 const ULTIMATE_BEST_SCORE_KEY = extremeBestScoreKey('ULTIMATE');
 const ULTIMATE_CLEAR_COUNT_KEY = extremeClearCountKey('ULTIMATE');
+// INFINITYも同じ動的キー方式(mh_extreme_hs_INFINITY / mh_extreme_clears_INFINITY)。
+// 旧セーブにこのキーは無いが、読み込みは既定値0を通すので移行処理はいらない。
+const INFINITY_BEST_SCORE_KEY = extremeBestScoreKey('INFINITY');
+const INFINITY_CLEAR_COUNT_KEY = extremeClearCountKey('INFINITY');
 const normalizeExtremeRecordValue = value => Math.max(0, Math.floor(Number(value) || 0));
 // NIGHTMAREの解放には既存のEXTREMEクリア回数を再利用する。
 const isNightmareUnlocked = extremeClearCount => (Number(extremeClearCount) || 0) > 0;
 const isChaosUnlocked = nightmareClearCount => (Number(nightmareClearCount) || 0) > 0;
 const isUltimateUnlocked = chaosClearCount => (Number(chaosClearCount) || 0) > 0;
+const isInfinityUnlocked = ultimateClearCount => (Number(ultimateClearCount) || 0) > 0;
 const normalizeBattleDifficulty = value => quickDifficultySetting(value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
@@ -11914,6 +12023,8 @@ function MonsterHeroGame() {
   const [onboardingName, setOnboardingName] = useState('');
   const [onboardingIcon, setOnboardingIcon] = useState(null);
   const [showWaveDetails, setShowWaveDetails] = useState(false);
+  // 極限の「ルール詳細」で開いている難易度ID。開いても選択中の難易度やバトル開始状態は変えない
+  const [extremeRuleDetail, setExtremeRuleDetail] = useState(null);
   const [waveScanPreview, setWaveScanPreview] = useState(null);
   const difficultyCarouselRef = useRef(null);
   // 起動UIはゲーム本体と別の明示的な状態機械で管理する。
@@ -13238,9 +13349,11 @@ function MonsterHeroGame() {
   const extremeClearCount = extremeClearCounts[EXTREME_SETTING.id] || 0;
   const nightmareClearCount = extremeClearCounts[NIGHTMARE_SETTING.id] || 0;
   const chaosClearCount = extremeClearCounts[CHAOS_SETTING.id] || 0;
+  const ultimateClearCount = extremeClearCounts[ULTIMATE_SETTING.id] || 0;
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
   const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
   const ultimateUnlocked = useMemo(() => isUltimateUnlocked(chaosClearCount), [chaosClearCount]);
+  const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -18654,7 +18767,7 @@ function MonsterHeroGame() {
     const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
     const normalGainedDistBonus = finalDistDamage.map(d => d * 0.001 / 100);
-    const gainedDistBonus = finalDistDamage.map(d => applyNightmareWaveEnhancement(d * 0.001 / 100, specialRuleDifficulty));
+    const gainedDistBonus = finalDistDamage.map(d => applyDistanceEnhancement(d * 0.001 / 100, specialRuleDifficulty));
     const newDistBonus = distDmgBonus.map((b, i) => b + gainedDistBonus[i]);
     setDistDmgBonus(newDistBonus);
     const newTotalDistDamage = totalDistDamage.map((d, i) => d + finalDistDamage[i]);
@@ -19779,13 +19892,13 @@ function MonsterHeroGame() {
   const handleNextWave = async () => {
     // 練習の台本があるときは、強化フェーズまで通して見せたいので
     // デバッグ戦の打ち切り(勝ち表示を出して止まる)を通さない
-    if (debugBattleRef.current && !battleScenarioRef.current && !(extremeRunRef.current && extremeDifficulty === ULTIMATE_SETTING.id)) {
+    if (debugBattleRef.current && !battleScenarioRef.current && !(extremeRunRef.current && extremeDistanceBreakRule(extremeDifficulty))) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
       return;
     }
-    if (debugBattleRef.current && extremeRunRef.current && extremeDifficulty === ULTIMATE_SETTING.id && wave === 10) {
+    if (debugBattleRef.current && extremeRunRef.current && extremeDistanceBreakRule(extremeDifficulty) && wave === 10) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
@@ -20188,7 +20301,7 @@ function MonsterHeroGame() {
   const spawnEnemy = useCallback((w, forcedEnemyKey = null, initialDistance = null) => {
     const battleSetting = extremeRunRef.current ? extremeRuleSetting(extremeDifficulty) : null;
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const enemyTurnMultiplier = specialRuleDifficulty === ULTIMATE_SETTING.id ? ultimateEnemyTurnMultiplier(totalTurnCount) : 1;
+    const enemyTurnMultiplier = ultimateEnemyTurnMultiplier(totalTurnCount, specialRuleDifficulty);
     const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
@@ -20314,7 +20427,7 @@ function MonsterHeroGame() {
     const pool = buildDeck(currentSlots, nAtkL, nGrdL, u || ownedUniques, t || ownedTeachings, nGB, slotUniqueChoice, slotUniqueLevelChoice, inheritedUniqueEvo, heroForDeck);
     const showExtremeRule = w === 1 && !!specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const breakPending = w > 1 && ultimateDistanceBreakPendingRef.current && specialRuleDifficulty === ULTIMATE_SETTING.id;
+    const breakPending = w > 1 && ultimateDistanceBreakPendingRef.current && !!extremeDistanceBreakRule(specialRuleDifficulty);
     setHand(pool.slice(0, 5));
     setDeck(pool.slice(5));
     setGraveyard([]);
@@ -24260,7 +24373,80 @@ function MonsterHeroGame() {
     }, "\u6240\u6301\u30C0\u30A4\u30E4 ", donationResult.gold.toLocaleString()), /*#__PURE__*/React.createElement("button", {
       onClick: () => setDonationResult(null),
       className: "w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm"
-    }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B"))), showWaveDetails && (() => {
+    }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B"))), gameState === 'EXTREME_DIFFICULTY_SELECT' && extremeRuleDetail && (() => {
+      const setting = extremeDifficultySetting(extremeRuleDetail);
+      if (!setting) return null;
+      const groups = extremeRuleDetailGroups(setting.id);
+      const close = () => setExtremeRuleDetail(null);
+      return /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 flex items-end justify-center",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          zIndex: 70500,
+          backgroundColor: 'rgba(2,6,23,.96)'
+        },
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": `${setting.label} ルール詳細`,
+        onClick: close
+      }, /*#__PURE__*/React.createElement("section", {
+        "data-extreme-rule-detail": setting.id,
+        onClick: e => e.stopPropagation(),
+        className: "w-full max-w-md flex flex-col rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950",
+        style: {
+          maxHeight: 'calc(100dvh - env(safe-area-inset-top) - 1rem)',
+          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "shrink-0 flex items-center justify-between gap-2 border-b border-white/10 px-4 py-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[9px] font-black tracking-widest text-slate-400"
+      }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("h2", {
+        className: "truncate text-lg font-black text-fuchsia-200"
+      }, setting.label, " \u30EB\u30FC\u30EB\u8A73\u7D30")), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
+        onClick: close,
+        className: "shrink-0 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 active:scale-95"
+      }, /*#__PURE__*/React.createElement(X, null))), /*#__PURE__*/React.createElement("div", {
+        "data-extreme-rule-detail-body": true,
+        className: "min-h-0 flex-1 overflow-y-auto mh-scroll px-4 py-3 space-y-3"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "rounded-xl bg-black/40 px-3 py-2 text-[11px] leading-relaxed text-slate-200"
+      }, setting.description), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-1.5"
+      }, [['敵強度', `×${setting.power}`], ['スコア', `×${setting.score}`], ['経験値', `×${setting.xp}`], ['ダイヤ', `×${setting.gold}`], ['虹のプシュケー', `${setting.psyche}個`], ['WAVE', `${ENEMY_SEQUENCE.length}WAVE`]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+        key: label,
+        className: "rounded-lg bg-black/35 px-1 py-1 text-center text-[9px] leading-tight text-slate-400"
+      }, label, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[12px] leading-tight text-white"
+      }, value)))), groups.map(group => /*#__PURE__*/React.createElement("section", {
+        key: group.title,
+        className: "rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-[10px] font-black tracking-widest text-amber-300"
+      }, "\u3010", group.title, "\u3011"), /*#__PURE__*/React.createElement("dl", {
+        className: "mt-1 space-y-1"
+      }, group.lines.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+        key: label,
+        className: "grid grid-cols-[auto_1fr] items-start gap-2 text-[11px] leading-snug"
+      }, /*#__PURE__*/React.createElement("dt", {
+        className: "shrink-0 text-slate-300"
+      }, label), /*#__PURE__*/React.createElement("dd", {
+        className: "min-w-0 text-right font-black text-white"
+      }, value)))))), groups.length === 0 && /*#__PURE__*/React.createElement("p", {
+        className: "rounded-xl bg-black/40 px-3 py-2 text-[11px] text-slate-300"
+      }, "\u3053\u306E\u96E3\u6613\u5EA6\u306B\u7279\u6B8A\u30EB\u30FC\u30EB\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] leading-relaxed text-slate-500"
+      }, "\u3053\u3053\u3092\u958B\u3044\u3066\u3082\u96E3\u6613\u5EA6\u306E\u9078\u629E\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002\u9589\u3058\u308B\u3068\u5143\u306E\u96E3\u6613\u5EA6\u9078\u629E\u306B\u623B\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 px-4 pt-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: close,
+        className: "min-h-[44px] w-full rounded-2xl bg-fuchsia-600 text-sm font-black text-white active:scale-[.99]"
+      }, "\u9589\u3058\u308B"))));
+    })(), showWaveDetails && (() => {
       const extreme = gameState === 'EXTREME_DIFFICULTY_SELECT';
       const extremePreviewSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
       const waveDifficulty = extreme ? 'Normal' : safeDifficulty;
@@ -24963,8 +25149,8 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
-        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : false);
-        const previewable = (setting.available || debugBattle && setting.id === ULTIMATE_SETTING.id) && unlocked;
+        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : false);
+        const previewable = setting.available && unlocked;
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
           "aria-disabled": !previewable,
@@ -24987,7 +25173,7 @@ function MonsterHeroGame() {
           className: "block text-right text-base leading-tight text-fuchsia-200"
         }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', setting.score ? `×${setting.score}` : '対象外'], ['ダイヤ', setting.gold ? `×${setting.gold}` : '対象外']].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
@@ -25003,35 +25189,29 @@ function MonsterHeroGame() {
           className: "block text-[11px] leading-tight text-white"
         }, value)))), /*#__PURE__*/React.createElement("p", {
           "data-extreme-card-description": setting.id,
-          className: `${setting.id === 'ULTIMATE' ? 'mt-1 h-[32px] shrink-0' : 'mt-1 min-h-[35px]'} rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200`
-        }, setting.cardDescription || setting.description), setting.id === 'EXTREME' ? /*#__PURE__*/React.createElement("div", {
-          className: "mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"
-        }, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] font-black text-amber-300"
-        }, "\u26A0 EXTREME\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
-          className: "block text-[11px] text-white whitespace-nowrap"
-        }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u52B9\u679C 50%")) : /*#__PURE__*/React.createElement("div", {
+          className: "mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200"
+        }, setting.cardDescription || setting.description), /*#__PURE__*/React.createElement("div", {
           "data-extreme-special-rules": setting.id,
-          className: `${setting.id === 'ULTIMATE' ? 'mt-1.5 h-[62px]' : 'mt-1 h-[51px]'} shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5`
-        }, /*#__PURE__*/React.createElement("small", {
-          className: "block text-center text-[8px] leading-[9px] font-black text-amber-300"
-        }, "\u26A0 ", setting.label, "\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", null, extremeSpecialRuleLines(setting.id).map(([label, value]) => /*#__PURE__*/React.createElement("div", {
-          key: label,
-          className: `grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 ${setting.id === 'ULTIMATE' ? 'text-[8px] leading-[9px]' : 'text-[9px] leading-[10px]'} whitespace-nowrap`
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-300"
-        }, label), /*#__PURE__*/React.createElement("b", {
-          className: "min-w-0 text-right text-white"
-        }, value)))))) : /*#__PURE__*/React.createElement("div", {
+          className: "mt-1 h-[34px] shrink-0 flex items-center justify-center rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 text-center"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "text-[10px] leading-tight text-amber-300"
+        }, "\u26A0 ", setting.label, " ", extremeRuleSummaryText(setting.id)))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
         }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("div", {
           "data-extreme-card-actions": true,
           className: "grid gap-1.5 mt-auto pt-2 pb-1"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-1.5"
         }, /*#__PURE__*/React.createElement("button", {
+          "data-extreme-rule-detail-open": setting.id,
+          disabled: !previewable,
+          onClick: () => setExtremeRuleDetail(setting.id),
+          className: "min-h-[38px] rounded-xl bg-fuchsia-900 border border-fuchsia-400/50 text-fuchsia-100 font-black text-xs disabled:opacity-50"
+        }, previewable ? 'ルール詳細' : 'ルール ？？？'), /*#__PURE__*/React.createElement("button", {
           disabled: !previewable,
           onClick: () => setShowWaveDetails(true),
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
-        }, previewable ? '全WAVE詳細' : '詳細 ？？？'), /*#__PURE__*/React.createElement("button", {
+        }, previewable ? '全WAVE詳細' : '詳細 ？？？')), /*#__PURE__*/React.createElement("button", {
           disabled: !previewable,
           onClick: () => {
             battleEntryStateRef.current = 'EXTREME_DIFFICULTY_SELECT';
@@ -30396,16 +30576,21 @@ function MonsterHeroGame() {
       fill: "currentColor",
       size: 12,
       className: "inline mr-1"
-    }), "Action")))) : /*#__PURE__*/React.createElement(React.Fragment, null, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+    }), "Action")))) : /*#__PURE__*/React.createElement(React.Fragment, null, (() => {
+      const statusRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+      const hasEnemyRate = extremeRuleNumber(statusRule, 'enemyTurnRate') != null;
+      const hasDamageRate = extremeRuleNumber(statusRule, 'damageTurnRate') != null;
+      if (!hasEnemyRate && !hasDamageRate) return null;
       const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
-      const enemyMultiplier = ultimateEnemyTurnMultiplier(totalTurnCount);
-      const damageMultiplier = ultimateDamageTurnMultiplier(elapsedTotalTurns, ULTIMATE_SETTING.id);
+      const enemyMultiplier = ultimateEnemyTurnMultiplier(totalTurnCount, statusRule);
+      const damageMultiplier = ultimateDamageTurnMultiplier(elapsedTotalTurns, statusRule);
+      const hasJoinRate = extremeRuleNumber(statusRule, 'allyJoinPenaltyRate') != null;
       return /*#__PURE__*/React.createElement("div", {
-        "data-ultimate-battle-status": true,
+        "data-ultimate-battle-status": statusRule,
         className: "shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "ULTIMATE"), /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5316 +", compactPercent(enemyMultiplier - 1), "\uFF08WAVE\u958B\u59CB\u6642 \u7D2F\u8A08", totalTurnCount, "T\uFF09"), /*#__PURE__*/React.createElement("span", null, "\u4E0E\u30C0\u30E1 ", compactPercent(damageMultiplier), "\uFF08\u73FE\u5728 \u7D2F\u8A08", elapsedTotalTurns, "T\uFF09"));
+      }, statusRule), hasEnemyRate && /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5316 +", compactPercent(enemyMultiplier - 1), "\uFF08WAVE\u958B\u59CB\u6642 \u7D2F\u8A08", totalTurnCount, "T\uFF09"), hasDamageRate && /*#__PURE__*/React.createElement("span", null, "\u4E0E\u30C0\u30E1 ", compactPercent(damageMultiplier), "\uFF08\u73FE\u5728 \u7D2F\u8A08", elapsedTotalTurns, "T\uFF09"), hasJoinRate && /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165B ", compactPercent(ultimateAllyJoinMultiplier(elapsedTotalTurns, statusRule)), "\uFF08\u73FE\u5728\uFF09"));
     })(), (() => {
       const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       return [NIGHTMARE_SETTING.id, CHAOS_SETTING.id].includes(rule) && /*#__PURE__*/React.createElement("div", {
@@ -32124,15 +32309,18 @@ function MonsterHeroGame() {
     })), gameState === 'PICK_ALLY' && /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5",
       "data-join-status": true
-    }, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+    }, (() => {
+      const joinRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+      if (extremeRuleNumber(joinRule, 'allyJoinPenaltyRate') == null) return null;
       const totalTurns = waveResult?.totalTurnCount || 0;
-      const multiplier = ultimateAllyJoinMultiplier(totalTurns);
+      const multiplier = ultimateAllyJoinMultiplier(totalTurns, joinRule);
+      const floorValue = extremeRuleNumber(joinRule, 'minimumAllyJoinBonus');
       return /*#__PURE__*/React.createElement("div", {
-        "data-ultimate-join-status": true,
+        "data-ultimate-join-status": joinRule,
         className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "ULTIMATE\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09"));
+      }, joinRule, "\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09", floorValue != null ? `／最低${specialRulePercent(floorValue)}` : ''));
     })(), (() => {
       const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       if (rule === NIGHTMARE_SETTING.id) return /*#__PURE__*/React.createElement("div", {
@@ -32347,7 +32535,7 @@ function MonsterHeroGame() {
               className: "min-w-0 block"
             }, /*#__PURE__*/React.createElement("span", {
               className: "block text-slate-500 font-black leading-none"
-            }, stat.short), [ULTIMATE_SETTING.id, CHAOS_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
+            }, stat.short), [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
               className: "block leading-none text-slate-500"
             }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
               className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
@@ -33492,7 +33680,7 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-xs font-black tracking-[.24em] text-amber-300"
-    }, "ULTIMATE"), /*#__PURE__*/React.createElement("div", {
+    }, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) || ULTIMATE_SETTING.id), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 text-2xl font-black italic tracking-wider text-red-100"
     }, ultimateDistanceBreakReveal.level >= 2 ? 'DISTANCE BREAK OVERWRITE' : 'DISTANCE BREAK'), /*#__PURE__*/React.createElement("div", {
       className: "mt-5 text-xl font-black text-white"
@@ -33508,34 +33696,42 @@ function MonsterHeroGame() {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         zIndex: 90500,
-        background: 'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))'
+        background: 'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))',
+        paddingTop: 'calc(1.25rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))'
       },
       onClick: closeExtremeRule,
       role: "dialog",
       "aria-modal": "true",
       "aria-label": "\u6975\u9650\u30EB\u30FC\u30EB\u767A\u52D5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]",
+      className: "w-full max-w-xs max-h-full flex flex-col rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]",
       style: {
         animation: 'mhExtremeRuleIn .38s ease-out'
       }
     }, (() => {
       const specialDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      return specialDifficulty === ULTIMATE_SETTING.id ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black tracking-[.12em] text-amber-300"
-      }, "ULTIMATE \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-3 grid gap-1.5 text-left"
-      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\u3054\u3068\u306B\u6575HP/\u653B\u6483+0.75%", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\u3054\u3068\u306B\u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u500D\u7387-0.75pt", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\u3054\u3068\u306B\u4E0E\u30C0\u30E1\u500D\u7387-0.75pt\uFF0825%\u3067\u505C\u6B62\uFF09")], ['2', isQuickMode(runMode) ? '自動成長低下' : 'トレーニング低下', isQuickMode(runMode) ? 'このWAVEのターン数×0.75% 次回の自動成長が10%から低下（最低0%）' : 'このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、味方側の1距離の与ダメージ弱体Lvが上昇（最終的に3距離が弱体・1距離が安全）']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
-        key: number,
+      const groups = extremeRuleDetailGroups(specialDifficulty, isQuickMode(runMode));
+      const breakRule = extremeDistanceBreakRule(specialDifficulty);
+      return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 text-[11px] font-black tracking-[.12em] text-amber-300"
+      }, "\u26A0 ", specialDifficulty, " \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
+        "data-extreme-rule-intro": specialDifficulty,
+        className: "mt-3 min-h-0 flex-1 overflow-y-auto mh-scroll grid content-start gap-1.5 text-left"
+      }, groups.map(group => /*#__PURE__*/React.createElement("div", {
+        key: group.title,
         className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black text-fuchsia-300"
-      }, "RULE ", number, "\uFF5C", title), /*#__PURE__*/React.createElement("div", {
-        className: "mt-0.5 text-[10px] font-bold leading-snug text-white"
-      }, text), number === '2' && /*#__PURE__*/React.createElement("div", {
-        className: "mt-0.5 text-[8px] font-black text-amber-300"
-      }, "\u203B\u8DDD\u96E2\u5F37\u5316\u306F\u5BFE\u8C61\u5916")))), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 rounded-xl border border-amber-300/40 bg-black/45 px-3 py-2 text-left text-[10px] leading-relaxed text-slate-200"
+      }, "\u3010", group.title, "\u3011"), group.lines.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+        key: label,
+        className: "mt-0.5 grid grid-cols-[auto_1fr] items-start gap-2 text-[10px] font-bold leading-snug text-white"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 text-slate-300"
+      }, label), /*#__PURE__*/React.createElement("b", {
+        className: "min-w-0 text-right"
+      }, value)))))), breakRule && /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 shrink-0 rounded-xl border border-amber-300/40 bg-black/45 px-3 py-2 text-left text-[10px] leading-relaxed text-slate-200"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
       }, "\u73FE\u5728\u306E\u7D2F\u8A08\u30BF\u30FC\u30F3\uFF1A"), /*#__PURE__*/React.createElement("b", {
@@ -33544,17 +33740,9 @@ function MonsterHeroGame() {
         className: "text-slate-400"
       }, "\u73FE\u5728\u306EBREAK\uFF1A"), /*#__PURE__*/React.createElement("b", {
         className: ultimateDistanceBreakLevels.some(level => level > 0) ? 'text-red-200' : 'text-white'
-      }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし')))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black tracking-[.16em] text-amber-300"
-      }, "\u26A0 ", specialDifficulty, "\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-3 space-y-2 text-left text-[11px] text-slate-200"
-      }, extremeSpecialRuleLines(specialDifficulty).map(([label, value]) => /*#__PURE__*/React.createElement("div", {
-        key: label
-      }, "\u30FB", label, " ", /*#__PURE__*/React.createElement("b", {
-        className: "text-white"
-      }, value)))));
+      }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし'))));
     })(), /*#__PURE__*/React.createElement("div", {
-      className: "mt-4 text-[9px] font-black tracking-widest text-fuchsia-200"
+      className: "mt-4 shrink-0 text-[9px] font-black tracking-widest text-fuchsia-200"
     }, "\u30BF\u30C3\u30D7\u3057\u3066\u30D0\u30C8\u30EB\u958B\u59CB"))), tutorialStep != null && (() => {
       const intro = tutorialKind === 'intro';
       const battleGuide = tutorialKind === 'battleGuide';
@@ -34098,7 +34286,7 @@ function MonsterHeroGame() {
         }
       }))), /*#__PURE__*/React.createElement("span", {
         className: "text-[11px] font-black font-mono text-amber-300"
-      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), specialRule === ULTIMATE_SETTING.id && (() => {
+      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), extremeRuleNumber(specialRule, 'awakeningPenaltyRate') != null && (() => {
         const turns = waveResult?.turn || 0;
         const probe = {
           atk: 10000,
@@ -34109,11 +34297,11 @@ function MonsterHeroGame() {
         const normal = resolveTrainingStep(probe, 'hp', turns, null).hp;
         const effective = resolveTrainingStep(probe, 'hp', turns, specialRule).hp;
         return /*#__PURE__*/React.createElement("div", {
-          "data-ultimate-training-status": true,
+          "data-ultimate-training-status": specialRule,
           className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-amber-300"
-        }, "ULTIMATE\u88DC\u6B63"), "\u3000\u4ECA\u56DE", turns, "T \u2192 \u5F37\u5316\u52B9\u679C -", Number(((normal - effective) / 100).toFixed(1)), "pt");
+        }, specialRule, "\u88DC\u6B63"), "\u3000\u4ECA\u56DE", turns, "T \u2192 \u5F37\u5316\u52B9\u679C -", Number(((normal - effective) / 100).toFixed(1)), "pt");
       })(), specialRule === 'NIGHTMARE' && /*#__PURE__*/React.createElement("div", {
         "data-nightmare-training-status": true,
         className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
@@ -34171,7 +34359,7 @@ function MonsterHeroGame() {
           className: "text-[13px] font-black text-white leading-none"
         }, option.name)), /*#__PURE__*/React.createElement("span", {
           className: `text-[10px] font-black ${st.tint} leading-tight`
-        }, option.effect, [ULTIMATE_SETTING.id, 'NIGHTMARE'].includes(specialRule) && (() => {
+        }, option.effect, (extremeRuleNumber(specialRule, 'awakeningPenaltyRate') != null || extremeRuleNumber(specialRule, 'waveEnhancement') != null) && (() => {
           const normalAfter = resolveTrainingStep(current, option.id, waveResult?.turn, null)[option.stat];
           const effectiveAfter = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
           const normalGain = normalAfter - current[option.stat],

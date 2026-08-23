@@ -135,12 +135,14 @@ node tools/build.js --check
 | コマンド | 内容 |
 | --- | --- |
 | `node mode/difficulty-item-check.js` | 新難易度(Grand Master/Hell/Legend)の表示と色、絆経験値チケットのまとめ使いを確認する。 |
-| `node mode/extreme-challenge-check.js` | 極限チャレンジ(正式版)を確認する。EXTREMEの倍率と未実装段階、Grand Master以上クリアの解放条件、アシストカード50%がEXTREME固有ルールに閉じていること、正式プレイは報酬・クリア記録を保存しデバッグプレイでは保存しないこと、既存の保存キーと全国ランキングへ混ぜていないことを見る。 |
+| `node mode/extreme-challenge-check.js` | 極限チャレンジ(正式版)を確認する。EXTREME〜INFINITYの倍率と解放の連鎖、Grand Master以上クリアの解放条件、アシストカード50%がEXTREME固有ルールに閉じていること、正式プレイは報酬・クリア記録を保存しデバッグプレイでは保存しないこと、既存の保存キーと全国ランキングへ混ぜていないことを見る。 |
 | `node mode/extreme-reward-check.js` | 極限チャレンジの数値を本番の定義で計算して確かめる。EXTREMEの敵×13と報酬倍率、通常難易度(Beginner〜Legend)の敵性能に回帰がないこと(powerOverride=nullを0と取り違えない)、解放判定の境界を見る。 |
 | `node mode/extreme-browser-check.js` | 極限チャレンジを実ブラウザで遊んで確認する。未解放時のロック表示、Grand Masterクリア後の解放、EXTREMEを押してバトルが始まること、敵の強さが×13、極限ルール発動の表示、通常難易度に影響が無いこと、正式公開の初回案内が1回だけ出ることを見る。 |
 | `node mode/nightmare-rules-check.js` | NIGHTMAREのWAVE後強化50%、自動回復率・距離適性のプラス50%／マイナス200%を代表値で確認し、WAVE後距離強化との分離、EXTREMEと通常モードへの非適用も確認する。 |
 | `node mode/ultimate-rules-check.js` | 正式ULTIMATEの解放・報酬・記録共通経路と、累計ターンによる敵強化・供モン加入ボーナス低下、WAVEターンによるトレーニング低下、DISTANCE BREAK、デバッグ戦との分離を代表値で確認する。 |
-| `node mode/ultimate-card-layout-check.js` | iPhone縦画面向けに全極限難易度カードを共通の外寸へ収め、説明・特殊ルール・3ボタン・下余白と、カード・ページドット・助手コメントの分離を確認する。ULTIMATEの重要な数値、文字サイズ、クイックULTIMATEの開始案内も維持していることを確認する。 |
+| `node mode/ultimate-card-layout-check.js` | iPhone縦画面向けに全極限難易度カードを共通の外寸(400px)へ収め、説明・「特殊ルールあり」の1行・4操作(ルール詳細/全WAVE詳細/挑戦/ランキング)・下余白と、カード・ページドット・助手コメントの分離を確認する。**特殊ルールの本文をカードへ並べていないこと**と、特殊ルール欄の文字を10px未満へ小さくして詰め込んでいないことも見る(ルールが増えるたびにカードを大きくする・文字を小さくする、という直し方を封じるため)。ルール詳細のSafe Area・縦スクロール・44pxの閉じる操作も確認する。 |
+| `node mode/infinity-rules-check.js` | 極限チャレンジ INFINITY を確認する。基本設定(敵×50 / スコア×20 / 経験値×45 / ダイヤ×30 / 虹80 / ULTIMATEクリアで解放)に加えて、**特殊ルールの計算を本体から切り出してそのまま動かし**、敵+0.75%/T・加入B -0.75pt/T(最低10%)・与ダメ -1.0pt/T(最低30%)・トレーニング -0.75pt/T・距離強化50%・ガッツ150%・BREAK 25Tとその倍率・与ダメ低下→BREAKの適用順を数値表で突き合わせる。CHAOSの与ダメ50%と加入B50%、NIGHTMAREのWAVE後強化50%をINFINITYへ重複適用していないこと、既存4難易度(とくにULTIMATEの35T / -0.75pt / 下限25%)が変わっていないこと、記録キーとランキングキーが既存方式のまま分離されていること、クイックへINFINITYを足していないことも見る。 |
+| `node mode/extreme-rule-detail-browser-check.js` | 「ルール詳細」を実ブラウザで開いて確認する。5難易度すべてで開けて難易度ごとに違う内容が出ること、INFINITYの主要ルールが全部載ること、閉じるとシートだけ消えて**選択中の難易度が変わらない**こと、ULTIMATE未クリアならINFINITYがロックされ解放条件が読めることを、実際に押して確かめる。このサンドボックスはTailwindのCDNへ出られずクラスによる寸法が再現できないため、**見た目(px)の確認にはならない**。 |
 | `node mode/chaos-rules-check.js` | CHAOSの特殊ルール(与ダメージ50%・加入ボーナス50%・消費ガッツ150%、いずれも端数切り捨て)と、極限チャレンジの説明文を確認する。 |
 | `node mode/quick-chaos-check.js` | クイックCHAOSの3報酬方針、同難易度解放、特殊ルール共有、ランキング除外、デバッグ保存なし、既存記録キー、カード構成、一度きり通知を確認する。 |
 | `node mode/quick-extreme-special-rules-check.js` | クイック極限難易度が極限本体の `specialRules` を共用することに加え、クイックULTIMATEの公開順・3報酬方針・自動成長低下・全回復・開始表示・固定カード高・ランキング除外・更新通知を確認する。 |

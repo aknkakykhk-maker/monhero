@@ -45,9 +45,15 @@ Grand Master 以上では一致しない。
 | NIGHTMARE | 実装済み（EXTREMEクリアで解放） | ×15 | ×20 | ×30 | ×10 | 40 | WAVE後強化50%、自動回復率・距離適性の＋50% / －200% |
 | CHAOS | 実装済み（NIGHTMAREクリアで解放） | ×20 | ×20 | ×35 | ×15 | 50 | 与ダメージ50%、供モン加入ボーナス50%、消費ガッツ150% |
 | ULTIMATE | 実装済み（CHAOSクリアで解放） | ×35 | ×20 | ×40 | ×20 | 60 | 累計ターン圧、トレーニング低下、35Tごとの段階式DISTANCE BREAK（安全距離以外の3距離） |
-| INFINITY | 未実装（`available:false`） | － | － | － | － | － | － |
+| INFINITY | 実装済み（ULTIMATEクリアで解放） | ×50 | ×20 | ×45 | ×30 | 80 | 極限ルールの統合。アシスト50%、＋50% / －200%、距離強化50%、ガッツ150%、累計ターン圧（加入B最低10% / 与ダメ-1.0pt・最低30%）、トレーニング低下、25Tごとの段階式DISTANCE BREAK |
 
-ULTIMATEでは累計ターン×0.75%を次WAVEの敵HP・攻撃倍率へ加算し、供モン加入時のステータス加算倍率を同率で低下させる。プレイヤーの与ダメージは `totalTurnCount + max(0, turnCount - 1)` を経過累計ターンとして同率で低下し、最低25%を維持する。そのWAVEのターン数×0.75%で次のトレーニングを低下させる（4種すべてが対象。割合は `max(0, 効果率 - ターン数×0.75%)`、猛勉強の固定+5は `1 - ターン数/20` で縮む。距離強化は対象外）。累計35ターンごとに次WAVEのDISTANCE BREAKを予約し、35・70・105Tでランダムな3距離をLv1、140・175・210Tで同じ3距離を重複なしにLv2、245・280・315TでLv3へ上書きする。1距離は安全距離として残り、以降も35Tごとに3距離を1段階ずつ強化する。BREAK倍率は `0.5 ** level` で、累計ターンの与ダメージ低下と乗算する。INFINITYは未実装段階のため数値を持たせず、画面には「？？？」とだけ出す。
+ULTIMATEでは累計ターン×0.75%を次WAVEの敵HP・攻撃倍率へ加算し、供モン加入時のステータス加算倍率を同率で低下させる。プレイヤーの与ダメージは `totalTurnCount + max(0, turnCount - 1)` を経過累計ターンとして同率で低下し、最低25%を維持する。そのWAVEのターン数×0.75%で次のトレーニングを低下させる（4種すべてが対象。割合は `max(0, 効果率 - ターン数×0.75%)`、猛勉強の固定+5は `1 - ターン数/20` で縮む。距離強化は対象外）。累計35ターンごとに次WAVEのDISTANCE BREAKを予約し、35・70・105Tでランダムな3距離をLv1、140・175・210Tで同じ3距離を重複なしにLv2、245・280・315TでLv3へ上書きする。1距離は安全距離として残り、以降も35Tごとに3距離を1段階ずつ強化する。BREAK倍率は `0.5 ** level` で、累計ターンの与ダメージ低下と乗算する。
+
+INFINITYは既存4難易度の特徴を統合した10WAVEの最終難易度。ULTIMATEと同じ計算経路を共有し、率と下限だけを難易度設定から差し替える。累計ターン×0.75%の敵強化と供モン加入ボーナス低下はULTIMATEと同率だが、加入ボーナスは `minimumAllyJoinBonus:0.10` で10%止まりになる。与ダメージは経過累計ターン×1.0ptで低下し、`minimumDamageDealt:0.30` で30%止まり。DISTANCE BREAKは `interval:25` で25Tごとに進み、倍率・安全距離・抽選ロジック・ラン中の永続はULTIMATEと同じものを使う。トレーニング低下はULTIMATEと同じ `awakeningPenaltyRate:0.0075`。
+
+**役割が重なるルールは重ねない。** CHAOSの `damageDealt:0.5` と `allyJoinBonus:0.5` はULTIMATE系のターン低下と重複するためINFINITYへ入れない。NIGHTMAREの `waveEnhancement:0.5` も、入れるとトレーニングまで50%になってターン低下と二重になるため入れず、距離強化だけを下げる `distanceEnhancement:0.5`（`applyDistanceEnhancement` が使う）を持たせる。これらのルールはCHAOS・NIGHTMARE本体では従来どおり有効。
+
+ターン系のルールは難易度名でハードコードせず、`extremeRuleNumber(difficultyId, rule)` / `extremeDistanceBreakRule(difficultyId)` で「その難易度がそのルールを持つか」で効かせる。持たない難易度では倍率1・BREAKなしになるため、既存の挙動は変わらない。
 
 敵順はディノ、ゲル、ブラックディノ、ジャアクソウ、ブルーマウンテン、ガリ、ナーガ、リリム、デュラハン、ムーの固定10体。各 WAVE 開始時に敵の初期距離を4枠から一様に選ぶ。基礎HP・基礎攻撃は `enemy-monsters.js`、倍率は `DIFFICULTY_SETTINGS` にある。
 
@@ -203,13 +209,15 @@ HOMEの「バトル」は `バトル → バトルモード選択 → 難易度�
   既存の `mh_clears_<難易度>` をそのまま読む）。専用の解放フラグは作らないので、旧セーブもそのまま解放される。
 - **内部の扱い**: `runMode` はチャレンジ、`difficulty` は `Normal` のまま固定し、極限かどうかは `extremeRunRef` で持つ。
   そのため**チャレンジのNormalの記録を汚さないよう、挑戦回数（`mh_attempts_*`）と最高到達WAVE（`mh_highest_wave_*`）へは入れない**。
-- **記録**: 自己ベストは `mh_extreme_hs_<極限難易度>`、クリア回数は `mh_extreme_clears_<極限難易度>`。NIGHTMAREとCHAOSも同じ構造の専用キーへ保存し、既存難易度の記録を変更しない。
+- **記録**: 自己ベストは `mh_extreme_hs_<極限難易度>`、クリア回数は `mh_extreme_clears_<極限難易度>`。NIGHTMARE・CHAOS・ULTIMATE・INFINITYも同じ構造の専用キーへ保存し、既存難易度の記録を変更しない。旧セーブに無いキーは既定値0で読むので、移行処理はいらない。
 - **ランキング**: チャレンジ・プロと同じ作りで、Supabaseのテーブル・列は増やさず `difficulty` へ入れる値だけで分ける
   （`EXTREME_RANKING_PREFIX = 'Extreme'` → `ExtremeEXTREME`）。既存のチャレンジ・プロの行は読みも書きもしない。
   ランキング画面の難易度タブは、通常の9段階ではなく**遊べる極限の段階**を並べる。
-- **報酬**: 選択中の極限難易度設定を共通経路で使う。EXTREMEはスコア×20・経験値×25・ダイヤ×7.5・虹30個、NIGHTMAREはスコア×20・経験値×30・ダイヤ×10・虹40個、CHAOSはスコア×20・経験値×35・ダイヤ×15・虹50個。
+- **報酬**: 選択中の極限難易度設定を共通経路で使う。EXTREMEはスコア×20・経験値×25・ダイヤ×7.5・虹30個、NIGHTMAREはスコア×20・経験値×30・ダイヤ×10・虹40個、CHAOSはスコア×20・経験値×35・ダイヤ×15・虹50個、ULTIMATEはスコア×20・経験値×40・ダイヤ×20・虹60個、INFINITYはスコア×20・経験値×45・ダイヤ×30・虹80個。
 - **NIGHTMARE**: EXTREMEクリアで解放。WAVE後強化50%、自動回復率と距離適性の正補正50%・負補正200%。WAVE 1の操作前に専用ルールを一度だけ表示し、全WAVEの敵本体へ暗青色の霊気オーラを付ける。
 - **CHAOS**: NIGHTMAREクリアで解放。与ダメージ50%、供モン加入時ステータスボーナス50%、消費ガッツ150%。既存の極限共通演出を利用する。
+- **INFINITY**: ULTIMATEクリアで解放する10WAVEの最終難易度。ルールは上の表と本節の解説を正本とする。クイックモードにはINFINITYを作らない（`QUICK_EXTREME_SETTINGS` はULTIMATEまで）。
+- **ルール詳細**: 難易度カードは「⚠ ○○ 特殊ルールあり」だけを出し、中身は「ルール詳細」のボトムシートで読ませる（`extremeRuleDetailGroups` が `specialRules` から本文を作る）。カード・WAVE 1の開始案内・ヘルプが同じ本文を共有するので、数値を書き写す場所を増やさない。開いても難易度の選択とバトル開始状態は変えない。
 - **EXTREME固有ルール**: アシストカードの効果量だけ50%（`extremeSpecialRule('EXTREME','assistCardEffect')`）。
   モードの説明には書かず、難易度カードとWAVE 1の発動テロップだけで見せる。
 - **デバッグとの分離**: `debugBattleRef` は極限の開始ボタンで**書き換えない**。デバッグ設定から入った周回だけ
@@ -272,4 +280,6 @@ HOMEの「バトル」は `バトル → バトルモード選択 → 難易度�
   `node tools/battle/battle-tutorial-v2-check.js`（新しいチュートリアルを実ブラウザで通してみる）、
   `node tools/mode/extreme-challenge-check.js`（極限チャレンジの解放条件・固有ルール・記録の分離）、
   `node tools/mode/extreme-reward-check.js`（EXTREMEの倍率と、通常難易度の敵性能に回帰がないこと）、
-  `node tools/mode/extreme-browser-check.js`（極限チャレンジを実ブラウザで開始まで進めてみる）
+  `node tools/mode/extreme-browser-check.js`（極限チャレンジを実ブラウザで開始まで進めてみる）、
+  `node tools/mode/infinity-rules-check.js`（INFINITYの設定・特殊ルールを本体の関数で検算し、既存4難易度の回帰も見る）、
+  `node tools/mode/extreme-rule-detail-browser-check.js`（ルール詳細を実ブラウザで開閉する）

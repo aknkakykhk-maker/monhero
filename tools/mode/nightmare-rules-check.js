@@ -16,7 +16,9 @@ assert.strictEqual(wave(10, false), 10, 'non-NIGHTMARE WAVE enhancement must sta
 assert.strictEqual(signed(-0.025, false), -0.025, 'non-NIGHTMARE signed modifiers must stay unchanged');
 
 assert(source.includes("specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 })"));
-assert(source.includes('applyNightmareWaveEnhancement(d*0.001/100,specialRuleDifficulty)'), 'WAVE distance gain must use the WAVE enhancement rule');
+assert(source.includes('applyDistanceEnhancement(d*0.001/100,specialRuleDifficulty)'), 'WAVE distance gain must go through the shared distance-enhancement rule');
+// 距離強化はINFINITY専用ルールが無ければ従来どおりNIGHTMAREのWAVE後強化へ落ちる
+assert(/const applyDistanceEnhancement[\s\S]{0,320}applyNightmareWaveEnhancement\(value,specialDifficulty\)/.test(source), 'NIGHTMARE distance gain must still fall back to the WAVE enhancement rule');
 assert(source.includes("applyNightmareSignedModifier(aptGradeToPct(apt[i] || 'C'), nightmare)"), 'monster aptitude must use the signed rule separately');
 assert(source.includes('const baseRecoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));'), 'recovery base formula and bounds must stay intact');
 assert(source.includes('const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty);'), 'recovery rule must apply after the base calculation');

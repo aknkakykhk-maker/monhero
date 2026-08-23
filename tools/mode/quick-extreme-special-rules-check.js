@@ -34,18 +34,18 @@ assert(source.includes('return hasExtremeSpecialRules(candidate) ? candidate : n
 assert(!source.includes('extremeRunRef.current?extremeSpecialRule(extremeDifficulty'), 'special rule activation must not depend only on extremeRunRef');
 assert(source.includes("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"));
 for (const use of [
-  'applyNightmareWaveEnhancement(d*0.001/100,specialRuleDifficulty)',
+  'applyDistanceEnhancement(d*0.001/100,specialRuleDifficulty)',
   'applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty)',
   'getMonsterAptPct(m,specialRuleDifficulty)',
   'applyNightmareStatGain(base,after,specialDifficulty)',
 ]) assert(source.includes(use), `${use} must use the shared run rule difficulty`);
 assert(source.includes('quick&&hasExtremeSpecialRules(key)') && source.includes('特殊ルールあり'));
-assert(source.includes("isQuickMode(runMode)?'自動成長低下':'トレーニング低下'"), 'Quick ULTIMATE intro must describe automatic growth without changing the extreme training label');
-assert(source.includes("[quick?'自動成長':'トレーニング','WAVE Tごと-0.75pt']"), 'Quick ULTIMATE card must call the WAVE effect automatic growth');
-assert(source.includes("['与ダメ倍率','経過Tごと-0.75pt（25%で停止）']")&&!source.includes('経過累計T×0.75%（最低25%）'), 'Quick ULTIMATE card must explain the damage floor as a stopping point');
-assert(source.includes('extremeSpecialRuleLines(setting.id).map'), 'official card must share the same rule presentation');
-assert(source.includes('const enemyTurnMultiplier=specialRuleDifficulty===ULTIMATE_SETTING.id?ultimateEnemyTurnMultiplier(totalTurnCount):1;'), 'ULTIMATE enemy turn scaling must use the shared run rule difficulty');
-assert(source.includes('const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&specialRuleDifficulty===ULTIMATE_SETTING.id;'), 'ULTIMATE BREAK reveal must use the shared run rule difficulty');
+assert(source.includes('const groups=extremeRuleDetailGroups(specialDifficulty,isQuickMode(runMode));'), 'Quick ULTIMATE intro must describe automatic growth without changing the extreme training label');
+assert(source.includes("[quick?'自動成長':'トレーニング',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`]"), 'Quick ULTIMATE rule detail must call the WAVE effect automatic growth');
+assert(source.includes("['与ダメ倍率',`経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`]")&&!source.includes('経過累計T×0.75%（最低25%）'), 'Quick ULTIMATE rule detail must explain the damage floor as a stopping point');
+assert(source.includes('extremeRuleSummaryText(setting.id)')&&source.includes('data-extreme-rule-detail-open={setting.id}'), 'official card must point at the shared rule-detail sheet instead of listing rules');
+assert(source.includes('const enemyTurnMultiplier=ultimateEnemyTurnMultiplier(totalTurnCount,specialRuleDifficulty);'), 'ULTIMATE enemy turn scaling must use the shared run rule difficulty');
+assert(source.includes('const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&!!extremeDistanceBreakRule(specialRuleDifficulty);'), 'ULTIMATE BREAK reveal must use the shared run rule difficulty');
 assert(!source.includes('ultimateDistanceBreakPendingRef.current&&extremeRunRef.current&&extremeDifficulty===ULTIMATE_SETTING.id'), 'BREAK activation must not depend on the extreme-run flags directly');
 assert(!/QUICK_EXTREME_SETTINGS[\s\S]{0,700}(assistCardEffect|waveEnhancement|positiveModifier|negativeModifier|damageDealt|allyJoinBonus|gutsCost)/.test(source), 'quick settings must not duplicate special-rule values');
 const quickExtremeSettings=source.match(/const QUICK_EXTREME_SETTINGS = Object\.freeze\(\{([\s\S]*?)\n\}\);/)?.[1]||'';
@@ -61,7 +61,7 @@ assert.strictEqual(60*2,120, 'psyche policy must double psyche');
 assert.strictEqual(12*1.5*2,36, 'diamond policy must double the final quick diamond reward');
 assert(source.includes('const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) =>'));
 assert(source.includes('specialRuleDifficultyForRun(runMode,difficultyId)'), 'growth penalty must share the special-rule resolver');
-assert(source.includes('ULTIMATE_SETTING.specialRules.awakeningPenaltyRate'), 'growth penalty must reuse the ULTIMATE rate');
+assert(source.includes("const penaltyRate=extremeRuleNumber(specialDifficulty,'awakeningPenaltyRate');"), 'growth penalty must reuse the difficulty rule instead of a duplicated rate');
 assert(!/quickGrowthRateForRun[\s\S]{0,500}0\.0075/.test(source), 'quick growth must not duplicate the ULTIMATE rate');
 const quickGrowthRate = turns => Math.max(0,0.10-Math.max(0,Number(turns)||0)*0.0075);
 for(const [turns,expected] of [[1,.0925],[5,.0625],[10,.025],[14,0],[99,0]]) {
@@ -71,7 +71,7 @@ assert(source.includes('const growthRate = quickGrowthRateForRun(runMode,difficu
 assert(source.includes('data-quick-ultimate-growth') && source.includes("effectiveRate=quickGrowthRateForRun(runMode,difficulty,waveResult.turn)"), 'Quick ULTIMATE result must show the effective shared growth calculation');
 assert(source.includes('normalRate-effectiveRate'), 'Quick ULTIMATE result must compare normal and effective growth');
 assert(source.includes('setHp(nextEffectiveMaxHp); setGuts(nextEffectiveMaxGuts);'), 'HP/guts full recovery must remain');
-assert(source.includes("if(specialDifficulty!==ULTIMATE_SETTING.id) return QUICK_GROWTH_MULT-1;"), 'other quick difficulties must keep 10% growth');
+assert(source.includes('if(penaltyRate==null) return QUICK_GROWTH_MULT-1;'), 'other quick difficulties must keep 10% growth');
 assert(source.includes("specialRuleDifficultyForRun('challenge','Normal',true,'ULTIMATE')") === false, 'production must not hard-code a Quick-only ULTIMATE rule branch');
 assert(source.includes("quick?'h-[366px] flex flex-col':''"), 'fixed quick card height must remain unchanged');
 assert(source.includes('if (isQuickMode(runMode)) {') && source.includes('return;'), 'quick ranking exclusion path must remain present');

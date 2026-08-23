@@ -20,7 +20,8 @@ assert(/EXTREME[^\n]+available:true[^\n]+power:13[^\n]+score:20[^\n]+xp:25[^\n]+
 assert(/NIGHTMARE[^\n]+available:true[^\n]+power:15[^\n]+score:20[^\n]+xp:30[^\n]+gold:10[^\n]+psyche:40[^\n]+specialRules/.test(config), 'NIGHTMARE must expose its official values and rules for battle');
 assert(/CHAOS[^\n]+available:true[^\n]+power:20[^\n]+score:20[^\n]+xp:35[^\n]+gold:15[^\n]+psyche:50[^\n]+unlockRequirement:'NIGHTMARE'[^\n]+specialRules:Object\.freeze\(\{ damageDealt:0\.5, allyJoinBonus:0\.5, gutsCost:1\.5 \}\)/.test(config), 'CHAOS must expose its official specification');
 assert(/ULTIMATE[^\n]+available:true[^\n]+power:35[^\n]+score:20[^\n]+xp:40[^\n]+gold:20[^\n]+psyche:60[^\n]+unlockRequirement:'CHAOS'[^\n]+specialRules/.test(config), 'ULTIMATE must expose its official specification');
-assert(/INFINITY[^\n]+available:false/.test(config), 'INFINITY must remain unavailable without placeholder values');
+assert(/INFINITY[^\n]+available:true[^\n]+power:50[^\n]+score:20[^\n]+xp:45[^\n]+gold:30[^\n]+psyche:80/.test(config), 'INFINITY must ship with its published multipliers');
+assert(/INFINITY[^\n]+unlockRequirement:'ULTIMATE'/.test(config), 'INFINITY must unlock after ULTIMATE');
 assert(config.includes('const isNightmareUnlocked = (extremeClearCount) => (Number(extremeClearCount) || 0) > 0;'), 'NIGHTMARE unlock must reuse the existing EXTREME clear count');
 assert(source.includes("{previewable?'この難易度で挑戦':'選択できません'}"), 'previewable EXTREME tiers must be selectable');
 
@@ -32,8 +33,9 @@ assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(
 assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE];'), 'the extreme card must always be listed, locked or not');
 assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
-assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
-assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:false") && source.includes("const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked"), 'CHAOS and ULTIMATE must use their preceding clear state while debug remains available');
+assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
+assert(source.includes('const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);'), 'INFINITY details must unlock from the loaded ULTIMATE clear count');
+assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:false") && source.includes('const previewable=setting.available&&unlocked'), 'CHAOS / ULTIMATE / INFINITY must use their preceding clear state while debug remains available');
 assert(source.includes("setting.id==='CHAOS'?'NIGHTMAREクリアで解放'"), 'CHAOS card must show its unlock condition');
 assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(true)}")
   && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
@@ -43,7 +45,7 @@ assert(source.includes("{previewable?'全WAVE詳細':'詳細 ？？？'}"), 'onl
 
 // --- ③ EXTREME固有ルール ---
 assert(source.includes("isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"), 'only breeder cards must receive the selected EXTREME difficulty rule');
-assert(source.includes("addPermaBuff('atkPct',card.baseValue*effMul)"), 'normal breeder buff must use the shared multiplier');
+assert(source.includes("const boost=localBoostFromCard(card).oryo*effMul; addPermaBuff('atkPct',boost);"), 'normal breeder buff must use the shared multiplier');
 assert(source.includes('Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul)'), 'breeder attack damage must use the shared multiplier');
 assert(source.includes("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved"), 'non-breeder attacks must retain their existing calculation');
 assert(!config.includes('teachingEffect') && source.includes("lines.push(['アシストカード効果',specialRulePercent(rules.assistCardEffect)])"), 'the 50% breeder-card rule must use the shared EXTREME specialRules presentation');
@@ -122,12 +124,12 @@ for (const name of ['chaosDifficulty', 'ultimateDifficulty', 'infinityDifficulty
   assert(sceneLines(name) >= 5, `the ${name} preview scene needs at least 5 lines`);
 }
 assert(source.includes('data-extreme-difficulty-card={setting.id}') && source.includes('h-[400px] flex flex-col') && !source.includes('h-[382px]'), 'all five EXTREME tier cards must share one expanded fixed outer height');
-assert(source.includes("lines.push(['自動回復補正',signed],['距離適性補正',signed])") && source.includes('grid-cols-[6.5rem_1fr]') && source.includes('whitespace-nowrap'), 'NIGHTMARE rule labels and values must remain aligned and unbroken');
+assert(source.includes("lines.push(['自動回復補正',signed],['距離適性補正',signed])") && source.includes('grid grid-cols-[auto_1fr] items-start gap-2 text-[11px] leading-snug'), 'rule-detail labels and values must remain aligned and unbroken');
 for (const expected of ["['与ダメージ',specialRulePercent(rules.damageDealt)]", "['供モン加入ボーナス',specialRulePercent(rules.allyJoinBonus)]", "['消費ガッツ',specialRulePercent(rules.gutsCost)]"]) {
   assert(source.includes(expected), `CHAOS debug card must label its planned special rule: ${expected}`);
 }
 assert(source.includes('有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。'), 'NIGHTMARE card must use the approved natural description');
-assert(source.includes('h-[42px] shrink-0') && source.includes('h-[51px] shrink-0') && source.includes('mt-auto pt-1.5'), 'available tier cards must reserve equal record, rule, and footer regions');
+assert(source.includes('h-[42px] shrink-0') && source.includes('h-[34px] shrink-0') && source.includes('mt-auto pt-2 pb-1'), 'available tier cards must reserve equal record, rule, and footer regions');
 for (const expected of ['EXTREMEの次', '有利な補正', '不利な補正', '距離適性', 'WAVEごとの戦い方']) assert(assistants.includes(expected), `NIGHTMARE assistant guidance must include: ${expected}`);
 const modeScene = assistants.slice(assistants.indexOf('extremeChallenge: ['), assistants.indexOf('extremeDifficulty: ['));
 assert(!modeScene.includes('アシストカード'), 'the mode scene must not explain the EXTREME-only breeder-card rule');
