@@ -119,17 +119,27 @@ check('実処理が経験値・ダイヤ・絆経験値にモード倍率を使�
   has('const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);')
     && has('const goldGain = applyQuickDiamondPolicy(goldForWavesClearedInMode(wavesCleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current);')
     && has('const gain = applyQuickXpPolicy(bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);'));
-check('ダイヤ優先は通常・スキップの最終ダイヤへ一度だけ適用する',
+// ダイヤ優先が効くのは通常クリアの最終ダイヤだけ。スキップは「育成」方針でしか使えないので、
+// スキップ側へ方針を掛ける処理は残っていてはいけない(残すと経験値0のまま使えてしまう)
+check('ダイヤ優先は通常クリアの最終ダイヤへ一度だけ適用する',
   count('applyQuickDiamondPolicy(goldForWavesClearedInMode(wavesCleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current)') === 1
-    && count('applyQuickDiamondPolicy(goldForWavesCleared(SKIP_WAVES, goldMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy)') === 1);
+    && count('applyQuickDiamondPolicy') === 2);
 check('クリア報酬は共通付与地点で一度だけ報酬方針を適用する',
   has('const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);')
     && count('applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current)') === 1);
 check('選択は保存キーを増やさず周回開始時に固定する',
   has('quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH')
     && !/storeSet\([^\n]*quickRewardPolicy/.test(source));
-check('スキップでもプシュケー優先なら経験値を付与しない',
-  count('applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy)') === 2);
+// 「プシュケー優先」「ダイヤ優先」は経験値を0にする代わりに虹・ダイヤを2倍にする方針。
+// スキップは虹のプシュケーを配らないため、この2つで使うと受け取れるものがほとんど無くなる。
+// そこでスキップ自体を「育成」方針のときだけに限り、スキップの報酬計算からは方針を外した
+check('スキップは「育成」方針のときだけ使える',
+  has('const skipAllowedByPolicy = (policy) => normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_GROWTH;')
+    && count('skipAllowedByPolicy(quickRewardPolicy)') >= 4);
+const skipBlock = grab(source, 'const executeBattleSkip', 'const openBattleSkip');
+check('スキップの報酬計算は報酬方針を通さない',
+  !skipBlock.includes('applyQuickXpPolicy') && !skipBlock.includes('applyQuickDiamondPolicy')
+    && !skipBlock.includes('flow.rewardPolicy'));
 check('WAVEごとの内訳もモード倍率を使う', has('xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)') && has('goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode)'));
 
 // --- ② 記録 ---

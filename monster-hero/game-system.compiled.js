@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e82df39f2aa6c7cd
+// source-sha256: f66b1dfcd4508277
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 09:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 11:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7096,6 +7096,14 @@ const COMPENSATION_GIFTS = [{
   }, {
     type: 'skipTicketKyu',
     amount: 1
+  }]
+}, {
+  id: 'gift_compensation_20260823_skip',
+  title: 'お詫びのしるし',
+  description: 'クイックモードの報酬方針を「プシュケー優先」「ダイヤ優先」にしたままスキップすると、経験値も絆経験値も入らないままチケットだけ減っていた不具合のお詫びです。ご迷惑をおかけしました。',
+  rewards: [{
+    type: 'skipTicketKyu',
+    amount: 5
   }]
 }, {
   id: 'gift_compensation_20260807_dye',
@@ -16859,6 +16867,7 @@ function MonsterHeroGame() {
     const flow = skipFlow;
     const item = BREEDER_MARKET_ITEMS.find(i => i.id === flow?.itemId);
     if (!flow || !item || !flow.hero) return;
+    if (!skipAllowedByPolicy(quickRewardPolicy)) return;
     if ((ownedItems[item.id] || 0) <= 0) return;
     // まとめて使う枚数。画面の値が壊れていても所持数を超えて消費しないよう、ここでも必ず丸める
     const count = clampSkipCount(flow.count, item.id);
@@ -16874,7 +16883,7 @@ function MonsterHeroGame() {
       const goldMult = DIFFICULTY_SETTINGS[flow.difficulty]?.gold || 1.0;
 
       // ブリーダー経験値・ブリーダーポイント(枚数ぶんまとめて受け取る)
-      const breederXpGain = applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
+      const breederXpGain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
       const breederLevelBefore = levelInfo(breederXp);
       const nextBreederXp = breederXp + breederXpGain;
       const breederLevelAfter = levelInfo(nextBreederXp);
@@ -16891,14 +16900,14 @@ function MonsterHeroGame() {
       }
 
       // ダイヤ
-      const goldGain = applyQuickDiamondPolicy(goldForWavesCleared(SKIP_WAVES, goldMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
+      const goldGain = goldForWavesCleared(SKIP_WAVES, goldMult) * count;
       const goldBefore = gold;
       const goldAfter = gold + goldGain;
       setGold(goldAfter);
       await storeSet('mh_gold', goldAfter, false);
 
       // 絆経験値。勇者モン=満額、選んだ供モン=1/2、編成内で選ばなかったマスモン=1/4 も通常と同じ
-      const gain = applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
+      const gain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
       const allies = (flow.allies || []).filter(Boolean);
       const bondAwards = buildRunBondAwards({
         gain,
@@ -16972,10 +16981,16 @@ function MonsterHeroGame() {
       skipProcessingRef.current = false;
     }
   };
+  // スキップは報酬方針が「育成」のときだけ使える。
+  // 「プシュケー優先」「ダイヤ優先」は経験値を0にする代わりに虹・ダイヤを2倍にする方針だが、
+  // スキップは虹のプシュケーを配らない仕様なので、プシュケー優先で使うと
+  // 経験値も絆経験値も0のままチケットだけ減っていた。使えないようにして取り違えを防ぐ
+  const skipAllowedByPolicy = policy => normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_GROWTH;
   const openBattleSkip = difficultyKey => {
     // スキップはクイックモード専用。画面側でも押せないようにしているが、
     // ここでも止めておく(チャレンジで使えるとスコアを出さずに報酬だけ取れてしまう)
     if (!isQuickMode(battleMode)) return;
+    if (!skipAllowedByPolicy(quickRewardPolicy)) return;
     const itemId = SKIP_TICKETS[difficultyKey];
     if (!itemId || (ownedItems[itemId] || 0) <= 0) return;
     setSkipFlow({
@@ -16983,8 +16998,7 @@ function MonsterHeroGame() {
       itemId,
       hero: null,
       allies: [],
-      count: 1,
-      rewardPolicy: normalizeQuickRewardPolicy(quickRewardPolicy)
+      count: 1
     });
     setSkipPickTab('roster');
     setSkipConfirmOpen(false);
@@ -23988,6 +24002,9 @@ function MonsterHeroGame() {
           if (!tid) return /*#__PURE__*/React.createElement("div", {
             className: "min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap"
           }, "\u3053\u306E\u96E3\u6613\u5EA6\u306F\u30B9\u30AD\u30C3\u30D7\u3067\u304D\u307E\u305B\u3093");
+          if (!skipAllowedByPolicy(quickRewardPolicy)) return /*#__PURE__*/React.createElement("div", {
+            className: "min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight"
+          }, "\u30B9\u30AD\u30C3\u30D7\u306F\u300C\u80B2\u6210\u300D\u65B9\u91DD\u306E\u3068\u304D\u3060\u3051\u4F7F\u3048\u307E\u3059");
           const have = ownedItems[tid] || 0;
           return /*#__PURE__*/React.createElement("div", {
             className: "flex gap-1.5"
@@ -24687,6 +24704,10 @@ function MonsterHeroGame() {
           const tid = SKIP_TICKETS[key];
           if (!tid) return null;
           const have = ownedItems[tid] || 0;
+          const policyOk = skipAllowedByPolicy(quickRewardPolicy);
+          if (!policyOk) return /*#__PURE__*/React.createElement("div", {
+            className: "min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight"
+          }, "\u30B9\u30AD\u30C3\u30D7\u306F\u300C\u80B2\u6210\u300D\u65B9\u91DD\u306E\u3068\u304D\u3060\u3051\u4F7F\u3048\u307E\u3059");
           return /*#__PURE__*/React.createElement("div", {
             className: "flex gap-1.5"
           }, /*#__PURE__*/React.createElement("button", {
@@ -31278,7 +31299,7 @@ function MonsterHeroGame() {
       size: 9
     }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", skipResult.heroBondGain.levelAfter.level - skipResult.heroBondGain.levelBefore.level)) : /*#__PURE__*/React.createElement("div", {
       className: "bg-black/30 rounded-2xl border border-white/10 p-3 text-[10px] text-slate-400 font-bold leading-relaxed"
-    }, "\u52C7\u8005\u30E2\u30F3\u304C\u30DE\u30B9\u30E2\u30F3\u3067\u306F\u306A\u3044\u305F\u3081\u3001\u7D46\u7D4C\u9A13\u5024\u306F\u5165\u308A\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u30B9\u30AD\u30C3\u30D7\u3067\u306F\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306F\u3067\u304D\u307E\u305B\u3093\u3002"), skipResult.allyBondGains.map(a => /*#__PURE__*/React.createElement("div", {
+    }, skipResult.heroIsMasu ? '勇者モンの絆経験値は入りませんでした。スキップではマスモン登録はできません。' : '勇者モンがマスモンではないため、絆経験値は入りませんでした。スキップではマスモン登録はできません。'), skipResult.allyBondGains.map(a => /*#__PURE__*/React.createElement("div", {
       key: a.masuId,
       className: "bg-black/40 rounded-2xl border border-pink-500/20 p-3"
     }, /*#__PURE__*/React.createElement("div", {
