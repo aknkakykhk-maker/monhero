@@ -3,6 +3,17 @@ const assert = require('assert');
 
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const has = text => source.includes(text);
+const slice = (from, to) => source.slice(source.indexOf(from), source.indexOf(to, source.indexOf(from)));
+
+const teachingModule = { exports: {} };
+new Function('module', `${slice('const chooseAutoTeachingCard', '// 整数で扱うバトル値の特殊ルール')}\nmodule.exports=chooseAutoTeachingCard;`)(teachingModule);
+const chooseAutoTeachingCard = teachingModule.exports;
+const teachingCandidates = [{id:'a'},{id:'b'},{id:'c'}];
+assert.strictEqual(chooseAutoTeachingCard(teachingCandidates,[{id:'b',evoLevel:0}],true,()=>0.99).id,'c','初回が全合法候補からランダム選択していません');
+assert.strictEqual(chooseAutoTeachingCard(teachingCandidates,[{id:'b',evoLevel:1}],false,()=>0).id,'b','WAVE後に強化可能な所持カードを優先していません');
+assert.strictEqual(chooseAutoTeachingCard(teachingCandidates,[{id:'a',evoLevel:0},{id:'b',evoLevel:1}],false,()=>0.99).id,'b','強化可能候補が複数ある場合にランダム選択していません');
+assert.strictEqual(chooseAutoTeachingCard(teachingCandidates,[{id:'b',evoLevel:2}],false,()=>0.99).id,'c','最大強化済みカードを優先対象から除外していません');
+assert.strictEqual(chooseAutoTeachingCard([],[],false),null,'候補0件を安全に扱っていません');
 
 assert(has('const [autoBattle, setAutoBattle] = useState(false);'), 'AUTOの初期値がOFFではありません');
 assert(has('const autoBattleRef = useRef(false);'), 'AUTOの同期refがありません');
@@ -23,6 +34,13 @@ assert(has("setSelectedCards([]);setCardAssignments({});setPendingCard(null);set
 assert(has('const stopAutoBattle = () => {'), 'AUTO停止helperがありません');
 assert(has('autoBattleRef.current = false;\n    autoTurnScheduledRef.current = false;\n    autoPostWaveScheduledRef.current = false;\n    setAutoBattle(false);'), 'AUTO停止helperがref・予約・stateを停止していません');
 assert(has('autoPostWaveScheduledRef.current = false;'), 'AUTO停止helperがWAVE後の予約を停止していません');
+assert(has("if(gameState!=='REWARD_PICK'&&gameState!=='PICK_ALLY'&&gameState!=='PICK_TEACHING')"), 'PICK_TEACHINGが既存WAVE後AUTOロックを再利用していません');
+assert(has('const choice=chooseAutoTeachingCard(teachingPool,ownedTeachings,!enemy);'), 'AUTOが現在の提示候補と既存の初回判定を使用していません');
+assert(has('confirmPickTeaching(choice);'), 'AUTOが既存のアシストカード確定処理を明示候補付きで再利用していません');
+assert(has('const confirmPickTeaching = (explicitTeaching=null) => {\n    const teaching=explicitTeaching||selectedTeachingCard;'), '確定処理にstale state対策がありません');
+assert(has('onClick={()=>confirmPickTeaching()}'), '手動確定ボタンがイベントを候補として渡す可能性があります');
+assert(!has('setSelectedTeachingCard(choice);'), 'AUTO確定が選択stateの反映待ちに依存しています');
+assert(has("addPopup('AUTO停止：アシストカードを選べません'"), '候補0件時の安全なAUTO停止がありません');
 assert(!source.slice(source.indexOf('const stopAutoBattle = () => {'), source.indexOf('};', source.indexOf('const stopAutoBattle = () => {'))).includes('autoTurnRunningRef.current'), '停止helperが実行中ターンのロックを解除しています');
 assert(has("if(hp<=0||gaveUp||gameState==='CHAMPION'||gameState==='PICK_HERO')stopAutoBattle();"), '敗北・リタイア・CHAMPION・新規周回の停止条件がありません');
 assert(has('const returnToHome = () => {\n    stopAutoBattle();'), 'HOME遷移時にAUTOを停止していません');

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8ff008298da7143d
+// source-sha256: 3d886008f2dd2c09
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 10:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 10:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8051,6 +8051,15 @@ const chooseAutoTrainingPicks = (strategy, rng = Math.random) => {
     const roll = Math.max(0, Math.min(0.999999999999, Number(rng()) || 0));
     return TRAINING_OPTIONS[Math.floor(roll * TRAINING_OPTIONS.length)].id;
   });
+};
+
+// 手動画面へ実際に提示された合法候補だけから選ぶ。ラン開始時は全候補、
+// WAVE後は所持済みかつLv2未満の候補を優先し、同条件内はランダムにする。
+const chooseAutoTeachingCard = (candidates, owned, isInitial, rng = Math.random) => {
+  if (!Array.isArray(candidates) || candidates.length === 0) return null;
+  const preferred = isInitial ? [] : candidates.filter(card => owned.some(item => item.id === card.id && item.evoLevel < 2));
+  const choices = preferred.length > 0 ? preferred : candidates;
+  return choices[Math.floor(rng() * choices.length)] || choices[0] || null;
 };
 const trainingOptionOf = id => TRAINING_OPTIONS.find(option => option.id === id) || null;
 // トレーニング1回ぶんを適用する。丸め方と特殊ルールの掛かり方は旧「能力覚醒」と同じ:
@@ -20450,9 +20459,9 @@ function MonsterHeroGame() {
     setTeachingPool([...getActiveTeachingCards()]);
     setGameState('PICK_TEACHING');
   };
-  const confirmPickTeaching = () => {
-    if (!selectedTeachingCard) return;
-    const teaching = selectedTeachingCard;
+  const confirmPickTeaching = (explicitTeaching = null) => {
+    const teaching = explicitTeaching || selectedTeachingCard;
+    if (!teaching) return;
     const alreadyOwned = ownedTeachings.find(t => t.id === teaching.id);
     let nextTeachings = [...ownedTeachings];
     let isUpgrade = false;
@@ -20556,10 +20565,10 @@ function MonsterHeroGame() {
     }, battleMs(900));
   };
 
-  // AUTO中にREWARD_PICKへ入ったときだけ、決めた配列をstateを経由せず直接確定する。
+  // AUTO中にWAVE後の選択画面へ入ったときだけ、決めた対象をstateを経由せず直接確定する。
   // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ報酬を二重処理しない。
   useEffect(() => {
-    if (gameState !== 'REWARD_PICK' && gameState !== 'PICK_ALLY') {
+    if (gameState !== 'REWARD_PICK' && gameState !== 'PICK_ALLY' && gameState !== 'PICK_TEACHING') {
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
       return;
@@ -20588,6 +20597,26 @@ function MonsterHeroGame() {
           return;
         }
         setupMon(choice.mon, choice.slotIdx);
+      });
+      return;
+    }
+    if (gameState === 'PICK_TEACHING') {
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      if (!autoBattleRef.current) return;
+      autoPostWaveScheduledRef.current = true;
+      Promise.resolve().then(() => {
+        autoPostWaveScheduledRef.current = false;
+        if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
+        autoPostWaveRunningRef.current = true;
+        // confirmPickTeachingと同じ既存判定(!enemy)を使って、初回とWAVE後を区別する。
+        const choice = chooseAutoTeachingCard(teachingPool, ownedTeachings, !enemy);
+        if (!choice) {
+          stopAutoBattle();
+          addPopup('AUTO停止：アシストカードを選べません', 'hero', 'text-amber-300 font-black text-sm');
+          return;
+        }
+        confirmPickTeaching(choice);
       });
       return;
     }
@@ -32120,7 +32149,7 @@ function MonsterHeroGame() {
       onClick: () => setSelectedTeachingCard(null),
       className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
     }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      onClick: confirmPickTeaching,
+      onClick: () => confirmPickTeaching(),
       className: "flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs"
     }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する"))))), gameState === 'QUICK_GROWTH' && quickGrowth && /*#__PURE__*/React.createElement(QuickStepScreen, {
       onDone: finishQuickGrowth,
