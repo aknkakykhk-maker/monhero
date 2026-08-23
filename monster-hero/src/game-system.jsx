@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 00:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 04:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15903,7 +15903,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 虹のプシュケーの変換。振り分けの画面と混ざるとごちゃつくので、専用のシートへ分けている */}
               {transcendExchangeOpen&&(
                 <div data-transcend-exchange-sheet role="dialog" aria-modal="true" aria-label="虹のプシュケーを変換" className="absolute inset-0 flex items-end justify-center" style={{zIndex:30500,backgroundColor:'rgba(2,6,23,0.86)'}} onClick={()=>setTranscendExchangeOpen(false)}>
-                  <div className="w-full max-w-md rounded-t-3xl border-t border-x border-fuchsia-400/40 bg-slate-900 p-4 space-y-3" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} onClick={e=>e.stopPropagation()}>
+                  <div className="w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-fuchsia-400/40 bg-slate-900 p-4 space-y-3" style={{maxHeight:'calc(100% - env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} onClick={e=>e.stopPropagation()}>
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="text-sm font-black text-fuchsia-200 flex items-center gap-1.5"><span aria-hidden="true">🌈</span>虹のプシュケーを変換</h3>
                       <button aria-label="閉じる" onClick={()=>setTranscendExchangeOpen(false)} className="p-2 text-slate-400 active:scale-90"><X size={18}/></button>

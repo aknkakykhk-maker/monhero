@@ -37,9 +37,14 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   // 以前は画面ごとに外枠と上部を書き写していたため、絆ゲージや限界突破の出方が画面で違っていた
   check(`${label}: 詳細の外枠が共通実装にまとまっている`, code.includes('renderMonsterDetailModal = ({'));
   check(`${label}: 上部サマリーが共通実装にまとまっている`, code.includes('renderMonsterSummaryHeader = ({'));
-  check(`${label}: 本文の共通表示を呼ぶのはマスターUIの中だけ`,
-    (code.match(/renderMonsterDetailInfo\(/g) || []).length === 1,
-    `${(code.match(/renderMonsterDetailInfo\(/g) || []).length}回の呼び出し`);
+  const detailInfoCalls = (code.match(/renderMonsterDetailInfo\(/g) || []).length;
+  // 通常の詳細はマスターUIだけを通す。神殿の再生確認はモーダルではなく購入確認画面であり、
+  // ベースモンの基礎性能部分だけを同じ本文部品で表示するため、2つ目の正当な呼び出しになる。
+  check(`${label}: 本文の共通表示はマスターUIと再生確認だけで呼ぶ`,
+    detailInfoCalls === 2
+      && /renderMonsterDetailModal\s*=\s*\(\{[\s\S]*?renderMonsterDetailInfo\(mon,\s*detailOpts\)/.test(code)
+      && /gameState\s*===\s*'MASU_REGENERATION_DETAIL'[\s\S]*?renderMonsterDetailInfo\(selectedBase\)/.test(code),
+    `${detailInfoCalls}回の呼び出し`);
   check(`${label}: 編成・ベースモン一覧の詳細がマスターUIを使う`, /rosterDetailMon\s*&&\s*renderMonsterDetailModal\(/.test(code));
   check(`${label}: 勇者モン選択・供モン合流の詳細がマスターUIを使う`, /currentPickingMon\s*&&\s*renderMonsterDetailModal\(/.test(code));
   check(`${label}: マスモン一覧の詳細がマスターUIを使う`, code.includes('mon: mergedMasu,'));
@@ -57,7 +62,8 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: サマリーに元のベースモン名がある`, code.includes('元：'));
   check(`${label}: サマリーに絆Lvと上限がある`, /絆 Lv\./.test(code) && code.includes('norm.levelCap'));
   check(`${label}: 限界突破は rebirthCount、転生は reincarnateCount のまま`,
-    /RebirthStars[^A-Za-z][\s\S]{0,80}norm\.rebirthCount/.test(code) && /ReincarnateBadge[^A-Za-z][\s\S]{0,80}norm\.reincarnateCount/.test(code));
+    /RebirthStars[^A-Za-z][\s\S]{0,80}norm\.rebirthCount/.test(code)
+      && /ReincarnateAura[^A-Za-z][\s\S]{0,80}norm\.reincarnateCount/.test(code));
   check(`${label}: 個体の強さと選び方で決まる効果を分けている`,
     code.includes('この個体の強さ') && code.includes('選び方で決まる効果'));
   check(`${label}: 第2段階の合体詳細を置ける枠がある`, code.includes('renderFusionSection') && code.includes('合体回数 '));
@@ -84,8 +90,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 共通カードは丸くくり抜いたiconUrlを使う`,
     /base\.iconUrl\s*\|\|\s*base\.imgUrl/.test(cardBody) && cardBody.includes('MONSTER_CARD_ICON_CLASS') && cardBody.includes('object-cover'));
   check(`${label}: 共通カードは素の立ち絵をそのまま貼らない`, !cardBody.includes('object-contain'));
-  check(`${label}: 共通カードにマスモンの限界突破★と転生バッジがある`,
-    /RebirthStars[\s\S]{0,120}masu\.rebirthCount/.test(cardBody) && /ReincarnateBadge[\s\S]{0,120}masu\.reincarnateCount/.test(cardBody));
+  check(`${label}: 共通カードにマスモンの限界突破★・転生・超越表示がある`,
+    /RebirthStars[^A-Za-z][\s\S]{0,80}masu\.rebirthCount/.test(cardBody)
+      && /ReincarnateAura[^A-Za-z][\s\S]{0,80}masu\.reincarnateCount/.test(cardBody)
+      && /TranscendenceBadge[^A-Za-z][\s\S]{0,100}normalizeMasuProgression\(masu\)\.transcended/.test(cardBody));
   check(`${label}: 共通カードに名前・絆Lv・総合力・強化P・状態がある`,
     cardBody.includes('monsterCardName(') && cardBody.includes('monsterCardBond(') && cardBody.includes('monsterCardPower(')
     && cardBody.includes('強化P') && cardBody.includes('monsterCardStatus('));
@@ -98,7 +106,7 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   }
   // 呼び出し側: 一覧を出すすべての画面が共通実装を通ること
   const cardCalls = (code.match(/renderMonsterCardBody\(\{/g) || []).length;
-  check(`${label}: すべての一覧画面が共通カードを呼ぶ`, cardCalls === 7, `${cardCalls}か所(編成2・ベースモン一覧・マスモン一覧・放牧設定・勇者モン選択/供モン選択・プロの供モン候補)`);
+  check(`${label}: すべての一覧画面が共通カードを呼ぶ`, cardCalls === 6, `${cardCalls}か所(編成2・ベースモン一覧・マスモン一覧・放牧設定・勇者モン選択/供モン選択)`);
   const pickStart = code.indexOf('const pickMasu');
   const pickEnd = pickStart > 0 ? code.indexOf('詳細を見る', pickStart) : -1;
   const pick = pickStart > 0 && pickEnd > 0 ? code.slice(pickStart, pickEnd) : '';
