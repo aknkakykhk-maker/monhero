@@ -25,10 +25,14 @@ const source = read('monster-hero/src/game-system.jsx');
 const from = source.indexOf('const INHERITED_UNIQUE_LEVEL_KEY_PREFIX');
 const uniqueFrom = source.indexOf('const uniqueSkillAtLevel', from);
 const to = source.indexOf('\n};', uniqueFrom) + 3; // uniqueSkillAtLevel の閉じ(行頭の }; )まで
+// 超越(Lv上限500まで伸ばす育成)の定数と正規化。総合力は超越ぶんの基礎値も足すので一緒に取り出す
+const transFrom = source.indexOf('const TRANSCEND_LEVEL_CAP =');
+const transTo = source.indexOf('// --- マスモンの絆レベル', transFrom);
 const powerFrom = source.indexOf('const masuBondLevelInfo = (masu) => bondLevelInfo(cappedBondXp(masu));');
 const powerTo = source.indexOf('const migrateMasuLevelCaps');
-check('総合力の実装を取り出せる', from >= 0 && to > from && powerFrom > 0 && powerTo > powerFrom);
-if (!(from >= 0 && to > from && powerFrom > 0 && powerTo > powerFrom)) { console.log('\n1件のNGがあります'); process.exit(1); }
+const sliced = from >= 0 && to > from && powerFrom > 0 && powerTo > powerFrom && transFrom > 0 && transTo > transFrom;
+check('総合力の実装を取り出せる', sliced);
+if (!sliced) { console.log('\n1件のNGがあります'); process.exit(1); }
 
 const ctx = { Math, Number, Array, Object, String, console };
 vm.createContext(ctx);
@@ -40,9 +44,10 @@ vm.runInContext([
   source.slice(from, to),
   'const cappedBondXp = () => 0; const bondLevelInfo = () => ({ level: 1 });',
   (source.match(/const MAX_UNIQUE_SKILL_LEVEL = \d+;/) || [''])[0],
-  "const DIST_APTITUDE_GRADES = ['G','F','E','D','C','B','A','S','S+','SS','SS+','M'];",
   "const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };",
   "const STAT_POINT_KEYS = { hp: 'ライフ', atk: 'ちから', def: '丈夫さ', guts: 'ガッツ' };",
+  (source.match(/const MAX_MASU_LEVEL_CAP = \d+;/) || [''])[0],
+  source.slice(transFrom, transTo),
   source.slice(powerFrom, powerTo),
   'globalThis.api = { monsterPowerOf, masuPowerOf, monsterPowerParts, mergeMasuIntoMon, applyEnhancePlanToMasu, plannedMasuPowerOf, ALL_PLAYER_MONSTERS, MONSTER_POWER_APTITUDE };',
 ].join('\n'), ctx);

@@ -21,10 +21,12 @@ const context = {
   INITIAL_MASU_LEVEL_CAP:30, MAX_MASU_LEVEL_CAP:200,
 };
 vm.createContext(context);
+// 超越(Lv上限を伸ばす育成)の定数・正規化。基礎値と間合い適性の解決がこれを使う
+const transcend = slice('const TRANSCEND_LEVEL_CAP =', '// --- マスモンの絆レベル');
 const resolution = slice('const getMasuColors =', 'const migrateMasuLevelCaps');
 const regeneration = slice('const randomRegenerationStat =', 'const rosterBaseId =');
 const rebirthReset = slice('const resetMasuForRebirth =', 'const migrateRebornMasuToFullReset');
-vm.runInContext(`${rebirthReset}\n${resolution}\n${regeneration}\nglobalThis.api={resolveMasuIndividualStats,resolveMasuDistAptitude,mergeMasuIntoMon,masuPowerOf,masuBaselineRepresentationsMatch,diagnoseMasuBaselineMigration,diagnoseMasuBaselineMigrationList,applyEnhancePlanToMasu,buildBondResetRestorePlan,buildMasuBondPointReset,buildRegeneratedMasu,resetMasuForRebirth};`, context);
+vm.runInContext(`${transcend}\n${rebirthReset}\n${resolution}\n${regeneration}\nglobalThis.api={resolveMasuIndividualStats,resolveMasuDistAptitude,mergeMasuIntoMon,masuPowerOf,masuBaselineRepresentationsMatch,diagnoseMasuBaselineMigration,diagnoseMasuBaselineMigrationList,applyEnhancePlanToMasu,buildBondResetRestorePlan,buildMasuBondPointReset,buildRegeneratedMasu,resetMasuForRebirth};`, context);
 const api = context.api;
 const check = (label, ok) => { if (!ok) throw new Error(`NG: ${label}`); console.log(`OK: ${label}`); };
 const snapshot = value => JSON.stringify(value);

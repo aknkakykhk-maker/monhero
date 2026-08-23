@@ -12,7 +12,7 @@ const context = {
   ALL_PLAYER_MONSTERS: { base: { distAptitude:['C','C','C','C'] } },
 };
 vm.createContext(context);
-vm.runInContext(`${prefix}\nconst STAT_POINT_GAIN={hp:10,atk:3,def:3,guts:3}; const DIST_APTITUDE_GRADES=['G','C','B','M'];\n${reconcileSource}\nglobalThis.__bondRewards = { buildRunBondAwards, bondLevelInfo, levelInfo, cappedBondXp, applyBondXpGain, reconcileMasuPoints, totalBondXpForLevel, xpForLevel, xpForBondLevel, BOND_XP_DISCOUNT };`, context);
+vm.runInContext(`${prefix}\nconst STAT_POINT_GAIN={hp:10,atk:3,def:3,guts:3};\n${reconcileSource}\nglobalThis.__bondRewards = { buildRunBondAwards, bondLevelInfo, levelInfo, cappedBondXp, applyBondXpGain, reconcileMasuPoints, totalBondXpForLevel, xpForLevel, xpForBondLevel, BOND_XP_DISCOUNT };`, context);
 const { buildRunBondAwards, bondLevelInfo, levelInfo, cappedBondXp, applyBondXpGain, reconcileMasuPoints, totalBondXpForLevel, xpForLevel, xpForBondLevel, BOND_XP_DISCOUNT } = context.__bondRewards;
 
 let failed = 0;

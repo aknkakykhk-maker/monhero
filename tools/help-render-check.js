@@ -31,7 +31,8 @@ const dataTablePrelude = [
   'const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;',
   // 総合力の表は計算式の定数から作るので、そちらも持ち込む
   grab(source, 'const MONSTER_POWER_STAT_WEIGHT', 'const monsterPowerUniques'),
-  grab(source, "const DIST_APTITUDE_GRADES = [", 'const DIST_APTITUDE_MULT'),
+  // 段階の並びは1行だけ持ち込む(宣言と DIST_APTITUDE_MULT は離れた場所にあるため範囲では取らない)
+  (source.match(/^const DIST_APTITUDE_GRADES = \[.*$/m) || [''])[0],
   grab(source, 'const STAT_POINT_GAIN = {', 'const STAT_POINT_KEYS'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む

@@ -23,7 +23,9 @@ const uniqueContext = {
   },
 };
 vm.createContext(uniqueContext);
-vm.runInContext(`${uniqueChunk};globalThis.out={uniqueLineageId,normalizeInheritedUniqueLineages,migrateInheritedUniqueLevelIds,resolveInheritedUniqueLevel};`, uniqueContext);
+// 超越(Lv上限を伸ばす育成)の定数・正規化。切り出した範囲の normalizeMasuProgression が使う
+const transcendChunk = source.slice(source.indexOf('const TRANSCEND_LEVEL_CAP ='), source.indexOf('// --- マスモンの絆レベル'));
+vm.runInContext(`${transcendChunk}\n${uniqueChunk};globalThis.out={uniqueLineageId,normalizeInheritedUniqueLineages,migrateInheritedUniqueLevelIds,resolveInheritedUniqueLevel};`, uniqueContext);
 const { uniqueLineageId, normalizeInheritedUniqueLineages, migrateInheritedUniqueLevelIds, resolveInheritedUniqueLevel } = uniqueContext.out;
 
 check('表示名ではなく固有技系統ID(monId/lineageId)を使う',
