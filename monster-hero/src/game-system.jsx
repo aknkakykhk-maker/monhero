@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 18:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 18:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4073,12 +4073,12 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ assistCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
-  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
+  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
   // INFINITYは既存4難易度の特徴を統合した10WAVEの最終難易度。ただし役割が重なるルールは
   // 重ねない(CHAOSの与ダメ50%・加入B50%はULTIMATE系のターン低下と重複するため入れない。
   // NIGHTMAREのwaveEnhancementも、トレーニングまで50%になってターン低下と重なるため入れず、
   // 距離強化だけを下げる distanceEnhancement を使う)。
-  { id:'INFINITY', label:'INFINITY', japanese:'インフィニティ', available:true, power:50, score:20, xp:45, gold:30, psyche:80, unlockRequirement:'ULTIMATE', description:'これまでの極限ルールを統合し、ターン経過による圧力がさらに強化された10WAVE最終難易度。', cardDescription:'極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.01, minimumDamageDealt:0.30, awakeningPenaltyRate:0.0075, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:25, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
+  { id:'INFINITY', label:'INFINITY', japanese:'インフィニティ', available:true, power:50, score:20, xp:45, gold:30, psyche:80, unlockRequirement:'ULTIMATE', description:'これまでの極限ルールを統合し、ターン経過による圧力がさらに強化された10WAVE最終難易度。', cardDescription:'極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.01, minimumDamageDealt:0.30, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:25, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
 ]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
@@ -4205,10 +4205,10 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
   push('WAVEターン',[
     // クイックの自動成長は成長率そのものから引く(10%→…)ので「pt」、
     // トレーニングは増える量へ掛かるので「%」。掛かり方が違うので言い方も分ける
-    rules.awakeningPenaltyRate!=null&&(quick
-      ? ['自動成長',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`]
-      : ['トレーニング',`強化量が WAVE Tごと-${precisePercent(rules.awakeningPenaltyRate)}`]),
-    rules.awakeningPenaltyRate!=null&&Array.isArray(rules.awakeningPenaltyExcludes)&&rules.awakeningPenaltyExcludes.includes('distance')&&['対象外','距離強化は下がらない'],
+    quick
+      ? (rules.awakeningPenaltyRate!=null&&['自動成長',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`])
+      : (rules.awakeningZeroTurns>0&&['トレーニング',`強化量が WAVE Tごと-${precisePercent(1/rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}Tで0%）`]),
+    (quick?rules.awakeningPenaltyRate!=null:rules.awakeningZeroTurns>0)&&Array.isArray(rules.awakeningPenaltyExcludes)&&rules.awakeningPenaltyExcludes.includes('distance')&&['対象外','距離強化は下がらない'],
   ]);
   const breakRule=extremeDistanceBreakRule(difficultyId);
   if(breakRule)push('DISTANCE BREAK',[
@@ -4275,15 +4275,16 @@ const ultimateAllyJoinMultiplier = (turns, specialDifficulty=ULTIMATE_SETTING.id
   if(rate==null)return 1;
   return Math.max(extremeRuleNumber(specialDifficulty,'minimumAllyJoinBonus')??0,1-Math.max(0,Number(turns)||0)*rate);
 };
-// トレーニングで「上がる量」へ掛かる倍率。そのWAVEのターン数1つにつき
-// awakeningPenaltyRate ぶん減る(ULTIMATE / INFINITYは0.75%)。
+// トレーニングで「上がる量」へ掛かる倍率。awakeningZeroTurns ターンでちょうど0になる
+// (ULTIMATE / INFINITYは20T)。1ターンあたりの下がり幅は 1 / awakeningZeroTurns。
 // **率から引くのではなく、増加量へ掛ける。** 率から引くと、ちから+5%・ガッツ+5%のように
-// 元の率が小さい項目だけが7ターンで増加0になり、ライフ・丈夫さ(+20%)との差が開きすぎる。
-// ターン数は20で頭打ち(それ以上長引いても低下は進まない)。
+// 元の率が小さい項目だけが先に増加0になり、ライフ・丈夫さ(+20%)との差が開きすぎる。
+// クイックの自動成長は成長率そのものから引く別の計算(awakeningPenaltyRate)なので、
+// ここと同じ数字を使い回さない。
 const trainingGainRate = (turns, specialDifficulty=null) => {
-  const penaltyRate=extremeRuleNumber(specialDifficulty,'awakeningPenaltyRate');
-  if(penaltyRate==null)return 1;
-  return Math.max(0,1-Math.max(0,Math.min(20,Number(turns)||0))*penaltyRate);
+  const zeroTurns=extremeRuleNumber(specialDifficulty,'awakeningZeroTurns');
+  if(zeroTurns==null||zeroTurns<=0)return 1;
+  return Math.max(0,1-Math.max(0,Number(turns)||0)/zeroTurns);
 };
 // ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
 // 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
@@ -17350,7 +17351,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </span>
               <span className="text-[11px] font-black font-mono text-amber-300">{trainingPicks.length} / {TRAINING_PICK_COUNT}</span>
             </div>
-            {extremeRuleNumber(specialRule,'awakeningPenaltyRate')!=null&&(()=>{
+            {extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null&&(()=>{
               const turns=waveResult?.turn||0;
               // 低下は増加量へ掛かるので、率から引いた「-○pt」ではなく倍率で出す
               const gainRate=trainingGainRate(turns,specialRule);
@@ -17396,7 +17397,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 何回選んだかを ×1 / ×2 で明確に出す */}
                   {count>0&&<span className={`absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
                   <span className={`flex items-center gap-1.5 ${st.tint}`}>{st.icon}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
-                  <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningPenaltyRate')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
+                  <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
                     const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
                     const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
                     const normalGain=normalAfter-current[option.stat],effectiveGain=effectiveAfter-current[option.stat];
