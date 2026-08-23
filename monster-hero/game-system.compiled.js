@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: acdde87c40c9127c
+// source-sha256: d2a12fcab8c8f308
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 23:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 00:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -419,8 +419,8 @@ const TRANSCEND_DIAMOND_COST = 1000000;
 // Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
 const TRANSCEND_XP_BASE_MULTIPLIER = 10;
 const TRANSCEND_XP_MULTIPLIER_STEP = 0.1;
-// 虹のプシュケー100個 → 超越ポイント1
-const TRANSCEND_PSYCHE_PER_POINT = 100;
+// 虹のプシュケー1,000個 → 超越ポイント1(端数は消費しない)
+const TRANSCEND_PSYCHE_PER_POINT = 1000;
 const TRANSCEND_STAT_KEYS = Object.freeze(['hp', 'atk', 'def', 'guts']);
 const isTranscended = masu => !!(masu && masu.transcended);
 // 超越済みならLv上限500まで、まだなら従来どおりLv400まで
@@ -12900,6 +12900,11 @@ function MonsterHeroGame() {
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
   const [transcendDebugId, setTranscendDebugId] = useState(null);
+  // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / MAX
+  const [transcendBulkUnit, setTranscendBulkUnit] = useState(1);
+  // 虹のプシュケーの変換シート。開いているあいだだけ、欲しい超越ポイント数を下書きする
+  const [transcendExchangeOpen, setTranscendExchangeOpen] = useState(false);
+  const [transcendExchangeWant, setTranscendExchangeWant] = useState(1);
   const transcendProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
@@ -14286,6 +14291,8 @@ function MonsterHeroGame() {
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
   const PROFILE_BGM_STATES = ['ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE'];
+  // マスモンの強化画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
+  const MASU_ENHANCE_STATES = ['MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE'];
   // 1回のプレイの中で流れる画面。「まだ1度も戦っていない準備中」か「WAVEを終えたあと」かで曲を分ける。
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
@@ -22571,8 +22578,12 @@ function MonsterHeroGame() {
     className: "mh-unread-badge",
     "aria-label": "\u672A\u8AAD\u3042\u308A"
   }, "!")))), /*#__PURE__*/React.createElement("div", {
-    className: "mh-changelog-list"
-  }, CHANGELOG_ENTRIES.filter(c => c.type === changelogTab).map(c => /*#__PURE__*/React.createElement("article", {
+    className: "mh-changelog-list",
+    "data-changelog-list": true
+  }, CHANGELOG_ENTRIES.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "mh-changelog-empty",
+    "data-changelog-empty": true
+  }, "\u66F4\u65B0\u5C65\u6B74\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u901A\u4FE1\u72B6\u6CC1\u3092\u78BA\u304B\u3081\u3066\u304B\u3089\u3001\u8A2D\u5B9A\u306E\u300C\u30B2\u30FC\u30E0\u3092\u66F4\u65B0\u300D\u3067\u8AAD\u307F\u8FBC\u307F\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002") : CHANGELOG_ENTRIES.filter(c => c.type === changelogTab).map(c => /*#__PURE__*/React.createElement("article", {
     key: c.id,
     className: changelogUnreadIds[changelogTab].includes(c.id) ? 'unread' : ''
   }, /*#__PURE__*/React.createElement("time", null, c.date, changelogUnreadIds[changelogTab].includes(c.id) && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("b", null, c.title), (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
@@ -30331,7 +30342,7 @@ function MonsterHeroGame() {
         onClick: () => setShowSortFilterModal(false),
         className: "mx-4 mb-4 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95 shrink-0"
       }, "\u3068\u3058\u308B"));
-    })(), masuMonDetail && gameState !== 'MASU_ENHANCE' && (() => {
+    })(), masuMonDetail && !MASU_ENHANCE_STATES.includes(gameState) && (() => {
       const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       if (!base) return null;
@@ -30497,13 +30508,15 @@ function MonsterHeroGame() {
       const currentPower = masuPowerOf(masu);
       const previewPower = masuPowerOf(previewMasu);
       const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0, 4) : ['C', 'C', 'C', 'C'];
+      const maxGrade = DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length - 1];
       const transcendGrade = (idx, extra = 0) => raiseAptitudeGrade(baseApt[idx] || 'C', normalized.transcendAptBoosts[idx] + extra);
-      const aptAtMax = idx => transcendGrade(idx, plan.apt[idx]) === DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length - 1];
-      const addApt = (idx, n) => setTranscendPlan(prev => {
-        const q = prev ? {
-          apt: [...prev.apt],
+      const aptAtMax = idx => transcendGrade(idx, plan.apt[idx]) === maxGrade;
+      // 振り分けは通常強化と同じ作法にそろえる(1 / 5 / 10 / MAX・長押しで連続・確定するまで保存しない)
+      const changeTranscendPlan = (kind, target, direction) => setTranscendPlan(previous => {
+        const q = previous ? {
+          apt: [...previous.apt],
           stat: {
-            ...prev.stat
+            ...previous.stat
           }
         } : {
           apt: [0, 0, 0, 0],
@@ -30514,29 +30527,38 @@ function MonsterHeroGame() {
             guts: 0
           }
         };
-        q.apt[idx] = Math.max(0, q.apt[idx] + n);
+        const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
+        const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
+        const remaining = Math.max(0, points - used);
+        let amount = transcendBulkUnit === 'MAX' ? direction > 0 ? remaining : current : Math.min(Number(transcendBulkUnit), direction > 0 ? remaining : current);
+        if (kind === 'apt' && direction > 0) {
+          // 基礎の段階もMで止める。今の段階から残り何段階上げられるかで頭打ちにする
+          const room = DIST_APTITUDE_GRADES.length - 1 - DIST_APTITUDE_GRADES.indexOf(transcendGrade(target));
+          amount = Math.min(amount, Math.max(0, room - current));
+        }
+        const next = Math.max(0, current + direction * Math.max(0, amount));
+        if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
         return q;
       });
-      const addStat = (key, n) => setTranscendPlan(prev => {
-        const q = prev ? {
-          apt: [...prev.apt],
-          stat: {
-            ...prev.stat
-          }
-        } : {
-          apt: [0, 0, 0, 0],
-          stat: {
-            hp: 0,
-            atk: 0,
-            def: 0,
-            guts: 0
-          }
-        };
-        q.stat[key] = Math.max(0, (q.stat[key] || 0) + n);
-        return q;
-      });
-      const exchange = wanted => commitTranscendExchange(masu, wanted);
-      const maxExchange = transcendPsycheExchange(psycheHave, Number.MAX_SAFE_INTEGER);
+      const addApt = (idx, direction) => changeTranscendPlan('apt', idx, direction);
+      const addStat = (key, direction) => changeTranscendPlan('stat', key, direction);
+      // 虹のプシュケーの変換シート。ここで欲しいポイント数を決めてから確定する
+      const exchangeMax = transcendPsycheExchange(psycheHave, Number.MAX_SAFE_INTEGER).maxPoints;
+      const exchangeWant = Math.max(1, Math.min(Math.max(1, exchangeMax), transcendExchangeWant));
+      const exchangeQuote = transcendPsycheExchange(psycheHave, exchangeWant);
+      const setWant = n => setTranscendExchangeWant(Math.max(1, Math.min(Math.max(1, exchangeMax), n)));
+      const openExchange = () => {
+        setTranscendExchangeError('');
+        setTranscendExchangeWant(exchangeMax > 0 ? 1 : 1);
+        setTranscendExchangeOpen(true);
+      };
+      const runExchange = async () => {
+        const applied = await commitTranscendExchange(masu, exchangeWant);
+        if (applied) {
+          setTranscendExchangeOpen(false);
+          setTranscendExchangeWant(1);
+        }
+      };
       return /*#__PURE__*/React.createElement("div", {
         style: {
           position: "absolute",
@@ -30552,21 +30574,41 @@ function MonsterHeroGame() {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))'
         }
       }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u901A\u5E38\u5F37\u5316\u3078\u623B\u308B",
         onClick: () => {
           setTranscendPlan(null);
+          setTranscendExchangeOpen(false);
           setGameState('MASU_ENHANCE');
         },
         className: "p-3 text-slate-400 active:scale-90"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-sky-300 uppercase tracking-widest flex-1"
-      }, "\u8D85\u8D8A\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] font-black tracking-widest text-sky-400"
+      }, "TRANSCENDENCE"), /*#__PURE__*/React.createElement("h2", {
+        className: "truncate text-sm font-black text-white"
+      }, masu.name)), /*#__PURE__*/React.createElement("span", {
+        className: "relative inline-block w-9 h-9 shrink-0"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block w-9 h-9 overflow-hidden rounded-full border border-sky-400/40"
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: masu.baseId,
+        src: base.iconUrl,
+        alt: masu.name,
+        masuColors: getMasuColors(masu),
+        className: "w-full h-full object-cover"
+      })), /*#__PURE__*/React.createElement(TranscendenceBadge, {
+        transcended: true,
+        small: true
+      }))), /*#__PURE__*/React.createElement("div", {
         "data-transcend-enhance-tabs": true,
         className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setTranscendPlan(null);
+          setTranscendExchangeOpen(false);
           setGameState('MASU_ENHANCE');
         },
         className: "min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95"
@@ -30583,116 +30625,133 @@ function MonsterHeroGame() {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
         }
       }, /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border border-sky-400/40 bg-sky-950/30 p-3"
+        className: "rounded-3xl border border-sky-400/40 bg-sky-950/30 p-3 shadow-xl"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black text-sky-200"
-      }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
+        className: "flex items-end justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black tracking-wider text-sky-200"
+      }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-bold text-slate-400"
+      }, "\u901A\u5E38\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3068\u306F\u5225\u67A0")), /*#__PURE__*/React.createElement("div", {
         "data-transcend-points": true,
-        className: "text-lg font-black font-mono text-white"
-      }, planLeft, /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] text-slate-400"
-      }, " / ", points))), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 text-[9px] text-slate-400 font-bold"
-      }, "\u901A\u5E38\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3068\u306F\u5225\u67A0\u3067\u3059\u30021P\u3067\u57FA\u790E\u30E9\u30A4\u30D5+", STAT_POINT_GAIN.hp, "\uFF0F\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4+", STAT_POINT_GAIN.atk, "\uFF0F\u9593\u5408\u3044\u9069\u60271\u6BB5\u968E\uFF08\u3069\u308C\u3082\u7DCF\u5408\u529B+10\u76F8\u5F53\uFF09\u3002")), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/25 p-3 space-y-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2"
+        className: "text-right leading-none"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-black text-fuchsia-200 flex items-center gap-1"
+        className: "text-3xl font-black font-mono text-white"
+      }, planLeft), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-bold text-slate-400"
+      }, " / ", points))), /*#__PURE__*/React.createElement("button", {
+        "data-transcend-exchange-open": true,
+        onClick: openExchange,
+        className: "mt-3 w-full min-h-[46px] rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         "aria-hidden": "true"
-      }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304B\u3089\u4EA4\u63DB"), /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-mono font-black text-white"
-      }, "\u6240\u6301 ", psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB", /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] font-mono text-slate-300"
+      }, "\u6240\u6301 ", psycheHave.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+        className: "bg-slate-900 border border-sky-500/40 rounded-3xl p-3 shadow-xl"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2 mb-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] font-black text-sky-300 uppercase tracking-wider flex items-center gap-1.5"
+      }, /*#__PURE__*/React.createElement(Sparkles, {
+        size: 14
+      }), "\u57FA\u790E\u5024\u3092\u4E0A\u3052\u308B"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 font-bold"
-      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC ", TRANSCEND_PSYCHE_PER_POINT, " \u500B \u2192 \u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8 1\uFF08", TRANSCEND_PSYCHE_PER_POINT, "\u500B\u672A\u6E80\u306E\u7AEF\u6570\u306F\u6D88\u8CBB\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1.5"
-      }, [['+1P', 1], ['+10P', 10], ['MAX', maxExchange.maxPoints]].map(([label, amount]) => {
-        const quote = transcendPsycheExchange(psycheHave, amount);
-        return /*#__PURE__*/React.createElement("button", {
-          key: label,
-          "data-transcend-exchange": label,
-          disabled: !quote.ok,
-          onClick: () => exchange(amount),
-          className: "min-h-[52px] rounded-xl border border-fuchsia-400/50 bg-slate-900 text-fuchsia-100 font-black text-[11px] disabled:opacity-35 active:scale-95 flex flex-col items-center justify-center gap-0.5"
-        }, /*#__PURE__*/React.createElement("span", null, label), /*#__PURE__*/React.createElement("small", {
-          className: "text-[8px] text-slate-400"
-        }, quote.ok ? `🌈${quote.psycheCost.toLocaleString()} → +${quote.points}P` : '不足'));
+      }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3",
+        role: "group",
+        "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
+      }, [1, 5, 10, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        key: unit,
+        "data-transcend-unit": unit,
+        "aria-pressed": transcendBulkUnit === unit,
+        onClick: () => setTranscendBulkUnit(unit),
+        className: `min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${transcendBulkUnit === unit ? 'bg-sky-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`
+      }, unit === 'MAX' ? 'MAX' : `${unit}P`))), /*#__PURE__*/React.createElement("div", {
+        className: "mb-3"
+      }, renderPowerBadge(previewPower, {
+        before: currentPower,
+        size: 'md'
       })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-bold text-slate-400"
-      }, "MAX\u3067\u4EA4\u63DB\u3059\u308B\u3068 \uD83C\uDF08", maxExchange.psycheCost.toLocaleString(), " \u3092\u4F7F\u3063\u3066\u8D85\u8D8AP +", maxExchange.maxPoints, "\u3001\u4EA4\u63DB\u5F8C\u306E\u6240\u6301\u306F ", maxExchange.nextPsyche.toLocaleString(), " \u306B\u306A\u308A\u307E\u3059\u3002"), transcendExchangeError && /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-red-400"
-      }, transcendExchangeError)), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-amber-300"
-      }, "\u57FA\u790E\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u4E0A\u3052\u308B"), Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
-        const gainPer = STAT_POINT_GAIN[key] || 1;
-        const planned = plan.stat[key] || 0;
-        const before = normalized.transcendStatPoints[key];
-        return /*#__PURE__*/React.createElement("div", {
-          key: key,
-          className: "grid grid-cols-[52px_1fr_auto] items-center gap-2 rounded-xl bg-black/35 p-2"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-black text-slate-300"
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-mono font-black text-white"
-        }, "\u57FA\u790E+", before, planned > 0 && /*#__PURE__*/React.createElement("span", {
-          className: "text-emerald-400"
-        }, " \u2192 \u57FA\u790E+", before + planned * gainPer)), /*#__PURE__*/React.createElement("span", {
-          className: "flex items-center gap-1"
-        }, /*#__PURE__*/React.createElement("button", {
-          "aria-label": `${label}の超越強化を1つ戻す`,
-          disabled: planned <= 0,
-          onClick: () => addStat(key, -1),
-          className: "min-h-[36px] min-w-[36px] rounded-lg bg-slate-800 text-white font-black disabled:opacity-30 active:scale-90"
-        }, "-"), /*#__PURE__*/React.createElement("button", {
-          "aria-label": `${label}を超越強化`,
-          disabled: planLeft <= 0,
-          onClick: () => addStat(key, 1),
-          className: "min-h-[36px] min-w-[36px] rounded-lg bg-sky-600 text-white font-black disabled:opacity-30 active:scale-90"
-        }, "+")));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-amber-300"
-      }, "\u57FA\u790E\u306E\u9593\u5408\u3044\u9069\u6027\u3092\u4E0A\u3052\u308B", /*#__PURE__*/React.createElement("span", {
-        className: "ml-1 text-[9px] font-bold text-slate-400"
-      }, "\uFF08\u4E0A\u9650\u306F", DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length - 1], "\uFF09")), RANGE_LABELS.map((label, idx) => {
-        const planned = plan.apt[idx] || 0;
+        className: "text-[9px] text-slate-400 font-bold mb-1.5"
+      }, "\u9593\u5408\u3044\u9069\u6027", /*#__PURE__*/React.createElement("span", {
+        className: "ml-1 text-slate-500"
+      }, "\uFF08\u4E0A\u9650", maxGrade, "\uFF09")), /*#__PURE__*/React.createElement("div", {
+        className: "space-y-1.5 mb-3"
+      }, RANGE_LABELS.map((label, idx) => {
+        const before = transcendGrade(idx),
+          after = transcendGrade(idx, plan.apt[idx]),
+          added = plan.apt[idx];
         return /*#__PURE__*/React.createElement("div", {
           key: idx,
-          className: "grid grid-cols-[44px_1fr_auto] items-center gap-2 rounded-xl bg-black/35 p-2"
+          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
         }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-black text-slate-300"
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-mono font-black text-white"
-        }, transcendGrade(idx), planned > 0 && /*#__PURE__*/React.createElement("span", {
-          className: "text-emerald-400"
-        }, " \u2192 ", transcendGrade(idx, planned))), /*#__PURE__*/React.createElement("span", {
-          className: "flex items-center gap-1"
-        }, /*#__PURE__*/React.createElement("button", {
-          "aria-label": `${label}の超越強化を1つ戻す`,
-          disabled: planned <= 0,
-          onClick: () => addApt(idx, -1),
-          className: "min-h-[36px] min-w-[36px] rounded-lg bg-slate-800 text-white font-black disabled:opacity-30 active:scale-90"
-        }, "-"), /*#__PURE__*/React.createElement("button", {
-          "aria-label": `${label}を超越強化`,
+          className: `text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`
+        }, label), /*#__PURE__*/React.createElement("div", {
+          className: "text-center font-mono font-black text-[12px]"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: DIST_APTITUDE_COLOR[before]
+        }, before), /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500 mx-1"
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+          className: added > 0 ? 'text-sky-300' : 'text-slate-300'
+        }, after)), /*#__PURE__*/React.createElement("span", {
+          className: "text-center text-[9px] font-mono font-black text-sky-300"
+        }, added, "P"), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-1"
+        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}の基礎適性を減らす`,
+          disabled: added <= 0,
+          onPress: () => addApt(idx, -1),
+          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}の基礎適性を上げる`,
           disabled: planLeft <= 0 || aptAtMax(idx),
-          onClick: () => addApt(idx, 1),
-          className: "min-h-[36px] min-w-[36px] rounded-lg bg-sky-600 text-white font-black disabled:opacity-30 active:scale-90"
-        }, "+")));
+          onPress: () => addApt(idx, 1),
+          className: "min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
+        }, "\uFF0B")));
       })), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border border-amber-400/30 bg-black/40 p-3 text-[10px] font-black text-slate-300 flex items-center justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "\u7DCF\u5408\u529B"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono text-white"
-      }, currentPower.toLocaleString(), planUsed > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "text-emerald-400"
-      }, " \u2192 ", previewPower.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-400 font-bold mb-1.5"
+      }, "\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
+        className: "space-y-1.5"
+      }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
+        const n = plan.stat[key] || 0,
+          gain = n * (STAT_POINT_GAIN[key] || 1),
+          before = normalized.transcendStatPoints[key];
+        return /*#__PURE__*/React.createElement("div", {
+          key: key,
+          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-[8px] text-center text-sky-200 font-black"
+        }, label), /*#__PURE__*/React.createElement("div", {
+          className: "text-center font-mono font-black text-[11px]"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-white"
+        }, "\u57FA\u790E+", before), /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500 mx-1"
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+          className: gain > 0 ? 'text-sky-300' : 'text-slate-300'
+        }, "\u57FA\u790E+", before + gain)), /*#__PURE__*/React.createElement("span", {
+          className: "text-center text-[9px] font-mono font-black text-sky-300"
+        }, n, "P"), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-1"
+        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}の基礎値を減らす`,
+          disabled: n <= 0,
+          onPress: () => addStat(key, -1),
+          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}の基礎値を上げる`,
+          disabled: planLeft <= 0,
+          onPress: () => addStat(key, 1),
+          className: "min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
+        }, "\uFF0B")));
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-500 mt-2"
+      }, "\uFF0B\uFF0F\u2212\u306F\u9577\u62BC\u3057\u3067\u3082\u9023\u7D9A\u8ABF\u6574\u3067\u304D\u307E\u3059\u30021P\u3067\u57FA\u790E\u30E9\u30A4\u30D5+", STAT_POINT_GAIN.hp, "\uFF0F\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4+", STAT_POINT_GAIN.atk, "\uFF0F\u9593\u5408\u3044\u9069\u60271\u6BB5\u968E\uFF08\u3069\u308C\u3082\u7DCF\u5408\u529B+10\u76F8\u5F53\uFF09\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-bold text-slate-400 leading-relaxed"
-      }, "\u8D85\u8D8A\u5F37\u5316\u306F\u300C\u57FA\u790E\u5024\u300D\u3092\u4E0A\u3052\u308B\u306E\u3067\u3001\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u3067\u901A\u5E38\u306E\u5F37\u5316\u3092\u623B\u3057\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002\u8EE2\u751F\u3057\u3066\u3082\u6B8B\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+      }, "\u8D85\u8D8A\u5F37\u5316\u306F\u300C\u57FA\u790E\u5024\u300D\u3092\u4E0A\u3052\u308B\u306E\u3067\u3001\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u3067\u901A\u5E38\u306E\u5F37\u5316\u3092\u623B\u3057\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002\u8EE2\u751F\u3057\u3066\u3082\u6B8B\u308A\u307E\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 grid grid-cols-2 gap-2 p-4 border-t border-white/10",
         style: {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
@@ -30706,7 +30765,113 @@ function MonsterHeroGame() {
         disabled: planUsed <= 0,
         onClick: () => commitTranscendPlan(masu, plan),
         className: "min-h-[48px] rounded-2xl bg-sky-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "\u3053\u306E\u914D\u5206\u3067\u78BA\u5B9A")));
+      }, "\u3053\u306E\u914D\u5206\u3067\u78BA\u5B9A\uFF08", planUsed, "P\uFF09")), transcendExchangeOpen && /*#__PURE__*/React.createElement("div", {
+        "data-transcend-exchange-sheet": true,
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB",
+        className: "absolute inset-0 flex items-end justify-center",
+        style: {
+          zIndex: 30500,
+          backgroundColor: 'rgba(2,6,23,0.86)'
+        },
+        onClick: () => setTranscendExchangeOpen(false)
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md rounded-t-3xl border-t border-x border-fuchsia-400/40 bg-slate-900 p-4 space-y-3",
+        style: {
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        },
+        onClick: e => e.stopPropagation()
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-sm font-black text-fuchsia-200 flex items-center gap-1.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        "aria-hidden": "true"
+      }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB"), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
+        onClick: () => setTranscendExchangeOpen(false),
+        className: "p-2 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(X, {
+        size: 18
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl bg-black/40 p-2.5 text-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-slate-400"
+      }, "\u6240\u6301\u3057\u3066\u3044\u308B\uD83C\uDF08"), /*#__PURE__*/React.createElement("div", {
+        className: "font-mono text-lg font-black text-white"
+      }, psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl bg-black/40 p-2.5 text-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-slate-400"
+      }, "\u4EA4\u63DB\u30EC\u30FC\u30C8"), /*#__PURE__*/React.createElement("div", {
+        className: "font-mono text-[11px] font-black text-fuchsia-200"
+      }, "\uD83C\uDF08", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " \u2192 1P"))), exchangeMax <= 0 ? /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl border border-amber-500/40 bg-amber-950/25 p-3 text-center text-[10px] font-black text-amber-200"
+      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C ", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " \u500B\u305D\u308D\u3046\u3068\u5909\u63DB\u3067\u304D\u307E\u3059\uFF08\u3042\u3068 ", (TRANSCEND_PSYCHE_PER_POINT - psycheHave).toLocaleString(), "\uFF09\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-2xl bg-black/40 p-2.5"
+      }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+        "aria-label": "\u5909\u63DB\u3059\u308B\u30DD\u30A4\u30F3\u30C8\u3092\u6E1B\u3089\u3059",
+        disabled: exchangeWant <= 1,
+        onPress: () => setWant(exchangeWant - 1),
+        className: "min-h-[44px] rounded-xl bg-slate-700 text-xl font-black disabled:opacity-25"
+      }, "\u2212"), /*#__PURE__*/React.createElement("div", {
+        className: "text-center leading-none"
+      }, /*#__PURE__*/React.createElement("span", {
+        "data-transcend-exchange-want": true,
+        className: "font-mono text-3xl font-black text-white"
+      }, exchangeWant), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-bold text-slate-400"
+      }, "P")), /*#__PURE__*/React.createElement(PressRepeatButton, {
+        "aria-label": "\u5909\u63DB\u3059\u308B\u30DD\u30A4\u30F3\u30C8\u3092\u5897\u3084\u3059",
+        disabled: exchangeWant >= exchangeMax,
+        onPress: () => setWant(exchangeWant + 1),
+        className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-xl font-black disabled:bg-slate-700 disabled:opacity-25"
+      }, "\uFF0B")), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-1.5"
+      }, [['1P', 1], ['5P', 5], ['MAX', exchangeMax]].map(([label, amount]) => /*#__PURE__*/React.createElement("button", {
+        key: label,
+        "data-transcend-exchange": label,
+        disabled: amount > exchangeMax,
+        onClick: () => setWant(amount),
+        className: `min-h-[40px] rounded-xl text-[11px] font-black active:scale-95 disabled:opacity-30 ${exchangeWant === Math.min(amount, exchangeMax) ? 'bg-fuchsia-600 text-white' : 'bg-slate-800 text-slate-300'}`
+      }, label))), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl border border-fuchsia-400/30 bg-fuchsia-950/25 p-3 space-y-1 text-[10px] font-black"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-300"
+      }, "\u4F7F\u3046\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono text-white"
+      }, exchangeQuote.psycheCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-300"
+      }, "\u4EA4\u63DB\u5F8C\u306E\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono text-white"
+      }, exchangeQuote.nextPsyche.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-300"
+      }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono text-fuchsia-200"
+      }, points, " \u2192 ", points + exchangeQuote.points))), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-bold text-slate-400"
+      }, TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), "\u500B\u306B\u6E80\u305F\u306A\u3044\u7AEF\u6570\u306F\u6D88\u8CBB\u3057\u307E\u305B\u3093\u3002\u5909\u63DB\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u3001\u3044\u307E\u958B\u3044\u3066\u3044\u308B\u300C", masu.name, "\u300D\u306B\u5165\u308A\u307E\u3059\u3002")), transcendExchangeError && /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black text-red-400"
+      }, transcendExchangeError), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setTranscendExchangeOpen(false),
+        className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95"
+      }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("button", {
+        "data-transcend-exchange-commit": true,
+        disabled: !exchangeQuote.ok,
+        onClick: runExchange,
+        className: "min-h-[48px] rounded-2xl bg-fuchsia-600 text-white font-black text-xs disabled:opacity-35 active:scale-95"
+      }, "\u3053\u306E\u5185\u5BB9\u3067\u5909\u63DB")))));
     })(), gameState === 'MASU_ENHANCE' && masuMonDetail && (() => {
       const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -37491,7 +37656,7 @@ const createAnimationStyle = () => {
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
-    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-changelog-empty{padding:18px 12px;text-align:center;line-height:1.7;color:#fbbf24}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}
