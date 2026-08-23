@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 23:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 00:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -364,8 +364,8 @@ const TRANSCEND_DIAMOND_COST = 1000000;
 // Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
 const TRANSCEND_XP_BASE_MULTIPLIER = 10;
 const TRANSCEND_XP_MULTIPLIER_STEP = 0.1;
-// 虹のプシュケー100個 → 超越ポイント1
-const TRANSCEND_PSYCHE_PER_POINT = 100;
+// 虹のプシュケー1,000個 → 超越ポイント1(端数は消費しない)
+const TRANSCEND_PSYCHE_PER_POINT = 1000;
 const TRANSCEND_STAT_KEYS = Object.freeze(['hp', 'atk', 'def', 'guts']);
 const isTranscended = (masu) => !!(masu && masu.transcended);
 // 超越済みならLv上限500まで、まだなら従来どおりLv400まで
@@ -7075,6 +7075,11 @@ function MonsterHeroGame() {
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
   const [transcendDebugId, setTranscendDebugId] = useState(null);
+  // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / MAX
+  const [transcendBulkUnit, setTranscendBulkUnit] = useState(1);
+  // 虹のプシュケーの変換シート。開いているあいだだけ、欲しい超越ポイント数を下書きする
+  const [transcendExchangeOpen, setTranscendExchangeOpen] = useState(false);
+  const [transcendExchangeWant, setTranscendExchangeWant] = useState(1);
   const transcendProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
@@ -15789,92 +15794,150 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const currentPower = masuPowerOf(masu);
           const previewPower = masuPowerOf(previewMasu);
           const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0,4) : ['C','C','C','C'];
+          const maxGrade = DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length-1];
           const transcendGrade = (idx, extra=0) => raiseAptitudeGrade(baseApt[idx]||'C', normalized.transcendAptBoosts[idx] + extra);
-          const aptAtMax = (idx) => transcendGrade(idx, plan.apt[idx]) === DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length-1];
-          const addApt = (idx, n) => setTranscendPlan(prev=>{ const q=prev?{apt:[...prev.apt],stat:{...prev.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.apt[idx]=Math.max(0,q.apt[idx]+n); return q; });
-          const addStat = (key, n) => setTranscendPlan(prev=>{ const q=prev?{apt:[...prev.apt],stat:{...prev.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.stat[key]=Math.max(0,(q.stat[key]||0)+n); return q; });
-          const exchange = (wanted) => commitTranscendExchange(masu, wanted);
-          const maxExchange = transcendPsycheExchange(psycheHave, Number.MAX_SAFE_INTEGER);
+          const aptAtMax = (idx) => transcendGrade(idx, plan.apt[idx]) === maxGrade;
+          // 振り分けは通常強化と同じ作法にそろえる(1 / 5 / 10 / MAX・長押しで連続・確定するまで保存しない)
+          const changeTranscendPlan = (kind, target, direction) => setTranscendPlan(previous => {
+            const q = previous ? {apt:[...previous.apt], stat:{...previous.stat}} : {apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0}};
+            const current = kind==='apt' ? q.apt[target] : (q.stat[target]||0);
+            const used = q.apt.reduce((a,b)=>a+b,0) + Object.values(q.stat).reduce((a,b)=>a+b,0);
+            const remaining = Math.max(0, points - used);
+            let amount = transcendBulkUnit==='MAX' ? (direction>0?remaining:current)
+              : Math.min(Number(transcendBulkUnit), direction>0?remaining:current);
+            if (kind==='apt' && direction>0) {
+              // 基礎の段階もMで止める。今の段階から残り何段階上げられるかで頭打ちにする
+              const room = DIST_APTITUDE_GRADES.length - 1 - DIST_APTITUDE_GRADES.indexOf(transcendGrade(target));
+              amount = Math.min(amount, Math.max(0, room - current));
+            }
+            const next = Math.max(0, current + direction*Math.max(0, amount));
+            if (kind==='apt') q.apt[target] = next; else q.stat[target] = next;
+            return q;
+          });
+          const addApt = (idx, direction) => changeTranscendPlan('apt', idx, direction);
+          const addStat = (key, direction) => changeTranscendPlan('stat', key, direction);
+          // 虹のプシュケーの変換シート。ここで欲しいポイント数を決めてから確定する
+          const exchangeMax = transcendPsycheExchange(psycheHave, Number.MAX_SAFE_INTEGER).maxPoints;
+          const exchangeWant = Math.max(1, Math.min(Math.max(1, exchangeMax), transcendExchangeWant));
+          const exchangeQuote = transcendPsycheExchange(psycheHave, exchangeWant);
+          const setWant = (n) => setTranscendExchangeWant(Math.max(1, Math.min(Math.max(1, exchangeMax), n)));
+          const openExchange = () => { setTranscendExchangeError(''); setTranscendExchangeWant(exchangeMax>0?1:1); setTranscendExchangeOpen(true); };
+          const runExchange = async () => {
+            const applied = await commitTranscendExchange(masu, exchangeWant);
+            if (applied) { setTranscendExchangeOpen(false); setTranscendExchangeWant(1); }
+          };
           return (
             <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col overflow-hidden" data-transcend-enhance={masu.id}>
               <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
-                <button onClick={()=>{setTranscendPlan(null);setGameState('MASU_ENHANCE');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-                <h2 className="text-xl font-black italic text-sky-300 uppercase tracking-widest flex-1">超越強化</h2>
+                <button aria-label="通常強化へ戻る" onClick={()=>{setTranscendPlan(null);setTranscendExchangeOpen(false);setGameState('MASU_ENHANCE');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                <div className="min-w-0 flex-1">
+                  <small className="block text-[8px] font-black tracking-widest text-sky-400">TRANSCENDENCE</small>
+                  <h2 className="truncate text-sm font-black text-white">{masu.name}</h2>
+                </div>
+                <span className="relative inline-block w-9 h-9 shrink-0">
+                  <span className="block w-9 h-9 overflow-hidden rounded-full border border-sky-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></span>
+                  <TranscendenceBadge transcended small/>
+                </span>
               </div>
               <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
-                <button onClick={()=>{setTranscendPlan(null);setGameState('MASU_ENHANCE');}} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
+                <button onClick={()=>{setTranscendPlan(null);setTranscendExchangeOpen(false);setGameState('MASU_ENHANCE');}} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
                 <button className="min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black">超越強化</button>
               </div>
               <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="transcendence" compact/></div>
               <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-                <div className="rounded-2xl border border-sky-400/40 bg-sky-950/30 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-black text-sky-200">超越ポイント</span>
-                    <span data-transcend-points className="text-lg font-black font-mono text-white">{planLeft}<span className="text-[10px] text-slate-400"> / {points}</span></span>
+                {/* 残りの超越ポイントと、足りないときの入口(プシュケー変換)を1枚にまとめる */}
+                <div className="rounded-3xl border border-sky-400/40 bg-sky-950/30 p-3 shadow-xl">
+                  <div className="flex items-end justify-between gap-2">
+                    <div>
+                      <div className="text-[10px] font-black tracking-wider text-sky-200">超越ポイント</div>
+                      <div className="text-[8px] font-bold text-slate-400">通常の強化ポイントとは別枠</div>
+                    </div>
+                    <div data-transcend-points className="text-right leading-none">
+                      <span className="text-3xl font-black font-mono text-white">{planLeft}</span>
+                      <span className="text-[10px] font-bold text-slate-400"> / {points}</span>
+                    </div>
                   </div>
-                  <div className="mt-1 text-[9px] text-slate-400 font-bold">通常の強化ポイントとは別枠です。1Pで基礎ライフ+{STAT_POINT_GAIN.hp}／ちから・丈夫さ・ガッツ+{STAT_POINT_GAIN.atk}／間合い適性1段階（どれも総合力+10相当）。</div>
+                  <button data-transcend-exchange-open onClick={openExchange} className="mt-3 w-full min-h-[46px] rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2">
+                    <span aria-hidden="true">🌈</span>虹のプシュケーを変換
+                    <span className="text-[9px] font-mono text-slate-300">所持 {psycheHave.toLocaleString()}</span>
+                  </button>
                 </div>
-                {/* 虹のプシュケーから超越ポイントへ交換。1Pずつ何十回も押さずに済むよう +1 / +10 / MAX を並べる */}
-                <div className="rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/25 p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケーから交換</span>
-                    <span className="text-[11px] font-mono font-black text-white">所持 {psycheHave.toLocaleString()}</span>
+                {/* 振り分け。通常強化(まとめて強化)とまったく同じ並び・同じ操作にそろえている */}
+                <div className="bg-slate-900 border border-sky-500/40 rounded-3xl p-3 shadow-xl">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="text-[11px] font-black text-sky-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>基礎値を上げる</div>
+                    <div className="text-[9px] text-slate-400 font-bold">全項目共通</div>
                   </div>
-                  <div className="text-[9px] text-slate-400 font-bold">虹のプシュケー {TRANSCEND_PSYCHE_PER_POINT} 個 → 超越ポイント 1（{TRANSCEND_PSYCHE_PER_POINT}個未満の端数は消費しません）</div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {[['+1P',1],['+10P',10],['MAX',maxExchange.maxPoints]].map(([label,amount])=>{
-                      const quote = transcendPsycheExchange(psycheHave, amount);
-                      return <button key={label} data-transcend-exchange={label} disabled={!quote.ok} onClick={()=>exchange(amount)} className="min-h-[52px] rounded-xl border border-fuchsia-400/50 bg-slate-900 text-fuchsia-100 font-black text-[11px] disabled:opacity-35 active:scale-95 flex flex-col items-center justify-center gap-0.5">
-                        <span>{label}</span>
-                        <small className="text-[8px] text-slate-400">{quote.ok?`🌈${quote.psycheCost.toLocaleString()} → +${quote.points}P`:'不足'}</small>
-                      </button>;
-                    })}
+                  <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
+                    {[1,5,10,'MAX'].map(unit=><button type="button" key={unit} data-transcend-unit={unit} aria-pressed={transcendBulkUnit===unit} onClick={()=>setTranscendBulkUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${transcendBulkUnit===unit?'bg-sky-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                   </div>
-                  <div className="text-[9px] font-bold text-slate-400">MAXで交換すると 🌈{maxExchange.psycheCost.toLocaleString()} を使って超越P +{maxExchange.maxPoints}、交換後の所持は {maxExchange.nextPsyche.toLocaleString()} になります。</div>
-                  {transcendExchangeError&&<div className="text-[9px] font-black text-red-400">{transcendExchangeError}</div>}
+                  <div className="mb-3">{renderPowerBadge(previewPower, {before: currentPower, size:'md'})}</div>
+                  <div className="text-[9px] text-slate-400 font-bold mb-1.5">間合い適性<span className="ml-1 text-slate-500">（上限{maxGrade}）</span></div>
+                  <div className="space-y-1.5 mb-3">
+                    {RANGE_LABELS.map((label,idx)=>{const before=transcendGrade(idx),after=transcendGrade(idx,plan.apt[idx]),added=plan.apt[idx];return <div key={idx} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
+                      <span className={`text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
+                      <div className="text-center font-mono font-black text-[12px]"><span className={DIST_APTITUDE_COLOR[before]}>{before}</span><span className="text-slate-500 mx-1">→</span><span className={added>0?'text-sky-300':'text-slate-300'}>{after}</span></div>
+                      <span className="text-center text-[9px] font-mono font-black text-sky-300">{added}P</span>
+                      <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}の基礎適性を減らす`} disabled={added<=0} onPress={()=>addApt(idx,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}の基礎適性を上げる`} disabled={planLeft<=0||aptAtMax(idx)} onPress={()=>addApt(idx,1)} className="min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
+                    </div>;})}
+                  </div>
+                  <div className="text-[9px] text-slate-400 font-bold mb-1.5">ステータス</div>
+                  <div className="space-y-1.5">
+                    {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const n=plan.stat[key]||0,gain=n*(STAT_POINT_GAIN[key]||1),before=normalized.transcendStatPoints[key];return <div key={key} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
+                      <span className="text-[8px] text-center text-sky-200 font-black">{label}</span>
+                      <div className="text-center font-mono font-black text-[11px]"><span className="text-white">基礎+{before}</span><span className="text-slate-500 mx-1">→</span><span className={gain>0?'text-sky-300':'text-slate-300'}>基礎+{before+gain}</span></div>
+                      <span className="text-center text-[9px] font-mono font-black text-sky-300">{n}P</span>
+                      <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}の基礎値を減らす`} disabled={n<=0} onPress={()=>addStat(key,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}の基礎値を上げる`} disabled={planLeft<=0} onPress={()=>addStat(key,1)} className="min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
+                    </div>;})}
+                  </div>
+                  <div className="text-[8px] text-slate-500 mt-2">＋／−は長押しでも連続調整できます。1Pで基礎ライフ+{STAT_POINT_GAIN.hp}／ちから・丈夫さ・ガッツ+{STAT_POINT_GAIN.atk}／間合い適性1段階（どれも総合力+10相当）。</div>
                 </div>
-                {/* 基礎ステータス強化 */}
-                <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2">
-                  <div className="text-[11px] font-black text-amber-300">基礎ステータスを上げる</div>
-                  {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{
-                    const gainPer = STAT_POINT_GAIN[key] || 1;
-                    const planned = plan.stat[key] || 0;
-                    const before = normalized.transcendStatPoints[key];
-                    return <div key={key} className="grid grid-cols-[52px_1fr_auto] items-center gap-2 rounded-xl bg-black/35 p-2">
-                      <span className="text-[10px] font-black text-slate-300">{label}</span>
-                      <span className="text-[10px] font-mono font-black text-white">基礎+{before}{planned>0&&<span className="text-emerald-400"> → 基礎+{before+planned*gainPer}</span>}</span>
-                      <span className="flex items-center gap-1">
-                        <button aria-label={`${label}の超越強化を1つ戻す`} disabled={planned<=0} onClick={()=>addStat(key,-1)} className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800 text-white font-black disabled:opacity-30 active:scale-90">-</button>
-                        <button aria-label={`${label}を超越強化`} disabled={planLeft<=0} onClick={()=>addStat(key,1)} className="min-h-[36px] min-w-[36px] rounded-lg bg-sky-600 text-white font-black disabled:opacity-30 active:scale-90">+</button>
-                      </span>
-                    </div>;
-                  })}
-                </div>
-                {/* 基礎距離適性強化 */}
-                <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2">
-                  <div className="text-[11px] font-black text-amber-300">基礎の間合い適性を上げる<span className="ml-1 text-[9px] font-bold text-slate-400">（上限は{DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length-1]}）</span></div>
-                  {RANGE_LABELS.map((label,idx)=>{
-                    const planned = plan.apt[idx] || 0;
-                    return <div key={idx} className="grid grid-cols-[44px_1fr_auto] items-center gap-2 rounded-xl bg-black/35 p-2">
-                      <span className="text-[10px] font-black text-slate-300">{label}</span>
-                      <span className="text-[10px] font-mono font-black text-white">{transcendGrade(idx)}{planned>0&&<span className="text-emerald-400"> → {transcendGrade(idx,planned)}</span>}</span>
-                      <span className="flex items-center gap-1">
-                        <button aria-label={`${label}の超越強化を1つ戻す`} disabled={planned<=0} onClick={()=>addApt(idx,-1)} className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800 text-white font-black disabled:opacity-30 active:scale-90">-</button>
-                        <button aria-label={`${label}を超越強化`} disabled={planLeft<=0||aptAtMax(idx)} onClick={()=>addApt(idx,1)} className="min-h-[36px] min-w-[36px] rounded-lg bg-sky-600 text-white font-black disabled:opacity-30 active:scale-90">+</button>
-                      </span>
-                    </div>;
-                  })}
-                </div>
-                <div className="rounded-2xl border border-amber-400/30 bg-black/40 p-3 text-[10px] font-black text-slate-300 flex items-center justify-between">
-                  <span>総合力</span>
-                  <span className="font-mono text-white">{currentPower.toLocaleString()}{planUsed>0&&<span className="text-emerald-400"> → {previewPower.toLocaleString()}</span>}</span>
-                </div>
-                <div className="text-[9px] font-bold text-slate-400 leading-relaxed">超越強化は「基礎値」を上げるので、絆ポイントリセットの書で通常の強化を戻しても消えません。転生しても残ります。</div>
+                <div className="text-[9px] font-bold text-slate-400 leading-relaxed">超越強化は「基礎値」を上げるので、絆ポイントリセットの書で通常の強化を戻しても消えません。転生しても残ります。確定するまで保存データは変わりません。</div>
               </div>
               <div className="shrink-0 grid grid-cols-2 gap-2 p-4 border-t border-white/10" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
                 <button onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs disabled:opacity-35 active:scale-95">キャンセル</button>
-                <button data-transcend-commit disabled={planUsed<=0} onClick={()=>commitTranscendPlan(masu, plan)} className="min-h-[48px] rounded-2xl bg-sky-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95">この配分で確定</button>
+                <button data-transcend-commit disabled={planUsed<=0} onClick={()=>commitTranscendPlan(masu, plan)} className="min-h-[48px] rounded-2xl bg-sky-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95">この配分で確定（{planUsed}P）</button>
               </div>
+              {/* 虹のプシュケーの変換。振り分けの画面と混ざるとごちゃつくので、専用のシートへ分けている */}
+              {transcendExchangeOpen&&(
+                <div data-transcend-exchange-sheet role="dialog" aria-modal="true" aria-label="虹のプシュケーを変換" className="absolute inset-0 flex items-end justify-center" style={{zIndex:30500,backgroundColor:'rgba(2,6,23,0.86)'}} onClick={()=>setTranscendExchangeOpen(false)}>
+                  <div className="w-full max-w-md rounded-t-3xl border-t border-x border-fuchsia-400/40 bg-slate-900 p-4 space-y-3" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} onClick={e=>e.stopPropagation()}>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-black text-fuchsia-200 flex items-center gap-1.5"><span aria-hidden="true">🌈</span>虹のプシュケーを変換</h3>
+                      <button aria-label="閉じる" onClick={()=>setTranscendExchangeOpen(false)} className="p-2 text-slate-400 active:scale-90"><X size={18}/></button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-2xl bg-black/40 p-2.5 text-center"><div className="text-[8px] font-black text-slate-400">所持している🌈</div><div className="font-mono text-lg font-black text-white">{psycheHave.toLocaleString()}</div></div>
+                      <div className="rounded-2xl bg-black/40 p-2.5 text-center"><div className="text-[8px] font-black text-slate-400">交換レート</div><div className="font-mono text-[11px] font-black text-fuchsia-200">🌈{TRANSCEND_PSYCHE_PER_POINT.toLocaleString()} → 1P</div></div>
+                    </div>
+                    {exchangeMax<=0
+                      ? <div className="rounded-2xl border border-amber-500/40 bg-amber-950/25 p-3 text-center text-[10px] font-black text-amber-200">虹のプシュケーが {TRANSCEND_PSYCHE_PER_POINT.toLocaleString()} 個そろうと変換できます（あと {(TRANSCEND_PSYCHE_PER_POINT-psycheHave).toLocaleString()}）。</div>
+                      : <>
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-2xl bg-black/40 p-2.5">
+                          <PressRepeatButton aria-label="変換するポイントを減らす" disabled={exchangeWant<=1} onPress={()=>setWant(exchangeWant-1)} className="min-h-[44px] rounded-xl bg-slate-700 text-xl font-black disabled:opacity-25">−</PressRepeatButton>
+                          <div className="text-center leading-none"><span data-transcend-exchange-want className="font-mono text-3xl font-black text-white">{exchangeWant}</span><span className="text-[10px] font-bold text-slate-400">P</span></div>
+                          <PressRepeatButton aria-label="変換するポイントを増やす" disabled={exchangeWant>=exchangeMax} onPress={()=>setWant(exchangeWant+1)} className="min-h-[44px] rounded-xl bg-fuchsia-700 text-xl font-black disabled:bg-slate-700 disabled:opacity-25">＋</PressRepeatButton>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[['1P',1],['5P',5],['MAX',exchangeMax]].map(([label,amount])=>(
+                            <button key={label} data-transcend-exchange={label} disabled={amount>exchangeMax} onClick={()=>setWant(amount)} className={`min-h-[40px] rounded-xl text-[11px] font-black active:scale-95 disabled:opacity-30 ${exchangeWant===Math.min(amount,exchangeMax)?'bg-fuchsia-600 text-white':'bg-slate-800 text-slate-300'}`}>{label}</button>
+                          ))}
+                        </div>
+                        <div className="rounded-2xl border border-fuchsia-400/30 bg-fuchsia-950/25 p-3 space-y-1 text-[10px] font-black">
+                          <div className="flex justify-between"><span className="text-slate-300">使う🌈</span><span className="font-mono text-white">{exchangeQuote.psycheCost.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-slate-300">交換後の🌈</span><span className="font-mono text-white">{exchangeQuote.nextPsyche.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span className="text-slate-300">超越ポイント</span><span className="font-mono text-fuchsia-200">{points} → {points+exchangeQuote.points}</span></div>
+                        </div>
+                        <div className="text-[9px] font-bold text-slate-400">{TRANSCEND_PSYCHE_PER_POINT.toLocaleString()}個に満たない端数は消費しません。変換したポイントは、いま開いている「{masu.name}」に入ります。</div>
+                      </>}
+                    {transcendExchangeError&&<div className="text-[10px] font-black text-red-400">{transcendExchangeError}</div>}
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={()=>setTranscendExchangeOpen(false)} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95">閉じる</button>
+                      <button data-transcend-exchange-commit disabled={!exchangeQuote.ok} onClick={runExchange} className="min-h-[48px] rounded-2xl bg-fuchsia-600 text-white font-black text-xs disabled:opacity-35 active:scale-95">この内容で変換</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}

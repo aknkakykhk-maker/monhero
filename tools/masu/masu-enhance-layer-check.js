@@ -28,7 +28,7 @@ const seed = () => {
   localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
   localStorage.setItem('mh_masu_migrated', JSON.stringify(true));
   localStorage.setItem('mh_gold', JSON.stringify(99999));
-  localStorage.setItem('mh_owned_items', JSON.stringify({ rainbow_psyche: 500 }));
+  localStorage.setItem('mh_owned_items', JSON.stringify({ rainbow_psyche: 3500 }));
   localStorage.setItem('mh_masu_mons', JSON.stringify([
     { id: 't1', baseId: 'Golem', name: 'レイヤーテスト', bondXp: 0, rebirthCount: 35, levelCap: 400,
       transcended: true, transcendPoints: 5, distAptPoints: 3,
@@ -131,15 +131,54 @@ const fullScreenLayers = () => [...document.querySelectorAll('body *')].filter((
     const atTranscend = await layers();
     check('超越強化で詳細が重なっていない', atTranscend.length === 1 && atTranscend[0].startsWith('超越強化'),
       atTranscend.join(' + ') || 'なし');
-    // 覆われていると交換UIまで届かない。実際に見えているところまで確かめる
-    const visible = await page.evaluate(() => {
-      const el = document.querySelector('[data-transcend-exchange]');
+    // 覆われていると操作まで届かない。実際に押せるところまで確かめる
+    const reachable = (selector) => page.evaluate((sel) => {
+      const el = document.querySelector(sel);
       if (!el) return { found: false };
+      el.scrollIntoView({ block: 'center' });
       const r = el.getBoundingClientRect();
-      const top = document.elementFromPoint(Math.min(innerWidth - 2, r.left + r.width / 2), Math.max(2, Math.min(innerHeight - 2, r.top + r.height / 2)));
-      return { found: true, reachable: !!top && (el.contains(top) || top.contains(el)) };
-    });
-    check('虹のプシュケーの交換UIが実際に見えている', visible.found && visible.reachable, JSON.stringify(visible));
+      if (r.width <= 0 || r.height <= 0) return { found: true, reachable: false, why: 'サイズが0' };
+      const x = Math.min(innerWidth - 2, Math.max(2, r.left + r.width / 2));
+      const y = Math.min(innerHeight - 2, Math.max(2, r.top + r.height / 2));
+      const top = document.elementFromPoint(x, y);
+      const ok = !!top && (el.contains(top) || top.contains(el));
+      return { found: true, reachable: ok, why: ok ? '' : `${top ? top.tagName + '.' + (top.className || '').toString().slice(0, 30) : 'なし'} が手前` };
+    }, selector);
+    const openEntry = await reachable('[data-transcend-exchange-open]');
+    check('プシュケー変換の入口が実際に押せる', openEntry.found && openEntry.reachable, JSON.stringify(openEntry));
+    // 変換は専用のシートへ分けてある。開いて中身が押せるところまで見る
+    await page.evaluate(() => { const b = document.querySelector('[data-transcend-exchange-open]'); b && b.click(); });
+    await page.waitForTimeout(900);
+    check('変換シートが開く', await page.evaluate(() => !!document.querySelector('[data-transcend-exchange-sheet]')));
+    const commit = await reachable('[data-transcend-exchange-commit]');
+    check('変換の確定ボタンが実際に押せる', commit.found && commit.reachable, JSON.stringify(commit));
+    check('交換レートを画面に出している',
+      await page.evaluate(() => /🌈1,000 → 1P/.test(document.body.innerText)));
+    // 実際に変換して、超越ポイントが増え、虹のプシュケーがレートぶんだけ減るか
+    const beforeExchange = await page.evaluate(() => ({
+      points: Number((document.querySelector('[data-transcend-points]') || {}).textContent.replace(/[^0-9].*$/, '')) || 0,
+      psyche: JSON.parse(localStorage.getItem('mh_owned_items') || '{}').rainbow_psyche || 0,
+    }));
+    await page.evaluate(() => { const b = document.querySelector('[data-transcend-exchange-commit]'); b && b.click(); });
+    await page.waitForTimeout(1500);
+    const afterExchange = await page.evaluate(() => ({
+      sheet: !!document.querySelector('[data-transcend-exchange-sheet]'),
+      points: Number((document.querySelector('[data-transcend-points]') || {}).textContent.replace(/[^0-9].*$/, '')) || 0,
+      psyche: JSON.parse(localStorage.getItem('mh_owned_items') || '{}').rainbow_psyche || 0,
+    }));
+    check('変換すると超越ポイントが1増える', afterExchange.points === beforeExchange.points + 1,
+      `${beforeExchange.points} → ${afterExchange.points}`);
+    check('虹のプシュケーがレートぶんだけ減る', beforeExchange.psyche - afterExchange.psyche === 1000,
+      `${beforeExchange.psyche} → ${afterExchange.psyche}`);
+    check('変換したらシートが閉じる', !afterExchange.sheet);
+    await page.evaluate(() => { const b = document.querySelector('[data-transcend-exchange-open]'); b && b.click(); });
+    await page.waitForTimeout(700);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('[data-transcend-exchange-sheet] button')].find(x => x.textContent.includes('閉じる')); b && b.click(); });
+    await page.waitForTimeout(900);
+    check('変換シートを閉じると振り分けへ戻る',
+      await page.evaluate(() => !document.querySelector('[data-transcend-exchange-sheet]')));
+    const afterSheet = await layers();
+    check('変換シートを閉じたあとに暗いレイヤーが残らない', afterSheet.length === 1, afterSheet.join(' + ') || 'なし');
 
     check('超越強化から戻れる', await page.evaluate(() => {
       const b = document.querySelector('[data-transcend-enhance] button');

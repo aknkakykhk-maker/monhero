@@ -194,17 +194,17 @@ check('reconcileはLv400までの不足はこれまでどおり補填する',
   reconcile(masu({ bondXp: totalXp(100), distAptPoints: 0 })).distAptPoints > 0);
 
 // ---- ⑤ 交換 ----
-check('虹のプシュケー100個 → 超越ポイント1', exchange(100, 1).points === 1 && exchange(100, 1).psycheCost === 100);
-check('1,000個 → 10ポイント', exchange(1000, 10).points === 10 && exchange(1000, 10).psycheCost === 1000);
-check('99個では交換できない', !exchange(99, 1).ok && exchange(99, 1).psycheCost === 0);
-check('MAX交換は100個単位で端数を残す', (() => {
-  const plan = exchange(1099, Number.MAX_SAFE_INTEGER);
-  return plan.points === 10 && plan.psycheCost === 1000 && plan.nextPsyche === 99;
+check('虹のプシュケー1,000個 → 超越ポイント1', exchange(1000, 1).points === 1 && exchange(1000, 1).psycheCost === 1000);
+check('10,000個 → 10ポイント', exchange(10000, 10).points === 10 && exchange(10000, 10).psycheCost === 10000);
+check('999個では交換できない', !exchange(999, 1).ok && exchange(999, 1).psycheCost === 0);
+check('MAX交換は1,000個単位で端数を残す', (() => {
+  const plan = exchange(10999, Number.MAX_SAFE_INTEGER);
+  return plan.points === 10 && plan.psycheCost === 10000 && plan.nextPsyche === 999;
 })());
 check('所持数がマイナスにならない', exchange(-50, 5).points === 0 && exchange(0, 5).nextPsyche === 0);
-check('超越前の個体は交換できない', applyExchange(masu(), 1000, 5) === null);
+check('超越前の個体は交換できない', applyExchange(masu(), 10000, 5) === null);
 check('交換した超越Pは選んだ個体へ入る', (() => {
-  const applied = applyExchange(transcended({ transcendPoints: 2 }), 500, 5);
+  const applied = applyExchange(transcended({ transcendPoints: 2 }), 5000, 5);
   return applied.nextMasu.transcendPoints === 7 && applied.nextPsyche === 0;
 })());
 
@@ -327,12 +327,18 @@ check('強化画面を開いているあいだは詳細モーダルを重ねな�
   && source.includes('{masuMonDetail&&!MASU_ENHANCE_STATES.includes(gameState)&&')
   && !source.includes("{masuMonDetail&&gameState!=='MASU_ENHANCE'&&"));
 check('超越強化はまとめて振れる（1Pずつ何十回も押させない）',
-  source.includes("data-transcend-exchange={label}") && source.includes("[['+1P',1],['+10P',10],['MAX',maxExchange.maxPoints]]"));
+  source.includes('data-transcend-unit={unit}') && source.includes("{[1,5,10,'MAX'].map(unit=><button type=\"button\" key={unit} data-transcend-unit=")
+  && source.includes('PressRepeatButton aria-label={`${label}の基礎値を上げる`}'));
+// 交換は振り分けと混ざらないよう専用のシートへ分けている
+check('プシュケーの変換は専用のシートで行う',
+  source.includes('data-transcend-exchange-open') && source.includes('data-transcend-exchange-sheet')
+  && source.includes('data-transcend-exchange-commit')
+  && source.indexOf('data-transcend-exchange-sheet') > source.indexOf('data-transcend-commit'));
 check('ヘルプに超越の項目がある',
   help.includes("id: 'transcendence'") && help.includes('MASU_TRANSCENDENCE: ') && help.includes('MASU_TRANSCEND_ENHANCE: '));
 check('ヘルプに解放条件・コスト・仕様が書いてある',
   ['限界突破35回（虹★5）と絆Lv.400', '虹のプシュケー 5,000個 と ダイヤ 1,000,000',
-    'レベル上限が400から500', '虹のプシュケー100個を超越ポイント1', 'ライフ基礎+10',
+    'レベル上限が400から500', '虹のプシュケー1,000個を超越ポイント1', 'ライフ基礎+10',
     '通常の強化を白紙に戻しても', '転生しても超越した状態とLv上限500は維持']
     .every(text => help.includes(text)));
 check('助手に超越の案内がある', assistants.includes('transcendence: {') && assistants.includes("help: 'masu/transcendence'"));
