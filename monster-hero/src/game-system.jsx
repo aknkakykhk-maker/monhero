@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 11:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6432,12 +6432,24 @@ function MonsterHeroGame() {
   const autoPostWaveRunningRef = useRef(false);
   const autoPostWaveScheduledRef = useRef(false);
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
+  // AUTO∞もラン中だけの一時状態。5CでUIを接続するまでは内部状態だけを持ち、永続化しない。
+  const [autoRepeat, setAutoRepeat] = useState(false);
+  const autoRepeatRef = useRef(false);
+  const autoRepeatStartingRef = useRef(false);
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
     autoTurnScheduledRef.current = false;
     autoPostWaveScheduledRef.current = false;
     setAutoBattle(false);
+  };
+  // 明示的な退出・異常終了では通常AUTOと再周回予約をまとめて破棄する。
+  // WAVE10正常勝利だけはstopAutoBattle()を直接使い、再周回の意思を維持する。
+  const stopAllAuto = () => {
+    stopAutoBattle();
+    autoRepeatRef.current = false;
+    autoRepeatStartingRef.current = false;
+    setAutoRepeat(false);
   };
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
@@ -7882,7 +7894,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     // 画面が見えなくなったらBGMを止める(他のアプリに切り替えたあとも鳴り続けないように)。
     // 戻ってきたら、止まっているAudioContextを復帰させて鳴らし直す
-    const onHidden = () => { Audio_.setPageHidden(true); stopAutoBattle(); };
+    const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto(); };
     const onVisible = () => { Audio_.setPageHidden(false); Audio_.resumeIfNeeded(); };
     const onVisibilityChange = () => (document.visibilityState === 'hidden' ? onHidden() : onVisible());
     document.addEventListener('visibilitychange', onVisibilityChange);
@@ -10041,8 +10053,7 @@ function MonsterHeroGame() {
       proAllies, extremeRun:!!template.extremeRun, extremeDifficulty:template.extremeDifficulty || null };
   };
 
-  // まだ本番のWAVE10/CHAMPIONには接続しない。5Bから呼べる、新しいrunIdと完全な初期状態を
-  // 作ったうえで既存の初回アシストカード選択へ合流する内部入口だけを用意する。
+  // AUTO∞から新しいrunIdと完全な初期状態を作り、既存の初回アシストカード選択へ合流する。
   const startRunFromRepeatTemplate = (template) => {
     const resolved=resolveRepeatRunTemplate(template);
     if (!resolved.ok) return resolved;
@@ -10261,7 +10272,7 @@ function MonsterHeroGame() {
   };
 
   const returnToHome = () => {
-    stopAutoBattle();
+    stopAllAuto();
     debugBattleRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
@@ -10430,7 +10441,7 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
-    stopAutoBattle();
+    stopAllAuto();
     if (debugBattleRef.current) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
@@ -10456,7 +10467,7 @@ function MonsterHeroGame() {
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
   const handleRetry = () => {
-    stopAutoBattle();
+    stopAllAuto();
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
     applyResetAllState();
@@ -11382,7 +11393,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
   // 通常のWAVE結果・選択画面ではOFFにしない。
   useEffect(()=>{
-    if(hp<=0||gaveUp||gameState==='CHAMPION'||gameState==='PICK_HERO')stopAutoBattle();
+    if(hp<=0||gaveUp||gameState==='PICK_HERO')stopAllAuto();
   },[hp,gaveUp,gameState]);
 
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
@@ -11401,7 +11412,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       try{
         const turnPromise=runAutoTurnOnce();
         if(!turnPromise){
-          autoBattleRef.current=false;setAutoBattle(false);
+          stopAllAuto();
           addPopup('AUTO停止：使えるカードがありません','hero','text-amber-300 text-sm font-black');
           return;
         }
@@ -11447,6 +11458,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setGameState('CHAMPION');
       await submitRunScoreOnce();
       setResultProcessing(false);
+      // 報酬・記録・CHAMPION遷移・ランキング送信をすべて終えてからだけ次周を開始する。
+      // 同じ勝利処理が再度呼ばれても、同期refのロックによりテンプレート開始は最大1回。
+      if (autoRepeatRef.current && !autoRepeatStartingRef.current) {
+        autoRepeatStartingRef.current = true;
+        const repeatResult = startRunFromRepeatTemplate(repeatRunTemplateRef.current);
+        if (repeatResult.ok) {
+          autoRepeatStartingRef.current = false;
+          autoBattleRef.current = true;
+          setAutoBattle(true);
+          setAutoTurnCycle(n=>n+1);
+        } else {
+          stopAllAuto();
+        }
+      }
     } else if (isQuickMode(runMode)) {
       // クイックモードは強化フェーズを行わず、味方を自動成長させてから次のWAVEへ進む
       beginQuickGrowth();
@@ -11801,7 +11826,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // variant は 'v2'(いまの本番。新しいモード選択から始まる)と
   // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
-    stopAutoBattle();
+    stopAllAuto();
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
@@ -11836,7 +11861,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
   // 戻してしまうので、練習中は必ずこちらを通してビギナー・チャレンジ・保存なしを保つ
   const beginBattleTutorialRun = () => {
-    stopAutoBattle();
+    stopAllAuto();
     debugBattleRef.current = true;
     debugResultRef.current = false;
     setDebugBattle(true); setDebugOutcome(null);
@@ -11968,7 +11993,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   }, [battleTutorialStep, gameState, currentPickingMon]);
 
   const startDebugBattle = (extreme=false) => {
-    stopAutoBattle();
+    stopAllAuto();
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
     const savedParty = getActiveMonsterList();
     const party = (debugStrongestHero
@@ -12006,6 +12031,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const setupMon = (m, slotIdx) => {
     if (!m) return;
     const isHero=!mainHero; const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; setSlots(nextSlots);
+    if (isHero) stopAllAuto();
     if (!isHero) Audio_.se.join();
     if (isHero) {
       initialBattleDistanceRef.current=slotIdx;
@@ -12204,7 +12230,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setting:autoSettings.allies[settingIndex], slots,
         }):null;
         if(!choice){
-          stopAutoBattle();
+          stopAllAuto();
           addPopup('AUTO停止：供モンを選べません','hero','text-amber-300 font-black text-sm');
           return;
         }
@@ -12224,7 +12250,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // confirmPickTeachingと同じ既存判定(!enemy)を使って、初回とWAVE後を区別する。
         const choice=chooseAutoTeachingCard(teachingPool,ownedTeachings,!enemy);
         if(!choice){
-          stopAutoBattle();
+          stopAllAuto();
           addPopup('AUTO停止：アシストカードを選べません','hero','text-amber-300 font-black text-sm');
           return;
         }
@@ -12248,7 +12274,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           MAX_UNIQUE_SKILL_LEVEL,
         );
         if(!plan){
-          stopAutoBattle();
+          stopAllAuto();
           autoPostWaveRunningRef.current=false;
           addPopup('AUTO停止：固有技を強化できません','hero','text-amber-300 font-black text-sm');
           return;

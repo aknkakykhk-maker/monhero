@@ -39,7 +39,7 @@ check('WAVE10はAUTO停止後に既存の終了ロック・報酬・記録・CHA
     && finalizer.indexOf('await awardRunRewards(10);') < finalizer.indexOf('await recordClearOnce();')
     && finalizer.indexOf('await recordClearOnce();') < finalizer.indexOf("setGameState('CHAMPION');")
     && finalizer.indexOf("setGameState('CHAMPION');") < finalizer.indexOf('await submitRunScoreOnce();'));
-check('CHAMPION後の自動再挑戦・マスモン登録を追加しない',
+check('AUTO controllerから自動Retry・マスモン登録を実行しない',
   !/retry|returnToHome|register|masu/i.test(controller));
 
 if (failed) process.exit(1);
