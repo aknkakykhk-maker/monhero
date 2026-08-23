@@ -56,5 +56,14 @@ if(!repeatToggle.includes('const next=!!enabled&&isQuickMode(runMode)'))fail('�
 if(!repeatToggle.includes("if(!next)setEcoModeSafe('off')"))fail('AUTO∞ OFF時に省エネをOFFにしていません');
 for(const token of ['flex-1 min-w-0 flex flex-wrap','min-h-[44px] min-w-[84px] shrink-0'])if(!battle.includes(token))fail('ACTION見切れ防止レイアウトが維持されていません');
 if(/['"]mh_[^'"]*eco/i.test(source)||/localStorage[\s\S]{0,160}(?:ecoMode|eco_mode)/i.test(source))fail('省エネ状態を永続化しています');
-if(battle.includes('onClick={cycleEcoMode}')||battle.includes('onClick={()=>cycleEcoMode'))fail('未実装の省エネ切替ボタンがあります');
+const controls=between('<span className={`flex-1 min-w-0 flex flex-wrap','{/* 使うカードが決まっている番は');
+for(const token of [
+  "gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true",
+  'onClick={cycleEcoMode}',
+  "ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'",
+  'w-[44px] shrink-0 flex flex-col',
+  '省エネ',
+])if(!controls.includes(token))fail(`省エネ切替UIに ${token} がありません`);
+if(/onClick=\{\(\)=>setEcoMode|const \[[^\]]*(?:ecoUi|ecoButton|energySaving)[^\]]*\] = useState/i.test(controls))fail('省エネ切替UIが既存cycle/stateを再利用していません');
+for(const width of [320,390,430])if(width-16-(40+44+84+4)<100)fail(`${width}pxで省エネをAUTO下に置いた操作列が収まりません`);
 console.log('eco mode ultra battle render check passed');
