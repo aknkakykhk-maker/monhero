@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 908fd1b1ac92e089
+// source-sha256: 362251ec37cf172f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 12:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10573,7 +10573,8 @@ const beginNewRankingRun = ({
 // レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
 const LevelGrowthBar = ({
   levelBefore,
-  levelAfter
+  levelAfter,
+  onComplete
 }) => {
   const leveledUp = levelAfter.level > levelBefore.level;
   // 累計経験値。levelInfo/bondLevelInfoが返すtotalXpをそのまま出すだけなので計算は増えない
@@ -10604,11 +10605,13 @@ const LevelGrowthBar = ({
         setPct(Math.max(0, Math.min(100, levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext) * 100)));
         setRemain(Math.max(0, levelAfter.xpForNext - levelAfter.xpIntoLevel));
       }, 2100));
+      timers.push(setTimeout(() => onComplete?.(), 2800));
     } else {
       timers.push(setTimeout(() => {
         setPct(Math.max(0, Math.min(100, levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext) * 100)));
         setRemain(Math.max(0, levelAfter.xpForNext - levelAfter.xpIntoLevel));
       }, 200));
+      timers.push(setTimeout(() => onComplete?.(), 900));
     }
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -10639,7 +10642,8 @@ const LevelGrowthBar = ({
 // 数値がfrom→toへカウントアップする演出(ダイヤ表示用、バー無し)
 const CountUpNumber = ({
   from,
-  to
+  to,
+  onComplete
 }) => {
   const [val, setVal] = useState(from);
   useEffect(() => {
@@ -10649,7 +10653,7 @@ const CountUpNumber = ({
     const tick = now => {
       const t = Math.min(1, (now - start) / duration);
       setVal(Math.round(from + (to - from) * t));
-      if (t < 1) raf = requestAnimationFrame(tick);
+      if (t < 1) raf = requestAnimationFrame(tick);else onComplete?.();
     };
     const timer = setTimeout(() => {
       raf = requestAnimationFrame(tick);
@@ -10665,103 +10669,116 @@ const CountUpNumber = ({
 // 最終リザルト画面(CHAMPION/敗北)共通: 今回の周回で獲得したブリーダー経験値・ダイヤ・
 // 勇者モンの絆経験値をまとめて表示するカード
 const RewardSummaryCard = ({
-  summary
-}) => /*#__PURE__*/React.createElement("div", {
-  className: "w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left shrink-0 flex flex-col min-h-0"
-}, /*#__PURE__*/React.createElement("div", {
-  className: "space-y-3 shrink-0"
-}, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center justify-between text-[11px] mb-1"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "text-indigo-300 font-black flex items-center gap-1"
-}, /*#__PURE__*/React.createElement(Crown, {
-  size: 12
-}), "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
-  className: "text-white font-mono font-bold"
-}, "+", summary.breederXpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
-  levelBefore: summary.breederLevelBefore,
-  levelAfter: summary.breederLevelAfter
-})), /*#__PURE__*/React.createElement("div", {
-  className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "text-amber-300 font-black flex items-center gap-1"
-}, /*#__PURE__*/React.createElement(Gem, {
-  size: 12
-}), "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-  className: "text-white font-mono font-bold flex items-baseline gap-1"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "text-slate-500 text-[10px]"
-}, summary.goldBefore.toLocaleString(), " \u2192"), /*#__PURE__*/React.createElement(CountUpNumber, {
-  from: summary.goldBefore,
-  to: summary.goldAfter
-}), summary.goldAfter > summary.goldBefore && /*#__PURE__*/React.createElement("span", {
-  className: "text-amber-300 text-[10px]"
-}, "(+", (summary.goldAfter - summary.goldBefore).toLocaleString(), ")"))), summary.psycheGain > 0 && /*#__PURE__*/React.createElement("div", {
-  className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "text-fuchsia-300 font-black flex items-center gap-1"
-}, /*#__PURE__*/React.createElement("span", {
-  "aria-hidden": "true"
-}, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
-  className: "text-white font-mono font-bold"
-}, "\xD7", summary.psycheGain.toLocaleString())), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
-  className: "pt-2 border-t border-white/10"
-}, /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center justify-between text-[11px] mb-1"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "text-pink-300 font-black flex items-center gap-1 truncate"
-}, /*#__PURE__*/React.createElement(Heart, {
-  size: 12
-}), "\u7D46\u30EC\u30D9\u30EB\uFF1A", summary.heroBondGain.name), /*#__PURE__*/React.createElement("span", {
-  className: "text-white font-mono font-bold shrink-0"
-}, "+", summary.heroBondGain.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
-  levelBefore: summary.heroBondGain.levelBefore,
-  levelAfter: summary.heroBondGain.levelAfter
-}), summary.heroBondGain.levelAfter.level > summary.heroBondGain.levelBefore.level && /*#__PURE__*/React.createElement("div", {
-  className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
-}, /*#__PURE__*/React.createElement(Sparkles, {
-  size: 9
-}), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level)), summary.allyBondGains && summary.allyBondGains.length > 0 && /*#__PURE__*/React.createElement("div", {
-  className: "pt-2 border-t border-white/10 space-y-2"
-}, /*#__PURE__*/React.createElement("div", {
-  className: "text-[10px] text-pink-300 font-black flex items-center gap-1"
-}, /*#__PURE__*/React.createElement(Heart, {
-  size: 10
-}), "\u4EF2\u9593\u306E\u7D46\u7D4C\u9A13\u5024"), summary.allyBondGains.map((a, i) => /*#__PURE__*/React.createElement("div", {
-  key: i
-}, /*#__PURE__*/React.createElement("div", {
-  className: "flex items-center justify-between text-[10px] mb-0.5"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "text-slate-300 font-bold truncate"
-}, a.name), /*#__PURE__*/React.createElement("span", {
-  className: "text-white font-mono font-bold shrink-0"
-}, "+", a.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
-  levelBefore: a.levelBefore,
-  levelAfter: a.levelAfter
-}), a.levelAfter.level > a.levelBefore.level && /*#__PURE__*/React.createElement("div", {
-  className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
-}, /*#__PURE__*/React.createElement(Sparkles, {
-  size: 9
-}), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", a.levelAfter.level - a.levelBefore.level))))), summary.waveHistory && summary.waveHistory.length > 0 && /*#__PURE__*/React.createElement("div", {
-  className: "pt-2 mt-3 border-t border-white/10 shrink-0 flex flex-col min-h-0"
-}, /*#__PURE__*/React.createElement("div", {
-  className: "text-[10px] text-cyan-300 font-black flex items-center gap-1 mb-1 shrink-0"
-}, /*#__PURE__*/React.createElement(Trophy, {
-  size: 11
-}), "WAVE\u5225\u30ED\u30B0"), /*#__PURE__*/React.createElement("div", {
-  className: "space-y-0.5 overflow-y-auto mh-scroll max-h-[18vh]"
-}, summary.waveHistory.map(w => /*#__PURE__*/React.createElement("div", {
-  key: w.wave,
-  className: "flex items-center justify-between gap-1 text-[9px] bg-white/5 rounded-lg px-2 py-1"
-}, /*#__PURE__*/React.createElement("span", {
-  className: "text-slate-400 font-bold shrink-0"
-}, "WAVE ", w.wave), !summary.quickMode && /*#__PURE__*/React.createElement("span", {
-  className: "text-white font-mono font-bold truncate"
-}, "\u30B9\u30B3\u30A2 +", w.roundScore.toLocaleString()), /*#__PURE__*/React.createElement("span", {
-  className: "text-indigo-300 font-mono font-bold shrink-0"
-}, "XP+", w.xpGain.toLocaleString()), /*#__PURE__*/React.createElement("span", {
-  className: "text-amber-300 font-mono font-bold shrink-0"
-}, "\uD83D\uDC8E+", w.goldGain.toLocaleString()))))));
+  summary,
+  onPresentationComplete
+}) => {
+  const completedPartsRef = useRef(new Set());
+  const expectedParts = 2 + (summary.heroBondGain ? 1 : 0) + (summary.allyBondGains?.length || 0);
+  const markPresented = part => {
+    completedPartsRef.current.add(part);
+    if (completedPartsRef.current.size >= expectedParts) onPresentationComplete?.();
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left shrink-0 flex flex-col min-h-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3 shrink-0"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-[11px] mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-indigo-300 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Crown, {
+    size: 12
+  }), "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono font-bold"
+  }, "+", summary.breederXpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
+    levelBefore: summary.breederLevelBefore,
+    levelAfter: summary.breederLevelAfter,
+    onComplete: () => markPresented('breeder')
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 12
+  }), "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono font-bold flex items-baseline gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 text-[10px]"
+  }, summary.goldBefore.toLocaleString(), " \u2192"), /*#__PURE__*/React.createElement(CountUpNumber, {
+    from: summary.goldBefore,
+    to: summary.goldAfter,
+    onComplete: () => markPresented('gold')
+  }), summary.goldAfter > summary.goldBefore && /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300 text-[10px]"
+  }, "(+", (summary.goldAfter - summary.goldBefore).toLocaleString(), ")"))), summary.psycheGain > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-fuchsia-300 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono font-bold"
+  }, "\xD7", summary.psycheGain.toLocaleString())), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 border-t border-white/10"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-[11px] mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-pink-300 font-black flex items-center gap-1 truncate"
+  }, /*#__PURE__*/React.createElement(Heart, {
+    size: 12
+  }), "\u7D46\u30EC\u30D9\u30EB\uFF1A", summary.heroBondGain.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono font-bold shrink-0"
+  }, "+", summary.heroBondGain.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
+    levelBefore: summary.heroBondGain.levelBefore,
+    levelAfter: summary.heroBondGain.levelAfter,
+    onComplete: () => markPresented('hero')
+  }), summary.heroBondGain.levelAfter.level > summary.heroBondGain.levelBefore.level && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 9
+  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level)), summary.allyBondGains && summary.allyBondGains.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 border-t border-white/10 space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-pink-300 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Heart, {
+    size: 10
+  }), "\u4EF2\u9593\u306E\u7D46\u7D4C\u9A13\u5024"), summary.allyBondGains.map((a, i) => /*#__PURE__*/React.createElement("div", {
+    key: i
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-[10px] mb-0.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300 font-bold truncate"
+  }, a.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono font-bold shrink-0"
+  }, "+", a.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
+    levelBefore: a.levelBefore,
+    levelAfter: a.levelAfter,
+    onComplete: () => markPresented(`ally-${i}`)
+  }), a.levelAfter.level > a.levelBefore.level && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 9
+  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", a.levelAfter.level - a.levelBefore.level))))), summary.waveHistory && summary.waveHistory.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 mt-3 border-t border-white/10 shrink-0 flex flex-col min-h-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-cyan-300 font-black flex items-center gap-1 mb-1 shrink-0"
+  }, /*#__PURE__*/React.createElement(Trophy, {
+    size: 11
+  }), "WAVE\u5225\u30ED\u30B0"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-0.5 overflow-y-auto mh-scroll max-h-[18vh]"
+  }, summary.waveHistory.map(w => /*#__PURE__*/React.createElement("div", {
+    key: w.wave,
+    className: "flex items-center justify-between gap-1 text-[9px] bg-white/5 rounded-lg px-2 py-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 font-bold shrink-0"
+  }, "WAVE ", w.wave), !summary.quickMode && /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono font-bold truncate"
+  }, "\u30B9\u30B3\u30A2 +", w.roundScore.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    className: "text-indigo-300 font-mono font-bold shrink-0"
+  }, "XP+", w.xpGain.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300 font-mono font-bold shrink-0"
+  }, "\uD83D\uDC8E+", w.goldGain.toLocaleString()))))));
+};
 
 // ---- 起動ローディングのゲージ ----
 // 進み具合そのものは index.html の __mhBoot が持っている。静的なローディング画面と
@@ -12506,6 +12523,7 @@ function MonsterHeroGame() {
   // 加算のたびに同じ値をこのrefへも書き、1周ぶん古い値を送らないようにする
   const totalTurnCountRef = useRef(0);
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
+  const [championPresentationComplete, setChampionPresentationComplete] = useState(false);
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -19626,11 +19644,41 @@ function MonsterHeroGame() {
     if (next) setAutoBattleEnabled(true);else autoRepeatStartingRef.current = false;
   };
 
+  // 特殊ルール説明を閉じる正規経路。手動タップとAUTOの自動通過で同じ処理を使う。
+  const closeExtremeRule = () => {
+    setExtremeRuleOpen(false);
+    setIsBusy(false);
+  };
+
+  // AUTO中も説明自体はいったん描画し、その次のフレームで既存の閉じる処理を1回だけ実行する。
+  useEffect(() => {
+    if (!extremeRuleOpen || !autoBattleRef.current && !autoRepeatRef.current) return;
+    const frame = requestAnimationFrame(() => {
+      if (document.visibilityState === 'hidden' || !autoBattleRef.current && !autoRepeatRef.current) return;
+      closeExtremeRule();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [extremeRuleOpen, autoBattle, autoRepeat]);
+
   // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
   // 通常のWAVE結果・選択画面ではOFFにしない。
   useEffect(() => {
     if (hp <= 0 || gaveUp || gameState === 'PICK_HERO') stopAllAuto();
   }, [hp, gaveUp, gameState]);
+
+  // 正規リザルトの全報酬演出が完了した場合だけ、AUTO∞の次周開始handlerへ進む。
+  useEffect(() => {
+    if (gameState !== 'CHAMPION' || !championPresentationComplete || !autoRepeatRef.current || autoRepeatStartingRef.current) return;
+    if (document.visibilityState === 'hidden') return;
+    autoRepeatStartingRef.current = true;
+    const repeatResult = startRunFromRepeatTemplate(repeatRunTemplateRef.current);
+    if (repeatResult.ok) {
+      autoRepeatStartingRef.current = false;
+      autoBattleRef.current = true;
+      setAutoBattle(true);
+      setAutoTurnCycle(n => n + 1);
+    } else stopAllAuto();
+  }, [gameState, championPresentationComplete, autoRepeat, autoBattle]);
 
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
   // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
@@ -19679,6 +19727,7 @@ function MonsterHeroGame() {
     setEffect(null);
     if (wave === 10) {
       stopAutoBattle();
+      setChampionPresentationComplete(false);
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
       runFinalizingRef.current = true;
       setRunFinalizing(true);
@@ -19695,20 +19744,6 @@ function MonsterHeroGame() {
       setGameState('CHAMPION');
       await submitRunScoreOnce();
       setResultProcessing(false);
-      // 報酬・記録・CHAMPION遷移・ランキング送信をすべて終えてからだけ次周を開始する。
-      // 同じ勝利処理が再度呼ばれても、同期refのロックによりテンプレート開始は最大1回。
-      if (autoRepeatRef.current && !autoRepeatStartingRef.current) {
-        autoRepeatStartingRef.current = true;
-        const repeatResult = startRunFromRepeatTemplate(repeatRunTemplateRef.current);
-        if (repeatResult.ok) {
-          autoRepeatStartingRef.current = false;
-          autoBattleRef.current = true;
-          setAutoBattle(true);
-          setAutoTurnCycle(n => n + 1);
-        } else {
-          stopAllAuto();
-        }
-      }
     } else if (isQuickMode(runMode)) {
       // クイックモードは強化フェーズを行わず、味方を自動成長させてから次のWAVEへ進む
       beginQuickGrowth();
@@ -33247,10 +33282,7 @@ function MonsterHeroGame() {
         zIndex: 90500,
         background: 'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))'
       },
-      onClick: () => {
-        setExtremeRuleOpen(false);
-        setIsBusy(false);
-      },
+      onClick: closeExtremeRule,
       role: "dialog",
       "aria-modal": "true",
       "aria-label": "\u6975\u9650\u30EB\u30FC\u30EB\u767A\u52D5"
@@ -35052,14 +35084,24 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "m-auto w-full flex flex-col items-center"
     }, masuRegisterButtonNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
-      summary: finalRewardSummary
+      key: resultProcessing ? 'locked' : 'ready',
+      summary: finalRewardSummary,
+      onPresentationComplete: resultProcessing ? undefined : () => setChampionPresentationComplete(true)
     }), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs mx-auto mt-3 text-left"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "resultWin",
       condition: runHighlights.firstWin ? 'firstWin' : runHighlights.newRecord ? 'newRecord' : runHighlights.firstClear ? 'firstClear' : null,
       compact: true
-    })))), /*#__PURE__*/React.createElement("button", {
+    })))), autoRepeat && /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 w-full max-w-xs mt-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAutoRepeatEnabled(false),
+      className: "min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black"
+    }, "\u221E\u5468\u56DE OFF"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAutoBattleEnabled(false),
+      className: "min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black"
+    }, "AUTO OFF")), /*#__PURE__*/React.createElement("button", {
       onClick: () => runResultActionOnce(returnToHome),
       disabled: resultActionPending,
       "aria-busy": resultActionPending,

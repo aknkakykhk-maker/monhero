@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 12:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5910,7 +5910,7 @@ const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rew
 
 // 最終リザルト画面(CHAMPION/敗北)共通: レベルの経験値バーが直前の進捗から今回の獲得分まで伸びる演出。
 // レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
-const LevelGrowthBar = ({ levelBefore, levelAfter }) => {
+const LevelGrowthBar = ({ levelBefore, levelAfter, onComplete }) => {
   const leveledUp = levelAfter.level > levelBefore.level;
   // 累計経験値。levelInfo/bondLevelInfoが返すtotalXpをそのまま出すだけなので計算は増えない
   const totalBefore = Number(levelBefore?.totalXp);
@@ -5929,8 +5929,10 @@ const LevelGrowthBar = ({ levelBefore, levelAfter }) => {
       timers.push(setTimeout(() => { Audio_.se.levelUp(); setFlash(true); }, 900));
       timers.push(setTimeout(() => { setFlash(false); setCurLevel(levelAfter.level); setPct(0); setRemain(levelAfter.xpForNext); }, 2000));
       timers.push(setTimeout(() => { setPct(Math.max(0, Math.min(100, (levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext)) * 100))); setRemain(Math.max(0, levelAfter.xpForNext - levelAfter.xpIntoLevel)); }, 2100));
+      timers.push(setTimeout(() => onComplete?.(), 2800));
     } else {
       timers.push(setTimeout(() => { setPct(Math.max(0, Math.min(100, (levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext)) * 100))); setRemain(Math.max(0, levelAfter.xpForNext - levelAfter.xpIntoLevel)); }, 200));
+      timers.push(setTimeout(() => onComplete?.(), 900));
     }
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -5952,7 +5954,7 @@ const LevelGrowthBar = ({ levelBefore, levelAfter }) => {
 };
 
 // 数値がfrom→toへカウントアップする演出(ダイヤ表示用、バー無し)
-const CountUpNumber = ({ from, to }) => {
+const CountUpNumber = ({ from, to, onComplete }) => {
   const [val, setVal] = useState(from);
   useEffect(() => {
     const duration = 700, start = performance.now();
@@ -5961,6 +5963,7 @@ const CountUpNumber = ({ from, to }) => {
       const t = Math.min(1, (now - start) / duration);
       setVal(Math.round(from + (to - from) * t));
       if (t < 1) raf = requestAnimationFrame(tick);
+      else onComplete?.();
     };
     const timer = setTimeout(() => { raf = requestAnimationFrame(tick); }, 200);
     return () => { clearTimeout(timer); cancelAnimationFrame(raf); };
@@ -5970,7 +5973,14 @@ const CountUpNumber = ({ from, to }) => {
 
 // 最終リザルト画面(CHAMPION/敗北)共通: 今回の周回で獲得したブリーダー経験値・ダイヤ・
 // 勇者モンの絆経験値をまとめて表示するカード
-const RewardSummaryCard = ({ summary }) => (
+const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
+  const completedPartsRef = useRef(new Set());
+  const expectedParts = 2 + (summary.heroBondGain ? 1 : 0) + (summary.allyBondGains?.length || 0);
+  const markPresented = (part) => {
+    completedPartsRef.current.add(part);
+    if (completedPartsRef.current.size >= expectedParts) onPresentationComplete?.();
+  };
+  return (
   <div className="w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left shrink-0 flex flex-col min-h-0">
     <div className="space-y-3 shrink-0">
       <div>
@@ -5978,11 +5988,11 @@ const RewardSummaryCard = ({ summary }) => (
           <span className="text-indigo-300 font-black flex items-center gap-1"><Crown size={12}/>ブリーダー経験値</span>
           <span className="text-white font-mono font-bold">+{summary.breederXpGain.toLocaleString()}</span>
         </div>
-        <LevelGrowthBar levelBefore={summary.breederLevelBefore} levelAfter={summary.breederLevelAfter}/>
+        <LevelGrowthBar levelBefore={summary.breederLevelBefore} levelAfter={summary.breederLevelAfter} onComplete={()=>markPresented('breeder')}/>
       </div>
       <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
         <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
-        <span className="text-white font-mono font-bold flex items-baseline gap-1"><span className="text-slate-500 text-[10px]">{summary.goldBefore.toLocaleString()} →</span><CountUpNumber from={summary.goldBefore} to={summary.goldAfter}/>{summary.goldAfter>summary.goldBefore&&<span className="text-amber-300 text-[10px]">(+{(summary.goldAfter-summary.goldBefore).toLocaleString()})</span>}</span>
+        <span className="text-white font-mono font-bold flex items-baseline gap-1"><span className="text-slate-500 text-[10px]">{summary.goldBefore.toLocaleString()} →</span><CountUpNumber from={summary.goldBefore} to={summary.goldAfter} onComplete={()=>markPresented('gold')}/>{summary.goldAfter>summary.goldBefore&&<span className="text-amber-300 text-[10px]">(+{(summary.goldAfter-summary.goldBefore).toLocaleString()})</span>}</span>
       </div>
       {/* クリアしたときだけ入る限界突破アイテム。1行だけ足して、リザルトの高さを崩さない */}
       {summary.psycheGain > 0 && (
@@ -5997,7 +6007,7 @@ const RewardSummaryCard = ({ summary }) => (
             <span className="text-pink-300 font-black flex items-center gap-1 truncate"><Heart size={12}/>絆レベル：{summary.heroBondGain.name}</span>
             <span className="text-white font-mono font-bold shrink-0">+{summary.heroBondGain.xpGain.toLocaleString()}</span>
           </div>
-          <LevelGrowthBar levelBefore={summary.heroBondGain.levelBefore} levelAfter={summary.heroBondGain.levelAfter}/>
+          <LevelGrowthBar levelBefore={summary.heroBondGain.levelBefore} levelAfter={summary.heroBondGain.levelAfter} onComplete={()=>markPresented('hero')}/>
           {summary.heroBondGain.levelAfter.level > summary.heroBondGain.levelBefore.level && (
             <div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level}</div>
           )}
@@ -6012,7 +6022,7 @@ const RewardSummaryCard = ({ summary }) => (
                 <span className="text-slate-300 font-bold truncate">{a.name}</span>
                 <span className="text-white font-mono font-bold shrink-0">+{a.xpGain.toLocaleString()}</span>
               </div>
-              <LevelGrowthBar levelBefore={a.levelBefore} levelAfter={a.levelAfter}/>
+              <LevelGrowthBar levelBefore={a.levelBefore} levelAfter={a.levelAfter} onComplete={()=>markPresented(`ally-${i}`)}/>
               {a.levelAfter.level > a.levelBefore.level && (
                 <div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{a.levelAfter.level - a.levelBefore.level}</div>
               )}
@@ -6037,7 +6047,8 @@ const RewardSummaryCard = ({ summary }) => (
       </div>
     )}
   </div>
-);
+  );
+};
 
 // ---- 起動ローディングのゲージ ----
 // 進み具合そのものは index.html の __mhBoot が持っている。静的なローディング画面と
@@ -6769,6 +6780,7 @@ function MonsterHeroGame() {
   // 加算のたびに同じ値をこのrefへも書き、1周ぶん古い値を送らないようにする
   const totalTurnCountRef = useRef(0);
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
+  const [championPresentationComplete, setChampionPresentationComplete] = useState(false);
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -11423,11 +11435,41 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else autoRepeatStartingRef.current=false;
   };
 
+  // 特殊ルール説明を閉じる正規経路。手動タップとAUTOの自動通過で同じ処理を使う。
+  const closeExtremeRule = () => {
+    setExtremeRuleOpen(false);
+    setIsBusy(false);
+  };
+
+  // AUTO中も説明自体はいったん描画し、その次のフレームで既存の閉じる処理を1回だけ実行する。
+  useEffect(()=>{
+    if(!extremeRuleOpen||(!autoBattleRef.current&&!autoRepeatRef.current))return;
+    const frame=requestAnimationFrame(()=>{
+      if(document.visibilityState==='hidden'||(!autoBattleRef.current&&!autoRepeatRef.current))return;
+      closeExtremeRule();
+    });
+    return ()=>cancelAnimationFrame(frame);
+  },[extremeRuleOpen,autoBattle,autoRepeat]);
+
   // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
   // 通常のWAVE結果・選択画面ではOFFにしない。
   useEffect(()=>{
     if(hp<=0||gaveUp||gameState==='PICK_HERO')stopAllAuto();
   },[hp,gaveUp,gameState]);
+
+  // 正規リザルトの全報酬演出が完了した場合だけ、AUTO∞の次周開始handlerへ進む。
+  useEffect(()=>{
+    if(gameState!=='CHAMPION'||!championPresentationComplete||!autoRepeatRef.current||autoRepeatStartingRef.current)return;
+    if(document.visibilityState==='hidden')return;
+    autoRepeatStartingRef.current=true;
+    const repeatResult=startRunFromRepeatTemplate(repeatRunTemplateRef.current);
+    if(repeatResult.ok){
+      autoRepeatStartingRef.current=false;
+      autoBattleRef.current=true;
+      setAutoBattle(true);
+      setAutoTurnCycle(n=>n+1);
+    }else stopAllAuto();
+  },[gameState,championPresentationComplete,autoRepeat,autoBattle]);
 
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
   // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
@@ -11477,6 +11519,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setEffect(null);
     if (wave === 10) {
       stopAutoBattle();
+      setChampionPresentationComplete(false);
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
       runFinalizingRef.current = true;
       setRunFinalizing(true);
@@ -11491,20 +11534,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setGameState('CHAMPION');
       await submitRunScoreOnce();
       setResultProcessing(false);
-      // 報酬・記録・CHAMPION遷移・ランキング送信をすべて終えてからだけ次周を開始する。
-      // 同じ勝利処理が再度呼ばれても、同期refのロックによりテンプレート開始は最大1回。
-      if (autoRepeatRef.current && !autoRepeatStartingRef.current) {
-        autoRepeatStartingRef.current = true;
-        const repeatResult = startRunFromRepeatTemplate(repeatRunTemplateRef.current);
-        if (repeatResult.ok) {
-          autoRepeatStartingRef.current = false;
-          autoBattleRef.current = true;
-          setAutoBattle(true);
-          setAutoTurnCycle(n=>n+1);
-        } else {
-          stopAllAuto();
-        }
-      }
     } else if (isQuickMode(runMode)) {
       // クイックモードは強化フェーズを行わず、味方を自動成長させてから次のWAVEへ進む
       beginQuickGrowth();
@@ -16851,7 +16880,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="mt-4 border-t border-red-300/20 pt-3 text-[10px] text-purple-100"><span className="font-black text-slate-400">現在のBREAK：</span><br/><span className="font-black">{ultimateDistanceBreakLevels.map((level,index)=>level>0?`${RANGE_LABELS[index]} Lv${level}`:null).filter(Boolean).join(' / ')||'なし'}</span></div>
         </div>
       </div>}
-      {gameState==='BATTLE'&&extremeRuleOpen&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:90500,background:'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))'}} onClick={()=>{setExtremeRuleOpen(false);setIsBusy(false);}} role="dialog" aria-modal="true" aria-label="極限ルール発動">
+      {gameState==='BATTLE'&&extremeRuleOpen&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:90500,background:'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))'}} onClick={closeExtremeRule} role="dialog" aria-modal="true" aria-label="極限ルール発動">
         <div className="w-full max-w-xs rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]" style={{animation:'mhExtremeRuleIn .38s ease-out'}}>
           {(()=>{const specialDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return specialDifficulty===ULTIMATE_SETTING.id?<>
             <div className="text-[11px] font-black tracking-[.12em] text-amber-300">ULTIMATE 特殊ルール</div>
@@ -17617,7 +17646,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       )}
 
       {/* CHAMPION */}
-      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>)}
+      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard key={resultProcessing?'locked':'ready'} summary={finalRewardSummary} onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div></div>{autoRepeat&&<div className="grid grid-cols-2 gap-2 w-full max-w-xs mt-2"><button onClick={()=>setAutoRepeatEnabled(false)} className="min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black">∞周回 OFF</button><button onClick={()=>setAutoBattleEnabled(false)} className="min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black">AUTO OFF</button></div>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>)}
 
       {/* GAME OVER */}
       {hp<=0&&!debugBattle&&(<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}

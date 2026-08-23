@@ -16,12 +16,19 @@ if(/['"]mh_[^'"]*(?:repeat|infinity)/.test(source)) fail('AUTO∞を永続化す
 const stopAll=between('const stopAllAuto = () => {','const [monSelection');
 for(const token of ['stopAutoBattle()','autoRepeatRef.current = false','autoRepeatStartingRef.current = false','setAutoRepeat(false)'])if(!stopAll.includes(token))fail(`stopAllAutoに ${token} がありません`);
 const victory=between('const handleNextWave = async () => {','// ===== クイックモード');
-const finalizeOrder=['await awardRunRewards(10)','await recordClearOnce()',"setGameState('CHAMPION')",'await submitRunScoreOnce()','setResultProcessing(false)','startRunFromRepeatTemplate(repeatRunTemplateRef.current)'];
+const finalizeOrder=['await awardRunRewards(10)','await recordClearOnce()',"setGameState('CHAMPION')",'await submitRunScoreOnce()','setResultProcessing(false)'];
 let cursor=-1;
 for(const token of finalizeOrder){const next=victory.indexOf(token,cursor+1);if(next<0)fail(`勝利finalization順序の ${token} がありません`);cursor=next;}
-if(!/if \(wave === 10\)[\s\S]*autoRepeatRef\.current && !autoRepeatStartingRef\.current/.test(victory))fail('WAVE10正常勝利だけの再周回条件または二重開始ロックがありません');
-if((victory.match(/startRunFromRepeatTemplate\(repeatRunTemplateRef\.current\)/g)||[]).length!==1)fail('勝利ごとのテンプレート開始呼び出しが1箇所ではありません');
-for(const token of ['if (repeatResult.ok)','autoBattleRef.current = true','setAutoBattle(true)','stopAllAuto()'])if(!victory.includes(token))fail(`再周回の成功/失敗処理 ${token} がありません`);
+if(victory.includes('startRunFromRepeatTemplate(repeatRunTemplateRef.current)'))fail('結果表示前の勝利処理から次周を開始しています');
+const presentation=between('// 正規リザルトの全報酬演出が完了した場合だけ','// 操作可能なBATTLEへ');
+for(const token of ["gameState!=='CHAMPION'",'!championPresentationComplete','!autoRepeatRef.current','autoRepeatStartingRef.current','document.visibilityState===\'hidden\'','startRunFromRepeatTemplate(repeatRunTemplateRef.current)','if(repeatResult.ok)','autoBattleRef.current=true','setAutoBattle(true)','stopAllAuto()'])if(!presentation.includes(token))fail(`結果表示後の再周回処理 ${token} がありません`);
+if((presentation.match(/startRunFromRepeatTemplate\(repeatRunTemplateRef\.current\)/g)||[]).length!==1)fail('結果表示後のテンプレート開始呼び出しが1箇所ではありません');
+for(const token of ['onPresentationComplete?.()',"key={resultProcessing?'locked':'ready'}",'onPresentationComplete={resultProcessing?undefined:()=>setChampionPresentationComplete(true)}','setChampionPresentationComplete(false)'])if(!source.includes(token))fail(`報酬演出完了の接続 ${token} がありません`);
+if(!source.includes('onClick={()=>setAutoRepeatEnabled(false)}')||!source.includes('onClick={()=>setAutoBattleEnabled(false)}'))fail('結果表示中にAUTO∞/AUTOを停止できません');
+
+const extremeAuto=between('// 特殊ルール説明を閉じる正規経路','// ランの終了表示');
+for(const token of ['const closeExtremeRule = () =>','requestAnimationFrame','autoBattleRef.current','autoRepeatRef.current',"document.visibilityState==='hidden'",'closeExtremeRule()'])if(!extremeAuto.includes(token))fail(`極限ルールのAUTO通過処理 ${token} がありません`);
+if(!source.includes('onClick={closeExtremeRule}'))fail('極限ルールの手動操作が共通handlerを使っていません');
 
 for(const token of [
   "if(hp<=0||gaveUp||gameState==='PICK_HERO')stopAllAuto()",
