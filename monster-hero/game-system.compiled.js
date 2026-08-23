@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7b54407986a0b387
+// source-sha256: c9c8ad78fab86bc3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 15:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 15:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12155,7 +12155,9 @@ function MonsterHeroGame() {
     return setEcoModeSafe(ECO_MODES[(currentIndex + 1) % ECO_MODES.length]);
   };
   const liteBattleView = gameState === 'BATTLE' && ecoMode === 'lite';
-  const ultraBattleView = gameState === 'BATTLE' && ecoMode === 'ultra';
+  // 表示・音声だけに使う超省エネ∞セッション。BATTLEを離れる中間画面や最終リザルトでも維持する。
+  const ultraEcoSession = ecoMode === 'ultra' && autoRepeat === true;
+  const ultraBattleView = gameState === 'BATTLE' && ultraEcoSession;
   const ecoBattleView = liteBattleView || ultraBattleView;
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
@@ -12667,7 +12669,7 @@ function MonsterHeroGame() {
     setQuickMuted(nextMuted);
   };
   useEffect(() => {
-    if (ultraBattleView) {
+    if (ultraEcoSession) {
       if (ultraAudioSessionRef.current) return;
       ultraAudioSessionRef.current = {
         mutedBefore: audioMuted,
@@ -12681,7 +12683,7 @@ function MonsterHeroGame() {
     if (!session) return;
     ultraAudioSessionRef.current = null;
     if (!session.mutedBefore && session.automaticallyMuted && !session.manuallyChanged && audioMuted) toggleQuickMute(true);
-  }, [ultraBattleView]);
+  }, [ultraEcoSession]);
   const closeBgmArrangement = () => {
     Audio_.stopPreview();
     setPreviewTrackId(null);
@@ -22510,7 +22512,14 @@ function MonsterHeroGame() {
         transformOrigin: 'center',
         animation: 'mhRipple 550ms ease-out forwards'
       }
-    }))), updateNotice, /*#__PURE__*/React.createElement("div", {
+    }))), updateNotice, ultraEcoSession && /*#__PURE__*/React.createElement("div", {
+      "data-ultra-eco-session-dimmer": true,
+      className: "fixed inset-0 bg-black/55 pointer-events-none",
+      style: {
+        zIndex: 2147483646
+      },
+      "aria-hidden": "true"
+    }), /*#__PURE__*/React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
       style: screenShake && !ecoBattleView ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
@@ -30181,13 +30190,6 @@ function MonsterHeroGame() {
         zIndex: 89999
       },
       "aria-hidden": "true"
-    }), ultraBattleView && /*#__PURE__*/React.createElement("div", {
-      "data-ultra-eco-dimmer": true,
-      className: "absolute inset-0 bg-black/55 pointer-events-none",
-      style: {
-        zIndex: 89999
-      },
-      "aria-hidden": "true"
     }), /*#__PURE__*/React.createElement("header", {
       "data-battle-header": true,
       className: "h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden"
@@ -30263,7 +30265,7 @@ function MonsterHeroGame() {
       "data-ultra-battle-view": true,
       className: "flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 px-2 py-1.5 flex flex-col gap-1.5 overflow-y-auto"
+      className: "flex-1 min-h-0 px-2 py-1.5 flex flex-col gap-1.5 overflow-hidden"
     }, enemy && /*#__PURE__*/React.createElement("section", {
       className: "rounded-xl border border-red-900/70 bg-slate-900/95 px-2 py-1.5"
     }, /*#__PURE__*/React.createElement("div", {
@@ -30298,34 +30300,26 @@ function MonsterHeroGame() {
       className: "text-[8px] font-black text-slate-400"
     }, "\u73FE\u5728\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
       className: `mt-1 rounded-full border px-3 py-1 text-[11px] font-black ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
-    }, RANGE_LABELS[enemyDist], "\u8DDD\u96E2"))), (enemySkillName || popups.some(p => p.side === 'enemy')) && /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 min-h-[38px] rounded-lg border border-red-800/60 bg-black/50 px-2 py-1 text-center"
+    }, RANGE_LABELS[enemyDist], "\u8DDD\u96E2"))), /*#__PURE__*/React.createElement("div", {
+      "data-ultra-enemy-log": true,
+      className: "mt-1 h-[42px] overflow-hidden rounded-lg border border-red-800/60 bg-black/50 px-2 py-1 text-center leading-tight"
     }, enemySkillName && /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] font-black text-red-200"
+      className: "truncate text-[11px] font-black text-red-200"
     }, enemySkillName.label), popups.filter(p => p.side === 'enemy').map(p => /*#__PURE__*/React.createElement("div", {
       key: p.id,
-      className: `${p.color} text-base font-black`
+      className: `${p.color} truncate text-sm font-black`
     }, p.text)))), /*#__PURE__*/React.createElement("section", {
       className: "rounded-xl border border-indigo-900/70 bg-slate-900/95 px-2 py-1.5"
     }, /*#__PURE__*/React.createElement("div", {
+      "data-ultra-ally-slots": true,
       className: "grid grid-cols-4 gap-1"
     }, slots.map((s, i) => /*#__PURE__*/React.createElement("div", {
       key: i,
-      className: `min-w-0 rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`
+      className: `flex h-[42px] min-w-0 flex-col items-center justify-center rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`
     }, /*#__PURE__*/React.createElement("div", {
-      className: "truncate text-[7px] font-black text-white"
+      className: "w-full truncate text-[9px] font-black text-white"
     }, s?.name || '---'), /*#__PURE__*/React.createElement("div", {
-      className: "mx-auto flex h-12 w-full items-center justify-center"
-    }, s?.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
-      baseId: s.id,
-      src: s.imgUrl,
-      alt: s.name,
-      masuColors: s.colors,
-      className: "w-full h-full object-contain"
-    }) : /*#__PURE__*/React.createElement("span", {
-      className: "text-3xl"
-    }, s?.emoji || '')), /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] font-black"
+      className: "mt-1 text-[8px] font-black"
     }, RANGE_LABELS[i], "\u8DDD\u96E2")))), /*#__PURE__*/React.createElement("div", {
       className: "mt-1.5 space-y-1"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
@@ -30350,13 +30344,14 @@ function MonsterHeroGame() {
       style: {
         width: `${guts / effectiveMaxGuts * 100}%`
       }
-    })))), (slotSkill || popups.some(p => ['hero', 'life', 'guts'].includes(p.side))) && /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 min-h-[38px] rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center"
+    })))), /*#__PURE__*/React.createElement("div", {
+      "data-ultra-ally-log": true,
+      className: "mt-1 h-[42px] overflow-hidden rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center leading-tight"
     }, slotSkill && /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] font-black text-indigo-200"
+      className: "truncate text-[11px] font-black text-indigo-200"
     }, slotSkill.name), popups.filter(p => ['hero', 'life', 'guts'].includes(p.side)).map(p => /*#__PURE__*/React.createElement("div", {
       key: p.id,
-      className: `${p.color} text-base font-black`
+      className: `${p.color} truncate text-sm font-black`
     }, p.text))))), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 border-t border-white/10 bg-slate-900 p-1"
     }, /*#__PURE__*/React.createElement("div", {

@@ -16,7 +16,8 @@ for(const token of [
   "autoRepeatRef.current===true&&ECO_MODES.includes(mode)?mode:'off'",
   'const cycleEcoMode = () =>',
   "const liteBattleView = gameState==='BATTLE'&&ecoMode==='lite'",
-  "const ultraBattleView = gameState==='BATTLE'&&ecoMode==='ultra'",
+  "const ultraEcoSession = ecoMode==='ultra'&&autoRepeat===true",
+  "const ultraBattleView = gameState==='BATTLE'&&ultraEcoSession",
   'const ecoBattleView = liteBattleView||ultraBattleView',
 ])if(!eco.includes(token))fail(`省エネ状態に ${token} がありません`);
 const stopAll=between('const stopAllAuto = () => {','const [monSelection');
@@ -25,7 +26,7 @@ if(!stopAll.includes("setEcoModeSafe('off')"))fail('stopAllAutoで省エネをOF
 const battle=between("{gameState==='BATTLE'&&(",' {/* スキップ: 勇者モンと供モン3体を選ぶ */}'.trimStart());
 for(const token of [
   "data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}",
-  'data-lite-eco-dimmer','bg-black/20','data-ultra-eco-dimmer','bg-black/55','pointer-events-none','data-ultra-battle-view',
+  'data-lite-eco-dimmer','bg-black/20','data-ultra-battle-view',
   'ultraBattleView?(','WAVE {wave}/10','{turnCount}/20','{enemy.name}','enemy.hp',
   '現在距離','味方HP','ガッツ','slots.map((s,i)=>','Action Cards','AUTO∞で進行中',
   '{slotSkill.name}','{enemySkillName.label}','popups.filter',
@@ -43,11 +44,15 @@ for(const token of [
 ])if(!has(token))fail(`ultraのアクション描画省略 ${token} がありません`);
 // liteは従来の個別分岐と20%遮光を保ち、ultra専用の全アニメ停止を混ぜない。
 if(!battle.includes("animation:liteBattleView?undefined:'skillNamePop 350ms ease-out forwards'"))fail('liteの静的な技名表示が維持されていません');
-if(!battle.includes('{ultraBattleView&&<div data-ultra-eco-dimmer className="absolute inset-0 bg-black/55 pointer-events-none"'))fail('ultraの55%遮光がBATTLE内にありません');
+for(const token of ['data-ultra-eco-session-dimmer','fixed inset-0 bg-black/55 pointer-events-none','zIndex:2147483646'])if(!has(token))fail(`超省エネ∞セッションの全画面遮光 ${token} がありません`);
+for(const token of ['data-ultra-enemy-log','data-ultra-ally-log','h-[42px] overflow-hidden','data-ultra-ally-slots'])if(!ultra.includes(token))fail(`ultra固定レイアウト ${token} がありません`);
+if(/data-ultra-ally-slots[\s\S]{0,900}(?:DyedMonsterImage|<img|emoji)/.test(ultra))fail('ultra味方枠に画像・絵文字描画が残っています');
 
-// ultraへ入ったときだけ既存ミュート経路で消音し、手動操作がなければ退出時に元のONへ戻す。
+// 超省エネ∞セッションへ入ったときだけ既存ミュート経路で消音し、中間画面では解除しない。
 for(const token of [
   'const ultraAudioSessionRef = useRef(null)',
+  'if (ultraEcoSession)',
+  '},[ultraEcoSession])',
   'ultraAudioSessionRef.current={mutedBefore:audioMuted,automaticallyMuted:!audioMuted,manuallyChanged:false}',
   'if (!audioMuted) toggleQuickMute(true)',
   '!session.mutedBefore&&session.automaticallyMuted&&!session.manuallyChanged&&audioMuted',
