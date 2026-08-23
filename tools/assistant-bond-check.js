@@ -667,6 +667,33 @@ check('既読の記録は新しい保存キーへ分けてある',
   A.ASSISTANT_UNLOCK_NOTICE_SEEN_KEY === 'mh_assistant_unlock_seen_v1'
     && !/mh_assistant_bond_v1[^\n]*unlock/.test(assistantsSrc));
 
+// --- 画面へつないであるか ---
+// データだけ用意しても、画面から呼んでいなければ誰も見られない。
+// 実際に「プロフィールを開いたときに出す」ところまで書けているかを見る。
+const unlockBlock = (() => {
+  const at = source.indexOf("assistantUnlockNoticeOf('profile')");
+  return at < 0 ? '' : source.slice(Math.max(0, at - 900), at + 2200);
+})();
+check('プロフィール画面から案内を呼び出している',
+  !!unlockBlock && /gameState==='PROFILE'/.test(unlockBlock));
+check('本文はdata側から受け取る（画面へ直接書いていない）',
+  !!unlockBlock && /notice\.pages/.test(unlockBlock) && !/[ぁ-んァ-ヶ一-龠]/.test(
+    (unlockBlock.match(/const notice=assistantUnlockNoticeOf[\s\S]*?閉じる/) || [''])[0]
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/次へ|閉じる/g, '')));
+check('起動時に既読を読み込んでいる',
+  new RegExp(`setAssistantUnlockSeen\\(normalizeAssistantUnlockSeen\\(await storeGet\\(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY`).test(source));
+check('読み終えたら既読として保存している',
+  /storeSet\(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY/.test(source));
+// アップデートの案内と重ならないよう、出す画面を分けてある(あちらはHOME)
+check('アップデートの案内とは別の画面に出る',
+  /updateGuideQueue\.length>0/.test(source)
+    && /gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&updateGuideQueue\.length>0/.test(source));
+// ヘルプにも書いておく(プレイヤーが仕様を確かめられる唯一の場所のため)
+check('ヘルプに案内が出ることが書いてある',
+  /解放されたことは助手が教えてくれます/.test(helpSrc));
+check('更新履歴に書いてある',
+  /呼び方を決められるようになったことを助手が教えてくれます/.test(changelogSrc));
+
 // --- セリフを増やす土台 ---
 // 場面ごとのセリフは多いほど飽きない。あとから足すための束を1つ空けてある
 check('あとからセリフを足すための束が用意してある',
