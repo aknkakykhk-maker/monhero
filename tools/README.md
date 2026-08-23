@@ -254,7 +254,7 @@ node tools/build.js --check
 
 | コマンド | 内容 |
 | --- | --- |
-| `node audio/bgm-check.js` | BGM(audio/のmp3)が画面に応じて切り替わるかを実ブラウザで確認する。 |
+| `node audio/bgm-check.js` | BGMが実際に鳴っているかを、実ブラウザのWeb Audioそのもので確認する(要 `python3 tools/serve.py`)。`AudioContext.decodeAudioData` と `AudioBufferSourceNode.start/stop` を差し替えて、「どのmp3をデコードしたか」「どれが鳴り始めたか」「そのときAudioContextが動いていたか」を直接見る。オリジナルBGMの再生／いちか4曲のデコード成功／BGMアレンジ画面からの試聴／試聴停止後に元のBGMへ復帰／何度試聴しても無音・二重再生にならない／AudioContextを止めてもタップで再開できる／アレンジで選んだ曲がHOMEで実際に鳴る、までを通しで確認する。★2026年8月に作り直した。以前は `document.querySelectorAll('audio')` を見ていたが、BGMは2026年7月にHTMLAudioElementをやめており、空配列に対する `every()` が素通りして何も観測できていなかった。 |
 | `node audio/bgm-arrangement-check.js` | BGMトラック登録、場面別アレンジ保存、最終ボス後のクリア曲、試聴、曲別音量補正を確認する。 |
 | `node audio/title-bgm-check.js` | iOS相当の自動再生制限を再現し、最初のタップだけでタイトルBGMが鳴るか、起動タップがトップ画面へ届いていないかを確認する。 |
 | `node audio/audio-route-check.js` | BGMのaudio要素が再生前にWeb Audioへ接続され、iOSのメディア再生経路へ漏れないことを確認する。 |
