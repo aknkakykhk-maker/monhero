@@ -29,10 +29,10 @@ const seed = () => {
   localStorage.setItem('mh_masu_migrated', JSON.stringify(true));
   localStorage.setItem('mh_gold', JSON.stringify(99999));
   localStorage.setItem('mh_owned_items', JSON.stringify({ rainbow_psyche: 3500 }));
+  // 超越強化はどのマスモンでも使える。ここでは「まだ超越していない・低Lv・0凸」で確かめる
   localStorage.setItem('mh_masu_mons', JSON.stringify([
-    { id: 't1', baseId: 'Golem', name: 'レイヤーテスト', bondXp: 0, rebirthCount: 35, levelCap: 400,
-      transcended: true, transcendPoints: 5, distAptPoints: 3,
-      transcendStatPoints: { hp: 0, atk: 0, def: 0, guts: 0 }, transcendAptBoosts: [0, 0, 0, 0] },
+    { id: 't1', baseId: 'Golem', name: 'レイヤーテスト', bondXp: 0, rebirthCount: 0, levelCap: 30,
+      distAptPoints: 3, statPoints: { hp: 0, atk: 0, def: 0, guts: 0 } },
   ]));
 };
 
@@ -126,7 +126,7 @@ const fullScreenLayers = () => [...document.querySelectorAll('body *')].filter((
     const atEnhance = await layers();
     check('通常強化で詳細が重なっていない', atEnhance.length === 1, atEnhance.join(' + ') || 'なし');
 
-    check('超越強化を開ける', await clickText('^超越強化$'));
+    check('未超越・低Lvでも超越強化を開ける', await clickText('^超越強化$'));
     await page.waitForTimeout(1500);
     const atTranscend = await layers();
     check('超越強化で詳細が重なっていない', atTranscend.length === 1 && atTranscend[0].startsWith('超越強化'),
@@ -179,6 +179,28 @@ const fullScreenLayers = () => [...document.querySelectorAll('body *')].filter((
       await page.evaluate(() => !document.querySelector('[data-transcend-exchange-sheet]')));
     const afterSheet = await layers();
     check('変換シートを閉じたあとに暗いレイヤーが残らない', afterSheet.length === 1, afterSheet.join(' + ') || 'なし');
+
+    // 実際に振って、基礎値と総合力へ反映されるか。超越済みでないことも確かめる
+    const beforePlan = await page.evaluate(() => (document.body.innerText.match(/総合力[^0-9]*([\d,]+)/) || [])[1] || '');
+    await page.evaluate(() => { const b = [...document.querySelectorAll('[data-transcend-enhance] button')].find(x => x.getAttribute('aria-label') === 'ライフの基礎値を上げる'); b && b.click(); });
+    await page.waitForTimeout(600);
+    await page.evaluate(() => { const b = document.querySelector('[data-transcend-commit]'); b && b.click(); });
+    await page.waitForTimeout(1500);
+    const afterPlan = await page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('mh_masu_mons') || '[]')[0] || {};
+      return {
+        hp: (saved.transcendStatPoints || {}).hp || 0,
+        transcended: saved.transcended === true,
+        levelCap: saved.levelCap,
+        badge: !!document.querySelector('[data-transcend-enhance] .mh-transcend-badge'),
+        power: (document.body.innerText.match(/総合力[^0-9]*([\d,]+)/) || [])[1] || '',
+      };
+    });
+    check('未超越でも超越Pを基礎ライフへ振れる', afterPlan.hp === 10, `基礎+${afterPlan.hp}`);
+    check('総合力が上がる', afterPlan.power !== beforePlan, `${beforePlan} → ${afterPlan.power}`);
+    check('超越強化しても transcended は false のまま', afterPlan.transcended === false);
+    check('Lv上限が勝手に500にならない', afterPlan.levelCap === 30, `上限${afterPlan.levelCap}`);
+    check('超越マークが付かない', afterPlan.badge === false);
 
     check('超越強化から戻れる', await page.evaluate(() => {
       const b = document.querySelector('[data-transcend-enhance] button');

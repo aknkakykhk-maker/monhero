@@ -202,7 +202,12 @@ check('MAX交換は1,000個単位で端数を残す', (() => {
   return plan.points === 10 && plan.psycheCost === 10000 && plan.nextPsyche === 999;
 })());
 check('所持数がマイナスにならない', exchange(-50, 5).points === 0 && exchange(0, 5).nextPsyche === 0);
-check('超越前の個体は交換できない', applyExchange(masu(), 10000, 5) === null);
+// 超越強化は「神殿で正式に超越したか」とは切り離してある。どのマスモンでも使える
+check('超越前の個体でも交換できる', (() => {
+  const applied = applyExchange(masu({ transcendPoints: 0, rebirthCount: 0, bondXp: 0 }), 10000, 5);
+  return !!applied && applied.points === 5 && applied.psycheCost === 5000
+    && applied.nextMasu.transcendPoints === 5 && applied.nextMasu.transcended !== true;
+})());
 check('交換した超越Pは選んだ個体へ入る', (() => {
   const applied = applyExchange(transcended({ transcendPoints: 2 }), 5000, 5);
   return applied.nextMasu.transcendPoints === 7 && applied.nextPsyche === 0;
@@ -231,7 +236,42 @@ check('間合い適性はMを超えない', (() => {
     && current.transcendAptBoosts[0] === grades.indexOf('M') - grades.indexOf('C');
 })(), `boost=${(() => { let c = transcended({ transcendPoints: 50 }); for (let i = 0; i < 20; i++) { const a = applyPlan(c, { apt: [1, 0, 0, 0], stat: {} }); if (!a) break; c = a.masu; } return c.transcendAptBoosts[0]; })()}`);
 check('持っている超越Pを超えて振れない', applyPlan(transcended({ transcendPoints: 1 }), { apt: [0, 0, 0, 0], stat: { hp: 2 } }) === null);
-check('未超越の個体は超越強化できない', applyPlan(masu({ transcendPoints: 5 }), { apt: [0, 0, 0, 0], stat: { hp: 1 } }) === null);
+check('未超越・低Lvの個体でも超越強化できる', (() => {
+  const plain = masu({ transcendPoints: 5, rebirthCount: 0, bondXp: 0, levelCap: 30 });
+  const applied = applyPlan(plain, { apt: [1, 0, 0, 0], stat: { hp: 1 } });
+  return !!applied && applied.used === 2 && applied.masu.transcendStatPoints.hp === 10
+    && applied.masu.transcendAptBoosts[0] === 1 && applied.masu.transcendPoints === 3;
+})());
+// 超越強化しただけでは「超越済み」にならない(マーク・Lv上限500・Lv401以降を勝手に開けない)
+check('超越強化しても transcended は false のまま・Lv上限も変わらない', (() => {
+  const plain = masu({ transcendPoints: 5, rebirthCount: 0, bondXp: totalXp(200), levelCap: 200 });
+  const applied = applyPlan(plain, { apt: [0, 0, 0, 0], stat: { hp: 3 } });
+  const after = normalize(applied.masu);
+  return after.transcended === false && after.levelCap === 200
+    && levelOf(applied.masu).level === 200;
+})());
+check('超越強化した基礎値は能力と総合力へ反映される', (() => {
+  const plain = masu({ transcendPoints: 5, rebirthCount: 0, bondXp: 0, levelCap: 30 });
+  const applied = applyPlan(plain, { apt: [0, 0, 0, 0], stat: { hp: 1 } });
+  return merge(applied.masu).baseHp - merge(plain).baseHp === 10
+    && powerOf(applied.masu) - powerOf(plain) === 10;
+})());
+// あとから正式に超越しても、それまでの超越強化と未使用の超越Pを引き継ぐ
+check('未超越で貯めた超越P・基礎値は、正式な超越で失われない', (() => {
+  const grown = applyPlan(masu({ transcendPoints: 8 }), { apt: [2, 0, 0, 0], stat: { hp: 1, atk: 1 } }).masu;
+  const result = buildTranscend({ masu: grown, gold: DIAMOND_COST, psycheOwned: PSYCHE_COST });
+  const after = normalize(result.nextMasu);
+  return result.ok && after.transcended === true
+    && after.transcendPoints === normalize(grown).transcendPoints
+    && after.transcendStatPoints.hp === normalize(grown).transcendStatPoints.hp
+    && after.transcendStatPoints.atk === normalize(grown).transcendStatPoints.atk
+    && after.transcendAptBoosts[0] === normalize(grown).transcendAptBoosts[0];
+})());
+check('正式な超越で超越Pを二重に配らない', (() => {
+  const grown = masu({ transcendPoints: 4 });
+  const result = buildTranscend({ masu: grown, gold: DIAMOND_COST, psycheOwned: PSYCHE_COST });
+  return normalize(result.nextMasu).transcendPoints === 4;
+})());
 check('超越強化は通常の強化ポイント・statPointsに触らない', (() => {
   const before = transcended({ transcendPoints: 5, distAptPoints: 7, statPoints: { hp: 30, atk: 0, def: 0, guts: 0 } });
   const applied = applyPlan(before, { apt: [1, 0, 0, 0], stat: { hp: 1 } });
@@ -263,6 +303,32 @@ check('転生しても超越状態・上限500・超越の基礎値・未使用�
 check('転生後もLv400を超えれば超越カーブを使う', (() => {
   const reborn = resetForRebirth(transcended(), { toLevel: 351 });
   return levelOf(applyBondXp(reborn, totalXp(401) - totalXp(351)).masu).level === 401;
+})());
+// 未超越のまま超越強化した個体でも、恒久の育成結果として残ること
+check('未超越の超越強化も、通常リセット相当で消えない', (() => {
+  const enhanced = applyPlan(masu({ transcendPoints: 3, rebirthCount: 0, bondXp: 0, levelCap: 30 }),
+    { apt: [1, 0, 0, 0], stat: { hp: 1 } }).masu;
+  const reset = { ...enhanced, statPoints: { hp: 0, atk: 0, def: 0, guts: 0 }, distAptBoosts: [0, 0, 0, 0], distAptPoints: 9 };
+  return normalize(reset).transcendStatPoints.hp === 10 && merge(reset).distAptitude[0] === 'B'
+    && normalize(reset).transcendPoints === 1 && normalize(reset).transcended === false;
+})());
+check('未超越の超越強化も、転生・限界突破で消えない', (() => {
+  const enhanced = applyPlan(masu({ transcendPoints: 3, rebirthCount: 3, bondXp: totalXp(200), levelCap: 200 }),
+    { apt: [1, 0, 0, 0], stat: { hp: 1 } }).masu;
+  const reborn = resetForRebirth(enhanced, { toLevel: 101 });
+  // 限界突破は levelCap を上げるだけ。超越の項目には触れない
+  const broken = { ...reborn, rebirthCount: 4, levelCap: reborn.levelCap + 5 };
+  return reborn.transcendStatPoints.hp === 10 && reborn.transcendAptBoosts[0] === 1
+    && reborn.transcendPoints === 1 && reborn.transcended !== true
+    && normalize(broken).transcendStatPoints.hp === 10 && normalize(broken).transcended === false;
+})());
+// 正式超越後は、これまでどおりLv401以降のレベルアップで同じ超越Pへ足される
+check('正式超越後のLv401以降は、既存の超越Pへ足される', (() => {
+  const grown = applyPlan(masu({ transcendPoints: 6 }), { apt: [0, 0, 0, 0], stat: { hp: 1 } }).masu;
+  const after = buildTranscend({ masu: grown, gold: DIAMOND_COST, psycheOwned: PSYCHE_COST }).nextMasu;
+  const leveled = applyBondXp(after, totalXp(403) - totalXp(400)).masu;
+  return normalize(after).transcendPoints === 5 && normalize(leveled).transcendPoints === 8
+    && levelOf(leveled).level === 403;
 })());
 
 // ---- ⑦ 旧セーブ ----
@@ -323,6 +389,23 @@ check('ステータス表示は通常強化の(+○)と基礎+○を分けてい
   && source.includes('基礎+{transcendPlus}'));
 check('強化画面で通常強化と超越強化を切り替えられる',
   source.includes('data-transcend-enhance-tabs') && source.includes("setGameState('MASU_TRANSCEND_ENHANCE')"));
+// 超越強化はどのマスモンでも使える。「超越済みのときだけタブを出す」に戻していないか見張る
+check('超越強化のタブを超越済み限定にしていない',
+  !source.includes('{normalizeMasuProgression(masu).transcended&&<div data-transcend-enhance-tabs')
+  && !/const applyTranscendPlanToMasu[\s\S]{0,200}?if \(!normalized\.transcended\) return null;/.test(source)
+  && !/const applyTranscendExchange[\s\S]{0,200}?if \(!normalized\.transcended\) return null;/.test(source)
+  && !source.includes("if (!base || !normalized.transcended) { setGameState('MASU_ENHANCE')"));
+// 超越強化しただけの個体に超越マークを出さない(マークは神殿で正式に超越した証)
+check('超越強化の画面では超越済みのときだけマークを出す', (() => {
+  // 見張るのは超越強化の画面だけ(デバッグの見本は「超越済みの見た目」をわざと出している)
+  const from = source.indexOf("gameState==='MASU_TRANSCEND_ENHANCE'");
+  const screen = source.slice(from, source.indexOf("gameState==='MASU_ENHANCE'&&masuMonDetail", from));
+  return screen.includes('<TranscendenceBadge transcended={normalized.transcended} small/>')
+    && !/<TranscendenceBadge transcended\s*\/>/.test(screen)
+    && !screen.includes('<TranscendenceBadge transcended small/>');
+})());
+check('まだ超越していない個体には、超越そのものとの違いを画面で伝える',
+  source.includes('data-transcend-not-yet') && source.includes('まだ神殿で超越していませんが、超越強化はいつでも使えます'));
 // 詳細モーダル(z=31000)は強化画面(z=30000)より手前に出る。除外し忘れると超越強化が
 // まるごと隠れて、閉じたときに暗い画面だけが残る。実際にその不具合を出している
 check('強化画面を開いているあいだは詳細モーダルを重ねない',
@@ -348,6 +431,12 @@ check('ヘルプに解放条件・コスト・仕様が書いてある',
     'レベル上限が400から500', '虹のプシュケー1,000個を超越ポイント1', 'ライフ基礎+10',
     '通常の強化を白紙に戻しても', '転生しても超越した状態とLv上限500は維持']
     .every(text => help.includes(text)));
+// 「超越しないと超越強化できない」という古い説明を残さない
+check('ヘルプに超越強化がいつでも使えると書いてある',
+  help.includes('超越強化はいつでも使えます')
+  && help.includes('どのマスモンでも「通常強化」と「超越強化」を切り替えられます')
+  && !help.includes('超越済みの個体だけが交換でき')
+  && !help.includes('超越済みの個体では「通常強化」と「超越強化」'));
 check('助手に超越の案内がある', assistants.includes('transcendence: {') && assistants.includes("help: 'masu/transcendence'"));
 check('更新履歴に超越の追加が載っている',
   changelog.includes('新育成システム「超越」を追加しました')
