@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 09:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 09:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1765,8 +1765,28 @@ const Audio_ = (() => {
       bgmGain = audioCtx.createGain();
       bgmGain.gain.value = _bgmGain(bgmVolumePct);
       bgmGain.connect(audioCtx.destination);
+      bindResumeOnGesture();
     } catch (e) { audioCtx = null; bgmGain = null; }
     return audioCtx;
+  };
+  // AudioContextは端末側の自動再生制限・省電力・他アプリの音声フォーカスで止められる。
+  // 止まったまま start() しても無音になるだけなので、次のタップで必ず復帰させる。
+  // タップはuser activationが有効な唯一の機会なので、ここでresume()を呼ぶ意味がある
+  let resumeOnGestureBound = false;
+  const bindResumeOnGesture = () => {
+    if (resumeOnGestureBound || typeof document === 'undefined') return;
+    resumeOnGestureBound = true;
+    const onGesture = () => {
+      const ctx = audioCtx;
+      if (!ctx || ctx.state === 'running') return;
+      let done = null;
+      try { done = ctx.resume(); } catch (e) {}
+      const after = () => { if (audioCtx && audioCtx.state === 'running' && enabled && !pageHidden && currentKey && !bgmSource && !jingleSource && !previewSource) playBGM(currentKey); };
+      if (done && done.then) done.then(after, () => {}); else setTimeout(after, 0);
+    };
+    ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(type => {
+      try { document.addEventListener(type, onGesture, { capture: true, passive: true }); } catch (e) { document.addEventListener(type, onGesture, true); }
+    });
   };
   const resumeAudioCtxNoWait = () => {
     const ctx = getAudioCtx();
@@ -1814,7 +1834,10 @@ const Audio_ = (() => {
     source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain);
     bgmSource = source; bgmSourceKey = key;
     source.onended = () => { if (bgmSource === source) { bgmSource = null; bgmSourceKey = null; } };
-    try { source.start(0); } catch (e) { stopOthers(); }
+    try { source.start(0); } catch (e) { stopOthers(); return; }
+    // 止まったままのAudioContextで鳴らしても無音のままになる。すぐに復帰を試す
+    // (失敗しても、次のタップで bindResumeOnGesture が鳴らし直す)
+    if (ctx.state !== 'running') resumeAudioCtxNoWait();
   };
   const playBGM = (key) => {
     const track = resolveTrack(key); if (!track) return Promise.resolve();
@@ -1835,10 +1858,18 @@ const Audio_ = (() => {
     const track = resolveTrack(key); if (!track) return false;
     if (previewKey === track.id) { stopPreview(true); return false; }
     stopPreview(false); stopJingles(); stopOthers(); previewKey = track.id;
+    // 通常BGM(playBGM)と同じく、タップが効いているうちに同期でresumeを始める。
+    // 読み込みを待ってから初めてresumeすると、user activationが切れていて復帰できない端末がある
+    resumeAudioCtxNoWait();
     try { const buffer = await loadBuffer(track.src); if (previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning(); if (!ctx) return false; applyTrackGain(track);
       const source = ctx.createBufferSource(); source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain); previewSource = source;
-      source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0); return true;
+      source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0);
+      // 止まったままのAudioContextで鳴らしても無音。もう一度だけ復帰を試し、
+      // それでも動かなければ「鳴っている」と嘘をつかずに戻す(次のタップでやり直せる)
+      if (ctx.state !== 'running') { await ensureAudioCtxRunning(); }
+      if (ctx.state !== 'running') { if (previewKey === track.id) stopPreview(false); return false; }
+      return true;
     } catch (e) { if (previewKey === track.id) stopPreview(true); return false; }
   };
   const stopBGM = () => { currentKey = null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers(); };
