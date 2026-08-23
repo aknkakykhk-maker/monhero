@@ -39,9 +39,9 @@ const slice = (from, to) => {
 const calcSrc = `
 const ULTIMATE_SETTING={id:'ULTIMATE',specialRules:{awakeningPenaltyRate:0.0075}};
 const extremeSpecialRule=(d,r)=>(d==='NIGHTMARE'&&r==='waveEnhancement')?0.5:1;
-// トレーニング低下は難易度名ではなく「その難易度がawakeningPenaltyRateを持つか」で効く。
-// ここではULTIMATE / INFINITYだけが持つ状態を再現する(本体の表と同じ0.75%)。
-const extremeRuleNumber=(d,r)=>(['ULTIMATE','INFINITY'].includes(d)&&r==='awakeningPenaltyRate')?0.0075:null;
+// トレーニング低下は難易度名ではなく「その難易度がawakeningZeroTurnsを持つか」で効く。
+// ここではULTIMATE / INFINITYだけが持つ状態を再現する(本体の表と同じ20T)。
+const extremeRuleNumber=(d,r)=>(['ULTIMATE','INFINITY'].includes(d)&&r==='awakeningZeroTurns')?20:null;
 ${slice('const applyNightmareWaveEnhancement', 'const ultimateEnemyTurnMultiplier')}
 ${slice('// トレーニングで「上がる量」へ掛かる倍率', '// 整数で扱うバトル値の特殊ルール倍率')}
 module.exports={TRAINING_PICK_COUNT,TRAINING_OPTIONS,chooseAutoTrainingPicks,trainingOptionOf,resolveTrainingStep,resolveTrainingStats,trainingGainRate};`;
@@ -110,15 +110,16 @@ const ult = (id, t) => T.resolveTrainingStep(base, id, t, 'ULTIMATE');
 const gainOf = (id, t, d) => T.resolveTrainingStep(base, id, t, d)[T.trainingOptionOf(id).stat] - base[T.trainingOptionOf(id).stat];
 check('ULTIMATE T=0 は低下しない',
   ult('hp', 0).hp === 600 && ult('atk', 0).atk === 105 && ult('def', 0).def === 120 && ult('guts', 0).guts === 110);
-check('低下倍率は 1 - ターン数×0.75%（20Tで頭打ち）', [[0, 1], [10, 0.925], [20, 0.85], [40, 0.85]]
+check('低下倍率は 1 - ターン数/20（1Tごと-5%・20Tでちょうど0）', [[0, 1], [1, 0.95], [10, 0.5], [19, 0.05], [20, 0], [30, 0]]
   .every(([turns, want]) => Math.abs(T.trainingGainRate(turns, 'ULTIMATE') - want) < 1e-9),
   `10T=${T.trainingGainRate(10, 'ULTIMATE')} / 20T=${T.trainingGainRate(20, 'ULTIMATE')}`);
-check('4項目すべてが同じ倍率で目減りする(率の小さい項目だけ0にならない)', WANT.every(w => {
+check('4項目すべてが同じ倍率で目減りする(率の小さい項目だけ先に0にならない)', WANT.every(w => {
   const normal = gainOf(w.id, 10, null), effective = gainOf(w.id, 10, 'ULTIMATE');
-  return effective === Math.floor(normal * 0.925);
+  return effective === Math.floor(normal * 0.5);
 }), WANT.map(w => `${w.name} ${gainOf(w.id, 10, null)}→${gainOf(w.id, 10, 'ULTIMATE')}`).join(' / '));
-check('ちから+5%が10ターンで増加0にならない', gainOf('atk', 10, 'ULTIMATE') > 0, `+${gainOf('atk', 10, 'ULTIMATE')}`);
-check('ガッツ+5%が10ターンで増加0にならない', gainOf('guts', 10, 'ULTIMATE') > 0, `+${gainOf('guts', 10, 'ULTIMATE')}`);
+check('ちから+5%が10ターンでも増える(以前は7ターンで0だった)', gainOf('atk', 10, 'ULTIMATE') > 0, `+${gainOf('atk', 10, 'ULTIMATE')}`);
+check('ガッツ+5%が10ターンでも増える', gainOf('guts', 10, 'ULTIMATE') > 0, `+${gainOf('guts', 10, 'ULTIMATE')}`);
+check('20ターンかかると4項目とも増えない', WANT.every(w => gainOf(w.id, 20, 'ULTIMATE') === 0));
 check('INFINITYもULTIMATEと同じ低下になる',
   WANT.every(w => gainOf(w.id, 12, 'INFINITY') === gainOf(w.id, 12, 'ULTIMATE')));
 check('ULTIMATE はターン数が増えるほど下がる(4項目すべて)', WANT.every(w => {
@@ -127,7 +128,9 @@ check('ULTIMATE はターン数が増えるほど下がる(4項目すべて)', W
 }));
 check('ULTIMATE でも同一項目×2は複利',
   T.resolveTrainingStats(base, ['hp', 'hp'], 0, 'ULTIMATE').hp === 720);
-check('ULTIMATEの低下率は0.0075のまま', has('awakeningPenaltyRate:0.0075'));
+check('トレーニングが0になるターン数は20', has('awakeningZeroTurns:20'));
+// クイックの自動成長は成長率そのものから引く別計算。今回のトレーニング修正で巻き込まない
+check('クイック自動成長の低下率0.0075はそのまま', has('awakeningPenaltyRate:0.0075'));
 
 // ---- NIGHTMARE(増えたぶんが半分) ----
 check('NIGHTMARE 走り込み 550 (増分100の半分)',

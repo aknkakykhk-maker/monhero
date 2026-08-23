@@ -12,7 +12,7 @@ assert.notStrictEqual(enemy(550,70,18).hp,Math.floor(enemy(550,70,10).hp*1.06),'
 // トレーニング(旧・能力覚醒)のULTIMATE低下。**低下は増える量へ掛ける**(率から引かない)。
 // 率から引いていたころは ちから+5%・ガッツ+5% だけが7ターンで増加0になっていた。
 // 式を書き写すとテストだけ古くなるので、本体の実装をそのまま取り出して動かす。
-const trainingSrc=`const extremeRuleNumber=(d,r)=>(d==='ULTIMATE'&&r==='awakeningPenaltyRate')?0.0075:null;
+const trainingSrc=`const extremeRuleNumber=(d,r)=>(d==='ULTIMATE'&&r==='awakeningZeroTurns')?20:null;
 const extremeSpecialRule=()=>1;
 ${source.slice(source.indexOf('const applyNightmareWaveEnhancement'),source.indexOf('const ultimateEnemyTurnMultiplier'))}
 ${source.slice(source.indexOf('// トレーニングで「上がる量」へ掛かる倍率'),source.indexOf('// 整数で扱うバトル値の特殊ルール倍率'))}
@@ -21,16 +21,18 @@ const trainingMod={exports:{}};
 new Function('module','exports',trainingSrc)(trainingMod,trainingMod.exports);
 const training=(v,t)=>['hp','atk','def','guts'].reduce((acc,id)=>Object.assign(acc,{[id]:trainingMod.exports.resolveTrainingStep(v,id,t,'ULTIMATE')[id]}),{});
 assert.deepStrictEqual(training({atk:100,def:100,hp:500,guts:100},0),{hp:600,atk:105,def:120,guts:110});
-// 10Tは低下倍率92.5%。増加量(hp+100 / atk+5 / def+20 / guts+10)へ掛かる
-assert.strictEqual(trainingMod.exports.trainingGainRate(10,'ULTIMATE'),0.925);
-assert.deepStrictEqual(training({atk:100,def:100,hp:500,guts:100},10),{hp:592,atk:104,def:118,guts:109});
-assert(training({atk:100,def:100,hp:500,guts:100},10).atk>100,'small-rate training must not drop to zero gain');
-assert.strictEqual(trainingMod.exports.trainingGainRate(20,'ULTIMATE'),0.85);
-assert.strictEqual(trainingMod.exports.trainingGainRate(40,'ULTIMATE'),0.85);
+// 1Tごと-5%、20Tでちょうど0。10Tは50%で、増加量(hp+100 / atk+5 / def+20 / guts+10)へ掛かる
+assert.strictEqual(trainingMod.exports.trainingGainRate(10,'ULTIMATE'),0.5);
+assert.deepStrictEqual(training({atk:100,def:100,hp:500,guts:100},10),{hp:550,atk:102,def:110,guts:105});
+assert(training({atk:100,def:100,hp:500,guts:100},10).atk>100,'small-rate training must not drop to zero gain first');
+assert.strictEqual(trainingMod.exports.trainingGainRate(1,'ULTIMATE'),0.95);
+assert.strictEqual(trainingMod.exports.trainingGainRate(20,'ULTIMATE'),0);
+assert.strictEqual(trainingMod.exports.trainingGainRate(40,'ULTIMATE'),0);
+assert.deepStrictEqual(training({atk:100,def:100,hp:500,guts:100},20),{hp:500,atk:100,def:100,guts:100},'20 turns must leave every training flat');
 assert.strictEqual(trainingMod.exports.trainingGainRate(10,null),1,'difficulties without the rule must not be reduced');
 assert(source.includes('const TRAINING_PICK_COUNT = 2;')&&source.includes('resolveTrainingStep'),'training resolver must exist');
 assert(/ULTIMATE[^\n]+available:true[^\n]+power:35[^\n]+score:20[^\n]+xp:40[^\n]+gold:20[^\n]+psyche:60/.test(source),'ULTIMATE multipliers must match');
-for(const rule of ['enemyTurnRate:0.0075','allyJoinPenaltyRate:0.0075','damageTurnRate:0.0075','minimumDamageDealt:0.25','awakeningPenaltyRate:0.0075','interval:35','damageDealtPerLevel:0.5','safeDistanceCount:1']) assert(source.includes(rule),`missing rule: ${rule}`);
+for(const rule of ['enemyTurnRate:0.0075','allyJoinPenaltyRate:0.0075','damageTurnRate:0.0075','minimumDamageDealt:0.25','awakeningZeroTurns:20','awakeningPenaltyRate:0.0075','interval:35','damageDealtPerLevel:0.5','safeDistanceCount:1']) assert(source.includes(rule),`missing rule: ${rule}`);
 const pending=(total,levels,wave=1,difficulty='ULTIMATE')=>difficulty==='ULTIMATE'&&wave<10&&total>=(levels.reduce((a,b)=>a+b,0)+1)*35?(levels.reduce((a,b)=>a+b,0)+1)*35:null;
 assert.strictEqual(pending(34,[0,0,0,0]),null);assert.strictEqual(pending(35,[0,0,0,0]),35);assert.strictEqual(pending(105,[1,1,0,0]),105);assert.strictEqual(pending(140,[1,1,1,0]),140);assert.strictEqual(pending(315,[3,3,2,0]),315);assert.strictEqual(pending(350,[3,3,3,0]),350);assert.strictEqual(pending(350,[3,3,3,0],10),null);
 const drawCandidates=levels=>{const active=levels.filter(v=>v>0),min=active.length?Math.min(...active):0;return levels.map((v,i)=>active.length<3?v===0?i:null:v===min?i:null).filter(v=>v!=null);};

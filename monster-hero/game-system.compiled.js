@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9235a306d06a71f
+// source-sha256: 90683f0239f44da2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 18:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 18:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7912,6 +7912,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
     damageTurnRate: 0.0075,
     minimumDamageDealt: 0.25,
     awakeningPenaltyRate: 0.0075,
+    awakeningZeroTurns: 20,
     awakeningPenaltyExcludes: Object.freeze(['distance']),
     distanceBreak: Object.freeze({
       interval: 35,
@@ -7950,6 +7951,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
     damageTurnRate: 0.01,
     minimumDamageDealt: 0.30,
     awakeningPenaltyRate: 0.0075,
+    awakeningZeroTurns: 20,
     awakeningPenaltyExcludes: Object.freeze(['distance']),
     distanceBreak: Object.freeze({
       interval: 25,
@@ -8094,7 +8096,7 @@ const extremeRuleDetailGroups = (difficultyId, quick = false) => {
   push('WAVEターン', [
   // クイックの自動成長は成長率そのものから引く(10%→…)ので「pt」、
   // トレーニングは増える量へ掛かるので「%」。掛かり方が違うので言い方も分ける
-  rules.awakeningPenaltyRate != null && (quick ? ['自動成長', `WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`] : ['トレーニング', `強化量が WAVE Tごと-${precisePercent(rules.awakeningPenaltyRate)}`]), rules.awakeningPenaltyRate != null && Array.isArray(rules.awakeningPenaltyExcludes) && rules.awakeningPenaltyExcludes.includes('distance') && ['対象外', '距離強化は下がらない']]);
+  quick ? rules.awakeningPenaltyRate != null && ['自動成長', `WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`] : rules.awakeningZeroTurns > 0 && ['トレーニング', `強化量が WAVE Tごと-${precisePercent(1 / rules.awakeningZeroTurns)}（${rules.awakeningZeroTurns}Tで0%）`], (quick ? rules.awakeningPenaltyRate != null : rules.awakeningZeroTurns > 0) && Array.isArray(rules.awakeningPenaltyExcludes) && rules.awakeningPenaltyExcludes.includes('distance') && ['対象外', '距離強化は下がらない']]);
   const breakRule = extremeDistanceBreakRule(difficultyId);
   if (breakRule) push('DISTANCE BREAK', [['進行', `累計${breakRule.interval}Tごと1距離の弱体Lv上昇`], ['弱体倍率', `Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel ** 2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel ** 3)}（以降も半減）`], ['安全距離', `${breakRule.safeDistanceCount}距離は最後まで弱体化しない`]]);
   return groups;
@@ -8151,15 +8153,16 @@ const ultimateAllyJoinMultiplier = (turns, specialDifficulty = ULTIMATE_SETTING.
   if (rate == null) return 1;
   return Math.max(extremeRuleNumber(specialDifficulty, 'minimumAllyJoinBonus') ?? 0, 1 - Math.max(0, Number(turns) || 0) * rate);
 };
-// トレーニングで「上がる量」へ掛かる倍率。そのWAVEのターン数1つにつき
-// awakeningPenaltyRate ぶん減る(ULTIMATE / INFINITYは0.75%)。
+// トレーニングで「上がる量」へ掛かる倍率。awakeningZeroTurns ターンでちょうど0になる
+// (ULTIMATE / INFINITYは20T)。1ターンあたりの下がり幅は 1 / awakeningZeroTurns。
 // **率から引くのではなく、増加量へ掛ける。** 率から引くと、ちから+5%・ガッツ+5%のように
-// 元の率が小さい項目だけが7ターンで増加0になり、ライフ・丈夫さ(+20%)との差が開きすぎる。
-// ターン数は20で頭打ち(それ以上長引いても低下は進まない)。
+// 元の率が小さい項目だけが先に増加0になり、ライフ・丈夫さ(+20%)との差が開きすぎる。
+// クイックの自動成長は成長率そのものから引く別の計算(awakeningPenaltyRate)なので、
+// ここと同じ数字を使い回さない。
 const trainingGainRate = (turns, specialDifficulty = null) => {
-  const penaltyRate = extremeRuleNumber(specialDifficulty, 'awakeningPenaltyRate');
-  if (penaltyRate == null) return 1;
-  return Math.max(0, 1 - Math.max(0, Math.min(20, Number(turns) || 0)) * penaltyRate);
+  const zeroTurns = extremeRuleNumber(specialDifficulty, 'awakeningZeroTurns');
+  if (zeroTurns == null || zeroTurns <= 0) return 1;
+  return Math.max(0, 1 - Math.max(0, Number(turns) || 0) / zeroTurns);
 };
 // ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
 // 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
@@ -34299,7 +34302,7 @@ function MonsterHeroGame() {
         }
       }))), /*#__PURE__*/React.createElement("span", {
         className: "text-[11px] font-black font-mono text-amber-300"
-      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), extremeRuleNumber(specialRule, 'awakeningPenaltyRate') != null && (() => {
+      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null && (() => {
         const turns = waveResult?.turn || 0;
         // 低下は増加量へ掛かるので、率から引いた「-○pt」ではなく倍率で出す
         const gainRate = trainingGainRate(turns, specialRule);
@@ -34366,7 +34369,7 @@ function MonsterHeroGame() {
           className: "text-[13px] font-black text-white leading-none"
         }, option.name)), /*#__PURE__*/React.createElement("span", {
           className: `text-[10px] font-black ${st.tint} leading-tight`
-        }, option.effect, (extremeRuleNumber(specialRule, 'awakeningPenaltyRate') != null || extremeRuleNumber(specialRule, 'waveEnhancement') != null) && (() => {
+        }, option.effect, (extremeRuleNumber(specialRule, 'awakeningZeroTurns') != null || extremeRuleNumber(specialRule, 'waveEnhancement') != null) && (() => {
           const normalAfter = resolveTrainingStep(current, option.id, waveResult?.turn, null)[option.stat];
           const effectiveAfter = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
           const normalGain = normalAfter - current[option.stat],
