@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 04:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 05:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1510,10 +1510,10 @@ const transcendPsycheExchange = (psycheOwned, wantedPoints) => {
   const psycheCost = points * TRANSCEND_PSYCHE_PER_POINT;
   return { ok: points > 0, points, psycheCost, maxPoints, nextPsyche: have - psycheCost };
 };
-// 交換を個体へ反映する。超越Pは個体ごとの育成値なので、必ず選んでいるその個体へ足す
+// 交換を個体へ反映する。超越Pは個体ごとの育成値なので、必ず選んでいるその個体へ足す。
+// 神殿で正式に超越しているかは問わない(超越強化はどのマスモンでも使える)。
 const applyTranscendExchange = (masu, psycheOwned, wantedPoints) => {
   const normalized = normalizeMasuProgression(masu);
-  if (!normalized.transcended) return null;
   const plan = transcendPsycheExchange(psycheOwned, wantedPoints);
   if (!plan.ok) return null;
   return { ...plan, nextMasu: { ...normalized, transcendPoints: normalized.transcendPoints + plan.points } };
@@ -1523,7 +1523,6 @@ const applyTranscendExchange = (masu, psycheOwned, wantedPoints) => {
 // 1Pあたりの効果は通常の強化ポイントと同じ価値基準(ライフ+10 / ほか+3 / 適性1段階)。
 const applyTranscendPlanToMasu = (masu, plan) => {
   const normalized = normalizeMasuProgression(masu);
-  if (!normalized.transcended) return null;
   const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[normalized.baseId] : null;
   if (!base) return null;
   const available = normalized.transcendPoints;
@@ -9951,10 +9950,8 @@ function MonsterHeroGame() {
   // 超越ポイントだけを足す(Lv401以降まで上げなくても、振り分け画面を確かめられるように)
   const debugTranscendGrantPoints = async (amount = 10) => {
     if (!transcendDebugId) return;
-    const saved = await debugSaveMasu(transcendDebugId, (masu) => masu.transcended
-      ? { ...masu, transcendPoints: masu.transcendPoints + amount } : masu);
-    if (saved && !saved.transcended) window.alert('まだ超越していない個体には超越ポイントを足せません。');
-    else if (saved) window.alert(`超越ポイントを+${amount}しました（現在 ${saved.transcendPoints}）。`);
+    const saved = await debugSaveMasu(transcendDebugId, (masu) => ({ ...masu, transcendPoints: masu.transcendPoints + amount }));
+    if (saved) window.alert(`超越ポイントを+${amount}しました（現在 ${saved.transcendPoints}）。`);
   };
   // 超越を取り消して未超越へ戻す。絆XPは消さず、Lv上限を400へ戻すだけなので
   // (cappedBondXp が上限で頭打ちにする)、もう一度超越すればLv401以降がそのまま戻る
@@ -15743,7 +15740,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 masuStatRow('丈夫さ', mergedMasu.baseDef, sp.def||0, 'text-emerald-400', tsp.def),
                 masuStatRow('ガッツ', mergedMasu.baseGuts, sp.guts||0, 'text-amber-400', tsp.guts),
               ],
-              aptPointsLabel: <div className="text-[8px] text-amber-300 font-black flex flex-wrap items-center gap-x-2 gap-y-0.5"><span className="flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</span>{masuNorm.transcended&&<span className="text-sky-300 flex items-center gap-1">超越P: {masuNorm.transcendPoints}</span>}{transcendAptBoostTotal(masu)>0&&<span className="text-amber-200">基礎適性 +{transcendAptBoostTotal(masu)}段階</span>}</div>,
+              aptPointsLabel: <div className="text-[8px] text-amber-300 font-black flex flex-wrap items-center gap-x-2 gap-y-0.5"><span className="flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</span>{(masuNorm.transcended||masuNorm.transcendPoints>0)&&<span className="text-sky-300 flex items-center gap-1">超越P: {masuNorm.transcendPoints}</span>}{transcendAptBoostTotal(masu)>0&&<span className="text-amber-200">基礎適性 +{transcendAptBoostTotal(masu)}段階</span>}</div>,
               // 限界突破・転生で残した固有技ポイントは、この詳細からいつでも使える
               extraAfterApt: renderUniqueSkillPointBox(masu, updated=>setMasuMonDetail(updated)),
             },
@@ -15785,7 +15782,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
           const normalized = normalizeMasuProgression(masu);
-          if (!base || !normalized.transcended) { setGameState('MASU_ENHANCE'); return null; }
+          if (!base) { setGameState('MASU_ENHANCE'); return null; }
           const points = normalized.transcendPoints;
           const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
           const plan = transcendPlan || { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
@@ -15838,14 +15835,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
                 <span className="relative inline-block w-9 h-9 shrink-0">
                   <span className="block w-9 h-9 overflow-hidden rounded-full border border-sky-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></span>
-                  <TranscendenceBadge transcended small/>
+                  <TranscendenceBadge transcended={normalized.transcended} small/>
                 </span>
               </div>
               <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
                 <button onClick={()=>{setTranscendPlan(null);setTranscendExchangeOpen(false);setGameState('MASU_ENHANCE');}} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
                 <button className="min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black">超越強化</button>
               </div>
-              <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="transcendence" compact/></div>
+              {/* 超越の話をするセリフは、正式に超越した個体のときだけにする */}
+              <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene={normalized.transcended?'transcendence':'masuEnhance'} compact/></div>
               <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
                 {/* 残りの超越ポイントと、足りないときの入口(プシュケー変換)を1枚にまとめる */}
                 <div className="rounded-3xl border border-sky-400/40 bg-sky-950/30 p-3 shadow-xl">
@@ -15894,7 +15892,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                   <div className="text-[8px] text-slate-500 mt-2">＋／−は長押しでも連続調整できます。1Pで基礎ライフ+{STAT_POINT_GAIN.hp}／ちから・丈夫さ・ガッツ+{STAT_POINT_GAIN.atk}／間合い適性1段階（どれも総合力+10相当）。</div>
                 </div>
-                <div className="text-[9px] font-bold text-slate-400 leading-relaxed">超越強化は「基礎値」を上げるので、絆ポイントリセットの書で通常の強化を戻しても消えません。転生しても残ります。確定するまで保存データは変わりません。</div>
+                <div className="text-[9px] font-bold text-slate-400 leading-relaxed">超越強化は「基礎値」を上げるので、絆ポイントリセットの書で通常の強化を戻しても消えません。転生・限界突破でも残ります。確定するまで保存データは変わりません。</div>
+                {!normalized.transcended&&<div data-transcend-not-yet className="rounded-2xl border border-slate-500/40 bg-black/40 p-3 text-[9px] font-bold text-slate-400 leading-relaxed">この個体はまだ神殿で超越していませんが、超越強化はいつでも使えます。あとで正式に超越しても、ここで上げた基礎値と残っている超越ポイントはそのまま引き継がれます。<br/>神殿の「超越」（Lv上限400→500・超越マーク）は、これまでどおりLv.{MAX_MASU_LEVEL_CAP}・限界突破{FINAL_BREAKTHROUGH_COUNT}回が必要です。</div>}
               </div>
               <div className="shrink-0 grid grid-cols-2 gap-2 p-4 border-t border-white/10" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
                 <button onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs disabled:opacity-35 active:scale-95">キャンセル</button>
@@ -16009,9 +16008,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button onClick={backToDetail} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                 <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1">マスモン強化</h2>
               </div>
-              {/* 超越済みの個体だけ、通常強化と超越強化を切り替えられるようにする。
-                  未超越の個体はこれまでどおり通常強化だけで、見た目も変わらない */}
-              {normalizeMasuProgression(masu).transcended&&<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+              {/* どのマスモンでも通常強化と超越強化を切り替えられる。
+                  超越強化が使えるかどうかと、神殿で正式に超越したかどうかは別の話 */}
+              {<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
                 <button className="min-h-[40px] rounded-xl bg-amber-600 text-slate-950 text-[11px] font-black">通常強化</button>
                 <button onClick={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}} className="min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
               </div>}

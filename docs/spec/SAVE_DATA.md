@@ -112,6 +112,12 @@
 これらを持たない既存個体は未超越（Lv上限400、超越ポイント0、基礎値の加算なし）として読み、
 壊れた値・負数・NaNは0へ落とす。超越ぶんは基礎値側に乗るため、絆ポイントリセットでも転生でも消えない。
 
+`transcended` は神殿で正式に超越したかどうかだけを表す。超越ポイントで基礎値を上げる「超越強化」は
+`transcended` が false の個体でも使えるため、**`transcendPoints` / `transcendStatPoints` / `transcendAptBoosts` は
+`transcended` が false のままでも 0 以外になりうる**。正式な超越（`buildMasuTranscendence`）は
+正規化済みの個体をスプレッドして `transcended` と `levelCap` だけを変えるので、それまでの値は保持され、
+超越ポイントの二重付与も起きない。
+
 明示的な `schemaVersion` は存在しない。未知フィールドはオブジェクトスプレッドにより多くの更新で維持されるが、全経路での保証は**未確認**。
 
 ## 5. ラン中データと保存タイミング
