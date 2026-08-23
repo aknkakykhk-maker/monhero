@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 09:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 09:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10819,11 +10819,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (scenario) setBattleTutorialLastAction('emergency');
   };
 
-  const processTurn = async () => {
-    if (isBusy||!enemy||selectedCards.length===0) return;
+  const processTurn = async (explicitEntries = null) => {
+    const hasExplicitEntries=Array.isArray(explicitEntries);
+    const usedCardEntries=hasExplicitEntries
+      ? explicitEntries.filter(entry=>entry&&Number.isInteger(entry.handIndex)&&hand[entry.handIndex]&&entry.card===hand[entry.handIndex])
+        .map(entry=>({card:entry.card,handIndex:entry.handIndex,slotIdx:entry.slotIdx!=null?entry.slotIdx:null}))
+      : selectedCards.map(i=>({card:hand[i],handIndex:i,slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
+    if (isBusy||!enemy||usedCardEntries.length===0) return;
     setFocusedCard(null); setPendingCard(null);
-    // Build list of {card, handIndex, slotIdx} pairs
-    const usedCardEntries=selectedCards.map(i=>({card:hand[i], handIndex:i, slotIdx:cardAssignments[i]!=null?cardAssignments[i]:null}));
     const usedCards=usedCardEntries.map(e=>e.card);
     // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う。
     // 合図を出すのはターンがすべて終わってから(このあとの敵の行動まで見せてから進める)
@@ -11150,6 +11153,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setEnemyLastIntent(enemyActionPerformedRef.current?executedIntent:null); advanceEnemyIntents(executedIntent,distForNextPredict,enemyActionPerformedRef.current);
     // ここまで来てはじめて「1ターンぶんを見終わった」ので、練習を次へ進める
     if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(','));
+  };
+
+  // AUTOの判断結果をstateへ書き戻さず、同じターン処理へ明示的に渡す。
+  // 今回はUIやeffectから呼ばず、1ターン接続用の内部処理だけを用意する。
+  const runAutoTurnOnce = () => {
+    const entries=chooseAutoTurn({
+      hand, slots, guts, cardLimit, strategy:autoSettings.strategy,
+      getCardGuts, cardNeedsMonster, slotMaxUses,
+    });
+    if (entries.length>0) processTurn(entries);
   };
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
@@ -15494,7 +15507,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <span className={`shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`}>Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}</span>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={10}/><span className="text-[7px]">VIEW</span></button>
-                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={processTurn} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
+                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
                 </div>
               </div>
               {/* 使うカードが決まっている番は、その種類だけを光らせる(枠全体は光らせない) */}

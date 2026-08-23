@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 801ea15b03b8de34
+// source-sha256: 4f32c03f851e0f5a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 09:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 09:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18633,16 +18633,20 @@ function MonsterHeroGame() {
     advanceEnemyIntents(acting, distForNextPredict, enemyActionPerformedRef.current);
     if (scenario) setBattleTutorialLastAction('emergency');
   };
-  const processTurn = async () => {
-    if (isBusy || !enemy || selectedCards.length === 0) return;
-    setFocusedCard(null);
-    setPendingCard(null);
-    // Build list of {card, handIndex, slotIdx} pairs
-    const usedCardEntries = selectedCards.map(i => ({
+  const processTurn = async (explicitEntries = null) => {
+    const hasExplicitEntries = Array.isArray(explicitEntries);
+    const usedCardEntries = hasExplicitEntries ? explicitEntries.filter(entry => entry && Number.isInteger(entry.handIndex) && hand[entry.handIndex] && entry.card === hand[entry.handIndex]).map(entry => ({
+      card: entry.card,
+      handIndex: entry.handIndex,
+      slotIdx: entry.slotIdx != null ? entry.slotIdx : null
+    })) : selectedCards.map(i => ({
       card: hand[i],
       handIndex: i,
       slotIdx: cardAssignments[i] != null ? cardAssignments[i] : null
     }));
+    if (isBusy || !enemy || usedCardEntries.length === 0) return;
+    setFocusedCard(null);
+    setPendingCard(null);
     const usedCards = usedCardEntries.map(e => e.card);
     // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う。
     // 合図を出すのはターンがすべて終わってから(このあとの敵の行動まで見せてから進める)
@@ -19251,6 +19255,22 @@ function MonsterHeroGame() {
     advanceEnemyIntents(executedIntent, distForNextPredict, enemyActionPerformedRef.current);
     // ここまで来てはじめて「1ターンぶんを見終わった」ので、練習を次へ進める
     if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(','));
+  };
+
+  // AUTOの判断結果をstateへ書き戻さず、同じターン処理へ明示的に渡す。
+  // 今回はUIやeffectから呼ばず、1ターン接続用の内部処理だけを用意する。
+  const runAutoTurnOnce = () => {
+    const entries = chooseAutoTurn({
+      hand,
+      slots,
+      guts,
+      cardLimit,
+      strategy: autoSettings.strategy,
+      getCardGuts,
+      cardNeedsMonster,
+      slotMaxUses
+    });
+    if (entries.length > 0) processTurn(entries);
   };
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
@@ -30730,7 +30750,7 @@ function MonsterHeroGame() {
       const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
       const canAct = !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
       return /*#__PURE__*/React.createElement("button", {
-        onClick: processTurn,
+        onClick: () => processTurn(),
         disabled: !canAct,
         className: `h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
       }, /*#__PURE__*/React.createElement(Play, {
