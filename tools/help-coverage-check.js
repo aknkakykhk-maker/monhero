@@ -34,7 +34,7 @@ const { HELP_CATEGORIES: categories, HELP_SCREEN_COVERAGE: coverage, helpFindTop
 const gameCtx = {};
 vm.createContext(gameCtx);
 vm.runInContext([
-  breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/\b[A-Z_]+_ICON\b|\bDISC_STONE_BASE\b/g, "''"),
+  breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/\b[A-Z_]+_(?:ICON|IMG)\b|\bDISC_STONE_BASE\b/g, "''"),
   grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
   grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),

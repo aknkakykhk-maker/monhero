@@ -8,6 +8,8 @@ const ally = fs.readFileSync('monster-hero/data/ally-monsters.js', 'utf8');
 const images = fs.readFileSync('monster-hero/data/images/images-ally.js', 'utf8');
 const lineages = fs.readFileSync('monster-hero/data/lineages.js', 'utf8');
 const game = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
+const breeder = fs.readFileSync('monster-hero/data/breeder.js', 'utf8');
+const changelog = fs.readFileSync('monster-hero/data/changelog.js', 'utf8');
 const ctx = {};
 vm.createContext(ctx);
 vm.runInContext(`${images}\n${ally}\n${lineages}\nglobalThis.data={HERO_ATK_NAMES,ALL_PLAYER_MONSTERS,STARTER_MONSTER_IDS,MONSTER_LINEAGES,MONSTER_LINEAGE_MAP};`, ctx);
@@ -32,6 +34,17 @@ const checks = [
   ['プラント血統の代表はPlant', lineagesById.plant?.monId === 'Plant'],
   ['Oboroの定義を維持', oboro?.baseHp === 900 && oboro.baseAtk === 90 && oboro.baseDef === 60 && oboro.baseGuts === 115 && lineageMap.Oboro?.main === 'plant' && lineageMap.Oboro?.sub === 'gel'],
   ['Plantは初期解放しない', !starters.includes('Plant')],
+  ['Plant円盤石画像参照', /const PLANT_DISC_ICON = "images\/disc-icons\/plant-disc\.PNG\?v=e62804cf3a5c"/.test(breeder)],
+  ['プラントの通常アイコンは1pt', /id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_IMG, cost:1/.test(breeder)],
+  ['プラントの円盤石アイコンは1pt', /id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1/.test(breeder)],
+  ['プラントの円盤石は購入可能・1500ダイヤ', /id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:1500/.test(breeder) && !/id:'Plant'[^\n]*available:false/.test(breeder)],
+  ['円盤石購入は既存キーへ解放IDを保存', game.includes("if (item.type === 'disc')") && game.includes("storeSet('mh_unlocked_monsters', next, false)")],
+  ['購入済み円盤石の二重購入を防止', game.includes("if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);") && game.includes('if (isMarketItemOwned(item)) return;')],
+  ['既存円盤石商品の価格を維持', [
+    ['Zan',1500], ['Mitarashi',500], ['Ark',1500], ['Iblis',1500], ['Snegurochka',1500], ['Undine',1500], ['Yaobikuni',1500],
+  ].every(([id,cost]) => new RegExp(`id:'${id}'[^\\n]*type:'disc'[^\\n]*cost:${cost}`).test(breeder))],
+  ['Plant更新履歴は1件だけ', (changelog.match(/title: '新モンスター「プラント」を追加しました'/g) || []).length === 1],
+  ['Plant助手告知IDは1件だけ', (changelog.match(/update_notice_plant_market_v1/g) || []).length === 1],
 ];
 
 let failed = 0;
