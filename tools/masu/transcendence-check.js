@@ -72,6 +72,10 @@ vm.runInContext([
   slice('const cappedBondXp', '// 絆経験値の加算'),
   slice('const applyBondXpGain', '// 周回終了時の絆経験値配布先'),
   'const masuBondLevelInfo = (masu) => bondLevelInfo(cappedBondXp(masu));',
+  // mergeMasuIntoMon は固有技設定(並び順・初期技)も解決するので、その正規化もそのまま持ち込む
+  "const INHERITED_UNIQUE_LEVEL_KEY_PREFIX = 'inhId:';",
+  slice('const inheritedUniqueLevelKey = (unique) =>', 'const isValidInheritedUnique'),
+  slice('const OWN_UNIQUE_KEY =', '// 構造ベースの冪等移行'),
   slice('const getMasuColors', '// ==================== 総合力'),
   slice('const MONSTER_POWER_STAT_WEIGHT', '// 保存データのマスモンから総合力'),
   'const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu));',

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 08:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 09:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -464,6 +464,104 @@ const resolveInheritedUniqueLevel = (masu, unique, index) => {
 };
 const isValidInheritedUnique = (unique) => unique && typeof unique === 'object'
   && typeof unique.name === 'string' && unique.name.trim();
+
+// ==================== 固有技設定(並び順・初期技) ====================
+// 個体ごとに「どの順で見せるか」「バトル開始時にどれを構えるか」だけを覚える。
+// 固有技Lv・技性能・消費ガッツ・継承元・固有技P・合体履歴には一切触らない。
+//
+// 技の識別は、恒久Lvと同じ安定キー(自前='own' / 継承='inhId:<inheritedUniqueId>')を使う。
+// 配列位置(inh:0 など)は並び替えで意味が変わるため、保存する正本にはしない。
+// ID移行前の壊れた記録だけは表示を欠かさないよう位置で仮のキーを付けるが、保存には残さない。
+const OWN_UNIQUE_KEY = 'own';
+const uniqueSettingKeyOf = (unique, index = 0) => inheritedUniqueLevelKey(unique) || `inh:${index}`;
+const isStableUniqueSettingKey = (key) => key === OWN_UNIQUE_KEY
+  || (typeof key === 'string' && key.startsWith(INHERITED_UNIQUE_LEVEL_KEY_PREFIX));
+// 設定が無いときの並び(=これまでの並び)。自前が先頭で、続けて継承技を保存配列の順に並べる
+const defaultUniqueSettingKeys = (masu) => [
+  OWN_UNIQUE_KEY,
+  ...(Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : []).map((unique, index) => uniqueSettingKeyOf(unique, index)),
+];
+// 保存された並び順を、いま実際に持っている固有技へ合わせる(読むたびに行う。保存の一括書き換えはしない)。
+//   設定が無い・壊れている → 従来順 ／ 保存に無い技(新しく増えた技) → 既存設定の後ろへ ／
+//   いま持っていない技 → 無視 ／ 同じ技が二重 → 最初の1つだけ
+const normalizeUniqueOrder = (masu) => {
+  const current = defaultUniqueSettingKeys(masu);
+  const known = new Set(current);
+  const saved = Array.isArray(masu?.uniqueOrder) ? masu.uniqueOrder : [];
+  const ordered = [];
+  const seen = new Set();
+  saved.forEach(key => {
+    if (typeof key !== 'string' || !known.has(key) || seen.has(key)) return;
+    seen.add(key); ordered.push(key);
+  });
+  current.forEach(key => { if (!seen.has(key)) { seen.add(key); ordered.push(key); } });
+  return ordered;
+};
+// 初期技。設定が無い・いま持っていない技を指しているときは、これまでどおり自前の固有技へ戻す
+const normalizeInitialUniqueKey = (masu) => {
+  const key = typeof masu?.initialUniqueKey === 'string' ? masu.initialUniqueKey.trim() : '';
+  return key && defaultUniqueSettingKeys(masu).includes(key) ? key : OWN_UNIQUE_KEY;
+};
+// 設定を書き戻す形。安定キーだけを保存し、位置で作った仮のキーは残さない
+const buildUniqueSettingUpdate = (masu, { order, initialKey }) => {
+  if (!masu) return null;
+  return {
+    ...masu,
+    uniqueOrder: normalizeUniqueOrder({ ...masu, uniqueOrder:order }).filter(isStableUniqueSettingKey),
+    initialUniqueKey: normalizeInitialUniqueKey({ ...masu, initialUniqueKey:initialKey }),
+  };
+};
+// 「初期状態に戻す」= 自前を先頭かつ初期技、継承技は従来の標準順。
+// 固有技Lv(uniqueSkillLevels)と固有技P(uniqueSkillPoints)には触れない
+const buildUniqueSettingReset = (masu) => {
+  if (!masu) return null;
+  return {
+    ...masu,
+    uniqueOrder: defaultUniqueSettingKeys(masu).filter(isStableUniqueSettingKey),
+    initialUniqueKey: OWN_UNIQUE_KEY,
+  };
+};
+// 設定の安定キー → バトル中のスロット選択キー('own' / 'inh0' 等)。
+// バトル側のキーは inheritedUniques の配列位置を指すので、並び替えても位置は動かさない。
+// 指している技が見つからないときは、これまでどおり自前の固有技を使う
+const battleUniqueKeyFromSettingKey = (mon, settingKey) => {
+  if (!settingKey || settingKey === OWN_UNIQUE_KEY) return OWN_UNIQUE_KEY;
+  const list = Array.isArray(mon?.inheritedUniques) ? mon.inheritedUniques : [];
+  const index = list.findIndex((unique, i) => uniqueSettingKeyOf(unique, i) === settingKey);
+  return index >= 0 ? `inh${index}` : OWN_UNIQUE_KEY;
+};
+// そのスロットで今えらばれている固有技のキー。ラン中に切り替えていればその選択、
+// まだ切り替えていなければ、そのマスモンに設定された初期技(未設定なら自前)を使う
+const activeSlotUniqueKey = (choice, slotIdx, mon) => (choice && choice[slotIdx])
+  || battleUniqueKeyFromSettingKey(mon, mon?.initialUniqueKey);
+// 個体ごとの並び順を、バトルで見せる候補の並びへ反映する。
+// 並び順に無い技は元の順のまま末尾に残すので、候補が消えることはない
+const sortUniqueOptionsByMasuOrder = (options, order) => {
+  if (!Array.isArray(order) || order.length === 0) return options;
+  const rank = new Map(order.map((key, index) => [key, index]));
+  return options
+    .map((option, index) => ({ option, index, rank: rank.has(option.settingKey) ? rank.get(option.settingKey) : Number.MAX_SAFE_INTEGER }))
+    .sort((a, b) => (a.rank - b.rank) || (a.index - b.index))
+    .map(entry => entry.option);
+};
+// 画面に出す固有技の一覧(getRebirthSkillChoices と同じ key を持つもの)を設定の並び順にする。
+// 並べ替えるのは表示だけで、key と固有技Lvの対応は動かさない
+const orderUniqueChoicesByMasuOrder = (masu, choices) => {
+  const rank = new Map(normalizeUniqueOrder(masu).map((key, index) => [key, index]));
+  return (Array.isArray(choices) ? choices : [])
+    .map((choice, index) => ({ choice, index, rank: rank.has(choice?.key) ? rank.get(choice.key) : Number.MAX_SAFE_INTEGER }))
+    .sort((a, b) => (a.rank - b.rank) || (a.index - b.index))
+    .map(entry => entry.choice);
+};
+// 並び替え操作。ドラッグに頼らず「↑」「↓」1回ぶんだけ動かす
+const moveUniqueOrderKey = (order, key, delta) => {
+  const list = Array.isArray(order) ? [...order] : [];
+  const from = list.indexOf(key);
+  const to = from + delta;
+  if (from < 0 || to < 0 || to >= list.length) return list;
+  list.splice(to, 0, list.splice(from, 1)[0]);
+  return list;
+};
 // 構造ベースの冪等移行。旧inh:Nは互換用に残し、現在の配列対応を一度だけ安定ID側へ写す。
 const migrateInheritedUniqueLevelIds = (masuMons, makeId = createInheritedUniqueId) => {
   let changed = false;
@@ -984,6 +1082,9 @@ const mergeMasuIntoMon = (masu) => {
     unique: uniqueSkillAtLevel(base.unique, masu.uniqueSkillLevels?.own),
     // 壊れた保存データ(null や技の体を成さない要素)が混ざっていても落ちないようにする。
     inheritedUniques: (masu.inheritedUniques || []).map((unique, index) => uniqueSkillAtLevel(unique, resolveInheritedUniqueLevel(masu, unique, index))),
+    // 固有技設定(並び順・初期技)。保存が無い個体はここで従来どおりの値になる
+    uniqueOrder: normalizeUniqueOrder(masu),
+    initialUniqueKey: normalizeInitialUniqueKey(masu),
   };
 };
 
@@ -7064,6 +7165,7 @@ function MonsterHeroGame() {
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
   const [masuMonDetail, setMasuMonDetail] = useState(null); // マスモン一覧: タップ中のマスモン詳細
+  const [uniqueSettingMasuId, setUniqueSettingMasuId] = useState(null); // 固有技設定(並び順・初期技)を開いているマスモンのid
   const [uniqueSkillPointDrafts, setUniqueSkillPointDrafts] = useState({}); // 個体IDごとの固有技ポイント仮配分
   const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
@@ -9642,6 +9744,29 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     return updatedMasu;
   };
+  // 固有技設定(並び順・初期技)を保存する。既存の mh_masu_mons の個体へ2項目を足すだけで、
+  // 固有技Lv(uniqueSkillLevels)・固有技P(uniqueSkillPoints)・継承技の中身には一切触らない
+  const updateMasuUniqueSetting = (masuId, mutate) => {
+    const masu = getMasuMon(masuId);
+    if (!masu) return null;
+    const updated = mutate(masu);
+    if (!updated) return null;
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? updated : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    Audio_.se.tap();
+    return updated;
+  };
+  const moveMasuUniqueOrder = (masuId, settingKey, delta) => updateMasuUniqueSetting(masuId, masu =>
+    buildUniqueSettingUpdate(masu, {
+      order:moveUniqueOrderKey(normalizeUniqueOrder(masu), settingKey, delta),
+      initialKey:normalizeInitialUniqueKey(masu),
+    }));
+  const setMasuInitialUnique = (masuId, settingKey) => updateMasuUniqueSetting(masuId, masu =>
+    buildUniqueSettingUpdate(masu, { order:normalizeUniqueOrder(masu), initialKey:settingKey }));
+  const resetMasuUniqueSetting = (masuId) => updateMasuUniqueSetting(masuId, buildUniqueSettingReset);
   const useUniqueSkillResetTicket = (masuId) => {
     if (ownedItemCount(ownedItems, 'unique_skill_reset_ticket') <= 0) return null;
     const result = buildUniqueSkillPointReset(getMasuMon(masuId));
@@ -12209,14 +12334,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const inherited = mon.inheritedUniques||[];
     // 引き継いだ固有技も自分の固有技と同じく、このランでの強化到達レベルを持たせる
     const evoMap = cInhEvo || inheritedUniqueEvo;
-    return [
-      ...(own?[{key:'own',unique:own}]:[]),
+    // キー(own / inh0…)はこれまでどおり配列位置を指したまま、並びだけを個体の設定順にする。
+    // 位置を動かすと固有技Lv・ラン内の強化到達レベルの対応が崩れるため、並べ替えるのは表示順だけ
+    return sortUniqueOptionsByMasuOrder([
+      ...(own?[{key:'own',settingKey:OWN_UNIQUE_KEY,unique:own}]:[]),
       ...inherited.map((iu,ii)=>({
         key:`inh${ii}`,
         inhIdx:ii,
+        settingKey:uniqueSettingKeyOf(iu,ii),
         unique:{...iu, evoLevel:inheritedUniqueRunLevel(iu, slotIdx!=null ? evoMap[inhEvoKey(slotIdx,ii)] : null)},
       })),
-    ];
+    ], mon.uniqueOrder);
   };
   // デッキに入るガードカードの枚数。
   // 丈夫さ100ごとに上がるガードレベルが2上がるたびに1枚増え、4枚で頭打ちになる。
@@ -12241,7 +12369,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         pool.push({name:`${RANGE_LABELS[rIdx]}${revo.name}`,type:'range_atk',rangeIdx:rIdx,guts:revo.guts,baseGuts:revo.baseGuts,mult:revo.mult,baseMult:revo.baseMult,crit:revo.crit,icon:RANGE_LABELS[rIdx],uid:Math.random(),evoLevel:aLvl});
         const options=getAvailableUniquesForSlot(s,cUniques,idx,cInhEvo);
         if(options.length>0){
-          const chosenKey=(uChoice&&uChoice[idx])||'own';
+          const chosenKey=activeSlotUniqueKey(uChoice,idx,s);
           const u=(options.find(o=>o.key===chosenKey)||options[0]).unique;
           const maxLevel=u.evoLevel||0;
           const lvl=(uLevelChoice&&uLevelChoice[idx]!=null)?Math.min(uLevelChoice[idx],maxLevel):maxLevel;
@@ -12277,7 +12405,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const applyUniqueLevelChoiceForSlot = (slotIdx, level) => {
     const mon=slots[slotIdx]; if(!mon) return;
     const options=getAvailableUniquesForSlot(mon,ownedUniques,slotIdx);
-    const activeKey=slotUniqueChoice[slotIdx]||'own';
+    const activeKey=activeSlotUniqueKey(slotUniqueChoice,slotIdx,mon);
     const chosen=options.find(o=>o.key===activeKey)||options[0]; if(!chosen) return;
     const u=chosen.unique;
     const maxLevel=u.evoLevel||0;
@@ -12294,7 +12422,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const mon=slots[slotIdx]; if(!mon) return;
     const options=getAvailableUniquesForSlot(mon,ownedUniques,slotIdx);
     if(options.length<2) return;
-    const curKey=slotUniqueChoice[slotIdx]||'own';
+    const curKey=activeSlotUniqueKey(slotUniqueChoice,slotIdx,mon);
     const curIdx=Math.max(0,options.findIndex(o=>o.key===curKey));
     applyUniqueChoiceForSlot(slotIdx, options[(curIdx+1)%options.length].key);
   };
@@ -13118,7 +13246,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const renderUniqueSkillPointBox = (masu, onUpdated) => {
     if (!masu) return null;
     const normalized = normalizeMasuProgression(masu);
-    const choices = getRebirthSkillChoices(normalized);
+    // 一覧は固有技設定の並び順で見せる(強化そのものの中身は変えない)
+    const choices = orderUniqueChoicesByMasuOrder(normalized, getRebirthSkillChoices(normalized));
     const draft = uniqueSkillPointDrafts[String(masu.id)] || {};
     const allocated = Object.values(draft).reduce((sum,value)=>sum+Math.max(0,Math.floor(Number(value)||0)),0);
     const remaining = Math.max(0,normalized.uniqueSkillPoints-allocated);
@@ -13143,6 +13272,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div key={choice.key} className="rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 min-w-0"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[10px] font-black text-white">{current?.name||choice.name}</span><span className="shrink-0 text-[9px] font-mono font-black text-amber-300">{maxed?`Lv.${choice.level} MAX`:`Lv.${choice.level} → Lv.${after}`}</span></div>{!maxed&&<div className="mt-1 flex items-center justify-end gap-2"><button aria-label={`${current?.name||choice.name}の仮配分を減らす`} disabled={amount<=0} onClick={()=>changeDraft(choice.key,-1)} className="w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30">−</button><span className="w-8 text-center text-[11px] font-mono font-black text-amber-200">＋{amount}</span><button aria-label={`${current?.name||choice.name}の仮配分を増やす`} disabled={remaining<=0||after>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>changeDraft(choice.key,1)} className="w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30">＋</button></div>}</div>
         );})}</div>
         <div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">キャンセル</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}
+        <div className="mt-2 border-t border-white/10 pt-2">
+          <button type="button" data-unique-setting-open aria-label={`${masu.name}の固有技設定を開く`} onClick={()=>setUniqueSettingMasuId(masu.id)} className="w-full min-h-[44px] px-2 rounded-xl bg-gradient-to-b from-violet-600 to-indigo-800 text-white text-[10px] font-black leading-tight active:scale-95 flex items-center justify-center gap-1.5"><List size={13}/><span>固有技設定（並び順・初期技）</span></button>
+          <div className="text-[8px] text-slate-400 font-bold text-center mt-1 leading-tight">バトルでの並び順と、開始時に構える固有技を決められます</div>
+        </div>
         <div className="mt-2 border-t border-white/10 pt-2 flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2 text-[9px] font-black"><span className="text-slate-400">スキルポイントリセット券</span><span className={resetTicketCount>0?'text-cyan-300':'text-slate-500'}>所持 {resetTicketCount}枚</span></div>
           <button disabled={resetTicketCount<=0||resetPointCount<=0} onClick={()=>{if(!window.confirm(`このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`))return;const result=useUniqueSkillResetTicket(masu.id);if(result){clearDraft();if(onUpdated)onUpdated(result.nextMasu);}}} className="w-full min-h-[42px] px-2 rounded-xl bg-cyan-700 text-[10px] font-black leading-tight disabled:opacity-30 disabled:bg-slate-700">配分済み固有技Pをリセット</button>
@@ -15836,7 +15969,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               extraAfterApt: renderUniqueSkillPointBox(masu, updated=>setMasuMonDetail(updated)),
             },
             bodyExtra: (<>
-              <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30"><div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>{getRebirthSkillChoices(masu).map(skill=>{const current=uniqueSkillAtLevel(skill.unique,skill.level);return <button key={skill.key} onClick={()=>setRosterSkillDetail({mon:{...mergedMasu,unique:current},kind:'unique'})} className="w-full flex justify-between text-[9px] py-1 text-left"><span className="truncate">{current.name}</span><span className="text-amber-300 font-black shrink-0">Lv.{skill.level} ›</span></button>;})}</div>
+              <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30"><div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>{orderUniqueChoicesByMasuOrder(masu, getRebirthSkillChoices(masu)).map(skill=>{const current=uniqueSkillAtLevel(skill.unique,skill.level);return <button key={skill.key} onClick={()=>setRosterSkillDetail({mon:{...mergedMasu,unique:current},kind:'unique'})} className="w-full flex justify-between text-[9px] py-1 text-left"><span className="truncate">{current.name}</span><span className="text-amber-300 font-black shrink-0">Lv.{skill.level} ›</span></button>;})}</div>
               {(masu.inheritedUniques||[]).length>0&&(
                 <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30">
                   <div className="text-[7px] text-amber-400 uppercase font-bold mb-1">継承した固有技(バトル中にスロットのバッジをタップで切替可能)</div>
@@ -15864,6 +15997,70 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             ),
           });
+        })()}
+
+        {/* 固有技設定: その個体が持つ固有技の「並び順」と「初期技」だけを決める。
+            固有技Lv・技性能・消費ガッツ・継承元・固有技P・合体履歴には一切触らない。
+            スマホで確実に押せるよう、並び替えはドラッグではなく「↑」「↓」ボタンで行う。
+            操作するたび即保存し、表示は毎回 mh_masu_mons の現在値から作り直す */}
+        {uniqueSettingMasuId!=null&&(()=>{
+          const masu = getMasuMon(uniqueSettingMasuId);
+          const base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+          if (!masu || !base) { setUniqueSettingMasuId(null); return null; }
+          const order = normalizeUniqueOrder(masu);
+          const initialKey = normalizeInitialUniqueKey(masu);
+          const byKey = new Map(getRebirthSkillChoices(masu).map(choice=>[choice.key, choice]));
+          // 並び順の正本はキーの配列。表示もそこから作るので、画面と保存がずれない
+          const rows = order.map(key=>byKey.get(key)).filter(Boolean);
+          const isDefault = order.every((key,index)=>key===defaultUniqueSettingKeys(masu)[index]) && initialKey===OWN_UNIQUE_KEY;
+          return (
+            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:31500}} role="dialog" aria-modal="true" aria-label={`${masu.name}の固有技設定`}>
+              <div data-unique-setting-sheet className="bg-slate-900 border-2 border-violet-500 rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl overflow-hidden"
+                   style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'}}>
+                <div className="flex items-center justify-between gap-2 shrink-0">
+                  <div className="min-w-0">
+                    <div className="text-[8px] font-black text-violet-300 uppercase tracking-widest">固有技設定</div>
+                    <div className="text-[13px] font-black text-white truncate">{masu.name}</div>
+                  </div>
+                  <button aria-label="固有技設定を閉じる" onClick={()=>setUniqueSettingMasuId(null)} className="shrink-0 p-2 bg-white/10 rounded-full active:scale-90"><X size={14}/></button>
+                </div>
+                <div className="text-[9px] text-slate-300 font-bold leading-relaxed shrink-0">並び順はバトルで固有技を切り替えるときの順番になります。「初期技」に設定した技は、勇者モンでも供モンでも参加した時点で最初に構える固有技になります。</div>
+                <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5">
+                  {rows.map((choice,index)=>{
+                    const current = uniqueSkillAtLevel(choice.unique, choice.level);
+                    const isInitial = choice.key===initialKey;
+                    const isOwn = choice.key===OWN_UNIQUE_KEY;
+                    const canSave = isStableUniqueSettingKey(choice.key);
+                    return (
+                      <div key={choice.key} data-unique-setting-row className={`rounded-xl border px-2 py-2 min-w-0 ${isInitial?'border-violet-400/70 bg-violet-950/40':'border-white/10 bg-slate-800/60'}`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="shrink-0 w-5 text-center text-[10px] font-mono font-black text-slate-500">{index+1}</span>
+                          <span className="min-w-0 flex-1 truncate text-[11px] font-black text-white">{current?.name||choice.name}</span>
+                          <span className="shrink-0 text-[9px] font-mono font-black text-amber-300">Lv.{choice.level}</span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-0.5 pl-7 min-w-0">
+                          <span className={`shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded ${isOwn?'bg-indigo-950/70 text-indigo-300':'bg-amber-950/70 text-amber-300'}`}>{isOwn?'自前':'継承'}</span>
+                          {!isOwn&&choice.unique?.sourceMasuName&&<span className="min-w-0 truncate text-[8px] text-slate-500 font-bold">元{choice.unique.sourceMasuName}</span>}
+                          {isInitial&&<span data-unique-setting-initial-badge className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded bg-violet-600 text-white">初期技</span>}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <button type="button" data-unique-setting-initial aria-label={`${current?.name||choice.name}を初期技に設定`} disabled={isInitial||!canSave} onClick={()=>setMasuInitialUnique(masu.id, choice.key)} className="flex-1 min-h-[44px] px-1 rounded-xl bg-violet-700 text-white text-[10px] font-black leading-tight active:scale-95 disabled:opacity-30 disabled:bg-slate-700">{isInitial?'初期技に設定ずみ':'初期技に設定'}</button>
+                          <button type="button" data-unique-setting-up aria-label={`${current?.name||choice.name}を上へ移動`} disabled={index<=0||!canSave} onClick={()=>moveMasuUniqueOrder(masu.id, choice.key, -1)} className="shrink-0 w-11 min-h-[44px] rounded-xl bg-slate-700 text-white text-base font-black active:scale-95 disabled:opacity-30">↑</button>
+                          <button type="button" data-unique-setting-down aria-label={`${current?.name||choice.name}を下へ移動`} disabled={index>=rows.length-1||!canSave} onClick={()=>moveMasuUniqueOrder(masu.id, choice.key, 1)} className="shrink-0 w-11 min-h-[44px] rounded-xl bg-slate-700 text-white text-base font-black active:scale-95 disabled:opacity-30">↓</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {rows.length<=1&&<div className="text-[9px] text-slate-500 font-bold text-center px-2 py-1 leading-relaxed">固有技が1つだけのため、並び替えと初期技の変更はできません。合体で固有技を継承すると設定できるようになります。</div>}
+                </div>
+                <div className="shrink-0 flex flex-col gap-1.5 pt-1 border-t border-white/10">
+                  <div className="text-[8px] text-slate-500 font-bold text-center leading-tight">固有技Lvと固有技Pは変わりません</div>
+                  <button type="button" data-unique-setting-reset disabled={isDefault} onClick={()=>{ if(!window.confirm('固有技の並び順と初期技を、はじめの状態（自前の固有技が先頭・初期技）へ戻しますか？固有技Lvと固有技ポイントは変わりません。')) return; resetMasuUniqueSetting(masu.id); }} className="w-full min-h-[44px] rounded-xl bg-slate-700 text-[10px] font-black active:scale-95 disabled:opacity-30">初期状態に戻す</button>
+                  <button onClick={()=>setUniqueSettingMasuId(null)} className="w-full min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase active:scale-95">閉じる</button>
+                </div>
+              </div>
+            </div>
+          );
         })()}
 
         {/* マスモン強化: 専用ページ(間合い適性・ステータス強化を、変動値のプレビュー付きで行う) */}
@@ -16972,7 +17169,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                         「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                     <div className={`h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[7px] font-black text-indigo-300">×{assignedCount}</span>}</div>
-                    {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=slotUniqueChoice[i]||'own'; const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
+                    {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=activeSlotUniqueKey(slotUniqueChoice,i,s); const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                       return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                         <RefreshCcw size={7} className="text-white"/><span className="text-[6px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
                       </div>);
@@ -18522,7 +18719,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         } else if (card.type==='unique') {
           const mon = slots[card.ownerSlotIdx];
           uniqueSources = getAvailableUniquesForSlot(mon, ownedUniques, card.ownerSlotIdx);
-          const activeKey = slotUniqueChoice[card.ownerSlotIdx]||'own';
+          const activeKey = activeSlotUniqueKey(slotUniqueChoice, card.ownerSlotIdx, mon);
           const activeOpt = uniqueSources.find(o=>o.key===activeKey) || uniqueSources[0];
           if (activeOpt) {
             const u = activeOpt.unique;
@@ -18554,7 +18751,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {card.type==='unique'&&uniqueSources.length>1&&(
                 <div className="flex gap-1.5 pb-2 border-b border-white/10 shrink-0 overflow-x-auto">
                   {uniqueSources.map(opt=>{
-                    const isActiveSource=(slotUniqueChoice[card.ownerSlotIdx]||'own')===opt.key;
+                    const isActiveSource=activeSlotUniqueKey(slotUniqueChoice, card.ownerSlotIdx, slots[card.ownerSlotIdx])===opt.key;
                     // タブ名は「自分の技」「みゅあの技」ではなく血統名(ザン・ピクシー等)にする。
                     // 引き継いだ技は出どころが分かるよう色を変え、印を付ける
                     const isInherited = opt.key !== 'own';

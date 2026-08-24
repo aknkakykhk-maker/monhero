@@ -23,7 +23,11 @@ const context = {
 vm.createContext(context);
 // 超越(Lv上限を伸ばす育成)の定数・正規化。基礎値と間合い適性の解決がこれを使う
 const transcend = slice('const TRANSCEND_LEVEL_CAP =', '// --- マスモンの絆レベル');
-const resolution = slice('const getMasuColors =', 'const migrateMasuLevelCaps');
+// mergeMasuIntoMon は固有技設定(並び順・初期技)も解決するので、その正規化もそのまま持ち込む
+const uniqueSetting = "const INHERITED_UNIQUE_LEVEL_KEY_PREFIX='inhId:';\n"
+  + slice('const inheritedUniqueLevelKey = (unique) =>', 'const isValidInheritedUnique')
+  + slice('const OWN_UNIQUE_KEY =', '// 構造ベースの冪等移行');
+const resolution = uniqueSetting + slice('const getMasuColors =', 'const migrateMasuLevelCaps');
 const regeneration = slice('const randomRegenerationStat =', 'const rosterBaseId =');
 const rebirthReset = slice('const resetMasuForRebirth =', 'const migrateRebornMasuToFullReset');
 vm.runInContext(`${transcend}\n${rebirthReset}\n${resolution}\n${regeneration}\nglobalThis.api={resolveMasuIndividualStats,resolveMasuDistAptitude,mergeMasuIntoMon,masuPowerOf,masuBaselineRepresentationsMatch,diagnoseMasuBaselineMigration,diagnoseMasuBaselineMigrationList,applyEnhancePlanToMasu,buildBondResetRestorePlan,buildMasuBondPointReset,buildRegeneratedMasu,resetMasuForRebirth};`, context);
