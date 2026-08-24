@@ -33,7 +33,7 @@ const MONSTER_LINEAGES = {
   // ここから下は、いまプレイアブルなモンスターがいない血統
   dragon:  { id:'dragon',  name:'ドラゴン' },
   joker:   { id:'joker',   name:'ジョーカー' },
-  plant:   { id:'plant',   name:'プラント' },
+  plant:   { id:'plant',   name:'プラント',     monId:'Plant' },
   gel:     { id:'gel',     name:'ゲル' },
   // 正体不明のレア血統
   unknown: { id:'unknown', name:'？？？', rare:true },
@@ -50,6 +50,7 @@ const MONSTER_LINEAGE_MAP = {
   Pixie:       { main:'pixie',  sub:'pixie' },
   Monol:       { main:'monol',  sub:'monol' },
   Oboro:       { main:'plant',  sub:'gel' },
+  Plant:       { main:'plant',  sub:'plant' },
   Zan:         { main:'zan',    sub:'zan' },
   Mitarashi:   { main:'mocchi', sub:'dragon' },
   Ark:         { main:'ark',    sub:'ark' },
