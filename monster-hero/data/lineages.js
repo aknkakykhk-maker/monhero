@@ -1,0 +1,77 @@
+// ==================== 血統と図鑑 ====================
+// モンスターは「主血統 × 副血統 = モンスター」で表される。
+// ここはその正式データで、モンスター図鑑の表示だけでなく、
+// 将来の「○○血統限定モード」の参加判定にもそのまま使えるようにしてある。
+//
+// 【マスモンには血統を保存しない】
+// 個体(マスモン)は baseId でベースモンを指しているので、血統は baseId から引く。
+// 個体側へ写して持つと、あとで血統の定義を直したときに古い値が残って食い違う。
+// 保存キー(mh_*)は一切増やしていない。
+//
+// 【新しいモンスターを足すとき】
+// ALL_PLAYER_MONSTERS へ足したら、MONSTER_LINEAGE_MAP にも1行足す。
+// 足し忘れは tools/monster/lineage-dex-check.js が見つける。
+
+// ---------- 血統カタログ ----------
+//   id     … 血統の識別子
+//   name   … 表示名
+//   monId  … その血統を代表するプレイアブルモンスター(あればアイコンに使う)。
+//            「ドラゴン」「ジョーカー」等、現在プレイアブルなモンスターがいない血統は持たない。
+//            画像を勝手に作らず、文字で表示する。
+//   rare   … 正体不明のレア血統。この血統が混ざるモンスターは区分「レア」になる
+const MONSTER_LINEAGES = {
+  mocchi:  { id:'mocchi',  name:'モッチー',     monId:'Mocchi' },
+  suezo:   { id:'suezo',   name:'スエゾー',     monId:'Suezo' },
+  golem:   { id:'golem',   name:'ゴーレム',     monId:'Golem' },
+  tiger:   { id:'tiger',   name:'ライガー',     monId:'Tiger' },
+  ham:     { id:'ham',     name:'ハム',         monId:'Ham' },
+  pixie:   { id:'pixie',   name:'ピクシー',     monId:'Pixie' },
+  monol:   { id:'monol',   name:'モノリス',     monId:'Monol' },
+  zan:     { id:'zan',     name:'ザン',         monId:'Zan' },
+  ark:     { id:'ark',     name:'アーク',       monId:'Ark' },
+  undine:  { id:'undine',  name:'ウンディーネ', monId:'Undine' },
+  // ここから下は、いまプレイアブルなモンスターがいない血統
+  dragon:  { id:'dragon',  name:'ドラゴン' },
+  joker:   { id:'joker',   name:'ジョーカー' },
+  plant:   { id:'plant',   name:'プラント' },
+  gel:     { id:'gel',     name:'ゲル' },
+  // 正体不明のレア血統
+  unknown: { id:'unknown', name:'？？？', rare:true },
+};
+
+// ---------- モンスターごとの血統 ----------
+// キーは ALL_PLAYER_MONSTERS のid。main が主血統、sub が副血統。
+const MONSTER_LINEAGE_MAP = {
+  Mocchi:      { main:'mocchi', sub:'mocchi' },
+  Suezo:       { main:'suezo',  sub:'suezo' },
+  Golem:       { main:'golem',  sub:'golem' },
+  Tiger:       { main:'tiger',  sub:'tiger' },
+  Ham:         { main:'ham',    sub:'ham' },
+  Pixie:       { main:'pixie',  sub:'pixie' },
+  Monol:       { main:'monol',  sub:'monol' },
+  Oboro:       { main:'plant',  sub:'gel' },
+  Zan:         { main:'zan',    sub:'zan' },
+  Mitarashi:   { main:'mocchi', sub:'dragon' },
+  Ark:         { main:'ark',    sub:'ark' },
+  Iblis:       { main:'ark',    sub:'joker' },
+  Undine:      { main:'undine', sub:'undine' },
+  Yaobikuni:   { main:'undine', sub:'mocchi' },
+  Snegurochka: { main:'undine', sub:'unknown' },
+};
+
+// ---------- 区分 ----------
+// 主血統と副血統が同じ → 純血 ／ どちらかがレア血統 → レア ／ それ以外 → 派生種
+const MONSTER_CATEGORIES = {
+  pure:      { id:'pure',      name:'純血' },
+  derived:   { id:'derived',   name:'派生種' },
+  rare:      { id:'rare',      name:'レア' },
+};
+
+// ---------- 図鑑の説明文 ----------
+// モンスターidをキーにした本文。1体ぶん足すたびに1行増やせばよい。
+// まだ書いていないモンスターは、図鑑側で「調査中」の案内を出す(空欄にはしない)。
+const MONSTER_DEX_DESCRIPTIONS = {
+  Mocchi: 'モッチー種を代表する人気モンスター。育てやすく扱いやすいため、初心者から上級者まで幅広く親しまれている。やわらかな体と愛らしい動きが魅力。',
+  Mitarashi: 'モッチー種らしい愛嬌を残しつつ、ドラゴンの荒々しさをあわせ持つ派生モンスター。見た目のかわいさとは裏腹に気性は激しく、独特な存在感で人気が高い。',
+  Snegurochka: '氷の孫娘の異名を持つレアモンスター。高い知性と強い意志を備え、冷気をまとった華麗な戦いぶりで敵を圧倒する。神秘的で気高い雰囲気を持つ特別な存在。',
+};

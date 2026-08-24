@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9940dd4a099690e9
+// source-sha256: 7495f0a603ee3419
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 17:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1287,6 +1287,61 @@ const mergeMasuIntoMon = masu => {
     uniqueOrder: normalizeUniqueOrder(masu),
     initialUniqueKey: normalizeInitialUniqueKey(masu)
   };
+};
+
+// ==================== 血統と図鑑 ====================
+// 血統の正本は data/lineages.js。ここは「引き方」だけを持つ。
+// 血統はモンスターの種(baseId)に紐づくもので、マスモン(個体)へは保存しない。
+// data/lineages.js を読めなかったときも画面が落ちないよう、必ず既定値へ落ちる。
+const UNKNOWN_LINEAGE = Object.freeze({
+  id: 'unknown',
+  name: '？？？',
+  rare: true
+});
+const lineageCatalog = () => typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES || {};
+const lineageEntryMap = () => typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP || {};
+const lineageById = id => lineageCatalog()[id] || (id ? {
+  id: String(id),
+  name: String(id)
+} : UNKNOWN_LINEAGE);
+// モンスターの種id(マスモンなら baseId)から主血統・副血統を引く。
+// 将来の「○○血統限定モード」の参加判定もここを通す
+const monsterLineageOf = monsterId => {
+  const entry = lineageEntryMap()[monsterId];
+  return {
+    main: lineageById(entry?.main),
+    sub: lineageById(entry?.sub != null ? entry.sub : entry?.main),
+    known: !!entry
+  };
+};
+// 区分: 主血統と副血統が同じ → 純血 ／ どちらかがレア血統 → レア ／ それ以外 → 派生種
+const monsterCategoryOf = monsterId => {
+  const {
+    main,
+    sub
+  } = monsterLineageOf(monsterId);
+  if (main.rare || sub.rare) return 'rare';
+  return main.id === sub.id ? 'pure' : 'derived';
+};
+const monsterCategoryName = categoryId => typeof MONSTER_CATEGORIES !== 'undefined' && MONSTER_CATEGORIES?.[categoryId]?.name || '不明';
+// 血統のアイコン。その血統を代表するプレイアブルモンスターがいるときだけ絵を使う。
+// ドラゴン・ジョーカーのようにモンスターがいない血統は、絵を作らず名前だけで見せる
+const lineageIconUrl = lineage => {
+  const base = lineage?.monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[lineage.monId] : null;
+  return base?.faceIconUrl || base?.iconUrl || null;
+};
+// 図鑑の説明。まだ書いていないモンスターは、空欄にせず調査中と伝える
+const monsterDexDescription = monsterId => typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[monsterId] || 'この個体の記録はまだ集まっていません。調査が進むと図鑑へ追記されます。';
+// 図鑑に並ぶモンスター。ALL_PLAYER_MONSTERS の定義順をそのまま図鑑の並びにする
+const dexMonsterList = () => typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.values(ALL_PLAYER_MONSTERS) : [];
+// 図鑑の絞り込みに出す主血統。実際に登場する主血統だけを、図鑑の並び順で並べる
+const dexMainLineages = () => {
+  const seen = new Set();
+  return dexMonsterList().map(mon => monsterLineageOf(mon.id).main).filter(lineage => {
+    if (!lineage || seen.has(lineage.id)) return false;
+    seen.add(lineage.id);
+    return true;
+  });
 };
 
 // ==================== 総合力 ====================
@@ -9035,6 +9090,15 @@ const helpDataRows = id => {
   switch (id) {
     case 'difficulties':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `敵×${s.power} ／ スコア×${s.score} ／ ダイヤ×${s.gold}`]);
+    // モンスターの血統一覧。ヘルプへ手で書き写すと、モンスターを足したときに古いままになる
+    case 'monsterLineages':
+      return dexMonsterList().map(mon => {
+        const {
+          main,
+          sub
+        } = monsterLineageOf(mon.id);
+        return [mon.name, `${main.name} × ${sub.name}（${monsterCategoryName(monsterCategoryOf(mon.id))}）`];
+      });
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
       return EXTREME_DIFFICULTIES.map(s => [s.label, s.available ? `敵×${s.power} ／ スコア×${s.score} ／ 経験値×${s.xp} ／ ダイヤ×${s.gold} ／ 虹のプシュケー ${s.psyche}個` : '？？？（未実装）']);
@@ -9105,6 +9169,7 @@ const HELP_DATA_TITLES = {
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
   monsterPower: '総合力の内訳',
+  monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー'
 };
 // ===== 助手(ナビゲーター) ここから =====
@@ -13069,6 +13134,10 @@ function MonsterHeroGame() {
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
   const [masuMonDetail, setMasuMonDetail] = useState(null); // マスモン一覧: タップ中のマスモン詳細
   const [uniqueSettingMasuId, setUniqueSettingMasuId] = useState(null); // 固有技設定(並び順・初期技)を開いているマスモンのid
+  const [dexLineageFilter, setDexLineageFilter] = useState('all'); // モンスター図鑑: 主血統の絞り込み('all'または血統id)
+  const [dexMonsterId, setDexMonsterId] = useState(null); // モンスター図鑑: 詳細で見ているモンスターのid
+  const [dexTab, setDexTab] = useState('basic'); // モンスター図鑑の詳細タブ(basic/stats/skills)
+  const dexSwipeRef = useRef(null); // 図鑑詳細の横スワイプ(指を置いた位置)
   const [uniqueSkillPointDrafts, setUniqueSkillPointDrafts] = useState({}); // 個体IDごとの固有技ポイント仮配分
   const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
@@ -14480,6 +14549,10 @@ function MonsterHeroGame() {
     // スキップのリザルト(通常のリザルトと同じ曲)
     MONSTER_LIST_MENU: 'management',
     // モンスター一覧メニュー
+    MONSTER_DEX: 'management',
+    // モンスター図鑑もM/B管理の曲を続ける
+    MONSTER_DEX_DETAIL: 'management',
+    // 図鑑の詳細も同じ曲のまま
     MB_MANAGEMENT: 'management',
     // M/B管理はモンスター一覧・編成と同じ曲を続ける
     AUTO_SETTINGS: 'management',
@@ -24188,6 +24261,12 @@ function MonsterHeroGame() {
       className: "mh-management-link"
     }, "\u30DE\u30B9\u30E2\u30F3\u4E00\u89A7"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
+        setDexLineageFilter('all');
+        setGameState('MONSTER_DEX');
+      },
+      className: "mh-management-link"
+    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
         setDraftMonsterRoster(monsterRosterIds);
         setDraftTeachingRoster(teachingRosterIds);
         setRosterTab('monster');
@@ -24208,7 +24287,294 @@ function MonsterHeroGame() {
     }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u7DE8\u6210"), /*#__PURE__*/React.createElement("button", {
       onClick: openAutoSettings,
       className: "mh-management-link"
-    }, "AUTO\u8A2D\u5B9A"))), gameState === 'AUTO_SETTINGS' && (() => {
+    }, "AUTO\u8A2D\u5B9A"))), gameState === 'MONSTER_DEX' && (() => {
+      const monsters = dexMonsterList();
+      const unlockedCount = monsters.filter(mon => unlockedMonsterIds.includes(mon.id)).length;
+      const filters = dexMainLineages();
+      const shown = dexLineageFilter === 'all' ? monsters : monsters.filter(mon => monsterLineageOf(mon.id).main.id === dexLineageFilter);
+      const chipClass = on => `shrink-0 min-h-[40px] px-3 rounded-full border text-[10px] font-black whitespace-nowrap active:scale-95 ${on ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-amber-500/30 text-amber-200/80'}`;
+      return /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 flex flex-col h-full min-h-0 p-4",
+        style: {
+          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 mb-3 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setGameState('MB_MANAGEMENT'),
+        className: "p-3 text-slate-400 active:scale-90",
+        "aria-label": "M/B\u7BA1\u7406\u3078\u623B\u308B"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic text-amber-300 uppercase tracking-widest"
+      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451")), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full max-w-md mx-auto mb-2"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "monsterDex"
+      })), /*#__PURE__*/React.createElement("div", {
+        "data-dex-count": true,
+        className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/70 to-orange-950/50 px-3 py-2 flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0"
+      }, "\u56F3\u9451\u767B\u9332\u6570"), /*#__PURE__*/React.createElement("span", {
+        className: "text-[15px] font-mono font-black text-amber-100 tabular-nums"
+      }, unlockedCount, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400 text-[10px]"
+      }, " / ", monsters.length))), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto mh-scroll pb-1",
+        role: "tablist",
+        "aria-label": "\u4E3B\u8840\u7D71\u3067\u3057\u307C\u308A\u3053\u3080"
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        role: "tab",
+        "aria-selected": dexLineageFilter === 'all',
+        onClick: () => setDexLineageFilter('all'),
+        className: chipClass(dexLineageFilter === 'all')
+      }, "\u3059\u3079\u3066"), filters.map(lineage => /*#__PURE__*/React.createElement("button", {
+        key: lineage.id,
+        type: "button",
+        role: "tab",
+        "aria-selected": dexLineageFilter === lineage.id,
+        onClick: () => setDexLineageFilter(lineage.id),
+        className: chipClass(dexLineageFilter === lineage.id)
+      }, lineage.name))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-2.5 pb-4"
+      }, shown.map(mon => {
+        const unlocked = unlockedMonsterIds.includes(mon.id);
+        const iconSrc = mon.iconUrl || mon.imgUrl || '';
+        const category = monsterCategoryOf(mon.id);
+        return /*#__PURE__*/React.createElement("button", {
+          key: mon.id,
+          type: "button",
+          "data-dex-entry": true,
+          "aria-label": unlocked ? `${mon.name}の図鑑を見る` : 'まだ出会っていないモンスター',
+          onClick: () => {
+            setDexMonsterId(mon.id);
+            setDexTab('basic');
+            setGameState('MONSTER_DEX_DETAIL');
+          },
+          className: "w-full min-h-[124px] rounded-2xl border-2 border-amber-600/30 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "w-14 h-14 rounded-full overflow-hidden border border-amber-400/30 shrink-0 bg-black/40"
+        }, iconSrc ? /*#__PURE__*/React.createElement("img", {
+          src: iconSrc,
+          alt: "",
+          draggable: false,
+          className: "w-full h-full object-cover",
+          style: monsterArtFitStyle(mon.id, unlocked ? undefined : {
+            filter: 'brightness(0)',
+            opacity: 0.6
+          })
+        }) : /*#__PURE__*/React.createElement("div", {
+          className: "w-full h-full flex items-center justify-center text-2xl"
+        }, unlocked ? mon.emoji : '？')), /*#__PURE__*/React.createElement("div", {
+          className: "text-[10px] font-black truncate w-full text-center leading-tight text-amber-100"
+        }, unlocked ? mon.name : '？？？'), /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] font-black text-amber-400/80 leading-tight"
+        }, unlocked ? monsterCategoryName(category) : '未発見'));
+      })), shown.length === 0 && /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] text-slate-400 font-bold text-center py-6"
+      }, "\u3053\u306E\u8840\u7D71\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u307E\u3060\u3044\u307E\u305B\u3093\u3002")));
+    })(), gameState === 'MONSTER_DEX_DETAIL' && (() => {
+      const monsters = dexMonsterList();
+      const index = monsters.findIndex(m => m.id === dexMonsterId);
+      const mon = index >= 0 ? monsters[index] : null;
+      if (!mon) {
+        setGameState('MONSTER_DEX');
+        return null;
+      }
+      const unlocked = unlockedMonsterIds.includes(mon.id);
+      const {
+        main,
+        sub
+      } = monsterLineageOf(mon.id);
+      const category = monsterCategoryOf(mon.id);
+      const categoryClass = category === 'rare' ? 'bg-amber-600 text-white' : category === 'pure' ? 'bg-emerald-700 text-white' : 'bg-indigo-700 text-white';
+      const go = delta => {
+        const next = monsters[(index + delta + monsters.length) % monsters.length];
+        if (!next) return;
+        setDexMonsterId(next.id);
+        setDexTab('basic');
+        Audio_.se.tap();
+      };
+      // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
+      const lineageChip = lineage => {
+        const icon = lineageIconUrl(lineage);
+        return /*#__PURE__*/React.createElement("span", {
+          "data-dex-lineage": true,
+          className: "inline-flex items-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1"
+        }, icon ? /*#__PURE__*/React.createElement("img", {
+          src: icon,
+          alt: "",
+          draggable: false,
+          className: "w-6 h-6 rounded-full object-cover border border-amber-300/40 shrink-0"
+        }) : /*#__PURE__*/React.createElement("span", {
+          className: "w-6 h-6 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0"
+        }, "\u8840"), /*#__PURE__*/React.createElement("span", {
+          className: "text-[11px] font-black text-amber-100 truncate"
+        }, lineage.name));
+      };
+      const tabs = [['basic', '基本'], ['stats', '能力'], ['skills', '技']];
+      const tab = tabs.some(([id]) => id === dexTab) ? dexTab : 'basic';
+      const row = (label, value) => /*#__PURE__*/React.createElement("div", {
+        className: "flex items-start justify-between gap-3 border-b border-amber-500/15 py-1.5 last:border-b-0"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black text-amber-300/90 shrink-0"
+      }, label), /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-bold text-white text-right min-w-0 break-words"
+      }, value));
+      const skillPills = (list, accent) => /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-1.5"
+      }, list.map(skill => /*#__PURE__*/React.createElement("div", {
+        key: skill.lvl,
+        className: `min-w-0 rounded-xl border px-2 py-1.5 ${accent}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-1.5 min-w-0"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black text-white truncate min-w-0"
+      }, skill.name), /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] font-mono font-black text-amber-300 shrink-0"
+      }, "Lv.", skill.lvl)), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 mt-0.5 text-[8px] font-mono font-black text-slate-400"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-red-300"
+      }, "\u5A01\u529B", skill.power), /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "\u6D88\u8CBBG", skill.guts), /*#__PURE__*/React.createElement("span", {
+        className: "text-yellow-300"
+      }, "\u4F1A\u5FC3", skill.crit, "%")))));
+      return /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 flex flex-col h-full min-h-0",
+        style: {
+          paddingTop: 'calc(0.5rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 px-3 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setGameState('MONSTER_DEX'),
+        className: "p-3 text-slate-400 active:scale-90",
+        "aria-label": "\u56F3\u9451\u4E00\u89A7\u3078\u623B\u308B"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-lg font-black italic text-amber-300 uppercase tracking-widest"
+      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451"), /*#__PURE__*/React.createElement("span", {
+        className: "ml-auto text-[10px] font-mono font-black text-amber-200/80 tabular-nums pr-1"
+      }, index + 1, " / ", monsters.length)), /*#__PURE__*/React.createElement("div", {
+        "data-dex-art": true,
+        className: "relative shrink-0 flex items-center justify-center px-12",
+        style: {
+          height: '34dvh',
+          minHeight: '180px'
+        },
+        onTouchStart: e => {
+          dexSwipeRef.current = e.touches && e.touches[0] ? e.touches[0].clientX : null;
+        },
+        onTouchEnd: e => {
+          const from = dexSwipeRef.current;
+          dexSwipeRef.current = null;
+          if (from == null) return;
+          const to = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : from;
+          const dx = to - from;
+          if (Math.abs(dx) >= 48) go(dx < 0 ? 1 : -1);
+        }
+      }, mon.imgUrl ? /*#__PURE__*/React.createElement("img", {
+        src: mon.imgUrl,
+        alt: unlocked ? mon.name : 'まだ出会っていないモンスター',
+        draggable: false,
+        className: "max-w-full max-h-full object-contain",
+        style: unlocked ? undefined : {
+          filter: 'brightness(0)',
+          opacity: 0.65
+        }
+      }) : /*#__PURE__*/React.createElement("div", {
+        className: "text-6xl"
+      }, unlocked ? mon.emoji : '？'), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-dex-prev": true,
+        "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
+        onClick: () => go(-1),
+        className: "absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
+      }, /*#__PURE__*/React.createElement(ChevronLeft, {
+        size: 22
+      })), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-dex-next": true,
+        "aria-label": "\u6B21\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
+        onClick: () => go(1),
+        className: "absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
+      }, /*#__PURE__*/React.createElement(ChevronRight, {
+        size: 22
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 px-3 pt-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 text-center text-[17px] font-black text-amber-100 truncate"
+      }, unlocked ? mon.name : '？？？'), unlocked ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0"
+      }, "\u8840\u7D71"), lineageChip(main), /*#__PURE__*/React.createElement("span", {
+        className: "text-[12px] font-black text-amber-300 shrink-0"
+      }, "\xD7"), lineageChip(sub), /*#__PURE__*/React.createElement("span", {
+        "data-dex-category": true,
+        className: `shrink-0 text-[9px] font-black px-2 py-1 rounded-full ${categoryClass}`
+      }, monsterCategoryName(category))), /*#__PURE__*/React.createElement("p", {
+        "data-dex-desc": true,
+        className: "shrink-0 mt-2 text-[10px] font-bold leading-relaxed text-slate-200 break-words"
+      }, monsterDexDescription(mon.id)), /*#__PURE__*/React.createElement("div", {
+        role: "tablist",
+        "aria-label": "\u56F3\u9451\u306E\u5185\u5BB9",
+        className: "shrink-0 mt-2 grid grid-cols-3 gap-1.5"
+      }, tabs.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+        key: id,
+        type: "button",
+        role: "tab",
+        "aria-selected": tab === id,
+        onClick: () => setDexTab(id),
+        className: `min-h-[40px] rounded-xl border text-[11px] font-black active:scale-95 ${tab === id ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-amber-500/30 text-amber-200/80'}`
+      }, label))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll mt-2 pr-0.5"
+      }, tab === 'basic' && /*#__PURE__*/React.createElement("div", {
+        "data-dex-tab-basic": true
+      }, row('主血統', main.name), row('副血統', sub.name), row('区分', monsterCategoryName(category)), row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし')), tab === 'stats' && /*#__PURE__*/React.createElement("div", {
+        "data-dex-tab-stats": true
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-amber-300/90 mb-1"
+      }, "\u305D\u306E\u7A2E\u306E\u57FA\u790E\u80FD\u529B\uFF08\u80B2\u3066\u305F\u30DE\u30B9\u30E2\u30F3\u306E\u5024\u3067\u306F\u3042\u308A\u307E\u305B\u3093\uFF09"), row('ライフ', mon.baseHp), row('ちから', mon.baseAtk), row('丈夫さ', mon.baseDef), row('ガッツ', mon.baseGuts), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-amber-300/90 mt-2 mb-1"
+      }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-4 gap-1.5"
+      }, RANGE_LABELS.map((label, i) => /*#__PURE__*/React.createElement("div", {
+        key: label,
+        className: "rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-slate-400"
+      }, label), /*#__PURE__*/React.createElement("div", {
+        className: "text-[13px] font-mono font-black text-amber-200"
+      }, mon.distAptitude && mon.distAptitude[i] || 'C'))))), tab === 'skills' && /*#__PURE__*/React.createElement("div", {
+        "data-dex-tab-skills": true,
+        className: "space-y-2"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest"
+      }, "\u901A\u5E38\u6280"), skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest"
+      }, "\u56FA\u6709\u6280\uFF08\u9032\u5316\u6BB5\u968E\uFF09"), skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30'), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-300 font-bold leading-relaxed mt-1.5 italic break-words"
+      }, "\"", mon.unique?.effectDesc || '', "\""))))) : /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 flex flex-col items-center justify-center gap-2 px-2 text-center"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-[11px] font-black text-amber-200"
+      }, "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
+        className: "text-[10px] font-bold text-slate-400 leading-relaxed"
+      }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u5186\u76E4\u77F3\u3092\u624B\u306B\u5165\u308C\u3066\u89E3\u653E\u3059\u308B\u3068\u3001\u8840\u7D71\u30FB\u80FD\u529B\u30FB\u6280\u304C\u56F3\u9451\u306B\u8A18\u9332\u3055\u308C\u307E\u3059\u3002")))));
+    })(), gameState === 'AUTO_SETTINGS' && (() => {
       const strategies = [['random', 'ランダム', 'AUTOが候補からランダムに選択'], ['offense', '火力重視', '攻撃・ちから系を優先'], ['defense', '耐久重視', 'ライフ・丈夫さ系を優先'], ['guts', 'ガッツ重視', 'ガッツ系を優先']];
       const ranges = [[null, '自動'], [0, '零'], [1, '近'], [2, '中'], [3, '遠']];
       const selectedEntries = draftAutoSettings.allies.map(ally => ally.rosterEntry).filter(Boolean);
