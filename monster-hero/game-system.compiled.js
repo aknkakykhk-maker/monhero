@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: df65d246a2b8eafb
+// source-sha256: 7f1242245b70a298
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 18:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 19:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24370,16 +24370,20 @@ function MonsterHeroGame() {
           },
           className: "w-full min-h-[124px] rounded-2xl border-2 border-amber-600/30 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none"
         }, /*#__PURE__*/React.createElement("div", {
-          className: "w-14 h-14 rounded-full overflow-hidden border border-amber-400/30 shrink-0 bg-black/40"
+          className: "w-14 h-14 rounded-full overflow-hidden border border-amber-400/30 shrink-0 bg-black/40 flex items-center justify-center"
         }, iconSrc ? /*#__PURE__*/React.createElement("img", {
           src: iconSrc,
           alt: "",
           draggable: false,
-          className: "w-full h-full object-cover",
-          style: monsterArtFitStyle(mon.id, unlocked ? undefined : {
-            filter: 'brightness(0)',
-            opacity: 0.6
-          })
+          "data-dex-entry-icon": true,
+          className: "w-full h-full object-contain",
+          style: {
+            padding: '10%',
+            ...(unlocked ? {} : {
+              filter: 'brightness(0)',
+              opacity: 0.6
+            })
+          }
         }) : /*#__PURE__*/React.createElement("div", {
           className: "w-full h-full flex items-center justify-center text-2xl"
         }, unlocked ? mon.emoji : '？')), /*#__PURE__*/React.createElement("div", {
@@ -24419,14 +24423,21 @@ function MonsterHeroGame() {
           "data-dex-lineage": true,
           className: "flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1"
         }, icon
-        /* ウンディーネ・ヤオビクニは顔アイコンが無く立ち絵をそのまま使うため、
-           丸く切り抜くと体だけが写って頭が切れる。既存の monsterArtFitStyle を通す */ ? /*#__PURE__*/React.createElement("img", {
+        /* 丸く切り抜くので、絵を枠いっぱいに入れると円の外側へかかる部分が切れる
+           (アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)。
+           どのモンスターでも全身が円の中へ収まるよう、少し縮めて中央へ置く。
+           顔アイコンを持たないウンディーネ・ヤオビクニも、これで頭まで入る */ ? /*#__PURE__*/React.createElement("span", {
+          className: "w-7 h-7 rounded-full overflow-hidden border border-amber-300/40 shrink-0 bg-black/30 flex items-center justify-center"
+        }, /*#__PURE__*/React.createElement("img", {
           src: icon,
           alt: "",
           draggable: false,
-          style: monsterArtFitStyle(lineage.monId, undefined),
-          className: "w-7 h-7 rounded-full object-cover border border-amber-300/40 shrink-0"
-        }) : /*#__PURE__*/React.createElement("span", {
+          "data-dex-lineage-icon": true,
+          className: "w-full h-full object-contain",
+          style: {
+            padding: '10%'
+          }
+        })) : /*#__PURE__*/React.createElement("span", {
           className: "w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0"
         }, "\u8840"), /*#__PURE__*/React.createElement("span", {
           className: "text-[11px] font-black text-amber-100 truncate"
