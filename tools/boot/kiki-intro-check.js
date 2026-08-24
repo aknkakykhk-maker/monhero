@@ -157,6 +157,22 @@ if (from >= 0 && to > from) {
       && /env\(safe-area-inset-bottom\)/.test(first));
 }
 
+// --- イベントBGM ---
+// 会話中はイベントBGMを鳴らし、終われば元の画面のBGMへ戻す。
+// 「画面には出ていないのに曲だけ変わる」「イベントが終わっても曲が残る」を防ぐため、
+// 表示条件と同じ判定を使っていること、依存へ入っていることまで見る。
+check('会話中はイベントBGMを鳴らす', has('if (eventBgmScene) return bgmArrangement[eventBgmScene];'));
+check('イベントBGMは画面のBGMより先に決まる',
+  source.indexOf('if (eventBgmScene) return bgmArrangement[eventBgmScene];') > 0
+  && source.indexOf('if (eventBgmScene) return bgmArrangement[eventBgmScene];') < source.indexOf("if (isGameOver) return 'gameOver';"));
+check('鳴らす条件は会話の表示条件と同じ',
+  has("const kikiIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null;"));
+check('イベントが終われば元の画面のBGMへ戻す(依存に入っている)',
+  /bgmArrangement, runMode, eventBgmScene\]/.test(source));
+check('曲はBGMアレンジの設定から引く(直接ファイル名を書かない)',
+  has("EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro' })")
+  && !/kikiIntroStep[\s\S]{0,400}bgm-event-0/.test(source));
+
 // --- 更新履歴とヘルプ ---
 check('更新履歴に書いてある', /加入会話|加入イベント/.test(changelogSrc));
 check('ヘルプに書いてある', /ききが加わったときの会話/.test(helpSrc));

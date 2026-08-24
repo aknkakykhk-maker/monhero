@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d2e338f04902041b
+// source-sha256: d9684c81b8636cf7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 09:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 11:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2987,6 +2987,38 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true,
   legacyKey: 'clear'
+},
+// 会話イベント用。1が既定で、2はBGMアレンジから自分で選べる(自動では使わない)
+{
+  id: 'original_event_01',
+  name: 'イベントBGM 1',
+  creator: 'オリジナル',
+  src: 'audio/bgm-event-01.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'original_event_02',
+  name: 'イベントBGM 2',
+  creator: 'オリジナル',
+  src: 'audio/bgm-event-02.mp3',
+  gain: 1,
+  loop: true
+},
+// プロモードの戦闘用
+{
+  id: 'original_pro_battle_01',
+  name: 'プロ戦闘BGM 1',
+  creator: 'オリジナル',
+  src: 'audio/bgm-pro-battle-01.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'original_pro_battle_02',
+  name: 'プロ戦闘BGM 2',
+  creator: 'オリジナル',
+  src: 'audio/bgm-pro-battle-02.mp3',
+  gain: 1,
+  loop: true
 }];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
@@ -3005,13 +3037,14 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   quickBattle: 'ichika_battle',
   quickDullahan: 'original_dullahan',
   quickMoo: 'original_boss',
-  proBattle: 'original_battle',
-  proDullahan: 'original_dullahan',
-  proMoo: 'original_boss',
+  proBattle: 'original_pro_battle_01',
+  proDullahan: 'original_pro_battle_01',
+  proMoo: 'original_pro_battle_02',
   extremeBattle: 'original_battle',
   extremeDullahan: 'original_dullahan',
   extremeMoo: 'original_boss',
-  clear: 'ichika_clear'
+  clear: 'ichika_clear',
+  kikiIntro: 'original_event_01'
 });
 const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
   quickMoo: 'boss',
@@ -3020,6 +3053,39 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
   extremeDullahan: 'dullahan',
   extremeMoo: 'boss'
 });
+// プロモードの既定曲を専用曲へ変えたときの、一度きりの移行。
+// この設定は起動のたびに全項目がそのまま保存されるため、既定値を書き換えるだけでは
+// すでに遊んでいる人へ新しい曲が届かない。「まだ自分で選び直していない(以前の既定のまま)」
+// ときだけ新しい既定へ入れ替え、自分で選んだ曲には触らない。
+// 二重適用は専用フラグ(BGM_PRO_DEFAULT_MIGRATION_KEY)で防ぐ。
+// 会話イベントごとのBGM設定名。イベントを足すときはここへ1行足せば、
+// 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
+const EVENT_BGM_SCENES = Object.freeze({
+  kiki_intro: 'kikiIntro'
+});
+const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
+const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
+  proBattle: 'original_battle',
+  proDullahan: 'original_dullahan',
+  proMoo: 'original_boss'
+});
+const migrateProBgmDefaults = arrangement => {
+  const next = {
+    ...arrangement
+  };
+  let changed = false;
+  Object.entries(BGM_PRO_PREVIOUS_DEFAULTS).forEach(([scene, previousDefault]) => {
+    if (next[scene] !== previousDefault) return; // 自分で選び直していれば触らない
+    const nextDefault = DEFAULT_BGM_ARRANGEMENT[scene];
+    if (!nextDefault || nextDefault === previousDefault) return;
+    next[scene] = nextDefault;
+    changed = true;
+  });
+  return {
+    changed,
+    arrangement: changed ? next : arrangement
+  };
+};
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
   const saved = value?.[scene];
   if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
@@ -14452,8 +14518,17 @@ function MonsterHeroGame() {
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
   const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'PICK_PRO_ALLIES', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN'];
+  // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
+  // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
+  // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
+  const kikiIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null;
+  const eventBgmScene = kikiIntroPlaying ? EVENT_BGM_SCENES.kiki_intro : eventReplay ? EVENT_BGM_SCENES[eventReplay.id] || null : null;
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver) => {
+    // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
+    // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
+    // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
+    if (eventBgmScene) return bgmArrangement[eventBgmScene];
     if (isGameOver) return 'gameOver';
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) return bgmArrangement.clear;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
@@ -14496,7 +14571,7 @@ function MonsterHeroGame() {
       return;
     }
     if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => {
@@ -14935,7 +15010,15 @@ function MonsterHeroGame() {
       const savedAudioMuted = !!(await storeGet('mh_audio_muted', false, false));
       setQuickMuted(savedAudioMuted);
       if (savedAudioMuted) Audio_.setEnabled(false);
-      const savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
+      let savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
+      // プロモードの既定曲だけは、以前の既定のまま遊んでいる人へ新しい曲を一度だけ届ける
+      if ((await storeGet(BGM_PRO_DEFAULT_MIGRATION_KEY, false, false)) !== true) {
+        const proMigration = migrateProBgmDefaults(savedBgmArrangement);
+        if (proMigration.changed) savedBgmArrangement = proMigration.arrangement;
+        try {
+          await storeSet(BGM_PRO_DEFAULT_MIGRATION_KEY, true, false);
+        } catch {}
+      }
       setBgmArrangement(savedBgmArrangement);
       setAssistantUnlockSeen(normalizeAssistantUnlockSeen(await storeGet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, [], false)));
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
@@ -22927,6 +23010,10 @@ function MonsterHeroGame() {
       id: 'battle',
       label: 'バトル'
     }, {
+      id: 'event',
+      label: 'イベント',
+      items: [['kikiIntro', 'きき加入イベント BGM']]
+    }, {
       id: 'other',
       label: 'その他',
       items: [['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM']]
@@ -22954,14 +23041,14 @@ function MonsterHeroGame() {
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       role: "tablist",
       "aria-label": "BGM\u30AB\u30C6\u30B4\u30EA",
-      className: "grid grid-cols-3 gap-2 mb-3"
+      className: "grid grid-cols-4 gap-1 mb-3"
     }, categories.map(category => /*#__PURE__*/React.createElement("button", {
       key: category.id,
       type: "button",
       role: "tab",
       "aria-selected": selected.id === category.id,
       onClick: () => setBgmArrangementCategory(category.id),
-      className: `min-h-[44px] rounded-xl border text-xs font-black ${selected.id === category.id ? 'bg-indigo-600 border-indigo-300 text-white' : 'bg-slate-900 border-white/15 text-slate-300'}`
+      className: `min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id === category.id ? 'bg-indigo-600 border-indigo-300 text-white' : 'bg-slate-900 border-white/15 text-slate-300'}`
     }, category.label))), selected.id === 'battle' && /*#__PURE__*/React.createElement("div", {
       role: "tablist",
       "aria-label": "\u30D0\u30C8\u30EB\u30E2\u30FC\u30C9",

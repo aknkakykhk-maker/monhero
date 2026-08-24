@@ -16,6 +16,7 @@
 | --- | --- | --- |
 | `mh_se_volume` | number / `1` | SE音量0～100 |
 | `mh_bgm_volume` | number / `1` | BGM音量0～100 |
+| `mh_bgm_arrangement` | object / 既定の組み合わせ | 場面ごとに選んだBGMのtrack ID。読み込み時に正規化し、知らない項目・不正なIDは既定値で補う |
 | `mh_breeder_name` | string / `名無しのブリーダー` | 表示名（保存時最大10文字） |
 | `mh_breeder_icon` | string or null | 種IDまたは購入アイコンID |
 | `mh_breeder_xp` | number / `0` | 累計ブリーダーXP |
@@ -60,6 +61,7 @@
 | `mh_breeder_points_granted` | XPカーブ緩和後の不足ポイント補填と二重付与防止 |
 | `mh_masu_rebirth_full_reset_migrated_v1` | 旧仕様で転生済みの個体をLv1・未使用強化ポイント5へ一度だけ補正 |
 | `mh_masu_baseline_relative_migrated_v1` | 第6Cの基礎値追従形式への安全移行を記録。trueでも未移行個体を再診断する |
+| `mh_bgm_pro_default_migrated_v1` | プロモードの既定BGMを専用曲へ変えたときの一度きりの入れ替えを記録。以前の既定のままの項目だけ差し替え、自分で選んだ曲には触らない |
 
 旧形式として `mh_bond_xp`（種ID→XP）、`mh_dist_apt_points`（種ID→未使用点）、`mh_dist_apt_overrides`（種ID→適性配列）を読み込む。XPが正の既知種だけ `masu_migrated_<種ID>` として追加する。旧キーは削除しない。
 
