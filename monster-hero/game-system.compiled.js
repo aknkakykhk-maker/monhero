@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3a6e1165f0942cf5
+// source-sha256: b69b1d715dff141c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 20:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4832,6 +4832,39 @@ const MASU_COLOR_REGION_HUES = {
     white: true,
     sMax: 0.18,
     vMin: 0.85
+  }],
+  // オボロゲソウと同じ「花／葉と茎／白い本体」の3部位。Plantは背景込みの正方形画像なので、
+  // 色相だけを画像全体へ適用せず、実際に各部位がある範囲と明度も併用して背景の光を拾わない。
+  // 花は赤い外花被・白い内花被・黄色い中心を染色①へまとめ、葉と茎を②、顔のある球根を③にする。
+  // 後日エディタから正式PNGを書き出すまで、この画像解析マスクを初期マスクとして共通経路で使う。
+  Plant: [[{
+    hue: 350,
+    sMin: 0.48,
+    vMin: 0.72,
+    bbox: [[0.12, 0.00, 0.88, 0.43], [0.08, 0.17, 0.38, 0.46], [0.62, 0.17, 0.92, 0.46]],
+    noEdgeGuard: true
+  }, {
+    white: true,
+    sMax: 0.16,
+    vMin: 0.82,
+    bbox: [[0.12, 0.00, 0.88, 0.43], [0.08, 0.17, 0.38, 0.46], [0.62, 0.17, 0.92, 0.46]],
+    noEdgeGuard: true
+  }, {
+    hue: 48,
+    sMin: 0.45,
+    vMin: 0.72,
+    bbox: [[0.12, 0.00, 0.88, 0.43], [0.08, 0.17, 0.38, 0.46], [0.62, 0.17, 0.92, 0.46]],
+    noEdgeGuard: true
+  }], {
+    hue: [108, 158],
+    sMin: 0.35,
+    vMin: 0.28,
+    bbox: [0.08, 0.26, 0.92, 0.76],
+    noEdgeGuard: true
+  }, {
+    posBbox: [[0.35, 0.49, 0.65, 0.80], [0.28, 0.69, 0.44, 0.91], [0.56, 0.69, 0.72, 0.91]],
+    noAAGuard: true,
+    noEdgeGuard: true
   }],
   // 2026年に新規イラストへ差し替え。ほぼ単色の甲殻(染色①)+赤い目(染色②、小さいのでsMinを
   // 上げて実測範囲のみ拾う)+両腕・翼(染色③、色相は本体とほぼ同じなので位置指定で分離)
