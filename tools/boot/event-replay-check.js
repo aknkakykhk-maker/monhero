@@ -147,6 +147,17 @@ if (from >= 0 && to > from) {
     render(1) === render(1) && render(1) === render(1));
 }
 
+// --- イベントBGM ---
+// 回想から再生したときも、通常再生(きき加入)と同じBGM設定を使う。
+// 画面ごとに分岐を増やすと、片方だけ直して食い違うため、1か所の対応表から引く。
+check('回想でも同じイベントBGM設定を使う',
+  /EVENT_BGM_SCENES/.test(source)
+  && /eventReplay\s*\?\s*\(?EVENT_BGM_SCENES\[eventReplay\.id\]\s*\|\|\s*null\)?\s*:\s*null/.test(source));
+check('対応表に回想イベントのidが載っている',
+  /kiki_intro:'kikiIntro'/.test(source.replace(/\s+/g, '')) || /kiki_intro:\s*'kikiIntro'/.test(source));
+check('回想を閉じれば元の画面のBGMへ戻す(依存に入っている)',
+  /bgmArrangement, runMode, eventBgmScene\]/.test(source));
+
 // --- 更新履歴とヘルプ ---
 check('更新履歴に書いてある', /イベント回想/.test(changelogSrc));
 check('ヘルプに書いてある', /イベント回想/.test(helpSrc));

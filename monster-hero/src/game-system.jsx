@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 09:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 11:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2037,13 +2037,41 @@ const BGM_TRACKS = [
   { id:'ichika_battle', name:'バトルテーマ by いちか', creator:'いちか', src:'audio/bgm-battle-ichika.mp3', gain:1, loop:true },
   { id:'ichika_boss', name:'ボステーマ by いちか', creator:'いちか', src:'audio/bgm-boss-ichika.mp3', gain:1, loop:true },
   { id:'ichika_clear', name:'クリアテーマ by いちか', creator:'いちか', src:'audio/bgm-clear-ichika.mp3', gain:1, loop:true, legacyKey:'clear' },
+  // 会話イベント用。1が既定で、2はBGMアレンジから自分で選べる(自動では使わない)
+  { id:'original_event_01', name:'イベントBGM 1', creator:'オリジナル', src:'audio/bgm-event-01.mp3', gain:1, loop:true },
+  { id:'original_event_02', name:'イベントBGM 2', creator:'オリジナル', src:'audio/bgm-event-02.mp3', gain:1, loop:true },
+  // プロモードの戦闘用
+  { id:'original_pro_battle_01', name:'プロ戦闘BGM 1', creator:'オリジナル', src:'audio/bgm-pro-battle-01.mp3', gain:1, loop:true },
+  { id:'original_pro_battle_02', name:'プロ戦闘BGM 2', creator:'オリジナル', src:'audio/bgm-pro-battle-02.mp3', gain:1, loop:true },
 ];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'ichika_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss', extremeBattle:'original_battle', extremeDullahan:'original_dullahan', extremeMoo:'original_boss', clear:'ichika_clear' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'ichika_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'original_pro_battle_01', proMoo:'original_pro_battle_02', extremeBattle:'original_battle', extremeDullahan:'original_dullahan', extremeMoo:'original_boss', clear:'ichika_clear', kikiIntro:'original_event_01' });
 const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDullahan:'dullahan', proMoo:'boss', extremeDullahan:'dullahan', extremeMoo:'boss' });
+// プロモードの既定曲を専用曲へ変えたときの、一度きりの移行。
+// この設定は起動のたびに全項目がそのまま保存されるため、既定値を書き換えるだけでは
+// すでに遊んでいる人へ新しい曲が届かない。「まだ自分で選び直していない(以前の既定のまま)」
+// ときだけ新しい既定へ入れ替え、自分で選んだ曲には触らない。
+// 二重適用は専用フラグ(BGM_PRO_DEFAULT_MIGRATION_KEY)で防ぐ。
+// 会話イベントごとのBGM設定名。イベントを足すときはここへ1行足せば、
+// 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro' });
+const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
+const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
+const migrateProBgmDefaults = (arrangement) => {
+  const next = { ...arrangement };
+  let changed = false;
+  Object.entries(BGM_PRO_PREVIOUS_DEFAULTS).forEach(([scene, previousDefault]) => {
+    if (next[scene] !== previousDefault) return; // 自分で選び直していれば触らない
+    const nextDefault = DEFAULT_BGM_ARRANGEMENT[scene];
+    if (!nextDefault || nextDefault === previousDefault) return;
+    next[scene] = nextDefault;
+    changed = true;
+  });
+  return { changed, arrangement: changed ? next : arrangement };
+};
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
   const saved = value?.[scene];
   if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
@@ -8176,8 +8204,19 @@ function MonsterHeroGame() {
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
   const RUN_PHASE_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','PICK_PRO_ALLIES','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION','QUICK_GROWTH','QUICK_JOIN'];
+  // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
+  // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
+  // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
+  const kikiIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null;
+  const eventBgmScene = kikiIntroPlaying
+    ? EVENT_BGM_SCENES.kiki_intro
+    : (eventReplay ? (EVENT_BGM_SCENES[eventReplay.id] || null) : null);
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver) => {
+    // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
+    // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
+    // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
+    if (eventBgmScene) return bgmArrangement[eventBgmScene];
     if (isGameOver) return 'gameOver';
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) return bgmArrangement.clear;
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
@@ -8208,7 +8247,7 @@ function MonsterHeroGame() {
     if (!audioOn) { Audio_.stopBGM(); return; }
     if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
@@ -8556,7 +8595,13 @@ function MonsterHeroGame() {
       const savedAudioMuted = !!await storeGet('mh_audio_muted', false, false);
       setQuickMuted(savedAudioMuted);
       if (savedAudioMuted) Audio_.setEnabled(false);
-      const savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
+      let savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
+      // プロモードの既定曲だけは、以前の既定のまま遊んでいる人へ新しい曲を一度だけ届ける
+      if (await storeGet(BGM_PRO_DEFAULT_MIGRATION_KEY, false, false) !== true) {
+        const proMigration = migrateProBgmDefaults(savedBgmArrangement);
+        if (proMigration.changed) savedBgmArrangement = proMigration.arrangement;
+        try { await storeSet(BGM_PRO_DEFAULT_MIGRATION_KEY, true, false); } catch {}
+      }
       setBgmArrangement(savedBgmArrangement);
       setAssistantUnlockSeen(normalizeAssistantUnlockSeen(await storeGet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, [], false)));
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
@@ -13549,13 +13594,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM']]},
       {id:'battle',label:'バトル'},
+      {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM']]},
       {id:'other',label:'その他',items:[['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
     ];const battleModes=[
       {id:'challenge',label:'チャレンジ',items:[['battle','通常戦 BGM'],['dullahan','デュラハン戦 BGM'],['boss','ムー戦 BGM']]},
       {id:'quick',label:'クイック',items:[['quickBattle','通常戦 BGM'],['quickDullahan','デュラハン戦 BGM'],['quickMoo','ムー戦 BGM']]},
       {id:'pro',label:'プロ',items:[['proBattle','通常戦 BGM'],['proDullahan','デュラハン戦 BGM'],['proMoo','ムー戦 BGM']]},
       {id:'extreme',label:'極限',items:[['extremeBattle','通常戦 BGM'],['extremeDullahan','デュラハン戦 BGM'],['extremeMoo','ムー戦 BGM']]},
-    ];const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-3 gap-2 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border text-xs font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className="grid grid-cols-4 gap-1 mb-4">{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
+    ];const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-4 gap-1 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className="grid grid-cols-4 gap-1 mb-4">{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{backupTab==='export'?<>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice" onClick={generateBackupCode}>バックアップコードを作成</button></>:<><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice" onClick={restoreFromBackupCode}>このコードで復元する</button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
   ) : null;
