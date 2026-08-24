@@ -138,6 +138,14 @@ check('血統チップは枠いっぱいに広がる（中身の長さで幅が�
 check('区分バッジの幅を固定している', detail.includes('data-dex-category') && detail.includes('min-w-[42px]'));
 check('説明文は行数が変わってもタブより下を動かさない',
   detail.includes('data-dex-desc') && detail.includes("height:'calc(1.625em * 3)'"));
+// 立ち絵の大きさは枠で決める。元画像は160px四方と1024px四方が混ざっているので、
+// 寸法を指定しないと小さい元画像だけそのままの大きさで表示され、
+// モンスターごとに見た目が2倍近く変わる(ザンだけ極端に大きく見えた)
+check('立ち絵は枠に合わせて縮尺する（元画像の解像度で大きさが変わらない）',
+  detail.includes('data-dex-art')
+  && detail.includes('className="w-full h-full object-contain"')
+  && !detail.includes('max-w-full max-h-full'));
+check('立ち絵の枠の高さを決めている', /data-dex-art[\s\S]{0,300}height:'clamp\(/.test(detail));
 check('Safe Areaを避けている', list.includes('env(safe-area-inset-top)') && detail.includes('env(safe-area-inset-bottom)'));
 check('横はみ出し対策(truncate/min-w-0/break-words)がある',
   detail.includes('truncate') && detail.includes('min-w-0') && detail.includes('break-words'));
