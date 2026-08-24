@@ -56,6 +56,12 @@ check('編成/一覧共通カード(renderMonsterCardBody)のベース種分岐�
   has('<img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>'));
 check('教え(固有技の元モンスター)アイコンがmonsterArtFitStyleを通す',
   has("<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className=\"w-10 h-10 rounded-full object-cover border border-white/10 shrink-0\"/>"));
+// モンスター図鑑。血統チップは24pxほどの小さな丸なので、通し忘れると
+// ウンディーネの頭が切れて体だけが写る(実際にそうなった)
+check('モンスター図鑑の一覧アイコンがmonsterArtFitStyleを通す',
+  /data-dex-entry[\s\S]{0,900}monsterArtFitStyle\(mon\.id,/.test(source));
+check('モンスター図鑑の血統チップのアイコンがmonsterArtFitStyleを通す',
+  /data-dex-lineage [\s\S]{0,600}monsterArtFitStyle\(lineage\.monId,/.test(source));
 check('マスモン一覧などのベース種分岐がmonsterArtFitStyleを通す',
   has('<img src={base.iconUrl} alt={base.name} style={monsterArtFitStyle(base.id)} className="w-full h-full object-cover"/>'));
 
