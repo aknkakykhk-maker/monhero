@@ -136,20 +136,26 @@ const web = path.join(root, 'monster-hero');
 const allySrc = fs.readFileSync(path.join(web, 'data/images/images-ally.js'), 'utf8');
 const artFiles = [...allySrc.matchAll(/const\s+(\w+_IMG)\s*=\s*"(images\/[^"?]+)/g)].map(m => ({ name: m[1], rel: m[2] }));
 
-// containで箱へ収めたときの、キャラ本体(透明でない部分)の高さ
-const drawnCharHeight = async (rel, box) => {
+// containで箱へ収めたときの、キャラ本体(透明でない部分)の高さと幅
+const drawnCharSize = async (rel, box) => {
   const img = await loadImage(path.join(web, rel));
   const cv = createCanvas(img.width, img.height);
   const g = cv.getContext('2d');
   g.drawImage(img, 0, 0);
   const d = g.getImageData(0, 0, img.width, img.height).data;
-  let top = img.height, bottom = 0;
+  let top = img.height, bottom = 0, left = img.width, right = 0;
   for (let y = 0; y < img.height; y++) {
     for (let x = 0; x < img.width; x++) {
-      if (d[(y * img.width + x) * 4 + 3] > 20) { if (y < top) top = y; if (y > bottom) bottom = y; break; }
+      if (d[(y * img.width + x) * 4 + 3] > 20) {
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+        if (x < left) left = x;
+        if (x > right) right = x;
+      }
     }
   }
-  return (bottom - top) * Math.min(box.w / img.width, box.h / img.height);
+  const scale = Math.min(box.w / img.width, box.h / img.height);
+  return { h: (bottom - top) * scale, w: (right - left) * scale };
 };
 
 const run = async () => {
@@ -157,23 +163,40 @@ const run = async () => {
     console.log(`\n[プロモードの横長カード ${PICK_HERO_BOX.w}x${PICK_HERO_BOX.h} での見た目の高さ]`);
     const measured = [];
     for (const { name, rel } of artFiles) {
-      measured.push({ name, h: await drawnCharHeight(rel, PICK_HERO_BOX) });
+      const size = await drawnCharSize(rel, PICK_HERO_BOX);
+      // 縦長のモンスターも横長のモンスターも同じものさしで比べたいので、長いほうの辺で見る。
+      // 高さだけで測ると、プラントのように横へ広い絵が実際より小さく判定されてしまう
+      measured.push({ name, h: size.h, w: size.w, long: Math.max(size.h, size.w) });
     }
-    const sorted = [...measured].sort((a, b) => a.h - b.h);
-    const median = sorted[Math.floor(sorted.length / 2)].h;
-    for (const m of sorted) console.log(`   ${m.name.padEnd(22)} ${m.h.toFixed(1)}px  (中央値比 ${(m.h / median).toFixed(2)}倍)`);
+    const sorted = [...measured].sort((a, b) => a.long - b.long);
+    const median = sorted[Math.floor(sorted.length / 2)].long;
+    for (const m of sorted) {
+      console.log(`   ${m.name.padEnd(22)} 高${m.h.toFixed(1)}px 幅${m.w.toFixed(1)}px 長辺${m.long.toFixed(1)}px  (中央値比 ${(m.long / median).toFixed(2)}倍)`);
+    }
     // 元絵の余白の差でどうしても多少はばらつくので、極端なものだけを弾く。
-    // 直す前のウンディーネ・ヤオビクニは1.51倍で、ここに引っかかっていた
+    // 直す前のウンディーネ・ヤオビクニは1.51倍で、上限に引っかかっていた
     const MAX_RATIO = 1.25;
-    const tooBig = sorted.filter(m => m.h / median > MAX_RATIO);
+    const tooBig = sorted.filter(m => m.long / median > MAX_RATIO);
     check(`どの立ち絵も中央値の${MAX_RATIO}倍より大きくならない`, tooBig.length === 0,
-      tooBig.map(m => `${m.name}=${(m.h / median).toFixed(2)}倍`).join(', '));
-    // ★今回の対象2体を名指しでも見る(将来また縦長の絵を足したときに気づけるように)
-    for (const id of ['UNDINE_IMG', 'YAOBIKUNI_IMG']) {
+      tooBig.map(m => `${m.name}=${(m.long / median).toFixed(2)}倍`).join(', '));
+
+    // 立ち絵が正方形でないと、正方形の枠(丸アイコン・一覧)では縮尺が短いほうの辺で決まり、
+    // その絵だけ小さく並ぶ。プラント(元は1536x1024で左右に広い余白つき)が実際にそうなっていた。
+    // 「絵が小さめに描かれている」(スエゾー・ライガーなど)のは別の話なので下限はここに掛けず、
+    // 枠の形のせいで縮んでいないかだけを、正方形でない絵と過去に直した対象へ掛ける
+    const MIN_RATIO = 0.9;
+    const nonSquare = [];
+    for (const { name, rel } of artFiles) {
+      const img = await loadImage(path.join(web, rel));
+      if (img.width !== img.height) nonSquare.push({ name, size: `${img.width}x${img.height}` });
+    }
+    console.log(`   正方形でない立ち絵: ${nonSquare.length ? nonSquare.map(n => `${n.name}=${n.size}`).join(', ') : 'なし'}`);
+    const watched = new Set([...nonSquare.map(n => n.name), 'UNDINE_IMG', 'YAOBIKUNI_IMG', 'PLANT_IMG']);
+    for (const id of watched) {
       const target = measured.find(m => m.name === id);
-      const ratio = target ? target.h / median : 0;
-      check(`${id} が他と同じくらいの大きさで並ぶ`, !!target && ratio <= MAX_RATIO,
-        target ? `${target.h.toFixed(1)}px / 中央値${median.toFixed(1)}px = ${ratio.toFixed(2)}倍` : '見つからない');
+      const ratio = target ? target.long / median : 0;
+      check(`${id} が他と同じくらいの大きさで並ぶ`, !!target && ratio <= MAX_RATIO && ratio >= MIN_RATIO,
+        target ? `長辺${target.long.toFixed(1)}px / 中央値${median.toFixed(1)}px = ${ratio.toFixed(2)}倍` : '見つからない');
     }
   }
 
