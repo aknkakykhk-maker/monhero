@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aa0118bc244e41cf
+// source-sha256: 9c76353b8ce97816
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 23:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 07:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5908,6 +5908,29 @@ const monsterArtFitStyle = (baseId, style) => MONSTER_ART_CONTAIN_IDS.includes(b
   ...style,
   objectFit: 'contain'
 } : style;
+// 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
+// そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
+// 表を二重に持つと片方だけ直して食い違うので、上の MONSTER_ART_CONTAIN_IDS から
+// そのモンスターが使う画像URLを集めておき、URLからも同じ判断ができるようにする。
+// ALL_PLAYER_MONSTERS は data/ally-monsters.js にあり、読み込み順の都合で最初に
+// 呼ばれたときに作る(モジュール読み込み時点ではまだ無い場合がある)
+let _monsterArtContainUrls = null;
+const monsterArtUrlNeedsContain = url => {
+  if (typeof url !== 'string' || !url) return false;
+  if (!_monsterArtContainUrls) {
+    const urls = new Set();
+    const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+    for (const baseId of MONSTER_ART_CONTAIN_IDS) {
+      const monster = all[baseId];
+      if (!monster) continue;
+      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
+        if (each) urls.add(each);
+      }
+    }
+    _monsterArtContainUrls = urls;
+  }
+  return _monsterArtContainUrls.has(url);
+};
 // 部位マスクは絵にぴったり重ねる必要がある。絵は object-fit(cover/contain)で枠へ収めるのに、
 // マスクだけ既定の mask-size:100% 100%(枠いっぱいへ引き伸ばす)にすると、絵とマスクで縮尺が
 // 変わって位置がずれる。正方形の絵を正方形の枠へ入れているあいだは cover も contain も
@@ -6705,7 +6728,7 @@ const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? ASSIST_C
     userSelect: 'none',
     pointerEvents: 'none'
   },
-  className: "rounded-full object-cover inline-block shrink-0"
+  className: `rounded-full ${monsterArtUrlNeedsContain(icon) ? 'object-contain' : 'object-cover'} inline-block shrink-0`
 }) : icon;
 // ランキングの記録に載せる部位別の色を作る。
 // colors は「何番目の部位か」を位置で表す配列なので、空きを詰めてはいけない。

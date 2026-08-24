@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 23:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 07:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3349,6 +3349,29 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
 const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
+// 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
+// そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
+// 表を二重に持つと片方だけ直して食い違うので、上の MONSTER_ART_CONTAIN_IDS から
+// そのモンスターが使う画像URLを集めておき、URLからも同じ判断ができるようにする。
+// ALL_PLAYER_MONSTERS は data/ally-monsters.js にあり、読み込み順の都合で最初に
+// 呼ばれたときに作る(モジュール読み込み時点ではまだ無い場合がある)
+let _monsterArtContainUrls = null;
+const monsterArtUrlNeedsContain = (url) => {
+  if (typeof url !== 'string' || !url) return false;
+  if (!_monsterArtContainUrls) {
+    const urls = new Set();
+    const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
+    for (const baseId of MONSTER_ART_CONTAIN_IDS) {
+      const monster = all[baseId];
+      if (!monster) continue;
+      for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
+        if (each) urls.add(each);
+      }
+    }
+    _monsterArtContainUrls = urls;
+  }
+  return _monsterArtContainUrls.has(url);
+};
 // 部位マスクは絵にぴったり重ねる必要がある。絵は object-fit(cover/contain)で枠へ収めるのに、
 // マスクだけ既定の mask-size:100% 100%(枠いっぱいへ引き伸ばす)にすると、絵とマスクで縮尺が
 // 変わって位置がずれる。正方形の絵を正方形の枠へ入れているあいだは cover も contain も
@@ -3567,7 +3590,7 @@ const AssistCardIcon = ({ icon, cardId, className='', style }) => (
 const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon)
   ? (ASSIST_CARD_ICON_STYLES[cardId]
     ? <AssistCardIcon icon={icon} cardId={cardId} style={{width:sizePx,height:sizePx}}/>
-    : <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="rounded-full object-cover inline-block shrink-0"/>)
+    : <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className={`rounded-full ${monsterArtUrlNeedsContain(icon)?'object-contain':'object-cover'} inline-block shrink-0`}/>)
   : icon;
 // ランキングの記録に載せる部位別の色を作る。
 // colors は「何番目の部位か」を位置で表す配列なので、空きを詰めてはいけない。
