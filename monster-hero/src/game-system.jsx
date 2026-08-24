@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 17:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1086,6 +1086,53 @@ const mergeMasuIntoMon = (masu) => {
     uniqueOrder: normalizeUniqueOrder(masu),
     initialUniqueKey: normalizeInitialUniqueKey(masu),
   };
+};
+
+// ==================== 血統と図鑑 ====================
+// 血統の正本は data/lineages.js。ここは「引き方」だけを持つ。
+// 血統はモンスターの種(baseId)に紐づくもので、マスモン(個体)へは保存しない。
+// data/lineages.js を読めなかったときも画面が落ちないよう、必ず既定値へ落ちる。
+const UNKNOWN_LINEAGE = Object.freeze({ id:'unknown', name:'？？？', rare:true });
+const lineageCatalog = () => (typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES) || {};
+const lineageEntryMap = () => (typeof MONSTER_LINEAGE_MAP !== 'undefined' && MONSTER_LINEAGE_MAP) || {};
+const lineageById = (id) => lineageCatalog()[id] || (id ? { id:String(id), name:String(id) } : UNKNOWN_LINEAGE);
+// モンスターの種id(マスモンなら baseId)から主血統・副血統を引く。
+// 将来の「○○血統限定モード」の参加判定もここを通す
+const monsterLineageOf = (monsterId) => {
+  const entry = lineageEntryMap()[monsterId];
+  return {
+    main: lineageById(entry?.main),
+    sub: lineageById(entry?.sub != null ? entry.sub : entry?.main),
+    known: !!entry,
+  };
+};
+// 区分: 主血統と副血統が同じ → 純血 ／ どちらかがレア血統 → レア ／ それ以外 → 派生種
+const monsterCategoryOf = (monsterId) => {
+  const { main, sub } = monsterLineageOf(monsterId);
+  if (main.rare || sub.rare) return 'rare';
+  return main.id === sub.id ? 'pure' : 'derived';
+};
+const monsterCategoryName = (categoryId) =>
+  (typeof MONSTER_CATEGORIES !== 'undefined' && MONSTER_CATEGORIES?.[categoryId]?.name) || '不明';
+// 血統のアイコン。その血統を代表するプレイアブルモンスターがいるときだけ絵を使う。
+// ドラゴン・ジョーカーのようにモンスターがいない血統は、絵を作らず名前だけで見せる
+const lineageIconUrl = (lineage) => {
+  const base = lineage?.monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[lineage.monId] : null;
+  return base?.faceIconUrl || base?.iconUrl || null;
+};
+// 図鑑の説明。まだ書いていないモンスターは、空欄にせず調査中と伝える
+const monsterDexDescription = (monsterId) =>
+  (typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[monsterId])
+  || 'この個体の記録はまだ集まっていません。調査が進むと図鑑へ追記されます。';
+// 図鑑に並ぶモンスター。ALL_PLAYER_MONSTERS の定義順をそのまま図鑑の並びにする
+const dexMonsterList = () => (typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.values(ALL_PLAYER_MONSTERS) : []);
+// 図鑑の絞り込みに出す主血統。実際に登場する主血統だけを、図鑑の並び順で並べる
+const dexMainLineages = () => {
+  const seen = new Set();
+  return dexMonsterList().map(mon => monsterLineageOf(mon.id).main).filter(lineage => {
+    if (!lineage || seen.has(lineage.id)) return false;
+    seen.add(lineage.id); return true;
+  });
 };
 
 // ==================== 総合力 ====================
@@ -4907,6 +4954,12 @@ const helpDataRows = (id) => {
   switch (id) {
     case 'difficulties':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `敵×${s.power} ／ スコア×${s.score} ／ ダイヤ×${s.gold}`]);
+    // モンスターの血統一覧。ヘルプへ手で書き写すと、モンスターを足したときに古いままになる
+    case 'monsterLineages':
+      return dexMonsterList().map(mon => {
+        const { main, sub } = monsterLineageOf(mon.id);
+        return [mon.name, `${main.name} × ${sub.name}（${monsterCategoryName(monsterCategoryOf(mon.id))}）`];
+      });
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
       return EXTREME_DIFFICULTIES.map(s => [s.label, s.available
@@ -4998,6 +5051,7 @@ const HELP_DATA_TITLES = {
   assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
   monsterPower: '総合力の内訳',
+  monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
 };
 // ===== 助手(ナビゲーター) ここから =====
@@ -7194,6 +7248,10 @@ function MonsterHeroGame() {
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
   const [masuMonDetail, setMasuMonDetail] = useState(null); // マスモン一覧: タップ中のマスモン詳細
   const [uniqueSettingMasuId, setUniqueSettingMasuId] = useState(null); // 固有技設定(並び順・初期技)を開いているマスモンのid
+  const [dexLineageFilter, setDexLineageFilter] = useState('all'); // モンスター図鑑: 主血統の絞り込み('all'または血統id)
+  const [dexMonsterId, setDexMonsterId] = useState(null);          // モンスター図鑑: 詳細で見ているモンスターのid
+  const [dexTab, setDexTab] = useState('basic');                   // モンスター図鑑の詳細タブ(basic/stats/skills)
+  const dexSwipeRef = useRef(null);                                // 図鑑詳細の横スワイプ(指を置いた位置)
   const [uniqueSkillPointDrafts, setUniqueSkillPointDrafts] = useState({}); // 個体IDごとの固有技ポイント仮配分
   const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
@@ -8180,6 +8238,8 @@ function MonsterHeroGame() {
     SKIP_PICK: 'enhance',        // スキップの編成選択(勇者モン選択と同じ曲)
     SKIP_RESULT: 'result',       // スキップのリザルト(通常のリザルトと同じ曲)
     MONSTER_LIST_MENU: 'management', // モンスター一覧メニュー
+    MONSTER_DEX: 'management',        // モンスター図鑑もM/B管理の曲を続ける
+    MONSTER_DEX_DETAIL: 'management', // 図鑑の詳細も同じ曲のまま
     MB_MANAGEMENT: 'management', // M/B管理はモンスター一覧・編成と同じ曲を続ける
     AUTO_SETTINGS: 'management', // AUTO事前設定もM/B管理の曲を続ける
     PASTURE_SETTINGS: 'management', // 放牧設定もM/B管理の曲を続ける
@@ -13843,11 +13903,193 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex items-center gap-2 mb-5 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-300">M/B管理</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="mbManagement"/></div>
             <div className="grid grid-cols-2 gap-2 mb-5 shrink-0"><button onClick={()=>setManagementTab('monster')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='monster'?'bg-indigo-600 text-white':'bg-slate-900 text-slate-400'}`}>モンスター</button><button onClick={()=>setManagementTab('assist')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='assist'?'bg-purple-600 text-white':'bg-slate-900 text-slate-400'}`}>アシストカード</button></div>
             <div className="w-full max-w-md mx-auto space-y-3 overflow-y-auto mh-scroll">
-              {managementTab==='monster'?<><button onClick={()=>setGameState('OWNED_MONSTERS')} className="mh-management-link">ベースモン一覧</button><button onClick={()=>setGameState('MASU_MONS')} className="mh-management-link">マスモン一覧</button><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('monster');setGameState('ROSTER');}} className="mh-management-link">モンスター編成</button><button onClick={openPastureSettings} className="mh-management-link">放牧設定</button></>:<button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('teaching');setGameState('ROSTER');}} className="mh-management-link">アシストカード編成</button>}
+              {managementTab==='monster'?<><button onClick={()=>setGameState('OWNED_MONSTERS')} className="mh-management-link">ベースモン一覧</button><button onClick={()=>setGameState('MASU_MONS')} className="mh-management-link">マスモン一覧</button><button onClick={()=>{setDexLineageFilter('all');setGameState('MONSTER_DEX');}} className="mh-management-link">モンスター図鑑</button><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('monster');setGameState('ROSTER');}} className="mh-management-link">モンスター編成</button><button onClick={openPastureSettings} className="mh-management-link">放牧設定</button></>:<button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('teaching');setGameState('ROSTER');}} className="mh-management-link">アシストカード編成</button>}
               <button onClick={openAutoSettings} className="mh-management-link">AUTO設定</button>
             </div>
           </div>
         )}
+
+        {/* モンスター図鑑(一覧): 図鑑登録数・主血統でのしぼりこみ・アイコン一覧。
+            解放判定は既存の mh_unlocked_monsters をそのまま使い、図鑑用の保存は増やさない */}
+        {gameState==='MONSTER_DEX'&&(()=>{
+          const monsters=dexMonsterList();
+          const unlockedCount=monsters.filter(mon=>unlockedMonsterIds.includes(mon.id)).length;
+          const filters=dexMainLineages();
+          const shown=dexLineageFilter==='all'?monsters:monsters.filter(mon=>monsterLineageOf(mon.id).main.id===dexLineageFilter);
+          const chipClass=(on)=>`shrink-0 min-h-[40px] px-3 rounded-full border text-[10px] font-black whitespace-nowrap active:scale-95 ${on?'bg-amber-600 border-amber-300 text-white':'bg-slate-900 border-amber-500/30 text-amber-200/80'}`;
+          return (
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-center gap-2 mb-3 shrink-0">
+              <button onClick={()=>setGameState('MB_MANAGEMENT')} className="p-3 text-slate-400 active:scale-90" aria-label="M/B管理へ戻る"><ArrowLeft size={20}/></button>
+              <h2 className="text-xl font-black italic text-amber-300 uppercase tracking-widest">モンスター図鑑</h2>
+            </div>
+            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="monsterDex"/></div>
+            <div data-dex-count className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/70 to-orange-950/50 px-3 py-2 flex items-center justify-between gap-2">
+              <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0">図鑑登録数</span>
+              <span className="text-[15px] font-mono font-black text-amber-100 tabular-nums">{unlockedCount}<span className="text-slate-400 text-[10px]"> / {monsters.length}</span></span>
+            </div>
+            <div className="shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto mh-scroll pb-1" role="tablist" aria-label="主血統でしぼりこむ">
+              <button type="button" role="tab" aria-selected={dexLineageFilter==='all'} onClick={()=>setDexLineageFilter('all')} className={chipClass(dexLineageFilter==='all')}>すべて</button>
+              {filters.map(lineage=>(
+                <button key={lineage.id} type="button" role="tab" aria-selected={dexLineageFilter===lineage.id} onClick={()=>setDexLineageFilter(lineage.id)} className={chipClass(dexLineageFilter===lineage.id)}>{lineage.name}</button>
+              ))}
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto">
+              <div className="grid grid-cols-3 gap-2.5 pb-4">
+                {shown.map(mon=>{
+                  const unlocked=unlockedMonsterIds.includes(mon.id);
+                  const iconSrc=mon.iconUrl||mon.imgUrl||'';
+                  const category=monsterCategoryOf(mon.id);
+                  return (
+                    <button key={mon.id} type="button" data-dex-entry aria-label={unlocked?`${mon.name}の図鑑を見る`:'まだ出会っていないモンスター'}
+                      onClick={()=>{setDexMonsterId(mon.id);setDexTab('basic');setGameState('MONSTER_DEX_DETAIL');}}
+                      className="w-full min-h-[124px] rounded-2xl border-2 border-amber-600/30 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none">
+                      <div className="w-14 h-14 rounded-full overflow-hidden border border-amber-400/30 shrink-0 bg-black/40">
+                        {iconSrc
+                          ? <img src={iconSrc} alt="" draggable={false} className="w-full h-full object-cover" style={monsterArtFitStyle(mon.id, unlocked?undefined:{filter:'brightness(0)',opacity:0.6})}/>
+                          : <div className="w-full h-full flex items-center justify-center text-2xl">{unlocked?mon.emoji:'？'}</div>}
+                      </div>
+                      <div className="text-[10px] font-black truncate w-full text-center leading-tight text-amber-100">{unlocked?mon.name:'？？？'}</div>
+                      <div className="text-[8px] font-black text-amber-400/80 leading-tight">{unlocked?monsterCategoryName(category):'未発見'}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {shown.length===0&&<div className="text-[10px] text-slate-400 font-bold text-center py-6">この血統のモンスターはまだいません。</div>}
+            </div>
+          </div>);
+        })()}
+
+        {/* モンスター図鑑(詳細): 上半分に立ち絵、下半分に情報カード。
+            左右ボタンと横スワイプで前後のモンスターへ移る。
+            出す中身はすべて既存のモンスターデータから引き、図鑑用に写しを作らない */}
+        {gameState==='MONSTER_DEX_DETAIL'&&(()=>{
+          const monsters=dexMonsterList();
+          const index=monsters.findIndex(m=>m.id===dexMonsterId);
+          const mon=index>=0?monsters[index]:null;
+          if(!mon){ setGameState('MONSTER_DEX'); return null; }
+          const unlocked=unlockedMonsterIds.includes(mon.id);
+          const {main,sub}=monsterLineageOf(mon.id);
+          const category=monsterCategoryOf(mon.id);
+          const categoryClass=category==='rare'?'bg-amber-600 text-white':category==='pure'?'bg-emerald-700 text-white':'bg-indigo-700 text-white';
+          const go=(delta)=>{ const next=monsters[(index+delta+monsters.length)%monsters.length]; if(!next) return; setDexMonsterId(next.id); setDexTab('basic'); Audio_.se.tap(); };
+          // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
+          const lineageChip=(lineage)=>{
+            const icon=lineageIconUrl(lineage);
+            return (
+              <span data-dex-lineage className="inline-flex items-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
+                {icon
+                  ? <img src={icon} alt="" draggable={false} className="w-6 h-6 rounded-full object-cover border border-amber-300/40 shrink-0"/>
+                  : <span className="w-6 h-6 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
+                <span className="text-[11px] font-black text-amber-100 truncate">{lineage.name}</span>
+              </span>
+            );
+          };
+          const tabs=[['basic','基本'],['stats','能力'],['skills','技']];
+          const tab=tabs.some(([id])=>id===dexTab)?dexTab:'basic';
+          const row=(label,value)=>(
+            <div className="flex items-start justify-between gap-3 border-b border-amber-500/15 py-1.5 last:border-b-0">
+              <span className="text-[10px] font-black text-amber-300/90 shrink-0">{label}</span>
+              <span className="text-[11px] font-bold text-white text-right min-w-0 break-words">{value}</span>
+            </div>
+          );
+          const skillPills=(list,accent)=>(
+            <div className="grid grid-cols-2 gap-1.5">
+              {list.map(skill=>(
+                <div key={skill.lvl} className={`min-w-0 rounded-xl border px-2 py-1.5 ${accent}`}>
+                  <div className="flex items-center justify-between gap-1.5 min-w-0">
+                    <span className="text-[10px] font-black text-white truncate min-w-0">{skill.name}</span>
+                    <span className="text-[8px] font-mono font-black text-amber-300 shrink-0">Lv.{skill.lvl}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 text-[8px] font-mono font-black text-slate-400">
+                    <span className="text-red-300">威力{skill.power}</span><span className="text-amber-300">消費G{skill.guts}</span><span className="text-yellow-300">会心{skill.crit}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+          return (
+          <div className="flex-1 flex flex-col h-full min-h-0" style={{paddingTop:'calc(0.5rem + env(safe-area-inset-top))',paddingBottom:'calc(0.5rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-center gap-2 px-3 shrink-0">
+              <button onClick={()=>setGameState('MONSTER_DEX')} className="p-3 text-slate-400 active:scale-90" aria-label="図鑑一覧へ戻る"><ArrowLeft size={20}/></button>
+              <h2 className="text-lg font-black italic text-amber-300 uppercase tracking-widest">モンスター図鑑</h2>
+              <span className="ml-auto text-[10px] font-mono font-black text-amber-200/80 tabular-nums pr-1">{index+1} / {monsters.length}</span>
+            </div>
+            {/* 上半分: 立ち絵。左右のボタンと横スワイプで前後へ移る */}
+            <div data-dex-art className="relative shrink-0 flex items-center justify-center px-12" style={{height:'34dvh',minHeight:'180px'}}
+              onTouchStart={e=>{dexSwipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
+              onTouchEnd={e=>{const from=dexSwipeRef.current; dexSwipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
+              {mon.imgUrl
+                ? <img src={mon.imgUrl} alt={unlocked?mon.name:'まだ出会っていないモンスター'} draggable={false} className="max-w-full max-h-full object-contain" style={unlocked?undefined:{filter:'brightness(0)',opacity:0.65}}/>
+                : <div className="text-6xl">{unlocked?mon.emoji:'？'}</div>}
+              <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
+              <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
+            </div>
+            {/* 下半分: 情報カード */}
+            <div className="flex-1 min-h-0 px-3 pt-2">
+              <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
+                <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{unlocked?mon.name:'？？？'}</div>
+                {unlocked?(<>
+                  <div className="shrink-0 mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
+                    <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0">血統</span>
+                    {lineageChip(main)}
+                    <span className="text-[12px] font-black text-amber-300 shrink-0">×</span>
+                    {lineageChip(sub)}
+                    <span data-dex-category className={`shrink-0 text-[9px] font-black px-2 py-1 rounded-full ${categoryClass}`}>{monsterCategoryName(category)}</span>
+                  </div>
+                  <p data-dex-desc className="shrink-0 mt-2 text-[10px] font-bold leading-relaxed text-slate-200 break-words">{monsterDexDescription(mon.id)}</p>
+                  <div role="tablist" aria-label="図鑑の内容" className="shrink-0 mt-2 grid grid-cols-3 gap-1.5">
+                    {tabs.map(([id,label])=>(
+                      <button key={id} type="button" role="tab" aria-selected={tab===id} onClick={()=>setDexTab(id)}
+                        className={`min-h-[40px] rounded-xl border text-[11px] font-black active:scale-95 ${tab===id?'bg-amber-600 border-amber-300 text-white':'bg-slate-900 border-amber-500/30 text-amber-200/80'}`}>{label}</button>
+                    ))}
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-y-auto mh-scroll mt-2 pr-0.5">
+                    {tab==='basic'&&(<div data-dex-tab-basic>
+                      {row('主血統', main.name)}
+                      {row('副血統', sub.name)}
+                      {row('区分', monsterCategoryName(category))}
+                      {row('勇者特性', mon.trait||'なし')}
+                      {row('特性の効果', mon.traitDesc||'特性なし')}
+                    </div>)}
+                    {tab==='stats'&&(<div data-dex-tab-stats>
+                      <div className="text-[9px] font-black text-amber-300/90 mb-1">その種の基礎能力（育てたマスモンの値ではありません）</div>
+                      {row('ライフ', mon.baseHp)}
+                      {row('ちから', mon.baseAtk)}
+                      {row('丈夫さ', mon.baseDef)}
+                      {row('ガッツ', mon.baseGuts)}
+                      <div className="text-[9px] font-black text-amber-300/90 mt-2 mb-1">間合い適性</div>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {RANGE_LABELS.map((label,i)=>(
+                          <div key={label} className="rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center">
+                            <div className="text-[9px] font-black text-slate-400">{label}</div>
+                            <div className="text-[13px] font-mono font-black text-amber-200">{(mon.distAptitude&&mon.distAptitude[i])||'C'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>)}
+                    {tab==='skills'&&(<div data-dex-tab-skills className="space-y-2">
+                      <div>
+                        <div className="text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest">通常技</div>
+                        {skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')}
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest">固有技（進化段階）</div>
+                        {skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30')}
+                        <div className="text-[9px] text-slate-300 font-bold leading-relaxed mt-1.5 italic break-words">"{mon.unique?.effectDesc||''}"</div>
+                      </div>
+                    </div>)}
+                  </div>
+                </>):(
+                  <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 px-2 text-center">
+                    <p className="text-[11px] font-black text-amber-200">まだ出会っていないモンスターです</p>
+                    <p className="text-[10px] font-bold text-slate-400 leading-relaxed">マーケットで円盤石を手に入れて解放すると、血統・能力・技が図鑑に記録されます。</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>);
+        })()}
 
         {gameState==='AUTO_SETTINGS'&&(()=>{
           const strategies = [

@@ -20,12 +20,16 @@ const sourcePath = path.join(root, 'monster-hero/src/game-system.jsx');
 const source = fs.readFileSync(sourcePath, 'utf8');
 
 // --- data/*.js を実行して、そこで定義される名前を集める ---
-// index.html が読む順にそのまま流す(前のファイルの定数を使うものがあるため)
-const dataFiles = [
-  'data/images/images-ally.js', 'data/images/images-enemy.js',
-  'data/ally-monsters.js', 'data/breeder.js', 'data/enemy-monsters.js',
-  'data/skills.js', 'data/changelog.js', 'data/help.js', 'data/assistants.js',
-];
+// index.html が読む順にそのまま流す(前のファイルの定数を使うものがあるため)。
+// 一覧を手で書いていたころは、data/*.js を1つ足すたびにここへ足し忘れ、
+// 新しいデータの定数が「どこからも見えない変数」として誤検出されていた。
+// 実際に配信される index.html の読み込み順から拾って、ずれないようにする。
+const indexHtml = fs.readFileSync(path.join(root, 'monster-hero', 'index.html'), 'utf8');
+const dataFiles = [...indexHtml.matchAll(/<script src="(data\/[^"?]+\.js)(?:\?[^"]*)?"/g)].map(m => m[1]);
+if (dataFiles.length === 0) {
+  console.error('NG: index.html から data/*.js の読み込みを拾えませんでした');
+  process.exit(1);
+}
 const dataContext = {};
 vm.createContext(dataContext);
 const beforeKeys = new Set(Object.getOwnPropertyNames(dataContext));

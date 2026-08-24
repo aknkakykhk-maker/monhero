@@ -17,6 +17,8 @@ const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx
 const helpData = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 const breeder = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8');
 const assistantsData = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
+const lineagesData = fs.readFileSync(path.join(root, 'monster-hero/data/lineages.js'), 'utf8');
+const allyMonstersData = fs.readFileSync(path.join(root, 'monster-hero/data/ally-monsters.js'), 'utf8');
 const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 // t:'data' の表は本番の helpDataRows() が実データから作るので、その定義と材料もそのまま持ち込む
 const dataTablePrelude = [
@@ -34,6 +36,10 @@ const dataTablePrelude = [
   // 段階の並びは1行だけ持ち込む(宣言と DIST_APTITUDE_MULT は離れた場所にあるため範囲では取らない)
   (source.match(/^const DIST_APTITUDE_GRADES = \[.*$/m) || [''])[0],
   grab(source, 'const STAT_POINT_GAIN = {', 'const STAT_POINT_KEYS'),
+  // 血統一覧の表は data/lineages.js・data/ally-monsters.js と血統の引き方から作るので、材料ごと持ち込む
+  allyMonstersData.replace(/\b[A-Z_]+_(?:IMG|ICON|FACE_ICON)\b/g, "''"),
+  lineagesData,
+  grab(source, 'const UNKNOWN_LINEAGE =', '// ==================== 総合力'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
   "const { useState, useEffect, useRef, useContext } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
