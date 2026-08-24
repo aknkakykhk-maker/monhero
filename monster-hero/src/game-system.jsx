@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 18:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 19:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13955,9 +13955,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button key={mon.id} type="button" data-dex-entry aria-label={unlocked?`${mon.name}の図鑑を見る`:'まだ出会っていないモンスター'}
                       onClick={()=>{setDexMonsterId(mon.id);setDexTab('basic');setGameState('MONSTER_DEX_DETAIL');}}
                       className="w-full min-h-[124px] rounded-2xl border-2 border-amber-600/30 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none">
-                      <div className="w-14 h-14 rounded-full overflow-hidden border border-amber-400/30 shrink-0 bg-black/40">
+                      {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
+                          少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
+                      <div className="w-14 h-14 rounded-full overflow-hidden border border-amber-400/30 shrink-0 bg-black/40 flex items-center justify-center">
                         {iconSrc
-                          ? <img src={iconSrc} alt="" draggable={false} className="w-full h-full object-cover" style={monsterArtFitStyle(mon.id, unlocked?undefined:{filter:'brightness(0)',opacity:0.6})}/>
+                          ? <img src={iconSrc} alt="" draggable={false} data-dex-entry-icon className="w-full h-full object-contain" style={{padding:'10%',...(unlocked?{}:{filter:'brightness(0)',opacity:0.6})}}/>
                           : <div className="w-full h-full flex items-center justify-center text-2xl">{unlocked?mon.emoji:'？'}</div>}
                       </div>
                       <div className="text-[10px] font-black truncate w-full text-center leading-tight text-amber-100">{unlocked?mon.name:'？？？'}</div>
@@ -13990,9 +13992,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             return (
               <span data-dex-lineage className="flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
                 {icon
-                  /* ウンディーネ・ヤオビクニは顔アイコンが無く立ち絵をそのまま使うため、
-                     丸く切り抜くと体だけが写って頭が切れる。既存の monsterArtFitStyle を通す */
-                  ? <img src={icon} alt="" draggable={false} style={monsterArtFitStyle(lineage.monId, undefined)} className="w-7 h-7 rounded-full object-cover border border-amber-300/40 shrink-0"/>
+                  /* 丸く切り抜くので、絵を枠いっぱいに入れると円の外側へかかる部分が切れる
+                     (アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)。
+                     どのモンスターでも全身が円の中へ収まるよう、少し縮めて中央へ置く。
+                     顔アイコンを持たないウンディーネ・ヤオビクニも、これで頭まで入る */
+                  ? <span className="w-7 h-7 rounded-full overflow-hidden border border-amber-300/40 shrink-0 bg-black/30 flex items-center justify-center">
+                      <img src={icon} alt="" draggable={false} data-dex-lineage-icon className="w-full h-full object-contain" style={{padding:'10%'}}/>
+                    </span>
                   : <span className="w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
                 <span className="text-[11px] font-black text-amber-100 truncate">{lineage.name}</span>
               </span>

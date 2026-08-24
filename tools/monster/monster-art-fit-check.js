@@ -58,10 +58,16 @@ check('教え(固有技の元モンスター)アイコンがmonsterArtFitStyle�
   has("<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className=\"w-10 h-10 rounded-full object-cover border border-white/10 shrink-0\"/>"));
 // モンスター図鑑。血統チップは24pxほどの小さな丸なので、通し忘れると
 // ウンディーネの頭が切れて体だけが写る(実際にそうなった)
-check('モンスター図鑑の一覧アイコンがmonsterArtFitStyleを通す',
-  /data-dex-entry[\s\S]{0,900}monsterArtFitStyle\(mon\.id,/.test(source));
-check('モンスター図鑑の血統チップのアイコンがmonsterArtFitStyleを通す',
-  /data-dex-lineage [\s\S]{0,600}monsterArtFitStyle\(lineage\.monId,/.test(source));
+// 図鑑の丸アイコンは、monsterArtFitStyle(ウンディーネ・ヤオビクニだけcontain)では足りない。
+// 丸く切り抜くと、円の外側へかかる部分がどのモンスターでも切れる
+// (アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)。
+// 全モンスターを object-contain にしたうえで、円の内側へ収まるよう内側の余白を取る。
+check('モンスター図鑑の一覧アイコンが円の内側へ収まる',
+  /data-dex-entry-icon className="w-full h-full object-contain"[\s\S]{0,120}padding:'10%'/.test(source));
+check('モンスター図鑑の血統チップのアイコンが円の内側へ収まる',
+  /data-dex-lineage-icon className="w-full h-full object-contain"[\s\S]{0,120}padding:'10%'/.test(source));
+check('図鑑の丸アイコンで object-cover を使っていない（切れる原因）',
+  !/data-dex-(?:entry|lineage)-icon[^>]*object-cover/.test(source));
 check('マスモン一覧などのベース種分岐がmonsterArtFitStyleを通す',
   has('<img src={base.iconUrl} alt={base.name} style={monsterArtFitStyle(base.id)} className="w-full h-full object-cover"/>'));
 

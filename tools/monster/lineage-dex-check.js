@@ -135,6 +135,12 @@ check('血統の行は文字数で位置が動かない（左右のチップが�
   && !/血統の行[\s\S]{0,200}justify-center/.test(detail));
 check('血統チップは枠いっぱいに広がる（中身の長さで幅が変わらない）',
   detail.includes('data-dex-lineage className="flex w-full items-center justify-center'));
+// 丸アイコンは円の内側へ収める。枠いっぱいに絵を入れると、円の外側へかかる部分が
+// どのモンスターでも切れる(アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)
+check('血統チップのアイコンが円の内側へ収まる',
+  detail.includes('data-dex-lineage-icon') && /data-dex-lineage-icon[\s\S]{0,140}padding:'10%'/.test(detail));
+check('図鑑一覧のアイコンも円の内側へ収まる',
+  list.includes('data-dex-entry-icon') && /data-dex-entry-icon[\s\S]{0,160}padding:'10%'/.test(list));
 check('区分バッジの幅を固定している', detail.includes('data-dex-category') && detail.includes('min-w-[42px]'));
 check('説明文は行数が変わってもタブより下を動かさない',
   detail.includes('data-dex-desc') && detail.includes("height:'calc(1.625em * 3)'"));
