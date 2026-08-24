@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 20:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 22:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2582,10 +2582,12 @@ const MASU_COLOR_REGION_HUES = {
   // どの部位にも属さないまま常に無染色で残っていた(花びらだけ染まって中心だけ元の黄色が浮く)ため、
   // 花びらと同じ染色①にまとめて含めた
   Oboro: [[{ hue: 239 }, { hue: 50, sMax: 0.3, vMin: 0.8 }], { hue: 205 }, { white: true, sMax: 0.18, vMin: 0.85 }],
-  // オボロゲソウと同じ「花／葉と茎／白い本体」の3部位。Plantは背景込みの正方形画像なので、
-  // 色相だけを画像全体へ適用せず、実際に各部位がある範囲と明度も併用して背景の光を拾わない。
-  // 花は赤い外花被・白い内花被・黄色い中心を染色①へまとめ、葉と茎を②、顔のある球根を③にする。
-  // 後日エディタから正式PNGを書き出すまで、この画像解析マスクを初期マスクとして共通経路で使う。
+  // オボロゲソウと同じ「花／葉と茎／白い本体」の3部位。
+  // 花の内側(淡いピンク)と体(ほぼ白)はどちらも低彩度で、色相・彩度の閾値だけでは
+  // どうしても互いに混ざってごま塩状に汚れる。そのため2026年8月に正式マスク
+  // plant-dye-mask.PNG(EXACT_DYE_MASKS)へ移行し、染色①②③はそちらが正本になった
+  // (作り直しは node tools/image/make-plant-dye-mask.js、検査は plant-dye-mask-check.js)。
+  // 以下の色相定義は部位数(3)を決めるためと、正式マスクを使えなかったときの控えとして残している。
   Plant: [
     [
       { hue: 350, sMin: 0.48, vMin: 0.72, bbox: [[0.12,0.00,0.88,0.43],[0.08,0.17,0.38,0.46],[0.62,0.17,0.92,0.46]], noEdgeGuard: true },
@@ -2992,7 +2994,7 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。

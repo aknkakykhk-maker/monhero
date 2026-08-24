@@ -15,7 +15,13 @@
 3. `monster-hero/images/monsters/<名前>.PNG`（大文字名の高解像度版。マーケットのアイコン商品として配信しているもの）
 4. `images-ally.js` の立ち絵（表示用に縮小されていることがある）
 
-## 今このフォルダが空になっている理由
+## 顔アイコン以外にも使っているもの
+
+| ファイル | 使うところ |
+| --- | --- |
+| `PLANT.PNG` | `node tools/image/make-plant-dye-mask.js` が読む、手を入れていない原本。配信中の `plant.PNG` は透過を掃除した後の絵なので中身が違う。配信中の絵を読んで同じ場所へ書き戻すと、Canvasが半透明画素の色を丸めるぶん結果が少しずつ変わり、何度流しても同じ絵にならなくなるため原本を分けている。 |
+
+## 顔アイコン用の原本が今このフォルダに無い理由
 
 ここへ置いていた原本(`MOCCHI.PNG` / `SNEGUROCHKA.PNG` / `SNEGUROCHKA_AWAKENED.PNG`)は、
 `monster-hero/images/monsters/` の同名ファイルと1バイトも違わない重複だった。
