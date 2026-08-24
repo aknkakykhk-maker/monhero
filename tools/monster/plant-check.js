@@ -12,14 +12,19 @@ const breeder = fs.readFileSync('monster-hero/data/breeder.js', 'utf8');
 const changelog = fs.readFileSync('monster-hero/data/changelog.js', 'utf8');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(`${images}\n${ally}\n${lineages}\nglobalThis.data={HERO_ATK_NAMES,ALL_PLAYER_MONSTERS,STARTER_MONSTER_IDS,MONSTER_LINEAGES,MONSTER_LINEAGE_MAP};`, ctx);
+vm.runInContext(`${images}\n${ally}\n${lineages}\nglobalThis.data={HERO_ATK_NAMES,ALL_PLAYER_MONSTERS,STARTER_MONSTER_IDS,MONSTER_LINEAGES,MONSTER_LINEAGE_MAP,MONSTER_DEX_DESCRIPTIONS};`, ctx);
 
 const { HERO_ATK_NAMES: attacks, ALL_PLAYER_MONSTERS: monsters, STARTER_MONSTER_IDS: starters,
-  MONSTER_LINEAGES: lineagesById, MONSTER_LINEAGE_MAP: lineageMap } = ctx.data;
+  MONSTER_LINEAGES: lineagesById, MONSTER_LINEAGE_MAP: lineageMap,
+  MONSTER_DEX_DESCRIPTIONS: dexDescriptions } = ctx.data;
 const plant = monsters.Plant;
 const oboro = monsters.Oboro;
 const checks = [
   ['Plantがプレイヤーモンスターに存在', plant?.id === 'Plant' && plant.name === 'プラント'],
+  ['プレイヤーモンスターは全16種', Object.keys(monsters).length === 16],
+  ['初期解放は8種を維持', starters.length === 8],
+  ['全16種に図鑑説明が存在', Object.keys(monsters).every(id => typeof dexDescriptions[id] === 'string' && dexDescriptions[id].trim())],
+  ['Plant図鑑説明は指定文どおり', dexDescriptions.Plant === '非力だが多彩な攻撃手段を持っている\nほかの地域と比べると、IMa地方のプラントは弱いと言われているようだ'],
   ['基礎能力', plant?.baseHp === 930 && plant.baseAtk === 100 && plant.baseDef === 65 && plant.baseGuts === 120],
   ['合流ボーナス', JSON.stringify(plant?.plusStats) === JSON.stringify({ hp:620, atk:10, def:0, guts:15 })],
   ['距離適性', JSON.stringify(plant?.distAptitude) === JSON.stringify(['C','D','F','A'])],
@@ -32,6 +37,7 @@ const checks = [
   ['本体画像を全用途で再利用', plant?.imgUrl === plant?.iconUrl && plant?.iconUrl === plant?.faceIconUrl && /plant\.PNG\?v=f2123e579d45/.test(plant.imgUrl)],
   ['Plantはプラント純血', lineageMap.Plant?.main === 'plant' && lineageMap.Plant?.sub === 'plant'],
   ['プラント血統の代表はPlant', lineagesById.plant?.monId === 'Plant'],
+  ['主血統プラントの対象はPlantとOboro', JSON.stringify(Object.keys(monsters).filter(id => lineageMap[id]?.main === 'plant').sort()) === JSON.stringify(['Oboro', 'Plant'])],
   ['Oboroの定義を維持', oboro?.baseHp === 900 && oboro.baseAtk === 90 && oboro.baseDef === 60 && oboro.baseGuts === 115 && lineageMap.Oboro?.main === 'plant' && lineageMap.Oboro?.sub === 'gel'],
   ['Plantは初期解放しない', !starters.includes('Plant')],
   ['Plant円盤石画像参照', /const PLANT_DISC_ICON = "images\/disc-icons\/plant-disc\.PNG\?v=e62804cf3a5c"/.test(breeder)],
