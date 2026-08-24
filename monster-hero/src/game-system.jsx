@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 17:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 18:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13990,8 +13990,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             return (
               <span data-dex-lineage className="flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
                 {icon
-                  ? <img src={icon} alt="" draggable={false} className="w-6 h-6 rounded-full object-cover border border-amber-300/40 shrink-0"/>
-                  : <span className="w-6 h-6 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
+                  /* ウンディーネ・ヤオビクニは顔アイコンが無く立ち絵をそのまま使うため、
+                     丸く切り抜くと体だけが写って頭が切れる。既存の monsterArtFitStyle を通す */
+                  ? <img src={icon} alt="" draggable={false} style={monsterArtFitStyle(lineage.monId, undefined)} className="w-7 h-7 rounded-full object-cover border border-amber-300/40 shrink-0"/>
+                  : <span className="w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
                 <span className="text-[11px] font-black text-amber-100 truncate">{lineage.name}</span>
               </span>
             );
