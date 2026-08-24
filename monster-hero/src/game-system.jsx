@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 18:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 18:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14029,11 +14029,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <span className="ml-auto text-[10px] font-mono font-black text-amber-200/80 tabular-nums pr-1">{index+1} / {monsters.length}</span>
             </div>
             {/* 上半分: 立ち絵。左右のボタンと横スワイプで前後へ移る */}
-            <div data-dex-art className="relative shrink-0 flex items-center justify-center px-12" style={{height:'34dvh',minHeight:'180px'}}
+            {/* 立ち絵の枠。高さをここで決め、絵は枠に合わせて縮尺する。
+                元画像は160px四方のものと1024px四方のものが混ざっており、
+                寸法を指定しないと「小さい元画像はそのままの大きさ、大きい元画像は枠いっぱい」となって
+                モンスターごとに見た目の大きさが2倍近く変わってしまう(ザンだけ極端に大きく見えた)。 */}
+            <div data-dex-art className="relative shrink-0 flex items-center justify-center px-14" style={{height:'clamp(150px, 20dvh, 180px)'}}
               onTouchStart={e=>{dexSwipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
               onTouchEnd={e=>{const from=dexSwipeRef.current; dexSwipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
               {mon.imgUrl
-                ? <img src={mon.imgUrl} alt={unlocked?mon.name:'まだ出会っていないモンスター'} draggable={false} className="max-w-full max-h-full object-contain" style={unlocked?undefined:{filter:'brightness(0)',opacity:0.65}}/>
+                ? <img src={mon.imgUrl} alt={unlocked?mon.name:'まだ出会っていないモンスター'} draggable={false} className="w-full h-full object-contain" style={unlocked?undefined:{filter:'brightness(0)',opacity:0.65}}/>
                 : <div className="text-6xl">{unlocked?mon.emoji:'？'}</div>}
               <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
               <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
