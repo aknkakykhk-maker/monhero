@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 17:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 17:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13977,7 +13977,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lineageChip=(lineage)=>{
             const icon=lineageIconUrl(lineage);
             return (
-              <span data-dex-lineage className="inline-flex items-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
+              <span data-dex-lineage className="flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
                 {icon
                   ? <img src={icon} alt="" draggable={false} className="w-6 h-6 rounded-full object-cover border border-amber-300/40 shrink-0"/>
                   : <span className="w-6 h-6 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
@@ -14030,14 +14030,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">
                 <div className="shrink-0 text-center text-[17px] font-black text-amber-100 truncate">{unlocked?mon.name:'？？？'}</div>
                 {unlocked?(<>
-                  <div className="shrink-0 mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5">
+                  {/* 血統の行。血統名や区分の文字数で位置が動かないよう、
+                      左右のチップを同じ幅(1fr)の枠へ入れ、ラベル・×・区分は端と中央へ固定する */}
+                  <div data-dex-lineage-row className="shrink-0 mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}>
                     <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0">血統</span>
                     {lineageChip(main)}
-                    <span className="text-[12px] font-black text-amber-300 shrink-0">×</span>
+                    <span className="text-[12px] font-black text-amber-300 shrink-0 text-center">×</span>
                     {lineageChip(sub)}
-                    <span data-dex-category className={`shrink-0 text-[9px] font-black px-2 py-1 rounded-full ${categoryClass}`}>{monsterCategoryName(category)}</span>
+                    <span data-dex-category className={`shrink-0 min-w-[42px] text-center text-[9px] font-black px-1.5 py-1 rounded-full ${categoryClass}`}>{monsterCategoryName(category)}</span>
                   </div>
-                  <p data-dex-desc className="shrink-0 mt-2 text-[10px] font-bold leading-relaxed text-slate-200 break-words">{monsterDexDescription(mon.id)}</p>
+                  {/* 説明文。1行の子と3行の子でタブから下がまるごと動いてしまうため、
+                      3行ぶんの高さを必ず確保する(それより長い説明はこの枠の中で送る) */}
+                  <div data-dex-desc className="shrink-0 mt-2 overflow-y-auto mh-scroll" style={{height:'calc(1.625em * 3)',fontSize:'10px'}}>
+                    <p className="text-[10px] font-bold leading-relaxed text-slate-200 break-words">{monsterDexDescription(mon.id)}</p>
+                  </div>
                   <div role="tablist" aria-label="図鑑の内容" className="shrink-0 mt-2 grid grid-cols-3 gap-1.5">
                     {tabs.map(([id,label])=>(
                       <button key={id} type="button" role="tab" aria-selected={tab===id} onClick={()=>setDexTab(id)}

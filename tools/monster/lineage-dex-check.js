@@ -127,6 +127,17 @@ check('基本タブは既存のモンスターデータから勇者特性を出�
 check('スマホで押せる大きさ（40px以上）を確保している',
   (list.match(/min-h-\[(?:4\d|[5-9]\d|\d{3,})px\]/g) || []).length >= 2
   && (detail.match(/min-h-\[(?:4\d|[5-9]\d|\d{3,})px\]/g) || []).length >= 2);
+// 文字数で表示位置が動かないこと。血統名(2文字〜6文字)や区分(2〜3文字)、説明文の行数が
+// 変わるたびにラベル・×・タブ・表が左右上下へずれる、という形で実際に気になった箇所
+check('血統の行は文字数で位置が動かない（左右のチップが同じ幅・端は固定）',
+  detail.includes('data-dex-lineage-row')
+  && detail.includes("gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'")
+  && !/血統の行[\s\S]{0,200}justify-center/.test(detail));
+check('血統チップは枠いっぱいに広がる（中身の長さで幅が変わらない）',
+  detail.includes('data-dex-lineage className="flex w-full items-center justify-center'));
+check('区分バッジの幅を固定している', detail.includes('data-dex-category') && detail.includes('min-w-[42px]'));
+check('説明文は行数が変わってもタブより下を動かさない',
+  detail.includes('data-dex-desc') && detail.includes("height:'calc(1.625em * 3)'"));
 check('Safe Areaを避けている', list.includes('env(safe-area-inset-top)') && detail.includes('env(safe-area-inset-bottom)'));
 check('横はみ出し対策(truncate/min-w-0/break-words)がある',
   detail.includes('truncate') && detail.includes('min-w-0') && detail.includes('break-words'));

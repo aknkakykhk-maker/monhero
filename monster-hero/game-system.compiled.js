@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7495f0a603ee3419
+// source-sha256: 3ac7c3d161a5b39b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 17:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 17:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24406,7 +24406,7 @@ function MonsterHeroGame() {
         const icon = lineageIconUrl(lineage);
         return /*#__PURE__*/React.createElement("span", {
           "data-dex-lineage": true,
-          className: "inline-flex items-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1"
+          className: "flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1"
         }, icon ? /*#__PURE__*/React.createElement("img", {
           src: icon,
           alt: "",
@@ -24517,18 +24517,28 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 text-center text-[17px] font-black text-amber-100 truncate"
       }, unlocked ? mon.name : '？？？'), unlocked ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5"
+        "data-dex-lineage-row": true,
+        className: "shrink-0 mt-2 grid items-center gap-1.5",
+        style: {
+          gridTemplateColumns: 'auto minmax(0,1fr) auto minmax(0,1fr) auto'
+        }
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0"
       }, "\u8840\u7D71"), lineageChip(main), /*#__PURE__*/React.createElement("span", {
-        className: "text-[12px] font-black text-amber-300 shrink-0"
+        className: "text-[12px] font-black text-amber-300 shrink-0 text-center"
       }, "\xD7"), lineageChip(sub), /*#__PURE__*/React.createElement("span", {
         "data-dex-category": true,
-        className: `shrink-0 text-[9px] font-black px-2 py-1 rounded-full ${categoryClass}`
-      }, monsterCategoryName(category))), /*#__PURE__*/React.createElement("p", {
+        className: `shrink-0 min-w-[42px] text-center text-[9px] font-black px-1.5 py-1 rounded-full ${categoryClass}`
+      }, monsterCategoryName(category))), /*#__PURE__*/React.createElement("div", {
         "data-dex-desc": true,
-        className: "shrink-0 mt-2 text-[10px] font-bold leading-relaxed text-slate-200 break-words"
-      }, monsterDexDescription(mon.id)), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 mt-2 overflow-y-auto mh-scroll",
+        style: {
+          height: 'calc(1.625em * 3)',
+          fontSize: '10px'
+        }
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-[10px] font-bold leading-relaxed text-slate-200 break-words"
+      }, monsterDexDescription(mon.id))), /*#__PURE__*/React.createElement("div", {
         role: "tablist",
         "aria-label": "\u56F3\u9451\u306E\u5185\u5BB9",
         className: "shrink-0 mt-2 grid grid-cols-3 gap-1.5"
