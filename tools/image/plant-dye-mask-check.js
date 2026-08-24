@@ -10,14 +10,18 @@ const BODY_REL = 'images/monsters/plant.PNG';
 const MASK_REL = 'images/monsters/plant-dye-mask.PNG';
 const MASK_PATH = path.join(REPO_ROOT, 'monster-hero', MASK_REL);
 const LABELS = ['染色1（赤・花）', '染色2（緑・葉と茎）', '染色3（青・白い体）', '染色対象外（根と口）'];
-// 1536pxの正本を本番解析サイズ(384px)へ縮小するときの補間と、本番側のならし処理で、
-// 部位と部位の境目は必ず数px分ズレる。プラントは細い茎と花びらが多く周囲長が長いぶん
-// 境目の画素も多いため、一致率そのものはモッチーほど高くならない。
-// 代わりに「境目から離れた内側で1画素も間違えていない」ことを別に検査する。
-// 内側のズレは、部位の取り違え(花が体になる等)そのものなので1画素も許さない。
-const MIN_MATCH_RATE = 0.98;
+// 正本を本番解析サイズ(384px)へ縮小するときの補間と、本番側のならし処理で、
+// 部位と部位の境目は必ず数px分ズレる。プラントは細い茎と花びらが多く周囲長が長く、
+// 絵の4分の1が「境目の帯」に入るため、全体の一致率だけを見ても良し悪しが分からない。
+// そこで、ズレを「境目の帯の中か外か」に分けて別々に見る。
+//   ・帯の外(内側)のズレ … 部位の取り違え(花が体になる等)そのもの。1画素も許さない
+//   ・帯の中のズレ       … 縮小とならしのぶん。丸ごとずれていないかだけを上限で見る
 // 境目とみなす距離(本番の解析サイズでの画素数)。ならし処理の半径ぶん。
 const BOUNDARY_MARGIN = 2;
+// 帯の中のズレの上限。実測4.5%で、マスクが1px単位でずれた程度でも跳ね上がる
+const MAX_BOUNDARY_MISMATCH_RATE = 0.20;
+// 全体の一致率は「崩壊していないか」だけを見る雑な下限。本命は上の2つ
+const MIN_MATCH_RATE = 0.95;
 // 透過の掃除で消したはずの薄い霞。境界の1〜24は残っていてはいけない。
 const HAZE_MAX_ALPHA = 24;
 // 見た目のゴミになる小さな島(離れた塊)は残っていてはいけない。
@@ -130,7 +134,7 @@ const checkAlphaHygiene = (image) => {
     return false;
   };
 
-  let insideMismatch = 0;
+  let insideMismatch = 0, boundaryPixels = 0, boundaryMismatch = 0;
   const insideSamples = [];
   for (let i = 0; i < width * height; i++) {
     const wanted = wantedAt[i];
@@ -141,8 +145,10 @@ const checkAlphaHygiene = (image) => {
     maskPixels.forEach((pixels, region) => {
       if (pixels[offset + 3] > strongest) { strongest = pixels[offset + 3]; actual = region; }
     });
+    const onBoundary = nearBoundary(i);
+    if (onBoundary) boundaryPixels++;
     if (actual === wanted) { matched[wanted]++; continue; }
-    if (nearBoundary(i)) continue;
+    if (onBoundary) { boundaryMismatch++; continue; }
     insideMismatch++;
     if (insideSamples.length < 8) insideSamples.push(`(${i % width},${(i / width) | 0}) 期待=${wanted} 実際=${actual}`);
   }
@@ -160,6 +166,12 @@ const checkAlphaHygiene = (image) => {
   console.log(`境目から${BOUNDARY_MARGIN}px以上内側のズレ: ${insideMismatch}px`);
   if (insideMismatch > 0) {
     console.error(`NG: 部位の内側で取り違えています: ${insideSamples.join(' / ')}`);
+    failed = true;
+  }
+  const boundaryRate = boundaryMismatch / boundaryPixels;
+  console.log(`境目の帯: ${boundaryPixels}px(絵の${(boundaryPixels / totalExpected * 100).toFixed(1)}%) / そのうちズレ ${boundaryMismatch}px (${(boundaryRate * 100).toFixed(1)}%)`);
+  if (boundaryRate > MAX_BOUNDARY_MISMATCH_RATE) {
+    console.error(`NG: 境目のズレが上限${(MAX_BOUNDARY_MISMATCH_RATE * 100).toFixed(0)}%を超えています。マスクが絵に対してずれていないか確認してください`);
     failed = true;
   }
   if (allRate < MIN_MATCH_RATE || failed) process.exitCode = 1;
