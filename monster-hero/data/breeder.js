@@ -22,6 +22,7 @@ const IBLIS_DISC_ICON = "images/disc-icons/iblis.png?v=8202f75a06f1";
 const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=f1032185e592";
 const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=8a601df886c5";
 const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=d2a3e509c7d2";
+const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=e62804cf3a5c";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["おりょうの力", "おりょうの気合", "おりょうの憤怒"],
@@ -173,6 +174,10 @@ const BREEDER_MARKET_ITEMS = [
   { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:'images/monsters/yaobikuni.PNG?v=efbd9d5dd6fa', cost:1 },
   { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
   { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:1500 },
+  // プラント。既存の本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
+  { id:'plant_icon', name:"プラントのアイコン", type:'icon', icon:PLANT_IMG, cost:1 },
+  { id:'plant_disc_icon', name:"プラントの円盤石アイコン", type:'icon', icon:PLANT_DISC_ICON, cost:1 },
+  { id:'Plant', name:"プラントの円盤石", type:'disc', icon:PLANT_DISC_ICON, cost:1500 },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'unique_skill_reset_ticket', name:"スキルポイントリセット券", type:'item', emoji:"🎟️", cost:1000, usage:'uniqueSkillReset', desc:"マスモン詳細の「固有技強化」で使うと、その個体の固有技に配分したポイントをすべて未使用の固有技Pへ戻せる。固有技以外の育成状態は変わらない。" },
