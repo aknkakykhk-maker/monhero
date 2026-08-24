@@ -14,7 +14,7 @@
 
 ## 2. 現在の種
 
-`ALL_PLAYER_MONSTERS` には15種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro、Zan、Mitarashi、Ark、Iblis、Snegurochka、Undine、Yaobikuni）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、残る7種はマーケットの円盤石購入で解放する。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
+`ALL_PLAYER_MONSTERS` には16種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro、Plant、Zan、Mitarashi、Ark、Iblis、Snegurochka、Undine、Yaobikuni）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、残る8種はマーケットの円盤石購入で解放する。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
 
 各定義の必須実装項目は次のとおり。
 
@@ -59,6 +59,7 @@
 | ピクシー | ピクシー | ピクシー | 純血 |
 | モノリス | モノリス | モノリス | 純血 |
 | オボロゲソウ | プラント | ゲル | 派生種 |
+| プラント | プラント | プラント | 純血 |
 | ザン | ザン | ザン | 純血 |
 | ミタラシ | モッチー | ドラゴン | 派生種 |
 | アーク | アーク | アーク | 純血 |
@@ -67,8 +68,8 @@
 | ヤオビクニ | ウンディーネ | モッチー | 派生種 |
 | スネグーラチカ | ウンディーネ | ？？？ | レア |
 
-「ドラゴン」「ジョーカー」「プラント」「ゲル」「？？？」は、いまのところその血統単体のプレイアブルモンスターがいない。
-血統カタログの `monId`（その血統を代表するモンスター）を持たないため、画面では名前だけで表示する。存在しない画像は作らない。
+プラント血統は代表モンスターとしてプラントを持つ。「ドラゴン」「ジョーカー」「ゲル」「？？？」は、いまのところその血統単体のプレイアブルモンスターがいない。
+これらの血統は血統カタログの `monId`（その血統を代表するモンスター）を持たないため、画面では名前だけで表示する。存在しない画像は作らない。
 
 **将来予定（未実装）**: 「○○血統限定モード」の参加判定にこの血統データをそのまま使う想定である。
 現時点でモード側の実装はなく、血統データと図鑑表示までが実装済みである。

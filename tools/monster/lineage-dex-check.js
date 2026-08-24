@@ -9,7 +9,7 @@
 // ふつうに開いてしまい、その1体だけ血統が「？？？ × ？？？」になっていることに
 // 気づけない。将来の血統限定モードでは参加判定にそのまま使うデータなので、
 // 全モンスターぶん揃っていることを機械的に確かめる。
-// 図鑑の画面も、全15体を順に開いて落ちないことをここで見る。
+// 図鑑の画面も、全プレイヤーモンスターを順に開いて落ちないことをここで見る。
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -48,6 +48,7 @@ const monsters = A.dexMonsterList();
 
 // ---------- ① 血統がすべて揃っている ----------
 check('図鑑にモンスターが並ぶ', monsters.length > 0, `${monsters.length}体`);
+check('図鑑全体の対象は16体', monsters.length === 16, `${monsters.length}体`);
 const missing = monsters.filter(mon => !A.monsterLineageOf(mon.id).known).map(mon => mon.name);
 check('全プレイヤーモンスターに血統が設定されている', missing.length === 0, missing.join(' / '));
 const broken = monsters.filter(mon => {
@@ -84,9 +85,11 @@ check('モンスターがいる血統はアイコンを引ける',
   ['mocchi','undine','ark'].every(id => !!A.lineageIconUrl(A.MONSTER_LINEAGES[id])));
 
 // ---------- ④ 図鑑説明 ----------
-check('今回の3体に図鑑説明がある',
-  ['Mocchi','Mitarashi','Snegurochka'].every(id => A.monsterDexDescription(id).length > 20
-    && !A.monsterDexDescription(id).includes('調査が進むと')));
+check('全プレイヤーモンスターに図鑑説明がある',
+  monsters.every(mon => A.monsterDexDescription(mon.id).trim().length > 0
+    && !A.monsterDexDescription(mon.id).includes('調査が進むと')));
+check('Plantの図鑑説明が指定文どおり',
+  A.monsterDexDescription('Plant') === '非力だが多彩な攻撃手段を持っている\nほかの地域と比べると、IMa地方のプラントは弱いと言われているようだ');
 check('説明が未記入のモンスターでも空欄にならない',
   monsters.every(mon => A.monsterDexDescription(mon.id).trim().length > 0));
 
@@ -95,6 +98,9 @@ const filters = A.dexMainLineages();
 check('主血統の絞り込みに重複が無い', new Set(filters.map(l => l.id)).size === filters.length);
 check('どの主血統でしぼっても1体以上出る',
   filters.every(l => monsters.some(mon => A.monsterLineageOf(mon.id).main.id === l.id)));
+check('主血統プラントの対象はPlantとOboro',
+  JSON.stringify(monsters.filter(mon => A.monsterLineageOf(mon.id).main.id === 'plant').map(mon => mon.id).sort())
+    === JSON.stringify(['Oboro', 'Plant']));
 
 // ---------- ⑥ 図鑑の画面 ----------
 const list = slice("{gameState==='MONSTER_DEX'&&(()=>{", "{gameState==='MONSTER_DEX_DETAIL'&&(()=>{");

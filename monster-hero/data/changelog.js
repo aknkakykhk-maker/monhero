@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-24 20:34",
+    date: "2026-08-24 20:42",
     type: 'update',
     title: '新モンスター「プラント」を追加しました',
     assistantNotice: { id:'update_notice_plant_market_v1', type:'market' },
