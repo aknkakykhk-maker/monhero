@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-24 17:10",
+    date: "2026-08-24 17:34",
     type: 'update',
     title: 'モンスター図鑑を追加しました',
     items: [
