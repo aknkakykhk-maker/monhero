@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 17:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 17:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4399,6 +4399,17 @@ const chooseAutoTurn = ({
 
   while (picked.length < limit) {
     let actions = legalActions();
+    // ★重要: どの方針でも「敵のライフが1も減らないターン」を作らない。
+    // 耐久重視はガードが常に手札にあり、ガードの優先度が攻撃より高かったため、
+    // 毎ターン守りだけを選び続けて敵のライフが1も減らず、20ターン切れでそのまま負けていた
+    // (イブリースのAUTOで実際に発生。固有技が高ガッツで撃てず、残りが通常技とガードだった)。
+    // そのターンの最後の1枠まで来ても攻撃を1枚も選んでいないときは、
+    // 攻撃できるならその中から選ぶ。攻撃が1つも使えないときは、これまでどおり守りを選ぶ。
+    const needsAttack = picked.length === limit - 1 && !picked.some(entry => attackCard(entry.card));
+    if (needsAttack) {
+      const attacks = actions.filter(action => attackCard(action.card));
+      if (attacks.length > 0) actions = attacks;
+    }
     if (strategy === 'guts') {
       const attacks = actions.filter(action => attackCard(action.card));
       actions = attacks.length ? attacks : actions;

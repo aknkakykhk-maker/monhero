@@ -66,6 +66,34 @@ assert.strictEqual(act([card('heal','heal',10),card('buff','buff',10),card('hit'
 assert.strictEqual(act([card('hit','atk',10),card('guard','guard',0),card('heal','heal',10)],
   {strategy:'defense'}, () => 0)[0].card.id, 'heal', 'defenseがhealを優先しません');
 
+// 9-2. どの方針でも「敵のライフが1も減らないターン」を作らない ★重要
+// 耐久重視はガードが常に手札にあるため、守りだけを選び続けて敵のライフが1も減らず、
+// 20ターン切れでそのまま負けていた(イブリースのAUTOで実際に発生)。
+// 1ターンに1枚しか出せない場面でも、攻撃できるなら必ず攻撃を選ぶ。
+{
+  const oneCard = { strategy:'defense', cardLimit:1 };
+  const hand = [card('guard','guard',0), card('hit','atk',16)];
+  const picked = act(hand, oneCard, () => 0);
+  assert.strictEqual(picked.length, 1, '耐久重視が1枚も選びませんでした');
+  assert.strictEqual(picked[0].card.id, 'hit', '耐久重視が1枚だけのターンで攻撃を選びません(ターン切れで負ける)');
+  // 回復カードが手札に居座っても同じ
+  assert.strictEqual(act([card('heal','heal',10), card('guard','guard',0), card('hit','atk',16)], oneCard, () => 0)[0].card.id,
+    'hit', '耐久重視が回復だけを選び続けます(ターン切れで負ける)');
+  // 複数枚出せるときは守りも使いつつ、攻撃を必ず1枚は混ぜる
+  const three = act([card('heal','heal',10), card('guard','guard',0), card('hit','atk',16)],
+    { strategy:'defense', cardLimit:3 }, () => 0);
+  assert(three.some(entry => entry.card.id === 'hit'), '耐久重視が複数枚のターンでも攻撃を混ぜません');
+  assert(three.some(entry => ['heal','guard'].includes(entry.card.id)), '耐久重視が守りを一切使わなくなりました');
+  // ランダムでも最後の1枠で攻撃へ寄せる(守りだけのターンを作らない)
+  assert.strictEqual(act([card('guard','guard',0), card('hit','atk',16)], { strategy:'random', cardLimit:1 }, () => 0)[0].card.id,
+    'hit', 'ランダムが1枚だけのターンで攻撃を選びません');
+  // 攻撃できないときは、これまでどおり守りを選ぶ(無理に攻撃しようとして何も選ばない、にはしない)
+  assert.strictEqual(act([card('guard','guard',0), card('hit','atk',999)], oneCard, () => 0)[0].card.id,
+    'guard', '攻撃が使えないのに守りまで選ばなくなりました');
+  assert.strictEqual(act([card('guard','guard',0)], oneCard, () => 0)[0].card.id,
+    'guard', '攻撃カードが無いときに守りを選びません');
+}
+
 // 10. gutsは使用可能な攻撃の最低ガッツを1枚だけ選ぶ
 const gutsResult = act([card('guard','guard',0),card('high','atk',30),card('low','range_atk',10)],
   {strategy:'guts'});
