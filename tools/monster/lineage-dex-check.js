@@ -77,7 +77,7 @@ check('血統を書いていないモンスターでも落ちず ？？？ に�
 
 // ---------- ③ 血統アイコン ----------
 // プレイアブルなモンスターがいる血統だけ絵を使い、いない血統は絵を作らず名前で出す
-const iconless = ['dragon', 'joker', 'plant', 'gel', 'unknown'];
+const iconless = ['dragon', 'joker', 'gel', 'unknown'];
 check('モンスターがいない血統は画像を持たない',
   iconless.every(id => !A.MONSTER_LINEAGES[id]?.monId && A.lineageIconUrl(A.MONSTER_LINEAGES[id]) === null));
 check('モンスターがいる血統はアイコンを引ける',
