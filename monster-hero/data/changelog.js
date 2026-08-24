@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-24 17:53",
+    date: "2026-08-24 18:05",
     type: 'issue',
     title: 'AUTOが攻撃せずターン切れで負ける問題を修正',
     status: 'fixed',
