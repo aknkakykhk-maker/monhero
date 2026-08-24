@@ -104,6 +104,7 @@ node tools/build.js --check
 | `node auto-turn-integration-check.js` | AUTOの1ターン判断結果が選択stateを経由せず既存processTurnへ明示入力され、手動ACTION経路と共通の戦闘処理を使うことを確認する。 |
 | `node auto-battle-check.js` | 通常バトルのAUTO ON/OFF、連続実行の同期ロック、実行条件、合法行動なしの停止、手動カード操作・ACTION・緊急回復との排他を確認する。 |
 | `node run/auto-full-run-check.js` | WAVE結果・Quick成長結果・Quick加入結果が既存handlerとWAVE後AUTOロックを使って1回だけ進み、WAVE10の終了順序、自動再挑戦・マスモン自動登録を追加していないことを確認する。 |
+| `node run/unique-initial-in-battle-check.js` | マスモンに設定した「初期技」が、バトルで実際に配られる固有技カードになるところまでを確認する。山札を組み立てる本体のコードをそのまま動かし、継承技を初期技にすると威力・消費・固有技Lvごとその技が1枚目になること、未設定・無効IDは自前技へ落ちること、ラン中に手で切り替えたらその選択が優先され次のWAVEでも戻らないこと、ラン開始と配置時に前の周回の一時選択(slotUniqueChoice)を消していること、消すのは一時選択だけで保存には触らないことを見る。 |
 | `node run/auto-repeat-initial-teaching-check.js` | AUTO∞で「1周目の最初に確定したアシストカードを次の周回でもそろえる」ことを確認する。覚えるのはラン開始時の1枚だけ(手動でもAUTOでも／∞がONでなくても)、WAVE途中のカードでは書き換えない、覚えたIDが今の候補に無ければこれまでのランダム選択へ落とす、テンプレートへ持たせるのは安定したIDだけでカードや強化状態は持ち越さない、新しい保存キーやAUTO設定の項目を増やしていない、までを見る。 |
 | `node run/auto-repeat-template-check.js` | AUTO∞第5Aの再周回テンプレートが安定IDだけを保持し、個体消失・Pro制約違反を安全に失敗させ、未接続のまま正規の新規ラン初期化を再利用することを確認する。 |
 | `node run/auto-repeat-ui-check.js` | ∞周回ONで通常AUTOもON、∞周回単独OFFで通常AUTO維持、通常AUTO OFFで`stopAllAuto()`が使われることと、状態を保存しないことを確認する。 |

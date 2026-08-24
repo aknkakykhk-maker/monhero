@@ -492,8 +492,10 @@ check('ランキングの一覧を複製していない',
 check('既存のバトル画面のランキングも同じ描画を使う',
   has("{rankingKind==='score'&&renderScoreRankingBody(BATTLE_MODE_CHALLENGE)}")
     && has("{rankingKind==='breeder'&&renderBreederRankingBody()}") && has("{rankingKind==='bond'&&renderBondRankingBody()}"));
+// 入口の記録・難易度・モードは、同じハンドラでまとめて確定する
+// (あいだに前の周回の一時選択を消す処理が入るので、続きの並びだけを見る)
 check('新しい画面から実際に始められる',
-  has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);")
+  has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);")
     && !has('プロモードは準備中です'));
 check('助手のセリフは場面キーで出し分ける(JSXへ直書きしない)',
   m.BATTLE_MODES.every(x => ['battleChallenge','battleQuick','battlePro'].includes(
@@ -501,8 +503,8 @@ check('助手のセリフは場面キーで出し分ける(JSXへ直書きしな
     && has('scene={battleModeAssistantScene(current.id)}') && has('scene={battleModeAssistantScene(battleMode)}'));
 check('スキップや勇者モン選択の戻りは、来た入口の画面へ返す',
   has("const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');") && count('battleEntryStateRef.current)') === 3
-    && has("battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);setRunMode(battleMode);")
-    && has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);"));
+    && has("battleEntryStateRef.current='BATTLE_MENU';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);")
+    && has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);"));
 check('新しい画面もBGMとヘルプの対応表に載っている',
   has("BATTLE_MODE_SELECT: 'enhance'") && has("BATTLE_DIFFICULTY_SELECT: 'enhance'") && has("BATTLE_SCORE_RANKING: 'enhance'")
     && helpSrc.includes("BATTLE_MODE_SELECT:       'basics/battle-modes'")

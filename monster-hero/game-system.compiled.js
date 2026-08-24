@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d9684c81b8636cf7
+// source-sha256: 9940dd4a099690e9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 11:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20826,6 +20826,28 @@ function MonsterHeroGame() {
   // 表示・選択UIとbuildDeckの両方から使う共通ロジック
   // 引き継いだ固有技の強化レベルを覚えておくキー。スロットの位置と何番目の引き継ぎ技かで決める
   const inhEvoKey = (slotIdx, inhIdx) => `${slotIdx}:${inhIdx}`;
+  // 固有技の「そのラン中の一時的な選択」を消す。slotIdxを渡すとそのスロットだけ、
+  // 省略すると全スロットぶん。レベルの一時指定も、選び直した技に付いていくものなので一緒に消す。
+  //
+  // 【なぜ必要か】
+  // slotUniqueChoice はバトル中に手で切り替えた結果だけを持つ入れ物で、
+  // 何も入っていないときにマスモンへ保存した初期技が使われる。
+  // 前の周回の値が残っていると、設定した初期技がそれに覆い隠され、
+  // 「設定したのに毎回もとの固有技から始まる」状態になる。
+  // 消すのは画面上の一時選択だけで、保存(mh_masu_mons)には触らない。
+  const clearSlotUniqueSelection = (slotIdx = null) => {
+    const drop = prev => {
+      if (slotIdx == null) return Object.keys(prev).length > 0 ? {} : prev;
+      if (!(slotIdx in prev)) return prev;
+      const next = {
+        ...prev
+      };
+      delete next[slotIdx];
+      return next;
+    };
+    setSlotUniqueChoice(drop);
+    setSlotUniqueLevelChoice(drop);
+  };
   const getAvailableUniquesForSlot = (mon, cUniques, slotIdx, cInhEvo) => {
     if (!mon) return [];
     const own = (cUniques || ownedUniques).find(uq => uq.monId === mon.id);
@@ -21527,6 +21549,7 @@ function MonsterHeroGame() {
     setGuardLevel(0);
     setGuardBonusCount(0);
     setFinalRewardSummary(null);
+    clearSlotUniqueSelection(); // デバッグ戦でも前の周回の一時選択を持ち込まない
     setMainHero(hero);
     setSlots(debugSlots);
     setOwnedUniques(uniques);
@@ -21552,6 +21575,9 @@ function MonsterHeroGame() {
       ...m
     };
     setSlots(nextSlots);
+    // 置いた瞬間に、そのスロットの古い一時選択を捨てる。
+    // 未選択に戻すことで、そのマスモンに保存された初期技がそのまま初期選択になる
+    clearSlotUniqueSelection(slotIdx);
     if (isHero) stopAllAuto();
     if (!isHero) Audio_.se.join();
     if (isHero) {
@@ -25859,6 +25885,7 @@ function MonsterHeroGame() {
               return;
             }
             battleEntryStateRef.current = 'BATTLE_MENU';
+            clearSlotUniqueSelection();
             setDifficulty(key);
             setRunMode(battleMode);
             battleScenarioRef.current = null;
@@ -26314,6 +26341,7 @@ function MonsterHeroGame() {
           disabled: !previewable,
           onClick: () => {
             battleEntryStateRef.current = 'EXTREME_DIFFICULTY_SELECT';
+            clearSlotUniqueSelection();
             setDifficulty('Normal');
             setRunMode(BATTLE_MODE_CHALLENGE);
             battleScenarioRef.current = null;
@@ -26542,6 +26570,7 @@ function MonsterHeroGame() {
               return;
             }
             battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+            clearSlotUniqueSelection();
             setDifficulty(key);
             setRunMode(battleMode);
             quickRewardPolicyRunRef.current = quick ? normalizeQuickRewardPolicy(quickRewardPolicy) : QUICK_REWARD_POLICY_GROWTH;
@@ -34612,6 +34641,7 @@ function MonsterHeroGame() {
         setMainHero(null);
         setSlots([null, null, null, null]);
         setCurrentPickingMon(null);
+        clearSlotUniqueSelection();
         setGameState('PICK_HERO');
       };
       return /*#__PURE__*/React.createElement("div", {
