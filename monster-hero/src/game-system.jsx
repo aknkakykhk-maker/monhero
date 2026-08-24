@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 22:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 23:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3349,14 +3349,25 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
 const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
-// 部位マスクは絵にぴったり重ねる必要がある。既定の mask-size:100% 100% は枠いっぱいへ
-// 引き伸ばすので、object-contain で余白ができる縦長の絵ではマスクだけ横に伸びて位置がずれる
-// (髪のマスクが顔や尾に掛かる)。絵の収め方と同じ contain + 中央 + 繰り返しなしにそろえる
-const monsterArtMaskSize = (baseId) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? 'contain' : '100% 100%');
+// 部位マスクは絵にぴったり重ねる必要がある。絵は object-fit(cover/contain)で枠へ収めるのに、
+// マスクだけ既定の mask-size:100% 100%(枠いっぱいへ引き伸ばす)にすると、絵とマスクで縮尺が
+// 変わって位置がずれる。正方形の絵を正方形の枠へ入れているあいだは cover も contain も
+// 100% 100% も同じ結果になるので長く気付けなかったが、プラント(1536x1024)のように
+// 正方形でない絵では大きくずれ、花のマスクが葉や花びらの途中に掛かってしまっていた。
+// baseIdごとの表で持つと正方形でない絵が増えるたびに書き足す必要があり、書き忘れると
+// また同じずれが出るため、絵の収め方そのものをマスクへ写す。
+// 収め方は style.objectFit(MONSTER_ART_CONTAIN_IDSの指定)か、呼び出し側のTailwindクラスで決まる。
+const monsterArtMaskSize = (className, style) => {
+  const fit = style?.objectFit
+    || (/(^|\s)object-contain(\s|$)/.test(className || '') ? 'contain' : '')
+    || (/(^|\s)object-cover(\s|$)/.test(className || '') ? 'cover' : '');
+  return (fit === 'contain' || fit === 'cover') ? fit : '100% 100%';
+};
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
 // 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable, debugMaskPlacement = null }) => {
   const style = monsterArtFitStyle(baseId, rawStyle);
+  const maskSize = monsterArtMaskSize(className, style);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
   const [recolored, setRecolored] = useState({});
@@ -3408,7 +3419,7 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
         <img key={idx} src={recolored[_recoloredKey(idx, colors[idx])]} alt="" draggable={false} style={{
           position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'inherit',
           WebkitMaskImage:`url(${masks[idx]})`, maskImage:`url(${masks[idx]})`,
-          WebkitMaskSize:monsterArtMaskSize(baseId), maskSize:monsterArtMaskSize(baseId),
+          WebkitMaskSize:maskSize, maskSize:maskSize,
           WebkitMaskPosition:'center', maskPosition:'center',
           WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat',
           opacity:colorAlphaOf(colors[idx])/100,
