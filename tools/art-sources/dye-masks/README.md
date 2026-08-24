@@ -8,5 +8,9 @@
 | `undine-dye-mask.PNG` | `node tools/image/undine-dye-mask-check.js` の正解見本(256x384) |
 | `yaobikuni-dye-mask.PNG` | ヤオビクニの差し替え前の原本。今の検査は配信中の `yaobikuni-dye-mask2.PNG` を使うため、比較・巻き戻し用に保管しているだけ |
 
+モッチー・プラントの正式マスクはここではなく配信フォルダ(`monster-hero/images/monsters/`)にある。
+ゲームが実際に読み込んで染め分けに使っているためで、検査もその配信中のPNGを正本として比べる
+(`mocchi-dye-mask-check.js` / `plant-dye-mask-check.js`)。
+
 見本はデバッグ画面の「染色マスクエディタ」から書き出した PNG を、そのままここへ置く。
 配信フォルダ(`monster-hero/images/`)には置かないこと — 理由は `../README.md` を参照。

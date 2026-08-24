@@ -302,6 +302,9 @@ node tools/build.js --check
 | `node image/dye-mask-editor-check.js` | 汎用染色マスクエディタの縦横比、本体内だけの描画、外部連結領域だけの掃除、Undo、境界警告、PNG正規化と輪郭内の透明穴維持を確認する。 |
 | `node image/undine-dye-mask-check.js` | ウンディーネの染色1（髪）・染色2（顔、首、耳、腕、尻尾、尾びれ）・染色3（服）と3色同時の本番マスクを、正解見本 `art-sources/dye-masks/undine-dye-mask.PNG` と画素単位で比較する。正解PNGは検査時だけ読み込むので、配信フォルダには置いていない。 |
 | `node image/yaobikuni-dye-mask-check.js` | ヤオビクニの染色1（髪・胸飾り・両腕〜手・下半身〜尾びれ）・染色2（左右のヒレ／羽状部分）・染色3（顔・耳・首〜胴体）を、保存済み3色マスクと画素単位で比較する。 |
+| `node image/mocchi-dye-mask-check.js` | モッチーの染色1（体）・染色2（頭の葉）・染色3（口ばし）を、保存済み3色マスク `images/monsters/mocchi-dye-mask.PNG` と画素単位で比較する。 |
+| `node image/make-plant-dye-mask.js` | プラントの原本 `art-sources/monsters/PLANT.PNG` から、透過を掃除した立ち絵 `images/monsters/plant.PNG` と3色マスク `images/monsters/plant-dye-mask.PNG`（赤=花／緑=葉と茎／青=白い体）を作り直す。実行後は `node tools/build.js` でキャッシュキーを更新すること。 |
+| `node image/plant-dye-mask-check.js` | プラントの染色1（花）・染色2（葉と茎）・染色3（白い体、口の中は除外）を保存済み3色マスクと画素単位で比較し、あわせて立ち絵に薄い霞・離れたゴミが残っていないかを見る。境目から離れた内側での取り違えは1画素も許さない。 |
 
 ### 通し確認・性能
 

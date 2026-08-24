@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b69b1d715dff141c
+// source-sha256: e293475f19338561
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 20:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 22:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4833,10 +4833,12 @@ const MASU_COLOR_REGION_HUES = {
     sMax: 0.18,
     vMin: 0.85
   }],
-  // オボロゲソウと同じ「花／葉と茎／白い本体」の3部位。Plantは背景込みの正方形画像なので、
-  // 色相だけを画像全体へ適用せず、実際に各部位がある範囲と明度も併用して背景の光を拾わない。
-  // 花は赤い外花被・白い内花被・黄色い中心を染色①へまとめ、葉と茎を②、顔のある球根を③にする。
-  // 後日エディタから正式PNGを書き出すまで、この画像解析マスクを初期マスクとして共通経路で使う。
+  // オボロゲソウと同じ「花／葉と茎／白い本体」の3部位。
+  // 花の内側(淡いピンク)と体(ほぼ白)はどちらも低彩度で、色相・彩度の閾値だけでは
+  // どうしても互いに混ざってごま塩状に汚れる。そのため2026年8月に正式マスク
+  // plant-dye-mask.PNG(EXACT_DYE_MASKS)へ移行し、染色①②③はそちらが正本になった
+  // (作り直しは node tools/image/make-plant-dye-mask.js、検査は plant-dye-mask-check.js)。
+  // 以下の色相定義は部位数(3)を決めるためと、正式マスクを使えなかったときの控えとして残している。
   Plant: [[{
     hue: 350,
     sMin: 0.48,
@@ -5429,7 +5431,8 @@ const _getUndineExactRegion = (nx, ny) => {
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
 const EXACT_DYE_MASKS = Object.freeze({
   Mocchi: MOCCHI_DYE_MASK,
-  Yaobikuni: YAOBIKUNI_DYE_MASK
+  Yaobikuni: YAOBIKUNI_DYE_MASK,
+  Plant: PLANT_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
