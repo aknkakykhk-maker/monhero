@@ -43,8 +43,34 @@ if (containSrc) {
 }
 
 // --- 部位分割の染色でも同じ収め方に揃えている(マスクだけ引き伸ばされてズレるのを防ぐ) ---
-check('染色マスクのサイズも同じ対象で切り替えている',
-  has("const monsterArtMaskSize = (baseId) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? 'contain' : '100% 100%');"));
+// 以前は baseId の表で切り替えていたが、表に無い正方形でない絵(プラント1536x1024)で
+// マスクだけ枠いっぱいに引き伸ばされ、花のマスクが葉や花びらの途中に掛かる不具合が出た。
+// 今は絵の収め方(object-fit)をそのままマスクへ写すので、表の書き忘れでズレることはない。
+const maskCtx = {};
+vm.createContext(maskCtx);
+const maskSrc = source.match(/const monsterArtMaskSize = \(className, style\) => \{[\s\S]*?\n\};\n/);
+check('monsterArtMaskSizeの定義を取り出せる', !!maskSrc);
+if (maskSrc && containSrc) {
+  vm.runInContext(`${containSrc[0]}\n${maskSrc[0]}\nglobalThis.__m = monsterArtMaskSize; globalThis.__f = monsterArtFitStyle;`, maskCtx);
+  const maskSize = maskCtx.__m, fitStyle = maskCtx.__f;
+  check('object-coverの枠ではマスクもcover', maskSize('w-full h-full object-cover', {}) === 'cover');
+  check('object-containの枠ではマスクもcontain', maskSize('w-full h-full object-contain', {}) === 'contain');
+  check('収め方の指定が無ければ従来どおり枠いっぱい', maskSize('w-full h-full', {}) === '100% 100%');
+  check('sm:object-containのような別条件のクラスは拾わない', maskSize('w-full h-full sm:object-contain', {}) === '100% 100%');
+  // 絵の収め方とマスクの収め方が、どのモンスター・どの枠でも必ず一致することを見る。
+  // ここがずれると「絵とマスクの縮尺が違う」= 別の場所が染まる、になる。
+  for (const baseId of ['Undine', 'Yaobikuni', 'Plant', 'Mocchi', 'Snegurochka']) {
+    for (const className of ['w-full h-full object-cover', 'w-full h-full object-contain']) {
+      const style = fitStyle(baseId, {});
+      const wanted = style.objectFit || (className.includes('object-contain') ? 'contain' : 'cover');
+      check(`${baseId} / ${className.includes('contain') ? 'contain' : 'cover'}の枠で絵とマスクの収め方が一致する`,
+        maskSize(className, style) === wanted, `マスク=${maskSize(className, style)} / 絵=${wanted}`);
+    }
+  }
+}
+check('DyedMonsterImageがマスクの収め方を絵から求めている',
+  has('const maskSize = monsterArtMaskSize(className, style);')
+    && has('WebkitMaskSize:maskSize, maskSize:maskSize,'));
 
 // --- 実際にDyedMonsterImageが内部で必ず通している(マスモン表示はこれで自動的に対応する) ---
 check('DyedMonsterImageは表示のたびにmonsterArtFitStyleを通す',

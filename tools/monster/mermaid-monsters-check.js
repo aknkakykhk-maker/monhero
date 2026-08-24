@@ -111,10 +111,13 @@ check('縦長の立ち絵は丸枠で object-contain にして全身を収める
   /const MONSTER_ART_CONTAIN_IDS = Object\.freeze\(\['Undine', 'Yaobikuni'\]\)/.test(source)
     && source.includes("objectFit: 'contain'") && source.includes('monsterArtFitStyle(baseId, rawStyle)'));
 // object-contain にすると絵の左右に余白ができる。マスクだけ枠いっぱい(100% 100%)に伸ばすと
-// 部位が横へずれて別の場所が染まるので、マスクの収め方も絵と同じ contain・中央・繰り返しなしにそろえる
+// 部位が横へずれて別の場所が染まるので、マスクの収め方も絵と同じ・中央・繰り返しなしにそろえる。
+// 収め方は baseId の表ではなく、実際に絵へ効いている object-fit から求める
+// (表だと正方形でない絵が増えたときの書き忘れでまたずれる。プラントで実際に起きた)
 check('部位マスクの収め方を絵の収め方に合わせている',
-  source.includes("const monsterArtMaskSize = (baseId)") && source.includes("? 'contain' : '100% 100%'")
-    && source.includes('WebkitMaskSize:monsterArtMaskSize(baseId), maskSize:monsterArtMaskSize(baseId)')
+  source.includes('const monsterArtMaskSize = (className, style)')
+    && source.includes('const maskSize = monsterArtMaskSize(className, style);')
+    && source.includes('WebkitMaskSize:maskSize, maskSize:maskSize')
     && source.includes("WebkitMaskPosition:'center', maskPosition:'center'")
     && source.includes("WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat'"));
 // 参照している画像が実在すること
@@ -137,8 +140,12 @@ for (const id of ['Undine', 'Yaobikuni']) {
 }
 check('ウンディーネの染色②は肌(顔・腕・尻尾)',
   source.includes('ウンディーネ: 髪(染色①)/肌(顔・腕・尻尾、染色②)/白い衣装(染色③)'));
+// 以前は染色エンジンの中に baseId === 'Yaobikuni' の分岐を直接書いていたが、
+// 保存済みマスクを持つモンスターが増えたので EXACT_DYE_MASKS の対応表へまとめられている。
+// 見るのは「ヤオビクニが保存済み3色マスクで染まること」なので、その表を見る
 check('ヤオビクニは保存済み3色マスクを染色に使う',
-  source.includes("baseId === 'Yaobikuni'") && source.includes('YAOBIKUNI_DYE_MASK'));
+  /const EXACT_DYE_MASKS = Object\.freeze\(\{[^}]*Yaobikuni:YAOBIKUNI_DYE_MASK[^}]*\}\)/.test(source)
+    && source.includes('EXACT_DYE_MASKS[baseId]'));
 check('notBboxは染色エンジン側で効いている', source.includes('const _defExcluded = (def, nx, ny)') && (source.match(/_defExcluded\(def, nx, ny\)/g) || []).length >= 4);
 check('ヘルプに2体の染色部位を書いている', help.includes('ウンディーネの染色部位') && help.includes('ヤオビクニの染色部位'));
 
