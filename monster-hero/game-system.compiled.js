@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dda6a40d8467ab1c
+// source-sha256: 386b97da3c0f26ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 17:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 06:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5477,6 +5477,47 @@ const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
+// パンドラは正式登録前のDEBUG確認専用。正式モン一覧・図鑑・血統・セーブへは混ぜず、
+// 保存済みマスクもDEBUG画面／エディタを開いた時だけ参照する。正式実装時は既存の
+// EXACT_DYE_MASKSまたは埋め込み部位マップへ移し、この定義を削除する。
+const PANDORA_DEBUG = Object.freeze({
+  id: 'Pandora',
+  name: 'パンドラ',
+  main: 'pixie',
+  sub: 'unknown',
+  category: 'レア',
+  imgUrl: 'images/monsters/pandora.PNG',
+  discUrl: 'images/disc-icons/pandora-disc.PNG',
+  maskUrl: '../tools/art-sources/dye-masks/pandora-dye-mask.PNG',
+  description: ['一つの体に光と闇、相反する二つの魔力を宿した珍しいピクシー', '絶えずぶつかり合う魔力のせいで情緒は少し不安定だが、', 'どちらの力も欠かせない不思議な均衡で成り立っている', '本当はオシャレが好きで、争いもあまり好まない'],
+  moves: ['はり手', 'レイ', 'サンダー', 'ハイキック', 'ヒールレイド', 'ライトニング', 'メガレイ', 'なげキッス', 'デュアルキッス'],
+  evolutions: ['バン', 'ギガレイ', 'ギガサンダー', 'ビッグバン', 'ギガライトニング', 'コズミッグバン', 'アストラルレイ', 'エクリプスノヴァ', 'ダイスキライライ'],
+  trait: {
+    name: '禁忌解錠',
+    effect: '勇者モン選択時、固有技のダメージが2倍'
+  },
+  unique: {
+    baseMult: 2.1,
+    baseGuts: 42,
+    effectName: '双極共振',
+    effect: '次ターン、カード消費ガッツ0'
+  }
+});
+// 染色エンジンに3枠を知らせるためのDEBUG限定ダミー定義。領域判定には必ず保存済みRGBマスクを使う。
+MASU_COLOR_REGION_HUES.Pandora = [{
+  hue: 0
+}, {
+  hue: 120
+}, {
+  hue: 240
+}];
+const PANDORA_DEBUG_MASK_PLACEMENT = Object.freeze({
+  maskUrl: PANDORA_DEBUG.maskUrl,
+  scaleX: 1,
+  scaleY: 1,
+  xPx: 0,
+  yPx: 0
+});
 const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).map(monster => ({
   id: String(monster.id).toLowerCase(),
   baseId: monster.id,
@@ -5484,7 +5525,14 @@ const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).ma
   imageUrl: monster.imgUrl,
   maskUrl: EXACT_DYE_MASKS[monster.id] || null,
   hasMask: Array.isArray(MASU_COLOR_REGION_HUES[monster.id]) && MASU_COLOR_REGION_HUES[monster.id].length > 0
-}))];
+})), {
+  id: 'pandora-debug',
+  baseId: PANDORA_DEBUG.id,
+  name: `${PANDORA_DEBUG.name}（DEBUG限定）`,
+  imageUrl: PANDORA_DEBUG.imgUrl,
+  maskUrl: PANDORA_DEBUG.maskUrl,
+  hasMask: true
+}];
 // Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
 // 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
 const DYE_MASK_DEBUG_PREVIEW_SIZE = Object.freeze({
@@ -28779,6 +28827,11 @@ function MonsterHeroGame() {
     }, "\uD83D\uDDBC\uFE0F \u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
     }, "\u672C\u756A\u8868\u793A\u3068\u67D3\u8272\u3092\u4FDD\u5B58\u305B\u305A\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGameState('PANDORA_IMPLEMENTATION_DEBUG'),
+      className: "w-full min-h-[64px] bg-violet-950 border-2 border-fuchsia-400 text-fuchsia-100 rounded-2xl font-black"
+    }, "\uD83D\uDE08 \u30D1\u30F3\u30C9\u30E9\u5B9F\u88C5\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-fuchsia-300"
+    }, "\u6B63\u5F0F\u767B\u9332\u305B\u305A\u672C\u4F53\u30FB\u56F3\u9451\u30FB\u5186\u76E4\u77F3\u30FB3\u8272\u67D3\u8272\u3092\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setDyeMaskEditorOpened(true);
         setGameState('DYE_MASK_POSITION_DEBUG');
@@ -28976,7 +29029,83 @@ function MonsterHeroGame() {
       disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
+    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'PANDORA_IMPLEMENTATION_DEBUG' && (() => {
+      const p = PANDORA_DEBUG;
+      const palettes = [['染色なし', [null, null, null]], ['染色1のみ', ['custom:25:90:90', null, null]], ['染色2のみ', [null, 'custom:150:90:78', null]], ['染色3のみ', [null, null, 'custom:215:90:95']], ['3色同時', ['custom:25:90:90', 'custom:150:90:78', 'custom:215:90:95']]];
+      const art = (label, colors) => /*#__PURE__*/React.createElement("section", {
+        key: label,
+        className: "rounded-xl border border-white/10 bg-black/30 p-2"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "mb-1 block text-center text-[9px] text-fuchsia-200"
+      }, label), /*#__PURE__*/React.createElement("div", {
+        className: "h-44 overflow-hidden rounded-lg",
+        style: {
+          backgroundColor: '#cbd5e1',
+          backgroundImage: 'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',
+          backgroundSize: '16px 16px',
+          backgroundPosition: '0 0,0 8px,8px -8px,-8px 0'
+        }
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: p.id,
+        src: p.imgUrl,
+        alt: `${p.name} ${label}`,
+        masuColors: colors,
+        debugMaskPlacement: PANDORA_DEBUG_MASK_PLACEMENT,
+        className: "h-full w-full object-contain"
+      })));
+      return /*#__PURE__*/React.createElement("main", {
+        className: "flex h-full min-h-0 flex-1 flex-col p-3",
+        style: {
+          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "mb-2 flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setGameState('DEBUG_SETTINGS'),
+        className: "p-3 text-slate-400"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px] font-black text-fuchsia-400"
+      }, "DEBUG\u9650\u5B9A\u30FB\u6B63\u5F0F\u30C7\u30FC\u30BF\uFF0F\u30BB\u30FC\u30D6\u3078\u672A\u767B\u9332"), /*#__PURE__*/React.createElement("h2", {
+        className: "text-sm font-black"
+      }, "\uD83D\uDE08 \u30D1\u30F3\u30C9\u30E9\u5B9F\u88C5\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
+        className: "mh-scroll min-h-0 flex-1 space-y-3 overflow-y-auto pb-3"
+      }, /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
+        className: "text-fuchsia-200"
+      }, "\u672C\u4F53\u753B\u50CF"), /*#__PURE__*/React.createElement("img", {
+        src: p.imgUrl,
+        alt: "\u30D1\u30F3\u30C9\u30E9\u5143\u753B\u50CF",
+        className: "mt-2 h-40 w-full object-contain"
+      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
+        className: "text-fuchsia-200"
+      }, "\u5186\u76E4\u77F3"), /*#__PURE__*/React.createElement("img", {
+        src: p.discUrl,
+        alt: "\u30D1\u30F3\u30C9\u30E9\u5186\u76E4\u77F3",
+        className: "mt-2 h-40 w-full object-contain"
+      })))), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[10px] leading-relaxed"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-sm font-black text-fuchsia-200"
+      }, p.name, " ", /*#__PURE__*/React.createElement("small", null, "ID: ", p.id, "\uFF0F\u30EC\u30A2")), /*#__PURE__*/React.createElement("p", null, "\u8840\u7D71\uFF1A\u30D4\u30AF\u30B7\u30FC \xD7 \uFF1F\uFF1F\uFF1F\uFF08main: ", p.main, " / sub: ", p.sub, "\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 text-slate-300"
+      }, p.description.map(line => /*#__PURE__*/React.createElement("p", {
+        key: line
+      }, line))), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2"
+      }, "\u901A\u5E38\u6280\uFF1A", p.moves.map((move, i) => `${i + 1}. ${move}`).join(' / ')), /*#__PURE__*/React.createElement("p", null, "\u52C7\u8005\u7279\u6027\uFF1A", p.trait.name, " \u2014 ", p.trait.effect), /*#__PURE__*/React.createElement("p", null, "\u56FA\u6709\u6280\uFF1AbaseMult ", p.unique.baseMult, " / baseGuts ", p.unique.baseGuts), /*#__PURE__*/React.createElement("p", null, "\u9032\u5316\u540D\uFF1A", p.evolutions.map((move, i) => `${i + 1}. ${move}`).join(' / ')), /*#__PURE__*/React.createElement("p", null, "\u56FA\u6709\u6280\u52B9\u679C\uFF1A", p.unique.effectName, " \u2014 ", p.unique.effect), /*#__PURE__*/React.createElement("p", null, "atkMotion\uFF1Adefault"), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2 font-black text-amber-300"
+      }, "\u672A\u6C7A\u5B9A\uFF1A\u30E9\u30A4\u30D5\uFF0F\u3061\u304B\u3089\uFF0F\u4E08\u592B\u3055\uFF0F\u30AC\u30C3\u30C4\uFF0FplusStats\uFF0F\u8DDD\u96E2\u9069\u6027\uFF0F\u5C02\u7528\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\uFF0F\u30DE\u30FC\u30B1\u30C3\u30C8\u4FA1\u683C\uFF0F\u9854\u30A2\u30A4\u30B3\u30F3\u88DC\u6B63")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[10px] font-black text-cyan-300"
+      }, "\u4FDD\u5B58\u6E08\u307FRGB\u30DE\u30B9\u30AF \xD7 DyedMonsterImage\uFF08\u78BA\u8A8D\u8272\uFF1A\u6A59\uFF0F\u7DD1\uFF0F\u9752\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, palettes.map(([label, colors]) => art(label, colors))))));
+    })(), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
       const owned = [...masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId])];
       if (temporaryDyeMasks.Mia) owned.push({
         id: 'temporary-dye-Mia',

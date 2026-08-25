@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":5750,"data/images/images-enemy.js":1347,"data/ally-monsters.js":19138,"data/lineages.js":7642,"data/breeder.js":21904,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/changelog.js":267724,"data/help.js":168444,"data/assistants.js":190113,"game-system.compiled.js":2247405,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":5750,"data/images/images-enemy.js":1347,"data/ally-monsters.js":19138,"data/lineages.js":7642,"data/breeder.js":21904,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/changelog.js":267724,"data/help.js":168444,"data/assistants.js":190113,"game-system.compiled.js":2256069,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -136,7 +136,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
 <script src="data/images/images-enemy.js?v=477babf86350" onload="__mhBoot.done('data/images/images-enemy.js','敵モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-enemy.js')"></script>
 <script src="data/ally-monsters.js?v=8fb99aa98a05" onload="__mhBoot.done('data/ally-monsters.js','モンスターデータを読み込み中')" onerror="__mhBoot.fail('data/ally-monsters.js')"></script>
 <script src="data/lineages.js?v=5bb96ec9be59" onload="__mhBoot.done('data/lineages.js','血統データを読み込み中')" onerror="__mhBoot.fail('data/lineages.js')"></script>
-<script src="data/breeder.js?v=4effbb5fe104" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
+<script src="data/breeder.js?v=9483853aeb2f" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
 <script src="data/changelog.js?v=d49823ec6f81" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
@@ -151,7 +151,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202608251749';
+  var GAME_BUILD = '202608260623';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');
