@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9b3b6aed977a2fd5
+// source-sha256: 572ca74344d13b0c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 07:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 07:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29025,7 +29025,7 @@ function MonsterHeroGame() {
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
     }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'PANDORA_IMPLEMENTATION_DEBUG' && (() => {
       const p = PANDORA_DEBUG;
-      const palettes = [['染色なし', [null, null, null]], ['染色1のみ', ['custom:25:90:90', null, null]], ['染色2のみ', [null, 'custom:150:90:78', null]], ['染色3のみ', [null, null, 'custom:215:90:95']], ['3色同時', ['custom:25:90:90', 'custom:150:90:78', 'custom:215:90:95']]];
+      const palettes = [['染色なし', [null, null, null]], ['染色1のみ', ['custom:25:90:90', null, null]], ['染色2のみ', [null, 'custom:320:90:95', null]], ['染色3のみ', [null, null, 'custom:215:90:95']], ['3色同時', ['custom:25:90:90', 'custom:320:90:95', 'custom:215:90:95']]];
       const art = (label, colors) => /*#__PURE__*/React.createElement("section", {
         key: label,
         className: "rounded-xl border border-white/10 bg-black/30 p-2"
@@ -29095,7 +29095,7 @@ function MonsterHeroGame() {
         className: "mt-2 font-black text-amber-300"
       }, "\u672A\u6C7A\u5B9A\uFF1A\u30E9\u30A4\u30D5\uFF0F\u3061\u304B\u3089\uFF0F\u4E08\u592B\u3055\uFF0F\u30AC\u30C3\u30C4\uFF0FplusStats\uFF0F\u8DDD\u96E2\u9069\u6027\uFF0F\u5C02\u7528\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\uFF0F\u30DE\u30FC\u30B1\u30C3\u30C8\u4FA1\u683C\uFF0F\u9854\u30A2\u30A4\u30B3\u30F3\u88DC\u6B63")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[10px] font-black text-cyan-300"
-      }, "\u4FDD\u5B58\u6E08\u307FRGB\u30DE\u30B9\u30AF \xD7 DyedMonsterImage\uFF08\u78BA\u8A8D\u8272\uFF1A\u6A59\uFF0F\u7DD1\uFF0F\u9752\uFF09"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4FDD\u5B58\u6E08\u307FRGB\u30DE\u30B9\u30AF \xD7 DyedMonsterImage\uFF08\u78BA\u8A8D\u8272\uFF1A\u6A59\uFF0F\u6843\uFF0F\u9752\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, palettes.map(([label, colors]) => art(label, colors))))));
     })(), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
