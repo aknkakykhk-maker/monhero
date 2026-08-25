@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1905b6ca630b493e
+// source-sha256: af7a12c6c4d3750e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 11:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 11:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5933,7 +5933,7 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // 立ち絵が縦長(2:3)のモンスター。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia']);
 const monsterArtFitStyle = (baseId, style) => MONSTER_ART_CONTAIN_IDS.includes(baseId) ? {
   ...style,
   objectFit: 'contain'
@@ -5951,7 +5951,7 @@ const monsterArtUrlNeedsContain = url => {
     const urls = new Set();
     const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
     for (const baseId of MONSTER_ART_CONTAIN_IDS) {
-      const monster = all[baseId];
+      const monster = all[baseId] || (baseId === 'Mia' && typeof MIA_DEBUG_MONSTER === 'object' ? MIA_DEBUG_MONSTER : null);
       if (!monster) continue;
       for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
         if (each) urls.add(each);
@@ -9030,6 +9030,12 @@ const MARKET_PROFILE_ICON_STYLES = {
     scale: 1.55,
     x: 0,
     y: 2
+  },
+  // 正式登録前のDEBUGでも、本番プロフィールと同じ補正経路で顔～上半身を切り出す。
+  mia_debug_icon: {
+    scale: 2.55,
+    x: 0,
+    y: 67
   }
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({
@@ -9103,6 +9109,147 @@ const HomeProfileIcon = ({
 }) : /*#__PURE__*/React.createElement(User, {
   size: 24
 }));
+
+// 図鑑一覧・血統チップ・立ち絵は本番とDEBUGで同じ収め方を使う。
+const DexMonsterIcon = ({
+  src,
+  alt = '',
+  hidden = false,
+  lineage = false
+}) => /*#__PURE__*/React.createElement("span", {
+  className: `${lineage ? 'w-7 h-7' : 'w-14 h-14'} rounded-full overflow-hidden border ${lineage ? 'border-amber-300/40' : 'border-amber-400/30'} shrink-0 bg-black/40 flex items-center justify-center`
+}, src ? /*#__PURE__*/React.createElement("img", {
+  src: src,
+  alt: alt,
+  draggable: false,
+  "data-dex-entry-icon": !lineage || undefined,
+  "data-dex-lineage-icon": lineage || undefined,
+  className: "w-full h-full object-contain",
+  style: {
+    padding: '10%',
+    ...(hidden ? {
+      filter: 'brightness(0)',
+      opacity: 0.6
+    } : {})
+  }
+}) : /*#__PURE__*/React.createElement("span", {
+  className: "text-2xl"
+}, "\uFF1F"));
+const DexLineageChip = ({
+  lineage,
+  iconUrl
+}) => /*#__PURE__*/React.createElement("span", {
+  "data-dex-lineage": true,
+  className: "flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1"
+}, iconUrl ? /*#__PURE__*/React.createElement(DexMonsterIcon, {
+  src: iconUrl,
+  lineage: true
+}) : /*#__PURE__*/React.createElement("span", {
+  className: "w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0"
+}, "\u8840"), /*#__PURE__*/React.createElement("span", {
+  className: "text-[11px] font-black text-amber-100 truncate"
+}, lineage.name));
+const DexMonsterArt = ({
+  mon,
+  alt,
+  hidden = false
+}) => mon.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+  baseId: mon.id,
+  src: mon.imgUrl,
+  alt: alt,
+  masuColors: [],
+  draggable: false,
+  className: "w-full h-full object-contain",
+  style: hidden ? {
+    filter: 'brightness(0)',
+    opacity: 0.65
+  } : undefined
+}) : /*#__PURE__*/React.createElement("div", {
+  className: "text-6xl"
+}, hidden ? '？' : mon.emoji);
+const MarketProductIcon = ({
+  item,
+  onZoom,
+  disabled = false
+}) => {
+  const content = item.icon ? item.type === 'icon' ? /*#__PURE__*/React.createElement(BreederIcon, {
+    src: item.icon,
+    id: item.id,
+    alt: item.name,
+    className: "w-full h-full"
+  }) : item.type === 'assist' && ASSIST_CARD_ICON_STYLES[item.id] ? /*#__PURE__*/React.createElement(AssistCardIcon, {
+    icon: item.icon,
+    cardId: item.id,
+    className: "w-full h-full"
+  }) : /*#__PURE__*/React.createElement("img", {
+    src: item.icon,
+    alt: item.name,
+    className: "w-full h-full object-cover"
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "text-xl"
+  }, item.emoji);
+  const cls = `${MARKET_ICON_SIZE[item.type] || 'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${disabled ? '' : 'active:scale-90'}`;
+  return onZoom ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onZoom,
+    "aria-label": `${item.name}を大きく見る`,
+    className: cls
+  }, content) : /*#__PURE__*/React.createElement("div", {
+    className: cls
+  }, content);
+};
+const MarketProductCard = ({
+  item,
+  owned = false,
+  comingSoon = false,
+  detail = null,
+  middle = null,
+  onDetail,
+  onZoom,
+  onBuy,
+  canBuy = false,
+  disabled = false
+}) => {
+  const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
+  return /*#__PURE__*/React.createElement("div", {
+    className: `rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/50' : comingSoon ? 'bg-slate-900/60 border-slate-800/60' : 'bg-slate-900 border-slate-800'}`
+  }, /*#__PURE__*/React.createElement(MarketProductIcon, {
+    item: item,
+    onZoom: onZoom,
+    disabled: disabled
+  }), /*#__PURE__*/React.createElement("div", {
+    className: `w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon ? 'text-slate-500' : 'text-white'}`,
+    style: {
+      minHeight: '36px'
+    }
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex items-center justify-center gap-1",
+    style: {
+      height: '22px'
+    }
+  }, middle || detail && !comingSoon ? /*#__PURE__*/React.createElement(React.Fragment, null, middle, !middle && /*#__PURE__*/React.createElement("button", {
+    onClick: onDetail,
+    "aria-label": `${item.name}の詳細を見る`,
+    className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
+  }, /*#__PURE__*/React.createElement(BookOpen, {
+    size: 8
+  }), "\u8A73\u7D30")) : null), /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex items-center justify-center mt-auto pt-2"
+  }, comingSoon ? /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap"
+  }, "\u8FD1\u65E5\u8FFD\u52A0") : owned ? /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap"
+  }, "\u6240\u6301\u6E08\u307F") : /*#__PURE__*/React.createElement("button", {
+    onClick: onBuy,
+    disabled: disabled || !canBuy,
+    "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${item.cost}${usesGold ? 'ダイヤ' : 'pt'}で購入`}`,
+    className: `text-[10px] font-black px-2.5 min-h-[30px] rounded-full flex items-center gap-0.5 whitespace-nowrap ${!disabled && canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
+  }, usesGold ? /*#__PURE__*/React.createElement(Gem, {
+    size: 9
+  }) : /*#__PURE__*/React.createElement(Coins, {
+    size: 9
+  }), item.cost)));
+};
 
 // 表示を待たせず、ブラウザキャッシュとデコードだけを少しずつ先へ進める画像キュー。
 // URLそのものをキーにして、Reactの再描画や複数の優先グループに同じ画像が含まれても1回だけ取得する。
@@ -24467,24 +24614,10 @@ function MonsterHeroGame() {
             setGameState('MONSTER_DEX_DETAIL');
           },
           className: "w-full min-h-[124px] rounded-2xl border-2 border-amber-600/30 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "w-14 h-14 rounded-full overflow-hidden border border-amber-400/30 shrink-0 bg-black/40 flex items-center justify-center"
-        }, iconSrc ? /*#__PURE__*/React.createElement("img", {
+        }, /*#__PURE__*/React.createElement(DexMonsterIcon, {
           src: iconSrc,
-          alt: "",
-          draggable: false,
-          "data-dex-entry-icon": true,
-          className: "w-full h-full object-contain",
-          style: {
-            padding: '10%',
-            ...(unlocked ? {} : {
-              filter: 'brightness(0)',
-              opacity: 0.6
-            })
-          }
-        }) : /*#__PURE__*/React.createElement("div", {
-          className: "w-full h-full flex items-center justify-center text-2xl"
-        }, unlocked ? mon.emoji : '？')), /*#__PURE__*/React.createElement("div", {
+          hidden: !unlocked
+        }), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] font-black truncate w-full text-center leading-tight text-amber-100"
         }, unlocked ? mon.name : '？？？'), /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] font-black text-amber-400/80 leading-tight"
@@ -24515,32 +24648,10 @@ function MonsterHeroGame() {
         Audio_.se.tap();
       };
       // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
-      const lineageChip = lineage => {
-        const icon = lineageIconUrl(lineage);
-        return /*#__PURE__*/React.createElement("span", {
-          "data-dex-lineage": true,
-          className: "flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1"
-        }, icon
-        /* 丸く切り抜くので、絵を枠いっぱいに入れると円の外側へかかる部分が切れる
-           (アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)。
-           どのモンスターでも全身が円の中へ収まるよう、少し縮めて中央へ置く。
-           顔アイコンを持たないウンディーネ・ヤオビクニも、これで頭まで入る */ ? /*#__PURE__*/React.createElement("span", {
-          className: "w-7 h-7 rounded-full overflow-hidden border border-amber-300/40 shrink-0 bg-black/30 flex items-center justify-center"
-        }, /*#__PURE__*/React.createElement("img", {
-          src: icon,
-          alt: "",
-          draggable: false,
-          "data-dex-lineage-icon": true,
-          className: "w-full h-full object-contain",
-          style: {
-            padding: '10%'
-          }
-        })) : /*#__PURE__*/React.createElement("span", {
-          className: "w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0"
-        }, "\u8840"), /*#__PURE__*/React.createElement("span", {
-          className: "text-[11px] font-black text-amber-100 truncate"
-        }, lineage.name));
-      };
+      const lineageChip = lineage => /*#__PURE__*/React.createElement(DexLineageChip, {
+        lineage: lineage,
+        iconUrl: lineageIconUrl(lineage)
+      });
       const tabs = [['basic', '基本'], ['stats', '能力'], ['skills', '技']];
       const tab = tabs.some(([id]) => id === dexTab) ? dexTab : 'basic';
       const row = (label, value) => /*#__PURE__*/React.createElement("div", {
@@ -24605,18 +24716,11 @@ function MonsterHeroGame() {
           const dx = to - from;
           if (Math.abs(dx) >= 48) go(dx < 0 ? 1 : -1);
         }
-      }, mon.imgUrl ? /*#__PURE__*/React.createElement("img", {
-        src: mon.imgUrl,
+      }, /*#__PURE__*/React.createElement(DexMonsterArt, {
+        mon: mon,
         alt: unlocked ? mon.name : 'まだ出会っていないモンスター',
-        draggable: false,
-        className: "w-full h-full object-contain",
-        style: unlocked ? undefined : {
-          filter: 'brightness(0)',
-          opacity: 0.65
-        }
-      }) : /*#__PURE__*/React.createElement("div", {
-        className: "text-6xl"
-      }, unlocked ? mon.emoji : '？'), /*#__PURE__*/React.createElement("button", {
+        hidden: !unlocked
+      }), /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-dex-prev": true,
         "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
@@ -28649,24 +28753,14 @@ function MonsterHeroGame() {
         icon: MIA_DEBUG_DISC_URL,
         cost: 1500
       }];
-      const circle = (label, src, profile = false) => /*#__PURE__*/React.createElement("div", {
-        className: "text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "mx-auto w-14 h-14 rounded-full overflow-hidden border border-amber-400/40 bg-black/40"
-      }, profile ? /*#__PURE__*/React.createElement(BreederIcon, {
-        src: src,
-        id: "mia_debug_icon",
-        alt: label,
-        className: "w-full h-full"
-      }) : /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: "Mia",
-        src: src,
-        alt: label,
-        masuColors: [],
-        className: "w-full h-full object-contain"
-      })), /*#__PURE__*/React.createElement("small", {
-        className: "mt-1 block text-[8px] font-black text-slate-300"
-      }, label));
+      const pixieLineage = {
+          id: 'pixie',
+          name: 'ピクシー'
+        },
+        rareLineage = {
+          id: 'rare',
+          name: '？？？'
+        };
       return /*#__PURE__*/React.createElement("main", {
         className: "flex-1 flex flex-col h-full min-h-0 p-3",
         style: {
@@ -28692,10 +28786,9 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         "data-dex-art": true,
         className: "h-44 flex items-center justify-center"
-      }, /*#__PURE__*/React.createElement("img", {
-        src: mon.imgUrl,
-        alt: "\u30DF\u30FC\u30A2",
-        className: "w-full h-full object-contain"
+      }, /*#__PURE__*/React.createElement(DexMonsterArt, {
+        mon: mon,
+        alt: "\u30DF\u30FC\u30A2"
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[17px] font-black text-amber-100"
       }, mon.name), /*#__PURE__*/React.createElement("div", {
@@ -28706,15 +28799,14 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black text-amber-300"
-      }, "\u8840\u7D71"), /*#__PURE__*/React.createElement("span", {
-        "data-dex-lineage": true,
-        className: "rounded-full border border-amber-400/40 bg-black/40 px-2 py-2 text-center text-[11px] font-black text-amber-100"
-      }, "\u30D4\u30AF\u30B7\u30FC"), /*#__PURE__*/React.createElement("span", {
+      }, "\u8840\u7D71"), /*#__PURE__*/React.createElement(DexLineageChip, {
+        lineage: pixieLineage,
+        iconUrl: mon.iconUrl
+      }), /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300 font-black"
-      }, "\xD7"), /*#__PURE__*/React.createElement("span", {
-        "data-dex-lineage": true,
-        className: "rounded-full border border-amber-400/40 bg-black/40 px-2 py-2 text-center text-[11px] font-black text-amber-100"
-      }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("span", {
+      }, "\xD7"), /*#__PURE__*/React.createElement(DexLineageChip, {
+        lineage: rareLineage
+      }), /*#__PURE__*/React.createElement("span", {
         "data-dex-category": true,
         className: "rounded-full bg-amber-600 px-2 py-1 text-[9px] font-black"
       }, "\u30EC\u30A2")), /*#__PURE__*/React.createElement("p", {
@@ -28738,60 +28830,58 @@ function MonsterHeroGame() {
         className: "mb-2 text-[10px] font-black text-amber-300"
       }, "\u672C\u756A\u5546\u54C1\u30AB\u30FC\u30C9\u8868\u793A\uFF08\u8CFC\u5165\u7121\u52B9\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: MARKET_GRID_CLASS
-      }, marketItems.map(item => {
-        const usesGold = item.type === 'disc';
-        return /*#__PURE__*/React.createElement("div", {
-          key: item.id,
-          className: "rounded-xl border-2 border-slate-800 bg-slate-900 p-1.5 flex flex-col items-center gap-1"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: `${MARKET_ICON_SIZE[item.type]} rounded-full overflow-hidden border-2 border-white/10 bg-black/30`
-        }, item.type === 'icon' ? /*#__PURE__*/React.createElement(BreederIcon, {
-          src: item.icon,
-          id: item.id,
-          alt: item.name,
-          className: "w-full h-full"
-        }) : /*#__PURE__*/React.createElement("img", {
-          src: item.icon,
-          alt: item.name,
-          className: "w-full h-full object-cover"
-        })), /*#__PURE__*/React.createElement("div", {
-          className: "w-full text-center text-[9px] font-black leading-[1.15]",
-          style: {
-            minHeight: '36px'
-          }
-        }, item.name), /*#__PURE__*/React.createElement("div", {
-          style: {
-            height: '22px'
-          }
-        }), /*#__PURE__*/React.createElement("button", {
-          disabled: true,
-          "aria-label": `${item.name}（デバッグのため購入不可）`,
-          className: "min-h-[30px] rounded-full bg-slate-800 px-2.5 text-[10px] font-black text-slate-500 flex items-center gap-0.5"
-        }, usesGold ? /*#__PURE__*/React.createElement(Gem, {
-          size: 9
-        }) : /*#__PURE__*/React.createElement(Coins, {
-          size: 9
-        }), " ", item.cost));
-      }))), /*#__PURE__*/React.createElement("section", {
+      }, marketItems.map(item => /*#__PURE__*/React.createElement(MarketProductCard, {
+        key: item.id,
+        item: item,
+        disabled: true
+      })))), /*#__PURE__*/React.createElement("section", {
         "data-mia-icon-preview": true,
         className: "rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[10px] font-black text-cyan-300"
-      }, "\u4E3B\u8981\u306A\u4E38\u30A2\u30A4\u30B3\u30F3\u8868\u793A"), /*#__PURE__*/React.createElement("div", {
+      }, "\u672C\u756A\u90E8\u54C1\u306B\u3088\u308B\u30A2\u30A4\u30B3\u30F3\u8868\u793A"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-3"
-      }, circle('プロフィール', mon.faceIconUrl, true), circle('マーケット', mon.iconUrl), circle('図鑑一覧', mon.iconUrl), circle('血統アイコン', mon.faceIconUrl), circle('技カード', mon.iconUrl))), /*#__PURE__*/React.createElement("section", {
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-center"
+      }, /*#__PURE__*/React.createElement(BreederIcon, {
+        src: mon.faceIconUrl,
+        id: "mia_debug_icon",
+        alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB",
+        className: "mx-auto w-14 h-14 border border-amber-400/40"
+      }), /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px]"
+      }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\uFF08\u9854\u4E2D\u5FC3\uFF09")), /*#__PURE__*/React.createElement("div", {
+        className: "text-center"
+      }, /*#__PURE__*/React.createElement(MarketProductIcon, {
+        item: marketItems[0]
+      }), /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px]"
+      }, "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("div", {
+        className: "text-center"
+      }, /*#__PURE__*/React.createElement(DexMonsterIcon, {
+        src: mon.iconUrl
+      }), /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px]"
+      }, "\u56F3\u9451\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
+        className: "text-center"
+      }, /*#__PURE__*/React.createElement(DexMonsterIcon, {
+        src: mon.iconUrl,
+        lineage: true
+      }), /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px]"
+      }, "\u8840\u7D71\u30A2\u30A4\u30B3\u30F3")), /*#__PURE__*/React.createElement("div", {
+        className: "text-center"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-3xl"
+      }, cardIconNode(mon.iconUrl, 32, 'mia_debug_skill')), /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px]"
+      }, "\u6280\u30AB\u30FC\u30C9")))), /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-[10px] font-black text-fuchsia-300"
       }, "\u67D3\u8272\u78BA\u8A8D"), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[9px] leading-relaxed text-slate-300"
-      }, "\u6B63\u5F0F\u30DE\u30B9\u30AF\u672A\u63A5\u7D9A\u3002\u30A8\u30C7\u30A3\u30BF\u3067\u30DF\u30FC\u30A2\u3092\u9078\u629E\u3057\u3001\u8D64=\u9AEA\u3001\u7DD1=\u8336\u8272\u3044\u4E0A\u7740\u30FB\u30B9\u30AB\u30FC\u30C8\u30FB\u9774\u3001\u9752=\u80F8\u5143/\u8170/\u8896\u53E3\u306E\u7DD1\u90E8\u5206\u30FB\u7DD1\u306E\u9774\u4E0B\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => {
-          setDyeMaskEditorOpened(true);
-          setGameState('DYE_MASK_POSITION_DEBUG');
-        },
-        className: "mt-2 w-full min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black"
-      }, "\u6C4E\u7528\u67D3\u8272\u30DE\u30B9\u30AF\u30A8\u30C7\u30A3\u30BF\u3092\u958B\u304F"))));
+      }, "mia-dye-mask.PNG \u672A\u4FDD\u5B58"))));
     })(), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
@@ -29740,49 +29830,27 @@ function MonsterHeroGame() {
     }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).map(item => {
       const comingSoon = item.available === false;
       const owned = !comingSoon && isMarketItemOwned(item);
-      const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
-      const balance = usesGold ? gold : breederPoints;
+      const balance = item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
       const canBuy = !comingSoon && !owned && balance >= item.cost;
       const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
       const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
-      return (
-        /*#__PURE__*/
-        // 名前・所持数・詳細ボタンは商品によって有無や行数が変わるため、
-        // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
-        React.createElement("div", {
-          key: item.id,
-          className: `rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/50' : comingSoon ? 'bg-slate-900/60 border-slate-800/60' : 'bg-slate-900 border-slate-800'}`
-        }, /*#__PURE__*/React.createElement("button", {
-          type: "button",
-          onClick: () => setMarketIconZoom(item),
-          "aria-label": `${item.name}を大きく見る`,
-          className: `${MARKET_ICON_SIZE[item.type] || 'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon ? 'grayscale opacity-50' : ''}`
-        }, item.icon ? item.type === 'icon' ? /*#__PURE__*/React.createElement(BreederIcon, {
-          src: item.icon,
-          id: item.id,
-          alt: item.name,
-          className: "w-full h-full"
-        }) : item.type === 'assist' && ASSIST_CARD_ICON_STYLES[item.id] ? /*#__PURE__*/React.createElement(AssistCardIcon, {
-          icon: item.icon,
-          cardId: item.id,
-          className: "w-full h-full"
-        }) : /*#__PURE__*/React.createElement("img", {
-          src: item.icon,
-          alt: item.name,
-          className: "w-full h-full object-cover"
-        }) : /*#__PURE__*/React.createElement("span", {
-          className: "text-xl"
-        }, item.emoji)), /*#__PURE__*/React.createElement("div", {
-          className: `w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon ? 'text-slate-500' : 'text-white'}`,
-          style: {
-            minHeight: '36px'
-          }
-        }, item.name), /*#__PURE__*/React.createElement("div", {
-          className: "w-full flex items-center justify-center gap-1",
-          style: {
-            height: '22px'
-          }
-        }, item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+      return /*#__PURE__*/React.createElement(MarketProductCard, {
+        key: item.id,
+        item: item,
+        owned: owned,
+        comingSoon: comingSoon,
+        canBuy: canBuy,
+        onZoom: () => setMarketIconZoom(item),
+        onBuy: () => buyMarketItem(item),
+        detail: detailMon || detailTeaching,
+        onDetail: () => {
+          if (detailMon) setRosterDetailMon({
+            ...detailMon,
+            marketDiscIcon: item.icon,
+            marketDiscName: item.name
+          });else setRosterDetailTeaching(detailTeaching);
+        },
+        middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
           className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
         }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
           onClick: () => setMarketItemDetail(item),
@@ -29790,35 +29858,8 @@ function MonsterHeroGame() {
           className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
         }, /*#__PURE__*/React.createElement(BookOpen, {
           size: 8
-        }), "\u8A73\u7D30")) : (detailMon || detailTeaching) && !comingSoon ? /*#__PURE__*/React.createElement("button", {
-          onClick: () => {
-            if (detailMon) setRosterDetailMon({
-              ...detailMon,
-              marketDiscIcon: item.icon,
-              marketDiscName: item.name
-            });else setRosterDetailTeaching(detailTeaching);
-          },
-          "aria-label": `${item.name}の詳細を見る`,
-          className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
-        }, /*#__PURE__*/React.createElement(BookOpen, {
-          size: 8
-        }), "\u8A73\u7D30") : null), /*#__PURE__*/React.createElement("div", {
-          className: "w-full flex items-center justify-center mt-auto pt-2"
-        }, comingSoon ? /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap"
-        }, "\u8FD1\u65E5\u8FFD\u52A0") : owned ? /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap"
-        }, "\u6240\u6301\u6E08\u307F") : /*#__PURE__*/React.createElement("button", {
-          onClick: () => buyMarketItem(item),
-          disabled: !canBuy,
-          "aria-label": `${item.name}を${item.cost}${usesGold ? 'ダイヤ' : 'pt'}で購入`,
-          className: `text-[10px] font-black px-2.5 min-h-[30px] rounded-full flex items-center gap-0.5 whitespace-nowrap ${canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
-        }, usesGold ? /*#__PURE__*/React.createElement(Gem, {
-          size: 9
-        }) : /*#__PURE__*/React.createElement(Coins, {
-          size: 9
-        }), item.cost)))
-      );
+        }), "\u8A73\u7D30")) : null
+      });
     })))), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {

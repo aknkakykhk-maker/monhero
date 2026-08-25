@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 11:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 11:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3356,7 +3356,7 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // 立ち絵が縦長(2:3)のモンスター。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
@@ -3371,7 +3371,7 @@ const monsterArtUrlNeedsContain = (url) => {
     const urls = new Set();
     const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
     for (const baseId of MONSTER_ART_CONTAIN_IDS) {
-      const monster = all[baseId];
+      const monster = all[baseId] || (baseId === 'Mia' && typeof MIA_DEBUG_MONSTER === 'object' ? MIA_DEBUG_MONSTER : null);
       if (!monster) continue;
       for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
         if (each) urls.add(each);
@@ -4904,6 +4904,8 @@ const MARKET_PROFILE_ICON_STYLES = {
   undine_disc_icon: { scale: 1.52, x: 0, y: 2 },
   yaobikuni_icon: { scale: 3.70, x: 6.8, y: 122 },
   yaobikuni_disc_icon: { scale: 1.55, x: 0, y: 2 },
+  // 正式登録前のDEBUGでも、本番プロフィールと同じ補正経路で顔～上半身を切り出す。
+  mia_debug_icon: { scale: 2.55, x: 0, y: 67 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
@@ -4930,6 +4932,36 @@ const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full
 const HomeProfileIcon = ({ src, id, adjustment }) => (
   <div className="mh-home-avatar">{src?<BreederIcon src={src} id={id} adjustment={adjustment} alt="プロフィール画像" className="w-full h-full"/>:<User size={24}/>}</div>
 );
+
+// 図鑑一覧・血統チップ・立ち絵は本番とDEBUGで同じ収め方を使う。
+const DexMonsterIcon = ({ src, alt='', hidden=false, lineage=false }) => (
+  <span className={`${lineage?'w-7 h-7':'w-14 h-14'} rounded-full overflow-hidden border ${lineage?'border-amber-300/40':'border-amber-400/30'} shrink-0 bg-black/40 flex items-center justify-center`}>
+    {src?<img src={src} alt={alt} draggable={false} data-dex-entry-icon={!lineage||undefined} data-dex-lineage-icon={lineage||undefined} className="w-full h-full object-contain" style={{padding:'10%',...(hidden?{filter:'brightness(0)',opacity:0.6}:{})}}/>:<span className="text-2xl">？</span>}
+  </span>
+);
+const DexLineageChip = ({ lineage, iconUrl }) => (
+  <span data-dex-lineage className="flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
+    {iconUrl?<DexMonsterIcon src={iconUrl} lineage/>:<span className="w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
+    <span className="text-[11px] font-black text-amber-100 truncate">{lineage.name}</span>
+  </span>
+);
+const DexMonsterArt = ({ mon, alt, hidden=false }) => mon.imgUrl
+  ? <DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt={alt} masuColors={[]} draggable={false} className="w-full h-full object-contain" style={hidden?{filter:'brightness(0)',opacity:0.65}:undefined}/>
+  : <div className="text-6xl">{hidden?'？':mon.emoji}</div>;
+const MarketProductIcon = ({ item, onZoom, disabled=false }) => {
+  const content=item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>;
+  const cls=`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${disabled?'':'active:scale-90'}`;
+  return onZoom?<button type="button" onClick={onZoom} aria-label={`${item.name}を大きく見る`} className={cls}>{content}</button>:<div className={cls}>{content}</div>;
+};
+const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, middle=null, onDetail, onZoom, onBuy, canBuy=false, disabled=false }) => {
+  const usesGold=item.type==='disc'||item.type==='assist'||item.type==='item';
+  return <div className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
+    <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled}/>
+    <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
+    <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<button onClick={onDetail} aria-label={`${item.name}の詳細を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}</div>
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${item.cost}${usesGold?'ダイヤ':'pt'}で購入`}`} className={`text-[10px] font-black px-2.5 min-h-[30px] rounded-full flex items-center gap-0.5 whitespace-nowrap ${!disabled&&canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}>{usesGold?<Gem size={9}/>:<Coins size={9}/>}{item.cost}</button>}</div>
+  </div>;
+};
 
 // 表示を待たせず、ブラウザキャッシュとデコードだけを少しずつ先へ進める画像キュー。
 // URLそのものをキーにして、Reactの再描画や複数の優先グループに同じ画像が含まれても1回だけ取得する。
@@ -14015,11 +14047,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       className="w-full min-h-[124px] rounded-2xl border-2 border-amber-600/30 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none">
                       {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
                           少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
-                      <div className="w-14 h-14 rounded-full overflow-hidden border border-amber-400/30 shrink-0 bg-black/40 flex items-center justify-center">
-                        {iconSrc
-                          ? <img src={iconSrc} alt="" draggable={false} data-dex-entry-icon className="w-full h-full object-contain" style={{padding:'10%',...(unlocked?{}:{filter:'brightness(0)',opacity:0.6})}}/>
-                          : <div className="w-full h-full flex items-center justify-center text-2xl">{unlocked?mon.emoji:'？'}</div>}
-                      </div>
+                      <DexMonsterIcon src={iconSrc} hidden={!unlocked}/>
                       <div className="text-[10px] font-black truncate w-full text-center leading-tight text-amber-100">{unlocked?mon.name:'？？？'}</div>
                       <div className="text-[8px] font-black text-amber-400/80 leading-tight">{unlocked?monsterCategoryName(category):'未発見'}</div>
                     </button>
@@ -14045,23 +14073,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const categoryClass=category==='rare'?'bg-amber-600 text-white':category==='pure'?'bg-emerald-700 text-white':'bg-indigo-700 text-white';
           const go=(delta)=>{ const next=monsters[(index+delta+monsters.length)%monsters.length]; if(!next) return; setDexMonsterId(next.id); setDexTab('basic'); Audio_.se.tap(); };
           // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
-          const lineageChip=(lineage)=>{
-            const icon=lineageIconUrl(lineage);
-            return (
-              <span data-dex-lineage className="flex w-full items-center justify-center gap-1.5 min-w-0 rounded-full border border-amber-400/40 bg-black/40 pl-1 pr-2.5 py-1">
-                {icon
-                  /* 丸く切り抜くので、絵を枠いっぱいに入れると円の外側へかかる部分が切れる
-                     (アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)。
-                     どのモンスターでも全身が円の中へ収まるよう、少し縮めて中央へ置く。
-                     顔アイコンを持たないウンディーネ・ヤオビクニも、これで頭まで入る */
-                  ? <span className="w-7 h-7 rounded-full overflow-hidden border border-amber-300/40 shrink-0 bg-black/30 flex items-center justify-center">
-                      <img src={icon} alt="" draggable={false} data-dex-lineage-icon className="w-full h-full object-contain" style={{padding:'10%'}}/>
-                    </span>
-                  : <span className="w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0">血</span>}
-                <span className="text-[11px] font-black text-amber-100 truncate">{lineage.name}</span>
-              </span>
-            );
-          };
+          const lineageChip=(lineage)=><DexLineageChip lineage={lineage} iconUrl={lineageIconUrl(lineage)}/>;
           const tabs=[['basic','基本'],['stats','能力'],['skills','技']];
           const tab=tabs.some(([id])=>id===dexTab)?dexTab:'basic';
           const row=(label,value)=>(
@@ -14100,9 +14112,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-dex-art className="relative shrink-0 flex items-center justify-center px-14" style={{height:'clamp(150px, 20dvh, 180px)'}}
               onTouchStart={e=>{dexSwipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
               onTouchEnd={e=>{const from=dexSwipeRef.current; dexSwipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
-              {mon.imgUrl
-                ? <img src={mon.imgUrl} alt={unlocked?mon.name:'まだ出会っていないモンスター'} draggable={false} className="w-full h-full object-contain" style={unlocked?undefined:{filter:'brightness(0)',opacity:0.65}}/>
-                : <div className="text-6xl">{unlocked?mon.emoji:'？'}</div>}
+              <DexMonsterArt mon={mon} alt={unlocked?mon.name:'まだ出会っていないモンスター'} hidden={!unlocked}/>
               <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
               <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
             </div>
@@ -15186,12 +15196,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const mon=MIA_DEBUG_MONSTER;
           const row=(label,value)=><div className="flex items-center justify-between border-b border-amber-500/15 py-1.5 last:border-0"><span className="text-[10px] font-black text-amber-300">{label}</span><span className="text-[11px] font-bold text-white text-right">{value}</span></div>;
           const marketItems=[{id:'mia_debug_icon',name:'ミーアのアイコン',type:'icon',icon:MIA_DEBUG_IMAGE_URL,cost:1},{id:'mia_debug_disc_icon',name:'ミーアの円盤石アイコン',type:'icon',icon:MIA_DEBUG_DISC_URL,cost:1},{id:'mia_debug_disc',name:'ミーアの円盤石',type:'disc',icon:MIA_DEBUG_DISC_URL,cost:1500}];
-          const circle=(label,src,profile=false)=><div className="text-center"><div className="mx-auto w-14 h-14 rounded-full overflow-hidden border border-amber-400/40 bg-black/40">{profile?<BreederIcon src={src} id="mia_debug_icon" alt={label} className="w-full h-full"/>:<DyedMonsterImage baseId="Mia" src={src} alt={label} masuColors={[]} className="w-full h-full object-contain"/>}</div><small className="mt-1 block text-[8px] font-black text-slate-300">{label}</small></div>;
+          const pixieLineage={id:'pixie',name:'ピクシー'}, rareLineage={id:'rare',name:'？？？'};
           return <main className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}><header className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・表示だけ／購入・解放・保存なし</small><h2 className="text-sm font-black">ミーア実装確認</h2></div></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3">
-            <section data-mia-dex-preview className="rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"><div data-dex-art className="h-44 flex items-center justify-center"><img src={mon.imgUrl} alt="ミーア" className="w-full h-full object-contain"/></div><div className="text-center text-[17px] font-black text-amber-100">{mon.name}</div><div data-dex-lineage-row className="mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}><span className="text-[9px] font-black text-amber-300">血統</span><span data-dex-lineage className="rounded-full border border-amber-400/40 bg-black/40 px-2 py-2 text-center text-[11px] font-black text-amber-100">ピクシー</span><span className="text-amber-300 font-black">×</span><span data-dex-lineage className="rounded-full border border-amber-400/40 bg-black/40 px-2 py-2 text-center text-[11px] font-black text-amber-100">？？？</span><span data-dex-category className="rounded-full bg-amber-600 px-2 py-1 text-[9px] font-black">レア</span></div><p data-dex-desc className="mt-2 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{MIA_DEBUG_DESCRIPTION}</p><div className="mt-2 rounded-xl bg-black/30 px-2">{row('ライフ',mon.baseHp)}{row('ちから',mon.baseAtk)}{row('丈夫さ',mon.baseDef)}{row('ガッツ',mon.baseGuts)}{row('合流ボーナス',`ライフ+${mon.plusStats.hp}／ちから+${mon.plusStats.atk}／丈夫さ+${mon.plusStats.def}／ガッツ+${mon.plusStats.guts}`)}</div><div className="mt-2 grid grid-cols-4 gap-1.5">{RANGE_LABELS.map((label,i)=><div key={label} className="rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"><div className="text-[9px] font-black text-slate-400">{label}</div><div className="text-[13px] font-mono font-black text-amber-200">{mon.distAptitude[i]}</div></div>)}</div></section>
-            <section data-mia-market-preview className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-amber-300">本番商品カード表示（購入無効）</h3><div className={MARKET_GRID_CLASS}>{marketItems.map(item=>{const usesGold=item.type==='disc';return <div key={item.id} className="rounded-xl border-2 border-slate-800 bg-slate-900 p-1.5 flex flex-col items-center gap-1"><div className={`${MARKET_ICON_SIZE[item.type]} rounded-full overflow-hidden border-2 border-white/10 bg-black/30`}>{item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>}</div><div className="w-full text-center text-[9px] font-black leading-[1.15]" style={{minHeight:'36px'}}>{item.name}</div><div style={{height:'22px'}}/><button disabled aria-label={`${item.name}（デバッグのため購入不可）`} className="min-h-[30px] rounded-full bg-slate-800 px-2.5 text-[10px] font-black text-slate-500 flex items-center gap-0.5">{usesGold?<Gem size={9}/>:<Coins size={9}/>} {item.cost}</button></div>})}</div></section>
-            <section data-mia-icon-preview className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-cyan-300">主要な丸アイコン表示</h3><div className="grid grid-cols-3 gap-3">{circle('プロフィール',mon.faceIconUrl,true)}{circle('マーケット',mon.iconUrl)}{circle('図鑑一覧',mon.iconUrl)}{circle('血統アイコン',mon.faceIconUrl)}{circle('技カード',mon.iconUrl)}</div></section>
-            <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="text-[10px] font-black text-fuchsia-300">染色確認</h3><p className="mt-1 text-[9px] leading-relaxed text-slate-300">正式マスク未接続。エディタでミーアを選択し、赤=髪、緑=茶色い上着・スカート・靴、青=胸元/腰/袖口の緑部分・緑の靴下を確認できます。</p><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="mt-2 w-full min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black">汎用染色マスクエディタを開く</button></section>
+            <section data-mia-dex-preview className="rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"><div data-dex-art className="h-44 flex items-center justify-center"><DexMonsterArt mon={mon} alt="ミーア"/></div><div className="text-center text-[17px] font-black text-amber-100">{mon.name}</div><div data-dex-lineage-row className="mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}><span className="text-[9px] font-black text-amber-300">血統</span><DexLineageChip lineage={pixieLineage} iconUrl={mon.iconUrl}/><span className="text-amber-300 font-black">×</span><DexLineageChip lineage={rareLineage}/><span data-dex-category className="rounded-full bg-amber-600 px-2 py-1 text-[9px] font-black">レア</span></div><p data-dex-desc className="mt-2 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{MIA_DEBUG_DESCRIPTION}</p><div className="mt-2 rounded-xl bg-black/30 px-2">{row('ライフ',mon.baseHp)}{row('ちから',mon.baseAtk)}{row('丈夫さ',mon.baseDef)}{row('ガッツ',mon.baseGuts)}{row('合流ボーナス',`ライフ+${mon.plusStats.hp}／ちから+${mon.plusStats.atk}／丈夫さ+${mon.plusStats.def}／ガッツ+${mon.plusStats.guts}`)}</div><div className="mt-2 grid grid-cols-4 gap-1.5">{RANGE_LABELS.map((label,i)=><div key={label} className="rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"><div className="text-[9px] font-black text-slate-400">{label}</div><div className="text-[13px] font-mono font-black text-amber-200">{mon.distAptitude[i]}</div></div>)}</div></section>
+            <section data-mia-market-preview className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-amber-300">本番商品カード表示（購入無効）</h3><div className={MARKET_GRID_CLASS}>{marketItems.map(item=><MarketProductCard key={item.id} item={item} disabled/>)}</div></section>
+            <section data-mia-icon-preview className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-cyan-300">本番部品によるアイコン表示</h3><div className="grid grid-cols-3 gap-3"><div className="text-center"><BreederIcon src={mon.faceIconUrl} id="mia_debug_icon" alt="プロフィール" className="mx-auto w-14 h-14 border border-amber-400/40"/><small className="text-[8px]">プロフィール（顔中心）</small></div><div className="text-center"><MarketProductIcon item={marketItems[0]}/><small className="text-[8px]">マーケット</small></div><div className="text-center"><DexMonsterIcon src={mon.iconUrl}/><small className="text-[8px]">図鑑一覧</small></div><div className="text-center"><DexMonsterIcon src={mon.iconUrl} lineage/><small className="text-[8px]">血統アイコン</small></div><div className="text-center"><span className="text-3xl">{cardIconNode(mon.iconUrl,32,'mia_debug_skill')}</span><small className="block text-[8px]">技カード</small></div></div></section>
+            <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="text-[10px] font-black text-fuchsia-300">染色確認</h3><p className="mt-1 text-[9px] leading-relaxed text-slate-300">mia-dye-mask.PNG 未保存</p></section>
           </div></main>;
         })()}
 
@@ -15520,39 +15530,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).map(item=>{
                   const comingSoon = item.available === false;
                   const owned = !comingSoon && isMarketItemOwned(item);
-                  const usesGold = item.type==='disc' || item.type==='assist' || item.type==='item';
-                  const balance = usesGold ? gold : breederPoints;
+                  const balance = item.type==='disc' || item.type==='assist' || item.type==='item' ? gold : breederPoints;
                   const canBuy = !comingSoon && !owned && balance>=item.cost;
                   const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
                   const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
                   return (
-                    // 名前・所持数・詳細ボタンは商品によって有無や行数が変わるため、
-                    // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
-                    <div key={item.id} className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
-                      {/* 1行に4つ並べているぶん小さいので、タップすると大きく見られるようにしている */}
-                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>}</button>
-                      {/* 名前の枠は3行ぶん。細い端末で長い名前が3行になっても、
-                          カードの高さが商品ごとにばらつかないようにしている */}
-                      <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
-                      <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>
-                        {item.type==='item'?(<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>)
-                          :(detailMon||detailTeaching)&&!comingSoon?(
-                            <button onClick={()=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}} aria-label={`${item.name}の詳細を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>
-                          ):null}
-                      </div>
-                      {/* 4列に並べるとボタンが細くなるので、文字は「💎120」のように短くし、
-                          読み上げ用の説明(aria-label)で意味を補っている。
-                          すぐ上の「詳細」と間違えて買ってしまわないよう、間に余白を空けている */}
-                      <div className="w-full flex items-center justify-center mt-auto pt-2">
-                        {comingSoon?(
-                          <div className="text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>
-                        ):owned?(
-                          <div className="text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>
-                        ):(
-                          <button onClick={()=>buyMarketItem(item)} disabled={!canBuy} aria-label={`${item.name}を${item.cost}${usesGold?'ダイヤ':'pt'}で購入`} className={`text-[10px] font-black px-2.5 min-h-[30px] rounded-full flex items-center gap-0.5 whitespace-nowrap ${canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}>{usesGold?<Gem size={9}/>:<Coins size={9}/>}{item.cost}</button>
-                        )}
-                      </div>
-                    </div>
+                    <MarketProductCard
+                      key={item.id} item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
+                      onZoom={()=>setMarketIconZoom(item)} onBuy={()=>buyMarketItem(item)}
+                      detail={detailMon||detailTeaching}
+                      onDetail={()=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
+                      middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
+                    />
                   );
                 })}
               </div>

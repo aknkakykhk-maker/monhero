@@ -105,6 +105,7 @@ check('主血統プラントの対象はPlantとOboro',
 // ---------- ⑥ 図鑑の画面 ----------
 const list = slice("{gameState==='MONSTER_DEX'&&(()=>{", "{gameState==='MONSTER_DEX_DETAIL'&&(()=>{");
 const detail = slice("{gameState==='MONSTER_DEX_DETAIL'&&(()=>{", "{gameState==='AUTO_SETTINGS'&&(()=>{");
+const sharedDex = slice('const DexMonsterIcon =', 'const MarketProductIcon =');
 check('M/B管理のモンスターから図鑑へ入れる',
   source.includes("setGameState('MONSTER_DEX');") && source.includes('モンスター図鑑</button>'));
 check('HOMEへ施設を増やしていない', !/mh-home-facility [a-z]*dex/.test(source));
@@ -113,7 +114,7 @@ check('解放判定は既存の mh_unlocked_monsters を使う',
   list.includes('unlockedMonsterIds.includes(mon.id)') && detail.includes('unlockedMonsterIds.includes(mon.id)'));
 check('図鑑のための保存キーを増やしていない', !/['"]mh_[^'"]*(?:dex|zukan)/i.test(source));
 check('未解放はシルエットと ？？？ で出す',
-  list.includes("'？？？'") && list.includes('brightness(0)') && detail.includes('brightness(0)'));
+  list.includes("'？？？'") && sharedDex.includes('brightness(0)') && detail.includes('hidden={!unlocked}'));
 check('主血統でしぼりこめる', list.includes('dexLineageFilter') && list.includes('主血統でしぼりこむ'));
 check('詳細に前後移動のボタンとスワイプがある',
   detail.includes('data-dex-prev') && detail.includes('data-dex-next')
@@ -140,13 +141,13 @@ check('血統の行は文字数で位置が動かない（左右のチップが�
   && detail.includes("gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'")
   && !/血統の行[\s\S]{0,200}justify-center/.test(detail));
 check('血統チップは枠いっぱいに広がる（中身の長さで幅が変わらない）',
-  detail.includes('data-dex-lineage className="flex w-full items-center justify-center'));
+  detail.includes('<DexLineageChip') && sharedDex.includes('data-dex-lineage className="flex w-full items-center justify-center'));
 // 丸アイコンは円の内側へ収める。枠いっぱいに絵を入れると、円の外側へかかる部分が
 // どのモンスターでも切れる(アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)
 check('血統チップのアイコンが円の内側へ収まる',
-  detail.includes('data-dex-lineage-icon') && /data-dex-lineage-icon[\s\S]{0,140}padding:'10%'/.test(detail));
+  detail.includes('<DexLineageChip') && sharedDex.includes('data-dex-lineage-icon') && /data-dex-lineage-icon[\s\S]{0,220}padding:'10%'/.test(sharedDex));
 check('図鑑一覧のアイコンも円の内側へ収まる',
-  list.includes('data-dex-entry-icon') && /data-dex-entry-icon[\s\S]{0,160}padding:'10%'/.test(list));
+  list.includes('<DexMonsterIcon') && sharedDex.includes('data-dex-entry-icon') && /data-dex-entry-icon[\s\S]{0,220}padding:'10%'/.test(sharedDex));
 check('区分バッジの幅を固定している', detail.includes('data-dex-category') && detail.includes('min-w-[42px]'));
 check('説明文は行数が変わってもタブより下を動かさない',
   detail.includes('data-dex-desc') && detail.includes("height:'calc(1.625em * 3)'"));
@@ -155,7 +156,8 @@ check('説明文は行数が変わってもタブより下を動かさない',
 // モンスターごとに見た目が2倍近く変わる(ザンだけ極端に大きく見えた)
 check('立ち絵は枠に合わせて縮尺する（元画像の解像度で大きさが変わらない）',
   detail.includes('data-dex-art')
-  && detail.includes('className="w-full h-full object-contain"')
+  && detail.includes('<DexMonsterArt')
+  && sharedDex.includes('className="w-full h-full object-contain"')
   && !detail.includes('max-w-full max-h-full'));
 check('立ち絵の枠の高さを決めている', /data-dex-art[\s\S]{0,300}height:'clamp\(/.test(detail));
 check('Safe Areaを避けている', list.includes('env(safe-area-inset-top)') && detail.includes('env(safe-area-inset-bottom)'));
