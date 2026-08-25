@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-25 13:07",
+    date: "2026-08-25 13:33",
     type: 'issue',
     title: '技カードのアイコンでウンディーネ・ヤオビクニの頭が切れる問題を修正',
     status: 'fixed',
