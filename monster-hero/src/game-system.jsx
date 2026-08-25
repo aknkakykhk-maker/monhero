@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 07:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 07:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15289,9 +15289,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const palettes=[
             ['染色なし',[null,null,null]],
             ['染色1のみ',['custom:25:90:90',null,null]],
-            ['染色2のみ',[null,'custom:150:90:78',null]],
+            ['染色2のみ',[null,'custom:320:90:95',null]],
             ['染色3のみ',[null,null,'custom:215:90:95']],
-            ['3色同時',['custom:25:90:90','custom:150:90:78','custom:215:90:95']],
+            ['3色同時',['custom:25:90:90','custom:320:90:95','custom:215:90:95']],
           ];
           const art=(label,colors)=><section key={label} className="rounded-xl border border-white/10 bg-black/30 p-2"><b className="mb-1 block text-center text-[9px] text-fuchsia-200">{label}</b><div className="h-44 overflow-hidden rounded-lg" style={{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'}}><DyedMonsterImage baseId={p.id} src={p.imgUrl} alt={`${p.name} ${label}`} masuColors={colors} className="h-full w-full object-contain"/></div></section>;
           return <main className="flex h-full min-h-0 flex-1 flex-col p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
@@ -15299,7 +15299,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mh-scroll min-h-0 flex-1 space-y-3 overflow-y-auto pb-3">
               <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="grid grid-cols-2 gap-2"><div><b className="text-fuchsia-200">本体画像</b><img src={p.imgUrl} alt="パンドラ元画像" className="mt-2 h-40 w-full object-contain"/></div><div><b className="text-fuchsia-200">円盤石</b><img src={p.discUrl} alt="パンドラ円盤石" className="mt-2 h-40 w-full object-contain"/></div></div></section>
               <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[10px] leading-relaxed"><h3 className="text-sm font-black text-fuchsia-200">{p.name} <small>ID: {p.id}／レア</small></h3><p>血統：ピクシー × ？？？（main: {p.main} / sub: {p.sub}）</p><div className="mt-2 text-slate-300">{p.description.map(line=><p key={line}>{line}</p>)}</div><p className="mt-2">通常技：{p.moves.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>勇者特性：{p.trait.name} — {p.trait.effect}</p><p>固有技：baseMult {p.unique.baseMult} / baseGuts {p.unique.baseGuts}</p><p>進化名：{p.evolutions.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>固有技効果：{p.unique.effectName} — {p.unique.effect}</p><p>atkMotion：default</p><p className="mt-2 font-black text-amber-300">未決定：ライフ／ちから／丈夫さ／ガッツ／plusStats／距離適性／専用攻撃モーション／マーケット価格／顔アイコン補正</p></section>
-              <section><h3 className="mb-2 text-[10px] font-black text-cyan-300">保存済みRGBマスク × DyedMonsterImage（確認色：橙／緑／青）</h3><div className="grid grid-cols-2 gap-2">{palettes.map(([label,colors])=>art(label,colors))}</div></section>
+              <section><h3 className="mb-2 text-[10px] font-black text-cyan-300">保存済みRGBマスク × DyedMonsterImage（確認色：橙／桃／青）</h3><div className="grid grid-cols-2 gap-2">{palettes.map(([label,colors])=>art(label,colors))}</div></section>
             </div>
           </main>;
         })()}

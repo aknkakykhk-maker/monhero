@@ -1029,6 +1029,7 @@ const HELP_SCREEN_COVERAGE = {
   // 模様テストは開発用の隠し画面なので、公開説明は増やさず既存の染色項目を参照先にする。
   MASU_PATTERN_DEBUG:'masu/dye',
   MONSTER_IMAGE_DEBUG:'masu/dye',
+  PANDORA_IMPLEMENTATION_DEBUG:'masu/dye',
   DYE_MASK_POSITION_DEBUG:'masu/dye',
   // 限界突破★テストは開発用だが、本番と同じ★を確認するため限界突破の説明へ対応させる。
   BREAKTHROUGH_STAR_DEBUG:'masu/rebirth',
