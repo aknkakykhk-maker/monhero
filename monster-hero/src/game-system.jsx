@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 06:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 07:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3042,7 +3042,6 @@ const PANDORA_DEBUG = Object.freeze({
 });
 // 染色エンジンに3枠を知らせるためのDEBUG限定ダミー定義。領域判定には必ず保存済みRGBマスクを使う。
 MASU_COLOR_REGION_HUES.Pandora = [{hue:0},{hue:120},{hue:240}];
-const PANDORA_DEBUG_MASK_PLACEMENT = Object.freeze({maskUrl:PANDORA_DEBUG.maskUrl,scaleX:1,scaleY:1,xPx:0,yPx:0});
 const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).map(monster => ({
   id:String(monster.id).toLowerCase(), baseId:monster.id, name:monster.name, imageUrl:monster.imgUrl,
   maskUrl:EXACT_DYE_MASKS[monster.id] || null,
@@ -3146,7 +3145,8 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
           const src = srcCtx.getImageData(0, 0, w, h).data;
           // 正式マスクがあるモンスターは、保存済みPNGの赤・緑・青を染色①・②・③として使う。
           // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
-          const exactMaskUrl = debugPlacement?.maskUrl || EXACT_DYE_MASKS[baseId] || null;
+          // 正式登録前のパンドラだけはDEBUG定義の保存済みマスクを直接選ぶ。
+          const exactMaskUrl = debugPlacement?.maskUrl || (baseId === PANDORA_DEBUG.id ? PANDORA_DEBUG.maskUrl : EXACT_DYE_MASKS[baseId]) || null;
           const exactMask = exactMaskUrl
             ? await _loadExactDyeMask(exactMaskUrl, w, h, debugPlacement || EXACT_DYE_MASK_PLACEMENT)
             : null;
@@ -15293,7 +15293,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ['染色3のみ',[null,null,'custom:215:90:95']],
             ['3色同時',['custom:25:90:90','custom:150:90:78','custom:215:90:95']],
           ];
-          const art=(label,colors)=><section key={label} className="rounded-xl border border-white/10 bg-black/30 p-2"><b className="mb-1 block text-center text-[9px] text-fuchsia-200">{label}</b><div className="h-44 overflow-hidden rounded-lg" style={{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'}}><DyedMonsterImage baseId={p.id} src={p.imgUrl} alt={`${p.name} ${label}`} masuColors={colors} debugMaskPlacement={PANDORA_DEBUG_MASK_PLACEMENT} className="h-full w-full object-contain"/></div></section>;
+          const art=(label,colors)=><section key={label} className="rounded-xl border border-white/10 bg-black/30 p-2"><b className="mb-1 block text-center text-[9px] text-fuchsia-200">{label}</b><div className="h-44 overflow-hidden rounded-lg" style={{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'}}><DyedMonsterImage baseId={p.id} src={p.imgUrl} alt={`${p.name} ${label}`} masuColors={colors} className="h-full w-full object-contain"/></div></section>;
           return <main className="flex h-full min-h-0 flex-1 flex-col p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <header className="mb-2 flex items-center gap-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG限定・正式データ／セーブへ未登録</small><h2 className="text-sm font-black">😈 パンドラ実装確認</h2></div></header>
             <div className="mh-scroll min-h-0 flex-1 space-y-3 overflow-y-auto pb-3">
