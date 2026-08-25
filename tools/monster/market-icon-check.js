@@ -81,11 +81,14 @@ check('対象アイコンを共通部品で拡大・位置調整する',
     && source.includes('snegurochka_icon: { scale: 4.28, x: 11, y: 111 }')
     && source.includes('snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 }')
     && source.includes('iblis_icon: { scale: 1.42, x: 2, y: -10 }')
-    && source.includes('const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={})')
-    && source.includes('transform: `translate(${x}%, ${y}%) scale(${scale})`')
+    && source.includes('const profileIconTransformStyle = iconAdjustmentTransformStyle')
+    && source.includes('const iconAdjustmentTransformStyle = ({ scale=1, x=0, y=0 }={})')
+    && source.includes('transform:`translate(${x}%, ${y}%) scale(${scale})`')
     && source.includes('transformOrigin:\'center center\'')
     && source.includes('const BreederIcon =')
-    && (source.match(/<BreederIcon /g) || []).length >= 10
+    && source.includes('const MarketProductIcon =')
+    && source.includes('<MarketProductCard')
+    && (source.match(/<BreederIcon /g) || []).length >= 6
     && !source.includes('transform: `scale(${scale}) translate(${x}%, ${y}%)`'));
 
 check('デバッグ画面で全アイコンの数値と4つの本番表示を調整・コピーできる',

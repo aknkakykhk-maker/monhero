@@ -26,8 +26,8 @@ const check = (name, ok, detail = '') => {
 const has = (needle) => source.includes(needle);
 
 // --- 対象の定義と挙動 ---
-check('縦長の立ち絵を持つ対象がウンディーネ・ヤオビクニに定義されている',
-  has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni']);"));
+check('縦長の立ち絵を持つ対象とMia DEBUGがcontainに定義されている',
+  has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia']);"));
 
 const fnCtx = {};
 vm.createContext(fnCtx);
@@ -89,9 +89,9 @@ check('教え(固有技の元モンスター)アイコンがmonsterArtFitStyle�
 // (アークの冠と翼、ザンの腕、ゴーレムの肩が実際に切れていた)。
 // 全モンスターを object-contain にしたうえで、円の内側へ収まるよう内側の余白を取る。
 check('モンスター図鑑の一覧アイコンが円の内側へ収まる',
-  /data-dex-entry-icon className="w-full h-full object-contain"[\s\S]{0,120}padding:'10%'/.test(source));
+  /data-dex-entry-icon=\{!lineage\|\|undefined\}[\s\S]{0,180}padding:'10%'/.test(source));
 check('モンスター図鑑の血統チップのアイコンが円の内側へ収まる',
-  /data-dex-lineage-icon className="w-full h-full object-contain"[\s\S]{0,120}padding:'10%'/.test(source));
+  /data-dex-lineage-icon=\{lineage\|\|undefined\}[\s\S]{0,180}padding:'10%'/.test(source));
 check('図鑑の丸アイコンで object-cover を使っていない（切れる原因）',
   !/data-dex-(?:entry|lineage)-icon[^>]*object-cover/.test(source));
 check('マスモン一覧などのベース種分岐がmonsterArtFitStyleを通す',
