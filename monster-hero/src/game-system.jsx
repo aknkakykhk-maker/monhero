@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 07:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 07:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3025,10 +3025,15 @@ const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 
 // パンドラは正式登録前のDEBUG確認専用。正式モン一覧・図鑑・血統・セーブへは混ぜず、
 // 保存済みマスクもDEBUG画面／エディタを開いた時だけ参照する。正式実装時は既存の
 // EXACT_DYE_MASKSまたは埋め込み部位マップへ移し、この定義を削除する。
+// 【重要】マスクは必ず配信フォルダ(monster-hero/images/)へ置くこと。
+// GitHub Pagesへ配るのは index.html と monster-hero/ だけなので、tools/ の下を指すと
+// 本番だけ404になる。マスクが読めないと色相推定へ静かに落ちるだけでエラーは出ず、
+// パンドラのダミー色相は緑(hue120)を含むのに絵に緑がほとんど無いため、
+// 「染色2だけ効いていない」ように見える不具合になっていた。
 const PANDORA_DEBUG = Object.freeze({
   id:'Pandora', name:'パンドラ', main:'pixie', sub:'unknown', category:'レア',
   imgUrl:'images/monsters/pandora.PNG', discUrl:'images/disc-icons/pandora-disc.PNG',
-  maskUrl:'../tools/art-sources/dye-masks/pandora-dye-mask.PNG',
+  maskUrl:'images/monsters/pandora-dye-mask.PNG',
   description:[
     '一つの体に光と闇、相反する二つの魔力を宿した珍しいピクシー',
     '絶えずぶつかり合う魔力のせいで情緒は少し不安定だが、',
@@ -7382,6 +7387,9 @@ function MonsterHeroGame() {
   const [dyeTargetMasuId, setDyeTargetMasuId] = useState(null); // 染色もどき: 対象に選んだマスモンid(色選択モーダル表示のトリガー)
   const [dyePreviewColors, setDyePreviewColors] = useState([]); // 染色もどき: 確定前にプレビュー中の部位別色id配列(染色①②③)
   const [customColorPicker, setCustomColorPicker] = useState(null); // 染色もどき: カスタム色選択中の{idx,h,s,v}(nullなら非表示)
+  // DEBUG「パンドラ実装確認」で手動で試す色。パンドラはまだマスモンでもベースモンでもないため
+  // 既存のmonsterImageDebugColors(マスモン個体が前提)には相乗りできず、専用に持つ。保存はしない
+  const [pandoraDebugColors, setPandoraDebugColors] = useState([null, null, null]);
   const [showMasuRegisterModal, setShowMasuRegisterModal] = useState(false); // ラン終了画面: マスモン登録の名前入力
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
@@ -15299,6 +15307,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mh-scroll min-h-0 flex-1 space-y-3 overflow-y-auto pb-3">
               <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="grid grid-cols-2 gap-2"><div><b className="text-fuchsia-200">本体画像</b><img src={p.imgUrl} alt="パンドラ元画像" className="mt-2 h-40 w-full object-contain"/></div><div><b className="text-fuchsia-200">円盤石</b><img src={p.discUrl} alt="パンドラ円盤石" className="mt-2 h-40 w-full object-contain"/></div></div></section>
               <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[10px] leading-relaxed"><h3 className="text-sm font-black text-fuchsia-200">{p.name} <small>ID: {p.id}／レア</small></h3><p>血統：ピクシー × ？？？（main: {p.main} / sub: {p.sub}）</p><div className="mt-2 text-slate-300">{p.description.map(line=><p key={line}>{line}</p>)}</div><p className="mt-2">通常技：{p.moves.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>勇者特性：{p.trait.name} — {p.trait.effect}</p><p>固有技：baseMult {p.unique.baseMult} / baseGuts {p.unique.baseGuts}</p><p>進化名：{p.evolutions.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>固有技効果：{p.unique.effectName} — {p.unique.effect}</p><p>atkMotion：default</p><p className="mt-2 font-black text-amber-300">未決定：ライフ／ちから／丈夫さ／ガッツ／plusStats／距離適性／専用攻撃モーション／マーケット価格／顔アイコン補正</p></section>
+              {/* 本番の染色もどきと同じ部品(DyeRegionColorControls)・同じカスタム色モーダルで
+                  実際に色を作って試せるようにする。保存はせず、この画面を出ているあいだだけの色 */}
+              <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3">
+                <div className="mb-2 flex items-center gap-2"><h3 className="text-[10px] font-black text-fuchsia-300">染色もどきで試す（保存されません）</h3><button onClick={()=>setPandoraDebugColors([null,null,null])} className="ml-auto min-h-[32px] rounded-lg border border-white/10 bg-black/40 px-2 text-[9px] font-black text-slate-300 active:scale-95">元の色へ戻す</button></div>
+                <div className="mb-2 grid grid-cols-2 gap-2">{art('いま選んでいる色',pandoraDebugColors)}{art('元の色',[null,null,null])}</div>
+                <div className="mb-2 grid grid-cols-3 gap-2">{[0,1,2].map(i=>art(`染色${i+1}のみ`,pandoraDebugColors.map((c,j)=>i===j?c:null)))}</div>
+                <DyeRegionColorControls baseId={p.id} colors={pandoraDebugColors}
+                  onChange={(idx,colorId)=>setPandoraDebugColors(prev=>{const next=[...prev];next[idx]=colorId;return next;})}
+                  onCustom={(idx)=>{const parsed=_parseCustomColorId(pandoraDebugColors[idx]);setCustomColorPicker({mode:'pandora',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/>
+              </section>
               <section><h3 className="mb-2 text-[10px] font-black text-cyan-300">保存済みRGBマスク × DyedMonsterImage（確認色：橙／桃／青）</h3><div className="grid grid-cols-2 gap-2">{palettes.map(([label,colors])=>art(label,colors))}</div></section>
             </div>
           </main>;
@@ -16901,18 +16919,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* 染色もどき: カスタム色選択(色相バー+彩度・明度パッドのスペクトラムピッカー) */}
         {customColorPicker&&(()=>{
           const { mode, idx, h, s, v } = customColorPicker;
-          const masu = mode==='debug' ? masuMons.find(m=>String(m.id)===String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
-          const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
+          // パンドラはまだマスモンでもベースモンでもないので、個体を引かずDEBUG定義をそのまま使う
+          const masu = mode==='pandora' ? { id:PANDORA_DEBUG.id, baseId:PANDORA_DEBUG.id, name:PANDORA_DEBUG.name }
+            : mode==='debug' ? masuMons.find(m=>String(m.id)===String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
+          const base = mode==='pandora' ? { iconUrl:PANDORA_DEBUG.imgUrl } : (masu && ALL_PLAYER_MONSTERS[masu.baseId]);
           const applyCustom = () => {
-            const setter=mode==='debug'?setMonsterImageDebugColors:setDyePreviewColors;
+            const setter=mode==='pandora'?setPandoraDebugColors:mode==='debug'?setMonsterImageDebugColors:setDyePreviewColors;
             // 濃さ(@NN)は色を作り直しても引き継ぐ
-            setter(prev => { const next = [...(prev||(mode==='debug'?getMasuColors(masu):[]))]; next[idx] = withColorAlpha(_encodeCustomColorId(h, s, v), colorAlphaOf(next[idx])); return next; });
+            setter(prev => { const next = [...(prev||(mode==='pandora'?[null,null,null]:mode==='debug'?getMasuColors(masu):[]))]; next[idx] = withColorAlpha(_encodeCustomColorId(h, s, v), colorAlphaOf(next[idx])); return next; });
             setCustomColorPicker(null);
           };
           // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
           // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
           const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
-          const sourceColors=mode==='debug'?(monsterImageDebugColors||getMasuColors(masu)):dyePreviewColors;
+          const sourceColors=mode==='pandora'?pandoraDebugColors:mode==='debug'?(monsterImageDebugColors||getMasuColors(masu)):dyePreviewColors;
           const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:32000}}>
@@ -16922,7 +16942,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button onClick={()=>setCustomColorPicker(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
                 </div>
                 {masu&&base&&(
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={previewColors} className="w-full h-full object-cover"/></div>
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={previewColors} className={`w-full h-full ${mode==='pandora'?'object-contain':'object-cover'}`}/></div>
                 )}
                 <CustomColorPicker h={h} s={s} v={v} onChange={(nh,ns,nv)=>setCustomColorPicker(prev=>prev?{...prev, h:nh, s:ns, v:nv}:prev)}/>
                 <div className="flex gap-2 mt-1 shrink-0">

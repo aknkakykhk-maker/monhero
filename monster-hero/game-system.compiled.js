@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 572ca74344d13b0c
+// source-sha256: 8840695bd5f584f0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 07:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 07:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5480,6 +5480,11 @@ const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
 // パンドラは正式登録前のDEBUG確認専用。正式モン一覧・図鑑・血統・セーブへは混ぜず、
 // 保存済みマスクもDEBUG画面／エディタを開いた時だけ参照する。正式実装時は既存の
 // EXACT_DYE_MASKSまたは埋め込み部位マップへ移し、この定義を削除する。
+// 【重要】マスクは必ず配信フォルダ(monster-hero/images/)へ置くこと。
+// GitHub Pagesへ配るのは index.html と monster-hero/ だけなので、tools/ の下を指すと
+// 本番だけ404になる。マスクが読めないと色相推定へ静かに落ちるだけでエラーは出ず、
+// パンドラのダミー色相は緑(hue120)を含むのに絵に緑がほとんど無いため、
+// 「染色2だけ効いていない」ように見える不具合になっていた。
 const PANDORA_DEBUG = Object.freeze({
   id: 'Pandora',
   name: 'パンドラ',
@@ -5488,7 +5493,7 @@ const PANDORA_DEBUG = Object.freeze({
   category: 'レア',
   imgUrl: 'images/monsters/pandora.PNG',
   discUrl: 'images/disc-icons/pandora-disc.PNG',
-  maskUrl: '../tools/art-sources/dye-masks/pandora-dye-mask.PNG',
+  maskUrl: 'images/monsters/pandora-dye-mask.PNG',
   description: ['一つの体に光と闇、相反する二つの魔力を宿した珍しいピクシー', '絶えずぶつかり合う魔力のせいで情緒は少し不安定だが、', 'どちらの力も欠かせない不思議な均衡で成り立っている', '本当はオシャレが好きで、争いもあまり好まない'],
   moves: ['はり手', 'レイ', 'サンダー', 'ハイキック', 'ヒールレイド', 'ライトニング', 'メガレイ', 'なげキッス', 'デュアルキッス'],
   evolutions: ['バン', 'ギガレイ', 'ギガサンダー', 'ビッグバン', 'ギガライトニング', 'コズミッグバン', 'アストラルレイ', 'エクリプスノヴァ', 'ダイスキライライ'],
@@ -13436,6 +13441,9 @@ function MonsterHeroGame() {
   const [dyeTargetMasuId, setDyeTargetMasuId] = useState(null); // 染色もどき: 対象に選んだマスモンid(色選択モーダル表示のトリガー)
   const [dyePreviewColors, setDyePreviewColors] = useState([]); // 染色もどき: 確定前にプレビュー中の部位別色id配列(染色①②③)
   const [customColorPicker, setCustomColorPicker] = useState(null); // 染色もどき: カスタム色選択中の{idx,h,s,v}(nullなら非表示)
+  // DEBUG「パンドラ実装確認」で手動で試す色。パンドラはまだマスモンでもベースモンでもないため
+  // 既存のmonsterImageDebugColors(マスモン個体が前提)には相乗りできず、専用に持つ。保存はしない
+  const [pandoraDebugColors, setPandoraDebugColors] = useState([null, null, null]);
   const [showMasuRegisterModal, setShowMasuRegisterModal] = useState(false); // ラン終了画面: マスモン登録の名前入力
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
@@ -29093,7 +29101,38 @@ function MonsterHeroGame() {
         className: "mt-2"
       }, "\u901A\u5E38\u6280\uFF1A", p.moves.map((move, i) => `${i + 1}. ${move}`).join(' / ')), /*#__PURE__*/React.createElement("p", null, "\u52C7\u8005\u7279\u6027\uFF1A", p.trait.name, " \u2014 ", p.trait.effect), /*#__PURE__*/React.createElement("p", null, "\u56FA\u6709\u6280\uFF1AbaseMult ", p.unique.baseMult, " / baseGuts ", p.unique.baseGuts), /*#__PURE__*/React.createElement("p", null, "\u9032\u5316\u540D\uFF1A", p.evolutions.map((move, i) => `${i + 1}. ${move}`).join(' / ')), /*#__PURE__*/React.createElement("p", null, "\u56FA\u6709\u6280\u52B9\u679C\uFF1A", p.unique.effectName, " \u2014 ", p.unique.effect), /*#__PURE__*/React.createElement("p", null, "atkMotion\uFF1Adefault"), /*#__PURE__*/React.createElement("p", {
         className: "mt-2 font-black text-amber-300"
-      }, "\u672A\u6C7A\u5B9A\uFF1A\u30E9\u30A4\u30D5\uFF0F\u3061\u304B\u3089\uFF0F\u4E08\u592B\u3055\uFF0F\u30AC\u30C3\u30C4\uFF0FplusStats\uFF0F\u8DDD\u96E2\u9069\u6027\uFF0F\u5C02\u7528\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\uFF0F\u30DE\u30FC\u30B1\u30C3\u30C8\u4FA1\u683C\uFF0F\u9854\u30A2\u30A4\u30B3\u30F3\u88DC\u6B63")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+      }, "\u672A\u6C7A\u5B9A\uFF1A\u30E9\u30A4\u30D5\uFF0F\u3061\u304B\u3089\uFF0F\u4E08\u592B\u3055\uFF0F\u30AC\u30C3\u30C4\uFF0FplusStats\uFF0F\u8DDD\u96E2\u9069\u6027\uFF0F\u5C02\u7528\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\uFF0F\u30DE\u30FC\u30B1\u30C3\u30C8\u4FA1\u683C\uFF0F\u9854\u30A2\u30A4\u30B3\u30F3\u88DC\u6B63")), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-[10px] font-black text-fuchsia-300"
+      }, "\u67D3\u8272\u3082\u3069\u304D\u3067\u8A66\u3059\uFF08\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setPandoraDebugColors([null, null, null]),
+        className: "ml-auto min-h-[32px] rounded-lg border border-white/10 bg-black/40 px-2 text-[9px] font-black text-slate-300 active:scale-95"
+      }, "\u5143\u306E\u8272\u3078\u623B\u3059")), /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 grid grid-cols-2 gap-2"
+      }, art('いま選んでいる色', pandoraDebugColors), art('元の色', [null, null, null])), /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 grid grid-cols-3 gap-2"
+      }, [0, 1, 2].map(i => art(`染色${i + 1}のみ`, pandoraDebugColors.map((c, j) => i === j ? c : null)))), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
+        baseId: p.id,
+        colors: pandoraDebugColors,
+        onChange: (idx, colorId) => setPandoraDebugColors(prev => {
+          const next = [...prev];
+          next[idx] = colorId;
+          return next;
+        }),
+        onCustom: idx => {
+          const parsed = _parseCustomColorId(pandoraDebugColors[idx]);
+          setCustomColorPicker({
+            mode: 'pandora',
+            idx,
+            h: parsed?.h ?? 210,
+            s: parsed?.s ?? .7,
+            v: parsed?.v ?? .7
+          });
+        }
+      })), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[10px] font-black text-cyan-300"
       }, "\u4FDD\u5B58\u6E08\u307FRGB\u30DE\u30B9\u30AF \xD7 DyedMonsterImage\uFF08\u78BA\u8A8D\u8272\uFF1A\u6A59\uFF0F\u6843\uFF0F\u9752\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
@@ -32619,13 +32658,20 @@ function MonsterHeroGame() {
         s,
         v
       } = customColorPicker;
-      const masu = mode === 'debug' ? masuMons.find(m => String(m.id) === String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
-      const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
+      // パンドラはまだマスモンでもベースモンでもないので、個体を引かずDEBUG定義をそのまま使う
+      const masu = mode === 'pandora' ? {
+        id: PANDORA_DEBUG.id,
+        baseId: PANDORA_DEBUG.id,
+        name: PANDORA_DEBUG.name
+      } : mode === 'debug' ? masuMons.find(m => String(m.id) === String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
+      const base = mode === 'pandora' ? {
+        iconUrl: PANDORA_DEBUG.imgUrl
+      } : masu && ALL_PLAYER_MONSTERS[masu.baseId];
       const applyCustom = () => {
-        const setter = mode === 'debug' ? setMonsterImageDebugColors : setDyePreviewColors;
+        const setter = mode === 'pandora' ? setPandoraDebugColors : mode === 'debug' ? setMonsterImageDebugColors : setDyePreviewColors;
         // 濃さ(@NN)は色を作り直しても引き継ぐ
         setter(prev => {
-          const next = [...(prev || (mode === 'debug' ? getMasuColors(masu) : []))];
+          const next = [...(prev || (mode === 'pandora' ? [null, null, null] : mode === 'debug' ? getMasuColors(masu) : []))];
           next[idx] = withColorAlpha(_encodeCustomColorId(h, s, v), colorAlphaOf(next[idx]));
           return next;
         });
@@ -32634,7 +32680,7 @@ function MonsterHeroGame() {
       // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
       // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
       const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
-      const sourceColors = mode === 'debug' ? monsterImageDebugColors || getMasuColors(masu) : dyePreviewColors;
+      const sourceColors = mode === 'pandora' ? pandoraDebugColors : mode === 'debug' ? monsterImageDebugColors || getMasuColors(masu) : dyePreviewColors;
       const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-4",
@@ -32662,7 +32708,7 @@ function MonsterHeroGame() {
         src: base.iconUrl,
         alt: masu.name,
         masuColors: previewColors,
-        className: "w-full h-full object-cover"
+        className: `w-full h-full ${mode === 'pandora' ? 'object-contain' : 'object-cover'}`
       })), /*#__PURE__*/React.createElement(CustomColorPicker, {
         h: h,
         s: s,
