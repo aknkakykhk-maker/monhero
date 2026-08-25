@@ -36,5 +36,23 @@ assert(source.includes("<section className=\"relative m-2 min-h-0 flex-1")&&sour
 assert(source.includes('debugMaskPlacement?.maskUrl, debugMaskPlacement?.xPx'),'一時マスクURLの変更時に本番マスクを再読込する');
 assert(source.includes('onTryInGame(target,blob,previewColors)')&&source.includes('setMonsterImageDebugColors(colors||getMasuColors(preview))'),'合成とゲーム内確認で同じ色設定を引き継ぐ');
 assert(source.includes('Object.values(ALL_PLAYER_MONSTERS).map(monster => ({')&&source.includes('hasMask:Array.isArray(MASU_COLOR_REGION_HUES[monster.id])'),'正式登録済みMiaを通常モンスターと同じエディタ候補生成経路へ含める');
-assert(source.includes('const MIA_EXACT_REGION_2BIT =')&&source.includes("baseId === 'Mia'")&&!source.includes('../tools/art-sources/dye-masks/mia-dye-mask.PNG'),'Miaは埋め込み部位マップを使い、本番からtoolsの見本PNGを読まない');
+assert(source.includes('const MIA_EXACT_REGION_2BIT =')&&source.includes("baseId === 'Mia'"),'Miaは埋め込み部位マップを使う');
+// GitHub Pagesへ配るのは index.html と monster-hero/ だけ。ゲームが tools/ の下や
+// monster-hero/ の外を指すと、手元では読めて本番だけ404になる。しかもマスクが読めないと
+// 色相推定へ静かに落ちるだけでエラーは出ないため、公開してから気づくことになる
+// (実際にパンドラの染色マスクがこれで「染色2だけ効かない」状態になっていた)。
+// 特定のモンスター名で書くと次の1体でまた漏れるので、参照そのものを禁止する。
+{
+  const outside = [...source.matchAll(/["'`](\.\.\/[^"'`\s)]+)["'`]/g)].map(m => m[1]);
+  assert(outside.length === 0, `ゲーム本体が配信フォルダの外を参照しない（${outside.join(' / ')}）`);
+}
+// 参照している画像が配信フォルダに実在するかも見る(綴り違い・置き忘れ・移動漏れ)
+{
+  const fs2 = require('fs');
+  const path2 = require('path');
+  const { REPO_ROOT } = require('../harness');
+  const refs = [...new Set([...source.matchAll(/["'`](images\/[^"'`\s)?]+\.(?:png|jpe?g|webp|PNG))(?:\?[^"'`\s)]*)?["'`]/g)].map(m => m[1]))];
+  const missing = refs.filter(rel => !fs2.existsSync(path2.join(REPO_ROOT, 'monster-hero', rel)));
+  assert(missing.length === 0, `ゲーム本体が参照する画像が配信フォルダに実在する（欠け: ${missing.join(' / ')}）`);
+}
 console.log('OK: 合成中の逐次編集・共通viewport・マスク編集制限・外部連結領域・掃除/Undo・警告・PNG正規化・縦横比を確認しました');
