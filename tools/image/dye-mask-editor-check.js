@@ -35,6 +35,6 @@ assert(!source.includes("{view==='composite'&&<div className=\"grid shrink-0 gri
 assert(source.includes("<section className=\"relative m-2 min-h-0 flex-1")&&source.includes("transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`"),'4表示モードで単一viewportとzoom/panを共有する');
 assert(source.includes('debugMaskPlacement?.maskUrl, debugMaskPlacement?.xPx'),'一時マスクURLの変更時に本番マスクを再読込する');
 assert(source.includes('onTryInGame(target,blob,previewColors)')&&source.includes('setMonsterImageDebugColors(colors||getMasuColors(preview))'),'合成とゲーム内確認で同じ色設定を引き継ぐ');
-assert(source.includes("{id:'mia',baseId:'Mia',name:'ミーア（正式実装前DEBUG）'")&&source.includes("maskUrl:EXACT_DYE_MASKS.Mia,hasMask:true"),'Miaを保存済みRGBマスク付きのエディタ候補として維持する');
-assert(source.includes("const MIA_DEBUG_DYE_MASK = '../tools/art-sources/dye-masks/mia-dye-mask.PNG?v=3c4ced33'"),'Mia DEBUGが差し替え済みマスクのキャッシュキーを参照する');
+assert(source.includes('Object.values(ALL_PLAYER_MONSTERS).map(monster => ({')&&source.includes('maskUrl:EXACT_DYE_MASKS[monster.id] || null'),'正式Miaを含むモンスターを正式データからエディタ候補にする');
+assert(source.includes('Mia:MIA_DYE_MASK')&&!source.includes('MIA_DEBUG_DYE_MASK'),'正式Miaが二重管理せず保存済みRGBマスクを参照する');
 console.log('OK: 合成中の逐次編集・共通viewport・マスク編集制限・外部連結領域・掃除/Undo・警告・PNG正規化・縦横比を確認しました');

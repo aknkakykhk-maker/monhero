@@ -38,6 +38,8 @@ const SNEGUROCHKA_IMG = "images/monsters/snegurochka.png?v=81fb95247bc6";
 const UNDINE_IMG = "images/monsters/undine.PNG?v=5cb4df81fcb7";
 const YAOBIKUNI_IMG = "images/monsters/yaobikuni.PNG?v=efbd9d5dd6fa";
 const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=c641333fe3c6";
+const MIA_IMG = "images/monsters/mia.PNG?v=883e25c3717a";
+const MIA_DYE_MASK = "../tools/art-sources/dye-masks/mia-dye-mask.PNG?v=3c4ced33d1bb";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -55,6 +57,7 @@ const IBLIS_ICON = IBLIS_IMG;
 const SNEGUROCHKA_ICON = SNEGUROCHKA_IMG;
 const UNDINE_ICON = UNDINE_IMG;
 const YAOBIKUNI_ICON = YAOBIKUNI_IMG;
+const MIA_ICON = MIA_IMG;
 
 // ==================== 顔アイコン (faceIconUrl) ====================
 // プロフィールアイコン選択画面・ロースター詳細等で使う顔クロップ画像。
@@ -82,3 +85,4 @@ const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=c3b4e
 // 顔クロップ画像は作らず、立ち絵をそのまま使う(表示側で寄せる方針)
 const UNDINE_FACE_ICON = UNDINE_IMG;
 const YAOBIKUNI_FACE_ICON = YAOBIKUNI_IMG;
+const MIA_FACE_ICON = MIA_IMG;

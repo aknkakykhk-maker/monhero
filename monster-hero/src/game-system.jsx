@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 14:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 15:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2538,8 +2538,7 @@ const YAOBIKUNI_EYE_BOXES = [[0.378, 0.146, 0.444, 0.192], [0.500, 0.146, 0.568,
 // 髪・衣装(染色①③)はこの範囲でもそのまま染まる
 const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.205], [0.625, 0.145, 0.685, 0.205]];
 const MASU_COLOR_REGION_HUES = {
-  // 正式登録前のMia DEBUGは保存済みRGBマスクでだけ部位を決める。
-  // 以下は染色①〜③の3レイヤーを既存経路へ知らせるための控えで、通常データには登録しない。
+  // Miaは保存済みRGBマスクで部位を決める。以下は染色①〜③の3レイヤーを既存経路へ知らせる。
   Mia: [0, 120, 240],
   // 2026年8月の新規透過イラストへ差し替え。体(染色①)・頭の葉(染色②)・口ばし(染色③)を色相で分ける。
   // 色相はイラストの実測値に合わせてある(体=330〜345のパステルピンク、葉=90前後、口ばし=30〜45の黄橙)。
@@ -2997,25 +2996,16 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const MIA_DEBUG_DYE_MASK = '../tools/art-sources/dye-masks/mia-dye-mask.PNG?v=3c4ced33';
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Mia:MIA_DEBUG_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Mia:MIA_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
-const MIA_DEBUG_IMAGE_URL = 'images/monsters/mia.PNG';
 const MIA_DEBUG_DISC_URL = 'images/disc-icons/mia-disc.PNG';
-// 正式登録前の見た目確認専用。通常のモンスター・血統・図鑑・商品・保存には混ぜない。
-const MIA_DEBUG_MONSTER = Object.freeze({
-  id:'Mia', name:'ミーア', emoji:'🧚', imgUrl:MIA_DEBUG_IMAGE_URL, iconUrl:MIA_DEBUG_IMAGE_URL,
-  faceIconUrl:MIA_DEBUG_IMAGE_URL, baseHp:300, baseAtk:175, baseDef:60, baseGuts:180,
-  plusStats:Object.freeze({hp:120,atk:30,def:10,guts:65}), distAptitude:Object.freeze(['G','C','A','B']),
-});
-const MIA_DEBUG_DESCRIPTION = '明るくさわやかな性格で、アイドル性が高く\n多くのブリーダーが憧れるモンスター\n着ている服は自らデザインしたとか';
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
 const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).map(monster => ({
   id:String(monster.id).toLowerCase(), baseId:monster.id, name:monster.name, imageUrl:monster.imgUrl,
   maskUrl:EXACT_DYE_MASKS[monster.id] || null,
   hasMask:Array.isArray(MASU_COLOR_REGION_HUES[monster.id]) && MASU_COLOR_REGION_HUES[monster.id].length > 0,
-})), {id:'mia',baseId:'Mia',name:'ミーア（正式実装前DEBUG）',imageUrl:MIA_DEBUG_IMAGE_URL,maskUrl:EXACT_DYE_MASKS.Mia,hasMask:true}];
+}))];
 // Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
 // 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
 const DYE_MASK_DEBUG_PREVIEW_SIZE = Object.freeze({ width:256, height:384 });
@@ -3375,7 +3365,7 @@ const monsterArtUrlNeedsContain = (url) => {
     const urls = new Set();
     const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
     for (const baseId of MONSTER_ART_CONTAIN_IDS) {
-      const monster = all[baseId] || (baseId === 'Mia' && typeof MIA_DEBUG_MONSTER === 'object' ? MIA_DEBUG_MONSTER : null);
+      const monster = all[baseId];
       if (!monster) continue;
       for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
         if (each) urls.add(each);
@@ -4908,9 +4898,8 @@ const MARKET_PROFILE_ICON_STYLES = {
   undine_disc_icon: { scale: 1.52, x: 0, y: 2 },
   yaobikuni_icon: { scale: 3.70, x: 6.8, y: 122 },
   yaobikuni_disc_icon: { scale: 1.55, x: 0, y: 2 },
-  // 正式登録前のDEBUGでも、本番プロフィールと同じ補正経路で顔を主役に切り出す。
-  // ピクシーの顔アイコンに近い大きさまで寄せ、肩～胸元と羽根飾りだけを残す。
-  mia_debug_icon: { scale: 3.2, x: 0, y: 94 },
+  // 立ち絵を再利用するミーアも、本番プロフィールと同じ補正経路で顔を主役に切り出す。
+  Mia: { scale: 3.2, x: 0, y: 94 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
@@ -11660,7 +11649,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else if (card.type==='unique') { const level=card.evoLevel||0; const chuuniBonus=(card.monId==='Ark'||card.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0; baseDmgMult=card.baseMult+(level*0.5)+chuuniBonus; }
     else if (card.type==='range_atk') { baseDmgMult=rangeAttackDamageMultiplier(card,attackStartDist); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
-    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0);
+    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*((mainHero?.id==='Pixie'||mainHero?.id==='Mia')&&card.type==='unique'?2.0:1.0);
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0);
@@ -12126,7 +12115,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
           else if(card.monId==='Suezo'){const gRec=Math.floor(liveEffectiveMaxGuts()*0.5*effMul); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gRec)); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
-          else if(card.monId==='Pixie'){setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
+          else if(card.monId==='Pixie'||card.monId==='Mia'){setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
           else if(card.monId==='Tiger'){setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02*effMul); addPermaBuff('critDmgPct',0.02*effMul); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup(`会心率+${(2*effMul).toFixed(effMul===1?0:1)}% 会心ダメ+${(2*effMul).toFixed(effMul===1?0:1)}%`,'hero','text-yellow-400 text-sm font-bold');}
           else if(card.monId==='Monol'){addPermaBuff('defPct',0.03*effMul); addWaveBuff('enemyAtkDebuffPct',0.10*effMul); setNextTurnBuff('reflect',true); addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold'); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
           else if(card.monId==='Oboro'||card.monId==='Plant'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+hRec); setHp(hpBeforeEnemyAttack); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
@@ -15198,15 +15187,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {gameState==='MIA_IMPLEMENTATION_DEBUG'&&(()=>{
-          const mon=MIA_DEBUG_MONSTER;
+          const mon=ALL_PLAYER_MONSTERS.Mia;
           const dyeColors=['red','green','blue'];
           const row=(label,value)=><div className="flex items-center justify-between border-b border-amber-500/15 py-1.5 last:border-0"><span className="text-[10px] font-black text-amber-300">{label}</span><span className="text-[11px] font-bold text-white text-right">{value}</span></div>;
-          const marketItems=[{id:'mia_debug_icon',name:'ミーアのアイコン',type:'icon',icon:MIA_DEBUG_IMAGE_URL,cost:1},{id:'mia_debug_disc_icon',name:'ミーアの円盤石アイコン',type:'icon',icon:MIA_DEBUG_DISC_URL,cost:1},{id:'mia_debug_disc',name:'ミーアの円盤石',type:'disc',icon:MIA_DEBUG_DISC_URL,cost:1500}];
+          const marketItems=[{id:'Mia',name:'ミーアのアイコン',type:'icon',icon:MIA_IMG,cost:1},{id:'mia_debug_disc_icon',name:'ミーアの円盤石アイコン',type:'icon',icon:MIA_DEBUG_DISC_URL,cost:1},{id:'mia_debug_disc',name:'ミーアの円盤石',type:'disc',icon:MIA_DEBUG_DISC_URL,cost:1500}];
           const pixieLineage={id:'pixie',name:'ピクシー'}, rareLineage={id:'rare',name:'？？？'};
           return <main className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}><header className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・表示だけ／購入・解放・保存なし</small><h2 className="text-sm font-black">ミーア実装確認</h2></div></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3">
-            <section data-mia-dex-preview className="rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"><div data-dex-art className="h-44 flex items-center justify-center"><DexMonsterArt mon={mon} alt="ミーア"/></div><div className="text-center text-[17px] font-black text-amber-100">{mon.name}</div><div data-dex-lineage-row className="mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}><span className="text-[9px] font-black text-amber-300">血統</span><DexLineageChip lineage={pixieLineage} iconUrl={mon.iconUrl}/><span className="text-amber-300 font-black">×</span><DexLineageChip lineage={rareLineage}/><span data-dex-category className="rounded-full bg-amber-600 px-2 py-1 text-[9px] font-black">レア</span></div><p data-dex-desc className="mt-2 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{MIA_DEBUG_DESCRIPTION}</p><div className="mt-2 rounded-xl bg-black/30 px-2">{row('ライフ',mon.baseHp)}{row('ちから',mon.baseAtk)}{row('丈夫さ',mon.baseDef)}{row('ガッツ',mon.baseGuts)}{row('合流ボーナス',`ライフ+${mon.plusStats.hp}／ちから+${mon.plusStats.atk}／丈夫さ+${mon.plusStats.def}／ガッツ+${mon.plusStats.guts}`)}</div><div className="mt-2 grid grid-cols-4 gap-1.5">{RANGE_LABELS.map((label,i)=><div key={label} className="rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"><div className="text-[9px] font-black text-slate-400">{label}</div><div className="text-[13px] font-mono font-black text-amber-200">{mon.distAptitude[i]}</div></div>)}</div></section>
+            <section data-mia-dex-preview className="rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"><div data-dex-art className="h-44 flex items-center justify-center"><DexMonsterArt mon={mon} alt="ミーア"/></div><div className="text-center text-[17px] font-black text-amber-100">{mon.name}</div><div data-dex-lineage-row className="mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}><span className="text-[9px] font-black text-amber-300">血統</span><DexLineageChip lineage={pixieLineage} iconUrl={mon.iconUrl}/><span className="text-amber-300 font-black">×</span><DexLineageChip lineage={rareLineage}/><span data-dex-category className="rounded-full bg-amber-600 px-2 py-1 text-[9px] font-black">レア</span></div><p data-dex-desc className="mt-2 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{MONSTER_DEX_DESCRIPTIONS.Mia}</p><div className="mt-2 rounded-xl bg-black/30 px-2">{row('ライフ',mon.baseHp)}{row('ちから',mon.baseAtk)}{row('丈夫さ',mon.baseDef)}{row('ガッツ',mon.baseGuts)}{row('合流ボーナス',`ライフ+${mon.plusStats.hp}／ちから+${mon.plusStats.atk}／丈夫さ+${mon.plusStats.def}／ガッツ+${mon.plusStats.guts}`)}</div><div className="mt-2 grid grid-cols-4 gap-1.5">{RANGE_LABELS.map((label,i)=><div key={label} className="rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"><div className="text-[9px] font-black text-slate-400">{label}</div><div className="text-[13px] font-mono font-black text-amber-200">{mon.distAptitude[i]}</div></div>)}</div></section>
             <section data-mia-market-preview className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-amber-300">本番商品カード表示（購入無効）</h3><div className={MARKET_GRID_CLASS}>{marketItems.map(item=><MarketProductCard key={item.id} item={item} disabled/>)}</div></section>
-            <section data-mia-icon-preview className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-cyan-300">本番部品によるアイコン表示</h3><div className="grid grid-cols-3 gap-3"><div className="text-center"><BreederIcon src={mon.faceIconUrl} id="mia_debug_icon" alt="プロフィール" className="mx-auto w-14 h-14 border border-amber-400/40"/><small className="text-[8px]">プロフィール（顔中心）</small></div><div className="text-center"><MarketProductIcon item={marketItems[0]}/><small className="text-[8px]">マーケット</small></div><div className="text-center"><DexMonsterIcon src={mon.iconUrl}/><small className="text-[8px]">図鑑一覧</small></div><div className="text-center"><DexMonsterIcon src={mon.iconUrl} lineage/><small className="text-[8px]">血統アイコン</small></div><div className="text-center"><span className="text-3xl">{cardIconNode(mon.iconUrl,32,'mia_debug_skill')}</span><small className="block text-[8px]">技カード</small></div></div></section>
+            <section data-mia-icon-preview className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-cyan-300">本番部品によるアイコン表示</h3><div className="grid grid-cols-3 gap-3"><div className="text-center"><BreederIcon src={mon.faceIconUrl} id="Mia" alt="プロフィール" className="mx-auto w-14 h-14 border border-amber-400/40"/><small className="text-[8px]">プロフィール（顔中心）</small></div><div className="text-center"><MarketProductIcon item={marketItems[0]}/><small className="text-[8px]">マーケット</small></div><div className="text-center"><DexMonsterIcon src={mon.iconUrl}/><small className="text-[8px]">図鑑一覧</small></div><div className="text-center"><DexMonsterIcon src={mon.iconUrl} lineage/><small className="text-[8px]">血統アイコン</small></div><div className="text-center"><span className="text-3xl">{cardIconNode(mon.iconUrl,32,'Mia')}</span><small className="block text-[8px]">技カード</small></div></div></section>
             <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="text-[10px] font-black text-fuchsia-300">染色確認</h3><p className="mt-1 text-[9px] leading-relaxed text-slate-300">保存済みmia-dye-mask.PNGを本番と共通の染色経路で合成</p><div className="mt-2 grid grid-cols-2 gap-2">{[[dyeColors,'3色同時'],...dyeColors.map((color,index)=>[dyeColors.map((value,i)=>i===index?value:null),`染色${index+1}のみ`])].map(([colors,label])=><figure key={label}><DyedMonsterImage baseId="Mia" src={mon.imgUrl} alt={`ミーア${label}`} masuColors={colors} className="h-44 w-full object-contain"/><figcaption className="text-center text-[8px] font-black text-fuchsia-200">{label}</figcaption></figure>)}</div></section>
           </div></main>;
         })()}
@@ -15271,7 +15260,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           Object.keys(temporaryDyeMasks).forEach(baseId=>{if(!owned.some(m=>m.baseId===baseId)&&ALL_PLAYER_MONSTERS[baseId])owned.push({id:`temporary-dye-${baseId}`,baseId,name:`${ALL_PLAYER_MONSTERS[baseId].name}（一時確認）`,colors:[]});});
           const selected=owned.find(m=>String(m.id)===String(monsterImageDebugId))||owned[0];
           if(!selected)return <main className="flex-1 p-4"><header className="flex items-center"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3"><ArrowLeft/></button><h2 className="font-black">モンスター画像・染色確認</h2></header><p className="p-6 text-center text-slate-400">確認できる所持モンスター個体がありません。</p></main>;
-          const base=selected.baseId==='Mia'?MIA_DEBUG_MONSTER:ALL_PLAYER_MONSTERS[selected.baseId];
+          const base=ALL_PLAYER_MONSTERS[selected.baseId];
           const regionCount=dyeRegionCount(selected.baseId);
           const colors=Array.from({length:regionCount},(_,i)=>monsterImageDebugColors===null?(getMasuColors(selected)[i]||null):(monsterImageDebugColors[i]||null));
           const isTiger=selected.baseId==='Tiger';
@@ -15287,7 +15276,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <header className="flex items-center gap-2 mb-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存されません</small><h2 className="text-sm font-black">モンスター画像・染色確認</h2></div>{temporaryDyeMasks[selected.baseId]&&<span className="ml-auto rounded-full bg-fuchsia-800 px-2 py-1 text-[8px] font-black">一時反映中</span>}</header>
             {temporaryDyeMasks[selected.baseId]&&dyeMaskEditorOpened&&<button onClick={()=>setGameState('DYE_MASK_POSITION_DEBUG')} className="mb-2 min-h-[42px] shrink-0 rounded-xl border border-fuchsia-300 bg-fuchsia-800 text-[10px] font-black">マスク編集へ戻る</button>}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3">
-              <select value={selected.id} onChange={e=>{const m=owned.find(x=>String(x.id)===e.target.value);setMonsterImageDebugId(e.target.value);setMonsterImageDebugColors(m?getMasuColors(m):[]);setMonsterImageDebugTigerMode('old');}} className="w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black">{owned.map(m=>{const b=m.baseId==='Mia'?MIA_DEBUG_MONSTER:ALL_PLAYER_MONSTERS[m.baseId];return <option key={m.id} value={m.id}>{m.name}／{b.name}／{m.baseId}／①{colorText(getMasuColors(m)[0])} ②{colorText(getMasuColors(m)[1])} ③{colorText(getMasuColors(m)[2])}</option>})}</select>
+              <select value={selected.id} onChange={e=>{const m=owned.find(x=>String(x.id)===e.target.value);setMonsterImageDebugId(e.target.value);setMonsterImageDebugColors(m?getMasuColors(m):[]);setMonsterImageDebugTigerMode('old');}} className="w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black">{owned.map(m=>{const b=ALL_PLAYER_MONSTERS[m.baseId];return <option key={m.id} value={m.id}>{m.name}／{b.name}／{m.baseId}／①{colorText(getMasuColors(m)[0])} ②{colorText(getMasuColors(m)[1])} ③{colorText(getMasuColors(m)[2])}</option>})}</select>
               {isTiger&&<div className="grid grid-cols-3 gap-1">{[['old','旧画像／ロールバック用'],['new','高画質版／現在の本番構成'],['compare','旧画像と高画質版の比較表示']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugTigerMode(id)} className={`min-h-[54px] rounded-xl px-1 text-[8px] font-black border ${monsterImageDebugTigerMode===id?'bg-amber-700 border-amber-300':'bg-slate-900 border-white/10'}`}>{label}</button>)}</div>}
               <div className="grid grid-cols-3 gap-2">{[['checker','市松模様'],['white','白'],['black','黒']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugBg(id)} className={`min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg===id?'ring-2 ring-cyan-500':'border-white/10'}`} style={id==='white'?{background:'#fff',color:'#000'}:id==='black'?{background:'#000'}:{background:'#64748b'}}>{label}</button>)}</div>
               <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色①～③</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>

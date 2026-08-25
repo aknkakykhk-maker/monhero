@@ -26,7 +26,7 @@ const check = (name, ok, detail = '') => {
 const has = (needle) => source.includes(needle);
 
 // --- 対象の定義と挙動 ---
-check('縦長の立ち絵を持つ対象とMia DEBUGがcontainに定義されている',
+check('縦長の立ち絵を持つ対象と正式Miaがcontainに定義されている',
   has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia']);"));
 
 const fnCtx = {};
@@ -113,9 +113,9 @@ check('プロモードの横長カードが共通部品にまとまっている'
   check('カード本体のJSXが1か所だけ(画面ごとに複製していない)', rowMarkup === 1, `${rowMarkup}か所`);
 }
 check('勇者モンを選択が共通部品を使っている',
-  has("onSelect: ()=>{setCurrentPickingMon(m);setGameState('PICK_SLOT');},"));
+  has("setCurrentPickingMon(m);setGameState('PICK_SLOT');},") && has('onDetail: ()=>setCurrentPickingMon(m),'));
 check('供モンの候補が共通部品を使っている',
-  has('onSelect: ()=>toggle(m),') && has('onDetail: ()=>setProAllyDetail(m),'));
+  has('onSelect:()=>changeAlly(m),onDetail:()=>setProAllyDetail(m),'));
 
 const PICK_HERO_BOX = (() => {
   const m = source.match(/const PRO_MON_ROW_ART_BOX = \{ width: '(\d+)px', height: '(\d+)px' \};/);

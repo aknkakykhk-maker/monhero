@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0447860900e5404
+// source-sha256: c4a6372b37d6b23a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 14:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 15:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4713,8 +4713,7 @@ const YAOBIKUNI_EYE_BOXES = [[0.378, 0.146, 0.444, 0.192], [0.500, 0.146, 0.568,
 // 髪・衣装(染色①③)はこの範囲でもそのまま染まる
 const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.205], [0.625, 0.145, 0.685, 0.205]];
 const MASU_COLOR_REGION_HUES = {
-  // 正式登録前のMia DEBUGは保存済みRGBマスクでだけ部位を決める。
-  // 以下は染色①〜③の3レイヤーを既存経路へ知らせるための控えで、通常データには登録しない。
+  // Miaは保存済みRGBマスクで部位を決める。以下は染色①〜③の3レイヤーを既存経路へ知らせる。
   Mia: [0, 120, 240],
   // 2026年8月の新規透過イラストへ差し替え。体(染色①)・頭の葉(染色②)・口ばし(染色③)を色相で分ける。
   // 色相はイラストの実測値に合わせてある(体=330〜345のパステルピンク、葉=90前後、口ばし=30〜45の黄橙)。
@@ -5432,12 +5431,11 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const MIA_DEBUG_DYE_MASK = '../tools/art-sources/dye-masks/mia-dye-mask.PNG?v=3c4ced33';
 const EXACT_DYE_MASKS = Object.freeze({
   Mocchi: MOCCHI_DYE_MASK,
   Yaobikuni: YAOBIKUNI_DYE_MASK,
   Plant: PLANT_DYE_MASK,
-  Mia: MIA_DEBUG_DYE_MASK
+  Mia: MIA_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -5445,29 +5443,7 @@ const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   x: 0,
   y: 0
 });
-const MIA_DEBUG_IMAGE_URL = 'images/monsters/mia.PNG';
 const MIA_DEBUG_DISC_URL = 'images/disc-icons/mia-disc.PNG';
-// 正式登録前の見た目確認専用。通常のモンスター・血統・図鑑・商品・保存には混ぜない。
-const MIA_DEBUG_MONSTER = Object.freeze({
-  id: 'Mia',
-  name: 'ミーア',
-  emoji: '🧚',
-  imgUrl: MIA_DEBUG_IMAGE_URL,
-  iconUrl: MIA_DEBUG_IMAGE_URL,
-  faceIconUrl: MIA_DEBUG_IMAGE_URL,
-  baseHp: 300,
-  baseAtk: 175,
-  baseDef: 60,
-  baseGuts: 180,
-  plusStats: Object.freeze({
-    hp: 120,
-    atk: 30,
-    def: 10,
-    guts: 65
-  }),
-  distAptitude: Object.freeze(['G', 'C', 'A', 'B'])
-});
-const MIA_DEBUG_DESCRIPTION = '明るくさわやかな性格で、アイドル性が高く\n多くのブリーダーが憧れるモンスター\n着ている服は自らデザインしたとか';
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
 const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).map(monster => ({
@@ -5477,14 +5453,7 @@ const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).ma
   imageUrl: monster.imgUrl,
   maskUrl: EXACT_DYE_MASKS[monster.id] || null,
   hasMask: Array.isArray(MASU_COLOR_REGION_HUES[monster.id]) && MASU_COLOR_REGION_HUES[monster.id].length > 0
-})), {
-  id: 'mia',
-  baseId: 'Mia',
-  name: 'ミーア（正式実装前DEBUG）',
-  imageUrl: MIA_DEBUG_IMAGE_URL,
-  maskUrl: EXACT_DYE_MASKS.Mia,
-  hasMask: true
-}];
+}))];
 // Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
 // 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
 const DYE_MASK_DEBUG_PREVIEW_SIZE = Object.freeze({
@@ -5956,7 +5925,7 @@ const monsterArtUrlNeedsContain = url => {
     const urls = new Set();
     const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
     for (const baseId of MONSTER_ART_CONTAIN_IDS) {
-      const monster = all[baseId] || (baseId === 'Mia' && typeof MIA_DEBUG_MONSTER === 'object' ? MIA_DEBUG_MONSTER : null);
+      const monster = all[baseId];
       if (!monster) continue;
       for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
         if (each) urls.add(each);
@@ -9036,9 +9005,8 @@ const MARKET_PROFILE_ICON_STYLES = {
     x: 0,
     y: 2
   },
-  // 正式登録前のDEBUGでも、本番プロフィールと同じ補正経路で顔を主役に切り出す。
-  // ピクシーの顔アイコンに近い大きさまで寄せ、肩～胸元と羽根飾りだけを残す。
-  mia_debug_icon: {
+  // 立ち絵を再利用するミーアも、本番プロフィールと同じ補正経路で顔を主役に切り出す。
+  Mia: {
     scale: 3.2,
     x: 0,
     y: 94
@@ -19818,7 +19786,7 @@ function MonsterHeroGame() {
     } else {
       baseDmgMult = card.mult || card.baseMult || 1.0;
     }
-    let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * (mainHero?.id === 'Pixie' && card.type === 'unique' ? 2.0 : 1.0);
+    let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * ((mainHero?.id === 'Pixie' || mainHero?.id === 'Mia') && card.type === 'unique' ? 2.0 : 1.0);
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (distAptPct[slotIdx] || 0);
@@ -20588,7 +20556,7 @@ function MonsterHeroGame() {
             const gRec = Math.floor(liveEffectiveMaxGuts() * 0.5 * effMul);
             setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gRec));
             addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
-          } else if (card.monId === 'Pixie') {
+          } else if (card.monId === 'Pixie' || card.monId === 'Mia') {
             setNextTurnBuff('zeroGuts', true);
             addPopup('次ターン消費0!', 'hero', 'text-blue-400 text-lg font-bold');
           } else if (card.monId === 'Tiger') {
@@ -28732,7 +28700,7 @@ function MonsterHeroGame() {
         }
       }, "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B")));
     })(), gameState === 'MIA_IMPLEMENTATION_DEBUG' && (() => {
-      const mon = MIA_DEBUG_MONSTER;
+      const mon = ALL_PLAYER_MONSTERS.Mia;
       const dyeColors = ['red', 'green', 'blue'];
       const row = (label, value) => /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between border-b border-amber-500/15 py-1.5 last:border-0"
@@ -28742,10 +28710,10 @@ function MonsterHeroGame() {
         className: "text-[11px] font-bold text-white text-right"
       }, value));
       const marketItems = [{
-        id: 'mia_debug_icon',
+        id: 'Mia',
         name: 'ミーアのアイコン',
         type: 'icon',
-        icon: MIA_DEBUG_IMAGE_URL,
+        icon: MIA_IMG,
         cost: 1
       }, {
         id: 'mia_debug_disc_icon',
@@ -28819,7 +28787,7 @@ function MonsterHeroGame() {
       }, "\u30EC\u30A2")), /*#__PURE__*/React.createElement("p", {
         "data-dex-desc": true,
         className: "mt-2 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200"
-      }, MIA_DEBUG_DESCRIPTION), /*#__PURE__*/React.createElement("div", {
+      }, MONSTER_DEX_DESCRIPTIONS.Mia), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 rounded-xl bg-black/30 px-2"
       }, row('ライフ', mon.baseHp), row('ちから', mon.baseAtk), row('丈夫さ', mon.baseDef), row('ガッツ', mon.baseGuts), row('合流ボーナス', `ライフ+${mon.plusStats.hp}／ちから+${mon.plusStats.atk}／丈夫さ+${mon.plusStats.def}／ガッツ+${mon.plusStats.guts}`)), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 grid grid-cols-4 gap-1.5"
@@ -28852,7 +28820,7 @@ function MonsterHeroGame() {
         className: "text-center"
       }, /*#__PURE__*/React.createElement(BreederIcon, {
         src: mon.faceIconUrl,
-        id: "mia_debug_icon",
+        id: "Mia",
         alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB",
         className: "mx-auto w-14 h-14 border border-amber-400/40"
       }), /*#__PURE__*/React.createElement("small", {
@@ -28880,7 +28848,7 @@ function MonsterHeroGame() {
         className: "text-center"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-3xl"
-      }, cardIconNode(mon.iconUrl, 32, 'mia_debug_skill')), /*#__PURE__*/React.createElement("small", {
+      }, cardIconNode(mon.iconUrl, 32, 'Mia')), /*#__PURE__*/React.createElement("small", {
         className: "block text-[8px]"
       }, "\u6280\u30AB\u30FC\u30C9")))), /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
@@ -29178,7 +29146,7 @@ function MonsterHeroGame() {
       }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D")), /*#__PURE__*/React.createElement("p", {
         className: "p-6 text-center text-slate-400"
       }, "\u78BA\u8A8D\u3067\u304D\u308B\u6240\u6301\u30E2\u30F3\u30B9\u30BF\u30FC\u500B\u4F53\u304C\u3042\u308A\u307E\u305B\u3093\u3002"));
-      const base = selected.baseId === 'Mia' ? MIA_DEBUG_MONSTER : ALL_PLAYER_MONSTERS[selected.baseId];
+      const base = ALL_PLAYER_MONSTERS[selected.baseId];
       const regionCount = dyeRegionCount(selected.baseId);
       const colors = Array.from({
         length: regionCount
@@ -29296,7 +29264,7 @@ function MonsterHeroGame() {
         },
         className: "w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black"
       }, owned.map(m => {
-        const b = m.baseId === 'Mia' ? MIA_DEBUG_MONSTER : ALL_PLAYER_MONSTERS[m.baseId];
+        const b = ALL_PLAYER_MONSTERS[m.baseId];
         return /*#__PURE__*/React.createElement("option", {
           key: m.id,
           value: m.id

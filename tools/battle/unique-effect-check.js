@@ -53,6 +53,10 @@ const branchOf = (monId) => {
   const m = effectRegion.match(new RegExp(`card\\.monId==='${monId}'[^\\n]*`));
   return m ? m[0] : null;
 };
+check('ピクシーとミーアの魔法空間が同じ分岐で次ターン消費0を付ける',
+  /card\.monId==='Pixie'\|\|card\.monId==='Mia'\)\{setNextTurnBuff\('zeroGuts',true\)/.test(effectRegion));
+check('ピクシーとミーアの魔力開放が固有技を2倍にする',
+  /\(mainHero\?\.id==='Pixie'\|\|mainHero\?\.id==='Mia'\)\&\&card\.type==='unique'\?2\.0:1\.0/.test(source));
 
 // 効果の「意味」まで見るために、実装で使っている関数とキーを明示的に突き合わせる。
 //   impl … その分岐に必ず出てほしい実装(関数名とキー、割合)

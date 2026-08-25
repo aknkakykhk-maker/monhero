@@ -41,14 +41,22 @@ for (const f of ['data/images/images-ally.js', 'data/ally-monsters.js', 'data/li
 vm.runInContext([
   slice('const UNKNOWN_LINEAGE =', '// ==================== 総合力'),
   `globalThis.api = { monsterLineageOf, monsterCategoryOf, monsterCategoryName, lineageIconUrl,
-    monsterDexDescription, dexMonsterList, dexMainLineages, MONSTER_LINEAGES, MONSTER_LINEAGE_MAP };`,
+    monsterDexDescription, dexMonsterList, dexMainLineages, MONSTER_LINEAGES, MONSTER_LINEAGE_MAP,
+    STARTER_MONSTER_IDS };`,
 ].join('\n'), ctx);
 const A = ctx.api;
 const monsters = A.dexMonsterList();
+const mia = monsters.find(mon => mon.id === 'Mia');
+check('ミーアの正式能力・技・合流ボーナスが指定どおり', !!mia
+  && mia.baseHp === 300 && mia.baseAtk === 175 && mia.baseDef === 60 && mia.baseGuts === 180
+  && JSON.stringify(mia.plusStats) === JSON.stringify({hp:120,atk:30,def:10,guts:65})
+  && JSON.stringify(mia.distAptitude) === JSON.stringify(['G','C','A','B'])
+  && mia.unique?.baseMult === 2.1 && mia.unique?.baseGuts === 42 && mia.unique?.names?.length === 9);
+check('ミーアは初期モンスターではない', !A.STARTER_MONSTER_IDS.includes('Mia'));
 
 // ---------- ① 血統がすべて揃っている ----------
 check('図鑑にモンスターが並ぶ', monsters.length > 0, `${monsters.length}体`);
-check('図鑑全体の対象は16体', monsters.length === 16, `${monsters.length}体`);
+check('図鑑全体の対象は17体', monsters.length === 17, `${monsters.length}体`);
 const missing = monsters.filter(mon => !A.monsterLineageOf(mon.id).known).map(mon => mon.name);
 check('全プレイヤーモンスターに血統が設定されている', missing.length === 0, missing.join(' / '));
 const broken = monsters.filter(mon => {
@@ -69,6 +77,8 @@ check('存在しないモンスターの血統が残っていない', extra.leng
 check('モッチーは純血', A.monsterCategoryOf('Mocchi') === 'pure');
 check('ミタラシは派生種', A.monsterCategoryOf('Mitarashi') === 'derived');
 check('スネグーラチカはレア', A.monsterCategoryOf('Snegurochka') === 'rare');
+check('ミーアはピクシー×？？？のレア', A.monsterCategoryOf('Mia') === 'rare'
+  && A.monsterLineageOf('Mia').main.id === 'pixie' && A.monsterLineageOf('Mia').sub.id === 'unknown');
 check('？？？ 血統はレア扱いになる', A.monsterLineageOf('Snegurochka').sub.rare === true
   && A.monsterLineageOf('Snegurochka').sub.name === '？？？');
 check('区分の名前が全モンスターで出せる',
