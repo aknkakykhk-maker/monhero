@@ -52,6 +52,8 @@ jobs:
           mkdir _site
           cp index.html _site/
           cp -a monster-hero _site/
+          mkdir -p _site/tools/art-sources/dye-masks
+          cp tools/art-sources/dye-masks/mia-dye-mask.PNG _site/tools/art-sources/dye-masks/
       - name: Upload GitHub Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3

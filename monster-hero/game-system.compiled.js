@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: af7a12c6c4d3750e
+// source-sha256: f5397c307a81e552
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 11:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 12:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4713,6 +4713,9 @@ const YAOBIKUNI_EYE_BOXES = [[0.378, 0.146, 0.444, 0.192], [0.500, 0.146, 0.568,
 // 髪・衣装(染色①③)はこの範囲でもそのまま染まる
 const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.205], [0.625, 0.145, 0.685, 0.205]];
 const MASU_COLOR_REGION_HUES = {
+  // 正式登録前のMia DEBUGは保存済みRGBマスクでだけ部位を決める。
+  // 以下は染色①〜③の3レイヤーを既存経路へ知らせるための控えで、通常データには登録しない。
+  Mia: [0, 120, 240],
   // 2026年8月の新規透過イラストへ差し替え。体(染色①)・頭の葉(染色②)・口ばし(染色③)を色相で分ける。
   // 色相はイラストの実測値に合わせてある(体=330〜345のパステルピンク、葉=90前後、口ばし=30〜45の黄橙)。
   // 以前は体を350、口ばしを45+範囲指定にしていたが、実際の色とずれていたため
@@ -5429,10 +5432,12 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
+const MIA_DEBUG_DYE_MASK = '../tools/art-sources/dye-masks/mia-dye-mask.PNG';
 const EXACT_DYE_MASKS = Object.freeze({
   Mocchi: MOCCHI_DYE_MASK,
   Yaobikuni: YAOBIKUNI_DYE_MASK,
-  Plant: PLANT_DYE_MASK
+  Plant: PLANT_DYE_MASK,
+  Mia: MIA_DEBUG_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -5477,8 +5482,8 @@ const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).ma
   baseId: 'Mia',
   name: 'ミーア（正式実装前DEBUG）',
   imageUrl: MIA_DEBUG_IMAGE_URL,
-  maskUrl: null,
-  hasMask: false
+  maskUrl: EXACT_DYE_MASKS.Mia,
+  hasMask: true
 }];
 // Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
 // 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
@@ -28727,6 +28732,7 @@ function MonsterHeroGame() {
       }, "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B")));
     })(), gameState === 'MIA_IMPLEMENTATION_DEBUG' && (() => {
       const mon = MIA_DEBUG_MONSTER;
+      const dyeColors = ['red', 'green', 'blue'];
       const row = (label, value) => /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between border-b border-amber-500/15 py-1.5 last:border-0"
       }, /*#__PURE__*/React.createElement("span", {
@@ -28881,7 +28887,19 @@ function MonsterHeroGame() {
         className: "text-[10px] font-black text-fuchsia-300"
       }, "\u67D3\u8272\u78BA\u8A8D"), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[9px] leading-relaxed text-slate-300"
-      }, "mia-dye-mask.PNG \u672A\u4FDD\u5B58"))));
+      }, "\u4FDD\u5B58\u6E08\u307Fmia-dye-mask.PNG\u3092\u672C\u756A\u3068\u5171\u901A\u306E\u67D3\u8272\u7D4C\u8DEF\u3067\u5408\u6210"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 grid grid-cols-2 gap-2"
+      }, [[dyeColors, '3色同時'], ...dyeColors.map((color, index) => [dyeColors.map((value, i) => i === index ? value : null), `染色${index + 1}のみ`])].map(([colors, label]) => /*#__PURE__*/React.createElement("figure", {
+        key: label
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: "Mia",
+        src: mon.imgUrl,
+        alt: `ミーア${label}`,
+        masuColors: colors,
+        className: "h-44 w-full object-contain"
+      }), /*#__PURE__*/React.createElement("figcaption", {
+        className: "text-center text-[8px] font-black text-fuchsia-200"
+      }, label)))))));
     })(), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 11:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 12:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2538,6 +2538,9 @@ const YAOBIKUNI_EYE_BOXES = [[0.378, 0.146, 0.444, 0.192], [0.500, 0.146, 0.568,
 // 髪・衣装(染色①③)はこの範囲でもそのまま染まる
 const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.205], [0.625, 0.145, 0.685, 0.205]];
 const MASU_COLOR_REGION_HUES = {
+  // 正式登録前のMia DEBUGは保存済みRGBマスクでだけ部位を決める。
+  // 以下は染色①〜③の3レイヤーを既存経路へ知らせるための控えで、通常データには登録しない。
+  Mia: [0, 120, 240],
   // 2026年8月の新規透過イラストへ差し替え。体(染色①)・頭の葉(染色②)・口ばし(染色③)を色相で分ける。
   // 色相はイラストの実測値に合わせてある(体=330〜345のパステルピンク、葉=90前後、口ばし=30〜45の黄橙)。
   // 以前は体を350、口ばしを45+範囲指定にしていたが、実際の色とずれていたため
@@ -2994,7 +2997,8 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK });
+const MIA_DEBUG_DYE_MASK = '../tools/art-sources/dye-masks/mia-dye-mask.PNG';
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Mia:MIA_DEBUG_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 const MIA_DEBUG_IMAGE_URL = 'images/monsters/mia.PNG';
 const MIA_DEBUG_DISC_URL = 'images/disc-icons/mia-disc.PNG';
@@ -3011,7 +3015,7 @@ const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).ma
   id:String(monster.id).toLowerCase(), baseId:monster.id, name:monster.name, imageUrl:monster.imgUrl,
   maskUrl:EXACT_DYE_MASKS[monster.id] || null,
   hasMask:Array.isArray(MASU_COLOR_REGION_HUES[monster.id]) && MASU_COLOR_REGION_HUES[monster.id].length > 0,
-})), {id:'mia',baseId:'Mia',name:'ミーア（正式実装前DEBUG）',imageUrl:MIA_DEBUG_IMAGE_URL,maskUrl:null,hasMask:false}];
+})), {id:'mia',baseId:'Mia',name:'ミーア（正式実装前DEBUG）',imageUrl:MIA_DEBUG_IMAGE_URL,maskUrl:EXACT_DYE_MASKS.Mia,hasMask:true}];
 // Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
 // 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
 const DYE_MASK_DEBUG_PREVIEW_SIZE = Object.freeze({ width:256, height:384 });
@@ -15194,6 +15198,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='MIA_IMPLEMENTATION_DEBUG'&&(()=>{
           const mon=MIA_DEBUG_MONSTER;
+          const dyeColors=['red','green','blue'];
           const row=(label,value)=><div className="flex items-center justify-between border-b border-amber-500/15 py-1.5 last:border-0"><span className="text-[10px] font-black text-amber-300">{label}</span><span className="text-[11px] font-bold text-white text-right">{value}</span></div>;
           const marketItems=[{id:'mia_debug_icon',name:'ミーアのアイコン',type:'icon',icon:MIA_DEBUG_IMAGE_URL,cost:1},{id:'mia_debug_disc_icon',name:'ミーアの円盤石アイコン',type:'icon',icon:MIA_DEBUG_DISC_URL,cost:1},{id:'mia_debug_disc',name:'ミーアの円盤石',type:'disc',icon:MIA_DEBUG_DISC_URL,cost:1500}];
           const pixieLineage={id:'pixie',name:'ピクシー'}, rareLineage={id:'rare',name:'？？？'};
@@ -15201,7 +15206,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section data-mia-dex-preview className="rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"><div data-dex-art className="h-44 flex items-center justify-center"><DexMonsterArt mon={mon} alt="ミーア"/></div><div className="text-center text-[17px] font-black text-amber-100">{mon.name}</div><div data-dex-lineage-row className="mt-2 grid items-center gap-1.5" style={{gridTemplateColumns:'auto minmax(0,1fr) auto minmax(0,1fr) auto'}}><span className="text-[9px] font-black text-amber-300">血統</span><DexLineageChip lineage={pixieLineage} iconUrl={mon.iconUrl}/><span className="text-amber-300 font-black">×</span><DexLineageChip lineage={rareLineage}/><span data-dex-category className="rounded-full bg-amber-600 px-2 py-1 text-[9px] font-black">レア</span></div><p data-dex-desc className="mt-2 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200">{MIA_DEBUG_DESCRIPTION}</p><div className="mt-2 rounded-xl bg-black/30 px-2">{row('ライフ',mon.baseHp)}{row('ちから',mon.baseAtk)}{row('丈夫さ',mon.baseDef)}{row('ガッツ',mon.baseGuts)}{row('合流ボーナス',`ライフ+${mon.plusStats.hp}／ちから+${mon.plusStats.atk}／丈夫さ+${mon.plusStats.def}／ガッツ+${mon.plusStats.guts}`)}</div><div className="mt-2 grid grid-cols-4 gap-1.5">{RANGE_LABELS.map((label,i)=><div key={label} className="rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"><div className="text-[9px] font-black text-slate-400">{label}</div><div className="text-[13px] font-mono font-black text-amber-200">{mon.distAptitude[i]}</div></div>)}</div></section>
             <section data-mia-market-preview className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-amber-300">本番商品カード表示（購入無効）</h3><div className={MARKET_GRID_CLASS}>{marketItems.map(item=><MarketProductCard key={item.id} item={item} disabled/>)}</div></section>
             <section data-mia-icon-preview className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-cyan-300">本番部品によるアイコン表示</h3><div className="grid grid-cols-3 gap-3"><div className="text-center"><BreederIcon src={mon.faceIconUrl} id="mia_debug_icon" alt="プロフィール" className="mx-auto w-14 h-14 border border-amber-400/40"/><small className="text-[8px]">プロフィール（顔中心）</small></div><div className="text-center"><MarketProductIcon item={marketItems[0]}/><small className="text-[8px]">マーケット</small></div><div className="text-center"><DexMonsterIcon src={mon.iconUrl}/><small className="text-[8px]">図鑑一覧</small></div><div className="text-center"><DexMonsterIcon src={mon.iconUrl} lineage/><small className="text-[8px]">血統アイコン</small></div><div className="text-center"><span className="text-3xl">{cardIconNode(mon.iconUrl,32,'mia_debug_skill')}</span><small className="block text-[8px]">技カード</small></div></div></section>
-            <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="text-[10px] font-black text-fuchsia-300">染色確認</h3><p className="mt-1 text-[9px] leading-relaxed text-slate-300">mia-dye-mask.PNG 未保存</p></section>
+            <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="text-[10px] font-black text-fuchsia-300">染色確認</h3><p className="mt-1 text-[9px] leading-relaxed text-slate-300">保存済みmia-dye-mask.PNGを本番と共通の染色経路で合成</p><div className="mt-2 grid grid-cols-2 gap-2">{[[dyeColors,'3色同時'],...dyeColors.map((color,index)=>[dyeColors.map((value,i)=>i===index?value:null),`染色${index+1}のみ`])].map(([colors,label])=><figure key={label}><DyedMonsterImage baseId="Mia" src={mon.imgUrl} alt={`ミーア${label}`} masuColors={colors} className="h-44 w-full object-contain"/><figcaption className="text-center text-[8px] font-black text-fuchsia-200">{label}</figcaption></figure>)}</div></section>
           </div></main>;
         })()}
 
