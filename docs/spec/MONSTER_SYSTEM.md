@@ -14,7 +14,7 @@
 
 ## 2. 現在の種
 
-`ALL_PLAYER_MONSTERS` には17種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Mia、Monol、Oboro、Plant、Zan、Mitarashi、Ark、Iblis、Snegurochka、Undine、Yaobikuni）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、Miaを含む残り9種は初期解放されない。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
+`ALL_PLAYER_MONSTERS` には17種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Mia、Monol、Oboro、Plant、Zan、Mitarashi、Ark、Iblis、Snegurochka、Undine、Yaobikuni）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、Miaを含む残り9種は初期解放されず、マーケットで対応する円盤石を購入すると解放される。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
 
 各定義の必須実装項目は次のとおり。
 

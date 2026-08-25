@@ -26,7 +26,7 @@ const check = (name, ok, detail = '') => {
 const has = (needle) => source.includes(needle);
 
 // --- 対象の定義と挙動 ---
-check('縦長の立ち絵を持つ対象とMia DEBUGがcontainに定義されている',
+check('縦長の立ち絵を持つ対象がcontainに定義されている',
   has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia']);"));
 
 const fnCtx = {};

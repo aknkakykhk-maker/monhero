@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8379c2bd8ae48a39
+// source-sha256: dda6a40d8467ab1c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 17:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 17:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5475,29 +5475,6 @@ const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   x: 0,
   y: 0
 });
-const MIA_DEBUG_IMAGE_URL = 'images/monsters/mia.PNG';
-const MIA_DEBUG_DISC_URL = 'images/disc-icons/mia-disc.PNG';
-// 正式登録前の見た目確認専用。通常のモンスター・血統・図鑑・商品・保存には混ぜない。
-const MIA_DEBUG_MONSTER = Object.freeze({
-  id: 'Mia',
-  name: 'ミーア',
-  emoji: '🧚',
-  imgUrl: MIA_DEBUG_IMAGE_URL,
-  iconUrl: MIA_DEBUG_IMAGE_URL,
-  faceIconUrl: MIA_DEBUG_IMAGE_URL,
-  baseHp: 300,
-  baseAtk: 175,
-  baseDef: 60,
-  baseGuts: 180,
-  plusStats: Object.freeze({
-    hp: 120,
-    atk: 30,
-    def: 10,
-    guts: 65
-  }),
-  distAptitude: Object.freeze(['G', 'C', 'A', 'B'])
-});
-const MIA_DEBUG_DESCRIPTION = '明るくさわやかな性格で、アイドル性が高く\n多くのブリーダーが憧れるモンスター\n着ている服は自らデザインしたとか';
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
 const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).map(monster => ({
@@ -5979,7 +5956,7 @@ const monsterArtUrlNeedsContain = url => {
     const urls = new Set();
     const all = typeof ALL_PLAYER_MONSTERS === 'object' && ALL_PLAYER_MONSTERS ? ALL_PLAYER_MONSTERS : {};
     for (const baseId of MONSTER_ART_CONTAIN_IDS) {
-      const monster = all[baseId] || (baseId === 'Mia' && typeof MIA_DEBUG_MONSTER === 'object' ? MIA_DEBUG_MONSTER : null);
+      const monster = all[baseId];
       if (!monster) continue;
       for (const each of [monster.imgUrl, monster.iconUrl, monster.faceIconUrl, monster.unique && monster.unique.icon]) {
         if (each) urls.add(each);
@@ -9058,13 +9035,6 @@ const MARKET_PROFILE_ICON_STYLES = {
     scale: 1.55,
     x: 0,
     y: 2
-  },
-  // 正式登録前のDEBUGでも、本番プロフィールと同じ補正経路で顔を主役に切り出す。
-  // ピクシーの顔アイコンに近い大きさまで寄せ、肩～胸元と羽根飾りだけを残す。
-  mia_debug_icon: {
-    scale: 3.2,
-    x: 0,
-    y: 94
   },
   mia_icon: {
     scale: 3.2,
@@ -28764,176 +28734,6 @@ function MonsterHeroGame() {
           setGameState('DEBUG_SETTINGS');
         }
       }, "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B")));
-    })(), gameState === 'MIA_IMPLEMENTATION_DEBUG' && (() => {
-      const mon = MIA_DEBUG_MONSTER;
-      const dyeColors = ['red', 'green', 'blue'];
-      const row = (label, value) => /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between border-b border-amber-500/15 py-1.5 last:border-0"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-black text-amber-300"
-      }, label), /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-bold text-white text-right"
-      }, value));
-      const marketItems = [{
-        id: 'mia_debug_icon',
-        name: 'ミーアのアイコン',
-        type: 'icon',
-        icon: MIA_DEBUG_IMAGE_URL,
-        cost: 1
-      }, {
-        id: 'mia_debug_disc_icon',
-        name: 'ミーアの円盤石アイコン',
-        type: 'icon',
-        icon: MIA_DEBUG_DISC_URL,
-        cost: 1
-      }, {
-        id: 'mia_debug_disc',
-        name: 'ミーアの円盤石',
-        type: 'disc',
-        icon: MIA_DEBUG_DISC_URL,
-        cost: 1500
-      }];
-      const pixieLineage = {
-          id: 'pixie',
-          name: 'ピクシー'
-        },
-        rareLineage = {
-          id: 'rare',
-          name: '？？？'
-        };
-      return /*#__PURE__*/React.createElement("main", {
-        className: "flex-1 flex flex-col h-full min-h-0 p-3",
-        style: {
-          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("header", {
-        className: "flex items-center gap-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3 text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px] font-black text-fuchsia-400"
-      }, "DEBUG\u30FB\u8868\u793A\u3060\u3051\uFF0F\u8CFC\u5165\u30FB\u89E3\u653E\u30FB\u4FDD\u5B58\u306A\u3057"), /*#__PURE__*/React.createElement("h2", {
-        className: "text-sm font-black"
-      }, "\u30DF\u30FC\u30A2\u5B9F\u88C5\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3"
-      }, /*#__PURE__*/React.createElement("section", {
-        "data-mia-dex-preview": true,
-        className: "rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        "data-dex-art": true,
-        className: "h-44 flex items-center justify-center"
-      }, /*#__PURE__*/React.createElement(DexMonsterArt, {
-        mon: mon,
-        alt: "\u30DF\u30FC\u30A2"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[17px] font-black text-amber-100"
-      }, mon.name), /*#__PURE__*/React.createElement("div", {
-        "data-dex-lineage-row": true,
-        className: "mt-2 grid items-center gap-1.5",
-        style: {
-          gridTemplateColumns: 'auto minmax(0,1fr) auto minmax(0,1fr) auto'
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] font-black text-amber-300"
-      }, "\u8840\u7D71"), /*#__PURE__*/React.createElement(DexLineageChip, {
-        lineage: pixieLineage,
-        iconUrl: mon.iconUrl
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300 font-black"
-      }, "\xD7"), /*#__PURE__*/React.createElement(DexLineageChip, {
-        lineage: rareLineage
-      }), /*#__PURE__*/React.createElement("span", {
-        "data-dex-category": true,
-        className: "rounded-full bg-amber-600 px-2 py-1 text-[9px] font-black"
-      }, "\u30EC\u30A2")), /*#__PURE__*/React.createElement("p", {
-        "data-dex-desc": true,
-        className: "mt-2 whitespace-pre-line text-[10px] font-bold leading-relaxed text-slate-200"
-      }, MIA_DEBUG_DESCRIPTION), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 rounded-xl bg-black/30 px-2"
-      }, row('ライフ', mon.baseHp), row('ちから', mon.baseAtk), row('丈夫さ', mon.baseDef), row('ガッツ', mon.baseGuts), row('合流ボーナス', `ライフ+${mon.plusStats.hp}／ちから+${mon.plusStats.atk}／丈夫さ+${mon.plusStats.def}／ガッツ+${mon.plusStats.guts}`)), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 grid grid-cols-4 gap-1.5"
-      }, RANGE_LABELS.map((label, i) => /*#__PURE__*/React.createElement("div", {
-        key: label,
-        className: "rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-slate-400"
-      }, label), /*#__PURE__*/React.createElement("div", {
-        className: "text-[13px] font-mono font-black text-amber-200"
-      }, mon.distAptitude[i]))))), /*#__PURE__*/React.createElement("section", {
-        "data-mia-market-preview": true,
-        className: "rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "mb-2 text-[10px] font-black text-amber-300"
-      }, "\u672C\u756A\u5546\u54C1\u30AB\u30FC\u30C9\u8868\u793A\uFF08\u8CFC\u5165\u7121\u52B9\uFF09"), /*#__PURE__*/React.createElement("div", {
-        className: MARKET_GRID_CLASS
-      }, marketItems.map(item => /*#__PURE__*/React.createElement(MarketProductCard, {
-        key: item.id,
-        item: item,
-        disabled: true
-      })))), /*#__PURE__*/React.createElement("section", {
-        "data-mia-icon-preview": true,
-        className: "rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "mb-2 text-[10px] font-black text-cyan-300"
-      }, "\u672C\u756A\u90E8\u54C1\u306B\u3088\u308B\u30A2\u30A4\u30B3\u30F3\u8868\u793A"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-center"
-      }, /*#__PURE__*/React.createElement(BreederIcon, {
-        src: mon.faceIconUrl,
-        id: "mia_debug_icon",
-        alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB",
-        className: "mx-auto w-14 h-14 border border-amber-400/40"
-      }), /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px]"
-      }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\uFF08\u9854\u4E2D\u5FC3\uFF09")), /*#__PURE__*/React.createElement("div", {
-        className: "text-center"
-      }, /*#__PURE__*/React.createElement(MarketProductIcon, {
-        item: marketItems[0]
-      }), /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px]"
-      }, "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("div", {
-        className: "text-center"
-      }, /*#__PURE__*/React.createElement(DexMonsterIcon, {
-        src: mon.iconUrl
-      }), /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px]"
-      }, "\u56F3\u9451\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
-        className: "text-center"
-      }, /*#__PURE__*/React.createElement(DexMonsterIcon, {
-        src: mon.iconUrl,
-        lineage: true
-      }), /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px]"
-      }, "\u8840\u7D71\u30A2\u30A4\u30B3\u30F3")), /*#__PURE__*/React.createElement("div", {
-        className: "text-center"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-3xl"
-      }, cardIconNode(mon.iconUrl, 32, 'mia_debug_skill')), /*#__PURE__*/React.createElement("small", {
-        className: "block text-[8px]"
-      }, "\u6280\u30AB\u30FC\u30C9")))), /*#__PURE__*/React.createElement("section", {
-        className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-[10px] font-black text-fuchsia-300"
-      }, "\u67D3\u8272\u78BA\u8A8D"), /*#__PURE__*/React.createElement("p", {
-        className: "mt-1 text-[9px] leading-relaxed text-slate-300"
-      }, "\u57CB\u3081\u8FBC\u307F\u90E8\u4F4D\u30DE\u30C3\u30D7\u3092\u672C\u756A\u3068\u5171\u901A\u306E\u67D3\u8272\u7D4C\u8DEF\u3067\u5408\u6210"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 grid grid-cols-2 gap-2"
-      }, [[dyeColors, '3色同時'], ...dyeColors.map((color, index) => [dyeColors.map((value, i) => i === index ? value : null), `染色${index + 1}のみ`])].map(([colors, label]) => /*#__PURE__*/React.createElement("figure", {
-        key: label
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: "Mia",
-        src: mon.imgUrl,
-        alt: `ミーア${label}`,
-        masuColors: colors,
-        className: "h-44 w-full object-contain"
-      }), /*#__PURE__*/React.createElement("figcaption", {
-        className: "text-center text-[8px] font-black text-fuchsia-200"
-      }, label)))))));
     })(), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
@@ -28955,12 +28755,6 @@ function MonsterHeroGame() {
     }, "BATTLE TEST")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-5"
     }, /*#__PURE__*/React.createElement("button", {
-      "data-debug-mia-preview": true,
-      onClick: () => setGameState('MIA_IMPLEMENTATION_DEBUG'),
-      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-400 text-fuchsia-100 rounded-2xl font-black"
-    }, "\uD83E\uDDDA \u30DF\u30FC\u30A2\u5B9F\u88C5\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] text-fuchsia-300"
-    }, "\u56F3\u9451\u30FB\u5546\u54C1\u30FB\u4E38\u30A2\u30A4\u30B3\u30F3\u30FB\u67D3\u8272\u3092\u4FDD\u5B58\u305B\u305A\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('REINCARNATE_DISPLAY_DEBUG'),
       className: "w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black"
     }, "\u267B\uFE0F \u8EE2\u751F\u8868\u793A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
@@ -29211,7 +29005,7 @@ function MonsterHeroGame() {
       }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D")), /*#__PURE__*/React.createElement("p", {
         className: "p-6 text-center text-slate-400"
       }, "\u78BA\u8A8D\u3067\u304D\u308B\u6240\u6301\u30E2\u30F3\u30B9\u30BF\u30FC\u500B\u4F53\u304C\u3042\u308A\u307E\u305B\u3093\u3002"));
-      const base = selected.baseId === 'Mia' ? MIA_DEBUG_MONSTER : ALL_PLAYER_MONSTERS[selected.baseId];
+      const base = ALL_PLAYER_MONSTERS[selected.baseId];
       const regionCount = dyeRegionCount(selected.baseId);
       const colors = Array.from({
         length: regionCount
@@ -29329,7 +29123,7 @@ function MonsterHeroGame() {
         },
         className: "w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black"
       }, owned.map(m => {
-        const b = m.baseId === 'Mia' ? MIA_DEBUG_MONSTER : ALL_PLAYER_MONSTERS[m.baseId];
+        const b = ALL_PLAYER_MONSTERS[m.baseId];
         return /*#__PURE__*/React.createElement("option", {
           key: m.id,
           value: m.id
