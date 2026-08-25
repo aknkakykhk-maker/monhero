@@ -300,6 +300,7 @@ node tools/build.js --check
 | `node image/dye-edge-check.js` | 染色もどきの「輪郭の塗り残し」を実測して見張る。部位マスクは縮小画像で作るため、等倍へ戻すと境界に隙間が出やすい。 |
 | `node image/dye-quality-report.js` | 染色もどきの部位マスクの品質を実測し、モンスターごとに比べる。輪郭のギザギザや白い縁の原因調査用。 |
 | `node image/dye-mask-editor-check.js` | 汎用染色マスクエディタの縦横比、本体内だけの描画、外部連結領域だけの掃除、Undo、境界警告、PNG正規化と輪郭内の透明穴維持を確認する。 |
+| `node image/mia-dye-mask-check.js` | ミーアの染色1（髪）・染色2（茶色い上着・スカート・靴）・染色3（緑の衣装・靴下）と対象外部位を、検査時だけ正解見本 `art-sources/dye-masks/mia-dye-mask.PNG` と画素単位で比較する。 |
 | `node image/undine-dye-mask-check.js` | ウンディーネの染色1（髪）・染色2（顔、首、耳、腕、尻尾、尾びれ）・染色3（服）と3色同時の本番マスクを、正解見本 `art-sources/dye-masks/undine-dye-mask.PNG` と画素単位で比較する。正解PNGは検査時だけ読み込むので、配信フォルダには置いていない。 |
 | `node image/yaobikuni-dye-mask-check.js` | ヤオビクニの染色1（髪・胸飾り・両腕〜手・下半身〜尾びれ）・染色2（左右のヒレ／羽状部分）・染色3（顔・耳・首〜胴体）を、保存済み3色マスクと画素単位で比較する。 |
 | `node image/mocchi-dye-mask-check.js` | モッチーの染色1（体）・染色2（頭の葉）・染色3（口ばし）を、保存済み3色マスク `images/monsters/mocchi-dye-mask.PNG` と画素単位で比較する。 |
