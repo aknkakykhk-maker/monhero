@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-25 18:01",
+    date: "2026-08-25 18:05",
     type: 'issue',
     title: 'ミーアの円盤石アイコンに白い背景が出ていた問題を修正',
     status: 'fixed',
@@ -11,7 +11,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-25 18:01",
+    date: "2026-08-25 18:05",
     type: 'update',
     title: '新モンスター ミーアを追加',
     items: [
@@ -21,7 +21,7 @@ const CHANGELOG = [
     assistantNotice: { id:'update_notice_mia_market_v1', type:'market' },
   },
   {
-    date: "2026-08-25 18:01",
+    date: "2026-08-25 18:05",
     type: 'issue',
     title: '技カードのアイコンでウンディーネ・ヤオビクニの頭が切れる問題を修正',
     status: 'fixed',
