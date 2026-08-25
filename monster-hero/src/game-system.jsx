@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 17:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 06:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3022,11 +3022,32 @@ const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIK
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
+// パンドラは正式登録前のDEBUG確認専用。正式モン一覧・図鑑・血統・セーブへは混ぜず、
+// 保存済みマスクもDEBUG画面／エディタを開いた時だけ参照する。正式実装時は既存の
+// EXACT_DYE_MASKSまたは埋め込み部位マップへ移し、この定義を削除する。
+const PANDORA_DEBUG = Object.freeze({
+  id:'Pandora', name:'パンドラ', main:'pixie', sub:'unknown', category:'レア',
+  imgUrl:'images/monsters/pandora.PNG', discUrl:'images/disc-icons/pandora-disc.PNG',
+  maskUrl:'../tools/art-sources/dye-masks/pandora-dye-mask.PNG',
+  description:[
+    '一つの体に光と闇、相反する二つの魔力を宿した珍しいピクシー',
+    '絶えずぶつかり合う魔力のせいで情緒は少し不安定だが、',
+    'どちらの力も欠かせない不思議な均衡で成り立っている',
+    '本当はオシャレが好きで、争いもあまり好まない',
+  ],
+  moves:['はり手','レイ','サンダー','ハイキック','ヒールレイド','ライトニング','メガレイ','なげキッス','デュアルキッス'],
+  evolutions:['バン','ギガレイ','ギガサンダー','ビッグバン','ギガライトニング','コズミッグバン','アストラルレイ','エクリプスノヴァ','ダイスキライライ'],
+  trait:{name:'禁忌解錠',effect:'勇者モン選択時、固有技のダメージが2倍'},
+  unique:{baseMult:2.1,baseGuts:42,effectName:'双極共振',effect:'次ターン、カード消費ガッツ0'},
+});
+// 染色エンジンに3枠を知らせるためのDEBUG限定ダミー定義。領域判定には必ず保存済みRGBマスクを使う。
+MASU_COLOR_REGION_HUES.Pandora = [{hue:0},{hue:120},{hue:240}];
+const PANDORA_DEBUG_MASK_PLACEMENT = Object.freeze({maskUrl:PANDORA_DEBUG.maskUrl,scaleX:1,scaleY:1,xPx:0,yPx:0});
 const makeDyeMaskEditorTargets = () => [...Object.values(ALL_PLAYER_MONSTERS).map(monster => ({
   id:String(monster.id).toLowerCase(), baseId:monster.id, name:monster.name, imageUrl:monster.imgUrl,
   maskUrl:EXACT_DYE_MASKS[monster.id] || null,
   hasMask:Array.isArray(MASU_COLOR_REGION_HUES[monster.id]) && MASU_COLOR_REGION_HUES[monster.id].length > 0,
-}))];
+})), { id:'pandora-debug', baseId:PANDORA_DEBUG.id, name:`${PANDORA_DEBUG.name}（DEBUG限定）`, imageUrl:PANDORA_DEBUG.imgUrl, maskUrl:PANDORA_DEBUG.maskUrl, hasMask:true }];
 // Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
 // 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
 const DYE_MASK_DEBUG_PREVIEW_SIZE = Object.freeze({ width:256, height:384 });
@@ -15212,7 +15233,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black">🌟 超越確認<small className="block text-[8px] text-amber-200">マーク・演出・必要XPの確認と、試すための準備</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black">🌟 超越確認<small className="block text-[8px] text-amber-200">マーク・演出・必要XPの確認と、試すための準備</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>setGameState('PANDORA_IMPLEMENTATION_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-fuchsia-400 text-fuchsia-100 rounded-2xl font-black">😈 パンドラ実装確認<small className="block text-[8px] text-fuchsia-300">正式登録せず本体・図鑑・円盤石・3色染色を確認</small></button><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
               {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                   通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
               <button data-debug-rpg-battle onClick={()=>{setRpgBattle(null);setGameState('RPG_DEBUG_SETUP');}} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black">⚔️ ダンジョンRPG戦闘テスト<small className="block text-[8px] text-emerald-300">コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません</small></button>
@@ -15262,6 +15283,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
           </div>
         )}
+
+        {gameState==='PANDORA_IMPLEMENTATION_DEBUG'&&(()=>{
+          const p=PANDORA_DEBUG;
+          const palettes=[
+            ['染色なし',[null,null,null]],
+            ['染色1のみ',['custom:25:90:90',null,null]],
+            ['染色2のみ',[null,'custom:150:90:78',null]],
+            ['染色3のみ',[null,null,'custom:215:90:95']],
+            ['3色同時',['custom:25:90:90','custom:150:90:78','custom:215:90:95']],
+          ];
+          const art=(label,colors)=><section key={label} className="rounded-xl border border-white/10 bg-black/30 p-2"><b className="mb-1 block text-center text-[9px] text-fuchsia-200">{label}</b><div className="h-44 overflow-hidden rounded-lg" style={{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'}}><DyedMonsterImage baseId={p.id} src={p.imgUrl} alt={`${p.name} ${label}`} masuColors={colors} debugMaskPlacement={PANDORA_DEBUG_MASK_PLACEMENT} className="h-full w-full object-contain"/></div></section>;
+          return <main className="flex h-full min-h-0 flex-1 flex-col p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
+            <header className="mb-2 flex items-center gap-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG限定・正式データ／セーブへ未登録</small><h2 className="text-sm font-black">😈 パンドラ実装確認</h2></div></header>
+            <div className="mh-scroll min-h-0 flex-1 space-y-3 overflow-y-auto pb-3">
+              <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="grid grid-cols-2 gap-2"><div><b className="text-fuchsia-200">本体画像</b><img src={p.imgUrl} alt="パンドラ元画像" className="mt-2 h-40 w-full object-contain"/></div><div><b className="text-fuchsia-200">円盤石</b><img src={p.discUrl} alt="パンドラ円盤石" className="mt-2 h-40 w-full object-contain"/></div></div></section>
+              <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[10px] leading-relaxed"><h3 className="text-sm font-black text-fuchsia-200">{p.name} <small>ID: {p.id}／レア</small></h3><p>血統：ピクシー × ？？？（main: {p.main} / sub: {p.sub}）</p><div className="mt-2 text-slate-300">{p.description.map(line=><p key={line}>{line}</p>)}</div><p className="mt-2">通常技：{p.moves.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>勇者特性：{p.trait.name} — {p.trait.effect}</p><p>固有技：baseMult {p.unique.baseMult} / baseGuts {p.unique.baseGuts}</p><p>進化名：{p.evolutions.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>固有技効果：{p.unique.effectName} — {p.unique.effect}</p><p>atkMotion：default</p><p className="mt-2 font-black text-amber-300">未決定：ライフ／ちから／丈夫さ／ガッツ／plusStats／距離適性／専用攻撃モーション／マーケット価格／顔アイコン補正</p></section>
+              <section><h3 className="mb-2 text-[10px] font-black text-cyan-300">保存済みRGBマスク × DyedMonsterImage（確認色：橙／緑／青）</h3><div className="grid grid-cols-2 gap-2">{palettes.map(([label,colors])=>art(label,colors))}</div></section>
+            </div>
+          </main>;
+        })()}
 
         {gameState==='MONSTER_IMAGE_DEBUG'&&(()=>{
           const owned=[...masuMons.filter(m=>ALL_PLAYER_MONSTERS[m.baseId])];

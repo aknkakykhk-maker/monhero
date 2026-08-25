@@ -23,7 +23,7 @@ const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=f1032185
 const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=8a601df886c5";
 const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=d2a3e509c7d2";
 const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=e62804cf3a5c";
-const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=18bf52bcb0f3";
+const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=9fce87806771";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["おりょうの力", "おりょうの気合", "おりょうの憤怒"],
