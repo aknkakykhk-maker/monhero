@@ -1,14 +1,16 @@
 const CHANGELOG = [
   {
-    date: "2026-08-25 16:36",
+    date: "2026-08-25 17:37",
     type: 'update',
     title: '新モンスター ミーアを追加',
     items: [
       '新モンスター ミーアを追加しました。',
+      'マーケットにミーアのアイコン・円盤石アイコン・円盤石を追加しました。',
     ],
+    assistantNotice: { id:'update_notice_mia_market_v1', type:'market' },
   },
   {
-    date: "2026-08-25 16:36",
+    date: "2026-08-25 17:37",
     type: 'issue',
     title: '技カードのアイコンでウンディーネ・ヤオビクニの頭が切れる問題を修正',
     status: 'fixed',

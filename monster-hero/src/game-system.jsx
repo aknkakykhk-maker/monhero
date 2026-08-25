@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-25 16:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-25 17:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4933,6 +4933,7 @@ const MARKET_PROFILE_ICON_STYLES = {
   // 正式登録前のDEBUGでも、本番プロフィールと同じ補正経路で顔を主役に切り出す。
   // ピクシーの顔アイコンに近い大きさまで寄せ、肩～胸元と羽根飾りだけを残す。
   mia_debug_icon: { scale: 3.2, x: 0, y: 94 },
+  mia_icon: { scale: 3.2, x: 0, y: 94 },
   Mia: { scale: 3.2, x: 0, y: 94 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
