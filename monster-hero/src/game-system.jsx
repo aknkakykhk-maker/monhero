@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 18:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 01:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3760,7 +3760,13 @@ const RANKING_FUSION_MAX = 12;
 // v1: 育て方(ステータス・間合い適性・固有技Lv)＋合体回数だけ
 // v2: 記録時点の総合力(power)と、合体履歴の中身(fusion)を追加。v1の項目はそのまま残す
 // v3: 転生回数、v4: 保存済みの転生育成ボーナスと合体継承回数を追加
-const RANKING_DETAIL_VERSION = 4;
+// v5: 超越(transcended とその強化ぶん)を追加。
+//     ここが抜けていたため、ランキング一覧は絆Lv.410なのに「詳細」を開くと
+//     Lv.400/400 MAX になる、という食い違いが出ていた。レベル上限は
+//     masuLevelCapLimit() が「超越済みなら500、未超越なら400」で決めるので、
+//     記録から組み立て直した個体に超越の印が無いと未超越として400へ丸められる。
+//     同じ理由で超越強化で振ったぶんのステータスも詳細に出ていなかった。
+const RANKING_DETAIL_VERSION = 5;
 const rankingMasuDetail = (masu) => {
   if (!masu) return null;
   const sp = masu.statPoints || {};
@@ -3781,6 +3787,12 @@ const rankingMasuDetail = (masu) => {
     inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: num(masu.levelCap) || null,
+    // 超越(v5)。levelCap だけでは足りない。超越済みかどうかでレベル上限そのものが
+    // 400/500 と変わるため、印が無いと Lv.400 へ丸められてしまう
+    transcended: isTranscended(masu),
+    transcendPoints: num(masu.transcendPoints),
+    transcendStatPoints: normalizeTranscendStatPoints(masu.transcendStatPoints),
+    transcendAptBoosts: normalizeTranscendAptBoosts(masu.transcendAptBoosts),
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // 間合い適性は「グレードの文字」の配列(['C','M','C','C'] など)。数値ではないので
     // 数に直そうとすると全部0になり、ランキング側だけ全距離Cに見えてしまう
@@ -3832,6 +3844,11 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     inheritedReincarnateBonusPoints: num(detail.inheritedReincarnateBonusPoints),
     inheritedReincarnateCount: num(detail.inheritedReincarnateCount),
     levelCap: num(detail.levelCap) || INITIAL_MASU_LEVEL_CAP,
+    // 超越はv5から。持っていない古い記録は未超越として読む(これまでと同じ見え方のまま)
+    transcended: detail.transcended === true,
+    transcendPoints: num(detail.transcendPoints),
+    transcendStatPoints: normalizeTranscendStatPoints(detail.transcendStatPoints),
+    transcendAptBoosts: normalizeTranscendAptBoosts(detail.transcendAptBoosts),
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // グレード以外(数値へ潰してしまった古い記録など)が入っていたら、その記録には
     // 間合い適性が残っていないものとして扱う。nullにしておけば血統本来の適性が出るので、

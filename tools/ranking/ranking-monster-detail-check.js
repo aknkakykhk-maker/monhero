@@ -27,7 +27,8 @@ vm.runInContext([
 ].join('\n'), ctx);
 const { ALL_PLAYER_MONSTERS } = ctx.__x;
 
-const { rankingMasuDetail, rankingDetailToMasu, masuBondLevelInfo, getMonsterAptPct, formatAptBonus, DIST_APTITUDE_GRADES, masuPowerOf, normalizeFusionHistory } = loadDyeModule();
+const { rankingMasuDetail, rankingDetailToMasu, masuBondLevelInfo, getMonsterAptPct, formatAptBonus, DIST_APTITUDE_GRADES, masuPowerOf, normalizeFusionHistory,
+  totalBondXpForLevel, mergeMasuIntoMon, MAX_MASU_LEVEL_CAP } = loadDyeModule();
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -54,6 +55,8 @@ for (let i = 0; i < ids.length; i++) {
     bondXp: 1234 + i * 77,
     rebirthCount: i % 4,
     levelCap: 30 + (i % 4) * 10,
+    // 超越していない、ふつうに育てた個体。超越済みの個体は下で別に往復させる
+    transcended: false,
     statPoints: { hp: 10 + i, atk: 5, def: 15, guts: 0 },
     // 間合い適性はグレードの文字の配列。数値ではない(ここを数値で書いていたために
     // 「文字を数に直すと全部0になる」不具合を取り逃していた)
@@ -99,6 +102,50 @@ for (let i = 0; i < ids.length; i++) {
   same('絆レベル', masuBondLevelInfo(masu).level, masuBondLevelInfo(back).level);
 }
 check('育て方が往復しても変わらない', mismatched.length === 0, mismatched.slice(0, 4).join(' / '));
+
+// --- 超越した個体(レベル上限がLv400を超える) ---
+// レベル上限は masuLevelCapLimit() が「超越済みなら500、未超越なら400」で決めるため、
+// 記録に超越の印が無いと、組み立て直した個体が未超越あつかいになってLv400へ丸められる。
+// 実際に「ランキング一覧は絆Lv.410なのに、詳細を開くとLv.400/400 MAX」という不具合が出た。
+// 上の個体はどれも超越していないためこの経路を踏まず、検査をすり抜けていた。
+{
+  const baseId = ids[0];
+  const LEVEL = 410; // Lv400超は超越したときにしか到達できない
+  const transcendedMasu = {
+    id: 'local-transcended', baseId, name: '超越テスト',
+    transcended: true,
+    levelCap: LEVEL,
+    bondXp: totalBondXpForLevel(LEVEL),
+    transcendPoints: 12,
+    transcendStatPoints: { hp: 20, atk: 10, def: 5, guts: 3 },
+    transcendAptBoosts: [2, 1, 0, 0],
+    rebirthCount: 35, reincarnateCount: 3,
+    statPoints: { hp: 0, atk: 0, def: 0, guts: 0 },
+    uniqueSkillLevels: { own: 8 }, inheritedUniques: [], fusionHistory: [],
+  };
+  const sent = JSON.parse(JSON.stringify(rankingMasuDetail(transcendedMasu)));
+  const back = rankingDetailToMasu(baseId, sent, []);
+  check('超越した印が記録に残る', sent.transcended === true);
+  // ランキング一覧は記録した数値をそのまま出し、詳細は記録から計算し直す。
+  // ここが食い違うと「一覧と詳細で絆Lvが違う」になる
+  check('一覧の絆Lvと詳細の絆Lvが一致する',
+    masuBondLevelInfo(transcendedMasu).level === masuBondLevelInfo(back).level,
+    `一覧 Lv.${masuBondLevelInfo(transcendedMasu).level} / 詳細 Lv.${masuBondLevelInfo(back).level}`);
+  // 超越強化で振ったぶんも往復すること(欠けると詳細のステータスだけ低く出る)
+  const wanted = mergeMasuIntoMon(transcendedMasu), got = mergeMasuIntoMon(back);
+  const statKeys = ['baseHp', 'baseAtk', 'baseDef', 'baseGuts'];
+  check('超越強化ぶんのステータスが往復する',
+    statKeys.every(key => wanted[key] === got[key]),
+    statKeys.map(key => `${key}: ${wanted[key]}→${got[key]}`).join(' '));
+  // 古い記録(v4以前)には超越の印が無い。これまでどおり未超越として読めること
+  const legacy = { ...sent, v: 4 };
+  delete legacy.transcended; delete legacy.transcendPoints;
+  delete legacy.transcendStatPoints; delete legacy.transcendAptBoosts;
+  const legacyBack = rankingDetailToMasu(baseId, legacy, []);
+  check('超越の印が無い古い記録は未超越として読む(これまでと同じ)',
+    legacyBack.transcended === false && masuBondLevelInfo(legacyBack).level === MAX_MASU_LEVEL_CAP,
+    `transcended=${legacyBack.transcended} / Lv.${masuBondLevelInfo(legacyBack).level}`);
+}
 
 // 記録が重くならないこと(以前ここへ画像を入れて読み込みが終わらなくなったことがある)
 const maxSize = Math.max(...sizes);
