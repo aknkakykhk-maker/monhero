@@ -49,7 +49,8 @@ check('readOnlyでも使う共通詳細には操作UIを混ぜない', !commonDe
 
 const autoRepeatRuntime = slice('// AUTO∞から新しいrunId', '// 正規リザルトの全報酬演出');
 check('AUTO∞や限界突破の実処理には未接続', !autoRepeatRuntime.includes('autoRepeatBreakthrough') && !autoRepeatRuntime.includes('setMasuAutoRepeatBreakthrough'));
-check('設定項目を参照するのは正規化・保存・所有詳細だけ', (source.match(/autoRepeatBreakthrough/g) || []).length === 7);
+const internalBuilder = slice('const buildAutoRepeatBreakthroughs =', '// 転生:');
+check('設定項目の実行判定は専用の内部処理に限定', internalBuilder.includes('autoRepeatBreakthrough !== true'));
 
 console.log(failed ? '\nNGがあります' : '\nすべてOK');
 process.exit(failed ? 1 : 0);
