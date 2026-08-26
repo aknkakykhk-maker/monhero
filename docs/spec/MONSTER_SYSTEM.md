@@ -14,7 +14,7 @@
 
 ## 2. 現在の種
 
-`ALL_PLAYER_MONSTERS` には17種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Mia、Monol、Oboro、Plant、Zan、Mitarashi、Ark、Iblis、Snegurochka、Undine、Yaobikuni）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、Miaを含む残り9種は初期解放されず、マーケットで対応する円盤石を購入すると解放される。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
+`ALL_PLAYER_MONSTERS` には18種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Mia、Pandora、Monol、Oboro、Plant、Zan、Mitarashi、Ark、Iblis、Snegurochka、Undine、Yaobikuni）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、MiaとPandoraを含む残り10種は初期解放されず、マーケットで対応する円盤石を購入すると解放される。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
 
 各定義の必須実装項目は次のとおり。
 
@@ -67,6 +67,7 @@
 | ウンディーネ | ウンディーネ | ウンディーネ | 純血 |
 | ヤオビクニ | ウンディーネ | モッチー | 派生種 |
 | スネグーラチカ | ウンディーネ | ？？？ | レア |
+| パンドラ | ピクシー | ？？？ | レア |
 
 プラント血統は代表モンスターとしてプラントを持つ。「ドラゴン」「ジョーカー」「ゲル」「？？？」は、いまのところその血統単体のプレイアブルモンスターがいない。
 これらの血統は血統カタログの `monId`（その血統を代表するモンスター）を持たないため、画面では名前だけで表示する。存在しない画像は作らない。

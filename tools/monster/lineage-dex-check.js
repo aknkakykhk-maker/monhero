@@ -48,7 +48,7 @@ const monsters = A.dexMonsterList();
 
 // ---------- ① 血統がすべて揃っている ----------
 check('図鑑にモンスターが並ぶ', monsters.length > 0, `${monsters.length}体`);
-check('図鑑全体の対象は17体', monsters.length === 17, `${monsters.length}体`);
+check('図鑑全体の対象は18体', monsters.length === 18, `${monsters.length}体`);
 const missing = monsters.filter(mon => !A.monsterLineageOf(mon.id).known).map(mon => mon.name);
 check('全プレイヤーモンスターに血統が設定されている', missing.length === 0, missing.join(' / '));
 const broken = monsters.filter(mon => {
