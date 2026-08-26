@@ -110,5 +110,21 @@ check('画面側に種族名を書き写していない', hardcoded.length === 0
 check('種族の選択肢を dexMainLineages から作っている',
   source.includes("...dexMainLineages().map(l=>({id:l.id,label:`${l.name}種`}))"));
 
+// しぼりこみのボタンを出している画面で、実際に絞れていること。
+// 一覧の組み立てには2通りある。共通のuseMemo(unifiedMonsterEntries*)を使う画面と、
+// 画面側で buildUnifiedMonsterEntries を直に呼ぶ画面。後者はしぼりこみを書き足さないと
+// 「ボタンは出るのに何も起きない」になる(超越・放牧設定が実際にそうなっていた)。
+{
+  // 一覧を組み立てている場所をすべて拾い、その直後にしぼりこみが書いてあるかを見る。
+  // 込み入った正規表現は書き方の揺れで取りこぼすので、出現位置から一定の範囲を見るだけにする
+  const NEEDLE = 'sortMonsterEntries(buildUnifiedMonsterEntries(';
+  const sites = [];
+  for (let at = source.indexOf(NEEDLE); at >= 0; at = source.indexOf(NEEDLE, at + 1)) sites.push(at);
+  check('一覧を組み立てている場所を見つけられる', sites.length > 0, `${sites.length}か所`);
+  const missing = sites.filter(at => !source.slice(at, at + 400).includes('monsterEntryMatchesLineage'));
+  check('一覧を組み立てているすべての場所でしぼりこみが掛かっている', missing.length === 0,
+    missing.map(at => source.slice(at, at + 110).replace(/\s+/g, ' ')).join(' / '));
+}
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
