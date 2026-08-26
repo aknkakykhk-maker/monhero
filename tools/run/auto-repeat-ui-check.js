@@ -6,7 +6,7 @@ const source=fs.readFileSync(path.resolve(__dirname,'../../monster-hero/src/game
 const fail=message=>{throw new Error(message);};
 const between=(from,to)=>{const start=source.indexOf(from),end=source.indexOf(to,start+from.length);if(start<0||end<0)fail(`${from} の範囲を取得できません`);return source.slice(start,end);};
 const repeatToggle=between('const setAutoRepeatEnabled = (enabled) => {','// ランの終了表示');
-for(const token of ['const next=!!enabled&&isQuickMode(runMode)','autoRepeatRef.current=next','setAutoRepeat(next)','if(next)setAutoBattleEnabled(true)','else autoRepeatStartingRef.current=false',"if(!next)setEcoModeSafe('off')"])if(!repeatToggle.includes(token))fail(`∞周回切替に ${token} がありません`);
+for(const token of ['const next=!!enabled&&isQuickMode(runMode)','autoRepeatRef.current=next','setAutoRepeat(next)','setAutoRepeatBattleSpeed(next)','if(next)setAutoBattleEnabled(true)','else autoRepeatStartingRef.current=false',"if(!next)setEcoModeSafe('off')"])if(!repeatToggle.includes(token))fail(`∞周回切替に ${token} がありません`);
 if(repeatToggle.includes('stopAutoBattle')||repeatToggle.includes('stopAllAuto'))fail('∞周回単独OFFが通常AUTOを停止します');
 const battleToggle=between('const setAutoBattleEnabled = (enabled) => {','// ∞周回は');
 if(!battleToggle.includes('if(!next){stopAllAuto();return;}'))fail('通常AUTO OFFがstopAllAutoを使っていません');
@@ -18,4 +18,10 @@ if(battleControls.includes('setAutoRepeatEnabled(!autoRepeatRef.current)')||batt
 if(/const \[[^\]]*(?:autoMode|autoStatus|battleAuto)[^\]]*\] = useState/i.test(source))fail('統合AUTO表示用のstateを追加しています');
 for(const width of [320,390,430])if(width-16-(40+44+84+4)<100)fail(`${width}pxでACTIONを維持した操作列が収まりません`);
 if(/['"]mh_[^'"]*(?:repeat|infinity)/.test(source))fail('AUTO∞を永続化する保存キーがあります');
+const speedControl=between('const [battleSpeed, setBattleSpeed] = useState(1);','const [focusedCard, setFocusedCard]');
+for(const token of ['const autoRepeatBattleSpeedRef = useRef(null)','if(autoRepeatBattleSpeedRef.current==null)autoRepeatBattleSpeedRef.current=normalizeBattleSpeed(battleSpeedRef.current)','battleSpeedRef.current=4','setBattleSpeed(4)','const restored=normalizeBattleSpeed(autoRepeatBattleSpeedRef.current)','battleSpeedRef.current=restored','setBattleSpeed(restored)','if (battleScenarioRef.current||autoRepeatRef.current) return;'])if(!speedControl.includes(token))fail(`AUTO∞の速度固定・復元に ${token} がありません`);
+const repeatSpeed=between('const setAutoRepeatBattleSpeed = (enabled) => {','const cycleBattleSpeed = () => {');
+if(repeatSpeed.includes('storeSet'))fail('AUTO∞の速度固定が通常の速度設定を保存しています');
+const headerControls=between('<div data-battle-controls','</header>');
+for(const token of ['disabled={!!battleTutorial||autoRepeat}',"autoRepeat?'∞周回中は4倍固定'","autoRepeat?'∞周回中は×4固定':undefined",'{autoRepeat&&<span'])if(!headerControls.includes(token))fail(`AUTO∞速度固定UIに ${token} がありません`);
 console.log('auto repeat UI check passed');
