@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 12:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 12:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12175,13 +12175,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan') || (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora')) {
           // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
           const comboDmgBonus=getPermaBuff('comboDmgPct');
-          const rollCombo=(rate)=>{
+          const rollCombo=(rate,noAnim=false)=>{
             const base=Math.floor(d*rate);
             if (base<=0) return;
             const crit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+critRateBonus));
             const final=crit?Math.floor(base*(1.5+critDmgBonus)):base;
             if (crit) hasCrit=true; totalDmg += final;
-            attackHits.push({dmg:final, isCrit:crit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
+            attackHits.push({dmg:final, isCrit:crit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false, ...(noAnim?{noAnim:true}:{})});
           };
           // 勇者特性「連撃」: ザン自身が攻撃していて、かつザンが勇者モンの時のみ、攻撃(通常/固有問わず)に連撃ヒットを追加
           if (mainHero?.id==='Zan' && activeMon.id==='Zan') rollCombo(0.3+comboDmgBonus);
@@ -12189,7 +12189,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if (card.type==='unique' && card.monId==='Zan') rollCombo(0.2+comboDmgBonus);
           // 禁忌解錠: パンドラ自身の固有技だけ、既存の連撃ヒットへ100%を渡す。
           // 引継ぎ技(card.monId!==Pandora)には連撃させない。
-          if (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora') rollCombo(1.0+comboDmgBonus);
+          if (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora') rollCombo(1.0+comboDmgBonus,true);
         }
         const globalComboRate=getPermaBuff('globalComboDmgPct')+localGlobalComboAdd;
         if(globalComboRate>0){
