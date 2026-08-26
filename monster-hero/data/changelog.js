@@ -1,5 +1,13 @@
 const CHANGELOG = [
   {
+    date: "2026-08-26 12:06", type: 'update', title: '新モンスター パンドラを追加',
+    items: [
+      '新モンスター パンドラを追加しました。',
+      'マーケットに「パンドラのアイコン」「パンドラの円盤石アイコン」「パンドラの円盤石」を追加しました。',
+    ],
+    assistantNotice: { id:'update_notice_pandora_market_v1', type:'market' },
+  },
+  {
     date: "2026-08-26 10:35",
     type: 'issue',
     title: 'ミーアの円盤石アイコンに白い背景が出ていた問題を修正',
