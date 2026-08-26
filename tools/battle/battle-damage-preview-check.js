@@ -5,10 +5,18 @@ const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 assert(source.includes('const getAttackPredictedDmg = useCallback'), '攻撃1枚の共通予測関数が必要');
 assert(source.includes("mainHero?.id==='Zan' && mon?.id==='Zan'"), 'ザン勇者特性の連撃を予測する');
 assert(source.includes("card.type==='unique' && card.monId==='Zan'"), '連斬の連撃を予測する');
+assert(source.includes("const pandoraSplitNormal=mainHero?.id==='Pandora' && mon?.id==='Pandora' && ['atk','range_atk'].includes(card.type)"), 'パンドラ勇者の通常攻撃分割を予測する');
+assert(source.includes('const mainBaseDmg=pandoraSplitNormal?Math.floor(baseDmg*0.5):baseDmg;'), 'パンドラ通常攻撃の1ヒット目を分割前ダメージの50%にする');
+assert(source.includes('if (pandoraSplitNormal) total += extraHit(0.5+comboDmgBonus)'), 'パンドラ通常攻撃の連撃を分割前ダメージ基準で予測する');
 assert(source.includes("card.monId==='Ark'||card.monId==='Iblis'"), '贖罪の追撃を予測する');
 assert((source.match(/getAttackPredictedDmg\(/g)||[]).length >= 4, '合計と個別表示が共通予測関数を使う');
 assert(source.includes('const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'), '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
 assert(source.includes('(予定: ${plannedDmg})'), '敵予告は軽減後の予定値を表示する');
+
+const pandoraPredictedDmg=(baseDmg,comboDmgBonus=0)=>
+  Math.floor(baseDmg*0.5)+Math.floor(baseDmg*(0.5+comboDmgBonus));
+assert.strictEqual(pandoraPredictedDmg(1000),1000, 'パンドラ通常攻撃は500 + 500になる');
+assert.strictEqual(pandoraPredictedDmg(1000,0.03),1030, '連撃ダメージ+3%時は500 + 530になる');
 
 // ==========================================================================
 // おりょう・ゴーレム・モッチー/ミタラシ・ききは「使ったターンからすぐ効く」設計だが、

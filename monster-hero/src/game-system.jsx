@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 12:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 12:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11751,7 +11751,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (baseDmg<=0) return 0;
     const guaranteedCrit=getTurnBuff('guaranteedCrit',false);
     const critMult=1.5+getPermaBuff('critDmgPct');
-    const mainDmg=guaranteedCrit?Math.floor(baseDmg*critMult):baseDmg;
+    // 禁忌解錠の通常攻撃は、分割前のbaseDmgを基準に50%ずつへ分ける。
+    // 先に半減したmainDmgを追撃の基準にすると 50% + 25% になるため、両ヒットともbaseDmgから計算する。
+    const pandoraSplitNormal=mainHero?.id==='Pandora' && mon?.id==='Pandora' && ['atk','range_atk'].includes(card.type);
+    const mainBaseDmg=pandoraSplitNormal?Math.floor(baseDmg*0.5):baseDmg;
+    const mainDmg=guaranteedCrit?Math.floor(mainBaseDmg*critMult):mainBaseDmg;
     const comboDmgBonus = getPermaBuff('comboDmgPct');
     const extraHit=(rate)=>{
       const raw=Math.floor(baseDmg*rate);
@@ -11760,6 +11764,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let total = mainDmg;
     if (mainHero?.id==='Zan' && mon?.id==='Zan') total += extraHit(0.3+comboDmgBonus); // 勇者特性「連撃」
     if (card.type==='unique' && card.monId==='Zan') total += extraHit(0.2+comboDmgBonus); // 固有技「連斬」
+    if (pandoraSplitNormal) total += extraHit(0.5+comboDmgBonus); // 禁忌解錠（通常攻撃の後半50%）
     if (mainHero?.id==='Pandora' && mon?.id==='Pandora' && card.type==='unique' && card.monId==='Pandora') total += extraHit(1.0+comboDmgBonus); // 禁忌解錠
     total += extraHit(getPermaBuff('globalComboDmgPct')+additionalGlobalCombo); // きき由来の全体連撃は全モンスター共通の別ヒット
     // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
@@ -12169,10 +12174,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist); attackCount++;
         const critRateBonus=getPermaBuff('critRatePct'), critDmgBonus=getPermaBuff('critDmgPct');
         const isCrit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+critRateBonus));
-        const finalD=isCrit?Math.floor(d*(1.5+critDmgBonus)):d; if(isCrit) hasCrit=true; totalDmg+=finalD;
+        // パンドラ勇者の通常攻撃だけは、分割前のdを共通の基準にして50% + 50%へ分ける。
+        // 自身・引継ぎを問わず固有技は従来の専用分岐を維持する。
+        const pandoraSplitNormal=mainHero?.id==='Pandora' && activeMon.id==='Pandora' && ['atk','range_atk'].includes(card.type);
+        const mainBaseD=pandoraSplitNormal?Math.floor(d*0.5):d;
+        const finalD=isCrit?Math.floor(mainBaseD*(1.5+critDmgBonus)):mainBaseD; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
-        if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan') || (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora')) {
+        if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan') || pandoraSplitNormal || (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora')) {
           // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
           const comboDmgBonus=getPermaBuff('comboDmgPct');
           const rollCombo=(rate,noAnim=false)=>{
@@ -12187,6 +12196,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if (mainHero?.id==='Zan' && activeMon.id==='Zan') rollCombo(0.3+comboDmgBonus);
           // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
           if (card.type==='unique' && card.monId==='Zan') rollCombo(0.2+comboDmgBonus);
+          // 禁忌解錠の通常攻撃: 分割前のdへ50%と既存の連撃ダメージUPを足した後半ヒット。
+          // 先頭ヒットが専用モーションを再生するため、後半は数値だけを続けて表示する。
+          if (pandoraSplitNormal) rollCombo(0.5+comboDmgBonus,true);
           // 禁忌解錠: パンドラ自身の固有技だけ、既存の連撃ヒットへ100%を渡す。
           // 引継ぎ技(card.monId!==Pandora)には連撃させない。
           if (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora') rollCombo(1.0+comboDmgBonus,true);
