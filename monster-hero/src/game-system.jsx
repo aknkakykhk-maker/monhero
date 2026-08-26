@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 17:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 17:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -840,6 +840,8 @@ const transferableReincarnateBonus = (masu) => ({
 });
 const normalizeMasuProgression = (masu) => ({
   ...masu,
+  // AUTO∞の自動限界突破設定。旧データ・欠損・boolean以外は必ずOFFへ戻す。
+  autoRepeatBreakthrough: masu?.autoRepeatBreakthrough === true,
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
   reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
@@ -856,6 +858,10 @@ const normalizeMasuProgression = (masu) => ({
   // 未使用の固有技ポイント。限界突破・転生でその場に上げなかったぶんをここへ貯めておき、
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0)),
+});
+const buildAutoRepeatBreakthroughUpdate = (masu, enabled) => ({
+  ...masu,
+  autoRepeatBreakthrough: enabled === true,
 });
 // 固有技ポイントの仮配分を検証して反映した個体を返す。UI操作中は呼ばず、確定時だけ保存へ渡す。
 const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
@@ -10058,6 +10064,20 @@ function MonsterHeroGame() {
   const setMasuInitialUnique = (masuId, settingKey) => updateMasuUniqueSetting(masuId, masu =>
     buildUniqueSettingUpdate(masu, { order:normalizeUniqueOrder(masu), initialKey:settingKey }));
   const resetMasuUniqueSetting = (masuId) => updateMasuUniqueSetting(masuId, buildUniqueSettingReset);
+  // 設定だけを個体データへ保存する。AUTO∞の周回・限界突破処理からはまだ参照しない。
+  const setMasuAutoRepeatBreakthrough = (masuId, enabled) => {
+    const masu = getMasuMon(masuId);
+    if (!masu) return null;
+    const updated = buildAutoRepeatBreakthroughUpdate(masu, enabled);
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? updated : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    setMasuMonDetail(prev => prev && String(prev.id) === String(masuId) ? updated : prev);
+    Audio_.se.tap();
+    return updated;
+  };
   const useUniqueSkillResetTicket = (masuId) => {
     if (ownedItemCount(ownedItems, 'unique_skill_reset_ticket') <= 0) return null;
     const result = buildUniqueSkillPointReset(getMasuMon(masuId));
@@ -16472,6 +16492,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               extraAfterApt: renderUniqueSkillPointBox(masu, updated=>setMasuMonDetail(updated)),
             },
             bodyExtra: (<>
+              <section data-auto-repeat-breakthrough-setting className="rounded-xl border border-cyan-500/40 bg-cyan-950/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0"><div className="text-[11px] font-black text-cyan-200">AUTO∞ 自動限界突破</div><div className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">∞周回中、Lv上限到達時に素材があれば自動で限界突破します（現在Lv100まで）</div></div>
+                  <button type="button" role="switch" aria-checked={masuNorm.autoRepeatBreakthrough} aria-label={`${masu.name}のAUTO∞ 自動限界突破`} onClick={()=>setMasuAutoRepeatBreakthrough(masu.id,!masuNorm.autoRepeatBreakthrough)} className={`min-h-[48px] min-w-[76px] shrink-0 rounded-xl border px-3 text-xs font-black active:scale-95 ${masuNorm.autoRepeatBreakthrough?'border-cyan-300 bg-cyan-600 text-white':'border-slate-500 bg-slate-800 text-slate-300'}`}>
+                    {masuNorm.autoRepeatBreakthrough?'ON':'OFF'}
+                  </button>
+                </div>
+              </section>
               <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30"><div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>{orderUniqueChoicesByMasuOrder(masu, getRebirthSkillChoices(masu)).map(skill=>{const current=uniqueSkillAtLevel(skill.unique,skill.level);return <button key={skill.key} onClick={()=>setRosterSkillDetail({mon:{...mergedMasu,unique:current},kind:'unique'})} className="w-full flex justify-between text-[9px] py-1 text-left"><span className="truncate">{current.name}</span><span className="text-amber-300 font-black shrink-0">Lv.{skill.level} ›</span></button>;})}</div>
               {(masu.inheritedUniques||[]).length>0&&(
                 <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30">
