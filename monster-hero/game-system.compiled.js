@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 565be37030c7c938
+// source-sha256: 13a0f6e438ba9bf8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 18:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 18:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -469,9 +469,22 @@ const INITIAL_MASU_LEVEL_CAP = 30;
 const MAX_BOND_LEVEL_ITERATIONS = TRANSCEND_LEVEL_CAP - 1;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
-// AUTO∞による自動限界突破は、育成の行き過ぎを防ぐためLv.100までに限定する。
-// 手動限界突破のbuildMasuBreakthroughにはこの上限を入れない。
-const AUTO_REPEAT_BREAKTHROUGH_LEVEL_LIMIT = 100;
+const AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL = 35;
+// ブリーダーLvの半分以下を5刻みに切り下げ、Lv35未満ならOFFだけにする。
+const autoRepeatBreakthroughMaxLevel = breederLevel => {
+  const maxLevel = Math.floor(Math.max(0, Number(breederLevel) || 0) / (BREAKTHROUGH_LEVEL_CAP_GAIN * 2)) * BREAKTHROUGH_LEVEL_CAP_GAIN;
+  return maxLevel >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL ? maxLevel : 0;
+};
+const autoRepeatBreakthroughLevelOptions = breederLevel => {
+  const maxLevel = autoRepeatBreakthroughMaxLevel(breederLevel);
+  const levels = [];
+  for (let level = AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL; level <= maxLevel; level += BREAKTHROUGH_LEVEL_CAP_GAIN) levels.push(level);
+  return levels;
+};
+const normalizeAutoRepeatBreakthroughLevel = value => {
+  const level = Math.floor(Number(value) || 0);
+  return level >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL && level % BREAKTHROUGH_LEVEL_CAP_GAIN === 0 ? level : 0;
+};
 const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 固有技の強化ポイントは、技を上げるほかに「いまのガッツを戻す」ことにも使える。
 // 育てきって技がすべてMAXになったあともポイントが余らないようにするための使い道。
@@ -1000,8 +1013,8 @@ const transferableReincarnateBonus = masu => ({
 });
 const normalizeMasuProgression = masu => ({
   ...masu,
-  // AUTO∞の自動限界突破設定。旧データ・欠損・boolean以外は必ずOFFへ戻す。
-  autoRepeatBreakthrough: masu?.autoRepeatBreakthrough === true,
+  // 旧booleanは曖昧な上限へ移行せずOFF。数値設定だけを正本として読む。
+  autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
   reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
@@ -1021,9 +1034,9 @@ const normalizeMasuProgression = masu => ({
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0))
 });
-const buildAutoRepeatBreakthroughUpdate = (masu, enabled) => ({
+const buildAutoRepeatBreakthroughUpdate = (masu, level) => ({
   ...masu,
-  autoRepeatBreakthrough: enabled === true
+  autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(level)
 });
 // 固有技ポイントの仮配分を検証して反映した個体を返す。UI操作中は呼ばず、確定時だけ保存へ渡す。
 const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
@@ -2424,7 +2437,8 @@ const buildAutoRepeatBreakthroughs = ({
   masuIds,
   masuMons,
   gold,
-  ownedItems
+  ownedItems,
+  breederXp
 }) => {
   let nextMasuMons = Array.isArray(masuMons) ? masuMons : [];
   let nextGold = donationDiamondValue(gold);
@@ -2433,19 +2447,22 @@ const buildAutoRepeatBreakthroughs = ({
   };
   const succeededMasuIds = [];
   const seen = new Set();
+  const breederLevelLimit = levelInfo(breederXp).level / 2;
   for (const rawId of Array.isArray(masuIds) ? masuIds : []) {
     const id = String(rawId);
     if (seen.has(id)) continue;
     seen.add(id);
     const masu = nextMasuMons.find(entry => String(entry.id) === id);
-    if (!masu || normalizeMasuProgression(masu).autoRepeatBreakthrough !== true) continue;
+    if (!masu) continue;
+    const settingLevel = normalizeMasuProgression(masu).autoRepeatBreakthroughLevel;
+    if (settingLevel <= 0) continue;
     const result = buildMasuBreakthrough({
       masu,
       skillKey: '',
       gold: nextGold,
       psycheOwned: ownedItemCount(nextOwnedItems, BREAKTHROUGH_ITEM_ID)
     });
-    if (!result.ok || result.nextMasu.levelCap > AUTO_REPEAT_BREAKTHROUGH_LEVEL_LIMIT) continue;
+    if (!result.ok || result.nextMasu.levelCap > settingLevel || result.nextMasu.levelCap > breederLevelLimit) continue;
     nextMasuMons = nextMasuMons.map(entry => String(entry.id) === id ? result.nextMasu : entry);
     nextGold = result.nextGold;
     nextOwnedItems = {
@@ -17063,10 +17080,10 @@ function MonsterHeroGame() {
   }));
   const resetMasuUniqueSetting = masuId => updateMasuUniqueSetting(masuId, buildUniqueSettingReset);
   // 設定だけを個体データへ保存する。AUTO∞の周回・限界突破処理からはまだ参照しない。
-  const setMasuAutoRepeatBreakthrough = (masuId, enabled) => {
+  const setMasuAutoRepeatBreakthrough = (masuId, level) => {
     const masu = getMasuMon(masuId);
     if (!masu) return null;
-    const updated = buildAutoRepeatBreakthroughUpdate(masu, enabled);
+    const updated = buildAutoRepeatBreakthroughUpdate(masu, level);
     setMasuMons(prev => {
       const next = prev.map(m => String(m.id) === String(masuId) ? updated : m);
       storeSet('mh_masu_mons', next, false);
@@ -17810,7 +17827,8 @@ function MonsterHeroGame() {
       masuIds,
       masuMons: masuMonsRef.current,
       gold: goldRef.current,
-      ownedItems: ownedItemsRef.current
+      ownedItems: ownedItemsRef.current,
+      breederXp
     });
     if (result.succeededMasuIds.length === 0) return result;
     await Promise.all([storeSet('mh_masu_mons', result.nextMasuMons, false), storeSet('mh_gold', result.nextGold, false), storeSet('mh_owned_items', result.nextOwnedItems, false)]);
@@ -31517,6 +31535,9 @@ function MonsterHeroGame() {
       const inRoster = monsterRosterIds.includes('masu:' + masu.id);
       const sp = masu.statPoints || {};
       const masuNorm = normalizeMasuProgression(masu);
+      const autoBreakthroughMaxLevel = autoRepeatBreakthroughMaxLevel(breederLevel.level);
+      const autoBreakthroughLevels = autoRepeatBreakthroughLevelOptions(breederLevel.level);
+      const autoBreakthroughSelectedLevel = autoBreakthroughLevels.includes(masuNorm.autoRepeatBreakthroughLevel) ? masuNorm.autoRepeatBreakthroughLevel : 0;
       const tsp = masuNorm.transcendStatPoints;
       const masuLvl = masuBondLevelInfo(masu);
       // (+○)は今までどおり通常の強化ポイントぶん。基礎+○は超越で永久に上げたぶんで、別物として並べる
@@ -31562,14 +31583,19 @@ function MonsterHeroGame() {
           className: "text-[11px] font-black text-cyan-200"
         }, "AUTO\u221E \u81EA\u52D5\u9650\u754C\u7A81\u7834"), /*#__PURE__*/React.createElement("div", {
           className: "mt-1 text-[9px] font-bold leading-relaxed text-slate-300"
-        }, "\u221E\u5468\u56DE\u4E2D\u3001Lv\u4E0A\u9650\u5230\u9054\u6642\u306B\u7D20\u6750\u304C\u3042\u308C\u3070\u81EA\u52D5\u3067\u9650\u754C\u7A81\u7834\u3057\u307E\u3059\uFF08\u73FE\u5728Lv100\u307E\u3067\uFF09")), /*#__PURE__*/React.createElement("button", {
-          type: "button",
-          role: "switch",
-          "aria-checked": masuNorm.autoRepeatBreakthrough,
-          "aria-label": `${masu.name}のAUTO∞ 自動限界突破`,
-          onClick: () => setMasuAutoRepeatBreakthrough(masu.id, !masuNorm.autoRepeatBreakthrough),
-          className: `min-h-[48px] min-w-[76px] shrink-0 rounded-xl border px-3 text-xs font-black active:scale-95 ${masuNorm.autoRepeatBreakthrough ? 'border-cyan-300 bg-cyan-600 text-white' : 'border-slate-500 bg-slate-800 text-slate-300'}`
-        }, masuNorm.autoRepeatBreakthrough ? 'ON' : 'OFF'))), /*#__PURE__*/React.createElement("div", {
+        }, "\u221E\u5468\u56DE\u4E2D\u3001\u8A2D\u5B9ALv\u307E\u3067\u7D20\u6750\u304C\u3042\u308C\u3070\u81EA\u52D5\u3067\u9650\u754C\u7A81\u7834\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+          className: "mt-1 text-[8px] font-bold text-cyan-300/80"
+        }, "\u8A2D\u5B9A\u53EF\u80FD\u4E0A\u9650\uFF1A", autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}` : 'OFF', "\uFF08\u30D6\u30EA\u30FC\u30C0\u30FCLv", breederLevel.level, "\u306E\u534A\u5206\uFF09")), /*#__PURE__*/React.createElement("select", {
+          "aria-label": `${masu.name}のAUTO∞ 自動限界突破上限`,
+          value: autoBreakthroughSelectedLevel,
+          onChange: event => setMasuAutoRepeatBreakthrough(masu.id, Number(event.target.value)),
+          className: "min-h-[48px] min-w-[112px] shrink-0 rounded-xl border border-cyan-400/60 bg-slate-900 px-3 text-center text-xs font-black text-white"
+        }, /*#__PURE__*/React.createElement("option", {
+          value: 0
+        }, "OFF"), autoBreakthroughLevels.map(level => /*#__PURE__*/React.createElement("option", {
+          key: level,
+          value: level
+        }, "Lv", level, "\u307E\u3067"))))), /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-2 rounded-xl border border-violet-500/30"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-violet-300 uppercase font-bold mb-1"
