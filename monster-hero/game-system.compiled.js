@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b85c9b92b67095c5
+// source-sha256: b01b2ca82e970ee0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 01:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7548,11 +7548,17 @@ const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).ma
   id: changelogEntryId(entry)
 }));
 const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_ENTRIES.filter(entry => entry.type === type).map(entry => entry.id)]));
+// 一覧の並べかえに使えるキー。画面の選択肢(MONSTER_SORT_OPTIONS)と必ず同じ顔ぶれにする。
+// 片方にだけ足すと、画面では選べるのに保存だけ弾かれて、開き直すと元に戻る
+// (実際に「総合力」がここへ足されておらず、選んでも次に開くと血統順へ戻っていた)。
+// tools/monster/monster-list-filter-check.js が両者の一致を見張る。
+const MONSTER_LIST_SORT_KEYS = ['base', 'masu', 'lineage', 'bond', 'power', 'name', 'active', 'fused', 'reborn'];
 const DEFAULT_MONSTER_LIST_SETTINGS = {
   version: 1,
   modalTab: 'sort',
   sortKey: 'lineage',
   sortDir: 'asc',
+  lineage: 'all',
   display: {
     base: true,
     masu: true,
@@ -7572,14 +7578,17 @@ const DEFAULT_DONATION_SORT_SETTINGS = {
   sortDir: 'desc'
 };
 const normalizeMonsterListSettings = value => {
-  const sortKeys = ['base', 'masu', 'lineage', 'bond', 'name', 'active', 'fused', 'reborn'];
   const displayKeys = ['base', 'masu', 'fused', 'active', 'reborn'];
-  if (!value || value.version !== 1 || !sortKeys.includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir) || !['sort', 'display'].includes(value.modalTab) || !value.display) return DEFAULT_MONSTER_LIST_SETTINGS;
+  if (!value || value.version !== 1 || !MONSTER_LIST_SORT_KEYS.includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir) || !['sort', 'lineage', 'display'].includes(value.modalTab) || !value.display) return DEFAULT_MONSTER_LIST_SETTINGS;
+  // 種族(主血統)のしぼりこみは後から足した項目。持っていない既存の保存値は「すべて」で補う。
+  // 版を上げると保存ごと既定へ戻って並べかえ・表示設定まで失われるので、版は1のままにする
+  const lineage = typeof value.lineage === 'string' && (value.lineage === 'all' || typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[value.lineage]) ? value.lineage : 'all';
   return {
     version: 1,
     modalTab: value.modalTab,
     sortKey: value.sortKey,
     sortDir: value.sortDir,
+    lineage,
     display: Object.fromEntries(displayKeys.map(key => [key, typeof value.display[key] === 'boolean' ? value.display[key] : DEFAULT_MONSTER_LIST_SETTINGS.display[key]]))
   };
 };
@@ -13708,8 +13717,10 @@ function MonsterHeroGame() {
   const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
   const [draftMonsterRoster, setDraftMonsterRoster] = useState([]); // 編成画面での仮選択(決定を押すまでmonsterRosterIdsには反映しない)
   // モンスター一覧系画面(編成・ベースモン一覧・マスモン一覧)共通のソート・表示設定。3画面で共有する
-  const [monsterSortKey, setMonsterSortKey] = useState('lineage'); // 'base'|'masu'|'lineage'|'bond'|'name'|'active'
+  const [monsterSortKey, setMonsterSortKey] = useState('lineage'); // MONSTER_LIST_SORT_KEYS のいずれか
   const [monsterSortDir, setMonsterSortDir] = useState('asc'); // 'asc'|'desc'
+  // 種族(主血統)のしぼりこみ。'all' か MONSTER_LINEAGES のid。並べかえとは独立していて同時に効く
+  const [monsterLineageFilter, setMonsterLineageFilter] = useState('all');
   const [monsterDisplayFlags, setMonsterDisplayFlags] = useState({
     ...DEFAULT_MONSTER_LIST_SETTINGS.display
   }); // 各カードに出す情報(複数選択可、オフで非表示)
@@ -15718,6 +15729,7 @@ function MonsterHeroGame() {
       setMonsterSortDir(listSettings.sortDir);
       setMonsterDisplayFlags(listSettings.display);
       setSortFilterModalTab(listSettings.modalTab);
+      setMonsterLineageFilter(listSettings.lineage);
       const fusionSettings = normalizeFusionSortSettings(await storeGet('mh_fusion_sort_settings', DEFAULT_FUSION_SORT_SETTINGS, false));
       setFusionSortKey(fusionSettings.sortKey);
       setFusionSortDir(fusionSettings.sortDir);
@@ -15949,9 +15961,10 @@ function MonsterHeroGame() {
       modalTab: sortFilterModalTab,
       sortKey: monsterSortKey,
       sortDir: monsterSortDir,
+      lineage: monsterLineageFilter,
       display: monsterDisplayFlags
     }, false);
-  }, [dataLoaded, sortFilterModalTab, monsterSortKey, monsterSortDir, monsterDisplayFlags]);
+  }, [dataLoaded, sortFilterModalTab, monsterSortKey, monsterSortDir, monsterLineageFilter, monsterDisplayFlags]);
   useEffect(() => {
     if (!dataLoaded) return;
     storeSet('mh_fusion_sort_settings', {
@@ -16582,10 +16595,14 @@ function MonsterHeroGame() {
   // 無関係な状態更新のたびに毎回全件ソートし直すと重くなり(タップ反応が悪くなる原因の一つ)、
   // useMemoで実際に関係する値が変わった時だけ計算し直すようにする
   // 種別が画面で固定されている一覧(ベースモン一覧・マスモン一覧)用。種別のチェックは見ない
+  // 種族(主血統)のしぼりこみ。表示設定や並べかえとは別軸なので、掛け合わせて使える
+  // (例:「ピクシー種だけを総合力の高い順に並べる」)。
+  // 血統は data/lineages.js が正本で、ここでは baseId から引くだけ(個体側へは持たせない)
+  const monsterEntryMatchesLineage = e => monsterLineageFilter === 'all' || monsterLineageOf(e.baseId).main.id === monsterLineageFilter;
   const unifiedMonsterEntriesSingleType = useMemo(() => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags, {
     ignoreTypeFlags: true
-  })), [unlockedMonsterIds, masuMons, monsterRosterIds, monsterSortKey, monsterSortDir, monsterDisplayFlags]);
-  const unifiedMonsterEntriesDraft = useMemo(() => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster)).filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags)), [unlockedMonsterIds, masuMons, draftMonsterRoster, monsterSortKey, monsterSortDir, monsterDisplayFlags]);
+  }) && monsterEntryMatchesLineage(e)), [unlockedMonsterIds, masuMons, monsterRosterIds, monsterSortKey, monsterSortDir, monsterDisplayFlags, monsterLineageFilter]);
+  const unifiedMonsterEntriesDraft = useMemo(() => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster)).filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e)), [unlockedMonsterIds, masuMons, draftMonsterRoster, monsterSortKey, monsterSortDir, monsterDisplayFlags, monsterLineageFilter]);
   // ソート/表示設定の起動バー(編成/ベースモン一覧/マスモン一覧で使い回す)。
   // 以前は横スクロールの小さいチップを並べていたがタップしづらいという指摘を受け、
   // ボタン1つでフルスクリーンの選択モーダル(showSortFilterModal)を開く方式に変更した。
@@ -16621,14 +16638,25 @@ function MonsterHeroGame() {
       size: 14,
       className: "text-slate-500 shrink-0"
     })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => openModal('lineage'),
+      style: {
+        minHeight: '40px'
+      },
+      className: `shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border active:scale-95 ${monsterLineageFilter === 'all' ? 'bg-slate-900 border-slate-700' : 'bg-indigo-900 border-indigo-400'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-black text-white truncate"
+    }, monsterLineageFilter === 'all' ? '種族' : `${lineageById(monsterLineageFilter).name}種`), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 14,
+      className: "text-slate-500 shrink-0"
+    })), /*#__PURE__*/React.createElement("button", {
       onClick: () => openModal('display'),
       style: {
         minHeight: '40px'
       },
-      className: "shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95"
+      className: "shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-black text-white"
-    }, "\u8868\u793A\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("span", {
+    }, "\u8868\u793A"), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-teal-400 font-black"
     }, activeDisplayCount), /*#__PURE__*/React.createElement(ChevronRight, {
       size: 14,
@@ -31521,6 +31549,9 @@ function MonsterHeroGame() {
         key: 'sort',
         label: 'ならべかえ'
       }, {
+        key: 'lineage',
+        label: '種族'
+      }, {
         key: 'display',
         label: '表示設定'
       }].map(tab => /*#__PURE__*/React.createElement("button", {
@@ -31549,7 +31580,33 @@ function MonsterHeroGame() {
           },
           className: `rounded-2xl font-black text-sm flex items-center justify-center gap-1.5 active:scale-95 ${active ? 'bg-indigo-500 text-white ring-2 ring-indigo-300' : 'bg-slate-900 border border-slate-800 text-slate-300'}`
         }, opt.label, active && /*#__PURE__*/React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼'));
-      })) : /*#__PURE__*/React.createElement("div", {
+      })) : sortFilterModalTab === 'lineage' ?
+      /*#__PURE__*/
+      /* 種族(主血統)のしぼりこみ。ならべかえとは別軸なので、選んだまま並べかえも変えられる。
+         種族の顔ぶれは data/lineages.js が正本(dexMainLineages)で、ここへ書き写さない */
+      React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+        className: "mb-2.5 text-[10px] leading-relaxed text-slate-400"
+      }, "\u9078\u3093\u3060\u7A2E\u65CF\u3060\u3051\u3092\u8868\u793A\u3057\u307E\u3059\u3002\u306A\u3089\u3079\u304B\u3048\u30FB\u8868\u793A\u8A2D\u5B9A\u306F\u305D\u306E\u307E\u307E\u52B9\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2.5"
+      }, [{
+        id: 'all',
+        label: 'すべて'
+      }, ...dexMainLineages().map(l => ({
+        id: l.id,
+        label: `${l.name}種`
+      }))].map(opt => {
+        const active = monsterLineageFilter === opt.id;
+        return /*#__PURE__*/React.createElement("button", {
+          key: opt.id,
+          onClick: () => setMonsterLineageFilter(opt.id),
+          style: {
+            minHeight: '56px'
+          },
+          className: `rounded-2xl font-black text-sm flex items-center justify-center gap-1.5 active:scale-95 ${active ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-300'}`
+        }, active && /*#__PURE__*/React.createElement(Check, {
+          size: 15
+        }), opt.label);
+      }))) : /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2.5"
       }, dispOpts.map(opt => {
         const on = !!monsterDisplayFlags[opt.key];

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 01:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4139,14 +4139,22 @@ const changelogEntryId = entry => {
 };
 const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).map(entry => Object.freeze({...entry,id:changelogEntryId(entry)}));
 const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_ENTRIES.filter(entry=>entry.type===type).map(entry=>entry.id)]));
-const DEFAULT_MONSTER_LIST_SETTINGS = { version: 1, modalTab: 'sort', sortKey: 'lineage', sortDir: 'asc', display: { base: true, masu: true, fused: true, active: true, reborn: true } };
+// 一覧の並べかえに使えるキー。画面の選択肢(MONSTER_SORT_OPTIONS)と必ず同じ顔ぶれにする。
+// 片方にだけ足すと、画面では選べるのに保存だけ弾かれて、開き直すと元に戻る
+// (実際に「総合力」がここへ足されておらず、選んでも次に開くと血統順へ戻っていた)。
+// tools/monster/monster-list-filter-check.js が両者の一致を見張る。
+const MONSTER_LIST_SORT_KEYS = ['base', 'masu', 'lineage', 'bond', 'power', 'name', 'active', 'fused', 'reborn'];
+const DEFAULT_MONSTER_LIST_SETTINGS = { version: 1, modalTab: 'sort', sortKey: 'lineage', sortDir: 'asc', lineage: 'all', display: { base: true, masu: true, fused: true, active: true, reborn: true } };
 const DEFAULT_FUSION_SORT_SETTINGS = { version: 1, sortKey: 'bond', sortDir: 'desc' };
 const DEFAULT_DONATION_SORT_SETTINGS = { version: 1, sortKey: 'bondXp', sortDir: 'desc' };
 const normalizeMonsterListSettings = (value) => {
-  const sortKeys = ['base', 'masu', 'lineage', 'bond', 'name', 'active', 'fused', 'reborn'];
   const displayKeys = ['base', 'masu', 'fused', 'active', 'reborn'];
-  if (!value || value.version !== 1 || !sortKeys.includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir) || !['sort', 'display'].includes(value.modalTab) || !value.display) return DEFAULT_MONSTER_LIST_SETTINGS;
-  return { version: 1, modalTab: value.modalTab, sortKey: value.sortKey, sortDir: value.sortDir, display: Object.fromEntries(displayKeys.map(key => [key, typeof value.display[key] === 'boolean' ? value.display[key] : DEFAULT_MONSTER_LIST_SETTINGS.display[key]])) };
+  if (!value || value.version !== 1 || !MONSTER_LIST_SORT_KEYS.includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir) || !['sort', 'lineage', 'display'].includes(value.modalTab) || !value.display) return DEFAULT_MONSTER_LIST_SETTINGS;
+  // 種族(主血統)のしぼりこみは後から足した項目。持っていない既存の保存値は「すべて」で補う。
+  // 版を上げると保存ごと既定へ戻って並べかえ・表示設定まで失われるので、版は1のままにする
+  const lineage = typeof value.lineage === 'string' && (value.lineage === 'all' || (typeof MONSTER_LINEAGES !== 'undefined' && MONSTER_LINEAGES[value.lineage]))
+    ? value.lineage : 'all';
+  return { version: 1, modalTab: value.modalTab, sortKey: value.sortKey, sortDir: value.sortDir, lineage, display: Object.fromEntries(displayKeys.map(key => [key, typeof value.display[key] === 'boolean' ? value.display[key] : DEFAULT_MONSTER_LIST_SETTINGS.display[key]])) };
 };
 const normalizeFusionSortSettings = (value) => {
   if (!value || value.version !== 1 || !['bond', 'lineage', 'name', 'fused'].includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir)) return DEFAULT_FUSION_SORT_SETTINGS;
@@ -7635,8 +7643,10 @@ function MonsterHeroGame() {
   const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
   const [draftMonsterRoster, setDraftMonsterRoster] = useState([]); // 編成画面での仮選択(決定を押すまでmonsterRosterIdsには反映しない)
   // モンスター一覧系画面(編成・ベースモン一覧・マスモン一覧)共通のソート・表示設定。3画面で共有する
-  const [monsterSortKey, setMonsterSortKey] = useState('lineage'); // 'base'|'masu'|'lineage'|'bond'|'name'|'active'
+  const [monsterSortKey, setMonsterSortKey] = useState('lineage'); // MONSTER_LIST_SORT_KEYS のいずれか
   const [monsterSortDir, setMonsterSortDir] = useState('asc'); // 'asc'|'desc'
+  // 種族(主血統)のしぼりこみ。'all' か MONSTER_LINEAGES のid。並べかえとは独立していて同時に効く
+  const [monsterLineageFilter, setMonsterLineageFilter] = useState('all');
   const [monsterDisplayFlags, setMonsterDisplayFlags] = useState({ ...DEFAULT_MONSTER_LIST_SETTINGS.display }); // 各カードに出す情報(複数選択可、オフで非表示)
   const [showSortFilterModal, setShowSortFilterModal] = useState(false); // ならべかえ・表示設定モーダルの開閉
   const [sortFilterModalTab, setSortFilterModalTab] = useState('sort'); // モーダル内タブ: 'sort'|'display'
@@ -9095,7 +9105,7 @@ function MonsterHeroGame() {
       }
       setChangelogSeen(migratedSeen);
       const listSettings = normalizeMonsterListSettings(await storeGet('mh_monster_list_settings', DEFAULT_MONSTER_LIST_SETTINGS, false));
-      setMonsterSortKey(listSettings.sortKey); setMonsterSortDir(listSettings.sortDir); setMonsterDisplayFlags(listSettings.display); setSortFilterModalTab(listSettings.modalTab);
+      setMonsterSortKey(listSettings.sortKey); setMonsterSortDir(listSettings.sortDir); setMonsterDisplayFlags(listSettings.display); setSortFilterModalTab(listSettings.modalTab); setMonsterLineageFilter(listSettings.lineage);
       const fusionSettings = normalizeFusionSortSettings(await storeGet('mh_fusion_sort_settings', DEFAULT_FUSION_SORT_SETTINGS, false));
       setFusionSortKey(fusionSettings.sortKey); setFusionSortDir(fusionSettings.sortDir);
       const donationSettings = normalizeDonationSortSettings(await storeGet('mh_donation_sort_settings', DEFAULT_DONATION_SORT_SETTINGS, false));
@@ -9301,8 +9311,8 @@ function MonsterHeroGame() {
   // 起動時の復元が終わってからだけ保存し、初期値で既存設定を上書きしない。
   useEffect(() => {
     if (!dataLoaded) return;
-    storeSet('mh_monster_list_settings', { version: 1, modalTab: sortFilterModalTab, sortKey: monsterSortKey, sortDir: monsterSortDir, display: monsterDisplayFlags }, false);
-  }, [dataLoaded, sortFilterModalTab, monsterSortKey, monsterSortDir, monsterDisplayFlags]);
+    storeSet('mh_monster_list_settings', { version: 1, modalTab: sortFilterModalTab, sortKey: monsterSortKey, sortDir: monsterSortDir, lineage: monsterLineageFilter, display: monsterDisplayFlags }, false);
+  }, [dataLoaded, sortFilterModalTab, monsterSortKey, monsterSortDir, monsterLineageFilter, monsterDisplayFlags]);
   useEffect(() => {
     if (!dataLoaded) return;
     storeSet('mh_fusion_sort_settings', { version: 1, sortKey: fusionSortKey, sortDir: fusionSortDir }, false);
@@ -9741,13 +9751,20 @@ function MonsterHeroGame() {
   // 無関係な状態更新のたびに毎回全件ソートし直すと重くなり(タップ反応が悪くなる原因の一つ)、
   // useMemoで実際に関係する値が変わった時だけ計算し直すようにする
   // 種別が画面で固定されている一覧(ベースモン一覧・マスモン一覧)用。種別のチェックは見ない
+  // 種族(主血統)のしぼりこみ。表示設定や並べかえとは別軸なので、掛け合わせて使える
+  // (例:「ピクシー種だけを総合力の高い順に並べる」)。
+  // 血統は data/lineages.js が正本で、ここでは baseId から引くだけ(個体側へは持たせない)
+  const monsterEntryMatchesLineage = (e) => monsterLineageFilter === 'all'
+    || monsterLineageOf(e.baseId).main.id === monsterLineageFilter;
   const unifiedMonsterEntriesSingleType = useMemo(
-    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags, { ignoreTypeFlags: true })),
-    [unlockedMonsterIds, masuMons, monsterRosterIds, monsterSortKey, monsterSortDir, monsterDisplayFlags]
+    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds))
+      .filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags, { ignoreTypeFlags: true }) && monsterEntryMatchesLineage(e)),
+    [unlockedMonsterIds, masuMons, monsterRosterIds, monsterSortKey, monsterSortDir, monsterDisplayFlags, monsterLineageFilter]
   );
   const unifiedMonsterEntriesDraft = useMemo(
-    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster)).filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags)),
-    [unlockedMonsterIds, masuMons, draftMonsterRoster, monsterSortKey, monsterSortDir, monsterDisplayFlags]
+    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster))
+      .filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e)),
+    [unlockedMonsterIds, masuMons, draftMonsterRoster, monsterSortKey, monsterSortDir, monsterDisplayFlags, monsterLineageFilter]
   );
   // ソート/表示設定の起動バー(編成/ベースモン一覧/マスモン一覧で使い回す)。
   // 以前は横スクロールの小さいチップを並べていたがタップしづらいという指摘を受け、
@@ -9770,8 +9787,14 @@ function MonsterHeroGame() {
           <span className="text-[11px] font-black text-white truncate">並べかえ: {currentSortOpt?.label}{monsterSortKey === currentSortOpt?.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}</span>
           <ChevronRight size={14} className="text-slate-500 shrink-0"/>
         </button>
-        <button onClick={() => openModal('display')} style={{minHeight:'40px'}} className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95">
-          <span className="text-[11px] font-black text-white">表示設定</span>
+        {/* 種族のしぼりこみ。並べかえと掛け合わせて使えるので、別のボタンとして常に出す。
+            しぼりこみ中はひと目で分かるように色を変える(戻し忘れて「いない」と勘違いしないため) */}
+        <button onClick={() => openModal('lineage')} style={{minHeight:'40px'}} className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border active:scale-95 ${monsterLineageFilter==='all'?'bg-slate-900 border-slate-700':'bg-indigo-900 border-indigo-400'}`}>
+          <span className="text-[11px] font-black text-white truncate">{monsterLineageFilter==='all'?'種族':`${lineageById(monsterLineageFilter).name}種`}</span>
+          <ChevronRight size={14} className="text-slate-500 shrink-0"/>
+        </button>
+        <button onClick={() => openModal('display')} style={{minHeight:'40px'}} className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95">
+          <span className="text-[11px] font-black text-white">表示</span>
           <span className="text-[9px] text-teal-400 font-black">{activeDisplayCount}</span>
           <ChevronRight size={14} className="text-slate-500 shrink-0"/>
         </button>
@@ -16549,7 +16572,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button onClick={()=>setShowSortFilterModal(false)} className="p-2.5 bg-white/5 rounded-full active:scale-90"><X size={18}/></button>
               </div>
               <div className="flex gap-2 px-4 pt-3 shrink-0">
-                {[{key:'sort',label:'ならべかえ'},{key:'display',label:'表示設定'}].map(tab=>(
+                {[{key:'sort',label:'ならべかえ'},{key:'lineage',label:'種族'},{key:'display',label:'表示設定'}].map(tab=>(
                   <button key={tab.key} onClick={()=>setSortFilterModalTab(tab.key)} style={{minHeight:'44px'}} className={`flex-1 rounded-xl text-xs font-black uppercase active:scale-95 ${sortFilterModalTab===tab.key?'bg-indigo-500 text-white':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
                 ))}
               </div>
@@ -16564,6 +16587,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         </button>
                       );
                     })}
+                  </div>
+                ):sortFilterModalTab==='lineage'?(
+                  /* 種族(主血統)のしぼりこみ。ならべかえとは別軸なので、選んだまま並べかえも変えられる。
+                     種族の顔ぶれは data/lineages.js が正本(dexMainLineages)で、ここへ書き写さない */
+                  <div>
+                    <p className="mb-2.5 text-[10px] leading-relaxed text-slate-400">選んだ種族だけを表示します。ならべかえ・表示設定はそのまま効きます。</p>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {[{id:'all',label:'すべて'},...dexMainLineages().map(l=>({id:l.id,label:`${l.name}種`}))].map(opt=>{
+                        const active = monsterLineageFilter===opt.id;
+                        return (
+                          <button key={opt.id} onClick={()=>setMonsterLineageFilter(opt.id)} style={{minHeight:'56px'}} className={`rounded-2xl font-black text-sm flex items-center justify-center gap-1.5 active:scale-95 ${active?'bg-indigo-500 text-white':'bg-slate-800 text-slate-300'}`}>
+                            {active&&<Check size={15}/>}{opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 ):(
                   <div className="grid grid-cols-2 gap-2.5">
