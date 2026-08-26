@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2d7e2f0355a7a7b7
+// source-sha256: a665d46828c22644
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 12:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 12:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20621,7 +20621,7 @@ function MonsterHeroGame() {
         if (activeMon.id === 'Zan' || card.type === 'unique' && card.monId === 'Zan' || mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') {
           // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
           const comboDmgBonus = getPermaBuff('comboDmgPct');
-          const rollCombo = rate => {
+          const rollCombo = (rate, noAnim = false) => {
             const base = Math.floor(d * rate);
             if (base <= 0) return;
             const crit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + critRateBonus;
@@ -20634,7 +20634,10 @@ function MonsterHeroGame() {
               slotIdx,
               isSpecial: true,
               skillName: '連撃',
-              isUnique: false
+              isUnique: false,
+              ...(noAnim ? {
+                noAnim: true
+              } : {})
             });
           };
           // 勇者特性「連撃」: ザン自身が攻撃していて、かつザンが勇者モンの時のみ、攻撃(通常/固有問わず)に連撃ヒットを追加
@@ -20643,7 +20646,7 @@ function MonsterHeroGame() {
           if (card.type === 'unique' && card.monId === 'Zan') rollCombo(0.2 + comboDmgBonus);
           // 禁忌解錠: パンドラ自身の固有技だけ、既存の連撃ヒットへ100%を渡す。
           // 引継ぎ技(card.monId!==Pandora)には連撃させない。
-          if (mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') rollCombo(1.0 + comboDmgBonus);
+          if (mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') rollCombo(1.0 + comboDmgBonus, true);
         }
         const globalComboRate = getPermaBuff('globalComboDmgPct') + localGlobalComboAdd;
         if (globalComboRate > 0) {
