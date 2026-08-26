@@ -106,7 +106,7 @@ node tools/build.js --check
 | `node run/auto-full-run-check.js` | WAVE結果・Quick成長結果・Quick加入結果が既存handlerとWAVE後AUTOロックを使って1回だけ進み、WAVE10の終了順序、自動再挑戦・マスモン自動登録を追加していないことを確認する。 |
 | `node run/unique-initial-in-battle-check.js` | マスモンに設定した「初期技」が、バトルで実際に配られる固有技カードになるところまでを確認する。山札を組み立てる本体のコードをそのまま動かし、継承技を初期技にすると威力・消費・固有技Lvごとその技が1枚目になること、未設定・無効IDは自前技へ落ちること、ラン中に手で切り替えたらその選択が優先され次のWAVEでも戻らないこと、ラン開始と配置時に前の周回の一時選択(slotUniqueChoice)を消していること、消すのは一時選択だけで保存には触らないことを見る。 |
 | `node run/auto-repeat-initial-teaching-check.js` | AUTO∞で「1周目の最初に確定したアシストカードを次の周回でもそろえる」ことを確認する。覚えるのはラン開始時の1枚だけ(手動でもAUTOでも／∞がONでなくても)、WAVE途中のカードでは書き換えない、覚えたIDが今の候補に無ければこれまでのランダム選択へ落とす、テンプレートへ持たせるのは安定したIDだけでカードや強化状態は持ち越さない、新しい保存キーやAUTO設定の項目を増やしていない、までを見る。 |
-| `node run/auto-repeat-template-check.js` | AUTO∞第5Aの再周回テンプレートが安定IDだけを保持し、個体消失・Pro制約違反を安全に失敗させ、未接続のまま正規の新規ラン初期化を再利用することを確認する。 |
+| `node run/auto-repeat-template-check.js` | AUTO∞の再周回テンプレートが安定IDだけを保持し、個体消失・Pro制約違反を安全に失敗させ、正規の新規ラン初期化を再利用することを確認する。 |
 | `node run/auto-repeat-ui-check.js` | ∞周回ONで通常AUTOもON、∞周回単独OFFで通常AUTO維持、通常AUTO OFFで`stopAllAuto()`が使われることと、状態を保存しないことを確認する。 |
 | `node run/eco-mode-internal-check.js` | 省エネモードの初期OFF・3段階cycle・入力制限・AUTO∞/`stopAllAuto()`との停止連動・非永続化に加え、lite/ultraの描画差、必須戦況表示、戦闘処理・速度・CHAMPIONへの非干渉を確認する。 |
 | `node battle/battle-carousel-check.js` | 難易度カードの順序・スワイプ/矢印・敵生成共通化・全WAVE詳細・挑戦導線を確認する。 |
@@ -163,6 +163,7 @@ node tools/build.js --check
 | `node run/masu-register-check.js` | ラン終了画面(優勝/敗北/リタイア)の「マスモンとして登録する」にたどり着けるかを確認する。1WAVE以上クリアしたときだけ案内が出ること、リタイアでも獲得内訳を作ってから結果を出すこと、3画面とも中央のスクロール領域が `justify-center` ではなく(はみ出すと上側へ永久に届かなくなるため)内側を `m-auto` で寄せていること、登録の案内を獲得内訳より前に置いていることを見る。 |
 | `node run/guts-recovery-check.js` | 固有技の強化画面で、強化ポイント1つを使って現在ガッツを10回復できることを確認する。押せる条件と回復後の値の式を本体からそのまま取り出して動かし、最大を超えないこと・満タンやポイント0では何も起きないこと・持っているポイントぶんだけ使えることを数値で見る。同じ描画の間に連打しても1ポイントで2回ぶん回復できないこと(同期の錠)、ガッツ回復を取り消す導線が無いこと、技の＋／－・ポイントの持ち越し・WAVEクリア時の付与・クイックモードの自動強化に触れていないこと、iPhone縦画面でタップしやすいことも確認する。 |
 | `node run/bond-reward-check.js` | 周回終了時の勇者・参加・控えマスモンへの絆経験値配分、重複防止、上限・強化ポイント計算を確認する。 |
+| `node run/auto-repeat-bond-level-cap-check.js` | AUTO∞の絆経験値だけが現在のブリーダーLvと個体levelCapの低い方で止まり、既存の超過Lv・XPを巻き戻さないこと、通常AUTO・手動・チケットなどの共通経路には制限が掛からないことを確認する。 |
 | `node run/unique-skill-point-check.js` | 固有技ポイント(限界突破・転生で「あとで決める」を選んだときに残るぶん)を検証する。 |
 | `node run/inherited-unique-definition-check.js` | 継承した固有技の定義を確認する。旧スナップショット名ではなく `monId` から最新の固有技名を参照していることを見る。 |
 | `node run/inherited-unique-level-check.js` | 継承固有技のLvを確認する。ラン中の強化、Lv.8上限、明示した下位Lvを恒久Lvへ戻さないことを見る。 |
@@ -177,6 +178,7 @@ node tools/build.js --check
 | `node masu/monster-detail-unified-check.js` | モンスター詳細(編成・ベースモン一覧・マスモン一覧・勇者モン選択・ランキング)が、外枠・上部サマリー・本文まで1つのマスターUIを通っているか確認する。呼び出し元固有の操作だけを引数で受け取っていること、上部サマリーの並び(総合力・絆Lv/上限・限界突破・転生・超越)、限界突破(rebirthCount)と転生(reincarnateCount)を取り違えていないこと、一覧カードでも超越を含む育成表示が欠落していないことも見る。神殿の再生確認は、購入前の基礎性能表示だけ本文部品を直接再利用する例外として検査する。 |
 | `node masu/monster-detail-actions-check.js` | マスモン詳細の育成導線が対象個体を引き継ぎ、神殿の機能を混ぜていないことを確認する。 |
 | `node masu/auto-repeat-breakthrough-setting-check.js` | AUTO∞の個体別「自動限界突破」設定を確認する。旧個体・欠損・不正値がOFFになること、個体別のON/OFFと再読み込み相当の保持、既存の`mh_masu_mons`だけへの保存、所有マスモン詳細だけに押しやすい操作を出すこと、AUTO∞や限界突破の実処理へまだ接続していないことを見る。 |
+| `node masu/auto-repeat-breakthrough-execution-check.js` | AUTO∞自動限界突破の内部判定を確認する。ON・カンスト・素材・Lv.100上限、固有技P保留、ID重複排除、複数個体の順次残高判定、手動限界突破の非影響を見る。 |
 | `node masu/bulk-enhance-check.js` | マスモンの「まとめて強化」が正しく動くか確認する。 |
 | `node masu/breeder-level-cap-check.js` | ブリーダーレベルの計算(`levelInfo`)に実質的な上限が無いことを確認する。以前はループの安全策(200回まで)がそのままレベル上限になっており、Lv.201から上がらなくなっていた。固定回数の`for`ループが残っていないこと、実際に計算関数を動かしてLv.201を超えて正しく上がることを見る。**あわせて、その打ち切りが兼ねていた安全弁の代わりが効いているかも見る**: `NaN`・`Infinity`・文字列などの壊れた保存値は「`xp < need`」がいつまでも偽になるため、守りが無いとその場で無限ループして画面が固まる。1秒以内にLv.1へ落ち着くこと、正しい数値文字列は従来どおり数値として扱うこと、極端に大きい経験値でも短時間で終わることを確認する。 |
 | `node masu/fusion-rebirth-check.js` | 合体で上がったレベルぶんの強化ポイントが配られるか、合体・転生の消費ダイヤ単価(絆レベル1あたり50)を確認する。 |
