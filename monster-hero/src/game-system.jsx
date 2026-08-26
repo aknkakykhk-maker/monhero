@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 12:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 17:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7158,6 +7158,7 @@ function MonsterHeroGame() {
     autoRepeatRef.current = false;
     autoRepeatStartingRef.current = false;
     setAutoRepeat(false);
+    setAutoRepeatBattleSpeed(false);
     setEcoModeSafe('off');
   };
   const [monSelection, setMonSelection] = useState([]);
@@ -7230,10 +7231,25 @@ function MonsterHeroGame() {
   // refを参照することで、演出途中の変更も次の待機から即時に反映される。
   const [battleSpeed, setBattleSpeed] = useState(1);
   const battleSpeedRef = useRef(1);
+  // AUTO∞中だけ×4へ固定し、開始前の通常設定は保存を書き換えずメモリ上に退避する。
+  const autoRepeatBattleSpeedRef = useRef(null);
   const battleMs = useCallback((baseMs) => Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current))), []);
   const battleWait = useCallback((baseMs) => new Promise(resolve => setTimeout(resolve, battleMs(baseMs))), [battleMs]);
+  const setAutoRepeatBattleSpeed = (enabled) => {
+    if(enabled){
+      if(autoRepeatBattleSpeedRef.current==null)autoRepeatBattleSpeedRef.current=normalizeBattleSpeed(battleSpeedRef.current);
+      battleSpeedRef.current=4;
+      setBattleSpeed(4);
+      return;
+    }
+    if(autoRepeatBattleSpeedRef.current==null)return;
+    const restored=normalizeBattleSpeed(autoRepeatBattleSpeedRef.current);
+    autoRepeatBattleSpeedRef.current=null;
+    battleSpeedRef.current=restored;
+    setBattleSpeed(restored);
+  };
   const cycleBattleSpeed = () => {
-    if (battleScenarioRef.current) return;
+    if (battleScenarioRef.current||autoRepeatRef.current) return;
     const current = normalizeBattleSpeed(battleSpeedRef.current);
     const next = BATTLE_SPEEDS[(BATTLE_SPEEDS.indexOf(current) + 1) % BATTLE_SPEEDS.length];
     battleSpeedRef.current = next;
@@ -12420,6 +12436,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const next=!!enabled&&isQuickMode(runMode);
     autoRepeatRef.current=next;
     setAutoRepeat(next);
+    setAutoRepeatBattleSpeed(next);
     if(next)setAutoBattleEnabled(true);
     else autoRepeatStartingRef.current=false;
     if(!next)setEcoModeSafe('off');
@@ -17157,7 +17174,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[7px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
                 {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[7px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
               </div>
-              <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:opacity-50" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}</button><button onClick={toggleQuickMute} aria-label="音量" className="shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
+              <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[7px]">固定</span>}</button><button onClick={toggleQuickMute} aria-label="音量" className="shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
             </header>
             {ultraBattleView?(
               <div data-ultra-battle-view className="flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100">
