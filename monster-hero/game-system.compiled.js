@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 94ccb62cec206579
+// source-sha256: 565be37030c7c938
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 18:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 18:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1137,15 +1137,21 @@ const migrateRebornMasuToFullReset = masuMons => (Array.isArray(masuMons) ? masu
   const masu = normalizeMasuProgression(raw);
   return masu.rebirthCount > 0 ? resetMasuForRebirth(masu) : masu;
 });
-const cappedBondXp = (masu, gain = 0) => {
+const cappedBondXp = (masu, gain = 0, maxLevel = null) => {
   const normalized = normalizeMasuProgression(masu);
-  return Math.min(totalBondXpForLevel(normalized.levelCap), donationDiamondValue(normalized.bondXp) + Math.max(0, Math.floor(Number(gain) || 0)));
+  const currentXp = donationDiamondValue(normalized.bondXp);
+  const requestedMaxLevel = maxLevel != null && Number.isFinite(Number(maxLevel)) ? Math.max(1, Math.floor(Number(maxLevel))) : normalized.levelCap;
+  const effectiveLevelCap = Math.min(normalized.levelCap, requestedMaxLevel);
+  const cappedXp = Math.min(totalBondXpForLevel(effectiveLevelCap), currentXp + Math.max(0, Math.floor(Number(gain) || 0)));
+  // AUTO∞など呼び出し側が一時的な上限を渡したとき、既存XPがその上限を超えていても巻き戻さない。
+  // maxLevelを省略する通常報酬・チケット・合体は、従来どおり個体levelCapだけで頭打ちにする。
+  return maxLevel == null ? cappedXp : Math.max(currentXp, cappedXp);
 };
 // 絆経験値の加算・レベル上限・強化ポイント付与を、通常バトル、チケット、合体で共有する。
 // 戻り値に表示用の前後レベルと実際の付与量も含め、画面と保存値の計算がずれないようにする。
-const applyBondXpGain = (masu, gain = 0) => {
+const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
   const before = masuBondLevelInfo(masu);
-  const bondXp = cappedBondXp(masu, gain);
+  const bondXp = cappedBondXp(masu, gain, maxLevel);
   const after = bondLevelInfo(bondXp);
   const gainedLevels = Math.max(0, after.level - before.level);
   const pointMultiplier = levelUpPointMultiplier(masu?.rebirthCount);
@@ -18378,6 +18384,10 @@ function MonsterHeroGame() {
       masuMons
     });
     const awardByMasuId = new Map(bondAwards.map(award => [String(award.masuId), award]));
+    // AUTO∞で付与する絆XPだけ、現在のbreederXpを既存levelInfoで換算したLvを追加上限にする。
+    // 通常AUTO・手動・チケットなどはnullのままなので、共通XP計算の従来挙動を変えない。
+    const autoRepeatBondLevelCap = autoRepeatRef.current ? levelInfo(breederXp).level : null;
+    const runBondXpAfter = (masu, awardGain) => cappedBondXp(masu, awardGain, autoRepeatBondLevelCap);
     // 表示用の獲得内訳は、setMasuMonsの更新関数(Reactが後で非同期に呼び出すため、この関数の続きの
     // 行が実行される時点ではまだ実行されているとは限らない)の中で計算するのではなく、現在のmasuMons
     // (getMasuMon)を直接読んでこの場で同期的に計算する。以前はupdater内でのみ計算していたため、
@@ -18386,12 +18396,13 @@ function MonsterHeroGame() {
     if (mainHero?.masuId) {
       const masu = getMasuMon(mainHero.masuId);
       const before = bondLevelInfo(masu?.bondXp || 0);
-      const after = bondLevelInfo(cappedBondXp(masu || {}, gain));
+      const afterXp = runBondXpAfter(masu || {}, gain);
+      const after = bondLevelInfo(afterXp);
       heroBondGain = {
         name: mainHero.masuName || mainHero.name,
         emoji: mainHero.emoji,
         iconUrl: mainHero.iconUrl,
-        xpGain: Math.max(0, cappedBondXp(masu || {}, gain) - (masu?.bondXp || 0)),
+        xpGain: Math.max(0, afterXp - (masu?.bondXp || 0)),
         levelBefore: before,
         levelAfter: after,
         masuId: mainHero.masuId
@@ -18414,10 +18425,11 @@ function MonsterHeroGame() {
       const masu = getMasuMon(masuId);
       if (!masu) return null;
       const before = masuBondLevelInfo(masu);
-      const after = bondLevelInfo(cappedBondXp(masu, award.gain));
+      const afterXp = runBondXpAfter(masu, award.gain);
+      const after = bondLevelInfo(afterXp);
       return {
         name: masu.name,
-        xpGain: Math.max(0, cappedBondXp(masu, award.gain) - (masu.bondXp || 0)),
+        xpGain: Math.max(0, afterXp - (masu.bondXp || 0)),
         levelBefore: before,
         levelAfter: after,
         masuId
@@ -18429,7 +18441,7 @@ function MonsterHeroGame() {
       const next = (masuMonsRef.current || masuMons).map(m => {
         const award = awardByMasuId.get(String(m.id));
         if (!award) return m;
-        return applyBondXpGain(m, award.gain).masu;
+        return applyBondXpGain(m, award.gain, autoRepeatBondLevelCap).masu;
       });
       masuMonsRef.current = next;
       postRunMasuMonsRef.current = next;

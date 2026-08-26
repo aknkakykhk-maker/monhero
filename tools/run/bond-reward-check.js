@@ -94,7 +94,7 @@ check('35凸後のLv331～400は虹5倍率', gainLevelsAt(35,331,400).gainedPoin
 check('35凸/Lv400で停止', gainLevelsAt(35,400,401).gainedLevels === 0);
 check('経験値取得方法に依存せず共通処理だけが倍率を決める',
   /const pointMultiplier = levelUpPointMultiplier\(masu\?\.rebirthCount\)/.test(source)
-  && ['applyBondXpGain(masu, gain)','applyBondXpGain(prepared, gainedXp)','applyBondXpGain(m, award.gain)'].every(call=>source.includes(call)));
+  && ['applyBondXpGain(masu, gain)','applyBondXpGain(prepared, gainedXp)','applyBondXpGain(m, award.gain, autoRepeatBondLevelCap)'].every(call=>source.includes(call)));
 
 // --- 必要経験値の緩和(0.05 → 0.025) ---
 // 1レベルぶんの必要XP = round(50 × Lv^1.4 × BOND_XP_DISCOUNT)。係数を下げると必要XPが下がる
