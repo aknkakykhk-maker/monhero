@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8840695bd5f584f0
+// source-sha256: 348b15ea9ea97153
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 07:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 10:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5491,21 +5491,46 @@ const PANDORA_DEBUG = Object.freeze({
   main: 'pixie',
   sub: 'unknown',
   category: 'レア',
+  emoji: '😈',
   imgUrl: 'images/monsters/pandora.PNG',
+  iconUrl: 'images/monsters/pandora.PNG',
+  faceIconUrl: 'images/monsters/pandora.PNG',
   discUrl: 'images/disc-icons/pandora-disc.PNG',
   maskUrl: 'images/monsters/pandora-dye-mask.PNG',
+  atkMotion: 'pandoraDualThunder',
+  faceCrop: Object.freeze({
+    scale: 3.2,
+    x: 0,
+    y: 94
+  }),
+  baseHp: 360,
+  baseAtk: 180,
+  baseDef: 100,
+  baseGuts: 135,
+  plusStats: Object.freeze({
+    hp: 130,
+    atk: 35,
+    def: 25,
+    guts: 40
+  }),
+  distAptitude: Object.freeze(['B', 'B', 'B', 'B']),
   description: ['一つの体に光と闇、相反する二つの魔力を宿した珍しいピクシー', '絶えずぶつかり合う魔力のせいで情緒は少し不安定だが、', 'どちらの力も欠かせない不思議な均衡で成り立っている', '本当はオシャレが好きで、争いもあまり好まない'],
-  moves: ['はり手', 'レイ', 'サンダー', 'ハイキック', 'ヒールレイド', 'ライトニング', 'メガレイ', 'なげキッス', 'デュアルキッス'],
-  evolutions: ['バン', 'ギガレイ', 'ギガサンダー', 'ビッグバン', 'ギガライトニング', 'コズミッグバン', 'アストラルレイ', 'エクリプスノヴァ', 'ダイスキライライ'],
+  moves: ['デュアルスラップ', 'ルミナスレイ', 'ナイトサンダー', 'セラフキック', 'アビスレイド', 'ホーリーライトニング', 'カオスメガレイ', 'エクリプスキッス', 'デュアルキッス'],
+  evolutions: ['デュアルバン', 'セイクリッドレイ', 'アビスサンダー', 'ツインビッグバン', 'ダークライトニング', 'カオスコズミック', 'アストラルクロスレイ', 'エクリプスノヴァ', 'ダイスキライライ'],
   trait: {
     name: '禁忌解錠',
-    effect: '勇者モン選択時、固有技のダメージが2倍'
+    effect: '勇者モン選択時：自身の固有技は連撃100%、引き継いだ固有技は通常ダメージ+50%'
   },
   unique: {
-    baseMult: 2.1,
-    baseGuts: 42,
+    name: 'デュアルバン',
+    monId: 'Pandora',
+    baseMult: 2.3,
+    baseGuts: 52,
+    evoLevel: 0,
+    names: Object.freeze(['デュアルバン', 'セイクリッドレイ', 'アビスサンダー', 'ツインビッグバン', 'ダークライトニング', 'カオスコズミック', 'アストラルクロスレイ', 'エクリプスノヴァ', 'ダイスキライライ']),
     effectName: '双極共振',
-    effect: '次ターン、カード消費ガッツ0'
+    effectDesc: '双極共振：使用後、次の2ターンのカード消費ガッツ50%減',
+    effect: '使用後、次の2ターンのカード消費ガッツ50%減'
   }
 });
 // 染色エンジンに3枠を知らせるためのDEBUG限定ダミー定義。領域判定には必ず保存済みRGBマスクを使う。
@@ -10840,8 +10865,18 @@ const RPG_MOTION_BY_ATK = Object.freeze({
   default: 'Attack',
   floatStab: 'Float',
   waterBurst: 'Water',
-  zanCombo: 'Dash'
+  zanCombo: 'Dash',
+  pandoraDualThunder: 'Thunder'
 });
+// DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
+const attackMotionAnimation = anim => {
+  if (!anim) return undefined;
+  if (anim.motion === 'pandoraDualThunder') return 'pandoraDualThunder 900ms ease-in-out forwards';
+  if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
+  if (anim.charge) return 'specialCharge 650ms ease-out forwards';
+  if (anim.charge === false) return anim.motion === 'floatStab' ? 'floatStabLunge 700ms ease-in forwards' : anim.motion === 'waterBurst' ? 'waterBurstLunge 520ms ease-out forwards' : 'specialLunge 500ms ease-in forwards';
+  return anim.motion === 'floatStab' ? 'floatStabAttack 650ms ease-in forwards' : anim.motion === 'waterBurst' ? 'waterBurstAttack 520ms ease-out forwards' : 'attackFly 450ms ease-in forwards';
+};
 const rpgMotionName = (side, monId, isSkill) => {
   const prefix = side === 'ally' ? 'rpgAlly' : 'rpgFoe';
   if (isSkill) return `${prefix}Special`;
@@ -13444,6 +13479,7 @@ function MonsterHeroGame() {
   // DEBUG「パンドラ実装確認」で手動で試す色。パンドラはまだマスモンでもベースモンでもないため
   // 既存のmonsterImageDebugColors(マスモン個体が前提)には相乗りできず、専用に持つ。保存はしない
   const [pandoraDebugColors, setPandoraDebugColors] = useState([null, null, null]);
+  const [pandoraMotionKey, setPandoraMotionKey] = useState(0);
   const [showMasuRegisterModal, setShowMasuRegisterModal] = useState(false); // ラン終了画面: マスモン登録の名前入力
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
@@ -18706,6 +18742,7 @@ function MonsterHeroGame() {
     }
     if (getTurnBuff('zeroGuts', false) && ['atk', 'range_atk', 'unique'].includes(card.type)) cost = 0;
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0));
+    if (cost > 0 && getTurnBuff('pandoraResonanceTurns', 0) > 0) cost = Math.floor(cost * 0.5);
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * getPermaBuff('snegurochkaGutsDiscountStacks')));
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
@@ -19872,6 +19909,9 @@ function MonsterHeroGame() {
       baseDmgMult = card.mult || card.baseMult || 1.0;
     }
     let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * ((mainHero?.id === 'Pixie' || mainHero?.id === 'Mia') && card.type === 'unique' ? 2.0 : 1.0);
+    // 禁忌解錠: パンドラ勇者が使う『引き継いだ』固有技だけを1.5倍にする。
+    // 技の出自はcard.monIdで判定し、自身の固有技へは適用しない。
+    if (mainHero?.id === 'Pandora' && card.type === 'unique' && card.monId !== 'Pandora') traitMult *= 1.5;
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (distAptPct[slotIdx] || 0);
@@ -19903,6 +19943,7 @@ function MonsterHeroGame() {
     let total = mainDmg;
     if (mainHero?.id === 'Zan' && mon?.id === 'Zan') total += extraHit(0.3 + comboDmgBonus); // 勇者特性「連撃」
     if (card.type === 'unique' && card.monId === 'Zan') total += extraHit(0.2 + comboDmgBonus); // 固有技「連斬」
+    if (mainHero?.id === 'Pandora' && mon?.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') total += extraHit(1.0 + comboDmgBonus); // 禁忌解錠
     total += extraHit(getPermaBuff('globalComboDmgPct') + additionalGlobalCombo); // きき由来の全体連撃は全モンスター共通の別ヒット
     // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
     if (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) total += Math.floor(mainDmg * 0.2);
@@ -20251,6 +20292,9 @@ function MonsterHeroGame() {
       melosoFullRecoveryMult,
       ...activeTurnBuffs
     } = pendingNextTurnBuffs;
+    const resonanceRefresh = activeTurnBuffs.pandoraResonanceTurns;
+    const resonanceCarry = Math.max(0, (turnBuffs.pandoraResonanceTurns || 0) - 1);
+    if (resonanceRefresh == null && resonanceCarry > 0) activeTurnBuffs.pandoraResonanceTurns = resonanceCarry;
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
     const nextTurn = turnCount + 1;
@@ -20584,7 +20628,7 @@ function MonsterHeroGame() {
           monId: card.type === 'unique' ? card.monId : undefined,
           rangeMoveTarget
         });
-        if (activeMon.id === 'Zan' || card.type === 'unique' && card.monId === 'Zan') {
+        if (activeMon.id === 'Zan' || card.type === 'unique' && card.monId === 'Zan' || mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') {
           // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
           const comboDmgBonus = getPermaBuff('comboDmgPct');
           const rollCombo = rate => {
@@ -20607,6 +20651,9 @@ function MonsterHeroGame() {
           if (mainHero?.id === 'Zan' && activeMon.id === 'Zan') rollCombo(0.3 + comboDmgBonus);
           // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
           if (card.type === 'unique' && card.monId === 'Zan') rollCombo(0.2 + comboDmgBonus);
+          // 禁忌解錠: パンドラ自身の固有技だけ、既存の連撃ヒットへ100%を渡す。
+          // 引継ぎ技(card.monId!==Pandora)には連撃させない。
+          if (mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') rollCombo(1.0 + comboDmgBonus);
         }
         const globalComboRate = getPermaBuff('globalComboDmgPct') + localGlobalComboAdd;
         if (globalComboRate > 0) {
@@ -20686,6 +20733,10 @@ function MonsterHeroGame() {
             setNextTurnBuff('takenDamageMult', 0.5);
             setNextTurnBuff('gutsCostMult', 1.15);
             addPopup('次ターン被ダメ50%減!', 'hero', 'text-pink-400 text-lg font-bold');
+          } else if (card.monId === 'Pandora') {
+            // 双極共振は次ターンから2ターン。再使用時は加算せず2へ更新する。
+            setNextTurnBuff('pandoraResonanceTurns', 2);
+            addPopup('双極共振！ 次の2ターン消費半減', 'hero', 'text-fuchsia-300 text-lg font-bold');
           } else if (isIceLockMonster(card.monId)) {
             activatedIceLockThisTurn = true;
             setWaveBuffs(p => ({
@@ -20798,14 +20849,14 @@ function MonsterHeroGame() {
                 charge: false,
                 motion
               });
-              await battleWait(motion === 'floatStab' ? 700 : motion === 'waterBurst' ? 520 : 500);
+              await battleWait(motion === 'pandoraDualThunder' ? 900 : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? 520 : 500);
             } else {
               setAttackAnim({
                 slotIndex: animSlot,
                 motion
               });
               if (hit.isSpecial) Audio_.se.special();else if (hit.isCrit) Audio_.se.crit();else Audio_.se.attack();
-              await battleWait(motion === 'floatStab' ? 650 : motion === 'waterBurst' ? 520 : 450);
+              await battleWait(motion === 'pandoraDualThunder' ? 900 : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? 520 : 450);
             }
             setAttackAnim(null);
             setSlotSkill(null);
@@ -29093,15 +29144,95 @@ function MonsterHeroGame() {
         className: "rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[10px] leading-relaxed"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-sm font-black text-fuchsia-200"
-      }, p.name, " ", /*#__PURE__*/React.createElement("small", null, "ID: ", p.id, "\uFF0F\u30EC\u30A2")), /*#__PURE__*/React.createElement("p", null, "\u8840\u7D71\uFF1A\u30D4\u30AF\u30B7\u30FC \xD7 \uFF1F\uFF1F\uFF1F\uFF08main: ", p.main, " / sub: ", p.sub, "\uFF09"), /*#__PURE__*/React.createElement("div", {
+      }, p.name, " ", /*#__PURE__*/React.createElement("small", null, "ID: ", p.id, "\uFF0F", p.category)), /*#__PURE__*/React.createElement("p", null, "\u8840\u7D71\uFF1A\u30D4\u30AF\u30B7\u30FC \xD7 \uFF1F\uFF1F\uFF1F\uFF08main: ", p.main, " / sub: ", p.sub, "\uFF09\uFF0F\u521D\u671F\u89E3\u653E\u306A\u3057"), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 text-slate-300"
       }, p.description.map(line => /*#__PURE__*/React.createElement("p", {
         key: line
-      }, line))), /*#__PURE__*/React.createElement("p", {
+      }, line))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 grid grid-cols-4 gap-1 text-center"
+      }, [['ライフ', p.baseHp], ['ちから', p.baseAtk], ['丈夫さ', p.baseDef], ['ガッツ', p.baseGuts]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+        key: label,
+        className: "rounded bg-black/40 p-1"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "block text-slate-400"
+      }, label), /*#__PURE__*/React.createElement("b", null, value)))), /*#__PURE__*/React.createElement("p", {
         className: "mt-2"
-      }, "\u901A\u5E38\u6280\uFF1A", p.moves.map((move, i) => `${i + 1}. ${move}`).join(' / ')), /*#__PURE__*/React.createElement("p", null, "\u52C7\u8005\u7279\u6027\uFF1A", p.trait.name, " \u2014 ", p.trait.effect), /*#__PURE__*/React.createElement("p", null, "\u56FA\u6709\u6280\uFF1AbaseMult ", p.unique.baseMult, " / baseGuts ", p.unique.baseGuts), /*#__PURE__*/React.createElement("p", null, "\u9032\u5316\u540D\uFF1A", p.evolutions.map((move, i) => `${i + 1}. ${move}`).join(' / ')), /*#__PURE__*/React.createElement("p", null, "\u56FA\u6709\u6280\u52B9\u679C\uFF1A", p.unique.effectName, " \u2014 ", p.unique.effect), /*#__PURE__*/React.createElement("p", null, "atkMotion\uFF1Adefault"), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 font-black text-amber-300"
-      }, "\u672A\u6C7A\u5B9A\uFF1A\u30E9\u30A4\u30D5\uFF0F\u3061\u304B\u3089\uFF0F\u4E08\u592B\u3055\uFF0F\u30AC\u30C3\u30C4\uFF0FplusStats\uFF0F\u8DDD\u96E2\u9069\u6027\uFF0F\u5C02\u7528\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\uFF0F\u30DE\u30FC\u30B1\u30C3\u30C8\u4FA1\u683C\uFF0F\u9854\u30A2\u30A4\u30B3\u30F3\u88DC\u6B63")), /*#__PURE__*/React.createElement("section", {
+      }, "plusStats\uFF1AHP ", p.plusStats.hp, " / ATK ", p.plusStats.atk, " / DEF ", p.plusStats.def, " / GUTS ", p.plusStats.guts), /*#__PURE__*/React.createElement("p", null, "\u8DDD\u96E2\u9069\u6027\uFF1A", p.distAptitude.join(' / ')), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2"
+      }, "\u901A\u5E38\u6280\uFF1A", p.moves.map((move, i) => `${i + 1}. ${move}`).join(' / ')), /*#__PURE__*/React.createElement("p", null, "\u52C7\u8005\u7279\u6027\uFF1A", p.trait.name, " \u2014 ", p.trait.effect), /*#__PURE__*/React.createElement("p", null, "\u56FA\u6709\u6280\uFF1AbaseMult ", p.unique.baseMult, " / baseGuts ", p.unique.baseGuts), /*#__PURE__*/React.createElement("p", null, "\u9032\u5316\u540D\uFF1A", p.unique.names.map((move, i) => `${i + 1}. ${move}`).join(' / ')), /*#__PURE__*/React.createElement("p", null, "\u56FA\u6709\u6280\u52B9\u679C\uFF1A", p.unique.effectName, " \u2014 ", p.unique.effect), /*#__PURE__*/React.createElement("p", null, "atkMotion\uFF1A", p.atkMotion)), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-fuchsia-500/30 bg-black/30 p-3"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[10px] font-black text-fuchsia-200"
+      }, "\u9854\u30A2\u30A4\u30B3\u30F3\u78BA\u8A8D\uFF08scale ", p.faceCrop.scale, " / x ", p.faceCrop.x, " / y ", p.faceCrop.y, "\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-4"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-fuchsia-300 bg-slate-800"
+      }, /*#__PURE__*/React.createElement("img", {
+        src: p.faceIconUrl,
+        alt: "\u30D1\u30F3\u30C9\u30E9\u9854\u30A2\u30A4\u30B3\u30F3",
+        className: "absolute max-w-none",
+        style: {
+          width: `${p.faceCrop.scale * 100}%`,
+          height: `${p.faceCrop.scale * 100}%`,
+          objectFit: 'contain',
+          left: `calc(50% + ${p.faceCrop.x}px)`,
+          top: `calc(50% + ${p.faceCrop.y}px)`,
+          transform: 'translate(-50%,-50%)'
+        }
+      })), /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] text-slate-300"
+      }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\uFF0F\u30DE\u30FC\u30B1\u30C3\u30C8\u5411\u3051\u306E\u9854\u4E2D\u5FC3\u30D7\u30EC\u30D3\u30E5\u30FC"))), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[10px] font-black text-amber-200"
+      }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u5546\u54C1\u30D7\u30EC\u30D3\u30E5\u30FC\uFF08DEBUG\u30FB\u8CFC\u5165\u4E0D\u53EF\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-2"
+      }, [{
+        id: 'pandora-icon-debug',
+        name: 'パンドラのアイコン',
+        type: 'icon',
+        icon: p.faceIconUrl,
+        cost: 1
+      }, {
+        id: 'pandora-disc-icon-debug',
+        name: 'パンドラの円盤石アイコン',
+        type: 'icon',
+        icon: p.discUrl,
+        cost: 1
+      }, {
+        id: 'pandora-disc-debug',
+        name: 'パンドラの円盤石',
+        type: 'disc',
+        icon: p.discUrl,
+        cost: 3000
+      }].map(item => /*#__PURE__*/React.createElement(MarketProductCard, {
+        key: item.id,
+        item: item,
+        disabled: true,
+        canBuy: false
+      })))), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-center"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-[10px] font-black text-cyan-200"
+      }, "\u5C02\u7528\u6280\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D"), /*#__PURE__*/React.createElement("div", {
+        className: "relative mx-auto my-3 flex h-40 w-40 items-center justify-center overflow-visible rounded-2xl bg-black/30"
+      }, pandoraMotionKey > 0 && /*#__PURE__*/React.createElement("img", {
+        key: pandoraMotionKey,
+        src: p.imgUrl,
+        alt: "\u30D1\u30F3\u30C9\u30E9\u5C02\u7528\u6280\u30E2\u30FC\u30B7\u30E7\u30F3",
+        className: "h-32 w-32 object-contain",
+        style: {
+          animation: attackMotionAnimation({
+            motion: p.atkMotion
+          })
+        }
+      })), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: () => setPandoraMotionKey(k => k + 1),
+        className: "min-h-[48px] w-full rounded-xl border-2 border-cyan-300 bg-cyan-800 text-xs font-black active:scale-95"
+      }, "\u30E2\u30FC\u30B7\u30E7\u30F3\u518D\u751F"), /*#__PURE__*/React.createElement("small", {
+        className: "mt-1 block text-cyan-300"
+      }, "\u672C\u756A\u30D0\u30C8\u30EB\u3068\u540C\u3058 ", p.atkMotion, " \u5206\u5C90\u3092\u518D\u751F")), /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "mb-2 flex items-center gap-2"
@@ -34271,7 +34402,7 @@ function MonsterHeroGame() {
         className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
         style: isAnimating ? {
           zIndex: 9999,
-          animation: attackAnim.zanCombo ? 'zanComboDash 320ms ease-out forwards' : attackAnim.charge ? 'specialCharge 650ms ease-out forwards' : attackAnim.charge === false ? attackAnim.motion === 'floatStab' ? 'floatStabLunge 700ms ease-in forwards' : attackAnim.motion === 'waterBurst' ? 'waterBurstLunge 520ms ease-out forwards' : 'specialLunge 500ms ease-in forwards' : attackAnim.motion === 'floatStab' ? 'floatStabAttack 650ms ease-in forwards' : attackAnim.motion === 'waterBurst' ? 'waterBurstAttack 520ms ease-out forwards' : 'attackFly 450ms ease-in forwards'
+          animation: attackMotionAnimation(attackAnim)
         } : distanceBroken ? {
           backgroundColor: distanceBreakLevel >= 2 ? 'rgb(12,2,5)' : 'rgb(24,5,25)',
           boxShadow: `inset 0 0 0 ${Math.min(4, distanceBreakLevel + 1)}px rgba(248,113,113,.95), inset 0 0 ${28 + distanceBreakLevel * 8}px rgba(76,5,25,.98), 0 0 ${9 + distanceBreakLevel * 4}px rgba(220,38,38,.65)`
@@ -38544,6 +38675,15 @@ const createAnimationStyle = () => {
         transform: translateY(0) scale(1);
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
+    }
+    /* パンドラ専用: 左右のdrop-shadow分身が同時に雷撃し、中央へ帰還する。 */
+    @keyframes pandoraDualThunder {
+      0% { transform:translate(0,0) scale(1); filter:none; }
+      24% { transform:translateY(-10px) scale(.98); filter:drop-shadow(-54px 0 0 rgba(244,114,182,.9)) drop-shadow(54px 0 0 rgba(96,165,250,.9)); }
+      48% { transform:translateY(-28px) scale(1.04); filter:drop-shadow(-58px -2px 1px rgba(244,114,182,.95)) drop-shadow(58px -2px 1px rgba(96,165,250,.95)) drop-shadow(-38px -85px 3px rgba(253,224,71,.95)) drop-shadow(38px -85px 3px rgba(255,255,255,.95)); }
+      62% { transform:translateY(-36px) scale(1.08); filter:brightness(2.4) drop-shadow(-45px -100px 5px #fde047) drop-shadow(45px -100px 5px #e0f2fe); }
+      78% { transform:translateY(-10px) scale(1.02); filter:drop-shadow(-22px 0 0 rgba(244,114,182,.55)) drop-shadow(22px 0 0 rgba(96,165,250,.55)); }
+      100% { transform:translate(0,0) scale(1); filter:none; }
     }
     /* スネグーラチカ専用: 追加画像を使わず、水弾の残像を軽量なdrop-shadowで表現する。 */
     @keyframes waterBurstAttack {
