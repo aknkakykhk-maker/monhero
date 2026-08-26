@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 17:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 18:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -408,6 +408,9 @@ const INITIAL_MASU_LEVEL_CAP = 30;
 const MAX_BOND_LEVEL_ITERATIONS = TRANSCEND_LEVEL_CAP - 1;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
+// AUTO∞による自動限界突破は、育成の行き過ぎを防ぐためLv.100までに限定する。
+// 手動限界突破のbuildMasuBreakthroughにはこの上限を入れない。
+const AUTO_REPEAT_BREAKTHROUGH_LEVEL_LIMIT = 100;
 const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 固有技の強化ポイントは、技を上げるほかに「いまのガッツを戻す」ことにも使える。
 // 育てきって技がすべてMAXになったあともポイントが余らないようにするための使い道。
@@ -1892,6 +1895,32 @@ const buildMasuBreakthrough = ({ masu, skillKey, gold, psycheOwned = 0 }) => {
       uniqueSkillPoints: keptSkillPoints,
     },
   };
+};
+// AUTO∞の自動限界突破候補を、呼び出し時点の最新残高から順番に確定する。
+// 費用・素材数・次の上限はbuildMasuBreakthroughだけに計算させ、ここではAUTO専用上限だけを追加判定する。
+const buildAutoRepeatBreakthroughs = ({ masuIds, masuMons, gold, ownedItems }) => {
+  let nextMasuMons = Array.isArray(masuMons) ? masuMons : [];
+  let nextGold = donationDiamondValue(gold);
+  let nextOwnedItems = { ...(ownedItems || {}) };
+  const succeededMasuIds = [];
+  const seen = new Set();
+  for (const rawId of Array.isArray(masuIds) ? masuIds : []) {
+    const id = String(rawId);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const masu = nextMasuMons.find(entry => String(entry.id) === id);
+    if (!masu || normalizeMasuProgression(masu).autoRepeatBreakthrough !== true) continue;
+    const result = buildMasuBreakthrough({
+      masu, skillKey:'', gold:nextGold,
+      psycheOwned:ownedItemCount(nextOwnedItems, BREAKTHROUGH_ITEM_ID),
+    });
+    if (!result.ok || result.nextMasu.levelCap > AUTO_REPEAT_BREAKTHROUGH_LEVEL_LIMIT) continue;
+    nextMasuMons = nextMasuMons.map(entry => String(entry.id) === id ? result.nextMasu : entry);
+    nextGold = result.nextGold;
+    nextOwnedItems = { ...nextOwnedItems, [BREAKTHROUGH_ITEM_ID]:result.nextPsyche };
+    succeededMasuIds.push(masu.id);
+  }
+  return { nextMasuMons, nextGold, nextOwnedItems, succeededMasuIds };
 };
 // 転生: 絆Lv100以上の個体を、レベル99ぶん引き換えに白紙から育て直す。
 // 振った強化はすべて戻り、強化ポイントは「新しいレベルぶん + これまでの限界突破ぶん + 10」で
@@ -7363,6 +7392,8 @@ function MonsterHeroGame() {
   const [breederName, setBreederName] = useState('名無しのブリーダー');
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [gold, setGold] = useState(0); // 累計ゴールド(WAVEクリア数ベース・端末保存)
+  const goldRef = useRef(gold);
+  goldRef.current = gold;
   // マスモン: 勇者モンに選んだモンスターをラン終了時に名前を付けて登録した、固有の育成インスタンス。
   // { id, baseId(元のモンスター種id), name, bondXp, distAptPoints(未使用の強化ポイント),
   //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, color(染色もどきで変えた色id、無ければnull), createdAt }
@@ -10316,6 +10347,28 @@ function MonsterHeroGame() {
     const own = base?.unique ? [{ key:'own', name:base.unique.name, unique:base.unique }] : [];
     return [...own, ...(masu.inheritedUniques || []).map((unique,index)=>({ key:inheritedUniqueLevelKey(unique)||`inh:${index}`, name:unique.name, unique }))]
       .map(choice=>{const level=Math.max(0,Math.floor(Number(masu.uniqueSkillLevels?.[choice.key])||0));return { ...choice, name:uniqueSkillAtLevel(choice.unique,Math.min(MAX_UNIQUE_SKILL_LEVEL,level+1))?.name||choice.name, level };});
+  };
+  // ③Bから対象IDを渡して呼ぶための内部処理。現在はどのeffect・周回終了処理からも呼ばない。
+  const executeAutoRepeatBreakthroughs = async (masuIds) => {
+    const result = buildAutoRepeatBreakthroughs({
+      masuIds,
+      masuMons:masuMonsRef.current,
+      gold:goldRef.current,
+      ownedItems:ownedItemsRef.current,
+    });
+    if (result.succeededMasuIds.length === 0) return result;
+    await Promise.all([
+      storeSet('mh_masu_mons', result.nextMasuMons, false),
+      storeSet('mh_gold', result.nextGold, false),
+      storeSet('mh_owned_items', result.nextOwnedItems, false),
+    ]);
+    masuMonsRef.current = result.nextMasuMons;
+    goldRef.current = result.nextGold;
+    ownedItemsRef.current = result.nextOwnedItems;
+    setMasuMons(result.nextMasuMons);
+    setGold(result.nextGold);
+    setOwnedItems(result.nextOwnedItems);
+    return result;
   };
   // 限界突破: レベルはそのままで上限だけ上げる
   const executeMasuBreakthrough = async () => {
