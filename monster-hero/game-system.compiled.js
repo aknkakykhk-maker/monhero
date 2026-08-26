@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1b74edc74df47367
+// source-sha256: b85c9b92b67095c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 01:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 01:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14432,17 +14432,19 @@ function MonsterHeroGame() {
     return mergeBondRankingEntries(primary, legacy);
   }, [bondRankingData, bondLevelRows]);
 
-  // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
-  // 記録から拾った名前ではなく、全モンスターの名前を並べる(記録が無い種は「まだいません」になる)
-  const bondRankingMonNames = useMemo(() => {
-    const all = Object.values(ALL_PLAYER_MONSTERS).map(m => m.name);
-    // 念のため、記録にしか出てこない名前(過去に居たモンスター等)も取りこぼさないよう足しておく
-    bondRankingAll.forEach(x => {
-      if (x.monName && !all.includes(x.monName)) all.push(x.monName);
-    });
-    return [...new Set(all)];
-  }, [bondRankingAll]);
-  const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50), [bondRankingAll, bondRankMonFilter]);
+  // 種族別フィルタの選択肢。モンスター1体ずつではなく主血統(種族)ごとにまとめる。
+  // 例:「モッチー種」にはモッチーとミタラシ、「ピクシー種」にはピクシー・ミーア・パンドラが入る。
+  // 血統は data/lineages.js の1か所だけが正本なので、ここで並びを持ち直さず dexMainLineages を使う
+  // (モンスターを足しても、そちらへ1行足すだけでタブへ自動的に加わる)。
+  // まだ誰も記録を出していない種族もタブに出す(記録が無ければ「まだいません」になる)
+  const bondRankingLineages = useMemo(() => dexMainLineages(), []);
+  // 記録から種族を引く。記録にはモンスターのidが入っているが、id を持たない古い記録も
+  // あるので、そのときは名前から種を引き当ててから血統を見る
+  const bondEntryLineageId = useCallback(entry => {
+    const monsterId = entry?.monsterId || Object.keys(ALL_PLAYER_MONSTERS).find(id => ALL_PLAYER_MONSTERS[id]?.name === entry?.monName) || null;
+    return monsterId ? monsterLineageOf(monsterId).main.id : null;
+  }, []);
+  const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => bondEntryLineageId(x) === bondRankMonFilter).slice(0, 50), [bondRankingAll, bondRankMonFilter, bondEntryLineageId]);
   const emptyRankingStatus = {
     loading: false,
     refreshing: false,
@@ -23992,11 +23994,17 @@ function MonsterHeroGame() {
   // 絆Lvランキング。こちらもモードでは分かれず、モンスターの種類で絞る
   const renderBondRankingBody = () => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
-  }, ['all', ...bondRankingMonNames].map(n => /*#__PURE__*/React.createElement("button", {
-    key: n,
-    onClick: () => setBondRankMonFilter(n),
-    className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter === n ? 'bg-pink-600 border-pink-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
-  }, n === 'all' ? 'すべて' : n))), /*#__PURE__*/React.createElement("div", {
+  }, [{
+    id: 'all',
+    label: 'すべて'
+  }, ...bondRankingLineages.map(l => ({
+    id: l.id,
+    label: `${l.name}種`
+  }))].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => setBondRankMonFilter(t.id),
+    className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter === t.id ? 'bg-pink-600 border-pink-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
+  }, t.label))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
   }, bondRankingLoading && bondRankingData && /*#__PURE__*/React.createElement("div", {
     className: "text-center text-[9px] text-indigo-300"
