@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 07:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 10:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3032,18 +3032,23 @@ const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 
 // 「染色2だけ効いていない」ように見える不具合になっていた。
 const PANDORA_DEBUG = Object.freeze({
   id:'Pandora', name:'パンドラ', main:'pixie', sub:'unknown', category:'レア',
-  imgUrl:'images/monsters/pandora.PNG', discUrl:'images/disc-icons/pandora-disc.PNG',
-  maskUrl:'images/monsters/pandora-dye-mask.PNG',
+  emoji:'😈', imgUrl:'images/monsters/pandora.PNG', iconUrl:'images/monsters/pandora.PNG',
+  faceIconUrl:'images/monsters/pandora.PNG', discUrl:'images/disc-icons/pandora-disc.PNG',
+  maskUrl:'images/monsters/pandora-dye-mask.PNG', atkMotion:'pandoraDualThunder',
+  faceCrop:Object.freeze({scale:3.2,x:0,y:94}),
+  baseHp:360, baseAtk:180, baseDef:100, baseGuts:135,
+  plusStats:Object.freeze({hp:130,atk:35,def:25,guts:40}),
+  distAptitude:Object.freeze(['B','B','B','B']),
   description:[
     '一つの体に光と闇、相反する二つの魔力を宿した珍しいピクシー',
     '絶えずぶつかり合う魔力のせいで情緒は少し不安定だが、',
     'どちらの力も欠かせない不思議な均衡で成り立っている',
     '本当はオシャレが好きで、争いもあまり好まない',
   ],
-  moves:['はり手','レイ','サンダー','ハイキック','ヒールレイド','ライトニング','メガレイ','なげキッス','デュアルキッス'],
-  evolutions:['バン','ギガレイ','ギガサンダー','ビッグバン','ギガライトニング','コズミッグバン','アストラルレイ','エクリプスノヴァ','ダイスキライライ'],
-  trait:{name:'禁忌解錠',effect:'勇者モン選択時、固有技のダメージが2倍'},
-  unique:{baseMult:2.1,baseGuts:42,effectName:'双極共振',effect:'次ターン、カード消費ガッツ0'},
+  moves:['デュアルスラップ','ルミナスレイ','ナイトサンダー','セラフキック','アビスレイド','ホーリーライトニング','カオスメガレイ','エクリプスキッス','デュアルキッス'],
+  evolutions:['デュアルバン','セイクリッドレイ','アビスサンダー','ツインビッグバン','ダークライトニング','カオスコズミック','アストラルクロスレイ','エクリプスノヴァ','ダイスキライライ'],
+  trait:{name:'禁忌解錠',effect:'勇者モン選択時：自身の固有技は連撃100%、引き継いだ固有技は通常ダメージ+50%'},
+  unique:{name:'デュアルバン',monId:'Pandora',baseMult:2.3,baseGuts:52,evoLevel:0,names:Object.freeze(['デュアルバン','セイクリッドレイ','アビスサンダー','ツインビッグバン','ダークライトニング','カオスコズミック','アストラルクロスレイ','エクリプスノヴァ','ダイスキライライ']),effectName:'双極共振',effectDesc:'双極共振：使用後、次の2ターンのカード消費ガッツ50%減',effect:'使用後、次の2ターンのカード消費ガッツ50%減'},
 });
 // 染色エンジンに3枠を知らせるためのDEBUG限定ダミー定義。領域判定には必ず保存済みRGBマスクを使う。
 MASU_COLOR_REGION_HUES.Pandora = [{hue:0},{hue:120},{hue:240}];
@@ -6019,7 +6024,16 @@ const rpgResolveStep = (battle, varianceOn, rng = rpgDefaultRng) => {
 //
 // どのモーションを使うかは、通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion で決める。
 // RPG用にモーションのデータを別に持たないので、モンスターを足しても更新漏れが起きない。
-const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash' });
+const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', pandoraDualThunder:'Thunder' });
+// DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
+const attackMotionAnimation = (anim) => {
+  if (!anim) return undefined;
+  if (anim.motion==='pandoraDualThunder') return 'pandoraDualThunder 900ms ease-in-out forwards';
+  if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
+  if (anim.charge) return 'specialCharge 650ms ease-out forwards';
+  if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards');
+  return anim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards');
+};
 const rpgMotionName = (side, monId, isSkill) => {
   const prefix = side === 'ally' ? 'rpgAlly' : 'rpgFoe';
   if (isSkill) return `${prefix}Special`;
@@ -7390,6 +7404,7 @@ function MonsterHeroGame() {
   // DEBUG「パンドラ実装確認」で手動で試す色。パンドラはまだマスモンでもベースモンでもないため
   // 既存のmonsterImageDebugColors(マスモン個体が前提)には相乗りできず、専用に持つ。保存はしない
   const [pandoraDebugColors, setPandoraDebugColors] = useState([null, null, null]);
+  const [pandoraMotionKey, setPandoraMotionKey] = useState(0);
   const [showMasuRegisterModal, setShowMasuRegisterModal] = useState(false); // ラン終了画面: マスモン登録の名前入力
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
@@ -10954,6 +10969,7 @@ function MonsterHeroGame() {
     }
     if (getTurnBuff('zeroGuts', false) && ['atk','range_atk','unique'].includes(card.type)) cost = 0;
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0));
+    if (cost>0 && getTurnBuff('pandoraResonanceTurns',0)>0) cost=Math.floor(cost*0.5);
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03*getPermaBuff('snegurochkaGutsDiscountStacks')));
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
@@ -11702,6 +11718,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else if (card.type==='range_atk') { baseDmgMult=rangeAttackDamageMultiplier(card,attackStartDist); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
     let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*((mainHero?.id==='Pixie'||mainHero?.id==='Mia')&&card.type==='unique'?2.0:1.0);
+    // 禁忌解錠: パンドラ勇者が使う『引き継いだ』固有技だけを1.5倍にする。
+    // 技の出自はcard.monIdで判定し、自身の固有技へは適用しない。
+    if (mainHero?.id==='Pandora' && card.type==='unique' && card.monId!=='Pandora') traitMult*=1.5;
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0);
@@ -11733,6 +11752,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let total = mainDmg;
     if (mainHero?.id==='Zan' && mon?.id==='Zan') total += extraHit(0.3+comboDmgBonus); // 勇者特性「連撃」
     if (card.type==='unique' && card.monId==='Zan') total += extraHit(0.2+comboDmgBonus); // 固有技「連斬」
+    if (mainHero?.id==='Pandora' && mon?.id==='Pandora' && card.type==='unique' && card.monId==='Pandora') total += extraHit(1.0+comboDmgBonus); // 禁忌解錠
     total += extraHit(getPermaBuff('globalComboDmgPct')+additionalGlobalCombo); // きき由来の全体連撃は全モンスター共通の別ヒット
     // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
     if (card.type==='unique' && (card.monId==='Ark'||card.monId==='Iblis')) total += Math.floor(mainDmg*0.2);
@@ -11968,6 +11988,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       addPopup(recoveryMult===1?'ライフ・ガッツ全回復!':'ライフ・ガッツ回復!','hero','text-rose-300 text-lg font-bold');
     }
     const {melosoFullRecoveryMult, ...activeTurnBuffs}=pendingNextTurnBuffs;
+    const resonanceRefresh=activeTurnBuffs.pandoraResonanceTurns;
+    const resonanceCarry=Math.max(0,(turnBuffs.pandoraResonanceTurns||0)-1);
+    if (resonanceRefresh==null && resonanceCarry>0) activeTurnBuffs.pandoraResonanceTurns=resonanceCarry;
     setTurnBuffs(activeTurnBuffs);
     writeNextTurnBuffs({});
     const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){setHp(0);} setIsBusy(false);
@@ -12141,7 +12164,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const finalD=isCrit?Math.floor(d*(1.5+critDmgBonus)):d; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
-        if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan')) {
+        if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan') || (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora')) {
           // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
           const comboDmgBonus=getPermaBuff('comboDmgPct');
           const rollCombo=(rate)=>{
@@ -12156,6 +12179,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if (mainHero?.id==='Zan' && activeMon.id==='Zan') rollCombo(0.3+comboDmgBonus);
           // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
           if (card.type==='unique' && card.monId==='Zan') rollCombo(0.2+comboDmgBonus);
+          // 禁忌解錠: パンドラ自身の固有技だけ、既存の連撃ヒットへ100%を渡す。
+          // 引継ぎ技(card.monId!==Pandora)には連撃させない。
+          if (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora') rollCombo(1.0+comboDmgBonus);
         }
         const globalComboRate=getPermaBuff('globalComboDmgPct')+localGlobalComboAdd;
         if(globalComboRate>0){
@@ -12181,6 +12207,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 贖罪: 次ターン消費ガッツ15%増・被ダメージ50%減(1回)
             setNextTurnBuff('takenDamageMult',0.5); setNextTurnBuff('gutsCostMult',1.15);
             addPopup('次ターン被ダメ50%減!','hero','text-pink-400 text-lg font-bold');
+          }
+          else if(card.monId==='Pandora'){
+            // 双極共振は次ターンから2ターン。再使用時は加算せず2へ更新する。
+            setNextTurnBuff('pandoraResonanceTurns',2);
+            addPopup('双極共振！ 次の2ターン消費半減','hero','text-fuchsia-300 text-lg font-bold');
           }
           else if(isIceLockMonster(card.monId)){
             activatedIceLockThisTurn=true;
@@ -12263,11 +12294,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               Audio_.se.special();
               await battleWait(650);
               setAttackAnim({slotIndex: animSlot, charge:false, motion});
-              await battleWait(motion==='floatStab'?700:(motion==='waterBurst'?520:500));
+              await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?520:500)));
             } else {
               setAttackAnim({slotIndex: animSlot, motion});
               if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-              await battleWait(motion==='floatStab'?650:(motion==='waterBurst'?520:450));
+              await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)));
             }
             setAttackAnim(null);
             setSlotSkill(null);
@@ -15306,7 +15337,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <header className="mb-2 flex items-center gap-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG限定・正式データ／セーブへ未登録</small><h2 className="text-sm font-black">😈 パンドラ実装確認</h2></div></header>
             <div className="mh-scroll min-h-0 flex-1 space-y-3 overflow-y-auto pb-3">
               <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="grid grid-cols-2 gap-2"><div><b className="text-fuchsia-200">本体画像</b><img src={p.imgUrl} alt="パンドラ元画像" className="mt-2 h-40 w-full object-contain"/></div><div><b className="text-fuchsia-200">円盤石</b><img src={p.discUrl} alt="パンドラ円盤石" className="mt-2 h-40 w-full object-contain"/></div></div></section>
-              <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[10px] leading-relaxed"><h3 className="text-sm font-black text-fuchsia-200">{p.name} <small>ID: {p.id}／レア</small></h3><p>血統：ピクシー × ？？？（main: {p.main} / sub: {p.sub}）</p><div className="mt-2 text-slate-300">{p.description.map(line=><p key={line}>{line}</p>)}</div><p className="mt-2">通常技：{p.moves.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>勇者特性：{p.trait.name} — {p.trait.effect}</p><p>固有技：baseMult {p.unique.baseMult} / baseGuts {p.unique.baseGuts}</p><p>進化名：{p.evolutions.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>固有技効果：{p.unique.effectName} — {p.unique.effect}</p><p>atkMotion：default</p><p className="mt-2 font-black text-amber-300">未決定：ライフ／ちから／丈夫さ／ガッツ／plusStats／距離適性／専用攻撃モーション／マーケット価格／顔アイコン補正</p></section>
+              <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 text-[10px] leading-relaxed"><h3 className="text-sm font-black text-fuchsia-200">{p.name} <small>ID: {p.id}／{p.category}</small></h3><p>血統：ピクシー × ？？？（main: {p.main} / sub: {p.sub}）／初期解放なし</p><div className="mt-2 text-slate-300">{p.description.map(line=><p key={line}>{line}</p>)}</div><div className="mt-2 grid grid-cols-4 gap-1 text-center">{[['ライフ',p.baseHp],['ちから',p.baseAtk],['丈夫さ',p.baseDef],['ガッツ',p.baseGuts]].map(([label,value])=><div key={label} className="rounded bg-black/40 p-1"><small className="block text-slate-400">{label}</small><b>{value}</b></div>)}</div><p className="mt-2">plusStats：HP {p.plusStats.hp} / ATK {p.plusStats.atk} / DEF {p.plusStats.def} / GUTS {p.plusStats.guts}</p><p>距離適性：{p.distAptitude.join(' / ')}</p><p className="mt-2">通常技：{p.moves.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>勇者特性：{p.trait.name} — {p.trait.effect}</p><p>固有技：baseMult {p.unique.baseMult} / baseGuts {p.unique.baseGuts}</p><p>進化名：{p.unique.names.map((move,i)=>`${i+1}. ${move}`).join(' / ')}</p><p>固有技効果：{p.unique.effectName} — {p.unique.effect}</p><p>atkMotion：{p.atkMotion}</p></section>
+              <section className="rounded-2xl border border-fuchsia-500/30 bg-black/30 p-3"><h3 className="mb-2 text-[10px] font-black text-fuchsia-200">顔アイコン確認（scale {p.faceCrop.scale} / x {p.faceCrop.x} / y {p.faceCrop.y}）</h3><div className="flex items-center gap-4"><div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-fuchsia-300 bg-slate-800"><img src={p.faceIconUrl} alt="パンドラ顔アイコン" className="absolute max-w-none" style={{width:`${p.faceCrop.scale*100}%`,height:`${p.faceCrop.scale*100}%`,objectFit:'contain',left:`calc(50% + ${p.faceCrop.x}px)`,top:`calc(50% + ${p.faceCrop.y}px)`,transform:'translate(-50%,-50%)'}}/></div><p className="text-[9px] text-slate-300">プロフィール／マーケット向けの顔中心プレビュー</p></div></section>
+              <section className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-amber-200">マーケット商品プレビュー（DEBUG・購入不可）</h3><div className="grid grid-cols-3 gap-2">{[{id:'pandora-icon-debug',name:'パンドラのアイコン',type:'icon',icon:p.faceIconUrl,cost:1},{id:'pandora-disc-icon-debug',name:'パンドラの円盤石アイコン',type:'icon',icon:p.discUrl,cost:1},{id:'pandora-disc-debug',name:'パンドラの円盤石',type:'disc',icon:p.discUrl,cost:3000}].map(item=><MarketProductCard key={item.id} item={item} disabled canBuy={false}/>)}</div></section>
+              <section className="rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3 text-center"><h3 className="text-[10px] font-black text-cyan-200">専用技モーション確認</h3><div className="relative mx-auto my-3 flex h-40 w-40 items-center justify-center overflow-visible rounded-2xl bg-black/30">{pandoraMotionKey>0&&<img key={pandoraMotionKey} src={p.imgUrl} alt="パンドラ専用技モーション" className="h-32 w-32 object-contain" style={{animation:attackMotionAnimation({motion:p.atkMotion})}}/>}</div><button type="button" onClick={()=>setPandoraMotionKey(k=>k+1)} className="min-h-[48px] w-full rounded-xl border-2 border-cyan-300 bg-cyan-800 text-xs font-black active:scale-95">モーション再生</button><small className="mt-1 block text-cyan-300">本番バトルと同じ {p.atkMotion} 分岐を再生</small></section>
               {/* 本番の染色もどきと同じ部品(DyeRegionColorControls)・同じカスタム色モーダルで
                   実際に色を作って試せるようにする。保存はせず、この画面を出ているあいだだけの色 */}
               <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3">
@@ -17624,7 +17658,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       setSlotSettle(i);
                       setTimeout(()=>{ setSlotSettle(null); }, 500);
                     }
-                  }} disabled={isBusy||autoBattle} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
+                  }} disabled={isBusy||autoBattle} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:attackMotionAnimation(attackAnim)}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
                     {distanceBroken&&<>
                       <div className="absolute inset-0 rounded-lg pointer-events-none z-[15]" style={{background:`repeating-linear-gradient(${135+distanceBreakLevel*12}deg,rgba(0,0,0,.12) 0 ${Math.max(3,8-distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8,.28+distanceBreakLevel*.14)}) ${Math.max(4,9-distanceBreakLevel)}px ${Math.max(5,10-distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel>=2?'69,10,10':'88,28,135'},.55),rgba(5,0,2,.9))`}}></div>
                       <div className="absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]" style={{boxShadow:'inset 0 0 12px rgba(239,68,68,.7)'}}></div>
@@ -19456,6 +19490,15 @@ const createAnimationStyle = () => {
         transform: translateY(0) scale(1);
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
+    }
+    /* パンドラ専用: 左右のdrop-shadow分身が同時に雷撃し、中央へ帰還する。 */
+    @keyframes pandoraDualThunder {
+      0% { transform:translate(0,0) scale(1); filter:none; }
+      24% { transform:translateY(-10px) scale(.98); filter:drop-shadow(-54px 0 0 rgba(244,114,182,.9)) drop-shadow(54px 0 0 rgba(96,165,250,.9)); }
+      48% { transform:translateY(-28px) scale(1.04); filter:drop-shadow(-58px -2px 1px rgba(244,114,182,.95)) drop-shadow(58px -2px 1px rgba(96,165,250,.95)) drop-shadow(-38px -85px 3px rgba(253,224,71,.95)) drop-shadow(38px -85px 3px rgba(255,255,255,.95)); }
+      62% { transform:translateY(-36px) scale(1.08); filter:brightness(2.4) drop-shadow(-45px -100px 5px #fde047) drop-shadow(45px -100px 5px #e0f2fe); }
+      78% { transform:translateY(-10px) scale(1.02); filter:drop-shadow(-22px 0 0 rgba(244,114,182,.55)) drop-shadow(22px 0 0 rgba(96,165,250,.55)); }
+      100% { transform:translate(0,0) scale(1); filter:none; }
     }
     /* スネグーラチカ専用: 追加画像を使わず、水弾の残像を軽量なdrop-shadowで表現する。 */
     @keyframes waterBurstAttack {
