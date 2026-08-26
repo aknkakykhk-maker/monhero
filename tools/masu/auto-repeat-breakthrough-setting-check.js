@@ -32,9 +32,4 @@ assert.ok(detail.includes('<select') && detail.includes('<option value={0}>OFF</
 assert.ok(detail.includes('autoBreakthroughLevels.map'), '利用可能な5刻み選択肢だけを生成');
 assert.ok(detail.includes('設定可能上限：'), '現在の設定可能上限を表示');
 
-const runtimeStart = source.indexOf('// AUTO∞から新しいrunId');
-const runtimeEnd = source.indexOf('// 正規リザルトの全報酬演出', runtimeStart);
-const runtime = source.slice(runtimeStart, runtimeEnd);
-assert.ok(!runtime.includes('autoRepeatBreakthrough') && !runtime.includes('executeAutoRepeatBreakthroughs'), '周回終了処理へ未接続');
-
 console.log('✅ AUTO∞自動限界突破の上限設定・保存チェックOK');

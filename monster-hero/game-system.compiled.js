@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 13a0f6e438ba9bf8
+// source-sha256: 7bbe532c08d73815
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 18:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 18:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13206,6 +13206,8 @@ function MonsterHeroGame() {
   const [autoRepeat, setAutoRepeat] = useState(false);
   const autoRepeatRef = useRef(false);
   const autoRepeatStartingRef = useRef(false);
+  // その周の正規bondAwardsで実際に付与対象になった個体IDだけを、最終リザルト後の限界突破へ渡す。
+  const autoRepeatBondAwardMasuIdsRef = useRef([]);
   // 省エネ設定はAUTO∞中だけ有効な一時状態。BATTLEの描画負荷だけを段階的に下げる。
   const ECO_MODES = ['off', 'lite', 'ultra'];
   const [ecoMode, setEcoMode] = useState('off');
@@ -13238,6 +13240,7 @@ function MonsterHeroGame() {
     stopAutoBattle();
     autoRepeatRef.current = false;
     autoRepeatStartingRef.current = false;
+    autoRepeatBondAwardMasuIdsRef.current = [];
     setAutoRepeat(false);
     setAutoRepeatBattleSpeed(false);
     setEcoModeSafe('off');
@@ -13814,7 +13817,8 @@ function MonsterHeroGame() {
   // マスモン関連のヘルパー。絆レベル・間合い適性・ステータス強化ポイントは、すべてマスモン
   // インスタンス(masuMons内の1件)に紐づく。プレーンな(マスモン化していない)モンスター種には
   // 絆レベルの概念自体が存在しない
-  const getMasuMon = masuId => masuMons.find(m => m.id === masuId) || null;
+  // 保存をawaitした直後のAUTO∞次周開始でも、Reactの再描画待ちではなく最新個体を解決する。
+  const getMasuMon = masuId => masuMonsRef.current.find(m => m.id === masuId) || null;
   // マスモンの染色データを部位別配列で返す。旧仕様(単一色のcolorフィールド)しか無いデータは
   const getMasuBondLevel = masuId => masuBondLevelInfo(getMasuMon(masuId) || {});
   // モンスターを並べるカード(編成・ベースモン一覧・マスモン一覧)の共通サイズ。
@@ -17821,7 +17825,7 @@ function MonsterHeroGame() {
       };
     });
   };
-  // ③Bから対象IDを渡して呼ぶための内部処理。現在はどのeffect・周回終了処理からも呼ばない。
+  // 正規bondAwardsで確定した対象IDを渡し、保存完了まで待ってから次周へ進める。
   const executeAutoRepeatBreakthroughs = async masuIds => {
     const result = buildAutoRepeatBreakthroughs({
       masuIds,
@@ -18401,6 +18405,7 @@ function MonsterHeroGame() {
       monsterRosterIds,
       masuMons
     });
+    autoRepeatBondAwardMasuIdsRef.current = autoRepeatRef.current ? bondAwards.map(award => award.masuId) : [];
     const awardByMasuId = new Map(bondAwards.map(award => [String(award.masuId), award]));
     // AUTO∞で付与する絆XPだけ、現在のbreederXpを既存levelInfoで換算したLvを追加上限にする。
     // 通常AUTO・手動・チケットなどはnullのままなので、共通XP計算の従来挙動を変えない。
@@ -18926,6 +18931,8 @@ function MonsterHeroGame() {
     gaveUp: false
   });
   const applyResetAllState = () => {
+    // 新しいrunへ前周の絆報酬対象を持ち越さない。
+    autoRepeatBondAwardMasuIdsRef.current = [];
     const s = resetAllState();
     setScore(s.score);
     setWave(s.wave);
@@ -21205,7 +21212,7 @@ function MonsterHeroGame() {
     if (autoRepeatRef.current && !isQuickMode(runMode)) setAutoRepeatEnabled(false);
   }, [runMode, autoRepeat]);
 
-  // 正規リザルトの全報酬演出が完了した場合だけ、AUTO∞の次周開始handlerへ進む。
+  // 正規リザルトの全報酬演出が完了した場合だけ、AUTO∞の限界突破→次周開始へ進む。
   useEffect(() => {
     if (gameState !== 'CHAMPION' || !championPresentationComplete || !autoRepeatRef.current || autoRepeatStartingRef.current) return;
     if (!isQuickMode(runMode)) {
@@ -21214,13 +21221,24 @@ function MonsterHeroGame() {
     }
     if (document.visibilityState === 'hidden') return;
     autoRepeatStartingRef.current = true;
-    const repeatResult = startRunFromRepeatTemplate(repeatRunTemplateRef.current);
-    if (repeatResult.ok) {
-      autoRepeatStartingRef.current = false;
-      autoBattleRef.current = true;
-      setAutoBattle(true);
-      setAutoTurnCycle(n => n + 1);
-    } else stopAllAuto();
+    void (async () => {
+      try {
+        // await中に保存まで完了する。素材不足の個体は既存判定がスキップするだけなので周回を止めない。
+        if (!autoRepeatRef.current || !isQuickMode(runMode) || document.visibilityState === 'hidden') return;
+        await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
+        if (!autoRepeatRef.current || !isQuickMode(runMode) || document.visibilityState === 'hidden') return;
+        const repeatResult = startRunFromRepeatTemplate(repeatRunTemplateRef.current);
+        if (repeatResult.ok) {
+          autoRepeatStartingRef.current = false;
+          autoBattleRef.current = true;
+          setAutoBattle(true);
+          setAutoTurnCycle(n => n + 1);
+        } else stopAllAuto();
+      } catch (e) {
+        console.error('[auto repeat] breakthrough save failed:', e && e.message ? e.message : e);
+        stopAllAuto();
+      }
+    })();
   }, [gameState, championPresentationComplete, autoRepeat, autoBattle, runMode]);
 
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
