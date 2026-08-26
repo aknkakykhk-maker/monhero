@@ -714,7 +714,7 @@ check('間の取り方は plan を読むだけで書き換えない',
 // モーションの種類は通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion から決める。
 // RPG用に別のモーションデータを持たないので、モンスターを足しても更新漏れが起きない
 check('モーションの種類は通常バトルと同じ atkMotion から決める',
-  source.includes('const RPG_MOTION_BY_ATK = Object.freeze({ default:\'Attack\', floatStab:\'Float\', waterBurst:\'Water\', zanCombo:\'Dash\' });')
+  source.includes("const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', pandoraDualThunder:'Thunder' });")
   && source.includes('RPG_MOTION_BY_ATK[ALL_PLAYER_MONSTERS[monId]?.atkMotion]'));
 const atkMotionKinds = [...new Set(Object.values(R.ALL_PLAYER_MONSTERS).map(m => m.atkMotion))];
 const motionMap = (source.match(/const RPG_MOTION_BY_ATK = Object\.freeze\(\{([^}]*)\}\)/) || [])[1] || '';
@@ -738,7 +738,12 @@ check('味方は上へ・敵は下へ動く（通常バトルと同じ向き）'
   `味方 ${(allyAttackFrames.match(/translateY\((-?\d+)px\)/g) || []).join(' ')} / 敵 ${(foeAttackFrames.match(/translateY\((-?\d+)px\)/g) || []).join(' ')}`);
 check('モーションは敵の丸枠と味方の顔アイコンへ当てる',
   rpgUi.includes("const motionOf=(side,index)=>")
-  && rpgUi.includes('style={motionOf(\'enemy\',index)}') && rpgUi.includes('style={motionOf(\'ally\',index)}'));
+  && rpgUi.includes('style={motionOf(\'enemy\',index)}')
+  && rpgUi.includes("?undefined:motionOf('ally',index)"));
+check('パンドラは本番とDEBUGで同じ分身描画を使う',
+  source.includes('const PandoraDualThunder = ({image, compact=false})')
+  && (source.match(/<PandoraDualThunder/g)||[]).length===2
+  && source.includes("rpgActing.atkMotion==='pandoraDualThunder'?900:480"));
 // モーションの対応表は同じ塊の末尾に置いてあるので、そこより前(計算と進行の本体)だけを見る
 const rpgEngineSource = grab(rpgSource, 'const RPG_MAX_LEVEL = 50;', '// ---------- RPG戦闘の攻撃モーション(表示だけ) ----------');
 check('モーションも戦闘の計算に触らない（表示だけ）',

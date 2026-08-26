@@ -1,9 +1,10 @@
 const CHANGELOG = [
   {
-    date: "2026-08-26 12:06", type: 'update', title: '新モンスター パンドラを追加',
+    date: "2026-08-26 12:26", type: 'update', title: '新モンスター パンドラを追加',
     items: [
       '新モンスター パンドラを追加しました。',
       'マーケットに「パンドラのアイコン」「パンドラの円盤石アイコン」「パンドラの円盤石」を追加しました。',
+      'パンドラの攻撃を、本人が左右2体へ分身し、それぞれから雷を放って中央へ戻るモーションに修正しました。',
     ],
     assistantNotice: { id:'update_notice_pandora_market_v1', type:'market' },
   },

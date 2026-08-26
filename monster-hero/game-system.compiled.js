@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c0680fc8eb3db002
+// source-sha256: 2d7e2f0355a7a7b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-26 12:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-26 12:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10841,7 +10841,8 @@ const RPG_MOTION_BY_ATK = Object.freeze({
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = anim => {
   if (!anim) return undefined;
-  if (anim.motion === 'pandoraDualThunder') return 'pandoraDualThunder 900ms ease-in-out forwards';
+  // パンドラは枠全体を動かさず、PandoraDualThunder 内の実画像2枚を動かす。
+  if (anim.motion === 'pandoraDualThunder') return undefined;
   if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
   if (anim.charge) return 'specialCharge 650ms ease-out forwards';
   if (anim.charge === false) return anim.motion === 'floatStab' ? 'floatStabLunge 700ms ease-in forwards' : anim.motion === 'waterBurst' ? 'waterBurstLunge 520ms ease-out forwards' : 'specialLunge 500ms ease-in forwards';
@@ -10889,6 +10890,26 @@ const rpgStepDelay = battle => {
 // Storage helpers — window.storage は元々の別プラットフォーム向けAPIで、
 // GitHub Pages上には存在しない。実ブラウザのlocalStorageを使い、
 // それも使えない場合のみメモリ内フォールバック(リロードで消える)にする。
+// 本番バトルとDEBUGで共用するパンドラの分身描画。中央像と左右2枚は同じ画像要素を
+// 複製し、雷も各分身体の内側に置くことで発射位置が中央1点にならないようにする。
+const PandoraDualThunder = ({
+  image,
+  compact = false
+}) => /*#__PURE__*/React.createElement("span", {
+  className: `pandora-dual-thunder${compact ? ' pandora-dual-thunder--compact' : ''}`,
+  "aria-hidden": "true"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "pandora-dual-center"
+}, React.cloneElement(image, {
+  alt: ''
+})), ['left', 'right'].map(side => /*#__PURE__*/React.createElement("span", {
+  key: side,
+  className: `pandora-dual-clone pandora-dual-clone--${side}`
+}, React.cloneElement(image, {
+  alt: ''
+}), /*#__PURE__*/React.createElement("i", {
+  className: "pandora-dual-bolt"
+}))));
 const _memStore = {};
 const hasWinStorage = () => typeof window !== 'undefined' && !!window.storage;
 const hasLocalStorage = () => {
@@ -14092,7 +14113,7 @@ function MonsterHeroGame() {
   // モンスターの上へ数字を出す。戦闘の計算には一切触らず、表示のためだけに差分を見ている
   const rpgPrevBattleRef = useRef(null);
   const [rpgHits, setRpgHits] = useState(null);
-  // いま攻撃モーションを出しているのは誰か。{side, index, motion} を短い間だけ持つ
+  // いま攻撃モーションを出しているのは誰か。{side, index, motion, atkMotion} を短い間だけ持つ
   const [rpgActing, setRpgActing] = useState(null);
   // いま技の演出を出しているのは誰か。{side, index, by, name, targetSide, targetIndex}
   const [rpgSpecial, setRpgSpecial] = useState(null);
@@ -14113,7 +14134,8 @@ function MonsterHeroGame() {
       setRpgActing({
         side: acted.side,
         index: acted.index,
-        motion: rpgMotionName(acted.side, actor.monId, usedSkill)
+        motion: rpgMotionName(acted.side, actor.monId, usedSkill),
+        atkMotion: ALL_PLAYER_MONSTERS[actor.monId]?.atkMotion
       });
     }
     if (usedSkill && actor.skill) {
@@ -14154,7 +14176,7 @@ function MonsterHeroGame() {
   }, [rpgBattle]);
   useEffect(() => {
     if (!rpgActing) return;
-    const timer = setTimeout(() => setRpgActing(null), 480);
+    const timer = setTimeout(() => setRpgActing(null), rpgActing.atkMotion === 'pandoraDualThunder' ? 900 : 480);
     return () => clearTimeout(timer);
   }, [rpgActing]);
   useEffect(() => {
@@ -28702,8 +28724,14 @@ function MonsterHeroGame() {
           className: "mh-rpg-member-fx"
         }, hitNode(hit)), /*#__PURE__*/React.createElement("span", {
           className: "mh-rpg-member-face",
-          style: motionOf('ally', index)
-        }, /*#__PURE__*/React.createElement("img", {
+          style: rpgActing?.atkMotion === 'pandoraDualThunder' && rpgActing.side === 'ally' && rpgActing.index === index ? undefined : motionOf('ally', index)
+        }, rpgActing?.atkMotion === 'pandoraDualThunder' && rpgActing.side === 'ally' && rpgActing.index === index ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
+          compact: true,
+          image: /*#__PURE__*/React.createElement("img", {
+            src: unit.imgUrl || unit.faceIconUrl || unit.iconUrl,
+            alt: ""
+          })
+        }) : /*#__PURE__*/React.createElement("img", {
           src: unit.faceIconUrl || unit.iconUrl,
           alt: ""
         }), !unit.alive && /*#__PURE__*/React.createElement("span", {
@@ -34312,7 +34340,19 @@ function MonsterHeroGame() {
         }), totalBonus > 0 ? '+' : '', (totalBonus * 100).toFixed(1), "%");
       })(), previewDmg > 0 && /*#__PURE__*/React.createElement("div", {
         className: `absolute ${slotAssignedCards.length > 0 ? 'top-[18px]' : 'top-0'} ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`
-      }, isPendingPreview && isPendingHalved ? '½ ' : '', "DMG:", previewDmg), s?.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      }, isPendingPreview && isPendingHalved ? '½ ' : '', "DMG:", previewDmg), s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
+        image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
+          baseId: s.id,
+          src: s.imgUrl,
+          alt: s.name,
+          masuColors: s.colors,
+          style: {
+            width: '64px',
+            height: '64px'
+          },
+          className: "object-contain drop-shadow-md"
+        })
+      }) : /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -38447,15 +38487,28 @@ const createAnimationStyle = () => {
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
     }
-    /* パンドラ専用: 左右のdrop-shadow分身が同時に雷撃し、中央へ帰還する。 */
-    @keyframes pandoraDualThunder {
-      0% { transform:translate(0,0) scale(1); filter:none; }
-      24% { transform:translateY(-10px) scale(.98); filter:drop-shadow(-54px 0 0 rgba(244,114,182,.9)) drop-shadow(54px 0 0 rgba(96,165,250,.9)); }
-      48% { transform:translateY(-28px) scale(1.04); filter:drop-shadow(-58px -2px 1px rgba(244,114,182,.95)) drop-shadow(58px -2px 1px rgba(96,165,250,.95)) drop-shadow(-38px -85px 3px rgba(253,224,71,.95)) drop-shadow(38px -85px 3px rgba(255,255,255,.95)); }
-      62% { transform:translateY(-36px) scale(1.08); filter:brightness(2.4) drop-shadow(-45px -100px 5px #fde047) drop-shadow(45px -100px 5px #e0f2fe); }
-      78% { transform:translateY(-10px) scale(1.02); filter:drop-shadow(-22px 0 0 rgba(244,114,182,.55)) drop-shadow(22px 0 0 rgba(96,165,250,.55)); }
-      100% { transform:translate(0,0) scale(1); filter:none; }
-    }
+    /* パンドラ専用: 同じ本体画像2枚へ分かれ、両方から雷撃して再び中央へ戻る。 */
+    .pandora-dual-thunder { position:relative; display:block; width:64px; height:64px; z-index:70; overflow:visible; pointer-events:none; }
+    .pandora-dual-thunder img, .pandora-dual-thunder canvas { width:100%!important; height:100%!important; object-fit:contain; }
+    .pandora-dual-center, .pandora-dual-clone { position:absolute; inset:0; display:block; }
+    .pandora-dual-center { animation:pandoraDualCenter 900ms ease-in-out forwards; }
+    .pandora-dual-clone { opacity:0; animation-duration:900ms; animation-timing-function:ease-in-out; animation-fill-mode:forwards; }
+    .pandora-dual-clone--left { animation-name:pandoraDualLeft; }
+    .pandora-dual-clone--right { animation-name:pandoraDualRight; }
+    .pandora-dual-bolt { position:absolute; left:50%; top:4px; width:7px; height:142px; opacity:0; transform-origin:50% 100%; background:linear-gradient(to top,#c084fc,#fff 42%,#ddd6fe 72%,transparent); clip-path:polygon(45% 100%,0 69%,42% 70%,12% 42%,55% 47%,32% 0,100% 54%,59% 52%,91% 78%,55% 77%); filter:drop-shadow(0 0 5px #a855f7) drop-shadow(0 0 9px #fff); animation:pandoraDualBolt 900ms ease-out forwards; }
+    .pandora-dual-clone--left .pandora-dual-bolt { transform:translate(-50%,-100%) rotate(8deg); }
+    .pandora-dual-clone--right .pandora-dual-bolt { transform:translate(-50%,-100%) rotate(-8deg); }
+    @keyframes pandoraDualCenter { 0%,18%{opacity:1;transform:scale(1)} 28%,78%{opacity:0;transform:scale(.9)} 90%,100%{opacity:1;transform:scale(1)} }
+    @keyframes pandoraDualLeft { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(-42px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0;transform:translateX(0) scale(1)} }
+    @keyframes pandoraDualRight { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(42px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0;transform:translateX(0) scale(1)} }
+    @keyframes pandoraDualBolt { 0%,43%{opacity:0} 48%{opacity:1} 54%{opacity:.35} 59%{opacity:1} 67%,100%{opacity:0} }
+    .pandora-dual-thunder--compact { width:38px; height:38px; }
+    .pandora-dual-thunder--compact .pandora-dual-clone--left { --pandora-compact:1; }
+    .pandora-dual-thunder--compact .pandora-dual-bolt { height:82px; width:5px; }
+    .pandora-dual-thunder--compact .pandora-dual-clone--left { animation-name:pandoraDualLeftCompact; }
+    .pandora-dual-thunder--compact .pandora-dual-clone--right { animation-name:pandoraDualRightCompact; }
+    @keyframes pandoraDualLeftCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(-25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
+    @keyframes pandoraDualRightCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
     /* スネグーラチカ専用: 追加画像を使わず、水弾の残像を軽量なdrop-shadowで表現する。 */
     @keyframes waterBurstAttack {
       0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 4px rgba(103,232,249,.45)); }
