@@ -158,6 +158,7 @@ node tools/build.js --check
 | `node mode/species-challenge-ally-simulation-check.js` | 種族チャレンジのデバッグ画面で、勇者・供モン0〜3体の同種制約、Base/Masu同種判定、WAVE2/4/6の任意順加入、二重加入防止、加入なしでもガッツ回復対象を維持すること、加入時だけ既存の特殊難易度ボーナス計算を使うこと、新しい保存キーがないことを確認する。 |
 | `node mode/species-challenge-integration-check.js` | STEP1〜STEP2の種族チャレンジ基盤を横断確認する。14難易度と種族別解放、勇者・供モン編成とWAVE加入、既存`specialRules` resolver、超越の実、保存キー、初回報酬合計、および本番UI・配布・MARKET・ランキングへ未接続であることを実値と静的検査で固定する。 |
 | `node mode/species-challenge-battle-check.js` | STEP5Bのデバッグ実戦接続を確認する。Base/Masu勇者、既存通常・極限難易度、WAVE2/4/6の事前選択供モン加入、二重加入防止、候補なし進行、保存抑止、終了後の選択導線、および本番BATTLE MODE未公開を静的に固定する。 |
+| `mode/species-challenge-lineage-stub.js` | （直接実行しない共有モジュール）種族チャレンジ系checkが血統ヘルパー（`monsterLineageOf` / `dexMainLineages`）を実物のまま読み込むための共通処理。「種族」は主血統なので、選択validationも報酬もここを通る。checkごとに読み込みを書き写すと片方だけ直して食い違うため1か所へまとめてある。偽物のスタブは作らない。 |
 | `node mode/species-challenge-clear-flow-check.js` | 種族チャレンジの「クリアしたときに何が確定するか」を確認する。WAVE10の勝利からだけ確定すること、敗北・リタイアからは確定しないこと、1ランにつき1回だけでクリア回数が二重に増えないこと、保存するのはデバッグの「実進行保存で実戦確認」から始めたランだけであること、HOMEへ戻ると保存フラグ・確定フラグを必ず落として通常バトルへ漏らさないこと、全国ランキングへ送らないこと、自己記録が種族×難易度で独立して積み上がることを見る。★報酬の個数そのものは `species-challenge-clear-reward-check.js` が正本なので重複して持たない。 |
 | `node mode/species-challenge-clear-reward-check.js` | STEP5C1の種族別クリア確定と初回の超越の実報酬を確認する。14難易度の個数、種族・難易度ごとの冪等性、途中保存後のtarget count復旧、他所持品の保持、既存2キー以外を増やさないことを見る。 |
 | `node mode/pro-mode-check.js` | プロモードを実ブラウザで最初から遊んでみて、仕様どおりに動くかを確かめる。 |
@@ -392,7 +393,7 @@ tools/                        開発用の検証スクリプト(配信されな�
   home-layout-check.js  help-*-check.js  assistant-*-check.js  stamp-*.js
   boot/                       起動・トップ・はじめての案内(16本)
   battle/                     バトル(24本)
-  mode/                       難易度とモード(26本)
+  mode/                       難易度とモード(27本)
   run/                        ラン中の育成・報酬・リザルト(10本)
   masu/                       マスモンの育成・神殿・保存形式(23本)
   monster/                    モンスター個別・アシストカード(8本)

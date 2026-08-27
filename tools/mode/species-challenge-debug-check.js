@@ -16,7 +16,7 @@ for (const name of [
   'speciesChallengeFirstClearReward',
 ]) assert(screen.includes(name), `デバッグ画面がSTEP1 helper ${name}を利用する`);
 
-assert(screen.includes('Object.entries(ALL_PLAYER_MONSTERS)'), '種族一覧はALL_PLAYER_MONSTERSから生成する');
+assert(screen.includes('const speciesEntries=speciesChallengeLineages();'), '種族一覧は主血統(dexMainLineages)から生成する');
 assert(screen.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map'), '14難易度は共通難易度ID一覧から生成する');
 assert(screen.includes('delete next.species[speciesId]'), 'リセットは選択種族だけを削除する');
 assert(screen.includes('storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,normalized,false)'), '保存先は既存の種族チャレンジ進行キーだけである');

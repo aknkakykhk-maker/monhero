@@ -117,9 +117,14 @@ const EXPORTED_NAMES = [
   'ownedItemCount',
   'SPECIES_TRANSCEND_FRUIT_ITEM_ID_PREFIX',
   'RAINBOW_TRANSCEND_FRUIT_ITEM_ID',
-  'SPECIES_TRANSCEND_FRUIT_ITEMS',
+  // 種族(主血統)ごとの実は、読み込み順の都合で最初に呼ばれたときに作る関数になっている
+  'speciesTranscendFruitItems',
+  'LEGACY_SPECIES_TRANSCEND_FRUIT_ITEMS',
+  'legacySpeciesTranscendFruitItemId',
   'RAINBOW_TRANSCEND_FRUIT_ITEM',
   'speciesTranscendFruitItemId',
+  'masuSpeciesTranscendFruitItemId',
+  'speciesChallengeLineages',
   'transcendFruitOwnedCount',
   'changeTranscendFruitOwnedCount',
   'consumeTranscendFruit',
@@ -218,6 +223,9 @@ const DATA_FILES = [
   'data/images/images-ally.js',
   'data/images/images-enemy.js',
   'data/ally-monsters.js',
+  // 血統(種族)の正本。種族チャレンジ・超越の実・図鑑の絞り込みがここを引く。
+  // 読み込まないと主血統がすべて「？？？」に落ちて、検査が静かに素通りする
+  'data/lineages.js',
   'data/breeder.js',
   'data/enemy-monsters.js',
   'data/skills.js',
