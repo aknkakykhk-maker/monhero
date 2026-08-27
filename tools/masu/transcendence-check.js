@@ -532,6 +532,21 @@ check('プシュケーの変換は専用のシートで行う',
   source.includes('data-transcend-exchange-open') && source.includes('data-transcend-exchange-sheet')
   && source.includes('data-transcend-exchange-commit')
   && source.indexOf('data-transcend-exchange-sheet') > source.indexOf('data-transcend-commit'));
+check('超越の実の本番導線は所持時だけ超越強化内に表示する',
+  source.includes('{hasTranscendFruit&&<button data-transcend-fruit-open')
+  && source.includes('data-transcend-fruit-sheet') && source.includes('data-transcend-fruit-select={itemId}'));
+check('超越の実は種類を明示選択して1・10・MAXを使う',
+  source.includes("setTranscendFruitItemId('')")
+  && source.includes("[[1,'1'],[10,'10'],[selectedFruitHave,'MAX']]")
+  && source.includes('if (amount > 1) { setTranscendFruitConfirmAmount(amount); return; }'));
+check('超越の実の保存は既存2キーだけをまとめて完了してからstateへ反映する',
+  source.includes("storeSet('mh_masu_mons', nextMasuMons, false)")
+  && source.includes("storeSet('mh_owned_items', result.nextOwnedItems, false)")
+  && source.includes('await Promise.all([')
+  && source.includes('transcendFruitProcessingRef.current = true'));
+check('超越の実シートはSafe Area内を縦スクロールでき、ボタンは44px以上',
+  source.includes('data-transcend-fruit-sheet') && source.includes('min-h-[64px]')
+  && source.includes('data-transcend-fruit-amount={label}') && source.includes('min-h-[44px]'));
 check('プシュケー変換シートは低い画面でもSafe Area内を縦スクロールできる',
   source.includes("maxHeight:'calc(100% - env(safe-area-inset-top))'")
     && source.includes('overflow-y-auto overscroll-contain')

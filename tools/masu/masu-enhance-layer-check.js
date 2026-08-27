@@ -28,7 +28,7 @@ const seed = () => {
   localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
   localStorage.setItem('mh_masu_migrated', JSON.stringify(true));
   localStorage.setItem('mh_gold', JSON.stringify(99999));
-  localStorage.setItem('mh_owned_items', JSON.stringify({ rainbow_psyche: 3500, transcend_reset_scroll: 2 }));
+  localStorage.setItem('mh_owned_items', JSON.stringify({ rainbow_psyche: 3500, transcend_reset_scroll: 2, transcend_fruit_species_Golem: 20, transcend_fruit_rainbow: 12 }));
   // 超越強化はどのマスモンでも使える。ここでは「まだ超越していない・低Lv・0凸」で確かめる
   localStorage.setItem('mh_masu_mons', JSON.stringify([
     { id: 't1', baseId: 'Golem', name: 'レイヤーテスト', bondXp: 0, rebirthCount: 0, levelCap: 30,
@@ -131,6 +131,51 @@ const fullScreenLayers = () => [...document.querySelectorAll('body *')].filter((
     const atTranscend = await layers();
     check('超越強化で詳細が重なっていない', atTranscend.length === 1 && atTranscend[0].startsWith('超越強化'),
       atTranscend.join(' + ') || 'なし');
+    // 超越の実の本番UI。種族別と虹を明示選択し、1／10／MAXを同じ個体へ使う
+    check('超越の実の入口がある', await page.evaluate(() => !!document.querySelector('[data-transcend-fruit-open]')));
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-open]').click());
+    await page.waitForTimeout(500);
+    check('超越の実シートだけが開く', await page.evaluate(() => !!document.querySelector('[data-transcend-fruit-sheet]') && !document.querySelector('[data-transcend-exchange-sheet]')));
+    check('実を選ぶまで使用数を出さない', await page.evaluate(() => !document.querySelector('[data-transcend-fruit-amount]')));
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-select="transcend_fruit_species_Golem"]').click());
+    const fruitBefore = await page.evaluate(() => ({
+      points: JSON.parse(localStorage.getItem('mh_masu_mons'))[0].transcendPoints || 0,
+      species: JSON.parse(localStorage.getItem('mh_owned_items')).transcend_fruit_species_Golem,
+      rainbow: JSON.parse(localStorage.getItem('mh_owned_items')).transcend_fruit_rainbow,
+    }));
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-amount="1"]').click());
+    await page.waitForTimeout(500);
+    const fruitOne = await page.evaluate(() => ({
+      points: JSON.parse(localStorage.getItem('mh_masu_mons'))[0].transcendPoints,
+      species: JSON.parse(localStorage.getItem('mh_owned_items')).transcend_fruit_species_Golem,
+      rainbow: JSON.parse(localStorage.getItem('mh_owned_items')).transcend_fruit_rainbow,
+      confirm: !!document.querySelector('[data-transcend-fruit-confirm]'),
+    }));
+    check('対応種族1個で+1し虹は減らない', fruitOne.points===fruitBefore.points+1 && fruitOne.species===fruitBefore.species-1 && fruitOne.rainbow===fruitBefore.rainbow);
+    check('1個使用は追加確認なし', !fruitOne.confirm);
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-amount="10"]').click());
+    check('10個使用は確定前に確認する', await page.evaluate(() => !!document.querySelector('[data-transcend-fruit-confirm]')));
+    await page.evaluate(() => { const b=document.querySelector('[data-transcend-fruit-commit]'); b.click(); b.click(); });
+    await page.waitForTimeout(700);
+    const fruitTen = await page.evaluate(() => ({ points:JSON.parse(localStorage.getItem('mh_masu_mons'))[0].transcendPoints, species:JSON.parse(localStorage.getItem('mh_owned_items')).transcend_fruit_species_Golem }));
+    check('10個で+10し二重タップでも1回だけ', fruitTen.points===fruitOne.points+10 && fruitTen.species===fruitOne.species-10);
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-amount="MAX"]').click());
+    check('MAX使用は確定前に確認する', await page.evaluate(() => !!document.querySelector('[data-transcend-fruit-confirm]')));
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-commit]').click());
+    await page.waitForTimeout(700);
+    const fruitMax = await page.evaluate(() => ({ points:JSON.parse(localStorage.getItem('mh_masu_mons'))[0].transcendPoints, species:JSON.parse(localStorage.getItem('mh_owned_items')).transcend_fruit_species_Golem, rainbow:JSON.parse(localStorage.getItem('mh_owned_items')).transcend_fruit_rainbow }));
+    check('MAXは選択した種族の実だけ全消費', fruitMax.species===0 && fruitMax.rainbow===fruitOne.rainbow && fruitMax.points===fruitBefore.points+fruitBefore.species);
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-select="transcend_fruit_rainbow"]').click());
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-amount="MAX"]').click());
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-commit]').click());
+    await page.waitForTimeout(700);
+    const rainbowMax = await page.evaluate(() => ({ points:JSON.parse(localStorage.getItem('mh_masu_mons'))[0].transcendPoints, rainbow:JSON.parse(localStorage.getItem('mh_owned_items')).transcend_fruit_rainbow, transcended:JSON.parse(localStorage.getItem('mh_masu_mons'))[0].transcended===true, levelCap:JSON.parse(localStorage.getItem('mh_masu_mons'))[0].levelCap }));
+    check('虹のMAXも全消費して同数加算', rainbowMax.rainbow===0 && rainbowMax.points===fruitMax.points+fruitMax.rainbow);
+    check('未超越・低Lvの正式超越状態とLv上限を変えない', !rainbowMax.transcended && rainbowMax.levelCap===30);
+    await page.evaluate(() => document.querySelector('[data-transcend-fruit-sheet] button[aria-label="閉じる"]').click());
+    await page.waitForTimeout(500);
+    check('実を使い切ると入口を隠す', await page.evaluate(() => !document.querySelector('[data-transcend-fruit-open]')));
+
     // 覆われていると操作まで届かない。実際に押せるところまで確かめる
     const reachable = (selector) => page.evaluate((sel) => {
       const el = document.querySelector(sel);

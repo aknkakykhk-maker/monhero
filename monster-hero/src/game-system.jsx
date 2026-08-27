@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 20:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7809,6 +7809,12 @@ function MonsterHeroGame() {
   // 虹のプシュケーの変換シート。開いているあいだだけ、欲しい超越ポイント数を下書きする
   const [transcendExchangeOpen, setTranscendExchangeOpen] = useState(false);
   const [transcendExchangeWant, setTranscendExchangeWant] = useState(1);
+  // 超越の実は種族別／虹を自動選択せず、使用する種類をシート内で明示してもらう
+  const [transcendFruitOpen, setTranscendFruitOpen] = useState(false);
+  const [transcendFruitItemId, setTranscendFruitItemId] = useState('');
+  const [transcendFruitConfirmAmount, setTranscendFruitConfirmAmount] = useState(0);
+  const [transcendFruitError, setTranscendFruitError] = useState('');
+  const transcendFruitProcessingRef = useRef(false);
   const transcendProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
@@ -10770,6 +10776,32 @@ function MonsterHeroGame() {
       return null;
     } finally {
       transcendProcessingRef.current = false;
+    }
+  };
+  // 超越の実と対象個体を同じ操作で更新する。両方の保存が完了するまで画面上のstateは進めない
+  const commitTranscendFruit = async (masu, itemId, amount) => {
+    if (transcendFruitProcessingRef.current) return null;
+    const currentMasu = masuMonsRef.current.find(m=>String(m.id)===String(masu?.id));
+    const result = useTranscendFruitOnMasu(currentMasu, ownedItemsRef.current, itemId, amount);
+    if (!result.ok) { setTranscendFruitError('選んだ実の所持数が足りないか、このマスモンには使用できません。'); return null; }
+    transcendFruitProcessingRef.current = true;
+    setTranscendFruitError('');
+    const nextMasuMons = masuMonsRef.current.map(m=>String(m.id)===String(currentMasu.id)?result.nextMasu:m);
+    try {
+      await Promise.all([
+        storeSet('mh_masu_mons', nextMasuMons, false),
+        storeSet('mh_owned_items', result.nextOwnedItems, false),
+      ]);
+      masuMonsRef.current = nextMasuMons; ownedItemsRef.current = result.nextOwnedItems;
+      setMasuMons(nextMasuMons); setOwnedItems(result.nextOwnedItems);
+      setMasuMonDetail(prev=>prev&&String(prev.id)===String(currentMasu.id)?result.nextMasu:prev);
+      setTranscendFruitConfirmAmount(0);
+      return result;
+    } catch {
+      setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう一度お試しください。');
+      return null;
+    } finally {
+      transcendFruitProcessingRef.current = false;
     }
   };
   // ===== 超越のデバッグ(DEBUG_SETTINGS からだけ開ける) =====
@@ -17089,6 +17121,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const exchangeQuote = transcendPsycheExchange(psycheHave, exchangeWant);
           const setWant = (n) => setTranscendExchangeWant(Math.max(1, Math.min(Math.max(1, exchangeMax), n)));
           const openExchange = () => { setTranscendExchangeError(''); setTranscendExchangeWant(exchangeMax>0?1:1); setTranscendExchangeOpen(true); };
+          const speciesFruitId = speciesTranscendFruitItemId(masu.baseId);
+          const speciesFruit = SPECIES_TRANSCEND_FRUIT_ITEMS[masu.baseId];
+          const speciesFruitHave = transcendFruitOwnedCount(ownedItems, speciesFruitId);
+          const rainbowFruitHave = transcendFruitOwnedCount(ownedItems, RAINBOW_TRANSCEND_FRUIT_ITEM_ID);
+          const hasTranscendFruit = speciesFruitHave > 0 || rainbowFruitHave > 0;
+          const selectedFruitHave = transcendFruitOwnedCount(ownedItems, transcendFruitItemId);
+          const selectedFruitName = transcendFruitItemId===speciesFruitId ? speciesFruit?.name : transcendFruitItemId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID ? RAINBOW_TRANSCEND_FRUIT_ITEM.name : '';
+          const openFruit = () => { setTranscendFruitItemId(''); setTranscendFruitConfirmAmount(0); setTranscendFruitError(''); setTranscendFruitOpen(true); };
+          const requestFruitUse = async (amount) => {
+            if (amount > 1) { setTranscendFruitConfirmAmount(amount); return; }
+            await commitTranscendFruit(masu, transcendFruitItemId, amount);
+          };
+          const runFruitUse = async () => { await commitTranscendFruit(masu, transcendFruitItemId, transcendFruitConfirmAmount); };
           // 超越ポイントリセットの書。振り分け直したいときに、使った超越Pを全部戻す
           const resetScrollHave = ownedItemCount(ownedItems, TRANSCEND_RESET_ITEM_ID);
           const spentPoints = transcendSpentPoints(normalized);
@@ -17137,6 +17182,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span aria-hidden="true">🌈</span>虹のプシュケーを変換
                     <span className="text-[9px] font-mono text-slate-300">所持 {psycheHave.toLocaleString()}</span>
                   </button>
+                  {hasTranscendFruit&&<button data-transcend-fruit-open onClick={openFruit} className="mt-2 w-full min-h-[46px] rounded-2xl border border-emerald-400/50 bg-emerald-950/40 text-emerald-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2">
+                    <span aria-hidden="true">🍎</span>超越の実を使う
+                    <span className="text-[9px] font-mono text-slate-300">種族 ×{speciesFruitHave}／虹 ×{rainbowFruitHave}</span>
+                  </button>}
                   {/* 振り直し。使った超越Pが1つも無いときは押せない(本を無駄に減らさない) */}
                   <button data-transcend-reset-open disabled={spentPoints<=0||resetScrollHave<=0} onClick={openReset} className="mt-2 w-full min-h-[42px] rounded-2xl border border-amber-400/50 bg-amber-950/30 text-amber-100 text-[11px] font-black active:scale-95 disabled:opacity-35 flex items-center justify-center gap-2">
                     <span aria-hidden="true">🌠</span>超越ポイントリセット
@@ -17242,6 +17291,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <button onClick={()=>setTranscendExchangeOpen(false)} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95">閉じる</button>
                       <button data-transcend-exchange-commit disabled={!exchangeQuote.ok} onClick={runExchange} className="min-h-[48px] rounded-2xl bg-fuchsia-600 text-white font-black text-xs disabled:opacity-35 active:scale-95">この内容で変換</button>
                     </div>
+                  </div>
+                </div>
+              )}
+              {transcendFruitOpen&&(
+                <div data-transcend-fruit-sheet role="dialog" aria-modal="true" aria-label="超越の実を使う" className="absolute inset-0 flex items-end justify-center" style={{zIndex:30500,backgroundColor:'rgba(2,6,23,0.86)'}} onClick={()=>setTranscendFruitOpen(false)}>
+                  <div className="w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-emerald-400/40 bg-slate-900 p-4 space-y-3" style={{maxHeight:'calc(100% - env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} onClick={e=>e.stopPropagation()}>
+                    <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-black text-emerald-200">🍎 超越の実を使う</h3><button aria-label="閉じる" onClick={()=>setTranscendFruitOpen(false)} className="min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"><X size={18}/></button></div>
+                    <p className="text-[9px] font-bold text-slate-400">使用する実を選んでください。虹の実が自動で代用されることはありません。</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[[speciesFruitId,speciesFruit?.name||'対応種族の超越の実',speciesFruitHave],[RAINBOW_TRANSCEND_FRUIT_ITEM_ID,RAINBOW_TRANSCEND_FRUIT_ITEM.name,rainbowFruitHave]].map(([itemId,name,have])=><button key={itemId} data-transcend-fruit-select={itemId} disabled={have<=0} aria-pressed={transcendFruitItemId===itemId} onClick={()=>{setTranscendFruitItemId(itemId);setTranscendFruitConfirmAmount(0);setTranscendFruitError('');}} className={`min-h-[64px] rounded-2xl border p-2 text-[9px] font-black active:scale-95 disabled:opacity-35 ${transcendFruitItemId===itemId?'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200':'border-white/10 bg-slate-800 text-slate-200'}`}><span className="block leading-tight">{name}</span><span className="mt-1 block font-mono text-[12px]">所持 ×{have}</span></button>)}
+                    </div>
+                    {!transcendFruitItemId?<div className="rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200">使用する実を明示選択してください</div>:<>
+                      <div className="grid grid-cols-3 gap-2">{[[1,'1'],[10,'10'],[selectedFruitHave,'MAX']].map(([amount,label])=><button key={label} data-transcend-fruit-amount={label} disabled={selectedFruitHave<amount||amount<=0} onClick={()=>requestFruitUse(amount)} className="min-h-[44px] rounded-xl bg-emerald-700 text-sm font-black active:scale-95 disabled:opacity-30">{label}</button>)}</div>
+                      <div className="rounded-2xl border border-emerald-400/30 bg-emerald-950/25 p-3 text-[10px] font-black"><div className="flex justify-between"><span className="text-slate-300">現在の超越ポイント</span><span className="font-mono">{points}P</span></div><div className="flex justify-between"><span className="text-slate-300">使用後（選択中）</span><span className="font-mono text-emerald-200">{points} → {points+(transcendFruitConfirmAmount||1)}P</span></div></div>
+                    </>}
+                    {transcendFruitConfirmAmount>1&&<div data-transcend-fruit-confirm className="rounded-2xl border border-amber-400/40 bg-amber-950/25 p-3 space-y-2"><div className="text-[11px] font-black text-amber-200">{selectedFruitName}を{transcendFruitConfirmAmount}個使いますか？</div><div className="text-[10px] font-bold text-slate-300">所持 ×{selectedFruitHave} → ×{selectedFruitHave-transcendFruitConfirmAmount}<br/>超越ポイント {points}P → {points+transcendFruitConfirmAmount}P</div><div className="grid grid-cols-2 gap-2"><button onClick={()=>setTranscendFruitConfirmAmount(0)} className="min-h-[44px] rounded-xl bg-slate-700 text-xs font-black">戻る</button><button data-transcend-fruit-commit onClick={runFruitUse} className="min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-xs font-black">使用を確定</button></div></div>}
+                    {transcendFruitError&&<div className="text-[10px] font-black text-red-400">{transcendFruitError}</div>}
+                    <button onClick={()=>setTranscendFruitOpen(false)} className="min-h-[48px] w-full rounded-2xl bg-slate-800 text-slate-200 text-xs font-black">閉じる</button>
                   </div>
                 </div>
               )}
