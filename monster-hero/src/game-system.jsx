@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 19:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 19:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -880,6 +880,24 @@ const consumeTranscendFruit = (ownedItems, itemId, amount) => {
   const have = transcendFruitOwnedCount(current, itemId);
   if (!TRANSCEND_FRUIT_ITEM_IDS.has(itemId) || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0 || have < n) return { ok:false, ownedItems:current };
   return { ok:true, ownedItems:{ ...current, [itemId]:have - n } };
+};
+// 使用する実は呼び出し側が明示する。種族別の実が合わない場合に虹の実へ代用しない。
+const useTranscendFruitOnMasu = (masu, ownedItems, itemId, amount) => {
+  const currentItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const n = Number(amount);
+  const speciesItemId = speciesTranscendFruitItemId(masu?.baseId);
+  const itemMatches = itemId === RAINBOW_TRANSCEND_FRUIT_ITEM_ID || (speciesItemId !== null && itemId === speciesItemId);
+  if (!masu || typeof masu !== 'object' || Array.isArray(masu) || !itemMatches
+    || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+    return { ok:false, nextMasu:masu, nextOwnedItems:currentItems };
+  }
+  const consumed = consumeTranscendFruit(currentItems, itemId, n);
+  if (!consumed.ok) return { ok:false, nextMasu:masu, nextOwnedItems:currentItems };
+  return {
+    ok:true,
+    nextMasu:{ ...masu, transcendPoints:Math.max(0, Math.floor(Number(masu.transcendPoints) || 0)) + n },
+    nextOwnedItems:consumed.ownedItems,
+  };
 };
 const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
@@ -7150,6 +7168,9 @@ function MonsterHeroGame() {
   const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(()=>Object.keys(ALL_PLAYER_MONSTERS)[0]||'');
   const [speciesChallengeDebugDifficultyId, setSpeciesChallengeDebugDifficultyId] = useState('Expert');
   const [speciesChallengeDebugProgress, setSpeciesChallengeDebugProgress] = useState(()=>normalizeSpeciesChallengeProgress(null));
+  const [transcendFruitDebugMasuId, setTranscendFruitDebugMasuId] = useState(null);
+  const [transcendFruitDebugItemId, setTranscendFruitDebugItemId] = useState('');
+  const [transcendFruitDebugResult, setTranscendFruitDebugResult] = useState(null);
   const [dyeMaskEditorOpened, setDyeMaskEditorOpened] = useState(false);
   const [temporaryDyeMasks, setTemporaryDyeMasks] = useState({});
   const temporaryDyeMasksRef = useRef({});
@@ -15739,6 +15760,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const saveProgress=async(next)=>{const normalized=normalizeSpeciesChallengeProgress(next);setSpeciesChallengeDebugProgress(normalized);await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,normalized,false);};
           const difficultyLabel=id=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
           const resetSpecies=async()=>{if(!window.confirm(`${ALL_PLAYER_MONSTERS[speciesId]?.name||speciesId}の種族チャレンジ進行だけをリセットしますか？`))return;const next=normalizeSpeciesChallengeProgress(speciesChallengeDebugProgress);delete next.species[speciesId];await saveProgress(next);};
+          const selectedMasu=masuMons.find(m=>String(m.id)===String(transcendFruitDebugMasuId))||masuMons[0]||null;
+          const speciesFruitId=speciesTranscendFruitItemId(selectedMasu?.baseId);
+          const selectedFruitId=[speciesFruitId,RAINBOW_TRANSCEND_FRUIT_ITEM_ID].includes(transcendFruitDebugItemId)?transcendFruitDebugItemId:'';
+          const useFruit=async(amount)=>{if(!selectedMasu)return;const before=Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0));const result=useTranscendFruitOnMasu(selectedMasu,ownedItems,selectedFruitId,amount);setTranscendFruitDebugResult({ok:result.ok,before,after:Math.max(0,Math.floor(Number(result.nextMasu?.transcendPoints)||0))});if(!result.ok)return;const nextMasuMons=masuMons.map(m=>String(m.id)===String(selectedMasu.id)?result.nextMasu:m);setMasuMons(nextMasuMons);setOwnedItems(result.nextOwnedItems);await Promise.all([storeSet('mh_masu_mons',nextMasuMons,false),storeSet('mh_owned_items',result.nextOwnedItems,false)]);};
+          const grantFruit=async(itemId)=>{const result=changeTranscendFruitOwnedCount(ownedItems,itemId,10);if(!result.ok)return;setOwnedItems(result.ownedItems);await storeSet('mh_owned_items',result.ownedItems,false);};
           return <main data-species-challenge-debug className="flex-1 flex flex-col min-h-0 bg-slate-950 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-3 shrink-0"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-emerald-300">DEBUG・保存先 {SPECIES_CHALLENGE_PROGRESS_KEY}</small><h2 className="text-sm font-black">種族チャレンジ進行確認</h2></div></header>
             <section className="shrink-0 space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3">
@@ -15747,7 +15773,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="grid grid-cols-2 gap-2"><button onClick={()=>saveProgress(markSpeciesChallengeCleared(speciesChallengeDebugProgress,speciesId,speciesChallengeDebugDifficultyId))} className="min-h-[44px] rounded-xl bg-emerald-700 text-[10px] font-black">clearedを付ける</button><button onClick={()=>saveProgress(markSpeciesChallengeFirstRewardClaimed(speciesChallengeDebugProgress,speciesId,speciesChallengeDebugDifficultyId))} className="min-h-[44px] rounded-xl bg-amber-700 text-[10px] font-black">firstRewardClaimedを付ける</button></div>
               <button onClick={resetSpecies} className="min-h-[40px] w-full rounded-xl border border-red-500/60 bg-red-950/50 text-[9px] font-black text-red-200">選択種族の進行だけリセット</button>
             </section>
-            <section className="mt-3 flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds),cleared=isSpeciesChallengeCleared(speciesChallengeDebugProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeDebugProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div></article>;})}</section>
+            <section className="mt-3 flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">
+              <article data-transcend-fruit-debug className="space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"><h3 className="text-[11px] font-black text-fuchsia-200">超越の実 → 超越ポイント確認</h3>{selectedMasu?<><label className="block text-[9px] font-black">所持マスモン<select aria-label="所持マスモン" value={selectedMasu.id} onChange={e=>{setTranscendFruitDebugMasuId(e.target.value);setTranscendFruitDebugItemId('');setTranscendFruitDebugResult(null);}} className="mt-1 block min-h-[44px] w-full rounded-xl bg-slate-900 px-3">{masuMons.map(m=><option key={m.id} value={m.id}>{m.name}／{ALL_PLAYER_MONSTERS[m.baseId]?.name||m.baseId}</option>)}</select></label><div className="grid grid-cols-2 gap-2 text-center text-[9px]"><span className="rounded-lg bg-slate-900 p-2">対応種族の実<br/><b>{transcendFruitOwnedCount(ownedItems,speciesFruitId)}</b></span><span className="rounded-lg bg-slate-900 p-2">虹の実<br/><b>{transcendFruitOwnedCount(ownedItems,RAINBOW_TRANSCEND_FRUIT_ITEM_ID)}</b></span></div><div className="grid grid-cols-2 gap-2"><button aria-pressed={selectedFruitId===speciesFruitId} onClick={()=>setTranscendFruitDebugItemId(speciesFruitId)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===speciesFruitId?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>対応種族の実を選択</button><button aria-pressed={selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID} onClick={()=>setTranscendFruitDebugItemId(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>虹の実を選択</button></div><div>{!selectedFruitId&&<p className="text-center text-[8px] font-black text-amber-300">使用する実を明示選択してください。</p>}</div><div className="grid grid-cols-3 gap-2"><button disabled={!selectedFruitId} onClick={()=>useFruit(1)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">1</button><button disabled={!selectedFruitId} onClick={()=>useFruit(10)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">10</button><button disabled={!selectedFruitId} onClick={()=>useFruit(transcendFruitOwnedCount(ownedItems,selectedFruitId))} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">MAX</button></div><div className="rounded-xl bg-black/30 p-2 text-center text-[10px]">超越P：{transcendFruitDebugResult?`${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok?'':'（失敗・変更なし）'}`:`${Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0))} → ―`}</div><div className="grid grid-cols-2 gap-2"><button onClick={()=>grantFruit(speciesFruitId)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">対応種族の実 +10</button><button onClick={()=>grantFruit(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">虹の実 +10</button></div></>:<p className="text-[9px] text-slate-400">所持マスモンがいません。</p>}</article>
+              {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds),cleared=isSpeciesChallengeCleared(speciesChallengeDebugProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeDebugProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div></article>;})}
+            </section>
           </main>;
         })()}
 
