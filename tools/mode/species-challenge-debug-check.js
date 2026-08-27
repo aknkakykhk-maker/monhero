@@ -21,6 +21,10 @@ assert(screen.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map'), '14難易度は�
 assert(screen.includes('delete next.species[speciesId]'), 'リセットは選択種族だけを削除する');
 assert(screen.includes('storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,normalized,false)'), '保存先は既存の種族チャレンジ進行キーだけである');
 assert(source.includes('data-debug-species-challenge') && source.includes("setGameState('SPECIES_CHALLENGE_DEBUG')"), '入口はデバッグ設定にだけある');
+assert(screen.includes('data-transcend-fruit-debug'), '超越の実の確認セクションがある');
+for (const text of ['所持マスモン','対応種族の実','虹の実','MAX','超越P：']) assert(screen.includes(text), `超越の実確認に「${text}」がある`);
+assert(screen.includes('useTranscendFruitOnMasu(selectedMasu,ownedItems,selectedFruitId,amount)'), '純粋処理へ選択した実を明示して渡す');
+assert(screen.includes("storeSet('mh_masu_mons',nextMasuMons,false)") && screen.includes("storeSet('mh_owned_items',result.nextOwnedItems,false)"), '使用結果は既存の2保存キーだけへ保存する');
 
 const start = source.indexOf('const DIFFICULTY_SETTINGS =');
 const end = source.indexOf('const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS =', start);
