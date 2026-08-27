@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 20:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 23:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -898,6 +898,27 @@ const useTranscendFruitOnMasu = (masu, ownedItems, itemId, amount) => {
     nextMasu:{ ...masu, transcendPoints:Math.max(0, Math.floor(Number(masu.transcendPoints) || 0)) + n },
     nextOwnedItems:consumed.ownedItems,
   };
+};
+// storeSet は保存先側の失敗を返さないことがあるため、2キーとも再読込してから成功とする。
+// 片方でも期待値と違えば、消費前の組を両方へ書き戻して中途半端な保存を残さない。
+const saveTranscendFruitPair = async (beforeMasuMons, beforeOwnedItems, nextMasuMons, nextOwnedItems, getValue, setValue) => {
+  const same = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
+  try {
+    await Promise.all([
+      setValue('mh_masu_mons', nextMasuMons, false),
+      setValue('mh_owned_items', nextOwnedItems, false),
+    ]);
+    const [savedMasuMons, savedOwnedItems] = await Promise.all([
+      getValue('mh_masu_mons', null, false),
+      getValue('mh_owned_items', null, false),
+    ]);
+    if (same(savedMasuMons, nextMasuMons) && same(savedOwnedItems, nextOwnedItems)) return true;
+  } catch { /* rollback below */ }
+  await Promise.allSettled([
+    setValue('mh_masu_mons', beforeMasuMons, false),
+    setValue('mh_owned_items', beforeOwnedItems, false),
+  ]);
+  return false;
 };
 const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
@@ -10786,12 +10807,17 @@ function MonsterHeroGame() {
     if (!result.ok) { setTranscendFruitError('選んだ実の所持数が足りないか、このマスモンには使用できません。'); return null; }
     transcendFruitProcessingRef.current = true;
     setTranscendFruitError('');
-    const nextMasuMons = masuMonsRef.current.map(m=>String(m.id)===String(currentMasu.id)?result.nextMasu:m);
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeOwnedItems = ownedItemsRef.current;
+    const nextMasuMons = beforeMasuMons.map(m=>String(m.id)===String(currentMasu.id)?result.nextMasu:m);
     try {
-      await Promise.all([
-        storeSet('mh_masu_mons', nextMasuMons, false),
-        storeSet('mh_owned_items', result.nextOwnedItems, false),
-      ]);
+      const saved = await saveTranscendFruitPair(
+        beforeMasuMons, beforeOwnedItems, nextMasuMons, result.nextOwnedItems, storeGet, storeSet
+      );
+      if (!saved) {
+        setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう一度お試しください。');
+        return null;
+      }
       masuMonsRef.current = nextMasuMons; ownedItemsRef.current = result.nextOwnedItems;
       setMasuMons(nextMasuMons); setOwnedItems(result.nextOwnedItems);
       setMasuMonDetail(prev=>prev&&String(prev.id)===String(currentMasu.id)?result.nextMasu:prev);

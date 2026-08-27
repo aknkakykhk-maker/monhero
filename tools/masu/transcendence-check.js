@@ -539,10 +539,13 @@ check('超越の実は種類を明示選択して1・10・MAXを使う',
   source.includes("setTranscendFruitItemId('')")
   && source.includes("[[1,'1'],[10,'10'],[selectedFruitHave,'MAX']]")
   && source.includes('if (amount > 1) { setTranscendFruitConfirmAmount(amount); return; }'));
-check('超越の実の保存は既存2キーだけをまとめて完了してからstateへ反映する',
-  source.includes("storeSet('mh_masu_mons', nextMasuMons, false)")
-  && source.includes("storeSet('mh_owned_items', result.nextOwnedItems, false)")
-  && source.includes('await Promise.all([')
+check('超越の実の保存は既存2キーを再読込検証し、失敗時は両方を戻してからstateへ反映しない',
+  source.includes('const saved = await saveTranscendFruitPair(')
+  && source.includes("getValue('mh_masu_mons', null, false)")
+  && source.includes("getValue('mh_owned_items', null, false)")
+  && source.includes("setValue('mh_masu_mons', beforeMasuMons, false)")
+  && source.includes("setValue('mh_owned_items', beforeOwnedItems, false)")
+  && source.includes('if (!saved) {')
   && source.includes('transcendFruitProcessingRef.current = true'));
 check('超越の実シートはSafe Area内を縦スクロールでき、ボタンは44px以上',
   source.includes('data-transcend-fruit-sheet') && source.includes('min-h-[64px]')
