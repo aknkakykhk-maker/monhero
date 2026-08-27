@@ -23,21 +23,49 @@ for (const file of files) {
     (source.match(/\{\s*id:\s*'[^']+',\s*name:/g) || []).length >= 20 && /BGM_TRACKS\.map\(track\s*=>/.test(source));
   check(`${file}: 4モード×通常・デュラハン・ムーの12設定を定義`,
     Object.values(routes).flat().every(key => Object.hasOwn(defaults, key)));
-  // プロだけ専用曲(通常戦・デュラハン戦=1 / ムー戦=2)。チャレンジ・クイック・極限は従来のまま
-  check(`${file}: チャレンジ・クイック・極限の既定曲が従来の再生結果を維持`,
-    defaults.battle === 'original_battle' && defaults.quickBattle === 'ichika_battle' &&
-    defaults.extremeBattle === 'original_battle' &&
-    ['dullahan','quickDullahan','extremeDullahan'].every(key => defaults[key] === 'original_dullahan') &&
-    ['boss','quickMoo','extremeMoo'].every(key => defaults[key] === 'original_boss'));
-  check(`${file}: プロの既定曲がプロ戦闘BGMになっている`,
-    defaults.proBattle === 'original_pro_battle_01' && defaults.proDullahan === 'original_pro_battle_01' &&
+  // チャレンジと極限はオリジナル3曲のまま(極限に専用曲は用意していないので、チャレンジと同じ)
+  check(`${file}: チャレンジと極限の既定曲がオリジナル3曲のまま`,
+    defaults.battle === 'original_battle' && defaults.dullahan === 'original_dullahan' && defaults.boss === 'original_boss' &&
+    defaults.extremeBattle === 'original_battle' && defaults.extremeDullahan === 'original_dullahan' && defaults.extremeMoo === 'original_boss');
+  // クイックはいちか2曲＋デュラハン専用曲。ムー戦はオリジナルではなく「ボステーマ by いちか」
+  check(`${file}: クイックの既定曲が いちか通常／時計仕掛け／いちかボス`,
+    defaults.quickBattle === 'ichika_battle' &&
+    defaults.quickDullahan === 'melo_dullahan_clockwork' &&
+    defaults.quickMoo === 'ichika_boss');
+  // プロは専用曲。デュラハン戦は通常戦との暫定共用をやめて専用曲にした
+  check(`${file}: プロの既定曲がプロ戦闘BGM1／鋼鉄の亡霊／プロ戦闘BGM2`,
+    defaults.proBattle === 'original_pro_battle_01' &&
+    defaults.proDullahan === 'melo_dullahan_steel_ghost' &&
     defaults.proMoo === 'original_pro_battle_02');
+  // デュラハン戦の曲は、通常戦・ムー戦の曲と別であること(暫定共用へ戻っていないか)
+  check(`${file}: デュラハン戦の既定曲が通常戦・ムー戦と別の曲`,
+    defaults.quickDullahan !== defaults.quickBattle && defaults.quickDullahan !== defaults.quickMoo &&
+    defaults.proDullahan !== defaults.proBattle && defaults.proDullahan !== defaults.proMoo);
   // 既定を変えても、すでに遊んでいる人の保存は起動時に丸ごと書き戻されるため届かない。
   // 「以前の既定のままの人」だけを一度きりで入れ替え、自分で選んだ曲は残す
   check(`${file}: プロ既定の入れ替えは一度きりで、自分で選んだ曲を上書きしない`,
     /mh_bgm_pro_default_migrated_v1/.test(source) &&
     /BGM_PRO_PREVIOUS_DEFAULTS/.test(source) &&
     /if \(next\[scene\] !== previousDefault\) return;/.test(source));
+  // デュラハン戦の曲を足したぶんの移行。フラグはプロのぶんと別にして二重適用を防ぐ
+  check(`${file}: デュラハン既定の入れ替えも一度きりで、フラグがプロのぶんと別`,
+    /mh_bgm_dullahan_default_migrated_v1/.test(source) &&
+    /BGM_DULLAHAN_PREVIOUS_DEFAULTS/.test(source) &&
+    /BGM_DULLAHAN_DEFAULT_MIGRATION_KEY='mh_bgm_dullahan_default_migrated_v1'/.test(compact) &&
+    /BGM_PRO_DEFAULT_MIGRATION_KEY='mh_bgm_pro_default_migrated_v1'/.test(compact));
+  check(`${file}: デュラハン移行の対象がクイック2枠とプロ1枠`,
+    /BGM_DULLAHAN_PREVIOUS_DEFAULTS=Object\.freeze\(\{quickDullahan:'original_dullahan',quickMoo:'original_boss',proDullahan:'original_pro_battle_01'\}\)/.test(compact));
+  // 追加した4曲。既定に使う2曲と、既定では使わないが選べる2曲
+  check(`${file}: デュラハン戦の4曲が登録されている`,
+    ['melo_dullahan_clockwork', 'melo_dullahan_clockwork_alt', 'melo_dullahan_steel_ghost', 'melo_dullahan_steel_ghost_alt']
+      .every(id => new RegExp(`id:'${id}'`).test(compact)));
+  check(`${file}: -Another- の2曲は自動では使わないが選択肢には並ぶ`,
+    !Object.values(defaults).includes('melo_dullahan_clockwork_alt') &&
+    !Object.values(defaults).includes('melo_dullahan_steel_ghost_alt') &&
+    /id:'melo_dullahan_clockwork_alt'/.test(compact) && /id:'melo_dullahan_steel_ghost_alt'/.test(compact));
+  // アップロード時のファイル名(「(1)(1)」など)が画面やコードへ紛れ込んでいないこと
+  check(`${file}: 元の添付ファイル名が混ざっていない`,
+    !/デュラハン戦[AB]/.test(source) && !/\(1\)\(1\)/.test(source) && !/あつゲーム/.test(source));
   check(`${file}: イベントBGMの設定欄が既定でイベントBGM 1`,
     defaults.kikiIntro === 'original_event_01');
   check(`${file}: イベントBGM 2は自動では使わないが選択肢には並ぶ`,
@@ -92,11 +120,25 @@ for (const file of files) {
     /storeSet\('mh_audio_muted', nextMuted, false\)/.test(source) &&
     !/toggleQuickMute[\s\S]{0,400}mh_(?:se|bgm)_volume/.test(source));
 }
-for (const name of ['bgm-home-ichika.mp3','bgm-battle-ichika.mp3','bgm-boss-ichika.mp3','bgm-clear-ichika.mp3',
-  'bgm-event-01.mp3','bgm-event-02.mp3','bgm-pro-battle-01.mp3','bgm-pro-battle-02.mp3']) {
-  const file = path.join(ROOT, 'monster-hero/audio', name);
-  const data = fs.existsSync(file) ? fs.readFileSync(file) : null;
-  check(`audio/${name}: MP3が存在し内容を持つ`, !!data && data.length > 1024 && (data.slice(0, 3).toString() === 'ID3' || data[0] === 0xff));
+// BGM_TRACKS が指しているMP3をすべて確かめる。曲を足すたびにここへ書き足す方式だと
+// 書き忘れて「登録したのにファイルが無い(本番で無音)」を取り逃すので、登録から引く
+{
+  const jsx = fs.readFileSync(path.join(ROOT, 'monster-hero/src/game-system.jsx'), 'utf8');
+  const block = jsx.match(/const BGM_TRACKS = \[([\s\S]*?)\n\];/);
+  check('BGM_TRACKSの一覧を取り出せる', !!block);
+  const srcs = block ? [...block[1].matchAll(/src:'(audio\/[^']+)'/g)].map(m => m[1]) : [];
+  check(`登録曲のMP3をすべて検査する(${srcs.length}曲)`, srcs.length >= 20);
+  for (const rel of srcs) {
+    const file = path.join(ROOT, 'monster-hero', rel);
+    const data = fs.existsSync(file) ? fs.readFileSync(file) : null;
+    check(`${rel}: MP3が存在し内容を持つ`, !!data && data.length > 1024 && (data.slice(0, 3).toString() === 'ID3' || data[0] === 0xff));
+  }
+  // 今回足した4曲が、それぞれ別の音源であること(同じファイルを2回置いていないか)
+  const added = ['audio/bgm-dullahan-clockwork.mp3','audio/bgm-dullahan-clockwork-alt.mp3',
+    'audio/bgm-dullahan-steel-ghost.mp3','audio/bgm-dullahan-steel-ghost-alt.mp3'];
+  check('デュラハン戦の4曲がすべて登録から参照されている', added.every(rel => srcs.includes(rel)));
+  const sizes = added.map(rel => { const f = path.join(ROOT, 'monster-hero', rel); return fs.existsSync(f) ? fs.readFileSync(f).length : 0; });
+  check('デュラハン戦の4曲がそれぞれ別の音源', new Set(sizes).size === 4 && sizes.every(n => n > 1024), sizes.join('/'));
 }
 
 process.exit(failed ? 1 : 0);

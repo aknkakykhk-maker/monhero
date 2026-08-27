@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 01:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2148,12 +2148,18 @@ const BGM_TRACKS = [
   // プロモードの戦闘用
   { id:'original_pro_battle_01', name:'プロ戦闘BGM 1', creator:'オリジナル', src:'audio/bgm-pro-battle-01.mp3', gain:1, loop:true },
   { id:'original_pro_battle_02', name:'プロ戦闘BGM 2', creator:'オリジナル', src:'audio/bgm-pro-battle-02.mp3', gain:1, loop:true },
+  // デュラハン戦用。A(時計仕掛け)をクイック、B(鋼鉄の亡霊)をプロの既定にする。
+  // -Another- の2曲は既定では使わないが、BGMアレンジからどの枠へも選べる
+  { id:'melo_dullahan_clockwork', name:'呪われた騎士の時計仕掛け', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork.mp3', gain:1, loop:true },
+  { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
+  { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
+  { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
 ];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'ichika_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'original_pro_battle_01', proMoo:'original_pro_battle_02', extremeBattle:'original_battle', extremeDullahan:'original_dullahan', extremeMoo:'original_boss', clear:'ichika_clear', kikiIntro:'original_event_01' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'ichika_battle', quickDullahan:'melo_dullahan_clockwork', quickMoo:'ichika_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'original_battle', extremeDullahan:'original_dullahan', extremeMoo:'original_boss', clear:'ichika_clear', kikiIntro:'original_event_01' });
 const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDullahan:'dullahan', proMoo:'boss', extremeDullahan:'dullahan', extremeMoo:'boss' });
 // プロモードの既定曲を専用曲へ変えたときの、一度きりの移行。
 // この設定は起動のたびに全項目がそのまま保存されるため、既定値を書き換えるだけでは
@@ -2165,10 +2171,12 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
-const migrateProBgmDefaults = (arrangement) => {
+// 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
+// 中身は1か所にまとめ、対象の表と二重適用フラグだけを回ごとに分ける
+const migrateBgmDefaults = (arrangement, previousDefaults) => {
   const next = { ...arrangement };
   let changed = false;
-  Object.entries(BGM_PRO_PREVIOUS_DEFAULTS).forEach(([scene, previousDefault]) => {
+  Object.entries(previousDefaults).forEach(([scene, previousDefault]) => {
     if (next[scene] !== previousDefault) return; // 自分で選び直していれば触らない
     const nextDefault = DEFAULT_BGM_ARRANGEMENT[scene];
     if (!nextDefault || nextDefault === previousDefault) return;
@@ -2177,6 +2185,13 @@ const migrateProBgmDefaults = (arrangement) => {
   });
   return { changed, arrangement: changed ? next : arrangement };
 };
+const migrateProBgmDefaults = (arrangement) => migrateBgmDefaults(arrangement, BGM_PRO_PREVIOUS_DEFAULTS);
+// デュラハン戦の曲を足したときの、一度きりの移行。
+// クイックのデュラハン・ムーとプロのデュラハンだけ既定が変わる。
+// プロのぶんは上の移行で original_pro_battle_01 になっているので、そこからの入れ替えになる。
+const BGM_DULLAHAN_DEFAULT_MIGRATION_KEY = 'mh_bgm_dullahan_default_migrated_v1';
+const BGM_DULLAHAN_PREVIOUS_DEFAULTS = Object.freeze({ quickDullahan:'original_dullahan', quickMoo:'original_boss', proDullahan:'original_pro_battle_01' });
+const migrateDullahanBgmDefaults = (arrangement) => migrateBgmDefaults(arrangement, BGM_DULLAHAN_PREVIOUS_DEFAULTS);
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
   const saved = value?.[scene];
   if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
@@ -8946,6 +8961,12 @@ function MonsterHeroGame() {
         const proMigration = migrateProBgmDefaults(savedBgmArrangement);
         if (proMigration.changed) savedBgmArrangement = proMigration.arrangement;
         try { await storeSet(BGM_PRO_DEFAULT_MIGRATION_KEY, true, false); } catch {}
+      }
+      // デュラハン戦の曲を足したぶん。クイックのデュラハン・ムーとプロのデュラハンが対象
+      if (await storeGet(BGM_DULLAHAN_DEFAULT_MIGRATION_KEY, false, false) !== true) {
+        const dullahanMigration = migrateDullahanBgmDefaults(savedBgmArrangement);
+        if (dullahanMigration.changed) savedBgmArrangement = dullahanMigration.arrangement;
+        try { await storeSet(BGM_DULLAHAN_DEFAULT_MIGRATION_KEY, true, false); } catch {}
       }
       setBgmArrangement(savedBgmArrangement);
       setAssistantUnlockSeen(normalizeAssistantUnlockSeen(await storeGet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, [], false)));
