@@ -43,6 +43,7 @@
 | `mh_pro_hs_<難易度>` | number / `0` | 端末ハイスコア（プロ） |
 | `mh_pro_clears_<難易度>` | number / `0` | 完走回数（プロ） |
 | `mh_pro_highest_wave_<難易度>` | number / `0` | 最高到達WAVE（プロ） |
+| `mh_species_challenge_progress_v1` | object / `{version:1,species:{}}` | 種族チャレンジの種族・難易度別クリアと初回報酬受取状況 |
 | `mh_rank_<難易度>` | object[] / `[]` | 全国送信失敗時の端末ランキング |
 
 難易度部分は `Beginner`, `Easy`, `Normal`, `Hard`, `Expert`, `Master`, `GrandMaster`, `Hell`, `Legend`。難易度キーは保存・ランキング識別子なので既存名を変更しない。
@@ -50,6 +51,20 @@
 バトルモードごとの記録は接頭辞で分ける（`modeKeyPrefix`：チャレンジ `mh_`／クイック `mh_quick_`／プロ `mh_pro_`）。モードを増やしても既存キーの意味は変えず、新しい接頭辞のキーを足すだけにする。未プレイのモードのキーは存在しないので、読み込みは既定値 `0` に落ちる。
 
 全国ランキング（Supabase）はテーブルの列を増やさず、`difficulty` へ入れる値でモードを分ける。プロは `ProHard` のように先頭へ `Pro` を付けた値（`rankingDifficultyForMode`）。既存のチャレンジの行（`Hard` など）は書き換えも変換もしない。
+
+種族チャレンジの進行は次の独立した形式で保存する。`cleared` と `firstRewardClaimed` はそれぞれ値が `true` の有効難易度だけを保持し、欠損・不正な値は空の状態へ正規化する。難易度IDの正本は `SPECIES_CHALLENGE_DIFFICULTY_IDS` とし、未知の難易度は破棄する。一方、空でない文字列の未知speciesIdは将来追加される種族との互換性のため保持する。
+
+```js
+{
+  version: 1,
+  species: {
+    [speciesId]: {
+      cleared: { [difficultyId]: true },
+      firstRewardClaimed: { [difficultyId]: true },
+    },
+  },
+}
+```
 
 ## 3. マイグレーション・補正フラグ
 

@@ -51,6 +51,6 @@ assert(JSON.stringify(foundation.EXTREME_DIFFICULTIES.map(item => item.id)) === 
 const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常の3モードとは別に持っている'));
 assert(!battleModes.includes('BATTLE_MODE_SPECIES_CHALLENGE') && !battleModes.includes('SPECIES_CHALLENGE_MODE'), '種族チャレンジは本番モード選択UIへ表示されていない');
 assert(source.includes("const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';") && source.includes("label:'種族チャレンジ'"), '内部IDと表示名を定義している');
-assert(!source.includes("'mh_species"), '種族チャレンジ用の保存キーを追加していない');
+assert(source.includes("const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';"), '種族チャレンジ進行専用の保存キーを定義している');
 
 console.log('species challenge foundation checks passed');
