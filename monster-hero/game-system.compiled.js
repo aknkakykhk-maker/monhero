@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a6d4decfb262c070
+// source-sha256: 5461a87df30c15c4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 01:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 01:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9007,8 +9007,9 @@ const speciesChallengeEntryBaseId = (entryId, masuMons = []) => {
   const masu = (Array.isArray(masuMons) ? masuMons : []).find(mon => mon && String(mon.id) === masuId);
   return typeof masu?.baseId === 'string' && masu.baseId ? masu.baseId : null;
 };
-const speciesChallengeAvailableAllyIds = (unlockedBaseIds = [], masuMons = []) => [...(Array.isArray(unlockedBaseIds) ? unlockedBaseIds : []).filter(id => typeof id === 'string' && id && !id.startsWith('masu:')), ...(Array.isArray(masuMons) ? masuMons : []).filter(mon => mon && mon.id !== null && mon.id !== undefined && typeof mon.baseId === 'string' && mon.baseId).map(mon => `masu:${String(mon.id)}`)];
+const speciesChallengeAvailableAllyIds = (speciesId, unlockedBaseIds = [], masuMons = []) => [...(Array.isArray(unlockedBaseIds) ? unlockedBaseIds : []).filter(id => id === speciesId), ...(Array.isArray(masuMons) ? masuMons : []).filter(mon => mon && mon.id !== null && mon.id !== undefined && mon.baseId === speciesId).map(mon => `masu:${String(mon.id)}`)];
 const validateSpeciesChallengeAllySelection = ({
+  speciesId,
   heroId,
   allyIds,
   unlockedBaseIds = [],
@@ -9023,13 +9024,12 @@ const validateSpeciesChallengeAllySelection = ({
     reason: 'too-many-allies'
   };
   const heroBaseId = speciesChallengeEntryBaseId(heroId, masuMons);
-  if (!heroBaseId) return {
+  if (!speciesId || heroBaseId !== speciesId) return {
     valid: false,
     reason: 'invalid-hero'
   };
-  const available = new Set(speciesChallengeAvailableAllyIds(unlockedBaseIds, masuMons));
-  const usedBaseIds = new Set([heroBaseId]);
-  const usedEntryIds = new Set();
+  const available = new Set(speciesChallengeAvailableAllyIds(speciesId, unlockedBaseIds, masuMons));
+  const usedEntryIds = new Set([heroId]);
   for (const entryId of allyIds) {
     if (!available.has(entryId)) return {
       valid: false,
@@ -9038,17 +9038,15 @@ const validateSpeciesChallengeAllySelection = ({
     };
     if (usedEntryIds.has(entryId)) return {
       valid: false,
-      reason: 'duplicate-ally',
+      reason: entryId === heroId ? 'same-entry-as-hero' : 'duplicate-ally',
       entryId
     };
-    const baseId = speciesChallengeEntryBaseId(entryId, masuMons);
-    if (!baseId || usedBaseIds.has(baseId)) return {
+    if (speciesChallengeEntryBaseId(entryId, masuMons) !== speciesId) return {
       valid: false,
-      reason: baseId === heroBaseId ? 'same-species-as-hero' : 'duplicate-species',
+      reason: 'different-species',
       entryId
     };
     usedEntryIds.add(entryId);
-    usedBaseIds.add(baseId);
   }
   return {
     valid: true,
@@ -9064,6 +9062,7 @@ const createSpeciesChallengeRunState = ({
   masuMons = []
 } = {}) => {
   const validation = validateSpeciesChallengeAllySelection({
+    speciesId,
     heroId,
     allyIds,
     unlockedBaseIds,
@@ -9071,12 +9070,12 @@ const createSpeciesChallengeRunState = ({
   });
   if (!validation.valid) return null;
   const run = {
+    speciesId,
+    difficultyId,
     heroId,
     allyIds: [...allyIds],
     joinedAllyIds: []
   };
-  if (typeof speciesId === 'string' && speciesId) run.speciesId = speciesId;
-  if (typeof difficultyId === 'string' && difficultyId) run.difficultyId = difficultyId;
   return run;
 };
 const speciesChallengeSelectedAllies = runState => Array.isArray(runState?.allyIds) ? [...runState.allyIds] : [];
@@ -9943,10 +9942,13 @@ const MarketProductCard = ({
     onClick: onBuy,
     disabled: disabled || !canBuy,
     "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${item.cost}${usesPsyche ? 'プシュケー' : usesGold ? 'ダイヤ' : 'pt'}で購入`}`,
-    className: `text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
+    className: `text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-0.5 ${usesPsyche ? 'flex-wrap leading-tight text-center' : 'whitespace-nowrap'} ${!disabled && canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
   }, usesPsyche ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+    className: "w-full whitespace-nowrap",
     "aria-hidden": "true"
-  }, "\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", null, item.cost.toLocaleString())) : /*#__PURE__*/React.createElement(React.Fragment, null, usesGold ? /*#__PURE__*/React.createElement(Gem, {
+  }, "\uD83C\uDF08 \u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
+    className: "w-full whitespace-nowrap"
+  }, "\xD7", item.cost.toLocaleString())) : /*#__PURE__*/React.createElement(React.Fragment, null, usesGold ? /*#__PURE__*/React.createElement(Gem, {
     size: 9
   }) : /*#__PURE__*/React.createElement(Coins, {
     size: 9
@@ -17589,7 +17591,7 @@ function MonsterHeroGame() {
         });
       }
       saveMissionProgress('market');
-      if (item.type === 'item') setMarketQuantityItem(null);
+      if (item.id === RAINBOW_TRANSCEND_FRUIT_ITEM_ID) setMarketQuantityItem(null);
     } finally {
       marketPurchaseProcessingRef.current = false;
     }
@@ -30033,13 +30035,14 @@ function MonsterHeroGame() {
       const challengeEntries = buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, []);
       const heroCandidates = challengeEntries.filter(entry => entry.baseId === speciesId);
       const heroId = heroCandidates.some(entry => entry.entryId === speciesChallengeDebugHeroId) ? speciesChallengeDebugHeroId : heroCandidates[0]?.entryId || '';
-      const allyCandidates = challengeEntries.filter(entry => entry.baseId !== speciesId);
+      const allyCandidates = challengeEntries.filter(entry => entry.baseId === speciesId && entry.entryId !== heroId);
       const selectedAllyIds = speciesChallengeDebugAllyIds.filter(entryId => allyCandidates.some(entry => entry.entryId === entryId));
       const entryLabel = entryId => {
         const entry = challengeEntries.find(item => item.entryId === entryId);
         return entry ? `${entry.name}（${entry.lineageName}）` : entryId;
       };
       const selectionValidation = validateSpeciesChallengeAllySelection({
+        speciesId,
         heroId,
         allyIds: selectedAllyIds,
         unlockedBaseIds: unlockedMonsterIds,
@@ -30048,6 +30051,7 @@ function MonsterHeroGame() {
       const toggleAlly = entryId => {
         const next = selectedAllyIds.includes(entryId) ? selectedAllyIds.filter(id => id !== entryId) : [...selectedAllyIds, entryId];
         if (validateSpeciesChallengeAllySelection({
+          speciesId,
           heroId,
           allyIds: next,
           unlockedBaseIds: unlockedMonsterIds,
@@ -30056,6 +30060,7 @@ function MonsterHeroGame() {
       };
       const startJoinSimulation = () => {
         const run = createSpeciesChallengeRunState({
+          speciesId,
           heroId,
           allyIds: selectedAllyIds,
           unlockedBaseIds: unlockedMonsterIds,
@@ -30197,14 +30202,13 @@ function MonsterHeroGame() {
         value: entry.entryId
       }, entryLabel(entry.entryId))))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("b", {
         className: "text-[9px]"
-      }, "\u4F9B\u30E2\u30F3 0\u301C3\u4F53\uFF08\u540C\u7A2E\u4E0D\u53EF\uFF09"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4F9B\u30E2\u30F3 0\u301C3\u4F53\uFF08\u9078\u629E\u7A2E\u65CF\u306E\u307F\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "mt-1 grid grid-cols-2 gap-1"
       }, allyCandidates.map(entry => {
-        const selected = selectedAllyIds.includes(entry.entryId),
-          sameSpeciesSelected = selectedAllyIds.some(id => id !== entry.entryId && speciesChallengeEntryBaseId(id, masuMons) === entry.baseId);
+        const selected = selectedAllyIds.includes(entry.entryId);
         return /*#__PURE__*/React.createElement("button", {
           key: entry.entryId,
-          disabled: !selected && (selectedAllyIds.length >= 3 || sameSpeciesSelected),
+          disabled: !selected && selectedAllyIds.length >= 3,
           onClick: () => toggleAlly(entry.entryId),
           "aria-pressed": selected,
           className: `min-h-[44px] rounded-xl px-2 text-[8px] font-black disabled:opacity-25 ${selected ? 'bg-cyan-700 ring-2 ring-white' : 'bg-slate-900 border border-white/10'}`
@@ -30341,9 +30345,10 @@ function MonsterHeroGame() {
       const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
       const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, selection.speciesId);
       const heroCandidates = challengeEntries.filter(entry => entry.baseId === selection.speciesId);
-      const allyCandidates = challengeEntries.filter(entry => entry.baseId !== selection.speciesId);
+      const allyCandidates = challengeEntries.filter(entry => entry.baseId === selection.speciesId && entry.entryId !== selection.heroId);
       const selectedAllies = selection.allyIds.filter(id => allyCandidates.some(entry => entry.entryId === id));
       const validation = validateSpeciesChallengeAllySelection({
+        speciesId: selection.speciesId,
         heroId: selection.heroId,
         allyIds: selectedAllies,
         unlockedBaseIds: unlockedMonsterIds,
@@ -30372,12 +30377,13 @@ function MonsterHeroGame() {
       });
       const chooseHero = heroId => patchSelection({
         heroId,
-        allyIds: selectedAllies.filter(id => speciesChallengeEntryBaseId(id, masuMons) !== speciesChallengeEntryBaseId(heroId, masuMons)),
+        allyIds: selectedAllies.filter(id => id !== heroId),
         run: null
       });
       const toggleAlly = entryId => {
         const next = selectedAllies.includes(entryId) ? selectedAllies.filter(id => id !== entryId) : [...selectedAllies, entryId];
         if (validateSpeciesChallengeAllySelection({
+          speciesId: selection.speciesId,
           heroId: selection.heroId,
           allyIds: next,
           unlockedBaseIds: unlockedMonsterIds,
@@ -30442,7 +30448,7 @@ function MonsterHeroGame() {
       }, marker));
       return /*#__PURE__*/React.createElement("main", {
         "data-species-challenge-selection": true,
-        className: "flex-1 flex min-h-0 flex-col overflow-hidden bg-gradient-to-b from-slate-950 via-cyan-950/20 to-slate-950 p-3 text-white",
+        className: "flex-1 flex min-h-0 flex-col overflow-hidden px-4 text-white",
         style: {
           paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
@@ -30458,44 +30464,71 @@ function MonsterHeroGame() {
       })), /*#__PURE__*/React.createElement("div", {
         className: "min-w-0"
       }, /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px] font-black tracking-[.18em] text-cyan-300"
-      }, "SPECIES CHALLENGE \u30FB ", stepIndex + 1, "/", stepOrder.length), /*#__PURE__*/React.createElement("h2", {
-        className: "truncate text-base font-black text-cyan-50"
+        className: "text-[8px] font-black tracking-[.18em] text-slate-400"
+      }, "BATTLE"), /*#__PURE__*/React.createElement("h2", {
+        className: "truncate text-xl font-black italic text-indigo-400 uppercase tracking-widest"
       }, titles[selection.step])), /*#__PURE__*/React.createElement("span", {
         className: "ml-auto rounded-full border border-amber-400/40 bg-amber-950/70 px-2 py-1 text-[7px] font-black text-amber-200"
-      }, "DEBUG\u30FB\u4FDD\u5B58\u306A\u3057")), /*#__PURE__*/React.createElement("div", {
-        className: "mb-3 grid shrink-0 grid-cols-6 gap-1",
-        "aria-label": "\u9078\u629E\u306E\u9032\u884C\u72B6\u6CC1"
-      }, stepOrder.map((step, index) => /*#__PURE__*/React.createElement("span", {
-        key: step,
-        className: `h-1.5 rounded-full ${index <= stepIndex ? 'bg-cyan-400' : 'bg-slate-700'}`
-      }))), /*#__PURE__*/React.createElement("section", {
+      }, "DEBUG\u30FB\u4FDD\u5B58\u306A\u3057")), /*#__PURE__*/React.createElement("section", {
         className: "mh-scroll min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pb-3"
       }, selection.step === 'intro' && /*#__PURE__*/React.createElement("div", {
-        className: "flex min-h-full flex-col justify-center py-4"
-      }, /*#__PURE__*/React.createElement("section", {
-        className: "relative overflow-hidden rounded-[28px] border-2 border-cyan-400/50 bg-gradient-to-br from-cyan-950 via-indigo-950 to-slate-950 p-5 text-center shadow-2xl shadow-cyan-950"
+        className: "flex min-h-full flex-col justify-center"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "absolute -right-8 -top-8 h-32 w-32 rounded-full bg-cyan-400/10"
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "relative text-5xl"
-      }, "\uD83E\uDDEC"), /*#__PURE__*/React.createElement("small", {
-        className: "relative mt-3 block font-black tracking-[.28em] text-cyan-300"
-      }, "BATTLE MODE"), /*#__PURE__*/React.createElement("h1", {
-        className: "relative mt-1 text-2xl font-black italic text-white"
-      }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("p", {
-        className: "relative mx-auto mt-4 max-w-sm text-[10px] leading-relaxed text-cyan-100"
-      }, "\u540C\u3058\u7A2E\u65CF\u306E\u52C7\u8005\u30E2\u30F3\u3092\u9078\u3073\u3001\u7570\u306A\u308B\u7A2E\u65CF\u306E\u4F9B\u30E2\u30F3\u3068\u3068\u3082\u306B\u516810WAVE\u3078\u6311\u3081\u3002\u4F9B\u30E2\u30F3\u306FWAVE2\u30FB4\u30FB6\u3067\u9806\u756A\u306B\u53C2\u6226\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "relative mt-4 grid grid-cols-3 gap-2 text-[8px] font-black"
+        className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black"
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u30E2\u30FC\u30C9\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
+        className: "relative mt-1"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u524D\u306E\u30E2\u30FC\u30C9",
+        disabled: true,
+        className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 opacity-20"
+      }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("article", {
+        "data-species-preview-mode-card": true,
+        className: "mx-auto w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden flex flex-col",
+        style: {
+          borderColor: '#818cf8',
+          background: 'linear-gradient(180deg,#152044,#0d142b)',
+          boxShadow: '0 0 30px #818cf855'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
+      }, "BATTLE MODE"), /*#__PURE__*/React.createElement("h3", {
+        className: "text-center text-lg font-black leading-tight text-indigo-300"
+      }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("p", {
+        className: "text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]"
+      }, "\u9078\u3093\u3060\u7A2E\u65CF\u3060\u3051\u3067\u6311\u3080\u3001\u7A2E\u65CF\u9650\u5B9A\u306E\u30C1\u30E3\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-400 font-black"
+      }, "\u516C\u958B\u72B6\u6CC1"), /*#__PURE__*/React.createElement("b", {
+        className: "block text-right text-base leading-tight text-indigo-300"
+      }, "DEBUG PREVIEW"), /*#__PURE__*/React.createElement("span", {
+        className: "block text-right text-[9px] text-amber-300"
+      }, "\u7D50\u679C\u30FB\u5831\u916C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("ul", {
+        className: "mt-1.5 space-y-0.5"
+      }, /*#__PURE__*/React.createElement("li", {
+        className: "flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black"
+      }, "\uD83E\uDDEC \u9078\u3093\u3060\u7A2E\u65CF\u3060\u3051\u3067\u30D1\u30FC\u30C6\u30A3\u7DE8\u6210"), /*#__PURE__*/React.createElement("li", {
+        className: "flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black"
+      }, "\uD83E\uDD1D \u4F9B\u30E2\u30F3\u306F0\u301C3\u4F53\u304B\u3089\u4EFB\u610F\u9078\u629E"), /*#__PURE__*/React.createElement("li", {
+        className: "flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black"
+      }, "\u2694\uFE0F W2\u30FB4\u30FB6\u3067\u6B8B\u308A\u304B\u3089\u52A0\u5165")), /*#__PURE__*/React.createElement("div", {
+        className: "grid gap-1.5 mt-auto pt-1.5"
+      }, /*#__PURE__*/React.createElement("button", {
+        className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs"
+      }, "\u3053\u306E\u30E2\u30FC\u30C9\u306E\u8AAC\u660E"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => patchSelection({
+          step: 'species'
+        }),
+        className: "min-h-[44px] rounded-xl bg-indigo-400 text-slate-950 font-black text-sm"
+      }, "\u7A2E\u65CF\u3092\u9078\u3076"))), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u6B21\u306E\u30E2\u30FC\u30C9",
+        disabled: true,
+        className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 opacity-20"
+      }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-center gap-1 py-1"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "rounded-xl bg-black/35 p-2"
-      }, "\u516810", /*#__PURE__*/React.createElement("br", null), "WAVE"), /*#__PURE__*/React.createElement("span", {
-        className: "rounded-xl bg-black/35 p-2"
-      }, "\u4F9B\u30E2\u30F3", /*#__PURE__*/React.createElement("br", null), "0\u301C3\u4F53"), /*#__PURE__*/React.createElement("span", {
-        className: "rounded-xl bg-black/35 p-2"
-      }, "\u521D\u56DE\u5831\u916C", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u306E\u5B9F"))), /*#__PURE__*/React.createElement("p", {
-        className: "mt-3 text-center text-[8px] leading-relaxed text-amber-200"
-      }, "\u672C\u756AUI\u78BA\u8A8D\u4E2D\u306E\u305F\u3081\u3001\u30AF\u30EA\u30A2\u30FB\u5831\u916C\u30FB\u30B9\u30B3\u30A2\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\u3002")), selection.step === 'species' && /*#__PURE__*/React.createElement("div", {
+        className: "w-1.5 h-1.5 rounded-full bg-indigo-300 scale-125"
+      }))), selection.step === 'species' && /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, speciesEntries.map(([id, monster]) => {
         const active = selection.speciesId === id;
@@ -30559,11 +30592,10 @@ function MonsterHeroGame() {
         className: "rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950"
       }, selectedAllies.length, " / 3\u4F53")), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[8px] leading-relaxed text-cyan-200"
-      }, "0\u4F53\u306E\u307E\u307E\u3067\u3082\u6B21\u3078\u9032\u3081\u307E\u3059\u3002\u52C7\u8005\u30FB\u4F9B\u30E2\u30F3\u540C\u58EB\u3067\u540C\u3058\u7A2E\u65CF\u306F\u9078\u3079\u307E\u305B\u3093\u3002")), allyCandidates.map(entry => {
+      }, "0\u4F53\u306E\u307E\u307E\u3067\u3082\u6B21\u3078\u9032\u3081\u307E\u3059\u3002\u9078\u3093\u3060\u7A2E\u65CF\u306E\u5225\u500B\u4F53\u3060\u3051\u30923\u4F53\u307E\u3067\u9078\u3079\u307E\u3059\u3002")), allyCandidates.map(entry => {
         const selected = selectedAllies.includes(entry.entryId);
-        const duplicateSpecies = selectedAllies.some(id => id !== entry.entryId && speciesChallengeEntryBaseId(id, masuMons) === entry.baseId);
-        const disabled = !selected && (selectedAllies.length >= 3 || duplicateSpecies);
-        return monsterCard(entry, selected, () => toggleAlly(entry.entryId), disabled, selected ? `${selectedAllies.indexOf(entry.entryId) + 1}番目` : '');
+        const disabled = !selected && selectedAllies.length >= 3;
+        return monsterCard(entry, selected, () => toggleAlly(entry.entryId), disabled, selected ? '選択中' : '');
       })), selection.step === 'confirm' && /*#__PURE__*/React.createElement("div", {
         className: "space-y-3"
       }, /*#__PURE__*/React.createElement("section", {
@@ -30580,41 +30612,36 @@ function MonsterHeroGame() {
         className: "mb-1 block text-[9px] text-cyan-300"
       }, "\u4F9B\u30E2\u30F3\uFF08", selectedAllies.length, "\u4F53\uFF09"), selectedAllies.length ? /*#__PURE__*/React.createElement("div", {
         className: "space-y-2"
-      }, selectedAllies.map((id, index) => entryById(id) && monsterCard(entryById(id), true, () => {}, false, `${index + 1}番目`))) : /*#__PURE__*/React.createElement("p", {
+      }, selectedAllies.map(id => entryById(id) && monsterCard(entryById(id), true, () => {}, false, '選択中'))) : /*#__PURE__*/React.createElement("p", {
         className: "rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400"
       }, "\u4F9B\u30E2\u30F3\u306A\u3057\u3067\u51FA\u6483")), /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl border border-amber-400/30 bg-amber-950/30 p-3 text-[9px] leading-relaxed text-amber-100"
       }, "\u51FA\u6483\u5F8C\u306F\u65E2\u5B58\u30D0\u30C8\u30EB\u306EWAVE1\u3078\u9032\u307F\u307E\u3059\u3002\u3053\u306E\u78BA\u8A8D\u30E2\u30FC\u30C9\u3067\u306F\u7D50\u679C\u30FB\u5831\u916C\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("footer", {
         className: "mt-2 shrink-0"
-      }, selection.step === 'intro' ? /*#__PURE__*/React.createElement("button", {
-        onClick: () => patchSelection({
-          step: 'species'
-        }),
-        className: "min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-[12px] font-black shadow-lg shadow-cyan-950 active:scale-[.98]"
-      }, "\u7A2E\u65CF\u9078\u629E\u3078\u9032\u3080") : selection.step === 'species' ? /*#__PURE__*/React.createElement("button", {
+      }, selection.step === 'intro' ? null : selection.step === 'species' ? /*#__PURE__*/React.createElement("button", {
         disabled: !selection.speciesId,
         onClick: () => patchSelection({
           step: 'difficulty'
         }),
-        className: "min-h-[52px] w-full rounded-xl bg-cyan-600 text-[11px] font-black disabled:opacity-30"
+        className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
       }, "\u96E3\u6613\u5EA6\u9078\u629E\u3078") : selection.step === 'difficulty' ? /*#__PURE__*/React.createElement("button", {
         disabled: !selection.difficultyId,
         onClick: () => patchSelection({
           step: 'hero'
         }),
-        className: "min-h-[52px] w-full rounded-xl bg-cyan-600 text-[11px] font-black disabled:opacity-30"
+        className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
       }, "\u52C7\u8005\u30E2\u30F3\u9078\u629E\u3078") : selection.step === 'hero' ? /*#__PURE__*/React.createElement("button", {
         disabled: !selection.heroId,
         onClick: () => patchSelection({
           step: 'allies'
         }),
-        className: "min-h-[52px] w-full rounded-xl bg-cyan-600 text-[11px] font-black disabled:opacity-30"
+        className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
       }, "\u4F9B\u30E2\u30F3\u9078\u629E\u3078") : selection.step === 'allies' ? /*#__PURE__*/React.createElement("button", {
         disabled: !validation.valid,
         onClick: () => patchSelection({
           step: 'confirm'
         }),
-        className: "min-h-[52px] w-full rounded-xl bg-cyan-600 text-[11px] font-black disabled:opacity-30"
+        className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
       }, "\u51FA\u6483\u78BA\u8A8D\u3078\uFF08", selectedAllies.length, "\u4F53\uFF09") : /*#__PURE__*/React.createElement("button", {
         disabled: !validation.valid,
         onClick: makeRun,
@@ -31332,7 +31359,7 @@ function MonsterHeroGame() {
         canBuy: canBuy,
         onZoom: () => setMarketIconZoom(item),
         onBuy: () => {
-          if (item.type === 'item') {
+          if (item.id === RAINBOW_TRANSCEND_FRUIT_ITEM_ID) {
             setMarketPurchaseQuantity(1);
             setMarketQuantityItem(item);
           } else buyMarketItem(item);
@@ -36330,16 +36357,13 @@ function MonsterHeroGame() {
       onClick: () => setMarketItemDetail(null),
       className: "w-full mt-4 min-h-[48px] rounded-2xl bg-teal-600 text-white font-black active:scale-[.98]"
     }, "\u3068\u3058\u308B"))), marketQuantityItem && (() => {
-      const usesPsyche = marketQuantityItem.currency === 'psyche';
-      const balance = usesPsyche ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : gold;
-      const unit = usesPsyche ? 'プシュケー' : 'ダイヤ';
+      const psyche = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
       const unitCost = Math.max(0, Math.floor(Number(marketQuantityItem.cost) || 0));
-      const maxQuantity = unitCost > 0 ? Math.floor(balance / unitCost) : 0;
+      const maxQuantity = unitCost > 0 ? Math.floor(psyche / unitCost) : 0;
       const quantity = Math.min(Math.max(1, marketPurchaseQuantity), Math.max(1, maxQuantity));
       const total = unitCost * quantity;
       const canPurchase = maxQuantity > 0 && !marketPurchaseProcessingRef.current;
       const changeQuantity = delta => setMarketPurchaseQuantity(current => Math.min(Math.max(1, current + delta), Math.max(1, maxQuantity)));
-      const accentText = usesPsyche ? 'text-fuchsia-200' : 'text-amber-200';
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center overflow-y-auto px-4",
         style: {
@@ -36355,16 +36379,16 @@ function MonsterHeroGame() {
         "aria-label": `${marketQuantityItem.name}の購入個数選択`
       }, /*#__PURE__*/React.createElement("div", {
         onClick: e => e.stopPropagation(),
-        className: `w-full max-w-sm rounded-3xl border-2 ${usesPsyche ? 'border-fuchsia-400/70' : 'border-amber-400/70'} bg-slate-950 p-4 shadow-2xl`
+        className: "w-full max-w-sm rounded-3xl border-2 border-fuchsia-400/70 bg-slate-950 p-4 shadow-2xl"
       }, /*#__PURE__*/React.createElement("h3", {
-        className: `text-center text-lg font-black ${accentText}`
+        className: "text-center text-lg font-black text-fuchsia-200"
       }, marketQuantityItem.name), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 rounded-2xl bg-slate-900 p-3 text-center"
       }, /*#__PURE__*/React.createElement("span", {
         className: "block text-[10px] font-bold text-slate-400"
       }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("strong", {
-        className: `mt-1 block text-xl font-black ${accentText}`
-      }, balance.toLocaleString(), " ", unit)), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 block text-xl font-black text-fuchsia-200"
+      }, psyche.toLocaleString(), " \u30D7\u30B7\u30E5\u30B1\u30FC")), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 text-center text-[11px] font-black text-slate-300"
       }, "\u8CFC\u5165\u500B\u6570"), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 grid grid-cols-5 items-center gap-1.5"
@@ -36389,28 +36413,28 @@ function MonsterHeroGame() {
       }, "+10")), /*#__PURE__*/React.createElement("button", {
         disabled: maxQuantity <= 0,
         onClick: () => setMarketPurchaseQuantity(maxQuantity),
-        className: `mt-2 min-h-[44px] w-full rounded-xl font-black disabled:opacity-30 ${usesPsyche ? 'bg-fuchsia-800' : 'bg-amber-700'}`
+        className: "mt-2 min-h-[44px] w-full rounded-xl bg-fuchsia-800 font-black disabled:opacity-30"
       }, "MAX\uFF08", maxQuantity.toLocaleString(), "\u500B\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "\u5358\u4FA1"), /*#__PURE__*/React.createElement("span", null, "1\u500B = ", unitCost.toLocaleString(), unit)), /*#__PURE__*/React.createElement("div", {
+      }, "\u5358\u4FA1"), /*#__PURE__*/React.createElement("span", null, "1\u500B = ", unitCost.toLocaleString(), "\u30D7\u30B7\u30E5\u30B1\u30FC")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-base"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
       }, "\u5408\u8A08"), /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, total.toLocaleString(), unit)), /*#__PURE__*/React.createElement("div", {
+      }, total.toLocaleString(), "\u30D7\u30B7\u30E5\u30B1\u30FC")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
       }, "\u8CFC\u5165\u5F8C"), /*#__PURE__*/React.createElement("span", {
-        className: accentText
-      }, "\u6B8B\u308A", Math.max(0, balance - total).toLocaleString(), unit))), maxQuantity <= 0 && /*#__PURE__*/React.createElement("p", {
+        className: "text-fuchsia-200"
+      }, "\u6B8B\u308A", Math.max(0, psyche - total).toLocaleString(), "\u30D7\u30B7\u30E5\u30B1\u30FC"))), maxQuantity <= 0 && /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-center text-[12px] font-black text-red-300"
-      }, unit, "\u304C\u8DB3\u308A\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 grid grid-cols-1 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: !canPurchase,

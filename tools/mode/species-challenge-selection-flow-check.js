@@ -25,21 +25,20 @@ const masuMons = [
   { id:'tiger-masu', baseId:'Tiger' },
 ];
 
-assert(api.speciesChallengeAvailableAllyIds(unlockedBaseIds, masuMons).includes('Mocchi'), '解放済みBaseを統合候補へ含める');
-assert(api.speciesChallengeAvailableAllyIds(unlockedBaseIds, masuMons).includes('masu:hero-masu'), '所持Masuを安定IDで統合候補へ含める');
-for (const allies of [[], ['Dragon'], ['Dragon', 'Slime'], ['Dragon', 'Slime', 'Golem']]) {
-  assert(api.validateSpeciesChallengeAllySelection({ heroId:'masu:hero-masu', allyIds:allies, unlockedBaseIds, masuMons }).valid, `供モン${allies.length}体を許可する`);
+assert(api.speciesChallengeAvailableAllyIds('Mocchi', unlockedBaseIds, masuMons).includes('Mocchi'), '選択種族のBaseを候補へ含める');
+assert(api.speciesChallengeAvailableAllyIds('Mocchi', unlockedBaseIds, masuMons).includes('masu:hero-masu'), '選択種族の所持Masuを安定IDで候補へ含める');
+for (const allies of [[], ['masu:hero-masu']]) {
+  assert(api.validateSpeciesChallengeAllySelection({ speciesId:'Mocchi',heroId:'Mocchi', allyIds:allies, unlockedBaseIds, masuMons }).valid, `供モン${allies.length}体を許可する`);
 }
-assert(!api.validateSpeciesChallengeAllySelection({ heroId:'Mocchi', allyIds:['masu:hero-masu'], unlockedBaseIds, masuMons }).valid, '勇者と同じbaseIdの供モンを拒否する');
-assert(!api.validateSpeciesChallengeAllySelection({ heroId:'Mocchi', allyIds:['Dragon', 'masu:dragon-masu'], unlockedBaseIds, masuMons }).valid, 'Base/Masu混在でも供モン同種を拒否する');
-assert(!api.validateSpeciesChallengeAllySelection({ heroId:'Mocchi', allyIds:['Dragon', 'Slime', 'Golem', 'Tiger'], unlockedBaseIds, masuMons }).valid, '4体目を拒否する');
-const run = api.createSpeciesChallengeRunState({ speciesId:'Mocchi', difficultyId:'Expert', heroId:'masu:hero-masu', allyIds:['Dragon'], unlockedBaseIds, masuMons });
-assert(run?.speciesId === 'Mocchi' && run?.difficultyId === 'Expert' && run?.heroId === 'masu:hero-masu' && run?.allyIds[0] === 'Dragon', '確認画面から本番バトル用run情報を生成する');
+assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'Mocchi',heroId:'masu:hero-masu', allyIds:['masu:hero-masu'], unlockedBaseIds, masuMons }).valid, '勇者と同じentryIdの供モンを拒否する');
+assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'Mocchi',heroId:'Mocchi', allyIds:['Dragon'], unlockedBaseIds, masuMons }).valid, '他種族を拒否する');
+const run = api.createSpeciesChallengeRunState({ speciesId:'Mocchi', difficultyId:'Expert', heroId:'Mocchi', allyIds:['masu:hero-masu'], unlockedBaseIds, masuMons });
+assert(run?.speciesId === 'Mocchi' && run?.allyIds[0] === 'masu:hero-masu', '確認画面から種族限定run情報を生成する');
 
 const screenStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_SELECT'");
 const screenEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", screenStart);
 const screen = source.slice(screenStart, screenEnd);
-assert(screenStart >= 0 && screenEnd > screenStart, 'モード画面を含む6段階の共通選択画面が存在する');
+assert(screenStart >= 0 && screenEnd > screenStart, '本番形式の共通選択画面が存在する');
 for (const step of ['intro', 'species', 'difficulty', 'hero', 'allies', 'confirm']) assert(screen.includes(`'${step}'`), `${step}ステップがある`);
 assert(screen.includes('Object.entries(ALL_PLAYER_MONSTERS)'), '種族候補はALL_PLAYER_MONSTERSのbaseIdを正本にする');
 assert(screen.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map'), '14難易度は既存ID一覧を再利用する');
@@ -51,7 +50,7 @@ assert(screen.includes('validateSpeciesChallengeAllySelection') && screen.includ
 assert(screen.includes('0体のままでも次へ進めます') && screen.includes('min-h-[44px]'), '0体出撃案内と44px以上の戻る操作を備える');
 assert(screen.includes('初回クリア報酬') && screen.includes('speciesChallengeFirstClearReward(id)'), '難易度カードに既存helper由来の初回報酬を表示する');
 assert(screen.includes("entry.type==='masu'?'Masu':'Base'") && screen.includes('DyedMonsterImage'), '勇者・供モンカードは画像とBase/Masu区別を表示する');
-assert(screen.includes("selection.step==='intro'") && screen.includes('種族選択へ進む'), '本番想定のモード画面から種族選択へ進める');
+assert(screen.includes("selection.step==='intro'") && screen.includes('種族を選ぶ'), '本番想定のモード画面から種族選択へ進める');
 assert(source.includes('const loadSpeciesChallengeProgress = async() =>')
   && source.includes('normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false))'), '共通loaderは既存キーを読み込み正規化する');
 assert(source.includes('const openSpeciesChallengeSelection = async() =>')

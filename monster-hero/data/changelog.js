@@ -1,3 +1,4 @@
+// 種族チャレンジの本番UI確認は未公開・保存なしのため、公開時まで利用者向け更新履歴へ掲載しない。
 const CHANGELOG = [
   {
     date: "2026-08-28 01:15", type: 'update', title: 'マーケットの消耗アイテムをまとめ買いできるようにしました', status: 'new',
@@ -7,7 +8,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-28 01:15", type: 'update', title: '虹の超越の実をマーケットへ追加しました', status: 'new',
+    date: "2026-08-28 01:03", type: 'update', title: '虹の超越の実をマーケットへ追加しました', status: 'new',
     assistantNotice: { id:'update_notice_rainbow_transcend_fruit_market_v1', type:'market' },
     items: [
       'マーケットのアイテムに「虹の超越の実」を追加しました。1個1000プシュケーで、回数制限なく購入できます。',

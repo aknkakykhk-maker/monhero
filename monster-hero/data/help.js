@@ -1045,7 +1045,7 @@ const HELP_SCREEN_COVERAGE = {
   // 超越テストも開発用だが、本番と同じマーク・演出を確認するため超越の説明へ対応させる。
   TRANSCEND_DEBUG:'masu/transcendence',
   EXTREME_DIFFICULTY_SELECT: 'basics/extreme-challenge',
-  // 対象外: DEBUG_SETTINGS と種族チャレンジ進行確認・選択フローは開発用の隠し画面。
+  // 対象外: DEBUG_SETTINGS と種族チャレンジ進行確認・本番形式プレビューは開発用の隠し画面。選択種族だけで編成するが、まだ通常入口には出さない。
   // 種族チャレンジをBATTLE MODEへ公開するときに、正式なヘルプ項目へ対応させる。TRAINING_* は別担当のため触らない。
   DEBUG_SETTINGS:   null,
   SPECIES_CHALLENGE_DEBUG: null,
