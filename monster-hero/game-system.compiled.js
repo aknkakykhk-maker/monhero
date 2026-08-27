@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1a6dc1468bcbd8c0
+// source-sha256: 7b75b9a3780438a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 07:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 08:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -174,9 +174,9 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   short: '種族',
   emoji: '🧬',
   color: '#67e8f9',
-  tagline: '好きな種族を1つ選び、その種族だけでWAVE1〜10へ挑むモード',
-  highlights: [['🧬', '選んだ種族だけで編成'], ['🤝', '供モン0〜3体'], ['🍎', '初回クリアで超越の実']],
-  points: [['⚔️', '編成', '勇者1体＋供モン0〜3体。解放済みベースモンと所持マスモンから選びます。選んだ種族以外は使えません。同じ個体を二重に選べませんが、別個体なら同じ種族を何体でも編成できます。'], ['🤝', '供モン', 'WAVE2・4・6をクリアしたとき、事前に選んだ未加入の供モンから1体を選んで加入させます。'], ['🔓', '難易度', 'Beginner〜Expertは最初から挑めます。Master以降は同じ種族で1つ前の難易度をクリアすると順に解放されます。進行は種族ごとに独立しています。'], ['🍎', '初回クリア報酬', '種族×難易度の初回クリアで、その種族の「超越の実」を獲得します。個数は難易度ごとに決まっており、難易度画面で確認できます。'], ['🔥', '上位難易度', 'EXTREME〜INFINITYでは、既存の極限チャレンジと同じ特殊ルールが適用されます。'], ['🏅', '記録', '自己ベストは種族×難易度ごとに別々に記録されます。']]
+  tagline: 'ひとつの種族だけで挑む、しばりプレイのモード',
+  highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🔓', '種族ごとに難易度を解放していく'], ['🏅', '記録は種族ごとに別々に残る']],
+  points: [['🧬', 'どんなモード', '挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'], ['⚔️', '編成', '勇者モン1体と供モン0〜3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。同じ個体を二重には選べませんが、別の個体なら同じ種族から何体でも連れていけます。供モン0体のまま挑むこともできます。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'], ['👹', '難しさ', '難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'], ['🔥', '上位の難易度', 'EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。'], ['🎯', 'こんな人におすすめ', '特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。']]
 });
 // プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
 // バトルの中身はチャレンジと同じで、違うのは「編成がベースモン限定」「経験値の倍率」
@@ -1024,19 +1024,39 @@ const buildFusionBreakthroughPlan = ({
 };
 const ownedItemCount = (ownedItems, itemId) => Math.max(0, Math.floor(Number(ownedItems?.[itemId]) || 0));
 // ===== 超越の実（種族チャレンジ報酬の所持データ基盤） =====
-// baseId を itemId の末尾へそのまま保持し、表示名の変更に影響されないようにする。
-// ALL_PLAYER_MONSTERS から生成するため、プレイアブル種の追加時に個別定義を足す必要はない。
+// 「種族」はモンスター1体ではなく主血統(モッチー種・ピクシー種…)を指す。
+// 血統idを itemId の末尾へそのまま保持し、表示名の変更に影響されないようにする。
+// data/lineages.js から生成するため、モンスター追加時に個別定義を足す必要はない。
 const SPECIES_TRANSCEND_FRUIT_ITEM_ID_PREFIX = 'transcend_fruit_species_';
 const RAINBOW_TRANSCEND_FRUIT_ITEM_ID = 'transcend_fruit_rainbow';
-const SPECIES_TRANSCEND_FRUIT_ITEMS = Object.freeze(Object.fromEntries(Object.entries(ALL_PLAYER_MONSTERS).map(([baseId, monster]) => [baseId, Object.freeze({
+// 実際に登場する主血統だけを対象にする(プレイアブルモンスターがいない血統は作らない)。
+// dexMainLineages はこのファイルの後ろで定義されるので、モジュール読み込み時ではなく
+// 最初に必要になったときに作る。ここで即座に呼ぶと
+// 「Cannot access 'dexMainLineages' before initialization」で画面が真っ白になる
+const speciesChallengeLineages = () => dexMainLineages();
+let _speciesTranscendFruitItems = null;
+const speciesTranscendFruitItems = () => {
+  if (!_speciesTranscendFruitItems) {
+    _speciesTranscendFruitItems = Object.freeze(Object.fromEntries(speciesChallengeLineages().map(lineage => [lineage.id, Object.freeze({
+      id: `${SPECIES_TRANSCEND_FRUIT_ITEM_ID_PREFIX}${lineage.id}`,
+      name: `超越の実（${lineage.name}種）`,
+      lineageId: lineage.id
+    })])));
+  }
+  return _speciesTranscendFruitItems;
+};
+// 【後方互換】種族をモンスター1体単位で作っていたころの実(transcend_fruit_species_Mocchi 等)。
+// もう配らないが、すでに持っている人の所持品を無効にしないため、使う側では受け付ける。
+// 対応する血統のマスモンへ、新しい実と同じように使える。
+const LEGACY_SPECIES_TRANSCEND_FRUIT_ITEMS = Object.freeze(Object.fromEntries(Object.keys(typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS : {}).map(baseId => [baseId, Object.freeze({
   id: `${SPECIES_TRANSCEND_FRUIT_ITEM_ID_PREFIX}${baseId}`,
-  name: `超越の実（${monster.name}）`,
   baseId
 })])));
+const legacySpeciesTranscendFruitItemId = baseId => typeof baseId === 'string' && Object.hasOwn(LEGACY_SPECIES_TRANSCEND_FRUIT_ITEMS, baseId) ? LEGACY_SPECIES_TRANSCEND_FRUIT_ITEMS[baseId].id : null;
 const RAINBOW_TRANSCEND_FRUIT_ITEM = Object.freeze({
   id: RAINBOW_TRANSCEND_FRUIT_ITEM_ID,
   name: '虹の超越の実',
-  baseId: null
+  lineageId: null
 });
 // 既存の虹の超越の実IDをそのままMARKET商品へ接続する。通貨は通常の虹ではないプシュケー。
 BREEDER_MARKET_ITEMS.push({
@@ -1048,13 +1068,28 @@ BREEDER_MARKET_ITEMS.push({
   currency: 'psyche',
   desc: 'どの種族のマスモンにも使える。1個で超越ポイント+1'
 });
-const TRANSCEND_FRUIT_ITEM_IDS = new Set([RAINBOW_TRANSCEND_FRUIT_ITEM_ID, ...Object.values(SPECIES_TRANSCEND_FRUIT_ITEMS).map(item => item.id)]);
-const speciesTranscendFruitItemId = speciesId => typeof speciesId === 'string' && Object.hasOwn(SPECIES_TRANSCEND_FRUIT_ITEMS, speciesId) ? SPECIES_TRANSCEND_FRUIT_ITEMS[speciesId].id : null;
-const transcendFruitOwnedCount = (ownedItems, itemId) => TRANSCEND_FRUIT_ITEM_IDS.has(itemId) ? ownedItemCount(ownedItems, itemId) : 0;
+// 実のidかどうかの判定も、種族の一覧と同じく最初に必要になったときに作る
+let _transcendFruitItemIds = null;
+const transcendFruitItemIds = () => {
+  if (!_transcendFruitItemIds) {
+    _transcendFruitItemIds = new Set([RAINBOW_TRANSCEND_FRUIT_ITEM_ID, ...Object.values(speciesTranscendFruitItems()).map(item => item.id),
+    // すでに配ってしまった個体単位の実も、所持数を読める対象として残す
+    ...Object.values(LEGACY_SPECIES_TRANSCEND_FRUIT_ITEMS).map(item => item.id)]);
+  }
+  return _transcendFruitItemIds;
+};
+// 種族(主血統)idから実のidを引く
+const speciesTranscendFruitItemId = speciesId => {
+  const items = speciesTranscendFruitItems();
+  return typeof speciesId === 'string' && Object.hasOwn(items, speciesId) ? items[speciesId].id : null;
+};
+// マスモン(個体)から、その子に使える種族の実のidを引く。baseId→主血統を経由する
+const masuSpeciesTranscendFruitItemId = baseId => speciesTranscendFruitItemId(typeof baseId === 'string' ? monsterLineageOf(baseId).main.id : null);
+const transcendFruitOwnedCount = (ownedItems, itemId) => transcendFruitItemIds().has(itemId) ? ownedItemCount(ownedItems, itemId) : 0;
 const changeTranscendFruitOwnedCount = (ownedItems, itemId, amount) => {
   const current = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const n = Number(amount);
-  if (!TRANSCEND_FRUIT_ITEM_IDS.has(itemId) || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0) return {
+  if (!transcendFruitItemIds().has(itemId) || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0) return {
     ok: false,
     ownedItems: current
   };
@@ -1070,7 +1105,7 @@ const consumeTranscendFruit = (ownedItems, itemId, amount) => {
   const current = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const n = Number(amount);
   const have = transcendFruitOwnedCount(current, itemId);
-  if (!TRANSCEND_FRUIT_ITEM_IDS.has(itemId) || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0 || have < n) return {
+  if (!transcendFruitItemIds().has(itemId) || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0 || have < n) return {
     ok: false,
     ownedItems: current
   };
@@ -1083,11 +1118,13 @@ const consumeTranscendFruit = (ownedItems, itemId, amount) => {
   };
 };
 // 使用する実は呼び出し側が明示する。種族別の実が合わない場合に虹の実へ代用しない。
+// 種族の実はその子の主血統のもの。個体単位で配っていたころの実も、同じ子へは使える
 const useTranscendFruitOnMasu = (masu, ownedItems, itemId, amount) => {
   const currentItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const n = Number(amount);
-  const speciesItemId = speciesTranscendFruitItemId(masu?.baseId);
-  const itemMatches = itemId === RAINBOW_TRANSCEND_FRUIT_ITEM_ID || speciesItemId !== null && itemId === speciesItemId;
+  const speciesItemId = masuSpeciesTranscendFruitItemId(masu?.baseId);
+  const legacyItemId = legacySpeciesTranscendFruitItemId(masu?.baseId);
+  const itemMatches = itemId === RAINBOW_TRANSCEND_FRUIT_ITEM_ID || speciesItemId !== null && itemId === speciesItemId || legacyItemId !== null && itemId === legacyItemId;
   if (!masu || typeof masu !== 'object' || Array.isArray(masu) || !itemMatches || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
     return {
       ok: false,
@@ -9082,6 +9119,8 @@ const updateSpeciesChallengeProgressFlag = (progress, speciesId, difficultyId, f
   };
   return normalized;
 };
+// 画面へ出す種族の呼び名。種族は主血統なので「モッチー種」のように出す
+const speciesChallengeSpeciesName = speciesId => validSpeciesChallengeId(speciesId) ? `${lineageById(speciesId).name}種` : '種族';
 // 種族×難易度の自己記録を読む。記録が無い組み合わせでも既定値へ落ちる
 const speciesChallengeRecord = (progress, speciesId, difficultyId) => normalizeSpeciesChallengeRecord(validSpeciesChallengeId(speciesId) && SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? normalizeSpeciesChallengeProgress(progress).species[speciesId]?.records?.[difficultyId] : null);
 // クリアしたときだけ呼ぶ。スコアとターン数は「良くなったときだけ」更新し、クリア回数は必ず1増やす
@@ -9123,7 +9162,13 @@ const speciesChallengeEntryBaseId = (entryId, masuMons = []) => {
   const masu = (Array.isArray(masuMons) ? masuMons : []).find(mon => mon && String(mon.id) === masuId);
   return typeof masu?.baseId === 'string' && masu.baseId ? masu.baseId : null;
 };
-const speciesChallengeAvailableAllyIds = (speciesId, unlockedBaseIds = [], masuMons = []) => [...(Array.isArray(unlockedBaseIds) ? unlockedBaseIds : []).filter(id => id === speciesId), ...(Array.isArray(masuMons) ? masuMons : []).filter(mon => mon && mon.id !== null && mon.id !== undefined && mon.baseId === speciesId).map(mon => `masu:${String(mon.id)}`)];
+// 「種族」は主血統。ピクシー種ならピクシー・ミーア・パンドラがまとめて候補になる。
+// 血統はモンスターの種(baseId)から引くので、個体側には何も保存しない
+const speciesChallengeEntryLineageId = (entryId, masuMons = []) => {
+  const baseId = speciesChallengeEntryBaseId(entryId, masuMons);
+  return baseId ? monsterLineageOf(baseId).main.id : null;
+};
+const speciesChallengeAvailableAllyIds = (speciesId, unlockedBaseIds = [], masuMons = []) => [...(Array.isArray(unlockedBaseIds) ? unlockedBaseIds : []).filter(id => monsterLineageOf(id).main.id === speciesId), ...(Array.isArray(masuMons) ? masuMons : []).filter(mon => mon && mon.id !== null && mon.id !== undefined && monsterLineageOf(mon.baseId).main.id === speciesId).map(mon => `masu:${String(mon.id)}`)];
 const validateSpeciesChallengeAllySelection = ({
   speciesId,
   heroId,
@@ -9139,8 +9184,8 @@ const validateSpeciesChallengeAllySelection = ({
     valid: false,
     reason: 'too-many-allies'
   };
-  const heroBaseId = speciesChallengeEntryBaseId(heroId, masuMons);
-  if (!speciesId || heroBaseId !== speciesId) return {
+  const heroLineageId = speciesChallengeEntryLineageId(heroId, masuMons);
+  if (!speciesId || heroLineageId !== speciesId) return {
     valid: false,
     reason: 'invalid-hero'
   };
@@ -9157,7 +9202,7 @@ const validateSpeciesChallengeAllySelection = ({
       reason: entryId === heroId ? 'same-entry-as-hero' : 'duplicate-ally',
       entryId
     };
-    if (speciesChallengeEntryBaseId(entryId, masuMons) !== speciesId) return {
+    if (speciesChallengeEntryLineageId(entryId, masuMons) !== speciesId) return {
       valid: false,
       reason: 'different-species',
       entryId
@@ -13606,7 +13651,7 @@ function MonsterHeroGame() {
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
   // 本番の選択フローと進行デバッグで、STEP1の保存形式・helperを共有する。
   // 選択中の種族・難易度だけがデバッグ専用で、保存先は既存の進行キー1つに限る。
-  const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(() => Object.keys(ALL_PLAYER_MONSTERS)[0] || '');
+  const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(() => speciesChallengeLineages()[0]?.id || '');
   const [speciesChallengeDebugDifficultyId, setSpeciesChallengeDebugDifficultyId] = useState('Expert');
   const [speciesChallengeProgress, setSpeciesChallengeProgress] = useState(() => normalizeSpeciesChallengeProgress(null));
   const [speciesChallengeDebugHeroId, setSpeciesChallengeDebugHeroId] = useState('');
@@ -24882,6 +24927,15 @@ function MonsterHeroGame() {
     clears: clearCounts[diff] || 0
   };
   // 新しい入口からスコアランキングを開く。難易度カードから来たときは、その難易度のタブを最初に選ぶ
+  // 種族チャレンジの記録一覧。ランキング画面と同じ入れ物をそのまま使う
+  const openSpeciesChallengeRecords = async backTo => {
+    await loadSpeciesChallengeProgress();
+    addAssistantBond('ranking');
+    setScoreRankingMode(BATTLE_MODE_SPECIES_CHALLENGE);
+    setScoreRankingBack(backTo);
+    setRankingViewDiff(SPECIES_CHALLENGE_DIFFICULTY_IDS[0]);
+    setGameState('BATTLE_SCORE_RANKING');
+  };
   const openModeScoreRanking = (mode, diff, backTo) => {
     if (!modeHasRanking(mode)) return;
     addAssistantBond('ranking');
@@ -24943,6 +24997,65 @@ function MonsterHeroGame() {
     }, status.error), rows.map(renderScoreRankingEntry), rows.length === 0 && (status.loading ? /*#__PURE__*/React.createElement("div", {
       className: "text-center text-slate-400 py-8"
     }, "Loading...") : status.error && !status.fetched ? rankingRetryButton(() => loadRankings(viewKey, false, true)) : rankingEmptyText)));
+  };
+  // 種族チャレンジの記録。一般公開まで全国ランキングへ送らないので、同じ画面の作り
+  // (難易度タブ + 一覧)のまま、自分の種族×難易度の記録を出す。
+  // 公開後は modeHasRanking が true になり、通常のスコアランキングへ切り替わる
+  const renderSpeciesChallengeRecordBody = () => {
+    const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
+    const settingOf = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
+    // 記録のある種族を上に、クリアが多い順→自己ベスト順に並べる
+    const rows = speciesChallengeLineages().map(lineage => ({
+      lineage,
+      record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId)
+    })).sort((a, b) => b.record.clears - a.record.clears || b.record.bestScore - a.record.bestScore);
+    const played = rows.filter(row => row.record.clears > 0);
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0"
+    }, SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
+      const st = settingOf(id);
+      return /*#__PURE__*/React.createElement("button", {
+        key: id,
+        onClick: () => setRankingViewDiff(id),
+        className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${diffId === id ? 'ring-2 ring-white' : 'border border-white/10'}`,
+        style: difficultyStyle(st, diffId === id)
+      }, st.label);
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 overflow-y-auto mh-scroll space-y-1.5",
+      "data-species-record-list": true
+    }, played.length === 0 ? /*#__PURE__*/React.createElement("p", {
+      className: "rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400"
+    }, settingOf(diffId).label, "\u3092\u30AF\u30EA\u30A2\u3057\u305F\u7A2E\u65CF\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u7A2E\u65CF\u3054\u3068\u306B\u81EA\u5DF1\u30D9\u30B9\u30C8\u304C\u6B8B\u308A\u307E\u3059\u3002") : played.map(({
+      lineage,
+      record
+    }, index) => {
+      const members = dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === lineage.id);
+      const iconMon = members.find(mon => mon.id === lineage.monId) || members[0];
+      return /*#__PURE__*/React.createElement("div", {
+        key: lineage.id,
+        "data-species-record-row": lineage.id,
+        className: "flex items-center gap-2.5 rounded-2xl border border-white/10 bg-slate-900 p-2.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "w-6 shrink-0 text-center text-[13px] font-black text-amber-300"
+      }, index + 1), /*#__PURE__*/React.createElement(MonsterArtFrame, {
+        baseId: iconMon?.id,
+        src: iconMon?.iconUrl,
+        alt: "",
+        className: "h-11 w-11 shrink-0 rounded-xl border border-white/10 bg-black/40"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block truncate text-[12px] font-black text-white"
+      }, lineage.name, "\u7A2E"), /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-400"
+      }, "\u30AF\u30EA\u30A2 ", record.clears, "\u56DE", record.bestTurns !== null ? ` ／ 最短 ${record.bestTurns}T` : '')), /*#__PURE__*/React.createElement("b", {
+        className: "shrink-0 text-right text-[13px] font-black text-cyan-200"
+      }, record.bestScore.toLocaleString(), /*#__PURE__*/React.createElement("small", {
+        className: "ml-0.5 text-[8px] text-slate-400"
+      }, "pt")));
+    }), !SPECIES_CHALLENGE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("p", {
+      className: "rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 text-center text-[9px] leading-relaxed text-amber-200"
+    }, "\u3044\u307E\u306F\u81EA\u5206\u306E\u8A18\u9332\u3060\u3051\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u30E2\u30FC\u30C9\u306E\u516C\u958B\u5F8C\u306B\u59CB\u307E\u308A\u307E\u3059\u3002")));
   };
   // ブリーダーLvランキング。モードで分かれない(そのブリーダーのレベルは1つだけ)
   const renderBreederRankingBody = () => {
@@ -28030,6 +28143,15 @@ function MonsterHeroGame() {
           className: "flex-1 text-center whitespace-nowrap"
         }, "\uD83C\uDFC6 ", m.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 14
+        })), isSpecies && /*#__PURE__*/React.createElement("button", {
+          "data-species-record-link": true,
+          disabled: !!battleTutorial,
+          onClick: () => openSpeciesChallengeRecords('BATTLE_MODE_SELECT'),
+          className: "min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "flex-1 text-center whitespace-nowrap"
+        }, "\uD83C\uDFC5 ", m.label, "\u306E\u8A18\u9332"), /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 14
         })), ranked && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => openModeScoreRanking(m.id, safeDifficulty, 'BATTLE_MODE_SELECT'),
@@ -28550,6 +28672,7 @@ function MonsterHeroGame() {
       })))));
     })(), gameState === 'BATTLE_SCORE_RANKING' && (() => {
       const mode = battleModeInfo(scoreRankingMode);
+      const species = scoreRankingMode === BATTLE_MODE_SPECIES_CHALLENGE;
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
         style: {
@@ -28569,14 +28692,14 @@ function MonsterHeroGame() {
         style: {
           color: mode.color
         }
-      }, mode.label, "\u30E9\u30F3\u30AD\u30F3\u30B0")), /*#__PURE__*/React.createElement("div", {
+      }, species ? `${mode.label}の記録` : `${mode.label}ランキング`)), /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full mb-2.5"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "ranking",
         compact: true
-      })), renderScoreRankingBody(scoreRankingMode)));
+      })), species ? renderSpeciesChallengeRecordBody() : renderScoreRankingBody(scoreRankingMode)));
     })(), gameState === 'MONSTER_LIST_MENU' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
@@ -30275,8 +30398,9 @@ function MonsterHeroGame() {
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
     }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
-      const speciesEntries = Object.entries(ALL_PLAYER_MONSTERS);
-      const speciesId = ALL_PLAYER_MONSTERS[speciesChallengeDebugSpeciesId] ? speciesChallengeDebugSpeciesId : speciesEntries[0]?.[0] || '';
+      // 種族は主血統。ここも本番と同じ一覧を使う
+      const speciesEntries = speciesChallengeLineages();
+      const speciesId = speciesEntries.some(l => l.id === speciesChallengeDebugSpeciesId) ? speciesChallengeDebugSpeciesId : speciesEntries[0]?.id || '';
       const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, speciesId);
       const saveProgress = async next => {
         const normalized = normalizeSpeciesChallengeProgress(next);
@@ -30285,15 +30409,15 @@ function MonsterHeroGame() {
       };
       const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
       const resetSpecies = async () => {
-        if (!window.confirm(`${ALL_PLAYER_MONSTERS[speciesId]?.name || speciesId}の種族チャレンジ進行だけをリセットしますか？`)) return;
+        if (!window.confirm(`${speciesChallengeSpeciesName(speciesId)}の種族チャレンジ進行だけをリセットしますか？`)) return;
         const next = normalizeSpeciesChallengeProgress(speciesChallengeProgress);
         delete next.species[speciesId];
         await saveProgress(next);
       };
       const challengeEntries = buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, []);
-      const heroCandidates = challengeEntries.filter(entry => entry.baseId === speciesId);
+      const heroCandidates = challengeEntries.filter(entry => monsterLineageOf(entry.baseId).main.id === speciesId);
       const heroId = heroCandidates.some(entry => entry.entryId === speciesChallengeDebugHeroId) ? speciesChallengeDebugHeroId : heroCandidates[0]?.entryId || '';
-      const allyCandidates = challengeEntries.filter(entry => entry.baseId === speciesId && entry.entryId !== heroId);
+      const allyCandidates = challengeEntries.filter(entry => monsterLineageOf(entry.baseId).main.id === speciesId && entry.entryId !== heroId);
       const selectedAllyIds = speciesChallengeDebugAllyIds.filter(entryId => allyCandidates.some(entry => entry.entryId === entryId));
       const entryLabel = entryId => {
         const entry = challengeEntries.find(item => item.entryId === entryId);
@@ -30347,7 +30471,7 @@ function MonsterHeroGame() {
         }]);
       };
       const selectedMasu = masuMons.find(m => String(m.id) === String(transcendFruitDebugMasuId)) || masuMons[0] || null;
-      const speciesFruitId = speciesTranscendFruitItemId(selectedMasu?.baseId);
+      const speciesFruitId = masuSpeciesTranscendFruitItemId(selectedMasu?.baseId);
       const selectedFruitId = [speciesFruitId, RAINBOW_TRANSCEND_FRUIT_ITEM_ID].includes(transcendFruitDebugItemId) ? transcendFruitDebugItemId : '';
       const useFruit = async amount => {
         if (!selectedMasu) return;
@@ -30399,7 +30523,7 @@ function MonsterHeroGame() {
         className: "block text-[8px] text-cyan-300"
       }, "\u672C\u756A\u7528\u306E\u9078\u629E\u30D5\u30ED\u30FC\uFF08\u30D0\u30C8\u30EB\u958B\u59CB\u306A\u3057\uFF09")), /*#__PURE__*/React.createElement("label", {
         className: "block text-[9px] font-black text-emerald-200"
-      }, "\u7A2E\u65CF\uFF08ALL_PLAYER_MONSTERS\uFF09", /*#__PURE__*/React.createElement("select", {
+      }, "\u7A2E\u65CF\uFF08\u4E3B\u8840\u7D71\uFF09", /*#__PURE__*/React.createElement("select", {
         "aria-label": "\u7A2E\u65CF",
         value: speciesId,
         onChange: e => {
@@ -30410,10 +30534,10 @@ function MonsterHeroGame() {
           setSpeciesChallengeDebugWaveLog([]);
         },
         className: "mt-1 block min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[11px] text-white"
-      }, speciesEntries.map(([id, monster]) => /*#__PURE__*/React.createElement("option", {
-        key: id,
-        value: id
-      }, monster.name, "\uFF0F", id)))), /*#__PURE__*/React.createElement("label", {
+      }, speciesEntries.map(lineage => /*#__PURE__*/React.createElement("option", {
+        key: lineage.id,
+        value: lineage.id
+      }, lineage.name, "\u7A2E\uFF0F", dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === lineage.id).map(mon => mon.name).join('・'))))), /*#__PURE__*/React.createElement("label", {
         className: "block text-[9px] font-black text-emerald-200"
       }, "\u64CD\u4F5C\u5BFE\u8C61\u306E\u96E3\u6613\u5EA6", /*#__PURE__*/React.createElement("select", {
         "aria-label": "\u64CD\u4F5C\u5BFE\u8C61\u306E\u96E3\u6613\u5EA6",
@@ -30617,7 +30741,9 @@ function MonsterHeroGame() {
       const selection = speciesChallengeSelection;
       const stepOrder = ['species', 'hero', 'allies', 'confirm'];
       const stepIndex = stepOrder.indexOf(selection.step);
-      const speciesEntries = Object.entries(ALL_PLAYER_MONSTERS);
+      // 「種族」はモンスター1体ではなく主血統。ピクシー種を選べば
+      // ピクシー・ミーア・パンドラがまとめて候補になる
+      const speciesEntries = speciesChallengeLineages();
       const challengeEntries = buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, []);
       const entryById = id => challengeEntries.find(entry => entry.entryId === id);
       const entryLabel = id => {
@@ -30626,8 +30752,9 @@ function MonsterHeroGame() {
       };
       const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
       const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, selection.speciesId);
-      const heroCandidates = challengeEntries.filter(entry => entry.baseId === selection.speciesId);
-      const allyCandidates = challengeEntries.filter(entry => entry.baseId === selection.speciesId && entry.entryId !== selection.heroId);
+      const entryLineageId = entry => monsterLineageOf(entry.baseId).main.id;
+      const heroCandidates = challengeEntries.filter(entry => entryLineageId(entry) === selection.speciesId);
+      const allyCandidates = challengeEntries.filter(entry => entryLineageId(entry) === selection.speciesId && entry.entryId !== selection.heroId);
       const selectedAllies = selection.allyIds.filter(id => allyCandidates.some(entry => entry.entryId === id));
       const validation = validateSpeciesChallengeAllySelection({
         speciesId: selection.speciesId,
@@ -30775,24 +30902,51 @@ function MonsterHeroGame() {
       }, "DEBUG\u30FB\u4FDD\u5B58\u306A\u3057")), /*#__PURE__*/React.createElement("section", {
         className: "mh-scroll min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pb-3"
       }, selection.step === 'species' && /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, speciesEntries.map(([id, monster]) => {
+        className: "space-y-2",
+        "data-species-list": true
+      }, speciesEntries.map(lineage => {
+        const id = lineage.id;
         const active = selection.speciesId === id;
+        const members = dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === id);
+        const owned = challengeEntries.filter(entry => entryLineageId(entry) === id);
+        const cleared = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, id);
+        const best = SPECIES_CHALLENGE_DIFFICULTY_IDS.reduce((top, diffId) => {
+          const record = speciesChallengeRecord(speciesChallengeProgress, id, diffId);
+          return record.bestScore > top ? record.bestScore : top;
+        }, 0);
+        const iconMon = members.find(mon => mon.id === lineage.monId) || members[0];
         return /*#__PURE__*/React.createElement("button", {
           key: id,
+          "data-species-row": id,
           "aria-pressed": active,
+          disabled: owned.length === 0,
           onClick: () => chooseSpecies(id),
-          className: `relative min-h-[132px] overflow-hidden rounded-2xl border-2 p-2 active:scale-[.98] ${active ? 'border-cyan-300 bg-cyan-900/80 ring-1 ring-white' : 'border-white/10 bg-slate-900'}`
+          className: `flex w-full items-center gap-3 rounded-2xl border-2 p-2.5 text-left transition active:scale-[.98] disabled:opacity-40 ${active ? 'border-cyan-300 bg-cyan-900/70 ring-1 ring-white' : 'border-white/10 bg-slate-900'}`
         }, /*#__PURE__*/React.createElement(MonsterArtFrame, {
-          baseId: id,
-          src: monster.iconUrl,
+          baseId: iconMon?.id,
+          src: iconMon?.iconUrl,
           alt: "",
-          className: "mx-auto h-20 w-20 rounded-2xl bg-black/30"
-        }), /*#__PURE__*/React.createElement("b", {
-          className: "mt-2 block break-words text-[10px] leading-tight"
-        }, monster.name), active && /*#__PURE__*/React.createElement("span", {
-          className: "absolute right-2 top-2 rounded-full bg-cyan-300 px-2 py-1 text-[8px] font-black text-slate-950"
-        }, "\u9078\u629E\u4E2D"));
+          className: "h-16 w-16 shrink-0 rounded-2xl border border-white/10 bg-black/40"
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "block truncate text-[13px] font-black text-white"
+        }, lineage.name, "\u7A2E \u9650\u5B9A"), /*#__PURE__*/React.createElement("small", {
+          className: "mt-0.5 block truncate text-[8px] text-slate-400"
+        }, members.map(mon => mon.name).join('・')), /*#__PURE__*/React.createElement("span", {
+          className: "mt-1 flex flex-wrap items-center gap-1"
+        }, /*#__PURE__*/React.createElement("small", {
+          className: "rounded-full bg-black/40 px-2 py-0.5 text-[8px] font-black text-cyan-200"
+        }, "\u30AF\u30EA\u30A2 ", cleared.length, "/", SPECIES_CHALLENGE_DIFFICULTY_IDS.length), /*#__PURE__*/React.createElement("small", {
+          className: "rounded-full bg-black/40 px-2 py-0.5 text-[8px] font-black text-indigo-200"
+        }, "\u81EA\u5DF1\u30D9\u30B9\u30C8 ", best.toLocaleString(), " pt"), /*#__PURE__*/React.createElement("small", {
+          className: `rounded-full px-2 py-0.5 text-[8px] font-black ${owned.length ? 'bg-black/40 text-slate-300' : 'bg-red-950/60 text-red-300'}`
+        }, owned.length ? `使える ${owned.length}体` : '使えるモンスターなし'))), active ? /*#__PURE__*/React.createElement("span", {
+          className: "shrink-0 rounded-full bg-cyan-300 px-2 py-1 text-[8px] font-black text-slate-950"
+        }, "\u9078\u629E\u4E2D") : /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 16,
+          className: "shrink-0 text-slate-500"
+        }));
       })), selection.step === 'hero' && /*#__PURE__*/React.createElement(React.Fragment, null, heroCandidates.length ? heroCandidates.map(entry => monsterCard(entry, selection.heroId === entry.entryId, () => chooseHero(entry.entryId), false, selection.heroId === entry.entryId ? '勇者' : '')) : /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400"
       }, "\u3053\u306E\u7A2E\u65CF\u306E\u89E3\u653E\u6E08\u307F\u30D9\u30FC\u30B9\u30E2\u30F3\uFF0F\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002")), selection.step === 'allies' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -30817,7 +30971,7 @@ function MonsterHeroGame() {
         className: "font-black tracking-widest text-cyan-300"
       }, "MISSION"), /*#__PURE__*/React.createElement("h3", {
         className: "mt-1 text-lg font-black"
-      }, ALL_PLAYER_MONSTERS[selection.speciesId]?.name || selection.speciesId, "\u7A2E\u65CF"), /*#__PURE__*/React.createElement("p", {
+      }, speciesChallengeSpeciesName(selection.speciesId), " \u9650\u5B9A"), /*#__PURE__*/React.createElement("p", {
         className: "text-[10px] text-amber-300"
       }, difficultyLabel(selection.difficultyId), " \u30FB \u521D\u56DE\u5831\u916C \u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(selection.difficultyId))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
         className: "mb-1 block text-[9px] text-cyan-300"
@@ -33552,8 +33706,8 @@ function MonsterHeroGame() {
         setTranscendExchangeWant(exchangeMax > 0 ? 1 : 1);
         setTranscendExchangeOpen(true);
       };
-      const speciesFruitId = speciesTranscendFruitItemId(masu.baseId);
-      const speciesFruit = SPECIES_TRANSCEND_FRUIT_ITEMS[masu.baseId];
+      const speciesFruitId = masuSpeciesTranscendFruitItemId(masu.baseId);
+      const speciesFruit = speciesTranscendFruitItems()[monsterLineageOf(masu.baseId).main.id];
       const speciesFruitHave = transcendFruitOwnedCount(ownedItems, speciesFruitId);
       const rainbowFruitHave = transcendFruitOwnedCount(ownedItems, RAINBOW_TRANSCEND_FRUIT_ITEM_ID);
       const hasTranscendFruit = speciesFruitHave > 0 || rainbowFruitHave > 0;
@@ -40168,7 +40322,7 @@ function MonsterHeroGame() {
       className: "text-right"
     }, activeExtremeSetting.psyche))), speciesChallengeBattleRun && speciesChallengeClearResult && (() => {
       const r = speciesChallengeClearResult;
-      const speciesName = ALL_PLAYER_MONSTERS[r.speciesId]?.name || r.speciesId;
+      const speciesName = speciesChallengeSpeciesName(r.speciesId);
       const diffLabel = DIFFICULTY_SETTINGS[r.difficultyId]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === r.difficultyId)?.label || r.difficultyId;
       const nextLabel = r.nextDifficultyId ? DIFFICULTY_SETTINGS[r.nextDifficultyId]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === r.nextDifficultyId)?.label || r.nextDifficultyId : null;
       const record = speciesChallengeRecord(speciesChallengeProgress, r.speciesId, r.difficultyId);

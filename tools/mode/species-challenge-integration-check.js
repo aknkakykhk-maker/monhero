@@ -1,6 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
 const { loadDyeModule } = require('../harness');
+const { installLineageHelpers } = require('./species-challenge-lineage-stub');
 
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
@@ -16,6 +17,7 @@ const definitionEnd = source.indexOf('const quickGrowthRateForRun =', definition
 assert(definitionStart >= 0 && definitionEnd > definitionStart, '種族チャレンジ統合対象の定義が見つかる');
 const context = { isQuickMode: mode => mode === 'quick' };
 vm.createContext(context);
+installLineageHelpers(vm, context, { source });
 vm.runInContext(`${source.slice(definitionStart, definitionEnd)}
 globalThis.api={
   DIFFICULTY_SETTINGS,EXTREME_DIFFICULTIES,SPECIES_CHALLENGE_DIFFICULTY_IDS,
@@ -45,20 +47,21 @@ for (let i = 5; i < expectedDifficulties.length; i++) {
   assert(api.isSpeciesChallengeDifficultyUnlocked(id, [expectedDifficulties[i - 1]]), `${id}は同種族の直前クリアで解放される`);
 }
 let progress = api.normalizeSpeciesChallengeProgress(null);
-progress = api.markSpeciesChallengeCleared(progress, 'Dragon', 'Expert');
-assert(api.isSpeciesChallengeDifficultyUnlocked('Master', api.speciesChallengeClearedDifficultyIds(progress, 'Dragon')), '同種族ExpertクリアでMasterを解放する');
-assert(!api.isSpeciesChallengeDifficultyUnlocked('Master', api.speciesChallengeClearedDifficultyIds(progress, 'Slime')), '他種族の進行は解放へ影響しない');
+progress = api.markSpeciesChallengeCleared(progress, 'mocchi', 'Expert');
+assert(api.isSpeciesChallengeDifficultyUnlocked('Master', api.speciesChallengeClearedDifficultyIds(progress, 'mocchi')), '同種族ExpertクリアでMasterを解放する');
+assert(!api.isSpeciesChallengeDifficultyUnlocked('Master', api.speciesChallengeClearedDifficultyIds(progress, 'pixie')), '他種族の進行は解放へ影響しない');
 
-const masuMons = [{ id:'dragon-a', baseId:'Dragon' }, { id:'dragon-b', baseId:'Dragon' }, { id:'slime-owned', baseId:'Slime' }];
-const unlockedBaseIds = ['Dragon','Slime','Mocchi','Golem'];
-equal(api.speciesChallengeAvailableAllyIds('Dragon', unlockedBaseIds, masuMons), ['Dragon','masu:dragon-a','masu:dragon-b'], '選択種族のBaseと所持Masuだけを候補にする');
-assert(api.validateSpeciesChallengeAllySelection({ speciesId:'Dragon',heroId:'Dragon', allyIds:['masu:dragon-a','masu:dragon-b'], unlockedBaseIds, masuMons }).valid, '同種族の別Masu複数を許可する');
-assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'Dragon',heroId:'masu:dragon-a', allyIds:['masu:dragon-a'], unlockedBaseIds, masuMons }).valid, '勇者本人entryIdを拒否する');
-assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'Dragon',heroId:'Dragon', allyIds:['Slime'], unlockedBaseIds, masuMons }).valid, '他種族を拒否する');
-let run = api.createSpeciesChallengeRunState({ speciesId:'Dragon',heroId:'masu:dragon-a', allyIds:['Dragon','masu:dragon-b'], unlockedBaseIds, masuMons });
-for (const [wave, entryId] of [[2,'masu:dragon-b'],[4,'Dragon']]) { const result=api.simulateSpeciesChallengeJoinWave(run,entryId); assert(result.joinedAllyId===entryId&&result.gutsRecoveryRequired,`WAVE${wave}で残りから任意加入する`); run=result.state; }
+// 種族は主血統。モッチー種＝モッチー・ミタラシ、ピクシー種＝ピクシー・ミーア・パンドラ
+const masuMons = [{ id:'mocchi-a', baseId:'Mocchi' }, { id:'mitarashi-b', baseId:'Mitarashi' }, { id:'pixie-owned', baseId:'Pixie' }];
+const unlockedBaseIds = ['Mocchi','Mitarashi','Pixie','Golem'];
+equal(api.speciesChallengeAvailableAllyIds('mocchi', unlockedBaseIds, masuMons), ['Mocchi','Mitarashi','masu:mocchi-a','masu:mitarashi-b'], '選択種族(主血統)のBaseと所持Masuだけを候補にする');
+assert(api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['masu:mocchi-a','masu:mitarashi-b'], unlockedBaseIds, masuMons }).valid, '同じ種族の別個体を複数許可する');
+assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'masu:mocchi-a', allyIds:['masu:mocchi-a'], unlockedBaseIds, masuMons }).valid, '勇者本人entryIdを拒否する');
+assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['Pixie'], unlockedBaseIds, masuMons }).valid, '他種族を拒否する');
+let run = api.createSpeciesChallengeRunState({ speciesId:'mocchi',heroId:'masu:mocchi-a', allyIds:['Mocchi','masu:mitarashi-b'], unlockedBaseIds, masuMons });
+for (const [wave, entryId] of [[2,'masu:mitarashi-b'],[4,'Mocchi']]) { const result=api.simulateSpeciesChallengeJoinWave(run,entryId); assert(result.joinedAllyId===entryId&&result.gutsRecoveryRequired,`WAVE${wave}で残りから任意加入する`); run=result.state; }
 equal(api.speciesChallengeUnjoinedAllies(run), [], '加入後は候補から除外する');
-run=api.createSpeciesChallengeRunState({speciesId:'Dragon',heroId:'Dragon',allyIds:[],unlockedBaseIds,masuMons});
+run=api.createSpeciesChallengeRunState({speciesId:'mocchi',heroId:'Mocchi',allyIds:[],unlockedBaseIds,masuMons});
 for(const wave of [2,4,6]){const result=api.simulateSpeciesChallengeJoinWave(run,null);assert(!result.hadJoinCandidates&&result.gutsRecoveryRequired,`候補なしのWAVE${wave}も処理を継続する`);}
 
 for (const id of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) {
@@ -69,20 +72,24 @@ const debugStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_DEBUG'&&(()=>
 const debugEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", debugStart);
 const debugScreen = source.slice(debugStart, debugEnd);
 assert(debugScreen.includes('buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[])'), '勇者候補は解放済Baseと所持Masuの既存統合一覧を使う');
-assert(debugScreen.includes('heroCandidates=challengeEntries.filter(entry=>entry.baseId===speciesId)'), '勇者候補を選択種族だけへ絞る');
+assert(debugScreen.includes('heroCandidates=challengeEntries.filter(entry=>monsterLineageOf(entry.baseId).main.id===speciesId)'), '勇者候補を選択種族(主血統)だけへ絞る');
 assert(debugScreen.includes("const bonus=result.joinedAllyId?"), '加入ボーナスは実際の加入時だけ計算する');
 assert(debugScreen.includes("specialRuleDifficultyForRun('extreme',speciesChallengeDebugDifficultyId,true,speciesChallengeDebugDifficultyId)"), '種族チャレンジは共通specialRules resolverを使う');
 assert(!/speciesChallenge[^\n]{0,80}specialRules\s*:\s*\{/.test(source), '種族チャレンジ専用specialRules数値を複製しない');
 
 const fruitApi = loadDyeModule();
-for (const [baseId, item] of Object.entries(fruitApi.SPECIES_TRANSCEND_FRUIT_ITEMS)) {
-  assert(item.baseId === baseId && item.id === fruitApi.speciesTranscendFruitItemId(baseId), `${baseId}のitemIdとbaseIdが一致する`);
+// 超越の実も種族(主血統)ごと。itemIdの末尾は血統idで、表示名は「◯◯種」
+for (const [lineageId, item] of Object.entries(fruitApi.speciesTranscendFruitItems())) {
+  assert(item.lineageId === lineageId && item.id === fruitApi.speciesTranscendFruitItemId(lineageId), `${lineageId}のitemIdと血統idが一致する`);
 }
-const [baseId, otherBaseId] = Object.keys(fruitApi.ALL_PLAYER_MONSTERS);
-const speciesFruit = fruitApi.speciesTranscendFruitItemId(baseId);
-const otherFruit = fruitApi.speciesTranscendFruitItemId(otherBaseId);
+const baseId = 'Mocchi', otherBaseId = 'Pixie';
+const speciesFruit = fruitApi.masuSpeciesTranscendFruitItemId(baseId);
+const otherFruit = fruitApi.masuSpeciesTranscendFruitItemId(otherBaseId);
 const rainbowFruit = fruitApi.RAINBOW_TRANSCEND_FRUIT_ITEM_ID;
 const masu = { id:'integration-fruit', baseId, transcended:false, transcendPoints:0 };
+// 同じ血統の別モンスター(ミタラシ)は、モッチー種の実を共有する
+assert(fruitApi.masuSpeciesTranscendFruitItemId('Mitarashi') === speciesFruit, '同じ種族の別モンスターは同じ実を使う');
+assert(speciesFruit !== otherFruit, '別の種族は別の実になる');
 const items = { [speciesFruit]:1, [otherFruit]:1, [rainbowFruit]:1 };
 const used = fruitApi.useTranscendFruitOnMasu(masu, items, speciesFruit, 1);
 assert(used.ok && used.nextMasu.transcendPoints === 1 && !used.nextMasu.transcended, '未超越でも実1個で既存transcendPointsを+1する');

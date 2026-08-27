@@ -1,5 +1,6 @@
 const fs = require('fs');
 const vm = require('vm');
+const { installLineageHelpers } = require('./species-challenge-lineage-stub');
 
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const assert = (condition, message) => {
@@ -16,31 +17,39 @@ assert(foundationStart >= 0 && foundationEnd > foundationStart, '共通難易度
 
 const helperContext = { console };
 vm.createContext(helperContext);
-vm.runInContext(`${source.slice(helperStart, helperEnd)}\nglobalThis.api={speciesChallengeEntryBaseId,speciesChallengeAvailableAllyIds,validateSpeciesChallengeAllySelection,createSpeciesChallengeRunState};`, helperContext);
+installLineageHelpers(vm, helperContext, { source });
+vm.runInContext(`${source.slice(helperStart, helperEnd)}\nglobalThis.api={speciesChallengeEntryBaseId,speciesChallengeEntryLineageId,speciesChallengeAvailableAllyIds,validateSpeciesChallengeAllySelection,createSpeciesChallengeRunState};`, helperContext);
 const api = helperContext.api;
-const unlockedBaseIds = ['Mocchi', 'Dragon', 'Slime', 'Golem', 'Tiger'];
+// 種族は主血統。ピクシー種＝ピクシー・ミーア・パンドラ、モッチー種＝モッチー・ミタラシ
+const unlockedBaseIds = ['Mocchi', 'Mitarashi', 'Pixie', 'Mia', 'Golem', 'Tiger'];
 const masuMons = [
   { id:'hero-masu', baseId:'Mocchi' },
-  { id:'dragon-masu', baseId:'Dragon' },
-  { id:'tiger-masu', baseId:'Tiger' },
+  { id:'mitarashi-masu', baseId:'Mitarashi' },
+  { id:'pixie-masu', baseId:'Pixie' },
 ];
 
-assert(api.speciesChallengeAvailableAllyIds('Mocchi', unlockedBaseIds, masuMons).includes('Mocchi'), '選択種族のBaseを候補へ含める');
-assert(api.speciesChallengeAvailableAllyIds('Mocchi', unlockedBaseIds, masuMons).includes('masu:hero-masu'), '選択種族の所持Masuを安定IDで候補へ含める');
+assert(api.speciesChallengeAvailableAllyIds('mocchi', unlockedBaseIds, masuMons).includes('Mocchi'), '選択種族のBaseを候補へ含める');
+assert(api.speciesChallengeAvailableAllyIds('mocchi', unlockedBaseIds, masuMons).includes('masu:hero-masu'), '選択種族の所持Masuを安定IDで候補へ含める');
+assert(api.speciesChallengeAvailableAllyIds('mocchi', unlockedBaseIds, masuMons).includes('Mitarashi'), '同じ種族の別モンスターも候補へ含める');
+assert(!api.speciesChallengeAvailableAllyIds('mocchi', unlockedBaseIds, masuMons).includes('Pixie'), '別の種族は候補へ含めない');
+assert(api.speciesChallengeAvailableAllyIds('pixie', unlockedBaseIds, masuMons).includes('Mia'), 'ピクシー種にはミーアも含まれる');
 for (const allies of [[], ['masu:hero-masu']]) {
-  assert(api.validateSpeciesChallengeAllySelection({ speciesId:'Mocchi',heroId:'Mocchi', allyIds:allies, unlockedBaseIds, masuMons }).valid, `供モン${allies.length}体を許可する`);
+  assert(api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:allies, unlockedBaseIds, masuMons }).valid, `供モン${allies.length}体を許可する`);
 }
-assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'Mocchi',heroId:'masu:hero-masu', allyIds:['masu:hero-masu'], unlockedBaseIds, masuMons }).valid, '勇者と同じentryIdの供モンを拒否する');
-assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'Mocchi',heroId:'Mocchi', allyIds:['Dragon'], unlockedBaseIds, masuMons }).valid, '他種族を拒否する');
-const run = api.createSpeciesChallengeRunState({ speciesId:'Mocchi', difficultyId:'Expert', heroId:'Mocchi', allyIds:['masu:hero-masu'], unlockedBaseIds, masuMons });
-assert(run?.speciesId === 'Mocchi' && run?.allyIds[0] === 'masu:hero-masu', '確認画面から種族限定run情報を生成する');
+assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'masu:hero-masu', allyIds:['masu:hero-masu'], unlockedBaseIds, masuMons }).valid, '勇者と同じentryIdの供モンを拒否する');
+assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['Pixie'], unlockedBaseIds, masuMons }).valid, '他種族を拒否する');
+assert(api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['Mitarashi','masu:mitarashi-masu'], unlockedBaseIds, masuMons }).valid, '同じ種族の別モンスターは複数連れていける');
+const run = api.createSpeciesChallengeRunState({ speciesId:'mocchi', difficultyId:'Expert', heroId:'Mocchi', allyIds:['masu:hero-masu'], unlockedBaseIds, masuMons });
+assert(run?.speciesId === 'mocchi' && run?.allyIds[0] === 'masu:hero-masu', '確認画面から種族限定run情報を生成する');
 
 const screenStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_SELECT'");
 const screenEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", screenStart);
 const screen = source.slice(screenStart, screenEnd);
 assert(screenStart >= 0 && screenEnd > screenStart, '本番形式の共通選択画面が存在する');
 for (const step of ['species', 'hero', 'allies', 'confirm']) assert(screen.includes(`'${step}'`), `${step}ステップがある`);
-assert(screen.includes('Object.entries(ALL_PLAYER_MONSTERS)'), '種族候補はALL_PLAYER_MONSTERSのbaseIdを正本にする');
+assert(screen.includes('const speciesEntries=speciesChallengeLineages();'), '種族候補は主血統(dexMainLineages)を正本にする');
+assert(screen.includes('data-species-row'), '種族は1行1種族の横長カードで並べる');
+assert(screen.includes('種 限定'), '種族カードは「◯◯種 限定」と名乗る');
 assert(source.includes('const difficulties=species?SPECIES_CHALLENGE_DIFFICULTY_IDS.map'), '14難易度は既存BATTLE DIFFICULTY描画へデータとして渡す');
 assert(source.includes('speciesChallengeClearedDifficultyIds(speciesChallengeProgress,speciesChallengeSelection.speciesId)'), '共通難易度画面は種族別progressからクリア難易度を得る');
 assert(source.includes('isSpeciesChallengeDifficultyUnlocked(key,speciesChallengeClearedDifficultyIds'), 'ロック判定は既存helperと種族別進行を再利用する');
