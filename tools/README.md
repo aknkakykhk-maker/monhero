@@ -153,6 +153,7 @@ node tools/build.js --check
 | `node mode/species-challenge-foundation-check.js` | 種族チャレンジの内部ID、既存定義を参照する14難易度の順序、初期・順次解放の純粋判定、初回クリア報酬、および本番モード選択UIへ未表示であることを確認する。 |
 | `node mode/species-challenge-progress-check.js` | 種族チャレンジの種族×難易度進行保存を確認する。壊れた値の正規化、種族・難易度・クリア・初回報酬受取の独立、非破壊更新、冪等性、Expertクリアによる同種族だけのMaster解放を見る。 |
 | `node mode/species-challenge-debug-check.js` | デバッグ設定内の種族チャレンジ進行画面がSTEP1 helperと既存保存キーを再利用し、種族一覧・14難易度表示・種族別の独立した解放／リセットを行うことを確認する。 |
+| `node mode/species-challenge-ally-simulation-check.js` | 種族チャレンジのデバッグ画面で、勇者・供モン0〜3体の同種制約、Base/Masu同種判定、WAVE2/4/6の任意順加入、二重加入防止、加入なしでもガッツ回復対象を維持すること、加入時だけ既存の特殊難易度ボーナス計算を使うこと、新しい保存キーがないことを確認する。 |
 | `node mode/pro-mode-check.js` | プロモードを実ブラウザで最初から遊んでみて、仕様どおりに動くかを確かめる。 |
 | `node mode/skip-ticket-check.js` | スキップチケット(序/破/急)の値段・配布・報酬計算と、スコアやランキングに記録しないこと、勇者モン選択のタブを確認する。 |
 
