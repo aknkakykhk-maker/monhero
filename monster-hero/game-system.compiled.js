@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b8349e8f226f6a9e
+// source-sha256: 69137f0346687cd2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 18:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 19:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8880,6 +8880,102 @@ const updateSpeciesChallengeProgressFlag = (progress, speciesId, difficultyId, f
 };
 const markSpeciesChallengeCleared = (progress, speciesId, difficultyId) => updateSpeciesChallengeProgressFlag(progress, speciesId, difficultyId, 'cleared');
 const markSpeciesChallengeFirstRewardClaimed = (progress, speciesId, difficultyId) => updateSpeciesChallengeProgressFlag(progress, speciesId, difficultyId, 'firstRewardClaimed');
+// 種族チャレンジの供モン選択と加入状況は、バトルへ接続するまで保存しない一時ラン状態として扱う。
+// entryId は既存編成と同じく、ベースモンなら baseId、マスモンなら "masu:<個体ID>" を使う。
+const speciesChallengeEntryBaseId = (entryId, masuMons = []) => {
+  if (typeof entryId !== 'string' || !entryId) return null;
+  if (!entryId.startsWith('masu:')) return entryId;
+  const masuId = entryId.slice(5);
+  if (!masuId) return null;
+  const masu = (Array.isArray(masuMons) ? masuMons : []).find(mon => mon && String(mon.id) === masuId);
+  return typeof masu?.baseId === 'string' && masu.baseId ? masu.baseId : null;
+};
+const speciesChallengeAvailableAllyIds = (unlockedBaseIds = [], masuMons = []) => [...(Array.isArray(unlockedBaseIds) ? unlockedBaseIds : []).filter(id => typeof id === 'string' && id && !id.startsWith('masu:')), ...(Array.isArray(masuMons) ? masuMons : []).filter(mon => mon && mon.id !== null && mon.id !== undefined && typeof mon.baseId === 'string' && mon.baseId).map(mon => `masu:${String(mon.id)}`)];
+const validateSpeciesChallengeAllySelection = ({
+  heroId,
+  allyIds,
+  unlockedBaseIds = [],
+  masuMons = []
+} = {}) => {
+  if (!Array.isArray(allyIds)) return {
+    valid: false,
+    reason: 'invalid-selection'
+  };
+  if (allyIds.length > 3) return {
+    valid: false,
+    reason: 'too-many-allies'
+  };
+  const heroBaseId = speciesChallengeEntryBaseId(heroId, masuMons);
+  if (!heroBaseId) return {
+    valid: false,
+    reason: 'invalid-hero'
+  };
+  const available = new Set(speciesChallengeAvailableAllyIds(unlockedBaseIds, masuMons));
+  const usedBaseIds = new Set([heroBaseId]);
+  const usedEntryIds = new Set();
+  for (const entryId of allyIds) {
+    if (!available.has(entryId)) return {
+      valid: false,
+      reason: 'unavailable-ally',
+      entryId
+    };
+    if (usedEntryIds.has(entryId)) return {
+      valid: false,
+      reason: 'duplicate-ally',
+      entryId
+    };
+    const baseId = speciesChallengeEntryBaseId(entryId, masuMons);
+    if (!baseId || usedBaseIds.has(baseId)) return {
+      valid: false,
+      reason: baseId === heroBaseId ? 'same-species-as-hero' : 'duplicate-species',
+      entryId
+    };
+    usedEntryIds.add(entryId);
+    usedBaseIds.add(baseId);
+  }
+  return {
+    valid: true,
+    reason: null
+  };
+};
+const createSpeciesChallengeRunState = ({
+  heroId,
+  allyIds,
+  unlockedBaseIds = [],
+  masuMons = []
+} = {}) => {
+  const validation = validateSpeciesChallengeAllySelection({
+    heroId,
+    allyIds,
+    unlockedBaseIds,
+    masuMons
+  });
+  return validation.valid ? {
+    heroId,
+    allyIds: [...allyIds],
+    joinedAllyIds: []
+  } : null;
+};
+const speciesChallengeSelectedAllies = runState => Array.isArray(runState?.allyIds) ? [...runState.allyIds] : [];
+const speciesChallengeUnjoinedAllies = runState => {
+  const joined = new Set(Array.isArray(runState?.joinedAllyIds) ? runState.joinedAllyIds : []);
+  return speciesChallengeSelectedAllies(runState).filter(entryId => !joined.has(entryId));
+};
+const joinSpeciesChallengeAlly = (runState, entryId) => {
+  const remaining = speciesChallengeUnjoinedAllies(runState);
+  if (!remaining.includes(entryId)) return {
+    state: runState,
+    joinedAllyId: null
+  };
+  return {
+    state: {
+      ...runState,
+      allyIds: speciesChallengeSelectedAllies(runState),
+      joinedAllyIds: [...(runState.joinedAllyIds || []), entryId]
+    },
+    joinedAllyId: entryId
+  };
+};
 const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
 const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds = []) => {
   const index = SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
