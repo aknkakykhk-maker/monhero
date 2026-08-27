@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 17:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 18:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -95,6 +95,10 @@ const goldForWavesCleared = (wavesCleared, mult) => {
 // 増える値はここだけで決まる。バトル本体は複製せず、この定義とモードの分岐で振る舞いを変える。
 const BATTLE_MODE_CHALLENGE = 'challenge';
 const BATTLE_MODE_QUICK = 'quick';
+// 種族チャレンジは後続STEPで使う内部定義だけを先に用意する。
+// 本番のモード選択へは BATTLE_MODES / PUBLIC_BATTLE_MODES に追加するまで表示しない。
+const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
+const SPECIES_CHALLENGE_MODE = Object.freeze({ id:BATTLE_MODE_SPECIES_CHALLENGE, label:'種族チャレンジ' });
 // プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
 // バトルの中身はチャレンジと同じで、違うのは「編成がベースモン限定」「経験値の倍率」
 // 「記録の置き場(mh_pro_* とプロ専用ランキング)」だけ。
@@ -4693,6 +4697,27 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   // 距離強化だけを下げる distanceEnhancement を使う)。
   { id:'INFINITY', label:'INFINITY', japanese:'インフィニティ', available:true, power:50, score:20, xp:45, gold:30, psyche:80, unlockRequirement:'ULTIMATE', description:'これまでの極限ルールを統合し、ターン経過による圧力がさらに強化された10WAVE最終難易度。', cardDescription:'極限ルールを統合。与ダメ低下とDISTANCE BREAKがさらに苛烈になる最上位10WAVE。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.01, minimumDamageDealt:0.30, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:25, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
 ]);
+// 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
+const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([
+  ...Object.keys(DIFFICULTY_SETTINGS),
+  ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
+]);
+const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
+const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds=[]) => {
+  const index=SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
+  if(index<0)return false;
+  if(index<SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT)return true;
+  const cleared=new Set(Array.isArray(clearedDifficultyIds)?clearedDifficultyIds:[]);
+  return cleared.has(SPECIES_CHALLENGE_DIFFICULTY_IDS[index-1]);
+};
+const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
+  Beginner:1, Easy:2, Normal:3, Hard:4, Expert:5, Master:6, GrandMaster:8,
+  Hell:10, Legend:12, EXTREME:15, NIGHTMARE:20, CHAOS:25, ULTIMATE:30, INFINITY:40,
+});
+const speciesChallengeFirstClearReward = (difficultyId) =>
+  Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS,difficultyId)
+    ? SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS[difficultyId]
+    : 0;
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
