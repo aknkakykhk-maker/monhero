@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 23:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 00:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7235,6 +7235,9 @@ function MonsterHeroGame() {
   const [speciesChallengeDebugWaveLog, setSpeciesChallengeDebugWaveLog] = useState([]);
   // 本番BATTLE MODEからも同じまま呼び出す種族チャレンジ選択state。現段階の入口だけをデバッグに置く。
   const [speciesChallengeSelection, setSpeciesChallengeSelection] = useState({step:'species',speciesId:'',difficultyId:'',heroId:'',allyIds:[],run:null});
+  // STEP5Bの実戦run。デバッグ戦と同じ保存抑止を使いながら、通常の10WAVE処理へ流す。
+  const speciesChallengeBattleRunRef = useRef(null);
+  const [speciesChallengeBattleRun, setSpeciesChallengeBattleRun] = useState(null);
   const loadSpeciesChallengeProgress = async() => {
     const progress=normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false));
     setSpeciesChallengeProgress(progress);
@@ -11528,6 +11531,36 @@ function MonsterHeroGame() {
     return s;
   };
 
+  const startSpeciesChallengeBattle = (run) => {
+    if (!run) return;
+    const hero=resolveRosterEntryToMon(run.heroId);
+    if (!hero) return;
+    stopAllAuto();
+    beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
+    setRunFinalizing(false);
+    applyResetAllState();
+    speciesChallengeBattleRunRef.current=run;
+    setSpeciesChallengeBattleRun(run);
+    debugBattleRef.current=true;
+    debugResultRef.current=false;
+    setDebugBattle(true);
+    setDebugOutcome(null);
+    const extremeSetting=extremeRuleSetting(run.difficultyId);
+    extremeRunRef.current=!!extremeSetting;
+    setExtremeRun(!!extremeSetting);
+    setRunMode(extremeSetting?EXTREME_MODE.id:BATTLE_MODE_CHALLENGE);
+    setDifficulty(extremeSetting?'Normal':run.difficultyId);
+    if (extremeSetting) setExtremeDifficulty(extremeSetting.id);
+    initialBattleDistanceRef.current=0;
+    const initialSlots=[{...hero},null,null,null];
+    const initialUnique={...hero.unique,evoLevel:Math.max(0,hero.unique?.evoLevel||0)};
+    setSlots(initialSlots); setMainHero(hero); setOwnedUniques([initialUnique]);
+    setMaxHp(hero.baseHp); setHp(hero.baseHp); setMaxGuts(hero.baseGuts); setGuts(Math.floor(hero.baseGuts*0.5)); setAtk(hero.baseAtk); setDef(hero.baseDef);
+    setDistAptPct(getMonsterAptPct(hero,specialRuleDifficultyForRun(extremeSetting?EXTREME_MODE.id:BATTLE_MODE_CHALLENGE,extremeSetting?'Normal':run.difficultyId,!!extremeSetting,extremeSetting?.id)));
+    setTeachingPool([...getActiveTeachingCards()]);
+    setGameState('PICK_TEACHING');
+  };
+
   const createRepeatRunTemplate = ({ hero, allies=[] }) => Object.freeze({
     runMode,
     difficulty,
@@ -11788,6 +11821,8 @@ function MonsterHeroGame() {
     debugBattleRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
+    speciesChallengeBattleRunRef.current = null;
+    setSpeciesChallengeBattleRun(null);
     setDebugBattle(false); setExtremeRun(false);
     setDebugOutcome(null);
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
@@ -13038,19 +13073,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const handleNextWave = async () => {
     // 練習の台本があるときは、強化フェーズまで通して見せたいので
     // デバッグ戦の打ち切り(勝ち表示を出して止まる)を通さない
-    if (debugBattleRef.current && !battleScenarioRef.current && !(extremeRunRef.current&&extremeDistanceBreakRule(extremeDifficulty))) {
+    if (debugBattleRef.current && !speciesChallengeBattleRunRef.current && !battleScenarioRef.current && !(extremeRunRef.current&&extremeDistanceBreakRule(extremeDifficulty))) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
       return;
     }
-    if (debugBattleRef.current && extremeRunRef.current && extremeDistanceBreakRule(extremeDifficulty) && wave===10) {
+    if (debugBattleRef.current && !speciesChallengeBattleRunRef.current && extremeRunRef.current && extremeDistanceBreakRule(extremeDifficulty) && wave===10) {
       if (debugResultRef.current) return;
       debugResultRef.current=true; setDebugOutcome('win'); return;
     }
     if (runFinalizingRef.current) return;
     setEffect(null);
     if (wave === 10) {
+      if (speciesChallengeBattleRunRef.current) {
+        debugResultRef.current=true;
+        setDebugOutcome('win');
+        return;
+      }
       stopAutoBattle();
       setChampionPresentationComplete(false);
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
@@ -13374,13 +13414,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ultimateDistanceBreakPendingRef.current=null; setUltimateDistanceBreakPending(null); setUltimateDistanceBreakReveal(null);
     }
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
-    if (w === 1 && !forcedEnemyKey) {
+    if (w === 1 && !forcedEnemyKey && !debugBattleRef.current) {
       addAssistantBond('battle');
       addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));
       // 助手のアシストカードを編成して挑んだぶん。編成を保存しただけでは増えず、
       // 実際にバトルを始めたここでだけ数える(付け外しをくり返して稼げないようにするため)。
       // デバッグ戦は報酬も記録も残さないので、ここでも数えない
-      if (!debugBattleRef.current) grantEquippedAssistantCardBond('assistantCardEquip');
+      grantEquippedAssistantCardBond('assistantCardEquip');
     }
     setWave(w);
     // クイック成長で確定した最大値を明示的に引き継ぎ、次WAVE開始時も同じ値で全回復する。
@@ -13677,6 +13717,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       repeatRunTemplateRef.current=createRepeatRunTemplate({ hero:m, allies:[] });
       setTeachingPool([...getActiveTeachingCards()]); setGameState('PICK_TEACHING');
     } else {
+      if (speciesChallengeBattleRunRef.current) {
+        const joined=joinSpeciesChallengeAlly(speciesChallengeBattleRunRef.current,joinRosterEntry(m));
+        if (!joined.joinedAllyId) return;
+        speciesChallengeBattleRunRef.current=joined.state;
+        setSpeciesChallengeBattleRun(joined.state);
+      }
       const bonus=m.plusStats||{};
       const bHp=maxHp, bAtk=atk, bDef=def, bGuts=maxGuts;
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
@@ -13779,7 +13825,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setEffect(null);
       const joinWaves=[2,4,6];
       const activeIds=slots.filter(Boolean).map(joinRosterEntry);
-      const avail=pickJoinCandidates(joinCandidatePool(),activeIds,mainHero?.id,joinOfferSize());
+      const speciesRun=speciesChallengeBattleRunRef.current;
+      const avail=speciesRun
+        ? speciesChallengeUnjoinedAllies(speciesRun).map(resolveRosterEntryToMon).filter(Boolean)
+        : pickJoinCandidates(joinCandidatePool(),activeIds,mainHero?.id,joinOfferSize());
       if(joinWaves.includes(wave)&&slots.filter(s=>s).length<4&&avail.length>0){
         setMonSelection(avail); setGameState('PICK_ALLY');
       } else if([1,3,5,7,9].includes(wave)){
@@ -15937,7 +15986,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const chooseSpecies=speciesId=>patchSelection({speciesId,difficultyId:'',heroId:'',allyIds:[],run:null});
           const chooseHero=heroId=>patchSelection({heroId,allyIds:selectedAllies.filter(id=>speciesChallengeEntryBaseId(id,masuMons)!==speciesChallengeEntryBaseId(heroId,masuMons)),run:null});
           const toggleAlly=entryId=>{const next=selectedAllies.includes(entryId)?selectedAllies.filter(id=>id!==entryId):[...selectedAllies,entryId];if(validateSpeciesChallengeAllySelection({heroId:selection.heroId,allyIds:next,unlockedBaseIds:unlockedMonsterIds,masuMons}).valid)patchSelection({allyIds:next,run:null});};
-          const makeRun=()=>{const run=createSpeciesChallengeRunState({speciesId:selection.speciesId,difficultyId:selection.difficultyId,heroId:selection.heroId,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons});if(run)patchSelection({run});};
+          const makeRun=()=>{const run=createSpeciesChallengeRunState({speciesId:selection.speciesId,difficultyId:selection.difficultyId,heroId:selection.heroId,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons});if(!run)return;patchSelection({run});startSpeciesChallengeBattle(run);};
           const titles={species:'種族選択',difficulty:'難易度選択',hero:'勇者モン選択',allies:'供モン選択',confirm:'出撃確認'};
           const cardClass=active=>`min-h-[52px] w-full rounded-xl border px-3 py-2 text-left text-[10px] font-black ${active?'border-cyan-300 bg-cyan-800 ring-2 ring-cyan-200':'border-white/10 bg-slate-900'}`;
           return <main data-species-challenge-selection className="flex-1 flex min-h-0 flex-col overflow-hidden bg-slate-950 p-3 text-white" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
@@ -15948,7 +15997,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {selection.step==='difficulty'&&<>{SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds);return <button key={id} data-species-flow-difficulty={id} disabled={!unlocked} aria-pressed={selection.difficultyId===id} onClick={()=>patchSelection({difficultyId:id,heroId:'',allyIds:[],run:null})} className={`${cardClass(selection.difficultyId===id)} disabled:opacity-45`}><span className="flex items-center justify-between gap-2"><b>{difficultyLabel(id)}</b><i className={`not-italic ${unlocked?'text-emerald-300':'text-slate-400'}`}>{unlocked?'解放済み':'🔒 未解放'}</i></span></button>;})}</>}
               {selection.step==='hero'&&<>{heroCandidates.length?heroCandidates.map(entry=><button key={entry.entryId} aria-pressed={selection.heroId===entry.entryId} onClick={()=>chooseHero(entry.entryId)} className={cardClass(selection.heroId===entry.entryId)}>{entryLabel(entry.entryId)}</button>):<p className="rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400">この種族の解放済みベースモン／所持マスモンがいません。</p>}</>}
               {selection.step==='allies'&&<><p className="rounded-xl border border-cyan-500/30 bg-cyan-950/30 p-3 text-[9px] text-cyan-100">供モンは0〜3体。<b>0体のままでも次へ進めます。</b><br/>勇者や選択済みの供モンと同じ種族は選べません。</p>{allyCandidates.map(entry=>{const selected=selectedAllies.includes(entry.entryId);const duplicateSpecies=selectedAllies.some(id=>id!==entry.entryId&&speciesChallengeEntryBaseId(id,masuMons)===entry.baseId);const disabled=!selected&&(selectedAllies.length>=3||duplicateSpecies);return <button key={entry.entryId} disabled={disabled} aria-pressed={selected} onClick={()=>toggleAlly(entry.entryId)} className={`${cardClass(selected)} disabled:opacity-30`}>{entryLabel(entry.entryId)}</button>;})}</>}
-              {selection.step==='confirm'&&<div className="space-y-3 rounded-2xl border border-cyan-400/40 bg-slate-900 p-3 text-[10px]"><div><b className="text-cyan-300">種族</b><p>{ALL_PLAYER_MONSTERS[selection.speciesId]?.name||selection.speciesId}</p></div><div><b className="text-cyan-300">難易度</b><p>{difficultyLabel(selection.difficultyId)}</p></div><div><b className="text-cyan-300">勇者</b><p>{entryLabel(selection.heroId)}</p></div><div><b className="text-cyan-300">供モン（{selectedAllies.length}体）</b><p>{selectedAllies.length?selectedAllies.map(entryLabel).join('、'):'なし'}</p></div>{selection.run&&<div data-species-challenge-run className="rounded-xl bg-black/40 p-3"><b className="text-emerald-300">本番バトルへ渡す予定のrun情報</b><pre className="mt-2 whitespace-pre-wrap break-all text-[9px] text-emerald-100">{JSON.stringify(selection.run,null,2)}</pre><p className="mt-2 text-[8px] text-slate-400">今回は実バトルを開始しません。</p></div>}</div>}
+              {selection.step==='confirm'&&<div className="space-y-3 rounded-2xl border border-cyan-400/40 bg-slate-900 p-3 text-[10px]"><div><b className="text-cyan-300">種族</b><p>{ALL_PLAYER_MONSTERS[selection.speciesId]?.name||selection.speciesId}</p></div><div><b className="text-cyan-300">難易度</b><p>{difficultyLabel(selection.difficultyId)}</p></div><div><b className="text-cyan-300">勇者</b><p>{entryLabel(selection.heroId)}</p></div><div><b className="text-cyan-300">供モン（{selectedAllies.length}体）</b><p>{selectedAllies.length?selectedAllies.map(entryLabel).join('、'):'なし'}</p></div><p className="rounded-xl bg-black/40 p-3 text-[9px] text-emerald-100">出撃後は既存バトルのWAVE1へ進みます。結果・報酬・ランキングは保存されません。</p></div>}
             </section>
             <footer className="mt-2 shrink-0">{selection.step==='species'?<button disabled={!selection.speciesId} onClick={()=>patchSelection({step:'difficulty'})} className="min-h-[52px] w-full rounded-xl bg-cyan-600 text-[11px] font-black disabled:opacity-30">難易度選択へ</button>:selection.step==='difficulty'?<button disabled={!selection.difficultyId} onClick={()=>patchSelection({step:'hero'})} className="min-h-[52px] w-full rounded-xl bg-cyan-600 text-[11px] font-black disabled:opacity-30">勇者モン選択へ</button>:selection.step==='hero'?<button disabled={!selection.heroId} onClick={()=>patchSelection({step:'allies'})} className="min-h-[52px] w-full rounded-xl bg-cyan-600 text-[11px] font-black disabled:opacity-30">供モン選択へ</button>:selection.step==='allies'?<button disabled={!validation.valid} onClick={()=>patchSelection({step:'confirm'})} className="min-h-[52px] w-full rounded-xl bg-cyan-600 text-[11px] font-black disabled:opacity-30">出撃確認へ（{selectedAllies.length}体）</button>:<button disabled={!validation.valid} onClick={makeRun} className="min-h-[52px] w-full rounded-xl bg-emerald-600 text-[11px] font-black disabled:opacity-30">この編成で出撃</button>}</footer>
           </main>;
@@ -20048,9 +20097,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>今回のスコア</span><b className="text-right">{score.toLocaleString()}</b><span>10WAVE 経験値</span><b className="text-right">{xpForWavesCleared(10,activeExtremeSetting.xp).toLocaleString()}</b><span>10WAVE ダイヤ</span><b className="text-right">{goldForWavesCleared(10,activeExtremeSetting.gold).toLocaleString()}</b><span>クリア時プシュケー</span><b className="text-right">{activeExtremeSetting.psyche}</b></div>
           </div>}
           <div className="w-full max-w-xs space-y-3">
-            <button onClick={()=>runResultActionOnce(()=>startDebugBattle(extremeRun))} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう一度</button>
-            <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('DEBUG_SETTINGS');})} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-200 py-3.5 rounded-2xl font-black disabled:opacity-50">デバッグ設定へ戻る</button>
-            <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('SETTINGS');openHelp();})} disabled={resultActionPending} className="w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50">ヘルプへ戻る</button>
+            {speciesChallengeBattleRun?<button onClick={()=>runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection();})} disabled={resultActionPending} className="w-full bg-cyan-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">種族チャレンジ選択へ戻る</button>:<>
+              <button onClick={()=>runResultActionOnce(()=>startDebugBattle(extremeRun))} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう一度</button>
+              <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('DEBUG_SETTINGS');})} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-200 py-3.5 rounded-2xl font-black disabled:opacity-50">デバッグ設定へ戻る</button>
+              <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('SETTINGS');openHelp();})} disabled={resultActionPending} className="w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50">ヘルプへ戻る</button>
+            </>}
           </div>
         </div>
       )}

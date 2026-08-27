@@ -1,6 +1,13 @@
 const CHANGELOG = [
   {
-    date: "2026-08-27 23:44", type: 'update', title: '虹の超越の実をマーケットへ追加しました', status: 'new',
+    date: "2026-08-28 00:03", type: 'update', title: '種族チャレンジの実戦確認を始めました', status: 'new',
+    items: [
+      '開発用デバッグ入口の種族チャレンジで、選んだ勇者モンと供モンを使ってWAVE1〜10の実バトルを確認できるようにしました。本番のBATTLE MODEにはまだ表示されません。',
+      '供モンはWAVE2・4・6のクリア後に、事前に選んだ未加入の仲間から1体ずつ選びます。この確認プレイでは報酬・進行・スコア・ランキングを保存しません。',
+    ],
+  },
+  {
+    date: "2026-08-28 00:03", type: 'update', title: '虹の超越の実をマーケットへ追加しました', status: 'new',
     assistantNotice: { id:'update_notice_rainbow_transcend_fruit_market_v1', type:'market' },
     items: [
       'マーケットのアイテムに「虹の超越の実」を追加しました。1個1000プシュケーで、回数制限なく購入できます。',
