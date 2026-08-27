@@ -295,6 +295,7 @@ node tools/build.js --check
 | `node image/extract-images.js [--dry-run]` | data/*.js に base64 で埋め込まれた画像をPNGファイルとして `monster-hero/images/` へ書き出し、定数をそのパスへ置き換える。置き場所はスクリプト内の `PLACEMENT` 表で決める。 |
 | `node image/import-monster-art.js` | 受け取ったモンスターのイラストを、ゲームで使う形(正方形・余白そろえ・透過)へ整えて `monster-hero/images/monsters/` へ書き出す。 |
 | `node image/compress-images.js` | 配信する画像(PNG)を、見た目を落とさない範囲で軽くする。引数なしなら対象を表示するだけで書き換えない。 |
+| `node image/home-background-to-jpeg.js [--write]` | HOME画面の背景(`data/images/home-background.png`)をJPEGへ変換して軽くする。背景は写真調でcompress-images.jsの256色パレット化(基準未達)には向かないため専用に用意した。品質80〜98を低いほうから順に試し、基準(PSNR34dB以上・差の見える画素12%未満)を満たす最初の(最も軽い)品質を採用する。`--write`で実際に変換し、`game-system.jsx`側の参照も一緒に`.jpg`へ書き換える。実行後は`node tools/build.js`が必要。 |
 | `node image/make-disc-icon-transparent.js [名前...] [--dry-run]` | 円盤石アイコン(`images/disc-icons/`)に残っている白い背景を透過にする。外周から白いところだけをたどるので、キャラクターの白い部分(肌・翼)は残る。引数なしなら全部を見て、背景が残っているものだけ書き換える。実行後は `node tools/build.js` でキャッシュキーを更新すること。 |
 | `node image/make-face-icons.js [--preview] [MOCCHI ...]` | 立ち絵から顔部分を切り出して256pxの顔アイコンを作り、`images/monster-icons/face/` のPNGを上書きする。モンスターIDを指定すると対象だけを更新する。切り出し範囲はスクリプト内の `FACE_BOXES`。 |
 | `node image/grid-overlay.js 変数名...` | 立ち絵に0.1刻みの目盛りを重ねたPNGを出す。顔クロップや染色bboxの範囲を実測するときに使う。 |
@@ -386,7 +387,7 @@ tools/                        開発用の検証スクリプト(配信されな�
   ranking/                    ランキング(21本)
   assistant/                  助手(3本)
   audio/                      音まわり(6本)
-  image/                      画像と染色(17本)
+  image/                      画像と染色(24本)
   browser/                    通し確認・性能(3本)
   art-sources/                配信しない原本・検査用の見本画像
   out/                        検査が書き出すPNGなど(Git管理外)

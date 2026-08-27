@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 16:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 17:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7074,7 +7074,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     let active = true;
     const image = new Image();
-    image.src = 'data/images/home-background.png';
+    image.src = 'data/images/home-background.jpg';
     const reveal = () => { if (active) setHomeBackgroundReady(true); };
     image.onload = () => {
       if (image.decode) image.decode().catch(()=>{}).then(reveal);
@@ -14245,7 +14245,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
           <main className="mh-home-scene" aria-label="村の広場">
-            <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''}`} aria-hidden="true"><img src="data/images/home-background.png" alt=""/></picture>
+            <picture className={`mh-home-background ${homeBackgroundReady?'is-ready':''}`} aria-hidden="true"><img src="data/images/home-background.jpg" alt=""/></picture>
             <div className="mh-home-masumon-layer" aria-hidden="true">{homePastureMasumons.map((masu,index)=><HomeWalkingMasumon key={masu.id} masu={masu} base={ALL_PLAYER_MONSTERS[masu.baseId]} masuColors={getMasuColors(masu)} index={index} count={homePastureMasumons.length}/>)}</div>
             {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
             <header className={`mh-home-status${spotClass('settings')}`}>
