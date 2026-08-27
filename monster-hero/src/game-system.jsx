@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 06:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 07:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -98,14 +98,26 @@ const BATTLE_MODE_QUICK = 'quick';
 // 種族チャレンジはデバッグのバトルモード入口だけに合流させる。
 // 通常プレイの公開配列には含めず、固定計画2/4では結果も保存しない。
 const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
+// 種族チャレンジを一般公開するかどうかの1つのスイッチ。
+// false のあいだは
+//   ・通常プレイのBATTLE MODEへ出さない(デバッグのバトルモード入口からだけ見える)
+//   ・クリアしても全国ランキングへ送らない
+// 公開するときはここを true にするだけで両方が切り替わる。
+// 公開の判断はユーザーが行うので、実装側から勝手に true にしない。
+const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;
+// モード説明は公開時にそのまま出す本文にする。開発の進み具合・デバッグ事情は
+// ここへ書かない(カード側のDEBUGバッジで分ける)。
 const SPECIES_CHALLENGE_MODE = Object.freeze({
   id:BATTLE_MODE_SPECIES_CHALLENGE, label:'種族チャレンジ', short:'種族', emoji:'🧬', color:'#67e8f9',
-  tagline:'選んだ種族だけで挑む、種族限定チャレンジ',
-  highlights:[['🧬','選択種族だけでパーティ編成'],['🤝','供モン0〜3体'],['⚔️','WAVE2/4/6で残りから加入']],
+  tagline:'好きな種族を1つ選び、その種族だけでWAVE1〜10へ挑むモード',
+  highlights:[['🧬','選んだ種族だけで編成'],['🤝','供モン0〜3体'],['🍎','初回クリアで超越の実']],
   points:[
-    ['⚔️','編成','選んだ種族の解放済みベースモンと所持マスモンだけで編成します。勇者本人と同じ個体だけは供モンにできません。'],
-    ['🤝','供モンの加入','供モンは0〜3体を選び、WAVE2・4・6で未加入の中からその都度1体を選びます。'],
-    ['🧪','試験中','固定計画2/4のデバッグ確認中です。結果・報酬・スコア・ランキングは保存しません。'],
+    ['⚔️','編成','勇者1体＋供モン0〜3体。解放済みベースモンと所持マスモンから選びます。選んだ種族以外は使えません。同じ個体を二重に選べませんが、別個体なら同じ種族を何体でも編成できます。'],
+    ['🤝','供モン','WAVE2・4・6をクリアしたとき、事前に選んだ未加入の供モンから1体を選んで加入させます。'],
+    ['🔓','難易度','Beginner〜Expertは最初から挑めます。Master以降は同じ種族で1つ前の難易度をクリアすると順に解放されます。進行は種族ごとに独立しています。'],
+    ['🍎','初回クリア報酬','種族×難易度の初回クリアで、その種族の「超越の実」を獲得します。個数は難易度ごとに決まっており、難易度画面で確認できます。'],
+    ['🔥','上位難易度','EXTREME〜INFINITYでは、既存の極限チャレンジと同じ特殊ルールが適用されます。'],
+    ['🏅','記録','自己ベストは種族×難易度ごとに別々に記録されます。'],
   ],
 });
 // プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
@@ -291,7 +303,10 @@ const battleModeInfo = (mode) => {
 // デバッグ・ヘルプの表・検査からだけ見える状態にできる
 const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 // スコアランキングがあるモードかどうか。クイックだけ対象外
-const modeHasRanking = (mode) => !isQuickMode(mode) && mode !== BATTLE_MODE_SPECIES_CHALLENGE;
+// 種族チャレンジは一般公開するまで全国ランキングへ送らない。
+// デバッグの実戦から外部ランキングを汚さないための入口はここ1か所にまとめてある
+const modeHasRanking = (mode) => !isQuickMode(mode)
+  && (mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE);
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
 const modeBondAction = (mode) => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
@@ -3711,6 +3726,33 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
     </div>
   );
 };
+// 種族チャレンジの全カードが使う、共通のモンスター絵の枠。
+//
+// 【なぜ共通部品にするか】
+// これまでは MONSTER_ART_CONTAIN_IDS へモンスターIDを1体ずつ手で足す方式だったので、
+// 新しいモンスターを追加するたびに書き忘れて頭や足が切れていた。
+// ここでは baseId に関係なく必ず
+//   ・固定サイズの枠
+//   ・object-fit: contain（縦横比を変えず、枠へ全体を収める）
+//   ・中央配置
+// にするので、どのモンスターが増えても切れない。Base の <img> と
+// マスモンの DyedMonsterImage のどちらも同じ規則で描く。
+const MonsterArtFrame = ({ baseId, src, alt='', masuColors=null, className='', frameStyle=null, children=null }) => {
+  // contain は inline style で指定する。className 側に object-cover が混ざっても
+  // inline style が必ず勝つので、枠ごとに崩れることがない
+  const fit = { width:'100%', height:'100%', objectFit:'contain', objectPosition:'center' };
+  return (
+    <span
+      className={`relative flex items-center justify-center overflow-hidden ${className}`}
+      style={{ ...(frameStyle||{}) }}
+    >
+      {Array.isArray(masuColors)
+        ? <DyedMonsterImage baseId={baseId} src={src} alt={alt} masuColors={masuColors} draggable={false} style={fit}/>
+        : <img src={src} alt={alt} draggable={false} style={fit}/>}
+      {children}
+    </span>
+  );
+};
 // 本番の染色モーダルとDebugで共有する色選択UI。色ID（元色=null、プリセット、カスタム）を
 // そのまま受け渡し、表示側も共通のDyedMonsterImageへ渡すため、Debug専用の色変換を持たない。
 const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom }) => {
@@ -4825,6 +4867,26 @@ const normalizeSpeciesChallengeDifficultyFlags = (value) => Object.fromEntries(
     .filter(difficultyId=>value && typeof value === 'object' && value[difficultyId] === true)
     .map(difficultyId=>[difficultyId,true])
 );
+// 自己記録は「種族 × 難易度」ごとに独立させる。既存の progress キーへ足すだけなので、
+// records を持たない既存セーブは空の記録として読める(新しい mh_* キーは作らない)。
+const emptySpeciesChallengeRecord = () => ({ bestScore:0, bestTurns:null, clears:0 });
+const normalizeSpeciesChallengeRecord = (value) => {
+  const record=emptySpeciesChallengeRecord();
+  if(!value || typeof value!=='object' || Array.isArray(value))return record;
+  const bestScore=Math.floor(Number(value.bestScore));
+  if(Number.isFinite(bestScore) && bestScore>0)record.bestScore=bestScore;
+  const bestTurns=Math.floor(Number(value.bestTurns));
+  if(Number.isFinite(bestTurns) && bestTurns>0)record.bestTurns=bestTurns;
+  const clears=Math.floor(Number(value.clears));
+  if(Number.isFinite(clears) && clears>0)record.clears=clears;
+  return record;
+};
+const normalizeSpeciesChallengeRecords = (value) => Object.fromEntries(
+  SPECIES_CHALLENGE_DIFFICULTY_IDS
+    .filter(difficultyId=>value && typeof value === 'object' && !Array.isArray(value) && value[difficultyId])
+    .map(difficultyId=>[difficultyId,normalizeSpeciesChallengeRecord(value[difficultyId])])
+    .filter(([,record])=>record.bestScore>0 || record.bestTurns!==null || record.clears>0)
+);
 const normalizeSpeciesChallengeProgress = (value) => {
   const normalized=emptySpeciesChallengeProgress();
   const savedSpecies=value && typeof value === 'object' && !Array.isArray(value)
@@ -4836,6 +4898,7 @@ const normalizeSpeciesChallengeProgress = (value) => {
     normalized.species[speciesId]={
       cleared:normalizeSpeciesChallengeDifficultyFlags(entry.cleared),
       firstRewardClaimed:normalizeSpeciesChallengeDifficultyFlags(entry.firstRewardClaimed),
+      records:normalizeSpeciesChallengeRecords(entry.records),
     };
   }
   const savedPending=value && typeof value === 'object' && !Array.isArray(value)
@@ -4865,13 +4928,39 @@ const isSpeciesChallengeFirstRewardClaimed = (progress,speciesId,difficultyId) =
 const speciesChallengeClearedDifficultyIds = (progress,speciesId) => validSpeciesChallengeId(speciesId)
   ? SPECIES_CHALLENGE_DIFFICULTY_IDS.filter(difficultyId=>isSpeciesChallengeCleared(progress,speciesId,difficultyId))
   : [];
+const emptySpeciesChallengeSpeciesEntry = () => ({ cleared:{}, firstRewardClaimed:{}, records:{} });
 const updateSpeciesChallengeProgressFlag = (progress,speciesId,difficultyId,field) => {
   const normalized=normalizeSpeciesChallengeProgress(progress);
   if(!validSpeciesChallengeId(speciesId) || !SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId))return normalized;
-  const current=normalized.species[speciesId] || { cleared:{}, firstRewardClaimed:{} };
+  const current=normalized.species[speciesId] || emptySpeciesChallengeSpeciesEntry();
   normalized.species[speciesId]={ ...current, [field]:{ ...current[field], [difficultyId]:true } };
   return normalized;
 };
+// 種族×難易度の自己記録を読む。記録が無い組み合わせでも既定値へ落ちる
+const speciesChallengeRecord = (progress,speciesId,difficultyId) => normalizeSpeciesChallengeRecord(
+  validSpeciesChallengeId(speciesId) && SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)
+    ? normalizeSpeciesChallengeProgress(progress).species[speciesId]?.records?.[difficultyId]
+    : null
+);
+// クリアしたときだけ呼ぶ。スコアとターン数は「良くなったときだけ」更新し、クリア回数は必ず1増やす
+const updateSpeciesChallengeRecord = (progress,speciesId,difficultyId,{ score=0,turns=null }={}) => {
+  const normalized=normalizeSpeciesChallengeProgress(progress);
+  if(!validSpeciesChallengeId(speciesId) || !SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId))return normalized;
+  const current=normalized.species[speciesId] || emptySpeciesChallengeSpeciesEntry();
+  const before=normalizeSpeciesChallengeRecord(current.records?.[difficultyId]);
+  const nextScore=Math.floor(Number(score));
+  const nextTurns=Math.floor(Number(turns));
+  const record={
+    bestScore:Number.isFinite(nextScore)&&nextScore>before.bestScore?nextScore:before.bestScore,
+    bestTurns:Number.isFinite(nextTurns)&&nextTurns>0&&(before.bestTurns===null||nextTurns<before.bestTurns)?nextTurns:before.bestTurns,
+    clears:before.clears+1,
+  };
+  normalized.species[speciesId]={ ...current, records:{ ...current.records, [difficultyId]:record } };
+  return normalized;
+};
+// モードカードへ出す「いくつクリアしたか」。種族をまたいだ合計だけを数える
+const speciesChallengeTotalClearedCount = (progress) => Object.values(normalizeSpeciesChallengeProgress(progress).species)
+  .reduce((total,entry)=>total+SPECIES_CHALLENGE_DIFFICULTY_IDS.filter(id=>entry.cleared[id]===true).length,0);
 const markSpeciesChallengeCleared = (progress,speciesId,difficultyId) =>
   updateSpeciesChallengeProgressFlag(progress,speciesId,difficultyId,'cleared');
 const markSpeciesChallengeFirstRewardClaimed = (progress,speciesId,difficultyId) =>
@@ -4960,7 +5049,8 @@ const finalizeSpeciesChallengeClearReward = ({ progress,ownedItems,speciesId,dif
   const rewardAmount=speciesChallengeFirstClearReward(difficultyId);
   const itemId=speciesTranscendFruitItemId(speciesId);
   if(!itemId || rewardAmount<=0){
-    return { nextProgress:currentProgress,nextOwnedItems:currentItems,rewardGranted:false,rewardAmount:0 };
+    // 報酬が無い組み合わせでも「クリアした」ことは必ず残す(次の難易度の解放に使うため)
+    return { nextProgress:markSpeciesChallengeCleared(currentProgress,speciesId,difficultyId),nextOwnedItems:currentItems,rewardGranted:false,rewardAmount:0 };
   }
   const clearedProgress=markSpeciesChallengeCleared(currentProgress,speciesId,difficultyId);
   const pendingKey=speciesChallengeRewardPendingKey(speciesId,difficultyId);
@@ -4979,14 +5069,26 @@ const finalizeSpeciesChallengeClearReward = ({ progress,ownedItems,speciesId,dif
 };
 // 2キーを一括保存できないlocal storageでも安全にする4段階確定。
 // pendingを先に残し、実はtargetCountまで、claimed後にpendingを消す。
-const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedItems,speciesId,difficultyId,storeSet,storeGet }={}) => {
+const persistSpeciesChallengeClearRewardTransaction = async ({ progress,ownedItems,speciesId,difficultyId,storeSet,storeGet,record=null }={}) => {
   const savedProgress=await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,progress,false);
   const savedItems=await storeGet('mh_owned_items',ownedItems,false);
-  const currentProgress=normalizeSpeciesChallengeProgress(savedProgress);
+  let currentProgress=normalizeSpeciesChallengeProgress(savedProgress);
   const currentItems=savedItems && typeof savedItems==='object' && !Array.isArray(savedItems) ? savedItems : {};
+  // 自己記録(種族×難易度)は初回かどうかに関係なくクリアのたびに更新する。
+  // 報酬の確定より先へ置き、報酬が無い難易度でも記録だけは必ず残す。
+  // clears を二重に増やさないよう、呼び出し側は1ランにつき1回だけ呼ぶこと。
+  if(record){
+    currentProgress=updateSpeciesChallengeRecord(currentProgress,speciesId,difficultyId,record);
+    await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,currentProgress,false);
+  }
   const rewardAmount=speciesChallengeFirstClearReward(difficultyId);
   const itemId=speciesTranscendFruitItemId(speciesId);
-  if(!itemId || rewardAmount<=0)return finalizeSpeciesChallengeClearReward({progress:currentProgress,ownedItems:currentItems,speciesId,difficultyId});
+  if(!itemId || rewardAmount<=0){
+    // 報酬が無くてもクリア済みは保存する。ここを保存し忘れると次の難易度が解放されない
+    const result=finalizeSpeciesChallengeClearReward({progress:currentProgress,ownedItems:currentItems,speciesId,difficultyId});
+    await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY,result.nextProgress,false);
+    return result;
+  }
   const pendingKey=speciesChallengeRewardPendingKey(speciesId,difficultyId);
   if(isSpeciesChallengeFirstRewardClaimed(currentProgress,speciesId,difficultyId)){
     const result=finalizeSpeciesChallengeClearReward({progress:currentProgress,ownedItems:currentItems,speciesId,difficultyId});
@@ -7328,18 +7430,31 @@ function MonsterHeroGame() {
   const [speciesChallengeDebugRun, setSpeciesChallengeDebugRun] = useState(null);
   const [speciesChallengeDebugWaveLog, setSpeciesChallengeDebugWaveLog] = useState([]);
   // 本番BATTLE MODEからも同じまま呼び出す種族チャレンジ選択state。現段階の入口だけをデバッグに置く。
-  const [speciesChallengeSelection, setSpeciesChallengeSelection] = useState({step:'intro',speciesId:'',difficultyId:'',heroId:'',allyIds:[],run:null});
+  // 入口は openSpeciesChallengeSelection が 'species' から始める。
+  // 廃止した 'intro'(専用モードプレビュー)を初期値へ残すと、どのステップにも当たらない
+  // 画面が一瞬出るので初期値もそろえておく
+  const [speciesChallengeSelection, setSpeciesChallengeSelection] = useState({step:'species',speciesId:'',difficultyId:'',heroId:'',allyIds:[],run:null,saveProgress:false});
   // STEP5Bの実戦run。デバッグ戦と同じ保存抑止を使いながら、通常の10WAVE処理へ流す。
   const speciesChallengeBattleRunRef = useRef(null);
   const [speciesChallengeBattleRun, setSpeciesChallengeBattleRun] = useState(null);
+  // このランのクリア結果を実際に保存するかどうか。
+  // 通常の BATTLE TEST → ⚔️バトルモード は false(保存なし)のままにし、
+  // デバッグ設定の「実進行保存で実戦確認」から始めたときだけ true にする。
+  const speciesChallengeSaveRunRef = useRef(false);
+  const [speciesChallengeSaveRun, setSpeciesChallengeSaveRun] = useState(false);
+  // WAVE10クリアの確定を1ランにつき1回だけにする。連打・再描画で clears が二重に増えるのを防ぐ
+  const speciesChallengeClearHandledRef = useRef(false);
+  const [speciesChallengeClearResult, setSpeciesChallengeClearResult] = useState(null);
   const loadSpeciesChallengeProgress = async() => {
     const progress=normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false));
     setSpeciesChallengeProgress(progress);
     return progress;
   };
-  const openSpeciesChallengeSelection = async() => {
+  // saveProgress=true はデバッグ設定の「実進行保存で実戦確認」からだけ渡す。
+  // 通常の BATTLE TEST → ⚔️バトルモード は false のままで、これまでどおり保存なし
+  const openSpeciesChallengeSelection = async({ saveProgress=false }={}) => {
     await loadSpeciesChallengeProgress();
-    setSpeciesChallengeSelection({step:'species',speciesId:'',difficultyId:'',heroId:'',allyIds:[],run:null});
+    setSpeciesChallengeSelection({step:'species',speciesId:'',difficultyId:'',heroId:'',allyIds:[],run:null,saveProgress:!!saveProgress});
     setGameState('SPECIES_CHALLENGE_SELECT');
   };
   const [transcendFruitDebugMasuId, setTranscendFruitDebugMasuId] = useState(null);
@@ -9951,7 +10066,7 @@ function MonsterHeroGame() {
     if(gameState!=='BATTLE_MODE_SELECT'||modeSelectTab!=='mode')return;
     const id=requestAnimationFrame(()=>{
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes=[...BATTLE_MODES,EXTREME_MODE,...(debugBattle?[SPECIES_CHALLENGE_MODE]:[])];
+      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];
       const index=modes.length+Math.max(0,modes.findIndex(m=>m.id===battleMode));
       modeCarouselRef.current?.children[index]?.scrollIntoView({inline:'center',block:'nearest'});
     });
@@ -11626,7 +11741,9 @@ function MonsterHeroGame() {
     return s;
   };
 
-  const startSpeciesChallengeBattle = (run) => {
+  // saveProgress=true はデバッグ設定の「実進行保存で実戦確認」からだけ渡す。
+  // 通常の BATTLE TEST 経由は false のままで、クリアしても何も保存しない。
+  const startSpeciesChallengeBattle = (run, { saveProgress=false }={}) => {
     if (!run) return;
     const hero=resolveRosterEntryToMon(run.heroId);
     if (!hero) return;
@@ -11636,6 +11753,10 @@ function MonsterHeroGame() {
     applyResetAllState();
     speciesChallengeBattleRunRef.current=run;
     setSpeciesChallengeBattleRun(run);
+    speciesChallengeSaveRunRef.current=!!saveProgress;
+    setSpeciesChallengeSaveRun(!!saveProgress);
+    speciesChallengeClearHandledRef.current=false;
+    setSpeciesChallengeClearResult(null);
     debugBattleRef.current=true;
     debugResultRef.current=false;
     setDebugBattle(true);
@@ -11654,6 +11775,43 @@ function MonsterHeroGame() {
     setDistAptPct(getMonsterAptPct(hero,specialRuleDifficultyForRun(extremeSetting?EXTREME_MODE.id:BATTLE_MODE_CHALLENGE,extremeSetting?'Normal':run.difficultyId,!!extremeSetting,extremeSetting?.id)));
     setTeachingPool([...getActiveTeachingCards()]);
     setGameState('PICK_TEACHING');
+  };
+
+  // WAVE10を勝ち切ったときだけ呼ぶ。敗北・リタイア・途中離脱からは呼ばない。
+  // 保存するのは「実進行保存で実戦確認」から始めたランだけで、通常のBATTLE TESTでは
+  // 何が起きるはずだったかを画面へ出すだけにする(保存なし)。
+  const finishSpeciesChallengeClear = async () => {
+    const run=speciesChallengeBattleRunRef.current;
+    if(!run)return;
+    if(speciesChallengeClearHandledRef.current)return;
+    speciesChallengeClearHandledRef.current=true;
+    const { speciesId,difficultyId }=run;
+    const clearTurns=Number.isFinite(Number(totalTurnCountRef.current))&&Number(totalTurnCountRef.current)>0
+      ? Number(totalTurnCountRef.current) : null;
+    const rewardAmount=speciesChallengeFirstClearReward(difficultyId);
+    const nextDifficultyId=SPECIES_CHALLENGE_DIFFICULTY_IDS[SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId)+1]||null;
+    const base={ speciesId,difficultyId,nextDifficultyId,score,clearTurns };
+    if(!speciesChallengeSaveRunRef.current){
+      // 保存なし確認。実際には書き込まず、保存したとしたらどうなるかだけを見せる
+      const firstClear=!isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,difficultyId);
+      setSpeciesChallengeClearResult({ ...base,saved:false,rewardGranted:firstClear&&rewardAmount>0,rewardAmount:firstClear?rewardAmount:0 });
+      return;
+    }
+    try{
+      const result=await persistSpeciesChallengeClearReward({
+        progress:speciesChallengeProgress,ownedItems:ownedItemsRef.current,speciesId,difficultyId,storeSet,storeGet,
+        record:{ score,turns:clearTurns },
+      });
+      setSpeciesChallengeProgress(result.nextProgress);
+      if(result.nextOwnedItems&&result.nextOwnedItems!==ownedItemsRef.current){
+        ownedItemsRef.current=result.nextOwnedItems;
+        setOwnedItems(result.nextOwnedItems);
+      }
+      setSpeciesChallengeClearResult({ ...base,saved:true,rewardGranted:!!result.rewardGranted,rewardAmount:result.rewardAmount||0 });
+    }catch(e){
+      console.error('[speciesChallenge] clear persistence failed:',e&&e.message?e.message:e);
+      setSpeciesChallengeClearResult({ ...base,saved:false,failed:true,rewardGranted:false,rewardAmount:0 });
+    }
   };
 
   const createRepeatRunTemplate = ({ hero, allies=[] }) => Object.freeze({
@@ -11918,6 +12076,12 @@ function MonsterHeroGame() {
     debugResultRef.current = false;
     speciesChallengeBattleRunRef.current = null;
     setSpeciesChallengeBattleRun(null);
+    // 種族チャレンジのデバッグ状態は、HOMEへ戻る時点で必ず落とす。
+    // ここを残すと次の通常バトルへ「保存する/しない」が漏れる
+    speciesChallengeSaveRunRef.current = false;
+    setSpeciesChallengeSaveRun(false);
+    speciesChallengeClearHandledRef.current = false;
+    setSpeciesChallengeClearResult(null);
     setDebugBattle(false); setExtremeRun(false);
     setDebugOutcome(null);
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
@@ -13182,6 +13346,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setEffect(null);
     if (wave === 10) {
       if (speciesChallengeBattleRunRef.current) {
+        await finishSpeciesChallengeClear();
         debugResultRef.current=true;
         setDebugOutcome('win');
         return;
@@ -15283,7 +15448,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ランキングの一覧は renderScoreRankingBody などの共通の描画を呼ぶだけで、画面を複製していない */}
         {gameState==='BATTLE_MODE_SELECT'&&(()=>{
           // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes=[...BATTLE_MODES,EXTREME_MODE,...(debugBattle?[SPECIES_CHALLENGE_MODE]:[])];
+      const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];
           const current=modes.find(m=>m.id===battleMode)||modes[0];
           const selectedIndex=Math.max(0,modes.findIndex(m=>m.id===current.id));
           // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
@@ -15321,9 +15486,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <p className="text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]">{m.tagline}</p>
                         {/* スコア対象モードは全難易度の自己ベスト最大値、クイックは従来どおり選択中難易度のWAVE記録を出す */}
                         <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5">
-                          <small className="block text-[8px] text-slate-400 font-black">{isSpecies?'試験状況':isExtreme?(extremeLocked?'解放条件':'最高スコア'):ranked?'最高スコア':`${DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}の記録`}</small>
-                          <b className="block text-right text-base leading-tight" style={{color:m.color}}>{isSpecies?'DEBUG TEST':isExtreme?(extremeLocked?'🔒 未解放':`${modeBestScore.toLocaleString()} pt`):ranked?`${modeBestScore.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{isSpecies?'結果は保存されません':isExtreme?(extremeLocked?EXTREME_UNLOCK_TEXT:`クリア ${rec.clears}回`):ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
+                          <small className="block text-[8px] text-slate-400 font-black">{isSpecies?'クリアした種族×難易度':isExtreme?(extremeLocked?'解放条件':'最高スコア'):ranked?'最高スコア':`${DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}の記録`}</small>
+                          <b className="block text-right text-base leading-tight" style={{color:m.color}}>{isSpecies?`${speciesChallengeTotalClearedCount(speciesChallengeProgress)} 組`:isExtreme?(extremeLocked?'🔒 未解放':`${modeBestScore.toLocaleString()} pt`):ranked?`${modeBestScore.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
+                          <span className="block text-right text-[9px] text-amber-300">{isSpecies?'🧪 DEBUG・一般公開前':isExtreme?(extremeLocked?EXTREME_UNLOCK_TEXT:`クリア ${rec.clears}回`):ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
                         </div>
                         {/* カードへ出す3行。どのモードも【売り】→【報酬】→【記録】の順でそろえてある。
                             細かい説明は「このモードの説明」で全部読める */}
@@ -15424,7 +15589,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const rateCells=(setting)=>quick
             ? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.xp||setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]
             : [['敵強度',`×${setting.power}`,false],['スコア',`×${setting.score}`,false],['ダイヤ',`×${setting.gold}`,false]];
-          const noteText=species?'種族別解放・初回報酬（試験中）':quick?'経験値・ダイヤのみ1.5倍':pro?'絆経験値3倍・ブリーダー経験値1.5倍':'スコアがランキングに登録される';
+          const noteText=species?'初回クリアで超越の実／難易度は種族ごとに解放':quick?'経験値・ダイヤのみ1.5倍':pro?'絆経験値3倍・ブリーダー経験値1.5倍':'スコアがランキングに登録される';
+          // 種族チャレンジの記録は種族×難易度で分かれる。選択中の種族のぶんだけを引く
+          const speciesRecord=difficultyId=>speciesChallengeRecord(speciesChallengeProgress,speciesChallengeSelection.speciesId,difficultyId);
           return (
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>setGameState(species?'SPECIES_CHALLENGE_SELECT':'BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{mode.label}</h2></div>
@@ -15447,9 +15614,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}</h3>
                         {/* 記録の枠は「見出し・大きい値・補足」の3行構成をどのモードでも守り、カードの高さをそろえる */}
                         <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5">
-                          <small className="block text-[8px] text-slate-400 font-black">{ranked?'自己ベストスコア':'最高到達WAVE'}</small>
-                          <b className={`block text-right text-base leading-tight ${ranked?'text-indigo-200':'text-amber-300'}`}>{ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
+                          {/* 種族チャレンジの自己ベストは「種族 × 難易度」ごとに独立している */}
+                          <small className="block text-[8px] text-slate-400 font-black">{species?'この種族での自己ベスト':ranked?'自己ベストスコア':'最高到達WAVE'}</small>
+                          <b className={`block text-right text-base leading-tight ${species?'text-cyan-200':ranked?'text-indigo-200':'text-amber-300'}`}>{species?`${speciesRecord(key).bestScore.toLocaleString()} pt`:ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
+                          <span className="block text-right text-[9px] text-amber-300">{species?`クリア ${speciesRecord(key).clears}回${speciesRecord(key).bestTurns!==null?` ／ 最短 ${speciesRecord(key).bestTurns}T`:''}`:ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
                         </div>
                         <div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>
                         <div className="mt-1 rounded-xl border px-2 py-0.5 text-[8px] font-black whitespace-nowrap overflow-hidden flex items-center justify-between gap-1" style={{borderColor:`${mode.color}55`,color:mode.color}}><span className="truncate">{noteText}</span>{quick&&hasExtremeSpecialRules(key)&&<span className="shrink-0 text-[8px] text-amber-300">特殊ルールあり</span>}</div>
@@ -15466,7 +15634,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               ベースモンのタブで開く。編成(マスモン入り)は使えない */}
                           {/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
                               ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}
-                          <button disabled={(pro&&!proReady)||!quickUnlocked||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?(species?'🔒 前の難易度クリアで解放':'🔒 同じ難易度クリアで解放'):pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                          <button disabled={(pro&&!proReady)||!quickUnlocked||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}
+                            // 種族チャレンジは通常の勇者選択(PICK_HERO)へ入れない。ここを通すと
+                            // debugBattle が false へ戻り、保存なしのはずの確認が記録を残してしまう。
+                            // 難易度を確定したら、そのまま種族チャレンジの勇者選択へ戻す
+                            if(species){Audio_.se.tap();setSpeciesChallengeSelection(current=>({...current,difficultyId:key,heroId:'',allyIds:[],run:null,step:'hero'}));setGameState('SPECIES_CHALLENGE_SELECT');return;}
+                            battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?(species?'🔒 前の難易度クリアで解放':'🔒 同じ難易度クリアで解放'):pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
@@ -16061,8 +16234,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <section><b className="text-[9px]">供モン 0〜3体（選択種族のみ）</b><div className="mt-1 grid grid-cols-2 gap-1">{allyCandidates.map(entry=>{const selected=selectedAllyIds.includes(entry.entryId);return <button key={entry.entryId} disabled={!selected&&selectedAllyIds.length>=3} onClick={()=>toggleAlly(entry.entryId)} aria-pressed={selected} className={`min-h-[44px] rounded-xl px-2 text-[8px] font-black disabled:opacity-25 ${selected?'bg-cyan-700 ring-2 ring-white':'bg-slate-900 border border-white/10'}`}>{entryLabel(entry.entryId)}</button>;})}</div><p className="mt-1 text-[8px] text-cyan-200">選択：{selectedAllyIds.length?selectedAllyIds.map(entryLabel).join('、'):'0体'}</p></section>
                 {!speciesChallengeDebugRun?<button disabled={!heroId||!selectionValidation.valid} onClick={startJoinSimulation} className="min-h-[46px] w-full rounded-xl bg-emerald-700 text-[10px] font-black disabled:opacity-30">この編成でシミュレーション開始</button>:<section className="space-y-2 rounded-xl bg-black/30 p-2 text-[9px]"><div><b>勇者：</b>{entryLabel(speciesChallengeDebugRun.heroId)}</div><div><b>加入済み：</b>{speciesChallengeDebugRun.joinedAllyIds.length?speciesChallengeDebugRun.joinedAllyIds.map(entryLabel).join('、'):'なし'}</div><div><b>未加入：</b>{speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length?speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).map(entryLabel).join('、'):'なし'}</div>{speciesChallengeDebugWaveLog.map(log=><div key={log.wave} data-species-wave-log={log.wave} className="rounded-lg border border-white/10 p-2"><b>WAVE{log.wave}：</b>{log.joinedAllyId?entryLabel(log.joinedAllyId):'加入なし'}<br/><span className="text-amber-300">⚡ ガッツ回復：実行対象</span><br/><span className="text-fuchsia-300">加入ボーナス：{log.bonus?`HP+${log.bonus.hp}／力+${log.bonus.atk}／防+${log.bonus.def}／G+${log.bonus.guts}`:'なし'}</span></div>)}{nextJoinWave&&<div><b>WAVE{nextJoinWave}で誰を加入させるか</b>{speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length?<div className="mt-1 grid grid-cols-2 gap-1">{speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).map(id=><button key={id} onClick={()=>simulateWave(id)} className="min-h-[44px] rounded-xl bg-fuchsia-800 px-2 text-[8px] font-black">{entryLabel(id)}を加入</button>)}</div>:<button onClick={()=>simulateWave(null)} className="mt-1 min-h-[44px] w-full rounded-xl bg-slate-700 font-black">加入なしで進む（ガッツ回復あり）</button>}</div>}{!nextJoinWave&&<button onClick={()=>{setSpeciesChallengeDebugRun(null);setSpeciesChallengeDebugWaveLog([]);}} className="min-h-[44px] w-full rounded-xl border border-cyan-400 font-black">編成選択へ戻る</button>}</section>}
               </article>
+              {/* 内部完成の確認用。ここからだけ、本番と同じ流れのまま結果を実際に保存できる。
+                  通常の BATTLE TEST → ⚔️バトルモード は保存なしのまま変えない */}
+              <article data-species-real-run className="space-y-2 rounded-2xl border-2 border-red-400/60 bg-red-950/25 p-3">
+                <h3 className="text-[11px] font-black text-red-200">実進行保存で実戦確認</h3>
+                <p className="text-[8px] leading-relaxed text-red-100">⚠️ 実際の種族チャレンジ進行・所持品を変更します。本番と同じ画面・同じバトルで進み、WAVE10までクリアすると「クリア状況」「次の難易度の解放」「初回の超越の実」「種族×難易度の自己記録」を実際に保存します。全国ランキングへは送信しません。</p>
+                <p className="text-[8px] text-slate-400">通常の BATTLE TEST →「⚔️ バトルモード」から入った場合は、これまでどおり何も保存しません。</p>
+                <button data-species-real-run-start onClick={()=>{if(!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？'))return;openSpeciesChallengeSelection({saveProgress:true});}} className="min-h-[46px] w-full rounded-xl bg-red-700 text-[10px] font-black text-white">実進行を保存する実戦を始める</button>
+              </article>
               <article data-transcend-fruit-debug className="space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"><h3 className="text-[11px] font-black text-fuchsia-200">超越の実 → 超越ポイント確認</h3>{selectedMasu?<><label className="block text-[9px] font-black">所持マスモン<select aria-label="所持マスモン" value={selectedMasu.id} onChange={e=>{setTranscendFruitDebugMasuId(e.target.value);setTranscendFruitDebugItemId('');setTranscendFruitDebugResult(null);}} className="mt-1 block min-h-[44px] w-full rounded-xl bg-slate-900 px-3">{masuMons.map(m=><option key={m.id} value={m.id}>{m.name}／{ALL_PLAYER_MONSTERS[m.baseId]?.name||m.baseId}</option>)}</select></label><div className="grid grid-cols-2 gap-2 text-center text-[9px]"><span className="rounded-lg bg-slate-900 p-2">対応種族の実<br/><b>{transcendFruitOwnedCount(ownedItems,speciesFruitId)}</b></span><span className="rounded-lg bg-slate-900 p-2">虹の実<br/><b>{transcendFruitOwnedCount(ownedItems,RAINBOW_TRANSCEND_FRUIT_ITEM_ID)}</b></span></div><div className="grid grid-cols-2 gap-2"><button aria-pressed={selectedFruitId===speciesFruitId} onClick={()=>setTranscendFruitDebugItemId(speciesFruitId)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===speciesFruitId?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>対応種族の実を選択</button><button aria-pressed={selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID} onClick={()=>setTranscendFruitDebugItemId(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className={`min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID?'bg-fuchsia-700 ring-2 ring-white':'bg-slate-800'}`}>虹の実を選択</button></div><div>{!selectedFruitId&&<p className="text-center text-[8px] font-black text-amber-300">使用する実を明示選択してください。</p>}</div><div className="grid grid-cols-3 gap-2"><button disabled={!selectedFruitId} onClick={()=>useFruit(1)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">1</button><button disabled={!selectedFruitId} onClick={()=>useFruit(10)} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">10</button><button disabled={!selectedFruitId} onClick={()=>useFruit(transcendFruitOwnedCount(ownedItems,selectedFruitId))} className="min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30">MAX</button></div><div className="rounded-xl bg-black/30 p-2 text-center text-[10px]">超越P：{transcendFruitDebugResult?`${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok?'':'（失敗・変更なし）'}`:`${Math.max(0,Math.floor(Number(selectedMasu.transcendPoints)||0))} → ―`}</div><div className="grid grid-cols-2 gap-2"><button onClick={()=>grantFruit(speciesFruitId)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">対応種族の実 +10</button><button onClick={()=>grantFruit(RAINBOW_TRANSCEND_FRUIT_ITEM_ID)} className="min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black">虹の実 +10</button></div></>:<p className="text-[9px] text-slate-400">所持マスモンがいません。</p>}</article>
-              {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds),cleared=isSpeciesChallengeCleared(speciesChallengeProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div></article>;})}
+              {SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>{const unlocked=isSpeciesChallengeDifficultyUnlocked(id,clearedIds),cleared=isSpeciesChallengeCleared(speciesChallengeProgress,speciesId,id),claimed=isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress,speciesId,id);return <article key={id} data-species-difficulty={id} className={`rounded-xl border p-3 ${unlocked?'border-emerald-500/40 bg-slate-900':'border-white/10 bg-slate-950 opacity-65'}`}><div className="flex items-center justify-between gap-2"><b className="text-[11px]">{difficultyLabel(id)}</b><span className={`rounded-full px-2 py-1 text-[8px] font-black ${unlocked?'bg-emerald-900 text-emerald-200':'bg-slate-800 text-slate-400'}`}>{unlocked?'解放':'未解放'}</span></div><div className="mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"><span className={cleared?'text-emerald-300':'text-slate-500'}>cleared<br/><b>{String(cleared)}</b></span><span className={claimed?'text-amber-300':'text-slate-500'}>firstRewardClaimed<br/><b>{String(claimed)}</b></span><span className="text-fuchsia-200">初回報酬<br/><b>超越の実 ×{speciesChallengeFirstClearReward(id)}</b></span></div>{/* 自己記録も種族×難易度ごとに独立していることをここで確認できる */}{(()=>{const record=speciesChallengeRecord(speciesChallengeProgress,speciesId,id);return <div data-species-record={id} className="mt-1 rounded-lg bg-black/30 px-2 py-1 text-center text-[8px] text-cyan-200">自己ベスト {record.bestScore.toLocaleString()}pt ／ 最短 {record.bestTurns!==null?`${record.bestTurns}T`:'—'} ／ クリア {record.clears}回</div>;})()}</article>;})}
             </section>
           </main>;
         })()}
@@ -16083,21 +16264,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const validation=validateSpeciesChallengeAllySelection({speciesId:selection.speciesId,heroId:selection.heroId,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons});
           const patchSelection=patch=>setSpeciesChallengeSelection(current=>({...current,...patch}));
           const goBack=()=>{if(stepIndex<=0){setGameState('BATTLE_MODE_SELECT');return;}if(selection.step==='hero'){setGameState('BATTLE_DIFFICULTY_SELECT');return;}patchSelection({step:stepOrder[stepIndex-1],run:null});};
-          const chooseSpecies=speciesId=>patchSelection({speciesId,difficultyId:'',heroId:'',allyIds:[],run:null});
-          const chooseHero=heroId=>patchSelection({heroId,allyIds:selectedAllies.filter(id=>id!==heroId),run:null});
-          const toggleAlly=entryId=>{const next=selectedAllies.includes(entryId)?selectedAllies.filter(id=>id!==entryId):[...selectedAllies,entryId];if(validateSpeciesChallengeAllySelection({speciesId:selection.speciesId,heroId:selection.heroId,allyIds:next,unlockedBaseIds:unlockedMonsterIds,masuMons}).valid)patchSelection({allyIds:next,run:null});};
-          const makeRun=()=>{const run=createSpeciesChallengeRunState({speciesId:selection.speciesId,difficultyId:selection.difficultyId,heroId:selection.heroId,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons});if(!run)return;patchSelection({run});startSpeciesChallengeBattle(run);};
+          // 選択の手ごたえは既存の選択音(Audio_.se.tap)をそのまま使う。新しい音源は増やさない。
+          // 音量・ミュートはAudio_側の設定に従う。押した時だけ鳴らし、再描画やスクロールでは鳴らさない
+          const selectSe=()=>{try{Audio_.se.tap();}catch(e){}};
+          const chooseSpecies=speciesId=>{selectSe();patchSelection({speciesId,difficultyId:'',heroId:'',allyIds:[],run:null});};
+          const chooseHero=heroId=>{selectSe();patchSelection({heroId,allyIds:selectedAllies.filter(id=>id!==heroId),run:null});};
+          const toggleAlly=entryId=>{const next=selectedAllies.includes(entryId)?selectedAllies.filter(id=>id!==entryId):[...selectedAllies,entryId];if(!validateSpeciesChallengeAllySelection({speciesId:selection.speciesId,heroId:selection.heroId,allyIds:next,unlockedBaseIds:unlockedMonsterIds,masuMons}).valid)return;selectSe();patchSelection({allyIds:next,run:null});};
+          const makeRun=()=>{const run=createSpeciesChallengeRunState({speciesId:selection.speciesId,difficultyId:selection.difficultyId,heroId:selection.heroId,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons});if(!run)return;selectSe();patchSelection({run});startSpeciesChallengeBattle(run,{saveProgress:speciesChallengeSelection.saveProgress===true});};
           const titles={species:'種族選択',hero:'勇者モン選択',allies:'供モン選択',confirm:'出撃確認'};
-          const entryImage=entry=>entry.type==='masu'?<DyedMonsterImage baseId={entry.baseId} src={entry.base.iconUrl} alt="" masuColors={getMasuColors(entry.masu)} className="h-full w-full object-cover"/>:<img src={entry.base.iconUrl} alt="" className="h-full w-full object-cover"/>;
+          // Base も Masu も同じ共通枠で描く。ここを分けるとモンスターごとに切れ方が変わるので、
+          // 渡すのは baseId と画像と（マスモンなら）染色色だけにする
+          const entryImage=entry=><MonsterArtFrame baseId={entry.baseId} src={entry.base.iconUrl} alt="" masuColors={entry.type==='masu'?getMasuColors(entry.masu):null} className="h-full w-full"/>;
           const monsterCard=(entry,active,onClick,disabled=false,marker='')=><button key={entry.entryId} disabled={disabled} aria-pressed={active} onClick={onClick} className={`relative flex min-h-[72px] w-full items-center gap-3 overflow-hidden rounded-2xl border-2 p-2 text-left transition active:scale-[.98] disabled:opacity-30 ${active?'border-cyan-300 bg-cyan-900/80 shadow-lg shadow-cyan-950 ring-1 ring-white':'border-white/10 bg-slate-900/90'}`}><span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/40">{entryImage(entry)}</span><span className="min-w-0 flex-1"><b className="block break-words text-[11px] leading-tight text-white">{entry.name}</b><small className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] font-black ${entry.type==='masu'?'bg-fuchsia-900 text-fuchsia-200':'bg-indigo-900 text-indigo-200'}`}>{entry.type==='masu'?'Masu':'Base'}</small><small className="ml-1 text-[8px] text-slate-400">{entry.lineageName}</small></span>{marker&&<span className="shrink-0 rounded-full bg-cyan-500 px-2 py-1 text-[8px] font-black text-slate-950">{marker}</span>}</button>;
           return <main data-species-challenge-selection className="flex-1 flex min-h-0 flex-col overflow-hidden px-4 text-white" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-            <header className="mb-2 flex shrink-0 items-center gap-2"><button aria-label="1つ前へ戻る" onClick={goBack} className="min-h-[44px] min-w-[44px] rounded-xl text-slate-300 active:bg-white/10"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="text-[8px] font-black tracking-[.18em] text-slate-400">BATTLE</small><h2 className="truncate text-xl font-black italic text-indigo-400 uppercase tracking-widest">{titles[selection.step]}</h2></div><span className="ml-auto rounded-full border border-amber-400/40 bg-amber-950/70 px-2 py-1 text-[7px] font-black text-amber-200">DEBUG・保存なし</span></header>
+            <header className="mb-2 flex shrink-0 items-center gap-2"><button aria-label="1つ前へ戻る" onClick={goBack} className="min-h-[44px] min-w-[44px] rounded-xl text-slate-300 active:bg-white/10"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="text-[8px] font-black tracking-[.18em] text-slate-400">BATTLE</small><h2 className="truncate text-xl font-black italic text-indigo-400 uppercase tracking-widest">{titles[selection.step]}</h2></div>{selection.saveProgress
+                ? <span data-species-save-badge className="ml-auto rounded-full border border-red-400/60 bg-red-950/80 px-2 py-1 text-[7px] font-black text-red-200">DEBUG・実進行を保存</span>
+                : <span className="ml-auto rounded-full border border-amber-400/40 bg-amber-950/70 px-2 py-1 text-[7px] font-black text-amber-200">DEBUG・保存なし</span>}</header>
 
             <section className="mh-scroll min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pb-3">
-              {selection.step==='species'&&<div className="grid grid-cols-2 gap-2">{speciesEntries.map(([id,monster])=>{const active=selection.speciesId===id;return <button key={id} aria-pressed={active} onClick={()=>chooseSpecies(id)} className={`relative min-h-[132px] overflow-hidden rounded-2xl border-2 p-2 active:scale-[.98] ${active?'border-cyan-300 bg-cyan-900/80 ring-1 ring-white':'border-white/10 bg-slate-900'}`}><img src={monster.iconUrl} alt="" className="mx-auto h-20 w-20 rounded-2xl object-cover"/><b className="mt-2 block break-words text-[10px] leading-tight">{monster.name}</b>{active&&<span className="absolute right-2 top-2 rounded-full bg-cyan-300 px-2 py-1 text-[8px] font-black text-slate-950">選択中</span>}</button>;})}</div>}
+              {selection.step==='species'&&<div className="grid grid-cols-2 gap-2">{speciesEntries.map(([id,monster])=>{const active=selection.speciesId===id;return <button key={id} aria-pressed={active} onClick={()=>chooseSpecies(id)} className={`relative min-h-[132px] overflow-hidden rounded-2xl border-2 p-2 active:scale-[.98] ${active?'border-cyan-300 bg-cyan-900/80 ring-1 ring-white':'border-white/10 bg-slate-900'}`}><MonsterArtFrame baseId={id} src={monster.iconUrl} alt="" className="mx-auto h-20 w-20 rounded-2xl bg-black/30"/><b className="mt-2 block break-words text-[10px] leading-tight">{monster.name}</b>{active&&<span className="absolute right-2 top-2 rounded-full bg-cyan-300 px-2 py-1 text-[8px] font-black text-slate-950">選択中</span>}</button>;})}</div>}
               {selection.step==='hero'&&<>{heroCandidates.length?heroCandidates.map(entry=>monsterCard(entry,selection.heroId===entry.entryId,()=>chooseHero(entry.entryId),false,selection.heroId===entry.entryId?'勇者':'')):<p className="rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400">この種族の解放済みベースモン／所持マスモンがいません。</p>}</>}
               {selection.step==='allies'&&<><div className="sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"><span className="flex items-center justify-between"><b className="text-[10px] text-cyan-100">供モンを選択</b><strong className="rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950">{selectedAllies.length} / 3体</strong></span><p className="mt-1 text-[8px] leading-relaxed text-cyan-200">0体のままでも次へ進めます。選んだ種族の別個体だけを3体まで選べます。</p></div>{allyCandidates.map(entry=>{const selected=selectedAllies.includes(entry.entryId);const disabled=!selected&&selectedAllies.length>=3;return monsterCard(entry,selected,()=>toggleAlly(entry.entryId),disabled,selected?'選択中':'');})}</>}
-              {selection.step==='confirm'&&<div className="space-y-3"><section className="rounded-2xl border-2 border-cyan-400/40 bg-slate-900/90 p-4"><small className="font-black tracking-widest text-cyan-300">MISSION</small><h3 className="mt-1 text-lg font-black">{ALL_PLAYER_MONSTERS[selection.speciesId]?.name||selection.speciesId}種族</h3><p className="text-[10px] text-amber-300">{difficultyLabel(selection.difficultyId)} ・ 初回報酬 超越の実 ×{speciesChallengeFirstClearReward(selection.difficultyId)}</p></section><div><b className="mb-1 block text-[9px] text-cyan-300">勇者モン</b>{entryById(selection.heroId)&&monsterCard(entryById(selection.heroId),true,()=>{},false,'勇者')}</div><div><b className="mb-1 block text-[9px] text-cyan-300">供モン（{selectedAllies.length}体）</b>{selectedAllies.length?<div className="space-y-2">{selectedAllies.map(id=>entryById(id)&&monsterCard(entryById(id),true,()=>{},false,'選択中'))}</div>:<p className="rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400">供モンなしで出撃</p>}</div><p className="rounded-xl border border-amber-400/30 bg-amber-950/30 p-3 text-[9px] leading-relaxed text-amber-100">出撃後は既存バトルのWAVE1へ進みます。この確認モードでは結果・報酬・ランキングを保存しません。</p></div>}
+              {selection.step==='confirm'&&<div className="space-y-3"><section className="rounded-2xl border-2 border-cyan-400/40 bg-slate-900/90 p-4"><small className="font-black tracking-widest text-cyan-300">MISSION</small><h3 className="mt-1 text-lg font-black">{ALL_PLAYER_MONSTERS[selection.speciesId]?.name||selection.speciesId}種族</h3><p className="text-[10px] text-amber-300">{difficultyLabel(selection.difficultyId)} ・ 初回報酬 超越の実 ×{speciesChallengeFirstClearReward(selection.difficultyId)}</p></section><div><b className="mb-1 block text-[9px] text-cyan-300">勇者モン</b>{entryById(selection.heroId)&&monsterCard(entryById(selection.heroId),true,()=>{},false,'勇者')}</div><div><b className="mb-1 block text-[9px] text-cyan-300">供モン（{selectedAllies.length}体）</b>{selectedAllies.length?<div className="space-y-2">{selectedAllies.map(id=>entryById(id)&&monsterCard(entryById(id),true,()=>{},false,'選択中'))}</div>:<p className="rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400">供モンなしで出撃</p>}</div>{selection.saveProgress
+                ? <p className="rounded-xl border-2 border-red-400/60 bg-red-950/40 p-3 text-[9px] leading-relaxed font-black text-red-100">⚠️ 実際の種族チャレンジ進行・所持品を変更します。WAVE10までクリアすると、クリア状況・次の難易度の解放・初回の超越の実・種族×難易度の自己記録が本当に保存されます。全国ランキングへは送信しません。</p>
+                : <p className="rounded-xl border border-amber-400/30 bg-amber-950/30 p-3 text-[9px] leading-relaxed text-amber-100">出撃後は既存バトルのWAVE1へ進みます。この確認では結果・報酬・進行・ランキングを一切保存しません。</p>}</div>}
             </section>
             <footer className="mt-2 shrink-0">{selection.step==='species'?<button disabled={!selection.speciesId} onClick={()=>{patchSelection({difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0]});setGameState('BATTLE_DIFFICULTY_SELECT');}} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">難易度選択へ</button>:selection.step==='hero'?<button disabled={!selection.heroId} onClick={()=>patchSelection({step:'allies'})} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">供モン選択へ</button>:selection.step==='allies'?<button disabled={!validation.valid} onClick={()=>patchSelection({step:'confirm'})} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">出撃確認へ（{selectedAllies.length}体）</button>:<button disabled={!validation.valid} onClick={makeRun} className="min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[12px] font-black shadow-lg disabled:opacity-30">この編成で出撃</button>}</footer>
           </main>;
@@ -20209,12 +20399,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(2,6,23,.98)'}}>
           <div className="text-[10px] font-black text-fuchsia-300 tracking-[.35em] mb-3">DEBUG</div>
           <h2 className="text-2xl font-black text-white mb-4">{debugOutcome==='win'?'勝利':debugOutcome==='lose'?'敗北':'リタイア'}</h2>
-          {extremeRun&&<div className="w-full max-w-xs mb-4 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/30 p-3 text-left">
+          {extremeRun&&!speciesChallengeBattleRun&&<div className="w-full max-w-xs mb-4 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/30 p-3 text-left">
             <div className="text-[10px] text-fuchsia-200 font-black mb-2">EXTREME 検証結果（保存されません）</div>
             <div className="grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>今回のスコア</span><b className="text-right">{score.toLocaleString()}</b><span>10WAVE 経験値</span><b className="text-right">{xpForWavesCleared(10,activeExtremeSetting.xp).toLocaleString()}</b><span>10WAVE ダイヤ</span><b className="text-right">{goldForWavesCleared(10,activeExtremeSetting.gold).toLocaleString()}</b><span>クリア時プシュケー</span><b className="text-right">{activeExtremeSetting.psyche}</b></div>
           </div>}
+          {/* 種族チャレンジのクリア結果。実際に保存したのか、保存なし確認なのかを必ず区別して出す */}
+          {speciesChallengeBattleRun&&speciesChallengeClearResult&&(()=>{const r=speciesChallengeClearResult;const speciesName=ALL_PLAYER_MONSTERS[r.speciesId]?.name||r.speciesId;const diffLabel=DIFFICULTY_SETTINGS[r.difficultyId]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===r.difficultyId)?.label||r.difficultyId;const nextLabel=r.nextDifficultyId?(DIFFICULTY_SETTINGS[r.nextDifficultyId]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===r.nextDifficultyId)?.label||r.nextDifficultyId):null;const record=speciesChallengeRecord(speciesChallengeProgress,r.speciesId,r.difficultyId);return (
+            <div data-species-clear-result className={`w-full max-w-xs mb-4 rounded-2xl border p-3 text-left ${r.saved?'border-emerald-400/60 bg-emerald-950/30':'border-amber-400/50 bg-amber-950/25'}`}>
+              <div className={`mb-2 text-[10px] font-black ${r.saved?'text-emerald-200':'text-amber-200'}`}>{r.failed?'保存に失敗しました':r.saved?'種族チャレンジ クリア（実際に保存しました）':'種族チャレンジ クリア（保存なし確認）'}</div>
+              <div className="grid grid-cols-2 gap-1 text-[10px] text-slate-200">
+                <span>種族 / 難易度</span><b className="text-right">{speciesName}／{diffLabel}</b>
+                <span>今回のスコア</span><b className="text-right">{r.score.toLocaleString()}</b>
+                <span>クリアターン</span><b className="text-right">{r.clearTurns!==null?`${r.clearTurns}T`:'—'}</b>
+                <span>初回報酬</span><b className="text-right">{r.rewardGranted?`超越の実（${speciesName}）×${r.rewardAmount}`:'なし（取得済み）'}</b>
+                <span>次の解放</span><b className="text-right">{nextLabel||'これ以上なし'}</b>
+              </div>
+              {r.saved
+                ? <div className="mt-2 border-t border-white/10 pt-2 text-[9px] text-emerald-200">自己ベスト {record.bestScore.toLocaleString()}pt ／ 最短 {record.bestTurns!==null?`${record.bestTurns}T`:'—'} ／ クリア {record.clears}回</div>
+                : <div className="mt-2 border-t border-white/10 pt-2 text-[9px] text-amber-200">この確認では保存していません。実際に保存して確かめるときは、デバッグ設定の「実進行保存で実戦確認」から始めてください。</div>}
+            </div>
+          );})()}
           <div className="w-full max-w-xs space-y-3">
-            {speciesChallengeBattleRun?<button onClick={()=>runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection();})} disabled={resultActionPending} className="w-full bg-cyan-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">種族チャレンジ選択へ戻る</button>:<>
+            {speciesChallengeBattleRun?<button onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving});});}} disabled={resultActionPending} className="w-full bg-cyan-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">種族チャレンジ選択へ戻る</button>:<>
               <button onClick={()=>runResultActionOnce(()=>startDebugBattle(extremeRun))} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう一度</button>
               <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('DEBUG_SETTINGS');})} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-200 py-3.5 rounded-2xl font-black disabled:opacity-50">デバッグ設定へ戻る</button>
               <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('SETTINGS');openHelp();})} disabled={resultActionPending} className="w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50">ヘルプへ戻る</button>
