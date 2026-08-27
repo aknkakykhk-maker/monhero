@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e0fccba9659da9cc
+// source-sha256: 78b6691e4d3b03a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 23:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 23:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1020,6 +1020,16 @@ const RAINBOW_TRANSCEND_FRUIT_ITEM = Object.freeze({
   name: '虹の超越の実',
   baseId: null
 });
+// 既存の虹の超越の実IDをそのままMARKET商品へ接続する。通貨は通常の虹ではないプシュケー。
+BREEDER_MARKET_ITEMS.push({
+  id: RAINBOW_TRANSCEND_FRUIT_ITEM_ID,
+  name: RAINBOW_TRANSCEND_FRUIT_ITEM.name,
+  type: 'item',
+  emoji: '🌈',
+  cost: 1000,
+  currency: 'psyche',
+  desc: 'どの種族のマスモンにも使える。1個で超越ポイント+1'
+});
 const TRANSCEND_FRUIT_ITEM_IDS = new Set([RAINBOW_TRANSCEND_FRUIT_ITEM_ID, ...Object.values(SPECIES_TRANSCEND_FRUIT_ITEMS).map(item => item.id)]);
 const speciesTranscendFruitItemId = speciesId => typeof speciesId === 'string' && Object.hasOwn(SPECIES_TRANSCEND_FRUIT_ITEMS, speciesId) ? SPECIES_TRANSCEND_FRUIT_ITEMS[speciesId].id : null;
 const transcendFruitOwnedCount = (ownedItems, itemId) => TRANSCEND_FRUIT_ITEM_IDS.has(itemId) ? ownedItemCount(ownedItems, itemId) : 0;
@@ -1092,6 +1102,51 @@ const saveTranscendFruitPair = async (beforeMasuMons, beforeOwnedItems, nextMasu
     if (same(savedMasuMons, nextMasuMons) && same(savedOwnedItems, nextOwnedItems)) return true;
   } catch {/* rollback below */}
   await Promise.allSettled([setValue('mh_masu_mons', beforeMasuMons, false), setValue('mh_owned_items', beforeOwnedItems, false)]);
+  return false;
+};
+const buildMarketItemPurchase = ({
+  item,
+  gold = 0,
+  breederPoints = 0,
+  ownedItems = {}
+} = {}) => {
+  const cost = Math.max(0, Math.floor(Number(item?.cost) || 0));
+  const currency = item?.currency === 'psyche' ? 'psyche' : item?.type === 'disc' || item?.type === 'assist' || item?.type === 'item' ? 'diamond' : 'breederPoint';
+  const balances = {
+    diamond: Math.max(0, Math.floor(Number(gold) || 0)),
+    breederPoint: Math.max(0, Math.floor(Number(breederPoints) || 0)),
+    psyche: ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID)
+  };
+  if (!item || item.available === false || balances[currency] < cost) return {
+    ok: false,
+    currency,
+    cost,
+    gold: balances.diamond,
+    breederPoints: balances.breederPoint,
+    ownedItems
+  };
+  const nextItems = item.type === 'item' ? {
+    ...ownedItems,
+    [item.id]: ownedItemCount(ownedItems, item.id) + 1
+  } : ownedItems;
+  if (currency === 'psyche') nextItems[BREAKTHROUGH_ITEM_ID] = balances.psyche - cost;
+  return {
+    ok: true,
+    currency,
+    cost,
+    gold: currency === 'diamond' ? balances.diamond - cost : balances.diamond,
+    breederPoints: currency === 'breederPoint' ? balances.breederPoint - cost : balances.breederPoint,
+    ownedItems: nextItems
+  };
+};
+const saveMarketBalances = async (beforeGold, beforeItems, nextGold, nextItems, getValue, setValue) => {
+  const same = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
+  try {
+    await Promise.all([setValue('mh_gold', nextGold, false), setValue('mh_owned_items', nextItems, false)]);
+    const [savedGold, savedItems] = await Promise.all([getValue('mh_gold', null, false), getValue('mh_owned_items', null, false)]);
+    if (same(savedGold, nextGold) && same(savedItems, nextItems)) return true;
+  } catch {/* rollback below */}
+  await Promise.allSettled([setValue('mh_gold', beforeGold, false), setValue('mh_owned_items', beforeItems, false)]);
   return false;
 };
 const REINCARNATE_MIN_LEVEL = 100;
@@ -9703,6 +9758,7 @@ const MarketProductCard = ({
   disabled = false
 }) => {
   const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
+  const usesPsyche = item.currency === 'psyche';
   return /*#__PURE__*/React.createElement("div", {
     className: `rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/50' : comingSoon ? 'bg-slate-900/60 border-slate-800/60' : 'bg-slate-900 border-slate-800'}`
   }, /*#__PURE__*/React.createElement(MarketProductIcon, {
@@ -9734,13 +9790,15 @@ const MarketProductCard = ({
   }, "\u6240\u6301\u6E08\u307F") : /*#__PURE__*/React.createElement("button", {
     onClick: onBuy,
     disabled: disabled || !canBuy,
-    "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${item.cost}${usesGold ? 'ダイヤ' : 'pt'}で購入`}`,
-    className: `text-[10px] font-black px-2.5 min-h-[30px] rounded-full flex items-center gap-0.5 whitespace-nowrap ${!disabled && canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
-  }, usesGold ? /*#__PURE__*/React.createElement(Gem, {
+    "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${item.cost}${usesPsyche ? 'プシュケー' : usesGold ? 'ダイヤ' : 'pt'}で購入`}`,
+    className: `text-[10px] font-black px-2 min-h-[30px] rounded-full flex items-center gap-0.5 whitespace-nowrap ${!disabled && canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
+  }, usesPsyche ? /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF08") : usesGold ? /*#__PURE__*/React.createElement(Gem, {
     size: 9
   }) : /*#__PURE__*/React.createElement(Coins, {
     size: 9
-  }), item.cost)));
+  }), /*#__PURE__*/React.createElement("span", null, usesPsyche ? 'プシュケー ×' : '', item.cost.toLocaleString()))));
 };
 
 // 表示を待たせず、ブラウザキャッシュとデコードだけを少しずつ先へ進める画像キュー。
@@ -14014,6 +14072,7 @@ function MonsterHeroGame() {
   const [transcendFruitConfirmAmount, setTranscendFruitConfirmAmount] = useState(0);
   const [transcendFruitError, setTranscendFruitError] = useState('');
   const transcendFruitProcessingRef = useRef(false);
+  const marketPurchaseProcessingRef = useRef(false);
   const transcendProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
@@ -17284,69 +17343,70 @@ function MonsterHeroGame() {
 
   // ブリーダーマーケットでアイテムを購入。アイコンはpt、円盤石/ブリーダー/消耗品はゴールドを消費し、
   // 種別ごとの解放リストに追加(端末保存)。円盤石/ブリーダーは解放と同時に編成へも自動追加する
-  const buyMarketItem = item => {
+  const buyMarketItem = async item => {
+    if (marketPurchaseProcessingRef.current) return;
     if (item.available === false) return; // 実装準備中のアイテムは購入不可
     if (isMarketItemOwned(item)) return;
-    const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
-    if (usesGold) {
-      if (gold < item.cost) return;
-      setGold(prev => {
-        const next = prev - item.cost;
-        storeSet('mh_gold', next, false);
-        return next;
-      });
-    } else {
-      if (breederPoints < item.cost) return;
-      setBreederPoints(prev => {
-        const next = prev - item.cost;
-        storeSet('mh_breeder_points', next, false);
-        return next;
-      });
-    }
-    if (item.type === 'disc') {
-      setUnlockedMonsterIds(prev => {
-        const next = [...prev, item.id];
-        storeSet('mh_unlocked_monsters', next, false);
-        return next;
-      });
-      // 編成はモンスター8体固定。既に8体埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
-      if (monsterRosterIds.length < STARTER_MONSTER_IDS.length) {
-        const rosters = monsterPartySets.rosters.map((roster, index) => index === monsterPartySets.activeIndex ? [...roster, item.id] : roster);
-        saveMonsterPartySets({
-          ...monsterPartySets,
-          rosters
+    const purchase = buildMarketItemPurchase({
+      item,
+      gold,
+      breederPoints,
+      ownedItems: ownedItemsRef.current
+    });
+    if (!purchase.ok) return;
+    marketPurchaseProcessingRef.current = true;
+    try {
+      if (item.type === 'item') {
+        const saved = await saveMarketBalances(gold, ownedItemsRef.current, purchase.gold, purchase.ownedItems, storeGet, storeSet);
+        if (!saved) return;
+        ownedItemsRef.current = purchase.ownedItems;
+        setOwnedItems(purchase.ownedItems);
+      }
+      if (purchase.currency === 'diamond') {
+        setGold(purchase.gold);
+        if (item.type !== 'item') storeSet('mh_gold', purchase.gold, false);
+      } else if (purchase.currency === 'breederPoint') {
+        setBreederPoints(purchase.breederPoints);
+        storeSet('mh_breeder_points', purchase.breederPoints, false);
+      }
+      if (item.type === 'disc') {
+        setUnlockedMonsterIds(prev => {
+          const next = [...prev, item.id];
+          storeSet('mh_unlocked_monsters', next, false);
+          return next;
+        });
+        // 編成はモンスター8体固定。既に8体埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
+        if (monsterRosterIds.length < STARTER_MONSTER_IDS.length) {
+          const rosters = monsterPartySets.rosters.map((roster, index) => index === monsterPartySets.activeIndex ? [...roster, item.id] : roster);
+          saveMonsterPartySets({
+            ...monsterPartySets,
+            rosters
+          });
+        }
+      } else if (item.type === 'assist') {
+        setUnlockedTeachingIds(prev => {
+          const next = [...prev, item.id];
+          storeSet('mh_unlocked_teachings', next, false);
+          return next;
+        });
+        // 編成はアシストカード6枚固定。既に6枚埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
+        setTeachingRosterIds(prev => {
+          if (prev.length >= STARTER_TEACHING_IDS.length) return prev;
+          const next = [...prev, item.id];
+          storeSet('mh_teaching_roster', next, false);
+          return next;
+        });
+      } else if (item.type !== 'item') {
+        setOwnedMarketIcons(prev => {
+          const next = [...prev, item.id];
+          storeSet('mh_market_icons', next, false);
+          return next;
         });
       }
-    } else if (item.type === 'assist') {
-      setUnlockedTeachingIds(prev => {
-        const next = [...prev, item.id];
-        storeSet('mh_unlocked_teachings', next, false);
-        return next;
-      });
-      // 編成はアシストカード6枚固定。既に6枚埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
-      setTeachingRosterIds(prev => {
-        if (prev.length >= STARTER_TEACHING_IDS.length) return prev;
-        const next = [...prev, item.id];
-        storeSet('mh_teaching_roster', next, false);
-        return next;
-      });
-    } else if (item.type === 'item') {
-      setOwnedItems(prev => {
-        const next = {
-          ...prev,
-          [item.id]: (prev[item.id] || 0) + 1
-        };
-        storeSet('mh_owned_items', next, false);
-        return next;
-      });
-    } else {
-      setOwnedMarketIcons(prev => {
-        const next = [...prev, item.id];
-        storeSet('mh_market_icons', next, false);
-        return next;
-      });
+      saveMissionProgress('market');
+    } finally {
+      marketPurchaseProcessingRef.current = false;
     }
-    saveMissionProgress('market');
   };
 
   // 編成画面: 解放済みモンスター/アシストカードの中から、次回以降の周回で使う候補を仮選択する。
@@ -30708,7 +30768,7 @@ function MonsterHeroGame() {
     }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).map(item => {
       const comingSoon = item.available === false;
       const owned = !comingSoon && isMarketItemOwned(item);
-      const balance = item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
+      const balance = item.currency === 'psyche' ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
       const canBuy = !comingSoon && !owned && balance >= item.cost;
       const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
       const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;

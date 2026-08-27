@@ -125,6 +125,8 @@ const EXPORTED_NAMES = [
   'consumeTranscendFruit',
   'useTranscendFruitOnMasu',
   'saveTranscendFruitPair',
+  'buildMarketItemPurchase',
+  'saveMarketBalances',
   'CLEAR_PSYCHE_REWARD',
   'clearPsycheReward',
   'DIFFICULTY_SETTINGS',
