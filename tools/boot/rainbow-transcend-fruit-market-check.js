@@ -30,7 +30,10 @@ const source = require('fs').readFileSync(require('path').join(__dirname, '../..
 assert(source.includes("marketItemDetail.currency==='psyche'?'プシュケー':marketItemDetail.type==='icon'?'pt':'ダイヤ'"), '詳細は商品通貨に応じてプシュケー・pt・ダイヤを表示する');
 assert(source.includes('setMarketPurchaseQuantity(1);setMarketQuantityItem(item)') && source.includes('プシュケーが足りません'), '価格タップは購入せず個数選択を初期値1で開き、不足を表示する');
 assert(source.includes('MAX（{maxQuantity.toLocaleString()}個）') && source.includes('changeQuantity(-10)') && source.includes('changeQuantity(10)'), '個数選択に±1・±10・MAXを用意する');
-assert(source.includes('🌈 プシュケー</span><span className="w-full whitespace-nowrap">×'), 'プシュケー価格はカード内で中央揃えの2行にする');
+// 「🌈 プシュケー」「×1,000」の2行表示は、カード内で折り返されて窮屈だったため1行表示へ改めた。
+// ダイヤ購入(amber)と紛れないよう、プシュケー購入だけボタン色を変えて区別する。
+assert(!source.includes('🌈 プシュケー</span>'), 'プシュケー価格をカード内で2行に折り返していない(窮屈になるため)');
+assert(source.includes("usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'"), 'プシュケー価格のボタンをダイヤ購入と別の色で区別する');
 
 (async () => {
   const storage = { mh_gold:55, mh_owned_items:before };
