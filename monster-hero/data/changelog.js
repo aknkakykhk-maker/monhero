@@ -1,9 +1,10 @@
 const CHANGELOG = [
   {
-    date: "2026-08-28 00:30", type: 'update', title: '虹の超越の実をマーケットへ追加しました', status: 'new',
+    date: "2026-08-28 00:36", type: 'update', title: '虹の超越の実をマーケットへ追加しました', status: 'new',
     assistantNotice: { id:'update_notice_rainbow_transcend_fruit_market_v1', type:'market' },
     items: [
       'マーケットのアイテムに「虹の超越の実」を追加しました。1個1000プシュケーで、回数制限なく購入できます。',
+      '価格表示を見やすくし、価格を押したあとに購入個数・合計・購入後のプシュケーを確認して、まとめて購入できるようにしました。',
       '虹の超越の実はどの種族のマスモンにも使え、1個で超越ポイントが1増えます。',
     ],
   },
