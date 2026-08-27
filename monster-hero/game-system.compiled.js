@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 73bcbe87288a5077
+// source-sha256: e3d20d5eee0813c9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 23:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 00:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13344,6 +13344,9 @@ function MonsterHeroGame() {
     allyIds: [],
     run: null
   });
+  // STEP5Bの実戦run。デバッグ戦と同じ保存抑止を使いながら、通常の10WAVE処理へ流す。
+  const speciesChallengeBattleRunRef = useRef(null);
+  const [speciesChallengeBattleRun, setSpeciesChallengeBattleRun] = useState(null);
   const loadSpeciesChallengeProgress = async () => {
     const progress = normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false));
     setSpeciesChallengeProgress(progress);
@@ -19542,6 +19545,53 @@ function MonsterHeroGame() {
     });
     return s;
   };
+  const startSpeciesChallengeBattle = run => {
+    if (!run) return;
+    const hero = resolveRosterEntryToMon(run.heroId);
+    if (!hero) return;
+    stopAllAuto();
+    beginNewRankingRun({
+      runIdRef,
+      scoreSubmittedRef,
+      runFinalizingRef,
+      rewardsAwardedRef,
+      clearRecordedRef
+    });
+    setRunFinalizing(false);
+    applyResetAllState();
+    speciesChallengeBattleRunRef.current = run;
+    setSpeciesChallengeBattleRun(run);
+    debugBattleRef.current = true;
+    debugResultRef.current = false;
+    setDebugBattle(true);
+    setDebugOutcome(null);
+    const extremeSetting = extremeRuleSetting(run.difficultyId);
+    extremeRunRef.current = !!extremeSetting;
+    setExtremeRun(!!extremeSetting);
+    setRunMode(extremeSetting ? EXTREME_MODE.id : BATTLE_MODE_CHALLENGE);
+    setDifficulty(extremeSetting ? 'Normal' : run.difficultyId);
+    if (extremeSetting) setExtremeDifficulty(extremeSetting.id);
+    initialBattleDistanceRef.current = 0;
+    const initialSlots = [{
+      ...hero
+    }, null, null, null];
+    const initialUnique = {
+      ...hero.unique,
+      evoLevel: Math.max(0, hero.unique?.evoLevel || 0)
+    };
+    setSlots(initialSlots);
+    setMainHero(hero);
+    setOwnedUniques([initialUnique]);
+    setMaxHp(hero.baseHp);
+    setHp(hero.baseHp);
+    setMaxGuts(hero.baseGuts);
+    setGuts(Math.floor(hero.baseGuts * 0.5));
+    setAtk(hero.baseAtk);
+    setDef(hero.baseDef);
+    setDistAptPct(getMonsterAptPct(hero, specialRuleDifficultyForRun(extremeSetting ? EXTREME_MODE.id : BATTLE_MODE_CHALLENGE, extremeSetting ? 'Normal' : run.difficultyId, !!extremeSetting, extremeSetting?.id)));
+    setTeachingPool([...getActiveTeachingCards()]);
+    setGameState('PICK_TEACHING');
+  };
   const createRepeatRunTemplate = ({
     hero,
     allies = []
@@ -19894,6 +19944,8 @@ function MonsterHeroGame() {
     debugBattleRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
+    speciesChallengeBattleRunRef.current = null;
+    setSpeciesChallengeBattleRun(null);
     setDebugBattle(false);
     setExtremeRun(false);
     setDebugOutcome(null);
@@ -21811,13 +21863,13 @@ function MonsterHeroGame() {
   const handleNextWave = async () => {
     // 練習の台本があるときは、強化フェーズまで通して見せたいので
     // デバッグ戦の打ち切り(勝ち表示を出して止まる)を通さない
-    if (debugBattleRef.current && !battleScenarioRef.current && !(extremeRunRef.current && extremeDistanceBreakRule(extremeDifficulty))) {
+    if (debugBattleRef.current && !speciesChallengeBattleRunRef.current && !battleScenarioRef.current && !(extremeRunRef.current && extremeDistanceBreakRule(extremeDifficulty))) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
       return;
     }
-    if (debugBattleRef.current && extremeRunRef.current && extremeDistanceBreakRule(extremeDifficulty) && wave === 10) {
+    if (debugBattleRef.current && !speciesChallengeBattleRunRef.current && extremeRunRef.current && extremeDistanceBreakRule(extremeDifficulty) && wave === 10) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
@@ -21826,6 +21878,11 @@ function MonsterHeroGame() {
     if (runFinalizingRef.current) return;
     setEffect(null);
     if (wave === 10) {
+      if (speciesChallengeBattleRunRef.current) {
+        debugResultRef.current = true;
+        setDebugOutcome('win');
+        return;
+      }
       stopAutoBattle();
       setChampionPresentationComplete(false);
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
@@ -22330,13 +22387,13 @@ function MonsterHeroGame() {
       setUltimateDistanceBreakReveal(null);
     }
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
-    if (w === 1 && !forcedEnemyKey) {
+    if (w === 1 && !forcedEnemyKey && !debugBattleRef.current) {
       addAssistantBond('battle');
       addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));
       // 助手のアシストカードを編成して挑んだぶん。編成を保存しただけでは増えず、
       // 実際にバトルを始めたここでだけ数える(付け外しをくり返して稼げないようにするため)。
       // デバッグ戦は報酬も記録も残さないので、ここでも数えない
-      if (!debugBattleRef.current) grantEquippedAssistantCardBond('assistantCardEquip');
+      grantEquippedAssistantCardBond('assistantCardEquip');
     }
     setWave(w);
     // クイック成長で確定した最大値を明示的に引き継ぎ、次WAVE開始時も同じ値で全回復する。
@@ -22751,6 +22808,12 @@ function MonsterHeroGame() {
       setTeachingPool([...getActiveTeachingCards()]);
       setGameState('PICK_TEACHING');
     } else {
+      if (speciesChallengeBattleRunRef.current) {
+        const joined = joinSpeciesChallengeAlly(speciesChallengeBattleRunRef.current, joinRosterEntry(m));
+        if (!joined.joinedAllyId) return;
+        speciesChallengeBattleRunRef.current = joined.state;
+        setSpeciesChallengeBattleRun(joined.state);
+      }
       const bonus = m.plusStats || {};
       const bHp = maxHp,
         bAtk = atk,
@@ -22954,7 +23017,8 @@ function MonsterHeroGame() {
       setEffect(null);
       const joinWaves = [2, 4, 6];
       const activeIds = slots.filter(Boolean).map(joinRosterEntry);
-      const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
+      const speciesRun = speciesChallengeBattleRunRef.current;
+      const avail = speciesRun ? speciesChallengeUnjoinedAllies(speciesRun).map(resolveRosterEntryToMon).filter(Boolean) : pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
       if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
         setMonSelection(avail);
         setGameState('PICK_ALLY');
@@ -30175,9 +30239,11 @@ function MonsterHeroGame() {
           unlockedBaseIds: unlockedMonsterIds,
           masuMons
         });
-        if (run) patchSelection({
+        if (!run) return;
+        patchSelection({
           run
         });
+        startSpeciesChallengeBattle(run);
       };
       const titles = {
         species: '種族選択',
@@ -30272,16 +30338,9 @@ function MonsterHeroGame() {
         className: "text-cyan-300"
       }, "\u52C7\u8005"), /*#__PURE__*/React.createElement("p", null, entryLabel(selection.heroId))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
         className: "text-cyan-300"
-      }, "\u4F9B\u30E2\u30F3\uFF08", selectedAllies.length, "\u4F53\uFF09"), /*#__PURE__*/React.createElement("p", null, selectedAllies.length ? selectedAllies.map(entryLabel).join('、') : 'なし')), selection.run && /*#__PURE__*/React.createElement("div", {
-        "data-species-challenge-run": true,
-        className: "rounded-xl bg-black/40 p-3"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "text-emerald-300"
-      }, "\u672C\u756A\u30D0\u30C8\u30EB\u3078\u6E21\u3059\u4E88\u5B9A\u306Erun\u60C5\u5831"), /*#__PURE__*/React.createElement("pre", {
-        className: "mt-2 whitespace-pre-wrap break-all text-[9px] text-emerald-100"
-      }, JSON.stringify(selection.run, null, 2)), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-[8px] text-slate-400"
-      }, "\u4ECA\u56DE\u306F\u5B9F\u30D0\u30C8\u30EB\u3092\u958B\u59CB\u3057\u307E\u305B\u3093\u3002")))), /*#__PURE__*/React.createElement("footer", {
+      }, "\u4F9B\u30E2\u30F3\uFF08", selectedAllies.length, "\u4F53\uFF09"), /*#__PURE__*/React.createElement("p", null, selectedAllies.length ? selectedAllies.map(entryLabel).join('、') : 'なし')), /*#__PURE__*/React.createElement("p", {
+        className: "rounded-xl bg-black/40 p-3 text-[9px] text-emerald-100"
+      }, "\u51FA\u6483\u5F8C\u306F\u65E2\u5B58\u30D0\u30C8\u30EB\u306EWAVE1\u3078\u9032\u307F\u307E\u3059\u3002\u7D50\u679C\u30FB\u5831\u916C\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("footer", {
         className: "mt-2 shrink-0"
       }, selection.step === 'species' ? /*#__PURE__*/React.createElement("button", {
         disabled: !selection.speciesId,
@@ -39525,7 +39584,14 @@ function MonsterHeroGame() {
       className: "text-right"
     }, activeExtremeSetting.psyche))), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs space-y-3"
-    }, /*#__PURE__*/React.createElement("button", {
+    }, speciesChallengeBattleRun ? /*#__PURE__*/React.createElement("button", {
+      onClick: () => runResultActionOnce(() => {
+        returnToHome();
+        openSpeciesChallengeSelection();
+      }),
+      disabled: resultActionPending,
+      className: "w-full bg-cyan-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50"
+    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9078\u629E\u3078\u623B\u308B") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
       onClick: () => runResultActionOnce(() => startDebugBattle(extremeRun)),
       disabled: resultActionPending,
       className: "w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50"
@@ -39544,7 +39610,7 @@ function MonsterHeroGame() {
       }),
       disabled: resultActionPending,
       className: "w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50"
-    }, "\u30D8\u30EB\u30D7\u3078\u623B\u308B"))), gameState === 'CHAMPION' && /*#__PURE__*/React.createElement("div", {
+    }, "\u30D8\u30EB\u30D7\u3078\u623B\u308B")))), gameState === 'CHAMPION' && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center p-6 text-center",
       style: {
         position: 'fixed',
