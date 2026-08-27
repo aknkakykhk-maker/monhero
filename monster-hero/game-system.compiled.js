@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6b6bfc54710e8a9d
+// source-sha256: b8349e8f226f6a9e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 18:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 18:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1005,6 +1005,55 @@ const buildFusionBreakthroughPlan = ({
   };
 };
 const ownedItemCount = (ownedItems, itemId) => Math.max(0, Math.floor(Number(ownedItems?.[itemId]) || 0));
+// ===== 超越の実（種族チャレンジ報酬の所持データ基盤） =====
+// baseId を itemId の末尾へそのまま保持し、表示名の変更に影響されないようにする。
+// ALL_PLAYER_MONSTERS から生成するため、プレイアブル種の追加時に個別定義を足す必要はない。
+const SPECIES_TRANSCEND_FRUIT_ITEM_ID_PREFIX = 'transcend_fruit_species_';
+const RAINBOW_TRANSCEND_FRUIT_ITEM_ID = 'transcend_fruit_rainbow';
+const SPECIES_TRANSCEND_FRUIT_ITEMS = Object.freeze(Object.fromEntries(Object.entries(ALL_PLAYER_MONSTERS).map(([baseId, monster]) => [baseId, Object.freeze({
+  id: `${SPECIES_TRANSCEND_FRUIT_ITEM_ID_PREFIX}${baseId}`,
+  name: `超越の実（${monster.name}）`,
+  baseId
+})])));
+const RAINBOW_TRANSCEND_FRUIT_ITEM = Object.freeze({
+  id: RAINBOW_TRANSCEND_FRUIT_ITEM_ID,
+  name: '虹の超越の実',
+  baseId: null
+});
+const TRANSCEND_FRUIT_ITEM_IDS = new Set([RAINBOW_TRANSCEND_FRUIT_ITEM_ID, ...Object.values(SPECIES_TRANSCEND_FRUIT_ITEMS).map(item => item.id)]);
+const speciesTranscendFruitItemId = speciesId => typeof speciesId === 'string' && Object.hasOwn(SPECIES_TRANSCEND_FRUIT_ITEMS, speciesId) ? SPECIES_TRANSCEND_FRUIT_ITEMS[speciesId].id : null;
+const transcendFruitOwnedCount = (ownedItems, itemId) => TRANSCEND_FRUIT_ITEM_IDS.has(itemId) ? ownedItemCount(ownedItems, itemId) : 0;
+const changeTranscendFruitOwnedCount = (ownedItems, itemId, amount) => {
+  const current = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const n = Number(amount);
+  if (!TRANSCEND_FRUIT_ITEM_IDS.has(itemId) || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0) return {
+    ok: false,
+    ownedItems: current
+  };
+  return {
+    ok: true,
+    ownedItems: {
+      ...current,
+      [itemId]: transcendFruitOwnedCount(current, itemId) + n
+    }
+  };
+};
+const consumeTranscendFruit = (ownedItems, itemId, amount) => {
+  const current = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const n = Number(amount);
+  const have = transcendFruitOwnedCount(current, itemId);
+  if (!TRANSCEND_FRUIT_ITEM_IDS.has(itemId) || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0 || have < n) return {
+    ok: false,
+    ownedItems: current
+  };
+  return {
+    ok: true,
+    ownedItems: {
+      ...current,
+      [itemId]: have - n
+    }
+  };
+};
 const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
 const REINCARNATE_POINTS = 10;
