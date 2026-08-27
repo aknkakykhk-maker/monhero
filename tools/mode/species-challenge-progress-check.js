@@ -20,7 +20,7 @@ const json = value => JSON.stringify(value);
 
 assert(api.SPECIES_CHALLENGE_PROGRESS_KEY === 'mh_species_challenge_progress_v1', '保存キーが正しい');
 for (const broken of [null, undefined, false, 1, 'broken', [], {}, { species:null }, { species:[] }]) {
-  assert(json(api.normalizeSpeciesChallengeProgress(broken)) === json({ version:1, species:{} }), '空・壊れた値を空の進行へ正規化する');
+  assert(json(api.normalizeSpeciesChallengeProgress(broken)) === json({ version:1, species:{}, pendingRewards:{} }), '空・壊れた値を空の進行へ正規化する');
 }
 
 const dirty = { version:0, species:{
@@ -31,7 +31,7 @@ const clean = api.normalizeSpeciesChallengeProgress(dirty);
 assert(json(clean) === json({ version:1, species:{
   dragon:{ cleared:{ Expert:true }, firstRewardClaimed:{ Hard:true } },
   futureSpecies:{ cleared:{ Beginner:true }, firstRewardClaimed:{} },
-} }), '有効なtrueだけを保持し、未知の有効speciesIdを保持する');
+}, pendingRewards:{} }), '有効なtrueだけを保持し、未知の有効speciesIdを保持する');
 
 const empty = api.normalizeSpeciesChallengeProgress(null);
 const dragonExpert = api.markSpeciesChallengeCleared(empty, 'dragon', 'Expert');
