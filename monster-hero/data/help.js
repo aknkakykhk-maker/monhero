@@ -1044,9 +1044,11 @@ const HELP_SCREEN_COVERAGE = {
   // 超越テストも開発用だが、本番と同じマーク・演出を確認するため超越の説明へ対応させる。
   TRANSCEND_DEBUG:'masu/transcendence',
   EXTREME_DIFFICULTY_SELECT: 'basics/extreme-challenge',
-  // 対象外: DEBUG_SETTINGS と種族チャレンジ進行確認は開発用の隠し画面。TRAINING_* は別担当のため触らない
+  // 対象外: DEBUG_SETTINGS と種族チャレンジ進行確認・選択フローは開発用の隠し画面。
+  // 種族チャレンジをBATTLE MODEへ公開するときに、正式なヘルプ項目へ対応させる。TRAINING_* は別担当のため触らない。
   DEBUG_SETTINGS:   null,
   SPECIES_CHALLENGE_DEBUG: null,
+  SPECIES_CHALLENGE_SELECT: null,
   BREEDER_ICON_DEBUG:'home/profile',
   TRAINING_INFO:    null,
   TRAINING_SELECT:  null,
