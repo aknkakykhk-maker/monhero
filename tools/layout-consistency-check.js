@@ -95,7 +95,7 @@ check('1行に4商品ずつ並べる',
   has("const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';") && has('<div className={MARKET_GRID_CLASS}>'));
 // 4つ並べるとアイコンが小さいので、タップで大きく見られるようにしている
 check('商品アイコンはタップで拡大できる',
-  has('onClick={()=>setMarketIconZoom(item)}') && has('aria-label={`${item.name}を大きく見る`}')
+  has('onZoom={()=>setMarketIconZoom(item)}') && has('aria-label={`${item.name}を大きく見る`}')
     && has('{marketIconZoom&&(()=>{const item=marketIconZoom;'));
 check('拡大表示は実際に使われる形(丸／角丸)で出す',
   has("const round=item.type==='icon'||item.type==='assist';"));
@@ -107,10 +107,12 @@ check('所持数は0でも消さずに出す', has('×{ownedItems[item.id]||0}')
 // 間に余白を入れ、買うボタン自体も指で押せる高さにしておく
 check('購入ボタンはカードの下端に揃える', has('<div className="w-full flex items-center justify-center mt-auto pt-2">'));
 check('詳細と購入ボタンを押し間違えない間隔がある',
-  has('mt-auto pt-2') && has("px-2.5 min-h-[30px] rounded-full flex items-center gap-0.5 whitespace-nowrap"));
-// 細いカードに収めるためボタンの文字は値段だけにし、意味は読み上げ用の説明で補う
-check('購入ボタンの文字は折り返さない',
-  has("aria-label={`${item.name}を${item.cost}${usesGold?'ダイヤ':'pt'}で購入`}") && has('rounded-full flex items-center gap-0.5 whitespace-nowrap'));
+  has('mt-auto pt-2') && has("min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-0.5"));
+// プシュケーだけは細いカードからはみ出さないよう通貨名と価格を明示的な2行にし、既存通貨は1行を保つ。
+check('購入ボタンの通貨表示がカード内に収まる',
+  has("usesPsyche?'flex-wrap leading-tight text-center':'whitespace-nowrap'")
+    && has('<span className="w-full whitespace-nowrap" aria-hidden="true">🌈 プシュケー</span>')
+    && has('<span className="w-full whitespace-nowrap">×{item.cost.toLocaleString()}</span>'));
 check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
 // ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
