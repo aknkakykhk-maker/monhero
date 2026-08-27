@@ -41,4 +41,31 @@ assert(one.nextMasu.transcended === false && one.nextMasu.levelCap === 30 && one
 assert(one.nextMasu.rebirthCount === 0 && one.nextMasu.distAptPoints === 7 && same(one.nextMasu.statPoints, originalMasu.statPoints)
   && one.nextMasu.uniqueSkillPoints === 4, '限界突破数・通常強化ポイント等に影響しない');
 
-console.log('transcend fruit use checks passed');
+const checkSaveFlow = async () => {
+  const beforeMasuMons = [originalMasu];
+  const beforeOwnedItems = originalItems;
+  const nextMasuMons = [one.nextMasu];
+  const nextOwnedItems = one.nextOwnedItems;
+
+  for (const mismatchKey of [null, 'mh_masu_mons', 'mh_owned_items']) {
+    const storage = { mh_masu_mons:beforeMasuMons, mh_owned_items:beforeOwnedItems };
+    let corruptNextWrite = mismatchKey;
+    const setValue = async (key, value) => {
+      storage[key] = corruptNextWrite === key ? { mismatched:true } : value;
+      if (corruptNextWrite === key) corruptNextWrite = null;
+    };
+    const getValue = async (key, fallback) => Object.hasOwn(storage, key) ? storage[key] : fallback;
+    const saved = await api.saveTranscendFruitPair(
+      beforeMasuMons, beforeOwnedItems, nextMasuMons, nextOwnedItems, getValue, setValue
+    );
+    if (mismatchKey === null) {
+      assert(saved, '両方の再読込結果が一致した場合だけ成功する');
+      assert(same(storage.mh_masu_mons, nextMasuMons) && same(storage.mh_owned_items, nextOwnedItems), '正常時は実減少と超越ポイント増加を両方保存する');
+    } else {
+      assert(!saved, `${mismatchKey}の再読込不一致を失敗扱いにする`);
+      assert(same(storage.mh_masu_mons, beforeMasuMons) && same(storage.mh_owned_items, beforeOwnedItems), `${mismatchKey}不一致時は更新前の2データへロールバックする`);
+    }
+  }
+};
+
+checkSaveFlow().then(() => console.log('transcend fruit use checks passed'));
