@@ -39,8 +39,8 @@ assert(run?.speciesId === 'Mocchi' && run?.difficultyId === 'Expert' && run?.her
 const screenStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_SELECT'");
 const screenEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", screenStart);
 const screen = source.slice(screenStart, screenEnd);
-assert(screenStart >= 0 && screenEnd > screenStart, '5段階の共通選択画面が存在する');
-for (const step of ['species', 'difficulty', 'hero', 'allies', 'confirm']) assert(screen.includes(`'${step}'`), `${step}ステップがある`);
+assert(screenStart >= 0 && screenEnd > screenStart, 'モード画面を含む6段階の共通選択画面が存在する');
+for (const step of ['intro', 'species', 'difficulty', 'hero', 'allies', 'confirm']) assert(screen.includes(`'${step}'`), `${step}ステップがある`);
 assert(screen.includes('Object.entries(ALL_PLAYER_MONSTERS)'), '種族候補はALL_PLAYER_MONSTERSのbaseIdを正本にする');
 assert(screen.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map'), '14難易度は既存ID一覧を再利用する');
 assert(screen.includes('speciesChallengeClearedDifficultyIds(speciesChallengeProgress,selection.speciesId)'), '選択フローは本番共通progressから種族別クリア難易度を得る');
@@ -49,6 +49,9 @@ assert(!screen.includes('speciesChallengeDebugProgress'), '選択フローはデ
 assert(screen.includes('buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[])'), '勇者・供モンは既存統合候補生成を再利用する');
 assert(screen.includes('validateSpeciesChallengeAllySelection') && screen.includes('createSpeciesChallengeRunState'), 'STEP1D validationとrun helperを再利用する');
 assert(screen.includes('0体のままでも次へ進めます') && screen.includes('min-h-[44px]'), '0体出撃案内と44px以上の戻る操作を備える');
+assert(screen.includes('初回クリア報酬') && screen.includes('speciesChallengeFirstClearReward(id)'), '難易度カードに既存helper由来の初回報酬を表示する');
+assert(screen.includes("entry.type==='masu'?'Masu':'Base'") && screen.includes('DyedMonsterImage'), '勇者・供モンカードは画像とBase/Masu区別を表示する');
+assert(screen.includes("selection.step==='intro'") && screen.includes('種族選択へ進む'), '本番想定のモード画面から種族選択へ進める');
 assert(source.includes('const loadSpeciesChallengeProgress = async() =>')
   && source.includes('normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false))'), '共通loaderは既存キーを読み込み正規化する');
 assert(source.includes('const openSpeciesChallengeSelection = async() =>')
