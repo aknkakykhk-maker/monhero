@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 697f76c9916f8258
+// source-sha256: 55d2766b66729d44
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 19:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9004,6 +9004,20 @@ const joinSpeciesChallengeAlly = (runState, entryId) => {
     joinedAllyId: entryId
   };
 };
+// WAVEクリア時の回復対象判定は供モン加入の成否から独立させる。
+// STEP2Cでは実バトルへ接続せず、この結果をデバッグ画面にだけ表示する。
+const simulateSpeciesChallengeJoinWave = (runState, entryId = null) => {
+  const remaining = speciesChallengeUnjoinedAllies(runState);
+  const result = entryId === null ? {
+    state: runState,
+    joinedAllyId: null
+  } : joinSpeciesChallengeAlly(runState, entryId);
+  return {
+    ...result,
+    hadJoinCandidates: remaining.length > 0,
+    gutsRecoveryRequired: true
+  };
+};
 const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
 const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds = []) => {
   const index = SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
@@ -13241,6 +13255,10 @@ function MonsterHeroGame() {
   const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(() => Object.keys(ALL_PLAYER_MONSTERS)[0] || '');
   const [speciesChallengeDebugDifficultyId, setSpeciesChallengeDebugDifficultyId] = useState('Expert');
   const [speciesChallengeDebugProgress, setSpeciesChallengeDebugProgress] = useState(() => normalizeSpeciesChallengeProgress(null));
+  const [speciesChallengeDebugHeroId, setSpeciesChallengeDebugHeroId] = useState('');
+  const [speciesChallengeDebugAllyIds, setSpeciesChallengeDebugAllyIds] = useState([]);
+  const [speciesChallengeDebugRun, setSpeciesChallengeDebugRun] = useState(null);
+  const [speciesChallengeDebugWaveLog, setSpeciesChallengeDebugWaveLog] = useState([]);
   const [transcendFruitDebugMasuId, setTranscendFruitDebugMasuId] = useState(null);
   const [transcendFruitDebugItemId, setTranscendFruitDebugItemId] = useState('');
   const [transcendFruitDebugResult, setTranscendFruitDebugResult] = useState(null);
@@ -29647,6 +29665,59 @@ function MonsterHeroGame() {
         delete next.species[speciesId];
         await saveProgress(next);
       };
+      const challengeEntries = buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, []);
+      const heroCandidates = challengeEntries.filter(entry => entry.baseId === speciesId);
+      const heroId = heroCandidates.some(entry => entry.entryId === speciesChallengeDebugHeroId) ? speciesChallengeDebugHeroId : heroCandidates[0]?.entryId || '';
+      const allyCandidates = challengeEntries.filter(entry => entry.baseId !== speciesId);
+      const selectedAllyIds = speciesChallengeDebugAllyIds.filter(entryId => allyCandidates.some(entry => entry.entryId === entryId));
+      const entryLabel = entryId => {
+        const entry = challengeEntries.find(item => item.entryId === entryId);
+        return entry ? `${entry.name}（${entry.lineageName}）` : entryId;
+      };
+      const selectionValidation = validateSpeciesChallengeAllySelection({
+        heroId,
+        allyIds: selectedAllyIds,
+        unlockedBaseIds: unlockedMonsterIds,
+        masuMons
+      });
+      const toggleAlly = entryId => {
+        const next = selectedAllyIds.includes(entryId) ? selectedAllyIds.filter(id => id !== entryId) : [...selectedAllyIds, entryId];
+        if (validateSpeciesChallengeAllySelection({
+          heroId,
+          allyIds: next,
+          unlockedBaseIds: unlockedMonsterIds,
+          masuMons
+        }).valid) setSpeciesChallengeDebugAllyIds(next);
+      };
+      const startJoinSimulation = () => {
+        const run = createSpeciesChallengeRunState({
+          heroId,
+          allyIds: selectedAllyIds,
+          unlockedBaseIds: unlockedMonsterIds,
+          masuMons
+        });
+        if (!run) return;
+        setSpeciesChallengeDebugRun(run);
+        setSpeciesChallengeDebugWaveLog([]);
+      };
+      const joinWaves = [2, 4, 6];
+      const nextJoinWave = joinWaves[speciesChallengeDebugWaveLog.length] || null;
+      const simulateWave = (entryId = null) => {
+        if (!speciesChallengeDebugRun || !nextJoinWave) return;
+        const result = simulateSpeciesChallengeJoinWave(speciesChallengeDebugRun, entryId);
+        if (entryId !== null && !result.joinedAllyId) return;
+        const joinedEntry = challengeEntries.find(item => item.entryId === result.joinedAllyId);
+        const joinedMon = joinedEntry?.type === 'masu' ? mergeMasuIntoMon(joinedEntry.masu) : joinedEntry?.base;
+        const rule = specialRuleDifficultyForRun('extreme', speciesChallengeDebugDifficultyId, true, speciesChallengeDebugDifficultyId);
+        const bonus = result.joinedAllyId ? Object.fromEntries(['hp', 'atk', 'def', 'guts'].map(key => [key, applyAllyJoinBonus(joinedMon?.plusStats?.[key] || 0, rule, 0)])) : null;
+        setSpeciesChallengeDebugRun(result.state);
+        setSpeciesChallengeDebugWaveLog(prev => [...prev, {
+          wave: nextJoinWave,
+          joinedAllyId: result.joinedAllyId,
+          gutsRecoveryRequired: result.gutsRecoveryRequired,
+          bonus
+        }]);
+      };
       const selectedMasu = masuMons.find(m => String(m.id) === String(transcendFruitDebugMasuId)) || masuMons[0] || null;
       const speciesFruitId = speciesTranscendFruitItemId(selectedMasu?.baseId);
       const selectedFruitId = [speciesFruitId, RAINBOW_TRANSCEND_FRUIT_ITEM_ID].includes(transcendFruitDebugItemId) ? transcendFruitDebugItemId : '';
@@ -29697,7 +29768,13 @@ function MonsterHeroGame() {
       }, "\u7A2E\u65CF\uFF08ALL_PLAYER_MONSTERS\uFF09", /*#__PURE__*/React.createElement("select", {
         "aria-label": "\u7A2E\u65CF",
         value: speciesId,
-        onChange: e => setSpeciesChallengeDebugSpeciesId(e.target.value),
+        onChange: e => {
+          setSpeciesChallengeDebugSpeciesId(e.target.value);
+          setSpeciesChallengeDebugHeroId('');
+          setSpeciesChallengeDebugAllyIds([]);
+          setSpeciesChallengeDebugRun(null);
+          setSpeciesChallengeDebugWaveLog([]);
+        },
         className: "mt-1 block min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[11px] text-white"
       }, speciesEntries.map(([id, monster]) => /*#__PURE__*/React.createElement("option", {
         key: id,
@@ -29726,6 +29803,73 @@ function MonsterHeroGame() {
       }, "\u9078\u629E\u7A2E\u65CF\u306E\u9032\u884C\u3060\u3051\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("section", {
         className: "mt-3 flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2"
       }, /*#__PURE__*/React.createElement("article", {
+        "data-species-ally-simulation": true,
+        className: "space-y-3 rounded-2xl border border-cyan-400/50 bg-cyan-950/20 p-3"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+        className: "text-[11px] font-black text-cyan-200"
+      }, "\u4F9B\u30E2\u30F3\u9078\u629E\u30FBWAVE2/4/6\u52A0\u5165\u30B7\u30DF\u30E5\u30EC\u30FC\u30B7\u30E7\u30F3"), /*#__PURE__*/React.createElement("p", {
+        className: "text-[8px] text-slate-400"
+      }, "\u4E00\u6642state\u306E\u307F\u30FB\u672C\u756A\u30D0\u30C8\u30EB\uFF0F\u4FDD\u5B58\uFF0F\u5831\u916C\u306B\u306F\u63A5\u7D9A\u3057\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("label", {
+        className: "block text-[9px] font-black"
+      }, "\u52C7\u8005\u30E2\u30F3\uFF08\u9078\u629E\u7A2E\u65CF\u306E\u307F\uFF09", /*#__PURE__*/React.createElement("select", {
+        "aria-label": "\u52C7\u8005\u30E2\u30F3",
+        value: heroId,
+        onChange: e => {
+          setSpeciesChallengeDebugHeroId(e.target.value);
+          setSpeciesChallengeDebugAllyIds([]);
+          setSpeciesChallengeDebugRun(null);
+          setSpeciesChallengeDebugWaveLog([]);
+        },
+        className: "mt-1 block min-h-[44px] w-full rounded-xl bg-slate-900 px-3"
+      }, heroCandidates.map(entry => /*#__PURE__*/React.createElement("option", {
+        key: entry.entryId,
+        value: entry.entryId
+      }, entryLabel(entry.entryId))))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("b", {
+        className: "text-[9px]"
+      }, "\u4F9B\u30E2\u30F3 0\u301C3\u4F53\uFF08\u540C\u7A2E\u4E0D\u53EF\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 grid grid-cols-2 gap-1"
+      }, allyCandidates.map(entry => {
+        const selected = selectedAllyIds.includes(entry.entryId),
+          sameSpeciesSelected = selectedAllyIds.some(id => id !== entry.entryId && speciesChallengeEntryBaseId(id, masuMons) === entry.baseId);
+        return /*#__PURE__*/React.createElement("button", {
+          key: entry.entryId,
+          disabled: !selected && (selectedAllyIds.length >= 3 || sameSpeciesSelected),
+          onClick: () => toggleAlly(entry.entryId),
+          "aria-pressed": selected,
+          className: `min-h-[44px] rounded-xl px-2 text-[8px] font-black disabled:opacity-25 ${selected ? 'bg-cyan-700 ring-2 ring-white' : 'bg-slate-900 border border-white/10'}`
+        }, entryLabel(entry.entryId));
+      })), /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-[8px] text-cyan-200"
+      }, "\u9078\u629E\uFF1A", selectedAllyIds.length ? selectedAllyIds.map(entryLabel).join('、') : '0体')), !speciesChallengeDebugRun ? /*#__PURE__*/React.createElement("button", {
+        disabled: !heroId || !selectionValidation.valid,
+        onClick: startJoinSimulation,
+        className: "min-h-[46px] w-full rounded-xl bg-emerald-700 text-[10px] font-black disabled:opacity-30"
+      }, "\u3053\u306E\u7DE8\u6210\u3067\u30B7\u30DF\u30E5\u30EC\u30FC\u30B7\u30E7\u30F3\u958B\u59CB") : /*#__PURE__*/React.createElement("section", {
+        className: "space-y-2 rounded-xl bg-black/30 p-2 text-[9px]"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "\u52C7\u8005\uFF1A"), entryLabel(speciesChallengeDebugRun.heroId)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "\u52A0\u5165\u6E08\u307F\uFF1A"), speciesChallengeDebugRun.joinedAllyIds.length ? speciesChallengeDebugRun.joinedAllyIds.map(entryLabel).join('、') : 'なし'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "\u672A\u52A0\u5165\uFF1A"), speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length ? speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).map(entryLabel).join('、') : 'なし'), speciesChallengeDebugWaveLog.map(log => /*#__PURE__*/React.createElement("div", {
+        key: log.wave,
+        "data-species-wave-log": log.wave,
+        className: "rounded-lg border border-white/10 p-2"
+      }, /*#__PURE__*/React.createElement("b", null, "WAVE", log.wave, "\uFF1A"), log.joinedAllyId ? entryLabel(log.joinedAllyId) : '加入なし', /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "\u26A1 \u30AC\u30C3\u30C4\u56DE\u5FA9\uFF1A\u5B9F\u884C\u5BFE\u8C61"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+        className: "text-fuchsia-300"
+      }, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\uFF1A", log.bonus ? `HP+${log.bonus.hp}／力+${log.bonus.atk}／防+${log.bonus.def}／G+${log.bonus.guts}` : 'なし'))), nextJoinWave && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "WAVE", nextJoinWave, "\u3067\u8AB0\u3092\u52A0\u5165\u3055\u305B\u308B\u304B"), speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length ? /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 grid grid-cols-2 gap-1"
+      }, speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).map(id => /*#__PURE__*/React.createElement("button", {
+        key: id,
+        onClick: () => simulateWave(id),
+        className: "min-h-[44px] rounded-xl bg-fuchsia-800 px-2 text-[8px] font-black"
+      }, entryLabel(id), "\u3092\u52A0\u5165"))) : /*#__PURE__*/React.createElement("button", {
+        onClick: () => simulateWave(null),
+        className: "mt-1 min-h-[44px] w-full rounded-xl bg-slate-700 font-black"
+      }, "\u52A0\u5165\u306A\u3057\u3067\u9032\u3080\uFF08\u30AC\u30C3\u30C4\u56DE\u5FA9\u3042\u308A\uFF09")), !nextJoinWave && /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          setSpeciesChallengeDebugRun(null);
+          setSpeciesChallengeDebugWaveLog([]);
+        },
+        className: "min-h-[44px] w-full rounded-xl border border-cyan-400 font-black"
+      }, "\u7DE8\u6210\u9078\u629E\u3078\u623B\u308B"))), /*#__PURE__*/React.createElement("article", {
         "data-transcend-fruit-debug": true,
         className: "space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
