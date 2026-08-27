@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55d2766b66729d44
+// source-sha256: d9215e34621f554d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 20:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13996,6 +13996,12 @@ function MonsterHeroGame() {
   // 虹のプシュケーの変換シート。開いているあいだだけ、欲しい超越ポイント数を下書きする
   const [transcendExchangeOpen, setTranscendExchangeOpen] = useState(false);
   const [transcendExchangeWant, setTranscendExchangeWant] = useState(1);
+  // 超越の実は種族別／虹を自動選択せず、使用する種類をシート内で明示してもらう
+  const [transcendFruitOpen, setTranscendFruitOpen] = useState(false);
+  const [transcendFruitItemId, setTranscendFruitItemId] = useState('');
+  const [transcendFruitConfirmAmount, setTranscendFruitConfirmAmount] = useState(0);
+  const [transcendFruitError, setTranscendFruitError] = useState('');
+  const transcendFruitProcessingRef = useRef(false);
   const transcendProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
@@ -18385,6 +18391,34 @@ function MonsterHeroGame() {
       return null;
     } finally {
       transcendProcessingRef.current = false;
+    }
+  };
+  // 超越の実と対象個体を同じ操作で更新する。両方の保存が完了するまで画面上のstateは進めない
+  const commitTranscendFruit = async (masu, itemId, amount) => {
+    if (transcendFruitProcessingRef.current) return null;
+    const currentMasu = masuMonsRef.current.find(m => String(m.id) === String(masu?.id));
+    const result = useTranscendFruitOnMasu(currentMasu, ownedItemsRef.current, itemId, amount);
+    if (!result.ok) {
+      setTranscendFruitError('選んだ実の所持数が足りないか、このマスモンには使用できません。');
+      return null;
+    }
+    transcendFruitProcessingRef.current = true;
+    setTranscendFruitError('');
+    const nextMasuMons = masuMonsRef.current.map(m => String(m.id) === String(currentMasu.id) ? result.nextMasu : m);
+    try {
+      await Promise.all([storeSet('mh_masu_mons', nextMasuMons, false), storeSet('mh_owned_items', result.nextOwnedItems, false)]);
+      masuMonsRef.current = nextMasuMons;
+      ownedItemsRef.current = result.nextOwnedItems;
+      setMasuMons(nextMasuMons);
+      setOwnedItems(result.nextOwnedItems);
+      setMasuMonDetail(prev => prev && String(prev.id) === String(currentMasu.id) ? result.nextMasu : prev);
+      setTranscendFruitConfirmAmount(0);
+      return result;
+    } catch {
+      setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう一度お試しください。');
+      return null;
+    } finally {
+      transcendFruitProcessingRef.current = false;
     }
   };
   // ===== 超越のデバッグ(DEBUG_SETTINGS からだけ開ける) =====
@@ -32644,6 +32678,29 @@ function MonsterHeroGame() {
         setTranscendExchangeWant(exchangeMax > 0 ? 1 : 1);
         setTranscendExchangeOpen(true);
       };
+      const speciesFruitId = speciesTranscendFruitItemId(masu.baseId);
+      const speciesFruit = SPECIES_TRANSCEND_FRUIT_ITEMS[masu.baseId];
+      const speciesFruitHave = transcendFruitOwnedCount(ownedItems, speciesFruitId);
+      const rainbowFruitHave = transcendFruitOwnedCount(ownedItems, RAINBOW_TRANSCEND_FRUIT_ITEM_ID);
+      const hasTranscendFruit = speciesFruitHave > 0 || rainbowFruitHave > 0;
+      const selectedFruitHave = transcendFruitOwnedCount(ownedItems, transcendFruitItemId);
+      const selectedFruitName = transcendFruitItemId === speciesFruitId ? speciesFruit?.name : transcendFruitItemId === RAINBOW_TRANSCEND_FRUIT_ITEM_ID ? RAINBOW_TRANSCEND_FRUIT_ITEM.name : '';
+      const openFruit = () => {
+        setTranscendFruitItemId('');
+        setTranscendFruitConfirmAmount(0);
+        setTranscendFruitError('');
+        setTranscendFruitOpen(true);
+      };
+      const requestFruitUse = async amount => {
+        if (amount > 1) {
+          setTranscendFruitConfirmAmount(amount);
+          return;
+        }
+        await commitTranscendFruit(masu, transcendFruitItemId, amount);
+      };
+      const runFruitUse = async () => {
+        await commitTranscendFruit(masu, transcendFruitItemId, transcendFruitConfirmAmount);
+      };
       // 超越ポイントリセットの書。振り分け直したいときに、使った超越Pを全部戻す
       const resetScrollHave = ownedItemCount(ownedItems, TRANSCEND_RESET_ITEM_ID);
       const spentPoints = transcendSpentPoints(normalized);
@@ -32750,7 +32807,15 @@ function MonsterHeroGame() {
         "aria-hidden": "true"
       }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB", /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-mono text-slate-300"
-      }, "\u6240\u6301 ", psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("button", {
+      }, "\u6240\u6301 ", psycheHave.toLocaleString())), hasTranscendFruit && /*#__PURE__*/React.createElement("button", {
+        "data-transcend-fruit-open": true,
+        onClick: openFruit,
+        className: "mt-2 w-full min-h-[46px] rounded-2xl border border-emerald-400/50 bg-emerald-950/40 text-emerald-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        "aria-hidden": "true"
+      }, "\uD83C\uDF4E"), "\u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046", /*#__PURE__*/React.createElement("span", {
+        className: "text-[9px] font-mono text-slate-300"
+      }, "\u7A2E\u65CF \xD7", speciesFruitHave, "\uFF0F\u8679 \xD7", rainbowFruitHave)), /*#__PURE__*/React.createElement("button", {
         "data-transcend-reset-open": true,
         disabled: spentPoints <= 0 || resetScrollHave <= 0,
         onClick: openReset,
@@ -33063,7 +33128,99 @@ function MonsterHeroGame() {
         disabled: !exchangeQuote.ok,
         onClick: runExchange,
         className: "min-h-[48px] rounded-2xl bg-fuchsia-600 text-white font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "\u3053\u306E\u5185\u5BB9\u3067\u5909\u63DB")))));
+      }, "\u3053\u306E\u5185\u5BB9\u3067\u5909\u63DB")))), transcendFruitOpen && /*#__PURE__*/React.createElement("div", {
+        "data-transcend-fruit-sheet": true,
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "\u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046",
+        className: "absolute inset-0 flex items-end justify-center",
+        style: {
+          zIndex: 30500,
+          backgroundColor: 'rgba(2,6,23,0.86)'
+        },
+        onClick: () => setTranscendFruitOpen(false)
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-emerald-400/40 bg-slate-900 p-4 space-y-3",
+        style: {
+          maxHeight: 'calc(100% - env(safe-area-inset-top))',
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        },
+        onClick: e => e.stopPropagation()
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-sm font-black text-emerald-200"
+      }, "\uD83C\uDF4E \u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046"), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
+        onClick: () => setTranscendFruitOpen(false),
+        className: "min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(X, {
+        size: 18
+      }))), /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] font-bold text-slate-400"
+      }, "\u4F7F\u7528\u3059\u308B\u5B9F\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u8679\u306E\u5B9F\u304C\u81EA\u52D5\u3067\u4EE3\u7528\u3055\u308C\u308B\u3053\u3068\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, [[speciesFruitId, speciesFruit?.name || '対応種族の超越の実', speciesFruitHave], [RAINBOW_TRANSCEND_FRUIT_ITEM_ID, RAINBOW_TRANSCEND_FRUIT_ITEM.name, rainbowFruitHave]].map(([itemId, name, have]) => /*#__PURE__*/React.createElement("button", {
+        key: itemId,
+        "data-transcend-fruit-select": itemId,
+        disabled: have <= 0,
+        "aria-pressed": transcendFruitItemId === itemId,
+        onClick: () => {
+          setTranscendFruitItemId(itemId);
+          setTranscendFruitConfirmAmount(0);
+          setTranscendFruitError('');
+        },
+        className: `min-h-[64px] rounded-2xl border p-2 text-[9px] font-black active:scale-95 disabled:opacity-35 ${transcendFruitItemId === itemId ? 'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200' : 'border-white/10 bg-slate-800 text-slate-200'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block leading-tight"
+      }, name), /*#__PURE__*/React.createElement("span", {
+        className: "mt-1 block font-mono text-[12px]"
+      }, "\u6240\u6301 \xD7", have)))), !transcendFruitItemId ? /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200"
+      }, "\u4F7F\u7528\u3059\u308B\u5B9F\u3092\u660E\u793A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-2"
+      }, [[1, '1'], [10, '10'], [selectedFruitHave, 'MAX']].map(([amount, label]) => /*#__PURE__*/React.createElement("button", {
+        key: label,
+        "data-transcend-fruit-amount": label,
+        disabled: selectedFruitHave < amount || amount <= 0,
+        onClick: () => requestFruitUse(amount),
+        className: "min-h-[44px] rounded-xl bg-emerald-700 text-sm font-black active:scale-95 disabled:opacity-30"
+      }, label))), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl border border-emerald-400/30 bg-emerald-950/25 p-3 text-[10px] font-black"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-300"
+      }, "\u73FE\u5728\u306E\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono"
+      }, points, "P")), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-300"
+      }, "\u4F7F\u7528\u5F8C\uFF08\u9078\u629E\u4E2D\uFF09"), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono text-emerald-200"
+      }, points, " \u2192 ", points + (transcendFruitConfirmAmount || 1), "P")))), transcendFruitConfirmAmount > 1 && /*#__PURE__*/React.createElement("div", {
+        "data-transcend-fruit-confirm": true,
+        className: "rounded-2xl border border-amber-400/40 bg-amber-950/25 p-3 space-y-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] font-black text-amber-200"
+      }, selectedFruitName, "\u3092", transcendFruitConfirmAmount, "\u500B\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-bold text-slate-300"
+      }, "\u6240\u6301 \xD7", selectedFruitHave, " \u2192 \xD7", selectedFruitHave - transcendFruitConfirmAmount, /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8 ", points, "P \u2192 ", points + transcendFruitConfirmAmount, "P"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setTranscendFruitConfirmAmount(0),
+        className: "min-h-[44px] rounded-xl bg-slate-700 text-xs font-black"
+      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+        "data-transcend-fruit-commit": true,
+        onClick: runFruitUse,
+        className: "min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-xs font-black"
+      }, "\u4F7F\u7528\u3092\u78BA\u5B9A"))), transcendFruitError && /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black text-red-400"
+      }, transcendFruitError), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setTranscendFruitOpen(false),
+        className: "min-h-[48px] w-full rounded-2xl bg-slate-800 text-slate-200 text-xs font-black"
+      }, "\u9589\u3058\u308B"))));
     })(), gameState === 'MASU_ENHANCE' && masuMonDetail && (() => {
       const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
