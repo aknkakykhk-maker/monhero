@@ -13,6 +13,7 @@ vm.runInContext(`${source.slice(start, end)}\nglobalThis.progressApi={
   isSpeciesChallengeCleared,isSpeciesChallengeFirstRewardClaimed,
   speciesChallengeClearedDifficultyIds,markSpeciesChallengeCleared,
   markSpeciesChallengeFirstRewardClaimed,isSpeciesChallengeDifficultyUnlocked,
+  speciesChallengeRecord,updateSpeciesChallengeRecord,speciesChallengeTotalClearedCount,
 };`, context);
 const api = context.progressApi;
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
@@ -29,9 +30,35 @@ const dirty = { version:0, species:{
 } };
 const clean = api.normalizeSpeciesChallengeProgress(dirty);
 assert(json(clean) === json({ version:1, species:{
-  dragon:{ cleared:{ Expert:true }, firstRewardClaimed:{ Hard:true } },
-  futureSpecies:{ cleared:{ Beginner:true }, firstRewardClaimed:{} },
+  dragon:{ cleared:{ Expert:true }, firstRewardClaimed:{ Hard:true }, records:{} },
+  futureSpecies:{ cleared:{ Beginner:true }, firstRewardClaimed:{}, records:{} },
 }, pendingRewards:{} }), '有効なtrueだけを保持し、未知の有効speciesIdを保持する');
+
+// --- 自己記録は「種族 × 難易度」ごとに独立させる ---
+// records を持たない既存セーブがそのまま読めること(新しいmh_*キーを作らないための後方互換)と、
+// 壊れた値・他難易度・他種族へ漏れないことを確かめる。
+assert(json(api.normalizeSpeciesChallengeProgress({ species:{ dragon:{ cleared:{ Expert:true } } } }).species.dragon.records) === json({}),
+  'recordsを持たない既存セーブでも空の記録として読める');
+const brokenRecords = api.normalizeSpeciesChallengeProgress({ species:{ dragon:{ records:{
+  Expert:{ bestScore:'x', bestTurns:-3, clears:2.9 },
+  UNKNOWN:{ bestScore:100, clears:1 },
+  Hard:{ bestScore:0, bestTurns:0, clears:0 },
+} } } });
+assert(json(brokenRecords.species.dragon.records) === json({ Expert:{ bestScore:0, bestTurns:null, clears:2 } }),
+  '壊れた記録・未知の難易度・中身のない記録を落とす');
+const blank = api.normalizeSpeciesChallengeProgress(null);
+const scored = api.updateSpeciesChallengeRecord(blank, 'dragon', 'Expert', { score:1200, turns:38 });
+assert(json(api.speciesChallengeRecord(scored, 'dragon', 'Expert')) === json({ bestScore:1200, bestTurns:38, clears:1 }), '初回クリアの記録を残す');
+assert(json(api.speciesChallengeRecord(scored, 'dragon', 'Hard')) === json({ bestScore:0, bestTurns:null, clears:0 }), '記録は難易度ごとに独立している');
+assert(json(api.speciesChallengeRecord(scored, 'beast', 'Expert')) === json({ bestScore:0, bestTurns:null, clears:0 }), '記録は種族ごとに独立している');
+const worse = api.updateSpeciesChallengeRecord(scored, 'dragon', 'Expert', { score:800, turns:55 });
+assert(json(api.speciesChallengeRecord(worse, 'dragon', 'Expert')) === json({ bestScore:1200, bestTurns:38, clears:2 }), '記録が下回ったらベストは据え置き、クリア回数だけ増える');
+const better = api.updateSpeciesChallengeRecord(worse, 'dragon', 'Expert', { score:2000, turns:20 });
+assert(json(api.speciesChallengeRecord(better, 'dragon', 'Expert')) === json({ bestScore:2000, bestTurns:20, clears:3 }), 'スコアは高い方、ターンは少ない方を残す');
+assert(json(api.speciesChallengeRecord(scored, 'dragon', 'Expert')) === json({ bestScore:1200, bestTurns:38, clears:1 }), '記録更新は更新元を破壊しない');
+const twoCleared = api.markSpeciesChallengeCleared(api.markSpeciesChallengeCleared(blank, 'dragon', 'Expert'), 'beast', 'Hard');
+assert(api.speciesChallengeTotalClearedCount(blank) === 0 && api.speciesChallengeTotalClearedCount(twoCleared) === 2,
+  'モードカード用のクリア数は種族をまたいだクリア済みの組を数える');
 
 const empty = api.normalizeSpeciesChallengeProgress(null);
 const dragonExpert = api.markSpeciesChallengeCleared(empty, 'dragon', 'Expert');

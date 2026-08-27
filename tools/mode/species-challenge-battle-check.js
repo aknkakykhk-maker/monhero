@@ -28,7 +28,10 @@ assert(setup.indexOf('joinSpeciesChallengeAlly') < setup.indexOf("const bonus=m.
 
 assert(source.includes('if (w === 1 && !forcedEnemyKey && !debugBattleRef.current)'), 'デバッグ実戦では助手・ミッションを含む保存進行を抑止する');
 assert(source.includes('speciesChallengeBattleRun?<button') && source.includes('openSpeciesChallengeSelection();'), '勝敗・リタイア後は種族チャレンジ選択へ戻る');
-assert(source.includes('...(debugBattle?[SPECIES_CHALLENGE_MODE]:[])') && !source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常')).includes('BATTLE_MODE_SPECIES_CHALLENGE'), 'デバッグ時だけ共通BATTLE MODEへ入口を追加する');
+assert(source.includes('...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])') && !source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常')).includes('BATTLE_MODE_SPECIES_CHALLENGE'), 'デバッグ時だけ共通BATTLE MODEへ入口を追加する');
+// 公開の切り替えを1か所へまとめてある(公開時はここをtrueにするだけ)
+assert(/const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;/.test(source), '一般公開フラグは既定でfalse');
+assert(source.includes("mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE"), '公開フラグが立つまでランキングへ送らない');
 assert(!source.includes('grantSpeciesChallengeFirstClearReward') && !source.includes('species_challenge_ranking'), '進行報酬・ランキング保存を接続しない');
 
 console.log('種族チャレンジSTEP5B実バトル接続確認: PASS');
