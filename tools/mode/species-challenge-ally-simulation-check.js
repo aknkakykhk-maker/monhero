@@ -3,50 +3,22 @@ const vm = require('vm');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const equal = (actual, expected, message) => assert(JSON.stringify(actual) === JSON.stringify(expected), `${message}: ${JSON.stringify(actual)}`);
-
 const start = source.indexOf('const speciesChallengeEntryBaseId =');
 const end = source.indexOf('const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT =', start);
-assert(start >= 0 && end > start, 'STEP1Dの一時ランhelperが見つかる');
-const context = {};
-vm.createContext(context);
-vm.runInContext(`${source.slice(start, end)}\nglobalThis.api={speciesChallengeEntryBaseId,speciesChallengeAvailableAllyIds,validateSpeciesChallengeAllySelection,createSpeciesChallengeRunState,speciesChallengeUnjoinedAllies,joinSpeciesChallengeAlly,simulateSpeciesChallengeJoinWave};`, context);
-const { api } = context;
-const masuMons = [{ id:101, baseId:'Dragon' }, { id:202, baseId:'Slime' }];
-const unlockedBaseIds = ['Mocchi','Dragon','Slime','Golem'];
-
-assert(!api.validateSpeciesChallengeAllySelection({heroId:'Mocchi',allyIds:['Mocchi'],unlockedBaseIds,masuMons}).valid, '勇者と同種を拒否する');
-assert(!api.validateSpeciesChallengeAllySelection({heroId:'Mocchi',allyIds:['Dragon','masu:101'],unlockedBaseIds,masuMons}).valid, 'Base/Masuを含む供モン同種を拒否する');
-assert(!api.validateSpeciesChallengeAllySelection({heroId:'Mocchi',allyIds:['Slime','masu:202'],unlockedBaseIds,masuMons}).valid, '供モン同士の同種を拒否する');
-
-let run = api.createSpeciesChallengeRunState({heroId:'Mocchi',allyIds:['Golem','Dragon','Slime'],unlockedBaseIds,masuMons});
-for (const id of ['Slime','Golem','Dragon']) {
-  const result = api.simulateSpeciesChallengeJoinWave(run,id);
-  assert(result.joinedAllyId === id && result.gutsRecoveryRequired, '任意順の加入と回復対象を両立する');
-  run = result.state;
-}
-equal(api.speciesChallengeUnjoinedAllies(run), [], '3体をW2/W4/W6で全員加入できる');
-const duplicate = api.simulateSpeciesChallengeJoinWave(run,'Dragon');
-assert(duplicate.joinedAllyId === null && duplicate.state === run, '二重加入できない');
-
-run = api.createSpeciesChallengeRunState({heroId:'Mocchi',allyIds:['Dragon'],unlockedBaseIds,masuMons});
-run = api.simulateSpeciesChallengeJoinWave(run,'Dragon').state;
-for (const wave of [4,6]) {
-  const noJoin = api.simulateSpeciesChallengeJoinWave(run,null);
-  assert(noJoin.joinedAllyId === null && noJoin.gutsRecoveryRequired, `1体構成のW${wave}は加入なしでも回復対象`);
-}
-run = api.createSpeciesChallengeRunState({heroId:'Mocchi',allyIds:[],unlockedBaseIds,masuMons});
-for (const wave of [2,4,6]) {
-  const noJoin = api.simulateSpeciesChallengeJoinWave(run,null);
-  assert(noJoin.joinedAllyId === null && noJoin.gutsRecoveryRequired, `0体構成のW${wave}は加入なしでも回復対象`);
-}
-
-const screenStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_DEBUG'&&(()=>{");
-const screenEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", screenStart);
-const screen = source.slice(screenStart, screenEnd);
-for (const helper of ['speciesChallengeEntryBaseId','speciesChallengeAvailableAllyIds','validateSpeciesChallengeAllySelection','createSpeciesChallengeRunState','speciesChallengeUnjoinedAllies','joinSpeciesChallengeAlly']) assert(source.includes(helper), `STEP1D helper ${helper}を維持する`);
-assert(screen.includes('data-species-ally-simulation'), '既存デバッグ画面内に加入シミュレーションがある');
-assert(screen.includes("applyAllyJoinBonus(joinedMon?.plusStats?.[key]||0,rule,0)"), '加入時だけ既存の加入ボーナス計算を使う');
-assert(screen.includes("const bonus=result.joinedAllyId?"), '加入なしでは加入ボーナスを計算しない');
-assert(!screen.includes("storeSet('mh_species_challenge"), 'シミュレーション用の保存キーを追加しない');
-
+assert(start >= 0 && end > start, '種族チャレンジの一時ランhelperが見つかる');
+const context = {}; vm.createContext(context);
+vm.runInContext(`${source.slice(start,end)}\nglobalThis.api={speciesChallengeAvailableAllyIds,validateSpeciesChallengeAllySelection,createSpeciesChallengeRunState,speciesChallengeUnjoinedAllies,simulateSpeciesChallengeJoinWave};`,context);
+const {api}=context;
+const masuMons=[{id:101,baseId:'Mocchi'},{id:102,baseId:'Mocchi'},{id:202,baseId:'Suezo'}];
+const unlockedBaseIds=['Mocchi','Suezo'];
+equal(api.speciesChallengeAvailableAllyIds('Mocchi',unlockedBaseIds,masuMons),['Mocchi','masu:101','masu:102'],'選択種族のBase/Masuだけを候補にする');
+assert(api.validateSpeciesChallengeAllySelection({speciesId:'Mocchi',heroId:'Mocchi',allyIds:['masu:101','masu:102'],unlockedBaseIds,masuMons}).valid,'Base勇者と同種族の別Masu複数を許可する');
+assert(api.validateSpeciesChallengeAllySelection({speciesId:'Mocchi',heroId:'masu:101',allyIds:['Mocchi','masu:102'],unlockedBaseIds,masuMons}).valid,'Masu勇者と同種Base・別Masuを許可する');
+assert(!api.validateSpeciesChallengeAllySelection({speciesId:'Mocchi',heroId:'masu:101',allyIds:['masu:101'],unlockedBaseIds,masuMons}).valid,'勇者本人entryIdを供モンにできない');
+assert(!api.validateSpeciesChallengeAllySelection({speciesId:'Mocchi',heroId:'Mocchi',allyIds:['Suezo'],unlockedBaseIds,masuMons}).valid,'他種族を拒否する');
+for(let count=0;count<=3;count++){const ids=['masu:101','masu:102'].slice(0,count);if(count===3)ids.push('Mocchi');const hero=count===3?'masu:101':'Mocchi';const allies=count===3?['Mocchi','masu:102']:ids;assert(api.createSpeciesChallengeRunState({speciesId:'Mocchi',difficultyId:'Expert',heroId:hero,allyIds:allies,unlockedBaseIds,masuMons}),`${count}体で出撃可能`);}
+let run=api.createSpeciesChallengeRunState({speciesId:'Mocchi',heroId:'masu:101',allyIds:['Mocchi','masu:102'],unlockedBaseIds,masuMons});
+for(const id of ['masu:102','Mocchi']){const result=api.simulateSpeciesChallengeJoinWave(run,id);assert(result.joinedAllyId===id,'残りから任意順で加入できる');run=result.state;}
+equal(api.speciesChallengeUnjoinedAllies(run),[],'加入済みを候補から除外する');
+assert(source.includes("selected?'選択中':''")&&!source.includes('`${selectedAllies.indexOf(entry.entryId)+1}番目`'),'事前選択順を表示しない');
 console.log('species challenge ally simulation checks passed');

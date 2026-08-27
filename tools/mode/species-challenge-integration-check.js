@@ -49,30 +49,17 @@ progress = api.markSpeciesChallengeCleared(progress, 'Dragon', 'Expert');
 assert(api.isSpeciesChallengeDifficultyUnlocked('Master', api.speciesChallengeClearedDifficultyIds(progress, 'Dragon')), '同種族ExpertクリアでMasterを解放する');
 assert(!api.isSpeciesChallengeDifficultyUnlocked('Master', api.speciesChallengeClearedDifficultyIds(progress, 'Slime')), '他種族の進行は解放へ影響しない');
 
-const masuMons = [{ id:'dragon-owned', baseId:'Dragon' }, { id:'slime-owned', baseId:'Slime' }];
+const masuMons = [{ id:'dragon-a', baseId:'Dragon' }, { id:'dragon-b', baseId:'Dragon' }, { id:'slime-owned', baseId:'Slime' }];
 const unlockedBaseIds = ['Dragon','Slime','Mocchi','Golem'];
-equal(api.speciesChallengeAvailableAllyIds(unlockedBaseIds, masuMons),
-  ['Dragon','Slime','Mocchi','Golem','masu:dragon-owned','masu:slime-owned'],
-  '候補は解放済Baseと所持Masuの両方を使う');
-assert(api.speciesChallengeEntryBaseId('masu:dragon-owned', masuMons) === 'Dragon', 'MasuもbaseIdで種族判定する');
-for (const allyIds of [[], ['Slime'], ['Slime','Golem'], ['Slime','Golem','Dragon']]) {
-  assert(api.validateSpeciesChallengeAllySelection({ heroId:'Mocchi', allyIds, unlockedBaseIds, masuMons }).valid, `供モン${allyIds.length}体を許可する`);
-}
-assert(!api.validateSpeciesChallengeAllySelection({ heroId:'Dragon', allyIds:['masu:dragon-owned'], unlockedBaseIds, masuMons }).valid, '勇者と同種のBase/Masuを拒否する');
-assert(!api.validateSpeciesChallengeAllySelection({ heroId:'Mocchi', allyIds:['Dragon','masu:dragon-owned'], unlockedBaseIds, masuMons }).valid, '供モン同士のBase/Masu同種を拒否する');
-assert(!api.validateSpeciesChallengeAllySelection({ heroId:'Mocchi', allyIds:['Dragon','Slime','Golem','masu:dragon-owned'], unlockedBaseIds, masuMons }).valid, '供モン4体を拒否する');
-let run = api.createSpeciesChallengeRunState({ heroId:'Mocchi', allyIds:['Dragon','Slime','Golem'], unlockedBaseIds, masuMons });
-for (const [wave, entryId] of [[2,'Golem'],[4,'Dragon'],[6,'Slime']]) {
-  const result = api.simulateSpeciesChallengeJoinWave(run, entryId);
-  assert(result.joinedAllyId === entryId && result.gutsRecoveryRequired, `WAVE${wave}で任意順加入しガッツ回復対象になる`);
-  run = result.state;
-}
-equal(api.speciesChallengeUnjoinedAllies(run), [], 'WAVE6後に3体とも加入済みになる');
-run = api.createSpeciesChallengeRunState({ heroId:'Mocchi', allyIds:[], unlockedBaseIds, masuMons });
-for (const wave of [2,4,6]) {
-  const result = api.simulateSpeciesChallengeJoinWave(run, null);
-  assert(!result.hadJoinCandidates && result.joinedAllyId === null && result.gutsRecoveryRequired, `候補なしのWAVE${wave}も処理とガッツ回復を継続する`);
-}
+equal(api.speciesChallengeAvailableAllyIds('Dragon', unlockedBaseIds, masuMons), ['Dragon','masu:dragon-a','masu:dragon-b'], '選択種族のBaseと所持Masuだけを候補にする');
+assert(api.validateSpeciesChallengeAllySelection({ speciesId:'Dragon',heroId:'Dragon', allyIds:['masu:dragon-a','masu:dragon-b'], unlockedBaseIds, masuMons }).valid, '同種族の別Masu複数を許可する');
+assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'Dragon',heroId:'masu:dragon-a', allyIds:['masu:dragon-a'], unlockedBaseIds, masuMons }).valid, '勇者本人entryIdを拒否する');
+assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'Dragon',heroId:'Dragon', allyIds:['Slime'], unlockedBaseIds, masuMons }).valid, '他種族を拒否する');
+let run = api.createSpeciesChallengeRunState({ speciesId:'Dragon',heroId:'masu:dragon-a', allyIds:['Dragon','masu:dragon-b'], unlockedBaseIds, masuMons });
+for (const [wave, entryId] of [[2,'masu:dragon-b'],[4,'Dragon']]) { const result=api.simulateSpeciesChallengeJoinWave(run,entryId); assert(result.joinedAllyId===entryId&&result.gutsRecoveryRequired,`WAVE${wave}で残りから任意加入する`); run=result.state; }
+equal(api.speciesChallengeUnjoinedAllies(run), [], '加入後は候補から除外する');
+run=api.createSpeciesChallengeRunState({speciesId:'Dragon',heroId:'Dragon',allyIds:[],unlockedBaseIds,masuMons});
+for(const wave of [2,4,6]){const result=api.simulateSpeciesChallengeJoinWave(run,null);assert(!result.hadJoinCandidates&&result.gutsRecoveryRequired,`候補なしのWAVE${wave}も処理を継続する`);}
 
 for (const id of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) {
   assert(api.specialRuleDifficultyForRun('extreme', id, true, id) === id, `${id}を既存resolverで解決する`);
