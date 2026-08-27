@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 904aca217b21911b
+// source-sha256: 1d5b49ee7e49342e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 01:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 06:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -156,12 +156,18 @@ const goldForWavesCleared = (wavesCleared, mult) => {
 // 増える値はここだけで決まる。バトル本体は複製せず、この定義とモードの分岐で振る舞いを変える。
 const BATTLE_MODE_CHALLENGE = 'challenge';
 const BATTLE_MODE_QUICK = 'quick';
-// 種族チャレンジは後続STEPで使う内部定義だけを先に用意する。
-// 本番のモード選択へは BATTLE_MODES / PUBLIC_BATTLE_MODES に追加するまで表示しない。
+// 種族チャレンジはデバッグのバトルモード入口だけに合流させる。
+// 通常プレイの公開配列には含めず、固定計画2/4では結果も保存しない。
 const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
 const SPECIES_CHALLENGE_MODE = Object.freeze({
   id: BATTLE_MODE_SPECIES_CHALLENGE,
-  label: '種族チャレンジ'
+  label: '種族チャレンジ',
+  short: '種族',
+  emoji: '🧬',
+  color: '#67e8f9',
+  tagline: '選んだ種族だけで挑む、種族限定チャレンジ',
+  highlights: [['🧬', '選択種族だけでパーティ編成'], ['🤝', '供モン0〜3体'], ['⚔️', 'WAVE2/4/6で残りから加入']],
+  points: [['⚔️', '編成', '選んだ種族の解放済みベースモンと所持マスモンだけで編成します。勇者本人と同じ個体だけは供モンにできません。'], ['🤝', '供モンの加入', '供モンは0〜3体を選び、WAVE2・4・6で未加入の中からその都度1体を選びます。'], ['🧪', '試験中', '固定計画2/4のデバッグ確認中です。結果・報酬・スコア・ランキングは保存しません。']]
 });
 // プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
 // バトルの中身はチャレンジと同じで、違うのは「編成がベースモン限定」「経験値の倍率」
@@ -315,6 +321,7 @@ const BATTLE_MODES = [{
 // (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
 const battleModeInfo = mode => {
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) return EXTREME_MODE;
+  if (mode === BATTLE_MODE_SPECIES_CHALLENGE) return SPECIES_CHALLENGE_MODE;
   return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 };
 // 本番のバトル画面へ出すモード。いまは3モードすべてを公開している。
@@ -322,7 +329,7 @@ const battleModeInfo = mode => {
 // デバッグ・ヘルプの表・検査からだけ見える状態にできる
 const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 // スコアランキングがあるモードかどうか。クイックだけ対象外
-const modeHasRanking = mode => !isQuickMode(mode);
+const modeHasRanking = mode => !isQuickMode(mode) && mode !== BATTLE_MODE_SPECIES_CHALLENGE;
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
 const modeBondAction = mode => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
@@ -13503,7 +13510,7 @@ function MonsterHeroGame() {
   const openSpeciesChallengeSelection = async () => {
     await loadSpeciesChallengeProgress();
     setSpeciesChallengeSelection({
-      step: 'intro',
+      step: 'species',
       speciesId: '',
       difficultyId: '',
       heroId: '',
@@ -16899,7 +16906,7 @@ function MonsterHeroGame() {
     if (gameState !== 'BATTLE_MODE_SELECT' || modeSelectTab !== 'mode') return;
     const id = requestAnimationFrame(() => {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes = [...BATTLE_MODES, EXTREME_MODE];
+      const modes = [...BATTLE_MODES, EXTREME_MODE, ...(debugBattle ? [SPECIES_CHALLENGE_MODE] : [])];
       const index = modes.length + Math.max(0, modes.findIndex(m => m.id === battleMode));
       modeCarouselRef.current?.children[index]?.scrollIntoView({
         inline: 'center',
@@ -27611,7 +27618,7 @@ function MonsterHeroGame() {
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
     }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_MODE_SELECT' && (() => {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
-      const modes = [...BATTLE_MODES, EXTREME_MODE];
+      const modes = [...BATTLE_MODES, EXTREME_MODE, ...(debugBattle ? [SPECIES_CHALLENGE_MODE] : [])];
       const current = modes.find(m => m.id === battleMode) || modes[0];
       const selectedIndex = Math.max(0, modes.findIndex(m => m.id === current.id));
       // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
@@ -27723,13 +27730,14 @@ function MonsterHeroGame() {
       }, loopModes.map((m, loopIndex) => {
         const active = m.id === current.id,
           isExtreme = m.id === EXTREME_MODE.id,
+          isSpecies = m.id === BATTLE_MODE_SPECIES_CHALLENGE,
           extremeLocked = isExtreme && !extremeUnlocked && !debugBattle,
           rec = isExtreme ? {
             score: highestModeScore(extremeBestScores, EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => setting.id)),
             wave: 0,
             clears: extremeClearCount
           } : modeRecordFor(m.id, safeDifficulty),
-          ranked = !isExtreme && modeHasRanking(m.id),
+          ranked = !isExtreme && !isSpecies && modeHasRanking(m.id),
           modeBestScore = ranked ? highestModeScore(isProMode(m.id) ? proHighScores : highScores, Object.keys(DIFFICULTY_SETTINGS)) : rec.score;
         return /*#__PURE__*/React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
@@ -27752,14 +27760,14 @@ function MonsterHeroGame() {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
-        }, isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`), /*#__PURE__*/React.createElement("b", {
+        }, isSpecies ? '試験状況' : isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`), /*#__PURE__*/React.createElement("b", {
           className: "block text-right text-base leading-tight",
           style: {
             color: m.color
           }
-        }, isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
+        }, isSpecies ? 'DEBUG TEST' : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
+        }, isSpecies ? '結果は保存されません' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
           className: "mt-1.5 space-y-0.5"
         }, m.highlights.map(([icon, text]) => /*#__PURE__*/React.createElement("li", {
           key: text,
@@ -27778,6 +27786,10 @@ function MonsterHeroGame() {
           disabled: extremeLocked || !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
           onClick: () => {
             setBattleMode(m.id);
+            if (isSpecies) {
+              openSpeciesChallengeSelection();
+              return;
+            }
             setGameState(isExtreme ? 'EXTREME_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
           },
           className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id === BATTLE_MODE_CHALLENGE ? battleTutorialSpotClass('modeStart') : ''}`,
@@ -27785,7 +27797,7 @@ function MonsterHeroGame() {
             backgroundColor: m.color,
             color: '#0f172a'
           }
-        }, extremeLocked ? 'まだ挑戦できません' : '難易度を選ぶ'), isExtreme && /*#__PURE__*/React.createElement("button", {
+        }, extremeLocked ? 'まだ挑戦できません' : isSpecies ? '種族を選ぶ' : '難易度を選ぶ'), isExtreme && /*#__PURE__*/React.createElement("button", {
           disabled: extremeLocked || !!battleTutorial,
           onClick: () => openModeScoreRanking(m.id, EXTREME_SETTING.id, 'BATTLE_MODE_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
@@ -28017,12 +28029,22 @@ function MonsterHeroGame() {
         className: "shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500"
       }, "\u30B9\u30B3\u30A2\u306F\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u5C02\u7528\u306E\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u8F09\u308A\u3001\u30C1\u30E3\u30EC\u30F3\u30B8\u306E\u8A18\u9332\u306F\u5909\u308F\u308A\u307E\u305B\u3093"))));
     })(), gameState === 'BATTLE_DIFFICULTY_SELECT' && (() => {
-      const quick = isQuickMode(battleMode),
-        difficulties = Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS),
-        selectedIndex = difficulties.findIndex(([key]) => key === safeDifficulty);
+      const species = battleMode === BATTLE_MODE_SPECIES_CHALLENGE,
+        quick = isQuickMode(battleMode);
+      const speciesSetting = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
+      const difficulties = species ? SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => [id, speciesSetting(id)]) : Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS);
+      const selectedDifficulty = species ? speciesChallengeSelection.difficultyId || difficulties[0]?.[0] : safeDifficulty;
+      const selectedIndex = Math.max(0, difficulties.findIndex(([key]) => key === selectedDifficulty));
+      const chooseDifficulty = id => species ? setSpeciesChallengeSelection(current => ({
+        ...current,
+        difficultyId: id,
+        heroId: '',
+        allyIds: [],
+        run: null
+      })) : setDifficulty(id);
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(difficulties.length - 1, index));
-        setDifficulty(difficulties[safe][0]);
+        chooseDifficulty(difficulties[safe][0]);
         modeDifficultyCarouselRef.current?.children[safe]?.scrollIntoView({
           behavior,
           inline: 'center',
@@ -28038,7 +28060,7 @@ function MonsterHeroGame() {
       // クイックはスコアを競わないのでスコアの代わりに経験値を出す
       const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
       const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.xp || setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
-      const noteText = quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
+      const noteText = species ? '種族別解放・初回報酬（試験中）' : quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
         style: {
@@ -28050,7 +28072,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u623B\u308B",
         disabled: !!battleTutorial,
-        onClick: () => setGameState('BATTLE_MODE_SELECT'),
+        onClick: () => setGameState(species ? 'SPECIES_CHALLENGE_SELECT' : 'BATTLE_MODE_SELECT'),
         className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
@@ -28107,7 +28129,7 @@ function MonsterHeroGame() {
               best = i;
             }
           });
-          if (difficulties[best]?.[0] !== safeDifficulty) setDifficulty(difficulties[best][0]);
+          if (difficulties[best]?.[0] !== selectedDifficulty) chooseDifficulty(difficulties[best][0]);
         },
         className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll",
         style: {
@@ -28117,9 +28139,9 @@ function MonsterHeroGame() {
         },
         "data-difficulty-carousel": true
       }, difficulties.map(([key, setting]) => {
-        const active = key === safeDifficulty,
+        const active = key === selectedDifficulty,
           rec = modeRecordFor(battleMode, key);
-        const quickUnlocked = !quick || debugBattle || isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
+        const quickUnlocked = species ? isSpeciesChallengeDifficultyUnlocked(key, speciesChallengeClearedDifficultyIds(speciesChallengeProgress, speciesChallengeSelection.speciesId)) : !quick || debugBattle || isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
         return /*#__PURE__*/React.createElement("article", {
           key: key,
           "aria-disabled": !quickUnlocked,
@@ -28172,7 +28194,9 @@ function MonsterHeroGame() {
           className: "shrink-0 whitespace-nowrap text-[10px] leading-tight text-fuchsia-200 font-black"
         }, "\u30AF\u30EA\u30A2\u5831\u916C"), /*#__PURE__*/React.createElement("div", {
           className: "flex-1 min-w-0 text-left whitespace-nowrap leading-[1.35]"
-        }, /*#__PURE__*/React.createElement("b", {
+        }, species ? /*#__PURE__*/React.createElement("b", {
+          className: "block text-[11px] text-amber-200"
+        }, "\u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(key)) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-white"
         }, "\u7D4C\u9A13\u5024\uFF1A", quick && quickRewardPolicy !== QUICK_REWARD_POLICY_GROWTH ? '0' : quick ? bonusLabel(setting.xp || setting.score) : '通常'), /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-fuchsia-100"
@@ -28180,9 +28204,9 @@ function MonsterHeroGame() {
           "aria-hidden": "true"
         }, "\uD83C\uDF08"), " \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\uFF1A", applyQuickPsychePolicy(clearPsycheReward(key), battleMode, quickRewardPolicy), "\u500B", quick ? quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '（×2）' : '（×1）' : ''), /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-amber-200"
-        }, "\uD83D\uDC8E \u30C0\u30A4\u30E4\uFF1A", quick ? bonusLabel(setting.gold * (quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? 2 : 1)) : `×${setting.gold}`, quick && quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? '（×2）' : ''))), /*#__PURE__*/React.createElement("div", {
+        }, "\uD83D\uDC8E \u30C0\u30A4\u30E4\uFF1A", quick ? bonusLabel(setting.gold * (quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? 2 : 1)) : `×${setting.gold}`, quick && quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? '（×2）' : '')))), /*#__PURE__*/React.createElement("div", {
           className: `grid gap-1.5 mt-1.5 ${quick ? 'mt-auto' : ''}`
-        }, /*#__PURE__*/React.createElement("button", {
+        }, !species && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => {
             setDifficulty(key);
@@ -28224,7 +28248,7 @@ function MonsterHeroGame() {
             backgroundColor: setting.bg,
             color: setting.darkText ? '#0f172a' : '#ffffff'
           }
-        }, !quickUnlocked ? '🔒 同じ難易度クリアで解放' : pro && !proReady ? `ベースモンが${PRO_ALLY_POOL_SIZE + 1}種必要です` : 'この難易度で挑戦'), ranked && /*#__PURE__*/React.createElement("button", {
+        }, !quickUnlocked ? species ? '🔒 前の難易度クリアで解放' : '🔒 同じ難易度クリアで解放' : pro && !proReady ? `ベースモンが${PRO_ALLY_POOL_SIZE + 1}種必要です` : 'この難易度で挑戦'), ranked && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => openModeScoreRanking(battleMode, key, 'BATTLE_DIFFICULTY_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
@@ -29777,12 +29801,6 @@ function MonsterHeroGame() {
     }, "BATTLE TEST")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-5"
     }, /*#__PURE__*/React.createElement("button", {
-      "data-species-challenge-production-flow": true,
-      onClick: openSpeciesChallengeSelection,
-      className: "w-full min-h-[76px] rounded-2xl border-2 border-cyan-300 bg-gradient-to-r from-cyan-950 to-indigo-950 px-4 text-cyan-50 font-black shadow-lg shadow-cyan-950/50"
-    }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8 \u672C\u756AUI\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
-      className: "block mt-1 text-[8px] leading-relaxed text-cyan-200"
-    }, "\u30E2\u30FC\u30C9\u753B\u9762\u304B\u3089WAVE10\u307E\u3067\u672C\u756A\u60F3\u5B9A\u306E\u5C0E\u7DDA\u3067\u78BA\u8A8D\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       "data-debug-species-challenge": true,
       onClick: async () => {
         await loadSpeciesChallengeProgress();
@@ -29865,7 +29883,7 @@ function MonsterHeroGame() {
       className: "w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black"
     }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-fuchsia-300"
-    }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
+    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
       className: "rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-pink-300 font-black mb-2"
@@ -30330,7 +30348,7 @@ function MonsterHeroGame() {
       })));
     })(), gameState === 'SPECIES_CHALLENGE_SELECT' && (() => {
       const selection = speciesChallengeSelection;
-      const stepOrder = ['intro', 'species', 'difficulty', 'hero', 'allies', 'confirm'];
+      const stepOrder = ['species', 'hero', 'allies', 'confirm'];
       const stepIndex = stepOrder.indexOf(selection.step);
       const speciesEntries = Object.entries(ALL_PLAYER_MONSTERS);
       const challengeEntries = buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, []);
@@ -30357,7 +30375,11 @@ function MonsterHeroGame() {
       }));
       const goBack = () => {
         if (stepIndex <= 0) {
-          setGameState('DEBUG_SETTINGS');
+          setGameState('BATTLE_MODE_SELECT');
+          return;
+        }
+        if (selection.step === 'hero') {
+          setGameState('BATTLE_DIFFICULTY_SELECT');
           return;
         }
         patchSelection({
@@ -30406,9 +30428,7 @@ function MonsterHeroGame() {
         startSpeciesChallengeBattle(run);
       };
       const titles = {
-        intro: '種族チャレンジ',
         species: '種族選択',
-        difficulty: '難易度選択',
         hero: '勇者モン選択',
         allies: '供モン選択',
         confirm: '出撃確認'
@@ -30468,64 +30488,7 @@ function MonsterHeroGame() {
         className: "ml-auto rounded-full border border-amber-400/40 bg-amber-950/70 px-2 py-1 text-[7px] font-black text-amber-200"
       }, "DEBUG\u30FB\u4FDD\u5B58\u306A\u3057")), /*#__PURE__*/React.createElement("section", {
         className: "mh-scroll min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pb-3"
-      }, selection.step === 'intro' && /*#__PURE__*/React.createElement("div", {
-        className: "flex min-h-full flex-col justify-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black"
-      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u30E2\u30FC\u30C9\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
-        className: "relative mt-1"
-      }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u524D\u306E\u30E2\u30FC\u30C9",
-        disabled: true,
-        className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 opacity-20"
-      }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("article", {
-        "data-species-preview-mode-card": true,
-        className: "mx-auto w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden flex flex-col",
-        style: {
-          borderColor: '#818cf8',
-          background: 'linear-gradient(180deg,#152044,#0d142b)',
-          boxShadow: '0 0 30px #818cf855'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
-      }, "BATTLE MODE"), /*#__PURE__*/React.createElement("h3", {
-        className: "text-center text-lg font-black leading-tight text-indigo-300"
-      }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("p", {
-        className: "text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]"
-      }, "\u9078\u3093\u3060\u7A2E\u65CF\u3060\u3051\u3067\u6311\u3080\u3001\u7A2E\u65CF\u9650\u5B9A\u306E\u30C1\u30E3\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
-      }, /*#__PURE__*/React.createElement("small", {
-        className: "block text-[8px] text-slate-400 font-black"
-      }, "\u516C\u958B\u72B6\u6CC1"), /*#__PURE__*/React.createElement("b", {
-        className: "block text-right text-base leading-tight text-indigo-300"
-      }, "DEBUG PREVIEW"), /*#__PURE__*/React.createElement("span", {
-        className: "block text-right text-[9px] text-amber-300"
-      }, "\u7D50\u679C\u30FB\u5831\u916C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("ul", {
-        className: "mt-1.5 space-y-0.5"
-      }, /*#__PURE__*/React.createElement("li", {
-        className: "flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black"
-      }, "\uD83E\uDDEC \u9078\u3093\u3060\u7A2E\u65CF\u3060\u3051\u3067\u30D1\u30FC\u30C6\u30A3\u7DE8\u6210"), /*#__PURE__*/React.createElement("li", {
-        className: "flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black"
-      }, "\uD83E\uDD1D \u4F9B\u30E2\u30F3\u306F0\u301C3\u4F53\u304B\u3089\u4EFB\u610F\u9078\u629E"), /*#__PURE__*/React.createElement("li", {
-        className: "flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black"
-      }, "\u2694\uFE0F W2\u30FB4\u30FB6\u3067\u6B8B\u308A\u304B\u3089\u52A0\u5165")), /*#__PURE__*/React.createElement("div", {
-        className: "grid gap-1.5 mt-auto pt-1.5"
-      }, /*#__PURE__*/React.createElement("button", {
-        className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs"
-      }, "\u3053\u306E\u30E2\u30FC\u30C9\u306E\u8AAC\u660E"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => patchSelection({
-          step: 'species'
-        }),
-        className: "min-h-[44px] rounded-xl bg-indigo-400 text-slate-950 font-black text-sm"
-      }, "\u7A2E\u65CF\u3092\u9078\u3076"))), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u6B21\u306E\u30E2\u30FC\u30C9",
-        disabled: true,
-        className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 opacity-20"
-      }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-center gap-1 py-1"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "w-1.5 h-1.5 rounded-full bg-indigo-300 scale-125"
-      }))), selection.step === 'species' && /*#__PURE__*/React.createElement("div", {
+      }, selection.step === 'species' && /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, speciesEntries.map(([id, monster]) => {
         const active = selection.speciesId === id;
@@ -30543,40 +30506,6 @@ function MonsterHeroGame() {
         }, monster.name), active && /*#__PURE__*/React.createElement("span", {
           className: "absolute right-2 top-2 rounded-full bg-cyan-300 px-2 py-1 text-[8px] font-black text-slate-950"
         }, "\u9078\u629E\u4E2D"));
-      })), selection.step === 'difficulty' && /*#__PURE__*/React.createElement(React.Fragment, null, SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
-        const unlocked = isSpeciesChallengeDifficultyUnlocked(id, clearedIds),
-          active = selection.difficultyId === id,
-          setting = DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(item => item.id === id);
-        return /*#__PURE__*/React.createElement("button", {
-          key: id,
-          "data-species-flow-difficulty": id,
-          disabled: !unlocked,
-          "aria-pressed": active,
-          onClick: () => patchSelection({
-            difficultyId: id,
-            heroId: '',
-            allyIds: [],
-            run: null
-          }),
-          className: `min-h-[112px] w-full overflow-hidden rounded-2xl border-2 p-3 text-left active:scale-[.98] disabled:opacity-50 ${active ? 'border-cyan-200 ring-1 ring-white' : 'border-white/10'}`,
-          style: {
-            background: unlocked ? `linear-gradient(135deg,${setting?.bg || '#164e63'},#0f172a)` : 'linear-gradient(135deg,#1e293b,#020617)'
-          }
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "flex items-start justify-between gap-2"
-        }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[7px] font-black tracking-widest text-slate-300"
-        }, "BATTLE DIFFICULTY"), /*#__PURE__*/React.createElement("b", {
-          className: "block text-base text-white"
-        }, difficultyLabel(id))), /*#__PURE__*/React.createElement("i", {
-          className: `rounded-full px-2 py-1 text-[8px] font-black not-italic ${unlocked ? 'bg-emerald-900 text-emerald-200' : 'bg-slate-800 text-slate-400'}`
-        }, unlocked ? '解放済み' : '🔒 未解放')), /*#__PURE__*/React.createElement("span", {
-          className: "mt-3 flex items-center justify-between rounded-xl bg-black/40 px-3 py-2"
-        }, /*#__PURE__*/React.createElement("small", {
-          className: "text-[9px] font-black text-amber-200"
-        }, "\u521D\u56DE\u30AF\u30EA\u30A2\u5831\u916C"), /*#__PURE__*/React.createElement("b", {
-          className: "text-[11px] text-amber-300"
-        }, "\u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(id))));
       })), selection.step === 'hero' && /*#__PURE__*/React.createElement(React.Fragment, null, heroCandidates.length ? heroCandidates.map(entry => monsterCard(entry, selection.heroId === entry.entryId, () => chooseHero(entry.entryId), false, selection.heroId === entry.entryId ? '勇者' : '')) : /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400"
       }, "\u3053\u306E\u7A2E\u65CF\u306E\u89E3\u653E\u6E08\u307F\u30D9\u30FC\u30B9\u30E2\u30F3\uFF0F\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002")), selection.step === 'allies' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -30615,19 +30544,16 @@ function MonsterHeroGame() {
         className: "rounded-xl border border-amber-400/30 bg-amber-950/30 p-3 text-[9px] leading-relaxed text-amber-100"
       }, "\u51FA\u6483\u5F8C\u306F\u65E2\u5B58\u30D0\u30C8\u30EB\u306EWAVE1\u3078\u9032\u307F\u307E\u3059\u3002\u3053\u306E\u78BA\u8A8D\u30E2\u30FC\u30C9\u3067\u306F\u7D50\u679C\u30FB\u5831\u916C\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("footer", {
         className: "mt-2 shrink-0"
-      }, selection.step === 'intro' ? null : selection.step === 'species' ? /*#__PURE__*/React.createElement("button", {
+      }, selection.step === 'species' ? /*#__PURE__*/React.createElement("button", {
         disabled: !selection.speciesId,
-        onClick: () => patchSelection({
-          step: 'difficulty'
-        }),
+        onClick: () => {
+          patchSelection({
+            difficultyId: SPECIES_CHALLENGE_DIFFICULTY_IDS[0]
+          });
+          setGameState('BATTLE_DIFFICULTY_SELECT');
+        },
         className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
-      }, "\u96E3\u6613\u5EA6\u9078\u629E\u3078") : selection.step === 'difficulty' ? /*#__PURE__*/React.createElement("button", {
-        disabled: !selection.difficultyId,
-        onClick: () => patchSelection({
-          step: 'hero'
-        }),
-        className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
-      }, "\u52C7\u8005\u30E2\u30F3\u9078\u629E\u3078") : selection.step === 'hero' ? /*#__PURE__*/React.createElement("button", {
+      }, "\u96E3\u6613\u5EA6\u9078\u629E\u3078") : selection.step === 'hero' ? /*#__PURE__*/React.createElement("button", {
         disabled: !selection.heroId,
         onClick: () => patchSelection({
           step: 'allies'
