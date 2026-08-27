@@ -10,20 +10,20 @@ const GEZUDERO_ICON = "images/breeder-icons/gezudero.png?v=d79a38ee0679";
 const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
-const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=9c4d7b5c3ff1";
+const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
 
 // ==================== モンスター円盤石アイコン ====================
 // DISC_STONE_BASE: 円盤石の土台画像(全モンスター共通)。作り方の詳細はBREEDER_MARKET_ITEMS手前のコメント参照。
-const DISC_STONE_BASE = "images/disc-icons/disc-stone-base.PNG?v=68c0be1a0e05";
-const ZAN_DISC_ICON = "images/disc-icons/zan.png?v=168e92b11f79";
-const MITARASHI_DISC_ICON = "images/disc-icons/mitarashi.png?v=4fe8d8d99525";
-const ARK_DISC_ICON = "images/disc-icons/ark.png?v=1c124027f057";
-const IBLIS_DISC_ICON = "images/disc-icons/iblis.png?v=8202f75a06f1";
-const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=f1032185e592";
-const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=8a601df886c5";
-const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=d2a3e509c7d2";
-const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=e62804cf3a5c";
-const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=9fce87806771";
+const DISC_STONE_BASE = "images/disc-icons/disc-stone-base.PNG?v=2cf55b47492a";
+const ZAN_DISC_ICON = "images/disc-icons/zan.png?v=dd757e49f636";
+const MITARASHI_DISC_ICON = "images/disc-icons/mitarashi.png?v=39933ff87253";
+const ARK_DISC_ICON = "images/disc-icons/ark.png?v=55e7c1c5d1e9";
+const IBLIS_DISC_ICON = "images/disc-icons/iblis.png?v=4d6d7f7f7234";
+const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=5404026ef24a";
+const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=3829b6f730f5";
+const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=99f34b0b4228";
+const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=23d828f69f14";
+const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=da09c07c8624";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["おりょうの力", "おりょうの気合", "おりょうの憤怒"],
@@ -162,17 +162,17 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Ark', name:"アークの円盤石", type:'disc', icon:ARK_DISC_ICON, cost:1500 },
   { id:'iblis_icon', name:"イブリースのアイコン", type:'icon', icon:IBLIS_FACE_ICON, cost:1 },
   { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:1500 },
-  { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA.PNG?v=21ee3cd2a444', cost:1 },
-  { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA_AWAKENED.PNG?v=3a71bfe44e3d', cost:1 },
+  { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe', cost:1 },
+  { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA_AWAKENED.PNG?v=52c8eda68793', cost:1 },
   { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:SNEGUROCHKA_DISC_ICON, cost:1500 },
   // ウンディーネ。本人アイコン・円盤石アイコン・解放用の円盤石の3商品。
   // アイコンは立ち絵/円盤石の絵をそのまま使い、丸い枠での見え方は
   // MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せる(画像は複製しない)
-  { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:'images/monsters/undine.PNG?v=5cb4df81fcb7', cost:1 },
+  { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:'images/monsters/undine.PNG?v=bf5593ae061a', cost:1 },
   { id:'undine_disc_icon', name:"ウンディーネの円盤石アイコン", type:'icon', icon:UNDINE_DISC_ICON, cost:1 },
   { id:'Undine', name:"ウンディーネの円盤石", type:'disc', icon:UNDINE_DISC_ICON, cost:1500 },
   // ヤオビクニ
-  { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:'images/monsters/yaobikuni.PNG?v=efbd9d5dd6fa', cost:1 },
+  { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:'images/monsters/yaobikuni.PNG?v=e23821f9d695', cost:1 },
   { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
   { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:1500 },
   // プラント。既存の本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
@@ -185,8 +185,8 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Mia', name:"ミーアの円盤石", type:'disc', icon:MIA_DISC_ICON, cost:1500 },
   // パンドラ。保存済みの本体・円盤石画像を各商品で共用する。
   { id:'pandora_icon', name:"パンドラのアイコン", type:'icon', icon:PANDORA_IMG, cost:1 },
-  { id:'pandora_disc_icon', name:"パンドラの円盤石アイコン", type:'icon', icon:'images/disc-icons/pandora-disc.PNG?v=6168795908b3', cost:1 },
-  { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:'images/disc-icons/pandora-disc.PNG?v=6168795908b3', cost:3000 },
+  { id:'pandora_disc_icon', name:"パンドラの円盤石アイコン", type:'icon', icon:'images/disc-icons/pandora-disc.PNG?v=adee72203d0a', cost:1 },
+  { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:'images/disc-icons/pandora-disc.PNG?v=adee72203d0a', cost:3000 },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'unique_skill_reset_ticket', name:"スキルポイントリセット券", type:'item', emoji:"🎟️", cost:1000, usage:'uniqueSkillReset', desc:"マスモン詳細の「固有技強化」で使うと、その個体の固有技に配分したポイントをすべて未使用の固有技Pへ戻せる。固有技以外の育成状態は変わらない。" },

@@ -5,25 +5,25 @@
 // (tools/extract-images.js)。パスの綴り間違い・置き忘れは
 // tools/image-asset-check.js が拾う。
 
-const DINO_IMG = "images/enemies/dino.png?v=81319f130d3e";
+const DINO_IMG = "images/enemies/dino.png?v=75352243f211";
 
-const GEL_IMG = "images/enemies/gel.png?v=689cfe44fc1d";
+const GEL_IMG = "images/enemies/gel.png?v=d222e94eff5b";
 
-const BLACKDINO_IMG = "images/enemies/blackdino.png?v=735a31f5c218";
+const BLACKDINO_IMG = "images/enemies/blackdino.png?v=59ee42098b91";
 
-const JAAKUSOU_IMG = "images/enemies/jaakusou.png?v=dd4434a9037e";
+const JAAKUSOU_IMG = "images/enemies/jaakusou.png?v=8f219a50db79";
 
-const BLUEMOUNTAIN_IMG = "images/enemies/bluemountain.png?v=199e8150d301";
+const BLUEMOUNTAIN_IMG = "images/enemies/bluemountain.png?v=f8409f1401ca";
 
-const GALI_IMG = "images/enemies/gali.png?v=3ade248f7009";
+const GALI_IMG = "images/enemies/gali.png?v=4dae1c1c20e3";
 
-const NAGA_IMG = "images/enemies/naga.png?v=30c8748fe732";
+const NAGA_IMG = "images/enemies/naga.png?v=318937e614cf";
 
-const LILIM_IMG = "images/enemies/lilim.png?v=3e44b5ba6448";
+const LILIM_IMG = "images/enemies/lilim.png?v=f44ed650b4b0";
 
-const DURAHAN_IMG = "images/enemies/durahan.png?v=46bef967b6b2";
+const DURAHAN_IMG = "images/enemies/durahan.png?v=0e3efd4f697c";
 
-const MOO_IMG_DATA = "images/enemies/moo.png?v=0160c034481a";
+const MOO_IMG_DATA = "images/enemies/moo.png?v=7a627d848865";
 
 // ムーは立ち絵とフル表示で同じ絵を使うため、パスを2度書かず参照にしている。
 // 同じ絵を使い回す場合は必ずこの書き方にすること(同じPNGを2枚置かないため)
