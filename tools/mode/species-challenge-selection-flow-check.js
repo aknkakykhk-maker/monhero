@@ -43,11 +43,17 @@ assert(screenStart >= 0 && screenEnd > screenStart, '5段階の共通選択画�
 for (const step of ['species', 'difficulty', 'hero', 'allies', 'confirm']) assert(screen.includes(`'${step}'`), `${step}ステップがある`);
 assert(screen.includes('Object.entries(ALL_PLAYER_MONSTERS)'), '種族候補はALL_PLAYER_MONSTERSのbaseIdを正本にする');
 assert(screen.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map'), '14難易度は既存ID一覧を再利用する');
+assert(screen.includes('speciesChallengeClearedDifficultyIds(speciesChallengeProgress,selection.speciesId)'), '選択フローは本番共通progressから種族別クリア難易度を得る');
 assert(screen.includes('isSpeciesChallengeDifficultyUnlocked(id,clearedIds)'), 'ロック判定は既存helperと種族別進行を再利用する');
+assert(!screen.includes('speciesChallengeDebugProgress'), '選択フローはデバッグ専用progressに依存しない');
 assert(screen.includes('buildUnifiedMonsterEntries(unlockedMonsterIds,masuMons,[])'), '勇者・供モンは既存統合候補生成を再利用する');
 assert(screen.includes('validateSpeciesChallengeAllySelection') && screen.includes('createSpeciesChallengeRunState'), 'STEP1D validationとrun helperを再利用する');
 assert(screen.includes('0体のままでも次へ進めます') && screen.includes('min-h-[44px]'), '0体出撃案内と44px以上の戻る操作を備える');
-assert(source.includes('data-species-challenge-production-flow') && source.includes("setGameState('SPECIES_CHALLENGE_SELECT')"), '入口は種族チャレンジ進行確認にある');
+assert(source.includes('const loadSpeciesChallengeProgress = async() =>')
+  && source.includes('normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false))'), '共通loaderは既存キーを読み込み正規化する');
+assert(source.includes('const openSpeciesChallengeSelection = async() =>')
+  && source.includes('await loadSpeciesChallengeProgress();')
+  && source.includes('data-species-challenge-production-flow onClick={openSpeciesChallengeSelection}'), 'デバッグ画面を先に開かず選択フロー入口で保存済み進行を読む');
 const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常の3モードとは別に持っている'));
 assert(!battleModes.includes('BATTLE_MODE_SPECIES_CHALLENGE') && !battleModes.includes('SPECIES_CHALLENGE_SELECT'), '本番BATTLE MODEには入口を表示しない');
 assert(!screen.includes('storeSet(') && !screen.includes('storeGet(') && !/mh_[a-z]/.test(screen), '選択フローは保存キーを読み書きしない');

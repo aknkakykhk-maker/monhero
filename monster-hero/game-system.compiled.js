@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8c445dfa74c8ae00
+// source-sha256: 73bcbe87288a5077
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 23:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13326,11 +13326,11 @@ function MonsterHeroGame() {
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
   const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
-  // 種族チャレンジ進行デバッグはSTEP1の保存形式・helperをそのまま表示／更新する。
-  // 選択中の種族・難易度だけが画面上の一時状態で、保存先は既存の進行キー1つに限る。
+  // 本番の選択フローと進行デバッグで、STEP1の保存形式・helperを共有する。
+  // 選択中の種族・難易度だけがデバッグ専用で、保存先は既存の進行キー1つに限る。
   const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(() => Object.keys(ALL_PLAYER_MONSTERS)[0] || '');
   const [speciesChallengeDebugDifficultyId, setSpeciesChallengeDebugDifficultyId] = useState('Expert');
-  const [speciesChallengeDebugProgress, setSpeciesChallengeDebugProgress] = useState(() => normalizeSpeciesChallengeProgress(null));
+  const [speciesChallengeProgress, setSpeciesChallengeProgress] = useState(() => normalizeSpeciesChallengeProgress(null));
   const [speciesChallengeDebugHeroId, setSpeciesChallengeDebugHeroId] = useState('');
   const [speciesChallengeDebugAllyIds, setSpeciesChallengeDebugAllyIds] = useState([]);
   const [speciesChallengeDebugRun, setSpeciesChallengeDebugRun] = useState(null);
@@ -13344,6 +13344,23 @@ function MonsterHeroGame() {
     allyIds: [],
     run: null
   });
+  const loadSpeciesChallengeProgress = async () => {
+    const progress = normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false));
+    setSpeciesChallengeProgress(progress);
+    return progress;
+  };
+  const openSpeciesChallengeSelection = async () => {
+    await loadSpeciesChallengeProgress();
+    setSpeciesChallengeSelection({
+      step: 'species',
+      speciesId: '',
+      difficultyId: '',
+      heroId: '',
+      allyIds: [],
+      run: null
+    });
+    setGameState('SPECIES_CHALLENGE_SELECT');
+  };
   const [transcendFruitDebugMasuId, setTranscendFruitDebugMasuId] = useState(null);
   const [transcendFruitDebugItemId, setTranscendFruitDebugItemId] = useState('');
   const [transcendFruitDebugResult, setTranscendFruitDebugResult] = useState(null);
@@ -29548,7 +29565,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       "data-debug-species-challenge": true,
       onClick: async () => {
-        setSpeciesChallengeDebugProgress(normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false)));
+        await loadSpeciesChallengeProgress();
         setGameState('SPECIES_CHALLENGE_DEBUG');
       },
       className: "w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black"
@@ -29779,16 +29796,16 @@ function MonsterHeroGame() {
     }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
       const speciesEntries = Object.entries(ALL_PLAYER_MONSTERS);
       const speciesId = ALL_PLAYER_MONSTERS[speciesChallengeDebugSpeciesId] ? speciesChallengeDebugSpeciesId : speciesEntries[0]?.[0] || '';
-      const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeDebugProgress, speciesId);
+      const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, speciesId);
       const saveProgress = async next => {
         const normalized = normalizeSpeciesChallengeProgress(next);
-        setSpeciesChallengeDebugProgress(normalized);
+        setSpeciesChallengeProgress(normalized);
         await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, normalized, false);
       };
       const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
       const resetSpecies = async () => {
         if (!window.confirm(`${ALL_PLAYER_MONSTERS[speciesId]?.name || speciesId}の種族チャレンジ進行だけをリセットしますか？`)) return;
-        const next = normalizeSpeciesChallengeProgress(speciesChallengeDebugProgress);
+        const next = normalizeSpeciesChallengeProgress(speciesChallengeProgress);
         delete next.species[speciesId];
         await saveProgress(next);
       };
@@ -29892,17 +29909,7 @@ function MonsterHeroGame() {
         className: "shrink-0 space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3"
       }, /*#__PURE__*/React.createElement("button", {
         "data-species-challenge-production-flow": true,
-        onClick: () => {
-          setSpeciesChallengeSelection({
-            step: 'species',
-            speciesId: '',
-            difficultyId: '',
-            heroId: '',
-            allyIds: [],
-            run: null
-          });
-          setGameState('SPECIES_CHALLENGE_SELECT');
-        },
+        onClick: openSpeciesChallengeSelection,
         className: "min-h-[52px] w-full rounded-xl border-2 border-cyan-300 bg-cyan-950 text-[11px] font-black text-cyan-100"
       }, "\u2694\uFE0F \u5B9F\u6226\u30D5\u30ED\u30FC\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
         className: "block text-[8px] text-cyan-300"
@@ -29935,10 +29942,10 @@ function MonsterHeroGame() {
       }, difficultyLabel(id))))), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => saveProgress(markSpeciesChallengeCleared(speciesChallengeDebugProgress, speciesId, speciesChallengeDebugDifficultyId)),
+        onClick: () => saveProgress(markSpeciesChallengeCleared(speciesChallengeProgress, speciesId, speciesChallengeDebugDifficultyId)),
         className: "min-h-[44px] rounded-xl bg-emerald-700 text-[10px] font-black"
       }, "cleared\u3092\u4ED8\u3051\u308B"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => saveProgress(markSpeciesChallengeFirstRewardClaimed(speciesChallengeDebugProgress, speciesId, speciesChallengeDebugDifficultyId)),
+        onClick: () => saveProgress(markSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesId, speciesChallengeDebugDifficultyId)),
         className: "min-h-[44px] rounded-xl bg-amber-700 text-[10px] font-black"
       }, "firstRewardClaimed\u3092\u4ED8\u3051\u308B")), /*#__PURE__*/React.createElement("button", {
         onClick: resetSpecies,
@@ -30077,8 +30084,8 @@ function MonsterHeroGame() {
         className: "text-[9px] text-slate-400"
       }, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002")), SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
         const unlocked = isSpeciesChallengeDifficultyUnlocked(id, clearedIds),
-          cleared = isSpeciesChallengeCleared(speciesChallengeDebugProgress, speciesId, id),
-          claimed = isSpeciesChallengeFirstRewardClaimed(speciesChallengeDebugProgress, speciesId, id);
+          cleared = isSpeciesChallengeCleared(speciesChallengeProgress, speciesId, id),
+          claimed = isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesId, id);
         return /*#__PURE__*/React.createElement("article", {
           key: id,
           "data-species-difficulty": id,
@@ -30111,7 +30118,7 @@ function MonsterHeroGame() {
         return entry ? `${entry.name}（${entry.type === 'masu' ? 'マスモン' : 'ベースモン'}／${entry.lineageName}）` : id;
       };
       const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
-      const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeDebugProgress, selection.speciesId);
+      const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, selection.speciesId);
       const heroCandidates = challengeEntries.filter(entry => entry.baseId === selection.speciesId);
       const allyCandidates = challengeEntries.filter(entry => entry.baseId !== selection.speciesId);
       const selectedAllies = selection.allyIds.filter(id => allyCandidates.some(entry => entry.entryId === id));
