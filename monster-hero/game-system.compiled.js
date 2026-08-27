@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9bdbb2bb9e0e5032
+// source-sha256: 46b2359531924813
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 01:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3149,6 +3149,37 @@ const BGM_TRACKS = [{
   src: 'audio/bgm-pro-battle-02.mp3',
   gain: 1,
   loop: true
+},
+// デュラハン戦用。A(時計仕掛け)をクイック、B(鋼鉄の亡霊)をプロの既定にする。
+// -Another- の2曲は既定では使わないが、BGMアレンジからどの枠へも選べる
+{
+  id: 'melo_dullahan_clockwork',
+  name: '呪われた騎士の時計仕掛け',
+  creator: 'オリジナル',
+  src: 'audio/bgm-dullahan-clockwork.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_dullahan_clockwork_alt',
+  name: '呪われた騎士の時計仕掛け -Another-',
+  creator: 'オリジナル',
+  src: 'audio/bgm-dullahan-clockwork-alt.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_dullahan_steel_ghost',
+  name: '鋼鉄の亡霊',
+  creator: 'オリジナル',
+  src: 'audio/bgm-dullahan-steel-ghost.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_dullahan_steel_ghost_alt',
+  name: '鋼鉄の亡霊 -Another-',
+  creator: 'オリジナル',
+  src: 'audio/bgm-dullahan-steel-ghost-alt.mp3',
+  gain: 1,
+  loop: true
 }];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
@@ -3165,10 +3196,10 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   dullahan: 'original_dullahan',
   boss: 'original_boss',
   quickBattle: 'ichika_battle',
-  quickDullahan: 'original_dullahan',
-  quickMoo: 'original_boss',
+  quickDullahan: 'melo_dullahan_clockwork',
+  quickMoo: 'ichika_boss',
   proBattle: 'original_pro_battle_01',
-  proDullahan: 'original_pro_battle_01',
+  proDullahan: 'melo_dullahan_steel_ghost',
   proMoo: 'original_pro_battle_02',
   extremeBattle: 'original_battle',
   extremeDullahan: 'original_dullahan',
@@ -3199,12 +3230,14 @@ const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
   proDullahan: 'original_dullahan',
   proMoo: 'original_boss'
 });
-const migrateProBgmDefaults = arrangement => {
+// 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
+// 中身は1か所にまとめ、対象の表と二重適用フラグだけを回ごとに分ける
+const migrateBgmDefaults = (arrangement, previousDefaults) => {
   const next = {
     ...arrangement
   };
   let changed = false;
-  Object.entries(BGM_PRO_PREVIOUS_DEFAULTS).forEach(([scene, previousDefault]) => {
+  Object.entries(previousDefaults).forEach(([scene, previousDefault]) => {
     if (next[scene] !== previousDefault) return; // 自分で選び直していれば触らない
     const nextDefault = DEFAULT_BGM_ARRANGEMENT[scene];
     if (!nextDefault || nextDefault === previousDefault) return;
@@ -3216,6 +3249,17 @@ const migrateProBgmDefaults = arrangement => {
     arrangement: changed ? next : arrangement
   };
 };
+const migrateProBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_PRO_PREVIOUS_DEFAULTS);
+// デュラハン戦の曲を足したときの、一度きりの移行。
+// クイックのデュラハン・ムーとプロのデュラハンだけ既定が変わる。
+// プロのぶんは上の移行で original_pro_battle_01 になっているので、そこからの入れ替えになる。
+const BGM_DULLAHAN_DEFAULT_MIGRATION_KEY = 'mh_bgm_dullahan_default_migrated_v1';
+const BGM_DULLAHAN_PREVIOUS_DEFAULTS = Object.freeze({
+  quickDullahan: 'original_dullahan',
+  quickMoo: 'original_boss',
+  proDullahan: 'original_pro_battle_01'
+});
+const migrateDullahanBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_DULLAHAN_PREVIOUS_DEFAULTS);
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
   const saved = value?.[scene];
   if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
@@ -15558,6 +15602,14 @@ function MonsterHeroGame() {
         if (proMigration.changed) savedBgmArrangement = proMigration.arrangement;
         try {
           await storeSet(BGM_PRO_DEFAULT_MIGRATION_KEY, true, false);
+        } catch {}
+      }
+      // デュラハン戦の曲を足したぶん。クイックのデュラハン・ムーとプロのデュラハンが対象
+      if ((await storeGet(BGM_DULLAHAN_DEFAULT_MIGRATION_KEY, false, false)) !== true) {
+        const dullahanMigration = migrateDullahanBgmDefaults(savedBgmArrangement);
+        if (dullahanMigration.changed) savedBgmArrangement = dullahanMigration.arrangement;
+        try {
+          await storeSet(BGM_DULLAHAN_DEFAULT_MIGRATION_KEY, true, false);
         } catch {}
       }
       setBgmArrangement(savedBgmArrangement);
