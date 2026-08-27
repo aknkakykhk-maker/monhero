@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7c0c6b5465813c6f
+// source-sha256: e100df73be5cafd6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 00:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 00:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8937,7 +8937,8 @@ const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULT
 const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';
 const emptySpeciesChallengeProgress = () => ({
   version: 1,
-  species: {}
+  species: {},
+  pendingRewards: {}
 });
 const validSpeciesChallengeId = speciesId => typeof speciesId === 'string' && speciesId.length > 0;
 const normalizeSpeciesChallengeDifficultyFlags = value => Object.fromEntries(SPECIES_CHALLENGE_DIFFICULTY_IDS.filter(difficultyId => value && typeof value === 'object' && value[difficultyId] === true).map(difficultyId => [difficultyId, true]));
@@ -8950,6 +8951,23 @@ const normalizeSpeciesChallengeProgress = value => {
     normalized.species[speciesId] = {
       cleared: normalizeSpeciesChallengeDifficultyFlags(entry.cleared),
       firstRewardClaimed: normalizeSpeciesChallengeDifficultyFlags(entry.firstRewardClaimed)
+    };
+  }
+  const savedPending = value && typeof value === 'object' && !Array.isArray(value) && value.pendingRewards && typeof value.pendingRewards === 'object' && !Array.isArray(value.pendingRewards) ? value.pendingRewards : {};
+  for (const [key, pending] of Object.entries(savedPending)) {
+    if (!pending || typeof pending !== 'object' || Array.isArray(pending)) continue;
+    const speciesId = typeof pending.speciesId === 'string' ? pending.speciesId : '';
+    const difficultyId = pending.difficultyId;
+    const itemId = speciesTranscendFruitItemId(speciesId);
+    const rewardAmount = Math.floor(Number(pending.rewardAmount));
+    const targetCount = Math.floor(Number(pending.targetCount));
+    if (key !== `${speciesId}:${difficultyId}` || !itemId || pending.itemId !== itemId || !SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) || !Number.isFinite(rewardAmount) || rewardAmount <= 0 || !Number.isFinite(targetCount) || targetCount < rewardAmount) continue;
+    normalized.pendingRewards[key] = {
+      speciesId,
+      difficultyId,
+      itemId,
+      rewardAmount,
+      targetCount
     };
   }
   return normalized;
@@ -9116,6 +9134,130 @@ const SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS = Object.freeze({
   INFINITY: 40
 });
 const speciesChallengeFirstClearReward = difficultyId => Object.prototype.hasOwnProperty.call(SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS, difficultyId) ? SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS[difficultyId] : 0;
+const speciesChallengeRewardPendingKey = (speciesId, difficultyId) => `${speciesId}:${difficultyId}`;
+// クリアと初回報酬の最終形を作る純粋処理。pendingのtargetCountは「加算値」ではなく
+// 絶対所持数なので、保存途中から何度やり直しても同じ所持数へ収束する。
+const finalizeSpeciesChallengeClearReward = ({
+  progress,
+  ownedItems,
+  speciesId,
+  difficultyId
+} = {}) => {
+  const currentProgress = normalizeSpeciesChallengeProgress(progress);
+  const currentItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const rewardAmount = speciesChallengeFirstClearReward(difficultyId);
+  const itemId = speciesTranscendFruitItemId(speciesId);
+  if (!itemId || rewardAmount <= 0) {
+    return {
+      nextProgress: currentProgress,
+      nextOwnedItems: currentItems,
+      rewardGranted: false,
+      rewardAmount: 0
+    };
+  }
+  const clearedProgress = markSpeciesChallengeCleared(currentProgress, speciesId, difficultyId);
+  const pendingKey = speciesChallengeRewardPendingKey(speciesId, difficultyId);
+  if (isSpeciesChallengeFirstRewardClaimed(clearedProgress, speciesId, difficultyId)) {
+    delete clearedProgress.pendingRewards[pendingKey];
+    return {
+      nextProgress: clearedProgress,
+      nextOwnedItems: currentItems,
+      rewardGranted: false,
+      rewardAmount: 0
+    };
+  }
+  const savedPending = clearedProgress.pendingRewards[pendingKey];
+  const pending = savedPending && savedPending.itemId === itemId && savedPending.rewardAmount === rewardAmount ? savedPending : {
+    speciesId,
+    difficultyId,
+    itemId,
+    rewardAmount,
+    targetCount: ownedItemCount(currentItems, itemId) + rewardAmount
+  };
+  const nextOwnedItems = {
+    ...currentItems,
+    [itemId]: Math.max(ownedItemCount(currentItems, itemId), pending.targetCount)
+  };
+  const nextProgress = markSpeciesChallengeFirstRewardClaimed(clearedProgress, speciesId, difficultyId);
+  delete nextProgress.pendingRewards[pendingKey];
+  return {
+    nextProgress,
+    nextOwnedItems,
+    rewardGranted: true,
+    rewardAmount
+  };
+};
+// 2キーを一括保存できないlocal storageでも安全にする4段階確定。
+// pendingを先に残し、実はtargetCountまで、claimed後にpendingを消す。
+const persistSpeciesChallengeClearRewardTransaction = async ({
+  progress,
+  ownedItems,
+  speciesId,
+  difficultyId,
+  storeSet,
+  storeGet
+} = {}) => {
+  const savedProgress = await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, progress, false);
+  const savedItems = await storeGet('mh_owned_items', ownedItems, false);
+  const currentProgress = normalizeSpeciesChallengeProgress(savedProgress);
+  const currentItems = savedItems && typeof savedItems === 'object' && !Array.isArray(savedItems) ? savedItems : {};
+  const rewardAmount = speciesChallengeFirstClearReward(difficultyId);
+  const itemId = speciesTranscendFruitItemId(speciesId);
+  if (!itemId || rewardAmount <= 0) return finalizeSpeciesChallengeClearReward({
+    progress: currentProgress,
+    ownedItems: currentItems,
+    speciesId,
+    difficultyId
+  });
+  const pendingKey = speciesChallengeRewardPendingKey(speciesId, difficultyId);
+  if (isSpeciesChallengeFirstRewardClaimed(currentProgress, speciesId, difficultyId)) {
+    const result = finalizeSpeciesChallengeClearReward({
+      progress: currentProgress,
+      ownedItems: currentItems,
+      speciesId,
+      difficultyId
+    });
+    if (currentProgress.pendingRewards[pendingKey]) await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, result.nextProgress, false);
+    return result;
+  }
+  const savedPending = currentProgress.pendingRewards[pendingKey];
+  const pending = savedPending && savedPending.itemId === itemId && savedPending.rewardAmount === rewardAmount ? savedPending : {
+    speciesId,
+    difficultyId,
+    itemId,
+    rewardAmount,
+    targetCount: ownedItemCount(currentItems, itemId) + rewardAmount
+  };
+  const pendingProgress = markSpeciesChallengeCleared(currentProgress, speciesId, difficultyId);
+  pendingProgress.pendingRewards[pendingKey] = pending;
+  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, pendingProgress, false);
+  const latestItems = await storeGet('mh_owned_items', currentItems, false);
+  const safeLatestItems = latestItems && typeof latestItems === 'object' && !Array.isArray(latestItems) ? latestItems : currentItems;
+  const nextOwnedItems = {
+    ...safeLatestItems,
+    [itemId]: Math.max(ownedItemCount(safeLatestItems, itemId), pending.targetCount)
+  };
+  await storeSet('mh_owned_items', nextOwnedItems, false);
+  const claimedProgress = markSpeciesChallengeFirstRewardClaimed(pendingProgress, speciesId, difficultyId);
+  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, claimedProgress, false);
+  const nextProgress = normalizeSpeciesChallengeProgress(claimedProgress);
+  delete nextProgress.pendingRewards[pendingKey];
+  await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, nextProgress, false);
+  return {
+    nextProgress,
+    nextOwnedItems,
+    rewardGranted: true,
+    rewardAmount
+  };
+};
+// 同一タブ内の別クリアが同時に走ってprogressを上書きし合わないよう、保存処理は直列化する。
+// 1件が保存エラーになっても後続の復旧処理を止めない。
+let speciesChallengeRewardPersistenceQueue = Promise.resolve();
+const persistSpeciesChallengeClearReward = (args = {}) => {
+  const task = speciesChallengeRewardPersistenceQueue.then(() => persistSpeciesChallengeClearRewardTransaction(args));
+  speciesChallengeRewardPersistenceQueue = task.catch(() => {});
+  return task;
+};
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];

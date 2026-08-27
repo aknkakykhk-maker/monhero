@@ -130,6 +130,15 @@ const EXPORTED_NAMES = [
   'CLEAR_PSYCHE_REWARD',
   'clearPsycheReward',
   'DIFFICULTY_SETTINGS',
+  'SPECIES_CHALLENGE_DIFFICULTY_IDS',
+  'SPECIES_CHALLENGE_PROGRESS_KEY',
+  'normalizeSpeciesChallengeProgress',
+  'isSpeciesChallengeCleared',
+  'isSpeciesChallengeFirstRewardClaimed',
+  'SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS',
+  'speciesChallengeFirstClearReward',
+  'finalizeSpeciesChallengeClearReward',
+  'persistSpeciesChallengeClearReward',
   'BREEDER_MARKET_ITEMS',
 ];
 
