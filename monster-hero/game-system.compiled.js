@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 46b2359531924813
+// source-sha256: dd4ea089f597a530
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 11:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3277,11 +3277,15 @@ const Audio_ = (() => {
     bgmGain = null;
   const buffers = new Map();
   const loadingBuffers = new Map();
+  // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
+  // 通常BGM(bgmRequest)と同じ役目で、読み込みを待っているあいだに止められたり
+  // 押し直されたりした古い呼び出しが、あとから音を鳴らし始めるのを防ぐ
   let bgmSource = null,
     bgmSourceKey = null,
     bgmRequest = 0,
     previewSource = null,
-    previewKey = null;
+    previewKey = null,
+    previewRequest = 0;
   let jingleSource = null,
     jingleTimer = null;
   let currentKey = null,
@@ -3523,7 +3527,9 @@ const Audio_ = (() => {
     }
     return loadBuffer(track.src).then(buffer => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
   };
+  // 番号を進めることで、読み込み待ちの古い試聴を無効にする(あとから鳴り出さない)
   const stopPreview = (resume = true) => {
+    ++previewRequest;
     stopSource(previewSource);
     previewSource = null;
     previewKey = null;
@@ -3539,15 +3545,22 @@ const Audio_ = (() => {
     stopPreview(false);
     stopJingles();
     stopOthers();
+    // stopPreview が番号を進めたあとに受け取るので、この値はこの呼び出し専用。
+    // 曲名だけで見張っていると、同じ曲を素早く押し直したときに古い呼び出しも
+    // 条件を通ってしまい、音源が2つ鳴って片方が参照から外れる(誰も止められなくなる)。
+    // 実際に「止めても鳴り続ける・アレンジを閉じても鳴り続ける」不具合になっていた
+    const request = previewRequest;
     previewKey = track.id;
     // 通常BGM(playBGM)と同じく、タップが効いているうちに同期でresumeを始める。
     // 読み込みを待ってから初めてresumeすると、user activationが切れていて復帰できない端末がある
     resumeAudioCtxNoWait();
     try {
       const buffer = await loadBuffer(track.src);
-      if (previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
+      if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
       const ctx = await ensureAudioCtxRunning();
       if (!ctx) return false;
+      // ensureAudioCtxRunning も待つので、そのあいだに止められていないかもう一度見る
+      if (request !== previewRequest) return false;
       applyTrackGain(track);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
@@ -3563,13 +3576,22 @@ const Audio_ = (() => {
       if (ctx.state !== 'running') {
         await ensureAudioCtxRunning();
       }
+      // 復帰待ちのあいだに止められていたら、いま鳴らし始めたぶんを取り逃さず止める
+      if (request !== previewRequest) {
+        stopSource(source);
+        if (previewSource === source) {
+          previewSource = null;
+          previewKey = null;
+        }
+        return false;
+      }
       if (ctx.state !== 'running') {
         if (previewKey === track.id) stopPreview(false);
         return false;
       }
       return true;
     } catch (e) {
-      if (previewKey === track.id) stopPreview(true);
+      if (request === previewRequest && previewKey === track.id) stopPreview(true);
       return false;
     }
   };
