@@ -1,5 +1,13 @@
 const CHANGELOG = [
   {
+    date: "2026-08-27 23:18", type: 'update', title: '虹の超越の実をマーケットへ追加しました', status: 'new',
+    assistantNotice: { id:'update_notice_rainbow_transcend_fruit_market_v1', type:'market' },
+    items: [
+      'マーケットのアイテムに「虹の超越の実」を追加しました。1個1000プシュケーで、回数制限なく購入できます。',
+      '虹の超越の実はどの種族のマスモンにも使え、1個で超越ポイントが1増えます。',
+    ],
+  },
+  {
     date: "2026-08-27 23:07", type: 'update', title: '超越の実をマスモンへ使えるようにしました', status: 'new',
     items: [
       'M/B管理のマスモン詳細から「強化」→「超越強化」を開くと、対応種族の超越の実と虹の超越の実を超越ポイントへ変えられます。実を1個使うごとに、その個体の超越ポイントが1増えます。',
