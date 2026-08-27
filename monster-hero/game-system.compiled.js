@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 69137f0346687cd2
+// source-sha256: 2aa55dbfcf92b4a1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 19:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 19:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13208,6 +13208,11 @@ function MonsterHeroGame() {
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
   const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
+  // 種族チャレンジ進行デバッグはSTEP1の保存形式・helperをそのまま表示／更新する。
+  // 選択中の種族・難易度だけが画面上の一時状態で、保存先は既存の進行キー1つに限る。
+  const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(() => Object.keys(ALL_PLAYER_MONSTERS)[0] || '');
+  const [speciesChallengeDebugDifficultyId, setSpeciesChallengeDebugDifficultyId] = useState('Expert');
+  const [speciesChallengeDebugProgress, setSpeciesChallengeDebugProgress] = useState(() => normalizeSpeciesChallengeProgress(null));
   const [dyeMaskEditorOpened, setDyeMaskEditorOpened] = useState(false);
   const [temporaryDyeMasks, setTemporaryDyeMasks] = useState({});
   const temporaryDyeMasksRef = useRef({});
@@ -29365,6 +29370,15 @@ function MonsterHeroGame() {
     }, "BATTLE TEST")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-5"
     }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-species-challenge": true,
+      onClick: async () => {
+        setSpeciesChallengeDebugProgress(normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false)));
+        setGameState('SPECIES_CHALLENGE_DEBUG');
+      },
+      className: "w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black"
+    }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-emerald-300"
+    }, "\u7A2E\u65CF\u5225\u306E\u89E3\u653E\u30FB\u30AF\u30EA\u30A2\u30FB\u521D\u56DE\u5831\u916C\u3092\u78BA\u8A8D\uFF0F\u7DE8\u96C6")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('REINCARNATE_DISPLAY_DEBUG'),
       className: "w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black"
     }, "\u267B\uFE0F \u8EE2\u751F\u8868\u793A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
@@ -29586,7 +29600,101 @@ function MonsterHeroGame() {
       disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
+    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
+      const speciesEntries = Object.entries(ALL_PLAYER_MONSTERS);
+      const speciesId = ALL_PLAYER_MONSTERS[speciesChallengeDebugSpeciesId] ? speciesChallengeDebugSpeciesId : speciesEntries[0]?.[0] || '';
+      const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeDebugProgress, speciesId);
+      const saveProgress = async next => {
+        const normalized = normalizeSpeciesChallengeProgress(next);
+        setSpeciesChallengeDebugProgress(normalized);
+        await storeSet(SPECIES_CHALLENGE_PROGRESS_KEY, normalized, false);
+      };
+      const difficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+      const resetSpecies = async () => {
+        if (!window.confirm(`${ALL_PLAYER_MONSTERS[speciesId]?.name || speciesId}の種族チャレンジ進行だけをリセットしますか？`)) return;
+        const next = normalizeSpeciesChallengeProgress(speciesChallengeDebugProgress);
+        delete next.species[speciesId];
+        await saveProgress(next);
+      };
+      return /*#__PURE__*/React.createElement("main", {
+        "data-species-challenge-debug": true,
+        className: "flex-1 flex flex-col min-h-0 bg-slate-950 p-3",
+        style: {
+          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "flex items-center gap-2 mb-3 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
+        onClick: () => setGameState('DEBUG_SETTINGS'),
+        className: "p-3 text-slate-400"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px] font-black text-emerald-300"
+      }, "DEBUG\u30FB\u4FDD\u5B58\u5148 ", SPECIES_CHALLENGE_PROGRESS_KEY), /*#__PURE__*/React.createElement("h2", {
+        className: "text-sm font-black"
+      }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("section", {
+        className: "shrink-0 space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3"
+      }, /*#__PURE__*/React.createElement("label", {
+        className: "block text-[9px] font-black text-emerald-200"
+      }, "\u7A2E\u65CF\uFF08ALL_PLAYER_MONSTERS\uFF09", /*#__PURE__*/React.createElement("select", {
+        "aria-label": "\u7A2E\u65CF",
+        value: speciesId,
+        onChange: e => setSpeciesChallengeDebugSpeciesId(e.target.value),
+        className: "mt-1 block min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[11px] text-white"
+      }, speciesEntries.map(([id, monster]) => /*#__PURE__*/React.createElement("option", {
+        key: id,
+        value: id
+      }, monster.name, "\uFF0F", id)))), /*#__PURE__*/React.createElement("label", {
+        className: "block text-[9px] font-black text-emerald-200"
+      }, "\u64CD\u4F5C\u5BFE\u8C61\u306E\u96E3\u6613\u5EA6", /*#__PURE__*/React.createElement("select", {
+        "aria-label": "\u64CD\u4F5C\u5BFE\u8C61\u306E\u96E3\u6613\u5EA6",
+        value: speciesChallengeDebugDifficultyId,
+        onChange: e => setSpeciesChallengeDebugDifficultyId(e.target.value),
+        className: "mt-1 block min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[11px] text-white"
+      }, SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => /*#__PURE__*/React.createElement("option", {
+        key: id,
+        value: id
+      }, difficultyLabel(id))))), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => saveProgress(markSpeciesChallengeCleared(speciesChallengeDebugProgress, speciesId, speciesChallengeDebugDifficultyId)),
+        className: "min-h-[44px] rounded-xl bg-emerald-700 text-[10px] font-black"
+      }, "cleared\u3092\u4ED8\u3051\u308B"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => saveProgress(markSpeciesChallengeFirstRewardClaimed(speciesChallengeDebugProgress, speciesId, speciesChallengeDebugDifficultyId)),
+        className: "min-h-[44px] rounded-xl bg-amber-700 text-[10px] font-black"
+      }, "firstRewardClaimed\u3092\u4ED8\u3051\u308B")), /*#__PURE__*/React.createElement("button", {
+        onClick: resetSpecies,
+        className: "min-h-[40px] w-full rounded-xl border border-red-500/60 bg-red-950/50 text-[9px] font-black text-red-200"
+      }, "\u9078\u629E\u7A2E\u65CF\u306E\u9032\u884C\u3060\u3051\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("section", {
+        className: "mt-3 flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2"
+      }, SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
+        const unlocked = isSpeciesChallengeDifficultyUnlocked(id, clearedIds),
+          cleared = isSpeciesChallengeCleared(speciesChallengeDebugProgress, speciesId, id),
+          claimed = isSpeciesChallengeFirstRewardClaimed(speciesChallengeDebugProgress, speciesId, id);
+        return /*#__PURE__*/React.createElement("article", {
+          key: id,
+          "data-species-difficulty": id,
+          className: `rounded-xl border p-3 ${unlocked ? 'border-emerald-500/40 bg-slate-900' : 'border-white/10 bg-slate-950 opacity-65'}`
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center justify-between gap-2"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "text-[11px]"
+        }, difficultyLabel(id)), /*#__PURE__*/React.createElement("span", {
+          className: `rounded-full px-2 py-1 text-[8px] font-black ${unlocked ? 'bg-emerald-900 text-emerald-200' : 'bg-slate-800 text-slate-400'}`
+        }, unlocked ? '解放' : '未解放')), /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 grid grid-cols-3 gap-1 text-center text-[8px]"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: cleared ? 'text-emerald-300' : 'text-slate-500'
+        }, "cleared", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, String(cleared))), /*#__PURE__*/React.createElement("span", {
+          className: claimed ? 'text-amber-300' : 'text-slate-500'
+        }, "firstRewardClaimed", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, String(claimed))), /*#__PURE__*/React.createElement("span", {
+          className: "text-fuchsia-200"
+        }, "\u521D\u56DE\u5831\u916C", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, "\u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(id)))));
+      })));
+    })(), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
       const owned = [...masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId])];
       if (temporaryDyeMasks.Mia) owned.push({
         id: 'temporary-dye-Mia',
