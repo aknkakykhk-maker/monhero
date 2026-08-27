@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d0d276b4c08436b0
+// source-sha256: a6d4decfb262c070
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 00:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 01:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9943,13 +9943,10 @@ const MarketProductCard = ({
     onClick: onBuy,
     disabled: disabled || !canBuy,
     "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${item.cost}${usesPsyche ? 'プシュケー' : usesGold ? 'ダイヤ' : 'pt'}で購入`}`,
-    className: `text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-0.5 ${usesPsyche ? 'flex-wrap leading-tight text-center' : 'whitespace-nowrap'} ${!disabled && canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
+    className: `text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
   }, usesPsyche ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-    className: "w-full whitespace-nowrap",
     "aria-hidden": "true"
-  }, "\uD83C\uDF08 \u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
-    className: "w-full whitespace-nowrap"
-  }, "\xD7", item.cost.toLocaleString())) : /*#__PURE__*/React.createElement(React.Fragment, null, usesGold ? /*#__PURE__*/React.createElement(Gem, {
+  }, "\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", null, item.cost.toLocaleString())) : /*#__PURE__*/React.createElement(React.Fragment, null, usesGold ? /*#__PURE__*/React.createElement(Gem, {
     size: 9
   }) : /*#__PURE__*/React.createElement(Coins, {
     size: 9
@@ -17592,7 +17589,7 @@ function MonsterHeroGame() {
         });
       }
       saveMissionProgress('market');
-      if (item.id === RAINBOW_TRANSCEND_FRUIT_ITEM_ID) setMarketQuantityItem(null);
+      if (item.type === 'item') setMarketQuantityItem(null);
     } finally {
       marketPurchaseProcessingRef.current = false;
     }
@@ -31335,7 +31332,7 @@ function MonsterHeroGame() {
         canBuy: canBuy,
         onZoom: () => setMarketIconZoom(item),
         onBuy: () => {
-          if (item.id === RAINBOW_TRANSCEND_FRUIT_ITEM_ID) {
+          if (item.type === 'item') {
             setMarketPurchaseQuantity(1);
             setMarketQuantityItem(item);
           } else buyMarketItem(item);
@@ -36333,13 +36330,16 @@ function MonsterHeroGame() {
       onClick: () => setMarketItemDetail(null),
       className: "w-full mt-4 min-h-[48px] rounded-2xl bg-teal-600 text-white font-black active:scale-[.98]"
     }, "\u3068\u3058\u308B"))), marketQuantityItem && (() => {
-      const psyche = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+      const usesPsyche = marketQuantityItem.currency === 'psyche';
+      const balance = usesPsyche ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : gold;
+      const unit = usesPsyche ? 'プシュケー' : 'ダイヤ';
       const unitCost = Math.max(0, Math.floor(Number(marketQuantityItem.cost) || 0));
-      const maxQuantity = unitCost > 0 ? Math.floor(psyche / unitCost) : 0;
+      const maxQuantity = unitCost > 0 ? Math.floor(balance / unitCost) : 0;
       const quantity = Math.min(Math.max(1, marketPurchaseQuantity), Math.max(1, maxQuantity));
       const total = unitCost * quantity;
       const canPurchase = maxQuantity > 0 && !marketPurchaseProcessingRef.current;
       const changeQuantity = delta => setMarketPurchaseQuantity(current => Math.min(Math.max(1, current + delta), Math.max(1, maxQuantity)));
+      const accentText = usesPsyche ? 'text-fuchsia-200' : 'text-amber-200';
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center overflow-y-auto px-4",
         style: {
@@ -36355,16 +36355,16 @@ function MonsterHeroGame() {
         "aria-label": `${marketQuantityItem.name}の購入個数選択`
       }, /*#__PURE__*/React.createElement("div", {
         onClick: e => e.stopPropagation(),
-        className: "w-full max-w-sm rounded-3xl border-2 border-fuchsia-400/70 bg-slate-950 p-4 shadow-2xl"
+        className: `w-full max-w-sm rounded-3xl border-2 ${usesPsyche ? 'border-fuchsia-400/70' : 'border-amber-400/70'} bg-slate-950 p-4 shadow-2xl`
       }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-center text-lg font-black text-fuchsia-200"
+        className: `text-center text-lg font-black ${accentText}`
       }, marketQuantityItem.name), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 rounded-2xl bg-slate-900 p-3 text-center"
       }, /*#__PURE__*/React.createElement("span", {
         className: "block text-[10px] font-bold text-slate-400"
       }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("strong", {
-        className: "mt-1 block text-xl font-black text-fuchsia-200"
-      }, psyche.toLocaleString(), " \u30D7\u30B7\u30E5\u30B1\u30FC")), /*#__PURE__*/React.createElement("div", {
+        className: `mt-1 block text-xl font-black ${accentText}`
+      }, balance.toLocaleString(), " ", unit)), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 text-center text-[11px] font-black text-slate-300"
       }, "\u8CFC\u5165\u500B\u6570"), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 grid grid-cols-5 items-center gap-1.5"
@@ -36389,28 +36389,28 @@ function MonsterHeroGame() {
       }, "+10")), /*#__PURE__*/React.createElement("button", {
         disabled: maxQuantity <= 0,
         onClick: () => setMarketPurchaseQuantity(maxQuantity),
-        className: "mt-2 min-h-[44px] w-full rounded-xl bg-fuchsia-800 font-black disabled:opacity-30"
+        className: `mt-2 min-h-[44px] w-full rounded-xl font-black disabled:opacity-30 ${usesPsyche ? 'bg-fuchsia-800' : 'bg-amber-700'}`
       }, "MAX\uFF08", maxQuantity.toLocaleString(), "\u500B\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "\u5358\u4FA1"), /*#__PURE__*/React.createElement("span", null, "1\u500B = ", unitCost.toLocaleString(), "\u30D7\u30B7\u30E5\u30B1\u30FC")), /*#__PURE__*/React.createElement("div", {
+      }, "\u5358\u4FA1"), /*#__PURE__*/React.createElement("span", null, "1\u500B = ", unitCost.toLocaleString(), unit)), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-base"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
       }, "\u5408\u8A08"), /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, total.toLocaleString(), "\u30D7\u30B7\u30E5\u30B1\u30FC")), /*#__PURE__*/React.createElement("div", {
+      }, total.toLocaleString(), unit)), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
       }, "\u8CFC\u5165\u5F8C"), /*#__PURE__*/React.createElement("span", {
-        className: "text-fuchsia-200"
-      }, "\u6B8B\u308A", Math.max(0, psyche - total).toLocaleString(), "\u30D7\u30B7\u30E5\u30B1\u30FC"))), maxQuantity <= 0 && /*#__PURE__*/React.createElement("p", {
+        className: accentText
+      }, "\u6B8B\u308A", Math.max(0, balance - total).toLocaleString(), unit))), maxQuantity <= 0 && /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-center text-[12px] font-black text-red-300"
-      }, "\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
+      }, unit, "\u304C\u8DB3\u308A\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 grid grid-cols-1 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: !canPurchase,

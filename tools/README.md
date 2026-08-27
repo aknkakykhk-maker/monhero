@@ -90,7 +90,8 @@ node tools/build.js --check
 | `node boot/mission-check.js` | デイリー・ウィークリーのJST期間、達成条件、バッジ、ギフト報酬と重複防止を確認する。 |
 | `node boot/mission-gift-badge-check.js` | ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、ランキングのタブ分離を確認する。 |
 | `node boot/market-notice-check.js` | マーケットへ商品を足したのに助手の告知(`assistantNotice`)を付け忘れていないか、告知idの重複・種類・本文の有無を確認する。 |
-| `node boot/rainbow-transcend-fruit-market-check.js` | 虹の超越の実が既存IDのまま1000プシュケーで常設販売され、不足時・連続購入・既存ダイヤ商品・2キー保存のロールバックが安全であることを確認する。 |
+| `node boot/rainbow-transcend-fruit-market-check.js` | 虹の超越の実が既存IDのまま1000プシュケーで常設販売され、不足時・連続購入・既存ダイヤ商品・2キー保存のロールバックが安全であることを確認する。価格表示がカード内で1行に収まり、ダイヤ購入と色で見分けられることも見る。 |
+| `node boot/market-item-quantity-purchase-check.js` | マーケットの消耗アイテム(type:'item')全体で、価格タップ→個数選択シートが開いてまとめ買いできることを確認する。虹の超越の実だけの専用対応だった個数選択を全アイテムへ広げたときに追加した。ダイヤ商品を複数個まとめて買っても単価×個数どおりに計算され、消耗アイテムが「所持済み」扱いにならず続けて買えることを見る。 |
 
 ### バトル
 
@@ -388,7 +389,7 @@ tools/                        開発用の検証スクリプト(配信されな�
   render-error-check.js  compiled-runtime-check.js  boot-flow-check.js
   update-notice-check.js  image-asset-check.js  layout-consistency-check.js
   home-layout-check.js  help-*-check.js  assistant-*-check.js  stamp-*.js
-  boot/                       起動・トップ・はじめての案内(13本)
+  boot/                       起動・トップ・はじめての案内(16本)
   battle/                     バトル(24本)
   mode/                       難易度とモード(13本)
   run/                        ラン中の育成・報酬・リザルト(10本)
