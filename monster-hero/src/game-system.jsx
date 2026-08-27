@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 11:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2205,7 +2205,10 @@ const Audio_ = (() => {
   let audioCtx = null, bgmGain = null;
   const buffers = new Map();
   const loadingBuffers = new Map();
-  let bgmSource = null, bgmSourceKey = null, bgmRequest = 0, previewSource = null, previewKey = null;
+  // previewRequest は試聴の「この呼び出しが今も最新か」を見るための番号。
+  // 通常BGM(bgmRequest)と同じ役目で、読み込みを待っているあいだに止められたり
+  // 押し直されたりした古い呼び出しが、あとから音を鳴らし始めるのを防ぐ
+  let bgmSource = null, bgmSourceKey = null, bgmRequest = 0, previewSource = null, previewKey = null, previewRequest = 0;
   let jingleSource = null, jingleTimer = null;
   let currentKey = null, bgmVolumePct = 0, seVolumePct = 0, pageHidden = false;
   let enabled = false;
@@ -2339,24 +2342,37 @@ const Audio_ = (() => {
     }
     return loadBuffer(track.src).then((buffer) => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
   };
-  const stopPreview = (resume = true) => { stopSource(previewSource); previewSource = null; previewKey = null; if (resume && currentKey) playBGM(currentKey); };
+  // 番号を進めることで、読み込み待ちの古い試聴を無効にする(あとから鳴り出さない)
+  const stopPreview = (resume = true) => { ++previewRequest; stopSource(previewSource); previewSource = null; previewKey = null; if (resume && currentKey) playBGM(currentKey); };
   const previewBGM = async key => {
     const track = resolveTrack(key); if (!track) return false;
     if (previewKey === track.id) { stopPreview(true); return false; }
-    stopPreview(false); stopJingles(); stopOthers(); previewKey = track.id;
+    stopPreview(false); stopJingles(); stopOthers();
+    // stopPreview が番号を進めたあとに受け取るので、この値はこの呼び出し専用。
+    // 曲名だけで見張っていると、同じ曲を素早く押し直したときに古い呼び出しも
+    // 条件を通ってしまい、音源が2つ鳴って片方が参照から外れる(誰も止められなくなる)。
+    // 実際に「止めても鳴り続ける・アレンジを閉じても鳴り続ける」不具合になっていた
+    const request = previewRequest;
+    previewKey = track.id;
     // 通常BGM(playBGM)と同じく、タップが効いているうちに同期でresumeを始める。
     // 読み込みを待ってから初めてresumeすると、user activationが切れていて復帰できない端末がある
     resumeAudioCtxNoWait();
-    try { const buffer = await loadBuffer(track.src); if (previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
-      const ctx = await ensureAudioCtxRunning(); if (!ctx) return false; applyTrackGain(track);
+    try { const buffer = await loadBuffer(track.src);
+      if (request !== previewRequest || previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
+      const ctx = await ensureAudioCtxRunning(); if (!ctx) return false;
+      // ensureAudioCtxRunning も待つので、そのあいだに止められていないかもう一度見る
+      if (request !== previewRequest) return false;
+      applyTrackGain(track);
       const source = ctx.createBufferSource(); source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain); previewSource = source;
       source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0);
       // 止まったままのAudioContextで鳴らしても無音。もう一度だけ復帰を試し、
       // それでも動かなければ「鳴っている」と嘘をつかずに戻す(次のタップでやり直せる)
       if (ctx.state !== 'running') { await ensureAudioCtxRunning(); }
+      // 復帰待ちのあいだに止められていたら、いま鳴らし始めたぶんを取り逃さず止める
+      if (request !== previewRequest) { stopSource(source); if (previewSource === source) { previewSource = null; previewKey = null; } return false; }
       if (ctx.state !== 'running') { if (previewKey === track.id) stopPreview(false); return false; }
       return true;
-    } catch (e) { if (previewKey === track.id) stopPreview(true); return false; }
+    } catch (e) { if (request === previewRequest && previewKey === track.id) stopPreview(true); return false; }
   };
   const stopBGM = () => { currentKey = null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers(); };
   const preloadBGM = (key) => { const track = resolveTrack(key); if (track) loadBuffer(track.src).catch(() => {}); };
