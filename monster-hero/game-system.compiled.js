@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c75b40f3ff8074e3
+// source-sha256: 6b6bfc54710e8a9d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 18:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 18:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8790,6 +8790,47 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 }]);
 // 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
 const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
+const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';
+const emptySpeciesChallengeProgress = () => ({
+  version: 1,
+  species: {}
+});
+const validSpeciesChallengeId = speciesId => typeof speciesId === 'string' && speciesId.length > 0;
+const normalizeSpeciesChallengeDifficultyFlags = value => Object.fromEntries(SPECIES_CHALLENGE_DIFFICULTY_IDS.filter(difficultyId => value && typeof value === 'object' && value[difficultyId] === true).map(difficultyId => [difficultyId, true]));
+const normalizeSpeciesChallengeProgress = value => {
+  const normalized = emptySpeciesChallengeProgress();
+  const savedSpecies = value && typeof value === 'object' && !Array.isArray(value) && value.species && typeof value.species === 'object' && !Array.isArray(value.species) ? value.species : {};
+  for (const [speciesId, saved] of Object.entries(savedSpecies)) {
+    if (!validSpeciesChallengeId(speciesId)) continue;
+    const entry = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+    normalized.species[speciesId] = {
+      cleared: normalizeSpeciesChallengeDifficultyFlags(entry.cleared),
+      firstRewardClaimed: normalizeSpeciesChallengeDifficultyFlags(entry.firstRewardClaimed)
+    };
+  }
+  return normalized;
+};
+const isSpeciesChallengeCleared = (progress, speciesId, difficultyId) => validSpeciesChallengeId(speciesId) && SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) && normalizeSpeciesChallengeProgress(progress).species[speciesId]?.cleared[difficultyId] === true;
+const isSpeciesChallengeFirstRewardClaimed = (progress, speciesId, difficultyId) => validSpeciesChallengeId(speciesId) && SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) && normalizeSpeciesChallengeProgress(progress).species[speciesId]?.firstRewardClaimed[difficultyId] === true;
+const speciesChallengeClearedDifficultyIds = (progress, speciesId) => validSpeciesChallengeId(speciesId) ? SPECIES_CHALLENGE_DIFFICULTY_IDS.filter(difficultyId => isSpeciesChallengeCleared(progress, speciesId, difficultyId)) : [];
+const updateSpeciesChallengeProgressFlag = (progress, speciesId, difficultyId, field) => {
+  const normalized = normalizeSpeciesChallengeProgress(progress);
+  if (!validSpeciesChallengeId(speciesId) || !SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)) return normalized;
+  const current = normalized.species[speciesId] || {
+    cleared: {},
+    firstRewardClaimed: {}
+  };
+  normalized.species[speciesId] = {
+    ...current,
+    [field]: {
+      ...current[field],
+      [difficultyId]: true
+    }
+  };
+  return normalized;
+};
+const markSpeciesChallengeCleared = (progress, speciesId, difficultyId) => updateSpeciesChallengeProgressFlag(progress, speciesId, difficultyId, 'cleared');
+const markSpeciesChallengeFirstRewardClaimed = (progress, speciesId, difficultyId) => updateSpeciesChallengeProgressFlag(progress, speciesId, difficultyId, 'firstRewardClaimed');
 const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
 const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds = []) => {
   const index = SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
