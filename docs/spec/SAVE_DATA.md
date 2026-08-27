@@ -44,8 +44,11 @@
 | `mh_pro_clears_<難易度>` | number / `0` | 完走回数（プロ） |
 | `mh_pro_highest_wave_<難易度>` | number / `0` | 最高到達WAVE（プロ） |
 | `mh_rank_<難易度>` | object[] / `[]` | 全国送信失敗時の端末ランキング |
+| `mh_species_challenge_progress_v1` | object / `{version:1,species:{}}` | 種族チャレンジの種族ID・難易度ID別クリア／初回報酬受取記録（保存接続は未実装） |
 
 難易度部分は `Beginner`, `Easy`, `Normal`, `Hard`, `Expert`, `Master`, `GrandMaster`, `Hell`, `Legend`。難易度キーは保存・ランキング識別子なので既存名を変更しない。
+
+種族チャレンジ進行は `{version:1,species:{[speciesId]:{cleared:{[difficultyId]:true},firstRewardClaimed:{[difficultyId]:true}}}}` の1オブジェクトにまとめる。`speciesId` は表示名ではない安定ID文字列を受け取り、未知IDも保持する。難易度IDは種族チャレンジ定義の14種類だけを受理し、各フラグは厳密に `true` の値だけを有効とする。この段階では保存キーと純粋なデータ操作だけを定義し、起動時読み込みや本番進行からの書き込みには接続しない。
 
 バトルモードごとの記録は接頭辞で分ける（`modeKeyPrefix`：チャレンジ `mh_`／クイック `mh_quick_`／プロ `mh_pro_`）。モードを増やしても既存キーの意味は変えず、新しい接頭辞のキーを足すだけにする。未プレイのモードのキーは存在しないので、読み込みは既定値 `0` に落ちる。
 

@@ -151,6 +151,7 @@ node tools/build.js --check
 | `node mode/quick-extreme-render-check.js` | クイック難易度カルーセルの再描画で、EXTREME/NIGHTMAREが通常難易度表に無くても表示・報酬値を解決できることを固定する。 |
 | `node mode/quick-difficulty-unlock-check.js` | クイックの難易度解放条件を確認する。極限のNIGHTMAREクリアでクイックNIGHTMAREが解放され、EXTREMEやCHAOSのクリアだけでは解放されないことを見る。 |
 | `node mode/species-challenge-foundation-check.js` | 種族チャレンジの内部ID、既存定義を参照する14難易度の順序、初期・順次解放の純粋判定、初回クリア報酬、および本番モード選択UIへ未表示であることを確認する。 |
+| `node mode/species-challenge-progress-check.js` | 種族・難易度別のクリア／初回報酬進行の正規化、純粋な参照・更新、冪等性、種族間の独立性、および解放判定との接続を確認する。 |
 | `node mode/pro-mode-check.js` | プロモードを実ブラウザで最初から遊んでみて、仕様どおりに動くかを確かめる。 |
 | `node mode/skip-ticket-check.js` | スキップチケット(序/破/急)の値段・配布・報酬計算と、スコアやランキングに記録しないこと、勇者モン選択のタブを確認する。 |
 

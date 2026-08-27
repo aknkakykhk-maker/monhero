@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c75b40f3ff8074e3
+// source-sha256: 2f4793236ac745cf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-27 18:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-27 18:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8790,6 +8790,61 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 }]);
 // 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
 const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
+const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';
+const emptySpeciesChallengeProgress = () => ({
+  version: 1,
+  species: {}
+});
+const isValidSpeciesChallengeSpeciesId = speciesId => typeof speciesId === 'string' && speciesId.trim().length > 0;
+const isValidSpeciesChallengeDifficultyId = difficultyId => SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId);
+const normalizeSpeciesChallengeDifficultyFlags = value => Object.fromEntries(SPECIES_CHALLENGE_DIFFICULTY_IDS.filter(difficultyId => value !== null && typeof value === 'object' && !Array.isArray(value) && Object.prototype.hasOwnProperty.call(value, difficultyId) && value[difficultyId] === true).map(difficultyId => [difficultyId, true]));
+const normalizeSpeciesChallengeProgress = raw => {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw) || raw.species === null || typeof raw.species !== 'object' || Array.isArray(raw.species)) {
+    return emptySpeciesChallengeProgress();
+  }
+  const species = Object.fromEntries(Object.entries(raw.species).filter(([speciesId, record]) => isValidSpeciesChallengeSpeciesId(speciesId) && record !== null && typeof record === 'object' && !Array.isArray(record)).map(([speciesId, record]) => [speciesId, {
+    cleared: normalizeSpeciesChallengeDifficultyFlags(record.cleared),
+    firstRewardClaimed: normalizeSpeciesChallengeDifficultyFlags(record.firstRewardClaimed)
+  }]));
+  return {
+    version: 1,
+    species
+  };
+};
+const speciesChallengeRecord = (progress, speciesId) => {
+  if (!isValidSpeciesChallengeSpeciesId(speciesId)) return null;
+  const normalized = normalizeSpeciesChallengeProgress(progress);
+  return Object.prototype.hasOwnProperty.call(normalized.species, speciesId) ? normalized.species[speciesId] : null;
+};
+const isSpeciesChallengeCleared = (progress, speciesId, difficultyId) => isValidSpeciesChallengeDifficultyId(difficultyId) && speciesChallengeRecord(progress, speciesId)?.cleared[difficultyId] === true;
+const isSpeciesChallengeFirstRewardClaimed = (progress, speciesId, difficultyId) => isValidSpeciesChallengeDifficultyId(difficultyId) && speciesChallengeRecord(progress, speciesId)?.firstRewardClaimed[difficultyId] === true;
+const speciesChallengeClearedDifficultyIds = (progress, speciesId) => {
+  const record = speciesChallengeRecord(progress, speciesId);
+  return record ? SPECIES_CHALLENGE_DIFFICULTY_IDS.filter(id => record.cleared[id] === true) : [];
+};
+const markSpeciesChallengeFlag = (progress, speciesId, difficultyId, flag) => {
+  const normalized = normalizeSpeciesChallengeProgress(progress);
+  if (!isValidSpeciesChallengeSpeciesId(speciesId) || !isValidSpeciesChallengeDifficultyId(difficultyId)) return normalized;
+  const current = normalized.species[speciesId] || {
+    cleared: {},
+    firstRewardClaimed: {}
+  };
+  return {
+    ...normalized,
+    species: {
+      ...normalized.species,
+      [speciesId]: {
+        ...current,
+        [flag]: {
+          ...current[flag],
+          [difficultyId]: true
+        }
+      }
+    }
+  };
+};
+const markSpeciesChallengeCleared = (progress, speciesId, difficultyId) => markSpeciesChallengeFlag(progress, speciesId, difficultyId, 'cleared');
+const markSpeciesChallengeFirstRewardClaimed = (progress, speciesId, difficultyId) => markSpeciesChallengeFlag(progress, speciesId, difficultyId, 'firstRewardClaimed');
 const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT = 5;
 const isSpeciesChallengeDifficultyUnlocked = (difficultyId, clearedDifficultyIds = []) => {
   const index = SPECIES_CHALLENGE_DIFFICULTY_IDS.indexOf(difficultyId);
