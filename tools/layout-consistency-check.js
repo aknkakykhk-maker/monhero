@@ -47,6 +47,10 @@ check('マスモンの個体名は転生オーラより前面に固定する',
   has('mh-monster-card-name text-[10px]')
     && has('.mh-reincarnate-aura{position:absolute;z-index:-1;')
     && has('.mh-monster-card-name{position:relative;z-index:2}'));
+check('マスモン一覧の個体名は画像とオーラの下に独立した名前帯で表示する',
+  has("band?'min-h-[26px] px-1 py-0.5 rounded-md border border-pink-300/50 bg-slate-950/80 whitespace-normal break-words")
+    && has("style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}")
+    && /gameState==='MASU_MONS'[\s\S]*?renderMonsterCardBody\(\{[\s\S]*?masu, base, nameBand:true,/.test(source));
 check('種別ごとにバラバラだった旧サイズが残っていない',
   !has('className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"')
     && !has('<div className="relative w-10 h-10 shrink-0">'));
