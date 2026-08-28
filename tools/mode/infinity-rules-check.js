@@ -51,6 +51,9 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext([
+  // 種族チャレンジのモードidは rankingDifficultyForMode が最初に見るので、実物を入れる
+  // (種族チャレンジのランキングキーそのものは species-challenge 系checkが見る)
+  slice("const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';", '// 種族チャレンジを一般公開するかどうか'),
   slice('const EXTREME_DIFFICULTIES = Object.freeze([', '// ===== トレーニング'),
   slice('const TRAINING_PICK_COUNT', '// 極限チャレンジの説明には'),
   slice('const EXTREME_RANKING_PREFIX', '// ランキングの難易度キーから'),

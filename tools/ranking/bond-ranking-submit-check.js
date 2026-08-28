@@ -60,12 +60,16 @@ check('前のランの値が残らないよう配りはじめに空にする',
 check('1WAVEも勝てなかったランでも前回の値を持ち越さない',
   awardBody.indexOf('postRunMasuMonsRef.current = null') < awardBody.indexOf('if (wavesCleared <= 0)'),
   `消す位置=${awardBody.indexOf('postRunMasuMonsRef.current = null')} / 早期return=${awardBody.indexOf('if (wavesCleared <= 0)')}`);
-// 報酬付与はスコア送信より先に走ること(3つの終わり方すべて)
-const orderOk = ['awardRunRewards', 'submitRunScoreOnce'];
+// 報酬付与はスコア送信より先に走ること。
+// 終わり方は「クリア・敗北・リタイア」の3通りに加えて、種族チャレンジのクリアで4通り。
+// 種族チャレンジだけは送り先が種族×難易度なので専用の送信を通るが、順番の決まりは同じ
 const awardCalls = [...source.matchAll(/await awardRunRewards\(/g)].map(m => m.index);
-const submitCalls = [...source.matchAll(/await submitRunScoreOnce\(\)/g)].map(m => m.index);
-check('終わり方3通りとも報酬付与→スコア送信の順',
-  awardCalls.length === 3 && submitCalls.length === 3
+const submitCalls = [
+  ...[...source.matchAll(/await submitRunScoreOnce\(\)/g)].map(m => m.index),
+  ...[...source.matchAll(/await submitSpeciesChallengeScoreOnce\(\)/g)].map(m => m.index),
+].sort((a, b) => a - b);
+check('終わり方4通りとも報酬付与→スコア送信の順',
+  awardCalls.length === 4 && submitCalls.length === 4
   && submitCalls.every((pos, i) => awardCalls[i] < pos),
   `付与${awardCalls.length}か所 / 送信${submitCalls.length}か所`);
 

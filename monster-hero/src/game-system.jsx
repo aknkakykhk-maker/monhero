@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 12:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 14:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -117,7 +117,7 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   ],
   points:[
     ['🧬','どんなモード','挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'],
-    ['⚔️','編成','勇者モン1体と供モン0〜3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは1体までですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。供モン0体のまま挑むこともできます。'],
+    ['⚔️','編成','勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'],
     ['🤝','供モンの加入','事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'],
     ['👹','難しさ','難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'],
     ['🔥','上位の難易度','EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'],
@@ -912,6 +912,17 @@ const legacySpeciesTranscendFruitItemId = (baseId) => (
     ? LEGACY_SPECIES_TRANSCEND_FRUIT_ITEMS[baseId].id
     : null
 );
+// 旧実は「モンスター1体ぶん」だが、いまの種族は主血統なので、同じ血統のマスモンへ広く使えるようにする。
+// (ミタラシの旧実をモッチーのマスモンへ使う、など)。所持しているのに使い道が無い状態を作らないための後方互換で、
+// 実の中身を書き換えたり別のidへ変換したりはしない(所持数はそのまま、消費するときだけ減る)。
+// monsterLineageOf はこのファイルの後ろで定義されるので、呼ばれたときに解決する
+const legacySpeciesTranscendFruitsForLineage = (baseId) => {
+  const lineageId = typeof baseId === 'string' ? monsterLineageOf(baseId).main.id : null;
+  if (!lineageId) return [];
+  return Object.values(LEGACY_SPECIES_TRANSCEND_FRUIT_ITEMS)
+    .filter(item => monsterLineageOf(item.baseId).main.id === lineageId);
+};
+const legacySpeciesTranscendFruitIdsForLineage = (baseId) => legacySpeciesTranscendFruitsForLineage(baseId).map(item => item.id);
 const RAINBOW_TRANSCEND_FRUIT_ITEM = Object.freeze({ id:RAINBOW_TRANSCEND_FRUIT_ITEM_ID, name:'虹の超越の実', lineageId:null });
 // 既存の虹の超越の実IDをそのままMARKET商品へ接続する。通貨は通常の虹ではないプシュケー。
 BREEDER_MARKET_ITEMS.push({
@@ -963,10 +974,10 @@ const useTranscendFruitOnMasu = (masu, ownedItems, itemId, amount) => {
   const currentItems = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
   const n = Number(amount);
   const speciesItemId = masuSpeciesTranscendFruitItemId(masu?.baseId);
-  const legacyItemId = legacySpeciesTranscendFruitItemId(masu?.baseId);
+  const legacyItemIds = legacySpeciesTranscendFruitIdsForLineage(masu?.baseId);
   const itemMatches = itemId === RAINBOW_TRANSCEND_FRUIT_ITEM_ID
     || (speciesItemId !== null && itemId === speciesItemId)
-    || (legacyItemId !== null && itemId === legacyItemId);
+    || legacyItemIds.includes(itemId);
   if (!masu || typeof masu !== 'object' || Array.isArray(masu) || !itemMatches
     || !Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
     return { ok:false, nextMasu:masu, nextOwnedItems:currentItems };
@@ -6775,12 +6786,37 @@ const RANKING_DIFFICULTY_KEYS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
   ...EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),
 ]);
+// 種族チャレンジは「種族(主血統) × 難易度」ごとに独立したランキングになる。
+// 既存 rankings テーブルの difficulty 列(自由文字列)へ Species-<血統id>-<難易度id> の形で入れるだけなので、
+// 新しいテーブルも列も要らない。区切りの「-」は既存キー(Normal / ProNormal / ExtremeEXTREME)に
+// 一切現れないため、チャレンジ・プロ・極限の行と混ざることが構造上起きない。
+const SPECIES_RANKING_PREFIX = 'Species';
+const SPECIES_RANKING_SEPARATOR = '-';
+const speciesChallengeRankingDifficulty = (speciesId, difficultyId) => {
+  const lineage = speciesChallengeLineages().find(item => item.id === speciesId);
+  if (!lineage || !SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)) return null;
+  return `${SPECIES_RANKING_PREFIX}${SPECIES_RANKING_SEPARATOR}${lineage.id}${SPECIES_RANKING_SEPARATOR}${difficultyId}`;
+};
+// ランキングキーから種族と難易度へ戻す。知らない組み合わせはnull(既存キーとして扱う)
+const parseSpeciesChallengeRankingDifficulty = (key) => {
+  const parts = String(key ?? '').trim().split(SPECIES_RANKING_SEPARATOR);
+  if (parts.length !== 3 || parts[0].toLowerCase() !== SPECIES_RANKING_PREFIX.toLowerCase()) return null;
+  const lineage = speciesChallengeLineages().find(item => item.id.toLowerCase() === parts[1].toLowerCase());
+  const difficultyId = SPECIES_CHALLENGE_DIFFICULTY_IDS.find(id => id.toLowerCase() === parts[2].toLowerCase());
+  return lineage && difficultyId ? { speciesId:lineage.id, difficultyId } : null;
+};
 // 極限の段階ID。知らない値が来ても実装済みの段階へ落として、ランキングのキーを壊さない
 const normalizeExtremeDifficulty = (value) => (EXTREME_DIFFICULTIES
   .find(setting => setting.id === value && setting.available) ? value : EXTREME_SETTING.id);
 // そのモード・難易度の記録を置く難易度キー。チャレンジは従来どおりの値をそのまま使う。
 // 極限チャレンジは diff に極限の段階ID(EXTREMEなど)を渡す
-const rankingDifficultyForMode = (mode, diff) => {
+// 種族チャレンジだけは種族(主血統)も要るので、第3引数で受け取る
+const rankingDifficultyForMode = (mode, diff, speciesId=null) => {
+  if (mode === BATTLE_MODE_SPECIES_CHALLENGE) {
+    const key = speciesChallengeRankingDifficulty(speciesId, diff);
+    if (!key) throw new Error(`unknown species challenge ranking: ${String(speciesId)}/${String(diff)}`);
+    return key;
+  }
   if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) {
     return `${EXTREME_RANKING_PREFIX}${normalizeExtremeDifficulty(diff)}`;
   }
@@ -6789,10 +6825,15 @@ const rankingDifficultyForMode = (mode, diff) => {
 // ランキングの難易度キーから、表示に使う素の難易度へ戻す
 const rankingDifficultyBase = (key) => {
   const text = String(key || '');
+  const species = parseSpeciesChallengeRankingDifficulty(text);
+  if (species) return species.difficultyId;
   if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
 const normalizeRankingDifficulty = (value) => {
+  // 種族チャレンジのキーは種族×難易度の組で決まるので、固定リストではなく組み合わせで確かめる
+  const species = parseSpeciesChallengeRankingDifficulty(value);
+  if (species) return speciesChallengeRankingDifficulty(species.speciesId, species.difficultyId);
   const compact = String(value ?? '').trim().replace(/\s+/g, '').toLowerCase();
   const canonical = RANKING_DIFFICULTY_KEYS.find(key => key.toLowerCase() === compact);
   if (!canonical) throw new Error(`unknown ranking difficulty: ${String(value)}`);
@@ -10089,6 +10130,32 @@ function MonsterHeroGame() {
     }
   };
 
+  // 種族チャレンジのスコア送信。ランキングは「種族×難易度」ごとに独立していて、
+  // 既存rankingsテーブルのdifficulty列へ Species-<血統id>-<難易度id> を入れるだけなので、
+  // テーブルにも列にも変更が要らない(送信・取得は既存のsubmitLocalScore/loadRankingsを使う)。
+  //
+  // 一般公開までは全国ランキングへ一切送らない。デバッグ実戦から外部の記録を汚さないための
+  // debugBattleRef の判定も、公開後に備えてそのまま残しておく。
+  // 自分の記録(種族×難易度の自己ベスト)は mh_species_challenge_progress_v1 側で保存済みなので、
+  // ここでは通常モードのような mh_hs_* へは一切書かない
+  const submitSpeciesChallengeScoreOnce = async () => {
+    const run = speciesChallengeBattleRunRef.current;
+    if (!run || score <= 0 || scoreSubmittedRef.current) return;
+    scoreSubmittedRef.current = true;
+    if (!SPECIES_CHALLENGE_PUBLIC_RELEASE) return;
+    if (debugBattleRef.current) return;
+    try {
+      const diff = rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, run.difficultyId, run.speciesId);
+      const result = await submitLocalScore(diff, score, runIdRef.current);
+      if (!result?.nationalSaved) {
+        console.error('[result] species challenge score save failed:', result?.error?.message || 'unknown ranking error');
+      }
+      return result;
+    } catch (e) {
+      console.error('[result] species challenge score submit failed:', e && e.message ? e.message : e);
+    }
+  };
+
   const handleSaveName = async () => {
     if (!tempName.trim()) return;
     const n = tempName.trim().substring(0, 10);
@@ -11669,6 +11736,14 @@ function MonsterHeroGame() {
     // チャレンジ・クイックのどちらもここを通り、clearRecordedRef が連打も二重付与も止める。
     // 敗北・リタイア・スキップチケットはこの関数を通らないので配られない
     await awardClearPsyche();
+    // 種族チャレンジのクリア回数は「種族×難易度」ごとに
+    // mh_species_challenge_progress_v1 へ積む(persistSpeciesChallengeClearRewardが正本)。
+    // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
+    // 極限難易度で遊んでも極限チャレンジのクリア数には数えない
+    if (speciesChallengeBattleRunRef.current) {
+      addAssistantBond('clear');
+      return;
+    }
     // 極限チャレンジは専用キーへ。チャレンジの通算クリア数(初勝利判定・解放判定に使う)は動かさない
     if (extremeRunRef.current) {
       const currentCount = extremeClearCounts[extremeDifficulty] || 0;
@@ -11876,6 +11951,20 @@ function MonsterHeroGame() {
       setSpeciesChallengeClearResult({ ...base,saved:false,rewardGranted:firstClear&&rewardAmount>0,rewardAmount:firstClear?rewardAmount:0 });
       return;
     }
+    // 本番のクリア報酬。経験値・ダイヤ・虹のプシュケー・ブリーダー経験値・絆経験値は
+    // 通常バトルとまったく同じ共通処理(awardRunRewards / recordClearOnce)へ通す。
+    // 難易度の倍率はその処理が DIFFICULTY_SETTINGS と極限設定から読むので、
+    // 種族チャレンジ側へ数値を複製しない。
+    // 虹のプシュケーを先に mh_owned_items へ確定させてから超越の実を書き込む
+    // (実の保存は書き込み直前に mh_owned_items を読み直すため、この順ならどちらも消えない)
+    try{
+      runEndWaveRef.current=10;
+      runClearTurnsRef.current=clearTurns;
+      await awardRunRewards(10);
+      await recordClearOnce();
+    }catch(e){
+      console.error('[speciesChallenge] clear rewards failed:',e&&e.message?e.message:e);
+    }
     try{
       const result=await persistSpeciesChallengeClearReward({
         progress:speciesChallengeProgress,ownedItems:ownedItemsRef.current,speciesId,difficultyId,storeSet,storeGet,
@@ -11891,6 +11980,8 @@ function MonsterHeroGame() {
       console.error('[speciesChallenge] clear persistence failed:',e&&e.message?e.message:e);
       setSpeciesChallengeClearResult({ ...base,saved:false,failed:true,rewardGranted:false,rewardAmount:0 });
     }
+    // 全国ランキングは種族×難易度ごと。公開フラグがfalseの間は送らない
+    await submitSpeciesChallengeScoreOnce();
   };
 
   const createRepeatRunTemplate = ({ hero, allies=[] }) => Object.freeze({
@@ -14885,8 +14976,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     addAssistantBond('ranking');
     setScoreRankingMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setScoreRankingBack(backTo);
-    setSpeciesRankFilter(speciesChallengeLineages().some(lineage=>lineage.id===speciesId)?speciesId:'all');
-    setRankingViewDiff(SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)?difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0]);
+    const speciesTab=speciesChallengeLineages().some(lineage=>lineage.id===speciesId)?speciesId:'all';
+    const viewDiff=SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)?difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
+    setSpeciesRankFilter(speciesTab);
+    setRankingViewDiff(viewDiff);
+    // 公開後だけ、その種族×難易度の全国ランキングを取りにいく。公開前は自分の記録だけなので通信しない
+    if(SPECIES_CHALLENGE_PUBLIC_RELEASE&&speciesTab!=='all'){
+      loadRankings(rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE,viewDiff,speciesTab)));
+    }
     setGameState('BATTLE_SCORE_RANKING');
   };
   const openModeScoreRanking = (mode, diff, backTo) => {
@@ -14961,6 +15058,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               : 'まだクリアしていません',
             row.record.bestScore, null, row.record.clears === 0));
     const emptyText = <>{settingOf(diffId).label}をクリアした種族はまだありません。<br/>クリアすると、種族ごとに自己ベストが残ります。</>;
+    // 公開後は、種族を選ぶとその「種族×難易度」の全国ランキングへ切り替わる。
+    // 取得も表示も既存のスコアランキングと同じ仕組みで、難易度キーだけが
+    // Species-<血統id>-<難易度id> になる(rankingsテーブルはそのまま)。
+    // 「すべて」は種族をまたぐ一覧なので、公開後も自己ベストによる種族順位のまま
+    const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== 'all';
+    const nationalKey = nationalMode ? rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, speciesFilter)) : null;
+    const nationalRows = nationalKey ? (localRankings[nationalKey] || []) : [];
+    const nationalStatus = rankingStatus(`score:${nationalKey}`);
     return <>
       {/* 種族タブ。絆Lvランキングと同じ「すべて＋種族別」の並べ方にそろえる */}
       <div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0" data-species-rank-tabs>
@@ -14968,14 +15073,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <button key={tab.id} onClick={() => setSpeciesRankFilter(tab.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${speciesFilter === tab.id ? 'bg-cyan-600 border-cyan-300 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`}>{tab.label}</button>
         ))}
       </div>
-      {/* 難易度タブは「すべて」のときだけ。種族を選んだときは全難易度を縦に並べるので要らない */}
-      {speciesFilter === 'all' && <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => { const st = settingOf(id); return (
-        <button key={id} onClick={() => setRankingViewDiff(id)} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${diffId === id ? 'ring-2 ring-white' : 'border border-white/10'}`} style={difficultyStyle(st, diffId === id)}>{st.label}</button>
+      {/* 難易度タブ。公開前に種族を選んだときは全難易度を縦に並べるので要らない。
+          公開後は種族を選ぶとその種族×難易度の全国ランキングを出すので、どちらでも要る */}
+      {(speciesFilter === 'all' || nationalMode) && <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => { const st = settingOf(id); return (
+        <button key={id} onClick={() => { setRankingViewDiff(id); if (nationalMode) loadRankings(rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, id, speciesFilter))); }} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${diffId === id ? 'ring-2 ring-white' : 'border border-white/10'}`} style={difficultyStyle(st, diffId === id)}>{st.label}</button>
       ); })}</div>}
       <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5" data-species-record-list>
-        {rows.length === 0
-          ? <p className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400">{emptyText}</p>
-          : rows}
+        {nationalMode
+          ? <>{nationalStatus.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{nationalStatus.error&&nationalStatus.fetched&&<div className="text-center text-[9px] text-amber-300">{nationalStatus.error}</div>}{nationalRows.map(renderScoreRankingEntry)}{nationalRows.length===0&&(nationalStatus.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:nationalStatus.error&&!nationalStatus.fetched?rankingRetryButton(()=>loadRankings(nationalKey,false,true)):rankingEmptyText)}</>
+          : rows.length === 0
+            ? <p className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400">{emptyText}</p>
+            : rows}
         {!SPECIES_CHALLENGE_PUBLIC_RELEASE && <p className="rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 text-center text-[9px] leading-relaxed text-amber-200">いまは自分の記録だけを表示しています。全国ランキングはモードの公開後に始まります。</p>}
       </div>
     </>;
@@ -16453,7 +16561,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // Base も Masu も同じ共通枠で描く。ここを分けるとモンスターごとに切れ方が変わるので、
           // 渡すのは baseId と画像と（マスモンなら）染色色だけにする
           const entryImage=entry=><MonsterArtFrame baseId={entry.baseId} src={entry.base.iconUrl} alt="" masuColors={entry.type==='masu'?getMasuColors(entry.masu):null} className="h-full w-full"/>;
-          const monsterCard=(entry,active,onClick,disabled=false,marker='')=><button key={entry.entryId} disabled={disabled} aria-pressed={active} onClick={onClick} className={`relative flex min-h-[72px] w-full items-center gap-3 overflow-hidden rounded-2xl border-2 p-2 text-left transition active:scale-[.98] disabled:opacity-30 ${active?'border-cyan-300 bg-cyan-900/80 shadow-lg shadow-cyan-950 ring-1 ring-white':'border-white/10 bg-slate-900/90'}`}><span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/40">{entryImage(entry)}</span><span className="min-w-0 flex-1"><b className="block break-words text-[11px] leading-tight text-white">{entry.name}</b><small className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] font-black ${entry.type==='masu'?'bg-fuchsia-900 text-fuchsia-200':'bg-indigo-900 text-indigo-200'}`}>{entry.type==='masu'?'Masu':'Base'}</small><small className="ml-1 text-[8px] text-slate-400">{entry.lineageName}</small></span>{marker&&<span className="shrink-0 rounded-full bg-cyan-500 px-2 py-1 text-[8px] font-black text-slate-950">{marker}</span>}</button>;
+          const monsterCard=(entry,active,onClick,disabled=false,marker='')=><button key={entry.entryId} data-species-monster-card={entry.entryId} disabled={disabled} aria-pressed={active} onClick={onClick} className={`relative flex min-h-[72px] w-full items-center gap-3 overflow-hidden rounded-2xl border-2 p-2 text-left transition active:scale-[.98] disabled:opacity-30 ${active?'border-cyan-300 bg-cyan-900/80 shadow-lg shadow-cyan-950 ring-1 ring-white':'border-white/10 bg-slate-900/90'}`}><span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/40">{entryImage(entry)}</span><span className="min-w-0 flex-1"><b className="block break-words text-[11px] leading-tight text-white">{entry.name}</b><small className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] font-black ${entry.type==='masu'?'bg-fuchsia-900 text-fuchsia-200':'bg-indigo-900 text-indigo-200'}`}>{entry.type==='masu'?'Masu':'Base'}</small><small className="ml-1 text-[8px] text-slate-400">{entry.lineageName}</small></span>{marker&&<span className="shrink-0 rounded-full bg-cyan-500 px-2 py-1 text-[8px] font-black text-slate-950">{marker}</span>}</button>;
           return <main data-species-challenge-selection className="flex-1 flex min-h-0 flex-col overflow-hidden px-4 text-white" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <header className="mb-2 flex shrink-0 items-center gap-2"><button aria-label="1つ前へ戻る" onClick={goBack} className="min-h-[44px] min-w-[44px] rounded-xl text-slate-300 active:bg-white/10"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="text-[8px] font-black tracking-[.18em] text-slate-400">BATTLE</small><h2 className="truncate text-xl font-black italic text-indigo-400 uppercase tracking-widest">{titles[selection.step]}</h2></div>{selection.saveProgress
                 ? <span data-species-save-badge className="ml-auto rounded-full border border-red-400/60 bg-red-950/80 px-2 py-1 text-[7px] font-black text-red-200">DEBUG・実進行を保存</span>
@@ -16490,7 +16598,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     : <ChevronRight size={16} className="shrink-0 text-slate-500"/>}
                 </button>;})}</div>}
               {selection.step==='hero'&&<>{heroCandidates.length?heroCandidates.map(entry=>monsterCard(entry,selection.heroId===entry.entryId,()=>chooseHero(entry.entryId),false,selection.heroId===entry.entryId?'勇者':'')):<p className="rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400">この種族の解放済みベースモン／所持マスモンがいません。</p>}</>}
-              {selection.step==='allies'&&<><div className="sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"><span className="flex items-center justify-between"><b className="text-[10px] text-cyan-100">供モンを選択</b><strong className="rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950">{selectedAllies.length} / 3体</strong></span><p className="mt-1 text-[8px] leading-relaxed text-cyan-200">0体のままでも次へ進めます。同じ種族の中から、勇者とは別のモンスターを3体まで選べます。</p></div>{allyCandidates.map(entry=>{const selected=selectedAllies.includes(entry.entryId);const sameMonsterTaken=!selected&&usedAllyBaseIds.has(entry.baseId);const disabled=sameMonsterTaken||(!selected&&selectedAllies.length>=3);return monsterCard(entry,selected,()=>toggleAlly(entry.entryId),disabled,selected?'選択中':sameMonsterTaken?'選択済み':'');})}</>}
+              {selection.step==='allies'&&<><div className="sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"><span className="flex items-center justify-between"><b className="text-[10px] text-cyan-100">供モンを選択</b><strong className="rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950">{selectedAllies.length} / 3体</strong></span><p className="mt-1 text-[8px] leading-relaxed text-cyan-200">供モンは最大3体。0体のままでも次へ進めます。同じモンスターは勇者・供モンを通して1体までなので（重複不可）、実際に選べる数はその種族のモンスターの種類によって変わります。</p></div>{allyCandidates.map(entry=>{const selected=selectedAllies.includes(entry.entryId);const sameMonsterTaken=!selected&&usedAllyBaseIds.has(entry.baseId);const disabled=sameMonsterTaken||(!selected&&selectedAllies.length>=3);return monsterCard(entry,selected,()=>toggleAlly(entry.entryId),disabled,selected?'選択中':sameMonsterTaken?'選択済み':'');})}</>}
               {selection.step==='confirm'&&<div className="space-y-3"><section className="rounded-2xl border-2 border-cyan-400/40 bg-slate-900/90 p-4"><small className="font-black tracking-widest text-cyan-300">MISSION</small><h3 className="mt-1 text-lg font-black">{speciesChallengeSpeciesName(selection.speciesId)} 限定</h3><p className="text-[10px] text-amber-300">{difficultyLabel(selection.difficultyId)} ・ 初回報酬 超越の実 ×{speciesChallengeFirstClearReward(selection.difficultyId)}</p></section><div><b className="mb-1 block text-[9px] text-cyan-300">勇者モン</b>{entryById(selection.heroId)&&monsterCard(entryById(selection.heroId),true,()=>{},false,'勇者')}</div><div><b className="mb-1 block text-[9px] text-cyan-300">供モン（{selectedAllies.length}体）</b>{selectedAllies.length?<div className="space-y-2">{selectedAllies.map(id=>entryById(id)&&monsterCard(entryById(id),true,()=>{},false,'選択中'))}</div>:<p className="rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400">供モンなしで出撃</p>}</div>{selection.saveProgress
                 ? <p className="rounded-xl border-2 border-red-400/60 bg-red-950/40 p-3 text-[9px] leading-relaxed font-black text-red-100">⚠️ 実際の種族チャレンジ進行・所持品を変更します。WAVE10までクリアすると、クリア状況・次の難易度の解放・初回の超越の実・種族×難易度の自己記録が本当に保存されます。全国ランキングへは送信しません。</p>
                 : <p className="rounded-xl border border-amber-400/30 bg-amber-950/30 p-3 text-[9px] leading-relaxed text-amber-100">出撃後は既存バトルのWAVE1へ進みます。この確認では結果・報酬・進行・ランキングを一切保存しません。</p>}</div>}
@@ -17781,9 +17889,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const speciesFruit = speciesTranscendFruitItems()[monsterLineageOf(masu.baseId).main.id];
           const speciesFruitHave = transcendFruitOwnedCount(ownedItems, speciesFruitId);
           const rainbowFruitHave = transcendFruitOwnedCount(ownedItems, RAINBOW_TRANSCEND_FRUIT_ITEM_ID);
-          const hasTranscendFruit = speciesFruitHave > 0 || rainbowFruitHave > 0;
+          // 【後方互換】種族をモンスター1体単位で作っていたころの実。もう配らないが、持っている人が
+          // 使えないままにならないよう、所持しているぶんだけ選択肢へ出す(持っていなければ増えない)
+          const legacyFruitChoices = legacySpeciesTranscendFruitsForLineage(masu.baseId)
+            .map(item => ({ itemId:item.id, name:`超越の実（旧・${ALL_PLAYER_MONSTERS[item.baseId]?.name||item.baseId}）`, have:transcendFruitOwnedCount(ownedItems, item.id) }))
+            .filter(choice => choice.have > 0);
+          const fruitChoices = [
+            { itemId:speciesFruitId, name:speciesFruit?.name||'対応種族の超越の実', have:speciesFruitHave },
+            ...legacyFruitChoices,
+            { itemId:RAINBOW_TRANSCEND_FRUIT_ITEM_ID, name:RAINBOW_TRANSCEND_FRUIT_ITEM.name, have:rainbowFruitHave },
+          ];
+          const hasTranscendFruit = fruitChoices.some(choice => choice.have > 0);
           const selectedFruitHave = transcendFruitOwnedCount(ownedItems, transcendFruitItemId);
-          const selectedFruitName = transcendFruitItemId===speciesFruitId ? speciesFruit?.name : transcendFruitItemId===RAINBOW_TRANSCEND_FRUIT_ITEM_ID ? RAINBOW_TRANSCEND_FRUIT_ITEM.name : '';
+          const selectedFruitName = fruitChoices.find(choice => choice.itemId === transcendFruitItemId)?.name || '';
           const openFruit = () => { setTranscendFruitItemId(''); setTranscendFruitConfirmAmount(0); setTranscendFruitError(''); setTranscendFruitOpen(true); };
           const requestFruitUse = async (amount) => {
             if (amount > 1) { setTranscendFruitConfirmAmount(amount); return; }
@@ -17956,7 +18074,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-black text-emerald-200">🍎 超越の実を使う</h3><button aria-label="閉じる" onClick={()=>setTranscendFruitOpen(false)} className="min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"><X size={18}/></button></div>
                     <p className="text-[9px] font-bold text-slate-400">使用する実を選んでください。虹の実が自動で代用されることはありません。</p>
                     <div className="grid grid-cols-2 gap-2">
-                      {[[speciesFruitId,speciesFruit?.name||'対応種族の超越の実',speciesFruitHave],[RAINBOW_TRANSCEND_FRUIT_ITEM_ID,RAINBOW_TRANSCEND_FRUIT_ITEM.name,rainbowFruitHave]].map(([itemId,name,have])=><button key={itemId} data-transcend-fruit-select={itemId} disabled={have<=0} aria-pressed={transcendFruitItemId===itemId} onClick={()=>{setTranscendFruitItemId(itemId);setTranscendFruitConfirmAmount(0);setTranscendFruitError('');}} className={`min-h-[64px] rounded-2xl border p-2 text-[9px] font-black active:scale-95 disabled:opacity-35 ${transcendFruitItemId===itemId?'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200':'border-white/10 bg-slate-800 text-slate-200'}`}><span className="block leading-tight">{name}</span><span className="mt-1 block font-mono text-[12px]">所持 ×{have}</span></button>)}
+                      {fruitChoices.map(({itemId,name,have})=><button key={itemId} data-transcend-fruit-select={itemId} disabled={have<=0} aria-pressed={transcendFruitItemId===itemId} onClick={()=>{setTranscendFruitItemId(itemId);setTranscendFruitConfirmAmount(0);setTranscendFruitError('');}} className={`min-h-[64px] rounded-2xl border p-2 text-[9px] font-black active:scale-95 disabled:opacity-35 ${transcendFruitItemId===itemId?'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200':'border-white/10 bg-slate-800 text-slate-200'}`}><span className="block leading-tight">{name}</span><span className="mt-1 block font-mono text-[12px]">所持 ×{have}</span></button>)}
                     </div>
                     {!transcendFruitItemId?<div className="rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200">使用する実を明示選択してください</div>:<>
                       <div className="grid grid-cols-3 gap-2">{[[1,'1'],[10,'10'],[selectedFruitHave,'MAX']].map(([amount,label])=><button key={label} data-transcend-fruit-amount={label} disabled={selectedFruitHave<amount||amount<=0} onClick={()=>requestFruitUse(amount)} className="min-h-[44px] rounded-xl bg-emerald-700 text-sm font-black active:scale-95 disabled:opacity-30">{label}</button>)}</div>

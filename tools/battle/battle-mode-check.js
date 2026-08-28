@@ -442,9 +442,14 @@ check('旧バトル画面はデバッグからだけ開ける',
   has('旧バトル画面を開く（見比べ用）')
     && (source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length === 2,
   `BATTLE_MENUへ移る場所 ${(source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length}か所(デバッグの見比べ用・旧チュートリアルの開始)`);
+// 種族チャレンジは一般公開前なので、公開フラグかデバッグのときだけ末尾へ並ぶ。
+// 通常プレイのBATTLE MODEには出さないこと自体は species-challenge 系checkが見る
 check('モード選択は極限チャレンジを含む全モードを横スライドで並べる',
-  has('const modes=[...BATTLE_MODES,EXTREME_MODE];') && has('aria-label="前のモード"') && has('aria-label="次のモード"')
-    && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'));
+  has('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];')
+    && count('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];') === 2
+    && has('aria-label="前のモード"') && has('aria-label="次のモード"')
+    && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'),
+  'モード一覧はモード選択と難易度選択の2か所とも同じ並べ方');
 check('モードカードは選択難易度固定でなくモード内最高スコアを表示する',
   has('modeBestScore=ranked?highestModeScore(isProMode(m.id)?proHighScores:highScores,Object.keys(DIFFICULTY_SETTINGS)):rec.score')
     && has('EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>setting.id)')
@@ -458,10 +463,15 @@ check('上のタブにスコアランキングを混ぜない',
 // チャレンジ/プロのカード2か所 + 極限のモードカード・難易度カード2か所
 check('スコアランキングはモードのカードと難易度のカードから開く',
   count("openModeScoreRanking(") === 4, `openModeScoreRanking ${count('openModeScoreRanking(')}か所`);
+// 極限チャレンジと種族チャレンジは、モードカードから開く共通スコアランキングの対象外
+// (極限は難易度カードから、種族チャレンジは専用の種族別ランキングから開く)
 check('ランキングが無いモードには導線も高さ合わせの空枠も出さない',
   has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,')
     && has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,')
-    && has('ranked=modeHasRanking(battleMode);') && has('ranked=!isExtreme&&modeHasRanking(m.id),'));
+    && has('ranked=modeHasRanking(battleMode);') && has('ranked=!isExtreme&&!isSpecies&&modeHasRanking(m.id),'));
+check('種族チャレンジは専用の種族別ランキングへ入る',
+  has('data-species-record-link') && has('data-species-difficulty-record-link')
+    && has("openSpeciesChallengeRecords('BATTLE_MODE_SELECT')"));
 check('難易度カードから開いたときは、その難易度のタブを最初に選ぶ',
   has('setRankingViewDiff(diff);') && has('loadRankings(rankingDifficultyForMode(mode, diff));')
     && has("openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')"));

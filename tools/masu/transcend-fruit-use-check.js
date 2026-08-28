@@ -3,10 +3,15 @@ const { loadDyeModule } = require('../harness');
 const api = loadDyeModule();
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// 「種族」はモンスター1体ではなく主血統(モッチー種・ピクシー種…)。実も血統ごとに1つで、
+// その血統のどのモンスターのマスモンにも使える(2026年8月にこの単位へ移行した)
 const baseIds = Object.keys(api.ALL_PLAYER_MONSTERS);
-const [baseId, otherBaseId] = baseIds;
-const speciesItemId = api.speciesTranscendFruitItemId(baseId);
-const otherItemId = api.speciesTranscendFruitItemId(otherBaseId);
+const baseId = baseIds[0];
+const lineageId = api.monsterLineageOf(baseId).main.id;
+const otherBaseId = baseIds.find(id => api.monsterLineageOf(id).main.id !== lineageId);
+const speciesItemId = api.masuSpeciesTranscendFruitItemId(baseId);
+const otherItemId = api.masuSpeciesTranscendFruitItemId(otherBaseId);
+assert(speciesItemId && otherItemId && speciesItemId !== otherItemId, '別の血統の実を用意できる');
 const rainbowItemId = api.RAINBOW_TRANSCEND_FRUIT_ITEM_ID;
 const originalMasu = {
   id:'fruit-test', baseId, name:'低Lv未超越', bondXp:0, transcendPoints:3,

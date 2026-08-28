@@ -3,14 +3,21 @@ const { loadDyeModule } = require('../harness');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const api = loadDyeModule();
 const assert = (condition, message) => { if (!condition) throw new Error(message); console.log(`OK: ${message}`); };
-const baseIds = Object.keys(api.ALL_PLAYER_MONSTERS);
-const itemIds = baseIds.map(api.speciesTranscendFruitItemId);
+// 「種族」はモンスター1体ではなく主血統(モッチー種・ピクシー種…)。
+// 実は血統ごとに1つで、その血統のどのモンスターのマスモンにも使える(2026年8月に移行)
+const lineages = api.dexMainLineages();
+const itemIds = lineages.map(lineage => api.speciesTranscendFruitItemId(lineage.id));
 
-assert(baseIds.length > 0, 'プレイアブル種が存在する');
-assert(itemIds.every(Boolean) && new Set(itemIds).size === baseIds.length, '全プレイアブル種で固有itemIdが生成される');
-assert(baseIds.every(baseId => itemIds.includes(`${api.SPECIES_TRANSCEND_FRUIT_ITEM_ID_PREFIX}${baseId}`)), 'itemIdは表示名でなくbaseIdから生成される');
-assert(baseIds.every(baseId => api.SPECIES_TRANSCEND_FRUIT_ITEMS[baseId].baseId === baseId
-  && api.SPECIES_TRANSCEND_FRUIT_ITEMS[baseId].name === `超越の実（${api.ALL_PLAYER_MONSTERS[baseId].name}）`), '全種族別アイテムに表示名とbaseIdが対応する');
+assert(lineages.length > 0, 'プレイアブルな主血統が存在する');
+assert(itemIds.every(Boolean) && new Set(itemIds).size === lineages.length, '全血統で固有itemIdが生成される');
+assert(lineages.every(lineage => itemIds.includes(`${api.SPECIES_TRANSCEND_FRUIT_ITEM_ID_PREFIX}${lineage.id}`)), 'itemIdは表示名でなく血統idから生成される');
+assert(lineages.every(lineage => api.speciesTranscendFruitItems()[lineage.id].lineageId === lineage.id
+  && api.speciesTranscendFruitItems()[lineage.id].name === `超越の実（${lineage.name}種）`), '全種族別アイテムに表示名と血統idが対応する');
+// 【後方互換】モンスター1体単位で配ってしまった旧実。もう配らないが、所持数は読めて使える
+const legacyIds = Object.values(api.LEGACY_SPECIES_TRANSCEND_FRUIT_ITEMS).map(item => item.id);
+assert(legacyIds.length === Object.keys(api.ALL_PLAYER_MONSTERS).length, '旧実は全プレイアブル種ぶん残してある');
+assert(legacyIds.every(id => api.transcendFruitOwnedCount({ [id]:3 }, id) === 3), '旧実の所持数を読める');
+assert(legacyIds.every(id => !itemIds.includes(id)), '旧実といまの血統単位の実は別のidになる');
 assert(api.RAINBOW_TRANSCEND_FRUIT_ITEM.id === api.RAINBOW_TRANSCEND_FRUIT_ITEM_ID
   && api.RAINBOW_TRANSCEND_FRUIT_ITEM.name === '虹の超越の実', '虹の超越の実が独立定義される');
 

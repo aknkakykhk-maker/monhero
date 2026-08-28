@@ -3,7 +3,13 @@ const src=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 const order=['Beginner','Easy','Normal','Hard','Expert','Master','GrandMaster','Hell','Legend'];
 let last=-1;for(const key of order){const i=src.indexOf(`${key}:`,src.indexOf('const DIFFICULTY_SETTINGS'));assert(i>last,`${key} の順序`);last=i;}
 for(const token of ['snap-mandatory','touchAction:\'pan-x pinch-zoom\'','flex items-start gap-2.5 overflow-x-auto overflow-y-hidden','relative shrink-0','前の難易度','次の難易度','自己ベストスコア','最高到達 WAVE','全WAVE詳細','この難易度で挑戦','ENEMY_SEQUENCE.map'])assert(src.includes(token),token);
-assert(src.includes('const createBattleEnemy ='));assert(src.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,extremeRunRef.current?EXTREME_SETTING.power:null)'));
+assert(src.includes('const createBattleEnemy ='));
+// 敵はどのモードでも共通の createBattleEnemy で作る。強さ倍率は「そのランの難易度設定」から
+// 渡すので、極限・種族チャレンジ用に別の敵生成を作らない
+// (以前は extremeRunRef を直接見て EXTREME_SETTING.power を渡していたが、
+//  極限の段階ごとに倍率が違うため battleSetting から渡す形になっている)
+assert(src.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier)'),'敵の生成は共通処理へ難易度設定の強さを渡す');
+assert((src.match(/=createBattleEnemy\(/g)||[]).length===2,`createBattleEnemyの呼び出しは実バトルと全WAVE詳細の2か所 (${(src.match(/=createBattleEnemy\(/g)||[]).length}か所)`);
 // WAVE1の敵情報は難易度カードから外し、「全WAVE詳細」でだけ見せる(カードを縦に縮めるため)
 assert(!src.includes('createBattleEnemy(1,key)'),'難易度カードにWAVE1の敵情報を戻していないこと');
 // モードのタブと、チャレンジのときだけ出るランキングボタン

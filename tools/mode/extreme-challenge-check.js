@@ -30,7 +30,9 @@ assert(config.includes("const EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['Gran
 assert(config.includes("const EXTREME_UNLOCK_TEXT = 'チャレンジ Grand Master以上クリアで解放'"), 'locked card must explain the unlock condition');
 assert(/const isExtremeUnlocked = \(clearCounts\) => EXTREME_UNLOCK_DIFFICULTIES[\s\S]{0,160}\(Number\(clearCounts\?\.\[key\]\) \|\| 0\) > 0\)/.test(config), 'unlock must read the existing challenge clear counts');
 assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);'), 'unlock state must derive from the loaded clear counts');
-assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE];'), 'the extreme card must always be listed, locked or not');
+// 極限チャレンジは解放していなくても必ず並ぶ(鍵つきで見える)。
+// 末尾の種族チャレンジは一般公開前なので、公開フラグかデバッグのときだけ足される
+assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];'), 'the extreme card must always be listed, locked or not');
 assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
 assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
@@ -91,7 +93,12 @@ assert(source.includes("const EXTREME_RANKING_PREFIX = 'Extreme';")
   && source.includes('...EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),'), 'EXTREME must get its own ranking namespace inside the existing table');
 assert(source.includes('const result = await submitLocalScore(rankingDifficultyForMode(EXTREME_MODE.id, extremeDifficulty), score, runIdRef.current);'), 'EXTREME scores must be submitted through the shared ranking path');
 assert(source.includes("if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);"), 'the extreme prefix must be stripped for display');
-assert(!/submitLocalScore\((?!rankingDifficultyForMode|difficulty)/.test(source), 'no other ranking submission path may be introduced');
+// 送信できるのは「共通のキー生成を通った難易度」だけ。ここを緩めると rankings テーブルへ
+// 勝手な文字列が混ざる。種族チャレンジも rankingDifficultyForMode で作ったキーを渡している
+const submitArgs = [...source.matchAll(/submitLocalScore\(([^,]+),/g)].map(match => match[1].trim());
+assert(submitArgs.length === 4, `submitLocalScore call sites: ${submitArgs.length}`);
+assert(submitArgs.every(arg => arg === 'difficulty' || arg === 'diff' || arg.startsWith('rankingDifficultyForMode(')), 'no other ranking submission path may be introduced');
+assert(source.includes('const diff = rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, run.difficultyId, run.speciesId);'), 'species challenge must build its ranking key through the shared path');
 
 // --- ⑥ 画面・演出・助手 ---
 // モードの共通説明とランキングの導線(チャレンジ・プロと同じ2つのボタン)
