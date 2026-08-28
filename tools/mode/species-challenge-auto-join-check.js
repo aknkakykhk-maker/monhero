@@ -60,6 +60,21 @@ assert(!/pool:\s*getActiveMonsterList\(\)/.test(autoPick), 'AUTOが編成を直�
 assert(source.includes('const avail=speciesChallengeJoinPool()\n        ||pickJoinCandidates(joinCandidatePool(),activeIds,mainHero?.id,joinOfferSize());'),
   '手動の合流画面も同じhelperから候補を作る');
 
+// --- 加入できる供モンがいないWAVEでも、強化ポイントとガッツ回復の機会を残す ---
+// 種族チャレンジは供モンの数がその種族の頭数で決まるので、合流WAVE(2/4/6)に
+// 「加入できる子がいない」が普通に起きる。そこを素通りさせると強化ポイントも
+// 固有技強化もガッツ回復(UPGRADE_SKILL画面)も一緒に失う
+const training = source.slice(source.indexOf('const handleTraining ='), source.indexOf('// UPGRADE_SKILL画面'));
+const noJoinAt = training.indexOf("} else if(joinWaves.includes(wave)&&speciesChallengeBattleRunRef.current){");
+assert(noJoinAt >= 0, '種族チャレンジは加入なしの合流WAVEを別扱いする');
+const noJoinBranch = training.slice(noJoinAt, training.indexOf('} else if([1,3,5,7,9].includes(wave)){', noJoinAt));
+assert(noJoinBranch.includes("setGameState('UPGRADE_SKILL')"), '加入なしでもガッツ回復のある固有技強化画面へ進む');
+assert(noJoinBranch.includes('setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1))'), '加入時と同じ強化ポイントを配る');
+assert(training.indexOf("setGameState('PICK_ALLY')") < noJoinAt, '加入できる子がいるときは今までどおり供モン選択を優先する');
+assert(!/} else if\(joinWaves\.includes\(wave\)\)\{/.test(training), '通常モードの合流WAVEの進み方は変えない');
+const upgradeScreen = source.slice(source.indexOf("{gameState==='UPGRADE_SKILL'&&("), source.indexOf('{/* WAVE RESULT */}'));
+assert(upgradeScreen.includes('data-guts-recovery-button'), 'その画面にガッツ回復の操作がある');
+
 // --- 弾いた供モンをスロットへ残さない ---
 const setupStart = source.indexOf('const setupMon = (m, slotIdx) => {');
 const setupEnd = source.indexOf('const handleTraining =', setupStart);

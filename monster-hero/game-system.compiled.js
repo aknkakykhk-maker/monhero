@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b7a7fbd4363f80b2
+// source-sha256: f65a6301dd161134
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 11:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 12:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23478,6 +23478,12 @@ function MonsterHeroGame() {
       if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
         setMonSelection(avail);
         setGameState('PICK_ALLY');
+      } else if (joinWaves.includes(wave) && speciesChallengeBattleRunRef.current) {
+        // 種族チャレンジは連れていける供モンの数がその種族の頭数で決まるので、
+        // 「合流するWAVEなのに加入できる子がいない」が普通に起きる。そのWAVEを素通りさせると
+        // 強化ポイントと固有技強化・ガッツ回復の機会まで一緒に失うため、加入なしでも同じ画面へ進める
+        setUpgradePoints(prev => prev + (Math.floor(Math.random() * 4) + 1));
+        setGameState('UPGRADE_SKILL');
       } else if ([1, 3, 5, 7, 9].includes(wave)) {
         const activeCards = getActiveTeachingCards();
         const upgradeableIds = ownedTeachings.filter(ot => ot.evoLevel < 2).map(ot => ot.id);
@@ -24957,12 +24963,17 @@ function MonsterHeroGame() {
   };
   // 新しい入口からスコアランキングを開く。難易度カードから来たときは、その難易度のタブを最初に選ぶ
   // 種族チャレンジの記録一覧。ランキング画面と同じ入れ物をそのまま使う
-  const openSpeciesChallengeRecords = async backTo => {
+  // 種族チャレンジのランキング。難易度カードから開いたときは、その種族と難易度を最初に選んでおく
+  const openSpeciesChallengeRecords = async (backTo, {
+    speciesId = null,
+    difficultyId = null
+  } = {}) => {
     await loadSpeciesChallengeProgress();
     addAssistantBond('ranking');
     setScoreRankingMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setScoreRankingBack(backTo);
-    setRankingViewDiff(SPECIES_CHALLENGE_DIFFICULTY_IDS[0]);
+    setSpeciesRankFilter(speciesChallengeLineages().some(lineage => lineage.id === speciesId) ? speciesId : 'all');
+    setRankingViewDiff(SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? difficultyId : SPECIES_CHALLENGE_DIFFICULTY_IDS[0]);
     setGameState('BATTLE_SCORE_RANKING');
   };
   const openModeScoreRanking = (mode, diff, backTo) => {
@@ -25039,10 +25050,10 @@ function MonsterHeroGame() {
       const members = dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === lineage.id);
       return members.find(mon => mon.id === lineage.monId) || members[0] || null;
     };
-    const recordRow = (key, iconMon, title, sub, score, rank) => /*#__PURE__*/React.createElement("div", {
+    const recordRow = (key, iconMon, title, sub, score, rank, empty = false) => /*#__PURE__*/React.createElement("div", {
       key: key,
       "data-species-record-row": key,
-      className: "flex items-center gap-2.5 rounded-2xl border border-white/10 bg-slate-900 p-2.5"
+      className: `flex items-center gap-2.5 rounded-2xl border p-2.5 ${empty ? 'border-white/5 bg-slate-900/50 opacity-60' : 'border-white/10 bg-slate-900'}`
     }, rank !== null && /*#__PURE__*/React.createElement("span", {
       className: "w-6 shrink-0 text-center text-[13px] font-black text-amber-300"
     }, rank), /*#__PURE__*/React.createElement(MonsterArtFrame, {
@@ -25056,7 +25067,9 @@ function MonsterHeroGame() {
       className: "block truncate text-[12px] font-black text-white"
     }, title), /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-slate-400"
-    }, sub)), /*#__PURE__*/React.createElement("b", {
+    }, sub)), empty ? /*#__PURE__*/React.createElement("small", {
+      className: "shrink-0 text-right text-[9px] font-black text-slate-500"
+    }, "\u8A18\u9332\u306A\u3057") : /*#__PURE__*/React.createElement("b", {
       className: "shrink-0 text-right text-[13px] font-black text-cyan-200"
     }, score.toLocaleString(), /*#__PURE__*/React.createElement("small", {
       className: "ml-0.5 text-[8px] text-slate-400"
@@ -25065,11 +25078,14 @@ function MonsterHeroGame() {
     const rows = speciesFilter === 'all' ? lineages.map(lineage => ({
       lineage,
       record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId)
-    })).filter(row => row.record.clears > 0).sort((a, b) => b.record.bestScore - a.record.bestScore || b.record.clears - a.record.clears).map((row, index) => recordRow(row.lineage.id, lineageIcon(row.lineage), `${row.lineage.name}種`, `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, index + 1)) : SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => ({
+    })).filter(row => row.record.clears > 0).sort((a, b) => b.record.bestScore - a.record.bestScore || b.record.clears - a.record.clears).map((row, index) => recordRow(row.lineage.id, lineageIcon(row.lineage), `${row.lineage.name}種`, `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, index + 1))
+    // 種族を選んだときは14難易度を必ず全部並べる。まだクリアしていない難易度も
+    // 「記録なし」として残し、その種族の難易度別ランキングがどこにも無い状態を作らない
+    : SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => ({
       id,
       record: speciesChallengeRecord(speciesChallengeProgress, speciesFilter, id)
-    })).filter(row => row.record.clears > 0).map(row => recordRow(`${speciesFilter}:${row.id}`, lineageIcon(lineages.find(l => l.id === speciesFilter)), settingOf(row.id).label, `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, null));
-    const emptyText = speciesFilter === 'all' ? /*#__PURE__*/React.createElement(React.Fragment, null, settingOf(diffId).label, "\u3092\u30AF\u30EA\u30A2\u3057\u305F\u7A2E\u65CF\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u7A2E\u65CF\u3054\u3068\u306B\u81EA\u5DF1\u30D9\u30B9\u30C8\u304C\u6B8B\u308A\u307E\u3059\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, lineageById(speciesFilter).name, "\u7A2E\u3067\u30AF\u30EA\u30A2\u3057\u305F\u96E3\u6613\u5EA6\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u96E3\u6613\u5EA6\u3054\u3068\u306B\u81EA\u5DF1\u30D9\u30B9\u30C8\u304C\u6B8B\u308A\u307E\u3059\u3002");
+    })).map(row => recordRow(`${speciesFilter}:${row.id}`, lineageIcon(lineages.find(l => l.id === speciesFilter)), settingOf(row.id).label, row.record.clears > 0 ? `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}` : 'まだクリアしていません', row.record.bestScore, null, row.record.clears === 0));
+    const emptyText = /*#__PURE__*/React.createElement(React.Fragment, null, settingOf(diffId).label, "\u3092\u30AF\u30EA\u30A2\u3057\u305F\u7A2E\u65CF\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u7A2E\u65CF\u3054\u3068\u306B\u81EA\u5DF1\u30D9\u30B9\u30C8\u304C\u6B8B\u308A\u307E\u3059\u3002");
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0",
       "data-species-rank-tabs": true
@@ -28665,6 +28681,19 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement("span", {
           className: "flex-1 text-center whitespace-nowrap"
         }, "\uD83C\uDFC6 ", setting.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 16,
+          className: "shrink-0"
+        })), species && /*#__PURE__*/React.createElement("button", {
+          "data-species-difficulty-record-link": true,
+          disabled: !!battleTutorial,
+          onClick: () => openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT', {
+            speciesId: speciesChallengeSelection.speciesId,
+            difficultyId: key
+          }),
+          className: "min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "flex-1 text-center whitespace-nowrap"
+        }, "\uD83C\uDFC6 ", lineageById(speciesChallengeSelection.speciesId).name, "\u7A2E\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 16,
           className: "shrink-0"
         })), quick && (() => {
