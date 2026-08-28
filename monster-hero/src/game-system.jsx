@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 19:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 22:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8440,7 +8440,7 @@ function MonsterHeroGame() {
   const MONSTER_CARD_STYLE = { minHeight: '152px' };
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   // 名前・情報・補足・状態の4行。中身が無くても同じ高さの空欄を確保する
-  const monsterCardName = (node, className='text-white') => <div className={`mh-monster-card-name text-[10px] font-black truncate w-full text-center leading-tight ${className}`} style={{height:'14px'}}>{node}</div>;
+  const monsterCardName = (node, className='text-white', band=false) => <div className={`mh-monster-card-name text-[10px] font-black w-full text-center ${band?'min-h-[26px] px-1 py-0.5 rounded-md border border-pink-300/50 bg-slate-950/80 whitespace-normal break-words leading-[11px] flex items-center justify-center shadow-inner':'h-[14px] truncate leading-tight'} ${className}`} style={band?{textShadow:'0 1px 2px rgba(0,0,0,.95)'}:undefined}>{node}</div>;
   const monsterCardInfo = (node) => <div className="w-full flex items-center justify-center" style={{height:'14px'}}>{node||null}</div>;
   // 総合力の行。一覧では「どれが強いか」がいちばん知りたい情報なので、強化Pより上に置く
   const monsterCardPower = (power) => <div className="w-full flex items-center justify-center gap-1 leading-none" style={{height:'16px'}}>{power==null?null:(<><span className="text-[7px] text-amber-400/80 font-black uppercase">総合力</span><span className="text-[11px] font-mono font-black text-amber-200 tabular-nums">{formatMonsterPower(power)}</span></>)}</div>;
@@ -8460,7 +8460,7 @@ function MonsterHeroGame() {
   // masu を渡すとマスモン扱い(ピンクのふち・染色・★・転生・絆Lv・強化P)になる。
   // mon は総合力の計算に使うモンスター。省略時は masu / base から自動で決める。
   // info / sub は undefined なら既定(絆Lv・強化P)、null を渡すと空欄になる。
-  const renderMonsterCardBody = ({ masu=null, base, mon=undefined, info=undefined, sub=undefined, status=null, extra=null, badge=null }) => {
+  const renderMonsterCardBody = ({ masu=null, base, mon=undefined, info=undefined, sub=undefined, status=null, extra=null, badge=null, nameBand=false }) => {
     if (!base) return null;
     const fused = (masu?.fusionHistory || []).length > 0;
     const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
@@ -8479,7 +8479,7 @@ function MonsterHeroGame() {
         {badge}
         {masu&&<ReincarnateAura count={masu.reincarnateCount} className="is-small"/>}
       </div>
-      {monsterCardName(masu?masu.name:base.name, masu?'text-pink-200':'text-white')}
+      {monsterCardName(masu?masu.name:base.name, nameBand?'text-white':(masu?'text-pink-200':'text-white'), nameBand)}
       {monsterCardInfo(info!==undefined?info:(masu?monsterCardBond(masuBondLevelInfo(masu), normalizeMasuProgression(masu).levelCap):null))}
       {monsterCardPower(power)}
       {monsterCardSub(sub!==undefined?sub:((masu&&(masu.distAptPoints||0)>0)?<span className="text-[7px] text-amber-300 font-black flex items-center gap-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</span>:null))}
@@ -17333,7 +17333,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div key={e.key} className="relative">
                           <button onClick={()=>setMasuMonDetail(masu)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-pink-900/50 bg-slate-900`}>
                             {renderMonsterCardBody({
-                              masu, base,
+                              masu, base, nameBand:true,
                               status: monsterDisplayFlags.active&&e.active?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white">編成中</span>:null,
                             })}
                           </button>

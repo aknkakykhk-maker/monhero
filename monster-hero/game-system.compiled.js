@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 19298eeedfdb29e3
+// source-sha256: 6a245ed7f6ff46c6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 19:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 22:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14809,11 +14809,11 @@ function MonsterHeroGame() {
   };
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   // 名前・情報・補足・状態の4行。中身が無くても同じ高さの空欄を確保する
-  const monsterCardName = (node, className = 'text-white') => /*#__PURE__*/React.createElement("div", {
-    className: `mh-monster-card-name text-[10px] font-black truncate w-full text-center leading-tight ${className}`,
-    style: {
-      height: '14px'
-    }
+  const monsterCardName = (node, className = 'text-white', band = false) => /*#__PURE__*/React.createElement("div", {
+    className: `mh-monster-card-name text-[10px] font-black w-full text-center ${band ? 'min-h-[26px] px-1 py-0.5 rounded-md border border-pink-300/50 bg-slate-950/80 whitespace-normal break-words leading-[11px] flex items-center justify-center shadow-inner' : 'h-[14px] truncate leading-tight'} ${className}`,
+    style: band ? {
+      textShadow: '0 1px 2px rgba(0,0,0,.95)'
+    } : undefined
   }, node);
   const monsterCardInfo = node => /*#__PURE__*/React.createElement("div", {
     className: "w-full flex items-center justify-center",
@@ -14875,7 +14875,8 @@ function MonsterHeroGame() {
     sub = undefined,
     status = null,
     extra = null,
-    badge = null
+    badge = null,
+    nameBand = false
   }) => {
     if (!base) return null;
     const fused = (masu?.fusionHistory || []).length > 0;
@@ -14913,7 +14914,7 @@ function MonsterHeroGame() {
     }), badge, masu && /*#__PURE__*/React.createElement(ReincarnateAura, {
       count: masu.reincarnateCount,
       className: "is-small"
-    })), monsterCardName(masu ? masu.name : base.name, masu ? 'text-pink-200' : 'text-white'), monsterCardInfo(info !== undefined ? info : masu ? monsterCardBond(masuBondLevelInfo(masu), normalizeMasuProgression(masu).levelCap) : null), monsterCardPower(power), monsterCardSub(sub !== undefined ? sub : masu && (masu.distAptPoints || 0) > 0 ? /*#__PURE__*/React.createElement("span", {
+    })), monsterCardName(masu ? masu.name : base.name, nameBand ? 'text-white' : masu ? 'text-pink-200' : 'text-white', nameBand), monsterCardInfo(info !== undefined ? info : masu ? monsterCardBond(masuBondLevelInfo(masu), normalizeMasuProgression(masu).levelCap) : null), monsterCardPower(power), monsterCardSub(sub !== undefined ? sub : masu && (masu.distAptPoints || 0) > 0 ? /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] text-amber-300 font-black flex items-center gap-0.5"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 7
@@ -32708,6 +32709,7 @@ function MonsterHeroGame() {
         }, renderMonsterCardBody({
           masu,
           base,
+          nameBand: true,
           status: monsterDisplayFlags.active && e.active ? /*#__PURE__*/React.createElement("span", {
             className: "text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white"
           }, "\u7DE8\u6210\u4E2D") : null
