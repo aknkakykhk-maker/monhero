@@ -43,6 +43,10 @@ check('カードの中身は共通部品1か所だけで組み立てる',
 check('強化ポイントや編成中バッジが無くても行が消えない',
   has('{monsterCardSub(') && has('{monsterCardStatus(status)}')
     && has("style={{height:'13px'}}>{node||null}") && has("style={{height:'18px'}}>{node||null}"));
+check('マスモンの個体名は転生オーラより前面に固定する',
+  has('mh-monster-card-name text-[10px]')
+    && has('.mh-reincarnate-aura{position:absolute;z-index:-1;')
+    && has('.mh-monster-card-name{position:relative;z-index:2}'));
 check('種別ごとにバラバラだった旧サイズが残っていない',
   !has('className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"')
     && !has('<div className="relative w-10 h-10 shrink-0">'));
