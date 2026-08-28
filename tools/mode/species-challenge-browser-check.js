@@ -9,7 +9,7 @@
 //   ③ 勇者と同じモンスターは供モンに出ない(同じbaseIdの重複拒否)
 //   ④ 供モン0体でも出撃できる
 //   ⑤ WAVE1のバトルまで到達して、どこでも実行時エラー(真っ白)にならない
-//   ⑥ 種族チャレンジのランキング画面が開き、種族タブと14難易度が並ぶ
+//   ⑥ 種族チャレンジのランキング画面が開き、種族タブと難易度タブ(14)が並ぶ
 //
 // このサンドボックスは外部CDN(Tailwind)へ出られないため、Tailwindの読み込みだけ
 // 打ち切って起動し、横スライドに必要な最小限のCSSだけ自前で足す。
@@ -161,9 +161,17 @@ const check = (name, ok, detail = '') => {
     check('「すべて」＋種族別のタブが並ぶ', await rankTabs.count() === 12, `${await rankTabs.count()}タブ`);
     const selectedTab = await page.locator('[data-species-rank-tabs] button.bg-cyan-600').textContent();
     check('難易度カードから開くとその種族が選ばれている', /種$/.test(String(selectedTab).trim()), String(selectedTab));
+    const rankDiffTabs = page.locator('[data-species-difficulty-tabs] button');
+    check('難易度も他モードと同じくタブで並ぶ', await rankDiffTabs.count() === 14, `${await rankDiffTabs.count()}タブ`);
     const rankRows = page.locator('[data-species-record-row]');
-    check('選んだ種族の14難易度が並ぶ', await rankRows.count() === 14, `${await rankRows.count()}行`);
-    check('未クリアの難易度も残る', (await rankRows.first().textContent()).includes('記録なし'));
+    check('選んだ種族×難易度の記録が出る', await rankRows.count() === 1, `${await rankRows.count()}行`);
+    check('未クリアなら「記録なし」と分かる', (await rankRows.first().textContent()).includes('記録なし'));
+    // 難易度タブを切り替えても、その種族の記録のまま中身だけ入れ替わる
+    await rankDiffTabs.nth(3).dispatchEvent('click');
+    await page.waitForTimeout(200);
+    check('難易度タブを切り替えられる',
+      await page.locator('[data-species-record-row]').count() === 1
+      && (await page.locator('[data-species-record-row]').first().textContent()).includes('種'));
     check('公開前は自分の記録だけと書いてある',
       (await page.locator('[data-species-record-list]').textContent()).includes('全国ランキングはモードの公開後に始まります'));
     await checkNoSideScroll('種族チャレンジランキング');

@@ -93,10 +93,16 @@ check('モードカードの導線も他モードと同じ「ランキング」�
 check('種族で絞り込むタブがある', rankBody.includes('data-species-rank-tabs'));
 check('種族タブは「すべて」＋種族別で、絆Lvランキングと同じ並べ方',
   rankBody.includes("{ id:'all', label:'すべて' }") && rankBody.includes('...lineages.map(l => ({ id:l.id, label:`${l.name}種` }))'));
-check('「すべて」はその難易度の種族順位、種族を選ぶとその種族の難易度別を出す',
-  rankBody.includes("speciesFilter === 'all'") && rankBody.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => ({ id, record: speciesChallengeRecord(speciesChallengeProgress, speciesFilter, id) }))'));
-check('公開前に種族を選んだときは難易度タブを出さない(全難易度を縦に並べるため)',
-  rankBody.includes("{(speciesFilter === 'all' || nationalMode) && <div className=\"flex gap-1.5 overflow-x-auto pb-2 shrink-0\">"));
+// 難易度は他モードのランキングと同じくタブで切り替える。種族タブ×難易度タブで中身が決まる
+check('「すべて」はその難易度の種族順位を出す',
+  rankBody.includes("speciesFilter === 'all'")
+  && rankBody.includes('lineages.map(lineage => ({ lineage, record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId) }))'));
+check('種族を選ぶとその種族×選んだ難易度の記録を出す',
+  rankBody.includes('const record = speciesChallengeRecord(speciesChallengeProgress, speciesFilter, diffId);'));
+// 以前は種族を選ぶと14難易度を縦に並べていたが、他モードにそろえて難易度もタブにした
+check('難易度はどのタブでもタブで切り替える',
+  rankBody.includes('data-species-difficulty-tabs')
+  && !rankBody.includes("{(speciesFilter === 'all' || nationalMode) && <div"));
 // 公開後は同じ画面のまま「種族×難易度の全国ランキング」へ切り替わる。
 // いまは SPECIES_CHALLENGE_PUBLIC_RELEASE=false なので、この経路は動かない
 check('公開フラグが立つまで全国ランキングへ切り替えない',
@@ -104,14 +110,12 @@ check('公開フラグが立つまで全国ランキングへ切り替えない'
 check('公開後は既存のスコアランキングの取得・表示をそのまま使う',
   rankBody.includes('rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, speciesFilter)')
   && rankBody.includes('nationalRows.map(renderScoreRankingEntry)'));
-// 種族を選んだあと、その種族の難易度別ランキングが必ず見られる状態にしておく。
-// クリア済みだけを並べると、1つもクリアしていない種族では中身が空になり
-// 「種族での難易度別ランキングが無い」ように見えてしまう
-check('種族を選ぶと14難易度をすべて並べる(未クリアも残す)',
-  rankBody.includes("row.record.clears > 0\n              ? `クリア ${row.record.clears}回")
-  && rankBody.includes("'まだクリアしていません'")
-  && !/SPECIES_CHALLENGE_DIFFICULTY_IDS\.map[\s\S]{0,200}?\.filter\(row => row\.record\.clears > 0\)/.test(rankBody));
-check('未クリアの難易度は「記録なし」と分かる形で出す', rankBody.includes('記録なし'));
+// 難易度タブは14段階すべてを出す。1つもクリアしていない種族でも
+// 「その難易度の記録がどこにも無い」状態にならないようにするため
+check('難易度タブに14段階すべてを出す',
+  rankBody.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => { const st = settingOf(id); return ('));
+check('未クリアの難易度も選べて「記録なし」と分かる形で出す',
+  rankBody.includes("'まだクリアしていません'") && rankBody.includes('記録なし'));
 // 難易度カードからも、その種族のランキングへ入れるようにする
 check('難易度カードに種族ランキングの導線がある',
   source.includes('data-species-difficulty-record-link')
