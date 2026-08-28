@@ -55,6 +55,7 @@ const run = async (browser, scenario) => {
   await clickButton(/^合体$/);
   await clickButton(/主・染色モッチー/);
   await clickButton(/副・染色スエゾー/);
+  await clickButton(/この副1体で確認へ/);
   await page.waitForFunction(() => document.body.innerText.includes('合体の最終確認'));
 
   const action = scenario.breakthrough ? /限界突破 .*して合体/ : scenario.name === 'normal' ? /合体する|通常合体/ : /通常合体/;
@@ -85,6 +86,7 @@ const run = async (browser, scenario) => {
   }));
   await page.screenshot({ path: path.join(outDir, `fusion-${scenario.name}-continued.png`) });
   await clickButton(/次の副・ゴーレム/);
+  await clickButton(/この副1体で確認へ/);
   const nextFusionReady = await page.waitForFunction(() => document.body.innerText.includes('合体の最終確認')).then(() => true);
   await page.close();
   if (errors.length || !phase1.left || !phase1.right || phase1.dyedImages < 2 || !merge || !flash || !result || Object.values(continued).some(value => !value) || !nextFusionReady) {

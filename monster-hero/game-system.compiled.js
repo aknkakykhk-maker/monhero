@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0fcd326853e32464
+// source-sha256: 1c93c95211db2c80
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 18:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 18:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14508,6 +14508,7 @@ function MonsterHeroGame() {
   const [fusionStep, setFusionStep] = useState('main'); // 'main'|'sub'|'confirm'|'anim'|'result'
   const [fusionMainId, setFusionMainId] = useState(null); // 主として選んだマスモンid
   const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
+  const [fusionSubIds, setFusionSubIds] = useState([]); // 副の複数選択。2体以上は次STEPまでプレビュー専用
   const [fusionInheritUnique, setFusionInheritUnique] = useState(false); // 副の固有技を引き継ぐか(副が絆Lv30以上のみ選択可)
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
@@ -18683,6 +18684,9 @@ function MonsterHeroGame() {
   // 強化ポイントは通常のレベルアップと同じように主へ配る。
   const executeMasuFusion = async (withBreakthrough = false) => {
     if (fusionProcessingRef.current) return null;
+    // 複数合体の保存処理は次STEPで接続する。選択が1体だけのとき以外は、既存の
+    // 単体処理へ絶対に流さず、マスモン・所持品・ダイヤを一切書き換えない。
+    if (fusionSubIds.length !== 1 || fusionSubIds[0] !== fusionSubId) return null;
     fusionProcessingRef.current = true;
     const main = getMasuMon(fusionMainId);
     const sub = getMasuMon(fusionSubId);
@@ -18803,6 +18807,7 @@ function MonsterHeroGame() {
     setFusionStep('main');
     setFusionMainId(null);
     setFusionSubId(null);
+    setFusionSubIds([]);
     setFusionInheritUnique(false);
     setFusionAnimPhase(0);
     setFusionResultData(null);
@@ -18811,6 +18816,7 @@ function MonsterHeroGame() {
     fusionProcessingRef.current = false;
     setFusionStep('sub');
     setFusionSubId(null);
+    setFusionSubIds([]);
     setFusionInheritUnique(false);
     setFusionAnimPhase(0);
     setFusionResultData(null);
@@ -32776,6 +32782,8 @@ function MonsterHeroGame() {
           }, /*#__PURE__*/React.createElement("button", {
             onClick: () => {
               setFusionMainId(masu.id);
+              setFusionSubId(null);
+              setFusionSubIds([]);
               setFusionStep('sub');
             },
             className: "w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95"
@@ -32818,6 +32826,18 @@ function MonsterHeroGame() {
           return null;
         }
         const candidates = sortMasuList(masuMons.filter(m => m.id !== fusionMainId));
+        const candidateIds = new Set(candidates.map(m => m.id));
+        const selectedSubs = fusionSubIds.map(id => getMasuMon(id)).filter(m => m && candidateIds.has(m.id));
+        const totalSubXp = selectedSubs.reduce((sum, sub) => sum + cappedBondXp(sub), 0);
+        const plannedXp = cappedBondXp(main, totalSubXp);
+        const plannedLevel = bondLevelInfo(plannedXp).level;
+        const toggleFusionSub = id => setFusionSubIds(prev => prev.includes(id) ? prev.filter(selectedId => selectedId !== id) : [...prev, id]);
+        const continueWithFusionSubs = () => {
+          if (selectedSubs.length !== 1) return;
+          setFusionSubId(selectedSubs[0].id);
+          setFusionInheritUnique(false);
+          setFusionStep('confirm');
+        };
         return /*#__PURE__*/React.createElement("div", {
           className: "flex-1 flex flex-col h-full min-h-0 p-4"
         }, /*#__PURE__*/React.createElement("div", {
@@ -32825,6 +32845,8 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement("button", {
           onClick: () => {
             setFusionMainId(null);
+            setFusionSubId(null);
+            setFusionSubIds([]);
             setFusionStep('main');
           },
           className: "p-3 text-slate-400 active:scale-90"
@@ -32834,7 +32856,46 @@ function MonsterHeroGame() {
           className: "text-xl font-black italic text-violet-400 uppercase tracking-widest"
         }, "\u5408\u4F53\u30FB\u526F\u3092\u9078\u3076")), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
-        }, "\u300C", main.name, "\u300D\u306B\u7D46\u7D4C\u9A13\u5024\u3092\u6E21\u3059\u300C\u526F\u300D\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u526F\u306F\u5408\u4F53\u5F8C\u306B\u3044\u306A\u304F\u306A\u308A\u307E\u3059"), fusionGuide, fusionSortBar, /*#__PURE__*/React.createElement("div", {
+        }, "\u300C", main.name, "\u300D\u306B\u7D46\u7D4C\u9A13\u5024\u3092\u6E21\u3059\u300C\u526F\u300D\u3092\u30BF\u30C3\u30D7\u3057\u3066\u9078\u629E\uFF0F\u89E3\u9664\u3057\u3066\u304F\u3060\u3055\u3044"), /*#__PURE__*/React.createElement("div", {
+          className: "shrink-0 mb-2 rounded-2xl border border-violet-400/50 bg-violet-950/50 p-3"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center justify-between gap-2"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-sm font-black text-white"
+        }, "\u526F ", /*#__PURE__*/React.createElement("span", {
+          className: "text-violet-300"
+        }, selectedSubs.length, "\u4F53"), "\u9078\u629E\u4E2D"), selectedSubs.length > 0 && /*#__PURE__*/React.createElement("button", {
+          onClick: () => {
+            setFusionSubId(null);
+            setFusionSubIds([]);
+          },
+          className: "min-h-9 px-3 rounded-xl border border-white/15 bg-slate-900 text-[9px] font-black text-slate-200 active:scale-95"
+        }, "\u3059\u3079\u3066\u89E3\u9664")), /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 grid grid-cols-2 gap-2 text-[9px] font-bold"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "rounded-xl bg-black/30 p-2 text-slate-300"
+        }, "\u7372\u5F97\u4E88\u5B9AXP", /*#__PURE__*/React.createElement("span", {
+          className: "block text-sm text-cyan-300 font-black"
+        }, "+", totalSubXp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+          className: "rounded-xl bg-black/30 p-2 text-slate-300"
+        }, "\u4E3B\u306E\u4E88\u5B9A\u5024", /*#__PURE__*/React.createElement("span", {
+          className: "block text-sm text-emerald-300 font-black"
+        }, "Lv.", plannedLevel, " / ", plannedXp.toLocaleString(), " XP"))), selectedSubs.length > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1"
+        }, selectedSubs.map(sub => /*#__PURE__*/React.createElement("div", {
+          key: sub.id,
+          className: "flex justify-between gap-2 text-[9px] text-slate-200"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "truncate"
+        }, sub.name, "\u30FB\u7D46Lv.", masuBondLevelInfo(sub).level), /*#__PURE__*/React.createElement("span", {
+          className: "shrink-0 text-cyan-300"
+        }, "+", cappedBondXp(sub).toLocaleString(), " XP")))), selectedSubs.length > 1 && /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 rounded-xl border border-amber-500/40 bg-amber-950/40 p-2 text-[9px] font-bold text-amber-200"
+        }, "\u8907\u6570\u4F53\u306E\u5408\u4F53\u5B9F\u884C\u306F\u6B21\u56DE\u5BFE\u5FDC\u4E88\u5B9A\u3067\u3059\u3002\u4ECA\u56DE\u306F\u96C6\u8A08\u30D7\u30EC\u30D3\u30E5\u30FC\u306E\u307F\u3067\u3001\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u66F4\u3055\u308C\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
+          onClick: continueWithFusionSubs,
+          disabled: selectedSubs.length !== 1,
+          className: "mt-2 w-full min-h-11 rounded-xl bg-violet-600 text-white text-xs font-black disabled:bg-slate-800 disabled:text-slate-500 active:scale-95"
+        }, selectedSubs.length === 1 ? 'この副1体で確認へ' : selectedSubs.length > 1 ? '複数合体は次回対応' : '副を選択してください')), fusionSortBar, /*#__PURE__*/React.createElement("div", {
           className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
         }, candidates.length === 0 ? /*#__PURE__*/React.createElement("div", {
           className: "empty-state",
@@ -32855,15 +32916,14 @@ function MonsterHeroGame() {
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
           if (!base) return null;
           const lvl = masuBondLevelInfo(masu);
+          const selected = fusionSubIds.includes(masu.id);
           return /*#__PURE__*/React.createElement("div", {
             key: masu.id,
             className: "relative"
           }, /*#__PURE__*/React.createElement("button", {
-            onClick: () => {
-              setFusionSubId(masu.id);
-              setFusionStep('confirm');
-            },
-            className: "w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95"
+            "aria-pressed": selected,
+            onClick: () => toggleFusionSub(masu.id),
+            className: `w-full min-h-[88px] rounded-2xl border-2 p-2 flex flex-col items-center gap-1 active:scale-95 ${selected ? 'border-violet-300 bg-violet-900/70 ring-2 ring-violet-400/70' : 'border-violet-900/50 bg-slate-900'}`
           }, /*#__PURE__*/React.createElement("div", {
             className: "relative w-12 h-12 shrink-0"
           }, /*#__PURE__*/React.createElement("div", {
@@ -32884,7 +32944,13 @@ function MonsterHeroGame() {
             className: "text-[7px] text-pink-300 font-black flex items-center gap-0.5"
           }, /*#__PURE__*/React.createElement(Heart, {
             size: 6
-          }), "\u7D46Lv.", lvl.level)), /*#__PURE__*/React.createElement("button", {
+          }), "\u7D46Lv.", lvl.level), selected && /*#__PURE__*/React.createElement("div", {
+            className: "absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-violet-500 border-2 border-white flex items-center justify-center shadow-lg"
+          }, /*#__PURE__*/React.createElement(Check, {
+            size: 13,
+            className: "text-white",
+            strokeWidth: 4
+          }))), /*#__PURE__*/React.createElement("button", {
             onClick: ev => {
               ev.stopPropagation();
               setMasuMonDetail(masu);
