@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eed0413af07e32c9
+// source-sha256: 3aa94e51db375be8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 14:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 16:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1534,6 +1534,61 @@ const mergeMasuIntoMon = masu => {
     // 固有技設定(並び順・初期技)。保存が無い個体はここで従来どおりの値になる
     uniqueOrder: normalizeUniqueOrder(masu),
     initialUniqueKey: normalizeInitialUniqueKey(masu)
+  };
+};
+// マスモン詳細で「元の値 ＋ 基礎UP(超越) ＋ 通常強化 ＝ 現在」を出すための内訳。★重要
+// 新しい計算も保存も作らない。現在値は mergeMasuIntoMon の結果そのもので、
+// 基礎UPと通常強化は保存済みの値をそのまま読む。元の値は引き算で求めるので、
+// どんな個体でも 元 ＋ 基礎UP ＋ 通常強化 ＝ 現在 が必ず成り立つ。
+// 個体データを持たないベースモンには null を返す(存在しない内訳を作らない)。
+const masuGrowthBreakdown = (masu, mergedMon) => {
+  if (!masu || !mergedMon) return null;
+  const base = ALL_PLAYER_MONSTERS[masu.baseId];
+  if (!base) return null;
+  const sp = masu.statPoints || {};
+  const tsp = normalizeTranscendStatPoints(masu.transcendStatPoints);
+  const num = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const stat = (key, label, currentValue, color) => {
+    const baseUp = Math.max(0, num(tsp[key]));
+    const enhance = Math.max(0, num(sp[key]));
+    const current = num(currentValue);
+    return {
+      key,
+      label,
+      color,
+      current,
+      baseUp,
+      enhance,
+      origin: current - baseUp - enhance
+    };
+  };
+  // 間合い適性は「段階」で積む。通常強化ぶんを別に持たない旧形式(distAptに完成値を保存)の個体は、
+  // 保存されている完成値を元の適性として扱い、通常強化は0段階として出す(推測で分けない)。
+  const aptBaseUps = normalizeTranscendAptBoosts(masu.transcendAptBoosts);
+  const newFormat = Array.isArray(masu.distAptBoosts);
+  const savedApt = Array.isArray(masu.distApt) ? masu.distApt : null;
+  const apt = Array.from({
+    length: 4
+  }, (_, index) => {
+    const baseUp = Math.max(0, num(aptBaseUps[index]));
+    const enhance = newFormat ? Math.max(0, num(masu.distAptBoosts[index])) : 0;
+    const originGrade = newFormat ? base.distAptitude?.[index] || 'C' : savedApt?.[index] || base.distAptitude?.[index] || 'C';
+    const grade = mergedMon.distAptitude?.[index] || originGrade;
+    // 段階はMで止まるので、足した段階の合計が現在の段階と合わないことがある
+    const originIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(originGrade));
+    const capped = originIndex + baseUp + enhance > DIST_APTITUDE_GRADES.length - 1;
+    return {
+      index,
+      originGrade,
+      grade,
+      baseUp,
+      enhance,
+      capped
+    };
+  });
+  return {
+    stats: [stat('hp', 'ライフ', mergedMon.baseHp, 'text-pink-400'), stat('atk', 'ちから', mergedMon.baseAtk, 'text-red-400'), stat('def', '丈夫さ', mergedMon.baseDef, 'text-emerald-400'), stat('guts', 'ガッツ', mergedMon.baseGuts, 'text-amber-400')],
+    apt
   };
 };
 
@@ -14580,6 +14635,12 @@ function MonsterHeroGame() {
   const [rosterDetailMon, setRosterDetailMon] = useState(null); // 編成画面: 長押しで詳細表示中のモンスター
   const [rosterDetailTeaching, setRosterDetailTeaching] = useState(null); // 編成画面: 長押しで詳細表示中のアシストカード
   const [rosterSkillDetail, setRosterSkillDetail] = useState(null); // モンスタープロフィール: タップ中の技(通常技/固有技)のレベル別詳細 {mon,kind}
+  // モンスター詳細で開いている育成内訳。'<個体キー>:hp' / '<個体キー>:2' の形で持つ。
+  // 個体キーを含めるので、別のモンスターの詳細を開いたときは自然に閉じた状態から始まる。
+  // ステータスと間合い適性は別々に覚える(片方を開いても、もう片方が閉じない)。
+  // どちらも「その中で1つだけ」開くので、内訳が何枚も積み上がることはない
+  const [growthStatOpen, setGrowthStatOpen] = useState(null);
+  const [growthAptOpen, setGrowthAptOpen] = useState(null);
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
   const [showBackup, setShowBackup] = useState(false); // データバックアップ/復元モーダル
@@ -23981,10 +24042,135 @@ function MonsterHeroGame() {
   // 同じ内容(基本ステータス・勇者特性・合流ボーナス・間合い適性・技)が見られるよう1か所へまとめる。
   // 以前は画面ごとに別々のJSXで組んでいたため、勇者特性が勇者モン選択でしか見られない等の差があった。
   // 画面ごとの操作(強化ポイントの割り振りなど)は、呼び出し側が statValues / aptExtra / aptPointsLabel で足す。
+  // ===== 育成の内訳表示(マスモン詳細) =====
+  // 桁が増えても壊れないよう、現在値は必ず全部出し、足りないぶんはバッジ側を折り返す。
+  // 色は「元＝青 / 基礎UP＝ピンク / 通常強化＝緑 / 現在＝結果色」で全画面そろえる
+  const GROWTH_TONES = {
+    origin: {
+      box: 'border-sky-400/40 bg-sky-950/30',
+      caption: 'text-sky-300',
+      value: 'text-sky-200'
+    },
+    base: {
+      box: 'border-pink-400/40 bg-pink-950/30',
+      caption: 'text-pink-300',
+      value: 'text-pink-200'
+    },
+    enhance: {
+      box: 'border-emerald-400/40 bg-emerald-950/30',
+      caption: 'text-emerald-300',
+      value: 'text-emerald-200'
+    },
+    result: {
+      box: 'border-amber-400/50 bg-amber-950/30',
+      caption: 'text-amber-300',
+      value: 'text-amber-200'
+    }
+  };
+  // 0のときは出さない(「基礎 +0」「強化 +0」で画面をごちゃつかせない)
+  const growthGainBadge = (kind, amount) => amount > 0 ? /*#__PURE__*/React.createElement("span", {
+    key: kind,
+    "data-growth-badge": kind,
+    className: `shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[9px] font-black leading-none ${kind === 'base' ? 'border-pink-400/50 bg-pink-950/60 text-pink-200' : 'border-emerald-400/50 bg-emerald-950/60 text-emerald-200'}`
+  }, kind === 'base' ? '基礎' : '強化', " +", amount.toLocaleString()) : null;
+  // 「元 ＋ 基礎UP ＋ 強化 ＝ 現在」の1ブロック。basisを持たせてあるので、
+  // 幅が足りる画面では横4つ、狭いiPhoneでは2×2へ自然に折り返す(4列固定にしない)
+  const growthTermBlock = (op, caption, value, tone) => /*#__PURE__*/React.createElement("span", {
+    key: caption,
+    className: "flex min-w-0 flex-1 basis-[132px] items-stretch gap-1.5"
+  }, op && /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 self-center text-[13px] font-black text-slate-500"
+  }, op), /*#__PURE__*/React.createElement("span", {
+    className: `min-w-0 flex-1 rounded-xl border px-2 py-1.5 text-center ${tone.box}`
+  }, /*#__PURE__*/React.createElement("small", {
+    className: `block text-[8px] font-black leading-tight ${tone.caption}`
+  }, caption), /*#__PURE__*/React.createElement("b", {
+    className: `mt-0.5 block font-mono text-[15px] font-black leading-tight ${tone.value}`,
+    style: {
+      overflowWrap: 'anywhere'
+    }
+  }, value)));
+  // ステータス1項目1行。タップで内訳を開く
+  const renderGrowthStatRows = (monKey, stats) => /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5",
+    "data-growth-stat-list": true
+  }, stats.map(stat => {
+    const openKey = `${monKey}:${stat.key}`;
+    const open = growthStatOpen === openKey;
+    return /*#__PURE__*/React.createElement("div", {
+      key: stat.key,
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-growth-stat-row": stat.key,
+      "aria-expanded": open,
+      "aria-label": `${stat.label}の内訳を${open ? '閉じる' : '開く'}`,
+      onClick: () => setGrowthStatOpen(open ? null : openKey),
+      className: `w-full min-w-0 rounded-2xl border px-2.5 py-2 text-left active:scale-[.99] ${open ? 'border-white/25 bg-slate-800/80' : 'border-white/10 bg-slate-900/70'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "flex min-w-0 items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "w-[52px] shrink-0 text-[11px] font-black text-slate-300"
+    }, stat.label), /*#__PURE__*/React.createElement("span", {
+      className: "flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-2 gap-y-1"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: `font-mono text-[17px] font-black leading-none ${stat.color}`,
+      style: {
+        overflowWrap: 'anywhere'
+      }
+    }, stat.current.toLocaleString()), (stat.baseUp > 0 || stat.enhance > 0) && /*#__PURE__*/React.createElement("span", {
+      className: "flex flex-wrap items-center justify-end gap-1"
+    }, growthGainBadge('base', stat.baseUp), growthGainBadge('enhance', stat.enhance))), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 14,
+      className: `shrink-0 text-slate-500 ${open ? 'rotate-90' : ''}`
+    }))), open && /*#__PURE__*/React.createElement("div", {
+      "data-growth-stat-detail": stat.key,
+      className: "mt-1.5 rounded-2xl border border-pink-400/40 bg-slate-950/70 p-2.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mb-1.5 text-[10px] font-black text-pink-200"
+    }, stat.label, "\u306E\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap items-stretch gap-1.5"
+    }, growthTermBlock(null, '元ステータス', stat.origin.toLocaleString(), GROWTH_TONES.origin), growthTermBlock('＋', '基礎UP（永久）', `+${stat.baseUp.toLocaleString()}`, GROWTH_TONES.base), growthTermBlock('＋', '強化（使用）', `+${stat.enhance.toLocaleString()}`, GROWTH_TONES.enhance), growthTermBlock('＝', `現在の${stat.label}`, stat.current.toLocaleString(), GROWTH_TONES.result))));
+  }));
+  // 間合い適性の内訳。4距離のカードの下へ全幅で開く(狭いセルの中へ押し込まない)
+  const renderGrowthAptDetail = entry => {
+    if (!entry) return null;
+    const from = Math.max(0, DIST_APTITUDE_GRADES.indexOf(entry.originGrade));
+    const to = Math.max(from, DIST_APTITUDE_GRADES.indexOf(entry.grade));
+    const ladder = DIST_APTITUDE_GRADES.slice(from, to + 1);
+    const maxGrade = DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length - 1];
+    return /*#__PURE__*/React.createElement("div", {
+      "data-growth-apt-detail": entry.index,
+      className: "mt-2 rounded-2xl border border-fuchsia-400/40 bg-slate-950/70 p-2.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mb-1.5 text-[10px] font-black text-fuchsia-200"
+    }, "\u9593\u5408\u3044\u9069\u6027\uFF08", RANGE_LABELS[entry.index], "\uFF09\u306E\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap items-stretch gap-1.5"
+    }, growthTermBlock(null, '元の適性', entry.originGrade, GROWTH_TONES.origin), growthTermBlock('＋', '基礎UP（永久）', `+${entry.baseUp}段階`, GROWTH_TONES.base), growthTermBlock('＋', '強化P（使用）', `+${entry.enhance}段階`, GROWTH_TONES.enhance), growthTermBlock('＝', '現在の適性', /*#__PURE__*/React.createElement(React.Fragment, null, entry.grade, /*#__PURE__*/React.createElement("small", {
+      className: "mt-0.5 block text-[10px] font-black"
+    }, formatAptPct(aptGradeToPct(entry.grade)))), GROWTH_TONES.result)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-2 py-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-[8px] font-black text-slate-400"
+    }, "\u9069\u6027\u30E9\u30F3\u30AF\u306E\u6BB5\u968E"), /*#__PURE__*/React.createElement("span", {
+      className: "flex min-w-0 flex-wrap items-center gap-0.5"
+    }, ladder.map((grade, i) => /*#__PURE__*/React.createElement("span", {
+      key: grade,
+      className: "flex items-center gap-0.5"
+    }, i > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] text-slate-600"
+    }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+      className: `rounded-md border px-1 py-0.5 text-[10px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
+    }, grade))))), entry.capped && /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 text-[8px] font-bold leading-tight text-amber-300"
+    }, "\u6BB5\u968E\u306E\u4E0A\u9650\u306F ", maxGrade, " \u3067\u3059\u3002\u4E0A\u9650\u3092\u8D85\u3048\u305F\u3076\u3093\u306F\u73FE\u5728\u306E\u9069\u6027\u3078\u53CD\u6620\u3055\u308C\u307E\u305B\u3093\u3002"));
+  };
   const renderMonsterDetailInfo = (mon, opts = {}) => {
     if (!mon) return null;
     // aptDeltaPct を渡すと、グレードから引いた素の補正値ではなくその配列を「このモンスターが足す量」として使う。
     // NIGHTMAREのように適性そのものへ倍率がかかる難易度で、実際に足される量と表示を合わせるため。
+    // growth を渡すと、ステータスと間合い適性が「タップで内訳が開く」表示になる(マスモンだけ)。
+    // 渡さない画面(ベースモン・合流プレビュー・ランキング)はこれまでどおりの表示のまま
     const {
       statTitle = '基本ステータス',
       statValues = null,
@@ -23992,17 +24178,27 @@ function MonsterHeroGame() {
       aptPointsLabel = null,
       extraAfterApt = null,
       aptCurrentPct = null,
-      aptDeltaPct = null
+      aptDeltaPct = null,
+      growth = null
     } = opts;
     const plus = mon.plusStats || {};
     const rows = statValues || [['ライフ', mon.baseHp, 'text-pink-400'], ['ちから', mon.baseAtk, 'text-red-400'], ['丈夫さ', mon.baseDef, 'text-emerald-400'], ['ガッツ', mon.baseGuts, 'text-amber-400']];
     const joinBonus = [plus.hp > 0 && `HP+${plus.hp}`, plus.atk > 0 && `攻+${plus.atk}`, plus.def > 0 && `防+${plus.def}`, plus.guts > 0 && `G+${plus.guts}`].filter(Boolean).join(' ');
     const aptBonus = formatAptBonus(mon);
+    // 開いている内訳は個体ごとに覚える。別のモンスターを開いたときは閉じた状態から始まる
+    const monGrowthKey = String(mon.masuId ?? mon.id ?? '');
+    const openAptEntry = growth ? growth.apt.find(entry => growthAptOpen === `${monGrowthKey}:${entry.index}`) || null : null;
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "bg-black/40 p-2 rounded-xl border border-white/5 shrink-0"
+      className: "bg-black/40 p-2 rounded-xl border border-white/5 shrink-0 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-baseline gap-2 flex-wrap"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-slate-500 uppercase font-bold"
-    }, statTitle), /*#__PURE__*/React.createElement("div", {
+    }, statTitle), growth && /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] text-slate-500 font-bold"
+    }, "\u30BF\u30C3\u30D7\u3067\u8A73\u7D30")), growth ? /*#__PURE__*/React.createElement("div", {
+      className: "mt-1"
+    }, renderGrowthStatRows(monGrowthKey, growth.stats)) : /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-x-3 gap-y-1 mt-1"
     }, rows.map(([label, value, color]) => /*#__PURE__*/React.createElement("div", {
       key: label,
@@ -24010,21 +24206,23 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("span", null, label, ":"), /*#__PURE__*/React.createElement("span", {
       className: `${color} font-bold`
     }, value))))), /*#__PURE__*/React.createElement("div", {
-      className: "bg-black/40 p-2 rounded-xl border border-cyan-500/30"
+      className: "bg-black/40 p-2 rounded-xl border border-cyan-500/30 min-w-0"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between mb-0.5"
+      className: "flex items-center justify-between gap-2 mb-0.5 flex-wrap"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-cyan-400 uppercase font-bold"
-    }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09"), aptPointsLabel), /*#__PURE__*/React.createElement("div", {
+    }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09", growth && /*#__PURE__*/React.createElement("span", {
+      className: "ml-1 text-slate-500 normal-case"
+    }, "\u30BF\u30C3\u30D7\u3067\u8A73\u7D30")), aptPointsLabel), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1 mt-1"
     }, RANGE_LABELS.map((label, idx) => {
       const grade = getDistAptitude(mon, idx);
       const pct = aptDeltaPct ? aptDeltaPct[idx] || 0 : aptGradeToPct(grade);
       const cur = aptCurrentPct ? aptCurrentPct[idx] || 0 : null;
-      return /*#__PURE__*/React.createElement("div", {
-        key: idx,
-        className: "flex flex-col items-center gap-0.5"
-      }, /*#__PURE__*/React.createElement("span", {
+      const gain = growth ? growth.apt[idx] : null;
+      const openKey = `${monGrowthKey}:${idx}`;
+      const aptOpen = !!gain && growthAptOpen === openKey;
+      const cell = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
         className: `text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
       }, label), /*#__PURE__*/React.createElement("span", {
         className: `w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
@@ -24036,8 +24234,21 @@ function MonsterHeroGame() {
         className: "block text-[7px] text-slate-400 font-mono"
       }, "\u73FE\u5728 ", formatAptPct(cur)), /*#__PURE__*/React.createElement("span", {
         className: `block text-[10px] font-mono font-black ${pct > 0 ? 'text-emerald-300' : pct < 0 ? 'text-red-300' : 'text-slate-400'}`
-      }, "\u2192 ", formatAptPct(cur + pct))), aptExtra ? aptExtra(idx, grade) : null);
-    })), /*#__PURE__*/React.createElement("div", {
+      }, "\u2192 ", formatAptPct(cur + pct))), gain && (gain.baseUp > 0 || gain.enhance > 0) && /*#__PURE__*/React.createElement("span", {
+        className: "flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5"
+      }, growthGainBadge('base', gain.baseUp), growthGainBadge('enhance', gain.enhance)));
+      return /*#__PURE__*/React.createElement("div", {
+        key: idx,
+        className: "flex flex-col items-center gap-0.5 min-w-0"
+      }, gain ? /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-growth-apt-cell": idx,
+        "aria-expanded": aptOpen,
+        "aria-label": `${label}距離の間合い適性の内訳を${aptOpen ? '閉じる' : '開く'}`,
+        onClick: () => setGrowthAptOpen(aptOpen ? null : openKey),
+        className: `w-full min-w-0 flex flex-col items-center gap-0.5 rounded-xl border px-1 py-1 active:scale-95 ${aptOpen ? 'border-fuchsia-400/70 bg-fuchsia-950/40' : 'border-white/10 bg-black/20'}`
+      }, cell) : cell, aptExtra ? aptExtra(idx, grade) : null);
+    })), openAptEntry && renderGrowthAptDetail(openAptEntry), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-slate-500 font-bold mt-1 leading-tight"
     }, "\u7F6E\u304F\u8DDD\u96E2\u306B\u95A2\u4FC2\u306A\u304F\u3001\u3053\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u88DC\u6B63\u304C4\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059")), renderSkillSection(mon), renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません'), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2 shrink-0"
@@ -33557,19 +33768,13 @@ function MonsterHeroGame() {
       if (!base) return null;
       const mergedMasu = mergeMasuIntoMon(masu);
       const inRoster = monsterRosterIds.includes('masu:' + masu.id);
-      const sp = masu.statPoints || {};
       const masuNorm = normalizeMasuProgression(masu);
       const autoBreakthroughMaxLevel = autoRepeatBreakthroughMaxLevel(breederLevel.level);
       const autoBreakthroughLevels = autoRepeatBreakthroughLevelOptions(breederLevel.level);
       const autoBreakthroughSelectedLevel = autoBreakthroughLevels.includes(masuNorm.autoRepeatBreakthroughLevel) ? masuNorm.autoRepeatBreakthroughLevel : 0;
-      const tsp = masuNorm.transcendStatPoints;
       const masuLvl = masuBondLevelInfo(masu);
-      // (+○)は今までどおり通常の強化ポイントぶん。基礎+○は超越で永久に上げたぶんで、別物として並べる
-      const masuStatRow = (label, value, plus, color, transcendPlus = 0) => [label, /*#__PURE__*/React.createElement(React.Fragment, null, value, plus > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "text-emerald-400 text-[8px]"
-      }, " (+", plus, ")"), transcendPlus > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300 text-[8px]"
-      }, " \u57FA\u790E+", transcendPlus)), color];
+      // 「元 ＋ 基礎UP(超越) ＋ 通常強化 ＝ 現在」の内訳。値は既存の計算からそのまま引く
+      const growth = masuGrowthBreakdown(masu, mergedMasu);
       return renderMonsterDetailModal({
         mon: mergedMasu,
         masu,
@@ -33580,8 +33785,8 @@ function MonsterHeroGame() {
           setShowMasuRenameModal(true);
         },
         detailOpts: {
-          statTitle: '現在のステータス(強化分込み)',
-          statValues: [masuStatRow('ライフ', mergedMasu.baseHp, sp.hp || 0, 'text-pink-400', tsp.hp), masuStatRow('ちから', mergedMasu.baseAtk, sp.atk || 0, 'text-red-400', tsp.atk), masuStatRow('丈夫さ', mergedMasu.baseDef, sp.def || 0, 'text-emerald-400', tsp.def), masuStatRow('ガッツ', mergedMasu.baseGuts, sp.guts || 0, 'text-amber-400', tsp.guts)],
+          statTitle: 'ステータス',
+          growth,
           aptPointsLabel: /*#__PURE__*/React.createElement("div", {
             className: "text-[8px] text-amber-300 font-black flex flex-wrap items-center gap-x-2 gap-y-0.5"
           }, /*#__PURE__*/React.createElement("span", {

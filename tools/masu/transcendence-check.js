@@ -496,9 +496,19 @@ check('超越演出はSafe Areaを考慮し、モーション軽減にも対応�
   && source.includes('prefersReducedMotion()?900:4400'));
 check('新しい画像・音声アセットを足していない',
   !/images\/[^'"`]*transcend/i.test(source) && !/audio\/[^'"`]*transcend/i.test(source));
-check('ステータス表示は通常強化の(+○)と基礎+○を分けている',
-  source.includes('const masuStatRow = (label, value, plus, color, transcendPlus = 0)')
-  && source.includes('基礎+{transcendPlus}'));
+// 通常強化(statPoints)と超越で上げた基礎(transcendStatPoints)は、混ぜずに別々に見せる。
+// 2026年8月にマスモン詳細を作り直し、行の中の(+○)から
+// 「ピンクの基礎バッジ／緑の強化バッジ＋タップで開く内訳」へ変わった
+check('ステータス表示は通常強化と基礎UP(超越)を分けている',
+  source.includes('const masuGrowthBreakdown = (masu, mergedMon) => {')
+  && source.includes('const tsp = normalizeTranscendStatPoints(masu.transcendStatPoints);')
+  && source.includes('const baseUp = Math.max(0, num(tsp[key]));')
+  && source.includes('const enhance = Math.max(0, num(sp[key]));')
+  && source.includes("kind === 'base' ? '基礎' : '強化'"));
+check('内訳は 元 ＋ 基礎UP ＋ 通常強化 ＝ 現在 になっている',
+  source.includes('origin: current - baseUp - enhance')
+  && source.includes("growthTermBlock('＋', '基礎UP（永久）'")
+  && source.includes("growthTermBlock('＋', '強化（使用）'"));
 check('強化画面で通常強化と超越強化を切り替えられる',
   source.includes('data-transcend-enhance-tabs') && source.includes("setGameState('MASU_TRANSCEND_ENHANCE')"));
 // 超越強化はどのマスモンでも使える。「超越済みのときだけタブを出す」に戻していないか見張る
