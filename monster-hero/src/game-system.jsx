@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 17:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 17:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14631,7 +14631,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     </span>
   );
   // ステータス1項目1行。タップで内訳を開く
-  const renderGrowthStatRows = (monKey, stats) => (
+  const renderGrowthStatRows = (monKey, stats) => {
+    // 数字の欄の幅は4項目でそろえる。等幅フォントなので、いちばん桁数の多い値に
+    // 合わせて ch で指定すれば、桁が増えても現在値が縦一列に並ぶ
+    const valueTexts = stats.map(stat => stat.current.toLocaleString());
+    const valueWidth = `${Math.max(6, ...valueTexts.map(text => text.length))}ch`;
+    return (
     <div className="space-y-1.5" data-growth-stat-list>
       {stats.map(stat => {
         const openKey = `${monKey}:${stat.key}`;
@@ -14642,12 +14647,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               aria-label={`${stat.label}の内訳を${open ? '閉じる' : '開く'}`}
               onClick={() => setGrowthStatOpen(open ? null : openKey)}
               className={`w-full min-w-0 rounded-2xl border px-2.5 py-2 text-left active:scale-[.99] ${open ? 'border-white/25 bg-slate-800/80' : 'border-white/10 bg-slate-900/70'}`}>
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="w-[52px] shrink-0 text-[11px] font-black text-slate-300">{stat.label}</span>
-                <span className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-2 gap-y-1">
-                  <b className={`font-mono text-[17px] font-black leading-none ${stat.color}`} style={{ overflowWrap:'anywhere' }}>{stat.current.toLocaleString()}</b>
-                  {(stat.baseUp > 0 || stat.enhance > 0) && <span className="flex flex-wrap items-center justify-end gap-1">{growthGainBadge('base', stat.baseUp)}{growthGainBadge('enhance', stat.enhance)}</span>}
-                </span>
+              {/* ★数字の位置をそろえる。値の欄を固定幅の右そろえにしておくと、
+                  バッジの数が行ごとに違っても現在値が縦一列に並ぶ。
+                  桁が増えたときだけ欄が広がり、そのぶんバッジ側が折り返す */}
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="w-[44px] shrink-0 text-[11px] font-black text-slate-300">{stat.label}</span>
+                <b style={{ minWidth: valueWidth }} className={`shrink-0 whitespace-nowrap text-right font-mono text-[17px] font-black leading-none ${stat.color}`}>{stat.current.toLocaleString()}</b>
+                <span className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1">{growthGainBadge('base', stat.baseUp)}{growthGainBadge('enhance', stat.enhance)}</span>
                 <ChevronRight size={14} className={`shrink-0 text-slate-500 ${open ? 'rotate-90' : ''}`}/>
               </span>
             </button>
@@ -14666,7 +14672,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         );
       })}
     </div>
-  );
+    );
+  };
   // 間合い適性の内訳。4距離のカードの下へ全幅で開く(狭いセルの中へ押し込まない)
   const renderGrowthAptDetail = (entry) => {
     if (!entry) return null;
