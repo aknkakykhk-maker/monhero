@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 16:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 17:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1284,6 +1284,9 @@ const mergeMasuIntoMon = (masu) => {
   const base = ALL_PLAYER_MONSTERS[masu?.baseId];
   if (!base) return null;
   const sp = masu.statPoints || {};
+  // 供モン時の合流ボーナスにも、通常強化と同じく超越で上げた基礎値を100%乗せる。
+  // transcendStatPoints は実際の増加値なので倍率換算せず、そのまま1度だけ加算する。
+  const tsp = normalizeTranscendStatPoints(masu?.transcendStatPoints);
   const individual = resolveMasuIndividualStats(masu, base);
   return {
     ...base,
@@ -1295,10 +1298,10 @@ const mergeMasuIntoMon = (masu) => {
     baseDef: individual.def + (sp.def || 0),
     baseGuts: individual.guts + (sp.guts || 0),
     plusStats: {
-      hp: (base.plusStats?.hp || 0) + (sp.hp || 0),
-      atk: (base.plusStats?.atk || 0) + (sp.atk || 0),
-      def: (base.plusStats?.def || 0) + (sp.def || 0),
-      guts: (base.plusStats?.guts || 0) + (sp.guts || 0),
+      hp: (base.plusStats?.hp || 0) + (sp.hp || 0) + tsp.hp,
+      atk: (base.plusStats?.atk || 0) + (sp.atk || 0) + tsp.atk,
+      def: (base.plusStats?.def || 0) + (sp.def || 0) + tsp.def,
+      guts: (base.plusStats?.guts || 0) + (sp.guts || 0) + tsp.guts,
     },
     distAptitude: resolveMasuDistAptitude(masu, base),
     colors: getMasuColors(masu),
