@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 18:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 19:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8193,7 +8193,7 @@ function MonsterHeroGame() {
   const [fusionStep, setFusionStep] = useState('main'); // 'main'|'sub'|'confirm'|'anim'|'result'
   const [fusionMainId, setFusionMainId] = useState(null); // 主として選んだマスモンid
   const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
-  const [fusionSubIds, setFusionSubIds] = useState([]); // 副の複数選択。2体以上は次STEPまでプレビュー専用
+  const [fusionSubIds, setFusionSubIds] = useState([]); // 通常合体でまとめて消費する副。配列順を処理順として維持する
   const [fusionInheritUnique, setFusionInheritUnique] = useState(false); // 副の固有技を引き継ぐか(副が絆Lv30以上のみ選択可)
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
@@ -10724,6 +10724,12 @@ function MonsterHeroGame() {
     const saved = saveMonsterPartySets({ ...monsterPartySets, rosters });
     setDraftMonsterRoster(prev=>editingPartySetIndex===saved.activeIndex?saved.rosters[editingPartySetIndex]:prev.filter(id=>id!==entry));
   };
+  const removeMasusFromAllPartySets = (masuIds) => {
+    const entries = new Set(masuIds.map(id=>`masu:${id}`));
+    const rosters = monsterPartySets.rosters.map(roster=>roster.filter(id=>!entries.has(id)));
+    const saved = saveMonsterPartySets({ ...monsterPartySets, rosters });
+    setDraftMonsterRoster(prev=>editingPartySetIndex===saved.activeIndex?saved.rosters[editingPartySetIndex]:prev.filter(id=>!entries.has(id)));
+  };
 
   // ブリーダーマーケットでアイテムを購入。アイコンはpt、円盤石/ブリーダー/消耗品はゴールドを消費し、
   // 種別ごとの解放リストに追加(端末保存)。円盤石/ブリーダーは解放と同時に編成へも自動追加する
@@ -11061,81 +11067,79 @@ function MonsterHeroGame() {
   // 強化ポイントは通常のレベルアップと同じように主へ配る。
   const executeMasuFusion = async (withBreakthrough = false) => {
     if (fusionProcessingRef.current) return null;
-    // 複数合体の保存処理は次STEPで接続する。選択が1体だけのとき以外は、既存の
-    // 単体処理へ絶対に流さず、マスモン・所持品・ダイヤを一切書き換えない。
-    if (fusionSubIds.length !== 1 || fusionSubIds[0] !== fusionSubId) return null;
+    // 実行前に選択全体を検証する。不正なIDが1つでもあれば、保存には一切進まない。
+    const requestedSubIds = [...fusionSubIds];
+    const uniqueSubIds = new Set(requestedSubIds);
+    const snapshot = masuMonsRef.current;
+    const main = snapshot.find(m=>m.id===fusionMainId);
+    const subs = requestedSubIds.map(id=>snapshot.find(m=>m.id===id));
+    if (!main || requestedSubIds.length===0 || uniqueSubIds.size!==requestedSubIds.length
+      || uniqueSubIds.has(fusionMainId) || subs.some(sub=>!sub)) return null;
+    // 複数副では今回対象外の固有技継承・限界突破合体へ流さない。
+    if (requestedSubIds.length>1 && (withBreakthrough || fusionInheritUnique)) return null;
     fusionProcessingRef.current = true;
-    const main = getMasuMon(fusionMainId);
-    const sub = getMasuMon(fusionSubId);
-    if (!main || !sub || main.id === sub.id) { fusionProcessingRef.current=false; return null; }
-    // レベルは必ず上限(levelCap)を通したものを使う。上限を超えた絆経験値がそのまま
-    // レベルとして扱われると、費用が高くなったり上がらないレベルぶんの強化ポイントを
-    // 配ってしまう(確認画面が「Lv.41になる」と出ていたのがこれ)
     const mainLvl = masuBondLevelInfo(main);
-    const subLvl = masuBondLevelInfo(sub);
-    const gainedXp = cappedBondXp(sub);
-    const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:gainedXp, gold, psycheOwned:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:subLvl.level, inherit:fusionInheritUnique });
+    const totalGainedXp = subs.reduce((sum, sub)=>sum+cappedBondXp(sub), 0);
+    const firstSubLvl = masuBondLevelInfo(subs[0]);
+    const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:totalGainedXp, gold, psycheOwned:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:firstSubLvl.level, inherit:requestedSubIds.length===1&&fusionInheritUnique });
     const { breakthroughPlan } = diamondSummary;
     if (diamondSummary.normalDiamondShortage || (withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford))) { fusionProcessingRef.current=false; return null; }
-    const fusionMain = withBreakthrough ? breakthroughPlan.nextMasu : main;
-    const afterXp = cappedBondXp(fusionMain, gainedXp);
-    const before = mainLvl;
-    const after = bondLevelInfo(afterXp);
-    const gainedLevels = after.level - before.level;
-    const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
+    const preparedMain = withBreakthrough ? { ...main, ...breakthroughPlan.nextMasu } : main;
     const mainBase = ALL_PLAYER_MONSTERS[main.baseId];
-    const ownedUniqueIds = new Set([uniqueLineageId(mainBase?.unique, mainBase?.id), ...(main.inheritedUniques || []).map(unique=>uniqueLineageId(unique))].filter(Boolean));
-    const subUniqueLineageId = uniqueLineageId(subBase?.unique, subBase?.id);
-    const canInherit = subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && fusionInheritUnique && subBase?.unique && !ownedUniqueIds.has(subUniqueLineageId);
-    const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
-    const inheritedUnique = canInherit ? { ...uniqueSkillAtLevel(subBase.unique, inheritedLevel), monId: subBase.id, lineageId:subUniqueLineageId, sourceMasuName: sub.name } : null;
-    const reincarnateTransfer = transferableReincarnateBonus(sub);
-    const historyEntry = { subName: sub.name, subBaseId: sub.baseId, subBondLevel: subLvl.level, xpGained: gainedXp, inherited: !!inheritedUnique, inheritedReincarnateCount:reincarnateTransfer.count, timestamp: Date.now() };
-    const next = masuMonsRef.current
-        .filter(m => m.id !== sub.id)
-        .map(m => {
-          if (m.id !== main.id) return m;
-          const prepared = withBreakthrough ? { ...m, ...breakthroughPlan.nextMasu } : m;
-          const advanced = applyBondXpGain(prepared, gainedXp);
-          const nextMain = {
-            ...advanced.masu,
-            // 副の通常強化は移さず、転生で獲得済みの強化ポイントだけを未使用Pとして全量加算する。
-            // 自身の転生回数・Lv・固有技・限界突破は変更しない。
-            distAptPoints: advanced.masu.distAptPoints + reincarnateTransfer.points,
-            inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(m) + reincarnateTransfer.points,
-            inheritedReincarnateCount: inheritedReincarnateCountOf(m) + reincarnateTransfer.count,
-            fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + advanced.gainedLevels,
-            fusionHistory: [...(m.fusionHistory || []), historyEntry],
-          };
-          return inheritedUnique ? appendInheritedUnique(nextMain, inheritedUnique, inheritedLevel) : nextMain;
-        });
+    let nextMain = preparedMain;
+    let inherited = false;
+    let inheritedReincarnatePoints = 0;
+    let inheritedReincarnateCount = 0;
+    // fusionSubIds順に、単体合体と同じXP・ポイント・履歴処理を1体ずつ適用する。
+    for (const sub of subs) {
+      const subLvl = masuBondLevelInfo(sub);
+      const gainedXp = cappedBondXp(sub);
+      const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
+      const ownedUniqueIds = new Set([uniqueLineageId(mainBase?.unique, mainBase?.id), ...(nextMain.inheritedUniques || []).map(unique=>uniqueLineageId(unique))].filter(Boolean));
+      const subUniqueLineageId = uniqueLineageId(subBase?.unique, subBase?.id);
+      const canInherit = subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && fusionInheritUnique && requestedSubIds.length===1 && subBase?.unique && !ownedUniqueIds.has(subUniqueLineageId);
+      const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
+      const inheritedUnique = canInherit ? { ...uniqueSkillAtLevel(subBase.unique, inheritedLevel), monId:subBase.id, lineageId:subUniqueLineageId, sourceMasuName:sub.name } : null;
+      const transfer = transferableReincarnateBonus(sub);
+      const advanced = applyBondXpGain(nextMain, gainedXp);
+      nextMain = {
+        ...advanced.masu,
+        distAptPoints: advanced.masu.distAptPoints + transfer.points,
+        inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(nextMain) + transfer.points,
+        inheritedReincarnateCount: inheritedReincarnateCountOf(nextMain) + transfer.count,
+        fusionBondLevels: donationDiamondValue(nextMain.fusionBondLevels) + advanced.gainedLevels,
+        fusionHistory: [...(nextMain.fusionHistory || []), { subName:sub.name, subBaseId:sub.baseId, subBondLevel:subLvl.level, xpGained:gainedXp, inherited:!!inheritedUnique, inheritedReincarnateCount:transfer.count, timestamp:Date.now() }],
+      };
+      if (inheritedUnique) nextMain=appendInheritedUnique(nextMain, inheritedUnique, inheritedLevel);
+      inherited ||= !!inheritedUnique;
+      inheritedReincarnatePoints += transfer.points;
+      inheritedReincarnateCount += transfer.count;
+    }
+    const after = masuBondLevelInfo(nextMain);
+    const gainedLevels = after.level-mainLvl.level;
+    const removedIds = new Set(requestedSubIds);
+    const next = snapshot.filter(m=>!removedIds.has(m.id)).map(m=>m.id===main.id?nextMain:m);
     const goldAfter = withBreakthrough ? diamondSummary.diamondAfter : diamondSummary.normalDiamondAfter;
-    const nextItems = withBreakthrough
-      ? { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]:breakthroughPlan.nextPsyche }
-      : ownedItemsRef.current;
+    const nextItems = withBreakthrough ? { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]:breakthroughPlan.nextPsyche } : ownedItemsRef.current;
     try {
       await Promise.all([
         storeSet('mh_masu_mons', next, false),
         storeSet('mh_gold', goldAfter, false),
         ...(withBreakthrough ? [storeSet('mh_owned_items', nextItems, false)] : []),
       ]);
-    } catch {
-      fusionProcessingRef.current=false;
-      return null;
-    }
-    masuMonsRef.current = next;
-    ownedItemsRef.current = nextItems;
-    setMasuMons(next); setGold(goldAfter);
-    if (withBreakthrough) setOwnedItems(nextItems);
-    removeMasuFromAllPartySets(sub.id);
+    } catch { fusionProcessingRef.current=false; return null; }
+    masuMonsRef.current=next; ownedItemsRef.current=nextItems;
+    setMasuMons(next); setGold(goldAfter); if (withBreakthrough) setOwnedItems(nextItems);
+    removeMasusFromAllPartySets(requestedSubIds);
     addAssistantBond('fusion');
+    const displaySub=subs[0], displaySubBase=ALL_PLAYER_MONSTERS[displaySub.baseId];
     return {
-      mainName: main.name, mainIconUrl: mainBase?.iconUrl, mainBaseId: main.baseId, mainEmoji: mainBase?.emoji, mainColors: getMasuColors(main),
-      subName: sub.name, subIconUrl: subBase?.iconUrl, subBaseId: sub.baseId, subEmoji: subBase?.emoji, subColors: getMasuColors(sub),
-      before, after, gainedXp, gainedLevels, inherited: !!inheritedUnique,
-      cost: withBreakthrough ? diamondSummary.totalDiamondCost : diamondSummary.normalDiamondCost,
-      inheritedReincarnatePoints:reincarnateTransfer.points, inheritedReincarnateCount:reincarnateTransfer.count,
-      breakthroughCount:withBreakthrough ? breakthroughPlan.count : 0,
+      mainName:main.name, mainIconUrl:mainBase?.iconUrl, mainBaseId:main.baseId, mainEmoji:mainBase?.emoji, mainColors:getMasuColors(main),
+      subName:displaySub.name, subIconUrl:displaySubBase?.iconUrl, subBaseId:displaySub.baseId, subEmoji:displaySubBase?.emoji, subColors:getMasuColors(displaySub), subCount:subs.length,
+      before:mainLvl, after, gainedXp:totalGainedXp, gainedLevels, inherited,
+      cost:withBreakthrough?diamondSummary.totalDiamondCost:diamondSummary.normalDiamondCost,
+      inheritedReincarnatePoints, inheritedReincarnateCount,
+      breakthroughCount:withBreakthrough?breakthroughPlan.count:0,
     };
   };
   const resetFusionFlow = () => {
@@ -17417,7 +17421,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const plannedLevel = bondLevelInfo(plannedXp).level;
             const toggleFusionSub = (id) => setFusionSubIds(prev => prev.includes(id) ? prev.filter(selectedId=>selectedId!==id) : [...prev, id]);
             const continueWithFusionSubs = () => {
-              if (selectedSubs.length !== 1) return;
+              if (selectedSubs.length === 0) return;
               setFusionSubId(selectedSubs[0].id);
               setFusionInheritUnique(false);
               setFusionStep('confirm');
@@ -17439,8 +17443,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="rounded-xl bg-black/30 p-2 text-slate-300">主の予定値<span className="block text-sm text-emerald-300 font-black">Lv.{plannedLevel} / {plannedXp.toLocaleString()} XP</span></div>
                   </div>
                   {selectedSubs.length>0&&<div className="mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1">{selectedSubs.map(sub=><div key={sub.id} className="flex justify-between gap-2 text-[9px] text-slate-200"><span className="truncate">{sub.name}・絆Lv.{masuBondLevelInfo(sub).level}</span><span className="shrink-0 text-cyan-300">+{cappedBondXp(sub).toLocaleString()} XP</span></div>)}</div>}
-                  {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-amber-500/40 bg-amber-950/40 p-2 text-[9px] font-bold text-amber-200">複数体の合体実行は次回対応予定です。今回は集計プレビューのみで、保存データは変更されません。</div>}
-                  <button onClick={continueWithFusionSubs} disabled={selectedSubs.length!==1} className="mt-2 w-full min-h-11 rounded-xl bg-violet-600 text-white text-xs font-black disabled:bg-slate-800 disabled:text-slate-500 active:scale-95">{selectedSubs.length===1?'この副1体で確認へ':selectedSubs.length>1?'複数合体は次回対応':'副を選択してください'}</button>
+                  {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-violet-500/40 bg-violet-950/40 p-2 text-[9px] font-bold text-violet-200">複数副の通常合体です。固有技継承と「限界突破して合体」は使用できません。</div>}
+                  <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mt-2 w-full min-h-11 rounded-xl bg-violet-600 text-white text-xs font-black disabled:bg-slate-800 disabled:text-slate-500 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'副を選択してください'}</button>
                 </div>
                 {fusionSortBar}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
@@ -17474,8 +17478,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
           if (fusionStep==='confirm') {
             const main = getMasuMon(fusionMainId);
-            const sub = getMasuMon(fusionSubId);
-            if (!main || !sub) { resetFusionFlow(); return null; }
+            const selectedSubs = fusionSubIds.map(id=>getMasuMon(id));
+            const sub = selectedSubs[0];
+            if (!main || selectedSubs.length===0 || selectedSubs.some(candidate=>!candidate)) { resetFusionFlow(); return null; }
             const mainBase = ALL_PLAYER_MONSTERS[main.baseId];
             const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
             if (!mainBase || !subBase) { resetFusionFlow(); return null; }
@@ -17488,16 +17493,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 実処理と同じ計算にする。主のレベル上限を超えるぶんは入らないので、
             // ここで上限まで切ったうえで「合体後」を出す(以前は上限を無視して出していた)
             const mainCap = normalizeMasuProgression(main).levelCap;
-            const subXp = cappedBondXp(sub);
+            const subXp = selectedSubs.reduce((sum, candidate)=>sum+cappedBondXp(candidate), 0);
             const beforeXp = cappedBondXp(main);
-            const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:subXp, gold, psycheOwned:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:subLvl.level, inherit:fusionInheritUnique });
+            const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:subXp, gold, psycheOwned:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:subLvl.level, inherit:selectedSubs.length===1&&fusionInheritUnique });
             const { inheritCost, breakthroughDiamondCost, totalDiamondCost, diamondAfter, diamondShortage, breakthroughPlan } = diamondSummary;
             const canAfford = diamondSummary.normalDiamondShortage === 0;
             const afterXp = cappedBondXp(main, subXp);
             const afterLvl = bondLevelInfo(afterXp);
             const gainedLevels = afterLvl.level - mainLvl.level;
             const gainedLevelPoints = gainedLevels * levelUpPointMultiplier(main.rebirthCount);
-            const reincarnateTransfer = transferableReincarnateBonus(sub);
+            const reincarnateTransfer = selectedSubs.reduce((total, candidate)=>{const transfer=transferableReincarnateBonus(candidate);return {points:total.points+transfer.points,count:total.count+transfer.count};},{points:0,count:0});
             // 上限で切り捨てられる絆経験値。あるときは事前に知らせる
             const wastedXp = Math.max(0, (beforeXp + subXp) - afterXp);
             const mainPointsNow = main.distAptPoints || 0;
@@ -17518,7 +17523,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="flex flex-col items-center gap-1">
                       <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-slate-500 shrink-0"><DyedMonsterImage baseId={sub.baseId} src={subBase.iconUrl} alt={sub.name} masuColors={getMasuColors(sub)} className="w-full h-full object-cover"/></div>
                       <div className="text-[9px] font-black text-slate-300">{sub.name}</div>
-                      <div className="text-[7px] text-slate-500 font-black">副(消える)</div>
+                      <div className="text-[7px] text-slate-500 font-black">副{selectedSubs.length}体(すべて消える)</div>
                     </div>
                   </div>
                   {/* 合体後にどう変わるかの内訳。実行前に結果が分かるようにしている */}
@@ -17549,7 +17554,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       通常合体では、超過する {wastedXp.toLocaleString()} XP は失われます。
                     </div>}
                   </div>
-                  {breakthroughPlan.count>0&&<div className="bg-violet-950/45 p-3 rounded-xl border border-violet-400/50 mb-2 space-y-1">
+                  {selectedSubs.length===1&&breakthroughPlan.count>0&&<div className="bg-violet-950/45 p-3 rounded-xl border border-violet-400/50 mb-2 space-y-1">
                     <div className="flex justify-between text-[10px] font-black text-violet-200"><span>合体後予定</span><span>Lv.{breakthroughPlan.plannedLevel}</span></div>
                     <div className="flex justify-between text-[9px] font-bold"><span className="text-slate-400">現在のLv上限</span><span>Lv.{mainCap}</span></div>
                     <div className="flex justify-between text-[10px] font-black"><span className="text-slate-300">必要な限界突破</span><span className="text-violet-300">×{breakthroughPlan.count}</span></div>
@@ -17560,9 +17565,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="text-[7px] text-slate-400">限界突破分の固有技ポイントは「あとで決める」として保持されます。</div>
                   </div>}
                   <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5">
-                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">受け継ぐ絆経験値</span><span className="text-pink-300 font-black">{(sub.bondXp||0).toLocaleString()} XP</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">副の数</span><span className="text-violet-300 font-black">{selectedSubs.length}体</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">合計獲得予定XP</span><span className="text-pink-300 font-black">{subXp.toLocaleString()} XP</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">実際に入るXP</span><span className="text-emerald-300 font-black">{Math.max(0,afterXp-beforeXp).toLocaleString()} XP</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">失われるXP</span><span className={wastedXp>0?"text-amber-300 font-black":"text-slate-300 font-black"}>{wastedXp.toLocaleString()} XP</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">合体後予定Lv</span><span className="text-pink-300 font-black">Lv.{afterLvl.level}</span></div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">転生育成ボーナス</span><span className="text-amber-300 font-black">{reincarnateTransfer.count}回分 / +{reincarnateTransfer.points}P</span></div>
-                    {reincarnateTransfer.count>0&&<div className="text-[8px] text-slate-400">副自身 {normalizeMasuProgression(sub).reincarnateCount}回＋継承済み {inheritedReincarnateCountOf(sub)}回分を全量継承します</div>}
+                    {reincarnateTransfer.count>0&&<div className="text-[8px] text-slate-400">{selectedSubs.length===1?`副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します`:`選択した副${selectedSubs.length}体の転生由来分をすべて累積します`}</div>}
                     <div className="text-[9px] font-black text-violet-200 tracking-wider">ダイヤ消費</div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-white font-black">{diamondSummary.goldBefore.toLocaleString()}</span></div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">固有技引き継ぎ</span><span className="text-amber-300 font-black">{inheritCost.toLocaleString()}</span></div>
@@ -17571,7 +17580,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="flex justify-between text-[11px] font-black"><span className="text-slate-200">合体後</span><span className={diamondShortage?'text-red-300':'text-emerald-300'}>{Math.max(0, diamondAfter).toLocaleString()}</span></div>
                     {diamondShortage>0&&<div className="text-[9px] text-red-300 font-black text-right">あと{diamondShortage.toLocaleString()}ダイヤ必要</div>}
                   </div>
-                  {canChooseInherit && (
+                  {selectedSubs.length===1 && canChooseInherit && (
                     <button onClick={()=>setFusionInheritUnique(v=>!v)} className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border mb-2 active:scale-95 ${fusionInheritUnique?'bg-amber-950/50 border-amber-500':'bg-slate-900 border-slate-800'}`}>
                       <span className="text-[10px] font-black text-left text-white">「{sub.name}」の固有技「{subBase.unique.name}」を引き継ぐ<br/><span className="text-[7px] text-slate-500 font-bold">※データとして記録のみ。現在はバトルで使用できません</span></span>
                       <div className={`w-9 h-5 rounded-full shrink-0 relative ${fusionInheritUnique?'bg-amber-500':'bg-slate-700'}`}><div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${fusionInheritUnique?'left-4':'left-0.5'}`}></div></div>
@@ -17580,11 +17589,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {duplicateUnique&&<div className="text-[9px] text-slate-400 font-bold bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 mb-2">同じ固有技はすでに所持しているため引き継げません。</div>}
                   <div className="bg-red-950/40 border border-red-500/40 rounded-xl p-3 mb-2">
                     <div className="text-[9px] text-red-300 font-black flex items-center gap-1 mb-1"><AlertCircle size={11}/>注意</div>
-                    <div className="text-[8px] text-red-200/90 leading-relaxed">合体すると副の「{sub.name}」はいなくなります。この操作は取り消せません。</div>
+                    <div className="text-[8px] text-red-200/90 leading-relaxed">合体すると{selectedSubs.length===1?`副の「${sub.name}」`:`選択した副${selectedSubs.length}体`}はいなくなります。この操作は取り消せません。</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-2 shrink-0 mt-1">
-                {breakthroughPlan.count>0&&<button onClick={async()=>{
+                {selectedSubs.length===1&&breakthroughPlan.count>0&&<button onClick={async()=>{
                   if (diamondShortage || !breakthroughPlan.canAfford) return;
                   const result = await executeMasuFusion(true);
                   if (!result) return;
@@ -17635,7 +17644,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.5)] mb-3 bg-slate-900">
                 {d.mainIconUrl?(<DyedMonsterImage baseId={d.mainBaseId} src={d.mainIconUrl} alt={d.mainName} masuColors={d.mainColors} className="w-full h-full object-cover"/>):(<div className="w-full h-full flex items-center justify-center text-5xl">{d.mainEmoji}</div>)}
               </div>
-              <div className="text-sm font-black text-white text-center mb-3">{d.mainName}が「{d.subName}」の絆経験値<span className="text-pink-300"> {d.gainedXp.toLocaleString()} XP</span>を受け継いだ！</div>
+              <div className="text-sm font-black text-white text-center mb-3">{d.mainName}が{d.subCount>1?`副${d.subCount}体を合体し、`:<>「{d.subName}」の</>}絆経験値<span className="text-pink-300"> {d.gainedXp.toLocaleString()} XP</span>を受け継いだ！</div>
               <div className="w-full max-w-xs bg-black/40 border border-pink-500/30 rounded-2xl p-3 mb-2">
                 <div className="flex justify-between text-[9px] text-pink-300 font-black mb-1"><span>絆Lv.{d.before.level}</span><span>→</span><span>絆Lv.{d.after.level}</span></div>
                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pctAfter}%`}}></div></div>
