@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 18:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 18:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8193,6 +8193,7 @@ function MonsterHeroGame() {
   const [fusionStep, setFusionStep] = useState('main'); // 'main'|'sub'|'confirm'|'anim'|'result'
   const [fusionMainId, setFusionMainId] = useState(null); // 主として選んだマスモンid
   const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
+  const [fusionSubIds, setFusionSubIds] = useState([]); // 副の複数選択。2体以上は次STEPまでプレビュー専用
   const [fusionInheritUnique, setFusionInheritUnique] = useState(false); // 副の固有技を引き継ぐか(副が絆Lv30以上のみ選択可)
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
@@ -11060,6 +11061,9 @@ function MonsterHeroGame() {
   // 強化ポイントは通常のレベルアップと同じように主へ配る。
   const executeMasuFusion = async (withBreakthrough = false) => {
     if (fusionProcessingRef.current) return null;
+    // 複数合体の保存処理は次STEPで接続する。選択が1体だけのとき以外は、既存の
+    // 単体処理へ絶対に流さず、マスモン・所持品・ダイヤを一切書き換えない。
+    if (fusionSubIds.length !== 1 || fusionSubIds[0] !== fusionSubId) return null;
     fusionProcessingRef.current = true;
     const main = getMasuMon(fusionMainId);
     const sub = getMasuMon(fusionSubId);
@@ -11135,10 +11139,10 @@ function MonsterHeroGame() {
     };
   };
   const resetFusionFlow = () => {
-    fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
+    fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const continueFusionFlow = () => {
-    fusionProcessingRef.current=false; setFusionStep('sub'); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
+    fusionProcessingRef.current=false; setFusionStep('sub'); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedIds([]); setDonationConfirmOpen(false); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
   const getRebirthSkillChoices = (masu) => {
@@ -17387,7 +17391,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       const lvl = masuBondLevelInfo(masu);
                       return (
                         <div key={masu.id} className="relative">
-                          <button onClick={()=>{setFusionMainId(masu.id); setFusionStep('sub');}} className="w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                          <button onClick={()=>{setFusionMainId(masu.id); setFusionSubId(null); setFusionSubIds([]); setFusionStep('sub');}} className="w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
                             <div className="relative w-12 h-12 shrink-0"><div className={`w-12 h-12 rounded-full overflow-hidden border ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
                             <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
                             <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
@@ -17406,14 +17410,38 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const main = getMasuMon(fusionMainId);
             if (!main) { resetFusionFlow(); return null; }
             const candidates = sortMasuList(masuMons.filter(m=>m.id!==fusionMainId));
+            const candidateIds = new Set(candidates.map(m=>m.id));
+            const selectedSubs = fusionSubIds.map(id=>getMasuMon(id)).filter(m=>m && candidateIds.has(m.id));
+            const totalSubXp = selectedSubs.reduce((sum, sub)=>sum+cappedBondXp(sub), 0);
+            const plannedXp = cappedBondXp(main, totalSubXp);
+            const plannedLevel = bondLevelInfo(plannedXp).level;
+            const toggleFusionSub = (id) => setFusionSubIds(prev => prev.includes(id) ? prev.filter(selectedId=>selectedId!==id) : [...prev, id]);
+            const continueWithFusionSubs = () => {
+              if (selectedSubs.length !== 1) return;
+              setFusionSubId(selectedSubs[0].id);
+              setFusionInheritUnique(false);
+              setFusionStep('confirm');
+            };
             return (
               <div className="flex-1 flex flex-col h-full min-h-0 p-4">
                 <div className="flex items-center gap-2 mb-2 shrink-0">
-                  <button onClick={()=>{setFusionMainId(null); setFusionStep('main');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <button onClick={()=>{setFusionMainId(null); setFusionSubId(null); setFusionSubIds([]); setFusionStep('main');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                   <h2 className="text-xl font-black italic text-violet-400 uppercase tracking-widest">合体・副を選ぶ</h2>
                 </div>
-                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">「{main.name}」に絆経験値を渡す「副」を選んでください。副は合体後にいなくなります</div>
-                {fusionGuide}
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">「{main.name}」に絆経験値を渡す「副」をタップして選択／解除してください</div>
+                <div className="shrink-0 mb-2 rounded-2xl border border-violet-400/50 bg-violet-950/50 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-black text-white">副 <span className="text-violet-300">{selectedSubs.length}体</span>選択中</div>
+                    {selectedSubs.length>0&&<button onClick={()=>{setFusionSubId(null); setFusionSubIds([]);}} className="min-h-9 px-3 rounded-xl border border-white/15 bg-slate-900 text-[9px] font-black text-slate-200 active:scale-95">すべて解除</button>}
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[9px] font-bold">
+                    <div className="rounded-xl bg-black/30 p-2 text-slate-300">獲得予定XP<span className="block text-sm text-cyan-300 font-black">+{totalSubXp.toLocaleString()}</span></div>
+                    <div className="rounded-xl bg-black/30 p-2 text-slate-300">主の予定値<span className="block text-sm text-emerald-300 font-black">Lv.{plannedLevel} / {plannedXp.toLocaleString()} XP</span></div>
+                  </div>
+                  {selectedSubs.length>0&&<div className="mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1">{selectedSubs.map(sub=><div key={sub.id} className="flex justify-between gap-2 text-[9px] text-slate-200"><span className="truncate">{sub.name}・絆Lv.{masuBondLevelInfo(sub).level}</span><span className="shrink-0 text-cyan-300">+{cappedBondXp(sub).toLocaleString()} XP</span></div>)}</div>}
+                  {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-amber-500/40 bg-amber-950/40 p-2 text-[9px] font-bold text-amber-200">複数体の合体実行は次回対応予定です。今回は集計プレビューのみで、保存データは変更されません。</div>}
+                  <button onClick={continueWithFusionSubs} disabled={selectedSubs.length!==1} className="mt-2 w-full min-h-11 rounded-xl bg-violet-600 text-white text-xs font-black disabled:bg-slate-800 disabled:text-slate-500 active:scale-95">{selectedSubs.length===1?'この副1体で確認へ':selectedSubs.length>1?'複数合体は次回対応':'副を選択してください'}</button>
+                </div>
                 {fusionSortBar}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   {candidates.length===0?(
@@ -17424,12 +17452,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         const base = ALL_PLAYER_MONSTERS[masu.baseId];
                         if (!base) return null;
                         const lvl = masuBondLevelInfo(masu);
+                        const selected = fusionSubIds.includes(masu.id);
                         return (
                           <div key={masu.id} className="relative">
-                            <button onClick={()=>{setFusionSubId(masu.id); setFusionStep('confirm');}} className="w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                            <button aria-pressed={selected} onClick={()=>toggleFusionSub(masu.id)} className={`w-full min-h-[88px] rounded-2xl border-2 p-2 flex flex-col items-center gap-1 active:scale-95 ${selected?'border-violet-300 bg-violet-900/70 ring-2 ring-violet-400/70':'border-violet-900/50 bg-slate-900'}`}>
                               <div className="relative w-12 h-12 shrink-0"><div className={`w-12 h-12 rounded-full overflow-hidden border ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
                               <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
                               <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                              {selected&&<div className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-violet-500 border-2 border-white flex items-center justify-center shadow-lg"><Check size={13} className="text-white" strokeWidth={4}/></div>}
                             </button>
                             <button onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
                           </div>
