@@ -18,7 +18,11 @@ assert(nextWave.includes('!speciesChallengeBattleRunRef.current'), '通常デバ
 assert(nextWave.includes("setDebugOutcome('win')"), 'WAVE10勝利は保存処理の前でデバッグ結果へ移る');
 
 const training = source.slice(source.indexOf('const handleTraining ='), source.indexOf('// UPGRADE_SKILL画面'));
-assert(training.includes('speciesChallengeUnjoinedAllies(speciesRun).map(resolveRosterEntryToMon)'), 'WAVE2/4/6候補はSTEP1D未加入helperとBase/Masu resolverを使う');
+// 候補の作り方は speciesChallengeJoinPool() に1本化してある(AUTOの自動加入と共有するため)。
+// 詳しい中身は tools/mode/species-challenge-auto-join-check.js で見ている
+const joinPool = source.slice(source.indexOf('const speciesChallengeJoinPool = () =>'), source.indexOf('const joinOfferSize = () =>'));
+assert(joinPool.includes('speciesChallengeUnjoinedAllies(run).map(resolveRosterEntryToMon)'), 'WAVE2/4/6候補はSTEP1D未加入helperとBase/Masu resolverを使う');
+assert(training.includes('const avail=speciesChallengeJoinPool()'), 'WAVE2/4/6の供モン選択はその共通helperから候補を作る');
 assert(training.includes('joinWaves.includes(wave)') && training.includes("setGameState('PICK_ALLY')"), '候補がある加入WAVEだけ既存供モン選択UIを出す');
 assert(training.includes('initBattle(wave+1,slots,ownedUniques,ownedTeachings,nDef)'), '候補なしでも既存の次WAVE開始へ進む');
 
