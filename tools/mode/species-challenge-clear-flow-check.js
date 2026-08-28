@@ -95,8 +95,15 @@ check('種族タブは「すべて」＋種族別で、絆Lvランキングと�
   rankBody.includes("{ id:'all', label:'すべて' }") && rankBody.includes('...lineages.map(l => ({ id:l.id, label:`${l.name}種` }))'));
 check('「すべて」はその難易度の種族順位、種族を選ぶとその種族の難易度別を出す',
   rankBody.includes("speciesFilter === 'all'") && rankBody.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => ({ id, record: speciesChallengeRecord(speciesChallengeProgress, speciesFilter, id) }))'));
-check('種族を選んだときは難易度タブを出さない(全難易度を縦に並べるため)',
-  rankBody.includes("{speciesFilter === 'all' && <div className=\"flex gap-1.5 overflow-x-auto pb-2 shrink-0\">"));
+check('公開前に種族を選んだときは難易度タブを出さない(全難易度を縦に並べるため)',
+  rankBody.includes("{(speciesFilter === 'all' || nationalMode) && <div className=\"flex gap-1.5 overflow-x-auto pb-2 shrink-0\">"));
+// 公開後は同じ画面のまま「種族×難易度の全国ランキング」へ切り替わる。
+// いまは SPECIES_CHALLENGE_PUBLIC_RELEASE=false なので、この経路は動かない
+check('公開フラグが立つまで全国ランキングへ切り替えない',
+  rankBody.includes('const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== \'all\';'));
+check('公開後は既存のスコアランキングの取得・表示をそのまま使う',
+  rankBody.includes('rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, speciesFilter)')
+  && rankBody.includes('nationalRows.map(renderScoreRankingEntry)'));
 // 種族を選んだあと、その種族の難易度別ランキングが必ず見られる状態にしておく。
 // クリア済みだけを並べると、1つもクリアしていない種族では中身が空になり
 // 「種族での難易度別ランキングが無い」ように見えてしまう
@@ -111,8 +118,10 @@ check('難易度カードに種族ランキングの導線がある',
   && source.includes("openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT',{speciesId:speciesChallengeSelection.speciesId,difficultyId:key})"));
 const openRecords = source.slice(source.indexOf('const openSpeciesChallengeRecords ='), source.indexOf('const openModeScoreRanking ='));
 check('そこから開くと、その種族と難易度が最初から選ばれている',
-  openRecords.includes('setSpeciesRankFilter(speciesChallengeLineages().some(lineage=>lineage.id===speciesId)?speciesId:\'all\')')
+  openRecords.includes("speciesChallengeLineages().some(lineage=>lineage.id===speciesId)?speciesId:'all'")
   && openRecords.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)?difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0]'));
+check('公開前はランキング画面を開いても通信しない',
+  openRecords.includes("if(SPECIES_CHALLENGE_PUBLIC_RELEASE&&speciesTab!=='all'){"));
 check('公開前は自分の記録だけと明示する',
   rankBody.includes('!SPECIES_CHALLENGE_PUBLIC_RELEASE &&') && rankBody.includes('全国ランキングはモードの公開後に始まります'));
 check('ランキング画面は新しい保存キーを作らない', !/mh_[a-z]/.test(rankBody));

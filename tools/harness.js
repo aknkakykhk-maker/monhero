@@ -144,6 +144,21 @@ const EXPORTED_NAMES = [
   'speciesChallengeFirstClearReward',
   'finalizeSpeciesChallengeClearReward',
   'persistSpeciesChallengeClearReward',
+  // 種族チャレンジのランキング識別(種族×難易度)。既存のdifficulty列へ入れるキーを作る
+  'BATTLE_MODE_SPECIES_CHALLENGE',
+  'SPECIES_CHALLENGE_PUBLIC_RELEASE',
+  'SPECIES_RANKING_PREFIX',
+  'speciesChallengeRankingDifficulty',
+  'parseSpeciesChallengeRankingDifficulty',
+  'rankingDifficultyForMode',
+  'rankingDifficultyBase',
+  'rankingDifficultyKey',
+  'RANKING_DIFFICULTY_KEYS',
+  // 旧(モンスター1体単位)の超越の実を、同じ血統のマスモンへ使えるようにするための後方互換
+  'legacySpeciesTranscendFruitsForLineage',
+  'legacySpeciesTranscendFruitIdsForLineage',
+  'monsterLineageOf',
+  'dexMainLineages',
   'BREEDER_MARKET_ITEMS',
 ];
 
