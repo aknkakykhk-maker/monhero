@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e44c23fa9f7f8b4a
+// source-sha256: b7a7fbd4363f80b2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 11:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 11:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17504,9 +17504,6 @@ function MonsterHeroGame() {
   // 勇者モン選択の「ベースモン」タブ用。解放済みの種は編成に入れていなくても選べる。
   // マスモン登録のためだけに編成を入れ替える手間を無くすためのもの。
   const getUnlockedBaseMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
-  // ラン中に供モンが合流するときの候補。
-  // プロモードは「始める前に選んだ5体」からしか出さないので、育てたマスモンは一切出てこない。
-  // それ以外のモードはこれまでどおり編成から出す
   // 種族チャレンジで合流できるのは「出撃前に選んだ供モンのうち、まだ合流していない子」だけ。
   // 種族チャレンジのランでなければnullを返す
   const speciesChallengeJoinPool = () => {
@@ -17514,6 +17511,9 @@ function MonsterHeroGame() {
     if (!run) return null;
     return speciesChallengeUnjoinedAllies(run).map(resolveRosterEntryToMon).filter(Boolean);
   };
+  // ラン中に供モンが合流するときの候補。
+  // プロモードは「始める前に選んだ5体」からしか出さないので、育てたマスモンは一切出てこない。
+  // それ以外のモードはこれまでどおり編成から出す
   const joinCandidatePool = () => {
     // 種族チャレンジを最優先で判定する。手動の選択画面とAUTOの自動加入が同じここを通るので、
     // 編成にいるだけの他種族モンスターがAUTO経由で紛れ込むことはない
