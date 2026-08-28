@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 19:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 19:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11097,8 +11097,6 @@ function MonsterHeroGame() {
     const subs = requestedSubIds.map(id=>snapshot.find(m=>m.id===id));
     if (!main || requestedSubIds.length===0 || uniqueSubIds.size!==requestedSubIds.length
       || uniqueSubIds.has(fusionMainId) || subs.some(sub=>!sub)) return null;
-    // 複数副の限界突破合体は対象外。通常合体の固有技継承は副ごとに判定する。
-    if (requestedSubIds.length>1 && withBreakthrough) return null;
     fusionProcessingRef.current = true;
     const mainLvl = masuBondLevelInfo(main);
     const totalGainedXp = subs.reduce((sum, sub)=>sum+cappedBondXp(sub), 0);
@@ -17468,7 +17466,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="rounded-xl bg-black/30 p-2 text-slate-300">主の予定値<span className="block text-sm text-emerald-300 font-black">Lv.{plannedLevel} / {plannedXp.toLocaleString()} XP</span></div>
                   </div>
                   {selectedSubs.length>0&&<div className="mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1">{selectedSubs.map(sub=><div key={sub.id} className="flex justify-between gap-2 text-[9px] text-slate-200"><span className="truncate">{sub.name}・絆Lv.{masuBondLevelInfo(sub).level}</span><span className="shrink-0 text-cyan-300">+{cappedBondXp(sub).toLocaleString()} XP</span></div>)}</div>}
-                  {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-violet-500/40 bg-violet-950/40 p-2 text-[9px] font-bold text-violet-200">複数副の通常合体です。固有技継承は確認画面で副ごとに選べます。「限界突破して合体」は使用できません。</div>}
+                  {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-violet-500/40 bg-violet-950/40 p-2 text-[9px] font-bold text-violet-200">複数副を選択順にまとめて合体します。固有技継承は確認画面で副ごとに選べ、Lv上限を超える場合は「限界突破して合体」も選べます。</div>}
                   <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mt-2 w-full min-h-11 rounded-xl bg-violet-600 text-white text-xs font-black disabled:bg-slate-800 disabled:text-slate-500 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'副を選択してください'}</button>
                 </div>
                 {fusionSortBar}
@@ -17577,7 +17575,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       通常合体では、超過する {wastedXp.toLocaleString()} XP は失われます。
                     </div>}
                   </div>
-                  {selectedSubs.length===1&&breakthroughPlan.count>0&&<div className="bg-violet-950/45 p-3 rounded-xl border border-violet-400/50 mb-2 space-y-1">
+                  {breakthroughPlan.count>0&&<div className="bg-violet-950/45 p-3 rounded-xl border border-violet-400/50 mb-2 space-y-1">
                     <div className="flex justify-between text-[10px] font-black text-violet-200"><span>合体後予定</span><span>Lv.{breakthroughPlan.plannedLevel}</span></div>
                     <div className="flex justify-between text-[9px] font-bold"><span className="text-slate-400">現在のLv上限</span><span>Lv.{mainCap}</span></div>
                     <div className="flex justify-between text-[10px] font-black"><span className="text-slate-300">必要な限界突破</span><span className="text-violet-300">×{breakthroughPlan.count}</span></div>
@@ -17622,7 +17620,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-2 shrink-0 mt-1">
-                {selectedSubs.length===1&&breakthroughPlan.count>0&&<button onClick={async()=>{
+                {breakthroughPlan.count>0&&<button onClick={async()=>{
                   if (diamondShortage || !breakthroughPlan.canAfford) return;
                   const result = await executeMasuFusion(true);
                   if (!result) return;

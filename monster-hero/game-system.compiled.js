@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bad262462f00821e
+// source-sha256: 19298eeedfdb29e3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 19:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 19:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18737,8 +18737,6 @@ function MonsterHeroGame() {
     const main = snapshot.find(m => m.id === fusionMainId);
     const subs = requestedSubIds.map(id => snapshot.find(m => m.id === id));
     if (!main || requestedSubIds.length === 0 || uniqueSubIds.size !== requestedSubIds.length || uniqueSubIds.has(fusionMainId) || subs.some(sub => !sub)) return null;
-    // 複数副の限界突破合体は対象外。通常合体の固有技継承は副ごとに判定する。
-    if (requestedSubIds.length > 1 && withBreakthrough) return null;
     fusionProcessingRef.current = true;
     const mainLvl = masuBondLevelInfo(main);
     const totalGainedXp = subs.reduce((sum, sub) => sum + cappedBondXp(sub), 0);
@@ -32951,7 +32949,7 @@ function MonsterHeroGame() {
           className: "shrink-0 text-cyan-300"
         }, "+", cappedBondXp(sub).toLocaleString(), " XP")))), selectedSubs.length > 1 && /*#__PURE__*/React.createElement("div", {
           className: "mt-2 rounded-xl border border-violet-500/40 bg-violet-950/40 p-2 text-[9px] font-bold text-violet-200"
-        }, "\u8907\u6570\u526F\u306E\u901A\u5E38\u5408\u4F53\u3067\u3059\u3002\u56FA\u6709\u6280\u7D99\u627F\u306F\u78BA\u8A8D\u753B\u9762\u3067\u526F\u3054\u3068\u306B\u9078\u3079\u307E\u3059\u3002\u300C\u9650\u754C\u7A81\u7834\u3057\u3066\u5408\u4F53\u300D\u306F\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
+        }, "\u8907\u6570\u526F\u3092\u9078\u629E\u9806\u306B\u307E\u3068\u3081\u3066\u5408\u4F53\u3057\u307E\u3059\u3002\u56FA\u6709\u6280\u7D99\u627F\u306F\u78BA\u8A8D\u753B\u9762\u3067\u526F\u3054\u3068\u306B\u9078\u3079\u3001Lv\u4E0A\u9650\u3092\u8D85\u3048\u308B\u5834\u5408\u306F\u300C\u9650\u754C\u7A81\u7834\u3057\u3066\u5408\u4F53\u300D\u3082\u9078\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
           onClick: continueWithFusionSubs,
           disabled: selectedSubs.length === 0,
           className: "mt-2 w-full min-h-11 rounded-xl bg-violet-600 text-white text-xs font-black disabled:bg-slate-800 disabled:text-slate-500 active:scale-95"
@@ -33189,7 +33187,7 @@ function MonsterHeroGame() {
           className: "text-[9px] text-amber-200 leading-relaxed mt-2 bg-amber-950/40 border border-amber-500/40 rounded-xl px-2.5 py-2"
         }, /*#__PURE__*/React.createElement("b", {
           className: "text-amber-300"
-        }, "\u3053\u306E\u5408\u4F53\u3067\u306FLv\u4E0A\u9650\u3092\u8D85\u3048\u308B\u7D4C\u9A13\u5024\u3092\u7372\u5F97\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("br", null), "\u901A\u5E38\u5408\u4F53\u3067\u306F\u3001\u8D85\u904E\u3059\u308B ", wastedXp.toLocaleString(), " XP \u306F\u5931\u308F\u308C\u307E\u3059\u3002")), selectedSubs.length === 1 && breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("div", {
+        }, "\u3053\u306E\u5408\u4F53\u3067\u306FLv\u4E0A\u9650\u3092\u8D85\u3048\u308B\u7D4C\u9A13\u5024\u3092\u7372\u5F97\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("br", null), "\u901A\u5E38\u5408\u4F53\u3067\u306F\u3001\u8D85\u904E\u3059\u308B ", wastedXp.toLocaleString(), " XP \u306F\u5931\u308F\u308C\u307E\u3059\u3002")), breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("div", {
           className: "bg-violet-950/45 p-3 rounded-xl border border-violet-400/50 mb-2 space-y-1"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-black text-violet-200"
@@ -33329,7 +33327,7 @@ function MonsterHeroGame() {
           className: "text-[8px] text-red-200/90 leading-relaxed"
         }, "\u5408\u4F53\u3059\u308B\u3068", selectedSubs.length === 1 ? `副の「${sub.name}」` : `選択した副${selectedSubs.length}体`, "\u306F\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-1 gap-2 shrink-0 mt-1"
-        }, selectedSubs.length === 1 && breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("button", {
+        }, breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("button", {
           onClick: async () => {
             if (diamondShortage || !breakthroughPlan.canAfford) return;
             const result = await executeMasuFusion(true);

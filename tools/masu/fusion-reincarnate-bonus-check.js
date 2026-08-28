@@ -7,10 +7,10 @@ const source = fs.readFileSync(path.join(TOOLS_DIR, '../monster-hero/src/game-sy
 let failed = 0;
 const check = (name, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${name}`); if (!ok) failed++; };
 const grab = (from, to) => source.slice(source.indexOf(from), source.indexOf(to));
-const ctx = { MAX_MASU_LEVEL_CAP:200, INITIAL_MASU_LEVEL_CAP:30 };
+const ctx = { MAX_MASU_LEVEL_CAP:200, INITIAL_MASU_LEVEL_CAP:30, AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL:30, BREAKTHROUGH_LEVEL_CAP_GAIN:5 };
 vm.createContext(ctx);
 // 超越(Lv上限を伸ばす育成)の定数・正規化。normalizeMasuProgression がLv上限の判定に使う
-vm.runInContext(`${grab('const TRANSCEND_LEVEL_CAP =', '// --- マスモンの絆レベル')}\n${grab('const REINCARNATE_POINTS =', 'const applyUniqueSkillPointPlan =')}globalThis.x={normalizeMasuProgression,transferableReincarnateBonus};`, ctx);
+vm.runInContext(`${grab('const normalizeAutoRepeatBreakthroughLevel =', 'const MAX_UNIQUE_SKILL_LEVEL =')}\n${grab('const TRANSCEND_LEVEL_CAP =', '// --- マスモンの絆レベル')}\n${grab('const REINCARNATE_POINTS =', 'const applyUniqueSkillPointPlan =')}globalThis.x={normalizeMasuProgression,transferableReincarnateBonus};`, ctx);
 const { normalizeMasuProgression: normalize, transferableReincarnateBonus: transfer } = ctx.x;
 
 const cases = [
@@ -26,10 +26,10 @@ check('保存済み実ボーナスは回数から再計算しない', normalize(
 const fusion = grab('const executeMasuFusion =', 'const resetFusionFlow =');
 check('通常合体と同時限界突破が共通確定処理を使う', source.includes('executeMasuFusion(true)') && source.includes('executeMasuFusion(false)'));
 check('二重実行ロックを継承加算前に取得', fusion.indexOf('fusionProcessingRef.current = true') < fusion.indexOf('transferableReincarnateBonus(sub)'));
-check('副削除と主への加算を同じnextで確定', fusion.includes('.filter(m => m.id !== sub.id)') && fusion.includes('inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(m) + reincarnateTransfer.points'));
+check('全副削除と主への加算を同じnextで確定', fusion.includes('snapshot.filter(m=>!removedIds.has(m.id))') && fusion.includes('inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(nextMain) + transfer.points'));
 check('主の転生回数・Lvを継承値で変更しない', !fusion.includes('reincarnateCount:') && !fusion.includes('REINCARNATE_LEVEL_DROP'));
 check('通常強化・距離適性・固有技を丸ごと移さない', !fusion.includes('sub.statPoints') && !fusion.includes('sub.distApt') && !fusion.includes('sub.uniqueSkillPoints'));
-check('継承Pだけを未使用強化ポイントへ加算', fusion.includes('distAptPoints: advanced.masu.distAptPoints + reincarnateTransfer.points'));
+check('継承Pだけを未使用強化ポイントへ加算', fusion.includes('distAptPoints: advanced.masu.distAptPoints + transfer.points'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

@@ -1,7 +1,7 @@
 // 合体と同時に行う複数回限界突破の事前計算を、本番関数で検証する。
 const { loadDyeModule } = require('../harness');
 const {
-  buildFusionBreakthroughPlan, totalBondXpForLevel, breakthroughItemCost,
+  buildFusionBreakthroughPlan, totalBondXpForLevel, bondLevelInfo, breakthroughItemCost,
   buildFusionDiamondSummary, masuRebirthCost, INITIAL_MASU_LEVEL_CAP,
 } = loadDyeModule();
 
@@ -28,6 +28,11 @@ check('複数回必要なXPをまとめて算出', multiple.count === 3 && multi
 check('複数回の素材は既存式の合計', multiple.psycheCost === breakthroughItemCost(1)+breakthroughItemCost(2)+breakthroughItemCost(3));
 check('複数回のダイヤは各上限Lvの既存費用合計', multiple.diamondCost === masuRebirthCost(30)+masuRebirthCost(35)+masuRebirthCost(40));
 check('限界突破回数ぶん固有技ポイントを保留', multiple.nextMasu.uniqueSkillPoints === 3);
+
+const subXps = [xpTo(1, 24), xpTo(1, 26), xpTo(1, 28)];
+const multiSub = buildFusionBreakthroughPlan({ masu:masuAt(30), fusionXp:subXps.reduce((sum, xp)=>sum+xp, 0), gold:999999, psycheOwned:999 });
+check('副2〜3体の合計XPから必要回数を算出', multiSub.count > 1 && multiSub.canReceiveAll);
+check('複数副でも全XPを保持した予定Lvになる', multiSub.plannedLevel === bondLevelInfo(totalBondXpForLevel(30)+subXps.reduce((sum, xp)=>sum+xp, 0)).level);
 
 const psycheShort = buildFusionBreakthroughPlan({ masu:masuAt(30), fusionXp:xpTo(30, 43), gold:999999, psycheOwned:10 });
 check('プシュケー不足量を返して実行不可', !psycheShort.canAfford && psycheShort.psycheShortage === multiple.psycheCost-10 && psycheShort.diamondShortage === 0);
@@ -58,6 +63,8 @@ check('合体後残高は所持から合計消費を引いた値', multipleWith.
 const shortage = summary(true, 43, 7000);
 check('不足量は合計消費と元の所持数の差', shortage.diamondShortage === shortage.totalDiamondCost - 7000);
 check('通常合体は継承代だけを表示・消費', multipleWith.normalDiamondCost === 3000 && multipleWith.normalDiamondAfter === 7000);
+const multiInherit = buildFusionDiamondSummary({ masu:masuAt(30), fusionXp:xpTo(30, 43), gold:20000, psycheOwned:999, inheritCount:2 });
+check('複数副の継承費用と限界突破費用を各1回だけ合計', multiInherit.inheritCost === 6000 && multiInherit.totalDiamondCost === 6000 + multiInherit.breakthroughDiamondCost);
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
