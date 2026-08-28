@@ -79,6 +79,28 @@ check('通常のバトルモード入口は保存なしのまま(saveProgressを
 check('一般公開フラグは既定でfalse(通常プレイのBATTLE MODEへ出さない)',
   /const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;/.test(source));
 
+// --- ランキング画面 ---
+// 他モードと同じ「◯◯ランキング」の呼び方・同じ入れ物にそろえ、
+// 絆Lvランキングと同じように種族で絞り込めるようにする
+const rankBodyStart = source.indexOf('const renderSpeciesChallengeRecordBody = () => {');
+const rankBodyEnd = source.indexOf('const renderBreederRankingBody =', rankBodyStart);
+check('種族チャレンジのランキング本文がある', rankBodyStart >= 0 && rankBodyEnd > rankBodyStart);
+const rankBody = rankBodyStart >= 0 ? source.slice(rankBodyStart, rankBodyEnd) : '';
+check('他モードと同じ「◯◯ランキング」の見出しにする',
+  source.includes('{`${mode.label}ランキング`}') && !source.includes('`${mode.label}の記録`'));
+check('モードカードの導線も他モードと同じ「ランキング」表記',
+  source.includes('🏆 {m.label}のランキング') && !source.includes('🏅 {m.label}の記録'));
+check('種族で絞り込むタブがある', rankBody.includes('data-species-rank-tabs'));
+check('種族タブは「すべて」＋種族別で、絆Lvランキングと同じ並べ方',
+  rankBody.includes("{ id:'all', label:'すべて' }") && rankBody.includes('...lineages.map(l => ({ id:l.id, label:`${l.name}種` }))'));
+check('「すべて」はその難易度の種族順位、種族を選ぶとその種族の難易度別を出す',
+  rankBody.includes("speciesFilter === 'all'") && rankBody.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => ({ id, record: speciesChallengeRecord(speciesChallengeProgress, speciesFilter, id) }))'));
+check('種族を選んだときは難易度タブを出さない(全難易度を縦に並べるため)',
+  rankBody.includes("{speciesFilter === 'all' && <div className=\"flex gap-1.5 overflow-x-auto pb-2 shrink-0\">"));
+check('公開前は自分の記録だけと明示する',
+  rankBody.includes('!SPECIES_CHALLENGE_PUBLIC_RELEASE &&') && rankBody.includes('全国ランキングはモードの公開後に始まります'));
+check('ランキング画面は新しい保存キーを作らない', !/mh_[a-z]/.test(rankBody));
+
 // --- ④ デバッグ状態が通常バトルへ漏れない ---
 const homeStart = source.indexOf('const returnToHome = () => {');
 const home = source.slice(homeStart, homeStart + 1500);
