@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 14:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 14:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15042,21 +15042,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           : <b className="shrink-0 text-right text-[13px] font-black text-cyan-200">{score.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">pt</small></b>}
       </div>
     );
-    // すべて=その難易度の種族順位 / 種族を選ぶ=その種族の難易度別
+    // 難易度は他モードと同じくタブで選ぶ。種族タブと難易度タブの組み合わせで中身が決まる。
+    //   すべて  … その難易度の種族別順位
+    //   ◯◯種  … その種族×その難易度の記録(公開後はそこの全国ランキング)
     const rows = speciesFilter === 'all'
       ? lineages.map(lineage => ({ lineage, record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId) }))
           .filter(row => row.record.clears > 0)
           .sort((a, b) => (b.record.bestScore - a.record.bestScore) || (b.record.clears - a.record.clears))
           .map((row, index) => recordRow(row.lineage.id, lineageIcon(row.lineage), `${row.lineage.name}種`,
             `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, index + 1))
-      // 種族を選んだときは14難易度を必ず全部並べる。まだクリアしていない難易度も
-      // 「記録なし」として残し、その種族の難易度別ランキングがどこにも無い状態を作らない
-      : SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => ({ id, record: speciesChallengeRecord(speciesChallengeProgress, speciesFilter, id) }))
-          .map(row => recordRow(`${speciesFilter}:${row.id}`, lineageIcon(lineages.find(l => l.id === speciesFilter)), settingOf(row.id).label,
-            row.record.clears > 0
-              ? `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`
+      : (() => {
+          const lineage = lineages.find(l => l.id === speciesFilter);
+          const record = speciesChallengeRecord(speciesChallengeProgress, speciesFilter, diffId);
+          return [recordRow(`${speciesFilter}:${diffId}`, lineageIcon(lineage), `${lineage.name}種`,
+            record.clears > 0
+              ? `クリア ${record.clears}回${record.bestTurns !== null ? ` ／ 最短 ${record.bestTurns}T` : ''}`
               : 'まだクリアしていません',
-            row.record.bestScore, null, row.record.clears === 0));
+            record.bestScore, null, record.clears === 0)];
+        })();
     const emptyText = <>{settingOf(diffId).label}をクリアした種族はまだありません。<br/>クリアすると、種族ごとに自己ベストが残ります。</>;
     // 公開後は、種族を選ぶとその「種族×難易度」の全国ランキングへ切り替わる。
     // 取得も表示も既存のスコアランキングと同じ仕組みで、難易度キーだけが
@@ -15073,11 +15076,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <button key={tab.id} onClick={() => setSpeciesRankFilter(tab.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${speciesFilter === tab.id ? 'bg-cyan-600 border-cyan-300 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`}>{tab.label}</button>
         ))}
       </div>
-      {/* 難易度タブ。公開前に種族を選んだときは全難易度を縦に並べるので要らない。
-          公開後は種族を選ぶとその種族×難易度の全国ランキングを出すので、どちらでも要る */}
-      {(speciesFilter === 'all' || nationalMode) && <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => { const st = settingOf(id); return (
+      {/* 難易度タブ。他モードのランキングと同じように、どのタブを選んでいても難易度はタブで切り替える */}
+      <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0" data-species-difficulty-tabs>{SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => { const st = settingOf(id); return (
         <button key={id} onClick={() => { setRankingViewDiff(id); if (nationalMode) loadRankings(rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, id, speciesFilter))); }} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${diffId === id ? 'ring-2 ring-white' : 'border border-white/10'}`} style={difficultyStyle(st, diffId === id)}>{st.label}</button>
-      ); })}</div>}
+      ); })}</div>
       <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5" data-species-record-list>
         {nationalMode
           ? <>{nationalStatus.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{nationalStatus.error&&nationalStatus.fetched&&<div className="text-center text-[9px] text-amber-300">{nationalStatus.error}</div>}{nationalRows.map(renderScoreRankingEntry)}{nationalRows.length===0&&(nationalStatus.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:nationalStatus.error&&!nationalStatus.fetched?rankingRetryButton(()=>loadRankings(nationalKey,false,true)):rankingEmptyText)}</>
