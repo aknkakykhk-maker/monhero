@@ -51,7 +51,11 @@ check('勇者モン選択は今までどおりその子の基礎値を出す',
 check('詳細ポップアップも同じ allyJoinPreview を通す',
   has('allyJoinPreview(currentPickingMon).stats.map(') && has('allyJoinPreview(currentPickingMon).apt.map(range=>range.diff)'));
 check('NIGHTMAREの適性半減を詳細側にも反映できる(aptDeltaPct)',
-  has('aptDeltaPct = null } = opts;') && has('const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade);'));
+  has('aptDeltaPct = null, growth = null } = opts;') && has('const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade);'));
+check('マスモンの合流値は種族値＋通常強化＋超越基礎UPを4能力へ各1回加算する',
+  ['hp', 'atk', 'def', 'guts'].every(key =>
+    has(`${key}: (base.plusStats?.${key} || 0) + (sp.${key} || 0) + tsp.${key}`))
+  && has('const tsp = normalizeTranscendStatPoints(masu?.transcendStatPoints);'));
 
 check('ULTIMATE補正率は共通倍率を小数精度で表示し、カードは本来値と実際値を比較する',
   has('data-ultimate-join-status={joinRule}') && has('const multiplier=ultimateAllyJoinMultiplier(totalTurns,joinRule);')
@@ -120,21 +124,22 @@ if (typeof C.applyAllyJoinBonus === 'function') {
     distTotalBonus: () => 0,
   });
 
-  // 零がM(+25%)・遠がG(-20%)の供モン
-  const mon = { plusStats: { hp: 100, atk: 20, def: 20, guts: 10 }, distAptitude: ['M', 'C', 'C', 'G'] };
+  // 種族値＋通常強化＋超越基礎UPを合成済みの供モン。
+  // 例: HP 100 + 300 + 50 = 450。超越適性は distAptitude 側ですでに解決済みなので別加算しない。
+  const mon = { plusStats: { hp: 450, atk: 60, def: 50, guts: 40 }, distAptitude: ['M', 'C', 'C', 'G'] };
 
   const normal = build({})(mon);
-  check('通常: ライフ 500 → 600', normal.stats[0].after === 600, String(normal.stats[0].after));
-  check('通常: ちから 100 → 120', normal.stats[1].after === 120, String(normal.stats[1].after));
+  check('通常: ライフに種族100＋通常強化300＋基礎UP50が乗る', normal.stats[0].after === 950, String(normal.stats[0].after));
+  check('通常: ちからに通常強化と基礎UPを含む合計60が乗る', normal.stats[1].after === 160, String(normal.stats[1].after));
   check('通常: 零の距離補正 ±0 → +25%', Math.abs(normal.apt[0].diff - 0.25) < 1e-9, C.formatAptPct(normal.apt[0].diff));
   check('通常: 遠の距離補正 ±0 → -20%', Math.abs(normal.apt[3].diff + 0.20) < 1e-9, C.formatAptPct(normal.apt[3].diff));
   check('通常: 変化のない距離は ±0', normal.apt[1].diff === 0);
 
   // ULTIMATE: 累計ターン×0.75%ぶん加算が下がる。40ターンなら30%減
   const ult = build({ extremeRun: true, extremeDifficulty: 'ULTIMATE', totalTurns: 40 })(mon);
-  check('ULTIMATE(累計40T): ライフの加算 100 → 70', ult.stats[0].diff === 70, String(ult.stats[0].diff));
-  check('ULTIMATE(累計40T): ちからの加算 20 → 14', ult.stats[1].diff === 14, String(ult.stats[1].diff));
-  check('ULTIMATE(累計0T)は通常と同じ', build({ extremeRun: true, extremeDifficulty: 'ULTIMATE', totalTurns: 0 })(mon).stats[0].diff === 100);
+  check('ULTIMATE(累計40T): 基礎UP込みのライフ加算 450 → 315', ult.stats[0].diff === 315, String(ult.stats[0].diff));
+  check('ULTIMATE(累計40T): 基礎UP込みのちから加算 60 → 42', ult.stats[1].diff === 42, String(ult.stats[1].diff));
+  check('ULTIMATE(累計0T)は通常と同じ', build({ extremeRun: true, extremeDifficulty: 'ULTIMATE', totalTurns: 0 })(mon).stats[0].diff === 450);
 
   // NIGHTMARE: プラス補正×0.5 / マイナス補正×2.0
   const nm = build({ extremeRun: true, extremeDifficulty: 'NIGHTMARE' })(mon);
