@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3aa94e51db375be8
+// source-sha256: 4f26d7d7d2a22ee9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 16:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 17:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24091,47 +24091,51 @@ function MonsterHeroGame() {
     }
   }, value)));
   // ステータス1項目1行。タップで内訳を開く
-  const renderGrowthStatRows = (monKey, stats) => /*#__PURE__*/React.createElement("div", {
-    className: "space-y-1.5",
-    "data-growth-stat-list": true
-  }, stats.map(stat => {
-    const openKey = `${monKey}:${stat.key}`;
-    const open = growthStatOpen === openKey;
+  const renderGrowthStatRows = (monKey, stats) => {
+    // 数字の欄の幅は4項目でそろえる。等幅フォントなので、いちばん桁数の多い値に
+    // 合わせて ch で指定すれば、桁が増えても現在値が縦一列に並ぶ
+    const valueTexts = stats.map(stat => stat.current.toLocaleString());
+    const valueWidth = `${Math.max(6, ...valueTexts.map(text => text.length))}ch`;
     return /*#__PURE__*/React.createElement("div", {
-      key: stat.key,
-      className: "min-w-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      "data-growth-stat-row": stat.key,
-      "aria-expanded": open,
-      "aria-label": `${stat.label}の内訳を${open ? '閉じる' : '開く'}`,
-      onClick: () => setGrowthStatOpen(open ? null : openKey),
-      className: `w-full min-w-0 rounded-2xl border px-2.5 py-2 text-left active:scale-[.99] ${open ? 'border-white/25 bg-slate-800/80' : 'border-white/10 bg-slate-900/70'}`
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "flex min-w-0 items-center gap-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "w-[52px] shrink-0 text-[11px] font-black text-slate-300"
-    }, stat.label), /*#__PURE__*/React.createElement("span", {
-      className: "flex min-w-0 flex-1 flex-wrap items-center justify-end gap-x-2 gap-y-1"
-    }, /*#__PURE__*/React.createElement("b", {
-      className: `font-mono text-[17px] font-black leading-none ${stat.color}`,
-      style: {
-        overflowWrap: 'anywhere'
-      }
-    }, stat.current.toLocaleString()), (stat.baseUp > 0 || stat.enhance > 0) && /*#__PURE__*/React.createElement("span", {
-      className: "flex flex-wrap items-center justify-end gap-1"
-    }, growthGainBadge('base', stat.baseUp), growthGainBadge('enhance', stat.enhance))), /*#__PURE__*/React.createElement(ChevronRight, {
-      size: 14,
-      className: `shrink-0 text-slate-500 ${open ? 'rotate-90' : ''}`
-    }))), open && /*#__PURE__*/React.createElement("div", {
-      "data-growth-stat-detail": stat.key,
-      className: "mt-1.5 rounded-2xl border border-pink-400/40 bg-slate-950/70 p-2.5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mb-1.5 text-[10px] font-black text-pink-200"
-    }, stat.label, "\u306E\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-wrap items-stretch gap-1.5"
-    }, growthTermBlock(null, '元ステータス', stat.origin.toLocaleString(), GROWTH_TONES.origin), growthTermBlock('＋', '基礎UP（永久）', `+${stat.baseUp.toLocaleString()}`, GROWTH_TONES.base), growthTermBlock('＋', '強化（使用）', `+${stat.enhance.toLocaleString()}`, GROWTH_TONES.enhance), growthTermBlock('＝', `現在の${stat.label}`, stat.current.toLocaleString(), GROWTH_TONES.result))));
-  }));
+      className: "space-y-1.5",
+      "data-growth-stat-list": true
+    }, stats.map(stat => {
+      const openKey = `${monKey}:${stat.key}`;
+      const open = growthStatOpen === openKey;
+      return /*#__PURE__*/React.createElement("div", {
+        key: stat.key,
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-growth-stat-row": stat.key,
+        "aria-expanded": open,
+        "aria-label": `${stat.label}の内訳を${open ? '閉じる' : '開く'}`,
+        onClick: () => setGrowthStatOpen(open ? null : openKey),
+        className: `w-full min-w-0 rounded-2xl border px-2.5 py-2 text-left active:scale-[.99] ${open ? 'border-white/25 bg-slate-800/80' : 'border-white/10 bg-slate-900/70'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "flex min-w-0 items-center gap-1.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "w-[44px] shrink-0 text-[11px] font-black text-slate-300"
+      }, stat.label), /*#__PURE__*/React.createElement("b", {
+        style: {
+          minWidth: valueWidth
+        },
+        className: `shrink-0 whitespace-nowrap text-right font-mono text-[17px] font-black leading-none ${stat.color}`
+      }, stat.current.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+        className: "flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1"
+      }, growthGainBadge('base', stat.baseUp), growthGainBadge('enhance', stat.enhance)), /*#__PURE__*/React.createElement(ChevronRight, {
+        size: 14,
+        className: `shrink-0 text-slate-500 ${open ? 'rotate-90' : ''}`
+      }))), open && /*#__PURE__*/React.createElement("div", {
+        "data-growth-stat-detail": stat.key,
+        className: "mt-1.5 rounded-2xl border border-pink-400/40 bg-slate-950/70 p-2.5"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "mb-1.5 text-[10px] font-black text-pink-200"
+      }, stat.label, "\u306E\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
+        className: "flex flex-wrap items-stretch gap-1.5"
+      }, growthTermBlock(null, '元ステータス', stat.origin.toLocaleString(), GROWTH_TONES.origin), growthTermBlock('＋', '基礎UP（永久）', `+${stat.baseUp.toLocaleString()}`, GROWTH_TONES.base), growthTermBlock('＋', '強化（使用）', `+${stat.enhance.toLocaleString()}`, GROWTH_TONES.enhance), growthTermBlock('＝', `現在の${stat.label}`, stat.current.toLocaleString(), GROWTH_TONES.result))));
+    }));
+  };
   // 間合い適性の内訳。4距離のカードの下へ全幅で開く(狭いセルの中へ押し込まない)
   const renderGrowthAptDetail = entry => {
     if (!entry) return null;

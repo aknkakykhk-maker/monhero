@@ -173,6 +173,16 @@ const MASU_FIXTURES = [
       check(`基礎UPだけ0ならピンクのバッジを出さない(${width}px)`,
         await atkRow.locator('[data-growth-badge="base"]').count() === 0
         && await atkRow.locator('[data-growth-badge="enhance"]').count() === 1);
+      // 数字がバラバラの位置に散らないこと。値の欄は4項目で同じ幅なので、右端がそろう
+      const valueRights = async () => page.evaluate(() => [...document.querySelectorAll('[data-growth-stat-row] b')]
+        .map(el => Math.round(el.getBoundingClientRect().right)));
+      const rights = await valueRights();
+      check(`4項目の現在値が縦一列にそろう(${width}px)`, rights.length === 4 && new Set(rights).size === 1, JSON.stringify(rights));
+      // バッジが1つの行と2つの行で高さが変わらない(行の高さがそろう)
+      const rowHeights = await page.evaluate(() => [...document.querySelectorAll('[data-growth-stat-row]')]
+        .map(el => Math.round(el.getBoundingClientRect().height)));
+      check(`ふつうの桁ならバッジが1行に収まり行の高さがそろう(${width}px)`,
+        rowHeights.length === 4 && new Set(rowHeights).size === 1, JSON.stringify(rowHeights));
       await noSideScroll('マスモン詳細');
       await noElementOverflow('マスモン詳細');
 
@@ -266,6 +276,9 @@ const MASU_FIXTURES = [
       await openDetail('内訳検証おおきい数字');
       const hugeCurrent = toNumber(await page.locator('[data-growth-stat-row="hp"] b').first().textContent());
       check(`大きい数字でも現在値を丸めずに全部出す(${width}px)`, hugeCurrent > 10000000, `${hugeCurrent.toLocaleString()}`);
+      const hugeRights = await page.evaluate(() => [...document.querySelectorAll('[data-growth-stat-row] b')]
+        .map(el => Math.round(el.getBoundingClientRect().right)));
+      check(`桁が増えても4項目の現在値がそろう(${width}px)`, hugeRights.length === 4 && new Set(hugeRights).size === 1, JSON.stringify(hugeRights));
       await noSideScroll('大きい数字の詳細');
       await noElementOverflow('大きい数字の詳細');
       await page.locator('[data-growth-stat-row="hp"]').dispatchEvent('click');
