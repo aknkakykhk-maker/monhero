@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 17:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11137,6 +11137,9 @@ function MonsterHeroGame() {
   const resetFusionFlow = () => {
     fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
+  const continueFusionFlow = () => {
+    fusionProcessingRef.current=false; setFusionStep('sub'); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
+  };
   const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedIds([]); setDonationConfirmOpen(false); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
   const getRebirthSkillChoices = (masu) => {
     const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -17611,7 +17614,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {d.inherited&&(<div className="text-[10px] text-amber-300 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2">「{d.subName}」の固有技を継承データとして記録しました</div>)}
               {d.inheritedReincarnateCount>0&&(<div className="text-[10px] text-amber-200 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2">転生育成ボーナス {d.inheritedReincarnateCount}回分（強化ポイント +{d.inheritedReincarnatePoints}）を継承しました</div>)}
               <div className="text-[9px] text-slate-500 font-bold mb-4">ダイヤを{d.cost.toLocaleString()}消費しました</div>
-              <button onClick={()=>{ resetFusionFlow(); setGameState('MASU_MONS'); }} className="w-full max-w-xs bg-violet-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95">とじる</button>
+              <button onClick={continueFusionFlow} className="w-full max-w-xs bg-violet-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95">とじる</button>
             </div>
           );
         })()}

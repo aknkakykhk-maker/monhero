@@ -32,6 +32,7 @@ const run = async (browser, scenario) => {
     put('mh_masu_mons', [
       makeMasu('fusion-main', 'Mocchi', '主・染色モッチー', mainXp, ['blue', 'red', 'green']),
       makeMasu('fusion-sub', 'Suezo', '副・染色スエゾー', subXp, ['red', 'blue', 'yellow']),
+      makeMasu('fusion-next-sub', 'Golem', '次の副・ゴーレム', 50, ['green', 'yellow', 'blue']),
     ]);
   }, scenario);
   await page.goto(URL, { waitUntil: 'load', timeout: 60000 });
@@ -73,11 +74,23 @@ const run = async (browser, scenario) => {
   await page.screenshot({ path: path.join(outDir, `fusion-${scenario.name}-flash.png`) });
   await page.waitForFunction(() => document.body.innerText.includes('合体完了！'), { timeout: 5000 });
   const result = await page.evaluate(() => document.body.innerText.includes('合体完了！'));
+  await clickButton(/^とじる$/);
+  await page.waitForFunction(() => document.body.innerText.includes('合体・副を選ぶ'));
+  const continued = await page.evaluate(() => ({
+    onSubSelection: document.body.innerText.includes('合体・副を選ぶ'),
+    mainSelected: document.body.innerText.includes('「主・染色モッチー」に絆経験値を渡す'),
+    consumedSubAbsent: !document.body.innerText.includes('副・染色スエゾー')
+      && !JSON.parse(localStorage.getItem('mh_masu_mons') || '[]').some(masu => masu.id === 'fusion-sub'),
+    nextSubVisible: document.body.innerText.includes('次の副・ゴーレム'),
+  }));
+  await page.screenshot({ path: path.join(outDir, `fusion-${scenario.name}-continued.png`) });
+  await clickButton(/次の副・ゴーレム/);
+  const nextFusionReady = await page.waitForFunction(() => document.body.innerText.includes('合体の最終確認')).then(() => true);
   await page.close();
-  if (errors.length || !phase1.left || !phase1.right || phase1.dyedImages < 2 || !merge || !flash || !result) {
-    throw new Error(JSON.stringify({ errors, phase1, merge, flash, result }));
+  if (errors.length || !phase1.left || !phase1.right || phase1.dyedImages < 2 || !merge || !flash || !result || Object.values(continued).some(value => !value) || !nextFusionReady) {
+    throw new Error(JSON.stringify({ errors, phase1, merge, flash, result, continued, nextFusionReady }));
   }
-  console.log(`OK: ${scenario.breakthrough ? '限界突破して合体' : '通常合体'} — slide / merge / flash / result / dyed images`);
+  console.log(`OK: ${scenario.breakthrough ? '限界突破して合体' : '通常合体'} — animation / result / return with main selected / next sub ready`);
 };
 
 (async () => {
