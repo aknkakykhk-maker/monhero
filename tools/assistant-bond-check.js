@@ -589,9 +589,11 @@ check('編成を保存しただけではカード分が増えない', (() => {
   const around = source.slice(Math.max(0, at - 1500), at + 1500);
   return !around.includes('assistantCardEquip');
 })());
+// デバッグ戦を外す判定は、加算の行ごとではなく「1周の始まりだけ通る」外側のifへ移っている。
+// どちらでも意味は同じだが、外側でまとめて弾くほうが加算を足すたびに書き忘れない
 check('カード編成分は、実際にバトルを始めた時だけ数える',
-  has("if (!debugBattleRef.current) grantEquippedAssistantCardBond('assistantCardEquip');")
-    && /if \(w === 1 && !forcedEnemyKey\) \{[\s\S]{0,600}grantEquippedAssistantCardBond\('assistantCardEquip'\);/.test(source));
+  has("grantEquippedAssistantCardBond('assistantCardEquip');")
+    && /if \(w === 1 && !forcedEnemyKey && !debugBattleRef\.current\) \{[\s\S]{0,900}grantEquippedAssistantCardBond\('assistantCardEquip'\);/.test(source));
 check('編成中のカードから本人を引いて加算する',
   has('const grantEquippedAssistantCardBond = (actionKey) => {')
     && has('getActiveTeachingCards().forEach(card => {')
@@ -607,7 +609,7 @@ check('カード使用の加算は、実際に使ったカードを回すルー�
 })());
 check('デバッグ戦では、カード分を数えない',
   /if\(isBreeder&&!debugBattleRef\.current\)/.test(source)
-    && /if \(!debugBattleRef\.current\) grantEquippedAssistantCardBond/.test(source));
+    && /if \(w === 1 && !forcedEnemyKey && !debugBattleRef\.current\) \{[\s\S]{0,900}grantEquippedAssistantCardBond/.test(source));
 // 通常の加算はこれまでどおり選択中の助手へ入る(カード分を足したせいで壊れていないこと)
 check('通常のバトル・モード・クリア分は、これまでどおり選択中の助手へ入る',
   has("addAssistantBond('battle');")

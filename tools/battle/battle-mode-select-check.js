@@ -160,11 +160,14 @@ const check = (name, ok, detail = '') => {
     check('難易度選択画面へ進める', await page.getByRole('heading', { name: 'プロモード' }).count() === 1);
     check('難易度のカードが9枚ある', await page.locator('.snap-mandatory > article').count() === 9,
       `${await page.locator('.snap-mandatory > article').count()}枚`);
+    // 表示は「クリア報酬」の枠の中に 経験値 / 虹のプシュケー：n個 / 💎 ダイヤ：×n を並べる。
+    // 個数は clearPsycheReward(=CLEAR_PSYCHE_REWARD) が正本で、画面へ手書きしていない
     const psycheRewards = { Beginner:1, Easy:2, Normal:3, Hard:5, Expert:7, Master:10, GrandMaster:15, Hell:20, Legend:25 };
     for (const [difficulty, amount] of Object.entries(psycheRewards)) {
       const reward = page.locator(`[data-psyche-reward="${difficulty}"]`);
+      const text = await reward.count() === 1 ? (await reward.textContent()) : '';
       check(`${difficulty}の虹のプシュケー報酬を表示する`,
-        await reward.count() === 1 && (await reward.textContent()).includes(`×${amount}`));
+        await reward.count() === 1 && text.includes(`虹のプシュケー：${amount}個`), text.trim().replace(/\s+/g, ' '));
     }
     // プロも実際に始められる(中身は tools/mode/pro-mode-check.js が最後まで通して確かめる)
     check('プロも「この難易度で挑戦」から始められる',

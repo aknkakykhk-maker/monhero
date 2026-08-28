@@ -2,9 +2,9 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // プロモードを実際のブラウザで最初から遊んでみて、仕様どおりに動くかを確かめる。
 //
 //   ① プロの勇者モン選択にはベースモンしか出ない(編成タブも出ない)
-//   ② 勇者モンを決めると、供モン候補を5体えらぶ画面へ進む
+//   ② 勇者モンを決めると、プロモード編成(勇者モン＋供モン5枠)の画面へ進む
 //   ③ 5体そろうまで始められない。そろえば始められる
-//   ④ 候補にはベースモンしか出ず、勇者モンにした種は出ない
+//   ④ 枠ごとの候補にはベースモンしか出ず、勇者モンにした種と他の枠で選んだ種は出ない
 //   ⑤ バトルが始まり、WAVE 2の合流では「選んだ5体のうち3体」だけが候補に出る
 //   ⑥ どこを通っても実行時エラー(真っ白)が出ない
 //
@@ -105,40 +105,53 @@ const check = (name, ok, detail = '') => {
       await page.getByText('プロモードはベースモンだけで挑みます').count() === 1);
     check('育てたマスモンは勇者モンの一覧に出ない',
       await page.getByText('プロ検査マスモン').count() === 0);
-    const heroCards = page.locator('.grid > button');
+    // 勇者モン・供モンのカードは共通の横長カード(renderProMonsterRow)で、
+    // 押すところに「◯◯を勇者モンに選ぶ」「◯◯を供モンNに選ぶ」というラベルが付いている
+    const heroCards = page.getByRole('button', { name: /を勇者モンに選ぶ$/ });
     const heroCount = await heroCards.count();
     check('解放済みのベースモンが並ぶ', heroCount >= 6, `${heroCount}体`);
 
-    // --- ② 勇者モンを決めて供モン候補の画面へ ---
-    const heroName = await heroCards.first().evaluate(node => node.textContent);
+    // --- ② 勇者モンを決めてプロモード編成の画面へ ---
+    const heroName = await heroCards.first().getAttribute('aria-label');
     await heroCards.first().dispatchEvent('click');
-    await page.getByRole('button', { name: '決定' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByText('配置場所を決定せよ').waitFor({ timeout: 15000 });
     await page.locator('button').filter({ hasText: '中距離' }).first().dispatchEvent('click');
-    await page.getByRole('heading', { name: '供モンの候補' }).waitFor({ timeout: 15000 });
-    check('勇者モンを決めると供モン候補の画面へ進む', true);
+    await page.getByRole('heading', { name: 'プロモード編成' }).waitFor({ timeout: 15000 });
+    check('勇者モンを決めるとプロモード編成の画面へ進む', true);
     // 勇者モンの詳細が開いたまま残っていないこと。
     // 残ると、あとの供モン合流で「勝手に勇者モンが選ばれている」ように見える
     check('勇者モンの詳細が開いたまま残らない',
       await page.getByRole('button', { name: '決定' }).count() === 0,
       `決定ボタン ${await page.getByRole('button', { name: '決定' }).count()}個`);
+    check('編成には勇者モンと供モン5枠が並ぶ',
+      await page.getByRole('button', { name: '変更' }).count() === 6,
+      `変更ボタン ${await page.getByRole('button', { name: '変更' }).count()}個`);
 
     // --- ③④ 5体そろうまで始められない ---
-    const startButton = page.getByRole('button', { name: /この候補で始める|あと\d体えらんでください/ });
+    const startButton = page.getByRole('button', { name: /この編成で開始|あと\d体えらんでください/ });
     check('そろうまでは始められない', await startButton.isDisabled());
-    check('候補にもマスモンは出ない', await page.getByText('プロ検査マスモン').count() === 0);
-    const poolCards = page.locator('.grid > button');
-    const poolCount = await poolCards.count();
-    check('勇者モンにした種は候補から外れる', poolCount === heroCount - 1, `${heroCount} → ${poolCount}体`);
 
+    // 供モンの枠を1つずつ開いて選ぶ。枠ごとに開くのが現在の作り
     const picked = [];
+    let poolCount = 0;
     for (let i = 0; i < 5; i++) {
-      const card = poolCards.nth(i);
-      picked.push((await card.evaluate(node => node.textContent)).slice(0, 12));
-      await card.dispatchEvent('click');
-      await page.waitForTimeout(120);
+      await page.getByRole('button', { name: '変更' }).nth(i + 1).dispatchEvent('click');
+      await page.getByRole('heading', { name: `供モン${i + 1}を変更` }).waitFor({ timeout: 15000 });
+      const poolCards = page.getByRole('button', { name: new RegExp(`を供モン${i + 1}に選ぶ$`) });
+      if (i === 0) {
+        poolCount = await poolCards.count();
+        check('候補にもマスモンは出ない', await page.getByText('プロ検査マスモン').count() === 0);
+        check('勇者モンにした種は候補から外れる', poolCount === heroCount - 1, `${heroCount} → ${poolCount}体`);
+      } else {
+        // すでに他の枠へ入れた子は候補から消える
+        check(`供モン${i + 1}の候補は選んだぶんだけ減る`, await poolCards.count() === poolCount - i, `${await poolCards.count()}体`);
+      }
+      const label = await poolCards.first().getAttribute('aria-label');
+      picked.push(String(label).replace(/を供モン\d+に選ぶ$/, '').slice(0, 12));
+      await poolCards.first().dispatchEvent('click');
+      await page.getByRole('heading', { name: 'プロモード編成' }).waitFor({ timeout: 15000 });
     }
-    check('5体えらぶと始められる', await page.getByRole('button', { name: 'この候補で始める' }).isEnabled());
+    check('5体えらぶと始められる', await page.getByRole('button', { name: 'この編成で開始' }).isEnabled());
     // 「押しても反応しない」を拾うための確認。
     // dispatchEvent はDOMへ直接イベントを送るので、他の層の下敷きになっていても通ってしまう。
     // 実際の指タップは重なりの判定を通るので、画面のかぶせ方(position/z-index)が抜けていると押せない。
@@ -149,14 +162,15 @@ const check = (name, ok, detail = '') => {
       const st = getComputedStyle(root);
       return { position: st.position, zIndex: st.zIndex, bg: st.backgroundColor };
     });
-    check('供モン候補の画面は全画面のかぶせ方になっている',
+    check('プロモード編成の画面は全画面のかぶせ方になっている',
       !!overlay && overlay.position === 'absolute' && Number(overlay.zIndex) >= 30000 && overlay.bg !== 'rgba(0, 0, 0, 0)',
       JSON.stringify(overlay));
-    // 6体目は押せない(上限を超えて選べない)
-    check('6体目は選べない', await poolCards.nth(5).isDisabled());
+    // 枠は勇者モン＋供モン5つで固定。6体目の枠は増えない
+    check('供モンの枠は5つで、それ以上は増えない',
+      await page.getByRole('button', { name: '変更' }).count() === 6);
 
     // --- ⑤ バトルへ。WAVE 2の合流候補は選んだ5体から3体だけ ---
-    await page.getByRole('button', { name: 'この候補で始める' }).dispatchEvent('click');
+    await page.getByRole('button', { name: 'この編成で開始' }).dispatchEvent('click');
     await page.getByRole('heading', { name: 'アシストカードの継承・強化' }).waitFor({ timeout: 15000 });
     await page.locator('.grid > button').first().dispatchEvent('click');
     await page.getByRole('button', { name: /習得する|強化する/ }).dispatchEvent('click', {}, { timeout: 15000 });
@@ -180,7 +194,7 @@ const check = (name, ok, detail = '') => {
     // --- ⑥ 実行時エラー ---
     check('実行時エラーが出ていない', errors.length === 0, errors[0] || '');
     console.log(`  えらんだ供モン候補: ${picked.join(' / ')}`);
-    console.log(`  勇者モン: ${String(heroName).slice(0, 12)}`);
+    console.log(`  勇者モン: ${String(heroName).replace(/を勇者モンに選ぶ$/, '').slice(0, 12)}`);
 
     console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
     await browser.close(); server.close();

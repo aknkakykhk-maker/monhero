@@ -42,7 +42,7 @@ check('固定ギフトIDと同期ロックで重複送付を防止',/gift_missio
 const breederSrc = fs.readFileSync(path.join(TOOLS_DIR,'..','monster-hero','data','breeder.js'),'utf8');
 const bctx = {}; vm.createContext(bctx);
 vm.runInContext(breederSrc.slice(breederSrc.indexOf('const TEACHING_CARDS = ['))
-  .replace(/\b[A-Z_]+_ICON\b|\bDISC_STONE_BASE\b/g, "''") + '\nglobalThis.__b=BREEDER_MARKET_ITEMS;', bctx);
+  .replace(/\b[A-Z_]+_(?:ICON|IMG)\b|\bDISC_STONE_BASE\b/g, "''") + '\nglobalThis.__b=BREEDER_MARKET_ITEMS;', bctx);
 const iconTotalCost = bctx.__b.filter(i => i.type === 'icon').reduce((a, i) => a + i.cost, 0);
 const ptOf = (rewards) => (rewards || []).filter(r => r.type === 'breederPoint').reduce((a, r) => a + r.amount, 0);
 const ptLimit = Math.max(1, Math.floor(iconTotalCost / 2));
