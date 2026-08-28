@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 417630ecfec8426a
+// source-sha256: d6e757d919a52c74
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 17:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18807,6 +18807,14 @@ function MonsterHeroGame() {
     setFusionAnimPhase(0);
     setFusionResultData(null);
   };
+  const continueFusionFlow = () => {
+    fusionProcessingRef.current = false;
+    setFusionStep('sub');
+    setFusionSubId(null);
+    setFusionInheritUnique(false);
+    setFusionAnimPhase(0);
+    setFusionResultData(null);
+  };
   const resetDonationFlow = () => {
     if (donationProcessingRef.current) return;
     setDonationSelectedIds([]);
@@ -33283,10 +33291,7 @@ function MonsterHeroGame() {
       }, "\u8EE2\u751F\u80B2\u6210\u30DC\u30FC\u30CA\u30B9 ", d.inheritedReincarnateCount, "\u56DE\u5206\uFF08\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", d.inheritedReincarnatePoints, "\uFF09\u3092\u7D99\u627F\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-500 font-bold mb-4"
       }, "\u30C0\u30A4\u30E4\u3092", d.cost.toLocaleString(), "\u6D88\u8CBB\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => {
-          resetFusionFlow();
-          setGameState('MASU_MONS');
-        },
+        onClick: continueFusionFlow,
         className: "w-full max-w-xs bg-violet-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95"
       }, "\u3068\u3058\u308B"));
     })(), gameState === 'ITEM_INVENTORY' && /*#__PURE__*/React.createElement("div", {
