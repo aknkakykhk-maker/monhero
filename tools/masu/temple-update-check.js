@@ -18,7 +18,8 @@ check('再生で間合い適性を変えない', JSON.stringify(masu.distApt)===
 check('個体差を保存データから再解決できる', x.mergeMasuIntoMon(masu).baseHp===90);
 check('既存マスモンは従来の基礎値', x.mergeMasuIntoMon({id:'old',baseId:'Test',name:'old',statPoints:{}}).baseHp===100);
 check('合体費用は0/3000', source.includes("inherit = false) => inherit ? FUSION_INHERIT_COST : 0") && source.includes('const FUSION_INHERIT_COST = 3000'));
-check('技継承条件は副Lv30のみ', source.includes('subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && fusionInheritUnique') && !source.includes('mainLvl.level >= 10 && subLvl.level'));
+check('技継承条件は副Lv30のみ', source.includes('masuBondLevelInfo(sub).level >= FUSION_INHERIT_MIN_SUB_LEVEL') && !source.includes('mainLvl.level >= 10 && subLvl.level'));
+check('複数副は実継承数だけ課金', source.includes('buildFusionInheritancePlan') && source.includes('inheritCount:inheritancePlan.inheritCount'));
 check('連打防止ロックと初回専用保存値', source.includes('fusionProcessingRef.current') && source.includes('regenerationProcessingRef.current') && source.includes("mh_temple_regeneration_used_v1"));
 check('登録済み円盤石画像を再利用', source.includes("images/disc-icons/stone-base.png") && fs.existsSync('monster-hero/images/disc-icons/stone-base.png'));
 check('再生一覧は3列の選択だけを表示', source.includes("gameState==='MASU_REGENERATION'") && source.includes('grid grid-cols-3 gap-2') && source.includes("setGameState('MASU_REGENERATION_DETAIL')"));
