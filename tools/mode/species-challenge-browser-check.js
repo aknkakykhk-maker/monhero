@@ -1,0 +1,257 @@
+// 種族チャレンジを実際のブラウザで通しで遊んでみて、画面が動くかを確かめる。
+//
+//   python3 tools/serve.py  は要らない(このツールが自前でポートを開く)
+//   node tools/mode/species-challenge-browser-check.js
+//
+// 見るのは次のとおり。
+//   ① デバッグ設定 → BATTLE TEST → ⚔️バトルモード → 本番と同じBATTLE MODEカルーセルから入れる
+//   ② 種族選択 → 難易度 → 勇者 → 供モン → 出撃確認 の各画面が出て、iPhone縦で横にはみ出さない
+//   ③ 勇者と同じモンスターは供モンに出ない(同じbaseIdの重複拒否)
+//   ④ 供モン0体でも出撃できる
+//   ⑤ WAVE1のバトルまで到達して、どこでも実行時エラー(真っ白)にならない
+//   ⑥ 種族チャレンジのランキング画面が開き、種族タブと14難易度が並ぶ
+//
+// このサンドボックスは外部CDN(Tailwind)へ出られないため、Tailwindの読み込みだけ
+// 打ち切って起動し、横スライドに必要な最小限のCSSだけ自前で足す。
+// そのため「見た目そのもの」は確認できない。ここで分かるのは
+// 「画面が出るか」「押せるか」「実行時エラーが出ないか」「横スクロール事故が無いか」まで。
+const http = require('http');
+const path = require('path');
+const fs = require('fs');
+
+const root = path.resolve(__dirname, '..', '..');
+const PORT = 8982;
+const MIME = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json',
+  '.css':'text/css', '.png':'image/png', '.jpg':'image/jpeg', '.webp':'image/webp',
+  '.svg':'image/svg+xml', '.mp3':'audio/mpeg', '.ico':'image/x-icon' };
+
+const serve = () => new Promise((resolve) => {
+  const server = http.createServer((req, res) => {
+    const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '');
+    const file = path.join(root, rel);
+    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      res.writeHead(404); res.end('not found'); return;
+    }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' });
+    fs.createReadStream(file).pipe(res);
+  });
+  server.listen(PORT, () => resolve(server));
+});
+
+let failed = 0;
+const check = (name, ok, detail = '') => {
+  console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`);
+  if (!ok) failed++;
+};
+
+(async () => {
+  let playwright;
+  try { playwright = require('playwright'); }
+  catch { console.log('SKIP: playwright が入っていないので確認できません'); process.exit(0); }
+
+  const server = await serve();
+  const errors = [];
+  let browser;
+  try {
+    browser = await playwright.chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+    // iPhone相当の縦画面で見る
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    page.on('pageerror', (e) => errors.push(String(e)));
+    await page.route('**cdn.tailwindcss.com**', (r) => r.abort());
+    await page.addInitScript(() => {
+      localStorage.setItem('mh_breeder_name', JSON.stringify('検査ブリーダー'));
+      localStorage.setItem('mh_breeder_icon', JSON.stringify('🐣'));
+      localStorage.setItem('mh_onboarded', JSON.stringify(true));
+      localStorage.setItem('mh_tutorial_seen_v1', JSON.stringify(true));
+      localStorage.setItem('mh_battle_tutorial_seen_v1', JSON.stringify(true));
+      localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
+      // ピクシー種(ピクシー・ミーア・パンドラ)をそろえて、供モンを実際に選べる状態にする。
+      // マスモンのピクシーも1体入れて、「勇者と同じモンスターは供モンに出ない」ところまで見る
+      localStorage.setItem('mh_unlocked_monsters', JSON.stringify(['Mocchi', 'Mitarashi', 'Pixie', 'Mia', 'Pandora', 'Suezo']));
+      localStorage.setItem('mh_masu_mons', JSON.stringify([{
+        id: 'sc-pixie-1', baseId: 'Pixie', name: '検査ピクシー', bondXp: 300,
+        createdAt: 1, plusStats: { hp: 0, atk: 0, def: 0, guts: 0 },
+      }]));
+    });
+    await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+    await page.addStyleTag({ content: `
+      .snap-mandatory { display:flex; overflow-x:auto; width:100%; scroll-snap-type:x mandatory; }
+      .snap-mandatory > article { flex:0 0 82%; scroll-snap-align:center; }
+    ` });
+
+    await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
+    await page.getByRole('button', { name: 'トップ画面へ進む' }).click({ timeout: 30000 });
+    await page.getByRole('button', { name: 'バトル' }).waitFor({ timeout: 30000 });
+    for (let i = 0; i < 6; i++) {
+      const btn = page.getByRole('button', { name: /受け取る|閉じる|はじめる|OK/ }).first();
+      if (await btn.count() === 0 || !(await btn.isVisible().catch(() => false))) break;
+      await btn.dispatchEvent('click').catch(() => {});
+      await page.waitForTimeout(250);
+    }
+
+    // 横スクロール事故(本文が画面幅を超えていないか)を測る共通処理
+    const overflow = () => page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    const checkNoSideScroll = async (label) => {
+      const size = await overflow();
+      check(`${label}が横にはみ出さない`, size.scrollWidth <= size.clientWidth + 1, `${size.scrollWidth} / ${size.clientWidth}`);
+    };
+
+    // --- ① デバッグ設定 → BATTLE TEST → ⚔️バトルモード ---
+    // デバッグ設定はヘルプの下にある目立たないボタンからだけ開ける
+    await page.getByRole('button', { name: '設定' }).first().dispatchEvent('click');
+    await page.getByRole('button', { name: 'ヘルプ' }).first().waitFor({ timeout: 20000 });
+    await page.getByRole('button', { name: 'ヘルプ' }).first().dispatchEvent('click');
+    await page.getByRole('button', { name: 'わかった！冒険に戻る' }).waitFor({ timeout: 20000 });
+    await page.locator('footer button[aria-label=""]').dispatchEvent('click');
+    await page.getByText('BATTLE TEST').first().waitFor({ timeout: 20000 });
+    check('デバッグ設定を開ける', true);
+    await page.getByRole('button', { name: '⚔️ バトルモード' }).dispatchEvent('click');
+    await page.getByText('BATTLE MODE').first().waitFor({ timeout: 20000 });
+    check('本番と同じBATTLE MODEカルーセルへ入る', true);
+
+    // 種族チャレンジのカードまで送る(デバッグのときだけ末尾に並ぶ)
+    const speciesCard = page.locator('article').filter({ hasText: '種族チャレンジ' }).first();
+    await speciesCard.scrollIntoViewIfNeeded();
+    check('デバッグ時だけ種族チャレンジのカードが並ぶ', await speciesCard.count() === 1);
+    check('公開前だと分かる印が出ている', (await speciesCard.textContent()).includes('DEBUG・一般公開前'));
+    await checkNoSideScroll('BATTLE MODE');
+
+    // --- ② 種族選択 ---
+    await speciesCard.getByRole('button', { name: '種族を選ぶ' }).dispatchEvent('click');
+    await page.getByRole('heading', { name: '種族選択' }).waitFor({ timeout: 20000 });
+    const speciesRows = page.locator('[data-species-row]');
+    check('主血統が1行1種族で並ぶ', await speciesRows.count() === 11, `${await speciesRows.count()}種族`);
+    check('「◯◯種 限定」と名乗る', (await speciesRows.first().textContent()).includes('種 限定'));
+    await checkNoSideScroll('種族選択');
+    // 使えるモンスターがいちばん多い種族を選ぶ(供モンの重複拒否まで見たいため)。
+    // 仕込みではピクシー種(ピクシー・ミーア・パンドラ＋マスモンのピクシー)がいちばん多い
+    const rowCount = await speciesRows.count();
+    let chosenRow = null, chosenUsable = 0;
+    for (let i = 0; i < rowCount; i++) {
+      const row = speciesRows.nth(i);
+      if (await row.isDisabled()) continue;
+      const text = await row.textContent();
+      const usable = Number((text.match(/使える\s*(\d+)\s*体/) || [])[1] || 0);
+      if (usable > chosenUsable) { chosenRow = row; chosenUsable = usable; }
+    }
+    check('選べる種族がある', !!chosenRow, `使える ${chosenUsable}体`);
+    const chosenText = await chosenRow.textContent();
+    await chosenRow.dispatchEvent('click');
+    await page.waitForTimeout(200);
+    await page.getByRole('button', { name: '難易度選択へ' }).dispatchEvent('click');
+
+    // --- 難易度選択 ---
+    await page.getByText('BATTLE DIFFICULTY').first().waitFor({ timeout: 20000 });
+    const difficultyCards = page.locator('.snap-mandatory > article');
+    check('14難易度が並ぶ', await difficultyCards.count() === 14, `${await difficultyCards.count()}枚`);
+    check('種族ランキングへの導線がある', await page.locator('[data-species-difficulty-record-link]').count() >= 1);
+    await checkNoSideScroll('難易度選択');
+    const beginner = difficultyCards.filter({ hasText: 'Beginner' }).first();
+    await beginner.scrollIntoViewIfNeeded();
+    check('初回クリア報酬に超越の実が出る', (await beginner.textContent()).includes('超越の実 ×1'));
+
+    // --- ⑥ 種族チャレンジのランキング画面 ---
+    await beginner.locator('[data-species-difficulty-record-link]').dispatchEvent('click');
+    await page.getByRole('heading', { name: /種族チャレンジランキング/ }).waitFor({ timeout: 20000 });
+    check('種族チャレンジのランキングを開ける', true);
+    const rankTabs = page.locator('[data-species-rank-tabs] button');
+    check('「すべて」＋種族別のタブが並ぶ', await rankTabs.count() === 12, `${await rankTabs.count()}タブ`);
+    const selectedTab = await page.locator('[data-species-rank-tabs] button.bg-cyan-600').textContent();
+    check('難易度カードから開くとその種族が選ばれている', /種$/.test(String(selectedTab).trim()), String(selectedTab));
+    const rankRows = page.locator('[data-species-record-row]');
+    check('選んだ種族の14難易度が並ぶ', await rankRows.count() === 14, `${await rankRows.count()}行`);
+    check('未クリアの難易度も残る', (await rankRows.first().textContent()).includes('記録なし'));
+    check('公開前は自分の記録だけと書いてある',
+      (await page.locator('[data-species-record-list]').textContent()).includes('全国ランキングはモードの公開後に始まります'));
+    await checkNoSideScroll('種族チャレンジランキング');
+    await page.getByRole('button', { name: '戻る' }).first().dispatchEvent('click');
+    await page.getByText('BATTLE DIFFICULTY').first().waitFor({ timeout: 20000 });
+
+    await beginner.scrollIntoViewIfNeeded();
+    await beginner.getByRole('button', { name: 'この難易度で挑戦' }).dispatchEvent('click');
+
+    // --- 勇者選択 ---
+    await page.getByRole('heading', { name: '勇者モン選択' }).waitFor({ timeout: 20000 });
+    const heroCards = page.locator('[data-species-monster-card]');
+    const heroCount = await heroCards.count();
+    check('勇者候補はその種族だけ', heroCount >= 1, `${heroCount}体`);
+    await checkNoSideScroll('勇者選択');
+    const heroEntryIds = await heroCards.evaluateAll(nodes => nodes.map(n => n.getAttribute('data-species-monster-card')));
+    // 仕込んだマスモン(ピクシー)と同じモンスターを勇者にすると、そのマスモンが
+    // 供モン候補から先に消えてしまう。重複拒否を見たいので、別のモンスターを勇者にする
+    const heroEntryId = heroEntryIds.find(id => id !== 'Pixie' && !String(id).startsWith('masu:')) || heroEntryIds[0];
+    const heroCard = page.locator(`[data-species-monster-card="${heroEntryId}"]`);
+    const heroText = await heroCard.textContent();
+    await heroCard.dispatchEvent('click');
+    await page.waitForTimeout(300);
+
+    // --- ③ 供モン選択(同じモンスターは出ない) ---
+    await page.getByRole('button', { name: '供モン選択へ' }).dispatchEvent('click');
+    await page.getByRole('heading', { name: '供モン選択' }).waitFor({ timeout: 20000 });
+    check('供モンは最大3体・重複不可と書いてある',
+      (await page.getByText('供モンは最大3体').first().textContent()).includes('重複不可'));
+    const allyCards = page.locator('[data-species-monster-card]');
+    const allyCount = await allyCards.count();
+    check('勇者に選んだモンスターは供モン候補から消える', allyCount === heroCount - 1, `勇者候補${heroCount}体 → 供モン候補${allyCount}体`);
+    await checkNoSideScroll('供モン選択');
+
+    // 同じ種族の別モンスターは供モンに選べる。ベースモンのピクシーを選ぶと、
+    // 同じモンスターのマスモン(検査ピクシー)は「選択済み」で選べなくなる
+    const allyEntryIds = await allyCards.evaluateAll(nodes => nodes.map(n => n.getAttribute('data-species-monster-card')));
+    const masuEntryId = allyEntryIds.find(id => String(id).startsWith('masu:'));
+    if (allyEntryIds.includes('Pixie') && masuEntryId) {
+      await page.locator('[data-species-monster-card="Pixie"]').dispatchEvent('click');
+      await page.waitForTimeout(200);
+      check('同じ種族の別モンスターを供モンに選べる',
+        await page.locator('[data-species-monster-card="Pixie"][aria-pressed="true"]').count() === 1);
+      const twin = page.locator(`[data-species-monster-card="${masuEntryId}"]`);
+      check('同じモンスターのマスモンは選べなくなる', await twin.isDisabled(), await twin.textContent());
+      check('同じモンスターだと分かる印が出る', (await twin.textContent()).includes('選択済み'));
+      await page.locator('[data-species-monster-card="Pixie"]').dispatchEvent('click');
+      await page.waitForTimeout(200);
+      check('選び直して0体へ戻せる', await page.locator('[data-species-monster-card][aria-pressed="true"]').count() === 0);
+      check('戻すと同じモンスターのマスモンもまた選べる', !(await twin.isDisabled()));
+    } else {
+      check('重複拒否を見られる編成になっている', false, `候補: ${allyEntryIds.join(',')}`);
+    }
+
+    // --- ④ 供モン0体のまま出撃確認へ ---
+    await page.getByRole('button', { name: '出撃確認へ' }).dispatchEvent('click');
+    await page.getByRole('heading', { name: '出撃確認' }).waitFor({ timeout: 20000 });
+    const startButton = page.getByRole('button', { name: 'この編成で出撃' });
+    check('供モン0体のまま出撃確認へ進める', await startButton.isEnabled());
+    await checkNoSideScroll('出撃確認');
+
+    // --- ⑤ バトルまで ---
+    await startButton.dispatchEvent('click');
+    await page.getByRole('heading', { name: 'アシストカードの継承・強化' }).waitFor({ timeout: 20000 });
+    await page.locator('.grid > button').first().dispatchEvent('click');
+    await page.getByRole('button', { name: /習得する|強化する/ }).dispatchEvent('click', {}, { timeout: 20000 });
+    await page.locator('[data-battle-controls]').waitFor({ timeout: 25000 });
+    check('種族チャレンジのバトルが始まる', true);
+    const modeLabel = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('span')].find(s => /^(チャレ|種族)/.test((s.textContent || '').trim()));
+      return el ? el.textContent.trim() : null;
+    });
+    check('バトル画面までたどり着く', !!modeLabel, String(modeLabel));
+    await checkNoSideScroll('バトル');
+
+    // --- 実行時エラー ---
+    check('どこでも実行時エラーが出ていない', errors.length === 0, errors[0] || '');
+    console.log(`  選んだ種族: ${chosenText.replace(/\s+/g, ' ').slice(0, 40)}`);
+    console.log(`  勇者モン: ${String(heroText).replace(/\s+/g, ' ').slice(0, 24)}`);
+
+    console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
+    await browser.close(); server.close();
+    process.exit(failed ? 1 : 0);
+  } catch (e) {
+    console.log(`NG: 確認できませんでした — ${e.message}`);
+    if (errors.length) console.log(`  実行時エラー: ${errors[0]}`);
+    if (browser) await browser.close();
+    server.close();
+    process.exit(1);
+  }
+})();
