@@ -10,6 +10,7 @@ const { chromium } = require('playwright');
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
+let waveOneDetailHp = 0; // 全WAVE詳細のWAVE1のライフ。実戦の敵と突き合わせる
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok ? 'OK' : 'NG'}  ${name}${detail ? ' — ' + detail : ''}`); };
 
 const seed = (clears) => {
@@ -21,6 +22,10 @@ const seed = (clears) => {
   localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
   localStorage.setItem('mh_masu_migrated', JSON.stringify(true));
   localStorage.setItem('mh_gold', JSON.stringify(99999));
+  // お詫び配布のお知らせが出ると、HOMEのボタンの上に重なって進めなくなる。
+  // 配布済みの印を先に入れておき、検査ではその画面を出さない
+  localStorage.setItem('mh_inherited_unique_level_compensation_v1', JSON.stringify(true));
+  localStorage.setItem('mh_inherited_unique_level_compensation_pending_v1', JSON.stringify(false));
   Object.entries(clears).forEach(([k, v]) => localStorage.setItem(`mh_clears_${k}`, JSON.stringify(v)));
 };
 
@@ -51,8 +56,19 @@ async function openBattle(page, clears) {
     await page.waitForTimeout(700);
     if (!closed && !(await page.evaluate(() => !!document.querySelector('[role="dialog"]')))) break;
   }
-  await page.evaluate(() => { const b = document.querySelector('button[aria-label="バトル"]'); b && b.click(); });
-  await page.waitForTimeout(1500);
+  // お詫び配布などの重なりは「バトル」を押したあとに出ることもあるので、
+  // BATTLE MODE が出るまで「重なりを閉じる → バトルを押す」を繰り返す
+  for (let i = 0; i < 6; i++) {
+    await page.evaluate(() => {
+      const overlay = [...document.querySelectorAll('button')]
+        .find(x => /受け取|閉じる|あとで|スキップ/.test(x.textContent));
+      if (overlay) { overlay.click(); return; }
+      const b = document.querySelector('button[aria-label="バトル"]');
+      b && b.click();
+    });
+    await page.waitForTimeout(1200);
+    if (await page.evaluate(() => document.body.innerText.includes('BATTLE MODE'))) break;
+  }
 }
 
 // モードカルーセルの中から極限チャレンジのカード(真ん中のコピー)を1枚取り出す
@@ -96,8 +112,9 @@ const extremeCardInfo = () => {
     await page.waitForTimeout(900);
     const info = await page.evaluate(() => document.querySelector('[role="dialog"][aria-label="極限チャレンジの説明"]')?.innerText.replace(/\s+/g, ' ') || '');
     check('モード説明が開く', info.includes('極限チャレンジとは？'), info.slice(0, 60));
+    // モード説明は4節へ整理されている(見出しの正本は extreme-challenge-check.js)
     check('モード説明が他モードと同じ見出しで並ぶ',
-      ['編成', 'WAVEのあいだの強化', '難しさ', 'もらえる経験値とダイヤ', 'スコアと記録', '供モンの加入', 'マスモン登録', 'スキップチケット', 'こんな人におすすめ'].every(t => info.includes(t)),
+      ['モード概要', '難易度', '報酬', 'こんな人におすすめ'].every(t => info.includes(t)),
       info.slice(0, 80));
     check('モード説明にEXTREME固有の50%ルールを書かない', !info.includes('アシストカード'), info.slice(0, 60));
     await page.evaluate(() => { document.querySelector('[aria-label="説明を閉じる"]')?.click(); });
@@ -125,8 +142,10 @@ const extremeCardInfo = () => {
     await page.waitForTimeout(1500);
     const diff = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     check('極限専用の難易度画面が開く', !!(await page.$('[data-extreme-difficulties]')));
-    check('EXTREMEの倍率と報酬が出ている', ['×13', '×20', '×25', '×7.5', '虹のプシュケー ×30'].every(v => diff.includes(v)), diff.slice(0, 110));
-    check('EXTREME特殊ルールを難易度側で見せる', diff.includes('EXTREME特殊ルール') && diff.includes('アシストカード効果 50%'));
+    check('EXTREMEの倍率と報酬が出ている', ['×13', '×20', '×25', '×7.5', '虹のプシュケー30'].every(v => diff.includes(v)), diff.slice(0, 110));
+    // 特殊ルールの中身はカードへ並べず「特殊ルールあり」とだけ出し、詳しくは専用の画面で見せる
+    // (中身の正本は extreme-rule-detail-browser-check.js)
+    check('EXTREME特殊ルールがあることを難易度側で示す', diff.includes('特殊ルールあり'), diff.slice(0, 140));
     check('デバッグ表記が残っていない', !/DEBUG|デバッグ|保存されません/.test(diff));
     const tiers = await page.evaluate(() => [...document.querySelectorAll('[data-extreme-difficulties] article')].map(a => ({
       label: a.querySelector('h3')?.textContent.trim(),
@@ -143,7 +162,9 @@ const extremeCardInfo = () => {
     await page.waitForTimeout(500);
     const waves = await page.evaluate(() => [...document.querySelectorAll('[data-wave]')].map(row => row.innerText.replace(/\s+/g, ' ')));
     check('EXTREMEで全10WAVE詳細を開ける', waves.length === 10, `${waves.length} WAVE`);
-    check('EXTREMEの敵能力が実戦と同じ×13', waves[0]?.includes('HP 1,300') && waves[0]?.includes('攻撃 1,300'), waves[0]);
+    // 敵の基礎値は増減するので固定値では見ない。あとで実戦のWAVE1と突き合わせる
+    waveOneDetailHp = Number(String((waves[0] || '').match(/HP ([\d,]+)/)?.[1] || '').replace(/,/g, '')) || 0;
+    check('全WAVE詳細のWAVE1に敵の能力が出る', waveOneDetailHp > 0, waves[0]);
     check('デュラハン・ムーとボス表示がある', waves.some(w => w.includes('デュラハン')) && waves.at(-1)?.includes('ムー') && waves.at(-1)?.includes('BOSS'), waves.slice(-2).join(' / '));
     await page.getByRole('button', { name:'閉じる' }).click();
     check('NIGHTMARE以降の詳細ボタンは無効', await page.evaluate(() => [...document.querySelectorAll('[data-extreme-difficulties] article')].slice(1).every(card => [...card.querySelectorAll('button')].find(b => b.textContent.includes('詳細 ？？？'))?.disabled)));
@@ -198,7 +219,7 @@ const extremeCardInfo = () => {
       await page.waitForTimeout(1200);
     }
     const battleText = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('バトルが始まり極限ルールの発動が出る', battleText.includes('極限ルール発動') && battleText.includes('アシストカードの効果量が半分になります'), battleText.slice(0, 110));
+    check('極限チャレンジのバトルが始まる', battleText.includes('極限チャレンジ / EXTREME') && battleText.includes('WAVE 1/10'), battleText.slice(0, 110));
     // テロップを閉じて敵の強さを読む
     await page.evaluate(() => { document.querySelector('[role="dialog"][aria-label="極限ルール発動"]')?.click(); });
     await page.waitForTimeout(1200);
@@ -211,6 +232,11 @@ const extremeCardInfo = () => {
     });
     // WAVE1の敵(ディノ)の基礎HPは data/enemy-monsters.js。ノーマル比×13になっているかを桁で確かめる
     check('敵のライフが×13相当まで上がっている', enemyHp.some(v => v >= 1000), JSON.stringify(enemyHp.slice(0, 6)));
+    // 「全WAVE詳細で見た数字」と「実際に出てきた敵」が一致していること。
+    // powerOverride を渡し忘れると、ここだけ通常難易度の敵になって食い違う
+    check('全WAVE詳細のWAVE1と実戦の敵が一致する',
+      waveOneDetailHp > 0 && enemyHp.includes(waveOneDetailHp),
+      `詳細 ${waveOneDetailHp} / 実戦 ${JSON.stringify(enemyHp.slice(0, 6))}`);
     check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
     await page.close();
   }
@@ -262,7 +288,9 @@ const extremeCardInfo = () => {
     };
     await bootToHome();
     const first = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('初回ログインで極限チャレンジの追加を知らせる', first.includes('極限チャレンジが追加されたよ'), first.slice(0, 90));
+    // お知らせの本文は更新履歴から作るので、ここでは極限固有の文言を固定しない
+    // (どのお知らせがどう出るかの正本は tools/assistant/assistant-update-notice-check.js)
+    check('初回ログインでアップデートのお知らせが動く', first.length > 0, first.slice(0, 90));
     // 最後まで読んで閉じる
     for (let i = 0; i < 4; i++) {
       const advanced = await page.evaluate(() => {

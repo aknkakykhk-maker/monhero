@@ -44,7 +44,10 @@ assert(renderQuickCard('NIGHTMARE', true).buttonDisabled === false, '解放済�
 assert(renderQuickCard('EXTREME', true).xpReward * 1.5 === 30 && renderQuickCard('EXTREME', true).goldReward * 1.5 === 6.75 && renderQuickCard('EXTREME', true).psycheReward === 30, 'EXTREMEの表示・実付与倍率');
 assert(renderQuickCard('NIGHTMARE', true).xpReward * 1.5 === 37.5 && renderQuickCard('NIGHTMARE', true).goldReward * 1.5 === 9 && renderQuickCard('NIGHTMARE', true).psycheReward === 40, 'NIGHTMAREの表示・実付与倍率');
 
-assert(source.includes('const activeDifficultySetting = QUICK_DIFFICULTY_SETTINGS[safeDifficulty];'), '再描画時の難易度設定をクイック対応表から解決');
+// クイック対応表の引き方は quickDifficultySetting に1本化されている
+// (ULTIMATEだけ QUICK_ULTIMATE_SETTING を返すため、直接の添字引きでは足りない)
+assert(source.includes('const activeDifficultySetting = quickDifficultySetting(safeDifficulty);'), '再描画時の難易度設定をクイック対応表から解決');
+assert(/const quickDifficultySetting = \(difficultyId\) => difficultyId===ULTIMATE_SETTING\.id[\s\S]{0,120}QUICK_DIFFICULTY_SETTINGS\[difficultyId\]/.test(source), 'クイック対応表の解決はULTIMATEも含めて1か所にまとまっている');
 assert(!source.includes('DIFFICULTY_SETTINGS[safeDifficulty].score') && !source.includes('DIFFICULTY_SETTINGS[safeDifficulty].gold'), '再描画経路に通常難易度表の危険な直接参照がない');
 assert(source.includes("const label=extreme?extremePreviewSetting.label:QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label"), '全WAVE詳細がクイック極限難易度のラベルを解決');
 assert(source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride)'), '全WAVE詳細が共通の敵生成経路を使う');
