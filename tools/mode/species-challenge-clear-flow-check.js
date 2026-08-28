@@ -97,6 +97,22 @@ check('「すべて」はその難易度の種族順位、種族を選ぶとそ�
   rankBody.includes("speciesFilter === 'all'") && rankBody.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => ({ id, record: speciesChallengeRecord(speciesChallengeProgress, speciesFilter, id) }))'));
 check('種族を選んだときは難易度タブを出さない(全難易度を縦に並べるため)',
   rankBody.includes("{speciesFilter === 'all' && <div className=\"flex gap-1.5 overflow-x-auto pb-2 shrink-0\">"));
+// 種族を選んだあと、その種族の難易度別ランキングが必ず見られる状態にしておく。
+// クリア済みだけを並べると、1つもクリアしていない種族では中身が空になり
+// 「種族での難易度別ランキングが無い」ように見えてしまう
+check('種族を選ぶと14難易度をすべて並べる(未クリアも残す)',
+  rankBody.includes("row.record.clears > 0\n              ? `クリア ${row.record.clears}回")
+  && rankBody.includes("'まだクリアしていません'")
+  && !/SPECIES_CHALLENGE_DIFFICULTY_IDS\.map[\s\S]{0,200}?\.filter\(row => row\.record\.clears > 0\)/.test(rankBody));
+check('未クリアの難易度は「記録なし」と分かる形で出す', rankBody.includes('記録なし'));
+// 難易度カードからも、その種族のランキングへ入れるようにする
+check('難易度カードに種族ランキングの導線がある',
+  source.includes('data-species-difficulty-record-link')
+  && source.includes("openSpeciesChallengeRecords('BATTLE_DIFFICULTY_SELECT',{speciesId:speciesChallengeSelection.speciesId,difficultyId:key})"));
+const openRecords = source.slice(source.indexOf('const openSpeciesChallengeRecords ='), source.indexOf('const openModeScoreRanking ='));
+check('そこから開くと、その種族と難易度が最初から選ばれている',
+  openRecords.includes('setSpeciesRankFilter(speciesChallengeLineages().some(lineage=>lineage.id===speciesId)?speciesId:\'all\')')
+  && openRecords.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)?difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0]'));
 check('公開前は自分の記録だけと明示する',
   rankBody.includes('!SPECIES_CHALLENGE_PUBLIC_RELEASE &&') && rankBody.includes('全国ランキングはモードの公開後に始まります'));
 check('ランキング画面は新しい保存キーを作らない', !/mh_[a-z]/.test(rankBody));
