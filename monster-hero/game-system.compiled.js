@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 77eac8c8e53adc31
+// source-sha256: bad262462f00821e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 19:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 19:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2598,10 +2598,11 @@ const buildFusionDiamondSummary = ({
   psycheOwned = 0,
   mainLevel = 0,
   subLevel = 0,
-  inherit = false
+  inherit = false,
+  inheritCount = inherit ? 1 : 0
 }) => {
   const goldBefore = donationDiamondValue(gold);
-  const inheritCost = masuFusionCost(mainLevel, subLevel, inherit);
+  const inheritCost = Math.max(0, Math.floor(Number(inheritCount) || 0)) * masuFusionCost(mainLevel, subLevel, true);
   const breakthroughPlan = buildFusionBreakthroughPlan({
     masu,
     fusionXp,
@@ -2621,6 +2622,42 @@ const buildFusionDiamondSummary = ({
     normalDiamondAfter: goldBefore - inheritCost,
     normalDiamondShortage: Math.max(0, inheritCost - goldBefore),
     breakthroughPlan
+  };
+};
+// 選択順に継承可否を確定する。確認画面と保存直前の再検証で同じ判定を使い、
+// 主が所持済み・同じ一括合体内で先に追加済みの同系統には費用を付けない。
+const buildFusionInheritancePlan = ({
+  main,
+  subs,
+  selectedSubIds
+}) => {
+  const selected = new Set(Array.isArray(selectedSubIds) ? selectedSubIds : []);
+  const mainBase = main ? ALL_PLAYER_MONSTERS[main.baseId] : null;
+  const ownedLineageIds = new Set([uniqueLineageId(mainBase?.unique, mainBase?.id), ...(Array.isArray(main?.inheritedUniques) ? main.inheritedUniques : []).map(unique => uniqueLineageId(unique))].filter(Boolean));
+  const entries = (Array.isArray(subs) ? subs : []).map(sub => {
+    const subBase = sub ? ALL_PLAYER_MONSTERS[sub.baseId] : null;
+    const lineageId = uniqueLineageId(subBase?.unique, subBase?.id);
+    const eligible = !!sub && masuBondLevelInfo(sub).level >= FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase?.unique;
+    const requested = !!sub && selected.has(sub.id);
+    const duplicate = !!lineageId && ownedLineageIds.has(lineageId);
+    const inherited = requested && eligible && !!lineageId && !duplicate;
+    if (inherited) ownedLineageIds.add(lineageId);
+    return {
+      sub,
+      subBase,
+      lineageId,
+      eligible,
+      requested,
+      duplicate,
+      inherited
+    };
+  });
+  const inheritedEntries = entries.filter(entry => entry.inherited);
+  return {
+    entries,
+    inheritedEntries,
+    inheritCount: inheritedEntries.length,
+    inheritCost: inheritedEntries.length * FUSION_INHERIT_COST
   };
 };
 // 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
@@ -14509,7 +14546,7 @@ function MonsterHeroGame() {
   const [fusionMainId, setFusionMainId] = useState(null); // 主として選んだマスモンid
   const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
   const [fusionSubIds, setFusionSubIds] = useState([]); // 通常合体でまとめて消費する副。配列順を処理順として維持する
-  const [fusionInheritUnique, setFusionInheritUnique] = useState(false); // 副の固有技を引き継ぐか(副が絆Lv30以上のみ選択可)
+  const [fusionInheritUniqueIds, setFusionInheritUniqueIds] = useState([]); // 固有技を引き継ぐ副id（合体画面内だけの一時状態）
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
   const fusionProcessingRef = useRef(false);
@@ -18688,7 +18725,7 @@ function MonsterHeroGame() {
   };
   // 合体: 副の絆経験値(累計bondXp)をまるごと主に加算し、副は消滅させる。
   // 技を引き継がなければ無料、引き継ぐ場合は3000ダイヤ。副が絆Lv30以上で
-  // fusionInheritUniqueがtrueなら、副の固有技を「継承した固有技」としてinheritedUniquesに記録する。
+  // 選択された副ごとに、固有技を「継承した固有技」としてinheritedUniquesに記録する。
   // 能力値・距離適性・副の強化ポイントは引き継がないが、絆レベルが上がったぶんの
   // 強化ポイントは通常のレベルアップと同じように主へ配る。
   const executeMasuFusion = async (withBreakthrough = false) => {
@@ -18700,12 +18737,22 @@ function MonsterHeroGame() {
     const main = snapshot.find(m => m.id === fusionMainId);
     const subs = requestedSubIds.map(id => snapshot.find(m => m.id === id));
     if (!main || requestedSubIds.length === 0 || uniqueSubIds.size !== requestedSubIds.length || uniqueSubIds.has(fusionMainId) || subs.some(sub => !sub)) return null;
-    // 複数副では今回対象外の固有技継承・限界突破合体へ流さない。
-    if (requestedSubIds.length > 1 && (withBreakthrough || fusionInheritUnique)) return null;
+    // 複数副の限界突破合体は対象外。通常合体の固有技継承は副ごとに判定する。
+    if (requestedSubIds.length > 1 && withBreakthrough) return null;
     fusionProcessingRef.current = true;
     const mainLvl = masuBondLevelInfo(main);
     const totalGainedXp = subs.reduce((sum, sub) => sum + cappedBondXp(sub), 0);
     const firstSubLvl = masuBondLevelInfo(subs[0]);
+    const inheritancePlan = buildFusionInheritancePlan({
+      main,
+      subs,
+      selectedSubIds: fusionInheritUniqueIds
+    });
+    // UI表示後に副のLv・技・重複状況が変わっていても、この再計算結果だけで費用と保存内容を確定する。
+    if (inheritancePlan.entries.some(entry => entry.requested && !entry.eligible) || fusionInheritUniqueIds.some(id => !uniqueSubIds.has(id))) {
+      fusionProcessingRef.current = false;
+      return null;
+    }
     const diamondSummary = buildFusionDiamondSummary({
       masu: main,
       fusionXp: totalGainedXp,
@@ -18713,7 +18760,7 @@ function MonsterHeroGame() {
       psycheOwned: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID),
       mainLevel: mainLvl.level,
       subLevel: firstSubLvl.level,
-      inherit: requestedSubIds.length === 1 && fusionInheritUnique
+      inheritCount: inheritancePlan.inheritCount
     });
     const {
       breakthroughPlan
@@ -18732,13 +18779,12 @@ function MonsterHeroGame() {
     let inheritedReincarnatePoints = 0;
     let inheritedReincarnateCount = 0;
     // fusionSubIds順に、単体合体と同じXP・ポイント・履歴処理を1体ずつ適用する。
-    for (const sub of subs) {
+    for (const [subIndex, sub] of subs.entries()) {
       const subLvl = masuBondLevelInfo(sub);
       const gainedXp = cappedBondXp(sub);
       const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
-      const ownedUniqueIds = new Set([uniqueLineageId(mainBase?.unique, mainBase?.id), ...(nextMain.inheritedUniques || []).map(unique => uniqueLineageId(unique))].filter(Boolean));
       const subUniqueLineageId = uniqueLineageId(subBase?.unique, subBase?.id);
-      const canInherit = subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && fusionInheritUnique && requestedSubIds.length === 1 && subBase?.unique && !ownedUniqueIds.has(subUniqueLineageId);
+      const canInherit = !!inheritancePlan.entries[subIndex]?.inherited;
       const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
       const inheritedUnique = canInherit ? {
         ...uniqueSkillAtLevel(subBase.unique, inheritedLevel),
@@ -18822,7 +18868,7 @@ function MonsterHeroGame() {
     setFusionMainId(null);
     setFusionSubId(null);
     setFusionSubIds([]);
-    setFusionInheritUnique(false);
+    setFusionInheritUniqueIds([]);
     setFusionAnimPhase(0);
     setFusionResultData(null);
   };
@@ -18831,7 +18877,7 @@ function MonsterHeroGame() {
     setFusionStep('sub');
     setFusionSubId(null);
     setFusionSubIds([]);
-    setFusionInheritUnique(false);
+    setFusionInheritUniqueIds([]);
     setFusionAnimPhase(0);
     setFusionResultData(null);
   };
@@ -32849,7 +32895,7 @@ function MonsterHeroGame() {
         const continueWithFusionSubs = () => {
           if (selectedSubs.length === 0) return;
           setFusionSubId(selectedSubs[0].id);
-          setFusionInheritUnique(false);
+          setFusionInheritUniqueIds([]);
           setFusionStep('confirm');
         };
         return /*#__PURE__*/React.createElement("div", {
@@ -32905,7 +32951,7 @@ function MonsterHeroGame() {
           className: "shrink-0 text-cyan-300"
         }, "+", cappedBondXp(sub).toLocaleString(), " XP")))), selectedSubs.length > 1 && /*#__PURE__*/React.createElement("div", {
           className: "mt-2 rounded-xl border border-violet-500/40 bg-violet-950/40 p-2 text-[9px] font-bold text-violet-200"
-        }, "\u8907\u6570\u526F\u306E\u901A\u5E38\u5408\u4F53\u3067\u3059\u3002\u56FA\u6709\u6280\u7D99\u627F\u3068\u300C\u9650\u754C\u7A81\u7834\u3057\u3066\u5408\u4F53\u300D\u306F\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
+        }, "\u8907\u6570\u526F\u306E\u901A\u5E38\u5408\u4F53\u3067\u3059\u3002\u56FA\u6709\u6280\u7D99\u627F\u306F\u78BA\u8A8D\u753B\u9762\u3067\u526F\u3054\u3068\u306B\u9078\u3079\u307E\u3059\u3002\u300C\u9650\u754C\u7A81\u7834\u3057\u3066\u5408\u4F53\u300D\u306F\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
           onClick: continueWithFusionSubs,
           disabled: selectedSubs.length === 0,
           className: "mt-2 w-full min-h-11 rounded-xl bg-violet-600 text-white text-xs font-black disabled:bg-slate-800 disabled:text-slate-500 active:scale-95"
@@ -32992,9 +33038,11 @@ function MonsterHeroGame() {
         }
         const mainLvl = masuBondLevelInfo(main);
         const subLvl = masuBondLevelInfo(sub);
-        const ownedUniqueIds = new Set([uniqueLineageId(mainBase.unique, mainBase.id), ...(main.inheritedUniques || []).map(unique => uniqueLineageId(unique))].filter(Boolean));
-        const duplicateUnique = ownedUniqueIds.has(uniqueLineageId(subBase.unique, subBase.id));
-        const canChooseInherit = subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase.unique && !duplicateUnique;
+        const inheritancePlan = buildFusionInheritancePlan({
+          main,
+          subs: selectedSubs,
+          selectedSubIds: fusionInheritUniqueIds
+        });
         // 合体後にどうなるかを先に計算して見せる(実行してみないと分からない状態だったため)
         // 実処理と同じ計算にする。主のレベル上限を超えるぶんは入らないので、
         // ここで上限まで切ったうえで「合体後」を出す(以前は上限を無視して出していた)
@@ -33008,7 +33056,7 @@ function MonsterHeroGame() {
           psycheOwned: ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID),
           mainLevel: mainLvl.level,
           subLevel: subLvl.level,
-          inherit: selectedSubs.length === 1 && fusionInheritUnique
+          inheritCount: inheritancePlan.inheritCount
         });
         const {
           inheritCost,
@@ -33217,7 +33265,19 @@ function MonsterHeroGame() {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "\u56FA\u6709\u6280\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("span", {
+        }, "\u7D99\u627F\u3059\u308B\u56FA\u6709\u6280\u6570"), /*#__PURE__*/React.createElement("span", {
+          className: "text-amber-300 font-black"
+        }, inheritancePlan.inheritCount, "\u500B")), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between gap-2 text-[10px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400 shrink-0"
+        }, "\u7D99\u627F\u5BFE\u8C61"), /*#__PURE__*/React.createElement("span", {
+          className: "text-amber-200 font-black text-right"
+        }, inheritancePlan.inheritedEntries.length ? inheritancePlan.inheritedEntries.map(entry => `${entry.sub.name}「${entry.subBase.unique.name}」`).join('、') : 'なし')), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[10px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, "\u56FA\u6709\u6280\u7D99\u627F\u30C0\u30A4\u30E4\u5408\u8A08"), /*#__PURE__*/React.createElement("span", {
           className: "text-amber-300 font-black"
         }, inheritCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
@@ -33235,24 +33295,31 @@ function MonsterHeroGame() {
           className: "flex justify-between text-[11px] font-black"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-200"
-        }, "\u5408\u4F53\u5F8C"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5408\u4F53\u5F8C\u30C0\u30A4\u30E4\u6B8B\u9AD8"), /*#__PURE__*/React.createElement("span", {
           className: diamondShortage ? 'text-red-300' : 'text-emerald-300'
         }, Math.max(0, diamondAfter).toLocaleString())), diamondShortage > 0 && /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-red-300 font-black text-right"
-        }, "\u3042\u3068", diamondShortage.toLocaleString(), "\u30C0\u30A4\u30E4\u5FC5\u8981")), selectedSubs.length === 1 && canChooseInherit && /*#__PURE__*/React.createElement("button", {
-          onClick: () => setFusionInheritUnique(v => !v),
-          className: `w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border mb-2 active:scale-95 ${fusionInheritUnique ? 'bg-amber-950/50 border-amber-500' : 'bg-slate-900 border-slate-800'}`
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-black text-left text-white"
-        }, "\u300C", sub.name, "\u300D\u306E\u56FA\u6709\u6280\u300C", subBase.unique.name, "\u300D\u3092\u5F15\u304D\u7D99\u3050", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
-          className: "text-[7px] text-slate-500 font-bold"
-        }, "\u203B\u30C7\u30FC\u30BF\u3068\u3057\u3066\u8A18\u9332\u306E\u307F\u3002\u73FE\u5728\u306F\u30D0\u30C8\u30EB\u3067\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("div", {
-          className: `w-9 h-5 rounded-full shrink-0 relative ${fusionInheritUnique ? 'bg-amber-500' : 'bg-slate-700'}`
-        }, /*#__PURE__*/React.createElement("div", {
-          className: `absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${fusionInheritUnique ? 'left-4' : 'left-0.5'}`
-        }))), duplicateUnique && /*#__PURE__*/React.createElement("div", {
-          className: "text-[9px] text-slate-400 font-bold bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 mb-2"
-        }, "\u540C\u3058\u56FA\u6709\u6280\u306F\u3059\u3067\u306B\u6240\u6301\u3057\u3066\u3044\u308B\u305F\u3081\u5F15\u304D\u7D99\u3052\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+        }, "\u3042\u3068", diamondShortage.toLocaleString(), "\u30C0\u30A4\u30E4\u5FC5\u8981")), /*#__PURE__*/React.createElement("div", {
+          className: "space-y-2 mb-2"
+        }, inheritancePlan.entries.map(entry => {
+          const selected = fusionInheritUniqueIds.includes(entry.sub.id);
+          const disabled = !entry.eligible || entry.duplicate && !selected;
+          const reason = !entry.eligible ? `絆Lv${FUSION_INHERIT_MIN_SUB_LEVEL}以上と継承可能な固有技が必要です` : entry.duplicate ? '同じ系統の固有技が主または先の副から継承されます' : '';
+          return /*#__PURE__*/React.createElement("button", {
+            key: entry.sub.id,
+            disabled: disabled,
+            onClick: () => setFusionInheritUniqueIds(prev => prev.includes(entry.sub.id) ? prev.filter(id => id !== entry.sub.id) : [...prev, entry.sub.id]),
+            className: `w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border active:scale-95 disabled:opacity-60 ${selected && !disabled ? 'bg-amber-950/50 border-amber-500' : 'bg-slate-900 border-slate-800'}`
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "text-[10px] font-black text-left text-white"
+          }, entry.sub.name, "\uFF1A", entry.subBase?.unique ? `固有技「${entry.subBase.unique.name}」を引き継ぐ` : '継承可能な固有技なし', reason && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+            className: "text-[7px] text-slate-500 font-bold"
+          }, reason, selected && entry.duplicate ? '（選択中ですが費用・継承対象には含みません）' : ''))), /*#__PURE__*/React.createElement("div", {
+            className: `w-9 h-5 rounded-full shrink-0 relative ${selected && !disabled ? 'bg-amber-500' : 'bg-slate-700'}`
+          }, /*#__PURE__*/React.createElement("div", {
+            className: `absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${selected && !disabled ? 'left-4' : 'left-0.5'}`
+          })));
+        })), /*#__PURE__*/React.createElement("div", {
           className: "bg-red-950/40 border border-red-500/40 rounded-xl p-3 mb-2"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-red-300 font-black flex items-center gap-1 mb-1"

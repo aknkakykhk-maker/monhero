@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 19:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 19:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2093,9 +2093,9 @@ const REGENERATION_DISC_IMAGE = 'images/disc-icons/stone-base.png';
 const REBIRTH_COST_PER_LEVEL = 50;
 const masuFusionCost = (_mainLevel, _subLevel, inherit = false) => inherit ? FUSION_INHERIT_COST : 0;
 // 合体確認と確定処理で共有するダイヤ収支。画面には必ず差し引き前の所持数を見せる。
-const buildFusionDiamondSummary = ({ masu, fusionXp = 0, gold = 0, psycheOwned = 0, mainLevel = 0, subLevel = 0, inherit = false }) => {
+const buildFusionDiamondSummary = ({ masu, fusionXp = 0, gold = 0, psycheOwned = 0, mainLevel = 0, subLevel = 0, inherit = false, inheritCount = inherit ? 1 : 0 }) => {
   const goldBefore = donationDiamondValue(gold);
-  const inheritCost = masuFusionCost(mainLevel, subLevel, inherit);
+  const inheritCost = Math.max(0, Math.floor(Number(inheritCount) || 0)) * masuFusionCost(mainLevel, subLevel, true);
   const breakthroughPlan = buildFusionBreakthroughPlan({
     masu, fusionXp, gold:goldBefore - inheritCost, psycheOwned,
   });
@@ -2110,6 +2110,28 @@ const buildFusionDiamondSummary = ({ masu, fusionXp = 0, gold = 0, psycheOwned =
     normalDiamondShortage:Math.max(0, inheritCost - goldBefore),
     breakthroughPlan,
   };
+};
+// 選択順に継承可否を確定する。確認画面と保存直前の再検証で同じ判定を使い、
+// 主が所持済み・同じ一括合体内で先に追加済みの同系統には費用を付けない。
+const buildFusionInheritancePlan = ({ main, subs, selectedSubIds }) => {
+  const selected = new Set(Array.isArray(selectedSubIds) ? selectedSubIds : []);
+  const mainBase = main ? ALL_PLAYER_MONSTERS[main.baseId] : null;
+  const ownedLineageIds = new Set([
+    uniqueLineageId(mainBase?.unique, mainBase?.id),
+    ...(Array.isArray(main?.inheritedUniques) ? main.inheritedUniques : []).map(unique=>uniqueLineageId(unique)),
+  ].filter(Boolean));
+  const entries = (Array.isArray(subs) ? subs : []).map(sub => {
+    const subBase = sub ? ALL_PLAYER_MONSTERS[sub.baseId] : null;
+    const lineageId = uniqueLineageId(subBase?.unique, subBase?.id);
+    const eligible = !!sub && masuBondLevelInfo(sub).level >= FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase?.unique;
+    const requested = !!sub && selected.has(sub.id);
+    const duplicate = !!lineageId && ownedLineageIds.has(lineageId);
+    const inherited = requested && eligible && !!lineageId && !duplicate;
+    if (inherited) ownedLineageIds.add(lineageId);
+    return { sub, subBase, lineageId, eligible, requested, duplicate, inherited };
+  });
+  const inheritedEntries = entries.filter(entry=>entry.inherited);
+  return { entries, inheritedEntries, inheritCount:inheritedEntries.length, inheritCost:inheritedEntries.length * FUSION_INHERIT_COST };
 };
 // 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
 // (以前は画面だけが「レベル×100」で計算しており、実際に引かれる額の倍が表示され、
@@ -8194,7 +8216,7 @@ function MonsterHeroGame() {
   const [fusionMainId, setFusionMainId] = useState(null); // 主として選んだマスモンid
   const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
   const [fusionSubIds, setFusionSubIds] = useState([]); // 通常合体でまとめて消費する副。配列順を処理順として維持する
-  const [fusionInheritUnique, setFusionInheritUnique] = useState(false); // 副の固有技を引き継ぐか(副が絆Lv30以上のみ選択可)
+  const [fusionInheritUniqueIds, setFusionInheritUniqueIds] = useState([]); // 固有技を引き継ぐ副id（合体画面内だけの一時状態）
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
   const fusionProcessingRef = useRef(false);
@@ -11062,7 +11084,7 @@ function MonsterHeroGame() {
   };
   // 合体: 副の絆経験値(累計bondXp)をまるごと主に加算し、副は消滅させる。
   // 技を引き継がなければ無料、引き継ぐ場合は3000ダイヤ。副が絆Lv30以上で
-  // fusionInheritUniqueがtrueなら、副の固有技を「継承した固有技」としてinheritedUniquesに記録する。
+  // 選択された副ごとに、固有技を「継承した固有技」としてinheritedUniquesに記録する。
   // 能力値・距離適性・副の強化ポイントは引き継がないが、絆レベルが上がったぶんの
   // 強化ポイントは通常のレベルアップと同じように主へ配る。
   const executeMasuFusion = async (withBreakthrough = false) => {
@@ -11075,13 +11097,17 @@ function MonsterHeroGame() {
     const subs = requestedSubIds.map(id=>snapshot.find(m=>m.id===id));
     if (!main || requestedSubIds.length===0 || uniqueSubIds.size!==requestedSubIds.length
       || uniqueSubIds.has(fusionMainId) || subs.some(sub=>!sub)) return null;
-    // 複数副では今回対象外の固有技継承・限界突破合体へ流さない。
-    if (requestedSubIds.length>1 && (withBreakthrough || fusionInheritUnique)) return null;
+    // 複数副の限界突破合体は対象外。通常合体の固有技継承は副ごとに判定する。
+    if (requestedSubIds.length>1 && withBreakthrough) return null;
     fusionProcessingRef.current = true;
     const mainLvl = masuBondLevelInfo(main);
     const totalGainedXp = subs.reduce((sum, sub)=>sum+cappedBondXp(sub), 0);
     const firstSubLvl = masuBondLevelInfo(subs[0]);
-    const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:totalGainedXp, gold, psycheOwned:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:firstSubLvl.level, inherit:requestedSubIds.length===1&&fusionInheritUnique });
+    const inheritancePlan = buildFusionInheritancePlan({ main, subs, selectedSubIds:fusionInheritUniqueIds });
+    // UI表示後に副のLv・技・重複状況が変わっていても、この再計算結果だけで費用と保存内容を確定する。
+    if (inheritancePlan.entries.some(entry=>entry.requested&&!entry.eligible)
+      || fusionInheritUniqueIds.some(id=>!uniqueSubIds.has(id))) { fusionProcessingRef.current=false; return null; }
+    const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:totalGainedXp, gold, psycheOwned:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:firstSubLvl.level, inheritCount:inheritancePlan.inheritCount });
     const { breakthroughPlan } = diamondSummary;
     if (diamondSummary.normalDiamondShortage || (withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford))) { fusionProcessingRef.current=false; return null; }
     const preparedMain = withBreakthrough ? { ...main, ...breakthroughPlan.nextMasu } : main;
@@ -11091,13 +11117,12 @@ function MonsterHeroGame() {
     let inheritedReincarnatePoints = 0;
     let inheritedReincarnateCount = 0;
     // fusionSubIds順に、単体合体と同じXP・ポイント・履歴処理を1体ずつ適用する。
-    for (const sub of subs) {
+    for (const [subIndex, sub] of subs.entries()) {
       const subLvl = masuBondLevelInfo(sub);
       const gainedXp = cappedBondXp(sub);
       const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
-      const ownedUniqueIds = new Set([uniqueLineageId(mainBase?.unique, mainBase?.id), ...(nextMain.inheritedUniques || []).map(unique=>uniqueLineageId(unique))].filter(Boolean));
       const subUniqueLineageId = uniqueLineageId(subBase?.unique, subBase?.id);
-      const canInherit = subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && fusionInheritUnique && requestedSubIds.length===1 && subBase?.unique && !ownedUniqueIds.has(subUniqueLineageId);
+      const canInherit = !!inheritancePlan.entries[subIndex]?.inherited;
       const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
       const inheritedUnique = canInherit ? { ...uniqueSkillAtLevel(subBase.unique, inheritedLevel), monId:subBase.id, lineageId:subUniqueLineageId, sourceMasuName:sub.name } : null;
       const transfer = transferableReincarnateBonus(sub);
@@ -11143,10 +11168,10 @@ function MonsterHeroGame() {
     };
   };
   const resetFusionFlow = () => {
-    fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
+    fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const continueFusionFlow = () => {
-    fusionProcessingRef.current=false; setFusionStep('sub'); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
+    fusionProcessingRef.current=false; setFusionStep('sub'); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedIds([]); setDonationConfirmOpen(false); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
   const getRebirthSkillChoices = (masu) => {
@@ -17423,7 +17448,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const continueWithFusionSubs = () => {
               if (selectedSubs.length === 0) return;
               setFusionSubId(selectedSubs[0].id);
-              setFusionInheritUnique(false);
+              setFusionInheritUniqueIds([]);
               setFusionStep('confirm');
             };
             return (
@@ -17443,7 +17468,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="rounded-xl bg-black/30 p-2 text-slate-300">主の予定値<span className="block text-sm text-emerald-300 font-black">Lv.{plannedLevel} / {plannedXp.toLocaleString()} XP</span></div>
                   </div>
                   {selectedSubs.length>0&&<div className="mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1">{selectedSubs.map(sub=><div key={sub.id} className="flex justify-between gap-2 text-[9px] text-slate-200"><span className="truncate">{sub.name}・絆Lv.{masuBondLevelInfo(sub).level}</span><span className="shrink-0 text-cyan-300">+{cappedBondXp(sub).toLocaleString()} XP</span></div>)}</div>}
-                  {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-violet-500/40 bg-violet-950/40 p-2 text-[9px] font-bold text-violet-200">複数副の通常合体です。固有技継承と「限界突破して合体」は使用できません。</div>}
+                  {selectedSubs.length>1&&<div className="mt-2 rounded-xl border border-violet-500/40 bg-violet-950/40 p-2 text-[9px] font-bold text-violet-200">複数副の通常合体です。固有技継承は確認画面で副ごとに選べます。「限界突破して合体」は使用できません。</div>}
                   <button onClick={continueWithFusionSubs} disabled={selectedSubs.length===0} className="mt-2 w-full min-h-11 rounded-xl bg-violet-600 text-white text-xs font-black disabled:bg-slate-800 disabled:text-slate-500 active:scale-95">{selectedSubs.length>0?`副${selectedSubs.length}体で確認へ`:'副を選択してください'}</button>
                 </div>
                 {fusionSortBar}
@@ -17486,16 +17511,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if (!mainBase || !subBase) { resetFusionFlow(); return null; }
             const mainLvl = masuBondLevelInfo(main);
             const subLvl = masuBondLevelInfo(sub);
-          const ownedUniqueIds = new Set([uniqueLineageId(mainBase.unique, mainBase.id), ...(main.inheritedUniques || []).map(unique=>uniqueLineageId(unique))].filter(Boolean));
-          const duplicateUnique = ownedUniqueIds.has(uniqueLineageId(subBase.unique, subBase.id));
-          const canChooseInherit = subLvl.level>=FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase.unique && !duplicateUnique;
+            const inheritancePlan = buildFusionInheritancePlan({ main, subs:selectedSubs, selectedSubIds:fusionInheritUniqueIds });
             // 合体後にどうなるかを先に計算して見せる(実行してみないと分からない状態だったため)
             // 実処理と同じ計算にする。主のレベル上限を超えるぶんは入らないので、
             // ここで上限まで切ったうえで「合体後」を出す(以前は上限を無視して出していた)
             const mainCap = normalizeMasuProgression(main).levelCap;
             const subXp = selectedSubs.reduce((sum, candidate)=>sum+cappedBondXp(candidate), 0);
             const beforeXp = cappedBondXp(main);
-            const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:subXp, gold, psycheOwned:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:subLvl.level, inherit:selectedSubs.length===1&&fusionInheritUnique });
+            const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:subXp, gold, psycheOwned:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:subLvl.level, inheritCount:inheritancePlan.inheritCount });
             const { inheritCost, breakthroughDiamondCost, totalDiamondCost, diamondAfter, diamondShortage, breakthroughPlan } = diamondSummary;
             const canAfford = diamondSummary.normalDiamondShortage === 0;
             const afterXp = cappedBondXp(main, subXp);
@@ -17574,19 +17597,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {reincarnateTransfer.count>0&&<div className="text-[8px] text-slate-400">{selectedSubs.length===1?`副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します`:`選択した副${selectedSubs.length}体の転生由来分をすべて累積します`}</div>}
                     <div className="text-[9px] font-black text-violet-200 tracking-wider">ダイヤ消費</div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-white font-black">{diamondSummary.goldBefore.toLocaleString()}</span></div>
-                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">固有技引き継ぎ</span><span className="text-amber-300 font-black">{inheritCost.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">継承する固有技数</span><span className="text-amber-300 font-black">{inheritancePlan.inheritCount}個</span></div>
+                    <div className="flex justify-between gap-2 text-[10px] font-bold"><span className="text-slate-400 shrink-0">継承対象</span><span className="text-amber-200 font-black text-right">{inheritancePlan.inheritedEntries.length?inheritancePlan.inheritedEntries.map(entry=>`${entry.sub.name}「${entry.subBase.unique.name}」`).join('、'):'なし'}</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">固有技継承ダイヤ合計</span><span className="text-amber-300 font-black">{inheritCost.toLocaleString()}</span></div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">限界突破 ×{breakthroughPlan.count}</span><span className="text-amber-300 font-black">{breakthroughDiamondCost.toLocaleString()}</span></div>
                     <div className="border-t border-slate-700 pt-1 flex justify-between text-[11px] font-black"><span className="text-slate-200">合計消費</span><span className={diamondShortage?'text-red-300':'text-amber-300'}>{totalDiamondCost.toLocaleString()}</span></div>
-                    <div className="flex justify-between text-[11px] font-black"><span className="text-slate-200">合体後</span><span className={diamondShortage?'text-red-300':'text-emerald-300'}>{Math.max(0, diamondAfter).toLocaleString()}</span></div>
+                    <div className="flex justify-between text-[11px] font-black"><span className="text-slate-200">合体後ダイヤ残高</span><span className={diamondShortage?'text-red-300':'text-emerald-300'}>{Math.max(0, diamondAfter).toLocaleString()}</span></div>
                     {diamondShortage>0&&<div className="text-[9px] text-red-300 font-black text-right">あと{diamondShortage.toLocaleString()}ダイヤ必要</div>}
                   </div>
-                  {selectedSubs.length===1 && canChooseInherit && (
-                    <button onClick={()=>setFusionInheritUnique(v=>!v)} className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border mb-2 active:scale-95 ${fusionInheritUnique?'bg-amber-950/50 border-amber-500':'bg-slate-900 border-slate-800'}`}>
-                      <span className="text-[10px] font-black text-left text-white">「{sub.name}」の固有技「{subBase.unique.name}」を引き継ぐ<br/><span className="text-[7px] text-slate-500 font-bold">※データとして記録のみ。現在はバトルで使用できません</span></span>
-                      <div className={`w-9 h-5 rounded-full shrink-0 relative ${fusionInheritUnique?'bg-amber-500':'bg-slate-700'}`}><div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${fusionInheritUnique?'left-4':'left-0.5'}`}></div></div>
-                    </button>
-                  )}
-                  {duplicateUnique&&<div className="text-[9px] text-slate-400 font-bold bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 mb-2">同じ固有技はすでに所持しているため引き継げません。</div>}
+                  <div className="space-y-2 mb-2">
+                    {inheritancePlan.entries.map(entry=>{
+                      const selected = fusionInheritUniqueIds.includes(entry.sub.id);
+                      const disabled = !entry.eligible || (entry.duplicate&&!selected);
+                      const reason = !entry.eligible ? `絆Lv${FUSION_INHERIT_MIN_SUB_LEVEL}以上と継承可能な固有技が必要です` : entry.duplicate ? '同じ系統の固有技が主または先の副から継承されます' : '';
+                      return <button key={entry.sub.id} disabled={disabled} onClick={()=>setFusionInheritUniqueIds(prev=>prev.includes(entry.sub.id)?prev.filter(id=>id!==entry.sub.id):[...prev,entry.sub.id])} className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border active:scale-95 disabled:opacity-60 ${selected&&!disabled?'bg-amber-950/50 border-amber-500':'bg-slate-900 border-slate-800'}`}>
+                        <span className="text-[10px] font-black text-left text-white">{entry.sub.name}：{entry.subBase?.unique?`固有技「${entry.subBase.unique.name}」を引き継ぐ`:'継承可能な固有技なし'}{reason&&<><br/><span className="text-[7px] text-slate-500 font-bold">{reason}{selected&&entry.duplicate?'（選択中ですが費用・継承対象には含みません）':''}</span></>}</span>
+                        <div className={`w-9 h-5 rounded-full shrink-0 relative ${selected&&!disabled?'bg-amber-500':'bg-slate-700'}`}><div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${selected&&!disabled?'left-4':'left-0.5'}`}></div></div>
+                      </button>;
+                    })}
+                  </div>
                   <div className="bg-red-950/40 border border-red-500/40 rounded-xl p-3 mb-2">
                     <div className="text-[9px] text-red-300 font-black flex items-center gap-1 mb-1"><AlertCircle size={11}/>注意</div>
                     <div className="text-[8px] text-red-200/90 leading-relaxed">合体すると{selectedSubs.length===1?`副の「${sub.name}」`:`選択した副${selectedSubs.length}体`}はいなくなります。この操作は取り消せません。</div>
