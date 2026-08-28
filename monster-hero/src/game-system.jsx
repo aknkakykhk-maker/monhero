@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 08:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-28 10:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -117,7 +117,7 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   ],
   points:[
     ['🧬','どんなモード','挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'],
-    ['⚔️','編成','勇者モン1体と供モン0〜3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。同じ個体を二重には選べませんが、別の個体なら同じ種族から何体でも連れていけます。供モン0体のまま挑むこともできます。'],
+    ['⚔️','編成','勇者モン1体と供モン0〜3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは1体までですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。供モン0体のまま挑むこともできます。'],
     ['🤝','供モンの加入','事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'],
     ['👹','難しさ','難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'],
     ['🔥','上位の難易度','EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'],
@@ -5045,11 +5045,18 @@ const validateSpeciesChallengeAllySelection = ({speciesId,heroId,allyIds,unlocke
   if(!speciesId || heroLineageId!==speciesId)return { valid:false,reason:'invalid-hero' };
   const available=new Set(speciesChallengeAvailableAllyIds(speciesId,unlockedBaseIds,masuMons));
   const usedEntryIds=new Set([heroId]);
+  // 同じモンスター(baseId)は勇者と供モンを通して1体まで。既存の編成画面と同じ決まりで、
+  // ベースモンのモッチーを勇者にしたらマスモンのモッチーは連れていけない
+  // (ミタラシのように同じ種族でも別のモンスターなら一緒に出せる)
+  const usedBaseIds=new Set([speciesChallengeEntryBaseId(heroId,masuMons)].filter(Boolean));
   for(const entryId of allyIds){
     if(!available.has(entryId))return { valid:false,reason:'unavailable-ally',entryId };
     if(usedEntryIds.has(entryId))return { valid:false,reason:entryId===heroId?'same-entry-as-hero':'duplicate-ally',entryId };
     if(speciesChallengeEntryLineageId(entryId,masuMons)!==speciesId)return { valid:false,reason:'different-species',entryId };
+    const baseId=speciesChallengeEntryBaseId(entryId,masuMons);
+    if(baseId && usedBaseIds.has(baseId))return { valid:false,reason:'same-monster',entryId };
     usedEntryIds.add(entryId);
+    if(baseId)usedBaseIds.add(baseId);
   }
   return { valid:true,reason:null };
 };
@@ -7708,6 +7715,9 @@ function MonsterHeroGame() {
     Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
+  // 種族チャレンジランキングの種族フィルタ。絆Lvランキングと同じ「すべて＋種族別」の形。
+  // 'all' なら選んだ難易度の種族順位、種族を選ぶとその種族の14難易度が並ぶ
+  const [speciesRankFilter, setSpeciesRankFilter] = useState('all');
   // 新しいバトルの入口(バトルモード再編・第2段階)。
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
@@ -14892,31 +14902,52 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const renderSpeciesChallengeRecordBody = () => {
     const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
     const settingOf = (id) => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
-    // 記録のある種族を上に、クリアが多い順→自己ベスト順に並べる
-    const rows = speciesChallengeLineages().map(lineage => ({
-      lineage, record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId),
-    })).sort((a, b) => (b.record.clears - a.record.clears) || (b.record.bestScore - a.record.bestScore));
-    const played = rows.filter(row => row.record.clears > 0);
+    const lineages = speciesChallengeLineages();
+    const speciesFilter = lineages.some(l => l.id === speciesRankFilter) ? speciesRankFilter : 'all';
+    const lineageIcon = (lineage) => {
+      const members = dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === lineage.id);
+      return members.find(mon => mon.id === lineage.monId) || members[0] || null;
+    };
+    const recordRow = (key, iconMon, title, sub, score, rank) => (
+      <div key={key} data-species-record-row={key} className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-slate-900 p-2.5">
+        {rank !== null && <span className="w-6 shrink-0 text-center text-[13px] font-black text-amber-300">{rank}</span>}
+        <MonsterArtFrame baseId={iconMon?.id} src={iconMon?.iconUrl} alt="" className="h-11 w-11 shrink-0 rounded-xl border border-white/10 bg-black/40"/>
+        <span className="min-w-0 flex-1">
+          <b className="block truncate text-[12px] font-black text-white">{title}</b>
+          <small className="block text-[8px] text-slate-400">{sub}</small>
+        </span>
+        <b className="shrink-0 text-right text-[13px] font-black text-cyan-200">{score.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">pt</small></b>
+      </div>
+    );
+    // すべて=その難易度の種族順位 / 種族を選ぶ=その種族の難易度別
+    const rows = speciesFilter === 'all'
+      ? lineages.map(lineage => ({ lineage, record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId) }))
+          .filter(row => row.record.clears > 0)
+          .sort((a, b) => (b.record.bestScore - a.record.bestScore) || (b.record.clears - a.record.clears))
+          .map((row, index) => recordRow(row.lineage.id, lineageIcon(row.lineage), `${row.lineage.name}種`,
+            `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, index + 1))
+      : SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => ({ id, record: speciesChallengeRecord(speciesChallengeProgress, speciesFilter, id) }))
+          .filter(row => row.record.clears > 0)
+          .map(row => recordRow(`${speciesFilter}:${row.id}`, lineageIcon(lineages.find(l => l.id === speciesFilter)), settingOf(row.id).label,
+            `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, null));
+    const emptyText = speciesFilter === 'all'
+      ? <>{settingOf(diffId).label}をクリアした種族はまだありません。<br/>クリアすると、種族ごとに自己ベストが残ります。</>
+      : <>{lineageById(speciesFilter).name}種でクリアした難易度はまだありません。<br/>クリアすると、難易度ごとに自己ベストが残ります。</>;
     return <>
-      <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => { const st = settingOf(id); return (
+      {/* 種族タブ。絆Lvランキングと同じ「すべて＋種族別」の並べ方にそろえる */}
+      <div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0" data-species-rank-tabs>
+        {[{ id:'all', label:'すべて' }, ...lineages.map(l => ({ id:l.id, label:`${l.name}種` }))].map(tab => (
+          <button key={tab.id} onClick={() => setSpeciesRankFilter(tab.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${speciesFilter === tab.id ? 'bg-cyan-600 border-cyan-300 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`}>{tab.label}</button>
+        ))}
+      </div>
+      {/* 難易度タブは「すべて」のときだけ。種族を選んだときは全難易度を縦に並べるので要らない */}
+      {speciesFilter === 'all' && <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => { const st = settingOf(id); return (
         <button key={id} onClick={() => setRankingViewDiff(id)} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${diffId === id ? 'ring-2 ring-white' : 'border border-white/10'}`} style={difficultyStyle(st, diffId === id)}>{st.label}</button>
-      ); })}</div>
+      ); })}</div>}
       <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5" data-species-record-list>
-        {played.length === 0
-          ? <p className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400">{settingOf(diffId).label}をクリアした種族はまだありません。<br/>クリアすると、種族ごとに自己ベストが残ります。</p>
-          : played.map(({ lineage, record }, index) => {
-              const members = dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === lineage.id);
-              const iconMon = members.find(mon => mon.id === lineage.monId) || members[0];
-              return <div key={lineage.id} data-species-record-row={lineage.id} className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-slate-900 p-2.5">
-                <span className="w-6 shrink-0 text-center text-[13px] font-black text-amber-300">{index + 1}</span>
-                <MonsterArtFrame baseId={iconMon?.id} src={iconMon?.iconUrl} alt="" className="h-11 w-11 shrink-0 rounded-xl border border-white/10 bg-black/40"/>
-                <span className="min-w-0 flex-1">
-                  <b className="block truncate text-[12px] font-black text-white">{lineage.name}種</b>
-                  <small className="block text-[8px] text-slate-400">クリア {record.clears}回{record.bestTurns !== null ? ` ／ 最短 ${record.bestTurns}T` : ''}</small>
-                </span>
-                <b className="shrink-0 text-right text-[13px] font-black text-cyan-200">{record.bestScore.toLocaleString()}<small className="ml-0.5 text-[8px] text-slate-400">pt</small></b>
-              </div>;
-            })}
+        {rows.length === 0
+          ? <p className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400">{emptyText}</p>
+          : rows}
         {!SPECIES_CHALLENGE_PUBLIC_RELEASE && <p className="rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 text-center text-[9px] leading-relaxed text-amber-200">いまは自分の記録だけを表示しています。全国ランキングはモードの公開後に始まります。</p>}
       </div>
     </>;
@@ -15604,7 +15635,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           {isExtreme&&<button disabled={extremeLocked||!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
                           {/* 種族チャレンジも他モードと同じ位置に記録への導線を置く。
                               公開前は全国ランキングを持たないので、種族ごとの自己記録を出す */}
-                          {isSpecies&&<button data-species-record-link disabled={!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏅 {m.label}の記録</span><ChevronRight size={14}/></button>}
+                          {isSpecies&&<button data-species-record-link disabled={!!battleTutorial} onClick={()=>openSpeciesChallengeRecords('BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
 
                         </div>
@@ -15765,7 +15796,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='BATTLE_SCORE_RANKING'&&(()=>{const mode=battleModeInfo(scoreRankingMode);const species=scoreRankingMode===BATTLE_MODE_SPECIES_CHALLENGE;return (
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState(scoreRankingBack)} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{species?`${mode.label}の記録`:`${mode.label}ランキング`}</h2></div>
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState(scoreRankingBack)} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{`${mode.label}ランキング`}</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>
               {/* 一覧はモード選択画面・既存のバトル画面と同じ描画を呼ぶ(画面を複製しない)。
@@ -16369,8 +16400,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const clearedIds=speciesChallengeClearedDifficultyIds(speciesChallengeProgress,selection.speciesId);
           const entryLineageId=entry=>monsterLineageOf(entry.baseId).main.id;
           const heroCandidates=challengeEntries.filter(entry=>entryLineageId(entry)===selection.speciesId);
-          const allyCandidates=challengeEntries.filter(entry=>entryLineageId(entry)===selection.speciesId && entry.entryId!==selection.heroId);
+          // 同じモンスター(baseId)は勇者と供モンを通して1体まで。既存の編成画面と同じ決まりなので、
+          // 勇者にしたモンスターのベースモン／マスモンは供モン候補から外す
+          const heroBaseId=heroCandidates.find(entry=>entry.entryId===selection.heroId)?.baseId||null;
+          const allyCandidates=challengeEntries.filter(entry=>entryLineageId(entry)===selection.speciesId
+            && entry.entryId!==selection.heroId && entry.baseId!==heroBaseId);
           const selectedAllies=selection.allyIds.filter(id=>allyCandidates.some(entry=>entry.entryId===id));
+          // すでに選んだ供モンと同じモンスターも、そのあとの候補から外す
+          const usedAllyBaseIds=new Set(selectedAllies.map(id=>allyCandidates.find(entry=>entry.entryId===id)?.baseId).filter(Boolean));
           const validation=validateSpeciesChallengeAllySelection({speciesId:selection.speciesId,heroId:selection.heroId,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons});
           const patchSelection=patch=>setSpeciesChallengeSelection(current=>({...current,...patch}));
           const goBack=()=>{if(stepIndex<=0){setGameState('BATTLE_MODE_SELECT');return;}if(selection.step==='hero'){setGameState('BATTLE_DIFFICULTY_SELECT');return;}patchSelection({step:stepOrder[stepIndex-1],run:null});};
@@ -16422,7 +16459,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     : <ChevronRight size={16} className="shrink-0 text-slate-500"/>}
                 </button>;})}</div>}
               {selection.step==='hero'&&<>{heroCandidates.length?heroCandidates.map(entry=>monsterCard(entry,selection.heroId===entry.entryId,()=>chooseHero(entry.entryId),false,selection.heroId===entry.entryId?'勇者':'')):<p className="rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400">この種族の解放済みベースモン／所持マスモンがいません。</p>}</>}
-              {selection.step==='allies'&&<><div className="sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"><span className="flex items-center justify-between"><b className="text-[10px] text-cyan-100">供モンを選択</b><strong className="rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950">{selectedAllies.length} / 3体</strong></span><p className="mt-1 text-[8px] leading-relaxed text-cyan-200">0体のままでも次へ進めます。選んだ種族の別個体だけを3体まで選べます。</p></div>{allyCandidates.map(entry=>{const selected=selectedAllies.includes(entry.entryId);const disabled=!selected&&selectedAllies.length>=3;return monsterCard(entry,selected,()=>toggleAlly(entry.entryId),disabled,selected?'選択中':'');})}</>}
+              {selection.step==='allies'&&<><div className="sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"><span className="flex items-center justify-between"><b className="text-[10px] text-cyan-100">供モンを選択</b><strong className="rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950">{selectedAllies.length} / 3体</strong></span><p className="mt-1 text-[8px] leading-relaxed text-cyan-200">0体のままでも次へ進めます。同じ種族の中から、勇者とは別のモンスターを3体まで選べます。</p></div>{allyCandidates.map(entry=>{const selected=selectedAllies.includes(entry.entryId);const sameMonsterTaken=!selected&&usedAllyBaseIds.has(entry.baseId);const disabled=sameMonsterTaken||(!selected&&selectedAllies.length>=3);return monsterCard(entry,selected,()=>toggleAlly(entry.entryId),disabled,selected?'選択中':sameMonsterTaken?'選択済み':'');})}</>}
               {selection.step==='confirm'&&<div className="space-y-3"><section className="rounded-2xl border-2 border-cyan-400/40 bg-slate-900/90 p-4"><small className="font-black tracking-widest text-cyan-300">MISSION</small><h3 className="mt-1 text-lg font-black">{speciesChallengeSpeciesName(selection.speciesId)} 限定</h3><p className="text-[10px] text-amber-300">{difficultyLabel(selection.difficultyId)} ・ 初回報酬 超越の実 ×{speciesChallengeFirstClearReward(selection.difficultyId)}</p></section><div><b className="mb-1 block text-[9px] text-cyan-300">勇者モン</b>{entryById(selection.heroId)&&monsterCard(entryById(selection.heroId),true,()=>{},false,'勇者')}</div><div><b className="mb-1 block text-[9px] text-cyan-300">供モン（{selectedAllies.length}体）</b>{selectedAllies.length?<div className="space-y-2">{selectedAllies.map(id=>entryById(id)&&monsterCard(entryById(id),true,()=>{},false,'選択中'))}</div>:<p className="rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400">供モンなしで出撃</p>}</div>{selection.saveProgress
                 ? <p className="rounded-xl border-2 border-red-400/60 bg-red-950/40 p-3 text-[9px] leading-relaxed font-black text-red-100">⚠️ 実際の種族チャレンジ進行・所持品を変更します。WAVE10までクリアすると、クリア状況・次の難易度の解放・初回の超越の実・種族×難易度の自己記録が本当に保存されます。全国ランキングへは送信しません。</p>
                 : <p className="rounded-xl border border-amber-400/30 bg-amber-950/30 p-3 text-[9px] leading-relaxed text-amber-100">出撃後は既存バトルのWAVE1へ進みます。この確認では結果・報酬・進行・ランキングを一切保存しません。</p>}</div>}

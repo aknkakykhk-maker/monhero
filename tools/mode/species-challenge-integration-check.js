@@ -52,14 +52,18 @@ assert(api.isSpeciesChallengeDifficultyUnlocked('Master', api.speciesChallengeCl
 assert(!api.isSpeciesChallengeDifficultyUnlocked('Master', api.speciesChallengeClearedDifficultyIds(progress, 'pixie')), '他種族の進行は解放へ影響しない');
 
 // 種族は主血統。モッチー種＝モッチー・ミタラシ、ピクシー種＝ピクシー・ミーア・パンドラ
-const masuMons = [{ id:'mocchi-a', baseId:'Mocchi' }, { id:'mitarashi-b', baseId:'Mitarashi' }, { id:'pixie-owned', baseId:'Pixie' }];
-const unlockedBaseIds = ['Mocchi','Mitarashi','Pixie','Golem'];
+const masuMons = [{ id:'mocchi-a', baseId:'Mocchi' }, { id:'mitarashi-b', baseId:'Mitarashi' }, { id:'pixie-owned', baseId:'Pixie' }, { id:'pandora-owned', baseId:'Pandora' }];
+const unlockedBaseIds = ['Mocchi','Mitarashi','Pixie','Mia','Pandora','Golem'];
 equal(api.speciesChallengeAvailableAllyIds('mocchi', unlockedBaseIds, masuMons), ['Mocchi','Mitarashi','masu:mocchi-a','masu:mitarashi-b'], '選択種族(主血統)のBaseと所持Masuだけを候補にする');
-assert(api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['masu:mocchi-a','masu:mitarashi-b'], unlockedBaseIds, masuMons }).valid, '同じ種族の別個体を複数許可する');
+// 同じモンスター(baseId)は勇者と供モンを通して1体まで(既存の編成画面と同じ決まり)。
+// 勇者モッチーに対し、供モンは同じ種族の別モンスター(ミタラシ)から選ぶ
+assert(api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['masu:mitarashi-b'], unlockedBaseIds, masuMons }).valid, '同じ種族の別モンスターを供モンにできる');
+assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['masu:mocchi-a'], unlockedBaseIds, masuMons }).valid, '勇者と同じモンスターは供モンにできない');
 assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'masu:mocchi-a', allyIds:['masu:mocchi-a'], unlockedBaseIds, masuMons }).valid, '勇者本人entryIdを拒否する');
 assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['Pixie'], unlockedBaseIds, masuMons }).valid, '他種族を拒否する');
-let run = api.createSpeciesChallengeRunState({ speciesId:'mocchi',heroId:'masu:mocchi-a', allyIds:['Mocchi','masu:mitarashi-b'], unlockedBaseIds, masuMons });
-for (const [wave, entryId] of [[2,'masu:mitarashi-b'],[4,'Mocchi']]) { const result=api.simulateSpeciesChallengeJoinWave(run,entryId); assert(result.joinedAllyId===entryId&&result.gutsRecoveryRequired,`WAVE${wave}で残りから任意加入する`); run=result.state; }
+// 2体の加入を試すため、モンスターが3種類あるピクシー種で組む
+let run = api.createSpeciesChallengeRunState({ speciesId:'pixie',heroId:'masu:pixie-owned', allyIds:['Mia','masu:pandora-owned'], unlockedBaseIds, masuMons });
+for (const [wave, entryId] of [[2,'masu:pandora-owned'],[4,'Mia']]) { const result=api.simulateSpeciesChallengeJoinWave(run,entryId); assert(result.joinedAllyId===entryId&&result.gutsRecoveryRequired,`WAVE${wave}で残りから任意加入する`); run=result.state; }
 equal(api.speciesChallengeUnjoinedAllies(run), [], '加入後は候補から除外する');
 run=api.createSpeciesChallengeRunState({speciesId:'mocchi',heroId:'Mocchi',allyIds:[],unlockedBaseIds,masuMons});
 for(const wave of [2,4,6]){const result=api.simulateSpeciesChallengeJoinWave(run,null);assert(!result.hadJoinCandidates&&result.gutsRecoveryRequired,`候補なしのWAVE${wave}も処理を継続する`);}
