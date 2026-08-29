@@ -20,17 +20,27 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: tools/package-lock.json
-      - name: Align patch matcher with current source
+      - name: Align patch matchers with current source
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p=Path('.chatgpt/patch_mission_rewards.py')
           s=p.read_text()
+
+          # 固有技リセット券: 現在の関数本体へ限定して、成功return直前だけ加算する。
           start=s.index("src = replace_once(src,\n\"\"\"    Audio_.se.tap();")
           label=s.index("'unique reset item use')", start)
           end=s.index("\n", label)+1
           new="""src = regex_once(src,\n    r\"(const useUniqueSkillResetTicket = \\(masuId\\) => \\{.*?)(\\n    Audio_\\.se\\.tap\\(\\);\\n    return result;\\n  \\};)\",\n    r\"\\1\\n    void saveMissionProgress('itemUse',1);\\2\",\n    'unique reset item use', re.S)\n"""
-          p.write_text(s[:start]+new+s[end:])
+          s=s[:start]+new+s[end:]
+
+          # 超越の実: 二重保存確認が成功しstate反映まで終わった直後だけ、実消費数を加算する。
+          start=s.index("src = regex_once(src,\n    r\"(const commitTranscendFruit")
+          label=s.index("'transcend fruit item use'", start)
+          end=s.index("\n", label)+1
+          new="""src = replace_once(src,\n    \"      setTranscendFruitConfirmAmount(0);\\n      return result;\",\n    \"      setTranscendFruitConfirmAmount(0);\\n      await saveMissionProgress('itemUse',Math.max(1,Math.floor(Number(amount)||1)));\\n      return result;\",\n    'transcend fruit item use')\n"""
+          s=s[:start]+new+s[end:]
+          p.write_text(s)
           PY
       - name: Apply requested changes
         run: python3 .chatgpt/patch_mission_rewards.py
