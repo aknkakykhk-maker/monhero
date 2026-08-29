@@ -25,8 +25,19 @@ jobs:
         working-directory: tools
         run: npm ci --omit=optional
       - name: Apply BGM swap
-        run: python tools/apply-quick-extreme-bgm-swap.py
+        id: apply
+        run: python tools/apply-quick-extreme-bgm-swap.py 2>&1 | tee /tmp/bgm-swap.log
+      - name: Save diagnostics on failure
+        if: failure() && steps.apply.outcome == 'failure'
+        run: |
+          cp /tmp/bgm-swap.log tools/chatgpt-bgm-diagnostic.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/chatgpt-bgm-diagnostic.txt
+          git commit -m "chore: capture BGM swap diagnostic"
+          git push
       - name: Build and focused checks
+        if: success()
         run: |
           node tools/build.js
           node tools/build.js --check
@@ -38,6 +49,7 @@ jobs:
           node tools/help/help-guide-check.js
           git diff --check
       - name: Commit result and remove one-off files
+        if: success()
         run: |
           git rm .github/workflows/chatgpt-bgm-swap.yml tools/apply-quick-extreme-bgm-swap.py
           git config user.name "github-actions[bot]"
