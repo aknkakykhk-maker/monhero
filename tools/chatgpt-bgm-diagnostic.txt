@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/runner/work/monhero/monhero/tools/apply-quick-extreme-bgm-swap.py", line 26, in <module>
+    assert s.count(anchor) == 1, 'migration declaration anchor mismatch'
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: migration declaration anchor mismatch
