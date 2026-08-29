@@ -42,6 +42,12 @@ const dataTablePrelude = [
   grab(source, 'const UNKNOWN_LINEAGE =', '// ==================== 総合力'),
   // 種族チャレンジの表は主血統の一覧から作る(定義は本体のずっと前にあるので1行だけ持ち込む)
   (source.match(/^const speciesChallengeLineages = .*$/m) || [''])[0],
+  // レベルアップでもらえる強化ポイントの表は、限界突破の段の定義から作る
+  (source.match(/^const MAX_MASU_LEVEL_CAP = .*$/m) || [''])[0],
+  (source.match(/^const INITIAL_MASU_LEVEL_CAP = .*$/m) || [''])[0],
+  (source.match(/^const BREAKTHROUGH_LEVEL_CAP_GAIN = .*$/m) || [''])[0],
+  grab(source, 'const BREAKTHROUGH_STARS_PER_TIER', 'const BREAKTHROUGH_LEVEL_CAPS'),
+  grab(source, '// レベルアップ時の強化ポイント倍率', 'const RAINBOW_STAR_IMAGE'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
   "const { useState, useEffect, useRef, useContext } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"

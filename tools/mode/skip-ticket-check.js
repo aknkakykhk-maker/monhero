@@ -81,7 +81,10 @@ check('使った枚数だけチケットを減らして保存する', skipBlock.
 check('経験値の計算は通常クリアと同じ式', skipBlock.includes('xpForWavesCleared(SKIP_WAVES, scoreMult)') && skipBlock.includes('goldForWavesCleared(SKIP_WAVES, goldMult)'));
 check('WAVE10まで到達した扱いにする', has('const SKIP_WAVES = 10;'));
 check('絆経験値の配り方も通常と同じ(勇者=満額・供モン1/2・控え1/4)', skipBlock.includes('buildRunBondAwards({'));
-check('絆レベルが上がれば強化ポイントも配る', skipBlock.includes('distAptPoints: (mon.distAptPoints || 0) + (after.level - before.level)'));
+// バトル・合体と同じ共通処理を通す。ここだけ「1レベル=1ポイント」で数えていたため、
+// 限界突破34回以上の倍率がスキップチケットにだけ効いていなかった
+check('絆レベルが上がれば強化ポイントも配る(バトル・合体と同じ共通処理)',
+  skipBlock.includes('return applyBondXpGain(mon, award.gain).masu;'));
 check('ブリーダー経験値とポイントも入る', skipBlock.includes("storeSet('mh_breeder_xp', nextBreederXp, false)") && skipBlock.includes("storeSet('mh_breeder_points', next, false)"));
 check('ダイヤも入る', skipBlock.includes("storeSet('mh_gold', goldAfter, false)"));
 // A案: スコア・ランキング・クリア回数・ミッションは対象外

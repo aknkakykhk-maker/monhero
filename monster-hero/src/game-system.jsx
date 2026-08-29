@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-29 19:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-29 23:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -797,6 +797,17 @@ const levelUpPointMultiplier = (rebirthCount) => {
   const n = Math.max(0, Math.floor(Number(rebirthCount) || 0));
   return n >= 35 ? 3 : n >= 34 ? 2 : 1;
 };
+// レベルで得られる強化ポイントの総数。1レベルにつき上の倍率ぶんもらえる。
+// Lv400までが対象で、Lv401以降(超越の領域)は通常ポイントではなく超越ポイントになる。
+//
+// 【ここを1か所にまとめてある理由】
+// 以前は「レベルアップのときは倍率あり」「読み込み時の補填と転生の計算は倍率なし」と
+// 数え方が3通りに分かれていた。そのため限界突破34回以上(倍率2・3)の個体が転生すると、
+// 倍率で稼いだぶんが丸ごと消え、レベルを上げ直しても戻らなかった。
+// 数え方をここ1つに集約し、どの経路も同じ答えになるようにしている。
+const levelBasedEnhancePoints = (level, rebirthCount) =>
+  Math.max(0, Math.min(MAX_MASU_LEVEL_CAP, Math.floor(Number(level) || 0)) - 1)
+    * levelUpPointMultiplier(rebirthCount);
 const RAINBOW_STAR_IMAGE = 'images/ui/breakthrough-rainbow-star.PNG';
 // 凸数から★の並びを作る。新しい色を先頭に、残りは1つ前の段階の色で埋める
 const breakthroughStars = (count) => {
@@ -2244,9 +2255,11 @@ const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
   const keptSkillPoints = Math.max(0, Math.floor(Number(normalized.uniqueSkillPoints) || 0)) + (raisesSkill ? 0 : 1);
   const nextLevel = Math.max(1, level - REINCARNATE_LEVEL_DROP);
   const nextCount = normalized.reincarnateCount + 1;
-  // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ「レベル-1」で数える
+  // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ levelBasedEnhancePoints で数える
+  // (ここを別の式にすると、限界突破の倍率で稼いだぶんが転生のたびに消えてしまう)
   const nextOwnBonusPoints = normalized.reincarnateBonusPoints + REINCARNATE_POINTS;
-  const nextPoints = (nextLevel - 1) + totalBreakthroughPoints(normalized.rebirthCount) + nextOwnBonusPoints + normalized.inheritedReincarnateBonusPoints;
+  const nextPoints = levelBasedEnhancePoints(nextLevel, normalized.rebirthCount)
+    + totalBreakthroughPoints(normalized.rebirthCount) + nextOwnBonusPoints + normalized.inheritedReincarnateBonusPoints;
   return {
     ok:true, cost, skillKey:raisesSkill ? skillKey : null, skillLevel:raisesSkill ? currentSkillLevel + 1 : null,
     raisesSkill, keptSkillPoints,
@@ -4852,9 +4865,11 @@ const reconcileMasuPoints = (masu) => {
   // せっかく足したポイントが消えたように見える。
   // ここを新しい方式で数え直すことが、そのまま既存のマスモンの調整にもなる
   // (読み込みのたびに不足分だけを補うので、二重に配られることはない)。
-  // 通常強化ポイントの「レベル由来ぶん」はLv400までで止める。Lv401以降で得られるのは
-  // 超越ポイントであって通常の強化ポイントではないので、ここへ含めると誤って補填してしまう。
-  const earned = Math.max(0, Math.min(MAX_MASU_LEVEL_CAP, masuBondLevelInfo(masu).level) - 1)
+  // 通常強化ポイントの「レベル由来ぶん」は levelBasedEnhancePoints が正本。
+  // Lv400までで止まり(Lv401以降で得られるのは超越ポイント)、限界突破34回以上なら
+  // 1レベルにつき倍率ぶんもらえる。ここを倍率なしで数えていたため、倍率で稼いだぶんが
+  // 転生のたびに消えて戻らなかった
+  const earned = levelBasedEnhancePoints(masuBondLevelInfo(masu).level, masu.rebirthCount)
     + totalBreakthroughPoints(masu.rebirthCount)
     + ownReincarnateBonusPoints(masu)
     + inheritedReincarnateBonusPointsOf(masu);
@@ -5880,6 +5895,19 @@ const helpDataRows = (id) => {
         const setting = DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(s => s.id === id);
         return [setting?.label || id, `初回クリアで 超越の実 ×${speciesChallengeFirstClearReward(id)}`];
       });
+    // 限界突破の回数で変わる「レベルアップ1回ぶんの強化ポイント」。
+    // 段の数や倍率を変えてもヘルプが古くならないよう、実データから作る
+    case 'levelUpPointMultipliers': {
+      const rows = [];
+      let prev = null;
+      for (let n = 0; n <= FINAL_BREAKTHROUGH_COUNT; n++) {
+        const mult = levelUpPointMultiplier(n);
+        if (mult === prev) continue;
+        prev = mult;
+        rows.push([n === 0 ? '限界突破なし' : `限界突破 ${n}回以上`, `レベルアップ1回につき 強化ポイント ${mult}`]);
+      }
+      return rows;
+    }
     case 'teachings':
       return ((typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS) || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
     case 'skipTickets':
@@ -5955,6 +5983,7 @@ const helpDataRows = (id) => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   extremeDifficulties: '極限チャレンジの難易度',
+  levelUpPointMultipliers: 'レベルアップでもらえる強化ポイント',
   speciesChallengeLineages: '種族チャレンジで選べる種族',
   speciesChallengeRewards: '種族チャレンジの難易度と初回クリア報酬',
   teachings: 'ブリーダーの教え',
@@ -11870,10 +11899,10 @@ function MonsterHeroGame() {
           const next = prev.map(mon => {
             const award = awardByMasuId.get(String(mon.id));
             if (!award) return mon;
-            const before = masuBondLevelInfo(mon);
-            const afterXp = cappedBondXp(mon, award.gain);
-            const after = bondLevelInfo(afterXp);
-            return { ...mon, bondXp: afterXp, distAptPoints: (mon.distAptPoints || 0) + (after.level - before.level) };
+            // バトル・合体と同じ共通処理(applyBondXpGain)を通す。ここだけ「1レベル=1ポイント」で
+            // 数えていたため、限界突破34回以上の倍率がスキップチケットのレベルアップにだけ効かず、
+            // Lv401以降の超越ポイントも配られていなかった
+            return applyBondXpGain(mon, award.gain).masu;
           });
           storeSet('mh_masu_mons', next, false);
           return next;
