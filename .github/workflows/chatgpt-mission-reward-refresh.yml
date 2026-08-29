@@ -1,0 +1,48 @@
+name: ChatGPT mission reward refresh
+
+on:
+  push:
+    branches:
+      - chatgpt/mission-reward-refresh-20260829
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Apply requested changes
+        run: python3 .chatgpt/patch_mission_rewards.py
+      - name: Install tool dependencies
+        run: cd tools && npm ci --omit=optional
+      - name: Static and mission checks
+        run: |
+          node tools/check-syntax.js
+          node tools/boot/mission-check.js
+          node tools/mode/skip-ticket-check.js
+          node tools/help-coverage-check.js
+          node tools/help-guide-check.js
+          node tools/help-render-check.js
+      - name: Build generated game bundle
+        run: |
+          node tools/build.js
+          node tools/build.js --check
+      - name: Diff check
+        run: git diff --check
+      - name: Commit verified implementation
+        run: |
+          git config user.name "ChatGPT"
+          git config user.email "noreply@openai.com"
+          git rm .chatgpt/patch_mission_rewards.py .github/workflows/chatgpt-mission-reward-refresh.yml
+          git add -A
+          git commit -m "feat: refresh login daily and weekly rewards"
+          git push origin HEAD:chatgpt/mission-reward-refresh-20260829
