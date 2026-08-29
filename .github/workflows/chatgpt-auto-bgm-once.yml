@@ -26,6 +26,11 @@ jobs:
       - name: Install Chromium for audio browser regression
         working-directory: tools
         run: npx playwright install chromium
+      - name: Expose Chromium at repository check path
+        run: |
+          CHROMIUM_PATH="$(node -e "const { chromium }=require('./tools/node_modules/playwright'); process.stdout.write(chromium.executablePath())")"
+          sudo mkdir -p /opt/pw-browsers
+          sudo ln -sf "$CHROMIUM_PATH" /opt/pw-browsers/chromium
       - name: Apply requested implementation
         run: node tools/chatgpt-auto-bgm-patch.js
       - name: Align existing BGM dependency regression check
