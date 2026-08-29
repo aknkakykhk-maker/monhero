@@ -36,7 +36,8 @@ vm.createContext(gameCtx);
 vm.runInContext([
   breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/\b[A-Z_]+_(?:ICON|IMG)\b|\bDISC_STONE_BASE\b/g, "''"),
   grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
-  grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
+  "const loginBonusPeriodKey=(now=Date.now())=>new Date(Number(now)+5*60*60*1000).toISOString().slice(0,10);",
+  grab(source, 'const missionDailyPeriod =', 'const missionClaimableList ='),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
   grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),

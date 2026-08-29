@@ -25,7 +25,8 @@ const dataTablePrelude = [
   breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/\b[A-Z_]+_(?:ICON|IMG)\b|\bDISC_STONE_BASE\b/g, "''"),
   grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
   grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
-  grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
+  "const loginBonusPeriodKey=(now=Date.now())=>new Date(Number(now)+5*60*60*1000).toISOString().slice(0,10);",
+  grab(source, 'const missionDailyPeriod =', 'const missionClaimableList ='),
   // 難易度の表と、クリアでもらえる虹のプシュケーの表は同じ塊から作る
   grab(source, 'const DIFFICULTY_SETTINGS = {', '// ヘルプの中に出す「実データから作る表」'),
   // 神殿でかかるダイヤの表は、合体・転生の単価をそのまま使う
