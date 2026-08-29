@@ -40,6 +40,8 @@ const dataTablePrelude = [
   allyMonstersData.replace(/\b[A-Z_]+_(?:IMG|ICON|FACE_ICON)\b/g, "''"),
   lineagesData,
   grab(source, 'const UNKNOWN_LINEAGE =', '// ==================== 総合力'),
+  // 種族チャレンジの表は主血統の一覧から作る(定義は本体のずっと前にあるので1行だけ持ち込む)
+  (source.match(/^const speciesChallengeLineages = .*$/m) || [''])[0],
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
   "const { useState, useEffect, useRef, useContext } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
@@ -70,7 +72,9 @@ const stubIcon = ({ size }) => React.createElement('i', { 'data-size': size });
 const transformed = babel.transformSync(
   `${helpData}\n${dataTablePrelude}\n` +
   // 本体側の「読み込めなかったときの守り」も同じ形で用意する
-  "const HELP_GUIDE = (typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES)) ? HELP_CATEGORIES : [];\n" +
+  // 公開前の項目を隠す絞り込みも本体と同じものを使う(このcheckでは全部を公開扱いにして中身まで描く)
+  'const releasedForPlayers = () => true;\n' +
+  grab(source, 'const HELP_GUIDE = (', 'const HELP_GUIDE_INTRO =') +
   "const HELP_GUIDE_INTRO = (typeof HELP_INTRO !== 'undefined' && HELP_INTRO) || '';\n" +
   'const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;\n' +
   'const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;\n' +

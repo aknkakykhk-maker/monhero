@@ -275,6 +275,23 @@ const ASSISTANT_UNLOCK_NOTICES = [
       ];
     },
   },
+  {
+    // 種族チャレンジの解放。条件(チャレンジ Master以上クリア)を満たしたあと、
+    // HOMEを開いたときに一度だけ知らせる。一般公開する前は ctx 側が false のままなので出ない
+    id: 'unlock_species_challenge_v1',
+    scene: 'home',
+    expression: 'excited',
+    when: (ctx) => ctx && ctx.speciesChallengeUnlocked === true,
+    title: '種族チャレンジが遊べるようになったよ',
+    destination: 'battle',
+    buttonLabel: 'バトルへ行く',
+    pages: (ctx) => [
+      `{name}、おめでとう！ ${(ctx && ctx.speciesChallengeUnlockText) || ''}の条件を満たしたから、新しい遊び方が増えたよ♪`,
+      'ひとつの種族(モッチー種・ピクシー種みたいなくくり)を選んで、その種族の子だけでWAVE1〜10を戦い抜くモードなんだ。',
+      '難易度は種族ごとに1つずつ解放していくよ。記録も種族と難易度の組み合わせごとに別々に残るから、いつもの記録は変わらないよ。',
+      'はじめてクリアした組み合わせでは、その種族の超越の実がもらえるんだ。育てている種族から挑んでみてね！',
+    ],
+  },
 ];
 // 本文はそのときの状況(解放Lv・助手ごとの呼び方の例)から作るので、関数でも配列でも書ける
 const assistantUnlockNoticePages = (notice, ctx) => {
@@ -299,11 +316,15 @@ const assistantUnlockNoticeFor = (scene, ctx, seen) => {
     && (typeof notice.when !== 'function' || notice.when(ctx || {}))
     && assistantUnlockNoticePages(notice, ctx || {}).length > 0);
   if (!found) return null;
+  // destination を書いた案内は、読み終わったときにその画面へ行けるボタンも出す
+  // (更新の案内と同じ仕組みで、画面側は destination の有無だけを見ればよい)
   return {
     id: found.id,
     title: found.title || '',
     expression: found.expression || 'happy',
     pages: assistantUnlockNoticePages(found, ctx || {}),
+    destination: found.destination || null,
+    buttonLabel: found.buttonLabel || null,
   };
 };
 
@@ -442,6 +463,12 @@ const ASSISTANT_SCENES = {
   },
   infinityDifficulty: {
     help: 'basics/extreme-challenge',
+    lines: [],
+  },
+  // 種族チャレンジの選択画面。種族→勇者→供モン→確認の各段で言うことが変わるので、
+  // 画面から condition(いまの段)を渡す。セリフ本体は speciesChallengeGuide の束から合流する
+  speciesChallenge: {
+    help: 'basics/species-challenge',
     lines: [],
   },
 
@@ -1060,6 +1087,55 @@ addAssistantLinePack({
   },
 });
 
+// 種族チャレンジ。選択画面の各段(種族→勇者→供モン→確認)で言うことを変える。
+// 段を渡さない場合は lines のほうが使われる
+addAssistantLinePack({
+  id: 'speciesChallengeGuide',
+  label: '種族チャレンジ案内',
+  lines: {
+    speciesChallenge: [
+      { e:'excited', t:'ひとつの種族だけで10WAVE！ しばりプレイだよ♪' },
+      { e:'happy', t:'育てている種族から挑むのがいちばん近道だね！' },
+      { e:'normal', t:'記録は種族と難易度の組み合わせごとに別々に残るよ。' },
+      { e:'wink', t:'はじめてクリアした組み合わせでは、その種族の超越の実がもらえるよ♪' },
+      { e:'surprise', t:'いつもの記録は変わらないから、気軽に挑戦してみて！' },
+      { e:'happy', t:'難易度は種族ごとに1つずつ解放していくんだ。焦らずいこ♪' },
+    ],
+  },
+  conditions: {
+    speciesChallenge: {
+      species: [
+        { e:'excited', t:'まずはどの種族で挑むか決めよ！ 育てている子がいる種族がおすすめ♪' },
+        { e:'normal', t:'種族ごとに難易度の解放は別々だよ。得意な種族から進めるのもアリ！' },
+        { e:'happy', t:'モンスターが何種類いるかで、連れていける供モンの数も変わるよ。' },
+        { e:'wink', t:'迷ったら、いちばん育っている子のいる種族から行こ♪' },
+        { e:'normal', t:'あとから別の種族へ挑んでも、こっちの記録は消えないよ。' },
+      ],
+      hero: [
+        { e:'excited', t:'勇者モンを決めよ！ この子が最後まで戦い抜くよ。' },
+        { e:'normal', t:'勇者モンにした子が、いちばん絆経験値をもらえるよ。' },
+        { e:'happy', t:'いちばん育っている子を勇者モンにするのが安全だね♪' },
+        { e:'wink', t:'勇者モンにした種は、供モンには選べなくなるよ。' },
+        { e:'normal', t:'置く距離もあとで決めるから、間合い適性も見ておこ！' },
+      ],
+      allies: [
+        { e:'happy', t:'供モンは最大3体。WAVE2・4・6で1体ずつ合流するよ♪' },
+        { e:'normal', t:'同じモンスターは勇者モンと合わせて1体まで。別の種なら一緒に行けるよ。' },
+        { e:'wink', t:'選べる子がいなければ、供モンなしのまま挑んでも大丈夫！' },
+        { e:'excited', t:'誰をいつ合流させるかは、その場で選べるよ♪' },
+        { e:'normal', t:'間合いが散らばるように選ぶと、どの距離でも戦いやすいよ。' },
+      ],
+      confirm: [
+        { e:'excited', t:'準備はいい？ この編成で行こう！' },
+        { e:'happy', t:'はじめてのクリアなら、超越の実がもらえるよ♪' },
+        { e:'wink', t:'クリアできたら、同じ種族の次の難易度が開くよ！' },
+        { e:'normal', t:'途中で厳しくなったら、あきらめても進んだぶんの報酬はもらえるよ。' },
+        { e:'happy', t:'いってらっしゃい！ あたしはここで応援してるね♪' },
+      ],
+    },
+  },
+});
+
 // ===== 親密度ぶんのセリフ(HOME) =====
 addAssistantLinePack({
   id: 'dailyMasuAdvice',
@@ -1531,6 +1607,15 @@ addAssistantLinePack({
       { e:'normal',  t:'WAVE2まで進むのが大事。そこから登録できまつ。' },
       { e:'happy',   t:'短い時間で仲間を増やしたいときに、どうぞ♪' },
     ],
+    // ---- 種族チャレンジ ----
+    speciesChallenge: [
+      { e:'normal',   t:'ひとつの種族だけで10WAVE。しばりプレイでつね。' },
+      { e:'happy',    t:'育てている種族から挑むのが、いちばん確実でつよ。' },
+      { e:'normal',   t:'記録は種族と難易度の組み合わせごとに分かれてまつ。' },
+      { e:'wink',     t:'はじめてクリアした組み合わせでは、その種族の超越の実がもらえまつ♪' },
+      { e:'happy',    t:'いつもの記録は変わらないので、気軽に試せまつよ。' },
+      { e:'normal',   t:'難易度は種族ごとに1つずつ。焦らず進めましょ。' },
+    ],
     // ---- 極限チャレンジ ----
     extremeChallenge: [
       { e:'surprise', t:'ここから先は極限チャレンジ。かなり手強いですよ。' },
@@ -1918,6 +2003,37 @@ addAssistantLinePack({
   },
   // 条件つきのセリフ(初回・記録更新・受け取り可能など)
   conditions: {
+    // ---- 種族チャレンジの選択画面(種族→勇者→供モン→確認) ----
+    speciesChallenge: {
+      species: [
+        { e:'normal',   t:'まずは挑む種族を決めましょ。育てている子がいる種族が安心でつ。' },
+        { e:'happy',    t:'種族ごとに難易度の解放は別々。得意な種族から進めても大丈夫でつよ。' },
+        { e:'normal',   t:'モンスターが何種類いるかで、連れていける供モンの数も変わりまつ。' },
+        { e:'wink',     t:'迷ったら、いちばん育っている子のいる種族からどうぞ♪' },
+        { e:'happy',    t:'あとから別の種族へ挑んでも、こちらの記録は消えまつせん。' },
+      ],
+      hero: [
+        { e:'normal',   t:'勇者モンを決めましょ。この子が最後まで戦い抜きまつ。' },
+        { e:'happy',    t:'勇者モンにした子が、いちばん絆経験値をもらえまつよ。' },
+        { e:'normal',   t:'いちばん育っている子を勇者モンにするのが安全でつ。' },
+        { e:'wink',     t:'勇者モンにした種は、供モンには選べなくなりまつ。' },
+        { e:'normal',   t:'置く距離もあとで決めまつから、間合い適性も見ておきましょ。' },
+      ],
+      allies: [
+        { e:'normal',   t:'供モンは最大3体。WAVE2・4・6で1体ずつ合流しまつ。' },
+        { e:'happy',    t:'同じモンスターは勇者モンと合わせて1体まで。別の種なら一緒に行けまつ。' },
+        { e:'wink',     t:'選べる子がいなければ、供モンなしのままでも大丈夫でつ。' },
+        { e:'normal',   t:'誰をいつ合流させるかは、その場で選べまつよ。' },
+        { e:'happy',    t:'間合いが散らばるように選ぶと、どの距離でも戦いやすいでつ。' },
+      ],
+      confirm: [
+        { e:'normal',   t:'準備はよろしいでつか？ この編成でいきましょ。' },
+        { e:'happy',    t:'はじめてのクリアなら、超越の実がもらえまつよ♪' },
+        { e:'wink',     t:'クリアできたら、同じ種族の次の難易度が開きまつ。' },
+        { e:'normal',   t:'途中で厳しくなっても、進んだぶんの報酬は受け取れまつ。' },
+        { e:'happy',    t:'いってらっしゃい。私はここで見てまつね♪' },
+      ],
+    },
     home: {
       firstRun: [
         { e:'excited',  t:'いよいよ冒険のはじまり。まずはバトルへ行ってみましょ♪' },

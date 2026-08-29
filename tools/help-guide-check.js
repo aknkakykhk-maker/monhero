@@ -127,8 +127,12 @@ check('ログインボーナスとミッションは実データの表を使う'
 
 // --- ⑤ 読み込めなかったときの守り ---
 check('data/help.jsが読めなくてもヘルプで落ちない',
-  has("const HELP_GUIDE = (typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES)) ? HELP_CATEGORIES : [];")
+  has("((typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES)) ? HELP_CATEGORIES : [])")
     && has('{HELP_GUIDE.length===0&&<div'));
+// 公開前の機能を説明する項目は、公開フラグが立つまで一覧に出さない
+check('releaseFlagの付いた項目は公開まで隠す',
+  has('const HELP_GUIDE = ') && has('.filter(releasedForPlayers)')
+    && has('category.topics.filter(releasedForPlayers)'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

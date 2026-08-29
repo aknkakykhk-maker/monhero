@@ -33,7 +33,8 @@ assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(
 // 極限チャレンジは解放していなくても必ず並ぶ(鍵つきで見える)。
 // 末尾の種族チャレンジは一般公開前なので、公開フラグかデバッグのときだけ足される
 assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];'), 'the extreme card must always be listed, locked or not');
-assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
+// 種族チャレンジにも同じ形の解放条件が付いたため、開始ボタンは2つのロックを見る
+assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||speciesLocked||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
 assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
 assert(source.includes('const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);'), 'INFINITY details must unlock from the loaded ULTIMATE clear count');
@@ -69,8 +70,9 @@ assert(source.includes('const extreme = extremeRunRef.current;') && source.inclu
   && source.includes('const xpMult = extreme ? selectedExtremeSetting.xp : scoreMult;'), 'official EXTREME rewards must use its own score/xp/gold multipliers');
 assert(source.includes('await storeSet(extremeClearCountKey(extremeDifficulty), nextExtreme, false);'), 'EXTREME clears must be recorded');
 // 極限は内部の difficulty が Normal のままなので、挑戦回数・最高到達WAVEへ入れるとチャレンジの記録が壊れる
-assert(source.includes('if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current) {')
-  && source.includes('if (!enemy && !extremeRunRef.current && !debugBattleRef.current) {'), 'EXTREME must not touch the challenge attempt / highest-wave records');
+// 種族チャレンジも難易度idがチャレンジと同名なので、同じ2か所で除外している
+assert(source.includes('if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {')
+  && source.includes('if (!enemy && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {'), 'EXTREME must not touch the challenge attempt / highest-wave records');
 // 敵の強さ: 極限だけ×13を渡し、それ以外は null(=難易度の倍率)のまま。null が 0 扱いされないこと
 assert(source.includes('const battleSetting=extremeRunRef.current?extremeRuleSetting(extremeDifficulty):null;')
   && source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier)'), 'only an extreme run may override enemy power and apply its turn multiplier');

@@ -31,7 +31,13 @@ assert(setup.includes('joinSpeciesChallengeAlly(speciesChallengeBattleRunRef.cur
 assert(setup.indexOf('joinSpeciesChallengeAlly') < setup.indexOf("const bonus=m.plusStats||{}"), '実加入が成立した場合だけ既存加入ボーナスを適用する');
 
 assert(source.includes('if (w === 1 && !forcedEnemyKey && !debugBattleRef.current)'), 'デバッグ実戦では助手・ミッションを含む保存進行を抑止する');
-assert(source.includes('speciesChallengeBattleRun?<button') && source.includes('openSpeciesChallengeSelection();'), '勝敗・リタイア後は種族チャレンジ選択へ戻る');
+// 保存なし確認のデバッグ表示・本番のCHAMPION・敗北/リタイアの「再挑戦」の3つとも、
+// 通常のPICK_HEROではなく種族チャレンジの選択画面へ戻す(保存する/しないも引き継ぐ)
+assert(source.includes('speciesChallengeBattleRun?<button') && source.includes('openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug});'), '保存なし確認のリザルトから種族チャレンジ選択へ戻る');
+assert(source.includes('data-species-champion-back') && source.includes('openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug});'), '本番のCHAMPIONからも種族チャレンジ選択へ戻れる');
+const retryFn = source.slice(source.indexOf('const handleRetry = () => {'), source.indexOf('const runResultActionOnce ='));
+assert(retryFn.includes('if (speciesChallengeBattleRunRef.current) {')
+  && retryFn.indexOf('openSpeciesChallengeSelection({ saveProgress: keepSaving, fromDebug: keepDebug });') < retryFn.indexOf("setGameState('PICK_HERO')"), '敗北・リタイアの再挑戦は通常のPICK_HEROへ落ちない');
 assert(source.includes('...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])') && !source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常')).includes('BATTLE_MODE_SPECIES_CHALLENGE'), 'デバッグ時だけ共通BATTLE MODEへ入口を追加する');
 // 公開の切り替えを1か所へまとめてある(公開時はここをtrueにするだけ)
 assert(/const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;/.test(source), '一般公開フラグは既定でfalse');
