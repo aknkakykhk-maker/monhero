@@ -123,7 +123,8 @@ check('ブリーダーの教えは実データの表を使う', dataIdsIn('growt
 check('ログインボーナスとミッションは実データの表を使う',
   dataIdsIn('items', 'login-bonus').includes('loginBonus')
     && dataIdsIn('items', 'missions').includes('missionsDaily')
-    && dataIdsIn('items', 'missions').includes('missionsWeekly'));
+    && dataIdsIn('items', 'missions').includes('missionsWeekly')
+    && dataIdsIn('items', 'missions').includes('missionsMonthly'));
 
 // --- ⑤ 読み込めなかったときの守り ---
 check('data/help.jsが読めなくてもヘルプで落ちない',
