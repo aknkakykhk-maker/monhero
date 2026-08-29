@@ -153,13 +153,22 @@ const clickByText = (page, text) => page.evaluate((t) => {
     return b ? b.textContent.trim() : null;
   });
 
-  const previewOnce = async (trackId, file) => {
+  // decodeAudioDataはファイルの長さ・サイズに比例して時間がかかる(パンドラ曲は4:34・6MBで
+  // 実測3秒前後)。固定の待ち時間だと長い曲だけ試聴イベントを取りこぼすため、
+  // 実際に鳴り始める(またはタイムアウトする)まで短い間隔でポーリングする
+  const previewOnce = async (trackId, file, maxWaitMs = 8000) => {
     await selectTrack(trackId);
     await page.waitForTimeout(200);
     const before = (await dump()).events.length;
     await tapPreview();
-    await page.waitForTimeout(2500);
-    const after = await dump();
+    const deadline = Date.now() + maxWaitMs;
+    let after = await dump();
+    while (Date.now() < deadline) {
+      after = await dump();
+      const started = after.events.slice(before).some((e) => e.t === 'start' && e.url === file);
+      if (started) break;
+      await page.waitForTimeout(150);
+    }
     return { file, newEvents: after.events.slice(before), log: after };
   };
 
