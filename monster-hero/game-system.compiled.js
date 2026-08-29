@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b3343c76c9a5bd59
+// source-sha256: 5be6d1f637ac73cd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 03:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 03:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3338,13 +3338,21 @@ const BGM_TRACKS = [{
   loop: true,
   legacyKey: 'title'
 },
-// タイトル画面の新しい既定曲。旧デフォルトのoriginal_titleはlegacyKeyを保ったまま残し、
-// BGMアレンジからいつでも選び直せるようにする
+// タイトル画面の曲。旧デフォルトのoriginal_titleはlegacyKeyを保ったまま残し、
+// BGMアレンジからいつでも選び直せるようにする。Monster Hero -Another- を新しい既定にし、
+// Monster Heroはアレンジの選択肢として残す(どちらも別テイクの生成曲で、同じ曲の別品質ではない)
 {
   id: 'monster_hero_theme',
   name: 'Monster Hero',
   creator: 'オリジナル',
   src: 'audio/bgm-monster-hero-theme.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'monster_hero_theme_alt',
+  name: 'Monster Hero -Another-',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monster-hero-theme-alt.mp3',
   gain: 1,
   loop: true
 }, {
@@ -3543,7 +3551,7 @@ const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pa
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
-  title: 'monster_hero_theme',
+  title: 'monster_hero_theme_alt',
   home: 'original_home',
   management: 'original_profile',
   market: 'original_market',

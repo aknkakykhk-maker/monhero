@@ -21,6 +21,7 @@ const AUDIO_BASE = PAGE_URL.replace(/index\.html$/, 'audio/');
 const ICHIKA = ['bgm-home-ichika.mp3', 'bgm-battle-ichika.mp3', 'bgm-boss-ichika.mp3', 'bgm-clear-ichika.mp3'];
 const PANDORA = 'bgm-pandora-boss.mp3';
 const MONSTER_HERO = 'bgm-monster-hero-theme.mp3';
+const MONSTER_HERO_ALT = 'bgm-monster-hero-theme-alt.mp3';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok ? 'OK' : 'NG'}  ${name}${detail ? ' — ' + detail : ''}`); };
 
@@ -105,7 +106,7 @@ const clickByText = (page, text) => page.evaluate((t) => {
   await page.addInitScript(INSTRUMENT);
 
   // 音声ファイルが実際に配信されているか(オリジナル・いちかの両方)
-  for (const f of ['bgm-title-theme.mp3', 'bgm-monster-hero-theme.mp3', 'bgm-title.mp3', 'bgm-battle.mp3', ...ICHIKA, PANDORA]) {
+  for (const f of ['bgm-title-theme.mp3', MONSTER_HERO, MONSTER_HERO_ALT, 'bgm-title.mp3', 'bgm-battle.mp3', ...ICHIKA, PANDORA]) {
     const res = await page.request.head(AUDIO_BASE + f).catch(() => null);
     check(`audio/${f} が配信されている`, !!res && res.ok(), res ? `HTTP ${res.status()}` : '取得できず');
   }
@@ -120,10 +121,10 @@ const clickByText = (page, text) => page.evaluate((t) => {
   const dump = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__bgm)));
   const started = (log, file) => log.events.filter((e) => e.t === 'start' && e.url === file);
 
-  // --- ① タイトルの既定BGM(Monster Hero)が実際に鳴り始める ---
+  // --- ① タイトルの既定BGM(Monster Hero -Another-)が実際に鳴り始める ---
   let log = await dump();
-  const title = started(log, 'bgm-monster-hero-theme.mp3');
-  check('タイトルで既定BGM(Monster Hero)が鳴り始める', title.length >= 1,
+  const title = started(log, MONSTER_HERO_ALT);
+  check('タイトルで既定BGM(Monster Hero -Another-)が鳴り始める', title.length >= 1,
     log.events.filter((e) => e.t === 'start').map((e) => e.url).join(',') || '再生開始なし');
   check('AudioContextが動いた状態で鳴らしている', title.every((e) => e.ctxState === 'running'),
     title.map((e) => e.ctxState).join(',') || '—');
@@ -175,10 +176,10 @@ const clickByText = (page, text) => page.evaluate((t) => {
   };
 
   const previews = [];
-  // タイトルの既定曲(monster_hero_theme)は、直後のセクション④で「試聴を止めるとタイトルの
+  // タイトルの既定曲(monster_hero_theme_alt)は、直後のセクション④で「試聴を止めるとタイトルの
   // 既定曲へ戻る」ことを確かめるため、あえて最後に試聴しない(最後に試聴した曲がタイトルの
   // 既定曲と同じだと、戻ったのか止めずに鳴り続けているだけなのか区別が付かなくなる)
-  for (const [trackId, file] of [['ichika_home', ICHIKA[0]], ['ichika_battle', ICHIKA[1]], ['ichika_boss', ICHIKA[2]], ['ichika_clear', ICHIKA[3]], ['monster_hero_theme', MONSTER_HERO], ['pandora_boss', PANDORA]]) {
+  for (const [trackId, file] of [['ichika_home', ICHIKA[0]], ['ichika_battle', ICHIKA[1]], ['ichika_boss', ICHIKA[2]], ['ichika_clear', ICHIKA[3]], ['monster_hero_theme', MONSTER_HERO], ['monster_hero_theme_alt', MONSTER_HERO_ALT], ['pandora_boss', PANDORA]]) {
     previews.push(await previewOnce(trackId, file));
     await tapPreview(); // 停止して次へ
     await page.waitForTimeout(700);
@@ -191,8 +192,10 @@ const clickByText = (page, text) => page.evaluate((t) => {
   }
   check(`パンドラ ${PANDORA} のdecodeAudioDataが成功する`, decodedUrls.includes(PANDORA),
     log.decodeErrors.filter((e) => e.url === PANDORA).map((e) => e.err).join(',') || (decodedUrls.includes(PANDORA) ? '' : 'デコード記録なし'));
-  check(`タイトル新曲 ${MONSTER_HERO} のdecodeAudioDataが成功する`, decodedUrls.includes(MONSTER_HERO),
+  check(`タイトル曲 ${MONSTER_HERO} のdecodeAudioDataが成功する`, decodedUrls.includes(MONSTER_HERO),
     log.decodeErrors.filter((e) => e.url === MONSTER_HERO).map((e) => e.err).join(',') || (decodedUrls.includes(MONSTER_HERO) ? '' : 'デコード記録なし'));
+  check(`タイトル新既定曲 ${MONSTER_HERO_ALT} のdecodeAudioDataが成功する`, decodedUrls.includes(MONSTER_HERO_ALT),
+    log.decodeErrors.filter((e) => e.url === MONSTER_HERO_ALT).map((e) => e.err).join(',') || (decodedUrls.includes(MONSTER_HERO_ALT) ? '' : 'デコード記録なし'));
   check('デコードに失敗した曲が1つも無い', log.decodeErrors.length === 0,
     log.decodeErrors.map((e) => `${e.url}:${e.err}`).join(' / ') || 'エラーなし');
 
@@ -216,7 +219,7 @@ const clickByText = (page, text) => page.evaluate((t) => {
   const back = (await dump()).events.slice(beforeBack);
   check('試聴を止めると元のBGMへ戻る',
     back.some((e) => e.t === 'start' && e.url === ICHIKA[0]) && back.some((e) => e.t === 'stop')
-    && back.filter((e) => e.t === 'start').some((e) => e.url === 'bgm-monster-hero-theme.mp3'),
+    && back.filter((e) => e.t === 'start').some((e) => e.url === MONSTER_HERO_ALT),
     back.map((e) => `${e.t}:${e.url}`).join(' → ') || '記録なし');
 
   // --- ⑤ 何度試聴しても無音・二重再生にならない ---
