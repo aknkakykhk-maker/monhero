@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-29 13:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-29 13:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2437,7 +2437,7 @@ const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, tr
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'ichika_battle', quickDullahan:'melo_dullahan_clockwork', quickMoo:'ichika_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'original_battle', extremeDullahan:'original_dullahan', extremeMoo:'original_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', clear:'ichika_clear', kikiIntro:'original_event_01' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', clear:'ichika_clear', kikiIntro:'original_event_01' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -2485,6 +2485,18 @@ const migrateProBgmDefaults = (arrangement) => migrateBgmDefaults(arrangement, B
 const BGM_DULLAHAN_DEFAULT_MIGRATION_KEY = 'mh_bgm_dullahan_default_migrated_v1';
 const BGM_DULLAHAN_PREVIOUS_DEFAULTS = Object.freeze({ quickDullahan:'original_dullahan', quickMoo:'original_boss', proDullahan:'original_pro_battle_01' });
 const migrateDullahanBgmDefaults = (arrangement) => migrateBgmDefaults(arrangement, BGM_DULLAHAN_PREVIOUS_DEFAULTS);
+// クイックと極限の既定曲を入れ替えたときの、一度きりの移行。
+// 以前の既定のままの枠だけを新しい既定へ移し、自分で選んだ曲は残す。
+const BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY = 'mh_bgm_quick_extreme_default_migrated_v1';
+const BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS = Object.freeze({
+  quickBattle: 'ichika_battle',
+  quickDullahan: 'melo_dullahan_clockwork',
+  quickMoo: 'ichika_boss',
+  extremeBattle: 'original_battle',
+  extremeDullahan: 'original_dullahan',
+  extremeMoo: 'original_boss'
+});
+const migrateQuickExtremeBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS);
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
   const saved = value?.[scene];
   if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
@@ -9736,6 +9748,13 @@ function MonsterHeroGame() {
         const dullahanMigration = migrateDullahanBgmDefaults(savedBgmArrangement);
         if (dullahanMigration.changed) savedBgmArrangement = dullahanMigration.arrangement;
         try { await storeSet(BGM_DULLAHAN_DEFAULT_MIGRATION_KEY, true, false); } catch {}
+      }
+      if ((await storeGet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, false, false)) !== true) {
+        const quickExtremeMigration = migrateQuickExtremeBgmDefaults(savedBgmArrangement);
+        if (quickExtremeMigration.changed) savedBgmArrangement = quickExtremeMigration.arrangement;
+        try {
+          await storeSet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, true, false);
+        } catch {}
       }
       setBgmArrangement(savedBgmArrangement);
       setAssistantUnlockSeen(normalizeAssistantUnlockSeen(await storeGet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, [], false)));

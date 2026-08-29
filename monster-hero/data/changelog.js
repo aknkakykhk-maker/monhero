@@ -3,6 +3,13 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-29 13:34", type: 'update', title: 'クイックと極限チャレンジの初期BGMを入れ替えました', status: 'new',
+    items: [
+      'クイックモードは通常戦・デュラハン戦・ムー戦ともオリジナルの3曲、極限チャレンジは「バトルテーマ by いちか」「呪われた騎士の時計仕掛け」「ボステーマ by いちか」が最初の設定になりました。',
+      '以前の初期設定のまま使っていた枠だけ新しい初期設定へ切り替わります。BGMアレンジで自分で選んでいた曲は変更しません。',
+    ],
+  },
+  {
     date: "2026-08-29 13:17", type: 'update', title: '種族チャレンジを追加しました', status: 'new', releaseFlag: 'speciesChallenge',
     assistantNotice: { id: 'update_notice_species_challenge_v1', type: 'mode' },
     items: [
