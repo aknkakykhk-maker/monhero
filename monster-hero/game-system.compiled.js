@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a28a5b381934355f
+// source-sha256: cca9476f84abc021
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 07:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 08:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3573,6 +3573,8 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   speciesBattle: 'original_battle',
   speciesDullahan: 'original_dullahan',
   speciesMoo: 'original_boss',
+  autoVictoryJingle: 'off',
+  autoPostWaveBgm: 'off',
   clear: 'ichika_clear',
   kikiIntro: 'original_event_01'
 });
@@ -3671,8 +3673,10 @@ const BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS = Object.freeze({
   extremeMoo: 'original_boss'
 });
 const migrateQuickExtremeBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS);
+const BGM_TOGGLE_SCENES = new Set(['autoVictoryJingle', 'autoPostWaveBgm']);
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
   const saved = value?.[scene];
+  if (BGM_TOGGLE_SCENES.has(scene)) return [scene, saved === 'on' || saved === 'off' ? saved : fallback];
   if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
   const legacySaved = value?.[BGM_ARRANGEMENT_LEGACY_FALLBACK[scene]];
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
@@ -15376,7 +15380,8 @@ function MonsterHeroGame() {
     setShowBgmArrangement(false);
   };
   const changeBgmArrangement = (scene, trackId) => {
-    if (!BGM_TRACK_BY_ID[trackId] || bgmArrangement[scene] === trackId) return;
+    const validToggle = BGM_TOGGLE_SCENES.has(scene) && (trackId === 'on' || trackId === 'off');
+    if (!validToggle && !BGM_TRACK_BY_ID[trackId] || bgmArrangement[scene] === trackId) return;
     setBgmArrangement(current => ({
       ...current,
       [scene]: trackId
@@ -16665,12 +16670,20 @@ function MonsterHeroGame() {
       if (enemyId === 'Durahan' || currentWave === 9) return bgmArrangement[modeBgm.dullahan];
       return bgmArrangement[modeBgm.normal];
     }
-    if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
+    if (RUN_PHASE_STATES.includes(state)) {
+      if (wavesDone && autoBattleRef.current && bgmArrangement.autoPostWaveBgm !== 'on') return '__keep_battle_bgm__';
+      return wavesDone ? 'result' : 'enhance';
+    }
     return null;
   };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
     const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
+    // AUTO中のWAVE後は曲を止めたり差し替えたりせず、直前の戦闘BGMをそのまま継続する。
+    if (key === '__keep_battle_bgm__') {
+      if (!audioOn) Audio_.stopBGM();
+      return;
+    }
     // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
     if (key) Audio_.preloadBGM(key);
     if (!audioOn) {
@@ -16678,7 +16691,7 @@ function MonsterHeroGame() {
       return;
     }
     if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => {
@@ -22174,7 +22187,7 @@ function MonsterHeroGame() {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
     enemyDefeatResolvedRef.current = true;
     setEnemySkillName(null);
-    Audio_.playJingle('victory');
+    if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
     const totalWaveDamage = currentWaveDamage + damage;
     const waveMult = 1.0 + wave * 0.1;
     const remainingTurns = Math.max(0, 21 - turnCount);
@@ -25939,7 +25952,23 @@ function MonsterHeroGame() {
       className: `min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id === mode.id ? 'bg-fuchsia-700 border-fuchsia-300 text-white' : 'bg-slate-900 border-white/15 text-slate-300'}`
     }, mode.label))), /*#__PURE__*/React.createElement("div", {
       className: "space-y-4"
-    }, items.map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
+    }, selected.id === 'other' && [['autoVictoryJingle', 'AUTO時 敵撃破ファンファーレ'], ['autoPostWaveBgm', 'AUTO時 強化フェーズBGM']].map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
+      key: scene,
+      className: "block text-left"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xs font-black text-slate-300"
+    }, label), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1"
+    }, /*#__PURE__*/React.createElement("select", {
+      "aria-label": label,
+      value: bgmArrangement[scene],
+      onChange: e => changeBgmArrangement(scene, e.target.value),
+      className: "w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "off"
+    }, "OFF\uFF08\u6226\u95D8BGM\u3092\u9014\u5207\u308C\u3055\u305B\u306A\u3044\uFF09"), /*#__PURE__*/React.createElement("option", {
+      value: "on"
+    }, "ON\uFF08\u5F93\u6765\u3069\u304A\u308A\uFF09"))))), items.map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
       key: scene,
       className: "block text-left"
     }, /*#__PURE__*/React.createElement("span", {
