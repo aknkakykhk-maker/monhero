@@ -52,6 +52,14 @@ jobs:
       - name: Run existing BGM checks
         run: |
           node tools/audio/bgm-arrangement-check.js
+          python3 tools/serve.py >/tmp/monhero-serve.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID >/dev/null 2>&1 || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8899/monster-hero/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://localhost:8899/monster-hero/index.html >/dev/null || { cat /tmp/monhero-serve.log; exit 1; }
           node tools/audio/bgm-check.js
       - name: Run source and help checks
         run: |
