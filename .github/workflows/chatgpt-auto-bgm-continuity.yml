@@ -1,0 +1,65 @@
+name: ChatGPT AUTO BGM continuity
+
+on:
+  push:
+    branches:
+      - chatgpt/auto-bgm-continuity
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install tools
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Apply AUTO BGM continuity patch
+        id: apply
+        run: |
+          set -o pipefail
+          python tools/apply-auto-bgm-continuity.py 2>&1 | tee /tmp/auto-bgm.log
+      - name: Save diagnostics on failure
+        if: failure() && steps.apply.outcome == 'failure'
+        run: |
+          cp /tmp/auto-bgm.log tools/chatgpt-auto-bgm-diagnostic.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/chatgpt-auto-bgm-diagnostic.txt
+          git commit -m "chore: capture AUTO BGM diagnostic"
+          git push
+      - name: Build and focused checks
+        if: success()
+        run: |
+          node tools/build.js
+          node tools/build.js --check
+          node tools/audio/auto-bgm-continuity-check.js
+          node tools/audio/bgm-arrangement-check.js
+          node tools/audio/pandora-boss-bgm-check.js
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/jsx-text-brace-check.js
+          node tools/update-notice-check.js
+          node tools/help-coverage-check.js
+          node tools/help-guide-check.js
+          git diff --check
+      - name: Commit result and remove one-off files
+        if: success()
+        run: |
+          git rm .github/workflows/chatgpt-auto-bgm-continuity.yml tools/apply-auto-bgm-continuity.py
+          if [ -f tools/chatgpt-auto-bgm-diagnostic.txt ]; then git rm tools/chatgpt-auto-bgm-diagnostic.txt; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add monster-hero/src/game-system.jsx monster-hero/game-system.compiled.js monster-hero/data/help.js monster-hero/data/changelog.js monster-hero/version.json tools/audio/auto-bgm-continuity-check.js tools/README.md DEVELOPMENT.md
+          git commit -m "feat: keep battle BGM continuous during AUTO"
+          git push
