@@ -247,6 +247,7 @@ node tools/build.js --check
 | --- | --- |
 | `node ranking/ranking-check.js` | ランキングの集計仕様(スコアは当時のまま固定/ブリーダーLv・絆Lvは最新)を確認する。通信はスタブ。 |
 | `node ranking/ranking-request-check.js` | Normal/Hard/MasterのData APIリクエスト、難易度正規化と`eq`取得、旧`clear_id=NULL`表示、`clear_id`重複防止を通信スタブで確認する。 |
+| `node ranking/species-all-ranking-check.js` | 種族チャレンジの「全種族」ランキング(種族を問わない全国ランキング)を確認する。`Species-all-<難易度id>` は保存には使わない読み取り専用の合成キーで、取得のときだけその難易度の全種族ぶんの `Species-<血統id>-<難易度id>` へ展開し、`in.(...)` で1回のリクエストにまとめる。実装から関数を切り出して動かし、キーの組み立てと読み戻し・実在キーだけへの展開・他モードのキーが混ざらないこと・組み立てたURLが元のキー一覧へ戻ること・送信側は種族別キーのままで全種族キーへ書き込まないこと・タブの並びと取得キーの決め方までを見る。 |
 | `node ranking/ranking-normal-display-check.js` | NormalのGET 3件が変換・絞り込み・並べ替え・重複排除を経て、正規化済みの同一stateキーで画面へ3件表示されることを確認する。 |
 | `node ranking/ranking-normal-integration-check.js` | 結果送信の入口からinsert相当、成功判定、ローカル退避までを一続きで確認する。 |
 | `node ranking/ranking-refresh-race-check.js` | 保存前GETと保存後の強制GETの競合を、Normalのstate反映まで再現する回帰テスト。 |
