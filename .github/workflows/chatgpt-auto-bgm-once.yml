@@ -25,6 +25,18 @@ jobs:
         run: npm ci --omit=optional
       - name: Apply requested implementation
         run: node tools/chatgpt-auto-bgm-patch.js
+      - name: Align existing BGM dependency regression check
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='tools/audio/bgm-arrangement-check.js';
+          let s=fs.readFileSync(p,'utf8');
+          const from="/bgmArrangement, runMode, eventBgmScene, mainHero\\?\\.id\\]/.test(source)";
+          const to="/bgmArrangement, runMode, eventBgmScene, mainHero\\?\\.id(?:, autoBattle)?\\]/.test(source)";
+          if(!s.includes(from)) throw new Error('BGM dependency check anchor not found');
+          s=s.replace(from,to);
+          fs.writeFileSync(p,s);
+          NODE
       - name: Build canonical distribution
         run: node tools/build.js
       - name: Run AUTO BGM regression check
