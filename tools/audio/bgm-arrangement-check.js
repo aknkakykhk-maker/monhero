@@ -18,15 +18,23 @@ for (const file of files) {
     quick:['quickBattle','quickDullahan','quickMoo'],
     pro:['proBattle','proDullahan','proMoo'],
     extreme:['extremeBattle','extremeDullahan','extremeMoo'],
+    species:['speciesBattle','speciesDullahan','speciesMoo'],
   };
   check(`${file}: 登録済み20曲を全設定欄の共通選択肢に使用`,
     (source.match(/\{\s*id:\s*'[^']+',\s*name:/g) || []).length >= 20 && /BGM_TRACKS\.map\(track\s*=>/.test(source));
-  check(`${file}: 4モード×通常・デュラハン・ムーの12設定を定義`,
+  check(`${file}: 5モード×通常・デュラハン・ムーの15設定を定義`,
     Object.values(routes).flat().every(key => Object.hasOwn(defaults, key)));
   // チャレンジと極限はオリジナル3曲のまま(極限に専用曲は用意していないので、チャレンジと同じ)
-  check(`${file}: チャレンジと極限の既定曲がオリジナル3曲のまま`,
+  check(`${file}: チャレンジ・極限・種族の既定曲がオリジナル3曲のまま`,
     defaults.battle === 'original_battle' && defaults.dullahan === 'original_dullahan' && defaults.boss === 'original_boss' &&
-    defaults.extremeBattle === 'original_battle' && defaults.extremeDullahan === 'original_dullahan' && defaults.extremeMoo === 'original_boss');
+    defaults.extremeBattle === 'original_battle' && defaults.extremeDullahan === 'original_dullahan' && defaults.extremeMoo === 'original_boss' &&
+    defaults.speciesBattle === 'original_battle' && defaults.speciesDullahan === 'original_dullahan' && defaults.speciesMoo === 'original_boss');
+  // 設定欄を足しただけなので、既存の保存へは何もしない(移行は要らない)。
+  // まだ自分で選んでいない人には、そのときのチャレンジの設定がそのまま引き継がれる
+  check(`${file}: 種族の3枠はチャレンジの設定を引き継ぐ`,
+    /speciesBattle:'battle',speciesDullahan:'dullahan',speciesMoo:'boss'/.test(compact));
+  check(`${file}: 種族チャレンジのランは種族の枠を使う(極限難易度でも)`,
+    /isSpeciesChallengeMode\(runMode\)\?\{normal:'speciesBattle',dullahan:'speciesDullahan',moo:'speciesMoo'\}/.test(compact));
   // クイックはいちか2曲＋デュラハン専用曲。ムー戦はオリジナルではなく「ボステーマ by いちか」
   check(`${file}: クイックの既定曲が いちか通常／時計仕掛け／いちかボス`,
     defaults.quickBattle === 'ichika_battle' &&

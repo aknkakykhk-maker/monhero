@@ -74,7 +74,7 @@ const transformed = babel.transformSync(
   // 本体側の「読み込めなかったときの守り」も同じ形で用意する
   // 公開前の項目を隠す絞り込みも本体と同じものを使う(このcheckでは全部を公開扱いにして中身まで描く)
   'const releasedForPlayers = () => true;\n' +
-  grab(source, 'const HELP_GUIDE = (', 'const HELP_GUIDE_INTRO =') +
+  grab(source, 'const releasedHelpTopic = (topic) =>', 'const HELP_GUIDE_INTRO =') +
   "const HELP_GUIDE_INTRO = (typeof HELP_INTRO !== 'undefined' && HELP_INTRO) || '';\n" +
   'const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;\n' +
   'const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;\n' +
