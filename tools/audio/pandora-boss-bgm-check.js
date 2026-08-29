@@ -57,7 +57,7 @@ for (const file of files) {
     compact.includes("if(enemyId==='Moo'||currentWave===10)returnbgmArrangement[modeBgm.moo];") &&
     ['boss', 'quickMoo', 'proMoo', 'extremeMoo', 'speciesMoo'].every(key => compact.includes(`moo:'${key}'`)));
   check(`${file}: 勇者変更もBGM切替の依存に含める`,
-    compact.includes('bgmArrangement,runMode,eventBgmScene,mainHero?.id]);'));
+    compact.includes('bgmArrangement,runMode,eventBgmScene,mainHero?.id,autoBattle]);'));
 }
 
 const audioPath = path.join(ROOT, 'monster-hero/audio/bgm-pandora-boss.mp3');

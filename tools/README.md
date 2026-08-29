@@ -463,3 +463,11 @@ supabase/migrations/          再現可能なDB構造変更の正本
 ## 神殿（再生・合体・寄付）の回帰確認
 
 `node tools/masu/temple-update-check.js` で、再生個体の90〜110%の能力差と間合い適性の維持、既存個体との互換性、合体の費用・継承条件、寄付報酬、二重処理ロック、円盤石画像の実在を確認できる。
+
+### AUTO中BGM継続チェック
+
+```bash
+node tools/audio/auto-bgm-continuity-check.js
+```
+
+AUTO中の敵撃破ファンファーレ／WAVE後BGMの既定OFF、戦闘BGM継続、BGMアレンジのON/OFF設定、更新情報・ヘルプ・開発ルールへの反映を確認します。

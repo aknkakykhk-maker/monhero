@@ -3,6 +3,14 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-30 08:49", type: 'update', title: 'AUTO中のBGMが途切れにくくなりました', status: 'new',
+    items: [
+      'AUTO中は、敵を倒したあとのファンファーレを初期設定でOFFにしました。',
+      'WAVE後の強化フェーズでも別のBGMへ切り替えず、直前の戦闘BGMをそのまま流し続けるため、周回中に曲が毎回途切れにくくなりました。',
+      'BGMアレンジの「その他」に「AUTO時 敵撃破ファンファーレ」「AUTO時 強化フェーズBGM」を追加しました。どちらも初期設定はOFFで、従来どおり鳴らしたい場合は個別にONへ戻せます。',
+    ],
+  },
+  {
     date: "2026-08-30 07:14", type: 'update', title: 'プロフィールに種族チャレンジの記録を追加しました', status: 'new',
     releaseFlag: 'speciesChallenge',
     items: [

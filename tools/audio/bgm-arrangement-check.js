@@ -95,7 +95,7 @@ for (const file of files) {
     /kikiIntroPlaying[\s\S]{0,200}EVENT_BGM_SCENES\.kiki_intro/.test(source) &&
     /eventReplay\s*\?\s*\(?EVENT_BGM_SCENES\[eventReplay\.id\]\s*\|\|\s*null\)?\s*:\s*null/.test(source));
   check(`${file}: イベントが終われば元の画面のBGMへ戻る（依存に入れて鳴らし直す）`,
-    /bgmArrangement, runMode, eventBgmScene, mainHero\?\.id\]/.test(source));
+    /bgmArrangement, runMode, eventBgmScene, mainHero\?\.id(?:, autoBattle)?\]/.test(source));
   check(`${file}: 旧保存のデュラハン・boss選択を新規キーへ継承`,
     /quickMoo:'boss'/.test(compact) && /proDullahan:'dullahan'/.test(compact) && /proMoo:'boss'/.test(compact) &&
     /extremeDullahan:'dullahan'/.test(compact) && /extremeMoo:'boss'/.test(compact) && /BGM_TRACK_BY_ID\[legacySaved\]/.test(source));
