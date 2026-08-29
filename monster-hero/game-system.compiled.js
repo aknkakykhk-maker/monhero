@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 607fafbde8f2c578
+// source-sha256: 41760fa41820e1c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-29 23:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 00:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -185,7 +185,7 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   color: '#67e8f9',
   tagline: 'ひとつの種族だけで挑む、しばりプレイのモード',
   highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🔓', '種族ごとに難易度を解放していく'], ['🏅', '記録は種族ごとに別々に残る']],
-  points: [['🧬', 'どんなモード', '挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'], ['👹', '難しさ', '難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'], ['🔥', '上位の難易度', 'EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。チャレンジモードの自己ベストや最高到達WAVEは書き換わりません。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。チャレンジモードと同じです。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🔁', 'AUTO', 'AUTOでの自動戦闘は使えます。ただしクリア後にそのまま次の周へ入る「AUTO∞」は使えません。挑むたびに種族・難易度・編成を選び直すモードのためです。'], ['🎯', 'こんな人におすすめ', '特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。']]
+  points: [['🧬', 'どんなモード', '挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。勇者モンを選んだあとは、零・壱・弐・参距離から開始距離を選びます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'], ['👹', '難しさ', '難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'], ['🔥', '上位の難易度', 'EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。チャレンジモードの自己ベストや最高到達WAVEは書き換わりません。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。チャレンジモードと同じです。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🔁', 'AUTO', 'AUTOでの自動戦闘は使えます。ただしクリア後にそのまま次の周へ入る「AUTO∞」は使えません。挑むたびに種族・難易度・編成を選び直すモードのためです。'], ['🎯', 'こんな人におすすめ', '特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。']]
 });
 // プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
 // バトルの中身はチャレンジと同じで、違うのは「編成がベースモン限定」「経験値の倍率」
@@ -9225,6 +9225,9 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 }]);
 // 種族チャレンジは既存の通常・極限難易度定義を複製せず、IDの順序だけを参照する。
 const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...EXTREME_DIFFICULTIES.map(setting => setting.id)]);
+// 種族チャレンジの出撃前UIでは、4スロットを零・壱・弐・参距離として選ぶ。
+// バトル中の既存表示(零・近・中・遠)や距離色は変更せず、同じindexとRANGE_STYLESを使う。
+const SPECIES_CHALLENGE_DISTANCE_LABELS = Object.freeze(['零', '壱', '弐', '参']);
 const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';
 const emptySpeciesChallengeProgress = () => ({
   version: 1,
@@ -9410,10 +9413,19 @@ const validateSpeciesChallengeAllySelection = ({
     reason: null
   };
 };
+const speciesChallengeHeroDistance = heroDistance => {
+  // 旧helper/checkの呼び出しだけは欠損(undefined)を従来の零距離へ落とす。
+  // 通常UIはnullを使うため、未選択のままrunを作ることはできない。
+  if (heroDistance === undefined) return 0;
+  if (heroDistance === null || heroDistance === '') return null;
+  const value = Number(heroDistance);
+  return Number.isInteger(value) && value >= 0 && value < 4 ? value : null;
+};
 const createSpeciesChallengeRunState = ({
   speciesId,
   difficultyId,
   heroId,
+  heroDistance,
   allyIds,
   unlockedBaseIds = [],
   masuMons = []
@@ -9426,10 +9438,13 @@ const createSpeciesChallengeRunState = ({
     masuMons
   });
   if (!validation.valid) return null;
+  const normalizedHeroDistance = speciesChallengeHeroDistance(heroDistance);
+  if (normalizedHeroDistance === null) return null;
   const run = {
     speciesId,
     difficultyId,
     heroId,
+    heroDistance: normalizedHeroDistance,
     allyIds: [...allyIds],
     joinedAllyIds: []
   };
@@ -13942,6 +13957,7 @@ function MonsterHeroGame() {
     speciesId: '',
     difficultyId: '',
     heroId: '',
+    heroDistance: null,
     allyIds: [],
     run: null,
     saveProgress: false,
@@ -13981,6 +13997,7 @@ function MonsterHeroGame() {
       speciesId: '',
       difficultyId: '',
       heroId: '',
+      heroDistance: null,
       allyIds: [],
       run: null,
       saveProgress: !!saveProgress,
@@ -20352,7 +20369,8 @@ function MonsterHeroGame() {
   } = {}) => {
     if (!run) return;
     const hero = resolveRosterEntryToMon(run.heroId);
-    if (!hero) return;
+    const initialDistance = speciesChallengeHeroDistance(run.heroDistance);
+    if (!hero || initialDistance === null) return;
     stopAllAuto();
     beginNewRankingRun({
       runIdRef,
@@ -20387,10 +20405,11 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setDifficulty(extremeSetting ? 'Normal' : run.difficultyId);
     if (extremeSetting) setExtremeDifficulty(extremeSetting.id);
-    initialBattleDistanceRef.current = 0;
-    const initialSlots = [{
+    initialBattleDistanceRef.current = initialDistance;
+    const initialSlots = [null, null, null, null];
+    initialSlots[initialDistance] = {
       ...hero
-    }, null, null, null];
+    };
     const initialUnique = {
       ...hero.unique,
       evoLevel: Math.max(0, hero.unique?.evoLevel || 0)
@@ -29130,6 +29149,7 @@ function MonsterHeroGame() {
         ...current,
         difficultyId: id,
         heroId: '',
+        heroDistance: null,
         allyIds: [],
         run: null
       })) : setDifficulty(id);
@@ -29322,6 +29342,7 @@ function MonsterHeroGame() {
                 ...current,
                 difficultyId: key,
                 heroId: '',
+                heroDistance: null,
                 allyIds: [],
                 run: null,
                 step: 'hero'
@@ -31499,7 +31520,7 @@ function MonsterHeroGame() {
       })));
     })(), gameState === 'SPECIES_CHALLENGE_SELECT' && (() => {
       const selection = speciesChallengeSelection;
-      const stepOrder = ['species', 'hero', 'allies', 'confirm'];
+      const stepOrder = ['species', 'hero', 'distance', 'allies', 'confirm'];
       const stepIndex = stepOrder.indexOf(selection.step);
       // 「種族」はモンスター1体ではなく主血統。ピクシー種を選べば
       // ピクシー・ミーア・パンドラがまとめて候補になる
@@ -31514,6 +31535,8 @@ function MonsterHeroGame() {
       const clearedIds = speciesChallengeClearedDifficultyIds(speciesChallengeProgress, selection.speciesId);
       const entryLineageId = entry => monsterLineageOf(entry.baseId).main.id;
       const heroCandidates = challengeEntries.filter(entry => entryLineageId(entry) === selection.speciesId);
+      const selectedHero = selection.heroId ? resolveRosterEntryToMon(selection.heroId) : null;
+      const heroDistance = speciesChallengeHeroDistance(selection.heroDistance);
       // 同じモンスター(baseId)は勇者と供モンを通して1体まで。既存の編成画面と同じ決まりなので、
       // 勇者にしたモンスターのベースモン／マスモンは供モン候補から外す
       const heroBaseId = heroCandidates.find(entry => entry.entryId === selection.heroId)?.baseId || null;
@@ -31559,6 +31582,7 @@ function MonsterHeroGame() {
           speciesId,
           difficultyId: '',
           heroId: '',
+          heroDistance: null,
           allyIds: [],
           run: null
         });
@@ -31567,7 +31591,15 @@ function MonsterHeroGame() {
         selectSe();
         patchSelection({
           heroId,
+          heroDistance: null,
           allyIds: selectedAllies.filter(id => id !== heroId),
+          run: null
+        });
+      };
+      const chooseHeroDistance = distance => {
+        selectSe();
+        patchSelection({
+          heroDistance: distance,
           run: null
         });
       };
@@ -31591,6 +31623,7 @@ function MonsterHeroGame() {
           speciesId: selection.speciesId,
           difficultyId: selection.difficultyId,
           heroId: selection.heroId,
+          heroDistance: selection.heroDistance,
           allyIds: selectedAllies,
           unlockedBaseIds: unlockedMonsterIds,
           masuMons
@@ -31607,6 +31640,7 @@ function MonsterHeroGame() {
       const titles = {
         species: '種族選択',
         hero: '勇者モン選択',
+        distance: '開始距離',
         allies: '供モン選択',
         confirm: '出撃確認'
       };
@@ -31715,7 +31749,39 @@ function MonsterHeroGame() {
         }));
       })), selection.step === 'hero' && /*#__PURE__*/React.createElement(React.Fragment, null, heroCandidates.length ? heroCandidates.map(entry => monsterCard(entry, selection.heroId === entry.entryId, () => chooseHero(entry.entryId), false, selection.heroId === entry.entryId ? '勇者' : '')) : /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400"
-      }, "\u3053\u306E\u7A2E\u65CF\u306E\u89E3\u653E\u6E08\u307F\u30D9\u30FC\u30B9\u30E2\u30F3\uFF0F\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002")), selection.step === 'allies' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u7A2E\u65CF\u306E\u89E3\u653E\u6E08\u307F\u30D9\u30FC\u30B9\u30E2\u30F3\uFF0F\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002")), selection.step === 'distance' && selectedHero && /*#__PURE__*/React.createElement("div", {
+        className: "space-y-3",
+        "data-species-start-distance": true
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
+        className: "mb-1 block text-[9px] text-cyan-300"
+      }, "\u52C7\u8005\u30E2\u30F3"), entryById(selection.heroId) && monsterCard(entryById(selection.heroId), true, () => {}, false, '勇者')), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] font-black text-white"
+      }, "\u958B\u59CB\u8DDD\u96E2\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-[8px] leading-relaxed text-slate-400"
+      }, "WAVE1\u3067\u52C7\u8005\u30E2\u30F3\u3092\u914D\u7F6E\u3059\u308B\u8DDD\u96E2\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u5404\u30DC\u30BF\u30F3\u306B\u306F\u3053\u306E\u52C7\u8005\u306E\u8DDD\u96E2\u9069\u6027\u3082\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-3 grid grid-cols-2 gap-3"
+      }, SPECIES_CHALLENGE_DISTANCE_LABELS.map((label, index) => {
+        const active = heroDistance === index;
+        const grade = getDistAptitude(selectedHero, index);
+        return /*#__PURE__*/React.createElement("button", {
+          key: label,
+          type: "button",
+          "data-species-start-distance-option": index,
+          "aria-pressed": active,
+          onClick: () => chooseHeroDistance(index),
+          className: `relative min-h-[92px] rounded-2xl border-2 px-2 py-3 text-center transition active:scale-95 ${RANGE_STYLES[index].bg} ${RANGE_STYLES[index].border} ${active ? 'ring-2 ring-white shadow-lg' : 'opacity-85'}`
+        }, /*#__PURE__*/React.createElement("span", {
+          className: `inline-flex rounded-full border border-white/10 px-3 py-1 text-[11px] font-black ${RANGE_STYLES[index].labelBg} ${RANGE_STYLES[index].text}`
+        }, label, "\u8DDD\u96E2"), /*#__PURE__*/React.createElement("span", {
+          className: "mt-2 block text-[8px] font-black text-slate-300"
+        }, RANGE_LABELS[index], "\u8DDD\u96E2\u9069\u6027 ", /*#__PURE__*/React.createElement("b", {
+          className: `ml-1 rounded px-2 py-0.5 text-[11px] ${DIST_APTITUDE_COLOR[grade]}`
+        }, grade)), active && /*#__PURE__*/React.createElement("span", {
+          className: "mt-2 inline-block rounded-full bg-white px-2 py-0.5 text-[8px] font-black text-slate-950"
+        }, "\u9078\u629E\u4E2D"));
+      })))), selection.step === 'allies' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"
       }, /*#__PURE__*/React.createElement("span", {
         className: "flex items-center justify-between"
@@ -31742,7 +31808,14 @@ function MonsterHeroGame() {
         className: "text-[10px] text-amber-300"
       }, difficultyLabel(selection.difficultyId), " \u30FB \u521D\u56DE\u5831\u916C \u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(selection.difficultyId))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
         className: "mb-1 block text-[9px] text-cyan-300"
-      }, "\u52C7\u8005\u30E2\u30F3"), entryById(selection.heroId) && monsterCard(entryById(selection.heroId), true, () => {}, false, '勇者')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
+      }, "\u52C7\u8005\u30E2\u30F3"), entryById(selection.heroId) && monsterCard(entryById(selection.heroId), true, () => {}, false, '勇者')), heroDistance !== null && selectedHero && /*#__PURE__*/React.createElement("div", {
+        "data-species-start-distance-confirm": true,
+        className: `flex min-h-[48px] items-center justify-between gap-2 rounded-xl border-2 px-3 py-2 ${RANGE_STYLES[heroDistance].bg} ${RANGE_STYLES[heroDistance].border}`
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "text-[11px] text-white"
+      }, "\u958B\u59CB\u8DDD\u96E2\uFF1A", SPECIES_CHALLENGE_DISTANCE_LABELS[heroDistance], "\u8DDD\u96E2"), /*#__PURE__*/React.createElement("span", {
+        className: `shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${DIST_APTITUDE_COLOR[getDistAptitude(selectedHero, heroDistance)]}`
+      }, RANGE_LABELS[heroDistance], "\u8DDD\u96E2\u9069\u6027 ", getDistAptitude(selectedHero, heroDistance))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
         className: "mb-1 block text-[9px] text-cyan-300"
       }, "\u4F9B\u30E2\u30F3\uFF08", selectedAllies.length, "\u4F53\uFF09"), selectedAllies.length ? /*#__PURE__*/React.createElement("div", {
         className: "space-y-2"
@@ -31775,17 +31848,23 @@ function MonsterHeroGame() {
       }, "\u96E3\u6613\u5EA6\u9078\u629E\u3078") : selection.step === 'hero' ? /*#__PURE__*/React.createElement("button", {
         disabled: !selection.heroId,
         onClick: () => patchSelection({
+          step: 'distance'
+        }),
+        className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
+      }, "\u958B\u59CB\u8DDD\u96E2\u9078\u629E\u3078") : selection.step === 'distance' ? /*#__PURE__*/React.createElement("button", {
+        disabled: heroDistance === null,
+        onClick: () => patchSelection({
           step: 'allies'
         }),
         className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
       }, "\u4F9B\u30E2\u30F3\u9078\u629E\u3078") : selection.step === 'allies' ? /*#__PURE__*/React.createElement("button", {
-        disabled: !validation.valid,
+        disabled: !validation.valid || heroDistance === null,
         onClick: () => patchSelection({
           step: 'confirm'
         }),
         className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
       }, "\u51FA\u6483\u78BA\u8A8D\u3078\uFF08", selectedAllies.length, "\u4F53\uFF09") : /*#__PURE__*/React.createElement("button", {
-        disabled: !validation.valid,
+        disabled: !validation.valid || heroDistance === null,
         onClick: makeRun,
         className: "min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[12px] font-black shadow-lg disabled:opacity-30"
       }, "\u3053\u306E\u7DE8\u6210\u3067\u51FA\u6483")));

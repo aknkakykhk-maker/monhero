@@ -9,9 +9,17 @@ const assert = (condition, message) => {
 const start = source.slice(source.indexOf('const startSpeciesChallengeBattle ='), source.indexOf('const createRepeatRunTemplate ='));
 assert(start.includes('resolveRosterEntryToMon(run.heroId)'), 'Base/Masu勇者を共通roster resolverで解決する');
 assert(start.includes('speciesChallengeBattleRunRef.current=run'), 'createSpeciesChallengeRunStateのrunを実戦状態に保持する');
+assert(start.includes('const initialDistance=speciesChallengeHeroDistance(run.heroDistance)'), 'runの開始距離を4スロット用に検証する');
+assert(start.includes('initialBattleDistanceRef.current=initialDistance'), 'WAVE1へ選択した開始距離を渡す');
+assert(start.includes('const initialSlots=[null,null,null,null]') && start.includes('initialSlots[initialDistance]={...hero}'), '選択距離のslotへ勇者を配置する');
+assert(!start.includes('initialBattleDistanceRef.current=0') && !start.includes('const initialSlots=[{...hero},null,null,null]'), '零距離の固定配置を残さない');
 assert(start.includes("setDifficulty(extremeSetting?'Normal':run.difficultyId)"), '通常難易度IDを既存バトル難易度へ渡す');
 assert(start.includes('extremeRuleSetting(run.difficultyId)') && start.includes('setExtremeDifficulty(extremeSetting.id)'), '極限5難易度を既存設定へ渡す');
 assert(start.includes("setGameState('PICK_TEACHING')"), '既存のアシストカード選択からWAVE1へ合流する');
+
+const initBattle = source.slice(source.indexOf('const initBattle ='), source.indexOf('const setupMon ='));
+assert(initBattle.includes('const selectedInitialDistance = w===1 && !forcedEnemyKey ? initialBattleDistanceRef.current : null;'), 'WAVE1だけ既存の初期距離refを使う');
+assert(initBattle.includes('spawnEnemy(w, forcedEnemyKey, selectedInitialDistance)'), 'WAVE1を選択距離から開始する既存処理を維持する');
 
 const nextWave = source.slice(source.indexOf('const handleNextWave ='), source.indexOf('// ===== クイックモード'));
 assert(nextWave.includes('!speciesChallengeBattleRunRef.current'), '通常デバッグ戦の1WAVE終了を種族チャレンジには適用しない');

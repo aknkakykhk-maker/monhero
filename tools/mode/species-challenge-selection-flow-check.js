@@ -50,8 +50,8 @@ assert(!api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'M
 assert(api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['Mitarashi'], unlockedBaseIds, masuMons }).valid, '同じ種族の別モンスターなら一緒に連れていける');
 assert(api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'masu:hero-masu', allyIds:['masu:mitarashi-masu'], unlockedBaseIds, masuMons }).valid, 'マスモン同士でも別モンスターなら連れていける');
 assert(api.validateSpeciesChallengeAllySelection({ speciesId:'mocchi',heroId:'Mocchi', allyIds:['masu:hero-masu'], unlockedBaseIds, masuMons }).reason === 'same-monster', '同じモンスターの重複だと分かる理由を返す');
-const run = api.createSpeciesChallengeRunState({ speciesId:'mocchi', difficultyId:'Expert', heroId:'Mocchi', allyIds:['masu:mitarashi-masu'], unlockedBaseIds, masuMons });
-assert(run?.speciesId === 'mocchi' && run?.allyIds[0] === 'masu:mitarashi-masu', '確認画面から種族限定run情報を生成する');
+const run = api.createSpeciesChallengeRunState({ speciesId:'mocchi', difficultyId:'Expert', heroId:'Mocchi', heroDistance:2, allyIds:['masu:mitarashi-masu'], unlockedBaseIds, masuMons });
+assert(run?.speciesId === 'mocchi' && run?.heroDistance === 2 && run?.allyIds[0] === 'masu:mitarashi-masu', '確認画面から開始距離を含む種族限定run情報を生成する');
 
 const screenStart = source.indexOf("{gameState==='SPECIES_CHALLENGE_SELECT'");
 const screenEnd = source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'", screenStart);
@@ -61,7 +61,7 @@ assert(screenStart >= 0 && screenEnd > screenStart, '本番形式の共通選択
 assert(screen.includes('const heroBaseId=heroCandidates.find(entry=>entry.entryId===selection.heroId)?.baseId||null;'), '勇者のモンスターを覚える');
 assert(screen.includes('&& entry.entryId!==selection.heroId && entry.baseId!==heroBaseId'), '勇者と同じモンスターを供モン候補へ出さない');
 assert(screen.includes('usedAllyBaseIds'), '選んだ供モンと同じモンスターもそのあとの候補から外す');
-for (const step of ['species', 'hero', 'allies', 'confirm']) assert(screen.includes(`'${step}'`), `${step}ステップがある`);
+for (const step of ['species', 'hero', 'distance', 'allies', 'confirm']) assert(screen.includes(`'${step}'`), `${step}ステップがある`);
 assert(screen.includes('const speciesEntries=speciesChallengeLineages();'), '種族候補は主血統(dexMainLineages)を正本にする');
 assert(screen.includes('data-species-row'), '種族は1行1種族の横長カードで並べる');
 assert(screen.includes('種 限定'), '種族カードは「◯◯種 限定」と名乗る');
@@ -74,6 +74,12 @@ assert(screen.includes('validateSpeciesChallengeAllySelection') && screen.includ
 assert(screen.includes('0体のままでも次へ進めます') && screen.includes('min-h-[44px]'), '0体出撃案内と44px以上の戻る操作を備える');
 assert(source.includes('speciesChallengeFirstClearReward(key)'), '共通難易度カードに既存helper由来の初回報酬を表示する');
 assert(screen.includes("entry.type==='masu'?'Masu':'Base'"), '勇者・供モンカードはBase/Masuの区別を表示する');
+assert(screen.includes("heroId,heroDistance:null") && screen.includes("chooseHero=heroId=>{selectSe();patchSelection({heroId,heroDistance:null"), '勇者を選び直すと開始距離を未選択へ戻す');
+assert(source.includes("const SPECIES_CHALLENGE_DISTANCE_LABELS = Object.freeze(['零','壱','弐','参']);"), '開始距離の表示は零・壱・弐・参の4種類');
+assert(screen.includes('data-species-start-distance-option={index}') && screen.includes('SPECIES_CHALLENGE_DISTANCE_LABELS.map'), '零・壱・弐・参の4距離を選択肢として描画する');
+assert(screen.includes('RANGE_STYLES[index].bg') && screen.includes('getDistAptitude(selectedHero,index)'), '既存距離色と勇者の距離適性表示を再利用する');
+assert(screen.includes("selection.step==='distance'?<button disabled={heroDistance===null}") && screen.includes('>供モン選択へ</button>'), '開始距離未選択では供モン選択へ進めない');
+assert(screen.includes('data-species-start-distance-confirm') && screen.includes('開始距離：{SPECIES_CHALLENGE_DISTANCE_LABELS[heroDistance]}距離'), '出撃確認へ開始距離を表示する');
 
 // --- 絵の収まりと選択SE ---
 // モンスターが増えるたびに切れ方が変わらないよう、種族・勇者・供モンのカードは
@@ -92,7 +98,7 @@ const frameUses = (screen.match(/<MonsterArtFrame/g) || []).length;
 assert(frameUses >= 2, `種族カードと勇者・供モンカードの両方が共通枠を使う（${frameUses}か所）`);
 
 assert(screen.includes('const selectSe=()=>{try{Audio_.se.tap();}catch(e){}};'), '選択SEは既存のAudio_.se.tapを再利用する');
-for (const [handler, label] of [['chooseSpecies', '種族'], ['chooseHero', '勇者'], ['toggleAlly', '供モン']]) {
+for (const [handler, label] of [['chooseSpecies', '種族'], ['chooseHero', '勇者'], ['chooseHeroDistance', '開始距離'], ['toggleAlly', '供モン']]) {
   const at = screen.indexOf(`const ${handler}=`);
   assert(at >= 0 && screen.slice(at, at + 400).includes('selectSe()'), `${label}を選んだときに選択SEを鳴らす`);
 }

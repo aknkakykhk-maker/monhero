@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-29 23:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 00:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -127,7 +127,7 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   ],
   points:[
     ['🧬','どんなモード','挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'],
-    ['⚔️','編成','勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'],
+    ['⚔️','編成','勇者モン1体と供モン最大3体で挑みます。勇者モンを選んだあとは、零・壱・弐・参距離から開始距離を選びます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'],
     ['🤝','供モンの加入','事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'],
     ['👹','難しさ','難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'],
     ['🔥','上位の難易度','EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'],
@@ -5059,6 +5059,9 @@ const SPECIES_CHALLENGE_DIFFICULTY_IDS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...EXTREME_DIFFICULTIES.map(setting=>setting.id),
 ]);
+// 種族チャレンジの出撃前UIでは、4スロットを零・壱・弐・参距離として選ぶ。
+// バトル中の既存表示(零・近・中・遠)や距離色は変更せず、同じindexとRANGE_STYLESを使う。
+const SPECIES_CHALLENGE_DISTANCE_LABELS = Object.freeze(['零','壱','弐','参']);
 const SPECIES_CHALLENGE_PROGRESS_KEY = 'mh_species_challenge_progress_v1';
 const emptySpeciesChallengeProgress = () => ({ version:1, species:{}, pendingRewards:{} });
 const validSpeciesChallengeId = (speciesId) => typeof speciesId === 'string' && speciesId.length > 0;
@@ -5211,10 +5214,20 @@ const validateSpeciesChallengeAllySelection = ({speciesId,heroId,allyIds,unlocke
   }
   return { valid:true,reason:null };
 };
-const createSpeciesChallengeRunState = ({speciesId,difficultyId,heroId,allyIds,unlockedBaseIds=[],masuMons=[]}={}) => {
+const speciesChallengeHeroDistance = (heroDistance) => {
+  // 旧helper/checkの呼び出しだけは欠損(undefined)を従来の零距離へ落とす。
+  // 通常UIはnullを使うため、未選択のままrunを作ることはできない。
+  if(heroDistance===undefined)return 0;
+  if(heroDistance===null||heroDistance==='')return null;
+  const value=Number(heroDistance);
+  return Number.isInteger(value)&&value>=0&&value<4?value:null;
+};
+const createSpeciesChallengeRunState = ({speciesId,difficultyId,heroId,heroDistance,allyIds,unlockedBaseIds=[],masuMons=[]}={}) => {
   const validation=validateSpeciesChallengeAllySelection({speciesId,heroId,allyIds,unlockedBaseIds,masuMons});
   if(!validation.valid)return null;
-  const run={ speciesId,difficultyId,heroId,allyIds:[...allyIds],joinedAllyIds:[] };
+  const normalizedHeroDistance=speciesChallengeHeroDistance(heroDistance);
+  if(normalizedHeroDistance===null)return null;
+  const run={ speciesId,difficultyId,heroId,heroDistance:normalizedHeroDistance,allyIds:[...allyIds],joinedAllyIds:[] };
   return run;
 };
 const speciesChallengeSelectedAllies = (runState) => Array.isArray(runState?.allyIds) ? [...runState.allyIds] : [];
@@ -7720,7 +7733,7 @@ function MonsterHeroGame() {
   // 入口は openSpeciesChallengeSelection が 'species' から始める。
   // 廃止した 'intro'(専用モードプレビュー)を初期値へ残すと、どのステップにも当たらない
   // 画面が一瞬出るので初期値もそろえておく
-  const [speciesChallengeSelection, setSpeciesChallengeSelection] = useState({step:'species',speciesId:'',difficultyId:'',heroId:'',allyIds:[],run:null,saveProgress:false,fromDebug:false});
+  const [speciesChallengeSelection, setSpeciesChallengeSelection] = useState({step:'species',speciesId:'',difficultyId:'',heroId:'',heroDistance:null,allyIds:[],run:null,saveProgress:false,fromDebug:false});
   // STEP5Bの実戦run。デバッグ戦と同じ保存抑止を使いながら、通常の10WAVE処理へ流す。
   const speciesChallengeBattleRunRef = useRef(null);
   const [speciesChallengeBattleRun, setSpeciesChallengeBattleRun] = useState(null);
@@ -7747,7 +7760,7 @@ function MonsterHeroGame() {
   const openSpeciesChallengeSelection = async({ saveProgress=false, fromDebug=false }={}) => {
     await loadSpeciesChallengeProgress();
     speciesChallengeFromDebugRef.current=!!fromDebug;
-    setSpeciesChallengeSelection({step:'species',speciesId:'',difficultyId:'',heroId:'',allyIds:[],run:null,saveProgress:!!saveProgress,fromDebug:!!fromDebug});
+    setSpeciesChallengeSelection({step:'species',speciesId:'',difficultyId:'',heroId:'',heroDistance:null,allyIds:[],run:null,saveProgress:!!saveProgress,fromDebug:!!fromDebug});
     setGameState('SPECIES_CHALLENGE_SELECT');
   };
   const [transcendFruitDebugMasuId, setTranscendFruitDebugMasuId] = useState(null);
@@ -12158,7 +12171,8 @@ function MonsterHeroGame() {
   const startSpeciesChallengeBattle = (run, { saveProgress=false }={}) => {
     if (!run) return;
     const hero=resolveRosterEntryToMon(run.heroId);
-    if (!hero) return;
+    const initialDistance=speciesChallengeHeroDistance(run.heroDistance);
+    if (!hero || initialDistance===null) return;
     stopAllAuto();
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
@@ -12187,8 +12201,9 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setDifficulty(extremeSetting?'Normal':run.difficultyId);
     if (extremeSetting) setExtremeDifficulty(extremeSetting.id);
-    initialBattleDistanceRef.current=0;
-    const initialSlots=[{...hero},null,null,null];
+    initialBattleDistanceRef.current=initialDistance;
+    const initialSlots=[null,null,null,null];
+    initialSlots[initialDistance]={...hero};
     const initialUnique={...hero.unique,evoLevel:Math.max(0,hero.unique?.evoLevel||0)};
     setSlots(initialSlots); setMainHero(hero); setOwnedUniques([initialUnique]);
     setMaxHp(hero.baseHp); setHp(hero.baseHp); setMaxGuts(hero.baseGuts); setGuts(Math.floor(hero.baseGuts*0.5)); setAtk(hero.baseAtk); setDef(hero.baseDef);
@@ -16278,7 +16293,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const difficulties=species?SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id=>[id,speciesSetting(id)]):Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS);
           const selectedDifficulty=species?(speciesChallengeSelection.difficultyId||difficulties[0]?.[0]):safeDifficulty;
           const selectedIndex=Math.max(0,difficulties.findIndex(([key])=>key===selectedDifficulty));
-          const chooseDifficulty=id=>species?setSpeciesChallengeSelection(current=>({...current,difficultyId:id,heroId:'',allyIds:[],run:null})):setDifficulty(id);
+          const chooseDifficulty=id=>species?setSpeciesChallengeSelection(current=>({...current,difficultyId:id,heroId:'',heroDistance:null,allyIds:[],run:null})):setDifficulty(id);
           const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));chooseDifficulty(difficulties[safe][0]);modeDifficultyCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});};
           const mode=battleModeInfo(battleMode),pro=isProMode(battleMode),ranked=modeHasRanking(battleMode);
           // プロは勇者モン1体＋供モン候補5体をベースモンだけで組むので、それだけの種が解放されている必要がある
@@ -16338,7 +16353,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             // 種族チャレンジは通常の勇者選択(PICK_HERO)へ入れない。ここを通すと
                             // debugBattle が false へ戻り、保存なしのはずの確認が記録を残してしまう。
                             // 難易度を確定したら、そのまま種族チャレンジの勇者選択へ戻す
-                            if(species){Audio_.se.tap();setSpeciesChallengeSelection(current=>({...current,difficultyId:key,heroId:'',allyIds:[],run:null,step:'hero'}));setGameState('SPECIES_CHALLENGE_SELECT');return;}
+                            if(species){Audio_.se.tap();setSpeciesChallengeSelection(current=>({...current,difficultyId:key,heroId:'',heroDistance:null,allyIds:[],run:null,step:'hero'}));setGameState('SPECIES_CHALLENGE_SELECT');return;}
                             battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?(species?'🔒 前の難易度クリアで解放':'🔒 同じ難易度クリアで解放'):pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
@@ -16956,7 +16971,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='SPECIES_CHALLENGE_SELECT'&&(()=>{
           const selection=speciesChallengeSelection;
-          const stepOrder=['species','hero','allies','confirm'];
+          const stepOrder=['species','hero','distance','allies','confirm'];
           const stepIndex=stepOrder.indexOf(selection.step);
           // 「種族」はモンスター1体ではなく主血統。ピクシー種を選べば
           // ピクシー・ミーア・パンドラがまとめて候補になる
@@ -16968,6 +16983,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const clearedIds=speciesChallengeClearedDifficultyIds(speciesChallengeProgress,selection.speciesId);
           const entryLineageId=entry=>monsterLineageOf(entry.baseId).main.id;
           const heroCandidates=challengeEntries.filter(entry=>entryLineageId(entry)===selection.speciesId);
+          const selectedHero=selection.heroId?resolveRosterEntryToMon(selection.heroId):null;
+          const heroDistance=speciesChallengeHeroDistance(selection.heroDistance);
           // 同じモンスター(baseId)は勇者と供モンを通して1体まで。既存の編成画面と同じ決まりなので、
           // 勇者にしたモンスターのベースモン／マスモンは供モン候補から外す
           const heroBaseId=heroCandidates.find(entry=>entry.entryId===selection.heroId)?.baseId||null;
@@ -16982,11 +16999,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 選択の手ごたえは既存の選択音(Audio_.se.tap)をそのまま使う。新しい音源は増やさない。
           // 音量・ミュートはAudio_側の設定に従う。押した時だけ鳴らし、再描画やスクロールでは鳴らさない
           const selectSe=()=>{try{Audio_.se.tap();}catch(e){}};
-          const chooseSpecies=speciesId=>{selectSe();patchSelection({speciesId,difficultyId:'',heroId:'',allyIds:[],run:null});};
-          const chooseHero=heroId=>{selectSe();patchSelection({heroId,allyIds:selectedAllies.filter(id=>id!==heroId),run:null});};
+          const chooseSpecies=speciesId=>{selectSe();patchSelection({speciesId,difficultyId:'',heroId:'',heroDistance:null,allyIds:[],run:null});};
+          const chooseHero=heroId=>{selectSe();patchSelection({heroId,heroDistance:null,allyIds:selectedAllies.filter(id=>id!==heroId),run:null});};
+          const chooseHeroDistance=distance=>{selectSe();patchSelection({heroDistance:distance,run:null});};
           const toggleAlly=entryId=>{const next=selectedAllies.includes(entryId)?selectedAllies.filter(id=>id!==entryId):[...selectedAllies,entryId];if(!validateSpeciesChallengeAllySelection({speciesId:selection.speciesId,heroId:selection.heroId,allyIds:next,unlockedBaseIds:unlockedMonsterIds,masuMons}).valid)return;selectSe();patchSelection({allyIds:next,run:null});};
-          const makeRun=()=>{const run=createSpeciesChallengeRunState({speciesId:selection.speciesId,difficultyId:selection.difficultyId,heroId:selection.heroId,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons});if(!run)return;selectSe();patchSelection({run});startSpeciesChallengeBattle(run,{saveProgress:speciesChallengeSelection.saveProgress===true});};
-          const titles={species:'種族選択',hero:'勇者モン選択',allies:'供モン選択',confirm:'出撃確認'};
+          const makeRun=()=>{const run=createSpeciesChallengeRunState({speciesId:selection.speciesId,difficultyId:selection.difficultyId,heroId:selection.heroId,heroDistance:selection.heroDistance,allyIds:selectedAllies,unlockedBaseIds:unlockedMonsterIds,masuMons});if(!run)return;selectSe();patchSelection({run});startSpeciesChallengeBattle(run,{saveProgress:speciesChallengeSelection.saveProgress===true});};
+          const titles={species:'種族選択',hero:'勇者モン選択',distance:'開始距離',allies:'供モン選択',confirm:'出撃確認'};
           // Base も Masu も同じ共通枠で描く。ここを分けるとモンスターごとに切れ方が変わるので、
           // 渡すのは baseId と画像と（マスモンなら）染色色だけにする
           const entryImage=entry=><MonsterArtFrame baseId={entry.baseId} src={entry.base.iconUrl} alt="" masuColors={entry.type==='masu'?getMasuColors(entry.masu):null} className="h-full w-full"/>;
@@ -17028,15 +17046,33 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     : <ChevronRight size={16} className="shrink-0 text-slate-500"/>}
                 </button>;})}</div>}
               {selection.step==='hero'&&<>{heroCandidates.length?heroCandidates.map(entry=>monsterCard(entry,selection.heroId===entry.entryId,()=>chooseHero(entry.entryId),false,selection.heroId===entry.entryId?'勇者':'')):<p className="rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400">この種族の解放済みベースモン／所持マスモンがいません。</p>}</>}
+              {selection.step==='distance'&&selectedHero&&<div className="space-y-3" data-species-start-distance>
+                <div><b className="mb-1 block text-[9px] text-cyan-300">勇者モン</b>{entryById(selection.heroId)&&monsterCard(entryById(selection.heroId),true,()=>{},false,'勇者')}</div>
+                <section className="rounded-2xl border border-white/10 bg-slate-900/90 p-3">
+                  <div className="text-[12px] font-black text-white">開始距離を選択</div>
+                  <p className="mt-1 text-[8px] leading-relaxed text-slate-400">WAVE1で勇者モンを配置する距離を選んでください。各ボタンにはこの勇者の距離適性も表示しています。</p>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {SPECIES_CHALLENGE_DISTANCE_LABELS.map((label,index)=>{const active=heroDistance===index;const grade=getDistAptitude(selectedHero,index);return <button key={label} type="button" data-species-start-distance-option={index} aria-pressed={active} onClick={()=>chooseHeroDistance(index)} className={`relative min-h-[92px] rounded-2xl border-2 px-2 py-3 text-center transition active:scale-95 ${RANGE_STYLES[index].bg} ${RANGE_STYLES[index].border} ${active?'ring-2 ring-white shadow-lg':'opacity-85'}`}>
+                      <span className={`inline-flex rounded-full border border-white/10 px-3 py-1 text-[11px] font-black ${RANGE_STYLES[index].labelBg} ${RANGE_STYLES[index].text}`}>{label}距離</span>
+                      <span className="mt-2 block text-[8px] font-black text-slate-300">{RANGE_LABELS[index]}距離適性 <b className={`ml-1 rounded px-2 py-0.5 text-[11px] ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</b></span>
+                      {active&&<span className="mt-2 inline-block rounded-full bg-white px-2 py-0.5 text-[8px] font-black text-slate-950">選択中</span>}
+                    </button>;})}
+                  </div>
+                </section>
+              </div>}
               {selection.step==='allies'&&<><div className="sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"><span className="flex items-center justify-between"><b className="text-[10px] text-cyan-100">供モンを選択</b><strong className="rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950">{selectedAllies.length} / 3体</strong></span><p className="mt-1 text-[8px] leading-relaxed text-cyan-200">供モンは最大3体。0体のままでも次へ進めます。同じモンスターは勇者・供モンを通して1体までなので（重複不可）、実際に選べる数はその種族のモンスターの種類によって変わります。</p></div>{allyCandidates.map(entry=>{const selected=selectedAllies.includes(entry.entryId);const sameMonsterTaken=!selected&&usedAllyBaseIds.has(entry.baseId);const disabled=sameMonsterTaken||(!selected&&selectedAllies.length>=3);return monsterCard(entry,selected,()=>toggleAlly(entry.entryId),disabled,selected?'選択中':sameMonsterTaken?'選択済み':'');})}</>}
-              {selection.step==='confirm'&&<div className="space-y-3"><section className="rounded-2xl border-2 border-cyan-400/40 bg-slate-900/90 p-4"><small className="font-black tracking-widest text-cyan-300">MISSION</small><h3 className="mt-1 text-lg font-black">{speciesChallengeSpeciesName(selection.speciesId)} 限定</h3><p className="text-[10px] text-amber-300">{difficultyLabel(selection.difficultyId)} ・ 初回報酬 超越の実 ×{speciesChallengeFirstClearReward(selection.difficultyId)}</p></section><div><b className="mb-1 block text-[9px] text-cyan-300">勇者モン</b>{entryById(selection.heroId)&&monsterCard(entryById(selection.heroId),true,()=>{},false,'勇者')}</div><div><b className="mb-1 block text-[9px] text-cyan-300">供モン（{selectedAllies.length}体）</b>{selectedAllies.length?<div className="space-y-2">{selectedAllies.map(id=>entryById(id)&&monsterCard(entryById(id),true,()=>{},false,'選択中'))}</div>:<p className="rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400">供モンなしで出撃</p>}</div>{/* 保存する/しないの注意書きも、デバッグから入ったときだけ。通常プレイでは出さない */}
+              {selection.step==='confirm'&&<div className="space-y-3">
+                <section className="rounded-2xl border-2 border-cyan-400/40 bg-slate-900/90 p-4"><small className="font-black tracking-widest text-cyan-300">MISSION</small><h3 className="mt-1 text-lg font-black">{speciesChallengeSpeciesName(selection.speciesId)} 限定</h3><p className="text-[10px] text-amber-300">{difficultyLabel(selection.difficultyId)} ・ 初回報酬 超越の実 ×{speciesChallengeFirstClearReward(selection.difficultyId)}</p></section>
+                <div><b className="mb-1 block text-[9px] text-cyan-300">勇者モン</b>{entryById(selection.heroId)&&monsterCard(entryById(selection.heroId),true,()=>{},false,'勇者')}</div>
+                {heroDistance!==null&&selectedHero&&<div data-species-start-distance-confirm className={`flex min-h-[48px] items-center justify-between gap-2 rounded-xl border-2 px-3 py-2 ${RANGE_STYLES[heroDistance].bg} ${RANGE_STYLES[heroDistance].border}`}><b className="text-[11px] text-white">開始距離：{SPECIES_CHALLENGE_DISTANCE_LABELS[heroDistance]}距離</b><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${DIST_APTITUDE_COLOR[getDistAptitude(selectedHero,heroDistance)]}`}>{RANGE_LABELS[heroDistance]}距離適性 {getDistAptitude(selectedHero,heroDistance)}</span></div>}
+                <div><b className="mb-1 block text-[9px] text-cyan-300">供モン（{selectedAllies.length}体）</b>{selectedAllies.length?<div className="space-y-2">{selectedAllies.map(id=>entryById(id)&&monsterCard(entryById(id),true,()=>{},false,'選択中'))}</div>:<p className="rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400">供モンなしで出撃</p>}</div>{/* 保存する/しないの注意書きも、デバッグから入ったときだけ。通常プレイでは出さない */}
               {selection.fromDebug&&(selection.saveProgress
                 ? <p className="rounded-xl border-2 border-red-400/60 bg-red-950/40 p-3 text-[9px] leading-relaxed font-black text-red-100">⚠️ 実際の種族チャレンジ進行・所持品を変更します。WAVE10までクリアすると、クリア状況・次の難易度の解放・初回の超越の実・種族×難易度の自己記録が本当に保存されます。全国ランキングへは送信しません。</p>
                 : <p className="rounded-xl border border-amber-400/30 bg-amber-950/30 p-3 text-[9px] leading-relaxed text-amber-100">出撃後は既存バトルのWAVE1へ進みます。この確認では結果・報酬・進行・ランキングを一切保存しません。</p>)}</div>}
               {/* 場面ごとの案内。セリフは data/assistants.js が持つ */}
               <div data-species-assistant className="pt-1"><AssistantBubble key={selection.step} scene="speciesChallenge" condition={selection.step} accent="#67e8f9" compact/></div>
             </section>
-            <footer className="mt-2 shrink-0">{selection.step==='species'?<button disabled={!selection.speciesId} onClick={()=>{patchSelection({difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0]});setGameState('BATTLE_DIFFICULTY_SELECT');}} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">難易度選択へ</button>:selection.step==='hero'?<button disabled={!selection.heroId} onClick={()=>patchSelection({step:'allies'})} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">供モン選択へ</button>:selection.step==='allies'?<button disabled={!validation.valid} onClick={()=>patchSelection({step:'confirm'})} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">出撃確認へ（{selectedAllies.length}体）</button>:<button disabled={!validation.valid} onClick={makeRun} className="min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[12px] font-black shadow-lg disabled:opacity-30">この編成で出撃</button>}</footer>
+            <footer className="mt-2 shrink-0">{selection.step==='species'?<button disabled={!selection.speciesId} onClick={()=>{patchSelection({difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0]});setGameState('BATTLE_DIFFICULTY_SELECT');}} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">難易度選択へ</button>:selection.step==='hero'?<button disabled={!selection.heroId} onClick={()=>patchSelection({step:'distance'})} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">開始距離選択へ</button>:selection.step==='distance'?<button disabled={heroDistance===null} onClick={()=>patchSelection({step:'allies'})} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">供モン選択へ</button>:selection.step==='allies'?<button disabled={!validation.valid||heroDistance===null} onClick={()=>patchSelection({step:'confirm'})} className="min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30">出撃確認へ（{selectedAllies.length}体）</button>:<button disabled={!validation.valid||heroDistance===null} onClick={makeRun} className="min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[12px] font-black shadow-lg disabled:opacity-30">この編成で出撃</button>}</footer>
           </main>;
         })()}
 

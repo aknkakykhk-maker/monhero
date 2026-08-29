@@ -55,6 +55,9 @@ assert(pool.indexOf('if (speciesPool) return speciesPool;') < pool.indexOf('getA
 const autoPick = source.slice(source.indexOf("if(gameState==='PICK_ALLY'){"), source.indexOf("if(gameState==='PICK_TEACHING'){"));
 assert(autoPick.includes('pool:joinCandidatePool(),'), 'AUTOの加入候補もjoinCandidatePool()から取る');
 assert(!/pool:\s*getActiveMonsterList\(\)/.test(autoPick), 'AUTOが編成を直接candidateにしない');
+const startBattle = source.slice(source.indexOf('const startSpeciesChallengeBattle ='), source.indexOf('const createRepeatRunTemplate ='));
+assert(startBattle.includes('initialBattleDistanceRef.current=initialDistance'), 'AUTO開始前にもrunで選んだ開始距離を共通refへ保持する');
+assert(!autoPick.includes('initialBattleDistanceRef.current='), 'AUTOの供モン加入処理は開始距離refを書き換えない');
 
 // 手動の合流画面も同じhelperを使う
 assert(source.includes('const avail=speciesChallengeJoinPool()\n        ||pickJoinCandidates(joinCandidatePool(),activeIds,mainHero?.id,joinOfferSize());'),

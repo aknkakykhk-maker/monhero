@@ -5,7 +5,7 @@
 //
 // 見るのは次のとおり。
 //   ① デバッグ設定 → BATTLE TEST → ⚔️バトルモード → 本番と同じBATTLE MODEカルーセルから入れる
-//   ② 種族選択 → 難易度 → 勇者 → 供モン → 出撃確認 の各画面が出て、iPhone縦で横にはみ出さない
+//   ② 種族選択 → 難易度 → 勇者 → 開始距離 → 供モン → 出撃確認 の各画面が出て、iPhone縦で横にはみ出さない
 //   ③ 勇者と同じモンスターは供モンに出ない(同じbaseIdの重複拒否)
 //   ④ 供モン0体でも出撃できる
 //   ⑤ WAVE1のバトルまで到達して、どこでも実行時エラー(真っ白)にならない
@@ -206,14 +206,47 @@ const check = (name, ok, detail = '') => {
     const heroEntryIds = await heroCards.evaluateAll(nodes => nodes.map(n => n.getAttribute('data-species-monster-card')));
     // 仕込んだマスモン(ピクシー)と同じモンスターを勇者にすると、そのマスモンが
     // 供モン候補から先に消えてしまう。重複拒否を見たいので、別のモンスターを勇者にする
-    const heroEntryId = heroEntryIds.find(id => id !== 'Pixie' && !String(id).startsWith('masu:')) || heroEntryIds[0];
-    const heroCard = page.locator(`[data-species-monster-card="${heroEntryId}"]`);
-    const heroText = await heroCard.textContent();
+    let heroEntryId = heroEntryIds.find(id => id !== 'Pixie' && !String(id).startsWith('masu:')) || heroEntryIds[0];
+    let heroCard = page.locator(`[data-species-monster-card="${heroEntryId}"]`);
+    let heroText = await heroCard.textContent();
     await heroCard.dispatchEvent('click');
     await page.waitForTimeout(300);
 
+    // --- 開始距離選択 ---
+    await page.getByRole('button', { name: '開始距離選択へ' }).dispatchEvent('click');
+    await page.getByRole('heading', { name: '開始距離' }).waitFor({ timeout: 20000 });
+    const distanceOptions = page.locator('[data-species-start-distance-option]');
+    check('零・壱・弐・参の4距離が並ぶ', await distanceOptions.count() === 4, `${await distanceOptions.count()}距離`);
+    const distanceTexts = await distanceOptions.evaluateAll(nodes => nodes.map(node => (node.textContent || '').replace(/\s+/g, '')));
+    check('4距離の名前が明示される', ['零距離','壱距離','弐距離','参距離'].every((label,index) => distanceTexts[index]?.includes(label)), distanceTexts.join(' / '));
+    check('勇者の各距離適性が併記される', distanceTexts.every(text => text.includes('距離適性')), distanceTexts.join(' / '));
+    let allyStepButton = page.getByRole('button', { name: '供モン選択へ' });
+    check('開始距離未選択では供モン選択へ進めない', !(await allyStepButton.isEnabled()));
+    await distanceOptions.nth(2).dispatchEvent('click');
+    check('弐距離を選択中と表示する', await distanceOptions.nth(2).getAttribute('aria-pressed') === 'true');
+    check('開始距離選択後は供モン選択へ進める', await allyStepButton.isEnabled());
+    await checkNoSideScroll('開始距離選択');
+
+    // 勇者を変更したら、先ほどの弐距離を引き継がず未選択へ戻る。
+    await page.getByRole('button', { name: '1つ前へ戻る' }).dispatchEvent('click');
+    await page.getByRole('heading', { name: '勇者モン選択' }).waitFor({ timeout: 20000 });
+    const alternateHeroId = heroEntryIds.find(id => id !== heroEntryId && id !== 'Pixie' && !String(id).startsWith('masu:'));
+    check('開始距離リセット確認用の別勇者がいる', !!alternateHeroId, heroEntryIds.join(','));
+    if (alternateHeroId) {
+      heroEntryId = alternateHeroId;
+      heroCard = page.locator(`[data-species-monster-card="${heroEntryId}"]`);
+      heroText = await heroCard.textContent();
+      await heroCard.dispatchEvent('click');
+    }
+    await page.getByRole('button', { name: '開始距離選択へ' }).dispatchEvent('click');
+    await page.getByRole('heading', { name: '開始距離' }).waitFor({ timeout: 20000 });
+    check('勇者変更で開始距離が未選択へ戻る', await page.locator('[data-species-start-distance-option][aria-pressed="true"]').count() === 0);
+    allyStepButton = page.getByRole('button', { name: '供モン選択へ' });
+    check('勇者変更後も距離を選び直すまで進めない', !(await allyStepButton.isEnabled()));
+    await page.locator('[data-species-start-distance-option="2"]').dispatchEvent('click');
+
     // --- ③ 供モン選択(同じモンスターは出ない) ---
-    await page.getByRole('button', { name: '供モン選択へ' }).dispatchEvent('click');
+    await allyStepButton.dispatchEvent('click');
     await page.getByRole('heading', { name: '供モン選択' }).waitFor({ timeout: 20000 });
     check('供モンは最大3体・重複不可と書いてある',
       (await page.getByText('供モンは最大3体').first().textContent()).includes('重複不可'));
@@ -247,6 +280,7 @@ const check = (name, ok, detail = '') => {
     await page.getByRole('heading', { name: '出撃確認' }).waitFor({ timeout: 20000 });
     const startButton = page.getByRole('button', { name: 'この編成で出撃' });
     check('供モン0体のまま出撃確認へ進める', await startButton.isEnabled());
+    check('出撃確認に弐距離が表示される', (await page.locator('[data-species-start-distance-confirm]').textContent()).includes('開始距離：弐距離'));
     await checkNoSideScroll('出撃確認');
 
     // --- ⑤ バトルまで ---
@@ -261,6 +295,9 @@ const check = (name, ok, detail = '') => {
       return el ? el.textContent.trim() : null;
     });
     check('バトル画面までたどり着く', !!modeLabel, String(modeLabel));
+    const battleSlots = page.locator('[data-slot-index]');
+    const battleSlotTexts = await battleSlots.evaluateAll(nodes => nodes.slice(0, 4).map(node => (node.textContent || '').replace(/\s+/g, '')));
+    check('勇者が選択したslots[2]へ配置される', battleSlotTexts[2] && !battleSlotTexts[2].includes('---') && battleSlotTexts.filter(text => !text.includes('---')).length === 1, battleSlotTexts.join(' / '));
     await checkNoSideScroll('バトル');
 
     // --- 実行時エラー ---

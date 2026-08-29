@@ -7,7 +7,7 @@ const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 const start=source.indexOf('const speciesChallengeEntryBaseId ='),end=source.indexOf('const SPECIES_CHALLENGE_INITIAL_UNLOCK_COUNT =',start);
 const context={console};vm.createContext(context);
 installLineageHelpers(vm,context,{source});
-vm.runInContext(`${source.slice(start,end)}\nglobalThis.api={speciesChallengeEntryBaseId,speciesChallengeEntryLineageId,validateSpeciesChallengeAllySelection,createSpeciesChallengeRunState,speciesChallengeSelectedAllies,speciesChallengeUnjoinedAllies,joinSpeciesChallengeAlly};`,context);
+vm.runInContext(`${source.slice(start,end)}\nglobalThis.api={speciesChallengeEntryBaseId,speciesChallengeEntryLineageId,validateSpeciesChallengeAllySelection,speciesChallengeHeroDistance,createSpeciesChallengeRunState,speciesChallengeSelectedAllies,speciesChallengeUnjoinedAllies,joinSpeciesChallengeAlly};`,context);
 const api=context.api,assert=(c,m)=>{if(!c)throw new Error(m)},equal=(a,b,m)=>assert(JSON.stringify(a)===JSON.stringify(b),m);
 // ピクシー種 = Pixie / Mia / Pandora、スエゾー種 = Suezo。
 // 同じモンスター(baseId)は勇者と供モンを通して1体までなので、
@@ -28,6 +28,13 @@ assert(validate(['masu:a']).valid,'同じ種族の別モンスターのマスモ
 assert(api.validateSpeciesChallengeAllySelection({speciesId:'pixie',heroId:'Mia',allyIds:['Pixie'],unlockedBaseIds,masuMons}).valid,'勇者を同じ種族の別モンスターにできる');
 const initial=api.createSpeciesChallengeRunState({speciesId:'pixie',heroId:'masu:hero',allyIds:['Mia','masu:b'],unlockedBaseIds,masuMons});
 equal(api.speciesChallengeSelectedAllies(initial),['Mia','masu:b'],'選択済み供モンを保持する');
+assert(initial.heroDistance===0,'旧helper呼び出しは開始距離欠損時だけ零距離へフォールバックする');
+const distanceRuns=[0,1,2,3].map(heroDistance=>api.createSpeciesChallengeRunState({speciesId:'pixie',heroId:'masu:hero',heroDistance,allyIds:['Mia'],unlockedBaseIds,masuMons}));
+assert(distanceRuns.every((run,heroDistance)=>run?.heroDistance===heroDistance),'零・壱・弐・参の各開始距離をrunへ保持する');
+const distanceRun=distanceRuns[2];
+assert(api.joinSpeciesChallengeAlly(distanceRun,'Mia').state.heroDistance===2,'供モン加入後もrunの開始距離2を維持する');
+assert(api.createSpeciesChallengeRunState({speciesId:'pixie',heroId:'masu:hero',heroDistance:null,allyIds:[],unlockedBaseIds,masuMons})===null,'通常UIの開始距離未選択(null)ではrunを作らない');
+assert(api.createSpeciesChallengeRunState({speciesId:'pixie',heroId:'masu:hero',heroDistance:4,allyIds:[],unlockedBaseIds,masuMons})===null,'4スロット外の開始距離を拒否する');
 let joined=api.joinSpeciesChallengeAlly(initial,'masu:b');assert(joined.joinedAllyId==='masu:b','残りから任意加入する');
 equal(api.speciesChallengeUnjoinedAllies(joined.state),['Mia'],'加入済みを除外する');
 const duplicate=api.joinSpeciesChallengeAlly(joined.state,'masu:b');assert(!duplicate.joinedAllyId&&duplicate.state===joined.state,'二重加入を拒否する');

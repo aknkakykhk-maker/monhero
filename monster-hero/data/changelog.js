@@ -3,6 +3,13 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-30 00:23", type: 'update', title: '種族チャレンジの開始距離を選べるようにしました', status: 'new',
+    items: [
+      '勇者モンを選んだあと、零・壱・弐・参距離からWAVE1の開始距離を選べるようにしました。選択画面では勇者モンの各距離適性も確認できます。',
+      '出撃確認にも開始距離を表示します。勇者モンを選び直した場合は開始距離も未選択へ戻り、もう一度選ぶまで供モン選択へ進みません。',
+    ],
+  },
+  {
     date: "2026-08-29 23:40", type: 'issue', title: '転生で強化ポイントが減っていた不具合を直しました', status: 'fixed',
     assistantNotice: { id: 'update_notice_enhance_point_total_v1', type: 'feature' },
     items: [
