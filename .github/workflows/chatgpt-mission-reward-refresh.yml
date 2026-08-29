@@ -50,10 +50,12 @@ jobs:
           PY
       - name: Apply requested changes
         run: python3 .chatgpt/patch_mission_rewards.py
-      - name: Update related legacy check for dynamic mission definitions
+      - name: Update related legacy checks for dynamic mission definitions
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
+          # skip-ticket-check: mission定義の位置変更に追従する。
           p=Path('tools/mode/skip-ticket-check.js')
           s=p.read_text()
           old="""vm.runInContext([\n  grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),\n  grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),\n  'globalThis.__r={LOGIN_BONUS_REWARDS,GIFT_REWARD_LABELS,MISSION_DEFS};',\n].join('\\n'), rewardCtx);"""
@@ -61,6 +63,16 @@ jobs:
           if s.count(old)!=1:
               raise SystemExit(f'skip-ticket reward extractor: expected 1 match, got {s.count(old)}')
           p.write_text(s.replace(old,new,1))
+
+          # help系: 静的MISSION_DEFSの旧位置ではなく、現在の期間/ローテーション定義を読み込む。
+          for filename in ['tools/help-coverage-check.js','tools/help-render-check.js']:
+              p=Path(filename)
+              s=p.read_text()
+              old="  grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),"
+              new="  \"const loginBonusPeriodKey=(now=Date.now())=>new Date(Number(now)+5*60*60*1000).toISOString().slice(0,10);\",\n  grab(source, 'const missionDailyPeriod =', 'const missionClaimableList ='),"
+              if s.count(old)!=1:
+                  raise SystemExit(f'{filename}: expected 1 mission extractor, got {s.count(old)}')
+              p.write_text(s.replace(old,new,1))
           PY
       - name: Install tool dependencies
         run: cd tools && npm ci --omit=optional
