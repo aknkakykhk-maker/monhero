@@ -3,6 +3,13 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-30 02:00", type: 'update', title: 'パンドラ専用の最終ボスBGMを追加しました', status: 'new',
+    items: [
+      'パンドラを勇者モンにしてムー戦へ進むと、専用曲「Stay With Me ～Locked Fate～」が流れるようになりました。',
+      '供モンだけがパンドラの場合や通常戦・デュラハン戦、ほかの勇者モンでは、これまでどおり各モードで設定したBGMが流れます。',
+    ],
+  },
+  {
     date: "2026-08-30 01:31", type: 'issue', title: '転生で強化ポイントが減っていた不具合を直しました', status: 'fixed',
     assistantNotice: { id: 'update_notice_enhance_point_total_v1', type: 'feature' },
     items: [

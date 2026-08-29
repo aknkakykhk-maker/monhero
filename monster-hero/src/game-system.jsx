@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 01:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 02:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2448,8 +2448,15 @@ const BGM_TRACKS = [
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
 ];
+// 勇者モンなどの条件でだけ流す固定曲。BGMアレンジの選択肢・保存対象には含めない。
+const BGM_EXCLUSIVE_TRACKS = Object.freeze([
+  Object.freeze({ id:'pandora_boss', name:'Stay With Me ～Locked Fate～', src:'audio/bgm-pandora-boss.mp3', gain:1, loop:true }),
+]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+const BGM_EXCLUSIVE_TRACK_BY_ID = Object.fromEntries(BGM_EXCLUSIVE_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
+const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) =>
+  heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', clear:'ichika_clear', kikiIntro:'original_event_01' });
@@ -2629,7 +2636,7 @@ const Audio_ = (() => {
   const stopSource = (source) => { if (source) { try { source.onended = null; source.stop(); } catch (e) {} try { source.disconnect(); } catch (e) {} } };
   const stopJingles = () => { if (jingleTimer) clearTimeout(jingleTimer); jingleTimer = null; stopSource(jingleSource); jingleSource = null; };
   const stopOthers = () => { stopSource(bgmSource); bgmSource = null; bgmSourceKey = null; };
-  const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
+  const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_EXCLUSIVE_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
   const safeTrackGain = track => Math.max(0, Math.min(1.25, Number.isFinite(track?.gain) ? track.gain : 1));
   const applyTrackGain = track => { if (bgmGain) bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track)); };
 
@@ -9488,6 +9495,10 @@ function MonsterHeroGame() {
     // 専用戦は敵IDとWAVEの両方で判定し、ムー → デュラハン → 通常戦の順に優先する。
     // デバッグで敵を直接呼び出した場合も、選択中のモードに対応する曲を使う。
     if (state === 'BATTLE') {
+      // パンドラを勇者モンにした最終ボス戦だけ、モード別のムー戦設定より専用曲を優先する。
+      // 供モンや敵にパンドラがいるだけでは発動しないよう、勇者モンの種idだけを渡す。
+      const pandoraBossBgm = pandoraBossBgmForBattle(mainHero?.id, currentWave, enemyId);
+      if (pandoraBossBgm) return pandoraBossBgm;
       // 種族チャレンジはモードで1つに決める。EXTREME以上の難易度で遊んでも、
       // BGMアレンジの「種族」タブで選んだ曲がそのまま鳴る(設定したのに効かない枠を作らない)
       const modeBgm = isSpeciesChallengeMode(runMode)
@@ -9514,7 +9525,7 @@ function MonsterHeroGame() {
     if (!audioOn) { Audio_.stopBGM(); return; }
     if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
