@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95892904764d8f15
+// source-sha256: c173e8c1035cd1a9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-29 13:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-29 13:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3520,15 +3520,15 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   battle: 'original_battle',
   dullahan: 'original_dullahan',
   boss: 'original_boss',
-  quickBattle: 'ichika_battle',
-  quickDullahan: 'melo_dullahan_clockwork',
-  quickMoo: 'ichika_boss',
+  quickBattle: 'original_battle',
+  quickDullahan: 'original_dullahan',
+  quickMoo: 'original_boss',
   proBattle: 'original_pro_battle_01',
   proDullahan: 'melo_dullahan_steel_ghost',
   proMoo: 'original_pro_battle_02',
-  extremeBattle: 'original_battle',
-  extremeDullahan: 'original_dullahan',
-  extremeMoo: 'original_boss',
+  extremeBattle: 'ichika_battle',
+  extremeDullahan: 'melo_dullahan_clockwork',
+  extremeMoo: 'ichika_boss',
   speciesBattle: 'original_battle',
   speciesDullahan: 'original_dullahan',
   speciesMoo: 'original_boss',
@@ -3618,6 +3618,18 @@ const BGM_DULLAHAN_PREVIOUS_DEFAULTS = Object.freeze({
   proDullahan: 'original_pro_battle_01'
 });
 const migrateDullahanBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_DULLAHAN_PREVIOUS_DEFAULTS);
+// クイックと極限の既定曲を入れ替えたときの、一度きりの移行。
+// 以前の既定のままの枠だけを新しい既定へ移し、自分で選んだ曲は残す。
+const BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY = 'mh_bgm_quick_extreme_default_migrated_v1';
+const BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS = Object.freeze({
+  quickBattle: 'ichika_battle',
+  quickDullahan: 'melo_dullahan_clockwork',
+  quickMoo: 'ichika_boss',
+  extremeBattle: 'original_battle',
+  extremeDullahan: 'original_dullahan',
+  extremeMoo: 'original_boss'
+});
+const migrateQuickExtremeBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS);
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
   const saved = value?.[scene];
   if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
@@ -16627,6 +16639,13 @@ function MonsterHeroGame() {
         if (dullahanMigration.changed) savedBgmArrangement = dullahanMigration.arrangement;
         try {
           await storeSet(BGM_DULLAHAN_DEFAULT_MIGRATION_KEY, true, false);
+        } catch {}
+      }
+      if ((await storeGet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, false, false)) !== true) {
+        const quickExtremeMigration = migrateQuickExtremeBgmDefaults(savedBgmArrangement);
+        if (quickExtremeMigration.changed) savedBgmArrangement = quickExtremeMigration.arrangement;
+        try {
+          await storeSet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, true, false);
         } catch {}
       }
       setBgmArrangement(savedBgmArrangement);
