@@ -92,6 +92,7 @@ const EXPORTED_NAMES = [
   'BREAKTHROUGH_LEVEL_CAPS',
   'breakthroughLevelCap',
   'levelUpPointMultiplier',
+  'levelBasedEnhancePoints',
   'applyBondXpGain',
   'diagnoseLegacyDistAptBoosts',
   'diagnoseLegacyMasuBaselineMigration',
