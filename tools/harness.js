@@ -139,6 +139,7 @@ const EXPORTED_NAMES = [
   'SPECIES_CHALLENGE_DIFFICULTY_IDS',
   'SPECIES_CHALLENGE_PROGRESS_KEY',
   'normalizeSpeciesChallengeProgress',
+  'speciesChallengeProfileSummary',
   'isSpeciesChallengeCleared',
   'isSpeciesChallengeFirstRewardClaimed',
   'SPECIES_CHALLENGE_FIRST_CLEAR_REWARDS',

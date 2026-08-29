@@ -3,6 +3,14 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-30 07:14", type: 'update', title: 'プロフィールに種族チャレンジの記録を追加しました', status: 'new',
+    releaseFlag: 'speciesChallenge',
+    items: [
+      'プロフィールの「バトル記録」に、種族チャレンジ全体の最高スコア・最高記録の種族と難易度・154組中のクリア数を追加しました。',
+      '種族チャレンジの項目をタップすると、「全種族」の全国ランキングを開きます。',
+    ],
+  },
+  {
     date: "2026-08-30 05:08", type: 'update', title: '種族チャレンジに「全種族」ランキングを追加しました', status: 'new',
     releaseFlag: 'speciesChallenge',
     items: [

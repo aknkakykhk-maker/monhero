@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e0bb4f65376c15ae
+// source-sha256: a28a5b381934355f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 05:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 07:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9720,6 +9720,35 @@ const updateSpeciesChallengeRecord = (progress, speciesId, difficultyId, {
 };
 // モードカードへ出す「いくつクリアしたか」。種族をまたいだ合計だけを数える
 const speciesChallengeTotalClearedCount = progress => Object.values(normalizeSpeciesChallengeProgress(progress).species).reduce((total, entry) => total + SPECIES_CHALLENGE_DIFFICULTY_IDS.filter(id => entry.cleared[id] === true).length, 0);
+// プロフィールでは154組を直接並べず、正本の主血統順×難易度順を1回ずつ走査して要約する。
+// 同点は先に現れた組を維持するため、表示が再描画のたびに変わらない。
+const speciesChallengeProfileSummary = progress => {
+  const normalized = normalizeSpeciesChallengeProgress(progress);
+  const lineages = speciesChallengeLineages();
+  let bestScore = 0,
+    bestSpeciesId = null,
+    bestDifficultyId = null,
+    clearedCount = 0;
+  for (const lineage of lineages) {
+    const entry = normalized.species[lineage.id];
+    for (const difficultyId of SPECIES_CHALLENGE_DIFFICULTY_IDS) {
+      if (entry?.cleared?.[difficultyId] === true) clearedCount += 1;
+      const score = normalizeSpeciesChallengeRecord(entry?.records?.[difficultyId]).bestScore;
+      if (score > bestScore) {
+        bestScore = score;
+        bestSpeciesId = lineage.id;
+        bestDifficultyId = difficultyId;
+      }
+    }
+  }
+  return {
+    bestScore,
+    bestSpeciesId,
+    bestDifficultyId,
+    clearedCount,
+    totalCount: lineages.length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length
+  };
+};
 const markSpeciesChallengeCleared = (progress, speciesId, difficultyId) => updateSpeciesChallengeProgressFlag(progress, speciesId, difficultyId, 'cleared');
 const markSpeciesChallengeFirstRewardClaimed = (progress, speciesId, difficultyId) => updateSpeciesChallengeProgressFlag(progress, speciesId, difficultyId, 'firstRewardClaimed');
 // 種族チャレンジの供モン選択と加入状況は、バトルへ接続するまで保存しない一時ラン状態として扱う。
@@ -17433,6 +17462,7 @@ function MonsterHeroGame() {
       }));
       setExtremeBestScores(loadedExtremeScores);
       setExtremeClearCounts(loadedExtremeClears);
+      setSpeciesChallengeProgress(normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY, null, false)));
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
@@ -32831,10 +32861,13 @@ function MonsterHeroGame() {
       }, "\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308A\u307E\u3059\u3002\u5207\u308A\u66FF\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002")));
     })(), (() => {
       const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
-      const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE];
+      const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE];
       const selected = modes.find(mode => mode.id === profileBattleMode) || null;
+      const speciesSummary = speciesChallengeProfileSummary(speciesChallengeProgress);
+      const speciesDifficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
       const scoreMapFor = mode => isProMode(mode.id) ? proHighScores : highScores;
       const representativeFor = mode => {
+        if (mode.id === BATTLE_MODE_SPECIES_CHALLENGE) return speciesSummary.bestScore > 0 ? `最高スコア: ${speciesSummary.bestScore.toLocaleString()} pt` : '最高スコア: 記録なし';
         if (isQuickMode(mode.id)) {
           const wave = highestModeWave(quickHighestWaves, difficultyIds);
           return wave > 0 ? `最高到達 WAVE ${wave}` : '未記録';
@@ -32853,34 +32886,42 @@ function MonsterHeroGame() {
         className: "text-[10px] font-black text-indigo-300 tracking-widest"
       }, "\u30D0\u30C8\u30EB\u8A18\u9332"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-500"
-      }, "\u30E2\u30FC\u30C9\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u96E3\u6613\u5EA6\u5225\u306B\u78BA\u8A8D\u3067\u304D\u307E\u3059"))), !selected ? /*#__PURE__*/React.createElement("div", {
+      }, "\u30E2\u30FC\u30C9\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A73\u3057\u3044\u8A18\u9332\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"))), !selected ? /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-1 gap-2"
-      }, modes.map(mode => /*#__PURE__*/React.createElement("button", {
-        key: mode.id,
-        type: "button",
-        onClick: () => setProfileBattleMode(mode.id),
-        className: "w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]",
-        style: {
-          borderColor: `${mode.color}66`
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "flex items-center gap-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-xl",
-        "aria-hidden": "true"
-      }, mode.emoji), /*#__PURE__*/React.createElement("span", {
-        className: "min-w-0 flex-1"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "block text-[13px] text-white"
-      }, mode.label), /*#__PURE__*/React.createElement("small", {
-        className: "block text-[11px] font-black",
-        style: {
-          color: mode.color
-        }
-      }, representativeFor(mode))), /*#__PURE__*/React.createElement(ChevronRight, {
-        size: 18,
-        className: "shrink-0 text-slate-500"
-      }))))) : /*#__PURE__*/React.createElement("div", {
+      }, modes.map(mode => {
+        const species = mode.id === BATTLE_MODE_SPECIES_CHALLENGE;
+        return /*#__PURE__*/React.createElement("button", {
+          key: mode.id,
+          type: "button",
+          "data-profile-mode": mode.id,
+          onClick: () => species ? openSpeciesChallengeRecords('PROFILE') : setProfileBattleMode(mode.id),
+          className: "w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]",
+          style: {
+            borderColor: `${mode.color}66`
+          }
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "flex items-center gap-2"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-xl",
+          "aria-hidden": "true"
+        }, mode.emoji), /*#__PURE__*/React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "block text-[13px] text-white"
+        }, mode.label), /*#__PURE__*/React.createElement("small", {
+          className: "block text-[11px] font-black",
+          style: {
+            color: mode.color
+          }
+        }, representativeFor(mode)), species && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("small", {
+          className: "block truncate text-[9px] font-black text-cyan-100"
+        }, "\u6700\u9AD8\u8A18\u9332: ", speciesSummary.bestScore > 0 ? `${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}` : '記録なし'), /*#__PURE__*/React.createElement("small", {
+          className: "block text-[9px] font-black text-emerald-300"
+        }, "\u30AF\u30EA\u30A2: ", speciesSummary.clearedCount, " / ", speciesSummary.totalCount))), /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 18,
+          className: "shrink-0 text-slate-500"
+        })));
+      })) : /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl border bg-slate-900/70 p-3",
         style: {
           borderColor: `${selected.color}66`
