@@ -1,7 +1,7 @@
 from pathlib import Path
 import re
 
-stamp = '2026-08-29 13:33'
+stamp = '2026-08-29 13:36'
 
 p = Path('monster-hero/src/game-system.jsx')
 s = p.read_text()
@@ -22,9 +22,12 @@ for key, old in expected.items():
     assert n == 1, f'default mismatch: {key}'
 s = s[:m.start()] + block + s[m.end():]
 
-anchor = "const migrateDullahanBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_DULLAHAN_PREVIOUS_DEFAULTS);"
-assert s.count(anchor) == 1, 'migration declaration anchor mismatch'
-addition = anchor + """
+migration_decl = re.compile(
+    r"const migrateDullahanBgmDefaults\s*=\s*\(?arrangement\)?\s*=>\s*migrateBgmDefaults\(arrangement,\s*BGM_DULLAHAN_PREVIOUS_DEFAULTS\);"
+)
+match = migration_decl.search(s)
+assert match, 'migrateDullahanBgmDefaults declaration not found'
+addition = match.group(0) + """
 // クイックと極限の既定曲を入れ替えたときの、一度きりの移行。
 // 以前の既定のままの枠だけを新しい既定へ移し、自分で選んだ曲は残す。
 const BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY = 'mh_bgm_quick_extreme_default_migrated_v1';
@@ -37,21 +40,23 @@ const BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS = Object.freeze({
   extremeMoo: 'original_boss'
 });
 const migrateQuickExtremeBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS);"""
-s = s.replace(anchor, addition, 1)
+s = s[:match.start()] + addition + s[match.end():]
 
-set_anchor = '      setBgmArrangement(savedBgmArrangement);'
-assert s.count(set_anchor) == 1, f'setBgmArrangement anchor count={s.count(set_anchor)}'
-migration = """      if ((await storeGet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, false, false)) !== true) {
-        const quickExtremeMigration = migrateQuickExtremeBgmDefaults(savedBgmArrangement);
-        if (quickExtremeMigration.changed) savedBgmArrangement = quickExtremeMigration.arrangement;
-        try {
-          await storeSet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, true, false);
-        } catch {}
-      }
+set_matches = list(re.finditer(r"^(\s*)setBgmArrangement\(savedBgmArrangement\);\s*$", s, re.M))
+assert len(set_matches) == 1, f'setBgmArrangement anchor count={len(set_matches)}'
+match = set_matches[0]
+indent = match.group(1)
+migration = f"""{indent}if ((await storeGet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, false, false)) !== true) {{
+{indent}  const quickExtremeMigration = migrateQuickExtremeBgmDefaults(savedBgmArrangement);
+{indent}  if (quickExtremeMigration.changed) savedBgmArrangement = quickExtremeMigration.arrangement;
+{indent}  try {{
+{indent}    await storeSet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, true, false);
+{indent}  }} catch {{}}
+{indent}}}
 """
-s = s.replace(set_anchor, migration + set_anchor, 1)
+s = s[:match.start()] + migration + match.group(0) + s[match.end():]
 s, n = re.subn(r'const BUILD_DATE = "[^"]+";', f'const BUILD_DATE = "{stamp}";', s, count=1)
-assert n == 1
+assert n == 1, 'BUILD_DATE not found'
 p.write_text(s)
 
 hp = Path('monster-hero/data/help.js')
@@ -90,10 +95,11 @@ t, n = re.subn(
     t, count=1)
 assert n == 1, 'extreme defaults check mismatch'
 anchor2 = '  // 追加した4曲。既定に使う2曲と、既定では使わないが選べる2曲\n'
-assert t.count(anchor2) == 1
+assert t.count(anchor2) == 1, 'migration check insertion anchor mismatch'
 extra = """  check(`${file}: クイック・極限の既定入れ替えは一度きりで、自分で選んだ曲を上書きしない`,
     /mh_bgm_quick_extreme_default_migrated_v1/.test(source) &&
     /BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS/.test(source) &&
-    /migrateQuickExtremeBgmDefaults/.test(source));
+    /migrateQuickExtremeBgmDefaults/.test(source) &&
+    /if \(next\[scene\] !== previousDefault\) return;/.test(source));
 """
 tp.write_text(t.replace(anchor2, extra + anchor2, 1))
