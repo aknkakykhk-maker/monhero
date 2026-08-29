@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-29 13:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-29 19:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -102,9 +102,11 @@ const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
 // false のあいだは
 //   ・通常プレイのBATTLE MODEへ出さない(デバッグのバトルモード入口からだけ見える)
 //   ・クリアしても全国ランキングへ送らない
-// 公開するときはここを true にするだけで両方が切り替わる。
-// 公開の判断はユーザーが行うので、実装側から勝手に true にしない。
-const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;
+//   ・ヘルプの項目・更新履歴・助手の告知・BGMアレンジの「種族」タブも出さない
+// true にするとこれらが同時に出る。
+// 2026年8月にユーザーの指示で公開した。実装側から勝手に false へ戻さない
+// (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
+const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -5817,6 +5819,11 @@ const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
 const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1';
 // 案内の「行き先」。更新の案内と解放の案内が同じ言葉(market / battle …)を使えるよう、
 // 対応表はここ1か所だけに置く
+// 「新しく増えたよ」の更新の案内と、「あなたはもう遊べるよ」の解放の案内は、
+// 公開した日にどちらも条件を満たすことがある。同じ内容を2回続けて出さないよう、
+// 更新の案内を読み終えた時点で解放条件を満たしていれば、解放の案内は読んだことにする。
+// (公開したあとに条件を満たした人へは、これまでどおり解放の案内が出る)
+const UPDATE_NOTICE_COVERS_UNLOCK = Object.freeze({ update_notice_species_challenge_v1:'unlock_species_challenge_v1' });
 const NOTICE_DESTINATIONS = { market:'BREEDER_MARKET', battle:'BATTLE_MODE_SELECT', training:'TRAINING_INFO' };
 const noticeDestinationState = (destination) => NOTICE_DESTINATIONS[destination]
   || (typeof destination === 'string' && /^[A-Z][A-Z0-9_]*$/.test(destination) ? destination : null);
@@ -8818,6 +8825,9 @@ function MonsterHeroGame() {
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   // 種族チャレンジの解放判定。こちらも同じ mh_clears_* を読むだけで、専用の解放フラグは持たない
   const speciesChallengeUnlocked = useMemo(() => isSpeciesChallengeUnlocked(clearCounts), [clearCounts]);
+  // 更新の案内を閉じた時点の解放状態を読むための控え(再描画を待たずに判定するため)
+  const speciesChallengeUnlockedRef = useRef(false);
+  useEffect(() => { speciesChallengeUnlockedRef.current = speciesChallengeUnlocked; }, [speciesChallengeUnlocked]);
   const extremeClearCount = extremeClearCounts[EXTREME_SETTING.id] || 0;
   const nightmareClearCount = extremeClearCounts[NIGHTMARE_SETTING.id] || 0;
   const chaosClearCount = extremeClearCounts[CHAOS_SETTING.id] || 0;
@@ -10723,14 +10733,19 @@ function MonsterHeroGame() {
     : null;
   // 読み終わったら既読へ足して保存する。同じ案内は二度と出ない。
   // destination を持つ案内は、閉じたあとその画面へ連れていく
-  const finishAssistantUnlockNotice = (id, destination=null) => {
-    setAssistantUnlockPage(0);
+  const markAssistantUnlockNoticeSeen = (id) => {
     if (!id) return;
     setAssistantUnlockSeen(prev => {
+      if (prev.includes(id)) return prev;
       const next = normalizeAssistantUnlockSeen([...prev, id]);
       storeSet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, next, false);
       return next;
     });
+  };
+  const finishAssistantUnlockNotice = (id, destination=null) => {
+    setAssistantUnlockPage(0);
+    if (!id) return;
+    markAssistantUnlockNoticeSeen(id);
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
   };
@@ -12469,6 +12484,9 @@ function MonsterHeroGame() {
     await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
     setUpdateGuidePage(0);
     setUpdateGuideQueue(queue => queue.slice(1));
+    // 同じ機能の解放の案内が続けて出ないようにする(いま解放済みの人だけ)
+    const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[current.id];
+    if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
   };

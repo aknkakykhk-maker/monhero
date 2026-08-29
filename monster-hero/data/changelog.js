@@ -3,7 +3,7 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
-    date: "2026-08-29 13:17", type: 'update', title: '種族チャレンジを追加しました', status: 'new', releaseFlag: 'speciesChallenge',
+    date: "2026-08-29 19:59", type: 'update', title: '種族チャレンジを追加しました', status: 'new', releaseFlag: 'speciesChallenge',
     assistantNotice: { id: 'update_notice_species_challenge_v1', type: 'mode' },
     items: [
       '挑む前に種族（モッチー種・ピクシー種など）をひとつ選び、その種族のモンスターだけでWAVE1〜10を戦い抜く「種族チャレンジ」を追加しました。チャレンジモードで Master 以上を1回以上クリアすると解放されます。',

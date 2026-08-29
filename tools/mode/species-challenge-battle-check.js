@@ -38,10 +38,11 @@ assert(source.includes('data-species-champion-back') && source.includes('openSpe
 const retryFn = source.slice(source.indexOf('const handleRetry = () => {'), source.indexOf('const runResultActionOnce ='));
 assert(retryFn.includes('if (speciesChallengeBattleRunRef.current) {')
   && retryFn.indexOf('openSpeciesChallengeSelection({ saveProgress: keepSaving, fromDebug: keepDebug });') < retryFn.indexOf("setGameState('PICK_HERO')"), '敗北・リタイアの再挑戦は通常のPICK_HEROへ落ちない');
-assert(source.includes('...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])') && !source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常')).includes('BATTLE_MODE_SPECIES_CHALLENGE'), 'デバッグ時だけ共通BATTLE MODEへ入口を追加する');
-// 公開の切り替えを1か所へまとめてある(公開時はここをtrueにするだけ)
-assert(/const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;/.test(source), '一般公開フラグは既定でfalse');
-assert(source.includes("mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE"), '公開フラグが立つまでランキングへ送らない');
-assert(!source.includes('grantSpeciesChallengeFirstClearReward') && !source.includes('species_challenge_ranking'), '進行報酬・ランキング保存を接続しない');
+assert(source.includes('...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])') && !source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常')).includes('BATTLE_MODE_SPECIES_CHALLENGE'), '共通BATTLE MODEへ入口を出す(公開前はデバッグのときだけ)');
+// 公開の切り替えは1か所だけ。公開後は true のまま(false へ戻すと、
+// すでに遊んだ人の全国ランキングだけが止まる)
+assert(/const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;/.test(source), '一般公開フラグはtrue(公開済み)');
+assert(source.includes("mode !== BATTLE_MODE_SPECIES_CHALLENGE || SPECIES_CHALLENGE_PUBLIC_RELEASE"), '公開フラグを見てからランキングへ送る');
+assert(!source.includes('grantSpeciesChallengeFirstClearReward') && !source.includes('species_challenge_ranking'), '進行報酬・ランキングは既存の共通処理だけを使う(専用の保存を書かない)');
 
 console.log('種族チャレンジSTEP5B実バトル接続確認: PASS');

@@ -116,7 +116,10 @@ const check = (name, ok, detail = '') => {
     const speciesCard = page.locator('article').filter({ hasText: '種族チャレンジ' }).first();
     await speciesCard.scrollIntoViewIfNeeded();
     check('デバッグ時だけ種族チャレンジのカードが並ぶ', await speciesCard.count() === 1);
-    check('公開前だと分かる印が出ている', (await speciesCard.textContent()).includes('DEBUG・一般公開前'));
+    // 公開後のカードは「クリアした種族×難易度 / 全154組中」を出す
+    const speciesCardText = await speciesCard.textContent();
+    check('カードに全体の組み合わせ数が出ている', /全\d+組中/.test(speciesCardText), speciesCardText.match(/全\d+組中/)?.[0]);
+    check('公開前のDEBUGの印は残っていない', !speciesCardText.includes('DEBUG・一般公開前'));
     await checkNoSideScroll('BATTLE MODE');
 
     // --- ② 種族選択 ---
@@ -163,17 +166,30 @@ const check = (name, ok, detail = '') => {
     check('難易度カードから開くとその種族が選ばれている', /種$/.test(String(selectedTab).trim()), String(selectedTab));
     const rankDiffTabs = page.locator('[data-species-difficulty-tabs] button');
     check('難易度も他モードと同じくタブで並ぶ', await rankDiffTabs.count() === 14, `${await rankDiffTabs.count()}タブ`);
-    const rankRows = page.locator('[data-species-record-row]');
-    check('選んだ種族×難易度の記録が出る', await rankRows.count() === 1, `${await rankRows.count()}行`);
-    check('未クリアなら「記録なし」と分かる', (await rankRows.first().textContent()).includes('記録なし'));
-    // 難易度タブを切り替えても、その種族の記録のまま中身だけ入れ替わる
+    // 公開後は、種族を選ぶとその種族×難易度の全国ランキングへ切り替わる。
+    // このサンドボックスは通信できないので、読み込み中・取得できないときの案内が出ればよい
+    // (行が出ないまま真っ白・無反応にならないことを見る)
+    await page.waitForTimeout(600);
+    const nationalText = await page.locator('[data-species-record-list]').textContent();
+    check('種族を選ぶと全国ランキングへ切り替わる',
+      !nationalText.includes('全国ランキングはモードの公開後に始まります'));
+    check('通信できないときも案内が出て無反応にならない',
+      /Loading|再[試読]|取得|まだ|ありません|エラー|失敗/.test(nationalText), nationalText.slice(0, 60).replace(/\s+/g, ' '));
+    // 「すべて」タブは自分の記録なので、通信できなくても中身が出る。
+    // その難易度をクリアした種族が並び、1つも無ければその旨の案内になる
+    await rankTabs.first().dispatchEvent('click');
+    await page.waitForTimeout(300);
+    const allText = await page.locator('[data-species-record-list]').textContent();
+    const allRows = await page.locator('[data-species-record-row]').count();
+    check('「すべて」は通信せずに自分の記録を出す',
+      allRows > 0 || /クリアした種族はまだありません/.test(allText), `${allRows}行`);
+    check('1つもクリアしていなければ、そう分かる案内が出る',
+      allRows > 0 || /クリアすると、種族ごとに自己ベストが残ります/.test(allText));
+    // 難易度タブを切り替えると、その難易度の中身に入れ替わる
     await rankDiffTabs.nth(3).dispatchEvent('click');
-    await page.waitForTimeout(200);
-    check('難易度タブを切り替えられる',
-      await page.locator('[data-species-record-row]').count() === 1
-      && (await page.locator('[data-species-record-row]').first().textContent()).includes('種'));
-    check('公開前は自分の記録だけと書いてある',
-      (await page.locator('[data-species-record-list]').textContent()).includes('全国ランキングはモードの公開後に始まります'));
+    await page.waitForTimeout(300);
+    const switchedText = await page.locator('[data-species-record-list]').textContent();
+    check('難易度タブを切り替えられる', switchedText !== allText, `${allText.slice(0, 12)} → ${switchedText.slice(0, 12)}`);
     await checkNoSideScroll('種族チャレンジランキング');
     await page.getByRole('button', { name: '戻る' }).first().dispatchEvent('click');
     await page.getByText('BATTLE DIFFICULTY').first().waitFor({ timeout: 20000 });
