@@ -1,0 +1,22 @@
+ 2px 8px #000}.mh-rpg-special-band small{display:block;margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e9d5ff;font-size:10px;font-weight:900;letter-spacing:.1em}.mh-rpg-special-band.foe small{color:#fecaca}.mh-rpg-special-ring{position:absolute;inset:-8%;border:3px solid #c084fc;border-radius:50%;pointer-events:none;box-shadow:0 0 18px #a855f7cc;animation:rpgSpecialRing 620ms ease-out forwards}.mh-rpg-member.struck{animation:rpgSpecialStruck 620ms ease-out}.mh-rpg-field.shake,.mh-rpg-party.shake{animation:rpgSpecialShake 940ms ease-in-out}@keyframes rpgSpecialFlash{0%{opacity:0}16%{opacity:1}100%{opacity:0}}@keyframes rpgSpecialBand{0%{opacity:0;transform:scaleX(.12) scaleY(.5)}12%{opacity:1;transform:scaleX(1) scaleY(1.14)}20%{transform:scaleX(1) scaleY(1)}74%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-14px)}}@keyframes rpgSpecialRing{0%{transform:scale(.5);opacity:.95}100%{transform:scale(1.95);opacity:0}}@keyframes rpgSpecialStruck{0%,100%{box-shadow:none}20%{box-shadow:0 0 0 2px #f87171,0 0 18px #ef4444cc}60%{box-shadow:0 0 0 2px #f8717188,0 0 12px #ef444488}}@keyframes rpgSpecialShake{0%,100%{transform:translateX(0)}8%{transform:translateX(-4px)}18%{transform:translateX(4px)}28%{transform:translateX(-3px)}38%{transform:translateX(3px)}48%{transform:translateX(-2px)}58%{transform:translateX(1px)}}.mh-rpg-foe-ring,.mh-rpg-member-face{will-change:transform}
+    `;
+  document.head.appendChild(style);
+};
+createAnimationStyle();
+
+// ==== GitHub Pages 用: グローバルからReact/フックを取得してレンダリング ====
+const rootEl = document.getElementById('root');
+const _root = ReactDOM.createRoot(rootEl);
+_root.render(React.createElement(MonsterHeroGame));
+
+// ==== 起動時: HTMLのローディング表示を消す ====
+// 事前ロードの進捗表示はReact側の起動画面(bootPhase)が受け持つので、
+// ここではHTMLに置いてある簡易ローディングを消すだけにする
+try {
+  const l = document.getElementById('loading');
+  if (l) l.style.display = 'none';
+  const b = document.getElementById('ver-banner');
+  if (b) b.style.display = 'none';
+} catch (e) {
+  window.__mhErr && window.__mhErr('render tail: ' + e.message);
+}
