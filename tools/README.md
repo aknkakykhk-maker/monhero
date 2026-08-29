@@ -300,6 +300,7 @@ node tools/build.js --check
 | --- | --- |
 | `node audio/bgm-check.js` | BGMが実際に鳴っているかを、実ブラウザのWeb Audioそのもので確認する(要 `python3 tools/serve.py`)。`AudioContext.decodeAudioData` と `AudioBufferSourceNode.start/stop` を差し替えて、「どのmp3をデコードしたか」「どれが鳴り始めたか」「そのときAudioContextが動いていたか」を直接見る。オリジナルBGMの再生／いちか4曲のデコード成功／BGMアレンジ画面からの試聴／試聴停止後に元のBGMへ復帰／何度試聴しても無音・二重再生にならない／AudioContextを止めてもタップで再開できる／アレンジで選んだ曲がHOMEで実際に鳴る、までを通しで確認する。★2026年8月に作り直した。以前は `document.querySelectorAll('audio')` を見ていたが、BGMは2026年7月にHTMLAudioElementをやめており、空配列に対する `every()` が素通りして何も観測できていなかった。 |
 | `node audio/bgm-arrangement-check.js` | BGMトラック登録、場面別アレンジ保存、最終ボス後のクリア曲、試聴、曲別音量補正を確認する。 |
+| `node audio/pandora-boss-bgm-check.js` | パンドラを勇者モンにしたムー戦だけで専用曲「Stay With Me ～Locked Fate～」を優先し、通常戦・デュラハン戦・供モンだけがパンドラ・他の勇者では既存のモード別BGMを維持すること、専用MP3と編集元・配信用コードの登録を確認する。 |
 | `node audio/bgm-arrangement-layout-check.js` | BGMアレンジのタブが、いちばん狭い端末でも1行に収まるかを実際に測る。同梱の tailwindcss で game-system.jsx から本物のCSSを作り、320／375／390pxのブラウザでカテゴリのタブとバトルモードのタブを描いて、行数・文字のはみ出し・44px以上の高さ・横スクロールの有無を見る。バトルモードのタブは公開前(4つ)と公開後(種族チャレンジを含む5つ)の両方を測るので、モードを足したのに列数を増やし忘れると2行になって検出できる。 |
 | `node audio/title-bgm-check.js` | iOS相当の自動再生制限を再現し、最初のタップだけでタイトルBGMが鳴るか、起動タップがトップ画面へ届いていないかを確認する。 |
 | `node audio/audio-route-check.js` | BGMのaudio要素が再生前にWeb Audioへ接続され、iOSのメディア再生経路へ漏れないことを確認する。 |
