@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b209eac97d22214b
+// source-sha256: 54d912ff43bd4a91
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 02:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 03:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3337,6 +3337,16 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true,
   legacyKey: 'title'
+},
+// タイトル画面の新しい既定曲。旧デフォルトのoriginal_titleはlegacyKeyを保ったまま残し、
+// BGMアレンジからいつでも選び直せるようにする
+{
+  id: 'monster_hero_theme',
+  name: 'Monster Hero',
+  creator: 'オリジナル',
+  src: 'audio/bgm-monster-hero-theme.mp3',
+  gain: 1,
+  loop: true
 }, {
   id: 'original_home',
   name: 'HOMEテーマ',
@@ -3533,6 +3543,7 @@ const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pa
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  title: 'monster_hero_theme',
   home: 'original_home',
   management: 'original_profile',
   market: 'original_market',
@@ -16579,7 +16590,7 @@ function MonsterHeroGame() {
   };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
-    const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? 'title' : null;
+    const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
     // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
     if (key) Audio_.preloadBGM(key);
     if (!audioOn) {
@@ -16699,7 +16710,7 @@ function MonsterHeroGame() {
         if (image.complete) image.onload();
       });
       say('タイトルBGMを準備中');
-      if (!(await Audio_.prepareBGM('title', 5000).catch(() => false))) throw new Error('title BGM unavailable');
+      if (!(await Audio_.prepareBGM(bgmArrangement.title, 5000).catch(() => false))) throw new Error('title BGM unavailable');
       bootLoadDone('audio/bgm-title-theme.mp3');
       await Audio_.prepareSE(5000).catch(() => false);
       say('冒険の準備をととのえています');
@@ -16779,7 +16790,7 @@ function MonsterHeroGame() {
       unlockAttempt = Promise.resolve(false);
     }
     try {
-      bgmAttempt = audioMuted ? Promise.resolve(false) : Promise.resolve(Audio_.playBGM('title')).catch(() => false);
+      bgmAttempt = audioMuted ? Promise.resolve(false) : Promise.resolve(Audio_.playBGM(bgmArrangement.title)).catch(() => false);
     } catch {
       bgmAttempt = Promise.resolve(false);
     }
@@ -16806,11 +16817,11 @@ function MonsterHeroGame() {
     if (bootPhase !== 'TITLE') return;
     const retryTimers = [0, 300, 1000].map(delay => setTimeout(() => {
       try {
-        Audio_.ensurePlaying('title');
+        Audio_.ensurePlaying(bgmArrangement.title);
       } catch {}
     }, delay));
     return () => retryTimers.forEach(clearTimeout);
-  }, [bootPhase]);
+  }, [bootPhase, bgmArrangement.title]);
   const prepareGameEntry = async () => {
     try {
       const image = new Image();
@@ -25817,7 +25828,7 @@ function MonsterHeroGame() {
     const categories = [{
       id: 'basic',
       label: '基本',
-      items: [['home', 'HOME BGM'], ['management', 'M/B管理 BGM'], ['clear', 'ゲームクリア BGM']]
+      items: [['home', 'HOME BGM'], ['title', 'タイトル BGM'], ['management', 'M/B管理 BGM'], ['clear', 'ゲームクリア BGM']]
     }, {
       id: 'battle',
       label: 'バトル'

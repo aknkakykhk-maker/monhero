@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 02:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 03:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2420,6 +2420,9 @@ const trainingDistanceToGoal=start=>{const q=[[start,0]],seen=new Set([start]);w
 // =====================================================================
 const BGM_TRACKS = [
   { id:'original_title', name:'タイトルテーマ', creator:'オリジナル', src:'audio/bgm-title-theme.mp3', gain:1, loop:true, legacyKey:'title' },
+  // タイトル画面の新しい既定曲。旧デフォルトのoriginal_titleはlegacyKeyを保ったまま残し、
+  // BGMアレンジからいつでも選び直せるようにする
+  { id:'monster_hero_theme', name:'Monster Hero', creator:'オリジナル', src:'audio/bgm-monster-hero-theme.mp3', gain:1, loop:true },
   { id:'original_home', name:'HOMEテーマ', creator:'オリジナル', src:'audio/bgm-title.mp3', gain:1, loop:true, legacyKey:'home' },
   { id:'original_prep', name:'強化テーマ', creator:'オリジナル', src:'audio/bgm-menu.mp3', gain:1, loop:true, legacyKey:'prep' },
   { id:'original_battle', name:'バトルテーマ', creator:'オリジナル', src:'audio/bgm-battle.mp3', gain:1, loop:true, legacyKey:'battle' },
@@ -2456,7 +2459,7 @@ const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', clear:'ichika_clear', kikiIntro:'original_event_01' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', clear:'ichika_clear', kikiIntro:'original_event_01' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -9516,7 +9519,7 @@ function MonsterHeroGame() {
   };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
-    const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? 'title' : null);
+    const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
     // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
     if (key) Audio_.preloadBGM(key);
     if (!audioOn) { Audio_.stopBGM(); return; }
@@ -9593,7 +9596,7 @@ function MonsterHeroGame() {
         if (image.complete) image.onload();
       });
       say('タイトルBGMを準備中');
-      if (!await Audio_.prepareBGM('title', 5000).catch(() => false)) throw new Error('title BGM unavailable');
+      if (!await Audio_.prepareBGM(bgmArrangement.title, 5000).catch(() => false)) throw new Error('title BGM unavailable');
       bootLoadDone('audio/bgm-title-theme.mp3');
       await Audio_.prepareSE(5000).catch(() => false);
       say('冒険の準備をととのえています');
@@ -9648,7 +9651,7 @@ function MonsterHeroGame() {
     let bgmAttempt;
     if (!audioMuted) Audio_.setEnabled(true);
     try { unlockAttempt = audioMuted ? Promise.resolve(false) : Promise.resolve(Audio_.unlock(true)).catch(() => false); } catch { unlockAttempt = Promise.resolve(false); }
-    try { bgmAttempt = audioMuted ? Promise.resolve(false) : Promise.resolve(Audio_.playBGM('title')).catch(() => false); } catch { bgmAttempt = Promise.resolve(false); }
+    try { bgmAttempt = audioMuted ? Promise.resolve(false) : Promise.resolve(Audio_.playBGM(bgmArrangement.title)).catch(() => false); } catch { bgmAttempt = Promise.resolve(false); }
     // ここでは完了を待たないが、拒否は上で処理し、同じタップ中に開始した試行を維持する。
     void bgmAttempt;
     try {
@@ -9672,10 +9675,10 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (bootPhase !== 'TITLE') return;
     const retryTimers = [0, 300, 1000].map(delay => setTimeout(() => {
-      try { Audio_.ensurePlaying('title'); } catch {}
+      try { Audio_.ensurePlaying(bgmArrangement.title); } catch {}
     }, delay));
     return () => retryTimers.forEach(clearTimeout);
-  }, [bootPhase]);
+  }, [bootPhase, bgmArrangement.title]);
 
   const prepareGameEntry = async () => {
     try {
@@ -15461,7 +15464,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
-      {id:'basic',label:'基本',items:[['home','HOME BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM']]},
+      {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM']]},
       {id:'battle',label:'バトル'},
       {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM']]},
       {id:'other',label:'その他',items:[['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
