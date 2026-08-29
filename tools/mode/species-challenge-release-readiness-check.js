@@ -1,10 +1,10 @@
-// 種族チャレンジを「一般公開直前の完成状態」として見張る。
+// 種族チャレンジが「一般公開できている状態」を見張る。
 //
 //   ① 本番のクリア報酬(経験値・ダイヤ・虹のプシュケー・ブリーダー経験値・絆経験値)を
 //      既存の共通処理へ通していて、種族チャレンジ側へ数値を複製していない
 //   ② 全国ランキングは「種族×難易度」ごとに独立し、既存rankingsテーブルの
 //      difficulty列だけで表せる(スキーマ変更なし)。既存キーと絶対に衝突しない
-//   ③ 一般公開フラグはfalseのままで、全国ランキングへ送らない
+//   ③ 一般公開フラグはtrueで、全国ランキングは公開フラグを見てから送る
 //   ④ 旧(モンスター1体単位)の超越の実を持っていても、同じ血統のマスモンへ使える
 //
 // ★報酬の個数そのものは species-challenge-clear-reward-check.js が正本なので重複して持たない。
@@ -84,12 +84,13 @@ check('Supabaseのテーブル・列を増やしていない',
   && fs.readdirSync('supabase/migrations').length === 2);
 
 // ===== ③ 公開フラグと送信 =====
-check('一般公開フラグはfalseのまま', api.SPECIES_CHALLENGE_PUBLIC_RELEASE === false);
-check('本番のBATTLE MODEへ出さない', source.includes('const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;'));
+check('一般公開フラグはtrue(公開済み)', api.SPECIES_CHALLENGE_PUBLIC_RELEASE === true);
+check('本番のBATTLE MODEへ出す', source.includes('const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;'));
 const submitFn = source.slice(source.indexOf('const submitSpeciesChallengeScoreOnce ='), source.indexOf('const handleSaveName ='));
 check('種族チャレンジ専用のスコア送信がある', submitFn.length > 0);
 check('1ランにつき1回だけ送る', submitFn.includes('if (!run || score <= 0 || scoreSubmittedRef.current) return;') && submitFn.includes('scoreSubmittedRef.current = true;'));
-check('公開までは全国ランキングへ送らない', submitFn.includes('if (!SPECIES_CHALLENGE_PUBLIC_RELEASE) return;'));
+// 公開前へ戻したときに送信も止まる仕掛けは、そのまま残しておく
+check('公開フラグを見てから全国ランキングへ送る', submitFn.includes('if (!SPECIES_CHALLENGE_PUBLIC_RELEASE) return;'));
 check('デバッグ実戦からも送らない', submitFn.includes('if (debugBattleRef.current) return;'));
 check('送信は既存のsubmitLocalScoreを使う', submitFn.includes('await submitLocalScore(diff, score, runIdRef.current)'));
 check('チャレンジの自己ベスト(mh_hs_*)を書き換えない', !submitFn.includes('mh_hs_') && !submitFn.includes('setHighScores'));

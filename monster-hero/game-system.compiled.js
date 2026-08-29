@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8e60e33c06c33506
+// source-sha256: 6c763adee9cbc38e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-29 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-29 19:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -163,9 +163,11 @@ const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
 // false のあいだは
 //   ・通常プレイのBATTLE MODEへ出さない(デバッグのバトルモード入口からだけ見える)
 //   ・クリアしても全国ランキングへ送らない
-// 公開するときはここを true にするだけで両方が切り替わる。
-// 公開の判断はユーザーが行うので、実装側から勝手に true にしない。
-const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;
+//   ・ヘルプの項目・更新履歴・助手の告知・BGMアレンジの「種族」タブも出さない
+// true にするとこれらが同時に出る。
+// 2026年8月にユーザーの指示で公開した。実装側から勝手に false へ戻さない
+// (戻すと、すでに遊んだ人の全国ランキングだけが止まる)。
+const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;
 // 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
 // クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
 // 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
@@ -3520,15 +3522,15 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   battle: 'original_battle',
   dullahan: 'original_dullahan',
   boss: 'original_boss',
-  quickBattle: 'original_battle',
-  quickDullahan: 'original_dullahan',
-  quickMoo: 'original_boss',
+  quickBattle: 'ichika_battle',
+  quickDullahan: 'melo_dullahan_clockwork',
+  quickMoo: 'ichika_boss',
   proBattle: 'original_pro_battle_01',
   proDullahan: 'melo_dullahan_steel_ghost',
   proMoo: 'original_pro_battle_02',
-  extremeBattle: 'ichika_battle',
-  extremeDullahan: 'melo_dullahan_clockwork',
-  extremeMoo: 'ichika_boss',
+  extremeBattle: 'original_battle',
+  extremeDullahan: 'original_dullahan',
+  extremeMoo: 'original_boss',
   speciesBattle: 'original_battle',
   speciesDullahan: 'original_dullahan',
   speciesMoo: 'original_boss',
@@ -3618,18 +3620,6 @@ const BGM_DULLAHAN_PREVIOUS_DEFAULTS = Object.freeze({
   proDullahan: 'original_pro_battle_01'
 });
 const migrateDullahanBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_DULLAHAN_PREVIOUS_DEFAULTS);
-// クイックと極限の既定曲を入れ替えたときの、一度きりの移行。
-// 以前の既定のままの枠だけを新しい既定へ移し、自分で選んだ曲は残す。
-const BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY = 'mh_bgm_quick_extreme_default_migrated_v1';
-const BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS = Object.freeze({
-  quickBattle: 'ichika_battle',
-  quickDullahan: 'melo_dullahan_clockwork',
-  quickMoo: 'ichika_boss',
-  extremeBattle: 'original_battle',
-  extremeDullahan: 'original_dullahan',
-  extremeMoo: 'original_boss'
-});
-const migrateQuickExtremeBgmDefaults = arrangement => migrateBgmDefaults(arrangement, BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS);
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
   const saved = value?.[scene];
   if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
@@ -8134,19 +8124,19 @@ const LOGIN_BONUS_REWARDS = [[{
   type: 'skipTicketJo',
   amount: 1
 }], [{
-  type: 'trainingTicket',
-  amount: 5
+  type: 'diamond',
+  amount: 1000
 }, {
   type: 'skipTicketJo',
   amount: 1
 }], [{
   type: 'breederXp',
-  amount: 200
+  amount: 100
 }, {
   type: 'skipTicketJo',
   amount: 1
 }], [{
-  type: 'uniqueSkillResetTicket',
+  type: 'dyeMock',
   amount: 1
 }, {
   type: 'skipTicketJo',
@@ -8155,16 +8145,10 @@ const LOGIN_BONUS_REWARDS = [[{
   type: 'diamond',
   amount: 2000
 }, {
-  type: 'rainbowPsyche',
-  amount: 10
-}, {
   type: 'skipTicketJo',
   amount: 1
 }], [{
   type: 'bondPointReset',
-  amount: 1
-}, {
-  type: 'trainingTicketLarge',
   amount: 1
 }, {
   type: 'skipTicketJo',
@@ -8175,10 +8159,7 @@ const GIFT_REWARD_LABELS = {
   breederPoint: 'ブリーダーポイント',
   breederXp: 'ブリーダー経験値',
   dyeMock: '染色もどき',
-  bondPointReset: '絆ポイントリセットの書',
-  uniqueSkillResetTicket: 'スキルポイントリセット券',
-  rainbowPsyche: '虹のプシュケー',
-  rainbowTranscendFruit: '虹の超越の実',
+  bondPointReset: '絆ポイントリセットアイテム',
   trainingTicket: 'トレーニングチケット',
   trainingTicketLarge: '重トレーニングチケット',
   skipTicketJo: 'スキップチケット・序',
@@ -8499,13 +8480,9 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
       ...(balances?.ownedItems || {})
     }
   };
-  // 虹の超越の実は既存の RAINBOW_TRANSCEND_FRUIT_ITEM_ID と同じ保存ID。
   const itemIds = {
     dyeMock: 'dye_mock',
     bondPointReset: 'bond_reset_scroll',
-    uniqueSkillResetTicket: 'unique_skill_reset_ticket',
-    rainbowPsyche: 'rainbow_psyche',
-    rainbowTranscendFruit: 'transcend_fruit_rainbow',
     trainingTicket: 'training_ticket',
     trainingTicketLarge: 'training_ticket_l',
     skipTicketJo: 'skip_ticket_jo',
@@ -8548,6 +8525,148 @@ const giftTitleDisplay = gift => {
     title: missionTitle || title
   };
 };
+const MISSION_DEFS = {
+  daily: [{
+    id: 'daily_login',
+    name: '今日もMonster Hero！',
+    condition: 'その期間中にログインする',
+    key: 'login',
+    target: 1,
+    rewards: [{
+      type: 'diamond',
+      amount: 100
+    }]
+  }, {
+    id: 'daily_battles',
+    name: 'バトルに挑戦',
+    condition: 'バトルを3回行う',
+    key: 'battles',
+    target: 3,
+    rewards: [{
+      type: 'diamond',
+      amount: 100
+    }]
+  }, {
+    id: 'daily_wins',
+    name: '勝利をつかめ',
+    condition: 'バトルに5回勝利する',
+    key: 'wins',
+    target: 5,
+    rewards: [{
+      type: 'diamond',
+      amount: 100
+    }]
+  }, {
+    id: 'daily_enhance',
+    name: 'モンスター育成',
+    condition: 'モンスターを1回強化する',
+    key: 'enhances',
+    target: 1,
+    rewards: [{
+      type: 'trainingTicket',
+      amount: 3
+    }]
+  }, {
+    id: 'daily_complete',
+    name: 'デイリーコンプリート',
+    condition: '通常デイリー4個をすべて達成する',
+    key: 'complete',
+    target: 4,
+    rewards: [{
+      type: 'diamond',
+      amount: 500
+    }, {
+      type: 'skipTicketHa',
+      amount: 1
+    }],
+    complete: true
+  }],
+  weekly: [{
+    id: 'weekly_logins',
+    name: '継続は力なり',
+    condition: '異なる5日分のログインを行う',
+    key: 'loginDays',
+    target: 5,
+    rewards: [{
+      type: 'diamond',
+      amount: 500
+    }]
+  }, {
+    id: 'weekly_battles',
+    name: 'バトル週間',
+    condition: 'バトルを20回行う',
+    key: 'battles',
+    target: 20,
+    rewards: [{
+      type: 'diamond',
+      amount: 500
+    }]
+  }, {
+    id: 'weekly_wins',
+    name: '勝利の積み重ね',
+    condition: 'バトルに50回勝利する',
+    key: 'wins',
+    target: 50,
+    rewards: [{
+      type: 'diamond',
+      amount: 500
+    }]
+  }, {
+    id: 'weekly_enhance',
+    name: '育成週間',
+    condition: 'モンスターを10回強化する',
+    key: 'enhances',
+    target: 10,
+    rewards: [{
+      type: 'trainingTicketLarge',
+      amount: 2
+    }]
+  }, {
+    id: 'weekly_daily_claims',
+    name: 'デイリー挑戦者',
+    condition: 'デイリー個別報酬を15回ギフトへ送る',
+    key: 'dailyClaims',
+    target: 15,
+    rewards: [{
+      type: 'diamond',
+      amount: 1000
+    }]
+  }, {
+    id: 'weekly_market',
+    name: 'マーケット常連',
+    condition: 'マーケットで3回取引を正常完了する',
+    key: 'marketTrades',
+    target: 3,
+    rewards: [{
+      type: 'dyeMock',
+      amount: 1
+    }]
+  }, {
+    id: 'weekly_donations',
+    name: 'チャレンジ挑戦',
+    condition: 'チャレンジモードを3回プレイする',
+    key: 'challengeRuns',
+    target: 3,
+    rewards: [{
+      type: 'breederXp',
+      amount: 200
+    }]
+  }, {
+    id: 'weekly_complete',
+    name: 'ウィークリーコンプリート',
+    condition: '通常ウィークリー7個のうち6個を達成する',
+    key: 'complete',
+    target: 6,
+    rewards: [{
+      type: 'diamond',
+      amount: 2000
+    }, {
+      type: 'skipTicketKyu',
+      amount: 1
+    }],
+    complete: true
+  }]
+};
 const missionDailyPeriod = loginBonusPeriodKey;
 const missionWeeklyPeriod = (now = Date.now()) => {
   const d = new Date(Number(now) + 5 * 60 * 60 * 1000);
@@ -8555,452 +8674,26 @@ const missionWeeklyPeriod = (now = Date.now()) => {
   d.setUTCDate(d.getUTCDate() - (day + 6) % 7);
   return d.toISOString().slice(0, 10);
 };
-const missionMonthlyPeriod = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 7);
-const MISSION_WEEK_ROTATION_EPOCH = '2026-08-24';
-const missionPeriodWeekday = (now = Date.now()) => new Date(`${missionDailyPeriod(now)}T00:00:00Z`).getUTCDay();
-const missionWeekRotationIndex = (now = Date.now()) => {
-  const periodMs = Date.parse(`${missionWeeklyPeriod(now)}T00:00:00Z`),
-    epochMs = Date.parse(`${MISSION_WEEK_ROTATION_EPOCH}T00:00:00Z`);
-  const index = Math.floor((periodMs - epochMs) / (7 * 24 * 60 * 60 * 1000));
-  return (index % 4 + 4) % 4;
-};
-const DAILY_ROTATION_MISSIONS = Object.freeze({
-  1: {
-    id: 'daily_rotation',
-    name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
-    target: 1,
-    rewards: [{
-      type: 'diamond',
-      amount: 200
-    }]
-  },
-  2: {
-    id: 'daily_rotation',
-    name: '本日のミッション',
-    condition: 'アイテムを1個使用する',
-    key: 'itemUses',
-    target: 1,
-    rewards: [{
-      type: 'trainingTicket',
-      amount: 3
-    }]
-  },
-  3: {
-    id: 'daily_rotation',
-    name: '本日のミッション',
-    condition: 'プロモードを1回クリアする',
-    key: 'proClears',
-    target: 1,
-    rewards: [{
-      type: 'trainingTicketLarge',
-      amount: 1
-    }]
-  },
-  4: {
-    id: 'daily_rotation',
-    name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
-    target: 1,
-    rewards: [{
-      type: 'rainbowPsyche',
-      amount: 5
-    }]
-  },
-  5: {
-    id: 'daily_rotation',
-    name: '本日のミッション',
-    condition: 'アイテムを1個使用する',
-    key: 'itemUses',
-    target: 1,
-    rewards: [{
-      type: 'dyeMock',
-      amount: 1
-    }]
-  },
-  6: {
-    id: 'daily_rotation',
-    name: '本日のミッション',
-    condition: 'プロモードを1回クリアする',
-    key: 'proClears',
-    target: 1,
-    rewards: [{
-      type: 'diamond',
-      amount: 300
-    }]
-  },
-  0: {
-    id: 'daily_rotation',
-    name: '本日のミッション',
-    condition: 'クイックモードを1回クリアする',
-    key: 'quickClears',
-    target: 1,
-    rewards: [{
-      type: 'trainingTicketLarge',
-      amount: 1
-    }]
-  }
-});
-const WEEKLY_ROTATION_MISSIONS = Object.freeze([{
-  id: 'weekly_rotation',
-  name: '今週のミッション',
-  condition: 'プロモードを3回クリアする',
-  key: 'proClears',
-  target: 3,
-  rewards: [{
-    type: 'uniqueSkillResetTicket',
-    amount: 1
-  }]
-}, {
-  id: 'weekly_rotation',
-  name: '今週のミッション',
-  condition: '極限チャレンジを1回クリアする（未解放ならクイックモードを10回クリア）',
-  key: 'extremeOrQuick',
-  target: 1,
-  rewards: [{
-    type: 'rainbowPsyche',
-    amount: 30
-  }]
-}, {
-  id: 'weekly_rotation',
-  name: '今週のミッション',
-  condition: 'クイックモードを10回クリアする',
-  key: 'quickClears',
-  target: 10,
-  rewards: [{
-    type: 'trainingTicketLarge',
-    amount: 2
-  }]
-}, {
-  id: 'weekly_rotation',
-  name: '今週のミッション',
-  condition: 'アイテムを10個使用する',
-  key: 'itemUses',
-  target: 10,
-  rewards: [{
-    type: 'bondPointReset',
-    amount: 1
-  }]
-}]);
-const missionDailyDefinitions = (now = Date.now()) => [{
-  id: 'daily_login',
-  name: '今日もMonster Hero！',
-  condition: 'その期間中にログインする',
-  key: 'login',
-  target: 1,
-  rewards: [{
-    type: 'diamond',
-    amount: 100
-  }]
-}, {
-  id: 'daily_battles',
-  name: 'バトルに挑戦',
-  condition: 'バトルを3回行う',
-  key: 'battles',
-  target: 3,
-  rewards: [{
-    type: 'trainingTicket',
-    amount: 3
-  }]
-},
-// 旧 daily_wins のIDは受取履歴互換のため維持。条件は通常チャレンジのクリアへ置き換える。
-{
-  id: 'daily_wins',
-  name: 'デイリーチャレンジ',
-  condition: 'チャレンジモードを1回クリアする',
-  key: 'challengeClears',
-  target: 1,
-  rewards: [{
-    type: 'rainbowPsyche',
-    amount: 5
-  }]
-}, {
-  id: 'daily_enhance',
-  name: 'モンスター育成',
-  condition: 'モンスターを1回強化する',
-  key: 'enhances',
-  target: 1,
-  rewards: [{
-    type: 'diamond',
-    amount: 200
-  }]
-}, {
-  ...DAILY_ROTATION_MISSIONS[missionPeriodWeekday(now)]
-}, {
-  id: 'daily_complete',
-  name: 'デイリーコンプリート',
-  condition: '通常デイリー5個のうち4個を達成する',
-  key: 'complete',
-  target: 4,
-  rewards: [{
-    type: 'diamond',
-    amount: 500
-  }, {
-    type: 'skipTicketHa',
-    amount: 1
-  }],
-  complete: true
-}];
-const missionWeeklyDefinitions = (now = Date.now()) => [{
-  id: 'weekly_logins',
-  name: '継続は力なり',
-  condition: '異なる5日分のログインを行う',
-  key: 'loginDays',
-  target: 5,
-  rewards: [{
-    type: 'diamond',
-    amount: 500
-  }]
-}, {
-  id: 'weekly_battles',
-  name: 'バトル週間',
-  condition: 'バトルを20回行う',
-  key: 'battles',
-  target: 20,
-  rewards: [{
-    type: 'diamond',
-    amount: 500
-  }]
-}, {
-  id: 'weekly_enhance',
-  name: '育成週間',
-  condition: 'モンスターを10回強化する',
-  key: 'enhances',
-  target: 10,
-  rewards: [{
-    type: 'trainingTicketLarge',
-    amount: 2
-  }]
-},
-// 旧 weekly_wins のIDをクイック枠へ再利用し、同期間の二重受取を防ぐ。
-{
-  id: 'weekly_wins',
-  name: 'クイック育成',
-  condition: 'クイックモードを5回クリアする',
-  key: 'quickClears',
-  target: 5,
-  rewards: [{
-    type: 'rainbowPsyche',
-    amount: 20
-  }]
-},
-// 旧IDは受取履歴互換のため維持。旧「プレイ」から通常チャレンジのクリアへ変更する。
-{
-  id: 'weekly_donations',
-  name: 'チャレンジャー',
-  condition: 'チャレンジモードを3回クリアする',
-  key: 'challengeClears',
-  target: 3,
-  rewards: [{
-    type: 'breederXp',
-    amount: 300
-  }]
-}, {
-  id: 'weekly_market',
-  name: 'マーケット常連',
-  condition: 'マーケットで3回購入する',
-  key: 'marketTrades',
-  target: 3,
-  rewards: [{
-    type: 'dyeMock',
-    amount: 2
-  }]
-},
-// 旧 weekly_daily_claims のIDをアイテム使用枠へ再利用する。
-{
-  id: 'weekly_daily_claims',
-  name: 'アイテム活用',
-  condition: 'アイテムを5個使用する',
-  key: 'itemUses',
-  target: 5,
-  rewards: [{
-    type: 'uniqueSkillResetTicket',
-    amount: 1
-  }]
-}, {
-  ...WEEKLY_ROTATION_MISSIONS[missionWeekRotationIndex(now)]
-}, {
-  id: 'weekly_complete',
-  name: 'ウィークリーコンプリート',
-  condition: '通常ウィークリー8個のうち6個を達成する',
-  key: 'complete',
-  target: 6,
-  rewards: [{
-    type: 'diamond',
-    amount: 2000
-  }, {
-    type: 'skipTicketKyu',
-    amount: 1
-  }, {
-    type: 'rainbowPsyche',
-    amount: 30
-  }],
-  complete: true
-}];
-const missionMonthlyDefinitions = () => [{
-  id: 'monthly_logins',
-  name: '月間ログイン',
-  condition: '異なる20日分のログインを行う',
-  key: 'loginDays',
-  target: 20,
-  rewards: [{
-    type: 'diamond',
-    amount: 3000
-  }]
-}, {
-  id: 'monthly_battles',
-  name: '月間バトル',
-  condition: 'バトルを100回行う',
-  key: 'battles',
-  target: 100,
-  rewards: [{
-    type: 'rainbowPsyche',
-    amount: 50
-  }]
-}, {
-  id: 'monthly_wins',
-  name: '月間勝利',
-  condition: 'バトルで200回勝利する',
-  key: 'wins',
-  target: 200,
-  rewards: [{
-    type: 'trainingTicketLarge',
-    amount: 5
-  }]
-}, {
-  id: 'monthly_daily_completes',
-  name: 'デイリーマスター',
-  condition: 'デイリーコンプリートを20回達成する',
-  key: 'dailyCompletes',
-  target: 20,
-  rewards: [{
-    type: 'diamond',
-    amount: 5000
-  }]
-}, {
-  id: 'monthly_weekly_completes',
-  name: 'ウィークリーマスター',
-  condition: 'ウィークリーコンプリートを3回達成する',
-  key: 'weeklyCompletes',
-  target: 3,
-  rewards: [{
-    type: 'rainbowPsyche',
-    amount: 100
-  }]
-}, {
-  id: 'monthly_quick_runs',
-  name: 'クイック月間',
-  condition: 'クイックモードを20回プレイする',
-  key: 'quickRuns',
-  target: 20,
-  rewards: [{
-    type: 'skipTicketKyu',
-    amount: 2
-  }]
-}, {
-  id: 'monthly_challenge_runs',
-  name: 'チャレンジ月間',
-  condition: 'チャレンジモードを10回プレイする',
-  key: 'challengeRuns',
-  target: 10,
-  rewards: [{
-    type: 'rainbowPsyche',
-    amount: 50
-  }]
-}, {
-  id: 'monthly_enhances',
-  name: '育成月間',
-  condition: 'モンスターを30回強化する',
-  key: 'enhances',
-  target: 30,
-  rewards: [{
-    type: 'uniqueSkillResetTicket',
-    amount: 2
-  }]
-}, {
-  id: 'monthly_market',
-  name: 'マーケット月間',
-  condition: 'マーケットで10回取引する',
-  key: 'marketTrades',
-  target: 10,
-  rewards: [{
-    type: 'dyeMock',
-    amount: 5
-  }]
-}, {
-  id: 'monthly_mode_runs',
-  name: 'モードプレイヤー',
-  condition: '各種モードを合計30回プレイする',
-  key: 'modeRuns',
-  target: 30,
-  rewards: [{
-    type: 'bondPointReset',
-    amount: 2
-  }]
-}, {
-  id: 'monthly_complete',
-  name: 'マンスリーコンプリート',
-  condition: '通常マンスリー10個のうち8個を達成する',
-  key: 'complete',
-  target: 8,
-  rewards: [{
-    type: 'diamond',
-    amount: 10000
-  }, {
-    type: 'rainbowPsyche',
-    amount: 200
-  }, {
-    type: 'rainbowTranscendFruit',
-    amount: 1
-  }],
-  complete: true
-}];
-// 日次・週次はJST期間に応じてローテーションするため、参照時に現在の定義を返す。
-const MISSION_DEFS = {
-  get daily() {
-    return missionDailyDefinitions();
-  },
-  get weekly() {
-    return missionWeeklyDefinitions();
-  },
-  get monthly() {
-    return missionMonthlyDefinitions();
-  }
-};
 const emptyMissionCounts = () => ({
   login: 0,
   battles: 0,
   wins: 0,
   enhances: 0,
   dailyClaims: 0,
-  dailyCompletes: 0,
-  weeklyCompletes: 0,
   marketTrades: 0,
   donations: 0,
-  challengeRuns: 0,
-  quickRuns: 0,
-  modeRuns: 0,
-  challengeClears: 0,
-  quickClears: 0,
-  proClears: 0,
-  extremeClears: 0,
-  itemUses: 0
+  challengeRuns: 0
 });
 const normalizeMissions = (value, now = Date.now()) => {
   const dailyPeriod = missionDailyPeriod(now),
     weeklyPeriod = missionWeeklyPeriod(now),
-    monthlyPeriod = missionMonthlyPeriod(now),
     old = value && typeof value === 'object' ? value : {};
   const dailySame = old.dailyPeriod === dailyPeriod,
-    weeklySame = old.weeklyPeriod === weeklyPeriod,
-    monthlySame = old.monthlyPeriod === monthlyPeriod;
-  const state = {
-    version: 2,
+    weeklySame = old.weeklyPeriod === weeklyPeriod;
+  return {
+    version: 1,
     dailyPeriod,
     weeklyPeriod,
-    monthlyPeriod,
     daily: dailySame ? {
       ...emptyMissionCounts(),
       ...(old.daily || {})
@@ -9009,76 +8702,29 @@ const normalizeMissions = (value, now = Date.now()) => {
       ...emptyMissionCounts(),
       ...(old.weekly || {})
     } : emptyMissionCounts(),
-    monthly: monthlySame ? {
-      ...emptyMissionCounts(),
-      ...(old.monthly || {})
-    } : emptyMissionCounts(),
     sentDaily: dailySame && Array.isArray(old.sentDaily) ? old.sentDaily : [],
     sentWeekly: weeklySame && Array.isArray(old.sentWeekly) ? old.sentWeekly : [],
-    sentMonthly: monthlySame && Array.isArray(old.sentMonthly) ? old.sentMonthly : [],
-    weeklyLoginDays: weeklySame && Array.isArray(old.weeklyLoginDays) ? old.weeklyLoginDays : [],
-    monthlyLoginDays: monthlySame && Array.isArray(old.monthlyLoginDays) ? old.monthlyLoginDays : [],
-    monthlyDailyCompletePeriods: monthlySame && Array.isArray(old.monthlyDailyCompletePeriods) ? old.monthlyDailyCompletePeriods : [],
-    monthlyWeeklyCompletePeriods: monthlySame && Array.isArray(old.monthlyWeeklyCompletePeriods) ? old.monthlyWeeklyCompletePeriods : []
+    weeklyLoginDays: weeklySame && Array.isArray(old.weeklyLoginDays) ? old.weeklyLoginDays : []
   };
-  // 月途中の初導入や月替わりでは、導入前・前月中に既に終わっていた現在期間の
-  // コンプリートを遡及加算しない。期間IDだけ記録し、次の新しい期間から数える。
-  if (!monthlySame) {
-    const completed = type => {
-      const defs = MISSION_DEFS[type],
-        normal = defs.filter(m => !m.complete),
-        target = defs.find(m => m.complete)?.target || Infinity;
-      const sent = type === 'daily' ? state.sentDaily : state.sentWeekly;
-      return normal.filter(m => {
-        if (sent.includes(m.id)) return true;
-        if (m.key === 'loginDays') return state.weeklyLoginDays.length >= m.target;
-        if (type === 'weekly' && m.key === 'extremeOrQuick') return state.weekly.extremeClears >= 1 || state.weekly.quickClears >= 10;
-        return (Number(state[type]?.[m.key]) || 0) >= m.target;
-      }).length >= target;
-    };
-    if (dailySame && completed('daily')) state.monthlyDailyCompletePeriods = [dailyPeriod];
-    if (weeklySame && completed('weekly')) state.monthlyWeeklyCompletePeriods = [weeklyPeriod];
-  }
-  return state;
 };
 const missionValue = (state, type, mission) => {
   if (mission.complete) {
     const normal = MISSION_DEFS[type].filter(m => !m.complete);
     return normal.filter(m => missionValue(state, type, m) >= m.target).length;
   }
-  if (mission.key === 'loginDays') return type === 'monthly' ? state.monthlyLoginDays.length : state.weeklyLoginDays.length;
-  // 旧仕様で同じIDの報酬を受取済みなら、新条件へ変わった同じ期間でも達成済みとして扱う。
-  const sent = type === 'daily' ? state.sentDaily : type === 'weekly' ? state.sentWeekly : state.sentMonthly;
-  if (Array.isArray(sent) && sent.includes(mission.id)) return mission.target;
-  if (type === 'weekly' && mission.key === 'extremeOrQuick') return (Number(state.weekly?.extremeClears) || 0) >= 1 || (Number(state.weekly?.quickClears) || 0) >= 10 ? 1 : 0;
+  if (mission.key === 'loginDays') return state.weeklyLoginDays.length;
+  if (type === 'weekly' && mission.id === 'weekly_donations' && state.sentWeekly.includes(mission.id)) return mission.target;
   return Number(state[type]?.[mission.key]) || 0;
 };
 // 「達成済みかつ未受取(ギフト未送付)」のミッション。HOMEの通知バッジ・タブのバッジ・一括受取が
 // すべてこの判定を共有するので、どこか1か所だけ数え方がずれることがない
-const missionClaimableList = (state, type) => {
-  const sent = type === 'daily' ? state.sentDaily : type === 'weekly' ? state.sentWeekly : state.sentMonthly;
-  return MISSION_DEFS[type].filter(m => missionValue(state, type, m) >= m.target && !sent.includes(m.id));
-};
-const missionClaimableCount = state => ['daily', 'weekly', 'monthly'].reduce((sum, type) => sum + missionClaimableList(state, type).length, 0);
+const missionClaimableList = (state, type) => MISSION_DEFS[type].filter(m => missionValue(state, type, m) >= m.target && !(type === 'daily' ? state.sentDaily : state.sentWeekly).includes(m.id));
+const missionClaimableCount = state => ['daily', 'weekly'].reduce((sum, type) => sum + missionClaimableList(state, type).length, 0);
 const missionNextReset = (type, now = Date.now()) => {
   const shifted = new Date(Number(now) + 5 * 60 * 60 * 1000);
   shifted.setUTCHours(0, 0, 0, 0);
-  if (type === 'monthly') shifted.setUTCMonth(shifted.getUTCMonth() + 1, 1);else shifted.setUTCDate(shifted.getUTCDate() + (type === 'daily' ? 1 : 7 - (shifted.getUTCDay() + 6) % 7));
+  shifted.setUTCDate(shifted.getUTCDate() + (type === 'daily' ? 1 : 7 - (shifted.getUTCDay() + 6) % 7));
   return shifted.getTime() - 5 * 60 * 60 * 1000;
-};
-const reconcileMonthlyMissionCompletions = (value, now = Date.now()) => {
-  const state = normalizeMissions(value, now),
-    dailyComplete = MISSION_DEFS.daily.find(m => m.complete),
-    weeklyComplete = MISSION_DEFS.weekly.find(m => m.complete);
-  if (dailyComplete && missionValue(state, 'daily', dailyComplete) >= dailyComplete.target && !state.monthlyDailyCompletePeriods.includes(state.dailyPeriod)) {
-    state.monthlyDailyCompletePeriods = [...state.monthlyDailyCompletePeriods, state.dailyPeriod];
-    state.monthly.dailyCompletes = (Number(state.monthly.dailyCompletes) || 0) + 1;
-  }
-  if (weeklyComplete && missionValue(state, 'weekly', weeklyComplete) >= weeklyComplete.target && !state.monthlyWeeklyCompletePeriods.includes(state.weeklyPeriod)) {
-    state.monthlyWeeklyCompletePeriods = [...state.monthlyWeeklyCompletePeriods, state.weeklyPeriod];
-    state.monthly.weeklyCompletes = (Number(state.monthly.weeklyCompletes) || 0) + 1;
-  }
-  return state;
 };
 const STAT_POINT_GAIN = {
   hp: 10,
@@ -10738,6 +10384,13 @@ const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
 const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1';
 // 案内の「行き先」。更新の案内と解放の案内が同じ言葉(market / battle …)を使えるよう、
 // 対応表はここ1か所だけに置く
+// 「新しく増えたよ」の更新の案内と、「あなたはもう遊べるよ」の解放の案内は、
+// 公開した日にどちらも条件を満たすことがある。同じ内容を2回続けて出さないよう、
+// 更新の案内を読み終えた時点で解放条件を満たしていれば、解放の案内は読んだことにする。
+// (公開したあとに条件を満たした人へは、これまでどおり解放の案内が出る)
+const UPDATE_NOTICE_COVERS_UNLOCK = Object.freeze({
+  update_notice_species_challenge_v1: 'unlock_species_challenge_v1'
+});
 const NOTICE_DESTINATIONS = {
   market: 'BREEDER_MARKET',
   battle: 'BATTLE_MODE_SELECT',
@@ -10838,10 +10491,8 @@ const helpDataRows = id => {
       return Object.values(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     case 'missionsDaily':
     case 'missionsWeekly':
-    case 'missionsMonthly':
       {
-        const type = id === 'missionsDaily' ? 'daily' : id === 'missionsWeekly' ? 'weekly' : 'monthly';
-        const defs = (typeof MISSION_DEFS !== 'undefined' && MISSION_DEFS || {})[type] || [];
+        const defs = (typeof MISSION_DEFS !== 'undefined' && MISSION_DEFS || {})[id === 'missionsDaily' ? 'daily' : 'weekly'] || [];
         return defs.map(m => [m.name, `${m.condition} → ${m.rewards.map(giftRewardText).join(' ／ ')}`]);
       }
     default:
@@ -10860,7 +10511,6 @@ const HELP_DATA_TITLES = {
   loginBonus: '7日間のログインボーナス',
   missionsDaily: 'デイリーミッション',
   missionsWeekly: 'ウィークリーミッション',
-  missionsMonthly: 'マンスリーミッション',
   masuCosts: '神殿でかかるダイヤ',
   assistants: '助手の種類',
   assistantBond: '仲良し度の段階と呼び方',
@@ -15792,6 +15442,11 @@ function MonsterHeroGame() {
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   // 種族チャレンジの解放判定。こちらも同じ mh_clears_* を読むだけで、専用の解放フラグは持たない
   const speciesChallengeUnlocked = useMemo(() => isSpeciesChallengeUnlocked(clearCounts), [clearCounts]);
+  // 更新の案内を閉じた時点の解放状態を読むための控え(再描画を待たずに判定するため)
+  const speciesChallengeUnlockedRef = useRef(false);
+  useEffect(() => {
+    speciesChallengeUnlockedRef.current = speciesChallengeUnlocked;
+  }, [speciesChallengeUnlocked]);
   const extremeClearCount = extremeClearCounts[EXTREME_SETTING.id] || 0;
   const nightmareClearCount = extremeClearCounts[NIGHTMARE_SETTING.id] || 0;
   const chaosClearCount = extremeClearCounts[CHAOS_SETTING.id] || 0;
@@ -16988,13 +16643,6 @@ function MonsterHeroGame() {
           await storeSet(BGM_DULLAHAN_DEFAULT_MIGRATION_KEY, true, false);
         } catch {}
       }
-      if ((await storeGet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, false, false)) !== true) {
-        const quickExtremeMigration = migrateQuickExtremeBgmDefaults(savedBgmArrangement);
-        if (quickExtremeMigration.changed) savedBgmArrangement = quickExtremeMigration.arrangement;
-        try {
-          await storeSet(BGM_QUICK_EXTREME_DEFAULT_MIGRATION_KEY, true, false);
-        } catch {}
-      }
       setBgmArrangement(savedBgmArrangement);
       setAssistantUnlockSeen(normalizeAssistantUnlockSeen(await storeGet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, [], false)));
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
@@ -17248,12 +16896,10 @@ function MonsterHeroGame() {
         }
         await storeSet(LOGIN_PT_TO_XP_KEY, true, false);
       }
-      let missionState = normalizeMissions(await storeGet('mh_missions', null, false));
+      const missionState = normalizeMissions(await storeGet('mh_missions', null, false));
       const loginDay = missionDailyPeriod();
       missionState.daily.login = 1;
       if (!missionState.weeklyLoginDays.includes(loginDay)) missionState.weeklyLoginDays.push(loginDay);
-      if (!missionState.monthlyLoginDays.includes(loginDay)) missionState.monthlyLoginDays.push(loginDay);
-      missionState = reconcileMonthlyMissionCompletions(missionState);
       await storeSet('mh_missions', missionState, false);
       setMissions(missionState);
       const savedUnlockedMonsters = await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false);
@@ -18241,14 +17887,19 @@ function MonsterHeroGame() {
   }, assistantUnlockSeen) : null;
   // 読み終わったら既読へ足して保存する。同じ案内は二度と出ない。
   // destination を持つ案内は、閉じたあとその画面へ連れていく
-  const finishAssistantUnlockNotice = (id, destination = null) => {
-    setAssistantUnlockPage(0);
+  const markAssistantUnlockNoticeSeen = id => {
     if (!id) return;
     setAssistantUnlockSeen(prev => {
+      if (prev.includes(id)) return prev;
       const next = normalizeAssistantUnlockSeen([...prev, id]);
       storeSet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, next, false);
       return next;
     });
+  };
+  const finishAssistantUnlockNotice = (id, destination = null) => {
+    setAssistantUnlockPage(0);
+    if (!id) return;
+    markAssistantUnlockNoticeSeen(id);
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
   };
@@ -18713,7 +18364,6 @@ function MonsterHeroGame() {
       storeSet('mh_owned_items', next, false);
       return next;
     });
-    void saveMissionProgress('itemUse', 1);
     Audio_.se.tap();
     return result;
   };
@@ -18740,7 +18390,6 @@ function MonsterHeroGame() {
       storeSet('mh_owned_items', next, false);
       return next;
     });
-    void saveMissionProgress('itemUse', 1);
     Audio_.se.tap();
   };
   // 超越ポイントリセットの書: 超越強化へ使った超越Pをすべて未使用の超越Pへ戻す。
@@ -19242,7 +18891,6 @@ function MonsterHeroGame() {
       storeSet('mh_owned_items', next, false);
       return next;
     });
-    void saveMissionProgress('itemUse', 1);
     addAssistantBond('dye');
     Audio_.se.tap();
   };
@@ -19645,7 +19293,6 @@ function MonsterHeroGame() {
       setOwnedItems(result.nextOwnedItems);
       setMasuMonDetail(prev => prev && String(prev.id) === String(currentMasu.id) ? result.nextMasu : prev);
       setTranscendFruitConfirmAmount(0);
-      await saveMissionProgress('itemUse', Math.max(1, Math.floor(Number(amount) || 1)));
       return result;
     } catch {
       setTranscendFruitError('超越の実を保存できませんでした。所持数を確認して、もう一度お試しください。');
@@ -20403,7 +20050,6 @@ function MonsterHeroGame() {
         [extremeDifficulty]: Math.max(Number(prev[extremeDifficulty]) || 0, nextExtreme)
       }));
       await storeSet(extremeClearCountKey(extremeDifficulty), nextExtreme, false);
-      await saveMissionProgress('extremeClear');
       addAssistantBond('extremeClear');
       return;
     }
@@ -20414,7 +20060,6 @@ function MonsterHeroGame() {
         [difficulty]: Math.max(prev[difficulty] || 0, nextQuick)
       }));
       await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
-      await saveMissionProgress('quickClear');
       addAssistantBond('quickClear');
       return;
     }
@@ -20426,7 +20071,6 @@ function MonsterHeroGame() {
         [difficulty]: Math.max(prev[difficulty] || 0, nextPro)
       }));
       await storeSet(clearCountKey(BATTLE_MODE_PRO, difficulty), nextPro, false);
-      await saveMissionProgress('proClear');
       addAssistantBond('proClear');
       return;
     }
@@ -20446,7 +20090,6 @@ function MonsterHeroGame() {
       firstClear: true
     }));
     await storeSet(`mh_clears_${difficulty}`, nextCount, false);
-    await saveMissionProgress('challengeClear');
     addAssistantBond('clear');
   };
 
@@ -21179,6 +20822,9 @@ function MonsterHeroGame() {
     await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
     setUpdateGuidePage(0);
     setUpdateGuideQueue(queue => queue.slice(1));
+    // 同じ機能の解放の案内が続けて出ないようにする(いま解放済みの人だけ)
+    const coveredUnlockId = UPDATE_NOTICE_COVERS_UNLOCK[current.id];
+    if (coveredUnlockId && speciesChallengeUnlockedRef.current) markAssistantUnlockNoticeSeen(coveredUnlockId);
     const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
   };
@@ -21403,88 +21049,23 @@ function MonsterHeroGame() {
   };
   const saveMissionProgress = async (event, amount = 1) => {
     // 記録を残さない戦い(バトルのれんしゅう・デバッグ戦)ではミッションも進めない。
+    // WAVEクリア時の battle/win がここを通っていたため、練習でも進んでしまっていた
     if (debugBattleRef.current) return;
-    const n = Math.max(0, Math.floor(Number(amount) || 0));
-    if (n <= 0) return;
-    const rule = {
-      battle: {
-        key: 'battles',
-        daily: true,
-        weekly: true,
-        monthly: true
-      },
-      win: {
-        key: 'wins',
-        daily: false,
-        weekly: false,
-        monthly: true
-      },
-      enhance: {
-        key: 'enhances',
-        daily: true,
-        weekly: true,
-        monthly: true
-      },
-      market: {
-        key: 'marketTrades',
-        daily: false,
-        weekly: true,
-        monthly: true
-      },
-      challengeRun: {
-        key: 'challengeRuns',
-        daily: false,
-        weekly: false,
-        monthly: true
-      },
-      quickRun: {
-        key: 'quickRuns',
-        daily: false,
-        weekly: false,
-        monthly: true
-      },
-      modeRun: {
-        key: 'modeRuns',
-        daily: false,
-        weekly: false,
-        monthly: true
-      },
-      challengeClear: {
-        key: 'challengeClears',
-        daily: true,
-        weekly: true
-      },
-      quickClear: {
-        key: 'quickClears',
-        daily: true,
-        weekly: true
-      },
-      proClear: {
-        key: 'proClears',
-        daily: true,
-        weekly: true
-      },
-      extremeClear: {
-        key: 'extremeClears',
-        daily: false,
-        weekly: true
-      },
-      itemUse: {
-        key: 'itemUses',
-        daily: true,
-        weekly: true
-      }
-    }[event];
-    if (!rule) return;
     const next = normalizeMissions(missionsRef.current);
-    if (rule.daily) next.daily[rule.key] = (Number(next.daily[rule.key]) || 0) + n;
-    if (rule.weekly) next.weekly[rule.key] = (Number(next.weekly[rule.key]) || 0) + n;
-    if (rule.monthly) next.monthly[rule.key] = (Number(next.monthly[rule.key]) || 0) + n;
-    if (['challengeRun', 'quickRun', 'modeRun'].includes(event) && rule.key !== 'modeRuns') next.monthly.modeRuns = (Number(next.monthly.modeRuns) || 0) + n;
-    const reconciled = reconcileMonthlyMissionCompletions(next);
-    missionsRef.current = reconciled;
-    setMissions(reconciled);
-    await storeSet('mh_missions', reconciled, false);
+    const key = {
+      battle: 'battles',
+      win: 'wins',
+      enhance: 'enhances',
+      market: 'marketTrades',
+      donation: 'donations',
+      challengeRun: 'challengeRuns'
+    }[event];
+    if (!key) return;
+    next.daily[key] = (Number(next.daily[key]) || 0) + amount;
+    next.weekly[key] = (Number(next.weekly[key]) || 0) + amount;
+    missionsRef.current = next;
+    setMissions(next);
+    await storeSet('mh_missions', next, false);
   };
   // ミッション報酬のギフト。IDは「種別+期間+ミッションID」で固定なので、
   // 何度実行しても同じミッションのギフトが二重に増えることはない
@@ -21510,11 +21091,11 @@ function MonsterHeroGame() {
     missionClaimingRef.current = true;
     try {
       const state = normalizeMissions(missionsRef.current),
-        sentKey = type === 'daily' ? 'sentDaily' : type === 'weekly' ? 'sentWeekly' : 'sentMonthly';
+        sentKey = type === 'daily' ? 'sentDaily' : 'sentWeekly';
       // 進捗と送付済みは保存されている値で判定し直す(画面の表示が古くても二重送付しない)
       const targets = (missionList || []).filter(m => m && !state[sentKey].includes(m.id) && missionValue(state, type, m) >= m.target);
       if (!targets.length) return 0;
-      const period = type === 'daily' ? state.dailyPeriod : type === 'weekly' ? state.weeklyPeriod : state.monthlyPeriod;
+      const period = type === 'daily' ? state.dailyPeriod : state.weeklyPeriod;
       let nextGifts = Array.isArray(gifts) ? [...gifts] : [];
       const sent = [...state[sentKey]];
       targets.forEach(mission => {
@@ -21524,13 +21105,12 @@ function MonsterHeroGame() {
         if (type === 'daily' && !mission.complete) state.weekly.dailyClaims = (Number(state.weekly.dailyClaims) || 0) + 1;
       });
       state[sentKey] = sent;
-      const reconciled = reconcileMonthlyMissionCompletions(state);
       // 固定IDと同期ロックに加え、ギフトを先に保存する。途中終了時も再操作では同じIDを再利用する。
       await storeSet('mh_gifts', nextGifts, false);
-      await storeSet('mh_missions', reconciled, false);
-      missionsRef.current = reconciled;
+      await storeSet('mh_missions', state, false);
+      missionsRef.current = state;
       setGifts(nextGifts);
-      setMissions(reconciled);
+      setMissions(state);
       targets.forEach(() => addAssistantBond('mission'));
       return targets.length;
     } finally {
@@ -23780,6 +23360,12 @@ function MonsterHeroGame() {
     const selectedInitialDistance = w === 1 && !forcedEnemyKey ? initialBattleDistanceRef.current : null;
     const dist = spawnEnemy(w, forcedEnemyKey, selectedInitialDistance);
     if (dist === null) return;
+    // 通常プレイのチャレンジモードでWAVE 1の戦闘が成立した時点だけ、1周につき1回数える。
+    // 難易度画面・スキップはinitBattleへ来ず、練習/デバッグはdebugBattleRef、クイックはrunModeで除外する。
+    if (w === 1 && !forcedEnemyKey && !debugBattleRef.current && !isQuickMode(runMode) && challengeMissionRunIdRef.current !== runIdRef.current) {
+      challengeMissionRunIdRef.current = runIdRef.current;
+      void saveMissionProgress('challengeRun');
+    }
     const nAtkL = computeAtkTier(currentSlots, dist, aptPctOverride);
     const nGrdL = computeGuardLevel(defVal !== undefined ? defVal : def);
     const nGB = nGrdL;
@@ -24337,11 +23923,6 @@ function MonsterHeroGame() {
         storeSet(`mh_attempts_${difficulty}`, next[difficulty], false);
         return next;
       });
-    }
-    // 月次の「モードをプレイ」はWAVE1へ入る直前に1周回1回だけ数える。
-    // デバッグ・練習・保存しない種族チャレンジはdebugBattleRefで除外される。
-    if (!enemy && !debugBattleRef.current) {
-      if (isQuickMode(runMode)) void saveMissionProgress('quickRun');else if (runMode === BATTLE_MODE_CHALLENGE && !extremeRunRef.current && !speciesChallengeBattleRunRef.current) void saveMissionProgress('challengeRun');else void saveMissionProgress('modeRun');
     }
     setTimeout(() => {
       setOwnedTeachings(nextTeachings);
@@ -26832,7 +26413,7 @@ function MonsterHeroGame() {
     })(), gameState === 'MISSIONS' && (() => {
       const state = normalizeMissions(missions),
         defs = MISSION_DEFS[missionTab],
-        sent = missionTab === 'daily' ? state.sentDaily : missionTab === 'weekly' ? state.sentWeekly : state.sentMonthly;
+        sent = missionTab === 'daily' ? state.sentDaily : state.sentWeekly;
       const resetAt = missionNextReset(missionTab);
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 p-3",
@@ -26855,7 +26436,7 @@ function MonsterHeroGame() {
         className: "w-11"
       })), (() => {
         const claimable = missionClaimableCount(state) > 0;
-        const allDone = ['daily', 'weekly', 'monthly'].every(t => MISSION_DEFS[t].every(m => missionValue(state, t, m) >= m.target));
+        const allDone = ['daily', 'weekly'].every(t => MISSION_DEFS[t].every(m => missionValue(state, t, m) >= m.target));
         return /*#__PURE__*/React.createElement("div", {
           className: "shrink-0 w-full max-w-md mx-auto mb-2"
         }, /*#__PURE__*/React.createElement(AssistantBubble, {
@@ -26865,17 +26446,14 @@ function MonsterHeroGame() {
           compact: true
         }));
       })(), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1.5 mb-2 shrink-0"
+        className: "grid grid-cols-2 gap-2 mb-2 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setMissionTab('daily'),
-        className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'daily' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400'}`
+        className: `relative min-h-[44px] rounded-xl font-black text-sm ${missionTab === 'daily' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400'}`
       }, "\u30C7\u30A4\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'daily').length)), /*#__PURE__*/React.createElement("button", {
         onClick: () => setMissionTab('weekly'),
-        className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'weekly' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "\u30A6\u30A3\u30FC\u30AF\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'weekly').length)), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setMissionTab('monthly'),
-        className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'monthly' ? 'bg-fuchsia-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "\u30DE\u30F3\u30B9\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'monthly').length))), (() => {
+        className: `relative min-h-[44px] rounded-xl font-black text-sm ${missionTab === 'weekly' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'}`
+      }, "\u30A6\u30A3\u30FC\u30AF\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'weekly').length))), (() => {
         const bulk = missionClaimableList(state, missionTab);
         return /*#__PURE__*/React.createElement("button", {
           disabled: !bulk.length,
@@ -34463,16 +34041,13 @@ function MonsterHeroGame() {
       }, usedResult ? '閉じる' : 'やめる'), !usedResult && /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           const result = useBondXpTickets(item.id, masu.id, count);
-          if (result) {
-            void saveMissionProgress('itemUse', count);
-            setXpTicketUse({
-              itemId: item.id,
-              masuId: masu.id,
-              count,
-              usedCount: count,
-              result
-            });
-          }
+          if (result) setXpTicketUse({
+            itemId: item.id,
+            masuId: masu.id,
+            count,
+            usedCount: count,
+            result
+          });
         },
         disabled: have <= 0,
         className: "flex-[2] bg-teal-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 disabled:opacity-30"
@@ -35039,10 +34614,7 @@ function MonsterHeroGame() {
       };
       const runReset = async () => {
         const done = await useTranscendResetScroll(masu.id);
-        if (done) {
-          await saveMissionProgress('itemUse', 1);
-          setTranscendResetOpen(false);
-        }
+        if (done) setTranscendResetOpen(false);
       };
       const runExchange = async () => {
         const applied = await commitTranscendExchange(masu, exchangeWant);

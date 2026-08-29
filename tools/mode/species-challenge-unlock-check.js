@@ -69,7 +69,7 @@ check('解放前はランキングの導線も押せない',
   source.includes('data-species-record-link disabled={speciesLocked||!!battleTutorial}'));
 
 // ===== ② 公開フラグ1つで、ヘルプ・更新履歴・告知がそろって出る =====
-check('公開フラグは既定でfalse', /const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;/.test(source));
+check('公開フラグはtrue(公開済み)', /const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;/.test(source));
 check('出す・出さないの判断を1か所へまとめてある',
   source.includes('const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE };')
     && source.includes('const releasedForPlayers = (item) =>'));

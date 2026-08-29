@@ -51,9 +51,11 @@ check('スキップできる難易度は3つだけ', Object.keys(byDiff).length 
 // --- 配布(ログインボーナス・ミッション) ---
 const rewardCtx = {};
 vm.createContext(rewardCtx);
-vm.runInContext(
-  grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const STAT_POINT_GAIN')
-    + '\nglobalThis.__r={LOGIN_BONUS_REWARDS,GIFT_REWARD_LABELS,MISSION_DEFS};', rewardCtx);
+vm.runInContext([
+  grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
+  grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
+  'globalThis.__r={LOGIN_BONUS_REWARDS,GIFT_REWARD_LABELS,MISSION_DEFS};',
+].join('\n'), rewardCtx);
 const r = rewardCtx.__r;
 const amountOf = (rewards, type) => (rewards || []).filter(x => x.type === type).reduce((a, x) => a + x.amount, 0);
 

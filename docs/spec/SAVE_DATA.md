@@ -25,7 +25,6 @@
 | `mh_breeder_points_granted` | number or null | 累計付与済み相当数 |
 | `mh_market_icons` | string[] / `[]` | 購入アイコンID |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
-| `mh_missions` | object / 期間ごとの既定値 | デイリー・ウィークリー・マンスリーの進捗、期間ID、ギフト送付済みID。旧データの欠損項目は読み込み時に補う |
 | `mh_unlocked_monsters` | string[] / 初期8種 | 解放済み種ID |
 | `mh_monster_roster` | string[] / 解放済み一覧 | 候補編成。種IDまたは `masu:<id>` |
 | `mh_auto_settings_v1` | object / `{strategy:'random', allies:[{rosterEntry:null,slot:null} × 3]}` | AUTO用の事前設定。方針は `random` / `offense` / `defense` / `guts`、供モンは種IDまたは `masu:<id>`、距離は `null`（自動）または0～3 |
@@ -84,16 +83,6 @@
 さらに起動時、各マスモンの現在絆Lvから得られるはずの総点と、使用済み＋未使用点を比較し、不足分を補う。過剰分を減らす処理はない。
 
 `mh_onboarded` が存在しない場合、名前が既定値でない、XPが正、またはいずれかのハイスコアが正なら既存利用者としてtrueにする。
-
-### ミッション
-
-`mh_missions` は既存のデイリー／ウィークリーに、マンスリーの項目を追加した単一オブジェクトである。既存キーの改名・削除は行わない。`normalizeMissions` が欠損を補い、日次・週次・月次の期間が変わった部分だけを初期化する。
-
-- 日次: `dailyPeriod`, `daily`, `sentDaily`（JST 04:00更新）
-- 週次: `weeklyPeriod`, `weekly`, `sentWeekly`, `weeklyLoginDays`（月曜JST 04:00更新）
-- 月次: `monthlyPeriod`, `monthly`, `sentMonthly`, `monthlyLoginDays`, `monthlyDailyCompletePeriods`, `monthlyWeeklyCompletePeriods`（毎月1日JST 04:00更新）
-
-月次のコンプリート履歴配列は、同じ日次・週次期間を二重加算しないための期間IDだけを保持する。月途中の初導入時は既存の進捗を壊さず月次を空で補い、導入前に完了していた現在の日次・週次は遡及加算しない。個別報酬とコンプリート報酬の二重送付は、`sentMonthly` と `gift_mission_monthly_<期間>_<missionId>` の固定ギフトIDで防ぐ。
 
 ## 4. マスモン形式
 

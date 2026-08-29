@@ -36,8 +36,7 @@ vm.createContext(gameCtx);
 vm.runInContext([
   breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/\b[A-Z_]+_(?:ICON|IMG)\b|\bDISC_STONE_BASE\b/g, "''"),
   grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
-  "const loginBonusPeriodKey=(now=Date.now())=>new Date(Number(now)+5*60*60*1000).toISOString().slice(0,10);",
-  grab(source, 'const missionDailyPeriod =', 'const missionClaimableList ='),
+  grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
   grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
@@ -74,7 +73,7 @@ check('対象外にした画面は開発用と別担当のものだけ',
 // --- ② 一覧は実データから作る ---
 const blocks = categories.flatMap(c => c.topics.flatMap(t => t.blocks.map(b => ({ ...b, at: `${c.id}/${t.id}` }))));
 const dataIds = blocks.filter(b => b.t === 'data').map(b => b.id);
-for (const id of ['difficulties', 'teachings', 'skipTickets', 'items', 'loginBonus', 'missionsDaily', 'missionsWeekly', 'missionsMonthly']) {
+for (const id of ['difficulties', 'teachings', 'skipTickets', 'items', 'loginBonus', 'missionsDaily', 'missionsWeekly']) {
   check(`${g.HELP_DATA_TITLES[id]}は実データから表を作っている`, dataIds.includes(id), dataIds.includes(id) ? '' : `data/help.js に { t:'data', id:'${id}' } がありません`);
 }
 check('使っているデータ表のidがすべて実在する', dataIds.every(id => id in g.HELP_DATA_TITLES), dataIds.filter(id => !(id in g.HELP_DATA_TITLES)).join(', '));
@@ -89,7 +88,6 @@ check('スキップ以外のアイテムも全種類出る', rowCount('items') =
 check('ログインボーナスは7日ぶん出る', rowCount('loginBonus') === g.LOGIN_BONUS_REWARDS.length, `${rowCount('loginBonus')}件`);
 check('デイリーミッションは全件出る', rowCount('missionsDaily') === g.MISSION_DEFS.daily.length, `${rowCount('missionsDaily')}件`);
 check('ウィークリーミッションは全件出る', rowCount('missionsWeekly') === g.MISSION_DEFS.weekly.length, `${rowCount('missionsWeekly')}件`);
-check('マンスリーミッションは全件出る', rowCount('missionsMonthly') === g.MISSION_DEFS.monthly.length, `${rowCount('missionsMonthly')}件`);
 
 // 中身も実データの値をそのまま出しているか(Masterなど、以前は載っていなかった難易度で確かめる)
 const master = g.helpDataRows('difficulties').find(r => r[0] === 'Master');

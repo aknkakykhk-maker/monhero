@@ -24,9 +24,8 @@ state.daily = { ...state.daily, login: 1, battles: 3 };
 const dailyClaimable = m.missionClaimableList(state, 'daily');
 check('デイリーの達成済み・未受取を数えられる', dailyClaimable.length > 0, `${dailyClaimable.length}件`);
 check('ウィークリー未達成は0件', m.missionClaimableList(state, 'weekly').length === 0);
-check('マンスリー未達成は0件', m.missionClaimableList(state, 'monthly').length === 0);
 check('HOMEの合計はタブ別件数の合計と一致する',
-  m.missionClaimableCount(state) === m.missionClaimableList(state, 'daily').length + m.missionClaimableList(state, 'weekly').length + m.missionClaimableList(state, 'monthly').length);
+  m.missionClaimableCount(state) === m.missionClaimableList(state, 'daily').length + m.missionClaimableList(state, 'weekly').length);
 state.sentDaily = dailyClaimable.map(x => x.id);
 check('受取(ギフト送付)済みは数に入らない', m.missionClaimableList(state, 'daily').length === 0);
 
@@ -50,8 +49,8 @@ check('報酬が無効なギフトは含めない', m.giftIsClaimable(gifts[3]) 
 const has = (needle) => source.includes(needle);
 check('タブ用の赤い丸バッジがある', has('const tabCountBadge = (count)') && has("backgroundColor: '#dc2626'"));
 check('0件ならバッジを出さない', has('count > 0 ?') && has(') : null)'));
-check('3種のミッションタブにバッジを出す',
-  has("tabCountBadge(missionClaimableList(state,'daily').length)") && has("tabCountBadge(missionClaimableList(state,'weekly').length)") && has("tabCountBadge(missionClaimableList(state,'monthly').length)"));
+check('デイリー・ウィークリーのタブにバッジを出す',
+  has("tabCountBadge(missionClaimableList(state,'daily').length)") && has("tabCountBadge(missionClaimableList(state,'weekly').length)"));
 check('ギフトの未受取タブにバッジを出す', has('tabCountBadge(claimable.length)'));
 check('HOMEのギフト通知も同じ判定を使う', has('{giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}'));
 check('ギフト画面の受取可能判定も共通化されている', has('const claimable=unclaimed.filter(g=>giftIsClaimable(g,now));'));
@@ -67,7 +66,7 @@ check('連打を同期ロックで止める', has('if(missionClaimingRef.current
 check('ギフトIDは種別+期間+ミッションIDで固定', has('id:`gift_mission_${type}_${period}_${mission.id}`'));
 check('同じIDのギフトは二重に作らない', has('if(!nextGifts.some(g=>g?.id===gift.id)) nextGifts=[gift,...nextGifts];'));
 check('受取期限30日は維持', has('expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString()'));
-check('報酬は直接付与せずギフトへ送る', has("await storeSet('mh_gifts',nextGifts,false);") && has("await storeSet('mh_missions',reconciled,false);"));
+check('報酬は直接付与せずギフトへ送る', has("await storeSet('mh_gifts',nextGifts,false);") && has("await storeSet('mh_missions',state,false);"));
 check('保存済みの進捗で判定し直す', has('const targets=(missionList||[]).filter(m=>m&&!state[sentKey].includes(m.id)&&missionValue(state,type,m)>=m.target);'));
 
 // 編成の戻り先

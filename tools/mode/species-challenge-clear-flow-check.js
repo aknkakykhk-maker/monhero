@@ -86,8 +86,8 @@ check('DEBUGの表示はデバッグから入ったときだけ',
   (source.match(/\{selection\.fromDebug&&\(selection\.saveProgress/g) || []).length === 2
     && source.includes('data-species-save-badge')
     && !/\}<\/div>\{selection\.saveProgress\s*\n\s*\? <p/.test(source));
-check('一般公開フラグは既定でfalse(通常プレイのBATTLE MODEへ出さない)',
-  /const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;/.test(source));
+check('一般公開フラグはtrue(通常プレイのBATTLE MODEへ出す)',
+  /const SPECIES_CHALLENGE_PUBLIC_RELEASE = true;/.test(source));
 
 // --- ランキング画面 ---
 // 他モードと同じ「◯◯ランキング」の呼び方・同じ入れ物にそろえ、
@@ -113,9 +113,9 @@ check('種族を選ぶとその種族×選んだ難易度の記録を出す',
 check('難易度はどのタブでもタブで切り替える',
   rankBody.includes('data-species-difficulty-tabs')
   && !rankBody.includes("{(speciesFilter === 'all' || nationalMode) && <div"));
-// 公開後は同じ画面のまま「種族×難易度の全国ランキング」へ切り替わる。
-// いまは SPECIES_CHALLENGE_PUBLIC_RELEASE=false なので、この経路は動かない
-check('公開フラグが立つまで全国ランキングへ切り替えない',
+// 種族を選ぶと「種族×難易度の全国ランキング」へ切り替わる。
+// 「すべて」タブのあいだは通信せず、自分の記録だけを出す
+check('全国ランキングへの切り替えは公開フラグを見てから',
   rankBody.includes('const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== \'all\';'));
 check('公開後は既存のスコアランキングの取得・表示をそのまま使う',
   rankBody.includes('rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, speciesFilter)')
@@ -134,9 +134,9 @@ const openRecords = source.slice(source.indexOf('const openSpeciesChallengeRecor
 check('そこから開くと、その種族と難易度が最初から選ばれている',
   openRecords.includes("speciesChallengeLineages().some(lineage=>lineage.id===speciesId)?speciesId:'all'")
   && openRecords.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)?difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0]'));
-check('公開前はランキング画面を開いても通信しない',
+check('「すべて」タブのときは通信しない(自分の記録だけ)',
   openRecords.includes("if(SPECIES_CHALLENGE_PUBLIC_RELEASE&&speciesTab!=='all'){"));
-check('公開前は自分の記録だけと明示する',
+check('公開前だったときの案内も残してある',
   rankBody.includes('!SPECIES_CHALLENGE_PUBLIC_RELEASE &&') && rankBody.includes('全国ランキングはモードの公開後に始まります'));
 check('ランキング画面は新しい保存キーを作らない', !/mh_[a-z]/.test(rankBody));
 

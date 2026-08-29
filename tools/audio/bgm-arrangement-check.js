@@ -24,10 +24,10 @@ for (const file of files) {
     (source.match(/\{\s*id:\s*'[^']+',\s*name:/g) || []).length >= 20 && /BGM_TRACKS\.map\(track\s*=>/.test(source));
   check(`${file}: 5モード×通常・デュラハン・ムーの15設定を定義`,
     Object.values(routes).flat().every(key => Object.hasOwn(defaults, key)));
-  // チャレンジ・クイック・種族はオリジナル3曲。極限は旧クイックの3曲
-  check(`${file}: チャレンジ・クイック・種族の既定曲がオリジナル3曲`,
+  // チャレンジと極限はオリジナル3曲のまま(極限に専用曲は用意していないので、チャレンジと同じ)
+  check(`${file}: チャレンジ・極限・種族の既定曲がオリジナル3曲のまま`,
     defaults.battle === 'original_battle' && defaults.dullahan === 'original_dullahan' && defaults.boss === 'original_boss' &&
-    defaults.quickBattle === 'original_battle' && defaults.quickDullahan === 'original_dullahan' && defaults.quickMoo === 'original_boss' &&
+    defaults.extremeBattle === 'original_battle' && defaults.extremeDullahan === 'original_dullahan' && defaults.extremeMoo === 'original_boss' &&
     defaults.speciesBattle === 'original_battle' && defaults.speciesDullahan === 'original_dullahan' && defaults.speciesMoo === 'original_boss');
   // 設定欄を足しただけなので、既存の保存へは何もしない(移行は要らない)。
   // まだ自分で選んでいない人には、そのときのチャレンジの設定がそのまま引き継がれる
@@ -35,11 +35,11 @@ for (const file of files) {
     /speciesBattle:'battle',speciesDullahan:'dullahan',speciesMoo:'boss'/.test(compact));
   check(`${file}: 種族チャレンジのランは種族の枠を使う(極限難易度でも)`,
     /isSpeciesChallengeMode\(runMode\)\?\{normal:'speciesBattle',dullahan:'speciesDullahan',moo:'speciesMoo'\}/.test(compact));
-  // 極限は旧クイックの3曲
-  check(`${file}: 極限の既定曲が いちか通常／時計仕掛け／いちかボス`,
-    defaults.extremeBattle === 'ichika_battle' &&
-    defaults.extremeDullahan === 'melo_dullahan_clockwork' &&
-    defaults.extremeMoo === 'ichika_boss');
+  // クイックはいちか2曲＋デュラハン専用曲。ムー戦はオリジナルではなく「ボステーマ by いちか」
+  check(`${file}: クイックの既定曲が いちか通常／時計仕掛け／いちかボス`,
+    defaults.quickBattle === 'ichika_battle' &&
+    defaults.quickDullahan === 'melo_dullahan_clockwork' &&
+    defaults.quickMoo === 'ichika_boss');
   // プロは専用曲。デュラハン戦は通常戦との暫定共用をやめて専用曲にした
   check(`${file}: プロの既定曲がプロ戦闘BGM1／鋼鉄の亡霊／プロ戦闘BGM2`,
     defaults.proBattle === 'original_pro_battle_01' &&
@@ -63,11 +63,6 @@ for (const file of files) {
     /BGM_PRO_DEFAULT_MIGRATION_KEY='mh_bgm_pro_default_migrated_v1'/.test(compact));
   check(`${file}: デュラハン移行の対象がクイック2枠とプロ1枠`,
     /BGM_DULLAHAN_PREVIOUS_DEFAULTS=Object\.freeze\(\{quickDullahan:'original_dullahan',quickMoo:'original_boss',proDullahan:'original_pro_battle_01'\}\)/.test(compact));
-  check(`${file}: クイック・極限の既定入れ替えは一度きりで、自分で選んだ曲を上書きしない`,
-    /mh_bgm_quick_extreme_default_migrated_v1/.test(source) &&
-    /BGM_QUICK_EXTREME_PREVIOUS_DEFAULTS/.test(source) &&
-    /migrateQuickExtremeBgmDefaults/.test(source) &&
-    /if \(next\[scene\] !== previousDefault\) return;/.test(source));
   // 追加した4曲。既定に使う2曲と、既定では使わないが選べる2曲
   check(`${file}: デュラハン戦の4曲が登録されている`,
     ['melo_dullahan_clockwork', 'melo_dullahan_clockwork_alt', 'melo_dullahan_steel_ghost', 'melo_dullahan_steel_ghost_alt']
