@@ -61,6 +61,7 @@ jobs:
       - name: Remove one-shot runner
         run: |
           rm -f tools/chatgpt-auto-bgm-patch.js
+          rm -f tools/chatgpt-auto-bgm-trigger.tmp
           rm -f .github/workflows/chatgpt-auto-bgm-once.yml
       - name: Commit implementation
         run: |
