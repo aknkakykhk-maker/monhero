@@ -94,7 +94,7 @@ jobs:
         run: |
           git config user.name "ChatGPT"
           git config user.email "noreply@openai.com"
-          git rm .chatgpt/patch_mission_rewards.py .github/workflows/chatgpt-mission-reward-refresh.yml
+          git rm -f .chatgpt/patch_mission_rewards.py .github/workflows/chatgpt-mission-reward-refresh.yml
           git add -A
           git commit -m "feat: refresh login daily and weekly rewards"
           git push origin HEAD:chatgpt/mission-reward-refresh-20260829
