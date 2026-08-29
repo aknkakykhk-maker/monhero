@@ -11,7 +11,25 @@ assert(start.includes('resolveRosterEntryToMon(run.heroId)'), 'Base/Masu勇者�
 assert(start.includes('speciesChallengeBattleRunRef.current=run'), 'createSpeciesChallengeRunStateのrunを実戦状態に保持する');
 assert(start.includes("setDifficulty(extremeSetting?'Normal':run.difficultyId)"), '通常難易度IDを既存バトル難易度へ渡す');
 assert(start.includes('extremeRuleSetting(run.difficultyId)') && start.includes('setExtremeDifficulty(extremeSetting.id)'), '極限5難易度を既存設定へ渡す');
-assert(start.includes("setGameState('PICK_TEACHING')"), '既存のアシストカード選択からWAVE1へ合流する');
+// 勇者モンの配置距離は他モードとまったく同じ PICK_SLOT で選ぶ。
+// 以前はここで initialBattleDistanceRef.current=0 と slots[0] を決め打ちしており、
+// 種族チャレンジだけ必ず零距離スタートになっていた(他モードは距離を選べる)。
+// 距離を決め打ちに戻すと以下の2つが同時に落ちる
+assert(start.includes("setGameState('PICK_SLOT')") && start.includes('setCurrentPickingMon(hero)'),
+  '勇者モンの配置距離は他モードと同じPICK_SLOTで選ばせる');
+// 「もう書いていないこと」を見る検査は、説明のコメントに書いた同じ文字列へ反応してしまう。
+// 実際に動くコードだけを見たいので、行コメントを落としてから判定する
+const stripLineComments = (text) => text.split('\n').map(line => line.replace(/\/\/.*$/, '')).join('\n');
+const startCode = stripLineComments(start);
+assert(!/initialBattleDistanceRef\.current\s*=\s*0/.test(startCode) && !/const initialSlots=\[\{\.\.\.hero\}/.test(startCode),
+  '出撃時に距離0・スロット0を決め打ちしない');
+// PICK_SLOT で置いたあとは setupMon が距離を確定してアシストカード選択へ合流する
+const setupHero = source.slice(source.indexOf('const setupMon ='), source.indexOf('// 「この編成で開始」'));
+assert(setupHero.includes('initialBattleDistanceRef.current=slotIdx') && setupHero.includes("setGameState('PICK_TEACHING')"),
+  '選んだ距離をそのまま初期距離にして、既存のアシストカード選択からWAVE1へ合流する');
+// 種族チャレンジは通常の勇者選択(PICK_HERO)を持たないので、PICK_SLOTの選び直しは選択画面へ戻す
+assert(source.includes("if(!mainHero&&speciesChallengeBattleRunRef.current){") && source.includes("setSpeciesChallengeSelection(current=>({...current,step:'confirm'}));"),
+  'PICK_SLOTの選び直しは通常のPICK_HEROではなく種族チャレンジの編成画面へ戻す');
 
 const nextWave = source.slice(source.indexOf('const handleNextWave ='), source.indexOf('// ===== クイックモード'));
 assert(nextWave.includes('!speciesChallengeBattleRunRef.current'), '通常デバッグ戦の1WAVE終了を種族チャレンジには適用しない');

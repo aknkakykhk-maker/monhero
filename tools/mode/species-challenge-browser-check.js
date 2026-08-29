@@ -122,6 +122,17 @@ const check = (name, ok, detail = '') => {
     check('公開前のDEBUGの印は残っていない', !speciesCardText.includes('DEBUG・一般公開前'));
     await checkNoSideScroll('BATTLE MODE');
 
+    // --- ①-2 モード選択からのランキング(種族を指定せずに開く入口) ---
+    // ここは他モードと同じ「🏆 ◯◯のランキング」。以前は種族タブが「すべて」(自分の記録)で
+    // 始まっていたため、開いても全国ランキングが無いように見えていた
+    await speciesCard.locator('[data-species-record-link]').dispatchEvent('click');
+    await page.getByRole('heading', { name: /種族チャレンジランキング/ }).waitFor({ timeout: 20000 });
+    const openedTab = String(await page.locator('[data-species-rank-tabs] button.bg-cyan-600').textContent()).trim();
+    check('種族を指定せず開いても、最初から種族(全国ランキング)が選ばれている',
+      /種$/.test(openedTab) && openedTab !== '自己ベスト', openedTab);
+    await page.getByRole('button', { name: '戻る' }).first().dispatchEvent('click');
+    await page.getByText('BATTLE MODE').first().waitFor({ timeout: 20000 });
+
     // --- ② 種族選択 ---
     await speciesCard.getByRole('button', { name: '種族を選ぶ' }).dispatchEvent('click');
     await page.getByRole('heading', { name: '種族選択' }).waitFor({ timeout: 20000 });
@@ -161,7 +172,8 @@ const check = (name, ok, detail = '') => {
     await page.getByRole('heading', { name: /種族チャレンジランキング/ }).waitFor({ timeout: 20000 });
     check('種族チャレンジのランキングを開ける', true);
     const rankTabs = page.locator('[data-species-rank-tabs] button');
-    check('「すべて」＋種族別のタブが並ぶ', await rankTabs.count() === 12, `${await rankTabs.count()}タブ`);
+    check('種族別＋「自己ベスト」のタブが並ぶ', await rankTabs.count() === 12, `${await rankTabs.count()}タブ`);
+    check('最後のタブが「自己ベスト」', String(await rankTabs.last().textContent()).trim() === '自己ベスト', String(await rankTabs.last().textContent()).trim());
     const selectedTab = await page.locator('[data-species-rank-tabs] button.bg-cyan-600').textContent();
     check('難易度カードから開くとその種族が選ばれている', /種$/.test(String(selectedTab).trim()), String(selectedTab));
     const rankDiffTabs = page.locator('[data-species-difficulty-tabs] button');
@@ -175,16 +187,18 @@ const check = (name, ok, detail = '') => {
       !nationalText.includes('全国ランキングはモードの公開後に始まります'));
     check('通信できないときも案内が出て無反応にならない',
       /Loading|再[試読]|取得|まだ|ありません|エラー|失敗/.test(nationalText), nationalText.slice(0, 60).replace(/\s+/g, ' '));
-    // 「すべて」タブは自分の記録なので、通信できなくても中身が出る。
+    // 「自己ベスト」タブは自分の記録なので、通信できなくても中身が出る。
     // その難易度をクリアした種族が並び、1つも無ければその旨の案内になる
-    await rankTabs.first().dispatchEvent('click');
+    await rankTabs.last().dispatchEvent('click');
     await page.waitForTimeout(300);
     const allText = await page.locator('[data-species-record-list]').textContent();
     const allRows = await page.locator('[data-species-record-row]').count();
-    check('「すべて」は通信せずに自分の記録を出す',
+    check('「自己ベスト」は通信せずに自分の記録を出す',
       allRows > 0 || /クリアした種族はまだありません/.test(allText), `${allRows}行`);
     check('1つもクリアしていなければ、そう分かる案内が出る',
       allRows > 0 || /クリアすると、種族ごとに自己ベストが残ります/.test(allText));
+    check('「自己ベスト」は全国ランキングではないと画面にも書いてある',
+      /全国ランキングは種族のタブから見られます/.test(allText));
     // 難易度タブを切り替えると、その難易度の中身に入れ替わる
     await rankDiffTabs.nth(3).dispatchEvent('click');
     await page.waitForTimeout(300);
@@ -249,8 +263,18 @@ const check = (name, ok, detail = '') => {
     check('供モン0体のまま出撃確認へ進める', await startButton.isEnabled());
     await checkNoSideScroll('出撃確認');
 
-    // --- ⑤ バトルまで ---
+    // --- ⑤ 勇者モンの配置距離を選ぶ(他モードと同じPICK_SLOT) ---
+    // 以前はここが無く、必ず零距離スタートに決め打ちされていた
     await startButton.dispatchEvent('click');
+    await page.getByRole('heading', { name: '配置場所を決定せよ' }).waitFor({ timeout: 20000 });
+    const slotButtons = page.locator('.grid.grid-cols-2 > button');
+    check('出撃すると他モードと同じ距離選択が出る', await slotButtons.count() === 4, `枠 ${await slotButtons.count()}個`);
+    const slotEnabled = await slotButtons.evaluateAll(list => list.map(b => !b.disabled));
+    check('4距離すべてが選べる(零距離に固定されない)', slotEnabled.every(Boolean), slotEnabled.join(','));
+    // 零距離以外をあえて選び、その距離でバトルが始まることまで見る
+    await slotButtons.nth(2).dispatchEvent('click');
+
+    // --- ⑥ バトルまで ---
     await page.getByRole('heading', { name: 'アシストカードの継承・強化' }).waitFor({ timeout: 20000 });
     await page.locator('.grid > button').first().dispatchEvent('click');
     await page.getByRole('button', { name: /習得する|強化する/ }).dispatchEvent('click', {}, { timeout: 20000 });

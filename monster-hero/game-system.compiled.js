@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5be6d1f637ac73cd
+// source-sha256: c3c6382cf1afaa5a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 03:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 04:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9693,6 +9693,30 @@ const updateSpeciesChallengeProgressFlag = (progress, speciesId, difficultyId, f
 const speciesChallengeSpeciesName = speciesId => validSpeciesChallengeId(speciesId) ? `${lineageById(speciesId).name}種` : '種族';
 // 種族×難易度の自己記録を読む。記録が無い組み合わせでも既定値へ落ちる
 const speciesChallengeRecord = (progress, speciesId, difficultyId) => normalizeSpeciesChallengeRecord(validSpeciesChallengeId(speciesId) && SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? normalizeSpeciesChallengeProgress(progress).species[speciesId]?.records?.[difficultyId] : null);
+// ランキング画面を開いたときに最初に見せる種族。
+// 種族チャレンジのランキングは「種族×難易度」ごとなので、種族が決まらないと全国ランキングを
+// 出しようがない。以前はここが「すべて」(自己ベストの種族順位)で始まっていたため、
+// ランキングを開いても自分の記録しか出ず、全国ランキングが無いように見えていた。
+// いちばん自己ベストの高い種族＝その人がいちばん遊んでいる種族を初期選択にする。
+// まだ1度もクリアしていない場合は先頭の種族へ落とす(必ず全国ランキングを出す)
+const defaultSpeciesChallengeRankingSpecies = progress => {
+  const lineages = speciesChallengeLineages();
+  if (!lineages.length) return null;
+  let best = null;
+  lineages.forEach(lineage => {
+    SPECIES_CHALLENGE_DIFFICULTY_IDS.forEach(difficultyId => {
+      const record = speciesChallengeRecord(progress, lineage.id, difficultyId);
+      const score = Number.isFinite(Number(record?.bestScore)) ? Number(record.bestScore) : 0;
+      const clears = Number.isFinite(Number(record?.clears)) ? Number(record.clears) : 0;
+      if (score <= 0 && clears <= 0) return;
+      if (!best || score > best.score) best = {
+        id: lineage.id,
+        score
+      };
+    });
+  });
+  return best ? best.id : lineages[0].id;
+};
 // クリアしたときだけ呼ぶ。スコアとターン数は「良くなったときだけ」更新し、クリア回数は必ず1増やす
 const updateSpeciesChallengeRecord = (progress, speciesId, difficultyId, {
   score = 0,
@@ -20796,26 +20820,15 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setDifficulty(extremeSetting ? 'Normal' : run.difficultyId);
     if (extremeSetting) setExtremeDifficulty(extremeSetting.id);
-    initialBattleDistanceRef.current = 0;
-    const initialSlots = [{
-      ...hero
-    }, null, null, null];
-    const initialUnique = {
-      ...hero.unique,
-      evoLevel: Math.max(0, hero.unique?.evoLevel || 0)
-    };
-    setSlots(initialSlots);
-    setMainHero(hero);
-    setOwnedUniques([initialUnique]);
-    setMaxHp(hero.baseHp);
-    setHp(hero.baseHp);
-    setMaxGuts(hero.baseGuts);
-    setGuts(Math.floor(hero.baseGuts * 0.5));
-    setAtk(hero.baseAtk);
-    setDef(hero.baseDef);
-    setDistAptPct(getMonsterAptPct(hero, specialRuleDifficultyForRun(BATTLE_MODE_SPECIES_CHALLENGE, extremeSetting ? 'Normal' : run.difficultyId, !!extremeSetting, extremeSetting?.id)));
-    setTeachingPool([...getActiveTeachingCards()]);
-    setGameState('PICK_TEACHING');
+    // 勇者モンの配置距離は、他モードとまったく同じ PICK_SLOT で選んでもらう。
+    // 以前はここで initialBattleDistanceRef.current=0 と slots[0] を決め打ちしていたため、
+    // 種族チャレンジだけ必ず零距離スタートになっていた。
+    // 勇者モンの能力・固有技・間合い適性・アシストカードの用意はすべて setupMon が行うので、
+    // ここでは「どのモンスターを置くか」だけを渡し、距離の決定と初期化はそちらへ任せる
+    // (setupMon は runMode / difficulty / extremeRunRef を読むが、上でセット済みのものが
+    //  次の描画で反映されるため、PICK_SLOT を押す時点では正しい値になっている)
+    setCurrentPickingMon(hero);
+    setGameState('PICK_SLOT');
   };
 
   // WAVE10を勝ち切ったときだけ呼ぶ。敗北・リタイア・途中離脱からは呼ばない。
@@ -26097,11 +26110,14 @@ function MonsterHeroGame() {
     speciesId = null,
     difficultyId = null
   } = {}) => {
-    await loadSpeciesChallengeProgress();
+    const progress = await loadSpeciesChallengeProgress();
     addAssistantBond('ranking');
     setScoreRankingMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setScoreRankingBack(backTo);
-    const speciesTab = speciesChallengeLineages().some(lineage => lineage.id === speciesId) ? speciesId : 'all';
+    // 種族を指定せずに開いたとき(モード選択の「🏆 種族チャレンジのランキング」)も、
+    // 他モードと同じように全国ランキングから見せる。以前はここが 'all' で始まっていたため、
+    // 自分の種族別ベスト一覧しか出ず「全国ランキングが無い」ように見えていた
+    const speciesTab = speciesChallengeLineages().some(lineage => lineage.id === speciesId) ? speciesId : SPECIES_CHALLENGE_PUBLIC_RELEASE ? defaultSpeciesChallengeRankingSpecies(progress) || 'all' : 'all';
     const viewDiff = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? difficultyId : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
     setSpeciesRankFilter(speciesTab);
     setRankingViewDiff(viewDiff);
@@ -26232,15 +26248,18 @@ function MonsterHeroGame() {
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0",
       "data-species-rank-tabs": true
-    }, [{
-      id: 'all',
-      label: 'すべて'
-    }, ...lineages.map(l => ({
+    }, [...lineages.map(l => ({
       id: l.id,
       label: `${l.name}種`
-    }))].map(tab => /*#__PURE__*/React.createElement("button", {
+    })), {
+      id: 'all',
+      label: '自己ベスト'
+    }].map(tab => /*#__PURE__*/React.createElement("button", {
       key: tab.id,
-      onClick: () => setSpeciesRankFilter(tab.id),
+      onClick: () => {
+        setSpeciesRankFilter(tab.id);
+        if (SPECIES_CHALLENGE_PUBLIC_RELEASE && tab.id !== 'all') loadRankings(rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, tab.id)));
+      },
       className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${speciesFilter === tab.id ? 'bg-cyan-600 border-cyan-300 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`
     }, tab.label))), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0",
@@ -26269,7 +26288,10 @@ function MonsterHeroGame() {
       className: "rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400"
     }, emptyText) : rows, !SPECIES_CHALLENGE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("p", {
       className: "rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 text-center text-[9px] leading-relaxed text-amber-200"
-    }, "\u3044\u307E\u306F\u81EA\u5206\u306E\u8A18\u9332\u3060\u3051\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u30E2\u30FC\u30C9\u306E\u516C\u958B\u5F8C\u306B\u59CB\u307E\u308A\u307E\u3059\u3002")));
+    }, "\u3044\u307E\u306F\u81EA\u5206\u306E\u8A18\u9332\u3060\u3051\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u30E2\u30FC\u30C9\u306E\u516C\u958B\u5F8C\u306B\u59CB\u307E\u308A\u307E\u3059\u3002"), SPECIES_CHALLENGE_PUBLIC_RELEASE && !nationalMode && /*#__PURE__*/React.createElement("p", {
+      "data-species-self-best-note": true,
+      className: "rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400"
+    }, "\u3053\u3053\u306F\u81EA\u5206\u306E\u7A2E\u65CF\u5225\u30D9\u30B9\u30C8\u306E\u6BD4\u8F03\u3067\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u7A2E\u65CF\u306E\u30BF\u30D6\u304B\u3089\u898B\u3089\u308C\u307E\u3059\u3002")));
   };
   // ブリーダーLvランキング。モードで分かれない(そのブリーダーのレベルは1つだけ)
   const renderBreederRankingBody = () => {
@@ -39090,7 +39112,18 @@ function MonsterHeroGame() {
       }, grade, " \u5408\u6D41\u5F8C ", formatAptPct(after)));
     })), /*#__PURE__*/React.createElement("button", {
       disabled: !!battleTutorial,
-      onClick: () => setGameState(mainHero ? 'PICK_ALLY' : 'PICK_HERO'),
+      onClick: () => {
+        if (!mainHero && speciesChallengeBattleRunRef.current) {
+          setCurrentPickingMon(null);
+          setSpeciesChallengeSelection(current => ({
+            ...current,
+            step: 'confirm'
+          }));
+          setGameState('SPECIES_CHALLENGE_SELECT');
+          return;
+        }
+        setGameState(mainHero ? 'PICK_ALLY' : 'PICK_HERO');
+      },
       className: "mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
     }, /*#__PURE__*/React.createElement(ArrowLeft, {
       size: 14
