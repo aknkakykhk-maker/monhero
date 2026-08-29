@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 03:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 04:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5249,6 +5249,27 @@ const speciesChallengeRecord = (progress,speciesId,difficultyId) => normalizeSpe
     ? normalizeSpeciesChallengeProgress(progress).species[speciesId]?.records?.[difficultyId]
     : null
 );
+// ランキング画面を開いたときに最初に見せる種族。
+// 種族チャレンジのランキングは「種族×難易度」ごとなので、種族が決まらないと全国ランキングを
+// 出しようがない。以前はここが「すべて」(自己ベストの種族順位)で始まっていたため、
+// ランキングを開いても自分の記録しか出ず、全国ランキングが無いように見えていた。
+// いちばん自己ベストの高い種族＝その人がいちばん遊んでいる種族を初期選択にする。
+// まだ1度もクリアしていない場合は先頭の種族へ落とす(必ず全国ランキングを出す)
+const defaultSpeciesChallengeRankingSpecies = (progress) => {
+  const lineages=speciesChallengeLineages();
+  if(!lineages.length)return null;
+  let best=null;
+  lineages.forEach(lineage=>{
+    SPECIES_CHALLENGE_DIFFICULTY_IDS.forEach(difficultyId=>{
+      const record=speciesChallengeRecord(progress,lineage.id,difficultyId);
+      const score=Number.isFinite(Number(record?.bestScore))?Number(record.bestScore):0;
+      const clears=Number.isFinite(Number(record?.clears))?Number(record.clears):0;
+      if(score<=0&&clears<=0)return;
+      if(!best||score>best.score)best={ id:lineage.id,score };
+    });
+  });
+  return best?best.id:lineages[0].id;
+};
 // クリアしたときだけ呼ぶ。スコアとターン数は「良くなったときだけ」更新し、クリア回数は必ず1増やす
 const updateSpeciesChallengeRecord = (progress,speciesId,difficultyId,{ score=0,turns=null }={}) => {
   const normalized=normalizeSpeciesChallengeProgress(progress);
@@ -12316,14 +12337,15 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setDifficulty(extremeSetting?'Normal':run.difficultyId);
     if (extremeSetting) setExtremeDifficulty(extremeSetting.id);
-    initialBattleDistanceRef.current=0;
-    const initialSlots=[{...hero},null,null,null];
-    const initialUnique={...hero.unique,evoLevel:Math.max(0,hero.unique?.evoLevel||0)};
-    setSlots(initialSlots); setMainHero(hero); setOwnedUniques([initialUnique]);
-    setMaxHp(hero.baseHp); setHp(hero.baseHp); setMaxGuts(hero.baseGuts); setGuts(Math.floor(hero.baseGuts*0.5)); setAtk(hero.baseAtk); setDef(hero.baseDef);
-    setDistAptPct(getMonsterAptPct(hero,specialRuleDifficultyForRun(BATTLE_MODE_SPECIES_CHALLENGE,extremeSetting?'Normal':run.difficultyId,!!extremeSetting,extremeSetting?.id)));
-    setTeachingPool([...getActiveTeachingCards()]);
-    setGameState('PICK_TEACHING');
+    // 勇者モンの配置距離は、他モードとまったく同じ PICK_SLOT で選んでもらう。
+    // 以前はここで initialBattleDistanceRef.current=0 と slots[0] を決め打ちしていたため、
+    // 種族チャレンジだけ必ず零距離スタートになっていた。
+    // 勇者モンの能力・固有技・間合い適性・アシストカードの用意はすべて setupMon が行うので、
+    // ここでは「どのモンスターを置くか」だけを渡し、距離の決定と初期化はそちらへ任せる
+    // (setupMon は runMode / difficulty / extremeRunRef を読むが、上でセット済みのものが
+    //  次の描画で反映されるため、PICK_SLOT を押す時点では正しい値になっている)
+    setCurrentPickingMon(hero);
+    setGameState('PICK_SLOT');
   };
 
   // WAVE10を勝ち切ったときだけ呼ぶ。敗北・リタイア・途中離脱からは呼ばない。
@@ -15545,11 +15567,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 種族チャレンジの記録一覧。ランキング画面と同じ入れ物をそのまま使う
   // 種族チャレンジのランキング。難易度カードから開いたときは、その種族と難易度を最初に選んでおく
   const openSpeciesChallengeRecords = async (backTo, { speciesId=null, difficultyId=null }={}) => {
-    await loadSpeciesChallengeProgress();
+    const progress=await loadSpeciesChallengeProgress();
     addAssistantBond('ranking');
     setScoreRankingMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setScoreRankingBack(backTo);
-    const speciesTab=speciesChallengeLineages().some(lineage=>lineage.id===speciesId)?speciesId:'all';
+    // 種族を指定せずに開いたとき(モード選択の「🏆 種族チャレンジのランキング」)も、
+    // 他モードと同じように全国ランキングから見せる。以前はここが 'all' で始まっていたため、
+    // 自分の種族別ベスト一覧しか出ず「全国ランキングが無い」ように見えていた
+    const speciesTab=speciesChallengeLineages().some(lineage=>lineage.id===speciesId)
+      ? speciesId
+      : (SPECIES_CHALLENGE_PUBLIC_RELEASE ? (defaultSpeciesChallengeRankingSpecies(progress)||'all') : 'all');
     const viewDiff=SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)?difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
     setSpeciesRankFilter(speciesTab);
     setRankingViewDiff(viewDiff);
@@ -15643,10 +15670,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const nationalRows = nationalKey ? (localRankings[nationalKey] || []) : [];
     const nationalStatus = rankingStatus(`score:${nationalKey}`);
     return <>
-      {/* 種族タブ。絆Lvランキングと同じ「すべて＋種族別」の並べ方にそろえる */}
+      {/* 種族タブ。種族(＝その種族×難易度の全国ランキング)を先に並べ、
+          自分の記録だけを見る「自己ベスト」は最後に置く。
+          以前は「すべて」という名前で先頭にあり、しかも中身は自分の記録だったため、
+          ランキングを開いても全国ランキングが無いように見えていた */}
       <div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0" data-species-rank-tabs>
-        {[{ id:'all', label:'すべて' }, ...lineages.map(l => ({ id:l.id, label:`${l.name}種` }))].map(tab => (
-          <button key={tab.id} onClick={() => setSpeciesRankFilter(tab.id)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${speciesFilter === tab.id ? 'bg-cyan-600 border-cyan-300 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`}>{tab.label}</button>
+        {/* 種族を切り替えたら、その種族×難易度の全国ランキングをその場で取りにいく。
+            以前は setSpeciesRankFilter だけで取得を呼んでいなかったため、種族タブを押しても
+            一覧が空のまま(「記録はまだありません」)になり、難易度タブを押すまで出なかった */}
+        {[...lineages.map(l => ({ id:l.id, label:`${l.name}種` })), { id:'all', label:'自己ベスト' }].map(tab => (
+          <button key={tab.id} onClick={() => { setSpeciesRankFilter(tab.id); if (SPECIES_CHALLENGE_PUBLIC_RELEASE && tab.id !== 'all') loadRankings(rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, tab.id))); }} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${speciesFilter === tab.id ? 'bg-cyan-600 border-cyan-300 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`}>{tab.label}</button>
         ))}
       </div>
       {/* 難易度タブ。他モードのランキングと同じように、どのタブを選んでいても難易度はタブで切り替える */}
@@ -15660,6 +15693,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ? <p className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400">{emptyText}</p>
             : rows}
         {!SPECIES_CHALLENGE_PUBLIC_RELEASE && <p className="rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 text-center text-[9px] leading-relaxed text-amber-200">いまは自分の記録だけを表示しています。全国ランキングはモードの公開後に始まります。</p>}
+        {/* 「自己ベスト」は全国ランキングではないので、そのことを画面にも書いておく */}
+        {SPECIES_CHALLENGE_PUBLIC_RELEASE && !nationalMode && <p data-species-self-best-note className="rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400">ここは自分の種族別ベストの比較です。全国ランキングは種族のタブから見られます。</p>}
       </div>
     </>;
   };
@@ -20165,7 +20200,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {!s&&<span className={`text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>}
             </button>);})}
           </div>
-          <button disabled={!!battleTutorial} onClick={()=>setGameState(mainHero?'PICK_ALLY':'PICK_HERO')} className="mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"><ArrowLeft size={14}/> モンスターを選び直す</button>
+          {/* 種族チャレンジは通常の勇者選択(PICK_HERO)を持たないので、選び直しは
+              種族チャレンジの編成画面(出撃確認)へ戻す。ここを分けないと、種族の縛りが
+              外れた通常の勇者選択へ入り込んでしまう */}
+          <button disabled={!!battleTutorial} onClick={()=>{
+            if(!mainHero&&speciesChallengeBattleRunRef.current){
+              setCurrentPickingMon(null);
+              setSpeciesChallengeSelection(current=>({...current,step:'confirm'}));
+              setGameState('SPECIES_CHALLENGE_SELECT');
+              return;
+            }
+            setGameState(mainHero?'PICK_ALLY':'PICK_HERO');
+          }} className="mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"><ArrowLeft size={14}/> モンスターを選び直す</button>
         </div>
       )}
 
