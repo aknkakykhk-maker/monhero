@@ -154,6 +154,7 @@ node tools/build.js --check
 | `node mode/quick-difficulty-unlock-check.js` | クイックの難易度解放条件を確認する。極限のNIGHTMAREクリアでクイックNIGHTMAREが解放され、EXTREMEやCHAOSのクリアだけでは解放されないことを見る。 |
 | `node mode/species-challenge-foundation-check.js` | 種族チャレンジの内部ID、既存定義を参照する14難易度の順序、初期・順次解放の純粋判定、初回クリア報酬、および本番モード選択UIへ未表示であることを確認する。 |
 | `node mode/species-challenge-progress-check.js` | 種族チャレンジの種族×難易度進行保存を確認する。壊れた値の正規化、種族・難易度・クリア・初回報酬受取の独立、非破壊更新、冪等性、Expertクリアによる同種族だけのMaster解放を見る。 |
+| `node mode/species-challenge-profile-check.js` | プロフィールの種族チャレンジ要約を確認する。正規化済みの11種族×14難易度から最高スコアと対応する種族・難易度を安定順で抽出し、`cleared`だけを154組中のクリア数として数えること、未記録、通常チャレンジや全国ランキングとの分離、154カードを直接描画しないこと、狭い縦画面向けの既存カード構造、タップ時の全種族ランキング導線を見る。 |
 | `node mode/species-challenge-debug-check.js` | デバッグ設定内の種族チャレンジ進行画面がSTEP1 helperと既存保存キーを再利用し、種族一覧・14難易度表示・種族別の独立した解放／リセットを行うことを確認する。 |
 | `node mode/species-challenge-ally-simulation-check.js` | 種族チャレンジのデバッグ画面で、勇者・供モン0〜3体の同種制約、Base/Masu同種判定、WAVE2/4/6の任意順加入、二重加入防止、加入なしでもガッツ回復対象を維持すること、加入時だけ既存の特殊難易度ボーナス計算を使うこと、新しい保存キーがないことを確認する。 |
 | `node mode/species-challenge-integration-check.js` | STEP1〜STEP2の種族チャレンジ基盤を横断確認する。14難易度と種族別解放、勇者・供モン編成とWAVE加入、既存`specialRules` resolver、超越の実、保存キー、初回報酬合計、および本番UI・配布・MARKET・ランキングへ未接続であることを実値と静的検査で固定する。 |

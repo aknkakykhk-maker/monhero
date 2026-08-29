@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 05:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 07:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5268,6 +5268,25 @@ const updateSpeciesChallengeRecord = (progress,speciesId,difficultyId,{ score=0,
 // モードカードへ出す「いくつクリアしたか」。種族をまたいだ合計だけを数える
 const speciesChallengeTotalClearedCount = (progress) => Object.values(normalizeSpeciesChallengeProgress(progress).species)
   .reduce((total,entry)=>total+SPECIES_CHALLENGE_DIFFICULTY_IDS.filter(id=>entry.cleared[id]===true).length,0);
+// プロフィールでは154組を直接並べず、正本の主血統順×難易度順を1回ずつ走査して要約する。
+// 同点は先に現れた組を維持するため、表示が再描画のたびに変わらない。
+const speciesChallengeProfileSummary = (progress) => {
+  const normalized=normalizeSpeciesChallengeProgress(progress);
+  const lineages=speciesChallengeLineages();
+  let bestScore=0,bestSpeciesId=null,bestDifficultyId=null,clearedCount=0;
+  for(const lineage of lineages){
+    const entry=normalized.species[lineage.id];
+    for(const difficultyId of SPECIES_CHALLENGE_DIFFICULTY_IDS){
+      if(entry?.cleared?.[difficultyId]===true)clearedCount+=1;
+      const score=normalizeSpeciesChallengeRecord(entry?.records?.[difficultyId]).bestScore;
+      if(score>bestScore){bestScore=score;bestSpeciesId=lineage.id;bestDifficultyId=difficultyId;}
+    }
+  }
+  return {
+    bestScore,bestSpeciesId,bestDifficultyId,clearedCount,
+    totalCount:lineages.length*SPECIES_CHALLENGE_DIFFICULTY_IDS.length,
+  };
+};
 const markSpeciesChallengeCleared = (progress,speciesId,difficultyId) =>
   updateSpeciesChallengeProgressFlag(progress,speciesId,difficultyId,'cleared');
 const markSpeciesChallengeFirstRewardClaimed = (progress,speciesId,difficultyId) =>
@@ -10239,6 +10258,7 @@ function MonsterHeroGame() {
       }));
       setExtremeBestScores(loadedExtremeScores);
       setExtremeClearCounts(loadedExtremeClears);
+      setSpeciesChallengeProgress(normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false)));
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
@@ -17442,10 +17462,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 保存済みの各モード記録を読むだけのプロフィール表示。新しい保存キーは作らない。 */}
             {(()=>{
               const difficultyIds=Object.keys(DIFFICULTY_SETTINGS);
-              const modes=[...PUBLIC_BATTLE_MODES,EXTREME_MODE];
+              const modes=[...PUBLIC_BATTLE_MODES,EXTREME_MODE,SPECIES_CHALLENGE_MODE];
               const selected=modes.find(mode=>mode.id===profileBattleMode)||null;
+              const speciesSummary=speciesChallengeProfileSummary(speciesChallengeProgress);
+              const speciesDifficultyLabel=(id)=>DIFFICULTY_SETTINGS[id]?.label||EXTREME_DIFFICULTIES.find(setting=>setting.id===id)?.label||id;
               const scoreMapFor=(mode)=>isProMode(mode.id)?proHighScores:highScores;
               const representativeFor=(mode)=>{
+                if(mode.id===BATTLE_MODE_SPECIES_CHALLENGE)return speciesSummary.bestScore>0?`最高スコア: ${speciesSummary.bestScore.toLocaleString()} pt`:'最高スコア: 記録なし';
                 if(isQuickMode(mode.id)){
                   const wave=highestModeWave(quickHighestWaves,difficultyIds);
                   return wave>0?`最高到達 WAVE ${wave}`:'未記録';
@@ -17458,12 +17481,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 return best>0?`最高スコア ${best.toLocaleString()} pt`:'未記録';
               };
               return <section className="mb-4" data-profile-battle-records>
-                <div className="mb-2 flex items-end justify-between px-1"><div><div className="text-[10px] font-black text-indigo-300 tracking-widest">バトル記録</div><div className="text-[9px] text-slate-500">モードをタップすると難易度別に確認できます</div></div></div>
+                <div className="mb-2 flex items-end justify-between px-1"><div><div className="text-[10px] font-black text-indigo-300 tracking-widest">バトル記録</div><div className="text-[9px] text-slate-500">モードをタップすると詳しい記録を確認できます</div></div></div>
                 {!selected?(
                   <div className="grid grid-cols-1 gap-2">
-                    {modes.map(mode=><button key={mode.id} type="button" onClick={()=>setProfileBattleMode(mode.id)} className="w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
-                      <span className="flex items-center gap-2"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block text-[13px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small></span><ChevronRight size={18} className="shrink-0 text-slate-500"/></span>
-                    </button>)}
+                    {modes.map(mode=>{const species=mode.id===BATTLE_MODE_SPECIES_CHALLENGE;return <button key={mode.id} type="button" data-profile-mode={mode.id} onClick={()=>species?openSpeciesChallengeRecords('PROFILE'):setProfileBattleMode(mode.id)} className="w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
+                      <span className="flex items-center gap-2"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block text-[13px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small>{species&&<><small className="block truncate text-[9px] font-black text-cyan-100">最高記録: {speciesSummary.bestScore>0?`${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}`:'記録なし'}</small><small className="block text-[9px] font-black text-emerald-300">クリア: {speciesSummary.clearedCount} / {speciesSummary.totalCount}</small></>}</span><ChevronRight size={18} className="shrink-0 text-slate-500"/></span>
+                    </button>})}
                   </div>
                 ):(
                   <div className="rounded-2xl border bg-slate-900/70 p-3" style={{borderColor:`${selected.color}66`}}>
