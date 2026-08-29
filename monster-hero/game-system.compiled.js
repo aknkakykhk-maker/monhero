@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ee416349806e9514
+// source-sha256: 95892904764d8f15
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-29 12:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-29 13:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -239,6 +239,9 @@ const resolveQuickGrowthStats = ({
 });
 const isQuickMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
 const isProMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_PRO;
+// 種族チャレンジは normalizeBattleMode の対象外(未知の値はチャレンジへ落ちる)なので、
+// idそのものを見る。BGMのようにモードごとに分かれる設定はここを通す
+const isSpeciesChallengeMode = mode => mode === BATTLE_MODE_SPECIES_CHALLENGE;
 // クイックの報酬方針は画面内だけで選び、保存データには増やさない。
 // 周回開始時の選択をrefへ固定するため、途中の画面遷移や他モードへ影響しない。
 const QUICK_REWARD_POLICY_GROWTH = 'growth';
@@ -3526,15 +3529,48 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   extremeBattle: 'original_battle',
   extremeDullahan: 'original_dullahan',
   extremeMoo: 'original_boss',
+  speciesBattle: 'original_battle',
+  speciesDullahan: 'original_dullahan',
+  speciesMoo: 'original_boss',
   clear: 'ichika_clear',
   kikiIntro: 'original_event_01'
 });
+// 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
+// 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
+// そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
+// BGMアレンジの「バトル」カテゴリに並ぶタブ。モードを足すたびにここへ1行足す。
+// 種族チャレンジは一般公開するまで出さない(モードが見えていないのに設定欄だけあると、
+// 何のための項目か分からないため)。曲そのものは公開前でもチャレンジと同じものが鳴る
+const BGM_BATTLE_MODE_TABS = Object.freeze([{
+  id: 'challenge',
+  label: 'チャレンジ',
+  items: [['battle', '通常戦 BGM'], ['dullahan', 'デュラハン戦 BGM'], ['boss', 'ムー戦 BGM']]
+}, {
+  id: 'quick',
+  label: 'クイック',
+  items: [['quickBattle', '通常戦 BGM'], ['quickDullahan', 'デュラハン戦 BGM'], ['quickMoo', 'ムー戦 BGM']]
+}, {
+  id: 'pro',
+  label: 'プロ',
+  items: [['proBattle', '通常戦 BGM'], ['proDullahan', 'デュラハン戦 BGM'], ['proMoo', 'ムー戦 BGM']]
+}, {
+  id: 'extreme',
+  label: '極限',
+  items: [['extremeBattle', '通常戦 BGM'], ['extremeDullahan', 'デュラハン戦 BGM'], ['extremeMoo', 'ムー戦 BGM']]
+}, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE ? [{
+  id: 'species',
+  label: '種族',
+  items: [['speciesBattle', '通常戦 BGM'], ['speciesDullahan', 'デュラハン戦 BGM'], ['speciesMoo', 'ムー戦 BGM']]
+}] : [])]);
 const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
   quickMoo: 'boss',
   proDullahan: 'dullahan',
   proMoo: 'boss',
   extremeDullahan: 'dullahan',
-  extremeMoo: 'boss'
+  extremeMoo: 'boss',
+  speciesBattle: 'battle',
+  speciesDullahan: 'dullahan',
+  speciesMoo: 'boss'
 });
 // プロモードの既定曲を専用曲へ変えたときの、一度きりの移行。
 // この設定は起動のたびに全項目がそのまま保存されるため、既定値を書き換えるだけでは
@@ -8949,9 +8985,15 @@ const SKIP_TICKETS = typeof SKIP_TICKET_BY_DIFFICULTY !== 'undefined' && SKIP_TI
 // 読めなかった場合はヘルプが空になるだけで、ゲーム自体は動く
 // 公開前の機能を説明する項目(releaseFlag つき)は、その機能が本番へ出るまで一覧に出さない。
 // 本文と HELP_SCREEN_COVERAGE は先に書き上げておき、公開フラグ1つで同時に出るようにしてある
-const HELP_GUIDE = (typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES) ? HELP_CATEGORIES : []).filter(releasedForPlayers).map(category => Array.isArray(category.topics) && category.topics.some(topic => !releasedForPlayers(topic)) ? {
+// 隠す単位はカテゴリ・項目・本文のかたまり(blocks)の3つ。
+// 既存の項目へ「公開後だけ出したい1段落」を足せるよう、blocksも同じ名札で絞り込む
+const releasedHelpTopic = topic => Array.isArray(topic.blocks) && topic.blocks.some(block => !releasedForPlayers(block)) ? {
+  ...topic,
+  blocks: topic.blocks.filter(releasedForPlayers)
+} : topic;
+const HELP_GUIDE = (typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES) ? HELP_CATEGORIES : []).filter(releasedForPlayers).map(category => Array.isArray(category.topics) ? {
   ...category,
-  topics: category.topics.filter(releasedForPlayers)
+  topics: category.topics.filter(releasedForPlayers).map(releasedHelpTopic)
 } : category).filter(category => !Array.isArray(category.topics) || category.topics.length > 0);
 const HELP_GUIDE_INTRO = typeof HELP_INTRO !== 'undefined' && HELP_INTRO || '';
 const helpCategoryById = id => HELP_GUIDE.find(c => c.id === id) || null;
@@ -16091,7 +16133,13 @@ function MonsterHeroGame() {
     // 専用戦は敵IDとWAVEの両方で判定し、ムー → デュラハン → 通常戦の順に優先する。
     // デバッグで敵を直接呼び出した場合も、選択中のモードに対応する曲を使う。
     if (state === 'BATTLE') {
-      const modeBgm = extremeRunRef.current ? {
+      // 種族チャレンジはモードで1つに決める。EXTREME以上の難易度で遊んでも、
+      // BGMアレンジの「種族」タブで選んだ曲がそのまま鳴る(設定したのに効かない枠を作らない)
+      const modeBgm = isSpeciesChallengeMode(runMode) ? {
+        normal: 'speciesBattle',
+        dullahan: 'speciesDullahan',
+        moo: 'speciesMoo'
+      } : extremeRunRef.current ? {
         normal: 'extremeBattle',
         dullahan: 'extremeDullahan',
         moo: 'extremeMoo'
@@ -25282,23 +25330,7 @@ function MonsterHeroGame() {
       label: 'その他',
       items: [['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM']]
     }];
-    const battleModes = [{
-      id: 'challenge',
-      label: 'チャレンジ',
-      items: [['battle', '通常戦 BGM'], ['dullahan', 'デュラハン戦 BGM'], ['boss', 'ムー戦 BGM']]
-    }, {
-      id: 'quick',
-      label: 'クイック',
-      items: [['quickBattle', '通常戦 BGM'], ['quickDullahan', 'デュラハン戦 BGM'], ['quickMoo', 'ムー戦 BGM']]
-    }, {
-      id: 'pro',
-      label: 'プロ',
-      items: [['proBattle', '通常戦 BGM'], ['proDullahan', 'デュラハン戦 BGM'], ['proMoo', 'ムー戦 BGM']]
-    }, {
-      id: 'extreme',
-      label: '極限',
-      items: [['extremeBattle', '通常戦 BGM'], ['extremeDullahan', 'デュラハン戦 BGM'], ['extremeMoo', 'ムー戦 BGM']]
-    }];
+    const battleModes = BGM_BATTLE_MODE_TABS;
     const selected = categories.find(category => category.id === bgmArrangementCategory) || categories[0];
     const selectedMode = battleModes.find(mode => mode.id === bgmArrangementBattleMode) || battleModes[0];
     const items = selected.id === 'battle' ? selectedMode.items : selected.items;
@@ -25316,7 +25348,7 @@ function MonsterHeroGame() {
     }, category.label))), selected.id === 'battle' && /*#__PURE__*/React.createElement("div", {
       role: "tablist",
       "aria-label": "\u30D0\u30C8\u30EB\u30E2\u30FC\u30C9",
-      className: "grid grid-cols-4 gap-1 mb-4"
+      className: `grid ${battleModes.length >= 5 ? 'grid-cols-5' : 'grid-cols-4'} gap-1 mb-4`
     }, battleModes.map(mode => /*#__PURE__*/React.createElement("button", {
       key: mode.id,
       type: "button",
