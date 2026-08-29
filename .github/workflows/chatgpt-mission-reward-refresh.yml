@@ -40,10 +40,28 @@ jobs:
           end=s.index("\n", label)+1
           new="""src = replace_once(src,\n    \"      setTranscendFruitConfirmAmount(0);\\n      return result;\",\n    \"      setTranscendFruitConfirmAmount(0);\\n      await saveMissionProgress('itemUse',Math.max(1,Math.floor(Number(amount)||1)));\\n      return result;\",\n    'transcend fruit item use')\n"""
           s=s[:start]+new+s[end:]
+
+          # スキップチケットは従来仕様どおりミッション進捗の対象外にする。
+          start=s.index("src = replace_once(src,\n\"\"\"      setOwnedItems(nextItems);")
+          label=s.index("'skip item use'", start)
+          end=s.index("\n", label)+1
+          s=s[:start]+s[end:]
           p.write_text(s)
           PY
       - name: Apply requested changes
         run: python3 .chatgpt/patch_mission_rewards.py
+      - name: Update related legacy check for dynamic mission definitions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tools/mode/skip-ticket-check.js')
+          s=p.read_text()
+          old="""vm.runInContext([\n  grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),\n  grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),\n  'globalThis.__r={LOGIN_BONUS_REWARDS,GIFT_REWARD_LABELS,MISSION_DEFS};',\n].join('\\n'), rewardCtx);"""
+          new="""vm.runInContext(\n  grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const STAT_POINT_GAIN')\n    + '\\nglobalThis.__r={LOGIN_BONUS_REWARDS,GIFT_REWARD_LABELS,MISSION_DEFS};', rewardCtx);"""
+          if s.count(old)!=1:
+              raise SystemExit(f'skip-ticket reward extractor: expected 1 match, got {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
       - name: Install tool dependencies
         run: cd tools && npm ci --omit=optional
       - name: Static and mission checks
