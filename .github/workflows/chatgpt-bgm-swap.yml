@@ -26,7 +26,9 @@ jobs:
         run: npm ci --omit=optional
       - name: Apply BGM swap
         id: apply
-        run: python tools/apply-quick-extreme-bgm-swap.py 2>&1 | tee /tmp/bgm-swap.log
+        run: |
+          set -o pipefail
+          python tools/apply-quick-extreme-bgm-swap.py 2>&1 | tee /tmp/bgm-swap.log
       - name: Save diagnostics on failure
         if: failure() && steps.apply.outcome == 'failure'
         run: |
@@ -44,14 +46,16 @@ jobs:
           node tools/audio/bgm-arrangement-check.js
           node tools/check-syntax.js
           node tools/undefined-reference-check.js
+          node tools/jsx-text-brace-check.js
           node tools/update-notice-check.js
-          node tools/help/help-coverage-check.js
-          node tools/help/help-guide-check.js
+          node tools/help-coverage-check.js
+          node tools/help-guide-check.js
           git diff --check
       - name: Commit result and remove one-off files
         if: success()
         run: |
           git rm .github/workflows/chatgpt-bgm-swap.yml tools/apply-quick-extreme-bgm-swap.py
+          if [ -f tools/chatgpt-bgm-diagnostic.txt ]; then git rm tools/chatgpt-bgm-diagnostic.txt; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add monster-hero/src/game-system.jsx monster-hero/game-system.compiled.js monster-hero/data/help.js monster-hero/data/changelog.js monster-hero/version.json tools/audio/bgm-arrangement-check.js
