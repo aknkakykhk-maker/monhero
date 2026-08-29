@@ -19,6 +19,7 @@ const { chromium } = require('playwright');
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const AUDIO_BASE = PAGE_URL.replace(/index\.html$/, 'audio/');
 const ICHIKA = ['bgm-home-ichika.mp3', 'bgm-battle-ichika.mp3', 'bgm-boss-ichika.mp3', 'bgm-clear-ichika.mp3'];
+const PANDORA = 'bgm-pandora-boss.mp3';
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok ? 'OK' : 'NG'}  ${name}${detail ? ' — ' + detail : ''}`); };
 
@@ -102,7 +103,7 @@ const clickByText = (page, text) => page.evaluate((t) => {
   await page.addInitScript(INSTRUMENT);
 
   // 音声ファイルが実際に配信されているか(オリジナル・いちかの両方)
-  for (const f of ['bgm-title-theme.mp3', 'bgm-title.mp3', 'bgm-battle.mp3', ...ICHIKA]) {
+  for (const f of ['bgm-title-theme.mp3', 'bgm-title.mp3', 'bgm-battle.mp3', ...ICHIKA, PANDORA]) {
     const res = await page.request.head(AUDIO_BASE + f).catch(() => null);
     check(`audio/${f} が配信されている`, !!res && res.ok(), res ? `HTTP ${res.status()}` : '取得できず');
   }
@@ -127,8 +128,8 @@ const clickByText = (page, text) => page.evaluate((t) => {
   check('BGMはループ再生になっている', title.length >= 1 && title.every((e) => e.loop));
   check('HTMLAudioElementを1つも作っていない', (await page.evaluate(() => document.querySelectorAll('audio').length)) === 0);
 
-  // --- ② いちか4曲のdecodeAudioDataが成功する ---
-  //     BGMアレンジ画面を開き、4曲を順に試聴して本体の経路でデコードさせる
+  // --- ② いちか4曲とパンドラ専用曲のdecodeAudioDataが成功する ---
+  //     BGMアレンジ画面を開き、5曲を順に試聴して本体の経路でデコードさせる
   const openArrangement = async () => {
     await clickByText(page, '設定');
     await page.waitForTimeout(600);
@@ -163,7 +164,7 @@ const clickByText = (page, text) => page.evaluate((t) => {
   };
 
   const previews = [];
-  for (const [trackId, file] of [['ichika_home', ICHIKA[0]], ['ichika_battle', ICHIKA[1]], ['ichika_boss', ICHIKA[2]], ['ichika_clear', ICHIKA[3]]]) {
+  for (const [trackId, file] of [['ichika_home', ICHIKA[0]], ['ichika_battle', ICHIKA[1]], ['ichika_boss', ICHIKA[2]], ['ichika_clear', ICHIKA[3]], ['pandora_boss', PANDORA]]) {
     previews.push(await previewOnce(trackId, file));
     await tapPreview(); // 停止して次へ
     await page.waitForTimeout(700);
@@ -174,6 +175,8 @@ const clickByText = (page, text) => page.evaluate((t) => {
     check(`いちか ${f} のdecodeAudioDataが成功する`, decodedUrls.includes(f),
       log.decodeErrors.filter((e) => e.url === f).map((e) => e.err).join(',') || (decodedUrls.includes(f) ? '' : 'デコード記録なし'));
   }
+  check(`パンドラ ${PANDORA} のdecodeAudioDataが成功する`, decodedUrls.includes(PANDORA),
+    log.decodeErrors.filter((e) => e.url === PANDORA).map((e) => e.err).join(',') || (decodedUrls.includes(PANDORA) ? '' : 'デコード記録なし'));
   check('デコードに失敗した曲が1つも無い', log.decodeErrors.length === 0,
     log.decodeErrors.map((e) => `${e.url}:${e.err}`).join(' / ') || 'エラーなし');
 

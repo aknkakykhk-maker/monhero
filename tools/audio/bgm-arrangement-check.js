@@ -20,8 +20,12 @@ for (const file of files) {
     extreme:['extremeBattle','extremeDullahan','extremeMoo'],
     species:['speciesBattle','speciesDullahan','speciesMoo'],
   };
-  check(`${file}: 登録済み20曲を全設定欄の共通選択肢に使用`,
-    (source.match(/\{\s*id:\s*'[^']+',\s*name:/g) || []).length >= 20 && /BGM_TRACKS\.map\(track\s*=>/.test(source));
+  check(`${file}: 登録済み25曲を全設定欄の共通選択肢に使用`,
+    (source.match(/\{\s*id:\s*'[^']+',\s*name:/g) || []).length >= 25 && /BGM_TRACKS\.map\(track\s*=>/.test(source));
+  check(`${file}: パンドラ専用曲も共通選択肢・試聴・保存正規化の対象`,
+    compact.includes("id:'pandora_boss',name:'StayWithMe～LockedFate～',creator:'オリジナル',src:'audio/bgm-pandora-boss.mp3'") &&
+    compact.includes('Audio_.previewBGM(trackId)') &&
+    compact.includes('BGM_TRACK_BY_ID[saved]'));
   check(`${file}: 5モード×通常・デュラハン・ムーの15設定を定義`,
     Object.values(routes).flat().every(key => Object.hasOwn(defaults, key)));
   // チャレンジ・クイック・種族はオリジナル3曲。極限は旧クイックの3曲
@@ -146,6 +150,7 @@ for (const file of files) {
     const data = fs.existsSync(file) ? fs.readFileSync(file) : null;
     check(`${rel}: MP3が存在し内容を持つ`, !!data && data.length > 1024 && (data.slice(0, 3).toString() === 'ID3' || data[0] === 0xff));
   }
+  check('パンドラ専用曲がBGMアレンジ登録から参照されている', srcs.includes('audio/bgm-pandora-boss.mp3'));
   // 今回足した4曲が、それぞれ別の音源であること(同じファイルを2回置いていないか)
   const added = ['audio/bgm-dullahan-clockwork.mp3','audio/bgm-dullahan-clockwork-alt.mp3',
     'audio/bgm-dullahan-steel-ghost.mp3','audio/bgm-dullahan-steel-ghost-alt.mp3'];

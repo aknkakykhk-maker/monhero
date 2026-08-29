@@ -16,9 +16,8 @@ const decodeUnicodeEscapes = source => source.replace(/\\u([0-9a-fA-F]{4})/g, (_
 for (const file of files) {
   const source = decodeUnicodeEscapes(fs.readFileSync(path.join(ROOT, file), 'utf8'));
   const compact = source.replace(/\s+/g, '');
-  const arrangeableBlock = source.match(/const BGM_TRACKS = \[([\s\S]*?)\n\];/)?.[1] || '';
-  const exclusiveBlock = source.match(/const BGM_EXCLUSIVE_TRACKS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || '';
-  const exclusiveCompact = exclusiveBlock.replace(/\s+/g, '');
+  const arrangeableBlock = source.match(/const BGM_TRACKS = \[([\s\S]*?)\];/)?.[1] || '';
+  const arrangeableCompact = arrangeableBlock.replace(/\s+/g, '');
   const helperExpression = source.match(/const pandoraBossBgmForBattle = \(heroId, currentWave, enemyId\) =>\s*([^;]+);/)?.[1];
   let resolvePandoraBoss = null;
   try {
@@ -27,15 +26,17 @@ for (const file of files) {
       : null;
   } catch {}
 
-  check(`${file}: 専用曲のID・曲名・保存先を登録`,
-    exclusiveCompact.includes("id:'pandora_boss'") &&
-    exclusiveCompact.includes("name:'StayWithMe～LockedFate～'") &&
-    exclusiveCompact.includes("src:'audio/bgm-pandora-boss.mp3'"));
+  check(`${file}: 専用曲のID・曲名・保存先を登録曲一覧へ追加`,
+    arrangeableCompact.includes("id:'pandora_boss'") &&
+    arrangeableCompact.includes("name:'StayWithMe～LockedFate～'") &&
+    arrangeableCompact.includes("src:'audio/bgm-pandora-boss.mp3'"));
   check(`${file}: 専用曲を既存Web Audioのトラック解決へ接続`,
-    compact.includes('constresolveTrack=key=>BGM_TRACK_BY_ID[key]||BGM_EXCLUSIVE_TRACK_BY_ID[key]||BGM_TRACK_BY_KEY[key]||null;'));
-  check(`${file}: 専用曲はBGMアレンジの選択肢・保存対象に含めない`,
-    !arrangeableBlock.includes("id:'pandora_boss'") &&
+    compact.includes('constresolveTrack=key=>BGM_TRACK_BY_ID[key]||BGM_TRACK_BY_KEY[key]||null;'));
+  check(`${file}: 専用曲をBGMアレンジの選択・試聴・保存対象に含める`,
+    arrangeableCompact.includes("id:'pandora_boss'") &&
     compact.includes('BGM_TRACKS.map(track=>') &&
+    compact.includes('Audio_.previewBGM(trackId)') &&
+    compact.includes('if(BGM_TRACK_BY_ID[saved])return[scene,saved]') &&
     !source.includes('mh_pandora_boss'));
   check(`${file}: 本体の専用BGM判定を取り出せる`, typeof resolvePandoraBoss === 'function');
   if (resolvePandoraBoss) {
@@ -70,10 +71,12 @@ const help = fs.readFileSync(path.join(ROOT, 'monster-hero/data/help.js'), 'utf8
 const changelog = fs.readFileSync(path.join(ROOT, 'monster-hero/data/changelog.js'), 'utf8');
 check('ヘルプに発動条件と非発動条件を記載',
   help.includes("title:'パンドラ専用の最終ボスBGM'") &&
-  help.includes('供モンだけがパンドラの場合や通常戦・デュラハン戦'));
-check('更新履歴に曲名と発動条件を記載',
+  help.includes('供モンだけがパンドラの場合や通常戦・デュラハン戦') &&
+  help.includes('この専用曲もBGMアレンジの全設定欄から選択・試聴できます'));
+check('更新履歴に曲名・発動条件・BGMアレンジ登録を記載',
   changelog.includes("title: 'パンドラ専用の最終ボスBGMを追加しました'") &&
-  changelog.includes('Stay With Me ～Locked Fate～'));
+  changelog.includes('Stay With Me ～Locked Fate～') &&
+  changelog.includes('BGMアレンジの登録曲一覧'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
