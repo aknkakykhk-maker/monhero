@@ -101,42 +101,37 @@ check('他モードと同じ「◯◯ランキング」の見出しにする',
 check('モードカードの導線も他モードと同じ「ランキング」表記',
   source.includes('🏆 {m.label}のランキング') && !source.includes('🏅 {m.label}の記録'));
 check('種族で絞り込むタブがある', rankBody.includes('data-species-rank-tabs'));
-// 種族タブ(＝全国ランキング)を先に並べ、自分の記録だけを見るタブは最後に「自己ベスト」として置く。
-// 以前は「すべて」という名前で先頭にあり、しかも中身は自分の記録だったため、
-// ランキングを開いても全国ランキングが無いように見えていた
-check('種族タブを先に並べ、自分の記録は「自己ベスト」として最後に置く',
-  rankBody.includes("{ id:'all', label:'自己ベスト' }")
-  && rankBody.includes('...lineages.map(l => ({ id:l.id, label:`${l.name}種` }))')
-  && rankBody.indexOf('...lineages.map(l => ({ id:l.id') < rankBody.indexOf("{ id:'all', label:'自己ベスト' }"));
-// 種族タブを押した時点でその種族の全国ランキングを取りにいく。
-// 以前は setSpeciesRankFilter だけで取得を呼んでおらず、種族を選んでも一覧が空のままだった
-check('種族タブを押したらその種族×難易度の全国ランキングを取りにいく',
-  rankBody.includes("setSpeciesRankFilter(tab.id); if (SPECIES_CHALLENGE_PUBLIC_RELEASE && tab.id !== 'all') loadRankings(rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, tab.id)))"));
+// タブは 全種族(種族を問わない全国ランキング) → 種族別(その種族の全国ランキング) → 自己ベスト。
+// ★タブの並び・取得キーの決め方・全種族キーの展開は
+//   tools/ranking/species-all-ranking-check.js が正本なので、ここでは重複して持たない
+check('自分の記録を見るタブは「自己ベスト」として置く',
+  rankBody.includes("{ id:SPECIES_RANK_TAB_SELF_BEST, label:'自己ベスト' }"));
+check('種族を問わない「全種族」タブがある',
+  rankBody.includes("{ id:SPECIES_RANK_TAB_ALL, label:'全種族' }"));
+// タブを押した時点でそのランキングを取りにいく。
+// 以前は setSpeciesRankFilter だけで取得を呼んでおらず、タブを選んでも一覧が空のままだった
+check('タブを押したらそのランキングを取りにいく',
+  rankBody.includes('const key=nationalKeyFor(tab.id, diffId); if (key) loadRankings(key);'));
 check('「自己ベスト」は全国ランキングではないと画面に書いてある',
   rankBody.includes('data-species-self-best-note') && rankBody.includes('全国ランキングは種族のタブから見られます'));
 // 難易度は他モードのランキングと同じくタブで切り替える。種族タブ×難易度タブで中身が決まる
-check('「すべて」はその難易度の種族順位を出す',
-  rankBody.includes("speciesFilter === 'all'")
-  && rankBody.includes('lineages.map(lineage => ({ lineage, record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId) }))'));
-check('種族を選ぶとその種族×選んだ難易度の記録を出す',
-  rankBody.includes('const record = speciesChallengeRecord(speciesChallengeProgress, speciesFilter, diffId);'));
+check('「自己ベスト」はその難易度の種族順位を出す',
+  rankBody.includes('lineages.map(lineage => ({ lineage, record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId) }))'));
 // 以前は種族を選ぶと14難易度を縦に並べていたが、他モードにそろえて難易度もタブにした
 check('難易度はどのタブでもタブで切り替える',
   rankBody.includes('data-species-difficulty-tabs')
   && !rankBody.includes("{(speciesFilter === 'all' || nationalMode) && <div"));
-// 種族を選ぶと「種族×難易度の全国ランキング」へ切り替わる。
-// 「すべて」タブのあいだは通信せず、自分の記録だけを出す
+// 全国ランキングへの切り替えは公開フラグを見てから。
+// 「自己ベスト」タブのあいだは通信せず、自分の記録だけを出す
 check('全国ランキングへの切り替えは公開フラグを見てから',
-  rankBody.includes('const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== \'all\';'));
+  rankBody.includes('const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== SPECIES_RANK_TAB_SELF_BEST;'));
 check('公開後は既存のスコアランキングの取得・表示をそのまま使う',
-  rankBody.includes('rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, speciesFilter)')
+  rankBody.includes('rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, difficultyId, tabId)')
   && rankBody.includes('nationalRows.map(renderScoreRankingEntry)'));
 // 難易度タブは14段階すべてを出す。1つもクリアしていない種族でも
 // 「その難易度の記録がどこにも無い」状態にならないようにするため
 check('難易度タブに14段階すべてを出す',
   rankBody.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => { const st = settingOf(id); return ('));
-check('未クリアの難易度も選べて「記録なし」と分かる形で出す',
-  rankBody.includes("'まだクリアしていません'") && rankBody.includes('記録なし'));
 // 難易度カードからも、その種族のランキングへ入れるようにする
 check('難易度カードに種族ランキングの導線がある',
   source.includes('data-species-difficulty-record-link')
@@ -147,14 +142,11 @@ check('そこから開くと、その種族と難易度が最初から選ばれ�
   && openRecords.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId)?difficultyId:SPECIES_CHALLENGE_DIFFICULTY_IDS[0]'));
 // 種族を指定せずに開くモード選択の「🏆 種族チャレンジのランキング」も、他モードと同じく
 // 全国ランキングから見せる。以前はここが 'all'(自分の記録)で始まっていた
-check('種族を指定せずに開いても全国ランキングの種族から始まる',
-  openRecords.includes('defaultSpeciesChallengeRankingSpecies(progress)')
+check('種族を指定せずに開いても全国ランキングから始まる',
+  openRecords.includes('SPECIES_CHALLENGE_PUBLIC_RELEASE ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST')
   && !openRecords.includes("lineage.id===speciesId)?speciesId:'all'"));
-check('最初に出す種族は自己ベストがいちばん高い種族(未クリアなら先頭)',
-  source.includes('const defaultSpeciesChallengeRankingSpecies = (progress) => {')
-  && source.includes('return best?best.id:lineages[0].id;'));
 check('「自己ベスト」タブのときは通信しない(自分の記録だけ)',
-  openRecords.includes("if(SPECIES_CHALLENGE_PUBLIC_RELEASE&&speciesTab!=='all'){"));
+  openRecords.includes("if(SPECIES_CHALLENGE_PUBLIC_RELEASE&&speciesTab!==SPECIES_RANK_TAB_SELF_BEST){"));
 check('公開前だったときの案内も残してある',
   rankBody.includes('!SPECIES_CHALLENGE_PUBLIC_RELEASE &&') && rankBody.includes('全国ランキングはモードの公開後に始まります'));
 check('ランキング画面は新しい保存キーを作らない', !/mh_[a-z]/.test(rankBody));

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 788549397e56df85
+// source-sha256: e0bb4f65376c15ae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 04:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 05:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9693,30 +9693,6 @@ const updateSpeciesChallengeProgressFlag = (progress, speciesId, difficultyId, f
 const speciesChallengeSpeciesName = speciesId => validSpeciesChallengeId(speciesId) ? `${lineageById(speciesId).name}種` : '種族';
 // 種族×難易度の自己記録を読む。記録が無い組み合わせでも既定値へ落ちる
 const speciesChallengeRecord = (progress, speciesId, difficultyId) => normalizeSpeciesChallengeRecord(validSpeciesChallengeId(speciesId) && SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? normalizeSpeciesChallengeProgress(progress).species[speciesId]?.records?.[difficultyId] : null);
-// ランキング画面を開いたときに最初に見せる種族。
-// 種族チャレンジのランキングは「種族×難易度」ごとなので、種族が決まらないと全国ランキングを
-// 出しようがない。以前はここが「すべて」(自己ベストの種族順位)で始まっていたため、
-// ランキングを開いても自分の記録しか出ず、全国ランキングが無いように見えていた。
-// いちばん自己ベストの高い種族＝その人がいちばん遊んでいる種族を初期選択にする。
-// まだ1度もクリアしていない場合は先頭の種族へ落とす(必ず全国ランキングを出す)
-const defaultSpeciesChallengeRankingSpecies = progress => {
-  const lineages = speciesChallengeLineages();
-  if (!lineages.length) return null;
-  let best = null;
-  lineages.forEach(lineage => {
-    SPECIES_CHALLENGE_DIFFICULTY_IDS.forEach(difficultyId => {
-      const record = speciesChallengeRecord(progress, lineage.id, difficultyId);
-      const score = Number.isFinite(Number(record?.bestScore)) ? Number(record.bestScore) : 0;
-      const clears = Number.isFinite(Number(record?.clears)) ? Number(record.clears) : 0;
-      if (score <= 0 && clears <= 0) return;
-      if (!best || score > best.score) best = {
-        id: lineage.id,
-        score
-      };
-    });
-  });
-  return best ? best.id : lineages[0].id;
-};
 // クリアしたときだけ呼ぶ。スコアとターン数は「良くなったときだけ」更新し、クリア回数は必ず1増やす
 const updateSpeciesChallengeRecord = (progress, speciesId, difficultyId, {
   score = 0,
@@ -12505,6 +12481,34 @@ const parseSpeciesChallengeRankingDifficulty = key => {
     difficultyId
   } : null;
 };
+// 種族をまたいだ「全種族」の全国ランキング。
+//
+// ★これは読み取り専用の合成キーで、この値をdifficultyへ保存することは一切ない。
+//   実体は Species-<各血統>-<難易度> の行そのままで、取りにいくときだけ
+//   その難易度の全種族ぶんのキーへ展開して1回のリクエストにまとめる(sbFetchRankings)。
+//   新しい行も列も増やさないので、これまでに送られた記録がそのまま並ぶ。
+//   別キーを新設して二重送信する方法もあるが、それだと過去の記録が1件も出ないうえ、
+//   1周回につき送信が2回に増えて失敗する場所も増えるため採らない。
+// 血統idに 'all' は存在しない(data/lineages.js)。実在する種族のキーと重ならないよう、
+// 先に parseSpeciesChallengeRankingDifficulty を通してからこちらを見る。
+const SPECIES_RANKING_ALL_ID = 'all';
+// ランキング画面の種族タブのid。血統idとぶつからない名前にする
+const SPECIES_RANK_TAB_ALL = 'allSpecies';
+const SPECIES_RANK_TAB_SELF_BEST = 'selfBest';
+const speciesChallengeAllRankingDifficulty = difficultyId => SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? `${SPECIES_RANKING_PREFIX}${SPECIES_RANKING_SEPARATOR}${SPECIES_RANKING_ALL_ID}${SPECIES_RANKING_SEPARATOR}${difficultyId}` : null;
+const parseSpeciesChallengeAllRankingDifficulty = key => {
+  const parts = String(key ?? '').trim().split(SPECIES_RANKING_SEPARATOR);
+  if (parts.length !== 3 || parts[0].toLowerCase() !== SPECIES_RANKING_PREFIX.toLowerCase()) return null;
+  if (parts[1].toLowerCase() !== SPECIES_RANKING_ALL_ID) return null;
+  // 実在する血統と同じidなら、そちらの解釈を優先する(取り違えを構造的に防ぐ)
+  if (speciesChallengeLineages().some(item => item.id.toLowerCase() === SPECIES_RANKING_ALL_ID)) return null;
+  const difficultyId = SPECIES_CHALLENGE_DIFFICULTY_IDS.find(id => id.toLowerCase() === parts[2].toLowerCase());
+  return difficultyId ? {
+    difficultyId
+  } : null;
+};
+// 「全種族」を、実際にDBへ入っている種族別キーの一覧へ展開する
+const speciesChallengeAllRankingMembers = difficultyId => speciesChallengeLineages().map(lineage => speciesChallengeRankingDifficulty(lineage.id, difficultyId)).filter(Boolean);
 // 極限の段階ID。知らない値が来ても実装済みの段階へ落として、ランキングのキーを壊さない
 const normalizeExtremeDifficulty = value => EXTREME_DIFFICULTIES.find(setting => setting.id === value && setting.available) ? value : EXTREME_SETTING.id;
 // そのモード・難易度の記録を置く難易度キー。チャレンジは従来どおりの値をそのまま使う。
@@ -12533,6 +12537,9 @@ const normalizeRankingDifficulty = value => {
   // 種族チャレンジのキーは種族×難易度の組で決まるので、固定リストではなく組み合わせで確かめる
   const species = parseSpeciesChallengeRankingDifficulty(value);
   if (species) return speciesChallengeRankingDifficulty(species.speciesId, species.difficultyId);
+  // 「全種族」は保存には使わない読み取り専用の合成キー。取得のときだけ種族別キーへ展開する
+  const speciesAll = parseSpeciesChallengeAllRankingDifficulty(value);
+  if (speciesAll) return speciesChallengeAllRankingDifficulty(speciesAll.difficultyId);
   const compact = String(value ?? '').trim().replace(/\s+/g, '').toLowerCase();
   const canonical = RANKING_DIFFICULTY_KEYS.find(key => key.toLowerCase() === compact);
   if (!canonical) throw new Error(`unknown ranking difficulty: ${String(value)}`);
@@ -12783,7 +12790,18 @@ const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score
   const select = rankingSelectWithRunStats(baseSelect);
   // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
   // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
-  const difficultyFilter = normalizedDifficulty == null ? '' : `&difficulty=eq.${encodeURIComponent(normalizedDifficulty)}`;
+  //
+  // 種族チャレンジの「全種族」だけは、その難易度の種族別キーをすべて並べた in.(...) にする。
+  // これも前方一致(ilike)ではなく実在するキーの完全一致の並びなので、
+  // 他モードの行(Normal / ProNormal / ExtremeEXTREME)が紛れ込むことは構造上ない。
+  // 並べ替えと件数の絞り込みはDB側で効くので、通信は他のタブと同じ1回で済む。
+  const speciesAllDifficulty = normalizedDifficulty == null ? null : parseSpeciesChallengeAllRankingDifficulty(normalizedDifficulty);
+  const speciesAllMembers = speciesAllDifficulty ? speciesChallengeAllRankingMembers(speciesAllDifficulty.difficultyId) : [];
+  const difficultyFilter = normalizedDifficulty == null ? '' : speciesAllDifficulty
+  // 値ごとに符号化し、区切りのカンマだけを生のまま残す(値に「-」以外の記号は入らない)
+  ? `&difficulty=in.(${speciesAllMembers.map(key => encodeURIComponent(`"${key}"`)).join(',')})` : `&difficulty=eq.${encodeURIComponent(normalizedDifficulty)}`;
+  // 展開先が1件も無いときに in.() を送るとDB側の構文エラーになるので、その前に空で返す
+  if (speciesAllDifficulty && speciesAllMembers.length === 0) return [];
   const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}${difficultyFilter}&order=${order}&limit=${limit}&offset=${offset}`;
   const startedAt = Date.now();
   rankingLog(requestId, 'request-start', {
@@ -14653,9 +14671,10 @@ function MonsterHeroGame() {
   const rankingViewKey = rankingDifficultyKey(Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
-  // 種族チャレンジランキングの種族フィルタ。絆Lvランキングと同じ「すべて＋種族別」の形。
-  // 'all' なら選んだ難易度の種族順位、種族を選ぶとその種族の14難易度が並ぶ
-  const [speciesRankFilter, setSpeciesRankFilter] = useState('all');
+  // 種族チャレンジランキングのタブ。
+  // 'allSpecies' なら種族を問わないその難易度の全国ランキング、
+  // 血統idならその種族×難易度の全国ランキング、'selfBest' なら自分の種族別ベストの比較
+  const [speciesRankFilter, setSpeciesRankFilter] = useState(SPECIES_RANK_TAB_ALL);
   // 新しいバトルの入口(バトルモード再編・第2段階)。
   // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
   // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
@@ -26110,20 +26129,20 @@ function MonsterHeroGame() {
     speciesId = null,
     difficultyId = null
   } = {}) => {
-    const progress = await loadSpeciesChallengeProgress();
+    await loadSpeciesChallengeProgress();
     addAssistantBond('ranking');
     setScoreRankingMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setScoreRankingBack(backTo);
-    // 種族を指定せずに開いたとき(モード選択の「🏆 種族チャレンジのランキング」)も、
-    // 他モードと同じように全国ランキングから見せる。以前はここが 'all' で始まっていたため、
-    // 自分の種族別ベスト一覧しか出ず「全国ランキングが無い」ように見えていた
-    const speciesTab = speciesChallengeLineages().some(lineage => lineage.id === speciesId) ? speciesId : SPECIES_CHALLENGE_PUBLIC_RELEASE ? defaultSpeciesChallengeRankingSpecies(progress) || 'all' : 'all';
+    // 種族を指定せずに開いたとき(モード選択の「🏆 種族チャレンジのランキング」)は、
+    // 他モードと同じく種族を問わない「全種族」の全国ランキングから見せる。
+    // 難易度カードから種族を指定して開いたときは、その種族のランキングを最初に出す
+    const speciesTab = speciesChallengeLineages().some(lineage => lineage.id === speciesId) ? speciesId : SPECIES_CHALLENGE_PUBLIC_RELEASE ? SPECIES_RANK_TAB_ALL : SPECIES_RANK_TAB_SELF_BEST;
     const viewDiff = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(difficultyId) ? difficultyId : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
     setSpeciesRankFilter(speciesTab);
     setRankingViewDiff(viewDiff);
-    // 公開後だけ、その種族×難易度の全国ランキングを取りにいく。公開前は自分の記録だけなので通信しない
-    if (SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesTab !== 'all') {
-      loadRankings(rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, viewDiff, speciesTab)));
+    // 公開後だけ全国ランキングを取りにいく。公開前は自分の記録だけなので通信しない
+    if (SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesTab !== SPECIES_RANK_TAB_SELF_BEST) {
+      loadRankings(rankingDifficultyKey(speciesTab === SPECIES_RANK_TAB_ALL ? speciesChallengeAllRankingDifficulty(viewDiff) : rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, viewDiff, speciesTab)));
     }
     setGameState('BATTLE_SCORE_RANKING');
   };
@@ -26196,7 +26215,11 @@ function MonsterHeroGame() {
     const diffId = SPECIES_CHALLENGE_DIFFICULTY_IDS.includes(rankingViewDiff) ? rankingViewDiff : SPECIES_CHALLENGE_DIFFICULTY_IDS[0];
     const settingOf = id => DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(setting => setting.id === id) || EXTREME_SETTING;
     const lineages = speciesChallengeLineages();
-    const speciesFilter = lineages.some(l => l.id === speciesRankFilter) ? speciesRankFilter : 'all';
+    // タブは3種類。種族を選んでいなければ「全種族」(種族をまたいだ全国ランキング)にする
+    //   allSpecies … その難易度の全国ランキング(種族を問わない)
+    //   <血統id>   … その種族×その難易度の全国ランキング
+    //   selfBest   … 自分の種族別ベストの比較(通信しない)
+    const speciesFilter = lineages.some(l => l.id === speciesRankFilter) ? speciesRankFilter : speciesRankFilter === SPECIES_RANK_TAB_SELF_BEST ? SPECIES_RANK_TAB_SELF_BEST : SPECIES_RANK_TAB_ALL;
     const lineageIcon = lineage => {
       const members = dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === lineage.id);
       return members.find(mon => mon.id === lineage.monId) || members[0] || null;
@@ -26225,40 +26248,42 @@ function MonsterHeroGame() {
     }, score.toLocaleString(), /*#__PURE__*/React.createElement("small", {
       className: "ml-0.5 text-[8px] text-slate-400"
     }, "pt")));
-    // 難易度は他モードと同じくタブで選ぶ。種族タブと難易度タブの組み合わせで中身が決まる。
-    //   すべて  … その難易度の種族別順位
-    //   ◯◯種  … その種族×その難易度の記録(公開後はそこの全国ランキング)
-    const rows = speciesFilter === 'all' ? lineages.map(lineage => ({
+    // 「自己ベスト」タブの中身。自分の種族別ベストをその難易度で並べて比べる(通信しない)
+    const rows = lineages.map(lineage => ({
       lineage,
       record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId)
-    })).filter(row => row.record.clears > 0).sort((a, b) => b.record.bestScore - a.record.bestScore || b.record.clears - a.record.clears).map((row, index) => recordRow(row.lineage.id, lineageIcon(row.lineage), `${row.lineage.name}種`, `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, index + 1)) : (() => {
-      const lineage = lineages.find(l => l.id === speciesFilter);
-      const record = speciesChallengeRecord(speciesChallengeProgress, speciesFilter, diffId);
-      return [recordRow(`${speciesFilter}:${diffId}`, lineageIcon(lineage), `${lineage.name}種`, record.clears > 0 ? `クリア ${record.clears}回${record.bestTurns !== null ? ` ／ 最短 ${record.bestTurns}T` : ''}` : 'まだクリアしていません', record.bestScore, null, record.clears === 0)];
-    })();
+    })).filter(row => row.record.clears > 0).sort((a, b) => b.record.bestScore - a.record.bestScore || b.record.clears - a.record.clears).map((row, index) => recordRow(row.lineage.id, lineageIcon(row.lineage), `${row.lineage.name}種`, `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, index + 1));
     const emptyText = /*#__PURE__*/React.createElement(React.Fragment, null, settingOf(diffId).label, "\u3092\u30AF\u30EA\u30A2\u3057\u305F\u7A2E\u65CF\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u7A2E\u65CF\u3054\u3068\u306B\u81EA\u5DF1\u30D9\u30B9\u30C8\u304C\u6B8B\u308A\u307E\u3059\u3002");
-    // 公開後は、種族を選ぶとその「種族×難易度」の全国ランキングへ切り替わる。
-    // 取得も表示も既存のスコアランキングと同じ仕組みで、難易度キーだけが
-    // Species-<血統id>-<難易度id> になる(rankingsテーブルはそのまま)。
-    // 「すべて」は種族をまたぐ一覧なので、公開後も自己ベストによる種族順位のまま
-    const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== 'all';
-    const nationalKey = nationalMode ? rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, speciesFilter)) : null;
+    // 取得も表示も既存のスコアランキングと同じ仕組みで、難易度キーだけを差し替える。
+    //   全種族   … Species-all-<難易度id>(取得のときだけ種族別キーへ展開する読み取り専用キー)
+    //   ◯◯種   … Species-<血統id>-<難易度id>
+    // どちらも rankings テーブルはそのままで、新しい行も列も作らない
+    // タブと難易度から取りにいくキーを1か所で決める。タブを押したときと難易度を押したときで
+    // 別々に組み立てると、片方だけ「全種族」に対応し忘れる
+    const nationalKeyFor = (tabId, difficultyId) => !SPECIES_CHALLENGE_PUBLIC_RELEASE || tabId === SPECIES_RANK_TAB_SELF_BEST ? null : rankingDifficultyKey(tabId === SPECIES_RANK_TAB_ALL ? speciesChallengeAllRankingDifficulty(difficultyId) : rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, difficultyId, tabId));
+    const nationalMode = SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesFilter !== SPECIES_RANK_TAB_SELF_BEST;
+    const nationalKey = nationalKeyFor(speciesFilter, diffId);
     const nationalRows = nationalKey ? localRankings[nationalKey] || [] : [];
     const nationalStatus = rankingStatus(`score:${nationalKey}`);
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0",
       "data-species-rank-tabs": true
-    }, [...lineages.map(l => ({
+    }, [{
+      id: SPECIES_RANK_TAB_ALL,
+      label: '全種族'
+    }, ...lineages.map(l => ({
       id: l.id,
       label: `${l.name}種`
     })), {
-      id: 'all',
+      id: SPECIES_RANK_TAB_SELF_BEST,
       label: '自己ベスト'
     }].map(tab => /*#__PURE__*/React.createElement("button", {
       key: tab.id,
+      "data-species-rank-tab": tab.id,
       onClick: () => {
         setSpeciesRankFilter(tab.id);
-        if (SPECIES_CHALLENGE_PUBLIC_RELEASE && tab.id !== 'all') loadRankings(rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, diffId, tab.id)));
+        const key = nationalKeyFor(tab.id, diffId);
+        if (key) loadRankings(key);
       },
       className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${speciesFilter === tab.id ? 'bg-cyan-600 border-cyan-300 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`
     }, tab.label))), /*#__PURE__*/React.createElement("div", {
@@ -26270,7 +26295,8 @@ function MonsterHeroGame() {
         key: id,
         onClick: () => {
           setRankingViewDiff(id);
-          if (nationalMode) loadRankings(rankingDifficultyKey(rankingDifficultyForMode(BATTLE_MODE_SPECIES_CHALLENGE, id, speciesFilter)));
+          const key = nationalKeyFor(speciesFilter, id);
+          if (key) loadRankings(key);
         },
         className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${diffId === id ? 'ring-2 ring-white' : 'border border-white/10'}`,
         style: difficultyStyle(st, diffId === id)
