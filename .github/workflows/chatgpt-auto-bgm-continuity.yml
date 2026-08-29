@@ -38,17 +38,25 @@ jobs:
           git add tools/chatgpt-auto-bgm-diagnostic.txt
           git commit -m "chore: capture AUTO BGM diagnostic"
           git push
-      - name: Make compiled-output check syntax tolerant
+      - name: Update focused check expectations
         if: success()
         run: |
           python - <<'PY'
           from pathlib import Path
+
           p = Path('tools/audio/auto-bgm-continuity-check.js')
           s = p.read_text()
           old = """  check(`${file}: AUTO用2項目はON/OFFを保存正規化`, source.includes(\"BGM_TOGGLE_SCENES = new Set(['autoVictoryJingle','autoPostWaveBgm'])\") && source.includes(\"saved === 'on' || saved === 'off'\"));"""
           new = """  check(`${file}: AUTO用2項目はON/OFFを保存正規化`, /BGM_TOGGLE_SCENES/.test(source) && /autoVictoryJingle/.test(source) && /autoPostWaveBgm/.test(source) && /saved\\s*===\\s*['\"]on['\"]/.test(source) && /saved\\s*===\\s*['\"]off['\"]/.test(source));"""
           assert s.count(old) == 1, 'AUTO normalization check anchor mismatch'
           p.write_text(s.replace(old, new, 1))
+
+          q = Path('tools/audio/bgm-arrangement-check.js')
+          t = q.read_text()
+          old_dep = r"/bgmArrangement, runMode, eventBgmScene, mainHero\?\.id\]/.test(source));"
+          new_dep = r"/bgmArrangement, runMode, eventBgmScene, mainHero\?\.id(?:, autoBattle)?\]/.test(source));"
+          assert t.count(old_dep) == 1, 'BGM dependency check anchor mismatch'
+          q.write_text(t.replace(old_dep, new_dep, 1))
           PY
       - name: Build and focused checks
         if: success()
@@ -72,6 +80,6 @@ jobs:
           if [ -f tools/chatgpt-auto-bgm-diagnostic.txt ]; then git rm tools/chatgpt-auto-bgm-diagnostic.txt; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add monster-hero/src/game-system.jsx monster-hero/game-system.compiled.js monster-hero/data/help.js monster-hero/data/changelog.js monster-hero/version.json tools/audio/auto-bgm-continuity-check.js tools/README.md DEVELOPMENT.md
+          git add monster-hero/src/game-system.jsx monster-hero/game-system.compiled.js monster-hero/data/help.js monster-hero/data/changelog.js monster-hero/version.json tools/audio/auto-bgm-continuity-check.js tools/audio/bgm-arrangement-check.js tools/README.md DEVELOPMENT.md
           git commit -m "feat: keep battle BGM continuous during AUTO"
           git push
