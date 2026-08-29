@@ -20,6 +20,18 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: tools/package-lock.json
+      - name: Align patch matcher with current source
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.chatgpt/patch_mission_rewards.py')
+          s=p.read_text()
+          start=s.index("src = replace_once(src,\n\"\"\"    Audio_.se.tap();")
+          label=s.index("'unique reset item use')", start)
+          end=s.index("\n", label)+1
+          new="""src = regex_once(src,\n    r\"(const useUniqueSkillResetTicket = \\(masuId\\) => \\{.*?)(\\n    Audio_\\.se\\.tap\\(\\);\\n    return result;\\n  \\};)\",\n    r\"\\1\\n    void saveMissionProgress('itemUse',1);\\2\",\n    'unique reset item use', re.S)\n"""
+          p.write_text(s[:start]+new+s[end:])
+          PY
       - name: Apply requested changes
         run: python3 .chatgpt/patch_mission_rewards.py
       - name: Install tool dependencies
