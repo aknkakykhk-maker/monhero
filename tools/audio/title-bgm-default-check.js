@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-// タイトル画面のデフォルトBGMを「Monster Hero」へ変更したことを確認する。
-//   ・新規登録曲がBGMアレンジの共通選択肢(選択・試聴・保存)に含まれる
+// タイトル画面のデフォルトBGMを「Monster Hero -Another-」へ変更したことを確認する。
+//   ・Monster HeroとMonster Hero -Another-は生成元が別の曲(同じ曲の高音質版ではない)。
+//     Monster Hero -Another-を新しい既定にし、Monster Heroはアレンジの選択肢として残す
+//   ・新規登録曲がどちらもBGMアレンジの共通選択肢(選択・試聴・保存)に含まれる
 //   ・タイトルの既定値が新しい曲になっている
 //   ・タイトルはこれまでbgmArrangementの対象外だった(=旧保存にtitleキーは無い)ため、
 //     新規キーを足すだけで「旧保存のまま = 新しい既定」に自動でなる
@@ -26,19 +28,24 @@ for (const file of files) {
   const defaultsMatch = source.match(/const DEFAULT_BGM_ARRANGEMENT = Object\.freeze\((\{[^;]+\})\);/);
   const defaults = defaultsMatch ? Function(`return (${defaultsMatch[1]})`)() : {};
 
-  check(`${file}: 新規曲のID・曲名・保存先を登録曲一覧へ追加`,
+  check(`${file}: Monster Hero(既存)のID・曲名・保存先を登録曲一覧へ追加`,
     arrangeableCompact.includes("id:'monster_hero_theme'") &&
     arrangeableCompact.includes("name:'MonsterHero'") &&
     arrangeableCompact.includes("src:'audio/bgm-monster-hero-theme.mp3'"));
-  check(`${file}: 新規曲もBGMアレンジの選択・試聴・保存対象に含める(専用の新しい仕組みを作らない)`,
+  check(`${file}: Monster Hero -Another-(新既定)のID・曲名・保存先を登録曲一覧へ追加`,
+    arrangeableCompact.includes("id:'monster_hero_theme_alt'") &&
+    arrangeableCompact.includes("name:'MonsterHero-Another-'") &&
+    arrangeableCompact.includes("src:'audio/bgm-monster-hero-theme-alt.mp3'"));
+  check(`${file}: 新規曲2つともBGMアレンジの選択・試聴・保存対象に含める(専用の新しい仕組みを作らない)`,
     arrangeableCompact.includes("id:'monster_hero_theme'") &&
+    arrangeableCompact.includes("id:'monster_hero_theme_alt'") &&
     compact.includes('BGM_TRACKS.map(track=>') &&
     compact.includes('Audio_.previewBGM(trackId)') &&
     !source.includes('mh_title_bgm') && !source.includes('mh_monster_hero_theme'));
   check(`${file}: 旧title(legacyKey)の曲もそのまま残り、いつでも選び直せる`,
     arrangeableCompact.includes("id:'original_title'") && arrangeableCompact.includes("legacyKey:'title'"));
-  check(`${file}: タイトルBGMの既定値がMonster Heroになっている`,
-    defaults.title === 'monster_hero_theme');
+  check(`${file}: タイトルBGMの既定値がMonster Hero -Another-になっている`,
+    defaults.title === 'monster_hero_theme_alt');
   check(`${file}: タイトル以外の既定値は変更していない`,
     defaults.home === 'original_home' && defaults.management === 'original_profile' &&
     defaults.market === 'original_market' && defaults.temple === 'original_fusion' &&
@@ -81,32 +88,42 @@ for (const file of files) {
   } catch (e) { console.error(e); }
   check('normalizeBgmArrangementを実行できる', typeof normalizeBgmArrangement === 'function');
   if (normalizeBgmArrangement) {
-    check('titleキーが無い旧保存は新しい既定(Monster Hero)へ自動で解決される',
-      normalizeBgmArrangement({ home:'original_home' }).title === 'monster_hero_theme');
+    check('titleキーが無い旧保存は新しい既定(Monster Hero -Another-)へ自動で解決される',
+      normalizeBgmArrangement({ home:'original_home' }).title === 'monster_hero_theme_alt');
     check('保存が空(初回起動)でも新しい既定になる',
-      normalizeBgmArrangement({}).title === 'monster_hero_theme');
+      normalizeBgmArrangement({}).title === 'monster_hero_theme_alt');
     check('自分でタイトル曲を選んでいる人(旧曲のまま)の保存は上書きされない',
       normalizeBgmArrangement({ title:'original_title' }).title === 'original_title');
-    check('自分でMonster Hero以外の曲を選んでいる人の保存も上書きされない',
+    check('自分でMonster Hero(既存版)を選んでいる人の保存も上書きされない',
+      normalizeBgmArrangement({ title:'monster_hero_theme' }).title === 'monster_hero_theme');
+    check('自分でMonster Hero -Another- 以外の曲を選んでいる人の保存も上書きされない',
       normalizeBgmArrangement({ title:'ichika_home' }).title === 'ichika_home');
     check('存在しないtrack idは既定へ正規化される(壊れた保存の保護)',
-      normalizeBgmArrangement({ title:'no_such_track' }).title === 'monster_hero_theme');
+      normalizeBgmArrangement({ title:'no_such_track' }).title === 'monster_hero_theme_alt');
     check('タイトル以外の項目は今までどおり正規化される(既存の互換を壊していない)',
       normalizeBgmArrangement({ quickMoo:'boss' }).quickMoo === 'original_boss');
   }
 }
 
-const audioPath = path.join(ROOT, 'monster-hero/audio/bgm-monster-hero-theme.mp3');
-const audio = fs.existsSync(audioPath) ? fs.readFileSync(audioPath) : null;
-check('新規MP3が存在し内容を持つ',
-  !!audio && audio.length > 1024 && (audio.slice(0, 3).toString() === 'ID3' || audio[0] === 0xff));
+for (const rel of ['monster-hero/audio/bgm-monster-hero-theme.mp3', 'monster-hero/audio/bgm-monster-hero-theme-alt.mp3']) {
+  const audioPath = path.join(ROOT, rel);
+  const audio = fs.existsSync(audioPath) ? fs.readFileSync(audioPath) : null;
+  check(`${rel}: MP3が存在し内容を持つ`,
+    !!audio && audio.length > 1024 && (audio.slice(0, 3).toString() === 'ID3' || audio[0] === 0xff));
+}
+{
+  const a = fs.readFileSync(path.join(ROOT, 'monster-hero/audio/bgm-monster-hero-theme.mp3'));
+  const b = fs.readFileSync(path.join(ROOT, 'monster-hero/audio/bgm-monster-hero-theme-alt.mp3'));
+  check('Monster HeroとMonster Hero -Another- は別の音源(同じファイルの使い回しではない)',
+    crypto.createHash('sha256').update(a).digest('hex') !== crypto.createHash('sha256').update(b).digest('hex'));
+}
 
 const help = fs.readFileSync(path.join(ROOT, 'monster-hero/data/help.js'), 'utf8');
 const changelog = fs.readFileSync(path.join(ROOT, 'monster-hero/data/changelog.js'), 'utf8');
 check('ヘルプにタイトルBGMの既定変更と既存ユーザー保護を記載',
-  /Monster Hero/.test(help) && /タイトル/.test(help) && /BGMアレンジ/.test(help));
+  /Monster Hero -Another-/.test(help) && /タイトル/.test(help) && /BGMアレンジ/.test(help));
 check('更新履歴にタイトルBGMの既定変更を記載',
-  /Monster Hero/.test(changelog));
+  /Monster Hero -Another-/.test(changelog));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
