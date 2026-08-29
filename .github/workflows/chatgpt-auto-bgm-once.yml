@@ -23,6 +23,9 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      - name: Install Chromium for audio browser regression
+        working-directory: tools
+        run: npx playwright install chromium
       - name: Apply requested implementation
         run: node tools/chatgpt-auto-bgm-patch.js
       - name: Align existing BGM dependency regression check
