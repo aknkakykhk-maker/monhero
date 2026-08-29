@@ -73,7 +73,6 @@ if (body) {
       B: { id: 'B', name: 'B', src: 'audio/b.mp3', gain: 1, loop: true }, // 押し分け用
       C: { id: 'C', name: 'C', src: 'audio/c.mp3', gain: 1, loop: true }, // 押し分け用
     },
-    BGM_EXCLUSIVE_TRACK_BY_ID: {},
     BGM_TRACK_BY_KEY: {},
     _bgmGain: () => 1,
     fetch: () => new Promise(r => setTimeout(() => r({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) }), LOAD_MS)),

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 02:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 02:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2447,13 +2447,10 @@ const BGM_TRACKS = [
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
+  // パンドラ勇者のムー戦では自動優先するが、ほかの曲と同様にBGMアレンジからも選べる
+  { id:'pandora_boss', name:'Stay With Me ～Locked Fate～', creator:'オリジナル', src:'audio/bgm-pandora-boss.mp3', gain:1, loop:true },
 ];
-// 勇者モンなどの条件でだけ流す固定曲。BGMアレンジの選択肢・保存対象には含めない。
-const BGM_EXCLUSIVE_TRACKS = Object.freeze([
-  Object.freeze({ id:'pandora_boss', name:'Stay With Me ～Locked Fate～', src:'audio/bgm-pandora-boss.mp3', gain:1, loop:true }),
-]);
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
-const BGM_EXCLUSIVE_TRACK_BY_ID = Object.fromEntries(BGM_EXCLUSIVE_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
@@ -2636,7 +2633,7 @@ const Audio_ = (() => {
   const stopSource = (source) => { if (source) { try { source.onended = null; source.stop(); } catch (e) {} try { source.disconnect(); } catch (e) {} } };
   const stopJingles = () => { if (jingleTimer) clearTimeout(jingleTimer); jingleTimer = null; stopSource(jingleSource); jingleSource = null; };
   const stopOthers = () => { stopSource(bgmSource); bgmSource = null; bgmSourceKey = null; };
-  const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_EXCLUSIVE_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
+  const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
   const safeTrackGain = track => Math.max(0, Math.min(1.25, Number.isFinite(track?.gain) ? track.gain : 1));
   const applyTrackGain = track => { if (bgmGain) bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track)); };
 
