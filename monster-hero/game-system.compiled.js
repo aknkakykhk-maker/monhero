@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c3c6382cf1afaa5a
+// source-sha256: 788549397e56df85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 04:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 04:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29653,6 +29653,11 @@ function MonsterHeroGame() {
       const noteText = species ? '初回クリアで超越の実／難易度は種族ごとに解放' : quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
       // 種族チャレンジの記録は種族×難易度で分かれる。選択中の種族のぶんだけを引く
       const speciesRecord = difficultyId => speciesChallengeRecord(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
+      // 初回クリア報酬(超越の実)を受け取り済みかどうか。2回目以降はもらえないので、
+      // 「もう受け取った」ことが難易度カードだけで分かるようにする。
+      // クリア済みかどうかではなく「実際に受け取ったか」を見る(報酬の無い難易度と区別するため)
+      const speciesRewardClaimed = difficultyId => isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
+      const speciesCleared = difficultyId => isSpeciesChallengeCleared(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
         style: {
@@ -29751,7 +29756,12 @@ function MonsterHeroGame() {
           style: {
             color: setting.text
           }
-        }, setting.label), /*#__PURE__*/React.createElement("div", {
+        }, setting.label, species && speciesCleared(key) && /*#__PURE__*/React.createElement("span", {
+          role: "img",
+          "aria-label": "\u30AF\u30EA\u30A2\u6E08\u307F",
+          "data-species-cleared-mark": key,
+          className: "ml-1 align-middle text-[11px]"
+        }, "\u2705")), /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
@@ -29780,15 +29790,21 @@ function MonsterHeroGame() {
         }, noteText), quick && hasExtremeSpecialRules(key) && /*#__PURE__*/React.createElement("span", {
           className: "shrink-0 text-[8px] text-amber-300"
         }, "\u7279\u6B8A\u30EB\u30FC\u30EB\u3042\u308A")), /*#__PURE__*/React.createElement("div", {
-          className: "mt-1.5 min-h-[54px] rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-2.5 py-1 flex items-center gap-2",
-          "data-psyche-reward": key
+          className: `mt-1.5 min-h-[54px] rounded-xl border px-2.5 py-1 flex items-center gap-2 ${species && speciesRewardClaimed(key) ? 'border-white/10 bg-slate-900/50' : 'border-fuchsia-400/35 bg-fuchsia-950/35'}`,
+          "data-psyche-reward": key,
+          "data-species-reward-claimed": species ? String(speciesRewardClaimed(key)) : undefined
         }, /*#__PURE__*/React.createElement("span", {
-          className: "shrink-0 whitespace-nowrap text-[10px] leading-tight text-fuchsia-200 font-black"
+          className: `shrink-0 whitespace-nowrap text-[10px] leading-tight font-black ${species && speciesRewardClaimed(key) ? 'text-slate-500' : 'text-fuchsia-200'}`
         }, "\u30AF\u30EA\u30A2\u5831\u916C"), /*#__PURE__*/React.createElement("div", {
           className: "flex-1 min-w-0 text-left whitespace-nowrap leading-[1.35]"
-        }, species ? /*#__PURE__*/React.createElement("b", {
-          className: "block text-[11px] text-amber-200"
-        }, "\u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(key)) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
+        }, species ? (() => {
+          const claimed = speciesRewardClaimed(key);
+          return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
+            className: `block text-[11px] ${claimed ? 'text-slate-500 line-through' : 'text-amber-200'}`
+          }, "\u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(key)), /*#__PURE__*/React.createElement("small", {
+            className: `block text-[8px] font-black ${claimed ? 'text-emerald-300' : 'text-slate-400'}`
+          }, claimed ? '✅ 受取済み（初回のみ）' : '初回クリアのみ'));
+        })() : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-white"
         }, "\u7D4C\u9A13\u5024\uFF1A", quick && quickRewardPolicy !== QUICK_REWARD_POLICY_GROWTH ? '0' : quick ? bonusLabel(setting.xp || setting.score) : '通常'), /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-fuchsia-100"
@@ -32237,9 +32253,17 @@ function MonsterHeroGame() {
         className: "font-black tracking-widest text-cyan-300"
       }, "MISSION"), /*#__PURE__*/React.createElement("h3", {
         className: "mt-1 text-lg font-black"
-      }, speciesChallengeSpeciesName(selection.speciesId), " \u9650\u5B9A"), /*#__PURE__*/React.createElement("p", {
-        className: "text-[10px] text-amber-300"
-      }, difficultyLabel(selection.difficultyId), " \u30FB \u521D\u56DE\u5831\u916C \u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(selection.difficultyId))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
+      }, speciesChallengeSpeciesName(selection.speciesId), " \u9650\u5B9A"), (() => {
+        const claimed = isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, selection.speciesId, selection.difficultyId);
+        return /*#__PURE__*/React.createElement("p", {
+          "data-species-confirm-reward": claimed ? 'claimed' : 'first',
+          className: `text-[10px] ${claimed ? 'text-slate-400' : 'text-amber-300'}`
+        }, difficultyLabel(selection.difficultyId), " \u30FB ", claimed ? /*#__PURE__*/React.createElement("span", null, "\u521D\u56DE\u5831\u916C ", /*#__PURE__*/React.createElement("span", {
+          className: "line-through"
+        }, "\u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(selection.difficultyId)), " ", /*#__PURE__*/React.createElement("span", {
+          className: "font-black text-emerald-300"
+        }, "\u2705 \u53D7\u53D6\u6E08\u307F")) : /*#__PURE__*/React.createElement("span", null, "\u521D\u56DE\u5831\u916C \u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(selection.difficultyId)));
+      })()), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
         className: "mb-1 block text-[9px] text-cyan-300"
       }, "\u52C7\u8005\u30E2\u30F3"), entryById(selection.heroId) && monsterCard(entryById(selection.heroId), true, () => {}, false, '勇者')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
         className: "mb-1 block text-[9px] text-cyan-300"
