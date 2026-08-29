@@ -671,25 +671,30 @@ check('既読の記録は新しい保存キーへ分けてある',
 
 // --- 画面へつないであるか ---
 // データだけ用意しても、画面から呼んでいなければ誰も見られない。
-// 実際に「プロフィールを開いたときに出す」ところまで書けているかを見る。
+// 実際に「その画面を開いたときに出す」ところまで書けているかを見る。
+// 描画は1か所(assistantUnlockNoticeNode)にまとめ、場面ごとにコピーしていないこと
+check('プロフィールとHOMEの両方から案内を呼び出している',
+  source.includes("assistantUnlockNoticeNode(gameState==='PROFILE'?'profile':gameState==='HOME'?'home':null)"));
 const unlockBlock = (() => {
-  const at = source.indexOf("assistantUnlockNoticeOf('profile')");
-  return at < 0 ? '' : source.slice(Math.max(0, at - 900), at + 2200);
+  const at = source.indexOf('const assistantUnlockNoticeNode = (scene) => {');
+  if (at < 0) return '';
+  const end = source.indexOf('// 吹き出しを使わず', at);
+  return end < 0 ? '' : source.slice(at, end);
 })();
-check('プロフィール画面から案内を呼び出している',
-  !!unlockBlock && /gameState==='PROFILE'/.test(unlockBlock));
+check('案内の描画は1か所だけ', !!unlockBlock
+  && (source.match(/assistantUnlockNoticeOf\(/g) || []).length === 1);
 check('本文はdata側から受け取る（画面へ直接書いていない）',
   !!unlockBlock && /notice\.pages/.test(unlockBlock) && !/[ぁ-んァ-ヶ一-龠]/.test(
-    (unlockBlock.match(/const notice=assistantUnlockNoticeOf[\s\S]*?閉じる/) || [''])[0]
-      .replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/次へ|閉じる/g, '')));
+    unlockBlock.replace(/\/\/[^\n]*/g, '').replace(/次へ|閉じる|見に行く/g, '')));
 check('起動時に既読を読み込んでいる',
   new RegExp(`setAssistantUnlockSeen\\(normalizeAssistantUnlockSeen\\(await storeGet\\(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY`).test(source));
 check('読み終えたら既読として保存している',
   /storeSet\(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY/.test(source));
-// アップデートの案内と重ならないよう、出す画面を分けてある(あちらはHOME)
-check('アップデートの案内とは別の画面に出る',
-  /updateGuideQueue\.length>0/.test(source)
-    && /gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&updateGuideQueue\.length>0/.test(source));
+// 解放の案内もHOMEへ出るようになったので、アップデートの案内・日次アドバイスが
+// 出ているあいだは待つ(同時に2枚重ならないこと)
+check('アップデートの案内と重ならない',
+  /gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&updateGuideQueue\.length>0/.test(source)
+    && /if \(updateGuideQueue\.length>0\|\|dailyMasuAdvice\) return null;/.test(unlockBlock));
 // ヘルプにも書いておく(プレイヤーが仕様を確かめられる唯一の場所のため)
 check('ヘルプに案内が出ることが書いてある',
   /解放されたことは助手が教えてくれます/.test(helpSrc));

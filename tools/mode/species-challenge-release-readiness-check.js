@@ -19,7 +19,8 @@ const check = (message, ok, detail = '') => {
 };
 
 // ===== ① 本番のクリア報酬 =====
-const clearFn = source.slice(source.indexOf('const finishSpeciesChallengeClear ='), source.indexOf('const createRepeatRunTemplate ='));
+// 確定処理そのものだけを切り出す(この後ろに続くクリア結果カードは表示用なので含めない)
+const clearFn = source.slice(source.indexOf('const finishSpeciesChallengeClear ='), source.indexOf('const speciesChallengeClearCardNode ='));
 check('WAVE10クリアの確定処理がある', clearFn.length > 0);
 check('既存の共通報酬処理をそのまま呼ぶ', clearFn.includes('await awardRunRewards(10);') && clearFn.includes('await recordClearOnce();'));
 const previewReturn = clearFn.indexOf('if(!speciesChallengeSaveRunRef.current){');

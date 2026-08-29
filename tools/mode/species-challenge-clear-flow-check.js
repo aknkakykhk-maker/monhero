@@ -56,8 +56,12 @@ check('WAVE10の分岐からだけ確定処理を呼ぶ',
   nextWave.includes('if (wave === 10) {') && nextWave.includes('await finishSpeciesChallengeClear();'));
 const beforeWave10 = nextWave.slice(0, nextWave.indexOf('if (wave === 10) {'));
 check('WAVE10へ着く前に確定処理を呼ばない', !beforeWave10.includes('finishSpeciesChallengeClear'));
+// 呼び出しは handleNextWave の wave===10 分岐だけ。保存なし確認と本番でリザルトの見せ方が
+// 変わるため2か所あるが、どちらもその分岐の中にあること
 const callSites = (source.match(/finishSpeciesChallengeClear\(\)/g) || []).length;
-check('確定処理の呼び出しは1か所だけ', callSites === 1, `${callSites}か所`);
+const wave10Block = nextWave.slice(nextWave.indexOf('if (wave === 10) {'));
+const inWave10 = (wave10Block.match(/finishSpeciesChallengeClear\(\)/g) || []).length;
+check('確定処理の呼び出しはWAVE10の分岐だけ', callSites === 2 && inWave10 === 2, `全${callSites}か所 / WAVE10内${inWave10}か所`);
 
 // 敗北・リタイアの経路から呼ばれていないこと
 for (const [needle, label] of [['const handleGiveUp', 'リタイア'], ['const handleDefeat', '敗北']]) {
@@ -67,15 +71,21 @@ for (const [needle, label] of [['const handleGiveUp', 'リタイア'], ['const h
 }
 
 // --- ③ 保存モードの入口 ---
-check('保存する実戦はデバッグ画面からだけ始められる',
-  source.includes('data-species-real-run-start') && source.includes('openSpeciesChallengeSelection({saveProgress:true})'));
+check('デバッグからも保存する実戦を始められる',
+  source.includes('data-species-real-run-start') && source.includes('openSpeciesChallengeSelection({saveProgress:true,fromDebug:true})'));
 check('保存する実戦は誤操作防止の確認を出す',
   source.includes("window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？')"));
 check('保存する実戦であることを画面へ明示する',
   source.includes('⚠️ 実際の種族チャレンジ進行・所持品を変更します。'));
 const modeCardStart = source.indexOf("const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])]");
-check('通常のバトルモード入口は保存なしのまま(saveProgressを渡さない)',
-  modeCardStart >= 0 && source.includes('if(isSpecies){openSpeciesChallengeSelection();return;}'));
+// 本番のバトル入口から始めたときだけ保存する。デバッグのバトルモード入口(debugBattle)は保存なしのまま
+check('デバッグのバトルモード入口は保存なしのまま',
+  modeCardStart >= 0 && source.includes('if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle});return;}'));
+// DEBUGバッジ・保存の注意書きは、デバッグから入ったときだけ出す(通常プレイの画面へ出さない)
+check('DEBUGの表示はデバッグから入ったときだけ',
+  (source.match(/\{selection\.fromDebug&&\(selection\.saveProgress/g) || []).length === 2
+    && source.includes('data-species-save-badge')
+    && !/\}<\/div>\{selection\.saveProgress\s*\n\s*\? <p/.test(source));
 check('一般公開フラグは既定でfalse(通常プレイのBATTLE MODEへ出さない)',
   /const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;/.test(source));
 
@@ -149,7 +159,16 @@ check('ラン開始時にクリア確定の一度きりフラグを戻す',
   start.includes('speciesChallengeClearHandledRef.current=false;'));
 check('ラン開始時に前回のクリア結果表示を消す',
   start.includes('setSpeciesChallengeClearResult(null);'));
-check('種族チャレンジ中はdebugBattleを維持する', start.includes('debugBattleRef.current=true;'));
+// 本番の周回(保存する)は debugBattle を立てず、他モードとまったく同じ進行を通す。
+// 保存しない確認だけを debugBattle にして、リザルトをデバッグ表示へ寄せる
+check('保存する周回はdebugBattleを立てない',
+  start.includes('const previewRun=!saveProgress;')
+  && start.includes('debugBattleRef.current=previewRun;')
+  && start.includes('setDebugBattle(previewRun);')
+  && !start.includes('debugBattleRef.current=true;'));
+check('種族チャレンジのランは専用のrunModeで走る',
+  start.includes('setRunMode(BATTLE_MODE_SPECIES_CHALLENGE);')
+  && !start.includes('setRunMode(extremeSetting?EXTREME_MODE.id:BATTLE_MODE_CHALLENGE);'));
 
 // --- ⑥ 実際に動かして、記録の積み上がり方を確かめる ---
 const sliceStart = source.indexOf('const DIFFICULTY_SETTINGS =');

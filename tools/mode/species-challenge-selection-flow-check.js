@@ -101,9 +101,12 @@ assert(!screen.includes("selection.step==='intro'") && !source.includes('data-sp
 assert(source.includes("isSpecies?'種族を選ぶ':'難易度を選ぶ'"), '共通モードカードから種族選択へ進める');
 assert(source.includes('const loadSpeciesChallengeProgress = async() =>')
   && source.includes('normalizeSpeciesChallengeProgress(await storeGet(SPECIES_CHALLENGE_PROGRESS_KEY,null,false))'), '共通loaderは既存キーを読み込み正規化する');
-assert(source.includes('const openSpeciesChallengeSelection = async({ saveProgress=false }={}) =>')
+assert(source.includes('const openSpeciesChallengeSelection = async({ saveProgress=false, fromDebug=false }={}) =>')
   && source.includes('await loadSpeciesChallengeProgress();')
-  && source.includes('if(isSpecies){openSpeciesChallengeSelection();return;}'), 'デバッグ画面を先に開かず選択フロー入口で保存済み進行を読む');
+  && source.includes('if(isSpecies){openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle});return;}'), 'デバッグ画面を先に開かず選択フロー入口で保存済み進行を読む');
+// 通常のバトル入口から始めた周回だけが記録・報酬を保存する。
+// デバッグのバトルモード入口(debugBattle)から来たときはこれまでどおり保存しない
+assert(source.includes('openSpeciesChallengeSelection({saveProgress:!debugBattle,fromDebug:debugBattle})'), '本番の入口からだけ保存する周回として始める');
 
 // --- 難易度を決めたあとに通常のPICK_HEROへ落ちない ---
 // ここを通すと debugBattle が false へ戻り、保存なしのはずの確認が記録を残してしまう。

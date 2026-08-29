@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6a245ed7f6ff46c6
+// source-sha256: ee416349806e9514
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-28 22:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-29 12:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -166,6 +166,13 @@ const BATTLE_MODE_SPECIES_CHALLENGE = 'speciesChallenge';
 // 公開するときはここを true にするだけで両方が切り替わる。
 // 公開の判断はユーザーが行うので、実装側から勝手に true にしない。
 const SPECIES_CHALLENGE_PUBLIC_RELEASE = false;
+// 解放条件。チャレンジモードで Master / Grand Master / Hell / Legend のどれかを1回以上
+// クリアしていること。判定には既存の mh_clears_<難易度> をそのまま読むので、新しい解放フラグは
+// 作らない(旧セーブのプレイヤーもログインした時点で解放済みとして扱われる)。
+// 極限チャレンジ(EXTREME_UNLOCK_DIFFICULTIES)とまったく同じ作りで、条件の段だけが違う
+const SPECIES_CHALLENGE_UNLOCK_DIFFICULTIES = Object.freeze(['Master', 'GrandMaster', 'Hell', 'Legend']);
+const SPECIES_CHALLENGE_UNLOCK_TEXT = 'チャレンジ Master以上クリアで解放';
+const isSpeciesChallengeUnlocked = clearCounts => SPECIES_CHALLENGE_UNLOCK_DIFFICULTIES.some(key => (Number(clearCounts?.[key]) || 0) > 0);
 // モード説明は公開時にそのまま出す本文にする。開発の進み具合・デバッグ事情は
 // ここへ書かない(カード側のDEBUGバッジで分ける)。
 const SPECIES_CHALLENGE_MODE = Object.freeze({
@@ -176,7 +183,7 @@ const SPECIES_CHALLENGE_MODE = Object.freeze({
   color: '#67e8f9',
   tagline: 'ひとつの種族だけで挑む、しばりプレイのモード',
   highlights: [['🧬', 'ひとつの種族だけでWAVE1〜10'], ['🔓', '種族ごとに難易度を解放していく'], ['🏅', '記録は種族ごとに別々に残る']],
-  points: [['🧬', 'どんなモード', '挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'], ['👹', '難しさ', '難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'], ['🔥', '上位の難易度', 'EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。'], ['🎯', 'こんな人におすすめ', '特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。']]
+  points: [['🧬', 'どんなモード', '挑む前に種族(モッチー種・ピクシー種など)をひとつ選び、その種族だけでWAVE1〜10を戦い抜くモードです。使えるモンスターが限られるぶん、その種族をどこまで育てているかがそのまま結果に出ます。'], ['⚔️', '編成', '勇者モン1体と供モン最大3体で挑みます。選べるのは、その種族の解放済みベースモンと所持マスモンだけです。ふだんの編成と同じで同じモンスターは勇者・供モンを通して1体まで(重複不可)ですが、同じ種族の別のモンスターなら一緒に連れていけます(モッチー種ならモッチーとミタラシなど)。そのため実際に選べる供モンの数は、その種族のモンスターの種類によって0〜3体で変わります。供モン0体のまま挑むこともできます。'], ['🤝', '供モンの加入', '事前に選んだ供モンは、最初から全員いるわけではありません。WAVE2・4・6をクリアしたとき、まだ加入していない供モンから1体を選んで加えます。誰をいつ加えるかは、その場で決められます。'], ['👹', '難しさ', '難易度は14段階です。Beginner〜Expertは最初から挑めます。Master以降は、同じ種族で1つ前の難易度をクリアすると順に解放されます。ある種族で進めても、ほかの種族の解放には影響しません。'], ['🔥', '上位の難易度', 'EXTREME以上では、極限チャレンジと同じ特殊ルールがそのまま適用されます。敵の強さや報酬の倍率も極限チャレンジと同じ設定です。'], ['💎', 'もらえるもの', '経験値・ダイヤは難易度の設定どおりです。加えて、種族と難易度の組み合わせごとに初回クリア報酬があります。'], ['🏅', '記録', '自己ベストスコア・最短クリアターン・クリア回数は、種族と難易度の組み合わせごとに別々に残ります。同じ難易度でも種族が違えば別の記録です。チャレンジモードの自己ベストや最高到達WAVEは書き換わりません。'], ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。チャレンジモードと同じです。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🔁', 'AUTO', 'AUTOでの自動戦闘は使えます。ただしクリア後にそのまま次の周へ入る「AUTO∞」は使えません。挑むたびに種族・難易度・編成を選び直すモードのためです。'], ['🎯', 'こんな人におすすめ', '特定の種族を集中して育てている人、いつもの編成とは違う制限つきの戦いを試したい人、種族ごとにやり込みたい人向けです。']]
 });
 // プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
 // バトルの中身はチャレンジと同じで、違うのは「編成がベースモン限定」「経験値の倍率」
@@ -7959,6 +7966,15 @@ const DIST_APTITUDE_COLOR = {
   G: "text-slate-400 bg-slate-800/60 border-slate-500/50"
 };
 // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
+// 公開前の機能は、ヘルプの項目も更新履歴のお知らせも書き上げたうえで隠しておく。
+// data/*.js は game-system.jsx より先に読み込まれるので公開フラグを見られない。
+// そこで data 側には releaseFlag という名札だけを書き、出す・出さないの判断はここでまとめて行う。
+// 公開するときは SPECIES_CHALLENGE_PUBLIC_RELEASE を true にするだけで、
+// ヘルプ・更新履歴・助手の告知が同時に出る(片方だけ先に出てしまうことがない)
+const RELEASE_FLAGS = {
+  speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE
+};
+const releasedForPlayers = item => !item || !item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true;
 const CHANGELOG_TYPES = ['update', 'issue'];
 // 日付やBUILD_DATEではなく、内容から作った安定IDでお知らせを識別する。同じID・同じ本文は
 // ビルドし直しても未読へ戻らず、本文を変更した場合だけ新しい項目として扱う。
@@ -7971,10 +7987,13 @@ const changelogEntryId = entry => {
   }
   return `${entry.type || 'notice'}-${(hash >>> 0).toString(36)}`;
 };
-const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).map(entry => Object.freeze({
+const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(releasedForPlayers).map(entry => Object.freeze({
   ...entry,
   id: changelogEntryId(entry)
 }));
+// 更新履歴から作る助手の告知も、隠している項目のぶんは出さない
+// (data/assistants.js は公開フラグを見られないため、ここで落とす)
+const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(entry => !releasedForPlayers(entry) && typeof entry?.assistantNotice?.id === 'string').map(entry => entry.assistantNotice.id.trim()));
 const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_ENTRIES.filter(entry => entry.type === type).map(entry => entry.id)]));
 // 一覧の並べかえに使えるキー。画面の選択肢(MONSTER_SORT_OPTIONS)と必ず同じ顔ぶれにする。
 // 片方にだけ足すと、画面では選べるのに保存だけ弾かれて、開き直すと元に戻る
@@ -8928,7 +8947,12 @@ const hasAutoTurnWithEnoughGuts = options => chooseAutoTurn({
 const SKIP_TICKETS = typeof SKIP_TICKET_BY_DIFFICULTY !== 'undefined' && SKIP_TICKET_BY_DIFFICULTY || {};
 // ヘルプの中身(data/help.js)も同じ理由で必ず既定値に落とす。
 // 読めなかった場合はヘルプが空になるだけで、ゲーム自体は動く
-const HELP_GUIDE = typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES) ? HELP_CATEGORIES : [];
+// 公開前の機能を説明する項目(releaseFlag つき)は、その機能が本番へ出るまで一覧に出さない。
+// 本文と HELP_SCREEN_COVERAGE は先に書き上げておき、公開フラグ1つで同時に出るようにしてある
+const HELP_GUIDE = (typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES) ? HELP_CATEGORIES : []).filter(releasedForPlayers).map(category => Array.isArray(category.topics) && category.topics.some(topic => !releasedForPlayers(topic)) ? {
+  ...category,
+  topics: category.topics.filter(releasedForPlayers)
+} : category).filter(category => !Array.isArray(category.topics) || category.topics.length > 0);
 const HELP_GUIDE_INTRO = typeof HELP_INTRO !== 'undefined' && HELP_INTRO || '';
 const helpCategoryById = id => HELP_GUIDE.find(c => c.id === id) || null;
 const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;
@@ -10314,11 +10338,19 @@ const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
 // 既存セーブにキーが無い場合は未表示として安全に扱う。
 const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
 const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1';
+// 案内の「行き先」。更新の案内と解放の案内が同じ言葉(market / battle …)を使えるよう、
+// 対応表はここ1か所だけに置く
+const NOTICE_DESTINATIONS = {
+  market: 'BREEDER_MARKET',
+  battle: 'BATTLE_MODE_SELECT',
+  training: 'TRAINING_INFO'
+};
+const noticeDestinationState = destination => NOTICE_DESTINATIONS[destination] || (typeof destination === 'string' && /^[A-Z][A-Z0-9_]*$/.test(destination) ? destination : null);
 const UPDATE_NOTICE_LOGIN_LIMIT = 3;
 const normalizeSeenUpdateNoticeIds = value => [...new Set((Array.isArray(value) ? value : []).filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
 const availableUpdateNotices = ({
   debug = false
-} = {}) => (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES || []).filter(notice => notice && notice.enabled === true && typeof notice.id === 'string' && (debug ? notice.debugOnly === true : notice.debugOnly !== true));
+} = {}) => (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES || []).filter(notice => notice && notice.enabled === true && typeof notice.id === 'string' && !HIDDEN_UPDATE_NOTICE_IDS.has(notice.id) && (debug ? notice.debugOnly === true : notice.debugOnly !== true));
 const planUpdateNoticesForLogin = (notices, seenIds) => {
   const seen = normalizeSeenUpdateNoticeIds(seenIds);
   const unseen = (Array.isArray(notices) ? notices : []).filter(notice => !seen.includes(notice.id));
@@ -10350,6 +10382,20 @@ const helpDataRows = id => {
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
       return EXTREME_DIFFICULTIES.map(s => [s.label, s.available ? `敵×${s.power} ／ スコア×${s.score} ／ 経験値×${s.xp} ／ ダイヤ×${s.gold} ／ 虹のプシュケー ${s.psyche}個` : '？？？（未実装）']);
+    // 種族チャレンジで選べる種族と、その種族で連れていけるモンスターの数。
+    // モンスターを足すと自動で増えるので、ヘルプへ手で書き写さない
+    case 'speciesChallengeLineages':
+      return speciesChallengeLineages().map(lineage => {
+        const members = dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === lineage.id);
+        const allyMax = Math.max(0, members.length - 1);
+        return [`${lineage.name}種`, `${members.map(mon => mon.name).join('・')}（勇者モン1体＋供モン最大${allyMax}体）`];
+      });
+    // 種族チャレンジの難易度と、その難易度をはじめてクリアしたときにもらえる超越の実の数
+    case 'speciesChallengeRewards':
+      return SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
+        const setting = DIFFICULTY_SETTINGS[id] || EXTREME_DIFFICULTIES.find(s => s.id === id);
+        return [setting?.label || id, `初回クリアで 超越の実 ×${speciesChallengeFirstClearReward(id)}`];
+      });
     case 'teachings':
       return (typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
     case 'skipTickets':
@@ -10406,6 +10452,8 @@ const helpDataRows = id => {
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
   extremeDifficulties: '極限チャレンジの難易度',
+  speciesChallengeLineages: '種族チャレンジで選べる種族',
+  speciesChallengeRewards: '種族チャレンジの難易度と初回クリア報酬',
   teachings: 'ブリーダーの教え',
   skipTickets: 'スキップチケットの種類',
   items: 'アイテム一覧',
@@ -13818,16 +13866,20 @@ function MonsterHeroGame() {
     heroId: '',
     allyIds: [],
     run: null,
-    saveProgress: false
+    saveProgress: false,
+    fromDebug: false
   });
   // STEP5Bの実戦run。デバッグ戦と同じ保存抑止を使いながら、通常の10WAVE処理へ流す。
   const speciesChallengeBattleRunRef = useRef(null);
   const [speciesChallengeBattleRun, setSpeciesChallengeBattleRun] = useState(null);
   // このランのクリア結果を実際に保存するかどうか。
-  // 通常の BATTLE TEST → ⚔️バトルモード は false(保存なし)のままにし、
-  // デバッグ設定の「実進行保存で実戦確認」から始めたときだけ true にする。
+  // 本番のバトル入口と、デバッグ設定の「実進行保存で実戦確認」から始めたときだけ true。
+  // デバッグの ⚔️バトルモード → 種族チャレンジ と「実戦フロー確認」は false(保存なし)のまま。
   const speciesChallengeSaveRunRef = useRef(false);
   const [speciesChallengeSaveRun, setSpeciesChallengeSaveRun] = useState(false);
+  // デバッグから入ったランかどうか。保存する/しないとは別で、画面のDEBUGバッジを
+  // 通常プレイへ出さないためだけに持つ(リザルトから選択画面へ戻るときも引き継ぐ)
+  const speciesChallengeFromDebugRef = useRef(false);
   // WAVE10クリアの確定を1ランにつき1回だけにする。連打・再描画で clears が二重に増えるのを防ぐ
   const speciesChallengeClearHandledRef = useRef(false);
   const [speciesChallengeClearResult, setSpeciesChallengeClearResult] = useState(null);
@@ -13836,12 +13888,16 @@ function MonsterHeroGame() {
     setSpeciesChallengeProgress(progress);
     return progress;
   };
-  // saveProgress=true はデバッグ設定の「実進行保存で実戦確認」からだけ渡す。
-  // 通常の BATTLE TEST → ⚔️バトルモード は false のままで、これまでどおり保存なし
+  // saveProgress=true は本番のバトル入口と、デバッグ設定の「実進行保存で実戦確認」から渡す。
+  // デバッグの ⚔️バトルモード → 種族チャレンジ と「実戦フロー確認」は false のままで、保存なし。
+  // fromDebug は「デバッグから入ったか」だけを表す。本番の入口と見分けて、
+  // 画面のDEBUGバッジを通常プレイへ出さないために持つ(保存する/しないとは別の話)
   const openSpeciesChallengeSelection = async ({
-    saveProgress = false
+    saveProgress = false,
+    fromDebug = false
   } = {}) => {
     await loadSpeciesChallengeProgress();
+    speciesChallengeFromDebugRef.current = !!fromDebug;
     setSpeciesChallengeSelection({
       step: 'species',
       speciesId: '',
@@ -13849,7 +13905,8 @@ function MonsterHeroGame() {
       heroId: '',
       allyIds: [],
       run: null,
-      saveProgress: !!saveProgress
+      saveProgress: !!saveProgress,
+      fromDebug: !!fromDebug
     });
     setGameState('SPECIES_CHALLENGE_SELECT');
   };
@@ -15332,6 +15389,8 @@ function MonsterHeroGame() {
   };
   // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
+  // 種族チャレンジの解放判定。こちらも同じ mh_clears_* を読むだけで、専用の解放フラグは持たない
+  const speciesChallengeUnlocked = useMemo(() => isSpeciesChallengeUnlocked(clearCounts), [clearCounts]);
   const extremeClearCount = extremeClearCounts[EXTREME_SETTING.id] || 0;
   const nightmareClearCount = extremeClearCounts[NIGHTMARE_SETTING.id] || 0;
   const chaosClearCount = extremeClearCounts[CHAOS_SETTING.id] || 0;
@@ -17104,6 +17163,10 @@ function MonsterHeroGame() {
     // デバッグ・練習の周回は、どのモードでも全国ランキングにも自己ベストにも残さない。
     // 呼び出し側でも弾いているが、ここでも止めて「デバッグから遊んだら記録がついた」を確実に防ぐ
     if (debugBattleRef.current) return;
+    // 種族チャレンジは専用の送信処理だけを通す。ここから下のどの分岐へも落とさない
+    // (落とすと最後の分岐でチャレンジの mh_hs_<難易度> を上書きしてしまう)。
+    // scoreSubmittedRef は委譲先で立てるので、ここでは立てずに渡す
+    if (speciesChallengeBattleRunRef.current) return submitSpeciesChallengeScoreOnce();
     scoreSubmittedRef.current = true;
     // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
     // 記録は専用のキーへだけ残す
@@ -17755,10 +17818,14 @@ function MonsterHeroGame() {
   const assistantUnlockNoticeOf = scene => typeof assistantUnlockNoticeFor === 'function' ? assistantUnlockNoticeFor(scene, {
     bondLevel: assistantBondLevelNow,
     assistantId: selectedAssistantId,
-    callStyles: typeof assistantCallStylesOf === 'function' ? assistantCallStylesOf(selectedAssistantId) : null
+    callStyles: typeof assistantCallStylesOf === 'function' ? assistantCallStylesOf(selectedAssistantId) : null,
+    // 種族チャレンジの解放。一般公開する前は必ず false のままなので、案内も出ない
+    speciesChallengeUnlocked: SPECIES_CHALLENGE_PUBLIC_RELEASE && speciesChallengeUnlocked,
+    speciesChallengeUnlockText: SPECIES_CHALLENGE_UNLOCK_TEXT
   }, assistantUnlockSeen) : null;
-  // 読み終わったら既読へ足して保存する。同じ案内は二度と出ない
-  const finishAssistantUnlockNotice = id => {
+  // 読み終わったら既読へ足して保存する。同じ案内は二度と出ない。
+  // destination を持つ案内は、閉じたあとその画面へ連れていく
+  const finishAssistantUnlockNotice = (id, destination = null) => {
     setAssistantUnlockPage(0);
     if (!id) return;
     setAssistantUnlockSeen(prev => {
@@ -17766,6 +17833,64 @@ function MonsterHeroGame() {
       storeSet(ASSISTANT_UNLOCK_NOTICE_SEEN_KEY, next, false);
       return next;
     });
+    const destinationState = noticeDestinationState(destination);
+    if (destinationState) setGameState(destinationState);
+  };
+  // 解放の案内の見た目。場面(scene)ごとに作り直さず、ここ1か所だけが描く。
+  // 出す場面でないとき・出すものが無いときは null を返す
+  const assistantUnlockNoticeNode = scene => {
+    if (!scene) return null;
+    if (!(bootPhase === 'GAME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && !eventReplay)) return null;
+    // アップデートの案内・日次アドバイスと重ならないよう、そちらが出ているあいだは待つ
+    if (updateGuideQueue.length > 0 || dailyMasuAdvice) return null;
+    const notice = assistantUnlockNoticeOf(scene);
+    if (!notice) return null;
+    const pages = notice.pages;
+    const page = Math.min(assistantUnlockPage, pages.length - 1);
+    const last = page === pages.length - 1;
+    const who = activeAssistant;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-assistant-unlock-notice": scene,
+      className: "fixed inset-0 flex items-end justify-center",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 76000,
+        backgroundColor: 'rgba(2,6,23,.94)'
+      },
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": notice.title
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+      style: {
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("h2", {
+      className: "mb-1 text-center text-base font-black text-pink-200"
+    }, notice.title), /*#__PURE__*/React.createElement("p", {
+      className: "mb-3 text-center text-[10px] font-bold text-slate-400"
+    }, page + 1, " / ", pages.length), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-end gap-2"
+    }, /*#__PURE__*/React.createElement(AssistantFace, {
+      who: who,
+      size: 76,
+      accent: who.accent,
+      expression: notice.expression || 'happy'
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
+    }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantUnlockPage(page + 1),
+      className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
+    }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("div", {
+      className: `mt-4 grid ${notice.destination ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
+    }, notice.destination && /*#__PURE__*/React.createElement("button", {
+      onClick: () => finishAssistantUnlockNotice(notice.id, notice.destination),
+      className: "min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
+    }, notice.buttonLabel || '見に行く'), /*#__PURE__*/React.createElement("button", {
+      onClick: () => finishAssistantUnlockNotice(notice.id),
+      className: `min-h-[50px] rounded-2xl text-sm font-black ${notice.destination ? 'bg-slate-800 text-slate-200' : 'bg-pink-500 text-slate-950'}`
+    }, "\u9589\u3058\u308B"))));
   };
   // 吹き出しを使わず、その場面のセリフを直接並べたいとき(日次アドバイスなど)。
   // いま選んでいる助手のぶんだけを返すので、画面側に助手ごとの分岐を書かなくてよい
@@ -20129,8 +20254,9 @@ function MonsterHeroGame() {
     return s;
   };
 
-  // saveProgress=true はデバッグ設定の「実進行保存で実戦確認」からだけ渡す。
-  // 通常の BATTLE TEST 経由は false のままで、クリアしても何も保存しない。
+  // saveProgress=true は本番の入口(BATTLE MODEの種族チャレンジ)と、デバッグ設定の
+  // 「実進行保存で実戦確認」から渡す。デバッグのバトルモード入口・実戦フロー確認は false のままで、
+  // クリアしても何も保存しない。
   const startSpeciesChallengeBattle = (run, {
     saveProgress = false
   } = {}) => {
@@ -20153,14 +20279,22 @@ function MonsterHeroGame() {
     setSpeciesChallengeSaveRun(!!saveProgress);
     speciesChallengeClearHandledRef.current = false;
     setSpeciesChallengeClearResult(null);
-    debugBattleRef.current = true;
+    // 本番の周回(saveProgress=true)は、他モードとまったく同じ進行へ通す。
+    // 保存しない確認だけを debugBattle 扱いにして、リザルトをデバッグ表示へ寄せる
+    const previewRun = !saveProgress;
+    debugBattleRef.current = previewRun;
     debugResultRef.current = false;
-    setDebugBattle(true);
+    setDebugBattle(previewRun);
     setDebugOutcome(null);
+    setGaveUp(false);
     const extremeSetting = extremeRuleSetting(run.difficultyId);
     extremeRunRef.current = !!extremeSetting;
     setExtremeRun(!!extremeSetting);
-    setRunMode(extremeSetting ? EXTREME_MODE.id : BATTLE_MODE_CHALLENGE);
+    // 種族チャレンジは runMode そのものを専用の値にする。
+    // isQuickMode / isProMode はどちらも false になり、記録キーの接頭辞(modeKeyPrefix)は
+    // チャレンジと同じ 'mh_' に落ちるが、そのキーへ書き込む処理はすべて
+    // speciesChallengeBattleRunRef で除外してあるので、チャレンジの記録には一切触れない
+    setRunMode(BATTLE_MODE_SPECIES_CHALLENGE);
     setDifficulty(extremeSetting ? 'Normal' : run.difficultyId);
     if (extremeSetting) setExtremeDifficulty(extremeSetting.id);
     initialBattleDistanceRef.current = 0;
@@ -20180,7 +20314,7 @@ function MonsterHeroGame() {
     setGuts(Math.floor(hero.baseGuts * 0.5));
     setAtk(hero.baseAtk);
     setDef(hero.baseDef);
-    setDistAptPct(getMonsterAptPct(hero, specialRuleDifficultyForRun(extremeSetting ? EXTREME_MODE.id : BATTLE_MODE_CHALLENGE, extremeSetting ? 'Normal' : run.difficultyId, !!extremeSetting, extremeSetting?.id)));
+    setDistAptPct(getMonsterAptPct(hero, specialRuleDifficultyForRun(BATTLE_MODE_SPECIES_CHALLENGE, extremeSetting ? 'Normal' : run.difficultyId, !!extremeSetting, extremeSetting?.id)));
     setTeachingPool([...getActiveTeachingCards()]);
     setGameState('PICK_TEACHING');
   };
@@ -20268,6 +20402,39 @@ function MonsterHeroGame() {
     }
     // 全国ランキングは種族×難易度ごと。公開フラグがfalseの間は送らない
     await submitSpeciesChallengeScoreOnce();
+  };
+
+  // クリア結果のカード。保存なしの確認(デバッグ表示)と、本番のCHAMPIONの両方から呼ぶ。
+  // 画面ごとに作り直さず、ここ1か所だけが結果の見せ方を決める
+  const speciesChallengeClearCardNode = () => {
+    const r = speciesChallengeClearResult;
+    if (!speciesChallengeBattleRun || !r) return null;
+    const speciesName = speciesChallengeSpeciesName(r.speciesId);
+    const labelOf = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+    const nextLabel = r.nextDifficultyId ? labelOf(r.nextDifficultyId) : null;
+    const record = speciesChallengeRecord(speciesChallengeProgress, r.speciesId, r.difficultyId);
+    return /*#__PURE__*/React.createElement("div", {
+      "data-species-clear-result": true,
+      className: `w-full max-w-xs mb-4 rounded-2xl border p-3 text-left ${r.saved ? 'border-emerald-400/60 bg-emerald-950/30' : 'border-amber-400/50 bg-amber-950/25'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `mb-2 text-[10px] font-black ${r.saved ? 'text-emerald-200' : 'text-amber-200'}`
+    }, r.failed ? '保存に失敗しました' : r.saved ? '種族チャレンジ クリア' : '種族チャレンジ クリア（保存なし確認）'), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1 text-[10px] text-slate-200"
+    }, /*#__PURE__*/React.createElement("span", null, "\u7A2E\u65CF / \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("b", {
+      className: "text-right"
+    }, speciesName, "\uFF0F", labelOf(r.difficultyId)), /*#__PURE__*/React.createElement("span", null, "\u4ECA\u56DE\u306E\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("b", {
+      className: "text-right"
+    }, r.score.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("b", {
+      className: "text-right"
+    }, r.clearTurns !== null ? `${r.clearTurns}T` : '—'), /*#__PURE__*/React.createElement("span", null, "\u521D\u56DE\u5831\u916C"), /*#__PURE__*/React.createElement("b", {
+      className: "text-right"
+    }, r.rewardGranted ? `超越の実（${speciesName}）×${r.rewardAmount}` : 'なし（取得済み）'), /*#__PURE__*/React.createElement("span", null, "\u6B21\u306E\u89E3\u653E"), /*#__PURE__*/React.createElement("b", {
+      className: "text-right"
+    }, nextLabel || 'これ以上なし')), r.saved ? /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 border-t border-white/10 pt-2 text-[9px] text-emerald-200"
+    }, "\u81EA\u5DF1\u30D9\u30B9\u30C8 ", record.bestScore.toLocaleString(), "pt \uFF0F \u6700\u77ED ", record.bestTurns !== null ? `${record.bestTurns}T` : '—', " \uFF0F \u30AF\u30EA\u30A2 ", record.clears, "\u56DE") : /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 border-t border-white/10 pt-2 text-[9px] text-amber-200"
+    }, "\u3053\u306E\u78BA\u8A8D\u3067\u306F\u4FDD\u5B58\u3057\u3066\u3044\u307E\u305B\u3093\u3002\u5B9F\u969B\u306B\u4FDD\u5B58\u3057\u3066\u78BA\u304B\u3081\u308B\u3068\u304D\u306F\u3001\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u306E\u300C\u5B9F\u9032\u884C\u4FDD\u5B58\u3067\u5B9F\u6226\u78BA\u8A8D\u300D\u304B\u3089\u59CB\u3081\u3066\u304F\u3060\u3055\u3044\u3002"));
   };
   const createRepeatRunTemplate = ({
     hero,
@@ -20588,12 +20755,7 @@ function MonsterHeroGame() {
     await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
     setUpdateGuidePage(0);
     setUpdateGuideQueue(queue => queue.slice(1));
-    const updateNoticeDestinations = {
-      market: 'BREEDER_MARKET',
-      battle: 'BATTLE_MODE_SELECT',
-      training: 'TRAINING_INFO'
-    };
-    const destinationState = updateNoticeDestinations[destination] || (typeof destination === 'string' && /^[A-Z][A-Z0-9_]*$/.test(destination) ? destination : null);
+    const destinationState = noticeDestinationState(destination);
     if (destinationState) setGameState(destinationState);
   };
   const debugPlayUpdateGuide = async () => {
@@ -20627,6 +20789,7 @@ function MonsterHeroGame() {
     // ここを残すと次の通常バトルへ「保存する/しない」が漏れる
     speciesChallengeSaveRunRef.current = false;
     setSpeciesChallengeSaveRun(false);
+    speciesChallengeFromDebugRef.current = false;
     speciesChallengeClearHandledRef.current = false;
     setSpeciesChallengeClearResult(null);
     setDebugBattle(false);
@@ -20958,6 +21121,18 @@ function MonsterHeroGame() {
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
   const handleRetry = () => {
     stopAllAuto();
+    // 種族チャレンジは通常の勇者選択(PICK_HERO)へは戻さない。
+    // 種族・難易度・編成を選び直すところからやり直す(保存する/しないは引き継ぐ)
+    if (speciesChallengeBattleRunRef.current) {
+      const keepSaving = speciesChallengeSaveRunRef.current;
+      const keepDebug = speciesChallengeFromDebugRef.current;
+      returnToHome();
+      openSpeciesChallengeSelection({
+        saveProgress: keepSaving,
+        fromDebug: keepDebug
+      });
+      return;
+    }
     beginNewRankingRun({
       runIdRef,
       scoreSubmittedRef,
@@ -22562,9 +22737,24 @@ function MonsterHeroGame() {
     setEffect(null);
     if (wave === 10) {
       if (speciesChallengeBattleRunRef.current) {
+        // 保存なしの確認だけ、これまでどおりデバッグ表示で止める。
+        // 本番の周回は他モードと同じ CHAMPION へ進み、リザルトも通常の画面を使う
+        if (!speciesChallengeSaveRunRef.current) {
+          await finishSpeciesChallengeClear();
+          debugResultRef.current = true;
+          setDebugOutcome('win');
+          return;
+        }
+        stopAutoBattle();
+        setChampionPresentationComplete(false);
+        runFinalizingRef.current = true;
+        setRunFinalizing(true);
+        setResultProcessing(true);
+        // 報酬・クリア記録・全国ランキング送信は finishSpeciesChallengeClear の中で
+        // 通常バトルと同じ共通処理(awardRunRewards / recordClearOnce)を通している
         await finishSpeciesChallengeClear();
-        debugResultRef.current = true;
-        setDebugOutcome('win');
+        setGameState('CHAMPION');
+        setResultProcessing(false);
         return;
       }
       stopAutoBattle();
@@ -22993,7 +23183,9 @@ function MonsterHeroGame() {
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
     // チャレンジのNormalの記録を書き換えてしまう。デバッグ戦・練習と同じく記録しない
-    if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current) {
+    // 種族チャレンジも同じ理由で除外する。記録は種族×難易度ごとに
+    // mh_species_challenge_progress_v1 側だけへ残し、mh_highest_wave_* には一切触れない
+    if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {
       if (isQuickMode(runMode)) {
         if (w > (quickHighestWaves[difficulty] || 0)) {
           setQuickHighestWaves(prev => ({
@@ -23649,8 +23841,10 @@ function MonsterHeroGame() {
     }
     if (isUpgrade) addPopup("強化完了！", 'hero', 'text-white bg-indigo-600 px-2 text-[10px]');
     // このWAVE1開始が今回の挑戦のスタート地点。
-    // 極限チャレンジ・デバッグ戦・練習は、チャレンジの挑戦回数(mh_attempts_*)へ数えない
-    if (!enemy && !extremeRunRef.current && !debugBattleRef.current) {
+    // 極限チャレンジ・デバッグ戦・練習は、チャレンジの挑戦回数(mh_attempts_*)へ数えない。
+    // 種族チャレンジも同じ理由で除外する。難易度idがチャレンジと同名(Master など)なので、
+    // ここを通すと mh_attempts_Master がチャレンジの挑戦として増えてしまう
+    if (!enemy && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {
       setAttemptCounts(prev => {
         const next = {
           ...prev,
@@ -28539,6 +28733,7 @@ function MonsterHeroGame() {
           isExtreme = m.id === EXTREME_MODE.id,
           isSpecies = m.id === BATTLE_MODE_SPECIES_CHALLENGE,
           extremeLocked = isExtreme && !extremeUnlocked && !debugBattle,
+          speciesLocked = isSpecies && !speciesChallengeUnlocked && !debugBattle,
           rec = isExtreme ? {
             score: highestModeScore(extremeBestScores, EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => setting.id)),
             wave: 0,
@@ -28567,14 +28762,14 @@ function MonsterHeroGame() {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
-        }, isSpecies ? 'クリアした種族×難易度' : isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`), /*#__PURE__*/React.createElement("b", {
+        }, isSpecies ? speciesLocked ? '解放条件' : 'クリアした種族×難易度' : isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`), /*#__PURE__*/React.createElement("b", {
           className: "block text-right text-base leading-tight",
           style: {
             color: m.color
           }
-        }, isSpecies ? `${speciesChallengeTotalClearedCount(speciesChallengeProgress)} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
+        }, isSpecies ? speciesLocked ? '🔒 未解放' : `${speciesChallengeTotalClearedCount(speciesChallengeProgress)} 組` : isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, isSpecies ? '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
+        }, isSpecies ? speciesLocked ? SPECIES_CHALLENGE_UNLOCK_TEXT : SPECIES_CHALLENGE_PUBLIC_RELEASE ? `全${speciesChallengeLineages().length * SPECIES_CHALLENGE_DIFFICULTY_IDS.length}組中` : '🧪 DEBUG・一般公開前' : isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
           className: "mt-1.5 space-y-0.5"
         }, m.highlights.map(([icon, text]) => /*#__PURE__*/React.createElement("li", {
           key: text,
@@ -28590,11 +28785,14 @@ function MonsterHeroGame() {
           onClick: () => setModeInfoId(m.id),
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
         }, "\u3053\u306E\u30E2\u30FC\u30C9\u306E\u8AAC\u660E"), /*#__PURE__*/React.createElement("button", {
-          disabled: extremeLocked || !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
+          disabled: extremeLocked || speciesLocked || !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
           onClick: () => {
             setBattleMode(m.id);
             if (isSpecies) {
-              openSpeciesChallengeSelection();
+              openSpeciesChallengeSelection({
+                saveProgress: !debugBattle,
+                fromDebug: debugBattle
+              });
               return;
             }
             setGameState(isExtreme ? 'EXTREME_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
@@ -28604,7 +28802,7 @@ function MonsterHeroGame() {
             backgroundColor: m.color,
             color: '#0f172a'
           }
-        }, extremeLocked ? 'まだ挑戦できません' : isSpecies ? '種族を選ぶ' : '難易度を選ぶ'), isExtreme && /*#__PURE__*/React.createElement("button", {
+        }, extremeLocked || speciesLocked ? 'まだ挑戦できません' : isSpecies ? '種族を選ぶ' : '難易度を選ぶ'), isExtreme && /*#__PURE__*/React.createElement("button", {
           disabled: extremeLocked || !!battleTutorial,
           onClick: () => openModeScoreRanking(m.id, EXTREME_SETTING.id, 'BATTLE_MODE_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
@@ -28614,7 +28812,7 @@ function MonsterHeroGame() {
           size: 14
         })), isSpecies && /*#__PURE__*/React.createElement("button", {
           "data-species-record-link": true,
-          disabled: !!battleTutorial,
+          disabled: speciesLocked || !!battleTutorial,
           onClick: () => openSpeciesChallengeRecords('BATTLE_MODE_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
@@ -30999,7 +31197,9 @@ function MonsterHeroGame() {
         className: "shrink-0 space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3"
       }, /*#__PURE__*/React.createElement("button", {
         "data-species-challenge-production-flow": true,
-        onClick: openSpeciesChallengeSelection,
+        onClick: () => openSpeciesChallengeSelection({
+          fromDebug: true
+        }),
         className: "min-h-[52px] w-full rounded-xl border-2 border-cyan-300 bg-cyan-950 text-[11px] font-black text-cyan-100"
       }, "\u2694\uFE0F \u5B9F\u6226\u30D5\u30ED\u30FC\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
         className: "block text-[8px] text-cyan-300"
@@ -31122,7 +31322,8 @@ function MonsterHeroGame() {
         onClick: () => {
           if (!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？')) return;
           openSpeciesChallengeSelection({
-            saveProgress: true
+            saveProgress: true,
+            fromDebug: true
           });
         },
         className: "min-h-[46px] w-full rounded-xl bg-red-700 text-[10px] font-black text-white"
@@ -31382,12 +31583,12 @@ function MonsterHeroGame() {
         className: "text-[8px] font-black tracking-[.18em] text-slate-400"
       }, "BATTLE"), /*#__PURE__*/React.createElement("h2", {
         className: "truncate text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-      }, titles[selection.step])), selection.saveProgress ? /*#__PURE__*/React.createElement("span", {
+      }, titles[selection.step])), selection.fromDebug && (selection.saveProgress ? /*#__PURE__*/React.createElement("span", {
         "data-species-save-badge": true,
         className: "ml-auto rounded-full border border-red-400/60 bg-red-950/80 px-2 py-1 text-[7px] font-black text-red-200"
       }, "DEBUG\u30FB\u5B9F\u9032\u884C\u3092\u4FDD\u5B58") : /*#__PURE__*/React.createElement("span", {
         className: "ml-auto rounded-full border border-amber-400/40 bg-amber-950/70 px-2 py-1 text-[7px] font-black text-amber-200"
-      }, "DEBUG\u30FB\u4FDD\u5B58\u306A\u3057")), /*#__PURE__*/React.createElement("section", {
+      }, "DEBUG\u30FB\u4FDD\u5B58\u306A\u3057"))), /*#__PURE__*/React.createElement("section", {
         className: "mh-scroll min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pb-3"
       }, selection.step === 'species' && /*#__PURE__*/React.createElement("div", {
         className: "space-y-2",
@@ -31470,11 +31671,20 @@ function MonsterHeroGame() {
         className: "space-y-2"
       }, selectedAllies.map(id => entryById(id) && monsterCard(entryById(id), true, () => {}, false, '選択中'))) : /*#__PURE__*/React.createElement("p", {
         className: "rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400"
-      }, "\u4F9B\u30E2\u30F3\u306A\u3057\u3067\u51FA\u6483")), selection.saveProgress ? /*#__PURE__*/React.createElement("p", {
+      }, "\u4F9B\u30E2\u30F3\u306A\u3057\u3067\u51FA\u6483")), selection.fromDebug && (selection.saveProgress ? /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl border-2 border-red-400/60 bg-red-950/40 p-3 text-[9px] leading-relaxed font-black text-red-100"
       }, "\u26A0\uFE0F \u5B9F\u969B\u306E\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u30FB\u6240\u6301\u54C1\u3092\u5909\u66F4\u3057\u307E\u3059\u3002WAVE10\u307E\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u30AF\u30EA\u30A2\u72B6\u6CC1\u30FB\u6B21\u306E\u96E3\u6613\u5EA6\u306E\u89E3\u653E\u30FB\u521D\u56DE\u306E\u8D85\u8D8A\u306E\u5B9F\u30FB\u7A2E\u65CF\xD7\u96E3\u6613\u5EA6\u306E\u81EA\u5DF1\u8A18\u9332\u304C\u672C\u5F53\u306B\u4FDD\u5B58\u3055\u308C\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u306F\u9001\u4FE1\u3057\u307E\u305B\u3093\u3002") : /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl border border-amber-400/30 bg-amber-950/30 p-3 text-[9px] leading-relaxed text-amber-100"
-      }, "\u51FA\u6483\u5F8C\u306F\u65E2\u5B58\u30D0\u30C8\u30EB\u306EWAVE1\u3078\u9032\u307F\u307E\u3059\u3002\u3053\u306E\u78BA\u8A8D\u3067\u306F\u7D50\u679C\u30FB\u5831\u916C\u30FB\u9032\u884C\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u4E00\u5207\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("footer", {
+      }, "\u51FA\u6483\u5F8C\u306F\u65E2\u5B58\u30D0\u30C8\u30EB\u306EWAVE1\u3078\u9032\u307F\u307E\u3059\u3002\u3053\u306E\u78BA\u8A8D\u3067\u306F\u7D50\u679C\u30FB\u5831\u916C\u30FB\u9032\u884C\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u4E00\u5207\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("div", {
+        "data-species-assistant": true,
+        className: "pt-1"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        key: selection.step,
+        scene: "speciesChallenge",
+        condition: selection.step,
+        accent: "#67e8f9",
+        compact: true
+      }))), /*#__PURE__*/React.createElement("footer", {
         className: "mt-2 shrink-0"
       }, selection.step === 'species' ? /*#__PURE__*/React.createElement("button", {
         disabled: !selection.speciesId,
@@ -38637,50 +38847,7 @@ function MonsterHeroGame() {
         onClick: () => finishUpdateGuide(),
         className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white"
       }, notice.destination ? 'あとで' : '閉じる'))));
-    })(), bootPhase === 'GAME' && gameState === 'PROFILE' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && !eventReplay && (() => {
-      const notice = assistantUnlockNoticeOf('profile');
-      if (!notice) return null;
-      const pages = notice.pages;
-      const page = Math.min(assistantUnlockPage, pages.length - 1);
-      const last = page === pages.length - 1;
-      const who = activeAssistant;
-      return /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-0 flex items-end justify-center",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          zIndex: 76000,
-          backgroundColor: 'rgba(2,6,23,.94)'
-        },
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": notice.title
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
-        style: {
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("h2", {
-        className: "mb-1 text-center text-base font-black text-pink-200"
-      }, notice.title), /*#__PURE__*/React.createElement("p", {
-        className: "mb-3 text-center text-[10px] font-bold text-slate-400"
-      }, page + 1, " / ", pages.length), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-end gap-2"
-      }, /*#__PURE__*/React.createElement(AssistantFace, {
-        who: who,
-        size: 76,
-        accent: who.accent,
-        expression: notice.expression || 'happy'
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
-      }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? /*#__PURE__*/React.createElement("button", {
-        onClick: () => setAssistantUnlockPage(page + 1),
-        className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
-      }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("button", {
-        onClick: () => finishAssistantUnlockNotice(notice.id),
-        className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
-      }, "\u9589\u3058\u308B")));
-    })(), eventReplay != null && (() => {
+    })(), assistantUnlockNoticeNode(gameState === 'PROFILE' ? 'profile' : gameState === 'HOME' ? 'home' : null), eventReplay != null && (() => {
       const list = typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || [];
       const event = list.find(ev => ev.id === eventReplay.id);
       const script = event && event.script || [];
@@ -40936,43 +41103,17 @@ function MonsterHeroGame() {
       className: "text-right"
     }, goldForWavesCleared(10, activeExtremeSetting.gold).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u6642\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, activeExtremeSetting.psyche))), speciesChallengeBattleRun && speciesChallengeClearResult && (() => {
-      const r = speciesChallengeClearResult;
-      const speciesName = speciesChallengeSpeciesName(r.speciesId);
-      const diffLabel = DIFFICULTY_SETTINGS[r.difficultyId]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === r.difficultyId)?.label || r.difficultyId;
-      const nextLabel = r.nextDifficultyId ? DIFFICULTY_SETTINGS[r.nextDifficultyId]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === r.nextDifficultyId)?.label || r.nextDifficultyId : null;
-      const record = speciesChallengeRecord(speciesChallengeProgress, r.speciesId, r.difficultyId);
-      return /*#__PURE__*/React.createElement("div", {
-        "data-species-clear-result": true,
-        className: `w-full max-w-xs mb-4 rounded-2xl border p-3 text-left ${r.saved ? 'border-emerald-400/60 bg-emerald-950/30' : 'border-amber-400/50 bg-amber-950/25'}`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: `mb-2 text-[10px] font-black ${r.saved ? 'text-emerald-200' : 'text-amber-200'}`
-      }, r.failed ? '保存に失敗しました' : r.saved ? '種族チャレンジ クリア（実際に保存しました）' : '種族チャレンジ クリア（保存なし確認）'), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-1 text-[10px] text-slate-200"
-      }, /*#__PURE__*/React.createElement("span", null, "\u7A2E\u65CF / \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("b", {
-        className: "text-right"
-      }, speciesName, "\uFF0F", diffLabel), /*#__PURE__*/React.createElement("span", null, "\u4ECA\u56DE\u306E\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("b", {
-        className: "text-right"
-      }, r.score.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("b", {
-        className: "text-right"
-      }, r.clearTurns !== null ? `${r.clearTurns}T` : '—'), /*#__PURE__*/React.createElement("span", null, "\u521D\u56DE\u5831\u916C"), /*#__PURE__*/React.createElement("b", {
-        className: "text-right"
-      }, r.rewardGranted ? `超越の実（${speciesName}）×${r.rewardAmount}` : 'なし（取得済み）'), /*#__PURE__*/React.createElement("span", null, "\u6B21\u306E\u89E3\u653E"), /*#__PURE__*/React.createElement("b", {
-        className: "text-right"
-      }, nextLabel || 'これ以上なし')), r.saved ? /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 border-t border-white/10 pt-2 text-[9px] text-emerald-200"
-      }, "\u81EA\u5DF1\u30D9\u30B9\u30C8 ", record.bestScore.toLocaleString(), "pt \uFF0F \u6700\u77ED ", record.bestTurns !== null ? `${record.bestTurns}T` : '—', " \uFF0F \u30AF\u30EA\u30A2 ", record.clears, "\u56DE") : /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 border-t border-white/10 pt-2 text-[9px] text-amber-200"
-      }, "\u3053\u306E\u78BA\u8A8D\u3067\u306F\u4FDD\u5B58\u3057\u3066\u3044\u307E\u305B\u3093\u3002\u5B9F\u969B\u306B\u4FDD\u5B58\u3057\u3066\u78BA\u304B\u3081\u308B\u3068\u304D\u306F\u3001\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u306E\u300C\u5B9F\u9032\u884C\u4FDD\u5B58\u3067\u5B9F\u6226\u78BA\u8A8D\u300D\u304B\u3089\u59CB\u3081\u3066\u304F\u3060\u3055\u3044\u3002"));
-    })(), /*#__PURE__*/React.createElement("div", {
+    }, activeExtremeSetting.psyche))), speciesChallengeClearCardNode(), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs space-y-3"
     }, speciesChallengeBattleRun ? /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         const keepSaving = speciesChallengeSaveRunRef.current;
+        const keepDebug = speciesChallengeFromDebugRef.current;
         runResultActionOnce(() => {
           returnToHome();
           openSpeciesChallengeSelection({
-            saveProgress: keepSaving
+            saveProgress: keepSaving,
+            fromDebug: keepDebug
           });
         });
       },
@@ -41020,7 +41161,7 @@ function MonsterHeroGame() {
       className: "flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "m-auto w-full flex flex-col items-center"
-    }, masuRegisterButtonNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
+    }, masuRegisterButtonNode(), speciesChallengeClearCardNode(), finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
       key: resultProcessing ? 'locked' : 'ready',
       summary: finalRewardSummary,
       onPresentationComplete: resultProcessing ? undefined : () => setChampionPresentationComplete(true)
@@ -41038,7 +41179,22 @@ function MonsterHeroGame() {
     }, "\u221E\u5468\u56DE OFF"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAutoBattleEnabled(false),
       className: "min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black"
-    }, "AUTO OFF")), /*#__PURE__*/React.createElement("button", {
+    }, "AUTO OFF")), speciesChallengeBattleRun && /*#__PURE__*/React.createElement("button", {
+      "data-species-champion-back": true,
+      onClick: () => {
+        const keepSaving = speciesChallengeSaveRunRef.current;
+        const keepDebug = speciesChallengeFromDebugRef.current;
+        runResultActionOnce(() => {
+          returnToHome();
+          openSpeciesChallengeSelection({
+            saveProgress: keepSaving,
+            fromDebug: keepDebug
+          });
+        });
+      },
+      disabled: resultActionPending,
+      className: "w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50"
+    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9078\u629E\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => runResultActionOnce(returnToHome),
       disabled: resultActionPending,
       "aria-busy": resultActionPending,
