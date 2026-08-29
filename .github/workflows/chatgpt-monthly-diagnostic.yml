@@ -1,0 +1,32 @@
+name: ChatGPT monthly mission diagnostic
+
+on:
+  push:
+    branches:
+      - chatgpt/monthly-missions-20260829
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print mission neighborhoods
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('monster-hero/src/game-system.jsx')
+          s=p.read_text()
+          patterns=['missionDailyDefinitions','saveMissionProgress','missionClaimableList','missionClaim','sentWeekly','weeklyLoginDays','missionTab','missionsWeekly']
+          lines=s.splitlines()
+          for pat in patterns:
+              print(f'\n===== {pat} =====')
+              hits=[i for i,l in enumerate(lines) if pat in l]
+              print('hits', [i+1 for i in hits])
+              for i in hits[:8]:
+                  a=max(0,i-22); b=min(len(lines),i+60)
+                  print(f'--- lines {a+1}-{b} ---')
+                  for n in range(a,b): print(f'{n+1:06d}: {lines[n]}')
+          PY
