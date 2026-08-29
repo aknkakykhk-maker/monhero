@@ -125,6 +125,131 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   @keyframes staticShadow { 0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3} }
   @keyframes staticProgress { to{width:28%} }
   @media(prefers-reduced-motion:reduce){.static-mocchi img,.static-mocchi span,.static-progress span{animation:none}}
+
+  /* 種族チャレンジの種族選択だけを、スマホで比較しやすい2列カードへ整える。
+     React側の選択・記録ロジックは触らず、既存data属性をレイアウトのフックにする。 */
+  section:has(> [data-species-list]) {
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+  }
+  section:has(> [data-species-list]) > * { margin-top:0 !important; }
+  section:has(> [data-species-list]) > [data-species-assistant] {
+    order:-1;
+    padding-top:0 !important;
+    margin-bottom:.25rem !important;
+  }
+  [data-species-list] {
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:.5rem !important;
+  }
+  [data-species-row] {
+    position:relative;
+    min-width:0;
+    min-height:104px;
+    gap:.375rem !important;
+    padding:.5rem .5rem 2rem !important;
+    border-radius:1rem !important;
+    align-items:center;
+  }
+  [data-species-row] > :first-child {
+    width:3.25rem !important;
+    height:3.25rem !important;
+    border-radius:.875rem !important;
+  }
+  [data-species-row] > .min-w-0.flex-1 {
+    min-width:0;
+    align-self:center;
+    padding-right:.65rem;
+  }
+  [data-species-row] > .min-w-0.flex-1 > b {
+    display:-webkit-box !important;
+    overflow:hidden;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    white-space:normal !important;
+    font-size:10px !important;
+    line-height:1.15;
+  }
+  [data-species-row] > .min-w-0.flex-1 > small {
+    display:-webkit-box !important;
+    overflow:hidden;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    white-space:normal !important;
+    font-size:7px !important;
+    line-height:1.2;
+  }
+  [data-species-row] > .min-w-0.flex-1 > span {
+    position:absolute;
+    left:.5rem;
+    right:.5rem;
+    bottom:.45rem;
+    display:grid !important;
+    grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);
+    gap:.25rem !important;
+    margin-top:0 !important;
+  }
+  [data-species-row] > .min-w-0.flex-1 > span > small {
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    padding:.18rem .22rem !important;
+    text-align:center;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:7px !important;
+    line-height:1.2;
+  }
+  [data-species-row] > .min-w-0.flex-1 > span > small:nth-child(3) {
+    display:none !important;
+  }
+  [data-species-row] > svg {
+    position:absolute;
+    top:50%;
+    right:.28rem;
+    width:14px;
+    height:14px;
+    transform:translateY(-50%);
+  }
+  [data-species-row] > span:last-child:not(.min-w-0) {
+    position:absolute;
+    top:.28rem;
+    right:.28rem;
+    padding:.18rem .3rem !important;
+    font-size:6px !important;
+  }
+  section:has(> [data-species-list]) + footer > button {
+    min-height:64px !important;
+    border-radius:1rem !important;
+    font-size:14px !important;
+  }
+  @media(max-width:350px) {
+    [data-species-list] { gap:.375rem !important; }
+    [data-species-row] {
+      min-height:98px;
+      gap:.25rem !important;
+      padding:.375rem .375rem 1.9rem !important;
+    }
+    [data-species-row] > :first-child {
+      width:3rem !important;
+      height:3rem !important;
+    }
+    [data-species-row] > .min-w-0.flex-1 { padding-right:.45rem; }
+    [data-species-row] > .min-w-0.flex-1 > b { font-size:9px !important; }
+    [data-species-row] > .min-w-0.flex-1 > small { font-size:6.5px !important; }
+    [data-species-row] > .min-w-0.flex-1 > span {
+      left:.375rem;
+      right:.375rem;
+      bottom:.35rem;
+      gap:.18rem !important;
+    }
+    [data-species-row] > .min-w-0.flex-1 > span > small {
+      padding:.15rem .12rem !important;
+      font-size:6.5px !important;
+    }
+  }
 </style>
 </head>
 <body>
