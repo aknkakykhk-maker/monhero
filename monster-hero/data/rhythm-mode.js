@@ -386,3 +386,21 @@ const installRhythmPerspectiveNoteVisuals=()=>{
   else observe();
 };
 installRhythmPerspectiveNoteVisuals();
+
+// DEBUG ONLY: 音ゲーデバッグ画面を開いた時だけ譜面制作ツールを読み込む。
+const installRhythmAuthoringLoader=()=>{
+  if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
+  let loaded=false;
+  const load=()=>{
+    if(loaded||!document.querySelector('[data-rhythm-debug]'))return;
+    loaded=true;
+    const script=document.createElement('script');
+    script.dataset.rhythmAuthoringLoader='';
+    script.src='data/rhythm-authoring.js?v=20260831a';
+    document.head.appendChild(script);
+  };
+  const start=()=>{load();if(!loaded)new MutationObserver(load).observe(document.body,{childList:true,subtree:true});};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+};
+installRhythmAuthoringLoader();

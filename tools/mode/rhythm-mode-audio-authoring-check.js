@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+const fs=require('fs');
+const path=require('path');
+const vm=require('vm');
+const ROOT=path.resolve(__dirname,'..','..');
+const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-authoring.js'),'utf8');
+let failed=0;
+const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
+const ctx={console,Math,Number,Array,Object,Map,JSON,Date,Promise,setTimeout,clearTimeout};
+vm.createContext(ctx);
+vm.runInContext(source,ctx);
+const onsets=new Array(1200).fill(0);
+for(let i=25;i<onsets.length;i+=50)onsets[i]=1;
+ctx.__testOnsets=onsets;
+const result=vm.runInContext('rhythmEstimateBeatGridFromOnsets(__testOnsets,100,12000)',ctx);
+check('120BPMの合成拍を約120BPMで推定',Math.abs(result.bpm-120)<1.5);
+check('250msの拍オフセットを約250msで推定',Math.abs(result.offsetMs-250)<20);
+check('拍列を生成',Array.isArray(result.beats)&&result.beats.length>=16&&Math.abs(result.beats[0]-250)<20);
+check('実音源はWeb Audio decodeAudioDataで解析',source.includes('decodeAudioData')&&source.includes('rhythmBuildOnsetEnvelope'));
+check('BGM_TRACKSを正本として音源srcを解決',source.includes("track.id===song?.bgmTrackId")&&source.includes('BGM_TRACKS'));
+check('解析はデバッグ画面で手動実行',source.includes("[data-rhythm-debug]")&&source.includes('data-rhythm-authoring-analyze'));
+check('解析結果は本番譜面を動的生成しない',!source.includes('localStorage.setItem')&&!source.includes('mh_rhythm_best_v1'));
+console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
+process.exit(failed?1:0);
