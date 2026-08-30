@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 683d239012ceba45
+// source-sha256: 3bc53cb5c77e34ee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-31 01:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-31 02:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23480,6 +23480,16 @@ function MonsterHeroGame() {
     let total = mainDmg;
     if (mainHero?.id === 'Zan' && mon?.id === 'Zan') total += extraHit(0.3 + comboDmgBonus); // 勇者特性「連撃」
     if (card.type === 'unique' && card.monId === 'Zan') total += extraHit(0.2 + comboDmgBonus); // 固有技「連斬」
+    // エイキの実処理と同じ順・同じ本数で、桜花連舞と緋桜連華の確定連撃を合算する。
+    if (mainHero?.id === 'Eiki' && mon?.id === 'Eiki') {
+      total += extraHit(0.1 + comboDmgBonus);
+      total += extraHit(0.1 + comboDmgBonus);
+      if (card.type === 'unique' && card.monId === 'Eiki') total += extraHit(0.3 + comboDmgBonus);
+    }
+    if (card.type === 'unique' && card.monId === 'Eiki') {
+      total += extraHit(0.15 + comboDmgBonus);
+      total += extraHit(0.15 + comboDmgBonus);
+    }
     if (pandoraSplitNormal) total += extraHit(0.5 + comboDmgBonus); // 禁忌解錠（通常攻撃の後半50%）
     if (mainHero?.id === 'Pandora' && mon?.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') total += extraHit(1.0 + comboDmgBonus); // 禁忌解錠
     total += extraHit(getPermaBuff('globalComboDmgPct') + additionalGlobalCombo); // きき由来の全体連撃は全モンスター共通の別ヒット

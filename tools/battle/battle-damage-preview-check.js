@@ -5,6 +5,8 @@ const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 assert(source.includes('const getAttackPredictedDmg = useCallback'), '攻撃1枚の共通予測関数が必要');
 assert(source.includes("mainHero?.id==='Zan' && mon?.id==='Zan'"), 'ザン勇者特性の連撃を予測する');
 assert(source.includes("card.type==='unique' && card.monId==='Zan'"), '連斬の連撃を予測する');
+assert(source.includes("mainHero?.id==='Eiki' && mon?.id==='Eiki'"), 'エイキ勇者特性の連撃を予測する');
+assert(source.includes("card.type==='unique' && card.monId==='Eiki'"), 'エイキ固有技の連撃を予測する');
 assert(source.includes("const pandoraSplitNormal=mainHero?.id==='Pandora' && mon?.id==='Pandora' && ['atk','range_atk'].includes(card.type)"), 'パンドラ勇者の通常攻撃分割を予測する');
 assert(source.includes('const mainBaseDmg=pandoraSplitNormal?Math.floor(baseDmg*0.5):baseDmg;'), 'パンドラ通常攻撃の1ヒット目を分割前ダメージの50%にする');
 assert(source.includes('if (pandoraSplitNormal) total += extraHit(0.5+comboDmgBonus)'), 'パンドラ通常攻撃の連撃を分割前ダメージ基準で予測する');
@@ -17,6 +19,30 @@ const pandoraPredictedDmg=(baseDmg,comboDmgBonus=0)=>
   Math.floor(baseDmg*0.5)+Math.floor(baseDmg*(0.5+comboDmgBonus));
 assert.strictEqual(pandoraPredictedDmg(1000),1000, 'パンドラ通常攻撃は500 + 500になる');
 assert.strictEqual(pandoraPredictedDmg(1000,0.03),1030, '連撃ダメージ+3%時は500 + 530になる');
+
+// 確定追加ヒットを持つ全モンスター系統の代表値。ランダム会心は予測対象外。
+const extraHit=(baseDmg,rate)=>Math.floor(baseDmg*rate);
+const deterministicPreview=({kind,baseDmg=1000,combo=0})=>{
+  let total=baseDmg;
+  if(kind==='zanHero') total+=extraHit(baseDmg,0.3+combo);
+  if(kind==='zanUnique') total+=extraHit(baseDmg,0.2+combo);
+  if(kind==='eikiHeroNormal') total+=extraHit(baseDmg,0.1+combo)*2;
+  if(kind==='eikiHeroUnique') total+=extraHit(baseDmg,0.1+combo)*2+extraHit(baseDmg,0.3+combo)+extraHit(baseDmg,0.15+combo)*2;
+  if(kind==='eikiInheritedUnique') total+=extraHit(baseDmg,0.15+combo)*2;
+  if(kind==='pandoraUnique') total+=extraHit(baseDmg,1+combo);
+  if(kind==='atonement') total+=Math.floor(baseDmg*0.2);
+  if(kind==='globalCombo') total+=extraHit(baseDmg,combo);
+  return total;
+};
+assert.strictEqual(deterministicPreview({kind:'zanHero'}),1300, 'ザン勇者の予測はメイン+30%');
+assert.strictEqual(deterministicPreview({kind:'zanUnique'}),1200, 'ザン固有技の予測はメイン+20%');
+assert.strictEqual(deterministicPreview({kind:'eikiHeroNormal'}),1200, 'エイキ通常技の予測はメイン+10%×2');
+assert.strictEqual(deterministicPreview({kind:'eikiHeroUnique'}),1800, 'エイキ自身の固有技予測はメイン+10%×2+30%+15%×2');
+assert.strictEqual(deterministicPreview({kind:'eikiInheritedUnique'}),1300, '継承したエイキ固有技の予測はメイン+15%×2');
+assert.strictEqual(deterministicPreview({kind:'pandoraUnique'}),2000, 'パンドラ固有技の予測はメイン+100%');
+assert.strictEqual(deterministicPreview({kind:'atonement'}),1200, 'アーク/イブリース固有技の予測はメイン+20%');
+assert.strictEqual(deterministicPreview({kind:'globalCombo',combo:0.07}),1070, 'きき全体連撃の予測はメイン+全体連撃率');
+assert.strictEqual(deterministicPreview({kind:'eikiHeroUnique',combo:0.03}),1949, '連撃強化はエイキの5連撃すべてへ加算する（各ヒット切り捨て）');
 
 // ==========================================================================
 // おりょう・ゴーレム・モッチー/ミタラシ・ききは「使ったターンからすぐ効く」設計だが、
