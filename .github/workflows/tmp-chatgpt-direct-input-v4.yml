@@ -1,0 +1,90 @@
+name: Temporary ChatGPT direct enhance input v4
+
+on:
+  push:
+    branches:
+      - chatgpt/direct-enhance-point-input-20260830
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Sync latest main
+        run: |
+          git config user.name "ChatGPT"
+          git config user.email "noreply@openai.com"
+          git fetch origin main
+          git merge --no-edit origin/main
+      - name: Install locked dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Install Chromium for focused browser check
+        working-directory: tools
+        run: |
+          npx playwright install --with-deps chromium
+          CHROME_PATH=$(node -e "const { chromium }=require('playwright'); process.stdout.write(chromium.executablePath())")
+          sudo mkdir -p /opt/pw-browsers
+          sudo ln -sf "$CHROME_PATH" /opt/pw-browsers/chromium
+      - name: Fix temporary patch script quoting
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tools/tmp-direct-enhance-input-patch.cjs')
+          s = p.read_text()
+          old = '''check('従来の1P/5P/10P/MAXと長押しを残す', source.includes("{[1,5,10,'MAX'].map") && source.includes('PressRepeatButton aria-label={`${label}を増やす`}') && source.includes('PressRepeatButton aria-label={`${label}の基礎値を上げる`}'));'''
+          new = '''check('従来の1P/5P/10P/MAXと長押しを残す', source.includes("{[1,5,10,'MAX'].map") && source.includes('PressRepeatButton') && source.includes('bulkEnhanceUnit') && source.includes('transcendBulkUnit'));'''
+          if old not in s:
+              raise SystemExit('quote fix target not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Apply requested change
+        run: node tools/tmp-direct-enhance-input-patch.cjs
+      - name: Keep unrelated existing bulk browser check unchanged
+        run: git checkout HEAD -- tools/masu/bulk-enhance-check.js
+      - name: Build canonical output
+        run: node tools/build.js
+      - name: Run mandatory checks
+        run: |
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/jsx-text-brace-check.js
+          node tools/render-error-check.js
+          node tools/build.js --check
+      - name: Run focused checks
+        run: |
+          node tools/masu/direct-enhance-input-check.js
+          node tools/masu/transcendence-check.js
+          node tools/help-coverage-check.js
+          node tools/help-guide-check.js
+          node tools/help-render-check.js
+      - name: Run focused browser layout check
+        run: |
+          python3 tools/serve.py >/tmp/monhero-serve.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          node tools/masu/masu-enhance-layer-check.js
+      - name: Check diff
+        run: git diff --check
+      - name: Commit implementation and remove temporary runners
+        run: |
+          rm -f tools/tmp-direct-enhance-input-patch.cjs \
+            .github/workflows/tmp-chatgpt-direct-input.yml \
+            .github/workflows/tmp-chatgpt-direct-input-v2.yml \
+            .github/workflows/tmp-chatgpt-direct-input-v3.yml \
+            .github/workflows/tmp-chatgpt-direct-input-v4.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "feat: 強化ポイントの数値直接入力を追加"
+          git push origin HEAD:chatgpt/direct-enhance-point-input-20260830
