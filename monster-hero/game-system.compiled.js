@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3bc53cb5c77e34ee
+// source-sha256: bd3507e368cf0271
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-31 02:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-31 07:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14886,12 +14886,6 @@ function PressRepeatButton({
 }
 const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
 const rhythmInputKey = (kind, id) => `${kind}:${id}`;
-const rhythmLaneFromClientX = (clientX, left, width) => {
-  const w = Number(width);
-  if (!Number.isFinite(w) || w <= 0) return null;
-  const relative = Math.min(Math.max(Number(clientX) - Number(left), 0), Math.max(0, w - .001));
-  return Math.min(RHYTHM_LANE_COUNT - 1, Math.max(0, Math.floor(relative / w * RHYTHM_LANE_COUNT)));
-};
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -14905,7 +14899,10 @@ const RhythmTapTest = ({
     runRef = useRef(null),
     frameRef = useRef(null),
     playAreaRef = useRef(null),
-    judgmentLineRef = useRef(null);
+    judgmentLineRef = useRef(null),
+    startLockRef = useRef(false),
+    generationRef = useRef(0),
+    mountedRef = useRef(false);
   const hasHold = chart.notes.some(note => note.type === 'HOLD');
   const emptyCounts = () => Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0]));
   const makeRuntimeNotes = () => chart.notes.map((note, index) => ({
@@ -14988,6 +14985,9 @@ const RhythmTapTest = ({
     if (!run || run.finished || run.paused) return;
     run.finished = true;
     stopFrame();
+    RHYTHM_GESTURE_RUNTIME.clear();
+    run.activePointers.clear();
+    run.activeTouchInputs?.clear();
     run.audio?.stop();
     const score = rhythmCalculateScore({
       judgments: run.counts,
@@ -15046,15 +15046,24 @@ const RhythmTapTest = ({
           travelMs = Math.max(650, 2600 - settings.noteSpeed * 90),
           progress = 1 - (note.timeMs - visualTime) / travelMs;
         if (travel) {
-          let yPx = travel.spawnY + progress * travel.travelPx;
+          let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
           if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
           el.style.transform = `translate3d(0,${Math.round(yPx)}px,0)`;
           if (note.type === 'HOLD') {
             const holdMs = note.activePointerId !== null ? Math.max(0, note.endTimeMs - visualTime) : Math.max(0, note.endTimeMs - note.timeMs);
-            const bodyPx = Math.max(0, holdMs / travelMs * travel.travelPx);
+            const holdProgress = Math.min(1, Math.max(0, holdMs / travelMs)),
+              bodyPx = Math.max(0, (rhythmProjectTravelProgress(progress) - rhythmProjectTravelProgress(progress - holdProgress)) * travel.travelPx);
             el.style.setProperty('--rhythm-hold-body', `${Math.round(bodyPx)}px`);
             el.style.filter = note.activePointerId !== null ? 'brightness(1.3)' : '';
           }
+          if (note.type === 'SLIDE' || note._rhythmOriginalType === 'SLIDE') {
+            const slideProgress = Math.min(1, Math.max(0, (note.endTimeMs - note.timeMs) / travelMs)),
+              slidePx = Math.max(0, (rhythmProjectTravelProgress(progress) - rhythmProjectTravelProgress(progress - slideProgress)) * travel.travelPx);
+            el.style.setProperty('--rhythm-slide-height', `${Math.round(slidePx)}px`);
+          }
+          const activeSlideLane = RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),
+            visualLane = activeSlideLane === null ? note.lane : activeSlideLane;
+          rhythmLayoutNoteVisual(el, note, yPx, visualLane, playAreaRef.current);
         }
         el.style.opacity = note.activePointerId !== null ? '1' : progress < -.1 || progress > 1.18 ? '0' : '1';
       });
@@ -15062,44 +15071,82 @@ const RhythmTapTest = ({
     };
     frameRef.current = requestAnimationFrame(tick);
   }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.displayTimingOffsetMs, settings.judgmentTimingOffsetMs, settings.noteSpeed, stopFrame]);
-  useEffect(() => {
-    let cancelled = false;
-    Audio_.startRhythmTrack(song.bgmTrackId).then(audio => {
-      if (cancelled || !audio) {
-        if (audio) audio.stop();
-        if (!cancelled) setView(v => ({
-          ...v,
-          status: 'error'
-        }));
-        return;
-      }
-      const startBest = normalizeRhythmBestRecord(bestRecord);
-      runRef.current = {
-        audio,
-        notes: makeRuntimeNotes(),
-        activePointers: new Map(),
-        activeTouchInputs: new Set(),
-        combo: 0,
-        maxCombo: 0,
-        counts: emptyCounts(),
-        fast: 0,
-        slow: 0,
-        finished: false,
-        paused: false,
-        startBest,
-        startBestScore: startBest.bestScore
-      };
+  const disposeRun = useCallback(() => {
+    stopFrame();
+    RHYTHM_GESTURE_RUNTIME.clear();
+    const run = runRef.current;
+    if (run) {
+      run.finished = true;
+      run.paused = true;
+      run.activePointers.clear();
+      run.activeTouchInputs?.clear();
+      run.audio?.stop();
+    }
+    runRef.current = null;
+    setPressedLanes([]);
+  }, [stopFrame]);
+  const beginRun = async startBestValue => {
+    if (startLockRef.current) return;
+    startLockRef.current = true;
+    const generation = ++generationRef.current;
+    disposeRun();
+    setView({
+      ...initialView(),
+      status: 'loading'
+    });
+    const audio = await Audio_.startRhythmTrack(song.bgmTrackId);
+    if (!mountedRef.current || generation !== generationRef.current) {
+      audio?.stop();
+      return;
+    }
+    if (!audio) {
+      startLockRef.current = false;
       setView(v => ({
         ...v,
-        status: 'playing'
+        status: 'error'
       }));
-      scheduleTick();
+      return;
+    }
+    const startBest = normalizeRhythmBestRecord(startBestValue);
+    runRef.current = {
+      audio,
+      notes: makeRuntimeNotes(),
+      activePointers: new Map(),
+      activeTouchInputs: new Set(),
+      combo: 0,
+      maxCombo: 0,
+      counts: emptyCounts(),
+      fast: 0,
+      slow: 0,
+      finished: false,
+      paused: false,
+      generation,
+      startBest,
+      startBestScore: startBest.bestScore
+    };
+    laneRefs.current.forEach(el => {
+      if (el) {
+        el.style.display = 'block';
+        el.style.opacity = '0';
+        el.style.filter = '';
+      }
     });
+    rhythmLayoutPlayArea(playAreaRef.current);
+    startLockRef.current = false;
+    setView({
+      ...initialView(),
+      status: 'playing'
+    });
+    scheduleTick();
+  };
+  useEffect(() => {
+    mountedRef.current = true;
+    beginRun(bestRecord);
     return () => {
-      cancelled = true;
-      stopFrame();
-      runRef.current?.audio?.stop();
-      runRef.current = null;
+      mountedRef.current = false;
+      ++generationRef.current;
+      startLockRef.current = false;
+      disposeRun();
     };
   }, []);
   const pause = () => {
@@ -15131,47 +15178,14 @@ const RhythmTapTest = ({
     }));
     scheduleTick();
   };
-  const restart = async () => {
-    const run = runRef.current;
-    if (!run || run.finished) return;
-    stopFrame();
-    run.paused = true;
-    await run.audio.restart();
-    run.notes = makeRuntimeNotes();
-    run.activePointers = new Map();
-    run.activeTouchInputs = new Set();
-    setPressedLanes([]);
-    run.combo = 0;
-    run.maxCombo = 0;
-    run.counts = emptyCounts();
-    run.fast = 0;
-    run.slow = 0;
-    run.finished = false;
-    run.paused = false;
-    laneRefs.current.forEach(el => {
-      if (el) {
-        el.style.display = 'block';
-        el.style.opacity = '0';
-        el.style.filter = '';
-      }
-    });
-    setView({
-      ...initialView(),
-      status: 'playing'
-    });
-    scheduleTick();
+  const restart = () => {
+    const startBest = runRef.current?.startBest;
+    if (startBest) beginRun(startBest);
   };
   const abort = () => {
-    const run = runRef.current;
-    if (run) {
-      run.finished = true;
-      run.paused = true;
-      run.activePointers.clear();
-      run.activeTouchInputs?.clear();
-      setPressedLanes([]);
-      run.audio?.stop();
-    }
-    stopFrame();
+    ++generationRef.current;
+    startLockRef.current = false;
+    disposeRun();
     onExit();
   };
   const inputStarts = inputs => {
@@ -15236,7 +15250,6 @@ const RhythmTapTest = ({
       el.style.backgroundColor = pressed ? 'rgba(34,211,238,0.30)' : '';
       el.style.boxShadow = pressed ? 'inset 0 0 26px rgba(103,232,249,0.78), inset 0 -72px 58px rgba(6,182,212,0.42), 0 0 18px rgba(34,211,238,0.28)' : '';
       el.style.borderBottom = pressed ? '3px solid rgba(207,250,254,0.98)' : '3px solid transparent';
-      el.style.filter = pressed ? 'brightness(1.15)' : '';
     });
   };
   const pointerDown = e => {
@@ -15245,7 +15258,7 @@ const RhythmTapTest = ({
     const area = playAreaRef.current;
     if (!area) return;
     const rect = area.getBoundingClientRect(),
-      lane = rhythmLaneFromClientX(e.clientX, rect.left, rect.width);
+      lane = rhythmLaneAtPoint(e.clientX, e.clientY, rect);
     if (lane === null) return;
     setPressedLanes([lane]);
     inputStarts([{
@@ -15279,7 +15292,7 @@ const RhythmTapTest = ({
       Array.from(e.touches || []).forEach(touch => {
         const inputKey = rhythmInputKey('touch', touch.identifier);
         live.add(inputKey);
-        const lane = rhythmLaneFromClientX(touch.clientX, rect.left, rect.width);
+        const lane = rhythmLaneAtPoint(touch.clientX, touch.clientY, rect);
         if (lane !== null) liveLanes.add(lane);
         if (current.activeTouchInputs.has(inputKey)) return;
         current.activeTouchInputs.add(inputKey);
@@ -15359,48 +15372,8 @@ const RhythmTapTest = ({
       className: "mt-5 grid grid-cols-1 gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       className: "min-h-[48px] rounded-xl bg-fuchsia-700 font-black",
-      onClick: async () => {
-        setView({
-          ...initialView(),
-          status: 'loading'
-        });
-        const audio = await Audio_.startRhythmTrack(song.bgmTrackId);
-        if (!audio) {
-          setView(v => ({
-            ...v,
-            status: 'error'
-          }));
-          return;
-        }
-        const startBest = mergeRhythmBestRecord(runRef.current?.startBest, result);
-        runRef.current = {
-          audio,
-          notes: makeRuntimeNotes(),
-          activePointers: new Map(),
-          activeTouchInputs: new Set(),
-          combo: 0,
-          maxCombo: 0,
-          counts: emptyCounts(),
-          fast: 0,
-          slow: 0,
-          finished: false,
-          paused: false,
-          startBest,
-          startBestScore: startBest.bestScore
-        };
-        laneRefs.current.forEach(el => {
-          if (el) {
-            el.style.display = 'block';
-            el.style.opacity = '0';
-            el.style.filter = '';
-          }
-        });
-        setView({
-          ...initialView(),
-          status: 'playing'
-        });
-        scheduleTick();
-      }
+      disabled: startLockRef.current,
+      onClick: () => beginRun(mergeRhythmBestRecord(runRef.current?.startBest, result))
     }, "\u3082\u3046\u4E00\u5EA6\u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("button", {
       className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
       onClick: abort

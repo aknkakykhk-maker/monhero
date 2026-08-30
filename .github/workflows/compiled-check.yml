@@ -11,6 +11,11 @@ permissions:
   id-token: write
 
 concurrency:
+  # PRの検査とmainの公開を同じ列に並べない。
+  # 以前は両方が group: pages を共有し、cancel-in-progress: false だったため、
+  # PRへ連続pushするとその検査が全部並び、mainの公開まで順番待ちになっていた。
+  #   PR        … ブランチごとに1本。新しくpushしたら古い検査は打ち切ってよい
+  #   mainへpush … 常に pages の1本。公開は途中で止めない(Pagesのデプロイを壊さない)
   group: ${{ github.workflow }}-${{ github.event_name == 'push' && 'pages' || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -27,6 +32,10 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
+      # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
+      # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
+      # 配信するのはリポジトリの中身そのものなので、ずれていたら公開せずに落とす。
       - name: Verify the committed compiled output is canonical
         run: node tools/build.js --check
       - name: Verify the compiled runtime
@@ -35,19 +44,6 @@ jobs:
         run: |
           node tools/check-syntax.js
           node tools/undefined-reference-check.js
-      # このPRで実音源の拍グリッドを確定するためだけの一時解析。最終マージ前に削除する。
-      - name: Install ffmpeg for rhythm timing analysis
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
-      - name: Analyze rhythm source audio timing
-        run: node tools/mode/rhythm-audio-timing-analyze.js --require-ffmpeg --json
-      - name: Upload rhythm source for offline cross-check
-        uses: actions/upload-artifact@v4
-        with:
-          name: rhythm-audio-source
-          path: monster-hero/audio/bgm-atsu-cup-theme.mp3
-          retention-days: 1
       - name: Check the boot path
         run: node tools/boot-flow-check.js
       - name: Check the shipped version stamps
@@ -58,6 +54,9 @@ jobs:
       - name: Stage the GitHub Pages site
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
+          # 配るのは index.html と monster-hero/ だけ。ゲームが読む画像・音は
+          # 必ず monster-hero/ の下に置くこと。tools/ から1枚ずつコピーする方式は
+          # 書き足し忘れに気づけず、実際にパンドラの染色マスクが本番だけ404になった。
           mkdir _site
           cp index.html _site/
           cp -a monster-hero _site/

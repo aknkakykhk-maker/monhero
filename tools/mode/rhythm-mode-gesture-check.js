@@ -12,6 +12,7 @@ const ok=(name,value)=>{console.log(`${value?'OK':'NG'}: ${name}`);if(!value)fai
 ok('4ノーツ種別を正式定義', ['TAP','HOLD','FLICK','SLIDE'].every(type=>api.RHYTHM_NOTE_TYPES.includes(type)));
 ok('HARDに4種混在テスト譜面', ['TAP','HOLD','FLICK','SLIDE'].every(type=>hard.notes.some(note=>note.type===type)));
 ok('EASY/NORMALは既存テストを維持', api.RHYTHM_SONGS[0].difficulties.EASY.notes.every(note=>note.type==='TAP')&&api.RHYTHM_SONGS[0].difficulties.NORMAL.notes.some(note=>note.type==='HOLD'));
+ok('HARD表示ラベルは同値書き換えを避けMutationObserver自己再発火を防止', source.includes("const hasGestureNotes=els.some")&&source.includes("label&&hasGestureNotes&&label.textContent!=='MIX TEST'"));
 const runtime=()=>hard.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0}));
 let notes=runtime();
 api.RHYTHM_GESTURE_RUNTIME.record('touch:1',10,10);
