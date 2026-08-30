@@ -52,6 +52,17 @@ jobs:
           if(failed)process.exit(1);
           console.log('OK: AUTO BGM選択の検証に成功しました');
           NODE
+      - name: Align existing BGM arrangement dependency check
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tools/audio/bgm-arrangement-check.js')
+          s=p.read_text()
+          old=r"/bgmArrangement, runMode, eventBgmScene, mainHero\?\.id(?:, autoBattle)?\]/.test(source)"
+          new=r"/bgmArrangement, runMode, eventBgmScene, mainHero\?\.id(?:, autoBattle)?(?:, autoBgmOverride)?\]/.test(source)"
+          assert s.count(old)==1, f'anchor count={s.count(old)}'
+          p.write_text(s.replace(old,new))
+          PY
       - name: Run scoped BGM checks
         run: |
           node tools/audio/auto-bgm-runtime-picker-check.js
