@@ -131,6 +131,9 @@ const fullScreenLayers = () => [...document.querySelectorAll('body *')].filter((
     const atTranscend = await layers();
     check('超越強化で詳細が重なっていない', atTranscend.length === 1 && atTranscend[0].startsWith('超越強化'),
       atTranscend.join(' + ') || 'なし');
+    check('超越強化にも8項目の数値直接入力がある',
+      await page.locator('[data-direct-point-input="transcend-apt"]').count() === 4
+      && await page.locator('[data-direct-point-input="transcend-stat"]').count() === 4);
     // 超越の実の本番UI。種族別と虹を明示選択し、1／10／MAXを同じ個体へ使う
     check('超越の実の入口がある', await page.evaluate(() => !!document.querySelector('[data-transcend-fruit-open]')));
     await page.evaluate(() => document.querySelector('[data-transcend-fruit-open]').click());
