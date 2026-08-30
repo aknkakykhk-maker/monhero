@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 10:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 13:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1423,7 +1423,10 @@ const monsterDexDescription = (monsterId) =>
   (typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[monsterId])
   || 'この個体の記録はまだ集まっていません。調査が進むと図鑑へ追記されます。';
 // 図鑑に並ぶモンスター。ALL_PLAYER_MONSTERS の定義順をそのまま図鑑の並びにする
-const dexMonsterList = () => (typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.values(ALL_PLAYER_MONSTERS) : []);
+// デバッグ専用個体(debugOnly)は図鑑に出さない。ここは図鑑だけでなく、血統の絞り込み
+// (dexMainLineages)と種族チャレンジの種族一覧・メンバー表示も見ているので、
+// 正式実装前のモンスターがそれらへ混ざらないよう、この1か所で除いている
+const dexMonsterList = () => (typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && !mon.debugOnly) : []);
 // 図鑑の絞り込みに出す主血統。実際に登場する主血統だけを、図鑑の並び順で並べる
 const dexMainLineages = () => {
   const seen = new Set();
@@ -3033,6 +3036,14 @@ const MASU_COLOR_REGION_HUES = {
     { hue: 2, sMin: 0.4, noEdgeGuard: true },
     { posBbox: [[0.0, 0.30, 0.30, 0.88], [0.70, 0.30, 1.0, 0.88]], noAAGuard: true, noEdgeGuard: true },
   ],
+  // エイキは承認済みマスク(EXACT_DYE_MASKS)が正本なので、ここは
+  // 「3レイヤーある」ことを既存経路へ知らせるための控え(ミーアと同じ形)。
+  // 染色①=髪+腹部のリボン・桜系装飾 / 染色②=刀身+足元オーラ / 染色③=鎧(足本体も③)
+  Eiki: [
+    { hue: 0, noAAGuard: true, noEdgeGuard: true },
+    { hue: 120, noAAGuard: true, noEdgeGuard: true },
+    { hue: 240, noAAGuard: true, noEdgeGuard: true },
+  ],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
   // 以前は口元を位置だけで決めるposBboxで指定していたが、矩形を積み重ねた形が実際の口の輪郭と
@@ -3456,7 +3467,7 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
@@ -6951,12 +6962,14 @@ const rpgResolveStep = (battle, varianceOn, rng = rpgDefaultRng) => {
 //
 // どのモーションを使うかは、通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion で決める。
 // RPG用にモーションのデータを別に持たないので、モンスターを足しても更新漏れが起きない。
-const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', pandoraDualThunder:'Thunder' });
+const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', pandoraDualThunder:'Thunder' });
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = (anim) => {
   if (!anim) return undefined;
   // パンドラは枠全体を動かさず、PandoraDualThunder 内の実画像2枚を動かす。
   if (anim.motion==='pandoraDualThunder') return undefined;
+  // エイキはザンと同じ高速斬撃の動き(zanComboDash)をそのまま使う。
+  // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
   if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
   if (anim.charge) return 'specialCharge 650ms ease-out forwards';
   if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards');
@@ -7006,6 +7019,28 @@ const rpgStepDelay = (battle) => {
 // それも使えない場合のみメモリ内フォールバック(リロードで消える)にする。
 // 本番バトルとDEBUGで共用するパンドラの分身描画。中央像と左右2枚は同じ画像要素を
 // 複製し、雷も各分身体の内側に置くことで発射位置が中央1点にならないようにする。
+// エイキの攻撃中だけ重ねる桜の花びら。
+// 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
+// スマホの負荷を増やしすぎないよう、要素は固定6枚・CSSアニメーション1本だけにして、
+// 画像もDOMも増やさない(絵文字1文字＋transformのみ)。枠の動きはザンと同じ
+// zanComboDash が担当するので、ここは花びらを流すことだけをする。
+const EIKI_SAKURA_PETALS = Object.freeze([
+  { left:'8%',  delay:'0ms',   drift:'14px',  spin:'220deg', size:'11px' },
+  { left:'26%', delay:'40ms',  drift:'-10px', spin:'-180deg', size:'9px'  },
+  { left:'44%', delay:'80ms',  drift:'16px',  spin:'260deg', size:'12px' },
+  { left:'62%', delay:'30ms',  drift:'-14px', spin:'-240deg', size:'10px' },
+  { left:'78%', delay:'100ms', drift:'8px',   spin:'200deg', size:'9px'  },
+  { left:'92%', delay:'60ms',  drift:'-6px',  spin:'-160deg', size:'11px' },
+]);
+const EikiSakuraPetals = () => (
+  <span className="eiki-sakura" aria-hidden="true">
+    {EIKI_SAKURA_PETALS.map((petal, index) => (
+      <span key={index} className="eiki-sakura__petal"
+        style={{ left:petal.left, fontSize:petal.size, animationDelay:petal.delay,
+          '--eiki-petal-drift':petal.drift, '--eiki-petal-spin':petal.spin }}>🌸</span>
+    ))}
+  </span>
+);
 const PandoraDualThunder = ({image, compact=false}) => (
   <span className={`pandora-dual-thunder${compact?' pandora-dual-thunder--compact':''}`} aria-hidden="true">
     <span className="pandora-dual-center">{React.cloneElement(image,{alt:''})}</span>
@@ -9512,7 +9547,7 @@ function MonsterHeroGame() {
     });
     imagePreloadQueue.add(imageUrlsFor(rosterBaseIds));
     imagePreloadQueue.add(imageUrlsFor(ownedBaseIds));
-    imagePreloadQueue.add(imageUrlsFor(allIds));
+    imagePreloadQueue.add(imageUrlsFor(allIds.filter(id => !ALL_PLAYER_MONSTERS[id]?.debugOnly)));
   }, [bootPhase, gameState, localRankings, breederRankingPool, bondLevelRows, bondRankingData, monsterRosterIds, unlockedMonsterIds, masuMons]);
   const openPastureSettings = () => { setDraftHomePastureIds([...homePastureIds]); setGameState('PASTURE_SETTINGS'); };
   const toggleDraftPasture = (id) => setDraftHomePastureIds(prev => {
@@ -10916,10 +10951,16 @@ function MonsterHeroGame() {
     distAptitude:['M','M','M','M'],
     debugOnly:true,
   });
+  // 正式実装前(debugOnly)のモンスターを、デバッグ戦の勇者モン選択にだけ並べる。
+  // 通常のロースター(unlockedMonsterIds で絞る)・図鑑・マーケットには出ないので、
+  // 「実際に選んで戦って確かめる」ことだけがここでできるようになる
+  const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
   const debugHeroMonsterList = (list) => {
     if (!debugBattleRef.current) return list;
     const debugMon=makeDebugStrongestMonster();
-    return [debugMon,...list.filter(mon=>mon?.id!==debugMon.id)];
+    const preview=debugOnlyMonsterList();
+    const previewIds=new Set(preview.map(mon=>mon.id));
+    return [debugMon,...preview,...list.filter(mon=>mon?.id!==debugMon.id&&!previewIds.has(mon?.id))];
   };
   // 勇者モン選択の「ベースモン」タブ用。解放済みの種は編成に入れていなくても選べる。
   // マスモン登録のためだけに編成を入れ替える手間を無くすためのもの。
@@ -13646,8 +13687,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const stunMon=slots[slotIdx];
           const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul); totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           // 勇者特性「連撃」: ザンが勇者モンの時、ザンの攻撃(あつの挑発シリーズ含む)に連撃ヒットを追加
-          if (stunMon?.id==='Zan' && mainHero?.id==='Zan') {
-            const comboBase=Math.floor(d*(0.3+getPermaBuff('comboDmgPct')));
+          // ザンは1発30%、エイキ(桜花連舞)は10%を2発。倍率と回数だけが違うので、
+          // 連撃を積む処理そのものは1つにまとめてある(あつの挑発は固有技ではないので追加30%は無い)
+          const stunComboRates=(stunMon?.id==='Zan' && mainHero?.id==='Zan') ? [0.3]
+            : (stunMon?.id==='Eiki' && mainHero?.id==='Eiki') ? [0.1,0.1] : [];
+          for (const rate of stunComboRates) {
+            const comboBase=Math.floor(d*(rate+getPermaBuff('comboDmgPct')));
             if (comboBase>0) {
               const comboCrit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+getPermaBuff('critRatePct')));
               const comboFinal=comboCrit?Math.floor(comboBase*(1.5+getPermaBuff('critDmgPct'))):comboBase;
@@ -13721,6 +13766,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(card.monId==='Mocchi'||card.monId==='Mitarashi'){addPermaBuff('dmgCutPct',0.03*effMul); const boost=localBoostFromCard(card).dmgMod*effMul; addWaveBuff('enemyTakenDmgBonus',boost); localDmgModAdd+=boost; addPopup('被ダメ軽減UP!','hero','text-emerald-400 text-lg font-bold');}
           else if(card.monId==='Golem'){const boost=localBoostFromCard(card).oryo*effMul; addPermaBuff('atkPct',boost); localOryoAdd+=boost; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
           else if(card.monId==='Zan'){addPermaBuff('comboDmgPct',0.03*effMul); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
+          // 緋桜連華: 連撃ダメージ+3%はザンの連斬と同じ comboDmgPct、攻撃力+3%はゴーレムの闘志と
+          // 同じ atkPct へ積む。どちらも addPermaBuff なので「永続・重複可・次のターンから」になる
+          // (このターンのダメージ計算は localOryoAdd を通すが、ここでは足さないので反映は次ターン)
+          else if(card.monId==='Eiki'){addPermaBuff('comboDmgPct',0.03*effMul); addPermaBuff('atkPct',0.03*effMul); addPopup('緋桜連華!','hero','text-pink-300 text-lg font-bold');}
         }
         const attackStartDist=attackDistance;
         const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist); attackCount++;
@@ -13733,7 +13782,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const finalD=isCrit?Math.floor(mainBaseD*(1.5+critDmgBonus)):mainBaseD; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
-        if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan') || pandoraSplitNormal || (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora')) {
+        if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan') || activeMon.id==='Eiki' || (card.type==='unique' && card.monId==='Eiki') || pandoraSplitNormal || (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora')) {
           // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
           const comboDmgBonus=getPermaBuff('comboDmgPct');
           const rollCombo=(rate,noAnim=false)=>{
@@ -13748,6 +13797,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if (mainHero?.id==='Zan' && activeMon.id==='Zan') rollCombo(0.3+comboDmgBonus);
           // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
           if (card.type==='unique' && card.monId==='Zan') rollCombo(0.2+comboDmgBonus);
+          // 勇者特性「桜花連舞」: エイキ自身が攻撃していて、かつエイキが勇者モンのときだけ。
+          //   通常・固有を問わず 与ダメ10%の連撃×2、さらにエイキ自身の固有技なら +30%の追加連撃。
+          //   ザンと同じ rollCombo を呼ぶだけなので、会心・連撃ダメージUPの扱いは完全に共通
+          if (mainHero?.id==='Eiki' && activeMon.id==='Eiki') {
+            rollCombo(0.1+comboDmgBonus);
+            rollCombo(0.1+comboDmgBonus);
+            if (card.type==='unique' && card.monId==='Eiki') rollCombo(0.3+comboDmgBonus);
+          }
+          // 固有効果「緋桜連華」の連撃: 技の出自(card.monId)がエイキなら、誰が使っても発生する
+          // (合体で引き継いだ場合も含む)。ザンの「連斬」と同じ考え方
+          if (card.type==='unique' && card.monId==='Eiki') {
+            rollCombo(0.15+comboDmgBonus);
+            rollCombo(0.15+comboDmgBonus);
+          }
           // 禁忌解錠の通常攻撃: 分割前のdへ50%と既存の連撃ダメージUPを足した後半ヒット。
           // 先頭ヒットが専用モーションを再生するため、後半は数値だけを続けて表示する。
           if (pandoraSplitNormal) rollCombo(0.5+comboDmgBonus,true);
@@ -13817,7 +13880,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 固有技(hit.isUnique)の場合は技の出自(hit.monId)側のatkMotionを優先する。合体で引き継いだ
           // 固有技を別のモンスターが使う場合でも、元モンスターの専用モーションを再現するため
           const hitMotion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[hit.slotIdx]?.atkMotion;
-          const isZanGroupStart = hit.skillName!=='連撃' && hitMotion==='zanCombo';
+          // 高速斬撃＋連撃をまとめて見せるモーション。ザンとエイキが同じ見せ方を共有する
+          const isComboDashMotion = hitMotion==='zanCombo' || hitMotion==='eikiSakuraCombo';
+          const isZanGroupStart = hit.skillName!=='連撃' && isComboDashMotion;
           if (isZanGroupStart) {
             // ザンの連撃グループ: 残像のような一瞬の突進を1回だけ見せ、モーションが終わってからダメージをバババッと立て続けに表示する
             const group=[hit]; let j=hitIdx+1;
@@ -13831,8 +13896,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 setAttackAnim({slotIndex: animSlot, charge:true});
                 await battleWait(650);
               }
-              setAttackAnim({slotIndex: animSlot, zanCombo:true});
-              Audio_.se.zanSlash(); // ザン専用の高めなシュシュ音
+              // 花びらはエイキのときだけ。ザン本体の見た目は一切変えない
+              setAttackAnim({slotIndex: animSlot, zanCombo:true, sakura: hitMotion==='eikiSakuraCombo'});
+              Audio_.se.zanSlash(); // ザン系の高めなシュシュ音(エイキも同じ音を使う)
               await battleWait(320);
               setAttackAnim(null);
               setSlotSkill(null);
@@ -13865,10 +13931,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               setAttackAnim({slotIndex: animSlot, charge:true});
               Audio_.se.special();
               await battleWait(650);
-              setAttackAnim({slotIndex: animSlot, charge:false, motion});
+              setAttackAnim({slotIndex: animSlot, charge:false, motion, sakura: motion==='eikiSakuraCombo'});
               await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?520:500)));
             } else {
-              setAttackAnim({slotIndex: animSlot, motion});
+              setAttackAnim({slotIndex: animSlot, motion, sakura: motion==='eikiSakuraCombo'});
               if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
               await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)));
             }
@@ -19798,6 +19864,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                         ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="object-contain drop-shadow-md"/>}/>
                         :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                      {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}
+                      {isAnimating&&attackAnim.sakura&&<EikiSakuraPetals/>}
                     </div>
                     <div className={`h-[28%] ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`}><span className="text-[9px] font-black uppercase tracking-tighter leading-none">{RANGE_LABELS[i]}距離</span></div>
                   </button>);
@@ -21629,6 +21697,36 @@ const createAnimationStyle = () => {
       0% { transform: translateY(44px) scale(.78); filter: drop-shadow(0 0 20px rgba(34,211,238,.8)); }
       55% { transform: translateY(-190px) scale(1.25); filter: drop-shadow(0 45px 3px rgba(125,211,252,.9)) drop-shadow(0 90px 7px rgba(37,99,235,.6)); }
       100% { transform: translateY(0) scale(1); filter: none; }
+    }
+    /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
+       常時アニメーションを増やさないため、@keyframes は1本・要素は6枚に固定してある。
+       transform と opacity だけを動かすので、低性能端末でもレイアウトを作り直さない。 */
+    .eiki-sakura {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 20;
+    }
+    .eiki-sakura__petal {
+      position: absolute;
+      top: -12%;
+      line-height: 1;
+      opacity: 0;
+      will-change: transform, opacity;
+      animation: eikiSakuraFall 320ms ease-out forwards;
+    }
+    @keyframes eikiSakuraFall {
+      0%   { opacity: 0; transform: translate3d(0, -6px, 0) rotate(0deg) scale(0.7); }
+      25%  { opacity: 1; }
+      100% { opacity: 0; transform: translate3d(var(--eiki-petal-drift, 10px), 78px, 0) rotate(var(--eiki-petal-spin, 200deg)) scale(1); }
+    }
+    /* 動きを減らす設定の端末では、花びらを流さず淡く出して消えるだけにする */
+    @media (prefers-reduced-motion: reduce) {
+      .eiki-sakura__petal { animation: eikiSakuraFade 320ms ease-out forwards; }
+      @keyframes eikiSakuraFade {
+        0% { opacity: 0; } 30% { opacity: .9; } 100% { opacity: 0; }
+      }
     }
     @keyframes zanComboDash {
       0% {
