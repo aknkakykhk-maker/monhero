@@ -43,7 +43,12 @@ assert(source.includes("distAptitude:['M','M','M','M']"), 'all debug monster dis
 assert(source.includes('...ALL_PLAYER_MONSTERS.Mocchi') && source.includes('debugOnly:true'), 'debug monster must reuse a formal monster only at runtime');
 assert(source.includes("const rawList=gameState==='PICK_HERO'?debugHeroMonsterList(savedRawList):savedRawList"), 'ULTIMATE debug hero selection must include the debug monster');
 assert(source.includes('data-debug-strongest-monster'), 'direct debug battle must allow selecting the debug monster');
-assert(source.includes('if (!debugBattleRef.current) return list'), 'normal hero selection must not include the debug monster');
+// デバッグ設定の ⚔️ バトルモードから入ったときも一覧へ出す(難易度の「この難易度で挑戦」が
+// debugBattleRef を必ず false へ戻すため、専用のしるしを別に持っている)。
+// 通常プレイではどちらも false なので、これまでどおり出ない
+assert(source.includes('if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list'), 'normal hero selection must not include the debug monster');
+assert(/data-debug-battle-mode[\s\S]{0,200}?debugMonsterPreviewRef\.current=true/.test(source), 'debug mode select must flag the preview list');
+assert(/returnToHome = \(\) => \{[\s\S]{0,400}?debugMonsterPreviewRef\.current = false;/.test(source), 'returning home must clear the preview flag');
 assert(source.includes('if (debugBattle || mainHero?.debugOnly) return null'), 'debug monster must not expose Masu registration');
 assert(!enemySource.includes('デバッグ最強モン'), 'debug monster must not enter formal enemy data');
 console.log('OK: debug battle isolation, enemy reuse, BGM routes, navigation, and normal-mode reset');
