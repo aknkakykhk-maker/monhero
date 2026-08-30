@@ -48,7 +48,7 @@ const dataTablePrelude = [
   (source.match(/^const INITIAL_MASU_LEVEL_CAP = .*$/m) || [''])[0],
   (source.match(/^const BREAKTHROUGH_LEVEL_CAP_GAIN = .*$/m) || [''])[0],
   grab(source, 'const BREAKTHROUGH_STARS_PER_TIER', 'const BREAKTHROUGH_LEVEL_CAPS'),
-  grab(source, '// レベルアップ時の強化ポイント倍率', 'const RAINBOW_STAR_IMAGE'),
+  grab(source, 'const levelUpPointMultiplier =', 'const RAINBOW_STAR_IMAGE'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
   "const { useState, useEffect, useRef, useContext } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 14:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 15:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -792,20 +792,35 @@ const breakthroughLevelCap = (count) => {
     ? INITIAL_MASU_LEVEL_CAP + n * BREAKTHROUGH_LEVEL_CAP_GAIN
     : BREAKTHROUGH_LEVEL_CAPS[n];
 };
-// レベルアップ時の強化ポイント倍率。経験値量・必要経験値には掛けない。
+// 限界突破画面などの表示用。34凸でLv270→330帯が×2、35凸でLv330→400帯が×3になる。
+// 実際の付与量は現在の凸数ではなく、下の「到達レベル帯」の共通関数を正本にする。
 const levelUpPointMultiplier = (rebirthCount) => {
   const n = Math.max(0, Math.floor(Number(rebirthCount) || 0));
   return n >= 35 ? 3 : n >= 34 ? 2 : 1;
 };
-// レベルで得られる強化ポイントの総数。1レベルにつき上の倍率ぶんもらえる。
-// Lv400までが対象で、Lv401以降(超越の領域)は通常ポイントではなく超越ポイントになる。
-//
-// 【ここを1か所にまとめてある理由】
-// 以前は「レベルアップのときは倍率あり」「読み込み時の補填と転生の計算は倍率なし」と
-// 数え方が3通りに分かれていた。そのため限界突破34回以上(倍率2・3)の個体が転生すると、
-// 倍率で稼いだぶんが丸ごと消え、レベルを上げ直しても戻らなかった。
-// 数え方をここ1つに集約し、どの経路も同じ答えになるようにしている。
-const levelBasedEnhancePoints = (level, rebirthCount) =>
+const ENHANCE_POINT_DOUBLE_LEVEL = 270;
+const ENHANCE_POINT_TRIPLE_LEVEL = 330;
+// 「そのレベルへ上がる1回」で得る通常強化ポイント。
+// Lv2〜270は1、Lv271〜330は2、Lv331〜400は3。Lv401以降は超越ポイントの領域。
+const levelEnhancePointMultiplier = (reachedLevel) => {
+  const level = Math.max(1, Math.floor(Number(reachedLevel) || 1));
+  return level > ENHANCE_POINT_TRIPLE_LEVEL ? 3 : level > ENHANCE_POINT_DOUBLE_LEVEL ? 2 : 1;
+};
+// 現在レベルまでに「レベル由来」で得ているべき通常強化ポイントの総数。
+// 重要: 34/35凸になったからといって、過去のLv1〜270へ×2/×3を遡及適用しない。
+const levelBasedEnhancePoints = (level) => {
+  const capped = Math.max(1, Math.min(MAX_MASU_LEVEL_CAP, Math.floor(Number(level) || 1)));
+  const single = Math.max(0, Math.min(capped, ENHANCE_POINT_DOUBLE_LEVEL) - 1);
+  const doubled = Math.max(0, Math.min(capped, ENHANCE_POINT_TRIPLE_LEVEL) - ENHANCE_POINT_DOUBLE_LEVEL) * 2;
+  const tripled = Math.max(0, capped - ENHANCE_POINT_TRIPLE_LEVEL) * 3;
+  return single + doubled + tripled;
+};
+// バトル・チケット・合体などで複数レベルを一度にまたいでも、帯ごとの差分を正確に付与する。
+const gainedEnhancePointsBetweenLevels = (beforeLevel, afterLevel) =>
+  Math.max(0, levelBasedEnhancePoints(afterLevel) - levelBasedEnhancePoints(beforeLevel));
+// 2026-08-29の不具合版(#827)が起動時補填に使ってしまった誤式。
+// 既存セーブの「その不具合で増えた分だけ」を安全に特定して戻すために、移行処理からのみ使う。
+const legacyRetroactiveLevelBasedEnhancePoints = (level, rebirthCount) =>
   Math.max(0, Math.min(MAX_MASU_LEVEL_CAP, Math.floor(Number(level) || 0)) - 1)
     * levelUpPointMultiplier(rebirthCount);
 const RAINBOW_STAR_IMAGE = 'images/ui/breakthrough-rainbow-star.PNG';
@@ -1201,14 +1216,16 @@ const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
   const bondXp = cappedBondXp(masu, gain, maxLevel);
   const after = bondLevelInfo(bondXp);
   const gainedLevels = Math.max(0, after.level - before.level);
-  const pointMultiplier = levelUpPointMultiplier(masu?.rebirthCount);
   // Lv400までは今までどおり通常の強化ポイント。Lv401以降(超越の領域)は
   // 通常ポイントを配らず、1レベルにつき超越ポイントを1だけ配る。
   // 400をまたいでレベルが上がったときも、400までのぶんと401以降のぶんを分けて数える。
   const cap = MAX_MASU_LEVEL_CAP;
   const normalLevels = Math.max(0, Math.min(cap, after.level) - Math.min(cap, before.level));
   const gainedTranscendPoints = Math.max(0, after.level - Math.max(cap, before.level));
-  const gainedPoints = normalLevels * pointMultiplier;
+  const gainedPoints = gainedEnhancePointsBetweenLevels(before.level, Math.min(cap, after.level));
+  // 同一帯だけを上がった場合は従来UI用に×2/×3を返す。帯をまたぐ場合は誤解を避けて×表示を出さない。
+  const sameBandMultiplier = normalLevels > 0 ? (gainedPoints / normalLevels) : 1;
+  const pointMultiplier = Number.isInteger(sameBandMultiplier) ? sameBandMultiplier : 1;
   return {
     masu: {
       ...masu,
@@ -2272,7 +2289,7 @@ const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
   // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ levelBasedEnhancePoints で数える
   // (ここを別の式にすると、限界突破の倍率で稼いだぶんが転生のたびに消えてしまう)
   const nextOwnBonusPoints = normalized.reincarnateBonusPoints + REINCARNATE_POINTS;
-  const nextPoints = levelBasedEnhancePoints(nextLevel, normalized.rebirthCount)
+  const nextPoints = levelBasedEnhancePoints(nextLevel)
     + totalBreakthroughPoints(normalized.rebirthCount) + nextOwnBonusPoints + normalized.inheritedReincarnateBonusPoints;
   return {
     ok:true, cost, skillKey:raisesSkill ? skillKey : null, skillLevel:raisesSkill ? currentSkillLevel + 1 : null,
@@ -4970,6 +4987,72 @@ const formatAptBonus = (mon) => getMonsterAptPct(mon)
 // マスモンが「これまでに得たはずの強化ポイント総数」は絆レベル-1で決まる。
 // 使用済み(間合い適性・ステータス強化に振った分)と未使用の合計がこれを下回っていたら、
 // 不足分を未使用ポイントとして補填したマスモンを返す。
+const ENHANCE_POINT_BAND_REPAIR_VERSION = 1;
+const normalEnhanceSpentPoints = (masu, base) => {
+  const aptSpent = Array.isArray(masu?.distAptBoosts)
+    ? masu.distAptBoosts.reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0)
+    : (Array.isArray(masu?.distApt) && base?.distAptitude
+      ? masu.distApt.reduce((sum, grade, index) => {
+          const from = DIST_APTITUDE_GRADES.indexOf(base.distAptitude[index]);
+          const to = DIST_APTITUDE_GRADES.indexOf(grade);
+          return sum + (from >= 0 && to >= 0 ? Math.max(0, to - from) : 0);
+        }, 0)
+      : 0);
+  const statSpent = Object.keys(STAT_POINT_GAIN).reduce((sum, key) => {
+    const gain = Math.max(1, Number(STAT_POINT_GAIN[key]) || 1);
+    const value = Math.max(0, Number(masu?.statPoints?.[key]) || 0);
+    return sum + Math.ceil(value / gain);
+  }, 0);
+  return { aptSpent, statSpent, total:aptSpent + statSpent };
+};
+const earnedEnhancePointTotal = (masu) => {
+  const normalized = normalizeMasuProgression(masu);
+  return levelBasedEnhancePoints(masuBondLevelInfo(normalized).level)
+    + totalBreakthroughPoints(normalized.rebirthCount)
+    + ownReincarnateBonusPoints(normalized)
+    + inheritedReincarnateBonusPointsOf(normalized);
+};
+const repairEnhancePointBandOvergrant = (masu) => {
+  if (!masu || Math.floor(Number(masu.enhancePointBandRepairVersion) || 0) >= ENHANCE_POINT_BAND_REPAIR_VERSION) return masu;
+  const normalized = normalizeMasuProgression(masu);
+  if (normalized.rebirthCount < 34) return masu;
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[normalized.baseId] : null;
+  if (!base) return masu;
+  const level = masuBondLevelInfo(normalized).level;
+  const correctLevelPoints = levelBasedEnhancePoints(level);
+  const badLevelPoints = legacyRetroactiveLevelBasedEnhancePoints(level, normalized.rebirthCount);
+  const knownOvergrant = Math.max(0, badLevelPoints - correctLevelPoints);
+  if (knownOvergrant <= 0) return masu;
+  const bonusPoints = totalBreakthroughPoints(normalized.rebirthCount)
+    + ownReincarnateBonusPoints(normalized)
+    + inheritedReincarnateBonusPointsOf(normalized);
+  const badTotal = badLevelPoints + bonusPoints;
+  const spent = normalEnhanceSpentPoints(normalized, base);
+  const unused = Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0));
+  const currentTotal = spent.total + unused;
+  // 不具合版を通った個体なら、少なくとも誤式の総数まで補填されている。
+  // そこに届いていない個体は「不具合による増加」と断定できないので減らさない。
+  if (currentTotal < badTotal) return masu;
+  const targetTotal = Math.max(0, currentTotal - knownOvergrant); // 不具合以前からの余剰があればそのまま保持
+  if (unused >= knownOvergrant) {
+    return {
+      ...masu,
+      distAptPoints: unused - knownOvergrant,
+      enhancePointBandRepairVersion: ENHANCE_POINT_BAND_REPAIR_VERSION,
+    };
+  }
+  // 過剰分が能力・適性へ既に振られている場合、「どの振り分けが過剰分だったか」は保存履歴から判別不能。
+  // 任意の能力だけ削るより、通常強化だけを白紙にして正しい総数を未使用Pへ戻す。
+  // 超越強化・個体基礎値・固有技・限界突破・転生・合体履歴などは一切触らない。
+  return {
+    ...masu,
+    distAptPoints: targetTotal,
+    statPoints: { hp:0, atk:0, def:0, guts:0 },
+    distAptBoosts: [0,0,0,0],
+    distApt: [...base.distAptitude],
+    enhancePointBandRepairVersion: ENHANCE_POINT_BAND_REPAIR_VERSION,
+  };
+};
 //
 // 必要経験値の緩和(BOND_XP_DISCOUNTの引き下げ)を行うと、同じ絆経験値のまま絆レベルだけが
 // 上がるため、レベルアップ時に配っている強化ポイントが後追いで配られず
@@ -4996,10 +5079,9 @@ const reconcileMasuPoints = (masu) => {
   // ここを新しい方式で数え直すことが、そのまま既存のマスモンの調整にもなる
   // (読み込みのたびに不足分だけを補うので、二重に配られることはない)。
   // 通常強化ポイントの「レベル由来ぶん」は levelBasedEnhancePoints が正本。
-  // Lv400までで止まり(Lv401以降で得られるのは超越ポイント)、限界突破34回以上なら
-  // 1レベルにつき倍率ぶんもらえる。ここを倍率なしで数えていたため、倍率で稼いだぶんが
-  // 転生のたびに消えて戻らなかった
-  const earned = levelBasedEnhancePoints(masuBondLevelInfo(masu).level, masu.rebirthCount)
+  // Lv1→270は1P、270→330は2P、330→400は3Pで、現在の凸数を過去レベルへ遡及しない。
+  // Lv401以降で得られるのは通常Pではなく超越P。
+  const earned = levelBasedEnhancePoints(masuBondLevelInfo(masu).level)
     + totalBreakthroughPoints(masu.rebirthCount)
     + ownReincarnateBonusPoints(masu)
     + inheritedReincarnateBonusPointsOf(masu);
@@ -6047,15 +6129,11 @@ const helpDataRows = (id) => {
     // 限界突破の回数で変わる「レベルアップ1回ぶんの強化ポイント」。
     // 段の数や倍率を変えてもヘルプが古くならないよう、実データから作る
     case 'levelUpPointMultipliers': {
-      const rows = [];
-      let prev = null;
-      for (let n = 0; n <= FINAL_BREAKTHROUGH_COUNT; n++) {
-        const mult = levelUpPointMultiplier(n);
-        if (mult === prev) continue;
-        prev = mult;
-        rows.push([n === 0 ? '限界突破なし' : `限界突破 ${n}回以上`, `レベルアップ1回につき 強化ポイント ${mult}`]);
-      }
-      return rows;
+      return [
+        [`Lv.1 → ${ENHANCE_POINT_DOUBLE_LEVEL}`, 'レベルアップ1回につき 強化ポイント 1'],
+        [`Lv.${ENHANCE_POINT_DOUBLE_LEVEL} → ${ENHANCE_POINT_TRIPLE_LEVEL}（虹★4）`, 'レベルアップ1回につき 強化ポイント 2'],
+        [`Lv.${ENHANCE_POINT_TRIPLE_LEVEL} → ${MAX_MASU_LEVEL_CAP}（虹★5）`, 'レベルアップ1回につき 強化ポイント 3'],
+      ];
     }
     case 'teachings':
       return ((typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS) || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
@@ -10165,6 +10243,13 @@ function MonsterHeroGame() {
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
+      // #827の誤式で34/35凸の過去レベルへ倍率が遡及され、既に増えた分だけを先に1回修復する。
+      // 未使用Pで吸収できる個体は配分を維持し、過剰分が使用済みなら通常強化だけ白紙にして正しい総数へ戻す。
+      const bandRepairedMasuMons = savedMasuMons.map(repairEnhancePointBandOvergrant);
+      if (bandRepairedMasuMons.some((m, i) => m !== savedMasuMons[i])) {
+        savedMasuMons = bandRepairedMasuMons;
+        await storeSet('mh_masu_mons', savedMasuMons, false);
+      }
       // 絆レベルに対して強化ポイントが不足しているマスモンがあれば、ここで不足分を補填する
       // (必要経験値を緩和した際、レベルだけ上がってポイントが配られないまま残っていた分の救済)
       const reconciledMasuMons = savedMasuMons.map(reconcileMasuPoints);
@@ -16236,7 +16321,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='MASU_REBIRTH'&&(()=>{
           const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
-          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。30凸までは上限+{BREAKTHROUGH_LEVEL_CAP_GAIN}、31～35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。虹★4はLvUP強化ポイント×2、虹★5は×3です。</div><div className="flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="text-[9px] text-slate-500 font-bold mb-2">限界突破には虹のプシュケーが必要です（1回目{BREAKTHROUGH_ITEM_BASE}個・以降1回ごとに+{BREAKTHROUGH_ITEM_STEP}個）。チャレンジ／クイックをクリアするともらえます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey(null);}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div><div className={`text-[8px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</div></button>})}</div></div>; }
+          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。30凸までは上限+{BREAKTHROUGH_LEVEL_CAP_GAIN}、31～35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。虹★4で解放されるLv270→330は強化P×2、虹★5で解放されるLv330→400は×3です。</div><div className="flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="text-[9px] text-slate-500 font-bold mb-2">限界突破には虹のプシュケーが必要です（1回目{BREAKTHROUGH_ITEM_BASE}個・以降1回ごとに+{BREAKTHROUGH_ITEM_STEP}個）。チャレンジ／クイックをクリアするともらえます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey(null);}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div><div className={`text-[8px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</div></button>})}</div></div>; }
           const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
           return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.rebirthCount>=BREAKTHROUGH_MAX_COUNT?`次は${normalized.rebirthCount+1}凸：上限Lv.${breakthroughLevelCap(normalized.rebirthCount+1)}、虹★が1個増えます${normalized.rebirthCount+1>=34?`（LvUP強化ポイント×${levelUpPointMultiplier(normalized.rebirthCount+1)}）`:''}`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>{/* 限界突破には虹のプシュケーも要る。必要数と所持数を必ず並べて出す */}{(()=>{const need=breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1);const have=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID);return <div className="bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${have>=need?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{need.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（{normalizeMasuProgression(selected).rebirthCount+1}回目の限界突破：{BREAKTHROUGH_ITEM_BASE} +（回数-1）×{BREAKTHROUGH_ITEM_STEP}）</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持数</span><span className="text-slate-300 font-black">{have.toLocaleString()}</span></div>{have<need&&<div className="text-[8px] text-red-400 font-black">虹のプシュケーが足りません（あと {(need-have).toLocaleString()}）</div>}</div>;})()}<div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
 {/* 固有技を上げずに突破する道。全部の技が最大まで育っていても限界突破できるようにするためのもの。
@@ -18157,7 +18242,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const afterXp = cappedBondXp(main, subXp);
             const afterLvl = bondLevelInfo(afterXp);
             const gainedLevels = afterLvl.level - mainLvl.level;
-            const gainedLevelPoints = gainedLevels * levelUpPointMultiplier(main.rebirthCount);
+            const gainedLevelPoints = gainedEnhancePointsBetweenLevels(mainLvl.level, afterLvl.level);
             const reincarnateTransfer = selectedSubs.reduce((total, candidate)=>{const transfer=transferableReincarnateBonus(candidate);return {points:total.points+transfer.points,count:total.count+transfer.count};},{points:0,count:0});
             // 上限で切り捨てられる絆経験値。あるときは事前に知らせる
             const wastedXp = Math.max(0, (beforeXp + subXp) - afterXp);

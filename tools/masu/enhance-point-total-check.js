@@ -1,25 +1,15 @@
-// 強化ポイントの「総数」の数え方が、どの経路でも同じであることを確認する。
+// 強化ポイントの総数・レベル帯・転生・既存セーブ補正が全経路で一致することを確認する。
 //
 //   node tools/masu/enhance-point-total-check.js
 //
-// 【なぜ要るか】
-// 強化ポイントの総数を数える場所が3つある。
+// 正本:
+//   Lv.1→270   : 1レベルにつき1P
+//   Lv.270→330 : 1レベルにつき2P（虹★4 / 34凸で解放）
+//   Lv.330→400 : 1レベルにつき3P（虹★5 / 35凸で解放）
 //
-//   ・レベルアップしたとき(applyBondXpGain … バトル・合体・チケットの共通処理)
-//   ・読み込み時の不足補填(reconcileMasuPoints)
-//   ・転生で総数を作り直すとき(buildMasuReincarnation)
-//
-// ここが食い違うと、多く数える側で貯めたポイントが、少なく数える側を通った瞬間に消える。
-// 実際に「限界突破34回以上なら1レベルにつき2〜3ポイント」という倍率が
-// レベルアップにだけ効いていて、補填と転生は倍率なしで数えていたため、
-// 倍率で稼いだぶんが転生のたびに丸ごと消え、レベルを上げ直しても戻らなかった。
-// (Lv320・限界突破35の個体で、転生1回につき数百ポイント失われる状態だった)
-//
-// ここでは数え方が1つ(levelBasedEnhancePoints)にまとまっていることと、
-// 実際に動かして「転生しても減らない」ことを確かめる。
+// 「現在35凸だからLv1から全部×3」のような遡及計算は禁止する。
 const fs = require('fs');
 const path = require('path');
-
 const { REPO_ROOT, loadDyeModule } = require('../harness');
 const source = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/src/game-system.jsx'), 'utf8');
 const a = loadDyeModule();
@@ -30,36 +20,64 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 
-// --- ① 数え方が1か所にまとまっているか ---
-check('レベル由来の総数を出す共通関数がある',
-  source.includes('const levelBasedEnhancePoints = (level, rebirthCount) =>')
-    && source.includes('levelUpPointMultiplier(rebirthCount)'));
-check('読み込み時の補填が共通関数を使う',
-  source.includes('const earned = levelBasedEnhancePoints(masuBondLevelInfo(masu).level, masu.rebirthCount)'));
-check('転生の総数計算が共通関数を使う',
-  source.includes('const nextPoints = levelBasedEnhancePoints(nextLevel, normalized.rebirthCount)'));
-// スキップチケットのレベルアップも、バトル・合体と同じ共通処理を通すこと。
-// ここだけ「1レベル=1ポイント」で数えていた
-check('スキップチケットのレベルアップも共通処理を通す',
-  source.includes('return applyBondXpGain(mon, award.gain).masu;')
-    && !source.includes('distAptPoints: (mon.distAptPoints || 0) + (after.level - before.level)'));
-check('倍率なしで数え直している場所が残っていない',
-  !source.includes('Math.max(0, Math.min(MAX_MASU_LEVEL_CAP, masuBondLevelInfo(masu).level) - 1)')
-    && !source.includes('const nextPoints = (nextLevel - 1) +'));
+// --- ① 正本がレベル帯になっているか ---
+check('総数の正本は現在の凸倍率を掛けない',
+  source.includes('const levelBasedEnhancePoints = (level) =>')
+    && source.includes('const gainedEnhancePointsBetweenLevels = (beforeLevel, afterLevel) =>')
+    && !source.includes('const levelBasedEnhancePoints = (level, rebirthCount) =>'));
+check('実レベルアップは前後レベルの差分を使う',
+  source.includes('const gainedPoints = gainedEnhancePointsBetweenLevels(before.level, Math.min(cap, after.level));'));
+check('読み込み補填も同じ正本を使う',
+  source.includes('const earned = levelBasedEnhancePoints(masuBondLevelInfo(masu).level)'));
+check('転生も同じ正本を使う',
+  source.includes('const nextPoints = levelBasedEnhancePoints(nextLevel)'));
+check('合体プレビューも同じ差分を使う',
+  source.includes('const gainedLevelPoints = gainedEnhancePointsBetweenLevels(mainLvl.level, afterLvl.level);'));
+check('スキップチケットも共通XP処理を通る',
+  source.includes('return applyBondXpGain(mon, award.gain).masu;'));
 
-// --- ② Lv400までで止まり、倍率が効いているか ---
-check('Lv401以降は通常の強化ポイントを増やさない(超越ポイントの領域)',
-  a.levelBasedEnhancePoints(400, 0) === a.levelBasedEnhancePoints(500, 0));
-for (const n of [0, 33, 34, 35]) {
-  const mult = a.levelUpPointMultiplier(n);
-  check(`限界突破${n}回のレベル由来ぶんが 倍率${mult} で数えられる`,
-    a.levelBasedEnhancePoints(320, n) === 319 * mult, `${a.levelBasedEnhancePoints(320, n)}点`);
+const expectedByLevel = new Map([
+  [1, 0], [150, 149], [270, 269], [271, 271], [330, 389], [331, 392], [400, 599], [500, 599],
+]);
+for (const [level, expected] of expectedByLevel) {
+  check(`Lv${level}までのレベル由来P = ${expected}`, a.levelBasedEnhancePoints(level) === expected,
+    `${a.levelBasedEnhancePoints(level)}`);
 }
 check('壊れた値でも0未満にならない',
-  a.levelBasedEnhancePoints(0, 0) === 0 && a.levelBasedEnhancePoints(null, null) === 0
-    && a.levelBasedEnhancePoints(1, 35) === 0);
+  a.levelBasedEnhancePoints(0) === 0 && a.levelBasedEnhancePoints(null) === 0);
 
-// --- ③ 実際に動かして、転生で減らないか ---
+// 境界を1回・複数Lvでまたぐケース。
+for (const [from, to, expected] of [
+  [150,151,1], [269,270,1], [270,271,2], [269,271,3],
+  [329,330,2], [330,331,3], [329,331,5], [398,400,6], [400,450,0],
+]) {
+  check(`Lv${from}→${to} の通常P = ${expected}`,
+    a.gainedEnhancePointsBetweenLevels(from, to) === expected,
+    `${a.gainedEnhancePointsBetweenLevels(from, to)}`);
+}
+
+// --- ② applyBondXpGain（バトル・合体・チケット共通）の実動作 ---
+const makeMasu = (level, rebirthCount, over = {}) => a.normalizeMasuProgression({
+  id:'m1', baseId:'Snegurochka', levelCap: rebirthCount >= 35 ? 400 : rebirthCount >= 34 ? 330 : 270,
+  bondXp:a.totalBondXpForLevel(level), rebirthCount, reincarnateCount:0,
+  distAptPoints:0, distAptBoosts:[0,0,0,0], statPoints:{hp:0,atk:0,def:0,guts:0}, ...over,
+});
+const levelTo = (m, to) => a.applyBondXpGain(m, a.totalBondXpForLevel(to) - (m.bondXp || 0));
+check('35凸でもLv150→151は+1（過去帯へ×3しない）', levelTo(makeMasu(150,35),151).gainedPoints === 1);
+check('34凸のLv320→325は+10', levelTo(makeMasu(320,34),325).gainedPoints === 10);
+check('35凸のLv390→395は+15', levelTo(makeMasu(390,35),395).gainedPoints === 15);
+check('35凸でLv269→271を一気に跨いでも+3', levelTo(makeMasu(269,35),271).gainedPoints === 3);
+
+// --- ③ 実報告4個体を総数で固定する ---
+const expectedTotal = (level, rebirthCount, reincarnateCount, inherited = 0) =>
+  a.levelBasedEnhancePoints(level) + a.totalBreakthroughPoints(rebirthCount)
+    + reincarnateCount * a.REINCARNATE_POINTS + inherited;
+check('ヤオビクニ Lv150/35凸/転生4 = 228P', expectedTotal(150,35,4) === 228);
+check('ウンディーネ Lv150/34凸/転生4 = 227P', expectedTotal(150,34,4) === 227);
+check('パンドラ Lv232/33凸/転生7 = 338P', expectedTotal(232,33,7) === 338);
+check('スネグーラチカ Lv331/35凸/転生5 = 481P', expectedTotal(331,35,5) === 481);
+
+// --- ④ 転生で減らず、同じLvへ戻すと転生+10だけ増える ---
 const GAIN = { hp:10, atk:3, def:3, guts:3 };
 const totalPointsOf = (m) => {
   const rec = a.reconcileMasuPoints(a.normalizeMasuProgression(m));
@@ -69,50 +87,72 @@ const totalPointsOf = (m) => {
   return boosts + stat + (rec.distAptPoints || 0);
 };
 const bad = [];
-for (const level of [120, 150, 320, 399, 400, 450]) {
-  for (const levelCap of [400, 500]) {
-    if (levelCap < level) continue;
-    for (const rebirthCount of [0, 33, 34, 35, 74]) {
-      for (const reincarnateCount of [0, 4]) {
-        for (const inheritedPoints of [0, 190]) {
-          const masu = a.normalizeMasuProgression({
-            id: 1, baseId: 'Snegurochka', levelCap, bondXp: a.totalBondXpForLevel(level),
-            rebirthCount, reincarnateCount, inheritedReincarnateBonusPoints: inheritedPoints,
-            distAptBoosts: [0,0,0,0], statPoints: { hp:0, atk:0, def:0, guts:0 }, distAptPoints: 0,
-          });
-          const before = totalPointsOf(masu);
-          const r = a.buildMasuReincarnation({ masu, skillKey: null, gold: 10 ** 12 });
-          if (!r.ok) continue;
-          // 転生したあと、同じレベルまで上げ直す
-          const back = { ...a.normalizeMasuProgression(r.nextMasu), bondXp: a.totalBondXpForLevel(level) };
-          const after = totalPointsOf(back);
-          if (after - before !== a.REINCARNATE_POINTS) {
-            bad.push(`Lv${level}/上限${levelCap}/限界突破${rebirthCount}/転生${reincarnateCount}/継承${inheritedPoints}: ${before}→${after}`);
-          }
+for (const level of [120,150,269,270,271,320,330,331,399,400]) {
+  for (const rebirthCount of [0,33,34,35]) {
+    const cap = rebirthCount >= 35 ? 400 : rebirthCount >= 34 ? 330 : 270;
+    if (level > cap || level < a.REINCARNATE_MIN_LEVEL) continue;
+    for (const reincarnateCount of [0,4]) {
+      for (const inheritedPoints of [0,190]) {
+        const masu = makeMasu(level, rebirthCount, {
+          levelCap:cap, reincarnateCount, inheritedReincarnateBonusPoints:inheritedPoints,
+        });
+        const before = totalPointsOf(masu);
+        const r = a.buildMasuReincarnation({ masu, skillKey:null, gold:10 ** 12 });
+        if (!r.ok) { bad.push(`転生不可 Lv${level}/凸${rebirthCount}`); continue; }
+        const back = { ...a.normalizeMasuProgression(r.nextMasu), bondXp:a.totalBondXpForLevel(level) };
+        const after = totalPointsOf(back);
+        if (after - before !== a.REINCARNATE_POINTS) {
+          bad.push(`Lv${level}/凸${rebirthCount}/転生${reincarnateCount}/継承${inheritedPoints}: ${before}→${after}`);
         }
       }
     }
   }
 }
-check('どの条件でも、転生して同じレベルへ戻すと総数がちょうど転生ぶんだけ増える',
-  bad.length === 0, bad.slice(0, 3).join(' / '));
+check('転生→同じLvまで育て直すと総数はちょうど+10', bad.length === 0, bad.slice(0,4).join(' / '));
 
-// レベルアップの経路(バトル・合体で共通)でも、同じ倍率で配られること
-const grown = a.applyBondXpGain(
-  a.normalizeMasuProgression({ id:1, baseId:'Snegurochka', levelCap:400, rebirthCount:35, bondXp:0,
-    distAptPoints:0, distAptBoosts:[0,0,0,0], statPoints:{ hp:0, atk:0, def:0, guts:0 } }),
-  a.totalBondXpForLevel(320));
-check('レベルアップで配られる量が共通関数と一致する',
-  grown.masu.distAptPoints === a.levelBasedEnhancePoints(320, 35),
-  `${grown.masu.distAptPoints} / ${a.levelBasedEnhancePoints(320, 35)}`);
+// --- ⑤ #827で既に増えたセーブの自動補正 ---
+const badTotal = (level, rebirthCount, reincarnateCount, inherited = 0) =>
+  a.legacyRetroactiveLevelBasedEnhancePoints(level, rebirthCount)
+    + a.totalBreakthroughPoints(rebirthCount) + reincarnateCount * a.REINCARNATE_POINTS + inherited;
+const yaobiBad = makeMasu(150,35,{ reincarnateCount:4, distAptPoints:526 });
+const yaobiFixed = a.repairEnhancePointBandOvergrant(yaobiBad);
+check('未使用Pだけで戻せるヤオビクニ相当は配分を崩さず526→228',
+  yaobiFixed.distAptPoints === 228 && yaobiFixed.enhancePointBandRepairVersion === a.ENHANCE_POINT_BAND_REPAIR_VERSION);
 
-// --- ④ ヘルプに倍率が書いてあるか ---
+// スネグー相当: 765P使用済み + 314P未使用 = 1079P。過剰598Pが未使用だけでは足りないので通常強化を白紙へ。
+const snegBad = makeMasu(331,35,{
+  reincarnateCount:5, distAptPoints:314,
+  statPoints:{hp:1700, atk:867, def:621, guts:252}, // 170+289+207+84 = 750P
+  distAptBoosts:[0,9,6,0], // 15P、合計使用765P
+});
+check('テスト前提: スネグー誤式総数は1079', badTotal(331,35,5) === 1079);
+const snegFixed = a.repairEnhancePointBandOvergrant(snegBad);
+check('過剰分を使用済みなら通常強化だけ白紙にして正しい481Pを返す',
+  snegFixed.distAptPoints === 481
+    && Object.values(snegFixed.statPoints).every(v => v === 0)
+    && snegFixed.distAptBoosts.every(v => v === 0)
+    && snegFixed.enhancePointBandRepairVersion === a.ENHANCE_POINT_BAND_REPAIR_VERSION,
+  `unused=${snegFixed.distAptPoints}`);
+check('補正済み個体へ二重適用しない', a.repairEnhancePointBandOvergrant(snegFixed) === snegFixed);
+
+const legit = makeMasu(331,35,{ reincarnateCount:5, distAptPoints:481 });
+check('誤式の総数まで増えていない正規個体は減らさない', a.repairEnhancePointBandOvergrant(legit) === legit);
+const withLegacyExtra = makeMasu(331,35,{ reincarnateCount:5, distAptPoints:1079 + 12 });
+const extraFixed = a.repairEnhancePointBandOvergrant(withLegacyExtra);
+check('不具合以前からの余剰12Pは保持して481+12へ戻す', extraFixed.distAptPoints === 493, `${extraFixed.distAptPoints}`);
+
+// --- ⑥ Lv401以降は通常Pを増やさず超越Pだけ ---
+const transcended = makeMasu(400,35,{ levelCap:500, transcended:true });
+const beyond = a.applyBondXpGain(transcended, a.totalBondXpForLevel(402) - transcended.bondXp);
+check('Lv400→402は通常P+0・超越P+2', beyond.gainedPoints === 0 && beyond.gainedTranscendPoints === 2);
+
+// --- ⑦ ヘルプと起動修復導線 ---
 const helpSrc = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/data/help.js'), 'utf8');
-check('倍率の一覧はヘルプへ手で書き写さず実データから作る',
-  helpSrc.includes("{ t:'data', id:'levelUpPointMultipliers' }")
-    && source.includes("case 'levelUpPointMultipliers':"));
-check('限界突破の説明からも倍率へたどれる',
-  helpSrc.includes('回数が進むと、レベルアップ1回でもらえる強化ポイントそのものが増えます'));
+check('ヘルプは倍率一覧を実データから表示する',
+  helpSrc.includes("{ t:'data', id:'levelUpPointMultipliers' }") && source.includes("case 'levelUpPointMultipliers':"));
+check('起動時はreconcileより先に既知過剰補正を行う',
+  source.indexOf('savedMasuMons.map(repairEnhancePointBandOvergrant)') >= 0
+    && source.indexOf('savedMasuMons.map(repairEnhancePointBandOvergrant)') < source.indexOf('savedMasuMons.map(reconcileMasuPoints)'));
 
-console.log(failed === 0 ? '\n強化ポイントの総数の数え方: PASS' : `\n${failed}件NG`);
+console.log(failed === 0 ? '\n強化ポイントのレベル帯・転生・既存セーブ補正: PASS' : `\n${failed}件NG`);
 process.exit(failed === 0 ? 0 : 1);
