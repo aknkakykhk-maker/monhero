@@ -18,14 +18,14 @@ if(helper){const c={RHYTHM_JUDGMENTS:context.out.RHYTHM_JUDGMENTS,RHYTHM_JUDGMEN
   check('maxComboは歴代最大値',low.maxCombo===8&&L.mergeRhythmBestRecord(old,{score:501,maxCombo:9}).maxCombo===9);
   check('達成フラグtrueを後から消さない',low.clear&&low.fullCombo&&low.allExcellent&&low.allMarvelous);
 }
-check('ノーツ移動はプレイエリア実高と判定ラインからpx計算',game.includes('area.getBoundingClientRect()')&&game.includes('line.getBoundingClientRect()')&&game.includes('travelPx:judgmentY-spawnY')&&game.includes('progress*travel.travelPx')&&game.includes('translate3d(0,${Math.round(yPx)}px,0)')&&!game.includes('Math.round(progress*100)}%'));
+check('ノーツ移動は時刻を変えず非線形projectionでpx計算',game.includes('travelPx:judgmentY-spawnY')&&game.includes('rhythmProjectTravelProgress(progress)*travel.travelPx')&&game.includes('translate3d(0,${Math.round(yPx)}px,0)'));
 check('ポーズ中は音源とrAFを止め入力・MISSを停止',game.includes('run.paused=true;stopFrame();run.audio.pause()')&&game.includes('run.finished||run.paused||note.done')&&(game.includes("run.paused||view.status!=='playing'")||game.includes('if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();rhythmMatchInputBatch')));
 check('再開は同じoffsetから新しいBufferSourceを生成',game.includes('offsetSeconds=songTimeSeconds()')&&game.includes('const nextSource=ctx.createBufferSource()')&&game.includes('startSource(offsetSeconds)'));
 check('ポーズ中songTimeは進まずAudioContext時刻を正本にする',game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&!/Date\.now\(\)/.test(game.match(/const RhythmTapTest=[\s\S]*?\n};\n\nfunction MonsterHeroGame/)?.[0]||''));
-check('リスタートは0ms・全ノーツ・全集計を初期化',game.includes('offsetSeconds=0')&&game.includes('return startSource(0)')&&game.includes('run.counts=emptyCounts();run.fast=0;run.slow=0'));
-check('中断は保存せず音源・rAF・入力を停止',game.includes('const abort=()=>')&&game.includes('stopFrame();RHYTHM_GESTURE_RUNTIME.clear();onExit()')&&!/const abort=[^;]*onComplete/.test(game));
+check('PAUSEとリザルト再プレイは同じbeginRunを使用',game.includes('const restart=()=>')&&game.includes('beginRun(startBest)')&&game.includes('onClick={()=>beginRun(mergeRhythmBestRecord'));
+check('中断は保存せず共通disposeRunで停止',game.includes('const abort=()=>')&&game.includes('disposeRun();onExit()')&&!/const abort=[^;]*onComplete/.test(game));
 check('正常完走だけBEST保存しReact stateを即時更新',game.includes('onComplete(result,merged)')&&game.includes('saveRhythmBestRecord(rhythmBestRecords')&&game.includes('setRhythmBestRecords(records)'));
-check('source/rAF cleanupと再プレイ導線を持つ',game.includes('return()=>{cancelled=true;stopFrame();RHYTHM_GESTURE_RUNTIME.clear()')&&game.includes('runRef.current=null')&&game.includes('もう一度プレイ')&&game.includes('音ゲーデバッグへ戻る'));
-check('完走・リスタート・中断でgesture sessionを破棄',game.match(/RHYTHM_GESTURE_RUNTIME\.clear\(\)/g)?.length>=4&&game.includes('run.restarting=true')&&game.includes('if(runRef.current!==run||run.finished)return'));
+check('source/rAF cleanupと再プレイ導線を持つ',game.includes('const disposeRun=useCallback')&&game.includes('runRef.current=null')&&game.includes('もう一度プレイ')&&game.includes('音ゲーデバッグへ戻る'));
+check('多重開始ロックとgenerationで古いPromiseを無効化',game.includes('if(startLockRef.current)return')&&game.includes('const generation=++generationRef.current')&&game.includes('generation!==generationRef.current')&&game.includes('audio?.stop();return'));
 check('通常公開はOFF',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
