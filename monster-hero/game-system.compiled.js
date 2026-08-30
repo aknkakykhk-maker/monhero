@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: beb7d5b89ba28a52
+// source-sha256: f3ee607a338d2138
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 15:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 17:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9233,6 +9233,10 @@ const earnedEnhancePointTotal = masu => {
 };
 const repairEnhancePointBandOvergrant = masu => {
   if (!masu || Math.floor(Number(masu.enhancePointBandRepairVersion) || 0) >= ENHANCE_POINT_BAND_REPAIR_VERSION) return masu;
+  // 旧形式ゴーレムは、過去のベース適性変更(A/C/E/G → A/E/G/G)により distApt だけでは
+  // 実際に使った適性Pを一意に戻せない。reconcileMasuPoints と同じく、distAptBoosts を持つ
+  // 新形式へ安全に移行済みになるまでは推測でポイントを減らしたり通常強化を白紙化しない。
+  if (masu.baseId === 'Golem' && !Object.prototype.hasOwnProperty.call(masu, 'distAptBoosts')) return masu;
   const normalized = normalizeMasuProgression(masu);
   if (normalized.rebirthCount < 34) return masu;
   const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[normalized.baseId] : null;
