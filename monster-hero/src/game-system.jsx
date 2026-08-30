@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 21:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 21:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13486,12 +13486,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     getIncomingDamageBeforeTurnReduction(intent)
   ), [getIncomingDamageBeforeTurnReduction,applyTurnDamageReduction]);
 
-  const addPopup = (text, side, color, replaceKey=null) => {
+  const addPopup = (text, side, color) => {
     const id = Date.now()+Math.random();
-    setPopups(prev=>{
-      const kept=replaceKey?prev.filter(x=>x.replaceKey!==replaceKey):prev;
-      return [...kept,{id,text,side,color,replaceKey}];
-    });
+    setPopups(prev=>[...prev,{id,text,side,color}]);
     setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));
   };
 
@@ -14253,14 +14250,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               setSlotSkill(null);
               await battleWait(100);
             }
-            // エイキ固有は本体+最大5連撃で、通常popupを全部残すと縦に積み上がって
-            // 後半が画面外へ切れる。4ヒット以上のエイキ高速斬撃だけ、同じ表示枠を
-            // 140msごとに差し替えて全ヒットを順番に見せる。ダメージ計算・連撃数は変えない。
-            const rapidHitPopupKey=hitMotion==='eikiSakuraCombo'&&group.length>=4?`eiki-rapid-${hitIdx}-${animSlot}`:null;
             for (const h of group) {
               const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if(h.isCrit) triggerShake();
-              addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,rapidHitPopupKey);
+              addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
               setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));
               await battleWait(140);
             }
