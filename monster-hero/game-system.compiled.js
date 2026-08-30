@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e92cb4d809f04a3e
+// source-sha256: bba9f2637818b8fa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 14:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 18:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -913,20 +913,34 @@ const breakthroughLevelCap = count => {
   const n = Math.max(0, Math.min(FINAL_BREAKTHROUGH_COUNT, Math.floor(Number(count) || 0)));
   return n <= BREAKTHROUGH_MAX_COUNT ? INITIAL_MASU_LEVEL_CAP + n * BREAKTHROUGH_LEVEL_CAP_GAIN : BREAKTHROUGH_LEVEL_CAPS[n];
 };
-// レベルアップ時の強化ポイント倍率。経験値量・必要経験値には掛けない。
+// 限界突破画面などの表示用。34凸でLv270→330帯が×2、35凸でLv330→400帯が×3になる。
+// 実際の付与量は現在の凸数ではなく、下の「到達レベル帯」の共通関数を正本にする。
 const levelUpPointMultiplier = rebirthCount => {
   const n = Math.max(0, Math.floor(Number(rebirthCount) || 0));
   return n >= 35 ? 3 : n >= 34 ? 2 : 1;
 };
-// レベルで得られる強化ポイントの総数。1レベルにつき上の倍率ぶんもらえる。
-// Lv400までが対象で、Lv401以降(超越の領域)は通常ポイントではなく超越ポイントになる。
-//
-// 【ここを1か所にまとめてある理由】
-// 以前は「レベルアップのときは倍率あり」「読み込み時の補填と転生の計算は倍率なし」と
-// 数え方が3通りに分かれていた。そのため限界突破34回以上(倍率2・3)の個体が転生すると、
-// 倍率で稼いだぶんが丸ごと消え、レベルを上げ直しても戻らなかった。
-// 数え方をここ1つに集約し、どの経路も同じ答えになるようにしている。
-const levelBasedEnhancePoints = (level, rebirthCount) => Math.max(0, Math.min(MAX_MASU_LEVEL_CAP, Math.floor(Number(level) || 0)) - 1) * levelUpPointMultiplier(rebirthCount);
+const ENHANCE_POINT_DOUBLE_LEVEL = 270;
+const ENHANCE_POINT_TRIPLE_LEVEL = 330;
+// 「そのレベルへ上がる1回」で得る通常強化ポイント。
+// Lv2〜270は1、Lv271〜330は2、Lv331〜400は3。Lv401以降は超越ポイントの領域。
+const levelEnhancePointMultiplier = reachedLevel => {
+  const level = Math.max(1, Math.floor(Number(reachedLevel) || 1));
+  return level > ENHANCE_POINT_TRIPLE_LEVEL ? 3 : level > ENHANCE_POINT_DOUBLE_LEVEL ? 2 : 1;
+};
+// 現在レベルまでに「レベル由来」で得ているべき通常強化ポイントの総数。
+// 重要: 34/35凸になったからといって、過去のLv1〜270へ×2/×3を遡及適用しない。
+const levelBasedEnhancePoints = level => {
+  const capped = Math.max(1, Math.min(MAX_MASU_LEVEL_CAP, Math.floor(Number(level) || 1)));
+  const single = Math.max(0, Math.min(capped, ENHANCE_POINT_DOUBLE_LEVEL) - 1);
+  const doubled = Math.max(0, Math.min(capped, ENHANCE_POINT_TRIPLE_LEVEL) - ENHANCE_POINT_DOUBLE_LEVEL) * 2;
+  const tripled = Math.max(0, capped - ENHANCE_POINT_TRIPLE_LEVEL) * 3;
+  return single + doubled + tripled;
+};
+// バトル・チケット・合体などで複数レベルを一度にまたいでも、帯ごとの差分を正確に付与する。
+const gainedEnhancePointsBetweenLevels = (beforeLevel, afterLevel) => Math.max(0, levelBasedEnhancePoints(afterLevel) - levelBasedEnhancePoints(beforeLevel));
+// 2026-08-29の不具合版(#827)が起動時補填に使ってしまった誤式。
+// 既存セーブの「その不具合で増えた分だけ」を安全に特定して戻すために、移行処理からのみ使う。
+const legacyRetroactiveLevelBasedEnhancePoints = (level, rebirthCount) => Math.max(0, Math.min(MAX_MASU_LEVEL_CAP, Math.floor(Number(level) || 0)) - 1) * levelUpPointMultiplier(rebirthCount);
 const RAINBOW_STAR_IMAGE = 'images/ui/breakthrough-rainbow-star.PNG';
 // 凸数から★の並びを作る。新しい色を先頭に、残りは1つ前の段階の色で埋める
 const breakthroughStars = count => {
@@ -1408,14 +1422,16 @@ const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
   const bondXp = cappedBondXp(masu, gain, maxLevel);
   const after = bondLevelInfo(bondXp);
   const gainedLevels = Math.max(0, after.level - before.level);
-  const pointMultiplier = levelUpPointMultiplier(masu?.rebirthCount);
   // Lv400までは今までどおり通常の強化ポイント。Lv401以降(超越の領域)は
   // 通常ポイントを配らず、1レベルにつき超越ポイントを1だけ配る。
   // 400をまたいでレベルが上がったときも、400までのぶんと401以降のぶんを分けて数える。
   const cap = MAX_MASU_LEVEL_CAP;
   const normalLevels = Math.max(0, Math.min(cap, after.level) - Math.min(cap, before.level));
   const gainedTranscendPoints = Math.max(0, after.level - Math.max(cap, before.level));
-  const gainedPoints = normalLevels * pointMultiplier;
+  const gainedPoints = gainedEnhancePointsBetweenLevels(before.level, Math.min(cap, after.level));
+  // 同一帯だけを上がった場合は従来UI用に×2/×3を返す。帯をまたぐ場合は誤解を避けて×表示を出さない。
+  const sameBandMultiplier = normalLevels > 0 ? gainedPoints / normalLevels : 1;
+  const pointMultiplier = Number.isInteger(sameBandMultiplier) ? sameBandMultiplier : 1;
   return {
     masu: {
       ...masu,
@@ -2271,6 +2287,17 @@ const sortDonationMasuMons = (masuList, sortKey, sortDir, activeIds = []) => {
   });
 };
 
+// 強化画面の数値直接入力を、0〜その項目へ振れる最大ポイントへ正規化する。
+// inputMode=numeric でも貼り付けでは記号等が入り得るため、整数だけを受け付ける。
+const directEnhancePointAmount = (rawValue, maxValue) => {
+  const text = String(rawValue ?? '').trim();
+  const max = Math.max(0, Math.floor(Number(maxValue) || 0));
+  if (!/^\d+$/.test(text)) return 0;
+  const parsed = Number(text);
+  const wanted = Number.isFinite(parsed) ? Math.floor(parsed) : Number.MAX_SAFE_INTEGER;
+  return Math.min(Math.max(0, wanted), max);
+};
+
 // 強化の下書き(plan)を当てはめた「強化後のマスモン」を、保存データに触れずに作る。
 // 一括強化のプレビュー・1ポイント強化のプレビュー・実際の確定処理が、すべてこの1か所を通るので、
 // 画面に出した「強化後の総合力」と、確定したあとの総合力が必ず一致する。
@@ -2855,7 +2882,7 @@ const buildMasuReincarnation = ({
   // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ levelBasedEnhancePoints で数える
   // (ここを別の式にすると、限界突破の倍率で稼いだぶんが転生のたびに消えてしまう)
   const nextOwnBonusPoints = normalized.reincarnateBonusPoints + REINCARNATE_POINTS;
-  const nextPoints = levelBasedEnhancePoints(nextLevel, normalized.rebirthCount) + totalBreakthroughPoints(normalized.rebirthCount) + nextOwnBonusPoints + normalized.inheritedReincarnateBonusPoints;
+  const nextPoints = levelBasedEnhancePoints(nextLevel) + totalBreakthroughPoints(normalized.rebirthCount) + nextOwnBonusPoints + normalized.inheritedReincarnateBonusPoints;
   return {
     ok: true,
     cost,
@@ -6067,7 +6094,8 @@ const EXACT_DYE_MASKS = Object.freeze({
   Mocchi: MOCCHI_DYE_MASK,
   Yaobikuni: YAOBIKUNI_DYE_MASK,
   Plant: PLANT_DYE_MASK,
-  Eiki: EIKI_DYE_MASK
+  Eiki: EIKI_DYE_MASK,
+  Pandora: PANDORA_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -6077,7 +6105,7 @@ const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
-// パンドラは埋め込み部位マップで3色の境界を固定する。以下は部位数を既存UIへ知らせる控え。
+// パンドラは正式な5色マスクを使う。赤=①、緑=②、青=③、黄=④、マゼンタ=⑤。
 MASU_COLOR_REGION_HUES.Pandora = [{
   hue: 0,
   noAAGuard: true,
@@ -6088,6 +6116,14 @@ MASU_COLOR_REGION_HUES.Pandora = [{
   noEdgeGuard: true
 }, {
   hue: 240,
+  noAAGuard: true,
+  noEdgeGuard: true
+}, {
+  hue: 60,
+  noAAGuard: true,
+  noEdgeGuard: true
+}, {
+  hue: 300,
   noAAGuard: true,
   noEdgeGuard: true
 }];
@@ -6200,6 +6236,8 @@ const _exactDyeMaskRegion = (pixels, offset) => {
   if (r > 200 && g < 80 && b < 80) return 0;
   if (g > 200 && r < 80 && b < 80) return 1;
   if (b > 200 && r < 80 && g < 80) return 2;
+  if (r > 200 && g > 200 && b < 80) return 3;
+  if (r > 200 && g < 80 && b > 200) return 4;
   return -1;
 };
 const _dyeRegionMaskCache = {};
@@ -6242,7 +6280,7 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
           srcCtx.imageSmoothingQuality = 'high';
           srcCtx.drawImage(img, 0, 0, w, h);
           const src = srcCtx.getImageData(0, 0, w, h).data;
-          // 正式マスクがあるモンスターは、保存済みPNGの赤・緑・青を染色①・②・③として使う。
+          // 正式マスクがあるモンスターは、保存済みPNGの色を染色部位として使う。
           // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
           // 正式登録前のパンドラだけはDEBUG定義の保存済みマスクを直接選ぶ。
           const exactMaskUrl = debugPlacement?.maskUrl || EXACT_DYE_MASKS[baseId] || null;
@@ -6798,7 +6836,7 @@ const DyeRegionColorControls = ({
   onCustom
 }) => {
   const regionCount = dyeRegionCount(baseId);
-  const regionLabels = ['①', '②', '③'];
+  const regionLabels = ['①', '②', '③', '④', '⑤'];
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
   }, Array.from({
@@ -6898,6 +6936,14 @@ const makePatternSettings = () => ({
     2: makePatternLayer({
       pattern: 'none',
       target: '3'
+    }),
+    3: makePatternLayer({
+      pattern: 'none',
+      target: '4'
+    }),
+    4: makePatternLayer({
+      pattern: 'none',
+      target: '5'
     })
   },
   decals: [],
@@ -9182,6 +9228,76 @@ const formatAptBonus = mon => getMonsterAptPct(mon).map((d, i) => d !== 0 ? `${R
 // マスモンが「これまでに得たはずの強化ポイント総数」は絆レベル-1で決まる。
 // 使用済み(間合い適性・ステータス強化に振った分)と未使用の合計がこれを下回っていたら、
 // 不足分を未使用ポイントとして補填したマスモンを返す。
+const ENHANCE_POINT_BAND_REPAIR_VERSION = 1;
+const normalEnhanceSpentPoints = (masu, base) => {
+  const aptSpent = Array.isArray(masu?.distAptBoosts) ? masu.distAptBoosts.reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0) : Array.isArray(masu?.distApt) && base?.distAptitude ? masu.distApt.reduce((sum, grade, index) => {
+    const from = DIST_APTITUDE_GRADES.indexOf(base.distAptitude[index]);
+    const to = DIST_APTITUDE_GRADES.indexOf(grade);
+    return sum + (from >= 0 && to >= 0 ? Math.max(0, to - from) : 0);
+  }, 0) : 0;
+  const statSpent = Object.keys(STAT_POINT_GAIN).reduce((sum, key) => {
+    const gain = Math.max(1, Number(STAT_POINT_GAIN[key]) || 1);
+    const value = Math.max(0, Number(masu?.statPoints?.[key]) || 0);
+    return sum + Math.ceil(value / gain);
+  }, 0);
+  return {
+    aptSpent,
+    statSpent,
+    total: aptSpent + statSpent
+  };
+};
+const earnedEnhancePointTotal = masu => {
+  const normalized = normalizeMasuProgression(masu);
+  return levelBasedEnhancePoints(masuBondLevelInfo(normalized).level) + totalBreakthroughPoints(normalized.rebirthCount) + ownReincarnateBonusPoints(normalized) + inheritedReincarnateBonusPointsOf(normalized);
+};
+const repairEnhancePointBandOvergrant = masu => {
+  if (!masu || Math.floor(Number(masu.enhancePointBandRepairVersion) || 0) >= ENHANCE_POINT_BAND_REPAIR_VERSION) return masu;
+  // 旧形式ゴーレムは、過去のベース適性変更(A/C/E/G → A/E/G/G)により distApt だけでは
+  // 実際に使った適性Pを一意に戻せない。reconcileMasuPoints と同じく、distAptBoosts を持つ
+  // 新形式へ安全に移行済みになるまでは推測でポイントを減らしたり通常強化を白紙化しない。
+  if (masu.baseId === 'Golem' && !Object.prototype.hasOwnProperty.call(masu, 'distAptBoosts')) return masu;
+  const normalized = normalizeMasuProgression(masu);
+  if (normalized.rebirthCount < 34) return masu;
+  const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[normalized.baseId] : null;
+  if (!base) return masu;
+  const level = masuBondLevelInfo(normalized).level;
+  const correctLevelPoints = levelBasedEnhancePoints(level);
+  const badLevelPoints = legacyRetroactiveLevelBasedEnhancePoints(level, normalized.rebirthCount);
+  const knownOvergrant = Math.max(0, badLevelPoints - correctLevelPoints);
+  if (knownOvergrant <= 0) return masu;
+  const bonusPoints = totalBreakthroughPoints(normalized.rebirthCount) + ownReincarnateBonusPoints(normalized) + inheritedReincarnateBonusPointsOf(normalized);
+  const badTotal = badLevelPoints + bonusPoints;
+  const spent = normalEnhanceSpentPoints(normalized, base);
+  const unused = Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0));
+  const currentTotal = spent.total + unused;
+  // 不具合版を通った個体なら、少なくとも誤式の総数まで補填されている。
+  // そこに届いていない個体は「不具合による増加」と断定できないので減らさない。
+  if (currentTotal < badTotal) return masu;
+  const targetTotal = Math.max(0, currentTotal - knownOvergrant); // 不具合以前からの余剰があればそのまま保持
+  if (unused >= knownOvergrant) {
+    return {
+      ...masu,
+      distAptPoints: unused - knownOvergrant,
+      enhancePointBandRepairVersion: ENHANCE_POINT_BAND_REPAIR_VERSION
+    };
+  }
+  // 過剰分が能力・適性へ既に振られている場合、「どの振り分けが過剰分だったか」は保存履歴から判別不能。
+  // 任意の能力だけ削るより、通常強化だけを白紙にして正しい総数を未使用Pへ戻す。
+  // 超越強化・個体基礎値・固有技・限界突破・転生・合体履歴などは一切触らない。
+  return {
+    ...masu,
+    distAptPoints: targetTotal,
+    statPoints: {
+      hp: 0,
+      atk: 0,
+      def: 0,
+      guts: 0
+    },
+    distAptBoosts: [0, 0, 0, 0],
+    distApt: [...base.distAptitude],
+    enhancePointBandRepairVersion: ENHANCE_POINT_BAND_REPAIR_VERSION
+  };
+};
 //
 // 必要経験値の緩和(BOND_XP_DISCOUNTの引き下げ)を行うと、同じ絆経験値のまま絆レベルだけが
 // 上がるため、レベルアップ時に配っている強化ポイントが後追いで配られず
@@ -9206,10 +9322,9 @@ const reconcileMasuPoints = masu => {
   // ここを新しい方式で数え直すことが、そのまま既存のマスモンの調整にもなる
   // (読み込みのたびに不足分だけを補うので、二重に配られることはない)。
   // 通常強化ポイントの「レベル由来ぶん」は levelBasedEnhancePoints が正本。
-  // Lv400までで止まり(Lv401以降で得られるのは超越ポイント)、限界突破34回以上なら
-  // 1レベルにつき倍率ぶんもらえる。ここを倍率なしで数えていたため、倍率で稼いだぶんが
-  // 転生のたびに消えて戻らなかった
-  const earned = levelBasedEnhancePoints(masuBondLevelInfo(masu).level, masu.rebirthCount) + totalBreakthroughPoints(masu.rebirthCount) + ownReincarnateBonusPoints(masu) + inheritedReincarnateBonusPointsOf(masu);
+  // Lv1→270は1P、270→330は2P、330→400は3Pで、現在の凸数を過去レベルへ遡及しない。
+  // Lv401以降で得られるのは通常Pではなく超越P。
+  const earned = levelBasedEnhancePoints(masuBondLevelInfo(masu).level) + totalBreakthroughPoints(masu.rebirthCount) + ownReincarnateBonusPoints(masu) + inheritedReincarnateBonusPointsOf(masu);
   const missing = earned - (aptSpent + statSpent + (masu.distAptPoints || 0));
   return missing > 0 ? {
     ...masu,
@@ -10908,15 +11023,7 @@ const helpDataRows = id => {
     // 段の数や倍率を変えてもヘルプが古くならないよう、実データから作る
     case 'levelUpPointMultipliers':
       {
-        const rows = [];
-        let prev = null;
-        for (let n = 0; n <= FINAL_BREAKTHROUGH_COUNT; n++) {
-          const mult = levelUpPointMultiplier(n);
-          if (mult === prev) continue;
-          prev = mult;
-          rows.push([n === 0 ? '限界突破なし' : `限界突破 ${n}回以上`, `レベルアップ1回につき 強化ポイント ${mult}`]);
-        }
-        return rows;
+        return [[`Lv.1 → ${ENHANCE_POINT_DOUBLE_LEVEL}`, 'レベルアップ1回につき 強化ポイント 1'], [`Lv.${ENHANCE_POINT_DOUBLE_LEVEL} → ${ENHANCE_POINT_TRIPLE_LEVEL}（虹★4）`, 'レベルアップ1回につき 強化ポイント 2'], [`Lv.${ENHANCE_POINT_TRIPLE_LEVEL} → ${MAX_MASU_LEVEL_CAP}（虹★5）`, 'レベルアップ1回につき 強化ポイント 3']];
       }
     case 'teachings':
       return (typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
@@ -14277,7 +14384,7 @@ const DyeMaskTouchEditor = ({
   }, (_, idx) => /*#__PURE__*/React.createElement("label", {
     key: idx,
     className: "text-[7px] text-fuchsia-200"
-  }, "\u67D3\u8272", '①②③'[idx], /*#__PURE__*/React.createElement("select", {
+  }, "\u67D3\u8272", '①②③④⑤'[idx], /*#__PURE__*/React.createElement("select", {
     value: previewColors[idx] || '',
     onChange: e => setPreviewColors(current => {
       const next = [...current];
@@ -17396,6 +17503,13 @@ function MonsterHeroGame() {
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
+      // #827の誤式で34/35凸の過去レベルへ倍率が遡及され、既に増えた分だけを先に1回修復する。
+      // 未使用Pで吸収できる個体は配分を維持し、過剰分が使用済みなら通常強化だけ白紙にして正しい総数へ戻す。
+      const bandRepairedMasuMons = savedMasuMons.map(repairEnhancePointBandOvergrant);
+      if (bandRepairedMasuMons.some((m, i) => m !== savedMasuMons[i])) {
+        savedMasuMons = bandRepairedMasuMons;
+        await storeSet('mh_masu_mons', savedMasuMons, false);
+      }
       // 絆レベルに対して強化ポイントが不足しているマスモンがあれば、ここで不足分を補填する
       // (必要経験値を緩和した際、レベルだけ上がってポイントが配られないまま残っていた分の救済)
       const reconciledMasuMons = savedMasuMons.map(reconcileMasuPoints);
@@ -28035,7 +28149,7 @@ function MonsterHeroGame() {
           compact: true
         })), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] text-slate-400 mb-3"
-        }, "\u73FE\u5728\u306E\u30EC\u30D9\u30EB\u4E0A\u9650\u306B\u5230\u9054\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u9650\u754C\u7A81\u7834\u3067\u304D\u307E\u3059\u300230\u51F8\u307E\u3067\u306F\u4E0A\u9650+", BREAKTHROUGH_LEVEL_CAP_GAIN, "\u300131\uFF5E35\u51F8\u306FLv.200\u30FB230\u30FB270\u30FB330\u30FB400\u3078\u4E0A\u304C\u308A\u3001\u91D1\u2605\u304C\u8679\u2605\u30781\u500B\u305A\u3064\u7F6E\u304D\u63DB\u308F\u308A\u307E\u3059\u3002\u8679\u26054\u306FLvUP\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\xD72\u3001\u8679\u26055\u306F\xD73\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+        }, "\u73FE\u5728\u306E\u30EC\u30D9\u30EB\u4E0A\u9650\u306B\u5230\u9054\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u9650\u754C\u7A81\u7834\u3067\u304D\u307E\u3059\u300230\u51F8\u307E\u3067\u306F\u4E0A\u9650+", BREAKTHROUGH_LEVEL_CAP_GAIN, "\u300131\uFF5E35\u51F8\u306FLv.200\u30FB230\u30FB270\u30FB330\u30FB400\u3078\u4E0A\u304C\u308A\u3001\u91D1\u2605\u304C\u8679\u2605\u30781\u500B\u305A\u3064\u7F6E\u304D\u63DB\u308F\u308A\u307E\u3059\u3002\u8679\u26054\u3067\u89E3\u653E\u3055\u308C\u308BLv270\u2192330\u306F\u5F37\u5316P\xD72\u3001\u8679\u26055\u3067\u89E3\u653E\u3055\u308C\u308BLv330\u2192400\u306F\xD73\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
           className: "flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-[10px] font-black text-fuchsia-200 flex items-center gap-1"
@@ -30647,7 +30761,7 @@ function MonsterHeroGame() {
           length: regions
         }, (_, i) => ({
           key: `region:${i}`,
-          label: `染色${'①②③'[i]}`,
+          label: `染色${'①②③④⑤'[i]}`,
           value: patternSettings.regionPatterns[i],
           mode: 'region'
         })), ...patternSettings.decals.map((d, i) => ({
@@ -30687,7 +30801,7 @@ function MonsterHeroGame() {
           className: "w-full h-full"
         }), /*#__PURE__*/React.createElement("span", {
           className: "absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[8px] font-black"
-        }, mode === 'all' ? '全身模様' : mode === 'region' ? `染色${'①②③'[regionIndex]}` : selectedDecal ? '選択中' : 'タップで追加'), mode === 'point' && /*#__PURE__*/React.createElement("span", {
+        }, mode === 'all' ? '全身模様' : mode === 'region' ? `染色${'①②③④⑤'[regionIndex]}` : selectedDecal ? '選択中' : 'タップで追加'), mode === 'point' && /*#__PURE__*/React.createElement("span", {
           className: "absolute inset-x-2 bottom-1 text-center text-[8px] text-cyan-200 bg-black/50 rounded-full"
         }, "\u30BF\u30C3\u30D7\u9078\u629E\u30FB\u30C9\u30E9\u30C3\u30B0\u79FB\u52D5\u30FB\u30D4\u30F3\u30C1\u62E1\u7E2E\uFF0F\u56DE\u8EE2")), /*#__PURE__*/React.createElement("section", {
           className: "flex-1 min-h-0 mt-2 rounded-t-3xl border-t border-fuchsia-500/30 bg-slate-900/95 flex flex-col overflow-hidden"
@@ -30710,7 +30824,7 @@ function MonsterHeroGame() {
             selectedLayer: `region:${i}`
           })),
           className: `min-h-[44px] rounded-xl font-black ${regionIndex === i ? 'bg-cyan-700 ring-2 ring-cyan-300' : 'bg-slate-800'}`
-        }, "\u67D3\u8272", '①②③'[i]))), mode === 'point' && /*#__PURE__*/React.createElement("button", {
+        }, "\u67D3\u8272", '①②③④⑤'[i]))), mode === 'point' && /*#__PURE__*/React.createElement("button", {
           onClick: () => addDecal(),
           className: "w-full min-h-[48px] rounded-xl bg-cyan-700 font-black"
         }, "\uFF0B \u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u3092\u8FFD\u52A0"), /*#__PURE__*/React.createElement("div", {
@@ -32861,7 +32975,7 @@ function MonsterHeroGame() {
         className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[10px] font-black text-fuchsia-300"
-      }, "\u672C\u756A\u3068\u5171\u901A\u306E\u67D3\u8272\u2460\uFF5E\u2462"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
+      }, "\u672C\u756A\u3068\u5171\u901A\u306E\u67D3\u8272\uFF08", regionCount, "\u90E8\u4F4D\uFF09"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
         baseId: selected.baseId,
         colors: colors,
         onChange: (idx, colorId) => setMonsterImageDebugColors(prev => {
@@ -34289,7 +34403,7 @@ function MonsterHeroGame() {
         const afterXp = cappedBondXp(main, subXp);
         const afterLvl = bondLevelInfo(afterXp);
         const gainedLevels = afterLvl.level - mainLvl.level;
-        const gainedLevelPoints = gainedLevels * levelUpPointMultiplier(main.rebirthCount);
+        const gainedLevelPoints = gainedEnhancePointsBetweenLevels(mainLvl.level, afterLvl.level);
         const reincarnateTransfer = selectedSubs.reduce((total, candidate) => {
           const transfer = transferableReincarnateBonus(candidate);
           return {
@@ -35514,6 +35628,32 @@ function MonsterHeroGame() {
       });
       const addApt = (idx, direction) => changeTranscendPlan('apt', idx, direction);
       const addStat = (key, direction) => changeTranscendPlan('stat', key, direction);
+      const setTranscendPlanExact = (kind, target, rawValue) => setTranscendPlan(previous => {
+        const q = previous ? {
+          apt: [...previous.apt],
+          stat: {
+            ...previous.stat
+          }
+        } : {
+          apt: [0, 0, 0, 0],
+          stat: {
+            hp: 0,
+            atk: 0,
+            def: 0,
+            guts: 0
+          }
+        };
+        const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
+        const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
+        let maxForRow = Math.max(0, points - (used - current));
+        if (kind === 'apt') {
+          const room = DIST_APTITUDE_GRADES.length - 1 - DIST_APTITUDE_GRADES.indexOf(transcendGrade(target));
+          maxForRow = Math.min(maxForRow, Math.max(0, room));
+        }
+        const next = directEnhancePointAmount(rawValue, maxForRow);
+        if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
+        return q;
+      });
       // 虹のプシュケーの変換シート。ここで欲しいポイント数を決めてから確定する
       const exchangeMax = transcendPsycheExchange(psycheHave, Number.MAX_SAFE_INTEGER).maxPoints;
       const exchangeWant = Math.max(1, Math.min(Math.max(1, exchangeMax), transcendExchangeWant));
@@ -35742,9 +35882,26 @@ function MonsterHeroGame() {
           className: "text-slate-500 mx-1"
         }, "\u2192"), /*#__PURE__*/React.createElement("span", {
           className: added > 0 ? 'text-sky-300' : 'text-slate-300'
-        }, after)), /*#__PURE__*/React.createElement("span", {
-          className: "text-center text-[9px] font-mono font-black text-sky-300"
-        }, added, "P"), /*#__PURE__*/React.createElement("div", {
+        }, after)), /*#__PURE__*/React.createElement("label", {
+          className: "flex items-center gap-0.5 min-w-0"
+        }, /*#__PURE__*/React.createElement("input", {
+          "data-direct-point-input": "transcend-apt",
+          "aria-label": `${label}の基礎適性の振り分けポイントを直接入力`,
+          type: "text",
+          inputMode: "numeric",
+          pattern: "[0-9]*",
+          enterKeyHint: "done",
+          autoComplete: "off",
+          value: added,
+          onFocus: e => e.currentTarget.select(),
+          onChange: e => setTranscendPlanExact('apt', idx, e.currentTarget.value),
+          onKeyDown: e => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+          },
+          className: "w-full min-w-0 h-8 rounded-md border border-sky-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "text-[8px] font-black text-sky-300"
+        }, "P")), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-2 gap-1"
         }, /*#__PURE__*/React.createElement(PressRepeatButton, {
           "aria-label": `${label}の基礎適性を減らす`,
@@ -35778,9 +35935,26 @@ function MonsterHeroGame() {
           className: "text-slate-500 mx-1"
         }, "\u2192"), /*#__PURE__*/React.createElement("span", {
           className: gain > 0 ? 'text-sky-300' : 'text-slate-300'
-        }, "\u57FA\u790E+", before + gain)), /*#__PURE__*/React.createElement("span", {
-          className: "text-center text-[9px] font-mono font-black text-sky-300"
-        }, n, "P"), /*#__PURE__*/React.createElement("div", {
+        }, "\u57FA\u790E+", before + gain)), /*#__PURE__*/React.createElement("label", {
+          className: "flex items-center gap-0.5 min-w-0"
+        }, /*#__PURE__*/React.createElement("input", {
+          "data-direct-point-input": "transcend-stat",
+          "aria-label": `${label}の基礎値の振り分けポイントを直接入力`,
+          type: "text",
+          inputMode: "numeric",
+          pattern: "[0-9]*",
+          enterKeyHint: "done",
+          autoComplete: "off",
+          value: n,
+          onFocus: e => e.currentTarget.select(),
+          onChange: e => setTranscendPlanExact('stat', key, e.currentTarget.value),
+          onKeyDown: e => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+          },
+          className: "w-full min-w-0 h-8 rounded-md border border-sky-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "text-[8px] font-black text-sky-300"
+        }, "P")), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-2 gap-1"
         }, /*#__PURE__*/React.createElement(PressRepeatButton, {
           "aria-label": `${label}の基礎値を減らす`,
@@ -36168,6 +36342,32 @@ function MonsterHeroGame() {
       });
       const addPlanApt = (idx, direction) => changePlan('apt', idx, direction);
       const addPlanStat = (key, direction) => changePlan('stat', key, direction);
+      const setPlanExact = (kind, target, rawValue) => setBulkPlan(previous => {
+        const q = previous ? {
+          apt: [...previous.apt],
+          stat: {
+            ...previous.stat
+          }
+        } : {
+          apt: [0, 0, 0, 0],
+          stat: {
+            hp: 0,
+            atk: 0,
+            def: 0,
+            guts: 0
+          }
+        };
+        const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
+        const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
+        let maxForRow = Math.max(0, points - (used - current));
+        if (kind === 'apt') {
+          const baseGradeIndex = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target] || 'C');
+          maxForRow = Math.min(maxForRow, Math.max(0, DIST_APTITUDE_GRADES.length - 1 - baseGradeIndex));
+        }
+        const next = directEnhancePointAmount(rawValue, maxForRow);
+        if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
+        return q;
+      });
       const applyPlan = () => {
         const updated = spendPointsBulk(masu.id, plan);
         if (!updated) return;
@@ -36288,9 +36488,26 @@ function MonsterHeroGame() {
           className: "text-slate-500 mx-1"
         }, "\u2192"), /*#__PURE__*/React.createElement("span", {
           className: added > 0 ? 'text-cyan-300' : 'text-slate-300'
-        }, after)), /*#__PURE__*/React.createElement("span", {
-          className: "text-center text-[9px] font-mono font-black text-amber-300"
-        }, added, "pt"), /*#__PURE__*/React.createElement("div", {
+        }, after)), /*#__PURE__*/React.createElement("label", {
+          className: "flex items-center gap-0.5 min-w-0"
+        }, /*#__PURE__*/React.createElement("input", {
+          "data-direct-point-input": "normal-apt",
+          "aria-label": `${label}距離適性の振り分けポイントを直接入力`,
+          type: "text",
+          inputMode: "numeric",
+          pattern: "[0-9]*",
+          enterKeyHint: "done",
+          autoComplete: "off",
+          value: added,
+          onFocus: e => e.currentTarget.select(),
+          onChange: e => setPlanExact('apt', idx, e.currentTarget.value),
+          onKeyDown: e => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+          },
+          className: "w-full min-w-0 h-8 rounded-md border border-amber-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "text-[8px] font-black text-amber-300"
+        }, "P")), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-2 gap-1"
         }, /*#__PURE__*/React.createElement(PressRepeatButton, {
           "aria-label": `${label}距離適性を減らす`,
@@ -36324,9 +36541,26 @@ function MonsterHeroGame() {
           className: "text-slate-500 mx-1"
         }, "\u2192"), /*#__PURE__*/React.createElement("span", {
           className: gain > 0 ? 'text-emerald-300' : 'text-slate-300'
-        }, before + gain)), /*#__PURE__*/React.createElement("span", {
-          className: "text-center text-[9px] font-mono font-black text-amber-300"
-        }, n, "pt"), /*#__PURE__*/React.createElement("div", {
+        }, before + gain)), /*#__PURE__*/React.createElement("label", {
+          className: "flex items-center gap-0.5 min-w-0"
+        }, /*#__PURE__*/React.createElement("input", {
+          "data-direct-point-input": "normal-stat",
+          "aria-label": `${label}の振り分けポイントを直接入力`,
+          type: "text",
+          inputMode: "numeric",
+          pattern: "[0-9]*",
+          enterKeyHint: "done",
+          autoComplete: "off",
+          value: n,
+          onFocus: e => e.currentTarget.select(),
+          onChange: e => setPlanExact('stat', key, e.currentTarget.value),
+          onKeyDown: e => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+          },
+          className: "w-full min-w-0 h-8 rounded-md border border-amber-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "text-[8px] font-black text-amber-300"
+        }, "P")), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-2 gap-1"
         }, /*#__PURE__*/React.createElement(PressRepeatButton, {
           "aria-label": `${label}を減らす`,

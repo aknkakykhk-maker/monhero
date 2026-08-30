@@ -204,6 +204,7 @@ node tools/build.js --check
 | `node masu/auto-repeat-breakthrough-setting-check.js` | AUTO∞の個体別「自動限界突破」設定を確認する。旧個体・欠損・不正値がOFFになること、個体別のON/OFFと再読み込み相当の保持、既存の`mh_masu_mons`だけへの保存、所有マスモン詳細だけに押しやすい操作を出すこと、AUTO∞や限界突破の実処理へまだ接続していないことを見る。 |
 | `node masu/auto-repeat-breakthrough-execution-check.js` | AUTO∞自動限界突破の内部判定を確認する。ON・カンスト・素材・Lv.100上限、固有技P保留、ID重複排除、複数個体の順次残高判定、手動限界突破の非影響を見る。 |
 | `node masu/bulk-enhance-check.js` | マスモンの「まとめて強化」が正しく動くか確認する。 |
+| `node masu/direct-enhance-input-check.js` | 通常強化・超越強化のポイント数直接入力を確認する。整数だけを受け付け、残りポイントと間合い適性Mの上限で止まること、従来の1P・5P・10P・MAXと長押し操作を残すこと、ヘルプ・更新履歴への反映を見る。 |
 | `node masu/breeder-level-cap-check.js` | ブリーダーレベルの計算(`levelInfo`)に実質的な上限が無いことを確認する。以前はループの安全策(200回まで)がそのままレベル上限になっており、Lv.201から上がらなくなっていた。固定回数の`for`ループが残っていないこと、実際に計算関数を動かしてLv.201を超えて正しく上がることを見る。**あわせて、その打ち切りが兼ねていた安全弁の代わりが効いているかも見る**: `NaN`・`Infinity`・文字列などの壊れた保存値は「`xp < need`」がいつまでも偽になるため、守りが無いとその場で無限ループして画面が固まる。1秒以内にLv.1へ落ち着くこと、正しい数値文字列は従来どおり数値として扱うこと、極端に大きい経験値でも短時間で終わることを確認する。 |
 | `node masu/fusion-rebirth-check.js` | 合体で上がったレベルぶんの強化ポイントが配られるか、合体・転生の消費ダイヤ単価(絆レベル1あたり50)を確認する。 |
 | `node masu/fusion-detail-check.js` | 合体詳細ページと、ランキングへ載せる合体履歴・総合力スナップショットを確認する。 |
@@ -333,7 +334,7 @@ node tools/build.js --check
 | `node image/region-map.js [モンスターID...]` | 部位分けを色分けしたPNGを `out/` に書き出す。目視確認用。 |
 | `node image/dye-report.js [モンスターID...]` | 染色もどきの部位マスクを実画像で生成し、部位ごとの画素数・被覆率を出力する。回帰テスト用。 |
 | `node image/dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
-| `node image/dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵(①赤・②黄・③青)を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
+| `node image/dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵（①赤・②緑・③青・④黄・⑤マゼンタ）を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
 | `node image/dye-alpha-check.js` | 染色の「濃さ(透過率)」を確かめる。 |
 | `node image/dye-edge-check.js` | 染色もどきの「輪郭の塗り残し」を実測して見張る。部位マスクは縮小画像で作るため、等倍へ戻すと境界に隙間が出やすい。 |
 | `node image/dye-quality-report.js` | 染色もどきの部位マスクの品質を実測し、モンスターごとに比べる。輪郭のギザギザや白い縁の原因調査用。 |

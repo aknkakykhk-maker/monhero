@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 14:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 18:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -792,20 +792,35 @@ const breakthroughLevelCap = (count) => {
     ? INITIAL_MASU_LEVEL_CAP + n * BREAKTHROUGH_LEVEL_CAP_GAIN
     : BREAKTHROUGH_LEVEL_CAPS[n];
 };
-// レベルアップ時の強化ポイント倍率。経験値量・必要経験値には掛けない。
+// 限界突破画面などの表示用。34凸でLv270→330帯が×2、35凸でLv330→400帯が×3になる。
+// 実際の付与量は現在の凸数ではなく、下の「到達レベル帯」の共通関数を正本にする。
 const levelUpPointMultiplier = (rebirthCount) => {
   const n = Math.max(0, Math.floor(Number(rebirthCount) || 0));
   return n >= 35 ? 3 : n >= 34 ? 2 : 1;
 };
-// レベルで得られる強化ポイントの総数。1レベルにつき上の倍率ぶんもらえる。
-// Lv400までが対象で、Lv401以降(超越の領域)は通常ポイントではなく超越ポイントになる。
-//
-// 【ここを1か所にまとめてある理由】
-// 以前は「レベルアップのときは倍率あり」「読み込み時の補填と転生の計算は倍率なし」と
-// 数え方が3通りに分かれていた。そのため限界突破34回以上(倍率2・3)の個体が転生すると、
-// 倍率で稼いだぶんが丸ごと消え、レベルを上げ直しても戻らなかった。
-// 数え方をここ1つに集約し、どの経路も同じ答えになるようにしている。
-const levelBasedEnhancePoints = (level, rebirthCount) =>
+const ENHANCE_POINT_DOUBLE_LEVEL = 270;
+const ENHANCE_POINT_TRIPLE_LEVEL = 330;
+// 「そのレベルへ上がる1回」で得る通常強化ポイント。
+// Lv2〜270は1、Lv271〜330は2、Lv331〜400は3。Lv401以降は超越ポイントの領域。
+const levelEnhancePointMultiplier = (reachedLevel) => {
+  const level = Math.max(1, Math.floor(Number(reachedLevel) || 1));
+  return level > ENHANCE_POINT_TRIPLE_LEVEL ? 3 : level > ENHANCE_POINT_DOUBLE_LEVEL ? 2 : 1;
+};
+// 現在レベルまでに「レベル由来」で得ているべき通常強化ポイントの総数。
+// 重要: 34/35凸になったからといって、過去のLv1〜270へ×2/×3を遡及適用しない。
+const levelBasedEnhancePoints = (level) => {
+  const capped = Math.max(1, Math.min(MAX_MASU_LEVEL_CAP, Math.floor(Number(level) || 1)));
+  const single = Math.max(0, Math.min(capped, ENHANCE_POINT_DOUBLE_LEVEL) - 1);
+  const doubled = Math.max(0, Math.min(capped, ENHANCE_POINT_TRIPLE_LEVEL) - ENHANCE_POINT_DOUBLE_LEVEL) * 2;
+  const tripled = Math.max(0, capped - ENHANCE_POINT_TRIPLE_LEVEL) * 3;
+  return single + doubled + tripled;
+};
+// バトル・チケット・合体などで複数レベルを一度にまたいでも、帯ごとの差分を正確に付与する。
+const gainedEnhancePointsBetweenLevels = (beforeLevel, afterLevel) =>
+  Math.max(0, levelBasedEnhancePoints(afterLevel) - levelBasedEnhancePoints(beforeLevel));
+// 2026-08-29の不具合版(#827)が起動時補填に使ってしまった誤式。
+// 既存セーブの「その不具合で増えた分だけ」を安全に特定して戻すために、移行処理からのみ使う。
+const legacyRetroactiveLevelBasedEnhancePoints = (level, rebirthCount) =>
   Math.max(0, Math.min(MAX_MASU_LEVEL_CAP, Math.floor(Number(level) || 0)) - 1)
     * levelUpPointMultiplier(rebirthCount);
 const RAINBOW_STAR_IMAGE = 'images/ui/breakthrough-rainbow-star.PNG';
@@ -1201,14 +1216,16 @@ const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
   const bondXp = cappedBondXp(masu, gain, maxLevel);
   const after = bondLevelInfo(bondXp);
   const gainedLevels = Math.max(0, after.level - before.level);
-  const pointMultiplier = levelUpPointMultiplier(masu?.rebirthCount);
   // Lv400までは今までどおり通常の強化ポイント。Lv401以降(超越の領域)は
   // 通常ポイントを配らず、1レベルにつき超越ポイントを1だけ配る。
   // 400をまたいでレベルが上がったときも、400までのぶんと401以降のぶんを分けて数える。
   const cap = MAX_MASU_LEVEL_CAP;
   const normalLevels = Math.max(0, Math.min(cap, after.level) - Math.min(cap, before.level));
   const gainedTranscendPoints = Math.max(0, after.level - Math.max(cap, before.level));
-  const gainedPoints = normalLevels * pointMultiplier;
+  const gainedPoints = gainedEnhancePointsBetweenLevels(before.level, Math.min(cap, after.level));
+  // 同一帯だけを上がった場合は従来UI用に×2/×3を返す。帯をまたぐ場合は誤解を避けて×表示を出さない。
+  const sameBandMultiplier = normalLevels > 0 ? (gainedPoints / normalLevels) : 1;
+  const pointMultiplier = Number.isInteger(sameBandMultiplier) ? sameBandMultiplier : 1;
   return {
     masu: {
       ...masu,
@@ -1880,6 +1897,17 @@ const sortDonationMasuMons = (masuList, sortKey, sortDir, activeIds = []) => {
   });
 };
 
+// 強化画面の数値直接入力を、0〜その項目へ振れる最大ポイントへ正規化する。
+// inputMode=numeric でも貼り付けでは記号等が入り得るため、整数だけを受け付ける。
+const directEnhancePointAmount = (rawValue, maxValue) => {
+  const text = String(rawValue ?? '').trim();
+  const max = Math.max(0, Math.floor(Number(maxValue) || 0));
+  if (!/^\d+$/.test(text)) return 0;
+  const parsed = Number(text);
+  const wanted = Number.isFinite(parsed) ? Math.floor(parsed) : Number.MAX_SAFE_INTEGER;
+  return Math.min(Math.max(0, wanted), max);
+};
+
 // 強化の下書き(plan)を当てはめた「強化後のマスモン」を、保存データに触れずに作る。
 // 一括強化のプレビュー・1ポイント強化のプレビュー・実際の確定処理が、すべてこの1か所を通るので、
 // 画面に出した「強化後の総合力」と、確定したあとの総合力が必ず一致する。
@@ -2261,7 +2289,7 @@ const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
   // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ levelBasedEnhancePoints で数える
   // (ここを別の式にすると、限界突破の倍率で稼いだぶんが転生のたびに消えてしまう)
   const nextOwnBonusPoints = normalized.reincarnateBonusPoints + REINCARNATE_POINTS;
-  const nextPoints = levelBasedEnhancePoints(nextLevel, normalized.rebirthCount)
+  const nextPoints = levelBasedEnhancePoints(nextLevel)
     + totalBreakthroughPoints(normalized.rebirthCount) + nextOwnBonusPoints + normalized.inheritedReincarnateBonusPoints;
   return {
     ok:true, cost, skillKey:raisesSkill ? skillKey : null, skillLevel:raisesSkill ? currentSkillLevel + 1 : null,
@@ -3467,15 +3495,17 @@ const _getUndineExactRegion = (nx, ny) => {
 };
 // 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
 // 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
-const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK });
+const EXACT_DYE_MASKS = Object.freeze({ Mocchi:MOCCHI_DYE_MASK, Yaobikuni:YAOBIKUNI_DYE_MASK, Plant:PLANT_DYE_MASK, Eiki:EIKI_DYE_MASK, Pandora:PANDORA_DYE_MASK });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
-// パンドラは埋め込み部位マップで3色の境界を固定する。以下は部位数を既存UIへ知らせる控え。
+// パンドラは正式な5色マスクを使う。赤=①、緑=②、青=③、黄=④、マゼンタ=⑤。
 MASU_COLOR_REGION_HUES.Pandora = [
   { hue:0, noAAGuard:true, noEdgeGuard:true },
   { hue:120, noAAGuard:true, noEdgeGuard:true },
   { hue:240, noAAGuard:true, noEdgeGuard:true },
+  { hue:60, noAAGuard:true, noEdgeGuard:true },
+  { hue:300, noAAGuard:true, noEdgeGuard:true },
 ];
 const makeDyeMaskEditorTargets = () => Object.values(ALL_PLAYER_MONSTERS).map(monster => ({
   id:String(monster.id).toLowerCase(), baseId:monster.id, name:monster.name, imageUrl:monster.imgUrl,
@@ -3544,6 +3574,8 @@ const _exactDyeMaskRegion = (pixels, offset) => {
   if (r > 200 && g < 80 && b < 80) return 0;
   if (g > 200 && r < 80 && b < 80) return 1;
   if (b > 200 && r < 80 && g < 80) return 2;
+  if (r > 200 && g > 200 && b < 80) return 3;
+  if (r > 200 && g < 80 && b > 200) return 4;
   return -1;
 };
 const _dyeRegionMaskCache = {};
@@ -3578,7 +3610,7 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
           srcCtx.imageSmoothingQuality = 'high';
           srcCtx.drawImage(img, 0, 0, w, h);
           const src = srcCtx.getImageData(0, 0, w, h).data;
-          // 正式マスクがあるモンスターは、保存済みPNGの赤・緑・青を染色①・②・③として使う。
+          // 正式マスクがあるモンスターは、保存済みPNGの色を染色部位として使う。
           // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
           // 正式登録前のパンドラだけはDEBUG定義の保存済みマスクを直接選ぶ。
           const exactMaskUrl = debugPlacement?.maskUrl || EXACT_DYE_MASKS[baseId] || null;
@@ -3966,7 +3998,7 @@ const MonsterArtFrame = ({ baseId, src, alt='', masuColors=null, className='', f
 // そのまま受け渡し、表示側も共通のDyedMonsterImageへ渡すため、Debug専用の色変換を持たない。
 const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom }) => {
   const regionCount = dyeRegionCount(baseId);
-  const regionLabels = ['①','②','③'];
+  const regionLabels = ['①','②','③','④','⑤'];
   return <div className="space-y-2">{Array.from({length:regionCount}).map((_,idx)=>(
     <div key={idx} className="bg-black/30 rounded-xl p-2 border border-white/5">
       <div className="text-[8px] text-fuchsia-300 font-black uppercase mb-1">{regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
@@ -3998,7 +4030,7 @@ const makePatternSettings = () => ({
   // デバッグ画面へ入った直後と初期化後は、素の立ち絵から始める。
   // レイヤー自体は残すことで、模様を選んだ瞬間から各方式を編集できるようにする。
   fullPattern:makePatternLayer({pattern:'none'}),
-  regionPatterns:{0:makePatternLayer({pattern:'none',target:'1'}),1:makePatternLayer({pattern:'none',target:'2'}),2:makePatternLayer({pattern:'none',target:'3'})},
+  regionPatterns:{0:makePatternLayer({pattern:'none',target:'1'}),1:makePatternLayer({pattern:'none',target:'2'}),2:makePatternLayer({pattern:'none',target:'3'}),3:makePatternLayer({pattern:'none',target:'4'}),4:makePatternLayer({pattern:'none',target:'5'})},
   decals:[],
   selectedLayer:'full',
 });
@@ -4959,6 +4991,76 @@ const formatAptBonus = (mon) => getMonsterAptPct(mon)
 // マスモンが「これまでに得たはずの強化ポイント総数」は絆レベル-1で決まる。
 // 使用済み(間合い適性・ステータス強化に振った分)と未使用の合計がこれを下回っていたら、
 // 不足分を未使用ポイントとして補填したマスモンを返す。
+const ENHANCE_POINT_BAND_REPAIR_VERSION = 1;
+const normalEnhanceSpentPoints = (masu, base) => {
+  const aptSpent = Array.isArray(masu?.distAptBoosts)
+    ? masu.distAptBoosts.reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0)
+    : (Array.isArray(masu?.distApt) && base?.distAptitude
+      ? masu.distApt.reduce((sum, grade, index) => {
+          const from = DIST_APTITUDE_GRADES.indexOf(base.distAptitude[index]);
+          const to = DIST_APTITUDE_GRADES.indexOf(grade);
+          return sum + (from >= 0 && to >= 0 ? Math.max(0, to - from) : 0);
+        }, 0)
+      : 0);
+  const statSpent = Object.keys(STAT_POINT_GAIN).reduce((sum, key) => {
+    const gain = Math.max(1, Number(STAT_POINT_GAIN[key]) || 1);
+    const value = Math.max(0, Number(masu?.statPoints?.[key]) || 0);
+    return sum + Math.ceil(value / gain);
+  }, 0);
+  return { aptSpent, statSpent, total:aptSpent + statSpent };
+};
+const earnedEnhancePointTotal = (masu) => {
+  const normalized = normalizeMasuProgression(masu);
+  return levelBasedEnhancePoints(masuBondLevelInfo(normalized).level)
+    + totalBreakthroughPoints(normalized.rebirthCount)
+    + ownReincarnateBonusPoints(normalized)
+    + inheritedReincarnateBonusPointsOf(normalized);
+};
+const repairEnhancePointBandOvergrant = (masu) => {
+  if (!masu || Math.floor(Number(masu.enhancePointBandRepairVersion) || 0) >= ENHANCE_POINT_BAND_REPAIR_VERSION) return masu;
+  // 旧形式ゴーレムは、過去のベース適性変更(A/C/E/G → A/E/G/G)により distApt だけでは
+  // 実際に使った適性Pを一意に戻せない。reconcileMasuPoints と同じく、distAptBoosts を持つ
+  // 新形式へ安全に移行済みになるまでは推測でポイントを減らしたり通常強化を白紙化しない。
+  if (masu.baseId === 'Golem' && !Object.prototype.hasOwnProperty.call(masu, 'distAptBoosts')) return masu;
+  const normalized = normalizeMasuProgression(masu);
+  if (normalized.rebirthCount < 34) return masu;
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[normalized.baseId] : null;
+  if (!base) return masu;
+  const level = masuBondLevelInfo(normalized).level;
+  const correctLevelPoints = levelBasedEnhancePoints(level);
+  const badLevelPoints = legacyRetroactiveLevelBasedEnhancePoints(level, normalized.rebirthCount);
+  const knownOvergrant = Math.max(0, badLevelPoints - correctLevelPoints);
+  if (knownOvergrant <= 0) return masu;
+  const bonusPoints = totalBreakthroughPoints(normalized.rebirthCount)
+    + ownReincarnateBonusPoints(normalized)
+    + inheritedReincarnateBonusPointsOf(normalized);
+  const badTotal = badLevelPoints + bonusPoints;
+  const spent = normalEnhanceSpentPoints(normalized, base);
+  const unused = Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0));
+  const currentTotal = spent.total + unused;
+  // 不具合版を通った個体なら、少なくとも誤式の総数まで補填されている。
+  // そこに届いていない個体は「不具合による増加」と断定できないので減らさない。
+  if (currentTotal < badTotal) return masu;
+  const targetTotal = Math.max(0, currentTotal - knownOvergrant); // 不具合以前からの余剰があればそのまま保持
+  if (unused >= knownOvergrant) {
+    return {
+      ...masu,
+      distAptPoints: unused - knownOvergrant,
+      enhancePointBandRepairVersion: ENHANCE_POINT_BAND_REPAIR_VERSION,
+    };
+  }
+  // 過剰分が能力・適性へ既に振られている場合、「どの振り分けが過剰分だったか」は保存履歴から判別不能。
+  // 任意の能力だけ削るより、通常強化だけを白紙にして正しい総数を未使用Pへ戻す。
+  // 超越強化・個体基礎値・固有技・限界突破・転生・合体履歴などは一切触らない。
+  return {
+    ...masu,
+    distAptPoints: targetTotal,
+    statPoints: { hp:0, atk:0, def:0, guts:0 },
+    distAptBoosts: [0,0,0,0],
+    distApt: [...base.distAptitude],
+    enhancePointBandRepairVersion: ENHANCE_POINT_BAND_REPAIR_VERSION,
+  };
+};
 //
 // 必要経験値の緩和(BOND_XP_DISCOUNTの引き下げ)を行うと、同じ絆経験値のまま絆レベルだけが
 // 上がるため、レベルアップ時に配っている強化ポイントが後追いで配られず
@@ -4985,10 +5087,9 @@ const reconcileMasuPoints = (masu) => {
   // ここを新しい方式で数え直すことが、そのまま既存のマスモンの調整にもなる
   // (読み込みのたびに不足分だけを補うので、二重に配られることはない)。
   // 通常強化ポイントの「レベル由来ぶん」は levelBasedEnhancePoints が正本。
-  // Lv400までで止まり(Lv401以降で得られるのは超越ポイント)、限界突破34回以上なら
-  // 1レベルにつき倍率ぶんもらえる。ここを倍率なしで数えていたため、倍率で稼いだぶんが
-  // 転生のたびに消えて戻らなかった
-  const earned = levelBasedEnhancePoints(masuBondLevelInfo(masu).level, masu.rebirthCount)
+  // Lv1→270は1P、270→330は2P、330→400は3Pで、現在の凸数を過去レベルへ遡及しない。
+  // Lv401以降で得られるのは通常Pではなく超越P。
+  const earned = levelBasedEnhancePoints(masuBondLevelInfo(masu).level)
     + totalBreakthroughPoints(masu.rebirthCount)
     + ownReincarnateBonusPoints(masu)
     + inheritedReincarnateBonusPointsOf(masu);
@@ -6036,15 +6137,11 @@ const helpDataRows = (id) => {
     // 限界突破の回数で変わる「レベルアップ1回ぶんの強化ポイント」。
     // 段の数や倍率を変えてもヘルプが古くならないよう、実データから作る
     case 'levelUpPointMultipliers': {
-      const rows = [];
-      let prev = null;
-      for (let n = 0; n <= FINAL_BREAKTHROUGH_COUNT; n++) {
-        const mult = levelUpPointMultiplier(n);
-        if (mult === prev) continue;
-        prev = mult;
-        rows.push([n === 0 ? '限界突破なし' : `限界突破 ${n}回以上`, `レベルアップ1回につき 強化ポイント ${mult}`]);
-      }
-      return rows;
+      return [
+        [`Lv.1 → ${ENHANCE_POINT_DOUBLE_LEVEL}`, 'レベルアップ1回につき 強化ポイント 1'],
+        [`Lv.${ENHANCE_POINT_DOUBLE_LEVEL} → ${ENHANCE_POINT_TRIPLE_LEVEL}（虹★4）`, 'レベルアップ1回につき 強化ポイント 2'],
+        [`Lv.${ENHANCE_POINT_TRIPLE_LEVEL} → ${MAX_MASU_LEVEL_CAP}（虹★5）`, 'レベルアップ1回につき 強化ポイント 3'],
+      ];
     }
     case 'teachings':
       return ((typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS) || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
@@ -7828,7 +7925,7 @@ const DyeMaskTouchEditor=({onClose,onTryInGame,onReleaseTemporary,onReleaseAllTe
  <section className="shrink-0 px-2 pb-1"><div className="grid grid-cols-[38px_1fr_38px] gap-1"><button onClick={()=>selectTarget((targetIndex-1+targets.length)%targets.length)} className="rounded-lg bg-slate-800" aria-label="前のモンスター">←</button><select aria-label="モンスター選択" value={targetIndex} onChange={e=>selectTarget(+e.target.value)} className="min-h-[34px] min-w-0 rounded-lg bg-slate-800 px-2 text-[9px] font-black">{targets.map((t,i)=><option key={t.baseId} value={i}>{t.name}／{t.hasMask?'染色マスクあり':'染色マスクなし'}</option>)}</select><button onClick={()=>selectTarget((targetIndex+1)%targets.length)} className="rounded-lg bg-slate-800" aria-label="次のモンスター">→</button></div><input value={search} onChange={e=>setSearch(e.target.value)} list="dye-mask-monsters" placeholder="名前検索" className="mt-1 min-h-[30px] w-full rounded-lg bg-slate-800 px-2 text-[9px]"/><datalist id="dye-mask-monsters">{filtered.map(({t})=><option key={t.baseId} value={t.name}/>)}</datalist>{search&&filtered.length>0&&<button onClick={()=>{selectTarget(filtered[0].i);setSearch('');}} className="mt-1 w-full rounded bg-cyan-900 py-1 text-[8px]">「{filtered[0].t.name}」を選択</button>}<p className={`text-center text-[8px] font-black ${target.hasMask?'text-emerald-300':'text-amber-300'}`}>{target.name}・{target.hasMask?'既存の染色マスクを読込':'染色マスクなし（完全透明から開始）'}{dirty?'・未書き出し':''}</p></section>
  <div className="grid shrink-0 grid-cols-4 gap-1 px-2">{[['composite','合成'],['body','本体のみ'],['mask','マスクのみ'],['boundary','境界確認']].map(([id,label])=><button key={id} onClick={()=>setView(id)} className={`min-h-[30px] rounded-lg text-[8px] font-black ${view===id?'bg-cyan-700':'bg-slate-800'}`}>{label}</button>)}</div>
  <section className="relative m-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-slate-600" style={{touchAction:'none'}} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>{error?<p className="p-4 text-center text-red-200">{error}</p>:!ready&&<p className="p-4 text-center">画像を読み込み中…</p>}<div className="absolute inset-0 flex items-center justify-center" style={{transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`,pointerEvents:ready?'auto':'none'}}><div className="relative max-h-full max-w-full" style={{height:'100%',aspectRatio:`${imageSize.width} / ${imageSize.height}`}}>{view==='composite'&&previewMaskUrl&&<DyedMonsterImage baseId={target.baseId} src={target.imageUrl} alt={`${target.name}合成`} masuColors={previewColors} debugMaskPlacement={{maskUrl:previewMaskUrl}} className="absolute inset-0 h-full w-full object-contain"/>}<canvas ref={bodyRef} aria-label={`${target.name}本体レイヤー`} className="absolute inset-0 h-full w-full" style={{display:view==='mask'||view==='composite'?'none':'block'}}/><canvas ref={maskRef} aria-label="染色マスク編集レイヤー" className="absolute inset-0 h-full w-full" style={{display:view==='body'?'none':'block',opacity:view==='composite'?0:view==='boundary'?opacity/100:1}}/>{view==='boundary'&&outlineRef.current&&<img src={outlineRef.current.toDataURL()} alt="本体の外周" className="pointer-events-none absolute inset-0 h-full w-full"/>}<canvas ref={warningRef} aria-label="本体範囲外のマスク警告" className="pointer-events-none absolute inset-0 h-full w-full" style={{display:view==='boundary'?'block':'none'}}/></div></div>{loupe&&pointer&&<canvas ref={loupeRef} width="120" height="120" aria-label="拡大鏡" className="pointer-events-none absolute left-2 top-2 rounded-full border-2 border-white bg-slate-950 shadow-xl"/>}{pointer&&<div className="pointer-events-none fixed z-10 rounded-full border-2" style={{left:pointer.x-size*zoom/2,top:pointer.y-size*zoom/2,width:size*zoom,height:size*zoom,borderColor:colorCss[color],background:color==='eraser'?'repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,.7) 3px,rgba(255,255,255,.7) 5px)':'transparent'}}><span className="absolute left-1/2 top-1/2 h-px w-3 -translate-x-1/2 bg-white"/><span className="absolute left-1/2 top-1/2 h-3 w-px -translate-y-1/2 bg-white"/></div>}</section>
- <section className="shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900 px-2 pt-1" style={{paddingBottom:'max(.4rem,env(safe-area-inset-bottom))'}}><div className="grid grid-cols-8 gap-1">{colorButton('red','赤','#f00')}{colorButton('green','緑','#080')}{colorButton('blue','青','#00f')}{colorButton('eraser','消す','#475569')}<button onClick={undo} disabled={!history.undo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Undo</button><button onClick={redo} disabled={!history.redo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Redo</button><button onClick={()=>setTool('brush')} className={`rounded-xl text-[7px] ${tool==='brush'?'bg-violet-700':'bg-slate-700'}`}>ブラシ</button><button onClick={()=>setTool('fill')} className={`rounded-xl text-[7px] ${tool==='fill'?'bg-violet-700':'bg-slate-700'}`}>塗りつぶし</button></div><div className="mt-1 grid grid-cols-3 gap-1"><button onClick={tryInGame} disabled={!ready} className="min-h-[38px] rounded-lg bg-fuchsia-700 text-[8px] font-black disabled:opacity-40">ゲームで試す</button><button onClick={()=>onReleaseTemporary(target.baseId)} disabled={!temporaryMasks[target.baseId]} className="rounded-lg bg-amber-800 text-[7px] font-black disabled:opacity-30">一時反映を解除</button><button onClick={onReleaseAllTemporary} disabled={!Object.keys(temporaryMasks).length} className="rounded-lg bg-red-900 text-[8px] font-black disabled:opacity-30">すべて解除</button></div>{temporaryMasks[target.baseId]&&<p className="pt-0.5 text-center text-[8px] font-black text-fuchsia-300">● 一時反映中</p>}<button onClick={()=>setDetails(v=>!v)} className="mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]">詳細 {details?'▲':'▼'}</button>{details&&<div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"><div className="col-span-2 grid grid-cols-3 gap-1">{Array.from({length:dyeRegionCount(target.baseId)},(_,idx)=><label key={idx} className="text-[7px] text-fuchsia-200">染色{'①②③'[idx]}<select value={previewColors[idx]||''} onChange={e=>setPreviewColors(current=>{const next=[...current];next[idx]=e.target.value||null;return next;})} className="block min-h-[28px] w-full rounded bg-slate-700 text-[8px]"><option value="">元の色</option>{Object.keys(MASU_COLOR_TARGET).map(id=><option key={id} value={id}>{MASU_COLOR_LABELS[id]}</option>)}</select></label>)}</div><label>ブラシ {size}px<input className="block w-full" type="range" min="2" max="100" step="2" value={size} onChange={e=>setSize(+e.target.value)}/></label><label>透明度 {opacity}%<input className="block w-full" type="range" min="25" max="100" step="25" value={opacity} onChange={e=>setOpacity(+e.target.value)}/></label><label>ポインター距離<select value={pointerDistance} onChange={e=>setPointerDistance(+e.target.value)} className="block w-full bg-slate-700">{[0,30,50,70].map(n=><option key={n} value={n}>{n}px</option>)}</select></label><label>方向<select value={pointerDirection} onChange={e=>setPointerDirection(e.target.value)} className="block w-full bg-slate-700"><option value="up">真上</option><option value="left">左上</option><option value="right">右上</option></select></label><button onClick={()=>setLoupe(v=>!v)} className="rounded bg-slate-700">拡大鏡 {loupe?'ON':'OFF'}</button><button onClick={()=>{setZoom(1);setPan({x:0,y:0});}} className="rounded bg-slate-700">全体表示</button><button onClick={cleanOutside} className="rounded bg-fuchsia-900">範囲外を掃除</button><button onClick={clearAll} className="rounded bg-red-900">全消去</button><button onClick={resetOriginal} className="rounded bg-amber-900">元マスク再読込</button></div>}<p className="pt-1 text-center text-[7px] text-slate-400">1本指：描画・2本指：パン/ピンチ・ダブルタップ：全体表示・{Math.round(zoom*100)}%</p></section></main>;
+ <section className="shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900 px-2 pt-1" style={{paddingBottom:'max(.4rem,env(safe-area-inset-bottom))'}}><div className="grid grid-cols-8 gap-1">{colorButton('red','赤','#f00')}{colorButton('green','緑','#080')}{colorButton('blue','青','#00f')}{colorButton('eraser','消す','#475569')}<button onClick={undo} disabled={!history.undo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Undo</button><button onClick={redo} disabled={!history.redo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Redo</button><button onClick={()=>setTool('brush')} className={`rounded-xl text-[7px] ${tool==='brush'?'bg-violet-700':'bg-slate-700'}`}>ブラシ</button><button onClick={()=>setTool('fill')} className={`rounded-xl text-[7px] ${tool==='fill'?'bg-violet-700':'bg-slate-700'}`}>塗りつぶし</button></div><div className="mt-1 grid grid-cols-3 gap-1"><button onClick={tryInGame} disabled={!ready} className="min-h-[38px] rounded-lg bg-fuchsia-700 text-[8px] font-black disabled:opacity-40">ゲームで試す</button><button onClick={()=>onReleaseTemporary(target.baseId)} disabled={!temporaryMasks[target.baseId]} className="rounded-lg bg-amber-800 text-[7px] font-black disabled:opacity-30">一時反映を解除</button><button onClick={onReleaseAllTemporary} disabled={!Object.keys(temporaryMasks).length} className="rounded-lg bg-red-900 text-[8px] font-black disabled:opacity-30">すべて解除</button></div>{temporaryMasks[target.baseId]&&<p className="pt-0.5 text-center text-[8px] font-black text-fuchsia-300">● 一時反映中</p>}<button onClick={()=>setDetails(v=>!v)} className="mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]">詳細 {details?'▲':'▼'}</button>{details&&<div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"><div className="col-span-2 grid grid-cols-3 gap-1">{Array.from({length:dyeRegionCount(target.baseId)},(_,idx)=><label key={idx} className="text-[7px] text-fuchsia-200">染色{'①②③④⑤'[idx]}<select value={previewColors[idx]||''} onChange={e=>setPreviewColors(current=>{const next=[...current];next[idx]=e.target.value||null;return next;})} className="block min-h-[28px] w-full rounded bg-slate-700 text-[8px]"><option value="">元の色</option>{Object.keys(MASU_COLOR_TARGET).map(id=><option key={id} value={id}>{MASU_COLOR_LABELS[id]}</option>)}</select></label>)}</div><label>ブラシ {size}px<input className="block w-full" type="range" min="2" max="100" step="2" value={size} onChange={e=>setSize(+e.target.value)}/></label><label>透明度 {opacity}%<input className="block w-full" type="range" min="25" max="100" step="25" value={opacity} onChange={e=>setOpacity(+e.target.value)}/></label><label>ポインター距離<select value={pointerDistance} onChange={e=>setPointerDistance(+e.target.value)} className="block w-full bg-slate-700">{[0,30,50,70].map(n=><option key={n} value={n}>{n}px</option>)}</select></label><label>方向<select value={pointerDirection} onChange={e=>setPointerDirection(e.target.value)} className="block w-full bg-slate-700"><option value="up">真上</option><option value="left">左上</option><option value="right">右上</option></select></label><button onClick={()=>setLoupe(v=>!v)} className="rounded bg-slate-700">拡大鏡 {loupe?'ON':'OFF'}</button><button onClick={()=>{setZoom(1);setPan({x:0,y:0});}} className="rounded bg-slate-700">全体表示</button><button onClick={cleanOutside} className="rounded bg-fuchsia-900">範囲外を掃除</button><button onClick={clearAll} className="rounded bg-red-900">全消去</button><button onClick={resetOriginal} className="rounded bg-amber-900">元マスク再読込</button></div>}<p className="pt-1 text-center text-[7px] text-slate-400">1本指：描画・2本指：パン/ピンチ・ダブルタップ：全体表示・{Math.round(zoom*100)}%</p></section></main>;
 };
 
 // タップは1回、長押しは一定間隔で繰り返す。Pointer Eventsを使ってタッチを優先し、
@@ -10158,6 +10255,13 @@ function MonsterHeroGame() {
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
+      // #827の誤式で34/35凸の過去レベルへ倍率が遡及され、既に増えた分だけを先に1回修復する。
+      // 未使用Pで吸収できる個体は配分を維持し、過剰分が使用済みなら通常強化だけ白紙にして正しい総数へ戻す。
+      const bandRepairedMasuMons = savedMasuMons.map(repairEnhancePointBandOvergrant);
+      if (bandRepairedMasuMons.some((m, i) => m !== savedMasuMons[i])) {
+        savedMasuMons = bandRepairedMasuMons;
+        await storeSet('mh_masu_mons', savedMasuMons, false);
+      }
       // 絆レベルに対して強化ポイントが不足しているマスモンがあれば、ここで不足分を補填する
       // (必要経験値を緩和した際、レベルだけ上がってポイントが配られないまま残っていた分の救済)
       const reconciledMasuMons = savedMasuMons.map(reconcileMasuPoints);
@@ -16229,7 +16333,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='MASU_REBIRTH'&&(()=>{
           const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
-          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。30凸までは上限+{BREAKTHROUGH_LEVEL_CAP_GAIN}、31～35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。虹★4はLvUP強化ポイント×2、虹★5は×3です。</div><div className="flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="text-[9px] text-slate-500 font-bold mb-2">限界突破には虹のプシュケーが必要です（1回目{BREAKTHROUGH_ITEM_BASE}個・以降1回ごとに+{BREAKTHROUGH_ITEM_STEP}個）。チャレンジ／クイックをクリアするともらえます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey(null);}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div><div className={`text-[8px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</div></button>})}</div></div>; }
+          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。30凸までは上限+{BREAKTHROUGH_LEVEL_CAP_GAIN}、31～35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。虹★4で解放されるLv270→330は強化P×2、虹★5で解放されるLv330→400は×3です。</div><div className="flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="text-[9px] text-slate-500 font-bold mb-2">限界突破には虹のプシュケーが必要です（1回目{BREAKTHROUGH_ITEM_BASE}個・以降1回ごとに+{BREAKTHROUGH_ITEM_STEP}個）。チャレンジ／クイックをクリアするともらえます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey(null);}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div><div className={`text-[8px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</div></button>})}</div></div>; }
           const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
           return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.rebirthCount>=BREAKTHROUGH_MAX_COUNT?`次は${normalized.rebirthCount+1}凸：上限Lv.${breakthroughLevelCap(normalized.rebirthCount+1)}、虹★が1個増えます${normalized.rebirthCount+1>=34?`（LvUP強化ポイント×${levelUpPointMultiplier(normalized.rebirthCount+1)}）`:''}`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>{/* 限界突破には虹のプシュケーも要る。必要数と所持数を必ず並べて出す */}{(()=>{const need=breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1);const have=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID);return <div className="bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${have>=need?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{need.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（{normalizeMasuProgression(selected).rebirthCount+1}回目の限界突破：{BREAKTHROUGH_ITEM_BASE} +（回数-1）×{BREAKTHROUGH_ITEM_STEP}）</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持数</span><span className="text-slate-300 font-black">{have.toLocaleString()}</span></div>{have<need&&<div className="text-[8px] text-red-400 font-black">虹のプシュケーが足りません（あと {(need-have).toLocaleString()}）</div>}</div>;})()}<div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
 {/* 固有技を上げずに突破する道。全部の技が最大まで育っていても限界突破できるようにするためのもの。
@@ -16793,17 +16897,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const toggleLayer=row=>setPatternSettings(prev=>{if(row.mode==='all')return {...prev,fullPattern:{...prev.fullPattern,visible:prev.fullPattern.visible===false}};if(row.mode==='region'){const i=Number(row.key.split(':')[1]);return {...prev,regionPatterns:{...prev.regionPatterns,[i]:{...prev.regionPatterns[i],visible:prev.regionPatterns[i]?.visible===false}}};}return {...prev,decals:prev.decals.map(d=>d.id===row.decal.id?{...d,visible:d.visible===false}:d)};});
               const slider=(key,label,min,max,step=1,format=v=>v)=><label className="block rounded-xl bg-slate-900 px-3 py-1"><span className="flex justify-between text-[9px] font-black text-slate-300"><b>{label}</b><output>{format(active?.[key]??0)}</output></span><input aria-label={label} type="range" min={min} max={max} step={step} value={active?.[key]??0} onChange={e=>patchActive({[key]:Number(e.target.value)})} className="w-full min-h-[36px] accent-fuchsia-500 touch-none"/></label>;
               const swatch=(id,label,point)=>{const glyph={stripe:'▥',dot:'⠿',leopard:'◉',camouflage:'⬟',check:'▦',scale:'◡',honeycomb:'⬡',lightning_repeat:'ϟ',flame_repeat:'♨',wave:'≋',crack:'⌁',star_repeat:'★',heart_repeat:'♥',paw_repeat:'🐾',rune_repeat:'ᚱ',digital:'▦',star:'★',heart:'♥',scar:'╱',paw:'🐾',crown:'♛',flame:'♨',lightning:'ϟ',moon:'☾',sun:'☀',magic_circle:'✡',skull:'☠',wing:'𓆩',number:'7',alphabet:'M'}[id]||'◆';return <button key={id} onClick={()=>patchActive({pattern:id})} className={`min-w-[76px] h-[68px] rounded-xl border p-1 ${active?.pattern===id?'bg-fuchsia-800 border-fuchsia-300 ring-1 ring-fuchsia-300':'bg-slate-900 border-white/10'}`}><span className="block text-2xl leading-7" style={{color:active?.color}}>{glyph}</span><b className="block text-[8px]">{label}</b></button>};
-              const layerRows=[{key:'full',label:'全身模様',value:patternSettings.fullPattern,mode:'all'},...Array.from({length:regions},(_,i)=>({key:`region:${i}`,label:`染色${'①②③'[i]}`,value:patternSettings.regionPatterns[i],mode:'region'})),...patternSettings.decals.map((d,i)=>({key:`decal:${d.id}`,label:`ワンポイント${i+1}`,value:d,mode:'point',decal:d}))];
+              const layerRows=[{key:'full',label:'全身模様',value:patternSettings.fullPattern,mode:'all'},...Array.from({length:regions},(_,i)=>({key:`region:${i}`,label:`染色${'①②③④⑤'[i]}`,value:patternSettings.regionPatterns[i],mode:'region'})),...patternSettings.decals.map((d,i)=>({key:`decal:${d.id}`,label:`ワンポイント${i+1}`,value:d,mode:'point',decal:d}))];
               return <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                 <nav aria-label="付け方" className="grid grid-cols-3 gap-1 px-3 py-1 shrink-0">{[['all','全身模様'],['region','部位ごと'],['point','ワンポイント']].map(([id,label])=><button key={id} onClick={()=>selectMode(id)} className={`min-h-[38px] rounded-xl text-[9px] font-black ${mode===id?'bg-fuchsia-700 ring-2 ring-fuchsia-300':'bg-slate-800 text-slate-400'}`}>{label}</button>)}</nav>
                 <section id="masu-pattern-large-preview" className="relative shrink-0 w-[calc(100%_-_1.5rem)] max-w-[430px] mx-auto rounded-3xl border border-fuchsia-500/40 bg-[radial-gradient(circle,#1e293b,#020617)] shadow-xl overflow-hidden" style={{height:'clamp(220px,28vh,260px)'}}>
                   <PatternPlacementPreview masu={selected} base={base} colors={colors} settings={patternSettings} selectedDecal={selectedDecal} onSelectDecal={id=>setPatternSettings(p=>({...p,selectedLayer:`decal:${id}`}))} onChangeDecal={patchDecal} onAddDecal={addDecal} className="w-full h-full"/>
-                  <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[8px] font-black">{mode==='all'?'全身模様':mode==='region'?`染色${'①②③'[regionIndex]}`:selectedDecal?'選択中':'タップで追加'}</span>
+                  <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[8px] font-black">{mode==='all'?'全身模様':mode==='region'?`染色${'①②③④⑤'[regionIndex]}`:selectedDecal?'選択中':'タップで追加'}</span>
                   {mode==='point'&&<span className="absolute inset-x-2 bottom-1 text-center text-[8px] text-cyan-200 bg-black/50 rounded-full">タップ選択・ドラッグ移動・ピンチ拡縮／回転</span>}
                 </section>
                 <section className="flex-1 min-h-0 mt-2 rounded-t-3xl border-t border-fuchsia-500/30 bg-slate-900/95 flex flex-col overflow-hidden">
                   <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-3 pb-2">
-                    {patternStep==='attach'&&<div className="space-y-3"><h3 className="text-xs font-black text-fuchsia-300">STEP1：付け方選択</h3><p className="text-[9px] text-slate-400">上の3方式はいつでも切り替えられ、設定は方式ごとに保持されます。</p>{mode==='region'&&<div className="grid grid-cols-3 gap-2">{Array.from({length:regions},(_,i)=><button key={i} onClick={()=>setPatternSettings(p=>({...p,selectedLayer:`region:${i}`}))} className={`min-h-[44px] rounded-xl font-black ${regionIndex===i?'bg-cyan-700 ring-2 ring-cyan-300':'bg-slate-800'}`}>染色{'①②③'[i]}</button>)}</div>}{mode==='point'&&<button onClick={()=>addDecal()} className="w-full min-h-[48px] rounded-xl bg-cyan-700 font-black">＋ ワンポイントを追加</button>}<div className="grid grid-cols-2 gap-2"><button onClick={()=>setPatternSizePreview(true)} className="min-h-[44px] rounded-xl bg-slate-800 font-black">サイズ確認</button><button onClick={resetPattern} className="min-h-[44px] rounded-xl bg-red-950 font-black">すべて初期化</button></div></div>}
+                    {patternStep==='attach'&&<div className="space-y-3"><h3 className="text-xs font-black text-fuchsia-300">STEP1：付け方選択</h3><p className="text-[9px] text-slate-400">上の3方式はいつでも切り替えられ、設定は方式ごとに保持されます。</p>{mode==='region'&&<div className="grid grid-cols-3 gap-2">{Array.from({length:regions},(_,i)=><button key={i} onClick={()=>setPatternSettings(p=>({...p,selectedLayer:`region:${i}`}))} className={`min-h-[44px] rounded-xl font-black ${regionIndex===i?'bg-cyan-700 ring-2 ring-cyan-300':'bg-slate-800'}`}>染色{'①②③④⑤'[i]}</button>)}</div>}{mode==='point'&&<button onClick={()=>addDecal()} className="w-full min-h-[48px] rounded-xl bg-cyan-700 font-black">＋ ワンポイントを追加</button>}<div className="grid grid-cols-2 gap-2"><button onClick={()=>setPatternSizePreview(true)} className="min-h-[44px] rounded-xl bg-slate-800 font-black">サイズ確認</button><button onClick={resetPattern} className="min-h-[44px] rounded-xl bg-red-950 font-black">すべて初期化</button></div></div>}
                     {patternStep==='pattern'&&<div className="space-y-2">{!active&&mode==='point'?<button onClick={()=>addDecal()} className="w-full min-h-[48px] rounded-xl bg-cyan-700 font-black">＋ 最初のワンポイントを追加</button>:<><div className="flex gap-2 overflow-x-auto mh-scroll pb-2">{(mode==='point'?MASU_PATTERN_POINT_OPTIONS:MASU_PATTERN_REPEAT_OPTIONS).map(([id,label])=>swatch(id,label,mode==='point'))}</div>{slider('size','大きさ',.02,.25,.005,v=>`${Math.round(v*100)}%`)}{slider('rotation','回転',-180,180,1,v=>`${Math.round(v)}°`)}{slider('x','横位置',0,1,.01,v=>`${Math.round(v*100)}%`)}{slider('y','縦位置',0,1,.01,v=>`${Math.round(v*100)}%`)}{slider('opacity','透明度',0,100,1,v=>`${v}%`)}{mode==='region'&&<button onClick={()=>patchActive({...makePatternLayer({pattern:'none',target:String(regionIndex+1)})})} className="w-full min-h-[42px] rounded-xl bg-slate-800 font-black">この部位を初期値へ戻す</button>}{mode==='point'&&selectedDecal&&<div className="grid grid-cols-3 gap-2"><button onClick={()=>duplicateDecal(selectedDecal)} className="min-h-[42px] rounded-xl bg-cyan-900 font-black">複製</button><button onClick={()=>moveDecal(selectedDecal.id,1)} className="min-h-[42px] rounded-xl bg-slate-800 font-black">前面へ</button><button onClick={()=>deleteDecal(selectedDecal.id)} className="min-h-[42px] rounded-xl bg-red-900 font-black">削除</button></div>}</>}</div>}
                     {patternStep==='color'&&<div className="space-y-3">{!active?<p className="text-center text-sm text-slate-400">レイヤーを選択してください</p>:<><div className="flex gap-2 items-center"><span className="w-10 h-10 rounded-full border-2 border-white/30" style={{backgroundColor:active.color}}/><b className="text-xs">プリセット色・カスタム色</b></div><div className="grid grid-cols-9 gap-1">{MASU_PATTERN_PRESET_COLORS.map(color=><button key={color} aria-label={`模様色 ${color}`} onClick={()=>patchActive({color})} className="aspect-square rounded-full border border-white/30" style={{backgroundColor:color}}/>)}<button aria-label="カスタム色" onClick={()=>setPatternCustomColor(prev=>({...prev,open:!prev.open}))} className="aspect-square rounded-full" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'}}/></div>{patternCustomColor.open&&<><CustomColorPicker h={patternCustomColor.h} s={patternCustomColor.s} v={patternCustomColor.v} onChange={(h,s,v)=>{const [r,g,b]=_hsvToRgb(h,s,v);setPatternCustomColor({open:true,h,s,v});patchActive({color:`#${[r,g,b].map(n=>n.toString(16).padStart(2,'0')).join('')}`});}}/><div className="grid grid-cols-3 text-center text-[8px] text-slate-400"><span>色相 {Math.round(patternCustomColor.h)}°</span><span>彩度 {Math.round(patternCustomColor.s*100)}%</span><span>明度 {Math.round(patternCustomColor.v*100)}%</span></div></>}</>}</div>}
                     {patternStep==='layers'&&<div className="space-y-2">{layerRows.map(row=><div key={row.key} className={`flex items-center gap-2 min-h-[48px] rounded-xl border p-2 ${selectedKey===row.key?'border-cyan-300 bg-cyan-950':'border-white/10 bg-slate-950'}`}><button onClick={()=>setPatternSettings(p=>({...p,mode:row.mode,selectedLayer:row.key}))} className="flex-1 text-left text-[10px] font-black">{row.label}<small className="block text-[8px] text-slate-400">{row.value?.pattern==='none'?'未設定':row.value?.pattern||'未設定'}</small></button>{row.value&&<button aria-label={`${row.label} 表示切替`} onClick={()=>toggleLayer(row)} className="w-10 h-10 rounded-lg bg-slate-800">{row.value.visible===false?'○':'●'}</button>}{row.decal&&<><button onClick={()=>moveDecal(row.decal.id,-1)} className="w-9 h-10 rounded-lg bg-slate-800">↓</button><button onClick={()=>moveDecal(row.decal.id,1)} className="w-9 h-10 rounded-lg bg-slate-800">↑</button><button onClick={()=>deleteDecal(row.decal.id)} className="w-9 h-10 rounded-lg bg-red-900">×</button></>}</div>)}</div>}
@@ -17481,7 +17585,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <select value={selected.id} onChange={e=>{const m=owned.find(x=>String(x.id)===e.target.value);setMonsterImageDebugId(e.target.value);setMonsterImageDebugColors(m?getMasuColors(m):[]);setMonsterImageDebugTigerMode('old');}} className="w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black">{owned.map(m=>{const b=ALL_PLAYER_MONSTERS[m.baseId];return <option key={m.id} value={m.id}>{m.name}／{b.name}／{m.baseId}／①{colorText(getMasuColors(m)[0])} ②{colorText(getMasuColors(m)[1])} ③{colorText(getMasuColors(m)[2])}</option>})}</select>
               {isTiger&&<div className="grid grid-cols-3 gap-1">{[['old','旧画像／ロールバック用'],['new','高画質版／現在の本番構成'],['compare','旧画像と高画質版の比較表示']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugTigerMode(id)} className={`min-h-[54px] rounded-xl px-1 text-[8px] font-black border ${monsterImageDebugTigerMode===id?'bg-amber-700 border-amber-300':'bg-slate-900 border-white/10'}`}>{label}</button>)}</div>}
               <div className="grid grid-cols-3 gap-2">{[['checker','市松模様'],['white','白'],['black','黒']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugBg(id)} className={`min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg===id?'ring-2 ring-cyan-500':'border-white/10'}`} style={id==='white'?{background:'#fff',color:'#000'}:id==='black'?{background:'#000'}:{background:'#64748b'}}>{label}</button>)}</div>
-              <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色①～③</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>
+              <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色（{regionCount}部位）</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>
               <div className="grid grid-cols-2 gap-2">{renderCurrent('元画像','imgUrl',null)}{renderCurrent('実際の合成後プレビュー','imgUrl',colors)}{Array.from({length:regionCount},(_,i)=>renderCurrent(`染色${i+1}のみ`,'imgUrl',colors.map((c,j)=>i===j?c:null)))}</div>
               <h3 className="text-[10px] font-black text-cyan-300">実際の表示条件</h3><div className="grid grid-cols-2 gap-2">{renderCurrent('バトル／立ち絵','imgUrl',colors,'h-36','object-contain')}{renderCurrent('一覧／全身アイコン','iconUrl',colors,'h-24','object-cover')}{renderCurrent('詳細／大きな全身表示','imgUrl',colors,'h-40','object-contain')}{renderCurrent('顔アイコン','faceIconUrl',colors,'h-20 rounded-full','object-cover')}{renderCurrent('プロフィール／選択アイコン','faceIconUrl',colors,'h-16 rounded-full','object-cover')}{renderCurrent('小型／編成枠','imgUrl',colors,'h-12 rounded-full','object-contain')}</div>
               {motionSupported&&(
@@ -18190,7 +18294,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const afterXp = cappedBondXp(main, subXp);
             const afterLvl = bondLevelInfo(afterXp);
             const gainedLevels = afterLvl.level - mainLvl.level;
-            const gainedLevelPoints = gainedLevels * levelUpPointMultiplier(main.rebirthCount);
+            const gainedLevelPoints = gainedEnhancePointsBetweenLevels(mainLvl.level, afterLvl.level);
             const reincarnateTransfer = selectedSubs.reduce((total, candidate)=>{const transfer=transferableReincarnateBonus(candidate);return {points:total.points+transfer.points,count:total.count+transfer.count};},{points:0,count:0});
             // 上限で切り捨てられる絆経験値。あるときは事前に知らせる
             const wastedXp = Math.max(0, (beforeXp + subXp) - afterXp);
@@ -18772,6 +18876,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           });
           const addApt = (idx, direction) => changeTranscendPlan('apt', idx, direction);
           const addStat = (key, direction) => changeTranscendPlan('stat', key, direction);
+          const setTranscendPlanExact = (kind, target, rawValue) => setTranscendPlan(previous => {
+            const q=previous?{apt:[...previous.apt],stat:{...previous.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}};
+            const current=kind==='apt'?q.apt[target]:(q.stat[target]||0);
+            const used=q.apt.reduce((a,b)=>a+b,0)+Object.values(q.stat).reduce((a,b)=>a+b,0);
+            let maxForRow=Math.max(0,points-(used-current));
+            if(kind==='apt'){
+              const room=DIST_APTITUDE_GRADES.length-1-DIST_APTITUDE_GRADES.indexOf(transcendGrade(target));
+              maxForRow=Math.min(maxForRow,Math.max(0,room));
+            }
+            const next=directEnhancePointAmount(rawValue,maxForRow);
+            if(kind==='apt')q.apt[target]=next;else q.stat[target]=next;
+            return q;
+          });
           // 虹のプシュケーの変換シート。ここで欲しいポイント数を決めてから確定する
           const exchangeMax = transcendPsycheExchange(psycheHave, Number.MAX_SAFE_INTEGER).maxPoints;
           const exchangeWant = Math.max(1, Math.min(Math.max(1, exchangeMax), transcendExchangeWant));
@@ -18876,7 +18993,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {RANGE_LABELS.map((label,idx)=>{const before=transcendGrade(idx),after=transcendGrade(idx,plan.apt[idx]),added=plan.apt[idx];return <div key={idx} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
                       <span className={`text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
                       <div className="text-center font-mono font-black text-[12px]"><span className={DIST_APTITUDE_COLOR[before]}>{before}</span><span className="text-slate-500 mx-1">→</span><span className={added>0?'text-sky-300':'text-slate-300'}>{after}</span></div>
-                      <span className="text-center text-[9px] font-mono font-black text-sky-300">{added}P</span>
+                      <label className="flex items-center gap-0.5 min-w-0"><input data-direct-point-input="transcend-apt" aria-label={`${label}の基礎適性の振り分けポイントを直接入力`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={added} onFocus={e=>e.currentTarget.select()} onChange={e=>setTranscendPlanExact('apt',idx,e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="w-full min-w-0 h-8 rounded-md border border-sky-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"/><span className="text-[8px] font-black text-sky-300">P</span></label>
                       <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}の基礎適性を減らす`} disabled={added<=0} onPress={()=>addApt(idx,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}の基礎適性を上げる`} disabled={planLeft<=0||aptAtMax(idx)} onPress={()=>addApt(idx,1)} className="min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
                     </div>;})}
                   </div>
@@ -18885,7 +19002,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const n=plan.stat[key]||0,gain=n*(STAT_POINT_GAIN[key]||1),before=normalized.transcendStatPoints[key];return <div key={key} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
                       <span className="text-[8px] text-center text-sky-200 font-black">{label}</span>
                       <div className="text-center font-mono font-black text-[11px]"><span className="text-white">基礎+{before}</span><span className="text-slate-500 mx-1">→</span><span className={gain>0?'text-sky-300':'text-slate-300'}>基礎+{before+gain}</span></div>
-                      <span className="text-center text-[9px] font-mono font-black text-sky-300">{n}P</span>
+                      <label className="flex items-center gap-0.5 min-w-0"><input data-direct-point-input="transcend-stat" aria-label={`${label}の基礎値の振り分けポイントを直接入力`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={n} onFocus={e=>e.currentTarget.select()} onChange={e=>setTranscendPlanExact('stat',key,e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="w-full min-w-0 h-8 rounded-md border border-sky-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"/><span className="text-[8px] font-black text-sky-300">P</span></label>
                       <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}の基礎値を減らす`} disabled={n<=0} onPress={()=>addStat(key,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}の基礎値を上げる`} disabled={planLeft<=0} onPress={()=>addStat(key,1)} className="min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
                     </div>;})}
                   </div>
@@ -19029,6 +19146,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           });
           const addPlanApt = (idx, direction) => changePlan('apt',idx,direction);
           const addPlanStat = (key, direction) => changePlan('stat',key,direction);
+          const setPlanExact = (kind, target, rawValue) => setBulkPlan(previous => {
+            const q=previous?{apt:[...previous.apt],stat:{...previous.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}};
+            const current=kind==='apt'?q.apt[target]:(q.stat[target]||0);
+            const used=q.apt.reduce((a,b)=>a+b,0)+Object.values(q.stat).reduce((a,b)=>a+b,0);
+            let maxForRow=Math.max(0,points-(used-current));
+            if(kind==='apt'){
+              const baseGradeIndex=DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target]||'C');
+              maxForRow=Math.min(maxForRow,Math.max(0,DIST_APTITUDE_GRADES.length-1-baseGradeIndex));
+            }
+            const next=directEnhancePointAmount(rawValue,maxForRow);
+            if(kind==='apt')q.apt[target]=next;else q.stat[target]=next;
+            return q;
+          });
           const applyPlan = () => {
             const updated = spendPointsBulk(masu.id, plan);
             if (!updated) return;
@@ -19078,7 +19208,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {RANGE_LABELS.map((label,idx)=>{const before=resolvedDistAptitude[idx]||'C',after=plannedGrade(idx),added=plan.apt[idx];return <div key={idx} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
                         <span className={`text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
                         <div className="text-center font-mono font-black text-[12px]"><span className={DIST_APTITUDE_COLOR[before]}>{before}</span><span className="text-slate-500 mx-1">→</span><span className={added>0?'text-cyan-300':'text-slate-300'}>{after}</span></div>
-                        <span className="text-center text-[9px] font-mono font-black text-amber-300">{added}pt</span>
+                        <label className="flex items-center gap-0.5 min-w-0"><input data-direct-point-input="normal-apt" aria-label={`${label}距離適性の振り分けポイントを直接入力`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={added} onFocus={e=>e.currentTarget.select()} onChange={e=>setPlanExact('apt',idx,e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="w-full min-w-0 h-8 rounded-md border border-amber-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"/><span className="text-[8px] font-black text-amber-300">P</span></label>
                         <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}距離適性を減らす`} disabled={added<=0} onPress={()=>addPlanApt(idx,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}距離適性を増やす`} disabled={!canPlanApt(idx)} onPress={()=>addPlanApt(idx,1)} className="min-h-[40px] rounded-lg bg-amber-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
                       </div>;})}
                     </div>
@@ -19087,7 +19217,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const n=plan.stat[key]||0,gain=n*(STAT_POINT_GAIN[key]||1),before=currentStatValue(key);return <div key={key} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
                         <span className="text-[8px] text-center text-emerald-300 font-black">{label}</span>
                         <div className="text-center font-mono font-black text-[11px]"><span className="text-white">{before}</span><span className="text-slate-500 mx-1">→</span><span className={gain>0?'text-emerald-300':'text-slate-300'}>{before+gain}</span></div>
-                        <span className="text-center text-[9px] font-mono font-black text-amber-300">{n}pt</span>
+                        <label className="flex items-center gap-0.5 min-w-0"><input data-direct-point-input="normal-stat" aria-label={`${label}の振り分けポイントを直接入力`} type="text" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" autoComplete="off" value={n} onFocus={e=>e.currentTarget.select()} onChange={e=>setPlanExact('stat',key,e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="w-full min-w-0 h-8 rounded-md border border-amber-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"/><span className="text-[8px] font-black text-amber-300">P</span></label>
                         <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}を減らす`} disabled={n<=0} onPress={()=>addPlanStat(key,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}を増やす`} disabled={planLeft<=0} onPress={()=>addPlanStat(key,1)} className="min-h-[40px] rounded-lg bg-emerald-700 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
                       </div>;})}
                     </div>
