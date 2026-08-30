@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 20:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7208,23 +7208,34 @@ const rpgStepDelay = (battle) => {
 // 複製し、雷も各分身体の内側に置くことで発射位置が中央1点にならないようにする。
 // エイキの攻撃中だけ重ねる桜の花びら。
 // 常時アニメーションにはせず、攻撃モーションが出ているあいだ(isAnimating)だけ描く。
-// スマホの負荷を増やしすぎないよう、要素は固定6枚・CSSアニメーション1本だけにして、
-// 画像もDOMも増やさない(絵文字1文字＋transformのみ)。枠の動きはザンと同じ
-// zanComboDash が担当するので、ここは花びらを流すことだけをする。
+// スマホの負荷を増やしすぎないよう、要素は固定12枚・CSSアニメーション1本だけにして、
+// 画像は使わずCSSの小片を transform / opacity だけで流す。枠の高速斬撃はザンと同じ
+// zanComboDash が担当し、花びらだけ斬撃方向へ遅れて散らして短い余韻を作る。
 const EIKI_SAKURA_PETALS = Object.freeze([
-  { left:'8%',  delay:'0ms',   drift:'14px',  spin:'220deg', size:'11px' },
-  { left:'26%', delay:'40ms',  drift:'-10px', spin:'-180deg', size:'9px'  },
-  { left:'44%', delay:'80ms',  drift:'16px',  spin:'260deg', size:'12px' },
-  { left:'62%', delay:'30ms',  drift:'-14px', spin:'-240deg', size:'10px' },
-  { left:'78%', delay:'100ms', drift:'8px',   spin:'200deg', size:'9px'  },
-  { left:'92%', delay:'60ms',  drift:'-6px',  spin:'-160deg', size:'11px' },
+  { left:'2%',  top:'66%', delay:'0ms',  flowX:'68px', flowY:'-38px', burstX:'86px',  burstY:'-54px', trailX:'112px', trailY:'-68px', spin:'310deg',  size:'7px'  },
+  { left:'8%',  top:'54%', delay:'18ms', flowX:'62px', flowY:'-24px', burstX:'76px',  burstY:'-42px', trailX:'104px', trailY:'-52px', spin:'-280deg', size:'9px'  },
+  { left:'14%', top:'74%', delay:'36ms', flowX:'74px', flowY:'-44px', burstX:'96px',  burstY:'-30px', trailX:'122px', trailY:'-42px', spin:'360deg',  size:'6px'  },
+  { left:'22%', top:'42%', delay:'8ms',  flowX:'70px', flowY:'-18px', burstX:'92px',  burstY:'-34px', trailX:'118px', trailY:'-48px', spin:'-330deg', size:'8px'  },
+  { left:'30%', top:'64%', delay:'54ms', flowX:'64px', flowY:'-34px', burstX:'82px',  burstY:'-60px', trailX:'108px', trailY:'-76px', spin:'390deg',  size:'10px' },
+  { left:'38%', top:'36%', delay:'26ms', flowX:'72px', flowY:'-20px', burstX:'98px',  burstY:'-10px', trailX:'124px', trailY:'-24px', spin:'-300deg', size:'7px'  },
+  { left:'46%', top:'70%', delay:'70ms', flowX:'66px', flowY:'-42px', burstX:'88px',  burstY:'-66px', trailX:'116px', trailY:'-80px', spin:'340deg',  size:'8px'  },
+  { left:'54%', top:'48%', delay:'12ms', flowX:'58px', flowY:'-26px', burstX:'80px',  burstY:'-12px', trailX:'106px', trailY:'-28px', spin:'-370deg', size:'9px'  },
+  { left:'62%', top:'62%', delay:'44ms', flowX:'70px', flowY:'-36px', burstX:'94px',  burstY:'-48px', trailX:'120px', trailY:'-62px', spin:'320deg',  size:'6px'  },
+  { left:'70%', top:'34%', delay:'62ms', flowX:'60px', flowY:'-16px', burstX:'78px',  burstY:'-38px', trailX:'102px', trailY:'-50px', spin:'-350deg', size:'8px'  },
+  { left:'78%', top:'72%', delay:'22ms', flowX:'66px', flowY:'-40px', burstX:'92px',  burstY:'-22px', trailX:'116px', trailY:'-38px', spin:'380deg',  size:'9px'  },
+  { left:'86%', top:'50%', delay:'48ms', flowX:'56px', flowY:'-28px', burstX:'74px',  burstY:'-50px', trailX:'98px',  trailY:'-64px', spin:'-320deg', size:'7px'  },
 ]);
 const EikiSakuraPetals = () => (
   <span className="eiki-sakura" aria-hidden="true">
     {EIKI_SAKURA_PETALS.map((petal, index) => (
       <span key={index} className="eiki-sakura__petal"
-        style={{ left:petal.left, fontSize:petal.size, animationDelay:petal.delay,
-          '--eiki-petal-drift':petal.drift, '--eiki-petal-spin':petal.spin }}>🌸</span>
+        style={{ left:petal.left, top:petal.top, width:petal.size, height:`${parseFloat(petal.size)*1.45}px`, animationDelay:petal.delay,
+          '--eiki-petal-flow-x':petal.flowX, '--eiki-petal-flow-y':petal.flowY,
+          '--eiki-petal-burst-x':petal.burstX, '--eiki-petal-burst-y':petal.burstY,
+          '--eiki-petal-trail-x':petal.trailX, '--eiki-petal-trail-y':petal.trailY,
+          '--eiki-petal-spin-mid':`${parseFloat(petal.spin)*.55}deg`,
+          '--eiki-petal-spin-burst':`${parseFloat(petal.spin)*.8}deg`,
+          '--eiki-petal-spin':petal.spin }}/>
     ))}
   </span>
 );
@@ -14147,7 +14158,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // 花びらはエイキのときだけ。ザン本体の見た目は一切変えない
               setAttackAnim({slotIndex: animSlot, zanCombo:true, sakura: hitMotion==='eikiSakuraCombo'});
               Audio_.se.zanSlash(); // ザン系の高めなシュシュ音(エイキも同じ音を使う)
-              await battleWait(320);
+              await battleWait(hitMotion==='eikiSakuraCombo'?500:320);
               setAttackAnim(null);
               setSlotSkill(null);
               await battleWait(100);
@@ -17701,7 +17712,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             await new Promise(r=>setTimeout(r,650));
             if(isDashMotion){
               setMonsterImageDebugMotionPlaying({zanCombo:true,sakura:atkMotion==='eikiSakuraCombo'});
-              await new Promise(r=>setTimeout(r,320));
+              await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:320));
             }else{
               setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
               await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?520:500)));
@@ -22024,7 +22035,7 @@ const createAnimationStyle = () => {
       100% { transform: translateY(0) scale(1); filter: none; }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
-       常時アニメーションを増やさないため、@keyframes は1本・要素は6枚に固定してある。
+       常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
        transform と opacity だけを動かすので、低性能端末でもレイアウトを作り直さない。 */
     .eiki-sakura {
       position: absolute;
@@ -22035,20 +22046,24 @@ const createAnimationStyle = () => {
     }
     .eiki-sakura__petal {
       position: absolute;
-      top: -12%;
-      line-height: 1;
       opacity: 0;
+      border-radius: 75% 15% 70% 20%;
+      background: linear-gradient(145deg, #fff7fb 0%, #f9a8d4 42%, #ec4899 100%);
+      box-shadow: 0 0 3px rgba(251, 113, 173, .75);
+      transform-origin: 70% 70%;
       will-change: transform, opacity;
-      animation: eikiSakuraFall 320ms ease-out forwards;
+      animation: eikiSakuraFall 430ms cubic-bezier(.2,.72,.28,1) forwards;
     }
     @keyframes eikiSakuraFall {
-      0%   { opacity: 0; transform: translate3d(0, -6px, 0) rotate(0deg) scale(0.7); }
-      25%  { opacity: 1; }
-      100% { opacity: 0; transform: translate3d(var(--eiki-petal-drift, 10px), 78px, 0) rotate(var(--eiki-petal-spin, 200deg)) scale(1); }
+      0%   { opacity: 0; transform: translate3d(-22px, 16px, 0) rotate(0deg) scale(.45); }
+      18%  { opacity: .95; }
+      52%  { opacity: 1; transform: translate3d(var(--eiki-petal-flow-x), var(--eiki-petal-flow-y), 0) rotate(var(--eiki-petal-spin-mid)) scale(.9); }
+      68%  { opacity: 1; transform: translate3d(var(--eiki-petal-burst-x), var(--eiki-petal-burst-y), 0) rotate(var(--eiki-petal-spin-burst)) scale(1.25); }
+      100% { opacity: 0; transform: translate3d(var(--eiki-petal-trail-x), var(--eiki-petal-trail-y), 0) rotate(var(--eiki-petal-spin)) scale(.65); }
     }
     /* 動きを減らす設定の端末では、花びらを流さず淡く出して消えるだけにする */
     @media (prefers-reduced-motion: reduce) {
-      .eiki-sakura__petal { animation: eikiSakuraFade 320ms ease-out forwards; }
+      .eiki-sakura__petal { animation: eikiSakuraFade 430ms ease-out forwards; }
       @keyframes eikiSakuraFade {
         0% { opacity: 0; } 30% { opacity: .9; } 100% { opacity: 0; }
       }
