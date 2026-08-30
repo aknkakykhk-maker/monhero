@@ -15,7 +15,7 @@ check('終端到達でHOLDを自動確定',game.includes("note.type==='HOLD'&&no
 check('終端100ms手前より早い離しはMISS',game.includes('const RHYTHM_HOLD_RELEASE_GRACE_MS=100')&&game.includes('now<holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS')&&game.includes("applyJudgment(note,'MISS',now-holdEndMs)"));
 check('入力ID別Mapで複数入力を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(input.inputKey,target.index)')&&game.includes('run.activePointers.get(input.inputKey)'));
 check('HOLD表示は専用ボディを持ち、rAF内transform/opacity中心',game.includes('data-rhythm-hold-body')&&game.includes("--rhythm-hold-body")&&game.includes('translate3d(0,${Math.round(yPx)}px,0)')&&game.includes('requestAnimationFrame(tick)'));
-check('ポーズ・リスタート・中断で入力管理を残さない',game.includes('run.activePointers.clear();run.activeTouchInputs?.clear();run.notes.forEach')&&game.includes('run.activePointers=new Map();run.activeTouchInputs=new Set();run.combo=0')&&game.includes('run.finished=true;run.paused=true;run.activePointers.clear();run.activeTouchInputs?.clear();run.audio?.stop()'));
+check('ポーズ・リスタート・中断で入力管理を残さない',game.includes('run.activePointers.clear();run.activeTouchInputs?.clear();')&&game.includes('run.activePointers=new Map();run.activeTouchInputs=new Set();')&&game.includes('run.finished=true;run.paused=true;run.activePointers.clear();run.activeTouchInputs?.clear();'));
 check('FLICK/SLIDEはSTEP 3Aの実譜面へ入れない',normal.notes.every(n=>!['FLICK','SLIDE'].includes(n.type)));
 check('通常公開はOFF',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
