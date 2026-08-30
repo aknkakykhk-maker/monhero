@@ -1,0 +1,71 @@
+name: Temporary restore Eiki popup style
+
+on:
+  push:
+    branches: [chatgpt/restore-eiki-damage-popup-style]
+
+permissions:
+  contents: write
+
+jobs:
+  restore-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/restore-eiki-damage-popup-style
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Restore previous Eiki damage popup style
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('monster-hero/src/game-system.jsx')
+          s=p.read_text()
+
+          new_popup="""  const addPopup = (text, side, color, replaceKey=null) => {\n    const id = Date.now()+Math.random();\n    setPopups(prev=>{\n      const kept=replaceKey?prev.filter(x=>x.replaceKey!==replaceKey):prev;\n      return [...kept,{id,text,side,color,replaceKey}];\n    });\n    setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));\n  };"""
+          old_popup="""  const addPopup = (text, side, color) => {\n    const id = Date.now()+Math.random();\n    setPopups(prev=>[...prev,{id,text,side,color}]);\n    setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));\n  };"""
+          if s.count(new_popup)!=1:
+              raise SystemExit(f'popup restore target count={s.count(new_popup)}')
+          s=s.replace(new_popup,old_popup)
+
+          new_group="""            // エイキ固有は本体+最大5連撃で、通常popupを全部残すと縦に積み上がって\n            // 後半が画面外へ切れる。4ヒット以上のエイキ高速斬撃だけ、同じ表示枠を\n            // 140msごとに差し替えて全ヒットを順番に見せる。ダメージ計算・連撃数は変えない。\n            const rapidHitPopupKey=hitMotion==='eikiSakuraCombo'&&group.length>=4?`eiki-rapid-${hitIdx}-${animSlot}`:null;\n            for (const h of group) {\n              const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';\n              if(h.isCrit) triggerShake();\n              addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,rapidHitPopupKey);\n              setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));\n              await battleWait(140);\n            }"""
+          old_group="""            for (const h of group) {\n              const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';\n              if(h.isCrit) triggerShake();\n              addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);\n              setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));\n              await battleWait(140);\n            }"""
+          if s.count(new_group)!=1:
+              raise SystemExit(f'group restore target count={s.count(new_group)}')
+          s=s.replace(new_group,old_group)
+          p.write_text(s)
+          PY
+      - name: Build canonical output
+        run: node tools/build.js
+      - name: Check source and Eiki regressions
+        run: |
+          node tools/build.js --check
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/mode/eiki-combo-damage-check.js
+          node tools/mode/eiki-debug-check.js
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
+          if(s.includes('rapidHitPopupKey')) throw new Error('rapid replacement popup remains');
+          if(s.includes('replaceKey=null')) throw new Error('replaceKey popup helper remains');
+          if(!s.includes("addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);")) throw new Error('legacy stacked damage popup call missing');
+          console.log('OK: Eiki damage popup display restored to previous stacked style');
+          NODE
+          git diff --check
+      - name: Commit generated output and remove temporary workflow
+        run: |
+          rm .github/workflows/_tmp_restore_eiki_popup_style.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: エイキのダメージ表示を従来方式へ戻す"
+          git push origin HEAD:chatgpt/restore-eiki-damage-popup-style
