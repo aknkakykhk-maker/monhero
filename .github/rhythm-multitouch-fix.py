@@ -79,14 +79,8 @@ console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process
 
 readme_path = root / 'tools/README.md'
 readme = readme_path.read_text(encoding='utf-8')
-needle = '`mode/rhythm-mode-hold-engine-check.js`'
-idx = readme.find(needle)
-if idx < 0:
-    raise SystemExit('tools README HOLD checker marker not found')
-line_end = readme.find('\n', idx)
-add = '\n| `mode/rhythm-mode-multitouch-check.js` | 音ゲーのiPhone向け複数指Touch Events、指ごとのidentifier管理、5レーン座標変換、Pointer Eventsとの二重処理防止、ノーツ表示が入力を遮らないことを確認する。 |'
 if 'rhythm-mode-multitouch-check.js' not in readme:
-    readme = readme[:line_end] + add + readme[line_end:]
+    readme += '\n\n- `mode/rhythm-mode-multitouch-check.js` — 音ゲーのiPhone向け複数指Touch Events、指ごとのidentifier管理、5レーン座標変換、Pointer Eventsとの二重処理防止、ノーツ表示が入力を遮らないことを確認する。\n'
 readme_path.write_text(readme, encoding='utf-8')
 
 ch_path = root / 'monster-hero/data/changelog.js'
