@@ -1,0 +1,66 @@
+name: ChatGPT apply direct enhancement input
+
+on:
+  push:
+    branches: [chatgpt/direct-enhance-input-20260830]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/direct-enhance-input-20260830
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Apply scoped patch
+        run: python3 tools/tmp-chatgpt-direct-enhance-input.py
+      - name: Build distributable
+        run: node tools/build.js
+      - name: Run required source checks
+        run: |
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/jsx-text-brace-check.js
+          node tools/render-error-check.js
+          node tools/build.js --check
+      - name: Run related checks
+        run: |
+          node tools/masu/transcendence-check.js
+          node tools/help-coverage-check.js
+          node tools/help-guide-check.js
+          node tools/help-render-check.js
+      - name: Run bulk enhancement browser check
+        run: |
+          sudo npx --yes playwright install-deps chromium
+          PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers npx playwright install chromium
+          CHROME=$(find /opt/pw-browsers -type f -name chrome -perm -111 | head -1)
+          test -n "$CHROME"
+          sudo ln -sf "$CHROME" /opt/pw-browsers/chromium
+          python3 tools/serve.py >/tmp/monhero-serve.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          node tools/masu/bulk-enhance-check.js
+      - name: Remove temporary patch machinery
+        run: rm -f .github/workflows/chatgpt-direct-enhance-input.yml tools/tmp-chatgpt-direct-enhance-input.py
+      - name: Commit implementation
+        run: |
+          git diff --check
+          git status --short
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: 強化ポイントを数値で直接入力できるようにする"
+          git push origin HEAD:chatgpt/direct-enhance-input-20260830
