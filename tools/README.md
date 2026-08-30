@@ -139,6 +139,8 @@ node tools/build.js --check
 
 `node mode/rhythm-mode-foundation-check.js` は、音ゲー基盤の5難易度・最大スコア・ノーツ種別・判定・保存normalize・テスト曲とデバッグ限定導線を確認する。
 
+`node mode/rhythm-mode-tap-engine-check.js` は、STEP 2AのTAP判定境界・FAST/SLOW・コンボ・自動MISS・90%＋10%スコア・AudioContext同期・TAP限定テスト譜面・非公開状態を確認する。
+
 | コマンド | 内容 |
 | --- | --- |
 | `node mode/difficulty-item-check.js` | 新難易度(Grand Master/Hell/Legend)の表示と色、絆経験値チケットのまとめ使いを確認する。 |
