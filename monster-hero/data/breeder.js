@@ -24,9 +24,6 @@ const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=3829b6f730f5";
 const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=99f34b0b4228";
 const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=23d828f69f14";
 const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=da09c07c8624";
-// エイキの円盤石。正式実装前の確認用に画像だけ先に置いてある。
-// BREEDER_MARKET_ITEMS へはまだ登録していない(マーケットには並ばない)。
-// 正式実装のときに、ここを参照する商品(3000ダイヤ)を1件足す。
 const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
 
 const BREEDER_EVO_NAMES = {
@@ -191,6 +188,12 @@ const BREEDER_MARKET_ITEMS = [
   { id:'pandora_icon', name:"パンドラのアイコン", type:'icon', icon:PANDORA_IMG, cost:1 },
   { id:'pandora_disc_icon', name:"パンドラの円盤石アイコン", type:'icon', icon:'images/disc-icons/pandora-disc.PNG?v=adee72203d0a', cost:1 },
   { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:'images/disc-icons/pandora-disc.PNG?v=adee72203d0a', cost:3000 },
+  // エイキ。ザン・ミタラシ・アーク・イブリースと同じく専用の顔クロップ(EIKI_FACE_ICON)を
+  // 商品アイコンにも使うため、パンドラ・ミーアのような MARKET_PROFILE_ICON_STYLES の
+  // 拡大・位置調整は不要(元から丸枠向けに切り出し済み)。
+  { id:'eiki_icon', name:"エイキのアイコン", type:'icon', icon:EIKI_FACE_ICON, cost:1 },
+  { id:'eiki_disc_icon', name:"エイキの円盤石アイコン", type:'icon', icon:EIKI_DISC_ICON, cost:1 },
+  { id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:3000 },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'unique_skill_reset_ticket', name:"スキルポイントリセット券", type:'item', emoji:"🎟️", cost:1000, usage:'uniqueSkillReset', desc:"マスモン詳細の「固有技強化」で使うと、その個体の固有技に配分したポイントをすべて未使用の固有技Pへ戻せる。固有技以外の育成状態は変わらない。" },
