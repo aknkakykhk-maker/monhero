@@ -158,14 +158,18 @@ check('花びらは攻撃中だけ描く(常時アニメーションにしない
   && source.includes("sakura: hitMotion==='eikiSakuraCombo'"));
 check('花びらはエイキのときだけ立つ(ザンでは立たない)',
   !/zanCombo:true, sakura: *true/.test(source));
-// スマホ負荷: 花びらは固定枚数・CSSアニメーション1本・transform/opacityのみ
+// スマホ負荷: 花びらは固定枚数・CSSアニメーション1本・transform/opacity中心
 const petals = (source.match(/EIKI_SAKURA_PETALS = Object\.freeze\(\[([\s\S]*?)\]\);/) || [])[1] || '';
 const petalCount = (petals.match(/\{ left:/g) || []).length;
-check('花びらの枚数が固定で控えめ(8枚以下)', petalCount > 0 && petalCount <= 8, `${petalCount}枚`);
+check('花びらの枚数が固定で控えめ(10〜12枚)', petalCount >= 10 && petalCount <= 12, `${petalCount}枚`);
+check('絵文字ではなくCSSの花びら小片を使う', !source.slice(source.indexOf('const EikiSakuraPetals'), source.indexOf('const PandoraDualThunder')).includes('🌸')
+  && source.includes('border-radius: 75% 15% 70% 20%'));
 check('花びらはtransformとopacityだけを動かす(レイアウトを作り直さない)',
   /@keyframes eikiSakuraFall \{[\s\S]*?\}/.test(source)
   && !/@keyframes eikiSakuraFall \{[\s\S]*?(width|height|top:|left:)\s*[0-9]/.test(source.slice(source.indexOf('@keyframes eikiSakuraFall'), source.indexOf('@keyframes eikiSakuraFall') + 400)));
 check('動きを減らす設定の端末では流さない', source.includes('@media (prefers-reduced-motion: reduce)') && source.includes('eikiSakuraFade'));
+check('エイキだけ斬撃後に短い余韻を残し、ザンは従来320msのまま',
+  source.includes("battleWait(hitMotion==='eikiSakuraCombo'?500:320)"));
 
 console.log('--- ⑧ 画像・染色・円盤石 ---');
 const imgFile = (rel) => path.join(ROOT, 'monster-hero', rel);
