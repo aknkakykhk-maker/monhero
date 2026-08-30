@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eb56c57dcbf4f842
+// source-sha256: f44f08bf160ef560
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 19:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 19:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3582,6 +3582,83 @@ const BGM_TRACKS = [{
 }];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
+// 音ゲーは曲データ側で既存track IDだけを持ち、音源・音量・ループ情報は必ずBGM_TRACKSから解決する。
+const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
+const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
+const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+const RHYTHM_EFFECT_LEVELS = Object.freeze(['LOW', 'NORMAL', 'HIGH']);
+const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
+const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
+  noteSpeed: 5,
+  noteSize: 100,
+  noteStartPosition: 0,
+  displayTimingOffsetMs: 0,
+  judgmentTimingOffsetMs: 0,
+  fastSlowDisplay: true,
+  judgmentTextPosition: 50,
+  comboDisplay: true,
+  holdSlideOpacity: 80,
+  noteSeVolume: 70,
+  noteSeEnabled: true,
+  vibrationEnabled: true,
+  effectAmount: 'NORMAL',
+  lightweightMode: false,
+  livePartnerVisible: true
+});
+const rhythmFiniteInRange = (value, min, max, fallback) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= min && number <= max ? number : fallback;
+};
+const normalizeRhythmSettings = value => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const bool = key => typeof source[key] === 'boolean' ? source[key] : DEFAULT_RHYTHM_SETTINGS[key];
+  return {
+    noteSpeed: rhythmFiniteInRange(source.noteSpeed, 1, 20, DEFAULT_RHYTHM_SETTINGS.noteSpeed),
+    noteSize: rhythmFiniteInRange(source.noteSize, 50, 150, DEFAULT_RHYTHM_SETTINGS.noteSize),
+    noteStartPosition: rhythmFiniteInRange(source.noteStartPosition, -100, 100, DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
+    displayTimingOffsetMs: rhythmFiniteInRange(source.displayTimingOffsetMs, -500, 500, DEFAULT_RHYTHM_SETTINGS.displayTimingOffsetMs),
+    judgmentTimingOffsetMs: rhythmFiniteInRange(source.judgmentTimingOffsetMs, -500, 500, DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
+    fastSlowDisplay: bool('fastSlowDisplay'),
+    judgmentTextPosition: rhythmFiniteInRange(source.judgmentTextPosition, 0, 100, DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
+    comboDisplay: bool('comboDisplay'),
+    holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
+    noteSeVolume: rhythmFiniteInRange(source.noteSeVolume, 0, 100, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    noteSeEnabled: bool('noteSeEnabled'),
+    vibrationEnabled: bool('vibrationEnabled'),
+    effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
+    lightweightMode: bool('lightweightMode'),
+    livePartnerVisible: bool('livePartnerVisible')
+  };
+};
+const emptyRhythmBestRecord = () => ({
+  bestScore: 0,
+  maxCombo: 0,
+  clear: false,
+  fullCombo: false,
+  allExcellent: false,
+  allMarvelous: false,
+  judgments: Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0]))
+});
+const normalizeRhythmBestRecord = value => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const count = value => Math.max(0, Math.floor(Number.isFinite(Number(value)) ? Number(value) : 0));
+  return {
+    bestScore: count(source.bestScore),
+    maxCombo: count(source.maxCombo),
+    clear: source.clear === true,
+    fullCombo: source.fullCombo === true,
+    allExcellent: source.allExcellent === true,
+    allMarvelous: source.allMarvelous === true,
+    judgments: Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, count(source.judgments?.[id] ?? source[id])]))
+  };
+};
+const normalizeRhythmBestRecords = value => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(RHYTHM_SONGS.map(song => [song.songId, Object.fromEntries(RHYTHM_DIFFICULTIES.map(({
+    id
+  }) => [id, normalizeRhythmBestRecord(source[song.songId]?.[id])]))]));
+};
+const rhythmBestRecord = (records, songId, difficultyId) => normalizeRhythmBestRecord(records?.[songId]?.[difficultyId]);
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
@@ -8137,8 +8214,10 @@ const DIST_APTITUDE_COLOR = {
 // そこで data 側には releaseFlag という名札だけを書き、出す・出さないの判断はここでまとめて行う。
 // 公開するときは SPECIES_CHALLENGE_PUBLIC_RELEASE を true にするだけで、
 // ヘルプ・更新履歴・助手の告知が同時に出る(片方だけ先に出てしまうことがない)
+const RHYTHM_MODE_PUBLIC_RELEASE = false;
 const RELEASE_FLAGS = {
-  speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE
+  speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
+  rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE
 };
 const releasedForPlayers = item => !item || !item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true;
 const CHANGELOG_TYPES = ['update', 'issue'];
@@ -12645,6 +12724,18 @@ const storeSet = async (key, val, shared = false) => {
     }
   } catch {}
 };
+const saveRhythmSettings = async value => {
+  const normalized = normalizeRhythmSettings(value);
+  await storeSet(RHYTHM_SETTINGS_KEY, normalized, false);
+  return normalized;
+};
+const saveRhythmBestRecord = async (records, songId, difficultyId, value) => {
+  if (!RHYTHM_SONGS.some(song => song.songId === songId) || !RHYTHM_DIFFICULTIES.some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
+  const normalized = normalizeRhythmBestRecords(records);
+  normalized[songId][difficultyId] = normalizeRhythmBestRecord(value);
+  await storeSet(RHYTHM_BEST_RECORDS_KEY, normalized, false);
+  return normalized;
+};
 const storeList = async (prefix, shared = false) => {
   try {
     if (hasWinStorage()) {
@@ -14555,6 +14646,15 @@ function MonsterHeroGame() {
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
+  const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
+  const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
+  const openRhythmDebug = async () => {
+    const settings = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
+    const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+    setRhythmSettings(settings);
+    setRhythmBestRecords(records);
+    setGameState('RHYTHM_DEBUG');
+  };
   const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
   const [updateGuidePage, setUpdateGuidePage] = useState(0);
   const dailyMasuAdviceCheckedRef = useRef(false);
@@ -31861,7 +31961,73 @@ function MonsterHeroGame() {
           setGameState('DEBUG_SETTINGS');
         }
       }, "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B")));
-    })(), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
+    })(), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
+      "data-rhythm-debug": true,
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll bg-slate-950 p-3 text-white",
+      style: {
+        paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "sticky top-0 z-10 mb-3 flex items-center gap-2 rounded-xl bg-slate-950/95 py-1"
+    }, /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
+      onClick: () => setGameState('DEBUG_SETTINGS'),
+      className: "min-h-[44px] min-w-[44px] text-slate-300"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] font-black text-cyan-300"
+    }, "DEBUG ONLY\u30FBSTEP 1"), /*#__PURE__*/React.createElement("h2", {
+      className: "text-sm font-black"
+    }, "\u97F3\u30B2\u30FC\u57FA\u76E4\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("section", {
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "mb-2 text-xs font-black text-cyan-200"
+    }, "\u4FDD\u5B58\u4E2D\u306E\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("dl", {
+      className: "grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
+    }, Object.entries(rhythmSettings).map(([key, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: key
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "break-all text-slate-400"
+    }, key), /*#__PURE__*/React.createElement("dd", {
+      className: "break-all text-right font-mono text-white"
+    }, String(value)))))), RHYTHM_SONGS.map(song => {
+      const track = rhythmSongTrack(song);
+      return /*#__PURE__*/React.createElement("section", {
+        key: song.songId,
+        className: "mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "mb-2"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px] text-indigo-300"
+      }, song.songId), /*#__PURE__*/React.createElement("h3", {
+        className: "font-black"
+      }, song.displayName), /*#__PURE__*/React.createElement("p", {
+        className: "break-all text-[9px] text-slate-400"
+      }, "BGM: ", song.bgmTrackId, " / ", track?.src || '未登録')), /*#__PURE__*/React.createElement("div", {
+        className: "space-y-2"
+      }, RHYTHM_DIFFICULTIES.map(difficulty => {
+        const chart = song.difficulties[difficulty.id];
+        const best = rhythmBestRecord(rhythmBestRecords, song.songId, difficulty.id);
+        return /*#__PURE__*/React.createElement("article", {
+          key: difficulty.id,
+          className: "rounded-xl border border-white/10 bg-slate-900/80 p-2"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center justify-between"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "text-xs text-cyan-200"
+        }, difficulty.id, " Lv.", chart.level), /*#__PURE__*/React.createElement("span", {
+          className: "text-[9px] font-mono"
+        }, "MAX ", difficulty.maxScore.toLocaleString())), /*#__PURE__*/React.createElement("p", {
+          className: "mt-1 text-[9px] text-slate-300"
+        }, "BEST ", best.bestScore.toLocaleString(), " / MAX COMBO ", best.maxCombo, " / ", best.clear ? 'CLEAR' : '未プレイ'), /*#__PURE__*/React.createElement("p", {
+          className: "mt-1 break-words text-[8px] text-slate-500"
+        }, RHYTHM_JUDGMENT_IDS.map(id => `${id} ${best.judgments[id]}`).join(' / ')), /*#__PURE__*/React.createElement("p", {
+          className: "mt-1 text-[8px] text-slate-500"
+        }, "FC ", best.fullCombo ? '○' : '-', " / ALL EXCELLENT ", best.allExcellent ? '○' : '-', " / ALL MARVELOUS ", best.allMarvelous ? '○' : '-'));
+      })));
+    })), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -31882,6 +32048,12 @@ function MonsterHeroGame() {
     }, "BATTLE TEST")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-5"
     }, /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-mode": true,
+      onClick: openRhythmDebug,
+      className: "w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black"
+    }, "\uD83C\uDFB5 \u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-cyan-300"
+    }, "\u66F2\u30FB\u96E3\u6613\u5EA6\u30FB\u8A2D\u5B9A\u30FBBEST\u4FDD\u5B58\u57FA\u76E4\u3092\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
       "data-debug-species-challenge": true,
       onClick: async () => {
         await loadSpeciesChallengeProgress();
