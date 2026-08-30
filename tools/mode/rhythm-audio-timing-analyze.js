@@ -6,7 +6,8 @@ const {spawnSync}=require('child_process');
 const ROOT=path.resolve(__dirname,'..','..');
 const DEFAULT_AUDIO=path.join(ROOT,'monster-hero/audio/bgm-atsu-cup-theme.mp3');
 const SAMPLE_RATE=8000;
-const ENVELOPE_HZ=100;
+// 100Hzでは169BPM付近が166.7BPMへ量子化されるため、5ms刻みまで上げる。
+const ENVELOPE_HZ=200;
 const BPM_MIN=70;
 const BPM_MAX=200;
 
@@ -109,7 +110,7 @@ const phaseScore=(lag,phase)=>{
   for(let i=phase;i<frameCount;i+=lag){
     score+=gated[i]||0;
     if(i>0)score+=(gated[i-1]||0)*.45;
-    if(i+1<frameCount)score+=(gated[i+1]||0)*.45;
+    if(i+1<frameCount)score+=(ated[i+1]||0)*.45;
     hits++;
   }
   return hits?score/hits:0;
