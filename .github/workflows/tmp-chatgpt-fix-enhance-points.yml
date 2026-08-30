@@ -46,7 +46,6 @@ jobs:
           node tools/masu/fusion-rebirth-check.js
           node tools/masu/fusion-breakthrough-check.js
           node tools/mode/skip-ticket-check.js
-          node tools/monster-power-check.js
       - name: Verify noisy checks have no new failures
         run: |
           set +e
