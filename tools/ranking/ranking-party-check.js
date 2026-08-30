@@ -20,7 +20,9 @@ for(const token of [
   '勇者モン情報なし',
 ]) assert(src.includes(token), token);
 // 一覧には編成を出さない(50件×最大4体で開いた瞬間に引っかかるため)
-const listStart=src.indexOf('const renderScoreRankingEntry = (entry, index)');
+// renderScoreRankingEntryは第3引数(showSpecies、種族チャレンジ「全種族」タブ用)を持つので、
+// 閉じ括弧までは固定せず前方一致で見る
+const listStart=src.indexOf('const renderScoreRankingEntry = (entry, index');
 const listEnd=src.indexOf('const renderBreederRankingEntry');
 const list=src.slice(listStart,listEnd);
 assert(!list.includes('供モン:'), '一覧に供モンを出さない');

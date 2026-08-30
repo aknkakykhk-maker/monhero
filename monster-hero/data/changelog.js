@@ -3,7 +3,14 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
-    date: "2026-08-30 20:42", type:'fix', title:'音ゲーの2本指入力を修正', releaseFlag:'rhythmMode',
+    date: "2026-08-30 21:19", type: 'update', title: 'ランキングとアイテム欄を分かりやすくしました', status: 'new',
+    items: [
+      '種族チャレンジのランキング「全種族」タブに、その記録がどの種族のものかを名前の横に表示するようにしました。',
+      '虹の超越の実・種族別の超越の実を、HOMEの「アイテム」からも確認できるようにしました。使う場所（マスモン詳細の超越強化）もあわせて案内します。',
+    ],
+  },
+  {
+    date: "2026-08-30 21:19", type:'fix', title:'音ゲーの2本指入力を修正', releaseFlag:'rhythmMode',
     items:['iPhone Safariで同時タッチを確実に拾えるようTouch EventsのchangedTouchesを指ごとに処理し、HOLD中の別レーン操作や同時2本HOLDができる入力経路へ修正しました。'],
   },
   {

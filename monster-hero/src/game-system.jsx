@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 21:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -935,6 +935,12 @@ const speciesTranscendFruitItems = () => {
         id:`${SPECIES_TRANSCEND_FRUIT_ITEM_ID_PREFIX}${lineage.id}`,
         name:`超越の実（${lineage.name}種）`,
         lineageId:lineage.id,
+        // アイテム欄(ITEM_INVENTORY)に並べるための見た目。マーケットでは売らない
+        // (種族チャレンジの初回クリア報酬でしか増えない)ので、BREEDER_MARKET_ITEMSには
+        // 登録しない。usage:'transcendFruit' で「使う」ボタンの代わりに使う場所を案内する
+        emoji:'🍇',
+        usage:'transcendFruit',
+        desc:`${lineage.name}種のマスモンに使える。1個で超越ポイント+1。マスモン詳細の「超越強化」から使う。`,
       })])
     ));
   }
@@ -969,7 +975,7 @@ const RAINBOW_TRANSCEND_FRUIT_ITEM = Object.freeze({ id:RAINBOW_TRANSCEND_FRUIT_
 // 既存の虹の超越の実IDをそのままMARKET商品へ接続する。通貨は通常の虹ではないプシュケー。
 BREEDER_MARKET_ITEMS.push({
   id:RAINBOW_TRANSCEND_FRUIT_ITEM_ID, name:RAINBOW_TRANSCEND_FRUIT_ITEM.name, type:'item', emoji:'🌈',
-  cost:1000, currency:'psyche',
+  cost:1000, currency:'psyche', usage:'transcendFruit',
   desc:'どの種族のマスモンにも使える。1個で超越ポイント+1',
 });
 // 実のidかどうかの判定も、種族の一覧と同じく最初に必要になったときに作る
@@ -7432,6 +7438,15 @@ const parseSpeciesChallengeAllRankingDifficulty = (key) => {
 const speciesChallengeAllRankingMembers = (difficultyId) => speciesChallengeLineages()
   .map(lineage => speciesChallengeRankingDifficulty(lineage.id, difficultyId))
   .filter(Boolean);
+// 「全種族」の一覧で、1件ごとの記録がどの種族のものかを表示するための短いラベル。
+// difficulty列(Species-<血統id>-<難易度id>)から血統名を戻すだけで、既存キーの意味は変えない。
+// 知らないキーや列が来ていない古い記録ではnullを返し、呼び出し側でバッジごと出さない
+const speciesRankingLabel = (difficultyKey) => {
+  const parsed = parseSpeciesChallengeRankingDifficulty(difficultyKey);
+  if (!parsed) return null;
+  const lineage = speciesChallengeLineages().find(item => item.id === parsed.speciesId);
+  return lineage ? `${lineage.name}種` : null;
+};
 // 極限の段階ID。知らない値が来ても実装済みの段階へ落として、ランキングのキーを壊さない
 const normalizeExtremeDifficulty = (value) => (EXTREME_DIFFICULTIES
   .find(setting => setting.id === value && setting.available) ? value : EXTREME_SETTING.id);
@@ -7698,7 +7713,11 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
       : `&difficulty=eq.${encodeURIComponent(normalizedDifficulty)}`;
   // 展開先が1件も無いときに in.() を送るとDB側の構文エラーになるので、その前に空で返す
   if (speciesAllDifficulty && speciesAllMembers.length === 0) return [];
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}${difficultyFilter}&order=${order}&limit=${limit}&offset=${offset}`;
+  // 「全種族」だけは difficulty 列(Species-<血統id>-<難易度id>)も一緒に受け取る。
+  // 展開した種族別キーがまとめて返るので、この列が無いとどの行がどの種族のものか
+  // 一覧側で区別できない。他の難易度は元々1本のキーしか要求しないので不要
+  const selectWithDifficulty = speciesAllDifficulty ? `${select},difficulty` : select;
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${selectWithDifficulty}${difficultyFilter}&order=${order}&limit=${limit}&offset=${offset}`;
   const startedAt = Date.now();
   rankingLog(requestId, 'request-start', {
     difficulty: normalizedDifficulty, requestedDifficulty: diff, category: 'ranking', rankingType: order, table: 'rankings',
@@ -9525,8 +9544,10 @@ function MonsterHeroGame() {
     const stripPartyImages = (party) => (Array.isArray(party) ? party.map(m => (m && m.imgUrl && rankingMonsterIdOf(m)) ? { ...m, imgUrl: undefined } : m) : party);
     // turns / reachedWave は列を足す前の記録には無いので、そのときはundefinedのまま渡す。
     // 端末内へ退避した記録は最初から画面用の名前(reachedWave)で持っているため、両方を見る
+    // difficulty は「全種族」タブを取得したときだけ選んでいる列(sbFetchRankings)。
+    // それ以外の難易度では常に同じ値になり画面側で使わないため、来ていればそのまま運ぶだけにする
     const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon,
-      turns: r.turns ?? undefined, reachedWave: r.reached_wave ?? r.reachedWave ?? undefined });
+      turns: r.turns ?? undefined, reachedWave: r.reached_wave ?? r.reachedWave ?? undefined, difficulty: r.difficulty ?? undefined });
     // 過去の多重送信はidが異なるため、プレイ内容そのものをキーにして畳む。
     const rowKey = (r) => `v:${r?.user_name}|${r?.score}|${r?.level}|${r?.hero}|${JSON.stringify(r?.party || null)}|${r?.icon || ''}`;
     const mergeRows = (a, b) => {
@@ -16004,12 +16025,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)?<BreederIcon src={resolveIconUrl(entry.icon)} id={entry.icon} className="w-8 h-8 shrink-0"/>:<div className="w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs">👤</div>;
   const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
-  const renderScoreRankingEntry = (entry, index) => {
+  // showSpecies … 種族チャレンジの「全種族」タブから呼ばれたときだけtrue。
+  // このタブは複数の種族の記録が1枚に混ざって並ぶので、entry.difficulty(sbFetchRankingsが
+  // 「全種族」のときだけ選ぶ列)からどの種族の記録かを出す。他のタブ・他モードでは出さない
+  const renderScoreRankingEntry = (entry, index, showSpecies=false) => {
     const finiteNumber = value => value==null || value==='' ? null : (Number.isFinite(Number(value)) ? Number(value) : null);
     const scoreValue = finiteNumber(entry?.score);
     const breederLevelValue = finiteNumber(entry?.level);
     const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし';
     const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue>0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし';
+    const speciesLabel = showSpecies ? speciesRankingLabel(entry?.difficulty) : null;
     // クリアした記録は「何ターンで終えたか」、途中で終わった記録は「どのWAVEまで行ったか」。
     // ターン数はクリアしたときだけ入るので、この2つが同じ意味で混ざることはない。
     // どちらも入っていない古い記録では、その場所に何も出さない(0や「—」を作らない)
@@ -16022,7 +16047,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <article key={`score-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="score" role="button" tabIndex={0} aria-label={`${entry?.userName||'名無しのブリーダー'}のパーティー詳細を見る`} onClick={()=>setRankingPartyDetail(entry)} className={`${rankingCardClass(index)} px-2 py-1.5 active:scale-[.99] cursor-pointer`}>
         <div className="flex items-center gap-1.5 min-w-0">
           {rankingPlace(index)}{rankingBreederIcon(entry)}
-          <div className="flex flex-1 items-baseline gap-1 min-w-0"><span className="text-[10px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</span><span className="text-[7px] text-indigo-300 whitespace-nowrap shrink-0">{breederLevelLabel}</span></div>
+          <div className="flex flex-1 items-baseline gap-1 min-w-0"><span className="text-[10px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</span><span className="text-[7px] text-indigo-300 whitespace-nowrap shrink-0">{breederLevelLabel}</span>{speciesLabel&&<span data-ranking-species-label className="shrink-0 rounded-full border border-cyan-400/40 bg-cyan-500/10 px-1.5 py-0.5 text-[7px] font-black text-cyan-200 whitespace-nowrap">{speciesLabel}</span>}</div>
           <div className="text-right text-[10px] font-black whitespace-nowrap text-indigo-300">{scoreLabel}</div>
         </div>
         {runStat&&<div data-ranking-run-stat={runStat.cleared?'turns':'wave'} className={`mt-0.5 text-right text-[8px] font-black whitespace-nowrap ${runStat.cleared?'text-amber-300':'text-slate-400'}`}>{runStat.cleared&&<Crown size={8} className="inline mr-0.5 mb-px"/>}{runStat.text}</div>}
@@ -16186,7 +16211,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ); })}</div>
       <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5" data-species-record-list>
         {nationalMode
-          ? <>{nationalStatus.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{nationalStatus.error&&nationalStatus.fetched&&<div className="text-center text-[9px] text-amber-300">{nationalStatus.error}</div>}{nationalRows.map(renderScoreRankingEntry)}{nationalRows.length===0&&(nationalStatus.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:nationalStatus.error&&!nationalStatus.fetched?rankingRetryButton(()=>loadRankings(nationalKey,false,true)):rankingEmptyText)}</>
+          ? <>{nationalStatus.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{nationalStatus.error&&nationalStatus.fetched&&<div className="text-center text-[9px] text-amber-300">{nationalStatus.error}</div>}{nationalRows.map((row,i)=>renderScoreRankingEntry(row,i,speciesFilter===SPECIES_RANK_TAB_ALL))}{nationalRows.length===0&&(nationalStatus.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:nationalStatus.error&&!nationalStatus.fetched?rankingRetryButton(()=>loadRankings(nationalKey,false,true)):rankingEmptyText)}</>
           : rows.length === 0
             ? <p className="rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400">{emptyText}</p>
             : rows}
@@ -18665,20 +18690,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {/* アイテム欄: 所持している消耗アイテムを一覧表示し、「使う」から対象のマスモンを選ぶ */}
-        {gameState==='ITEM_INVENTORY'&&(
+        {gameState==='ITEM_INVENTORY'&&(()=>{
+          // 超越の実(虹・種族別)はマーケットで売る商品ではなく種族チャレンジの初回クリア報酬でしか
+          // 増えないため、種族別ぶんはBREEDER_MARKET_ITEMSに登録していない(虹だけは購入もできるので
+          // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
+          const inventoryItems = [
+            ...BREEDER_MARKET_ITEMS.filter(item=>item.type==='item'&&(ownedItems[item.id]||0)>0),
+            ...Object.values(speciesTranscendFruitItems()).filter(item=>(ownedItems[item.id]||0)>0),
+          ];
+          return (
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
               <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-teal-400 uppercase tracking-widest">アイテム</h2>
             </div>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="inventory" compact/></div>
-            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">マーケットで買った消耗アイテムです。「使う」から対象のマスモンを選べます。</div>
+            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">マーケットで買った消耗アイテムと、種族チャレンジの報酬でもらった超越の実です。「使う」から対象のマスモンを選べます。</div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              {BREEDER_MARKET_ITEMS.filter(item=>item.type==='item'&&(ownedItems[item.id]||0)>0).length===0?(
+              {inventoryItems.length===0?(
                 <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🎒</span><div className="text-[11px] text-slate-400 mt-2">まだアイテムを持っていません。<br/>マーケットの「アイテム」タブから購入できます。</div></div>
               ):(
                 <div className="flex flex-col gap-2 pb-4">
-                  {BREEDER_MARKET_ITEMS.filter(item=>item.type==='item'&&(ownedItems[item.id]||0)>0).map(item=>(
+                  {inventoryItems.map(item=>(
                     <div key={item.id} className="rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-3 flex items-center gap-3">
                       <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30">{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-2xl">{item.emoji}</span>}</div>
                       <div className="flex-1 min-w-0">
@@ -18686,7 +18719,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="text-[8px] text-slate-400 leading-tight mt-0.5">{item.desc}</div>
                         <div className="text-[9px] font-black text-teal-300 mt-0.5">所持数: {ownedItems[item.id]}</div>
                       </div>
-                      {/* スキップチケットはマスモンに使うものではないため、使う場所だけ案内する */}
+                      {/* スキップチケットや超越の実はマスモン詳細の別の場所で使うものなので、使う場所だけ案内する */}
                       {item.usage==='battleSkip'
                         ? <div className="shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2">バトルの<br/>{DIFFICULTY_SETTINGS[item.skipDifficulty]?.label}<br/>スキップで使用</div>
                         : item.usage==='breakthrough'
@@ -18695,6 +18728,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>固有技強化で<br/>使用</div>
                         : item.usage==='transcendReset'
                         ? <div className="shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
+                        : item.usage==='transcendFruit'
+                        ? <div className="shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
                         : <button onClick={()=>setPendingItemUse(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>}
                     </div>
                   ))}
@@ -18702,7 +18737,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               )}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* アイテムの使用対象マスモンを選ぶ画面(アイテム欄で「使う」を押した直後) */}
         {pendingItemUse&&(()=>{
