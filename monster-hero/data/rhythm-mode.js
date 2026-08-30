@@ -84,3 +84,87 @@ const RHYTHM_SONGS = Object.freeze([
     ])))
   }),
 ]);
+
+// STEP B: 遠近化した5レーンに、既存ノーツ描画だけを追従させる。
+// 判定・入力座標・AudioContext時間には触れず、表示中ノーツのleft/widthだけを補正する。
+const installRhythmPerspectiveNoteVisuals=()=>{
+  if(typeof document==='undefined'||typeof requestAnimationFrame!=='function'||typeof MutationObserver==='undefined')return;
+  if(document.documentElement.dataset.rhythmPerspectiveNotes==='ready')return;
+  document.documentElement.dataset.rhythmPerspectiveNotes='ready';
+
+  const style=document.createElement('style');
+  style.textContent='[data-rhythm-note][data-note-type="HOLD"] [data-rhythm-hold-body]{clip-path:polygon(34% 0,66% 0,100% 100%,0 100%)}';
+  document.head.appendChild(style);
+
+  let area=null,notes=[],raf=0;
+  const meta=new WeakMap();
+  const reset=el=>{
+    const info=meta.get(el);
+    if(!info)return;
+    el.style.left=`calc(${info.lane*20}% + 5px)`;
+    el.style.width='calc(20% - 10px)';
+  };
+  const stop=()=>{
+    if(raf)cancelAnimationFrame(raf);
+    raf=0;
+    notes.forEach(reset);
+    notes=[];
+    area=null;
+  };
+  const noteLane=el=>{
+    const cached=meta.get(el);
+    if(cached)return cached.lane;
+    const match=String(el.style.left||'').match(/calc\(\s*([\d.]+)%/);
+    if(!match)return null;
+    const lane=Math.round(Number(match[1])/20);
+    if(lane<0||lane>=RHYTHM_LANE_COUNT)return null;
+    meta.set(el,{lane});
+    return lane;
+  };
+  const frame=()=>{
+    if(!area||!area.isConnected){stop();scan();return;}
+    const areaRect=area.getBoundingClientRect();
+    const line=area.querySelector('[data-rhythm-judgment-line]');
+    const lineRect=line?.getBoundingClientRect();
+    if(areaRect.width>0&&areaRect.height>0&&lineRect){
+      const judgeY=Math.max(1,lineRect.top-areaRect.top+lineRect.height/2);
+      const flatNoteWidth=Math.max(8,areaRect.width/RHYTHM_LANE_COUNT-10);
+      notes.forEach(el=>{
+        if(!el.isConnected||el.style.opacity==='0')return;
+        const move=String(el.style.transform||'').match(/translate3d\(\s*[-\d.]+(?:px)?\s*,\s*([-\d.]+)px/i);
+        if(!move)return;
+        const lane=noteLane(el);
+        if(lane===null)return;
+        const y=Number(move[1]);
+        if(!Number.isFinite(y))return;
+        const depth=Math.max(0,Math.min(1,y/judgeY));
+        const scale=.44+.56*depth;
+        const baseCenter=areaRect.width*((lane+.5)/RHYTHM_LANE_COUNT);
+        const visualCenter=areaRect.width/2+(baseCenter-areaRect.width/2)*scale;
+        const visualWidth=Math.max(8,flatNoteWidth*scale);
+        el.style.left=`${(visualCenter-visualWidth/2).toFixed(2)}px`;
+        el.style.width=`${visualWidth.toFixed(2)}px`;
+      });
+    }
+    raf=requestAnimationFrame(frame);
+  };
+  const start=next=>{
+    stop();
+    if(!next)return;
+    area=next;
+    notes=Array.from(area.querySelectorAll('[data-rhythm-note]'));
+    notes.forEach(noteLane);
+    raf=requestAnimationFrame(frame);
+  };
+  const scan=()=>{
+    const next=document.querySelector('[data-rhythm-play-area]');
+    if(next!==area)start(next);
+  };
+  const observe=()=>{
+    scan();
+    new MutationObserver(scan).observe(document.body,{childList:true,subtree:true});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe,{once:true});
+  else observe();
+};
+installRhythmPerspectiveNoteVisuals();
