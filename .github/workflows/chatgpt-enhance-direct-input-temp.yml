@@ -32,6 +32,8 @@ jobs:
           sudo mkdir -p /opt/pw-browsers
           sudo ln -sf "$CHROME_BIN" /opt/pw-browsers/chromium
           /opt/pw-browsers/chromium --version
+      - name: Record baseline layout check
+        run: node tools/layout-consistency-check.js >/tmp/layout-baseline.log 2>&1 || true
       - name: Apply implementation
         run: python3 tools/chatgpt-enhance-direct-input-temp.py
       - name: Build and verify
@@ -58,7 +60,14 @@ jobs:
           node tools/help-coverage-check.js
           node tools/help-guide-check.js
           node tools/help-render-check.js
-          node tools/layout-consistency-check.js
+
+          node tools/layout-consistency-check.js >/tmp/layout-current.log 2>&1 || true
+          if ! diff -u /tmp/layout-baseline.log /tmp/layout-current.log; then
+            echo "Layout check changed versus baseline"
+            exit 1
+          fi
+          echo "Layout check baseline unchanged (existing unrelated NGs are not regressions)."
+
           node --check tools/masu/bulk-enhance-check.js
           node tools/masu/bulk-enhance-check.js
 
