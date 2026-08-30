@@ -27,6 +27,24 @@ const rhythmLanePolygon=lane=>{
   const top=rhythmProjectLane(lane,0),bottom=rhythmProjectLane(lane,1);
   return `polygon(${(top.center-top.width/2)*100}% 0,${(top.center+top.width/2)*100}% 0,${(bottom.center+bottom.width/2)*100}% 100%,${(bottom.center-bottom.width/2)*100}% 100%)`;
 };
+const rhythmProjectTravelProgress=progress=>{
+  const p=Number(progress)||0;
+  if(p<0)return p*.72;
+  if(p>1)return 1+(p-1)*1.28;
+  return p*(.72+.28*p);
+};
+const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
+  if(!rect||!Number.isFinite(rect.width)||rect.width<=0||!Number.isFinite(rect.height)||rect.height<=0)return null;
+  const yRatio=Math.max(0,Math.min(1,(Number(clientY)-rect.top)/rect.height));
+  const scale=rhythmProjectionScale(yRatio),left=(1-scale)/2,nx=(Number(clientX)-rect.left)/rect.width;
+  if(!Number.isFinite(nx)||nx<left||nx>1-left)return null;
+  return (nx-left)/(scale/RHYTHM_LANE_COUNT)-.5;
+};
+const rhythmLaneAtPoint=(clientX,clientY,rect)=>{
+  const coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
+  if(coordinate===null)return null;
+  return Math.max(0,Math.min(RHYTHM_LANE_COUNT-1,Math.floor(coordinate+.5)));
+};
 
 const RHYTHM_FLICK_DISTANCE_PX = 24;
 const RHYTHM_FLICK_MAX_MS = 450;
@@ -62,10 +80,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     const rect=area.getBoundingClientRect();
     return rect&&Number.isFinite(rect.width)&&rect.width>0?rect:null;
   };
-  const normalizedX=clientX=>{
+  const laneCoordinate=(clientX,clientY)=>{
     const rect=areaRect();
     if(!rect)return null;
-    return Math.max(0,Math.min(1,(Number(clientX)-rect.left)/rect.width));
+    return rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
   };
   const estimatedSongMs=session=>{
     const elapsed=Math.max(0,nowPerf()-session.startPerfMs);
@@ -88,11 +106,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       return;
     }
     if(session.kind==='SLIDE'){
-      const nx=normalizedX(pos.clientX);
-      if(nx===null)return;
+      const actual=laneCoordinate(pos.clientX,pos.clientY);
+      if(actual===null){session.note.holdJudgment='MISS';session.failed=true;return;}
       const chartNow=estimatedSongMs(session)-session.offsetMs;
       const expected=rhythmSlideExpectedLane(session.note,chartNow);
-      const actual=nx*RHYTHM_LANE_COUNT-.5;
       if(Math.abs(actual-expected)>RHYTHM_SLIDE_TOLERANCE_LANES){
         session.note.holdJudgment='MISS';
         session.failed=true;
@@ -311,95 +328,50 @@ const installRhythmGestureVisuals=()=>{
 };
 installRhythmGestureVisuals();
 
-// STEP B: 遠近化した5レーンに、既存ノーツ描画だけを追従させる。
-// 判定・入力座標・AudioContext時間には触れず、表示中ノーツのleft/widthだけを補正する。
+const rhythmLayoutPlayArea=area=>{
+  if(!area)return;
+  const rect=area.getBoundingClientRect();
+  if(!(rect.width>0&&rect.height>0))return;
+  Array.from(area.querySelectorAll('[data-rhythm-lane]')).forEach((lane,index)=>{
+    lane.style.clipPath=rhythmLanePolygon(index);
+    const label=lane.querySelector('span'),at=rhythmProjectLane(index,.93);
+    if(label){label.style.left=`${at.center*100}%`;label.style.transform='translateX(-50%)';}
+  });
+  const line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=line?.getBoundingClientRect();
+  if(line&&lineRect){
+    const y=(lineRect.top-rect.top+lineRect.height/2)/rect.height,projection=rhythmProjectLane(2,y);
+    line.style.left=`${((1-projection.scale)/2)*100}%`;
+    line.style.right=`${((1-projection.scale)/2)*100}%`;
+  }
+};
+const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area)=>{
+  if(!el||!area)return;
+  const rect=area.getBoundingClientRect();
+  if(!(rect.width>0&&rect.height>0))return;
+  const lane=Number(visualLane),yRatio=Math.max(0,Math.min(1,(Number(yPx)+el.offsetHeight/2)/rect.height));
+  const projected=rhythmProjectLane(lane,yRatio),width=Math.max(8,rect.width*projected.width*.78),left=rect.width*projected.center-width/2;
+  el.style.left=`${left.toFixed(2)}px`;
+  el.style.width=`${width.toFixed(2)}px`;
+  const body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
+  if(!body)return;
+  const height=Math.max(0,parseFloat(getComputedStyle(body).height)||0),topY=Math.max(0,Number(yPx)-height);
+  const topLane=body.hasAttribute('data-rhythm-slide-body')?Number(note?.endLane??lane):lane;
+  const top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio),inset=.31;
+  body.style.left=`${(-left).toFixed(2)}px`;
+  body.style.width=`${rect.width.toFixed(2)}px`;
+  body.style.clipPath=`polygon(${((top.center-top.width*(.5-inset))*100).toFixed(3)}% 0,${((top.center+top.width*(.5-inset))*100).toFixed(3)}% 0,${((bottom.center+bottom.width*(.5-inset))*100).toFixed(3)}% 100%,${((bottom.center-bottom.width*(.5-inset))*100).toFixed(3)}% 100%)`;
+};
+
+// レーンのDOMが入れ替わった時だけ静的形状を設定する。ノーツはプレイ本体の1本のrAFから直接配置する。
 const installRhythmPerspectiveNoteVisuals=()=>{
-  if(typeof document==='undefined'||typeof requestAnimationFrame!=='function'||typeof MutationObserver==='undefined')return;
+  if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
   if(document.documentElement.dataset.rhythmPerspectiveNotes==='ready')return;
   document.documentElement.dataset.rhythmPerspectiveNotes='ready';
 
-  let area=null,notes=[],raf=0;
-  const meta=new WeakMap();
-  const reset=el=>{
-    const info=meta.get(el);
-    if(!info)return;
-    el.style.left=`calc(${info.lane*20}% + 5px)`;
-    el.style.width='calc(20% - 10px)';
-  };
-  const stop=()=>{
-    if(raf)cancelAnimationFrame(raf);
-    raf=0;
-    notes.forEach(reset);
-    notes=[];
-    area=null;
-  };
-  const noteLane=el=>{
-    const cached=meta.get(el);
-    if(cached)return cached.lane;
-    const match=String(el.style.left||'').match(/calc\(\s*([\d.]+)%/);
-    if(!match)return null;
-    const lane=Math.round(Number(match[1])/20);
-    if(lane<0||lane>=RHYTHM_LANE_COUNT)return null;
-    meta.set(el,{lane});
-    return lane;
-  };
-  const frame=()=>{
-    if(!area||!area.isConnected){stop();scan();return;}
-    const areaRect=area.getBoundingClientRect();
-    const line=area.querySelector('[data-rhythm-judgment-line]');
-    const lineRect=line?.getBoundingClientRect();
-    if(areaRect.width>0&&areaRect.height>0&&lineRect){
-      const judgeY=Math.max(1,lineRect.top-areaRect.top+lineRect.height/2);
-      const judgeProjection=rhythmProjectLane(2,judgeY/areaRect.height);
-      line.style.left=`${((1-judgeProjection.scale)/2)*100}%`;
-      line.style.right=`${((1-judgeProjection.scale)/2)*100}%`;
-      notes.forEach((el,index)=>{
-        if(!el.isConnected||el.style.opacity==='0')return;
-        const move=String(el.style.transform||'').match(/translate3d\(\s*[-\d.]+(?:px)?\s*,\s*([-\d.]+)px/i);
-        if(!move)return;
-        const lane=noteLane(el);
-        if(lane===null)return;
-        const y=Number(move[1]);
-        if(!Number.isFinite(y))return;
-        const yRatio=Math.max(0,Math.min(1,(y+el.offsetHeight/2)/areaRect.height));
-        const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(index);
-        const visualLane=activeSlideLane===null?lane:activeSlideLane;
-        const projected=rhythmProjectLane(visualLane,yRatio);
-        const visualCenter=areaRect.width*projected.center;
-        const visualWidth=Math.max(8,areaRect.width*projected.width*.78);
-        el.style.left=`${(visualCenter-visualWidth/2).toFixed(2)}px`;
-        el.style.width=`${visualWidth.toFixed(2)}px`;
-        const body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
-        if(body){
-          const height=Math.max(0,parseFloat(getComputedStyle(body).height)||0);
-          const topY=Math.max(0,y-height),note=atsuCupGestureTestChart.notes[index];
-          const topLane=body.hasAttribute('data-rhythm-slide-body')?Number(note?.endLane??lane):lane;
-          const top=rhythmProjectLane(topLane,topY/areaRect.height),bottom=rhythmProjectLane(visualLane,yRatio);
-          const inset=.31;
-          body.style.left=`${(-parseFloat(el.style.left)).toFixed(2)}px`;
-          body.style.width=`${areaRect.width.toFixed(2)}px`;
-          body.style.clipPath=`polygon(${((top.center-top.width*(.5-inset))*100).toFixed(3)}% 0,${((top.center+top.width*(.5-inset))*100).toFixed(3)}% 0,${((bottom.center+bottom.width*(.5-inset))*100).toFixed(3)}% 100%,${((bottom.center-bottom.width*(.5-inset))*100).toFixed(3)}% 100%)`;
-        }
-      });
-    }
-    raf=requestAnimationFrame(frame);
-  };
-  const start=next=>{
-    stop();
-    if(!next)return;
-    area=next;
-    Array.from(area.querySelectorAll('[data-rhythm-lane]')).forEach((lane,index)=>{
-      lane.style.clipPath=rhythmLanePolygon(index);
-      const label=lane.querySelector('span'),at=rhythmProjectLane(index,.93);
-      if(label){label.style.left=`${at.center*100}%`;label.style.transform='translateX(-50%)';}
-    });
-    notes=Array.from(area.querySelectorAll('[data-rhythm-note]'));
-    notes.forEach(noteLane);
-    raf=requestAnimationFrame(frame);
-  };
+  let area=null;
   const scan=()=>{
     const next=document.querySelector('[data-rhythm-play-area]');
-    if(next!==area)start(next);
+    if(next!==area){area=next;rhythmLayoutPlayArea(area);}
   };
   const observe=()=>{
     scan();
