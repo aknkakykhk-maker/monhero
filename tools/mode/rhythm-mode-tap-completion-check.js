@@ -19,7 +19,7 @@ if(helper){const c={RHYTHM_JUDGMENTS:context.out.RHYTHM_JUDGMENTS,RHYTHM_JUDGMEN
   check('達成フラグtrueを後から消さない',low.clear&&low.fullCombo&&low.allExcellent&&low.allMarvelous);
 }
 check('ノーツ移動はプレイエリア実高と判定ラインからpx計算',game.includes('area.getBoundingClientRect()')&&game.includes('line.getBoundingClientRect()')&&game.includes('travelPx:judgmentY-spawnY')&&game.includes('progress*travel.travelPx')&&game.includes('translate3d(0,${Math.round(yPx)}px,0)')&&!game.includes('Math.round(progress*100)}%'));
-check('ポーズ中は音源とrAFを止め入力・MISSを停止',game.includes('run.paused=true;stopFrame();run.audio.pause()')&&game.includes('run.finished||run.paused||note.done')&&game.includes("run.paused||view.status!=='playing'"));
+check('ポーズ中は音源とrAFを止め入力・MISSを停止',game.includes('run.paused=true;stopFrame();run.audio.pause()')&&game.includes('run.finished||run.paused||note.done')&&game.includes('const inputStarts=inputs=>{const run=runRef.current;if(!run||run.finished||run.paused)return;'));
 check('再開は同じoffsetから新しいBufferSourceを生成',game.includes('offsetSeconds=songTimeSeconds()')&&game.includes('const nextSource=ctx.createBufferSource()')&&game.includes('startSource(offsetSeconds)'));
 check('ポーズ中songTimeは進まずAudioContext時刻を正本にする',game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&!/Date\.now\(\)/.test(game.match(/const RhythmTapTest=[\s\S]*?\n};\n\nfunction MonsterHeroGame/)?.[0]||''));
 check('リスタートは0ms・全ノーツ・全集計を初期化',game.includes('offsetSeconds=0')&&game.includes('return startSource(0)')&&game.includes('run.counts=emptyCounts();run.fast=0;run.slow=0'));
