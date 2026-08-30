@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 09:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 09:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8184,6 +8184,9 @@ function MonsterHeroGame() {
   // AUTO∞もラン中だけの一時状態。リロード後は必ずOFFに戻す。
   const [autoRepeat, setAutoRepeat] = useState(false);
   const autoRepeatRef = useRef(false);
+  // AUTO中だけ使うBGMの一時上書き。保存済みBGMアレンジは書き換えない。
+  const [autoBgmOverride, setAutoBgmOverride] = useState(null);
+  const [showAutoBgmPicker, setShowAutoBgmPicker] = useState(false);
   const autoRepeatStartingRef = useRef(false);
   // その周の正規bondAwardsで実際に付与対象になった個体IDだけを、最終リザルト後の限界突破へ渡す。
   const autoRepeatBondAwardMasuIdsRef = useRef([]);
@@ -8223,6 +8226,8 @@ function MonsterHeroGame() {
     setAutoRepeat(false);
     setAutoRepeatBattleSpeed(false);
     setEcoModeSafe('off');
+    setAutoBgmOverride(null);
+    setShowAutoBgmPicker(false);
   };
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
@@ -8690,6 +8695,10 @@ function MonsterHeroGame() {
   const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const audioMuted = !audioOn;
+  const selectAutoRuntimeBgm = (trackId) => {
+    if (trackId !== '__none__' && !BGM_TRACK_BY_ID[trackId]) return;
+    setAutoBgmOverride(trackId);
+  };
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
   const toggleQuickMute = (automatic=false) => {
     if (automatic!==true) noteUltraAudioManualChange();
@@ -9578,7 +9587,10 @@ function MonsterHeroGame() {
       if (pandoraBossBgm) return pandoraBossBgm;
       // AUTO中はモード別の通常/デュラハン/ムー曲より専用AUTO曲を使う。
       // パンドラ勇者の最終ボス専用曲だけは上で優先する。
-      if (autoBattleRef.current) return bgmArrangement.autoBattle;
+      if (autoBattleRef.current) {
+        if (autoBgmOverride === '__none__') return '__silence_bgm__';
+        return autoBgmOverride || bgmArrangement.autoBattle;
+      }
       // 種族チャレンジはモードで1つに決める。EXTREME以上の難易度で遊んでも、
       // BGMアレンジの「種族」タブで選んだ曲がそのまま鳴る(設定したのに効かない枠を作らない)
       const modeBgm = isSpeciesChallengeMode(runMode)
@@ -9608,12 +9620,17 @@ function MonsterHeroGame() {
       if (!audioOn) Audio_.stopBGM();
       return;
     }
+    // AUTO中の「BGMなし」はSE設定を触らず、BGMだけ止める。
+    if (key === '__silence_bgm__') {
+      Audio_.stopBGM();
+      return;
+    }
     // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
     if (key) Audio_.preloadBGM(key);
     if (!audioOn) { Audio_.stopBGM(); return; }
     if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
@@ -15799,6 +15816,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         ))}
       </div>
       {updateNotice}
+      {showAutoBgmPicker&&(autoBattle||autoRepeat)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">AUTO BGM</div><div className="text-[10px] text-slate-400">このAUTOセッションだけ変更</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="AUTO中に再生するBGM" value={autoBgmOverride||bgmArrangement.autoBattle} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">AUTOを完全に終了すると、この一時選択は解除されます。BGMアレンジの保存内容は変更しません。</p></div></div>}
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {ultraEcoSession&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
       <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
@@ -19219,7 +19237,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[7px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
                 {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[7px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
               </div>
-              <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[7px]">固定</span>}</button><button onClick={toggleQuickMute} aria-label="音量" className="shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
+              <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial||autoRepeat} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':autoRepeat?'∞周回中は4倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} title={autoRepeat?'∞周回中は×4固定':undefined} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:cursor-not-allowed disabled:opacity-60" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}{autoRepeat&&<span className="ml-0.5 text-[7px]">固定</span>}</button><button onClick={toggleQuickMute} aria-label="音量" className="shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button>{(autoBattle||autoRepeat)&&<button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="AUTO BGMを選ぶ" title="AUTO BGM" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center rounded bg-indigo-800 border border-indigo-400/50 text-[13px] active:scale-90">🎵</button>}<button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
             </header>
             {ultraBattleView?(
               <div data-ultra-battle-view className="flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100">
