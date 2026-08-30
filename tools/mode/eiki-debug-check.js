@@ -1,16 +1,12 @@
-// 新レア「エイキ」の正式実装前確認。
+// 新レア「エイキ」の正式実装(市販開始後)の回帰チェック。
 //
 //   node tools/mode/eiki-debug-check.js
 //
-// 【この段階の位置づけ】
-// エイキはまだ正式実装していない。debugOnly:true を付けて、
-//   ・通常ロースター(解放していないので出ない)
-//   ・図鑑(dexMonsterList が debugOnly を外す)
-//   ・種族チャレンジの種族一覧・メンバー(同じく dexMonsterList 経由)
-//   ・マーケット(円盤石をまだ商品化していない)
-//   ・更新履歴・ヘルプ
-// のどこにも出ないまま、デバッグ戦の勇者モン選択からだけ選んで確かめられる状態にしてある。
-// ここでは「仕様どおりの数値になっているか」と「まだ表へ出ていないか」の両方を機械的に見る。
+// 正式実装前は debugOnly:true を付けて、通常ロースター・図鑑・マーケット・更新履歴・
+// ヘルプのどこにも出さず、デバッグ戦の勇者モン選択からだけ確かめられる状態にしていた
+// (この段階の検証はすでに完了・ユーザー承認済み)。正式実装で debugOnly を外し、
+// マーケット・図鑑・更新履歴・ヘルプへ表へ出したので、ここからは pandora-debug-check.js
+// と同じく「仕様どおりの数値のまま公開できているか」を見る通常の回帰チェックになる。
 //
 // 連撃の実測は、実装から rollCombo と同じ式を切り出して動かすのではなく、
 // game-system.jsx の該当行そのものを読み、倍率と回数を数えている
@@ -82,42 +78,40 @@ check('図鑑説明が入っている', typeof MONSTER_DEX_DESCRIPTIONS.Eiki ===
 check('図鑑説明が指定文のまま',
   MONSTER_DEX_DESCRIPTIONS.Eiki === 'ザンの純血を色濃く継ぎ、一つの体に桜と氷、相反する二つの力を宿す。人の目では追えない速さで舞い、花吹雪とともに敵を斬る。意外にも穏やかで、争いより美しいものを愛でる性質がある。');
 
-console.log('--- ④ まだ表へ出ていないこと(正式実装前) ---');
-check('debugOnly が立っている', eiki.debugOnly === true);
-check('図鑑一覧(dexMonsterList)が debugOnly を外している',
+console.log('--- ④ 正式実装で表へ出ていること ---');
+check('debugOnly を外している(正式実装済み)', eiki.debugOnly === undefined || eiki.debugOnly === false);
+check('図鑑一覧(dexMonsterList)は debugOnly だけを外す作りのまま(エイキ自身は対象外にならない)',
   /const dexMonsterList = \(\) => \(typeof ALL_PLAYER_MONSTERS !== 'undefined' \? Object\.values\(ALL_PLAYER_MONSTERS\)\.filter\(mon => mon && !mon\.debugOnly\) : \[\]\);/.test(source));
-// 円盤石の画像だけは breeder.js へ定数(EIKI_DISC_ICON)として先に置いてある。
-// 見るべきは「商品の並び(BREEDER_MARKET_ITEMS)へ入っていないか」なので、そこだけを取り出して確かめる
+// 円盤石は3商品(本人アイコン・円盤石アイコン・円盤石本体)がそろって並ぶ決まり(breeder.jsのコメント参照)
 const marketStart = breederSrc.indexOf('const BREEDER_MARKET_ITEMS = [');
 const marketSrc = marketStart >= 0 ? breederSrc.slice(marketStart) : '';
 check('マーケットの商品一覧を取り出せる', marketStart >= 0);
-check('マーケットへ商品として登録していない', !/Eiki|eiki/i.test(marketSrc));
-check('円盤石の画像だけは先に置いてある(商品ではない)', breederSrc.includes('EIKI_DISC_ICON'));
-check('更新履歴へ書いていない', !changelogSrc.includes('エイキ'));
-check('ヘルプへ書いていない', !helpSrc.includes('エイキ'));
-check('はじめから解放されるモンスターに入れていない', !/STARTER_MONSTER_IDS[^\n]*Eiki/.test(source));
-check('デバッグ戦の勇者モン選択にだけ並べる',
-  source.includes("const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);")
-  && /const debugHeroMonsterList = \(list\) => \{\s*\n\s*if \(!debugBattleRef\.current && !debugMonsterPreviewRef\.current\) return list;/.test(source));
-check('起動時の画像先読みからも外している',
+check("マーケットに「エイキのアイコン」がある(pt購入)", /\{ id:'eiki_icon', name:"エイキのアイコン", type:'icon'/.test(marketSrc));
+check("マーケットに「エイキの円盤石アイコン」がある(pt購入)", /\{ id:'eiki_disc_icon', name:"エイキの円盤石アイコン", type:'icon'/.test(marketSrc));
+check("マーケットに「エイキの円盤石」が3000ダイヤである(パンドラと同じ最上位価格)",
+  /\{ id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:3000 \}/.test(marketSrc));
+check('商品アイコンは専用の顔クロップ(EIKI_FACE_ICON)を使う(全身画像ではない)',
+  /\{ id:'eiki_icon', name:"エイキのアイコン", type:'icon', icon:EIKI_FACE_ICON, cost:1 \}/.test(marketSrc));
+check('MARKET_PROFILE_ICON_STYLESにEikiの拡大位置調整を増やしていない(専用の顔クロップがあるため不要)',
+  !/(^|[^_a-zA-Z])Eiki:\s*\{\s*scale/.test(source) && !/eiki_icon:\s*\{\s*scale/.test(source));
+check('更新履歴に新モンスター追加の項目がある', /新モンスター エイキを追加/.test(changelogSrc));
+check('更新履歴のマーケット追加は助手の告知(assistantNotice)付き',
+  /title: '新モンスター エイキを追加'[\s\S]{0,400}?assistantNotice: \{ id:'update_notice_eiki_market_v1', type:'market' \}/.test(changelogSrc));
+check('ヘルプのマーケット項目にエイキが載っている(アイコン・円盤石の一覧)',
+  /パンドラ・エイキの円盤石は各3000ダイヤ/.test(helpSrc));
+check('ヘルプの図鑑項目にエイキ専用の解説がある', /title:'エイキ', text:'エイキは「ザン × ？？？」のレアモンスター/.test(helpSrc));
+check('はじめから解放されるモンスターには入れない(円盤石購入で解放する仕様のまま)',
+  !/STARTER_MONSTER_IDS[^\n]*Eiki/.test(source));
+check('起動時の画像先読みは debugOnly だけを外す作りのまま(公開後は先読み対象になる)',
   source.includes("imageUrlsFor(allIds.filter(id => !ALL_PLAYER_MONSTERS[id]?.debugOnly))"));
-// debugOnly はマスモン登録も止める(セーブデータへ入らない)。既存の作りをそのまま使う
-check('デバッグのモード選択(⚔️ バトルモード)から入ると勇者モン選択に並ぶ',
+// デバッグ専用プレビューの仕組み(debugMonsterPreviewRef 等)は、次にdebugOnlyな新モンスターが
+// 増えたときのための汎用インフラとして残す(エイキ自身はもう使わないが、コードごと消さない)
+check('正式実装前プレビューの汎用インフラは次のモンスターのために残っている',
   /const debugMonsterPreviewRef = useRef\(false\);/.test(source)
-  && /if \(!debugBattleRef\.current && !debugMonsterPreviewRef\.current\) return list;/.test(source)
-  && /data-debug-battle-mode[\s\S]{0,200}?debugMonsterPreviewRef\.current=true/.test(source));
-check('HOMEへ戻るとそのしるしは落ちる',
-  /returnToHome = \(\) => \{[\s\S]{0,400}?debugMonsterPreviewRef\.current = false;/.test(source));
-check('エイキを連れた周回はスコア・全国ランキングへ残さない',
-  /if \(runHasDebugOnlyMonster\(\)\) return;/.test(source)
-  && /const runHasDebugOnlyMonster = \(\) => \[mainHero, \.\.\.slots\]\.some/.test(source));
-check('エイキを連れた周回はクリア回数・挑戦回数・ミッションにも数えない',
-  /debugBattleRef\.current \|\| runHasDebugOnlyMonster\(\)/.test(source)
-  && /!speciesChallengeBattleRunRef\.current && !runHasDebugOnlyMonster\(\)/.test(source)
-  && /正式実装前のモンスターを連れた周回は、クリア回数へも数えない/.test(source));
-check('マスモン登録の対象外(セーブデータへ入らない)',
+  && /if \(!debugBattleRef\.current && !debugMonsterPreviewRef\.current\) return list;/.test(source));
+check('マスモン登録の対象になる(debugOnlyが外れたので通常どおり登録できる)',
   source.includes('if (debugBattle || mainHero?.debugOnly) return null;')
-  && source.includes('if (!mainHero || mainHero.masuId || mainHero.debugOnly || debugBattleRef.current) return null;'));
+  && eiki.debugOnly !== true);
 
 console.log('--- ⑤ 勇者特性「桜花連舞」と固有効果「緋桜連華」---');
 check('特性名が 桜花連舞', eiki.trait === '桜花連舞');

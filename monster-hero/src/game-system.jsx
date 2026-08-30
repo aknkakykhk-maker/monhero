@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 18:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 19:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5945,8 +5945,8 @@ const MARKET_PROFILE_ICON_STYLES = {
   yaobikuni_disc_icon: { scale: 1.55, x: 0, y: 2 },
   mia_icon: { scale: 3.2, x: 0, y: 94 },
   Mia: { scale: 3.2, x: 0, y: 94 },
-  pandora_icon: { scale: 3.2, x: 0, y: 94 },
-  Pandora: { scale: 3.2, x: 0, y: 94 },
+  pandora_icon: { scale: 1.8, x: 0, y: 55 },
+  Pandora: { scale: 1.8, x: 0, y: 55 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
