@@ -36,11 +36,23 @@ jobs:
         run: python3 tools/chatgpt-enhance-direct-input-temp.py
       - name: Build and verify
         run: |
+          set -euo pipefail
           node tools/build.js
           node tools/check-syntax.js
           node tools/undefined-reference-check.js
           node tools/jsx-text-brace-check.js
           node tools/render-error-check.js
+
+          python3 tools/serve.py 8899 >/tmp/monhero-serve.log 2>&1 &
+          SERVE_PID=$!
+          trap 'kill $SERVE_PID 2>/dev/null || true' EXIT
+          READY=0
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8899/monster-hero/index.html >/dev/null; then READY=1; break; fi
+            sleep 0.5
+          done
+          if [ "$READY" != "1" ]; then cat /tmp/monhero-serve.log; exit 1; fi
+
           node tools/masu/masu-enhance-layer-check.js
           node tools/masu/transcendence-check.js
           node tools/help-coverage-check.js
@@ -48,15 +60,8 @@ jobs:
           node tools/help-render-check.js
           node tools/layout-consistency-check.js
           node --check tools/masu/bulk-enhance-check.js
-          python3 tools/serve.py 8899 >/tmp/monhero-serve.log 2>&1 &
-          SERVE_PID=$!
-          trap 'kill $SERVE_PID 2>/dev/null || true' EXIT
-          for i in $(seq 1 20); do
-            if curl -fsS http://127.0.0.1:8899/monster-hero/index.html >/dev/null; then break; fi
-            sleep 0.5
-          done
-          if ! kill -0 $SERVE_PID 2>/dev/null; then cat /tmp/monhero-serve.log; exit 1; fi
-          SMOKE_URL=http://127.0.0.1:8899/monster-hero/index.html node tools/masu/bulk-enhance-check.js
+          node tools/masu/bulk-enhance-check.js
+
           kill $SERVE_PID 2>/dev/null || true
           trap - EXIT
           node tools/build.js --check
