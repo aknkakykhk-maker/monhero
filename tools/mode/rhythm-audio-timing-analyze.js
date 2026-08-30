@@ -110,7 +110,7 @@ const phaseScore=(lag,phase)=>{
   for(let i=phase;i<frameCount;i+=lag){
     score+=gated[i]||0;
     if(i>0)score+=(gated[i-1]||0)*.45;
-    if(i+1<frameCount)score+=(ated[i+1]||0)*.45;
+    if(i+1<frameCount)score+=(gated[i+1]||0)*.45;
     hits++;
   }
   return hits?score/hits:0;
