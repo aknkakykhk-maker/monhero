@@ -27,7 +27,11 @@ const LABELS = ['染色1（髪・腹部のリボン・桜装飾）', '染色2（
 // そこでプラントと同じように、ズレを「境目の帯の中か外か」に分けて別々に見る。
 //   ・帯の外のズレ … 部位の取り違え(刀が鎧になる等)そのもの。ここは1画素も許さない
 //   ・帯の中のズレ … 縮小とならしのぶん。丸ごとずれていないかだけを上限で見る
-const BOUNDARY_MARGIN = 2;      // 境目とみなす距離(解析サイズでの画素数)
+// 境目とみなす距離。解析サイズでの画素数を直に書くと、解析解像度を変えたときに
+// 「見ている物理的な幅」が変わってしまう(2026年8月に384→768pxへ上げたとき、
+// 同じ絵なのに帯の外のズレが0px→21pxに増えた)。元絵での画素数で決めて、
+// マスクの解像度に合わせて換算する
+const BOUNDARY_MARGIN_SOURCE_PX = 6;
 const MAX_BOUNDARY_MISMATCH_RATE = 0.30; // 帯の中のズレの上限
 const MIN_ALL_MATCH_RATE = 0.97;         // 崩壊していないかだけを見る雑な下限
 const ALPHA_THRESHOLD = 128;
@@ -115,11 +119,15 @@ const writePreview = async (source, masks, recoloredImages, outPath) => {
     if (sourcePixels[i * 4 + 3] < 20) continue; // 絵の外は見ない
     wantedAt[i] = approvedRegion(approvedPixels, i * 4);
   }
-  // 半径 BOUNDARY_MARGIN 以内に別の染色があれば「境目の帯」
+  // 元絵での BOUNDARY_MARGIN_SOURCE_PX 分が、いまのマスク解像度で何画素にあたるか
+  const boundaryMargin = Math.max(1, Math.round(BOUNDARY_MARGIN_SOURCE_PX * width / source.width));
+  console.log(`境目の帯: 元絵${BOUNDARY_MARGIN_SOURCE_PX}px = マスク${boundaryMargin}px`
+    + `(マスク${width}x${height} / 元絵${source.width}x${source.height})`);
+  // 半径 boundaryMargin 以内に別の染色があれば「境目の帯」
   const isBoundary = (i) => {
     const x = i % width, y = (i - x) / width, w = wantedAt[i];
-    for (let dy = -BOUNDARY_MARGIN; dy <= BOUNDARY_MARGIN; dy++) {
-      for (let dx = -BOUNDARY_MARGIN; dx <= BOUNDARY_MARGIN; dx++) {
+    for (let dy = -boundaryMargin; dy <= boundaryMargin; dy++) {
+      for (let dx = -boundaryMargin; dx <= boundaryMargin; dx++) {
         const nx = x + dx, ny = y + dy;
         // 画像の外も「別の領域」。余白を切って絵が画像の端に接すると、いちばん端の
         // 画素は縮小のならしでマスクが薄くなり、境目とまったく同じ理由でずれる

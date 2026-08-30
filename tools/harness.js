@@ -31,6 +31,7 @@ const EXPORTED_NAMES = [
   'MASU_COLOR_EXCLUDE',
   'MASU_COLOR_SMOOTH',
   'MASU_COLOR_REGION_SIZE_OVERRIDES',
+  'EXACT_DYE_MASKS',
   'dyeRegionCount',
   'getDyeRegionMasks',
   'getRecoloredImage',

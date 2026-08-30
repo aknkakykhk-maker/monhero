@@ -8,9 +8,16 @@ const MASK_REL = 'images/monsters/mocchi-dye-mask.PNG';
 const MASK_PATH = path.join(REPO_ROOT, 'monster-hero', MASK_REL);
 const LABELS = ['染色1（赤）', '染色2（緑）', '染色3（青）', '染色対象外（透明）'];
 // 1024pxの正本を本番解析サイズへ縮小する境界の補間差だけを許容する。
-const MIN_REGION_MATCH_RATE = 0.995;
-const MIN_UNCOLORED_MATCH_RATE = 0.995;
-const MIN_ALL_MATCH_RATE = 0.995;
+//
+// この一致率は「本番の解析解像度」で数えているため、解析を細かくするほど
+// 境目の画素が増えて下がる。2026年8月に正式マスク経路の解析を384→768pxへ上げたとき、
+// 見た目は良くなったのにここだけ 99.87%→99.68% と下がった
+// (原寸で測ると 染め残し0.08%→0.02%、取り違え0.17%→0.09% と実際は改善している)。
+// そのため、ここは「マスクが丸ごとずれていないか」を見る粗い監視として基準を置き直す。
+// 実際の精度は解像度に左右されない image/dye-precision-check.js が原寸で見張る。
+const MIN_REGION_MATCH_RATE = 0.99;
+const MIN_UNCOLORED_MATCH_RATE = 0.99;
+const MIN_ALL_MATCH_RATE = 0.99;
 
 const pixelsAt = (image, width, height) => {
   const canvas = createCanvas(width, height);
