@@ -1,0 +1,136 @@
+name: Apply battle audio controls once
+on:
+  push:
+    branches: [chatgpt/battle-audio-controls-always]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: ${{ !contains(github.event.head_commit.message, '[battle-audio-controls-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/battle-audio-controls-always
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked tool dependencies
+        run: npm ci --ignore-scripts
+      - name: Apply battle audio UI changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('monster-hero/src/game-system.jsx')
+          s=p.read_text()
+
+          old='''{(autoBattle||autoRepeat)&&<button data-auto-bgm-button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="AUTO BGMを選ぶ" title="AUTO BGM" className="shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"><span className="block text-[13px] leading-none">🎵</span><span className="mt-0.5 block text-[7px] font-black leading-none">BGM</span></button>}'''
+          new='''<button data-auto-bgm-button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="バトルBGMと音量を調整" title="BGM / 音量" className="shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"><span className="block text-[13px] leading-none">🎵</span><span className="mt-0.5 block text-[7px] font-black leading-none">BGM</span></button>'''
+          n=s.count(old)
+          if n!=2:
+              raise SystemExit(f'BGM button pattern count expected 2, got {n}')
+          s=s.replace(old,new)
+
+          old_route='''      if (autoBattleRef.current) {
+        if (autoBgmOverride === '__none__') return '__silence_bgm__';
+        return autoBgmOverride || bgmArrangement.autoBattle;
+      }
+'''
+          new_route='''      // バトル画面のBGMボタンで選んだ曲は、手動/AUTOどちらでもそのラン中だけ優先する。
+      // 保存済みBGMアレンジは変更しない。パンドラ専用曲は上で優先する。
+      if (autoBgmOverride === '__none__') return '__silence_bgm__';
+      if (autoBgmOverride) return autoBgmOverride;
+      if (autoBattleRef.current) return bgmArrangement.autoBattle;
+'''
+          if old_route not in s:
+              raise SystemExit('BGM routing pattern not found')
+          s=s.replace(old_route,new_route,1)
+
+          start=s.find("{showAutoBgmPicker&&(autoBattle||autoRepeat)&&<div data-auto-bgm-picker")
+          if start<0:
+              raise SystemExit('AUTO BGM picker start not found')
+          end=s.find("</div></div>}", start)
+          if end<0:
+              raise SystemExit('AUTO BGM picker end not found')
+          end += len("</div></div>}")
+          picker=s[start:end]
+          picker_new='''{showAutoBgmPicker&&gameState==='BATTLE'&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p></div></div>}'''
+          s=s[:start]+picker_new+s[end:]
+          p.write_text(s)
+          PY
+      - name: Update help, changelog and regression check
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          hp=Path('monster-hero/data/help.js')
+          h=hp.read_text()
+          replacements=[
+            ('AUTO中はバトル画面の🎵ボタン','バトル中は画面下部の🎵BGMボタン'),
+            ('AUTO中のバトル画面にある🎵ボタン','バトル画面下部にある🎵BGMボタン'),
+          ]
+          changed=False
+          for a,b in replacements:
+              if a in h:
+                  h=h.replace(a,b)
+                  changed=True
+          # 既存のAUTO BGM説明へ音量共通化を追記できる場合だけ最小差分で追記
+          marker='BGMアレンジの保存内容は変更しません。'
+          addition=' BGMパネルではSE/BGM音量も調整でき、通常バトル中も常設表示されます。'
+          if marker in h and addition.strip() not in h:
+              h=h.replace(marker,marker+addition,1)
+              changed=True
+          if not changed:
+              raise SystemExit('help BGM guidance pattern not found')
+          hp.write_text(h)
+
+          cp=Path('monster-hero/data/changelog.js')
+          c=cp.read_text()
+          marker='const CHANGELOG = [\n'
+          if marker not in c:
+              raise SystemExit('changelog marker not found')
+          entry='''  {\n    date: "2026-08-30 10:00", type: 'update', title: 'バトル中の音量操作をまとめました', status: 'new',\n    items: [\n      '画面下部の🎵BGMボタンを通常バトル中も常設し、AUTOをOFFにしていても使えるようにしました。',\n      'BGMパネルにSE音量とBGM音量をまとめ、HOMEの音量設定と同じ保存値をその場で調整できるようにしました。',\n      'AUTO∞の超省エネ中は従来どおりSEをOFF固定にし、BGM選択・BGM音量だけ操作できます。',\n    ],\n  },\n'''
+          if "バトル中の音量操作をまとめました" not in c:
+              c=c.replace(marker,marker+entry,1)
+          cp.write_text(c)
+
+          rp=Path('tools/audio/auto-bgm-runtime-picker-check.js')
+          r=rp.read_text()
+          r=r.replace("check(file+': AUTO中は一時選択を優先',s.includes(\"if (autoBgmOverride === '__none__') return '__silence_bgm__';\")&&s.includes('return autoBgmOverride || bgmArrangement.autoBattle;'));",
+                      "check(file+': バトル中は一時選択を優先',s.includes(\"if (autoBgmOverride === '__none__') return '__silence_bgm__';\")&&s.includes('if (autoBgmOverride) return autoBgmOverride;')&&s.includes('if (autoBattleRef.current) return bgmArrangement.autoBattle;'));" )
+          r=r.replace("if(file.includes('/src/')) check(file+': BGM選択UIの主要文字列',s.includes('AUTO BGMを選ぶ')&&s.includes('BGMなし')&&s.includes('AUTO中に再生するBGM'));",
+                      "if(file.includes('/src/')) { check(file+': BGMボタン常設',s.includes('バトルBGMと音量を調整')&&!s.includes('{(autoBattle||autoRepeat)&&<button data-auto-bgm-button')); check(file+': BGM/SEパネル',s.includes('BGM / 音量')&&s.includes('label=\\\"SE\\\"')&&s.includes('label=\\\"BGM\\\"')&&s.includes('バトル中に再生するBGM')); }")
+          r=r.replace("check('ヘルプにAUTO BGM選択を掲載',help.includes('AUTO中はバトル画面の🎵ボタン'));",
+                      "check('ヘルプにバトルBGM操作を掲載',help.includes('🎵BGMボタン')&&help.includes('SE/BGM音量'));" )
+          rp.write_text(r)
+          PY
+      - name: Build
+        run: node tools/build.js
+      - name: Checks
+        shell: bash
+        run: |
+          node tools/audio/auto-bgm-runtime-picker-check.js
+          node tools/audio/auto-bgm-loop-continuity-check.js
+          node tools/audio/auto-ultra-bgm-check.js
+          node tools/audio/auto-repeat-result-bgm-check.js
+          node tools/audio/bgm-arrangement-check.js
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/help/help-coverage-check.js
+          node tools/help/help-guide-check.js
+          node tools/help/help-render-check.js
+          node tools/update-notice-check.js
+          node tools/build.js --check
+          git diff --check
+      - name: Remove one-shot workflow
+        run: rm -f .github/workflows/apply-battle-audio-controls-once.yml
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat: keep battle audio controls available [battle-audio-controls-applied]"
+          git push origin HEAD:chatgpt/battle-audio-controls-always
