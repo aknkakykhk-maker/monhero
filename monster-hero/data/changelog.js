@@ -3,6 +3,10 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-30 22:03", type:'fix', title:'音ゲーの同時押しを再修正', releaseFlag:'rhythmMode',
+    items:['iPhone Safariの同時押し入力をプレイエリアのnative Touch Eventsで直接取得し、同時に始まった複数指を1batchで判定する方式へ変更しました。TAP同時押し・HOLD同時押し・HOLD中の別レーンTAPを同じ入力経路で処理します。'],
+  },
+  {
     date: "2026-08-30 21:52", type: 'update', title: 'ランキングとアイテム欄を分かりやすくしました', status: 'new',
     items: [
       '種族チャレンジのランキング「全種族」タブに、その記録がどの種族のものかを名前の横に表示するようにしました。',
