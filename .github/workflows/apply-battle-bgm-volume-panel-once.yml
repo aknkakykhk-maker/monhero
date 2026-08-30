@@ -34,7 +34,7 @@ jobs:
           fs.writeFileSync(cp,c);
           const hp='monster-hero/data/help.js';
           let h=fs.readFileSync(hp,'utf8');
-          h=h.replace('AUTO中はバトル画面の🎵ボタンから、そのAUTOセッションだけ別の登録曲へ変更でき、「BGMなし」も選べます。','AUTO中はバトル画面下部の🎵ボタンから、そのAUTOセッションだけ別の登録曲へ変更でき、「BGMなし」も選べます。🎵ボタン内ではBGM音量も調整できます。');
+          h=h.replace('AUTO中はバトル画面の🎵ボタンから、そのAUTOセッションだけ別の登録曲へ変更でき、「BGMなし」も選べます。','AUTO中はバトル画面の🎵ボタン（下部）から、そのAUTOセッションだけ別の登録曲へ変更でき、「BGMなし」も選べます。🎵ボタン内ではBGM音量も調整できます。');
           fs.writeFileSync(hp,h);
           NODE
       - name: Build
