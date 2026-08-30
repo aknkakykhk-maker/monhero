@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 06aa8d701f080d66
+// source-sha256: 0794cd453eb89b9d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 19:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 20:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5996,6 +5996,19 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
 // 染色マスクを作るときに解析する画像の最大サイズ(px)。表示は大きくても250px程度なので、
 // これ以上の解像度で判定しても見た目は変わらず、時間だけがかかる
 const MASK_ANALYSIS_MAX_SIZE = 384;
+// 正式RGBマスク(EXACT_DYE_MASKS)を持つモンスターだけ、解析サイズをここまで上げる。
+//
+// 【なぜ分けるか】
+// 上の384pxは「色相から部位を推定する」経路のための値で、重いのは推定そのものではなく
+// そのあとの多数決の平滑化(半径が画像幅に比例するため、解像度を上げると実測7秒級)。
+// 正式マスクを持つモンスターは平滑化も色相の境界除外も走らず(下の !exactMask を参照)、
+// 「マスクの色を読んで部位番号にする」だけなので、解像度を上げても重くならない。
+// 逆に384pxのままだと、1024px級の元絵に対してマスクの1画素が元絵の約3画素ぶんになり、
+// 表示時にCSSで引き伸ばした境目が数px単位でずれる。実測でエイキは
+// 「染まるはずが染まらない画素」が2.59%、「対象外なのに染まる画素」が6.82%あった。
+// 表示は最大250px程度なので原寸まで上げる必要はなく、書き出しの上限(MASK_HIRES_MAX_SIZE)
+// と同じ768pxで頭打ちにする。
+const MASK_EXACT_ANALYSIS_MAX_SIZE = 768;
 // 判定は解析サイズ(上のMASK_ANALYSIS_MAX_SIZE)のままで、書き出すマスク画像だけを
 // 元絵に近い解像度へ引き上げるモンスター。
 // 元絵が解析サイズより大幅に大きいと、マスクの1画素が元絵の数画素ぶんに相当してしまい、
@@ -6341,7 +6354,15 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
           // 数秒かかり(実測3〜7秒)、起動時の読み込みが毎回長くなっていた。
           // 判定は正規化座標で行っており、平滑化の半径も画像幅に比例させているため、
           // 縮小しても部位の分かれ方は変わらない。
-          const scale = Math.min(1, MASK_ANALYSIS_MAX_SIZE / Math.max(natW, natH));
+          // 正式マスクがあるモンスターは、保存済みPNGの色を染色部位として使う。
+          // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
+          // 正式登録前のパンドラだけはDEBUG定義の保存済みマスクを直接選ぶ。
+          // どの経路を通るかで解析サイズが変わるので、縮小率を決める前に確定させる。
+          const exactMaskUrl = debugPlacement?.maskUrl || EXACT_DYE_MASKS[baseId] || null;
+          // 正式マスクは平滑化も色相の境界除外も通らない(「マスクの色を読むだけ」)ため、
+          // 解析サイズを上げても重くならない。境目のズレを減らすためこちらだけ高解像度にする
+          const analysisMax = exactMaskUrl ? MASK_EXACT_ANALYSIS_MAX_SIZE : MASK_ANALYSIS_MAX_SIZE;
+          const scale = Math.min(1, analysisMax / Math.max(natW, natH));
           const w = Math.max(1, Math.round(natW * scale)),
             h = Math.max(1, Math.round(natH * scale));
           const regionDefs = _resolveRegionDefsForSize(baseId, hues, natW);
@@ -6357,10 +6378,6 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
           srcCtx.imageSmoothingQuality = 'high';
           srcCtx.drawImage(img, 0, 0, w, h);
           const src = srcCtx.getImageData(0, 0, w, h).data;
-          // 正式マスクがあるモンスターは、保存済みPNGの色を染色部位として使う。
-          // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
-          // 正式登録前のパンドラだけはDEBUG定義の保存済みマスクを直接選ぶ。
-          const exactMaskUrl = debugPlacement?.maskUrl || EXACT_DYE_MASKS[baseId] || null;
           const exactMask = exactMaskUrl ? await _loadExactDyeMask(exactMaskUrl, w, h, debugPlacement || EXACT_DYE_MASK_PLACEMENT) : null;
           const aaAlphaThreshold = baseId === 'Mocchi' ? 96 : 200;
           const maskCanvases = regionDefs.map(() => {
@@ -6376,9 +6393,11 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
           }
           const maskDatas = maskCtxs.map(ctx => ctx.createImageData(w, h));
           // 塗り分けの境目(色が隣接するピクセルとの間でにじむ部分)も誤判定しやすいため、
-          // 先に全ピクセルの色相を計算しておき、隣接ピクセルと色相が大きく違う場所も除外する
+          // 先に全ピクセルの色相を計算しておき、隣接ピクセルと色相が大きく違う場所も除外する。
+          // 正式マスクのときは下の色相判定を丸ごと通らないので、この表も作らない
+          // (高解像度で解析するぶん、作ると無駄に時間だけかかる)
           const hueMap = new Float32Array(w * h).fill(NaN);
-          for (let i = 0; i < w * h; i++) {
+          if (!exactMask) for (let i = 0; i < w * h; i++) {
             const o = i * 4;
             if (src[o + 3] < 20) continue;
             hueMap[i] = _rgbToHsv(src[o], src[o + 1], src[o + 2])[0];

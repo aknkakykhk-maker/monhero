@@ -23,7 +23,7 @@ const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=4519062c1312";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=774d21917ef1";
 const PIXIE_IMG = "images/monsters/pixie.png?v=ecd7433b3190";
 const MIA_IMG = "images/monsters/mia.PNG?v=a2b1a26f451c";
-const PANDORA_IMG = "images/monsters/pandora.PNG?v=a30b71d43904";
+const PANDORA_IMG = "images/monsters/pandora.PNG?v=9f2a203dfec6";
 const PANDORA_DYE_MASK = "images/monsters/pandora-dye-mask.PNG?v=3dae0c26d9a1";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const GOLEM_IMG = "images/monsters/golem.png?v=8106dff84f6b";
