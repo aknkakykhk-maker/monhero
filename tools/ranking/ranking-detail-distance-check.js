@@ -20,8 +20,10 @@ const check = (name, ok, detail = '') => {
 const has = (needle) => src.includes(needle);
 
 // --- ① 3種のランキング ---
+// renderScoreRankingEntryだけは第3引数(showSpecies、種族チャレンジ「全種族」タブ用)を
+// 持つので、閉じ括弧までは固定せず「(entry, index」までの前方一致で見る
 for (const [kind, fn] of [['スコア', 'renderScoreRankingEntry'], ['ブリーダーLv', 'renderBreederRankingEntry'], ['絆Lv', 'renderBondRankingEntry']]) {
-  check(`${kind}ランキングのカードがある`, has(`const ${fn} = (entry, index)`));
+  check(`${kind}ランキングのカードがある`, has(`const ${fn} = (entry, index`));
 }
 
 // --- ② 古い記録の受け皿 ---
@@ -50,7 +52,7 @@ check('置いていた距離も出す',
 check('勇者モンが分かるようにする', has("const isHero=(m)=>m?.role==='hero'"));
 
 // --- ④ 一覧では染色しない(重いため) ---
-const listStart = src.indexOf('const renderScoreRankingEntry = (entry, index)');
+const listStart = src.indexOf('const renderScoreRankingEntry = (entry, index');
 const listEnd = src.indexOf('const renderBreederRankingEntry');
 const listBlock = src.slice(listStart, listEnd);
 check('一覧では染色しない(一覧はふつうの画像のまま)',
