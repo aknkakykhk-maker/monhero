@@ -44,6 +44,11 @@ jobs:
         run: |
           node tools/check-syntax.js
           node tools/undefined-reference-check.js
+      # このPRで実音源の拍グリッドを確定するためだけの一時解析。最終マージ前に削除する。
+      - name: Install ffmpeg for rhythm timing analysis
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
       - name: Analyze rhythm source audio timing
         run: node tools/mode/rhythm-audio-timing-analyze.js --require-ffmpeg --json
       - name: Check the boot path
