@@ -135,8 +135,10 @@ check('種族チャレンジの判定は自己ベストを書く分岐より前�
   submitFn.indexOf('submitSpeciesChallengeScoreOnce()') < submitFn.indexOf('mh_hs_${difficulty}'));
 check('最高到達WAVEへ入れない',
   source.includes('if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {'));
+// 条件はあとから増える(正式実装前のモンスターを連れた周回など)ので、
+// 「種族チャレンジを外していること」だけを見る
 check('挑戦回数へ入れない',
-  source.includes('if (!enemy && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {'));
+  /if \(!enemy && !extremeRunRef\.current && !debugBattleRef\.current && !speciesChallengeBattleRunRef\.current[^{]*\{/.test(source));
 const recordFn = source.slice(source.indexOf('const recordClearOnce = async () => {'), source.indexOf('// はじめての敗北かどうか'));
 check('クリア回数はチャレンジのキーへ入れない',
   recordFn.indexOf('if (speciesChallengeBattleRunRef.current) {') < recordFn.indexOf('mh_clears_${difficulty}'));

@@ -98,10 +98,23 @@ check('ヘルプへ書いていない', !helpSrc.includes('エイキ'));
 check('はじめから解放されるモンスターに入れていない', !/STARTER_MONSTER_IDS[^\n]*Eiki/.test(source));
 check('デバッグ戦の勇者モン選択にだけ並べる',
   source.includes("const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);")
-  && /const debugHeroMonsterList = \(list\) => \{\s*\n\s*if \(!debugBattleRef\.current\) return list;/.test(source));
+  && /const debugHeroMonsterList = \(list\) => \{\s*\n\s*if \(!debugBattleRef\.current && !debugMonsterPreviewRef\.current\) return list;/.test(source));
 check('起動時の画像先読みからも外している',
   source.includes("imageUrlsFor(allIds.filter(id => !ALL_PLAYER_MONSTERS[id]?.debugOnly))"));
 // debugOnly はマスモン登録も止める(セーブデータへ入らない)。既存の作りをそのまま使う
+check('デバッグのモード選択(⚔️ バトルモード)から入ると勇者モン選択に並ぶ',
+  /const debugMonsterPreviewRef = useRef\(false\);/.test(source)
+  && /if \(!debugBattleRef\.current && !debugMonsterPreviewRef\.current\) return list;/.test(source)
+  && /data-debug-battle-mode[\s\S]{0,200}?debugMonsterPreviewRef\.current=true/.test(source));
+check('HOMEへ戻るとそのしるしは落ちる',
+  /returnToHome = \(\) => \{[\s\S]{0,400}?debugMonsterPreviewRef\.current = false;/.test(source));
+check('エイキを連れた周回はスコア・全国ランキングへ残さない',
+  /if \(runHasDebugOnlyMonster\(\)\) return;/.test(source)
+  && /const runHasDebugOnlyMonster = \(\) => \[mainHero, \.\.\.slots\]\.some/.test(source));
+check('エイキを連れた周回はクリア回数・挑戦回数・ミッションにも数えない',
+  /debugBattleRef\.current \|\| runHasDebugOnlyMonster\(\)/.test(source)
+  && /!speciesChallengeBattleRunRef\.current && !runHasDebugOnlyMonster\(\)/.test(source)
+  && /正式実装前のモンスターを連れた周回は、クリア回数へも数えない/.test(source));
 check('マスモン登録の対象外(セーブデータへ入らない)',
   source.includes('if (debugBattle || mainHero?.debugOnly) return null;')
   && source.includes('if (!mainHero || mainHero.masuId || mainHero.debugOnly || debugBattleRef.current) return null;'));
