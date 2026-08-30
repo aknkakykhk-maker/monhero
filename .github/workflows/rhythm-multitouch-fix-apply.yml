@@ -40,9 +40,9 @@ jobs:
           node tools/mode/rhythm-mode-tap-completion-check.js
           node tools/mode/rhythm-mode-hold-engine-check.js
           node tools/mode/rhythm-mode-multitouch-check.js
-          node tools/help/help-coverage-check.js
-          node tools/help/help-guide-check.js
-          node tools/help/help-render-check.js
+          node tools/help-coverage-check.js
+          node tools/help-guide-check.js
+          node tools/help-render-check.js
           git diff --check
       - name: Commit fix and remove temporary files
         shell: bash
