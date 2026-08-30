@@ -27,7 +27,7 @@ const has = (needle) => source.includes(needle);
 
 // --- 対象の定義と挙動 ---
 check('縦長の立ち絵を持つ対象がcontainに定義されている',
-  has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora']);"));
+  has("const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki']);"));
 
 const fnCtx = {};
 vm.createContext(fnCtx);
@@ -38,6 +38,7 @@ if (containSrc) {
   const fit = fnCtx.__f;
   check('ウンディーネはcontainになる', fit('Undine', { width: '64px' }).objectFit === 'contain');
   check('ヤオビクニはcontainになる', fit('Yaobikuni', {}).objectFit === 'contain');
+  check('エイキはcontainになる', fit('Eiki', { width: '64px' }).objectFit === 'contain');
   check('対象外(例: スネグーラチカ)は元のスタイルのまま', fit('Snegurochka', { width: '64px' }).objectFit === undefined);
   check('スタイルが無くても落ちない', fit('Undine', undefined).objectFit === 'contain');
 }
@@ -59,7 +60,7 @@ if (maskSrc && containSrc) {
   check('sm:object-containのような別条件のクラスは拾わない', maskSize('w-full h-full sm:object-contain', {}) === '100% 100%');
   // 絵の収め方とマスクの収め方が、どのモンスター・どの枠でも必ず一致することを見る。
   // ここがずれると「絵とマスクの縮尺が違う」= 別の場所が染まる、になる。
-  for (const baseId of ['Undine', 'Yaobikuni', 'Plant', 'Mocchi', 'Snegurochka']) {
+  for (const baseId of ['Undine', 'Yaobikuni', 'Eiki', 'Plant', 'Mocchi', 'Snegurochka']) {
     for (const className of ['w-full h-full object-cover', 'w-full h-full object-contain']) {
       const style = fitStyle(baseId, {});
       const wanted = style.objectFit || (className.includes('object-contain') ? 'contain' : 'cover');

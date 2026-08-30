@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4dfd9e2d5ad2b2b0
+// source-sha256: bba9f2637818b8fa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 18:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 18:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6591,7 +6591,7 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // 立ち絵が縦長(2:3)のモンスター。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki']);
 const monsterArtFitStyle = (baseId, style) => MONSTER_ART_CONTAIN_IDS.includes(baseId) ? {
   ...style,
   objectFit: 'contain'
@@ -14580,6 +14580,10 @@ function MonsterHeroGame() {
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
   const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
+  // モンスター画像・染色確認から、専用の攻撃モーション(atkMotion)を実際に再生して見るための状態。
+  // 形は本番の attackAnim と同じ({charge}→{zanCombo,sakura}や{charge:false,motion,sakura})にして、
+  // 同じ attackMotionAnimation/EikiSakuraPetals をそのまま使い、演出だけ別に持たない
+  const [monsterImageDebugMotionPlaying, setMonsterImageDebugMotionPlaying] = useState(null);
   // 本番の選択フローと進行デバッグで、STEP1の保存形式・helperを共有する。
   // 選択中の種族・難易度だけがデバッグ専用で、保存先は既存の進行キー1つに限る。
   const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(() => speciesChallengeLineages()[0]?.id || '');
@@ -32768,6 +32772,18 @@ function MonsterHeroGame() {
           colors: []
         });
       });
+      // 正式実装前のモンスター(debugOnly)は、そもそもマスモン登録ができない
+      // (registerMasuFromRun 側で弾いている)ため、上のマスモン一覧には絶対に出てこない。
+      // 所持を経ずにここへ入れておくことで、実装中でも立ち絵・染色・顔アイコン・
+      // 攻撃モーションを保存データに触れず確認できるようにする
+      Object.values(ALL_PLAYER_MONSTERS).forEach(mon => {
+        if (mon?.debugOnly && !owned.some(m => m.baseId === mon.id)) owned.push({
+          id: `debug-preview-${mon.id}`,
+          baseId: mon.id,
+          name: `${mon.name}（実装確認・DEBUG専用）`,
+          colors: []
+        });
+      });
       const selected = owned.find(m => String(m.id) === String(monsterImageDebugId)) || owned[0];
       if (!selected) return /*#__PURE__*/React.createElement("main", {
         className: "flex-1 p-4"
@@ -32837,6 +32853,9 @@ function MonsterHeroGame() {
       const renderCurrent = (label, sourceKey, palette, frameClass = 'h-32', fit = 'object-contain') => {
         if (isTiger) return renderPair(label, sourceKey, palette, frameClass, fit);
         const src = oldSources[sourceKey];
+        // 染色なし(元画像)の表示も、本番と同じ収め方(MONSTER_ART_CONTAIN_IDSのcontain上書き)を通す。
+        // ここを通さないと、縦長の立ち絵(ウンディーネ・エイキ等)の「元画像」だけ本番よりきつく
+        // 切り取られて出てしまい、確認画面のほうが実際の見え方より悪く見えてしまう
         return /*#__PURE__*/React.createElement("section", {
           className: "rounded-xl bg-black/30 p-2 text-center"
         }, /*#__PURE__*/React.createElement("b", {
@@ -32847,7 +32866,8 @@ function MonsterHeroGame() {
         }, palette === null ? /*#__PURE__*/React.createElement("img", {
           src: src,
           alt: label,
-          className: `w-full h-full ${fit}`
+          className: `w-full h-full ${fit}`,
+          style: monsterArtFitStyle(base.id, undefined)
         }) : /*#__PURE__*/React.createElement(DyedMonsterImage, {
           baseId: base.id,
           src: src,
@@ -32864,6 +32884,33 @@ function MonsterHeroGame() {
         } = splitColorAlpha(c);
         const name = _parseCustomColorId(base) ? `カスタム(${base})` : MASU_COLOR_LABELS[base] || base;
         return alpha < MASU_COLOR_ALPHA_MAX ? `${name} 濃さ${alpha}%` : name;
+      };
+      // 専用の攻撃モーション(atkMotion)を、本番のバトル画面とまったく同じ関数・同じCSSで再生する。
+      // パンドラの分身(pandoraDualThunder)は枠を動かすのではなく専用コンポーネントが要るため、ここでは対象外にする
+      const atkMotion = base.atkMotion || 'default';
+      const motionSupported = atkMotion !== 'default' && atkMotion !== 'pandoraDualThunder';
+      const isDashMotion = atkMotion === 'zanCombo' || atkMotion === 'eikiSakuraCombo';
+      const playMotionPreview = async () => {
+        if (!motionSupported || monsterImageDebugMotionPlaying) return;
+        setMonsterImageDebugMotionPlaying({
+          charge: true
+        });
+        await new Promise(r => setTimeout(r, 650));
+        if (isDashMotion) {
+          setMonsterImageDebugMotionPlaying({
+            zanCombo: true,
+            sakura: atkMotion === 'eikiSakuraCombo'
+          });
+          await new Promise(r => setTimeout(r, 320));
+        } else {
+          setMonsterImageDebugMotionPlaying({
+            charge: false,
+            motion: atkMotion,
+            sakura: false
+          });
+          await new Promise(r => setTimeout(r, atkMotion === 'floatStab' ? 700 : atkMotion === 'waterBurst' ? 520 : 500));
+        }
+        setMonsterImageDebugMotionPlaying(null);
       };
       return /*#__PURE__*/React.createElement("main", {
         className: "flex-1 flex flex-col h-full min-h-0 p-3",
@@ -32957,7 +33004,32 @@ function MonsterHeroGame() {
         className: "text-[10px] font-black text-cyan-300"
       }, "\u5B9F\u969B\u306E\u8868\u793A\u6761\u4EF6"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
-      }, renderCurrent('バトル／立ち絵', 'imgUrl', colors, 'h-36', 'object-contain'), renderCurrent('一覧／全身アイコン', 'iconUrl', colors, 'h-24', 'object-cover'), renderCurrent('詳細／大きな全身表示', 'imgUrl', colors, 'h-40', 'object-contain'), renderCurrent('顔アイコン', 'faceIconUrl', colors, 'h-20 rounded-full', 'object-cover'), renderCurrent('プロフィール／選択アイコン', 'faceIconUrl', colors, 'h-16 rounded-full', 'object-cover'), renderCurrent('小型／編成枠', 'imgUrl', colors, 'h-12 rounded-full', 'object-contain')), /*#__PURE__*/React.createElement("section", {
+      }, renderCurrent('バトル／立ち絵', 'imgUrl', colors, 'h-36', 'object-contain'), renderCurrent('一覧／全身アイコン', 'iconUrl', colors, 'h-24', 'object-cover'), renderCurrent('詳細／大きな全身表示', 'imgUrl', colors, 'h-40', 'object-contain'), renderCurrent('顔アイコン', 'faceIconUrl', colors, 'h-20 rounded-full', 'object-cover'), renderCurrent('プロフィール／選択アイコン', 'faceIconUrl', colors, 'h-16 rounded-full', 'object-cover'), renderCurrent('小型／編成枠', 'imgUrl', colors, 'h-12 rounded-full', 'object-contain')), motionSupported && /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-[10px] font-black text-cyan-300"
+      }, "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D\uFF08atkMotion: ", atkMotion, "\uFF09"), /*#__PURE__*/React.createElement("p", {
+        className: "mb-2 text-[8px] leading-relaxed text-slate-400"
+      }, "\u672C\u756A\u306E\u30D0\u30C8\u30EB\u753B\u9762\u3068\u540C\u3058\u95A2\u6570\u30FB\u540C\u3058CSS\u3067\u3053\u306E\u5834\u3067\u518D\u751F\u3059\u308B\u3002\u9023\u6483\u306E\u5DFB\u304D\u6DFB\u3048\u30D2\u30C3\u30C8\u306F\u7121\u3044\u306E\u3067\u3053\u306E1\u56DE\u3060\u3051\u52D5\u304F\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "mx-auto h-28 w-28 overflow-hidden rounded-xl border border-white/20",
+        style: bgStyle
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "relative h-full w-full",
+        style: {
+          isolation: 'isolate',
+          animation: attackMotionAnimation(monsterImageDebugMotionPlaying)
+        }
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: base.id,
+        src: oldSources.imgUrl,
+        alt: "\u653B\u6483\u30E2\u30FC\u30B7\u30E7\u30F3\u78BA\u8A8D",
+        masuColors: colors,
+        className: "h-full w-full object-contain"
+      }), monsterImageDebugMotionPlaying?.sakura && /*#__PURE__*/React.createElement(EikiSakuraPetals, null))), /*#__PURE__*/React.createElement("button", {
+        onClick: playMotionPreview,
+        disabled: !!monsterImageDebugMotionPlaying,
+        className: "mt-2 w-full min-h-[42px] rounded-xl bg-cyan-700 text-[10px] font-black disabled:opacity-40"
+      }, monsterImageDebugMotionPlaying ? '再生中…' : '攻撃モーションを再生')), /*#__PURE__*/React.createElement("section", {
         className: "rounded-xl bg-black/40 p-3 text-[8px] break-all"
       }, /*#__PURE__*/React.createElement("b", null, "baseId: ", selected.baseId), variants.map(([name, v]) => /*#__PURE__*/React.createElement("div", {
         key: name

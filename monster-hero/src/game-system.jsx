@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 18:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 18:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3863,7 +3863,7 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // 立ち絵が縦長(2:3)のモンスター。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
 // 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
-const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora']);
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora', 'Eiki']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
 // 技カードのアイコンのように、絵は出すのに baseId を持ち回れない場所がある。
 // そこだけ収め方が抜けていて、ウンディーネ・ヤオビクニの固有技カードで頭が切れていた。
@@ -8017,6 +8017,10 @@ function MonsterHeroGame() {
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
   const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
+  // モンスター画像・染色確認から、専用の攻撃モーション(atkMotion)を実際に再生して見るための状態。
+  // 形は本番の attackAnim と同じ({charge}→{zanCombo,sakura}や{charge:false,motion,sakura})にして、
+  // 同じ attackMotionAnimation/EikiSakuraPetals をそのまま使い、演出だけ別に持たない
+  const [monsterImageDebugMotionPlaying, setMonsterImageDebugMotionPlaying] = useState(null);
   // 本番の選択フローと進行デバッグで、STEP1の保存形式・helperを共有する。
   // 選択中の種族・難易度だけがデバッグ専用で、保存先は既存の進行キー1つに限る。
   const [speciesChallengeDebugSpeciesId, setSpeciesChallengeDebugSpeciesId] = useState(()=>speciesChallengeLineages()[0]?.id||'');
@@ -17533,6 +17537,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const owned=[...masuMons.filter(m=>ALL_PLAYER_MONSTERS[m.baseId])];
           if(temporaryDyeMasks.Mia)owned.push({id:'temporary-dye-Mia',baseId:'Mia',name:'ミーア（一時確認）',colors:[]});
           Object.keys(temporaryDyeMasks).forEach(baseId=>{if(!owned.some(m=>m.baseId===baseId)&&ALL_PLAYER_MONSTERS[baseId])owned.push({id:`temporary-dye-${baseId}`,baseId,name:`${ALL_PLAYER_MONSTERS[baseId].name}（一時確認）`,colors:[]});});
+          // 正式実装前のモンスター(debugOnly)は、そもそもマスモン登録ができない
+          // (registerMasuFromRun 側で弾いている)ため、上のマスモン一覧には絶対に出てこない。
+          // 所持を経ずにここへ入れておくことで、実装中でも立ち絵・染色・顔アイコン・
+          // 攻撃モーションを保存データに触れず確認できるようにする
+          Object.values(ALL_PLAYER_MONSTERS).forEach(mon=>{if(mon?.debugOnly&&!owned.some(m=>m.baseId===mon.id))owned.push({id:`debug-preview-${mon.id}`,baseId:mon.id,name:`${mon.name}（実装確認・DEBUG専用）`,colors:[]});});
           const selected=owned.find(m=>String(m.id)===String(monsterImageDebugId))||owned[0];
           if(!selected)return <main className="flex-1 p-4"><header className="flex items-center"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3"><ArrowLeft/></button><h2 className="font-black">モンスター画像・染色確認</h2></header><p className="p-6 text-center text-slate-400">確認できる所持モンスター個体がありません。</p></main>;
           const base=ALL_PLAYER_MONSTERS[selected.baseId];
@@ -17545,8 +17554,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const variants=isTiger&&monsterImageDebugTigerMode==='compare'?[['旧',oldSources],['新',newSources]]:[[isTiger&&monsterImageDebugTigerMode==='new'?'新':'本番',isTiger&&monsterImageDebugTigerMode==='new'?newSources:oldSources]];
           const bgStyle=monsterImageDebugBg==='white'?{background:'#fff'}:monsterImageDebugBg==='black'?{background:'#000'}:{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'};
           const renderPair=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=><section className="rounded-xl bg-black/30 p-2"><b className="block mb-2 text-center text-[9px] text-cyan-200">{label}</b><div className={`grid gap-2 ${variants.length===2?'grid-cols-2':'grid-cols-1'}`}>{variants.map(([name,sources])=><div key={name} className="text-center"><div className={`${frameClass} overflow-hidden border border-white/20 flex items-center justify-center`} style={bgStyle}>{palette===null?<img src={sources[sourceKey]} alt={`${name}${label}`} className={`w-full h-full ${fit}`}/>:<DyedMonsterImage baseId="Tiger" src={sources[sourceKey]} alt={`${name}${label}`} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div><small className="text-[8px] font-black">{name}</small></div>)}</div></section>;
-          const renderCurrent=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=>{if(isTiger)return renderPair(label,sourceKey,palette,frameClass,fit);const src=oldSources[sourceKey];return <section className="rounded-xl bg-black/30 p-2 text-center"><b className="block mb-2 text-[9px] text-cyan-200">{label}</b><div className={`${frameClass} overflow-hidden border border-white/20`} style={bgStyle}>{palette===null?<img src={src} alt={label} className={`w-full h-full ${fit}`}/>:<DyedMonsterImage baseId={base.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div></section>};
+          const renderCurrent=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=>{if(isTiger)return renderPair(label,sourceKey,palette,frameClass,fit);const src=oldSources[sourceKey];
+            // 染色なし(元画像)の表示も、本番と同じ収め方(MONSTER_ART_CONTAIN_IDSのcontain上書き)を通す。
+            // ここを通さないと、縦長の立ち絵(ウンディーネ・エイキ等)の「元画像」だけ本番よりきつく
+            // 切り取られて出てしまい、確認画面のほうが実際の見え方より悪く見えてしまう
+            return <section className="rounded-xl bg-black/30 p-2 text-center"><b className="block mb-2 text-[9px] text-cyan-200">{label}</b><div className={`${frameClass} overflow-hidden border border-white/20`} style={bgStyle}>{palette===null?<img src={src} alt={label} className={`w-full h-full ${fit}`} style={monsterArtFitStyle(base.id,undefined)}/>:<DyedMonsterImage baseId={base.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div></section>};
           const colorText=(c)=>{if(!c)return '元の色';const{base,alpha}=splitColorAlpha(c);const name=_parseCustomColorId(base)?`カスタム(${base})`:(MASU_COLOR_LABELS[base]||base);return alpha<MASU_COLOR_ALPHA_MAX?`${name} 濃さ${alpha}%`:name;};
+          // 専用の攻撃モーション(atkMotion)を、本番のバトル画面とまったく同じ関数・同じCSSで再生する。
+          // パンドラの分身(pandoraDualThunder)は枠を動かすのではなく専用コンポーネントが要るため、ここでは対象外にする
+          const atkMotion=base.atkMotion||'default';
+          const motionSupported=atkMotion!=='default'&&atkMotion!=='pandoraDualThunder';
+          const isDashMotion=atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo';
+          const playMotionPreview=async()=>{
+            if(!motionSupported||monsterImageDebugMotionPlaying)return;
+            setMonsterImageDebugMotionPlaying({charge:true});
+            await new Promise(r=>setTimeout(r,650));
+            if(isDashMotion){
+              setMonsterImageDebugMotionPlaying({zanCombo:true,sakura:atkMotion==='eikiSakuraCombo'});
+              await new Promise(r=>setTimeout(r,320));
+            }else{
+              setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
+              await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?520:500)));
+            }
+            setMonsterImageDebugMotionPlaying(null);
+          };
           return <main className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存されません</small><h2 className="text-sm font-black">モンスター画像・染色確認</h2></div>{temporaryDyeMasks[selected.baseId]&&<span className="ml-auto rounded-full bg-fuchsia-800 px-2 py-1 text-[8px] font-black">一時反映中</span>}</header>
             {temporaryDyeMasks[selected.baseId]&&dyeMaskEditorOpened&&<button onClick={()=>setGameState('DYE_MASK_POSITION_DEBUG')} className="mb-2 min-h-[42px] shrink-0 rounded-xl border border-fuchsia-300 bg-fuchsia-800 text-[10px] font-black">マスク編集へ戻る</button>}
@@ -17557,6 +17588,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色（{regionCount}部位）</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>
               <div className="grid grid-cols-2 gap-2">{renderCurrent('元画像','imgUrl',null)}{renderCurrent('実際の合成後プレビュー','imgUrl',colors)}{Array.from({length:regionCount},(_,i)=>renderCurrent(`染色${i+1}のみ`,'imgUrl',colors.map((c,j)=>i===j?c:null)))}</div>
               <h3 className="text-[10px] font-black text-cyan-300">実際の表示条件</h3><div className="grid grid-cols-2 gap-2">{renderCurrent('バトル／立ち絵','imgUrl',colors,'h-36','object-contain')}{renderCurrent('一覧／全身アイコン','iconUrl',colors,'h-24','object-cover')}{renderCurrent('詳細／大きな全身表示','imgUrl',colors,'h-40','object-contain')}{renderCurrent('顔アイコン','faceIconUrl',colors,'h-20 rounded-full','object-cover')}{renderCurrent('プロフィール／選択アイコン','faceIconUrl',colors,'h-16 rounded-full','object-cover')}{renderCurrent('小型／編成枠','imgUrl',colors,'h-12 rounded-full','object-contain')}</div>
+              {motionSupported&&(
+                <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
+                  <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>
+                  <p className="mb-2 text-[8px] leading-relaxed text-slate-400">本番のバトル画面と同じ関数・同じCSSでこの場で再生する。連撃の巻き添えヒットは無いのでこの1回だけ動く。</p>
+                  <div className="mx-auto h-28 w-28 overflow-hidden rounded-xl border border-white/20" style={bgStyle}>
+                    <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}>
+                      <DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>
+                      {monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}
+                    </div>
+                  </div>
+                  <button onClick={playMotionPreview} disabled={!!monsterImageDebugMotionPlaying} className="mt-2 w-full min-h-[42px] rounded-xl bg-cyan-700 text-[10px] font-black disabled:opacity-40">{monsterImageDebugMotionPlaying?'再生中…':'攻撃モーションを再生'}</button>
+                </section>
+              )}
               <section className="rounded-xl bg-black/40 p-3 text-[8px] break-all"><b>baseId: {selected.baseId}</b>{variants.map(([name,v])=><div key={name}>{name}: imgUrl={v.imgUrl} / iconUrl={v.iconUrl} / faceIconUrl={v.faceIconUrl}</div>)}</section>
             </div>
           </main>;

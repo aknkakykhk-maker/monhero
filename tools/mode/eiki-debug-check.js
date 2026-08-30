@@ -250,6 +250,29 @@ const discCheck = async () => {
     `エイキ ${mine.color.toFixed(1)} / 既存の最大 ${worst.toFixed(1)}`);
 };
 
+console.log('--- ⑨ 縦長立ち絵の丸枠(object-cover)対策 ---');
+// エイキの立ち絵は縦長(2:3寄り)で、しかもV字の角が絵の上端ぎりぎりまで伸びている。
+// 丸アイコン等で既定の object-cover のままだと角の先端が水平に切れてしまう
+// (実際に「アイコンが切れてる」という指摘で見つかった)。ウンディーネ・ヤオビクニ・
+// ミーア・パンドラと同じ対策(MONSTER_ART_CONTAIN_IDSでobject-containへ上書き)へ加える
+check('縦長立ち絵の丸枠対策(MONSTER_ART_CONTAIN_IDS)にエイキが入っている',
+  /MONSTER_ART_CONTAIN_IDS = Object\.freeze\(\[[^\]]*'Eiki'[^\]]*\]\)/.test(source));
+
+console.log('--- ⑩ 既存デバッグ画面(モンスター画像・染色確認)からも見られること ---');
+// エイキはdebugOnlyのためマスモン登録ができず、通常の「所持モンスター個体」経由では
+// この画面(MONSTER_IMAGE_DEBUG)へ出せない。所持を経ずに直接差し込んでいるかを確かめる
+check('MONSTER_IMAGE_DEBUGの選択肢へ debugOnly モンスターを所持を問わず差し込んでいる',
+  /Object\.values\(ALL_PLAYER_MONSTERS\)\.forEach\(mon=>\{if\(mon\?\.debugOnly&&!owned\.some\(m=>m\.baseId===mon\.id\)\)owned\.push\(\{id:`debug-preview-\$\{mon\.id\}`/.test(source));
+check('元画像の表示も本番と同じ収め方(monsterArtFitStyle)を通す(丸枠だけ実物より切れて見えるのを防ぐ)',
+  /palette===null\?<img src=\{src\} alt=\{label\} className=\{`w-full h-full \$\{fit\}`\} style=\{monsterArtFitStyle\(base\.id,undefined\)\}\/>/.test(source));
+check('攻撃モーションを同じ画面でその場で再生できる(atkMotionがdefault以外のときだけ)',
+  source.includes("const motionSupported=atkMotion!=='default'&&atkMotion!=='pandoraDualThunder';")
+  && source.includes('攻撃モーション確認（atkMotion: {atkMotion}）')
+  && source.includes('攻撃モーションを再生'));
+check('モーション再生は本番と同じ関数(attackMotionAnimation)・同じ桜(EikiSakuraPetals)を使う(別実装を増やしていない)',
+  source.includes('style={{isolation:\'isolate\',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}')
+  && source.includes('{monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}'));
+
 discCheck().then(() => {
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
   process.exit(failed ? 1 : 0);
