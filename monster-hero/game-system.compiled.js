@@ -2,8 +2,9 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b72036705ec6dd83
+// source-sha256: 725ef6f222427f93
 // ============================================================
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
   useState,
@@ -127,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 10:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 10:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6796,7 +6797,7 @@ const DyeRegionColorControls = ({
     size: 7
   })), /*#__PURE__*/React.createElement("span", {
     className: "text-[5.5px] font-black"
-  }, "元の色")), Object.keys(MASU_COLOR_TARGET).map(colorId => /*#__PURE__*/React.createElement("button", {
+  }, "\u5143\u306E\u8272")), Object.keys(MASU_COLOR_TARGET).map(colorId => /*#__PURE__*/React.createElement("button", {
     key: colorId,
     onClick: () => onChange(idx, withColorAlpha(colorId, colorAlphaOf(colors[idx]))),
     className: `flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${splitColorAlpha(colors[idx]).base === colorId ? 'border-fuchsia-400 ring-2 ring-fuchsia-400' : 'border-white/10'}`
@@ -6817,11 +6818,11 @@ const DyeRegionColorControls = ({
     }
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[5.5px] font-black"
-  }, "カスタム"))), colors[idx] && /*#__PURE__*/React.createElement("div", {
+  }, "\u30AB\u30B9\u30BF\u30E0"))), colors[idx] && /*#__PURE__*/React.createElement("div", {
     className: "mt-1.5 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] font-black text-slate-300 shrink-0"
-  }, "濃さ"), /*#__PURE__*/React.createElement("input", {
+  }, "\u6FC3\u3055"), /*#__PURE__*/React.createElement("input", {
     type: "range",
     min: MASU_COLOR_ALPHA_MIN,
     max: MASU_COLOR_ALPHA_MAX,
@@ -7615,17 +7616,15 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
   };
 };
 // 限界突破の★。並びと色は breakthroughStars が保存値(rebirthCount)から組み立てる
-const renderBreakthroughStar = (star, key, props = {}) => star.image ? /*#__PURE__*/React.createElement("img", {
+const renderBreakthroughStar = (star, key, props = {}) => star.image ? /*#__PURE__*/React.createElement("img", _extends({
   key: key,
   src: star.image,
   alt: "",
-  className: "mh-rainbow-breakthrough-star",
-  ...props
-}) : /*#__PURE__*/React.createElement("span", {
+  className: "mh-rainbow-breakthrough-star"
+}, props)) : /*#__PURE__*/React.createElement("span", _extends({
   key: key,
-  style: breakthroughStarStyle(star),
-  ...props
-}, "★");
+  style: breakthroughStarStyle(star)
+}, props), "\u2605");
 const RebirthStars = ({
   count = 0,
   className = ''
@@ -7666,11 +7665,11 @@ const BreakthroughStarDebugCard = ({
     "data-breakthrough-star-debug-count": count
   }, /*#__PURE__*/React.createElement("b", {
     className: "block text-[11px] text-white"
-  }, count, "凸"), /*#__PURE__*/React.createElement("span", {
+  }, count, "\u51F8"), /*#__PURE__*/React.createElement("span", {
     className: "block text-[8px] text-slate-400"
-  }, "上限Lv", info.levelCap), info.multiplier > 1 && /*#__PURE__*/React.createElement("span", {
+  }, "\u4E0A\u9650Lv", info.levelCap), info.multiplier > 1 && /*#__PURE__*/React.createElement("span", {
     className: "block text-[8px] font-black text-amber-300"
-  }, "LvUPボーナス×", info.multiplier), /*#__PURE__*/React.createElement("span", {
+  }, "LvUP\u30DC\u30FC\u30CA\u30B9\xD7", info.multiplier), /*#__PURE__*/React.createElement("span", {
     className: "block text-[9px] font-black text-amber-200"
   }, info.label), /*#__PURE__*/React.createElement("div", {
     className: "mt-2 min-h-[12px] flex items-center justify-center"
@@ -7678,7 +7677,7 @@ const BreakthroughStarDebugCard = ({
     count: count
   }), count === 0 && /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] text-slate-600"
-  }, "★なし")));
+  }, "\u2605\u306A\u3057")));
 };
 // 転生の回数プレート。詳細画面など、回数を確認する場所だけで使う。
 // モーション軽減設定。CSS側は @media(prefers-reduced-motion:reduce) で止めるが、
@@ -7702,10 +7701,10 @@ const TranscendenceBadge = ({
   if (!transcended) return null;
   return /*#__PURE__*/React.createElement("span", {
     className: `mh-transcend-badge${small ? ' is-small' : ''} ${className}`,
-    "aria-label": "超越済み"
+    "aria-label": "\u8D85\u8D8A\u6E08\u307F"
   }, /*#__PURE__*/React.createElement("b", {
     "aria-hidden": "true"
-  }, "超"));
+  }, "\u8D85"));
 };
 const ReincarnateBadge = ({
   count = 0,
@@ -7716,7 +7715,7 @@ const ReincarnateBadge = ({
   return /*#__PURE__*/React.createElement("div", {
     className: `mh-reincarnate-badge ${className}`,
     "aria-label": `転生${value}回`
-  }, "転生 ×", value);
+  }, "\u8EE2\u751F \xD7", value);
 };
 // 一覧・詳細・HOME・演出で共有する転生オーラ。同じ画像を別周期で重ね、背面だけで燃焼感を作る。
 const REINCARNATE_AURA_IMAGES = {
@@ -8009,7 +8008,7 @@ const VolumeSlider = ({
   }, label)), /*#__PURE__*/React.createElement("button", {
     onClick: () => step(-1),
     className: "shrink-0 w-6 h-6 rounded-lg bg-slate-800 border border-white/10 text-slate-300 font-black text-xs active:scale-90 active:bg-slate-700 flex items-center justify-center select-none"
-  }, "−"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2212"), /*#__PURE__*/React.createElement("div", {
     ref: trackRef,
     onPointerDown: startDrag,
     className: "relative flex-1 h-2 rounded-full bg-slate-800 border border-white/10 cursor-pointer touch-none"
@@ -8029,7 +8028,7 @@ const VolumeSlider = ({
   })), /*#__PURE__*/React.createElement("button", {
     onClick: () => step(1),
     className: "shrink-0 w-6 h-6 rounded-lg bg-slate-800 border border-white/10 text-slate-300 font-black text-xs active:scale-90 active:bg-slate-700 flex items-center justify-center select-none"
-  }, "＋"), /*#__PURE__*/React.createElement("span", {
+  }, "\uFF0B"), /*#__PURE__*/React.createElement("span", {
     className: "w-6 shrink-0 text-right text-[9px] font-mono font-black text-slate-300"
   }, value));
 };
@@ -10594,7 +10593,7 @@ const HomeProfileIcon = ({
   src: src,
   id: id,
   adjustment: adjustment,
-  alt: "プロフィール画像",
+  alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF",
   className: "w-full h-full"
 }) : /*#__PURE__*/React.createElement(User, {
   size: 24
@@ -10624,7 +10623,7 @@ const DexMonsterIcon = ({
   }
 }) : /*#__PURE__*/React.createElement("span", {
   className: "text-2xl"
-}, "？"));
+}, "\uFF1F"));
 const DexLineageChip = ({
   lineage,
   iconUrl
@@ -10636,7 +10635,7 @@ const DexLineageChip = ({
   lineage: true
 }) : /*#__PURE__*/React.createElement("span", {
   className: "w-7 h-7 rounded-full bg-amber-900/60 border border-amber-300/30 flex items-center justify-center text-[9px] font-black text-amber-200 shrink-0"
-}, "血"), /*#__PURE__*/React.createElement("span", {
+}, "\u8840"), /*#__PURE__*/React.createElement("span", {
   className: "text-[11px] font-black text-amber-100 truncate"
 }, lineage.name));
 const DexMonsterArt = ({
@@ -10724,20 +10723,20 @@ const MarketProductCard = ({
     className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
   }, /*#__PURE__*/React.createElement(BookOpen, {
     size: 8
-  }), "詳細")) : null), /*#__PURE__*/React.createElement("div", {
+  }), "\u8A73\u7D30")) : null), /*#__PURE__*/React.createElement("div", {
     className: "w-full flex items-center justify-center mt-auto pt-2"
   }, comingSoon ? /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap"
-  }, "近日追加") : owned ? /*#__PURE__*/React.createElement("div", {
+  }, "\u8FD1\u65E5\u8FFD\u52A0") : owned ? /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap"
-  }, "所持済み") : /*#__PURE__*/React.createElement("button", {
+  }, "\u6240\u6301\u6E08\u307F") : /*#__PURE__*/React.createElement("button", {
     onClick: onBuy,
     disabled: disabled || !canBuy,
     "aria-label": `${item.name}${disabled ? '（デバッグのため購入不可）' : `を${item.cost}${usesPsyche ? 'プシュケー' : usesGold ? 'ダイヤ' : 'pt'}で購入`}`,
     className: `text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled || !canBuy ? 'bg-slate-800 text-slate-500' : usesPsyche ? 'bg-fuchsia-600 text-white active:scale-95' : 'bg-amber-500 text-black active:scale-95'}`
   }, usesPsyche ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
-  }, "🌈"), /*#__PURE__*/React.createElement("span", null, item.cost.toLocaleString())) : /*#__PURE__*/React.createElement(React.Fragment, null, usesGold ? /*#__PURE__*/React.createElement(Gem, {
+  }, "\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", null, item.cost.toLocaleString())) : /*#__PURE__*/React.createElement(React.Fragment, null, usesGold ? /*#__PURE__*/React.createElement(Gem, {
     size: 9
   }) : /*#__PURE__*/React.createElement(Coins, {
     size: 9
@@ -11232,17 +11231,16 @@ const AssistantBubble = ({
     size: size,
     accent: color,
     expression: face
-  })), /*#__PURE__*/React.createElement(Wrapper, {
-    ...(hasDetail ? {
-      onClick: () => setOpen(true),
-      'aria-label': `${who.name}の説明を開く`
-    } : {}),
+  })), /*#__PURE__*/React.createElement(Wrapper, _extends({}, hasDetail ? {
+    onClick: () => setOpen(true),
+    'aria-label': `${who.name}の説明を開く`
+  } : {}, {
     className: `relative flex-1 min-w-0 text-left rounded-2xl border-2 ${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${hasDetail ? 'active:scale-[.99]' : ''}`,
     style: {
       borderColor: color,
       backgroundColor: 'rgba(15,23,42,0.92)'
     }
-  }, /*#__PURE__*/React.createElement("span", {
+  }), /*#__PURE__*/React.createElement("span", {
     className: "absolute",
     style: {
       left: '-9px',
@@ -11276,7 +11274,7 @@ const AssistantBubble = ({
     style: {
       color
     }
-  }, "タップで詳しく", /*#__PURE__*/React.createElement(ChevronRight, {
+  }, "\u30BF\u30C3\u30D7\u3067\u8A73\u3057\u304F", /*#__PURE__*/React.createElement(ChevronRight, {
     size: 11
   })))), open && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex items-end justify-center",
@@ -11313,7 +11311,7 @@ const AssistantBubble = ({
     className: "text-[12px] text-white leading-relaxed"
   }, text)), /*#__PURE__*/React.createElement("button", {
     onClick: () => setOpen(false),
-    "aria-label": "説明を閉じる",
+    "aria-label": "\u8AAC\u660E\u3092\u9589\u3058\u308B",
     className: "shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
@@ -11333,7 +11331,7 @@ const AssistantBubble = ({
     style: {
       backgroundColor: color
     }
-  }, "とじる")))));
+  }, "\u3068\u3058\u308B")))));
 };
 // クイックモードの短い演出画面。プレイヤーがタップするまで待つ(自動では進めない)。
 // 連打しても onDone は1回しか呼ばない
@@ -13179,7 +13177,7 @@ const LevelGrowthBar = ({
     className: "text-amber-400 font-black animate-pulse"
   }, "LEVEL UP!") : /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500 font-mono"
-  }, "次Lvまで", remain.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+  }, "\u6B21Lv\u307E\u3067", remain.toLocaleString())), /*#__PURE__*/React.createElement("div", {
     className: "h-2 bg-slate-800 rounded-full overflow-hidden border border-white/10"
   }, /*#__PURE__*/React.createElement("div", {
     className: "h-full bg-gradient-to-r from-indigo-500 to-purple-400 transition-all duration-700 ease-out",
@@ -13190,9 +13188,9 @@ const LevelGrowthBar = ({
     className: "flex items-center justify-between text-[8px] font-mono mt-0.5 gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: leveledUp ? 'text-amber-300 font-black shrink-0' : 'text-slate-500 shrink-0'
-  }, "Lv.", levelBefore.level, " → Lv.", levelAfter.level), hasTotals && /*#__PURE__*/React.createElement("span", {
+  }, "Lv.", levelBefore.level, " \u2192 Lv.", levelAfter.level), hasTotals && /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500 truncate"
-  }, "累計 ", totalBefore.toLocaleString(), " → ", totalAfter.toLocaleString(), gainedXp > 0 ? ` (+${gainedXp.toLocaleString()})` : '')));
+  }, "\u7D2F\u8A08 ", totalBefore.toLocaleString(), " \u2192 ", totalAfter.toLocaleString(), gainedXp > 0 ? ` (+${gainedXp.toLocaleString()})` : '')));
 };
 
 // 数値がfrom→toへカウントアップする演出(ダイヤ表示用、バー無し)
@@ -13244,7 +13242,7 @@ const RewardSummaryCard = ({
     className: "text-indigo-300 font-black flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Crown, {
     size: 12
-  }), "ブリーダー経験値"), /*#__PURE__*/React.createElement("span", {
+  }), "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
     className: "text-white font-mono font-bold"
   }, "+", summary.breederXpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
     levelBefore: summary.breederLevelBefore,
@@ -13256,11 +13254,11 @@ const RewardSummaryCard = ({
     className: "text-amber-300 font-black flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Gem, {
     size: 12
-  }), "ダイヤ"), /*#__PURE__*/React.createElement("span", {
+  }), "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
     className: "text-white font-mono font-bold flex items-baseline gap-1"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500 text-[10px]"
-  }, summary.goldBefore.toLocaleString(), " →"), /*#__PURE__*/React.createElement(CountUpNumber, {
+  }, summary.goldBefore.toLocaleString(), " \u2192"), /*#__PURE__*/React.createElement(CountUpNumber, {
     from: summary.goldBefore,
     to: summary.goldAfter,
     onComplete: () => markPresented('gold')
@@ -13272,9 +13270,9 @@ const RewardSummaryCard = ({
     className: "text-fuchsia-300 font-black flex items-center gap-1"
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
-  }, "🌈"), "虹のプシュケー"), /*#__PURE__*/React.createElement("span", {
+  }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
     className: "text-white font-mono font-bold"
-  }, "×", summary.psycheGain.toLocaleString())), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
+  }, "\xD7", summary.psycheGain.toLocaleString())), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
     className: "pt-2 border-t border-white/10"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between text-[11px] mb-1"
@@ -13282,7 +13280,7 @@ const RewardSummaryCard = ({
     className: "text-pink-300 font-black flex items-center gap-1 truncate"
   }, /*#__PURE__*/React.createElement(Heart, {
     size: 12
-  }), "絆レベル：", summary.heroBondGain.name), /*#__PURE__*/React.createElement("span", {
+  }), "\u7D46\u30EC\u30D9\u30EB\uFF1A", summary.heroBondGain.name), /*#__PURE__*/React.createElement("span", {
     className: "text-white font-mono font-bold shrink-0"
   }, "+", summary.heroBondGain.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
     levelBefore: summary.heroBondGain.levelBefore,
@@ -13292,13 +13290,13 @@ const RewardSummaryCard = ({
     className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Sparkles, {
     size: 9
-  }), "強化ポイント +", summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level)), summary.allyBondGains && summary.allyBondGains.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level)), summary.allyBondGains && summary.allyBondGains.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "pt-2 border-t border-white/10 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-pink-300 font-black flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Heart, {
     size: 10
-  }), "仲間の絆経験値"), summary.allyBondGains.map((a, i) => /*#__PURE__*/React.createElement("div", {
+  }), "\u4EF2\u9593\u306E\u7D46\u7D4C\u9A13\u5024"), summary.allyBondGains.map((a, i) => /*#__PURE__*/React.createElement("div", {
     key: i
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between text-[10px] mb-0.5"
@@ -13314,13 +13312,13 @@ const RewardSummaryCard = ({
     className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
   }, /*#__PURE__*/React.createElement(Sparkles, {
     size: 9
-  }), "強化ポイント +", a.levelAfter.level - a.levelBefore.level))))), summary.waveHistory && summary.waveHistory.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", a.levelAfter.level - a.levelBefore.level))))), summary.waveHistory && summary.waveHistory.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "pt-2 mt-3 border-t border-white/10 shrink-0 flex flex-col min-h-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-cyan-300 font-black flex items-center gap-1 mb-1 shrink-0"
   }, /*#__PURE__*/React.createElement(Trophy, {
     size: 11
-  }), "WAVE別ログ"), /*#__PURE__*/React.createElement("div", {
+  }), "WAVE\u5225\u30ED\u30B0"), /*#__PURE__*/React.createElement("div", {
     className: "space-y-0.5 overflow-y-auto mh-scroll max-h-[18vh]"
   }, summary.waveHistory.map(w => /*#__PURE__*/React.createElement("div", {
     key: w.wave,
@@ -13329,11 +13327,11 @@ const RewardSummaryCard = ({
     className: "text-slate-400 font-bold shrink-0"
   }, "WAVE ", w.wave), !summary.quickMode && /*#__PURE__*/React.createElement("span", {
     className: "text-white font-mono font-bold truncate"
-  }, "スコア +", w.roundScore.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+  }, "\u30B9\u30B3\u30A2 +", w.roundScore.toLocaleString()), /*#__PURE__*/React.createElement("span", {
     className: "text-indigo-300 font-mono font-bold shrink-0"
   }, "XP+", w.xpGain.toLocaleString()), /*#__PURE__*/React.createElement("span", {
     className: "text-amber-300 font-mono font-bold shrink-0"
-  }, "💎+", w.goldGain.toLocaleString()))))));
+  }, "\uD83D\uDC8E+", w.goldGain.toLocaleString()))))));
 };
 
 // ---- 起動ローディングのゲージ ----
@@ -14013,37 +14011,37 @@ const DyeMaskTouchEditor = ({
     className: "min-w-0"
   }, /*#__PURE__*/React.createElement("small", {
     className: "block text-[7px] font-black text-cyan-400"
-  }, "DEBUG・メモリ上だけ／再読込で消去"), /*#__PURE__*/React.createElement("h2", {
+  }, "DEBUG\u30FB\u30E1\u30E2\u30EA\u4E0A\u3060\u3051\uFF0F\u518D\u8AAD\u8FBC\u3067\u6D88\u53BB"), /*#__PURE__*/React.createElement("h2", {
     className: "truncate text-[11px] font-black"
-  }, "汎用染色マスクエディタ")), /*#__PURE__*/React.createElement("button", {
+  }, "\u6C4E\u7528\u67D3\u8272\u30DE\u30B9\u30AF\u30A8\u30C7\u30A3\u30BF")), /*#__PURE__*/React.createElement("button", {
     onClick: exportPng,
     disabled: !ready,
     className: "ml-auto min-h-[36px] rounded-xl bg-cyan-600 px-2 text-[8px] font-black disabled:opacity-40"
-  }, "PNG書出")), /*#__PURE__*/React.createElement("section", {
+  }, "PNG\u66F8\u51FA")), /*#__PURE__*/React.createElement("section", {
     className: "shrink-0 px-2 pb-1"
   }, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-[38px_1fr_38px] gap-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => selectTarget((targetIndex - 1 + targets.length) % targets.length),
     className: "rounded-lg bg-slate-800",
-    "aria-label": "前のモンスター"
-  }, "←"), /*#__PURE__*/React.createElement("select", {
-    "aria-label": "モンスター選択",
+    "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC"
+  }, "\u2190"), /*#__PURE__*/React.createElement("select", {
+    "aria-label": "\u30E2\u30F3\u30B9\u30BF\u30FC\u9078\u629E",
     value: targetIndex,
     onChange: e => selectTarget(+e.target.value),
     className: "min-h-[34px] min-w-0 rounded-lg bg-slate-800 px-2 text-[9px] font-black"
   }, targets.map((t, i) => /*#__PURE__*/React.createElement("option", {
     key: t.baseId,
     value: i
-  }, t.name, "／", t.hasMask ? '染色マスクあり' : '染色マスクなし'))), /*#__PURE__*/React.createElement("button", {
+  }, t.name, "\uFF0F", t.hasMask ? '染色マスクあり' : '染色マスクなし'))), /*#__PURE__*/React.createElement("button", {
     onClick: () => selectTarget((targetIndex + 1) % targets.length),
     className: "rounded-lg bg-slate-800",
-    "aria-label": "次のモンスター"
-  }, "→")), /*#__PURE__*/React.createElement("input", {
+    "aria-label": "\u6B21\u306E\u30E2\u30F3\u30B9\u30BF\u30FC"
+  }, "\u2192")), /*#__PURE__*/React.createElement("input", {
     value: search,
     onChange: e => setSearch(e.target.value),
     list: "dye-mask-monsters",
-    placeholder: "名前検索",
+    placeholder: "\u540D\u524D\u691C\u7D22",
     className: "mt-1 min-h-[30px] w-full rounded-lg bg-slate-800 px-2 text-[9px]"
   }), /*#__PURE__*/React.createElement("datalist", {
     id: "dye-mask-monsters"
@@ -14058,9 +14056,9 @@ const DyeMaskTouchEditor = ({
       setSearch('');
     },
     className: "mt-1 w-full rounded bg-cyan-900 py-1 text-[8px]"
-  }, "「", filtered[0].t.name, "」を選択"), /*#__PURE__*/React.createElement("p", {
+  }, "\u300C", filtered[0].t.name, "\u300D\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("p", {
     className: `text-center text-[8px] font-black ${target.hasMask ? 'text-emerald-300' : 'text-amber-300'}`
-  }, target.name, "・", target.hasMask ? '既存の染色マスクを読込' : '染色マスクなし（完全透明から開始）', dirty ? '・未書き出し' : '')), /*#__PURE__*/React.createElement("div", {
+  }, target.name, "\u30FB", target.hasMask ? '既存の染色マスクを読込' : '染色マスクなし（完全透明から開始）', dirty ? '・未書き出し' : '')), /*#__PURE__*/React.createElement("div", {
     className: "grid shrink-0 grid-cols-4 gap-1 px-2"
   }, [['composite', '合成'], ['body', '本体のみ'], ['mask', 'マスクのみ'], ['boundary', '境界確認']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
@@ -14079,7 +14077,7 @@ const DyeMaskTouchEditor = ({
     className: "p-4 text-center text-red-200"
   }, error) : !ready && /*#__PURE__*/React.createElement("p", {
     className: "p-4 text-center"
-  }, "画像を読み込み中…"), /*#__PURE__*/React.createElement("div", {
+  }, "\u753B\u50CF\u3092\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 flex items-center justify-center",
     style: {
       transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`,
@@ -14109,7 +14107,7 @@ const DyeMaskTouchEditor = ({
     }
   }), /*#__PURE__*/React.createElement("canvas", {
     ref: maskRef,
-    "aria-label": "染色マスク編集レイヤー",
+    "aria-label": "\u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6\u30EC\u30A4\u30E4\u30FC",
     className: "absolute inset-0 h-full w-full",
     style: {
       display: view === 'body' ? 'none' : 'block',
@@ -14117,11 +14115,11 @@ const DyeMaskTouchEditor = ({
     }
   }), view === 'boundary' && outlineRef.current && /*#__PURE__*/React.createElement("img", {
     src: outlineRef.current.toDataURL(),
-    alt: "本体の外周",
+    alt: "\u672C\u4F53\u306E\u5916\u5468",
     className: "pointer-events-none absolute inset-0 h-full w-full"
   }), /*#__PURE__*/React.createElement("canvas", {
     ref: warningRef,
-    "aria-label": "本体範囲外のマスク警告",
+    "aria-label": "\u672C\u4F53\u7BC4\u56F2\u5916\u306E\u30DE\u30B9\u30AF\u8B66\u544A",
     className: "pointer-events-none absolute inset-0 h-full w-full",
     style: {
       display: view === 'boundary' ? 'block' : 'none'
@@ -14130,7 +14128,7 @@ const DyeMaskTouchEditor = ({
     ref: loupeRef,
     width: "120",
     height: "120",
-    "aria-label": "拡大鏡",
+    "aria-label": "\u62E1\u5927\u93E1",
     className: "pointer-events-none absolute left-2 top-2 rounded-full border-2 border-white bg-slate-950 shadow-xl"
   }), pointer && /*#__PURE__*/React.createElement("div", {
     className: "pointer-events-none fixed z-10 rounded-full border-2",
@@ -14164,29 +14162,29 @@ const DyeMaskTouchEditor = ({
   }, "Redo"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setTool('brush'),
     className: `rounded-xl text-[7px] ${tool === 'brush' ? 'bg-violet-700' : 'bg-slate-700'}`
-  }, "ブラシ"), /*#__PURE__*/React.createElement("button", {
+  }, "\u30D6\u30E9\u30B7"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setTool('fill'),
     className: `rounded-xl text-[7px] ${tool === 'fill' ? 'bg-violet-700' : 'bg-slate-700'}`
-  }, "塗りつぶし")), /*#__PURE__*/React.createElement("div", {
+  }, "\u5857\u308A\u3064\u3076\u3057")), /*#__PURE__*/React.createElement("div", {
     className: "mt-1 grid grid-cols-3 gap-1"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: tryInGame,
     disabled: !ready,
     className: "min-h-[38px] rounded-lg bg-fuchsia-700 text-[8px] font-black disabled:opacity-40"
-  }, "ゲームで試す"), /*#__PURE__*/React.createElement("button", {
+  }, "\u30B2\u30FC\u30E0\u3067\u8A66\u3059"), /*#__PURE__*/React.createElement("button", {
     onClick: () => onReleaseTemporary(target.baseId),
     disabled: !temporaryMasks[target.baseId],
     className: "rounded-lg bg-amber-800 text-[7px] font-black disabled:opacity-30"
-  }, "一時反映を解除"), /*#__PURE__*/React.createElement("button", {
+  }, "\u4E00\u6642\u53CD\u6620\u3092\u89E3\u9664"), /*#__PURE__*/React.createElement("button", {
     onClick: onReleaseAllTemporary,
     disabled: !Object.keys(temporaryMasks).length,
     className: "rounded-lg bg-red-900 text-[8px] font-black disabled:opacity-30"
-  }, "すべて解除")), temporaryMasks[target.baseId] && /*#__PURE__*/React.createElement("p", {
+  }, "\u3059\u3079\u3066\u89E3\u9664")), temporaryMasks[target.baseId] && /*#__PURE__*/React.createElement("p", {
     className: "pt-0.5 text-center text-[8px] font-black text-fuchsia-300"
-  }, "● 一時反映中"), /*#__PURE__*/React.createElement("button", {
+  }, "\u25CF \u4E00\u6642\u53CD\u6620\u4E2D"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setDetails(v => !v),
     className: "mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]"
-  }, "詳細 ", details ? '▲' : '▼'), details && /*#__PURE__*/React.createElement("div", {
+  }, "\u8A73\u7D30 ", details ? '▲' : '▼'), details && /*#__PURE__*/React.createElement("div", {
     className: "mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"
   }, /*#__PURE__*/React.createElement("div", {
     className: "col-span-2 grid grid-cols-3 gap-1"
@@ -14195,7 +14193,7 @@ const DyeMaskTouchEditor = ({
   }, (_, idx) => /*#__PURE__*/React.createElement("label", {
     key: idx,
     className: "text-[7px] text-fuchsia-200"
-  }, "染色", '①②③'[idx], /*#__PURE__*/React.createElement("select", {
+  }, "\u67D3\u8272", '①②③'[idx], /*#__PURE__*/React.createElement("select", {
     value: previewColors[idx] || '',
     onChange: e => setPreviewColors(current => {
       const next = [...current];
@@ -14205,10 +14203,10 @@ const DyeMaskTouchEditor = ({
     className: "block min-h-[28px] w-full rounded bg-slate-700 text-[8px]"
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
-  }, "元の色"), Object.keys(MASU_COLOR_TARGET).map(id => /*#__PURE__*/React.createElement("option", {
+  }, "\u5143\u306E\u8272"), Object.keys(MASU_COLOR_TARGET).map(id => /*#__PURE__*/React.createElement("option", {
     key: id,
     value: id
-  }, MASU_COLOR_LABELS[id])))))), /*#__PURE__*/React.createElement("label", null, "ブラシ ", size, "px", /*#__PURE__*/React.createElement("input", {
+  }, MASU_COLOR_LABELS[id])))))), /*#__PURE__*/React.createElement("label", null, "\u30D6\u30E9\u30B7 ", size, "px", /*#__PURE__*/React.createElement("input", {
     className: "block w-full",
     type: "range",
     min: "2",
@@ -14216,7 +14214,7 @@ const DyeMaskTouchEditor = ({
     step: "2",
     value: size,
     onChange: e => setSize(+e.target.value)
-  })), /*#__PURE__*/React.createElement("label", null, "透明度 ", opacity, "%", /*#__PURE__*/React.createElement("input", {
+  })), /*#__PURE__*/React.createElement("label", null, "\u900F\u660E\u5EA6 ", opacity, "%", /*#__PURE__*/React.createElement("input", {
     className: "block w-full",
     type: "range",
     min: "25",
@@ -14224,27 +14222,27 @@ const DyeMaskTouchEditor = ({
     step: "25",
     value: opacity,
     onChange: e => setOpacity(+e.target.value)
-  })), /*#__PURE__*/React.createElement("label", null, "ポインター距離", /*#__PURE__*/React.createElement("select", {
+  })), /*#__PURE__*/React.createElement("label", null, "\u30DD\u30A4\u30F3\u30BF\u30FC\u8DDD\u96E2", /*#__PURE__*/React.createElement("select", {
     value: pointerDistance,
     onChange: e => setPointerDistance(+e.target.value),
     className: "block w-full bg-slate-700"
   }, [0, 30, 50, 70].map(n => /*#__PURE__*/React.createElement("option", {
     key: n,
     value: n
-  }, n, "px")))), /*#__PURE__*/React.createElement("label", null, "方向", /*#__PURE__*/React.createElement("select", {
+  }, n, "px")))), /*#__PURE__*/React.createElement("label", null, "\u65B9\u5411", /*#__PURE__*/React.createElement("select", {
     value: pointerDirection,
     onChange: e => setPointerDirection(e.target.value),
     className: "block w-full bg-slate-700"
   }, /*#__PURE__*/React.createElement("option", {
     value: "up"
-  }, "真上"), /*#__PURE__*/React.createElement("option", {
+  }, "\u771F\u4E0A"), /*#__PURE__*/React.createElement("option", {
     value: "left"
-  }, "左上"), /*#__PURE__*/React.createElement("option", {
+  }, "\u5DE6\u4E0A"), /*#__PURE__*/React.createElement("option", {
     value: "right"
-  }, "右上"))), /*#__PURE__*/React.createElement("button", {
+  }, "\u53F3\u4E0A"))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setLoupe(v => !v),
     className: "rounded bg-slate-700"
-  }, "拡大鏡 ", loupe ? 'ON' : 'OFF'), /*#__PURE__*/React.createElement("button", {
+  }, "\u62E1\u5927\u93E1 ", loupe ? 'ON' : 'OFF'), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setZoom(1);
       setPan({
@@ -14253,18 +14251,18 @@ const DyeMaskTouchEditor = ({
       });
     },
     className: "rounded bg-slate-700"
-  }, "全体表示"), /*#__PURE__*/React.createElement("button", {
+  }, "\u5168\u4F53\u8868\u793A"), /*#__PURE__*/React.createElement("button", {
     onClick: cleanOutside,
     className: "rounded bg-fuchsia-900"
-  }, "範囲外を掃除"), /*#__PURE__*/React.createElement("button", {
+  }, "\u7BC4\u56F2\u5916\u3092\u6383\u9664"), /*#__PURE__*/React.createElement("button", {
     onClick: clearAll,
     className: "rounded bg-red-900"
-  }, "全消去"), /*#__PURE__*/React.createElement("button", {
+  }, "\u5168\u6D88\u53BB"), /*#__PURE__*/React.createElement("button", {
     onClick: resetOriginal,
     className: "rounded bg-amber-900"
-  }, "元マスク再読込")), /*#__PURE__*/React.createElement("p", {
+  }, "\u5143\u30DE\u30B9\u30AF\u518D\u8AAD\u8FBC")), /*#__PURE__*/React.createElement("p", {
     className: "pt-1 text-center text-[7px] text-slate-400"
-  }, "1本指：描画・2本指：パン/ピンチ・ダブルタップ：全体表示・", Math.round(zoom * 100), "%")));
+  }, "1\u672C\u6307\uFF1A\u63CF\u753B\u30FB2\u672C\u6307\uFF1A\u30D1\u30F3/\u30D4\u30F3\u30C1\u30FB\u30C0\u30D6\u30EB\u30BF\u30C3\u30D7\uFF1A\u5168\u4F53\u8868\u793A\u30FB", Math.round(zoom * 100), "%")));
 };
 
 // タップは1回、長押しは一定間隔で繰り返す。Pointer Eventsを使ってタッチを優先し、
@@ -14304,7 +14302,7 @@ function PressRepeatButton({
     }
     onPress();
   };
-  return /*#__PURE__*/React.createElement("button", {
+  return /*#__PURE__*/React.createElement("button", _extends({
     type: "button",
     disabled: disabled,
     onPointerDown: startPress,
@@ -14316,9 +14314,8 @@ function PressRepeatButton({
     style: {
       touchAction: 'manipulation',
       WebkitTouchCallout: 'none'
-    },
-    ...props
-  }, children);
+    }
+  }, props), children);
 }
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -15455,7 +15452,7 @@ function MonsterHeroGame() {
     }
   }, power == null ? null : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
     className: "text-[7px] text-amber-400/80 font-black uppercase"
-  }, "総合力"), /*#__PURE__*/React.createElement("span", {
+  }, "\u7DCF\u5408\u529B"), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] font-mono font-black text-amber-200 tabular-nums"
   }, formatMonsterPower(power))));
   const monsterCardSub = node => /*#__PURE__*/React.createElement("div", {
@@ -15475,7 +15472,7 @@ function MonsterHeroGame() {
     className: "text-[8px] text-pink-300 font-black flex items-center gap-0.5 leading-none whitespace-nowrap"
   }, /*#__PURE__*/React.createElement(Heart, {
     size: 7
-  }), "絆 ", lvl.level, /*#__PURE__*/React.createElement("span", {
+  }), "\u7D46 ", lvl.level, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-500"
   }, " / ", cap));
   // ===== 一覧カードのマスターUI =====
@@ -15544,7 +15541,7 @@ function MonsterHeroGame() {
       className: "text-[7px] text-amber-300 font-black flex items-center gap-0.5"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 7
-    }), "強化P ", masu.distAptPoints) : null), monsterCardStatus(status), extra);
+    }), "\u5F37\u5316P ", masu.distAptPoints) : null), monsterCardStatus(status), extra);
   };
   // mon引数は素のモンスター種、またはresolveRosterEntryToMonで解決済みのマスモン反映後オブジェクトのどちらもあり得る。
   // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
@@ -15614,15 +15611,15 @@ function MonsterHeroGame() {
     className: "text-pink-300"
   }, mon.baseHp)), /*#__PURE__*/React.createElement("span", {
     className: "flex justify-between text-slate-400"
-  }, "ちから ", /*#__PURE__*/React.createElement("b", {
+  }, "\u3061\u304B\u3089 ", /*#__PURE__*/React.createElement("b", {
     className: "text-red-300"
   }, mon.baseAtk)), /*#__PURE__*/React.createElement("span", {
     className: "flex justify-between text-slate-400"
-  }, "丈夫さ ", /*#__PURE__*/React.createElement("b", {
+  }, "\u4E08\u592B\u3055 ", /*#__PURE__*/React.createElement("b", {
     className: "text-emerald-300"
   }, mon.baseDef)), /*#__PURE__*/React.createElement("span", {
     className: "flex justify-between text-slate-400"
-  }, "ガッツ ", /*#__PURE__*/React.createElement("b", {
+  }, "\u30AC\u30C3\u30C4 ", /*#__PURE__*/React.createElement("b", {
     className: "text-amber-300"
   }, mon.baseGuts)))), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 self-stretch flex flex-col justify-center gap-1 border-l border-white/10 pl-2"
@@ -15636,7 +15633,7 @@ function MonsterHeroGame() {
     className: `text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[getDistAptitude(mon, idx)]}`
   }, getDistAptitude(mon, idx))))), /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] text-indigo-400 font-black"
-  }, "勇者特性"), /*#__PURE__*/React.createElement("div", {
+  }, "\u52C7\u8005\u7279\u6027"), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-indigo-200 font-black leading-tight line-clamp-2"
   }, mon.trait || '特性なし'))), /*#__PURE__*/React.createElement("div", {
     className: "w-[74px] shrink-0 border-l border-white/10 flex flex-col"
@@ -15644,13 +15641,13 @@ function MonsterHeroGame() {
     className: "flex-1 flex flex-col items-center justify-center bg-black/25 px-1"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] text-slate-500 font-black"
-  }, "総合力"), /*#__PURE__*/React.createElement("b", {
+  }, "\u7DCF\u5408\u529B"), /*#__PURE__*/React.createElement("b", {
     className: "text-[14px] text-amber-300 font-mono leading-tight"
   }, formatMonsterPower(monsterPowerOf(mon)))), /*#__PURE__*/React.createElement("button", {
     onClick: onDetail,
     "aria-label": `${mon.name}の詳細を見る`,
     className: "min-h-[46px] border-t border-indigo-400/30 bg-indigo-950/60 text-[10px] leading-tight text-indigo-200 font-black flex items-center justify-center active:bg-indigo-800/60"
-  }, "詳細を見る", /*#__PURE__*/React.createElement(ChevronRight, {
+  }, "\u8A73\u7D30\u3092\u898B\u308B", /*#__PURE__*/React.createElement(ChevronRight, {
     size: 12
   }))));
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
@@ -18131,9 +18128,9 @@ function MonsterHeroGame() {
       className: isMasu ? 'text-pink-300' : 'text-cyan-300'
     }, isMasu ? 'マスモン' : 'ベースモン'), isMasu && /*#__PURE__*/React.createElement("span", {
       className: "text-pink-300"
-    }, "絆Lv.", masuBondLevelInfo(masu).level), /*#__PURE__*/React.createElement("span", {
+    }, "\u7D46Lv.", masuBondLevelInfo(masu).level), /*#__PURE__*/React.createElement("span", {
       className: "text-slate-200"
-    }, "総合力 ", formatMonsterPower(power))), /*#__PURE__*/React.createElement("div", {
+    }, "\u7DCF\u5408\u529B ", formatMonsterPower(power))), /*#__PURE__*/React.createElement("div", {
       className: "mt-1.5 grid min-w-0 grid-cols-4 gap-1"
     }, RANGE_LABELS.map((label, index) => /*#__PURE__*/React.createElement("div", {
       key: label,
@@ -18142,7 +18139,7 @@ function MonsterHeroGame() {
       className: "ml-1"
     }, aptitude[index] || 'C')))), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 text-right text-[10px] font-black text-indigo-200"
-    }, "詳細を見る ›"));
+    }, "\u8A73\u7D30\u3092\u898B\u308B \u203A"));
   };
   // 編成の1枠が対象とする「モンスター種id」を返す(プレーン種でもマスモンでも、種としては同じ扱い)
   const baseIdOfRosterEntry = entry => {
@@ -18307,7 +18304,7 @@ function MonsterHeroGame() {
       className: "flex-1 min-w-0 flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-black text-white truncate"
-    }, "並べかえ: ", currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && /*#__PURE__*/React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼')), /*#__PURE__*/React.createElement(ChevronRight, {
+    }, "\u4E26\u3079\u304B\u3048: ", currentSortOpt?.label, monsterSortKey === currentSortOpt?.key && /*#__PURE__*/React.createElement("span", null, monsterSortDir === 'asc' ? '▲' : '▼')), /*#__PURE__*/React.createElement(ChevronRight, {
       size: 14,
       className: "text-slate-500 shrink-0"
     })), /*#__PURE__*/React.createElement("button", {
@@ -18329,7 +18326,7 @@ function MonsterHeroGame() {
       className: "shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-black text-white"
-    }, "表示"), /*#__PURE__*/React.createElement("span", {
+    }, "\u8868\u793A"), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-teal-400 font-black"
     }, activeDisplayCount), /*#__PURE__*/React.createElement(ChevronRight, {
       size: 14,
@@ -18509,7 +18506,7 @@ function MonsterHeroGame() {
     }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantUnlockPage(page + 1),
       className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
-    }, "次へ") : /*#__PURE__*/React.createElement("div", {
+    }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("div", {
       className: `mt-4 grid ${notice.destination ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
     }, notice.destination && /*#__PURE__*/React.createElement("button", {
       onClick: () => finishAssistantUnlockNotice(notice.id, notice.destination),
@@ -18517,7 +18514,7 @@ function MonsterHeroGame() {
     }, notice.buttonLabel || '見に行く'), /*#__PURE__*/React.createElement("button", {
       onClick: () => finishAssistantUnlockNotice(notice.id),
       className: `min-h-[50px] rounded-2xl text-sm font-black ${notice.destination ? 'bg-slate-800 text-slate-200' : 'bg-pink-500 text-slate-950'}`
-    }, "閉じる"))));
+    }, "\u9589\u3058\u308B"))));
   };
   // 吹き出しを使わず、その場面のセリフを直接並べたいとき(日次アドバイスなど)。
   // いま選んでいる助手のぶんだけを返すので、画面側に助手ごとの分岐を書かなくてよい
@@ -20135,7 +20132,7 @@ function MonsterHeroGame() {
       className: "text-[10px] text-pink-300 font-black mt-1 flex items-center justify-center gap-1 shrink-0"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 11
-    }), "マスモンとして登録しました！");
+    }), "\u30DE\u30B9\u30E2\u30F3\u3068\u3057\u3066\u767B\u9332\u3057\u307E\u3057\u305F\uFF01");
     // 見落とされやすいので、ただのボタンではなく枠つきの案内にして光らせる
     return /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs mt-2 shrink-0 rounded-2xl border-2 p-2.5",
@@ -20152,11 +20149,11 @@ function MonsterHeroGame() {
         backgroundColor: '#ec4899',
         animation: 'masuBadge 1.6s ease-in-out infinite'
       }
-    }, "登録できます"), /*#__PURE__*/React.createElement("span", {
+    }, "\u767B\u9332\u3067\u304D\u307E\u3059"), /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black text-pink-200"
-    }, mainHero?.name || 'このモンスター', "をマスモンに！")), /*#__PURE__*/React.createElement("div", {
+    }, mainHero?.name || 'このモンスター', "\u3092\u30DE\u30B9\u30E2\u30F3\u306B\uFF01")), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center"
-    }, "今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます"), /*#__PURE__*/React.createElement("button", {
+    }, "\u4ECA\u56DE\u305F\u3081\u305F\u7D46\u7D4C\u9A13\u5024\u3092\u305D\u306E\u307E\u307E\u5F15\u304D\u7D99\u3044\u3067\u3001\u6B21\u306E\u30E9\u30F3\u304B\u3089\u3082\u80B2\u3066\u3089\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setMasuNameInput(mainHero?.name || '');
         setShowMasuRegisterModal(true);
@@ -20167,7 +20164,7 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 14
-    }), "マスモンとして登録する"));
+    }), "\u30DE\u30B9\u30E2\u30F3\u3068\u3057\u3066\u767B\u9332\u3059\u308B"));
   };
   const registerMasuMon = name => {
     if (!mainHero || mainHero.masuId || mainHero.debugOnly || debugBattleRef.current) return null; // 既にマスモンの勇者・デバッグ個体は登録不要
@@ -21040,21 +21037,21 @@ function MonsterHeroGame() {
       className: `mb-2 text-[10px] font-black ${r.saved ? 'text-emerald-200' : 'text-amber-200'}`
     }, r.failed ? '保存に失敗しました' : r.saved ? '種族チャレンジ クリア' : '種族チャレンジ クリア（保存なし確認）'), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-1 text-[10px] text-slate-200"
-    }, /*#__PURE__*/React.createElement("span", null, "種族 / 難易度"), /*#__PURE__*/React.createElement("b", {
+    }, /*#__PURE__*/React.createElement("span", null, "\u7A2E\u65CF / \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, speciesName, "／", labelOf(r.difficultyId)), /*#__PURE__*/React.createElement("span", null, "今回のスコア"), /*#__PURE__*/React.createElement("b", {
+    }, speciesName, "\uFF0F", labelOf(r.difficultyId)), /*#__PURE__*/React.createElement("span", null, "\u4ECA\u56DE\u306E\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, r.score.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "クリアターン"), /*#__PURE__*/React.createElement("b", {
+    }, r.score.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, r.clearTurns !== null ? `${r.clearTurns}T` : '—'), /*#__PURE__*/React.createElement("span", null, "初回報酬"), /*#__PURE__*/React.createElement("b", {
+    }, r.clearTurns !== null ? `${r.clearTurns}T` : '—'), /*#__PURE__*/React.createElement("span", null, "\u521D\u56DE\u5831\u916C"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, r.rewardGranted ? `超越の実（${speciesName}）×${r.rewardAmount}` : 'なし（取得済み）'), /*#__PURE__*/React.createElement("span", null, "次の解放"), /*#__PURE__*/React.createElement("b", {
+    }, r.rewardGranted ? `超越の実（${speciesName}）×${r.rewardAmount}` : 'なし（取得済み）'), /*#__PURE__*/React.createElement("span", null, "\u6B21\u306E\u89E3\u653E"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
     }, nextLabel || 'これ以上なし')), r.saved ? /*#__PURE__*/React.createElement("div", {
       className: "mt-2 border-t border-white/10 pt-2 text-[9px] text-emerald-200"
-    }, "自己ベスト ", record.bestScore.toLocaleString(), "pt ／ 最短 ", record.bestTurns !== null ? `${record.bestTurns}T` : '—', " ／ クリア ", record.clears, "回") : /*#__PURE__*/React.createElement("div", {
+    }, "\u81EA\u5DF1\u30D9\u30B9\u30C8 ", record.bestScore.toLocaleString(), "pt \uFF0F \u6700\u77ED ", record.bestTurns !== null ? `${record.bestTurns}T` : '—', " \uFF0F \u30AF\u30EA\u30A2 ", record.clears, "\u56DE") : /*#__PURE__*/React.createElement("div", {
       className: "mt-2 border-t border-white/10 pt-2 text-[9px] text-amber-200"
-    }, "この確認では保存していません。実際に保存して確かめるときは、デバッグ設定の「実進行保存で実戦確認」から始めてください。"));
+    }, "\u3053\u306E\u78BA\u8A8D\u3067\u306F\u4FDD\u5B58\u3057\u3066\u3044\u307E\u305B\u3093\u3002\u5B9F\u969B\u306B\u4FDD\u5B58\u3057\u3066\u78BA\u304B\u3081\u308B\u3068\u304D\u306F\u3001\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u306E\u300C\u5B9F\u9032\u884C\u4FDD\u5B58\u3067\u5B9F\u6226\u78BA\u8A8D\u300D\u304B\u3089\u59CB\u3081\u3066\u304F\u3060\u3055\u3044\u3002"));
   };
   const createRepeatRunTemplate = ({
     hero,
@@ -21564,7 +21561,7 @@ function MonsterHeroGame() {
     className: "text-left"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-black text-slate-400 mb-1 tracking-wider"
-  }, "7日間のログインボーナス"), /*#__PURE__*/React.createElement("div", {
+  }, "7\u65E5\u9593\u306E\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("div", {
     className: "max-h-[34vh] overflow-y-auto mh-scroll space-y-1 pr-0.5"
   }, LOGIN_BONUS_REWARDS.map((rewards, idx) => {
     const day = idx + 1;
@@ -21576,14 +21573,14 @@ function MonsterHeroGame() {
       className: "shrink-0 w-12 text-center"
     }, /*#__PURE__*/React.createElement("div", {
       className: `text-[11px] font-black leading-tight ${phase === 'today' ? 'text-amber-200' : 'text-slate-300'}`
-    }, day, "日目"), /*#__PURE__*/React.createElement("div", {
+    }, day, "\u65E5\u76EE"), /*#__PURE__*/React.createElement("div", {
       className: `text-[7px] font-black leading-tight ${phase === 'today' ? 'text-amber-300' : phase === 'done' ? 'text-emerald-400' : 'text-slate-500'}`
     }, phase === 'today' ? '今日' : phase === 'done' ? '受取済み' : 'これから')), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-w-0 text-[10px] font-bold text-cyan-200 leading-tight break-words"
     }, rewards.map(r => giftRewardText(r)).join('　/　')));
   })), /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] text-slate-500 font-bold mt-1 leading-relaxed"
-  }, "7日目まで受け取ると1日目に戻ります。報酬はギフトボックスへ届きます。"));
+  }, "7\u65E5\u76EE\u307E\u3067\u53D7\u3051\u53D6\u308B\u30681\u65E5\u76EE\u306B\u623B\u308A\u307E\u3059\u3002\u5831\u916C\u306F\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9\u3078\u5C4A\u304D\u307E\u3059\u3002"));
   const tabCountBadge = count => count > 0 ? /*#__PURE__*/React.createElement("span", {
     className: "absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[10px] font-black leading-none",
     style: {
@@ -24848,7 +24845,7 @@ function MonsterHeroGame() {
       className: `text-[8px] font-black uppercase tracking-wider flex items-center gap-1 ${inherited ? 'text-cyan-300' : 'text-indigo-400'}`
     }, inherited && /*#__PURE__*/React.createElement("span", {
       className: "bg-cyan-600 text-white px-1 rounded-sm not-italic"
-    }, "引き継ぎ"), heading), /*#__PURE__*/React.createElement("div", {
+    }, "\u5F15\u304D\u7D99\u304E"), heading), /*#__PURE__*/React.createElement("div", {
       className: "font-black uppercase text-white",
       style: {
         fontSize: '13px'
@@ -24857,25 +24854,25 @@ function MonsterHeroGame() {
       className: "text-slate-500"
     }, "Lv.", lvl, lvl < 8 && /*#__PURE__*/React.createElement("span", {
       className: "text-amber-500"
-    }, " → ", lvl + 1))), lvl < 8 ? /*#__PURE__*/React.createElement("div", {
+    }, " \u2192 ", lvl + 1))), lvl < 8 ? /*#__PURE__*/React.createElement("div", {
       className: "text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1",
       style: {
         fontSize: '9px'
       }
-    }, /*#__PURE__*/React.createElement("div", null, "技威力 ", Math.floor(currentMult * 100), " → ", /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100), " \u2192 ", /*#__PURE__*/React.createElement("span", {
       className: "text-red-400 font-bold"
-    }, Math.floor(nextMult * 100))), /*#__PURE__*/React.createElement("div", null, "消費 ", currentGuts, " → ", /*#__PURE__*/React.createElement("span", {
+    }, Math.floor(nextMult * 100))), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts, " \u2192 ", /*#__PURE__*/React.createElement("span", {
       className: "text-amber-400 font-bold"
-    }, nextGuts)), /*#__PURE__*/React.createElement("div", null, "会心 ", curCrit, "% → ", /*#__PURE__*/React.createElement("span", {
+    }, nextGuts)), /*#__PURE__*/React.createElement("div", null, "\u4F1A\u5FC3 ", curCrit, "% \u2192 ", /*#__PURE__*/React.createElement("span", {
       className: "text-yellow-400 font-bold"
     }, nextCrit, "%"))) : /*#__PURE__*/React.createElement("div", {
       className: "text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1",
       style: {
         fontSize: '9px'
       }
-    }, /*#__PURE__*/React.createElement("div", null, "技威力 ", Math.floor(currentMult * 100)), /*#__PURE__*/React.createElement("div", null, "消費 ", currentGuts), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("div", null, "\u6280\u5A01\u529B ", Math.floor(currentMult * 100)), /*#__PURE__*/React.createElement("div", null, "\u6D88\u8CBB ", currentGuts), /*#__PURE__*/React.createElement("div", {
       className: "text-yellow-400"
-    }, "会心 ", curCrit, "%"), /*#__PURE__*/React.createElement("div", {
+    }, "\u4F1A\u5FC3 ", curCrit, "%"), /*#__PURE__*/React.createElement("div", {
       className: "text-amber-500 font-black"
     }, "MAX")))), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between bg-black/20 p-2 rounded-xl"
@@ -24884,7 +24881,7 @@ function MonsterHeroGame() {
       style: {
         fontSize: '9px'
       }
-    }, "レベル調整"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30EC\u30D9\u30EB\u8ABF\u6574"), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-3"
     }, /*#__PURE__*/React.createElement("button", {
       disabled: lvl <= 0,
@@ -25089,7 +25086,7 @@ function MonsterHeroGame() {
         className: "mt-1.5 rounded-2xl border border-pink-400/40 bg-slate-950/70 p-2.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "mb-1.5 text-[10px] font-black text-pink-200"
-      }, stat.label, "の詳細"), /*#__PURE__*/React.createElement("div", {
+      }, stat.label, "\u306E\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
         className: "flex flex-wrap items-stretch gap-1.5"
       }, growthTermBlock(null, '元ステータス', stat.origin.toLocaleString(), GROWTH_TONES.origin), growthTermBlock('＋', '基礎UP（永久）', `+${stat.baseUp.toLocaleString()}`, GROWTH_TONES.base), growthTermBlock('＋', '強化（使用）', `+${stat.enhance.toLocaleString()}`, GROWTH_TONES.enhance), growthTermBlock('＝', `現在の${stat.label}`, stat.current.toLocaleString(), GROWTH_TONES.result))));
     }));
@@ -25106,7 +25103,7 @@ function MonsterHeroGame() {
       className: "mt-2 rounded-2xl border border-fuchsia-400/40 bg-slate-950/70 p-2.5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mb-1.5 text-[10px] font-black text-fuchsia-200"
-    }, "間合い適性（", RANGE_LABELS[entry.index], "）の詳細"), /*#__PURE__*/React.createElement("div", {
+    }, "\u9593\u5408\u3044\u9069\u6027\uFF08", RANGE_LABELS[entry.index], "\uFF09\u306E\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-wrap items-stretch gap-1.5"
     }, growthTermBlock(null, '元の適性', entry.originGrade, GROWTH_TONES.origin), growthTermBlock('＋', '基礎UP（永久）', `+${entry.baseUp}段階`, GROWTH_TONES.base), growthTermBlock('＋', '強化P（使用）', `+${entry.enhance}段階`, GROWTH_TONES.enhance), growthTermBlock('＝', '現在の適性', /*#__PURE__*/React.createElement(React.Fragment, null, entry.grade, /*#__PURE__*/React.createElement("small", {
       className: "mt-0.5 block text-[10px] font-black"
@@ -25114,18 +25111,18 @@ function MonsterHeroGame() {
       className: "mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-white/10 bg-black/30 px-2 py-1.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "shrink-0 text-[8px] font-black text-slate-400"
-    }, "適性ランクの段階"), /*#__PURE__*/React.createElement("span", {
+    }, "\u9069\u6027\u30E9\u30F3\u30AF\u306E\u6BB5\u968E"), /*#__PURE__*/React.createElement("span", {
       className: "flex min-w-0 flex-wrap items-center gap-0.5"
     }, ladder.map((grade, i) => /*#__PURE__*/React.createElement("span", {
       key: grade,
       className: "flex items-center gap-0.5"
     }, i > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-slate-600"
-    }, "→"), /*#__PURE__*/React.createElement("span", {
+    }, "\u2192"), /*#__PURE__*/React.createElement("span", {
       className: `rounded-md border px-1 py-0.5 text-[10px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
     }, grade))))), entry.capped && /*#__PURE__*/React.createElement("div", {
       className: "mt-1 text-[8px] font-bold leading-tight text-amber-300"
-    }, "段階の上限は ", maxGrade, " です。上限を超えたぶんは現在の適性へ反映されません。"));
+    }, "\u6BB5\u968E\u306E\u4E0A\u9650\u306F ", maxGrade, " \u3067\u3059\u3002\u4E0A\u9650\u3092\u8D85\u3048\u305F\u3076\u3093\u306F\u73FE\u5728\u306E\u9069\u6027\u3078\u53CD\u6620\u3055\u308C\u307E\u305B\u3093\u3002"));
   };
   const renderMonsterDetailInfo = (mon, opts = {}) => {
     if (!mon) return null;
@@ -25158,7 +25155,7 @@ function MonsterHeroGame() {
       className: "text-[7px] text-slate-500 uppercase font-bold"
     }, statTitle), growth && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-slate-500 font-bold"
-    }, "タップで詳細")), growth ? /*#__PURE__*/React.createElement("div", {
+    }, "\u30BF\u30C3\u30D7\u3067\u8A73\u7D30")), growth ? /*#__PURE__*/React.createElement("div", {
       className: "mt-1"
     }, renderGrowthStatRows(monGrowthKey, growth.stats)) : /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-x-3 gap-y-1 mt-1"
@@ -25173,9 +25170,9 @@ function MonsterHeroGame() {
       className: "flex items-center justify-between gap-2 mb-0.5 flex-wrap"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-cyan-400 uppercase font-bold"
-    }, "間合い適性（距離補正）", growth && /*#__PURE__*/React.createElement("span", {
+    }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09", growth && /*#__PURE__*/React.createElement("span", {
       className: "ml-1 text-slate-500 normal-case"
-    }, "タップで詳細")), aptPointsLabel), /*#__PURE__*/React.createElement("div", {
+    }, "\u30BF\u30C3\u30D7\u3067\u8A73\u7D30")), aptPointsLabel), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1 mt-1"
     }, RANGE_LABELS.map((label, idx) => {
       const grade = getDistAptitude(mon, idx);
@@ -25194,9 +25191,9 @@ function MonsterHeroGame() {
         className: "w-full text-center leading-tight mt-0.5"
       }, /*#__PURE__*/React.createElement("span", {
         className: "block text-[7px] text-slate-400 font-mono"
-      }, "現在 ", formatAptPct(cur)), /*#__PURE__*/React.createElement("span", {
+      }, "\u73FE\u5728 ", formatAptPct(cur)), /*#__PURE__*/React.createElement("span", {
         className: `block text-[10px] font-mono font-black ${pct > 0 ? 'text-emerald-300' : pct < 0 ? 'text-red-300' : 'text-slate-400'}`
-      }, "→ ", formatAptPct(cur + pct))), gain && (gain.baseUp > 0 || gain.enhance > 0) && /*#__PURE__*/React.createElement("span", {
+      }, "\u2192 ", formatAptPct(cur + pct))), gain && (gain.baseUp > 0 || gain.enhance > 0) && /*#__PURE__*/React.createElement("span", {
         className: "flex w-full flex-wrap items-center justify-center gap-0.5 mt-0.5"
       }, growthGainBadge('base', gain.baseUp), growthGainBadge('enhance', gain.enhance)));
       return /*#__PURE__*/React.createElement("div", {
@@ -25212,15 +25209,15 @@ function MonsterHeroGame() {
       }, cell) : cell, aptExtra ? aptExtra(idx, grade) : null);
     })), openAptEntry && renderGrowthAptDetail(openAptEntry), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-slate-500 font-bold mt-1 leading-tight"
-    }, "置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます")), renderSkillSection(mon), renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません'), /*#__PURE__*/React.createElement("div", {
+    }, "\u7F6E\u304F\u8DDD\u96E2\u306B\u95A2\u4FC2\u306A\u304F\u3001\u3053\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u88DC\u6B63\u304C4\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059")), renderSkillSection(mon), renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません'), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2 shrink-0"
     }, /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 p-2 rounded-xl border border-indigo-500/30"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-indigo-400 uppercase font-bold"
-    }, "勇者特性"), /*#__PURE__*/React.createElement("div", {
+    }, "\u52C7\u8005\u7279\u6027"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-slate-500 font-bold"
-    }, "勇者モンに選んだとき"), mon.trait && /*#__PURE__*/React.createElement("div", {
+    }, "\u52C7\u8005\u30E2\u30F3\u306B\u9078\u3093\u3060\u3068\u304D"), mon.trait && /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-indigo-300 font-black mt-0.5"
     }, mon.trait), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-white font-bold leading-tight mt-1"
@@ -25228,13 +25225,13 @@ function MonsterHeroGame() {
       className: "bg-black/40 p-2 rounded-xl border border-pink-500/30"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-pink-400 uppercase font-bold"
-    }, "合流ボーナス"), /*#__PURE__*/React.createElement("div", {
+    }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-slate-500 font-bold"
-    }, "供モンとして合流したとき"), /*#__PURE__*/React.createElement("div", {
+    }, "\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u3068\u304D"), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-white font-bold mt-1"
     }, joinBonus || 'なし'), aptBonus && /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-cyan-300 font-bold mt-0.5"
-    }, "間合い適性 ", aptBonus))), extraAfterApt);
+    }, "\u9593\u5408\u3044\u9069\u6027 ", aptBonus))), extraAfterApt);
   };
   // 限界突破・転生で残した固有技ポイントを仮配分してから確定する枠。
   // 0ポイントでも項目名と残数はコンパクトに表示し、確認場所を統一する。
@@ -25278,13 +25275,13 @@ function MonsterHeroGame() {
       className: "flex items-center justify-between gap-2 mb-1"
     }, /*#__PURE__*/React.createElement("div", {
       className: `text-[10px] uppercase font-black ${normalized.uniqueSkillPoints > 0 ? 'text-amber-300' : 'text-slate-400'}`
-    }, "固有技強化"), /*#__PURE__*/React.createElement("div", {
+    }, "\u56FA\u6709\u6280\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
       className: `text-[10px] font-black flex items-center gap-1 ${normalized.uniqueSkillPoints > 0 ? 'text-amber-300' : 'text-slate-500'}`
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 10
-    }), "未使用 固有技P：", normalized.uniqueSkillPoints)), normalized.uniqueSkillPoints > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    }), "\u672A\u4F7F\u7528 \u56FA\u6709\u6280P\uFF1A", normalized.uniqueSkillPoints)), normalized.uniqueSkillPoints > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-slate-400 font-bold mb-1.5 leading-tight"
-    }, "＋／－で仮配分し、「強化を確定」で反映します。"), /*#__PURE__*/React.createElement("div", {
+    }, "\uFF0B\uFF0F\uFF0D\u3067\u4EEE\u914D\u5206\u3057\u3001\u300C\u5F37\u5316\u3092\u78BA\u5B9A\u300D\u3067\u53CD\u6620\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "space-y-1.5"
     }, choices.map(choice => {
       const amount = Math.max(0, Math.floor(Number(draft[choice.key]) || 0)),
@@ -25307,19 +25304,19 @@ function MonsterHeroGame() {
         disabled: amount <= 0,
         onClick: () => changeDraft(choice.key, -1),
         className: "w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30"
-      }, "−"), /*#__PURE__*/React.createElement("span", {
+      }, "\u2212"), /*#__PURE__*/React.createElement("span", {
         className: "w-8 text-center text-[11px] font-mono font-black text-amber-200"
-      }, "＋", amount), /*#__PURE__*/React.createElement("button", {
+      }, "\uFF0B", amount), /*#__PURE__*/React.createElement("button", {
         "aria-label": `${current?.name || choice.name}の仮配分を増やす`,
         disabled: remaining <= 0 || after >= MAX_UNIQUE_SKILL_LEVEL,
         onClick: () => changeDraft(choice.key, 1),
         className: "w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30"
-      }, "＋")));
+      }, "\uFF0B")));
     })), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 flex items-center justify-between text-[10px] font-black"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400"
-    }, "残りP"), /*#__PURE__*/React.createElement("span", {
+    }, "\u6B8B\u308AP"), /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300"
     }, remaining)), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"
@@ -25327,7 +25324,7 @@ function MonsterHeroGame() {
       disabled: allocated <= 0,
       onClick: clearDraft,
       className: "min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30"
-    }, "キャンセル"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
       disabled: allocated <= 0,
       onClick: () => {
         const updated = spendUniqueSkillPoint(masu.id, draft);
@@ -25337,7 +25334,7 @@ function MonsterHeroGame() {
         }
       },
       className: "min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30"
-    }, "強化を確定"))), /*#__PURE__*/React.createElement("div", {
+    }, "\u5F37\u5316\u3092\u78BA\u5B9A"))), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 border-t border-white/10 pt-2"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
@@ -25347,17 +25344,17 @@ function MonsterHeroGame() {
       className: "w-full min-h-[44px] px-2 rounded-xl bg-gradient-to-b from-violet-600 to-indigo-800 text-white text-[10px] font-black leading-tight active:scale-95 flex items-center justify-center gap-1.5"
     }, /*#__PURE__*/React.createElement(List, {
       size: 13
-    }), /*#__PURE__*/React.createElement("span", null, "固有技設定（並び順・初期技）")), /*#__PURE__*/React.createElement("div", {
+    }), /*#__PURE__*/React.createElement("span", null, "\u56FA\u6709\u6280\u8A2D\u5B9A\uFF08\u4E26\u3073\u9806\u30FB\u521D\u671F\u6280\uFF09")), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-slate-400 font-bold text-center mt-1 leading-tight"
-    }, "バトルでの並び順と、開始時に構える固有技を決められます")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30D0\u30C8\u30EB\u3067\u306E\u4E26\u3073\u9806\u3068\u3001\u958B\u59CB\u6642\u306B\u69CB\u3048\u308B\u56FA\u6709\u6280\u3092\u6C7A\u3081\u3089\u308C\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 border-t border-white/10 pt-2 flex flex-col gap-1.5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-2 text-[9px] font-black"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400"
-    }, "スキルポイントリセット券"), /*#__PURE__*/React.createElement("span", {
+    }, "\u30B9\u30AD\u30EB\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u5238"), /*#__PURE__*/React.createElement("span", {
       className: resetTicketCount > 0 ? 'text-cyan-300' : 'text-slate-500'
-    }, "所持 ", resetTicketCount, "枚")), /*#__PURE__*/React.createElement("button", {
+    }, "\u6240\u6301 ", resetTicketCount, "\u679A")), /*#__PURE__*/React.createElement("button", {
       disabled: resetTicketCount <= 0 || resetPointCount <= 0,
       onClick: () => {
         if (!window.confirm(`このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`)) return;
@@ -25368,9 +25365,9 @@ function MonsterHeroGame() {
         }
       },
       className: "w-full min-h-[42px] px-2 rounded-xl bg-cyan-700 text-[10px] font-black leading-tight disabled:opacity-30 disabled:bg-slate-700"
-    }, "配分済み固有技Pをリセット"), resetPointCount <= 0 && /*#__PURE__*/React.createElement("div", {
+    }, "\u914D\u5206\u6E08\u307F\u56FA\u6709\u6280P\u3092\u30EA\u30BB\u30C3\u30C8"), resetPointCount <= 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-slate-500 font-bold text-center"
-    }, "配分済み固有技Pがないため使用できません")));
+    }, "\u914D\u5206\u6E08\u307F\u56FA\u6709\u6280P\u304C\u306A\u3044\u305F\u3081\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093")));
   };
   const renderSkillSection = mon => {
     const currentUnique = uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel);
@@ -25389,16 +25386,16 @@ function MonsterHeroGame() {
       className: "text-red-400"
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black uppercase"
-    }, "通常技: ", (HERO_ATK_NAMES[mon.id] || HERO_ATK_NAMES['Mocchi'])[0])), /*#__PURE__*/React.createElement(ChevronRight, {
+    }, "\u901A\u5E38\u6280: ", (HERO_ATK_NAMES[mon.id] || HERO_ATK_NAMES['Mocchi'])[0])), /*#__PURE__*/React.createElement(ChevronRight, {
       size: 12,
       className: "text-slate-500"
     })), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-4 text-[9px] font-mono"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-red-400 font-bold"
-    }, "技威力 ", Math.floor(BASE_ATK_EVOLUTION[0].mult * 100)), /*#__PURE__*/React.createElement("span", {
+    }, "\u6280\u5A01\u529B ", Math.floor(BASE_ATK_EVOLUTION[0].mult * 100)), /*#__PURE__*/React.createElement("span", {
       className: "text-amber-400 font-bold"
-    }, "消費G ", BASE_ATK_EVOLUTION[0].baseGuts))), /*#__PURE__*/React.createElement("button", {
+    }, "\u6D88\u8CBBG ", BASE_ATK_EVOLUTION[0].baseGuts))), /*#__PURE__*/React.createElement("button", {
       onClick: () => setRosterSkillDetail({
         mon,
         kind: 'unique'
@@ -25413,18 +25410,18 @@ function MonsterHeroGame() {
       className: "text-amber-400"
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black uppercase"
-    }, "固有技 Lv.", currentUnique.evoLevel, ": ", currentUnique.name)), /*#__PURE__*/React.createElement(ChevronRight, {
+    }, "\u56FA\u6709\u6280 Lv.", currentUnique.evoLevel, ": ", currentUnique.name)), /*#__PURE__*/React.createElement(ChevronRight, {
       size: 12,
       className: "text-slate-500"
     })), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-3 text-[9px] font-mono mb-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-red-400 font-bold"
-    }, "技威力 ", Math.floor(currentUnique.mult * 100)), /*#__PURE__*/React.createElement("span", {
+    }, "\u6280\u5A01\u529B ", Math.floor(currentUnique.mult * 100)), /*#__PURE__*/React.createElement("span", {
       className: "text-yellow-400 font-bold"
-    }, "会心率 ", Math.round(currentUnique.crit * 100), "%"), /*#__PURE__*/React.createElement("span", {
+    }, "\u4F1A\u5FC3\u7387 ", Math.round(currentUnique.crit * 100), "%"), /*#__PURE__*/React.createElement("span", {
       className: "text-amber-400 font-bold"
-    }, "消費G ", currentUnique.guts)), /*#__PURE__*/React.createElement("div", {
+    }, "\u6D88\u8CBBG ", currentUnique.guts)), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-300 leading-relaxed italic"
     }, "\"", currentUnique.effectDesc, "\"")));
   };
@@ -25453,11 +25450,11 @@ function MonsterHeroGame() {
       className: "flex items-center justify-between gap-2 min-w-0"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] font-black text-amber-300 uppercase tracking-widest shrink-0"
-    }, "総合力"), /*#__PURE__*/React.createElement("span", {
+    }, "\u7DCF\u5408\u529B"), /*#__PURE__*/React.createElement("span", {
       className: "flex items-baseline gap-1.5 min-w-0 justify-end"
     }, known && before != null && before !== power && /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-mono font-black text-slate-400 shrink-0"
-    }, formatMonsterPower(before), " →"), /*#__PURE__*/React.createElement("b", {
+    }, formatMonsterPower(before), " \u2192"), /*#__PURE__*/React.createElement("b", {
       className: `${valueClass} font-mono font-black text-amber-200 leading-none tabular-nums`
     }, known ? formatMonsterPower(power) : '—'), delta != null && delta !== 0 && /*#__PURE__*/React.createElement("span", {
       className: `text-[11px] font-mono font-black shrink-0 ${delta > 0 ? 'text-emerald-300' : 'text-red-300'}`
@@ -25534,7 +25531,7 @@ function MonsterHeroGame() {
       className: `text-[9px] font-bold ${masu ? 'text-pink-400' : 'text-indigo-400'} truncate`
     }, masu ? `元：${base.name}` : 'ベースモン')), onClose && /*#__PURE__*/React.createElement("button", {
       onClick: onClose,
-      "aria-label": "閉じる",
+      "aria-label": "\u9589\u3058\u308B",
       className: "p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"
     }, /*#__PURE__*/React.createElement(X, {
       size: 16
@@ -25546,7 +25543,7 @@ function MonsterHeroGame() {
       className: "text-pink-300 flex items-center gap-1 shrink-0"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 10
-    }), "絆 Lv.", lvl.level, " ", /*#__PURE__*/React.createElement("span", {
+    }), "\u7D46 Lv.", lvl.level, " ", /*#__PURE__*/React.createElement("span", {
       className: "text-slate-500"
     }, "/ ", norm.levelCap), lvl.level >= norm.levelCap && /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300"
@@ -25554,11 +25551,11 @@ function MonsterHeroGame() {
       className: "flex items-center gap-1.5 text-[8px] shrink-0"
     }, norm.rebirthCount > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-violet-300"
-    }, "限界突破 ", norm.rebirthCount), /*#__PURE__*/React.createElement("span", {
+    }, "\u9650\u754C\u7A81\u7834 ", norm.rebirthCount), /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300"
-    }, "転生 ", norm.reincarnateCount, "回", norm.inheritedReincarnateCount > 0 && /*#__PURE__*/React.createElement("span", {
+    }, "\u8EE2\u751F ", norm.reincarnateCount, "\u56DE", norm.inheritedReincarnateCount > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-amber-200"
-    }, "（継承 ", norm.inheritedReincarnateCount, "回分）")))), /*#__PURE__*/React.createElement("div", {
+    }, "\uFF08\u7D99\u627F ", norm.inheritedReincarnateCount, "\u56DE\u5206\uFF09")))), /*#__PURE__*/React.createElement("div", {
       className: "w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"
     }, /*#__PURE__*/React.createElement("div", {
       className: "h-full bg-gradient-to-r from-pink-500 to-rose-400",
@@ -25604,20 +25601,20 @@ function MonsterHeroGame() {
         readOnly,
         zIndex: zIndex + 500
       }),
-      "aria-label": "合体詳細を見る",
+      "aria-label": "\u5408\u4F53\u8A73\u7D30\u3092\u898B\u308B",
       className: "w-full bg-black/40 p-2 rounded-xl border border-amber-500/30 flex items-center justify-between gap-2 active:scale-95",
       "data-fusion-section": true
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] text-amber-400 uppercase font-bold flex items-center gap-1 shrink-0"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 9
-    }), "合体"), /*#__PURE__*/React.createElement("span", {
+    }), "\u5408\u4F53"), /*#__PURE__*/React.createElement("span", {
       className: "flex items-center gap-2 min-w-0"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black text-amber-200 shrink-0"
-    }, "合体回数 ", total, "回"), /*#__PURE__*/React.createElement("span", {
+    }, "\u5408\u4F53\u56DE\u6570 ", total, "\u56DE"), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-indigo-300 flex items-center gap-0.5 shrink-0"
-    }, "合体詳細を見る", /*#__PURE__*/React.createElement(ChevronRight, {
+    }, "\u5408\u4F53\u8A73\u7D30\u3092\u898B\u308B", /*#__PURE__*/React.createElement(ChevronRight, {
       size: 11
     }))));
   };
@@ -25678,7 +25675,7 @@ function MonsterHeroGame() {
       className: "text-[11px] font-black text-amber-300 uppercase tracking-widest flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 12
-    }), "合体詳細")), renderMonsterSummaryHeader({
+    }), "\u5408\u4F53\u8A73\u7D30")), renderMonsterSummaryHeader({
       mon,
       masu,
       onClose: close,
@@ -25686,18 +25683,18 @@ function MonsterHeroGame() {
       compact: true,
       extraLine: /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-amber-200"
-      }, "合体回数 ", total, "回")
+      }, "\u5408\u4F53\u56DE\u6570 ", total, "\u56DE")
     }), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5"
     }, renderDetailSectionLabel('合体履歴', total > 0 ? '新しい合体が上' : null), total === 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 font-bold text-center py-6"
-    }, "まだ合体履歴はありません"), total > 0 && !hasDetail && /*#__PURE__*/React.createElement("div", {
+    }, "\u307E\u3060\u5408\u4F53\u5C65\u6B74\u306F\u3042\u308A\u307E\u305B\u3093"), total > 0 && !hasDetail && /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 p-3 rounded-xl border border-white/10 text-center"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] font-black text-amber-200"
-    }, "合体回数 ", total, "回"), /*#__PURE__*/React.createElement("div", {
+    }, "\u5408\u4F53\u56DE\u6570 ", total, "\u56DE"), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-400 font-bold mt-1 leading-relaxed"
-    }, "詳細な合体履歴はこの記録には保存されていません")), rows.map(h => /*#__PURE__*/React.createElement("div", {
+    }, "\u8A73\u7D30\u306A\u5408\u4F53\u5C65\u6B74\u306F\u3053\u306E\u8A18\u9332\u306B\u306F\u4FDD\u5B58\u3055\u308C\u3066\u3044\u307E\u305B\u3093")), rows.map(h => /*#__PURE__*/React.createElement("div", {
       key: h.no,
       className: "bg-black/40 rounded-xl border border-amber-500/20 px-2.5 py-2"
     }, /*#__PURE__*/React.createElement("div", {
@@ -25710,26 +25707,26 @@ function MonsterHeroGame() {
       className: "text-[11px] font-black text-white truncate mt-0.5"
     }, h.subName || h.subBaseName || '記録なし', h.subBaseName && /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-slate-400 font-bold"
-    }, "（", h.subBaseName, "）")), /*#__PURE__*/React.createElement("div", {
+    }, "\uFF08", h.subBaseName, "\uFF09")), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-1"
     }, h.subBondLevel != null && /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-pink-300 font-black flex items-center gap-0.5"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 8
-    }), "相手の絆 Lv.", h.subBondLevel), h.xpGained != null && /*#__PURE__*/React.createElement("span", {
+    }), "\u76F8\u624B\u306E\u7D46 Lv.", h.subBondLevel), h.xpGained != null && /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-pink-200 font-mono font-black tabular-nums"
     }, "+", h.xpGained.toLocaleString(), " XP")), h.inherited && /*#__PURE__*/React.createElement("div", {
       className: "mt-1 text-[9px] font-black text-amber-300 flex items-center gap-1 bg-amber-950/40 border border-amber-500/30 rounded-lg px-2 py-1"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 9
-    }), "固有技を継承", h.inheritedUnique?.name && /*#__PURE__*/React.createElement("span", {
+    }), "\u56FA\u6709\u6280\u3092\u7D99\u627F", h.inheritedUnique?.name && /*#__PURE__*/React.createElement("span", {
       className: "text-amber-100 truncate"
-    }, "：", h.inheritedUnique.name)))), shown.length > 0 && offset > 0 && /*#__PURE__*/React.createElement("div", {
+    }, "\uFF1A", h.inheritedUnique.name)))), shown.length > 0 && offset > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-slate-500 font-bold text-center pt-1"
-    }, "この記録には直近", shown.length, "件ぶんの履歴が残っています（全", total, "回）")), /*#__PURE__*/React.createElement("button", {
+    }, "\u3053\u306E\u8A18\u9332\u306B\u306F\u76F4\u8FD1", shown.length, "\u4EF6\u3076\u3093\u306E\u5C65\u6B74\u304C\u6B8B\u3063\u3066\u3044\u307E\u3059\uFF08\u5168", total, "\u56DE\uFF09")), /*#__PURE__*/React.createElement("button", {
       onClick: close,
       className: "w-full min-h-[48px] bg-amber-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg shrink-0 active:scale-95"
-    }, "閉じる")));
+    }, "\u9589\u3058\u308B")));
   };
 
   // 詳細モーダルの外枠。ヘッダーは固定したまま本文だけスクロールする。
@@ -25795,13 +25792,13 @@ function MonsterHeroGame() {
       className: "min-w-0"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] font-black text-amber-400"
-    }, "マーケット販売中の円盤石"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u8CA9\u58F2\u4E2D\u306E\u5186\u76E4\u77F3"), /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] font-black text-white leading-tight break-words"
     }, detailOpts.marketDiscName))), renderDetailSectionLabel('この個体の強さ', '総合力に反映されます'), renderMonsterDetailInfo(mon, detailOpts), masu && (masu.inheritedUniques || []).length > 0 && /*#__PURE__*/React.createElement("section", {
       className: "rounded-xl border border-amber-500/40 bg-amber-950/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black text-amber-300 mb-1"
-    }, "継承した固有技"), masu.inheritedUniques.map((u, i) => /*#__PURE__*/React.createElement("div", {
+    }, "\u7D99\u627F\u3057\u305F\u56FA\u6709\u6280"), masu.inheritedUniques.map((u, i) => /*#__PURE__*/React.createElement("div", {
       key: u?.inheritedUniqueId || i,
       className: "text-[10px] text-white font-bold"
     }, u?.name || '固有技', " ", /*#__PURE__*/React.createElement("span", {
@@ -25814,7 +25811,7 @@ function MonsterHeroGame() {
     }), bodyExtra), footer || /*#__PURE__*/React.createElement("button", {
       onClick: onClose,
       className: "w-full min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg shrink-0 active:scale-95"
-    }, "閉じる")));
+    }, "\u9589\u3058\u308B")));
   };
   const pct = Math.round(bootProgress.done / Math.max(1, bootProgress.total) * 100);
   // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
@@ -25832,9 +25829,9 @@ function MonsterHeroGame() {
     className: "flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"
   }, /*#__PURE__*/React.createElement(RefreshCcw, {
     size: 18
-  }), /*#__PURE__*/React.createElement("span", null, "新しいバージョンがあります\u3000更新する")), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("span", null, "\u65B0\u3057\u3044\u30D0\u30FC\u30B8\u30E7\u30F3\u304C\u3042\u308A\u307E\u3059\u3000\u66F4\u65B0\u3059\u308B")), /*#__PURE__*/React.createElement("button", {
     type: "button",
-    "aria-label": "あとで更新する（この通知を閉じる）",
+    "aria-label": "\u3042\u3068\u3067\u66F4\u65B0\u3059\u308B\uFF08\u3053\u306E\u901A\u77E5\u3092\u9589\u3058\u308B\uFF09",
     onClick: () => setDismissedUpdateBuild(latestBuild || BUILD_DATE),
     className: "shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"
   }, /*#__PURE__*/React.createElement(X, {
@@ -25847,7 +25844,7 @@ function MonsterHeroGame() {
     className: "mh-title-dialog"
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-dialog-head"
-  }, /*#__PURE__*/React.createElement("h3", null, "✦ 更新履歴"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("h3", null, "\u2726 \u66F4\u65B0\u5C65\u6B74"), /*#__PURE__*/React.createElement("button", {
     onClick: closeChangelog
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
@@ -25865,26 +25862,26 @@ function MonsterHeroGame() {
     className: changelogTab === t.key ? 'active' : ''
   }, t.label, changelogUnread[t.key] && /*#__PURE__*/React.createElement("em", {
     className: "mh-unread-badge",
-    "aria-label": "未読あり"
+    "aria-label": "\u672A\u8AAD\u3042\u308A"
   }, "!")))), /*#__PURE__*/React.createElement("div", {
     className: "mh-changelog-list",
     "data-changelog-list": true
   }, CHANGELOG_ENTRIES.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "mh-changelog-empty",
     "data-changelog-empty": true
-  }, "更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。") : CHANGELOG_ENTRIES.filter(c => c.type === changelogTab).map(c => /*#__PURE__*/React.createElement("article", {
+  }, "\u66F4\u65B0\u5C65\u6B74\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u901A\u4FE1\u72B6\u6CC1\u3092\u78BA\u304B\u3081\u3066\u304B\u3089\u3001\u8A2D\u5B9A\u306E\u300C\u30B2\u30FC\u30E0\u3092\u66F4\u65B0\u300D\u3067\u8AAD\u307F\u8FBC\u307F\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002") : CHANGELOG_ENTRIES.filter(c => c.type === changelogTab).map(c => /*#__PURE__*/React.createElement("article", {
     key: c.id,
     className: changelogUnreadIds[changelogTab].includes(c.id) ? 'unread' : ''
   }, /*#__PURE__*/React.createElement("time", null, c.date, changelogUnreadIds[changelogTab].includes(c.id) && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("b", null, c.title), (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
     key: j
-  }, "・", x))))))) : showTitleSettings ? /*#__PURE__*/React.createElement("div", {
+  }, "\u30FB", x))))))) : showTitleSettings ? /*#__PURE__*/React.createElement("div", {
     className: "mh-title-modal",
     onPointerDown: e => e.stopPropagation()
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-title-dialog"
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-dialog-head"
-  }, /*#__PURE__*/React.createElement("h3", null, "設定"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("h3", null, "\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowTitleSettings(false)
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
@@ -25894,7 +25891,7 @@ function MonsterHeroGame() {
       setShowTitleSettings(false);
       setShowAudioSettings(true);
     }
-  }, "🔊 音量設定 ", /*#__PURE__*/React.createElement(ChevronRight, {
+  }, "\uD83D\uDD0A \u97F3\u91CF\u8A2D\u5B9A ", /*#__PURE__*/React.createElement(ChevronRight, {
     size: 18
   })), /*#__PURE__*/React.createElement("button", {
     className: "mh-dialog-choice",
@@ -25902,7 +25899,7 @@ function MonsterHeroGame() {
       setShowTitleSettings(false);
       setShowBgmArrangement(true);
     }
-  }, "🎼 BGMアレンジ ", /*#__PURE__*/React.createElement(ChevronRight, {
+  }, "\uD83C\uDFBC BGM\u30A2\u30EC\u30F3\u30B8 ", /*#__PURE__*/React.createElement(ChevronRight, {
     size: 18
   })), /*#__PURE__*/React.createElement("button", {
     className: "mh-dialog-choice",
@@ -25910,7 +25907,7 @@ function MonsterHeroGame() {
       setShowTitleSettings(false);
       setShowBackup(true);
     }
-  }, "🛡️ データ引き継ぎ ", /*#__PURE__*/React.createElement(ChevronRight, {
+  }, "\uD83D\uDEE1\uFE0F \u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E ", /*#__PURE__*/React.createElement(ChevronRight, {
     size: 18
   })))) : showAudioSettings ? /*#__PURE__*/React.createElement("div", {
     className: "mh-title-modal"
@@ -25918,7 +25915,7 @@ function MonsterHeroGame() {
     className: "mh-title-dialog"
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-dialog-head"
-  }, /*#__PURE__*/React.createElement("h3", null, "音量設定"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("h3", null, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowAudioSettings(false)
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
@@ -25927,14 +25924,14 @@ function MonsterHeroGame() {
     onClick: toggleQuickMute
   }, audioMuted ? '🔇 音がオフです' : '🔊 音はオンです'), /*#__PURE__*/React.createElement(VolumeSlider, {
     label: "SE",
-    icon: "🔔",
+    icon: "\uD83D\uDD14",
     value: seVolume,
     onChange: changeSeVolume,
     gradient: "from-cyan-500 to-indigo-500",
     thumbRing: "border-indigo-400"
   }), /*#__PURE__*/React.createElement(VolumeSlider, {
     label: "BGM",
-    icon: "🎵",
+    icon: "\uD83C\uDFB5",
     value: bgmVolume,
     onChange: changeBgmVolume,
     gradient: "from-fuchsia-500 to-pink-500",
@@ -25949,7 +25946,7 @@ function MonsterHeroGame() {
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-dialog-head"
-  }, /*#__PURE__*/React.createElement("h3", null, "BGMアレンジ"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("h3", null, "BGM\u30A2\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("button", {
     onClick: closeBgmArrangement
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
@@ -25976,7 +25973,7 @@ function MonsterHeroGame() {
     const items = selected.id === 'battle' ? selectedMode.items : selected.items;
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       role: "tablist",
-      "aria-label": "BGMカテゴリ",
+      "aria-label": "BGM\u30AB\u30C6\u30B4\u30EA",
       className: "grid grid-cols-4 gap-1 mb-3"
     }, categories.map(category => /*#__PURE__*/React.createElement("button", {
       key: category.id,
@@ -25987,7 +25984,7 @@ function MonsterHeroGame() {
       className: `min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selected.id === category.id ? 'bg-indigo-600 border-indigo-300 text-white' : 'bg-slate-900 border-white/15 text-slate-300'}`
     }, category.label))), selected.id === 'battle' && /*#__PURE__*/React.createElement("div", {
       role: "tablist",
-      "aria-label": "バトルモード",
+      "aria-label": "\u30D0\u30C8\u30EB\u30E2\u30FC\u30C9",
       className: `grid ${battleModes.length >= 5 ? 'grid-cols-5' : 'grid-cols-4'} gap-1 mb-4`
     }, battleModes.map(mode => /*#__PURE__*/React.createElement("button", {
       key: mode.id,
@@ -26012,9 +26009,9 @@ function MonsterHeroGame() {
       className: "w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
     }, /*#__PURE__*/React.createElement("option", {
       value: "off"
-    }, "OFF（戦闘BGMを途切れさせない）"), /*#__PURE__*/React.createElement("option", {
+    }, "OFF\uFF08\u6226\u95D8BGM\u3092\u9014\u5207\u308C\u3055\u305B\u306A\u3044\uFF09"), /*#__PURE__*/React.createElement("option", {
       value: "on"
-    }, "ON（従来どおり）"))))), items.map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
+    }, "ON\uFF08\u5F93\u6765\u3069\u304A\u308A\uFF09"))))), items.map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
       key: scene,
       className: "block text-left"
     }, /*#__PURE__*/React.createElement("span", {
@@ -26040,13 +26037,13 @@ function MonsterHeroGame() {
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
     })
-  }, "デフォルトに戻す"))) : showBackup ? /*#__PURE__*/React.createElement("div", {
+  }, "\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u623B\u3059"))) : showBackup ? /*#__PURE__*/React.createElement("div", {
     className: "mh-title-modal"
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-title-dialog"
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-dialog-head"
-  }, /*#__PURE__*/React.createElement("h3", null, "データ引き継ぎ"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("h3", null, "\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowBackup(false)
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
@@ -26055,23 +26052,23 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("button", {
     className: backupTab === 'export' ? 'active' : '',
     onClick: () => setBackupTab('export')
-  }, "バックアップ"), /*#__PURE__*/React.createElement("button", {
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), /*#__PURE__*/React.createElement("button", {
     className: backupTab === 'import' ? 'active' : '',
     onClick: () => setBackupTab('import')
-  }, "復元")), backupTab === 'export' ? /*#__PURE__*/React.createElement(React.Fragment, null, backupCode && /*#__PURE__*/React.createElement("textarea", {
+  }, "\u5FA9\u5143")), backupTab === 'export' ? /*#__PURE__*/React.createElement(React.Fragment, null, backupCode && /*#__PURE__*/React.createElement("textarea", {
     readOnly: true,
     value: backupCode
   }), /*#__PURE__*/React.createElement("button", {
     className: "mh-dialog-choice",
     onClick: generateBackupCode
-  }, "バックアップコードを作成")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("textarea", {
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u4F5C\u6210")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("textarea", {
     value: restoreInput,
     onChange: e => setRestoreInput(e.target.value),
-    placeholder: "バックアップコードを貼り付け"
+    placeholder: "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u8CBC\u308A\u4ED8\u3051"
   }), /*#__PURE__*/React.createElement("button", {
     className: "mh-dialog-choice",
     onClick: restoreFromBackupCode
-  }, "このコードで復元する")), restoreMsg && /*#__PURE__*/React.createElement("p", null, restoreMsg))) : null;
+  }, "\u3053\u306E\u30B3\u30FC\u30C9\u3067\u5FA9\u5143\u3059\u308B")), restoreMsg && /*#__PURE__*/React.createElement("p", null, restoreMsg))) : null;
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: `mh-boot-screen ${bootPhase === 'ENTRY_READY' ? 'is-ready' : ''} ${entryAnimating ? 'is-entering' : ''}`
   }, /*#__PURE__*/React.createElement("div", {
@@ -26081,10 +26078,10 @@ function MonsterHeroGame() {
     className: "mh-mocchi-wrap"
   }, /*#__PURE__*/React.createElement("img", {
     src: MOCCHI_IMG,
-    alt: "モッチー"
-  }), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("i", null, "✦"), /*#__PURE__*/React.createElement("i", null, "✧")), /*#__PURE__*/React.createElement("section", {
+    alt: "\u30E2\u30C3\u30C1\u30FC"
+  }), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("i", null, "\u2726"), /*#__PURE__*/React.createElement("i", null, "\u2727")), /*#__PURE__*/React.createElement("section", {
     className: "mh-boot-copy"
-  }, bootPhase === 'LOADING' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h1", null, "NOW LOADING"), /*#__PURE__*/React.createElement("h2", null, "冒険の準備をしています"), /*#__PURE__*/React.createElement("div", {
+  }, bootPhase === 'LOADING' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h1", null, "NOW LOADING"), /*#__PURE__*/React.createElement("h2", null, "\u5192\u967A\u306E\u6E96\u5099\u3092\u3057\u3066\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "mh-progress"
   }, /*#__PURE__*/React.createElement("span", {
     style: {
@@ -26093,7 +26090,7 @@ function MonsterHeroGame() {
   })), /*#__PURE__*/React.createElement("strong", null, pct, "%"), /*#__PURE__*/React.createElement("p", null, bootProgress.label)) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h1", null, "READY"), /*#__PURE__*/React.createElement("button", {
     disabled: entryAnimating,
     onPointerDown: unlockBootSound
-  }, "TAP TO START"), /*#__PURE__*/React.createElement("h2", null, "― 冒険の扉を開く ―"), /*#__PURE__*/React.createElement("p", null, "追加データはバックグラウンドで読み込みを続けます"))), /*#__PURE__*/React.createElement("footer", null, "VERSION ", BUILD_DATE), /*#__PURE__*/React.createElement("div", {
+  }, "TAP TO START"), /*#__PURE__*/React.createElement("h2", null, "\u2015 \u5192\u967A\u306E\u6249\u3092\u958B\u304F \u2015"), /*#__PURE__*/React.createElement("p", null, "\u8FFD\u52A0\u30C7\u30FC\u30BF\u306F\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u3067\u8AAD\u307F\u8FBC\u307F\u3092\u7D9A\u3051\u307E\u3059"))), /*#__PURE__*/React.createElement("footer", null, "VERSION ", BUILD_DATE), /*#__PURE__*/React.createElement("div", {
     className: "mh-entry-flash"
   })), updateNotice);
   const rankingPlace = index => /*#__PURE__*/React.createElement("div", {
@@ -26105,7 +26102,7 @@ function MonsterHeroGame() {
     className: "w-8 h-8 shrink-0"
   }) : /*#__PURE__*/React.createElement("div", {
     className: "w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs"
-  }, "👤");
+  }, "\uD83D\uDC64");
   const rankingCardClass = index => `rounded-xl border ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   const renderScoreRankingEntry = (entry, index) => {
@@ -26152,7 +26149,7 @@ function MonsterHeroGame() {
       className: "inline mr-0.5 mb-px"
     }), runStat.text), /*#__PURE__*/React.createElement("div", {
       className: "mt-1 flex items-center justify-center gap-0.5 rounded-lg border border-indigo-400/40 bg-indigo-500/10 py-1 text-[9px] font-black text-indigo-200"
-    }, "パーティー詳細", /*#__PURE__*/React.createElement(ChevronRight, {
+    }, "\u30D1\u30FC\u30C6\u30A3\u30FC\u8A73\u7D30", /*#__PURE__*/React.createElement(ChevronRight, {
       size: 11
     })));
   };
@@ -26193,7 +26190,7 @@ function MonsterHeroGame() {
       className: "truncate text-[10px]"
     }, entry?.userName || '名無しのブリーダー'), /*#__PURE__*/React.createElement("strong", {
       className: "text-xs text-pink-300 whitespace-nowrap"
-    }, "絆Lv.", level)), /*#__PURE__*/React.createElement("div", {
+    }, "\u7D46Lv.", level)), /*#__PURE__*/React.createElement("div", {
       className: "ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"
     }, entry?.imgUrl ? /*#__PURE__*/React.createElement("img", {
       src: entry.imgUrl,
@@ -26265,13 +26262,13 @@ function MonsterHeroGame() {
   // 画面が増えても表示の作りが枝分かれしないよう、一覧はここにしか書かない
   const rankingRetryButton = onRetry => /*#__PURE__*/React.createElement("div", {
     className: "text-center text-red-300 py-8"
-  }, /*#__PURE__*/React.createElement("p", null, "取得に失敗しました"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("p", null, "\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
     onClick: onRetry,
     className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
-  }, "再読込"));
+  }, "\u518D\u8AAD\u8FBC"));
   const rankingEmptyText = /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-500 py-8"
-  }, "記録はまだありません");
+  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093");
   // スコアランキング。モードごとに別枠なので、どのモードのぶんを見るかを受け取る。
   // チャレンジは従来どおりの難易度キー、プロは Pro を付けたキーを読み書きする
   const renderScoreRankingBody = (mode = BATTLE_MODE_CHALLENGE) => {
@@ -26307,7 +26304,7 @@ function MonsterHeroGame() {
       className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
     }, status.refreshing && /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] text-indigo-300"
-    }, "更新中…"), status.error && status.fetched && /*#__PURE__*/React.createElement("div", {
+    }, "\u66F4\u65B0\u4E2D\u2026"), status.error && status.fetched && /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] text-amber-300"
     }, status.error), rows.map(renderScoreRankingEntry), rows.length === 0 && (status.loading ? /*#__PURE__*/React.createElement("div", {
       className: "text-center text-slate-400 py-8"
@@ -26348,7 +26345,7 @@ function MonsterHeroGame() {
       className: "block text-[8px] text-slate-400"
     }, sub)), empty ? /*#__PURE__*/React.createElement("small", {
       className: "shrink-0 text-right text-[9px] font-black text-slate-500"
-    }, "記録なし") : /*#__PURE__*/React.createElement("b", {
+    }, "\u8A18\u9332\u306A\u3057") : /*#__PURE__*/React.createElement("b", {
       className: "shrink-0 text-right text-[13px] font-black text-cyan-200"
     }, score.toLocaleString(), /*#__PURE__*/React.createElement("small", {
       className: "ml-0.5 text-[8px] text-slate-400"
@@ -26358,7 +26355,7 @@ function MonsterHeroGame() {
       lineage,
       record: speciesChallengeRecord(speciesChallengeProgress, lineage.id, diffId)
     })).filter(row => row.record.clears > 0).sort((a, b) => b.record.bestScore - a.record.bestScore || b.record.clears - a.record.clears).map((row, index) => recordRow(row.lineage.id, lineageIcon(row.lineage), `${row.lineage.name}種`, `クリア ${row.record.clears}回${row.record.bestTurns !== null ? ` ／ 最短 ${row.record.bestTurns}T` : ''}`, row.record.bestScore, index + 1));
-    const emptyText = /*#__PURE__*/React.createElement(React.Fragment, null, settingOf(diffId).label, "をクリアした種族はまだありません。", /*#__PURE__*/React.createElement("br", null), "クリアすると、種族ごとに自己ベストが残ります。");
+    const emptyText = /*#__PURE__*/React.createElement(React.Fragment, null, settingOf(diffId).label, "\u3092\u30AF\u30EA\u30A2\u3057\u305F\u7A2E\u65CF\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u7A2E\u65CF\u3054\u3068\u306B\u81EA\u5DF1\u30D9\u30B9\u30C8\u304C\u6B8B\u308A\u307E\u3059\u3002");
     // 取得も表示も既存のスコアランキングと同じ仕組みで、難易度キーだけを差し替える。
     //   全種族   … Species-all-<難易度id>(取得のときだけ種族別キーへ展開する読み取り専用キー)
     //   ◯◯種   … Species-<血統id>-<難易度id>
@@ -26411,7 +26408,7 @@ function MonsterHeroGame() {
       "data-species-record-list": true
     }, nationalMode ? /*#__PURE__*/React.createElement(React.Fragment, null, nationalStatus.refreshing && /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] text-indigo-300"
-    }, "更新中…"), nationalStatus.error && nationalStatus.fetched && /*#__PURE__*/React.createElement("div", {
+    }, "\u66F4\u65B0\u4E2D\u2026"), nationalStatus.error && nationalStatus.fetched && /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] text-amber-300"
     }, nationalStatus.error), nationalRows.map(renderScoreRankingEntry), nationalRows.length === 0 && (nationalStatus.loading ? /*#__PURE__*/React.createElement("div", {
       className: "text-center text-slate-400 py-8"
@@ -26419,10 +26416,10 @@ function MonsterHeroGame() {
       className: "rounded-2xl border border-white/10 bg-slate-900 p-6 text-center text-[10px] leading-relaxed text-slate-400"
     }, emptyText) : rows, !SPECIES_CHALLENGE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("p", {
       className: "rounded-xl border border-amber-400/30 bg-amber-950/25 p-3 text-center text-[9px] leading-relaxed text-amber-200"
-    }, "いまは自分の記録だけを表示しています。全国ランキングはモードの公開後に始まります。"), SPECIES_CHALLENGE_PUBLIC_RELEASE && !nationalMode && /*#__PURE__*/React.createElement("p", {
+    }, "\u3044\u307E\u306F\u81EA\u5206\u306E\u8A18\u9332\u3060\u3051\u3092\u8868\u793A\u3057\u3066\u3044\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u30E2\u30FC\u30C9\u306E\u516C\u958B\u5F8C\u306B\u59CB\u307E\u308A\u307E\u3059\u3002"), SPECIES_CHALLENGE_PUBLIC_RELEASE && !nationalMode && /*#__PURE__*/React.createElement("p", {
       "data-species-self-best-note": true,
       className: "rounded-xl border border-white/10 bg-slate-900/60 p-3 text-center text-[9px] leading-relaxed text-slate-400"
-    }, "ここは自分の種族別ベストの比較です。全国ランキングは種族のタブから見られます。")));
+    }, "\u3053\u3053\u306F\u81EA\u5206\u306E\u7A2E\u65CF\u5225\u30D9\u30B9\u30C8\u306E\u6BD4\u8F03\u3067\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u7A2E\u65CF\u306E\u30BF\u30D6\u304B\u3089\u898B\u3089\u308C\u307E\u3059\u3002")));
   };
   // ブリーダーLvランキング。モードで分かれない(そのブリーダーのレベルは1つだけ)
   const renderBreederRankingBody = () => {
@@ -26431,7 +26428,7 @@ function MonsterHeroGame() {
       className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
     }, status.refreshing && /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] text-indigo-300"
-    }, "更新中…"), status.error && status.fetched && /*#__PURE__*/React.createElement("div", {
+    }, "\u66F4\u65B0\u4E2D\u2026"), status.error && status.fetched && /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] text-amber-300"
     }, status.error), breederRanking.map(renderBreederRankingEntry), breederRanking.length === 0 && (status.loading ? /*#__PURE__*/React.createElement("div", {
       className: "text-center text-slate-400 py-8"
@@ -26454,18 +26451,18 @@ function MonsterHeroGame() {
     className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
   }, bondRankingLoading && bondRankingData && /*#__PURE__*/React.createElement("div", {
     className: "text-center text-[9px] text-indigo-300"
-  }, "更新中…"), bondRankingError && bondRankingData && /*#__PURE__*/React.createElement("div", {
+  }, "\u66F4\u65B0\u4E2D\u2026"), bondRankingError && bondRankingData && /*#__PURE__*/React.createElement("div", {
     className: "text-center text-[9px] text-amber-300"
   }, bondRankingError), bondRanking.map(renderBondRankingEntry), bondRanking.length === 0 && (bondRankingLoading && !bondRankingData ? /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-400 py-8"
   }, "Loading...") : bondRankingError && !bondRankingData ? rankingRetryButton(() => loadRankings(null, true, true, 'bond')) : rankingEmptyText)));
   if (bootPhase === 'TITLE') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-title-gate",
-    "aria-label": "Monster Hero タイトル画面"
+    "aria-label": "Monster Hero \u30BF\u30A4\u30C8\u30EB\u753B\u9762"
   }, /*#__PURE__*/React.createElement("img", {
     className: "mh-title-visual",
     src: "data/images/title-screen-clean.PNG",
-    alt: "モンスターヒーロー グランドチャンピオンクエスト"
+    alt: "\u30E2\u30F3\u30B9\u30BF\u30FC\u30D2\u30FC\u30ED\u30FC \u30B0\u30E9\u30F3\u30C9\u30C1\u30E3\u30F3\u30D4\u30AA\u30F3\u30AF\u30A8\u30B9\u30C8"
   }), /*#__PURE__*/React.createElement("header", {
     className: "mh-title-header"
   }, /*#__PURE__*/React.createElement("div", {
@@ -26480,7 +26477,7 @@ function MonsterHeroGame() {
     }
   }, /*#__PURE__*/React.createElement(Sparkles, {
     size: 19
-  }), /*#__PURE__*/React.createElement("span", null, "お知らせ"), hasUnreadChangelog && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("span", null, "\u304A\u77E5\u3089\u305B"), hasUnreadChangelog && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("button", {
     onPointerDown: e => e.stopPropagation(),
     onClick: e => {
       e.stopPropagation();
@@ -26488,12 +26485,12 @@ function MonsterHeroGame() {
     }
   }, /*#__PURE__*/React.createElement(Settings, {
     size: 19
-  }), /*#__PURE__*/React.createElement("span", null, "設定")))), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("button", {
     type: "button",
     className: "mh-title-start",
     disabled: !!titleModal || titleStarting,
     onPointerDown: startGame,
-    "aria-label": "トップ画面へ進む"
+    "aria-label": "\u30C8\u30C3\u30D7\u753B\u9762\u3078\u9032\u3080"
   }), titleModal), updateNotice);
   if (bootPhase === 'ENTERING_GAME') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-entering"
@@ -26506,7 +26503,7 @@ function MonsterHeroGame() {
     className: "mh-gate-particles"
   }), /*#__PURE__*/React.createElement("div", {
     className: "mh-gate-flash"
-  }), enteringSlow && /*#__PURE__*/React.createElement("p", null, "世界を構築しています…")), updateNotice);
+  }), enteringSlow && /*#__PURE__*/React.createElement("p", null, "\u4E16\u754C\u3092\u69CB\u7BC9\u3057\u3066\u3044\u307E\u3059\u2026")), updateNotice);
   return (
     /*#__PURE__*/
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
@@ -26559,19 +26556,19 @@ function MonsterHeroGame() {
       className: "flex items-center justify-between gap-2 mb-3"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-sm font-black text-white"
-    }, "BGM / 音量"), /*#__PURE__*/React.createElement("div", {
+    }, "BGM / \u97F3\u91CF"), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400"
     }, ultraEcoSession ? '超省エネ中：SEはOFF固定' : autoBattle || autoRepeat ? 'AUTO中のBGMを一時変更' : 'このバトル中のBGMを一時変更')), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => setShowAutoBgmPicker(false),
       className: "min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black"
-    }, "×")), /*#__PURE__*/React.createElement("div", {
+    }, "\xD7")), /*#__PURE__*/React.createElement("div", {
       className: "mb-2"
     }, ultraEcoSession ? /*#__PURE__*/React.createElement("div", {
       className: "rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400"
-    }, "🔕 SE 0\u3000超省エネ中はOFF固定") : /*#__PURE__*/React.createElement(VolumeSlider, {
+    }, "\uD83D\uDD15 SE 0\u3000\u8D85\u7701\u30A8\u30CD\u4E2D\u306FOFF\u56FA\u5B9A") : /*#__PURE__*/React.createElement(VolumeSlider, {
       label: "SE",
-      icon: "🔔",
+      icon: "\uD83D\uDD14",
       value: seVolume,
       onChange: changeSeVolume,
       gradient: "from-cyan-500 to-indigo-500",
@@ -26580,7 +26577,7 @@ function MonsterHeroGame() {
       className: "mb-3"
     }, /*#__PURE__*/React.createElement(VolumeSlider, {
       label: "BGM",
-      icon: "🎵",
+      icon: "\uD83C\uDFB5",
       value: bgmVolume,
       onChange: changeBgmVolume,
       gradient: "from-fuchsia-500 to-pink-500",
@@ -26589,19 +26586,19 @@ function MonsterHeroGame() {
       className: "block"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-xs font-black text-slate-300"
-    }, "再生するBGM"), /*#__PURE__*/React.createElement("select", {
-      "aria-label": "バトル中に再生するBGM",
+    }, "\u518D\u751F\u3059\u308BBGM"), /*#__PURE__*/React.createElement("select", {
+      "aria-label": "\u30D0\u30C8\u30EB\u4E2D\u306B\u518D\u751F\u3059\u308BBGM",
       value: autoBgmOverride || (autoBattle || autoRepeat ? bgmArrangement.autoBattle : bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp)),
       onChange: e => selectAutoRuntimeBgm(e.target.value),
       className: "mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"
     }, /*#__PURE__*/React.createElement("option", {
       value: "__none__"
-    }, "BGMなし"), BGM_TRACKS.map(track => /*#__PURE__*/React.createElement("option", {
+    }, "BGM\u306A\u3057"), BGM_TRACKS.map(track => /*#__PURE__*/React.createElement("option", {
       key: track.id,
       value: track.id
     }, track.name)))), /*#__PURE__*/React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-    }, "BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。"))), ultraEcoSession && /*#__PURE__*/React.createElement("div", {
+    }, "BGM\u306E\u4E00\u6642\u9078\u629E\u306F\u4FDD\u5B58\u6E08\u307FBGM\u30A2\u30EC\u30F3\u30B8\u3092\u5909\u66F4\u3057\u307E\u305B\u3093\u3002SE/BGM\u97F3\u91CF\u306FHOME\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5171\u901A\u3067\u3059\u3002"))), ultraEcoSession && /*#__PURE__*/React.createElement("div", {
       "data-ultra-eco-session-dimmer": true,
       className: "fixed inset-0 bg-black/55 pointer-events-none",
       style: {
@@ -26615,7 +26612,7 @@ function MonsterHeroGame() {
       } : undefined
     }, gameState === 'HOME' && /*#__PURE__*/React.createElement("main", {
       className: "mh-home-scene",
-      "aria-label": "村の広場"
+      "aria-label": "\u6751\u306E\u5E83\u5834"
     }, /*#__PURE__*/React.createElement("picture", {
       className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''}`,
       "aria-hidden": "true"
@@ -26638,13 +26635,13 @@ function MonsterHeroGame() {
       type: "button",
       className: "mh-home-player",
       onClick: () => setGameState('PROFILE'),
-      "aria-label": "プロフィールを開く"
+      "aria-label": "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3092\u958B\u304F"
     }, /*#__PURE__*/React.createElement(HomeProfileIcon, {
       src: resolveIconUrl(breederIcon),
       id: breederIcon
     }), /*#__PURE__*/React.createElement("div", {
       className: "mh-home-player-copy"
-    }, /*#__PURE__*/React.createElement("strong", null, breederName), /*#__PURE__*/React.createElement("span", null, "ブリーダー Lv.", breederLevel.level), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("strong", null, breederName), /*#__PURE__*/React.createElement("span", null, "\u30D6\u30EA\u30FC\u30C0\u30FC Lv.", breederLevel.level), /*#__PURE__*/React.createElement("div", {
       className: "mh-home-xp"
     }, /*#__PURE__*/React.createElement("i", {
       style: {
@@ -26657,17 +26654,17 @@ function MonsterHeroGame() {
       className: "mh-home-wallet"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Gem, {
       size: 14
-    }), /*#__PURE__*/React.createElement("b", null, gold.toLocaleString()), /*#__PURE__*/React.createElement("small", null, "ダイヤ")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Coins, {
+    }), /*#__PURE__*/React.createElement("b", null, gold.toLocaleString()), /*#__PURE__*/React.createElement("small", null, "\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Coins, {
       size: 14
     }), /*#__PURE__*/React.createElement("b", null, breederPoints), /*#__PURE__*/React.createElement("small", null, "pt")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('SETTINGS'),
       className: `mh-home-settings${spotClass('settings')}`,
-      "aria-label": "設定"
+      "aria-label": "\u8A2D\u5B9A"
     }, /*#__PURE__*/React.createElement(Settings, {
       size: 20
-    }), /*#__PURE__*/React.createElement("span", null, "設定")))), /*#__PURE__*/React.createElement("nav", {
+    }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("nav", {
       className: "mh-home-facilities",
-      "aria-label": "拠点施設"
+      "aria-label": "\u62E0\u70B9\u65BD\u8A2D"
     }, /*#__PURE__*/React.createElement("button", {
       className: `mh-home-facility management${spotClass('management')}`,
       onClick: () => {
@@ -26675,58 +26672,58 @@ function MonsterHeroGame() {
         setManagementTab('monster');
         setGameState('MB_MANAGEMENT');
       },
-      "aria-label": "M/B管理"
+      "aria-label": "M/B\u7BA1\u7406"
     }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Layers, {
       size: 18
-    }), "M/B管理")), /*#__PURE__*/React.createElement("button", {
+    }), "M/B\u7BA1\u7406")), /*#__PURE__*/React.createElement("button", {
       className: `mh-home-facility temple${spotClass('temple')}`,
       onClick: () => {
         addAssistantBond('temple');
         setGameState('TEMPLE');
       },
-      "aria-label": "神殿"
+      "aria-label": "\u795E\u6BBF"
     }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sparkles, {
       size: 18
-    }), "神殿")), /*#__PURE__*/React.createElement("button", {
+    }), "\u795E\u6BBF")), /*#__PURE__*/React.createElement("button", {
       className: `mh-home-facility market${spotClass('market')}`,
       onClick: () => {
         addAssistantBond('market');
         setGameState('BREEDER_MARKET');
       },
-      "aria-label": "マーケット"
+      "aria-label": "\u30DE\u30FC\u30B1\u30C3\u30C8"
     }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(ShoppingBag, {
       size: 17
-    }), "マーケット")), /*#__PURE__*/React.createElement("button", {
+    }), "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
       className: "mh-home-facility training",
       onClick: openTrainingInfo,
-      "aria-label": "修行（準備中）"
-    }, /*#__PURE__*/React.createElement("span", null, "🎲 修行", /*#__PURE__*/React.createElement("small", null, "準備中"))), /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u4FEE\u884C\uFF08\u6E96\u5099\u4E2D\uFF09"
+    }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB2 \u4FEE\u884C", /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"))), /*#__PURE__*/React.createElement("button", {
       className: `mh-home-facility battle${spotClass('battle')}`,
       onClick: () => {
         setModeSelectTab('mode');
         setGameState('BATTLE_MODE_SELECT');
       },
-      "aria-label": "バトル"
+      "aria-label": "\u30D0\u30C8\u30EB"
     }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sword, {
       size: 25
-    }), "バトル"))), /*#__PURE__*/React.createElement("button", {
+    }), "\u30D0\u30C8\u30EB"))), /*#__PURE__*/React.createElement("button", {
       onClick: openMissions,
       className: `mh-home-mission${spotClass('reward')}`
     }, /*#__PURE__*/React.createElement(List, {
       size: 16
-    }), "ミッション", missionClaimableCount(normalizeMissions(missions)) > 0 && /*#__PURE__*/React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), /*#__PURE__*/React.createElement("button", {
+    }), "\u30DF\u30C3\u30B7\u30E7\u30F3", missionClaimableCount(normalizeMissions(missions)) > 0 && /*#__PURE__*/React.createElement("em", null, missionClaimableCount(normalizeMissions(missions)))), /*#__PURE__*/React.createElement("button", {
       onClick: openGiftBox,
       className: `mh-home-gift${spotClass('reward')}`
     }, /*#__PURE__*/React.createElement(Package, {
       size: 16
-    }), "ギフト", giftClaimableCount(gifts) > 0 && /*#__PURE__*/React.createElement("em", null, giftClaimableCount(gifts))), /*#__PURE__*/React.createElement("button", {
+    }), "\u30AE\u30D5\u30C8", giftClaimableCount(gifts) > 0 && /*#__PURE__*/React.createElement("em", null, giftClaimableCount(gifts))), /*#__PURE__*/React.createElement("button", {
       onClick: openChangelog,
       className: "mh-home-update"
     }, /*#__PURE__*/React.createElement(RefreshCcw, {
       size: 15
-    }), "更新履歴", hasUnreadChangelog && /*#__PURE__*/React.createElement("em", {
+    }), "\u66F4\u65B0\u5C65\u6B74", hasUnreadChangelog && /*#__PURE__*/React.createElement("em", {
       className: "mh-unread-badge",
-      "aria-label": "未読あり"
+      "aria-label": "\u672A\u8AAD\u3042\u308A"
     }, "!")), /*#__PURE__*/React.createElement("div", {
       className: `mh-home-assistant${spotClass('assistant')}`
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
@@ -26739,36 +26736,36 @@ function MonsterHeroGame() {
       className: "mh-training-head"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: returnToHome
-    }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "COMING SOON"), /*#__PURE__*/React.createElement("h2", null, "修行")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("section", {
+    }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "COMING SOON"), /*#__PURE__*/React.createElement("h2", null, "\u4FEE\u884C")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("section", {
       className: "mh-training-confirm"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-6xl text-center my-6"
-    }, "🎲"), /*#__PURE__*/React.createElement("h3", null, "修行は準備中です"), /*#__PURE__*/React.createElement("p", null, "マスモンとすごろく形式のマップを進み、さまざまなマス効果や修行道具を使ってゴールを目指す予定です。"), /*#__PURE__*/React.createElement("div", {
+    }, "\uD83C\uDFB2"), /*#__PURE__*/React.createElement("h3", null, "\u4FEE\u884C\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("p", null, "\u30DE\u30B9\u30E2\u30F3\u3068\u3059\u3054\u308D\u304F\u5F62\u5F0F\u306E\u30DE\u30C3\u30D7\u3092\u9032\u307F\u3001\u3055\u307E\u3056\u307E\u306A\u30DE\u30B9\u52B9\u679C\u3084\u4FEE\u884C\u9053\u5177\u3092\u4F7F\u3063\u3066\u30B4\u30FC\u30EB\u3092\u76EE\u6307\u3059\u4E88\u5B9A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "mh-training-ticket"
-    }, /*#__PURE__*/React.createElement("b", null, "正式実装前のお知らせ"), /*#__PURE__*/React.createElement("small", null, "通常プレイから修行本編は開始できません。チケットの消費、報酬の付与、進行状況の保存も行いません。"))), /*#__PURE__*/React.createElement("footer", {
+    }, /*#__PURE__*/React.createElement("b", null, "\u6B63\u5F0F\u5B9F\u88C5\u524D\u306E\u304A\u77E5\u3089\u305B"), /*#__PURE__*/React.createElement("small", null, "\u901A\u5E38\u30D7\u30EC\u30A4\u304B\u3089\u4FEE\u884C\u672C\u7DE8\u306F\u958B\u59CB\u3067\u304D\u307E\u305B\u3093\u3002\u30C1\u30B1\u30C3\u30C8\u306E\u6D88\u8CBB\u3001\u5831\u916C\u306E\u4ED8\u4E0E\u3001\u9032\u884C\u72B6\u6CC1\u306E\u4FDD\u5B58\u3082\u884C\u3044\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("footer", {
       className: "mh-training-footer"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: returnToHome
-    }, "HOMEへ戻る"))), gameState === 'TRAINING_SELECT' && (() => {
+    }, "HOME\u3078\u623B\u308B"))), gameState === 'TRAINING_SELECT' && (() => {
       const selected = masuMons.find(m => String(m.id) === String(trainingSelectedId));
       return /*#__PURE__*/React.createElement("main", {
         className: "mh-training-screen"
       }, /*#__PURE__*/React.createElement("div", {
         className: "mh-debug-banner"
-      }, "DEBUG・報酬や進行状況は保存されません"), /*#__PURE__*/React.createElement("header", {
+      }, "DEBUG\u30FB\u5831\u916C\u3084\u9032\u884C\u72B6\u6CC1\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("header", {
         className: "mh-training-head"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setGameState('DEBUG_SETTINGS')
-      }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "TRAINING TEST"), /*#__PURE__*/React.createElement("h2", null, "所持マスモン選択")), /*#__PURE__*/React.createElement("i", null)), selected && /*#__PURE__*/React.createElement("section", {
+      }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "TRAINING TEST"), /*#__PURE__*/React.createElement("h2", null, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u9078\u629E")), /*#__PURE__*/React.createElement("i", null)), selected && /*#__PURE__*/React.createElement("section", {
         className: "mh-training-selected"
       }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: selected.baseId,
         src: ALL_PLAYER_MONSTERS[selected.baseId]?.iconUrl,
         alt: selected.name,
         masuColors: getMasuColors(selected)
-      }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("span", null, "絆Lv.", bondLevelInfo(selected.bondXp || 0).level))), /*#__PURE__*/React.createElement("p", {
+      }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("span", null, "\u7D46Lv.", bondLevelInfo(selected.bondXp || 0).level))), /*#__PURE__*/React.createElement("p", {
         className: "mh-training-note"
-      }, "デバッグ修行に参加する所持マスモンを1体選択してください。"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30C7\u30D0\u30C3\u30B0\u4FEE\u884C\u306B\u53C2\u52A0\u3059\u308B\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u30921\u4F53\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "mh-training-mon-list"
       }, masuMons.map(m => /*#__PURE__*/React.createElement("button", {
         key: m.id,
@@ -26779,27 +26776,27 @@ function MonsterHeroGame() {
         src: ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl,
         alt: m.name,
         masuColors: getMasuColors(m)
-      }), /*#__PURE__*/React.createElement("b", null, m.name), /*#__PURE__*/React.createElement("small", null, "絆Lv.", bondLevelInfo(m.bondXp || 0).level)))), /*#__PURE__*/React.createElement("footer", {
+      }), /*#__PURE__*/React.createElement("b", null, m.name), /*#__PURE__*/React.createElement("small", null, "\u7D46Lv.", bondLevelInfo(m.bondXp || 0).level)))), /*#__PURE__*/React.createElement("footer", {
         className: "mh-training-footer"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: !selected,
         onClick: () => setGameState('TRAINING_DIFFICULTY')
-      }, "難易度選択へ")));
+      }, "\u96E3\u6613\u5EA6\u9078\u629E\u3078")));
     })(), gameState === 'TRAINING_DIFFICULTY' && /*#__PURE__*/React.createElement("main", {
       className: "mh-training-screen"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mh-debug-banner"
-    }, "DEBUG・報酬や進行状況は保存されません"), /*#__PURE__*/React.createElement("header", {
+    }, "DEBUG\u30FB\u5831\u916C\u3084\u9032\u884C\u72B6\u6CC1\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("header", {
       className: "mh-training-head"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('TRAINING_SELECT')
-    }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "TRAINING TEST"), /*#__PURE__*/React.createElement("h2", null, "難易度選択")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "TRAINING TEST"), /*#__PURE__*/React.createElement("h2", null, "\u96E3\u6613\u5EA6\u9078\u629E")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("div", {
       className: "mh-training-difficulties"
     }, Object.values(TRAINING_DIFFICULTIES).map(d => /*#__PURE__*/React.createElement("button", {
       key: d.id,
       className: `${trainingDifficulty === d.id ? 'active' : ''} ${d.available ? '' : 'soon'}`,
       onClick: () => setTrainingDifficulty(d.id)
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, d.label), /*#__PURE__*/React.createElement("em", null, d.available ? 'テスト可能' : '準備中')), /*#__PURE__*/React.createElement("p", null, d.summary), /*#__PURE__*/React.createElement("dl", null, /*#__PURE__*/React.createElement("span", null, d.turns, "ターン"), /*#__PURE__*/React.createElement("span", null, "🎲 ", d.dice[0], "～", d.dice[1]), /*#__PURE__*/React.createElement("span", null, "約", d.spaces, "マス"))))), /*#__PURE__*/React.createElement("footer", {
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, d.label), /*#__PURE__*/React.createElement("em", null, d.available ? 'テスト可能' : '準備中')), /*#__PURE__*/React.createElement("p", null, d.summary), /*#__PURE__*/React.createElement("dl", null, /*#__PURE__*/React.createElement("span", null, d.turns, "\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB2 ", d.dice[0], "\uFF5E", d.dice[1]), /*#__PURE__*/React.createElement("span", null, "\u7D04", d.spaces, "\u30DE\u30B9"))))), /*#__PURE__*/React.createElement("footer", {
       className: "mh-training-footer"
     }, /*#__PURE__*/React.createElement("button", {
       disabled: trainingDifficulty !== 'BEGINNER',
@@ -26808,24 +26805,24 @@ function MonsterHeroGame() {
       className: "mh-training-screen"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mh-debug-banner"
-    }, "DEBUG・報酬や進行状況は保存されません"), /*#__PURE__*/React.createElement("header", {
+    }, "DEBUG\u30FB\u5831\u916C\u3084\u9032\u884C\u72B6\u6CC1\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("header", {
       className: "mh-training-head"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('TRAINING_DIFFICULTY')
-    }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "BEGINNER"), /*#__PURE__*/React.createElement("h2", null, "マップとルール確認")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("section", {
+    }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "BEGINNER"), /*#__PURE__*/React.createElement("h2", null, "\u30DE\u30C3\u30D7\u3068\u30EB\u30FC\u30EB\u78BA\u8A8D")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("section", {
       className: "mh-training-confirm"
-    }, /*#__PURE__*/React.createElement("h3", null, "BEGINNER 試作マップ"), /*#__PURE__*/React.createElement("p", null, "24マス / 10ターン / サイコロ1～3。3か所の分岐で短い安全ルートと遠回りの報酬ルートを選び、再合流してゴールを目指します。"), /*#__PURE__*/React.createElement("h4", null, "移動ルール"), /*#__PURE__*/React.createElement("p", null, "サイコロ後は出目ぶん1マスずつ自動で進みます。操作が必要なのは、移動中に分岐へ着いた時の進行方向だけです。ゴールは到達または通過で成功。前進・後退は最終停止マスだけ発動し、強制移動は1ターン3回までです。"), /*#__PURE__*/React.createElement("button", {
+    }, /*#__PURE__*/React.createElement("h3", null, "BEGINNER \u8A66\u4F5C\u30DE\u30C3\u30D7"), /*#__PURE__*/React.createElement("p", null, "24\u30DE\u30B9 / 10\u30BF\u30FC\u30F3 / \u30B5\u30A4\u30B3\u30ED1\uFF5E3\u30023\u304B\u6240\u306E\u5206\u5C90\u3067\u77ED\u3044\u5B89\u5168\u30EB\u30FC\u30C8\u3068\u9060\u56DE\u308A\u306E\u5831\u916C\u30EB\u30FC\u30C8\u3092\u9078\u3073\u3001\u518D\u5408\u6D41\u3057\u3066\u30B4\u30FC\u30EB\u3092\u76EE\u6307\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("h4", null, "\u79FB\u52D5\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("p", null, "\u30B5\u30A4\u30B3\u30ED\u5F8C\u306F\u51FA\u76EE\u3076\u30931\u30DE\u30B9\u305A\u3064\u81EA\u52D5\u3067\u9032\u307F\u307E\u3059\u3002\u64CD\u4F5C\u304C\u5FC5\u8981\u306A\u306E\u306F\u3001\u79FB\u52D5\u4E2D\u306B\u5206\u5C90\u3078\u7740\u3044\u305F\u6642\u306E\u9032\u884C\u65B9\u5411\u3060\u3051\u3067\u3059\u3002\u30B4\u30FC\u30EB\u306F\u5230\u9054\u307E\u305F\u306F\u901A\u904E\u3067\u6210\u529F\u3002\u524D\u9032\u30FB\u5F8C\u9000\u306F\u6700\u7D42\u505C\u6B62\u30DE\u30B9\u3060\u3051\u767A\u52D5\u3057\u3001\u5F37\u5236\u79FB\u52D5\u306F1\u30BF\u30FC\u30F33\u56DE\u307E\u3067\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
       className: "mh-rule-button",
       onClick: () => setTrainingModal({
         type: 'rules'
       })
-    }, "マス一覧／ルール・全道具を見る"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30DE\u30B9\u4E00\u89A7\uFF0F\u30EB\u30FC\u30EB\u30FB\u5168\u9053\u5177\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
       className: "mh-training-ticket"
-    }, /*#__PURE__*/React.createElement("b", null, "デバッグ専用"), /*#__PURE__*/React.createElement("small", null, "チケット・通常データ・報酬・ミッション・ランキング・実績には一切反映しません。"))), /*#__PURE__*/React.createElement("footer", {
+    }, /*#__PURE__*/React.createElement("b", null, "\u30C7\u30D0\u30C3\u30B0\u5C02\u7528"), /*#__PURE__*/React.createElement("small", null, "\u30C1\u30B1\u30C3\u30C8\u30FB\u901A\u5E38\u30C7\u30FC\u30BF\u30FB\u5831\u916C\u30FB\u30DF\u30C3\u30B7\u30E7\u30F3\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u30FB\u5B9F\u7E3E\u306B\u306F\u4E00\u5207\u53CD\u6620\u3057\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("footer", {
       className: "mh-training-footer"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: startTraining
-    }, "BEGINNER 修行開始"))), gameState === 'TRAINING_BOARD' && trainingSession && (() => {
+    }, "BEGINNER \u4FEE\u884C\u958B\u59CB"))), gameState === 'TRAINING_BOARD' && trainingSession && (() => {
       const m = masuMons.find(x => String(x.id) === String(trainingSession.masuId));
       const current = TRAINING_NODE_BY_ID[trainingSession.position];
       const highlighted = new Set([current.id, ...trainingSession.routePreview, ...trainingSession.branchOptions]);
@@ -26839,12 +26836,12 @@ function MonsterHeroGame() {
         "aria-live": "assertive"
       }, /*#__PURE__*/React.createElement("div", {
         className: "mh-dice-cube"
-      }, trainingDiceFace), /*#__PURE__*/React.createElement("b", null, trainingDiceStage === 'rolling' ? 'サイコロを振っています…' : `${trainingDiceFace} が出た！`)), /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, m?.name || 'マスモン', " ", /*#__PURE__*/React.createElement("small", null, "BEGINNER・DEBUG保存なし")), /*#__PURE__*/React.createElement("span", null, "残り ", trainingSession.remainingTurns, "ターン\u3000・\u3000ゴールまであと ", trainingDistanceToGoal(current.id), "マス")), /*#__PURE__*/React.createElement("button", {
+      }, trainingDiceFace), /*#__PURE__*/React.createElement("b", null, trainingDiceStage === 'rolling' ? 'サイコロを振っています…' : `${trainingDiceFace} が出た！`)), /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, m?.name || 'マスモン', " ", /*#__PURE__*/React.createElement("small", null, "BEGINNER\u30FBDEBUG\u4FDD\u5B58\u306A\u3057")), /*#__PURE__*/React.createElement("span", null, "\u6B8B\u308A ", trainingSession.remainingTurns, "\u30BF\u30FC\u30F3\u3000\u30FB\u3000\u30B4\u30FC\u30EB\u307E\u3067\u3042\u3068 ", trainingDistanceToGoal(current.id), "\u30DE\u30B9")), /*#__PURE__*/React.createElement("button", {
         className: "mh-debug-toggle",
         onClick: () => setTrainingDebugOpen(v => !v)
       }, "DEBUG")), /*#__PURE__*/React.createElement("section", {
         className: "mh-training-hud"
-      }, /*#__PURE__*/React.createElement("span", null, "💗 仮XP ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.bondXp)), /*#__PURE__*/React.createElement("span", null, "💎 仮ダイヤ ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.diamonds)), /*#__PURE__*/React.createElement("span", null, "🎁 仮アイテム ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.items.length))), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC97 \u4EEEXP ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.bondXp)), /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC8E \u4EEE\u30C0\u30A4\u30E4 ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.diamonds)), /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF81 \u4EEE\u30A2\u30A4\u30C6\u30E0 ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.items.length))), /*#__PURE__*/React.createElement("div", {
         ref: trainingMapRef,
         className: `mh-tile-viewport ${trainingMapOverview ? 'overview' : ''}`,
         onPointerDown: trainingPointerDown,
@@ -26854,9 +26851,9 @@ function MonsterHeroGame() {
         onWheel: trainingWheel
       }, /*#__PURE__*/React.createElement("div", {
         className: "mh-map-legend"
-      }, /*#__PURE__*/React.createElement("b", null, "🚩 START"), /*#__PURE__*/React.createElement("b", null, "📍 現在地"), /*#__PURE__*/React.createElement("b", null, "⚡ 安全ルート"), /*#__PURE__*/React.createElement("b", null, "🎁 報酬ルート"), /*#__PURE__*/React.createElement("b", null, "🏁 GOAL")), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("b", null, "\uD83D\uDEA9 START"), /*#__PURE__*/React.createElement("b", null, "\uD83D\uDCCD \u73FE\u5728\u5730"), /*#__PURE__*/React.createElement("b", null, "\u26A1 \u5B89\u5168\u30EB\u30FC\u30C8"), /*#__PURE__*/React.createElement("b", null, "\uD83C\uDF81 \u5831\u916C\u30EB\u30FC\u30C8"), /*#__PURE__*/React.createElement("b", null, "\uD83C\uDFC1 GOAL")), /*#__PURE__*/React.createElement("div", {
         className: "mh-goal-guide"
-      }, "GOAL ", /*#__PURE__*/React.createElement("span", null, "➜")), /*#__PURE__*/React.createElement("div", {
+      }, "GOAL ", /*#__PURE__*/React.createElement("span", null, "\u279C")), /*#__PURE__*/React.createElement("div", {
         className: "mh-tile-board",
         style: {
           width: `${720 * trainingMapScale}px`,
@@ -26897,7 +26894,7 @@ function MonsterHeroGame() {
         }
       }, trainingSession.branchOptions.includes(n.id) && /*#__PURE__*/React.createElement("em", {
         className: "mh-branch-arrow"
-      }, "➜ 選ぶ"), /*#__PURE__*/React.createElement("small", null, n.type === 'start' ? 'START' : n.type === 'goal' ? 'GOAL' : TRAINING_SPACE_TYPES[n.type].label), /*#__PURE__*/React.createElement("span", null, TRAINING_SPACE_TYPES[n.type].emoji), n.id === current.id && m && /*#__PURE__*/React.createElement("div", {
+      }, "\u279C \u9078\u3076"), /*#__PURE__*/React.createElement("small", null, n.type === 'start' ? 'START' : n.type === 'goal' ? 'GOAL' : TRAINING_SPACE_TYPES[n.type].label), /*#__PURE__*/React.createElement("span", null, TRAINING_SPACE_TYPES[n.type].emoji), n.id === current.id && m && /*#__PURE__*/React.createElement("div", {
         className: "mh-training-piece"
       }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: m.baseId,
@@ -26916,114 +26913,114 @@ function MonsterHeroGame() {
             behavior: 'smooth'
           });
         }
-      }, "🗺️ 全体"), /*#__PURE__*/React.createElement("button", {
+      }, "\uD83D\uDDFA\uFE0F \u5168\u4F53"), /*#__PURE__*/React.createElement("button", {
         onClick: focusTrainingCurrent
-      }, "📍 現在地"), /*#__PURE__*/React.createElement("span", null, Math.round(trainingMapScale * 100), "%"), /*#__PURE__*/React.createElement("button", {
+      }, "\uD83D\uDCCD \u73FE\u5728\u5730"), /*#__PURE__*/React.createElement("span", null, Math.round(trainingMapScale * 100), "%"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setTrainingModal({
           type: 'rules'
         })
-      }, "マス詳細・ルール")), /*#__PURE__*/React.createElement("p", {
+      }, "\u30DE\u30B9\u8A73\u7D30\u30FB\u30EB\u30FC\u30EB")), /*#__PURE__*/React.createElement("p", {
         className: "mh-training-message"
-      }, trainingSession.lastRoll && /*#__PURE__*/React.createElement("strong", null, "出目 ", trainingSession.lastRoll), trainingSession.movementRemaining > 0 && /*#__PURE__*/React.createElement("strong", null, "あと ", trainingSession.movementRemaining, " マス"), trainingSession.message, trainingSession.previousRoll && /*#__PURE__*/React.createElement("small", null, "前回の出目 ", trainingSession.previousRoll)), /*#__PURE__*/React.createElement("section", {
+      }, trainingSession.lastRoll && /*#__PURE__*/React.createElement("strong", null, "\u51FA\u76EE ", trainingSession.lastRoll), trainingSession.movementRemaining > 0 && /*#__PURE__*/React.createElement("strong", null, "\u3042\u3068 ", trainingSession.movementRemaining, " \u30DE\u30B9"), trainingSession.message, trainingSession.previousRoll && /*#__PURE__*/React.createElement("small", null, "\u524D\u56DE\u306E\u51FA\u76EE ", trainingSession.previousRoll)), /*#__PURE__*/React.createElement("section", {
         className: "mh-training-tools"
-      }, /*#__PURE__*/React.createElement("strong", null, "修行道具"), trainingSession.tools.length ? trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
+      }, /*#__PURE__*/React.createElement("strong", null, "\u4FEE\u884C\u9053\u5177"), trainingSession.tools.length ? trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
         key: `${id}-${i}`,
         className: trainingSession.effects[id] ? 'waiting' : '',
         onClick: () => setTrainingModal({
           type: 'tool',
           id
         })
-      }, /*#__PURE__*/React.createElement("span", null, TRAINING_TOOLS[id].emoji), /*#__PURE__*/React.createElement("small", null, TRAINING_TOOLS[id].name, /*#__PURE__*/React.createElement("br", null), trainingSession.effects[id] ? '待機中' : TRAINING_TOOLS[id].timing))) : /*#__PURE__*/React.createElement("p", null, "所持なし（最大3個）")), /*#__PURE__*/React.createElement("footer", null, trainingSession.rollPending ? /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, TRAINING_TOOLS[id].emoji), /*#__PURE__*/React.createElement("small", null, TRAINING_TOOLS[id].name, /*#__PURE__*/React.createElement("br", null), trainingSession.effects[id] ? '待機中' : TRAINING_TOOLS[id].timing))) : /*#__PURE__*/React.createElement("p", null, "\u6240\u6301\u306A\u3057\uFF08\u6700\u59273\u500B\uFF09")), /*#__PURE__*/React.createElement("footer", null, trainingSession.rollPending ? /*#__PURE__*/React.createElement("div", {
         className: "mh-roll-decision"
-      }, /*#__PURE__*/React.createElement("b", null, "🎲 出目 ", trainingSession.lastRoll), /*#__PURE__*/React.createElement("button", {
+      }, /*#__PURE__*/React.createElement("b", null, "\uD83C\uDFB2 \u51FA\u76EE ", trainingSession.lastRoll), /*#__PURE__*/React.createElement("button", {
         onClick: acceptTrainingRoll
-      }, "この出目で進む")) : trainingSession.effects.fixed ? /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u51FA\u76EE\u3067\u9032\u3080")) : trainingSession.effects.fixed ? /*#__PURE__*/React.createElement("div", {
         className: "mh-fixed-dice"
-      }, /*#__PURE__*/React.createElement("span", null, "確定サイコロ"), [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u78BA\u5B9A\u30B5\u30A4\u30B3\u30ED"), [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
         key: n,
         onClick: () => rollTrainingDice(n)
       }, n))) : /*#__PURE__*/React.createElement("button", {
         disabled: trainingSession.movementRemaining > 0 || trainingSession.branchOptions.length > 0 || trainingMovingRef.current,
         onClick: () => rollTrainingDice(),
         className: "mh-roll-button"
-      }, "🎲 サイコロを振る", /*#__PURE__*/React.createElement("small", null, trainingSession.branchOptions.length ? '分岐方向を選んでください' : '出目ぶん自動で進みます'))), trainingDebugOpen && /*#__PURE__*/React.createElement("aside", {
+      }, "\uD83C\uDFB2 \u30B5\u30A4\u30B3\u30ED\u3092\u632F\u308B", /*#__PURE__*/React.createElement("small", null, trainingSession.branchOptions.length ? '分岐方向を選んでください' : '出目ぶん自動で進みます'))), trainingDebugOpen && /*#__PURE__*/React.createElement("aside", {
         className: "mh-training-debug"
       }, /*#__PURE__*/React.createElement("b", null, "DEBUG PANEL"), /*#__PURE__*/React.createElement("button", {
         className: "mh-debug-close",
         onClick: () => setTrainingDebugOpen(false)
-      }, "閉じる"), /*#__PURE__*/React.createElement("div", null, "次の出目 ", [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
+      }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("div", null, "\u6B21\u306E\u51FA\u76EE ", [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
         key: n,
         onClick: () => setTrainingDebugRoll(n),
         className: trainingDebugRoll === n ? 'active' : ''
       }, n)), /*#__PURE__*/React.createElement("button", {
         onClick: () => setTrainingDebugRoll(null)
-      }, "解除")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+      }, "\u89E3\u9664")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
         onClick: () => patchTraining({
           remainingTurns: trainingSession.remainingTurns + 1
         })
-      }, "ターン＋1"), /*#__PURE__*/React.createElement("button", {
+      }, "\u30BF\u30FC\u30F3\uFF0B1"), /*#__PURE__*/React.createElement("button", {
         onClick: () => patchTraining({
           remainingTurns: Math.max(0, trainingSession.remainingTurns - 1)
         })
-      }, "－1")), /*#__PURE__*/React.createElement("select", {
+      }, "\uFF0D1")), /*#__PURE__*/React.createElement("select", {
         onChange: e => {
           if (e.target.value) addTrainingTool(e.target.value);
         },
         defaultValue: ""
       }, /*#__PURE__*/React.createElement("option", {
         value: ""
-      }, "道具を追加"), Object.entries(TRAINING_TOOLS).map(([id, t]) => /*#__PURE__*/React.createElement("option", {
+      }, "\u9053\u5177\u3092\u8FFD\u52A0"), Object.entries(TRAINING_TOOLS).map(([id, t]) => /*#__PURE__*/React.createElement("option", {
         key: id,
         value: id
       }, t.name))), /*#__PURE__*/React.createElement("button", {
         onClick: () => setTrainingModal({
           type: 'rewards'
         })
-      }, "仮報酬確認"), /*#__PURE__*/React.createElement("button", {
+      }, "\u4EEE\u5831\u916C\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
         onClick: () => finishTraining(true)
-      }, "強制成功"), /*#__PURE__*/React.createElement("button", {
+      }, "\u5F37\u5236\u6210\u529F"), /*#__PURE__*/React.createElement("button", {
         onClick: () => finishTraining(false)
-      }, "強制失敗"), /*#__PURE__*/React.createElement("button", {
+      }, "\u5F37\u5236\u5931\u6557"), /*#__PURE__*/React.createElement("button", {
         onClick: restartTraining
-      }, "最初から"), /*#__PURE__*/React.createElement("pre", null, "map: ", trainingSession.mapId, '\n', "seed: ", trainingSession.seed, '\n', trainingSession.eventLog.join('\n'))));
+      }, "\u6700\u521D\u304B\u3089"), /*#__PURE__*/React.createElement("pre", null, "map: ", trainingSession.mapId, '\n', "seed: ", trainingSession.seed, '\n', trainingSession.eventLog.join('\n'))));
     })(), gameState === 'TRAINING_RESULT' && trainingSession && (() => {
       const r = trainingSession.finalRewards;
       return /*#__PURE__*/React.createElement("main", {
         className: `mh-training-result ${trainingSession.success ? 'success' : 'failure'}`
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "mh-debug-banner"
-      }, "DEBUG・報酬や進行状況は保存されません"), /*#__PURE__*/React.createElement("span", {
+      }, "DEBUG\u30FB\u5831\u916C\u3084\u9032\u884C\u72B6\u6CC1\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("span", {
         className: "mh-result-mark"
-      }, trainingSession.success ? '🏁' : '🌧️'), /*#__PURE__*/React.createElement("h2", null, trainingSession.success ? '修行成功！' : '修行失敗…'), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "仮獲得XP（", trainingSession.success ? '100' : '50', "%）"), /*#__PURE__*/React.createElement("b", null, r.bondXp, " XP")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "仮獲得ダイヤ（", trainingSession.success ? '100' : '50', "%）"), /*#__PURE__*/React.createElement("b", null, r.diamonds)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "通常アイテム"), /*#__PURE__*/React.createElement("b", null, r.items.length ? `${r.items.length}個` : '没収')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "ゴール報酬"), /*#__PURE__*/React.createElement("b", null, r.goalReward))), /*#__PURE__*/React.createElement("p", {
+      }, trainingSession.success ? '🏁' : '🌧️'), /*#__PURE__*/React.createElement("h2", null, trainingSession.success ? '修行成功！' : '修行失敗…'), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "\u4EEE\u7372\u5F97XP\uFF08", trainingSession.success ? '100' : '50', "%\uFF09"), /*#__PURE__*/React.createElement("b", null, r.bondXp, " XP")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "\u4EEE\u7372\u5F97\u30C0\u30A4\u30E4\uFF08", trainingSession.success ? '100' : '50', "%\uFF09"), /*#__PURE__*/React.createElement("b", null, r.diamonds)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "\u901A\u5E38\u30A2\u30A4\u30C6\u30E0"), /*#__PURE__*/React.createElement("b", null, r.items.length ? `${r.items.length}個` : '没収')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "\u30B4\u30FC\u30EB\u5831\u916C"), /*#__PURE__*/React.createElement("b", null, r.goalReward))), /*#__PURE__*/React.createElement("p", {
         className: "mh-result-note"
-      }, "計算表示のみです。所持データには反映されません。"), /*#__PURE__*/React.createElement("button", {
+      }, "\u8A08\u7B97\u8868\u793A\u306E\u307F\u3067\u3059\u3002\u6240\u6301\u30C7\u30FC\u30BF\u306B\u306F\u53CD\u6620\u3055\u308C\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
         onClick: restartTraining
-      }, "もう一度"), /*#__PURE__*/React.createElement("button", {
+      }, "\u3082\u3046\u4E00\u5EA6"), /*#__PURE__*/React.createElement("button", {
         onClick: leaveTrainingResult
-      }, "設定へ戻る"), /*#__PURE__*/React.createElement("button", {
+      }, "\u8A2D\u5B9A\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setTrainingSession(null);
           returnToHome();
         }
-      }, "HOMEへ戻る")));
+      }, "HOME\u3078\u623B\u308B")));
     })(), trainingModal && /*#__PURE__*/React.createElement("div", {
       className: "mh-training-modal",
       onClick: () => setTrainingModal(null)
     }, /*#__PURE__*/React.createElement("div", {
       onClick: e => e.stopPropagation()
-    }, trainingModal.type === 'rules' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, "マス一覧／ルール"), /*#__PURE__*/React.createElement("div", {
+    }, trainingModal.type === 'rules' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, "\u30DE\u30B9\u4E00\u89A7\uFF0F\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
       className: "mh-rules-list"
-    }, Object.values(TRAINING_SPACE_TYPES).map(s => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, s.emoji, " ", s.label), /*#__PURE__*/React.createElement("span", null, s.desc)))), /*#__PURE__*/React.createElement("h3", null, "修行道具"), /*#__PURE__*/React.createElement("div", {
+    }, Object.values(TRAINING_SPACE_TYPES).map(s => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, s.emoji, " ", s.label), /*#__PURE__*/React.createElement("span", null, s.desc)))), /*#__PURE__*/React.createElement("h3", null, "\u4FEE\u884C\u9053\u5177"), /*#__PURE__*/React.createElement("div", {
       className: "mh-rules-list"
-    }, Object.entries(TRAINING_TOOLS).map(([id, t]) => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, t.emoji, " ", t.name), /*#__PURE__*/React.createElement("span", null, "使用：", t.timing, /*#__PURE__*/React.createElement("br", null), "効果：", t.desc))))) : trainingModal.type === 'tool' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, TRAINING_TOOLS[trainingModal.id].emoji, " ", TRAINING_TOOLS[trainingModal.id].name), /*#__PURE__*/React.createElement("p", null, "種類：", TRAINING_TOOLS[trainingModal.id].mode, /*#__PURE__*/React.createElement("br", null), "使用可能なタイミング：", TRAINING_TOOLS[trainingModal.id].timing), /*#__PURE__*/React.createElement("p", null, "正確な効果：", TRAINING_TOOLS[trainingModal.id].desc), trainingToolAvailability(trainingModal.id).ok ? /*#__PURE__*/React.createElement("button", {
+    }, Object.entries(TRAINING_TOOLS).map(([id, t]) => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, t.emoji, " ", t.name), /*#__PURE__*/React.createElement("span", null, "\u4F7F\u7528\uFF1A", t.timing, /*#__PURE__*/React.createElement("br", null), "\u52B9\u679C\uFF1A", t.desc))))) : trainingModal.type === 'tool' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, TRAINING_TOOLS[trainingModal.id].emoji, " ", TRAINING_TOOLS[trainingModal.id].name), /*#__PURE__*/React.createElement("p", null, "\u7A2E\u985E\uFF1A", TRAINING_TOOLS[trainingModal.id].mode, /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528\u53EF\u80FD\u306A\u30BF\u30A4\u30DF\u30F3\u30B0\uFF1A", TRAINING_TOOLS[trainingModal.id].timing), /*#__PURE__*/React.createElement("p", null, "\u6B63\u78BA\u306A\u52B9\u679C\uFF1A", TRAINING_TOOLS[trainingModal.id].desc), trainingToolAvailability(trainingModal.id).ok ? /*#__PURE__*/React.createElement("button", {
       className: "mh-route-choice",
       onClick: () => {
         useTrainingTool(trainingModal.id);
         setTrainingModal(null);
       }
-    }, "使用する") : /*#__PURE__*/React.createElement("p", {
+    }, "\u4F7F\u7528\u3059\u308B") : /*#__PURE__*/React.createElement("p", {
       className: "mh-tool-unavailable"
-    }, "今は使えません：", trainingToolAvailability(trainingModal.id).reason)) : trainingModal.type === 'discard' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, "道具の所持上限（3個）"), /*#__PURE__*/React.createElement("p", null, "捨てる道具を選ぶか、新しい道具を諦めてください。"), trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
+    }, "\u4ECA\u306F\u4F7F\u3048\u307E\u305B\u3093\uFF1A", trainingToolAvailability(trainingModal.id).reason)) : trainingModal.type === 'discard' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, "\u9053\u5177\u306E\u6240\u6301\u4E0A\u9650\uFF083\u500B\uFF09"), /*#__PURE__*/React.createElement("p", null, "\u6368\u3066\u308B\u9053\u5177\u3092\u9078\u3076\u304B\u3001\u65B0\u3057\u3044\u9053\u5177\u3092\u8AE6\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
       className: "mh-route-choice",
       onClick: () => {
         const tools = [...trainingSession.tools];
@@ -27033,15 +27030,15 @@ function MonsterHeroGame() {
         });
         setTrainingModal(null);
       }
-    }, TRAINING_TOOLS[id].name, "を捨てる")), /*#__PURE__*/React.createElement("button", {
+    }, TRAINING_TOOLS[id].name, "\u3092\u6368\u3066\u308B")), /*#__PURE__*/React.createElement("button", {
       className: "mh-route-choice",
       onClick: () => setTrainingModal(null)
-    }, "新しい道具を諦める")) : trainingModal.type === 'rewards' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, "仮報酬"), /*#__PURE__*/React.createElement("p", null, "絆経験値：", trainingSession?.rewards.bondXp || 0, /*#__PURE__*/React.createElement("br", null), "ダイヤ：", trainingSession?.rewards.diamonds || 0, /*#__PURE__*/React.createElement("br", null), "通常アイテム：", trainingSession?.rewards.items.length || 0, "個")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, trainingModal.space?.emoji, " ", trainingModal.space?.label), /*#__PURE__*/React.createElement("dl", {
+    }, "\u65B0\u3057\u3044\u9053\u5177\u3092\u8AE6\u3081\u308B")) : trainingModal.type === 'rewards' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, "\u4EEE\u5831\u916C"), /*#__PURE__*/React.createElement("p", null, "\u7D46\u7D4C\u9A13\u5024\uFF1A", trainingSession?.rewards.bondXp || 0, /*#__PURE__*/React.createElement("br", null), "\u30C0\u30A4\u30E4\uFF1A", trainingSession?.rewards.diamonds || 0, /*#__PURE__*/React.createElement("br", null), "\u901A\u5E38\u30A2\u30A4\u30C6\u30E0\uFF1A", trainingSession?.rewards.items.length || 0, "\u500B")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, trainingModal.space?.emoji, " ", trainingModal.space?.label), /*#__PURE__*/React.createElement("dl", {
       className: "mh-space-detail"
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "効果内容"), /*#__PURE__*/React.createElement("dd", null, trainingModal.space?.desc)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "数値"), /*#__PURE__*/React.createElement("dd", null, trainingSpaceValue(trainingModal.space))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "発動タイミング"), /*#__PURE__*/React.createElement("dd", null, trainingSpaceTiming(trainingModal.space))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "補足"), /*#__PURE__*/React.createElement("dd", null, "仮報酬・効果はデバッグ修行中だけ有効で、通常データには保存されません。")))), /*#__PURE__*/React.createElement("button", {
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "\u52B9\u679C\u5185\u5BB9"), /*#__PURE__*/React.createElement("dd", null, trainingModal.space?.desc)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "\u6570\u5024"), /*#__PURE__*/React.createElement("dd", null, trainingSpaceValue(trainingModal.space))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "\u767A\u52D5\u30BF\u30A4\u30DF\u30F3\u30B0"), /*#__PURE__*/React.createElement("dd", null, trainingSpaceTiming(trainingModal.space))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "\u88DC\u8DB3"), /*#__PURE__*/React.createElement("dd", null, "\u4EEE\u5831\u916C\u30FB\u52B9\u679C\u306F\u30C7\u30D0\u30C3\u30B0\u4FEE\u884C\u4E2D\u3060\u3051\u6709\u52B9\u3067\u3001\u901A\u5E38\u30C7\u30FC\u30BF\u306B\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\u3002")))), /*#__PURE__*/React.createElement("button", {
       className: "mh-modal-close",
       onClick: () => setTrainingModal(null)
-    }, "閉じる"))), gameState === 'GIFT_BOX' && (() => {
+    }, "\u9589\u3058\u308B"))), gameState === 'GIFT_BOX' && (() => {
       const now = Date.now();
       const unclaimed = gifts.filter(g => !g?.claimedAt);
       const history = gifts.filter(g => g?.claimedAt);
@@ -27064,7 +27061,7 @@ function MonsterHeroGame() {
         className: "text-xl font-black text-cyan-200 flex items-center gap-2"
       }, /*#__PURE__*/React.createElement(Package, {
         size: 22
-      }), "ギフトボックス"), /*#__PURE__*/React.createElement("div", {
+      }), "\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9"), /*#__PURE__*/React.createElement("div", {
         className: "w-11"
       })), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-md mx-auto mb-2"
@@ -27077,17 +27074,17 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setGiftTab('unclaimed'),
         className: `relative min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'unclaimed' ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "未受取 (", unclaimed.filter(g => !giftIsExpired(g, now)).length, ")", tabCountBadge(claimable.length)), /*#__PURE__*/React.createElement("button", {
+      }, "\u672A\u53D7\u53D6 (", unclaimed.filter(g => !giftIsExpired(g, now)).length, ")", tabCountBadge(claimable.length)), /*#__PURE__*/React.createElement("button", {
         onClick: () => setGiftTab('history'),
         className: `min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'history' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "受取済み (", history.length, ")")), giftTab === 'unclaimed' && /*#__PURE__*/React.createElement("button", {
+      }, "\u53D7\u53D6\u6E08\u307F (", history.length, ")")), giftTab === 'unclaimed' && /*#__PURE__*/React.createElement("button", {
         disabled: !claimable.length,
         onClick: () => claimGiftIds(claimable.map(g => g.id)),
         className: "shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-black disabled:opacity-40"
-      }, "すべて受け取る"), /*#__PURE__*/React.createElement("button", {
+      }, "\u3059\u3079\u3066\u53D7\u3051\u53D6\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setShowLoginBonusList(true),
         className: "shrink-0 mb-2 min-h-[40px] rounded-xl bg-slate-800 border border-amber-400/40 text-amber-200 font-black text-[12px] active:scale-[.98]"
-      }, "ログインボーナス一覧を見る"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u4E00\u89A7\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
         className: "mh-gift-list flex-1 min-h-0 overflow-y-auto mh-scroll pb-1"
       }, shown.length === 0 ? /*#__PURE__*/React.createElement("div", {
         className: "mt-16 text-center text-slate-500 font-bold"
@@ -27112,7 +27109,7 @@ function MonsterHeroGame() {
         }, giftRewardText(r)))), !g.claimedAt && /*#__PURE__*/React.createElement("button", {
           disabled: expired || !valid,
           onClick: () => claimGiftIds([g.id])
-        }, "受け取る")), /*#__PURE__*/React.createElement("div", {
+        }, "\u53D7\u3051\u53D6\u308B")), /*#__PURE__*/React.createElement("div", {
           className: "mh-gift-deadline"
         }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限情報なし'}`));
       })));
@@ -27138,7 +27135,7 @@ function MonsterHeroGame() {
         className: "text-xl font-black text-amber-200 flex items-center gap-2"
       }, /*#__PURE__*/React.createElement(List, {
         size: 21
-      }), "ミッション"), /*#__PURE__*/React.createElement("div", {
+      }), "\u30DF\u30C3\u30B7\u30E7\u30F3"), /*#__PURE__*/React.createElement("div", {
         className: "w-11"
       })), (() => {
         const claimable = missionClaimableCount(state) > 0;
@@ -27156,22 +27153,22 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setMissionTab('daily'),
         className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'daily' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "デイリー", tabCountBadge(missionClaimableList(state, 'daily').length)), /*#__PURE__*/React.createElement("button", {
+      }, "\u30C7\u30A4\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'daily').length)), /*#__PURE__*/React.createElement("button", {
         onClick: () => setMissionTab('weekly'),
         className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'weekly' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "ウィークリー", tabCountBadge(missionClaimableList(state, 'weekly').length)), /*#__PURE__*/React.createElement("button", {
+      }, "\u30A6\u30A3\u30FC\u30AF\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'weekly').length)), /*#__PURE__*/React.createElement("button", {
         onClick: () => setMissionTab('monthly'),
         className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'monthly' ? 'bg-fuchsia-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "マンスリー", tabCountBadge(missionClaimableList(state, 'monthly').length))), (() => {
+      }, "\u30DE\u30F3\u30B9\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'monthly').length))), (() => {
         const bulk = missionClaimableList(state, missionTab);
         return /*#__PURE__*/React.createElement("button", {
           disabled: !bulk.length,
           onClick: () => claimMissionsBulk(missionTab),
           className: "shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black disabled:opacity-40"
-        }, "一括受け取り", bulk.length > 0 && ` (${bulk.length})`);
+        }, "\u4E00\u62EC\u53D7\u3051\u53D6\u308A", bulk.length > 0 && ` (${bulk.length})`);
       })(), /*#__PURE__*/React.createElement("div", {
         className: "mb-2 text-center text-[10px] font-bold text-slate-400 shrink-0"
-      }, "次回更新: ", new Date(resetAt).toLocaleString('ja-JP', {
+      }, "\u6B21\u56DE\u66F4\u65B0: ", new Date(resetAt).toLocaleString('ja-JP', {
         timeZone: 'Asia/Tokyo',
         month: 'numeric',
         day: 'numeric',
@@ -27209,15 +27206,15 @@ function MonsterHeroGame() {
           className: "flex items-center justify-between gap-2"
         }, /*#__PURE__*/React.createElement("div", {
           className: "min-w-0 text-[10px] font-black text-cyan-200 break-words"
-        }, "報酬: ", m.rewards.map(giftRewardText).join(' / ')), isSent ? /*#__PURE__*/React.createElement("button", {
+        }, "\u5831\u916C: ", m.rewards.map(giftRewardText).join(' / ')), isSent ? /*#__PURE__*/React.createElement("button", {
           disabled: true,
           className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-700 text-[10px] font-black text-slate-400"
-        }, "ギフト送付済み") : done ? /*#__PURE__*/React.createElement("button", {
+        }, "\u30AE\u30D5\u30C8\u9001\u4ED8\u6E08\u307F") : done ? /*#__PURE__*/React.createElement("button", {
           onClick: () => claimMission(missionTab, m),
           className: "shrink-0 min-h-[38px] px-4 rounded-xl bg-amber-500 text-[11px] font-black text-black active:scale-95"
-        }, "受け取る") : /*#__PURE__*/React.createElement("span", {
+        }, "\u53D7\u3051\u53D6\u308B") : /*#__PURE__*/React.createElement("span", {
           className: "shrink-0 text-[10px] font-black text-slate-500"
-        }, "進行中 ", pct, "%")));
+        }, "\u9032\u884C\u4E2D ", pct, "%")));
       })));
     })(), showLoginBonusList && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
@@ -27227,7 +27224,7 @@ function MonsterHeroGame() {
       },
       role: "dialog",
       "aria-modal": "true",
-      "aria-label": "ログインボーナス一覧"
+      "aria-label": "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u4E00\u89A7"
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-gradient-to-b from-indigo-950 to-slate-950 p-5 shadow-2xl"
     }, /*#__PURE__*/React.createElement("div", {
@@ -27237,10 +27234,10 @@ function MonsterHeroGame() {
       className: "text-amber-300"
     }), /*#__PURE__*/React.createElement("h2", {
       className: "text-base font-black text-amber-200"
-    }, "ログインボーナス")), renderLoginBonusList(loginBonusTodayDay), /*#__PURE__*/React.createElement("button", {
+    }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9")), renderLoginBonusList(loginBonusTodayDay), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowLoginBonusList(false),
       className: "w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]"
-    }, "閉じる"))), loginBonusPopup && /*#__PURE__*/React.createElement("div", {
+    }, "\u9589\u3058\u308B"))), loginBonusPopup && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         zIndex: 60000,
@@ -27248,7 +27245,7 @@ function MonsterHeroGame() {
       },
       role: "dialog",
       "aria-modal": "true",
-      "aria-label": "ログインボーナス"
+      "aria-label": "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9"
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"
     }, /*#__PURE__*/React.createElement(Sparkles, {
@@ -27256,16 +27253,16 @@ function MonsterHeroGame() {
       className: "mx-auto mb-3 text-amber-300"
     }), /*#__PURE__*/React.createElement("h2", {
       className: "text-2xl font-black text-amber-200"
-    }, "ログインボーナス"), /*#__PURE__*/React.createElement("p", {
+    }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("p", {
       className: "mt-3 text-sm font-black text-white"
-    }, loginBonusPopup.day, "日目のログインボーナスを獲得しました！"), /*#__PURE__*/React.createElement("div", {
+    }, loginBonusPopup.day, "\u65E5\u76EE\u306E\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u3092\u7372\u5F97\u3057\u307E\u3057\u305F\uFF01"), /*#__PURE__*/React.createElement("div", {
       className: "my-3 space-y-1.5"
     }, loginBonusPopup.rewards.map((reward, i) => /*#__PURE__*/React.createElement("div", {
       key: i,
       className: "rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words"
     }, giftRewardText(reward)))), renderLoginBonusList(loginBonusPopup.day), /*#__PURE__*/React.createElement("p", {
       className: "text-xs text-slate-300 mt-3"
-    }, "報酬はギフトボックスへ送られました。"), /*#__PURE__*/React.createElement("div", {
+    }, "\u5831\u916C\u306F\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9\u3078\u9001\u3089\u308C\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "mt-5 grid grid-cols-2 gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => {
@@ -27273,10 +27270,10 @@ function MonsterHeroGame() {
         openGiftBox();
       },
       className: "min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white"
-    }, "ギフトを確認"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30AE\u30D5\u30C8\u3092\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setLoginBonusPopup(null),
       className: "min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white"
-    }, "閉じる")))), gameState === 'MB_MANAGEMENT' && /*#__PURE__*/React.createElement("div", {
+    }, "\u9589\u3058\u308B")))), gameState === 'MB_MANAGEMENT' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -27291,7 +27288,7 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-indigo-300"
-    }, "M/B管理")), /*#__PURE__*/React.createElement("div", {
+    }, "M/B\u7BA1\u7406")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-3"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "mbManagement"
@@ -27300,24 +27297,24 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setManagementTab('monster'),
       className: `min-h-[48px] rounded-xl font-black ${managementTab === 'monster' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}`
-    }, "モンスター"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30E2\u30F3\u30B9\u30BF\u30FC"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setManagementTab('assist'),
       className: `min-h-[48px] rounded-xl font-black ${managementTab === 'assist' ? 'bg-purple-600 text-white' : 'bg-slate-900 text-slate-400'}`
-    }, "アシストカード")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9")), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-md mx-auto space-y-3 overflow-y-auto mh-scroll"
     }, managementTab === 'monster' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('OWNED_MONSTERS'),
       className: "mh-management-link"
-    }, "ベースモン一覧"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u4E00\u89A7"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('MASU_MONS'),
       className: "mh-management-link"
-    }, "マスモン一覧"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30DE\u30B9\u30E2\u30F3\u4E00\u89A7"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setDexLineageFilter('all');
         setGameState('MONSTER_DEX');
       },
       className: "mh-management-link"
-    }, "モンスター図鑑"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setDraftMonsterRoster(monsterRosterIds);
         setDraftTeachingRoster(teachingRosterIds);
@@ -27325,10 +27322,10 @@ function MonsterHeroGame() {
         setGameState('ROSTER');
       },
       className: "mh-management-link"
-    }, "モンスター編成"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u7DE8\u6210"), /*#__PURE__*/React.createElement("button", {
       onClick: openPastureSettings,
       className: "mh-management-link"
-    }, "放牧設定")) : /*#__PURE__*/React.createElement("button", {
+    }, "\u653E\u7267\u8A2D\u5B9A")) : /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setDraftMonsterRoster(monsterRosterIds);
         setDraftTeachingRoster(teachingRosterIds);
@@ -27336,10 +27333,10 @@ function MonsterHeroGame() {
         setGameState('ROSTER');
       },
       className: "mh-management-link"
-    }, "アシストカード編成"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u7DE8\u6210"), /*#__PURE__*/React.createElement("button", {
       onClick: openAutoSettings,
       className: "mh-management-link"
-    }, "AUTO設定"))), gameState === 'MONSTER_DEX' && (() => {
+    }, "AUTO\u8A2D\u5B9A"))), gameState === 'MONSTER_DEX' && (() => {
       const monsters = dexMonsterList();
       const unlockedCount = monsters.filter(mon => unlockedMonsterIds.includes(mon.id)).length;
       const filters = dexMainLineages();
@@ -27356,12 +27353,12 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setGameState('MB_MANAGEMENT'),
         className: "p-3 text-slate-400 active:scale-90",
-        "aria-label": "M/B管理へ戻る"
+        "aria-label": "M/B\u7BA1\u7406\u3078\u623B\u308B"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-amber-300 uppercase tracking-widest"
-      }, "モンスター図鑑")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451")), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-md mx-auto mb-2"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "monsterDex"
@@ -27370,21 +27367,21 @@ function MonsterHeroGame() {
         className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/70 to-orange-950/50 px-3 py-2 flex items-center justify-between gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0"
-      }, "図鑑登録数"), /*#__PURE__*/React.createElement("span", {
+      }, "\u56F3\u9451\u767B\u9332\u6570"), /*#__PURE__*/React.createElement("span", {
         className: "text-[15px] font-mono font-black text-amber-100 tabular-nums"
       }, unlockedCount, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400 text-[10px]"
       }, " / ", monsters.length))), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto mh-scroll pb-1",
         role: "tablist",
-        "aria-label": "主血統でしぼりこむ"
+        "aria-label": "\u4E3B\u8840\u7D71\u3067\u3057\u307C\u308A\u3053\u3080"
       }, /*#__PURE__*/React.createElement("button", {
         type: "button",
         role: "tab",
         "aria-selected": dexLineageFilter === 'all',
         onClick: () => setDexLineageFilter('all'),
         className: chipClass(dexLineageFilter === 'all')
-      }, "すべて"), filters.map(lineage => /*#__PURE__*/React.createElement("button", {
+      }, "\u3059\u3079\u3066"), filters.map(lineage => /*#__PURE__*/React.createElement("button", {
         key: lineage.id,
         type: "button",
         role: "tab",
@@ -27420,7 +27417,7 @@ function MonsterHeroGame() {
         }, unlocked ? monsterCategoryName(category) : '未発見'));
       })), shown.length === 0 && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-400 font-bold text-center py-6"
-      }, "この血統のモンスターはまだいません。")));
+      }, "\u3053\u306E\u8840\u7D71\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u307E\u3060\u3044\u307E\u305B\u3093\u3002")));
     })(), gameState === 'MONSTER_DEX_DETAIL' && (() => {
       const monsters = dexMonsterList();
       const index = monsters.findIndex(m => m.id === dexMonsterId);
@@ -27472,11 +27469,11 @@ function MonsterHeroGame() {
         className: "flex items-center gap-2 mt-0.5 text-[8px] font-mono font-black text-slate-400"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-red-300"
-      }, "威力", skill.power), /*#__PURE__*/React.createElement("span", {
+      }, "\u5A01\u529B", skill.power), /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "消費G", skill.guts), /*#__PURE__*/React.createElement("span", {
+      }, "\u6D88\u8CBBG", skill.guts), /*#__PURE__*/React.createElement("span", {
         className: "text-yellow-300"
-      }, "会心", skill.crit, "%")))));
+      }, "\u4F1A\u5FC3", skill.crit, "%")))));
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0",
         style: {
@@ -27488,12 +27485,12 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setGameState('MONSTER_DEX'),
         className: "p-3 text-slate-400 active:scale-90",
-        "aria-label": "図鑑一覧へ戻る"
+        "aria-label": "\u56F3\u9451\u4E00\u89A7\u3078\u623B\u308B"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-lg font-black italic text-amber-300 uppercase tracking-widest"
-      }, "モンスター図鑑"), /*#__PURE__*/React.createElement("span", {
+      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451"), /*#__PURE__*/React.createElement("span", {
         className: "ml-auto text-[10px] font-mono font-black text-amber-200/80 tabular-nums pr-1"
       }, index + 1, " / ", monsters.length)), /*#__PURE__*/React.createElement("div", {
         "data-dex-art": true,
@@ -27519,7 +27516,7 @@ function MonsterHeroGame() {
       }), /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-dex-prev": true,
-        "aria-label": "前のモンスター",
+        "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
         onClick: () => go(-1),
         className: "absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
       }, /*#__PURE__*/React.createElement(ChevronLeft, {
@@ -27527,7 +27524,7 @@ function MonsterHeroGame() {
       })), /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-dex-next": true,
-        "aria-label": "次のモンスター",
+        "aria-label": "\u6B21\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
         onClick: () => go(1),
         className: "absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
       }, /*#__PURE__*/React.createElement(ChevronRight, {
@@ -27546,9 +27543,9 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0"
-      }, "血統"), lineageChip(main), /*#__PURE__*/React.createElement("span", {
+      }, "\u8840\u7D71"), lineageChip(main), /*#__PURE__*/React.createElement("span", {
         className: "text-[12px] font-black text-amber-300 shrink-0 text-center"
-      }, "×"), lineageChip(sub), /*#__PURE__*/React.createElement("span", {
+      }, "\xD7"), lineageChip(sub), /*#__PURE__*/React.createElement("span", {
         "data-dex-category": true,
         className: `shrink-0 min-w-[42px] text-center text-[9px] font-black px-1.5 py-1 rounded-full ${categoryClass}`
       }, monsterCategoryName(category))), /*#__PURE__*/React.createElement("div", {
@@ -27562,7 +27559,7 @@ function MonsterHeroGame() {
         className: "text-[10px] font-bold leading-relaxed text-slate-200 break-words"
       }, monsterDexDescription(mon.id))), /*#__PURE__*/React.createElement("div", {
         role: "tablist",
-        "aria-label": "図鑑の内容",
+        "aria-label": "\u56F3\u9451\u306E\u5185\u5BB9",
         className: "shrink-0 mt-2 grid grid-cols-3 gap-1.5"
       }, tabs.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
         key: id,
@@ -27579,9 +27576,9 @@ function MonsterHeroGame() {
         "data-dex-tab-stats": true
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black text-amber-300/90 mb-1"
-      }, "その種の基礎能力（育てたマスモンの値ではありません）"), row('ライフ', mon.baseHp), row('ちから', mon.baseAtk), row('丈夫さ', mon.baseDef), row('ガッツ', mon.baseGuts), /*#__PURE__*/React.createElement("div", {
+      }, "\u305D\u306E\u7A2E\u306E\u57FA\u790E\u80FD\u529B\uFF08\u80B2\u3066\u305F\u30DE\u30B9\u30E2\u30F3\u306E\u5024\u3067\u306F\u3042\u308A\u307E\u305B\u3093\uFF09"), row('ライフ', mon.baseHp), row('ちから', mon.baseAtk), row('丈夫さ', mon.baseDef), row('ガッツ', mon.baseGuts), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black text-amber-300/90 mt-2 mb-1"
-      }, "間合い適性"), /*#__PURE__*/React.createElement("div", {
+      }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-4 gap-1.5"
       }, RANGE_LABELS.map((label, i) => /*#__PURE__*/React.createElement("div", {
         key: label,
@@ -27595,17 +27592,17 @@ function MonsterHeroGame() {
         className: "space-y-2"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest"
-      }, "通常技"), skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      }, "\u901A\u5E38\u6280"), skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest"
-      }, "固有技（進化段階）"), skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30'), /*#__PURE__*/React.createElement("div", {
+      }, "\u56FA\u6709\u6280\uFF08\u9032\u5316\u6BB5\u968E\uFF09"), skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30'), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-300 font-bold leading-relaxed mt-1.5 italic break-words"
       }, "\"", mon.unique?.effectDesc || '', "\""))))) : /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col items-center justify-center gap-2 px-2 text-center"
       }, /*#__PURE__*/React.createElement("p", {
         className: "text-[11px] font-black text-amber-200"
-      }, "まだ出会っていないモンスターです"), /*#__PURE__*/React.createElement("p", {
+      }, "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
         className: "text-[10px] font-bold text-slate-400 leading-relaxed"
-      }, "マーケットで円盤石を手に入れて解放すると、血統・能力・技が図鑑に記録されます。")))));
+      }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u5186\u76E4\u77F3\u3092\u624B\u306B\u5165\u308C\u3066\u89E3\u653E\u3059\u308B\u3068\u3001\u8840\u7D71\u30FB\u80FD\u529B\u30FB\u6280\u304C\u56F3\u9451\u306B\u8A18\u9332\u3055\u308C\u307E\u3059\u3002")))));
     })(), gameState === 'AUTO_SETTINGS' && (() => {
       const strategies = [['random', 'ランダム', 'AUTOが候補からランダムに選択'], ['offense', '火力重視', '攻撃・ちから系を優先'], ['defense', '耐久重視', 'ライフ・丈夫さ系を優先'], ['guts', 'ガッツ重視', 'ガッツ系を優先']];
       const ranges = [[null, '自動'], [0, '零'], [1, '近'], [2, '中'], [3, '遠']];
@@ -27621,20 +27618,20 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setGameState('MB_MANAGEMENT'),
         className: "p-3 text-slate-400 active:scale-90",
-        "aria-label": "M/B管理へ戻る"
+        "aria-label": "M/B\u7BA1\u7406\u3078\u623B\u308B"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-indigo-300"
-      }, "AUTO設定"), /*#__PURE__*/React.createElement("p", {
+      }, "AUTO\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] text-slate-400 font-bold"
-      }, "将来のAUTO用事前設定"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u5C06\u6765\u306EAUTO\u7528\u4E8B\u524D\u8A2D\u5B9A"))), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto space-y-4 pb-3"
       }, /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-indigo-500/40 bg-slate-950/70 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-sm font-black text-indigo-200 mb-2"
-      }, "1. AUTO方針"), /*#__PURE__*/React.createElement("div", {
+      }, "1. AUTO\u65B9\u91DD"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, strategies.map(([key, label, description]) => /*#__PURE__*/React.createElement("button", {
         key: key,
@@ -27652,15 +27649,15 @@ function MonsterHeroGame() {
         className: "space-y-3"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
         className: "text-sm font-black text-indigo-200"
-      }, "2. 供モン事前設定"), /*#__PURE__*/React.createElement("p", {
+      }, "2. \u4F9B\u30E2\u30F3\u4E8B\u524D\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] leading-relaxed text-slate-400 mt-1"
-      }, "WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。")), draftAutoSettings.allies.map((ally, index) => /*#__PURE__*/React.createElement("div", {
+      }, "WAVE2\u30FB4\u30FB6\u306E\u9806\u306B\u5BFE\u5FDC\u3057\u307E\u3059\u3002\u8A2D\u5B9A\u3057\u305F\u4F9B\u30E2\u30F3\u304C\u5019\u88DC\u306B\u3044\u306A\u3044\u5834\u5408\u306FAUTO\u6642\u306B\u30E9\u30F3\u30C0\u30E0\u3067\u88DC\u5B8C\u3055\u308C\u307E\u3059\u3002")), draftAutoSettings.allies.map((ally, index) => /*#__PURE__*/React.createElement("div", {
         key: index,
         className: "rounded-2xl border border-indigo-500/30 bg-slate-900 p-3 space-y-2"
       }, /*#__PURE__*/React.createElement("label", {
         className: "block text-xs font-black text-white",
         htmlFor: `auto-ally-${index}`
-      }, "供モン", ['①', '②', '③'][index]), /*#__PURE__*/React.createElement("select", {
+      }, "\u4F9B\u30E2\u30F3", ['①', '②', '③'][index]), /*#__PURE__*/React.createElement("select", {
         id: `auto-ally-${index}`,
         value: ally.rosterEntry || '',
         onChange: event => updateDraftAutoAlly(index, {
@@ -27669,13 +27666,13 @@ function MonsterHeroGame() {
         className: "w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"
       }, /*#__PURE__*/React.createElement("option", {
         value: ""
-      }, "未指定（ランダム）"), monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)).map(entry => /*#__PURE__*/React.createElement("option", {
+      }, "\u672A\u6307\u5B9A\uFF08\u30E9\u30F3\u30C0\u30E0\uFF09"), monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)).map(entry => /*#__PURE__*/React.createElement("option", {
         key: entry,
         value: entry,
         disabled: selectedEntries.includes(entry) && ally.rosterEntry !== entry
       }, autoRosterLabel(entry)))), renderAutoAllySummary(ally.rosterEntry), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-slate-300 mb-1.5"
-      }, "配置距離"), /*#__PURE__*/React.createElement("div", {
+      }, "\u914D\u7F6E\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-5 gap-1"
       }, ranges.map(([slot, label]) => /*#__PURE__*/React.createElement("button", {
         key: label,
@@ -27687,7 +27684,7 @@ function MonsterHeroGame() {
       }, label)))))))), /*#__PURE__*/React.createElement("button", {
         onClick: saveAutoSettings,
         className: "w-full max-w-md mx-auto min-h-[52px] shrink-0 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
-      }, "決定"), autoAllyDetail && renderMonsterDetailModal({
+      }, "\u6C7A\u5B9A"), autoAllyDetail && renderMonsterDetailModal({
         mon: autoAllyDetail.mon,
         masu: autoAllyDetail.masu,
         onClose: () => setAutoAllyDetail(null),
@@ -27710,7 +27707,7 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-violet-300"
-    }, "神殿")), /*#__PURE__*/React.createElement("div", {
+    }, "\u795E\u6BBF")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-3"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "temple"
@@ -27725,7 +27722,7 @@ function MonsterHeroGame() {
       className: "mh-management-link mh-temple-link"
     }, /*#__PURE__*/React.createElement(RotateCcw, {
       size: 18
-    }), "再生"), /*#__PURE__*/React.createElement("button", {
+    }), "\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         resetFusionFlow();
         setGameState('MASU_FUSION');
@@ -27733,7 +27730,7 @@ function MonsterHeroGame() {
       className: "mh-management-link mh-temple-link"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 18
-    }), "合体"), /*#__PURE__*/React.createElement("button", {
+    }), "\u5408\u4F53"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         resetDonationFlow();
         setGameState('MASU_DONATION');
@@ -27741,7 +27738,7 @@ function MonsterHeroGame() {
       className: "mh-management-link mh-temple-link"
     }, /*#__PURE__*/React.createElement(Gem, {
       size: 18
-    }), "寄付"), /*#__PURE__*/React.createElement("button", {
+    }), "\u5BC4\u4ED8"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setRebirthSelectedId(null);
         setRebirthSkillKey(null);
@@ -27751,7 +27748,7 @@ function MonsterHeroGame() {
       className: "mh-management-link mh-temple-link"
     }, /*#__PURE__*/React.createElement(Star, {
       size: 18
-    }), "限界突破"), /*#__PURE__*/React.createElement("button", {
+    }), "\u9650\u754C\u7A81\u7834"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setReincarnateSelectedId(null);
         setReincarnateSkillKey(null);
@@ -27761,7 +27758,7 @@ function MonsterHeroGame() {
       className: "mh-management-link mh-temple-link"
     }, /*#__PURE__*/React.createElement(RotateCcw, {
       size: 18
-    }), "転生"), /*#__PURE__*/React.createElement("button", {
+    }), "\u8EE2\u751F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setTranscendSelectedId(null);
         setTranscendError('');
@@ -27770,7 +27767,7 @@ function MonsterHeroGame() {
       className: "mh-management-link mh-temple-link mh-transcend-link"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 18
-    }), "超越"))), gameState === 'MASU_REGENERATION' && (() => {
+    }), "\u8D85\u8D8A"))), gameState === 'MASU_REGENERATION' && (() => {
       const unlocked = Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
@@ -27787,9 +27784,9 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-violet-300"
-      }, "ベースモンを選ぶ"), /*#__PURE__*/React.createElement("p", {
+      }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u3076"), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] text-slate-400 font-bold"
-      }, "タップすると再生前の性能を確認できます"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u30BF\u30C3\u30D7\u3059\u308B\u3068\u518D\u751F\u524D\u306E\u6027\u80FD\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"))), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-2"
@@ -27826,13 +27823,13 @@ function MonsterHeroGame() {
           setRegenerationSelectedId(null);
           setGameState('MASU_REGENERATION');
         },
-        "aria-label": "ベースモン選択へ戻る",
+        "aria-label": "\u30D9\u30FC\u30B9\u30E2\u30F3\u9078\u629E\u3078\u623B\u308B",
         className: "p-3 text-slate-400"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
       })), /*#__PURE__*/React.createElement("span", {
         className: "text-[10px] text-violet-300 font-black"
-      }, "再生詳細")), /*#__PURE__*/React.createElement("div", {
+      }, "\u518D\u751F\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-1"
       }, /*#__PURE__*/React.createElement("h2", {
         className: "text-center text-xl font-black text-white"
@@ -27845,26 +27842,26 @@ function MonsterHeroGame() {
         "aria-label": `${selectedBase.name}の基礎性能`
       }, renderDetailSectionLabel('ベースモンの性能', '再生前の正式な基礎値です'), renderMonsterDetailInfo(selectedBase)), /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-amber-400/40 bg-amber-950/30 p-3",
-        "aria-label": "再生に必要な情報"
+        "aria-label": "\u518D\u751F\u306B\u5FC5\u8981\u306A\u60C5\u5831"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-amber-200 font-black mb-1"
-      }, "再生に必要な情報"), /*#__PURE__*/React.createElement("div", {
+      }, "\u518D\u751F\u306B\u5FC5\u8981\u306A\u60C5\u5831"), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between text-sm"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "対象"), /*#__PURE__*/React.createElement("b", {
+      }, "\u5BFE\u8C61"), /*#__PURE__*/React.createElement("b", {
         className: "text-white"
       }, selectedBase.name)), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between text-sm mt-1"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "必要ダイヤ"), /*#__PURE__*/React.createElement("b", {
+      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
         className: "text-amber-300"
       }, cost === 0 ? '初回無料' : cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between text-[10px] mt-1"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "所持ダイヤ"), /*#__PURE__*/React.createElement("span", {
+      }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
       }, gold.toLocaleString()))), /*#__PURE__*/React.createElement("button", {
         disabled: gold < cost || regenerationProcessing,
@@ -27886,24 +27883,24 @@ function MonsterHeroGame() {
           size: 20
         })), /*#__PURE__*/React.createElement("h2", {
           className: "text-xl font-black italic text-violet-300"
-        }, "限界突破")), /*#__PURE__*/React.createElement("div", {
+        }, "\u9650\u754C\u7A81\u7834")), /*#__PURE__*/React.createElement("div", {
           className: "shrink-0 w-full max-w-md mx-auto mb-2"
         }, /*#__PURE__*/React.createElement(AssistantBubble, {
           scene: "rebirth",
           compact: true
         })), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] text-slate-400 mb-3"
-        }, "現在のレベル上限に到達したマスモンだけが限界突破できます。30凸までは上限+", BREAKTHROUGH_LEVEL_CAP_GAIN, "、31～35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。虹★4はLvUP強化ポイント×2、虹★5は×3です。"), /*#__PURE__*/React.createElement("div", {
+        }, "\u73FE\u5728\u306E\u30EC\u30D9\u30EB\u4E0A\u9650\u306B\u5230\u9054\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u9650\u754C\u7A81\u7834\u3067\u304D\u307E\u3059\u300230\u51F8\u307E\u3067\u306F\u4E0A\u9650+", BREAKTHROUGH_LEVEL_CAP_GAIN, "\u300131\uFF5E35\u51F8\u306FLv.200\u30FB230\u30FB270\u30FB330\u30FB400\u3078\u4E0A\u304C\u308A\u3001\u91D1\u2605\u304C\u8679\u2605\u30781\u500B\u305A\u3064\u7F6E\u304D\u63DB\u308F\u308A\u307E\u3059\u3002\u8679\u26054\u306FLvUP\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\xD72\u3001\u8679\u26055\u306F\xD73\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
           className: "flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-[10px] font-black text-fuchsia-200 flex items-center gap-1"
         }, /*#__PURE__*/React.createElement("span", {
           "aria-hidden": "true"
-        }, "🌈"), "虹のプシュケー"), /*#__PURE__*/React.createElement("span", {
+        }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
           className: "text-[11px] font-mono font-black text-white"
-        }, "所持 ", ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        }, "\u6240\u6301 ", ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-slate-500 font-bold mb-2"
-        }, "限界突破には虹のプシュケーが必要です（1回目", BREAKTHROUGH_ITEM_BASE, "個・以降1回ごとに+", BREAKTHROUGH_ITEM_STEP, "個）。チャレンジ／クイックをクリアするともらえます。"), renderMonsterSortFilterBar({
+        }, "\u9650\u754C\u7A81\u7834\u306B\u306F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u5FC5\u8981\u3067\u3059\uFF081\u56DE\u76EE", BREAKTHROUGH_ITEM_BASE, "\u500B\u30FB\u4EE5\u964D1\u56DE\u3054\u3068\u306B+", BREAKTHROUGH_ITEM_STEP, "\u500B\uFF09\u3002\u30C1\u30E3\u30EC\u30F3\u30B8\uFF0F\u30AF\u30A4\u30C3\u30AF\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3082\u3089\u3048\u307E\u3059\u3002"), renderMonsterSortFilterBar({
           singleType: true
         }), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
@@ -27942,7 +27939,7 @@ function MonsterHeroGame() {
             className: "text-[8px] text-pink-300"
           }, "Lv.", lvl.level, "/", masu.levelCap || 30), /*#__PURE__*/React.createElement("div", {
             className: `text-[8px] font-black ${enoughPsyche ? 'text-fuchsia-300' : 'text-red-400'}`
-          }, "🌈", need));
+          }, "\uD83C\uDF08", need));
         })));
       }
       const normalized = normalizeMasuProgression(selected),
@@ -27962,7 +27959,7 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-violet-300"
-      }, "限界突破・固有技選択")), /*#__PURE__*/React.createElement("div", {
+      }, "\u9650\u754C\u7A81\u7834\u30FB\u56FA\u6709\u6280\u9078\u629E")), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "relative w-20 h-20 rounded-full overflow-hidden"
@@ -27977,31 +27974,31 @@ function MonsterHeroGame() {
         className: "mh-rebirth-stars-overlay"
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("div", {
         className: "text-pink-300 text-xs"
-      }, "Lv.", lvl.level, " / 上限Lv.", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
+      }, "Lv.", lvl.level, " / \u4E0A\u9650Lv.", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
         className: "text-slate-400 text-[10px]"
       }, normalized.rebirthCount >= BREAKTHROUGH_MAX_COUNT ? `次は${normalized.rebirthCount + 1}凸：上限Lv.${breakthroughLevelCap(normalized.rebirthCount + 1)}、虹★が1個増えます${normalized.rebirthCount + 1 >= 34 ? `（LvUP強化ポイント×${levelUpPointMultiplier(normalized.rebirthCount + 1)}）` : ''}` : `星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`), /*#__PURE__*/React.createElement("div", {
         className: "text-amber-300 text-[10px] font-black"
-      }, "強化ポイント +", normalized.rebirthCount === 0 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS))), /*#__PURE__*/React.createElement("div", {
+      }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", normalized.rebirthCount === 0 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS))), /*#__PURE__*/React.createElement("div", {
         className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[10px] font-bold"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "必要ダイヤ"), /*#__PURE__*/React.createElement("span", {
+      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
         className: `font-black flex items-center gap-1 ${gold >= cost ? 'text-amber-300' : 'text-red-400'}`
       }, /*#__PURE__*/React.createElement(Gem, {
         size: 12
       }), cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-400"
-      }, "（絆Lv.", lvl.level, "）× ", REBIRTH_COST_PER_LEVEL), /*#__PURE__*/React.createElement("div", {
+      }, "\uFF08\u7D46Lv.", lvl.level, "\uFF09\xD7 ", REBIRTH_COST_PER_LEVEL), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[9px] font-bold"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-500"
-      }, "所持ダイヤ"), /*#__PURE__*/React.createElement("span", {
+      }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300 font-black"
       }, gold.toLocaleString())), gold < cost && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-red-400 font-black"
-      }, "ダイヤが足りません（あと ", (cost - gold).toLocaleString(), "）")), (() => {
+      }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), (() => {
         const need = breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1);
         const have = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
         return /*#__PURE__*/React.createElement("div", {
@@ -28010,24 +28007,24 @@ function MonsterHeroGame() {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "必要な虹のプシュケー"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5FC5\u8981\u306A\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
           className: `font-black flex items-center gap-1 ${have >= need ? 'text-fuchsia-300' : 'text-red-400'}`
         }, /*#__PURE__*/React.createElement("span", {
           "aria-hidden": "true"
-        }, "🌈"), need.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        }, "\uD83C\uDF08"), need.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-400"
-        }, "（", normalizeMasuProgression(selected).rebirthCount + 1, "回目の限界突破：", BREAKTHROUGH_ITEM_BASE, " +（回数-1）×", BREAKTHROUGH_ITEM_STEP, "）"), /*#__PURE__*/React.createElement("div", {
+        }, "\uFF08", normalizeMasuProgression(selected).rebirthCount + 1, "\u56DE\u76EE\u306E\u9650\u754C\u7A81\u7834\uFF1A", BREAKTHROUGH_ITEM_BASE, " +\uFF08\u56DE\u6570-1\uFF09\xD7", BREAKTHROUGH_ITEM_STEP, "\uFF09"), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[9px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-500"
-        }, "所持数"), /*#__PURE__*/React.createElement("span", {
+        }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300 font-black"
         }, have.toLocaleString())), have < need && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-red-400 font-black"
-        }, "虹のプシュケーが足りません（あと ", (need - have).toLocaleString(), "）"));
+        }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (need - have).toLocaleString(), "\uFF09"));
       })(), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-300 mb-2"
-      }, "LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます"), /*#__PURE__*/React.createElement("div", {
+      }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u3079\u307E\u3059\uFF08\u6700\u5927Lv.8\uFF09\u3002\u9078\u3070\u306A\u3044\u3068\u304D\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3067\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u305B\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
       }, skills.map(skill => /*#__PURE__*/React.createElement("button", {
         key: skill.key,
@@ -28038,22 +28035,22 @@ function MonsterHeroGame() {
         className: "font-black text-xs"
       }, skill.name), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300"
-      }, "現在Lv.", skill.level, " → Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
+      }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
         onClick: () => setRebirthSkillKey(''),
         className: `w-full p-3 rounded-xl border text-left ${rebirthSkillKey === '' ? 'bg-amber-700 border-white' : 'bg-slate-900 border-amber-500/40'}`
       }, /*#__PURE__*/React.createElement("div", {
         className: "font-black text-xs"
-      }, "あとで決める（ポイントとして残す）"), /*#__PURE__*/React.createElement("div", {
+      }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300"
-      }, "固有技ポイント +1（いまの所持 ", normalized.uniqueSkillPoints, "）"), /*#__PURE__*/React.createElement("div", {
+      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-300 mt-1"
-      }, "保留したポイントはマスモン詳細の「固有技強化」から使用できます"))), rebirthError && /*#__PURE__*/React.createElement("div", {
+      }, "\u4FDD\u7559\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E\u300C\u56FA\u6709\u6280\u5F37\u5316\u300D\u304B\u3089\u4F7F\u7528\u3067\u304D\u307E\u3059"))), rebirthError && /*#__PURE__*/React.createElement("div", {
         className: "text-red-300 text-[10px] my-2"
       }, rebirthError), /*#__PURE__*/React.createElement("button", {
         disabled: rebirthSkillKey == null || gold < cost || ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) < breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1) || rebirthProcessingRef.current,
         onClick: executeMasuBreakthrough,
         className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
-      }, "限界突破する"));
+      }, "\u9650\u754C\u7A81\u7834\u3059\u308B"));
     })(), gameState === 'MASU_REINCARNATE' && (() => {
       const selected = masuMons.find(m => String(m.id) === String(reincarnateSelectedId));
       if (!selected) {
@@ -28069,14 +28066,14 @@ function MonsterHeroGame() {
           size: 20
         })), /*#__PURE__*/React.createElement("h2", {
           className: "text-xl font-black italic text-violet-300"
-        }, "転生")), /*#__PURE__*/React.createElement("div", {
+        }, "\u8EE2\u751F")), /*#__PURE__*/React.createElement("div", {
           className: "shrink-0 w-full max-w-md mx-auto mb-2"
         }, /*#__PURE__*/React.createElement(AssistantBubble, {
           scene: "reincarnate",
           compact: true
         })), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] text-slate-400 mb-3"
-        }, "絆Lv.", REINCARNATE_MIN_LEVEL, "以上のマスモンだけが転生できます。レベルが", REINCARNATE_LEVEL_DROP, "下がる代わりに、振った強化をすべて振り直せます。"), renderMonsterSortFilterBar({
+        }, "\u7D46Lv.", REINCARNATE_MIN_LEVEL, "\u4EE5\u4E0A\u306E\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u8EE2\u751F\u3067\u304D\u307E\u3059\u3002\u30EC\u30D9\u30EB\u304C", REINCARNATE_LEVEL_DROP, "\u4E0B\u304C\u308B\u4EE3\u308F\u308A\u306B\u3001\u632F\u3063\u305F\u5F37\u5316\u3092\u3059\u3079\u3066\u632F\u308A\u76F4\u305B\u307E\u3059\u3002"), renderMonsterSortFilterBar({
           singleType: true
         }), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
@@ -28135,7 +28132,7 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-violet-300"
-      }, "転生・固有技選択")), /*#__PURE__*/React.createElement("div", {
+      }, "\u8EE2\u751F\u30FB\u56FA\u6709\u6280\u9078\u629E")), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "relative w-20 h-20 rounded-full overflow-hidden"
@@ -28152,33 +28149,33 @@ function MonsterHeroGame() {
         count: normalized.reincarnateCount
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("div", {
         className: "text-pink-300 text-xs"
-      }, "Lv.", lvl.level, " → Lv.", nextLevel), /*#__PURE__*/React.createElement("div", {
+      }, "Lv.", lvl.level, " \u2192 Lv.", nextLevel), /*#__PURE__*/React.createElement("div", {
         className: "text-slate-400 text-[10px]"
-      }, "上限Lv.", normalized.levelCap, "はそのまま。振った強化は白紙に戻ります"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4E0A\u9650Lv.", normalized.levelCap, "\u306F\u305D\u306E\u307E\u307E\u3002\u632F\u3063\u305F\u5F37\u5316\u306F\u767D\u7D19\u306B\u623B\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "text-amber-300 text-[10px] font-black"
-      }, "振り直せる強化ポイント ", nextPoints, "（うち転生ぶん +", REINCARNATE_POINTS, "）"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u632F\u308A\u76F4\u305B\u308B\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 ", nextPoints, "\uFF08\u3046\u3061\u8EE2\u751F\u3076\u3093 +", REINCARNATE_POINTS, "\uFF09"))), /*#__PURE__*/React.createElement("div", {
         className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[10px] font-bold"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "必要ダイヤ"), /*#__PURE__*/React.createElement("span", {
+      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
         className: `font-black flex items-center gap-1 ${gold >= cost ? 'text-amber-300' : 'text-red-400'}`
       }, /*#__PURE__*/React.createElement(Gem, {
         size: 12
       }), cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-400"
-      }, "（絆Lv.", lvl.level, "）× ", REBIRTH_COST_PER_LEVEL), /*#__PURE__*/React.createElement("div", {
+      }, "\uFF08\u7D46Lv.", lvl.level, "\uFF09\xD7 ", REBIRTH_COST_PER_LEVEL), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[9px] font-bold"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-500"
-      }, "所持ダイヤ"), /*#__PURE__*/React.createElement("span", {
+      }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300 font-black"
       }, gold.toLocaleString())), gold < cost && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-red-400 font-black"
-      }, "ダイヤが足りません（あと ", (cost - gold).toLocaleString(), "）")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-300 mb-2"
-      }, "LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます"), /*#__PURE__*/React.createElement("div", {
+      }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u3079\u307E\u3059\uFF08\u6700\u5927Lv.8\uFF09\u3002\u9078\u3070\u306A\u3044\u3068\u304D\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3067\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u305B\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
       }, skills.map(skill => /*#__PURE__*/React.createElement("button", {
         key: skill.key,
@@ -28189,22 +28186,22 @@ function MonsterHeroGame() {
         className: "font-black text-xs"
       }, skill.name), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300"
-      }, "現在Lv.", skill.level, " → Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
+      }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
         onClick: () => setReincarnateSkillKey(''),
         className: `w-full p-3 rounded-xl border text-left ${reincarnateSkillKey === '' ? 'bg-amber-700 border-white' : 'bg-slate-900 border-amber-500/40'}`
       }, /*#__PURE__*/React.createElement("div", {
         className: "font-black text-xs"
-      }, "あとで決める（ポイントとして残す）"), /*#__PURE__*/React.createElement("div", {
+      }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300"
-      }, "固有技ポイント +1（いまの所持 ", normalized.uniqueSkillPoints, "）"), /*#__PURE__*/React.createElement("div", {
+      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-300 mt-1"
-      }, "保留したポイントはマスモン詳細の「固有技強化」から使用できます"))), reincarnateError && /*#__PURE__*/React.createElement("div", {
+      }, "\u4FDD\u7559\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E\u300C\u56FA\u6709\u6280\u5F37\u5316\u300D\u304B\u3089\u4F7F\u7528\u3067\u304D\u307E\u3059"))), reincarnateError && /*#__PURE__*/React.createElement("div", {
         className: "text-red-300 text-[10px] my-2"
       }, reincarnateError), /*#__PURE__*/React.createElement("button", {
         disabled: reincarnateSkillKey == null || gold < cost || reincarnateProcessingRef.current,
         onClick: executeMasuReincarnation,
         className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
-      }, "転生する"));
+      }, "\u8EE2\u751F\u3059\u308B"));
     })(), gameState === 'MASU_DONATION' && (() => {
       const options = [{
         key: 'bondXp',
@@ -28267,11 +28264,11 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-violet-300"
-      }, "寄付")), /*#__PURE__*/React.createElement("p", {
+      }, "\u5BC4\u4ED8")), /*#__PURE__*/React.createElement("p", {
         className: "text-[10px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-xl px-3 py-2 mb-2 shrink-0"
-      }, "総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます"), /*#__PURE__*/React.createElement("div", {
+      }, "\u7DCF\u5408\u529B\u3068\u5831\u916C\u3092\u898B\u6BD4\u3079\u3066\u8907\u6570\u9078\u3079\u307E\u3059\u3002\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-4 gap-1 mb-2 shrink-0",
-        "aria-label": "寄付一覧の並べ替え"
+        "aria-label": "\u5BC4\u4ED8\u4E00\u89A7\u306E\u4E26\u3079\u66FF\u3048"
       }, options.map(o => {
         const active = donationSortKey === o.key;
         const direction = donationSortDir === 'asc' ? '低い順' : '高い順';
@@ -28301,7 +28298,7 @@ function MonsterHeroGame() {
         size: 42
       }), /*#__PURE__*/React.createElement("p", {
         className: "text-[11px] mt-3 font-bold"
-      }, "寄付できるマスモンがいません")) : /*#__PURE__*/React.createElement("div", {
+      }, "\u5BC4\u4ED8\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093")) : /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-1.5 pb-3"
       }, sorted.map(masu => {
         const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -28339,24 +28336,24 @@ function MonsterHeroGame() {
           className: "mh-rebirth-stars-overlay"
         }), active && /*#__PURE__*/React.createElement("span", {
           className: "absolute top-1 left-1 text-[7px] leading-4 px-1 bg-pink-600/95 text-white rounded-full font-black"
-        }, "編成中"), selected && /*#__PURE__*/React.createElement("span", {
+        }, "\u7DE8\u6210\u4E2D"), selected && /*#__PURE__*/React.createElement("span", {
           className: "absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full bg-amber-300 text-slate-950 font-black"
-        }, "✓")), /*#__PURE__*/React.createElement("div", {
+        }, "\u2713")), /*#__PURE__*/React.createElement("div", {
           className: "w-full mt-1 font-black text-[9px] leading-tight text-white truncate"
         }, masu.name), /*#__PURE__*/React.createElement("div", {
           className: "w-full flex justify-center gap-1 text-[8px] leading-tight font-black"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-pink-300"
-        }, "絆Lv.", lvl.level), /*#__PURE__*/React.createElement("span", {
+        }, "\u7D46Lv.", lvl.level), /*#__PURE__*/React.createElement("span", {
           className: "text-cyan-300"
-        }, "総合力 ", formatMonsterPower(masuPowerOf(masu)))), /*#__PURE__*/React.createElement("div", {
+        }, "\u7DCF\u5408\u529B ", formatMonsterPower(masuPowerOf(masu)))), /*#__PURE__*/React.createElement("div", {
           className: "w-full text-[8px] leading-tight text-amber-300 font-black truncate"
         }, /*#__PURE__*/React.createElement(Gem, {
           size: 8,
           className: "inline"
         }), " ", diamonds.toLocaleString()), !canSelect && !selected && /*#__PURE__*/React.createElement("span", {
           className: "text-[7px] text-red-300 font-black"
-        }, "編成を維持できないため選択不可"));
+        }, "\u7DE8\u6210\u3092\u7DAD\u6301\u3067\u304D\u306A\u3044\u305F\u3081\u9078\u629E\u4E0D\u53EF"));
       }))), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 rounded-2xl border border-violet-400/50 bg-slate-950 px-3 py-2 shadow-xl",
         style: {
@@ -28366,18 +28363,18 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between mb-2 text-[10px] font-black"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-violet-200"
-      }, "選択数：", /*#__PURE__*/React.createElement("b", {
+      }, "\u9078\u629E\u6570\uFF1A", /*#__PURE__*/React.createElement("b", {
         className: "text-white text-sm"
-      }, donationSelectedIds.length, "体")), /*#__PURE__*/React.createElement("span", {
+      }, donationSelectedIds.length, "\u4F53")), /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "合計 ", /*#__PURE__*/React.createElement(Gem, {
+      }, "\u5408\u8A08 ", /*#__PURE__*/React.createElement(Gem, {
         size: 11,
         className: "inline"
-      }), " ", selectedDiamonds.toLocaleString(), " / 虹のプシュケー ×", selectedPsyche)), /*#__PURE__*/React.createElement("button", {
+      }), " ", selectedDiamonds.toLocaleString(), " / \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", selectedPsyche)), /*#__PURE__*/React.createElement("button", {
         disabled: !donationSelectedIds.length || donationProcessing || !selectedResult?.ok,
         onClick: () => setDonationConfirmOpen(true),
         className: "w-full min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-xl font-black text-sm disabled:opacity-30"
-      }, "選んだマスモンを寄付する")));
+      }, "\u9078\u3093\u3060\u30DE\u30B9\u30E2\u30F3\u3092\u5BC4\u4ED8\u3059\u308B")));
     })(), gameState === 'MASU_DONATION' && donationConfirmOpen && donationSelectedIds.length > 0 && (() => {
       const selected = donationSelectedIds.map(id => masuMons.find(m => String(m.id) === String(id))).filter(Boolean);
       const result = buildMasuDonations({
@@ -28405,7 +28402,7 @@ function MonsterHeroGame() {
         className: "w-full max-w-sm bg-slate-900 border-2 border-violet-400 rounded-3xl p-5 shadow-2xl"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-lg font-black text-violet-200 text-center mb-3"
-      }, "寄付の最終確認"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5BC4\u4ED8\u306E\u6700\u7D42\u78BA\u8A8D"), /*#__PURE__*/React.createElement("div", {
         className: "flex -space-x-2 justify-center mb-3"
       }, selected.slice(0, 5).map(m => {
         const base = ALL_PLAYER_MONSTERS[m.baseId];
@@ -28425,24 +28422,24 @@ function MonsterHeroGame() {
         className: "bg-black/40 rounded-2xl p-3 space-y-1 text-[12px] mb-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "選択数"), /*#__PURE__*/React.createElement("b", null, selected.length, "体")), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u9078\u629E\u6570"), /*#__PURE__*/React.createElement("b", null, selected.length, "\u4F53")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-amber-300"
-      }, /*#__PURE__*/React.createElement("span", null, "獲得ダイヤ合計"), /*#__PURE__*/React.createElement("b", null, result.diamonds.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u7372\u5F97\u30C0\u30A4\u30E4\u5408\u8A08"), /*#__PURE__*/React.createElement("b", null, result.diamonds.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-fuchsia-300"
-      }, /*#__PURE__*/React.createElement("span", null, "虹のプシュケー合計"), /*#__PURE__*/React.createElement("b", null, "×", result.psyche)), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u5408\u8A08"), /*#__PURE__*/React.createElement("b", null, "\xD7", result.psyche)), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-slate-300"
-      }, /*#__PURE__*/React.createElement("span", null, "寄付後の所持ダイヤ"), /*#__PURE__*/React.createElement("b", null, result.nextGold.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u5BC4\u4ED8\u5F8C\u306E\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", null, result.nextGold.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
         className: "bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"
       }, /*#__PURE__*/React.createElement(AlertCircle, {
         size: 14,
         className: "inline mr-1"
-      }), "選択した全マスモンがいなくなります。この操作は取り消せません。"), /*#__PURE__*/React.createElement("div", {
+      }), "\u9078\u629E\u3057\u305F\u5168\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "flex gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setDonationConfirmOpen(false),
         disabled: donationProcessing,
         className: "flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-2xl font-black text-xs disabled:opacity-40"
-      }, "戻る"), /*#__PURE__*/React.createElement("button", {
+      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: executeMasuDonation,
         disabled: donationProcessing,
         className: "flex-[2] min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-2xl font-black text-xs shadow-lg disabled:opacity-40"
@@ -28455,7 +28452,7 @@ function MonsterHeroGame() {
         "aria-modal": "true"
       }, /*#__PURE__*/React.createElement("img", {
         src: REGENERATION_DISC_IMAGE,
-        alt: "円盤石",
+        alt: "\u5186\u76E4\u77F3",
         className: "mh-regeneration-disc"
       }), /*#__PURE__*/React.createElement("div", {
         className: "mh-regeneration-born"
@@ -28463,9 +28460,9 @@ function MonsterHeroGame() {
         src: regenerationResult.base.iconUrl,
         alt: regenerationResult.masu.name,
         className: "w-28 h-28 object-contain mx-auto"
-      }), /*#__PURE__*/React.createElement("h3", null, "モンスター誕生！"), /*#__PURE__*/React.createElement("div", {
+      }), /*#__PURE__*/React.createElement("h3", null, "\u30E2\u30F3\u30B9\u30BF\u30FC\u8A95\u751F\uFF01"), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-400 font-bold mt-1"
-      }, "ベースモンの基礎値との差"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u57FA\u790E\u5024\u3068\u306E\u5DEE"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-1 text-[11px] text-left mt-2"
       }, statRows.map(([label, key, baseKey]) => {
         const value = regenerationResult.masu.individualStats[key];
@@ -28474,7 +28471,7 @@ function MonsterHeroGame() {
           key: key
         }, label, " ", /*#__PURE__*/React.createElement("b", null, value, " ", /*#__PURE__*/React.createElement("small", {
           className: `text-[9px] ${delta > 0 ? 'text-emerald-300' : delta < 0 ? 'text-red-300' : 'text-slate-400'}`
-        }, "（", delta > 0 ? '+' : delta < 0 ? '' : '±', delta, "）")));
+        }, "\uFF08", delta > 0 ? '+' : delta < 0 ? '' : '±', delta, "\uFF09")));
       })), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setRegenerationResult(null);
@@ -28482,7 +28479,7 @@ function MonsterHeroGame() {
           setGameState('MASU_REGENERATION');
         },
         className: "mt-4 w-full py-3 bg-amber-500 text-black rounded-xl font-black"
-      }, "一覧へ戻る")));
+      }, "\u4E00\u89A7\u3078\u623B\u308B")));
     })(), gameState === 'MASU_TRANSCENDENCE' && (() => {
       const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
       const selected = masuMons.find(m => String(m.id) === String(transcendSelectedId));
@@ -28503,24 +28500,24 @@ function MonsterHeroGame() {
           size: 20
         })), /*#__PURE__*/React.createElement("h2", {
           className: "text-xl font-black italic text-amber-200"
-        }, "超越")), /*#__PURE__*/React.createElement("div", {
+        }, "\u8D85\u8D8A")), /*#__PURE__*/React.createElement("div", {
           className: "shrink-0 w-full max-w-md mx-auto mb-2"
         }, /*#__PURE__*/React.createElement(AssistantBubble, {
           scene: "transcendence",
           compact: true
         })), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] text-slate-400 mb-3 shrink-0"
-        }, "Lv.", MAX_MASU_LEVEL_CAP, "・虹★", BREAKTHROUGH_STARS_PER_TIER, "（限界突破", FINAL_BREAKTHROUGH_COUNT, "回）まで育てたマスモンだけが超越できます。超越するとLv上限が", TRANSCEND_LEVEL_CAP, "になり、Lv", MAX_MASU_LEVEL_CAP + 1, "以降のレベルアップで超越ポイントを獲得します。1個体につき1回だけです。"), /*#__PURE__*/React.createElement("div", {
+        }, "Lv.", MAX_MASU_LEVEL_CAP, "\u30FB\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\uFF08\u9650\u754C\u7A81\u7834", FINAL_BREAKTHROUGH_COUNT, "\u56DE\uFF09\u307E\u3067\u80B2\u3066\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u8D85\u8D8A\u3067\u304D\u307E\u3059\u3002\u8D85\u8D8A\u3059\u308B\u3068Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u3001Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3067\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3057\u307E\u3059\u30021\u500B\u4F53\u306B\u3064\u304D1\u56DE\u3060\u3051\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
           className: "flex items-center justify-between gap-2 rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 mb-3 shrink-0"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-[10px] font-black text-amber-200 flex items-center gap-1"
         }, /*#__PURE__*/React.createElement("span", {
           "aria-hidden": "true"
-        }, "🌈"), "虹のプシュケー"), /*#__PURE__*/React.createElement("span", {
+        }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
           className: "text-[11px] font-mono font-black text-white"
-        }, "所持 ", psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        }, "\u6240\u6301 ", psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-slate-500 font-bold mb-2 shrink-0"
-        }, "超越には虹のプシュケー", TRANSCEND_PSYCHE_COST.toLocaleString(), "個とダイヤ", TRANSCEND_DIAMOND_COST.toLocaleString(), "が必要です。"), renderMonsterSortFilterBar({
+        }, "\u8D85\u8D8A\u306B\u306F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC", TRANSCEND_PSYCHE_COST.toLocaleString(), "\u500B\u3068\u30C0\u30A4\u30E4", TRANSCEND_DIAMOND_COST.toLocaleString(), "\u304C\u5FC5\u8981\u3067\u3059\u3002"), renderMonsterSortFilterBar({
           singleType: true
         }), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
@@ -28596,7 +28593,7 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-amber-200"
-      }, "超越の儀式")), /*#__PURE__*/React.createElement("div", {
+      }, "\u8D85\u8D8A\u306E\u5100\u5F0F")), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3"
@@ -28623,35 +28620,35 @@ function MonsterHeroGame() {
         className: "text-pink-300 text-xs"
       }, "Lv.", lvl.level, " / ", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
         className: "text-amber-200 text-[10px] font-black"
-      }, "虹★", BREAKTHROUGH_STARS_PER_TIER, "（限界突破", normalized.rebirthCount, "回）"), /*#__PURE__*/React.createElement("div", {
+      }, "\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\uFF08\u9650\u754C\u7A81\u7834", normalized.rebirthCount, "\u56DE\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "text-emerald-300 text-[10px] font-black"
-      }, "超越するとLv上限が", TRANSCEND_LEVEL_CAP, "になります"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u8D85\u8D8A\u3059\u308B\u3068Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u307E\u3059"))), /*#__PURE__*/React.createElement("div", {
         className: "rounded-xl border border-amber-400/30 bg-black/40 p-3 text-[10px] leading-relaxed text-slate-200 space-y-1.5"
-      }, /*#__PURE__*/React.createElement("p", null, "Lv.", MAX_MASU_LEVEL_CAP, "・虹★", BREAKTHROUGH_STARS_PER_TIER, "まで育ったマスモンだけが行える、限界の先へ進むための特別な儀式です。"), /*#__PURE__*/React.createElement("p", null, "超越するとLv", MAX_MASU_LEVEL_CAP + 1, "以降の成長が解放され、Lv上限が", TRANSCEND_LEVEL_CAP, "になります。"), /*#__PURE__*/React.createElement("p", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "以降のレベルアップでは通常の強化ポイントではなく「超越ポイント」を獲得します。"), /*#__PURE__*/React.createElement("p", null, "超越ポイントは通常の強化とは別に、モンスターの基礎能力を永久的に強化できます。"), /*#__PURE__*/React.createElement("p", null, "超越状態と超越強化は、転生や強化ポイントリセットを行っても失われません。")), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("p", null, "Lv.", MAX_MASU_LEVEL_CAP, "\u30FB\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\u307E\u3067\u80B2\u3063\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u884C\u3048\u308B\u3001\u9650\u754C\u306E\u5148\u3078\u9032\u3080\u305F\u3081\u306E\u7279\u5225\u306A\u5100\u5F0F\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u8D85\u8D8A\u3059\u308B\u3068Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u6210\u9577\u304C\u89E3\u653E\u3055\u308C\u3001Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3067\u306F\u901A\u5E38\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3067\u306F\u306A\u304F\u300C\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u300D\u3092\u7372\u5F97\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u306F\u901A\u5E38\u306E\u5F37\u5316\u3068\u306F\u5225\u306B\u3001\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u57FA\u790E\u80FD\u529B\u3092\u6C38\u4E45\u7684\u306B\u5F37\u5316\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u8D85\u8D8A\u72B6\u614B\u3068\u8D85\u8D8A\u5F37\u5316\u306F\u3001\u8EE2\u751F\u3084\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u3092\u884C\u3063\u3066\u3082\u5931\u308F\u308C\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "rounded-xl border border-fuchsia-500/30 bg-black/40 p-3 space-y-1.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[10px] font-bold"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "必要な虹のプシュケー"), /*#__PURE__*/React.createElement("span", {
+      }, "\u5FC5\u8981\u306A\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
         className: `font-black flex items-center gap-1 ${psycheShort === 0 ? 'text-fuchsia-300' : 'text-red-400'}`
       }, /*#__PURE__*/React.createElement("span", {
         "aria-hidden": "true"
-      }, "🌈"), TRANSCEND_PSYCHE_COST.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      }, "\uD83C\uDF08"), TRANSCEND_PSYCHE_COST.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[9px] font-bold"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-500"
-      }, "所持数"), /*#__PURE__*/React.createElement("span", {
+      }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300 font-black"
       }, psycheHave.toLocaleString())), psycheShort > 0 && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-red-400 font-black"
-      }, "虹のプシュケーが足りません（あと ", psycheShort.toLocaleString(), "）")), /*#__PURE__*/React.createElement("div", {
+      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", psycheShort.toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
         className: "rounded-xl border border-amber-500/30 bg-black/40 p-3 space-y-1.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[10px] font-bold"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "必要ダイヤ"), /*#__PURE__*/React.createElement("span", {
+      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
         className: `font-black flex items-center gap-1 ${goldShort === 0 ? 'text-amber-300' : 'text-red-400'}`
       }, /*#__PURE__*/React.createElement(Gem, {
         size: 12
@@ -28659,20 +28656,20 @@ function MonsterHeroGame() {
         className: "flex justify-between text-[9px] font-bold"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-500"
-      }, "所持ダイヤ"), /*#__PURE__*/React.createElement("span", {
+      }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300 font-black"
       }, gold.toLocaleString())), goldShort > 0 && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-red-400 font-black"
-      }, "ダイヤが足りません（あと ", goldShort.toLocaleString(), "）")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", goldShort.toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
         className: "rounded-xl border-2 border-red-400/60 bg-red-950/40 px-3 py-2 text-center text-[11px] font-black text-red-200"
-      }, "⚠ 超越は取り消せません"), transcendError && /*#__PURE__*/React.createElement("div", {
+      }, "\u26A0 \u8D85\u8D8A\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093"), transcendError && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-red-400 font-black text-center"
       }, transcendError)), /*#__PURE__*/React.createElement("button", {
         "data-transcend-execute": true,
         disabled: !plan.ok || transcendProcessingRef.current,
         onClick: executeMasuTranscendence,
         className: "shrink-0 mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-amber-500 via-fuchsia-500 to-sky-400 text-slate-950 font-black text-sm disabled:opacity-40 disabled:from-slate-700 disabled:via-slate-700 disabled:to-slate-700 disabled:text-slate-400 active:scale-[.98]"
-      }, "超越する"));
+      }, "\u8D85\u8D8A\u3059\u308B"));
     })(), levelCapCompensation && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
@@ -28688,17 +28685,17 @@ function MonsterHeroGame() {
       className: "text-amber-300 mx-auto mb-3"
     }), /*#__PURE__*/React.createElement("h2", {
       className: "font-black text-lg mb-2"
-    }, "Lv30上限補償"), /*#__PURE__*/React.createElement("p", {
+    }, "Lv30\u4E0A\u9650\u88DC\u511F"), /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-slate-300 leading-relaxed"
-    }, "Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。"), /*#__PURE__*/React.createElement("div", {
+    }, "Lv30\u3092\u8D85\u3048\u3066\u3044\u305F\u672A\u9650\u754C\u7A81\u7834\u30DE\u30B9\u30E2\u30F3\u306E\u8D85\u904E\u7D46\u7D4C\u9A13\u5024\u3092\u524A\u9664\u3057\u3001\u540C\u6570\u306E\u30C0\u30A4\u30E4\u3078\u9084\u5143\u3057\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "text-2xl text-amber-300 font-black my-4"
-    }, "+", levelCapCompensation.diamonds.toLocaleString(), " ダイヤ"), /*#__PURE__*/React.createElement("button", {
+    }, "+", levelCapCompensation.diamonds.toLocaleString(), " \u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setLevelCapCompensation(null);
         storeSet('mh_masu_level_cap_compensation_notice_seen_v1', true, false);
       },
       className: "w-full bg-amber-500 text-black py-3 rounded-2xl font-black"
-    }, "受け取る"))), inheritedUniqueCompensation && /*#__PURE__*/React.createElement("div", {
+    }, "\u53D7\u3051\u53D6\u308B"))), inheritedUniqueCompensation && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         position: 'fixed',
@@ -28710,14 +28707,14 @@ function MonsterHeroGame() {
       className: "max-w-sm w-full bg-slate-900 border-2 border-fuchsia-400 rounded-3xl p-6 text-center"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-4xl mb-3"
-    }, "🌈"), /*#__PURE__*/React.createElement("h2", {
+    }, "\uD83C\uDF08"), /*#__PURE__*/React.createElement("h2", {
       className: "font-black text-lg mb-2"
-    }, "お詫びの配布"), /*#__PURE__*/React.createElement("p", {
+    }, "\u304A\u8A6B\u3073\u306E\u914D\u5E03"), /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-slate-300 leading-relaxed"
-    }, "継承固有技Lv不具合修正のお詫びとして虹のプシュケー×20を配布しました。"), /*#__PURE__*/React.createElement("button", {
+    }, "\u7D99\u627F\u56FA\u6709\u6280Lv\u4E0D\u5177\u5408\u4FEE\u6B63\u306E\u304A\u8A6B\u3073\u3068\u3057\u3066\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\xD720\u3092\u914D\u5E03\u3057\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setInheritedUniqueCompensation(false),
       className: "w-full bg-fuchsia-500 text-white py-3 mt-5 rounded-2xl font-black"
-    }, "確認"))), rebirthAnimation && (() => {
+    }, "\u78BA\u8A8D"))), rebirthAnimation && (() => {
       const starList = breakthroughStars(rebirthAnimation.masu.rebirthCount || 1);
       const finalBreak = isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
       return /*#__PURE__*/React.createElement("div", {
@@ -28730,7 +28727,7 @@ function MonsterHeroGame() {
         className: "mh-breakthrough-ring"
       }), /*#__PURE__*/React.createElement("div", {
         className: "mh-breakthrough-cap"
-      }, "レベル上限", /*#__PURE__*/React.createElement("b", null, "Lv.", rebirthAnimation.masu.levelCap)), /*#__PURE__*/React.createElement("div", {
+      }, "\u30EC\u30D9\u30EB\u4E0A\u9650", /*#__PURE__*/React.createElement("b", null, "Lv.", rebirthAnimation.masu.levelCap)), /*#__PURE__*/React.createElement("div", {
         className: "mh-breakthrough-mon"
       }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: rebirthAnimation.masu.baseId,
@@ -28745,7 +28742,7 @@ function MonsterHeroGame() {
         className: `${s.image ? 'mh-rainbow-breakthrough-star ' : ''}${finalBreak || i === 0 ? 'is-new' : 'is-old'}`
       }))), /*#__PURE__*/React.createElement("div", {
         className: "mh-breakthrough-copy"
-      }, /*#__PURE__*/React.createElement("b", null, finalBreak ? '最終限界突破！' : '限界突破！'), /*#__PURE__*/React.createElement("span", null, finalBreak ? '★ が虹になりました' : '★ が1つ増えました'), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${rebirthAnimation.keptSkillPoints}）` : `${rebirthAnimation.skillName} Lv.${rebirthAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "強化ポイント +", rebirthAnimation.gainedPoints)));
+      }, /*#__PURE__*/React.createElement("b", null, finalBreak ? '最終限界突破！' : '限界突破！'), /*#__PURE__*/React.createElement("span", null, finalBreak ? '★ が虹になりました' : '★ が1つ増えました'), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${rebirthAnimation.keptSkillPoints}）` : `${rebirthAnimation.skillName} Lv.${rebirthAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", rebirthAnimation.gainedPoints)));
     })(), transcendAnimation && /*#__PURE__*/React.createElement("div", {
       className: "mh-transcend-animation",
       role: "status",
@@ -28811,14 +28808,14 @@ function MonsterHeroGame() {
     }), /*#__PURE__*/React.createElement("div", {
       className: "mh-transcend-title",
       "aria-hidden": "true"
-    }, "超\u3000越"), /*#__PURE__*/React.createElement("div", {
+    }, "\u8D85\u3000\u8D8A"), /*#__PURE__*/React.createElement("div", {
       className: "mh-transcend-mark",
       "aria-hidden": "true"
     }, /*#__PURE__*/React.createElement(TranscendenceBadge, {
       transcended: true
     })), /*#__PURE__*/React.createElement("div", {
       className: "mh-transcend-copy"
-    }, /*#__PURE__*/React.createElement("b", null, "超越完了！"), /*#__PURE__*/React.createElement("span", null, "Lv上限 ", transcendAnimation.fromLevelCap, " → ", transcendAnimation.toLevelCap), /*#__PURE__*/React.createElement("span", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "以降が解放されました"), /*#__PURE__*/React.createElement("span", null, "超越ポイントが解放されました"))), reincarnateAnimation && /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("b", null, "\u8D85\u8D8A\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv\u4E0A\u9650 ", transcendAnimation.fromLevelCap, " \u2192 ", transcendAnimation.toLevelCap), /*#__PURE__*/React.createElement("span", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("span", null, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F"))), reincarnateAnimation && /*#__PURE__*/React.createElement("div", {
       className: "mh-reincarnation-animation",
       role: "status",
       "aria-live": "polite"
@@ -28840,11 +28837,11 @@ function MonsterHeroGame() {
       className: "mh-rebirth-stars-overlay"
     })), /*#__PURE__*/React.createElement("div", {
       className: "mh-reincarnation-copy"
-    }, /*#__PURE__*/React.createElement("b", null, "転生完了！"), /*#__PURE__*/React.createElement("span", null, "Lv.", reincarnateAnimation.fromLevel, " → Lv.", reincarnateAnimation.nextLevel), /*#__PURE__*/React.createElement("span", null, reincarnateAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）` : `${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "強化ポイント ", reincarnateAnimation.nextPoints, " を振り直せます"))), donationAnimation && /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("b", null, "\u8EE2\u751F\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv.", reincarnateAnimation.fromLevel, " \u2192 Lv.", reincarnateAnimation.nextLevel), /*#__PURE__*/React.createElement("span", null, reincarnateAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）` : `${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 ", reincarnateAnimation.nextPoints, " \u3092\u632F\u308A\u76F4\u305B\u307E\u3059"))), donationAnimation && /*#__PURE__*/React.createElement("div", {
       className: "mh-donation-animation",
       role: "status",
       "aria-live": "polite",
-      "aria-label": "寄付を処理中"
+      "aria-label": "\u5BC4\u4ED8\u3092\u51E6\u7406\u4E2D"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mh-donation-beam"
     }), /*#__PURE__*/React.createElement("div", {
@@ -28870,7 +28867,7 @@ function MonsterHeroGame() {
       }
     }))), /*#__PURE__*/React.createElement("div", {
       className: "mh-donation-copy"
-    }, "神殿へ寄付中…")), gameState === 'MASU_DONATION' && donationResult && /*#__PURE__*/React.createElement("div", {
+    }, "\u795E\u6BBF\u3078\u5BC4\u4ED8\u4E2D\u2026")), gameState === 'MASU_DONATION' && donationResult && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-4",
       style: {
         position: 'fixed',
@@ -28885,18 +28882,18 @@ function MonsterHeroGame() {
       className: "text-amber-300 mx-auto mb-3"
     }), /*#__PURE__*/React.createElement("h3", {
       className: "text-xl font-black text-white mb-3"
-    }, "寄付完了"), /*#__PURE__*/React.createElement("p", {
+    }, "\u5BC4\u4ED8\u5B8C\u4E86"), /*#__PURE__*/React.createElement("p", {
       className: "text-sm text-violet-200 font-bold"
     }, donationResult.count === 1 ? `${donationResult.name}を寄付しました` : `${donationResult.count}体をまとめて寄付しました`), /*#__PURE__*/React.createElement("p", {
       className: "text-lg text-amber-300 font-black mt-2"
-    }, donationResult.diamonds.toLocaleString(), "ダイヤを受け取りました"), /*#__PURE__*/React.createElement("p", {
+    }, donationResult.diamonds.toLocaleString(), "\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308A\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("p", {
       className: "text-base text-fuchsia-300 font-black mt-1"
-    }, "虹のプシュケー ×", donationResult.psyche), /*#__PURE__*/React.createElement("p", {
+    }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", donationResult.psyche), /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-slate-300 mt-2"
-    }, "所持ダイヤ ", donationResult.gold.toLocaleString()), /*#__PURE__*/React.createElement("button", {
+    }, "\u6240\u6301\u30C0\u30A4\u30E4 ", donationResult.gold.toLocaleString()), /*#__PURE__*/React.createElement("button", {
       onClick: () => setDonationResult(null),
       className: "w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm"
-    }, "寄付一覧へ戻る"))), gameState === 'EXTREME_DIFFICULTY_SELECT' && extremeRuleDetail && (() => {
+    }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B"))), gameState === 'EXTREME_DIFFICULTY_SELECT' && extremeRuleDetail && (() => {
       const setting = extremeDifficultySetting(extremeRuleDetail);
       if (!setting) return null;
       const groups = extremeRuleDetailGroups(setting.id);
@@ -28927,10 +28924,10 @@ function MonsterHeroGame() {
         className: "min-w-0"
       }, /*#__PURE__*/React.createElement("small", {
         className: "block text-[9px] font-black tracking-widest text-slate-400"
-      }, "極限チャレンジ"), /*#__PURE__*/React.createElement("h2", {
+      }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("h2", {
         className: "truncate text-lg font-black text-fuchsia-200"
-      }, setting.label, " ルール詳細")), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "閉じる",
+      }, setting.label, " \u30EB\u30FC\u30EB\u8A73\u7D30")), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
         onClick: close,
         className: "shrink-0 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 active:scale-95"
       }, /*#__PURE__*/React.createElement(X, null))), /*#__PURE__*/React.createElement("div", {
@@ -28950,7 +28947,7 @@ function MonsterHeroGame() {
         className: "rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/40 px-3 py-2"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-[10px] font-black tracking-widest text-amber-300"
-      }, "【", group.title, "】"), /*#__PURE__*/React.createElement("dl", {
+      }, "\u3010", group.title, "\u3011"), /*#__PURE__*/React.createElement("dl", {
         className: "mt-1 space-y-1"
       }, group.lines.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
         key: label,
@@ -28961,14 +28958,14 @@ function MonsterHeroGame() {
         className: "min-w-0 text-right font-black text-white"
       }, value)))))), groups.length === 0 && /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl bg-black/40 px-3 py-2 text-[11px] text-slate-300"
-      }, "この難易度に特殊ルールはありません。"), /*#__PURE__*/React.createElement("p", {
+      }, "\u3053\u306E\u96E3\u6613\u5EA6\u306B\u7279\u6B8A\u30EB\u30FC\u30EB\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] leading-relaxed text-slate-500"
-      }, "ここを開いても難易度の選択は変わりません。閉じると元の難易度選択に戻ります。")), /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u3053\u3092\u958B\u3044\u3066\u3082\u96E3\u6613\u5EA6\u306E\u9078\u629E\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002\u9589\u3058\u308B\u3068\u5143\u306E\u96E3\u6613\u5EA6\u9078\u629E\u306B\u623B\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 px-4 pt-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: close,
         className: "min-h-[44px] w-full rounded-2xl bg-fuchsia-600 text-sm font-black text-white active:scale-[.99]"
-      }, "閉じる"))));
+      }, "\u9589\u3058\u308B"))));
     })(), showWaveDetails && (() => {
       const extreme = gameState === 'EXTREME_DIFFICULTY_SELECT';
       const extremePreviewSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -28993,8 +28990,8 @@ function MonsterHeroGame() {
         className: "text-indigo-300 font-black"
       }, label), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black"
-      }, "全WAVE詳細")), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "閉じる",
+      }, "\u5168WAVE\u8A73\u7D30")), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
         onClick: () => {
           setWaveScanPreview(null);
           setShowWaveDetails(false);
@@ -29049,7 +29046,7 @@ function MonsterHeroGame() {
         }, "BOSS")), /*#__PURE__*/React.createElement("div", {
           "data-wave-stats": true,
           className: "w-[72px] text-right text-[10px] whitespace-nowrap"
-        }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "攻撃 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString()))));
+        }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString()))));
       }))));
     })(), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 px-4",
@@ -29073,7 +29070,7 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-    }, "バトル")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
     }, battleMenuTab === 'difficulty' && /*#__PURE__*/React.createElement("div", {
       className: `grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeTabs')}`
@@ -29110,14 +29107,14 @@ function MonsterHeroGame() {
           borderColor: '#0f172a',
           color: '#0f172a'
         } : undefined
-      }, "？"));
+      }, "\uFF1F"));
     })), battleMenuTab === 'difficulty' && (() => {
       const quick = isQuickMode(battleMode);
       return /*#__PURE__*/React.createElement("div", {
         className: `shrink-0 w-full h-10 mb-1${battleTutorialSpotClass('rankingBtn')}`
       }, quick ? /*#__PURE__*/React.createElement("div", {
         className: "w-full h-10 rounded-xl bg-slate-900/60 border border-white/5 text-slate-500 font-black text-[10px] flex items-center justify-center px-2 whitespace-nowrap"
-      }, "クイックモードはランキング対象外です")
+      }, "\u30AF\u30A4\u30C3\u30AF\u30E2\u30FC\u30C9\u306F\u30E9\u30F3\u30AD\u30F3\u30B0\u5BFE\u8C61\u5916\u3067\u3059")
       /* 練習中はランキング一覧へ移らせない(台本が難易度の画面のまま進むため) */ : /*#__PURE__*/React.createElement("button", {
         disabled: !!battleTutorial,
         onClick: () => {
@@ -29130,7 +29127,7 @@ function MonsterHeroGame() {
         className: "w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-60"
       }, /*#__PURE__*/React.createElement("span", {
         className: "flex-1 text-center whitespace-nowrap"
-      }, "🏆 ランキングを見る（チャレンジモード）"), /*#__PURE__*/React.createElement(ChevronRight, {
+      }, "\uD83C\uDFC6 \u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B\uFF08\u30C1\u30E3\u30EC\u30F3\u30B8\u30E2\u30FC\u30C9\uFF09"), /*#__PURE__*/React.createElement(ChevronRight, {
         size: 16,
         className: "shrink-0"
       })));
@@ -29174,7 +29171,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
-      }, "左右にスワイプして難易度を選択"), Object.keys(SKIP_TICKETS).length > 0 &&
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), Object.keys(SKIP_TICKETS).length > 0 &&
       /*#__PURE__*/
       /* スキップチケットの所持数。使えるのはクイックだけだが、チャレンジでも同じ高さの行を出す。
          ここを片方だけ消すと、下に続く難易度カードの位置がモードでずれてしまうため */
@@ -29193,11 +29190,11 @@ function MonsterHeroGame() {
           className: `flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border text-[9px] font-black active:scale-95 ${have > 0 ? 'bg-teal-950/70 border-teal-500/40 text-teal-200' : 'bg-black/30 border-white/5 text-slate-500'}`
         }, /*#__PURE__*/React.createElement("span", null, item?.emoji || '⏩'), /*#__PURE__*/React.createElement("span", null, short), /*#__PURE__*/React.createElement("span", {
           className: "font-mono"
-        }, have, "枚"));
+        }, have, "\u679A"));
       })), /*#__PURE__*/React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('difficulty')}`
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "前の難易度",
+        "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
         disabled: selectedIndex === 0,
         onClick: () => selectDifficultyIndex(selectedIndex - 1),
         className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
@@ -29275,7 +29272,7 @@ function MonsterHeroGame() {
             setShowWaveDetails(true);
           },
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs"
-        }, "全WAVE詳細"), /*#__PURE__*/React.createElement("button", {
+        }, "\u5168WAVE\u8A73\u7D30"), /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial && key !== 'Beginner',
           onClick: () => {
             if (battleTutorial) {
@@ -29302,17 +29299,17 @@ function MonsterHeroGame() {
             backgroundColor: setting.bg,
             color: setting.darkText ? '#0f172a' : '#ffffff'
           }
-        }, "この難易度で挑戦"), (() => {
+        }, "\u3053\u306E\u96E3\u6613\u5EA6\u3067\u6311\u6226"), (() => {
           const tid = SKIP_TICKETS[key];
           if (!quick) return /*#__PURE__*/React.createElement("div", {
             className: "min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap"
-          }, "スキップはクイックモード専用");
+          }, "\u30B9\u30AD\u30C3\u30D7\u306F\u30AF\u30A4\u30C3\u30AF\u30E2\u30FC\u30C9\u5C02\u7528");
           if (!tid) return /*#__PURE__*/React.createElement("div", {
             className: "min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap"
-          }, "この難易度はスキップできません");
+          }, "\u3053\u306E\u96E3\u6613\u5EA6\u306F\u30B9\u30AD\u30C3\u30D7\u3067\u304D\u307E\u305B\u3093");
           if (!skipAllowedByPolicy(quickRewardPolicy)) return /*#__PURE__*/React.createElement("div", {
             className: "min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight"
-          }, "スキップは「育成」方針のときだけ使えます");
+          }, "\u30B9\u30AD\u30C3\u30D7\u306F\u300C\u80B2\u6210\u300D\u65B9\u91DD\u306E\u3068\u304D\u3060\u3051\u4F7F\u3048\u307E\u3059");
           const have = ownedItems[tid] || 0;
           return /*#__PURE__*/React.createElement("div", {
             className: "flex gap-1.5"
@@ -29324,16 +29321,16 @@ function MonsterHeroGame() {
               openBattleSkip(key);
             },
             className: `flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
-          }, /*#__PURE__*/React.createElement("span", null, "スキップ"), /*#__PURE__*/React.createElement("span", {
+          }, /*#__PURE__*/React.createElement("span", null, "\u30B9\u30AD\u30C3\u30D7"), /*#__PURE__*/React.createElement("span", {
             className: `text-[10px] font-black px-1.5 py-0.5 rounded-full ${have > 0 ? 'bg-black/30 text-teal-100' : 'bg-black/40 text-slate-500'}`
-          }, have, "枚")), /*#__PURE__*/React.createElement("button", {
+          }, have, "\u679A")), /*#__PURE__*/React.createElement("button", {
             onClick: () => setSkipInfoItemId(tid),
-            "aria-label": "スキップの説明",
+            "aria-label": "\u30B9\u30AD\u30C3\u30D7\u306E\u8AAC\u660E",
             className: "shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95"
-          }, "？"));
+          }, "\uFF1F"));
         })()));
       })), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "次の難易度",
+        "aria-label": "\u6B21\u306E\u96E3\u6613\u5EA6",
         disabled: selectedIndex === difficulties.length - 1,
         onClick: () => selectDifficultyIndex(selectedIndex + 1),
         className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
@@ -29436,7 +29433,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-1 mb-1 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "戻る",
+        "aria-label": "\u623B\u308B",
         disabled: !!battleTutorial,
         onClick: () => {
           if (modeSelectTab !== 'mode') {
@@ -29450,7 +29447,7 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-      }, "バトル")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, /*#__PURE__*/React.createElement("div", {
         className: `grid grid-cols-3 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`
@@ -29470,10 +29467,10 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
-      }, "左右にスワイプしてモードを選択"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u30E2\u30FC\u30C9\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('modeCards')}`
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "前のモード",
+        "aria-label": "\u524D\u306E\u30E2\u30FC\u30C9",
         onClick: () => stepMode(-1),
         className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70"
       }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("div", {
@@ -29547,7 +29544,7 @@ function MonsterHeroGame() {
           disabled: !!battleTutorial,
           onClick: () => setModeInfoId(m.id),
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
-        }, "このモードの説明"), /*#__PURE__*/React.createElement("button", {
+        }, "\u3053\u306E\u30E2\u30FC\u30C9\u306E\u8AAC\u660E"), /*#__PURE__*/React.createElement("button", {
           disabled: extremeLocked || speciesLocked || !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
           onClick: () => {
             setBattleMode(m.id);
@@ -29571,7 +29568,7 @@ function MonsterHeroGame() {
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
           className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 ", m.label, "のランキング"), /*#__PURE__*/React.createElement(ChevronRight, {
+        }, "\uD83C\uDFC6 ", m.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 14
         })), isSpecies && /*#__PURE__*/React.createElement("button", {
           "data-species-record-link": true,
@@ -29580,7 +29577,7 @@ function MonsterHeroGame() {
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
           className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 ", m.label, "のランキング"), /*#__PURE__*/React.createElement(ChevronRight, {
+        }, "\uD83C\uDFC6 ", m.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 14
         })), ranked && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
@@ -29588,12 +29585,12 @@ function MonsterHeroGame() {
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
           className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 ", m.label, "のランキング"), /*#__PURE__*/React.createElement(ChevronRight, {
+        }, "\uD83C\uDFC6 ", m.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 16,
           className: "shrink-0"
         }))));
       })), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "次のモード",
+        "aria-label": "\u6B21\u306E\u30E2\u30FC\u30C9",
         onClick: () => stepMode(1),
         className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70"
       }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
@@ -29647,23 +29644,23 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-1 mb-1 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "戻る",
+        "aria-label": "\u623B\u308B",
         onClick: () => setGameState('BATTLE_MODE_SELECT'),
         className: "p-3 text-slate-400 active:scale-90"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate"
-      }, "極限チャレンジ")), /*#__PURE__*/React.createElement("div", {
+      }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8")), /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
-      }, "左右にスワイプして難易度を選択"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
         className: "relative shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "前の難易度",
+        "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
         disabled: selectedIndex === 0,
         onClick: () => selectDifficultyIndex(selectedIndex - 1),
         className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
@@ -29737,9 +29734,9 @@ function MonsterHeroGame() {
           className: "mt-1 h-[34px] shrink-0 flex items-center justify-center rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 text-center"
         }, /*#__PURE__*/React.createElement("b", {
           className: "text-[10px] leading-tight text-amber-300"
-        }, "⚠ ", setting.label, " ", extremeRuleSummaryText(setting.id)))) : /*#__PURE__*/React.createElement("div", {
+        }, "\u26A0 ", setting.label, " ", extremeRuleSummaryText(setting.id)))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
-        }, "？？？"), /*#__PURE__*/React.createElement("div", {
+        }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("div", {
           "data-extreme-card-actions": true,
           className: "grid gap-1.5 mt-auto pt-2 pb-1"
         }, /*#__PURE__*/React.createElement("div", {
@@ -29777,11 +29774,11 @@ function MonsterHeroGame() {
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
           className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 ", setting.label, "のランキング"), /*#__PURE__*/React.createElement(ChevronRight, {
+        }, "\uD83C\uDFC6 ", setting.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 14
         }))));
       })), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "次の難易度",
+        "aria-label": "\u6B21\u306E\u96E3\u6613\u5EA6",
         disabled: selectedIndex === difficulties.length - 1,
         onClick: () => selectDifficultyIndex(selectedIndex + 1),
         className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
@@ -29804,7 +29801,7 @@ function MonsterHeroGame() {
         compact: true
       })), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500"
-      }, "スコアは極限チャレンジ専用のランキングへ載り、チャレンジの記録は変わりません"))));
+      }, "\u30B9\u30B3\u30A2\u306F\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u5C02\u7528\u306E\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u8F09\u308A\u3001\u30C1\u30E3\u30EC\u30F3\u30B8\u306E\u8A18\u9332\u306F\u5909\u308F\u308A\u307E\u305B\u3093"))));
     })(), gameState === 'BATTLE_DIFFICULTY_SELECT' && (() => {
       const species = battleMode === BATTLE_MODE_SPECIES_CHALLENGE,
         quick = isQuickMode(battleMode);
@@ -29854,7 +29851,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-1 mb-1 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "戻る",
+        "aria-label": "\u623B\u308B",
         disabled: !!battleTutorial,
         onClick: () => setGameState(species ? 'SPECIES_CHALLENGE_SELECT' : 'BATTLE_MODE_SELECT'),
         className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
@@ -29871,11 +29868,11 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
-      }, "左右にスワイプして難易度を選択"), quick && /*#__PURE__*/React.createElement("fieldset", {
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), quick && /*#__PURE__*/React.createElement("fieldset", {
         className: "shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1"
       }, /*#__PURE__*/React.createElement("legend", {
         className: "px-1 text-[9px] font-black text-teal-200"
-      }, "報酬方針"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5831\u916C\u65B9\u91DD"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-1"
       }, [[QUICK_REWARD_POLICY_GROWTH, '育成', '経験値あり'], [QUICK_REWARD_POLICY_PSYCHE, 'プシュケー優先', '経験値0・虹×2'], [QUICK_REWARD_POLICY_DIAMOND, 'ダイヤ優先', '経験値0・ダイヤ×2']].map(([id, label, detail]) => {
         const selected = quickRewardPolicy === id;
@@ -29892,10 +29889,10 @@ function MonsterHeroGame() {
         }, detail));
       })), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-center text-[8px] font-black text-slate-400"
-      }, "同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放")), /*#__PURE__*/React.createElement("div", {
+      }, "\u540C\u3058\u96E3\u6613\u5EA6\u3092\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30D7\u30ED\u30FB\u6975\u9650\u306E\u3069\u308C\u304B\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u89E3\u653E")), /*#__PURE__*/React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('difficulty')}`
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "前の難易度",
+        "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
         disabled: selectedIndex === 0,
         onClick: () => selectDifficultyIndex(selectedIndex - 1),
         className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
@@ -29945,10 +29942,10 @@ function MonsterHeroGame() {
           }
         }, setting.label, species && speciesCleared(key) && /*#__PURE__*/React.createElement("span", {
           role: "img",
-          "aria-label": "クリア済み",
+          "aria-label": "\u30AF\u30EA\u30A2\u6E08\u307F",
           "data-species-cleared-mark": key,
           className: "ml-1 align-middle text-[11px]"
-        }, "✅")), /*#__PURE__*/React.createElement("div", {
+        }, "\u2705")), /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
@@ -29976,30 +29973,30 @@ function MonsterHeroGame() {
           className: "truncate"
         }, noteText), quick && hasExtremeSpecialRules(key) && /*#__PURE__*/React.createElement("span", {
           className: "shrink-0 text-[8px] text-amber-300"
-        }, "特殊ルールあり")), /*#__PURE__*/React.createElement("div", {
+        }, "\u7279\u6B8A\u30EB\u30FC\u30EB\u3042\u308A")), /*#__PURE__*/React.createElement("div", {
           className: `mt-1.5 min-h-[54px] rounded-xl border px-2.5 py-1 flex items-center gap-2 ${species && speciesRewardClaimed(key) ? 'border-white/10 bg-slate-900/50' : 'border-fuchsia-400/35 bg-fuchsia-950/35'}`,
           "data-psyche-reward": key,
           "data-species-reward-claimed": species ? String(speciesRewardClaimed(key)) : undefined
         }, /*#__PURE__*/React.createElement("span", {
           className: `shrink-0 whitespace-nowrap text-[10px] leading-tight font-black ${species && speciesRewardClaimed(key) ? 'text-slate-500' : 'text-fuchsia-200'}`
-        }, "クリア報酬"), /*#__PURE__*/React.createElement("div", {
+        }, "\u30AF\u30EA\u30A2\u5831\u916C"), /*#__PURE__*/React.createElement("div", {
           className: "flex-1 min-w-0 text-left whitespace-nowrap leading-[1.35]"
         }, species ? (() => {
           const claimed = speciesRewardClaimed(key);
           return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
             className: `block text-[11px] ${claimed ? 'text-slate-500 line-through' : 'text-amber-200'}`
-          }, "超越の実 ×", speciesChallengeFirstClearReward(key)), /*#__PURE__*/React.createElement("small", {
+          }, "\u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(key)), /*#__PURE__*/React.createElement("small", {
             className: `block text-[8px] font-black ${claimed ? 'text-emerald-300' : 'text-slate-400'}`
           }, claimed ? '✅ 受取済み（初回のみ）' : '初回クリアのみ'));
         })() : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-white"
-        }, "経験値：", quick && quickRewardPolicy !== QUICK_REWARD_POLICY_GROWTH ? '0' : quick ? bonusLabel(setting.xp || setting.score) : '通常'), /*#__PURE__*/React.createElement("b", {
+        }, "\u7D4C\u9A13\u5024\uFF1A", quick && quickRewardPolicy !== QUICK_REWARD_POLICY_GROWTH ? '0' : quick ? bonusLabel(setting.xp || setting.score) : '通常'), /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-fuchsia-100"
         }, /*#__PURE__*/React.createElement("span", {
           "aria-hidden": "true"
-        }, "🌈"), " 虹のプシュケー：", applyQuickPsychePolicy(clearPsycheReward(key), battleMode, quickRewardPolicy), "個", quick ? quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '（×2）' : '（×1）' : ''), /*#__PURE__*/React.createElement("b", {
+        }, "\uD83C\uDF08"), " \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\uFF1A", applyQuickPsychePolicy(clearPsycheReward(key), battleMode, quickRewardPolicy), "\u500B", quick ? quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '（×2）' : '（×1）' : ''), /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-amber-200"
-        }, "💎 ダイヤ：", quick ? bonusLabel(setting.gold * (quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? 2 : 1)) : `×${setting.gold}`, quick && quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? '（×2）' : '')))), /*#__PURE__*/React.createElement("div", {
+        }, "\uD83D\uDC8E \u30C0\u30A4\u30E4\uFF1A", quick ? bonusLabel(setting.gold * (quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? 2 : 1)) : `×${setting.gold}`, quick && quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? '（×2）' : '')))), /*#__PURE__*/React.createElement("div", {
           className: `grid gap-1.5 mt-1.5 ${quick ? 'mt-auto' : ''}`
         }, !species && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
@@ -30008,7 +30005,7 @@ function MonsterHeroGame() {
             setShowWaveDetails(true);
           },
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30"
-        }, "全WAVE詳細"), /*#__PURE__*/React.createElement("button", {
+        }, "\u5168WAVE\u8A73\u7D30"), /*#__PURE__*/React.createElement("button", {
           disabled: pro && !proReady || !quickUnlocked || !!battleTutorial && key !== 'Beginner',
           onClick: () => {
             if (battleTutorial) {
@@ -30065,7 +30062,7 @@ function MonsterHeroGame() {
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
           className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 ", setting.label, "のランキング"), /*#__PURE__*/React.createElement(ChevronRight, {
+        }, "\uD83C\uDFC6 ", setting.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 16,
           className: "shrink-0"
         })), species && /*#__PURE__*/React.createElement("button", {
@@ -30078,7 +30075,7 @@ function MonsterHeroGame() {
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-cyan-400/40 text-cyan-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
           className: "flex-1 text-center whitespace-nowrap"
-        }, "🏆 ", lineageById(speciesChallengeSelection.speciesId).name, "種のランキング"), /*#__PURE__*/React.createElement(ChevronRight, {
+        }, "\uD83C\uDFC6 ", lineageById(speciesChallengeSelection.speciesId).name, "\u7A2E\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 16,
           className: "shrink-0"
         })), quick && (() => {
@@ -30088,7 +30085,7 @@ function MonsterHeroGame() {
           const policyOk = skipAllowedByPolicy(quickRewardPolicy);
           if (!policyOk) return /*#__PURE__*/React.createElement("div", {
             className: "min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight"
-          }, "スキップは「育成」方針のときだけ使えます");
+          }, "\u30B9\u30AD\u30C3\u30D7\u306F\u300C\u80B2\u6210\u300D\u65B9\u91DD\u306E\u3068\u304D\u3060\u3051\u4F7F\u3048\u307E\u3059");
           return /*#__PURE__*/React.createElement("div", {
             className: "flex gap-1.5"
           }, /*#__PURE__*/React.createElement("button", {
@@ -30099,16 +30096,16 @@ function MonsterHeroGame() {
               openBattleSkip(key);
             },
             className: `flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${quickUnlocked && have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
-          }, /*#__PURE__*/React.createElement("span", null, "スキップ"), /*#__PURE__*/React.createElement("span", {
+          }, /*#__PURE__*/React.createElement("span", null, "\u30B9\u30AD\u30C3\u30D7"), /*#__PURE__*/React.createElement("span", {
             className: `text-[10px] font-black px-1.5 py-0.5 rounded-full ${quickUnlocked && have > 0 ? 'bg-black/30 text-teal-100' : 'bg-black/40 text-slate-500'}`
-          }, have, "枚")), /*#__PURE__*/React.createElement("button", {
+          }, have, "\u679A")), /*#__PURE__*/React.createElement("button", {
             onClick: () => setSkipInfoItemId(tid),
-            "aria-label": "スキップの説明",
+            "aria-label": "\u30B9\u30AD\u30C3\u30D7\u306E\u8AAC\u660E",
             className: "shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95"
-          }, "？"));
+          }, "\uFF1F"));
         })()));
       })), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "次の難易度",
+        "aria-label": "\u6B21\u306E\u96E3\u6613\u5EA6",
         disabled: selectedIndex === difficulties.length - 1,
         onClick: () => selectDifficultyIndex(selectedIndex + 1),
         className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
@@ -30141,7 +30138,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-1 mb-1 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "戻る",
+        "aria-label": "\u623B\u308B",
         onClick: () => setGameState(scoreRankingBack),
         className: "p-3 text-slate-400 active:scale-90"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
@@ -30174,15 +30171,15 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-cyan-400"
-    }, "モンスター一覧")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-md mx-auto space-y-4 mt-[clamp(3.5rem,14vh,8rem)]"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('OWNED_MONSTERS'),
       className: "w-full min-h-[72px] bg-cyan-950/50 border border-cyan-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]"
-    }, "ベースモン"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30D9\u30FC\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('MASU_MONS'),
       className: "w-full min-h-[72px] bg-pink-950/50 border border-pink-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]"
-    }, "マスモン"))), gameState === 'SETTINGS' && /*#__PURE__*/React.createElement("div", {
+    }, "\u30DE\u30B9\u30E2\u30F3"))), gameState === 'SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-5"
@@ -30193,7 +30190,7 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-slate-200"
-    }, "設定")), /*#__PURE__*/React.createElement("div", {
+    }, "\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-3"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "settings"
@@ -30202,10 +30199,10 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowAudioSettings(true),
       className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
-    }, "音量設定"), /*#__PURE__*/React.createElement("button", {
+    }, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowBgmArrangement(true),
       className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
-    }, "BGMアレンジ"), /*#__PURE__*/React.createElement("button", {
+    }, "BGM\u30A2\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setShowBackup(true);
         setBackupTab('export');
@@ -30214,23 +30211,23 @@ function MonsterHeroGame() {
         setRestoreMsg('');
       },
       className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
-    }, "データ引き継ぎ"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("button", {
       onClick: () => openHelp(),
       className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
-    }, "ヘルプ"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowGameUpdateConfirm(true),
       disabled: showGameUpdateConfirm || gameUpdatePending,
       className: "w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-cyan-200"
-    }, "ゲームを更新"), /*#__PURE__*/React.createElement("span", {
+    }, "\u30B2\u30FC\u30E0\u3092\u66F4\u65B0"), /*#__PURE__*/React.createElement("span", {
       className: "block mt-1 text-[10px] text-slate-400"
-    }, "最新のゲームデータを読み込みます")), /*#__PURE__*/React.createElement("div", {
+    }, "\u6700\u65B0\u306E\u30B2\u30FC\u30E0\u30C7\u30FC\u30BF\u3092\u8AAD\u307F\u8FBC\u307F\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] font-mono text-slate-600"
     }, "BUILD ", BUILD_DATE), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowOfficialTitleConfirm(true),
       className: "w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black"
-    }, "タイトルへ戻る"))), gameState === 'MASU_PATTERN_DEBUG' && (() => {
+    }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B"))), gameState === 'MASU_PATTERN_DEBUG' && (() => {
       const eligible = masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId]);
       const selected = eligible.find(m => String(m.id) === String(patternMasuId));
       const resetPattern = () => {
@@ -30252,10 +30249,10 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement("div", {
         className: "mh-debug-banner"
-      }, "DEBUG・模様は保存されません"), /*#__PURE__*/React.createElement("header", {
+      }, "DEBUG\u30FB\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("header", {
         className: "flex items-center gap-2 px-2 py-1 shrink-0 border-b border-white/10"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "戻る",
+        "aria-label": "\u623B\u308B",
         onClick: () => setGameState('DEBUG_SETTINGS'),
         className: "p-3 text-slate-300"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
@@ -30269,13 +30266,13 @@ function MonsterHeroGame() {
       }, selected ? selected.name : 'マスモン模様カスタム')), selected && /*#__PURE__*/React.createElement("button", {
         onClick: () => setPatternMasuId(null),
         className: "ml-auto min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black"
-      }, "変更")), eligible.length === 0 ? /*#__PURE__*/React.createElement("section", {
+      }, "\u5909\u66F4")), eligible.length === 0 ? /*#__PURE__*/React.createElement("section", {
         className: "flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300"
-      }, "カスタマイズできる所持マスモンがいません") : !selected ? /*#__PURE__*/React.createElement("section", {
+      }, "\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u3067\u304D\u308B\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093") : !selected ? /*#__PURE__*/React.createElement("section", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4"
       }, /*#__PURE__*/React.createElement("p", {
         className: "mb-3 text-[11px] font-bold text-slate-400"
-      }, "所持マスモンを1体選択してください。"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u30921\u4F53\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-2"
       }, eligible.map(m => {
         const base = ALL_PLAYER_MONSTERS[m.baseId];
@@ -30518,7 +30515,7 @@ function MonsterHeroGame() {
         return /*#__PURE__*/React.createElement("div", {
           className: "flex-1 min-h-0 flex flex-col overflow-hidden"
         }, /*#__PURE__*/React.createElement("nav", {
-          "aria-label": "付け方",
+          "aria-label": "\u4ED8\u3051\u65B9",
           className: "grid grid-cols-3 gap-1 px-3 py-1 shrink-0"
         }, [['all', '全身模様'], ['region', '部位ごと'], ['point', 'ワンポイント']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
           key: id,
@@ -30547,7 +30544,7 @@ function MonsterHeroGame() {
           className: "absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[8px] font-black"
         }, mode === 'all' ? '全身模様' : mode === 'region' ? `染色${'①②③'[regionIndex]}` : selectedDecal ? '選択中' : 'タップで追加'), mode === 'point' && /*#__PURE__*/React.createElement("span", {
           className: "absolute inset-x-2 bottom-1 text-center text-[8px] text-cyan-200 bg-black/50 rounded-full"
-        }, "タップ選択・ドラッグ移動・ピンチ拡縮／回転")), /*#__PURE__*/React.createElement("section", {
+        }, "\u30BF\u30C3\u30D7\u9078\u629E\u30FB\u30C9\u30E9\u30C3\u30B0\u79FB\u52D5\u30FB\u30D4\u30F3\u30C1\u62E1\u7E2E\uFF0F\u56DE\u8EE2")), /*#__PURE__*/React.createElement("section", {
           className: "flex-1 min-h-0 mt-2 rounded-t-3xl border-t border-fuchsia-500/30 bg-slate-900/95 flex flex-col overflow-hidden"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-3 pb-2"
@@ -30555,9 +30552,9 @@ function MonsterHeroGame() {
           className: "space-y-3"
         }, /*#__PURE__*/React.createElement("h3", {
           className: "text-xs font-black text-fuchsia-300"
-        }, "STEP1：付け方選択"), /*#__PURE__*/React.createElement("p", {
+        }, "STEP1\uFF1A\u4ED8\u3051\u65B9\u9078\u629E"), /*#__PURE__*/React.createElement("p", {
           className: "text-[9px] text-slate-400"
-        }, "上の3方式はいつでも切り替えられ、設定は方式ごとに保持されます。"), mode === 'region' && /*#__PURE__*/React.createElement("div", {
+        }, "\u4E0A\u306E3\u65B9\u5F0F\u306F\u3044\u3064\u3067\u3082\u5207\u308A\u66FF\u3048\u3089\u308C\u3001\u8A2D\u5B9A\u306F\u65B9\u5F0F\u3054\u3068\u306B\u4FDD\u6301\u3055\u308C\u307E\u3059\u3002"), mode === 'region' && /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2"
         }, Array.from({
           length: regions
@@ -30568,23 +30565,23 @@ function MonsterHeroGame() {
             selectedLayer: `region:${i}`
           })),
           className: `min-h-[44px] rounded-xl font-black ${regionIndex === i ? 'bg-cyan-700 ring-2 ring-cyan-300' : 'bg-slate-800'}`
-        }, "染色", '①②③'[i]))), mode === 'point' && /*#__PURE__*/React.createElement("button", {
+        }, "\u67D3\u8272", '①②③'[i]))), mode === 'point' && /*#__PURE__*/React.createElement("button", {
           onClick: () => addDecal(),
           className: "w-full min-h-[48px] rounded-xl bg-cyan-700 font-black"
-        }, "＋ ワンポイントを追加"), /*#__PURE__*/React.createElement("div", {
+        }, "\uFF0B \u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u3092\u8FFD\u52A0"), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-2 gap-2"
         }, /*#__PURE__*/React.createElement("button", {
           onClick: () => setPatternSizePreview(true),
           className: "min-h-[44px] rounded-xl bg-slate-800 font-black"
-        }, "サイズ確認"), /*#__PURE__*/React.createElement("button", {
+        }, "\u30B5\u30A4\u30BA\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
           onClick: resetPattern,
           className: "min-h-[44px] rounded-xl bg-red-950 font-black"
-        }, "すべて初期化"))), patternStep === 'pattern' && /*#__PURE__*/React.createElement("div", {
+        }, "\u3059\u3079\u3066\u521D\u671F\u5316"))), patternStep === 'pattern' && /*#__PURE__*/React.createElement("div", {
           className: "space-y-2"
         }, !active && mode === 'point' ? /*#__PURE__*/React.createElement("button", {
           onClick: () => addDecal(),
           className: "w-full min-h-[48px] rounded-xl bg-cyan-700 font-black"
-        }, "＋ 最初のワンポイントを追加") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        }, "\uFF0B \u6700\u521D\u306E\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u3092\u8FFD\u52A0") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "flex gap-2 overflow-x-auto mh-scroll pb-2"
         }, (mode === 'point' ? MASU_PATTERN_POINT_OPTIONS : MASU_PATTERN_REPEAT_OPTIONS).map(([id, label]) => swatch(id, label, mode === 'point'))), slider('size', '大きさ', .02, .25, .005, v => `${Math.round(v * 100)}%`), slider('rotation', '回転', -180, 180, 1, v => `${Math.round(v)}°`), slider('x', '横位置', 0, 1, .01, v => `${Math.round(v * 100)}%`), slider('y', '縦位置', 0, 1, .01, v => `${Math.round(v * 100)}%`), slider('opacity', '透明度', 0, 100, 1, v => `${v}%`), mode === 'region' && /*#__PURE__*/React.createElement("button", {
           onClick: () => patchActive({
@@ -30594,22 +30591,22 @@ function MonsterHeroGame() {
             })
           }),
           className: "w-full min-h-[42px] rounded-xl bg-slate-800 font-black"
-        }, "この部位を初期値へ戻す"), mode === 'point' && selectedDecal && /*#__PURE__*/React.createElement("div", {
+        }, "\u3053\u306E\u90E8\u4F4D\u3092\u521D\u671F\u5024\u3078\u623B\u3059"), mode === 'point' && selectedDecal && /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2"
         }, /*#__PURE__*/React.createElement("button", {
           onClick: () => duplicateDecal(selectedDecal),
           className: "min-h-[42px] rounded-xl bg-cyan-900 font-black"
-        }, "複製"), /*#__PURE__*/React.createElement("button", {
+        }, "\u8907\u88FD"), /*#__PURE__*/React.createElement("button", {
           onClick: () => moveDecal(selectedDecal.id, 1),
           className: "min-h-[42px] rounded-xl bg-slate-800 font-black"
-        }, "前面へ"), /*#__PURE__*/React.createElement("button", {
+        }, "\u524D\u9762\u3078"), /*#__PURE__*/React.createElement("button", {
           onClick: () => deleteDecal(selectedDecal.id),
           className: "min-h-[42px] rounded-xl bg-red-900 font-black"
-        }, "削除")))), patternStep === 'color' && /*#__PURE__*/React.createElement("div", {
+        }, "\u524A\u9664")))), patternStep === 'color' && /*#__PURE__*/React.createElement("div", {
           className: "space-y-3"
         }, !active ? /*#__PURE__*/React.createElement("p", {
           className: "text-center text-sm text-slate-400"
-        }, "レイヤーを選択してください") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        }, "\u30EC\u30A4\u30E4\u30FC\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "flex gap-2 items-center"
         }, /*#__PURE__*/React.createElement("span", {
           className: "w-10 h-10 rounded-full border-2 border-white/30",
@@ -30618,7 +30615,7 @@ function MonsterHeroGame() {
           }
         }), /*#__PURE__*/React.createElement("b", {
           className: "text-xs"
-        }, "プリセット色・カスタム色")), /*#__PURE__*/React.createElement("div", {
+        }, "\u30D7\u30EA\u30BB\u30C3\u30C8\u8272\u30FB\u30AB\u30B9\u30BF\u30E0\u8272")), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-9 gap-1"
         }, MASU_PATTERN_PRESET_COLORS.map(color => /*#__PURE__*/React.createElement("button", {
           key: color,
@@ -30631,7 +30628,7 @@ function MonsterHeroGame() {
             backgroundColor: color
           }
         })), /*#__PURE__*/React.createElement("button", {
-          "aria-label": "カスタム色",
+          "aria-label": "\u30AB\u30B9\u30BF\u30E0\u8272",
           onClick: () => setPatternCustomColor(prev => ({
             ...prev,
             open: !prev.open
@@ -30658,7 +30655,7 @@ function MonsterHeroGame() {
           }
         }), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 text-center text-[8px] text-slate-400"
-        }, /*#__PURE__*/React.createElement("span", null, "色相 ", Math.round(patternCustomColor.h), "°"), /*#__PURE__*/React.createElement("span", null, "彩度 ", Math.round(patternCustomColor.s * 100), "%"), /*#__PURE__*/React.createElement("span", null, "明度 ", Math.round(patternCustomColor.v * 100), "%"))))), patternStep === 'layers' && /*#__PURE__*/React.createElement("div", {
+        }, /*#__PURE__*/React.createElement("span", null, "\u8272\u76F8 ", Math.round(patternCustomColor.h), "\xB0"), /*#__PURE__*/React.createElement("span", null, "\u5F69\u5EA6 ", Math.round(patternCustomColor.s * 100), "%"), /*#__PURE__*/React.createElement("span", null, "\u660E\u5EA6 ", Math.round(patternCustomColor.v * 100), "%"))))), patternStep === 'layers' && /*#__PURE__*/React.createElement("div", {
           className: "space-y-2"
         }, layerRows.map(row => /*#__PURE__*/React.createElement("div", {
           key: row.key,
@@ -30679,13 +30676,13 @@ function MonsterHeroGame() {
         }, row.value.visible === false ? '○' : '●'), row.decal && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
           onClick: () => moveDecal(row.decal.id, -1),
           className: "w-9 h-10 rounded-lg bg-slate-800"
-        }, "↓"), /*#__PURE__*/React.createElement("button", {
+        }, "\u2193"), /*#__PURE__*/React.createElement("button", {
           onClick: () => moveDecal(row.decal.id, 1),
           className: "w-9 h-10 rounded-lg bg-slate-800"
-        }, "↑"), /*#__PURE__*/React.createElement("button", {
+        }, "\u2191"), /*#__PURE__*/React.createElement("button", {
           onClick: () => deleteDecal(row.decal.id),
           className: "w-9 h-10 rounded-lg bg-red-900"
-        }, "×")))))), /*#__PURE__*/React.createElement("nav", {
+        }, "\xD7")))))), /*#__PURE__*/React.createElement("nav", {
           className: "grid grid-cols-4 gap-1 px-2 pt-1 border-t border-white/10 shrink-0",
           style: {
             paddingBottom: 'max(.4rem,env(safe-area-inset-bottom))'
@@ -30704,10 +30701,10 @@ function MonsterHeroGame() {
           className: "flex justify-between"
         }, /*#__PURE__*/React.createElement("h3", {
           className: "font-black"
-        }, "サイズ確認"), /*#__PURE__*/React.createElement("button", {
+        }, "\u30B5\u30A4\u30BA\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
           onClick: () => setPatternSizePreview(false),
           className: "px-4 py-2 rounded-xl bg-slate-700"
-        }, "閉じる")), /*#__PURE__*/React.createElement("div", {
+        }, "\u9589\u3058\u308B")), /*#__PURE__*/React.createElement("div", {
           className: "flex items-end justify-around text-center mt-3"
         }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PatternedMasuImage, {
           masu: selected,
@@ -30715,13 +30712,13 @@ function MonsterHeroGame() {
           colors: colors,
           settings: patternSettings,
           className: "w-24 h-24"
-        }), /*#__PURE__*/React.createElement("small", null, "通常カード")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PatternedMasuImage, {
+        }), /*#__PURE__*/React.createElement("small", null, "\u901A\u5E38\u30AB\u30FC\u30C9")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PatternedMasuImage, {
           masu: selected,
           base: base,
           colors: colors,
           settings: patternSettings,
           className: "w-11 h-11 mx-auto"
-        }), /*#__PURE__*/React.createElement("small", null, "小型アイコン"))))));
+        }), /*#__PURE__*/React.createElement("small", null, "\u5C0F\u578B\u30A2\u30A4\u30B3\u30F3"))))));
       })());
     })(), dyeMaskEditorOpened && /*#__PURE__*/React.createElement(DyeMaskTouchEditor, {
       active: gameState === 'DYE_MASK_POSITION_DEBUG',
@@ -30737,7 +30734,7 @@ function MonsterHeroGame() {
       const item = debugIconItems.find(entry => entry.id === iconAdjustId) || debugIconItems[0];
       if (!item) return /*#__PURE__*/React.createElement("div", {
         className: "p-4 text-slate-400"
-      }, "調整できるアイコンがありません。");
+      }, "\u8ABF\u6574\u3067\u304D\u308B\u30A2\u30A4\u30B3\u30F3\u304C\u3042\u308A\u307E\u305B\u3093\u3002");
       const initial = {
         ...(MARKET_PROFILE_ICON_STYLES[item.id] || DEFAULT_PROFILE_ICON_STYLE)
       };
@@ -30780,15 +30777,15 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] font-black text-fuchsia-400"
-      }, "DEBUG・保存されません"), /*#__PURE__*/React.createElement("h2", {
+      }, "DEBUG\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black"
-      }, "ブリーダーアイコン調整"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574"))), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3"
       }, /*#__PURE__*/React.createElement("input", {
         type: "search",
         value: iconAdjustQuery,
         onChange: e => setIconAdjustQuery(e.target.value),
-        placeholder: "名前・内部IDで検索",
+        placeholder: "\u540D\u524D\u30FB\u5185\u90E8ID\u3067\u691C\u7D22",
         className: "w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"
       }), /*#__PURE__*/React.createElement("select", {
         value: filteredItems.some(entry => entry.id === item.id) ? item.id : '',
@@ -30797,12 +30794,12 @@ function MonsterHeroGame() {
         className: "w-full rounded-xl bg-slate-900 border border-white/10 p-2 text-xs font-black"
       }, !filteredItems.length && /*#__PURE__*/React.createElement("option", {
         value: ""
-      }, "一致するアイコンはありません"), filteredItems.map(entry => /*#__PURE__*/React.createElement("option", {
+      }, "\u4E00\u81F4\u3059\u308B\u30A2\u30A4\u30B3\u30F3\u306F\u3042\u308A\u307E\u305B\u3093"), filteredItems.map(entry => /*#__PURE__*/React.createElement("option", {
         key: entry.id,
         value: entry.id
-      }, entry.name, "（", entry.id, "）"))), /*#__PURE__*/React.createElement("small", {
+      }, entry.name, "\uFF08", entry.id, "\uFF09"))), /*#__PURE__*/React.createElement("small", {
         className: "block text-right text-[8px] text-slate-500"
-      }, "全", debugIconItems.length, "件・表示", filteredItems.length, "件"), /*#__PURE__*/React.createElement("section", {
+      }, "\u5168", debugIconItems.length, "\u4EF6\u30FB\u8868\u793A", filteredItems.length, "\u4EF6"), /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 items-end gap-3 text-center text-[8px] font-black text-slate-400"
@@ -30812,26 +30809,26 @@ function MonsterHeroGame() {
         src: item.src,
         id: item.id,
         adjustment: values
-      }), /*#__PURE__*/React.createElement("span", null, "HOME左上プロフィール")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
+      }), /*#__PURE__*/React.createElement("span", null, "HOME\u5DE6\u4E0A\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
         src: item.src,
         id: item.id,
         adjustment: values,
-        alt: "マーケット一覧",
+        alt: "\u30DE\u30FC\u30B1\u30C3\u30C8\u4E00\u89A7",
         className: "w-10 h-10 mx-auto border-2 border-white/20 bg-black/30"
-      }), /*#__PURE__*/React.createElement("span", null, "マーケット一覧")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
+      }), /*#__PURE__*/React.createElement("span", null, "\u30DE\u30FC\u30B1\u30C3\u30C8\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
         src: item.src,
         id: item.id,
         adjustment: values,
-        alt: "商品詳細",
+        alt: "\u5546\u54C1\u8A73\u7D30",
         className: "w-28 h-28 mx-auto border-4 border-white/20 bg-black/30"
-      }), /*#__PURE__*/React.createElement("span", null, "商品詳細")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
+      }), /*#__PURE__*/React.createElement("span", null, "\u5546\u54C1\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
         src: item.src,
         id: item.id,
         adjustment: values,
-        alt: "プロフィール選択",
+        alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u9078\u629E",
         roundedClass: "rounded-2xl",
         className: "w-16 h-16 mx-auto border-2 border-amber-400 bg-black/30"
-      }), /*#__PURE__*/React.createElement("span", null, "プロフィール選択")))), slider('scale', '拡大率 scale', .5, 5, .01), slider('x', '左右位置 X', -50, 50, 1), slider('y', '上下位置 Y', -50, 130, 1), /*#__PURE__*/React.createElement("pre", {
+      }), /*#__PURE__*/React.createElement("span", null, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u9078\u629E")))), slider('scale', '拡大率 scale', .5, 5, .01), slider('x', '左右位置 X', -50, 50, 1), slider('y', '上下位置 Y', -50, 130, 1), /*#__PURE__*/React.createElement("pre", {
         className: "whitespace-pre-wrap break-all rounded-xl bg-black/40 p-3 text-[10px] text-cyan-200"
       }, copyText), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
@@ -30841,13 +30838,13 @@ function MonsterHeroGame() {
           [item.id]: initial
         })),
         className: "min-h-[46px] rounded-xl bg-slate-800 text-[10px] font-black"
-      }, "初期値へ戻す"), /*#__PURE__*/React.createElement("button", {
+      }, "\u521D\u671F\u5024\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
         onClick: async () => {
           await navigator.clipboard.writeText(copyText);
           window.alert('設定値をコピーしました。');
         },
         className: "min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black"
-      }, "設定値をコピー"))));
+      }, "\u8A2D\u5B9A\u5024\u3092\u30B3\u30D4\u30FC"))));
     })(), gameState === 'TRANSCEND_DEBUG' && (() => {
       const previewBase = Object.values(ALL_PLAYER_MONSTERS)[0];
       const previewMasu = transcended => ({
@@ -30881,15 +30878,15 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] font-black text-amber-300"
-      }, "DEBUG・本番と同じ TranscendenceBadge / 超越演出"), /*#__PURE__*/React.createElement("h2", {
+      }, "DEBUG\u30FB\u672C\u756A\u3068\u540C\u3058 TranscendenceBadge / \u8D85\u8D8A\u6F14\u51FA"), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black"
-      }, "超越確認"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u8D85\u8D8A\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4"
       }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[9px] font-black text-amber-300"
-      }, "1. 超越マーク（保存しません）"), /*#__PURE__*/React.createElement("p", {
+      }, "1. \u8D85\u8D8A\u30DE\u30FC\u30AF\uFF08\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("p", {
         className: "mb-2 text-[9px] leading-relaxed text-slate-400"
-      }, "虹★", BREAKTHROUGH_STARS_PER_TIER, "・転生3回と重ねて、隠れていないかを見ます。表示用の一時データだけを使います。"), previewBase && /*#__PURE__*/React.createElement("div", {
+      }, "\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\u30FB\u8EE2\u751F3\u56DE\u3068\u91CD\u306D\u3066\u3001\u96A0\u308C\u3066\u3044\u306A\u3044\u304B\u3092\u898B\u307E\u3059\u3002\u8868\u793A\u7528\u306E\u4E00\u6642\u30C7\u30FC\u30BF\u3060\u3051\u3092\u4F7F\u3044\u307E\u3059\u3002"), previewBase && /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-3"
       }, [false, true].map(on => {
         const masu = previewMasu(on);
@@ -30933,47 +30930,47 @@ function MonsterHeroGame() {
         transcended: true
       })), /*#__PURE__*/React.createElement("small", {
         className: "text-[9px] text-slate-400"
-      }, "small / 通常")), /*#__PURE__*/React.createElement("button", {
+      }, "small / \u901A\u5E38")), /*#__PURE__*/React.createElement("button", {
         onClick: debugPlayTranscendAnimation,
         className: "mt-2 w-full min-h-[52px] rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-fuchsia-700 to-amber-600 text-sm font-black text-white active:scale-95"
-      }, "超越演出を再生")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+      }, "\u8D85\u8D8A\u6F14\u51FA\u3092\u518D\u751F")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[9px] font-black text-slate-300"
-      }, "2. 数値の確認（保存しません）"), /*#__PURE__*/React.createElement("div", {
+      }, "2. \u6570\u5024\u306E\u78BA\u8A8D\uFF08\u4FDD\u5B58\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "解放条件"), /*#__PURE__*/React.createElement("b", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u89E3\u653E\u6761\u4EF6"), /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, "Lv.", MAX_MASU_LEVEL_CAP, "・限界突破", FINAL_BREAKTHROUGH_COUNT, "回")), /*#__PURE__*/React.createElement("div", {
+      }, "Lv.", MAX_MASU_LEVEL_CAP, "\u30FB\u9650\u754C\u7A81\u7834", FINAL_BREAKTHROUGH_COUNT, "\u56DE")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "費用"), /*#__PURE__*/React.createElement("b", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u8CBB\u7528"), /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, "虹のプシュケー ", TRANSCEND_PSYCHE_COST.toLocaleString(), " ＋ ダイヤ ", TRANSCEND_DIAMOND_COST.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC ", TRANSCEND_PSYCHE_COST.toLocaleString(), " \uFF0B \u30C0\u30A4\u30E4 ", TRANSCEND_DIAMOND_COST.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "Lv上限"), /*#__PURE__*/React.createElement("b", {
+      }, /*#__PURE__*/React.createElement("span", null, "Lv\u4E0A\u9650"), /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, MAX_MASU_LEVEL_CAP, " → ", TRANSCEND_LEVEL_CAP)), /*#__PURE__*/React.createElement("div", {
+      }, MAX_MASU_LEVEL_CAP, " \u2192 ", TRANSCEND_LEVEL_CAP)), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "交換レート"), /*#__PURE__*/React.createElement("b", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u4EA4\u63DB\u30EC\u30FC\u30C8"), /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, "虹のプシュケー ", TRANSCEND_PSYCHE_PER_POINT, " → 超越P 1")), /*#__PURE__*/React.createElement("div", {
+      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC ", TRANSCEND_PSYCHE_PER_POINT, " \u2192 \u8D85\u8D8AP 1")), /*#__PURE__*/React.createElement("div", {
         className: "pt-1 border-t border-white/10"
       }, xpRows.map(lv => /*#__PURE__*/React.createElement("div", {
         key: lv,
         className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "Lv.", lv, " → ", lv + 1), /*#__PURE__*/React.createElement("b", {
+      }, /*#__PURE__*/React.createElement("span", null, "Lv.", lv, " \u2192 ", lv + 1), /*#__PURE__*/React.createElement("b", {
         className: "text-white font-mono"
       }, xpForBondLevelAt(lv).toLocaleString())))), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between pt-1 border-t border-white/10"
-      }, /*#__PURE__*/React.createElement("span", null, "Lv.", MAX_MASU_LEVEL_CAP, " → ", TRANSCEND_LEVEL_CAP, " 累計"), /*#__PURE__*/React.createElement("b", {
+      }, /*#__PURE__*/React.createElement("span", null, "Lv.", MAX_MASU_LEVEL_CAP, " \u2192 ", TRANSCEND_LEVEL_CAP, " \u7D2F\u8A08"), /*#__PURE__*/React.createElement("b", {
         className: "text-white font-mono"
       }, (totalBondXpForLevel(TRANSCEND_LEVEL_CAP) - totalBondXpForLevel(MAX_MASU_LEVEL_CAP)).toLocaleString())))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[9px] font-black text-rose-300"
-      }, "3. 実際に試す準備（セーブデータを書き換えます）"), /*#__PURE__*/React.createElement("p", {
+      }, "3. \u5B9F\u969B\u306B\u8A66\u3059\u6E96\u5099\uFF08\u30BB\u30FC\u30D6\u30C7\u30FC\u30BF\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("p", {
         className: "mb-2 text-[9px] leading-relaxed text-slate-400"
-      }, "選んだ個体の絆経験値・限界突破回数と、共通の虹のプシュケー・ダイヤを書き換えます。押すたびに確認が出ます。"), masuMons.length === 0 ? /*#__PURE__*/React.createElement("p", {
+      }, "\u9078\u3093\u3060\u500B\u4F53\u306E\u7D46\u7D4C\u9A13\u5024\u30FB\u9650\u754C\u7A81\u7834\u56DE\u6570\u3068\u3001\u5171\u901A\u306E\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u30FB\u30C0\u30A4\u30E4\u3092\u66F8\u304D\u63DB\u3048\u307E\u3059\u3002\u62BC\u3059\u305F\u3073\u306B\u78BA\u8A8D\u304C\u51FA\u307E\u3059\u3002"), masuMons.length === 0 ? /*#__PURE__*/React.createElement("p", {
         className: "rounded-2xl border border-white/10 bg-slate-900/90 p-4 text-center text-[10px] text-slate-400"
-      }, "所持マスモンがありません。") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      }, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3042\u308A\u307E\u305B\u3093\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-1.5"
       }, masuMons.map(m => /*#__PURE__*/React.createElement("button", {
         key: m.id,
@@ -30997,21 +30994,21 @@ function MonsterHeroGame() {
         className: "mt-1 block truncate"
       }, m.name), /*#__PURE__*/React.createElement("small", {
         className: "block"
-      }, "Lv.", masuBondLevelInfo(m).level, "／", normalizeMasuProgression(m).rebirthCount, "凸")))), selected && /*#__PURE__*/React.createElement("div", {
+      }, "Lv.", masuBondLevelInfo(m).level, "\uFF0F", normalizeMasuProgression(m).rebirthCount, "\u51F8")))), selected && /*#__PURE__*/React.createElement("div", {
         className: "mt-2 rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", null, selected.name), /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, "Lv.", level, "／上限", norm.levelCap, "／", norm.rebirthCount, "凸")), /*#__PURE__*/React.createElement("div", {
+      }, "Lv.", level, "\uFF0F\u4E0A\u9650", norm.levelCap, "\uFF0F", norm.rebirthCount, "\u51F8")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "超越"), /*#__PURE__*/React.createElement("b", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u8D85\u8D8A"), /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, norm.transcended ? '済み' : 'まだ', "／超越P ", norm.transcendPoints, "／基礎+適性 ", transcendAptBoostTotal(selected), "段階")), /*#__PURE__*/React.createElement("div", {
+      }, norm.transcended ? '済み' : 'まだ', "\uFF0F\u8D85\u8D8AP ", norm.transcendPoints, "\uFF0F\u57FA\u790E+\u9069\u6027 ", transcendAptBoostTotal(selected), "\u6BB5\u968E")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "所持"), /*#__PURE__*/React.createElement("b", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u6240\u6301"), /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, "虹のプシュケー ", psycheHave.toLocaleString(), "／ダイヤ ", gold.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC ", psycheHave.toLocaleString(), "\uFF0F\u30C0\u30A4\u30E4 ", gold.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "pt-1 border-t border-white/10 text-[9px] text-amber-200"
       }, eligible.ok ? 'いまの状態で超越できます。' : eligible.reason)), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 grid grid-cols-2 gap-2"
@@ -31020,21 +31017,21 @@ function MonsterHeroGame() {
         disabled: !selected,
         onClick: debugTranscendPrepare,
         className: "col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30"
-      }, "解放条件を満たす（Lv.", MAX_MASU_LEVEL_CAP, "・", FINAL_BREAKTHROUGH_COUNT, "凸）"), /*#__PURE__*/React.createElement("button", {
+      }, "\u89E3\u653E\u6761\u4EF6\u3092\u6E80\u305F\u3059\uFF08Lv.", MAX_MASU_LEVEL_CAP, "\u30FB", FINAL_BREAKTHROUGH_COUNT, "\u51F8\uFF09"), /*#__PURE__*/React.createElement("button", {
         "data-transcend-debug-cost": true,
         onClick: debugTranscendGrantCost,
         className: "col-span-2 min-h-[46px] rounded-xl bg-amber-800/70 border border-amber-300/60 text-white text-[10px] font-black active:scale-95"
-      }, "費用ぶんを配る（プシュケー・ダイヤ）"), /*#__PURE__*/React.createElement("button", {
+      }, "\u8CBB\u7528\u3076\u3093\u3092\u914D\u308B\uFF08\u30D7\u30B7\u30E5\u30B1\u30FC\u30FB\u30C0\u30A4\u30E4\uFF09"), /*#__PURE__*/React.createElement("button", {
         "data-transcend-debug-points": true,
         disabled: !selected,
         onClick: () => debugTranscendGrantPoints(10),
         className: "min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-200 text-[10px] font-black active:scale-95 disabled:opacity-30"
-      }, "超越Pを+10"), /*#__PURE__*/React.createElement("button", {
+      }, "\u8D85\u8D8AP\u3092+10"), /*#__PURE__*/React.createElement("button", {
         "data-transcend-debug-reset": true,
         disabled: !selected,
         onClick: debugTranscendReset,
         className: "min-h-[46px] rounded-xl bg-rose-950/70 border border-rose-500/50 text-rose-100 text-[10px] font-black active:scale-95 disabled:opacity-30"
-      }, "超越を取り消す"), /*#__PURE__*/React.createElement("button", {
+      }, "\u8D85\u8D8A\u3092\u53D6\u308A\u6D88\u3059"), /*#__PURE__*/React.createElement("button", {
         disabled: !selected,
         onClick: () => {
           setTranscendSelectedId(transcendDebugId);
@@ -31042,7 +31039,7 @@ function MonsterHeroGame() {
           setGameState('MASU_TRANSCENDENCE');
         },
         className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-900/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30"
-      }, "神殿の「超越」を開く"))))));
+      }, "\u795E\u6BBF\u306E\u300C\u8D85\u8D8A\u300D\u3092\u958B\u304F"))))));
     })(), gameState === 'BREAKTHROUGH_STAR_DEBUG' && /*#__PURE__*/React.createElement("main", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
@@ -31058,13 +31055,13 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
       className: "text-[8px] font-black text-amber-400"
-    }, "DEBUG・本番と同じ RebirthStars"), /*#__PURE__*/React.createElement("h2", {
+    }, "DEBUG\u30FB\u672C\u756A\u3068\u540C\u3058 RebirthStars"), /*#__PURE__*/React.createElement("h2", {
       className: "text-sm font-black"
-    }, "限界突破★表示確認"))), /*#__PURE__*/React.createElement("div", {
+    }, "\u9650\u754C\u7A81\u7834\u2605\u8868\u793A\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4"
     }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-[9px] font-black text-amber-300"
-    }, "黄色・金・虹 比較"), /*#__PURE__*/React.createElement("div", {
+    }, "\u9EC4\u8272\u30FB\u91D1\u30FB\u8679 \u6BD4\u8F03"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-1.5"
     }, [10, 30, 35].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
       key: count,
@@ -31072,14 +31069,14 @@ function MonsterHeroGame() {
       compact: true
     })))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-[9px] font-black text-slate-300"
-    }, "完成状態"), /*#__PURE__*/React.createElement("div", {
+    }, "\u5B8C\u6210\u72B6\u614B"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, [0, 5, 10, 15, 20, 25, 30, 31, 32, 33, 34, 35].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
       key: count,
       count: count
     })))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-[9px] font-black text-slate-300"
-    }, "色の切り替わり"), /*#__PURE__*/React.createElement("div", {
+    }, "\u8272\u306E\u5207\u308A\u66FF\u308F\u308A"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, [1, 6, 11, 16, 21, 26].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
       key: count,
@@ -31124,13 +31121,13 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] font-black text-cyan-300"
-      }, "DEBUG・本番と同じ ReincarnateAura / RebirthStars"), /*#__PURE__*/React.createElement("h2", {
+      }, "DEBUG\u30FB\u672C\u756A\u3068\u540C\u3058 ReincarnateAura / RebirthStars"), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black"
-      }, "転生表示確認"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u8EE2\u751F\u8868\u793A\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("p", {
         className: "mb-3 text-[9px] leading-relaxed text-slate-400"
-      }, "表示用の一時データだけを使います。所持マスモン・転生回数・ダイヤは変更も保存もしません。"), /*#__PURE__*/React.createElement("section", {
+      }, "\u8868\u793A\u7528\u306E\u4E00\u6642\u30C7\u30FC\u30BF\u3060\u3051\u3092\u4F7F\u3044\u307E\u3059\u3002\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u30FB\u8EE2\u751F\u56DE\u6570\u30FB\u30C0\u30A4\u30E4\u306F\u5909\u66F4\u3082\u4FDD\u5B58\u3082\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("section", {
         className: "grid grid-cols-2 gap-3"
       }, [0, 1, 2, 3].map(count => {
         const masu = previewMasu(count);
@@ -31158,7 +31155,7 @@ function MonsterHeroGame() {
       }))), /*#__PURE__*/React.createElement("button", {
         onClick: playPreview,
         className: "mt-3 shrink-0 min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-sm font-black text-white active:scale-95"
-      }, "転生演出を再生"));
+      }, "\u8EE2\u751F\u6F14\u51FA\u3092\u518D\u751F"));
     })(), gameState === 'RPG_DEBUG_SETUP' && (() => {
       const monsters = rpgMonsterList();
       const renderCount = (value, max, onPick) => /*#__PURE__*/React.createElement("div", {
@@ -31169,27 +31166,27 @@ function MonsterHeroGame() {
         key: n,
         className: value === n ? 'active' : '',
         onClick: () => onPick(n)
-      }, n, "体")));
+      }, n, "\u4F53")));
       return /*#__PURE__*/React.createElement("main", {
         className: "mh-rpg-screen"
       }, /*#__PURE__*/React.createElement("div", {
         className: "mh-debug-banner"
-      }, "DEBUG・保存／報酬／ランキングへ一切影響しません"), /*#__PURE__*/React.createElement("header", {
+      }, "DEBUG\u30FB\u4FDD\u5B58\uFF0F\u5831\u916C\uFF0F\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u4E00\u5207\u5F71\u97FF\u3057\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("header", {
         className: "mh-rpg-head"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "戻る",
+        "aria-label": "\u623B\u308B",
         onClick: () => setGameState('DEBUG_SETTINGS')
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "DUNGEON RPG TEST"), /*#__PURE__*/React.createElement("h2", null, "編成とステータス")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("div", {
+      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "DUNGEON RPG TEST"), /*#__PURE__*/React.createElement("h2", null, "\u7DE8\u6210\u3068\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("div", {
         className: "mh-rpg-scroll overflow-y-auto"
       }, /*#__PURE__*/React.createElement("section", {
         className: "mh-rpg-section mh-rpg-counts"
-      }, /*#__PURE__*/React.createElement("h3", null, "人数"), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("h3", null, "\u4EBA\u6570"), /*#__PURE__*/React.createElement("div", {
         className: "mh-rpg-vs"
-      }, /*#__PURE__*/React.createElement("b", null, "味方"), renderCount(rpgPartySize, RPG_MAX_PARTY, setRpgPartySize), /*#__PURE__*/React.createElement("b", null, "敵"), renderCount(rpgEnemyCount, RPG_MAX_ENEMIES, setRpgEnemyCount))), /*#__PURE__*/React.createElement("section", {
+      }, /*#__PURE__*/React.createElement("b", null, "\u5473\u65B9"), renderCount(rpgPartySize, RPG_MAX_PARTY, setRpgPartySize), /*#__PURE__*/React.createElement("b", null, "\u6575"), renderCount(rpgEnemyCount, RPG_MAX_ENEMIES, setRpgEnemyCount))), /*#__PURE__*/React.createElement("section", {
         className: "mh-rpg-section"
-      }, /*#__PURE__*/React.createElement("h3", null, "味方パーティ（", rpgPartySize, "体）"), rpgActiveParty.map((slot, index) => {
+      }, /*#__PURE__*/React.createElement("h3", null, "\u5473\u65B9\u30D1\u30FC\u30C6\u30A3\uFF08", rpgPartySize, "\u4F53\uFF09"), rpgActiveParty.map((slot, index) => {
         const mon = rpgMonsterById(slot.monId);
         if (!mon) return null;
         const base = rpgBaseStatsOf(mon);
@@ -31228,9 +31225,9 @@ function MonsterHeroGame() {
           })
         })), /*#__PURE__*/React.createElement("div", {
           className: "mh-rpg-points"
-        }, /*#__PURE__*/React.createElement("span", null, "使用 ", used, " / ", limit, "P"), /*#__PURE__*/React.createElement("button", {
+        }, /*#__PURE__*/React.createElement("span", null, "\u4F7F\u7528 ", used, " / ", limit, "P"), /*#__PURE__*/React.createElement("button", {
           onClick: () => rpgResetAlloc(index)
-        }, "配分をリセット")), /*#__PURE__*/React.createElement("div", {
+        }, "\u914D\u5206\u3092\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("div", {
           className: "mh-rpg-stats"
         }, RPG_STAT_KEYS.map(key => /*#__PURE__*/React.createElement("div", {
           key: key,
@@ -31241,22 +31238,22 @@ function MonsterHeroGame() {
           className: "mh-rpg-stat-base"
         }, base[key]), /*#__PURE__*/React.createElement("span", {
           className: "mh-rpg-stat-arrow"
-        }, "→"), /*#__PURE__*/React.createElement("span", {
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
           className: "mh-rpg-stat-final"
         }, final[key]), /*#__PURE__*/React.createElement("button", {
           "aria-label": `${RPG_STAT_LABELS[key]}を減らす`,
           disabled: alloc[key] <= 0,
           onClick: () => rpgStepAlloc(index, key, -1)
-        }, "−"), /*#__PURE__*/React.createElement("em", null, alloc[key]), /*#__PURE__*/React.createElement("button", {
+        }, "\u2212"), /*#__PURE__*/React.createElement("em", null, alloc[key]), /*#__PURE__*/React.createElement("button", {
           "aria-label": `${RPG_STAT_LABELS[key]}を増やす`,
           disabled: used >= limit,
           onClick: () => rpgStepAlloc(index, key, 1)
-        }, "＋")))), /*#__PURE__*/React.createElement("p", {
+        }, "\uFF0B")))), /*#__PURE__*/React.createElement("p", {
           className: "mh-rpg-skill"
         }, skill ? `固有技「${skill.name}」倍率${skill.mult} / 消費ガッツ${skill.cost}` : '固有技なし'));
       })), /*#__PURE__*/React.createElement("section", {
         className: "mh-rpg-section"
-      }, /*#__PURE__*/React.createElement("h3", null, "敵（", rpgEnemyCount, "体）"), rpgActiveEnemies.map((slot, index) => {
+      }, /*#__PURE__*/React.createElement("h3", null, "\u6575\uFF08", rpgEnemyCount, "\u4F53\uFF09"), rpgActiveEnemies.map((slot, index) => {
         const mon = rpgMonsterById(slot.monId);
         if (!mon) return null;
         const type = rpgEnemyType(slot.typeId);
@@ -31311,18 +31308,18 @@ function MonsterHeroGame() {
           key: key
         }, /*#__PURE__*/React.createElement("small", null, RPG_STAT_LABELS[key]), /*#__PURE__*/React.createElement("b", null, stats[key])))), /*#__PURE__*/React.createElement("p", {
           className: "mh-rpg-skill"
-        }, skill ? `固有技「${skill.name}」倍率${skill.mult} / 消費ガッツ${skill.cost}` : '固有技なし', "・能力は自動配分"));
+        }, skill ? `固有技「${skill.name}」倍率${skill.mult} / 消費ガッツ${skill.cost}` : '固有技なし', "\u30FB\u80FD\u529B\u306F\u81EA\u52D5\u914D\u5206"));
       })), /*#__PURE__*/React.createElement("section", {
         className: "mh-rpg-section"
-      }, /*#__PURE__*/React.createElement("h3", null, "テスト設定"), /*#__PURE__*/React.createElement("button", {
+      }, /*#__PURE__*/React.createElement("h3", null, "\u30C6\u30B9\u30C8\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
         className: `mh-rpg-toggle ${rpgVarianceOn ? 'active' : ''}`,
         "aria-pressed": rpgVarianceOn,
         onClick: () => setRpgVarianceOn(v => !v)
-      }, "ダメージ乱数 ", rpgVarianceOn ? 'ON' : 'OFF', /*#__PURE__*/React.createElement("small", null, "ONにすると最終ダメージへ0.95〜1.05を掛けます。OFFなら常に1.0固定でバランスを比べやすくなります")))), /*#__PURE__*/React.createElement("footer", {
+      }, "\u30C0\u30E1\u30FC\u30B8\u4E71\u6570 ", rpgVarianceOn ? 'ON' : 'OFF', /*#__PURE__*/React.createElement("small", null, "ON\u306B\u3059\u308B\u3068\u6700\u7D42\u30C0\u30E1\u30FC\u30B8\u30780.95\u301C1.05\u3092\u639B\u3051\u307E\u3059\u3002OFF\u306A\u3089\u5E38\u306B1.0\u56FA\u5B9A\u3067\u30D0\u30E9\u30F3\u30B9\u3092\u6BD4\u3079\u3084\u3059\u304F\u306A\u308A\u307E\u3059")))), /*#__PURE__*/React.createElement("footer", {
         className: "mh-rpg-footer"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: rpgStartBattle
-      }, "この編成で戦闘開始")));
+      }, "\u3053\u306E\u7DE8\u6210\u3067\u6226\u95D8\u958B\u59CB")));
     })(), gameState === 'RPG_DEBUG_BATTLE' && rpgBattle && (() => {
       const battle = rpgBattle;
       const inputting = battle.phase === 'command';
@@ -31368,7 +31365,7 @@ function MonsterHeroGame() {
       const hitNode = hit => hit ? /*#__PURE__*/React.createElement("span", {
         key: rpgHits ? rpgHits.at : 0,
         className: `mh-rpg-hit ${hit.crit ? 'crit' : ''} ${hit.evaded ? 'miss' : ''} ${hit.down ? 'down' : ''}`
-      }, hit.crit && !hit.evaded && /*#__PURE__*/React.createElement("i", null, "会心"), hit.evaded ? 'MISS' : `-${hit.damage}`) : null;
+      }, hit.crit && !hit.evaded && /*#__PURE__*/React.createElement("i", null, "\u4F1A\u5FC3"), hit.evaded ? 'MISS' : `-${hit.damage}`) : null;
       // 行動順。最大8体でも横にはみ出さないよう、小さな顔アイコンで折り返して並べる
       const orderEntries = resolving ? battle.plan : rpgSpeedOrder(battle);
       const inputCount = Object.keys(battle.inputs || {}).length;
@@ -31380,7 +31377,7 @@ function MonsterHeroGame() {
         className: "mh-rpg-battle"
       }, /*#__PURE__*/React.createElement("div", {
         className: "mh-debug-banner"
-      }, "DEBUG・保存されません"), rpgSpecial && /*#__PURE__*/React.createElement("div", {
+      }, "DEBUG\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), rpgSpecial && /*#__PURE__*/React.createElement("div", {
         className: `mh-rpg-special ${rpgSpecial.side === 'ally' ? 'ally' : 'foe'}`,
         "aria-hidden": "true"
       }, /*#__PURE__*/React.createElement("span", {
@@ -31395,13 +31392,13 @@ function MonsterHeroGame() {
         className: "mh-rpg-hud-step"
       }, resolving ? `行動 ${Math.min(battle.planStep + 1, battle.plan.length)} / ${battle.plan.length}` : `入力 ${Math.min(inputCount + 1, aliveAllyCount)} / ${aliveAllyCount}`), /*#__PURE__*/React.createElement("button", {
         type: "button",
-        "aria-label": "デバッグ設定へ戻る",
+        "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
         onClick: () => {
           setRpgSkillMenu(false);
           setRpgBattle(null);
           setGameState('DEBUG_SETTINGS');
         }
-      }, "✕")), /*#__PURE__*/React.createElement("div", {
+      }, "\u2715")), /*#__PURE__*/React.createElement("div", {
         className: "mh-rpg-order"
       }, /*#__PURE__*/React.createElement("b", null, resolving ? '行動順' : '予測順'), /*#__PURE__*/React.createElement("div", {
         className: "mh-rpg-order-list"
@@ -31458,13 +31455,13 @@ function MonsterHeroGame() {
         }), !unit.alive && /*#__PURE__*/React.createElement("span", {
           className: "mh-rpg-down-mark",
           "aria-hidden": "true"
-        }, "✖"), unit.guarding && /*#__PURE__*/React.createElement("span", {
+        }, "\u2716"), unit.guarding && /*#__PURE__*/React.createElement("span", {
           className: "mh-rpg-guard-mark",
           "aria-hidden": "true"
-        }, "🛡"), selectable && (aimed || auto) && /*#__PURE__*/React.createElement("span", {
+        }, "\uD83D\uDEE1"), selectable && (aimed || auto) && /*#__PURE__*/React.createElement("span", {
           className: "mh-rpg-aim-mark",
           "aria-hidden": "true"
-        }, "🎯"), struckBySpecial('enemy', index) && /*#__PURE__*/React.createElement("span", {
+        }, "\uD83C\uDFAF"), struckBySpecial('enemy', index) && /*#__PURE__*/React.createElement("span", {
           className: "mh-rpg-special-ring",
           "aria-hidden": "true"
         })), /*#__PURE__*/React.createElement("b", null, unit.name), bar(unit.hp, unit.maxHp, 'hp'), /*#__PURE__*/React.createElement("span", {
@@ -31511,40 +31508,40 @@ function MonsterHeroGame() {
         }), !unit.alive && /*#__PURE__*/React.createElement("span", {
           className: "mh-rpg-down-mark",
           "aria-hidden": "true"
-        }, "✖"), unit.guarding && /*#__PURE__*/React.createElement("span", {
+        }, "\u2716"), unit.guarding && /*#__PURE__*/React.createElement("span", {
           className: "mh-rpg-guard-mark",
           "aria-hidden": "true"
-        }, "🛡")), /*#__PURE__*/React.createElement("div", {
+        }, "\uD83D\uDEE1")), /*#__PURE__*/React.createElement("div", {
           className: "mh-rpg-member-body"
         }, /*#__PURE__*/React.createElement("b", null, unit.name, isActor && /*#__PURE__*/React.createElement("em", null, "COMMAND"), !isActor && chosen && /*#__PURE__*/React.createElement("em", {
           className: "done"
-        }, RPG_COMMAND_LABELS[chosen.command] || chosen.command, /*#__PURE__*/React.createElement("i", null, "↺"))), bar(unit.hp, unit.maxHp, 'hp'), /*#__PURE__*/React.createElement("small", null, unit.hp, "/", unit.maxHp), bar(unit.guts, unit.maxGuts, 'guts'), /*#__PURE__*/React.createElement("small", null, "G ", unit.guts, "/", unit.maxGuts, "・速", unit.speed, "・運", unit.luck)));
+        }, RPG_COMMAND_LABELS[chosen.command] || chosen.command, /*#__PURE__*/React.createElement("i", null, "\u21BA"))), bar(unit.hp, unit.maxHp, 'hp'), /*#__PURE__*/React.createElement("small", null, unit.hp, "/", unit.maxHp), bar(unit.guts, unit.maxGuts, 'guts'), /*#__PURE__*/React.createElement("small", null, "G ", unit.guts, "/", unit.maxGuts, "\u30FB\u901F", unit.speed, "\u30FB\u904B", unit.luck)));
       })), /*#__PURE__*/React.createElement("footer", {
         className: "mh-rpg-commands"
       }, resolving && /*#__PURE__*/React.createElement("p", {
         className: "mh-rpg-wait"
-      }, "行動中…"), inputting && actor && !rpgSkillMenu && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+      }, "\u884C\u52D5\u4E2D\u2026"), inputting && actor && !rpgSkillMenu && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
         className: "mh-rpg-actor"
-      }, /*#__PURE__*/React.createElement("span", null, actor.name, " は どうする？"), Object.keys(battle.inputs || {}).length > 0 && /*#__PURE__*/React.createElement("small", null, "決めた味方をタップでやり直し")), /*#__PURE__*/React.createElement("p", {
+      }, /*#__PURE__*/React.createElement("span", null, actor.name, " \u306F \u3069\u3046\u3059\u308B\uFF1F"), Object.keys(battle.inputs || {}).length > 0 && /*#__PURE__*/React.createElement("small", null, "\u6C7A\u3081\u305F\u5473\u65B9\u3092\u30BF\u30C3\u30D7\u3067\u3084\u308A\u76F4\u3057")), /*#__PURE__*/React.createElement("p", {
         className: `mh-rpg-aim ${aimIndex >= 0 ? 'fixed' : ''}`
-      }, "ねらい: ", /*#__PURE__*/React.createElement("b", null, targetUnit ? targetUnit.name : '—'), /*#__PURE__*/React.createElement("small", null, aimIndex >= 0 ? '（タップして解除）' : '自動・ライフ最小')), /*#__PURE__*/React.createElement("div", {
+      }, "\u306D\u3089\u3044: ", /*#__PURE__*/React.createElement("b", null, targetUnit ? targetUnit.name : '—'), /*#__PURE__*/React.createElement("small", null, aimIndex >= 0 ? '（タップして解除）' : '自動・ライフ最小')), /*#__PURE__*/React.createElement("div", {
         className: "mh-rpg-command-row"
       }, /*#__PURE__*/React.createElement("button", {
         type: "button",
         disabled: targetIndex < 0,
         onClick: () => startAction('attack')
-      }, "こうげき"), /*#__PURE__*/React.createElement("button", {
+      }, "\u3053\u3046\u3052\u304D"), /*#__PURE__*/React.createElement("button", {
         type: "button",
         disabled: skillList.length === 0 || targetIndex < 0,
         onClick: () => setRpgSkillMenu(true)
-      }, "技", /*#__PURE__*/React.createElement("small", null, skillList.length, "コ")), /*#__PURE__*/React.createElement("button", {
+      }, "\u6280", /*#__PURE__*/React.createElement("small", null, skillList.length, "\u30B3")), /*#__PURE__*/React.createElement("button", {
         type: "button",
         onClick: () => startAction('guard')
-      }, "防御", /*#__PURE__*/React.createElement("small", null, "被ダメ50%")))), inputting && actor && rpgSkillMenu && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      }, "\u9632\u5FA1", /*#__PURE__*/React.createElement("small", null, "\u88AB\u30C0\u30E150%")))), inputting && actor && rpgSkillMenu && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "mh-rpg-skill-panel"
       }, /*#__PURE__*/React.createElement("p", {
         className: "mh-rpg-actor"
-      }, actor.name, " の技（ガッツ ", actor.guts, "/", actor.maxGuts, "）"), /*#__PURE__*/React.createElement("div", {
+      }, actor.name, " \u306E\u6280\uFF08\u30AC\u30C3\u30C4 ", actor.guts, "/", actor.maxGuts, "\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "mh-rpg-skill-list"
       }, skillList.map((skill, i) => {
         const enough = actor.guts >= skill.cost;
@@ -31554,21 +31551,21 @@ function MonsterHeroGame() {
           className: "mh-rpg-skill",
           disabled: !enough,
           onClick: () => startAction('skill')
-        }, /*#__PURE__*/React.createElement("b", null, skill.name), /*#__PURE__*/React.createElement("span", null, "消費ガッツ ", skill.cost, enough ? '' : '（足りない）'));
+        }, /*#__PURE__*/React.createElement("b", null, skill.name), /*#__PURE__*/React.createElement("span", null, "\u6D88\u8CBB\u30AC\u30C3\u30C4 ", skill.cost, enough ? '' : '（足りない）'));
       }))), /*#__PURE__*/React.createElement("p", {
         className: "mh-rpg-actor"
-      }, "技をえらぶ（ねらい: ", targetUnit ? targetUnit.name : '—', "）"), /*#__PURE__*/React.createElement("button", {
+      }, "\u6280\u3092\u3048\u3089\u3076\uFF08\u306D\u3089\u3044: ", targetUnit ? targetUnit.name : '—', "\uFF09"), /*#__PURE__*/React.createElement("button", {
         type: "button",
         className: "mh-rpg-cancel",
         onClick: () => setRpgSkillMenu(false)
-      }, "もどる"))));
+      }, "\u3082\u3069\u308B"))));
     })(), gameState === 'RPG_DEBUG_RESULT' && rpgBattle && (() => {
       const battle = rpgBattle;
       const renderRows = units => /*#__PURE__*/React.createElement("div", {
         className: "mh-rpg-result-table"
       }, /*#__PURE__*/React.createElement("div", {
         className: "mh-rpg-result-row head"
-      }, /*#__PURE__*/React.createElement("span", null, "名前"), /*#__PURE__*/React.createElement("span", null, "残HP"), /*#__PURE__*/React.createElement("span", null, "与ダメ"), /*#__PURE__*/React.createElement("span", null, "被ダメ"), /*#__PURE__*/React.createElement("span", null, "通常"), /*#__PURE__*/React.createElement("span", null, "技"), /*#__PURE__*/React.createElement("span", null, "消費G"), /*#__PURE__*/React.createElement("span", null, "会心"), /*#__PURE__*/React.createElement("span", null, "回避")), units.map((unit, i) => /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u540D\u524D"), /*#__PURE__*/React.createElement("span", null, "\u6B8BHP"), /*#__PURE__*/React.createElement("span", null, "\u4E0E\u30C0\u30E1"), /*#__PURE__*/React.createElement("span", null, "\u88AB\u30C0\u30E1"), /*#__PURE__*/React.createElement("span", null, "\u901A\u5E38"), /*#__PURE__*/React.createElement("span", null, "\u6280"), /*#__PURE__*/React.createElement("span", null, "\u6D88\u8CBBG"), /*#__PURE__*/React.createElement("span", null, "\u4F1A\u5FC3"), /*#__PURE__*/React.createElement("span", null, "\u56DE\u907F")), units.map((unit, i) => /*#__PURE__*/React.createElement("div", {
         key: i,
         className: "mh-rpg-result-row"
       }, /*#__PURE__*/React.createElement("span", null, unit.name), /*#__PURE__*/React.createElement("span", null, unit.hp, "/", unit.maxHp), /*#__PURE__*/React.createElement("span", null, unit.record.dealt), /*#__PURE__*/React.createElement("span", null, unit.record.taken), /*#__PURE__*/React.createElement("span", null, unit.record.attacks), /*#__PURE__*/React.createElement("span", null, unit.record.skills), /*#__PURE__*/React.createElement("span", null, unit.record.gutsSpent), /*#__PURE__*/React.createElement("span", null, unit.record.crits), /*#__PURE__*/React.createElement("span", null, unit.record.evaded))));
@@ -31576,10 +31573,10 @@ function MonsterHeroGame() {
         className: "mh-rpg-screen"
       }, /*#__PURE__*/React.createElement("div", {
         className: "mh-debug-banner"
-      }, "DEBUG・保存／報酬／ランキングへ一切影響しません"), /*#__PURE__*/React.createElement("header", {
+      }, "DEBUG\u30FB\u4FDD\u5B58\uFF0F\u5831\u916C\uFF0F\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u4E00\u5207\u5F71\u97FF\u3057\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("header", {
         className: "mh-rpg-head"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "戻る",
+        "aria-label": "\u623B\u308B",
         onClick: () => setGameState('RPG_DEBUG_SETUP')
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
@@ -31587,24 +31584,24 @@ function MonsterHeroGame() {
         className: "mh-rpg-scroll overflow-y-auto"
       }, /*#__PURE__*/React.createElement("p", {
         className: "mh-rpg-result-turn"
-      }, "総ターン数 ", battle.turn), /*#__PURE__*/React.createElement("section", {
+      }, "\u7DCF\u30BF\u30FC\u30F3\u6570 ", battle.turn), /*#__PURE__*/React.createElement("section", {
         className: "mh-rpg-section"
-      }, /*#__PURE__*/React.createElement("h3", null, "味方"), renderRows(battle.allies)), /*#__PURE__*/React.createElement("section", {
+      }, /*#__PURE__*/React.createElement("h3", null, "\u5473\u65B9"), renderRows(battle.allies)), /*#__PURE__*/React.createElement("section", {
         className: "mh-rpg-section"
-      }, /*#__PURE__*/React.createElement("h3", null, "敵"), renderRows(battle.enemies))), /*#__PURE__*/React.createElement("footer", {
+      }, /*#__PURE__*/React.createElement("h3", null, "\u6575"), renderRows(battle.enemies))), /*#__PURE__*/React.createElement("footer", {
         className: "mh-rpg-footer"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: rpgStartBattle
-      }, "同じ条件でもう一度"), /*#__PURE__*/React.createElement("button", {
+      }, "\u540C\u3058\u6761\u4EF6\u3067\u3082\u3046\u4E00\u5EA6"), /*#__PURE__*/React.createElement("button", {
         className: "sub",
         onClick: () => setGameState('RPG_DEBUG_SETUP')
-      }, "編成・Lv・ステータスを変更"), /*#__PURE__*/React.createElement("button", {
+      }, "\u7DE8\u6210\u30FBLv\u30FB\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u5909\u66F4"), /*#__PURE__*/React.createElement("button", {
         className: "sub",
         onClick: () => {
           setRpgBattle(null);
           setGameState('DEBUG_SETTINGS');
         }
-      }, "デバッグ設定へ戻る")));
+      }, "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B")));
     })(), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
@@ -31632,69 +31629,69 @@ function MonsterHeroGame() {
         setGameState('SPECIES_CHALLENGE_DEBUG');
       },
       className: "w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black"
-    }, "🧬 種族チャレンジ進行確認", /*#__PURE__*/React.createElement("small", {
+    }, "\uD83E\uDDEC \u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-emerald-300"
-    }, "種族別の解放・クリア・初回報酬を確認／編集")), /*#__PURE__*/React.createElement("button", {
+    }, "\u7A2E\u65CF\u5225\u306E\u89E3\u653E\u30FB\u30AF\u30EA\u30A2\u30FB\u521D\u56DE\u5831\u916C\u3092\u78BA\u8A8D\uFF0F\u7DE8\u96C6")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('REINCARNATE_DISPLAY_DEBUG'),
       className: "w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black"
-    }, "♻️ 転生表示確認", /*#__PURE__*/React.createElement("small", {
+    }, "\u267B\uFE0F \u8EE2\u751F\u8868\u793A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-200"
-    }, "0～3回と完了演出を保存せず比較")), /*#__PURE__*/React.createElement("button", {
+    }, "0\uFF5E3\u56DE\u3068\u5B8C\u4E86\u6F14\u51FA\u3092\u4FDD\u5B58\u305B\u305A\u6BD4\u8F03")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('BREAKTHROUGH_STAR_DEBUG'),
       className: "w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black"
-    }, "⭐ 限界突破★表示確認", /*#__PURE__*/React.createElement("small", {
+    }, "\u2B50 \u9650\u754C\u7A81\u7834\u2605\u8868\u793A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-amber-300"
-    }, "全色段階を本番と同じ★で比較")), /*#__PURE__*/React.createElement("button", {
+    }, "\u5168\u8272\u6BB5\u968E\u3092\u672C\u756A\u3068\u540C\u3058\u2605\u3067\u6BD4\u8F03")), /*#__PURE__*/React.createElement("button", {
       "data-debug-transcend": true,
       onClick: () => {
         setTranscendDebugId(null);
         setGameState('TRANSCEND_DEBUG');
       },
       className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black"
-    }, "🌟 超越確認", /*#__PURE__*/React.createElement("small", {
+    }, "\uD83C\uDF1F \u8D85\u8D8A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-amber-200"
-    }, "マーク・演出・必要XPの確認と、試すための準備")), /*#__PURE__*/React.createElement("button", {
+    }, "\u30DE\u30FC\u30AF\u30FB\u6F14\u51FA\u30FB\u5FC5\u8981XP\u306E\u78BA\u8A8D\u3068\u3001\u8A66\u3059\u305F\u3081\u306E\u6E96\u5099")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('MONSTER_IMAGE_DEBUG'),
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
-    }, "🖼️ モンスター画像・染色確認", /*#__PURE__*/React.createElement("small", {
+    }, "\uD83D\uDDBC\uFE0F \u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
-    }, "本番表示と染色を保存せず確認")), /*#__PURE__*/React.createElement("button", {
+    }, "\u672C\u756A\u8868\u793A\u3068\u67D3\u8272\u3092\u4FDD\u5B58\u305B\u305A\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setDyeMaskEditorOpened(true);
         setGameState('DYE_MASK_POSITION_DEBUG');
       },
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black"
-    }, "🖌️ 染色マスク編集", /*#__PURE__*/React.createElement("small", {
+    }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
-    }, "全ベースモンを選択して直接描画・PNG出力")), /*#__PURE__*/React.createElement("button", {
+    }, "\u5168\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u629E\u3057\u3066\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
       onClick: openDebugTraining,
       className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
-    }, "🎲 修行テスト", /*#__PURE__*/React.createElement("small", {
+    }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-fuchsia-300"
-    }, "報酬・進行は保存されません")), /*#__PURE__*/React.createElement("button", {
+    }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('BREEDER_ICON_DEBUG'),
       className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
-    }, "🙂 ブリーダーアイコン調整", /*#__PURE__*/React.createElement("small", {
+    }, "\uD83D\uDE42 \u30D6\u30EA\u30FC\u30C0\u30FC\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-fuchsia-300"
-    }, "表示値は保存されません")), /*#__PURE__*/React.createElement("button", {
+    }, "\u8868\u793A\u5024\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setPatternMasuId(null);
         setPatternSettings(makePatternSettings());
         setGameState('MASU_PATTERN_DEBUG');
       },
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
-    }, "🎨 マスモン模様カスタムテスト", /*#__PURE__*/React.createElement("small", {
+    }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
-    }, "模様は保存されません")), /*#__PURE__*/React.createElement("button", {
+    }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       "data-debug-rpg-battle": true,
       onClick: () => {
         setRpgBattle(null);
         setGameState('RPG_DEBUG_SETUP');
       },
       className: "w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black"
-    }, "⚔️ ダンジョンRPG戦闘テスト", /*#__PURE__*/React.createElement("small", {
+    }, "\u2694\uFE0F \u30C0\u30F3\u30B8\u30E7\u30F3RPG\u6226\u95D8\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-emerald-300"
-    }, "コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません")), /*#__PURE__*/React.createElement("button", {
+    }, "\u30B3\u30DE\u30F3\u30C9\u5F0F\u30BF\u30FC\u30F3\u5236\u306E\u8A66\u4F5C\u30FB\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u307F\u30FB\u4FDD\u5B58\u3082\u5831\u916C\u3082\u3042\u308A\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       "data-debug-battle-mode": true,
       onClick: () => {
         debugBattleRef.current = true;
@@ -31706,107 +31703,107 @@ function MonsterHeroGame() {
         setGameState('BATTLE_MODE_SELECT');
       },
       className: "w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black"
-    }, "⚔️ バトルモード", /*#__PURE__*/React.createElement("small", {
+    }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-fuchsia-300"
-    }, "種族チャレンジ・極限チャレンジを含む試験用モード選択・結果は保存されません")), /*#__PURE__*/React.createElement("section", {
+    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
       className: "rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-pink-300 font-black mb-2"
-    }, "💖 みゅあデバッグ"), /*#__PURE__*/React.createElement("div", {
+    }, "\uD83D\uDC96 \u307F\u3085\u3042\u30C7\u30D0\u30C3\u30B0"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       "data-debug-onboarding-preview": true,
       onClick: startOnboardingPreview,
       className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "初回プレイを最初から再生", /*#__PURE__*/React.createElement("small", {
+    }, "\u521D\u56DE\u30D7\u30EC\u30A4\u3092\u6700\u521D\u304B\u3089\u518D\u751F", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] font-bold opacity-80"
-    }, "助手選択→あいさつ→プロフィール→村の案内→HOME・保存されません")), /*#__PURE__*/React.createElement("button", {
+    }, "\u52A9\u624B\u9078\u629E\u2192\u3042\u3044\u3055\u3064\u2192\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u2192\u6751\u306E\u6848\u5185\u2192HOME\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         returnToHome();
         startTutorial('intro');
       },
       className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
-    }, "みゅあのあいさつだけ再生"), /*#__PURE__*/React.createElement("button", {
+    }, "\u307F\u3085\u3042\u306E\u3042\u3044\u3055\u3064\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         returnToHome();
         startTutorial('tour');
       },
       className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
-    }, "村の案内だけ再生"), /*#__PURE__*/React.createElement("button", {
+    }, "\u6751\u306E\u6848\u5185\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         returnToHome();
         setKikiIntroStep(0);
       },
       className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
-    }, "きき加入の会話を再生"), /*#__PURE__*/React.createElement("button", {
+    }, "\u304D\u304D\u52A0\u5165\u306E\u4F1A\u8A71\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('lines'),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "全助手コメント確認"), /*#__PURE__*/React.createElement("button", {
+    }, "\u5168\u52A9\u624B\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('expressions'),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "全表情確認"), /*#__PURE__*/React.createElement("button", {
+    }, "\u5168\u8868\u60C5\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('conditions'),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "条件コメント確認"), /*#__PURE__*/React.createElement("button", {
+    }, "\u6761\u4EF6\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('spam'),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "連打リアクション確認"), /*#__PURE__*/React.createElement("button", {
+    }, "\u9023\u6253\u30EA\u30A2\u30AF\u30B7\u30E7\u30F3\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('bond'),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "親密度・呼び方確認"), /*#__PURE__*/React.createElement("button", {
+    }, "\u89AA\u5BC6\u5EA6\u30FB\u547C\u3073\u65B9\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAssistantDebug('random'),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "ランダムテスト"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
       onClick: debugPlayUpdateGuide,
       className: "min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "アップデート通知テスト"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
       onClick: debugResetUpdateGuide,
       className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "通知テストを未読へ戻す"), /*#__PURE__*/React.createElement("button", {
+    }, "\u901A\u77E5\u30C6\u30B9\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setBattleMenuTab('difficulty');
         setGameState('BATTLE_MENU');
       },
       className: "col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95"
-    }, "旧バトル画面を開く（見比べ用）"), /*#__PURE__*/React.createElement("button", {
+    }, "\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u3092\u958B\u304F\uFF08\u898B\u6BD4\u3079\u7528\uFF09"), /*#__PURE__*/React.createElement("button", {
       onClick: () => startBattleTutorial(),
       className: "col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "バトルチュートリアル開始（記録は残りません）"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
       onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'v1'),
       className: "col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95"
-    }, "旧バトルチュートリアルを見る（旧バトル画面・記録は残りません）"), /*#__PURE__*/React.createElement("button", {
+    }, "\u65E7\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B\uFF08\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
         await storeSet(BATTLE_TUTORIAL_SEEN_KEY, false, false);
         window.alert('バトルチュートリアルを未視聴に戻しました。');
       },
       className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "バトル練習を未視聴へ戻す"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30D0\u30C8\u30EB\u7DF4\u7FD2\u3092\u672A\u8996\u8074\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
         await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false);
         battleTutorialGuideCheckedRef.current = false;
         window.alert('初回案内を未表示に戻しました。');
       },
       className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "初回案内を未表示へ戻す"), /*#__PURE__*/React.createElement("button", {
+    }, "\u521D\u56DE\u6848\u5185\u3092\u672A\u8868\u793A\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         returnToHome();
         startTutorial('battleGuide');
       },
       className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "バトル初回案内を再生"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => debugDailyMasuAdviceAt(7),
       className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "ワンポイント案内を再生（登録数7体）"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185\u3092\u518D\u751F\uFF08\u767B\u9332\u65707\u4F53\uFF09"), /*#__PURE__*/React.createElement("button", {
       onClick: () => debugDailyMasuAdviceAt(8),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
-    }, "登録数8体の条件確認"), /*#__PURE__*/React.createElement("button", {
+    }, "\u767B\u9332\u65708\u4F53\u306E\u6761\u4EF6\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
         await storeSet(DAILY_MASU_ADVICE_KEY, '', false);
         dailyMasuAdviceCheckedRef.current = false;
         window.alert('本日のワンポイント表示済みフラグをリセットしました。');
       },
       className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "本日の表示済みをリセット")), /*#__PURE__*/React.createElement("button", {
+    }, "\u672C\u65E5\u306E\u8868\u793A\u6E08\u307F\u3092\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
         if (!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return;
         try {
@@ -31816,9 +31813,9 @@ function MonsterHeroGame() {
         window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。');
       },
       className: "w-full mt-2 min-h-[42px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-    }, "初回状態へ戻す（セーブは消えません）")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    }, "\u521D\u56DE\u72B6\u614B\u3078\u623B\u3059\uFF08\u30BB\u30FC\u30D6\u306F\u6D88\u3048\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
-    }, "1. 難易度"), /*#__PURE__*/React.createElement("div", {
+    }, "1. \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-2"
     }, Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => /*#__PURE__*/React.createElement("button", {
       key: key,
@@ -31831,7 +31828,7 @@ function MonsterHeroGame() {
       style: difficultyStyle(setting, difficulty === key)
     }, setting.label)))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
-    }, "2. 敵"), /*#__PURE__*/React.createElement("div", {
+    }, "2. \u6575"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2"
     }, getDebugEnemyOptions(difficulty).map(({
       key,
@@ -31842,7 +31839,7 @@ function MonsterHeroGame() {
       className: `min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey === key ? 'bg-purple-950 border-2 border-purple-400 text-purple-100' : 'bg-slate-900 border border-white/10 text-slate-400'}`
     }, debugEnemy.emoji, " ", debugEnemy.name)))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-500 font-black mb-2"
-    }, "3. 勇者モン"), /*#__PURE__*/React.createElement("button", {
+    }, "3. \u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("button", {
       type: "button",
       "data-debug-strongest-monster": true,
       "aria-pressed": debugStrongestHero,
@@ -31850,13 +31847,13 @@ function MonsterHeroGame() {
       className: `w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero ? 'border-fuchsia-300 bg-fuchsia-800 text-white' : 'border-white/15 bg-slate-900 text-slate-300'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "block"
-    }, "🛠 デバッグ最強モン"), /*#__PURE__*/React.createElement("small", {
+    }, "\uD83D\uDEE0 \u30C7\u30D0\u30C3\u30B0\u6700\u5F37\u30E2\u30F3"), /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] opacity-80"
-    }, "DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 9999・全距離M"))), /*#__PURE__*/React.createElement("button", {
+    }, "DEBUG\u5C02\u7528\u30FB\u30E9\u30A4\u30D5/\u3061\u304B\u3089/\u4E08\u592B\u3055/\u6700\u5927\u30AC\u30C3\u30C4 9999\u30FB\u5168\u8DDD\u96E2M"))), /*#__PURE__*/React.createElement("button", {
       disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "4. デバッグ戦開始"))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
+    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'SPECIES_CHALLENGE_DEBUG' && (() => {
       // 種族は主血統。ここも本番と同じ一覧を使う
       const speciesEntries = speciesChallengeLineages();
       const speciesId = speciesEntries.some(l => l.id === speciesChallengeDebugSpeciesId) ? speciesChallengeDebugSpeciesId : speciesEntries[0]?.id || '';
@@ -31963,16 +31960,16 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("header", {
         className: "flex items-center gap-2 mb-3 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "デバッグ設定へ戻る",
+        "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
         onClick: () => setGameState('DEBUG_SETTINGS'),
         className: "p-3 text-slate-400"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] font-black text-emerald-300"
-      }, "DEBUG・保存先 ", SPECIES_CHALLENGE_PROGRESS_KEY), /*#__PURE__*/React.createElement("h2", {
+      }, "DEBUG\u30FB\u4FDD\u5B58\u5148 ", SPECIES_CHALLENGE_PROGRESS_KEY), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black"
-      }, "種族チャレンジ進行確認"))), /*#__PURE__*/React.createElement("section", {
+      }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("section", {
         className: "shrink-0 space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-3"
       }, /*#__PURE__*/React.createElement("button", {
         "data-species-challenge-production-flow": true,
@@ -31980,12 +31977,12 @@ function MonsterHeroGame() {
           fromDebug: true
         }),
         className: "min-h-[52px] w-full rounded-xl border-2 border-cyan-300 bg-cyan-950 text-[11px] font-black text-cyan-100"
-      }, "⚔️ 実戦フロー確認", /*#__PURE__*/React.createElement("small", {
+      }, "\u2694\uFE0F \u5B9F\u6226\u30D5\u30ED\u30FC\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
         className: "block text-[8px] text-cyan-300"
-      }, "本番用の選択フロー（バトル開始なし）")), /*#__PURE__*/React.createElement("label", {
+      }, "\u672C\u756A\u7528\u306E\u9078\u629E\u30D5\u30ED\u30FC\uFF08\u30D0\u30C8\u30EB\u958B\u59CB\u306A\u3057\uFF09")), /*#__PURE__*/React.createElement("label", {
         className: "block text-[9px] font-black text-emerald-200"
-      }, "種族（主血統）", /*#__PURE__*/React.createElement("select", {
-        "aria-label": "種族",
+      }, "\u7A2E\u65CF\uFF08\u4E3B\u8840\u7D71\uFF09", /*#__PURE__*/React.createElement("select", {
+        "aria-label": "\u7A2E\u65CF",
         value: speciesId,
         onChange: e => {
           setSpeciesChallengeDebugSpeciesId(e.target.value);
@@ -31998,10 +31995,10 @@ function MonsterHeroGame() {
       }, speciesEntries.map(lineage => /*#__PURE__*/React.createElement("option", {
         key: lineage.id,
         value: lineage.id
-      }, lineage.name, "種／", dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === lineage.id).map(mon => mon.name).join('・'))))), /*#__PURE__*/React.createElement("label", {
+      }, lineage.name, "\u7A2E\uFF0F", dexMonsterList().filter(mon => monsterLineageOf(mon.id).main.id === lineage.id).map(mon => mon.name).join('・'))))), /*#__PURE__*/React.createElement("label", {
         className: "block text-[9px] font-black text-emerald-200"
-      }, "操作対象の難易度", /*#__PURE__*/React.createElement("select", {
-        "aria-label": "操作対象の難易度",
+      }, "\u64CD\u4F5C\u5BFE\u8C61\u306E\u96E3\u6613\u5EA6", /*#__PURE__*/React.createElement("select", {
+        "aria-label": "\u64CD\u4F5C\u5BFE\u8C61\u306E\u96E3\u6613\u5EA6",
         value: speciesChallengeDebugDifficultyId,
         onChange: e => setSpeciesChallengeDebugDifficultyId(e.target.value),
         className: "mt-1 block min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-[11px] text-white"
@@ -32013,25 +32010,25 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => saveProgress(markSpeciesChallengeCleared(speciesChallengeProgress, speciesId, speciesChallengeDebugDifficultyId)),
         className: "min-h-[44px] rounded-xl bg-emerald-700 text-[10px] font-black"
-      }, "clearedを付ける"), /*#__PURE__*/React.createElement("button", {
+      }, "cleared\u3092\u4ED8\u3051\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: () => saveProgress(markSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesId, speciesChallengeDebugDifficultyId)),
         className: "min-h-[44px] rounded-xl bg-amber-700 text-[10px] font-black"
-      }, "firstRewardClaimedを付ける")), /*#__PURE__*/React.createElement("button", {
+      }, "firstRewardClaimed\u3092\u4ED8\u3051\u308B")), /*#__PURE__*/React.createElement("button", {
         onClick: resetSpecies,
         className: "min-h-[40px] w-full rounded-xl border border-red-500/60 bg-red-950/50 text-[9px] font-black text-red-200"
-      }, "選択種族の進行だけリセット")), /*#__PURE__*/React.createElement("section", {
+      }, "\u9078\u629E\u7A2E\u65CF\u306E\u9032\u884C\u3060\u3051\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("section", {
         className: "mt-3 flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2"
       }, /*#__PURE__*/React.createElement("article", {
         "data-species-ally-simulation": true,
         className: "space-y-3 rounded-2xl border border-cyan-400/50 bg-cyan-950/20 p-3"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
         className: "text-[11px] font-black text-cyan-200"
-      }, "供モン選択・WAVE2/4/6加入シミュレーション"), /*#__PURE__*/React.createElement("p", {
+      }, "\u4F9B\u30E2\u30F3\u9078\u629E\u30FBWAVE2/4/6\u52A0\u5165\u30B7\u30DF\u30E5\u30EC\u30FC\u30B7\u30E7\u30F3"), /*#__PURE__*/React.createElement("p", {
         className: "text-[8px] text-slate-400"
-      }, "一時stateのみ・本番バトル／保存／報酬には接続しません")), /*#__PURE__*/React.createElement("label", {
+      }, "\u4E00\u6642state\u306E\u307F\u30FB\u672C\u756A\u30D0\u30C8\u30EB\uFF0F\u4FDD\u5B58\uFF0F\u5831\u916C\u306B\u306F\u63A5\u7D9A\u3057\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("label", {
         className: "block text-[9px] font-black"
-      }, "勇者モン（選択種族のみ）", /*#__PURE__*/React.createElement("select", {
-        "aria-label": "勇者モン",
+      }, "\u52C7\u8005\u30E2\u30F3\uFF08\u9078\u629E\u7A2E\u65CF\u306E\u307F\uFF09", /*#__PURE__*/React.createElement("select", {
+        "aria-label": "\u52C7\u8005\u30E2\u30F3",
         value: heroId,
         onChange: e => {
           setSpeciesChallengeDebugHeroId(e.target.value);
@@ -32045,7 +32042,7 @@ function MonsterHeroGame() {
         value: entry.entryId
       }, entryLabel(entry.entryId))))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("b", {
         className: "text-[9px]"
-      }, "供モン 0〜3体（選択種族のみ）"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4F9B\u30E2\u30F3 0\u301C3\u4F53\uFF08\u9078\u629E\u7A2E\u65CF\u306E\u307F\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "mt-1 grid grid-cols-2 gap-1"
       }, allyCandidates.map(entry => {
         const selected = selectedAllyIds.includes(entry.entryId);
@@ -32058,45 +32055,45 @@ function MonsterHeroGame() {
         }, entryLabel(entry.entryId));
       })), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[8px] text-cyan-200"
-      }, "選択：", selectedAllyIds.length ? selectedAllyIds.map(entryLabel).join('、') : '0体')), !speciesChallengeDebugRun ? /*#__PURE__*/React.createElement("button", {
+      }, "\u9078\u629E\uFF1A", selectedAllyIds.length ? selectedAllyIds.map(entryLabel).join('、') : '0体')), !speciesChallengeDebugRun ? /*#__PURE__*/React.createElement("button", {
         disabled: !heroId || !selectionValidation.valid,
         onClick: startJoinSimulation,
         className: "min-h-[46px] w-full rounded-xl bg-emerald-700 text-[10px] font-black disabled:opacity-30"
-      }, "この編成でシミュレーション開始") : /*#__PURE__*/React.createElement("section", {
+      }, "\u3053\u306E\u7DE8\u6210\u3067\u30B7\u30DF\u30E5\u30EC\u30FC\u30B7\u30E7\u30F3\u958B\u59CB") : /*#__PURE__*/React.createElement("section", {
         className: "space-y-2 rounded-xl bg-black/30 p-2 text-[9px]"
-      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "勇者："), entryLabel(speciesChallengeDebugRun.heroId)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "加入済み："), speciesChallengeDebugRun.joinedAllyIds.length ? speciesChallengeDebugRun.joinedAllyIds.map(entryLabel).join('、') : 'なし'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "未加入："), speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length ? speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).map(entryLabel).join('、') : 'なし'), speciesChallengeDebugWaveLog.map(log => /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "\u52C7\u8005\uFF1A"), entryLabel(speciesChallengeDebugRun.heroId)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "\u52A0\u5165\u6E08\u307F\uFF1A"), speciesChallengeDebugRun.joinedAllyIds.length ? speciesChallengeDebugRun.joinedAllyIds.map(entryLabel).join('、') : 'なし'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "\u672A\u52A0\u5165\uFF1A"), speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length ? speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).map(entryLabel).join('、') : 'なし'), speciesChallengeDebugWaveLog.map(log => /*#__PURE__*/React.createElement("div", {
         key: log.wave,
         "data-species-wave-log": log.wave,
         className: "rounded-lg border border-white/10 p-2"
-      }, /*#__PURE__*/React.createElement("b", null, "WAVE", log.wave, "："), log.joinedAllyId ? entryLabel(log.joinedAllyId) : '加入なし', /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+      }, /*#__PURE__*/React.createElement("b", null, "WAVE", log.wave, "\uFF1A"), log.joinedAllyId ? entryLabel(log.joinedAllyId) : '加入なし', /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "⚡ ガッツ回復：実行対象"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+      }, "\u26A1 \u30AC\u30C3\u30C4\u56DE\u5FA9\uFF1A\u5B9F\u884C\u5BFE\u8C61"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
         className: "text-fuchsia-300"
-      }, "加入ボーナス：", log.bonus ? `HP+${log.bonus.hp}／力+${log.bonus.atk}／防+${log.bonus.def}／G+${log.bonus.guts}` : 'なし'))), nextJoinWave && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "WAVE", nextJoinWave, "で誰を加入させるか"), speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length ? /*#__PURE__*/React.createElement("div", {
+      }, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\uFF1A", log.bonus ? `HP+${log.bonus.hp}／力+${log.bonus.atk}／防+${log.bonus.def}／G+${log.bonus.guts}` : 'なし'))), nextJoinWave && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "WAVE", nextJoinWave, "\u3067\u8AB0\u3092\u52A0\u5165\u3055\u305B\u308B\u304B"), speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).length ? /*#__PURE__*/React.createElement("div", {
         className: "mt-1 grid grid-cols-2 gap-1"
       }, speciesChallengeUnjoinedAllies(speciesChallengeDebugRun).map(id => /*#__PURE__*/React.createElement("button", {
         key: id,
         onClick: () => simulateWave(id),
         className: "min-h-[44px] rounded-xl bg-fuchsia-800 px-2 text-[8px] font-black"
-      }, entryLabel(id), "を加入"))) : /*#__PURE__*/React.createElement("button", {
+      }, entryLabel(id), "\u3092\u52A0\u5165"))) : /*#__PURE__*/React.createElement("button", {
         onClick: () => simulateWave(null),
         className: "mt-1 min-h-[44px] w-full rounded-xl bg-slate-700 font-black"
-      }, "加入なしで進む（ガッツ回復あり）")), !nextJoinWave && /*#__PURE__*/React.createElement("button", {
+      }, "\u52A0\u5165\u306A\u3057\u3067\u9032\u3080\uFF08\u30AC\u30C3\u30C4\u56DE\u5FA9\u3042\u308A\uFF09")), !nextJoinWave && /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setSpeciesChallengeDebugRun(null);
           setSpeciesChallengeDebugWaveLog([]);
         },
         className: "min-h-[44px] w-full rounded-xl border border-cyan-400 font-black"
-      }, "編成選択へ戻る"))), /*#__PURE__*/React.createElement("article", {
+      }, "\u7DE8\u6210\u9078\u629E\u3078\u623B\u308B"))), /*#__PURE__*/React.createElement("article", {
         "data-species-real-run": true,
         className: "space-y-2 rounded-2xl border-2 border-red-400/60 bg-red-950/25 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-[11px] font-black text-red-200"
-      }, "実進行保存で実戦確認"), /*#__PURE__*/React.createElement("p", {
+      }, "\u5B9F\u9032\u884C\u4FDD\u5B58\u3067\u5B9F\u6226\u78BA\u8A8D"), /*#__PURE__*/React.createElement("p", {
         className: "text-[8px] leading-relaxed text-red-100"
-      }, "⚠️ 実際の種族チャレンジ進行・所持品を変更します。本番と同じ画面・同じバトルで進み、WAVE10までクリアすると「クリア状況」「次の難易度の解放」「初回の超越の実」「種族×難易度の自己記録」を実際に保存します。全国ランキングへは送信しません。"), /*#__PURE__*/React.createElement("p", {
+      }, "\u26A0\uFE0F \u5B9F\u969B\u306E\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u30FB\u6240\u6301\u54C1\u3092\u5909\u66F4\u3057\u307E\u3059\u3002\u672C\u756A\u3068\u540C\u3058\u753B\u9762\u30FB\u540C\u3058\u30D0\u30C8\u30EB\u3067\u9032\u307F\u3001WAVE10\u307E\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u300C\u30AF\u30EA\u30A2\u72B6\u6CC1\u300D\u300C\u6B21\u306E\u96E3\u6613\u5EA6\u306E\u89E3\u653E\u300D\u300C\u521D\u56DE\u306E\u8D85\u8D8A\u306E\u5B9F\u300D\u300C\u7A2E\u65CF\xD7\u96E3\u6613\u5EA6\u306E\u81EA\u5DF1\u8A18\u9332\u300D\u3092\u5B9F\u969B\u306B\u4FDD\u5B58\u3057\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u306F\u9001\u4FE1\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("p", {
         className: "text-[8px] text-slate-400"
-      }, "通常の BATTLE TEST →「⚔️ バトルモード」から入った場合は、これまでどおり何も保存しません。"), /*#__PURE__*/React.createElement("button", {
+      }, "\u901A\u5E38\u306E BATTLE TEST \u2192\u300C\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9\u300D\u304B\u3089\u5165\u3063\u305F\u5834\u5408\u306F\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308A\u4F55\u3082\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
         "data-species-real-run-start": true,
         onClick: () => {
           if (!window.confirm('実際の種族チャレンジ進行・所持品を変更します。よろしいですか？')) return;
@@ -32106,15 +32103,15 @@ function MonsterHeroGame() {
           });
         },
         className: "min-h-[46px] w-full rounded-xl bg-red-700 text-[10px] font-black text-white"
-      }, "実進行を保存する実戦を始める")), /*#__PURE__*/React.createElement("article", {
+      }, "\u5B9F\u9032\u884C\u3092\u4FDD\u5B58\u3059\u308B\u5B9F\u6226\u3092\u59CB\u3081\u308B")), /*#__PURE__*/React.createElement("article", {
         "data-transcend-fruit-debug": true,
         className: "space-y-2 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-[11px] font-black text-fuchsia-200"
-      }, "超越の実 → 超越ポイント確認"), selectedMasu ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("label", {
+      }, "\u8D85\u8D8A\u306E\u5B9F \u2192 \u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u78BA\u8A8D"), selectedMasu ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("label", {
         className: "block text-[9px] font-black"
-      }, "所持マスモン", /*#__PURE__*/React.createElement("select", {
-        "aria-label": "所持マスモン",
+      }, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3", /*#__PURE__*/React.createElement("select", {
+        "aria-label": "\u6240\u6301\u30DE\u30B9\u30E2\u30F3",
         value: selectedMasu.id,
         onChange: e => {
           setTranscendFruitDebugMasuId(e.target.value);
@@ -32125,25 +32122,25 @@ function MonsterHeroGame() {
       }, masuMons.map(m => /*#__PURE__*/React.createElement("option", {
         key: m.id,
         value: m.id
-      }, m.name, "／", ALL_PLAYER_MONSTERS[m.baseId]?.name || m.baseId)))), /*#__PURE__*/React.createElement("div", {
+      }, m.name, "\uFF0F", ALL_PLAYER_MONSTERS[m.baseId]?.name || m.baseId)))), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2 text-center text-[9px]"
       }, /*#__PURE__*/React.createElement("span", {
         className: "rounded-lg bg-slate-900 p-2"
-      }, "対応種族の実", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, transcendFruitOwnedCount(ownedItems, speciesFruitId))), /*#__PURE__*/React.createElement("span", {
+      }, "\u5BFE\u5FDC\u7A2E\u65CF\u306E\u5B9F", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, transcendFruitOwnedCount(ownedItems, speciesFruitId))), /*#__PURE__*/React.createElement("span", {
         className: "rounded-lg bg-slate-900 p-2"
-      }, "虹の実", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, transcendFruitOwnedCount(ownedItems, RAINBOW_TRANSCEND_FRUIT_ITEM_ID)))), /*#__PURE__*/React.createElement("div", {
+      }, "\u8679\u306E\u5B9F", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, transcendFruitOwnedCount(ownedItems, RAINBOW_TRANSCEND_FRUIT_ITEM_ID)))), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         "aria-pressed": selectedFruitId === speciesFruitId,
         onClick: () => setTranscendFruitDebugItemId(speciesFruitId),
         className: `min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId === speciesFruitId ? 'bg-fuchsia-700 ring-2 ring-white' : 'bg-slate-800'}`
-      }, "対応種族の実を選択"), /*#__PURE__*/React.createElement("button", {
+      }, "\u5BFE\u5FDC\u7A2E\u65CF\u306E\u5B9F\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("button", {
         "aria-pressed": selectedFruitId === RAINBOW_TRANSCEND_FRUIT_ITEM_ID,
         onClick: () => setTranscendFruitDebugItemId(RAINBOW_TRANSCEND_FRUIT_ITEM_ID),
         className: `min-h-[44px] rounded-xl text-[9px] font-black ${selectedFruitId === RAINBOW_TRANSCEND_FRUIT_ITEM_ID ? 'bg-fuchsia-700 ring-2 ring-white' : 'bg-slate-800'}`
-      }, "虹の実を選択")), /*#__PURE__*/React.createElement("div", null, !selectedFruitId && /*#__PURE__*/React.createElement("p", {
+      }, "\u8679\u306E\u5B9F\u3092\u9078\u629E")), /*#__PURE__*/React.createElement("div", null, !selectedFruitId && /*#__PURE__*/React.createElement("p", {
         className: "text-center text-[8px] font-black text-amber-300"
-      }, "使用する実を明示選択してください。")), /*#__PURE__*/React.createElement("div", {
+      }, "\u4F7F\u7528\u3059\u308B\u5B9F\u3092\u660E\u793A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: !selectedFruitId,
@@ -32159,17 +32156,17 @@ function MonsterHeroGame() {
         className: "min-h-[44px] rounded-xl bg-emerald-700 font-black disabled:opacity-30"
       }, "MAX")), /*#__PURE__*/React.createElement("div", {
         className: "rounded-xl bg-black/30 p-2 text-center text-[10px]"
-      }, "超越P：", transcendFruitDebugResult ? `${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok ? '' : '（失敗・変更なし）'}` : `${Math.max(0, Math.floor(Number(selectedMasu.transcendPoints) || 0))} → ―`), /*#__PURE__*/React.createElement("div", {
+      }, "\u8D85\u8D8AP\uFF1A", transcendFruitDebugResult ? `${transcendFruitDebugResult.before} → ${transcendFruitDebugResult.after}${transcendFruitDebugResult.ok ? '' : '（失敗・変更なし）'}` : `${Math.max(0, Math.floor(Number(selectedMasu.transcendPoints) || 0))} → ―`), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => grantFruit(speciesFruitId),
         className: "min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black"
-      }, "対応種族の実 +10"), /*#__PURE__*/React.createElement("button", {
+      }, "\u5BFE\u5FDC\u7A2E\u65CF\u306E\u5B9F +10"), /*#__PURE__*/React.createElement("button", {
         onClick: () => grantFruit(RAINBOW_TRANSCEND_FRUIT_ITEM_ID),
         className: "min-h-[40px] rounded-xl border border-fuchsia-500 text-[8px] font-black"
-      }, "虹の実 +10"))) : /*#__PURE__*/React.createElement("p", {
+      }, "\u8679\u306E\u5B9F +10"))) : /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] text-slate-400"
-      }, "所持マスモンがいません。")), SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
+      }, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002")), SPECIES_CHALLENGE_DIFFICULTY_IDS.map(id => {
         const unlocked = isSpeciesChallengeDifficultyUnlocked(id, clearedIds),
           cleared = isSpeciesChallengeCleared(speciesChallengeProgress, speciesId, id),
           claimed = isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesId, id);
@@ -32191,12 +32188,12 @@ function MonsterHeroGame() {
           className: claimed ? 'text-amber-300' : 'text-slate-500'
         }, "firstRewardClaimed", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, String(claimed))), /*#__PURE__*/React.createElement("span", {
           className: "text-fuchsia-200"
-        }, "初回報酬", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, "超越の実 ×", speciesChallengeFirstClearReward(id)))), (() => {
+        }, "\u521D\u56DE\u5831\u916C", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, "\u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(id)))), (() => {
           const record = speciesChallengeRecord(speciesChallengeProgress, speciesId, id);
           return /*#__PURE__*/React.createElement("div", {
             "data-species-record": id,
             className: "mt-1 rounded-lg bg-black/30 px-2 py-1 text-center text-[8px] text-cyan-200"
-          }, "自己ベスト ", record.bestScore.toLocaleString(), "pt ／ 最短 ", record.bestTurns !== null ? `${record.bestTurns}T` : '—', " ／ クリア ", record.clears, "回");
+          }, "\u81EA\u5DF1\u30D9\u30B9\u30C8 ", record.bestScore.toLocaleString(), "pt \uFF0F \u6700\u77ED ", record.bestTurns !== null ? `${record.bestTurns}T` : '—', " \uFF0F \u30AF\u30EA\u30A2 ", record.clears, "\u56DE");
         })());
       })));
     })(), gameState === 'SPECIES_CHALLENGE_SELECT' && (() => {
@@ -32351,7 +32348,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("header", {
         className: "mb-2 flex shrink-0 items-center gap-2"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "1つ前へ戻る",
+        "aria-label": "1\u3064\u524D\u3078\u623B\u308B",
         onClick: goBack,
         className: "min-h-[44px] min-w-[44px] rounded-xl text-slate-300 active:bg-white/10"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
@@ -32365,9 +32362,9 @@ function MonsterHeroGame() {
       }, titles[selection.step])), selection.fromDebug && (selection.saveProgress ? /*#__PURE__*/React.createElement("span", {
         "data-species-save-badge": true,
         className: "ml-auto rounded-full border border-red-400/60 bg-red-950/80 px-2 py-1 text-[7px] font-black text-red-200"
-      }, "DEBUG・実進行を保存") : /*#__PURE__*/React.createElement("span", {
+      }, "DEBUG\u30FB\u5B9F\u9032\u884C\u3092\u4FDD\u5B58") : /*#__PURE__*/React.createElement("span", {
         className: "ml-auto rounded-full border border-amber-400/40 bg-amber-950/70 px-2 py-1 text-[7px] font-black text-amber-200"
-      }, "DEBUG・保存なし"))), /*#__PURE__*/React.createElement("section", {
+      }, "DEBUG\u30FB\u4FDD\u5B58\u306A\u3057"))), /*#__PURE__*/React.createElement("section", {
         className: "mh-scroll min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pb-3"
       }, selection.step === 'species' && /*#__PURE__*/React.createElement("div", {
         className: "space-y-2",
@@ -32399,35 +32396,35 @@ function MonsterHeroGame() {
           className: "min-w-0 flex-1"
         }, /*#__PURE__*/React.createElement("b", {
           className: "block truncate text-[13px] font-black text-white"
-        }, lineage.name, "種 限定"), /*#__PURE__*/React.createElement("small", {
+        }, lineage.name, "\u7A2E \u9650\u5B9A"), /*#__PURE__*/React.createElement("small", {
           className: "mt-0.5 block truncate text-[8px] text-slate-400"
         }, members.map(mon => mon.name).join('・')), /*#__PURE__*/React.createElement("span", {
           className: "mt-1 flex flex-wrap items-center gap-1"
         }, /*#__PURE__*/React.createElement("small", {
           className: "rounded-full bg-black/40 px-2 py-0.5 text-[8px] font-black text-cyan-200"
-        }, "クリア ", cleared.length, "/", SPECIES_CHALLENGE_DIFFICULTY_IDS.length), /*#__PURE__*/React.createElement("small", {
+        }, "\u30AF\u30EA\u30A2 ", cleared.length, "/", SPECIES_CHALLENGE_DIFFICULTY_IDS.length), /*#__PURE__*/React.createElement("small", {
           className: "rounded-full bg-black/40 px-2 py-0.5 text-[8px] font-black text-indigo-200"
-        }, "自己ベスト ", best.toLocaleString(), " pt"), /*#__PURE__*/React.createElement("small", {
+        }, "\u81EA\u5DF1\u30D9\u30B9\u30C8 ", best.toLocaleString(), " pt"), /*#__PURE__*/React.createElement("small", {
           className: `rounded-full px-2 py-0.5 text-[8px] font-black ${owned.length ? 'bg-black/40 text-slate-300' : 'bg-red-950/60 text-red-300'}`
         }, owned.length ? `使える ${owned.length}体` : '使えるモンスターなし'))), active ? /*#__PURE__*/React.createElement("span", {
           className: "shrink-0 rounded-full bg-cyan-300 px-2 py-1 text-[8px] font-black text-slate-950"
-        }, "選択中") : /*#__PURE__*/React.createElement(ChevronRight, {
+        }, "\u9078\u629E\u4E2D") : /*#__PURE__*/React.createElement(ChevronRight, {
           size: 16,
           className: "shrink-0 text-slate-500"
         }));
       })), selection.step === 'hero' && /*#__PURE__*/React.createElement(React.Fragment, null, heroCandidates.length ? heroCandidates.map(entry => monsterCard(entry, selection.heroId === entry.entryId, () => chooseHero(entry.entryId), false, selection.heroId === entry.entryId ? '勇者' : '')) : /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl bg-slate-900 p-4 text-center text-[10px] text-slate-400"
-      }, "この種族の解放済みベースモン／所持マスモンがいません。")), selection.step === 'allies' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u7A2E\u65CF\u306E\u89E3\u653E\u6E08\u307F\u30D9\u30FC\u30B9\u30E2\u30F3\uFF0F\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002")), selection.step === 'allies' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "sticky top-0 z-10 rounded-2xl border border-cyan-500/40 bg-cyan-950/95 p-3 shadow-lg"
       }, /*#__PURE__*/React.createElement("span", {
         className: "flex items-center justify-between"
       }, /*#__PURE__*/React.createElement("b", {
         className: "text-[10px] text-cyan-100"
-      }, "供モンを選択"), /*#__PURE__*/React.createElement("strong", {
+      }, "\u4F9B\u30E2\u30F3\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("strong", {
         className: "rounded-full bg-cyan-400 px-3 py-1 text-[9px] text-slate-950"
-      }, selectedAllies.length, " / 3体")), /*#__PURE__*/React.createElement("p", {
+      }, selectedAllies.length, " / 3\u4F53")), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[8px] leading-relaxed text-cyan-200"
-      }, "供モンは最大3体。0体のままでも次へ進めます。同じモンスターは勇者・供モンを通して1体までなので（重複不可）、実際に選べる数はその種族のモンスターの種類によって変わります。")), allyCandidates.map(entry => {
+      }, "\u4F9B\u30E2\u30F3\u306F\u6700\u59273\u4F53\u30020\u4F53\u306E\u307E\u307E\u3067\u3082\u6B21\u3078\u9032\u3081\u307E\u3059\u3002\u540C\u3058\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u52C7\u8005\u30FB\u4F9B\u30E2\u30F3\u3092\u901A\u3057\u30661\u4F53\u307E\u3067\u306A\u306E\u3067\uFF08\u91CD\u8907\u4E0D\u53EF\uFF09\u3001\u5B9F\u969B\u306B\u9078\u3079\u308B\u6570\u306F\u305D\u306E\u7A2E\u65CF\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u7A2E\u985E\u306B\u3088\u3063\u3066\u5909\u308F\u308A\u307E\u3059\u3002")), allyCandidates.map(entry => {
         const selected = selectedAllies.includes(entry.entryId);
         const sameMonsterTaken = !selected && usedAllyBaseIds.has(entry.baseId);
         const disabled = sameMonsterTaken || !selected && selectedAllies.length >= 3;
@@ -32440,29 +32437,29 @@ function MonsterHeroGame() {
         className: "font-black tracking-widest text-cyan-300"
       }, "MISSION"), /*#__PURE__*/React.createElement("h3", {
         className: "mt-1 text-lg font-black"
-      }, speciesChallengeSpeciesName(selection.speciesId), " 限定"), (() => {
+      }, speciesChallengeSpeciesName(selection.speciesId), " \u9650\u5B9A"), (() => {
         const claimed = isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, selection.speciesId, selection.difficultyId);
         return /*#__PURE__*/React.createElement("p", {
           "data-species-confirm-reward": claimed ? 'claimed' : 'first',
           className: `text-[10px] ${claimed ? 'text-slate-400' : 'text-amber-300'}`
-        }, difficultyLabel(selection.difficultyId), " ・ ", claimed ? /*#__PURE__*/React.createElement("span", null, "初回報酬 ", /*#__PURE__*/React.createElement("span", {
+        }, difficultyLabel(selection.difficultyId), " \u30FB ", claimed ? /*#__PURE__*/React.createElement("span", null, "\u521D\u56DE\u5831\u916C ", /*#__PURE__*/React.createElement("span", {
           className: "line-through"
-        }, "超越の実 ×", speciesChallengeFirstClearReward(selection.difficultyId)), " ", /*#__PURE__*/React.createElement("span", {
+        }, "\u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(selection.difficultyId)), " ", /*#__PURE__*/React.createElement("span", {
           className: "font-black text-emerald-300"
-        }, "✅ 受取済み")) : /*#__PURE__*/React.createElement("span", null, "初回報酬 超越の実 ×", speciesChallengeFirstClearReward(selection.difficultyId)));
+        }, "\u2705 \u53D7\u53D6\u6E08\u307F")) : /*#__PURE__*/React.createElement("span", null, "\u521D\u56DE\u5831\u916C \u8D85\u8D8A\u306E\u5B9F \xD7", speciesChallengeFirstClearReward(selection.difficultyId)));
       })()), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
         className: "mb-1 block text-[9px] text-cyan-300"
-      }, "勇者モン"), entryById(selection.heroId) && monsterCard(entryById(selection.heroId), true, () => {}, false, '勇者')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
+      }, "\u52C7\u8005\u30E2\u30F3"), entryById(selection.heroId) && monsterCard(entryById(selection.heroId), true, () => {}, false, '勇者')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
         className: "mb-1 block text-[9px] text-cyan-300"
-      }, "供モン（", selectedAllies.length, "体）"), selectedAllies.length ? /*#__PURE__*/React.createElement("div", {
+      }, "\u4F9B\u30E2\u30F3\uFF08", selectedAllies.length, "\u4F53\uFF09"), selectedAllies.length ? /*#__PURE__*/React.createElement("div", {
         className: "space-y-2"
       }, selectedAllies.map(id => entryById(id) && monsterCard(entryById(id), true, () => {}, false, '選択中'))) : /*#__PURE__*/React.createElement("p", {
         className: "rounded-2xl border border-white/10 bg-slate-900 p-4 text-center text-[10px] text-slate-400"
-      }, "供モンなしで出撃")), selection.fromDebug && (selection.saveProgress ? /*#__PURE__*/React.createElement("p", {
+      }, "\u4F9B\u30E2\u30F3\u306A\u3057\u3067\u51FA\u6483")), selection.fromDebug && (selection.saveProgress ? /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl border-2 border-red-400/60 bg-red-950/40 p-3 text-[9px] leading-relaxed font-black text-red-100"
-      }, "⚠️ 実際の種族チャレンジ進行・所持品を変更します。WAVE10までクリアすると、クリア状況・次の難易度の解放・初回の超越の実・種族×難易度の自己記録が本当に保存されます。全国ランキングへは送信しません。") : /*#__PURE__*/React.createElement("p", {
+      }, "\u26A0\uFE0F \u5B9F\u969B\u306E\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9032\u884C\u30FB\u6240\u6301\u54C1\u3092\u5909\u66F4\u3057\u307E\u3059\u3002WAVE10\u307E\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u30AF\u30EA\u30A2\u72B6\u6CC1\u30FB\u6B21\u306E\u96E3\u6613\u5EA6\u306E\u89E3\u653E\u30FB\u521D\u56DE\u306E\u8D85\u8D8A\u306E\u5B9F\u30FB\u7A2E\u65CF\xD7\u96E3\u6613\u5EA6\u306E\u81EA\u5DF1\u8A18\u9332\u304C\u672C\u5F53\u306B\u4FDD\u5B58\u3055\u308C\u307E\u3059\u3002\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u306F\u9001\u4FE1\u3057\u307E\u305B\u3093\u3002") : /*#__PURE__*/React.createElement("p", {
         className: "rounded-xl border border-amber-400/30 bg-amber-950/30 p-3 text-[9px] leading-relaxed text-amber-100"
-      }, "出撃後は既存バトルのWAVE1へ進みます。この確認では結果・報酬・進行・ランキングを一切保存しません。"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u51FA\u6483\u5F8C\u306F\u65E2\u5B58\u30D0\u30C8\u30EB\u306EWAVE1\u3078\u9032\u307F\u307E\u3059\u3002\u3053\u306E\u78BA\u8A8D\u3067\u306F\u7D50\u679C\u30FB\u5831\u916C\u30FB\u9032\u884C\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u4E00\u5207\u4FDD\u5B58\u3057\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("div", {
         "data-species-assistant": true,
         className: "pt-1"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
@@ -32482,23 +32479,23 @@ function MonsterHeroGame() {
           setGameState('BATTLE_DIFFICULTY_SELECT');
         },
         className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
-      }, "難易度選択へ") : selection.step === 'hero' ? /*#__PURE__*/React.createElement("button", {
+      }, "\u96E3\u6613\u5EA6\u9078\u629E\u3078") : selection.step === 'hero' ? /*#__PURE__*/React.createElement("button", {
         disabled: !selection.heroId,
         onClick: () => patchSelection({
           step: 'allies'
         }),
         className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
-      }, "供モン選択へ") : selection.step === 'allies' ? /*#__PURE__*/React.createElement("button", {
+      }, "\u4F9B\u30E2\u30F3\u9078\u629E\u3078") : selection.step === 'allies' ? /*#__PURE__*/React.createElement("button", {
         disabled: !validation.valid,
         onClick: () => patchSelection({
           step: 'confirm'
         }),
         className: "min-h-[52px] w-full rounded-xl bg-indigo-600 text-[11px] font-black disabled:opacity-30"
-      }, "出撃確認へ（", selectedAllies.length, "体）") : /*#__PURE__*/React.createElement("button", {
+      }, "\u51FA\u6483\u78BA\u8A8D\u3078\uFF08", selectedAllies.length, "\u4F53\uFF09") : /*#__PURE__*/React.createElement("button", {
         disabled: !validation.valid,
         onClick: makeRun,
         className: "min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-[12px] font-black shadow-lg disabled:opacity-30"
-      }, "この編成で出撃")));
+      }, "\u3053\u306E\u7DE8\u6210\u3067\u51FA\u6483")));
     })(), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
       const owned = [...masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId])];
       if (temporaryDyeMasks.Mia) owned.push({
@@ -32525,9 +32522,9 @@ function MonsterHeroGame() {
         className: "p-3"
       }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("h2", {
         className: "font-black"
-      }, "モンスター画像・染色確認")), /*#__PURE__*/React.createElement("p", {
+      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D")), /*#__PURE__*/React.createElement("p", {
         className: "p-6 text-center text-slate-400"
-      }, "確認できる所持モンスター個体がありません。"));
+      }, "\u78BA\u8A8D\u3067\u304D\u308B\u6240\u6301\u30E2\u30F3\u30B9\u30BF\u30FC\u500B\u4F53\u304C\u3042\u308A\u307E\u305B\u3093\u3002"));
       const base = ALL_PLAYER_MONSTERS[selected.baseId];
       const regionCount = dyeRegionCount(selected.baseId);
       const colors = Array.from({
@@ -32627,14 +32624,14 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] font-black text-cyan-400"
-      }, "DEBUG・保存されません"), /*#__PURE__*/React.createElement("h2", {
+      }, "DEBUG\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black"
-      }, "モンスター画像・染色確認")), temporaryDyeMasks[selected.baseId] && /*#__PURE__*/React.createElement("span", {
+      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D")), temporaryDyeMasks[selected.baseId] && /*#__PURE__*/React.createElement("span", {
         className: "ml-auto rounded-full bg-fuchsia-800 px-2 py-1 text-[8px] font-black"
-      }, "一時反映中")), temporaryDyeMasks[selected.baseId] && dyeMaskEditorOpened && /*#__PURE__*/React.createElement("button", {
+      }, "\u4E00\u6642\u53CD\u6620\u4E2D")), temporaryDyeMasks[selected.baseId] && dyeMaskEditorOpened && /*#__PURE__*/React.createElement("button", {
         onClick: () => setGameState('DYE_MASK_POSITION_DEBUG'),
         className: "mb-2 min-h-[42px] shrink-0 rounded-xl border border-fuchsia-300 bg-fuchsia-800 text-[10px] font-black"
-      }, "マスク編集へ戻る"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30DE\u30B9\u30AF\u7DE8\u96C6\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3"
       }, /*#__PURE__*/React.createElement("select", {
         value: selected.id,
@@ -32650,7 +32647,7 @@ function MonsterHeroGame() {
         return /*#__PURE__*/React.createElement("option", {
           key: m.id,
           value: m.id
-        }, m.name, "／", b.name, "／", m.baseId, "／①", colorText(getMasuColors(m)[0]), " ②", colorText(getMasuColors(m)[1]), " ③", colorText(getMasuColors(m)[2]));
+        }, m.name, "\uFF0F", b.name, "\uFF0F", m.baseId, "\uFF0F\u2460", colorText(getMasuColors(m)[0]), " \u2461", colorText(getMasuColors(m)[1]), " \u2462", colorText(getMasuColors(m)[2]));
       })), isTiger && /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-1"
       }, [['old', '旧画像／ロールバック用'], ['new', '高画質版／現在の本番構成'], ['compare', '旧画像と高画質版の比較表示']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
@@ -32675,7 +32672,7 @@ function MonsterHeroGame() {
         className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[10px] font-black text-fuchsia-300"
-      }, "本番と共通の染色①～③"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
+      }, "\u672C\u756A\u3068\u5171\u901A\u306E\u67D3\u8272\u2460\uFF5E\u2462"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
         baseId: selected.baseId,
         colors: colors,
         onChange: (idx, colorId) => setMonsterImageDebugColors(prev => {
@@ -32696,13 +32693,13 @@ function MonsterHeroGame() {
       }), /*#__PURE__*/React.createElement("button", {
         onClick: () => setMonsterImageDebugColors(getMasuColors(selected)),
         className: "w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black"
-      }, "個体の現在色へ戻す")), /*#__PURE__*/React.createElement("div", {
+      }, "\u500B\u4F53\u306E\u73FE\u5728\u8272\u3078\u623B\u3059")), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, renderCurrent('元画像', 'imgUrl', null), renderCurrent('実際の合成後プレビュー', 'imgUrl', colors), Array.from({
         length: regionCount
       }, (_, i) => renderCurrent(`染色${i + 1}のみ`, 'imgUrl', colors.map((c, j) => i === j ? c : null)))), /*#__PURE__*/React.createElement("h3", {
         className: "text-[10px] font-black text-cyan-300"
-      }, "実際の表示条件"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5B9F\u969B\u306E\u8868\u793A\u6761\u4EF6"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, renderCurrent('バトル／立ち絵', 'imgUrl', colors, 'h-36', 'object-contain'), renderCurrent('一覧／全身アイコン', 'iconUrl', colors, 'h-24', 'object-cover'), renderCurrent('詳細／大きな全身表示', 'imgUrl', colors, 'h-40', 'object-contain'), renderCurrent('顔アイコン', 'faceIconUrl', colors, 'h-20 rounded-full', 'object-cover'), renderCurrent('プロフィール／選択アイコン', 'faceIconUrl', colors, 'h-16 rounded-full', 'object-cover'), renderCurrent('小型／編成枠', 'imgUrl', colors, 'h-12 rounded-full', 'object-contain')), /*#__PURE__*/React.createElement("section", {
         className: "rounded-xl bg-black/40 p-3 text-[8px] break-all"
@@ -32718,9 +32715,9 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("h2", {
       className: "text-lg font-black italic text-indigo-300 uppercase tracking-widest"
-    }, "助手をえらぶ"), /*#__PURE__*/React.createElement("p", {
+    }, "\u52A9\u624B\u3092\u3048\u3089\u3076"), /*#__PURE__*/React.createElement("p", {
       className: "text-[10px] text-slate-400 mt-1 leading-tight"
-    }, "冒険に付き添ってくれる助手を選んでください。", /*#__PURE__*/React.createElement("br", null), "あとからプロフィールでいつでも変えられます。")), /*#__PURE__*/React.createElement("div", {
+    }, "\u5192\u967A\u306B\u4ED8\u304D\u6DFB\u3063\u3066\u304F\u308C\u308B\u52A9\u624B\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002", /*#__PURE__*/React.createElement("br", null), "\u3042\u3068\u304B\u3089\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3067\u3044\u3064\u3067\u3082\u5909\u3048\u3089\u308C\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3"
@@ -32759,9 +32756,9 @@ function MonsterHeroGame() {
       style: {
         backgroundColor: who.accent
       }
-    }, "この子にする")))), /*#__PURE__*/React.createElement("p", {
+    }, "\u3053\u306E\u5B50\u306B\u3059\u308B")))), /*#__PURE__*/React.createElement("p", {
       className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
-    }, "どちらも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
+    }, "\u3069\u3061\u3089\u3082\u6700\u521D\u304B\u3089\u9078\u3079\u307E\u3059\u3002\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308B\u306E\u3067\u3001\u3042\u3068\u3067\u5909\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-4 shrink-0",
@@ -32777,7 +32774,7 @@ function MonsterHeroGame() {
       className: "w-11"
     }), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-    }, "プロフィール")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-3"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "profile"
@@ -32792,9 +32789,9 @@ function MonsterHeroGame() {
         className: "mb-4 rounded-2xl border-2 border-indigo-400/60 bg-indigo-950/50 p-3 shrink-0"
       }, onboardingPreview && /*#__PURE__*/React.createElement("div", {
         className: "-mx-3 -mt-3 mb-2 px-3 py-1.5 rounded-t-xl bg-fuchsia-700 text-white text-[10px] font-black tracking-widest"
-      }, "DEBUG・見るだけの表示です。名前もアイコンも保存されません"), /*#__PURE__*/React.createElement("div", {
+      }, "DEBUG\u30FB\u898B\u308B\u3060\u3051\u306E\u8868\u793A\u3067\u3059\u3002\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-indigo-300 tracking-widest mb-2"
-      }, "はじめての設定"), /*#__PURE__*/React.createElement(AssistantBubble, {
+      }, "\u306F\u3058\u3081\u3066\u306E\u8A2D\u5B9A"), /*#__PURE__*/React.createElement(AssistantBubble, {
         line: step?.t || null,
         expression: step?.e || null,
         helpRef: "basics/onboarding",
@@ -32817,9 +32814,9 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: '#f472b6'
         }
-      }, "けってい！"), /*#__PURE__*/React.createElement("div", {
+      }, "\u3051\u3063\u3066\u3044\uFF01"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 text-center mt-1.5"
-      }, "名前もアイコンも、あとからこの画面でいつでも変えられます"));
+      }, "\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u3001\u3042\u3068\u304B\u3089\u3053\u306E\u753B\u9762\u3067\u3044\u3064\u3067\u3082\u5909\u3048\u3089\u308C\u307E\u3059"));
     })(), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4"
     }, /*#__PURE__*/React.createElement("button", {
@@ -32876,7 +32873,7 @@ function MonsterHeroGame() {
       className: "text-[11px] font-black text-amber-300 font-mono"
     }, gold.toLocaleString()), /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] text-amber-500/70 font-bold"
-    }, "ダイヤ")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", {
       className: "w-full flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 px-4 py-2.5 rounded-xl"
     }, /*#__PURE__*/React.createElement(Coins, {
       size: 14,
@@ -32891,7 +32888,7 @@ function MonsterHeroGame() {
       className: "text-teal-400"
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black text-teal-200"
-    }, "アイテム（", Object.values(ownedItems).reduce((sum, n) => sum + (n || 0), 0), "個）"))), onboarded && !onboardingPreview && (() => {
+    }, "\u30A2\u30A4\u30C6\u30E0\uFF08", Object.values(ownedItems).reduce((sum, n) => sum + (n || 0), 0), "\u500B\uFF09"))), onboarded && !onboardingPreview && (() => {
       const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : null;
       const next = typeof assistantBondNext === 'function' ? assistantBondNext(assistantBond.points) : null;
       const from = stage ? stage.need : 0;
@@ -32916,7 +32913,7 @@ function MonsterHeroGame() {
         style: {
           color: accent
         }
-      }, activeAssistant.name, "との仲良し度"), /*#__PURE__*/React.createElement("div", {
+      }, activeAssistant.name, "\u3068\u306E\u4EF2\u826F\u3057\u5EA6"), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black text-white"
       }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) ? /*#__PURE__*/React.createElement("button", {
         type: "button",
@@ -32927,7 +32924,7 @@ function MonsterHeroGame() {
         className: "shrink-0 text-right active:scale-95"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 flex items-center justify-end gap-0.5"
-      }, "呼び方", /*#__PURE__*/React.createElement(Edit3, {
+      }, "\u547C\u3073\u65B9", /*#__PURE__*/React.createElement(Edit3, {
         size: 8
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black",
@@ -32938,7 +32935,7 @@ function MonsterHeroGame() {
         className: "shrink-0 text-right"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500"
-      }, "呼び方"), /*#__PURE__*/React.createElement("div", {
+      }, "\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black",
         style: {
           color: accent
@@ -32957,7 +32954,7 @@ function MonsterHeroGame() {
         className: "mt-2.5 pt-2.5 border-t border-white/10"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] font-black text-slate-500 tracking-widest mb-1.5"
-      }, "いっしょに遊ぶ助手"), /*#__PURE__*/React.createElement("div", {
+      }, "\u3044\u3063\u3057\u3087\u306B\u904A\u3076\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-1.5"
       }, ASSISTANT_LIST.map(who => {
         const active = who.id === selectedAssistantId;
@@ -32989,7 +32986,7 @@ function MonsterHeroGame() {
         }, "Lv.", lv, " ", t ? t.title : '')));
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 mt-1"
-      }, "仲良し度は助手ごとに別々に貯まります。切り替えても消えません。")));
+      }, "\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308A\u307E\u3059\u3002\u5207\u308A\u66FF\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002")));
     })(), (() => {
       const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
       const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE];
@@ -33015,9 +33012,9 @@ function MonsterHeroGame() {
         className: "mb-2 flex items-end justify-between px-1"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-indigo-300 tracking-widest"
-      }, "バトル記録"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30D0\u30C8\u30EB\u8A18\u9332"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-500"
-      }, "モードをタップすると詳しい記録を確認できます"))), !selected ? /*#__PURE__*/React.createElement("div", {
+      }, "\u30E2\u30FC\u30C9\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A73\u3057\u3044\u8A18\u9332\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"))), !selected ? /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-1 gap-2"
       }, modes.map(mode => {
         const species = mode.id === BATTLE_MODE_SPECIES_CHALLENGE;
@@ -33046,9 +33043,9 @@ function MonsterHeroGame() {
           }
         }, representativeFor(mode)), species && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("small", {
           className: "block truncate text-[9px] font-black text-cyan-100"
-        }, "最高記録: ", speciesSummary.bestScore > 0 ? `${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}` : '記録なし'), /*#__PURE__*/React.createElement("small", {
+        }, "\u6700\u9AD8\u8A18\u9332: ", speciesSummary.bestScore > 0 ? `${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}` : '記録なし'), /*#__PURE__*/React.createElement("small", {
           className: "block text-[9px] font-black text-emerald-300"
-        }, "クリア: ", speciesSummary.clearedCount, " / ", speciesSummary.totalCount))), /*#__PURE__*/React.createElement(ChevronRight, {
+        }, "\u30AF\u30EA\u30A2: ", speciesSummary.clearedCount, " / ", speciesSummary.totalCount))), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 18,
           className: "shrink-0 text-slate-500"
         })));
@@ -33068,7 +33065,7 @@ function MonsterHeroGame() {
         "aria-hidden": "true"
       }, selected.emoji), /*#__PURE__*/React.createElement("span", {
         className: "font-black text-[13px]"
-      }, selected.label, "の記録")), /*#__PURE__*/React.createElement("div", {
+      }, selected.label, "\u306E\u8A18\u9332")), /*#__PURE__*/React.createElement("div", {
         className: "flex flex-col gap-2"
       }, selected.id === EXTREME_MODE.id ? EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => {
         const score = extremeBestScores[setting.id] || 0;
@@ -33083,15 +33080,15 @@ function MonsterHeroGame() {
           className: "mt-2 grid grid-cols-2 gap-2 text-center"
         }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-500"
-        }, "最高スコア"), /*#__PURE__*/React.createElement("strong", {
+        }, "\u6700\u9AD8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("strong", {
           className: "text-[12px] text-amber-300"
         }, score.toLocaleString(), " pt")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-500"
-        }, "クリア回数"), /*#__PURE__*/React.createElement("strong", {
+        }, "\u30AF\u30EA\u30A2\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
           className: "text-[12px] text-emerald-300"
-        }, clears, "回"))) : /*#__PURE__*/React.createElement("div", {
+        }, clears, "\u56DE"))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-2 text-center text-[11px] font-black text-slate-500"
-        }, "未記録"));
+        }, "\u672A\u8A18\u9332"));
       }) : Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => {
         const record = modeRecordFor(selected.id, key);
         const quick = isQuickMode(selected.id);
@@ -33108,23 +33105,23 @@ function MonsterHeroGame() {
           className: `mt-2 grid gap-1 text-center ${quick ? 'grid-cols-2' : challenge ? 'grid-cols-2' : 'grid-cols-3'}`
         }, challenge && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-500"
-        }, "挑戦回数"), /*#__PURE__*/React.createElement("strong", {
+        }, "\u6311\u6226\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
           className: "text-[11px] text-white"
-        }, attempts, "回")), !quick && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        }, attempts, "\u56DE")), !quick && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-500"
-        }, "最高スコア"), /*#__PURE__*/React.createElement("strong", {
+        }, "\u6700\u9AD8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("strong", {
           className: "text-[11px] text-amber-300"
         }, record.score.toLocaleString(), " pt")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-500"
-        }, "最高到達WAVE"), /*#__PURE__*/React.createElement("strong", {
+        }, "\u6700\u9AD8\u5230\u9054WAVE"), /*#__PURE__*/React.createElement("strong", {
           className: "text-[11px] text-indigo-200"
         }, "WAVE ", record.wave)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-500"
-        }, "クリア回数"), /*#__PURE__*/React.createElement("strong", {
+        }, "\u30AF\u30EA\u30A2\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
           className: "text-[11px] text-emerald-300"
-        }, record.clears, "回"))) : /*#__PURE__*/React.createElement("div", {
+        }, record.clears, "\u56DE"))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-2 text-center text-[11px] font-black text-slate-500"
-        }, "未記録"));
+        }, "\u672A\u8A18\u9332"));
       }))));
     })(), onboarded && !onboardingPreview && (() => {
       const list = typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || [];
@@ -33141,9 +33138,9 @@ function MonsterHeroGame() {
         className: "flex-1 min-w-0 text-left"
       }, /*#__PURE__*/React.createElement("b", {
         className: "block text-[11px] font-black text-fuchsia-100"
-      }, "イベント回想"), /*#__PURE__*/React.createElement("small", {
+      }, "\u30A4\u30D9\u30F3\u30C8\u56DE\u60F3"), /*#__PURE__*/React.createElement("small", {
         className: "block text-[9px] text-fuchsia-300/70"
-      }, "見たことのある会話をもう一度見られます（", unlockedCount, "/", list.length, "）")), /*#__PURE__*/React.createElement(ChevronRight, {
+      }, "\u898B\u305F\u3053\u3068\u306E\u3042\u308B\u4F1A\u8A71\u3092\u3082\u3046\u4E00\u5EA6\u898B\u3089\u308C\u307E\u3059\uFF08", unlockedCount, "/", list.length, "\uFF09")), /*#__PURE__*/React.createElement(ChevronRight, {
         size: 16,
         className: "shrink-0 text-fuchsia-400"
       }));
@@ -33158,7 +33155,7 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-amber-400 uppercase tracking-widest"
-    }, "マーケット")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-3"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "market",
@@ -33174,7 +33171,7 @@ function MonsterHeroGame() {
       className: "text-lg font-black text-amber-300"
     }, breederPoints), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-slate-400 font-bold"
-    }, "pt(Lv.UPで+1)")), /*#__PURE__*/React.createElement("div", {
+    }, "pt(Lv.UP\u3067+1)")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
     }, /*#__PURE__*/React.createElement(Gem, {
       size: 16,
@@ -33183,7 +33180,7 @@ function MonsterHeroGame() {
       className: "text-lg font-black text-amber-300"
     }, gold.toLocaleString()), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-slate-400 font-bold"
-    }, "ダイヤ(WAVEクリアで獲得)"))), /*#__PURE__*/React.createElement("div", {
+    }, "\u30C0\u30A4\u30E4(WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97)"))), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1.5 mb-3 shrink-0"
     }, [{
       key: 'icon',
@@ -33205,7 +33202,7 @@ function MonsterHeroGame() {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).length === 0 ? /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[11px] text-slate-600 font-bold py-10"
-    }, "まだ商品がありません") : /*#__PURE__*/React.createElement("div", {
+    }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
       className: MARKET_GRID_CLASS
     }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).map(item => {
       const comingSoon = item.available === false;
@@ -33237,13 +33234,13 @@ function MonsterHeroGame() {
         },
         middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
           className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-        }, "×", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
+        }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
           onClick: () => setMarketItemDetail(item),
           "aria-label": `${item.name}の効果を見る`,
           className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
         }, /*#__PURE__*/React.createElement(BookOpen, {
           size: 8
-        }), "詳細")) : null
+        }), "\u8A73\u7D30")) : null
       });
     })))), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
@@ -33271,7 +33268,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2 overflow-x-auto pb-1 scrollbar-hide",
       role: "tablist",
-      "aria-label": "編成セット"
+      "aria-label": "\u7DE8\u6210\u30BB\u30C3\u30C8"
     }, monsterPartySets.names.map((name, index) => /*#__PURE__*/React.createElement("button", {
       key: index,
       role: "tab",
@@ -33282,13 +33279,13 @@ function MonsterHeroGame() {
       className: "block text-[10px] font-black truncate"
     }, index + 1, ". ", name), monsterPartySets.activeIndex === index ? /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] font-black text-emerald-300"
-    }, "✓ 使用中") : /*#__PURE__*/React.createElement("span", {
+    }, "\u2713 \u4F7F\u7528\u4E2D") : /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] text-slate-500"
-    }, "タップで使用")))), /*#__PURE__*/React.createElement("div", {
+    }, "\u30BF\u30C3\u30D7\u3067\u4F7F\u7528")))), /*#__PURE__*/React.createElement("div", {
       className: "mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end"
     }, /*#__PURE__*/React.createElement("label", {
       className: "min-w-0 text-[8px] font-black text-slate-400"
-    }, "セット名", /*#__PURE__*/React.createElement("input", {
+    }, "\u30BB\u30C3\u30C8\u540D", /*#__PURE__*/React.createElement("input", {
       key: `${editingPartySetIndex}:${monsterPartySets.names[editingPartySetIndex]}`,
       defaultValue: monsterPartySets.names[editingPartySetIndex],
       maxLength: 20,
@@ -33300,11 +33297,11 @@ function MonsterHeroGame() {
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setPartySetCopyTarget(partySetCopyTarget == null ? (editingPartySetIndex + 1) % MONSTER_PARTY_SET_COUNT : null),
       className: "min-h-[38px] rounded-lg border border-amber-500/50 px-3 text-[10px] font-black text-amber-200"
-    }, "編成をコピー")), partySetCopyTarget != null && /*#__PURE__*/React.createElement("div", {
+    }, "\u7DE8\u6210\u3092\u30B3\u30D4\u30FC")), partySetCopyTarget != null && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 rounded-xl bg-amber-950/40 p-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] font-bold text-amber-100 mb-1"
-    }, "「", monsterPartySets.names[editingPartySetIndex], "」の編成内容をコピーする先（名前は変わりません）"), /*#__PURE__*/React.createElement("div", {
+    }, "\u300C", monsterPartySets.names[editingPartySetIndex], "\u300D\u306E\u7DE8\u6210\u5185\u5BB9\u3092\u30B3\u30D4\u30FC\u3059\u308B\u5148\uFF08\u540D\u524D\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-wrap gap-1"
     }, monsterPartySets.names.map((name, index) => index === editingPartySetIndex ? null : /*#__PURE__*/React.createElement("button", {
       key: index,
@@ -33315,18 +33312,18 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setPartySetCopyTarget(null),
       className: "flex-1 min-h-[36px] rounded-lg bg-slate-700 text-[10px] font-black"
-    }, "やめる"), /*#__PURE__*/React.createElement("button", {
+    }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => copyMonsterPartySet(partySetCopyTarget),
       className: "flex-1 min-h-[36px] rounded-lg bg-amber-500 text-slate-950 text-[10px] font-black"
-    }, "このセットへ上書き")))), /*#__PURE__*/React.createElement("div", {
+    }, "\u3053\u306E\u30BB\u30C3\u30C8\u3078\u4E0A\u66F8\u304D")))), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0 bg-indigo-950/30 border border-indigo-500/30 rounded-2xl px-2 py-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-indigo-300 shrink-0 leading-tight"
-    }, "編成中", /*#__PURE__*/React.createElement("br", null), draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length), /*#__PURE__*/React.createElement("div", {
+    }, "\u7DE8\u6210\u4E2D", /*#__PURE__*/React.createElement("br", null), draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex gap-1.5 overflow-x-auto scrollbar-hide min-h-[36px] items-center"
     }, draftMonsterRoster.length === 0 ? /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-slate-600 font-bold"
-    }, "まだ選ばれていません") : draftMonsterRoster.map(entryId => {
+    }, "\u307E\u3060\u9078\u3070\u308C\u3066\u3044\u307E\u305B\u3093") : draftMonsterRoster.map(entryId => {
       const isMasu = entryId.startsWith('masu:');
       const masu = isMasu ? getMasuMon(entryId.slice(5)) : null;
       const base = isMasu ? masu && ALL_PLAYER_MONSTERS[masu.baseId] : ALL_PLAYER_MONSTERS[entryId];
@@ -33352,7 +33349,7 @@ function MonsterHeroGame() {
       }));
     }))), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold mb-1 px-1 shrink-0"
-    }, "解放済み", unlockedMonsterIds.length, "体・ちょうど", STARTER_MONSTER_IDS.length, "体選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細・同じ種は1体まで(マスモン含む)"), renderMonsterSortFilterBar(), /*#__PURE__*/React.createElement("div", {
+    }, "\u89E3\u653E\u6E08\u307F", unlockedMonsterIds.length, "\u4F53\u30FB\u3061\u3087\u3046\u3069", STARTER_MONSTER_IDS.length, "\u4F53\u9078\u3076\u3068\u300C\u6C7A\u5B9A\u300D\u3067\u304D\u307E\u3059\u30FB\u30A2\u30A4\u30B3\u30F3\u30BF\u30C3\u30D7\u3067\u7DE8\u6210/\u89E3\u9664\u3001i\u30DC\u30BF\u30F3\u3067\u8A73\u7D30\u30FB\u540C\u3058\u7A2E\u306F1\u4F53\u307E\u3067(\u30DE\u30B9\u30E2\u30F3\u542B\u3080)"), renderMonsterSortFilterBar(), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-3 pb-4"
@@ -33371,7 +33368,7 @@ function MonsterHeroGame() {
           base: m,
           info: /*#__PURE__*/React.createElement("div", {
             className: "text-[8px] text-slate-500 font-bold text-center leading-none"
-          }, "ベースモン"),
+          }, "\u30D9\u30FC\u30B9\u30E2\u30F3"),
           status: monsterDisplayFlags.active ? /*#__PURE__*/React.createElement("span", {
             className: `text-[8px] font-black px-2 py-0.5 rounded-full ${selected ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500'}`
           }, selected ? '選択中' : '未選択') : null
@@ -33401,7 +33398,7 @@ function MonsterHeroGame() {
         base,
         badge: /*#__PURE__*/React.createElement("div", {
           className: "absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight"
-        }, "マスモン"),
+        }, "\u30DE\u30B9\u30E2\u30F3"),
         status: monsterDisplayFlags.active ? /*#__PURE__*/React.createElement("span", {
           className: `text-[8px] font-black px-2 py-0.5 rounded-full ${selected ? 'bg-pink-500 text-white' : 'bg-slate-800 text-slate-500'}`
         }, selected ? '選択中' : '未選択') : null
@@ -33419,17 +33416,17 @@ function MonsterHeroGame() {
       onClick: confirmMonsterRoster,
       disabled: draftMonsterRoster.length !== STARTER_MONSTER_IDS.length,
       className: `w-full py-3 rounded-2xl font-black text-sm mt-2 shrink-0 ${draftMonsterRoster.length === STARTER_MONSTER_IDS.length ? 'bg-indigo-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
-    }, "決定 (", draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length, ")")) : /*#__PURE__*/React.createElement("div", {
+    }, "\u6C7A\u5B9A (", draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length, ")")) : /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 flex flex-col"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0 bg-purple-950/30 border border-purple-500/30 rounded-2xl px-2 py-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-purple-300 shrink-0 leading-tight"
-    }, "編成中", /*#__PURE__*/React.createElement("br", null), draftTeachingRoster.length, "/", STARTER_TEACHING_IDS.length), /*#__PURE__*/React.createElement("div", {
+    }, "\u7DE8\u6210\u4E2D", /*#__PURE__*/React.createElement("br", null), draftTeachingRoster.length, "/", STARTER_TEACHING_IDS.length), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex gap-1.5 overflow-x-auto scrollbar-hide min-h-[36px] items-center"
     }, draftTeachingRoster.length === 0 ? /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-slate-600 font-bold"
-    }, "まだ選ばれていません") : draftTeachingRoster.map(id => {
+    }, "\u307E\u3060\u9078\u3070\u308C\u3066\u3044\u307E\u305B\u3093") : draftTeachingRoster.map(id => {
       const t = TEACHING_CARDS.find(tc => tc.id === id);
       if (!t) return null;
       return /*#__PURE__*/React.createElement("button", {
@@ -33439,7 +33436,7 @@ function MonsterHeroGame() {
       }, cardIconNode(t.icon, 32, t.id));
     }))), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold mb-2 px-1 shrink-0"
-    }, "解放済み", unlockedTeachingIds.length, "枚・ちょうど", STARTER_TEACHING_IDS.length, "枚選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細"), /*#__PURE__*/React.createElement("div", {
+    }, "\u89E3\u653E\u6E08\u307F", unlockedTeachingIds.length, "\u679A\u30FB\u3061\u3087\u3046\u3069", STARTER_TEACHING_IDS.length, "\u679A\u9078\u3076\u3068\u300C\u6C7A\u5B9A\u300D\u3067\u304D\u307E\u3059\u30FB\u30A2\u30A4\u30B3\u30F3\u30BF\u30C3\u30D7\u3067\u7DE8\u6210/\u89E3\u9664\u3001i\u30DC\u30BF\u30F3\u3067\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-3 pb-4"
@@ -33471,7 +33468,7 @@ function MonsterHeroGame() {
       onClick: confirmTeachingRoster,
       disabled: draftTeachingRoster.length !== STARTER_TEACHING_IDS.length,
       className: `w-full py-3 rounded-2xl font-black text-sm mt-2 shrink-0 ${draftTeachingRoster.length === STARTER_TEACHING_IDS.length ? 'bg-purple-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
-    }, "決定 (", draftTeachingRoster.length, "/", STARTER_TEACHING_IDS.length, ")"))), rosterDetailMon && renderMonsterDetailModal({
+    }, "\u6C7A\u5B9A (", draftTeachingRoster.length, "/", STARTER_TEACHING_IDS.length, ")"))), rosterDetailMon && renderMonsterDetailModal({
       mon: rosterDetailMon,
       masu: rosterDetailMon.masuId ? getMasuMon(rosterDetailMon.masuId) : null,
       onClose: () => setRosterDetailMon(null),
@@ -33513,15 +33510,15 @@ function MonsterHeroGame() {
           className: `text-[9px] font-black ${isCurrent ? 'text-purple-300' : isNext ? 'text-amber-300' : 'text-slate-500'}`
         }, "Lv.", info.lvl, " ", info.name), isCurrent && /*#__PURE__*/React.createElement("span", {
           className: "text-[7px] bg-purple-500 text-white px-1.5 rounded"
-        }, "所持"), !owned && info.lvl === 0 && /*#__PURE__*/React.createElement("span", {
+        }, "\u6240\u6301"), !owned && info.lvl === 0 && /*#__PURE__*/React.createElement("span", {
           className: "text-[7px] bg-slate-600 text-white px-1.5 rounded"
-        }, "未習得")), /*#__PURE__*/React.createElement("div", {
+        }, "\u672A\u7FD2\u5F97")), /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-300"
         }, info.desc));
       })), /*#__PURE__*/React.createElement("button", {
         onClick: () => setRosterDetailTeaching(null),
         className: "w-full bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs shrink-0"
-      }, "閉じる")));
+      }, "\u9589\u3058\u308B")));
     })(), gameState === 'OWNED_MONSTERS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
@@ -33533,13 +33530,13 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-cyan-400 uppercase tracking-widest"
-    }, "ベースモン一覧")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-3"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "monsterList"
     })), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0"
-    }, "解放済み", unlockedMonsterIds.length, "体・タップで詳細を確認できます"), renderMonsterSortFilterBar({
+    }, "\u89E3\u653E\u6E08\u307F", unlockedMonsterIds.length, "\u4F53\u30FB\u30BF\u30C3\u30D7\u3067\u8A73\u7D30\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"), renderMonsterSortFilterBar({
       singleType: true
     }), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
@@ -33562,7 +33559,7 @@ function MonsterHeroGame() {
         }, masuCount > 0 ? `マスモン${masuCount}体` : 'マスモン未登録'),
         status: monsterDisplayFlags.active && e.active ? /*#__PURE__*/React.createElement("span", {
           className: "text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white"
-        }, "編成中") : null
+        }, "\u7DE8\u6210\u4E2D") : null
       })), /*#__PURE__*/React.createElement("button", {
         onClick: ev => {
           ev.stopPropagation();
@@ -33584,7 +33581,7 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-emerald-300"
-    }, "放牧設定"), /*#__PURE__*/React.createElement("div", {
+    }, "\u653E\u7267\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
       className: "min-w-[52px] text-center text-sm font-black text-emerald-200"
     }, draftHomePastureIds.length, " / 5")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
@@ -33593,9 +33590,9 @@ function MonsterHeroGame() {
       compact: true
     })), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 font-bold mb-3 px-1 shrink-0"
-    }, "HOMEに表示するマスモンをタップで選択してください。0体でも保存できます。"), /*#__PURE__*/React.createElement("div", {
+    }, "HOME\u306B\u8868\u793A\u3059\u308B\u30DE\u30B9\u30E2\u30F3\u3092\u30BF\u30C3\u30D7\u3067\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u30020\u4F53\u3067\u3082\u4FDD\u5B58\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-5 gap-2 mb-2 shrink-0",
-      "aria-label": "選択中の放牧マスモン"
+      "aria-label": "\u9078\u629E\u4E2D\u306E\u653E\u7267\u30DE\u30B9\u30E2\u30F3"
     }, Array.from({
       length: 5
     }, (_, index) => {
@@ -33645,12 +33642,12 @@ function MonsterHeroGame() {
         className: `${MONSTER_CARD_CLASS} relative ${selected ? 'border-emerald-300 bg-emerald-950/80 ring-2 ring-emerald-400/30' : 'border-slate-800 bg-slate-900'} disabled:opacity-35`
       }, selected && /*#__PURE__*/React.createElement("span", {
         className: "absolute top-1 right-1 w-5 h-5 rounded-full bg-emerald-400 text-slate-950 font-black text-xs"
-      }, "✓"), renderMonsterCardBody({
+      }, "\u2713"), renderMonsterCardBody({
         masu,
         base,
         status: selected ? /*#__PURE__*/React.createElement("span", {
           className: "text-[7px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500 text-white"
-        }, "放牧中") : null
+        }, "\u653E\u7267\u4E2D") : null
       })), /*#__PURE__*/React.createElement("button", {
         onClick: ev => {
           ev.stopPropagation();
@@ -33665,7 +33662,7 @@ function MonsterHeroGame() {
     }))), /*#__PURE__*/React.createElement("button", {
       onClick: savePastureSettings,
       className: "w-full min-h-[52px] shrink-0 rounded-2xl bg-emerald-600 text-white font-black shadow-lg active:scale-[.98]"
-    }, "決定（", draftHomePastureIds.length, "体）")), gameState === 'MASU_MONS' && /*#__PURE__*/React.createElement("div", {
+    }, "\u6C7A\u5B9A\uFF08", draftHomePastureIds.length, "\u4F53\uFF09")), gameState === 'MASU_MONS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0"
@@ -33676,13 +33673,13 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-pink-400 uppercase tracking-widest"
-    }, "マスモン一覧")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30DE\u30B9\u30E2\u30F3\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-3"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "masuList"
     })), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0"
-    }, "勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。"), renderMonsterSortFilterBar({
+    }, "\u52C7\u8005\u30E2\u30F3\u3092\u30E9\u30F3\u7D42\u4E86\u6642\u306B\u767B\u9332\u3059\u308B\u3068\u3001\u3053\u3053\u306B\u4E26\u3073\u307E\u3059\u3002\u7DE8\u6210\u753B\u9762\u3067\u9078\u3076\u3068\u6B21\u306E\u5468\u56DE\u3067\u4F7F\u3048\u307E\u3059(\u540C\u3058\u7A2E\u306F1\u4F53\u307E\u3067)\u3002"), renderMonsterSortFilterBar({
       singleType: true
     }), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
@@ -33699,9 +33696,9 @@ function MonsterHeroGame() {
         style: {
           fontSize: '40px'
         }
-      }, "🐾"), /*#__PURE__*/React.createElement("div", {
+      }, "\uD83D\uDC3E"), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] text-slate-400 mt-2"
-      }, masuMons.length === 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, "まだマスモンがいません。", /*#__PURE__*/React.createElement("br", null), "勇者モンでランを終えると登録できます。") : '表示設定で対象がすべてオフになっています。'));
+      }, masuMons.length === 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u52C7\u8005\u30E2\u30F3\u3067\u30E9\u30F3\u3092\u7D42\u3048\u308B\u3068\u767B\u9332\u3067\u304D\u307E\u3059\u3002") : '表示設定で対象がすべてオフになっています。'));
       return /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-2.5 pb-4"
       }, entries.map(e => {
@@ -33720,7 +33717,7 @@ function MonsterHeroGame() {
           nameBand: true,
           status: monsterDisplayFlags.active && e.active ? /*#__PURE__*/React.createElement("span", {
             className: "text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white"
-          }, "編成中") : null
+          }, "\u7DE8\u6210\u4E2D") : null
         })), /*#__PURE__*/React.createElement("button", {
           onClick: ev => {
             ev.stopPropagation();
@@ -33790,33 +33787,33 @@ function MonsterHeroGame() {
         className: "shrink-0 mt-2 bg-black/40 border border-violet-500/30 rounded-2xl p-3 space-y-1.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black text-violet-300 uppercase tracking-wider"
-      }, "合体のルール"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5408\u4F53\u306E\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-300 leading-relaxed"
-      }, "・", /*#__PURE__*/React.createElement("span", {
+      }, "\u30FB", /*#__PURE__*/React.createElement("span", {
         className: "text-white font-bold"
-      }, "主"), "が残り、", /*#__PURE__*/React.createElement("span", {
+      }, "\u4E3B"), "\u304C\u6B8B\u308A\u3001", /*#__PURE__*/React.createElement("span", {
         className: "text-white font-bold"
-      }, "副"), "は消滅します。副の絆経験値は累計のまま主に加算されます"), /*#__PURE__*/React.createElement("div", {
+      }, "\u526F"), "\u306F\u6D88\u6EC5\u3057\u307E\u3059\u3002\u526F\u306E\u7D46\u7D4C\u9A13\u5024\u306F\u7D2F\u8A08\u306E\u307E\u307E\u4E3B\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-300 leading-relaxed"
-      }, "・上がった絆レベルの数だけ、主が", /*#__PURE__*/React.createElement("span", {
+      }, "\u30FB\u4E0A\u304C\u3063\u305F\u7D46\u30EC\u30D9\u30EB\u306E\u6570\u3060\u3051\u3001\u4E3B\u304C", /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300 font-bold"
-      }, "強化ポイント"), "を獲得します"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8"), "\u3092\u7372\u5F97\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-300 leading-relaxed"
-      }, "・主の名前・見た目・間合い適性・ステータス強化は", /*#__PURE__*/React.createElement("span", {
+      }, "\u30FB\u4E3B\u306E\u540D\u524D\u30FB\u898B\u305F\u76EE\u30FB\u9593\u5408\u3044\u9069\u6027\u30FB\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316\u306F", /*#__PURE__*/React.createElement("span", {
         className: "text-white font-bold"
-      }, "そのまま維持"), "されます(副の強化は引き継がれません)"), /*#__PURE__*/React.createElement("div", {
+      }, "\u305D\u306E\u307E\u307E\u7DAD\u6301"), "\u3055\u308C\u307E\u3059(\u526F\u306E\u5F37\u5316\u306F\u5F15\u304D\u7D99\u304C\u308C\u307E\u305B\u3093)"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-300 leading-relaxed"
-      }, "・技を引き継がない合体は", /*#__PURE__*/React.createElement("span", {
+      }, "\u30FB\u6280\u3092\u5F15\u304D\u7D99\u304C\u306A\u3044\u5408\u4F53\u306F", /*#__PURE__*/React.createElement("span", {
         className: "text-cyan-300 font-bold"
-      }, "0ダイヤ"), "、引き継ぐ合体は", /*#__PURE__*/React.createElement("span", {
+      }, "0\u30C0\u30A4\u30E4"), "\u3001\u5F15\u304D\u7D99\u3050\u5408\u4F53\u306F", /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300 font-bold"
-      }, "3000ダイヤ"), "です"), /*#__PURE__*/React.createElement("div", {
+      }, "3000\u30C0\u30A4\u30E4"), "\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-amber-200 leading-relaxed border-t border-white/10 pt-1.5"
-      }, "・", /*#__PURE__*/React.createElement("span", {
+      }, "\u30FB", /*#__PURE__*/React.createElement("span", {
         className: "font-bold"
-      }, "固有技の引き継ぎ"), "は、", /*#__PURE__*/React.createElement("span", {
+      }, "\u56FA\u6709\u6280\u306E\u5F15\u304D\u7D99\u304E"), "\u306F\u3001", /*#__PURE__*/React.createElement("span", {
         className: "font-bold"
-      }, "副が絆Lv.30以上"), "のときだけ選べます。条件を満たすと副の固有技が主に記録されます"));
+      }, "\u526F\u304C\u7D46Lv.30\u4EE5\u4E0A"), "\u306E\u3068\u304D\u3060\u3051\u9078\u3079\u307E\u3059\u3002\u6761\u4EF6\u3092\u6E80\u305F\u3059\u3068\u526F\u306E\u56FA\u6709\u6280\u304C\u4E3B\u306B\u8A18\u9332\u3055\u308C\u307E\u3059"));
       if (fusionStep === 'main') {
         return /*#__PURE__*/React.createElement("div", {
           className: "flex-1 flex flex-col h-full min-h-0 p-4"
@@ -33829,9 +33826,9 @@ function MonsterHeroGame() {
           size: 20
         })), /*#__PURE__*/React.createElement("h2", {
           className: "text-xl font-black italic text-violet-400 uppercase tracking-widest"
-        }, "合体・主を選ぶ")), /*#__PURE__*/React.createElement("div", {
+        }, "\u5408\u4F53\u30FB\u4E3B\u3092\u9078\u3076")), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
-        }, "絆経験値を受け継いで残る「主」となるマスモンを選んでください"), /*#__PURE__*/React.createElement("div", {
+        }, "\u7D46\u7D4C\u9A13\u5024\u3092\u53D7\u3051\u7D99\u3044\u3067\u6B8B\u308B\u300C\u4E3B\u300D\u3068\u306A\u308B\u30DE\u30B9\u30E2\u30F3\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044"), /*#__PURE__*/React.createElement("div", {
           className: "shrink-0 w-full max-w-md mx-auto mb-2"
         }, /*#__PURE__*/React.createElement(AssistantBubble, {
           scene: "fusion",
@@ -33875,7 +33872,7 @@ function MonsterHeroGame() {
             className: "text-[7px] text-pink-300 font-black flex items-center gap-0.5"
           }, /*#__PURE__*/React.createElement(Heart, {
             size: 6
-          }), "絆Lv.", lvl.level)), /*#__PURE__*/React.createElement("button", {
+          }), "\u7D46Lv.", lvl.level)), /*#__PURE__*/React.createElement("button", {
             onClick: ev => {
               ev.stopPropagation();
               setMasuMonDetail(masu);
@@ -33922,31 +33919,31 @@ function MonsterHeroGame() {
           size: 20
         })), /*#__PURE__*/React.createElement("h2", {
           className: "text-xl font-black italic text-violet-400 uppercase tracking-widest"
-        }, "合体・副を選ぶ")), /*#__PURE__*/React.createElement("div", {
+        }, "\u5408\u4F53\u30FB\u526F\u3092\u9078\u3076")), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
-        }, "「", main.name, "」に絆経験値を渡す「副」をタップして選択／解除してください"), /*#__PURE__*/React.createElement("div", {
+        }, "\u300C", main.name, "\u300D\u306B\u7D46\u7D4C\u9A13\u5024\u3092\u6E21\u3059\u300C\u526F\u300D\u3092\u30BF\u30C3\u30D7\u3057\u3066\u9078\u629E\uFF0F\u89E3\u9664\u3057\u3066\u304F\u3060\u3055\u3044"), /*#__PURE__*/React.createElement("div", {
           className: "shrink-0 mb-2 rounded-2xl border border-violet-400/50 bg-violet-950/50 p-3"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex items-center justify-between gap-2"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-sm font-black text-white"
-        }, "副 ", /*#__PURE__*/React.createElement("span", {
+        }, "\u526F ", /*#__PURE__*/React.createElement("span", {
           className: "text-violet-300"
-        }, selectedSubs.length, "体"), "選択中"), selectedSubs.length > 0 && /*#__PURE__*/React.createElement("button", {
+        }, selectedSubs.length, "\u4F53"), "\u9078\u629E\u4E2D"), selectedSubs.length > 0 && /*#__PURE__*/React.createElement("button", {
           onClick: () => {
             setFusionSubId(null);
             setFusionSubIds([]);
           },
           className: "min-h-9 px-3 rounded-xl border border-white/15 bg-slate-900 text-[9px] font-black text-slate-200 active:scale-95"
-        }, "すべて解除")), /*#__PURE__*/React.createElement("div", {
+        }, "\u3059\u3079\u3066\u89E3\u9664")), /*#__PURE__*/React.createElement("div", {
           className: "mt-2 grid grid-cols-2 gap-2 text-[9px] font-bold"
         }, /*#__PURE__*/React.createElement("div", {
           className: "rounded-xl bg-black/30 p-2 text-slate-300"
-        }, "獲得予定XP", /*#__PURE__*/React.createElement("span", {
+        }, "\u7372\u5F97\u4E88\u5B9AXP", /*#__PURE__*/React.createElement("span", {
           className: "block text-sm text-cyan-300 font-black"
         }, "+", totalSubXp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "rounded-xl bg-black/30 p-2 text-slate-300"
-        }, "主の予定値", /*#__PURE__*/React.createElement("span", {
+        }, "\u4E3B\u306E\u4E88\u5B9A\u5024", /*#__PURE__*/React.createElement("span", {
           className: "block text-sm text-emerald-300 font-black"
         }, "Lv.", plannedLevel, " / ", plannedXp.toLocaleString(), " XP"))), selectedSubs.length > 0 && /*#__PURE__*/React.createElement("div", {
           className: "mt-2 max-h-16 overflow-y-auto mh-scroll space-y-1"
@@ -33955,11 +33952,11 @@ function MonsterHeroGame() {
           className: "flex justify-between gap-2 text-[9px] text-slate-200"
         }, /*#__PURE__*/React.createElement("span", {
           className: "truncate"
-        }, sub.name, "・絆Lv.", masuBondLevelInfo(sub).level), /*#__PURE__*/React.createElement("span", {
+        }, sub.name, "\u30FB\u7D46Lv.", masuBondLevelInfo(sub).level), /*#__PURE__*/React.createElement("span", {
           className: "shrink-0 text-cyan-300"
         }, "+", cappedBondXp(sub).toLocaleString(), " XP")))), selectedSubs.length > 1 && /*#__PURE__*/React.createElement("div", {
           className: "mt-2 rounded-xl border border-violet-500/40 bg-violet-950/40 p-2 text-[9px] font-bold text-violet-200"
-        }, "複数副を選択順にまとめて合体します。固有技継承は確認画面で副ごとに選べ、Lv上限を超える場合は「限界突破して合体」も選べます。"), /*#__PURE__*/React.createElement("button", {
+        }, "\u8907\u6570\u526F\u3092\u9078\u629E\u9806\u306B\u307E\u3068\u3081\u3066\u5408\u4F53\u3057\u307E\u3059\u3002\u56FA\u6709\u6280\u7D99\u627F\u306F\u78BA\u8A8D\u753B\u9762\u3067\u526F\u3054\u3068\u306B\u9078\u3079\u3001Lv\u4E0A\u9650\u3092\u8D85\u3048\u308B\u5834\u5408\u306F\u300C\u9650\u754C\u7A81\u7834\u3057\u3066\u5408\u4F53\u300D\u3082\u9078\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
           onClick: continueWithFusionSubs,
           disabled: selectedSubs.length === 0,
           className: "mt-2 w-full min-h-11 rounded-xl bg-violet-600 text-white text-xs font-black disabled:bg-slate-800 disabled:text-slate-500 active:scale-95"
@@ -33976,9 +33973,9 @@ function MonsterHeroGame() {
           style: {
             fontSize: '40px'
           }
-        }, "💫"), /*#__PURE__*/React.createElement("div", {
+        }, "\uD83D\uDCAB"), /*#__PURE__*/React.createElement("div", {
           className: "text-[11px] text-slate-400 mt-2"
-        }, "合体できる他のマスモンがいません。")) : /*#__PURE__*/React.createElement("div", {
+        }, "\u5408\u4F53\u3067\u304D\u308B\u4ED6\u306E\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002")) : /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2.5 pb-4"
         }, candidates.map(masu => {
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -34012,7 +34009,7 @@ function MonsterHeroGame() {
             className: "text-[7px] text-pink-300 font-black flex items-center gap-0.5"
           }, /*#__PURE__*/React.createElement(Heart, {
             size: 6
-          }), "絆Lv.", lvl.level), selected && /*#__PURE__*/React.createElement("div", {
+          }), "\u7D46Lv.", lvl.level), selected && /*#__PURE__*/React.createElement("div", {
             className: "absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-violet-500 border-2 border-white flex items-center justify-center shadow-lg"
           }, /*#__PURE__*/React.createElement(Check, {
             size: 13,
@@ -34106,7 +34103,7 @@ function MonsterHeroGame() {
           size: 20
         })), /*#__PURE__*/React.createElement("h2", {
           className: "text-xl font-black italic text-violet-400 uppercase tracking-widest"
-        }, "合体の確認")), /*#__PURE__*/React.createElement("div", {
+        }, "\u5408\u4F53\u306E\u78BA\u8A8D")), /*#__PURE__*/React.createElement("div", {
           className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex items-center justify-center gap-3 mb-3"
@@ -34124,7 +34121,7 @@ function MonsterHeroGame() {
           className: "text-[9px] font-black text-violet-200"
         }, main.name), /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-amber-300 font-black"
-        }, "主(残る)")), /*#__PURE__*/React.createElement(Sparkles, {
+        }, "\u4E3B(\u6B8B\u308B)")), /*#__PURE__*/React.createElement(Sparkles, {
           size: 20,
           className: "text-amber-300"
         }), /*#__PURE__*/React.createElement("div", {
@@ -34141,173 +34138,173 @@ function MonsterHeroGame() {
           className: "text-[9px] font-black text-slate-300"
         }, sub.name), /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-slate-500 font-black"
-        }, "副", selectedSubs.length, "体(すべて消える)"))), /*#__PURE__*/React.createElement("div", {
+        }, "\u526F", selectedSubs.length, "\u4F53(\u3059\u3079\u3066\u6D88\u3048\u308B)"))), /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-3 rounded-xl border border-pink-500/30 mb-2"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] font-black text-pink-300 uppercase tracking-wider mb-2"
-        }, "合体後の「", main.name, "」"), /*#__PURE__*/React.createElement("div", {
+        }, "\u5408\u4F53\u5F8C\u306E\u300C", main.name, "\u300D"), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 items-center gap-1 mb-2"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-center"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-slate-500 font-bold"
-        }, "いま"), /*#__PURE__*/React.createElement("div", {
+        }, "\u3044\u307E"), /*#__PURE__*/React.createElement("div", {
           className: "text-[15px] font-mono font-black text-slate-300"
-        }, "絆Lv.", mainLvl.level)), /*#__PURE__*/React.createElement("div", {
+        }, "\u7D46Lv.", mainLvl.level)), /*#__PURE__*/React.createElement("div", {
           className: "text-center text-slate-500 text-[14px] font-black"
-        }, "→"), /*#__PURE__*/React.createElement("div", {
+        }, "\u2192"), /*#__PURE__*/React.createElement("div", {
           className: "text-center"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-pink-400 font-bold"
-        }, "合体後"), /*#__PURE__*/React.createElement("div", {
+        }, "\u5408\u4F53\u5F8C"), /*#__PURE__*/React.createElement("div", {
           className: "text-[15px] font-mono font-black text-pink-300"
-        }, "絆Lv.", afterLvl.level), /*#__PURE__*/React.createElement("div", {
+        }, "\u7D46Lv.", afterLvl.level), /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-slate-500 font-bold"
-        }, "上限 Lv.", mainCap))), /*#__PURE__*/React.createElement("div", {
+        }, "\u4E0A\u9650 Lv.", mainCap))), /*#__PURE__*/React.createElement("div", {
           className: "space-y-1"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "絆レベル"), /*#__PURE__*/React.createElement("span", {
+        }, "\u7D46\u30EC\u30D9\u30EB"), /*#__PURE__*/React.createElement("span", {
           className: `font-black ${gainedLevels > 0 ? 'text-pink-300' : 'text-slate-400'}`
         }, gainedLevels > 0 ? `+${gainedLevels}` : '変化なし')), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "絆経験値"), /*#__PURE__*/React.createElement("span", {
+        }, "\u7D46\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
           className: "text-white font-black"
-        }, (main.bondXp || 0).toLocaleString(), " → ", afterXp.toLocaleString(), " XP")), /*#__PURE__*/React.createElement("div", {
+        }, (main.bondXp || 0).toLocaleString(), " \u2192 ", afterXp.toLocaleString(), " XP")), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "次のレベルまで"), /*#__PURE__*/React.createElement("span", {
+        }, "\u6B21\u306E\u30EC\u30D9\u30EB\u307E\u3067"), /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300 font-black"
         }, afterLvl.xpIntoLevel.toLocaleString(), " / ", afterLvl.xpForNext.toLocaleString(), " XP")), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "強化ポイント"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
           className: `font-black ${gainedLevelPoints + reincarnateTransfer.points > 0 ? 'text-amber-300' : 'text-slate-400'}`
-        }, mainPointsNow, " → ", mainPointsNow + gainedLevelPoints + reincarnateTransfer.points, gainedLevelPoints + reincarnateTransfer.points > 0 && /*#__PURE__*/React.createElement("span", {
+        }, mainPointsNow, " \u2192 ", mainPointsNow + gainedLevelPoints + reincarnateTransfer.points, gainedLevelPoints + reincarnateTransfer.points > 0 && /*#__PURE__*/React.createElement("span", {
           className: "text-amber-200"
         }, " (+", gainedLevelPoints + reincarnateTransfer.points, ")")))), gainedLevels === 0 && wastedXp === 0 && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-500 leading-relaxed mt-2"
-        }, "※ 絆経験値は加算されますが、次のレベルには届きません(強化ポイントは増えません)"), wastedXp > 0 && /*#__PURE__*/React.createElement("div", {
+        }, "\u203B \u7D46\u7D4C\u9A13\u5024\u306F\u52A0\u7B97\u3055\u308C\u307E\u3059\u304C\u3001\u6B21\u306E\u30EC\u30D9\u30EB\u306B\u306F\u5C4A\u304D\u307E\u305B\u3093(\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306F\u5897\u3048\u307E\u305B\u3093)"), wastedXp > 0 && /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-amber-200 leading-relaxed mt-2 bg-amber-950/40 border border-amber-500/40 rounded-xl px-2.5 py-2"
         }, /*#__PURE__*/React.createElement("b", {
           className: "text-amber-300"
-        }, "この合体ではLv上限を超える経験値を獲得します"), /*#__PURE__*/React.createElement("br", null), "通常合体では、超過する ", wastedXp.toLocaleString(), " XP は失われます。")), breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("div", {
+        }, "\u3053\u306E\u5408\u4F53\u3067\u306FLv\u4E0A\u9650\u3092\u8D85\u3048\u308B\u7D4C\u9A13\u5024\u3092\u7372\u5F97\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("br", null), "\u901A\u5E38\u5408\u4F53\u3067\u306F\u3001\u8D85\u904E\u3059\u308B ", wastedXp.toLocaleString(), " XP \u306F\u5931\u308F\u308C\u307E\u3059\u3002")), breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("div", {
           className: "bg-violet-950/45 p-3 rounded-xl border border-violet-400/50 mb-2 space-y-1"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-black text-violet-200"
-        }, /*#__PURE__*/React.createElement("span", null, "合体後予定"), /*#__PURE__*/React.createElement("span", null, "Lv.", breakthroughPlan.plannedLevel)), /*#__PURE__*/React.createElement("div", {
+        }, /*#__PURE__*/React.createElement("span", null, "\u5408\u4F53\u5F8C\u4E88\u5B9A"), /*#__PURE__*/React.createElement("span", null, "Lv.", breakthroughPlan.plannedLevel)), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[9px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "現在のLv上限"), /*#__PURE__*/React.createElement("span", null, "Lv.", mainCap)), /*#__PURE__*/React.createElement("div", {
+        }, "\u73FE\u5728\u306ELv\u4E0A\u9650"), /*#__PURE__*/React.createElement("span", null, "Lv.", mainCap)), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-black"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300"
-        }, "必要な限界突破"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5FC5\u8981\u306A\u9650\u754C\u7A81\u7834"), /*#__PURE__*/React.createElement("span", {
           className: "text-violet-300"
-        }, "×", breakthroughPlan.count)), /*#__PURE__*/React.createElement("div", {
+        }, "\xD7", breakthroughPlan.count)), /*#__PURE__*/React.createElement("div", {
           className: `flex justify-between text-[9px] font-bold ${breakthroughPlan.psycheShortage ? 'text-red-300' : 'text-fuchsia-300'}`
-        }, /*#__PURE__*/React.createElement("span", null, "虹のプシュケー"), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.psycheHave.toLocaleString(), " / ", breakthroughPlan.psycheCost.toLocaleString(), breakthroughPlan.psycheShortage ? `（あと${breakthroughPlan.psycheShortage.toLocaleString()}個）` : '')), /*#__PURE__*/React.createElement("div", {
+        }, /*#__PURE__*/React.createElement("span", null, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.psycheHave.toLocaleString(), " / ", breakthroughPlan.psycheCost.toLocaleString(), breakthroughPlan.psycheShortage ? `（あと${breakthroughPlan.psycheShortage.toLocaleString()}個）` : '')), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[9px] font-bold text-amber-300"
-        }, /*#__PURE__*/React.createElement("span", null, "限界突破のダイヤ"), /*#__PURE__*/React.createElement("span", null, breakthroughDiamondCost.toLocaleString())), breakthroughPlan.diamondCosts.length > 1 && /*#__PURE__*/React.createElement("div", {
+        }, /*#__PURE__*/React.createElement("span", null, "\u9650\u754C\u7A81\u7834\u306E\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", null, breakthroughDiamondCost.toLocaleString())), breakthroughPlan.diamondCosts.length > 1 && /*#__PURE__*/React.createElement("div", {
           className: "text-right text-[7px] text-slate-400"
         }, breakthroughPlan.diamondCosts.map(value => value.toLocaleString()).join(' + ')), !breakthroughPlan.canReceiveAll && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-red-300 font-black"
-        }, "最大上限Lv.", MAX_MASU_LEVEL_CAP, "でも全XPは受け取れません。"), /*#__PURE__*/React.createElement("div", {
+        }, "\u6700\u5927\u4E0A\u9650Lv.", MAX_MASU_LEVEL_CAP, "\u3067\u3082\u5168XP\u306F\u53D7\u3051\u53D6\u308C\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-slate-400"
-        }, "限界突破分の固有技ポイントは「あとで決める」として保持されます。")), /*#__PURE__*/React.createElement("div", {
+        }, "\u9650\u754C\u7A81\u7834\u5206\u306E\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3068\u3057\u3066\u4FDD\u6301\u3055\u308C\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "副の数"), /*#__PURE__*/React.createElement("span", {
+        }, "\u526F\u306E\u6570"), /*#__PURE__*/React.createElement("span", {
           className: "text-violet-300 font-black"
-        }, selectedSubs.length, "体")), /*#__PURE__*/React.createElement("div", {
+        }, selectedSubs.length, "\u4F53")), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "合計獲得予定XP"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5408\u8A08\u7372\u5F97\u4E88\u5B9AXP"), /*#__PURE__*/React.createElement("span", {
           className: "text-pink-300 font-black"
         }, subXp.toLocaleString(), " XP")), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "実際に入るXP"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5B9F\u969B\u306B\u5165\u308BXP"), /*#__PURE__*/React.createElement("span", {
           className: "text-emerald-300 font-black"
         }, Math.max(0, afterXp - beforeXp).toLocaleString(), " XP")), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "失われるXP"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5931\u308F\u308C\u308BXP"), /*#__PURE__*/React.createElement("span", {
           className: wastedXp > 0 ? "text-amber-300 font-black" : "text-slate-300 font-black"
         }, wastedXp.toLocaleString(), " XP")), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "合体後予定Lv"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5408\u4F53\u5F8C\u4E88\u5B9ALv"), /*#__PURE__*/React.createElement("span", {
           className: "text-pink-300 font-black"
         }, "Lv.", afterLvl.level)), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "転生育成ボーナス"), /*#__PURE__*/React.createElement("span", {
+        }, "\u8EE2\u751F\u80B2\u6210\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("span", {
           className: "text-amber-300 font-black"
-        }, reincarnateTransfer.count, "回分 / +", reincarnateTransfer.points, "P")), reincarnateTransfer.count > 0 && /*#__PURE__*/React.createElement("div", {
+        }, reincarnateTransfer.count, "\u56DE\u5206 / +", reincarnateTransfer.points, "P")), reincarnateTransfer.count > 0 && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-400"
         }, selectedSubs.length === 1 ? `副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します` : `選択した副${selectedSubs.length}体の転生由来分をすべて累積します`), /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] font-black text-violet-200 tracking-wider"
-        }, "ダイヤ消費"), /*#__PURE__*/React.createElement("div", {
+        }, "\u30C0\u30A4\u30E4\u6D88\u8CBB"), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "所持ダイヤ"), /*#__PURE__*/React.createElement("span", {
+        }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
           className: "text-white font-black"
         }, diamondSummary.goldBefore.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "継承する固有技数"), /*#__PURE__*/React.createElement("span", {
+        }, "\u7D99\u627F\u3059\u308B\u56FA\u6709\u6280\u6570"), /*#__PURE__*/React.createElement("span", {
           className: "text-amber-300 font-black"
-        }, inheritancePlan.inheritCount, "個")), /*#__PURE__*/React.createElement("div", {
+        }, inheritancePlan.inheritCount, "\u500B")), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between gap-2 text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400 shrink-0"
-        }, "継承対象"), /*#__PURE__*/React.createElement("span", {
+        }, "\u7D99\u627F\u5BFE\u8C61"), /*#__PURE__*/React.createElement("span", {
           className: "text-amber-200 font-black text-right"
         }, inheritancePlan.inheritedEntries.length ? inheritancePlan.inheritedEntries.map(entry => `${entry.sub.name}「${entry.subBase.unique.name}」`).join('、') : 'なし')), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "固有技継承ダイヤ合計"), /*#__PURE__*/React.createElement("span", {
+        }, "\u56FA\u6709\u6280\u7D99\u627F\u30C0\u30A4\u30E4\u5408\u8A08"), /*#__PURE__*/React.createElement("span", {
           className: "text-amber-300 font-black"
         }, inheritCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "限界突破 ×", breakthroughPlan.count), /*#__PURE__*/React.createElement("span", {
+        }, "\u9650\u754C\u7A81\u7834 \xD7", breakthroughPlan.count), /*#__PURE__*/React.createElement("span", {
           className: "text-amber-300 font-black"
         }, breakthroughDiamondCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "border-t border-slate-700 pt-1 flex justify-between text-[11px] font-black"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-200"
-        }, "合計消費"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5408\u8A08\u6D88\u8CBB"), /*#__PURE__*/React.createElement("span", {
           className: diamondShortage ? 'text-red-300' : 'text-amber-300'
         }, totalDiamondCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[11px] font-black"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-200"
-        }, "合体後ダイヤ残高"), /*#__PURE__*/React.createElement("span", {
+        }, "\u5408\u4F53\u5F8C\u30C0\u30A4\u30E4\u6B8B\u9AD8"), /*#__PURE__*/React.createElement("span", {
           className: diamondShortage ? 'text-red-300' : 'text-emerald-300'
         }, Math.max(0, diamondAfter).toLocaleString())), diamondShortage > 0 && /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-red-300 font-black text-right"
-        }, "あと", diamondShortage.toLocaleString(), "ダイヤ必要")), /*#__PURE__*/React.createElement("div", {
+        }, "\u3042\u3068", diamondShortage.toLocaleString(), "\u30C0\u30A4\u30E4\u5FC5\u8981")), /*#__PURE__*/React.createElement("div", {
           className: "space-y-2 mb-2"
         }, inheritancePlan.entries.map(entry => {
           const selected = fusionInheritUniqueIds.includes(entry.sub.id);
@@ -34320,7 +34317,7 @@ function MonsterHeroGame() {
             className: `w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border active:scale-95 disabled:opacity-60 ${selected && !disabled ? 'bg-amber-950/50 border-amber-500' : 'bg-slate-900 border-slate-800'}`
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-[10px] font-black text-left text-white"
-          }, entry.sub.name, "：", entry.subBase?.unique ? `固有技「${entry.subBase.unique.name}」を引き継ぐ` : '継承可能な固有技なし', reason && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+          }, entry.sub.name, "\uFF1A", entry.subBase?.unique ? `固有技「${entry.subBase.unique.name}」を引き継ぐ` : '継承可能な固有技なし', reason && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
             className: "text-[7px] text-slate-500 font-bold"
           }, reason, selected && entry.duplicate ? '（選択中ですが費用・継承対象には含みません）' : ''))), /*#__PURE__*/React.createElement("div", {
             className: `w-9 h-5 rounded-full shrink-0 relative ${selected && !disabled ? 'bg-amber-500' : 'bg-slate-700'}`
@@ -34333,9 +34330,9 @@ function MonsterHeroGame() {
           className: "text-[9px] text-red-300 font-black flex items-center gap-1 mb-1"
         }, /*#__PURE__*/React.createElement(AlertCircle, {
           size: 11
-        }), "注意"), /*#__PURE__*/React.createElement("div", {
+        }), "\u6CE8\u610F"), /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-red-200/90 leading-relaxed"
-        }, "合体すると", selectedSubs.length === 1 ? `副の「${sub.name}」` : `選択した副${selectedSubs.length}体`, "はいなくなります。この操作は取り消せません。"))), /*#__PURE__*/React.createElement("div", {
+        }, "\u5408\u4F53\u3059\u308B\u3068", selectedSubs.length === 1 ? `副の「${sub.name}」` : `選択した副${selectedSubs.length}体`, "\u306F\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-1 gap-2 shrink-0 mt-1"
         }, breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("button", {
           onClick: async () => {
@@ -34350,9 +34347,9 @@ function MonsterHeroGame() {
           className: "w-full py-2.5 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"
         }, /*#__PURE__*/React.createElement(Star, {
           size: 16
-        }), /*#__PURE__*/React.createElement("span", null, "限界突破 ×", breakthroughPlan.count, " して合体", /*#__PURE__*/React.createElement("span", {
+        }), /*#__PURE__*/React.createElement("span", null, "\u9650\u754C\u7A81\u7834 \xD7", breakthroughPlan.count, " \u3057\u3066\u5408\u4F53", /*#__PURE__*/React.createElement("span", {
           className: "block text-[8px] font-bold opacity-80"
-        }, totalDiamondCost.toLocaleString(), "ダイヤ消費 → 残り", Math.max(0, diamondAfter).toLocaleString()))), /*#__PURE__*/React.createElement("button", {
+        }, totalDiamondCost.toLocaleString(), "\u30C0\u30A4\u30E4\u6D88\u8CBB \u2192 \u6B8B\u308A", Math.max(0, diamondAfter).toLocaleString()))), /*#__PURE__*/React.createElement("button", {
           onClick: async () => {
             if (!canAfford) return;
             const result = await executeMasuFusion(false);
@@ -34367,7 +34364,7 @@ function MonsterHeroGame() {
           size: 16
         }), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.count > 0 ? '通常合体' : '合体する', /*#__PURE__*/React.createElement("span", {
           className: "block text-[8px] normal-case font-bold opacity-80"
-        }, diamondSummary.normalDiamondCost.toLocaleString(), "ダイヤ消費 → 残り", Math.max(0, diamondSummary.normalDiamondAfter).toLocaleString())))));
+        }, diamondSummary.normalDiamondCost.toLocaleString(), "\u30C0\u30A4\u30E4\u6D88\u8CBB \u2192 \u6B8B\u308A", Math.max(0, diamondSummary.normalDiamondAfter).toLocaleString())))));
       }
       if (fusionStep === 'anim') {
         const d = fusionResultData;
@@ -34446,7 +34443,7 @@ function MonsterHeroGame() {
         className: "text-amber-300 mb-2"
       }), /*#__PURE__*/React.createElement("h2", {
         className: "text-lg font-black text-white mb-1"
-      }, "合体完了！"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5408\u4F53\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("div", {
         className: "w-24 h-24 rounded-full overflow-hidden border-4 border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.5)] mb-3 bg-slate-900"
       }, d.mainIconUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: d.mainBaseId,
@@ -34458,13 +34455,13 @@ function MonsterHeroGame() {
         className: "w-full h-full flex items-center justify-center text-5xl"
       }, d.mainEmoji)), /*#__PURE__*/React.createElement("div", {
         className: "text-sm font-black text-white text-center mb-3"
-      }, d.mainName, "が", d.subCount > 1 ? `副${d.subCount}体を合体し、` : /*#__PURE__*/React.createElement(React.Fragment, null, "「", d.subName, "」の"), "絆経験値", /*#__PURE__*/React.createElement("span", {
+      }, d.mainName, "\u304C", d.subCount > 1 ? `副${d.subCount}体を合体し、` : /*#__PURE__*/React.createElement(React.Fragment, null, "\u300C", d.subName, "\u300D\u306E"), "\u7D46\u7D4C\u9A13\u5024", /*#__PURE__*/React.createElement("span", {
         className: "text-pink-300"
-      }, " ", d.gainedXp.toLocaleString(), " XP"), "を受け継いだ！"), /*#__PURE__*/React.createElement("div", {
+      }, " ", d.gainedXp.toLocaleString(), " XP"), "\u3092\u53D7\u3051\u7D99\u3044\u3060\uFF01"), /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-xs bg-black/40 border border-pink-500/30 rounded-2xl p-3 mb-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[9px] text-pink-300 font-black mb-1"
-      }, /*#__PURE__*/React.createElement("span", null, "絆Lv.", d.before.level), /*#__PURE__*/React.createElement("span", null, "→"), /*#__PURE__*/React.createElement("span", null, "絆Lv.", d.after.level)), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u7D46Lv.", d.before.level), /*#__PURE__*/React.createElement("span", null, "\u2192"), /*#__PURE__*/React.createElement("span", null, "\u7D46Lv.", d.after.level)), /*#__PURE__*/React.createElement("div", {
         className: "w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"
       }, /*#__PURE__*/React.createElement("div", {
         className: "h-full bg-gradient-to-r from-pink-500 to-rose-400",
@@ -34473,16 +34470,16 @@ function MonsterHeroGame() {
         }
       })), d.gainedLevels > 0 && /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-emerald-400 font-black text-center mt-1"
-      }, "絆レベルが", d.gainedLevels, "上がった！")), d.inherited && /*#__PURE__*/React.createElement("div", {
+      }, "\u7D46\u30EC\u30D9\u30EB\u304C", d.gainedLevels, "\u4E0A\u304C\u3063\u305F\uFF01")), d.inherited && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2"
-      }, "「", d.subName, "」の固有技を継承データとして記録しました"), d.inheritedReincarnateCount > 0 && /*#__PURE__*/React.createElement("div", {
+      }, "\u300C", d.subName, "\u300D\u306E\u56FA\u6709\u6280\u3092\u7D99\u627F\u30C7\u30FC\u30BF\u3068\u3057\u3066\u8A18\u9332\u3057\u307E\u3057\u305F"), d.inheritedReincarnateCount > 0 && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-200 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2"
-      }, "転生育成ボーナス ", d.inheritedReincarnateCount, "回分（強化ポイント +", d.inheritedReincarnatePoints, "）を継承しました"), /*#__PURE__*/React.createElement("div", {
+      }, "\u8EE2\u751F\u80B2\u6210\u30DC\u30FC\u30CA\u30B9 ", d.inheritedReincarnateCount, "\u56DE\u5206\uFF08\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", d.inheritedReincarnatePoints, "\uFF09\u3092\u7D99\u627F\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-500 font-bold mb-4"
-      }, "ダイヤを", d.cost.toLocaleString(), "消費しました"), /*#__PURE__*/React.createElement("button", {
+      }, "\u30C0\u30A4\u30E4\u3092", d.cost.toLocaleString(), "\u6D88\u8CBB\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
         onClick: continueFusionFlow,
         className: "w-full max-w-xs bg-violet-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95"
-      }, "とじる"));
+      }, "\u3068\u3058\u308B"));
     })(), gameState === 'ITEM_INVENTORY' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
@@ -34494,14 +34491,14 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-teal-400 uppercase tracking-widest"
-    }, "アイテム")), /*#__PURE__*/React.createElement("div", {
+    }, "\u30A2\u30A4\u30C6\u30E0")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "inventory",
       compact: true
     })), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
-    }, "マーケットで買った消耗アイテムです。「使う」から対象のマスモンを選べます。"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u8CB7\u3063\u305F\u6D88\u8017\u30A2\u30A4\u30C6\u30E0\u3067\u3059\u3002\u300C\u4F7F\u3046\u300D\u304B\u3089\u5BFE\u8C61\u306E\u30DE\u30B9\u30E2\u30F3\u3092\u9078\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0).length === 0 ? /*#__PURE__*/React.createElement("div", {
       className: "empty-state",
@@ -34514,9 +34511,9 @@ function MonsterHeroGame() {
       style: {
         fontSize: '40px'
       }
-    }, "🎒"), /*#__PURE__*/React.createElement("div", {
+    }, "\uD83C\uDF92"), /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] text-slate-400 mt-2"
-    }, "まだアイテムを持っていません。", /*#__PURE__*/React.createElement("br", null), "マーケットの「アイテム」タブから購入できます。")) : /*#__PURE__*/React.createElement("div", {
+    }, "\u307E\u3060\u30A2\u30A4\u30C6\u30E0\u3092\u6301\u3063\u3066\u3044\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u30BF\u30D6\u304B\u3089\u8CFC\u5165\u3067\u304D\u307E\u3059\u3002")) : /*#__PURE__*/React.createElement("div", {
       className: "flex flex-col gap-2 pb-4"
     }, BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0).map(item => /*#__PURE__*/React.createElement("div", {
       key: item.id,
@@ -34537,18 +34534,18 @@ function MonsterHeroGame() {
       className: "text-[8px] text-slate-400 leading-tight mt-0.5"
     }, item.desc), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] font-black text-teal-300 mt-0.5"
-    }, "所持数: ", ownedItems[item.id])), item.usage === 'battleSkip' ? /*#__PURE__*/React.createElement("div", {
+    }, "\u6240\u6301\u6570: ", ownedItems[item.id])), item.usage === 'battleSkip' ? /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2"
-    }, "バトルの", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "スキップで使用") : item.usage === 'breakthrough' ? /*#__PURE__*/React.createElement("div", {
+    }, "\u30D0\u30C8\u30EB\u306E", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "\u30B9\u30AD\u30C3\u30D7\u3067\u4F7F\u7528") : item.usage === 'breakthrough' ? /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2"
-    }, "神殿の", /*#__PURE__*/React.createElement("br", null), "限界突破で", /*#__PURE__*/React.createElement("br", null), "使用") : item.usage === 'uniqueSkillReset' ? /*#__PURE__*/React.createElement("div", {
+    }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9650\u754C\u7A81\u7834\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'uniqueSkillReset' ? /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
-    }, "マスモン詳細の", /*#__PURE__*/React.createElement("br", null), "固有技強化で", /*#__PURE__*/React.createElement("br", null), "使用") : item.usage === 'transcendReset' ? /*#__PURE__*/React.createElement("div", {
+    }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u56FA\u6709\u6280\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendReset' ? /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2"
-    }, "マスモン詳細の", /*#__PURE__*/React.createElement("br", null), "超越強化で", /*#__PURE__*/React.createElement("br", null), "使用") : /*#__PURE__*/React.createElement("button", {
+    }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
       onClick: () => setPendingItemUse(item.id),
       className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
-    }, "使う")))))), pendingItemUse && (() => {
+    }, "\u4F7F\u3046")))))), pendingItemUse && (() => {
       const item = BREEDER_MARKET_ITEMS.find(i => i.id === pendingItemUse);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex flex-col p-4",
@@ -34568,9 +34565,9 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-lg font-black italic text-teal-400 uppercase tracking-widest truncate"
-      }, item?.name, "を使う対象を選択")), /*#__PURE__*/React.createElement("div", {
+      }, item?.name, "\u3092\u4F7F\u3046\u5BFE\u8C61\u3092\u9078\u629E")), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
-      }, "対象のマスモンをタップしてください"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5BFE\u8C61\u306E\u30DE\u30B9\u30E2\u30F3\u3092\u30BF\u30C3\u30D7\u3057\u3066\u304F\u3060\u3055\u3044"), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, masuMons.length === 0 ? /*#__PURE__*/React.createElement("div", {
         className: "empty-state",
@@ -34583,9 +34580,9 @@ function MonsterHeroGame() {
         style: {
           fontSize: '40px'
         }
-      }, "🐾"), /*#__PURE__*/React.createElement("div", {
+      }, "\uD83D\uDC3E"), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] text-slate-400 mt-2"
-      }, "まだマスモンがいません。")) : /*#__PURE__*/React.createElement("div", {
+      }, "\u307E\u3060\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002")) : /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-4 gap-2 pb-4"
       }, masuMons.map(masu => {
         const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -34634,7 +34631,7 @@ function MonsterHeroGame() {
           className: "text-[7px] text-pink-300 font-black flex items-center gap-0.5"
         }, /*#__PURE__*/React.createElement(Heart, {
           size: 6
-        }), "絆Lv.", lvl.level));
+        }), "\u7D46Lv.", lvl.level));
       }))));
     })(), xpTicketUse && (() => {
       const item = BREEDER_MARKET_ITEMS.find(i => i.id === xpTicketUse.itemId);
@@ -34671,7 +34668,7 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-lg font-black italic text-teal-400 uppercase tracking-widest truncate"
-      }, item.name, "を使う")), /*#__PURE__*/React.createElement("div", {
+      }, item.name, "\u3092\u4F7F\u3046")), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
         className: "bg-slate-900 border border-teal-500/40 rounded-2xl p-4"
@@ -34695,19 +34692,19 @@ function MonsterHeroGame() {
         className: "text-[10px] text-pink-300 font-black flex items-center gap-1 mt-0.5"
       }, /*#__PURE__*/React.createElement(Heart, {
         size: 10
-      }), "絆Lv.", before.level, after.level > before.level && /*#__PURE__*/React.createElement("span", {
+      }), "\u7D46Lv.", before.level, after.level > before.level && /*#__PURE__*/React.createElement("span", {
         className: "text-emerald-400"
-      }, " → ", after.level)))), /*#__PURE__*/React.createElement("div", {
+      }, " \u2192 ", after.level)))), /*#__PURE__*/React.createElement("div", {
         className: "bg-black/30 rounded-xl p-3 border border-white/5"
       }, !usedResult && /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between mb-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[10px] font-black text-slate-400 uppercase tracking-wider"
-      }, "使う枚数"), /*#__PURE__*/React.createElement("span", {
+      }, "\u4F7F\u3046\u679A\u6570"), /*#__PURE__*/React.createElement("span", {
         className: "text-[10px] font-mono font-black text-teal-300"
-      }, "所持 ", have, "枚")), usedResult ? /*#__PURE__*/React.createElement("div", {
+      }, "\u6240\u6301 ", have, "\u679A")), usedResult ? /*#__PURE__*/React.createElement("div", {
         className: "text-center text-sm font-black text-teal-300"
-      }, xpTicketUse.usedCount, "枚 使用しました") : /*#__PURE__*/React.createElement("div", {
+      }, xpTicketUse.usedCount, "\u679A \u4F7F\u7528\u3057\u307E\u3057\u305F") : /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-3"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setCount(count - 1),
@@ -34731,7 +34728,7 @@ function MonsterHeroGame() {
         className: "text-center text-2xl font-mono font-black text-white leading-none mt-1"
       }, count, /*#__PURE__*/React.createElement("span", {
         className: "text-[10px] text-slate-500 font-black"
-      }, " 枚"))), /*#__PURE__*/React.createElement("button", {
+      }, " \u679A"))), /*#__PURE__*/React.createElement("button", {
         onClick: () => setCount(count + 1),
         disabled: count >= have,
         className: "w-10 h-10 flex items-center justify-center bg-teal-600 rounded-lg text-white disabled:opacity-20 active:scale-90 shrink-0"
@@ -34744,26 +34741,26 @@ function MonsterHeroGame() {
         onClick: () => setCount(n),
         disabled: have < n,
         className: "py-1.5 rounded-lg bg-slate-800 border border-white/10 text-[10px] font-black text-slate-300 disabled:opacity-25 active:scale-95"
-      }, n, "枚")), /*#__PURE__*/React.createElement("button", {
+      }, n, "\u679A")), /*#__PURE__*/React.createElement("button", {
         onClick: () => setCount(have),
         className: "py-1.5 rounded-lg bg-slate-800 border border-teal-500/40 text-[10px] font-black text-teal-300 active:scale-95"
-      }, "最大"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u6700\u5927"))), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 bg-black/30 rounded-xl p-3 border border-white/5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between items-center text-[11px] font-black mb-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400 uppercase tracking-wider"
-      }, "もらえる絆経験値"), /*#__PURE__*/React.createElement("span", {
+      }, "\u3082\u3089\u3048\u308B\u7D46\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
         className: "text-emerald-400 font-mono text-base"
       }, "+", gain.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-500 font-bold mb-1"
-      }, "絆Lv.", before.level, " → ", /*#__PURE__*/React.createElement("span", {
+      }, "\u7D46Lv.", before.level, " \u2192 ", /*#__PURE__*/React.createElement("span", {
         className: "text-white font-black"
       }, "Lv.", after.level), after.level > before.level && /*#__PURE__*/React.createElement("span", {
         className: "text-emerald-400 font-black"
       }, " (+", after.level - before.level, ")")), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300 font-black mb-2"
-      }, "強化ポイント +", preview.gainedPoints, preview.pointMultiplier > 1 ? `（×${preview.pointMultiplier}）` : ``), /*#__PURE__*/React.createElement("div", {
+      }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", preview.gainedPoints, preview.pointMultiplier > 1 ? `（×${preview.pointMultiplier}）` : ``), /*#__PURE__*/React.createElement("div", {
         className: "w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 relative"
       }, /*#__PURE__*/React.createElement("div", {
         className: "h-full bg-slate-600 absolute inset-y-0 left-0",
@@ -34777,7 +34774,7 @@ function MonsterHeroGame() {
         }
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 font-mono mt-1 text-right"
-      }, "次のLvまで あと ", Math.max(0, after.xpForNext - after.xpIntoLevel).toLocaleString())))), /*#__PURE__*/React.createElement("div", {
+      }, "\u6B21\u306ELv\u307E\u3067 \u3042\u3068 ", Math.max(0, after.xpForNext - after.xpIntoLevel).toLocaleString())))), /*#__PURE__*/React.createElement("div", {
         className: "flex gap-2 shrink-0 mt-3"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setXpTicketUse(null),
@@ -34798,7 +34795,7 @@ function MonsterHeroGame() {
         },
         disabled: have <= 0,
         className: "flex-[2] bg-teal-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 disabled:opacity-30"
-      }, count, "枚 使う")));
+      }, count, "\u679A \u4F7F\u3046")));
     })(), detailTrainingMasuId && (() => {
       const masu = getMasuMon(detailTrainingMasuId);
       const tickets = BREEDER_MARKET_ITEMS.filter(item => ['training_ticket', 'training_ticket_l'].includes(item.id));
@@ -34822,16 +34819,16 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between gap-2 mb-1"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-sm font-black text-white"
-      }, "🎓 ", masu.name, "をトレーニング"), /*#__PURE__*/React.createElement("button", {
+      }, "\uD83C\uDF93 ", masu.name, "\u3092\u30C8\u30EC\u30FC\u30CB\u30F3\u30B0"), /*#__PURE__*/React.createElement("button", {
         type: "button",
-        "aria-label": "トレーニングを閉じる",
+        "aria-label": "\u30C8\u30EC\u30FC\u30CB\u30F3\u30B0\u3092\u9589\u3058\u308B",
         onClick: () => setDetailTrainingMasuId(null),
         className: "p-2 bg-white/5 rounded-full active:scale-90"
       }, /*#__PURE__*/React.createElement(X, {
         size: 16
       }))), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] text-slate-400 font-bold mb-3"
-      }, "使うチケットを選んでください。対象はこのマスモンのままです。"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4F7F\u3046\u30C1\u30B1\u30C3\u30C8\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u5BFE\u8C61\u306F\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u306E\u307E\u307E\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2"
       }, tickets.map(item => {
         const count = ownedItems[item.id] || 0;
@@ -34855,12 +34852,12 @@ function MonsterHeroGame() {
           className: "block text-[11px] text-white truncate"
         }, item.name), /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-teal-300"
-        }, "絆経験値 +", item.bondXp)), /*#__PURE__*/React.createElement("strong", {
+        }, "\u7D46\u7D4C\u9A13\u5024 +", item.bondXp)), /*#__PURE__*/React.createElement("strong", {
           className: "text-[10px] text-white"
-        }, count, "枚"));
+        }, count, "\u679A"));
       })), tickets.every(item => (ownedItems[item.id] || 0) <= 0) && /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] text-amber-300 font-bold text-center mt-3"
-      }, "チケットはマーケットで購入できます")));
+      }, "\u30C1\u30B1\u30C3\u30C8\u306F\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u8CFC\u5165\u3067\u304D\u307E\u3059")));
     })(), showSortFilterModal && (() => {
       const sortOpts = sortFilterModalSingleType ? MONSTER_SORT_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_SORT_OPTIONS;
       const dispOpts = sortFilterModalSingleType ? MONSTER_DISPLAY_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_DISPLAY_OPTIONS;
@@ -34877,7 +34874,7 @@ function MonsterHeroGame() {
         className: "flex items-center gap-2 p-4 shrink-0 border-b border-white/10"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-base font-black text-white flex-1"
-      }, "ならべかえ・表示設定"), /*#__PURE__*/React.createElement("button", {
+      }, "\u306A\u3089\u3079\u304B\u3048\u30FB\u8868\u793A\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setShowSortFilterModal(false),
         className: "p-2.5 bg-white/5 rounded-full active:scale-90"
       }, /*#__PURE__*/React.createElement(X, {
@@ -34925,7 +34922,7 @@ function MonsterHeroGame() {
          種族の顔ぶれは data/lineages.js が正本(dexMainLineages)で、ここへ書き写さない */
       React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
         className: "mb-2.5 text-[10px] leading-relaxed text-slate-400"
-      }, "選んだ種族だけを表示します。ならべかえ・表示設定はそのまま効きます。"), /*#__PURE__*/React.createElement("div", {
+      }, "\u9078\u3093\u3060\u7A2E\u65CF\u3060\u3051\u3092\u8868\u793A\u3057\u307E\u3059\u3002\u306A\u3089\u3079\u304B\u3048\u30FB\u8868\u793A\u8A2D\u5B9A\u306F\u305D\u306E\u307E\u307E\u52B9\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2.5"
       }, [{
         id: 'all',
@@ -34965,7 +34962,7 @@ function MonsterHeroGame() {
       }))), /*#__PURE__*/React.createElement("button", {
         onClick: () => setShowSortFilterModal(false),
         className: "mx-4 mb-4 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95 shrink-0"
-      }, "とじる"));
+      }, "\u3068\u3058\u308B"));
     })(), masuMonDetail && !MASU_ENHANCE_STATES.includes(gameState) && (() => {
       const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -34997,11 +34994,11 @@ function MonsterHeroGame() {
             className: "flex items-center gap-1"
           }, /*#__PURE__*/React.createElement(Sparkles, {
             size: 9
-          }), "強化P: ", masu.distAptPoints || 0), (masuNorm.transcended || masuNorm.transcendPoints > 0) && /*#__PURE__*/React.createElement("span", {
+          }), "\u5F37\u5316P: ", masu.distAptPoints || 0), (masuNorm.transcended || masuNorm.transcendPoints > 0) && /*#__PURE__*/React.createElement("span", {
             className: "text-sky-300 flex items-center gap-1"
-          }, "超越P: ", masuNorm.transcendPoints), transcendAptBoostTotal(masu) > 0 && /*#__PURE__*/React.createElement("span", {
+          }, "\u8D85\u8D8AP: ", masuNorm.transcendPoints), transcendAptBoostTotal(masu) > 0 && /*#__PURE__*/React.createElement("span", {
             className: "text-amber-200"
-          }, "基礎適性 +", transcendAptBoostTotal(masu), "段階")),
+          }, "\u57FA\u790E\u9069\u6027 +", transcendAptBoostTotal(masu), "\u6BB5\u968E")),
           // 限界突破・転生で残した固有技ポイントは、この詳細からいつでも使える
           extraAfterApt: renderUniqueSkillPointBox(masu, updated => setMasuMonDetail(updated))
         },
@@ -35014,11 +35011,11 @@ function MonsterHeroGame() {
           className: "min-w-0"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[11px] font-black text-cyan-200"
-        }, "AUTO∞ 自動限界突破"), /*#__PURE__*/React.createElement("div", {
+        }, "AUTO\u221E \u81EA\u52D5\u9650\u754C\u7A81\u7834"), /*#__PURE__*/React.createElement("div", {
           className: "mt-1 text-[9px] font-bold leading-relaxed text-slate-300"
-        }, "∞周回中、設定Lvまで素材があれば自動で限界突破します"), /*#__PURE__*/React.createElement("div", {
+        }, "\u221E\u5468\u56DE\u4E2D\u3001\u8A2D\u5B9ALv\u307E\u3067\u7D20\u6750\u304C\u3042\u308C\u3070\u81EA\u52D5\u3067\u9650\u754C\u7A81\u7834\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
           className: "mt-1 text-[8px] font-bold text-cyan-300/80"
-        }, "設定可能上限：", autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}` : 'OFF', "（ブリーダーLv", breederLevel.level, "の半分）")), /*#__PURE__*/React.createElement("select", {
+        }, "\u8A2D\u5B9A\u53EF\u80FD\u4E0A\u9650\uFF1A", autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}` : 'OFF', "\uFF08\u30D6\u30EA\u30FC\u30C0\u30FCLv", breederLevel.level, "\u306E\u534A\u5206\uFF09")), /*#__PURE__*/React.createElement("select", {
           "aria-label": `${masu.name}のAUTO∞ 自動限界突破上限`,
           value: autoBreakthroughSelectedLevel,
           onChange: event => setMasuAutoRepeatBreakthrough(masu.id, Number(event.target.value)),
@@ -35028,11 +35025,11 @@ function MonsterHeroGame() {
         }, "OFF"), autoBreakthroughLevels.map(level => /*#__PURE__*/React.createElement("option", {
           key: level,
           value: level
-        }, "Lv", level, "まで"))))), /*#__PURE__*/React.createElement("div", {
+        }, "Lv", level, "\u307E\u3067"))))), /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-2 rounded-xl border border-violet-500/30"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-violet-300 uppercase font-bold mb-1"
-        }, "所持固有技Lv"), orderUniqueChoicesByMasuOrder(masu, getRebirthSkillChoices(masu)).map(skill => {
+        }, "\u6240\u6301\u56FA\u6709\u6280Lv"), orderUniqueChoicesByMasuOrder(masu, getRebirthSkillChoices(masu)).map(skill => {
           const current = uniqueSkillAtLevel(skill.unique, skill.level);
           return /*#__PURE__*/React.createElement("button", {
             key: skill.key,
@@ -35048,33 +35045,33 @@ function MonsterHeroGame() {
             className: "truncate"
           }, current.name), /*#__PURE__*/React.createElement("span", {
             className: "text-amber-300 font-black shrink-0"
-          }, "Lv.", skill.level, " ›"));
+          }, "Lv.", skill.level, " \u203A"));
         })), (masu.inheritedUniques || []).length > 0 && /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-2 rounded-xl border border-amber-500/30"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-amber-400 uppercase font-bold mb-1"
-        }, "継承した固有技(バトル中にスロットのバッジをタップで切替可能)"), /*#__PURE__*/React.createElement("div", {
+        }, "\u7D99\u627F\u3057\u305F\u56FA\u6709\u6280(\u30D0\u30C8\u30EB\u4E2D\u306B\u30B9\u30ED\u30C3\u30C8\u306E\u30D0\u30C3\u30B8\u3092\u30BF\u30C3\u30D7\u3067\u5207\u66FF\u53EF\u80FD)"), /*#__PURE__*/React.createElement("div", {
           className: "space-y-1"
         }, masu.inheritedUniques.map((u, idx) => /*#__PURE__*/React.createElement("div", {
           key: idx,
           className: "text-[8px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1"
         }, u.name, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-500 font-normal"
-        }, "(元", u.sourceMasuName, ")"))))), masuNorm.transcended ? /*#__PURE__*/React.createElement("div", {
+        }, "(\u5143", u.sourceMasuName, ")"))))), masuNorm.transcended ? /*#__PURE__*/React.createElement("div", {
           "data-transcend-detail-note": true,
           className: "rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[9px] font-black text-amber-200 text-center leading-relaxed"
-        }, "超越済み ／ Lv上限 ", TRANSCEND_LEVEL_CAP, masuLvl.level >= TRANSCEND_LEVEL_CAP && '（MAX）', /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+        }, "\u8D85\u8D8A\u6E08\u307F \uFF0F Lv\u4E0A\u9650 ", TRANSCEND_LEVEL_CAP, masuLvl.level >= TRANSCEND_LEVEL_CAP && '（MAX）', /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300 font-bold"
-        }, "Lv", MAX_MASU_LEVEL_CAP + 1, "以降のレベルアップで超越ポイントを獲得します。「強化」から超越強化へ切り替えて使えます。")) : canTranscendMasu(masu).ok ? /*#__PURE__*/React.createElement("div", {
+        }, "Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3067\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3057\u307E\u3059\u3002\u300C\u5F37\u5316\u300D\u304B\u3089\u8D85\u8D8A\u5F37\u5316\u3078\u5207\u308A\u66FF\u3048\u3066\u4F7F\u3048\u307E\u3059\u3002")) : canTranscendMasu(masu).ok ? /*#__PURE__*/React.createElement("div", {
           "data-transcend-detail-note": true,
           className: "rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[9px] font-black text-amber-200 text-center leading-relaxed"
-        }, "Lv上限到達", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+        }, "Lv\u4E0A\u9650\u5230\u9054", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300 font-bold"
-        }, "神殿で超越するとLv", MAX_MASU_LEVEL_CAP + 1, "以降が解放され、Lv上限が", TRANSCEND_LEVEL_CAP, "になります。")) : null, /*#__PURE__*/React.createElement("div", {
+        }, "\u795E\u6BBF\u3067\u8D85\u8D8A\u3059\u308B\u3068Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u304C\u89E3\u653E\u3055\u308C\u3001Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u307E\u3059\u3002")) : null, /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-500 font-bold text-center px-2"
         }, inRoster ? '現在、編成に入っています' : '編成画面で選ぶと、次の周回でこのマスモンを使えます'), /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-teal-400/80 font-bold text-center px-2"
-        }, "絆ポイントリセットの書は「アイテム」から使用できます"), /*#__PURE__*/React.createElement("button", {
+        }, "\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u306F\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u304B\u3089\u4F7F\u7528\u3067\u304D\u307E\u3059"), /*#__PURE__*/React.createElement("button", {
           onClick: () => {
             if (window.confirm(`「${masu.name}」を削除しますか？この操作は取り消せません。`)) {
               deleteMasuMon(masu.id);
@@ -35082,12 +35079,12 @@ function MonsterHeroGame() {
             }
           },
           className: "w-full min-h-[40px] text-[10px] font-black text-red-300 bg-red-950/40 border border-red-500/30 rounded-xl active:scale-95"
-        }, "このマスモンを削除する")),
+        }, "\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u3092\u524A\u9664\u3059\u308B")),
         footer: /*#__PURE__*/React.createElement("div", {
           className: "w-full rounded-2xl border border-white/10 bg-black/30 p-2 shrink-0"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] font-black text-slate-400 tracking-wider mb-1.5 px-1"
-        }, "育成・カスタム"), /*#__PURE__*/React.createElement("div", {
+        }, "\u80B2\u6210\u30FB\u30AB\u30B9\u30BF\u30E0"), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-1.5"
         }, /*#__PURE__*/React.createElement("button", {
           type: "button",
@@ -35099,7 +35096,7 @@ function MonsterHeroGame() {
           className: "min-h-[46px] bg-gradient-to-b from-amber-600 to-orange-700 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"
         }, /*#__PURE__*/React.createElement(Sparkles, {
           size: 14
-        }), /*#__PURE__*/React.createElement("span", null, "強化"), (masu.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("small", {
+        }), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316"), (masu.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("small", {
           className: "text-[7px] bg-white/20 px-1 rounded"
         }, masu.distAptPoints, "P")), /*#__PURE__*/React.createElement("button", {
           type: "button",
@@ -35108,7 +35105,7 @@ function MonsterHeroGame() {
           className: "min-h-[46px] bg-gradient-to-b from-teal-600 to-cyan-800 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-sm leading-none"
-        }, "🎓"), /*#__PURE__*/React.createElement("span", null, "トレーニング")), /*#__PURE__*/React.createElement("button", {
+        }, "\uD83C\uDF93"), /*#__PURE__*/React.createElement("span", null, "\u30C8\u30EC\u30FC\u30CB\u30F3\u30B0")), /*#__PURE__*/React.createElement("button", {
           type: "button",
           "aria-label": `${masu.name}を染色`,
           onClick: () => {
@@ -35122,9 +35119,9 @@ function MonsterHeroGame() {
           className: "min-h-[46px] bg-gradient-to-b from-fuchsia-600 to-purple-800 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-sm leading-none"
-        }, "🎨"), /*#__PURE__*/React.createElement("span", null, "染色"), /*#__PURE__*/React.createElement("small", {
+        }, "\uD83C\uDFA8"), /*#__PURE__*/React.createElement("span", null, "\u67D3\u8272"), /*#__PURE__*/React.createElement("small", {
           className: "text-[7px] text-fuchsia-100"
-        }, "所持 ", ownedItems.dye_mock || 0))))
+        }, "\u6240\u6301 ", ownedItems.dye_mock || 0))))
       });
     })(), uniqueSettingMasuId != null && (() => {
       const masu = getMasuMon(uniqueSettingMasuId);
@@ -35162,17 +35159,17 @@ function MonsterHeroGame() {
         className: "min-w-0"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] font-black text-violet-300 uppercase tracking-widest"
-      }, "固有技設定"), /*#__PURE__*/React.createElement("div", {
+      }, "\u56FA\u6709\u6280\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
         className: "text-[13px] font-black text-white truncate"
       }, masu.name)), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "固有技設定を閉じる",
+        "aria-label": "\u56FA\u6709\u6280\u8A2D\u5B9A\u3092\u9589\u3058\u308B",
         onClick: () => setUniqueSettingMasuId(null),
         className: "shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
       }, /*#__PURE__*/React.createElement(X, {
         size: 14
       }))), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-300 font-bold leading-relaxed shrink-0"
-      }, "並び順はバトルで固有技を切り替えるときの順番になります。「初期技」に設定した技は、勇者モンでも供モンでも参加した時点で最初に構える固有技になります。"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4E26\u3073\u9806\u306F\u30D0\u30C8\u30EB\u3067\u56FA\u6709\u6280\u3092\u5207\u308A\u66FF\u3048\u308B\u3068\u304D\u306E\u9806\u756A\u306B\u306A\u308A\u307E\u3059\u3002\u300C\u521D\u671F\u6280\u300D\u306B\u8A2D\u5B9A\u3057\u305F\u6280\u306F\u3001\u52C7\u8005\u30E2\u30F3\u3067\u3082\u4F9B\u30E2\u30F3\u3067\u3082\u53C2\u52A0\u3057\u305F\u6642\u70B9\u3067\u6700\u521D\u306B\u69CB\u3048\u308B\u56FA\u6709\u6280\u306B\u306A\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5"
       }, rows.map((choice, index) => {
         const current = uniqueSkillAtLevel(choice.unique, choice.level);
@@ -35197,10 +35194,10 @@ function MonsterHeroGame() {
           className: `shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded ${isOwn ? 'bg-indigo-950/70 text-indigo-300' : 'bg-amber-950/70 text-amber-300'}`
         }, isOwn ? '自前' : '継承'), !isOwn && choice.unique?.sourceMasuName && /*#__PURE__*/React.createElement("span", {
           className: "min-w-0 truncate text-[8px] text-slate-500 font-bold"
-        }, "元", choice.unique.sourceMasuName), isInitial && /*#__PURE__*/React.createElement("span", {
+        }, "\u5143", choice.unique.sourceMasuName), isInitial && /*#__PURE__*/React.createElement("span", {
           "data-unique-setting-initial-badge": true,
           className: "shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded bg-violet-600 text-white"
-        }, "初期技")), /*#__PURE__*/React.createElement("div", {
+        }, "\u521D\u671F\u6280")), /*#__PURE__*/React.createElement("div", {
           className: "flex items-center gap-1.5 mt-1.5"
         }, /*#__PURE__*/React.createElement("button", {
           type: "button",
@@ -35216,21 +35213,21 @@ function MonsterHeroGame() {
           disabled: index <= 0 || !canSave,
           onClick: () => moveMasuUniqueOrder(masu.id, choice.key, -1),
           className: "shrink-0 w-11 min-h-[44px] rounded-xl bg-slate-700 text-white text-base font-black active:scale-95 disabled:opacity-30"
-        }, "↑"), /*#__PURE__*/React.createElement("button", {
+        }, "\u2191"), /*#__PURE__*/React.createElement("button", {
           type: "button",
           "data-unique-setting-down": true,
           "aria-label": `${current?.name || choice.name}を下へ移動`,
           disabled: index >= rows.length - 1 || !canSave,
           onClick: () => moveMasuUniqueOrder(masu.id, choice.key, 1),
           className: "shrink-0 w-11 min-h-[44px] rounded-xl bg-slate-700 text-white text-base font-black active:scale-95 disabled:opacity-30"
-        }, "↓")));
+        }, "\u2193")));
       }), rows.length <= 1 && /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-500 font-bold text-center px-2 py-1 leading-relaxed"
-      }, "固有技が1つだけのため、並び替えと初期技の変更はできません。合体で固有技を継承すると設定できるようになります。")), /*#__PURE__*/React.createElement("div", {
+      }, "\u56FA\u6709\u6280\u304C1\u3064\u3060\u3051\u306E\u305F\u3081\u3001\u4E26\u3073\u66FF\u3048\u3068\u521D\u671F\u6280\u306E\u5909\u66F4\u306F\u3067\u304D\u307E\u305B\u3093\u3002\u5408\u4F53\u3067\u56FA\u6709\u6280\u3092\u7D99\u627F\u3059\u308B\u3068\u8A2D\u5B9A\u3067\u304D\u308B\u3088\u3046\u306B\u306A\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 flex flex-col gap-1.5 pt-1 border-t border-white/10"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 font-bold text-center leading-tight"
-      }, "固有技Lvと固有技Pは変わりません"), /*#__PURE__*/React.createElement("button", {
+      }, "\u56FA\u6709\u6280Lv\u3068\u56FA\u6709\u6280P\u306F\u5909\u308F\u308A\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-unique-setting-reset": true,
         disabled: isDefault,
@@ -35239,10 +35236,10 @@ function MonsterHeroGame() {
           resetMasuUniqueSetting(masu.id);
         },
         className: "w-full min-h-[44px] rounded-xl bg-slate-700 text-[10px] font-black active:scale-95 disabled:opacity-30"
-      }, "初期状態に戻す"), /*#__PURE__*/React.createElement("button", {
+      }, "\u521D\u671F\u72B6\u614B\u306B\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setUniqueSettingMasuId(null),
         className: "w-full min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase active:scale-95"
-      }, "閉じる"))));
+      }, "\u9589\u3058\u308B"))));
     })(), gameState === 'MASU_TRANSCEND_ENHANCE' && masuMonDetail && (() => {
       const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -35388,7 +35385,7 @@ function MonsterHeroGame() {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))'
         }
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "通常強化へ戻る",
+        "aria-label": "\u901A\u5E38\u5F37\u5316\u3078\u623B\u308B",
         onClick: () => {
           setTranscendPlan(null);
           setTranscendExchangeOpen(false);
@@ -35426,9 +35423,9 @@ function MonsterHeroGame() {
           setGameState('MASU_ENHANCE');
         },
         className: "min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95"
-      }, "通常強化"), /*#__PURE__*/React.createElement("button", {
+      }, "\u901A\u5E38\u5F37\u5316"), /*#__PURE__*/React.createElement("button", {
         className: "min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black"
-      }, "超越強化")), /*#__PURE__*/React.createElement("div", {
+      }, "\u8D85\u8D8A\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: normalized.transcended ? 'transcendence' : 'masuEnhance',
@@ -35444,9 +35441,9 @@ function MonsterHeroGame() {
         className: "flex items-end justify-between gap-2"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black tracking-wider text-sky-200"
-      }, "超越ポイント"), /*#__PURE__*/React.createElement("div", {
+      }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] font-bold text-slate-400"
-      }, "通常の強化ポイントとは別枠")), /*#__PURE__*/React.createElement("div", {
+      }, "\u901A\u5E38\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3068\u306F\u5225\u67A0")), /*#__PURE__*/React.createElement("div", {
         "data-transcend-points": true,
         className: "text-right leading-none"
       }, /*#__PURE__*/React.createElement("span", {
@@ -35459,30 +35456,30 @@ function MonsterHeroGame() {
         className: "mt-3 w-full min-h-[46px] rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         "aria-hidden": "true"
-      }, "🌈"), "虹のプシュケーを変換", /*#__PURE__*/React.createElement("span", {
+      }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB", /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-mono text-slate-300"
-      }, "所持 ", psycheHave.toLocaleString())), hasTranscendFruit && /*#__PURE__*/React.createElement("button", {
+      }, "\u6240\u6301 ", psycheHave.toLocaleString())), hasTranscendFruit && /*#__PURE__*/React.createElement("button", {
         "data-transcend-fruit-open": true,
         onClick: openFruit,
         className: "mt-2 w-full min-h-[46px] rounded-2xl border border-emerald-400/50 bg-emerald-950/40 text-emerald-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         "aria-hidden": "true"
-      }, "🍎"), "超越の実を使う", /*#__PURE__*/React.createElement("span", {
+      }, "\uD83C\uDF4E"), "\u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046", /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-mono text-slate-300"
-      }, "種族 ×", speciesFruitHave, "／虹 ×", rainbowFruitHave)), /*#__PURE__*/React.createElement("button", {
+      }, "\u7A2E\u65CF \xD7", speciesFruitHave, "\uFF0F\u8679 \xD7", rainbowFruitHave)), /*#__PURE__*/React.createElement("button", {
         "data-transcend-reset-open": true,
         disabled: spentPoints <= 0 || resetScrollHave <= 0,
         onClick: openReset,
         className: "mt-2 w-full min-h-[42px] rounded-2xl border border-amber-400/50 bg-amber-950/30 text-amber-100 text-[11px] font-black active:scale-95 disabled:opacity-35 flex items-center justify-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         "aria-hidden": "true"
-      }, "🌠"), "超越ポイントリセット", /*#__PURE__*/React.createElement("span", {
+      }, "\uD83C\uDF20"), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8", /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-mono text-slate-300"
-      }, "書 ×", resetScrollHave)), spentPoints <= 0 && /*#__PURE__*/React.createElement("div", {
+      }, "\u66F8 \xD7", resetScrollHave)), spentPoints <= 0 && /*#__PURE__*/React.createElement("div", {
         className: "mt-1 text-[9px] font-bold text-slate-500 text-center"
-      }, "リセットする超越強化がありません"), spentPoints > 0 && resetScrollHave <= 0 && /*#__PURE__*/React.createElement("div", {
+      }, "\u30EA\u30BB\u30C3\u30C8\u3059\u308B\u8D85\u8D8A\u5F37\u5316\u304C\u3042\u308A\u307E\u305B\u3093"), spentPoints > 0 && resetScrollHave <= 0 && /*#__PURE__*/React.createElement("div", {
         className: "mt-1 text-[9px] font-bold text-slate-500 text-center"
-      }, "「超越ポイントリセットの書」はマーケットで買えます")), /*#__PURE__*/React.createElement("div", {
+      }, "\u300C\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u300D\u306F\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u8CB7\u3048\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
         className: "bg-slate-900 border border-sky-500/40 rounded-3xl p-3 shadow-xl"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between gap-2 mb-2"
@@ -35490,12 +35487,12 @@ function MonsterHeroGame() {
         className: "text-[11px] font-black text-sky-300 uppercase tracking-wider flex items-center gap-1.5"
       }, /*#__PURE__*/React.createElement(Sparkles, {
         size: 14
-      }), "基礎値を上げる"), /*#__PURE__*/React.createElement("div", {
+      }), "\u57FA\u790E\u5024\u3092\u4E0A\u3052\u308B"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 font-bold"
-      }, "全項目共通")), /*#__PURE__*/React.createElement("div", {
+      }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3",
         role: "group",
-        "aria-label": "振り分け単位"
+        "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
       }, [1, 5, 10, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
         type: "button",
         key: unit,
@@ -35510,9 +35507,9 @@ function MonsterHeroGame() {
         size: 'md'
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 font-bold mb-1.5"
-      }, "間合い適性", /*#__PURE__*/React.createElement("span", {
+      }, "\u9593\u5408\u3044\u9069\u6027", /*#__PURE__*/React.createElement("span", {
         className: "ml-1 text-slate-500"
-      }, "（上限", maxGrade, "）")), /*#__PURE__*/React.createElement("div", {
+      }, "\uFF08\u4E0A\u9650", maxGrade, "\uFF09")), /*#__PURE__*/React.createElement("div", {
         className: "space-y-1.5 mb-3"
       }, RANGE_LABELS.map((label, idx) => {
         const before = transcendGrade(idx),
@@ -35529,7 +35526,7 @@ function MonsterHeroGame() {
           className: DIST_APTITUDE_COLOR[before]
         }, before), /*#__PURE__*/React.createElement("span", {
           className: "text-slate-500 mx-1"
-        }, "→"), /*#__PURE__*/React.createElement("span", {
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
           className: added > 0 ? 'text-sky-300' : 'text-slate-300'
         }, after)), /*#__PURE__*/React.createElement("span", {
           className: "text-center text-[9px] font-mono font-black text-sky-300"
@@ -35540,15 +35537,15 @@ function MonsterHeroGame() {
           disabled: added <= 0,
           onPress: () => addApt(idx, -1),
           className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
-        }, "−"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
           "aria-label": `${label}の基礎適性を上げる`,
           disabled: planLeft <= 0 || aptAtMax(idx),
           onPress: () => addApt(idx, 1),
           className: "min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
-        }, "＋")));
+        }, "\uFF0B")));
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 font-bold mb-1.5"
-      }, "ステータス"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-1.5"
       }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
         const n = plan.stat[key] || 0,
@@ -35563,11 +35560,11 @@ function MonsterHeroGame() {
           className: "text-center font-mono font-black text-[11px]"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-white"
-        }, "基礎+", before), /*#__PURE__*/React.createElement("span", {
+        }, "\u57FA\u790E+", before), /*#__PURE__*/React.createElement("span", {
           className: "text-slate-500 mx-1"
-        }, "→"), /*#__PURE__*/React.createElement("span", {
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
           className: gain > 0 ? 'text-sky-300' : 'text-slate-300'
-        }, "基礎+", before + gain)), /*#__PURE__*/React.createElement("span", {
+        }, "\u57FA\u790E+", before + gain)), /*#__PURE__*/React.createElement("span", {
           className: "text-center text-[9px] font-mono font-black text-sky-300"
         }, n, "P"), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-2 gap-1"
@@ -35576,20 +35573,20 @@ function MonsterHeroGame() {
           disabled: n <= 0,
           onPress: () => addStat(key, -1),
           className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
-        }, "−"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
           "aria-label": `${label}の基礎値を上げる`,
           disabled: planLeft <= 0,
           onPress: () => addStat(key, 1),
           className: "min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
-        }, "＋")));
+        }, "\uFF0B")));
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 mt-2"
-      }, "＋／−は長押しでも連続調整できます。1Pで基礎ライフ+", STAT_POINT_GAIN.hp, "／ちから・丈夫さ・ガッツ+", STAT_POINT_GAIN.atk, "／間合い適性1段階（どれも総合力+10相当）。")), /*#__PURE__*/React.createElement("div", {
+      }, "\uFF0B\uFF0F\u2212\u306F\u9577\u62BC\u3057\u3067\u3082\u9023\u7D9A\u8ABF\u6574\u3067\u304D\u307E\u3059\u30021P\u3067\u57FA\u790E\u30E9\u30A4\u30D5+", STAT_POINT_GAIN.hp, "\uFF0F\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4+", STAT_POINT_GAIN.atk, "\uFF0F\u9593\u5408\u3044\u9069\u60271\u6BB5\u968E\uFF08\u3069\u308C\u3082\u7DCF\u5408\u529B+10\u76F8\u5F53\uFF09\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-bold text-slate-400 leading-relaxed"
-      }, "超越強化は「基礎値」を上げるので、絆ポイントリセットの書で通常の強化を戻しても消えません。転生・限界突破でも残ります。確定するまで保存データは変わりません。"), !normalized.transcended && /*#__PURE__*/React.createElement("div", {
+      }, "\u8D85\u8D8A\u5F37\u5316\u306F\u300C\u57FA\u790E\u5024\u300D\u3092\u4E0A\u3052\u308B\u306E\u3067\u3001\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u3067\u901A\u5E38\u306E\u5F37\u5316\u3092\u623B\u3057\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002\u8EE2\u751F\u30FB\u9650\u754C\u7A81\u7834\u3067\u3082\u6B8B\u308A\u307E\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), !normalized.transcended && /*#__PURE__*/React.createElement("div", {
         "data-transcend-not-yet": true,
         className: "rounded-2xl border border-slate-500/40 bg-black/40 p-3 text-[9px] font-bold text-slate-400 leading-relaxed"
-      }, "この個体はまだ神殿で超越していませんが、超越強化はいつでも使えます。あとで正式に超越しても、ここで上げた基礎値と残っている超越ポイントはそのまま引き継がれます。", /*#__PURE__*/React.createElement("br", null), "神殿の「超越」（Lv上限400→500・超越マーク）は、これまでどおりLv.", MAX_MASU_LEVEL_CAP, "・限界突破", FINAL_BREAKTHROUGH_COUNT, "回が必要です。")), /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u500B\u4F53\u306F\u307E\u3060\u795E\u6BBF\u3067\u8D85\u8D8A\u3057\u3066\u3044\u307E\u305B\u3093\u304C\u3001\u8D85\u8D8A\u5F37\u5316\u306F\u3044\u3064\u3067\u3082\u4F7F\u3048\u307E\u3059\u3002\u3042\u3068\u3067\u6B63\u5F0F\u306B\u8D85\u8D8A\u3057\u3066\u3082\u3001\u3053\u3053\u3067\u4E0A\u3052\u305F\u57FA\u790E\u5024\u3068\u6B8B\u3063\u3066\u3044\u308B\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u306F\u305D\u306E\u307E\u307E\u5F15\u304D\u7D99\u304C\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u795E\u6BBF\u306E\u300C\u8D85\u8D8A\u300D\uFF08Lv\u4E0A\u9650400\u2192500\u30FB\u8D85\u8D8A\u30DE\u30FC\u30AF\uFF09\u306F\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308ALv.", MAX_MASU_LEVEL_CAP, "\u30FB\u9650\u754C\u7A81\u7834", FINAL_BREAKTHROUGH_COUNT, "\u56DE\u304C\u5FC5\u8981\u3067\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 grid grid-cols-2 gap-2 p-4 border-t border-white/10",
         style: {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
@@ -35598,16 +35595,16 @@ function MonsterHeroGame() {
         onClick: () => setTranscendPlan(null),
         disabled: planUsed <= 0,
         className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "キャンセル"), /*#__PURE__*/React.createElement("button", {
+      }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
         "data-transcend-commit": true,
         disabled: planUsed <= 0,
         onClick: () => commitTranscendPlan(masu, plan),
         className: "min-h-[48px] rounded-2xl bg-sky-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "この配分で確定（", planUsed, "P）")), transcendResetOpen && /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u914D\u5206\u3067\u78BA\u5B9A\uFF08", planUsed, "P\uFF09")), transcendResetOpen && /*#__PURE__*/React.createElement("div", {
         "data-transcend-reset-sheet": true,
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "超越ポイントをリセット",
+        "aria-label": "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u30EA\u30BB\u30C3\u30C8",
         className: "absolute inset-0 flex items-end justify-center",
         style: {
           zIndex: 30500,
@@ -35627,8 +35624,8 @@ function MonsterHeroGame() {
         className: "text-sm font-black text-amber-200 flex items-center gap-1.5"
       }, /*#__PURE__*/React.createElement("span", {
         "aria-hidden": "true"
-      }, "🌠"), "超越ポイントをリセットしますか？"), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "閉じる",
+      }, "\uD83C\uDF20"), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u30EA\u30BB\u30C3\u30C8\u3057\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
         onClick: () => setTranscendResetOpen(false),
         className: "p-2 text-slate-400 active:scale-90"
       }, /*#__PURE__*/React.createElement(X, {
@@ -35639,47 +35636,47 @@ function MonsterHeroGame() {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "使用済み超越P"), /*#__PURE__*/React.createElement("span", {
+      }, "\u4F7F\u7528\u6E08\u307F\u8D85\u8D8AP"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono text-white"
       }, spentPoints, "P")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "未使用超越P"), /*#__PURE__*/React.createElement("span", {
+      }, "\u672A\u4F7F\u7528\u8D85\u8D8AP"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono text-white"
       }, points, "P")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between pt-1 border-t border-white/10"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "リセット後の未使用超越P"), /*#__PURE__*/React.createElement("span", {
+      }, "\u30EA\u30BB\u30C3\u30C8\u5F8C\u306E\u672A\u4F7F\u7528\u8D85\u8D8AP"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono text-amber-200"
       }, points + spentPoints, "P")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "超越ポイントリセットの書"), /*#__PURE__*/React.createElement("span", {
+      }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono text-white"
-      }, "×", resetScrollHave, " → ×", Math.max(0, resetScrollHave - 1)))), /*#__PURE__*/React.createElement("div", {
+      }, "\xD7", resetScrollHave, " \u2192 \xD7", Math.max(0, resetScrollHave - 1)))), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-bold text-slate-400 leading-relaxed"
-      }, "超越で上げた基礎ステータスと基礎の間合い適性が元へ戻り、そのぶんの超越ポイントが未使用へ返ります。絆レベル・絆経験値・Lv上限・超越済みかどうか・限界突破・転生回数・通常の強化は変わりません。", /*#__PURE__*/React.createElement("b", {
+      }, "\u8D85\u8D8A\u3067\u4E0A\u3052\u305F\u57FA\u790E\u30B9\u30C6\u30FC\u30BF\u30B9\u3068\u57FA\u790E\u306E\u9593\u5408\u3044\u9069\u6027\u304C\u5143\u3078\u623B\u308A\u3001\u305D\u306E\u3076\u3093\u306E\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u304C\u672A\u4F7F\u7528\u3078\u8FD4\u308A\u307E\u3059\u3002\u7D46\u30EC\u30D9\u30EB\u30FB\u7D46\u7D4C\u9A13\u5024\u30FBLv\u4E0A\u9650\u30FB\u8D85\u8D8A\u6E08\u307F\u304B\u3069\u3046\u304B\u30FB\u9650\u754C\u7A81\u7834\u30FB\u8EE2\u751F\u56DE\u6570\u30FB\u901A\u5E38\u306E\u5F37\u5316\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("b", {
         className: "text-amber-200"
-      }, "交換に使った虹のプシュケーは戻りません。")), transcendResetError && /*#__PURE__*/React.createElement("div", {
+      }, "\u4EA4\u63DB\u306B\u4F7F\u3063\u305F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u306F\u623B\u308A\u307E\u305B\u3093\u3002")), transcendResetError && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-red-400"
       }, transcendResetError), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setTranscendResetOpen(false),
         className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95"
-      }, "やめる"), /*#__PURE__*/React.createElement("button", {
+      }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
         "data-transcend-reset-commit": true,
         disabled: spentPoints <= 0 || resetScrollHave <= 0,
         onClick: runReset,
         className: "min-h-[48px] rounded-2xl bg-amber-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "書を1冊使ってリセット")))), transcendExchangeOpen && /*#__PURE__*/React.createElement("div", {
+      }, "\u66F8\u30921\u518A\u4F7F\u3063\u3066\u30EA\u30BB\u30C3\u30C8")))), transcendExchangeOpen && /*#__PURE__*/React.createElement("div", {
         "data-transcend-exchange-sheet": true,
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "虹のプシュケーを変換",
+        "aria-label": "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB",
         className: "absolute inset-0 flex items-end justify-center",
         style: {
           zIndex: 30500,
@@ -35699,8 +35696,8 @@ function MonsterHeroGame() {
         className: "text-sm font-black text-fuchsia-200 flex items-center gap-1.5"
       }, /*#__PURE__*/React.createElement("span", {
         "aria-hidden": "true"
-      }, "🌈"), "虹のプシュケーを変換"), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "閉じる",
+      }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB"), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
         onClick: () => setTranscendExchangeOpen(false),
         className: "p-2 text-slate-400 active:scale-90"
       }, /*#__PURE__*/React.createElement(X, {
@@ -35711,24 +35708,24 @@ function MonsterHeroGame() {
         className: "rounded-2xl bg-black/40 p-2.5 text-center"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] font-black text-slate-400"
-      }, "所持している🌈"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6240\u6301\u3057\u3066\u3044\u308B\uD83C\uDF08"), /*#__PURE__*/React.createElement("div", {
         className: "font-mono text-lg font-black text-white"
       }, psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl bg-black/40 p-2.5 text-center"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] font-black text-slate-400"
-      }, "交換レート"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4EA4\u63DB\u30EC\u30FC\u30C8"), /*#__PURE__*/React.createElement("div", {
         className: "font-mono text-[11px] font-black text-fuchsia-200"
-      }, "🌈", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " → 1P"))), exchangeMax <= 0 ? /*#__PURE__*/React.createElement("div", {
+      }, "\uD83C\uDF08", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " \u2192 1P"))), exchangeMax <= 0 ? /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl border border-amber-500/40 bg-amber-950/25 p-3 text-center text-[10px] font-black text-amber-200"
-      }, "虹のプシュケーが ", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " 個そろうと変換できます（あと ", (TRANSCEND_PSYCHE_PER_POINT - psycheHave).toLocaleString(), "）。") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C ", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " \u500B\u305D\u308D\u3046\u3068\u5909\u63DB\u3067\u304D\u307E\u3059\uFF08\u3042\u3068 ", (TRANSCEND_PSYCHE_PER_POINT - psycheHave).toLocaleString(), "\uFF09\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-2xl bg-black/40 p-2.5"
       }, /*#__PURE__*/React.createElement(PressRepeatButton, {
-        "aria-label": "変換するポイントを減らす",
+        "aria-label": "\u5909\u63DB\u3059\u308B\u30DD\u30A4\u30F3\u30C8\u3092\u6E1B\u3089\u3059",
         disabled: exchangeWant <= 1,
         onPress: () => setWant(exchangeWant - 1),
         className: "min-h-[44px] rounded-xl bg-slate-700 text-xl font-black disabled:opacity-25"
-      }, "−"), /*#__PURE__*/React.createElement("div", {
+      }, "\u2212"), /*#__PURE__*/React.createElement("div", {
         className: "text-center leading-none"
       }, /*#__PURE__*/React.createElement("span", {
         "data-transcend-exchange-want": true,
@@ -35736,11 +35733,11 @@ function MonsterHeroGame() {
       }, exchangeWant), /*#__PURE__*/React.createElement("span", {
         className: "text-[10px] font-bold text-slate-400"
       }, "P")), /*#__PURE__*/React.createElement(PressRepeatButton, {
-        "aria-label": "変換するポイントを増やす",
+        "aria-label": "\u5909\u63DB\u3059\u308B\u30DD\u30A4\u30F3\u30C8\u3092\u5897\u3084\u3059",
         disabled: exchangeWant >= exchangeMax,
         onPress: () => setWant(exchangeWant + 1),
         className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-xl font-black disabled:bg-slate-700 disabled:opacity-25"
-      }, "＋")), /*#__PURE__*/React.createElement("div", {
+      }, "\uFF0B")), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-1.5"
       }, [['1P', 1], ['5P', 5], ['MAX', exchangeMax]].map(([label, amount]) => /*#__PURE__*/React.createElement("button", {
         key: label,
@@ -35754,39 +35751,39 @@ function MonsterHeroGame() {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "使う🌈"), /*#__PURE__*/React.createElement("span", {
+      }, "\u4F7F\u3046\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono text-white"
       }, exchangeQuote.psycheCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "交換後の🌈"), /*#__PURE__*/React.createElement("span", {
+      }, "\u4EA4\u63DB\u5F8C\u306E\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono text-white"
       }, exchangeQuote.nextPsyche.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "超越ポイント"), /*#__PURE__*/React.createElement("span", {
+      }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono text-fuchsia-200"
-      }, points, " → ", points + exchangeQuote.points))), /*#__PURE__*/React.createElement("div", {
+      }, points, " \u2192 ", points + exchangeQuote.points))), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-bold text-slate-400"
-      }, TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), "個に満たない端数は消費しません。変換したポイントは、いま開いている「", masu.name, "」に入ります。")), transcendExchangeError && /*#__PURE__*/React.createElement("div", {
+      }, TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), "\u500B\u306B\u6E80\u305F\u306A\u3044\u7AEF\u6570\u306F\u6D88\u8CBB\u3057\u307E\u305B\u3093\u3002\u5909\u63DB\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u3001\u3044\u307E\u958B\u3044\u3066\u3044\u308B\u300C", masu.name, "\u300D\u306B\u5165\u308A\u307E\u3059\u3002")), transcendExchangeError && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-red-400"
       }, transcendExchangeError), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setTranscendExchangeOpen(false),
         className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95"
-      }, "閉じる"), /*#__PURE__*/React.createElement("button", {
+      }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("button", {
         "data-transcend-exchange-commit": true,
         disabled: !exchangeQuote.ok,
         onClick: runExchange,
         className: "min-h-[48px] rounded-2xl bg-fuchsia-600 text-white font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "この内容で変換")))), transcendFruitOpen && /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u5185\u5BB9\u3067\u5909\u63DB")))), transcendFruitOpen && /*#__PURE__*/React.createElement("div", {
         "data-transcend-fruit-sheet": true,
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "超越の実を使う",
+        "aria-label": "\u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046",
         className: "absolute inset-0 flex items-end justify-center",
         style: {
           zIndex: 30500,
@@ -35804,15 +35801,15 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between gap-2"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-sm font-black text-emerald-200"
-      }, "🍎 超越の実を使う"), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "閉じる",
+      }, "\uD83C\uDF4E \u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046"), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
         onClick: () => setTranscendFruitOpen(false),
         className: "min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
       }, /*#__PURE__*/React.createElement(X, {
         size: 18
       }))), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] font-bold text-slate-400"
-      }, "使用する実を選んでください。虹の実が自動で代用されることはありません。"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4F7F\u7528\u3059\u308B\u5B9F\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u8679\u306E\u5B9F\u304C\u81EA\u52D5\u3067\u4EE3\u7528\u3055\u308C\u308B\u3053\u3068\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, fruitChoices.map(({
         itemId,
@@ -35833,9 +35830,9 @@ function MonsterHeroGame() {
         className: "block leading-tight"
       }, name), /*#__PURE__*/React.createElement("span", {
         className: "mt-1 block font-mono text-[12px]"
-      }, "所持 ×", have)))), !transcendFruitItemId ? /*#__PURE__*/React.createElement("div", {
+      }, "\u6240\u6301 \xD7", have)))), !transcendFruitItemId ? /*#__PURE__*/React.createElement("div", {
         className: "rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200"
-      }, "使用する実を明示選択してください") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      }, "\u4F7F\u7528\u3059\u308B\u5B9F\u3092\u660E\u793A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-2"
       }, [[1, '1'], [10, '10'], [selectedFruitHave, 'MAX']].map(([amount, label]) => /*#__PURE__*/React.createElement("button", {
         key: label,
@@ -35849,36 +35846,36 @@ function MonsterHeroGame() {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "現在の超越ポイント"), /*#__PURE__*/React.createElement("span", {
+      }, "\u73FE\u5728\u306E\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono"
       }, points, "P")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "使用後（選択中）"), /*#__PURE__*/React.createElement("span", {
+      }, "\u4F7F\u7528\u5F8C\uFF08\u9078\u629E\u4E2D\uFF09"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono text-emerald-200"
-      }, points, " → ", points + (transcendFruitConfirmAmount || 1), "P")))), transcendFruitConfirmAmount > 1 && /*#__PURE__*/React.createElement("div", {
+      }, points, " \u2192 ", points + (transcendFruitConfirmAmount || 1), "P")))), transcendFruitConfirmAmount > 1 && /*#__PURE__*/React.createElement("div", {
         "data-transcend-fruit-confirm": true,
         className: "rounded-2xl border border-amber-400/40 bg-amber-950/25 p-3 space-y-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black text-amber-200"
-      }, selectedFruitName, "を", transcendFruitConfirmAmount, "個使いますか？"), /*#__PURE__*/React.createElement("div", {
+      }, selectedFruitName, "\u3092", transcendFruitConfirmAmount, "\u500B\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-bold text-slate-300"
-      }, "所持 ×", selectedFruitHave, " → ×", selectedFruitHave - transcendFruitConfirmAmount, /*#__PURE__*/React.createElement("br", null), "超越ポイント ", points, "P → ", points + transcendFruitConfirmAmount, "P"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6240\u6301 \xD7", selectedFruitHave, " \u2192 \xD7", selectedFruitHave - transcendFruitConfirmAmount, /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8 ", points, "P \u2192 ", points + transcendFruitConfirmAmount, "P"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setTranscendFruitConfirmAmount(0),
         className: "min-h-[44px] rounded-xl bg-slate-700 text-xs font-black"
-      }, "戻る"), /*#__PURE__*/React.createElement("button", {
+      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
         "data-transcend-fruit-commit": true,
         onClick: runFruitUse,
         className: "min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-xs font-black"
-      }, "使用を確定"))), transcendFruitError && /*#__PURE__*/React.createElement("div", {
+      }, "\u4F7F\u7528\u3092\u78BA\u5B9A"))), transcendFruitError && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-red-400"
       }, transcendFruitError), /*#__PURE__*/React.createElement("button", {
         onClick: () => setTranscendFruitOpen(false),
         className: "min-h-[48px] w-full rounded-2xl bg-slate-800 text-slate-200 text-xs font-black"
-      }, "閉じる"))));
+      }, "\u9589\u3058\u308B"))));
     })(), gameState === 'MASU_ENHANCE' && masuMonDetail && (() => {
       const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -36003,19 +36000,19 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1"
-      }, "マスモン強化")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30DE\u30B9\u30E2\u30F3\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
         "data-transcend-enhance-tabs": true,
         className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5"
       }, /*#__PURE__*/React.createElement("button", {
         className: "min-h-[40px] rounded-xl bg-amber-600 text-slate-950 text-[11px] font-black"
-      }, "通常強化"), /*#__PURE__*/React.createElement("button", {
+      }, "\u901A\u5E38\u5F37\u5316"), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setTranscendPlan(null);
           setTranscendExchangeError('');
           setGameState('MASU_TRANSCEND_ENHANCE');
         },
         className: "min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95"
-      }, "超越強化")), /*#__PURE__*/React.createElement("div", {
+      }, "\u8D85\u8D8A\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "masuEnhance",
@@ -36030,12 +36027,12 @@ function MonsterHeroGame() {
         className: "text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"
       }, /*#__PURE__*/React.createElement(Sparkles, {
         size: 14
-      }), "まとめて強化"), /*#__PURE__*/React.createElement("div", {
+      }), "\u307E\u3068\u3081\u3066\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 font-bold"
-      }, "全項目共通")), /*#__PURE__*/React.createElement("div", {
+      }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3",
         role: "group",
-        "aria-label": "振り分け単位"
+        "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
       }, [1, 5, 10, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
         type: "button",
         key: unit,
@@ -36049,7 +36046,7 @@ function MonsterHeroGame() {
         onClick: restoreResetAllocation,
         disabled: restoreDraft.restored <= 0,
         className: "w-full min-h-[40px] rounded-lg bg-slate-800 text-cyan-200 text-[10px] font-black active:scale-95 disabled:opacity-40"
-      }, "↩ リセット前の配分を復元"), /*#__PURE__*/React.createElement("div", {
+      }, "\u21A9 \u30EA\u30BB\u30C3\u30C8\u524D\u306E\u914D\u5206\u3092\u5FA9\u5143"), /*#__PURE__*/React.createElement("div", {
         className: `mt-1 text-[8px] font-bold text-center ${restoreDraft.omitted > 0 ? 'text-amber-300' : 'text-slate-500'}`
       }, restoreDraft.omitted > 0 ? `現行の上限・残りptに合わせ、${restoreDraft.restored}ptを仮配分（復元できない分 ${restoreDraft.omitted}pt）` : '保存は「強化する」を押した時だけです')), /*#__PURE__*/React.createElement("div", {
         className: "mb-3"
@@ -36058,7 +36055,7 @@ function MonsterHeroGame() {
         size: 'md'
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 font-bold mb-1.5"
-      }, "間合い適性"), /*#__PURE__*/React.createElement("div", {
+      }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-1.5 mb-3"
       }, RANGE_LABELS.map((label, idx) => {
         const before = resolvedDistAptitude[idx] || 'C',
@@ -36075,7 +36072,7 @@ function MonsterHeroGame() {
           className: DIST_APTITUDE_COLOR[before]
         }, before), /*#__PURE__*/React.createElement("span", {
           className: "text-slate-500 mx-1"
-        }, "→"), /*#__PURE__*/React.createElement("span", {
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
           className: added > 0 ? 'text-cyan-300' : 'text-slate-300'
         }, after)), /*#__PURE__*/React.createElement("span", {
           className: "text-center text-[9px] font-mono font-black text-amber-300"
@@ -36086,15 +36083,15 @@ function MonsterHeroGame() {
           disabled: added <= 0,
           onPress: () => addPlanApt(idx, -1),
           className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
-        }, "−"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
           "aria-label": `${label}距離適性を増やす`,
           disabled: !canPlanApt(idx),
           onPress: () => addPlanApt(idx, 1),
           className: "min-h-[40px] rounded-lg bg-amber-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
-        }, "＋")));
+        }, "\uFF0B")));
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 font-bold mb-1.5"
-      }, "ステータス"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-1.5"
       }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
         const n = plan.stat[key] || 0,
@@ -36111,7 +36108,7 @@ function MonsterHeroGame() {
           className: "text-white"
         }, before), /*#__PURE__*/React.createElement("span", {
           className: "text-slate-500 mx-1"
-        }, "→"), /*#__PURE__*/React.createElement("span", {
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
           className: gain > 0 ? 'text-emerald-300' : 'text-slate-300'
         }, before + gain)), /*#__PURE__*/React.createElement("span", {
           className: "text-center text-[9px] font-mono font-black text-amber-300"
@@ -36122,25 +36119,25 @@ function MonsterHeroGame() {
           disabled: n <= 0,
           onPress: () => addPlanStat(key, -1),
           className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
-        }, "−"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
           "aria-label": `${label}を増やす`,
           disabled: planLeft <= 0,
           onPress: () => addPlanStat(key, 1),
           className: "min-h-[40px] rounded-lg bg-emerald-700 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
-        }, "＋")));
+        }, "\uFF0B")));
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 mt-2"
-      }, "＋／−は長押しでも連続調整できます。確定するまで保存データは変わりません。")), /*#__PURE__*/React.createElement("div", {
+      }, "\uFF0B\uFF0F\u2212\u306F\u9577\u62BC\u3057\u3067\u3082\u9023\u7D9A\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "sticky bottom-0 z-20 -mx-4 px-4 pt-2 border-t border-amber-500/30 bg-slate-950/95",
         style: {
           paddingBottom: 'max(.75rem,env(safe-area-inset-bottom))'
         },
-        "aria-label": "強化の確定操作"
+        "aria-label": "\u5F37\u5316\u306E\u78BA\u5B9A\u64CD\u4F5C"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between mb-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[10px] font-black text-slate-300"
-      }, "残りpt"), /*#__PURE__*/React.createElement("span", {
+      }, "\u6B8B\u308Apt"), /*#__PURE__*/React.createElement("span", {
         className: "font-mono font-black"
       }, /*#__PURE__*/React.createElement("b", {
         className: planLeft > 0 ? 'text-amber-300' : 'text-slate-500'
@@ -36153,7 +36150,7 @@ function MonsterHeroGame() {
         disabled: planUsed <= 0,
         onClick: () => setBulkPlan(null),
         className: "min-h-[46px] px-3 rounded-xl font-black text-[10px] bg-slate-800 text-slate-300 disabled:opacity-30"
-      }, "配分をすべて取消"), /*#__PURE__*/React.createElement("button", {
+      }, "\u914D\u5206\u3092\u3059\u3079\u3066\u53D6\u6D88"), /*#__PURE__*/React.createElement("button", {
         type: "button",
         disabled: planUsed <= 0,
         onClick: applyPlan,
@@ -36178,13 +36175,13 @@ function MonsterHeroGame() {
         className: "text-lg font-black text-white truncate"
       }, masu.name), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-amber-400 font-bold uppercase tracking-wider"
-      }, "マスモン・元は", base.name), /*#__PURE__*/React.createElement("div", {
+      }, "\u30DE\u30B9\u30E2\u30F3\u30FB\u5143\u306F", base.name), /*#__PURE__*/React.createElement("div", {
         className: "mt-1"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-pink-300 font-black flex items-center gap-1"
       }, /*#__PURE__*/React.createElement(Heart, {
         size: 9
-      }), "絆 Lv.", lvl.level, " ", /*#__PURE__*/React.createElement("span", {
+      }), "\u7D46 Lv.", lvl.level, " ", /*#__PURE__*/React.createElement("span", {
         className: "text-slate-500"
       }, "/ ", normalizeMasuProgression(masu).levelCap)), /*#__PURE__*/React.createElement("div", {
         className: "w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"
@@ -36204,35 +36201,35 @@ function MonsterHeroGame() {
         className: "text-[10px] text-amber-300 uppercase font-black flex items-center gap-1.5"
       }, /*#__PURE__*/React.createElement(Sparkles, {
         size: 12
-      }), "強化ポイント"), /*#__PURE__*/React.createElement("div", {
+      }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", {
         className: "text-xl text-white font-black font-mono"
       }, points)), /*#__PURE__*/React.createElement("div", {
         className: "bg-black/40 p-3 rounded-2xl border border-white/5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 uppercase font-bold mb-1"
-      }, "現在のステータス(強化分込み)"), /*#__PURE__*/React.createElement("div", {
+      }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9(\u5F37\u5316\u5206\u8FBC\u307F)"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-x-3 gap-y-1"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[11px] font-mono"
-      }, /*#__PURE__*/React.createElement("span", null, "ライフ:"), /*#__PURE__*/React.createElement("span", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u30E9\u30A4\u30D5:"), /*#__PURE__*/React.createElement("span", {
         className: "text-pink-400 font-bold"
       }, currentStatValue('hp'), (masu.statPoints?.hp || 0) > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-emerald-400 text-[9px]"
       }, " (+", masu.statPoints.hp, ")"))), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[11px] font-mono"
-      }, /*#__PURE__*/React.createElement("span", null, "ちから:"), /*#__PURE__*/React.createElement("span", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u3061\u304B\u3089:"), /*#__PURE__*/React.createElement("span", {
         className: "text-red-400 font-bold"
       }, currentStatValue('atk'), (masu.statPoints?.atk || 0) > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-emerald-400 text-[9px]"
       }, " (+", masu.statPoints.atk, ")"))), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[11px] font-mono"
-      }, /*#__PURE__*/React.createElement("span", null, "丈夫さ:"), /*#__PURE__*/React.createElement("span", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u4E08\u592B\u3055:"), /*#__PURE__*/React.createElement("span", {
         className: "text-emerald-400 font-bold"
       }, currentStatValue('def'), (masu.statPoints?.def || 0) > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-emerald-400 text-[9px]"
       }, " (+", masu.statPoints.def, ")"))), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-[11px] font-mono"
-      }, /*#__PURE__*/React.createElement("span", null, "ガッツ:"), /*#__PURE__*/React.createElement("span", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4:"), /*#__PURE__*/React.createElement("span", {
         className: "text-amber-400 font-bold"
       }, currentStatValue('guts'), (masu.statPoints?.guts || 0) > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-emerald-400 text-[9px]"
@@ -36240,14 +36237,14 @@ function MonsterHeroGame() {
         className: "bg-black/40 p-3 rounded-2xl border border-pink-500/30"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-pink-400 uppercase font-bold"
-      }, "合流ボーナス(このマスモンが供モンとして合流した時に加算される値)"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9(\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u304C\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u6642\u306B\u52A0\u7B97\u3055\u308C\u308B\u5024)"), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-white font-bold mt-1"
       }, ps.hp > 0 && `HP+${ps.hp} `, ps.atk > 0 && `攻+${ps.atk} `, ps.def > 0 && `防+${ps.def} `, ps.guts > 0 && `G+${ps.guts} `, !(ps.hp > 0 || ps.atk > 0 || ps.def > 0 || ps.guts > 0) && 'なし')), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 font-bold text-center px-2"
-      }, "強化は上の「まとめて強化」で下書きし、確定すると保存されます。"), /*#__PURE__*/React.createElement("button", {
+      }, "\u5F37\u5316\u306F\u4E0A\u306E\u300C\u307E\u3068\u3081\u3066\u5F37\u5316\u300D\u3067\u4E0B\u66F8\u304D\u3057\u3001\u78BA\u5B9A\u3059\u308B\u3068\u4FDD\u5B58\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
         onClick: backToDetail,
         className: "w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2"
-      }, "完了")));
+      }, "\u5B8C\u4E86")));
     })(), dyeTargetMasuId && (() => {
       const masu = getMasuMon(dyeTargetMasuId);
       const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
@@ -36287,9 +36284,9 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between shrink-0"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-sm font-black text-white"
-      }, "🎨 ", masu.name, "の色をプレビュー"), /*#__PURE__*/React.createElement("button", {
+      }, "\uD83C\uDFA8 ", masu.name, "\u306E\u8272\u3092\u30D7\u30EC\u30D3\u30E5\u30FC"), /*#__PURE__*/React.createElement("button", {
         type: "button",
-        "aria-label": "染色を閉じる",
+        "aria-label": "\u67D3\u8272\u3092\u9589\u3058\u308B",
         onClick: closeDyePicker,
         className: "p-2 bg-white/5 rounded-full active:scale-90"
       }, /*#__PURE__*/React.createElement(X, {
@@ -36306,7 +36303,7 @@ function MonsterHeroGame() {
         className: "text-[9px] text-fuchsia-300 font-black text-center -mt-1 shrink-0"
       }, hasAnyColor ? 'プレビュー中(合成後の見た目です)' : '現在の色のまま'), regionCount === 1 && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 font-bold text-center px-2 -mt-1 shrink-0"
-      }, "このモンスターは全身一括の染色のみ対応しています"), /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u5168\u8EAB\u4E00\u62EC\u306E\u67D3\u8272\u306E\u307F\u5BFE\u5FDC\u3057\u3066\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement(DyeRegionColorControls, {
         baseId: masu.baseId,
@@ -36331,14 +36328,14 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         onClick: closeDyePicker,
         className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase"
-      }, "キャンセル"), /*#__PURE__*/React.createElement("button", {
+      }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           useDyeItem(masu.id, dyePreviewColors);
           closeDyePicker();
         },
         disabled: noChange,
         className: `flex-1 py-3 rounded-xl font-black text-xs uppercase ${noChange ? 'bg-slate-800 text-slate-600' : 'bg-fuchsia-600 text-white active:scale-95'}`
-      }, "この色に染める"))));
+      }, "\u3053\u306E\u8272\u306B\u67D3\u3081\u308B"))));
     })(), customColorPicker && (() => {
       const {
         mode,
@@ -36379,7 +36376,7 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between shrink-0"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "text-sm font-black text-white"
-      }, "🎨 カスタムカラー"), /*#__PURE__*/React.createElement("button", {
+      }, "\uD83C\uDFA8 \u30AB\u30B9\u30BF\u30E0\u30AB\u30E9\u30FC"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setCustomColorPicker(null),
         className: "p-2 bg-white/5 rounded-full active:scale-90"
       }, /*#__PURE__*/React.createElement(X, {
@@ -36407,10 +36404,10 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setCustomColorPicker(null),
         className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase"
-      }, "キャンセル"), /*#__PURE__*/React.createElement("button", {
+      }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
         onClick: applyCustom,
         className: "flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95"
-      }, "この色に決定"))));
+      }, "\u3053\u306E\u8272\u306B\u6C7A\u5B9A"))));
     })(), showMasuRenameModal && masuMonDetail && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
       style: {
@@ -36423,7 +36420,7 @@ function MonsterHeroGame() {
       className: "bg-slate-900 border border-pink-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-lg font-black text-white mb-1"
-    }, "マスモンの名前を変更"), /*#__PURE__*/React.createElement("input", {
+    }, "\u30DE\u30B9\u30E2\u30F3\u306E\u540D\u524D\u3092\u5909\u66F4"), /*#__PURE__*/React.createElement("input", {
       type: "text",
       value: masuRenameInput,
       onChange: e => setMasuRenameInput(e.target.value.slice(0, 12)),
@@ -36434,7 +36431,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowMasuRenameModal(false),
       className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "戻る"), /*#__PURE__*/React.createElement("button", {
+    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         renameMasuMon(masuMonDetail.id, masuRenameInput);
         setMasuMonDetail(prev => prev ? {
@@ -36444,7 +36441,7 @@ function MonsterHeroGame() {
         setShowMasuRenameModal(false);
       },
       className: "flex-1 bg-pink-600 text-white py-3 rounded-xl font-black text-xs"
-    }, "保存")))), showNameEdit && /*#__PURE__*/React.createElement("div", {
+    }, "\u4FDD\u5B58")))), showNameEdit && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -36456,7 +36453,7 @@ function MonsterHeroGame() {
       className: "bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-lg font-black text-white mb-1"
-    }, "ブリーダー名変更"), /*#__PURE__*/React.createElement("input", {
+    }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u540D\u5909\u66F4"), /*#__PURE__*/React.createElement("input", {
       type: "text",
       value: tempName,
       onChange: e => setTempName(e.target.value),
@@ -36467,10 +36464,10 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowNameEdit(false),
       className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "戻る"), /*#__PURE__*/React.createElement("button", {
+    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: handleSaveName,
       className: "flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs"
-    }, "保存")))), showCallStylePicker && /*#__PURE__*/React.createElement("div", {
+    }, "\u4FDD\u5B58")))), showCallStylePicker && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -36485,9 +36482,9 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-lg font-black text-white mb-1 text-center"
-    }, activeAssistant.name, "の呼び方"), /*#__PURE__*/React.createElement("p", {
+    }, activeAssistant.name, "\u306E\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "絆Lv6になったので、呼び方を自由に決められます。「", '{name}', "」と書くと、そこがあなたの名前に置き換わります。"), /*#__PURE__*/React.createElement("input", {
+    }, "\u7D46Lv6\u306B\u306A\u3063\u305F\u306E\u3067\u3001\u547C\u3073\u65B9\u3092\u81EA\u7531\u306B\u6C7A\u3081\u3089\u308C\u307E\u3059\u3002\u300C", '{name}', "\u300D\u3068\u66F8\u304F\u3068\u3001\u305D\u3053\u304C\u3042\u306A\u305F\u306E\u540D\u524D\u306B\u7F6E\u304D\u63DB\u308F\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("input", {
       type: "text",
       value: tempCallStyle,
       onChange: e => setTempCallStyle(e.target.value),
@@ -36503,7 +36500,7 @@ function MonsterHeroGame() {
       className: "px-2.5 min-h-[30px] rounded-full text-[10px] font-black bg-slate-800 border border-slate-700 text-slate-300 active:scale-95"
     }, style.label))), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3"
-    }, "いまの呼び方プレビュー: ", /*#__PURE__*/React.createElement("span", {
+    }, "\u3044\u307E\u306E\u547C\u3073\u65B9\u30D7\u30EC\u30D3\u30E5\u30FC: ", /*#__PURE__*/React.createElement("span", {
       className: "font-black",
       style: {
         color: activeAssistant.accent
@@ -36513,7 +36510,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowCallStylePicker(false),
       className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"), /*#__PURE__*/React.createElement("button", {
+    }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         chooseAssistantCallStyle(tempCallStyle);
         setShowCallStylePicker(false);
@@ -36522,14 +36519,14 @@ function MonsterHeroGame() {
       style: {
         backgroundColor: activeAssistant.accent
       }
-    }, "保存")), /*#__PURE__*/React.createElement("button", {
+    }, "\u4FDD\u5B58")), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         chooseAssistantCallStyle('');
         setTempCallStyle('');
         setShowCallStylePicker(false);
       },
       className: "w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95"
-    }, "絆Lvの呼び方に戻す"))), showAssistantPicker && /*#__PURE__*/React.createElement("div", {
+    }, "\u7D46Lv\u306E\u547C\u3073\u65B9\u306B\u623B\u3059"))), showAssistantPicker && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-5",
       style: {
         position: 'fixed',
@@ -36541,9 +36538,9 @@ function MonsterHeroGame() {
       className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-base font-black text-white mb-1 text-center"
-    }, "いっしょに遊ぶ助手"), /*#__PURE__*/React.createElement("p", {
+    }, "\u3044\u3063\u3057\u3087\u306B\u904A\u3076\u52A9\u624B"), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。"), /*#__PURE__*/React.createElement("div", {
+    }, "\u3044\u3064\u3067\u3082\u5909\u3048\u3089\u308C\u307E\u3059\u3002\u4EF2\u826F\u3057\u5EA6\u3068\u547C\u3073\u65B9\u306F\u52A9\u624B\u3054\u3068\u306B\u5206\u304B\u308C\u3066\u3044\u308B\u306E\u3067\u3001\u5207\u308A\u66FF\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "space-y-2 mb-3"
     }, ASSISTANT_LIST.map(who => {
       const active = who.id === selectedAssistantId;
@@ -36576,7 +36573,7 @@ function MonsterHeroGame() {
         style: {
           color: who.accent
         }
-      }, "選択中")), /*#__PURE__*/React.createElement("small", {
+      }, "\u9078\u629E\u4E2D")), /*#__PURE__*/React.createElement("small", {
         className: "block text-[9px] text-slate-400 leading-tight"
       }, who.tagline || ''), /*#__PURE__*/React.createElement("small", {
         className: "block text-[9px] font-black mt-0.5",
@@ -36587,7 +36584,7 @@ function MonsterHeroGame() {
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowAssistantPicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showEventReplayList && /*#__PURE__*/React.createElement("div", {
+    }, "\u9589\u3058\u308B"))), showEventReplayList && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-5",
       style: {
         position: 'fixed',
@@ -36599,9 +36596,9 @@ function MonsterHeroGame() {
       className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-base font-black text-white mb-1 text-center"
-    }, "イベント回想"), /*#__PURE__*/React.createElement("p", {
+    }, "\u30A4\u30D9\u30F3\u30C8\u56DE\u60F3"), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "見たことのある会話イベントを、何度でも見返せます。"), /*#__PURE__*/React.createElement("div", {
+    }, "\u898B\u305F\u3053\u3068\u306E\u3042\u308B\u4F1A\u8A71\u30A4\u30D9\u30F3\u30C8\u3092\u3001\u4F55\u5EA6\u3067\u3082\u898B\u8FD4\u305B\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "space-y-2 mb-3"
     }, (typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || []).map(event => {
       const eventUnlocked = isEventReplayUnlocked(event);
@@ -36612,13 +36609,13 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-lg",
           "aria-hidden": "true"
-        }, "🔒"), /*#__PURE__*/React.createElement("span", {
+        }, "\uD83D\uDD12"), /*#__PURE__*/React.createElement("span", {
           className: "min-w-0 flex-1"
         }, /*#__PURE__*/React.createElement("b", {
           className: "block text-[12px] font-black text-slate-400"
-        }, "？？？"), /*#__PURE__*/React.createElement("small", {
+        }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("small", {
           className: "block text-[9px] text-slate-600"
-        }, "まだ見ていません")));
+        }, "\u307E\u3060\u898B\u3066\u3044\u307E\u305B\u3093")));
       }
       return /*#__PURE__*/React.createElement("button", {
         key: event.id,
@@ -36640,11 +36637,11 @@ function MonsterHeroGame() {
         className: "block text-[12px] font-black text-white"
       }, event.title), /*#__PURE__*/React.createElement("small", {
         className: "block text-[9px] text-fuchsia-300/70"
-      }, "タップして見返す")));
+      }, "\u30BF\u30C3\u30D7\u3057\u3066\u898B\u8FD4\u3059")));
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowEventReplayList(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showIconPicker && /*#__PURE__*/React.createElement("div", {
+    }, "\u9589\u3058\u308B"))), showIconPicker && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -36656,7 +36653,7 @@ function MonsterHeroGame() {
       className: "bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-lg font-black text-white mb-4 text-center"
-    }, "アイコンを選択"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30A2\u30A4\u30B3\u30F3\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-3 mb-4"
     }, breederIconOptions().filter(m => m.source === 'starter').map(m => /*#__PURE__*/React.createElement("button", {
       key: m.id,
@@ -36677,7 +36674,7 @@ function MonsterHeroGame() {
       className: "text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"
     }, /*#__PURE__*/React.createElement(ShoppingBag, {
       size: 10
-    }), "マーケット購入アイコン"), /*#__PURE__*/React.createElement("div", {
+    }), "\u30DE\u30FC\u30B1\u30C3\u30C8\u8CFC\u5165\u30A2\u30A4\u30B3\u30F3"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-3 mb-4"
     }, breederIconOptions({
       ownedMarketIconIds: ownedMarketIcons
@@ -36699,7 +36696,7 @@ function MonsterHeroGame() {
     }))))), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowIconPicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "閉じる"))), showBackup && /*#__PURE__*/React.createElement("div", {
+    }, "\u9589\u3058\u308B"))), showBackup && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -36714,17 +36711,17 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement(ShieldCheck, {
       size: 18,
       className: "text-emerald-400"
-    }), "データのバックアップ"), /*#__PURE__*/React.createElement("p", {
+    }), "\u30C7\u30FC\u30BF\u306E\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-4 leading-tight"
-    }, "ホーム画面のアイコンを作り直すとデータが引き継がれないことがあります。バックアップコードを控えておけば、新しいアイコンから復元できます。"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30DB\u30FC\u30E0\u753B\u9762\u306E\u30A2\u30A4\u30B3\u30F3\u3092\u4F5C\u308A\u76F4\u3059\u3068\u30C7\u30FC\u30BF\u304C\u5F15\u304D\u7D99\u304C\u308C\u306A\u3044\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u63A7\u3048\u3066\u304A\u3051\u3070\u3001\u65B0\u3057\u3044\u30A2\u30A4\u30B3\u30F3\u304B\u3089\u5FA9\u5143\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1.5 mb-4"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setBackupTab('export'),
       className: `flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${backupTab === 'export' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500'}`
-    }, "バックアップ作成"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u4F5C\u6210"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setBackupTab('import'),
       className: `flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${backupTab === 'import' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500'}`
-    }, "復元する")), backupTab === 'export' ? /*#__PURE__*/React.createElement("div", {
+    }, "\u5FA9\u5143\u3059\u308B")), backupTab === 'export' ? /*#__PURE__*/React.createElement("div", {
       className: "space-y-3"
     }, backupCode ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("textarea", {
       readOnly: true,
@@ -36737,12 +36734,12 @@ function MonsterHeroGame() {
     }, backupCopied ? 'コピーしました！' : 'コードをコピー')) : /*#__PURE__*/React.createElement("button", {
       onClick: generateBackupCode,
       className: "w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-xs active:scale-95"
-    }, "バックアップコードを作成")) : /*#__PURE__*/React.createElement("div", {
+    }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u4F5C\u6210")) : /*#__PURE__*/React.createElement("div", {
       className: "space-y-3"
     }, /*#__PURE__*/React.createElement("textarea", {
       value: restoreInput,
       onChange: e => setRestoreInput(e.target.value),
-      placeholder: "バックアップコードを貼り付け",
+      placeholder: "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u8CBC\u308A\u4ED8\u3051",
       className: "w-full h-24 bg-black/50 border border-slate-700 rounded-xl p-2 text-white text-[9px] font-mono resize-none"
     }), restoreMsg && /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-center font-bold text-amber-300"
@@ -36750,10 +36747,10 @@ function MonsterHeroGame() {
       onClick: restoreFromBackupCode,
       disabled: !restoreInput.trim(),
       className: `w-full py-3 rounded-xl font-black text-xs ${restoreInput.trim() ? 'bg-emerald-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
-    }, "このコードで復元する")), /*#__PURE__*/React.createElement("button", {
+    }, "\u3053\u306E\u30B3\u30FC\u30C9\u3067\u5FA9\u5143\u3059\u308B")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowBackup(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs mt-3"
-    }, "閉じる"))), gameState === 'BATTLE' && /*#__PURE__*/React.createElement("div", {
+    }, "\u9589\u3058\u308B"))), gameState === 'BATTLE' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full relative",
       "data-battle-speed": battleSpeed,
       "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off'
@@ -36818,11 +36815,11 @@ function MonsterHeroGame() {
         backgroundColor: 'rgba(120,53,15,.72)',
         boxShadow: '0 0 9px rgba(245,158,11,.35)'
       }
-    }, "×", battleSpeed, autoRepeat && /*#__PURE__*/React.createElement("span", {
+    }, "\xD7", battleSpeed, autoRepeat && /*#__PURE__*/React.createElement("span", {
       className: "ml-0.5 text-[7px]"
-    }, "固定")), /*#__PURE__*/React.createElement("button", {
+    }, "\u56FA\u5B9A")), /*#__PURE__*/React.createElement("button", {
       onClick: () => openHelp(),
-      "aria-label": "ヘルプ",
+      "aria-label": "\u30D8\u30EB\u30D7",
       className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"
     }, /*#__PURE__*/React.createElement(HelpCircle, {
       size: 14
@@ -36830,7 +36827,7 @@ function MonsterHeroGame() {
       "data-battle-quit": true,
       disabled: !!battleTutorial,
       onClick: () => setShowQuitConfirm(true),
-      "aria-label": "諦める",
+      "aria-label": "\u8AE6\u3081\u308B",
       className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"
     }, /*#__PURE__*/React.createElement(Flag, {
       size: 14
@@ -36871,9 +36868,9 @@ function MonsterHeroGame() {
       className: "text-center"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] font-black text-slate-400"
-    }, "現在距離"), /*#__PURE__*/React.createElement("div", {
+    }, "\u73FE\u5728\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
       className: `mt-1 rounded-full border px-3 py-1 text-[11px] font-black ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
-    }, RANGE_LABELS[enemyDist], "距離"))), /*#__PURE__*/React.createElement("div", {
+    }, RANGE_LABELS[enemyDist], "\u8DDD\u96E2"))), /*#__PURE__*/React.createElement("div", {
       "data-ultra-enemy-log": true,
       className: "mt-1 h-[42px] overflow-hidden rounded-lg border border-red-800/60 bg-black/50 px-2 py-1 text-center leading-tight"
     }, enemySkillName && /*#__PURE__*/React.createElement("div", {
@@ -36893,11 +36890,11 @@ function MonsterHeroGame() {
       className: "w-full truncate text-[9px] font-black text-white"
     }, s?.name || '---'), /*#__PURE__*/React.createElement("div", {
       className: "mt-1 text-[8px] font-black"
-    }, RANGE_LABELS[i], "距離")))), /*#__PURE__*/React.createElement("div", {
+    }, RANGE_LABELS[i], "\u8DDD\u96E2")))), /*#__PURE__*/React.createElement("div", {
       className: "mt-1.5 space-y-1"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between text-[8px] font-black text-pink-300"
-    }, /*#__PURE__*/React.createElement("span", null, "味方HP"), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("span", null, "\u5473\u65B9HP"), /*#__PURE__*/React.createElement("span", {
       className: "font-mono"
     }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
       className: "h-1.5 overflow-hidden rounded-full bg-slate-800"
@@ -36908,7 +36905,7 @@ function MonsterHeroGame() {
       }
     }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between text-[8px] font-black text-amber-300"
-    }, /*#__PURE__*/React.createElement("span", null, "ガッツ"), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
       className: "font-mono"
     }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
       className: "h-1.5 overflow-hidden rounded-full bg-slate-800"
@@ -36935,7 +36932,7 @@ function MonsterHeroGame() {
       className: "text-[8px] font-black uppercase tracking-wider text-indigo-300"
     }, "Action Cards"), /*#__PURE__*/React.createElement("div", {
       className: "truncate text-[9px] font-bold text-slate-300"
-    }, "AUTO∞で進行中")), /*#__PURE__*/React.createElement("button", {
+    }, "AUTO\u221E\u3067\u9032\u884C\u4E2D")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(true),
       className: "flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"
     }, /*#__PURE__*/React.createElement(Layers, {
@@ -36944,12 +36941,12 @@ function MonsterHeroGame() {
       "data-auto-bgm-button": true,
       type: "button",
       onClick: () => setShowAutoBgmPicker(true),
-      "aria-label": "バトルBGMと音量を調整",
-      title: "BGM / 音量",
+      "aria-label": "\u30D0\u30C8\u30EBBGM\u3068\u97F3\u91CF\u3092\u8ABF\u6574",
+      title: "BGM / \u97F3\u91CF",
       className: "shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-[13px] leading-none"
-    }, "🎵"), /*#__PURE__*/React.createElement("span", {
+    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
       className: "mt-0.5 block text-[7px] font-black leading-none"
     }, "BGM")), /*#__PURE__*/React.createElement("div", {
       className: "w-[44px] shrink-0 flex flex-col gap-0.5"
@@ -36967,13 +36964,13 @@ function MonsterHeroGame() {
     }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: cycleEcoMode,
-      "aria-label": "省エネ 超",
+      "aria-label": "\u7701\u30A8\u30CD \u8D85",
       className: "min-h-[24px] w-full rounded-md border border-lime-200 bg-lime-500 text-[7px] font-black leading-[9px] text-slate-950"
     }, /*#__PURE__*/React.createElement("span", {
       className: "block"
-    }, "省エネ"), /*#__PURE__*/React.createElement("span", {
+    }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
       className: "block"
-    }, "超"))), /*#__PURE__*/React.createElement("button", {
+    }, "\u8D85"))), /*#__PURE__*/React.createElement("button", {
       disabled: true,
       className: "min-h-[44px] min-w-[84px] shrink-0 rounded-full border-2 border-black bg-slate-700 px-2 text-[11px] font-black uppercase text-slate-400 opacity-50"
     }, /*#__PURE__*/React.createElement(Play, {
@@ -36994,7 +36991,7 @@ function MonsterHeroGame() {
         className: "shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, statusRule), hasEnemyRate && /*#__PURE__*/React.createElement("span", null, "敵強化 +", compactPercent(enemyMultiplier - 1), "（WAVE開始時 累計", totalTurnCount, "T）"), hasDamageRate && /*#__PURE__*/React.createElement("span", null, "与ダメ ", compactPercent(damageMultiplier), "（現在 累計", elapsedTotalTurns, "T）"), hasJoinRate && /*#__PURE__*/React.createElement("span", null, "加入B ", compactPercent(ultimateAllyJoinMultiplier(elapsedTotalTurns, statusRule)), "（現在）"));
+      }, statusRule), hasEnemyRate && /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5316 +", compactPercent(enemyMultiplier - 1), "\uFF08WAVE\u958B\u59CB\u6642 \u7D2F\u8A08", totalTurnCount, "T\uFF09"), hasDamageRate && /*#__PURE__*/React.createElement("span", null, "\u4E0E\u30C0\u30E1 ", compactPercent(damageMultiplier), "\uFF08\u73FE\u5728 \u7D2F\u8A08", elapsedTotalTurns, "T\uFF09"), hasJoinRate && /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165B ", compactPercent(ultimateAllyJoinMultiplier(elapsedTotalTurns, statusRule)), "\uFF08\u73FE\u5728\uFF09"));
     })(), (() => {
       const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       return [NIGHTMARE_SETTING.id, CHAOS_SETTING.id].includes(rule) && /*#__PURE__*/React.createElement("div", {
@@ -37022,7 +37019,7 @@ function MonsterHeroGame() {
     }, RANGE_LABELS[enemyDist]), iceLockTurns > 0 && /*#__PURE__*/React.createElement("span", {
       "data-ice-lock-status": true,
       className: "shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tighter whitespace-nowrap text-cyan-100"
-    }, "❄️絶氷 ", iceLockPreparing ? '準備' : /*#__PURE__*/React.createElement(React.Fragment, null, iceLockTurns, "T\u3000⬇30%"))), /*#__PURE__*/React.createElement("span", {
+    }, "\u2744\uFE0F\u7D76\u6C37 ", iceLockPreparing ? '準備' : /*#__PURE__*/React.createElement(React.Fragment, null, iceLockTurns, "T\u3000\u2B0730%"))), /*#__PURE__*/React.createElement("span", {
       className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
     }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
       className: "h-2.5 bg-slate-900 rounded-full overflow-hidden border border-white/20 relative shadow-inner"
@@ -37042,7 +37039,7 @@ function MonsterHeroGame() {
       size: 14
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] font-black text-white"
-    }, "解析")), /*#__PURE__*/React.createElement("button", {
+    }, "\u89E3\u6790")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowHeroInfo(true),
       className: `absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`
     }, /*#__PURE__*/React.createElement(Crown, {
@@ -37050,7 +37047,7 @@ function MonsterHeroGame() {
       size: 14
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] font-black text-white"
-    }, "ステータス")), /*#__PURE__*/React.createElement("button", {
+    }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
       onClick: useEmergency,
       disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
       className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
@@ -37059,7 +37056,7 @@ function MonsterHeroGame() {
       size: 16
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] font-black text-white"
-    }, "緊急")), /*#__PURE__*/React.createElement("div", {
+    }, "\u7DCA\u6025")), /*#__PURE__*/React.createElement("div", {
       className: "mt-1 relative flex flex-col items-center"
     }, enemySkillName && /*#__PURE__*/React.createElement("div", {
       className: "fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap",
@@ -37079,9 +37076,9 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]"
-    }, "☠️"), /*#__PURE__*/React.createElement("div", {
+    }, "\u2620\uFE0F"), /*#__PURE__*/React.createElement("div", {
       className: "px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]"
-    }, "必 殺 技")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
+    }, "\u5FC5 \u6BBA \u6280")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
       className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
       style: {
         top: '11%',
@@ -37090,9 +37087,9 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]"
-    }, "✨"), /*#__PURE__*/React.createElement("div", {
+    }, "\u2728"), /*#__PURE__*/React.createElement("div", {
       className: "px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]"
-    }, "た め る")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
+    }, "\u305F \u3081 \u308B")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
     /*#__PURE__*/
     // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
     // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
@@ -37107,7 +37104,7 @@ function MonsterHeroGame() {
       className: "mh-enemy-move-hint"
     }, /*#__PURE__*/React.createElement("span", {
       "aria-hidden": "true"
-    }, "🏃"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "距離に移動しようとしている…？"))), slotSkill && /*#__PURE__*/React.createElement("div", {
+    }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), slotSkill && /*#__PURE__*/React.createElement("div", {
       className: "fixed -translate-x-1/2 pointer-events-none whitespace-nowrap",
       style: {
         left: `${12.5 + slotSkill.slotIndex * 25}%`,
@@ -37129,7 +37126,7 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[120px] drop-shadow-[0_0_30px_rgba(56,189,248,1)]"
-    }, "🛡️")), [0, 1, 2, 3, 4, 5].map(k => /*#__PURE__*/React.createElement("div", {
+    }, "\uD83D\uDEE1\uFE0F")), [0, 1, 2, 3, 4, 5].map(k => /*#__PURE__*/React.createElement("div", {
       key: k,
       className: "absolute",
       style: {
@@ -37148,7 +37145,7 @@ function MonsterHeroGame() {
         top: '34%',
         animation: 'guardShine 550ms ease-out forwards'
       }
-    }, "キーン!"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30AD\u30FC\u30F3!"), /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0",
       style: {
         background: 'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',
@@ -37206,7 +37203,7 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("img", {
       src: enemy.imgUrl,
-      alt: "ムー",
+      alt: "\u30E0\u30FC",
       style: {
         width: '100%',
         height: '100%',
@@ -37250,7 +37247,7 @@ function MonsterHeroGame() {
         animation: 'sparkFlicker 240ms ease-in-out infinite',
         animationDelay: `${deg}ms`
       }
-    }, "⚡")), /*#__PURE__*/React.createElement("div", {
+    }, "\u26A1")), /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 rounded-full border-4 border-purple-300/80",
       style: {
         animation: 'auraRing 500ms ease-out infinite'
@@ -37333,12 +37330,12 @@ function MonsterHeroGame() {
       style: {
         animation: 'moveDash 700ms ease-in-out forwards'
       }
-    }, "💨"), /*#__PURE__*/React.createElement("div", {
+    }, "\uD83D\uDCA8"), /*#__PURE__*/React.createElement("div", {
       className: "absolute -top-3 text-4xl font-black text-cyan-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]",
       style: {
         animation: 'exclaimPop 600ms cubic-bezier(.2,1.4,.4,1) forwards'
       }
-    }, "🏃")), !ecoBattleView && enemyAttackFx?.kind === 'normal' && /*#__PURE__*/React.createElement("div", {
+    }, "\uD83C\uDFC3")), !ecoBattleView && enemyAttackFx?.kind === 'normal' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[10000] flex items-center justify-center",
       style: {
         animation: 'enemyExclaim 500ms ease-out forwards'
@@ -37348,7 +37345,7 @@ function MonsterHeroGame() {
       style: {
         animation: 'exclaimPop 500ms cubic-bezier(.2,1.4,.4,1) forwards'
       }
-    }, "❗"), /*#__PURE__*/React.createElement("div", {
+    }, "\u2757"), /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 rounded-full border-4 border-yellow-300/80",
       style: {
         animation: 'shockRing 500ms ease-out forwards'
@@ -37384,12 +37381,12 @@ function MonsterHeroGame() {
         animation: 'sparkFlicker 300ms ease-in-out infinite',
         animationDelay: `${deg}ms`
       }
-    }, "⚡")), /*#__PURE__*/React.createElement("div", {
+    }, "\u26A1")), /*#__PURE__*/React.createElement("div", {
       className: "absolute text-7xl drop-shadow-[0_0_24px_rgba(251,191,36,1)]",
       style: {
         animation: 'specialThrob 500ms ease-in-out infinite'
       }
-    }, "🔥"), /*#__PURE__*/React.createElement("div", {
+    }, "\uD83D\uDD25"), /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 rounded-full",
       style: {
         animation: 'specialFlash 600ms ease-out infinite',
@@ -37402,7 +37399,7 @@ function MonsterHeroGame() {
       style: {
         animation: 'idleExclaim 1100ms ease-in-out infinite'
       }
-    }, "❗")), !ecoBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+    }, "\u2757")), !ecoBattleView && enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute -inset-6 rounded-full",
@@ -37417,7 +37414,7 @@ function MonsterHeroGame() {
         '--deg': `${k * 45}deg`,
         animation: `chargeGather 900ms ease-in ${k * 70}ms infinite`
       }
-    }, "✨")), /*#__PURE__*/React.createElement("div", {
+    }, "\u2728")), /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 rounded-full border-4 border-amber-300/80",
       style: {
         animation: 'auraRing 700ms ease-out infinite'
@@ -37473,7 +37470,7 @@ function MonsterHeroGame() {
           animation: 'idleSpark 600ms ease-in-out infinite',
           animationDelay: `${deg * 1.5}ms`
         }
-      }, "⚡"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      }, "\u26A1"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "absolute -inset-10 rounded-full",
         style: {
           background: 'radial-gradient(circle, rgba(239,68,68,0.45) 0%, rgba(220,38,38,0.32) 42%, rgba(0,0,0,0) 75%)',
@@ -37497,15 +37494,15 @@ function MonsterHeroGame() {
           animation: 'idleSpark 900ms ease-in-out infinite',
           animationDelay: `${deg * 2}ms`
         }
-      }, "⚡")), /*#__PURE__*/React.createElement("div", {
+      }, "\u26A1")), /*#__PURE__*/React.createElement("div", {
         className: "absolute -top-3 text-3xl drop-shadow-[0_0_12px_rgba(239,68,68,1)]",
         style: {
           animation: 'idleExclaim 900ms ease-in-out infinite'
         }
-      }, "❗")));
+      }, "\u2757")));
     })()), getTurnBuff('stunEnemy', false) && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 flex items-center justify-center text-3xl bg-indigo-500/20 rounded-full border-4 border-indigo-500 animate-pulse"
-    }, "💫"), /*#__PURE__*/React.createElement("div", {
+    }, "\uD83D\uDCAB"), /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5"
     }, popups.filter(p => p.side === 'enemy').map(p => /*#__PURE__*/React.createElement("div", {
       key: p.id,
@@ -37553,7 +37550,7 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Shield, {
       size: 7
-    }), " 被ダメ -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    }), " \u88AB\u30C0\u30E1 -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Shield, {
       size: 7
@@ -37561,47 +37558,47 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 7
-    }), " ライフ +", Math.floor(getPermaBuff('muaHpPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    }), " \u30E9\u30A4\u30D5 +", Math.floor(getPermaBuff('muaHpPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-amber-500 bg-black/60 px-2 py-0.5 rounded border border-amber-500/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 7
-    }), " ガッツ +", Math.floor(getPermaBuff('muaGutsPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    }), " \u30AC\u30C3\u30C4 +", Math.floor(getPermaBuff('muaGutsPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 7
-    }), " クリ率 +", Math.round(getPermaBuff('critRatePct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    }), " \u30AF\u30EA\u7387 +", Math.round(getPermaBuff('critRatePct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 7
-    }), " クリダメ +", Math.round(getPermaBuff('critDmgPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    }), " \u30AF\u30EA\u30C0\u30E1 +", Math.round(getPermaBuff('critDmgPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Sword, {
       size: 7
-    }), " 連撃 +", Math.round(getPermaBuff('comboDmgPct') * 100), "%"), getPermaBuff('globalComboDmgPct') > 0 && /*#__PURE__*/React.createElement("div", {
+    }), " \u9023\u6483 +", Math.round(getPermaBuff('comboDmgPct') * 100), "%"), getPermaBuff('globalComboDmgPct') > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"
     }, /*#__PURE__*/React.createElement(Sword, {
       size: 7
-    }), " 全体連撃 +", Math.round(getPermaBuff('globalComboDmgPct') * 100), "%"), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("div", {
+    }), " \u5168\u4F53\u9023\u6483 +", Math.round(getPermaBuff('globalComboDmgPct') * 100), "%"), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
     }, /*#__PURE__*/React.createElement(PlusCircle, {
       size: 7
-    }), " カード上限 +1（残り", Math.ceil(getPermaBuff('kikiCardBonusTurns')), "T）"), /*#__PURE__*/React.createElement("div", {
+    }), " \u30AB\u30FC\u30C9\u4E0A\u9650 +1\uFF08\u6B8B\u308A", Math.ceil(getPermaBuff('kikiCardBonusTurns')), "T\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: `text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50'}`
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 7
-    }), " ライフ回復 ", Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    }), " \u30E9\u30A4\u30D5\u56DE\u5FA9 ", Math.round(getPermaBuff('autoHpRecovery', 0.1) * 100), "%"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 7
-    }), " ガッツ回復 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getPermaBuff('poltzCharges') > 0 && /*#__PURE__*/React.createElement("div", {
+    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getPermaBuff('poltzCharges') > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-lime-300 bg-lime-950/60 px-2 py-1 rounded-full border border-lime-400/50 animate-pulse flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 8
-    }), " ", BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], " ×", Math.floor(getPermaBuff('poltzCharges'))), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
+    }), " ", BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], " \xD7", Math.floor(getPermaBuff('poltzCharges'))), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 8
-    }), " 次ターン全回復"), getTurnBuff('atkMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
+    }), " \u6B21\u30BF\u30FC\u30F3\u5168\u56DE\u5FA9"), getTurnBuff('atkMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 8
@@ -37609,47 +37606,47 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 8
-    }), " スタン予約"), getTurnBuff('guaranteedCrit', false) && /*#__PURE__*/React.createElement("div", {
+    }), " \u30B9\u30BF\u30F3\u4E88\u7D04"), getTurnBuff('guaranteedCrit', false) && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Target, {
       size: 8
-    }), " 会心予約"), (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) && /*#__PURE__*/React.createElement("div", {
+    }), " \u4F1A\u5FC3\u4E88\u7D04"), (getTurnBuff('zeroGuts', false) || getNextTurnBuff('zeroGuts', false)) && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-blue-400 bg-blue-950/60 px-2 py-1 rounded-full border border-blue-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Star, {
       size: 8
-    }), " 0消費中"), getNextTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
+    }), " 0\u6D88\u8CBB\u4E2D"), getNextTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-purple-400 bg-purple-950/60 px-2 py-1 rounded-full border border-purple-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(RefreshCcw, {
       size: 8
-    }), " 次反射"), getTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
+    }), " \u6B21\u53CD\u5C04"), getTurnBuff('reflect', false) && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-purple-300 bg-purple-900/80 px-2 py-1 rounded-full border border-purple-400 animate-bounce uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(RefreshCcw, {
       size: 8
-    }), " 反射待機"), getWaveBuff('enemyAtkDebuffPct') > 0 && /*#__PURE__*/React.createElement("div", {
+    }), " \u53CD\u5C04\u5F85\u6A5F"), getWaveBuff('enemyAtkDebuffPct') > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-indigo-400 bg-indigo-950/60 px-2 py-1 rounded-full border border-indigo-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(ArrowDownCircle, {
       size: 8
-    }), " 敵攻-", Math.round(getWaveBuff('enemyAtkDebuffPct') * 100), "%"), getWaveBuff('enemyTakenDmgBonus') > 0 && /*#__PURE__*/React.createElement("div", {
+    }), " \u6575\u653B-", Math.round(getWaveBuff('enemyAtkDebuffPct') * 100), "%"), getWaveBuff('enemyTakenDmgBonus') > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(PlusCircle, {
       size: 8
-    }), " 敵被ダメ+", Math.round(getWaveBuff('enemyTakenDmgBonus') * 100), "%"), getNextTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
+    }), " \u6575\u88AB\u30C0\u30E1+", Math.round(getWaveBuff('enemyTakenDmgBonus') * 100), "%"), getNextTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-pink-400 bg-pink-950/60 px-2 py-1 rounded-full border border-pink-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Shield, {
       size: 8
-    }), " 次T被ダメ-", Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
+    }), " \u6B21T\u88AB\u30C0\u30E1-", Math.round((1 - getNextTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getTurnBuff('takenDamageMult', 1.0) < 1 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-pink-300 bg-pink-900/80 px-2 py-1 rounded-full border border-pink-400 animate-bounce uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Shield, {
       size: 8
-    }), " 被ダメ-", Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getNextTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
+    }), " \u88AB\u30C0\u30E1-", Math.round((1 - getTurnBuff('takenDamageMult', 1.0)) * 100), "%"), getNextTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-amber-400 bg-amber-950/60 px-2 py-1 rounded-full border border-amber-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 8
-    }), " 次T消費G+", Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"), getTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
+    }), " \u6B21T\u6D88\u8CBBG+", Math.round((getNextTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"), getTurnBuff('gutsCostMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-amber-300 bg-amber-900/80 px-2 py-1 rounded-full border border-amber-400 animate-bounce uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 8
-    }), " 消費G+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"))), /*#__PURE__*/React.createElement("div", {
+    }), " \u6D88\u8CBBG+", Math.round((getTurnBuff('gutsCostMult', 1.0) - 1) * 100), "%"))), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 py-2 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1",
@@ -37810,7 +37807,7 @@ function MonsterHeroGame() {
         className: showProjected ? 'text-yellow-400' : 'text-red-400'
       }), /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] font-black uppercase tracking-widest text-slate-300"
-      }, "合計DMG"), showProjected ? /*#__PURE__*/React.createElement("span", {
+      }, "\u5408\u8A08DMG"), showProjected ? /*#__PURE__*/React.createElement("span", {
         className: "text-[11px] font-black font-mono flex items-center gap-1"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
@@ -37830,7 +37827,7 @@ function MonsterHeroGame() {
         className: showGuardProjected ? 'text-yellow-400' : 'text-emerald-400'
       }), /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] font-black uppercase tracking-widest text-slate-300"
-      }, "合計軽減"), showGuardProjected ? /*#__PURE__*/React.createElement("span", {
+      }, "\u5408\u8A08\u8EFD\u6E1B"), showGuardProjected ? /*#__PURE__*/React.createElement("span", {
         className: "text-[11px] font-black font-mono flex items-center gap-1"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
@@ -37983,11 +37980,11 @@ function MonsterHeroGame() {
         }
       }), /*#__PURE__*/React.createElement("div", {
         className: "absolute -top-2 left-1/2 -translate-x-1/2 z-[65] whitespace-nowrap rounded-full border-2 border-red-200 bg-red-950 px-1.5 py-0.5 text-[7px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,.9)]"
-      }, distanceBreakLevel === 1 ? '⚠' : '☠', " BREAK ", distanceBreakRoman, "｜与ダメ ", distanceBreakPercent, "%"), !s && /*#__PURE__*/React.createElement("div", {
+      }, distanceBreakLevel === 1 ? '⚠' : '☠', " BREAK ", distanceBreakRoman, "\uFF5C\u4E0E\u30C0\u30E1 ", distanceBreakPercent, "%"), !s && /*#__PURE__*/React.createElement("div", {
         className: "absolute inset-0 z-[25] flex items-center justify-center pointer-events-none text-red-200/80"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-2xl font-black"
-      }, "⚠"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
         className: `h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
       }, isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
         size: 8,
@@ -37996,7 +37993,7 @@ function MonsterHeroGame() {
         className: `text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s) ? 'text-amber-100' : 'text-white'}`
       }, s?.name || '---'), assignedCount > 0 && /*#__PURE__*/React.createElement("span", {
         className: "ml-1 text-[7px] font-black text-indigo-300"
-      }, "×", assignedCount)), (() => {
+      }, "\xD7", assignedCount)), (() => {
         const uOptions = getAvailableUniquesForSlot(s, ownedUniques, i);
         if (uOptions.length < 2) return null;
         const curKey = activeSlotUniqueKey(slotUniqueChoice, i, s);
@@ -38014,7 +38011,7 @@ function MonsterHeroGame() {
           className: "text-white"
         }), /*#__PURE__*/React.createElement("span", {
           className: "text-[6px] font-black text-white leading-none"
-        }, "固有技 ", curIdx + 1, "/", uOptions.length));
+        }, "\u56FA\u6709\u6280 ", curIdx + 1, "/", uOptions.length));
       })(), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col items-center justify-center relative"
       }, slotSettle === i && /*#__PURE__*/React.createElement("div", {
@@ -38094,7 +38091,7 @@ function MonsterHeroGame() {
           animation: 'idleSpark 900ms ease-in-out infinite',
           animationDelay: `${deg * 2}ms`
         }
-      }, "⚡"))), (() => {
+      }, "\u26A1"))), (() => {
         const totalBonus = distTotalBonus(i);
         return /*#__PURE__*/React.createElement("div", {
           className: `absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
@@ -38134,7 +38131,7 @@ function MonsterHeroGame() {
         className: `h-[28%] ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black uppercase tracking-tighter leading-none"
-      }, RANGE_LABELS[i], "距離")));
+      }, RANGE_LABELS[i], "\u8DDD\u96E2")));
     }))), /*#__PURE__*/React.createElement("div", {
       className: "h-[24%] shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10"
     }, /*#__PURE__*/React.createElement("div", {
@@ -38151,7 +38148,7 @@ function MonsterHeroGame() {
       size: 8
     }), "+", heroCardBonus), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
       className: "shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
-    }, "応援+1")), /*#__PURE__*/React.createElement("div", {
+    }, "\u5FDC\u63F4+1")), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-0.5 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(true),
@@ -38164,12 +38161,12 @@ function MonsterHeroGame() {
       "data-auto-bgm-button": true,
       type: "button",
       onClick: () => setShowAutoBgmPicker(true),
-      "aria-label": "バトルBGMと音量を調整",
-      title: "BGM / 音量",
+      "aria-label": "\u30D0\u30C8\u30EBBGM\u3068\u97F3\u91CF\u3092\u8ABF\u6574",
+      title: "BGM / \u97F3\u91CF",
       className: "shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-[13px] leading-none"
-    }, "🎵"), /*#__PURE__*/React.createElement("span", {
+    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
       className: "mt-0.5 block text-[7px] font-black leading-none"
     }, "BGM")), /*#__PURE__*/React.createElement("div", {
       className: "w-[44px] shrink-0 flex flex-col gap-0.5"
@@ -38191,7 +38188,7 @@ function MonsterHeroGame() {
       className: `min-h-[24px] w-full rounded-md border font-black text-[7px] leading-[9px] active:scale-90 ${ecoMode === 'lite' ? 'border-emerald-300 bg-emerald-700 text-emerald-50' : ecoMode === 'ultra' ? 'border-lime-200 bg-lime-500 text-slate-950' : 'border-slate-500 bg-slate-700 text-slate-200'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "block"
-    }, "省エネ"), /*#__PURE__*/React.createElement("span", {
+    }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
       className: "block"
     }, ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'))), (() => {
       const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
@@ -38329,7 +38326,7 @@ function MonsterHeroGame() {
       }, item.name), /*#__PURE__*/React.createElement("button", {
         onClick: () => setMarketIconZoom(null),
         className: "w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98]"
-      }, "とじる")));
+      }, "\u3068\u3058\u308B")));
     })(), marketItemDetail && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-4",
       style: {
@@ -38359,18 +38356,18 @@ function MonsterHeroGame() {
       className: "mt-3 flex items-center justify-between text-[11px] font-black"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400"
-    }, "所持数"), /*#__PURE__*/React.createElement("span", {
+    }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("span", {
       className: "text-cyan-300 font-mono"
     }, ownedItems[marketItemDetail.id] || 0)), /*#__PURE__*/React.createElement("div", {
       className: "mt-1 flex items-center justify-between text-[11px] font-black"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400"
-    }, "ねだん"), /*#__PURE__*/React.createElement("span", {
+    }, "\u306D\u3060\u3093"), /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300 font-mono"
     }, Number(marketItemDetail.cost || 0).toLocaleString(), " ", marketItemDetail.currency === 'psyche' ? 'プシュケー' : marketItemDetail.type === 'icon' ? 'pt' : 'ダイヤ')), /*#__PURE__*/React.createElement("button", {
       onClick: () => setMarketItemDetail(null),
       className: "w-full mt-4 min-h-[48px] rounded-2xl bg-teal-600 text-white font-black active:scale-[.98]"
-    }, "とじる"))), marketQuantityItem && (() => {
+    }, "\u3068\u3058\u308B"))), marketQuantityItem && (() => {
       const usesPsyche = marketQuantityItem.currency === 'psyche';
       const balance = usesPsyche ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : gold;
       const unit = usesPsyche ? 'プシュケー' : 'ダイヤ';
@@ -38403,11 +38400,11 @@ function MonsterHeroGame() {
         className: "mt-3 rounded-2xl bg-slate-900 p-3 text-center"
       }, /*#__PURE__*/React.createElement("span", {
         className: "block text-[10px] font-bold text-slate-400"
-      }, "所持数"), /*#__PURE__*/React.createElement("strong", {
+      }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("strong", {
         className: `mt-1 block text-xl font-black ${accentText}`
       }, balance.toLocaleString(), " ", unit)), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 text-center text-[11px] font-black text-slate-300"
-      }, "購入個数"), /*#__PURE__*/React.createElement("div", {
+      }, "\u8CFC\u5165\u500B\u6570"), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 grid grid-cols-5 items-center gap-1.5"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: quantity <= 1,
@@ -38431,36 +38428,36 @@ function MonsterHeroGame() {
         disabled: maxQuantity <= 0,
         onClick: () => setMarketPurchaseQuantity(maxQuantity),
         className: `mt-2 min-h-[44px] w-full rounded-xl font-black disabled:opacity-30 ${usesPsyche ? 'bg-fuchsia-800' : 'bg-amber-700'}`
-      }, "MAX（", maxQuantity.toLocaleString(), "個）"), /*#__PURE__*/React.createElement("div", {
+      }, "MAX\uFF08", maxQuantity.toLocaleString(), "\u500B\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 space-y-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 text-[12px] font-black"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "単価"), /*#__PURE__*/React.createElement("span", null, "1個 = ", unitCost.toLocaleString(), unit)), /*#__PURE__*/React.createElement("div", {
+      }, "\u5358\u4FA1"), /*#__PURE__*/React.createElement("span", null, "1\u500B = ", unitCost.toLocaleString(), unit)), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-base"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-300"
-      }, "合計"), /*#__PURE__*/React.createElement("span", {
+      }, "\u5408\u8A08"), /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
       }, total.toLocaleString(), unit)), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "購入後"), /*#__PURE__*/React.createElement("span", {
+      }, "\u8CFC\u5165\u5F8C"), /*#__PURE__*/React.createElement("span", {
         className: accentText
-      }, "残り", Math.max(0, balance - total).toLocaleString(), unit))), maxQuantity <= 0 && /*#__PURE__*/React.createElement("p", {
+      }, "\u6B8B\u308A", Math.max(0, balance - total).toLocaleString(), unit))), maxQuantity <= 0 && /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-center text-[12px] font-black text-red-300"
-      }, unit, "が足りません"), /*#__PURE__*/React.createElement("div", {
+      }, unit, "\u304C\u8DB3\u308A\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 grid grid-cols-1 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: !canPurchase,
         onClick: () => buyMarketItem(marketQuantityItem, quantity),
         className: "min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
-      }, "購入する"), /*#__PURE__*/React.createElement("button", {
+      }, "\u8CFC\u5165\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setMarketQuantityItem(null),
         className: "min-h-[48px] rounded-2xl border border-white/20 bg-slate-900 font-black active:scale-[.98]"
-      }, "キャンセル"))));
+      }, "\u30AD\u30E3\u30F3\u30BB\u30EB"))));
     })(), skipInfoItemId && (() => {
       const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipInfoItemId);
       if (!item) return null;
@@ -38475,7 +38472,7 @@ function MonsterHeroGame() {
         },
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "スキップの説明"
+        "aria-label": "\u30B9\u30AD\u30C3\u30D7\u306E\u8AAC\u660E"
       }, /*#__PURE__*/React.createElement("div", {
         className: "bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl"
       }, /*#__PURE__*/React.createElement("div", {
@@ -38488,26 +38485,26 @@ function MonsterHeroGame() {
         className: "space-y-2 text-[11px] text-slate-200 leading-relaxed"
       }, /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, item.name), "を1枚使うと、", label, "を", /*#__PURE__*/React.createElement("b", {
+      }, item.name), "\u30921\u679A\u4F7F\u3046\u3068\u3001", label, "\u3092", /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, "ボスまで倒したとき"), "と同じ絆経験値・ブリーダー経験値・ダイヤを受け取れます。"), /*#__PURE__*/React.createElement("p", null, "スキップを押すと、勇者モンと供モン3体を選ぶ画面に進みます。同じ画面で", /*#__PURE__*/React.createElement("b", {
+      }, "\u30DC\u30B9\u307E\u3067\u5012\u3057\u305F\u3068\u304D"), "\u3068\u540C\u3058\u7D46\u7D4C\u9A13\u5024\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u30B9\u30AD\u30C3\u30D7\u3092\u62BC\u3059\u3068\u3001\u52C7\u8005\u30E2\u30F3\u3068\u4F9B\u30E2\u30F33\u4F53\u3092\u9078\u3076\u753B\u9762\u306B\u9032\u307F\u307E\u3059\u3002\u540C\u3058\u753B\u9762\u3067", /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, "使う枚数"), "を決められ、まとめて使うと受け取る量も枚数ぶんになります。決めたあとに確認が出て、「はい」でチケットを使います。"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4F7F\u3046\u679A\u6570"), "\u3092\u6C7A\u3081\u3089\u308C\u3001\u307E\u3068\u3081\u3066\u4F7F\u3046\u3068\u53D7\u3051\u53D6\u308B\u91CF\u3082\u679A\u6570\u3076\u3093\u306B\u306A\u308A\u307E\u3059\u3002\u6C7A\u3081\u305F\u3042\u3068\u306B\u78BA\u8A8D\u304C\u51FA\u3066\u3001\u300C\u306F\u3044\u300D\u3067\u30C1\u30B1\u30C3\u30C8\u3092\u4F7F\u3044\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "bg-black/40 rounded-xl border border-teal-500/30 p-3 text-[10px] leading-relaxed"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-teal-300 font-black mb-1"
-      }, "受け取れるもの"), /*#__PURE__*/React.createElement("div", null, "・勇者モンの絆経験値（マスモンのみ）"), /*#__PURE__*/React.createElement("div", null, "・選んだ供モンは1/2、編成内で選ばなかったマスモンは1/4"), /*#__PURE__*/React.createElement("div", null, "・ブリーダー経験値とブリーダーポイント"), /*#__PURE__*/React.createElement("div", null, "・ダイヤ")), /*#__PURE__*/React.createElement("div", {
+      }, "\u53D7\u3051\u53D6\u308C\u308B\u3082\u306E"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u52C7\u8005\u30E2\u30F3\u306E\u7D46\u7D4C\u9A13\u5024\uFF08\u30DE\u30B9\u30E2\u30F3\u306E\u307F\uFF09"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u9078\u3093\u3060\u4F9B\u30E2\u30F3\u306F1/2\u3001\u7DE8\u6210\u5185\u3067\u9078\u3070\u306A\u304B\u3063\u305F\u30DE\u30B9\u30E2\u30F3\u306F1/4"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u3068\u30D6\u30EA\u30FC\u30C0\u30FC\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", {
         className: "bg-black/40 rounded-xl border border-white/10 p-3 text-[10px] leading-relaxed text-slate-400"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-slate-300 font-black mb-1"
-      }, "受け取れないもの"), /*#__PURE__*/React.createElement("div", null, "・スコアとランキングへの記録"), /*#__PURE__*/React.createElement("div", null, "・クリア回数・ミッションの進捗"), /*#__PURE__*/React.createElement("div", null, "・マスモン登録（マスモンでないモンスターには絆経験値が入りません）")), /*#__PURE__*/React.createElement("p", {
+      }, "\u53D7\u3051\u53D6\u308C\u306A\u3044\u3082\u306E"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30B9\u30B3\u30A2\u3068\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u306E\u8A18\u9332"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30AF\u30EA\u30A2\u56DE\u6570\u30FB\u30DF\u30C3\u30B7\u30E7\u30F3\u306E\u9032\u6357"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30DE\u30B9\u30E2\u30F3\u767B\u9332\uFF08\u30DE\u30B9\u30E2\u30F3\u3067\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u306B\u306F\u7D46\u7D4C\u9A13\u5024\u304C\u5165\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("p", {
         className: "text-slate-400"
-      }, "所持数: ", /*#__PURE__*/React.createElement("b", {
+      }, "\u6240\u6301\u6570: ", /*#__PURE__*/React.createElement("b", {
         className: "text-white"
-      }, ownedItems[item.id] || 0), " 枚（マーケットでも購入できます）")), /*#__PURE__*/React.createElement("button", {
+      }, ownedItems[item.id] || 0), " \u679A\uFF08\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u3082\u8CFC\u5165\u3067\u304D\u307E\u3059\uFF09")), /*#__PURE__*/React.createElement("button", {
         onClick: () => setSkipInfoItemId(null),
         className: "w-full mt-4 bg-teal-600 text-white py-3 rounded-2xl font-black text-sm uppercase active:scale-95"
-      }, "閉じる")));
+      }, "\u9589\u3058\u308B")));
     })(), gameState === 'SKIP_PICK' && skipFlow && (() => {
       const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipFlow.itemId);
       const label = DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label || skipFlow.difficulty;
@@ -38533,7 +38530,7 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-lg font-black italic text-teal-400 uppercase tracking-widest"
-      }, "スキップ・", label), /*#__PURE__*/React.createElement("div", {
+      }, "\u30B9\u30AD\u30C3\u30D7\u30FB", label), /*#__PURE__*/React.createElement("div", {
         className: "w-10"
       })), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-md mx-auto mb-2"
@@ -38565,12 +38562,12 @@ function MonsterHeroGame() {
           className: "text-lg"
         }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
           className: "text-slate-600 text-lg"
-        }, "＋")), /*#__PURE__*/React.createElement("span", {
+        }, "\uFF0B")), /*#__PURE__*/React.createElement("span", {
           className: "text-[8px] font-black text-white truncate w-full text-center"
         }, mon ? mon.name : '未選択'));
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
-      }, "上のわくをタップすると外せます。絆経験値が入るのはマスモンだけです"), /*#__PURE__*/React.createElement("div", {
+      }, "\u4E0A\u306E\u308F\u304F\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u5916\u305B\u307E\u3059\u3002\u7D46\u7D4C\u9A13\u5024\u304C\u5165\u308B\u306E\u306F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "flex gap-1.5 mt-2"
       }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, tabLabel]) => /*#__PURE__*/React.createElement("button", {
         key: key,
@@ -38605,46 +38602,46 @@ function MonsterHeroGame() {
           className: "text-[7px] font-black"
         }, mon.masuId ? /*#__PURE__*/React.createElement("span", {
           className: "text-pink-300"
-        }, "絆Lv.", getMasuBondLevel(mon.masuId).level) : /*#__PURE__*/React.createElement("span", {
+        }, "\u7D46Lv.", getMasuBondLevel(mon.masuId).level) : /*#__PURE__*/React.createElement("span", {
           className: "text-slate-500"
-        }, "マスモン未登録")));
+        }, "\u30DE\u30B9\u30E2\u30F3\u672A\u767B\u9332")));
       }))), /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto shrink-0 pt-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-400 font-bold text-center mb-1"
-      }, item?.name, " 所持数 ", ownedItems[skipFlow.itemId] || 0, " 枚"), (() => {
+      }, item?.name, " \u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, " \u679A"), (() => {
         const max = skipMaxCount(skipFlow.itemId);
         const n = skipFlowCount();
         return /*#__PURE__*/React.createElement("div", {
           className: "flex items-center gap-2 mb-2"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-[10px] font-black text-slate-400 shrink-0"
-        }, "使う枚数"), /*#__PURE__*/React.createElement("button", {
+        }, "\u4F7F\u3046\u679A\u6570"), /*#__PURE__*/React.createElement("button", {
           disabled: n <= 1,
           onClick: () => changeSkipCount(n - 1),
-          "aria-label": "使う枚数を1枚減らす",
+          "aria-label": "\u4F7F\u3046\u679A\u6570\u30921\u679A\u6E1B\u3089\u3059",
           className: "shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30"
-        }, "−"), /*#__PURE__*/React.createElement("div", {
+        }, "\u2212"), /*#__PURE__*/React.createElement("div", {
           className: "flex-1 text-center"
         }, /*#__PURE__*/React.createElement("span", {
           className: "font-mono font-black text-white text-lg"
         }, n), /*#__PURE__*/React.createElement("span", {
           className: "text-[10px] font-black text-slate-400"
-        }, " / ", max, "枚")), /*#__PURE__*/React.createElement("button", {
+        }, " / ", max, "\u679A")), /*#__PURE__*/React.createElement("button", {
           disabled: n >= max,
           onClick: () => changeSkipCount(n + 1),
-          "aria-label": "使う枚数を1枚増やす",
+          "aria-label": "\u4F7F\u3046\u679A\u6570\u30921\u679A\u5897\u3084\u3059",
           className: "shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30"
-        }, "＋"), /*#__PURE__*/React.createElement("button", {
+        }, "\uFF0B"), /*#__PURE__*/React.createElement("button", {
           disabled: n >= max,
           onClick: () => changeSkipCount(max),
           className: "shrink-0 h-11 px-3 rounded-xl bg-slate-700 text-white font-black text-[11px] active:scale-95 disabled:opacity-30"
-        }, "全部"));
+        }, "\u5168\u90E8"));
       })(), /*#__PURE__*/React.createElement("button", {
         disabled: !skipFlow.hero,
         onClick: () => setSkipConfirmOpen(true),
         className: "w-full min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
-      }, "決定")));
+      }, "\u6C7A\u5B9A")));
     })(), skipConfirmOpen && skipFlow && (() => {
       const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipFlow.itemId);
       const useCount = skipFlowCount();
@@ -38664,19 +38661,19 @@ function MonsterHeroGame() {
         className: "text-4xl mb-2"
       }, item?.emoji), /*#__PURE__*/React.createElement("h3", {
         className: "text-base font-black text-white mb-1"
-      }, item?.name, "を", useCount, "枚使いますか？"), /*#__PURE__*/React.createElement("div", {
+      }, item?.name, "\u3092", useCount, "\u679A\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] text-slate-400 font-bold mb-2"
-      }, DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label, " を最後まで進めた扱いで、経験値とダイヤを", useCount, "周ぶん受け取ります"), /*#__PURE__*/React.createElement("div", {
+      }, DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label, " \u3092\u6700\u5F8C\u307E\u3067\u9032\u3081\u305F\u6271\u3044\u3067\u3001\u7D4C\u9A13\u5024\u3068\u30C0\u30A4\u30E4\u3092", useCount, "\u5468\u3076\u3093\u53D7\u3051\u53D6\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black text-teal-200 bg-black/40 border border-teal-500/30 rounded-xl py-2 mb-4"
-      }, "所持数 ", ownedItems[skipFlow.itemId] || 0, "枚 → ", Math.max(0, (ownedItems[skipFlow.itemId] || 0) - useCount), "枚"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, "\u679A \u2192 ", Math.max(0, (ownedItems[skipFlow.itemId] || 0) - useCount), "\u679A"), /*#__PURE__*/React.createElement("div", {
         className: "flex gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setSkipConfirmOpen(false),
         className: "w-2/5 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-black text-sm"
-      }, "いいえ"), /*#__PURE__*/React.createElement("button", {
+      }, "\u3044\u3044\u3048"), /*#__PURE__*/React.createElement("button", {
         onClick: executeBattleSkip,
         className: "w-3/5 bg-teal-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg active:scale-95"
-      }, "はい"))));
+      }, "\u306F\u3044"))));
     })(), gameState === 'SKIP_RESULT' && skipResult && /*#__PURE__*/React.createElement("div", {
       style: {
         position: 'absolute',
@@ -38703,9 +38700,9 @@ function MonsterHeroGame() {
       compact: true
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-2xl font-black italic text-white mt-1"
-    }, DIFFICULTY_SETTINGS[skipResult.difficulty]?.label, " 突破！"), /*#__PURE__*/React.createElement("div", {
+    }, DIFFICULTY_SETTINGS[skipResult.difficulty]?.label, " \u7A81\u7834\uFF01"), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 font-bold mt-1"
-    }, skipResult.itemName, " を", skipResult.count || 1, "枚使いました（残り ", ownedItems[skipResult.itemId] || 0, "枚）"), /*#__PURE__*/React.createElement("div", {
+    }, skipResult.itemName, " \u3092", skipResult.count || 1, "\u679A\u4F7F\u3044\u307E\u3057\u305F\uFF08\u6B8B\u308A ", ownedItems[skipResult.itemId] || 0, "\u679A\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: "mt-3 flex items-center justify-center gap-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-16 h-16 rounded-full overflow-hidden border-2 border-teal-400 flex items-center justify-center bg-black/40"
@@ -38721,7 +38718,7 @@ function MonsterHeroGame() {
       className: "text-left"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-black uppercase"
-    }, "勇者モン"), /*#__PURE__*/React.createElement("div", {
+    }, "\u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("div", {
       className: "text-sm font-black text-white"
     }, skipResult.heroName)))), /*#__PURE__*/React.createElement("div", {
       className: `space-y-2 transition-all duration-500 ${skipAnimPhase > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`
@@ -38731,9 +38728,9 @@ function MonsterHeroGame() {
       className: "text-[11px] font-black text-amber-300 flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 13
-    }), "ダイヤ"), /*#__PURE__*/React.createElement("span", {
+    }), "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
       className: "font-mono font-black text-white text-sm"
-    }, skipResult.goldBefore.toLocaleString(), " → ", skipResult.goldAfter.toLocaleString(), " ", /*#__PURE__*/React.createElement("span", {
+    }, skipResult.goldBefore.toLocaleString(), " \u2192 ", skipResult.goldAfter.toLocaleString(), " ", /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300"
     }, "(+", skipResult.goldGain.toLocaleString(), ")"))), /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 rounded-2xl border border-indigo-500/30 p-3"
@@ -38741,7 +38738,7 @@ function MonsterHeroGame() {
       className: "flex items-center justify-between mb-1"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-black text-indigo-300"
-    }, "ブリーダー経験値"), /*#__PURE__*/React.createElement("span", {
+    }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
       className: "font-mono font-black text-white text-sm"
     }, "+", skipResult.breederXpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
       levelBefore: skipResult.breederLevelBefore,
@@ -38750,7 +38747,7 @@ function MonsterHeroGame() {
       className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 9
-    }), "ブリーダーポイント +", skipResult.breederLevelAfter.level - skipResult.breederLevelBefore.level)), skipResult.heroBondGain ? /*#__PURE__*/React.createElement("div", {
+    }), "\u30D6\u30EA\u30FC\u30C0\u30FC\u30DD\u30A4\u30F3\u30C8 +", skipResult.breederLevelAfter.level - skipResult.breederLevelBefore.level)), skipResult.heroBondGain ? /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 rounded-2xl border border-pink-500/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between mb-1"
@@ -38758,7 +38755,7 @@ function MonsterHeroGame() {
       className: "text-[11px] font-black text-pink-300 flex items-center gap-1 truncate"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 13
-    }), "絆レベル：", skipResult.heroBondGain.name), /*#__PURE__*/React.createElement("span", {
+    }), "\u7D46\u30EC\u30D9\u30EB\uFF1A", skipResult.heroBondGain.name), /*#__PURE__*/React.createElement("span", {
       className: "font-mono font-black text-white text-sm shrink-0"
     }, "+", skipResult.heroBondGain.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
       levelBefore: skipResult.heroBondGain.levelBefore,
@@ -38767,7 +38764,7 @@ function MonsterHeroGame() {
       className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 9
-    }), "強化ポイント +", skipResult.heroBondGain.levelAfter.level - skipResult.heroBondGain.levelBefore.level)) : /*#__PURE__*/React.createElement("div", {
+    }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", skipResult.heroBondGain.levelAfter.level - skipResult.heroBondGain.levelBefore.level)) : /*#__PURE__*/React.createElement("div", {
       className: "bg-black/30 rounded-2xl border border-white/10 p-3 text-[10px] text-slate-400 font-bold leading-relaxed"
     }, skipResult.heroIsMasu ? '勇者モンの絆経験値は入りませんでした。スキップではマスモン登録はできません。' : '勇者モンがマスモンではないため、絆経験値は入りませんでした。スキップではマスモン登録はできません。'), skipResult.allyBondGains.map(a => /*#__PURE__*/React.createElement("div", {
       key: a.masuId,
@@ -38776,21 +38773,21 @@ function MonsterHeroGame() {
       className: "flex items-center justify-between mb-1"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black text-pink-200 truncate"
-    }, "供モン：", a.name), /*#__PURE__*/React.createElement("span", {
+    }, "\u4F9B\u30E2\u30F3\uFF1A", a.name), /*#__PURE__*/React.createElement("span", {
       className: "font-mono font-black text-white text-xs shrink-0"
     }, "+", a.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
       levelBefore: a.levelBefore,
       levelAfter: a.levelAfter
     }))), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold text-center px-2 leading-relaxed"
-    }, "スコア・ランキング・クリア回数には記録されません"))), /*#__PURE__*/React.createElement("button", {
+    }, "\u30B9\u30B3\u30A2\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u30FB\u30AF\u30EA\u30A2\u56DE\u6570\u306B\u306F\u8A18\u9332\u3055\u308C\u307E\u305B\u3093"))), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setSkipResult(null);
         setSkipFlow(null);
         setGameState(battleEntryStateRef.current);
       },
       className: "w-full max-w-sm mx-auto shrink-0 mt-2 min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98]"
-    }, "バトルメニューへ戻る")), (gameState === 'PICK_HERO' || gameState === 'PICK_ALLY') && /*#__PURE__*/React.createElement("div", {
+    }, "\u30D0\u30C8\u30EB\u30E1\u30CB\u30E5\u30FC\u3078\u623B\u308B")), (gameState === 'PICK_HERO' || gameState === 'PICK_ALLY') && /*#__PURE__*/React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
@@ -38838,7 +38835,7 @@ function MonsterHeroGame() {
         className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, joinRule, "補正"), /*#__PURE__*/React.createElement("span", null, "累計", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "加入ボーナス ", precisePercent(multiplier), "（-", precisePercent(1 - multiplier), "）", floorValue != null ? `／最低${specialRulePercent(floorValue)}` : ''));
+      }, joinRule, "\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09", floorValue != null ? `／最低${specialRulePercent(floorValue)}` : ''));
     })(), (() => {
       const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       if (rule === NIGHTMARE_SETTING.id) return /*#__PURE__*/React.createElement("div", {
@@ -38846,17 +38843,17 @@ function MonsterHeroGame() {
         className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "NIGHTMARE補正"), "\u3000間合い適性：＋", specialRulePercent(extremeSpecialRule(rule, 'positiveModifier')), " / －", specialRulePercent(extremeSpecialRule(rule, 'negativeModifier')));
+      }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u9593\u5408\u3044\u9069\u6027\uFF1A\uFF0B", specialRulePercent(extremeSpecialRule(rule, 'positiveModifier')), " / \uFF0D", specialRulePercent(extremeSpecialRule(rule, 'negativeModifier')));
       if (rule === CHAOS_SETTING.id) return /*#__PURE__*/React.createElement("div", {
         "data-chaos-join-status": true,
         className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "CHAOS補正"), "\u3000加入ボーナス ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
+      }, "CHAOS\u88DC\u6B63"), "\u3000\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
       return null;
     })(), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
-    }, "現在のステータス"), /*#__PURE__*/React.createElement("div", {
+    }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1"
     }, [['ライフ', maxHp, 'text-pink-300'], ['ちから', atk, 'text-red-300'], ['丈夫さ', def, 'text-emerald-300'], ['ガッツ', maxGuts, 'text-amber-300']].map(([label, value, tint]) => /*#__PURE__*/React.createElement("div", {
       key: label,
@@ -38867,7 +38864,7 @@ function MonsterHeroGame() {
       className: `block text-[13px] font-black font-mono leading-tight ${tint}`
     }, value)))), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] font-black tracking-widest text-slate-500 text-left mt-1.5 mb-1"
-    }, "間合い適性（距離補正）"), /*#__PURE__*/React.createElement("div", {
+    }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1"
     }, RANGE_LABELS.map((label, idx) => {
       const cur = distTotalBonus(idx);
@@ -38917,15 +38914,15 @@ function MonsterHeroGame() {
       };
       return /*#__PURE__*/React.createElement(React.Fragment, null, allyCarousel && /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
-      }, "左右にスワイプして供モンを選択"), allyCarousel && /*#__PURE__*/React.createElement("div", {
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u4F9B\u30E2\u30F3\u3092\u9078\u629E"), allyCarousel && /*#__PURE__*/React.createElement("div", {
         className: "relative h-0"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "前の供モン",
+        "aria-label": "\u524D\u306E\u4F9B\u30E2\u30F3",
         disabled: allyCardIndex === 0,
         onClick: () => stepAlly(-1),
         className: "absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
       }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "次の供モン",
+        "aria-label": "\u6B21\u306E\u4F9B\u30E2\u30F3",
         disabled: allyCardIndex >= list.length - 1,
         onClick: () => stepAlly(1),
         className: "absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
@@ -38999,7 +38996,7 @@ function MonsterHeroGame() {
           mon: m,
           badge: m.debugOnly ? /*#__PURE__*/React.createElement("div", {
             className: "absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white"
-          }, "DEBUG専用") : isSel ? /*#__PURE__*/React.createElement("div", {
+          }, "DEBUG\u5C02\u7528") : isSel ? /*#__PURE__*/React.createElement("div", {
             className: "absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"
           }, /*#__PURE__*/React.createElement(Check, {
             size: 12,
@@ -39027,13 +39024,13 @@ function MonsterHeroGame() {
             className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-slate-500"
-          }, "力"), /*#__PURE__*/React.createElement("span", {
+          }, "\u529B"), /*#__PURE__*/React.createElement("span", {
             className: "text-red-400 font-bold"
           }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
             className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-slate-500"
-          }, "防"), /*#__PURE__*/React.createElement("span", {
+          }, "\u9632"), /*#__PURE__*/React.createElement("span", {
             className: "text-emerald-400 font-bold"
           }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
             className: "flex justify-between"
@@ -39055,7 +39052,7 @@ function MonsterHeroGame() {
               className: "block text-slate-500 font-black leading-none"
             }, stat.short), [ULTIMATE_SETTING.id, CHAOS_SETTING.id, INFINITY_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
               className: "block leading-none text-slate-500"
-            }, "本来 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
+            }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
               className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
               style: {
                 fontSize: '9px'
@@ -39074,7 +39071,7 @@ function MonsterHeroGame() {
               className: "block text-slate-500 font-black leading-none"
             }, range.label), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === NIGHTMARE_SETTING.id && range.normalDiff !== range.diff ? /*#__PURE__*/React.createElement("span", {
               className: "block leading-none text-slate-500"
-            }, "通常 ", formatAptPct(range.normalDiff), " →") : null, /*#__PURE__*/React.createElement("b", {
+            }, "\u901A\u5E38 ", formatAptPct(range.normalDiff), " \u2192") : null, /*#__PURE__*/React.createElement("b", {
               className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
             }, formatAptPct(range.after)), /*#__PURE__*/React.createElement("span", {
               className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
@@ -39084,7 +39081,7 @@ function MonsterHeroGame() {
             style: {
               fontSize: '10px'
             }
-          }, "詳細を見る ", /*#__PURE__*/React.createElement(ChevronRight, {
+          }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
             size: 11
           })))
         }));
@@ -39116,7 +39113,7 @@ function MonsterHeroGame() {
           className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
         }, /*#__PURE__*/React.createElement(Sparkles, {
           size: 9
-        }), "強化P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
+        }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
         aptExtra: (idx, grade) => {
           const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
           const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
@@ -39132,7 +39129,7 @@ function MonsterHeroGame() {
           className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
-        }, "ステータス強化(強化P 1つにつき使用・調整中)"), /*#__PURE__*/React.createElement("div", {
+        }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-4 gap-1"
         }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
           key: key,
@@ -39149,14 +39146,14 @@ function MonsterHeroGame() {
           className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
         }, gameState === 'PICK_HERO' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
           className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
-        }, "DEBUG専用・保存、育成、マスモン登録の対象外"))
+        }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
       },
       footer: /*#__PURE__*/React.createElement("div", {
         className: "flex gap-2 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setCurrentPickingMon(null),
         className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
-      }, "戻る"), /*#__PURE__*/React.createElement("button", {
+      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setGameState('PICK_SLOT'),
         className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
       }, gameState === 'PICK_HERO' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
@@ -39202,7 +39199,7 @@ function MonsterHeroGame() {
           paddingTop: 'calc(.35rem + env(safe-area-inset-top))'
         }
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "戻る",
+        "aria-label": "\u623B\u308B",
         onClick: returnToHero,
         className: "p-3 text-slate-400 active:scale-90"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
@@ -39224,7 +39221,7 @@ function MonsterHeroGame() {
         compact: true
       })), /*#__PURE__*/React.createElement("p", {
         className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
-      }, "変えたい枠だけ「変更」を押してください。他の枠はそのまま維持されます。"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5909\u3048\u305F\u3044\u67A0\u3060\u3051\u300C\u5909\u66F4\u300D\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u4ED6\u306E\u67A0\u306F\u305D\u306E\u307E\u307E\u7DAD\u6301\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5 pb-2"
       }, [["勇者モン", mainHero], ...Array.from({
         length: need
@@ -39248,16 +39245,16 @@ function MonsterHeroGame() {
         className: "text-xl"
       }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
         className: "text-slate-600"
-      }, "＋")), /*#__PURE__*/React.createElement("span", {
+      }, "\uFF0B")), /*#__PURE__*/React.createElement("span", {
         className: "min-w-0"
       }, /*#__PURE__*/React.createElement("b", {
         className: "block text-[11px] text-white truncate"
       }, mon?.name || '未選択'), i === 0 && /*#__PURE__*/React.createElement("small", {
         className: "block text-[8px] text-slate-500"
-      }, RANGE_LABELS[initialBattleDistanceRef.current], "距離に配置"))), /*#__PURE__*/React.createElement("button", {
+      }, RANGE_LABELS[initialBattleDistanceRef.current], "\u8DDD\u96E2\u306B\u914D\u7F6E"))), /*#__PURE__*/React.createElement("button", {
         onClick: () => i === 0 ? returnToHero() : setProEditingAllyIndex(i - 1),
         className: "min-w-[58px] min-h-[42px] rounded-xl border border-pink-400/50 bg-pink-950/60 text-pink-200 text-[11px] font-black active:scale-95"
-      }, "変更")))), /*#__PURE__*/React.createElement("div", {
+      }, "\u5909\u66F4")))), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 pt-1",
         style: {
           paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
@@ -39272,7 +39269,7 @@ function MonsterHeroGame() {
         }
       }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体えらんでください`))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
         className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
-      }, "この枠に入れるベースモンを1体選んでください。"), /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u67A0\u306B\u5165\u308C\u308B\u30D9\u30FC\u30B9\u30E2\u30F3\u30921\u4F53\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex flex-col gap-2.5"
@@ -39288,7 +39285,7 @@ function MonsterHeroGame() {
       }))))), /*#__PURE__*/React.createElement("button", {
         onClick: () => setProEditingAllyIndex(null),
         className: "shrink-0 w-full min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm mb-1"
-      }, "変更せず戻る")), proAllyDetail && renderMonsterDetailModal({
+      }, "\u5909\u66F4\u305B\u305A\u623B\u308B")), proAllyDetail && renderMonsterDetailModal({
         mon: proAllyDetail,
         onClose: () => setProAllyDetail(null),
         accent: 'pink',
@@ -39297,7 +39294,7 @@ function MonsterHeroGame() {
         footer: /*#__PURE__*/React.createElement("button", {
           onClick: () => setProAllyDetail(null),
           className: "w-full min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95"
-        }, "閉じる")
+        }, "\u9589\u3058\u308B")
       })));
     })(), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement("div", {
       style: {
@@ -39317,14 +39314,14 @@ function MonsterHeroGame() {
       className: "text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"
     }, currentPickingMon?.emoji), /*#__PURE__*/React.createElement("h2", {
       className: "text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400"
-    }, "配置場所を決定せよ"), /*#__PURE__*/React.createElement("div", {
+    }, "\u914D\u7F6E\u5834\u6240\u3092\u6C7A\u5B9A\u305B\u3088"), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs mb-2"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "pickSlot",
       compact: true
     })), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2"
-    }, "間合い適性はどこに置いても4距離すべてに加算されます。", /*#__PURE__*/React.createElement("br", null), "配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。"), /*#__PURE__*/React.createElement("div", {
+    }, "\u9593\u5408\u3044\u9069\u6027\u306F\u3069\u3053\u306B\u7F6E\u3044\u3066\u30824\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u914D\u7F6E\u306F\u300C\u6575\u3068\u540C\u3058\u8DDD\u96E2\u3067\u653B\u6483\u3059\u308B\u300D\u3053\u3068\u3068\u3001\u899A\u3048\u308B\u8DDD\u96E2\u6483\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-4 w-full max-w-xs"
     }, slots.map((s, i) => {
       const grade = getDistAptitude(currentPickingMon, i);
@@ -39336,7 +39333,7 @@ function MonsterHeroGame() {
         className: `h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all disabled:opacity-20${scenarioPicksSlot(i) ? battleTutorialSpotClass('slots') : ''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s ? 'opacity-100 shadow-xl' : 'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`
       }, /*#__PURE__*/React.createElement("span", {
         className: `text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`
-      }, RANGE_LABELS[i], "距離"), s ? s.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      }, RANGE_LABELS[i], "\u8DDD\u96E2"), s ? s.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: s.id,
         src: s.imgUrl,
         alt: s.name,
@@ -39349,7 +39346,7 @@ function MonsterHeroGame() {
         size: 20
       }), !s && /*#__PURE__*/React.createElement("span", {
         className: `text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
-      }, grade, " 合流後 ", formatAptPct(after)));
+      }, grade, " \u5408\u6D41\u5F8C ", formatAptPct(after)));
     })), /*#__PURE__*/React.createElement("button", {
       disabled: !!battleTutorial,
       onClick: () => {
@@ -39367,7 +39364,7 @@ function MonsterHeroGame() {
       className: "mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"
     }, /*#__PURE__*/React.createElement(ArrowLeft, {
       size: 14
-    }), " モンスターを選び直す")), gameState === 'PICK_TEACHING' && /*#__PURE__*/React.createElement("div", {
+    }), " \u30E2\u30F3\u30B9\u30BF\u30FC\u3092\u9078\u3073\u76F4\u3059")), gameState === 'PICK_TEACHING' && /*#__PURE__*/React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,
@@ -39379,7 +39376,7 @@ function MonsterHeroGame() {
       className: "mb-4 text-center shrink-0"
     }, /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black text-purple-400 italic"
-    }, "アシストカードの継承・強化"), /*#__PURE__*/React.createElement("p", {
+    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u306E\u7D99\u627F\u30FB\u5F37\u5316"), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-400 uppercase mt-1 tracking-widest"
     }, "Select Breeder Card")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-sm mb-2"
@@ -39444,9 +39441,9 @@ function MonsterHeroGame() {
         className: `text-[9px] font-black ${isCurrent ? 'text-purple-300' : isNext ? 'text-amber-300' : 'text-slate-500'}`
       }, "Lv.", info.lvl, " ", info.name), isCurrent && /*#__PURE__*/React.createElement("span", {
         className: "text-[7px] bg-purple-500 text-white px-1.5 rounded"
-      }, "所持"), isNext && /*#__PURE__*/React.createElement("span", {
+      }, "\u6240\u6301"), isNext && /*#__PURE__*/React.createElement("span", {
         className: "text-[7px] bg-amber-600 text-white px-1.5 rounded"
-      }, "強化後")), /*#__PURE__*/React.createElement("div", {
+      }, "\u5F37\u5316\u5F8C")), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-300"
       }, info.desc));
     })), /*#__PURE__*/React.createElement("div", {
@@ -39454,21 +39451,21 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setSelectedTeachingCard(null),
       className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "戻る"), /*#__PURE__*/React.createElement("button", {
+    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => confirmPickTeaching(),
       className: "flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs"
     }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する"))))), gameState === 'QUICK_GROWTH' && quickGrowth && /*#__PURE__*/React.createElement(QuickStepScreen, {
       onDone: finishQuickGrowth,
       accent: "#2dd4bf",
-      label: "タップして次へ"
+      label: "\u30BF\u30C3\u30D7\u3057\u3066\u6B21\u3078"
     }, /*#__PURE__*/React.createElement("h2", {
       className: "text-2xl font-black italic",
       style: {
         color: '#2dd4bf'
       }
-    }, "ステータスアップ！"), /*#__PURE__*/React.createElement("p", {
+    }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u30A2\u30C3\u30D7\uFF01"), /*#__PURE__*/React.createElement("p", {
       className: "text-[10px] font-black text-slate-400 mt-1"
-    }, "WAVE ", quickGrowth.nextWave - 1, " クリア／全ステータス +10%"), /*#__PURE__*/React.createElement("div", {
+    }, "WAVE ", quickGrowth.nextWave - 1, " \u30AF\u30EA\u30A2\uFF0F\u5168\u30B9\u30C6\u30FC\u30BF\u30B9 +10%"), /*#__PURE__*/React.createElement("div", {
       className: "mt-4 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden"
     }, quickGrowth.stats.map((st, i) => /*#__PURE__*/React.createElement("div", {
       key: st.label,
@@ -39482,7 +39479,7 @@ function MonsterHeroGame() {
       style: {
         color: '#2dd4bf'
       }
-    }, "→"), /*#__PURE__*/React.createElement("span", {
+    }, "\u2192"), /*#__PURE__*/React.createElement("span", {
       className: "flex-1 text-left font-mono text-[13px] font-black text-white"
     }, st.after.toLocaleString())))), /*#__PURE__*/React.createElement("div", {
       className: "mt-3 rounded-2xl px-3 py-2 text-[11px] font-black",
@@ -39490,16 +39487,16 @@ function MonsterHeroGame() {
         backgroundColor: 'rgba(45,212,191,.12)',
         color: '#5eead4'
       }
-    }, "ライフ・ガッツ全回復！")), gameState === 'QUICK_JOIN' && quickJoin && /*#__PURE__*/React.createElement(QuickStepScreen, {
+    }, "\u30E9\u30A4\u30D5\u30FB\u30AC\u30C3\u30C4\u5168\u56DE\u5FA9\uFF01")), gameState === 'QUICK_JOIN' && quickJoin && /*#__PURE__*/React.createElement(QuickStepScreen, {
       onDone: finishQuickJoin,
       accent: "#2dd4bf",
-      label: "タップして次へ"
+      label: "\u30BF\u30C3\u30D7\u3057\u3066\u6B21\u3078"
     }, /*#__PURE__*/React.createElement("h2", {
       className: "text-2xl font-black italic",
       style: {
         color: '#2dd4bf'
       }
-    }, "供モン加入！"), /*#__PURE__*/React.createElement("div", {
+    }, "\u4F9B\u30E2\u30F3\u52A0\u5165\uFF01"), /*#__PURE__*/React.createElement("div", {
       className: "mt-3 flex items-center justify-center gap-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40",
@@ -39516,7 +39513,7 @@ function MonsterHeroGame() {
       className: "text-3xl"
     }, quickJoin.emoji)), /*#__PURE__*/React.createElement("p", {
       className: "text-sm font-black text-white"
-    }, quickJoin.name, "が仲間になった！")), quickJoin.stats.length > 0 && /*#__PURE__*/React.createElement("div", {
+    }, quickJoin.name, "\u304C\u4EF2\u9593\u306B\u306A\u3063\u305F\uFF01")), quickJoin.stats.length > 0 && /*#__PURE__*/React.createElement("div", {
       className: "mt-3 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden"
     }, quickJoin.stats.map((st, i) => /*#__PURE__*/React.createElement("div", {
       key: st.label,
@@ -39530,11 +39527,11 @@ function MonsterHeroGame() {
       style: {
         color: '#2dd4bf'
       }
-    }, "→"), /*#__PURE__*/React.createElement("span", {
+    }, "\u2192"), /*#__PURE__*/React.createElement("span", {
       className: "flex-1 text-left font-mono text-[13px] font-black text-white"
     }, st.after.toLocaleString())))), quickJoin.aptLabel && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 text-[10px] font-black text-cyan-300"
-    }, "間合い適性 ", quickJoin.aptLabel), quickJoin.unique ? /*#__PURE__*/React.createElement("div", {
+    }, "\u9593\u5408\u3044\u9069\u6027 ", quickJoin.aptLabel), quickJoin.unique ? /*#__PURE__*/React.createElement("div", {
       className: "mt-3 w-full rounded-2xl border px-3 py-2.5",
       style: {
         borderColor: 'rgba(251,191,36,.5)',
@@ -39542,15 +39539,15 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] font-black text-amber-300"
-    }, "固有技アップ！"), /*#__PURE__*/React.createElement("div", {
+    }, "\u56FA\u6709\u6280\u30A2\u30C3\u30D7\uFF01"), /*#__PURE__*/React.createElement("div", {
       className: "text-[12px] font-black text-white mt-0.5"
     }, quickJoin.unique.monName), /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] text-slate-300 mt-0.5"
-    }, "「", quickJoin.unique.skillName, "」 Lv.", quickJoin.unique.before, " → ", /*#__PURE__*/React.createElement("b", {
+    }, "\u300C", quickJoin.unique.skillName, "\u300D Lv.", quickJoin.unique.before, " \u2192 ", /*#__PURE__*/React.createElement("b", {
       className: "text-amber-300"
     }, "Lv.", quickJoin.unique.after))) : /*#__PURE__*/React.createElement("div", {
       className: "mt-3 text-[10px] font-black text-slate-500"
-    }, "上げられる固有技はもうありません")), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null && (() => {
+    }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null && (() => {
       const script = typeof ASSISTANT_KIKI_INTRO !== 'undefined' && ASSISTANT_KIKI_INTRO || [];
       if (script.length === 0) return null;
       const step = Math.max(0, Math.min(kikiIntroStep, script.length - 1));
@@ -39571,11 +39568,11 @@ function MonsterHeroGame() {
         },
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "ききが助手に加わりました"
+        "aria-label": "\u304D\u304D\u304C\u52A9\u624B\u306B\u52A0\u308F\u308A\u307E\u3057\u305F"
       }, /*#__PURE__*/React.createElement("button", {
         type: "button",
         onClick: next,
-        "aria-label": "次へ",
+        "aria-label": "\u6B21\u3078",
         className: "absolute inset-0 w-full h-full",
         style: {
           background: 'transparent'
@@ -39588,7 +39585,7 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-pink-300"
-      }, "あたらしい助手"), /*#__PURE__*/React.createElement("div", {
+      }, "\u3042\u305F\u3089\u3057\u3044\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
         className: "mb-3 flex items-end justify-center gap-3"
       }, ASSISTANT_LIST.map(who => {
         const talking = who.id === line.who;
@@ -39624,7 +39621,7 @@ function MonsterHeroGame() {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
       }, line.t)), /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-center text-[8px] text-slate-500"
-      }, step + 1, " / ", script.length, "\u3000／\u3000みゅあは「", calls.mua || '', "」、ききは「", calls.kiki || '', "」と呼び合います"), /*#__PURE__*/React.createElement("button", {
+      }, step + 1, " / ", script.length, "\u3000\uFF0F\u3000\u307F\u3085\u3042\u306F\u300C", calls.mua || '', "\u300D\u3001\u304D\u304D\u306F\u300C", calls.kiki || '', "\u300D\u3068\u547C\u3073\u5408\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("button", {
         onClick: next,
         className: "mt-3 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]",
         style: {
@@ -39655,7 +39652,7 @@ function MonsterHeroGame() {
         }
       }, notice.debugOnly && /*#__PURE__*/React.createElement("div", {
         className: "mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white"
-      }, "DEBUG・通常ログインでは表示されません"), /*#__PURE__*/React.createElement("h2", {
+      }, "DEBUG\u30FB\u901A\u5E38\u30ED\u30B0\u30A4\u30F3\u3067\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
         className: "mb-1 text-center text-base font-black text-pink-200"
       }, notice.title), /*#__PURE__*/React.createElement("p", {
         className: "mb-3 text-center text-[10px] font-bold text-slate-400"
@@ -39671,7 +39668,7 @@ function MonsterHeroGame() {
       }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? /*#__PURE__*/React.createElement("button", {
         onClick: () => setUpdateGuidePage(page + 1),
         className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
-      }, "次へ") : /*#__PURE__*/React.createElement("div", {
+      }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("div", {
         className: `mt-4 grid ${notice.destination ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
       }, notice.destination && /*#__PURE__*/React.createElement("button", {
         onClick: () => finishUpdateGuide(notice.destination),
@@ -39710,7 +39707,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         type: "button",
         onClick: next,
-        "aria-label": "次へ",
+        "aria-label": "\u6B21\u3078",
         className: "absolute inset-0 w-full h-full",
         style: {
           background: 'transparent'
@@ -39723,7 +39720,7 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement("p", {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
-      }, "回想・", event?.title || ''), /*#__PURE__*/React.createElement("div", {
+      }, "\u56DE\u60F3\u30FB", event?.title || ''), /*#__PURE__*/React.createElement("div", {
         className: "mb-3 flex items-end justify-center gap-3"
       }, ASSISTANT_LIST.map(who => {
         const talking = who.id === line.who;
@@ -39780,7 +39777,7 @@ function MonsterHeroGame() {
         },
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "みゅあのワンポイントアドバイス"
+        "aria-label": "\u307F\u3085\u3042\u306E\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u30A2\u30C9\u30D0\u30A4\u30B9"
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
         style: {
@@ -39788,9 +39785,9 @@ function MonsterHeroGame() {
         }
       }, dailyMasuAdvice.debugCount != null && /*#__PURE__*/React.createElement("div", {
         className: "mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white"
-      }, "DEBUG・登録数", dailyMasuAdvice.debugCount, "体を想定"), /*#__PURE__*/React.createElement("h2", {
+      }, "DEBUG\u30FB\u767B\u9332\u6570", dailyMasuAdvice.debugCount, "\u4F53\u3092\u60F3\u5B9A"), /*#__PURE__*/React.createElement("h2", {
         className: "mb-3 text-center text-base font-black text-pink-200"
-      }, "みゅあのワンポイントアドバイス"), eligible ? /*#__PURE__*/React.createElement("div", {
+      }, "\u307F\u3085\u3042\u306E\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u30A2\u30C9\u30D0\u30A4\u30B9"), eligible ? /*#__PURE__*/React.createElement("div", {
         className: "flex items-end gap-2"
       }, /*#__PURE__*/React.createElement(AssistantFace, {
         who: who,
@@ -39820,15 +39817,15 @@ function MonsterHeroGame() {
           color: '#f1f5f9',
           backgroundColor: '#0f172a'
         }
-      }, "表示条件の対象外です。", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("small", null, "登録数8体以上では、通常プレイ中にこの案内は表示されません。")), /*#__PURE__*/React.createElement("div", {
+      }, "\u8868\u793A\u6761\u4EF6\u306E\u5BFE\u8C61\u5916\u3067\u3059\u3002", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("small", null, "\u767B\u9332\u65708\u4F53\u4EE5\u4E0A\u3067\u306F\u3001\u901A\u5E38\u30D7\u30EC\u30A4\u4E2D\u306B\u3053\u306E\u6848\u5185\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
         className: `mt-4 grid ${eligible ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
       }, eligible && /*#__PURE__*/React.createElement("button", {
         onClick: tryDailyMasuAdvice,
         className: "min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]"
-      }, "やってみる"), /*#__PURE__*/React.createElement("button", {
+      }, "\u3084\u3063\u3066\u307F\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: closeDailyMasuAdvice,
         className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]"
-      }, "閉じる"))));
+      }, "\u9589\u3058\u308B"))));
     })(), assistantDebug && (() => {
       const who = activeAssistant;
       const scenes = typeof ASSISTANT_SCENES !== 'undefined' && ASSISTANT_SCENES || {};
@@ -39864,7 +39861,7 @@ function MonsterHeroGame() {
           className: "min-w-0"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] font-black text-slate-500"
-        }, l.e, " ／ ", bondText(l), l.w != null ? ` ／ 出やすさ${l.w}` : '', l.pack ? ` ／ ${l.pack}` : ''), /*#__PURE__*/React.createElement("div", {
+        }, l.e, " \uFF0F ", bondText(l), l.w != null ? ` ／ 出やすさ${l.w}` : '', l.pack ? ` ／ ${l.pack}` : ''), /*#__PURE__*/React.createElement("div", {
           className: "text-[11px] text-white leading-relaxed"
         }, speak(l.t))));
       };
@@ -39873,16 +39870,16 @@ function MonsterHeroGame() {
         className: "shrink-0 flex flex-wrap items-center gap-1 px-3 py-2 border-b border-white/10"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] font-black text-slate-500"
-      }, "見るLv"), /*#__PURE__*/React.createElement("button", {
+      }, "\u898B\u308BLv"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setAssistantDebugLevel(null),
         className: `px-2 min-h-[26px] rounded-full text-[9px] font-black ${assistantDebugLevel == null ? 'bg-pink-600 text-white' : 'bg-slate-900 border border-white/10 text-slate-400'}`
-      }, "いま(Lv", assistantBondLevelNow, ")"), stages.map(s => /*#__PURE__*/React.createElement("button", {
+      }, "\u3044\u307E(Lv", assistantBondLevelNow, ")"), stages.map(s => /*#__PURE__*/React.createElement("button", {
         key: s.level,
         onClick: () => setAssistantDebugLevel(s.level),
         className: `px-2 min-h-[26px] rounded-full text-[9px] font-black ${assistantDebugLevel === s.level ? 'bg-pink-600 text-white' : 'bg-slate-900 border border-white/10 text-slate-400'}`
       }, "Lv", s.level)), /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black text-pink-200 ml-auto"
-      }, "呼び方: ", assistantSpeakText('{name}', breederName, viewLevel, assistantCallStyle, selectedAssistantId)));
+      }, "\u547C\u3073\u65B9: ", assistantSpeakText('{name}', breederName, viewLevel, assistantCallStyle, selectedAssistantId)));
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex flex-col",
         style: {
@@ -39903,7 +39900,7 @@ function MonsterHeroGame() {
         size: 20
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black text-pink-300"
-      }, "💖 ", titles[assistantDebug])), assistantDebug !== 'expressions' && assistantDebug !== 'spam' && levelChips, /*#__PURE__*/React.createElement("div", {
+      }, "\uD83D\uDC96 ", titles[assistantDebug])), assistantDebug !== 'expressions' && assistantDebug !== 'spam' && levelChips, /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, assistantDebug === 'expressions' && /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-4 gap-2 p-3"
@@ -39919,7 +39916,7 @@ function MonsterHeroGame() {
         className: "text-[8px] text-slate-400 font-black"
       }, e)))), assistantDebug === 'spam' && /*#__PURE__*/React.createElement("div", null, spam.map((l, i) => row(l, i)), /*#__PURE__*/React.createElement("div", {
         className: "p-3 text-[10px] text-slate-500 leading-relaxed"
-      }, "上から順に切り替わります。最後の「…………」のあと、少し待つと最後の行を話して通常へ戻ります。")), (assistantDebug === 'lines' || assistantDebug === 'conditions') && /*#__PURE__*/React.createElement("div", null, Object.entries(scenes).map(([key, def]) => {
+      }, "\u4E0A\u304B\u3089\u9806\u306B\u5207\u308A\u66FF\u308F\u308A\u307E\u3059\u3002\u6700\u5F8C\u306E\u300C\u2026\u2026\u2026\u2026\u300D\u306E\u3042\u3068\u3001\u5C11\u3057\u5F85\u3064\u3068\u6700\u5F8C\u306E\u884C\u3092\u8A71\u3057\u3066\u901A\u5E38\u3078\u623B\u308A\u307E\u3059\u3002")), (assistantDebug === 'lines' || assistantDebug === 'conditions') && /*#__PURE__*/React.createElement("div", null, Object.entries(scenes).map(([key, def]) => {
         const list = assistantDebug === 'conditions' ? Object.entries(def.when || {}).flatMap(([c, ls]) => ls.map(l => ({
           ...l,
           t: `[${c}] ${l.t}`
@@ -39930,7 +39927,7 @@ function MonsterHeroGame() {
           key: key
         }, /*#__PURE__*/React.createElement("div", {
           className: "px-3 py-1.5 bg-slate-900 text-[10px] font-black text-pink-300 sticky top-0"
-        }, key, "（", list.length, "件 ／ このLvで", usable, "件）"), list.map((l, i) => row(l, i)));
+        }, key, "\uFF08", list.length, "\u4EF6 \uFF0F \u3053\u306ELv\u3067", usable, "\u4EF6\uFF09"), list.map((l, i) => row(l, i)));
       })), assistantDebug === 'bond' && (() => {
         const points = assistantBond.points;
         const next = typeof assistantBondNext === 'function' ? assistantBondNext(points) : null;
@@ -39940,15 +39937,15 @@ function MonsterHeroGame() {
           className: "rounded-2xl border border-pink-500/40 bg-slate-900 p-3"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] font-black text-pink-300 mb-1"
-        }, "いまの仲良し度"), /*#__PURE__*/React.createElement("div", {
+        }, "\u3044\u307E\u306E\u4EF2\u826F\u3057\u5EA6"), /*#__PURE__*/React.createElement("div", {
           className: "text-[12px] text-white font-black"
-        }, points, " ポイント ／ Lv", assistantBondLevelNow, "（", (typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : {}).title || '', "）"), /*#__PURE__*/React.createElement("div", {
+        }, points, " \u30DD\u30A4\u30F3\u30C8 \uFF0F Lv", assistantBondLevelNow, "\uFF08", (typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : {}).title || '', "\uFF09"), /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-slate-400 mt-1"
         }, next ? `次のLv${next.level}まで あと${next.remain}` : 'いちばん上まで来ています'), /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-slate-400"
-        }, "今日ぶん: ", assistantBond.dailyTotal, " / ", typeof ASSISTANT_BOND_DAILY_MAX !== 'undefined' && ASSISTANT_BOND_DAILY_MAX || 0, "（", assistantBond.day || '未記録', "）")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        }, "\u4ECA\u65E5\u3076\u3093: ", assistantBond.dailyTotal, " / ", typeof ASSISTANT_BOND_DAILY_MAX !== 'undefined' && ASSISTANT_BOND_DAILY_MAX || 0, "\uFF08", assistantBond.day || '未記録', "\uFF09")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] font-black text-slate-400 mb-1"
-        }, "Lvを直接変える"), /*#__PURE__*/React.createElement("div", {
+        }, "Lv\u3092\u76F4\u63A5\u5909\u3048\u308B"), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2"
         }, stages.map(s => /*#__PURE__*/React.createElement("button", {
           key: s.level,
@@ -39958,7 +39955,7 @@ function MonsterHeroGame() {
           className: "text-[8px] font-bold"
         }, s.title))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] font-black text-slate-400 mb-1"
-        }, "Lvごとの呼び方と話し方"), /*#__PURE__*/React.createElement("div", {
+        }, "Lv\u3054\u3068\u306E\u547C\u3073\u65B9\u3068\u8A71\u3057\u65B9"), /*#__PURE__*/React.createElement("div", {
           className: "rounded-2xl bg-black/40 border border-white/5 overflow-hidden"
         }, stages.map(s => /*#__PURE__*/React.createElement("div", {
           key: s.level,
@@ -39973,9 +39970,9 @@ function MonsterHeroGame() {
           className: "block text-[9px] text-slate-400"
         }, s.tone)), /*#__PURE__*/React.createElement("span", {
           className: "shrink-0 text-[9px] text-slate-500"
-        }, s.need, "〜"))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        }, s.need, "\u301C"))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] font-black text-slate-400 mb-1"
-        }, "増える行動と1日の上限"), /*#__PURE__*/React.createElement("div", {
+        }, "\u5897\u3048\u308B\u884C\u52D5\u30681\u65E5\u306E\u4E0A\u9650"), /*#__PURE__*/React.createElement("div", {
           className: "rounded-2xl bg-black/40 border border-white/5 overflow-hidden"
         }, Object.entries(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).map(([k, a]) => /*#__PURE__*/React.createElement("div", {
           key: k,
@@ -39984,13 +39981,13 @@ function MonsterHeroGame() {
           className: "flex-1 text-[10px] text-white"
         }, a.label), /*#__PURE__*/React.createElement("span", {
           className: "shrink-0 text-[9px] text-slate-400"
-        }, "1回+", a.amount, " ／ 1日", a.dailyMax, "まで（今日 ", assistantBond.daily[k] || 0, "）"))))), /*#__PURE__*/React.createElement("button", {
+        }, "1\u56DE+", a.amount, " \uFF0F 1\u65E5", a.dailyMax, "\u307E\u3067\uFF08\u4ECA\u65E5 ", assistantBond.daily[k] || 0, "\uFF09"))))), /*#__PURE__*/React.createElement("button", {
           onClick: () => {
             if (!window.confirm('いま選んでいる助手との仲良し度を0に戻します。ほかのセーブデータは消えません。よろしいですか？')) return;
             debugSetAssistantBond(0);
           },
           className: "w-full min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
-        }, "親密度をリセット（セーブは消えません）"));
+        }, "\u89AA\u5BC6\u5EA6\u3092\u30EA\u30BB\u30C3\u30C8\uFF08\u30BB\u30FC\u30D6\u306F\u6D88\u3048\u307E\u305B\u3093\uFF09"));
       })(), assistantDebug === 'random' && (() => {
         const keys = Object.keys(scenes);
         const roll = () => {
@@ -40005,7 +40002,7 @@ function MonsterHeroGame() {
           className: "p-3 space-y-3"
         }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] font-black text-slate-400 mb-1"
-        }, "場面を選ぶ"), /*#__PURE__*/React.createElement("div", {
+        }, "\u5834\u9762\u3092\u9078\u3076"), /*#__PURE__*/React.createElement("div", {
           className: "flex flex-wrap gap-1"
         }, keys.map(k => /*#__PURE__*/React.createElement("button", {
           key: k,
@@ -40017,7 +40014,7 @@ function MonsterHeroGame() {
         }, k)))), /*#__PURE__*/React.createElement("button", {
           onClick: roll,
           className: "w-full min-h-[46px] rounded-xl bg-pink-700 text-white text-[11px] font-black active:scale-95"
-        }, "20回引いてみる"), assistantDebugRolls.length > 0 && /*#__PURE__*/React.createElement("div", {
+        }, "20\u56DE\u5F15\u3044\u3066\u307F\u308B"), assistantDebugRolls.length > 0 && /*#__PURE__*/React.createElement("div", {
           className: "rounded-2xl bg-black/40 border border-white/5 overflow-hidden"
         }, assistantDebugRolls.map((l, i) => /*#__PURE__*/React.createElement("div", {
           key: i,
@@ -40028,7 +40025,7 @@ function MonsterHeroGame() {
           className: "flex-1 text-[10px] text-white leading-relaxed"
         }, speak(l.t)))), /*#__PURE__*/React.createElement("div", {
           className: "px-3 py-2 text-[9px] text-slate-500 leading-relaxed"
-        }, "続けて同じセリフが出た行は赤くなります（ここが赤くならないのが正しい状態です）。")));
+        }, "\u7D9A\u3051\u3066\u540C\u3058\u30BB\u30EA\u30D5\u304C\u51FA\u305F\u884C\u306F\u8D64\u304F\u306A\u308A\u307E\u3059\uFF08\u3053\u3053\u304C\u8D64\u304F\u306A\u3089\u306A\u3044\u306E\u304C\u6B63\u3057\u3044\u72B6\u614B\u3067\u3059\uFF09\u3002")));
       })()));
     })(), battleTutorial && (() => {
       const who = activeAssistant;
@@ -40065,7 +40062,7 @@ function MonsterHeroGame() {
         },
         role: "dialog",
         "aria-modal": !acting,
-        "aria-label": "バトルチュートリアル"
+        "aria-label": "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB"
       }, acting ?
       /*#__PURE__*/
       /* 操作の番。読むものは出さず、何をすればよいかだけを細いバーで伝える */
@@ -40089,7 +40086,7 @@ function MonsterHeroGame() {
       }, battleTutorial.title || '光っているところを操作してね'), /*#__PURE__*/React.createElement("button", {
         onClick: () => endBattleTutorial(false),
         className: "px-2.5 min-h-[26px] rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95"
-      }, "やめる")) : /*#__PURE__*/React.createElement("div", {
+      }, "\u3084\u3081\u308B")) : /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md rounded-3xl border-2 p-3",
         style: {
           borderColor: who.accent,
@@ -40104,10 +40101,10 @@ function MonsterHeroGame() {
         style: {
           color: who.accent
         }
-      }, "れんしゅう ", battleTutorialStep + 1, " / ", total), /*#__PURE__*/React.createElement("button", {
+      }, "\u308C\u3093\u3057\u3085\u3046 ", battleTutorialStep + 1, " / ", total), /*#__PURE__*/React.createElement("button", {
         onClick: () => endBattleTutorial(false),
         className: "px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
-      }, "やめる")), /*#__PURE__*/React.createElement("div", {
+      }, "\u3084\u3081\u308B")), /*#__PURE__*/React.createElement("div", {
         className: "flex items-end gap-2"
       }, /*#__PURE__*/React.createElement(AssistantFace, {
         who: who,
@@ -40159,7 +40156,7 @@ function MonsterHeroGame() {
       },
       role: "dialog",
       "aria-modal": "true",
-      "aria-label": "距離弱体化発動"
+      "aria-label": "\u8DDD\u96E2\u5F31\u4F53\u5316\u767A\u52D5"
     }, /*#__PURE__*/React.createElement("div", {
       className: `w-full max-w-xs rounded-3xl border-2 border-red-300 px-5 py-7 ${ultimateDistanceBreakReveal.level >= 2 ? 'bg-black/95 shadow-[0_0_64px_rgba(220,38,38,.9)]' : 'bg-purple-950/95 shadow-[0_0_48px_rgba(239,68,68,.65)]'}`,
       style: {
@@ -40171,13 +40168,13 @@ function MonsterHeroGame() {
       className: "mt-2 text-2xl font-black italic tracking-wider text-red-100"
     }, ultimateDistanceBreakReveal.level >= 2 ? 'DISTANCE BREAK OVERWRITE' : 'DISTANCE BREAK'), /*#__PURE__*/React.createElement("div", {
       className: "mt-5 text-xl font-black text-white"
-    }, RANGE_LABELS[ultimateDistanceBreakReveal.distance], "距離 BREAK Lv", ultimateDistanceBreakReveal.level), /*#__PURE__*/React.createElement("div", {
+    }, RANGE_LABELS[ultimateDistanceBreakReveal.distance], "\u8DDD\u96E2 BREAK Lv", ultimateDistanceBreakReveal.level), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 rounded-xl border border-red-300/50 bg-black/40 py-2 text-sm font-black text-red-200"
-    }, "与ダメージ ", 100 * 0.5 ** ultimateDistanceBreakReveal.level, "%"), /*#__PURE__*/React.createElement("div", {
+    }, "\u4E0E\u30C0\u30E1\u30FC\u30B8 ", 100 * 0.5 ** ultimateDistanceBreakReveal.level, "%"), /*#__PURE__*/React.createElement("div", {
       className: "mt-4 border-t border-red-300/20 pt-3 text-[10px] text-purple-100"
     }, /*#__PURE__*/React.createElement("span", {
       className: "font-black text-slate-400"
-    }, "現在のBREAK："), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    }, "\u73FE\u5728\u306EBREAK\uFF1A"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
       className: "font-black"
     }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし')))), gameState === 'BATTLE' && extremeRuleOpen && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
@@ -40190,7 +40187,7 @@ function MonsterHeroGame() {
       onClick: closeExtremeRule,
       role: "dialog",
       "aria-modal": "true",
-      "aria-label": "極限ルール発動"
+      "aria-label": "\u6975\u9650\u30EB\u30FC\u30EB\u767A\u52D5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs max-h-full flex flex-col rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]",
       style: {
@@ -40202,7 +40199,7 @@ function MonsterHeroGame() {
       const breakRule = extremeDistanceBreakRule(specialDifficulty);
       return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 text-[11px] font-black tracking-[.12em] text-amber-300"
-      }, "⚠ ", specialDifficulty, " 特殊ルール"), /*#__PURE__*/React.createElement("div", {
+      }, "\u26A0 ", specialDifficulty, " \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         "data-extreme-rule-intro": specialDifficulty,
         className: "mt-3 min-h-0 flex-1 overflow-y-auto mh-scroll grid content-start gap-1.5 text-left"
       }, groups.map(group => /*#__PURE__*/React.createElement("div", {
@@ -40210,7 +40207,7 @@ function MonsterHeroGame() {
         className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black text-fuchsia-300"
-      }, "【", group.title, "】"), group.lines.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+      }, "\u3010", group.title, "\u3011"), group.lines.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
         key: label,
         className: "mt-0.5 grid grid-cols-[auto_1fr] items-start gap-2 text-[10px] font-bold leading-snug text-white"
       }, /*#__PURE__*/React.createElement("span", {
@@ -40221,16 +40218,16 @@ function MonsterHeroGame() {
         className: "mt-2 shrink-0 rounded-xl border border-amber-300/40 bg-black/45 px-3 py-2 text-left text-[10px] leading-relaxed text-slate-200"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "現在の累計ターン："), /*#__PURE__*/React.createElement("b", {
+      }, "\u73FE\u5728\u306E\u7D2F\u8A08\u30BF\u30FC\u30F3\uFF1A"), /*#__PURE__*/React.createElement("b", {
         className: "text-white"
       }, totalTurnCount)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "現在のBREAK："), /*#__PURE__*/React.createElement("b", {
+      }, "\u73FE\u5728\u306EBREAK\uFF1A"), /*#__PURE__*/React.createElement("b", {
         className: ultimateDistanceBreakLevels.some(level => level > 0) ? 'text-red-200' : 'text-white'
       }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし'))));
     })(), /*#__PURE__*/React.createElement("div", {
       className: "mt-4 shrink-0 text-[9px] font-black tracking-widest text-fuchsia-200"
-    }, "タップしてバトル開始"))), tutorialStep != null && (() => {
+    }, "\u30BF\u30C3\u30D7\u3057\u3066\u30D0\u30C8\u30EB\u958B\u59CB"))), tutorialStep != null && (() => {
       const intro = tutorialKind === 'intro';
       const battleGuide = tutorialKind === 'battleGuide';
       const pages = battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId) || [];
@@ -40251,7 +40248,7 @@ function MonsterHeroGame() {
         },
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "はじめての案内"
+        "aria-label": "\u306F\u3058\u3081\u3066\u306E\u6848\u5185"
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md flex flex-col items-center"
       }, /*#__PURE__*/React.createElement("div", {
@@ -40264,7 +40261,7 @@ function MonsterHeroGame() {
       }, tutorialStep + 1, " / ", pages.length), !battleGuide && /*#__PURE__*/React.createElement("button", {
         onClick: () => finishTutorial(true),
         className: "px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
-      }, "スキップ")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30B9\u30AD\u30C3\u30D7")), /*#__PURE__*/React.createElement("div", {
         className: "w-full flex items-end gap-3"
       }, /*#__PURE__*/React.createElement(AssistantFace, {
         who: who,
@@ -40304,7 +40301,7 @@ function MonsterHeroGame() {
           setShowHelp(true);
         },
         className: "w-full mt-2 min-h-[38px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 text-[11px] font-black active:scale-[.98]"
-      }, "この話をヘルプで詳しく見る"), page.offer === 'battle' && /*#__PURE__*/React.createElement("button", {
+      }, "\u3053\u306E\u8A71\u3092\u30D8\u30EB\u30D7\u3067\u8A73\u3057\u304F\u898B\u308B"), page.offer === 'battle' && /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           finishTutorial(true);
           startBattleTutorial('HOME');
@@ -40313,7 +40310,7 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: who.accent
         }
-      }, "バトルのれんしゅうをやってみる！"), page.offer === 'battleGuide' && /*#__PURE__*/React.createElement("div", {
+      }, "\u30D0\u30C8\u30EB\u306E\u308C\u3093\u3057\u3085\u3046\u3092\u3084\u3063\u3066\u307F\u308B\uFF01"), page.offer === 'battleGuide' && /*#__PURE__*/React.createElement("div", {
         className: "w-full grid grid-cols-1 gap-2 mt-3"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => {
@@ -40324,22 +40321,22 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: who.accent
         }
-      }, "チュートリアルを見る"), /*#__PURE__*/React.createElement("button", {
+      }, "\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setTutorialStep(v => v + 1),
         className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]"
-      }, "今は見ない")), page.declined && /*#__PURE__*/React.createElement("button", {
+      }, "\u4ECA\u306F\u898B\u306A\u3044")), page.declined && /*#__PURE__*/React.createElement("button", {
         onClick: () => finishTutorial(false),
         className: "w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
         style: {
           backgroundColor: who.accent
         }
-      }, "わかった！"), !battleGuide && /*#__PURE__*/React.createElement("div", {
+      }, "\u308F\u304B\u3063\u305F\uFF01"), !battleGuide && /*#__PURE__*/React.createElement("div", {
         className: "w-full grid grid-cols-2 gap-2 mt-3"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: tutorialStep <= 0,
         onClick: () => setTutorialStep(v => Math.max(0, v - 1)),
         className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]"
-      }, "もどる"), /*#__PURE__*/React.createElement("button", {
+      }, "\u3082\u3069\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           if (last) finishTutorial(true);else setTutorialStep(v => v + 1);
         },
@@ -40353,7 +40350,7 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: who.accent
         }
-      }, "つぎへ")));
+      }, "\u3064\u304E\u3078")));
     })(), modeInfoId && (() => {
       const mode = battleModeInfo(modeInfoId);
       return /*#__PURE__*/React.createElement("div", {
@@ -40384,11 +40381,11 @@ function MonsterHeroGame() {
         style: {
           color: mode.color
         }
-      }, mode.label, "とは？"), /*#__PURE__*/React.createElement("p", {
+      }, mode.label, "\u3068\u306F\uFF1F"), /*#__PURE__*/React.createElement("p", {
         className: "text-[10px] text-slate-400"
       }, mode.tagline)), /*#__PURE__*/React.createElement("button", {
         onClick: () => setModeInfoId(null),
-        "aria-label": "説明を閉じる",
+        "aria-label": "\u8AAC\u660E\u3092\u9589\u3058\u308B",
         className: "shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
       }, /*#__PURE__*/React.createElement(X, {
         size: 18
@@ -40425,7 +40422,7 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: mode.color
         }
-      }, "閉じる"))));
+      }, "\u9589\u3058\u308B"))));
     })(), gameState === 'UPGRADE_SKILL' && /*#__PURE__*/React.createElement("div", {
       style: {
         position: "absolute",
@@ -40438,7 +40435,7 @@ function MonsterHeroGame() {
       className: "mb-2 shrink-0"
     }, /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black text-amber-400 italic uppercase"
-    }, "固有技の強化"), /*#__PURE__*/React.createElement("div", {
+    }, "\u56FA\u6709\u6280\u306E\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-400 mt-1 uppercase tracking-widest flex items-center justify-center gap-2"
     }, "Remaining Points: ", /*#__PURE__*/React.createElement("span", {
       className: "text-white bg-amber-600 px-2 rounded-full font-mono"
@@ -40452,7 +40449,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-w-0 text-left"
       }, /*#__PURE__*/React.createElement("span", {
         className: "block text-[8px] font-black tracking-widest text-amber-300/80 leading-none"
-      }, "現在ガッツ"), /*#__PURE__*/React.createElement("span", {
+      }, "\u73FE\u5728\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
         className: "block font-mono font-black leading-tight"
       }, /*#__PURE__*/React.createElement("b", {
         className: gutsFull ? 'text-amber-300' : 'text-white',
@@ -40481,7 +40478,7 @@ function MonsterHeroGame() {
         style: {
           fontSize: '12px'
         }
-      }, GUTS_RECOVERY_POINT_COST, "P で +", GUTS_RECOVERY_AMOUNT), /*#__PURE__*/React.createElement("span", {
+      }, GUTS_RECOVERY_POINT_COST, "P \u3067 +", GUTS_RECOVERY_AMOUNT), /*#__PURE__*/React.createElement("span", {
         className: "block text-amber-100/90",
         style: {
           fontSize: '8px'
@@ -40492,7 +40489,7 @@ function MonsterHeroGame() {
     }, uniqueUpgradeEntries().map(e => uniqueUpgradeRow(e))), /*#__PURE__*/React.createElement("button", {
       onClick: continueAfterUniqueUpgrade,
       className: "w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0"
-    }, "ブリーダー継承へ")), gameState === 'WAVE_RESULT' && waveResult &&
+    }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D99\u627F\u3078")), gameState === 'WAVE_RESULT' && waveResult &&
     /*#__PURE__*/
     /* 内訳が長くなると背の低い端末で「次のWAVEへ」が画面外に出る。justify-center は
        あふれたぶんを上下へ均等にはみ出させるので、overflow-hidden と合わさると
@@ -40517,19 +40514,19 @@ function MonsterHeroGame() {
       size: 32
     }), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic uppercase tracking-tighter text-white"
-    }, "WAVE ", waveResult.wave, " リザルト")), /*#__PURE__*/React.createElement("div", {
+    }, "WAVE ", waveResult.wave, " \u30EA\u30B6\u30EB\u30C8")), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-1.5 mb-3 shadow-2xl shrink-0"
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-1 rounded-xl bg-indigo-950/60 border border-indigo-400/20 px-2 py-1"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black text-indigo-200"
-    }, "今回：", /*#__PURE__*/React.createElement("b", {
+    }, "\u4ECA\u56DE\uFF1A", /*#__PURE__*/React.createElement("b", {
       className: "font-mono text-sm text-white"
-    }, waveResult.turn), "ターン"), /*#__PURE__*/React.createElement("span", {
+    }, waveResult.turn), "\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black text-amber-200"
-    }, "累計：", /*#__PURE__*/React.createElement("b", {
+    }, "\u7D2F\u8A08\uFF1A", /*#__PURE__*/React.createElement("b", {
       className: "font-mono text-sm text-white"
-    }, waveResult.totalTurnCount), "ターン")), isQuickMode(runMode) && specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+    }, waveResult.totalTurnCount), "\u30BF\u30FC\u30F3")), isQuickMode(runMode) && specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
       const normalRate = quickGrowthRateForRun(runMode, 'Normal', waveResult.turn);
       const effectiveRate = quickGrowthRateForRun(runMode, difficulty, waveResult.turn);
       return /*#__PURE__*/React.createElement("div", {
@@ -40537,25 +40534,25 @@ function MonsterHeroGame() {
         className: "rounded-lg border border-fuchsia-400/40 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "自動成長"), "\u3000通常 +", compactPercent(normalRate), " ", /*#__PURE__*/React.createElement("span", {
+      }, "\u81EA\u52D5\u6210\u9577"), "\u3000\u901A\u5E38 +", compactPercent(normalRate), " ", /*#__PURE__*/React.createElement("span", {
         className: "text-slate-500"
-      }, "→"), " 今回 +", compactPercent(effectiveRate), /*#__PURE__*/React.createElement("span", {
+      }, "\u2192"), " \u4ECA\u56DE +", compactPercent(effectiveRate), /*#__PURE__*/React.createElement("span", {
         className: "block text-[8px] text-purple-300"
-      }, "WAVE ", waveResult.turn, "T / ULTIMATE補正 -", compactPercent(normalRate - effectiveRate)));
+      }, "WAVE ", waveResult.turn, "T / ULTIMATE\u88DC\u6B63 -", compactPercent(normalRate - effectiveRate)));
     })(), waveResult.pendingUltimateDistanceBreak && /*#__PURE__*/React.createElement("div", {
       "data-ultimate-distance-break-warning": true,
       className: "rounded-lg border border-red-400/60 bg-purple-950/80 px-2 py-1 text-[10px] font-black text-red-200"
-    }, "⚠ 次WAVEで距離弱体化が発動"), /*#__PURE__*/React.createElement("div", {
+    }, "\u26A0 \u6B21WAVE\u3067\u8DDD\u96E2\u5F31\u4F53\u5316\u304C\u767A\u52D5"), /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center border-b border-white/10 pb-0.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "WAVE 与ダメージ"), /*#__PURE__*/React.createElement("span", {
+    }, "WAVE \u4E0E\u30C0\u30E1\u30FC\u30B8"), /*#__PURE__*/React.createElement("span", {
       className: "text-red-400 font-mono font-black text-base"
     }, waveResult.totalDamage.toLocaleString())), waveResult.totalAllDamage != null && /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center border-b border-white/10 pb-0.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "全WAVE累計ダメージ"), /*#__PURE__*/React.createElement("span", {
+    }, "\u5168WAVE\u7D2F\u8A08\u30C0\u30E1\u30FC\u30B8"), /*#__PURE__*/React.createElement("span", {
       className: "text-orange-400 font-mono font-black text-base"
     }, waveResult.totalAllDamage.toLocaleString())), waveResult.distDamage && /*#__PURE__*/React.createElement("div", {
       className: "border-b border-white/10 pb-1.5"
@@ -40564,7 +40561,7 @@ function MonsterHeroGame() {
       style: {
         fontSize: '9px'
       }
-    }, "距離別ダメージ（味方位置）& 補正値(永続)"), /*#__PURE__*/React.createElement("div", {
+    }, "\u8DDD\u96E2\u5225\u30C0\u30E1\u30FC\u30B8\uFF08\u5473\u65B9\u4F4D\u7F6E\uFF09& \u88DC\u6B63\u5024(\u6C38\u7D9A)"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1"
     }, ['零', '近', '中', '遠'].map((lbl, i) => {
       const dmg = waveResult.distDamage[i] || 0;
@@ -40621,7 +40618,7 @@ function MonsterHeroGame() {
         style: {
           fontSize: '7px'
         }
-      }, "累計", cumDmg.toLocaleString()), /*#__PURE__*/React.createElement("div", {
+      }, "\u7D2F\u8A08", cumDmg.toLocaleString()), /*#__PURE__*/React.createElement("div", {
         className: "font-mono font-black text-cyan-300 leading-none",
         style: {
           fontSize: '9px'
@@ -40636,53 +40633,53 @@ function MonsterHeroGame() {
         style: {
           fontSize: '8px'
         }
-      }, "適性込合計+", combinedTotal.toFixed(1), "%"));
+      }, "\u9069\u6027\u8FBC\u5408\u8A08+", combinedTotal.toFixed(1), "%"));
     }))), waveResult.recoveryDelta != null && /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center border-b border-white/10 pb-0.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "自動回復率 補正"), /*#__PURE__*/React.createElement("span", {
+    }, "\u81EA\u52D5\u56DE\u5FA9\u7387 \u88DC\u6B63"), /*#__PURE__*/React.createElement("span", {
       className: "flex items-baseline gap-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: `font-mono font-black text-base ${waveResult.recoveryDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`
-    }, waveResult.baseRecoveryDelta !== waveResult.recoveryDelta && /*#__PURE__*/React.createElement(React.Fragment, null, "通常 ", waveResult.baseRecoveryDelta >= 0 ? '+' : '', (waveResult.baseRecoveryDelta * 100).toFixed(1), "% → 実際 "), waveResult.recoveryDelta >= 0 ? '+' : '', (waveResult.recoveryDelta * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("span", {
+    }, waveResult.baseRecoveryDelta !== waveResult.recoveryDelta && /*#__PURE__*/React.createElement(React.Fragment, null, "\u901A\u5E38 ", waveResult.baseRecoveryDelta >= 0 ? '+' : '', (waveResult.baseRecoveryDelta * 100).toFixed(1), "% \u2192 \u5B9F\u969B "), waveResult.recoveryDelta >= 0 ? '+' : '', (waveResult.recoveryDelta * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] text-slate-500 font-mono"
-    }, "累計 ", /*#__PURE__*/React.createElement("span", {
+    }, "\u7D2F\u8A08 ", /*#__PURE__*/React.createElement("span", {
       className: `${waveResult.totalRecoveryDelta >= 0 ? 'text-emerald-300' : 'text-red-300'}`
     }, waveResult.totalRecoveryDelta >= 0 ? '+' : '', (waveResult.totalRecoveryDelta * 100).toFixed(1), "%")))), !isQuickMode(runMode) && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center border-b border-white/10 pb-0.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "WAVE ボーナス (", waveResult.wave, " WAVE)"), /*#__PURE__*/React.createElement("span", {
+    }, "WAVE \u30DC\u30FC\u30CA\u30B9 (", waveResult.wave, " WAVE)"), /*#__PURE__*/React.createElement("span", {
       className: "text-yellow-400 font-mono font-black text-base"
     }, "x", waveResult.waveMult.toFixed(2))), /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center border-b border-white/10 pb-0.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400 text-[11px] font-bold uppercase"
-    }, "残りターン数ボーナス (", waveResult.remainingTurns, ")"), /*#__PURE__*/React.createElement("span", {
+    }, "\u6B8B\u308A\u30BF\u30FC\u30F3\u6570\u30DC\u30FC\u30CA\u30B9 (", waveResult.remainingTurns, ")"), /*#__PURE__*/React.createElement("span", {
       className: "text-blue-400 font-mono font-black text-base"
     }, "x", waveResult.turnMult.toFixed(2))), /*#__PURE__*/React.createElement("div", {
       className: "pt-1 flex flex-col gap-0.5 text-right"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold uppercase italic"
-    }, "難易度ボーナス (", extremeRun ? extremeDifficulty : difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
+    }, "\u96E3\u6613\u5EA6\u30DC\u30FC\u30CA\u30B9 (", extremeRun ? extremeDifficulty : difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-end"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-indigo-400 text-xs font-black uppercase"
-    }, "獲得スコア"), /*#__PURE__*/React.createElement("span", {
+    }, "\u7372\u5F97\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("span", {
       className: "text-white font-mono font-black text-xl"
     }, waveResult.roundScore.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
       className: "pt-1 flex justify-between items-end border-t border-white/20"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-amber-500 text-[11px] font-black uppercase"
-    }, "累計スコア"), /*#__PURE__*/React.createElement("span", {
+    }, "\u7D2F\u8A08\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("span", {
       className: "text-amber-400 font-mono font-black text-lg"
     }, waveResult.totalScore.toLocaleString()))))), /*#__PURE__*/React.createElement("button", {
       onClick: handleNextWave,
       disabled: runFinalizing,
       "aria-busy": runFinalizing,
       className: `w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0${battleTutorialSpotClass('waveNext')} ${runFinalizing ? 'bg-slate-500 text-slate-300 cursor-not-allowed' : 'bg-white text-indigo-900 active:scale-95'}`
-    }, runFinalizing ? '処理中…' : /*#__PURE__*/React.createElement(React.Fragment, null, "次へ進む ", /*#__PURE__*/React.createElement(ChevronRight, {
+    }, runFinalizing ? '処理中…' : /*#__PURE__*/React.createElement(React.Fragment, null, "\u6B21\u3078\u9032\u3080 ", /*#__PURE__*/React.createElement(ChevronRight, {
       className: "inline",
       size: 20
     })))), gameState === 'REWARD_PICK' && (() => {
@@ -40756,11 +40753,11 @@ function MonsterHeroGame() {
         size: 22
       }), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic uppercase tracking-tighter text-white leading-none"
-      }, "トレーニング")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30C8\u30EC\u30FC\u30CB\u30F3\u30B0")), /*#__PURE__*/React.createElement("div", {
         className: "mt-1.5 flex items-center justify-center gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[10px] font-black text-slate-300"
-      }, "4種類から2つ選ぶ"), /*#__PURE__*/React.createElement("span", {
+      }, "4\u7A2E\u985E\u304B\u30892\u3064\u9078\u3076"), /*#__PURE__*/React.createElement("span", {
         className: "flex items-center gap-1"
       }, Array.from({
         length: TRAINING_PICK_COUNT
@@ -40782,13 +40779,13 @@ function MonsterHeroGame() {
           className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-amber-300"
-        }, specialRule, "補正"), "\u3000今回", turns, "T → 強化量 ", compactPercent(gainRate), "（-", compactPercent(1 - gainRate), "）");
+        }, specialRule, "\u88DC\u6B63"), "\u3000\u4ECA\u56DE", turns, "T \u2192 \u5F37\u5316\u91CF ", compactPercent(gainRate), "\uFF08-", compactPercent(1 - gainRate), "\uFF09");
       })(), specialRule === 'NIGHTMARE' && /*#__PURE__*/React.createElement("div", {
         "data-nightmare-training-status": true,
         className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "NIGHTMARE補正"), "\u3000強化量 ", specialRulePercent(extremeSpecialRule(specialRule, 'waveEnhancement')))), /*#__PURE__*/React.createElement("div", {
+      }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u5F37\u5316\u91CF ", specialRulePercent(extremeSpecialRule(specialRule, 'waveEnhancement')))), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-sm my-2 text-left"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "rewardPick",
@@ -40798,9 +40795,9 @@ function MonsterHeroGame() {
         "data-training-status": true
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
-      }, "現在のステータス", trainingPicks.length > 0 && /*#__PURE__*/React.createElement("span", {
+      }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9", trainingPicks.length > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "（選択中の変化）")), /*#__PURE__*/React.createElement("div", {
+      }, "\uFF08\u9078\u629E\u4E2D\u306E\u5909\u5316\uFF09")), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-4 gap-1"
       }, TRAINING_OPTIONS.map(option => {
         const st = STYLES[option.id] || STYLES.hp;
@@ -40834,7 +40831,7 @@ function MonsterHeroGame() {
           className: `relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count > 0 ? `${st.bg} ${st.ring}` : 'bg-slate-900/60 border-slate-800'}`
         }, count > 0 && /*#__PURE__*/React.createElement("span", {
           className: `absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`
-        }, "×", count), /*#__PURE__*/React.createElement("span", {
+        }, "\xD7", count), /*#__PURE__*/React.createElement("span", {
           className: `flex items-center gap-1.5 ${st.tint}`
         }, st.icon, /*#__PURE__*/React.createElement("b", {
           className: "text-[13px] font-black text-white leading-none"
@@ -40847,7 +40844,7 @@ function MonsterHeroGame() {
             effectiveGain = effectiveAfter - current[option.stat];
           return /*#__PURE__*/React.createElement("span", {
             className: "block text-purple-200"
-          }, "通常 +", normalGain, " → 実際 +", effectiveGain);
+          }, "\u901A\u5E38 +", normalGain, " \u2192 \u5B9F\u969B +", effectiveGain);
         })()), /*#__PURE__*/React.createElement("span", {
           className: "w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight"
         }, /*#__PURE__*/React.createElement("span", {
@@ -40856,7 +40853,7 @@ function MonsterHeroGame() {
           className: "block text-[11px] font-black text-slate-300"
         }, before, " ", /*#__PURE__*/React.createElement("span", {
           className: "text-slate-600"
-        }, "→"), " ", /*#__PURE__*/React.createElement("b", {
+        }, "\u2192"), " ", /*#__PURE__*/React.createElement("b", {
           className: st.tint
         }, after))));
       })), /*#__PURE__*/React.createElement("div", {
@@ -40869,7 +40866,7 @@ function MonsterHeroGame() {
         disabled: trainingPicks.length === 0 || !!effect,
         onClick: () => setTrainingPicks([]),
         className: "min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
-      }, "選び直す"), /*#__PURE__*/React.createElement("button", {
+      }, "\u9078\u3073\u76F4\u3059"), /*#__PURE__*/React.createElement("button", {
         type: "button",
         disabled: !ready || !!effect,
         onClick: () => {
@@ -40932,7 +40929,7 @@ function MonsterHeroGame() {
         }
       }, headTitle)), /*#__PURE__*/React.createElement("button", {
         onClick: () => setHelpAssistantOpen(v => !v),
-        "aria-label": "助手のひとことを開く",
+        "aria-label": "\u52A9\u624B\u306E\u3072\u3068\u3053\u3068\u3092\u958B\u304F",
         className: `shrink-0 active:scale-90 ${helpAssistantOpen ? '' : 'opacity-40'}`
       }, /*#__PURE__*/React.createElement(AssistantFace, {
         who: activeAssistant,
@@ -40984,7 +40981,7 @@ function MonsterHeroGame() {
           }
         }, t.title), /*#__PURE__*/React.createElement("span", {
           className: "block text-[10px] text-slate-300 leading-tight mt-0.5"
-        }, "みゅあと一緒に、実際に動かして遊び方を覚えられます")), /*#__PURE__*/React.createElement(ChevronRight, {
+        }, "\u307F\u3085\u3042\u3068\u4E00\u7DD2\u306B\u3001\u5B9F\u969B\u306B\u52D5\u304B\u3057\u3066\u904A\u3073\u65B9\u3092\u899A\u3048\u3089\u308C\u307E\u3059")), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 16,
           className: "shrink-0 text-slate-400"
         }));
@@ -40992,7 +40989,7 @@ function MonsterHeroGame() {
         className: "text-[11px] text-slate-400 leading-relaxed mb-3"
       }, HELP_GUIDE_INTRO), HELP_GUIDE.length === 0 && /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[11px] text-slate-500 font-bold py-10 leading-relaxed"
-      }, "ヘルプの内容を読み込めませんでした。", /*#__PURE__*/React.createElement("br", null), "通信環境を確認して、ページを再読み込みしてください。"), HELP_GUIDE.map(c => /*#__PURE__*/React.createElement("button", {
+      }, "\u30D8\u30EB\u30D7\u306E\u5185\u5BB9\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002", /*#__PURE__*/React.createElement("br", null), "\u901A\u4FE1\u74B0\u5883\u3092\u78BA\u8A8D\u3057\u3066\u3001\u30DA\u30FC\u30B8\u3092\u518D\u8AAD\u307F\u8FBC\u307F\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), HELP_GUIDE.map(c => /*#__PURE__*/React.createElement("button", {
         key: c.id,
         onClick: () => {
           setHelpCatId(c.id);
@@ -41046,18 +41043,18 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: cat.color
         }
-      }, "🎓 バトルのれんしゅうを始める"), /*#__PURE__*/React.createElement("div", {
+      }, "\uD83C\uDF93 \u30D0\u30C8\u30EB\u306E\u308C\u3093\u3057\u3085\u3046\u3092\u59CB\u3081\u308B"), /*#__PURE__*/React.createElement("div", {
         className: "pt-1 flex gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setHelpTopicId(null),
         className: "flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
-      }, "項目一覧へ"), nextTopic && /*#__PURE__*/React.createElement("button", {
+      }, "\u9805\u76EE\u4E00\u89A7\u3078"), nextTopic && /*#__PURE__*/React.createElement("button", {
         onClick: () => setHelpTopicId(nextTopic.id),
         className: "flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2",
         style: {
           backgroundColor: cat.color
         }
-      }, "次: ", nextTopic.title)))), /*#__PURE__*/React.createElement("footer", {
+      }, "\u6B21: ", nextTopic.title)))), /*#__PURE__*/React.createElement("footer", {
         className: "shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center",
         style: {
           backgroundColor: '#0f172a',
@@ -41066,7 +41063,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setShowHelp(false),
         className: "w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm shadow-2xl active:scale-95"
-      }, "わかった！冒険に戻る"), /*#__PURE__*/React.createElement("button", {
+      }, "\u308F\u304B\u3063\u305F\uFF01\u5192\u967A\u306B\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
         "aria-label": "",
         onClick: () => {
           const options = getDebugEnemyOptions(difficulty);
@@ -41080,7 +41077,7 @@ function MonsterHeroGame() {
           setGameState('DEBUG_SETTINGS');
         },
         className: "mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
-      }, "💊")));
+      }, "\uD83D\uDC8A")));
     })(), titleModal, showOfficialTitleConfirm && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-6",
       style: {
@@ -41093,15 +41090,15 @@ function MonsterHeroGame() {
       className: "w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-lg font-black mb-6"
-    }, "タイトル画面へ戻りますか？"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30BF\u30A4\u30C8\u30EB\u753B\u9762\u3078\u623B\u308A\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
       className: "space-y-3"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowOfficialTitleConfirm(false),
       className: "w-full bg-slate-800 py-3 rounded-xl font-black"
-    }, "キャンセル"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
       onClick: returnToOfficialTitle,
       className: "w-full bg-red-600 py-3 rounded-xl font-black"
-    }, "タイトルへ戻る")))), showGameUpdateConfirm && /*#__PURE__*/React.createElement("div", {
+    }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B")))), showGameUpdateConfirm && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -41117,7 +41114,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("h3", {
       id: "game-update-confirm-title",
       className: "text-lg font-black mb-3"
-    }, "最新のゲームデータを読み込み直します。", /*#__PURE__*/React.createElement("br", null), "セーブデータは消えません。"), /*#__PURE__*/React.createElement("div", {
+    }, "\u6700\u65B0\u306E\u30B2\u30FC\u30E0\u30C7\u30FC\u30BF\u3092\u8AAD\u307F\u8FBC\u307F\u76F4\u3057\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u30BB\u30FC\u30D6\u30C7\u30FC\u30BF\u306F\u6D88\u3048\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "space-y-3 mt-6"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: reloadLatestVersion,
@@ -41127,7 +41124,7 @@ function MonsterHeroGame() {
       onClick: () => setShowGameUpdateConfirm(false),
       disabled: gameUpdatePending,
       className: "w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50"
-    }, "キャンセル")))), rankingPartyDetail && (() => {
+    }, "\u30AD\u30E3\u30F3\u30BB\u30EB")))), rankingPartyDetail && (() => {
       const entry = rankingPartyDetail;
       const finite = v => v == null || v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null;
       const score = finite(entry?.score),
@@ -41157,7 +41154,7 @@ function MonsterHeroGame() {
         },
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "編成のくわしい情報"
+        "aria-label": "\u7DE8\u6210\u306E\u304F\u308F\u3057\u3044\u60C5\u5831"
       }, /*#__PURE__*/React.createElement("div", {
         onClick: e => e.stopPropagation(),
         className: "w-full max-w-sm max-h-full flex flex-col gap-2"
@@ -41191,14 +41188,14 @@ function MonsterHeroGame() {
         className: "text-center py-6"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] text-slate-500"
-      }, "編成情報なし（過去の記録）"), /*#__PURE__*/React.createElement("div", {
+      }, "\u7DE8\u6210\u60C5\u5831\u306A\u3057\uFF08\u904E\u53BB\u306E\u8A18\u9332\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "mt-2 flex items-center justify-center gap-1"
       }, /*#__PURE__*/React.createElement(Crown, {
         size: 11,
         className: "text-amber-400 shrink-0"
       }), /*#__PURE__*/React.createElement("span", {
         className: "text-[8px] text-amber-300"
-      }, "勇者モン:"), /*#__PURE__*/React.createElement("span", {
+      }, "\u52C7\u8005\u30E2\u30F3:"), /*#__PURE__*/React.createElement("span", {
         className: "text-[11px] font-black text-white"
       }, entry?.hero || '勇者モン情報なし'))) : /*#__PURE__*/React.createElement("div", {
         className: "space-y-2"
@@ -41241,7 +41238,7 @@ function MonsterHeroGame() {
           className: "flex items-center gap-1 mt-1"
         }, m?.slotIndex != null && /*#__PURE__*/React.createElement("span", {
           className: `text-[8px] font-black px-2 py-0.5 rounded-full border ${RANGE_STYLES[m.slotIndex].bg} ${RANGE_STYLES[m.slotIndex].border}`
-        }, RANGE_LABELS[m.slotIndex], "距離"), colors.length > 0 ? colors.filter(Boolean).map((c, ci) => /*#__PURE__*/React.createElement("span", {
+        }, RANGE_LABELS[m.slotIndex], "\u8DDD\u96E2"), colors.length > 0 ? colors.filter(Boolean).map((c, ci) => /*#__PURE__*/React.createElement("span", {
           key: ci,
           className: "w-3 h-3 rounded-full border border-white/30 shrink-0",
           style: {
@@ -41249,17 +41246,17 @@ function MonsterHeroGame() {
           }
         })) : /*#__PURE__*/React.createElement("span", {
           className: "text-[8px] text-slate-500"
-        }, "染色なし"))), /*#__PURE__*/React.createElement("button", {
+        }, "\u67D3\u8272\u306A\u3057"))), /*#__PURE__*/React.createElement("button", {
           onClick: () => {
             if (m?.detail) setRankingMonsterDetail(m);
           },
           disabled: !m?.detail,
           className: `shrink-0 self-stretch px-2 rounded-xl border text-[9px] font-black leading-tight ${m?.detail ? 'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95' : 'border-white/10 bg-black/20 text-slate-600'}`
-        }, m?.detail ? /*#__PURE__*/React.createElement(React.Fragment, null, "詳細", /*#__PURE__*/React.createElement("br", null), "›") : /*#__PURE__*/React.createElement(React.Fragment, null, "情報", /*#__PURE__*/React.createElement("br", null), "なし")));
+        }, m?.detail ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u8A73\u7D30", /*#__PURE__*/React.createElement("br", null), "\u203A") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u60C5\u5831", /*#__PURE__*/React.createElement("br", null), "\u306A\u3057")));
       })), /*#__PURE__*/React.createElement("button", {
         onClick: () => setRankingPartyDetail(null),
         className: "w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0"
-      }, "とじる"))));
+      }, "\u3068\u3058\u308B"))));
     })(), rankingMonsterDetail && (() => {
       const member = rankingMonsterDetail;
       const baseId = rankingMonsterIdOf(member);
@@ -41284,10 +41281,10 @@ function MonsterHeroGame() {
           className: "w-full max-w-sm rounded-3xl border-2 border-indigo-500 bg-slate-900 p-5 text-center"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[11px] text-slate-400"
-        }, "このモンスターの詳細は表示できません"), /*#__PURE__*/React.createElement("button", {
+        }, "\u3053\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u8A73\u7D30\u306F\u8868\u793A\u3067\u304D\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("button", {
           onClick: close,
           className: "mt-4 w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98]"
-        }, "とじる")));
+        }, "\u3068\u3058\u308B")));
       }
       const lvl = masuBondLevelInfo(masu);
       const pct = Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100));
@@ -41318,7 +41315,7 @@ function MonsterHeroGame() {
           className: "bg-black/40 p-2 rounded-xl border border-violet-500/30"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-violet-300 uppercase font-bold mb-1"
-        }, "所持固有技Lv"), getRebirthSkillChoices(masu).map(skill => {
+        }, "\u6240\u6301\u56FA\u6709\u6280Lv"), getRebirthSkillChoices(masu).map(skill => {
           const current = uniqueSkillAtLevel(skill.unique, skill.level);
           return /*#__PURE__*/React.createElement("div", {
             key: skill.key,
@@ -41332,7 +41329,7 @@ function MonsterHeroGame() {
         footer: /*#__PURE__*/React.createElement("button", {
           onClick: close,
           className: "w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0"
-        }, "とじる")
+        }, "\u3068\u3058\u308B")
       });
     })(), renderFusionDetailModal(), showDeckInfo && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[40000] p-4 flex flex-col",
@@ -41350,7 +41347,7 @@ function MonsterHeroGame() {
     }, "Deck View"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(false),
       className: "px-4 py-2 bg-white/10 rounded-full text-[11px] active:scale-90 text-white"
-    }, "閉じる")), /*#__PURE__*/React.createElement("div", {
+    }, "\u9589\u3058\u308B")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto"
     }, (() => {
       const renderCard = (c, isUsed) => /*#__PURE__*/React.createElement("button", {
@@ -41360,7 +41357,7 @@ function MonsterHeroGame() {
         className: `relative w-full aspect-square rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b active:scale-95 transition-all ${TYPE_COLORS[c.type]} ${isUsed ? 'opacity-35 grayscale' : ''}`
       }, isUsed && /*#__PURE__*/React.createElement("div", {
         className: "absolute top-1 right-1 text-[6px] font-black text-white bg-black/60 px-1 rounded uppercase z-10"
-      }, "済"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6E08"), /*#__PURE__*/React.createElement("div", {
         className: "text-3xl mt-1.5"
       }, cardIconNode(c.icon, 32, c.id)), /*#__PURE__*/React.createElement("div", {
         className: "w-full text-center flex flex-col justify-end gap-0.5"
@@ -41375,7 +41372,7 @@ function MonsterHeroGame() {
         className: "mb-4"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2"
-      }, "手札 (", hand.length, ")"), /*#__PURE__*/React.createElement("div", {
+      }, "\u624B\u672D (", hand.length, ")"), /*#__PURE__*/React.createElement("div", {
         className: "grid gap-1.5",
         style: {
           gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
@@ -41384,14 +41381,14 @@ function MonsterHeroGame() {
         className: "mb-4"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2"
-      }, "山札 (", deck.length, ")"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5C71\u672D (", deck.length, ")"), /*#__PURE__*/React.createElement("div", {
         className: "grid gap-1.5",
         style: {
           gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
         }
       }, deck.map(c => renderCard(c, false)))), graveyard.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2"
-      }, "捨て札 (", graveyard.length, ")"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6368\u3066\u672D (", graveyard.length, ")"), /*#__PURE__*/React.createElement("div", {
         className: "grid gap-1.5",
         style: {
           gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
@@ -41525,17 +41522,17 @@ function MonsterHeroGame() {
         className: `text-[11px] font-black truncate ${t.unlocked ? 'text-white' : 'text-slate-500'}`
       }, t.label, t.isActive && /*#__PURE__*/React.createElement("span", {
         className: "ml-1 text-[8px] text-indigo-300"
-      }, "(使用中)")), !t.unlocked && /*#__PURE__*/React.createElement("span", {
+      }, "(\u4F7F\u7528\u4E2D)")), !t.unlocked && /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] text-slate-500 shrink-0"
-      }, "🔒未解放")), t.unlocked && /*#__PURE__*/React.createElement("div", {
+      }, "\uD83D\uDD12\u672A\u89E3\u653E")), t.unlocked && /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2.5 mt-1"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-mono text-red-400 font-bold"
-      }, "威力 ", t.power), t.guts > 0 && /*#__PURE__*/React.createElement("span", {
+      }, "\u5A01\u529B ", t.power), t.guts > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-mono text-amber-400 font-bold"
-      }, "消費G ", t.guts), t.crit > 0 && /*#__PURE__*/React.createElement("span", {
+      }, "\u6D88\u8CBBG ", t.guts), t.crit > 0 && /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-mono text-yellow-300 font-bold"
-      }, "会心 ", t.crit, "%")), t.sub && /*#__PURE__*/React.createElement("div", {
+      }, "\u4F1A\u5FC3 ", t.crit, "%")), t.sub && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-amber-400 font-bold truncate mt-0.5"
       }, t.sub)), t.unlocked && t.effect && /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-1.5 px-3 pb-2"
@@ -41553,11 +41550,11 @@ function MonsterHeroGame() {
           });
         },
         className: "shrink-0 text-[8px] font-black text-indigo-300 bg-indigo-950/60 border border-indigo-500/40 rounded-full px-2 py-0.5 active:scale-90"
-      }, "詳細"))))), isAtkFamily && /*#__PURE__*/React.createElement("div", {
+      }, "\u8A73\u7D30"))))), isAtkFamily && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 text-center pt-1 shrink-0"
-      }, "敵と同じ距離枠にいる味方の距離適性・距離ダメージ補正の合計値を上げると、上位レベルが解放されます"), card.type === 'unique' && /*#__PURE__*/React.createElement("div", {
+      }, "\u6575\u3068\u540C\u3058\u8DDD\u96E2\u67A0\u306B\u3044\u308B\u5473\u65B9\u306E\u8DDD\u96E2\u9069\u6027\u30FB\u8DDD\u96E2\u30C0\u30E1\u30FC\u30B8\u88DC\u6B63\u306E\u5408\u8A08\u5024\u3092\u4E0A\u3052\u308B\u3068\u3001\u4E0A\u4F4D\u30EC\u30D9\u30EB\u304C\u89E3\u653E\u3055\u308C\u307E\u3059"), card.type === 'unique' && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 text-center pt-1 shrink-0"
-      }, "固有技の強化(強化ポイント)で上位レベルが解放されます")));
+      }, "\u56FA\u6709\u6280\u306E\u5F37\u5316(\u5F37\u5316\u30DD\u30A4\u30F3\u30C8)\u3067\u4E0A\u4F4D\u30EC\u30D9\u30EB\u304C\u89E3\u653E\u3055\u308C\u307E\u3059")));
     })(), focusedCard && /*#__PURE__*/React.createElement("div", {
       className: "fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md",
       style: {
@@ -41581,17 +41578,17 @@ function MonsterHeroGame() {
       className: "text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1"
     }, ['atk', 'range_atk', 'unique'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center text-xs"
-    }, /*#__PURE__*/React.createElement("span", null, "技威力:"), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("span", null, "\u6280\u5A01\u529B:"), /*#__PURE__*/React.createElement("span", {
       className: "text-red-400 font-black"
     }, focusedCard.type === 'range_atk' ? `${Math.floor(focusedCard.mult * 100)} / ${Math.floor(focusedCard.mult * 0.4 * 100)}` : Math.floor((focusedCard.type === 'unique' ? focusedCard.baseMult + (focusedCard.evoLevel || 0) * 0.5 + (focusedCard.monId === 'Ark' || focusedCard.monId === 'Iblis' ? 0.1 * getPermaBuff('chuuniUniqueStack') : 0) : focusedCard.mult || focusedCard.baseMult || 1.0) * 100))), ['atk', 'range_atk', 'unique'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center text-xs"
-    }, /*#__PURE__*/React.createElement("span", null, "会心率:"), /*#__PURE__*/React.createElement("span", {
+    }, /*#__PURE__*/React.createElement("span", null, "\u4F1A\u5FC3\u7387:"), /*#__PURE__*/React.createElement("span", {
       className: "text-yellow-400 font-black"
     }, Math.round(((focusedCard.crit || 0.1) + getPermaBuff('critRatePct')) * 100), "%", getPermaBuff('critRatePct') > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-yellow-200 text-[8px]"
     }, " (+", Math.round(getPermaBuff('critRatePct') * 100), ")"), " ", /*#__PURE__*/React.createElement("span", {
       className: "text-yellow-200/70 text-[8px]"
-    }, "×", (1.5 + getPermaBuff('critDmgPct')).toFixed(2)))), focusedCard.type === 'guard' && (() => {
+    }, "\xD7", (1.5 + getPermaBuff('critDmgPct')).toFixed(2)))), focusedCard.type === 'guard' && (() => {
       // 2枚目以降で使うガードは軽減量が半分になる。実際に効く値をそのまま出す。
       const raw = (focusedCard.flat || 0) + def * (focusedCard.mult || 0);
       const fIdx = hand.findIndex(c => c && c.uid === focusedCard.uid);
@@ -41611,22 +41608,22 @@ function MonsterHeroGame() {
       if (!found) halved = n > 0; // まだ置いていないカードは「次に使う1枚」として判定する
       return /*#__PURE__*/React.createElement("div", {
         className: "text-center font-bold"
-      }, "敵の攻撃を最大 ", Math.floor(halved ? raw * 0.5 : raw), " 軽減", halved && /*#__PURE__*/React.createElement("span", {
+      }, "\u6575\u306E\u653B\u6483\u3092\u6700\u5927 ", Math.floor(halved ? raw * 0.5 : raw), " \u8EFD\u6E1B", halved && /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300 font-black"
-      }, "（2枚目以降のため半減）"), /*#__PURE__*/React.createElement("span", {
+      }, "\uFF082\u679A\u76EE\u4EE5\u964D\u306E\u305F\u3081\u534A\u6E1B\uFF09"), /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400 font-normal"
-      }, "（", focusedCard.flat || 0, " ＋ 丈夫さ×", focusedCard.mult || 0, halved ? ' の半分' : '', "）"));
+      }, "\uFF08", focusedCard.flat || 0, " \uFF0B \u4E08\u592B\u3055\xD7", focusedCard.mult || 0, halved ? ' の半分' : '', "\uFF09"));
     })(), focusedCard.type === 'range_atk' && focusedCard.rangeIdx != null && /*#__PURE__*/React.createElement("div", {
       className: "border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-cyan-400"
-    }, "距離効果:"), " ", RANGE_LABELS[focusedCard.rangeIdx], "距離で威力アップ。攻撃後、", RANGE_LABELS[focusedCard.rangeIdx], "距離へ移動する"), ['buff', 'debuff', 'heal'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
+    }, "\u8DDD\u96E2\u52B9\u679C:"), " ", RANGE_LABELS[focusedCard.rangeIdx], "\u8DDD\u96E2\u3067\u5A01\u529B\u30A2\u30C3\u30D7\u3002\u653B\u6483\u5F8C\u3001", RANGE_LABELS[focusedCard.rangeIdx], "\u8DDD\u96E2\u3078\u79FB\u52D5\u3059\u308B"), ['buff', 'debuff', 'heal'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
       className: "text-center italic text-amber-300 font-bold text-[7px] leading-tight"
     }, getDynamicDesc(focusedCard, true, focusedCard.evoLevel || 0)), focusedCard.effectDesc && /*#__PURE__*/React.createElement("div", {
       className: "border-t border-white/10 pt-1 mt-1 text-[7px] text-amber-200 font-bold"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-indigo-400"
-    }, "特殊効果:"), " ", focusedCard.effectDesc))), skillEffectDetail && /*#__PURE__*/React.createElement("div", {
+    }, "\u7279\u6B8A\u52B9\u679C:"), " ", focusedCard.effectDesc))), skillEffectDetail && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -41651,20 +41648,20 @@ function MonsterHeroGame() {
       className: "flex items-center gap-3 mb-3"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-mono text-red-400 font-bold"
-    }, "威力 ", skillEffectDetail.power), skillEffectDetail.guts > 0 && /*#__PURE__*/React.createElement("span", {
+    }, "\u5A01\u529B ", skillEffectDetail.power), skillEffectDetail.guts > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-mono text-amber-400 font-bold"
-    }, "消費G ", skillEffectDetail.guts), skillEffectDetail.crit > 0 && /*#__PURE__*/React.createElement("span", {
+    }, "\u6D88\u8CBBG ", skillEffectDetail.guts), skillEffectDetail.crit > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-mono text-yellow-300 font-bold"
-    }, "会心 ", skillEffectDetail.crit, "%")), /*#__PURE__*/React.createElement("div", {
+    }, "\u4F1A\u5FC3 ", skillEffectDetail.crit, "%")), /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 border border-white/10 rounded-2xl p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-indigo-300 font-black uppercase tracking-wider mb-1"
-    }, "効果"), /*#__PURE__*/React.createElement("div", {
+    }, "\u52B9\u679C"), /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] text-slate-200 leading-relaxed whitespace-pre-line"
     }, skillEffectDetail.effect)), /*#__PURE__*/React.createElement("button", {
       onClick: () => setSkillEffectDetail(null),
       className: "w-full bg-indigo-600 text-white py-2.5 rounded-2xl font-black text-[12px] mt-3 active:scale-95"
-    }, "閉じる"))), (showEnemyInfo && enemy || waveScanPreview) && (() => {
+    }, "\u9589\u3058\u308B"))), (showEnemyInfo && enemy || waveScanPreview) && (() => {
       const scanEnemy = waveScanPreview?.enemy || enemy;
       const scanDist = waveScanPreview ? 2 : enemyDist;
       const scanBeforeBattle = !!waveScanPreview;
@@ -41684,19 +41681,19 @@ function MonsterHeroGame() {
         },
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": "敵行動詳細"
+        "aria-label": "\u6575\u884C\u52D5\u8A73\u7D30"
       }, /*#__PURE__*/React.createElement("header", {
         className: "flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
         className: "font-black italic uppercase text-red-500 text-lg"
       }, "Enemy Scan"), waveScanPreview && /*#__PURE__*/React.createElement("small", {
         className: "text-indigo-300 font-black"
-      }, "WAVE ", waveScanPreview.wave, "・戦闘開始前")), /*#__PURE__*/React.createElement("button", {
+      }, "WAVE ", waveScanPreview.wave, "\u30FB\u6226\u95D8\u958B\u59CB\u524D")), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           if (waveScanPreview) setWaveScanPreview(null);else setShowEnemyInfo(false);
         },
         className: "min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
-      }, "戻る")), /*#__PURE__*/React.createElement("div", {
+      }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8"
@@ -41720,11 +41717,11 @@ function MonsterHeroGame() {
         className: "grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-pink-400 font-black"
-      }, "ライフ"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30E9\u30A4\u30D5"), /*#__PURE__*/React.createElement("div", {
         className: "text-xl font-mono font-black"
       }, scanEnemy.hp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-red-400 font-black"
-      }, "攻撃力"), /*#__PURE__*/React.createElement("div", {
+      }, "\u653B\u6483\u529B"), /*#__PURE__*/React.createElement("div", {
         className: "text-xl font-mono font-black"
       }, scanEnemy.atk.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
         className: "text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"
@@ -41751,22 +41748,22 @@ function MonsterHeroGame() {
           className: "text-amber-300"
         }, (action.probability * 100).toFixed(action.probability * 100 % 1 ? 1 : 0), "%"), !scanBeforeBattle && enemyIntent?.actionId === action.id && /*#__PURE__*/React.createElement("small", {
           className: "block text-cyan-300"
-        }, "予告中"))), /*#__PURE__*/React.createElement("div", {
+        }, "\u4E88\u544A\u4E2D"))), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"
-        }, /*#__PURE__*/React.createElement("span", null, "威力倍率 ", /*#__PURE__*/React.createElement("b", null, "×", action.multiplier)), /*#__PURE__*/React.createElement("span", null, "基準威力 ", /*#__PURE__*/React.createElement("b", null, power.toLocaleString())), /*#__PURE__*/React.createElement("span", null, "攻撃回数 ", /*#__PURE__*/React.createElement("b", null, action.hits, "回")), /*#__PURE__*/React.createElement("span", null, "使用間合い ", /*#__PURE__*/React.createElement("b", null, action.range)), /*#__PURE__*/React.createElement("span", {
+        }, /*#__PURE__*/React.createElement("span", null, "\u5A01\u529B\u500D\u7387 ", /*#__PURE__*/React.createElement("b", null, "\xD7", action.multiplier)), /*#__PURE__*/React.createElement("span", null, "\u57FA\u6E96\u5A01\u529B ", /*#__PURE__*/React.createElement("b", null, power.toLocaleString())), /*#__PURE__*/React.createElement("span", null, "\u653B\u6483\u56DE\u6570 ", /*#__PURE__*/React.createElement("b", null, action.hits, "\u56DE")), /*#__PURE__*/React.createElement("span", null, "\u4F7F\u7528\u9593\u5408\u3044 ", /*#__PURE__*/React.createElement("b", null, action.range)), /*#__PURE__*/React.createElement("span", {
           className: "col-span-2"
-        }, "発動条件 ", /*#__PURE__*/React.createElement("b", null, action.condition)), /*#__PURE__*/React.createElement("span", {
+        }, "\u767A\u52D5\u6761\u4EF6 ", /*#__PURE__*/React.createElement("b", null, action.condition)), /*#__PURE__*/React.createElement("span", {
           className: "col-span-2"
-        }, "移動効果 ", /*#__PURE__*/React.createElement("b", null, action.type === 'MOVE' ? `${RANGE_LABELS.filter((_, i) => i !== scanDist).join('・')}距離のいずれかへ移動` : 'なし')), /*#__PURE__*/React.createElement("span", {
+        }, "\u79FB\u52D5\u52B9\u679C ", /*#__PURE__*/React.createElement("b", null, action.type === 'MOVE' ? `${RANGE_LABELS.filter((_, i) => i !== scanDist).join('・')}距離のいずれかへ移動` : 'なし')), /*#__PURE__*/React.createElement("span", {
           className: "col-span-2"
-        }, "バフ・デバフ・状態異常 ", /*#__PURE__*/React.createElement("b", null, "なし")), /*#__PURE__*/React.createElement("span", null, "クールダウン ", /*#__PURE__*/React.createElement("b", null, action.cooldown ? `${action.cooldown}ターン` : 'なし')), /*#__PURE__*/React.createElement("span", null, "回数制限 ", /*#__PURE__*/React.createElement("b", null, action.useLimit ?? 'なし'))), !action.available && /*#__PURE__*/React.createElement("div", {
+        }, "\u30D0\u30D5\u30FB\u30C7\u30D0\u30D5\u30FB\u72B6\u614B\u7570\u5E38 ", /*#__PURE__*/React.createElement("b", null, "\u306A\u3057")), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30FC\u30EB\u30C0\u30A6\u30F3 ", /*#__PURE__*/React.createElement("b", null, action.cooldown ? `${action.cooldown}ターン` : 'なし')), /*#__PURE__*/React.createElement("span", null, "\u56DE\u6570\u5236\u9650 ", /*#__PURE__*/React.createElement("b", null, action.useLimit ?? 'なし'))), !action.available && /*#__PURE__*/React.createElement("div", {
           className: "mt-2 text-[10px] text-red-300"
-        }, "現在は使用不可：", action.unavailableReason));
+        }, "\u73FE\u5728\u306F\u4F7F\u7528\u4E0D\u53EF\uFF1A", action.unavailableReason));
       })), /*#__PURE__*/React.createElement("aside", {
         className: "text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"
       }, /*#__PURE__*/React.createElement("b", {
         className: "block text-slate-200 mb-1"
-      }, "行動ルール"), "使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。必殺技は「ためる」の次のターンに必ず発動し、ほかの行動では上書きされません。移動は必ず前のターンに吹き出しで予告してから行うため、戦闘開始の1ターン目と、移動した次のターンには選ばれません。SCAN表示では抽選しません。")))));
+      }, "\u884C\u52D5\u30EB\u30FC\u30EB"), "\u4F7F\u7528\u53EF\u80FD\u306A\u884C\u52D5\u306E\u91CD\u307F\u3092\u5408\u8A08100%\u306B\u6B63\u898F\u5316\u3057\u3066\u62BD\u9078\u3057\u307E\u3059\u3002\u79FB\u52D5\u304C\u9078\u3070\u308C\u305F\u5834\u5408\u306F\u3001\u73FE\u5728\u4EE5\u5916\u306E3\u9593\u5408\u3044\u304B\u3089\u540C\u7387\u3067\u79FB\u52D5\u5148\u3092\u9078\u3073\u307E\u3059\u3002\u5FC5\u6BBA\u6280\u306F\u300C\u305F\u3081\u308B\u300D\u306E\u6B21\u306E\u30BF\u30FC\u30F3\u306B\u5FC5\u305A\u767A\u52D5\u3057\u3001\u307B\u304B\u306E\u884C\u52D5\u3067\u306F\u4E0A\u66F8\u304D\u3055\u308C\u307E\u305B\u3093\u3002\u79FB\u52D5\u306F\u5FC5\u305A\u524D\u306E\u30BF\u30FC\u30F3\u306B\u5439\u304D\u51FA\u3057\u3067\u4E88\u544A\u3057\u3066\u304B\u3089\u884C\u3046\u305F\u3081\u3001\u6226\u95D8\u958B\u59CB\u306E1\u30BF\u30FC\u30F3\u76EE\u3068\u3001\u79FB\u52D5\u3057\u305F\u6B21\u306E\u30BF\u30FC\u30F3\u306B\u306F\u9078\u3070\u308C\u307E\u305B\u3093\u3002SCAN\u8868\u793A\u3067\u306F\u62BD\u9078\u3057\u307E\u305B\u3093\u3002")))));
     })(), showHeroInfo && mainHero && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 p-6 flex flex-col",
       style: {
@@ -41783,7 +41780,7 @@ function MonsterHeroGame() {
     }, "Hero Scan"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowHeroInfo(false),
       className: "px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
-    }, "戻る")), /*#__PURE__*/React.createElement("div", {
+    }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll"
     }, mainHero.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: mainHero.id,
@@ -41808,29 +41805,29 @@ function MonsterHeroGame() {
       className: "grid grid-cols-2 gap-6 text-left"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-pink-400 font-black uppercase"
-    }, "ライフ"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30E9\u30A4\u30D5"), /*#__PURE__*/React.createElement("div", {
       className: "text-xl font-mono font-black"
     }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-red-400 font-black uppercase"
-    }, "攻撃力"), /*#__PURE__*/React.createElement("div", {
+    }, "\u653B\u6483\u529B"), /*#__PURE__*/React.createElement("div", {
       className: "text-xl font-mono font-black"
     }, atk)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-emerald-400 font-black uppercase"
-    }, "丈夫さ"), /*#__PURE__*/React.createElement("div", {
+    }, "\u4E08\u592B\u3055"), /*#__PURE__*/React.createElement("div", {
       className: "text-xl font-mono font-black"
     }, effectiveDef, getPermaBuff('defPct') > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-emerald-400 ml-1"
-    }, "(基礎", def, " DEF +", Math.round(getPermaBuff('defPct') * 100), "%)"), getPermaBuff('dmgCutPct') > 0 && /*#__PURE__*/React.createElement("span", {
+    }, "(\u57FA\u790E", def, " DEF +", Math.round(getPermaBuff('defPct') * 100), "%)"), getPermaBuff('dmgCutPct') > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-emerald-400 ml-1"
-    }, "(被ダメ -", Math.round(getPermaBuff('dmgCutPct') * 100), "%)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    }, "(\u88AB\u30C0\u30E1 -", Math.round(getPermaBuff('dmgCutPct') * 100), "%)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-amber-400 font-black uppercase"
-    }, "ガッツ"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("div", {
       className: "text-xl font-mono font-black"
     }, guts, " / ", effectiveMaxGuts))), /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-indigo-400 uppercase font-black"
-    }, "勇者特性"), /*#__PURE__*/React.createElement("div", {
+    }, "\u52C7\u8005\u7279\u6027"), /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] text-white font-bold leading-relaxed mt-1"
     }, mainHero.traitDesc)), /*#__PURE__*/React.createElement("div", {
       className: "text-left"
@@ -41840,7 +41837,7 @@ function MonsterHeroGame() {
     }))))), resultProcessing && /*#__PURE__*/React.createElement("div", {
       role: "status",
       "aria-live": "polite",
-      "aria-label": "クリア結果を処理中",
+      "aria-label": "\u30AF\u30EA\u30A2\u7D50\u679C\u3092\u51E6\u7406\u4E2D",
       className: "fixed inset-0 flex items-center justify-center bg-black/55 backdrop-blur-sm",
       style: {
         position: 'fixed',
@@ -41853,7 +41850,7 @@ function MonsterHeroGame() {
       onClick: e => e.preventDefault()
     }, /*#__PURE__*/React.createElement("div", {
       className: "rounded-2xl border border-white/20 bg-slate-950/90 px-6 py-4 text-sm font-black text-white shadow-2xl"
-    }, "処理中…")), onboardingPreview && /*#__PURE__*/React.createElement("div", {
+    }, "\u51E6\u7406\u4E2D\u2026")), onboardingPreview && /*#__PURE__*/React.createElement("div", {
       "data-onboarding-preview-bar": true,
       className: "fixed left-0 right-0 top-0 flex items-center gap-2 px-3 py-1",
       style: {
@@ -41864,13 +41861,13 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("span", {
       className: "flex-1 min-w-0 text-[9px] font-black text-white leading-tight"
-    }, "DEBUG・初回プレイの再生中", /*#__PURE__*/React.createElement("small", {
+    }, "DEBUG\u30FB\u521D\u56DE\u30D7\u30EC\u30A4\u306E\u518D\u751F\u4E2D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] font-bold opacity-90"
-    }, "名前も助手も仲良し度も保存されません")), /*#__PURE__*/React.createElement("button", {
+    }, "\u540D\u524D\u3082\u52A9\u624B\u3082\u4EF2\u826F\u3057\u5EA6\u3082\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: endOnboardingPreview,
       className: "shrink-0 min-h-[32px] px-3 rounded-full bg-white text-fuchsia-800 text-[10px] font-black active:scale-95"
-    }, "再生をやめる")), showQuitConfirm && /*#__PURE__*/React.createElement("div", {
+    }, "\u518D\u751F\u3092\u3084\u3081\u308B")), showQuitConfirm && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-8 text-center",
       style: {
         position: 'fixed',
@@ -41884,9 +41881,9 @@ function MonsterHeroGame() {
       className: "text-red-500 mb-4"
     }), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black text-white uppercase mb-2"
-    }, "降参しますか？"), /*#__PURE__*/React.createElement("p", {
+    }, "\u964D\u53C2\u3057\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("p", {
       className: "text-[11px] text-slate-400 mb-2"
-    }, debugBattle ? 'このデバッグ戦を終了します' : /*#__PURE__*/React.createElement(React.Fragment, null, "現在のスコア ", score.toLocaleString(), " pt がランキングに記録されます")), /*#__PURE__*/React.createElement("div", {
+    }, debugBattle ? 'このデバッグ戦を終了します' : /*#__PURE__*/React.createElement(React.Fragment, null, "\u73FE\u5728\u306E\u30B9\u30B3\u30A2 ", score.toLocaleString(), " pt \u304C\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u8A18\u9332\u3055\u308C\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-col gap-3 w-full max-w-xs mt-4",
       style: {
         position: 'relative',
@@ -41901,7 +41898,7 @@ function MonsterHeroGame() {
         pointerEvents: 'auto'
       },
       className: "w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95"
-    }, "降参する"), /*#__PURE__*/React.createElement("button", {
+    }, "\u964D\u53C2\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => setShowQuitConfirm(false),
       style: {
@@ -41910,7 +41907,7 @@ function MonsterHeroGame() {
         pointerEvents: 'auto'
       },
       className: "w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95"
-    }, "戦いを続ける"))), debugBattle && debugOutcome && /*#__PURE__*/React.createElement("div", {
+    }, "\u6226\u3044\u3092\u7D9A\u3051\u308B"))), debugBattle && debugOutcome && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center justify-center p-6 text-center",
       style: {
         position: 'fixed',
@@ -41926,15 +41923,15 @@ function MonsterHeroGame() {
       className: "w-full max-w-xs mb-4 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/30 p-3 text-left"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-fuchsia-200 font-black mb-2"
-    }, "EXTREME 検証結果（保存されません）"), /*#__PURE__*/React.createElement("div", {
+    }, "EXTREME \u691C\u8A3C\u7D50\u679C\uFF08\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-1 text-[10px] text-slate-200"
-    }, /*#__PURE__*/React.createElement("span", null, "今回のスコア"), /*#__PURE__*/React.createElement("b", {
+    }, /*#__PURE__*/React.createElement("span", null, "\u4ECA\u56DE\u306E\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, score.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE 経験値"), /*#__PURE__*/React.createElement("b", {
+    }, score.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, xpForWavesCleared(10, activeExtremeSetting.xp).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE ダイヤ"), /*#__PURE__*/React.createElement("b", {
+    }, xpForWavesCleared(10, activeExtremeSetting.xp).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, goldForWavesCleared(10, activeExtremeSetting.gold).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "クリア時プシュケー"), /*#__PURE__*/React.createElement("b", {
+    }, goldForWavesCleared(10, activeExtremeSetting.gold).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u6642\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
     }, activeExtremeSetting.psyche))), speciesChallengeClearCardNode(), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs space-y-3"
@@ -41952,18 +41949,18 @@ function MonsterHeroGame() {
       },
       disabled: resultActionPending,
       className: "w-full bg-cyan-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50"
-    }, "種族チャレンジ選択へ戻る") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9078\u629E\u3078\u623B\u308B") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
       onClick: () => runResultActionOnce(() => startDebugBattle(extremeRun)),
       disabled: resultActionPending,
       className: "w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50"
-    }, "同じ条件でもう一度"), /*#__PURE__*/React.createElement("button", {
+    }, "\u540C\u3058\u6761\u4EF6\u3067\u3082\u3046\u4E00\u5EA6"), /*#__PURE__*/React.createElement("button", {
       onClick: () => runResultActionOnce(() => {
         returnToHome();
         setGameState('DEBUG_SETTINGS');
       }),
       disabled: resultActionPending,
       className: "w-full bg-slate-800 text-slate-200 py-3.5 rounded-2xl font-black disabled:opacity-50"
-    }, "デバッグ設定へ戻る"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => runResultActionOnce(() => {
         returnToHome();
         setGameState('SETTINGS');
@@ -41971,7 +41968,7 @@ function MonsterHeroGame() {
       }),
       disabled: resultActionPending,
       className: "w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50"
-    }, "ヘルプへ戻る")))), gameState === 'CHAMPION' && /*#__PURE__*/React.createElement("div", {
+    }, "\u30D8\u30EB\u30D7\u3078\u623B\u308B")))), gameState === 'CHAMPION' && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex flex-col items-center p-6 text-center",
       style: {
         position: 'fixed',
@@ -42009,7 +42006,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setAutoRepeatEnabled(false),
       className: "min-h-[40px] rounded-xl bg-fuchsia-950/70 border border-fuchsia-300 text-fuchsia-100 text-xs font-black"
-    }, "∞周回 OFF"), /*#__PURE__*/React.createElement("button", {
+    }, "\u221E\u5468\u56DE OFF"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setAutoBattleEnabled(false),
       className: "min-h-[40px] rounded-xl bg-slate-900/70 border border-white/30 text-white text-xs font-black"
     }, "AUTO OFF")), speciesChallengeBattleRun && /*#__PURE__*/React.createElement("button", {
@@ -42027,7 +42024,7 @@ function MonsterHeroGame() {
       },
       disabled: resultActionPending,
       className: "w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50"
-    }, "種族チャレンジ選択へ戻る"), /*#__PURE__*/React.createElement("button", {
+    }, "\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u9078\u629E\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => runResultActionOnce(returnToHome),
       disabled: resultActionPending,
       "aria-busy": resultActionPending,
@@ -42047,7 +42044,7 @@ function MonsterHeroGame() {
       className: "text-red-700 mb-3 animate-pulse"
     }), /*#__PURE__*/React.createElement("h2", {
       className: "text-2xl font-black italic text-white uppercase"
-    }, "敗 北"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
+    }, "\u6557 \u5317"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
       className: "bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-3xl font-mono font-black text-white"
@@ -42075,7 +42072,7 @@ function MonsterHeroGame() {
       onClick: () => runResultActionOnce(returnToHome),
       disabled: resultActionPending,
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-    }, "トップへ"))), gaveUp && !debugBattle && /*#__PURE__*/React.createElement("div", {
+    }, "\u30C8\u30C3\u30D7\u3078"))), gaveUp && !debugBattle && /*#__PURE__*/React.createElement("div", {
       className: "mh-game-over-screen fixed inset-0 flex flex-col items-center text-center",
       style: {
         position: 'fixed',
@@ -42090,7 +42087,7 @@ function MonsterHeroGame() {
       className: "text-slate-400 mb-3"
     }), /*#__PURE__*/React.createElement("h2", {
       className: "text-2xl font-black italic text-white uppercase"
-    }, "リタイア"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
+    }, "\u30EA\u30BF\u30A4\u30A2"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
       className: "bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-3xl font-mono font-black text-white"
@@ -42117,7 +42114,7 @@ function MonsterHeroGame() {
       onClick: () => runResultActionOnce(returnToHome),
       disabled: resultActionPending,
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-    }, "トップへ"))), showMasuRegisterModal && /*#__PURE__*/React.createElement("div", {
+    }, "\u30C8\u30C3\u30D7\u3078"))), showMasuRegisterModal && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -42131,11 +42128,11 @@ function MonsterHeroGame() {
       className: "text-center"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-4xl mb-2"
-    }, "🐾"), /*#__PURE__*/React.createElement("h3", {
+    }, "\uD83D\uDC3E"), /*#__PURE__*/React.createElement("h3", {
       className: "text-lg font-black text-white"
-    }, "マスモンとして登録"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30DE\u30B9\u30E2\u30F3\u3068\u3057\u3066\u767B\u9332"), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 mt-1"
-    }, "名前を付けて保存すると、今回得た絆レベル・強化ポイントが引き継がれます。同じ種でも違う名前で複数登録できます。")), /*#__PURE__*/React.createElement("input", {
+    }, "\u540D\u524D\u3092\u4ED8\u3051\u3066\u4FDD\u5B58\u3059\u308B\u3068\u3001\u4ECA\u56DE\u5F97\u305F\u7D46\u30EC\u30D9\u30EB\u30FB\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u304C\u5F15\u304D\u7D99\u304C\u308C\u307E\u3059\u3002\u540C\u3058\u7A2E\u3067\u3082\u9055\u3046\u540D\u524D\u3067\u8907\u6570\u767B\u9332\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("input", {
       type: "text",
       value: masuNameInput,
       onChange: e => setMasuNameInput(e.target.value.slice(0, 12)),
@@ -42147,13 +42144,13 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowMasuRegisterModal(false),
       className: "w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95"
-    }, "キャンセル"), /*#__PURE__*/React.createElement("button", {
+    }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         registerMasuMon(masuNameInput);
         setShowMasuRegisterModal(false);
       },
       className: "w-3/5 bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95"
-    }, "登録する")))), effect && /*#__PURE__*/React.createElement("div", {
+    }, "\u767B\u9332\u3059\u308B")))), effect && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',
@@ -42194,7 +42191,7 @@ function MonsterHeroGame() {
         animation: 'sparkFlicker 350ms ease-in-out infinite',
         animationDelay: `${deg}ms`
       }
-    }, "⚡"))), /*#__PURE__*/React.createElement("div", {
+    }, "\u26A1"))), /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0",
       style: {
         animation: 'specialFlash 500ms ease-out infinite',
@@ -42233,7 +42230,7 @@ function MonsterHeroGame() {
         animation: 'sparkFlicker 350ms ease-in-out infinite',
         animationDelay: `${deg}ms`
       }
-    }, "✨")))), effect.imgUrl ? effect.baseId ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    }, "\u2728")))), effect.imgUrl ? effect.baseId ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: effect.baseId,
       src: effect.imgUrl,
       alt: "effect",
@@ -42311,17 +42308,17 @@ function MonsterHeroGame() {
           className: "flex gap-4 text-[9px] font-mono"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-red-400 font-bold"
-        }, "技威力 ", info.power), /*#__PURE__*/React.createElement("span", {
+        }, "\u6280\u5A01\u529B ", info.power), /*#__PURE__*/React.createElement("span", {
           className: "text-yellow-400 font-bold"
-        }, "会心率 ", info.crit, "%"), /*#__PURE__*/React.createElement("span", {
+        }, "\u4F1A\u5FC3\u7387 ", info.crit, "%"), /*#__PURE__*/React.createElement("span", {
           className: "text-amber-400 font-bold"
-        }, "消費G ", info.guts)), isUnique && /*#__PURE__*/React.createElement("div", {
+        }, "\u6D88\u8CBBG ", info.guts)), isUnique && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-400 mt-1"
         }, mon.unique.effectDesc));
       })), /*#__PURE__*/React.createElement("button", {
         onClick: () => setRosterSkillDetail(null),
         className: "w-full bg-amber-600 text-white py-3 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95"
-      }, "閉じる")));
+      }, "\u9589\u3058\u308B")));
     })()))
   );
 }
