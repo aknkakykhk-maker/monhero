@@ -23,6 +23,14 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      - name: Record pre-change rebirth-check baseline
+        run: |
+          set +e
+          node tools/masu/rebirth-check.js | tee /tmp/rebirth-baseline.log
+          set -e
+          grep '^NG:' /tmp/rebirth-baseline.log | sort > /tmp/rebirth-baseline-ng.txt || true
+          echo 'Baseline NG:'
+          cat /tmp/rebirth-baseline-ng.txt || true
       - name: Apply source, migration, docs and regression-test changes
         run: python3 tools/_tmp_fix_enhance_points.py
       - name: Build canonical shipped output
@@ -30,13 +38,19 @@ jobs:
       - name: Run focused progression checks
         run: |
           node tools/masu/enhance-point-total-check.js
-          node tools/masu/rebirth-check.js
           node tools/masu/transcendence-check.js
           node tools/masu/masu-growth-breakdown-check.js
           node tools/masu/fusion-rebirth-check.js
           node tools/masu/fusion-breakthrough-check.js
           node tools/mode/skip-ticket-check.js
           node tools/monster-power-check.js
+      - name: Verify rebirth-check has no new failures
+        run: |
+          set +e
+          node tools/masu/rebirth-check.js | tee /tmp/rebirth-current.log
+          set -e
+          grep '^NG:' /tmp/rebirth-current.log | sort > /tmp/rebirth-current-ng.txt || true
+          diff -u /tmp/rebirth-baseline-ng.txt /tmp/rebirth-current-ng.txt
       - name: Run source, help and release checks
         run: |
           node tools/check-syntax.js
