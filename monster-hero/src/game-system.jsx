@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 22:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 22:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20012,7 +20012,33 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   })()}
                 </div>
                 {getTurnBuff('stunEnemy',false)&&<div className="absolute inset-0 flex items-center justify-center text-3xl bg-indigo-500/20 rounded-full border-4 border-indigo-500 animate-pulse">💫</div>}
-                <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-start pt-1 gap-0.5">{popups.filter(p=>p.side==='enemy').map(p=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} className={`text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}</div>
+                {(() => {
+        const enemyPopups=popups.filter(p=>p.side==='enemy');
+        const wrapEnemyPopups=!liteBattleView&&enemyPopups.length>4;
+        const popupColumns=wrapEnemyPopups?Math.ceil(enemyPopups.length/4):1;
+        const popupGridStyle=wrapEnemyPopups?{
+          display:'grid',
+          gridAutoFlow:'column',
+          gridTemplateRows:'repeat(4, auto)',
+          gridAutoColumns:'max-content',
+          justifyContent:'center',
+          alignContent:'start',
+          columnGap:popupColumns>=3?'0px':'4px',
+          rowGap:'2px',
+          paddingTop:'4px'
+        }:undefined;
+        const compactPopupStyle=wrapEnemyPopups?{
+          fontSize:popupColumns>=3?'clamp(1.4rem, 5.8vw, 1.85rem)':'clamp(1.75rem, 7.5vw, 2.25rem)',
+          lineHeight:1.05,
+          paddingLeft:'2px',
+          paddingRight:'2px'
+        }:undefined;
+        return (
+          <div className={`absolute inset-0 z-50 pointer-events-none ${wrapEnemyPopups?'':'flex flex-col items-center justify-start pt-1 gap-0.5'}`} style={popupGridStyle}>
+            {enemyPopups.map(p=>(<div key={p.id} data-lite-damage={liteBattleView?'true':undefined} style={compactPopupStyle} className={`text-center ${p.color} font-black whitespace-nowrap px-4 ${liteBattleView?'rounded-lg border border-white/20 bg-slate-950/95 py-1 text-base':'drop-shadow-[0_0_15px_rgba(0,0,0,1)]'}`}>{p.text}</div>))}
+          </div>
+        );
+      })()}
               </div>
               <div className="w-full max-w-[180px] mt-2 mb-1 shrink-0 relative z-[40]">
                 <div className="h-2"></div>
