@@ -22,7 +22,18 @@ jobs:
           cache: npm
           cache-dependency-path: tools/package-lock.json
       - name: Apply final simultaneous-input fix
-        run: python3 .github/rhythm-simultaneous-input-final.py
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/rhythm-simultaneous-input-final.py')
+          s=p.read_text()
+          old="foundation.find('const logic=game.match/', start)"
+          new="foundation.find('const logic=game.match(', start)"
+          if s.count(old)!=1:
+              raise SystemExit(f'patch locator count={s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
+          python3 .github/rhythm-simultaneous-input-final.py
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
