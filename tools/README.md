@@ -487,3 +487,6 @@ node tools/audio/auto-bgm-continuity-check.js
 ```
 
 AUTO中の敵撃破ファンファーレ／WAVE後BGMの既定OFF、戦闘BGM継続、BGMアレンジのON/OFF設定、更新情報・ヘルプ・開発ルールへの反映を確認します。
+
+
+- `mode/rhythm-mode-multitouch-check.js` — 音ゲーのiPhone向け複数指Touch Events、指ごとのidentifier管理、5レーン座標変換、Pointer Eventsとの二重処理防止、ノーツ表示が入力を遮らないことを確認する。
