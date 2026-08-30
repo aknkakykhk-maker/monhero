@@ -32,27 +32,38 @@ jobs:
           marker = "  const pointerDown=e=>{if(e.pointerType==='touch')return;e.preventDefault();"
           if marker not in src:
               raise SystemExit('pointerDown marker not found')
-
           helper = """  const setPressedLanes=lanes=>{const area=playAreaRef.current;if(!area)return;const active=lanes instanceof Set?lanes:new Set(lanes||[]);area.querySelectorAll('[data-rhythm-lane]').forEach((el,index)=>{const pressed=active.has(index);el.dataset.pressed=pressed?'true':'false';el.style.backgroundColor=pressed?'rgba(34,211,238,0.30)':'';el.style.boxShadow=pressed?'inset 0 0 26px rgba(103,232,249,0.55), inset 0 -42px 48px rgba(6,182,212,0.28)':'';});};\n"""
           src = src.replace(marker, helper + marker, 1)
 
-          old_pointer = "const pointerDown=e=>{if(e.pointerType==='touch')return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const rect=area.getBoundingClientRect(),lane=rhythmLaneFromClientX(e.clientX,rect.left,rect.width);if(lane===null)return;inputStarts([{lane,inputKey:rhythmInputKey('pointer',e.pointerId),captureTarget:e.currentTarget,pointerId:e.pointerId}]);};const pointerEnd=e=>{if(e.pointerType==='touch')return;inputEnds([{inputKey:rhythmInputKey('pointer',e.pointerId),releaseTarget:e.currentTarget,pointerId:e.pointerId}]);};"
-          new_pointer = "const pointerDown=e=>{if(e.pointerType==='touch')return;e.preventDefault();const area=playAreaRef.current;if(!area)return;const rect=area.getBoundingClientRect(),lane=rhythmLaneFromClientX(e.clientX,rect.left,rect.width);if(lane===null)return;setPressedLanes([lane]);inputStarts([{lane,inputKey:rhythmInputKey('pointer',e.pointerId),captureTarget:e.currentTarget,pointerId:e.pointerId}]);};const pointerEnd=e=>{if(e.pointerType==='touch')return;setPressedLanes([]);inputEnds([{inputKey:rhythmInputKey('pointer',e.pointerId),releaseTarget:e.currentTarget,pointerId:e.pointerId}]);};"
-          if old_pointer not in src:
-              raise SystemExit('pointer handlers marker not found')
-          src = src.replace(old_pointer, new_pointer, 1)
+          pointer_start = "if(lane===null)return;inputStarts([{lane,inputKey:rhythmInputKey('pointer',e.pointerId)"
+          if pointer_start not in src:
+              raise SystemExit('pointer start marker not found')
+          src = src.replace(pointer_start, "if(lane===null)return;setPressedLanes([lane]);inputStarts([{lane,inputKey:rhythmInputKey('pointer',e.pointerId)", 1)
 
-          old_touch = "const rect=area.getBoundingClientRect(),live=new Set(),starts=[];Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);if(current.activeTouchInputs.has(inputKey))return;current.activeTouchInputs.add(inputKey);const lane=rhythmLaneFromClientX(touch.clientX,rect.left,rect.width);if(lane!==null)starts.push({lane,inputKey});});if(starts.length)inputStarts(starts);"
-          new_touch = "const rect=area.getBoundingClientRect(),live=new Set(),liveLanes=new Set(),starts=[];Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const lane=rhythmLaneFromClientX(touch.clientX,rect.left,rect.width);if(lane!==null)liveLanes.add(lane);if(current.activeTouchInputs.has(inputKey))return;current.activeTouchInputs.add(inputKey);if(lane!==null)starts.push({lane,inputKey});});setPressedLanes(liveLanes);if(starts.length)inputStarts(starts);"
-          if old_touch not in src:
-              raise SystemExit('touch sync marker not found')
-          src = src.replace(old_touch, new_touch, 1)
+          pointer_end = "const pointerEnd=e=>{if(e.pointerType==='touch')return;"
+          if pointer_end not in src:
+              raise SystemExit('pointer end marker not found')
+          src = src.replace(pointer_end, pointer_end + "setPressedLanes([]);", 1)
 
-          old_cleanup = "area.removeEventListener('touchcancel',syncTouches);};},[view.status]);"
-          new_cleanup = "area.removeEventListener('touchcancel',syncTouches);setPressedLanes([]);};},[view.status]);"
-          if old_cleanup not in src:
+          touch_decl = "const rect=area.getBoundingClientRect(),live=new Set(),starts=[];"
+          if touch_decl not in src:
+              raise SystemExit('touch declaration marker not found')
+          src = src.replace(touch_decl, "const rect=area.getBoundingClientRect(),live=new Set(),liveLanes=new Set(),starts=[];", 1)
+
+          touch_body = "live.add(inputKey);if(current.activeTouchInputs.has(inputKey))return;current.activeTouchInputs.add(inputKey);const lane=rhythmLaneFromClientX(touch.clientX,rect.left,rect.width);if(lane!==null)starts.push({lane,inputKey});"
+          if touch_body not in src:
+              raise SystemExit('touch body marker not found')
+          src = src.replace(touch_body, "live.add(inputKey);const lane=rhythmLaneFromClientX(touch.clientX,rect.left,rect.width);if(lane!==null)liveLanes.add(lane);if(current.activeTouchInputs.has(inputKey))return;current.activeTouchInputs.add(inputKey);if(lane!==null)starts.push({lane,inputKey});", 1)
+
+          starts_marker = "});if(starts.length)inputStarts(starts);const ended=[];"
+          if starts_marker not in src:
+              raise SystemExit('touch starts marker not found')
+          src = src.replace(starts_marker, "});setPressedLanes(liveLanes);if(starts.length)inputStarts(starts);const ended=[];", 1)
+
+          cleanup_marker = "area.removeEventListener('touchcancel',syncTouches);};},[view.status]);"
+          if cleanup_marker not in src:
               raise SystemExit('touch cleanup marker not found')
-          src = src.replace(old_cleanup, new_cleanup, 1)
+          src = src.replace(cleanup_marker, "area.removeEventListener('touchcancel',syncTouches);setPressedLanes([]);};},[view.status]);", 1)
 
           lane_old = '<div key={lane} aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40">'
           lane_new = '<div key={lane} data-rhythm-lane={lane} data-pressed="false" aria-hidden="true" className="relative border-r border-white/20 bg-slate-900/40" style={{transition:\'background-color 60ms linear, box-shadow 60ms linear\'}}>'
@@ -60,15 +71,14 @@ jobs:
               raise SystemExit('lane visual marker not found')
           src = src.replace(lane_old, lane_new, 1)
 
-          # Clear visual feedback whenever input state is deliberately reset.
-          replacements = [
+          resets = [
               ("run.activePointers.clear();run.activeTouchInputs?.clear();run.notes.forEach", "run.activePointers.clear();run.activeTouchInputs?.clear();setPressedLanes([]);run.notes.forEach"),
               ("run.activePointers=new Map();run.activeTouchInputs=new Set();run.combo=0;", "run.activePointers=new Map();run.activeTouchInputs=new Set();setPressedLanes([]);run.combo=0;"),
               ("run.activePointers.clear();run.activeTouchInputs?.clear();run.audio?.stop();", "run.activePointers.clear();run.activeTouchInputs?.clear();setPressedLanes([]);run.audio?.stop();"),
           ]
-          for old,new in replacements:
+          for old,new in resets:
               if old not in src:
-                  raise SystemExit(f'reset marker not found: {old[:50]}')
+                  raise SystemExit(f'reset marker not found: {old[:55]}')
               src = src.replace(old,new,1)
 
           stamp = datetime.now(ZoneInfo('Asia/Tokyo')).strftime('%Y-%m-%d %H:%M')
@@ -99,8 +109,7 @@ jobs:
               changelog = changelog[:item_pos] + segment + changelog[end_pos:]
           changelog_path.write_text(changelog)
 
-          check = Path('tools/mode/rhythm-mode-lane-feedback-check.js')
-          check.write_text("""const fs=require('fs');\nconst game=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');\nconst must=[\n  \"const setPressedLanes=lanes=>\",\n  \"data-rhythm-lane={lane}\",\n  \"liveLanes=new Set()\",\n  \"setPressedLanes(liveLanes)\",\n  \"backgroundColor=pressed?'rgba(34,211,238,0.30)'\",\n  \"boxShadow=pressed?'inset 0 0 26px\",\n  \"setPressedLanes([]);run.notes.forEach\",\n  \"setPressedLanes([]);run.audio?.stop()\"\n];\nfor(const token of must){if(!game.includes(token)){console.error('missing lane feedback token:',token);process.exit(1);}}\nif(!game.includes(\"rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)\")){console.error('simultaneous batch input path regressed');process.exit(1);}\nconsole.log('rhythm lane press feedback check: OK');\n""")
+          Path('tools/mode/rhythm-mode-lane-feedback-check.js').write_text("""const fs=require('fs');\nconst game=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');\nconst must=[\n  \"const setPressedLanes=lanes=>\",\n  \"data-rhythm-lane={lane}\",\n  \"liveLanes=new Set()\",\n  \"setPressedLanes(liveLanes)\",\n  \"backgroundColor=pressed?'rgba(34,211,238,0.30)'\",\n  \"boxShadow=pressed?'inset 0 0 26px\",\n  \"setPressedLanes([]);run.notes.forEach\",\n  \"setPressedLanes([]);run.audio?.stop()\"\n];\nfor(const token of must){if(!game.includes(token)){console.error('missing lane feedback token:',token);process.exit(1);}}\nif(!game.includes(\"rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)\")){console.error('simultaneous batch input path regressed');process.exit(1);}\nconsole.log('rhythm lane press feedback check: OK');\n""")
           PY
       - name: Install locked tool dependencies
         run: cd tools && npm ci
