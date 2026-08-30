@@ -5,6 +5,8 @@ const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 assert(source.includes('const getAttackPredictedDmg = useCallback'), '攻撃1枚の共通予測関数が必要');
 assert(source.includes("mainHero?.id==='Zan' && mon?.id==='Zan'"), 'ザン勇者特性の連撃を予測する');
 assert(source.includes("card.type==='unique' && card.monId==='Zan'"), '連斬の連撃を予測する');
+assert(source.includes("mainHero?.id==='Eiki' && mon?.id==='Eiki'"), 'エイキ勇者特性の連撃を予測する');
+assert(source.includes("card.type==='unique' && card.monId==='Eiki'"), '緋桜連華の連撃を予測する');
 assert(source.includes("const pandoraSplitNormal=mainHero?.id==='Pandora' && mon?.id==='Pandora' && ['atk','range_atk'].includes(card.type)"), 'パンドラ勇者の通常攻撃分割を予測する');
 assert(source.includes('const mainBaseDmg=pandoraSplitNormal?Math.floor(baseDmg*0.5):baseDmg;'), 'パンドラ通常攻撃の1ヒット目を分割前ダメージの50%にする');
 assert(source.includes('if (pandoraSplitNormal) total += extraHit(0.5+comboDmgBonus)'), 'パンドラ通常攻撃の連撃を分割前ダメージ基準で予測する');
@@ -18,7 +20,26 @@ const pandoraPredictedDmg=(baseDmg,comboDmgBonus=0)=>
 assert.strictEqual(pandoraPredictedDmg(1000),1000, 'パンドラ通常攻撃は500 + 500になる');
 assert.strictEqual(pandoraPredictedDmg(1000,0.03),1030, '連撃ダメージ+3%時は500 + 530になる');
 
-// ==========================================================================
+// エイキの予測は、実処理と同じく各連撃ヒットを個別に切り捨ててから合算する。
+// 通常攻撃: 本体 + 桜花連舞10%×2。
+// 自身の固有技: さらに桜花連舞30% + 緋桜連華15%×2。
+const eikiPredictedDmg=(baseDmg,{unique=false,comboDmgBonus=0}={})=>{
+  let total=baseDmg;
+  total+=Math.floor(baseDmg*(0.1+comboDmgBonus));
+  total+=Math.floor(baseDmg*(0.1+comboDmgBonus));
+  if(unique) total+=Math.floor(baseDmg*(0.3+comboDmgBonus));
+  if(unique){
+    total+=Math.floor(baseDmg*(0.15+comboDmgBonus));
+    total+=Math.floor(baseDmg*(0.15+comboDmgBonus));
+  }
+  return total;
+};
+assert.strictEqual(eikiPredictedDmg(1000),1200, 'エイキ通常攻撃は本体1000 + 100 + 100になる');
+assert.strictEqual(eikiPredictedDmg(1000,{unique:true}),1800, 'エイキ自身の固有技は本体1000 + 100 + 100 + 300 + 150 + 150になる');
+assert.strictEqual(eikiPredictedDmg(1000,{comboDmgBonus:0.03}),1260, '連撃ダメージ+3%時のエイキ通常攻撃は1000 + 130 + 130になる');
+assert.strictEqual(eikiPredictedDmg(1000,{unique:true,comboDmgBonus:0.03}),1950, '連撃ダメージ+3%時のエイキ固有技は各連撃へ+3%を反映する');
+
+// ========================================================================== 
 // おりょう・ゴーレム・モッチー/ミタラシ・ききは「使ったターンからすぐ効く」設計だが、
 // カード選択中の予測(合計DMG)は以前この4枚の同ターン即時ぶんを一切見ていなかった。
 // 実行(processTurn)は先に使ったバフカードの効果を後続の攻撃へ正しく乗せるのに、
@@ -27,7 +48,7 @@ assert.strictEqual(pandoraPredictedDmg(1000,0.03),1030, '連撃ダメージ+3%�
 //
 // これを直した localBoostFromCard / previewLocalBoosts が、実処理(processTurn)と
 // 同じ並び順・同じ半減規則で値を作れているかを、実際に式を書き写して検算する。
-// ==========================================================================
+// ========================================================================== 
 
 assert(source.includes('const localBoostFromCard = (card) => {'), '同ターン即時ボーナスの共通定義が必要');
 assert(source.includes('const previewLocalBoosts = (excludeIdx=null) => {'), 'カード選択中のプレビュー用スキャンが必要');
@@ -60,10 +81,10 @@ const zeroZeroCalls = (source.match(/getDmg\([^)]*,0,0,/g) || []).length;
 assert.strictEqual(zeroZeroCalls, 0,
   `getDmg へ additionalOryo/additionalDmgMod を 0,0 で固定している箇所が${zeroZeroCalls}件残っている`);
 
-// ==========================================================================
+// ========================================================================== 
 // 実際に式を書き写して、実行(processTurn)と予測(previewLocalBoosts)が
 // 同じ並び順で同じ結果を出すことを検算する
-// ==========================================================================
+// ========================================================================== 
 const cardEffectMultiplier = (card, halved, breederEffMul=1) =>
   card.isBreeder ? breederEffMul : (halved ? 0.5 : 1);
 
