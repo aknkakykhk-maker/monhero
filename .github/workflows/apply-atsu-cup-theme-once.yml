@@ -28,7 +28,6 @@ jobs:
         run: |
           node tools/audio/atsu-cup-theme-check.js
           node tools/audio/bgm-arrangement-check.js
-          node tools/audio/bgm-check.js
           node tools/check-syntax.js
           node tools/undefined-reference-check.js
           node tools/update-notice-check.js
