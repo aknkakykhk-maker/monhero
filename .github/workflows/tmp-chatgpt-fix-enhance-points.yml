@@ -37,6 +37,18 @@ jobs:
           cat /tmp/growth-baseline-ng.txt || true
       - name: Apply source, migration, docs and regression-test changes
         run: python3 tools/_tmp_fix_enhance_points.py
+      - name: Update help render harness for new canonical constants
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tools/help-render-check.js')
+          s = p.read_text()
+          old = "grab(source, '// レベルアップ時の強化ポイント倍率', 'const RAINBOW_STAR_IMAGE'),"
+          new = "grab(source, 'const levelUpPointMultiplier =', 'const RAINBOW_STAR_IMAGE'),"
+          if s.count(old) != 1:
+              raise SystemExit(f'help-render harness marker mismatch: {s.count(old)}')
+          p.write_text(s.replace(old, new, 1))
+          PY
       - name: Build canonical shipped output
         run: node tools/build.js
       - name: Run focused progression checks
