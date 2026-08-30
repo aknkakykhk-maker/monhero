@@ -1,0 +1,51 @@
+name: One-off old Golem enhance repair
+
+on:
+  push:
+    branches: [chatgpt/fix-old-golem-enhance-repair-guard]
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-check:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/fix-old-golem-enhance-repair-guard
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Apply focused fix
+        run: node tools/_oneoff_old_golem_enhance_repair_guard.js
+      - name: Build canonical runtime
+        run: node tools/build.js
+      - name: Check enhancement-point regression
+        run: node tools/masu/enhance-point-total-check.js
+      - name: Check related Masu flows
+        run: |
+          node tools/masu/transcendence-check.js
+          node tools/masu/fusion-rebirth-check.js
+      - name: Check source and generated runtime
+        run: |
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/jsx-text-brace-check.js
+          node tools/build.js --check
+          node tools/compiled-runtime-check.js
+          node tools/update-notice-check.js
+          git diff --check
+      - name: Commit generated and source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: 旧形式ゴーレムの強化ポイント補正を保護する"
+          git push origin HEAD:chatgpt/fix-old-golem-enhance-repair-guard
