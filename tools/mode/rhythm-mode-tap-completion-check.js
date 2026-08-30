@@ -23,8 +23,9 @@ check('ポーズ中は音源とrAFを止め入力・MISSを停止',game.includes
 check('再開は同じoffsetから新しいBufferSourceを生成',game.includes('offsetSeconds=songTimeSeconds()')&&game.includes('const nextSource=ctx.createBufferSource()')&&game.includes('startSource(offsetSeconds)'));
 check('ポーズ中songTimeは進まずAudioContext時刻を正本にする',game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&!/Date\.now\(\)/.test(game.match(/const RhythmTapTest=[\s\S]*?\n};\n\nfunction MonsterHeroGame/)?.[0]||''));
 check('リスタートは0ms・全ノーツ・全集計を初期化',game.includes('offsetSeconds=0')&&game.includes('return startSource(0)')&&game.includes('run.counts=emptyCounts();run.fast=0;run.slow=0'));
-check('中断は保存せず音源・rAF・入力を停止',game.includes('const abort=()=>')&&game.includes('run.audio?.stop();}stopFrame();onExit()')&&!/const abort=[^;]*onComplete/.test(game));
+check('中断は保存せず音源・rAF・入力を停止',game.includes('const abort=()=>')&&game.includes('stopFrame();RHYTHM_GESTURE_RUNTIME.clear();onExit()')&&!/const abort=[^;]*onComplete/.test(game));
 check('正常完走だけBEST保存しReact stateを即時更新',game.includes('onComplete(result,merged)')&&game.includes('saveRhythmBestRecord(rhythmBestRecords')&&game.includes('setRhythmBestRecords(records)'));
-check('source/rAF cleanupと再プレイ導線を持つ',game.includes('return()=>{cancelled=true;stopFrame();runRef.current?.audio?.stop()')&&game.includes('もう一度プレイ')&&game.includes('音ゲーデバッグへ戻る'));
+check('source/rAF cleanupと再プレイ導線を持つ',game.includes('return()=>{cancelled=true;stopFrame();RHYTHM_GESTURE_RUNTIME.clear()')&&game.includes('runRef.current=null')&&game.includes('もう一度プレイ')&&game.includes('音ゲーデバッグへ戻る'));
+check('完走・リスタート・中断でgesture sessionを破棄',game.match(/RHYTHM_GESTURE_RUNTIME\.clear\(\)/g)?.length>=4&&game.includes('run.restarting=true')&&game.includes('if(runRef.current!==run||run.finished)return'));
 check('通常公開はOFF',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

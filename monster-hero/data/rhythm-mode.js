@@ -17,6 +17,16 @@ const RHYTHM_JUDGMENTS = Object.freeze([
   Object.freeze({ id:'MISS', windowMs:null, scoreRate:0 }),
 ]);
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
+const RHYTHM_PROJECTION_TOP_SCALE=.46;
+const rhythmProjectionScale=yRatio=>RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*Math.max(0,Math.min(1,Number(yRatio)||0));
+const rhythmProjectLane=(lane,yRatio)=>{
+  const scale=rhythmProjectionScale(yRatio),flatCenter=(Number(lane)+.5)/RHYTHM_LANE_COUNT;
+  return {center:.5+(flatCenter-.5)*scale,width:scale/RHYTHM_LANE_COUNT,scale};
+};
+const rhythmLanePolygon=lane=>{
+  const top=rhythmProjectLane(lane,0),bottom=rhythmProjectLane(lane,1);
+  return `polygon(${(top.center-top.width/2)*100}% 0,${(top.center+top.width/2)*100}% 0,${(bottom.center+bottom.width/2)*100}% 100%,${(bottom.center-bottom.width/2)*100}% 100%)`;
+};
 
 const RHYTHM_FLICK_DISTANCE_PX = 24;
 const RHYTHM_FLICK_MAX_MS = 450;
@@ -271,7 +281,7 @@ const installRhythmGestureVisuals=()=>{
     [data-rhythm-note][data-note-type="FLICK"] > span:last-child{background:linear-gradient(180deg,#f9a8d4,#ec4899 52%,#a21caf)!important;border-color:rgba(253,164,175,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 0 16px rgba(236,72,153,.68)!important}
     [data-rhythm-note][data-note-type="FLICK"] > span:last-child::after{content:"▲";position:absolute;left:50%;top:-18px;transform:translateX(-50%);color:#fdf2f8;font-size:18px;line-height:1;text-shadow:0 0 8px #ec4899,0 0 14px #d946ef}
     [data-rhythm-note][data-note-type="SLIDE"] > span:last-child{background:linear-gradient(180deg,#ddd6fe,#a855f7 58%,#6d28d9)!important;border-color:rgba(221,214,254,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.82),0 0 16px rgba(168,85,247,.64)!important}
-    [data-rhythm-slide-body]{position:absolute;left:50%;bottom:50%;width:34%;height:var(--rhythm-slide-height,120px);transform:translateX(-50%) rotate(var(--rhythm-slide-angle,0deg));transform-origin:50% 100%;border-radius:999px 999px 3px 3px;background:linear-gradient(180deg,rgba(216,180,254,.38),rgba(168,85,247,.72));box-shadow:0 0 14px rgba(168,85,247,.42);pointer-events:none}
+    [data-rhythm-slide-body]{position:absolute;bottom:50%;height:var(--rhythm-slide-height,120px);border-radius:999px 999px 3px 3px;background:linear-gradient(180deg,rgba(216,180,254,.38),rgba(168,85,247,.72));box-shadow:0 0 14px rgba(168,85,247,.42);pointer-events:none}
   `;
   document.head.appendChild(style);
   const decorate=()=>{
@@ -285,9 +295,8 @@ const installRhythmGestureVisuals=()=>{
       body.setAttribute('aria-hidden','true');
       const note=atsuCupGestureTestChart.notes[index];
       if(note?.type==='SLIDE'){
-        const duration=Math.max(500,note.endTimeMs-note.timeMs),delta=Number(note.endLane??note.lane)-Number(note.lane);
+        const duration=Math.max(500,note.endTimeMs-note.timeMs);
         body.style.setProperty('--rhythm-slide-height',`${Math.round(92+duration/2000*82)}px`);
-        body.style.setProperty('--rhythm-slide-angle',`${Math.max(-24,Math.min(24,delta*9))}deg`);
       }
       el.insertBefore(body,el.firstChild);
     });
@@ -308,10 +317,6 @@ const installRhythmPerspectiveNoteVisuals=()=>{
   if(typeof document==='undefined'||typeof requestAnimationFrame!=='function'||typeof MutationObserver==='undefined')return;
   if(document.documentElement.dataset.rhythmPerspectiveNotes==='ready')return;
   document.documentElement.dataset.rhythmPerspectiveNotes='ready';
-
-  const style=document.createElement('style');
-  style.textContent='[data-rhythm-note][data-note-type="HOLD"] [data-rhythm-hold-body]{clip-path:polygon(34% 0,66% 0,100% 100%,0 100%)}';
-  document.head.appendChild(style);
 
   let area=null,notes=[],raf=0;
   const meta=new WeakMap();
@@ -345,7 +350,9 @@ const installRhythmPerspectiveNoteVisuals=()=>{
     const lineRect=line?.getBoundingClientRect();
     if(areaRect.width>0&&areaRect.height>0&&lineRect){
       const judgeY=Math.max(1,lineRect.top-areaRect.top+lineRect.height/2);
-      const flatNoteWidth=Math.max(8,areaRect.width/RHYTHM_LANE_COUNT-10);
+      const judgeProjection=rhythmProjectLane(2,judgeY/areaRect.height);
+      line.style.left=`${((1-judgeProjection.scale)/2)*100}%`;
+      line.style.right=`${((1-judgeProjection.scale)/2)*100}%`;
       notes.forEach((el,index)=>{
         if(!el.isConnected||el.style.opacity==='0')return;
         const move=String(el.style.transform||'').match(/translate3d\(\s*[-\d.]+(?:px)?\s*,\s*([-\d.]+)px/i);
@@ -354,15 +361,25 @@ const installRhythmPerspectiveNoteVisuals=()=>{
         if(lane===null)return;
         const y=Number(move[1]);
         if(!Number.isFinite(y))return;
-        const depth=Math.max(0,Math.min(1,y/judgeY));
-        const scale=.44+.56*depth;
+        const yRatio=Math.max(0,Math.min(1,(y+el.offsetHeight/2)/areaRect.height));
         const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(index);
         const visualLane=activeSlideLane===null?lane:activeSlideLane;
-        const baseCenter=areaRect.width*((visualLane+.5)/RHYTHM_LANE_COUNT);
-        const visualCenter=areaRect.width/2+(baseCenter-areaRect.width/2)*scale;
-        const visualWidth=Math.max(8,flatNoteWidth*scale);
+        const projected=rhythmProjectLane(visualLane,yRatio);
+        const visualCenter=areaRect.width*projected.center;
+        const visualWidth=Math.max(8,areaRect.width*projected.width*.78);
         el.style.left=`${(visualCenter-visualWidth/2).toFixed(2)}px`;
         el.style.width=`${visualWidth.toFixed(2)}px`;
+        const body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
+        if(body){
+          const height=Math.max(0,parseFloat(getComputedStyle(body).height)||0);
+          const topY=Math.max(0,y-height),note=atsuCupGestureTestChart.notes[index];
+          const topLane=body.hasAttribute('data-rhythm-slide-body')?Number(note?.endLane??lane):lane;
+          const top=rhythmProjectLane(topLane,topY/areaRect.height),bottom=rhythmProjectLane(visualLane,yRatio);
+          const inset=.31;
+          body.style.left=`${(-parseFloat(el.style.left)).toFixed(2)}px`;
+          body.style.width=`${areaRect.width.toFixed(2)}px`;
+          body.style.clipPath=`polygon(${((top.center-top.width*(.5-inset))*100).toFixed(3)}% 0,${((top.center+top.width*(.5-inset))*100).toFixed(3)}% 0,${((bottom.center+bottom.width*(.5-inset))*100).toFixed(3)}% 100%,${((bottom.center-bottom.width*(.5-inset))*100).toFixed(3)}% 100%)`;
+        }
       });
     }
     raf=requestAnimationFrame(frame);
@@ -371,6 +388,11 @@ const installRhythmPerspectiveNoteVisuals=()=>{
     stop();
     if(!next)return;
     area=next;
+    Array.from(area.querySelectorAll('[data-rhythm-lane]')).forEach((lane,index)=>{
+      lane.style.clipPath=rhythmLanePolygon(index);
+      const label=lane.querySelector('span'),at=rhythmProjectLane(index,.93);
+      if(label){label.style.left=`${at.center*100}%`;label.style.transform='translateX(-50%)';}
+    });
     notes=Array.from(area.querySelectorAll('[data-rhythm-note]'));
     notes.forEach(noteLane);
     raf=requestAnimationFrame(frame);

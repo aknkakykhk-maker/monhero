@@ -141,7 +141,8 @@ node tools/build.js --check
 
 `node mode/rhythm-mode-tap-engine-check.js` は、STEP 2AのTAP判定境界・FAST/SLOW・コンボ・自動MISS・90%＋10%スコア・AudioContext同期・TAP限定テスト譜面・非公開状態を確認する。
 
-`node mode/rhythm-mode-tap-completion-check.js` は、STEP 2Bのプレイエリア基準ノーツ移動、ポーズ／再開／リスタート／中断のライフサイクル、正式リザルト条件、BEST統合、NEW RECORD、音源とrAFのcleanup、非公開状態を確認する。
+`node mode/rhythm-mode-tap-completion-check.js` は、STEP 2Bのプレイエリア基準ノーツ移動、ポーズ／再開／リスタート／中断のライフサイクル、正式リザルト条件、BEST統合、NEW RECORD、音源・入力セッション・rAFのcleanup、非公開状態を確認する。
+`node mode/rhythm-mode-note-perspective-check.js` は、5レーン、TAP／HOLD／FLICK／SLIDE、帯、判定ライン、レーン番号、押下発光が共通projection helperの境界・中央を使い、奥ほど細く手前ほど広くなることを数値で確認する。
 | `node mode/rhythm-mode-hold-engine-check.js` | 音ゲーSTEP 3AのHOLD終端・早離しMISS・Pointer EventsのpointerId別2本指入力・EASY TAP回帰とNORMAL混在譜面を確認する。 |
 
 | コマンド | 内容 |

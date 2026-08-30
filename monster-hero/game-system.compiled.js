@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3bc53cb5c77e34ee
+// source-sha256: d7f9b72867c70edf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-31 02:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-31 07:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14988,6 +14988,9 @@ const RhythmTapTest = ({
     if (!run || run.finished || run.paused) return;
     run.finished = true;
     stopFrame();
+    RHYTHM_GESTURE_RUNTIME.clear();
+    run.activePointers.clear();
+    run.activeTouchInputs?.clear();
     run.audio?.stop();
     const score = rhythmCalculateScore({
       judgments: run.counts,
@@ -15064,6 +15067,7 @@ const RhythmTapTest = ({
   }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.displayTimingOffsetMs, settings.judgmentTimingOffsetMs, settings.noteSpeed, stopFrame]);
   useEffect(() => {
     let cancelled = false;
+    RHYTHM_GESTURE_RUNTIME.clear();
     Audio_.startRhythmTrack(song.bgmTrackId).then(audio => {
       if (cancelled || !audio) {
         if (audio) audio.stop();
@@ -15086,6 +15090,7 @@ const RhythmTapTest = ({
         slow: 0,
         finished: false,
         paused: false,
+        restarting: false,
         startBest,
         startBestScore: startBest.bestScore
       };
@@ -15098,7 +15103,15 @@ const RhythmTapTest = ({
     return () => {
       cancelled = true;
       stopFrame();
-      runRef.current?.audio?.stop();
+      RHYTHM_GESTURE_RUNTIME.clear();
+      const run = runRef.current;
+      if (run) {
+        run.finished = true;
+        run.paused = true;
+        run.activePointers.clear();
+        run.activeTouchInputs?.clear();
+        run.audio?.stop();
+      }
       runRef.current = null;
     };
   }, []);
@@ -15133,10 +15146,21 @@ const RhythmTapTest = ({
   };
   const restart = async () => {
     const run = runRef.current;
-    if (!run || run.finished) return;
+    if (!run || run.finished || run.restarting) return;
+    run.restarting = true;
     stopFrame();
+    RHYTHM_GESTURE_RUNTIME.clear();
     run.paused = true;
-    await run.audio.restart();
+    const restarted = await run.audio.restart();
+    if (runRef.current !== run || run.finished) return;
+    run.restarting = false;
+    if (restarted === false) {
+      setView(v => ({
+        ...v,
+        status: 'error'
+      }));
+      return;
+    }
     run.notes = makeRuntimeNotes();
     run.activePointers = new Map();
     run.activeTouchInputs = new Set();
@@ -15166,12 +15190,14 @@ const RhythmTapTest = ({
     if (run) {
       run.finished = true;
       run.paused = true;
+      run.restarting = false;
       run.activePointers.clear();
       run.activeTouchInputs?.clear();
       setPressedLanes([]);
       run.audio?.stop();
     }
     stopFrame();
+    RHYTHM_GESTURE_RUNTIME.clear();
     onExit();
   };
   const inputStarts = inputs => {
@@ -15236,7 +15262,6 @@ const RhythmTapTest = ({
       el.style.backgroundColor = pressed ? 'rgba(34,211,238,0.30)' : '';
       el.style.boxShadow = pressed ? 'inset 0 0 26px rgba(103,232,249,0.78), inset 0 -72px 58px rgba(6,182,212,0.42), 0 0 18px rgba(34,211,238,0.28)' : '';
       el.style.borderBottom = pressed ? '3px solid rgba(207,250,254,0.98)' : '3px solid transparent';
-      el.style.filter = pressed ? 'brightness(1.15)' : '';
     });
   };
   const pointerDown = e => {
