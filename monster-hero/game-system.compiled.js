@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4b3ed1677ffb2b8a
+// source-sha256: 6102c5936d9af887
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 21:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15058,6 +15058,7 @@ const RhythmTapTest = ({
         audio,
         notes: makeRuntimeNotes(),
         activePointers: new Map(),
+        activeTouchInputs: new Set(),
         combo: 0,
         maxCombo: 0,
         counts: emptyCounts(),
@@ -15085,6 +15086,7 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
     run.activePointers.clear();
+    run.activeTouchInputs?.clear();
     run.notes.forEach(note => {
       if (note.type === 'HOLD' && note.activePointerId !== null) note.activePointerId = -1;
     });
@@ -15116,6 +15118,7 @@ const RhythmTapTest = ({
     await run.audio.restart();
     run.notes = makeRuntimeNotes();
     run.activePointers = new Map();
+    run.activeTouchInputs = new Set();
     run.combo = 0;
     run.maxCombo = 0;
     run.counts = emptyCounts();
@@ -15142,80 +15145,140 @@ const RhythmTapTest = ({
       run.finished = true;
       run.paused = true;
       run.activePointers.clear();
+      run.activeTouchInputs?.clear();
       run.audio?.stop();
     }
     stopFrame();
     onExit();
   };
-  const inputStart = (lane, inputKey, captureTarget, pointerId) => {
-    const run = runRef.current;
-    if (!run || run.finished || run.paused || view.status !== 'playing') return;
-    const now = run.audio.songTimeMs(),
-      target = run.notes.filter(note => !note.done && note.activePointerId === null && (note.type === 'TAP' || note.type === 'HOLD') && note.lane === lane && Math.abs(now - (note.timeMs + settings.judgmentTimingOffsetMs)) <= 200).sort((a, b) => Math.abs(now - (a.timeMs + settings.judgmentTimingOffsetMs)) - Math.abs(now - (b.timeMs + settings.judgmentTimingOffsetMs)))[0];
-    if (!target) return;
-    const delta = now - (target.timeMs + settings.judgmentTimingOffsetMs),
-      judgment = rhythmJudgeTap(delta);
-    if (target.type === 'HOLD') {
-      target.activePointerId = inputKey;
-      target.holdJudgment = judgment;
-      target.holdDeltaMs = delta;
-      run.activePointers.set(inputKey, target.index);
-      if (captureTarget && pointerId !== undefined) {
-        try {
-          captureTarget.setPointerCapture(pointerId);
-        } catch {}
-      }
-      const side = rhythmFastSlow(delta);
-      setView(v => ({
-        ...v,
-        last: 'HOLD',
-        fastSlow: side || ''
-      }));
-      return;
-    }
-    applyJudgment(target, judgment, delta);
-  };
-  const inputEnd = (inputKey, releaseTarget, pointerId) => {
+  const inputStarts = inputs => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
-    const noteIndex = run.activePointers.get(inputKey);
-    if (noteIndex === undefined) return;
-    run.activePointers.delete(inputKey);
-    const note = run.notes[noteIndex];
-    if (!note || note.done) return;
-    note.activePointerId = null;
-    const now = run.audio.songTimeMs(),
-      holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
-    if (now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) applyJudgment(note, 'MISS', now - holdEndMs);else applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
-    if (releaseTarget && pointerId !== undefined) {
-      try {
-        if (releaseTarget.hasPointerCapture?.(pointerId)) releaseTarget.releasePointerCapture(pointerId);
-      } catch {}
-    }
+    const now = run.audio.songTimeMs();
+    rhythmMatchInputBatch(run.notes, inputs, now, settings.judgmentTimingOffsetMs).forEach(({
+      input,
+      target,
+      deltaMs
+    }) => {
+      if (!target) return;
+      const judgment = rhythmJudgeTap(deltaMs);
+      if (target.type === 'HOLD') {
+        target.activePointerId = input.inputKey;
+        target.holdJudgment = judgment;
+        target.holdDeltaMs = deltaMs;
+        run.activePointers.set(input.inputKey, target.index);
+        if (input.captureTarget && input.pointerId !== undefined) {
+          try {
+            input.captureTarget.setPointerCapture(input.pointerId);
+          } catch {}
+        }
+        const side = rhythmFastSlow(deltaMs);
+        setView(v => ({
+          ...v,
+          last: 'HOLD',
+          fastSlow: side || ''
+        }));
+        return;
+      }
+      applyJudgment(target, judgment, deltaMs);
+    });
   };
-  const pointerDown = (lane, e) => {
+  const inputEnds = inputs => {
+    const run = runRef.current;
+    if (!run || run.finished || run.paused) return;
+    const now = run.audio.songTimeMs();
+    inputs.forEach(input => {
+      const noteIndex = run.activePointers.get(input.inputKey);
+      if (noteIndex === undefined) return;
+      run.activePointers.delete(input.inputKey);
+      const note = run.notes[noteIndex];
+      if (!note || note.done) return;
+      note.activePointerId = null;
+      const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
+      if (now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) applyJudgment(note, 'MISS', now - holdEndMs);else applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+      if (input.releaseTarget && input.pointerId !== undefined) {
+        try {
+          if (input.releaseTarget.hasPointerCapture?.(input.pointerId)) input.releaseTarget.releasePointerCapture(input.pointerId);
+        } catch {}
+      }
+    });
+  };
+  const pointerDown = e => {
     if (e.pointerType === 'touch') return;
     e.preventDefault();
-    inputStart(lane, rhythmInputKey('pointer', e.pointerId), e.currentTarget, e.pointerId);
+    const area = playAreaRef.current;
+    if (!area) return;
+    const rect = area.getBoundingClientRect(),
+      lane = rhythmLaneFromClientX(e.clientX, rect.left, rect.width);
+    if (lane === null) return;
+    inputStarts([{
+      lane,
+      inputKey: rhythmInputKey('pointer', e.pointerId),
+      captureTarget: e.currentTarget,
+      pointerId: e.pointerId
+    }]);
   };
   const pointerEnd = e => {
     if (e.pointerType === 'touch') return;
-    inputEnd(rhythmInputKey('pointer', e.pointerId), e.currentTarget, e.pointerId);
+    inputEnds([{
+      inputKey: rhythmInputKey('pointer', e.pointerId),
+      releaseTarget: e.currentTarget,
+      pointerId: e.pointerId
+    }]);
   };
-  const touchStart = e => {
-    if (e.cancelable) e.preventDefault();
+  useEffect(() => {
     const area = playAreaRef.current;
-    if (!area) return;
-    const rect = area.getBoundingClientRect();
-    Array.from(e.changedTouches || []).forEach(touch => {
-      const lane = rhythmLaneFromClientX(touch.clientX, rect.left, rect.width);
-      if (lane !== null) inputStart(lane, rhythmInputKey('touch', touch.identifier));
+    if (!area || view.status === 'result') return;
+    const syncTouches = e => {
+      if (e.cancelable) e.preventDefault();
+      const current = runRef.current;
+      if (!current || current.finished || current.paused) return;
+      current.activeTouchInputs = current.activeTouchInputs || new Set();
+      const rect = area.getBoundingClientRect(),
+        live = new Set(),
+        starts = [];
+      Array.from(e.touches || []).forEach(touch => {
+        const inputKey = rhythmInputKey('touch', touch.identifier);
+        live.add(inputKey);
+        if (current.activeTouchInputs.has(inputKey)) return;
+        current.activeTouchInputs.add(inputKey);
+        const lane = rhythmLaneFromClientX(touch.clientX, rect.left, rect.width);
+        if (lane !== null) starts.push({
+          lane,
+          inputKey
+        });
+      });
+      if (starts.length) inputStarts(starts);
+      const ended = [];
+      Array.from(current.activeTouchInputs).forEach(inputKey => {
+        if (!live.has(inputKey)) {
+          current.activeTouchInputs.delete(inputKey);
+          ended.push({
+            inputKey
+          });
+        }
+      });
+      if (ended.length) inputEnds(ended);
+    };
+    area.addEventListener('touchstart', syncTouches, {
+      passive: false
     });
-  };
-  const touchEnd = e => {
-    if (e.cancelable) e.preventDefault();
-    Array.from(e.changedTouches || []).forEach(touch => inputEnd(rhythmInputKey('touch', touch.identifier)));
-  };
+    area.addEventListener('touchmove', syncTouches, {
+      passive: false
+    });
+    area.addEventListener('touchend', syncTouches, {
+      passive: false
+    });
+    area.addEventListener('touchcancel', syncTouches, {
+      passive: false
+    });
+    return () => {
+      area.removeEventListener('touchstart', syncTouches);
+      area.removeEventListener('touchmove', syncTouches);
+      area.removeEventListener('touchend', syncTouches);
+      area.removeEventListener('touchcancel', syncTouches);
+    };
+  }, [view.status]);
   if (view.status === 'result') {
     const result = view.result;
     return /*#__PURE__*/React.createElement("main", {
@@ -15272,6 +15335,7 @@ const RhythmTapTest = ({
           audio,
           notes: makeRuntimeNotes(),
           activePointers: new Map(),
+          activeTouchInputs: new Set(),
           combo: 0,
           maxCombo: 0,
           counts: emptyCounts(),
@@ -15333,9 +15397,9 @@ const RhythmTapTest = ({
   }, view.fastSlow)), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
-    onTouchStart: touchStart,
-    onTouchEnd: touchEnd,
-    onTouchCancel: touchEnd,
+    onPointerDown: pointerDown,
+    onPointerUp: pointerEnd,
+    onPointerCancel: pointerEnd,
     className: "relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50",
     style: {
       touchAction: 'none',
@@ -15344,19 +15408,13 @@ const RhythmTapTest = ({
       userSelect: 'none'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "absolute inset-0 grid grid-cols-5"
+    className: "pointer-events-none absolute inset-0 grid grid-cols-5"
   }, Array.from({
     length: 5
-  }, (_, lane) => /*#__PURE__*/React.createElement("button", {
+  }, (_, lane) => /*#__PURE__*/React.createElement("div", {
     key: lane,
-    "aria-label": `レーン${lane + 1}`,
-    onPointerDown: e => pointerDown(lane, e),
-    onPointerUp: pointerEnd,
-    onPointerCancel: pointerEnd,
-    className: "relative border-r border-white/20 bg-slate-900/40 active:bg-cyan-800/50",
-    style: {
-      touchAction: 'none'
-    }
+    "aria-hidden": "true",
+    className: "relative border-r border-white/20 bg-slate-900/40"
   }, /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500"
   }, lane + 1)))), /*#__PURE__*/React.createElement("div", {

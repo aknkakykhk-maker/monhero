@@ -17,6 +17,20 @@ const RHYTHM_JUDGMENTS = Object.freeze([
   Object.freeze({ id:'MISS', windowMs:null, scoreRate:0 }),
 ]);
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
+const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
+  const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
+  return (Array.isArray(inputs)?inputs:[]).map(input=>{
+    const inputKey=String(input?.inputKey??'');
+    if(!inputKey||seenInputs.has(inputKey))return {input,target:null,deltaMs:null};
+    seenInputs.add(inputKey);
+    const lane=Number(input?.lane);
+    const candidates=source.map((note,index)=>({note,index})).filter(({note,index})=>!claimed.has(index)&&!note.done&&note.activePointerId===null&&(note.type==='TAP'||note.type==='HOLD')&&note.lane===lane&&Math.abs(now-(note.timeMs+offset))<=200).sort((a,b)=>Math.abs(now-(a.note.timeMs+offset))-Math.abs(now-(b.note.timeMs+offset))||a.index-b.index);
+    const picked=candidates[0];
+    if(!picked)return {input,target:null,deltaMs:null};
+    claimed.add(picked.index);
+    return {input,target:picked.note,deltaMs:now-(picked.note.timeMs+offset)};
+  });
+};
 const emptyRhythmChart = (level=0) => Object.freeze({ level, notes:Object.freeze([]), totalNotes:0 });
 const atsuCupTapNotes = Object.freeze([
   [1800,2],[2600,0],[3200,4],[4000,1],[4400,3],[5200,2],[5800,2],[6400,0],[6400,4],
@@ -70,96 +84,3 @@ const RHYTHM_SONGS = Object.freeze([
     ])))
   }),
 ]);
-
-// iPhone Safariの同時押し検証用。
-// Reactの委譲TouchEventだけに頼らず、音ゲー領域のnative TouchEventをcaptureで先に受け、
-// 指ごとに既存PointerEvent経路へ渡す。元のTouchEventはReactへ流さず二重判定を防ぐ。
-(function installRhythmNativeMultitouchBridge(){
-  if (typeof document === 'undefined' || typeof window === 'undefined' || typeof PointerEvent === 'undefined') return;
-  if (window.__mhRhythmNativeTouchBridgeInstalled) return;
-  window.__mhRhythmNativeTouchBridgeInstalled = true;
-
-  const activeTouches = new Map();
-  let nextPointerId = 10000;
-
-  const playAreaForTouch = (touch, fallbackTarget) => {
-    const target = touch?.target && typeof touch.target.closest === 'function' ? touch.target : fallbackTarget;
-    return target?.closest?.('[data-rhythm-play-area]') || null;
-  };
-
-  const laneTargetFromTouch = (area, touch) => {
-    const rect = area.getBoundingClientRect();
-    if (!rect || !Number.isFinite(rect.width) || rect.width <= 0) return null;
-    const relative = Math.min(Math.max(Number(touch.clientX) - Number(rect.left), 0), Math.max(0, rect.width - .001));
-    const lane = Math.min(RHYTHM_LANE_COUNT - 1, Math.max(0, Math.floor(relative / rect.width * RHYTHM_LANE_COUNT)));
-    const lanes = area.querySelectorAll('button[aria-label^="レーン"]');
-    return lanes[lane] || null;
-  };
-
-  const dispatchPointer = (target, type, pointerId, touch) => {
-    target.dispatchEvent(new PointerEvent(type, {
-      bubbles:true,
-      cancelable:true,
-      composed:true,
-      pointerId,
-      pointerType:'pen',
-      isPrimary:false,
-      button:0,
-      buttons:type === 'pointerup' || type === 'pointercancel' ? 0 : 1,
-      pressure:type === 'pointerup' || type === 'pointercancel' ? 0 : .5,
-      clientX:Number(touch.clientX) || 0,
-      clientY:Number(touch.clientY) || 0,
-      screenX:Number(touch.screenX) || 0,
-      screenY:Number(touch.screenY) || 0,
-    }));
-  };
-
-  const blockOriginalTouch = event => {
-    if (event.cancelable) event.preventDefault();
-    event.stopImmediatePropagation();
-  };
-
-  const onTouchStart = event => {
-    let handled = false;
-    Array.from(event.changedTouches || []).forEach(touch => {
-      const area = playAreaForTouch(touch, event.target);
-      if (!area) return;
-      handled = true;
-      if (activeTouches.has(touch.identifier)) return;
-      const target = laneTargetFromTouch(area, touch);
-      if (!target) return;
-      const pointerId = nextPointerId++;
-      activeTouches.set(touch.identifier, { target, pointerId });
-      dispatchPointer(target, 'pointerdown', pointerId, touch);
-    });
-    if (handled) blockOriginalTouch(event);
-  };
-
-  const onTouchMove = event => {
-    let handled = false;
-    Array.from(event.changedTouches || []).forEach(touch => {
-      const active = activeTouches.get(touch.identifier);
-      if (!active) return;
-      handled = true;
-      dispatchPointer(active.target, 'pointermove', active.pointerId, touch);
-    });
-    if (handled) blockOriginalTouch(event);
-  };
-
-  const finishTouches = (event, pointerType) => {
-    let handled = false;
-    Array.from(event.changedTouches || []).forEach(touch => {
-      const active = activeTouches.get(touch.identifier);
-      if (!active) return;
-      handled = true;
-      activeTouches.delete(touch.identifier);
-      dispatchPointer(active.target, pointerType, active.pointerId, touch);
-    });
-    if (handled) blockOriginalTouch(event);
-  };
-
-  document.addEventListener('touchstart', onTouchStart, { capture:true, passive:false });
-  document.addEventListener('touchmove', onTouchMove, { capture:true, passive:false });
-  document.addEventListener('touchend', event => finishTouches(event, 'pointerup'), { capture:true, passive:false });
-  document.addEventListener('touchcancel', event => finishTouches(event, 'pointercancel'), { capture:true, passive:false });
-})();
