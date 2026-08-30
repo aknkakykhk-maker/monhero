@@ -1,0 +1,13 @@
+const fs=require('fs');
+const path=require('path');
+const file=path.resolve(__dirname,'../../monster-hero/src/game-system.jsx');
+let s=fs.readFileSync(file,'utf8');
+const oldHeader=`<button onClick={toggleQuickMute} aria-label="音量" className="shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button>`;
+if(!s.includes(oldHeader)) throw new Error('battle header mute button not found');
+s=s.replace(oldHeader,'');
+const oldPicker=`<label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="AUTO中に再生するBGM" value={autoBgmOverride||bgmArrangement.autoBattle} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label>`;
+const newPicker=`<div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="AUTO中に再生するBGM" value={autoBgmOverride||bgmArrangement.autoBattle} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label>`;
+if(!s.includes(oldPicker)) throw new Error('AUTO BGM picker not found');
+s=s.replace(oldPicker,newPicker);
+fs.writeFileSync(file,s);
+console.log('applied battle BGM volume panel');
