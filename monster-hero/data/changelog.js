@@ -3,7 +3,12 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
-    date: "2026-08-31 01:08", type:'fix', title:'エイキの桜演出を見やすくしました', status:'new',
+    date: "2026-08-31 02:12", type:'update', title:'連撃を含む予測ダメージを修正しました', status:'new',
+    items:['エイキの攻撃カードに表示される予測ダメージが、メイン攻撃だけでなく「桜花連舞」「緋桜連華」の全連撃を合算した値になるよう修正しました。ザン・パンドラ・アーク／イブリース・ききの確定追加ヒットもあわせて再確認しています。'],
+    assistantNotice: { id:'update_notice_combo_damage_preview_fix_v1', type:'feature' },
+  },
+  {
+    date: "2026-08-31 01:08", type:'issue', title:'エイキの桜演出を見やすくしました', status:'new',
     items:['高速斬撃中の桜の花びらが小さい全身表示枠で切れていたため、斬撃方向へ枠外まで舞い、ヒット後の余韻まで見えるように修正しました。'],
   },
   {
@@ -11,7 +16,7 @@ const CHANGELOG = [
     items:['SCOREとCOMBOを左右に整理し、判定文字とFAST/SLOWを判定ライン付近へ移動しました。押しているレーンの発光も強化し、同時押し時は複数レーンを見分けやすくしています。'],
   },
   {
-    date: "2026-08-30 22:30", type:'fix', title:'音ゲーの同時押しを再修正', releaseFlag:'rhythmMode',
+    date: "2026-08-30 22:30", type:'issue', title:'音ゲーの同時押しを再修正', releaseFlag:'rhythmMode',
     items:['iPhone Safariの同時押し入力をプレイエリアのnative Touch Eventsで直接取得し、同時に始まった複数指を1batchで判定する方式へ変更しました。TAP同時押し・HOLD同時押し・HOLD中の別レーンTAPを同じ入力経路で処理します。'],
   },
   {
@@ -22,7 +27,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-30 21:52", type:'fix', title:'音ゲーの2本指入力を修正', releaseFlag:'rhythmMode',
+    date: "2026-08-30 21:52", type:'issue', title:'音ゲーの2本指入力を修正', releaseFlag:'rhythmMode',
     items:['iPhone Safariで同時タッチを確実に拾えるようTouch EventsのchangedTouchesを指ごとに処理し、HOLD中の別レーン操作や同時2本HOLDができる入力経路へ修正しました。', '押しているレーンが光る入力フィードバックを戻し、2本指では2レーンが同時に光るようにしました。'],
   },
   {
@@ -30,7 +35,7 @@ const CHANGELOG = [
     items:['デバッグ限定のNORMAL譜面にHOLDノーツと複数指入力を追加し、HOLD中の別レーンTAP・同時2本HOLD・早離しMISSを確認できるようにしました。'],
   },
   {
-    date: "2026-08-30 20:17", type: 'fix', title: '立ち絵の透過と染色の縁を綺麗にしました', status: 'new',
+    date: "2026-08-30 20:17", type: 'issue', title: '立ち絵の透過と染色の縁を綺麗にしました', status: 'new',
     items: [
       'パンドラの頭上の輪が途中で途切れていたのを直しました。以前の透過処理で輪の金色まで削れていたため、元の絵から作り直しています。輪郭のなめらかさも元の絵のとおりに戻りました。',
       'モッチー・ヤオビクニ・プラント・エイキ・パンドラの染色を、より細かい解像度で判定するようにしました。染めた色と元の色の境目に残っていた細い白い縁や、対象外へのはみ出しが減ります。',
@@ -49,7 +54,7 @@ const CHANGELOG = [
     assistantNotice: { id:'update_notice_eiki_market_v1', type:'market' },
   },
   {
-    date: "2026-08-30 18:57", type: 'fix', title: '旧形式ゴーレムの強化ポイント補正を安全化しました', status: 'new',
+    date: "2026-08-30 18:57", type: 'issue', title: '旧形式ゴーレムの強化ポイント補正を安全化しました', status: 'new',
     items: [
       '過去の間合い適性変更より前から育成されている旧形式ゴーレムでは、使用済みの適性ポイントを現在値から推測して自動補正しないよう保護しました。',
       '距離ごとの強化段階を保存している新形式ゴーレムは、ほかのマスモンと同じく高限界突破時の過剰ポイントだけを正しく補正します。',
@@ -94,7 +99,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-30 09:32", type: 'fix', title: 'AUTO∞のBGM操作と周回継続を改善しました', status: 'new',
+    date: "2026-08-30 09:32", type: 'issue', title: 'AUTO∞のBGM操作と周回継続を改善しました', status: 'new',
     items: [
       'AUTO中のBGM選択ボタンを画面上部から、スコア表示と競合しにくい画面下部のVIEW／AUTO付近へ移動しました。',
       'AUTO∞で10WAVE終了後に次周へ入るとき、BGMが曲頭へ戻らず同じ再生位置のまま継続するようにしました。',
@@ -196,7 +201,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-30 01:31", type: 'issue', title: '転生で強化ポイントが減っていた不具合を直しました', status: 'fixed',
+    date: "2026-08-30 01:31", type: 'update', title: '転生で強化ポイントが減っていた不具合を直しました', status: 'fixed',
     assistantNotice: { id: 'update_notice_enhance_point_total_v1', type: 'feature' },
     items: [
       '限界突破を重ねると、レベルアップ1回でもらえる強化ポイントが増えます（34回以上で2、35回以上で3）。ところが「読み込んだときの不足補填」と「転生で持てるポイントを数え直すところ」がこの増加ぶんを知らなかったため、転生するたびに増加ぶんが丸ごと消え、同じレベルまで上げ直しても戻りませんでした。数え方を1つにそろえて直しました。',
