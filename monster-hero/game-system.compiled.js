@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 074cb2969b23217d
+// source-sha256: 823d4158a66ef23a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 09:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 09:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16704,6 +16704,9 @@ function MonsterHeroGame() {
       return bgmArrangement[modeBgm.normal];
     }
     if (RUN_PHASE_STATES.includes(state)) {
+      // AUTO∞の次周開始時はwaveHistoryが0へ戻る中間フェーズでも、直前のBGMを維持する。
+      // ここでenhance/resultへ一瞬切り替わると、次のBATTLEでAUTO曲が先頭から再生されてしまう。
+      if (autoRepeatRef.current && !wavesDone) return '__keep_battle_bgm__';
       if (wavesDone && autoBattleRef.current && bgmArrangement.autoPostWaveBgm !== 'on') return '__keep_battle_bgm__';
       return wavesDone ? 'result' : 'enhance';
     }
@@ -36797,13 +36800,7 @@ function MonsterHeroGame() {
       onClick: toggleQuickMute,
       "aria-label": "\u97F3\u91CF",
       className: "shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center"
-    }, audioMuted ? '🔇' : '🔊'), (autoBattle || autoRepeat) && /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onClick: () => setShowAutoBgmPicker(true),
-      "aria-label": "AUTO BGM\u3092\u9078\u3076",
-      title: "AUTO BGM",
-      className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center rounded bg-indigo-800 border border-indigo-400/50 text-[13px] active:scale-90"
-    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("button", {
+    }, audioMuted ? '🔇' : '🔊'), /*#__PURE__*/React.createElement("button", {
       onClick: () => openHelp(),
       "aria-label": "\u30D8\u30EB\u30D7",
       className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"
@@ -36923,7 +36920,18 @@ function MonsterHeroGame() {
       className: "flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"
     }, /*#__PURE__*/React.createElement(Layers, {
       size: 9
-    }), "VIEW"), /*#__PURE__*/React.createElement("div", {
+    }), "VIEW"), (autoBattle || autoRepeat) && /*#__PURE__*/React.createElement("button", {
+      "data-auto-bgm-button": true,
+      type: "button",
+      onClick: () => setShowAutoBgmPicker(true),
+      "aria-label": "AUTO BGM\u3092\u9078\u3076",
+      title: "AUTO BGM",
+      className: "shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[13px] leading-none"
+    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
+      className: "mt-0.5 block text-[7px] font-black leading-none"
+    }, "BGM")), /*#__PURE__*/React.createElement("div", {
       className: "w-[44px] shrink-0 flex flex-col gap-0.5"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
@@ -38132,7 +38140,18 @@ function MonsterHeroGame() {
       size: 9
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px]"
-    }, "VIEW")), /*#__PURE__*/React.createElement("div", {
+    }, "VIEW")), (autoBattle || autoRepeat) && /*#__PURE__*/React.createElement("button", {
+      "data-auto-bgm-button": true,
+      type: "button",
+      onClick: () => setShowAutoBgmPicker(true),
+      "aria-label": "AUTO BGM\u3092\u9078\u3076",
+      title: "AUTO BGM",
+      className: "shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[13px] leading-none"
+    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
+      className: "mt-0.5 block text-[7px] font-black leading-none"
+    }, "BGM")), /*#__PURE__*/React.createElement("div", {
       className: "w-[44px] shrink-0 flex flex-col gap-0.5"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
