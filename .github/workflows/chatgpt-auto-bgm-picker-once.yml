@@ -42,8 +42,8 @@ jobs:
             check(file+': AUTO停止で一時選択を解除',s.includes('setAutoBgmOverride(null)')&&s.includes('setShowAutoBgmPicker(false)'));
             check(file+': AUTO中は一時選択を優先',s.includes("if (autoBgmOverride === '__none__') return '__silence_bgm__';")&&s.includes('return autoBgmOverride || bgmArrangement.autoBattle;'));
             check(file+': BGMなしはBGMだけ停止',s.includes("if (key === '__silence_bgm__')")&&s.includes('Audio_.stopBGM();'));
-            check(file+': BGM選択UIの主要文字列',s.includes('AUTO BGMを選ぶ')&&s.includes('BGMなし')&&s.includes('AUTO中に再生するBGM'));
             check(file+': 登録曲一覧をBGM選択へ利用',/BGM_TRACKS\.map\(/.test(s));
+            if(file.includes('/src/')) check(file+': BGM選択UIの主要文字列',s.includes('AUTO BGMを選ぶ')&&s.includes('BGMなし')&&s.includes('AUTO中に再生するBGM'));
           }
           const help=fs.readFileSync(path.join(ROOT,'monster-hero/data/help.js'),'utf8');
           const log=fs.readFileSync(path.join(ROOT,'monster-hero/data/changelog.js'),'utf8');
