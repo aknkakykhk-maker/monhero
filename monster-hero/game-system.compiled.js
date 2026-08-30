@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cca9476f84abc021
+// source-sha256: 3f09fe6c9c9dc97c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 08:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 09:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3573,6 +3573,7 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   speciesBattle: 'original_battle',
   speciesDullahan: 'original_dullahan',
   speciesMoo: 'original_boss',
+  autoBattle: 'monster_hero_theme',
   autoVictoryJingle: 'off',
   autoPostWaveBgm: 'off',
   clear: 'ichika_clear',
@@ -16643,6 +16644,9 @@ function MonsterHeroGame() {
       // 供モンや敵にパンドラがいるだけでは発動しないよう、勇者モンの種idだけを渡す。
       const pandoraBossBgm = pandoraBossBgmForBattle(mainHero?.id, currentWave, enemyId);
       if (pandoraBossBgm) return pandoraBossBgm;
+      // AUTO中はモード別の通常/デュラハン/ムー曲より専用AUTO曲を使う。
+      // パンドラ勇者の最終ボス専用曲だけは上で優先する。
+      if (autoBattleRef.current) return bgmArrangement.autoBattle;
       // 種族チャレンジはモードで1つに決める。EXTREME以上の難易度で遊んでも、
       // BGMアレンジの「種族」タブで選んだ曲がそのまま鳴る(設定したのに効かない枠を作らない)
       const modeBgm = isSpeciesChallengeMode(runMode) ? {
@@ -25911,7 +25915,7 @@ function MonsterHeroGame() {
     const categories = [{
       id: 'basic',
       label: '基本',
-      items: [['home', 'HOME BGM'], ['title', 'タイトル BGM'], ['management', 'M/B管理 BGM'], ['clear', 'ゲームクリア BGM']]
+      items: [['home', 'HOME BGM'], ['title', 'タイトル BGM'], ['autoBattle', 'AUTOモード BGM'], ['management', 'M/B管理 BGM'], ['clear', 'ゲームクリア BGM']]
     }, {
       id: 'battle',
       label: 'バトル'
