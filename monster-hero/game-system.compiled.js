@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b59288145121fbfb
+// source-sha256: f5979fadf4b61489
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 22:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 22:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15107,6 +15107,7 @@ const RhythmTapTest = ({
     if (!run || run.finished || run.paused) return;
     run.activePointers.clear();
     run.activeTouchInputs?.clear();
+    setPressedLanes([]);
     run.notes.forEach(note => {
       if (note.type === 'HOLD' && note.activePointerId !== null) note.activePointerId = -1;
     });
@@ -15139,6 +15140,7 @@ const RhythmTapTest = ({
     run.notes = makeRuntimeNotes();
     run.activePointers = new Map();
     run.activeTouchInputs = new Set();
+    setPressedLanes([]);
     run.combo = 0;
     run.maxCombo = 0;
     run.counts = emptyCounts();
@@ -15166,6 +15168,7 @@ const RhythmTapTest = ({
       run.paused = true;
       run.activePointers.clear();
       run.activeTouchInputs?.clear();
+      setPressedLanes([]);
       run.audio?.stop();
     }
     stopFrame();
@@ -15223,6 +15226,17 @@ const RhythmTapTest = ({
       }
     });
   };
+  const setPressedLanes = lanes => {
+    const area = playAreaRef.current;
+    if (!area) return;
+    const active = lanes instanceof Set ? lanes : new Set(lanes || []);
+    area.querySelectorAll('[data-rhythm-lane]').forEach((el, index) => {
+      const pressed = active.has(index);
+      el.dataset.pressed = pressed ? 'true' : 'false';
+      el.style.backgroundColor = pressed ? 'rgba(34,211,238,0.30)' : '';
+      el.style.boxShadow = pressed ? 'inset 0 0 26px rgba(103,232,249,0.55), inset 0 -42px 48px rgba(6,182,212,0.28)' : '';
+    });
+  };
   const pointerDown = e => {
     if (e.pointerType === 'touch') return;
     e.preventDefault();
@@ -15231,6 +15245,7 @@ const RhythmTapTest = ({
     const rect = area.getBoundingClientRect(),
       lane = rhythmLaneFromClientX(e.clientX, rect.left, rect.width);
     if (lane === null) return;
+    setPressedLanes([lane]);
     inputStarts([{
       lane,
       inputKey: rhythmInputKey('pointer', e.pointerId),
@@ -15240,6 +15255,7 @@ const RhythmTapTest = ({
   };
   const pointerEnd = e => {
     if (e.pointerType === 'touch') return;
+    setPressedLanes([]);
     inputEnds([{
       inputKey: rhythmInputKey('pointer', e.pointerId),
       releaseTarget: e.currentTarget,
@@ -15256,18 +15272,21 @@ const RhythmTapTest = ({
       current.activeTouchInputs = current.activeTouchInputs || new Set();
       const rect = area.getBoundingClientRect(),
         live = new Set(),
+        liveLanes = new Set(),
         starts = [];
       Array.from(e.touches || []).forEach(touch => {
         const inputKey = rhythmInputKey('touch', touch.identifier);
         live.add(inputKey);
+        const lane = rhythmLaneFromClientX(touch.clientX, rect.left, rect.width);
+        if (lane !== null) liveLanes.add(lane);
         if (current.activeTouchInputs.has(inputKey)) return;
         current.activeTouchInputs.add(inputKey);
-        const lane = rhythmLaneFromClientX(touch.clientX, rect.left, rect.width);
         if (lane !== null) starts.push({
           lane,
           inputKey
         });
       });
+      setPressedLanes(liveLanes);
       if (starts.length) inputStarts(starts);
       const ended = [];
       Array.from(current.activeTouchInputs).forEach(inputKey => {
@@ -15297,6 +15316,7 @@ const RhythmTapTest = ({
       area.removeEventListener('touchmove', syncTouches);
       area.removeEventListener('touchend', syncTouches);
       area.removeEventListener('touchcancel', syncTouches);
+      setPressedLanes([]);
     };
   }, [view.status]);
   if (view.status === 'result') {
@@ -15433,8 +15453,13 @@ const RhythmTapTest = ({
     length: 5
   }, (_, lane) => /*#__PURE__*/React.createElement("div", {
     key: lane,
+    "data-rhythm-lane": lane,
+    "data-pressed": "false",
     "aria-hidden": "true",
-    className: "relative border-r border-white/20 bg-slate-900/40"
+    className: "relative border-r border-white/20 bg-slate-900/40",
+    style: {
+      transition: 'background-color 60ms linear, box-shadow 60ms linear'
+    }
   }, /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500"
   }, lane + 1)))), /*#__PURE__*/React.createElement("div", {
