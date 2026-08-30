@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 09:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 09:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8698,6 +8698,16 @@ function MonsterHeroGame() {
   const selectAutoRuntimeBgm = (trackId) => {
     if (trackId !== '__none__' && !BGM_TRACK_BY_ID[trackId]) return;
     setAutoBgmOverride(trackId);
+    // 超省エネは開始時ミュートのまま。ただしユーザーがここで曲を選んだ場合だけBGMを許可する。
+    // toggleQuickMute(true) は自動変更扱いなので、超省エネ終了時に開始前のミュート状態へ戻せる。
+    if (!ultraEcoSession) return;
+    if (trackId === '__none__') {
+      if (!quickMuted) toggleQuickMute(true);
+      return;
+    }
+    if (!audioUnlocked) setAudioUnlocked(true);
+    if (quickMuted) toggleQuickMute(true);
+    Audio_.unlock(true);
   };
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
   const toggleQuickMute = (automatic=false) => {
@@ -8711,14 +8721,15 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (ultraEcoSession) {
       if (ultraAudioSessionRef.current) return;
-      ultraAudioSessionRef.current={mutedBefore:audioMuted,automaticallyMuted:!audioMuted,manuallyChanged:false};
+      ultraAudioSessionRef.current={mutedBefore:audioMuted,quickMutedBefore:quickMuted,automaticallyMuted:!audioMuted,manuallyChanged:false};
       if (!audioMuted) toggleQuickMute(true);
       return;
     }
     const session=ultraAudioSessionRef.current;
     if (!session) return;
     ultraAudioSessionRef.current=null;
-    if (!session.mutedBefore&&session.automaticallyMuted&&!session.manuallyChanged&&audioMuted) toggleQuickMute(true);
+    // BGMピッカーの一時的なON/OFFは手動設定変更として扱わず、開始前のミュート状態へ正確に戻す。
+    if (!session.manuallyChanged&&quickMuted!==session.quickMutedBefore) toggleQuickMute(true);
   },[ultraEcoSession]);
   const closeBgmArrangement = () => { Audio_.stopPreview(); setPreviewTrackId(null); setShowBgmArrangement(false); };
   const changeBgmArrangement = (scene, trackId) => {
@@ -9633,7 +9644,8 @@ function MonsterHeroGame() {
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
-  useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
+  // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
+  useEffect(() => { Audio_.setSeVolume(ultraEcoSession ? 0 : seVolume); }, [seVolume, ultraEcoSession]);
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
 
   // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
@@ -15816,7 +15828,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         ))}
       </div>
       {updateNotice}
-      {showAutoBgmPicker&&(autoBattle||autoRepeat)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">AUTO BGM</div><div className="text-[10px] text-slate-400">このAUTOセッションだけ変更</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="AUTO中に再生するBGM" value={autoBgmOverride||bgmArrangement.autoBattle} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">AUTOを完全に終了すると、この一時選択は解除されます。BGMアレンジの保存内容は変更しません。</p></div></div>}
+      {showAutoBgmPicker&&(autoBattle||autoRepeat)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">AUTO BGM</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF':'このAUTOセッションだけ変更'}</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="AUTO中に再生するBGM" value={autoBgmOverride||bgmArrangement.autoBattle} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">AUTOを完全に終了すると、この一時選択は解除されます。BGMアレンジの保存内容は変更しません。</p></div></div>}
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {ultraEcoSession&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
       <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>

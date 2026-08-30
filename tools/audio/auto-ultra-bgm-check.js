@@ -1,0 +1,7 @@
+const fs=require('fs');
+const path=require('path');
+const ROOT=path.resolve(__dirname,'../..');
+const files=['monster-hero/src/game-system.jsx','monster-hero/game-system.compiled.js'];
+let failed=0;const check=(name,ok)=>{console.log((ok?'OK':'NG')+': '+name);if(!ok)failed++;};
+for(const file of files){const s=fs.readFileSync(path.join(ROOT,file),'utf8');check(file+': 超省エネのBGM選択で音声を一時許可',s.includes('if (!ultraEcoSession) return;')&&s.includes("if (trackId === '__none__')")&&s.includes('if (quickMuted) toggleQuickMute(true);')&&s.includes('Audio_.unlock(true);'));check(file+': 超省エネ中はSEを常時0',/Audio_\.setSeVolume\(ultraEcoSession\s*\?\s*0\s*:\s*seVolume\)/.test(s));check(file+': SE音量effectは超省エネ切替にも追従',/\[seVolume,\s*ultraEcoSession\]/.test(s));check(file+': 超省エネ開始前のミュート状態を保持',s.replace(/\s+/g,'').includes('quickMutedBefore:quickMuted'));check(file+': BGMピッカー操作後も開始前ミュートへ復元',s.replace(/\s+/g,'').includes('!session.manuallyChanged&&quickMuted!==session.quickMutedBefore'));check(file+': BGMなしは引き続き利用可能',s.includes("'__none__'")&&s.includes('BGMなし'));}
+const help=fs.readFileSync(path.join(ROOT,'monster-hero/data/help.js'),'utf8');const log=fs.readFileSync(path.join(ROOT,'monster-hero/data/changelog.js'),'utf8');check('ヘルプに超省エネBGM/SE仕様を掲載',help.includes('超省エネ中は曲を選んでもSEは常に鳴らず'));check('更新履歴に超省エネBGM選択を掲載',log.includes('超省エネ中もBGMだけ選べるようにしました'));if(failed)process.exit(1);console.log('OK: 超省エネBGM選択の検証に成功しました');
