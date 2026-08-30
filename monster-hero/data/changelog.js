@@ -3,6 +3,14 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-30 09:45", type: 'update', title: 'AUTO BGM操作を使いやすくしました', status: 'new',
+    items: [
+      'バトル上部のミュートボタンをなくし、WAVE・モード・TURN・SCOREを表示する領域を広げました。',
+      'AUTO中のBGMボタンを開くと、曲選択と同じパネル内でBGM音量も調整できるようにしました。',
+      '「BGMなし」と超省エネ中のSE OFF仕様はそのまま維持します。',
+    ],
+  },
+  {
     date: "2026-08-30 09:32", type: 'fix', title: 'AUTO∞のBGM操作と周回継続を改善しました', status: 'new',
     items: [
       'AUTO中のBGM選択ボタンを画面上部から、スコア表示と競合しにくい画面下部のVIEW／AUTO付近へ移動しました。',
