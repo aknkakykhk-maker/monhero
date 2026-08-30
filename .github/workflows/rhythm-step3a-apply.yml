@@ -1,0 +1,224 @@
+name: Apply rhythm STEP 3A
+
+on:
+  push:
+    branches:
+      - chatgpt/rhythm-step-3a-hold-multitouch
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: chatgpt/rhythm-step-3a-hold-multitouch
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Apply STEP 3A source changes
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          root=Path('.')
+
+          rhythm = r'''// 音ゲーモードの拡張用データ。音源そのものは既存 BGM_TRACKS を正本とし、trackId だけを参照する。
+          const RHYTHM_LANE_COUNT = 5;
+          const RHYTHM_NOTE_TYPES = Object.freeze(['TAP', 'HOLD', 'FLICK', 'SLIDE']);
+          const RHYTHM_DIFFICULTIES = Object.freeze([
+            Object.freeze({ id:'EASY', maxScore:600000 }),
+            Object.freeze({ id:'NORMAL', maxScore:700000 }),
+            Object.freeze({ id:'HARD', maxScore:800000 }),
+            Object.freeze({ id:'EXPERT', maxScore:900000 }),
+            Object.freeze({ id:'MASTER', maxScore:1000000 }),
+          ]);
+          const RHYTHM_JUDGMENTS = Object.freeze([
+            Object.freeze({ id:'MARVELOUS', windowMs:25, scoreRate:1 }),
+            Object.freeze({ id:'EXCELLENT', windowMs:50, scoreRate:.98 }),
+            Object.freeze({ id:'GREAT', windowMs:100, scoreRate:.9 }),
+            Object.freeze({ id:'GOOD', windowMs:150, scoreRate:.7 }),
+            Object.freeze({ id:'BAD', windowMs:200, scoreRate:.3 }),
+            Object.freeze({ id:'MISS', windowMs:null, scoreRate:0 }),
+          ]);
+          const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
+          const emptyRhythmChart = (level=0) => Object.freeze({ level, notes:Object.freeze([]), totalNotes:0 });
+          const atsuCupTapNotes = Object.freeze([
+            [1800,2],[2600,0],[3200,4],[4000,1],[4400,3],[5200,2],[5800,2],[6400,0],[6400,4],
+            [7200,1],[7600,2],[8000,3],[8800,0],[9200,4],[10000,2],[10600,1],[11200,3],[11800,0],
+            [11800,4],[12600,2],[13000,1],[13400,0],[14200,3],[14600,4],[15000,2],[15800,0],[16200,1],
+            [16600,2],[17000,3],[17400,4],[18200,1],[18200,3],[19000,0],[19400,2],[19800,4],[20600,2],
+            [21200,1],[21600,3],[22200,0],[22200,4],[23000,2],[23400,1],[23800,3],[24600,0],[24600,4],
+          ].map(([timeMs,lane])=>Object.freeze({type:'TAP',timeMs,lane})));
+          const atsuCupTapChart = Object.freeze({level:1,notes:atsuCupTapNotes,totalNotes:atsuCupTapNotes.length,durationMs:26000});
+
+          // STEP 3A: HOLDと複数指入力を検証するNORMAL専用テスト譜面。
+          // HOLD中の別レーンTAPと、同時2本HOLDを意図的に含める。
+          const atsuCupHoldTestNotes = Object.freeze([
+            Object.freeze({type:'TAP',timeMs:1800,lane:2}),
+            Object.freeze({type:'HOLD',timeMs:2600,endTimeMs:4000,lane:0}),
+            Object.freeze({type:'TAP',timeMs:3200,lane:4}),
+            Object.freeze({type:'TAP',timeMs:3600,lane:2}),
+            Object.freeze({type:'TAP',timeMs:4600,lane:1}),
+            Object.freeze({type:'HOLD',timeMs:5200,endTimeMs:6800,lane:3}),
+            Object.freeze({type:'TAP',timeMs:5800,lane:0}),
+            Object.freeze({type:'TAP',timeMs:6400,lane:4}),
+            Object.freeze({type:'TAP',timeMs:7600,lane:2}),
+            Object.freeze({type:'HOLD',timeMs:8400,endTimeMs:10000,lane:1}),
+            Object.freeze({type:'TAP',timeMs:9000,lane:3}),
+            Object.freeze({type:'TAP',timeMs:9600,lane:4}),
+            Object.freeze({type:'HOLD',timeMs:11800,endTimeMs:13600,lane:0}),
+            Object.freeze({type:'HOLD',timeMs:11800,endTimeMs:13600,lane:4}),
+            Object.freeze({type:'TAP',timeMs:14200,lane:2}),
+            Object.freeze({type:'HOLD',timeMs:15000,endTimeMs:16600,lane:3}),
+            Object.freeze({type:'TAP',timeMs:15600,lane:0}),
+            Object.freeze({type:'TAP',timeMs:16200,lane:1}),
+            Object.freeze({type:'HOLD',timeMs:17400,endTimeMs:19000,lane:2}),
+            Object.freeze({type:'TAP',timeMs:18000,lane:4}),
+            Object.freeze({type:'TAP',timeMs:18600,lane:0}),
+            Object.freeze({type:'HOLD',timeMs:19800,endTimeMs:21600,lane:1}),
+            Object.freeze({type:'TAP',timeMs:20400,lane:3}),
+            Object.freeze({type:'TAP',timeMs:21200,lane:4}),
+            Object.freeze({type:'TAP',timeMs:22800,lane:0}),
+            Object.freeze({type:'TAP',timeMs:23400,lane:2}),
+            Object.freeze({type:'TAP',timeMs:24200,lane:4}),
+          ]);
+          const atsuCupHoldTestChart = Object.freeze({level:5,notes:atsuCupHoldTestNotes,totalNotes:atsuCupHoldTestNotes.length,durationMs:26000});
+          const RHYTHM_SONGS = Object.freeze([
+            Object.freeze({
+              songId:'atsu_cup_theme_test',
+              displayName:'あつ杯テーマ',
+              bgmTrackId:'atsu_cup_theme',
+              difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+                id,
+                id==='EASY'?atsuCupTapChart:id==='NORMAL'?atsuCupHoldTestChart:emptyRhythmChart()
+              ])))
+            }),
+          ]);
+          '''
+          rhythm='\n'.join(line[10:] if line.startswith('          ') else line for line in rhythm.splitlines())+'\n'
+          (root/'monster-hero/data/rhythm-mode.js').write_text(rhythm,encoding='utf-8')
+
+          game_path=root/'monster-hero/src/game-system.jsx'
+          game=game_path.read_text(encoding='utf-8')
+          component=r'''const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
+          const RhythmTapTest=({song,difficulty,settings,bestRecord,onComplete,onExit})=>{
+            const chart=song.difficulties[difficulty.id],laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),playAreaRef=useRef(null),judgmentLineRef=useRef(null);
+            const hasHold=chart.notes.some(note=>note.type==='HOLD');
+            const emptyCounts=()=>Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]));
+            const makeRuntimeNotes=()=>chart.notes.map((note,index)=>({...note,index,done:false,activePointerId:null,holdJudgment:null,holdDeltaMs:0}));
+            const initialView=()=>({status:'loading',score:0,combo:0,maxCombo:0,last:'',fastSlow:'',counts:emptyCounts(),fast:0,slow:0,result:null});
+            const [view,setView]=useState(initialView);
+            const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;},[]);
+            const measureTravel=useCallback(()=>{const area=playAreaRef.current,line=judgmentLineRef.current;if(!area||!line)return null;const areaRect=area.getBoundingClientRect(),lineRect=line.getBoundingClientRect(),noteHeight=laneRefs.current.find(Boolean)?.getBoundingClientRect().height||20;const spawnY=-noteHeight+(settings.noteStartPosition/100)*areaRect.height*.2;const judgmentY=lineRect.top-areaRect.top+lineRect.height/2-noteHeight/2;return {spawnY,judgmentY,travelPx:judgmentY-spawnY,playAreaHeight:areaRect.height};},[settings.noteStartPosition]);
+            const applyJudgment=useCallback((note,judgment,deltaMs)=>{const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.done=true;const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const score=rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore});setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow}));},[chart.totalNotes,difficulty.maxScore]);
+            const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.finished=true;stopFrame();run.audio?.stop();const score=rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore});const achievements=rhythmResultAchievements(run.counts,chart.totalNotes);const result={score,judgments:{...run.counts},maxCombo:run.maxCombo,fast:run.fast,slow:run.slow,...achievements};const isNewRecord=score>run.startBestScore;const merged=mergeRhythmBestRecord(run.startBest,result);setView(v=>({...v,status:'result',score,combo:run.combo,maxCombo:run.maxCombo,counts:{...run.counts},fast:run.fast,slow:run.slow,result:{...result,isNewRecord,bestScore:merged.bestScore}}));onComplete(result,merged);},[chart.totalNotes,difficulty.maxScore,onComplete,stopFrame]);
+            const scheduleTick=useCallback(()=>{stopFrame();const tick=()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const songTimeMs=run.audio.songTimeMs(),travel=measureTravel();run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);if(!note.done&&note.activePointerId===null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>200)applyJudgment(note,'MISS',songTimeMs-note.timeMs);const el=laneRefs.current[note.index];if(!el||note.done){if(el)el.style.display='none';return;}const visualTime=songTimeMs+settings.displayTimingOffsetMs,travelMs=Math.max(650,2600-settings.noteSpeed*90),progress=1-(note.timeMs-visualTime)/travelMs;if(travel){let yPx=travel.spawnY+progress*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;el.style.transform=`translate3d(0,${Math.round(yPx)}px,0)`;if(note.type==='HOLD'){const holdMs=note.activePointerId!==null?Math.max(0,note.endTimeMs-visualTime):Math.max(0,note.endTimeMs-note.timeMs);const bodyPx=Math.max(0,holdMs/travelMs*travel.travelPx);el.style.setProperty('--rhythm-hold-body',`${Math.round(bodyPx)}px`);el.style.filter=note.activePointerId!==null?'brightness(1.3)':'';}}el.style.opacity=note.activePointerId!==null?'1':progress<-.1||progress>1.18?'0':'1';});if(songTimeMs>=chart.durationMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.displayTimingOffsetMs,settings.judgmentTimingOffsetMs,settings.noteSpeed,stopFrame]);
+            useEffect(()=>{let cancelled=false;Audio_.startRhythmTrack(song.bgmTrackId).then(audio=>{if(cancelled||!audio){if(audio)audio.stop();if(!cancelled)setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(bestRecord);runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,finished:false,paused:false,startBest,startBestScore:startBest.bestScore};setView(v=>({...v,status:'playing'}));scheduleTick();});return()=>{cancelled=true;stopFrame();runRef.current?.audio?.stop();runRef.current=null;};},[]);
+            const pause=()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.activePointers.clear();run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null)note.activePointerId=-1;});run.paused=true;stopFrame();run.audio.pause();setView(v=>({...v,status:'paused'}));};
+            const resume=async()=>{const run=runRef.current;if(!run||run.finished||!run.paused)return;const resumed=await run.audio.resume();if(!resumed)return;run.paused=false;setView(v=>({...v,status:'playing'}));scheduleTick();};
+            const restart=async()=>{const run=runRef.current;if(!run||run.finished)return;stopFrame();run.paused=true;await run.audio.restart();run.notes=makeRuntimeNotes();run.activePointers=new Map();run.combo=0;run.maxCombo=0;run.counts=emptyCounts();run.fast=0;run.slow=0;run.finished=false;run.paused=false;laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';}});setView({...initialView(),status:'playing'});scheduleTick();};
+            const abort=()=>{const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.audio?.stop();}stopFrame();onExit();};
+            const pointerDown=(lane,e)=>{const run=runRef.current;if(!run||run.finished||run.paused||view.status!=='playing')return;e.preventDefault();const now=run.audio.songTimeMs(),target=run.notes.filter(note=>!note.done&&note.activePointerId===null&&(note.type==='TAP'||note.type==='HOLD')&&note.lane===lane&&Math.abs(now-(note.timeMs+settings.judgmentTimingOffsetMs))<=200).sort((a,b)=>Math.abs(now-(a.timeMs+settings.judgmentTimingOffsetMs))-Math.abs(now-(b.timeMs+settings.judgmentTimingOffsetMs)))[0];if(!target)return;const delta=now-(target.timeMs+settings.judgmentTimingOffsetMs),judgment=rhythmJudgeTap(delta);if(target.type==='HOLD'){target.activePointerId=e.pointerId;target.holdJudgment=judgment;target.holdDeltaMs=delta;run.activePointers.set(e.pointerId,target.index);try{e.currentTarget.setPointerCapture(e.pointerId);}catch{}const side=rhythmFastSlow(delta);setView(v=>({...v,last:'HOLD',fastSlow:side||''}));return;}applyJudgment(target,judgment,delta);};
+            const pointerEnd=e=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const noteIndex=run.activePointers.get(e.pointerId);if(noteIndex===undefined)return;run.activePointers.delete(e.pointerId);const note=run.notes[noteIndex];if(!note||note.done)return;note.activePointerId=null;const now=run.audio.songTimeMs(),holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;if(now<holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS)applyJudgment(note,'MISS',now-holdEndMs);else applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);try{if(e.currentTarget.hasPointerCapture?.(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);}catch{}};
+            if(view.status==='result'){const result=view.result;return <main data-rhythm-result className="flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><p className="text-center text-xs text-cyan-300">{song.displayName}・{difficulty.id}</p><h2 className="text-center font-black">RHYTHM RESULT</h2><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}<div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div><dl className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd></React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" onClick={async()=>{setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId);if(!audio){setView(v=>({...v,status:'error'}));return;}const startBest=mergeRhythmBestRecord(runRef.current?.startBest,result);runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,finished:false,paused:false,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';}});setView({...initialView(),status:'playing'});scheduleTick();}}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>音ゲーデバッグへ戻る</button></div></main>}
+            return <main data-rhythm-tap-test className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)',touchAction:'none'}}><header className="flex shrink-0 items-center justify-between p-2"><div><small className="text-cyan-300">{difficulty.id}・{hasHold?'HOLD TEST':'TAP TEST'}</small><h2 className="font-black">{song.displayName}</h2></div><button data-rhythm-pause className="min-h-[44px] rounded-xl bg-amber-700 px-3 font-black" onClick={pause}>ポーズ</button></header><section className="grid grid-cols-2 px-3 text-center"><div>SCORE <b className="block text-xl">{view.score.toLocaleString()}</b></div><div>COMBO <b className="block text-xl">{view.combo}</b></div></section><div className="h-12 text-center"><b className="text-xl text-amber-300">{view.last||(view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':'')}</b><small className="block text-cyan-300">{view.fastSlow}</small></div><div ref={playAreaRef} data-rhythm-play-area className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50"><div className="absolute inset-0 grid grid-cols-5">{Array.from({length:5},(_,lane)=><button key={lane} aria-label={`レーン${lane+1}`} onPointerDown={e=>pointerDown(lane,e)} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative border-r border-white/20 bg-slate-900/40 active:bg-cyan-800/50" style={{touchAction:'none'}}><span className="absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500">{lane+1}</span></button>)}</div><div ref={judgmentLineRef} data-rhythm-judgment-line className="absolute bottom-[12%] left-0 right-0 h-1 bg-cyan-300 shadow-[0_0_12px_#67e8f9]"/>{chart.notes.map((note,index)=><div key={index} ref={el=>laneRefs.current[index]=el} data-rhythm-note data-note-type={note.type} className="absolute top-0 h-5" style={{left:`calc(${note.lane*20}% + 5px)`,width:'calc(20% - 10px)',willChange:'transform, opacity'}}>{note.type==='HOLD'&&<span data-rhythm-hold-body className="absolute left-[18%] right-[18%] bottom-1/2 rounded-t-lg bg-gradient-to-t from-emerald-400/90 to-cyan-300/70" style={{height:'var(--rhythm-hold-body, 0px)'}}/>}<span className={`absolute inset-0 rounded-full shadow-lg ${note.type==='HOLD'?'bg-gradient-to-b from-emerald-200 to-cyan-500':'bg-gradient-to-b from-amber-200 to-fuchsia-500'}`}/></div>)}{view.status==='paused'&&<div data-rhythm-pause-menu className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3><button className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>中断して音ゲーデバッグへ戻る</button></div>}</div></main>;
+          };
+          '''
+          component='\n'.join(line[10:] if line.startswith('          ') else line for line in component.splitlines())
+          pat=r"const RhythmTapTest=\(\{song,difficulty,settings,bestRecord,onComplete,onExit\}\)=>\{[\s\S]*?\n\};\n\nfunction MonsterHeroGame\(\) \{"
+          replacement=component+'\n\nfunction MonsterHeroGame() {'
+          game2,n=re.subn(pat,replacement,game,count=1)
+          if n!=1:
+            raise SystemExit(f'RhythmTapTest replacement count={n}')
+          game2=game2.replace('TAPテストプレイ','リズムテストプレイ')
+          game_path.write_text(game2,encoding='utf-8')
+
+          help_path=root/'monster-hero/data/help.js'
+          help_text=help_path.read_text(encoding='utf-8')
+          old='曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面のTAPテストではポーズ・リスタート・完走リザルトと端末内BEST保存を確認できます。中断したプレイは記録されません。通常画面には表示されません。'
+          new='曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAPテストに加えてNORMALでHOLDと2本指同時入力を確認できます。ポーズ・リスタート・完走リザルト・端末内BEST保存にも対応し、中断したプレイは記録されません。通常画面には表示されません。'
+          if old not in help_text:
+            raise SystemExit('help rhythm text not found')
+          help_path.write_text(help_text.replace(old,new,1),encoding='utf-8')
+
+          changelog_path=root/'monster-hero/data/changelog.js'
+          changelog=changelog_path.read_text(encoding='utf-8')
+          entry='''  {\n    date: "2026-08-30 20:20", type:'update', title:'音ゲーHOLD・2本指テストを追加', releaseFlag:'rhythmMode',\n    items:['デバッグ限定のNORMAL譜面にHOLDノーツと複数指入力を追加し、HOLD中の別レーンTAP・同時2本HOLD・早離しMISSを確認できるようにしました。'],\n  },\n'''
+          marker='const CHANGELOG = [\n'
+          if marker not in changelog:
+            raise SystemExit('changelog marker not found')
+          changelog_path.write_text(changelog.replace(marker,marker+entry,1),encoding='utf-8')
+
+          readme_path=root/'tools/README.md'
+          readme=readme_path.read_text(encoding='utf-8')
+          if 'rhythm-mode-hold-engine-check.js' not in readme:
+            needle='`node mode/rhythm-mode-tap-completion-check.js`'
+            pos=readme.find(needle)
+            if pos<0:
+              raise SystemExit('README rhythm completion row not found')
+            eol=readme.find('\n',pos)
+            row='| `node mode/rhythm-mode-hold-engine-check.js` | 音ゲーSTEP 3AのHOLD終端・早離しMISS・Pointer EventsのpointerId別2本指入力・EASY TAP回帰とNORMAL混在譜面を確認する。 |\n'
+            readme=readme[:eol+1]+row+readme[eol+1:]
+            readme_path.write_text(readme,encoding='utf-8')
+
+          check=r'''#!/usr/bin/env node
+          const fs=require('fs'),path=require('path'),vm=require('vm');
+          const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
+          let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
+          const data=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx');
+          const context={};vm.runInNewContext(`${data}\nthis.out={RHYTHM_SONGS};`,context);const song=context.out.RHYTHM_SONGS[0],easy=song.difficulties.EASY,normal=song.difficulties.NORMAL;
+          check('EASYのSTEP 2 TAP専用譜面を維持',easy.notes.length>0&&easy.notes.every(n=>n.type==='TAP'));
+          check('NORMALに20〜30秒のTAP/HOLD混在譜面',normal.durationMs>=20000&&normal.durationMs<=30000&&normal.notes.some(n=>n.type==='TAP')&&normal.notes.some(n=>n.type==='HOLD')&&normal.notes.every(n=>n.type==='TAP'||n.type==='HOLD'));
+          const holds=normal.notes.filter(n=>n.type==='HOLD');
+          check('HOLDは開始より後のendTimeMsと有効レーンを持つ',holds.length>=5&&holds.every(n=>Number.isFinite(n.endTimeMs)&&n.endTimeMs>n.timeMs&&n.endTimeMs<=normal.durationMs&&n.lane>=0&&n.lane<5));
+          check('HOLD中の別レーンTAPを含む',holds.some(h=>normal.notes.some(n=>n.type==='TAP'&&n.timeMs>h.timeMs&&n.timeMs<h.endTimeMs&&n.lane!==h.lane)));
+          check('同時2本HOLDを含む',holds.some((a,i)=>holds.some((b,j)=>j>i&&a.timeMs===b.timeMs&&a.lane!==b.lane)));
+          check('HOLD開始はTAPと同じ判定幅を使い、完了時に1ノーツとして確定',game.includes("target.type==='HOLD'")&&game.includes('target.holdJudgment=judgment')&&game.includes("applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0)"));
+          check('終端到達でHOLDを自動確定',game.includes("note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs"));
+          check('終端100ms手前より早い離しはMISS',game.includes('const RHYTHM_HOLD_RELEASE_GRACE_MS=100')&&game.includes('now<holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS')&&game.includes("applyJudgment(note,'MISS',now-holdEndMs)"));
+          check('pointerId別Mapとpointer captureで複数指を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(e.pointerId,target.index)')&&game.includes('run.activePointers.get(e.pointerId)')&&game.includes('setPointerCapture(e.pointerId)'));
+          check('HOLD表示は専用ボディを持ち、rAF内transform/opacity中心',game.includes('data-rhythm-hold-body')&&game.includes("--rhythm-hold-body")&&game.includes('translate3d(0,${Math.round(yPx)}px,0)')&&game.includes('requestAnimationFrame(tick)'));
+          check('ポーズ・リスタート・中断でpointer管理を残さない',game.includes('run.activePointers.clear()')&&game.includes('run.activePointers=new Map()')&&game.includes('run.finished=true;run.paused=true;run.activePointers.clear();run.audio?.stop()'));
+          check('FLICK/SLIDEはSTEP 3Aの実譜面へ入れない',normal.notes.every(n=>!['FLICK','SLIDE'].includes(n.type)));
+          check('通常公開はOFF',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
+          console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
+          '''
+          check='\n'.join(line[10:] if line.startswith('          ') else line for line in check.splitlines())+'\n'
+          (root/'tools/mode/rhythm-mode-hold-engine-check.js').write_text(check,encoding='utf-8')
+          PY
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Build canonical output
+        run: node tools/build.js
+      - name: Run rhythm and regression checks
+        run: |
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/jsx-text-brace-check.js
+          node tools/mode/rhythm-mode-foundation-check.js
+          node tools/mode/rhythm-mode-tap-engine-check.js
+          node tools/mode/rhythm-mode-tap-completion-check.js
+          node tools/mode/rhythm-mode-hold-engine-check.js
+          node tools/help-coverage-check.js
+          node tools/help-guide-check.js
+          node tools/help-render-check.js
+          node tools/build.js --check
+          git diff --check
+      - name: Commit STEP 3A and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "ChatGPT"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/rhythm-step3a-apply.yml
+          git add -A
+          git commit -m "feat: add rhythm HOLD and multitouch test"
+          git push origin HEAD:chatgpt/rhythm-step-3a-hold-multitouch
