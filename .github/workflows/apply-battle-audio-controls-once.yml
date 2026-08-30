@@ -15,6 +15,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install build-only Babel dependencies
+        run: npm install --no-save --package-lock=false @babel/core @babel/preset-react
       - name: Apply patch
         run: python tools/battle-audio-controls-patch.py
       - name: Build
