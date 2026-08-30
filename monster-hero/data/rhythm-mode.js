@@ -27,7 +27,7 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
     : [{timeMs:Number(note?.timeMs)||0,lane:Number(note?.lane)||0},{timeMs:Number(note?.endTimeMs)||Number(note?.timeMs)||0,lane:Number(note?.endLane??note?.lane)||0}];
   const t=Number(chartTimeMs);
   if(!Number.isFinite(t))return Number(points[0]?.lane)||0;
-  if(t<=points[0].timeMs)return Number(points[0]?.lane)||0;
+  if(t<=points[0].timeMs)return Number(points[0].lane)||0;
   for(let i=1;i<points.length;i++){
     const a=points[i-1],b=points[i];
     if(t<=b.timeMs){
@@ -387,10 +387,20 @@ const installRhythmPerspectiveNoteVisuals=()=>{
 };
 installRhythmPerspectiveNoteVisuals();
 
-// 譜面制作ツールは通常プレイの初期処理から分離し、デバッグ画面で使う補助JSとして読み込む。
-if(typeof document!=='undefined'&&!document.querySelector('script[data-rhythm-authoring-loader]')){
-  const script=document.createElement('script');
-  script.dataset.rhythmAuthoringLoader='';
-  script.src='data/rhythm-authoring.js?v=20260831a';
-  document.head.appendChild(script);
-}
+// DEBUG ONLY: 音ゲーデバッグ画面を開いた時だけ譜面制作ツールを読み込む。
+const installRhythmAuthoringLoader=()=>{
+  if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
+  let loaded=false;
+  const load=()=>{
+    if(loaded||!document.querySelector('[data-rhythm-debug]'))return;
+    loaded=true;
+    const script=document.createElement('script');
+    script.dataset.rhythmAuthoringLoader='';
+    script.src='data/rhythm-authoring.js?v=20260831a';
+    document.head.appendChild(script);
+  };
+  const start=()=>{load();if(!loaded)new MutationObserver(load).observe(document.body,{childList:true,subtree:true});};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+};
+installRhythmAuthoringLoader();
