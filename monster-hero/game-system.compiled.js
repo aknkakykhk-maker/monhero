@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 26fc95d6da33114d
+// source-sha256: c973d892bd01836d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 14:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 14:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15783,6 +15783,13 @@ function MonsterHeroGame() {
   // 敗北・諦め・勝利の非同期処理が通常の保存処理へ入る前に必ず判定できるようにする。
   const [debugBattle, setDebugBattle] = useState(false);
   const debugBattleRef = useRef(false);
+  // 「デバッグ設定の ⚔️ バトルモード から入った」ことだけを覚えるしるし。
+  // debugBattleRef と分けてあるのは、難易度の「この難易度で挑戦」が
+  // debugBattleRef を必ず false へ戻す(ふだんの周回を記録する側へ寄せる)ため。
+  // これを共用すると、記録するかどうかの判定まで一緒に動いてしまう。
+  // ここでは「正式実装前のモンスター(debugOnly)を勇者モン選択に出すかどうか」だけに使い、
+  // 保存・スコア・ランキングの判定には一切使わない。HOMEへ戻ると落ちる
+  const debugMonsterPreviewRef = useRef(false);
   const [extremeRun, setExtremeRun] = useState(false);
   const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
@@ -17866,6 +17873,9 @@ function MonsterHeroGame() {
     // デバッグ・練習の周回は、どのモードでも全国ランキングにも自己ベストにも残さない。
     // 呼び出し側でも弾いているが、ここでも止めて「デバッグから遊んだら記録がついた」を確実に防ぐ
     if (debugBattleRef.current) return;
+    // 正式実装前のモンスターを連れた周回も同じ扱いにする。デバッグのモード選択から入っても
+    // 難易度の「この難易度で挑戦」が debugBattleRef を false に戻すため、ここで必ず止める
+    if (runHasDebugOnlyMonster()) return;
     // 種族チャレンジは専用の送信処理だけを通す。ここから下のどの分岐へも落とさない
     // (落とすと最後の分岐でチャレンジの mh_hs_<難易度> を上書きしてしまう)。
     // scoreSubmittedRef は委譲先で立てるので、ここでは立てずに渡す
@@ -18438,8 +18448,12 @@ function MonsterHeroGame() {
   // 通常のロースター(unlockedMonsterIds で絞る)・図鑑・マーケットには出ないので、
   // 「実際に選んで戦って確かめる」ことだけがここでできるようになる
   const debugOnlyMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly);
+  // いま戦っている編成に、正式実装前のモンスター(debugOnly)が1体でも入っているか。
+  // debugBattleRef が false のまま(難易度の「この難易度で挑戦」が必ず false へ戻すため)でも
+  // 記録・全国ランキングへ残さないための保険。ここが唯一の判定元になる
+  const runHasDebugOnlyMonster = () => [mainHero, ...slots].some(mon => mon && (mon.debugOnly === true || ALL_PLAYER_MONSTERS[mon.id]?.debugOnly === true));
   const debugHeroMonsterList = list => {
-    if (!debugBattleRef.current) return list;
+    if (!debugBattleRef.current && !debugMonsterPreviewRef.current) return list;
     const debugMon = makeDebugStrongestMonster();
     const preview = debugOnlyMonsterList();
     const previewIds = new Set(preview.map(mon => mon.id));
@@ -20730,6 +20744,8 @@ function MonsterHeroGame() {
       ...prev,
       firstWin: true
     }));
+    // 正式実装前のモンスターを連れた周回は、クリア回数へも数えない
+    if (runHasDebugOnlyMonster()) return;
     const nextCount = (clearCounts[difficulty] || 0) + 1;
     setClearCounts(prev => ({
       ...prev,
@@ -21491,6 +21507,8 @@ function MonsterHeroGame() {
   const returnToHome = () => {
     stopAllAuto();
     debugBattleRef.current = false;
+    // 正式実装前のモンスターを勇者モン選択へ出すしるしも、HOMEへ戻る時点で必ず落とす
+    debugMonsterPreviewRef.current = false;
     extremeRunRef.current = false;
     debugResultRef.current = false;
     speciesChallengeBattleRunRef.current = null;
@@ -21689,7 +21707,8 @@ function MonsterHeroGame() {
   };
   const saveMissionProgress = async (event, amount = 1) => {
     // 記録を残さない戦い(バトルのれんしゅう・デバッグ戦)ではミッションも進めない。
-    if (debugBattleRef.current) return;
+    // 正式実装前のモンスターを連れた周回も同じ扱いにする
+    if (debugBattleRef.current || runHasDebugOnlyMonster()) return;
     const n = Math.max(0, Math.floor(Number(amount) || 0));
     if (n <= 0) return;
     const rule = {
@@ -24645,7 +24664,8 @@ function MonsterHeroGame() {
     // 極限チャレンジ・デバッグ戦・練習は、チャレンジの挑戦回数(mh_attempts_*)へ数えない。
     // 種族チャレンジも同じ理由で除外する。難易度idがチャレンジと同名(Master など)なので、
     // ここを通すと mh_attempts_Master がチャレンジの挑戦として増えてしまう
-    if (!enemy && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current) {
+    // 正式実装前のモンスター(debugOnly)を連れた周回も、同じ理由で数えない
+    if (!enemy && !extremeRunRef.current && !debugBattleRef.current && !speciesChallengeBattleRunRef.current && !runHasDebugOnlyMonster()) {
       setAttemptCounts(prev => {
         const next = {
           ...prev,
@@ -31816,6 +31836,7 @@ function MonsterHeroGame() {
       "data-debug-battle-mode": true,
       onClick: () => {
         debugBattleRef.current = true;
+        debugMonsterPreviewRef.current = true;
         extremeRunRef.current = false;
         setDebugBattle(true);
         setExtremeRun(false);
