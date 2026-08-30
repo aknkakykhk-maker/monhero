@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4dbd2f2f005f137a
+// source-sha256: 4b3ed1677ffb2b8a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14865,6 +14865,13 @@ function PressRepeatButton({
   }, props), children);
 }
 const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
+const rhythmInputKey = (kind, id) => `${kind}:${id}`;
+const rhythmLaneFromClientX = (clientX, left, width) => {
+  const w = Number(width);
+  if (!Number.isFinite(w) || w <= 0) return null;
+  const relative = Math.min(Math.max(Number(clientX) - Number(left), 0), Math.max(0, w - .001));
+  return Math.min(RHYTHM_LANE_COUNT - 1, Math.max(0, Math.floor(relative / w * RHYTHM_LANE_COUNT)));
+};
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -15140,23 +15147,24 @@ const RhythmTapTest = ({
     stopFrame();
     onExit();
   };
-  const pointerDown = (lane, e) => {
+  const inputStart = (lane, inputKey, captureTarget, pointerId) => {
     const run = runRef.current;
     if (!run || run.finished || run.paused || view.status !== 'playing') return;
-    e.preventDefault();
     const now = run.audio.songTimeMs(),
       target = run.notes.filter(note => !note.done && note.activePointerId === null && (note.type === 'TAP' || note.type === 'HOLD') && note.lane === lane && Math.abs(now - (note.timeMs + settings.judgmentTimingOffsetMs)) <= 200).sort((a, b) => Math.abs(now - (a.timeMs + settings.judgmentTimingOffsetMs)) - Math.abs(now - (b.timeMs + settings.judgmentTimingOffsetMs)))[0];
     if (!target) return;
     const delta = now - (target.timeMs + settings.judgmentTimingOffsetMs),
       judgment = rhythmJudgeTap(delta);
     if (target.type === 'HOLD') {
-      target.activePointerId = e.pointerId;
+      target.activePointerId = inputKey;
       target.holdJudgment = judgment;
       target.holdDeltaMs = delta;
-      run.activePointers.set(e.pointerId, target.index);
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch {}
+      run.activePointers.set(inputKey, target.index);
+      if (captureTarget && pointerId !== undefined) {
+        try {
+          captureTarget.setPointerCapture(pointerId);
+        } catch {}
+      }
       const side = rhythmFastSlow(delta);
       setView(v => ({
         ...v,
@@ -15167,21 +15175,46 @@ const RhythmTapTest = ({
     }
     applyJudgment(target, judgment, delta);
   };
-  const pointerEnd = e => {
+  const inputEnd = (inputKey, releaseTarget, pointerId) => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
-    const noteIndex = run.activePointers.get(e.pointerId);
+    const noteIndex = run.activePointers.get(inputKey);
     if (noteIndex === undefined) return;
-    run.activePointers.delete(e.pointerId);
+    run.activePointers.delete(inputKey);
     const note = run.notes[noteIndex];
     if (!note || note.done) return;
     note.activePointerId = null;
     const now = run.audio.songTimeMs(),
       holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
     if (now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) applyJudgment(note, 'MISS', now - holdEndMs);else applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
-    try {
-      if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {}
+    if (releaseTarget && pointerId !== undefined) {
+      try {
+        if (releaseTarget.hasPointerCapture?.(pointerId)) releaseTarget.releasePointerCapture(pointerId);
+      } catch {}
+    }
+  };
+  const pointerDown = (lane, e) => {
+    if (e.pointerType === 'touch') return;
+    e.preventDefault();
+    inputStart(lane, rhythmInputKey('pointer', e.pointerId), e.currentTarget, e.pointerId);
+  };
+  const pointerEnd = e => {
+    if (e.pointerType === 'touch') return;
+    inputEnd(rhythmInputKey('pointer', e.pointerId), e.currentTarget, e.pointerId);
+  };
+  const touchStart = e => {
+    if (e.cancelable) e.preventDefault();
+    const area = playAreaRef.current;
+    if (!area) return;
+    const rect = area.getBoundingClientRect();
+    Array.from(e.changedTouches || []).forEach(touch => {
+      const lane = rhythmLaneFromClientX(touch.clientX, rect.left, rect.width);
+      if (lane !== null) inputStart(lane, rhythmInputKey('touch', touch.identifier));
+    });
+  };
+  const touchEnd = e => {
+    if (e.cancelable) e.preventDefault();
+    Array.from(e.changedTouches || []).forEach(touch => inputEnd(rhythmInputKey('touch', touch.identifier)));
   };
   if (view.status === 'result') {
     const result = view.result;
@@ -15300,7 +15333,16 @@ const RhythmTapTest = ({
   }, view.fastSlow)), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
-    className: "relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50"
+    onTouchStart: touchStart,
+    onTouchEnd: touchEnd,
+    onTouchCancel: touchEnd,
+    className: "relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50",
+    style: {
+      touchAction: 'none',
+      WebkitTouchCallout: 'none',
+      WebkitUserSelect: 'none',
+      userSelect: 'none'
+    }
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 grid grid-cols-5"
   }, Array.from({
@@ -15330,7 +15372,8 @@ const RhythmTapTest = ({
     style: {
       left: `calc(${note.lane * 20}% + 5px)`,
       width: 'calc(20% - 10px)',
-      willChange: 'transform, opacity'
+      willChange: 'transform, opacity',
+      pointerEvents: 'none'
     }
   }, note.type === 'HOLD' && /*#__PURE__*/React.createElement("span", {
     "data-rhythm-hold-body": true,

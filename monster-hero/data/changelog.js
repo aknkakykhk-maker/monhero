@@ -3,6 +3,10 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-30 20:42", type:'fix', title:'音ゲーの2本指入力を修正', releaseFlag:'rhythmMode',
+    items:['iPhone Safariで同時タッチを確実に拾えるようTouch EventsのchangedTouchesを指ごとに処理し、HOLD中の別レーン操作や同時2本HOLDができる入力経路へ修正しました。'],
+  },
+  {
     date: "2026-08-30 20:27", type:'update', title:'音ゲーHOLD・2本指テストを追加', releaseFlag:'rhythmMode',
     items:['デバッグ限定のNORMAL譜面にHOLDノーツと複数指入力を追加し、HOLD中の別レーンTAP・同時2本HOLD・早離しMISSを確認できるようにしました。'],
   },

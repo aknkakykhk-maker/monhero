@@ -13,7 +13,7 @@ check('同時2本HOLDを含む',holds.some((a,i)=>holds.some((b,j)=>j>i&&a.timeM
 check('HOLD開始はTAPと同じ判定幅を使い、完了時に1ノーツとして確定',game.includes("target.type==='HOLD'")&&game.includes('target.holdJudgment=judgment')&&game.includes("applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0)"));
 check('終端到達でHOLDを自動確定',game.includes("note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs"));
 check('終端100ms手前より早い離しはMISS',game.includes('const RHYTHM_HOLD_RELEASE_GRACE_MS=100')&&game.includes('now<holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS')&&game.includes("applyJudgment(note,'MISS',now-holdEndMs)"));
-check('pointerId別Mapとpointer captureで複数指を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(e.pointerId,target.index)')&&game.includes('run.activePointers.get(e.pointerId)')&&game.includes('setPointerCapture(e.pointerId)'));
+check('入力ID別Mapとpointer captureで複数入力を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(inputKey,target.index)')&&game.includes('run.activePointers.get(inputKey)')&&game.includes('captureTarget.setPointerCapture(pointerId)'));
 check('HOLD表示は専用ボディを持ち、rAF内transform/opacity中心',game.includes('data-rhythm-hold-body')&&game.includes("--rhythm-hold-body")&&game.includes('translate3d(0,${Math.round(yPx)}px,0)')&&game.includes('requestAnimationFrame(tick)'));
 check('ポーズ・リスタート・中断でpointer管理を残さない',game.includes('run.activePointers.clear()')&&game.includes('run.activePointers=new Map()')&&game.includes('run.finished=true;run.paused=true;run.activePointers.clear();run.audio?.stop()'));
 check('FLICK/SLIDEはSTEP 3Aの実譜面へ入れない',normal.notes.every(n=>!['FLICK','SLIDE'].includes(n.type)));
