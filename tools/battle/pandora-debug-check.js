@@ -30,6 +30,7 @@ const inherited=(base,origin)=>Math.floor(base*(origin==='Pandora'?1:1.5)); asse
 const cost=(base,{zero=false,resonance=0}={})=>{let value=zero?0:base;if(value>0&&resonance>0)value=Math.floor(value*.5);return value;};
 assert.strictEqual(cost(52,{resonance:2}),26); assert.strictEqual(cost(52,{zero:true,resonance:2}),0); let turns=2; assert.strictEqual(cost(52,{resonance:turns--}),26);assert.strictEqual(cost(52,{resonance:turns--}),26);assert.strictEqual(cost(52,{resonance:turns}),52);
 assert(source.includes("setNextTurnBuff('pandoraResonanceTurns',2)")); assert(source.includes('if (resonanceRefresh==null && resonanceCarry>0)'));
-assert(source.includes("MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni', 'Mia', 'Pandora'])"));
+// エイキ追加時に縦長立ち絵の一覧が伸びた。パンドラが引き続き対象に含まれていることだけを見る
+assert(/MONSTER_ART_CONTAIN_IDS = Object\.freeze\(\[[^\]]*'Pandora'[^\]]*\]\)/.test(source));
 assert(!source.includes('PANDORA_DEBUG'));
 console.log('OK: 正式パンドラ・マーケット解放・禁忌解錠・双極共振・共通モーション');
