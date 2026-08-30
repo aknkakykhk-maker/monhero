@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e52d078ffd91bfe1
+// source-sha256: 4dbd2f2f005f137a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 20:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14864,6 +14864,7 @@ function PressRepeatButton({
     }
   }, props), children);
 }
+const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -14878,7 +14879,16 @@ const RhythmTapTest = ({
     frameRef = useRef(null),
     playAreaRef = useRef(null),
     judgmentLineRef = useRef(null);
+  const hasHold = chart.notes.some(note => note.type === 'HOLD');
   const emptyCounts = () => Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0]));
+  const makeRuntimeNotes = () => chart.notes.map((note, index) => ({
+    ...note,
+    index,
+    done: false,
+    activePointerId: null,
+    holdJudgment: null,
+    holdDeltaMs: 0
+  }));
   const initialView = () => ({
     status: 'loading',
     score: 0,
@@ -14915,6 +14925,10 @@ const RhythmTapTest = ({
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
+    if (note.activePointerId !== null) {
+      if (note.activePointerId !== -1) run.activePointers.delete(note.activePointerId);
+      note.activePointerId = null;
+    }
     note.done = true;
     const nextCombo = rhythmComboAfter(run.combo, judgment);
     run.combo = nextCombo;
@@ -14994,7 +15008,8 @@ const RhythmTapTest = ({
       const songTimeMs = run.audio.songTimeMs(),
         travel = measureTravel();
       run.notes.forEach(note => {
-        if (!note.done && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
+        if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+        if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
         const el = laneRefs.current[note.index];
         if (!el || note.done) {
           if (el) el.style.display = 'none';
@@ -15004,10 +15019,17 @@ const RhythmTapTest = ({
           travelMs = Math.max(650, 2600 - settings.noteSpeed * 90),
           progress = 1 - (note.timeMs - visualTime) / travelMs;
         if (travel) {
-          const yPx = travel.spawnY + progress * travel.travelPx;
+          let yPx = travel.spawnY + progress * travel.travelPx;
+          if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
           el.style.transform = `translate3d(0,${Math.round(yPx)}px,0)`;
+          if (note.type === 'HOLD') {
+            const holdMs = note.activePointerId !== null ? Math.max(0, note.endTimeMs - visualTime) : Math.max(0, note.endTimeMs - note.timeMs);
+            const bodyPx = Math.max(0, holdMs / travelMs * travel.travelPx);
+            el.style.setProperty('--rhythm-hold-body', `${Math.round(bodyPx)}px`);
+            el.style.filter = note.activePointerId !== null ? 'brightness(1.3)' : '';
+          }
         }
-        el.style.opacity = !travel || progress < -.1 || progress > 1.18 ? '0' : '1';
+        el.style.opacity = note.activePointerId !== null ? '1' : progress < -.1 || progress > 1.18 ? '0' : '1';
       });
       if (songTimeMs >= chart.durationMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
@@ -15027,11 +15049,8 @@ const RhythmTapTest = ({
       const startBest = normalizeRhythmBestRecord(bestRecord);
       runRef.current = {
         audio,
-        notes: chart.notes.map((note, index) => ({
-          ...note,
-          index,
-          done: false
-        })),
+        notes: makeRuntimeNotes(),
+        activePointers: new Map(),
         combo: 0,
         maxCombo: 0,
         counts: emptyCounts(),
@@ -15058,6 +15077,10 @@ const RhythmTapTest = ({
   const pause = () => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
+    run.activePointers.clear();
+    run.notes.forEach(note => {
+      if (note.type === 'HOLD' && note.activePointerId !== null) note.activePointerId = -1;
+    });
     run.paused = true;
     stopFrame();
     run.audio.pause();
@@ -15084,11 +15107,8 @@ const RhythmTapTest = ({
     stopFrame();
     run.paused = true;
     await run.audio.restart();
-    run.notes = chart.notes.map((note, index) => ({
-      ...note,
-      index,
-      done: false
-    }));
+    run.notes = makeRuntimeNotes();
+    run.activePointers = new Map();
     run.combo = 0;
     run.maxCombo = 0;
     run.counts = emptyCounts();
@@ -15100,6 +15120,7 @@ const RhythmTapTest = ({
       if (el) {
         el.style.display = 'block';
         el.style.opacity = '0';
+        el.style.filter = '';
       }
     });
     setView({
@@ -15113,17 +15134,54 @@ const RhythmTapTest = ({
     if (run) {
       run.finished = true;
       run.paused = true;
+      run.activePointers.clear();
       run.audio?.stop();
     }
     stopFrame();
     onExit();
   };
-  const tapLane = lane => {
+  const pointerDown = (lane, e) => {
     const run = runRef.current;
     if (!run || run.finished || run.paused || view.status !== 'playing') return;
+    e.preventDefault();
     const now = run.audio.songTimeMs(),
-      target = run.notes.filter(note => !note.done && note.lane === lane && Math.abs(now - (note.timeMs + settings.judgmentTimingOffsetMs)) <= 200).sort((a, b) => Math.abs(now - (a.timeMs + settings.judgmentTimingOffsetMs)) - Math.abs(now - (b.timeMs + settings.judgmentTimingOffsetMs)))[0];
-    if (target) applyJudgment(target, rhythmJudgeTap(now - (target.timeMs + settings.judgmentTimingOffsetMs)), now - (target.timeMs + settings.judgmentTimingOffsetMs));
+      target = run.notes.filter(note => !note.done && note.activePointerId === null && (note.type === 'TAP' || note.type === 'HOLD') && note.lane === lane && Math.abs(now - (note.timeMs + settings.judgmentTimingOffsetMs)) <= 200).sort((a, b) => Math.abs(now - (a.timeMs + settings.judgmentTimingOffsetMs)) - Math.abs(now - (b.timeMs + settings.judgmentTimingOffsetMs)))[0];
+    if (!target) return;
+    const delta = now - (target.timeMs + settings.judgmentTimingOffsetMs),
+      judgment = rhythmJudgeTap(delta);
+    if (target.type === 'HOLD') {
+      target.activePointerId = e.pointerId;
+      target.holdJudgment = judgment;
+      target.holdDeltaMs = delta;
+      run.activePointers.set(e.pointerId, target.index);
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {}
+      const side = rhythmFastSlow(delta);
+      setView(v => ({
+        ...v,
+        last: 'HOLD',
+        fastSlow: side || ''
+      }));
+      return;
+    }
+    applyJudgment(target, judgment, delta);
+  };
+  const pointerEnd = e => {
+    const run = runRef.current;
+    if (!run || run.finished || run.paused) return;
+    const noteIndex = run.activePointers.get(e.pointerId);
+    if (noteIndex === undefined) return;
+    run.activePointers.delete(e.pointerId);
+    const note = run.notes[noteIndex];
+    if (!note || note.done) return;
+    note.activePointerId = null;
+    const now = run.audio.songTimeMs(),
+      holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
+    if (now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) applyJudgment(note, 'MISS', now - holdEndMs);else applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+    try {
+      if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
   };
   if (view.status === 'result') {
     const result = view.result;
@@ -15179,11 +15237,8 @@ const RhythmTapTest = ({
         const startBest = mergeRhythmBestRecord(runRef.current?.startBest, result);
         runRef.current = {
           audio,
-          notes: chart.notes.map((note, index) => ({
-            ...note,
-            index,
-            done: false
-          })),
+          notes: makeRuntimeNotes(),
+          activePointers: new Map(),
           combo: 0,
           maxCombo: 0,
           counts: emptyCounts(),
@@ -15198,6 +15253,7 @@ const RhythmTapTest = ({
           if (el) {
             el.style.display = 'block';
             el.style.opacity = '0';
+            el.style.filter = '';
           }
         });
         setView({
@@ -15223,7 +15279,7 @@ const RhythmTapTest = ({
     className: "flex shrink-0 items-center justify-between p-2"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
     className: "text-cyan-300"
-  }, difficulty.id, "\u30FBTAP TEST"), /*#__PURE__*/React.createElement("h2", {
+  }, difficulty.id, "\u30FB", hasHold ? 'HOLD TEST' : 'TAP TEST'), /*#__PURE__*/React.createElement("h2", {
     className: "font-black"
   }, song.displayName)), /*#__PURE__*/React.createElement("button", {
     "data-rhythm-pause": true,
@@ -15252,11 +15308,13 @@ const RhythmTapTest = ({
   }, (_, lane) => /*#__PURE__*/React.createElement("button", {
     key: lane,
     "aria-label": `レーン${lane + 1}`,
-    onPointerDown: e => {
-      e.preventDefault();
-      tapLane(lane);
-    },
-    className: "relative border-r border-white/20 bg-slate-900/40 active:bg-cyan-800/50"
+    onPointerDown: e => pointerDown(lane, e),
+    onPointerUp: pointerEnd,
+    onPointerCancel: pointerEnd,
+    className: "relative border-r border-white/20 bg-slate-900/40 active:bg-cyan-800/50",
+    style: {
+      touchAction: 'none'
+    }
   }, /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500"
   }, lane + 1)))), /*#__PURE__*/React.createElement("div", {
@@ -15267,13 +15325,22 @@ const RhythmTapTest = ({
     key: index,
     ref: el => laneRefs.current[index] = el,
     "data-rhythm-note": true,
-    className: "absolute top-0 h-5 rounded-full bg-gradient-to-b from-amber-200 to-fuchsia-500 shadow-lg",
+    "data-note-type": note.type,
+    className: "absolute top-0 h-5",
     style: {
       left: `calc(${note.lane * 20}% + 5px)`,
       width: 'calc(20% - 10px)',
       willChange: 'transform, opacity'
     }
-  })), view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
+  }, note.type === 'HOLD' && /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-hold-body": true,
+    className: "absolute left-[18%] right-[18%] bottom-1/2 rounded-t-lg bg-gradient-to-t from-emerald-400/90 to-cyan-300/70",
+    style: {
+      height: 'var(--rhythm-hold-body, 0px)'
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    className: `absolute inset-0 rounded-full shadow-lg ${note.type === 'HOLD' ? 'bg-gradient-to-b from-emerald-200 to-cyan-500' : 'bg-gradient-to-b from-amber-200 to-fuchsia-500'}`
+  }))), view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-pause-menu": true,
     className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
   }, /*#__PURE__*/React.createElement("h3", {
@@ -32741,7 +32808,7 @@ function MonsterHeroGame() {
             });
             setGameState('RHYTHM_PLAY');
           }
-        }, "TAP\u30C6\u30B9\u30C8\u30D7\u30EC\u30A4"));
+        }, "\u30EA\u30BA\u30E0\u30C6\u30B9\u30C8\u30D7\u30EC\u30A4"));
       })));
     })), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",

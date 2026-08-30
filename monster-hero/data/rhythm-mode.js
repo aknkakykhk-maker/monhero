@@ -26,11 +26,47 @@ const atsuCupTapNotes = Object.freeze([
   [21200,1],[21600,3],[22200,0],[22200,4],[23000,2],[23400,1],[23800,3],[24600,0],[24600,4],
 ].map(([timeMs,lane])=>Object.freeze({type:'TAP',timeMs,lane})));
 const atsuCupTapChart = Object.freeze({level:1,notes:atsuCupTapNotes,totalNotes:atsuCupTapNotes.length,durationMs:26000});
+
+// STEP 3A: HOLDと複数指入力を検証するNORMAL専用テスト譜面。
+// HOLD中の別レーンTAPと、同時2本HOLDを意図的に含める。
+const atsuCupHoldTestNotes = Object.freeze([
+  Object.freeze({type:'TAP',timeMs:1800,lane:2}),
+  Object.freeze({type:'HOLD',timeMs:2600,endTimeMs:4000,lane:0}),
+  Object.freeze({type:'TAP',timeMs:3200,lane:4}),
+  Object.freeze({type:'TAP',timeMs:3600,lane:2}),
+  Object.freeze({type:'TAP',timeMs:4600,lane:1}),
+  Object.freeze({type:'HOLD',timeMs:5200,endTimeMs:6800,lane:3}),
+  Object.freeze({type:'TAP',timeMs:5800,lane:0}),
+  Object.freeze({type:'TAP',timeMs:6400,lane:4}),
+  Object.freeze({type:'TAP',timeMs:7600,lane:2}),
+  Object.freeze({type:'HOLD',timeMs:8400,endTimeMs:10000,lane:1}),
+  Object.freeze({type:'TAP',timeMs:9000,lane:3}),
+  Object.freeze({type:'TAP',timeMs:9600,lane:4}),
+  Object.freeze({type:'HOLD',timeMs:11800,endTimeMs:13600,lane:0}),
+  Object.freeze({type:'HOLD',timeMs:11800,endTimeMs:13600,lane:4}),
+  Object.freeze({type:'TAP',timeMs:14200,lane:2}),
+  Object.freeze({type:'HOLD',timeMs:15000,endTimeMs:16600,lane:3}),
+  Object.freeze({type:'TAP',timeMs:15600,lane:0}),
+  Object.freeze({type:'TAP',timeMs:16200,lane:1}),
+  Object.freeze({type:'HOLD',timeMs:17400,endTimeMs:19000,lane:2}),
+  Object.freeze({type:'TAP',timeMs:18000,lane:4}),
+  Object.freeze({type:'TAP',timeMs:18600,lane:0}),
+  Object.freeze({type:'HOLD',timeMs:19800,endTimeMs:21600,lane:1}),
+  Object.freeze({type:'TAP',timeMs:20400,lane:3}),
+  Object.freeze({type:'TAP',timeMs:21200,lane:4}),
+  Object.freeze({type:'TAP',timeMs:22800,lane:0}),
+  Object.freeze({type:'TAP',timeMs:23400,lane:2}),
+  Object.freeze({type:'TAP',timeMs:24200,lane:4}),
+]);
+const atsuCupHoldTestChart = Object.freeze({level:5,notes:atsuCupHoldTestNotes,totalNotes:atsuCupHoldTestNotes.length,durationMs:26000});
 const RHYTHM_SONGS = Object.freeze([
   Object.freeze({
     songId:'atsu_cup_theme_test',
     displayName:'あつ杯テーマ',
     bgmTrackId:'atsu_cup_theme',
-    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?atsuCupTapChart:emptyRhythmChart()])))
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
+      id,
+      id==='EASY'?atsuCupTapChart:id==='NORMAL'?atsuCupHoldTestChart:emptyRhythmChart()
+    ])))
   }),
 ]);
