@@ -3,6 +3,10 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-30 23:41", type:'update', title:'音ゲープレイ画面の視認性を改善', releaseFlag:'rhythmMode',
+    items:['SCOREとCOMBOを左右に整理し、判定文字とFAST/SLOWを判定ライン付近へ移動しました。押しているレーンの発光も強化し、同時押し時は複数レーンを見分けやすくしています。'],
+  },
+  {
     date: "2026-08-30 22:30", type:'fix', title:'音ゲーの同時押しを再修正', releaseFlag:'rhythmMode',
     items:['iPhone Safariの同時押し入力をプレイエリアのnative Touch Eventsで直接取得し、同時に始まった複数指を1batchで判定する方式へ変更しました。TAP同時押し・HOLD同時押し・HOLD中の別レーンTAPを同じ入力経路で処理します。'],
   },
