@@ -110,6 +110,14 @@ jobs:
           changelog_path.write_text(changelog)
 
           Path('tools/mode/rhythm-mode-lane-feedback-check.js').write_text("""const fs=require('fs');\nconst game=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');\nconst must=[\n  \"const setPressedLanes=lanes=>\",\n  \"data-rhythm-lane={lane}\",\n  \"liveLanes=new Set()\",\n  \"setPressedLanes(liveLanes)\",\n  \"backgroundColor=pressed?'rgba(34,211,238,0.30)'\",\n  \"boxShadow=pressed?'inset 0 0 26px\",\n  \"setPressedLanes([]);run.notes.forEach\",\n  \"setPressedLanes([]);run.audio?.stop()\"\n];\nfor(const token of must){if(!game.includes(token)){console.error('missing lane feedback token:',token);process.exit(1);}}\nif(!game.includes(\"rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)\")){console.error('simultaneous batch input path regressed');process.exit(1);}\nconsole.log('rhythm lane press feedback check: OK');\n""")
+
+          multitouch_path = Path('tools/mode/rhythm-mode-multitouch-check.js')
+          multitouch = multitouch_path.read_text()
+          old = "game.includes('const rect=area.getBoundingClientRect(),live=new Set(),starts=[]')&&game.includes('if(starts.length)inputStarts(starts)')"
+          new = "game.includes('const rect=area.getBoundingClientRect(),live=new Set(),')&&game.includes('starts=[]')&&game.includes('if(starts.length)inputStarts(starts)')"
+          if old not in multitouch:
+              raise SystemExit('multitouch batch check marker not found')
+          multitouch_path.write_text(multitouch.replace(old,new,1))
           PY
       - name: Install locked tool dependencies
         run: cd tools && npm ci
@@ -133,6 +141,6 @@ jobs:
           git config user.name ChatGPT
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git rm .github/workflows/rhythm-lane-press-feedback.yml
-          git add monster-hero tools/mode/rhythm-mode-lane-feedback-check.js
+          git add monster-hero tools/mode/rhythm-mode-lane-feedback-check.js tools/mode/rhythm-mode-multitouch-check.js
           git commit -m "fix: restore rhythm lane press feedback"
           git push origin HEAD:chatgpt/rhythm-lane-press-feedback
