@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6e7fa11d049c4db7
+// source-sha256: 074cb2969b23217d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 09:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 09:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15360,6 +15360,16 @@ function MonsterHeroGame() {
   const selectAutoRuntimeBgm = trackId => {
     if (trackId !== '__none__' && !BGM_TRACK_BY_ID[trackId]) return;
     setAutoBgmOverride(trackId);
+    // 超省エネは開始時ミュートのまま。ただしユーザーがここで曲を選んだ場合だけBGMを許可する。
+    // toggleQuickMute(true) は自動変更扱いなので、超省エネ終了時に開始前のミュート状態へ戻せる。
+    if (!ultraEcoSession) return;
+    if (trackId === '__none__') {
+      if (!quickMuted) toggleQuickMute(true);
+      return;
+    }
+    if (!audioUnlocked) setAudioUnlocked(true);
+    if (quickMuted) toggleQuickMute(true);
+    Audio_.unlock(true);
   };
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
   const toggleQuickMute = (automatic = false) => {
@@ -15374,6 +15384,7 @@ function MonsterHeroGame() {
       if (ultraAudioSessionRef.current) return;
       ultraAudioSessionRef.current = {
         mutedBefore: audioMuted,
+        quickMutedBefore: quickMuted,
         automaticallyMuted: !audioMuted,
         manuallyChanged: false
       };
@@ -15383,7 +15394,8 @@ function MonsterHeroGame() {
     const session = ultraAudioSessionRef.current;
     if (!session) return;
     ultraAudioSessionRef.current = null;
-    if (!session.mutedBefore && session.automaticallyMuted && !session.manuallyChanged && audioMuted) toggleQuickMute(true);
+    // BGMピッカーの一時的なON/OFFは手動設定変更として扱わず、開始前のミュート状態へ正確に戻す。
+    if (!session.manuallyChanged && quickMuted !== session.quickMutedBefore) toggleQuickMute(true);
   }, [ultraEcoSession]);
   const closeBgmArrangement = () => {
     Audio_.stopPreview();
@@ -16720,9 +16732,10 @@ function MonsterHeroGame() {
   }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
+  // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
   useEffect(() => {
-    Audio_.setSeVolume(seVolume);
-  }, [seVolume]);
+    Audio_.setSeVolume(ultraEcoSession ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession]);
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);
@@ -26541,7 +26554,7 @@ function MonsterHeroGame() {
       className: "text-sm font-black text-white"
     }, "AUTO BGM"), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400"
-    }, "\u3053\u306EAUTO\u30BB\u30C3\u30B7\u30E7\u30F3\u3060\u3051\u5909\u66F4")), /*#__PURE__*/React.createElement("button", {
+    }, ultraEcoSession ? '超省エネ中：SEはOFF' : 'このAUTOセッションだけ変更')), /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: () => setShowAutoBgmPicker(false),
       className: "min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black"
