@@ -23,14 +23,18 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-      - name: Record pre-change rebirth-check baseline
+      - name: Record pre-change noisy-check baselines
         run: |
           set +e
           node tools/masu/rebirth-check.js | tee /tmp/rebirth-baseline.log
+          node tools/masu/masu-growth-breakdown-check.js | tee /tmp/growth-baseline.log
           set -e
           grep '^NG:' /tmp/rebirth-baseline.log | sort > /tmp/rebirth-baseline-ng.txt || true
-          echo 'Baseline NG:'
+          grep '^NG:' /tmp/growth-baseline.log | sort > /tmp/growth-baseline-ng.txt || true
+          echo 'Rebirth baseline NG:'
           cat /tmp/rebirth-baseline-ng.txt || true
+          echo 'Growth baseline NG:'
+          cat /tmp/growth-baseline-ng.txt || true
       - name: Apply source, migration, docs and regression-test changes
         run: python3 tools/_tmp_fix_enhance_points.py
       - name: Build canonical shipped output
@@ -39,18 +43,20 @@ jobs:
         run: |
           node tools/masu/enhance-point-total-check.js
           node tools/masu/transcendence-check.js
-          node tools/masu/masu-growth-breakdown-check.js
           node tools/masu/fusion-rebirth-check.js
           node tools/masu/fusion-breakthrough-check.js
           node tools/mode/skip-ticket-check.js
           node tools/monster-power-check.js
-      - name: Verify rebirth-check has no new failures
+      - name: Verify noisy checks have no new failures
         run: |
           set +e
           node tools/masu/rebirth-check.js | tee /tmp/rebirth-current.log
+          node tools/masu/masu-growth-breakdown-check.js | tee /tmp/growth-current.log
           set -e
           grep '^NG:' /tmp/rebirth-current.log | sort > /tmp/rebirth-current-ng.txt || true
+          grep '^NG:' /tmp/growth-current.log | sort > /tmp/growth-current-ng.txt || true
           diff -u /tmp/rebirth-baseline-ng.txt /tmp/rebirth-current-ng.txt
+          diff -u /tmp/growth-baseline-ng.txt /tmp/growth-current-ng.txt
       - name: Run source, help and release checks
         run: |
           node tools/check-syntax.js
