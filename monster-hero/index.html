@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21923,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":2114,"data/changelog.js":308133,"data/help.js":189841,"data/assistants.js":198390,"game-system.compiled.js":2580388,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21923,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":2114,"data/changelog.js":308193,"data/help.js":189841,"data/assistants.js":198390,"game-system.compiled.js":2580388,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -256,7 +256,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
 <div id="loading"><div class="static-mocchi"><img id="static-mocchi-image" alt="モッチー"><span></span></div><section class="static-copy"><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div class="static-progress"><span></span></div><strong>0%</strong><p>ゲームシステムを起動中</p></section></div>
 <div id="root"></div>
 <div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
-<script src="data/images/images-ally.js?v=b41da70283c4" onload="__mhBoot.done('data/images/images-ally.js','モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-ally.js')"></script>
+<script src="data/images/images-ally.js?v=5d8da83cbd7f" onload="__mhBoot.done('data/images/images-ally.js','モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-ally.js')"></script>
 <script>try{document.getElementById('static-mocchi-image').src=MOCCHI_IMG}catch(e){}</script>
 <script src="data/images/images-enemy.js?v=548448d40244" onload="__mhBoot.done('data/images/images-enemy.js','敵モンスターの絵を読み込み中')" onerror="__mhBoot.fail('data/images/images-enemy.js')"></script>
 <script src="data/ally-monsters.js?v=6e12177f261c" onload="__mhBoot.done('data/ally-monsters.js','モンスターデータを読み込み中')" onerror="__mhBoot.fail('data/ally-monsters.js')"></script>
@@ -265,7 +265,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
 <script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
 <script src="data/rhythm-mode.js?v=1c5154b19c2b" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
-<script src="data/changelog.js?v=6710a269f7d1" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/changelog.js?v=646f57111ca6" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
 <script src="data/help.js?v=3e37859f74e1" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
 <script src="data/assistants.js?v=2c805db89dc7" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
@@ -277,7 +277,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202608302005';
+  var GAME_BUILD = '202608302009';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');
