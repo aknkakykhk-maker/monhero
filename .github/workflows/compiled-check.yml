@@ -11,8 +11,13 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  # PRの検査とmainの公開を同じ列に並べない。
+  # 以前は両方が group: pages を共有し、cancel-in-progress: false だったため、
+  # PRへ連続pushするとその検査が全部並び、mainの公開まで順番待ちになっていた。
+  #   PR        … ブランチごとに1本。新しくpushしたら古い検査は打ち切ってよい
+  #   mainへpush … 常に pages の1本。公開は途中で止めない(Pagesのデプロイを壊さない)
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && 'pages' || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
