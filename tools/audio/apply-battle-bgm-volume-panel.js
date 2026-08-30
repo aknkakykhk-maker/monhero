@@ -1,3 +1,4 @@
+// one-shot transform for AUTO BGM panel
 const fs=require('fs');
 const path=require('path');
 const file=path.resolve(__dirname,'../../monster-hero/src/game-system.jsx');
