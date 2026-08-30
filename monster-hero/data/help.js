@@ -56,7 +56,7 @@ const HELP_CATEGORIES = [
       {
         id:'rhythm-mode', emoji:'🎵', title:'音ゲーモード', releaseFlag:'rhythmMode',
         assistant:'曲に合わせて5レーンのノーツを演奏する、新しいモードだよ♪', expression:'happy',
-        blocks:[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中のため通常画面には表示されません。'}],
+        blocks:[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、TAPノーツの基本演奏テストをデバッグ画面だけで確認できます。通常画面には表示されません。'}],
       },
       {
         id: 'goal', emoji: '🏆', title: 'ゲームの目的',
@@ -1105,6 +1105,7 @@ const HELP_SCREEN_COVERAGE = {
   // 対象外: DEBUG_SETTINGS と種族チャレンジ進行確認は開発用の隠し画面。
   // TRAINING_* は別担当のため触らない。
   RHYTHM_DEBUG:      'basics/rhythm-mode',
+  RHYTHM_PLAY:       'basics/rhythm-mode',
   DEBUG_SETTINGS:   null,
   SPECIES_CHALLENGE_DEBUG: null,
   BREEDER_ICON_DEBUG:'home/profile',

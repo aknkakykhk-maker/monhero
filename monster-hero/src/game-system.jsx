@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 20:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2536,6 +2536,15 @@ const normalizeRhythmBestRecords = value => {
   return Object.fromEntries(RHYTHM_SONGS.map(song=>[song.songId,Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,normalizeRhythmBestRecord(source[song.songId]?.[id])]))]));
 };
 const rhythmBestRecord = (records,songId,difficultyId) => normalizeRhythmBestRecord(records?.[songId]?.[difficultyId]);
+const rhythmJudgeTap = deltaMs => RHYTHM_JUDGMENTS.find(item=>item.windowMs!==null&&Math.abs(deltaMs)<=item.windowMs)?.id||'MISS';
+const rhythmFastSlow = deltaMs => deltaMs<0?'FAST':deltaMs>0?'SLOW':null;
+const rhythmComboAfter = (combo,judgment) => ['MARVELOUS','EXCELLENT','GREAT','GOOD'].includes(judgment)?combo+1:0;
+const rhythmCalculateScore = ({judgments,maxCombo,totalNotes,maxScore}) => {
+  if(!totalNotes) return 0;
+  const rates=Object.fromEntries(RHYTHM_JUDGMENTS.map(item=>[item.id,item.scoreRate]));
+  const judged=RHYTHM_JUDGMENT_IDS.reduce((sum,id)=>sum+(judgments[id]||0)*rates[id],0);
+  return Math.min(maxScore,Math.round((judged/totalNotes*RHYTHM_SCORE_WEIGHTS.judgment+maxCombo/totalNotes*RHYTHM_SCORE_WEIGHTS.combo)*maxScore));
+};
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
@@ -2785,6 +2794,20 @@ const Audio_ = (() => {
     } catch (e) { if (request === previewRequest && previewKey === track.id) stopPreview(true); return false; }
   };
   const stopBGM = () => { currentKey = null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers(); };
+  // 音ゲーの時刻は、このsourceを開始したAudioContext.currentTimeだけを正本にする。
+  const startRhythmTrack = async key => {
+    const track=resolveTrack(key); if(!track) return null;
+    currentKey=null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers();
+    resumeAudioCtxNoWait();
+    try {
+      const buffer=await loadBuffer(track.src),ctx=await ensureAudioCtxRunning();
+      if(!ctx) return null;
+      const source=ctx.createBufferSource(); applyTrackGain(track); source.buffer=buffer; source.loop=false; source.connect(bgmGain);
+      const startedAt=ctx.currentTime; source.start(0);
+      let stopped=false;
+      return {songTimeMs:()=>Math.max(0,(ctx.currentTime-startedAt)*1000),durationMs:buffer.duration*1000,ended:()=>stopped||ctx.currentTime-startedAt>=buffer.duration,stop:()=>{if(stopped)return;stopped=true;stopSource(source);}};
+    } catch(e){ return null; }
+  };
   const preloadBGM = (key) => { const track = resolveTrack(key); if (track) loadBuffer(track.src).catch(() => {}); };
   const prepareBGM = (key, timeoutMs = 2000) => {
     const track = resolveTrack(key); if (!track) return Promise.resolve(false);
@@ -2886,7 +2909,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, se };
+  return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, se };
 })();
 
 
@@ -8030,6 +8053,17 @@ function PressRepeatButton({ onPress, disabled, className, children, ...props })
   return <button type="button" disabled={disabled} onPointerDown={startPress} onPointerUp={clearPress} onPointerCancel={clearPress} onLostPointerCapture={clearPress} onClick={clickPress} className={className} style={{touchAction:'manipulation',WebkitTouchCallout:'none'}} {...props}>{children}</button>;
 }
 
+const RhythmTapTest=({song,difficulty,settings,onExit})=>{
+  const chart=song.difficulties[difficulty.id],laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null);
+  const [view,setView]=useState({status:'loading',score:0,combo:0,maxCombo:0,last:'',fastSlow:'',counts:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0])),fast:0,slow:0});
+  const finish=useCallback(()=>{const run=runRef.current;if(!run||run.finished)return;run.finished=true;run.audio?.stop();cancelAnimationFrame(frameRef.current);setView(v=>({...v,status:'result'}));},[]);
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const run=runRef.current;if(!run||note.done)return;note.done=true;const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const score=rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart.totalNotes,maxScore:difficulty.maxScore});setView(v=>({...v,score,combo:run.combo,maxCombo:run.maxCombo,last:judgment,fastSlow:side||'',counts:{...run.counts},fast:run.fast,slow:run.slow}));},[chart.totalNotes,difficulty.maxScore]);
+  useEffect(()=>{let cancelled=false;Audio_.startRhythmTrack(song.bgmTrackId).then(audio=>{if(cancelled||!audio){if(audio)audio.stop();if(!cancelled)setView(v=>({...v,status:'error'}));return;}const run={audio,notes:chart.notes.map((note,index)=>({...note,index,done:false})),combo:0,maxCombo:0,counts:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0])),fast:0,slow:0,finished:false};runRef.current=run;setView(v=>({...v,status:'playing'}));const tick=()=>{if(run.finished)return;const songTimeMs=audio.songTimeMs();run.notes.forEach(note=>{if(!note.done&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>200)applyJudgment(note,'MISS',songTimeMs-note.timeMs);const el=laneRefs.current[note.index];if(!el||note.done){if(el)el.style.display='none';return;}const visualTime=songTimeMs+settings.displayTimingOffsetMs,travelMs=Math.max(650,2600-settings.noteSpeed*90),progress=1-(note.timeMs-visualTime)/travelMs;el.style.transform=`translate3d(0,${Math.round(progress*100)}%,0)`;el.style.opacity=progress<-.1||progress>1.18?'0':'1';});if(songTimeMs>=chart.durationMs||audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);});return()=>{cancelled=true;cancelAnimationFrame(frameRef.current);runRef.current?.audio?.stop();};},[]);
+  const tapLane=lane=>{const run=runRef.current;if(!run||run.finished||view.status!=='playing')return;const now=run.audio.songTimeMs(),target=run.notes.filter(note=>!note.done&&note.lane===lane&&Math.abs(now-(note.timeMs+settings.judgmentTimingOffsetMs))<=200).sort((a,b)=>Math.abs(now-(a.timeMs+settings.judgmentTimingOffsetMs))-Math.abs(now-(b.timeMs+settings.judgmentTimingOffsetMs)))[0];if(target)applyJudgment(target,rhythmJudgeTap(now-(target.timeMs+settings.judgmentTimingOffsetMs)),now-(target.timeMs+settings.judgmentTimingOffsetMs));};
+  if(view.status==='result')return <main data-rhythm-result className="flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><h2 className="text-center text-cyan-300 font-black">TAP TEST RESULT</h2><div className="my-4 text-center text-3xl font-black">{view.score.toLocaleString()}</div><dl className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd></React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST / SLOW</dt><dd className="text-right">{view.fast} / {view.slow}</dd></dl><button className="mt-5 min-h-[48px] w-full rounded-xl bg-indigo-700 font-black" onClick={onExit}>デバッグ画面へ戻る</button></main>;
+  return <main data-rhythm-tap-test className="flex-1 min-h-0 overflow-hidden bg-slate-950 text-white flex flex-col" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)',touchAction:'none'}}><header className="shrink-0 p-2 flex justify-between items-center"><div><small className="text-cyan-300">{difficulty.id}・TAP TEST</small><h2 className="font-black">{song.displayName}</h2></div><button className="min-h-[44px] rounded-xl bg-rose-800 px-3 font-black" onClick={()=>{finish();onExit();}}>中断</button></header><section className="grid grid-cols-2 px-3 text-center"><div>SCORE <b className="block text-xl">{view.score.toLocaleString()}</b></div><div>COMBO <b className="block text-xl">{view.combo}</b></div></section><div className="h-12 text-center"><b className="text-xl text-amber-300">{view.last|| (view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':'')}</b><small className="block text-cyan-300">{view.fastSlow}</small></div><div className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50"><div className="absolute inset-0 grid grid-cols-5">{Array.from({length:5},(_,lane)=><button key={lane} aria-label={`レーン${lane+1}`} onPointerDown={e=>{e.preventDefault();tapLane(lane);}} className="relative border-r border-white/20 bg-slate-900/40 active:bg-cyan-800/50"><span className="absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500">{lane+1}</span></button>)}</div><div className="absolute left-0 right-0 bottom-[12%] h-1 bg-cyan-300 shadow-[0_0_12px_#67e8f9]"/>{chart.notes.map((note,index)=><div key={index} ref={el=>laneRefs.current[index]=el} data-rhythm-note className="absolute top-0 h-5 rounded-full bg-gradient-to-b from-amber-200 to-fuchsia-500 shadow-lg" style={{left:`calc(${note.lane*20}% + 5px)`,width:'calc(20% - 10px)',willChange:'transform, opacity'}}/>)}</div></main>;
+};
+
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -8074,6 +8108,7 @@ function MonsterHeroGame() {
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
+  const [rhythmPlay,setRhythmPlay]=useState(null);
   const openRhythmDebug = async () => {
     const settings=normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false));
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
@@ -9856,6 +9891,8 @@ function MonsterHeroGame() {
   };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
+    // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
+    if (gameState === 'RHYTHM_PLAY') return;
     const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
     // AUTO中のWAVE後は曲を止めたり差し替えたりせず、直前の戦闘BGMをそのまま継続する。
     if (key === '__keep_battle_bgm__') {
@@ -17419,11 +17456,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} onExit={()=>{setRhythmPlay(null);setGameState('RHYTHM_DEBUG');}}/>}
+
         {gameState==='RHYTHM_DEBUG'&&(
           <main data-rhythm-debug className="flex-1 min-h-0 overflow-y-auto mh-scroll bg-slate-950 p-3 text-white" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <header className="sticky top-0 z-10 mb-3 flex items-center gap-2 rounded-xl bg-slate-950/95 py-1"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div><small className="block text-[8px] font-black text-cyan-300">DEBUG ONLY・STEP 1</small><h2 className="text-sm font-black">音ゲー基盤確認</h2></div></header>
             <section className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"><h3 className="mb-2 text-xs font-black text-cyan-200">保存中の設定</h3><dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{Object.entries(rhythmSettings).map(([key,value])=><React.Fragment key={key}><dt className="break-all text-slate-400">{key}</dt><dd className="break-all text-right font-mono text-white">{String(value)}</dd></React.Fragment>)}</dl></section>
-            {RHYTHM_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} className="mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"><div className="mb-2"><small className="text-[8px] text-indigo-300">{song.songId}</small><h3 className="font-black">{song.displayName}</h3><p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_DIFFICULTIES.map(difficulty=>{const chart=song.difficulties[difficulty.id];const best=rhythmBestRecord(rhythmBestRecords,song.songId,difficulty.id);return <article key={difficulty.id} className="rounded-xl border border-white/10 bg-slate-900/80 p-2"><div className="flex items-center justify-between"><b className="text-xs text-cyan-200">{difficulty.id} Lv.{chart.level}</b><span className="text-[9px] font-mono">MAX {difficulty.maxScore.toLocaleString()}</span></div><p className="mt-1 text-[9px] text-slate-300">BEST {best.bestScore.toLocaleString()} / MAX COMBO {best.maxCombo} / {best.clear?'CLEAR':'未プレイ'}</p><p className="mt-1 break-words text-[8px] text-slate-500">{RHYTHM_JUDGMENT_IDS.map(id=>`${id} ${best.judgments[id]}`).join(' / ')}</p><p className="mt-1 text-[8px] text-slate-500">FC {best.fullCombo?'○':'-'} / ALL EXCELLENT {best.allExcellent?'○':'-'} / ALL MARVELOUS {best.allMarvelous?'○':'-'}</p></article>})}</div></section>})}
+            {RHYTHM_SONGS.map(song=>{const track=rhythmSongTrack(song);return <section key={song.songId} className="mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"><div className="mb-2"><small className="text-[8px] text-indigo-300">{song.songId}</small><h3 className="font-black">{song.displayName}</h3><p className="break-all text-[9px] text-slate-400">BGM: {song.bgmTrackId} / {track?.src||'未登録'}</p></div><div className="space-y-2">{RHYTHM_DIFFICULTIES.map(difficulty=>{const chart=song.difficulties[difficulty.id];const best=rhythmBestRecord(rhythmBestRecords,song.songId,difficulty.id);return <article key={difficulty.id} className="rounded-xl border border-white/10 bg-slate-900/80 p-2"><div className="flex items-center justify-between"><b className="text-xs text-cyan-200">{difficulty.id} Lv.{chart.level}</b><span className="text-[9px] font-mono">MAX {difficulty.maxScore.toLocaleString()}</span></div><p className="mt-1 text-[9px] text-slate-300">BEST {best.bestScore.toLocaleString()} / MAX COMBO {best.maxCombo} / {best.clear?'CLEAR':'未プレイ'}</p><p className="mt-1 break-words text-[8px] text-slate-500">{RHYTHM_JUDGMENT_IDS.map(id=>`${id} ${best.judgments[id]}`).join(' / ')}</p><p className="mt-1 text-[8px] text-slate-500">FC {best.fullCombo?'○':'-'} / ALL EXCELLENT {best.allExcellent?'○':'-'} / ALL MARVELOUS {best.allMarvelous?'○':'-'}</p>{chart.notes.length>0&&<button data-rhythm-tap-start className="mt-2 min-h-[44px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={()=>{setRhythmPlay({song,difficulty});setGameState('RHYTHM_PLAY');}}>TAPテストプレイ</button>}</article>})}</div></section>})}
           </main>
         )}
 
