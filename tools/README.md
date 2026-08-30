@@ -137,6 +137,8 @@ node tools/build.js --check
 
 ### 難易度とモード（チャレンジ／クイック／プロ／極限）
 
+`node mode/rhythm-mode-foundation-check.js` は、音ゲー基盤の5難易度・最大スコア・ノーツ種別・判定・保存normalize・テスト曲とデバッグ限定導線を確認する。
+
 | コマンド | 内容 |
 | --- | --- |
 | `node mode/difficulty-item-check.js` | 新難易度(Grand Master/Hell/Legend)の表示と色、絆経験値チケットのまとめ使いを確認する。 |
