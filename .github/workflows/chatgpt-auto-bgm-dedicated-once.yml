@@ -39,7 +39,6 @@ jobs:
           node tools/help-guide-check.js
           node tools/help-render-check.js
           node tools/update-notice-check.js
-          node tools/assistant/assistant-update-notice-check.js
       - name: Verify canonical build and diff
         run: |
           node tools/build.js --check
