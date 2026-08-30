@@ -51,7 +51,7 @@ check = once(check,
   'check route');
 check = once(check,
   "  check(`${file}: BGMアレンジにAUTO用2項目を表示`, source.includes('AUTO時 敵撃破ファンファーレ') && source.includes('AUTO時 強化フェーズBGM'));",
-  "  check(`${file}: BGMアレンジにAUTO専用曲の選択欄を表示`, source.includes(\"['autoBattle','AUTOモード BGM']\"));\n  check(`${file}: BGMアレンジにAUTO用2項目を表示`, source.includes('AUTO時 敵撃破ファンファーレ') && source.includes('AUTO時 強化フェーズBGM'));",
+  "  check(`${file}: BGMアレンジにAUTO専用曲の選択欄を表示`, compact.includes(\"['autoBattle',\"));\n  check(`${file}: BGMアレンジにAUTO用2項目を表示`, source.includes('AUTO時 敵撃破ファンファーレ') && source.includes('AUTO時 強化フェーズBGM'));",
   'check arrangement');
 check = once(check,
   "check('更新情報にAUTO BGM変更を掲載', /AUTO中のBGMが途切れにくくなりました/.test(changelog));",
