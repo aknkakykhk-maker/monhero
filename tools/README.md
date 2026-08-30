@@ -334,7 +334,7 @@ node tools/build.js --check
 | `node image/region-map.js [モンスターID...]` | 部位分けを色分けしたPNGを `out/` に書き出す。目視確認用。 |
 | `node image/dye-report.js [モンスターID...]` | 染色もどきの部位マスクを実画像で生成し、部位ごとの画素数・被覆率を出力する。回帰テスト用。 |
 | `node image/dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
-| `node image/dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵(①赤・②黄・③青)を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
+| `node image/dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵（①赤・②緑・③青・④黄・⑤マゼンタ）を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
 | `node image/dye-alpha-check.js` | 染色の「濃さ(透過率)」を確かめる。 |
 | `node image/dye-edge-check.js` | 染色もどきの「輪郭の塗り残し」を実測して見張る。部位マスクは縮小画像で作るため、等倍へ戻すと境界に隙間が出やすい。 |
 | `node image/dye-quality-report.js` | 染色もどきの部位マスクの品質を実測し、モンスターごとに比べる。輪郭のギザギザや白い縁の原因調査用。 |
