@@ -44,6 +44,8 @@ jobs:
         run: |
           node tools/check-syntax.js
           node tools/undefined-reference-check.js
+      - name: Analyze rhythm source audio timing
+        run: node tools/mode/rhythm-audio-timing-analyze.js --require-ffmpeg --json
       - name: Check the boot path
         run: node tools/boot-flow-check.js
       - name: Check the shipped version stamps
