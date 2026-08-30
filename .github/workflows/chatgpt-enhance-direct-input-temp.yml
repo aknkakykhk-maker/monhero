@@ -35,7 +35,9 @@ jobs:
       - name: Record baseline layout check
         run: node tools/layout-consistency-check.js >/tmp/layout-baseline.log 2>&1 || true
       - name: Apply implementation
-        run: python3 tools/chatgpt-enhance-direct-input-temp.py
+        run: |
+          python3 tools/chatgpt-enhance-direct-input-temp.py
+          python3 tools/chatgpt-enhance-scroll-temp.py
       - name: Build and verify
         run: |
           set -euo pipefail
@@ -64,6 +66,7 @@ jobs:
           node tools/layout-consistency-check.js >/tmp/layout-current.log 2>&1 || true
           if ! diff -u /tmp/layout-baseline.log /tmp/layout-current.log; then
             echo "Layout check changed versus baseline"
+            cat /tmp/layout-current.log
             exit 1
           fi
           echo "Layout check baseline unchanged (existing unrelated NGs are not regressions)."
@@ -79,6 +82,7 @@ jobs:
         run: |
           rm .github/workflows/chatgpt-enhance-direct-input-temp.yml
           rm tools/chatgpt-enhance-direct-input-temp.py
+          rm tools/chatgpt-enhance-scroll-temp.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
