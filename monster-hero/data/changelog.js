@@ -3,6 +3,14 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-30 10:15", type: 'update', title: 'バトル中の音量操作をまとめました', status: 'new',
+    items: [
+      '画面下部の🎵BGMボタンを通常バトル中も常設し、AUTOをOFFにしていても使えるようにしました。',
+      'BGMパネルにSE音量とBGM音量をまとめ、HOMEの音量設定と同じ保存値をその場で調整できるようにしました。',
+      'AUTO∞の超省エネ中は従来どおりSEをOFF固定にし、BGM選択・BGM音量だけ操作できます。',
+    ],
+  },
+  {
     date: "2026-08-30 09:45", type: 'update', title: 'AUTO BGM操作を使いやすくしました', status: 'new',
     items: [
       'バトル上部のミュートボタンをなくし、WAVE・モード・TURN・SCOREを表示する領域を広げました。',
