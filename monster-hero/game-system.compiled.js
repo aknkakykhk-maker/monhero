@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f5979fadf4b61489
+// source-sha256: b108b562ca3743d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 22:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 23:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15234,7 +15234,9 @@ const RhythmTapTest = ({
       const pressed = active.has(index);
       el.dataset.pressed = pressed ? 'true' : 'false';
       el.style.backgroundColor = pressed ? 'rgba(34,211,238,0.30)' : '';
-      el.style.boxShadow = pressed ? 'inset 0 0 26px rgba(103,232,249,0.55), inset 0 -42px 48px rgba(6,182,212,0.28)' : '';
+      el.style.boxShadow = pressed ? 'inset 0 0 26px rgba(103,232,249,0.78), inset 0 -72px 58px rgba(6,182,212,0.42), 0 0 18px rgba(34,211,238,0.28)' : '';
+      el.style.borderBottom = pressed ? '3px solid rgba(207,250,254,0.98)' : '3px solid transparent';
+      el.style.filter = pressed ? 'brightness(1.15)' : '';
     });
   };
   const pointerDown = e => {
@@ -15413,28 +15415,44 @@ const RhythmTapTest = ({
       touchAction: 'none'
     }
   }, /*#__PURE__*/React.createElement("header", {
-    className: "flex shrink-0 items-center justify-between p-2"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-    className: "text-cyan-300"
-  }, difficulty.id, "\u30FB", hasHold ? 'HOLD TEST' : 'TAP TEST'), /*#__PURE__*/React.createElement("h2", {
-    className: "font-black"
-  }, song.displayName)), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-hud": true,
+    className: "shrink-0 border-b border-cyan-400/15 bg-slate-950/95 px-3 pb-2 pt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "rounded-md bg-fuchsia-700/80 px-2 py-0.5 text-[11px] font-black"
+  }, difficulty.id), /*#__PURE__*/React.createElement("span", {
+    className: "truncate text-sm font-black"
+  }, song.displayName)), /*#__PURE__*/React.createElement("small", {
+    className: "text-[10px] font-bold tracking-[0.16em] text-cyan-300"
+  }, hasHold ? 'HOLD TEST' : 'TAP TEST')), /*#__PURE__*/React.createElement("button", {
     "data-rhythm-pause": true,
-    className: "min-h-[44px] rounded-xl bg-amber-700 px-3 font-black",
+    "aria-label": "\u30DD\u30FC\u30BA",
+    className: "flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-white/20 bg-slate-900 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)]",
     onClick: pause
-  }, "\u30DD\u30FC\u30BA")), /*#__PURE__*/React.createElement("section", {
-    className: "grid grid-cols-2 px-3 text-center"
-  }, /*#__PURE__*/React.createElement("div", null, "SCORE ", /*#__PURE__*/React.createElement("b", {
-    className: "block text-xl"
-  }, view.score.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "COMBO ", /*#__PURE__*/React.createElement("b", {
-    className: "block text-xl"
-  }, view.combo))), /*#__PURE__*/React.createElement("div", {
-    className: "h-12 text-center"
-  }, /*#__PURE__*/React.createElement("b", {
-    className: "text-xl text-amber-300"
-  }, view.last || (view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : '')), /*#__PURE__*/React.createElement("small", {
-    className: "block text-cyan-300"
-  }, view.fastSlow)), /*#__PURE__*/React.createElement("div", {
+  }, "\u2161")), /*#__PURE__*/React.createElement("section", {
+    className: "mt-1 grid grid-cols-2 items-end gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-left"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black tracking-[0.18em] text-cyan-200"
+  }, "SCORE"), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-score": true,
+    className: "block text-2xl font-black leading-none tabular-nums"
+  }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("small", {
+    className: "mt-1 block text-[10px] font-bold text-slate-400"
+  }, "BEST ", Number(bestRecord?.bestScore || 0).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "text-right"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black tracking-[0.18em] text-fuchsia-300"
+  }, "COMBO"), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-combo": true,
+    className: "block text-3xl font-black leading-none tabular-nums text-white"
+  }, view.combo)))), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
     onPointerDown: pointerDown,
@@ -15458,15 +15476,30 @@ const RhythmTapTest = ({
     "aria-hidden": "true",
     className: "relative border-r border-white/20 bg-slate-900/40",
     style: {
-      transition: 'background-color 60ms linear, box-shadow 60ms linear'
+      transition: 'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',
+      borderBottom: '3px solid transparent',
+      boxSizing: 'border-box'
     }
   }, /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500"
   }, lane + 1)))), /*#__PURE__*/React.createElement("div", {
     ref: judgmentLineRef,
     "data-rhythm-judgment-line": true,
-    className: "absolute bottom-[12%] left-0 right-0 h-1 bg-cyan-300 shadow-[0_0_12px_#67e8f9]"
-  }), chart.notes.map((note, index) => /*#__PURE__*/React.createElement("div", {
+    className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300 shadow-[0_0_18px_#67e8f9,0_0_30px_#c084fc]"
+  }), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-judgment-display": true,
+    className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
+    style: {
+      bottom: 'calc(12% + 38px)'
+    }
+  }, /*#__PURE__*/React.createElement("b", {
+    className: `block text-3xl font-black leading-none tracking-wide ${view.last === 'MARVELOUS' ? 'text-fuchsia-100' : view.last === 'EXCELLENT' ? 'text-cyan-100' : view.last === 'GREAT' ? 'text-amber-200' : view.last === 'GOOD' ? 'text-lime-300' : view.last === 'BAD' ? 'text-rose-300' : 'text-white'}`,
+    style: {
+      textShadow: '0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'
+    }
+  }, view.last || (view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : '')), /*#__PURE__*/React.createElement("small", {
+    className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
+  }, view.fastSlow || '—')), chart.notes.map((note, index) => /*#__PURE__*/React.createElement("div", {
     key: index,
     ref: el => laneRefs.current[index] = el,
     "data-rhythm-note": true,
