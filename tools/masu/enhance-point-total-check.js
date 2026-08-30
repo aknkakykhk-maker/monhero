@@ -141,6 +141,25 @@ const withLegacyExtra = makeMasu(331,35,{ reincarnateCount:5, distAptPoints:1079
 const extraFixed = a.repairEnhancePointBandOvergrant(withLegacyExtra);
 check('不具合以前からの余剰12Pは保持して481+12へ戻す', extraFixed.distAptPoints === 493, `${extraFixed.distAptPoints}`);
 
+// 旧ゴーレムは過去にベース適性が変わっており、distAptだけの旧形式では実際の使用済み適性Pを
+// 安全に逆算できない。ここへ推測補正を掛けると他プレイヤーの古い個体を壊すため、そのまま保護する。
+const legacyGolem = {
+  id:'legacy-golem', baseId:'Golem', levelCap:400, bondXp:a.totalBondXpForLevel(150),
+  rebirthCount:35, reincarnateCount:4, distAptPoints:526, distApt:['A','C','E','G'],
+  statPoints:{hp:0,atk:0,def:0,guts:0},
+};
+const legacyGolemFixed = a.repairEnhancePointBandOvergrant(legacyGolem);
+check('distAptBoostsを持たない旧形式ゴーレムは推測補正せず完全に保持する',
+  legacyGolemFixed === legacyGolem && legacyGolemFixed.enhancePointBandRepairVersion == null);
+
+// 新形式へ移行済みなら使用済み適性Pが明示されているため、ゴーレムだけを一律除外しない。
+const modernGolem = makeMasu(150,35,{ baseId:'Golem', reincarnateCount:4, distAptPoints:526 });
+const modernGolemFixed = a.repairEnhancePointBandOvergrant(modernGolem);
+check('distAptBoostsを持つ新形式ゴーレムは通常どおり526→228へ補正する',
+  modernGolemFixed.distAptPoints === 228
+    && modernGolemFixed.enhancePointBandRepairVersion === a.ENHANCE_POINT_BAND_REPAIR_VERSION,
+  `unused=${modernGolemFixed.distAptPoints}`);
+
 // --- ⑥ Lv401以降は通常Pを増やさず超越Pだけ ---
 const transcended = makeMasu(400,35,{ levelCap:500, transcended:true });
 const beyond = a.applyBondXpGain(transcended, a.totalBondXpForLevel(402) - transcended.bondXp);
