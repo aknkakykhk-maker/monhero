@@ -41,7 +41,8 @@ for (const f of ['data/images/images-ally.js', 'data/ally-monsters.js', 'data/li
 vm.runInContext([
   slice('const UNKNOWN_LINEAGE =', '// ==================== 総合力'),
   `globalThis.api = { monsterLineageOf, monsterCategoryOf, monsterCategoryName, lineageIconUrl,
-    monsterDexDescription, dexMonsterList, dexMainLineages, MONSTER_LINEAGES, MONSTER_LINEAGE_MAP };`,
+    monsterDexDescription, dexMonsterList, dexMainLineages, MONSTER_LINEAGES, MONSTER_LINEAGE_MAP,
+    ALL_PLAYER_MONSTERS };`,
 ].join('\n'), ctx);
 const A = ctx.api;
 const monsters = A.dexMonsterList();
@@ -60,10 +61,17 @@ check('主血統・副血統の欠損がない', broken.length === 0, broken.joi
 const unknownRefs = Object.entries(A.MONSTER_LINEAGE_MAP).flatMap(([id, entry]) =>
   [entry.main, entry.sub].filter(key => !(key in A.MONSTER_LINEAGES)).map(key => `${id}:${key}`));
 check('血統カタログに無い血統を指していない', unknownRefs.length === 0, unknownRefs.join(' / '));
-// 図鑑に無いモンスターの血統を余分に持っていないか
-const ids = new Set(monsters.map(mon => mon.id));
-const extra = Object.keys(A.MONSTER_LINEAGE_MAP).filter(id => !ids.has(id));
+// 居ないモンスターの血統を余分に持っていないか(綴り間違い・消し忘れ)。
+// 正式実装前のモンスター(debugOnly)は図鑑には出ないが、デバッグ画面では血統を出すので
+// 血統は先に用意してある。ここで見たいのは「そもそも定義が無いidを指していないか」なので、
+// 図鑑の一覧ではなく ALL_PLAYER_MONSTERS そのものと突き合わせる
+const definedIds = new Set(Object.keys(A.ALL_PLAYER_MONSTERS));
+const extra = Object.keys(A.MONSTER_LINEAGE_MAP).filter(id => !definedIds.has(id));
 check('存在しないモンスターの血統が残っていない', extra.length === 0, extra.join(' / '));
+const debugOnlyIds = Object.values(A.ALL_PLAYER_MONSTERS).filter(mon => mon?.debugOnly).map(mon => mon.id);
+console.log(`   正式実装前(debugOnly)で図鑑に出さないモンスター: ${debugOnlyIds.length ? debugOnlyIds.join(' / ') : 'なし'}`);
+check('正式実装前のモンスターは図鑑へ出ていない',
+  debugOnlyIds.every(id => !monsters.some(mon => mon.id === id)), debugOnlyIds.join(' / '));
 
 // ---------- ② 区分 ----------
 check('モッチーは純血', A.monsterCategoryOf('Mocchi') === 'pure');

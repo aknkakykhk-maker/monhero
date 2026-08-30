@@ -40,6 +40,11 @@ const SNEGUROCHKA_IMG = "images/monsters/snegurochka.png?v=9843be5ed231";
 const UNDINE_IMG = "images/monsters/undine.PNG?v=bf5593ae061a";
 const YAOBIKUNI_IMG = "images/monsters/yaobikuni.PNG?v=e23821f9d695";
 const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=33881ea3c9bf";
+// 2026年8月に追加準備中のレア「エイキ」(ザン×？？？)。正式実装まではデバッグ専用。
+// 染色マスクは承認済みマスクの範囲そのままで、色だけリポジトリ仕様(赤=①/緑=②/青=③)へ
+// 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
+const EIKI_IMG = "images/monsters/eiki.png?v=0105e40f8d1a";
+const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=6b5ab28ef5b4";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -59,6 +64,7 @@ const IBLIS_ICON = IBLIS_IMG;
 const SNEGUROCHKA_ICON = SNEGUROCHKA_IMG;
 const UNDINE_ICON = UNDINE_IMG;
 const YAOBIKUNI_ICON = YAOBIKUNI_IMG;
+const EIKI_ICON = EIKI_IMG;
 
 // ==================== 顔アイコン (faceIconUrl) ====================
 // プロフィールアイコン選択画面・ロースター詳細等で使う顔クロップ画像。
@@ -88,3 +94,5 @@ const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=b30d9
 // 顔クロップ画像は作らず、立ち絵をそのまま使う(表示側で寄せる方針)
 const UNDINE_FACE_ICON = UNDINE_IMG;
 const YAOBIKUNI_FACE_ICON = YAOBIKUNI_IMG;
+// 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
+const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";

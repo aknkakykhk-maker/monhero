@@ -40,7 +40,17 @@ const MIN_SAVING = 5; // %
 
 const args = process.argv.slice(2);
 const write = args.includes('--write');
-const targets = args.filter((a) => !a.startsWith('--'));
+// --force <monster-hero/からの相対パス> … その1枚だけ、下の画質基準を満たさなくても採用する。
+// 使ってよいのは「実際に等倍と表示サイズで見比べて、差が分からないことを確かめた」ときだけ。
+// エイキの立ち絵・円盤石は元絵の色数が36万色あり(他のモンスターは256色に減色済み)、
+// 減色のディザリングで「差>8の画素」が2〜3割に達するが、それは滑らかな階調に乗る
+// ごく細かい点のばらつきで、等倍で並べても分からない。基準そのものを緩めると
+// 他の絵の劣化を見逃すので、こうして1枚ずつ明示する形にしてある。
+const forced = new Set(
+  args.flatMap((a, i) => (a === '--force' ? [args[i + 1]] : [])).filter(Boolean).map((p) => p.replace(/^\.\//, ''))
+);
+const forceValues = new Set([...forced]);
+const targets = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--force' && !forceValues.has(a));
 
 const listPngs = (dir) => {
   const out = [];
@@ -108,7 +118,10 @@ const compare = (a, b) => {
     }
     const q = compare(await decode(file), await decode(buf));
     const ok = q.psnr >= MIN_PSNR && q.visible <= MAX_VISIBLE_RATIO;
-    if (!ok) {
+    if (!ok && forced.has(rel)) {
+      console.log(`⚠ 基準は満たさないが --force 指定 ${rel} — PSNR ${q.psnr.toFixed(1)}dB / 差の見える画素 ${q.visible.toFixed(1)}% (基準 ${MIN_PSNR}dB・${MAX_VISIBLE_RATIO}%)`);
+    }
+    if (!ok && !forced.has(rel)) {
       console.log(`見送り ${rel} — PSNR ${q.psnr.toFixed(1)}dB / 差の見える画素 ${q.visible.toFixed(1)}% (基準 ${MIN_PSNR}dB・${MAX_VISIBLE_RATIO}%)`);
       after += orig; rejected++; continue;
     }
