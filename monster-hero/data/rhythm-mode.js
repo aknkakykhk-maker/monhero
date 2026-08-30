@@ -292,7 +292,8 @@ const installRhythmGestureVisuals=()=>{
       el.insertBefore(body,el.firstChild);
     });
     const label=area.previousElementSibling?.querySelector?.('small');
-    if(label&&els.some(el=>el.dataset.noteType==='FLICK'||el.dataset.noteType==='SLIDE'))label.textContent='MIX TEST';
+    const hasGestureNotes=els.some(el=>el.dataset.noteType==='FLICK'||el.dataset.noteType==='SLIDE');
+    if(label&&hasGestureNotes&&label.textContent!=='MIX TEST')label.textContent='MIX TEST';
   };
   const observer=new MutationObserver(decorate);
   const start=()=>{decorate();observer.observe(document.body,{childList:true,subtree:true});};
