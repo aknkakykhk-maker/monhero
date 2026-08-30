@@ -22,115 +22,7 @@ jobs:
           cache: npm
           cache-dependency-path: tools/package-lock.json
       - name: Apply multitouch fix
-        shell: bash
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-          from datetime import datetime, timezone, timedelta
-          import re
-
-          root=Path('.')
-          game_path=root/'monster-hero/src/game-system.jsx'
-          game=game_path.read_text(encoding='utf-8')
-
-          marker="const RHYTHM_HOLD_RELEASE_GRACE_MS=100;\nconst RhythmTapTest="
-          helper="""const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
-const rhythmInputKey=(kind,id)=>`${kind}:${id}`;
-const rhythmLaneFromClientX=(clientX,left,width)=>{
-  const w=Number(width);
-  if(!Number.isFinite(w)||w<=0)return null;
-  const relative=Math.min(Math.max(Number(clientX)-Number(left),0),Math.max(0,w-.001));
-  return Math.min(RHYTHM_LANE_COUNT-1,Math.max(0,Math.floor(relative/w*RHYTHM_LANE_COUNT)));
-};
-const RhythmTapTest="""
-          if marker not in game:
-            raise SystemExit('multitouch helper marker not found')
-          game=game.replace(marker,helper,1)
-
-          pattern=re.compile(r"  const pointerDown=\(lane,e\)=>\{.*?\n  const pointerEnd=e=>\{.*?\n  if\(view\.status==='result'\)",re.S)
-          replacement="""  const inputStart=(lane,inputKey,captureTarget,pointerId)=>{const run=runRef.current;if(!run||run.finished||run.paused||view.status!=='playing')return;const now=run.audio.songTimeMs(),target=run.notes.filter(note=>!note.done&&note.activePointerId===null&&(note.type==='TAP'||note.type==='HOLD')&&note.lane===lane&&Math.abs(now-(note.timeMs+settings.judgmentTimingOffsetMs))<=200).sort((a,b)=>Math.abs(now-(a.timeMs+settings.judgmentTimingOffsetMs))-Math.abs(now-(b.timeMs+settings.judgmentTimingOffsetMs)))[0];if(!target)return;const delta=now-(target.timeMs+settings.judgmentTimingOffsetMs),judgment=rhythmJudgeTap(delta);if(target.type==='HOLD'){target.activePointerId=inputKey;target.holdJudgment=judgment;target.holdDeltaMs=delta;run.activePointers.set(inputKey,target.index);if(captureTarget&&pointerId!==undefined){try{captureTarget.setPointerCapture(pointerId);}catch{}}const side=rhythmFastSlow(delta);setView(v=>({...v,last:'HOLD',fastSlow:side||''}));return;}applyJudgment(target,judgment,delta);};
-  const inputEnd=(inputKey,releaseTarget,pointerId)=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const noteIndex=run.activePointers.get(inputKey);if(noteIndex===undefined)return;run.activePointers.delete(inputKey);const note=run.notes[noteIndex];if(!note||note.done)return;note.activePointerId=null;const now=run.audio.songTimeMs(),holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;if(now<holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS)applyJudgment(note,'MISS',now-holdEndMs);else applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);if(releaseTarget&&pointerId!==undefined){try{if(releaseTarget.hasPointerCapture?.(pointerId))releaseTarget.releasePointerCapture(pointerId);}catch{}}};
-  const pointerDown=(lane,e)=>{if(e.pointerType==='touch')return;e.preventDefault();inputStart(lane,rhythmInputKey('pointer',e.pointerId),e.currentTarget,e.pointerId);};
-  const pointerEnd=e=>{if(e.pointerType==='touch')return;inputEnd(rhythmInputKey('pointer',e.pointerId),e.currentTarget,e.pointerId);};
-  const touchStart=e=>{if(e.cancelable)e.preventDefault();const area=playAreaRef.current;if(!area)return;const rect=area.getBoundingClientRect();Array.from(e.changedTouches||[]).forEach(touch=>{const lane=rhythmLaneFromClientX(touch.clientX,rect.left,rect.width);if(lane!==null)inputStart(lane,rhythmInputKey('touch',touch.identifier));});};
-  const touchEnd=e=>{if(e.cancelable)e.preventDefault();Array.from(e.changedTouches||[]).forEach(touch=>inputEnd(rhythmInputKey('touch',touch.identifier)));};
-  if(view.status==='result')"""
-          game2,n=pattern.subn(replacement,game,count=1)
-          if n!=1:
-            raise SystemExit(f'pointer handler replacement count={n}')
-          game=game2
-
-          old='<div ref={playAreaRef} data-rhythm-play-area className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50">'
-          new='<div ref={playAreaRef} data-rhythm-play-area onTouchStart={touchStart} onTouchEnd={touchEnd} onTouchCancel={touchEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{touchAction:\'none\',WebkitTouchCallout:\'none\',WebkitUserSelect:\'none\',userSelect:\'none\'}}>'
-          if old not in game:
-            raise SystemExit('play area marker not found')
-          game=game.replace(old,new,1)
-
-          old="willChange:'transform, opacity'}}>"
-          new="willChange:'transform, opacity',pointerEvents:'none'}}>"
-          if old not in game:
-            raise SystemExit('note visual style marker not found')
-          game=game.replace(old,new,1)
-          game_path.write_text(game,encoding='utf-8')
-
-          # Existing HOLD check: update from raw pointerId-only implementation to common input key handling.
-          hold_path=root/'tools/mode/rhythm-mode-hold-engine-check.js'
-          hold=hold_path.read_text(encoding='utf-8')
-          old_line="check('pointerId別Mapとpointer captureで複数指を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(e.pointerId,target.index)')&&game.includes('run.activePointers.get(e.pointerId)')&&game.includes('setPointerCapture(e.pointerId)'));"
-          new_line="check('入力ID別Mapとpointer captureで複数入力を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(inputKey,target.index)')&&game.includes('run.activePointers.get(inputKey)')&&game.includes('captureTarget.setPointerCapture(pointerId)'));"
-          if old_line not in hold:
-            raise SystemExit('hold check marker not found')
-          hold_path.write_text(hold.replace(old_line,new_line,1),encoding='utf-8')
-
-          check_path=root/'tools/mode/rhythm-mode-multitouch-check.js'
-          check_path.write_text(r'''#!/usr/bin/env node
-const fs=require('fs'),path=require('path'),vm=require('vm');
-const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
-let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
-const game=read('monster-hero/src/game-system.jsx');
-const helper=game.match(/const rhythmInputKey=[\s\S]*?\n};\nconst RhythmTapTest/)?.[0]?.replace(/\nconst RhythmTapTest$/,'');
-check('タッチ入力ヘルパーを抽出できる',!!helper);
-if(helper){const c={RHYTHM_LANE_COUNT:5};vm.runInNewContext(`${helper}\nthis.out={rhythmInputKey,rhythmLaneFromClientX};`,c);const L=c.out;
-  check('入力IDはtouch/pointerで衝突しない',L.rhythmInputKey('touch',7)==='touch:7'&&L.rhythmInputKey('pointer',7)==='pointer:7');
-  check('5レーン境界をplay area幅から算出',L.rhythmLaneFromClientX(0,0,500)===0&&L.rhythmLaneFromClientX(99.9,0,500)===0&&L.rhythmLaneFromClientX(100,0,500)===1&&L.rhythmLaneFromClientX(499,0,500)===4&&L.rhythmLaneFromClientX(500,0,500)===4);
-  check('範囲外座標を安全に端レーンへ丸める',L.rhythmLaneFromClientX(-50,0,500)===0&&L.rhythmLaneFromClientX(900,0,500)===4&&L.rhythmLaneFromClientX(0,0,0)===null);
-}
-check('iPhone向けTouch EventsでchangedTouchesを全件処理',game.includes('onTouchStart={touchStart}')&&game.includes('onTouchEnd={touchEnd}')&&game.includes('onTouchCancel={touchEnd}')&&(game.match(/Array\.from\(e\.changedTouches\|\|\[\]\)\.forEach/g)||[]).length>=2);
-check('各touch.identifierを独立した入力キーで管理',game.includes("rhythmInputKey('touch',touch.identifier)")&&game.includes('run.activePointers.set(inputKey,target.index)')&&game.includes('run.activePointers.get(inputKey)'));
-check('touch PointerEventは二重処理しない',game.includes("if(e.pointerType==='touch')return")&&(game.match(/if\(e\.pointerType==='touch'\)return/g)||[]).length>=2);
-check('TouchStartは各指のclientXから個別レーン判定',game.includes('rhythmLaneFromClientX(touch.clientX,rect.left,rect.width)')&&game.includes('inputStart(lane,rhythmInputKey(\'touch\',touch.identifier))'));
-check('ノーツ描画がタッチ面を遮らない',game.includes("pointerEvents:'none'"));
-check('play areaでブラウザ既定ジェスチャを抑止',game.includes("touchAction:'none'")&&game.includes("WebkitTouchCallout:'none'"));
-check('Pointer Eventsはマウス/ペン用フォールバックとして維持',game.includes("rhythmInputKey('pointer',e.pointerId)")&&game.includes('captureTarget.setPointerCapture(pointerId)'));
-check('通常公開はOFF',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
-console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
-''',encoding='utf-8')
-
-          # Register the new checker in tools README next to the HOLD checker.
-          readme_path=root/'tools/README.md'
-          readme=readme_path.read_text(encoding='utf-8')
-          needle='`mode/rhythm-mode-hold-engine-check.js`'
-          idx=readme.find(needle)
-          if idx<0:
-            raise SystemExit('tools README HOLD checker marker not found')
-          line_start=readme.rfind('\n',0,idx)+1
-          line_end=readme.find('\n',idx)
-          hold_line=readme[line_start:line_end]
-          add='\n| `mode/rhythm-mode-multitouch-check.js` | 音ゲーのiPhone向け複数指Touch Events、指ごとのidentifier管理、5レーン座標変換、Pointer Eventsとの二重処理防止、ノーツ表示が入力を遮らないことを確認する。 |'
-          if 'rhythm-mode-multitouch-check.js' not in readme:
-            readme=readme[:line_end]+add+readme[line_end:]
-          readme_path.write_text(readme,encoding='utf-8')
-
-          # Hidden changelog entry because rhythm mode is still debug-only.
-          ch_path=root/'monster-hero/data/changelog.js'
-          ch=ch_path.read_text(encoding='utf-8')
-          if '音ゲーの2本指入力を修正' not in ch:
-            jst=timezone(timedelta(hours=9))
-            stamp=datetime.now(jst).strftime('%Y-%m-%d %H:%M')
-            entry=f'''  {{\n    date: "{stamp}", type:'fix', title:'音ゲーの2本指入力を修正', releaseFlag:'rhythmMode',\n    items:['iPhone Safariで同時タッチを確実に拾えるようTouch EventsのchangedTouchesを指ごとに処理し、HOLD中の別レーン操作や同時2本HOLDができる入力経路へ修正しました。'],\n  }},\n'''
-            ch=ch.replace('const CHANGELOG = [\n','const CHANGELOG = [\n'+entry,1)
-            ch_path.write_text(ch,encoding='utf-8')
-          PY
+        run: python3 .github/rhythm-multitouch-fix.py
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
@@ -152,10 +44,10 @@ console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process
           node tools/help/help-guide-check.js
           node tools/help/help-render-check.js
           git diff --check
-      - name: Commit fix and remove temporary workflow
+      - name: Commit fix and remove temporary files
         shell: bash
         run: |
-          rm -f .github/workflows/rhythm-multitouch-fix-apply.yml
+          rm -f .github/workflows/rhythm-multitouch-fix-apply.yml .github/rhythm-multitouch-fix.py
           git config user.name "ChatGPT"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
