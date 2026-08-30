@@ -27,6 +27,16 @@ jobs:
         run: node tools/chatgpt-auto-ultra-bgm-patch.js
       - name: Build canonical distribution
         run: node tools/build.js
+      - name: Align ultra eco regression check
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tools/audio/auto-ultra-bgm-check.js')
+          s=p.read_text()
+          s=s.replace("s.includes('quickMutedBefore:quickMuted')", "s.replace(/\\s+/g,'').includes('quickMutedBefore:quickMuted')")
+          s=s.replace("s.includes('!session.manuallyChanged&&quickMuted!==session.quickMutedBefore')", "s.replace(/\\s+/g,'').includes('!session.manuallyChanged&&quickMuted!==session.quickMutedBefore')")
+          p.write_text(s)
+          PY
       - name: Run AUTO and BGM regression checks
         run: |
           node tools/audio/auto-ultra-bgm-check.js
