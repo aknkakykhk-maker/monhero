@@ -38,21 +38,12 @@ src.write_text(s)
 
 help_path = Path('monster-hero/data/help.js')
 h = help_path.read_text()
-changed = False
-for a, b in [
-    ('AUTO中はバトル画面の🎵ボタン', 'バトル中は画面下部の🎵BGMボタン'),
-    ('AUTO中のバトル画面にある🎵ボタン', 'バトル画面下部にある🎵BGMボタン'),
-]:
-    if a in h:
-        h = h.replace(a, b)
-        changed = True
-marker = 'BGMアレンジの保存内容は変更しません。'
-addition = ' BGMパネルではSE/BGM音量も調整でき、通常バトル中も常設表示されます。'
-if marker in h and addition.strip() not in h:
-    h = h.replace(marker, marker + addition, 1)
-    changed = True
-if not changed:
+old_help = 'AUTO中はバトル画面の🎵ボタン（下部）から、そのAUTOセッションだけ別の登録曲へ変更でき、「BGMなし」も選べます。🎵ボタン内ではBGM音量も調整できます。'
+new_help = 'バトル画面下部の🎵BGMボタンは通常操作中もAUTO中も常設されています。通常操作中はそのバトル中だけ、AUTO中はそのAUTOセッション中だけ別の登録曲へ変更でき、「BGMなし」も選べます。🎵BGMパネルではSE音量とBGM音量をHOMEの音量設定と共通で調整できます。'
+if old_help not in h:
     raise SystemExit('help BGM guidance pattern not found')
+h = h.replace(old_help, new_help, 1)
+h = h.replace('AUTO中の🎵BGMボタンは、スコア表示などと重ならないよう画面下部のVIEW／AUTO付近にあります。', '🎵BGMボタンは、スコア表示などと重ならないよう画面下部のVIEW／AUTO付近にあります。', 1)
 help_path.write_text(h)
 
 changelog_path = Path('monster-hero/data/changelog.js')
@@ -78,7 +69,7 @@ if old2 not in r:
     raise SystemExit('runtime picker UI check pattern not found')
 r = r.replace(old2, new2)
 old3 = "check('ヘルプにAUTO BGM選択を掲載',help.includes('AUTO中はバトル画面の🎵ボタン'));"
-new3 = "check('ヘルプにバトルBGM操作を掲載',help.includes('🎵BGMボタン')&&help.includes('SE/BGM音量'));"
+new3 = "check('ヘルプにバトルBGM操作を掲載',help.includes('通常操作中もAUTO中も常設')&&help.includes('SE音量とBGM音量'));"
 if old3 not in r:
     raise SystemExit('runtime picker help check pattern not found')
 r = r.replace(old3, new3)
