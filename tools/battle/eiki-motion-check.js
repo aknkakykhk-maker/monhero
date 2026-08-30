@@ -6,7 +6,7 @@
 //   ① 12枚のCSS花びらが斬撃方向へ流れて散るか(transform が時間で変わるか)
 //   ② 高速斬撃のあとに短い余韻を残して終わるか(常時アニメーションになっていないか)
 //   ③ 動きを減らす設定の端末では、流さず淡く出て消えるだけになっているか
-// あわせて、枠(.eiki-sakura)からはみ出して画面をずらしていないかも見る。
+// あわせて、実戦の小さい全身枠でも花びらが枠外へ流れて見えるかを見る。
 //
 // 花びらのCSSは自前のスタイル(Tailwindを使っていない)ので、CSSだけを取り出して
 // 同じ形のDOMへ当てれば、Tailwindが読めないこのサンドボックスでも本物と同じ動きを測れる。
@@ -39,7 +39,7 @@ if (petalsStart < 0 || petalsEnd < 0) { console.error('NG: 花びらの定義を
 const petals = new Function(`return ${source.slice(petalsStart + 'const EIKI_SAKURA_PETALS = Object.freeze('.length, petalsEnd + 1)};`)();
 check('花びらは10〜12枚に固定されている', petals.length >= 10 && petals.length <= 12, `${petals.length}枚`);
 
-// EikiSakuraPetals と同じDOM。枠は攻撃中のカード相当(180x220)に置く
+// EikiSakuraPetals と同じDOM。枠は実戦で描く全身画像と同じ64x64に置く。
 const petalHtml = petals.map(p =>
   `<span class="eiki-sakura__petal" style="left:${p.left};top:${p.top};width:${p.size};height:${parseFloat(p.size)*1.45}px;animation-delay:${p.delay};`
   + `--eiki-petal-flow-x:${p.flowX};--eiki-petal-flow-y:${p.flowY};--eiki-petal-burst-x:${p.burstX};--eiki-petal-burst-y:${p.burstY};`
@@ -47,7 +47,7 @@ const petalHtml = petals.map(p =>
   + `--eiki-petal-spin-burst:${parseFloat(p.spin)*.8}deg;--eiki-petal-spin:${p.spin}"></span>`).join('');
 const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>
 html,body{margin:0;background:#111}
-.stage{position:relative;width:180px;height:220px;margin:40px;background:#222;overflow:hidden}
+.stage{position:relative;width:64px;height:64px;margin:140px;background:#222;overflow:visible}
 ${css}
 </style></head><body>
 <div class="stage"><span class="eiki-sakura" aria-hidden="true">${petalHtml}</span></div>
@@ -90,16 +90,17 @@ const sample = async (page) => page.evaluate(() => {
     const done = await sample(page);
     check('モーション終了後は透明になり残らない', done.every(p => p.opacity < 0.02), done.map(p => p.opacity.toFixed(2)).join('/'));
 
-    // --- 枠からはみ出して画面をずらしていないか ---
+    // --- 実戦の64px枠で斬撃方向へ流れた花びらが切られないか ---
     const box = await page.evaluate(() => {
       const stage = document.querySelector('.stage').getBoundingClientRect();
       const layer = document.querySelector('.eiki-sakura').getBoundingClientRect();
       return { stage: { w: stage.width, h: stage.height }, layer: { w: layer.width, h: layer.height },
         scrollW: document.documentElement.scrollWidth, clientW: document.documentElement.clientWidth };
     });
-    check('花びらの層は枠と同じ大きさ(inset:0)',
+    check('花びらの層は実戦枠と同じ大きさ(inset:0)',
       Math.abs(box.layer.w - box.stage.w) < 1 && Math.abs(box.layer.h - box.stage.h) < 1,
       `層 ${box.layer.w}x${box.layer.h} / 枠 ${box.stage.w}x${box.stage.h}`);
+    check('実戦の小枠で花びらを切らない', css.includes('overflow: visible'));
     check('花びらで横スクロールが増えない', box.scrollW <= box.clientW, `${box.scrollW} / ${box.clientW}`);
     await page.close();
 

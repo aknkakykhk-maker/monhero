@@ -164,6 +164,8 @@ const petalCount = (petals.match(/\{ left:/g) || []).length;
 check('花びらの枚数が固定で控えめ(10〜12枚)', petalCount >= 10 && petalCount <= 12, `${petalCount}枚`);
 check('絵文字ではなくCSSの花びら小片を使う', !source.slice(source.indexOf('const EikiSakuraPetals'), source.indexOf('const PandoraDualThunder')).includes('🌸')
   && source.includes('border-radius: 75% 15% 70% 20%'));
+check('実戦の小さい全身枠でも流れる花びらを切らない',
+  /\.eiki-sakura \{[\s\S]{0,320}?overflow: visible;/.test(source));
 check('花びらはtransformとopacityだけを動かす(レイアウトを作り直さない)',
   /@keyframes eikiSakuraFall \{[\s\S]*?\}/.test(source)
   && !/@keyframes eikiSakuraFall \{[\s\S]*?(width|height|top:|left:)\s*[0-9]/.test(source.slice(source.indexOf('@keyframes eikiSakuraFall'), source.indexOf('@keyframes eikiSakuraFall') + 400)));

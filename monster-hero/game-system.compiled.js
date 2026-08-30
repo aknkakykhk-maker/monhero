@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b108b562ca3743d4
+// source-sha256: 683d239012ceba45
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 23:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-31 01:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -44010,7 +44010,9 @@ const createAnimationStyle = () => {
     .eiki-sakura {
       position: absolute;
       inset: 0;
-      overflow: hidden;
+      /* 実戦の全身枠は約64pxしかない。斬撃方向へ流れる花びらをここで切ると、
+         zanComboDash の移動と重なった瞬間にほぼ見えなくなるため、枠外にも描く。 */
+      overflow: visible;
       pointer-events: none;
       z-index: 20;
     }
@@ -44019,7 +44021,7 @@ const createAnimationStyle = () => {
       opacity: 0;
       border-radius: 75% 15% 70% 20%;
       background: linear-gradient(145deg, #fff7fb 0%, #f9a8d4 42%, #ec4899 100%);
-      box-shadow: 0 0 3px rgba(251, 113, 173, .75);
+      box-shadow: 0 0 2px rgba(255, 255, 255, .95), 0 0 5px rgba(236, 72, 153, .9);
       transform-origin: 70% 70%;
       will-change: transform, opacity;
       animation: eikiSakuraFall 430ms cubic-bezier(.2,.72,.28,1) forwards;
