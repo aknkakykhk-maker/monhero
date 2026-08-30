@@ -96,6 +96,12 @@ GitHub Actions（`.github/workflows/compiled-check.yml`）は、**コミット�
 CI 側でビルドし直さないため、`node tools/build.js` を忘れたままコミットすると
 `node tools/build.js --check` で落ち、公開もされません（配信物とリポジトリの中身を必ず一致させるための意図的な作りです）。
 
+手元に Node 環境が無い状態（モバイルから GitHub の Web UI で編集した場合など）で
+`node tools/build.js` を実行できないときは、Actions の
+**ビルドと検査（手動実行）**（`.github/workflows/build-and-check.yml`）を対象の作業ブランチで
+実行してください。生成物の再生成と、CI と同じ検査、差分があればコミットまで行います。
+この用途のために使い捨てのワークフローを新しく作ることは禁止です（[`AGENTS.md`](AGENTS.md) 参照）。
+
 ## 6. Git / GitHub 運用
 
 - 1コミットは1つの目的に絞り、例として `docs: add AI development guides` のような命令形の件名にする。

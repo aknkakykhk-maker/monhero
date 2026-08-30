@@ -1,0 +1,93 @@
+# モバイル(iPhone等)から作業したときに、ビルドと検査を代わりに回すためのワークフロー。
+#
+# 【なぜ要るか】
+# 手元にNode環境が無い状態でGitHubのWeb UIから game-system.jsx を直接編集すると、
+# 配信用の game-system.compiled.js が古いままになる。compiled-check.yml の
+# `node tools/build.js --check` はそれを必ず落とすので、そのままではmainへ入れられない。
+#
+# これまではその穴を埋めるために、変更のたびに使い捨てのワークフロー
+# (*-once.yml / _tmp_*.yml など)を新しく作って push で起動していた。
+# 2026年8月にこの方式で登録ワークフローが42個まで増え、失敗するたびに
+# 別名のymlを作り直すため、画面上の変更1件あたり8 Runまで膨らんだ。
+#
+# このワークフローはその置き換えで、次の2点が違う。
+#   ・on: workflow_dispatch なので、pushのたびに勝手に走らない。押したときだけ動く
+#   ・使い回すので、変更のたびに新しいymlを作る必要がない。失敗しても押し直すだけ
+#
+# 【使い方(モバイル)】
+#   1. Web UIでソースを編集してコミットする
+#   2. Actions → このワークフロー → Run workflow
+#   3. 対象ブランチを選んで実行する
+#
+# mainは選べない。公開物を検査なしで書き換えないため、必ず作業ブランチで使い、
+# 通常どおりPR経由でmainへ入れること。
+name: ビルドと検査（手動実行）
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "ビルド結果に差分があればコミットする"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  # 同じブランチへ二重に走らせない。あとから押したほうを優先する
+  group: build-and-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: mainでは実行しない
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "mainに対しては実行できません。作業ブランチを選んでください。" >&2
+          exit 1
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+
+      # 配信用JSを作り直す。編集元(game-system.jsx)だけを変えたコミットでも、
+      # ここで生成物が追いつく
+      - name: Build the shipped bundle
+        run: node tools/build.js
+
+      # compiled-check.yml と同じ検査を同じ順で通す。ここを緩めると、
+      # PRを出した時点で結局同じ検査に落とされる
+      - name: Verify the compiled runtime
+        run: node tools/compiled-runtime-check.js
+      - name: Check source syntax and references
+        run: |
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+      - name: Check the boot path
+        run: node tools/boot-flow-check.js
+      - name: Check the shipped version stamps
+        run: node tools/update-notice-check.js
+
+      # 生成物に差分が出たときだけコミットする。差分が無ければ何もしない
+      - name: Commit the rebuilt output
+        if: inputs.commit
+        run: |
+          if git diff --quiet; then
+            echo "ビルド結果に差分はありません。コミットしません。"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "build: 配信用JSを再生成（ビルドと検査の手動実行）"
+          git push
