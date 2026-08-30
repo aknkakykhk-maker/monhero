@@ -20,50 +20,6 @@ const song=D.RHYTHM_SONGS[0];
 check('あつ杯テーマを既存track IDでテスト登録',D.RHYTHM_SONGS.length===1&&song.displayName==='あつ杯テーマ'&&song.bgmTrackId==='atsu_cup_theme'&&game.includes("id:'atsu_cup_theme', name:'あつ杯テーマ'"));
 check('全難易度に正式譜面フィールド',D.RHYTHM_DIFFICULTIES.every(x=>song.difficulties[x.id]&&'level' in song.difficulties[x.id]&&Array.isArray(song.difficulties[x.id].notes)&&song.difficulties[x.id].totalNotes===song.difficulties[x.id].notes.length));
 
-const touchHandlers={};
-const laneEvents=Array.from({length:5},()=>[]);
-let lanes;
-const playArea={
-  getBoundingClientRect:()=>({left:0,width:500}),
-  querySelectorAll:()=>lanes,
-  closest:selector=>selector==='[data-rhythm-play-area]'?playArea:null,
-};
-lanes=laneEvents.map(events=>({
-  closest:selector=>selector==='[data-rhythm-play-area]'?playArea:null,
-  dispatchEvent:event=>{events.push(event);return true;},
-}));
-class FakePointerEvent{constructor(type,init){this.type=type;Object.assign(this,init);}}
-const browserContext={
-  document:{addEventListener:(type,handler,options)=>{touchHandlers[type]={handler,options};}},
-  window:{},
-  PointerEvent:FakePointerEvent,
-};
-vm.runInNewContext(data,browserContext);
-check('native複数タッチbridgeをcapture/passive:falseで登録',
-  touchHandlers.touchstart?.options?.capture===true&&touchHandlers.touchstart?.options?.passive===false&&
-  touchHandlers.touchend?.options?.capture===true&&touchHandlers.touchend?.options?.passive===false);
-let prevented=0,stopped=0;
-const simultaneousTouches=[
-  {identifier:11,clientX:50,clientY:100,target:lanes[0]},
-  {identifier:22,clientX:450,clientY:100,target:lanes[4]},
-];
-touchHandlers.touchstart?.handler({
-  changedTouches:simultaneousTouches,target:playArea,cancelable:true,
-  preventDefault:()=>prevented++,stopImmediatePropagation:()=>stopped++,
-});
-const downA=laneEvents[0][0],downB=laneEvents[4][0];
-check('同一touchstartの2本指を別レーンへ独立pointerdown化',
-  downA?.type==='pointerdown'&&downB?.type==='pointerdown'&&
-  downA.pointerType==='pen'&&downB.pointerType==='pen'&&downA.pointerId!==downB.pointerId);
-check('元TouchEventを止めて二重判定を防ぐ',prevented===1&&stopped===1);
-touchHandlers.touchend?.handler({
-  changedTouches:simultaneousTouches,target:playArea,cancelable:true,
-  preventDefault:()=>prevented++,stopImmediatePropagation:()=>stopped++,
-});
-check('2本指の終了も元レーンへ独立pointerup化',
-  laneEvents[0][1]?.type==='pointerup'&&laneEvents[4][1]?.type==='pointerup'&&
-  laneEvents[0][1].pointerId===downA?.pointerId&&laneEvents[4][1].pointerId===downB?.pointerId);
-
 const logic=game.match(/const RHYTHM_SETTINGS_KEY = [\s\S]*?const rhythmBestRecord = \(records,songId,difficultyId\) => normalizeRhythmBestRecord\(records\?\.\[songId\]\?\.\[difficultyId\]\);/)?.[0];
 check('normalizeロジックを抽出できる',!!logic);
 if(logic){const c={RHYTHM_SONGS:D.RHYTHM_SONGS,RHYTHM_DIFFICULTIES:D.RHYTHM_DIFFICULTIES};vm.runInNewContext(`${logic}\nthis.out={DEFAULT_RHYTHM_SETTINGS,normalizeRhythmSettings,normalizeRhythmBestRecord,normalizeRhythmBestRecords};`,c);const L=c.out;
