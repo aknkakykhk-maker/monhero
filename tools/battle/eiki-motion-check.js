@@ -3,8 +3,8 @@
 //   node tools/battle/eiki-motion-check.js
 //
 // 花びらは「攻撃したときだけ出す」約束で入れたので、次の3つを実測する。
-//   ① 6枚が枠の中で本当に動いているか(transform が時間で変わるか)
-//   ② 攻撃モーションと同じ長さで終わるか(常時アニメーションになっていないか)
+//   ① 12枚のCSS花びらが斬撃方向へ流れて散るか(transform が時間で変わるか)
+//   ② 高速斬撃のあとに短い余韻を残して終わるか(常時アニメーションになっていないか)
 //   ③ 動きを減らす設定の端末では、流さず淡く出て消えるだけになっているか
 // あわせて、枠(.eiki-sakura)からはみ出して画面をずらしていないかも見る。
 //
@@ -37,13 +37,14 @@ const petalsEnd = source.indexOf(']);', petalsStart);
 if (petalsStart < 0 || petalsEnd < 0) { console.error('NG: 花びらの定義を切り出せません'); process.exit(1); }
 // eslint-disable-next-line no-new-func
 const petals = new Function(`return ${source.slice(petalsStart + 'const EIKI_SAKURA_PETALS = Object.freeze('.length, petalsEnd + 1)};`)();
-check('花びらは6枚に固定されている', petals.length === 6, `${petals.length}枚`);
-check('スマホ負荷を増やさないため枚数は8枚以下', petals.length <= 8);
+check('花びらは10〜12枚に固定されている', petals.length >= 10 && petals.length <= 12, `${petals.length}枚`);
 
 // EikiSakuraPetals と同じDOM。枠は攻撃中のカード相当(180x220)に置く
 const petalHtml = petals.map(p =>
-  `<span class="eiki-sakura__petal" style="left:${p.left};font-size:${p.size};animation-delay:${p.delay};`
-  + `--eiki-petal-drift:${p.drift};--eiki-petal-spin:${p.spin}">🌸</span>`).join('');
+  `<span class="eiki-sakura__petal" style="left:${p.left};top:${p.top};width:${p.size};height:${parseFloat(p.size)*1.45}px;animation-delay:${p.delay};`
+  + `--eiki-petal-flow-x:${p.flowX};--eiki-petal-flow-y:${p.flowY};--eiki-petal-burst-x:${p.burstX};--eiki-petal-burst-y:${p.burstY};`
+  + `--eiki-petal-trail-x:${p.trailX};--eiki-petal-trail-y:${p.trailY};--eiki-petal-spin-mid:${parseFloat(p.spin)*.55}deg;`
+  + `--eiki-petal-spin-burst:${parseFloat(p.spin)*.8}deg;--eiki-petal-spin:${p.spin}"></span>`).join('');
 const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>
 html,body{margin:0;background:#111}
 .stage{position:relative;width:180px;height:220px;margin:40px;background:#222;overflow:hidden}
@@ -71,17 +72,21 @@ const sample = async (page) => page.evaluate(() => {
     await page.waitForTimeout(140);
     const mid = await sample(page);
 
-    check('花びらが6枚描かれている', early.length === 6, `${early.length}枚`);
+    check('花びらが12枚描かれている', early.length === 12, `${early.length}枚`);
     check('全枚 eikiSakuraFall で動いている', early.every(p => p.name === 'eikiSakuraFall'), early.map(p => p.name).join('/'));
     check('繰り返さない(1回で終わる)', early.every(p => p.iteration === '1'), early.map(p => p.iteration).join('/'));
-    check('攻撃モーションと同じ短さ(0.5秒以下)',
-      early.every(p => parseFloat(p.duration) > 0 && parseFloat(p.duration) <= 0.5), early[0].duration);
+    check('斬撃後の余韻を含めても0.55秒以下',
+      early.every(p => parseFloat(p.duration) > 0.32 && parseFloat(p.duration) <= 0.55), early[0].duration);
     check('終わったあとの状態を保つ(forwards)', early.every(p => p.fill === 'forwards'), early[0].fill);
     const moved = early.filter((p, i) => p.transform !== mid[i].transform).length;
-    check('実際に動いている(transformが時間で変わる)', moved === 6, `${moved}/6枚`);
+    check('実際に動いている(transformが時間で変わる)', moved === 12, `${moved}/12枚`);
 
-    // 攻撃モーション(320ms)が終わったあと、花びらが消えているか
-    await page.waitForTimeout(400);
+    // 高速斬撃(320ms)のあとに短い余韻を残し、500ms前後で消えているか
+    await page.waitForTimeout(160);
+    const tail = await sample(page);
+    const lingering = tail.some(p => p.opacity > 0.1);
+    check('高速斬撃のあとまで花びらの余韻が見える', lingering);
+    await page.waitForTimeout(250);
     const done = await sample(page);
     check('モーション終了後は透明になり残らない', done.every(p => p.opacity < 0.02), done.map(p => p.opacity.toFixed(2)).join('/'));
 
