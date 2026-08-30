@@ -141,6 +141,9 @@ node tools/build.js --check
 
 `node mode/rhythm-mode-tap-engine-check.js` は、STEP 2AのTAP判定境界・FAST/SLOW・コンボ・自動MISS・90%＋10%スコア・AudioContext同期・TAP限定テスト譜面・非公開状態を確認する。
 
+`node mode/rhythm-mode-tap-completion-check.js` は、STEP 2Bのプレイエリア基準ノーツ移動、ポーズ／再開／リスタート／中断のライフサイクル、正式リザルト条件、BEST統合、NEW RECORD、音源とrAFのcleanup、非公開状態を確認する。
+| `node mode/rhythm-mode-hold-engine-check.js` | 音ゲーSTEP 3AのHOLD終端・早離しMISS・Pointer EventsのpointerId別2本指入力・EASY TAP回帰とNORMAL混在譜面を確認する。 |
+
 | コマンド | 内容 |
 | --- | --- |
 | `node mode/difficulty-item-check.js` | 新難易度(Grand Master/Hell/Legend)の表示と色、絆経験値チケットのまとめ使いを確認する。 |
@@ -484,3 +487,6 @@ node tools/audio/auto-bgm-continuity-check.js
 ```
 
 AUTO中の敵撃破ファンファーレ／WAVE後BGMの既定OFF、戦闘BGM継続、BGMアレンジのON/OFF設定、更新情報・ヘルプ・開発ルールへの反映を確認します。
+
+
+- `mode/rhythm-mode-multitouch-check.js` — 音ゲーのiPhone向け複数指Touch Events、指ごとのidentifier管理、5レーン座標変換、Pointer Eventsとの二重処理防止、ノーツ表示が入力を遮らないことを確認する。

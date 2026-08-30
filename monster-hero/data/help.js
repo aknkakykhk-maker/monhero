@@ -56,7 +56,7 @@ const HELP_CATEGORIES = [
       {
         id:'rhythm-mode', emoji:'🎵', title:'音ゲーモード', releaseFlag:'rhythmMode',
         assistant:'曲に合わせて5レーンのノーツを演奏する、新しいモードだよ♪', expression:'happy',
-        blocks:[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、TAPノーツの基本演奏テストをデバッグ画面だけで確認できます。通常画面には表示されません。'}],
+        blocks:[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAPテストに加えてNORMALでHOLDと2本指同時入力を確認できます。ポーズ・リスタート・完走リザルト・端末内BEST保存にも対応し、中断したプレイは記録されません。通常画面には表示されません。'}],
       },
       {
         id: 'goal', emoji: '🏆', title: 'ゲームの目的',
