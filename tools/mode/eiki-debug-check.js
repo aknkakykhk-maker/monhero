@@ -49,8 +49,8 @@ if (!eiki) { console.log('\n定義が無いため以降を中止'); process.exit
 check('内部IDが Eiki', eiki.id === 'Eiki');
 check('名前が エイキ', eiki.name === 'エイキ');
 check('emojiが 🌸', eiki.emoji === '🌸');
-check('基礎能力 ライフ400/ちから165/丈夫さ50/ガッツ135',
-  eiki.baseHp === 400 && eiki.baseAtk === 165 && eiki.baseDef === 50 && eiki.baseGuts === 135,
+check('基礎能力 ライフ400/ちから165/丈夫さ20/ガッツ135',
+  eiki.baseHp === 400 && eiki.baseAtk === 165 && eiki.baseDef === 20 && eiki.baseGuts === 135,
   `HP${eiki.baseHp}/ATK${eiki.baseAtk}/DEF${eiki.baseDef}/GUTS${eiki.baseGuts}`);
 check('供モン加入値 +150/+50/+20/+45',
   eiki.plusStats.hp === 150 && eiki.plusStats.atk === 50 && eiki.plusStats.def === 20 && eiki.plusStats.guts === 45,

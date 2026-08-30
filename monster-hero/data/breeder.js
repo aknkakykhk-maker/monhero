@@ -27,7 +27,7 @@ const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=da09c07c8624";
 // エイキの円盤石。正式実装前の確認用に画像だけ先に置いてある。
 // BREEDER_MARKET_ITEMS へはまだ登録していない(マーケットには並ばない)。
 // 正式実装のときに、ここを参照する商品(3000ダイヤ)を1件足す。
-const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=504898f0305f";
+const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["おりょうの力", "おりょうの気合", "おりょうの憤怒"],

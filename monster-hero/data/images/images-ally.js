@@ -43,8 +43,8 @@ const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=33881ea3c9
 // 2026年8月に追加準備中のレア「エイキ」(ザン×？？？)。正式実装まではデバッグ専用。
 // 染色マスクは承認済みマスクの範囲そのままで、色だけリポジトリ仕様(赤=①/緑=②/青=③)へ
 // 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
-const EIKI_IMG = "images/monsters/eiki.png?v=f35a7cc2ddcf";
-const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=991b213f3151";
+const EIKI_IMG = "images/monsters/eiki.png?v=0105e40f8d1a";
+const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=6b5ab28ef5b4";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -95,4 +95,4 @@ const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=b30d9
 const UNDINE_FACE_ICON = UNDINE_IMG;
 const YAOBIKUNI_FACE_ICON = YAOBIKUNI_IMG;
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
-const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=453caa06326f";
+const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";

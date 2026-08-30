@@ -323,7 +323,8 @@ node tools/build.js --check
 | `node image/monster-image-quality-check.js` | 敵・味方の全身画像数、PNG読込、透過隅、可視画素を検査する。 |
 | `node image/extract-images.js [--dry-run]` | data/*.js に base64 で埋め込まれた画像をPNGファイルとして `monster-hero/images/` へ書き出し、定数をそのパスへ置き換える。置き場所はスクリプト内の `PLACEMENT` 表で決める。 |
 | `node image/import-monster-art.js` | 受け取ったモンスターのイラストを、ゲームで使う形(正方形・余白そろえ・透過)へ整えて `monster-hero/images/monsters/` へ書き出す。 |
-| `node image/compress-images.js` | 配信する画像(PNG)を、見た目を落とさない範囲で軽くする。引数なしなら対象を表示するだけで書き換えない。 |
+| `node image/compress-images.js` | 配信する画像(PNG)を、見た目を落とさない範囲で軽くする。引数なしなら対象を表示するだけで書き換えない。`--force <monster-hero/からの相対パス>` を付けたファイルだけは画質基準(PSNR34dB以上・差の見える画素12%以下)を満たさなくても採用する。使ってよいのは**等倍と表示サイズで実際に見比べて差が分からないことを確かめたとき**だけで、採用時は測定値を⚠付きで必ず表示する。エイキの立ち絵・円盤石は元絵の色数が36万色あり(他のモンスターは256色に減色済み)、減色のディザリングで「差の見える画素」が2〜3割になるが、これは滑らかな階調に乗る細かい点のばらつきで等倍でも分からない。基準そのものを緩めると他の絵の劣化を見逃すため、1枚ずつ明示する形にしてある。 |
+| `node image/trim-art-margin.js <立ち絵> [--mask <染色マスク>] [--pad N] [--dry-run]` | 立ち絵の外側に残った透明な余白を切り落とし、共通枠(`MonsterArtFrame`)で他のモンスターと同じくらいの大きさに並ぶようにする。染色マスクを渡すと**必ず同じ矩形で**一緒に切る(別々に切ると染色が壊れるため)。切るのは透明な画素だけで、絵そのものは拡大・縮小・描き直ししない。エイキは上109px・下209pxの余白があり共通枠で他の0.89倍にしかなっていなかった。実行後は `node tools/build.js` でキャッシュキーを更新し、顔アイコンを作り直すこと。 |
 | `node image/home-background-to-jpeg.js [--write]` | HOME画面の背景(`data/images/home-background.png`)をJPEGへ変換して軽くする。背景は写真調でcompress-images.jsの256色パレット化(基準未達)には向かないため専用に用意した。品質80〜98を低いほうから順に試し、基準(PSNR34dB以上・差の見える画素12%未満)を満たす最初の(最も軽い)品質を採用する。`--write`で実際に変換し、`game-system.jsx`側の参照も一緒に`.jpg`へ書き換える。実行後は`node tools/build.js`が必要。 |
 | `node image/make-disc-icon-transparent.js [名前...] [--dry-run]` | 円盤石アイコン(`images/disc-icons/`)に残っている白い背景を透過にする。外周から白いところだけをたどるので、キャラクターの白い部分(肌・翼)は残る。引数なしなら全部を見て、背景が残っているものだけ書き換える。実行後は `node tools/build.js` でキャッシュキーを更新すること。 |
 | `node image/make-face-icons.js [--preview] [MOCCHI ...]` | 立ち絵から顔部分を切り出して256pxの顔アイコンを作り、`images/monster-icons/face/` のPNGを上書きする。モンスターIDを指定すると対象だけを更新する。切り出し範囲はスクリプト内の `FACE_BOXES`。 |

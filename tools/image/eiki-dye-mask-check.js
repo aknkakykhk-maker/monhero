@@ -121,7 +121,9 @@ const writePreview = async (source, masks, recoloredImages, outPath) => {
     for (let dy = -BOUNDARY_MARGIN; dy <= BOUNDARY_MARGIN; dy++) {
       for (let dx = -BOUNDARY_MARGIN; dx <= BOUNDARY_MARGIN; dx++) {
         const nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        // 画像の外も「別の領域」。余白を切って絵が画像の端に接すると、いちばん端の
+        // 画素は縮小のならしでマスクが薄くなり、境目とまったく同じ理由でずれる
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) return true;
         const n = wantedAt[ny * width + nx];
         if (n !== w) return true; // 絵の外(-1)との境も帯に入れる
       }
