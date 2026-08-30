@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f3ee607a338d2138
+// source-sha256: c503342fa170d62e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 17:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 17:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6094,7 +6094,8 @@ const EXACT_DYE_MASKS = Object.freeze({
   Mocchi: MOCCHI_DYE_MASK,
   Yaobikuni: YAOBIKUNI_DYE_MASK,
   Plant: PLANT_DYE_MASK,
-  Eiki: EIKI_DYE_MASK
+  Eiki: EIKI_DYE_MASK,
+  Pandora: PANDORA_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -6104,7 +6105,7 @@ const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
 });
 // タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
 // モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
-// パンドラは埋め込み部位マップで3色の境界を固定する。以下は部位数を既存UIへ知らせる控え。
+// パンドラは正式な5色マスクを使う。赤=①、緑=②、青=③、黄=④、マゼンタ=⑤。
 MASU_COLOR_REGION_HUES.Pandora = [{
   hue: 0,
   noAAGuard: true,
@@ -6115,6 +6116,14 @@ MASU_COLOR_REGION_HUES.Pandora = [{
   noEdgeGuard: true
 }, {
   hue: 240,
+  noAAGuard: true,
+  noEdgeGuard: true
+}, {
+  hue: 60,
+  noAAGuard: true,
+  noEdgeGuard: true
+}, {
+  hue: 300,
   noAAGuard: true,
   noEdgeGuard: true
 }];
@@ -6227,6 +6236,8 @@ const _exactDyeMaskRegion = (pixels, offset) => {
   if (r > 200 && g < 80 && b < 80) return 0;
   if (g > 200 && r < 80 && b < 80) return 1;
   if (b > 200 && r < 80 && g < 80) return 2;
+  if (r > 200 && g > 200 && b < 80) return 3;
+  if (r > 200 && g < 80 && b > 200) return 4;
   return -1;
 };
 const _dyeRegionMaskCache = {};
@@ -6269,7 +6280,7 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
           srcCtx.imageSmoothingQuality = 'high';
           srcCtx.drawImage(img, 0, 0, w, h);
           const src = srcCtx.getImageData(0, 0, w, h).data;
-          // 正式マスクがあるモンスターは、保存済みPNGの赤・緑・青を染色①・②・③として使う。
+          // 正式マスクがあるモンスターは、保存済みPNGの色を染色部位として使う。
           // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
           // 正式登録前のパンドラだけはDEBUG定義の保存済みマスクを直接選ぶ。
           const exactMaskUrl = debugPlacement?.maskUrl || EXACT_DYE_MASKS[baseId] || null;
@@ -6825,7 +6836,7 @@ const DyeRegionColorControls = ({
   onCustom
 }) => {
   const regionCount = dyeRegionCount(baseId);
-  const regionLabels = ['①', '②', '③'];
+  const regionLabels = ['①', '②', '③', '④', '⑤'];
   return /*#__PURE__*/React.createElement("div", {
     className: "space-y-2"
   }, Array.from({
@@ -6925,6 +6936,14 @@ const makePatternSettings = () => ({
     2: makePatternLayer({
       pattern: 'none',
       target: '3'
+    }),
+    3: makePatternLayer({
+      pattern: 'none',
+      target: '4'
+    }),
+    4: makePatternLayer({
+      pattern: 'none',
+      target: '5'
     })
   },
   decals: [],
@@ -14365,7 +14384,7 @@ const DyeMaskTouchEditor = ({
   }, (_, idx) => /*#__PURE__*/React.createElement("label", {
     key: idx,
     className: "text-[7px] text-fuchsia-200"
-  }, "\u67D3\u8272", '①②③'[idx], /*#__PURE__*/React.createElement("select", {
+  }, "\u67D3\u8272", '①②③④⑤'[idx], /*#__PURE__*/React.createElement("select", {
     value: previewColors[idx] || '',
     onChange: e => setPreviewColors(current => {
       const next = [...current];
@@ -30738,7 +30757,7 @@ function MonsterHeroGame() {
           length: regions
         }, (_, i) => ({
           key: `region:${i}`,
-          label: `染色${'①②③'[i]}`,
+          label: `染色${'①②③④⑤'[i]}`,
           value: patternSettings.regionPatterns[i],
           mode: 'region'
         })), ...patternSettings.decals.map((d, i) => ({
@@ -30778,7 +30797,7 @@ function MonsterHeroGame() {
           className: "w-full h-full"
         }), /*#__PURE__*/React.createElement("span", {
           className: "absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[8px] font-black"
-        }, mode === 'all' ? '全身模様' : mode === 'region' ? `染色${'①②③'[regionIndex]}` : selectedDecal ? '選択中' : 'タップで追加'), mode === 'point' && /*#__PURE__*/React.createElement("span", {
+        }, mode === 'all' ? '全身模様' : mode === 'region' ? `染色${'①②③④⑤'[regionIndex]}` : selectedDecal ? '選択中' : 'タップで追加'), mode === 'point' && /*#__PURE__*/React.createElement("span", {
           className: "absolute inset-x-2 bottom-1 text-center text-[8px] text-cyan-200 bg-black/50 rounded-full"
         }, "\u30BF\u30C3\u30D7\u9078\u629E\u30FB\u30C9\u30E9\u30C3\u30B0\u79FB\u52D5\u30FB\u30D4\u30F3\u30C1\u62E1\u7E2E\uFF0F\u56DE\u8EE2")), /*#__PURE__*/React.createElement("section", {
           className: "flex-1 min-h-0 mt-2 rounded-t-3xl border-t border-fuchsia-500/30 bg-slate-900/95 flex flex-col overflow-hidden"
@@ -30801,7 +30820,7 @@ function MonsterHeroGame() {
             selectedLayer: `region:${i}`
           })),
           className: `min-h-[44px] rounded-xl font-black ${regionIndex === i ? 'bg-cyan-700 ring-2 ring-cyan-300' : 'bg-slate-800'}`
-        }, "\u67D3\u8272", '①②③'[i]))), mode === 'point' && /*#__PURE__*/React.createElement("button", {
+        }, "\u67D3\u8272", '①②③④⑤'[i]))), mode === 'point' && /*#__PURE__*/React.createElement("button", {
           onClick: () => addDecal(),
           className: "w-full min-h-[48px] rounded-xl bg-cyan-700 font-black"
         }, "\uFF0B \u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u3092\u8FFD\u52A0"), /*#__PURE__*/React.createElement("div", {
@@ -32909,7 +32928,7 @@ function MonsterHeroGame() {
         className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[10px] font-black text-fuchsia-300"
-      }, "\u672C\u756A\u3068\u5171\u901A\u306E\u67D3\u8272\u2460\uFF5E\u2462"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
+      }, "\u672C\u756A\u3068\u5171\u901A\u306E\u67D3\u8272\uFF08", regionCount, "\u90E8\u4F4D\uFF09"), /*#__PURE__*/React.createElement(DyeRegionColorControls, {
         baseId: selected.baseId,
         colors: colors,
         onChange: (idx, colorId) => setMonsterImageDebugColors(prev => {

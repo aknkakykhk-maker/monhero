@@ -1,7 +1,7 @@
 // 染色もどきの部位分けを目で確かめる。本番と同じ getDyeRegionMasks を実画像に対して呼び、
 // 「元の絵」と「部位ごとに色を塗り分けた絵」を左右に並べたPNGを書き出す。
 // 被覆率(dye-report.js)だけでは「どこが混ざっているか」が分からないので、部位定義を
-// 足す・直すときはこれで場所を確かめる(染色①=赤・②=黄・③=青、無染色=元の絵のまま)。
+// 足す・直すときはこれで場所を確かめる(染色①=赤・②=緑・③=青・④=黄・⑤=マゼンタ、無染色=元の絵のまま)。
 //
 //   node image/dye-region-map.js out.png Undine                    … 全身
 //   node image/dye-region-map.js out.png Undine 0.1 0.3            … 縦0.1〜0.3だけ拡大
@@ -29,8 +29,8 @@ const PANEL = Number(process.env.DYE_MAP_WIDTH || 620);
   ctx.fillRect(0, 0, c.width, c.height);
   ctx.drawImage(base, sx, sy, sw, sh, 0, 0, W, H);
   ctx.drawImage(base, sx, sy, sw, sh, W, 0, W, H);
-  const COLORS = ['#ff0000', '#ffff00', '#0000ff'];
-  for (let i = 0; i < 3; i++) {
+  const COLORS = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'];
+  for (let i = 0; i < Math.min(urls?.length || 0, COLORS.length); i++) {
     if (!urls || !urls[i]) continue;
     const m = await decodeDataUrl(urls[i]);
     const t = createCanvas(W, H);
