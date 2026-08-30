@@ -15,8 +15,8 @@ if(logic){const c={RHYTHM_JUDGMENTS:D.RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS:D.RH
 const chart=D.RHYTHM_SONGS[0].difficulties.EASY;
 check('20〜30秒・5レーン・複数/連続を含むTAP限定譜面',chart.durationMs>=20000&&chart.durationMs<=30000&&chart.notes.length>0&&chart.notes.every(n=>n.type==='TAP'&&n.lane>=0&&n.lane<5)&&new Set(chart.notes.map(n=>n.lane)).size===5&&chart.notes.some((n,i)=>i&&n.timeMs===chart.notes[i-1].timeMs));
 check('±200ms超の未処理ノーツを自動MISS',/songTimeMs-\(note\.timeMs\+settings\.judgmentTimingOffsetMs\)>200\)applyJudgment\(note,'MISS'/.test(game));
-check('songTimeはAudioContext.currentTimeと実再生開始時刻が正本',/startedAt=ctx\.currentTime; source\.start\(0\)/.test(game)&&/songTimeMs:\(\)=>Math\.max\(0,\(ctx\.currentTime-startedAt\)\*1000\)/.test(game));
+check('songTimeはAudioContext.currentTimeと実再生開始時刻が正本',game.includes('startedAt=ctx.currentTime')&&game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&game.includes('songTimeMs:()=>songTimeSeconds()*1000'));
 check('判定処理はDate.now/setInterval/CSS animationを基準にしない',!logic?.includes('Date.now')&&!logic?.includes('setInterval')&&game.includes('requestAnimationFrame(tick)'));
-check('既存BGM track IDを再利用しループしない',game.includes('const startRhythmTrack = async key')&&game.includes('source.buffer=buffer; source.loop=false')&&D.RHYTHM_SONGS[0].bgmTrackId==='atsu_cup_theme');
+check('既存BGM track IDを再利用しループしない',game.includes('const startRhythmTrack = async key')&&game.includes('nextSource.buffer=buffer; nextSource.loop=false')&&D.RHYTHM_SONGS[0].bgmTrackId==='atsu_cup_theme');
 check('デバッグ限定の開始導線・通常公開OFF',game.includes('data-rhythm-tap-start')&&game.includes("gameState==='RHYTHM_DEBUG'")&&game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

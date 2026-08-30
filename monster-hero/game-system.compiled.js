@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f281ba61c7dd4f3
+// source-sha256: 7739fc8b0f4f3231
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-30 19:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-30 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3673,6 +3673,31 @@ const rhythmCalculateScore = ({
   const judged = RHYTHM_JUDGMENT_IDS.reduce((sum, id) => sum + (judgments[id] || 0) * rates[id], 0);
   return Math.min(maxScore, Math.round((judged / totalNotes * RHYTHM_SCORE_WEIGHTS.judgment + maxCombo / totalNotes * RHYTHM_SCORE_WEIGHTS.combo) * maxScore));
 };
+const rhythmResultAchievements = (judgments, totalNotes) => {
+  const counts = Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, Math.max(0, Number(judgments?.[id]) || 0)]));
+  return {
+    fullCombo: counts.BAD === 0 && counts.MISS === 0,
+    allExcellent: counts.GREAT === 0 && counts.GOOD === 0 && counts.BAD === 0 && counts.MISS === 0,
+    allMarvelous: totalNotes > 0 && counts.MARVELOUS === totalNotes
+  };
+};
+// 今回の完走結果を既存BESTへ統合する純粋関数。判定内訳は、そのBESTスコアを
+// 出したプレイと必ず対になるよう、スコア更新時だけ差し替える。
+const mergeRhythmBestRecord = (current, result) => {
+  const previous = normalizeRhythmBestRecord(current),
+    score = Math.max(0, Math.floor(Number(result?.score) || 0));
+  const isNewRecord = score > previous.bestScore;
+  return normalizeRhythmBestRecord({
+    ...previous,
+    bestScore: isNewRecord ? score : previous.bestScore,
+    judgments: isNewRecord ? result?.judgments : previous.judgments,
+    maxCombo: Math.max(previous.maxCombo, Math.max(0, Math.floor(Number(result?.maxCombo) || 0))),
+    clear: true,
+    fullCombo: previous.fullCombo || result?.fullCombo === true,
+    allExcellent: previous.allExcellent || result?.allExcellent === true,
+    allMarvelous: previous.allMarvelous || result?.allMarvelous === true
+  });
+};
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
@@ -4145,7 +4170,8 @@ const Audio_ = (() => {
     stopJingles();
     stopOthers();
   };
-  // 音ゲーの時刻は、このsourceを開始したAudioContext.currentTimeだけを正本にする。
+  // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
+  // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
   const startRhythmTrack = async key => {
     const track = resolveTrack(key);
     if (!track) return null;
@@ -4159,22 +4185,74 @@ const Audio_ = (() => {
       const buffer = await loadBuffer(track.src),
         ctx = await ensureAudioCtxRunning();
       if (!ctx) return null;
-      const source = ctx.createBufferSource();
-      applyTrackGain(track);
-      source.buffer = buffer;
-      source.loop = false;
-      source.connect(bgmGain);
-      const startedAt = ctx.currentTime;
-      source.start(0);
-      let stopped = false;
+      let source = null,
+        startedAt = ctx.currentTime,
+        offsetSeconds = 0,
+        playing = false,
+        stopped = false,
+        naturallyEnded = false;
+      const startSource = offset => {
+        if (stopped || offset >= buffer.duration) {
+          naturallyEnded = true;
+          return false;
+        }
+        const nextSource = ctx.createBufferSource();
+        applyTrackGain(track);
+        nextSource.buffer = buffer;
+        nextSource.loop = false;
+        nextSource.connect(bgmGain);
+        source = nextSource;
+        offsetSeconds = offset;
+        startedAt = ctx.currentTime;
+        playing = true;
+        nextSource.onended = () => {
+          if (source === nextSource && playing) {
+            playing = false;
+            naturallyEnded = true;
+            source = null;
+          }
+        };
+        nextSource.start(0, offset);
+        return true;
+      };
+      const songTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt : 0)));
+      startSource(0);
       return {
-        songTimeMs: () => Math.max(0, (ctx.currentTime - startedAt) * 1000),
+        songTimeMs: () => songTimeSeconds() * 1000,
         durationMs: buffer.duration * 1000,
-        ended: () => stopped || ctx.currentTime - startedAt >= buffer.duration,
+        ended: () => naturallyEnded || songTimeSeconds() >= buffer.duration,
+        paused: () => !playing && !stopped && !naturallyEnded,
+        pause: () => {
+          if (!playing || stopped) return;
+          offsetSeconds = songTimeSeconds();
+          playing = false;
+          const old = source;
+          source = null;
+          stopSource(old);
+        },
+        resume: async () => {
+          if (playing || stopped || naturallyEnded) return playing;
+          await ensureAudioCtxRunning();
+          return startSource(offsetSeconds);
+        },
+        restart: async () => {
+          if (stopped) return false;
+          playing = false;
+          naturallyEnded = false;
+          const old = source;
+          source = null;
+          stopSource(old);
+          offsetSeconds = 0;
+          await ensureAudioCtxRunning();
+          return startSource(0);
+        },
         stop: () => {
           if (stopped) return;
           stopped = true;
-          stopSource(source);
+          playing = false;
+          const old = source;
+          source = null;
+          stopSource(old);
         }
       };
     } catch (e) {
@@ -14673,37 +14751,53 @@ const RhythmTapTest = ({
   song,
   difficulty,
   settings,
+  bestRecord,
+  onComplete,
   onExit
 }) => {
   const chart = song.difficulties[difficulty.id],
     laneRefs = useRef([]),
     runRef = useRef(null),
-    frameRef = useRef(null);
-  const [view, setView] = useState({
+    frameRef = useRef(null),
+    playAreaRef = useRef(null),
+    judgmentLineRef = useRef(null);
+  const emptyCounts = () => Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0]));
+  const initialView = () => ({
     status: 'loading',
     score: 0,
     combo: 0,
     maxCombo: 0,
     last: '',
     fastSlow: '',
-    counts: Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0])),
+    counts: emptyCounts(),
     fast: 0,
-    slow: 0
+    slow: 0,
+    result: null
   });
-  const finish = useCallback(() => {
-    const run = runRef.current;
-    if (!run || run.finished) return;
-    run.finished = true;
-    run.audio?.stop();
-    cancelAnimationFrame(frameRef.current);
-    setView(v => ({
-      ...v,
-      status: 'result'
-    }));
+  const [view, setView] = useState(initialView);
+  const stopFrame = useCallback(() => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
   }, []);
+  const measureTravel = useCallback(() => {
+    const area = playAreaRef.current,
+      line = judgmentLineRef.current;
+    if (!area || !line) return null;
+    const areaRect = area.getBoundingClientRect(),
+      lineRect = line.getBoundingClientRect(),
+      noteHeight = laneRefs.current.find(Boolean)?.getBoundingClientRect().height || 20;
+    const spawnY = -noteHeight + settings.noteStartPosition / 100 * areaRect.height * .2;
+    const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteHeight / 2;
+    return {
+      spawnY,
+      judgmentY,
+      travelPx: judgmentY - spawnY,
+      playAreaHeight: areaRect.height
+    };
+  }, [settings.noteStartPosition]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
     const run = runRef.current;
-    if (!run || note.done) return;
+    if (!run || run.finished || run.paused || note.done) return;
     note.done = true;
     const nextCombo = rhythmComboAfter(run.combo, judgment);
     run.combo = nextCombo;
@@ -14731,6 +14825,77 @@ const RhythmTapTest = ({
       slow: run.slow
     }));
   }, [chart.totalNotes, difficulty.maxScore]);
+  const finish = useCallback(() => {
+    const run = runRef.current;
+    if (!run || run.finished || run.paused) return;
+    run.finished = true;
+    stopFrame();
+    run.audio?.stop();
+    const score = rhythmCalculateScore({
+      judgments: run.counts,
+      maxCombo: run.maxCombo,
+      totalNotes: chart.totalNotes,
+      maxScore: difficulty.maxScore
+    });
+    const achievements = rhythmResultAchievements(run.counts, chart.totalNotes);
+    const result = {
+      score,
+      judgments: {
+        ...run.counts
+      },
+      maxCombo: run.maxCombo,
+      fast: run.fast,
+      slow: run.slow,
+      ...achievements
+    };
+    const isNewRecord = score > run.startBestScore;
+    const merged = mergeRhythmBestRecord(run.startBest, result);
+    setView(v => ({
+      ...v,
+      status: 'result',
+      score,
+      combo: run.combo,
+      maxCombo: run.maxCombo,
+      counts: {
+        ...run.counts
+      },
+      fast: run.fast,
+      slow: run.slow,
+      result: {
+        ...result,
+        isNewRecord,
+        bestScore: merged.bestScore
+      }
+    }));
+    onComplete(result, merged);
+  }, [chart.totalNotes, difficulty.maxScore, onComplete, stopFrame]);
+  const scheduleTick = useCallback(() => {
+    stopFrame();
+    const tick = () => {
+      const run = runRef.current;
+      if (!run || run.finished || run.paused) return;
+      const songTimeMs = run.audio.songTimeMs(),
+        travel = measureTravel();
+      run.notes.forEach(note => {
+        if (!note.done && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
+        const el = laneRefs.current[note.index];
+        if (!el || note.done) {
+          if (el) el.style.display = 'none';
+          return;
+        }
+        const visualTime = songTimeMs + settings.displayTimingOffsetMs,
+          travelMs = Math.max(650, 2600 - settings.noteSpeed * 90),
+          progress = 1 - (note.timeMs - visualTime) / travelMs;
+        if (travel) {
+          const yPx = travel.spawnY + progress * travel.travelPx;
+          el.style.transform = `translate3d(0,${Math.round(yPx)}px,0)`;
+        }
+        el.style.opacity = !travel || progress < -.1 || progress > 1.18 ? '0' : '1';
+      });
+      if (songTimeMs >= chart.durationMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
+    };
+    frameRef.current = requestAnimationFrame(tick);
+  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.displayTimingOffsetMs, settings.judgmentTimingOffsetMs, settings.noteSpeed, stopFrame]);
   useEffect(() => {
     let cancelled = false;
     Audio_.startRhythmTrack(song.bgmTrackId).then(audio => {
@@ -14742,7 +14907,8 @@ const RhythmTapTest = ({
         }));
         return;
       }
-      const run = {
+      const startBest = normalizeRhythmBestRecord(bestRecord);
+      runRef.current = {
         audio,
         notes: chart.notes.map((note, index) => ({
           ...note,
@@ -14751,95 +14917,202 @@ const RhythmTapTest = ({
         })),
         combo: 0,
         maxCombo: 0,
-        counts: Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id => [id, 0])),
+        counts: emptyCounts(),
         fast: 0,
         slow: 0,
-        finished: false
+        finished: false,
+        paused: false,
+        startBest,
+        startBestScore: startBest.bestScore
       };
-      runRef.current = run;
       setView(v => ({
         ...v,
         status: 'playing'
       }));
-      const tick = () => {
-        if (run.finished) return;
-        const songTimeMs = audio.songTimeMs();
-        run.notes.forEach(note => {
-          if (!note.done && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
-          const el = laneRefs.current[note.index];
-          if (!el || note.done) {
-            if (el) el.style.display = 'none';
-            return;
-          }
-          const visualTime = songTimeMs + settings.displayTimingOffsetMs,
-            travelMs = Math.max(650, 2600 - settings.noteSpeed * 90),
-            progress = 1 - (note.timeMs - visualTime) / travelMs;
-          el.style.transform = `translate3d(0,${Math.round(progress * 100)}%,0)`;
-          el.style.opacity = progress < -.1 || progress > 1.18 ? '0' : '1';
-        });
-        if (songTimeMs >= chart.durationMs || audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
-      };
-      frameRef.current = requestAnimationFrame(tick);
+      scheduleTick();
     });
     return () => {
       cancelled = true;
-      cancelAnimationFrame(frameRef.current);
+      stopFrame();
       runRef.current?.audio?.stop();
+      runRef.current = null;
     };
   }, []);
+  const pause = () => {
+    const run = runRef.current;
+    if (!run || run.finished || run.paused) return;
+    run.paused = true;
+    stopFrame();
+    run.audio.pause();
+    setView(v => ({
+      ...v,
+      status: 'paused'
+    }));
+  };
+  const resume = async () => {
+    const run = runRef.current;
+    if (!run || run.finished || !run.paused) return;
+    const resumed = await run.audio.resume();
+    if (!resumed) return;
+    run.paused = false;
+    setView(v => ({
+      ...v,
+      status: 'playing'
+    }));
+    scheduleTick();
+  };
+  const restart = async () => {
+    const run = runRef.current;
+    if (!run || run.finished) return;
+    stopFrame();
+    run.paused = true;
+    await run.audio.restart();
+    run.notes = chart.notes.map((note, index) => ({
+      ...note,
+      index,
+      done: false
+    }));
+    run.combo = 0;
+    run.maxCombo = 0;
+    run.counts = emptyCounts();
+    run.fast = 0;
+    run.slow = 0;
+    run.finished = false;
+    run.paused = false;
+    laneRefs.current.forEach(el => {
+      if (el) {
+        el.style.display = 'block';
+        el.style.opacity = '0';
+      }
+    });
+    setView({
+      ...initialView(),
+      status: 'playing'
+    });
+    scheduleTick();
+  };
+  const abort = () => {
+    const run = runRef.current;
+    if (run) {
+      run.finished = true;
+      run.paused = true;
+      run.audio?.stop();
+    }
+    stopFrame();
+    onExit();
+  };
   const tapLane = lane => {
     const run = runRef.current;
-    if (!run || run.finished || view.status !== 'playing') return;
+    if (!run || run.finished || run.paused || view.status !== 'playing') return;
     const now = run.audio.songTimeMs(),
       target = run.notes.filter(note => !note.done && note.lane === lane && Math.abs(now - (note.timeMs + settings.judgmentTimingOffsetMs)) <= 200).sort((a, b) => Math.abs(now - (a.timeMs + settings.judgmentTimingOffsetMs)) - Math.abs(now - (b.timeMs + settings.judgmentTimingOffsetMs)))[0];
     if (target) applyJudgment(target, rhythmJudgeTap(now - (target.timeMs + settings.judgmentTimingOffsetMs)), now - (target.timeMs + settings.judgmentTimingOffsetMs));
   };
-  if (view.status === 'result') return /*#__PURE__*/React.createElement("main", {
-    "data-rhythm-result": true,
-    className: "flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
-    style: {
-      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-    }
-  }, /*#__PURE__*/React.createElement("h2", {
-    className: "text-center text-cyan-300 font-black"
-  }, "TAP TEST RESULT"), /*#__PURE__*/React.createElement("div", {
-    className: "my-4 text-center text-3xl font-black"
-  }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("dl", {
-    className: "grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4"
-  }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
-    key: id
-  }, /*#__PURE__*/React.createElement("dt", null, id), /*#__PURE__*/React.createElement("dd", {
-    className: "text-right font-mono"
-  }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
-    className: "text-right"
-  }, view.maxCombo), /*#__PURE__*/React.createElement("dt", null, "FAST / SLOW"), /*#__PURE__*/React.createElement("dd", {
-    className: "text-right"
-  }, view.fast, " / ", view.slow)), /*#__PURE__*/React.createElement("button", {
-    className: "mt-5 min-h-[48px] w-full rounded-xl bg-indigo-700 font-black",
-    onClick: onExit
-  }, "\u30C7\u30D0\u30C3\u30B0\u753B\u9762\u3078\u623B\u308B"));
+  if (view.status === 'result') {
+    const result = view.result;
+    return /*#__PURE__*/React.createElement("main", {
+      "data-rhythm-result": true,
+      className: "flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
+      style: {
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-center text-xs text-cyan-300"
+    }, song.displayName, "\u30FB", difficulty.id), /*#__PURE__*/React.createElement("h2", {
+      className: "text-center font-black"
+    }, "RHYTHM RESULT"), /*#__PURE__*/React.createElement("div", {
+      className: "my-3 text-center text-3xl font-black"
+    }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("p", {
+      className: "text-center text-sm"
+    }, "BEST SCORE ", result.bestScore.toLocaleString()), result.isNewRecord && /*#__PURE__*/React.createElement("p", {
+      "data-rhythm-new-record": true,
+      className: "text-center text-xl font-black text-amber-300"
+    }, "NEW RECORD"), /*#__PURE__*/React.createElement("div", {
+      className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black"
+    }, result.fullCombo && /*#__PURE__*/React.createElement("span", null, "FULL COMBO"), result.allExcellent && /*#__PURE__*/React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && /*#__PURE__*/React.createElement("span", null, "ALL MARVELOUS")), /*#__PURE__*/React.createElement("dl", {
+      className: "grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4"
+    }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: id
+    }, /*#__PURE__*/React.createElement("dt", null, id), /*#__PURE__*/React.createElement("dd", {
+      className: "text-right font-mono"
+    }, view.counts[id]))), /*#__PURE__*/React.createElement("dt", null, "MAX COMBO"), /*#__PURE__*/React.createElement("dd", {
+      className: "text-right"
+    }, view.maxCombo), /*#__PURE__*/React.createElement("dt", null, "FAST"), /*#__PURE__*/React.createElement("dd", {
+      className: "text-right"
+    }, view.fast), /*#__PURE__*/React.createElement("dt", null, "SLOW"), /*#__PURE__*/React.createElement("dd", {
+      className: "text-right"
+    }, view.slow)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-5 grid grid-cols-1 gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      className: "min-h-[48px] rounded-xl bg-fuchsia-700 font-black",
+      onClick: async () => {
+        setView({
+          ...initialView(),
+          status: 'loading'
+        });
+        const audio = await Audio_.startRhythmTrack(song.bgmTrackId);
+        if (!audio) {
+          setView(v => ({
+            ...v,
+            status: 'error'
+          }));
+          return;
+        }
+        const startBest = mergeRhythmBestRecord(runRef.current?.startBest, result);
+        runRef.current = {
+          audio,
+          notes: chart.notes.map((note, index) => ({
+            ...note,
+            index,
+            done: false
+          })),
+          combo: 0,
+          maxCombo: 0,
+          counts: emptyCounts(),
+          fast: 0,
+          slow: 0,
+          finished: false,
+          paused: false,
+          startBest,
+          startBestScore: startBest.bestScore
+        };
+        laneRefs.current.forEach(el => {
+          if (el) {
+            el.style.display = 'block';
+            el.style.opacity = '0';
+          }
+        });
+        setView({
+          ...initialView(),
+          status: 'playing'
+        });
+        scheduleTick();
+      }
+    }, "\u3082\u3046\u4E00\u5EA6\u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("button", {
+      className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
+      onClick: abort
+    }, "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u3078\u623B\u308B")));
+  }
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-tap-test": true,
-    className: "flex-1 min-h-0 overflow-hidden bg-slate-950 text-white flex flex-col",
+    className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
     style: {
       paddingTop: 'env(safe-area-inset-top)',
       paddingBottom: 'env(safe-area-inset-bottom)',
       touchAction: 'none'
     }
   }, /*#__PURE__*/React.createElement("header", {
-    className: "shrink-0 p-2 flex justify-between items-center"
+    className: "flex shrink-0 items-center justify-between p-2"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
     className: "text-cyan-300"
   }, difficulty.id, "\u30FBTAP TEST"), /*#__PURE__*/React.createElement("h2", {
     className: "font-black"
   }, song.displayName)), /*#__PURE__*/React.createElement("button", {
-    className: "min-h-[44px] rounded-xl bg-rose-800 px-3 font-black",
-    onClick: () => {
-      finish();
-      onExit();
-    }
-  }, "\u4E2D\u65AD")), /*#__PURE__*/React.createElement("section", {
+    "data-rhythm-pause": true,
+    className: "min-h-[44px] rounded-xl bg-amber-700 px-3 font-black",
+    onClick: pause
+  }, "\u30DD\u30FC\u30BA")), /*#__PURE__*/React.createElement("section", {
     className: "grid grid-cols-2 px-3 text-center"
   }, /*#__PURE__*/React.createElement("div", null, "SCORE ", /*#__PURE__*/React.createElement("b", {
     className: "block text-xl"
@@ -14852,6 +15125,8 @@ const RhythmTapTest = ({
   }, view.last || (view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : '')), /*#__PURE__*/React.createElement("small", {
     className: "block text-cyan-300"
   }, view.fastSlow)), /*#__PURE__*/React.createElement("div", {
+    ref: playAreaRef,
+    "data-rhythm-play-area": true,
     className: "relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50"
   }, /*#__PURE__*/React.createElement("div", {
     className: "absolute inset-0 grid grid-cols-5"
@@ -14868,7 +15143,9 @@ const RhythmTapTest = ({
   }, /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500"
   }, lane + 1)))), /*#__PURE__*/React.createElement("div", {
-    className: "absolute left-0 right-0 bottom-[12%] h-1 bg-cyan-300 shadow-[0_0_12px_#67e8f9]"
+    ref: judgmentLineRef,
+    "data-rhythm-judgment-line": true,
+    className: "absolute bottom-[12%] left-0 right-0 h-1 bg-cyan-300 shadow-[0_0_12px_#67e8f9]"
   }), chart.notes.map((note, index) => /*#__PURE__*/React.createElement("div", {
     key: index,
     ref: el => laneRefs.current[index] = el,
@@ -14879,7 +15156,21 @@ const RhythmTapTest = ({
       width: 'calc(20% - 10px)',
       willChange: 'transform, opacity'
     }
-  }))));
+  })), view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-pause-menu": true,
+    className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-2xl font-black"
+  }, "PAUSE"), /*#__PURE__*/React.createElement("button", {
+    className: "min-h-[48px] w-full rounded-xl bg-cyan-700 font-black",
+    onClick: resume
+  }, "\u518D\u958B"), /*#__PURE__*/React.createElement("button", {
+    className: "min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black",
+    onClick: restart
+  }, "\u30EA\u30B9\u30BF\u30FC\u30C8"), /*#__PURE__*/React.createElement("button", {
+    className: "min-h-[48px] w-full rounded-xl bg-rose-800 font-black",
+    onClick: abort
+  }, "\u4E2D\u65AD\u3057\u3066\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u3078\u623B\u308B"))));
 };
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -32250,6 +32541,11 @@ function MonsterHeroGame() {
       song: rhythmPlay.song,
       difficulty: rhythmPlay.difficulty,
       settings: rhythmSettings,
+      bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
+      onComplete: async (result, merged) => {
+        const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
+        setRhythmBestRecords(records);
+      },
       onExit: () => {
         setRhythmPlay(null);
         setGameState('RHYTHM_DEBUG');
