@@ -1,0 +1,71 @@
+name: Temporary Eiki combo popup fix
+
+on:
+  push:
+    branches: [chatgpt/eiki-combo-popup-fix]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/eiki-combo-popup-fix
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Patch Eiki rapid combo popup display
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('monster-hero/src/game-system.jsx')
+          s = p.read_text()
+
+          old_popup = """  const addPopup = (text, side, color) => {\n    const id = Date.now()+Math.random();\n    setPopups(prev=>[...prev,{id,text,side,color}]);\n    setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));\n  };"""
+          new_popup = """  const addPopup = (text, side, color, replaceKey=null) => {\n    const id = Date.now()+Math.random();\n    setPopups(prev=>{\n      const kept=replaceKey?prev.filter(x=>x.replaceKey!==replaceKey):prev;\n      return [...kept,{id,text,side,color,replaceKey}];\n    });\n    setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));\n  };"""
+          if s.count(old_popup) != 1:
+              raise SystemExit(f'addPopup target count={s.count(old_popup)}')
+          s = s.replace(old_popup, new_popup)
+
+          old_group = """            for (const h of group) {\n              const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';\n              if(h.isCrit) triggerShake();\n              addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);\n              setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));\n              await battleWait(140);\n            }"""
+          new_group = """            // エイキ固有は本体+最大5連撃で、通常popupを全部残すと縦に積み上がって\n            // 後半が画面外へ切れる。4ヒット以上のエイキ高速斬撃だけ、同じ表示枠を\n            // 140msごとに差し替えて全ヒットを順番に見せる。ダメージ計算・連撃数は変えない。\n            const rapidHitPopupKey=hitMotion==='eikiSakuraCombo'&&group.length>=4?`eiki-rapid-${hitIdx}-${animSlot}`:null;\n            for (const h of group) {\n              const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';\n              if(h.isCrit) triggerShake();\n              addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`,rapidHitPopupKey);\n              setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));\n              await battleWait(140);\n            }"""
+          if s.count(old_group) != 1:
+              raise SystemExit(f'combo group target count={s.count(old_group)}')
+          s = s.replace(old_group, new_group)
+          p.write_text(s)
+          PY
+      - name: Build canonical output
+        run: node tools/build.js
+      - name: Check Eiki combo and source
+        run: |
+          node tools/build.js --check
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/mode/eiki-combo-damage-check.js
+          node tools/mode/eiki-debug-check.js
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
+          if(!s.includes("const addPopup = (text, side, color, replaceKey=null)")) throw new Error('replaceable popup helper missing');
+          if(!s.includes("hitMotion==='eikiSakuraCombo'&&group.length>=4")) throw new Error('Eiki long-combo gating missing');
+          if(!s.includes("animate-bounce`,rapidHitPopupKey)")) throw new Error('rapid popup replacement not wired');
+          console.log('OK: Eiki long combo uses one replaceable damage popup slot');
+          NODE
+          git diff --check
+      - name: Commit generated output and remove temporary workflow
+        run: |
+          rm .github/workflows/_tmp_eiki_combo_popup_fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: エイキの連撃表示が途切れないようにする"
+          git push origin HEAD:chatgpt/eiki-combo-popup-fix
