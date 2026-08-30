@@ -17,6 +17,20 @@ const RHYTHM_JUDGMENTS = Object.freeze([
   Object.freeze({ id:'MISS', windowMs:null, scoreRate:0 }),
 ]);
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
+const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
+  const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
+  return (Array.isArray(inputs)?inputs:[]).map(input=>{
+    const inputKey=String(input?.inputKey??'');
+    if(!inputKey||seenInputs.has(inputKey))return {input,target:null,deltaMs:null};
+    seenInputs.add(inputKey);
+    const lane=Number(input?.lane);
+    const candidates=source.map((note,index)=>({note,index})).filter(({note,index})=>!claimed.has(index)&&!note.done&&note.activePointerId===null&&(note.type==='TAP'||note.type==='HOLD')&&note.lane===lane&&Math.abs(now-(note.timeMs+offset))<=200).sort((a,b)=>Math.abs(now-(a.note.timeMs+offset))-Math.abs(now-(b.note.timeMs+offset))||a.index-b.index);
+    const picked=candidates[0];
+    if(!picked)return {input,target:null,deltaMs:null};
+    claimed.add(picked.index);
+    return {input,target:picked.note,deltaMs:now-(picked.note.timeMs+offset)};
+  });
+};
 const emptyRhythmChart = (level=0) => Object.freeze({ level, notes:Object.freeze([]), totalNotes:0 });
 const atsuCupTapNotes = Object.freeze([
   [1800,2],[2600,0],[3200,4],[4000,1],[4400,3],[5200,2],[5800,2],[6400,0],[6400,4],
