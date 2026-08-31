@@ -96,10 +96,11 @@ const rhythmWorseJudgment=(a,b)=>{
   const left=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(String(a||'MISS')),right=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(String(b||'MISS'));
   return RHYTHM_RELEASE_JUDGMENT_IDS[Math.max(left<0?RHYTHM_RELEASE_JUDGMENT_IDS.length-1:left,right<0?RHYTHM_RELEASE_JUDGMENT_IDS.length-1:right)];
 };
-const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
-  const points=Array.isArray(note?.slidePoints)&&note.slidePoints.length>=2
+const rhythmSlidePoints=note=>Array.isArray(note?.slidePoints)&&note.slidePoints.length>=2
     ? note.slidePoints
     : [{timeMs:Number(note?.timeMs)||0,lane:Number(note?.lane)||0},{timeMs:Number(note?._rhythmReleaseOriginalEndTimeMs??note?.endTimeMs)||Number(note?.timeMs)||0,lane:Number(note?.endLane??note?.lane)||0}];
+const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
+  const points=rhythmSlidePoints(note);
   const t=Number(chartTimeMs);
   if(!Number.isFinite(t))return Number(points[0]?.lane)||0;
   if(t<=points[0].timeMs)return Number(points[0]?.lane)||0;
@@ -419,7 +420,8 @@ const installRhythmGestureVisuals=()=>{
     [data-rhythm-note][data-note-type="FLICK"] > span:last-child{background:linear-gradient(180deg,#f9a8d4,#ec4899 52%,#a21caf)!important;border-color:rgba(253,164,175,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 0 16px rgba(236,72,153,.68)!important}
     [data-rhythm-note][data-note-type="FLICK"] > span:last-child::after{content:"▲";position:absolute;left:50%;top:-18px;transform:translateX(-50%);color:#fdf2f8;font-size:18px;line-height:1;text-shadow:0 0 8px #ec4899,0 0 14px #d946ef}
     [data-rhythm-note][data-note-type="SLIDE"] > span:last-child{background:linear-gradient(180deg,#ddd6fe,#a855f7 58%,#6d28d9)!important;border-color:rgba(221,214,254,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.82),0 0 16px rgba(168,85,247,.64)!important}
-    [data-rhythm-slide-body]{position:absolute;bottom:50%;height:var(--rhythm-slide-height,120px);border-radius:999px 999px 3px 3px;background:linear-gradient(180deg,rgba(216,180,254,.38),rgba(168,85,247,.72));box-shadow:0 0 14px rgba(168,85,247,.42);pointer-events:none}
+    svg[data-rhythm-slide-body]{position:absolute;inset:0;height:var(--rhythm-slide-area-height,0px)!important;overflow:visible;pointer-events:none;filter:drop-shadow(0 0 7px rgba(168,85,247,.52))}
+    [data-rhythm-slide-segment]{fill:rgba(168,85,247,.64);stroke:rgba(216,180,254,.42);stroke-width:1}
   `;
   document.head.appendChild(style);
   const decorate=()=>{
@@ -428,14 +430,9 @@ const installRhythmGestureVisuals=()=>{
     const els=Array.from(area.querySelectorAll('[data-rhythm-note]'));
     els.forEach((el,index)=>{
       if(el.dataset.noteType!=='SLIDE'||el.querySelector('[data-rhythm-slide-body]'))return;
-      const body=document.createElement('span');
+      const body=document.createElementNS('http://www.w3.org/2000/svg','svg');
       body.dataset.rhythmSlideBody='';
       body.setAttribute('aria-hidden','true');
-      const note=atsuCupGestureTestChart.notes[index];
-      if(note?.type==='SLIDE'){
-        const duration=Math.max(500,note.endTimeMs-note.timeMs);
-        body.style.setProperty('--rhythm-slide-height',`${Math.round(92+duration/2000*82)}px`);
-      }
       el.insertBefore(body,el.firstChild);
     });
     const label=area.previousElementSibling?.querySelector?.('small');
@@ -500,7 +497,22 @@ const rhythmLayoutPlayArea=area=>{
     line.style.right=`${((1-right)*100).toFixed(4)}%`;
   }
 };
-const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null)=>{
+const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect)=>{
+  const source=rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
+  const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
+  const points=now>start?[{timeMs:now,lane:rhythmSlideExpectedLane(note,now)},...source.filter(point=>Number(point.timeMs)>now)]:source;
+  const project=point=>{
+    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+Number(travel.noteHalfHeight||0),yRatio=rhythmClamp01(y/rect.height),lane=rhythmProjectLane(Number(point.lane),yRatio),half=rect.width*lane.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    return {y,left:rect.width*lane.center-half,right:rect.width*lane.center+half};
+  };
+  const projected=points.map(project),segments=[];
+  for(let index=1;index<projected.length;index++){
+    const from=projected[index-1],to=projected[index];
+    segments.push(`${from.left.toFixed(2)},${from.y.toFixed(2)} ${from.right.toFixed(2)},${from.y.toFixed(2)} ${to.right.toFixed(2)},${to.y.toFixed(2)} ${to.left.toFixed(2)},${to.y.toFixed(2)}`);
+  }
+  return segments;
+};
+const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideTravel=null)=>{
   if(!el||!area)return;
   const rect=area.getBoundingClientRect();
   if(!(rect.width>0&&rect.height>0))return;
@@ -512,12 +524,27 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null)=>{
   el.style.setProperty('--rhythm-note-depth-brightness',(0.72+projected.scale*.28).toFixed(3));
   const body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
   if(!body)return;
+  if(body.hasAttribute('data-rhythm-slide-body')){
+    body.style.left=`${(-left).toFixed(2)}px`;
+    body.style.top=`${(-Number(yPx)).toFixed(2)}px`;
+    body.style.width=`${rect.width.toFixed(2)}px`;
+    body.style.setProperty('--rhythm-slide-area-height',`${rect.height.toFixed(2)}px`);
+    body.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
+    const polygons=slideTravel?rhythmSlideSegmentPolygons(note,slideTravel.chartNowMs,{...slideTravel,noteHalfHeight:el.offsetHeight/2},rect):[];
+    while(body.childNodes.length>polygons.length)body.lastChild.remove();
+    polygons.forEach((points,index)=>{
+      let segment=body.childNodes[index];
+      if(!segment){segment=document.createElementNS('http://www.w3.org/2000/svg','polygon');segment.dataset.rhythmSlideSegment='';body.appendChild(segment);}
+      segment.setAttribute('points',points);
+    });
+  }else{
   const height=Math.max(0,parseFloat(getComputedStyle(body).height)||0),topY=Math.max(0,Math.min(rect.height,centerY-height));
-  const topLane=body.hasAttribute('data-rhythm-slide-body')?Number(note?.endLane??lane):lane;
+  const topLane=lane;
   const top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio),topHalf=top.width*RHYTHM_BODY_WIDTH_RATIO/2,bottomHalf=bottom.width*RHYTHM_BODY_WIDTH_RATIO/2;
   body.style.left=`${(-left).toFixed(2)}px`;
   body.style.width=`${rect.width.toFixed(2)}px`;
   body.style.clipPath=`polygon(${((top.center-topHalf)*100).toFixed(3)}% 0,${((top.center+topHalf)*100).toFixed(3)}% 0,${((bottom.center+bottomHalf)*100).toFixed(3)}% 100%,${((bottom.center-bottomHalf)*100).toFixed(3)}% 100%)`;
+  }
   const endBar=el.querySelector('[data-rhythm-end-bar]');
   if(endBar&&Number.isFinite(releaseYpx)){
     const endY=rhythmClamp01((Number(releaseYpx)+el.offsetHeight/2)/rect.height),end=rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);

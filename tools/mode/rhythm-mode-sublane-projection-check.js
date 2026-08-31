@@ -20,5 +20,5 @@ if(helper){
 }
 check('薄い5本のサブレーン境界を共通boundaryで配置',game.includes('Array.from({length:5},(_,index)=><i key={index} data-rhythm-sublane-boundary="" />)')&&source.includes('rhythmProjectBoundary(coordinate,0)')&&source.includes('rhythmProjectBoundary(coordinate,1)'));
 check('可変幅はTAP描画だけに限定',source.includes("note?.type==='TAP'")&&source.includes('rhythmNoteVisualSpan(note,lane,yRatio)'));
-check('既存HOLD・SLIDE帯とENDバーのprojectionを維持',source.includes("const topLane=body.hasAttribute('data-rhythm-slide-body')")&&source.includes('top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio)')&&source.includes('end=rhythmProjectLane(rhythmReleaseLane(note),endY)'));
+check('既存HOLD・SLIDE帯とENDバーのprojectionを維持',source.includes('rhythmProjectLane(Number(point.lane),yRatio)')&&source.includes('top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio)')&&source.includes('end=rhythmProjectLane(rhythmReleaseLane(note),endY)'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
