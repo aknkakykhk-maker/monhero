@@ -3,10 +3,10 @@
 // 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
 // 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
-  const RHYTHM_RELEASE_DATE='2026-09-01 06:35';
-  const RHYTHM_DATA_BUILD='2026-09-01 06:35';
+  const RHYTHM_RELEASE_DATE='2026-09-01 06:49';
+  const RHYTHM_DATA_BUILD='2026-09-01 06:49';
   const RHYTHM_COMPILED_BUILD='2026-08-31 20:42';
-  const RHYTHM_RELEASE_TITLE='データ引き継ぎをファイル保存に対応';
+  const RHYTHM_RELEASE_TITLE='バックアップファイル保存ボタンを表示';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
     const start=Number(startMs)||0,end=Number(endMs)||start,now=Number(chartNowMs);
@@ -105,7 +105,7 @@
     CHANGELOG.unshift({
       date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
-        '長くなった引き継ぎコードをコピーしなくても、バックアップを「.mhsave」ファイルとして保存・復元できるようにしました。',
+        'データ引き継ぎ画面で「バックアップファイルを保存（.mhsave）」と「バックアップファイルから復元（.mhsave）」を確実に表示するよう、バックアップ機能を標準の起動スクリプトとして読み込むようにしました。',
         '従来の引き継ぎコード方式もそのまま利用でき、既存のmh_*セーブデータ形式は変更していません。'
       ]
     });
@@ -118,7 +118,7 @@
   // データ引き継ぎの .mhsave 拡張を読み込む。保存形式は従来の引き継ぎコードと同じ。
   if(typeof document!=='undefined'&&!document.querySelector('script[data-mhsave-backup]')){
     const script=document.createElement('script');
-    script.src='data/mhsave-backup.js?v=202609010635';
+    script.src='data/mhsave-backup.js?v=202609010649';
     script.dataset.mhsaveBackup='true';
     script.async=false;
     document.head.appendChild(script);
