@@ -56,13 +56,29 @@ const rhythmLaneAtPoint=(clientX,clientY,rect)=>{
 const RHYTHM_FLICK_DISTANCE_PX = 24;
 const RHYTHM_FLICK_MAX_MS = 450;
 const RHYTHM_SLIDE_TOLERANCE_LANES = .82;
+const RHYTHM_RELEASE_MAX_MS = 200;
+const RHYTHM_RELEASE_DEFER_ARM_MS = 100;
+const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = 180;
+const RHYTHM_RELEASE_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
+const rhythmJudgeRelease=deltaMs=>{
+  const value=Math.abs(Number(deltaMs));
+  if(!Number.isFinite(value))return 'MISS';
+  for(const judgment of RHYTHM_JUDGMENTS){
+    if(judgment.windowMs!==null&&value<=judgment.windowMs)return judgment.id;
+  }
+  return 'MISS';
+};
+const rhythmWorseJudgment=(a,b)=>{
+  const left=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(String(a||'MISS')),right=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(String(b||'MISS'));
+  return RHYTHM_RELEASE_JUDGMENT_IDS[Math.max(left<0?RHYTHM_RELEASE_JUDGMENT_IDS.length-1:left,right<0?RHYTHM_RELEASE_JUDGMENT_IDS.length-1:right)];
+};
 const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
   const points=Array.isArray(note?.slidePoints)&&note.slidePoints.length>=2
     ? note.slidePoints
-    : [{timeMs:Number(note?.timeMs)||0,lane:Number(note?.lane)||0},{timeMs:Number(note?.endTimeMs)||Number(note?.timeMs)||0,lane:Number(note?.endLane??note?.lane)||0}];
+    : [{timeMs:Number(note?.timeMs)||0,lane:Number(note?.lane)||0},{timeMs:Number(note?._rhythmReleaseOriginalEndTimeMs??note?.endTimeMs)||Number(note?.timeMs)||0,lane:Number(note?.endLane??note?.lane)||0}];
   const t=Number(chartTimeMs);
   if(!Number.isFinite(t))return Number(points[0]?.lane)||0;
-  if(t<=points[0].timeMs)return Number(points[0].lane)||0;
+  if(t<=points[0].timeMs)return Number(points[0]?.lane)||0;
   for(let i=1;i<points.length;i++){
     const a=points[i-1],b=points[i];
     if(t<=b.timeMs){
@@ -136,11 +152,28 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         return;
       }
       session.lastPerfMs=perf;
+      if(session.releaseRequired&&session.startJudgment===null&&session.note.holdJudgment){
+        session.startJudgment=session.note.holdJudgment;
+        session.startDeltaMs=Number(session.note.holdDeltaMs)||0;
+      }
       if(session.kind==='FLICK'&&!session.finished&&perf-session.startPerfMs>RHYTHM_FLICK_MAX_MS){
         finishGesture(session,false);
         return;
       }
       if(session.kind==='SLIDE'&&!session.finished)evaluatePosition(session,positions.get(key));
+      if(session.releaseRequired&&!session.note.done){
+        const releaseDelta=estimatedSongMs(session)-(session.releaseTargetMs+session.offsetMs);
+        if(!session.autoCompletionDeferred&&releaseDelta>=-RHYTHM_RELEASE_DEFER_ARM_MS){
+          // 本体の「終端到達で自動成功」を終端判定窓の直後まで延期する。
+          session.note.endTimeMs=session.releaseTargetMs+RHYTHM_RELEASE_MAX_MS+1;
+          session.autoCompletionDeferred=true;
+        }
+        if(releaseDelta>=RHYTHM_RELEASE_AUTO_MISS_ARM_MS){
+          session.expiredGuard=true;
+          session.note.holdJudgment='MISS';
+          session.note.holdDeltaMs=releaseDelta;
+        }
+      }
     });
     if(sessions.size&&typeof requestAnimationFrame==='function')raf=requestAnimationFrame(tick);
   };
@@ -152,20 +185,50 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     positions.set(String(key),pos);
     evaluatePosition(sessions.get(String(key)),pos);
   };
-  const release=key=>{
-    positions.delete(String(key));
-    sessions.delete(String(key));
+  const release=(key,cancelled=false)=>{
+    const id=String(key),session=sessions.get(id);
+    positions.delete(id);
+    if(!session){sessions.delete(id);return;}
+    if(session.releaseRequired&&!session.note.done){
+      if(session.startJudgment===null&&session.note.holdJudgment){
+        session.startJudgment=session.note.holdJudgment;
+        session.startDeltaMs=Number(session.note.holdDeltaMs)||0;
+      }
+      const songNow=estimatedSongMs(session);
+      const releaseDelta=songNow-(session.releaseTargetMs+session.offsetMs);
+      const endJudgment=cancelled?'MISS':rhythmJudgeRelease(releaseDelta);
+      const startJudgment=session.startJudgment||session.note.holdJudgment||'MISS';
+      const finalJudgment=session.failed?'MISS':rhythmWorseJudgment(startJudgment,endJudgment);
+      const startRank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(startJudgment),endRank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(endJudgment);
+      session.note.holdJudgment=finalJudgment;
+      session.note.holdDeltaMs=session.failed||endRank>=startRank?releaseDelta:(session.startDeltaMs||0);
+      session.note._rhythmReleaseJudgment=endJudgment;
+      session.note._rhythmReleaseDeltaMs=releaseDelta;
+      session.note._rhythmReleaseDone=true;
+      // game-system.jsx の既存 inputEnds に最終判定だけ適用させる。
+      // document capture は play-area の inputEnds より先に走るため、ここで終了時刻を
+      // 現在より十分前へ寄せれば旧「早離し」分岐へ入らず、上で合成した判定が1回だけ反映される。
+      session.note.endTimeMs=songNow-session.offsetMs-101;
+    }
+    sessions.delete(id);
   };
   const bind=(inputKeyValue,note,kind,startSongMs,offsetMs)=>{
     const key=String(inputKeyValue||'');
-    if(!key||!note||(kind!=='FLICK'&&kind!=='SLIDE'))return;
+    if(!key||!note||(kind!=='HOLD'&&kind!=='FLICK'&&kind!=='SLIDE'))return;
     const pos=positions.get(key)||{clientX:0,clientY:0,perfMs:nowPerf()};
     note._rhythmGestureType=kind;
     note._rhythmOriginalType=kind;
     note.type='HOLD';
-    if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
+    const releaseRequired=kind==='HOLD'||kind==='SLIDE';
+    const releaseTargetMs=releaseRequired?(Number(note.endTimeMs)||Number(note.timeMs)||0):null;
+    if(releaseRequired){
+      note._rhythmReleaseOriginalEndTimeMs=releaseTargetMs;
+      note._rhythmReleaseRequired=true;
+      // 普段の見た目は元のendTimeMsを保ち、終端100ms前からだけ自動完了を延期する。
+      // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
+    }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{
@@ -183,15 +246,16 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
 
   if(typeof document!=='undefined'){
     const captureTouchPositions=event=>{Array.from(event.changedTouches||[]).forEach(touch=>record(inputKey('touch',touch.identifier),touch.clientX,touch.clientY));};
-    const releaseTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier)));};
+    const releaseTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false));};
+    const cancelTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),true));};
     document.addEventListener('touchstart',captureTouchPositions,{capture:true,passive:true});
     document.addEventListener('touchmove',captureTouchPositions,{capture:true,passive:true});
     document.addEventListener('touchend',releaseTouches,{capture:true,passive:true});
-    document.addEventListener('touchcancel',releaseTouches,{capture:true,passive:true});
+    document.addEventListener('touchcancel',cancelTouches,{capture:true,passive:true});
     document.addEventListener('pointerdown',event=>{if(event.pointerType!=='touch')record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);},true);
     document.addEventListener('pointermove',event=>{if(event.pointerType!=='touch')record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);},true);
-    document.addEventListener('pointerup',event=>{if(event.pointerType!=='touch')release(inputKey('pointer',event.pointerId));},true);
-    document.addEventListener('pointercancel',event=>{if(event.pointerType!=='touch')release(inputKey('pointer',event.pointerId));},true);
+    document.addEventListener('pointerup',event=>{if(event.pointerType!=='touch')release(inputKey('pointer',event.pointerId),false);},true);
+    document.addEventListener('pointercancel',event=>{if(event.pointerType!=='touch')release(inputKey('pointer',event.pointerId),true);},true);
     document.addEventListener('click',event=>{const button=event.target?.closest?.('[data-rhythm-pause-menu] button');if(button&&/リスタート|中断/.test(button.textContent||''))clear();},true);
   }
 
@@ -210,7 +274,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     if(!picked)return {input,target:null,deltaMs:null};
     claimed.add(picked.index);
     const originalType=picked.note.type;
-    if(originalType==='FLICK'||originalType==='SLIDE')RHYTHM_GESTURE_RUNTIME.bind(key,picked.note,originalType,now,offset);
+    if(originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE')RHYTHM_GESTURE_RUNTIME.bind(key,picked.note,originalType,now,offset);
     return {input,target:picked.note,deltaMs:now-(picked.note.timeMs+offset)};
   });
 };
