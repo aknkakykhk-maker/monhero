@@ -20,5 +20,6 @@ if(helpers){
 check('描画は判定と同じrhythmSlidePointsを正本にする',source.includes('const points=rhythmSlidePoints(note);')&&source.includes('const source=rhythmSlidePoints(note)'));
 check('既存projectionとプレイ本体rAFの時刻を再利用',source.includes('rhythmProjectTravelProgress(progress)')&&source.includes('rhythmProjectLane(Number(point.lane),yRatio)')&&game.includes('chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs'));
 check('SLIDE判定許容値と追従判定を変更していない',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')&&source.includes('if(Math.abs(actual-expected)>RHYTHM_SLIDE_TOLERANCE_LANES)'));
+check('SLIDE帯は薄い塗りと控えめな発光でも縁を維持',source.includes('fill:rgba(168,85,247,.48)')&&source.includes('stroke:rgba(233,213,255,.56)')&&source.includes('drop-shadow(0 0 5px rgba(168,85,247,.38)'));
 check('TAP・HOLD・FLICK描画分岐を維持',game.includes("note.type==='HOLD'&&<span data-rhythm-hold-body")&&source.includes('[data-note-type="FLICK"]')&&source.includes('rhythmNoteVisualSpan(note,lane,yRatio)'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
