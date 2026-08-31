@@ -6,6 +6,8 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // キーが変わらないため、ブラウザは古いbreeder.jsを使い続け、
 // 「本体は新しいのにデータが古い」状態で参照エラー → 画面が真っ暗になった。
 // tools/stamp-version.js が中身のハッシュへ揃えるようになったので、ここで出荷前に検証する。
+// あわせて __mhBoot の BOOT_SIZES も実ファイルと一致することを確認し、
+// dataファイルだけ変更して正規ビルドを通し忘れた状態を配信前に止める。
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
@@ -21,6 +23,10 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 
+const sizesMatch = index.match(/var SIZES = (\{.*?\}); \/\* BOOT_SIZES \*\//);
+check('index.htmlにBOOT_SIZESがある', !!sizesMatch);
+const bootSizes = sizesMatch ? JSON.parse(sizesMatch[1]) : {};
+
 const tags = [...index.matchAll(/<script src="(data\/[^"?]+\.js)\?v=([^"]*)"/g)];
 check('index.htmlがdata/*.jsを読み込んでいる', tags.length > 0, `${tags.length}件`);
 
@@ -28,8 +34,11 @@ for (const [, relPath, key] of tags) {
   const filePath = path.join(root, 'monster-hero', relPath);
   const exists = fs.existsSync(filePath);
   if (!exists) { check(`${relPath} が存在する`, false); continue; }
-  const hash = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex').slice(0, 12);
+  const bytes = fs.readFileSync(filePath);
+  const hash = crypto.createHash('sha256').update(bytes).digest('hex').slice(0, 12);
   check(`${relPath} のキャッシュキーが中身と一致`, key === hash, key === hash ? key : `index=${key} / 実際=${hash}`);
+  check(`${relPath} のBOOT_SIZESが実サイズと一致`, bootSizes[relPath] === bytes.length,
+    bootSizes[relPath] === bytes.length ? `${bytes.length} bytes` : `index=${bootSizes[relPath]} / 実際=${bytes.length}`);
 }
 
 check('本体JSはGAME_BUILDでキャッシュを更新する', /game-system\.compiled\.js\?v=' \+ GAME_BUILD/.test(index));
