@@ -44,6 +44,6 @@ if(remainingHelper){
 check('SLIDE残り表示は既存のノーツ描画フレームへ統合',release.includes('const originalSlideVisualLaneForIndex=runtime.slideVisualLaneForIndex.bind(runtime)')&&release.includes('runtime.slideVisualLaneForIndex=index=>')&&release.includes('updateBody(index)')&&!release.includes('requestAnimationFrame('));
 check('SLIDE帯の高さだけをCSS変数で短縮',release.includes("body.style.setProperty('--rhythm-slide-visible-height'")&&release.includes('height:var(--rhythm-slide-visible-height,var(--rhythm-slide-height,120px))!important'));
 check('SLIDE入力・判定runtimeは上書きしない',!release.includes('runtime.bind=')&&!release.includes('rhythmMatchInputBatch=')&&!release.includes('RHYTHM_SLIDE_TOLERANCE_LANES='));
-check('SLIDE表示修正の更新履歴とヘルプを同時反映',release.includes("RHYTHM_RELEASE_TITLE='音ゲーデバッグのSLIDE帯の残り表示を修正'")&&release.includes('残り時間に合わせて紫の帯が短くなり'));
+check('SLIDE表示修正と最新HOLD・SLIDE仕様の更新履歴・ヘルプを同時反映',release.includes('SLIDE')&&release.includes('HOLD')&&release.includes('最後に指を離したタイミング')&&release.includes('終端のタイミングで指を離す必要があります'));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
