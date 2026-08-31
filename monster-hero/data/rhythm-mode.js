@@ -116,6 +116,60 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
   return Number(points[points.length-1]?.lane)||0;
 };
 
+// STEP 2A.5: 入力成功を即座に返す仮ノーツSE。既存の音ゲー設定キーだけを読み、
+// AudioContextは1個だけ遅延生成して再利用する。空打ち/MISS経路からは呼ばない。
+const RHYTHM_NOTE_SE_RUNTIME=(()=>{
+  let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70};
+  const readSettings=()=>{
+    if(typeof localStorage==='undefined')return cachedSettings;
+    let raw=null;
+    try{raw=localStorage.getItem('mh_rhythm_settings_v1');}catch{return cachedSettings;}
+    if(raw===cachedRaw)return cachedSettings;
+    cachedRaw=raw;
+    if(!raw){cachedSettings={enabled:true,volume:70};return cachedSettings;}
+    try{
+      const value=JSON.parse(raw),number=Number(value?.noteSeVolume);
+      cachedSettings={
+        enabled:typeof value?.noteSeEnabled==='boolean'?value.noteSeEnabled:true,
+        volume:Number.isFinite(number)?Math.max(0,Math.min(100,number)):70,
+      };
+    }catch{cachedSettings={enabled:true,volume:70};}
+    return cachedSettings;
+  };
+  const context=()=>{
+    if(ctx&&ctx.state!=='closed')return ctx;
+    if(typeof window==='undefined')return null;
+    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+    if(!AudioContextClass)return null;
+    try{ctx=new AudioContextClass();}catch{return null;}
+    return ctx;
+  };
+  const warm=()=>{
+    const audio=context();
+    if(audio?.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+  };
+  const play=()=>{
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0)return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime,level=Math.max(.0001,.035*(settings.volume/100));
+    oscillator.type='triangle';
+    oscillator.frequency.setValueAtTime(1120,now);
+    oscillator.frequency.exponentialRampToValueAtTime(820,now+.035);
+    gain.gain.setValueAtTime(level,now);
+    gain.gain.exponentialRampToValueAtTime(.0001,now+.045);
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now+.05);
+    oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    return true;
+  };
+  return {warm,play,_readSettings:readSettings};
+})();
+
 const RHYTHM_GESTURE_RUNTIME=(()=>{
   const positions=new Map(),sessions=new Map();
   let raf=0;
@@ -273,13 +327,14 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
 
   if(typeof document!=='undefined'){
     const captureTouchPositions=event=>{Array.from(event.changedTouches||[]).forEach(touch=>record(inputKey('touch',touch.identifier),touch.clientX,touch.clientY));};
+    const captureTouchStart=event=>{if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();captureTouchPositions(event);};
     const releaseTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),false));};
     const cancelTouches=event=>{Array.from(event.changedTouches||[]).forEach(touch=>release(inputKey('touch',touch.identifier),true));};
-    document.addEventListener('touchstart',captureTouchPositions,{capture:true,passive:true});
+    document.addEventListener('touchstart',captureTouchStart,{capture:true,passive:true});
     document.addEventListener('touchmove',captureTouchPositions,{capture:true,passive:true});
     document.addEventListener('touchend',releaseTouches,{capture:true,passive:true});
     document.addEventListener('touchcancel',cancelTouches,{capture:true,passive:true});
-    document.addEventListener('pointerdown',event=>{if(event.pointerType!=='touch')record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);},true);
+    document.addEventListener('pointerdown',event=>{if(event.pointerType!=='touch'){if(event.target?.closest?.('[data-rhythm-play-area]'))RHYTHM_NOTE_SE_RUNTIME.warm();record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);}},true);
     document.addEventListener('pointermove',event=>{if(event.pointerType!=='touch')record(inputKey('pointer',event.pointerId),event.clientX,event.clientY);},true);
     document.addEventListener('pointerup',event=>{if(event.pointerType!=='touch')release(inputKey('pointer',event.pointerId),false);},true);
     document.addEventListener('pointercancel',event=>{if(event.pointerType!=='touch')release(inputKey('pointer',event.pointerId),true);},true);
@@ -314,6 +369,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     claimed.add(picked.index);
     const originalType=picked.note.type;
     if(originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE')RHYTHM_GESTURE_RUNTIME.bind(key,picked.note,originalType,now,offset);
+    RHYTHM_NOTE_SE_RUNTIME.play();
     return {input,target:picked.note,deltaMs:now-(picked.note.timeMs+offset)};
   });
 };
