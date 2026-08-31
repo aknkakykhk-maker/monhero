@@ -3,10 +3,10 @@
 // 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
 // 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
-  const RHYTHM_RELEASE_DATE='2026-09-01 06:49';
-  const RHYTHM_DATA_BUILD='2026-09-01 06:49';
-  const RHYTHM_COMPILED_BUILD='2026-08-31 20:42';
-  const RHYTHM_RELEASE_TITLE='バックアップファイル保存ボタンを表示';
+  const RHYTHM_RELEASE_DATE='2026-09-01 07:10';
+  const RHYTHM_DATA_BUILD='2026-09-01 07:10';
+  const RHYTHM_COMPILED_BUILD='2026-09-01 07:10';
+  const RHYTHM_RELEASE_TITLE='バックアップファイル保存を本体UIへ統合';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
     const start=Number(startMs)||0,end=Number(endMs)||start,now=Number(chartNowMs);
@@ -105,8 +105,8 @@
     CHANGELOG.unshift({
       date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
-        'データ引き継ぎ画面で「バックアップファイルを保存（.mhsave）」と「バックアップファイルから復元（.mhsave）」を確実に表示するよう、バックアップ機能を標準の起動スクリプトとして読み込むようにしました。',
-        '従来の引き継ぎコード方式もそのまま利用でき、既存のmh_*セーブデータ形式は変更していません。'
+        'データ引き継ぎ画面のReact本体へ「バックアップファイルを保存（.mhsave）」と「バックアップファイルから復元（.mhsave）」を直接追加しました。',
+        'iPhoneでは共有メニューから「ファイルに保存」を選べます。従来の引き継ぎコード方式と既存のmh_*セーブデータ形式もそのまま維持しています。'
       ]
     });
   }
