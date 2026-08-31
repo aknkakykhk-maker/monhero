@@ -3,10 +3,10 @@
 // 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
 // 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
-  const RHYTHM_RELEASE_DATE='2026-08-31 18:25';
-  const RHYTHM_DATA_BUILD='2026-08-31 18:25';
-  const RHYTHM_COMPILED_BUILD='2026-08-31 18:25';
-  const RHYTHM_RELEASE_TITLE='音ゲーの奥行きとレーン位置を再調整';
+  const RHYTHM_RELEASE_DATE='2026-09-01 06:35';
+  const RHYTHM_DATA_BUILD='2026-09-01 06:35';
+  const RHYTHM_COMPILED_BUILD='2026-08-31 20:42';
+  const RHYTHM_RELEASE_TITLE='データ引き継ぎをファイル保存に対応';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
     const start=Number(startMs)||0,end=Number(endMs)||start,now=Number(chartNowMs);
@@ -105,13 +105,22 @@
     CHANGELOG.unshift({
       date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
-        'レーン上端の収束と奥のノーツの縮小、判定ラインへ近づくほど加速して迫る動きをもう一段階強めました。',
-        'レーン描画をプレイエリア全体の座標へ統一し、TAP／FLICK／HOLD／SLIDEと帯、判定ライン、タッチ判定を同じ投影中心へ揃えました。'
+        '長くなった引き継ぎコードをコピーしなくても、バックアップを「.mhsave」ファイルとして保存・復元できるようにしました。',
+        '従来の引き継ぎコード方式もそのまま利用でき、既存のmh_*セーブデータ形式は変更していません。'
       ]
     });
   }
   if(typeof HELP_CATEGORIES!=='undefined'){
     const topic=HELP_CATEGORIES.flatMap(category=>category.topics||[]).find(item=>item.id==='rhythm-mode');
     if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDEを確認できます。レーンは上端へ強く収束し、ノーツは奥で小さく、手前へ近づくほど大きく加速して見えます。レーン境界、ノーツ、HOLD／SLIDE帯、判定ライン、タッチ判定は、プレイエリア全体を基準にした同じ遠近座標とレーン中心へ揃えています。HOLDとSLIDEは開始位置で押すだけでなく、終端のタイミングで指を離す必要があります。横長に発光する終端バーが判定ラインへ来たタイミングで指を離します。最後に指を離したタイミングも±200msでMARVELOUS〜BADを判定し、範囲外または+200msを超えて押しっぱなしの場合はMISSです。SLIDE途中はこれまでどおり指位置と経路も照合します。iPhone Safariのポーズ画面は「再開」「リスタート」「中断して音ゲーデバッグへ戻る」をtouchendのcapture段階で処理します。'}];
+  }
+
+  // データ引き継ぎの .mhsave 拡張を読み込む。保存形式は従来の引き継ぎコードと同じ。
+  if(typeof document!=='undefined'&&!document.querySelector('script[data-mhsave-backup]')){
+    const script=document.createElement('script');
+    script.src='data/mhsave-backup.js?v=202609010635';
+    script.dataset.mhsaveBackup='true';
+    script.async=false;
+    document.head.appendChild(script);
   }
 })();
