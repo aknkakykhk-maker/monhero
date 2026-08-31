@@ -1,14 +1,12 @@
-// 音ゲーデバッグ STEP7 以降の小さい出荷レイヤー。
+// 音ゲーデバッグ STEP7 の小さい出荷レイヤー。
 // 旧ページは version.json の新buildを見て標準更新バナーを出す。
-// 更新後のページだけ対象buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
-// 条件は対象buildとの完全一致だけなので、将来の別buildはそのまま検知される。
+// 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
+// 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
   const RHYTHM_RELEASE_DATE='2026-08-31 18:25';
   const RHYTHM_DATA_BUILD='2026-08-31 18:25';
   const RHYTHM_COMPILED_BUILD='2026-08-31 18:25';
   const RHYTHM_RELEASE_TITLE='音ゲーの奥行きとレーン位置を再調整';
-  const RHYTHM_NOTE_SE_DATE='2026-08-31 21:39';
-  const RHYTHM_NOTE_SE_TITLE='音ゲーに仮のノーツヒットSEを追加';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
     const start=Number(startMs)||0,end=Number(endMs)||start,now=Number(chartNowMs);
@@ -74,25 +72,17 @@
     Object.defineProperty(window,'__mhRhythmDataBuildBridge',{value:true,configurable:false});
   }
 
-  if(typeof CHANGELOG!=='undefined'){
-    if(!CHANGELOG.some(entry=>entry?.title===RHYTHM_RELEASE_TITLE)){
-      CHANGELOG.unshift({
-        date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',releaseFlag:'rhythmMode',
-        items:[
-          'レーン上端の収束と奥のノーツの縮小、判定ラインへ近づくほど加速して迫る動きをもう一段階強めました。',
-          'レーン描画をプレイエリア全体の座標へ統一し、TAP／FLICK／HOLD／SLIDEと帯、判定ライン、タッチ判定を同じ投影中心へ揃えました。'
-        ]
-      });
-    }
-    if(!CHANGELOG.some(entry=>entry?.title===RHYTHM_NOTE_SE_TITLE)){
-      CHANGELOG.unshift({
-        date:RHYTHM_NOTE_SE_DATE,type:'update',title:RHYTHM_NOTE_SE_TITLE,status:'new',releaseFlag:'rhythmMode',
-        items:['TAP／HOLD／FLICK／SLIDEの開始入力が正常にノーツを取得したときだけ、短い仮SEが鳴るようにしました。空打ちでは鳴らず、既存の音ゲー設定にあるノーツSE ON/OFFと音量を反映します。']
-      });
-    }
+  if(typeof CHANGELOG!=='undefined'&&!CHANGELOG.some(entry=>entry?.title===RHYTHM_RELEASE_TITLE)){
+    CHANGELOG.unshift({
+      date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
+      items:[
+        'レーン上端の収束と奥のノーツの縮小、判定ラインへ近づくほど加速して迫る動きをもう一段階強めました。',
+        'レーン描画をプレイエリア全体の座標へ統一し、TAP／FLICK／HOLD／SLIDEと帯、判定ライン、タッチ判定を同じ投影中心へ揃えました。'
+      ]
+    });
   }
   if(typeof HELP_CATEGORIES!=='undefined'){
     const topic=HELP_CATEGORIES.flatMap(category=>category.topics||[]).find(item=>item.id==='rhythm-mode');
-    if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDE、WIDTH TESTの幅1〜4 TAP／HOLDを確認できます。操作表示は5メインレーンで、可変幅TAP／HOLDは10サブレーン単位で配置・入力します。SLIDE／FLICKの可変幅はまだ未対応です。レーン境界、ノーツ、HOLD／SLIDE帯、判定ライン、タッチ判定は同じ遠近座標へ揃えています。HOLDとSLIDEは開始位置で押したあと、終端バーが判定ラインへ来たタイミングで指を離します。SLIDEは途中もslidePointsに沿って追従します。ノーツの開始入力を正常取得したときは短い仮ヒットSEが鳴り、空打ちでは鳴りません。SEは音ゲー設定のノーツSE ON/OFFと音量を反映します。'}];
+    if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDEを確認できます。レーンは上端へ強く収束し、ノーツは奥で小さく、手前へ近づくほど大きく加速して見えます。レーン境界、ノーツ、HOLD／SLIDE帯、判定ライン、タッチ判定は、プレイエリア全体を基準にした同じ遠近座標とレーン中心へ揃えています。HOLDとSLIDEは開始位置で押すだけでなく、終端のタイミングで指を離す必要があります。横長に発光する終端バーが判定ラインへ来たタイミングで指を離します。最後に指を離したタイミングも±200msでMARVELOUS〜BADを判定し、範囲外または+200msを超えて押しっぱなしの場合はMISSです。SLIDE途中はこれまでどおり指位置と経路も照合します。iPhone Safariのポーズ画面は「再開」「リスタート」「中断して音ゲーデバッグへ戻る」をtouchendのcapture段階で処理します。'}];
   }
 })();
