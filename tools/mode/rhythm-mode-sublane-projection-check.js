@@ -22,6 +22,6 @@ check('薄い5本のサブレーン境界を共通boundaryで配置',game.includ
 check('補助線は入力を遮らずノーツより下の専用レイヤーへ表示',source.includes('[data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none')&&source.includes('[data-rhythm-note]{z-index:2}'));
 check('play-area再マウント時も静的形状を再設定',source.includes("const next=document.querySelector('[data-rhythm-play-area]')")&&source.includes('if(next!==area){area=next;rhythmLayoutPlayArea(area);}'));
 check('プレイ中の判定文字だけを約13%縮小',game.includes('data-rhythm-judgment-display')&&game.includes('block text-[26px] font-black leading-none tracking-wide'));
-check('可変幅はTAP描画だけに限定',source.includes("note?.type==='TAP'")&&source.includes('rhythmNoteVisualSpan(note,lane,yRatio)'));
-check('既存HOLD・SLIDE帯とENDバーのprojectionを維持',source.includes('rhythmProjectLane(Number(point.lane),yRatio)')&&source.includes('top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio)')&&source.includes('end=rhythmProjectLane(rhythmReleaseLane(note),endY)'));
+check('可変幅はTAP/HOLD描画だけに限定',source.includes("note?.type==='TAP'||note?.type==='HOLD'")&&source.includes('rhythmNoteVisualSpan(note,lane,yRatio)'));
+check('可変幅HOLDと既存SLIDEの帯・ENDバーprojection',source.includes('rhythmProjectLane(Number(point.lane),yRatio)')&&source.includes('variableHold?rhythmNoteVisualSpan(note,lane,topY/rect.height):rhythmProjectLane(lane,topY/rect.height)')&&source.includes("rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY):rhythmProjectLane(rhythmReleaseLane(note),endY)"));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

@@ -41,8 +41,9 @@ const rhythmProjectSubLaneSpan=(subLane,width,yRatio)=>{
   return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio),subLane:start,subLaneWidth:span};
 };
 // 旧譜面は lane を正本のまま使い、従来と同じ中央・2サブレーン幅へ写す。
-// 可変幅はTAPの描画と入力だけに限定し、HOLD/FLICK/SLIDEの仕様は変えない。
-const rhythmNoteVisualSpan=(note,visualLane,yRatio)=>note?.type==='TAP'&&note?.subLane!=null&&Number.isFinite(Number(note.subLane))
+// subLaneを持つTAP/HOLDだけを可変幅にし、FLICK/SLIDEは従来仕様を保つ。
+const rhythmNoteHasVariableSpan=note=>(note?.type==='TAP'||note?.type==='HOLD')&&note?.subLane!=null&&Number.isFinite(Number(note.subLane));
+const rhythmNoteVisualSpan=(note,visualLane,yRatio)=>rhythmNoteHasVariableSpan(note)
   ?rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,yRatio)
   :rhythmProjectSubLaneSpan(Number(visualLane)*2,2,yRatio);
 const rhythmLanePolygon=lane=>{
@@ -296,14 +297,14 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     seenInputs.add(key);
     const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate);
     const acceptsPosition=note=>{
-      if(note.type!=='TAP'||note.subLane==null||!Number.isFinite(Number(note.subLane)))return note.lane===lane;
+      if(!rhythmNoteHasVariableSpan(note))return note.lane===lane;
       if(!Number.isFinite(subCoordinate))return false;
       const span=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1),start=span.subLane,end=start+span.subLaneWidth;
       const tolerance=span.subLaneWidth===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:0;
       return subCoordinate>=start-tolerance&&subCoordinate<=end+tolerance;
     };
     const spatialDistance=note=>{
-      if(note.type!=='TAP'||note.subLane==null||!Number.isFinite(subCoordinate))return 0;
+      if(!rhythmNoteHasVariableSpan(note)||!Number.isFinite(subCoordinate))return 0;
       const span=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1);
       return Math.abs(subCoordinate-(span.subLane+span.subLaneWidth/2));
     };
@@ -394,6 +395,16 @@ const widthTestNotes = Object.freeze([
   [8400,0,1],[9000,1,2],[9600,3,3],[10200,6,4], // 幅1→2→3→4
 ].map(([timeMs,subLane,subLaneWidth])=>Object.freeze({type:'TAP',timeMs,lane:Math.floor(subLane/2),subLane,subLaneWidth})));
 const widthTestChart=Object.freeze({level:1,notes:widthTestNotes,totalNotes:widthTestNotes.length,durationMs:12000});
+// STEP 2A: 可変幅HOLDの始点・帯・ENDバーと複数指入力を確認するNORMAL専用譜面。
+const widthHoldTestNotes=Object.freeze([
+  [1800,3200,0,1],[4000,5400,2,2],[6200,7600,4,3],[8400,10000,6,4],
+  [10800,12200,0,1],[13000,14400,9,1],
+  [15200,17000,4,1],[15200,17000,5,1],
+].map(([timeMs,endTimeMs,subLane,subLaneWidth])=>Object.freeze({type:'HOLD',timeMs,endTimeMs,lane:Math.floor(subLane/2),subLane,subLaneWidth})).concat([
+  Object.freeze({type:'HOLD',timeMs:18000,endTimeMs:20200,lane:2,subLane:4,subLaneWidth:2}),
+  Object.freeze({type:'TAP',timeMs:18800,lane:4,subLane:8,subLaneWidth:2}),
+]));
+const widthHoldTestChart=Object.freeze({level:2,notes:widthHoldTestNotes,totalNotes:widthHoldTestNotes.length,durationMs:22000});
 
 const RHYTHM_SONGS = Object.freeze([
   Object.freeze({
@@ -407,7 +418,7 @@ const RHYTHM_SONGS = Object.freeze([
   }),
   Object.freeze({
     songId:'width_test', displayName:'WIDTH TEST', bgmTrackId:'atsu_cup_theme',
-    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:emptyRhythmChart()])))
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:id==='NORMAL'?widthHoldTestChart:emptyRhythmChart()])))
   }),
 ]);
 
@@ -545,8 +556,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
     for(let index=polygons.length;index<body.childNodes.length;index++)body.childNodes[index].style.display='none';
   }else{
   const measuredBodyHeight=frameLayout&&Number.isFinite(Number(frameLayout.bodyHeight))?Number(frameLayout.bodyHeight):parseFloat(getComputedStyle(body).height),height=Math.max(0,measuredBodyHeight||0),topY=Math.max(0,Math.min(rect.height,centerY-height));
-  const topLane=lane;
-  const top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio),topHalf=top.width*RHYTHM_BODY_WIDTH_RATIO/2,bottomHalf=bottom.width*RHYTHM_BODY_WIDTH_RATIO/2;
+  const variableHold=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD',top=variableHold?rhythmNoteVisualSpan(note,lane,topY/rect.height):rhythmProjectLane(lane,topY/rect.height),bottom=variableHold?rhythmNoteVisualSpan(note,lane,yRatio):rhythmProjectLane(lane,yRatio),bodyRatio=variableHold?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO,topHalf=top.width*bodyRatio/2,bottomHalf=bottom.width*bodyRatio/2;
   body.style.left=`${(-left).toFixed(2)}px`;
   body.style.width=`${rect.width.toFixed(2)}px`;
   body.style.clipPath=`polygon(${((top.center-topHalf)*100).toFixed(3)}% 0,${((top.center+topHalf)*100).toFixed(3)}% 0,${((bottom.center+bottomHalf)*100).toFixed(3)}% 100%,${((bottom.center-bottomHalf)*100).toFixed(3)}% 100%)`;
@@ -554,7 +564,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const endBar=el._rhythmEndBar||el.querySelector('[data-rhythm-end-bar]');
   if(endBar)el._rhythmEndBar=endBar;
   if(endBar&&Number.isFinite(releaseYpx)){
-    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
+    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY):rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
     endBar.style.left=`${(rect.width*end.center-left-barWidth/2).toFixed(2)}px`;
     endBar.style.top=`${(Number(releaseYpx)-Number(yPx)+noteHeight/2-4).toFixed(2)}px`;
     endBar.style.width=`${barWidth.toFixed(2)}px`;
