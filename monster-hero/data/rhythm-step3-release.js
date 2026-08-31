@@ -6,7 +6,7 @@
   const RHYTHM_RELEASE_DATE='2026-09-01 07:10';
   const RHYTHM_DATA_BUILD='2026-09-01 07:10';
   const RHYTHM_COMPILED_BUILD='2026-09-01 07:10';
-  const RHYTHM_RELEASE_TITLE='バックアップファイル保存を本体UIへ統合';
+  const RHYTHM_RELEASE_TITLE='バックアップ画面に使い方とファイル名を表示';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
     const start=Number(startMs)||0,end=Number(endMs)||start,now=Number(chartNowMs);
@@ -105,8 +105,8 @@
     CHANGELOG.unshift({
       date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
-        'データ引き継ぎ画面のReact本体へ「バックアップファイルを保存（.mhsave）」と「バックアップファイルから復元（.mhsave）」を直接追加しました。',
-        'iPhoneでは共有メニューから「ファイルに保存」を選べます。従来の引き継ぎコード方式と既存のmh_*セーブデータ形式もそのまま維持しています。'
+        'バックアップ／復元画面に使い方を表示し、iPhoneでの「ファイルに保存」手順と復元手順を画面内で確認できるようにしました。',
+        '保存ファイル名を「MonsterHero_Backup_YYYYMMDD_HHMM.mhsave」に統一しました。従来の引き継ぎコード方式と既存のmh_*セーブデータ形式は変更していません。'
       ]
     });
   }

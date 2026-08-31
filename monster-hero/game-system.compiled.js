@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9c8754415e9cc5ef
+// source-sha256: 6f0f11e14a560960
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-01 07:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-01 07:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19334,7 +19334,7 @@ function MonsterHeroGame() {
   const backupFileStamp = () => {
     const d = new Date();
     const pad = v => String(v).padStart(2, '0');
-    return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes());
   };
   const saveBackupFile = async () => {
     setRestoreMsg('');
@@ -19344,7 +19344,7 @@ function MonsterHeroGame() {
         setRestoreMsg('バックアップファイルを作成できませんでした');
         return;
       }
-      const filename = 'monster-hero-backup-' + backupFileStamp() + '.mhsave';
+      const filename = 'MonsterHero_Backup_' + backupFileStamp() + '.mhsave';
       const blob = new Blob([code], {
         type: 'application/octet-stream'
       });
@@ -27468,7 +27468,43 @@ function MonsterHeroGame() {
   }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), /*#__PURE__*/React.createElement("button", {
     className: backupTab === 'import' ? 'active' : '',
     onClick: () => setBackupTab('import')
-  }, "\u5FA9\u5143")), backupTab === 'export' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+  }, "\u5FA9\u5143")), backupTab === 'export' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'rgba(15,23,42,.72)',
+      border: '1px solid rgba(255,255,255,.12)',
+      borderRadius: 12,
+      padding: '12px 14px',
+      margin: '10px 0',
+      textAlign: 'left',
+      fontSize: 12,
+      lineHeight: 1.65,
+      color: '#e2e8f0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      color: '#fff',
+      marginBottom: 4
+    }
+  }, "\u4F7F\u3044\u65B9"), /*#__PURE__*/React.createElement("div", null, "1. \u4E0B\u306E\u300C\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u3092\u4FDD\u5B58\u300D\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", null, "2. iPhone\u306F\u5171\u6709\u30E1\u30CB\u30E5\u30FC\u3067\u300C\u30D5\u30A1\u30A4\u30EB\u306B\u4FDD\u5B58\u300D\u3092\u9078\u3076"), /*#__PURE__*/React.createElement("div", null, "3. iCloud Drive\u306A\u3069\u3001\u3042\u3068\u3067\u898B\u3064\u3051\u3084\u3059\u3044\u5834\u6240\u3078\u4FDD\u5B58\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      fontWeight: 900,
+      color: '#fff'
+    }
+  }, "\u4FDD\u5B58\u30D5\u30A1\u30A4\u30EB\u540D"), /*#__PURE__*/React.createElement("code", {
+    style: {
+      display: 'block',
+      marginTop: 2,
+      wordBreak: 'break-all',
+      color: '#c4b5fd'
+    }
+  }, "MonsterHero_Backup_YYYYMMDD_HHMM.mhsave"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      color: '#94a3b8'
+    }
+  }, "\u203B YYYYMMDD_HHMM \u306F\u4FDD\u5B58\u3057\u305F\u65E5\u6642\u306B\u7F6E\u304D\u63DB\u308F\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("button", {
     "data-mhsave-action": "export",
     className: "mh-dialog-choice",
     onClick: saveBackupFile
@@ -27478,7 +27514,34 @@ function MonsterHeroGame() {
   }), /*#__PURE__*/React.createElement("button", {
     className: "mh-dialog-choice",
     onClick: generateBackupCode
-  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u4F5C\u6210")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u4F5C\u6210")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'rgba(15,23,42,.72)',
+      border: '1px solid rgba(255,255,255,.12)',
+      borderRadius: 12,
+      padding: '12px 14px',
+      margin: '10px 0',
+      textAlign: 'left',
+      fontSize: 12,
+      lineHeight: 1.65,
+      color: '#e2e8f0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      color: '#fff',
+      marginBottom: 4
+    }
+  }, "\u4F7F\u3044\u65B9"), /*#__PURE__*/React.createElement("div", null, "1. \u4E0B\u306E\u300C\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u304B\u3089\u5FA9\u5143\u300D\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", null, "2. \u4FDD\u5B58\u3057\u305F ", /*#__PURE__*/React.createElement("code", {
+    style: {
+      color: '#c4b5fd'
+    }
+  }, "MonsterHero_Backup_....mhsave"), " \u3092\u9078\u3076"), /*#__PURE__*/React.createElement("div", null, "3. \u5FA9\u5143\u5F8C\u3001\u30B2\u30FC\u30E0\u306F\u81EA\u52D5\u3067\u518D\u8AAD\u307F\u8FBC\u307F\u3055\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 7,
+      color: '#fbbf24'
+    }
+  }, "\u203B \u9078\u3093\u3060\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u5185\u306E\u30C7\u30FC\u30BF\u3067\u73FE\u5728\u306E\u30BB\u30FC\u30D6\u304C\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("button", {
     "data-mhsave-action": "import",
     className: "mh-dialog-choice",
     onClick: restoreFromBackupFile
