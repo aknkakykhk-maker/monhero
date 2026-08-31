@@ -6,21 +6,29 @@ let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if
 const helper=source.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const rhythmLaneAtPoint=[\s\S]*?\n\};/)?.[0];
 check('共通projection helperを抽出できる',!!helper);
 if(helper){
-  const context={RHYTHM_LANE_COUNT:5};vm.runInNewContext(`${helper}\nthis.out={rhythmProjectLane,rhythmLanePolygon,rhythmProjectTravelProgress,rhythmLaneCoordinateAtPoint,rhythmLaneAtPoint};`,context);
-  const {rhythmProjectLane,rhythmProjectTravelProgress,rhythmLaneCoordinateAtPoint,rhythmLaneAtPoint}=context.out,rect={left:20,top:40,width:500,height:800};
-  for(const y of [.05,.5,.88])for(let lane=0;lane<5;lane++){
-    const p=rhythmProjectLane(lane,y),left=rhythmProjectLane(0,y).center-rhythmProjectLane(0,y).width/2;
-    const clientX=rect.left+p.center*rect.width,clientY=rect.top+y*rect.height,coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
-    check(`lane ${lane+1} / y ${y} の境界・中央・入力が一致`,Math.abs(p.center-(left+(lane+.5)*p.width))<1e-9&&Math.abs(coordinate-lane)<1e-9&&rhythmLaneAtPoint(clientX,clientY,rect)===lane);
+  const context={RHYTHM_LANE_COUNT:5};vm.runInNewContext(`${helper}\nthis.out={rhythmProjectBoundary,rhythmProjectLane,rhythmLanePolygon,rhythmProjectTravelProgress,rhythmLaneCoordinateAtPoint,rhythmLaneAtPoint};`,context);
+  const {rhythmProjectBoundary,rhythmProjectLane,rhythmProjectTravelProgress,rhythmLaneCoordinateAtPoint,rhythmLaneAtPoint}=context.out,rect={left:20,top:40,width:500,height:800};
+  for(const y of [0,.25,.5,.75,.88]){
+    for(let lane=0;lane<5;lane++){
+      const p=rhythmProjectLane(lane,y),left=rhythmProjectBoundary(lane,y),right=rhythmProjectBoundary(lane+1,y);
+      const clientX=rect.left+p.center*rect.width,clientY=rect.top+y*rect.height,coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
+      check(`lane ${lane+1} / y ${y} の境界・中央・入力が一致`,Math.abs(p.left-left)<1e-9&&Math.abs(p.right-right)<1e-9&&Math.abs(p.center-(left+right)/2)<1e-9&&Math.abs(coordinate-lane)<1e-9&&rhythmLaneAtPoint(clientX,clientY,rect)===lane);
+      const leftInside=rect.left+(left+(right-left)*.02)*rect.width,rightInside=rect.left+(right-(right-left)*.02)*rect.width;
+      check(`lane ${lane+1} / y ${y} の左右内側も同じレーン`,rhythmLaneAtPoint(leftInside,clientY,rect)===lane&&rhythmLaneAtPoint(rightInside,clientY,rect)===lane);
+      if(lane<4)check(`lane ${lane+1}-${lane+2} / y ${y} の共有境界が同一`,Math.abs(p.right-rhythmProjectLane(lane+1,y).left)<1e-9);
+    }
+    const outerLeft=rhythmProjectBoundary(0,y),outerRight=rhythmProjectBoundary(5,y);
+    check(`y ${y} の外周幅はprojection scaleと一致`,Math.abs((outerRight-outerLeft)-rhythmProjectLane(2,y).scale)<1e-9);
   }
   check('奥ほど細く判定ライン側ほど広い',rhythmProjectLane(2,0).width<rhythmProjectLane(2,.88).width&&rhythmProjectLane(2,.88).width<rhythmProjectLane(2,1).width);
   const far=rhythmProjectTravelProgress(.2)-rhythmProjectTravelProgress(.1),near=rhythmProjectTravelProgress(.9)-rhythmProjectTravelProgress(.8);
   check('Y移動は時刻を保った自然な非線形遠近',rhythmProjectTravelProgress(0)===0&&rhythmProjectTravelProgress(1)===1&&far>0&&near>far&&near/far<2);
 }
 check('TAP・FLICK・SLIDE端点が共通projectionを使用',source.includes('const projected=rhythmProjectLane(lane,yRatio)')&&source.includes("const topLane=body.hasAttribute('data-rhythm-slide-body')")&&source.includes('const top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio)'));
-check('HOLD・SLIDE帯も共通境界からpolygonを生成',source.includes('body.style.clipPath=`polygon('));
-check('レーン形状・番号・発光は同じlane polygon',source.includes('lane.style.clipPath=rhythmLanePolygon(index)')&&source.includes('const label=lane.querySelector')&&html.includes('[data-rhythm-lane][data-pressed="true"]'));
-check('判定ラインも同じ投影幅',source.includes('projection=rhythmProjectLane(2,y)')&&source.includes('line.style.left=')&&source.includes('line.style.right='));
+check('HOLD・SLIDE帯はノーツ中心から同じ境界幅で生成',source.includes('centerY=Number(yPx)+el.offsetHeight/2')&&source.includes('topY=Math.max(0,Math.min(rect.height,centerY-height))')&&source.includes('RHYTHM_BODY_WIDTH_RATIO')&&source.includes('body.style.clipPath=`polygon('));
+check('レーン形状と6本の境界線は同じboundary helper',source.includes('lane.style.clipPath=rhythmLanePolygon(index)')&&source.includes("--rhythm-boundary-top")&&source.includes('rhythmProjectBoundary(index,0)')&&source.includes('rhythmProjectBoundary(RHYTHM_LANE_COUNT,0)'));
+check('押下発光は別楕円ではなくレーン台形本体',source.includes('[data-rhythm-lane]::after{content:none!important}')&&source.includes('[data-rhythm-lane][data-pressed="true"]{background:linear-gradient'));
+check('判定ラインも同じ外周境界',source.includes('left=rhythmProjectBoundary(0,y),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)')&&source.includes("line.style.left=`${(left*100).toFixed(4)}%`")&&source.includes("line.style.right=`${((1-right)*100).toFixed(4)}%`"));
 check('Touch・Pointer・SLIDE追従がclientX/clientYで共通逆投影',game.includes('rhythmLaneAtPoint(e.clientX,e.clientY,rect)')&&game.includes('rhythmLaneAtPoint(touch.clientX,touch.clientY,rect)')&&source.includes('rhythmLaneCoordinateAtPoint(clientX,clientY,rect)'));
 check('ノーツY/X/幅をプレイ本体の同じrAFで配置',game.includes('rhythmProjectTravelProgress(progress)*travel.travelPx')&&game.includes('rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current)')&&!source.match(/const installRhythmPerspectiveNoteVisuals=[\s\S]*?requestAnimationFrame/));
 check('別座標系のCSS 3D変形を廃止',!html.includes('transform:perspective(')&&!source.includes('const scale=.44+.56*depth'));
