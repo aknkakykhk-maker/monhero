@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-01 07:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-01 07:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11115,7 +11115,7 @@ function MonsterHeroGame() {
           const file = new File([blob], filename, { type:'application/octet-stream' });
           if (navigator.canShare({ files:[file] })) {
             setRestoreMsg('共有メニューから「ファイルに保存」を選んでください');
-            await navigator.share({ files:[file], title:'Monster Hero バックアップ' });
+            await navigator.share({ files:[file] });
             setRestoreMsg('バックアップファイルを保存・共有しました');
             return;
           }

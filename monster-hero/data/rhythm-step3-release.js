@@ -6,7 +6,7 @@
   const RHYTHM_RELEASE_DATE='2026-09-01 07:10';
   const RHYTHM_DATA_BUILD='2026-09-01 07:10';
   const RHYTHM_COMPILED_BUILD='2026-09-01 07:10';
-  const RHYTHM_RELEASE_TITLE='バックアップ画面に使い方とファイル名を表示';
+  const RHYTHM_RELEASE_TITLE='iPhoneでバックアップファイル名が変わる問題を修正';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
     const start=Number(startMs)||0,end=Number(endMs)||start,now=Number(chartNowMs);
@@ -105,8 +105,8 @@
     CHANGELOG.unshift({
       date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
-        'バックアップ／復元画面に使い方を表示し、iPhoneでの「ファイルに保存」手順と復元手順を画面内で確認できるようにしました。',
-        '保存ファイル名を「MonsterHero_Backup_YYYYMMDD_HHMM.mhsave」に統一しました。従来の引き継ぎコード方式と既存のmh_*セーブデータ形式は変更していません。'
+        'iPhoneの共有メニューへバックアップファイルだけを渡すようにし、「ファイルに保存」で名前が「テキスト」などへ変わる問題を修正しました。',
+        '保存名は「MonsterHero_Backup_YYYYMMDD_HHMM.mhsave」を維持します。従来の引き継ぎコード方式と既存のmh_*セーブデータ形式は変更していません。'
       ]
     });
   }
