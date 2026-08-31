@@ -24,6 +24,6 @@ for(const y of [.05,.5,.88,1]) for(const sub of [.1,2.5,5.5,9.9]){
 }
 assert(source.includes("id==='EASY'?widthTestChart")&&/\[7200,4,1\],\[7200,5,1\]/.test(source),'WIDTH TEST譜面');
 assert(game.includes('subLaneCoordinate:rhythmSubLaneCoordinateAtPoint'),'Touch/Pointerが実座標を渡す');
-assert(source.includes("if(note.type!=='TAP'")&&source.includes('return note.lane===lane'),'HOLD/FLICK/SLIDE回帰');
+assert(source.includes("note?.type==='TAP'||note?.type==='HOLD'")&&source.includes('return note.lane===lane'),'HOLD可変幅・FLICK/SLIDE回帰');
 assert(source.includes('rhythmReleaseTargetMs')&&source.includes('data-rhythm-end-bar'),'ENDバー回帰');
 console.log('OK: 10サブレーン可変幅TAP入力・許容・同時入力・旧譜面・projection回帰');
