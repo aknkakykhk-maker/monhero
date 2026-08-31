@@ -23,8 +23,8 @@ const dataOnlyStamp = !!buildDate
   && rhythmRelease.includes('build:RHYTHM_COMPILED_BUILD');
 const checks = [
   ['BUILD_DATE・version.json・更新履歴の最新日時、または検証済みdata-only橋渡しが整合', normalStamp || dataOnlyStamp],
-  ['data-only橋渡しは今回versionだけを既存compiledへ写し、将来versionは素通し', !dataBuild || (dataOnlyStamp && rhythmRelease.includes('if(data?.build===RHYTHM_DATA_BUILD)') && !rhythmRelease.includes('if(data?.build!==RHYTHM_DATA_BUILD)'))],
-  ['data-only出荷でも更新情報を実行時CHANGELOGへ先頭追加', !dataBuild || (dataOnlyStamp && rhythmRelease.includes('CHANGELOG.unshift') && rhythmRelease.includes('RHYTHM_RELEASE_TITLE'))],
+  ['data-only橋渡しは今回versionだけを既存compiledへ写し、将来versionは素通し', normalStamp || !dataBuild || (dataOnlyStamp && rhythmRelease.includes('if(data?.build===RHYTHM_DATA_BUILD)') && !rhythmRelease.includes('if(data?.build!==RHYTHM_DATA_BUILD)'))],
+  ['data-only出荷でも更新情報を実行時CHANGELOGへ先頭追加', normalStamp || !dataBuild || (dataOnlyStamp && rhythmRelease.includes('CHANGELOG.unshift') && rhythmRelease.includes('RHYTHM_RELEASE_TITLE'))],
   ['30秒間隔・バックグラウンド復帰・ページ再表示時にversion.jsonを再確認', source.includes('setInterval(checkVersion, 30 * 1000)') && source.includes("document.addEventListener('visibilitychange', onVisible)") && source.includes("window.addEventListener('pageshow', onVisible)")],
   ['version.jsonをキャッシュなしで取得', source.includes("fetch('version.json?t=' + Date.now(), { cache: 'no-store' })")],
   ['初回検知で自動再読み込みせず更新ボタンを表示', source.includes('setUpdateAvailable(true)') && !source.includes('if (wasFirstCheck) window.location.reload()')],
