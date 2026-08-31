@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
-const source=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx'),html=read('monster-hero/index.html');
+const source=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx'),html=read('monster-hero/index.html'),release=read('monster-hero/data/rhythm-step3-release.js');
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 const helper=source.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const rhythmLaneAtPoint=[\s\S]*?\n\};/)?.[0];
 check('共通projection helperを抽出できる',!!helper);
@@ -33,4 +33,17 @@ check('Touch・Pointer・SLIDE追従がclientX/clientYで共通逆投影',game.i
 check('ノーツY/X/幅をプレイ本体の同じrAFで配置',game.includes('rhythmProjectTravelProgress(progress)*travel.travelPx')&&game.includes('rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current)')&&!source.match(/const installRhythmPerspectiveNoteVisuals=[\s\S]*?requestAnimationFrame/));
 check('別座標系のCSS 3D変形を廃止',!html.includes('transform:perspective(')&&!source.includes('const scale=.44+.56*depth'));
 check('既存の同時押しbatchを維持',source.includes('const rhythmMatchInputBatch='));
+
+const remainingHelper=release.match(/const rhythmSlideRemainingRatio=[\s\S]*?\n  \};/)?.[0];
+check('SLIDE残り時間率helperを抽出できる',!!remainingHelper);
+if(remainingHelper){
+  const context={};vm.runInNewContext(`${remainingHelper}\nthis.out=rhythmSlideRemainingRatio;`,context);
+  const ratio=context.out;
+  check('SLIDE帯は開始1→中間0.5→終了0へ単調短縮',ratio(1000,3000,1000)===1&&Math.abs(ratio(1000,3000,2000)-.5)<1e-9&&ratio(1000,3000,3000)===0&&ratio(1000,3000,3500)===0);
+}
+check('SLIDE残り表示は既存のノーツ描画フレームへ統合',release.includes('const originalSlideVisualLaneForIndex=runtime.slideVisualLaneForIndex.bind(runtime)')&&release.includes('runtime.slideVisualLaneForIndex=index=>')&&release.includes('updateBody(index)')&&!release.includes('requestAnimationFrame('));
+check('SLIDE帯の高さだけをCSS変数で短縮',release.includes("body.style.setProperty('--rhythm-slide-visible-height'")&&release.includes('height:var(--rhythm-slide-visible-height,var(--rhythm-slide-height,120px))!important'));
+check('SLIDE入力・判定runtimeは上書きしない',!release.includes('runtime.bind=')&&!release.includes('rhythmMatchInputBatch=')&&!release.includes('RHYTHM_SLIDE_TOLERANCE_LANES='));
+check('SLIDE表示修正の更新履歴とヘルプを同時反映',release.includes("RHYTHM_RELEASE_TITLE='音ゲーデバッグのSLIDE帯の残り表示を修正'")&&release.includes('残り時間に合わせて紫の帯が短くなり'));
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
