@@ -52,6 +52,7 @@ jobs:
         run: |
           node tools/boot/data-cache-key-check.js
           node tools/mode/rhythm-mode-note-perspective-check.js
+          node tools/mode/rhythm-mode-restart-remount-check.js
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
