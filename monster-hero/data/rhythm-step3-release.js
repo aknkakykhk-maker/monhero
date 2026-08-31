@@ -51,6 +51,35 @@
   };
   installRhythmSlideRemainingVisual();
 
+  // STEP 2A.6: HOLD / SLIDE を正常な終端判定幅内で離したときも、
+  // 既存の仮ノーツSEを1回鳴らす。window capture は rhythm-mode.js の
+  // document capture より先に走るため、release() がsessionを削除する前に判定する。
+  const installRhythmReleaseNoteSe=()=>{
+    if(typeof window==='undefined'||typeof RHYTHM_GESTURE_RUNTIME==='undefined'||typeof RHYTHM_NOTE_SE_RUNTIME==='undefined')return;
+    if(window.__mhRhythmReleaseNoteSe)return;
+    const runtime=RHYTHM_GESTURE_RUNTIME;
+    if(!runtime._sessions||typeof RHYTHM_NOTE_SE_RUNTIME.play!=='function')return;
+    const nowPerf=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
+    const shouldPlay=session=>{
+      if(!session?.releaseRequired||session.note?.done||session.failed)return false;
+      const songNow=(Number(session.startSongMs)||0)+Math.max(0,nowPerf()-(Number(session.startPerfMs)||0));
+      const releaseDelta=songNow-((Number(session.releaseTargetMs)||0)+(Number(session.offsetMs)||0));
+      return Number.isFinite(releaseDelta)&&Math.abs(releaseDelta)<=RHYTHM_RELEASE_MAX_MS;
+    };
+    const playForKey=key=>{
+      const session=runtime._sessions.get(String(key));
+      if(shouldPlay(session))RHYTHM_NOTE_SE_RUNTIME.play();
+    };
+    window.addEventListener('touchend',event=>{
+      Array.from(event.changedTouches||[]).forEach(touch=>playForKey(`touch:${touch.identifier}`));
+    },{capture:true,passive:true});
+    window.addEventListener('pointerup',event=>{
+      if(event.pointerType!=='touch')playForKey(`pointer:${event.pointerId}`);
+    },true);
+    Object.defineProperty(window,'__mhRhythmReleaseNoteSe',{value:true,configurable:false});
+  };
+  installRhythmReleaseNoteSe();
+
   if(typeof window!=='undefined'&&typeof window.fetch==='function'&&!window.__mhRhythmDataBuildBridge){
     const nativeFetch=window.fetch.bind(window);
     window.fetch=async(...args)=>{
