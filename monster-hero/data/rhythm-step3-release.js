@@ -1,12 +1,12 @@
-// 音ゲーデバッグ STEP6 の小さい出荷レイヤー。
+// 音ゲーデバッグ STEP7 の小さい出荷レイヤー。
 // 旧ページは version.json の新buildを見て標準更新バナーを出す。
 // 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
 // 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
-  const RHYTHM_RELEASE_DATE='2026-08-31 16:33';
-  const RHYTHM_DATA_BUILD='2026-08-31 16:33';
+  const RHYTHM_RELEASE_DATE='2026-08-31 17:53';
+  const RHYTHM_DATA_BUILD='2026-08-31 17:53';
   const RHYTHM_COMPILED_BUILD='2026-08-31 10:17';
-  const RHYTHM_RELEASE_TITLE='音ゲーデバッグのSLIDE帯の残り表示を修正';
+  const RHYTHM_RELEASE_TITLE='音ゲーデバッグのHOLD・SLIDE終端判定を追加';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
     const start=Number(startMs)||0,end=Number(endMs)||start,now=Number(chartNowMs);
@@ -76,14 +76,14 @@
     CHANGELOG.unshift({
       date:RHYTHM_RELEASE_DATE,type:'issue',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
-        'HARDデバッグのSLIDEで、押している間も紫の帯が固定長のまま残り、終端が判定ラインへ近づいて見えない問題を修正しました。',
-        'SLIDE開始後は残り時間率に合わせて帯の表示高さを、既存のノーツ描画フレーム内で縮めます。消化済み部分を残さず、残りの終端が時間と一緒に判定ラインへ降りてくる表示にしました。',
-        'SLIDEの入力判定・追従レーン・譜面・スコア計算には変更を加えていません。'
+        'HOLDとSLIDEを、終端まで押し続けるだけでは成功せず、最後に指を離したタイミングまで判定するよう変更しました。',
+        '終端の離し判定は開始時と同じ±200msの判定幅を使い、MARVELOUS / EXCELLENT / GREAT / GOOD / BAD / MISSを付けます。最終判定は開始と終了の悪い方です。',
+        '終端から+200msを超えて押しっぱなしの場合もMISSになります。TAP・FLICK、SLIDE途中の追従判定、譜面・スコア計算は変更していません。'
       ]
     });
   }
   if(typeof HELP_CATEGORIES!=='undefined'){
     const topic=HELP_CATEGORIES.flatMap(category=>category.topics||[]).find(item=>item.id==='rhythm-mode');
-    if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDEを確認できます。SLIDEは押し始めた後、残り時間に合わせて紫の帯が短くなり、残りの終端が判定ラインへ近づく表示になります。入力判定はこれまでどおり指位置とSLIDE経路を照合します。iPhone Safariのポーズ画面は「再開」「リスタート」「中断して音ゲーデバッグへ戻る」をtouchendのcapture段階で処理します。'}];
+    if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDEを確認できます。HOLDとSLIDEは開始位置で押すだけでなく、終端のタイミングで指を離す必要があります。終端も±200msでMARVELOUS〜BADを判定し、範囲外または+200msを超えて押しっぱなしの場合はMISSです。1ノーツの最終判定は開始と終了の悪い方を採用します。SLIDE途中はこれまでどおり指位置と経路も照合します。iPhone Safariのポーズ画面は「再開」「リスタート」「中断して音ゲーデバッグへ戻る」をtouchendのcapture段階で処理します。'}];
   }
 })();
