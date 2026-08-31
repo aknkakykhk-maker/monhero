@@ -72,7 +72,7 @@
     try {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = '.mhsave,text/plain';
+      input.accept = '.mhsave,text/plain,application/octet-stream';
       input.onchange = async () => {
         const file = input.files && input.files[0];
         if (!file) return;
