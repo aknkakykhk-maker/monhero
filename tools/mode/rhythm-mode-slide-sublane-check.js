@@ -95,6 +95,16 @@ const master=RHYTHM_SONGS.find(song=>song.songId==='width_test')?.difficulties?.
 check('WIDTH TEST MASTERへSTEP2B-3譜面を追加する',master===widthSlideChangingTestChart&&masterSlides.length>=4);
 check('MASTERに幅1→4・4→1・1→3→2→4を収録する',masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='1,4')&&masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='4,1')&&masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='1,3,2,4'));
 check('MASTERに幅変化しながら曲がるSLIDEと途中TAPを収録する',masterSlides.some(note=>new Set(note.slidePoints.map(point=>point.lane)).size>=3&&new Set(note.slidePoints.map(point=>point.subLaneWidth)).size>=3)&&master.notes.some(note=>note.type==='TAP'&&masterSlides.some(slide=>note.timeMs>slide.timeMs&&note.timeMs<slide.endTimeMs)));
+const masterSlideAt=timeMs=>masterSlides.find(note=>note.timeMs===timeMs);
+const sCurve=masterSlideAt(11400),zigzag=masterSlideAt(16600),halfLane=masterSlideAt(21400),changingCurve=masterSlideAt(26200),longSlide=masterSlideAt(31400);
+check('MASTERに大きなS字と細かいジグザグ経路を収録する',sCurve?.slidePoints.map(point=>point.lane).join(',')==='0.5,2,3.5,2,0.5'&&zigzag?.slidePoints.length>=9&&zigzag.slidePoints.slice(0,-1).every((point,index)=>point.lane===(index%2?3:1)));
+check('MASTERに0.5レーン単位で左右へ移動する経路を収録する',halfLane?.slidePoints.length>=9&&halfLane.slidePoints.every(point=>point.lane===1.5||point.lane===2));
+check('MASTERに曲がりながら幅1→4→1へ変化する経路を収録する',changingCurve?.slidePoints.map(point=>point.subLaneWidth).join(',')==='1,2,4,2,1'&&new Set(changingCurve.slidePoints.map(point=>point.lane)).size>=3);
+check('MASTERに多数pointの長いSLIDEを収録する',longSlide?.endTimeMs-longSlide?.timeMs>=8000&&longSlide?.slidePoints.length>=16);
+check('MASTERの複雑SLIDE中に別TAPと別HOLDを収録する',master.notes.some(note=>note.type==='TAP'&&note.timeMs>halfLane.timeMs&&note.timeMs<halfLane.endTimeMs)&&master.notes.some(note=>note.type==='HOLD'&&note.timeMs>longSlide.timeMs&&note.endTimeMs<longSlide.endTimeMs));
+check('STEP2B-4の全経路・幅は既存authored範囲内',masterSlides.every(note=>note.slidePoints.every(point=>rhythmSlideAuthoredLane(point.lane)!==null&&(point.subLaneWidth==null||[1,2,3,4].includes(point.subLaneWidth)))));
+check('多数pointでも既存polygonを1区間1枚で再利用する',rhythmSlideSegmentPolygons(longSlide,longSlide.timeMs,{visualTime:longSlide.timeMs,travelMs:10000,spawnY:0,travelPx:700},rect).length===longSlide.slidePoints.length-1);
+
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
