@@ -1,0 +1,50 @@
+name: Materialize rhythm fix
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.head_ref == 'chatgpt/rhythm-svg-remount'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Verify and materialize rhythm patch
+        run: |
+          cat tools/.rhythm-svg-remount/part-*.b64 > /tmp/rhythm.patch.b64
+          echo 'a0d748ca5bbccdd989db9a3ba85094d58c118ec501aa542871f2230a17316fa7  /tmp/rhythm.patch.b64' | sha256sum -c -
+          base64 -d /tmp/rhythm.patch.b64 > /tmp/rhythm.patch
+          echo 'fbe22b734794fad0188d22e7f628410cd8895a4067bb64f5bbdff110bd4d7450  /tmp/rhythm.patch' | sha256sum -c -
+          git apply --check /tmp/rhythm.patch
+          git apply /tmp/rhythm.patch
+      - name: Canonical build and basic checks
+        run: |
+          node tools/build.js
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/mode/rhythm-mode-note-perspective-check.js
+          node tools/mode/rhythm-mode-lane-feedback-check.js
+          node tools/mode/rhythm-mode-tap-completion-check.js
+      - name: Commit materialized source and generated output
+        run: |
+          rm -rf tools/.rhythm-svg-remount
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: 音ゲー描画とリスタートを構造から修正'
+          git push origin HEAD:${{ github.head_ref }}
