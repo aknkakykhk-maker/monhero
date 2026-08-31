@@ -14,45 +14,34 @@
     return Math.max(0,Math.min(1,(end-now)/Math.max(1,end-start)));
   };
   const installRhythmSlideRemainingVisual=()=>{
-    if(typeof document==='undefined'||typeof requestAnimationFrame!=='function'||typeof RHYTHM_GESTURE_RUNTIME==='undefined')return;
+    if(typeof document==='undefined'||typeof RHYTHM_GESTURE_RUNTIME==='undefined')return;
     const runtime=RHYTHM_GESTURE_RUNTIME;
-    if(runtime.__mhSlideRemainingVisual||!runtime._sessions||typeof runtime.bind!=='function')return;
-    const originalBind=runtime.bind.bind(runtime),timings=new WeakMap();
-    let raf=0;
+    if(runtime.__mhSlideRemainingVisual||!runtime._sessions||typeof runtime.slideVisualLaneForIndex!=='function')return;
+    const originalSlideVisualLaneForIndex=runtime.slideVisualLaneForIndex.bind(runtime);
     const nowPerf=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
-    const clearVisibleHeights=()=>document.querySelectorAll('[data-rhythm-slide-body]').forEach(body=>body.style.removeProperty('--rhythm-slide-visible-height'));
-    const update=()=>{
-      raf=0;
-      const active=new Map();
-      for(const session of runtime._sessions.values()){
-        if(session?.kind!=='SLIDE'||!session.note||session.note.done)continue;
-        const timing=timings.get(session.note)||{start:Number(session.note.timeMs)||0,end:Number(session.note.endTimeMs)||Number(session.note.timeMs)||0};
-        const chartNow=(Number(session.startSongMs)||0)+Math.max(0,nowPerf()-(Number(session.startPerfMs)||0))-(Number(session.offsetMs)||0);
-        active.set(Number(session.note.index),{remaining:rhythmSlideRemainingRatio(timing.start,timing.end,chartNow)});
-      }
-      if(!active.size){clearVisibleHeights();return;}
-      if(!document.querySelector('[data-rhythm-pause-menu]')){
-        const area=document.querySelector('[data-rhythm-play-area]');
-        if(area){
-          const notes=Array.from(area.querySelectorAll('[data-rhythm-note]'));
-          notes.forEach((el,domIndex)=>{
-            const body=el.querySelector('[data-rhythm-slide-body]');
-            if(!body)return;
-            const attr=Number(el.dataset.rhythmNoteIndex??el.dataset.noteIndex),noteIndex=Number.isInteger(attr)?attr:domIndex,state=active.get(noteIndex);
-            if(!state){body.style.removeProperty('--rhythm-slide-visible-height');return;}
-            const computed=getComputedStyle(body),base=parseFloat(body.style.getPropertyValue('--rhythm-slide-height'))||parseFloat(computed.getPropertyValue('--rhythm-slide-height'))||parseFloat(computed.height)||0;
-            body.style.setProperty('--rhythm-slide-visible-height',`${Math.max(0,base*state.remaining).toFixed(2)}px`);
-          });
-        }
-      }
-      raf=requestAnimationFrame(update);
+    const bodyForIndex=index=>{
+      const area=document.querySelector('[data-rhythm-play-area]');
+      return area?Array.from(area.querySelectorAll('[data-rhythm-note]'))[Number(index)]?.querySelector('[data-rhythm-slide-body]')||null:null;
     };
-    const ensure=()=>{if(!raf)raf=requestAnimationFrame(update);};
-    runtime.bind=(inputKeyValue,note,kind,startSongMs,offsetMs)=>{
-      if(kind==='SLIDE'&&note)timings.set(note,{start:Number(note.timeMs)||0,end:Number(note.endTimeMs)||Number(note.timeMs)||0});
-      const result=originalBind(inputKeyValue,note,kind,startSongMs,offsetMs);
-      if(kind==='SLIDE')ensure();
-      return result;
+    const updateBody=(index)=>{
+      const body=bodyForIndex(index);
+      if(!body)return;
+      let session=null;
+      for(const candidate of runtime._sessions.values()){
+        if(candidate?.kind==='SLIDE'&&Number(candidate.note?.index)===Number(index)&&!candidate.note?.done){session=candidate;break;}
+      }
+      if(!session){body.style.removeProperty('--rhythm-slide-visible-height');return;}
+      const chartNote=typeof atsuCupGestureTestChart!=='undefined'?atsuCupGestureTestChart.notes?.[Number(index)]:null;
+      const start=Number(chartNote?.timeMs??session.note?.timeMs)||0,end=Number(chartNote?.endTimeMs??session.note?.endTimeMs)||start;
+      const chartNow=(Number(session.startSongMs)||0)+Math.max(0,nowPerf()-(Number(session.startPerfMs)||0))-(Number(session.offsetMs)||0);
+      const remaining=rhythmSlideRemainingRatio(start,end,chartNow);
+      const computed=getComputedStyle(body),base=parseFloat(body.style.getPropertyValue('--rhythm-slide-height'))||parseFloat(computed.getPropertyValue('--rhythm-slide-height'))||parseFloat(computed.height)||0;
+      body.style.setProperty('--rhythm-slide-visible-height',`${Math.max(0,base*remaining).toFixed(2)}px`);
+    };
+    runtime.slideVisualLaneForIndex=index=>{
+      const lane=originalSlideVisualLaneForIndex(index);
+      updateBody(index);
+      return lane;
     };
     const style=document.createElement('style');
     style.dataset.rhythmSlideRemainingVisual='';
@@ -88,7 +77,7 @@
       date:RHYTHM_RELEASE_DATE,type:'issue',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
         'HARDデバッグのSLIDEで、押している間も紫の帯が固定長のまま残り、終端が判定ラインへ近づいて見えない問題を修正しました。',
-        'SLIDE開始後は残り時間率に合わせて帯の表示高さを毎フレーム縮め、消化済み部分を残さず、残りの終端が時間と一緒に判定ラインへ降りてくる表示にしました。',
+        'SLIDE開始後は残り時間率に合わせて帯の表示高さを、既存のノーツ描画フレーム内で縮めます。消化済み部分を残さず、残りの終端が時間と一緒に判定ラインへ降りてくる表示にしました。',
         'SLIDEの入力判定・追従レーン・譜面・スコア計算には変更を加えていません。'
       ]
     });
