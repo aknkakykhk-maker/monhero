@@ -61,12 +61,13 @@ jobs:
         run: npm ci --omit=optional
 
       # 配信用JSを作り直す。編集元(game-system.jsx)だけを変えたコミットでも、
-      # ここで生成物が追いつく
+      # ここで生成物が追いつく。BUILD_DATE / version.json / 更新履歴日時 /
+      # data/*.jsキャッシュキー / BOOT_SIZESも同じ正規ビルドで同期する。
       - name: Build the shipped bundle
         run: node tools/build.js
 
-      # compiled-check.yml と同じ検査を同じ順で通す。ここを緩めると、
-      # PRを出した時点で結局同じ検査に落とされる
+      - name: Verify the committed compiled output after build
+        run: node tools/build.js --check
       - name: Verify the compiled runtime
         run: node tools/compiled-runtime-check.js
       - name: Check source syntax and references
@@ -77,6 +78,10 @@ jobs:
         run: node tools/boot-flow-check.js
       - name: Check the shipped version stamps
         run: node tools/update-notice-check.js
+      - name: Check shipped data metadata and rhythm geometry
+        run: |
+          node tools/boot/data-cache-key-check.js
+          node tools/mode/rhythm-mode-note-perspective-check.js
 
       # 生成物に差分が出たときだけコミットする。差分が無ければ何もしない
       - name: Commit the rebuilt output

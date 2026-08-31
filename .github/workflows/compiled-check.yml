@@ -48,6 +48,10 @@ jobs:
         run: node tools/boot-flow-check.js
       - name: Check the shipped version stamps
         run: node tools/update-notice-check.js
+      - name: Check shipped data metadata and rhythm geometry
+        run: |
+          node tools/boot/data-cache-key-check.js
+          node tools/mode/rhythm-mode-note-perspective-check.js
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
