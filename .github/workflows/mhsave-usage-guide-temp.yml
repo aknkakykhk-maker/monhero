@@ -1,0 +1,50 @@
+name: Temporary mhsave usage guide
+
+on:
+  push:
+    branches:
+      - chatgpt/mhsave-usage-guide
+    paths:
+      - .github/workflows/mhsave-usage-guide-temp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/mhsave-usage-guide
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Patch UI, build and verify
+        run: |
+          node tools/mhsave-usage-guide-temp.js
+          node tools/build.js
+          node tools/build.js --check
+          node tools/compiled-runtime-check.js
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/boot-flow-check.js
+          node tools/update-notice-check.js
+          node tools/boot/data-cache-key-check.js
+          node tools/mode/rhythm-mode-note-perspective-check.js
+          node tools/mode/rhythm-mode-restart-remount-check.js
+          node tools/mode/rhythm-mode-release-timing-check.js
+          node tools/mode/rhythm-mode-note-se-check.js
+          node tools/mode/rhythm-mode-slide-sublane-check.js
+      - name: Commit verified changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add monster-hero docs/spec/SAVE_DATA.md
+          git commit -m "feat: explain mhsave usage and rename backup files"
+          git push origin HEAD:chatgpt/mhsave-usage-guide
