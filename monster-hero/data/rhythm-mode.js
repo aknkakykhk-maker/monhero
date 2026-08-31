@@ -49,12 +49,14 @@ const rhythmSlideAuthoredLane=lane=>{
   if(!Number.isFinite(value)||Math.abs(value*2-doubled)>1e-6||doubled<0||doubled>RHYTHM_SUB_LANE_COUNT-2)return null;
   return doubled/2;
 };
-const rhythmSlideWidth=note=>{
-  const width=Number(note?.subLaneWidth);
-  return Number.isInteger(width)&&width>=1&&width<=4?width:2;
+const rhythmSlideAuthoredWidth=value=>{
+  const width=Number(value);
+  return Number.isInteger(width)&&width>=1&&width<=4?width:null;
 };
-const rhythmProjectSlideSpan=(lane,note,yRatio)=>{
-  const value=Number(lane),width=rhythmSlideWidth(note),half=width/4,centerBoundary=value+.5;
+const rhythmSlideWidth=note=>rhythmSlideAuthoredWidth(note?.subLaneWidth)??2;
+const rhythmSlidePointWidth=(note,point)=>rhythmSlideAuthoredWidth(point?.subLaneWidth)??rhythmSlideWidth(note);
+const rhythmProjectSlideSpan=(lane,note,yRatio,chartTimeMs=note?.timeMs)=>{
+  const value=Number(lane),width=rhythmSlideWidthAt(note,chartTimeMs),half=width/4,centerBoundary=value+.5;
   const left=rhythmProjectBoundary(centerBoundary-half,yRatio),right=rhythmProjectBoundary(centerBoundary+half,yRatio);
   return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio),subLaneWidth:width};
 };
@@ -62,7 +64,7 @@ const rhythmSlideInputSpan=note=>{
   if(!rhythmNoteIsSlide(note))return null;
   const lane=rhythmSlideAuthoredLane(note?.lane);
   if(lane===null)return null;
-  const width=rhythmSlideWidth(note),center=(lane+.5)*2;
+  const width=rhythmSlideWidthAt(note,note?.timeMs),center=(lane+.5)*2;
   return {start:center-width/2,end:center+width/2,center,width};
 };
 const rhythmNoteVisualSpan=(note,visualLane,yRatio)=>rhythmNoteHasVariableSpan(note)
@@ -109,7 +111,7 @@ const RHYTHM_RELEASE_MAX_MS = 200;
 const RHYTHM_RELEASE_DEFER_ARM_MS = 100;
 const RHYTHM_RELEASE_AUTO_MISS_ARM_MS = 180;
 const RHYTHM_RELEASE_JUDGMENT_IDS = Object.freeze(['MARVELOUS','EXCELLENT','GREAT','GOOD','BAD','MISS']);
-const rhythmSlideTrackingTolerance=note=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidth(note)-2)/4;
+const rhythmSlideTrackingTolerance=(note,chartTimeMs)=>RHYTHM_SLIDE_TOLERANCE_LANES+(rhythmSlideWidthAt(note,chartTimeMs)-2)/4;
 const rhythmJudgeRelease=deltaMs=>{
   const value=Math.abs(Number(deltaMs));
   if(!Number.isFinite(value))return 'MISS';
@@ -125,6 +127,18 @@ const rhythmWorseJudgment=(a,b)=>{
 const rhythmSlidePoints=note=>Array.isArray(note?.slidePoints)&&note.slidePoints.length>=2
     ? note.slidePoints
     : [{timeMs:Number(note?.timeMs)||0,lane:Number(note?.lane)||0},{timeMs:Number(note?._rhythmReleaseOriginalEndTimeMs??note?.endTimeMs)||Number(note?.timeMs)||0,lane:Number(note?.endLane??note?.lane)||0}];
+const rhythmSlideWidthAt=(note,chartTimeMs)=>{
+  const points=rhythmSlidePoints(note),t=Number(chartTimeMs);
+  if(!Number.isFinite(t)||t<=Number(points[0]?.timeMs))return rhythmSlidePointWidth(note,points[0]);
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i];
+    if(t<=Number(b.timeMs)){
+      const span=Math.max(1,Number(b.timeMs)-Number(a.timeMs)),p=Math.max(0,Math.min(1,(t-Number(a.timeMs))/span));
+      return rhythmSlidePointWidth(note,a)+(rhythmSlidePointWidth(note,b)-rhythmSlidePointWidth(note,a))*p;
+    }
+  }
+  return rhythmSlidePointWidth(note,points[points.length-1]);
+};
 const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
   const points=rhythmSlidePoints(note);
   const t=Number(chartTimeMs);
@@ -238,7 +252,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       if(actual===null){session.note.holdJudgment='MISS';session.failed=true;return;}
       const chartNow=estimatedSongMs(session)-session.offsetMs;
       const expected=rhythmSlideExpectedLane(session.note,chartNow);
-      if(Math.abs(actual-expected)>rhythmSlideTrackingTolerance(session.note)){
+      if(Math.abs(actual-expected)>rhythmSlideTrackingTolerance(session.note,chartNow)){
         session.note.holdJudgment='MISS';
         session.failed=true;
       }
@@ -514,6 +528,15 @@ const widthSlideVariableTestNotes=Object.freeze([
   Object.freeze({type:'SLIDE',timeMs:12200,endTimeMs:14200,lane:3.5,endLane:2.5,subLaneWidth:1,slidePoints:Object.freeze([Object.freeze({timeMs:12200,lane:3.5}),Object.freeze({timeMs:13200,lane:3}),Object.freeze({timeMs:14200,lane:2.5})])}),
 ]);
 const widthSlideVariableTestChart=Object.freeze({level:7,notes:widthSlideVariableTestNotes,totalNotes:widthSlideVariableTestNotes.length,durationMs:15500});
+// STEP 2B-3: slidePointsごとの幅を時間補間するMASTER専用テスト譜面。
+const widthSlideChangingTestNotes=Object.freeze([
+  Object.freeze({type:'SLIDE',timeMs:1800,endTimeMs:3800,lane:1.5,endLane:1.5,slidePoints:Object.freeze([Object.freeze({timeMs:1800,lane:1.5,subLaneWidth:1}),Object.freeze({timeMs:3800,lane:1.5,subLaneWidth:4})])}),
+  Object.freeze({type:'SLIDE',timeMs:4600,endTimeMs:6600,lane:2.5,endLane:2.5,slidePoints:Object.freeze([Object.freeze({timeMs:4600,lane:2.5,subLaneWidth:4}),Object.freeze({timeMs:6600,lane:2.5,subLaneWidth:1})])}),
+  Object.freeze({type:'SLIDE',timeMs:7400,endTimeMs:10600,lane:1.5,endLane:1.5,slidePoints:Object.freeze([Object.freeze({timeMs:7400,lane:1.5,subLaneWidth:1}),Object.freeze({timeMs:8400,lane:1.5,subLaneWidth:3}),Object.freeze({timeMs:9400,lane:1.5,subLaneWidth:2}),Object.freeze({timeMs:10600,lane:1.5,subLaneWidth:4})])}),
+  Object.freeze({type:'SLIDE',timeMs:11400,endTimeMs:14600,lane:.5,endLane:3.5,subLaneWidth:2,slidePoints:Object.freeze([Object.freeze({timeMs:11400,lane:.5,subLaneWidth:1}),Object.freeze({timeMs:12400,lane:2,subLaneWidth:3}),Object.freeze({timeMs:13400,lane:1,subLaneWidth:2}),Object.freeze({timeMs:14600,lane:3.5,subLaneWidth:4})])}),
+  Object.freeze({type:'TAP',timeMs:13000,lane:4,subLane:8,subLaneWidth:2}),
+]);
+const widthSlideChangingTestChart=Object.freeze({level:9,notes:widthSlideChangingTestNotes,totalNotes:widthSlideChangingTestNotes.length,durationMs:16000});
 
 const RHYTHM_SONGS = Object.freeze([
   Object.freeze({
@@ -527,7 +550,7 @@ const RHYTHM_SONGS = Object.freeze([
   }),
   Object.freeze({
     songId:'width_test', displayName:'WIDTH TEST', bgmTrackId:'atsu_cup_theme',
-    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:id==='NORMAL'?widthHoldTestChart:id==='HARD'?widthSlideTestChart:id==='EXPERT'?widthSlideVariableTestChart:emptyRhythmChart()])))
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:id==='NORMAL'?widthHoldTestChart:id==='HARD'?widthSlideTestChart:id==='EXPERT'?widthSlideVariableTestChart:id==='MASTER'?widthSlideChangingTestChart:emptyRhythmChart()])))
   }),
 ]);
 
@@ -622,7 +645,7 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
   const project=point=>{
-    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=rhythmClamp01(y/rect.height),span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=rhythmClamp01(y/rect.height),span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
     return {y,left:rect.width*span.center-half,right:rect.width*span.center+half};
   };
   let firstIndex=0;
@@ -641,7 +664,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const rect=frameLayout?.rect||area.getBoundingClientRect();
   if(!(rect.width>0&&rect.height>0))return;
   const noteHeight=Number(frameLayout?.noteHeight)||el.offsetHeight,lane=Number(visualLane),centerY=Number(yPx)+noteHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
-  const projected=rhythmNoteVisualSpan(note,lane,yRatio),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO)),left=rect.width*projected.center-width/2;
+  const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO)),left=rect.width*projected.center-width/2;
   el.style.left=`${left.toFixed(2)}px`;
   el.style.width=`${width.toFixed(2)}px`;
   el.style.setProperty('--rhythm-note-depth-scale',(0.56+projected.scale*.44).toFixed(3));
@@ -673,7 +696,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const endBar=el._rhythmEndBar||el.querySelector('[data-rhythm-end-bar]');
   if(endBar)el._rhythmEndBar=endBar;
   if(endBar&&Number.isFinite(releaseYpx)){
-    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY):rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
+    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
     endBar.style.left=`${(rect.width*end.center-left-barWidth/2).toFixed(2)}px`;
     endBar.style.top=`${(Number(releaseYpx)-Number(yPx)+noteHeight/2-4).toFixed(2)}px`;
     endBar.style.width=`${barWidth.toFixed(2)}px`;
