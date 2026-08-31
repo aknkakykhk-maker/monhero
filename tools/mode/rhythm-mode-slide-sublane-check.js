@@ -7,13 +7,13 @@ const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 const context={console};
-vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideInputSpan,rhythmSlideTrackingTolerance,rhythmSlideExpectedLane,rhythmReleaseLane,rhythmProjectLane,rhythmProjectSlideSpan,rhythmNoteVisualSpan,rhythmNoteHasVariableSpan,rhythmMatchInputBatch,rhythmSlideSegmentPolygons,RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,widthSlideVariableTestChart};`,context);
+vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideWidthAt,rhythmSlideInputSpan,rhythmSlideTrackingTolerance,rhythmSlideExpectedLane,rhythmReleaseLane,rhythmProjectLane,rhythmProjectSlideSpan,rhythmNoteVisualSpan,rhythmNoteHasVariableSpan,rhythmMatchInputBatch,rhythmSlideSegmentPolygons,RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,widthSlideVariableTestChart,widthSlideChangingTestChart};`,context);
 const {
-  RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,
+  RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideWidthAt,
   rhythmSlideInputSpan,rhythmSlideTrackingTolerance,rhythmSlideExpectedLane,rhythmReleaseLane,
   rhythmProjectLane,rhythmProjectSlideSpan,rhythmNoteVisualSpan,rhythmNoteHasVariableSpan,
   rhythmMatchInputBatch,rhythmSlideSegmentPolygons,RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,
-  widthSlideVariableTestChart,
+  widthSlideVariableTestChart,widthSlideChangingTestChart,
 }=context.out;
 const close=(a,b,epsilon=1e-9)=>Math.abs(Number(a)-Number(b))<epsilon;
 const makeSlide=(overrides={})=>({
@@ -82,6 +82,19 @@ const variableSlides=expert?.notes?.filter(note=>note.type==='SLIDE')||[];
 check('WIDTH TEST EXPERTに可変幅SLIDE確認譜面がある',expert===widthSlideVariableTestChart&&variableSlides.length>=4);
 check('EXPERTに幅1〜4をすべて収録する',[1,2,3,4].every(width=>variableSlides.some(note=>note.subLaneWidth===width)));
 check('STEP2B-2では1ノーツ内の途中幅変化をまだ入れない',variableSlides.every(note=>note.slidePoints.every(point=>point.subLaneWidth==null&&point.width==null)));
+
+const changing=makeSlide({subLaneWidth:3,slidePoints:[{timeMs:1000,lane:.5,subLaneWidth:1},{timeMs:1600,lane:1,subLaneWidth:4},{timeMs:2200,lane:1.5}]});
+check('point幅を位置と同じ時間軸で連続補間する',close(rhythmSlideWidthAt(changing,1300),2.5)&&close(rhythmSlideWidthAt(changing,1900),3.5));
+check('point→note→2の順で幅をfallbackする',rhythmSlideWidthAt(changing,2200)===3&&rhythmSlideWidthAt(makeSlide({slidePoints:[{timeMs:1000,lane:.5},{timeMs:2200,lane:1.5}]}),1600)===2&&rhythmSlideWidthAt(makeSlide({subLaneWidth:4,slidePoints:[{timeMs:1000,lane:.5,subLaneWidth:0},{timeMs:2200,lane:1.5,subLaneWidth:5}]}),1600)===4);
+check('開始ノーツ幅は先頭pointの実効幅を使う',rhythmSlideInputSpan(changing).width===1);
+check('END幅は最終pointの実効幅を使う',close(rhythmProjectSlideSpan(1.5,changing,.7,2200).subLaneWidth,3));
+check('途中追従許容は現在時刻の補間幅に連動する',close(rhythmSlideTrackingTolerance(changing,1300),RHYTHM_SLIDE_TOLERANCE_LANES+.125));
+check('途中の実効幅2でも追従許容±0.82を厳守する',close(rhythmSlideTrackingTolerance(changing,1200),RHYTHM_SLIDE_TOLERANCE_LANES));
+
+const master=RHYTHM_SONGS.find(song=>song.songId==='width_test')?.difficulties?.MASTER,masterSlides=master?.notes?.filter(note=>note.type==='SLIDE')||[];
+check('WIDTH TEST MASTERへSTEP2B-3譜面を追加する',master===widthSlideChangingTestChart&&masterSlides.length>=4);
+check('MASTERに幅1→4・4→1・1→3→2→4を収録する',masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='1,4')&&masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='4,1')&&masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='1,3,2,4'));
+check('MASTERに幅変化しながら曲がるSLIDEと途中TAPを収録する',masterSlides.some(note=>new Set(note.slidePoints.map(point=>point.lane)).size>=3&&new Set(note.slidePoints.map(point=>point.subLaneWidth)).size>=3)&&master.notes.some(note=>note.type==='TAP'&&masterSlides.some(slide=>note.timeMs>slide.timeMs&&note.timeMs<slide.endTimeMs)));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
