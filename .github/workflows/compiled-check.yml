@@ -55,6 +55,7 @@ jobs:
           node tools/mode/rhythm-mode-restart-remount-check.js
           node tools/mode/rhythm-mode-release-timing-check.js
           node tools/mode/rhythm-mode-note-se-check.js
+          node tools/mode/rhythm-mode-slide-sublane-check.js
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5

@@ -41,11 +41,23 @@ const rhythmProjectSubLaneSpan=(subLane,width,yRatio)=>{
   return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio),subLane:start,subLaneWidth:span};
 };
 // 旧譜面は lane を正本のまま使い、従来と同じ中央・2サブレーン幅へ写す。
-// subLaneを持つTAP/HOLDだけを可変幅にし、FLICK/SLIDEは従来仕様を保つ。
+// TAP/HOLDはsubLaneで可変幅、STEP2B-1のSLIDEはlane/slidePoints.laneを0.5刻みで配置できる。
 const rhythmNoteHasVariableSpan=note=>(note?.type==='TAP'||note?.type==='HOLD')&&note?.subLane!=null&&Number.isFinite(Number(note.subLane));
+const rhythmSlideAuthoredLane=lane=>{
+  const value=Number(lane),doubled=Math.round(value*2);
+  if(!Number.isFinite(value)||Math.abs(value*2-doubled)>1e-6||doubled<0||doubled>RHYTHM_SUB_LANE_COUNT-2)return null;
+  return doubled/2;
+};
+const rhythmSlideInputSpan=note=>{
+  if(note?.type!=='SLIDE'&&note?._rhythmOriginalType!=='SLIDE')return null;
+  const lane=rhythmSlideAuthoredLane(note?.lane);
+  return lane===null?null:rhythmProjectSubLaneSpan(Math.round(lane*2),2,1);
+};
 const rhythmNoteVisualSpan=(note,visualLane,yRatio)=>rhythmNoteHasVariableSpan(note)
   ?rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,yRatio)
-  :rhythmProjectSubLaneSpan(Number(visualLane)*2,2,yRatio);
+  :(note?.type==='SLIDE'||note?._rhythmOriginalType==='SLIDE')
+    ?rhythmProjectLane(Number(visualLane),yRatio)
+    :rhythmProjectSubLaneSpan(Number(visualLane)*2,2,yRatio);
 const rhythmLanePolygon=lane=>{
   const top=rhythmProjectLane(lane,0),bottom=rhythmProjectLane(lane,1);
   return `polygon(${top.left*100}% 0,${top.right*100}% 0,${bottom.right*100}% 100%,${bottom.left*100}% 100%)`;
@@ -351,17 +363,21 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
     seenInputs.add(key);
     const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate);
+    const inputSpan=note=>rhythmNoteHasVariableSpan(note)
+      ?rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1)
+      :rhythmSlideInputSpan(note);
     const acceptsPosition=note=>{
-      if(!rhythmNoteHasVariableSpan(note))return note.lane===lane;
-      if(!Number.isFinite(subCoordinate))return false;
-      const span=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1),start=span.subLane,end=start+span.subLaneWidth;
-      const tolerance=span.subLaneWidth===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:0;
+      const span=inputSpan(note);
+      if(!span)return note.lane===lane;
+      if(!Number.isFinite(subCoordinate))return note.lane===lane;
+      const start=span.subLane,end=start+span.subLaneWidth;
+      const tolerance=rhythmNoteHasVariableSpan(note)&&span.subLaneWidth===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:0;
       return subCoordinate>=start-tolerance&&subCoordinate<=end+tolerance;
     };
     const spatialDistance=note=>{
-      if(!rhythmNoteHasVariableSpan(note)||!Number.isFinite(subCoordinate))return 0;
-      const span=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1);
-      return Math.abs(subCoordinate-(span.subLane+span.subLaneWidth/2));
+      if(!Number.isFinite(subCoordinate))return 0;
+      const span=inputSpan(note);
+      return span?Math.abs(subCoordinate-(span.subLane+span.subLaneWidth/2)):0;
     };
     const candidates=source.map((note,index)=>({note,index})).filter(({note,index})=>!claimed.has(index)&&!note.done&&note.activePointerId===null&&RHYTHM_NOTE_TYPES.includes(note.type)&&acceptsPosition(note)&&Math.abs(now-(note.timeMs+offset))<=200).sort((a,b)=>Math.abs(now-(a.note.timeMs+offset))-Math.abs(now-(b.note.timeMs+offset))||spatialDistance(a.note)-spatialDistance(b.note)||a.index-b.index);
     const picked=candidates[0];
@@ -461,6 +477,15 @@ const widthHoldTestNotes=Object.freeze([
   Object.freeze({type:'TAP',timeMs:18800,lane:4,subLane:8,subLaneWidth:2}),
 ]));
 const widthHoldTestChart=Object.freeze({level:2,notes:widthHoldTestNotes,totalNotes:widthHoldTestNotes.length,durationMs:22000});
+// STEP 2B-1: SLIDEの幅は従来のまま、始点とslidePointsを0.5レーン刻みへ拡張するHARD専用テスト譜面。
+const widthSlideTestNotes=Object.freeze([
+  Object.freeze({type:'SLIDE',timeMs:1800,endTimeMs:3600,lane:.5,endLane:2,slidePoints:Object.freeze([Object.freeze({timeMs:1800,lane:.5}),Object.freeze({timeMs:2400,lane:1}),Object.freeze({timeMs:3000,lane:1.5}),Object.freeze({timeMs:3600,lane:2})])}),
+  Object.freeze({type:'SLIDE',timeMs:4600,endTimeMs:6400,lane:3.5,endLane:2,slidePoints:Object.freeze([Object.freeze({timeMs:4600,lane:3.5}),Object.freeze({timeMs:5200,lane:3}),Object.freeze({timeMs:5800,lane:2.5}),Object.freeze({timeMs:6400,lane:2})])}),
+  Object.freeze({type:'SLIDE',timeMs:7400,endTimeMs:9800,lane:1,endLane:3,slidePoints:Object.freeze([Object.freeze({timeMs:7400,lane:1}),Object.freeze({timeMs:8000,lane:1.5}),Object.freeze({timeMs:8600,lane:1}),Object.freeze({timeMs:9200,lane:2.5}),Object.freeze({timeMs:9800,lane:3})])}),
+  Object.freeze({type:'TAP',timeMs:8600,lane:4,subLane:8,subLaneWidth:2}),
+  Object.freeze({type:'SLIDE',timeMs:10800,endTimeMs:12800,lane:2.5,endLane:.5,slidePoints:Object.freeze([Object.freeze({timeMs:10800,lane:2.5}),Object.freeze({timeMs:11300,lane:2}),Object.freeze({timeMs:11800,lane:1.5}),Object.freeze({timeMs:12300,lane:1}),Object.freeze({timeMs:12800,lane:.5})])}),
+]);
+const widthSlideTestChart=Object.freeze({level:4,notes:widthSlideTestNotes,totalNotes:widthSlideTestNotes.length,durationMs:14000});
 
 const RHYTHM_SONGS = Object.freeze([
   Object.freeze({
@@ -474,7 +499,7 @@ const RHYTHM_SONGS = Object.freeze([
   }),
   Object.freeze({
     songId:'width_test', displayName:'WIDTH TEST', bgmTrackId:'atsu_cup_theme',
-    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:id==='NORMAL'?widthHoldTestChart:emptyRhythmChart()])))
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:id==='NORMAL'?widthHoldTestChart:id==='HARD'?widthSlideTestChart:emptyRhythmChart()])))
   }),
 ]);
 
