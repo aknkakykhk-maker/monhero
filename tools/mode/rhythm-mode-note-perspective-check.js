@@ -21,10 +21,13 @@ if(helper){
     check(`y ${y} の外周幅はprojection scaleと一致`,Math.abs((outerRight-outerLeft)-rhythmProjectLane(2,y).scale)<1e-9);
   }
   check('奥ほど細く判定ライン側ほど広い',rhythmProjectLane(2,0).width<rhythmProjectLane(2,.88).width&&rhythmProjectLane(2,.88).width<rhythmProjectLane(2,1).width);
+  check('上端は画面幅の35%以下へ収束し、判定線側は90%以上まで広がる',rhythmProjectLane(2,0).scale<=.35&&rhythmProjectLane(2,.88).scale>=.9);
   const far=rhythmProjectTravelProgress(.2)-rhythmProjectTravelProgress(.1),near=rhythmProjectTravelProgress(.9)-rhythmProjectTravelProgress(.8);
   check('Y移動は時刻を保った自然な非線形遠近',rhythmProjectTravelProgress(0)===0&&rhythmProjectTravelProgress(1)===1&&far>0&&near>far&&near/far<2);
+  check('手前の移動量は奥の1.5倍以上で迫り感を保つ',near/far>=1.5);
 }
 check('TAP・FLICK・SLIDE端点が共通projectionを使用',source.includes('const projected=rhythmProjectLane(lane,yRatio)')&&source.includes("const topLane=body.hasAttribute('data-rhythm-slide-body')")&&source.includes('const top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio)'));
+check('ノーツの高さと明るさもprojectionに連動',source.includes("--rhythm-note-depth-scale")&&source.includes("--rhythm-note-depth-brightness")&&source.includes('[data-rhythm-note]>span:last-child'));
 check('HOLD・SLIDE帯はノーツ中心から同じ境界幅で生成',source.includes('centerY=Number(yPx)+el.offsetHeight/2')&&source.includes('topY=Math.max(0,Math.min(rect.height,centerY-height))')&&source.includes('RHYTHM_BODY_WIDTH_RATIO')&&source.includes('body.style.clipPath=`polygon('));
 check('レーン形状と6本の境界線は同じboundary helper',source.includes('lane.style.clipPath=rhythmLanePolygon(index)')&&source.includes("--rhythm-boundary-top")&&source.includes('rhythmProjectBoundary(index,0)')&&source.includes('rhythmProjectBoundary(RHYTHM_LANE_COUNT,0)'));
 check('押下発光は別楕円ではなくレーン台形本体',source.includes('[data-rhythm-lane]::after{content:none!important}')&&source.includes('[data-rhythm-lane][data-pressed="true"]{background:linear-gradient'));
