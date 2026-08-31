@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dc2e0358ed01569d
+// source-sha256: 4cf5fb0b9be0d83e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-31 20:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-31 20:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14911,7 +14911,10 @@ const RhythmTapTest = ({
     done: false,
     activePointerId: null,
     holdJudgment: null,
-    holdDeltaMs: 0
+    holdDeltaMs: 0,
+    ...(note.type === 'SLIDE' ? {
+      _rhythmSlideRenderPoints: rhythmSlidePoints(note)
+    } : {})
   }));
   const initialView = () => ({
     status: 'loading',
@@ -14943,7 +14946,9 @@ const RhythmTapTest = ({
       spawnY,
       judgmentY,
       travelPx: judgmentY - spawnY,
-      playAreaHeight: areaRect.height
+      playAreaHeight: areaRect.height,
+      rect: areaRect,
+      noteHeight
     };
   }, [settings.noteStartPosition]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
@@ -15033,7 +15038,9 @@ const RhythmTapTest = ({
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
       const songTimeMs = run.audio.songTimeMs(),
-        travel = measureTravel();
+        travel = measureTravel(),
+        visualTime = songTimeMs + settings.displayTimingOffsetMs,
+        travelMs = Math.max(650, 2600 - settings.noteSpeed * 90);
       run.notes.forEach(note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
@@ -15042,37 +15049,39 @@ const RhythmTapTest = ({
           if (el) el.style.display = 'none';
           return;
         }
-        const visualTime = songTimeMs + settings.displayTimingOffsetMs,
-          travelMs = Math.max(650, 2600 - settings.noteSpeed * 90),
-          progress = 1 - (note.timeMs - visualTime) / travelMs;
-        if (travel) {
-          let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
-          if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
-          yPx = Math.round(yPx);
-          el.style.transform = `translate3d(0,${yPx}px,0)`;
-          const releaseTargetMs = rhythmReleaseTargetMs(note),
-            releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
-            releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
-            bodyPx = Math.max(0, yPx - releaseYpx);
-          if (note.type === 'HOLD') {
-            el.style.setProperty('--rhythm-hold-body', `${Math.round(bodyPx)}px`);
-            el.style.filter = note.activePointerId !== null ? 'brightness(1.3)' : '';
-          }
-          if (note.type === 'SLIDE' || note._rhythmOriginalType === 'SLIDE') {
-            el.style.setProperty('--rhythm-slide-height', `${Math.round(bodyPx)}px`);
-            el.style.setProperty('--rhythm-slide-visible-height', `${Math.round(bodyPx)}px`);
-          }
-          const activeSlideLane = RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),
-            visualLane = activeSlideLane === null ? note.lane : activeSlideLane;
-          rhythmLayoutNoteVisual(el, note, yPx, visualLane, playAreaRef.current, releaseYpx, {
-            chartNowMs: songTimeMs - settings.judgmentTimingOffsetMs,
-            visualTime,
-            travelMs,
-            spawnY: travel.spawnY,
-            travelPx: travel.travelPx
-          });
+        const progress = 1 - (note.timeMs - visualTime) / travelMs,
+          visible = note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
+        el.style.opacity = visible ? '1' : '0';
+        if (!visible || !travel) return;
+        let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
+        if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
+        yPx = Math.round(yPx);
+        el.style.transform = `translate3d(0,${yPx}px,0)`;
+        const releaseTargetMs = rhythmReleaseTargetMs(note),
+          releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
+          releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
+          bodyPx = Math.max(0, yPx - releaseYpx);
+        if (note.type === 'HOLD') {
+          el.style.setProperty('--rhythm-hold-body', `${Math.round(bodyPx)}px`);
+          el.style.filter = note.activePointerId !== null ? 'brightness(1.3)' : '';
         }
-        el.style.opacity = note.activePointerId !== null ? '1' : progress < -.1 || progress > 1.18 ? '0' : '1';
+        if (note.type === 'SLIDE' || note._rhythmOriginalType === 'SLIDE') {
+          el.style.setProperty('--rhythm-slide-height', `${Math.round(bodyPx)}px`);
+          el.style.setProperty('--rhythm-slide-visible-height', `${Math.round(bodyPx)}px`);
+        }
+        const activeSlideLane = RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),
+          visualLane = activeSlideLane === null ? note.lane : activeSlideLane;
+        rhythmLayoutNoteVisual(el, note, yPx, visualLane, playAreaRef.current, releaseYpx, {
+          chartNowMs: songTimeMs - settings.judgmentTimingOffsetMs,
+          visualTime,
+          travelMs,
+          spawnY: travel.spawnY,
+          travelPx: travel.travelPx
+        }, {
+          rect: travel.rect,
+          noteHeight: travel.noteHeight,
+          bodyHeight: bodyPx
+        });
       });
       if (songTimeMs >= chart.durationMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };

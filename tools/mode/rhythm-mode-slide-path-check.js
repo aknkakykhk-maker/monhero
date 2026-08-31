@@ -17,8 +17,13 @@ if(helpers){
   const last=all[all.length-1].split(/[ ,]/).map(Number),endY=last[5],endLane=h.rhythmProjectLane(4,endY/rect.height);
   check('最後の帯中心はslidePoints終端・ENDバーと同じレーン投影',Math.abs((last[4]+last[6])/2-rect.width*endLane.center)<.02&&source.includes('rhythmReleaseLane(note),endY'));
 }
-check('描画は判定と同じrhythmSlidePointsを正本にする',source.includes('const points=rhythmSlidePoints(note);')&&source.includes('const source=rhythmSlidePoints(note)'));
+check('描画は判定と同じrhythmSlidePointsを正本にしてnote単位で再利用できる',source.includes('const points=rhythmSlidePoints(note);')&&source.includes('note?._rhythmSlideRenderPoints||rhythmSlidePoints(note)')&&game.includes('_rhythmSlideRenderPoints:rhythmSlidePoints(note)'));
 check('既存projectionとプレイ本体rAFの時刻を再利用',source.includes('rhythmProjectTravelProgress(progress)')&&source.includes('rhythmProjectLane(Number(point.lane),yRatio)')&&game.includes('chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs'));
+check('SLIDE区間計算は毎frameのfilter・map・spread配列を作らない',!segments.includes('.filter(')&&!segments.includes('.map(')&&!segments.includes('...source'));
+check('playArea rectとnote高さは1frameの計測結果を全noteで共有',game.includes('rect:areaRect,noteHeight')&&game.includes('{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx}'));
+check('表示外noteは重いprojectionとpolygon更新をskip',game.includes("if(!visible||!travel)return;")&&game.indexOf("if(!visible||!travel)return;")<game.indexOf('rhythmLayoutNoteVisual(el,note'));
+check('polygon DOMは不足分だけ追加し通過済み区間を非表示で再利用',source.includes("if(!segment){segment=document.createElementNS")&&source.includes("body.childNodes[index].style.display='none'")&&!source.includes('body.lastChild.remove()'));
+check('同一polygon pointsのsetAttributeを省略',source.includes("if(segment._rhythmPoints!==points){segment.setAttribute('points',points);segment._rhythmPoints=points;}"));
 check('SLIDE判定許容値と追従判定を変更していない',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')&&source.includes('if(Math.abs(actual-expected)>RHYTHM_SLIDE_TOLERANCE_LANES)'));
 check('SLIDE帯は薄い塗りと控えめな発光でも縁を維持',source.includes('fill:rgba(168,85,247,.48)')&&source.includes('stroke:rgba(233,213,255,.56)')&&source.includes('drop-shadow(0 0 5px rgba(168,85,247,.38)'));
 check('TAP・HOLD・FLICK描画分岐を維持',game.includes("note.type==='HOLD'&&<span data-rhythm-hold-body")&&source.includes('[data-note-type="FLICK"]')&&source.includes('rhythmNoteVisualSpan(note,lane,yRatio)'));

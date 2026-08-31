@@ -146,7 +146,7 @@ node tools/build.js --check
 `node mode/rhythm-mode-sublane-projection-check.js` は、旧5レーン互換を保つ10サブレーン座標、TAP幅1〜4、左右端、奥／手前の共通projection、サブ境界とHOLD／SLIDE／ENDバーの回帰を確認する。
 `node mode/rhythm-mode-tap-width-input-check.js` は、可変幅TAPの10サブレーン入力、幅1の最小タッチ許容、左右端・範囲外、隣接同時押し、旧5レーン互換、描画projectionの逆変換、WIDTH TESTと既存ジェスチャーの回帰を確認する。
 `node mode/rhythm-mode-end-bar-check.js` は、HOLD／SLIDE終端バーがruntimeで延期された値ではなく元のendTimeMsを使い、終点レーンと共通projectionへ揃い、帯と接続して入力を遮らないことを確認する。
-`node mode/rhythm-mode-slide-path-check.js` は、SLIDE帯が判定と同じslidePointsの各区間を一定幅のSVG polygonとして描き、共通projection、通過済み区間の除去、終端バーとの一致、TAP／HOLD／FLICKと判定ロジックの回帰を確認する。
+`node mode/rhythm-mode-slide-path-check.js` は、SLIDE帯が判定と同じslidePointsの各区間を一定幅のSVG polygonとして描き、共通projection、通過済み区間の除去、終端バーとの一致、TAP／HOLD／FLICKと判定ロジックの回帰を確認する。あわせて、polygon DOM・slidePoints・frame内レイアウト計測の再利用と表示外更新のスキップも確認する。
 | `node mode/rhythm-mode-hold-engine-check.js` | 音ゲーSTEP 3AのHOLD終端・早離しMISS・Pointer EventsのpointerId別2本指入力・EASY TAP回帰とNORMAL混在譜面を確認する。 |
 
 | コマンド | 内容 |

@@ -498,59 +498,65 @@ const rhythmLayoutPlayArea=area=>{
     line.style.right=`${((1-right)*100).toFixed(4)}%`;
   }
 };
-const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect)=>{
-  const source=rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
+const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
+  const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
   const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
-  const points=now>start?[{timeMs:now,lane:rhythmSlideExpectedLane(note,now)},...source.filter(point=>Number(point.timeMs)>now)]:source;
   const project=point=>{
-    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+Number(travel.noteHalfHeight||0),yRatio=rhythmClamp01(y/rect.height),lane=rhythmProjectLane(Number(point.lane),yRatio),half=rect.width*lane.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=rhythmClamp01(y/rect.height),lane=rhythmProjectLane(Number(point.lane),yRatio),half=rect.width*lane.width*RHYTHM_BODY_WIDTH_RATIO/2;
     return {y,left:rect.width*lane.center-half,right:rect.width*lane.center+half};
   };
-  const projected=points.map(project),segments=[];
-  for(let index=1;index<projected.length;index++){
-    const from=projected[index-1],to=projected[index];
+  let firstIndex=0;
+  while(firstIndex<source.length&&Number(source[firstIndex].timeMs)<=now)firstIndex++;
+  const segments=[];
+  let from=project(now>start?{timeMs:now,lane:rhythmSlideExpectedLane(note,now)}:source[0]);
+  for(let index=Math.max(1,firstIndex);index<source.length;index++){
+    const to=project(source[index]);
     segments.push(`${from.left.toFixed(2)},${from.y.toFixed(2)} ${from.right.toFixed(2)},${from.y.toFixed(2)} ${to.right.toFixed(2)},${to.y.toFixed(2)} ${to.left.toFixed(2)},${to.y.toFixed(2)}`);
+    from=to;
   }
   return segments;
 };
-const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideTravel=null)=>{
+const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideTravel=null,frameLayout=null)=>{
   if(!el||!area)return;
-  const rect=area.getBoundingClientRect();
+  const rect=frameLayout?.rect||area.getBoundingClientRect();
   if(!(rect.width>0&&rect.height>0))return;
-  const lane=Number(visualLane),centerY=Number(yPx)+el.offsetHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
+  const noteHeight=Number(frameLayout?.noteHeight)||el.offsetHeight,lane=Number(visualLane),centerY=Number(yPx)+noteHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
   const projected=rhythmNoteVisualSpan(note,lane,yRatio),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO)),left=rect.width*projected.center-width/2;
   el.style.left=`${left.toFixed(2)}px`;
   el.style.width=`${width.toFixed(2)}px`;
   el.style.setProperty('--rhythm-note-depth-scale',(0.56+projected.scale*.44).toFixed(3));
   el.style.setProperty('--rhythm-note-depth-brightness',(0.72+projected.scale*.28).toFixed(3));
-  const body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
+  const body=el._rhythmVisualBody||el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
   if(!body)return;
+  el._rhythmVisualBody=body;
   if(body.hasAttribute('data-rhythm-slide-body')){
     body.style.left=`${(-left).toFixed(2)}px`;
     body.style.top=`${(-Number(yPx)).toFixed(2)}px`;
     body.style.width=`${rect.width.toFixed(2)}px`;
     body.style.setProperty('--rhythm-slide-area-height',`${rect.height.toFixed(2)}px`);
     body.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
-    const polygons=slideTravel?rhythmSlideSegmentPolygons(note,slideTravel.chartNowMs,{...slideTravel,noteHalfHeight:el.offsetHeight/2},rect):[];
-    while(body.childNodes.length>polygons.length)body.lastChild.remove();
+    const polygons=slideTravel?rhythmSlideSegmentPolygons(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2):[];
     polygons.forEach((points,index)=>{
       let segment=body.childNodes[index];
       if(!segment){segment=document.createElementNS('http://www.w3.org/2000/svg','polygon');segment.dataset.rhythmSlideSegment='';body.appendChild(segment);}
-      segment.setAttribute('points',points);
+      segment.style.display='';
+      if(segment._rhythmPoints!==points){segment.setAttribute('points',points);segment._rhythmPoints=points;}
     });
+    for(let index=polygons.length;index<body.childNodes.length;index++)body.childNodes[index].style.display='none';
   }else{
-  const height=Math.max(0,parseFloat(getComputedStyle(body).height)||0),topY=Math.max(0,Math.min(rect.height,centerY-height));
+  const measuredBodyHeight=frameLayout&&Number.isFinite(Number(frameLayout.bodyHeight))?Number(frameLayout.bodyHeight):parseFloat(getComputedStyle(body).height),height=Math.max(0,measuredBodyHeight||0),topY=Math.max(0,Math.min(rect.height,centerY-height));
   const topLane=lane;
   const top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio),topHalf=top.width*RHYTHM_BODY_WIDTH_RATIO/2,bottomHalf=bottom.width*RHYTHM_BODY_WIDTH_RATIO/2;
   body.style.left=`${(-left).toFixed(2)}px`;
   body.style.width=`${rect.width.toFixed(2)}px`;
   body.style.clipPath=`polygon(${((top.center-topHalf)*100).toFixed(3)}% 0,${((top.center+topHalf)*100).toFixed(3)}% 0,${((bottom.center+bottomHalf)*100).toFixed(3)}% 100%,${((bottom.center-bottomHalf)*100).toFixed(3)}% 100%)`;
   }
-  const endBar=el.querySelector('[data-rhythm-end-bar]');
+  const endBar=el._rhythmEndBar||el.querySelector('[data-rhythm-end-bar]');
+  if(endBar)el._rhythmEndBar=endBar;
   if(endBar&&Number.isFinite(releaseYpx)){
-    const endY=rhythmClamp01((Number(releaseYpx)+el.offsetHeight/2)/rect.height),end=rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
+    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
     endBar.style.left=`${(rect.width*end.center-left-barWidth/2).toFixed(2)}px`;
-    endBar.style.top=`${(Number(releaseYpx)-Number(yPx)+el.offsetHeight/2-4).toFixed(2)}px`;
+    endBar.style.top=`${(Number(releaseYpx)-Number(yPx)+noteHeight/2-4).toFixed(2)}px`;
     endBar.style.width=`${barWidth.toFixed(2)}px`;
     endBar.style.setProperty('--rhythm-end-depth-scale',(0.52+end.scale*.48).toFixed(3));
   }
