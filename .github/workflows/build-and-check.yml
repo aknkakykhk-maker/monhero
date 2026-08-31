@@ -35,7 +35,7 @@ concurrency:
 jobs:
   build:
     # 自分が生成したbuildコミットでは再実行しない。
-    if: github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'build: 配信用JSを再生成')
+    if: ${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'build: 配信用JSを再生成') }}
     runs-on: ubuntu-latest
     steps:
       - name: mainでは実行しない
