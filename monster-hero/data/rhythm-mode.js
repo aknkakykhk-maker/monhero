@@ -21,6 +21,8 @@ const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
 const RHYTHM_PROJECTION_TOP_SCALE=.30;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
 const RHYTHM_BODY_WIDTH_RATIO=.64;
+// 幅1だけに付ける入力側の余白。隣接する細ノーツの中心までは広げない。
+const RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES=.18;
 const rhythmClamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
 const rhythmProjectionScale=yRatio=>RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*Math.pow(rhythmClamp01(yRatio),1.24);
 const rhythmProjectBoundary=(boundary,yRatio)=>{
@@ -39,7 +41,7 @@ const rhythmProjectSubLaneSpan=(subLane,width,yRatio)=>{
   return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio),subLane:start,subLaneWidth:span};
 };
 // 旧譜面は lane を正本のまま使い、従来と同じ中央・2サブレーン幅へ写す。
-// STEP1Aでは可変幅をTAPの描画だけに限定し、入力/HOLD/FLICK/SLIDEの仕様は変えない。
+// 可変幅はTAPの描画と入力だけに限定し、HOLD/FLICK/SLIDEの仕様は変えない。
 const rhythmNoteVisualSpan=(note,visualLane,yRatio)=>note?.type==='TAP'&&note?.subLane!=null&&Number.isFinite(Number(note.subLane))
   ?rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,yRatio)
   :rhythmProjectSubLaneSpan(Number(visualLane)*2,2,yRatio);
@@ -64,6 +66,10 @@ const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   const left=rhythmProjectBoundary(0,yRatio),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yRatio),laneWidth=(right-left)/RHYTHM_LANE_COUNT;
   if(!Number.isFinite(nx)||nx<left||nx>right||!(laneWidth>0))return null;
   return (nx-left)/laneWidth-.5;
+};
+const rhythmSubLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
+  const coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
+  return coordinate===null?null:(coordinate+.5)*2;
 };
 const rhythmLaneAtPoint=(clientX,clientY,rect)=>{
   const coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
@@ -287,8 +293,20 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     const key=String(input?.inputKey??'');
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
     seenInputs.add(key);
-    const lane=Number(input?.lane);
-    const candidates=source.map((note,index)=>({note,index})).filter(({note,index})=>!claimed.has(index)&&!note.done&&note.activePointerId===null&&RHYTHM_NOTE_TYPES.includes(note.type)&&note.lane===lane&&Math.abs(now-(note.timeMs+offset))<=200).sort((a,b)=>Math.abs(now-(a.note.timeMs+offset))-Math.abs(now-(b.note.timeMs+offset))||a.index-b.index);
+    const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate);
+    const acceptsPosition=note=>{
+      if(note.type!=='TAP'||note.subLane==null||!Number.isFinite(Number(note.subLane)))return note.lane===lane;
+      if(!Number.isFinite(subCoordinate))return false;
+      const span=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1),start=span.subLane,end=start+span.subLaneWidth;
+      const tolerance=span.subLaneWidth===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:0;
+      return subCoordinate>=start-tolerance&&subCoordinate<=end+tolerance;
+    };
+    const spatialDistance=note=>{
+      if(note.type!=='TAP'||note.subLane==null||!Number.isFinite(subCoordinate))return 0;
+      const span=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1);
+      return Math.abs(subCoordinate-(span.subLane+span.subLaneWidth/2));
+    };
+    const candidates=source.map((note,index)=>({note,index})).filter(({note,index})=>!claimed.has(index)&&!note.done&&note.activePointerId===null&&RHYTHM_NOTE_TYPES.includes(note.type)&&acceptsPosition(note)&&Math.abs(now-(note.timeMs+offset))<=200).sort((a,b)=>Math.abs(now-(a.note.timeMs+offset))-Math.abs(now-(b.note.timeMs+offset))||spatialDistance(a.note)-spatialDistance(b.note)||a.index-b.index);
     const picked=candidates[0];
     if(!picked)return {input,target:null,deltaMs:null};
     claimed.add(picked.index);
@@ -367,6 +385,15 @@ const atsuCupGestureTestNotes = Object.freeze([
 ]);
 const atsuCupGestureTestChart = Object.freeze({level:9,notes:atsuCupGestureTestNotes,totalNotes:atsuCupGestureTestNotes.length,durationMs:26000});
 
+// 10サブレーン入力と幅1〜4を実際に確認するデバッグ専用譜面。
+const widthTestNotes = Object.freeze([
+  [1800,0,1],[2600,4,1],[3400,9,1], // 左端・中央・右端の幅1
+  [4400,1,2],[5200,3,3],[6000,6,4], // 幅2〜4とワイドTAP
+  [7200,4,1],[7200,5,1],             // 隣接する幅1の同時押し
+  [8400,0,1],[9000,1,2],[9600,3,3],[10200,6,4], // 幅1→2→3→4
+].map(([timeMs,subLane,subLaneWidth])=>Object.freeze({type:'TAP',timeMs,lane:Math.floor(subLane/2),subLane,subLaneWidth})));
+const widthTestChart=Object.freeze({level:1,notes:widthTestNotes,totalNotes:widthTestNotes.length,durationMs:12000});
+
 const RHYTHM_SONGS = Object.freeze([
   Object.freeze({
     songId:'atsu_cup_theme_test',
@@ -376,6 +403,10 @@ const RHYTHM_SONGS = Object.freeze([
       id,
       id==='EASY'?atsuCupTapChart:id==='NORMAL'?atsuCupHoldTestChart:id==='HARD'?atsuCupGestureTestChart:emptyRhythmChart()
     ])))
+  }),
+  Object.freeze({
+    songId:'width_test', displayName:'WIDTH TEST', bgmTrackId:'atsu_cup_theme',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:emptyRhythmChart()])))
   }),
 ]);
 

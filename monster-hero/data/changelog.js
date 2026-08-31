@@ -3,6 +3,10 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-31 19:26", type:'update', title:'音ゲー可変幅TAPの入力判定を追加', releaseFlag:'rhythmMode',
+    items:['10サブレーン上のTAP表示範囲をそのまま入力判定へ使い、幅1〜4を実際に演奏できるようにしました。幅1には隣の細ノーツを取りにくくしない最小限のタッチ許容を設け、デバッグにWIDTH TEST譜面を追加しました。'],
+  },
+  {
     date: "2026-08-31 19:16", type:'update', title:'音ゲーHOLD／SLIDEの終端バーを追加', releaseFlag:'rhythmMode',
     items:['HOLD／SLIDEの本来の終端時刻と終点レーンへ、横長に発光する終端バーを追加しました。バーが判定ラインへ来た瞬間が、指を離すタイミングです。'],
   },
