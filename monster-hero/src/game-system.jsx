@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-31 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-01 07:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11088,6 +11088,78 @@ function MonsterHeroGame() {
     } catch { setRestoreMsg('コードが正しくありません'); }
   };
 
+  const buildBackupCodeForFile = () => {
+    if (!hasLocalStorage()) return '';
+    const data = {};
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith('mh_')) data[k] = window.localStorage.getItem(k);
+    }
+    if (!Object.keys(data).length) return '';
+    return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  };
+  const backupFileStamp = () => {
+    const d = new Date();
+    const pad = v => String(v).padStart(2, '0');
+    return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+  };
+  const saveBackupFile = async () => {
+    setRestoreMsg('');
+    try {
+      const code = buildBackupCodeForFile();
+      if (!code) { setRestoreMsg('バックアップファイルを作成できませんでした'); return; }
+      const filename = 'monster-hero-backup-' + backupFileStamp() + '.mhsave';
+      const blob = new Blob([code], { type:'application/octet-stream' });
+      if (typeof File !== 'undefined' && navigator.share && navigator.canShare) {
+        try {
+          const file = new File([blob], filename, { type:'application/octet-stream' });
+          if (navigator.canShare({ files:[file] })) {
+            setRestoreMsg('共有メニューから「ファイルに保存」を選んでください');
+            await navigator.share({ files:[file], title:'Monster Hero バックアップ' });
+            setRestoreMsg('バックアップファイルを保存・共有しました');
+            return;
+          }
+        } catch (e) {
+          if (e && e.name === 'AbortError') { setRestoreMsg('保存をキャンセルしました'); return; }
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setRestoreMsg('バックアップファイルを保存しました');
+    } catch { setRestoreMsg('バックアップファイルを保存できませんでした'); }
+  };
+  const restoreFromBackupFile = () => {
+    setRestoreMsg('');
+    try {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.mhsave,text/plain,application/octet-stream';
+      input.onchange = async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) { setRestoreMsg('バックアップファイルが大きすぎます'); return; }
+        try {
+          const text = (await file.text()).trim();
+          const json = decodeURIComponent(escape(atob(text)));
+          const data = JSON.parse(json);
+          if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid');
+          const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
+          if (!keys.length) throw new Error('no-save-keys');
+          keys.forEach(k => window.localStorage.setItem(k, data[k]));
+          setRestoreMsg('復元しました。再読み込みします...');
+          setTimeout(() => window.location.reload(), 900);
+        } catch { setRestoreMsg('バックアップファイルが正しくありません'); }
+      };
+      input.click();
+    } catch { setRestoreMsg('バックアップファイルを開けませんでした'); }
+  };
+
   // 編成の1枠(monsterRosterIdsの要素)を、実際に使えるモンスターオブジェクトに変換する。
   // 通常は素のモンスター種idの文字列だが、"masu:<masuId>"の形式ならマスモンインスタンスを指す。
   // マスモンの解決はモジュール直下の mergeMasuIntoMon が正本(総合力の計算も同じものを使う)。
@@ -16017,7 +16089,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ['autoRepeatResultBgm','AUTO∞ 最終リザルトBGM'],
     ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="w-full min-h-[44px] bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"><option value="off">OFF（戦闘BGMを途切れさせない）</option><option value="on">ON（従来どおり）</option></select></div></label>)}{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
   ) : showBackup ? (
-    <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{backupTab==='export'?<>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice" onClick={generateBackupCode}>バックアップコードを作成</button></>:<><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice" onClick={restoreFromBackupCode}>このコードで復元する</button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
+    <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{backupTab==='export'?<><button data-mhsave-action="export" className="mh-dialog-choice" onClick={saveBackupFile}>バックアップファイルを保存（.mhsave）</button>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice" onClick={generateBackupCode}>バックアップコードを作成</button></>:<><button data-mhsave-action="import" className="mh-dialog-choice" onClick={restoreFromBackupFile}>バックアップファイルから復元（.mhsave）</button><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice" onClick={restoreFromBackupCode}>このコードで復元する</button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
   ) : null;
 
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return (

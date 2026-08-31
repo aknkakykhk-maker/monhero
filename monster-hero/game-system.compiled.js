@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4d5b027d75a4b607
+// source-sha256: 1595ba2b22246be6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-31 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-01 07:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19321,6 +19321,101 @@ function MonsterHeroGame() {
       setRestoreMsg('コードが正しくありません');
     }
   };
+  const buildBackupCodeForFile = () => {
+    if (!hasLocalStorage()) return '';
+    const data = {};
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith('mh_')) data[k] = window.localStorage.getItem(k);
+    }
+    if (!Object.keys(data).length) return '';
+    return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  };
+  const backupFileStamp = () => {
+    const d = new Date();
+    const pad = v => String(v).padStart(2, '0');
+    return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+  };
+  const saveBackupFile = async () => {
+    setRestoreMsg('');
+    try {
+      const code = buildBackupCodeForFile();
+      if (!code) {
+        setRestoreMsg('バックアップファイルを作成できませんでした');
+        return;
+      }
+      const filename = 'monster-hero-backup-' + backupFileStamp() + '.mhsave';
+      const blob = new Blob([code], {
+        type: 'application/octet-stream'
+      });
+      if (typeof File !== 'undefined' && navigator.share && navigator.canShare) {
+        try {
+          const file = new File([blob], filename, {
+            type: 'application/octet-stream'
+          });
+          if (navigator.canShare({
+            files: [file]
+          })) {
+            setRestoreMsg('共有メニューから「ファイルに保存」を選んでください');
+            await navigator.share({
+              files: [file],
+              title: 'Monster Hero バックアップ'
+            });
+            setRestoreMsg('バックアップファイルを保存・共有しました');
+            return;
+          }
+        } catch (e) {
+          if (e && e.name === 'AbortError') {
+            setRestoreMsg('保存をキャンセルしました');
+            return;
+          }
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setRestoreMsg('バックアップファイルを保存しました');
+    } catch {
+      setRestoreMsg('バックアップファイルを保存できませんでした');
+    }
+  };
+  const restoreFromBackupFile = () => {
+    setRestoreMsg('');
+    try {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.mhsave,text/plain,application/octet-stream';
+      input.onchange = async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) {
+          setRestoreMsg('バックアップファイルが大きすぎます');
+          return;
+        }
+        try {
+          const text = (await file.text()).trim();
+          const json = decodeURIComponent(escape(atob(text)));
+          const data = JSON.parse(json);
+          if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid');
+          const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
+          if (!keys.length) throw new Error('no-save-keys');
+          keys.forEach(k => window.localStorage.setItem(k, data[k]));
+          setRestoreMsg('復元しました。再読み込みします...');
+          setTimeout(() => window.location.reload(), 900);
+        } catch {
+          setRestoreMsg('バックアップファイルが正しくありません');
+        }
+      };
+      input.click();
+    } catch {
+      setRestoreMsg('バックアップファイルを開けませんでした');
+    }
+  };
 
   // 編成の1枠(monsterRosterIdsの要素)を、実際に使えるモンスターオブジェクトに変換する。
   // 通常は素のモンスター種idの文字列だが、"masu:<masuId>"の形式ならマスモンインスタンスを指す。
@@ -27373,13 +27468,21 @@ function MonsterHeroGame() {
   }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), /*#__PURE__*/React.createElement("button", {
     className: backupTab === 'import' ? 'active' : '',
     onClick: () => setBackupTab('import')
-  }, "\u5FA9\u5143")), backupTab === 'export' ? /*#__PURE__*/React.createElement(React.Fragment, null, backupCode && /*#__PURE__*/React.createElement("textarea", {
+  }, "\u5FA9\u5143")), backupTab === 'export' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    "data-mhsave-action": "export",
+    className: "mh-dialog-choice",
+    onClick: saveBackupFile
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u3092\u4FDD\u5B58\uFF08.mhsave\uFF09"), backupCode && /*#__PURE__*/React.createElement("textarea", {
     readOnly: true,
     value: backupCode
   }), /*#__PURE__*/React.createElement("button", {
     className: "mh-dialog-choice",
     onClick: generateBackupCode
-  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u4F5C\u6210")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("textarea", {
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u4F5C\u6210")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    "data-mhsave-action": "import",
+    className: "mh-dialog-choice",
+    onClick: restoreFromBackupFile
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u304B\u3089\u5FA9\u5143\uFF08.mhsave\uFF09"), /*#__PURE__*/React.createElement("textarea", {
     value: restoreInput,
     onChange: e => setRestoreInput(e.target.value),
     placeholder: "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u8CBC\u308A\u4ED8\u3051"
