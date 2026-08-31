@@ -1,5 +1,6 @@
 // 音ゲーモードの拡張用データ。音源そのものは既存 BGM_TRACKS を正本とし、trackId だけを参照する。
 const RHYTHM_LANE_COUNT = 5;
+const RHYTHM_SUB_LANE_COUNT = RHYTHM_LANE_COUNT*2;
 const RHYTHM_NOTE_TYPES = Object.freeze(['TAP', 'HOLD', 'FLICK', 'SLIDE']);
 const RHYTHM_DIFFICULTIES = Object.freeze([
   Object.freeze({ id:'EASY', maxScore:600000 }),
@@ -30,6 +31,18 @@ const rhythmProjectLane=(lane,yRatio)=>{
   const value=Number(lane),left=rhythmProjectBoundary(value,yRatio),right=rhythmProjectBoundary(value+1,yRatio);
   return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio)};
 };
+const rhythmProjectSubLaneSpan=(subLane,width,yRatio)=>{
+  const total=RHYTHM_LANE_COUNT*2;
+  const span=Math.max(1,Math.min(4,Math.trunc(Number(width))||2));
+  const start=Math.max(0,Math.min(total-span,Math.trunc(Number(subLane))||0));
+  const left=rhythmProjectBoundary(start/2,yRatio),right=rhythmProjectBoundary((start+span)/2,yRatio);
+  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio),subLane:start,subLaneWidth:span};
+};
+// 旧譜面は lane を正本のまま使い、従来と同じ中央・2サブレーン幅へ写す。
+// STEP1Aでは可変幅をTAPの描画だけに限定し、入力/HOLD/FLICK/SLIDEの仕様は変えない。
+const rhythmNoteVisualSpan=(note,visualLane,yRatio)=>note?.type==='TAP'&&note?.subLane!=null&&Number.isFinite(Number(note.subLane))
+  ?rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,yRatio)
+  :rhythmProjectSubLaneSpan(Number(visualLane)*2,2,yRatio);
 const rhythmLanePolygon=lane=>{
   const top=rhythmProjectLane(lane,0),bottom=rhythmProjectLane(lane,1);
   return `polygon(${top.left*100}% 0,${top.right*100}% 0,${bottom.right*100}% 100%,${bottom.left*100}% 100%)`;
@@ -416,6 +429,7 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-lane]::before{content:"";position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:polygon(var(--rhythm-boundary-top) 0,calc(var(--rhythm-boundary-top) + 1px) 0,calc(var(--rhythm-boundary-bottom) + 1px) 100%,var(--rhythm-boundary-bottom) 100%)!important}
     [data-rhythm-lane]::after{content:none!important}
     [data-rhythm-lane]:last-child::after{content:""!important;position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:polygon(calc(var(--rhythm-right-top) - 1px) 0,var(--rhythm-right-top) 0,var(--rhythm-right-bottom) 100%,calc(var(--rhythm-right-bottom) - 1px) 100%)!important}
+    [data-rhythm-sublane-boundary]{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(216,180,254,.08),rgba(103,232,249,.14) 72%,rgba(236,254,255,.24));clip-path:polygon(var(--rhythm-sub-top) 0,calc(var(--rhythm-sub-top) + 1px) 0,calc(var(--rhythm-sub-bottom) + 1px) 100%,var(--rhythm-sub-bottom) 100%)}
     [data-rhythm-lane][data-pressed="true"]{background:linear-gradient(180deg,rgba(34,211,238,.10),rgba(34,211,238,.22) 54%,rgba(217,70,239,.30) 100%)!important;box-shadow:inset 0 0 30px rgba(103,232,249,.48),inset 0 -72px 64px rgba(6,182,212,.34),0 0 15px rgba(34,211,238,.24)!important;border:0!important;filter:none!important}
     [data-rhythm-note]>span:last-child{transform:scaleY(var(--rhythm-note-depth-scale,1));transform-origin:center;filter:brightness(var(--rhythm-note-depth-brightness,1));transition:filter 40ms linear}
     [data-rhythm-judgment-line]{height:4px!important;background:linear-gradient(90deg,#d8b4fe 0%,#ecfeff 50%,#d8b4fe 100%)!important;border-radius:999px;box-shadow:0 0 14px #67e8f9,0 0 28px #c084fc,0 8px 24px rgba(34,211,238,.34)!important}
@@ -443,6 +457,11 @@ const rhythmLayoutPlayArea=area=>{
       label.style.transform='translateX(-50%)';
     }
   });
+  Array.from(area.querySelectorAll('[data-rhythm-sublane-boundary]')).forEach((boundary,index)=>{
+    const coordinate=index+.5;
+    boundary.style.setProperty('--rhythm-sub-top',`${(rhythmProjectBoundary(coordinate,0)*100).toFixed(4)}%`);
+    boundary.style.setProperty('--rhythm-sub-bottom',`${(rhythmProjectBoundary(coordinate,1)*100).toFixed(4)}%`);
+  });
   const line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=line?.getBoundingClientRect();
   if(line&&lineRect){
     const y=rhythmClamp01((lineRect.top-rect.top+lineRect.height/2)/rect.height),left=rhythmProjectBoundary(0,y),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,y);
@@ -455,7 +474,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null)=>{
   const rect=area.getBoundingClientRect();
   if(!(rect.width>0&&rect.height>0))return;
   const lane=Number(visualLane),centerY=Number(yPx)+el.offsetHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
-  const projected=rhythmProjectLane(lane,yRatio),width=Math.max(8,rect.width*projected.width*RHYTHM_NOTE_WIDTH_RATIO),left=rect.width*projected.center-width/2;
+  const projected=rhythmNoteVisualSpan(note,lane,yRatio),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO)),left=rect.width*projected.center-width/2;
   el.style.left=`${left.toFixed(2)}px`;
   el.style.width=`${width.toFixed(2)}px`;
   el.style.setProperty('--rhythm-note-depth-scale',(0.56+projected.scale*.44).toFixed(3));

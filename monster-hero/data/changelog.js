@@ -3,7 +3,7 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
-    date: "2026-08-31 19:03", type:'update', title:'音ゲーHOLD／SLIDEの終端バーを追加', releaseFlag:'rhythmMode',
+    date: "2026-08-31 19:16", type:'update', title:'音ゲーHOLD／SLIDEの終端バーを追加', releaseFlag:'rhythmMode',
     items:['HOLD／SLIDEの本来の終端時刻と終点レーンへ、横長に発光する終端バーを追加しました。バーが判定ラインへ来た瞬間が、指を離すタイミングです。'],
   },
   {
