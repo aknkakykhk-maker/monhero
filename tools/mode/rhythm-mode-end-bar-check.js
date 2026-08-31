@@ -17,6 +17,6 @@ if(helpers){
 check('HOLD／SLIDEだけに入力を遮らない終端バーを描画',game.includes("(note.type==='HOLD'||note.type==='SLIDE')&&<span data-rhythm-end-bar")&&game.includes("pointerEvents:'none'"));
 check('終端バーYは元終端時刻と共通travel projectionから毎フレーム算出',game.includes('releaseTargetMs=rhythmReleaseTargetMs(note)')&&game.includes('rhythmProjectTravelProgress(releaseProgress)*travel.travelPx'));
 check('帯と終端バーを同じ終端Yへ接続',source.includes('rhythmSlideSegmentPolygons(note,slideTravel.chartNowMs')&&source.includes('rhythmReleaseLane(note),endY'));
-check('終端バーの横位置と幅はHOLDサブレーンまたは共通lane projectionを再利用',source.includes("rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY):rhythmProjectLane(rhythmReleaseLane(note),endY)")&&source.includes('rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO'));
+check('終端バーの横位置と幅はHOLDサブレーンまたは共通lane projectionを再利用',source.includes("rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY)")&&source.includes('rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO'));
 check('ヘルプに終端バーで指を離す案内がある',help.includes('終端バーが判定ラインへ来たタイミングで指を離します'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

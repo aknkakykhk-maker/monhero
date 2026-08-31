@@ -147,7 +147,7 @@ node tools/build.js --check
 `node mode/rhythm-mode-tap-width-input-check.js` は、可変幅TAPの10サブレーン入力、幅1の最小タッチ許容、左右端・範囲外、隣接同時押し、旧5レーン互換、描画projectionの逆変換、WIDTH TESTと既存ジェスチャーの回帰を確認する。
 `node mode/rhythm-mode-hold-width-check.js` は、可変幅HOLDの幅1〜4の始点・帯・ENDバー投影、10サブレーン開始入力、幅1許容、旧HOLD互換、1指と1ノーツ、2指同時HOLD、HOLD中TAP、終端判定とSLIDE描画軽量化の回帰を確認する。
 `node mode/rhythm-mode-end-bar-check.js` は、HOLD／SLIDE終端バーがruntimeで延期された値ではなく元のendTimeMsを使い、終点レーンと共通projectionへ揃い、帯と接続して入力を遮らないことを確認する。
-`node mode/rhythm-mode-slide-path-check.js` は、SLIDE帯が判定と同じslidePointsの各区間を一定幅のSVG polygonとして描き、共通projection、通過済み区間の除去、終端バーとの一致、TAP／HOLD／FLICKと判定ロジックの回帰を確認する。あわせて、polygon DOM・slidePoints・frame内レイアウト計測の再利用と表示外更新のスキップも確認する。
+`node mode/rhythm-mode-slide-path-check.js` は、SLIDE帯が判定と同じslidePointsの各区間を一定幅のSVG polygonとして描き、共通projection、通過済み区間の除去、終端バーとの一致、TAP／HOLD／FLICKと判定ロジックの回帰を確認する。あわせて、polygon DOM・slidePoints・frame内レイアウト計測の再利用と表示外更新のスキップも確認する。`node mode/rhythm-mode-slide-sublane-check.js` は、位置・幅補間と幅2の±0.82互換に加え、WIDTH TEST MASTERのS字・ジグザグ・0.5レーン往復・幅1→4→1・多数point・別TAP/HOLD、および多数pointでも1区間1polygonとなることを確認する。
 | `node mode/rhythm-mode-hold-engine-check.js` | 音ゲーSTEP 3AのHOLD終端・早離しMISS・Pointer EventsのpointerId別2本指入力・EASY TAP回帰とNORMAL混在譜面を確認する。 |
 
 | コマンド | 内容 |

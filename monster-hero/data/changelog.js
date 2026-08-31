@@ -3,6 +3,10 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-09-01 07:13", type:'update', title:'音ゲーSLIDEの複合テストを拡張', releaseFlag:'rhythmMode',
+    items:['デバッグ限定のWIDTH TEST MASTERへ、大きなS字、細かいジグザグ、0.5レーン往復、曲がりながら幅1→4→1へ変化するSLIDE、多数の中継点を持つ長いSLIDEを追加しました。SLIDE中の別TAP／HOLDも実際に操作して確認できます。判定や速度などの演奏仕様は変更していません。'],
+  },
+  {
     date: "2026-09-01 06:46", type:'update', title:'音ゲーSLIDEの途中幅変化に対応', releaseFlag:'rhythmMode',
     items:['SLIDEの中継点ごとに幅1〜4を指定し、位置と同じ時間軸で細い帯から太い帯、太い帯から細い帯へ連続変形できるようにしました。開始・追従判定・操作中の頭・終端バーも各時刻の幅へ揃え、従来の幅2と一定幅SLIDEはそのまま維持します。'],
   },
