@@ -1,12 +1,12 @@
-// 音ゲーデバッグ STEP4 の小さい出荷レイヤー。
+// 音ゲーデバッグ STEP5 の小さい出荷レイヤー。
 // 旧ページは version.json の新buildを見て標準更新バナーを出す。
 // 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
 // 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
-  const RHYTHM_RELEASE_DATE='2026-08-31 15:29';
-  const RHYTHM_DATA_BUILD='2026-08-31 15:29';
+  const RHYTHM_RELEASE_DATE='2026-08-31 16:17';
+  const RHYTHM_DATA_BUILD='2026-08-31 16:17';
   const RHYTHM_COMPILED_BUILD='2026-08-31 10:17';
-  const RHYTHM_RELEASE_TITLE='音ゲーデバッグのiPhoneポーズリスタートを修正';
+  const RHYTHM_RELEASE_TITLE='音ゲーデバッグのiPhoneポーズ操作を修正';
 
   if(typeof window!=='undefined'&&typeof window.fetch==='function'&&!window.__mhRhythmDataBuildBridge){
     const nativeFetch=window.fetch.bind(window);
@@ -33,14 +33,14 @@
     CHANGELOG.unshift({
       date:RHYTHM_RELEASE_DATE,type:'issue',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
-        'iPhone Safariではポーズメニューがプレイエリア内にあるため、既存のタッチ入力処理がtouchendを処理して「リスタート」のclickが届かないケースがありました。',
-        'ポーズ中の「リスタート」はtouchendのcapture段階で直接受け取り、旧プレイの入力処理へ渡さず、古い音声・入力・描画状態を破棄して新しいプレイ画面を起動するよう修正しました。',
-        '曲終了後の「もう一度プレイ」は前回修正の完全再マウント方式をそのまま維持しています。'
+        'iPhone Safariのポーズ画面で「再開」「中断して音ゲーデバッグへ戻る」が押せない問題を修正しました。',
+        'ポーズメニュー3ボタンをtouchendのcapture段階で判定し、リスタートは完全再マウント、再開と中断は元のReact onClickへ安全に橋渡しするよう変更しました。',
+        '曲終了後の「もう一度プレイ」とポーズ中の「リスタート」のフリーズ対策はそのまま維持しています。'
       ]
     });
   }
   if(typeof HELP_CATEGORIES!=='undefined'){
     const topic=HELP_CATEGORIES.flatMap(category=>category.topics||[]).find(item=>item.id==='rhythm-mode');
-    if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDEを確認できます。ポーズ・リスタート・完走リザルト・端末内BEST保存にも対応し、中断したプレイは記録されません。通常画面には表示されません。曲終了後の「もう一度プレイ」とポーズ中の「リスタート」は、古いプレイ画面を丸ごと破棄して新しいプレイ画面を起動します。iPhone Safariのポーズ中リスタートは、プレイエリアのタッチ入力にclickを消されないようtouchendのcapture段階で直接処理します。'}];
+    if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDEを確認できます。ポーズ・リスタート・完走リザルト・端末内BEST保存にも対応し、中断したプレイは記録されません。通常画面には表示されません。iPhone Safariのポーズ画面は「再開」「リスタート」「中断して音ゲーデバッグへ戻る」をtouchendのcapture段階で受け取り、プレイエリア側の入力処理にclickを消されないようにしています。リスタートは古いプレイ画面を破棄して新しいプレイ画面を起動します。'}];
   }
 })();
