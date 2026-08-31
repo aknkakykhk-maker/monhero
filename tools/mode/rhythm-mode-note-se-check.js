@@ -4,6 +4,7 @@ const path=require('path');
 const vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..');
 const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
+const releaseSource=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-step3-release.js'),'utf8');
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 
@@ -69,6 +70,58 @@ const missIndex=source.indexOf('if(!picked)return {input,target:null,deltaMs:nul
 const playIndex=source.indexOf('RHYTHM_NOTE_SE_RUNTIME.play();',missIndex);
 check('対象取得後だけSE呼び出しへ進む',missIndex>=0&&playIndex>missIndex);
 check('入力ごとのAudioContext新規生成をしない',/let ctx=null/.test(source)&&source.match(/new AudioContextClass\(\)/g)?.length===1);
+
+const listeners={};
+const sessions=new Map();
+let releasePlayCount=0;
+const releaseContext={
+  window:{
+    addEventListener:(type,handler)=>{listeners[type]=handler;},
+  },
+  RHYTHM_GESTURE_RUNTIME:{_sessions:sessions},
+  RHYTHM_NOTE_SE_RUNTIME:{play:()=>{releasePlayCount++;return true;}},
+  RHYTHM_RELEASE_MAX_MS:200,
+  performance:{now:()=>1000},
+  console,
+};
+vm.runInNewContext(releaseSource,releaseContext);
+const holdSession=(overrides={})=>({
+  releaseRequired:true,
+  kind:'HOLD',
+  note:{done:false},
+  failed:false,
+  startSongMs:1800,
+  startPerfMs:1000,
+  releaseTargetMs:1800,
+  offsetMs:0,
+  ...overrides,
+});
+sessions.set('touch:1',holdSession());
+listeners.touchend?.({changedTouches:[{identifier:1}]});
+check('HOLD終端を判定幅内で離すとSEを鳴らす',releasePlayCount===1);
+
+sessions.set('touch:2',holdSession({failed:true,kind:'SLIDE'}));
+listeners.touchend?.({changedTouches:[{identifier:2}]});
+check('途中失敗したSLIDE/HOLDの離しでは鳴らさない',releasePlayCount===1);
+
+sessions.set('touch:3',holdSession({releaseTargetMs:1500}));
+listeners.touchend?.({changedTouches:[{identifier:3}]});
+check('±200ms外の離しでは鳴らさない',releasePlayCount===1);
+
+sessions.set('touch:4',holdSession({releaseRequired:false,kind:'FLICK'}));
+listeners.touchend?.({changedTouches:[{identifier:4}]});
+check('FLICKの指離しでは追加SEを鳴らさない',releasePlayCount===1);
+
+sessions.set('pointer:5',holdSession({kind:'SLIDE'}));
+listeners.pointerup?.({pointerType:'mouse',pointerId:5});
+check('非touch PointerのHOLD/SLIDE終端でもSEを鳴らす',releasePlayCount===2);
+
+sessions.set('pointer:6',holdSession());
+listeners.pointerup?.({pointerType:'touch',pointerId:6});
+check('touch由来pointerupはtouchendと二重再生しない',releasePlayCount===2);
+
+check('終端SEも既存RHYTHM_NOTE_SE_RUNTIMEを再利用',releaseSource.includes('RHYTHM_NOTE_SE_RUNTIME.play()'));
+check('touchcancel/pointercancelには終端SEを追加しない',!releaseSource.includes("addEventListener('touchcancel'")&&!releaseSource.includes("addEventListener('pointercancel'"));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
