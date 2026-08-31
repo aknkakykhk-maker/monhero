@@ -3,10 +3,10 @@
 // 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
 // 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
-  const RHYTHM_RELEASE_DATE='2026-08-31 17:53';
-  const RHYTHM_DATA_BUILD='2026-08-31 17:53';
-  const RHYTHM_COMPILED_BUILD='2026-08-31 10:17';
-  const RHYTHM_RELEASE_TITLE='音ゲーデバッグのHOLD・SLIDE終端判定を追加';
+  const RHYTHM_RELEASE_DATE='2026-08-31 18:25';
+  const RHYTHM_DATA_BUILD='2026-08-31 18:25';
+  const RHYTHM_COMPILED_BUILD='2026-08-31 18:25';
+  const RHYTHM_RELEASE_TITLE='音ゲーの奥行き表現を強化';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
     const start=Number(startMs)||0,end=Number(endMs)||start,now=Number(chartNowMs);
@@ -74,16 +74,15 @@
 
   if(typeof CHANGELOG!=='undefined'&&!CHANGELOG.some(entry=>entry?.title===RHYTHM_RELEASE_TITLE)){
     CHANGELOG.unshift({
-      date:RHYTHM_RELEASE_DATE,type:'issue',title:RHYTHM_RELEASE_TITLE,status:'new',
+      date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
-        'HOLDとSLIDEを、終端まで押し続けるだけでは成功せず、最後に指を離したタイミングまで判定するよう変更しました。',
-        '終端の離し判定は開始時と同じ±200msの判定幅を使い、MARVELOUS / EXCELLENT / GREAT / GOOD / BAD / MISSを付けます。最終判定は開始と終了の悪い方です。',
-        '終端から+200msを超えて押しっぱなしの場合もMISSになります。TAP・FLICK、SLIDE途中の追従判定、譜面・スコア計算は変更していません。'
+        'レーン上端の収束を強め、奥のノーツはより小さく、判定ラインへ近づくほど大きく加速して迫るように見える遠近表現へ調整しました。',
+        'レーン境界、HOLD／SLIDE帯、判定ラインとタッチ判定は同じ投影座標を維持しています。'
       ]
     });
   }
   if(typeof HELP_CATEGORIES!=='undefined'){
     const topic=HELP_CATEGORIES.flatMap(category=>category.topics||[]).find(item=>item.id==='rhythm-mode');
-    if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDEを確認できます。HOLDとSLIDEは開始位置で押すだけでなく、終端のタイミングで指を離す必要があります。終端も±200msでMARVELOUS〜BADを判定し、範囲外または+200msを超えて押しっぱなしの場合はMISSです。1ノーツの最終判定は開始と終了の悪い方を採用します。SLIDE途中はこれまでどおり指位置と経路も照合します。iPhone Safariのポーズ画面は「再開」「リスタート」「中断して音ゲーデバッグへ戻る」をtouchendのcapture段階で処理します。'}];
+    if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDEを確認できます。レーンは上端へ強く収束し、ノーツは奥で小さく、手前へ近づくほど大きく加速して見えます。レーン境界、ノーツ、HOLD／SLIDE帯、判定ライン、タッチ判定は同じ遠近座標です。HOLDとSLIDEは開始位置で押すだけでなく、終端のタイミングで指を離す必要があります。最後に指を離したタイミングも±200msでMARVELOUS〜BADを判定し、範囲外または+200msを超えて押しっぱなしの場合はMISSです。SLIDE途中はこれまでどおり指位置と経路も照合します。iPhone Safariのポーズ画面は「再開」「リスタート」「中断して音ゲーデバッグへ戻る」をtouchendのcapture段階で処理します。'}];
   }
 })();
