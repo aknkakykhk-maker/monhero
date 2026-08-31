@@ -10,7 +10,17 @@
 # 2026年8月にこの方式で登録ワークフローが42個まで増え、失敗するたびに
 # 別名のymlを作り直すため、画面上の変更1件あたり8 Runまで膨らんだ。
 #
-# このワークフローはその置き換えで、通常は workflow_dispatch で必要時だけ動かす。
+# このワークフローはその置き換えで、次の2点が違う。
+#   ・on: workflow_dispatch なので、pushのたびに勝手に走らない。押したときだけ動く
+#   ・使い回すので、変更のたびに新しいymlを作る必要がない。失敗しても押し直すだけ
+#
+# 【使い方(モバイル)】
+#   1. Web UIでソースを編集してコミットする
+#   2. Actions → このワークフロー → Run workflow
+#   3. 対象ブランチを選んで実行する
+#
+# mainは選べない。公開物を検査なしで書き換えないため、必ず作業ブランチで使い、
+# 通常どおりPR経由でmainへ入れること。
 name: ビルドと検査（手動実行）
 
 on:
@@ -20,22 +30,17 @@ on:
         description: "ビルド結果に差分があればコミットする"
         type: boolean
         default: true
-  # chatgpt/rhythm-release-repair で今回の配信不整合を正規ビルドへ通すための一時起動。
-  # 生成物コミット後、このpushトリガーはPR前に削除して通常のworkflow_dispatch専用へ戻す。
-  push:
-    branches: [chatgpt/rhythm-release-repair]
 
 permissions:
   contents: write
 
 concurrency:
+  # 同じブランチへ二重に走らせない。あとから押したほうを優先する
   group: build-and-check-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    # 自分が生成したbuildコミットでは再実行しない。
-    if: "${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'build: 配信用JSを再生成') }}"
     runs-on: ubuntu-latest
     steps:
       - name: mainでは実行しない
@@ -55,24 +60,9 @@ jobs:
         working-directory: tools
         run: npm ci --omit=optional
 
-      - name: Add the rhythm delivery repair release note
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const file = 'monster-hero/data/changelog.js';
-          let text = fs.readFileSync(file, 'utf8');
-          const title = '音ゲーのレーン更新が端末へ届かない問題を修正';
-          if (!text.includes(title)) {
-            const entry = `  {\n    date: "2026-08-31 07:49", type:'issue', title:'${title}', releaseFlag:'rhythmMode',\n    items:['音ゲーのレーン・ノーツ・判定ライン・入力座標を共通geometryへ統一した更新が、古いdata/rhythm-mode.jsのキャッシュキーのまま配信されていたため、iPhone Safariで旧表示が残る問題を修正しました。', '正規ビルドでdata/*.jsのキャッシュキー・起動ファイルサイズ・更新日時を同期し、今後は配信前CIでも不一致を検出します。'],\n  },\n`;
-            text = text.replace('const CHANGELOG = [\n', 'const CHANGELOG = [\n' + entry);
-            fs.writeFileSync(file, text);
-          }
-          NODE
-
-      # 配信用JSと、BUILD_DATE / version.json / 更新履歴日時 / dataキャッシュキー /
-      # BOOT_SIZESを正規手順でまとめて同期する。
+      # 配信用JSを作り直す。編集元(game-system.jsx)だけを変えたコミットでも、
+      # ここで生成物が追いつく。BUILD_DATE / version.json / 更新履歴日時 /
+      # data/*.jsキャッシュキー / BOOT_SIZESも同じ正規ビルドで同期する。
       - name: Build the shipped bundle
         run: node tools/build.js
 
@@ -93,8 +83,9 @@ jobs:
           node tools/boot/data-cache-key-check.js
           node tools/mode/rhythm-mode-note-perspective-check.js
 
+      # 生成物に差分が出たときだけコミットする。差分が無ければ何もしない
       - name: Commit the rebuilt output
-        if: github.event_name == 'push' || inputs.commit
+        if: inputs.commit
         run: |
           if git diff --quiet; then
             echo "ビルド結果に差分はありません。コミットしません。"
