@@ -40,6 +40,11 @@ const rhythmProjectTravelProgress=progress=>{
   if(p>1)return 1+(p-1)*1.28;
   return p*(.54+.46*p);
 };
+const rhythmReleaseTargetMs=note=>Number(note?._rhythmReleaseTargetMs??note?._rhythmReleaseOriginalEndTimeMs??note?.endTimeMs??note?.timeMs)||0;
+const rhythmReleaseLane=note=>{
+  const points=Array.isArray(note?.slidePoints)?note.slidePoints:[];
+  return Number(points[points.length-1]?.lane??note?.endLane??note?.lane)||0;
+};
 const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   if(!rect||!Number.isFinite(rect.width)||rect.width<=0||!Number.isFinite(rect.height)||rect.height<=0)return null;
   const yRatio=rhythmClamp01((Number(clientY)-rect.top)/rect.height),nx=(Number(clientX)-rect.left)/rect.width;
@@ -222,6 +227,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     const releaseRequired=kind==='HOLD'||kind==='SLIDE';
     const releaseTargetMs=releaseRequired?(Number(note.endTimeMs)||Number(note.timeMs)||0):null;
     if(releaseRequired){
+      note._rhythmReleaseTargetMs=releaseTargetMs;
       note._rhythmReleaseOriginalEndTimeMs=releaseTargetMs;
       note._rhythmReleaseRequired=true;
       // 普段の見た目は元のendTimeMsを保ち、終端100ms前からだけ自動完了を延期する。
@@ -444,7 +450,7 @@ const rhythmLayoutPlayArea=area=>{
     line.style.right=`${((1-right)*100).toFixed(4)}%`;
   }
 };
-const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area)=>{
+const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null)=>{
   if(!el||!area)return;
   const rect=area.getBoundingClientRect();
   if(!(rect.width>0&&rect.height>0))return;
@@ -462,6 +468,14 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area)=>{
   body.style.left=`${(-left).toFixed(2)}px`;
   body.style.width=`${rect.width.toFixed(2)}px`;
   body.style.clipPath=`polygon(${((top.center-topHalf)*100).toFixed(3)}% 0,${((top.center+topHalf)*100).toFixed(3)}% 0,${((bottom.center+bottomHalf)*100).toFixed(3)}% 100%,${((bottom.center-bottomHalf)*100).toFixed(3)}% 100%)`;
+  const endBar=el.querySelector('[data-rhythm-end-bar]');
+  if(endBar&&Number.isFinite(releaseYpx)){
+    const endY=rhythmClamp01((Number(releaseYpx)+el.offsetHeight/2)/rect.height),end=rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
+    endBar.style.left=`${(rect.width*end.center-left-barWidth/2).toFixed(2)}px`;
+    endBar.style.top=`${(Number(releaseYpx)-Number(yPx)+el.offsetHeight/2-4).toFixed(2)}px`;
+    endBar.style.width=`${barWidth.toFixed(2)}px`;
+    endBar.style.setProperty('--rhythm-end-depth-scale',(0.52+end.scale*.48).toFixed(3));
+  }
 };
 
 // レーンのDOMが入れ替わった時だけ静的形状を設定する。ノーツはプレイ本体の1本のrAFから直接配置する。

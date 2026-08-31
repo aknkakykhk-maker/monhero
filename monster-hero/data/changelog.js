@@ -3,6 +3,10 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-08-31 19:03", type:'update', title:'音ゲーHOLD／SLIDEの終端バーを追加', releaseFlag:'rhythmMode',
+    items:['HOLD／SLIDEの本来の終端時刻と終点レーンへ、横長に発光する終端バーを追加しました。バーが判定ラインへ来た瞬間が、指を離すタイミングです。'],
+  },
+  {
     date: "2026-08-31 18:39", type:'issue', title:'音ゲーの奥行きとレーン位置を再調整', releaseFlag:'rhythmMode',
     items:['レーン上端の収束とノーツが手前へ迫る動きをもう一段階強めました。', 'レーンを描く5要素が別々の横幅を基準にしていたためノーツ中心とずれていた問題を修正し、TAP／FLICK／HOLD／SLIDEと帯を全域で同じ投影中心へ揃えました。'],
   },
