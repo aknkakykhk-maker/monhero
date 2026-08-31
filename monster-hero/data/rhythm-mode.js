@@ -18,14 +18,21 @@ const RHYTHM_JUDGMENTS = Object.freeze([
 ]);
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
 const RHYTHM_PROJECTION_TOP_SCALE=.46;
-const rhythmProjectionScale=yRatio=>RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*Math.max(0,Math.min(1,Number(yRatio)||0));
+const RHYTHM_NOTE_WIDTH_RATIO=.78;
+const RHYTHM_BODY_WIDTH_RATIO=.64;
+const rhythmClamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
+const rhythmProjectionScale=yRatio=>RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*rhythmClamp01(yRatio);
+const rhythmProjectBoundary=(boundary,yRatio)=>{
+  const scale=rhythmProjectionScale(yRatio),flat=Number(boundary)/RHYTHM_LANE_COUNT;
+  return .5+(flat-.5)*scale;
+};
 const rhythmProjectLane=(lane,yRatio)=>{
-  const scale=rhythmProjectionScale(yRatio),flatCenter=(Number(lane)+.5)/RHYTHM_LANE_COUNT;
-  return {center:.5+(flatCenter-.5)*scale,width:scale/RHYTHM_LANE_COUNT,scale};
+  const value=Number(lane),left=rhythmProjectBoundary(value,yRatio),right=rhythmProjectBoundary(value+1,yRatio);
+  return {left,right,center:(left+right)/2,width:right-left,scale:rhythmProjectionScale(yRatio)};
 };
 const rhythmLanePolygon=lane=>{
   const top=rhythmProjectLane(lane,0),bottom=rhythmProjectLane(lane,1);
-  return `polygon(${(top.center-top.width/2)*100}% 0,${(top.center+top.width/2)*100}% 0,${(bottom.center+bottom.width/2)*100}% 100%,${(bottom.center-bottom.width/2)*100}% 100%)`;
+  return `polygon(${top.left*100}% 0,${top.right*100}% 0,${bottom.right*100}% 100%,${bottom.left*100}% 100%)`;
 };
 const rhythmProjectTravelProgress=progress=>{
   const p=Number(progress)||0;
@@ -35,10 +42,10 @@ const rhythmProjectTravelProgress=progress=>{
 };
 const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   if(!rect||!Number.isFinite(rect.width)||rect.width<=0||!Number.isFinite(rect.height)||rect.height<=0)return null;
-  const yRatio=Math.max(0,Math.min(1,(Number(clientY)-rect.top)/rect.height));
-  const scale=rhythmProjectionScale(yRatio),left=(1-scale)/2,nx=(Number(clientX)-rect.left)/rect.width;
-  if(!Number.isFinite(nx)||nx<left||nx>1-left)return null;
-  return (nx-left)/(scale/RHYTHM_LANE_COUNT)-.5;
+  const yRatio=rhythmClamp01((Number(clientY)-rect.top)/rect.height),nx=(Number(clientX)-rect.left)/rect.width;
+  const left=rhythmProjectBoundary(0,yRatio),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yRatio),laneWidth=(right-left)/RHYTHM_LANE_COUNT;
+  if(!Number.isFinite(nx)||nx<left||nx>right||!(laneWidth>0))return null;
+  return (nx-left)/laneWidth-.5;
 };
 const rhythmLaneAtPoint=(clientX,clientY,rect)=>{
   const coordinate=rhythmLaneCoordinateAtPoint(clientX,clientY,rect);
@@ -328,38 +335,66 @@ const installRhythmGestureVisuals=()=>{
 };
 installRhythmGestureVisuals();
 
+const installRhythmGeometryStyles=()=>{
+  if(typeof document==='undefined')return;
+  if(document.documentElement.dataset.rhythmGeometryStyle==='ready')return;
+  document.documentElement.dataset.rhythmGeometryStyle='ready';
+  const style=document.createElement('style');
+  style.dataset.rhythmGeometryStyle='';
+  style.textContent=`
+    [data-rhythm-lane]{border:0!important;filter:none!important}
+    [data-rhythm-lane]::before{content:"";position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:polygon(var(--rhythm-boundary-top) 0,calc(var(--rhythm-boundary-top) + 1px) 0,calc(var(--rhythm-boundary-bottom) + 1px) 100%,var(--rhythm-boundary-bottom) 100%)!important}
+    [data-rhythm-lane]::after{content:none!important}
+    [data-rhythm-lane]:last-child::after{content:""!important;position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:polygon(calc(var(--rhythm-right-top) - 1px) 0,var(--rhythm-right-top) 0,var(--rhythm-right-bottom) 100%,calc(var(--rhythm-right-bottom) - 1px) 100%)!important}
+    [data-rhythm-lane][data-pressed="true"]{background:linear-gradient(180deg,rgba(34,211,238,.10),rgba(34,211,238,.22) 54%,rgba(217,70,239,.30) 100%)!important;box-shadow:inset 0 0 30px rgba(103,232,249,.48),inset 0 -72px 64px rgba(6,182,212,.34),0 0 15px rgba(34,211,238,.24)!important;border:0!important;filter:none!important}
+    [data-rhythm-judgment-line]{background:linear-gradient(90deg,#d8b4fe 0%,#ecfeff 50%,#d8b4fe 100%)!important;border-radius:999px}
+  `;
+  document.head.appendChild(style);
+};
+installRhythmGeometryStyles();
+
 const rhythmLayoutPlayArea=area=>{
   if(!area)return;
   const rect=area.getBoundingClientRect();
   if(!(rect.width>0&&rect.height>0))return;
   Array.from(area.querySelectorAll('[data-rhythm-lane]')).forEach((lane,index)=>{
     lane.style.clipPath=rhythmLanePolygon(index);
-    const label=lane.querySelector('span'),at=rhythmProjectLane(index,.93);
-    if(label){label.style.left=`${at.center*100}%`;label.style.transform='translateX(-50%)';}
+    lane.style.setProperty('--rhythm-boundary-top',`${(rhythmProjectBoundary(index,0)*100).toFixed(4)}%`);
+    lane.style.setProperty('--rhythm-boundary-bottom',`${(rhythmProjectBoundary(index,1)*100).toFixed(4)}%`);
+    if(index===RHYTHM_LANE_COUNT-1){
+      lane.style.setProperty('--rhythm-right-top',`${(rhythmProjectBoundary(RHYTHM_LANE_COUNT,0)*100).toFixed(4)}%`);
+      lane.style.setProperty('--rhythm-right-bottom',`${(rhythmProjectBoundary(RHYTHM_LANE_COUNT,1)*100).toFixed(4)}%`);
+    }
+    const label=lane.querySelector('span');
+    if(label){
+      const labelRect=label.getBoundingClientRect(),labelY=rhythmClamp01((labelRect.top-rect.top+labelRect.height/2)/rect.height),at=rhythmProjectLane(index,labelY);
+      label.style.left=`${at.center*100}%`;
+      label.style.transform='translateX(-50%)';
+    }
   });
   const line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=line?.getBoundingClientRect();
   if(line&&lineRect){
-    const y=(lineRect.top-rect.top+lineRect.height/2)/rect.height,projection=rhythmProjectLane(2,y);
-    line.style.left=`${((1-projection.scale)/2)*100}%`;
-    line.style.right=`${((1-projection.scale)/2)*100}%`;
+    const y=rhythmClamp01((lineRect.top-rect.top+lineRect.height/2)/rect.height),left=rhythmProjectBoundary(0,y),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,y);
+    line.style.left=`${(left*100).toFixed(4)}%`;
+    line.style.right=`${((1-right)*100).toFixed(4)}%`;
   }
 };
 const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area)=>{
   if(!el||!area)return;
   const rect=area.getBoundingClientRect();
   if(!(rect.width>0&&rect.height>0))return;
-  const lane=Number(visualLane),yRatio=Math.max(0,Math.min(1,(Number(yPx)+el.offsetHeight/2)/rect.height));
-  const projected=rhythmProjectLane(lane,yRatio),width=Math.max(8,rect.width*projected.width*.78),left=rect.width*projected.center-width/2;
+  const lane=Number(visualLane),centerY=Number(yPx)+el.offsetHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
+  const projected=rhythmProjectLane(lane,yRatio),width=Math.max(8,rect.width*projected.width*RHYTHM_NOTE_WIDTH_RATIO),left=rect.width*projected.center-width/2;
   el.style.left=`${left.toFixed(2)}px`;
   el.style.width=`${width.toFixed(2)}px`;
   const body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
   if(!body)return;
-  const height=Math.max(0,parseFloat(getComputedStyle(body).height)||0),topY=Math.max(0,Number(yPx)-height);
+  const height=Math.max(0,parseFloat(getComputedStyle(body).height)||0),topY=Math.max(0,Math.min(rect.height,centerY-height));
   const topLane=body.hasAttribute('data-rhythm-slide-body')?Number(note?.endLane??lane):lane;
-  const top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio),inset=.31;
+  const top=rhythmProjectLane(topLane,topY/rect.height),bottom=rhythmProjectLane(lane,yRatio),topHalf=top.width*RHYTHM_BODY_WIDTH_RATIO/2,bottomHalf=bottom.width*RHYTHM_BODY_WIDTH_RATIO/2;
   body.style.left=`${(-left).toFixed(2)}px`;
   body.style.width=`${rect.width.toFixed(2)}px`;
-  body.style.clipPath=`polygon(${((top.center-top.width*(.5-inset))*100).toFixed(3)}% 0,${((top.center+top.width*(.5-inset))*100).toFixed(3)}% 0,${((bottom.center+bottom.width*(.5-inset))*100).toFixed(3)}% 100%,${((bottom.center-bottom.width*(.5-inset))*100).toFixed(3)}% 100%)`;
+  body.style.clipPath=`polygon(${((top.center-topHalf)*100).toFixed(3)}% 0,${((top.center+topHalf)*100).toFixed(3)}% 0,${((bottom.center+bottomHalf)*100).toFixed(3)}% 100%,${((bottom.center-bottomHalf)*100).toFixed(3)}% 100%)`;
 };
 
 // レーンのDOMが入れ替わった時だけ静的形状を設定する。ノーツはプレイ本体の1本のrAFから直接配置する。
