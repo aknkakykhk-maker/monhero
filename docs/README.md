@@ -19,6 +19,7 @@ Claude 固有の会話・公開フローは [`CLAUDE.md`](../CLAUDE.md) が正�
 | --- | --- |
 | [`spec/BATTLE_SYSTEM.md`](spec/BATTLE_SYSTEM.md) | バトルの進行、ダメージ計算、カード、WAVE |
 | [`spec/MONSTER_SYSTEM.md`](spec/MONSTER_SYSTEM.md) | 育成、マスモン、総合力、融合、ランキング詳細 |
+| [`spec/RHYTHM_MODE.md`](spec/RHYTHM_MODE.md) | 音ゲーの初期設計、現行の基礎仕様、確定済み追加仕様と未確定項目 |
 | [`spec/SAVE_DATA.md`](spec/SAVE_DATA.md) | 保存キー(`mh_*`)の一覧と互換性の方針 |
 | [`spec/UI_RULES.md`](spec/UI_RULES.md) | 画面まわりの共通ルール |
 

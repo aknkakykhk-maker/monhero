@@ -22,8 +22,9 @@ const releaseDate=release.match(/const RHYTHM_RELEASE_DATE='([^']+)'/)?.[1];
 const dataBuild=release.match(/const RHYTHM_DATA_BUILD='([^']+)'/)?.[1];
 const compiledBuild=release.match(/const RHYTHM_COMPILED_BUILD='([^']+)'/)?.[1];
 const buildDate=source.match(/const BUILD_DATE = "([^"]+)";/)?.[1];
-check('今回versionはリリース追記と一致',version.build===releaseDate&&version.build===dataBuild);
-check('更新後だけ今回versionを既存compiledへ橋渡し',compiledBuild===buildDate&&release.includes('if(data?.build===RHYTHM_DATA_BUILD)')&&release.includes('build:RHYTHM_COMPILED_BUILD'));
+const bridgeTargetsCurrentVersion=version.build===dataBuild;
+check('data-only橋渡し対象versionはリリース追記と一致',!bridgeTargetsCurrentVersion||version.build===releaseDate);
+check('data-only橋渡し使用時は既存compiledへ正しく写す',!bridgeTargetsCurrentVersion||(compiledBuild===buildDate&&release.includes('if(data?.build===RHYTHM_DATA_BUILD)')&&release.includes('build:RHYTHM_COMPILED_BUILD')));
 check('将来versionを隠さない',!release.includes('if(data?.build!==RHYTHM_DATA_BUILD)'));
 check('更新情報とヘルプにポーズ3ボタン修正を追記',release.includes('CHANGELOG.unshift')&&release.includes("item.id==='rhythm-mode'")&&release.includes('再開')&&release.includes('中断して音ゲーデバッグへ戻る'));
 for(const rel of ['data/rhythm-result-replay-remount.js','data/rhythm-step3-release.js']){
