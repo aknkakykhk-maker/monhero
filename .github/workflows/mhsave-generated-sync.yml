@@ -1,0 +1,44 @@
+name: Temporary mhsave generated sync
+
+on:
+  push:
+    branches:
+      - chatgpt/mhsave-react-ui-fix-final
+    paths:
+      - .github/workflows/mhsave-generated-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/mhsave-react-ui-fix-final
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Rebuild and verify all generated files
+        run: |
+          node tools/build.js
+          node tools/build.js --check
+          node tools/compiled-runtime-check.js
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/boot-flow-check.js
+          node tools/update-notice-check.js
+          node tools/boot/data-cache-key-check.js
+      - name: Commit all build outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add monster-hero
+          git commit -m "chore: sync generated files for mhsave React UI"
+          git push origin HEAD:chatgpt/mhsave-react-ui-fix-final
