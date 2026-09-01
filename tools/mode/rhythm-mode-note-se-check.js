@@ -9,11 +9,12 @@ const gameSource=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.js
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 
-check('空押しSEは既存の音ゲーSE runtimeと設定を共用',source.includes('const playEmpty=()=>')&&source.includes('return {warm,play,playEmpty,_readSettings:readSettings}'));
+check('空押しSEは既存の音ゲーSE runtimeと設定を共用',source.includes('const playEmpty=()=>')&&source.includes('beginInputGroup')&&source.includes('endInputGroup')&&source.includes('_readSettings:readSettings'));
 check('空押しSEはノーツ未取得の新規入力と境界越え再判定の対象なし時に呼ぶ',gameSource.includes('if(!target){RHYTHM_NOTE_SE_RUNTIME.playEmpty()')&&gameSource.includes('if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey}]'));
 check('TAP後は次の境界で再判定し、操作中ノーツの指は横取りしない',gameSource.includes("empty:!target||target.type==='TAP'")&&gameSource.includes("if(state.empty)inputStarts(")&&gameSource.includes("if(subLane===state.subLane)return"));
 check('ノーツ取得時は従来SEだけを鳴らす',source.includes('RHYTHM_NOTE_SE_RUNTIME.play();\n    return {input,target:picked.note'));
 check('空押しSEは短いノイズ系Web Audio',source.includes('const duration=.055')&&source.includes("filter.type='bandpass'")&&source.includes('audio.createBufferSource()'));
+check('接触幅の1物理イベントは空押しをまとめ、成功があれば空押しを抑止',source.includes('inputGroupDepth')&&source.includes('inputGroupHit')&&source.includes('markInputGroupHandled')&&source.includes('return handled?true:emitEmpty()'));
 
 let saved=JSON.stringify({noteSeEnabled:true,noteSeVolume:70});
 let contextCount=0,startCount=0,lastGain=0;
@@ -31,10 +32,19 @@ class FakeOscillator extends FakeNode{
   stop(){if(typeof this.onended==='function')this.onended();}
 }
 class FakeGain extends FakeNode{constructor(){super();this.gain=new FakeParam();}}
+class FakeBufferSource extends FakeNode{
+  constructor(){super();this.onended=null;this.buffer=null;}
+  start(){startCount++;}
+  stop(){if(typeof this.onended==='function')this.onended();}
+}
+class FakeFilter extends FakeNode{constructor(){super();this.frequency=new FakeParam();this.Q=new FakeParam();this.type='';}}
 class FakeAudioContext{
-  constructor(){contextCount++;this.state='running';this.currentTime=1;this.destination={};}
+  constructor(){contextCount++;this.state='running';this.currentTime=1;this.destination={};this.sampleRate=44100;}
   createOscillator(){return new FakeOscillator();}
   createGain(){return new FakeGain();}
+  createBuffer(){return {getChannelData:()=>new Float32Array(32)};}
+  createBufferSource(){return new FakeBufferSource();}
+  createBiquadFilter(){return new FakeFilter();}
   resume(){this.state='running';return Promise.resolve();}
 }
 const context={
@@ -77,6 +87,20 @@ const missIndex=source.indexOf('if(!picked)return {input,target:null,deltaMs:nul
 const playIndex=source.indexOf('RHYTHM_NOTE_SE_RUNTIME.play();',missIndex);
 check('対象取得後だけSE呼び出しへ進む',missIndex>=0&&playIndex>missIndex);
 check('入力ごとのAudioContext新規生成をしない',/let ctx=null/.test(source)&&source.match(/new AudioContextClass\(\)/g)?.length===1);
+
+saved=JSON.stringify({noteSeEnabled:true,noteSeVolume:70});
+const beforeGrouped=startCount;
+RHYTHM_NOTE_SE_RUNTIME.beginInputGroup();
+RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+RHYTHM_NOTE_SE_RUNTIME.endInputGroup();
+check('同じ接触イベント内の複数空押しSEは1回へ集約',startCount===beforeGrouped+1);
+const beforeHitGroup=startCount;
+RHYTHM_NOTE_SE_RUNTIME.beginInputGroup();
+RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+RHYTHM_NOTE_SE_RUNTIME.play();
+RHYTHM_NOTE_SE_RUNTIME.endInputGroup();
+check('同じ接触イベントで成功SEがあれば空押しSEを追加しない',startCount===beforeHitGroup+1);
 
 const listeners={};
 const sessions=new Map();
