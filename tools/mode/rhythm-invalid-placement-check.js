@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+const fs=require('fs');
+const path=require('path');
+const vm=require('vm');
+const assert=require('assert');
+const ROOT=path.resolve(__dirname,'..','..');
+const invalid=fs.readFileSync(path.join(ROOT,'monster-hero/debug/rhythm-invalid-placement.js'),'utf8');
+const calibration=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-geometry-calibration.js'),'utf8');
+const ok=(name,value)=>{assert(value,name);console.log(`OK: ${name}`);};
+new vm.Script(invalid,{filename:'rhythm-invalid-placement.js'});
+ok('不正配置チェックJSの構文が有効',true);
+ok('通常プレイでは読み込まずデバッグ譜面UI列の末尾で遅延ロード',calibration.includes("invalidScript.src='debug/rhythm-invalid-placement.js?v=20260901a'")&&calibration.includes('loopScript.onload=loadInvalidPlacementUi')&&calibration.includes("!document.querySelector('[data-rhythm-debug]')"));
+ok('TAP/HOLD/FLICKの幅はみ出しをエラーにする',invalid.includes('subLane+width>10')&&invalid.includes('10サブレーン外へはみ出します')&&invalid.includes('(lane-1)+width>10'));
+ok('HOLDは終端と1〜128グリッドを検査',invalid.includes("type==='HOLD'")&&invalid.includes('HOLD終端時刻が不正です')&&invalid.includes('HOLD長さは1〜128グリッドが必要です'));
+ok('SLIDEは0.5レーン・2点以上・時刻順を検査',invalid.includes('Math.abs(n*2-Math.round(n*2))<1e-6')&&invalid.includes('SLIDE経路は2点以上必要です')&&invalid.includes('SLIDE経路の時刻順が不正です'));
+ok('SLIDE始終点とslidePointsの整合を検査',invalid.includes('SLIDE始点と経路先頭の時刻が一致しません')&&invalid.includes('SLIDE終点と経路末尾の時刻が一致しません')&&invalid.includes('SLIDE始点と経路先頭のレーンが一致しません')&&invalid.includes('SLIDE終点と経路末尾のレーンが一致しません'));
+ok('固定16分グリッド外を検出',invalid.includes('rhythmSnapTimeToGrid')&&invalid.includes('Math.abs(row.deltaMs)>1')&&invalid.includes('16分グリッド外です'));
+ok('SLIDE全長も1〜128グリッドを検査',invalid.includes('SLIDE長さは1〜128グリッドが必要です'));
+ok('同時刻・同位置の重複は警告に留める',invalid.includes('同時刻・同位置で重複しています')&&invalid.includes("byIndex.set(first,'warning')")&&!invalid.includes('重複しています`);errors.push'));
+ok('不正ノーツを一覧と視覚ノーツで明示',invalid.includes('data-rhythm-invalid-summary')&&invalid.includes('data-rhythm-visual-note')&&invalid.includes("state==='error'?'2px solid #fb7185'"));
+ok('エラー中はテストプレイとJSON/実装JS書き出しを止める',invalid.includes("querySelector('[data-rhythm-chart-preview]')")&&invalid.includes("querySelector('[data-rhythm-chart-copy-json]')")&&invalid.includes("querySelector('[data-rhythm-chart-copy-js]')")&&invalid.includes('result.errors.length>0'));
+ok('フォーム入力時点で不正配置をcaptureして追加を止める',invalid.includes("event.target.closest('[data-rhythm-chart-apply]')")&&invalid.includes('validateForm(editor)')&&invalid.includes('event.stopImmediatePropagation()'));
+ok('SLIDE経路更新もauthoring draftへ入る前にcapture検査',invalid.includes("addEventListener('rhythm-chart-replace-note'")&&invalid.includes('validateNote(editor,event.detail?.note||{}')&&invalid.includes('event.stopImmediatePropagation()'));
+ok('セーブ/BESTへ書き込まない',!invalid.includes('localStorage.setItem')&&!invalid.includes('mh_rhythm_best')&&!invalid.includes('mh_rhythm_settings'));
+ok('成立後の全体MutationObserver自己発火を避け一覧childListだけで再検査',invalid.includes('currentEditor?.isConnected&&currentList?.isConnected')&&invalid.includes("listObserver.observe(list,{childList:true})")&&!invalid.includes("listObserver.observe(document.body"));
+console.log('OK: 音ゲー視覚エディタSTEP2-D 不正配置チェック');
