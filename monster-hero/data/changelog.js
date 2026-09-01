@@ -3,6 +3,10 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-09-01 23:30", type:'issue', title:'音ゲー初回プレイの判定ライン表示を修正', releaseFlag:'rhythmMode',
+    items:['初回プレイだけSVG版の判定ラインへ切り替わり、iPhone Safariで見えなくなる問題を修正しました。初回とリスタート後のどちらも、プレイエリアに最初からある同じ判定ラインを表示します。判定位置・タイミング・ノーツ・入力は変更していません。'],
+  },
+  {
     date: "2026-09-01 20:16", type:'update', title:'Android・PCのバックアップ保存に対応',
     items:['バックアップファイル保存を端末別に最適化し、Android ChromeとPC Chromeでは共有メニューを使わず「MonsterHero_Backup_YYYYMMDD_HHMM.mhsave」を直接ダウンロードするようにしました。', 'iPhone / iPadは従来どおり共有メニューから「ファイルに保存」を利用できます。復元は全端末共通で.mhsaveファイルを選択し、従来の引き継ぎコード方式とmh_*保存形式もそのまま維持しています。'],
   },

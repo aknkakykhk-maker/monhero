@@ -11,6 +11,7 @@ const slidePathUi=fs.readFileSync(path.join(ROOT,'monster-hero/debug/rhythm-slid
 const sectionLoopUi=fs.readFileSync(path.join(ROOT,'monster-hero/debug/rhythm-section-loop.js'),'utf8');
 const calibration=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-geometry-calibration.js'),'utf8');
 const lane=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-lane-svg.js'),'utf8');
+const game=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'utf8');
 const offsetUi=fs.readFileSync(path.join(ROOT,'monster-hero/debug/rhythm-preview-offset.js'),'utf8');
 const timing=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-timing.js'),'utf8');
 const draft=JSON.parse(fs.readFileSync(path.join(ROOT,'monster-hero/debug/atsu-cup-theme-easy-draft.json'),'utf8'));
@@ -76,7 +77,7 @@ ok('SLIDE経路再描画も既存ノーツ一覧を主同期源にする',slideP
 ok('区間帯の再描画監視は視覚タイムラインchildListだけを見る',sectionLoopUi.includes("timelineObserver.observe(timeline,{childList:true})")&&!sectionLoopUi.includes("timelineObserver.observe(document.body"));
 ok('±10/20msの共通補正をプレビューだけへ適用',offsetUi.includes('data-rhythm-offset="-20"')&&offsetUi.includes('data-rhythm-offset="20"')&&offsetUi.includes("Object.defineProperty(chart,'notes'")&&offsetUi.includes('shiftNote(note,offsetMs)'));
 ok('補正はtime/end/slidePointsを同じmsだけ移動',offsetUi.includes('endTimeMs')&&offsetUi.includes('slidePoints')&&offsetUi.includes('point?.timeMs'));
-ok('判定ラインは固定3層線＋5レーン目印で明示',lane.includes("'data-rhythm-svg-judgment':''")&&lane.includes("'stroke-width':'28'")&&lane.includes("'stroke-width':'12'")&&lane.includes("'stroke-width':'5'")&&lane.includes('rhythmProjectLane(lane, y)'));
+ok('判定ラインは初回と再プレイで共通のDOM表示を使用',game.includes('data-rhythm-judgment-line')&&!lane.includes('data-rhythm-svg-judgment')&&!lane.includes('data-rhythm-svg-ready'));
 ok('判定ラインのGaussianBlurを廃止',!lane.includes('feGaussianBlur')&&!lane.includes('rhythmLaneSvgJudgeGlow'));
 ok('ノーツ親の重いdrop-shadowをSVGレイヤー側で解除',lane.includes('[data-rhythm-note]{z-index:4}')&&lane.includes('[data-rhythm-note]{filter:none!important}'));
 ok('プレイ中はレーン全体を再検索しない',lane.includes('currentArea && currentArea.isConnected && currentSvg && currentSvg.isConnected')&&lane.includes("dataset.rhythmPlayActive=currentArea?'true':'false'"));
