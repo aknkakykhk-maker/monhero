@@ -1,7 +1,7 @@
 // DEBUG ONLY: 音ゲー表示座標の最終校正ガイド。
 // 既存の5レーンSVG・ノーツ・入力と同じprojection helperだけを使い、通常の判定ロジックは変更しない。
-const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 19:59';
-const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
+const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 20:35';
+const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
 
 (()=>{
   // data-onlyのデバッグ出荷でも更新バナーは1回だけ出す。
@@ -32,6 +32,20 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
   if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
   if(document.documentElement.dataset.rhythmGeometryCalibration==='ready')return;
   document.documentElement.dataset.rhythmGeometryCalibration='ready';
+
+  // iPhone Safariでノーツ本体のutility class適用が遅れても高さ0にならない表示fallback。
+  // opacity/transform/left/widthはruntimeの正本を上書きせず、判定・速度・座標には触れない。
+  if(!document.head.querySelector('[data-rhythm-note-visibility-guard]')){
+    const style=document.createElement('style');
+    style.dataset.rhythmNoteVisibilityGuard='';
+    style.textContent=`
+      [data-rhythm-note]{display:block!important;position:absolute!important;height:20px!important;min-height:20px!important;z-index:5!important;overflow:visible!important}
+      [data-rhythm-note]>span:last-child{display:block!important;position:absolute!important;inset:4px 0!important;min-height:12px!important;border:1px solid rgba(255,255,255,.72)!important;border-radius:5px!important}
+      [data-rhythm-note][data-note-type="HOLD"]>span:last-child{background:linear-gradient(to bottom,#a7f3d0,#06b6d4)!important}
+      [data-rhythm-note]:not([data-note-type="HOLD"])>span:last-child{background:linear-gradient(to bottom,#fde68a,#d946ef)!important}
+    `;
+    document.head.appendChild(style);
+  }
 
   const SVG_NS='http://www.w3.org/2000/svg';
   let enabled=false,currentArea=null,currentSvg=null,button=null,guideFrame=0;
@@ -71,8 +85,6 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
     if(guide)guide.style.display=enabled?'':'none';
     if(button){
       const label=enabled?'座標校正 ON':'座標校正';
-      // childListを監視しているため、同じ文字列を毎回textContentへ代入すると
-      // 自分自身のMutationObserverを再発火し続けて画面遷移が固まる。実変更時だけ書き換える。
       if(button.textContent!==label)button.textContent=label;
       button.setAttribute('aria-pressed',enabled?'true':'false');
       button.dataset.active=enabled?'true':'false';
@@ -88,7 +100,6 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
     const group=svgEl('g',{'data-rhythm-calibration-guide':'','pointer-events':'none'});
     group.style.display=enabled?'':'none';
 
-    // 青=5メインレーン境界、黄=その中間の10サブレーン境界。
     for(let boundary=0;boundary<=10;boundary++){
       const main=boundary%2===0,topX=rhythmProjectBoundary(boundary/2,0),bottomX=rhythmProjectBoundary(boundary/2,1);
       group.appendChild(svgEl('line',{
@@ -108,7 +119,6 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
       }));
     }
 
-    // TAP/HOLD/FLICKは同じsubLane spanを使う。幅1〜4を別位置で重ねて端を比較できるようにする。
     const widthSamples=[
       {subLane:0,width:1,y:.25,label:'T/H/F W1'},
       {subLane:2,width:2,y:.42,label:'T/H/F W2'},
@@ -125,7 +135,6 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
       addText(group,sample.label,center,sample.y+.008,{fill:'#dcfce7'});
     });
 
-    // SLIDEはhalf-lane中心を含む専用projectionを確認する。幅1〜4が紫の帯。
     const slideSamples=[
       {lane:.5,width:1,y:.31,label:'SL W1'},
       {lane:1.5,width:2,y:.48,label:'SL W2'},
@@ -142,7 +151,6 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
       addText(group,sample.label,spanAt(sample.y).center,sample.y-.018,{fill:'#f3e8ff','font-size':'18'});
     });
 
-    // 判定ライン上の10サブレーン中心。既存の入力発光とこの丸が一致するかを実機で確認する。
     for(let subLane=0;subLane<10;subLane++){
       const span=rhythmProjectSubLaneSpan(subLane,1,judgeY);
       group.appendChild(svgEl('circle',{
@@ -187,35 +195,24 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
     }
     guideFrame=requestAnimationFrame(()=>{
       guideFrame=0;
-      if(area===currentArea&&area?.isConnected){
-        mountGuide(area);
-        setGuideVisible(area);
-      }
+      if(area===currentArea&&area?.isConnected){mountGuide(area);setGuideVisible(area);}
     });
   };
   const remountGuide=area=>{
     const old=area?.querySelector(':scope > [data-rhythm-lane-svg] [data-rhythm-calibration-guide]');
-    old?.remove();
-    currentSvg=null;
-    scheduleGuide(area);
+    old?.remove();currentSvg=null;scheduleGuide(area);
   };
   const scan=()=>{
     if(currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected)return;
     const area=document.querySelector('[data-rhythm-play-area]');
     ensureButton().style.display=area?'':'none';
-    if(!area){
-      currentArea=null;currentSvg=null;enabled=false;
-      return;
-    }
-    if(currentArea!==area){
-      currentArea=area;currentSvg=null;enabled=false;
-    }
+    if(!area){currentArea=null;currentSvg=null;enabled=false;return;}
+    if(currentArea!==area){currentArea=area;currentSvg=null;enabled=false;}
     scheduleGuide(area);
   };
   const start=()=>{
     scan();
     new MutationObserver(()=>{
-      // ノーツのDOM増減では座標ガイドを再検索しない。画面自体が差し替わった時だけ再走査する。
       if(currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected)return;
       scan();
     }).observe(document.body,{childList:true,subtree:true});
@@ -233,7 +230,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
     if(document.querySelector('[data-rhythm-review-mode-loader]'))return;
     const reviewScript=document.createElement('script');
     reviewScript.dataset.rhythmReviewModeLoader='';
-    reviewScript.src='debug/rhythm-review-mode.js?v=20260901b';
+    reviewScript.src='debug/rhythm-review-mode.js?v=20260901c';
     document.head.appendChild(reviewScript);
   };
   const loadInvalidPlacementUi=()=>{
@@ -284,8 +281,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
   const load=()=>{
     if(loaded||!document.querySelector('[data-rhythm-debug]'))return;
     loaded=true;
-    loaderObserver?.disconnect();
-    loaderObserver=null;
+    loaderObserver?.disconnect();loaderObserver=null;
     const script=document.createElement('script');
     script.dataset.rhythmChartAuthoringLoader='';
     script.src='debug/rhythm-chart-authoring-ui.js?v=20260901d';
@@ -293,10 +289,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
     script.onerror=()=>{loaded=false;script.remove();watch();};
     document.head.appendChild(script);
   };
-  const start=()=>{
-    load();
-    if(!loaded)watch();
-  };
+  const start=()=>{load();if(!loaded)watch();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
 })();

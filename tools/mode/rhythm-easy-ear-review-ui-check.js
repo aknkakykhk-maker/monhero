@@ -16,16 +16,13 @@ ok('22点を24grid間隔・前後8gridで16区間へまとめる',review.include
 ok('既存の区間ループUIを再利用して別タイマーを作らない',review.includes("querySelector('[data-rhythm-loop-set-start]')")&&review.includes("querySelector('[data-rhythm-loop-set-end]')")&&review.includes("querySelector('[data-rhythm-loop-toggle]')")&&review.includes('setStart.click()')&&review.includes('setEnd.click()')&&review.includes('loopToggle.click()')&&!review.includes('setInterval(')&&!review.includes('setTimeout('));
 ok('既存編集audioと共通timing helperを利用',review.includes("querySelector('[data-rhythm-chart-audio]')")&&review.includes("typeof rhythmTimingAt==='function'"));
 ok('前後移動・ループ再生・停止を44px以上で用意',review.includes('data-rhythm-ear-review-prev')&&review.includes('data-rhythm-ear-review-next')&&review.includes('data-rhythm-ear-review-play')&&review.includes('data-rhythm-ear-review-stop')&&review.includes('min-h-[44px]')&&review.includes('min-h-[46px]'));
-ok('区間移動と曲変更で再生中ループを止める',review.includes('stopEarLoop(editor)')&&review.includes("track.addEventListener('change',()=>{stopEarLoop(editor);refreshEarNav(editor);})"));
+ok('区間移動時に再生中ループを止める',review.includes('stopEarLoop(editor())')&&review.includes('earIndex=(earIndex-1+earPlan.groups.length)%earPlan.groups.length')&&review.includes('earIndex=(earIndex+1)%earPlan.groups.length'));
+ok('耳確認ナビは折りたたみで通常のテスト導線を圧迫しない',review.includes('data-rhythm-ear-review-details')&&review.includes('🎧 耳確認22点ナビ'));
 ok('採用・移動・不採用を保存しないことを明示',review.includes('採用・移動・不採用はここでは保存しません')&&!review.includes('localStorage')&&!review.includes('mh_rhythm_best')&&!review.includes('mh_rhythm_settings'));
 
 const reviews=candidate.earReviewGrids.map(Number);
 const groups=[];
-for(const grid of reviews){
-  const current=groups[groups.length-1];
-  if(!current||grid-current[current.length-1]>24)groups.push([grid]);
-  else current.push(grid);
-}
+for(const grid of reviews){const current=groups[groups.length-1];if(!current||grid-current[current.length-1]>24)groups.push([grid]);else current.push(grid);}
 ok('現行candidateも22点→16区間になる',reviews.length===22&&groups.length===16);
 ok('candidateはまだ正式runtime未接続',candidate.reviewRequired===true&&candidate.runtimeConnected===false);
 console.log('OK: EASY耳確認ナビは確認補助のみで正式譜面を確定しない');
