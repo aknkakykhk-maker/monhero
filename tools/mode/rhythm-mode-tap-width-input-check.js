@@ -49,6 +49,7 @@ assert.strictEqual(stableMove.centerMoved,false,'指腹変形による数pxの�
 assert(Math.abs(stableMove.touch.clientX-centerX)<1e-9,'微小中心揺れでは元の中心位置を維持');
 const realMove=run(`RHYTHM_TOUCH_SPAN_RUNTIME._stabilizedMoveTouch({centerAnchorX:${centerX}},{clientX:${centerX+12},clientY:800,radiusX:27},${JSON.stringify(touchRect)})`);
 assert.strictEqual(realMove.centerMoved,true,'明確な横移動は従来どおり追従');
+assert(source.includes('if(isStart||centerChanged||entered.length)actions.push')&&!source.includes('centerChanged||stabilized.centerMoved||entered.length'),'中心だけ動いて新規ラインなしの時は空入力グループを作らない');
 assert.strictEqual(run(`RHYTHM_TOUCH_SPAN_RUNTIME._radiusExpansionAccepted(25,27)`),false,'radiusXの小さな揺れは追加TAPにしない');
 assert.strictEqual(run(`RHYTHM_TOUCH_SPAN_RUNTIME._radiusExpansionAccepted(25,29)`),true,'指の腹を明確に広げた時は追加接触を許可');
 assert(!laneSvg.includes("window.addEventListener('touchmove'")&&!laneSvg.includes('installTouchSpanMoveGuard'),'旧window幅同期ガードを撤去してruntimeへ一元化');

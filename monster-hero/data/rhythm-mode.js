@@ -525,7 +525,7 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
         }else acceptedRadiusX=rawRadiusX;
       }else if(rawRadiusX>0&&(!(acceptedRadiusX>0)||rawRadiusX<acceptedRadiusX))acceptedRadiusX=rawRadiusX;
       touchStates.set(id,{...next,touch,centerAnchorX:stabilized.centerAnchorX,acceptedRadiusX});
-      if(isStart||centerChanged||stabilized.centerMoved||entered.length)actions.push({id,touch,next,entered:isStart?next.subLanes:entered});
+      if(isStart||centerChanged||entered.length)actions.push({id,touch,next,entered:isStart?next.subLanes:entered});
     });
     if(!actions.length){defer(applyTouchSpanGlow);return;}
     RHYTHM_NOTE_SE_RUNTIME.beginInputGroup?.();
