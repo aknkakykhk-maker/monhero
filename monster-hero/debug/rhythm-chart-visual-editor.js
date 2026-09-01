@@ -126,7 +126,9 @@
 
     const list=editor.querySelector('[data-rhythm-chart-list]');
     const output=editor.querySelector('[data-rhythm-chart-output]');
-    (list?.parentElement||output?.parentElement||editor).insertAdjacentElement('beforebegin',box);
+    if(list)list.insertAdjacentElement('beforebegin',box);
+    else if(output)output.insertAdjacentElement('beforebegin',box);
+    else editor.appendChild(box);
 
     const timeline=box.querySelector('[data-rhythm-visual-timeline]');
     const scroller=box.querySelector('[data-rhythm-visual-scroller]');
@@ -163,6 +165,7 @@
       selectedIndex=index;
       const note=notes[index];
       selection.textContent=`#${index+1} ${note.type} を選択中`;
+      setTimeout(()=>{if(box.isConnected)box.scrollIntoView({block:'nearest'});},0);
       updateToolbar();
       render();
       return true;
