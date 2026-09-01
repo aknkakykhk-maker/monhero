@@ -1,6 +1,6 @@
 // DEBUG ONLY: 音ゲー表示座標の最終校正ガイド。
 // 既存の5レーンSVG・ノーツ・入力と同じprojection helperだけを使い、通常の判定ロジックは変更しない。
-const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 12:46';
+const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 13:08';
 const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
 
 (()=>{
@@ -195,6 +195,27 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
     scan();
     new MutationObserver(scan).observe(document.body,{childList:true,subtree:true});
     window.addEventListener('resize',()=>{if(currentArea)remountGuide(currentArea);},{passive:true});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+})();
+
+// DEBUG ONLY: 譜面編集UIは通常プレイでは読み込まず、音ゲーデバッグ画面を開いた時だけ遅延読込する。
+(()=>{
+  if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
+  let loaded=false;
+  const load=()=>{
+    if(loaded||!document.querySelector('[data-rhythm-debug]'))return;
+    loaded=true;
+    const script=document.createElement('script');
+    script.dataset.rhythmChartAuthoringLoader='';
+    script.src='debug/rhythm-chart-authoring-ui.js?v=20260901a';
+    script.onerror=()=>{loaded=false;script.remove();};
+    document.head.appendChild(script);
+  };
+  const start=()=>{
+    load();
+    if(!loaded)new MutationObserver(load).observe(document.body,{childList:true,subtree:true});
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
