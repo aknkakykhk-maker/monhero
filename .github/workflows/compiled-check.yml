@@ -79,6 +79,7 @@ jobs:
           node tools/mode/rhythm-mode-note-se-check.js
           node tools/mode/rhythm-mode-slide-sublane-check.js
           node tools/mode/rhythm-chart-authoring-ui-check.js
+          node tools/mode/rhythm-invalid-placement-check.js
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
