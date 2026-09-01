@@ -6,7 +6,9 @@
   document.documentElement.dataset.rhythmPreviewOffsetUi='ready';
 
   const MIN=-200,MAX=200;
+  const VISUAL_EDITOR_URL='debug/rhythm-chart-visual-editor.js?v=20260901a';
   let offsetMs=0,currentSection=null;
+  let visualEditorRequested=false;
   const clamp=value=>Math.max(MIN,Math.min(MAX,Math.round(Number(value)||0)));
   const shiftNote=(note,delta)=>{
     const out={...note,timeMs:Math.max(0,Math.round(Number(note?.timeMs)||0)+delta)};
@@ -18,6 +20,18 @@
   };
   const previewChart=()=>{
     try{return window.__mhRhythmAuthoringPreviewSong?.difficulties?.EASY||null;}catch{return null;}
+  };
+  const loadVisualEditor=()=>{
+    if(document.documentElement.dataset.rhythmChartVisualUi==='ready')return true;
+    if(document.querySelector('[data-rhythm-chart-visual-loader]'))return true;
+    if(visualEditorRequested)return true;
+    visualEditorRequested=true;
+    const script=document.createElement('script');
+    script.dataset.rhythmChartVisualLoader='';
+    script.src=VISUAL_EDITOR_URL;
+    script.onerror=()=>{visualEditorRequested=false;script.remove();};
+    document.head.appendChild(script);
+    return true;
   };
   const installChartHook=()=>{
     const chart=previewChart();
@@ -51,6 +65,7 @@
   const mount=()=>{
     const editor=document.querySelector('[data-rhythm-chart-authoring-ui]');
     if(!editor)return false;
+    loadVisualEditor();
     if(!installChartHook())return false;
     const existing=editor.querySelector('[data-rhythm-preview-offset-ui]');
     if(existing){currentSection=existing;updateUi();return true;}
