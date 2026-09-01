@@ -29,6 +29,6 @@ ok('HOLDは4/8グリッドのみ',holds.length===6&&holds.every(note=>note.durat
 ok('HOLD終端は次ノーツより前',holds.every(note=>{const index=notes.indexOf(note),next=notes[index+1];return !next||Number(note.grid)+Number(note.durationGrids)<Number(next.grid);}));
 ok('エディタは正式候補v1を優先し旧100をfallback保持',ui.includes("FORMAL_CANDIDATE_URL='debug/atsu-cup-theme-easy-formal-candidate-v1.json'")&&ui.includes('loadFormalCandidate')&&ui.includes('if(!await loadFormalCandidate(false))await loadAutoDraft(false)')&&ui.includes('data-rhythm-chart-load-candidate'));
 ok('正式候補のTAP/HOLDを既存draft形式へ変換',ui.includes('candidateNote=(row,trackId)=>')&&ui.includes("noteType==='HOLD'")&&ui.includes('durationGrids')&&ui.includes('note.endTimeMs=Math.round(endTimeMs)'));
-ok('作者UIキャッシュを更新',calibration.includes("script.src='debug/rhythm-chart-authoring-ui.js?v=20260901d'"));
+ok('作者UIキャッシュを更新',calibration.includes("script.src='debug/rhythm-chart-authoring-ui.js?v=20260902a'"));
 ok('正式runtimeへは未接続',!runtime.includes('atsu-cup-theme-easy-formal-candidate-v1'));
 console.log('\nEASY正式候補v1チェック: OK');
