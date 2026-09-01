@@ -422,10 +422,27 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
 const RHYTHM_TOUCH_RADIUS_SCALE=.70;
 const RHYTHM_TOUCH_MIN_SUBLANE_COVERAGE=.25;
 const RHYTHM_TOUCH_RADIUS_MAX_PLAY_AREA_RATIO=.25;
+const RHYTHM_TOUCH_CENTER_DEADZONE_MIN_PX=6;
+const RHYTHM_TOUCH_CENTER_DEADZONE_MAX_PX=10;
+const RHYTHM_TOUCH_CENTER_DEADZONE_PLAY_AREA_RATIO=.02;
+const RHYTHM_TOUCH_RADIUS_EXPAND_MIN_PX=3;
+const RHYTHM_TOUCH_RADIUS_EXPAND_MIN_RATIO=.10;
 const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   const touchStates=new Map(),syntheticTapKeys=new Set();
   let nextSyntheticPointerId=900000;
   const clampSubLane=value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))));
+  const centerDeadzonePx=rect=>Math.min(RHYTHM_TOUCH_CENTER_DEADZONE_MAX_PX,Math.max(RHYTHM_TOUCH_CENTER_DEADZONE_MIN_PX,(Number(rect?.width)||0)*RHYTHM_TOUCH_CENTER_DEADZONE_PLAY_AREA_RATIO));
+  const stabilizedMoveTouch=(previous,touch,rect)=>{
+    const rawClientX=Number(touch?.clientX),rawClientY=Number(touch?.clientY),rawRadiusX=Number(touch?.radiusX);
+    const previousAnchor=Number(previous?.centerAnchorX),anchor=Number.isFinite(previousAnchor)?previousAnchor:rawClientX,deadzone=centerDeadzonePx(rect);
+    const centerMoved=Number.isFinite(rawClientX)&&Number.isFinite(anchor)&&Math.abs(rawClientX-anchor)>deadzone,effectiveClientX=centerMoved?rawClientX:anchor;
+    return {touch:{identifier:touch?.identifier,clientX:effectiveClientX,clientY:rawClientY,radiusX:rawRadiusX},centerAnchorX:effectiveClientX,centerMoved,rawClientX};
+  };
+  const radiusExpansionAccepted=(previousRadius,currentRadius)=>{
+    const from=Number(previousRadius),to=Number(currentRadius);
+    if(!(from>0&&to>from))return false;
+    return to-from>=Math.max(RHYTHM_TOUCH_RADIUS_EXPAND_MIN_PX,from*RHYTHM_TOUCH_RADIUS_EXPAND_MIN_RATIO);
+  };
   const contactsForTouch=(touch,rect)=>{
     const centerCoordinate=rhythmSubLaneCoordinateAtPoint(touch?.clientX,touch?.clientY,rect);
     if(!Number.isFinite(centerCoordinate))return null;
@@ -492,10 +509,22 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     if(!(rect.width>0&&rect.height>0))return;
     const actions=[];
     Array.from(event.changedTouches||[]).forEach(touch=>{
-      const id=Number(touch.identifier),previous=touchStates.get(id),next=contactsForTouch(touch,rect);
+      const id=Number(touch.identifier),previous=touchStates.get(id),stabilized=previous&&!isStart?stabilizedMoveTouch(previous,touch,rect):{touch,centerAnchorX:Number(touch.clientX),centerMoved:false},next=contactsForTouch(stabilized.touch,rect);
       if(!next)return;
-      const previousSet=new Set(previous?.subLanes||[]),entered=next.subLanes.filter(lane=>!previousSet.has(lane)),centerChanged=!previous||previous.centerSubLane!==next.centerSubLane;
-      touchStates.set(id,{...next,touch});
+      const previousSet=new Set(previous?.subLanes||[]),candidateEntered=next.subLanes.filter(lane=>!previousSet.has(lane)),centerChanged=!previous||previous.centerSubLane!==next.centerSubLane;
+      let entered=candidateEntered,acceptedRadiusX=Number(previous?.acceptedRadiusX);
+      const rawRadiusX=Number(touch?.radiusX);
+      if(isStart||centerChanged||stabilized.centerMoved){
+        acceptedRadiusX=rawRadiusX>0?rawRadiusX:acceptedRadiusX;
+      }else if(candidateEntered.length){
+        if(!radiusExpansionAccepted(acceptedRadiusX,rawRadiusX)){
+          const nextSet=new Set(next.subLanes),kept=(previous?.subLanes||[]).filter(lane=>nextSet.has(lane));
+          if(!kept.includes(next.centerSubLane))kept.push(next.centerSubLane);
+          next.subLanes=kept.sort((a,b)=>a-b);
+          entered=[];
+        }else acceptedRadiusX=rawRadiusX;
+      }else if(rawRadiusX>0&&(!(acceptedRadiusX>0)||rawRadiusX<acceptedRadiusX))acceptedRadiusX=rawRadiusX;
+      touchStates.set(id,{...next,touch,centerAnchorX:stabilized.centerAnchorX,acceptedRadiusX});
       if(isStart||centerChanged||entered.length)actions.push({id,touch,next,entered:isStart?next.subLanes:entered});
     });
     if(!actions.length){defer(applyTouchSpanGlow);return;}
@@ -526,7 +555,7 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     document.addEventListener('touchcancel',finish,{capture:true,passive:true});
     document.addEventListener('click',event=>{if(event.target?.closest?.('[data-rhythm-pause],[data-rhythm-pause-menu] button'))clear();},true);
   }
-  return {contactsForTouch,isSyntheticTapKey:key=>syntheticTapKeys.has(String(key)),clear,_touchStates:touchStates,_syntheticTapKeys:syntheticTapKeys};
+  return {contactsForTouch,isSyntheticTapKey:key=>syntheticTapKeys.has(String(key)),clear,_touchStates:touchStates,_syntheticTapKeys:syntheticTapKeys,_stabilizedMoveTouch:stabilizedMoveTouch,_radiusExpansionAccepted:radiusExpansionAccepted};
 })();
 
 const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
