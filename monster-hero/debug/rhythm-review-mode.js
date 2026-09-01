@@ -8,6 +8,8 @@
   const EAR_CANDIDATE_URL='debug/atsu-cup-theme-easy-formal-candidate-v1.json';
   const EAR_GROUP_GAP_GRIDS=24;
   const EAR_LOOP_PADDING_GRIDS=8;
+  const PREVIEW_SONG_ID='__rhythm_authoring_preview__';
+  const PREVIEW_LABEL='EASY FORMAL CANDIDATE PREVIEW';
   let currentEditor=null;
   let currentRoot=null;
   let statusObserver=null;
@@ -201,6 +203,56 @@
     setText(target,text?`現在: ${text}`:'現在の確認対象を読み込み中…');
   };
 
+  const findSelectWithLabels=(scope,labels)=>[...scope.querySelectorAll('select')].find(select=>{
+    const texts=[...select.options].map(option=>(option.textContent||'').trim());
+    return labels.every(label=>texts.some(text=>text===label||text.includes(label)));
+  });
+  const dispatchValue=(select,value,label)=>{
+    if(!select)return false;
+    if(label&&![...select.options].some(option=>option.value===value)){
+      const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);
+    }
+    select.value=value;
+    select.dispatchEvent(new Event('change',{bubbles:true}));
+    return true;
+  };
+  const bindDirectPreviewStart=(root,editor)=>{
+    const preview=editor.querySelector('[data-rhythm-chart-preview]');
+    if(!preview||preview.dataset.rhythmDirectStartBound==='true')return;
+    preview.dataset.rhythmDirectStartBound='true';
+    setText(preview,'① EASY候補をテスト欄へセット');
+    preview.addEventListener('click',event=>{
+      // iPhone Safariで音声開始のユーザー操作権限を失わないよう、ここではゲーム開始を自動clickしない。
+      // EASY候補の選択だけ済ませ、本物の「テストプレイ」はユーザー自身の次のタップで開始する。
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if(preview.disabled)return;
+      const difficultySelect=findSelectWithLabels(root,['EASY','NORMAL','HARD','EXPERT','MASTER']);
+      const songSelect=findSelectWithLabels(root,['あつ杯テーマ','WIDTH TEST']);
+      const status=editor.querySelector('[data-rhythm-chart-status]');
+      const audio=editor.querySelector('[data-rhythm-chart-audio]');
+      if(!songSelect){setText(status,'曲選択欄を取得できません。上の曲一覧を一度操作してから再試行してください');return;}
+      audio?.pause();
+      if(difficultySelect)dispatchValue(difficultySelect,'EASY');
+      dispatchValue(songSelect,PREVIEW_SONG_ID,PREVIEW_LABEL);
+      const startButton=[...root.querySelectorAll('button')].find(button=>!button.closest('[data-rhythm-chart-authoring-ui]')&&/テストプレイ/.test(button.textContent||''));
+      if(!startButton){setText(status,'EASY候補をセットしました。上の「テストプレイ」を直接押してください');return;}
+      setText(status,'EASY候補をセットしました。黄色枠の「テストプレイ」を直接押してください');
+      startButton.dataset.rhythmDirectPreviewReady='true';
+      startButton.style.outline='3px solid #fbbf24';
+      startButton.style.outlineOffset='3px';
+      startButton.style.boxShadow='0 0 18px rgba(251,191,36,.75)';
+      try{startButton.scrollIntoView({behavior:'smooth',block:'center'});}catch(_e){}
+      try{startButton.focus({preventScroll:true});}catch(_e){}
+      startButton.addEventListener('click',()=>{
+        startButton.removeAttribute('data-rhythm-direct-preview-ready');
+        startButton.style.outline='';
+        startButton.style.outlineOffset='';
+        startButton.style.boxShadow='';
+      },{once:true});
+    },true);
+  };
+
   const placeProductionToolsAfterTests=(root,editor)=>{
     // React管理の曲/難易度セクションには触れず、外付け制作ツールだけを末尾へ送る。
     // これにより画面を開いた直後から通常の「リズムテストプレイ」を選べる。
@@ -228,6 +280,7 @@
     placeProductionToolsAfterTests(root,editor);
     ensureGuide(editor);
     bindEarNav(editor);
+    bindDirectPreviewStart(root,editor);
     refreshCurrent(editor);
     refreshEarNav(editor);
     const status=editor.querySelector('[data-rhythm-chart-status]');
