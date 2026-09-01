@@ -1,6 +1,6 @@
 // DEBUG ONLY: 音ゲー表示座標の最終校正ガイド。
 // 既存の5レーンSVG・ノーツ・入力と同じprojection helperだけを使い、通常の判定ロジックは変更しない。
-const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 13:52';
+const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 14:11';
 const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
 
 (()=>{
@@ -34,7 +34,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
   document.documentElement.dataset.rhythmGeometryCalibration='ready';
 
   const SVG_NS='http://www.w3.org/2000/svg';
-  let enabled=false,currentArea=null,button=null;
+  let enabled=false,currentArea=null,currentSvg=null,button=null,guideFrame=0;
   const svgEl=(tag,attrs={})=>{
     const el=document.createElementNS(SVG_NS,tag);
     Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));
@@ -80,9 +80,11 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
   };
 
   const mountGuide=area=>{
-    if(!area||!projectionReady())return;
+    if(!area||!projectionReady())return false;
     const svg=area.querySelector(':scope > [data-rhythm-lane-svg]');
-    if(!svg||svg.querySelector('[data-rhythm-calibration-guide]'))return;
+    if(!svg)return false;
+    currentSvg=svg;
+    if(svg.querySelector('[data-rhythm-calibration-guide]'))return true;
     const group=svgEl('g',{'data-rhythm-calibration-guide':'','pointer-events':'none'});
     group.style.display=enabled?'':'none';
 
@@ -152,6 +154,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
 
     addText(group,'5 LANE / 10 SUB / WIDTH 1-4 / SLIDE',.5,.055,{fill:'#f8fafc','font-size':'24'});
     svg.appendChild(group);
+    return true;
   };
 
   const ensureButton=()=>{
@@ -177,24 +180,46 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
     return button;
   };
 
+  const scheduleGuide=area=>{
+    if(guideFrame||typeof requestAnimationFrame!=='function'){
+      if(!guideFrame){mountGuide(area);setGuideVisible(area);}
+      return;
+    }
+    guideFrame=requestAnimationFrame(()=>{
+      guideFrame=0;
+      if(area===currentArea&&area?.isConnected){
+        mountGuide(area);
+        setGuideVisible(area);
+      }
+    });
+  };
   const remountGuide=area=>{
     const old=area?.querySelector(':scope > [data-rhythm-lane-svg] [data-rhythm-calibration-guide]');
     old?.remove();
-    mountGuide(area);
-    setGuideVisible(area);
+    currentSvg=null;
+    scheduleGuide(area);
   };
   const scan=()=>{
+    if(currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected)return;
     const area=document.querySelector('[data-rhythm-play-area]');
     ensureButton().style.display=area?'':'none';
-    if(!area){currentArea=null;return;}
-    if(currentArea!==area){currentArea=area;enabled=false;}
-    mountGuide(area);
-    setGuideVisible(area);
+    if(!area){
+      currentArea=null;currentSvg=null;enabled=false;
+      return;
+    }
+    if(currentArea!==area){
+      currentArea=area;currentSvg=null;enabled=false;
+    }
+    scheduleGuide(area);
   };
   const start=()=>{
     scan();
-    new MutationObserver(scan).observe(document.body,{childList:true,subtree:true});
-    window.addEventListener('resize',()=>{if(currentArea)remountGuide(currentArea);},{passive:true});
+    new MutationObserver(()=>{
+      // ノーツのDOM増減では座標ガイドを再検索しない。画面自体が差し替わった時だけ再走査する。
+      if(currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected)return;
+      scan();
+    }).observe(document.body,{childList:true,subtree:true});
+    window.addEventListener('resize',()=>{if(currentArea?.isConnected)remountGuide(currentArea);},{passive:true});
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
@@ -203,19 +228,34 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
 // DEBUG ONLY: 譜面編集UIは通常プレイでは読み込まず、音ゲーデバッグ画面を開いた時だけ遅延読込する。
 (()=>{
   if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
-  let loaded=false;
+  let loaded=false,loaderObserver=null;
+  const loadOffsetUi=()=>{
+    if(document.querySelector('[data-rhythm-preview-offset-loader]'))return;
+    const offsetScript=document.createElement('script');
+    offsetScript.dataset.rhythmPreviewOffsetLoader='';
+    offsetScript.src='debug/rhythm-preview-offset.js?v=20260901a';
+    document.head.appendChild(offsetScript);
+  };
+  const watch=()=>{
+    if(loaderObserver||loaded)return;
+    loaderObserver=new MutationObserver(load);
+    loaderObserver.observe(document.body,{childList:true,subtree:true});
+  };
   const load=()=>{
     if(loaded||!document.querySelector('[data-rhythm-debug]'))return;
     loaded=true;
+    loaderObserver?.disconnect();
+    loaderObserver=null;
     const script=document.createElement('script');
     script.dataset.rhythmChartAuthoringLoader='';
     script.src='debug/rhythm-chart-authoring-ui.js?v=20260901b';
-    script.onerror=()=>{loaded=false;script.remove();};
+    script.onload=loadOffsetUi;
+    script.onerror=()=>{loaded=false;script.remove();watch();};
     document.head.appendChild(script);
   };
   const start=()=>{
     load();
-    if(!loaded)new MutationObserver(load).observe(document.body,{childList:true,subtree:true});
+    if(!loaded)watch();
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();

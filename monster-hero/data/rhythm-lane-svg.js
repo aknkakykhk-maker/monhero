@@ -7,6 +7,8 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const observedAreas = new WeakSet();
+  let currentArea = null;
+  let currentSvg = null;
   const svgEl = (tag, attrs = {}) => {
     const el = document.createElementNS(SVG_NS, tag);
     Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, String(value)));
@@ -30,6 +32,7 @@
       [data-rhythm-lane-svg]{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
       [data-rhythm-sublane-feedback]{z-index:2!important}
       [data-rhythm-note]{z-index:4}
+      [data-rhythm-note]{filter:none!important}
     `;
     document.head.appendChild(style);
   };
@@ -46,7 +49,13 @@
     area.querySelectorAll('[data-rhythm-svg-press]').forEach(el => el.setAttribute('opacity', active.has(Number(el.dataset.rhythmSvgPress)) ? '1' : '0'));
   };
   const mount = area => {
-    if (!area || area.querySelector(':scope > [data-rhythm-lane-svg]')) return;
+    if (!area) return;
+    const existing = area.querySelector(':scope > [data-rhythm-lane-svg]');
+    if (existing) {
+      currentArea = area;
+      currentSvg = existing;
+      return;
+    }
     const svg = svgEl('svg', { viewBox:'0 0 1000 1000', preserveAspectRatio:'none', 'aria-hidden':'true' });
     svg.dataset.rhythmLaneSvg = '';
 
@@ -63,9 +72,7 @@
       svgEl('stop', { offset:'62%', 'stop-color':'#22d3ee', 'stop-opacity':'.28' }),
       svgEl('stop', { offset:'100%', 'stop-color':'#d946ef', 'stop-opacity':'.46' })
     );
-    const glow = svgEl('filter', { id:'rhythmLaneSvgJudgeGlow', x:'-20%', y:'-400%', width:'140%', height:'900%' });
-    glow.appendChild(svgEl('feGaussianBlur', { stdDeviation:'8' }));
-    defs.append(laneFill, pressedFill, glow);
+    defs.append(laneFill, pressedFill);
     svg.appendChild(defs);
 
     const roadLeftTop = rhythmProjectBoundary(0, 0), roadRightTop = rhythmProjectBoundary(RHYTHM_LANE_COUNT, 0);
@@ -99,9 +106,24 @@
       }));
     }
 
+    // 判定位置はぼかしfilterを使わず3本の固定線で強調する。
+    // iPhone Safariでの再合成負荷を抑えつつ「ここに重なった瞬間に叩く」を明確にする。
     const y = judgmentRatio(area), x1 = rhythmProjectBoundary(0,y)*1000, x2 = rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)*1000;
-    svg.appendChild(svgEl('line', { x1:x1.toFixed(3), y1:(y*1000).toFixed(3), x2:x2.toFixed(3), y2:(y*1000).toFixed(3), stroke:'#c084fc', 'stroke-opacity':'.72', 'stroke-width':'18', filter:'url(#rhythmLaneSvgJudgeGlow)' }));
-    svg.appendChild(svgEl('line', { x1:x1.toFixed(3), y1:(y*1000).toFixed(3), x2:x2.toFixed(3), y2:(y*1000).toFixed(3), stroke:'#ecfeff', 'stroke-width':'4' }));
+    const judge = svgEl('g', {'data-rhythm-svg-judgment':''});
+    judge.append(
+      svgEl('line', { x1:x1.toFixed(3), y1:(y*1000).toFixed(3), x2:x2.toFixed(3), y2:(y*1000).toFixed(3), stroke:'#d946ef', 'stroke-opacity':'.24', 'stroke-width':'28' }),
+      svgEl('line', { x1:x1.toFixed(3), y1:(y*1000).toFixed(3), x2:x2.toFixed(3), y2:(y*1000).toFixed(3), stroke:'#22d3ee', 'stroke-opacity':'.72', 'stroke-width':'12' }),
+      svgEl('line', { x1:x1.toFixed(3), y1:(y*1000).toFixed(3), x2:x2.toFixed(3), y2:(y*1000).toFixed(3), stroke:'#f8fafc', 'stroke-width':'5' })
+    );
+    for (let lane = 0; lane < RHYTHM_LANE_COUNT; lane++) {
+      const at = rhythmProjectLane(lane, y);
+      judge.appendChild(svgEl('line', {
+        x1:(at.center*1000).toFixed(3), y1:(y*1000-11).toFixed(3),
+        x2:(at.center*1000).toFixed(3), y2:(y*1000+11).toFixed(3),
+        stroke:'#f8fafc', 'stroke-opacity':'.96', 'stroke-width':'4'
+      }));
+    }
+    svg.appendChild(judge);
 
     for (let lane = 0; lane < RHYTHM_LANE_COUNT; lane++) {
       const at = rhythmProjectLane(lane, .94), label = svgEl('text', { x:(at.center*1000).toFixed(3), y:'950', 'text-anchor':'middle', fill:'#94a3b8', 'fill-opacity':'.62', 'font-size':'28', 'font-weight':'700' });
@@ -110,6 +132,9 @@
     }
 
     area.insertBefore(svg, area.firstChild);
+    currentArea = area;
+    currentSvg = svg;
+    document.documentElement.dataset.rhythmPlayActive='true';
     syncPressed(area);
     if (!observedAreas.has(area)) {
       observedAreas.add(area);
@@ -119,12 +144,19 @@
   };
   const scan = () => {
     installStyle();
-    const area = document.querySelector('[data-rhythm-play-area]');
-    if (area) mount(area);
+    if (currentArea && currentArea.isConnected && currentSvg && currentSvg.isConnected) return;
+    currentArea = document.querySelector('[data-rhythm-play-area]');
+    currentSvg = currentArea?.querySelector(':scope > [data-rhythm-lane-svg]') || null;
+    document.documentElement.dataset.rhythmPlayActive=currentArea?'true':'false';
+    if (currentArea) mount(currentArea);
   };
   const start = () => {
     scan();
-    new MutationObserver(scan).observe(document.body, { childList:true, subtree:true });
+    new MutationObserver(() => {
+      // プレイ中のノーツ増減では全画面querySelectorを繰り返さない。
+      if (currentArea && currentArea.isConnected && currentSvg && currentSvg.isConnected) return;
+      scan();
+    }).observe(document.body, { childList:true, subtree:true });
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });
   else start();
