@@ -1,5 +1,5 @@
-// DEBUG ONLY: 音ゲー確認者向けの簡易表示。
-// 制作機能は削除せず折りたたみへ収納し、普段の実機確認で触る項目だけを前面に出す。
+// DEBUG ONLY: 音ゲー確認者向けの補助表示。
+// 元のデバッグ曲/難易度一覧は並べ替えず最優先で触れる状態を保ち、制作エディタは下部へ退避する。
 (()=>{
   if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
   if(document.documentElement.dataset.rhythmReviewMode==='ready')return;
@@ -9,6 +9,7 @@
   const EAR_GROUP_GAP_GRIDS=24;
   const EAR_LOOP_PADDING_GRIDS=8;
   let currentEditor=null;
+  let currentRoot=null;
   let statusObserver=null;
   let earPlanPromise=null;
   let earPlan=null;
@@ -65,8 +66,34 @@
     return earPlanPromise;
   };
 
+  // Tailwind CDNの動的class生成が端末側で遅延/欠落しても、ノーツ本体を枠線だけにしない。
+  // 既存の意図と同じ色を通常CSSでも保証し、座標・判定・速度には一切触れない。
+  const ensureNoteVisibilityStyle=()=>{
+    if(document.querySelector('style[data-rhythm-note-visibility-fallback]'))return;
+    const style=document.createElement('style');
+    style.dataset.rhythmNoteVisibilityFallback='';
+    style.textContent=`
+      [data-rhythm-note] { z-index:5; }
+      [data-rhythm-note] > span:last-child {
+        display:block !important;
+        background:linear-gradient(to bottom,#fde68a 0%,#f0abfc 48%,#d946ef 100%) !important;
+        opacity:1 !important;
+      }
+      [data-rhythm-note][data-note-type="HOLD"] > span:last-child {
+        background:linear-gradient(to bottom,#a7f3d0 0%,#67e8f9 52%,#0891b2 100%) !important;
+      }
+      [data-rhythm-note][data-note-type="FLICK"] > span:last-child {
+        background:linear-gradient(to bottom,#fef3c7 0%,#f9a8d4 46%,#c026d3 100%) !important;
+      }
+      [data-rhythm-note][data-note-type="SLIDE"] > span:last-child {
+        background:linear-gradient(to bottom,#ddd6fe 0%,#67e8f9 50%,#9333ea 100%) !important;
+      }
+    `;
+    document.head.appendChild(style);
+  };
+
   const ensureGuide=editor=>{
-    let guide=editor.querySelector('[data-rhythm-review-guide]');
+    let guide=editor.querySelector(':scope > [data-rhythm-review-guide]');
     if(guide)return guide;
     guide=document.createElement('section');
     guide.dataset.rhythmReviewGuide='';
@@ -74,20 +101,12 @@
     guide.innerHTML=`
       <div class="flex items-center justify-between gap-2">
         <div>
-          <small class="text-[8px] font-black tracking-wider text-amber-300">今回ここだけ確認</small>
-          <h3 class="text-base font-black">あつ杯テーマ EASY 実機確認</h3>
+          <small class="text-[8px] font-black tracking-wider text-amber-300">EASY制作確認</small>
+          <h3 class="text-sm font-black">あつ杯テーマ EASY 耳確認</h3>
         </div>
-        <span class="shrink-0 rounded-full bg-amber-400/20 px-2 py-1 text-[8px] font-black text-amber-100">確認用</span>
+        <span class="shrink-0 rounded-full bg-amber-400/20 px-2 py-1 text-[8px] font-black text-amber-100">制作ツール内</span>
       </div>
-      <div class="mt-2 rounded-xl bg-black/25 p-2 text-[9px] leading-relaxed text-slate-100">
-        <b>やること</b>
-        <ol class="mt-1 list-decimal space-y-1 pl-4">
-          <li>下のオレンジ色「現在のEASY譜面をテストプレイ」を押す</li>
-          <li>まずは <b>0 ms</b> のまま1曲プレイする</li>
-          <li>音とノーツが気持ちよく合うか、HOLDの開始・終端が自然かを見る</li>
-          <li>全体が明らかに早い/遅い時だけ −10 / ＋10 ms を試す</li>
-        </ol>
-      </div>
+      <p class="mt-2 text-[8px] leading-relaxed text-slate-200">通常のテストモード選択はこの制作エディタより上に残しています。ここはEASY候補を編集・耳確認する時だけ使います。</p>
       <div data-rhythm-ear-review-nav class="mt-2 rounded-xl border border-fuchsia-300/30 bg-fuchsia-950/35 p-2">
         <div class="flex items-start justify-between gap-2">
           <div>
@@ -108,7 +127,6 @@
         <p data-rhythm-ear-review-status class="mt-1 text-[8px] leading-relaxed text-fuchsia-100">採用・移動・不採用はここでは保存しません。</p>
       </div>
       <p data-rhythm-review-current class="mt-2 rounded-lg bg-cyan-950/50 px-2 py-1.5 text-[8px] leading-relaxed text-cyan-100">現在の確認対象を読み込み中…</p>
-      <p class="mt-2 text-[8px] leading-relaxed text-slate-300">音源解析・ノーツ編集・JSON/実装JSなどは通常触らなくてOKです。必要な時だけ下の「制作ツール」を開いてください。</p>
     `;
     editor.prepend(guide);
     return guide;
@@ -125,22 +143,13 @@
     const track=editor.querySelector('[data-rhythm-chart-track]')?.value;
     const ready=earPlan&&track==='atsu_cup_theme';
     [prev,next,play].forEach(button=>{if(button)button.disabled=!ready;});
-    if(!earPlan){
-      setText(count,'読込中');
-      setText(detail,'candidate v1を読み込み中…');
-      return;
-    }
-    if(track!=='atsu_cup_theme'){
-      setText(count,'対象外');
-      setText(detail,'あつ杯テーマ EASY を選択すると耳確認ナビを使えます');
-      return;
-    }
+    if(!earPlan){setText(count,'読込中');setText(detail,'candidate v1を読み込み中…');return;}
+    if(track!=='atsu_cup_theme'){setText(count,'対象外');setText(detail,'あつ杯テーマ EASY を選択すると耳確認ナビを使えます');return;}
     earIndex=Math.max(0,Math.min(earIndex,earPlan.groups.length-1));
     const group=earPlan.groups[earIndex];
     setText(count,`${earIndex+1} / ${earPlan.groups.length}`);
     setText(detail,`${formatTime(group.startMs)}–${formatTime(group.endMs)}　候補 grid ${group.points.join(', ')}`);
   };
-
   const stopEarLoop=editor=>{
     const player=editor.querySelector('[data-rhythm-chart-audio]');
     const loopToggle=editor.querySelector('[data-rhythm-loop-toggle]');
@@ -158,123 +167,70 @@
     const group=earPlan.groups[earIndex];
     if(!group||!Number.isFinite(group.startMs)||!Number.isFinite(group.endMs)){setText(status,'この区間の時刻を取得できません');return;}
     stopEarLoop(editor);
-    player.currentTime=Math.max(0,group.startMs/1000);
-    setStart.click();
-    player.currentTime=Math.max(0,group.endMs/1000);
-    setEnd.click();
+    player.currentTime=Math.max(0,group.startMs/1000);setStart.click();
+    player.currentTime=Math.max(0,group.endMs/1000);setEnd.click();
     player.currentTime=Math.max(0,group.startMs/1000);
     if(loopToggle.getAttribute('aria-pressed')!=='true')loopToggle.click();
-    try{
-      await player.play();
-      setText(status,`${earIndex+1}/${earPlan.groups.length} をループ再生中。聞き終わったら停止→次の区間へ。`);
-    }catch(_e){
-      setText(status,'再生を開始できませんでした。もう一度「ループ再生」を押してください。');
-    }
+    try{await player.play();setText(status,`${earIndex+1}/${earPlan.groups.length} をループ再生中。聞き終わったら停止→次の区間へ。`);}
+    catch(_e){setText(status,'再生を開始できませんでした。もう一度「ループ再生」を押してください。');}
   };
   const bindEarNav=editor=>{
     const nav=editor.querySelector('[data-rhythm-ear-review-nav]');
     if(!nav||nav.dataset.bound==='true')return;
     nav.dataset.bound='true';
-    nav.querySelector('[data-rhythm-ear-review-prev]')?.addEventListener('click',()=>{
-      stopEarLoop(editor);
-      if(earPlan)earIndex=(earIndex-1+earPlan.groups.length)%earPlan.groups.length;
-      refreshEarNav(editor);
-    });
-    nav.querySelector('[data-rhythm-ear-review-next]')?.addEventListener('click',()=>{
-      stopEarLoop(editor);
-      if(earPlan)earIndex=(earIndex+1)%earPlan.groups.length;
-      refreshEarNav(editor);
-    });
+    nav.querySelector('[data-rhythm-ear-review-prev]')?.addEventListener('click',()=>{stopEarLoop(editor);if(earPlan)earIndex=(earIndex-1+earPlan.groups.length)%earPlan.groups.length;refreshEarNav(editor);});
+    nav.querySelector('[data-rhythm-ear-review-next]')?.addEventListener('click',()=>{stopEarLoop(editor);if(earPlan)earIndex=(earIndex+1)%earPlan.groups.length;refreshEarNav(editor);});
     nav.querySelector('[data-rhythm-ear-review-play]')?.addEventListener('click',()=>playEarGroup(editor));
-    nav.querySelector('[data-rhythm-ear-review-stop]')?.addEventListener('click',()=>{
-      stopEarLoop(editor);
-      setText(nav.querySelector('[data-rhythm-ear-review-status]'),'停止しました。採否はまだ保存していません。');
-    });
+    nav.querySelector('[data-rhythm-ear-review-stop]')?.addEventListener('click',()=>{stopEarLoop(editor);setText(nav.querySelector('[data-rhythm-ear-review-status]'),'停止しました。採否はまだ保存していません。');});
     const track=editor.querySelector('[data-rhythm-chart-track]');
     if(track&&track.dataset.earReviewBound!=='true'){
       track.dataset.earReviewBound='true';
       track.addEventListener('change',()=>{stopEarLoop(editor);refreshEarNav(editor);});
     }
     loadEarPlan().then(()=>refreshEarNav(editor)).catch(error=>{
-      const status=nav.querySelector('[data-rhythm-ear-review-status]');
       setText(nav.querySelector('[data-rhythm-ear-review-count]'),'読込失敗');
       setText(nav.querySelector('[data-rhythm-ear-review-detail]'),'耳確認candidateを読み込めませんでした');
-      setText(status,`確認データエラー: ${error.message||error}`);
+      setText(nav.querySelector('[data-rhythm-ear-review-status]'),`確認データエラー: ${error.message||error}`);
     });
   };
-
   const refreshCurrent=editor=>{
     const target=editor.querySelector('[data-rhythm-review-current]');
     const status=editor.querySelector('[data-rhythm-chart-status]');
     if(!target||!status)return;
     const text=(status.textContent||'').trim();
-    const next=text?`現在: ${text}`:'現在の確認対象を読み込み中…';
-    if(target.textContent!==next)target.textContent=next;
+    setText(target,text?`現在: ${text}`:'現在の確認対象を読み込み中…');
   };
 
-  const ensureAdvanced=editor=>{
-    let details=editor.querySelector(':scope > [data-rhythm-review-advanced]');
-    if(details)return details;
-    details=document.createElement('details');
-    details.dataset.rhythmReviewAdvanced='';
-    details.className='mt-3 rounded-2xl border border-slate-600/70 bg-slate-950/70 text-white';
-    details.innerHTML=`
-      <summary class="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-xs font-black text-slate-200" style="touch-action:manipulation;">
-        <span>🛠 制作ツールを表示</span><span class="text-[8px] font-bold text-slate-400">通常は触らなくてOK</span>
-      </summary>
-      <div data-rhythm-review-advanced-content class="border-t border-white/10 p-2"></div>
-    `;
-    editor.appendChild(details);
-    return details;
+  const placeProductionToolsAfterTests=(root,editor)=>{
+    // React管理の曲/難易度セクションには触れず、外付け制作ツールだけを末尾へ送る。
+    // これにより画面を開いた直後から通常の「リズムテストプレイ」を選べる。
+    const analysis=root.querySelector(':scope > [data-rhythm-authoring]');
+    if(analysis&&analysis.nextElementSibling!==editor)root.appendChild(analysis);
+    if(editor.parentElement===root&&editor!==root.lastElementChild)root.appendChild(editor);
   };
-
-  const adoptAuthoringPanel=content=>{
-    const root=document.querySelector('[data-rhythm-debug]');
-    const analysis=root?.querySelector('[data-rhythm-authoring]');
-    if(analysis&&!content.contains(analysis))content.prepend(analysis);
-  };
-
-  const placeAfter=(anchor,node)=>{
-    if(!anchor||!node)return anchor;
-    if(anchor.nextElementSibling!==node)anchor.insertAdjacentElement('afterend',node);
-    return node;
-  };
-
   const layout=()=>{
-    const editor=document.querySelector('[data-rhythm-chart-authoring-ui]');
-    if(!editor){
-      currentEditor=null;
+    const root=document.querySelector('[data-rhythm-debug]');
+    const editor=root?.querySelector(':scope > [data-rhythm-chart-authoring-ui]');
+    if(!root||!editor){
+      currentEditor=null;currentRoot=null;
       statusObserver?.disconnect();statusObserver=null;
       return false;
     }
-    if(currentEditor&&currentEditor!==editor){
-      statusObserver?.disconnect();statusObserver=null;
+    ensureNoteVisibilityStyle();
+    if(currentEditor&&currentEditor!==editor){statusObserver?.disconnect();statusObserver=null;}
+    currentEditor=editor;currentRoot=root;
+    if(root.dataset.rhythmReviewScrollFixed!=='true'){
+      root.dataset.rhythmReviewScrollFixed='true';
+      root.style.scrollPaddingTop='calc(56px + env(safe-area-inset-top))';
+      root.style.overscrollBehaviorY='contain';
+      root.scrollTop=0;
     }
-    currentEditor=editor;
-
-    const guide=ensureGuide(editor);
+    placeProductionToolsAfterTests(root,editor);
+    ensureGuide(editor);
     bindEarNav(editor);
-    const details=ensureAdvanced(editor);
-    const content=details.querySelector('[data-rhythm-review-advanced-content]');
-    const status=editor.querySelector('[data-rhythm-chart-status]');
-    const preview=editor.querySelector('[data-rhythm-chart-preview]');
-    const offset=editor.querySelector('[data-rhythm-preview-offset-ui]');
-    const keep=new Set([guide,status,preview,offset,details].filter(Boolean));
-
-    [...editor.children].forEach(child=>{
-      if(!keep.has(child)&&child.parentElement===editor)content.appendChild(child);
-    });
-    adoptAuthoringPanel(content);
-
-    // 確認用の要素だけを上から一定順序へ保つ。実際に順序が違う時だけDOMを動かす。
-    let anchor=guide;
-    anchor=placeAfter(anchor,status);
-    anchor=placeAfter(anchor,preview);
-    anchor=placeAfter(anchor,offset);
-    placeAfter(anchor,details);
     refreshCurrent(editor);
     refreshEarNav(editor);
-
+    const status=editor.querySelector('[data-rhythm-chart-status]');
     if(!statusObserver&&status){
       statusObserver=new MutationObserver(()=>refreshCurrent(editor));
       statusObserver.observe(status,{childList:true,subtree:true,characterData:true});
@@ -282,8 +238,12 @@
     return true;
   };
 
-  const observer=new MutationObserver(layout);
-  const start=()=>{layout();observer.observe(document.body,{childList:true,subtree:true});};
+  const observer=new MutationObserver(()=>{
+    // プレイ中はDOMを並べ替えない。デバッグ一覧へ戻った時だけ補助UIを整える。
+    if(document.documentElement.dataset.rhythmPlayActive==='true')return;
+    layout();
+  });
+  const start=()=>{ensureNoteVisibilityStyle();layout();observer.observe(document.body,{childList:true,subtree:true});};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
 })();
