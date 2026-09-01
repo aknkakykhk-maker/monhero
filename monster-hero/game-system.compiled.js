@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8ad04532a3eae2b1
+// source-sha256: a65ccd5087bca089
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-01 12:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-01 20:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19449,7 +19449,8 @@ function MonsterHeroGame() {
       const blob = new Blob([code], {
         type: 'application/octet-stream'
       });
-      if (typeof File !== 'undefined' && navigator.share && navigator.canShare) {
+      const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent || '') || navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+      if (isAppleMobile && typeof File !== 'undefined' && navigator.share && navigator.canShare) {
         try {
           const file = new File([blob], filename, {
             type: 'application/octet-stream'
@@ -19479,7 +19480,7 @@ function MonsterHeroGame() {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setRestoreMsg('バックアップファイルを保存しました');
+      setRestoreMsg('バックアップファイルをダウンロードしました');
     } catch {
       setRestoreMsg('バックアップファイルを保存できませんでした');
     }
@@ -27586,7 +27587,7 @@ function MonsterHeroGame() {
       color: '#fff',
       marginBottom: 4
     }
-  }, "\u4F7F\u3044\u65B9"), /*#__PURE__*/React.createElement("div", null, "1. \u4E0B\u306E\u300C\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u3092\u4FDD\u5B58\u300D\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", null, "2. iPhone\u306F\u5171\u6709\u30E1\u30CB\u30E5\u30FC\u3067\u300C\u30D5\u30A1\u30A4\u30EB\u306B\u4FDD\u5B58\u300D\u3092\u9078\u3076"), /*#__PURE__*/React.createElement("div", null, "3. iCloud Drive\u306A\u3069\u3001\u3042\u3068\u3067\u898B\u3064\u3051\u3084\u3059\u3044\u5834\u6240\u3078\u4FDD\u5B58\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+  }, "\u4F7F\u3044\u65B9"), /*#__PURE__*/React.createElement("div", null, "1. \u4E0B\u306E\u300C\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u3092\u4FDD\u5B58\u300D\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", null, "2. iPhone / iPad\u306F\u5171\u6709\u30E1\u30CB\u30E5\u30FC\u3067\u300C\u30D5\u30A1\u30A4\u30EB\u306B\u4FDD\u5B58\u300D\u3092\u9078\u3076"), /*#__PURE__*/React.createElement("div", null, "3. Android / PC\u306F\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u30D5\u30A9\u30EB\u30C0\u3078\u76F4\u63A5\u4FDD\u5B58\u3055\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", null, "4. \u7AEF\u672B\u9593\u3067\u79FB\u3059\u3068\u304D\u306FGoogle Drive\u306A\u3069\u3078\u540C\u3058\u30D5\u30A1\u30A4\u30EB\u3092\u7F6E\u304F"), /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 8,
       fontWeight: 900,

@@ -27,7 +27,7 @@
 
   function fileStamp(date){
     const pad = value => String(value).padStart(2, '0');
-    return `${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+    return `${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
   }
 
   function setMessage(modal, text, isError){
@@ -46,11 +46,11 @@
     const code = collectBackupCode();
     if (!code) { setMessage(modal, 'バックアップを作成できませんでした', true); return; }
     try {
-      const blob = new Blob([code], { type:'text/plain;charset=utf-8' });
+      const blob = new Blob([code], { type:'application/octet-stream' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `monster-hero-backup-${fileStamp(new Date())}${FILE_EXT}`;
+      link.download = `MonsterHero_Backup_${fileStamp(new Date())}${FILE_EXT}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -149,7 +149,7 @@
       backup.assistant = 'ここが一番大事かも…！ ファイルでバックアップしておけば、長いコードを控えなくても復元できるよ。';
       backup.blocks = [
         { t:'note', title:'定期的にバックアップしましょう', text:'HOMEの「設定」内にある「データ引き継ぎ」で、バックアップファイル（.mhsave）を保存しておくと安心です。' },
-        { t:'p', text:'「バックアップファイルを保存（.mhsave）」なら、長い引き継ぎコードをコピーせず端末のファイルとして保管できます。復元するときは「バックアップファイルから復元」を選んで保存した.mhsaveファイルを開きます。' },
+        { t:'p', text:'「バックアップファイルを保存（.mhsave）」なら、長い引き継ぎコードをコピーせず端末のファイルとして保管できます。iPhone / iPadは共有メニューから「ファイルに保存」、Android / PCはダウンロードフォルダへ直接保存されます。端末を替えるときは同じ.mhsaveファイルをGoogle Driveなどで受け渡し、「バックアップファイルから復元」で開きます。' },
         { t:'note', title:'従来のコード方式も使えます', text:'これまでの引き継ぎコードも引き続き作成・復元できます。.mhsaveファイルの中身は従来のバックアップコードと同じデータなので、保存対象のmh_*データや復元結果は変わりません。' },
       ];
     }
