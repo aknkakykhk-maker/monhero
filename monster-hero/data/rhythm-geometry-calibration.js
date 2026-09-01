@@ -107,6 +107,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
         'stroke-width':y===judgeY?'4':'1.2','stroke-dasharray':y===judgeY?'':'5 8'
       }));
     }
+
     // TAP/HOLD/FLICKは同じsubLane spanを使う。幅1〜4を別位置で重ねて端を比較できるようにする。
     const widthSamples=[
       {subLane:0,width:1,y:.25,label:'T/H/F W1'},
