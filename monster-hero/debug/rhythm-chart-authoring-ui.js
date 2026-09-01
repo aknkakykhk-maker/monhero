@@ -8,7 +8,55 @@
   const DRAFT_URL='debug/atsu-cup-theme-easy-draft.json';
   const TIMING_URL='data/rhythm-timing.js';
   const DIV=4;
+  const PREVIEW_SONG_ID='__rhythm_authoring_preview__';
+  const PREVIEW_LABEL='EASY DRAFT PREVIEW';
+  const EASY_LANE_PATTERN=Object.freeze([2,1,3,0,4,2,3,1,4,0]);
   let timingPromise=null;
+
+  // RHYTHM_SONGS は既存仕様どおり freeze されているため、配列そのものは変更しない。
+  // デバッグ編集中だけ map/find/some がこの1曲を仮想的に末尾へ見せる。対象配列以外の挙動は完全に素通しする。
+  const previewChart={level:1,notes:[],totalNotes:0,durationMs:1000};
+  const emptyPreviewChart=()=>({level:0,notes:[],totalNotes:0,durationMs:1000});
+  const previewSong={
+    songId:PREVIEW_SONG_ID,
+    displayName:PREVIEW_LABEL,
+    bgmTrackId:'atsu_cup_theme',
+    difficulties:{
+      EASY:previewChart,
+      NORMAL:emptyPreviewChart(),
+      HARD:emptyPreviewChart(),
+      EXPERT:emptyPreviewChart(),
+      MASTER:emptyPreviewChart(),
+    },
+  };
+  let previewCatalogInstalled=false;
+  const installPreviewCatalog=()=>{
+    if(previewCatalogInstalled)return true;
+    let catalog=null;
+    try{catalog=RHYTHM_SONGS;}catch{return false;}
+    if(!Array.isArray(catalog))return false;
+    const proto=Array.prototype;
+    const nativeMap=proto.map,nativeFind=proto.find,nativeSome=proto.some;
+    proto.map=function(callback,thisArg){
+      if(this===catalog){
+        const result=nativeMap.call(this,callback,thisArg);
+        result.push(callback.call(thisArg,previewSong,this.length,this));
+        return result;
+      }
+      return nativeMap.call(this,callback,thisArg);
+    };
+    proto.find=function(callback,thisArg){
+      if(this===catalog&&callback.call(thisArg,previewSong,this.length,this))return previewSong;
+      return nativeFind.call(this,callback,thisArg);
+    };
+    proto.some=function(callback,thisArg){
+      if(this===catalog&&callback.call(thisArg,previewSong,this.length,this))return true;
+      return nativeSome.call(this,callback,thisArg);
+    };
+    previewCatalogInstalled=true;
+    try{Object.defineProperty(window,'__mhRhythmAuthoringPreviewSong',{value:previewSong,configurable:false});}catch{}
+    return true;
+  };
 
   const ensureTiming=()=>{
     if(typeof rhythmTimingAt==='function'&&typeof rhythmSnapTimeToGrid==='function')return Promise.resolve();
@@ -64,17 +112,20 @@
   const mount=async()=>{
     const root=document.querySelector('[data-rhythm-debug]');
     if(!root||root.querySelector('[data-rhythm-chart-authoring-ui]'))return;
+    installPreviewCatalog();
 
     const section=document.createElement('section');
     section.dataset.rhythmChartAuthoringUi='';
     section.className='mb-3 rounded-2xl border border-cyan-400/40 bg-slate-950/80 p-3 text-white';
     section.innerHTML=`
       <div class="mb-2">
-        <small class="text-[8px] font-black tracking-wider text-cyan-300">DEBUG ONLY・CHART EDITOR v1</small>
+        <small class="text-[8px] font-black tracking-wider text-cyan-300">DEBUG ONLY・CHART EDITOR v2</small>
         <h3 class="font-black">譜面エディタ・音合わせ</h3>
-        <p class="mt-1 text-[9px] leading-relaxed text-slate-300">169 BPMの固定拍グリッドへノーツを置き、実音源へシークして確認します。ここでの編集は本番譜面・BEST・セーブへ自動反映しません。</p>
+        <p class="mt-1 text-[9px] leading-relaxed text-slate-300">169 BPMの固定拍グリッドで譜面を作ります。普段は下の黄色ボタンだけでOK。EASY自動ドラフト100ノーツをそのまま本物の音ゲー判定で試せます。</p>
       </div>
       <div data-rhythm-chart-status class="mb-2 rounded-lg bg-cyan-950/60 px-2 py-1 text-[9px] text-cyan-100">準備中…</div>
+      <button type="button" data-rhythm-chart-preview disabled class="mb-3 min-h-[56px] w-full rounded-xl bg-amber-500 px-3 text-sm font-black text-slate-950 shadow-lg disabled:opacity-40">🎮 EASY自動ドラフトをテストプレイ</button>
+      <p class="-mt-2 mb-3 text-center text-[8px] text-amber-100">100ノーツを自動配置して、既存の入力・判定・演出をそのまま使います</p>
       <label class="block text-[9px] text-slate-300">対象曲
         <select data-rhythm-chart-track class="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-sm font-bold text-white"></select>
       </label>
@@ -101,7 +152,7 @@
       </div>
       <button type="button" data-rhythm-chart-apply class="mt-3 min-h-[50px] w-full rounded-xl bg-emerald-700 font-black">ノーツを追加</button>
       <div class="mt-2 grid grid-cols-2 gap-2">
-        <button type="button" data-rhythm-chart-load-draft class="min-h-[46px] rounded-xl bg-indigo-700 text-[10px] font-black">EASY自動ドラフト100を読込</button>
+        <button type="button" data-rhythm-chart-load-draft class="min-h-[46px] rounded-xl bg-indigo-700 text-[10px] font-black">EASY自動ドラフト100を再読込</button>
         <button type="button" data-rhythm-chart-clear class="min-h-[46px] rounded-xl bg-rose-900/80 text-[10px] font-black">ドラフトを空にする</button>
       </div>
       <div class="mt-3 flex items-center justify-between"><b class="text-xs">ドラフト一覧</b><small data-rhythm-chart-count class="text-[9px] text-cyan-200">0 notes</small></div>
@@ -116,6 +167,7 @@
 
     const q=selector=>section.querySelector(selector);
     const status=q('[data-rhythm-chart-status]');
+    const preview=q('[data-rhythm-chart-preview]');
     const trackSelect=q('[data-rhythm-chart-track]');
     const audio=q('[data-rhythm-chart-audio]');
     const type=q('[data-rhythm-chart-type]');
@@ -185,9 +237,19 @@
       const notes=draft.map(cleanNote);
       return `const authoringDraftNotes = Object.freeze(${JSON.stringify(notes,null,2)});\nconst authoringDraftChart = Object.freeze({level:1,notes:authoringDraftNotes,totalNotes:authoringDraftNotes.length,durationMs:${Math.max(1000,...notes.map(n=>Number(n.endTimeMs??n.timeMs)+1000))}});`;
     };
+    const syncPreviewChart=()=>{
+      const notes=draft.map(cleanNote);
+      previewSong.bgmTrackId=selectedTrackId();
+      previewChart.notes=notes;
+      previewChart.totalNotes=notes.length;
+      previewChart.durationMs=Math.max(1000,...notes.map(note=>Number(note.endTimeMs??note.timeMs)+1000));
+      preview.disabled=!notes.length;
+      return notes.length;
+    };
     const render=()=>{
       sortDraft();
       count.textContent=`${draft.length} notes`;
+      preview.disabled=!draft.length;
       list.replaceChildren();
       if(!draft.length){
         const empty=document.createElement('p');empty.className='py-3 text-center text-slate-500';empty.textContent='まだノーツがありません';list.appendChild(empty);
@@ -223,6 +285,58 @@
       try{await navigator.clipboard.writeText(text);setStatus(`${label}をコピーしました`);}
       catch{output.focus();output.select();setStatus('自動コピーできません。下の欄を長押ししてコピーしてください');}
     };
+    const loadAutoDraft=async(confirmReplace=>{
+      try{
+        const response=await fetch(`${DRAFT_URL}?t=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        const data=await response.json();
+        if(!Array.isArray(data?.points))throw new Error('pointsなし');
+        if(confirmReplace&&draft.length&&!confirm('現在のドラフトをEASY自動ドラフトで置き換えますか？'))return false;
+        const id=data.trackId||'atsu_cup_theme';
+        if([...trackSelect.options].some(option=>option.value===id))trackSelect.value=id;
+        syncTrack();
+        draft=data.points.map((row,index)=>{
+          const grid=int(row?.[0],0,99999),timeMs=timeAt(id,Math.floor(grid/DIV),grid%DIV),lane=EASY_LANE_PATTERN[index%EASY_LANE_PATTERN.length];
+          return {type:'TAP',timeMs:Math.round(timeMs),lane,subLane:lane*2,subLaneWidth:2,_sourceGrid:grid,_strength:Number(row?.[1])||0};
+        }).filter(note=>Number.isFinite(note.timeMs));
+        editingIndex=-1;apply.textContent='ノーツを追加';
+        setStatus(`EASY自動ドラフト ${draft.length}ノーツを5レーンへ仮配置しました。黄色ボタンでそのまま遊べます`);
+        render();syncPreviewChart();return true;
+      }catch(error){setStatus(`ドラフト読込失敗: ${error?.message||error}`);return false;}
+    });
+    const findSelectWithLabels=(scope,labels)=>[...scope.querySelectorAll('select')].find(select=>{
+      const texts=[...select.options].map(option=>(option.textContent||'').trim());
+      return labels.every(label=>texts.some(text=>text===label||text.includes(label)));
+    });
+    const dispatchValue=(select,value,label)=>{
+      if(!select)return false;
+      if(label&&![...select.options].some(option=>option.value===value)){
+        const option=document.createElement('option');option.value=value;option.textContent=label;select.appendChild(option);
+      }
+      select.value=value;
+      select.dispatchEvent(new Event('change',{bubbles:true}));
+      return true;
+    };
+    const startPreview=()=>{
+      if(!syncPreviewChart()){setStatus('テストするノーツがありません');return;}
+      if(!installPreviewCatalog()){setStatus('音ゲー曲一覧へプレビューを接続できません');return;}
+      const debugRoot=document.querySelector('[data-rhythm-debug]');
+      if(!debugRoot){setStatus('音ゲーデバッグ画面を取得できません');return;}
+      const difficultySelect=findSelectWithLabels(debugRoot,['EASY','NORMAL','HARD','EXPERT','MASTER']);
+      const songSelect=findSelectWithLabels(debugRoot,['あつ杯テーマ','WIDTH TEST']);
+      if(!songSelect){setStatus('曲選択欄を取得できません。上の曲一覧を一度操作してから再試行してください');return;}
+      audio.pause();
+      const changeSelection=()=>{
+        if(difficultySelect)dispatchValue(difficultySelect,'EASY');
+        dispatchValue(songSelect,PREVIEW_SONG_ID,PREVIEW_LABEL);
+      };
+      try{
+        if(window.ReactDOM&&typeof window.ReactDOM.flushSync==='function')window.ReactDOM.flushSync(changeSelection);
+        else changeSelection();
+      }catch{changeSelection();}
+      const startButton=[...debugRoot.querySelectorAll('button')].find(button=>!button.closest('[data-rhythm-chart-authoring-ui]')&&/テストプレイ/.test(button.textContent||''));
+      if(!startButton){setStatus('プレビュー曲へ切り替えました。上の「テストプレイ」ボタンを押してください');return;}
+      startButton.click();
+    };
 
     try{
       await ensureTiming();
@@ -230,36 +344,23 @@
       timingIds.forEach(id=>{const option=document.createElement('option');option.value=id;option.textContent=id==='atsu_cup_theme'?'あつ杯テーマ':id;trackSelect.appendChild(option);});
       if(!timingIds.length){const option=document.createElement('option');option.value='atsu_cup_theme';option.textContent='あつ杯テーマ';trackSelect.appendChild(option);}
       syncTrack();syncType();render();
+      await loadAutoDraft(false);
     }catch(error){setStatus(`タイミング読込失敗: ${error?.message||error}`);}
 
     trackSelect.addEventListener('change',syncTrack);
     type.addEventListener('change',syncType);
+    preview.addEventListener('click',startPreview);
     q('[data-rhythm-chart-seek-grid]').addEventListener('click',()=>{const time=timeAt(selectedTrackId(),beat.value,sub.value);if(Number.isFinite(time)){audio.currentTime=Math.max(0,time/1000-.5);audio.play().catch(()=>{});}});
     q('[data-rhythm-chart-capture-grid]').addEventListener('click',()=>{const snapped=snap(selectedTrackId(),audio.currentTime*1000);if(!snapped)return;beat.value=String(snapped.beatIndex);sub.value=String(snapped.subdivisionIndex);setStatus(`再生位置 ${Math.round(audio.currentTime*1000)}ms → 拍 ${snapped.beatIndex}:${snapped.subdivisionIndex}（差 ${Math.round(snapped.deltaMs)}ms）`);});
     apply.addEventListener('click',()=>{
       try{
         const note=buildNote();
         if(editingIndex>=0&&editingIndex<draft.length)draft[editingIndex]=note;else draft.push(note);
-        editingIndex=-1;apply.textContent='ノーツを追加';setStatus('ドラフトを更新しました');render();
+        editingIndex=-1;apply.textContent='ノーツを追加';setStatus('ドラフトを更新しました');render();syncPreviewChart();
       }catch(error){setStatus(`追加できません: ${error?.message||error}`);}
     });
-    q('[data-rhythm-chart-load-draft]').addEventListener('click',async()=>{
-      try{
-        const response=await fetch(`${DRAFT_URL}?t=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);
-        const data=await response.json();
-        if(!Array.isArray(data?.points))throw new Error('pointsなし');
-        if(draft.length&&!confirm('現在のドラフトをEASY自動ドラフトで置き換えますか？'))return;
-        const id=data.trackId||'atsu_cup_theme';
-        if([...trackSelect.options].some(option=>option.value===id))trackSelect.value=id;
-        syncTrack();
-        draft=data.points.map(row=>{
-          const grid=int(row?.[0],0,99999),timeMs=timeAt(id,Math.floor(grid/DIV),grid%DIV);
-          return {type:'TAP',timeMs:Math.round(timeMs),lane:2,subLane:4,subLaneWidth:2,_sourceGrid:grid,_strength:Number(row?.[1])||0};
-        }).filter(note=>Number.isFinite(note.timeMs));
-        editingIndex=-1;apply.textContent='ノーツを追加';setStatus(`EASY自動ドラフト ${draft.length}ノーツを中央仮配置で読み込みました。タイミング確認用です`);render();
-      }catch(error){setStatus(`ドラフト読込失敗: ${error?.message||error}`);}
-    });
-    q('[data-rhythm-chart-clear]').addEventListener('click',()=>{if(draft.length&&!confirm('編集中のドラフトを空にしますか？'))return;draft=[];editingIndex=-1;apply.textContent='ノーツを追加';setStatus('ドラフトを空にしました');render();});
+    q('[data-rhythm-chart-load-draft]').addEventListener('click',()=>loadAutoDraft(true));
+    q('[data-rhythm-chart-clear]').addEventListener('click',()=>{if(draft.length&&!confirm('編集中のドラフトを空にしますか？'))return;draft=[];editingIndex=-1;apply.textContent='ノーツを追加';setStatus('ドラフトを空にしました');render();syncPreviewChart();});
     q('[data-rhythm-chart-copy-json]').addEventListener('click',()=>copyText(JSON.stringify(exportObject(),null,2),'JSON'));
     q('[data-rhythm-chart-copy-js]').addEventListener('click',()=>copyText(jsOutput(),'実装JS'));
   };
