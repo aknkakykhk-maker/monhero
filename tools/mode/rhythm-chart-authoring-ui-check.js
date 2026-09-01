@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs=require('fs');
 const path=require('path');
+const vm=require('vm');
 const assert=require('assert');
 const ROOT=path.resolve(__dirname,'..','..');
 const ui=fs.readFileSync(path.join(ROOT,'monster-hero/debug/rhythm-chart-authoring-ui.js'),'utf8');
@@ -10,17 +11,24 @@ const draft=JSON.parse(fs.readFileSync(path.join(ROOT,'monster-hero/debug/atsu-c
 const sourceDraft=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/atsu-cup-theme-easy-draft.json'),'utf8'));
 
 const ok=(name,value)=>{assert(value,name);console.log(`OK: ${name}`);};
+new vm.Script(ui,{filename:'rhythm-chart-authoring-ui.js'});
+ok('譜面エディタJSの構文が有効',true);
 ok('デバッグ画面だけへ譜面エディタをマウント',ui.includes("document.querySelector('[data-rhythm-debug]')")&&ui.includes("dataset.rhythmChartAuthoringUi='ready'"));
-ok('通常プレイでは本体を読み込まずデバッグ画面で遅延ロード',calibration.includes("!document.querySelector('[data-rhythm-debug]')")&&calibration.includes("script.src='debug/rhythm-chart-authoring-ui.js?v=20260901a'"));
+ok('通常プレイでは本体を読み込まずデバッグ画面で遅延ロード',calibration.includes("!document.querySelector('[data-rhythm-debug]')")&&calibration.includes("script.src='debug/rhythm-chart-authoring-ui.js?v=20260901b'"));
 ok('固定timing正本を使い16分へ配置',ui.includes("TIMING_URL='data/rhythm-timing.js'")&&ui.includes('rhythmTimingAt')&&ui.includes('rhythmSnapTimeToGrid')&&timing.includes('subdivisionsPerBeat:4'));
 ok('TAP/HOLD/FLICK/SLIDEを編集対象にする',['TAP','HOLD','FLICK','SLIDE'].every(type=>ui.includes(`<option>${type}</option>`)));
 ok('10サブレーンと幅1〜4を編集可能',ui.includes('サブレーン 1〜10')&&ui.includes('min="1" max="10"')&&ui.includes("int(width.value,1,4)"));
 ok('HOLDは終端時刻、SLIDEは始終点とslidePointsを生成',ui.includes("noteType==='HOLD'")&&ui.includes("type:'SLIDE'")&&ui.includes('slidePoints:['));
-ok('iPhone向け操作サイズを確保',ui.includes('min-h-[44px]')&&ui.includes('min-h-[50px]')&&ui.includes('playsinline'));
+ok('iPhone向け操作サイズを確保',ui.includes('min-h-[44px]')&&ui.includes('min-h-[56px]')&&ui.includes('playsinline'));
 ok('音源の拍シークと再生位置スナップを実装',ui.includes('data-rhythm-chart-seek-grid')&&ui.includes('data-rhythm-chart-capture-grid')&&ui.includes('audio.currentTime'));
 ok('JSONと実装JSを書き出せる',ui.includes('data-rhythm-chart-copy-json')&&ui.includes('data-rhythm-chart-copy-js')&&ui.includes('authoringDraftChart'));
-ok('デバッグ編集はセーブデータへ書き込まない',!ui.includes('localStorage.setItem')&&!ui.includes('mh_rhythm_best'));
+ok('デバッグ編集自体はセーブデータへ直接書き込まない',!ui.includes('localStorage.setItem')&&!ui.includes('mh_rhythm_best'));
 ok('自動EASYドラフトの配信用スナップショットが制作元と一致',JSON.stringify(draft)===JSON.stringify(sourceDraft)&&draft.noteCount===100&&draft.runtimeConnected===false);
-ok('自動ドラフトはタイミング確認用の中央仮配置として読み込む',ui.includes("lane:2,subLane:4,subLaneWidth:2")&&ui.includes('中央仮配置'));
+ok('自動ドラフト100ノーツを起動時に読み込む',ui.includes('await loadAutoDraft(false)')&&ui.includes('data.points.map((row,index)=>'));
+ok('EASY仮配置は5メインレーンへ分散',ui.includes('EASY_LANE_PATTERN')&&ui.includes('subLane:lane*2')&&!ui.includes('中央仮配置'));
+ok('編集中譜面をプレビュー曲へ同期',ui.includes("PREVIEW_SONG_ID='__rhythm_authoring_preview__'")&&ui.includes('previewChart.notes=notes')&&ui.includes('previewChart.totalNotes=notes.length'));
+ok('freeze済みRHYTHM_SONGS自体を変更しない',ui.includes('this===catalog')&&ui.includes('nativeMap.call')&&ui.includes('nativeFind.call')&&!ui.includes('RHYTHM_SONGS.push')&&!ui.includes('RHYTHM_SONGS.splice'));
+ok('プレビュー選択はReact更新を同期して既存テストプレイを再利用',ui.includes('ReactDOM.flushSync')&&ui.includes("dispatchValue(songSelect,PREVIEW_SONG_ID,PREVIEW_LABEL)")&&ui.includes('/テストプレイ/.test'));
+ok('テストプレイ前にエディタ音源を停止',ui.includes('audio.pause()'));
 ok('前回フリーズ対策を維持',calibration.includes('if(button.textContent!==label)button.textContent=label')&&!calibration.includes("button.textContent=enabled?'座標校正 ON':'座標校正';"));
-console.log('OK: 音ゲー譜面エディタv1（拍配置・音源シーク・4種ノーツ・自動EASYドラフト・出力・フリーズ回帰）');
+console.log('OK: 音ゲー譜面エディタv2（EASYドラフト100自動配置・実プレイ接続・既存入力判定再利用・フリーズ回帰）');
