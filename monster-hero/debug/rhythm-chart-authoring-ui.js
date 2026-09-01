@@ -402,6 +402,19 @@
         editingIndex=-1;apply.textContent='ノーツを追加';setStatus(String(event.detail?.label||`#${index+1} SLIDE経路を更新`));render();syncPreviewChart();
       }catch(error){setStatus(`SLIDE経路を更新できません: ${error?.message||error}`);}
     });
+    section.addEventListener('rhythm-chart-load-review-preview',event=>{
+      try{
+        const rows=Array.isArray(event.detail?.notes)?event.detail.notes:[];
+        if(!rows.length)throw new Error('レビュー譜面が空です');
+        const id=String(event.detail?.trackId||'atsu_cup_theme');
+        if([...trackSelect.options].some(option=>option.value===id))trackSelect.value=id;
+        syncTrack();
+        draft=rows.map(row=>candidateNote(row,id)).filter(Boolean);
+        editingIndex=-1;apply.textContent='ノーツを追加';
+        setStatus(String(event.detail?.label||`v2レビュー譜面 ${draft.length}ノーツを仮適用しました`));
+        render();syncPreviewChart();
+      }catch(error){setStatus(`v2レビュー譜面を仮適用できません: ${error?.message||error}`);}
+    });
     q('[data-rhythm-chart-load-candidate]').addEventListener('click',()=>loadFormalCandidate(true));
     q('[data-rhythm-chart-load-draft]').addEventListener('click',()=>loadAutoDraft(true));
     q('[data-rhythm-chart-clear]').addEventListener('click',()=>{if(draft.length&&!confirm('編集中のドラフトを空にしますか？'))return;draft=[];editingIndex=-1;apply.textContent='ノーツを追加';setStatus('ドラフトを空にしました');render();syncPreviewChart();});

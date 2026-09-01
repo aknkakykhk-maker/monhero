@@ -5,7 +5,7 @@
   if(document.documentElement.dataset.rhythmReviewMode==='ready')return;
   document.documentElement.dataset.rhythmReviewMode='ready';
 
-  const EAR_CANDIDATE_URL='debug/atsu-cup-theme-easy-formal-candidate-v1.json';
+  const EAR_CANDIDATE_URL='debug/atsu-cup-theme-easy-formal-candidate-v2-review.json';
   const EAR_GROUP_GAP_GRIDS=24;
   const EAR_LOOP_PADDING_GRIDS=8;
   const PREVIEW_SONG_ID='__rhythm_authoring_preview__';
@@ -16,6 +16,8 @@
   let earPlanPromise=null;
   let earPlan=null;
   let earIndex=0;
+  let candidateIndex=0;
+  const reviewDecisions=new Map();
 
   const setText=(node,text)=>{if(node&&node.textContent!==text)node.textContent=text;};
   const formatTime=ms=>{
@@ -35,8 +37,9 @@
     return (Number(candidate.beatZeroMs)||0)+grid*(60000/(Number(candidate.bpm)||169)/(Number(candidate.subdivisionsPerBeat)||4));
   };
   const buildEarGroups=candidate=>{
-    const reviews=Array.isArray(candidate?.earReviewGrids)?candidate.earReviewGrids.map(Number).filter(Number.isFinite):[];
-    if(candidate?.trackId!=='atsu_cup_theme'||candidate?.difficulty!=='EASY'||candidate?.candidateVersion!==1||candidate?.status!=='FORMAL_CANDIDATE'||candidate?.reviewRequired!==true||candidate?.runtimeConnected!==false||reviews.length!==22)return null;
+    const pending=Array.isArray(candidate?.pendingReviews)?candidate.pendingReviews:[];
+    const reviews=pending.map(row=>Number(row?.grid)).filter(Number.isFinite);
+    if(candidate?.trackId!=='atsu_cup_theme'||candidate?.difficulty!=='EASY'||candidate?.candidateVersion!==2||candidate?.status!=='FORMAL_CANDIDATE_REVIEW'||candidate?.reviewRequired!==true||candidate?.runtimeConnected!==false||candidate?.notes?.length!==78||reviews.length!==22)return null;
     const sorted=[...reviews].sort((a,b)=>a-b);
     if(sorted.some((grid,index)=>grid!==reviews[index])||new Set(sorted).size!==sorted.length)return null;
     const groups=[];
@@ -46,6 +49,7 @@
       else current.points.push(grid);
     });
     groups.forEach(group=>{
+      group.candidates=group.points.map(grid=>pending.find(row=>Number(row.grid)===grid));
       group.startGrid=Math.max(0,group.points[0]-EAR_LOOP_PADDING_GRIDS);
       group.endGrid=group.points[group.points.length-1]+EAR_LOOP_PADDING_GRIDS;
       group.startMs=timingAtGrid(candidate,group.startGrid);
@@ -60,7 +64,7 @@
       .then(response=>{if(!response.ok)throw new Error(`HTTP ${response.status}`);return response.json();})
       .then(candidate=>{
         const plan=buildEarGroups(candidate);
-        if(!plan)throw new Error('candidate v1の耳確認22点と一致しません');
+        if(!plan)throw new Error('candidate v2-reviewの耳確認22点と一致しません');
         earPlan=plan;
         return plan;
       })
@@ -117,7 +121,8 @@
           </div>
           <span data-rhythm-ear-review-count class="shrink-0 rounded-full bg-fuchsia-400/15 px-2 py-1 text-[8px] font-black text-fuchsia-100">読込中</span>
         </div>
-        <p data-rhythm-ear-review-detail class="mt-2 rounded-lg bg-black/25 px-2 py-1.5 text-[9px] font-black text-white">candidate v1を読み込み中…</p>
+        <p data-rhythm-ear-review-detail class="mt-2 rounded-lg bg-black/25 px-2 py-1.5 text-[9px] font-black text-white">candidate v2-reviewを読み込み中…</p>
+        <div data-rhythm-ear-review-candidates class="mt-1 space-y-1 rounded-lg bg-black/20 p-2 text-[8px] text-slate-200"></div>
         <div class="mt-2 grid grid-cols-2 gap-1">
           <button type="button" data-rhythm-ear-review-prev class="min-h-[44px] rounded-lg bg-slate-800 text-[9px] font-black">◀ 前の区間</button>
           <button type="button" data-rhythm-ear-review-next class="min-h-[44px] rounded-lg bg-slate-800 text-[9px] font-black">次の区間 ▶</button>
@@ -126,6 +131,26 @@
           <button type="button" data-rhythm-ear-review-play class="min-h-[46px] rounded-lg bg-fuchsia-700 text-[9px] font-black">▶ この区間をループ再生</button>
           <button type="button" data-rhythm-ear-review-stop class="min-h-[46px] rounded-lg bg-slate-900 text-[9px] font-black">■ 停止</button>
         </div>
+        <details class="mt-2 rounded-lg border border-white/10 bg-slate-950/50 p-2">
+          <summary class="min-h-[44px] cursor-pointer py-3 text-[9px] font-black text-cyan-100">候補ごとの採否を入力</summary>
+          <div class="grid grid-cols-2 gap-1">
+            <button type="button" data-rhythm-ear-candidate-prev class="min-h-[44px] rounded-lg bg-slate-800 text-[9px] font-black">◀ 前の候補</button>
+            <button type="button" data-rhythm-ear-candidate-next class="min-h-[44px] rounded-lg bg-slate-800 text-[9px] font-black">次の候補 ▶</button>
+          </div>
+          <p data-rhythm-ear-candidate-current class="mt-1 rounded bg-black/30 p-2 text-[9px] font-black text-white">候補読込中…</p>
+          <div class="mt-1 grid grid-cols-2 gap-1">
+            <button type="button" data-review-decision="KEEP" class="min-h-[44px] rounded-lg bg-emerald-700 text-[9px] font-black">採用</button>
+            <button type="button" data-review-decision="DROP" class="min-h-[44px] rounded-lg bg-rose-800 text-[9px] font-black">削除</button>
+            <button type="button" data-review-decision="SHIFT_PREVIOUS_GRID" class="min-h-[44px] rounded-lg bg-amber-700 text-[9px] font-black">前へ1grid</button>
+            <button type="button" data-review-decision="SHIFT_NEXT_GRID" class="min-h-[44px] rounded-lg bg-amber-700 text-[9px] font-black">後ろへ1grid</button>
+            <button type="button" data-review-decision="PENDING" class="col-span-2 min-h-[44px] rounded-lg bg-slate-700 text-[9px] font-black">保留</button>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-1">
+            <button type="button" data-rhythm-ear-copy-review class="min-h-[46px] rounded-lg bg-sky-700 text-[9px] font-black">レビューJSONコピー</button>
+            <button type="button" data-rhythm-ear-apply-preview class="min-h-[46px] rounded-lg bg-violet-700 text-[9px] font-black">v2レビュー譜面を仮適用</button>
+          </div>
+          <textarea data-rhythm-ear-review-output readonly class="mt-1 h-28 w-full rounded-lg bg-black/40 p-2 font-mono text-[8px] text-slate-200" aria-label="レビュー結果JSON"></textarea>
+        </details>
         <p data-rhythm-ear-review-status class="mt-1 text-[8px] leading-relaxed text-fuchsia-100">採用・移動・不採用はここでは保存しません。</p>
       </div>
       <p data-rhythm-review-current class="mt-2 rounded-lg bg-cyan-950/50 px-2 py-1.5 text-[8px] leading-relaxed text-cyan-100">現在の確認対象を読み込み中…</p>
@@ -145,12 +170,34 @@
     const track=editor.querySelector('[data-rhythm-chart-track]')?.value;
     const ready=earPlan&&track==='atsu_cup_theme';
     [prev,next,play].forEach(button=>{if(button)button.disabled=!ready;});
-    if(!earPlan){setText(count,'読込中');setText(detail,'candidate v1を読み込み中…');return;}
+    if(!earPlan){setText(count,'読込中');setText(detail,'candidate v2-reviewを読み込み中…');return;}
     if(track!=='atsu_cup_theme'){setText(count,'対象外');setText(detail,'あつ杯テーマ EASY を選択すると耳確認ナビを使えます');return;}
     earIndex=Math.max(0,Math.min(earIndex,earPlan.groups.length-1));
     const group=earPlan.groups[earIndex];
     setText(count,`${earIndex+1} / ${earPlan.groups.length}`);
     setText(detail,`${formatTime(group.startMs)}–${formatTime(group.endMs)}　候補 grid ${group.points.join(', ')}`);
+    const list=nav.querySelector('[data-rhythm-ear-review-candidates]');
+    if(list){list.replaceChildren(...group.candidates.map(row=>{const p=document.createElement('p');p.textContent=`grid ${row.grid}　${Number(row.sourcePeakOffsetMs)>=0?'+':''}${row.sourcePeakOffsetMs}ms　strength ${Number(row.sourceStrength).toFixed(2)}　${row.machineRecommendation}`;return p;}));}
+    refreshCandidate(editor);
+  };
+  const allCandidates=()=>earPlan?earPlan.groups.flatMap(group=>group.candidates):[];
+  const currentCandidate=()=>allCandidates()[candidateIndex]||null;
+  const reviewExport=()=>({trackId:'atsu_cup_theme',difficulty:'EASY',candidateVersion:2,status:'HUMAN_REVIEW_IN_PROGRESS',decisions:allCandidates().map(row=>{const decision=reviewDecisions.get(row.grid)||'PENDING';return {grid:row.grid,decision,targetGrid:decision==='SHIFT_PREVIOUS_GRID'?row.grid-1:decision==='SHIFT_NEXT_GRID'?row.grid+1:null};})});
+  const refreshCandidate=editor=>{
+    const nav=editor.querySelector('[data-rhythm-ear-review-nav]'),rows=allCandidates();
+    if(!nav||!rows.length)return;
+    candidateIndex=Math.max(0,Math.min(candidateIndex,rows.length-1));
+    const row=rows[candidateIndex],decision=reviewDecisions.get(row.grid)||'PENDING';
+    setText(nav.querySelector('[data-rhythm-ear-candidate-current]'),`${candidateIndex+1} / ${rows.length}　grid ${row.grid}　${row.timeLabel}　推奨 ${row.machineRecommendation}　入力 ${decision}`);
+    nav.querySelectorAll('[data-review-decision]').forEach(button=>{button.setAttribute('aria-pressed',button.dataset.reviewDecision===decision?'true':'false');button.style.outline=button.dataset.reviewDecision===decision?'2px solid white':'';});
+    const output=nav.querySelector('[data-rhythm-ear-review-output]');if(output)output.value=JSON.stringify(reviewExport(),null,2);
+  };
+  const applyReviewPreview=editor=>{
+    if(!earPlan)return;
+    const additions=[];
+    allCandidates().forEach(row=>{const decision=reviewDecisions.get(row.grid)||'PENDING';if(decision==='KEEP')additions.push({...row.proposedNote});if(decision==='SHIFT_PREVIOUS_GRID'||decision==='SHIFT_NEXT_GRID'){const shift=decision==='SHIFT_PREVIOUS_GRID'?-1:1;additions.push({...row.proposedNote,grid:row.grid+shift});}});
+    const notes=[...earPlan.candidate.notes.map(note=>({...note})),...additions].sort((a,b)=>Number(a.grid)-Number(b.grid));
+    editor.dispatchEvent(new CustomEvent('rhythm-chart-load-review-preview',{detail:{trackId:'atsu_cup_theme',notes,label:`v2レビュー仮適用: v1 78 + 採用/移動 ${additions.length}（保留は追加なし）`}}));
   };
   const stopEarLoop=editor=>{
     const player=editor.querySelector('[data-rhythm-chart-audio]');
@@ -180,10 +227,15 @@
     const nav=editor.querySelector('[data-rhythm-ear-review-nav]');
     if(!nav||nav.dataset.bound==='true')return;
     nav.dataset.bound='true';
-    nav.querySelector('[data-rhythm-ear-review-prev]')?.addEventListener('click',()=>{stopEarLoop(editor);if(earPlan)earIndex=(earIndex-1+earPlan.groups.length)%earPlan.groups.length;refreshEarNav(editor);});
-    nav.querySelector('[data-rhythm-ear-review-next]')?.addEventListener('click',()=>{stopEarLoop(editor);if(earPlan)earIndex=(earIndex+1)%earPlan.groups.length;refreshEarNav(editor);});
+    nav.querySelector('[data-rhythm-ear-review-prev]')?.addEventListener('click',()=>{stopEarLoop(editor);if(earPlan){earIndex=(earIndex-1+earPlan.groups.length)%earPlan.groups.length;candidateIndex=Math.max(0,allCandidates().findIndex(row=>row.grid===earPlan.groups[earIndex].points[0]));}refreshEarNav(editor);});
+    nav.querySelector('[data-rhythm-ear-review-next]')?.addEventListener('click',()=>{stopEarLoop(editor);if(earPlan){earIndex=(earIndex+1)%earPlan.groups.length;candidateIndex=Math.max(0,allCandidates().findIndex(row=>row.grid===earPlan.groups[earIndex].points[0]));}refreshEarNav(editor);});
     nav.querySelector('[data-rhythm-ear-review-play]')?.addEventListener('click',()=>playEarGroup(editor));
     nav.querySelector('[data-rhythm-ear-review-stop]')?.addEventListener('click',()=>{stopEarLoop(editor);setText(nav.querySelector('[data-rhythm-ear-review-status]'),'停止しました。採否はまだ保存していません。');});
+    nav.querySelector('[data-rhythm-ear-candidate-prev]')?.addEventListener('click',()=>{const rows=allCandidates();if(rows.length)candidateIndex=(candidateIndex-1+rows.length)%rows.length;refreshCandidate(editor);});
+    nav.querySelector('[data-rhythm-ear-candidate-next]')?.addEventListener('click',()=>{const rows=allCandidates();if(rows.length)candidateIndex=(candidateIndex+1)%rows.length;refreshCandidate(editor);});
+    nav.querySelectorAll('[data-review-decision]').forEach(button=>button.addEventListener('click',()=>{const row=currentCandidate();if(!row)return;reviewDecisions.set(row.grid,button.dataset.reviewDecision);refreshCandidate(editor);}));
+    nav.querySelector('[data-rhythm-ear-copy-review]')?.addEventListener('click',async()=>{const text=JSON.stringify(reviewExport(),null,2),output=nav.querySelector('[data-rhythm-ear-review-output]');if(output)output.value=text;try{await navigator.clipboard.writeText(text);setText(nav.querySelector('[data-rhythm-ear-review-status]'),'レビュー結果JSONをコピーしました');}catch{output?.focus();output?.select();setText(nav.querySelector('[data-rhythm-ear-review-status]'),'下のJSON欄を長押ししてコピーしてください');}});
+    nav.querySelector('[data-rhythm-ear-apply-preview]')?.addEventListener('click',()=>{applyReviewPreview(editor);setText(nav.querySelector('[data-rhythm-ear-review-status]'),'レビュー結果をDEBUGプレビューへ仮適用しました。上の候補セット→テストプレイを直接押してください。');});
     const track=editor.querySelector('[data-rhythm-chart-track]');
     if(track&&track.dataset.earReviewBound!=='true'){
       track.dataset.earReviewBound='true';

@@ -31,7 +31,7 @@ ok('SLIDE経路編集JSの構文が有効',true);
 ok('区間ループJSの構文が有効',true);
 ok('実機タイミング補正JSの構文が有効',true);
 ok('デバッグ画面だけへ譜面エディタをマウント',ui.includes("document.querySelector('[data-rhythm-debug]')")&&ui.includes("dataset.rhythmChartAuthoringUi='ready'"));
-ok('通常プレイでは本体を読み込まずデバッグ画面で遅延ロード',calibration.includes("!document.querySelector('[data-rhythm-debug]')")&&calibration.includes("script.src='debug/rhythm-chart-authoring-ui.js?v=20260901d'"));
+ok('通常プレイでは本体を読み込まずデバッグ画面で遅延ロード',calibration.includes("!document.querySelector('[data-rhythm-debug]')")&&calibration.includes("script.src='debug/rhythm-chart-authoring-ui.js?v=20260902a'"));
 ok('実機タイミング補正もエディタ読込後だけ遅延ロード',calibration.includes("offsetScript.src='debug/rhythm-preview-offset.js?v=20260901b'")&&calibration.includes('script.onload=loadOffsetUi'));
 ok('HOLD伸縮も補正UI成立後だけ遅延ロード',calibration.includes("holdScript.src='debug/rhythm-hold-resize.js?v=20260901a'")&&calibration.includes('offsetScript.onload=loadHoldResizeUi'));
 ok('SLIDE経路編集もHOLD補助成立後だけ遅延ロード',calibration.includes("slideScript.src='debug/rhythm-slide-path-editor.js?v=20260901a'")&&calibration.includes('holdScript.onload=loadSlidePathUi'));

@@ -233,7 +233,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
     if(document.querySelector('[data-rhythm-review-mode-loader]'))return;
     const reviewScript=document.createElement('script');
     reviewScript.dataset.rhythmReviewModeLoader='';
-    reviewScript.src='debug/rhythm-review-mode.js?v=20260901d';
+    reviewScript.src='debug/rhythm-review-mode.js?v=20260902a';
     document.head.appendChild(reviewScript);
   };
   const loadInvalidPlacementUi=()=>{
@@ -288,7 +288,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
     loaderObserver=null;
     const script=document.createElement('script');
     script.dataset.rhythmChartAuthoringLoader='';
-    script.src='debug/rhythm-chart-authoring-ui.js?v=20260901d';
+    script.src='debug/rhythm-chart-authoring-ui.js?v=20260902a';
     script.onload=loadOffsetUi;
     script.onerror=()=>{loaded=false;script.remove();watch();};
     document.head.appendChild(script);

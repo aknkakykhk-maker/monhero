@@ -429,6 +429,26 @@ PR #953の100ノーツ音ハメ基礎監査:
 - 純粋な入力・幅・SLIDE構造検査用のWIDTH TESTとも役割を分ける
 - 通常HOME、正式曲選択、一般ユーザー導線には公開しない
 
+### EASY正式候補v2レビュー準備
+
+実装済み:
+
+- v1の正式候補78ノーツ（TAP 72 / HOLD 6）と22耳確認候補を変更せず保持
+- v1採用78点の全尺offset・区間偏り・drift・32grid密度・隣接間隔・長い空白・HOLD後余白を機械監査
+- `atsu-cup-theme-easy-formal-candidate-v2-review.json` に78ノーツと22件の `pendingReviews` を分離して保存
+- 22候補ごとに時刻、offset、strength、前後採用点、近傍±2grid onset、機械推奨を記録。機械推奨は参考情報であり正式採否ではない
+- iPhone向け16区間ループ、候補単位ナビ、採用／前後1grid移動／削除／保留、レビューJSONコピー、DEBUGプレビュー仮適用
+- 約60秒のDEBUG総合回帰曲は引き続き基盤回帰用として維持
+
+未完了:
+
+- ユーザーによる22候補の耳確認
+- 22候補の正式な採用・移動・削除
+- EASY正式譜面の完成
+- 正式runtimeへの接続
+
+v2-reviewの `status` は `FORMAL_CANDIDATE_REVIEW`、`reviewRequired=true`、`runtimeConnected=false` とし、未確認候補を正式notesへ自動追加しない。
+
 重要:
 
 - 解析値だけで本番譜面を完成扱いにしない

@@ -143,6 +143,7 @@ node tools/build.js --check
 
 `node mode/rhythm-mode-tap-completion-check.js` は、STEP 2Bのプレイエリア基準ノーツ移動、ポーズ／再開／リスタート／中断のライフサイクル、正式リザルト条件、BEST統合、NEW RECORD、音源・入力セッション・rAFのcleanup、非公開状態を確認する。
 `node mode/rhythm-debug-short-check.js` は、同一のあつ杯テーマ音源を使う約60秒のDEBUG専用総合譜面について、短縮時間、4ノーツ種別、幅1〜4、0.5レーン／可変幅SLIDE、複合入力、audio clock終了、再スタート分離、正式EASY候補とMP3の非変更を確認する。
+`node mode/rhythm-easy-v2-review-check.js` は、EASY正式候補v1の78ノーツを保持したv2-review準備データ、22候補の詳細・機械推奨・未入力decision、全尺品質監査、機械的不正なし、正式runtime未接続を確認する。`node mode/rhythm-easy-v2-review-build.js` でv1・100点draft・282点onset候補から同データを再生成できる。
 `node mode/rhythm-mode-note-perspective-check.js` は、上部・中央・判定ライン付近の5レーンについて、左右境界・中央・ノーツ幅・Touch／Pointer／SLIDE入力の逆投影が同じprojection結果になることと、時刻を変えない非線形Y移動、HOLD／SLIDE帯、判定ライン、番号、押下発光、描画用rAFの一本化を数値と実装経路の両方で確認する。
 `node mode/rhythm-mode-sublane-projection-check.js` は、旧5レーン互換を保つ10サブレーン座標、TAP幅1〜4、左右端、奥／手前の共通projection、サブ境界とHOLD／SLIDE／ENDバーの回帰を確認する。
 `node mode/rhythm-mode-tap-width-input-check.js` は、可変幅TAPの10サブレーン入力、幅1の最小タッチ許容、左右端・範囲外、隣接同時押し、旧5レーン互換、描画projectionの逆変換、WIDTH TESTと既存ジェスチャーの回帰を確認する。
