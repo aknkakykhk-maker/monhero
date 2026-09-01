@@ -5,8 +5,14 @@ const vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..');
 const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
 const releaseSource=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-step3-release.js'),'utf8');
+const gameSource=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'utf8');
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
+
+check('空押しSEは既存の音ゲーSE runtimeと設定を共用',source.includes('const playEmpty=()=>')&&source.includes('return {warm,play,playEmpty,_readSettings:readSettings}'));
+check('空押しSEはノーツ未取得の新規入力だけで呼ぶ',gameSource.includes("if(!target){RHYTHM_NOTE_SE_RUNTIME.playEmpty();return;}"));
+check('ノーツ取得時は従来SEだけを鳴らす',source.includes('RHYTHM_NOTE_SE_RUNTIME.play();\n    return {input,target:picked.note'));
+check('空押しSEは短いノイズ系Web Audio',source.includes('const duration=.055')&&source.includes("filter.type='bandpass'")&&source.includes('audio.createBufferSource()'));
 
 let saved=JSON.stringify({noteSeEnabled:true,noteSeVolume:70});
 let contextCount=0,startCount=0,lastGain=0;
