@@ -1,6 +1,6 @@
 // DEBUG ONLY: 音ゲー表示座標の最終校正ガイド。
 // 既存の5レーンSVG・ノーツ・入力と同じprojection helperだけを使い、通常の判定ロジックは変更しない。
-const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 13:08';
+const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 13:52';
 const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
 
 (()=>{
@@ -209,7 +209,7 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
     loaded=true;
     const script=document.createElement('script');
     script.dataset.rhythmChartAuthoringLoader='';
-    script.src='debug/rhythm-chart-authoring-ui.js?v=20260901a';
+    script.src='debug/rhythm-chart-authoring-ui.js?v=20260901b';
     script.onerror=()=>{loaded=false;script.remove();};
     document.head.appendChild(script);
   };
