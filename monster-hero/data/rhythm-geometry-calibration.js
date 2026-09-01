@@ -1,6 +1,6 @@
 // DEBUG ONLY: 音ゲー表示座標の最終校正ガイド。
 // 既存の5レーンSVG・ノーツ・入力と同じprojection helperだけを使い、通常の判定ロジックは変更しない。
-const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 18:40';
+const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 19:12';
 const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
 
 (()=>{
@@ -229,11 +229,19 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
 (()=>{
   if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
   let loaded=false,loaderObserver=null;
+  const loadReviewMode=()=>{
+    if(document.querySelector('[data-rhythm-review-mode-loader]'))return;
+    const reviewScript=document.createElement('script');
+    reviewScript.dataset.rhythmReviewModeLoader='';
+    reviewScript.src='debug/rhythm-review-mode.js?v=20260901a';
+    document.head.appendChild(reviewScript);
+  };
   const loadInvalidPlacementUi=()=>{
-    if(document.querySelector('[data-rhythm-invalid-placement-loader]'))return;
+    if(document.querySelector('[data-rhythm-invalid-placement-loader]')){loadReviewMode();return;}
     const invalidScript=document.createElement('script');
     invalidScript.dataset.rhythmInvalidPlacementLoader='';
     invalidScript.src='debug/rhythm-invalid-placement.js?v=20260901a';
+    invalidScript.onload=loadReviewMode;
     document.head.appendChild(invalidScript);
   };
   const loadSectionLoopUi=()=>{
