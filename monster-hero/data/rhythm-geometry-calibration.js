@@ -1,7 +1,7 @@
 // DEBUG ONLY: 音ゲー表示座標の最終校正ガイド。
 // 既存の5レーンSVG・ノーツ・入力と同じprojection helperだけを使い、通常の判定ロジックは変更しない。
 const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 21:19';
-const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
+const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
 
 (()=>{
   // data-onlyのデバッグ出荷でも更新バナーは1回だけ出す。
