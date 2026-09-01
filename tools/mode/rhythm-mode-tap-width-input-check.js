@@ -2,12 +2,15 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const source=fs.readFileSync('monster-hero/data/rhythm-mode.js','utf8');
 const laneSvg=fs.readFileSync('monster-hero/data/rhythm-lane-svg.js','utf8');
+const calibration=fs.readFileSync('monster-hero/data/rhythm-geometry-calibration.js','utf8');
+const indexHtml=fs.readFileSync('monster-hero/index.html','utf8');
 const game=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 const ctx={};vm.createContext(ctx);vm.runInContext(source,ctx);
 const run=code=>vm.runInContext(code,ctx);
 const note=(subLane,subLaneWidth,index=0,extra={})=>({type:'TAP',timeMs:1000,lane:Math.floor(subLane/2),subLane,subLaneWidth,index,done:false,activePointerId:null,...extra});
 const match=(notes,inputs)=>run(`rhythmMatchInputBatch(${JSON.stringify(notes)},${JSON.stringify(inputs)},1000,0).map(x=>x.target&&x.target.index)`);
 const input=(subLaneCoordinate,key='touch:1')=>({lane:Math.max(0,Math.min(4,Math.floor(subLaneCoordinate/2))),subLaneCoordinate,inputKey:key});
+const close=(a,b)=>Math.abs(Number(a)-Number(b))<1e-10;
 assert.deepEqual(match([note(4,1)],[input(4.5)]),[0],'幅1中央');
 for(const width of [2,3,4]) assert.deepEqual(match([note(3,width)],[input(3+width-.01)]),[0],`幅${width}内側`);
 assert.deepEqual(match([note(3,2)],[input(2.99)]),[null],'幅2範囲外');
@@ -23,6 +26,20 @@ for(const y of [.05,.5,.88,1]) for(const sub of [.1,2.5,5.5,9.9]){
   const actual=run(`rhythmSubLaneCoordinateAtPoint(${x},${cy},${JSON.stringify(rect)})`);
   assert(Math.abs(actual-sub)<1e-9,'描画projectionと入力逆変換');
 }
+for(const y of [0,.2,.5,.88,1]) for(let lane=0;lane<5;lane++){
+  const main=run(`rhythmProjectLane(${lane},${y})`),sub=run(`rhythmProjectSubLaneSpan(${lane*2},2,${y})`);
+  assert(close(main.left,sub.left)&&close(main.right,sub.right)&&close(main.center,sub.center),`5レーンと10サブレーン幅2が同一projection lane=${lane} y=${y}`);
+}
+for(const y of [0,.25,.5,.88,1]) for(let subLane=0;subLane<10;subLane++){
+  const span=run(`rhythmProjectSubLaneSpan(${subLane},1,${y})`),left=run(`rhythmProjectBoundary(${subLane/2},${y})`),right=run(`rhythmProjectBoundary(${(subLane+1)/2},${y})`);
+  assert(close(span.left,left)&&close(span.right,right),`幅1ノーツ端とサブレーン境界が一致 sub=${subLane} y=${y}`);
+}
+assert(calibration.includes("data.rhythmGeometryCalibration='ready'")&&calibration.includes("button.dataset.rhythmCalibrationToggle=''")&&calibration.includes("'data-rhythm-calibration-guide':''"),'座標校正トグルとガイドをデバッグ専用レイヤーへ実装');
+assert(calibration.includes('rhythmProjectBoundary(boundary/2,0)')&&calibration.includes('rhythmProjectSubLaneSpan(sample.subLane,sample.width,y)')&&calibration.includes('rhythmProjectSlideSpan(sample.lane,note,y,0)'),'校正ガイドはレーン・可変幅・SLIDEの共通projection helperだけを使用');
+assert(calibration.includes("{subLane:0,width:1")&&calibration.includes("{subLane:2,width:2")&&calibration.includes("{subLane:4,width:3")&&calibration.includes("{subLane:6,width:4"),'TAP/HOLD/FLICK幅1〜4の基準帯を表示');
+assert(calibration.includes("{lane:.5,width:1")&&calibration.includes("{lane:1.5,width:2")&&calibration.includes("{lane:2.5,width:3")&&calibration.includes("{lane:3.5,width:4"),'SLIDE half-lane幅1〜4の基準帯を表示');
+assert(calibration.includes("for(let subLane=0;subLane<10;subLane++)")&&calibration.includes('rhythmProjectSubLaneSpan(subLane,1,judgeY)'),'判定ライン上の10サブレーン中心を同じprojectionで表示');
+assert(indexHtml.includes('data/rhythm-geometry-calibration.js?v='),'座標校正ガイドを起動経路へ登録');
 const touchRect={left:0,top:0,width:400,height:800};
 const centerX=run(`rhythmProjectBoundary(2.25,1)`)*touchRect.width;
 const contact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:45},${JSON.stringify(touchRect)})`);
@@ -62,4 +79,4 @@ assert(source.includes("id==='EASY'?widthTestChart")&&/\[7200,4,1\],\[7200,5,1\]
 assert(game.includes('subLaneCoordinate=rhythmSubLaneCoordinateAtPoint')&&game.includes('{lane,subLaneCoordinate,inputKey'),'Touch/Pointerが実座標を渡す');
 assert(source.includes("note?.type==='TAP'||note?.type==='HOLD'")&&source.includes('return note.lane===lane'),'HOLD可変幅・FLICK/SLIDE回帰');
 assert(source.includes('rhythmReleaseTargetMs')&&source.includes('data-rhythm-end-bar'),'ENDバー回帰');
-console.log('OK: 10サブレーン可変幅TAP入力・接触半径70%補正・隣接25%重なり条件・指腹拡張追従・中心揺れデッドゾーン・固定3上限なし・異常radius fallback・押しっぱなし回帰防止・発光レイヤー・旧譜面・projection回帰');
+console.log('OK: 10サブレーン可変幅TAP入力・表示座標校正ガイド・接触半径70%補正・隣接25%重なり条件・指腹拡張追従・中心揺れデッドゾーン・固定3上限なし・異常radius fallback・押しっぱなし回帰防止・発光レイヤー・旧譜面・projection回帰');
