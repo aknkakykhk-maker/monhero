@@ -63,16 +63,30 @@
     return details;
   };
 
-  const adoptAuthoringPanel=(editor,content)=>{
+  const adoptAuthoringPanel=(content)=>{
     const root=document.querySelector('[data-rhythm-debug]');
     const analysis=root?.querySelector('[data-rhythm-authoring]');
     if(analysis&&!content.contains(analysis))content.prepend(analysis);
   };
 
+  const placeAfter=(anchor,node)=>{
+    if(!anchor||!node)return anchor;
+    if(anchor.nextElementSibling!==node)anchor.insertAdjacentElement('afterend',node);
+    return node;
+  };
+
   const layout=()=>{
     const editor=document.querySelector('[data-rhythm-chart-authoring-ui]');
-    if(!editor){currentEditor=null;statusObserver?.disconnect();statusObserver=null;return false;}
+    if(!editor){
+      currentEditor=null;
+      statusObserver?.disconnect();statusObserver=null;
+      return false;
+    }
+    if(currentEditor&&currentEditor!==editor){
+      statusObserver?.disconnect();statusObserver=null;
+    }
     currentEditor=editor;
+
     const guide=ensureGuide(editor);
     const details=ensureAdvanced(editor);
     const content=details.querySelector('[data-rhythm-review-advanced-content]');
@@ -82,18 +96,16 @@
     const keep=new Set([guide,status,preview,offset,details].filter(Boolean));
 
     [...editor.children].forEach(child=>{
-      if(!keep.has(child)&&child!==details)content.appendChild(child);
+      if(!keep.has(child)&&child.parentElement===editor)content.appendChild(child);
     });
-    adoptAuthoringPanel(editor,content);
+    adoptAuthoringPanel(content);
 
-    // 確認用の4要素だけを上から一定順序へ保つ。offset UIが後から来てもここへ戻す。
+    // 確認用の要素だけを上から一定順序へ保つ。実際に順序が違う時だけDOMを動かす。
     let anchor=guide;
-    [status,preview,offset].forEach(node=>{
-      if(!node)return;
-      anchor.insertAdjacentElement('afterend',node);
-      anchor=node;
-    });
-    anchor.insertAdjacentElement('afterend',details);
+    anchor=placeAfter(anchor,status);
+    anchor=placeAfter(anchor,preview);
+    anchor=placeAfter(anchor,offset);
+    placeAfter(anchor,details);
     refreshCurrent(editor);
 
     if(!statusObserver&&status){
@@ -103,12 +115,8 @@
     return true;
   };
 
-  const scan=()=>{
-    // 同じeditorでも、遅延ロードされた補助UIを制作ツール側へ収納するため再レイアウトする。
-    layout();
-  };
-  const observer=new MutationObserver(scan);
-  const start=()=>{scan();observer.observe(document.body,{childList:true,subtree:true});};
+  const observer=new MutationObserver(layout);
+  const start=()=>{layout();observer.observe(document.body,{childList:true,subtree:true});};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
 })();
