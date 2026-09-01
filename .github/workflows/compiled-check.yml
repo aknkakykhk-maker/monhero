@@ -83,6 +83,7 @@ jobs:
           node tools/mode/rhythm-review-mode-check.js
           node tools/mode/rhythm-easy-alignment-audit.js
           node tools/mode/rhythm-easy-formal-candidate-check.js
+          node tools/mode/rhythm-easy-ear-review-plan.js
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
