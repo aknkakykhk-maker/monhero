@@ -1,0 +1,45 @@
+name: Temporary mhsave Android PC download
+
+on:
+  push:
+    branches:
+      - chatgpt/mhsave-android-pc-download
+    paths:
+      - .github/workflows/mhsave-android-pc-temp.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/mhsave-android-pc-download
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Patch, build and verify
+        run: |
+          node tools/mhsave-android-pc-temp.js
+          node tools/build.js
+          node tools/build.js --check
+          node tools/compiled-runtime-check.js
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+          node tools/boot-flow-check.js
+          node tools/update-notice-check.js
+          node tools/boot/data-cache-key-check.js
+      - name: Commit verified changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add monster-hero docs/spec/SAVE_DATA.md
+          git commit -m "fix: support mhsave downloads on Android and PC"
+          git push origin HEAD:chatgpt/mhsave-android-pc-download
