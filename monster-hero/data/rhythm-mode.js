@@ -415,8 +415,11 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   return {bind,record,release,clear,slideVisualLaneForIndex,_sessions:sessions};
 })();
 
-// iPhoneのTouch.radiusXを既存projectionへ通し、1本指を最大3サブレーンの接触領域として扱う。
+// iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
+// radiusXは端を拾いすぎないよう75%へ縮小し、明らかな異常値だけ中心1サブレーンへfallbackする。
 // ゲーム本体の中心1点入力はそのまま残し、中心以外の新規接触サブレーンだけTAP専用の疑似Pointerで補う。
+const RHYTHM_TOUCH_RADIUS_SCALE=.75;
+const RHYTHM_TOUCH_RADIUS_MAX_PLAY_AREA_RATIO=.25;
 const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   const touchStates=new Map(),syntheticTapKeys=new Set();
   let nextSyntheticPointerId=900000;
@@ -424,8 +427,11 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   const contactsForTouch=(touch,rect)=>{
     const centerCoordinate=rhythmSubLaneCoordinateAtPoint(touch?.clientX,touch?.clientY,rect);
     if(!Number.isFinite(centerCoordinate))return null;
-    const centerSubLane=clampSubLane(centerCoordinate),radiusX=Number(touch?.radiusX);
-    if(!(radiusX>0))return {centerCoordinate,centerSubLane,subLanes:[centerSubLane]};
+    const centerSubLane=clampSubLane(centerCoordinate),rawRadiusX=Number(touch?.radiusX);
+    if(!(rawRadiusX>0))return {centerCoordinate,centerSubLane,subLanes:[centerSubLane]};
+    const maxSaneRadiusX=Number(rect?.width)*RHYTHM_TOUCH_RADIUS_MAX_PLAY_AREA_RATIO;
+    if(!(maxSaneRadiusX>0)||rawRadiusX>maxSaneRadiusX)return {centerCoordinate,centerSubLane,subLanes:[centerSubLane]};
+    const radiusX=rawRadiusX*RHYTHM_TOUCH_RADIUS_SCALE;
     const leftCoordinate=rhythmSubLaneCoordinateAtPoint(Number(touch.clientX)-radiusX,touch.clientY,rect);
     const rightCoordinate=rhythmSubLaneCoordinateAtPoint(Number(touch.clientX)+radiusX,touch.clientY,rect);
     const coordinates=[centerCoordinate];
@@ -435,7 +441,6 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     let subLanes=[];
     for(let lane=clampSubLane(min);lane<=clampSubLane(max);lane++)subLanes.push(lane);
     if(!subLanes.includes(centerSubLane))subLanes.push(centerSubLane);
-    if(subLanes.length>3)subLanes=subLanes.sort((a,b)=>Math.abs(a-centerSubLane)-Math.abs(b-centerSubLane)||a-b).slice(0,3);
     subLanes.sort((a,b)=>a-b);
     return {centerCoordinate,centerSubLane,subLanes};
   };
