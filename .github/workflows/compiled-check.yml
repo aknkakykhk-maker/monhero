@@ -80,6 +80,7 @@ jobs:
           node tools/mode/rhythm-mode-slide-sublane-check.js
           node tools/mode/rhythm-chart-authoring-ui-check.js
           node tools/mode/rhythm-invalid-placement-check.js
+          node tools/mode/rhythm-review-mode-check.js
           node tools/mode/rhythm-easy-alignment-audit.js
           node tools/mode/rhythm-easy-formal-candidate-check.js
       - name: Configure GitHub Pages
