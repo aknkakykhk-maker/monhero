@@ -359,6 +359,21 @@
         editingIndex=-1;apply.textContent='ノーツを追加';setStatus('ドラフトを更新しました');render();syncPreviewChart();
       }catch(error){setStatus(`追加できません: ${error?.message||error}`);}
     });
+    section.addEventListener('rhythm-chart-replace-note',event=>{
+      try{
+        const index=Math.trunc(Number(event.detail?.index));
+        if(!(index>=0&&index<draft.length))throw new Error('対象ノーツが見つかりません');
+        const next=cleanNote(event.detail?.note||{});
+        if(next.type!=='SLIDE'||!Array.isArray(next.slidePoints)||next.slidePoints.length<2)throw new Error('SLIDE経路が不正です');
+        for(let i=1;i<next.slidePoints.length;i++){
+          if(!(next.slidePoints[i].timeMs>next.slidePoints[i-1].timeMs))throw new Error('SLIDE経路の時刻順が不正です');
+        }
+        const first=next.slidePoints[0],last=next.slidePoints[next.slidePoints.length-1];
+        next.timeMs=first.timeMs;next.lane=first.lane;next.endTimeMs=last.timeMs;next.endLane=last.lane;
+        draft[index]=next;
+        editingIndex=-1;apply.textContent='ノーツを追加';setStatus(String(event.detail?.label||`#${index+1} SLIDE経路を更新`));render();syncPreviewChart();
+      }catch(error){setStatus(`SLIDE経路を更新できません: ${error?.message||error}`);}
+    });
     q('[data-rhythm-chart-load-draft]').addEventListener('click',()=>loadAutoDraft(true));
     q('[data-rhythm-chart-clear]').addEventListener('click',()=>{if(draft.length&&!confirm('編集中のドラフトを空にしますか？'))return;draft=[];editingIndex=-1;apply.textContent='ノーツを追加';setStatus('ドラフトを空にしました');render();syncPreviewChart();});
     q('[data-rhythm-chart-copy-json]').addEventListener('click',()=>copyText(JSON.stringify(exportObject(),null,2),'JSON'));
