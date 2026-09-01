@@ -416,9 +416,11 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
-// radiusXは端を拾いすぎないよう75%へ縮小し、明らかな異常値だけ中心1サブレーンへfallbackする。
-// ゲーム本体の中心1点入力はそのまま残し、中心以外の新規接触サブレーンだけTAP専用の疑似Pointerで補う。
-const RHYTHM_TOUCH_RADIUS_SCALE=.75;
+// radiusXは端を拾いすぎないよう70%へ縮小し、隣接サブレーンは25%以上重なった時だけ接触扱いにする。
+// 明らかな異常値だけ中心1サブレーンへfallbackする。ゲーム本体の中心1点入力はそのまま残し、
+// 中心以外の新規接触サブレーンだけTAP専用の疑似Pointerで補う。
+const RHYTHM_TOUCH_RADIUS_SCALE=.70;
+const RHYTHM_TOUCH_MIN_SUBLANE_COVERAGE=.25;
 const RHYTHM_TOUCH_RADIUS_MAX_PLAY_AREA_RATIO=.25;
 const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   const touchStates=new Map(),syntheticTapKeys=new Set();
@@ -439,7 +441,10 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     if(Number.isFinite(rightCoordinate))coordinates.push(rightCoordinate);
     const min=Math.max(0,Math.min(...coordinates)),max=Math.min(RHYTHM_SUB_LANE_COUNT-.000001,Math.max(...coordinates));
     let subLanes=[];
-    for(let lane=clampSubLane(min);lane<=clampSubLane(max);lane++)subLanes.push(lane);
+    for(let lane=clampSubLane(min);lane<=clampSubLane(max);lane++){
+      const overlap=Math.max(0,Math.min(max,lane+1)-Math.max(min,lane));
+      if(lane===centerSubLane||overlap>=RHYTHM_TOUCH_MIN_SUBLANE_COVERAGE)subLanes.push(lane);
+    }
     if(!subLanes.includes(centerSubLane))subLanes.push(centerSubLane);
     subLanes.sort((a,b)=>a-b);
     return {centerCoordinate,centerSubLane,subLanes};
