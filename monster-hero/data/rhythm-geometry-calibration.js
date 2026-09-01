@@ -1,6 +1,6 @@
 // DEBUG ONLY: 音ゲー表示座標の最終校正ガイド。
 // 既存の5レーンSVG・ノーツ・入力と同じprojection helperだけを使い、通常の判定ロジックは変更しない。
-const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 12:34';
+const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 12:46';
 const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
 
 (()=>{
@@ -70,7 +70,10 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
     const guide=area?.querySelector(':scope > [data-rhythm-lane-svg] [data-rhythm-calibration-guide]');
     if(guide)guide.style.display=enabled?'':'none';
     if(button){
-      button.textContent=enabled?'座標校正 ON':'座標校正';
+      const label=enabled?'座標校正 ON':'座標校正';
+      // childListを監視しているため、同じ文字列を毎回textContentへ代入すると
+      // 自分自身のMutationObserverを再発火し続けて画面遷移が固まる。実変更時だけ書き換える。
+      if(button.textContent!==label)button.textContent=label;
       button.setAttribute('aria-pressed',enabled?'true':'false');
       button.dataset.active=enabled?'true':'false';
     }
