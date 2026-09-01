@@ -40,10 +40,10 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":64366,"data/rhythm-lane-svg.js":8870,"data/rhythm-geometry-calibration.js":11952,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":316974,"data/help.js":193063,"data/rhythm-step3-release.js":8666,"data/assistants.js":198390,"game-system.compiled.js":2619021,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":64366,"data/rhythm-lane-svg.js":8896,"data/rhythm-geometry-calibration.js":11952,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":316974,"data/help.js":193063,"data/rhythm-step3-release.js":8666,"data/assistants.js":198390,"game-system.compiled.js":2619021,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
-  var got = {};   // ファイルごとに「いま何バイト受け取ったか」
+  var got = {};
   var label = 'ゲームシステムを起動中';
   var watchers = [];
 
@@ -56,26 +56,19 @@ window.__mhBoot = (function () {
       var bar = box.querySelector('.static-progress span');
       var num = box.querySelector('.static-copy strong');
       var cap = box.querySelector('.static-copy p');
-      // 実測で動かすので、往復するだけの見せかけのアニメーションは止める
       if (bar) { bar.style.animation = 'none'; bar.style.width = percent() + '%'; }
       if (num) num.textContent = percent() + '%';
       if (cap) cap.textContent = label;
     }
     for (var i = 0; i < watchers.length; i++) { try { watchers[i](); } catch (e) {} }
   }
-  // 知らない名前は数に入れない(重みが分からないものを足すと合計とずれるため)
   function bytes(name, n) { if (SIZES[name]) { got[name] = Math.min(SIZES[name], n); paint(); } }
   function done(name, text) { if (SIZES[name]) got[name] = SIZES[name]; if (text) label = text; paint(); }
   function say(text) { label = text; paint(); }
-  // 読めなかったファイルでゲージが止まらないよう、失敗しても済んだものとして数える
   function fail(name) { done(name); }
-  // 起動が終わったときに呼ぶ。数え漏れが残っていても必ず右端(100%)まで伸ばす
   function finish() { for (var key in SIZES) got[key] = SIZES[key]; paint(); }
   function watch(fn) { watchers.push(fn); return function () { var i = watchers.indexOf(fn); if (i >= 0) watchers.splice(i, 1); }; }
 
-  // 大きいファイルは受け取ったバイト数をそのまま出す。
-  // ここで取ったものはブラウザのキャッシュに載るので、あとで <img> や <script> が
-  // 同じURLを読むときに取り直しにはならない。
   function prefetch(name, url) {
     if (!SIZES[name] || typeof fetch !== 'function') { return; }
     try {
@@ -96,12 +89,8 @@ window.__mhBoot = (function () {
            ratio: ratio, percent: percent, prefetch: prefetch,
            label: function () { return label; }, total: function () { return total; } };
 })();
-// タイトル画像は起動時にいちばん大きいファイルなので、いちばん早く取りはじめる
 window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/title-screen-clean.PNG');
 </script>
-<!-- React本体はCDNから毎回取りに行かず、リポジトリに同梱したものを読む。
-     外部への往復が2回減り、CDNが不調でもゲームが起動しなくなることがなくなる
-     (差し替えは tools/ で npm install react@18 react-dom@18 して umd/ からコピーする) -->
 <script src="vendor/react.production.min.js?v=18" onload="__mhBoot.done('vendor/react.production.min.js','画面の土台を読み込み中')" onerror="__mhBoot.fail('vendor/react.production.min.js')"></script>
 <script src="vendor/react-dom.production.min.js?v=18" onload="__mhBoot.done('vendor/react-dom.production.min.js','画面の土台を読み込み中')" onerror="__mhBoot.fail('vendor/react-dom.production.min.js')"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -126,276 +115,54 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   @keyframes staticProgress { to{width:28%} }
   @media(prefers-reduced-motion:reduce){.static-mocchi img,.static-mocchi span,.static-progress span{animation:none}}
 
-  /* 種族チャレンジの種族選択だけを、スマホで比較しやすい2列カードへ整える。
-     React側の選択・記録ロジックは触らず、既存data属性をレイアウトのフックにする。 */
-  section:has(> [data-species-list]) {
-    display:flex;
-    flex-direction:column;
-    gap:.5rem;
-  }
+  section:has(> [data-species-list]) { display:flex; flex-direction:column; gap:.5rem; }
   section:has(> [data-species-list]) > * { margin-top:0 !important; }
-  section:has(> [data-species-list]) > [data-species-assistant] {
-    order:-1;
-    padding-top:0 !important;
-    margin-bottom:.25rem !important;
-  }
-  [data-species-list] {
-    display:grid !important;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:.5rem !important;
-  }
-  [data-species-row] {
-    position:relative;
-    min-width:0;
-    min-height:104px;
-    gap:.375rem !important;
-    padding:.5rem .5rem 2rem !important;
-    border-radius:1rem !important;
-    align-items:center;
-  }
-  [data-species-row] > :first-child {
-    width:3.25rem !important;
-    height:3.25rem !important;
-    border-radius:.875rem !important;
-  }
-  [data-species-row] > .min-w-0.flex-1 {
-    min-width:0;
-    align-self:center;
-    padding-right:.65rem;
-  }
-  [data-species-row] > .min-w-0.flex-1 > b {
-    display:-webkit-box !important;
-    overflow:hidden;
-    -webkit-box-orient:vertical;
-    -webkit-line-clamp:2;
-    white-space:normal !important;
-    font-size:10px !important;
-    line-height:1.15;
-  }
-  [data-species-row] > .min-w-0.flex-1 > small {
-    display:-webkit-box !important;
-    overflow:hidden;
-    -webkit-box-orient:vertical;
-    -webkit-line-clamp:2;
-    white-space:normal !important;
-    font-size:7px !important;
-    line-height:1.2;
-  }
-  [data-species-row] > .min-w-0.flex-1 > span {
-    position:absolute;
-    left:.5rem;
-    right:.5rem;
-    bottom:.45rem;
-    display:grid !important;
-    grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);
-    gap:.25rem !important;
-    margin-top:0 !important;
-  }
-  [data-species-row] > .min-w-0.flex-1 > span > small {
-    display:block;
-    min-width:0;
-    overflow:hidden;
-    padding:.18rem .22rem !important;
-    text-align:center;
-    white-space:nowrap;
-    text-overflow:ellipsis;
-    font-size:7px !important;
-    line-height:1.2;
-  }
-  [data-species-row] > .min-w-0.flex-1 > span > small:nth-child(3) {
-    display:none !important;
-  }
-  [data-species-row] > svg {
-    position:absolute;
-    top:50%;
-    right:.28rem;
-    width:14px;
-    height:14px;
-    transform:translateY(-50%);
-  }
-  [data-species-row] > span:last-child:not(.min-w-0) {
-    position:absolute;
-    top:.28rem;
-    right:.28rem;
-    padding:.18rem .3rem !important;
-    font-size:6px !important;
-  }
-  section:has(> [data-species-list]) + footer > button {
-    min-height:64px !important;
-    border-radius:1rem !important;
-    font-size:14px !important;
-  }
+  section:has(> [data-species-list]) > [data-species-assistant] { order:-1; padding-top:0 !important; margin-bottom:.25rem !important; }
+  [data-species-list] { display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem !important; }
+  [data-species-row] { position:relative; min-width:0; min-height:104px; gap:.375rem !important; padding:.5rem .5rem 2rem !important; border-radius:1rem !important; align-items:center; }
+  [data-species-row] > :first-child { width:3.25rem !important; height:3.25rem !important; border-radius:.875rem !important; }
+  [data-species-row] > .min-w-0.flex-1 { min-width:0; align-self:center; padding-right:.65rem; }
+  [data-species-row] > .min-w-0.flex-1 > b { display:-webkit-box !important; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; white-space:normal !important; font-size:10px !important; line-height:1.15; }
+  [data-species-row] > .min-w-0.flex-1 > small { display:-webkit-box !important; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; white-space:normal !important; font-size:7px !important; line-height:1.2; }
+  [data-species-row] > .min-w-0.flex-1 > span { position:absolute; left:.5rem; right:.5rem; bottom:.45rem; display:grid !important; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:.25rem !important; margin-top:0 !important; }
+  [data-species-row] > .min-w-0.flex-1 > span > small { display:block; min-width:0; overflow:hidden; padding:.18rem .22rem !important; text-align:center; white-space:nowrap; text-overflow:ellipsis; font-size:7px !important; line-height:1.2; }
+  [data-species-row] > .min-w-0.flex-1 > span > small:nth-child(3) { display:none !important; }
+  [data-species-row] > svg { position:absolute; top:50%; right:.28rem; width:14px; height:14px; transform:translateY(-50%); }
+  [data-species-row] > span:last-child:not(.min-w-0) { position:absolute; top:.28rem; right:.28rem; padding:.18rem .3rem !important; font-size:6px !important; }
+  section:has(> [data-species-list]) + footer > button { min-height:64px !important; border-radius:1rem !important; font-size:14px !important; }
   @media(max-width:350px) {
     [data-species-list] { gap:.375rem !important; }
-    [data-species-row] {
-      min-height:98px;
-      gap:.25rem !important;
-      padding:.375rem .375rem 1.9rem !important;
-    }
-    [data-species-row] > :first-child {
-      width:3rem !important;
-      height:3rem !important;
-    }
+    [data-species-row] { min-height:98px; gap:.25rem !important; padding:.375rem .375rem 1.9rem !important; }
+    [data-species-row] > :first-child { width:3rem !important; height:3rem !important; }
     [data-species-row] > .min-w-0.flex-1 { padding-right:.45rem; }
     [data-species-row] > .min-w-0.flex-1 > b { font-size:9px !important; }
     [data-species-row] > .min-w-0.flex-1 > small { font-size:6.5px !important; }
-    [data-species-row] > .min-w-0.flex-1 > span {
-      left:.375rem;
-      right:.375rem;
-      bottom:.35rem;
-      gap:.18rem !important;
-    }
-    [data-species-row] > .min-w-0.flex-1 > span > small {
-      padding:.15rem .12rem !important;
-      font-size:6.5px !important;
-    }
+    [data-species-row] > .min-w-0.flex-1 > span { left:.375rem; right:.375rem; bottom:.35rem; gap:.18rem !important; }
+    [data-species-row] > .min-w-0.flex-1 > span > small { padding:.15rem .12rem !important; font-size:6.5px !important; }
   }
 
-  /* 音ゲー STEP B: 入力面や判定ロジックは触らず、data属性だけでステージに奥行きを付ける。 */
-  [data-rhythm-tap-test] {
-    background:
-      radial-gradient(ellipse at 50% -8%,rgba(192,132,252,.20),transparent 35%),
-      linear-gradient(180deg,#06091a 0%,#04050d 48%,#02030a 100%) !important;
-  }
-  [data-rhythm-hud] {
-    position:relative;
-    z-index:30;
-    background:linear-gradient(180deg,rgba(6,9,26,.98),rgba(7,9,24,.90)) !important;
-    box-shadow:0 10px 28px rgba(2,6,23,.70),0 1px 0 rgba(103,232,249,.12);
-    -webkit-backdrop-filter:blur(10px);
-    backdrop-filter:blur(10px);
-  }
-  [data-rhythm-score],[data-rhythm-combo] {
-    text-shadow:0 0 14px rgba(103,232,249,.22),0 0 26px rgba(217,70,239,.14);
-  }
-  [data-rhythm-play-area] {
-    isolation:isolate;
-    margin-left:0 !important;
-    margin-right:0 !important;
-    margin-bottom:0 !important;
-    border-left:0 !important;
-    border-right:0 !important;
-    background:
-      radial-gradient(ellipse at 50% 4%,rgba(217,70,239,.18),transparent 28%),
-      radial-gradient(ellipse at 50% 92%,rgba(34,211,238,.12),transparent 34%),
-      linear-gradient(180deg,#050817 0%,#070718 42%,#03040b 100%);
-    box-shadow:inset 0 24px 58px rgba(2,6,23,.82),inset 0 -42px 80px rgba(2,6,23,.68);
-  }
-  [data-rhythm-play-area]::before {
-    content:"";
-    position:absolute;
-    inset:0;
-    z-index:0;
-    pointer-events:none;
-    clip-path:polygon(27% 0,73% 0,100% 100%,0 100%);
-    background:
-      repeating-linear-gradient(180deg,transparent 0 59px,rgba(103,232,249,.075) 60px 61px),
-      linear-gradient(90deg,rgba(2,6,23,.84) 0%,rgba(15,23,42,.14) 20%,rgba(88,28,135,.08) 50%,rgba(15,23,42,.14) 80%,rgba(2,6,23,.84) 100%);
-    opacity:.96;
-    filter:drop-shadow(0 0 24px rgba(103,232,249,.08));
-  }
-  [data-rhythm-play-area]::after {
-    content:"";
-    position:absolute;
-    top:-2%;
-    left:19%;
-    right:19%;
-    height:18%;
-    z-index:0;
-    pointer-events:none;
-    background:radial-gradient(ellipse at center,rgba(232,121,249,.20),rgba(34,211,238,.08) 34%,transparent 72%);
-    filter:blur(12px);
-    opacity:.78;
-  }
-  [data-rhythm-play-area] > div:first-child {
-    inset:0 !important;
-    z-index:1;
-  }
-  [data-rhythm-lane] {
-    position:absolute;
-    inset:0;
-    border-right-color:rgba(226,232,240,.15) !important;
-    background:
-      linear-gradient(180deg,rgba(15,23,42,.02),rgba(15,23,42,.12) 52%,rgba(8,47,73,.18) 100%) !important;
-    box-shadow:inset 1px 0 rgba(103,232,249,.035),inset -1px 0 rgba(217,70,239,.025);
-    filter:drop-shadow(1px 0 rgba(226,232,240,.20));
-  }
+  [data-rhythm-tap-test] { background:radial-gradient(ellipse at 50% -8%,rgba(192,132,252,.20),transparent 35%),linear-gradient(180deg,#06091a 0%,#04050d 48%,#02030a 100%) !important; }
+  [data-rhythm-hud] { position:relative; z-index:30; background:linear-gradient(180deg,rgba(6,9,26,.98),rgba(7,9,24,.90)) !important; box-shadow:0 10px 28px rgba(2,6,23,.70),0 1px 0 rgba(103,232,249,.12); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+  [data-rhythm-score],[data-rhythm-combo] { text-shadow:0 0 14px rgba(103,232,249,.22),0 0 26px rgba(217,70,239,.14); }
+  [data-rhythm-play-area] { isolation:isolate; margin-left:0 !important; margin-right:0 !important; margin-bottom:0 !important; border-left:0 !important; border-right:0 !important; background:radial-gradient(ellipse at 50% 4%,rgba(217,70,239,.18),transparent 28%),radial-gradient(ellipse at 50% 92%,rgba(34,211,238,.12),transparent 34%),linear-gradient(180deg,#050817 0%,#070718 42%,#03040b 100%); box-shadow:inset 0 24px 58px rgba(2,6,23,.82),inset 0 -42px 80px rgba(2,6,23,.68); }
+  [data-rhythm-play-area]::before { content:""; position:absolute; inset:0; z-index:0; pointer-events:none; clip-path:polygon(27% 0,73% 0,100% 100%,0 100%); background:repeating-linear-gradient(180deg,transparent 0 59px,rgba(103,232,249,.075) 60px 61px),linear-gradient(90deg,rgba(2,6,23,.84) 0%,rgba(15,23,42,.14) 20%,rgba(88,28,135,.08) 50%,rgba(15,23,42,.14) 80%,rgba(2,6,23,.84) 100%); opacity:.96; filter:drop-shadow(0 0 24px rgba(103,232,249,.08)); }
+  [data-rhythm-play-area]::after { content:""; position:absolute; top:-2%; left:19%; right:19%; height:18%; z-index:0; pointer-events:none; background:radial-gradient(ellipse at center,rgba(232,121,249,.20),rgba(34,211,238,.08) 34%,transparent 72%); filter:blur(12px); opacity:.78; }
+  [data-rhythm-play-area] > div:first-child { inset:0 !important; z-index:1; }
+  [data-rhythm-lane] { position:absolute; inset:0; border-right-color:rgba(226,232,240,.15) !important; background:linear-gradient(180deg,rgba(15,23,42,.02),rgba(15,23,42,.12) 52%,rgba(8,47,73,.18) 100%) !important; box-shadow:inset 1px 0 rgba(103,232,249,.035),inset -1px 0 rgba(217,70,239,.025); filter:drop-shadow(1px 0 rgba(226,232,240,.20)); }
   [data-rhythm-lane]:last-child { border-right-color:transparent !important; }
-  [data-rhythm-lane]::before {
-    content:"";
-    position:absolute;
-    inset:0 24%;
-    pointer-events:none;
-    background:linear-gradient(180deg,transparent 10%,rgba(255,255,255,.018) 62%,rgba(103,232,249,.09) 100%);
-    opacity:.8;
-  }
-  [data-rhythm-lane]::after {
-    content:"";
-    position:absolute;
-    left:12%;
-    right:12%;
-    bottom:8.5%;
-    height:9%;
-    border-radius:50%;
-    pointer-events:none;
-    background:radial-gradient(ellipse at center,rgba(207,250,254,.78) 0%,rgba(34,211,238,.36) 30%,rgba(217,70,239,.18) 53%,transparent 74%);
-    opacity:.07;
-    filter:blur(4px);
-    transition:opacity 60ms linear,filter 60ms linear;
-  }
-  [data-rhythm-lane][data-pressed="true"]::after {
-    opacity:.95;
-    filter:blur(1px);
-  }
+  [data-rhythm-lane]::before { content:""; position:absolute; inset:0 24%; pointer-events:none; background:linear-gradient(180deg,transparent 10%,rgba(255,255,255,.018) 62%,rgba(103,232,249,.09) 100%); opacity:.8; }
+  [data-rhythm-lane]::after { content:""; position:absolute; left:12%; right:12%; bottom:8.5%; height:9%; border-radius:50%; pointer-events:none; background:radial-gradient(ellipse at center,rgba(207,250,254,.78) 0%,rgba(34,211,238,.36) 30%,rgba(217,70,239,.18) 53%,transparent 74%); opacity:.07; filter:blur(4px); transition:opacity 60ms linear,filter 60ms linear; }
+  [data-rhythm-lane][data-pressed="true"]::after { opacity:.95; filter:blur(1px); }
   [data-rhythm-lane][data-pressed="true"] { filter:brightness(1.15) drop-shadow(1px 0 rgba(207,250,254,.72)); }
-  [data-rhythm-lane] > span {
-    position:absolute;
-    color:rgba(148,163,184,.48) !important;
-    text-shadow:0 0 8px rgba(103,232,249,.22);
-  }
-  [data-rhythm-judgment-line] {
-    z-index:6;
-    height:3px !important;
-    background:linear-gradient(90deg,transparent 0%,#d8b4fe 8%,#ecfeff 50%,#d8b4fe 92%,transparent 100%) !important;
-    box-shadow:0 0 11px rgba(236,254,255,.92),0 0 25px rgba(34,211,238,.68),0 0 42px rgba(217,70,239,.30) !important;
-  }
-  [data-rhythm-judgment-line]::before {
-    content:"";
-    position:absolute;
-    left:0;
-    right:0;
-    top:50%;
-    height:20px;
-    transform:translateY(-50%);
-    pointer-events:none;
-    background:linear-gradient(90deg,transparent,rgba(34,211,238,.05) 16%,rgba(255,255,255,.13) 50%,rgba(217,70,239,.05) 84%,transparent);
-    filter:blur(5px);
-  }
+  [data-rhythm-lane] > span { position:absolute; color:rgba(148,163,184,.48) !important; text-shadow:0 0 8px rgba(103,232,249,.22); }
+  [data-rhythm-judgment-line] { z-index:6; height:3px !important; background:linear-gradient(90deg,transparent 0%,#d8b4fe 8%,#ecfeff 50%,#d8b4fe 92%,transparent 100%) !important; box-shadow:0 0 11px rgba(236,254,255,.92),0 0 25px rgba(34,211,238,.68),0 0 42px rgba(217,70,239,.30) !important; }
+  [data-rhythm-judgment-line]::before { content:""; position:absolute; left:0; right:0; top:50%; height:20px; transform:translateY(-50%); pointer-events:none; background:linear-gradient(90deg,transparent,rgba(34,211,238,.05) 16%,rgba(255,255,255,.13) 50%,rgba(217,70,239,.05) 84%,transparent); filter:blur(5px); }
   [data-rhythm-judgment-display] { z-index:8 !important; }
-  [data-rhythm-note] {
-    z-index:5;
-    filter:drop-shadow(0 0 6px rgba(255,255,255,.20)) drop-shadow(0 0 10px rgba(217,70,239,.18));
-  }
-  [data-rhythm-note] > span:last-child {
-    inset:4px 0 !important;
-    border:1px solid rgba(255,255,255,.72);
-    border-radius:5px !important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.58),0 0 12px rgba(217,70,239,.32) !important;
-  }
-  [data-rhythm-note][data-note-type="HOLD"] > span:last-child {
-    border-color:rgba(207,250,254,.86);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 0 13px rgba(34,211,238,.42) !important;
-  }
-  [data-rhythm-hold-body] {
-    border-left:1px solid rgba(167,243,208,.34);
-    border-right:1px solid rgba(103,232,249,.28);
-    box-shadow:0 0 12px rgba(52,211,153,.22),inset 0 0 8px rgba(236,254,255,.12);
-  }
-  [data-rhythm-pause-menu] {
-    background:linear-gradient(180deg,rgba(2,6,23,.94),rgba(15,8,32,.97)) !important;
-    -webkit-backdrop-filter:blur(12px);
-    backdrop-filter:blur(12px);
-  }
+  [data-rhythm-note] { z-index:5; filter:drop-shadow(0 0 6px rgba(255,255,255,.20)) drop-shadow(0 0 10px rgba(217,70,239,.18)); }
+  [data-rhythm-note] > span:last-child { inset:4px 0 !important; border:1px solid rgba(255,255,255,.72); border-radius:5px !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.58),0 0 12px rgba(217,70,239,.32) !important; }
+  [data-rhythm-note][data-note-type="HOLD"] > span:last-child { border-color:rgba(207,250,254,.86); box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 0 13px rgba(34,211,238,.42) !important; }
+  [data-rhythm-hold-body] { border-left:1px solid rgba(167,243,208,.34); border-right:1px solid rgba(103,232,249,.28); box-shadow:0 0 12px rgba(52,211,153,.22),inset 0 0 8px rgba(236,254,255,.12); }
+  [data-rhythm-pause-menu] { background:linear-gradient(180deg,rgba(2,6,23,.94),rgba(15,8,32,.97)) !important; -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
 </style>
 </head>
 <body>
@@ -411,23 +178,16 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
 <script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
 <script src="data/rhythm-mode.js?v=5f8334115f1c" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
-<script src="data/rhythm-lane-svg.js?v=7528224d3428" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
+<script src="data/rhythm-lane-svg.js?v=053e30bd96f0" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=eb6e5b7c0db7" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=d83a62752510" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
 <script src="data/changelog.js?v=5c7af36845fa" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
 <script src="data/help.js?v=c53c9ed5f66e" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=9155730953df" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
-<!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
 <script src="data/assistants.js?v=2c805db89dc7" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
 <script>
 (function(){
-  // game-system.compiled.js は tools/build.js が game-system.jsx から生成した変換済みJS。
-  // 以前はここで @babel/standalone を読み込み、game-system.jsx を毎回取得しなおして
-  // ブラウザ上で変換していたが、それが読み込みの重さの主因だったため事前変換に切り替えた。
-  // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
-  // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
-  // 2回とも失敗した場合だけエラーを表示する。
   var GAME_BUILD = '202609011221';
   var attempts = 0;
   function showLoadError(){
@@ -441,16 +201,10 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     var script = document.createElement('script');
     script.src = 'game-system.compiled.js?v=' + GAME_BUILD + (attempts > 1 ? '&retry=' + Date.now() : '');
     script.onload = function(){
-      if (typeof MonsterHeroGame === 'undefined') {
-        if (attempts < 2) loadGame(); else showLoadError();
-        return;
-      }
+      if (typeof MonsterHeroGame === 'undefined') { if (attempts < 2) loadGame(); else showLoadError(); return; }
       window.__mhBoot.done('game-system.compiled.js', 'ゲーム本体を組み立て中');
     };
-    script.onerror = function(){
-      script.remove();
-      if (attempts < 2) loadGame(); else { window.__mhBoot.fail('game-system.compiled.js'); showLoadError(); }
-    };
+    script.onerror = function(){ script.remove(); if (attempts < 2) loadGame(); else { window.__mhBoot.fail('game-system.compiled.js'); showLoadError(); } };
     document.body.appendChild(script);
   }
   loadGame();
