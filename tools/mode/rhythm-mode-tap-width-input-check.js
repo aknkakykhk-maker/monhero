@@ -40,6 +40,7 @@ assert(calibration.includes("{subLane:0,width:1")&&calibration.includes("{subLan
 assert(calibration.includes("{lane:.5,width:1")&&calibration.includes("{lane:1.5,width:2")&&calibration.includes("{lane:2.5,width:3")&&calibration.includes("{lane:3.5,width:4"),'SLIDE half-lane幅1〜4の基準帯を表示');
 assert(calibration.includes("for(let subLane=0;subLane<10;subLane++)")&&calibration.includes('rhythmProjectSubLaneSpan(subLane,1,judgeY)'),'判定ライン上の10サブレーン中心を同じprojectionで表示');
 assert(indexHtml.includes('data/rhythm-geometry-calibration.js?v='),'座標校正ガイドを起動経路へ登録');
+assert(calibration.includes("const label=enabled?'座標校正 ON':'座標校正';")&&calibration.includes('if(button.textContent!==label)button.textContent=label;')&&!calibration.includes("button.textContent=enabled?'座標校正 ON':'座標校正';"),'MutationObserver監視中は同じボタン文字を再代入せず自己ループを防止');
 const touchRect={left:0,top:0,width:400,height:800};
 const centerX=run(`rhythmProjectBoundary(2.25,1)`)*touchRect.width;
 const contact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:45},${JSON.stringify(touchRect)})`);
@@ -79,4 +80,4 @@ assert(source.includes("id==='EASY'?widthTestChart")&&/\[7200,4,1\],\[7200,5,1\]
 assert(game.includes('subLaneCoordinate=rhythmSubLaneCoordinateAtPoint')&&game.includes('{lane,subLaneCoordinate,inputKey'),'Touch/Pointerが実座標を渡す');
 assert(source.includes("note?.type==='TAP'||note?.type==='HOLD'")&&source.includes('return note.lane===lane'),'HOLD可変幅・FLICK/SLIDE回帰');
 assert(source.includes('rhythmReleaseTargetMs')&&source.includes('data-rhythm-end-bar'),'ENDバー回帰');
-console.log('OK: 10サブレーン可変幅TAP入力・表示座標校正ガイド・接触半径70%補正・隣接25%重なり条件・指腹拡張追従・中心揺れデッドゾーン・固定3上限なし・異常radius fallback・押しっぱなし回帰防止・発光レイヤー・旧譜面・projection回帰');
+console.log('OK: 10サブレーン可変幅TAP入力・表示座標校正ガイド・Observer自己ループ防止・接触半径70%補正・隣接25%重なり条件・指腹拡張追従・中心揺れデッドゾーン・固定3上限なし・異常radius fallback・押しっぱなし回帰防止・発光レイヤー・旧譜面・projection回帰');
