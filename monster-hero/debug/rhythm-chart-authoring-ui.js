@@ -259,7 +259,7 @@
         const label=document.createElement('span');label.className='min-w-0 flex-1 truncate';label.textContent=noteLabel(note,index,selectedTrackId());
         const seek=document.createElement('button');seek.type='button';seek.className='min-h-[34px] rounded bg-cyan-800 px-2 font-black';seek.textContent='▶';seek.addEventListener('click',()=>{audio.currentTime=Math.max(0,Number(note.timeMs)/1000-.8);audio.play().catch(()=>{});});
         const edit=document.createElement('button');edit.type='button';edit.className='min-h-[34px] rounded bg-amber-700 px-2 font-black';edit.textContent='編集';edit.addEventListener('click',()=>loadNoteForEdit(index));
-        const del=document.createElement('button');del.type='button';del.className='min-h-[34px] rounded bg-rose-900 px-2 font-black';del.textContent='×';del.addEventListener('click',()=>{draft.splice(index,1);editingIndex=-1;apply.textContent='ノーツを追加';render();});
+        const del=document.createElement('button');del.type='button';del.className='min-h-[34px] rounded bg-rose-900 px-2 font-black';del.textContent='×';del.addEventListener('click',()=>{draft.splice(index,1);editingIndex=-1;apply.textContent='ノーツを追加';render();syncPreviewChart();});
         row.append(label,seek,edit,del);list.appendChild(row);
       });
       output.value=JSON.stringify(exportObject(),null,2);
@@ -285,7 +285,7 @@
       try{await navigator.clipboard.writeText(text);setStatus(`${label}をコピーしました`);}
       catch{output.focus();output.select();setStatus('自動コピーできません。下の欄を長押ししてコピーしてください');}
     };
-    const loadAutoDraft=async(confirmReplace=>{
+    const loadAutoDraft=async(confirmReplace)=>{
       try{
         const response=await fetch(`${DRAFT_URL}?t=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);
         const data=await response.json();
@@ -302,7 +302,7 @@
         setStatus(`EASY自動ドラフト ${draft.length}ノーツを5レーンへ仮配置しました。黄色ボタンでそのまま遊べます`);
         render();syncPreviewChart();return true;
       }catch(error){setStatus(`ドラフト読込失敗: ${error?.message||error}`);return false;}
-    });
+    };
     const findSelectWithLabels=(scope,labels)=>[...scope.querySelectorAll('select')].find(select=>{
       const texts=[...select.options].map(option=>(option.textContent||'').trim());
       return labels.every(label=>texts.some(text=>text===label||text.includes(label)));
