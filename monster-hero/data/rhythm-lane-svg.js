@@ -31,7 +31,8 @@
       [data-rhythm-judgment-line]{opacity:0!important;box-shadow:none!important}
       [data-rhythm-lane-svg]{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
       [data-rhythm-sublane-feedback]{z-index:2!important}
-      [data-rhythm-note]{z-index:4;filter:none!important}
+      [data-rhythm-note]{z-index:4}
+      [data-rhythm-note]{filter:none!important}
     `;
     document.head.appendChild(style);
   };
