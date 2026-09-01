@@ -7,6 +7,7 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const observedAreas = new WeakSet();
+  const verifiedAreas = new WeakSet();
   let currentArea = null;
   let currentSvg = null;
   const svgEl = (tag, attrs = {}) => {
@@ -28,7 +29,7 @@
       [data-rhythm-lane]{background:transparent!important;border:0!important;box-shadow:none!important;filter:none!important}
       [data-rhythm-lane]::before,[data-rhythm-lane]::after{content:none!important;display:none!important}
       [data-rhythm-lane]>span{opacity:0!important}
-      [data-rhythm-judgment-line]{opacity:0!important;box-shadow:none!important}
+      [data-rhythm-play-area][data-rhythm-svg-ready="true"] [data-rhythm-judgment-line]{opacity:0!important;box-shadow:none!important}
       [data-rhythm-lane-svg]{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
       [data-rhythm-sublane-feedback]{z-index:2!important}
       [data-rhythm-note]{z-index:4}
@@ -48,14 +49,47 @@
     const active = new Set(Array.from(area.querySelectorAll('[data-rhythm-lane][data-pressed="true"]')).map(el => Number(el.dataset.rhythmLane)));
     area.querySelectorAll('[data-rhythm-svg-press]').forEach(el => el.setAttribute('opacity', active.has(Number(el.dataset.rhythmSvgPress)) ? '1' : '0'));
   };
+  const svgReady = (area, svg) => {
+    if (!area?.isConnected || !svg?.isConnected || !svg.querySelector('[data-rhythm-svg-judgment]')) return false;
+    const rect = area.getBoundingClientRect();
+    if (!(rect.width > 0 && rect.height > 0)) return false;
+    area.dataset.rhythmSvgReady = 'true';
+    return true;
+  };
+  const scheduleInitialVerify = area => {
+    if (!area || verifiedAreas.has(area)) return;
+    verifiedAreas.add(area);
+    let attempts = 0;
+    const verify = () => {
+      if (!area.isConnected) return;
+      const svg = area.querySelector(':scope > [data-rhythm-lane-svg]');
+      if (svgReady(area, svg)) {
+        currentArea = area;
+        currentSvg = svg;
+        return;
+      }
+      attempts += 1;
+      if (attempts === 2 && svg) {
+        svg.remove();
+        area.removeAttribute('data-rhythm-svg-ready');
+        if (currentArea === area) currentSvg = null;
+        mount(area);
+      }
+      if (attempts < 4 && typeof requestAnimationFrame === 'function') requestAnimationFrame(verify);
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => requestAnimationFrame(verify));
+    else verify();
+  };
   const mount = area => {
     if (!area) return;
     const existing = area.querySelector(':scope > [data-rhythm-lane-svg]');
     if (existing) {
       currentArea = area;
       currentSvg = existing;
+      scheduleInitialVerify(area);
       return;
     }
+    area.removeAttribute('data-rhythm-svg-ready');
     const svg = svgEl('svg', { viewBox:'0 0 1000 1000', preserveAspectRatio:'none', 'aria-hidden':'true' });
     svg.dataset.rhythmLaneSvg = '';
 
@@ -136,6 +170,7 @@
     currentSvg = svg;
     document.documentElement.dataset.rhythmPlayActive='true';
     syncPressed(area);
+    scheduleInitialVerify(area);
     if (!observedAreas.has(area)) {
       observedAreas.add(area);
       new MutationObserver(sync => { if (sync.some(m => m.type === 'attributes')) syncPressed(area); })
