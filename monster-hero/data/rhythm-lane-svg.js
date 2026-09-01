@@ -7,7 +7,6 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const observedAreas = new WeakSet();
-  const verifiedAreas = new WeakSet();
   let currentArea = null;
   let currentSvg = null;
   const svgEl = (tag, attrs = {}) => {
@@ -29,7 +28,6 @@
       [data-rhythm-lane]{background:transparent!important;border:0!important;box-shadow:none!important;filter:none!important}
       [data-rhythm-lane]::before,[data-rhythm-lane]::after{content:none!important;display:none!important}
       [data-rhythm-lane]>span{opacity:0!important}
-      [data-rhythm-play-area][data-rhythm-svg-ready="true"] [data-rhythm-judgment-line]{opacity:0!important;box-shadow:none!important}
       [data-rhythm-lane-svg]{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
       [data-rhythm-sublane-feedback]{z-index:2!important}
       [data-rhythm-note]{z-index:4}
@@ -38,47 +36,9 @@
     document.head.appendChild(style);
   };
   // 押しっぱなし中の接触幅揺れ・意図的な拡張の判定は rhythm-mode.js 側で一元管理する。
-  const judgmentRatio = area => {
-    const areaRect = area.getBoundingClientRect();
-    const line = area.querySelector('[data-rhythm-judgment-line]');
-    const lineRect = line?.getBoundingClientRect();
-    if (!(areaRect.width > 0 && areaRect.height > 0) || !lineRect) return .88;
-    return rhythmClamp01((lineRect.top - areaRect.top + lineRect.height / 2) / areaRect.height);
-  };
   const syncPressed = area => {
     const active = new Set(Array.from(area.querySelectorAll('[data-rhythm-lane][data-pressed="true"]')).map(el => Number(el.dataset.rhythmLane)));
     area.querySelectorAll('[data-rhythm-svg-press]').forEach(el => el.setAttribute('opacity', active.has(Number(el.dataset.rhythmSvgPress)) ? '1' : '0'));
-  };
-  const svgReady = (area, svg) => {
-    if (!area?.isConnected || !svg?.isConnected || !svg.querySelector('[data-rhythm-svg-judgment]')) return false;
-    const rect = area.getBoundingClientRect();
-    if (!(rect.width > 0 && rect.height > 0)) return false;
-    area.dataset.rhythmSvgReady = 'true';
-    return true;
-  };
-  const scheduleInitialVerify = area => {
-    if (!area || verifiedAreas.has(area)) return;
-    verifiedAreas.add(area);
-    let attempts = 0;
-    const verify = () => {
-      if (!area.isConnected) return;
-      const svg = area.querySelector(':scope > [data-rhythm-lane-svg]');
-      if (svgReady(area, svg)) {
-        currentArea = area;
-        currentSvg = svg;
-        return;
-      }
-      attempts += 1;
-      if (attempts === 2 && svg) {
-        svg.remove();
-        area.removeAttribute('data-rhythm-svg-ready');
-        if (currentArea === area) currentSvg = null;
-        mount(area);
-      }
-      if (attempts < 4 && typeof requestAnimationFrame === 'function') requestAnimationFrame(verify);
-    };
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => requestAnimationFrame(verify));
-    else verify();
   };
   const mount = area => {
     if (!area) return;
@@ -86,10 +46,8 @@
     if (existing) {
       currentArea = area;
       currentSvg = existing;
-      scheduleInitialVerify(area);
       return;
     }
-    area.removeAttribute('data-rhythm-svg-ready');
     const svg = svgEl('svg', { viewBox:'0 0 1000 1000', preserveAspectRatio:'none', 'aria-hidden':'true' });
     svg.dataset.rhythmLaneSvg = '';
 
@@ -140,25 +98,6 @@
       }));
     }
 
-    // 判定位置はぼかしfilterを使わず3本の固定線で強調する。
-    // iPhone Safariでの再合成負荷を抑えつつ「ここに重なった瞬間に叩く」を明確にする。
-    const y = judgmentRatio(area), x1 = rhythmProjectBoundary(0,y)*1000, x2 = rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)*1000;
-    const judge = svgEl('g', {'data-rhythm-svg-judgment':''});
-    judge.append(
-      svgEl('line', { x1:x1.toFixed(3), y1:(y*1000).toFixed(3), x2:x2.toFixed(3), y2:(y*1000).toFixed(3), stroke:'#d946ef', 'stroke-opacity':'.24', 'stroke-width':'28' }),
-      svgEl('line', { x1:x1.toFixed(3), y1:(y*1000).toFixed(3), x2:x2.toFixed(3), y2:(y*1000).toFixed(3), stroke:'#22d3ee', 'stroke-opacity':'.72', 'stroke-width':'12' }),
-      svgEl('line', { x1:x1.toFixed(3), y1:(y*1000).toFixed(3), x2:x2.toFixed(3), y2:(y*1000).toFixed(3), stroke:'#f8fafc', 'stroke-width':'5' })
-    );
-    for (let lane = 0; lane < RHYTHM_LANE_COUNT; lane++) {
-      const at = rhythmProjectLane(lane, y);
-      judge.appendChild(svgEl('line', {
-        x1:(at.center*1000).toFixed(3), y1:(y*1000-11).toFixed(3),
-        x2:(at.center*1000).toFixed(3), y2:(y*1000+11).toFixed(3),
-        stroke:'#f8fafc', 'stroke-opacity':'.96', 'stroke-width':'4'
-      }));
-    }
-    svg.appendChild(judge);
-
     for (let lane = 0; lane < RHYTHM_LANE_COUNT; lane++) {
       const at = rhythmProjectLane(lane, .94), label = svgEl('text', { x:(at.center*1000).toFixed(3), y:'950', 'text-anchor':'middle', fill:'#94a3b8', 'fill-opacity':'.62', 'font-size':'28', 'font-weight':'700' });
       label.textContent = String(lane + 1);
@@ -170,7 +109,6 @@
     currentSvg = svg;
     document.documentElement.dataset.rhythmPlayActive='true';
     syncPressed(area);
-    scheduleInitialVerify(area);
     if (!observedAreas.has(area)) {
       observedAreas.add(area);
       new MutationObserver(sync => { if (sync.some(m => m.type === 'attributes')) syncPressed(area); })
