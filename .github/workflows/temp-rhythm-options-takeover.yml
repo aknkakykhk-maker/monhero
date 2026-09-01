@@ -1,0 +1,54 @@
+name: Temporary rhythm options takeover
+
+on:
+  push:
+    branches:
+      - chatgpt/rhythm-options-runtime-fix
+    paths:
+      - tools/temp-rhythm-options-takeover.py
+      - .github/workflows/temp-rhythm-options-takeover.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/rhythm-options-runtime-fix
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
+      - name: Apply takeover patch
+        run: python3 tools/temp-rhythm-options-takeover.py
+      - name: Build canonical shipped files
+        run: node tools/build.js
+      - name: Verify build and rhythm options
+        run: |
+          node tools/build.js --check
+          node tools/mode/rhythm-options-step1-check.js
+          node tools/mode/rhythm-debug-short-check.js
+          node tools/mode/rhythm-mode-note-perspective-check.js
+          node tools/mode/rhythm-mode-tap-engine-check.js
+          node tools/mode/rhythm-mode-hold-engine-check.js
+          node tools/mode/rhythm-mode-note-se-check.js
+          node tools/mode/rhythm-mode-release-timing-check.js
+          node tools/mode/rhythm-judgment-line-first-mount-check.js
+          git diff --check
+      - name: Remove temporary takeover files
+        run: rm -f tools/temp-rhythm-options-takeover.py .github/workflows/temp-rhythm-options-takeover.yml
+      - name: Commit generated fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "fix(rhythm): apply saved options at runtime"
+          git push origin HEAD:chatgpt/rhythm-options-runtime-fix
