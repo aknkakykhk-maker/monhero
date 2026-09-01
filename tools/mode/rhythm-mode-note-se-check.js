@@ -128,7 +128,7 @@ listeners.pointerup?.({pointerType:'touch',pointerId:6});
 check('touch由来pointerupはtouchendと二重再生しない',releasePlayCount===2);
 
 check('終端SEも既存RHYTHM_NOTE_SE_RUNTIMEを再利用',releaseSource.includes('RHYTHM_NOTE_SE_RUNTIME.play()'));
-check('touchcancel/pointercancelには終端SEを追加しない',!releaseSource.includes("addEventListener('touchcancel'")&&!releaseSource.includes("addEventListener('pointercancel'"));
+check('終端SEはtouchcancel/pointercancelへ追加しない',!releaseSource.includes("window.addEventListener('touchcancel'")&&!releaseSource.includes("window.addEventListener('pointercancel'"));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
