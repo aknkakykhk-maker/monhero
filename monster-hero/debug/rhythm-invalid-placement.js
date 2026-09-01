@@ -179,7 +179,7 @@
   };
   const scan=()=>{
     if(document.documentElement.dataset.rhythmPlayActive==='true')return;
-    if(currentEditor?.isConnected){queueRender();return;}
+    if(currentEditor?.isConnected&&currentList?.isConnected)return;
     currentEditor=null;currentList=null;listObserver?.disconnect();listObserver=null;bind();
   };
   const start=()=>{scan();rootObserver=new MutationObserver(scan);rootObserver.observe(document.body,{childList:true,subtree:true});};
