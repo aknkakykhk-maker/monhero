@@ -7,6 +7,7 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const observedAreas = new WeakSet();
+  let touchSpanMoveGuardInstalled = false;
   const svgEl = (tag, attrs = {}) => {
     const el = document.createElementNS(SVG_NS, tag);
     Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, String(value)));
@@ -28,9 +29,32 @@
       [data-rhythm-lane]>span{opacity:0!important}
       [data-rhythm-judgment-line]{opacity:0!important;box-shadow:none!important}
       [data-rhythm-lane-svg]{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
+      [data-rhythm-sublane-feedback]{z-index:2!important}
       [data-rhythm-note]{z-index:4}
     `;
     document.head.appendChild(style);
+  };
+  // Touch.radiusX は押しっぱなし中でも微細に変動するため、幅だけの変化を新しいTAP入力にしない。
+  // window captureでdocument側のtouch-span処理より先に状態だけ同期し、中心サブレーンを跨いだ実移動は従来処理へ渡す。
+  const installTouchSpanMoveGuard = () => {
+    if (touchSpanMoveGuardInstalled || typeof window === 'undefined') return;
+    touchSpanMoveGuardInstalled = true;
+    window.addEventListener('touchmove', event => {
+      if (typeof RHYTHM_TOUCH_SPAN_RUNTIME === 'undefined') return;
+      const runtime = RHYTHM_TOUCH_SPAN_RUNTIME, states = runtime?._touchStates;
+      if (!states || typeof states.get !== 'function' || typeof runtime.contactsForTouch !== 'function') return;
+      const eventArea = event.target?.closest?.('[data-rhythm-play-area]'), area = eventArea || document.querySelector('[data-rhythm-play-area]');
+      if (!area) return;
+      const rect = area.getBoundingClientRect();
+      if (!(rect.width > 0 && rect.height > 0)) return;
+      Array.from(event.changedTouches || []).forEach(touch => {
+        const id = Number(touch.identifier), previous = states.get(id);
+        if (!previous) return;
+        const next = runtime.contactsForTouch(touch, rect);
+        if (!next || previous.centerSubLane !== next.centerSubLane) return;
+        states.set(id, { ...next, touch });
+      });
+    }, { capture:true, passive:true });
   };
   const judgmentRatio = area => {
     const areaRect = area.getBoundingClientRect();
@@ -121,6 +145,7 @@
     if (area) mount(area);
   };
   const start = () => {
+    installTouchSpanMoveGuard();
     scan();
     new MutationObserver(scan).observe(document.body, { childList:true, subtree:true });
   };
