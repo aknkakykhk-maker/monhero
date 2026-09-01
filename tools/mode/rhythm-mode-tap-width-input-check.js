@@ -34,7 +34,7 @@ for(const y of [0,.25,.5,.88,1]) for(let subLane=0;subLane<10;subLane++){
   const span=run(`rhythmProjectSubLaneSpan(${subLane},1,${y})`),left=run(`rhythmProjectBoundary(${subLane/2},${y})`),right=run(`rhythmProjectBoundary(${(subLane+1)/2},${y})`);
   assert(close(span.left,left)&&close(span.right,right),`幅1ノーツ端とサブレーン境界が一致 sub=${subLane} y=${y}`);
 }
-assert(calibration.includes("data.rhythmGeometryCalibration='ready'")&&calibration.includes("button.dataset.rhythmCalibrationToggle=''")&&calibration.includes("'data-rhythm-calibration-guide':''"),'座標校正トグルとガイドをデバッグ専用レイヤーへ実装');
+assert(calibration.includes("dataset.rhythmGeometryCalibration='ready'")&&calibration.includes("button.dataset.rhythmCalibrationToggle=''")&&calibration.includes("'data-rhythm-calibration-guide':''"),'座標校正トグルとガイドをデバッグ専用レイヤーへ実装');
 assert(calibration.includes('rhythmProjectBoundary(boundary/2,0)')&&calibration.includes('rhythmProjectSubLaneSpan(sample.subLane,sample.width,y)')&&calibration.includes('rhythmProjectSlideSpan(sample.lane,note,y,0)'),'校正ガイドはレーン・可変幅・SLIDEの共通projection helperだけを使用');
 assert(calibration.includes("{subLane:0,width:1")&&calibration.includes("{subLane:2,width:2")&&calibration.includes("{subLane:4,width:3")&&calibration.includes("{subLane:6,width:4"),'TAP/HOLD/FLICK幅1〜4の基準帯を表示');
 assert(calibration.includes("{lane:.5,width:1")&&calibration.includes("{lane:1.5,width:2")&&calibration.includes("{lane:2.5,width:3")&&calibration.includes("{lane:3.5,width:4"),'SLIDE half-lane幅1〜4の基準帯を表示');
