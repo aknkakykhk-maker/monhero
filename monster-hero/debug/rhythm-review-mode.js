@@ -29,11 +29,11 @@
         if(Number.isFinite(value))return value;
       }
     }catch(_e){}
-    return Number(candidate.beatZeroMs)||0+grid*(60000/(Number(candidate.bpm)||169)/(Number(candidate.subdivisionsPerBeat)||4));
+    return (Number(candidate.beatZeroMs)||0)+grid*(60000/(Number(candidate.bpm)||169)/(Number(candidate.subdivisionsPerBeat)||4));
   };
   const buildEarGroups=candidate=>{
     const reviews=Array.isArray(candidate?.earReviewGrids)?candidate.earReviewGrids.map(Number).filter(Number.isFinite):[];
-    if(candidate?.trackId!=='atsu_cup_theme'||candidate?.difficulty!=='EASY'||candidate?.reviewRequired!==true||candidate?.runtimeConnected!==false||reviews.length!==22)return null;
+    if(candidate?.trackId!=='atsu_cup_theme'||candidate?.difficulty!=='EASY'||candidate?.candidateVersion!==1||candidate?.status!=='FORMAL_CANDIDATE'||candidate?.reviewRequired!==true||candidate?.runtimeConnected!==false||reviews.length!==22)return null;
     const sorted=[...reviews].sort((a,b)=>a-b);
     if(sorted.some((grid,index)=>grid!==reviews[index])||new Set(sorted).size!==sorted.length)return null;
     const groups=[];
@@ -52,6 +52,7 @@
   };
   const loadEarPlan=()=>{
     if(earPlanPromise)return earPlanPromise;
+    if(typeof fetch!=='function')return Promise.reject(new Error('fetchを利用できません'));
     earPlanPromise=fetch(EAR_CANDIDATE_URL,{cache:'no-store'})
       .then(response=>{if(!response.ok)throw new Error(`HTTP ${response.status}`);return response.json();})
       .then(candidate=>{
@@ -118,7 +119,6 @@
     if(!nav)return;
     const count=nav.querySelector('[data-rhythm-ear-review-count]');
     const detail=nav.querySelector('[data-rhythm-ear-review-detail]');
-    const status=nav.querySelector('[data-rhythm-ear-review-status]');
     const prev=nav.querySelector('[data-rhythm-ear-review-prev]');
     const next=nav.querySelector('[data-rhythm-ear-review-next]');
     const play=nav.querySelector('[data-rhythm-ear-review-play]');
@@ -139,7 +139,6 @@
     const group=earPlan.groups[earIndex];
     setText(count,`${earIndex+1} / ${earPlan.groups.length}`);
     setText(detail,`${formatTime(group.startMs)}–${formatTime(group.endMs)}　候補 grid ${group.points.join(', ')}`);
-    setText(status,'採用・移動・不採用はここでは保存しません。耳で判断するための再生補助だけです。');
   };
 
   const stopEarLoop=editor=>{
