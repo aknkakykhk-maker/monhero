@@ -6,10 +6,11 @@
   document.documentElement.dataset.rhythmChartAuthoringUi='ready';
 
   const DRAFT_URL='debug/atsu-cup-theme-easy-draft.json';
+  const FORMAL_CANDIDATE_URL='debug/atsu-cup-theme-easy-formal-candidate-v1.json';
   const TIMING_URL='data/rhythm-timing.js';
   const DIV=4;
   const PREVIEW_SONG_ID='__rhythm_authoring_preview__';
-  const PREVIEW_LABEL='EASY DRAFT PREVIEW';
+  const PREVIEW_LABEL='EASY FORMAL CANDIDATE PREVIEW';
   const EASY_LANE_PATTERN=Object.freeze([2,1,3,0,4,2,3,1,4,0]);
   let timingPromise=null;
 
@@ -121,11 +122,11 @@
       <div class="mb-2">
         <small class="text-[8px] font-black tracking-wider text-cyan-300">DEBUG ONLY・CHART EDITOR v2</small>
         <h3 class="font-black">譜面エディタ・音合わせ</h3>
-        <p class="mt-1 text-[9px] leading-relaxed text-slate-300">169 BPMの固定拍グリッドで譜面を作ります。普段は下の黄色ボタンだけでOK。EASY自動ドラフト100ノーツをそのまま本物の音ゲー判定で試せます。</p>
+        <p class="mt-1 text-[9px] leading-relaxed text-slate-300">169 BPMの固定拍グリッドで譜面を作ります。現在はEASY正式候補v1（78ノーツ・TAP/HOLD）を優先読込し、±30ms超の22候補は耳確認待ちとして保留しています。</p>
       </div>
       <div data-rhythm-chart-status class="mb-2 rounded-lg bg-cyan-950/60 px-2 py-1 text-[9px] text-cyan-100">準備中…</div>
-      <button type="button" data-rhythm-chart-preview disabled class="mb-3 min-h-[56px] w-full rounded-xl bg-amber-500 px-3 text-sm font-black text-slate-950 shadow-lg disabled:opacity-40">🎮 EASY自動ドラフトをテストプレイ</button>
-      <p class="-mt-2 mb-3 text-center text-[8px] text-amber-100">100ノーツを自動配置して、既存の入力・判定・演出をそのまま使います</p>
+      <button type="button" data-rhythm-chart-preview disabled class="mb-3 min-h-[56px] w-full rounded-xl bg-amber-500 px-3 text-sm font-black text-slate-950 shadow-lg disabled:opacity-40">🎮 現在のEASY譜面をテストプレイ</button>
+      <p class="-mt-2 mb-3 text-center text-[8px] text-amber-100">正式完成前のデバッグ候補です。既存の入力・判定・演出でそのまま試せます</p>
       <label class="block text-[9px] text-slate-300">対象曲
         <select data-rhythm-chart-track class="mt-1 min-h-[44px] w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-sm font-bold text-white"></select>
       </label>
@@ -152,7 +153,8 @@
       </div>
       <button type="button" data-rhythm-chart-apply class="mt-3 min-h-[50px] w-full rounded-xl bg-emerald-700 font-black">ノーツを追加</button>
       <div class="mt-2 grid grid-cols-2 gap-2">
-        <button type="button" data-rhythm-chart-load-draft class="min-h-[46px] rounded-xl bg-indigo-700 text-[10px] font-black">EASY自動ドラフト100を再読込</button>
+        <button type="button" data-rhythm-chart-load-candidate class="col-span-2 min-h-[46px] rounded-xl bg-emerald-700 text-[10px] font-black">EASY正式候補v1を再読込</button>
+        <button type="button" data-rhythm-chart-load-draft class="min-h-[46px] rounded-xl bg-indigo-700 text-[10px] font-black">旧・自動ドラフト100</button>
         <button type="button" data-rhythm-chart-clear class="min-h-[46px] rounded-xl bg-rose-900/80 text-[10px] font-black">ドラフトを空にする</button>
       </div>
       <div class="mt-3 flex items-center justify-between"><b class="text-xs">ドラフト一覧</b><small data-rhythm-chart-count class="text-[9px] text-cyan-200">0 notes</small></div>
@@ -285,6 +287,32 @@
       try{await navigator.clipboard.writeText(text);setStatus(`${label}をコピーしました`);}
       catch{output.focus();output.select();setStatus('自動コピーできません。下の欄を長押ししてコピーしてください');}
     };
+    const candidateNote=(row,trackId)=>{
+      const grid=int(row?.grid,0,99999),timeMs=timeAt(trackId,Math.floor(grid/DIV),grid%DIV),lane=int(row?.lane,0,4),w=int(row?.subLaneWidth,1,4),noteType=String(row?.type||'TAP');
+      if(!Number.isFinite(timeMs)||!['TAP','HOLD','FLICK'].includes(noteType))return null;
+      const s=int(row?.subLane,lane*2,Math.min(9,lane*2)),note={type:noteType,timeMs:Math.round(timeMs),lane,subLane:s,subLaneWidth:w,_sourceGrid:grid,_strength:Number(row?.sourceStrength)||0,_sourcePeakOffsetMs:Number(row?.sourcePeakOffsetMs)||0};
+      if(noteType==='HOLD'){
+        const endGrid=grid+int(row?.durationGrids,1,128),endTimeMs=timeAt(trackId,Math.floor(endGrid/DIV),endGrid%DIV);
+        if(!(endTimeMs>timeMs))return null;
+        note.endTimeMs=Math.round(endTimeMs);
+      }
+      return note;
+    };
+    const loadFormalCandidate=async(confirmReplace)=>{
+      try{
+        const response=await fetch(`${FORMAL_CANDIDATE_URL}?t=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        const data=await response.json();
+        if(!Array.isArray(data?.notes))throw new Error('notesなし');
+        if(confirmReplace&&draft.length&&!confirm('現在のドラフトをEASY正式候補v1で置き換えますか？'))return false;
+        const id=data.trackId||'atsu_cup_theme';
+        if([...trackSelect.options].some(option=>option.value===id))trackSelect.value=id;
+        syncTrack();
+        draft=data.notes.map(row=>candidateNote(row,id)).filter(Boolean);
+        editingIndex=-1;apply.textContent='ノーツを追加';
+        setStatus(`EASY正式候補v${Number(data.candidateVersion)||1}: ${draft.length}ノーツ（TAP ${Number(data.typeCounts?.TAP)||0} / HOLD ${Number(data.typeCounts?.HOLD)||0}）。耳確認待ち ${Array.isArray(data.earReviewGrids)?data.earReviewGrids.length:0}点`);
+        render();syncPreviewChart();return true;
+      }catch(error){setStatus(`正式候補読込失敗: ${error?.message||error}`);return false;}
+    };
     const loadAutoDraft=async(confirmReplace)=>{
       try{
         const response=await fetch(`${DRAFT_URL}?t=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);
@@ -299,7 +327,7 @@
           return {type:'TAP',timeMs:Math.round(timeMs),lane,subLane:lane*2,subLaneWidth:2,_sourceGrid:grid,_strength:Number(row?.[1])||0};
         }).filter(note=>Number.isFinite(note.timeMs));
         editingIndex=-1;apply.textContent='ノーツを追加';
-        setStatus(`EASY自動ドラフト ${draft.length}ノーツを5レーンへ仮配置しました。黄色ボタンでそのまま遊べます`);
+        setStatus(`旧EASY自動ドラフト ${draft.length}ノーツを5レーンへ仮配置しました。比較用です`);
         render();syncPreviewChart();return true;
       }catch(error){setStatus(`ドラフト読込失敗: ${error?.message||error}`);return false;}
     };
@@ -344,7 +372,7 @@
       timingIds.forEach(id=>{const option=document.createElement('option');option.value=id;option.textContent=id==='atsu_cup_theme'?'あつ杯テーマ':id;trackSelect.appendChild(option);});
       if(!timingIds.length){const option=document.createElement('option');option.value='atsu_cup_theme';option.textContent='あつ杯テーマ';trackSelect.appendChild(option);}
       syncTrack();syncType();render();
-      await loadAutoDraft(false);
+      if(!await loadFormalCandidate(false))await loadAutoDraft(false);
     }catch(error){setStatus(`タイミング読込失敗: ${error?.message||error}`);}
 
     trackSelect.addEventListener('change',syncTrack);
@@ -374,6 +402,7 @@
         editingIndex=-1;apply.textContent='ノーツを追加';setStatus(String(event.detail?.label||`#${index+1} SLIDE経路を更新`));render();syncPreviewChart();
       }catch(error){setStatus(`SLIDE経路を更新できません: ${error?.message||error}`);}
     });
+    q('[data-rhythm-chart-load-candidate]').addEventListener('click',()=>loadFormalCandidate(true));
     q('[data-rhythm-chart-load-draft]').addEventListener('click',()=>loadAutoDraft(true));
     q('[data-rhythm-chart-clear]').addEventListener('click',()=>{if(draft.length&&!confirm('編集中のドラフトを空にしますか？'))return;draft=[];editingIndex=-1;apply.textContent='ノーツを追加';setStatus('ドラフトを空にしました');render();syncPreviewChart();});
     q('[data-rhythm-chart-copy-json]').addEventListener('click',()=>copyText(JSON.stringify(exportObject(),null,2),'JSON'));
