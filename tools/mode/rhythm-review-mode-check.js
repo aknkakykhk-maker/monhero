@@ -21,6 +21,6 @@ ok('テストプレイ・status・実機補正は確認画面へ残す',review.i
 ok('制作ツール表示は44px以上のタッチ領域',review.includes('min-h-[48px]')&&review.includes('touch-action:manipulation'));
 ok('DOM順が変わる時だけ移動してObserver自己発火ループを避ける',review.includes('anchor.nextElementSibling!==node')&&review.includes("new MutationObserver(layout)"));
 ok('保存データやBESTへ書き込まない',!review.includes('localStorage')&&!review.includes('mh_rhythm_best')&&!review.includes('mh_rhythm_settings'));
-ok('既存制作UIは削除せずそのまま残す',editor.includes('実音源')===false&&editor.includes('JSONコピー')&&editor.includes('実装JSコピー')&&editor.includes('10サブレーン'));
+ok('既存制作UIは削除せずそのまま残す',editor.includes('JSONコピー')&&editor.includes('実装JSコピー')&&editor.includes('10サブレーン')&&editor.includes('data-rhythm-chart-clear'));
 ok('review modeは不正配置UI成立後に遅延ロード',calibration.includes("reviewScript.src='debug/rhythm-review-mode.js?v=20260901a'")&&calibration.includes('invalidScript.onload=loadReviewMode')&&calibration.includes("if(document.querySelector('[data-rhythm-invalid-placement-loader]')){loadReviewMode();return;}"));
 console.log('OK: 音ゲーデバッグ確認者向け簡易モード');
