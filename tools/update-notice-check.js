@@ -8,11 +8,16 @@ const root = path.join(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero', 'src', 'game-system.jsx'), 'utf8');
 const stampTool = fs.readFileSync(path.join(__dirname, 'stamp-version.js'), 'utf8');
 const version = JSON.parse(fs.readFileSync(path.join(root, 'monster-hero', 'version.json'), 'utf8'));
+const index = fs.readFileSync(path.join(root, 'monster-hero', 'index.html'), 'utf8');
 const rhythmRelease = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'rhythm-step3-release.js'), 'utf8');
+const calibrationPath = path.join(root, 'monster-hero', 'data', 'rhythm-geometry-calibration.js');
+const calibration = fs.existsSync(calibrationPath) ? fs.readFileSync(calibrationPath, 'utf8') : '';
 const buildDate = source.match(/const BUILD_DATE = "([^"]+)";/)?.[1];
 const releaseDate = rhythmRelease.match(/const RHYTHM_RELEASE_DATE='([^']+)'/)?.[1];
 const dataBuild = rhythmRelease.match(/const RHYTHM_DATA_BUILD='([^']+)'/)?.[1];
 const compiledBuild = rhythmRelease.match(/const RHYTHM_COMPILED_BUILD='([^']+)'/)?.[1];
+const calibrationDataBuild = calibration.match(/const RHYTHM_CALIBRATION_DATA_BUILD='([^']+)'/)?.[1];
+const calibrationCompiledBuild = calibration.match(/const RHYTHM_CALIBRATION_COMPILED_BUILD='([^']+)'/)?.[1];
 const normalStamp = !!buildDate && buildDate === version.build;
 const dataOnlyStamp = !!buildDate
   && dataBuild === version.build
@@ -21,9 +26,20 @@ const dataOnlyStamp = !!buildDate
   && rhythmRelease.includes("String(rawUrl).includes('version.json')")
   && rhythmRelease.includes('if(data?.build===RHYTHM_DATA_BUILD)')
   && rhythmRelease.includes('build:RHYTHM_COMPILED_BUILD');
+const calibrationDataOnlyStamp = !!buildDate
+  && calibrationDataBuild === version.build
+  && calibrationCompiledBuild === buildDate
+  && index.includes('data/rhythm-geometry-calibration.js?v=')
+  && calibration.includes("String(rawUrl).includes('version.json')")
+  && calibration.includes('if(data?.build===RHYTHM_CALIBRATION_DATA_BUILD)')
+  && calibration.includes('build:RHYTHM_CALIBRATION_COMPILED_BUILD');
+const validStamp = normalStamp || dataOnlyStamp || calibrationDataOnlyStamp;
 const checks = [
-  ['BUILD_DATE・version.json、または検証済みdata-only橋渡しが整合', normalStamp || dataOnlyStamp],
-  ['data-only橋渡しは今回versionだけを既存compiledへ写し、将来versionは素通し', normalStamp || !dataBuild || (dataOnlyStamp && rhythmRelease.includes('if(data?.build===RHYTHM_DATA_BUILD)') && !rhythmRelease.includes('if(data?.build!==RHYTHM_DATA_BUILD)'))],
+  ['BUILD_DATE・version.json、または検証済みdata-only橋渡しが整合', validStamp],
+  ['data-only橋渡しは今回versionだけを既存compiledへ写し、将来versionは素通し', normalStamp
+    || (dataOnlyStamp && rhythmRelease.includes('if(data?.build===RHYTHM_DATA_BUILD)') && !rhythmRelease.includes('if(data?.build!==RHYTHM_DATA_BUILD)'))
+    || (calibrationDataOnlyStamp && calibration.includes('if(data?.build===RHYTHM_CALIBRATION_DATA_BUILD)') && !calibration.includes('if(data?.build!==RHYTHM_CALIBRATION_DATA_BUILD)'))],
+  ['デバッグdata-only橋渡しは更新履歴へ追記しない', !calibrationDataOnlyStamp || (!calibration.includes('CHANGELOG.unshift') && !calibration.includes('HELP_CATEGORIES'))],
   ['更新バナー用stampはCHANGELOGを自動変更しない', !stampTool.includes('replacedChangelog') && !stampTool.includes('fs.writeFileSync(changelogPath') && stampTool.includes('CHANGELOGは変更しません')],
   ['30秒間隔・バックグラウンド復帰・ページ再表示時にversion.jsonを再確認', source.includes('setInterval(checkVersion, 30 * 1000)') && source.includes("document.addEventListener('visibilitychange', onVisible)") && source.includes("window.addEventListener('pageshow', onVisible)")],
   ['version.jsonをキャッシュなしで取得', source.includes("fetch('version.json?t=' + Date.now(), { cache: 'no-store' })")],
