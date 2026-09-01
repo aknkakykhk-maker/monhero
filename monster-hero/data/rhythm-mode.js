@@ -155,8 +155,8 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
   return Number(points[points.length-1]?.lane)||0;
 };
 
-// STEP 2A.5: 入力成功を即座に返す仮ノーツSE。既存の音ゲー設定キーだけを読み、
-// AudioContextは1個だけ遅延生成して再利用する。空打ち/MISS経路からは呼ばない。
+// STEP 2A.5: 入力成功と空押しを即座に返すWeb Audio SE。既存の音ゲー設定キーだけを読み、
+// AudioContextは1個だけ遅延生成して再利用する。空押しは新規入力でノーツを取得できなかったときだけ呼ぶ。
 const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70};
   const readSettings=()=>{
@@ -206,7 +206,27 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
     return true;
   };
-  return {warm,play,_readSettings:readSettings};
+  const playEmpty=()=>{
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0)return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const duration=.055,sampleRate=audio.sampleRate||44100,buffer=audio.createBuffer(1,Math.max(1,Math.floor(sampleRate*duration)),sampleRate),samples=buffer.getChannelData(0);
+    for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*(1-i/samples.length);
+    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),now=audio.currentTime,level=Math.max(.0001,.022*(settings.volume/100));
+    source.buffer=buffer;
+    filter.type='bandpass';
+    filter.frequency.setValueAtTime(2800,now);
+    filter.Q.setValueAtTime(.7,now);
+    gain.gain.setValueAtTime(level,now);
+    gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
+    source.connect(filter);filter.connect(gain);gain.connect(audio.destination);
+    source.start(now);source.stop(now+duration);
+    source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect();}catch{}};
+    return true;
+  };
+  return {warm,play,playEmpty,_readSettings:readSettings};
 })();
 
 const RHYTHM_GESTURE_RUNTIME=(()=>{

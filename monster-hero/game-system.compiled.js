@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e1d378e6fb138f32
+// source-sha256: 5784ae2c7254779c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-01 07:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-01 09:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15213,7 +15213,10 @@ const RhythmTapTest = ({
       target,
       deltaMs
     }) => {
-      if (!target) return;
+      if (!target) {
+        RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+        return;
+      }
       const judgment = rhythmJudgeTap(deltaMs);
       if (target.type === 'HOLD') {
         target.activePointerId = input.inputKey;
@@ -15256,16 +15259,14 @@ const RhythmTapTest = ({
       }
     });
   };
-  const setPressedLanes = lanes => {
+  const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
-    const active = lanes instanceof Set ? lanes : new Set(lanes || []);
-    area.querySelectorAll('[data-rhythm-lane]').forEach((el, index) => {
+    const active = new Set(Array.from(coordinates || []).map(value => Math.max(0, Math.min(9, Math.floor(Number(value))))).filter(Number.isFinite));
+    area.querySelectorAll('[data-rhythm-sublane-feedback]').forEach((el, index) => {
       const pressed = active.has(index);
       el.dataset.pressed = pressed ? 'true' : 'false';
-      el.style.backgroundColor = pressed ? 'rgba(34,211,238,0.30)' : '';
-      el.style.boxShadow = pressed ? 'inset 0 0 26px rgba(103,232,249,0.78), inset 0 -72px 58px rgba(6,182,212,0.42), 0 0 18px rgba(34,211,238,0.28)' : '';
-      el.style.borderBottom = pressed ? '3px solid rgba(207,250,254,0.98)' : '3px solid transparent';
+      el.style.opacity = pressed ? '1' : '0';
     });
   };
   const pointerDown = e => {
@@ -15274,12 +15275,18 @@ const RhythmTapTest = ({
     const area = playAreaRef.current;
     if (!area) return;
     const rect = area.getBoundingClientRect(),
-      lane = rhythmLaneAtPoint(e.clientX, e.clientY, rect);
-    if (lane === null) return;
-    setPressedLanes([lane]);
+      lane = rhythmLaneAtPoint(e.clientX, e.clientY, rect),
+      subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(e.clientX, e.clientY, rect);
+    if (lane === null || subLaneCoordinate === null) return;
+    const run = runRef.current;
+    if (run) {
+      run.activePointerFeedback = run.activePointerFeedback || new Map();
+      run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+      setPressedLanes(run.activePointerFeedback.values());
+    }
     inputStarts([{
       lane,
-      subLaneCoordinate: rhythmSubLaneCoordinateAtPoint(e.clientX, e.clientY, rect),
+      subLaneCoordinate,
       inputKey: rhythmInputKey('pointer', e.pointerId),
       captureTarget: e.currentTarget,
       pointerId: e.pointerId
@@ -15287,7 +15294,11 @@ const RhythmTapTest = ({
   };
   const pointerEnd = e => {
     if (e.pointerType === 'touch') return;
-    setPressedLanes([]);
+    const run = runRef.current;
+    if (run?.activePointerFeedback) {
+      run.activePointerFeedback.delete(e.pointerId);
+      setPressedLanes(run.activePointerFeedback.values());
+    } else setPressedLanes([]);
     inputEnds([{
       inputKey: rhythmInputKey('pointer', e.pointerId),
       releaseTarget: e.currentTarget,
@@ -15304,22 +15315,23 @@ const RhythmTapTest = ({
       current.activeTouchInputs = current.activeTouchInputs || new Set();
       const rect = area.getBoundingClientRect(),
         live = new Set(),
-        liveLanes = new Set(),
+        liveSubLanes = [],
         starts = [];
       Array.from(e.touches || []).forEach(touch => {
         const inputKey = rhythmInputKey('touch', touch.identifier);
         live.add(inputKey);
-        const lane = rhythmLaneAtPoint(touch.clientX, touch.clientY, rect);
-        if (lane !== null) liveLanes.add(lane);
+        const lane = rhythmLaneAtPoint(touch.clientX, touch.clientY, rect),
+          subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(touch.clientX, touch.clientY, rect);
+        if (subLaneCoordinate !== null) liveSubLanes.push(subLaneCoordinate);
         if (current.activeTouchInputs.has(inputKey)) return;
         current.activeTouchInputs.add(inputKey);
-        if (lane !== null) starts.push({
+        if (lane !== null && subLaneCoordinate !== null) starts.push({
           lane,
-          subLaneCoordinate: rhythmSubLaneCoordinateAtPoint(touch.clientX, touch.clientY, rect),
+          subLaneCoordinate,
           inputKey
         });
       });
-      setPressedLanes(liveLanes);
+      setPressedLanes(liveSubLanes);
       if (starts.length) inputStarts(starts);
       const ended = [];
       Array.from(current.activeTouchInputs).forEach(inputKey => {
@@ -15482,6 +15494,26 @@ const RhythmTapTest = ({
     key: index,
     "data-rhythm-sublane-boundary": ""
   }))), /*#__PURE__*/React.createElement("div", {
+    className: "pointer-events-none absolute inset-0",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 10
+  }, (_, subLane) => {
+    const top = rhythmProjectSubLaneSpan(subLane, 1, .74),
+      bottom = rhythmProjectSubLaneSpan(subLane, 1, 1);
+    return /*#__PURE__*/React.createElement("i", {
+      key: subLane,
+      "data-rhythm-sublane-feedback": subLane,
+      "data-pressed": "false",
+      className: "absolute inset-0 opacity-0",
+      style: {
+        clipPath: `polygon(${top.left * 100}% 74%,${top.right * 100}% 74%,${bottom.right * 100}% 100%,${bottom.left * 100}% 100%)`,
+        background: 'linear-gradient(to bottom,rgba(34,211,238,0),rgba(34,211,238,.38) 45%,rgba(207,250,254,.88))',
+        boxShadow: 'inset 0 -24px 26px rgba(103,232,249,.72)',
+        transition: 'opacity 45ms linear'
+      }
+    });
+  })), /*#__PURE__*/React.createElement("div", {
     ref: judgmentLineRef,
     "data-rhythm-judgment-line": true,
     className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300 shadow-[0_0_18px_#67e8f9,0_0_30px_#c084fc]"
