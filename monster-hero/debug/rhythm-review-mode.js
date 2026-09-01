@@ -177,7 +177,13 @@
     setText(count,`${earIndex+1} / ${earPlan.groups.length}`);
     setText(detail,`${formatTime(group.startMs)}–${formatTime(group.endMs)}　候補 grid ${group.points.join(', ')}`);
     const list=nav.querySelector('[data-rhythm-ear-review-candidates]');
-    if(list){list.replaceChildren(...group.candidates.map(row=>{const p=document.createElement('p');p.textContent=`grid ${row.grid}　${Number(row.sourcePeakOffsetMs)>=0?'+':''}${row.sourcePeakOffsetMs}ms　strength ${Number(row.sourceStrength).toFixed(2)}　${row.machineRecommendation}`;return p;}));}
+    const listSignature=group.candidates.map(row=>`${row.grid}:${row.sourcePeakOffsetMs}:${row.sourceStrength}:${row.machineRecommendation}`).join('|');
+    // body全体のchildList監視内から呼ばれるため、同じ候補を毎回作り直すと
+    // replaceChildren自身を再検知して無限再描画になる。区間が変わった時だけ更新する。
+    if(list&&list.dataset.rhythmEarCandidateSignature!==listSignature){
+      list.dataset.rhythmEarCandidateSignature=listSignature;
+      list.replaceChildren(...group.candidates.map(row=>{const p=document.createElement('p');p.textContent=`grid ${row.grid}　${Number(row.sourcePeakOffsetMs)>=0?'+':''}${row.sourcePeakOffsetMs}ms　strength ${Number(row.sourceStrength).toFixed(2)}　${row.machineRecommendation}`;return p;}));
+    }
     refreshCandidate(editor);
   };
   const allCandidates=()=>earPlan?earPlan.groups.flatMap(group=>group.candidates):[];

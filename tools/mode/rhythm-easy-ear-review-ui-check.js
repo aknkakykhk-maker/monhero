@@ -19,6 +19,7 @@ ok('前後移動・ループ再生・停止を44px以上で用意',review.includ
 ok('区間移動と曲変更で再生中ループを止める',review.includes('stopEarLoop(editor)')&&review.includes("track.addEventListener('change',()=>{stopEarLoop(editor);refreshEarNav(editor);})"));
 ok('採用・移動・不採用を保存しないことを明示',review.includes('採用・移動・不採用はここでは保存しません')&&!review.includes('localStorage')&&!review.includes('mh_rhythm_best')&&!review.includes('mh_rhythm_settings'));
 ok('22候補のoffset・strength・機械推奨を表示',review.includes('sourcePeakOffsetMs')&&review.includes('sourceStrength')&&review.includes('machineRecommendation'));
+ok('候補一覧は変更時だけ再構築してMutationObserverの自己ループを防ぐ',review.includes('list.dataset.rhythmEarCandidateSignature!==listSignature')&&review.indexOf('list.dataset.rhythmEarCandidateSignature=listSignature')<review.indexOf('list.replaceChildren('));
 ok('候補単位ナビと5種類のreview decision',review.includes('data-rhythm-ear-candidate-prev')&&review.includes('data-rhythm-ear-candidate-next')&&['KEEP','DROP','SHIFT_PREVIOUS_GRID','SHIFT_NEXT_GRID','PENDING'].every(value=>review.includes(`data-review-decision="${value}"`)));
 ok('レビューJSONをコピー可能',review.includes('data-rhythm-ear-copy-review')&&review.includes('navigator.clipboard.writeText(text)')&&review.includes('data-rhythm-ear-review-output'));
 ok('仮適用はDEBUGエディタeventだけで正式chartへ書かない',review.includes("new CustomEvent('rhythm-chart-load-review-preview'")&&!review.includes('RHYTHM_SONGS.push')&&!review.includes('saveRhythmBestRecord'));
