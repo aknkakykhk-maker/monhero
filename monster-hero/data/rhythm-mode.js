@@ -737,6 +737,49 @@ const widthSlideChangingTestNotes=Object.freeze([
 ]);
 const widthSlideChangingTestChart=Object.freeze({level:9,notes:widthSlideChangingTestNotes,totalNotes:widthSlideChangingTestNotes.length,durationMs:41000});
 
+// 同じあつ杯テーマ音源を0秒から使う、約60秒の総合回帰テスト譜面。
+// 正式譜面候補やWIDTH TESTとは分離し、169 BPM / beatZero 40msの16分グリッドへ揃える。
+const atsuCupDebugGridMs=grid=>Math.round(40+Number(grid)*(60000/169/4));
+const atsuCupDebugTap=(grid,subLane,subLaneWidth=2)=>Object.freeze({type:'TAP',timeMs:atsuCupDebugGridMs(grid),lane:Math.floor(subLane/2),subLane,subLaneWidth});
+const atsuCupDebugHold=(startGrid,endGrid,subLane,subLaneWidth=2)=>Object.freeze({type:'HOLD',timeMs:atsuCupDebugGridMs(startGrid),endTimeMs:atsuCupDebugGridMs(endGrid),lane:Math.floor(subLane/2),subLane,subLaneWidth});
+const atsuCupDebugFlick=(grid,subLane,subLaneWidth=2)=>Object.freeze({type:'FLICK',timeMs:atsuCupDebugGridMs(grid),lane:Math.floor(subLane/2),subLane,subLaneWidth});
+const atsuCupDebugSlide=(points,subLaneWidth=2)=>{
+  const slidePoints=Object.freeze(points.map(([grid,lane,width])=>Object.freeze({timeMs:atsuCupDebugGridMs(grid),lane,...(width?{subLaneWidth:width}:{})})));
+  return Object.freeze({type:'SLIDE',timeMs:slidePoints[0].timeMs,endTimeMs:slidePoints[slidePoints.length-1].timeMs,lane:slidePoints[0].lane,endLane:slidePoints[slidePoints.length-1].lane,subLaneWidth,slidePoints});
+};
+const atsuCupDebugShortNotes=Object.freeze([
+  // 0〜14秒: 導入、左右・中央・交互・同時押しの基本TAP。
+  atsuCupDebugTap(20,4),atsuCupDebugTap(32,2),atsuCupDebugTap(40,6),
+  atsuCupDebugTap(48,0),atsuCupDebugTap(56,8),atsuCupDebugTap(64,2),atsuCupDebugTap(72,6),
+  atsuCupDebugTap(80,4),atsuCupDebugTap(88,0),atsuCupDebugTap(88,8),atsuCupDebugTap(96,2),
+  atsuCupDebugTap(104,6),atsuCupDebugTap(112,4),atsuCupDebugTap(120,0),atsuCupDebugTap(120,8),
+  atsuCupDebugTap(132,2),atsuCupDebugTap(144,6),
+  // 14〜24秒: 幅1〜4、左右端、隣接幅1、2本指と指腹接触の確認。
+  atsuCupDebugTap(160,0,1),atsuCupDebugTap(176,2,2),atsuCupDebugTap(192,4,3),atsuCupDebugTap(208,6,4),
+  atsuCupDebugTap(220,9,1),atsuCupDebugTap(232,4,1),atsuCupDebugTap(232,5,1),
+  atsuCupDebugTap(244,0,1),atsuCupDebugTap(244,8,2),
+  atsuCupDebugTap(260,3,1),atsuCupDebugTap(260,4,1),atsuCupDebugTap(260,5,1),
+  // 24〜34秒: 幅1〜4、短長HOLD、HOLD中別TAP、左右2本指。
+  atsuCupDebugHold(276,292,0,1),atsuCupDebugHold(304,328,2,2),atsuCupDebugTap(316,8,2),
+  atsuCupDebugHold(340,372,4,3),atsuCupDebugTap(352,0,1),
+  atsuCupDebugHold(380,412,6,4),atsuCupDebugHold(380,404,0,1),
+  // 34〜42秒: 左右・幅違いFLICKとFLICK+別TAP。
+  atsuCupDebugFlick(420,0,1),atsuCupDebugFlick(432,8,2),atsuCupDebugFlick(444,2,3),
+  atsuCupDebugFlick(456,6,4),atsuCupDebugFlick(468,0,2),atsuCupDebugTap(468,8,2),
+  // 42〜52秒: 直線、0.5レーン、折り返し、固定幅、幅1→4→1。
+  atsuCupDebugSlide([[480,.5],[496,1.5],[512,2.5]],2),
+  atsuCupDebugSlide([[520,3.5],[532,3],[544,3.5],[556,2.5]],1),
+  atsuCupDebugSlide([[566,.5,1],[578,2,4],[590,3.5,1]],1),
+  atsuCupDebugTap(578,8,2),
+  // 52〜58秒: HOLD/SLIDE中の別TAP、幅違い、左右2本指。
+  atsuCupDebugHold(596,628,0,2),atsuCupDebugTap(608,8,1),atsuCupDebugTap(620,6,3),
+  atsuCupDebugSlide([[632,3.5,1],[644,2.5,3],[656,3.5,2]],1),atsuCupDebugTap(644,0,2),
+  // 終了直前は疎にして、最終ノーツ後の短縮終了とリザルト遷移を見やすくする。
+  atsuCupDebugTap(664,4,2),
+]);
+const ATSU_CUP_DEBUG_SHORT_END_MS=atsuCupDebugGridMs(676);
+const atsuCupDebugShortChart=Object.freeze({level:8,notes:atsuCupDebugShortNotes,totalNotes:atsuCupDebugShortNotes.length,durationMs:ATSU_CUP_DEBUG_SHORT_END_MS});
+
 const RHYTHM_SONGS = Object.freeze([
   Object.freeze({
     songId:'atsu_cup_theme_test',
@@ -750,6 +793,14 @@ const RHYTHM_SONGS = Object.freeze([
   Object.freeze({
     songId:'width_test', displayName:'WIDTH TEST', bgmTrackId:'atsu_cup_theme',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:id==='NORMAL'?widthHoldTestChart:id==='HARD'?widthSlideTestChart:id==='EXPERT'?widthSlideVariableTestChart:id==='MASTER'?widthSlideChangingTestChart:emptyRhythmChart()])))
+  }),
+  Object.freeze({
+    songId:'atsu_cup_theme_debug_short',
+    displayName:'あつ杯テーマ DEBUG 60s',
+    debugDescription:'約60秒の総合テスト（正式候補・WIDTH TESTとは別）',
+    bgmTrackId:'atsu_cup_theme',
+    playDurationMs:ATSU_CUP_DEBUG_SHORT_END_MS,
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='HARD'?atsuCupDebugShortChart:emptyRhythmChart()])))
   }),
 ]);
 
