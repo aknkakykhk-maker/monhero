@@ -187,9 +187,9 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(audio?.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
   };
-  const play=()=>{
+  const play=(previewSettings=null)=>{
     if(inputGroupDepth>0)inputGroupHit=true;
-    const settings=readSettings();
+    const settings=previewSettings?{enabled:previewSettings.noteSeEnabled!==false,volume:Math.max(0,Math.min(100,Number(previewSettings.noteSeVolume)||0))}:readSettings();
     if(!settings.enabled||settings.volume<=0)return false;
     const audio=context();
     if(!audio)return false;
@@ -238,7 +238,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     inputGroupHit=false;
     return handled?true:emitEmpty();
   };
-  return {warm,play,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,_readSettings:readSettings};
+  return {warm,play,preview:settings=>play(settings),playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,_readSettings:readSettings};
 })();
 
 const RHYTHM_GESTURE_RUNTIME=(()=>{

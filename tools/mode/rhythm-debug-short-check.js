@@ -31,7 +31,7 @@ check('HOLD中別TAPを収録',notes.some(hold=>hold.type==='HOLD'&&notes.some(n
 check('SLIDE中別TAPを収録',notes.some(slide=>slide.type==='SLIDE'&&notes.some(note=>note.type==='TAP'&&note.timeMs>slide.timeMs&&note.timeMs<slide.endTimeMs)));
 check('短縮終了はsong固有値をaudio clock内でfallback適用',game.includes("const playEndTimeMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs")&&game.includes('songTimeMs>=playEndTimeMs||run.audio.ended()'));
 check('既存曲は短縮値なしで従来chart終了を維持',songs.filter(item=>item.songId!=='atsu_cup_theme_debug_short').every(item=>item.playDurationMs===undefined));
-check('リスタートは新run生成・入力と音声を破棄',game.includes('const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};')&&game.includes('disposeRun();setView({...initialView(),status:\'loading\'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId)'));
+check('リスタートは新run生成・入力と音声を破棄',game.includes('const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};')&&game.includes('disposeRun();setView({...initialView(),status:\'loading\'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume)'));
 check('音声開始は直接ボタンonClick経路',game.includes("onClick={()=>{setRhythmPlay({song,difficulty});setGameState('RHYTHM_PLAY');}}")&&!game.includes("data-rhythm-tap-start')?.click"));
 check('DOM判定ラインを維持',game.includes('data-rhythm-judgment-line')&&!game.includes('<line data-rhythm-judgment-line'));
 const formal=JSON.parse(read('monster-hero/debug/atsu-cup-theme-easy-formal-candidate-v1.json'));

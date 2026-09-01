@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 72b5e4d1bc3f4d7e
+// source-sha256: 50784e81a7a26eeb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 06:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 07:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3593,21 +3593,25 @@ const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.leg
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
 const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
-const RHYTHM_EFFECT_LEVELS = Object.freeze(['LOW', 'NORMAL', 'HIGH']);
+const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'MINIMAL']);
+const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
-  noteSpeed: 5,
+  bgmVolume: 100,
+  noteSpeed: 6,
   noteSize: 100,
   noteStartPosition: 0,
   displayTimingOffsetMs: 0,
   judgmentTimingOffsetMs: 0,
   fastSlowDisplay: true,
+  judgmentTextDisplay: true,
   judgmentTextPosition: 50,
   comboDisplay: true,
   holdSlideOpacity: 80,
+  laneGlow: 'NORMAL',
   noteSeVolume: 70,
   noteSeEnabled: true,
-  vibrationEnabled: true,
+  vibrationEnabled: false,
   effectAmount: 'NORMAL',
   lightweightMode: false,
   livePartnerVisible: true
@@ -3616,20 +3620,27 @@ const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
   return Number.isFinite(number) && number >= min && number <= max ? number : fallback;
 };
+const rhythmFiniteStep = (value, min, max, step, fallback) => {
+  const number = rhythmFiniteInRange(value, min, max, fallback);
+  return Math.round((number - min) / step) * step + min;
+};
 const normalizeRhythmSettings = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const bool = key => typeof source[key] === 'boolean' ? source[key] : DEFAULT_RHYTHM_SETTINGS[key];
   return {
-    noteSpeed: rhythmFiniteInRange(source.noteSpeed, 1, 20, DEFAULT_RHYTHM_SETTINGS.noteSpeed),
-    noteSize: rhythmFiniteInRange(source.noteSize, 50, 150, DEFAULT_RHYTHM_SETTINGS.noteSize),
+    bgmVolume: rhythmFiniteStep(source.bgmVolume, 0, 100, 1, DEFAULT_RHYTHM_SETTINGS.bgmVolume),
+    noteSpeed: rhythmFiniteStep(source.noteSpeed, 3, 10, .5, DEFAULT_RHYTHM_SETTINGS.noteSpeed),
+    noteSize: rhythmFiniteStep(source.noteSize, 80, 120, 5, DEFAULT_RHYTHM_SETTINGS.noteSize),
     noteStartPosition: rhythmFiniteInRange(source.noteStartPosition, -100, 100, DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
-    displayTimingOffsetMs: rhythmFiniteInRange(source.displayTimingOffsetMs, -500, 500, DEFAULT_RHYTHM_SETTINGS.displayTimingOffsetMs),
-    judgmentTimingOffsetMs: rhythmFiniteInRange(source.judgmentTimingOffsetMs, -500, 500, DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
+    displayTimingOffsetMs: 0,
+    judgmentTimingOffsetMs: rhythmFiniteStep(source.judgmentTimingOffsetMs, -100, 100, 5, DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
     fastSlowDisplay: bool('fastSlowDisplay'),
+    judgmentTextDisplay: bool('judgmentTextDisplay'),
     judgmentTextPosition: rhythmFiniteInRange(source.judgmentTextPosition, 0, 100, DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
     comboDisplay: bool('comboDisplay'),
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
-    noteSeVolume: rhythmFiniteInRange(source.noteSeVolume, 0, 100, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
+    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, 100, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeEnabled: bool('noteSeEnabled'),
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
@@ -4179,7 +4190,7 @@ const Audio_ = (() => {
   };
   // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
   // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
-  const startRhythmTrack = async key => {
+  const startRhythmTrack = async (key, rhythmVolumePct = 100) => {
     const track = resolveTrack(key);
     if (!track) return null;
     currentKey = null;
@@ -4203,11 +4214,14 @@ const Audio_ = (() => {
           naturallyEnded = true;
           return false;
         }
-        const nextSource = ctx.createBufferSource();
+        const nextSource = ctx.createBufferSource(),
+          rhythmGain = ctx.createGain();
         applyTrackGain(track);
+        rhythmGain.gain.value = Math.max(0, Math.min(1, Number(rhythmVolumePct) / 100));
         nextSource.buffer = buffer;
         nextSource.loop = false;
-        nextSource.connect(bgmGain);
+        nextSource.connect(rhythmGain);
+        rhythmGain.connect(bgmGain);
         source = nextSource;
         offsetSeconds = offset;
         startedAt = ctx.currentTime;
@@ -14887,6 +14901,171 @@ function PressRepeatButton({
 const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
 const RHYTHM_JUDGMENT_DISPLAY_MS = 450;
 const rhythmInputKey = (kind, id) => `${kind}:${id}`;
+const RhythmOptions = ({
+  value,
+  onSave,
+  onBack
+}) => {
+  const [draft, setDraft] = useState(() => normalizeRhythmSettings(value));
+  const [message, setMessage] = useState('');
+  const previewRef = useRef(null);
+  useEffect(() => () => {
+    previewRef.current?.stop();
+    previewRef.current = null;
+  }, []);
+  const set = (key, next) => setDraft(current => normalizeRhythmSettings({
+    ...current,
+    [key]: next
+  }));
+  const range = (key, min, max, step, suffix = '') => /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-[1fr_56px] items-center gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    "aria-label": key,
+    type: "range",
+    min: min,
+    max: max,
+    step: step,
+    value: draft[key],
+    onChange: event => set(key, Number(event.target.value)),
+    className: "h-11 min-w-0 accent-cyan-400"
+  }), /*#__PURE__*/React.createElement("output", {
+    className: "rounded-lg border border-cyan-400/30 bg-slate-950 px-1 py-2 text-center text-xs font-black tabular-nums"
+  }, draft[key], suffix));
+  const toggle = (key, label) => /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-pressed": draft[key],
+    onClick: () => set(key, !draft[key]),
+    className: `min-h-[44px] min-w-[88px] rounded-xl border px-4 text-xs font-black ${draft[key] ? 'border-cyan-200 bg-cyan-600 text-white' : 'border-white/20 bg-slate-900 text-slate-300'}`
+  }, label, " ", draft[key] ? 'ON' : 'OFF');
+  const segments = (key, items) => /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 overflow-hidden rounded-xl border border-white/20"
+  }, items.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    key: id,
+    "aria-pressed": draft[key] === id,
+    onClick: () => set(key, id),
+    className: `min-h-[44px] border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
+  }, label)));
+  const card = 'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-3 shadow-[0_0_18px_rgba(34,211,238,.08)]';
+  const row = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-white/10 py-2 last:border-b-0';
+  const previewBgm = async () => {
+    previewRef.current?.stop();
+    previewRef.current = null;
+    const audio = await Audio_.startRhythmTrack('atsu_cup_theme', draft.bgmVolume);
+    previewRef.current = audio;
+    if (!audio) setMessage('BGMを再生できませんでした');
+  };
+  return /*#__PURE__*/React.createElement("main", {
+    "data-rhythm-options": true,
+    className: "flex-1 min-h-0 overflow-y-auto bg-slate-950 px-3 text-white mh-scroll",
+    style: {
+      paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "sticky top-0 z-10 mb-3 flex items-center gap-2 bg-slate-950/95 py-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u3078\u623B\u308B",
+    onClick: onBack,
+    className: "min-h-[44px] min-w-[44px] text-slate-300"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[8px] font-black text-cyan-300"
+  }, "DEBUG\u30FB\u6B63\u5F0F\u30E2\u30FC\u30C9\u5171\u901A\u8A2D\u8A08"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-black"
+  }, "\u2699\uFE0F \u97F3\u30B2\u30FC\u30AA\u30D7\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("section", {
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-cyan-200"
+  }, "\uD83D\uDD0A \u97F3\u91CF"), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "BGM\u97F3\u91CF", range('bgmVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "\u30BF\u30C3\u30D7\u97F3\u91CF", range('noteSeVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "\u30BF\u30C3\u30D7\u97F3"), toggle('noteSeEnabled', '')), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: previewBgm,
+    className: "min-h-[46px] rounded-xl bg-indigo-700 text-xs font-black"
+  }, "\u266A BGM\u8A66\u8074"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview(draft),
+    className: "min-h-[46px] rounded-xl bg-fuchsia-700 text-xs font-black"
+  }, "\u30BF\u30C3\u30D7\u97F3\u8A66\u8074"))), /*#__PURE__*/React.createElement("section", {
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-cyan-200"
+  }, "\uD83C\uDFAF \u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "\u30CE\u30FC\u30C4\u901F\u5EA6", range('noteSpeed', 3, 10, .5)), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "\u30CE\u30FC\u30C4\u30B5\u30A4\u30BA", range('noteSize', 80, 120, 5, '%')), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "\u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574", range('judgmentTimingOffsetMs', -100, 100, 5, 'ms')), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[9px] leading-relaxed text-slate-400"
+  }, "\u5224\u5B9A\u7A93\u306E\u5E45\u306F\u5909\u3048\u305A\u3001\u8868\u793A\u3068\u5165\u529B\u306E\u57FA\u6E96\u3092\u540C\u3058\u91CF\u3060\u3051\u88DC\u6B63\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-cyan-200"
+  }, "\uD83D\uDC41 \u8868\u793A"), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "FAST / SLOW\u8868\u793A"), toggle('fastSlowDisplay', '')), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "\u5224\u5B9A\u6587\u5B57\u8868\u793A"), toggle('judgmentTextDisplay', '')), /*#__PURE__*/React.createElement("div", {
+    className: "py-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-xs font-bold"
+  }, "\u30EC\u30FC\u30F3\u767A\u5149"), segments('laneGlow', [['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]))), /*#__PURE__*/React.createElement("section", {
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-cyan-200"
+  }, "\u2728 \u6F14\u51FA\u30FB\u7AEF\u672B"), /*#__PURE__*/React.createElement("div", {
+    className: "py-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-xs font-bold"
+  }, "\u6F14\u51FA\u91CF"), segments('effectAmount', [['NORMAL', '標準'], ['LOW', '少なめ'], ['MINIMAL', '最小']])), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "\u632F\u52D5"), toggle('vibrationEnabled', '')), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "\u8EFD\u91CF\u30E2\u30FC\u30C9"), toggle('lightweightMode', ''))), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-cyan-400/30 bg-cyan-950/25 p-3 text-[10px] leading-relaxed text-cyan-100"
+  }, "\u5224\u5B9A\u3092\u7518\u304F\u3059\u308B\u8A2D\u5B9A\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u7AEF\u672B\u3054\u3068\u306E\u898B\u3048\u65B9\u30FB\u97F3\u91CF\u30FB\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u8ABF\u6574\u3059\u308B\u9805\u76EE\u3067\u3059\u3002"), message && /*#__PURE__*/React.createElement("p", {
+    role: "status",
+    className: "text-center text-xs font-black text-amber-300"
+  }, message), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: async () => {
+      const saved = await onSave(draft);
+      setDraft(saved);
+      setMessage('保存しました');
+    },
+    className: "min-h-[52px] rounded-xl bg-amber-500 font-black text-slate-950"
+  }, "\u4FDD\u5B58"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));
+      setMessage('画面上の値を戻しました（未保存）');
+    },
+    className: "min-h-[52px] rounded-xl border border-white/20 bg-slate-800 text-xs font-black"
+  }, "\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u623B\u3059"))));
+};
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -14980,6 +15159,11 @@ const RhythmTapTest = ({
       note.activePointerId = null;
     }
     note.done = true;
+    if (settings.vibrationEnabled && judgment !== 'MISS') {
+      try {
+        navigator.vibrate?.(8);
+      } catch {}
+    }
     const nextCombo = rhythmComboAfter(run.combo, judgment);
     run.combo = nextCombo;
     run.maxCombo = Math.max(run.maxCombo, nextCombo);
@@ -15006,7 +15190,7 @@ const RhythmTapTest = ({
       slow: run.slow
     }));
     scheduleJudgmentClear();
-  }, [chart.totalNotes, difficulty.maxScore, scheduleJudgmentClear]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleJudgmentClear, settings.vibrationEnabled]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -15061,8 +15245,8 @@ const RhythmTapTest = ({
       if (!run || run.finished || run.paused) return;
       const songTimeMs = run.audio.songTimeMs(),
         travel = measureTravel(),
-        visualTime = songTimeMs + settings.displayTimingOffsetMs,
-        travelMs = Math.max(650, 2600 - settings.noteSpeed * 90);
+        visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
+        travelMs = Math.max(650, 2690 - settings.noteSpeed * 90);
       run.notes.forEach(note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
@@ -15078,7 +15262,7 @@ const RhythmTapTest = ({
         let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
         if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
         yPx = Math.round(yPx);
-        el.style.transform = `translate3d(0,${yPx}px,0)`;
+        el.style.transform = `translate3d(0,${yPx}px,0) scale(${settings.noteSize / 100})`;
         const releaseTargetMs = rhythmReleaseTargetMs(note),
           releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
@@ -15109,7 +15293,7 @@ const RhythmTapTest = ({
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
-  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.displayTimingOffsetMs, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame]);
+  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.judgmentTimingOffsetMs, settings.noteSize, settings.noteSpeed, song.playDurationMs, stopFrame]);
   const disposeRun = useCallback(() => {
     stopFrame();
     clearJudgmentTimer();
@@ -15135,7 +15319,7 @@ const RhythmTapTest = ({
       ...initialView(),
       status: 'loading'
     });
-    const audio = await Audio_.startRhythmTrack(song.bgmTrackId);
+    const audio = await Audio_.startRhythmTrack(song.bgmTrackId, settings.bgmVolume);
     if (!mountedRef.current || generation !== generationRef.current) {
       audio?.stop();
       return;
@@ -15314,11 +15498,12 @@ const RhythmTapTest = ({
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
-    const active = new Set(Array.from(coordinates || []).map(value => Math.max(0, Math.min(9, Math.floor(Number(value))))).filter(Number.isFinite));
+    const active = new Set(Array.from(coordinates || []).map(value => Math.max(0, Math.min(9, Math.floor(Number(value))))).filter(Number.isFinite)),
+      glowOpacity = settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1';
     area.querySelectorAll('[data-rhythm-sublane-feedback]').forEach((el, index) => {
       const pressed = active.has(index);
       el.dataset.pressed = pressed ? 'true' : 'false';
-      el.style.opacity = pressed ? '1' : '0';
+      el.style.opacity = pressed ? glowOpacity : '0';
     });
   };
   const pointerDown = e => {
@@ -15526,6 +15711,8 @@ const RhythmTapTest = ({
   }, view.combo)))), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
+    "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
+    "data-rhythm-effect": settings.effectAmount,
     onPointerDown: pointerDown,
     onPointerMove: pointerMove,
     onPointerUp: pointerEnd,
@@ -15535,7 +15722,8 @@ const RhythmTapTest = ({
       touchAction: 'none',
       WebkitTouchCallout: 'none',
       WebkitUserSelect: 'none',
-      userSelect: 'none'
+      userSelect: 'none',
+      filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "pointer-events-none absolute inset-0 grid grid-cols-5"
@@ -15548,7 +15736,7 @@ const RhythmTapTest = ({
     "aria-hidden": "true",
     className: "relative border-r border-white/20 bg-slate-900/40",
     style: {
-      transition: 'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',
+      transition: settings.lightweightMode ? 'none' : 'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',
       borderBottom: '3px solid transparent',
       boxSizing: 'border-box'
     }
@@ -15598,9 +15786,9 @@ const RhythmTapTest = ({
     style: {
       textShadow: '0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'
     }
-  }, view.last || (view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : '')), /*#__PURE__*/React.createElement("small", {
-    className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
-  }, view.fastSlow || '—')), chart.notes.map((note, index) => /*#__PURE__*/React.createElement("div", {
+  }, view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? view.last : ''), /*#__PURE__*/React.createElement("small", {
+    className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
+  }, settings.fastSlowDisplay ? view.fastSlow || '—' : '—')), chart.notes.map((note, index) => /*#__PURE__*/React.createElement("div", {
     key: index,
     ref: el => laneRefs.current[index] = el,
     "data-rhythm-note": true,
@@ -33208,6 +33396,14 @@ function MonsterHeroGame() {
         setRhythmPlay(null);
         setGameState('RHYTHM_DEBUG');
       }
+    }), gameState === 'RHYTHM_OPTIONS' && /*#__PURE__*/React.createElement(RhythmOptions, {
+      value: rhythmSettings,
+      onBack: () => setGameState('RHYTHM_DEBUG'),
+      onSave: async draft => {
+        const saved = await saveRhythmSettings(draft);
+        setRhythmSettings(saved);
+        return saved;
+      }
     }), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
       "data-rhythm-debug": true,
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll bg-slate-950 p-3 text-white",
@@ -33223,11 +33419,17 @@ function MonsterHeroGame() {
       className: "min-h-[44px] min-w-[44px] text-slate-300"
     }, /*#__PURE__*/React.createElement(ArrowLeft, {
       size: 20
-    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] font-black text-cyan-300"
     }, "DEBUG ONLY\u30FBSTEP 1"), /*#__PURE__*/React.createElement("h2", {
       className: "text-sm font-black"
-    }, "\u97F3\u30B2\u30FC\u57FA\u76E4\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("section", {
+    }, "\u97F3\u30B2\u30FC\u57FA\u76E4\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
+      "data-rhythm-options-open": true,
+      onClick: () => setGameState('RHYTHM_OPTIONS'),
+      className: "min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100"
+    }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("section", {
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-xs font-black text-cyan-200"
