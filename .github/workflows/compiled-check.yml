@@ -24,6 +24,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Require update banner stamp for shipped changes
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
+          shipped="$(printf '%s\n' "$changed" | grep -E '^(monster-hero/|index\.html$)' | grep -v '^monster-hero/version\.json$' || true)"
+          if [[ -z "$shipped" ]]; then
+            echo "配信対象の変更なし: 更新バナーstampは不要"
+            exit 0
+          fi
+          if ! printf '%s\n' "$changed" | grep -qx 'monster-hero/version.json'; then
+            echo "NG: 配信対象を変更したのに monster-hero/version.json が更新されていません"
+            echo "デバッグ・内部修正でも node tools/build.js を実行して更新バナー用buildを進めてください"
+            exit 1
+          fi
+          echo "OK: 配信対象の変更に更新バナー用versionが含まれています"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
