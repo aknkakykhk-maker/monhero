@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e56e624be20b2cd
+// source-sha256: c1ede0f8e798724e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-01 10:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-01 10:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15242,7 +15242,7 @@ const RhythmTapTest = ({
     }) => {
       run.inputFeedbackState.set(input.inputKey, {
         subLane: Math.max(0, Math.min(9, Math.floor(input.subLaneCoordinate))),
-        empty: !target
+        empty: !target || target.type === 'TAP'
       });
       if (!target) {
         RHYTHM_NOTE_SE_RUNTIME.playEmpty();
@@ -15283,7 +15283,11 @@ const RhythmTapTest = ({
     const subLane = Math.max(0, Math.min(9, Math.floor(subLaneCoordinate)));
     if (subLane === state.subLane) return;
     state.subLane = subLane;
-    if (state.empty) RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+    if (state.empty) inputStarts([{
+      lane: Math.floor(subLane / 2),
+      subLaneCoordinate,
+      inputKey
+    }]);
   };
   const inputEnds = inputs => {
     const run = runRef.current;
@@ -15563,7 +15567,7 @@ const RhythmTapTest = ({
   }, Array.from({
     length: 10
   }, (_, subLane) => {
-    const top = rhythmProjectSubLaneSpan(subLane, 1, .58),
+    const top = rhythmProjectSubLaneSpan(subLane, 1, 0),
       bottom = rhythmProjectSubLaneSpan(subLane, 1, 1);
     return /*#__PURE__*/React.createElement("i", {
       key: subLane,
@@ -15571,10 +15575,10 @@ const RhythmTapTest = ({
       "data-pressed": "false",
       className: "absolute inset-0 opacity-0",
       style: {
-        clipPath: `polygon(${top.left * 100}% 58%,${top.right * 100}% 58%,${bottom.right * 100}% 100%,${bottom.left * 100}% 100%)`,
-        background: 'linear-gradient(to bottom,rgba(34,211,238,0) 0%,rgba(34,211,238,.18) 18%,rgba(103,232,249,.66) 58%,rgba(236,254,255,.98) 88%,#fff 100%)',
-        boxShadow: 'inset 0 -52px 42px rgba(207,250,254,.96),inset 0 -10px 16px #fff,0 0 24px rgba(103,232,249,.9)',
-        filter: 'brightness(1.35)',
+        clipPath: `polygon(${top.left * 100}% 0%,${top.right * 100}% 0%,${bottom.right * 100}% 100%,${bottom.left * 100}% 100%)`,
+        background: 'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',
+        boxShadow: 'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',
+        filter: 'brightness(1.22)',
         transition: 'opacity 45ms linear'
       }
     });
