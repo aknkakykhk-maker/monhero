@@ -22,8 +22,23 @@ for(const y of [.05,.5,.88,1]) for(const sub of [.1,2.5,5.5,9.9]){
   const actual=run(`rhythmSubLaneCoordinateAtPoint(${x},${cy},${JSON.stringify(rect)})`);
   assert(Math.abs(actual-sub)<1e-9,'描画projectionと入力逆変換');
 }
-assert(source.includes("id==='EASY'?widthTestChart")&&/\[7200,4,1\],\[7200,5,1\]/.test(source),'WIDTH TEST譜面');
+const touchRect={left:0,top:0,width:400,height:800};
+const centerX=run(`rhythmProjectBoundary(2.25,1)`)*touchRect.width;
+const contact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:45},${JSON.stringify(touchRect)})`);
+assert.deepEqual(Array.from(contact.subLanes),[3,4,5],'Touch.radiusXをprojectionへ通して最大3サブレーン接触');
+const fallback=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:0},${JSON.stringify(touchRect)})`);
+assert.deepEqual(Array.from(fallback.subLanes),[4],'接触幅なしは中心1サブレーンへfallback');
+const invalidFallback=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:'invalid'},${JSON.stringify(touchRect)})`);
+assert.deepEqual(Array.from(invalidFallback.subLanes),[4],'不正なradiusXも中心1サブレーンへfallback');
+const hugeContact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:9999},${JSON.stringify(touchRect)})`);
+assert(hugeContact.subLanes.length<=3,'異常に大きいradiusXでも1本指は最大3サブレーン');
+assert(source.includes('entered=next.subLanes.filter(lane=>!previousSet.has(lane))')&&source.includes("entered:isStart?next.subLanes:entered"),'touchmoveは新しく接触したサブレーンだけ再判定');
+run(`['pointer:910001','pointer:910002','pointer:910003','pointer:910004'].forEach(key=>RHYTHM_TOUCH_SPAN_RUNTIME._syntheticTapKeys.add(key))`);
+assert.deepEqual(match([note(3,1,0),note(4,1,1),note(5,1,2)],[input(3.5,'pointer:910001'),input(4.5,'pointer:910002'),input(5.5,'pointer:910003')]),[0,1,2],'1本指接触幅のTAP専用入力で幅1×3を同時取得');
+assert.strictEqual(match([note(3,3,0)],[input(3.5,'pointer:910001'),input(4.5,'pointer:910002'),input(5.5,'pointer:910003')]).filter(x=>x!==null).length,1,'幅2〜4の同一TAPを接触幅で重複取得しない');
+assert.deepEqual(match([{type:'HOLD',timeMs:1000,lane:2,subLane:4,subLaneWidth:1,index:0,done:false,activePointerId:null}],[input(4.5,'pointer:910004')]),[null],'接触幅の追加入力はHOLD/SLIDE/FLICKを横取りしない');
+assert(source.includes("id==='EASY'?widthTestChart")&&/\[7200,4,1\],\[7200,5,1\]/.test(source)&&/\[11200,3,1\],\[11200,4,1\],\[11200,5,1\]/.test(source),'WIDTH TEST譜面');
 assert(game.includes('subLaneCoordinate=rhythmSubLaneCoordinateAtPoint')&&game.includes('{lane,subLaneCoordinate,inputKey'),'Touch/Pointerが実座標を渡す');
 assert(source.includes("note?.type==='TAP'||note?.type==='HOLD'")&&source.includes('return note.lane===lane'),'HOLD可変幅・FLICK/SLIDE回帰');
 assert(source.includes('rhythmReleaseTargetMs')&&source.includes('data-rhythm-end-bar'),'ENDバー回帰');
-console.log('OK: 10サブレーン可変幅TAP入力・許容・同時入力・旧譜面・projection回帰');
+console.log('OK: 10サブレーン可変幅TAP入力・接触幅最大3・旧譜面・projection回帰');

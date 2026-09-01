@@ -158,7 +158,7 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
 // STEP 2A.5: 入力成功と空押しを即座に返すWeb Audio SE。既存の音ゲー設定キーだけを読み、
 // AudioContextは1個だけ遅延生成して再利用する。空押しは新規入力でノーツを取得できなかったときだけ呼ぶ。
 const RHYTHM_NOTE_SE_RUNTIME=(()=>{
-  let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70};
+  let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70},inputGroupDepth=0,inputGroupHit=false;
   const readSettings=()=>{
     if(typeof localStorage==='undefined')return cachedSettings;
     let raw=null;
@@ -188,6 +188,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     if(audio?.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
   };
   const play=()=>{
+    if(inputGroupDepth>0)inputGroupHit=true;
     const settings=readSettings();
     if(!settings.enabled||settings.volume<=0)return false;
     const audio=context();
@@ -206,7 +207,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
     return true;
   };
-  const playEmpty=()=>{
+  const emitEmpty=()=>{
     const settings=readSettings();
     if(!settings.enabled||settings.volume<=0)return false;
     const audio=context();
@@ -226,7 +227,18 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect();}catch{}};
     return true;
   };
-  return {warm,play,playEmpty,_readSettings:readSettings};
+  const playEmpty=()=>inputGroupDepth>0?true:emitEmpty();
+  const beginInputGroup=()=>{if(inputGroupDepth===0)inputGroupHit=false;inputGroupDepth++;};
+  const markInputGroupHandled=()=>{if(inputGroupDepth>0)inputGroupHit=true;};
+  const endInputGroup=()=>{
+    if(inputGroupDepth<=0)return false;
+    inputGroupDepth--;
+    if(inputGroupDepth>0)return true;
+    const handled=inputGroupHit;
+    inputGroupHit=false;
+    return handled?true:emitEmpty();
+  };
+  return {warm,play,playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,_readSettings:readSettings};
 })();
 
 const RHYTHM_GESTURE_RUNTIME=(()=>{
@@ -403,13 +415,117 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   return {bind,record,release,clear,slideVisualLaneForIndex,_sessions:sessions};
 })();
 
+// iPhoneのTouch.radiusXを既存projectionへ通し、1本指を最大3サブレーンの接触領域として扱う。
+// ゲーム本体の中心1点入力はそのまま残し、中心以外の新規接触サブレーンだけTAP専用の疑似Pointerで補う。
+const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
+  const touchStates=new Map(),syntheticTapKeys=new Set();
+  let nextSyntheticPointerId=900000;
+  const clampSubLane=value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))));
+  const contactsForTouch=(touch,rect)=>{
+    const centerCoordinate=rhythmSubLaneCoordinateAtPoint(touch?.clientX,touch?.clientY,rect);
+    if(!Number.isFinite(centerCoordinate))return null;
+    const centerSubLane=clampSubLane(centerCoordinate),radiusX=Number(touch?.radiusX);
+    if(!(radiusX>0))return {centerCoordinate,centerSubLane,subLanes:[centerSubLane]};
+    const leftCoordinate=rhythmSubLaneCoordinateAtPoint(Number(touch.clientX)-radiusX,touch.clientY,rect);
+    const rightCoordinate=rhythmSubLaneCoordinateAtPoint(Number(touch.clientX)+radiusX,touch.clientY,rect);
+    const coordinates=[centerCoordinate];
+    if(Number.isFinite(leftCoordinate))coordinates.push(leftCoordinate);
+    if(Number.isFinite(rightCoordinate))coordinates.push(rightCoordinate);
+    const min=Math.max(0,Math.min(...coordinates)),max=Math.min(RHYTHM_SUB_LANE_COUNT-.000001,Math.max(...coordinates));
+    let subLanes=[];
+    for(let lane=clampSubLane(min);lane<=clampSubLane(max);lane++)subLanes.push(lane);
+    if(!subLanes.includes(centerSubLane))subLanes.push(centerSubLane);
+    if(subLanes.length>3)subLanes=subLanes.sort((a,b)=>Math.abs(a-centerSubLane)-Math.abs(b-centerSubLane)||a-b).slice(0,3);
+    subLanes.sort((a,b)=>a-b);
+    return {centerCoordinate,centerSubLane,subLanes};
+  };
+  const defer=fn=>{if(typeof queueMicrotask==='function')queueMicrotask(fn);else Promise.resolve().then(fn);};
+  const pointForSubLane=(subLane,clientY,rect)=>{
+    const yRatio=rhythmClamp01((Number(clientY)-rect.top)/rect.height),nx=rhythmProjectBoundary((Number(subLane)+.5)/2,yRatio);
+    return {clientX:rect.left+rect.width*nx,clientY:Number(clientY)};
+  };
+  const makePointerEvent=(type,id,point)=>{
+    const init={bubbles:true,cancelable:true,pointerId:id,pointerType:'pen',isPrimary:false,clientX:point.clientX,clientY:point.clientY,button:0,buttons:type==='pointerdown'?1:0};
+    if(typeof PointerEvent==='function')return new PointerEvent(type,init);
+    const event=new Event(type,{bubbles:true,cancelable:true});
+    Object.entries(init).forEach(([key,value])=>{try{Object.defineProperty(event,key,{value,configurable:true});}catch{}});
+    return event;
+  };
+  const dispatchTapProbe=(area,touch,subLane)=>{
+    if(!area?.dispatchEvent)return false;
+    const rect=area.getBoundingClientRect();
+    if(!(rect.width>0&&rect.height>0))return false;
+    const id=++nextSyntheticPointerId,key=`pointer:${id}`,point=pointForSubLane(subLane,touch.clientY,rect);
+    syntheticTapKeys.add(key);
+    try{
+      area.dispatchEvent(makePointerEvent('pointerdown',id,point));
+      area.dispatchEvent(makePointerEvent('pointerup',id,point));
+      return true;
+    }finally{syntheticTapKeys.delete(key);}
+  };
+  const applyTouchSpanGlow=()=>{
+    if(typeof document==='undefined')return;
+    const active=new Set();
+    touchStates.forEach(state=>state.subLanes.forEach(lane=>active.add(lane)));
+    document.querySelectorAll('[data-rhythm-sublane-feedback]').forEach((el,index)=>{
+      if(active.has(index))el.dataset.rhythmTouchspan='true';
+      else delete el.dataset.rhythmTouchspan;
+    });
+  };
+  const clear=()=>{touchStates.clear();applyTouchSpanGlow();};
+  const startOrMove=(event,isStart)=>{
+    if(typeof document==='undefined')return;
+    const eventArea=event.target?.closest?.('[data-rhythm-play-area]'),fallbackArea=document.querySelector('[data-rhythm-play-area]'),area=eventArea||fallbackArea;
+    if(!area)return;
+    if(isStart&&!eventArea)return;
+    const rect=area.getBoundingClientRect();
+    if(!(rect.width>0&&rect.height>0))return;
+    const actions=[];
+    Array.from(event.changedTouches||[]).forEach(touch=>{
+      const id=Number(touch.identifier),previous=touchStates.get(id),next=contactsForTouch(touch,rect);
+      if(!next)return;
+      const previousSet=new Set(previous?.subLanes||[]),entered=next.subLanes.filter(lane=>!previousSet.has(lane)),centerChanged=!previous||previous.centerSubLane!==next.centerSubLane;
+      touchStates.set(id,{...next,touch});
+      if(isStart||centerChanged||entered.length)actions.push({id,touch,next,entered:isStart?next.subLanes:entered});
+    });
+    if(!actions.length){defer(applyTouchSpanGlow);return;}
+    RHYTHM_NOTE_SE_RUNTIME.beginInputGroup?.();
+    defer(()=>{
+      let eligible=false;
+      try{
+        actions.forEach(action=>{
+          const baseKey=`touch:${action.id}`;
+          if(RHYTHM_GESTURE_RUNTIME._sessions?.has(baseKey))return;
+          eligible=true;
+          action.entered.filter(lane=>lane!==action.next.centerSubLane).forEach(lane=>dispatchTapProbe(area,action.touch,lane));
+        });
+        if(!eligible)RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
+        applyTouchSpanGlow();
+      }finally{RHYTHM_NOTE_SE_RUNTIME.endInputGroup?.();}
+    });
+  };
+  if(typeof document!=='undefined'){
+    const style=document.createElement('style');
+    style.dataset.rhythmTouchSpan='';
+    style.textContent='[data-rhythm-sublane-feedback][data-rhythm-touchspan="true"]{opacity:1!important}';
+    document.head.appendChild(style);
+    document.addEventListener('touchstart',event=>startOrMove(event,true),{capture:true,passive:true});
+    document.addEventListener('touchmove',event=>{if(Array.from(event.changedTouches||[]).some(touch=>touchStates.has(Number(touch.identifier))))startOrMove(event,false);},{capture:true,passive:true});
+    const finish=event=>{Array.from(event.changedTouches||[]).forEach(touch=>touchStates.delete(Number(touch.identifier)));defer(applyTouchSpanGlow);};
+    document.addEventListener('touchend',finish,{capture:true,passive:true});
+    document.addEventListener('touchcancel',finish,{capture:true,passive:true});
+    document.addEventListener('click',event=>{if(event.target?.closest?.('[data-rhythm-pause],[data-rhythm-pause-menu] button'))clear();},true);
+  }
+  return {contactsForTouch,isSyntheticTapKey:key=>syntheticTapKeys.has(String(key)),clear,_touchStates:touchStates,_syntheticTapKeys:syntheticTapKeys};
+})();
+
 const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
   return (Array.isArray(inputs)?inputs:[]).map(input=>{
     const key=String(input?.inputKey??'');
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
     seenInputs.add(key);
-    const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate);
+    const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate),tapOnly=RHYTHM_TOUCH_SPAN_RUNTIME.isSyntheticTapKey(key);
     const inputSpan=note=>{
       if(rhythmNoteHasVariableSpan(note)){
         const span=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1);
@@ -429,7 +545,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const span=inputSpan(note);
       return span?Math.abs(subCoordinate-span.center):0;
     };
-    const candidates=source.map((note,index)=>({note,index})).filter(({note,index})=>!claimed.has(index)&&!note.done&&note.activePointerId===null&&RHYTHM_NOTE_TYPES.includes(note.type)&&acceptsPosition(note)&&Math.abs(now-(note.timeMs+offset))<=200).sort((a,b)=>Math.abs(now-(a.note.timeMs+offset))-Math.abs(now-(b.note.timeMs+offset))||spatialDistance(a.note)-spatialDistance(b.note)||a.index-b.index);
+    const candidates=source.map((note,index)=>({note,index})).filter(({note,index})=>!claimed.has(index)&&!note.done&&note.activePointerId===null&&RHYTHM_NOTE_TYPES.includes(note.type)&&(!tapOnly||note.type==='TAP')&&acceptsPosition(note)&&Math.abs(now-(note.timeMs+offset))<=200).sort((a,b)=>Math.abs(now-(a.note.timeMs+offset))-Math.abs(now-(b.note.timeMs+offset))||spatialDistance(a.note)-spatialDistance(b.note)||a.index-b.index);
     const picked=candidates[0];
     if(!picked)return {input,target:null,deltaMs:null};
     claimed.add(picked.index);
@@ -515,8 +631,9 @@ const widthTestNotes = Object.freeze([
   [4400,1,2],[5200,3,3],[6000,6,4], // 幅2〜4とワイドTAP
   [7200,4,1],[7200,5,1],             // 隣接する幅1の同時押し
   [8400,0,1],[9000,1,2],[9600,3,3],[10200,6,4], // 幅1→2→3→4
+  [11200,3,1],[11200,4,1],[11200,5,1],          // 1本指の接触幅で確認する幅1×3同時TAP
 ].map(([timeMs,subLane,subLaneWidth])=>Object.freeze({type:'TAP',timeMs,lane:Math.floor(subLane/2),subLane,subLaneWidth})));
-const widthTestChart=Object.freeze({level:1,notes:widthTestNotes,totalNotes:widthTestNotes.length,durationMs:12000});
+const widthTestChart=Object.freeze({level:1,notes:widthTestNotes,totalNotes:widthTestNotes.length,durationMs:13000});
 // STEP 2A: 可変幅HOLDの始点・帯・ENDバーと複数指入力を確認するNORMAL専用譜面。
 const widthHoldTestNotes=Object.freeze([
   [1800,3200,0,1],[4000,5400,2,2],[6200,7600,4,3],[8400,10000,6,4],
