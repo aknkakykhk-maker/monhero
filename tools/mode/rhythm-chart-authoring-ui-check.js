@@ -22,7 +22,7 @@ ok('視覚譜面エディタJSの構文が有効',true);
 ok('実機タイミング補正JSの構文が有効',true);
 ok('デバッグ画面だけへ譜面エディタをマウント',ui.includes("document.querySelector('[data-rhythm-debug]')")&&ui.includes("dataset.rhythmChartAuthoringUi='ready'"));
 ok('通常プレイでは本体を読み込まずデバッグ画面で遅延ロード',calibration.includes("!document.querySelector('[data-rhythm-debug]')")&&calibration.includes("script.src='debug/rhythm-chart-authoring-ui.js?v=20260901b'"));
-ok('実機タイミング補正もエディタ読込後だけ遅延ロード',calibration.includes("offsetScript.src='debug/rhythm-preview-offset.js?v=20260901a'")&&calibration.includes('script.onload=loadOffsetUi'));
+ok('実機タイミング補正もエディタ読込後だけ遅延ロード',calibration.includes("offsetScript.src='debug/rhythm-preview-offset.js?v=20260901b'")&&calibration.includes('script.onload=loadOffsetUi'));
 ok('視覚譜面エディタも既存エディタ成立後だけ遅延ロード',offsetUi.includes("VISUAL_EDITOR_URL='debug/rhythm-chart-visual-editor.js?v=20260901a'")&&offsetUi.includes('loadVisualEditor()')&&visualUi.includes("document.querySelector('[data-rhythm-chart-authoring-ui]')"));
 ok('固定timing正本を使い16分へ配置',ui.includes("TIMING_URL='data/rhythm-timing.js'")&&ui.includes('rhythmTimingAt')&&ui.includes('rhythmSnapTimeToGrid')&&timing.includes('subdivisionsPerBeat:4'));
 ok('TAP/HOLD/FLICK/SLIDEを編集対象にする',['TAP','HOLD','FLICK','SLIDE'].every(type=>ui.includes(`<option>${type}</option>`)));
