@@ -39,7 +39,7 @@ ok('±10/20msの共通補正をプレビューだけへ適用',offsetUi.includes
 ok('補正はtime/end/slidePointsを同じmsだけ移動',offsetUi.includes('endTimeMs')&&offsetUi.includes('slidePoints')&&offsetUi.includes('point?.timeMs'));
 ok('判定ラインは固定3層線＋5レーン目印で明示',lane.includes("'data-rhythm-svg-judgment':''")&&lane.includes("'stroke-width':'28'")&&lane.includes("'stroke-width':'12'")&&lane.includes("'stroke-width':'5'")&&lane.includes('rhythmProjectLane(lane, y)'));
 ok('判定ラインのGaussianBlurを廃止',!lane.includes('feGaussianBlur')&&!lane.includes('rhythmLaneSvgJudgeGlow'));
-ok('ノーツ親の重いdrop-shadowをSVGレイヤー側で解除',lane.includes('[data-rhythm-note]{z-index:4;filter:none!important}'));
+ok('ノーツ親の重いdrop-shadowをSVGレイヤー側で解除',lane.includes('[data-rhythm-note]{z-index:4}')&&lane.includes('[data-rhythm-note]{filter:none!important}'));
 ok('プレイ中はレーン全体を再検索しない',lane.includes('currentArea && currentArea.isConnected && currentSvg && currentSvg.isConnected')&&lane.includes("dataset.rhythmPlayActive=currentArea?'true':'false'"));
 ok('座標校正もプレイ中の全体再検索を避ける',calibration.includes('currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected')&&calibration.includes('scheduleGuide(area)'));
 ok('デバッグUI遅延ロード監視は読込後にdisconnect',calibration.includes('loaderObserver?.disconnect()')&&calibration.includes('loaderObserver=null'));
