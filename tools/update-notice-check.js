@@ -1,5 +1,6 @@
 // 新バージョン検知から更新までの退行を静的に検出する。
 // 更新バナー用build番号は全出荷で進め、CHANGELOGはユーザー向け変更だけを別管理する。
+// 配信対象の更新でversion更新が漏れないこと自体は compiled-check.yml 側でも必須検査する。
 const fs = require('fs');
 const path = require('path');
 
