@@ -229,11 +229,19 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 12:21';
 (()=>{
   if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
   let loaded=false,loaderObserver=null;
+  const loadReviewMode=()=>{
+    if(document.querySelector('[data-rhythm-review-mode-loader]'))return;
+    const reviewScript=document.createElement('script');
+    reviewScript.dataset.rhythmReviewModeLoader='';
+    reviewScript.src='debug/rhythm-review-mode.js?v=20260901a';
+    document.head.appendChild(reviewScript);
+  };
   const loadInvalidPlacementUi=()=>{
-    if(document.querySelector('[data-rhythm-invalid-placement-loader]'))return;
+    if(document.querySelector('[data-rhythm-invalid-placement-loader]')){loadReviewMode();return;}
     const invalidScript=document.createElement('script');
     invalidScript.dataset.rhythmInvalidPlacementLoader='';
     invalidScript.src='debug/rhythm-invalid-placement.js?v=20260901a';
+    invalidScript.onload=loadReviewMode;
     document.head.appendChild(invalidScript);
   };
   const loadSectionLoopUi=()=>{
