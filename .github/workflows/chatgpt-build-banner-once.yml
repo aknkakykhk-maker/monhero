@@ -1,19 +1,20 @@
 name: ChatGPT one-time banner build
 
 on:
-  push:
-    branches: [chatgpt/update-banner-all-builds]
+  pull_request:
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   build-and-commit:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: chatgpt/update-banner-all-builds
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -25,6 +26,8 @@ jobs:
       - name: Run canonical build without changelog rewrite
         run: node tools/build.js
       - name: Commit generated release stamp
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -33,5 +36,5 @@ jobs:
             echo "No generated changes"
           else
             git commit -m "build: stamp update banner release"
-            git push origin HEAD:chatgpt/update-banner-all-builds
+            git push origin "HEAD:${HEAD_BRANCH}"
           fi
