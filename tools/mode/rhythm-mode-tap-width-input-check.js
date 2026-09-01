@@ -26,13 +26,18 @@ for(const y of [.05,.5,.88,1]) for(const sub of [.1,2.5,5.5,9.9]){
 const touchRect={left:0,top:0,width:400,height:800};
 const centerX=run(`rhythmProjectBoundary(2.25,1)`)*touchRect.width;
 const contact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:45},${JSON.stringify(touchRect)})`);
-assert.deepEqual(Array.from(contact.subLanes),[3,4,5],'Touch.radiusXをprojectionへ通して最大3サブレーン接触');
+assert.deepEqual(Array.from(contact.subLanes),[3,4,5],'Touch.radiusXを75%へ縮小してprojectionへ通す');
+const narrowedContact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:25},${JSON.stringify(touchRect)})`);
+assert.deepEqual(Array.from(narrowedContact.subLanes),[4],'接触端を75%補正して隣接サブレーンの拾いすぎを抑える');
+const broadContact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:90},${JSON.stringify(touchRect)})`);
+assert.deepEqual(Array.from(broadContact.subLanes),[2,3,4,5,6],'通常範囲の広い接触は3サブレーン固定上限なしで反映');
 const fallback=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:0},${JSON.stringify(touchRect)})`);
 assert.deepEqual(Array.from(fallback.subLanes),[4],'接触幅なしは中心1サブレーンへfallback');
 const invalidFallback=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:'invalid'},${JSON.stringify(touchRect)})`);
 assert.deepEqual(Array.from(invalidFallback.subLanes),[4],'不正なradiusXも中心1サブレーンへfallback');
 const hugeContact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:9999},${JSON.stringify(touchRect)})`);
-assert(hugeContact.subLanes.length<=3,'異常に大きいradiusXでも1本指は最大3サブレーン');
+assert.deepEqual(Array.from(hugeContact.subLanes),[4],'異常に大きいradiusXは中心1サブレーンへfallback');
+assert(source.includes('RHYTHM_TOUCH_RADIUS_SCALE=.75')&&source.includes('RHYTHM_TOUCH_RADIUS_MAX_PLAY_AREA_RATIO=.25')&&!source.includes('subLanes.length>3'),'接触半径75%補正・固定3サブレーン上限撤廃');
 assert(source.includes('entered=next.subLanes.filter(lane=>!previousSet.has(lane))')&&source.includes("entered:isStart?next.subLanes:entered"),'touchmoveは新しく接触したサブレーンだけ再判定');
 assert(laneSvg.includes("window.addEventListener('touchmove'")&&laneSvg.includes('previous.centerSubLane !== next.centerSubLane')&&laneSvg.includes('states.set(id, { ...next, touch });'),'radiusXの幅揺れだけでは押しっぱなしTAPを再発火しない');
 assert(laneSvg.includes('[data-rhythm-lane-svg]{position:absolute;inset:0;width:100%;height:100%;z-index:1')&&laneSvg.includes('[data-rhythm-sublane-feedback]{z-index:2!important}')&&laneSvg.includes('[data-rhythm-note]{z-index:4}'),'10サブレーン発光をSVGレーンより上・ノーツより下へ表示');
@@ -44,4 +49,4 @@ assert(source.includes("id==='EASY'?widthTestChart")&&/\[7200,4,1\],\[7200,5,1\]
 assert(game.includes('subLaneCoordinate=rhythmSubLaneCoordinateAtPoint')&&game.includes('{lane,subLaneCoordinate,inputKey'),'Touch/Pointerが実座標を渡す');
 assert(source.includes("note?.type==='TAP'||note?.type==='HOLD'")&&source.includes('return note.lane===lane'),'HOLD可変幅・FLICK/SLIDE回帰');
 assert(source.includes('rhythmReleaseTargetMs')&&source.includes('data-rhythm-end-bar'),'ENDバー回帰');
-console.log('OK: 10サブレーン可変幅TAP入力・接触幅最大3・押しっぱなし回帰防止・発光レイヤー・旧譜面・projection回帰');
+console.log('OK: 10サブレーン可変幅TAP入力・接触半径75%補正・固定3上限撤廃・異常radius fallback・押しっぱなし回帰防止・発光レイヤー・旧譜面・projection回帰');
