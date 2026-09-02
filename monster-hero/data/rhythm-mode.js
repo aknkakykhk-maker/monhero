@@ -918,7 +918,9 @@ const installRhythmGestureVisuals=()=>{
       body.setAttribute('aria-hidden','true');
       el.insertBefore(body,el.firstChild);
     });
-    const label=area.previousElementSibling?.querySelector?.('small');
+    // HUDの中から目印で探す。以前は「HUDの最初の<small>」という位置頼みで拾っていたため、
+    // HUDの並び順を変えたときにBEST行を'MIX TEST'で上書きしてしまう不具合を出した。
+    const label=document.querySelector('[data-rhythm-mode-label]');
     const hasGestureNotes=els.some(el=>el.dataset.noteType==='FLICK'||el.dataset.noteType==='SLIDE');
     if(label&&hasGestureNotes&&label.textContent!=='MIX TEST')label.textContent='MIX TEST';
   };

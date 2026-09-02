@@ -16,6 +16,7 @@ const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const game=read('monster-hero/src/game-system.jsx');
 const calibration=read('monster-hero/data/rhythm-geometry-calibration.js');
+const rhythmData=read('monster-hero/data/rhythm-mode.js');
 const debugFiles=fs.readdirSync(path.join(ROOT,'monster-hero/debug')).filter(name=>name.endsWith('.js'));
 
 let failed=0;
@@ -50,6 +51,14 @@ check('プレイ画面はSafe Areaを二重に足さない(bodyがすでに確�
   game.includes("data-rhythm-tap-test")
   &&!/data-rhythm-tap-test[\s\S]{0,400}env\(safe-area-inset/.test(game)
   &&!/data-rhythm-hud[\s\S]{0,300}env\(safe-area-inset/.test(game));
+// HUDの中身を書き換えるスクリプトは、並び順ではなく目印(data-*)で対象を探すこと。
+// 以前 rhythm-mode.js が「HUDの最初の<small>」を 'MIX TEST' へ書き換えており、
+// HUDの並びを変えたらBEST行が'MIX TEST'に化けた(実機で発覚)。
+check('MIX TEST表記は位置ではなく目印(data-rhythm-mode-label)で書き換える',
+  game.includes('<small data-rhythm-mode-label ')
+  &&rhythmData.includes("document.querySelector('[data-rhythm-mode-label]')")
+  &&!/previousElementSibling\?\.querySelector\?\('small'\)/.test(rhythmData));
+
 // ポーズ中はHUD(z-30)より前に出す。逆にするとポーズメニューの上にスコアが浮く。
 check('ポーズ操作はプレイエリアの中のオーバーレイに閉じ、HUDより前に出る',
   game.includes('data-rhythm-pause-menu className="absolute inset-0 z-40'));
