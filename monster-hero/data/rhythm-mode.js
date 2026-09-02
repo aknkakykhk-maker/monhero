@@ -18,6 +18,29 @@ const RHYTHM_JUDGMENTS = Object.freeze([
   Object.freeze({ id:'MISS', windowMs:null, scoreRate:0 }),
 ]);
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
+// スコアランク(暫定値)。G→F→E→D→C→B→A→S→SS→Mの10段階(Mが最上位)。
+// 難易度ごとの割合(%)ではなく絶対スコアのしきい値で判定する。%基準だと
+// EASYで100%を出してもMASTERで100%を出しても同じ最上位ランクになってしまうが、
+// 絶対値にすることでEASYの最大60万点はどれだけ極めてもAが上限になり、
+// MASTERの100万点だけがMへ届く。既存の難易度別最大スコア
+// (EASY 60万 / NORMAL 70万 / HARD 80万 / EXPERT 90万 / MASTER 100万)を
+// そのまま各ランクの境界に使っている。
+const RHYTHM_RANKS = Object.freeze([
+  Object.freeze({ id:'M', min:900000 }),
+  Object.freeze({ id:'SS', min:800000 }),
+  Object.freeze({ id:'S', min:700000 }),
+  Object.freeze({ id:'A', min:600000 }),
+  Object.freeze({ id:'B', min:500000 }),
+  Object.freeze({ id:'C', min:400000 }),
+  Object.freeze({ id:'D', min:300000 }),
+  Object.freeze({ id:'E', min:200000 }),
+  Object.freeze({ id:'F', min:100000 }),
+  Object.freeze({ id:'G', min:0 }),
+]);
+const rhythmRankForScore = score => {
+  const value = Number.isFinite(Number(score)) ? Number(score) : 0;
+  return (RHYTHM_RANKS.find(rank => value >= rank.min) || RHYTHM_RANKS[RHYTHM_RANKS.length - 1]).id;
+};
 // 音ゲーのライフ(暫定値)。モンスターノーツの「回復 / バリア / 丈夫さ」はライフの数値が
 // 決まっていないと設計できないため、まず数値の管理と表示だけを固定する。
 // この段階ではライフが0になっても曲は止めない(失敗終了は次段階で決める)。
