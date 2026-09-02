@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 15:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 15:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2675,6 +2675,11 @@ const Audio_ = (() => {
   let jingleSource = null, jingleTimer = null;
   let currentKey = null, bgmVolumePct = 0, seVolumePct = 0, pageHidden = false;
   let enabled = false;
+  // 音ゲーのBGM音量は、メインのBGM音量設定(対数カーブ・bgmGain)を経由させず独立させる。
+  // ただし全体ミュート(タイトルの「音がオフです」)だけは共通で効かせる。
+  // 稼働中のgainノードを覚えておき、ミュート切り替え時にまとめて反映する。
+  const activeRhythmGains = new Set();
+  const applyRhythmMute = () => { activeRhythmGains.forEach(entry => { entry.node.gain.value = enabled ? entry.raw : 0; }); };
 
   const load = () => {
     if (ready) return Promise.resolve();
@@ -2847,12 +2852,17 @@ const Audio_ = (() => {
     try {
       const buffer=await loadBuffer(track.src),ctx=await ensureAudioCtxRunning();
       if(!ctx) return null;
-      let source=null,startedAt=ctx.currentTime,offsetSeconds=0,playing=false,stopped=false,naturallyEnded=false;
+      let source=null,startedAt=ctx.currentTime,offsetSeconds=0,playing=false,stopped=false,naturallyEnded=false,gainEntry=null;
+      const dropGainEntry=()=>{if(gainEntry){activeRhythmGains.delete(gainEntry);gainEntry=null;}};
       const startSource=offset=>{
         if(stopped||offset>=buffer.duration){naturallyEnded=true;return false;}
-        const nextSource=ctx.createBufferSource(),rhythmGain=ctx.createGain(); applyTrackGain(track);
-        rhythmGain.gain.value=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100));
-        nextSource.buffer=buffer; nextSource.loop=false; nextSource.connect(rhythmGain);rhythmGain.connect(bgmGain);
+        const nextSource=ctx.createBufferSource(),rhythmGain=ctx.createGain();
+        const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);
+        dropGainEntry(); gainEntry={node:rhythmGain,raw}; activeRhythmGains.add(gainEntry);
+        rhythmGain.gain.value=enabled?raw:0;
+        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由せず直接destinationへ繋ぐ。
+        // 全体ミュート(enabled)だけはactiveRhythmGains経由で共通に反映する。
+        nextSource.buffer=buffer; nextSource.loop=false; nextSource.connect(rhythmGain);rhythmGain.connect(ctx.destination);
         source=nextSource; offsetSeconds=offset; startedAt=ctx.currentTime; playing=true;
         nextSource.onended=()=>{if(source===nextSource&&playing){playing=false;naturallyEnded=true;source=null;}};
         nextSource.start(0,offset); return true;
@@ -2867,7 +2877,7 @@ const Audio_ = (() => {
         pause:()=>{if(!playing||stopped)return;offsetSeconds=songTimeSeconds();playing=false;const old=source;source=null;stopSource(old);},
         resume:async()=>{if(playing||stopped||naturallyEnded)return playing;await ensureAudioCtxRunning();return startSource(offsetSeconds);},
         restart:async()=>{if(stopped)return false;playing=false;naturallyEnded=false;const old=source;source=null;stopSource(old);offsetSeconds=0;await ensureAudioCtxRunning();return startSource(0);},
-        stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);},
+        stop:()=>{if(stopped)return;stopped=true;playing=false;const old=source;source=null;stopSource(old);dropGainEntry();},
       };
     } catch(e){ return null; }
   };
@@ -2896,13 +2906,13 @@ const Audio_ = (() => {
     } catch (e) { if (currentKey) playBGM(currentKey); }
   };
   const setPageHidden = (hidden) => { pageHidden = !!hidden; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
-  const setEnabled = async (on) => { enabled = !!on; if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
+  const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
   const unlock = async (playTestTone = false) => {
-    if (!enabled) enabled = true;
+    if (!enabled) { enabled = true; if (typeof window !== 'undefined') window.__mhAudioEnabled = true; applyRhythmMute(); }
     // resume・決定SEはuser activationが残るイベント処理内で開始し、最初の再生前に待たない。
     const ctx = resumeAudioCtxNoWait();
     let toneStart = null;
@@ -8242,7 +8252,7 @@ const RhythmOptions=({value,onSave,onBack})=>{
     <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"><button aria-label="音ゲーデバッグへ戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div><small className="block text-[8px] font-black text-cyan-300">DEBUG・正式モード共通設計</small><h2 className="text-base font-black">⚙️ 音ゲーオプション</h2></div></header>
     <div data-rhythm-options-scroll className="flex-1 min-h-0 overflow-y-auto px-3 pb-4 pt-3 mh-scroll">
       <div className="space-y-3">
-        <section className={card}><h3 className="text-sm font-black text-cyan-200">🔊 音量</h3><label className="mt-2 block text-xs font-bold">BGM音量{range('bgmVolume',0,100,1)}</label><label className="mt-2 block text-xs font-bold">タップ音量{range('noteSeVolume',0,100,1)}</label><div className={row}><span className="text-xs font-bold">タップ音</span>{toggle('noteSeEnabled','')}</div><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={previewBgm} className="min-h-[46px] rounded-xl bg-indigo-700 text-xs font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-xs font-black">タップ音試聴</button></div></section>
+        <section className={card}><h3 className="text-sm font-black text-cyan-200">🔊 音量</h3><label className="mt-2 block text-xs font-bold">BGM音量{range('bgmVolume',0,100,1)}</label><label className="mt-2 block text-xs font-bold">タップ音量{range('noteSeVolume',0,100,1)}</label><div className={row}><span className="text-xs font-bold">タップ音</span>{toggle('noteSeEnabled','')}</div><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={previewBgm} className="min-h-[46px] rounded-xl bg-indigo-700 text-xs font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-xs font-black">タップ音試聴</button></div><p className="mt-2 text-[9px] leading-relaxed text-slate-400">この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p></section>
         <section className={card}><h3 className="text-sm font-black text-cyan-200">🎯 プレイ</h3><label className="mt-2 block text-xs font-bold">ノーツ速度{range('noteSpeed',RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,'',1)}</label><p className="mt-1 text-[9px] leading-relaxed text-slate-400">1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約{rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。</p><label className="mt-2 block text-xs font-bold">ノーツサイズ{range('noteSize',80,120,5,'%')}</label><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。</p><label className="mt-2 block text-xs font-bold">判定タイミング調整{range('judgmentTimingOffsetMs',-100,100,5,'ms')}</label><p className="mt-2 text-[9px] leading-relaxed text-slate-400">判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。</p></section>
         <section className={card}><h3 className="text-sm font-black text-cyan-200">👁 表示</h3><div className={row}><span className="text-xs font-bold">FAST / SLOW表示</span>{toggle('fastSlowDisplay','')}</div><div className={row}><span className="text-xs font-bold">判定文字表示</span>{toggle('judgmentTextDisplay','')}</div><div className="py-2"><p className="mb-2 text-xs font-bold">レーン発光</p>{segments('laneGlow',[['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']])}</div></section>
         <section className={card}><h3 className="text-sm font-black text-cyan-200">✨ 演出・端末</h3><div className="py-2"><p className="mb-2 text-xs font-bold">演出量</p>{segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']])}</div><div className={row}><span className="text-xs font-bold">振動</span>{toggle('vibrationEnabled','')}</div><div className={row}><span className="text-xs font-bold">軽量モード</span>{toggle('lightweightMode','')}</div></section>

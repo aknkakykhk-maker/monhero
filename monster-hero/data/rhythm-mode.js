@@ -177,6 +177,10 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
 
 // STEP 2A.5: 入力成功と空押しを即座に返すWeb Audio SE。既存の音ゲー設定キーだけを読み、
 // AudioContextは1個だけ遅延生成して再利用する。空押しは新規入力でノーツを取得できなかったときだけ呼ぶ。
+// 音ゲーのタップ音量はメインのSE音量設定と独立している(rhythm-mode.js側で自前のAudioContextを使う)。
+// ただし全体ミュート(タイトル画面の「音がオフです」)だけは、game-system.jsx の Audio_.setEnabled が
+// window.__mhAudioEnabled へ反映するのでそれを見て共通に効かせる。値が無い(main未読込)場合はfalse扱いにしない。
+const rhythmAudioGloballyEnabled=()=>typeof window==='undefined'||window.__mhAudioEnabled!==false;
 const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70},inputGroupDepth=0,inputGroupHit=false;
   const readSettings=()=>{
@@ -210,7 +214,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   const play=(previewSettings=null)=>{
     if(inputGroupDepth>0)inputGroupHit=true;
     const settings=previewSettings?{enabled:previewSettings.noteSeEnabled!==false,volume:Math.max(0,Math.min(100,Number(previewSettings.noteSeVolume)||0))}:readSettings();
-    if(!settings.enabled||settings.volume<=0)return false;
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
@@ -229,7 +233,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   };
   const emitEmpty=()=>{
     const settings=readSettings();
-    if(!settings.enabled||settings.volume<=0)return false;
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});

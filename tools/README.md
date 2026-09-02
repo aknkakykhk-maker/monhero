@@ -148,6 +148,7 @@ node tools/build.js --check
 `node mode/rhythm-mode-note-perspective-check.js` は、上部・中央・判定ライン付近の5レーンについて、左右境界・中央・ノーツ幅・Touch／Pointer／SLIDE入力の逆投影が同じprojection結果になることと、時刻を変えない非線形Y移動、HOLD／SLIDE帯、判定ライン、番号、押下発光、描画用rAFの一本化を数値と実装経路の両方で確認する。
 `node mode/rhythm-mode-sublane-projection-check.js` は、旧5レーン互換を保つ10サブレーン座標、TAP幅1〜4、左右端、奥／手前の共通projection、サブ境界とHOLD／SLIDE／ENDバーの回帰を確認する。
 `node mode/rhythm-note-geometry-audit.js` は、ノーツ速度1.0〜12.0（0.1刻み・6.0=2150ms）の変換式と、速度1／3／6／10／12 × ノーツサイズ80／100／120％の全組み合わせについて、ノーツ頭・HOLD帯・SLIDE帯・ENDバーの実描画位置を実ブラウザで測り、共通projectionからのズレとレーン外へのはみ出しを検出する。ノーツサイズは頭だけに掛かり、帯とENDバーはレーンgeometry基準のままであることもここで確認する。帯は上端と下端の2点だけを見ると途中の歪みを見逃すため、clipPath／polygonを実際に線形補間した値を**画面内の複数の高さ**で突き合わせる（画面より長い帯のケースも含む）。
+`node mode/rhythm-audio-independence-check.js` は、音ゲーのBGM専用gainがメインのbgmGainを経由せずdestinationへ直結していること、曲ごとの音量差はsafeTrackGainで正規化すること、タップ音がもともとメインのSE音量と無関係であること、そして全体ミュート(タイトルの「音がオフです」)だけは`window.__mhAudioEnabled`経由で両方に共通で効くことを確認する。
 `node mode/rhythm-failed-hold-trail-check.js` は、MISSになったHOLD／SLIDEを譜面上の終端まで薄いグレーで流し続け、TAP／FLICKは従来どおり消えること、判定・コンボ・スコアへ影響していないことを確認する。
 `node mode/rhythm-screen-layout-check.js` は、音ゲーのデバッグ／オプション／プレイの各画面が「固定ヘッダー＋スクロール1つ（＋固定フッター）」で閉じ、座標校正などのデバッグUIが `document.body` 直下の固定レイヤーとしてプレイ画面へ重ならないことを確認する。あわせて実ブラウザで座標校正スクリプトを動かし、トグルがデバッグ画面とポーズメニューの中へ入ること、プレイ中に画面へ浮かないこと、ON/OFFが画面をまたいで保持されることを実測する。
 `node mode/rhythm-mode-tap-width-input-check.js` は、可変幅TAPの10サブレーン入力、幅1の最小タッチ許容、左右端・範囲外、隣接同時押し、旧5レーン互換、描画projectionの逆変換、WIDTH TESTと既存ジェスチャーの回帰を確認する。

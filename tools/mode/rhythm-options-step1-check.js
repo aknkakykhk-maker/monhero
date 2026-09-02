@@ -16,7 +16,10 @@ ok('デバッグ画面だけに44px以上の入口',game.includes('data-rhythm-o
 ok('下部固定操作バーと独立スクロール領域',game.includes('data-rhythm-options-scroll')&&game.includes('data-rhythm-options-actions')&&game.includes("env(safe-area-inset-bottom)")&&game.includes('data-rhythm-options-save'));
 ok('変更時に保存ボタンを明示',game.includes("data-dirty={dirty?'true':'false'}")&&game.includes("dirty?'変更を保存':'保存'"));
 ok('試聴はボタンの直接イベントから既存音声経路を使う',game.includes('onClick={previewBgm}')&&game.includes("Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume)")&&game.includes('onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)}')&&data.includes('preview:settings=>play(settings)'));
-ok('音ゲーBGM音量だけを専用gainへ反映',game.includes('rhythmGain.gain.value=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))')&&game.includes('Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume)'));
+ok('音ゲーBGM音量だけを専用gainへ反映(メインのbgmGainは経由しない)',
+  game.includes('const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);')
+  &&game.includes('rhythmGain.connect(ctx.destination);')
+  &&game.includes('Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume)'));
 
 const speedBlock=game.match(/const RHYTHM_NOTE_TRAVEL_BASE_MS=2150;[\s\S]*?const rhythmTravelMsForSpeed=value=>\{[\s\S]*?\n\};/);
 ok('速度変換を独立した描画helperに集約',!!speedBlock&&game.includes('travelMs=rhythmTravelMsForSpeed(settings.noteSpeed)'));
