@@ -1180,14 +1180,42 @@ const installRhythmPerspectiveNoteVisuals=()=>{
   if(document.documentElement.dataset.rhythmPerspectiveNotes==='ready')return;
   document.documentElement.dataset.rhythmPerspectiveNotes='ready';
 
-  let area=null;
+  let area=null,laidOutWidth=0,laidOutHeight=0;
+  const layoutFor=next=>{
+    area=next;
+    const rect=next?.getBoundingClientRect?.();
+    laidOutWidth=rect?.width||0;laidOutHeight=rect?.height||0;
+    rhythmLayoutPlayArea(next);
+  };
   const scan=()=>{
     const next=document.querySelector('[data-rhythm-play-area]');
-    if(next!==area){area=next;rhythmLayoutPlayArea(area);}
+    if(next!==area)layoutFor(next);
+  };
+  // 端末を回した / 画面の大きさが変わったときは、要素が同じでも測り直す。
+  // 以前は「プレイエリアの要素が入れ替わったときだけ」だったので、回転してもレーンの
+  // 静的形状(レーン番号の位置・判定ラインの左右)が古い縦横比のまま残っていた。
+  //
+  // ノーツの配置は本体の1本のrAFが持つので、ここでrAFを増やさない。
+  // 代わりに「大きさが実際に変わったときだけ」やり直す(回転中に resize が連続で
+  // 飛んできても、同じ大きさなら何もしない)。
+  // 触るのは見た目のstyleだけで、audio clock・run・スコア・コンボ・判定状態には関与しない。
+  const relayout=()=>{
+    const next=document.querySelector('[data-rhythm-play-area]');
+    if(!next)return;
+    const rect=next.getBoundingClientRect();
+    if(!(rect.width>0&&rect.height>0))return;
+    if(next===area&&rect.width===laidOutWidth&&rect.height===laidOutHeight)return;
+    layoutFor(next);
   };
   const observe=()=>{
     scan();
     new MutationObserver(scan).observe(document.body,{childList:true,subtree:true});
+    if(typeof window!=='undefined'&&typeof window.addEventListener==='function'){
+      ['resize','orientationchange'].forEach(type=>window.addEventListener(type,relayout,{passive:true}));
+      if(window.visualViewport&&typeof window.visualViewport.addEventListener==='function'){
+        window.visualViewport.addEventListener('resize',relayout,{passive:true});
+      }
+    }
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',observe,{once:true});
   else observe();
