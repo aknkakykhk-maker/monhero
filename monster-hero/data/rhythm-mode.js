@@ -384,15 +384,32 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
 
   const nowPerf=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
   const inputKey=(kind,id)=>`${kind}:${id}`;
+  // areaRect は「指の座標 → レーン」の変換のたびに呼ばれる。以前は毎回 querySelector と
+  // getBoundingClientRect()(=強制レイアウト)をしていたため、1フレームのあいだに
+  // 指の数ぶん・pointermoveの数ぶんレイアウトを確定させていた。
+  // 同じフレームのあいだは測り直さずに共有する。**ズレると入力位置がずれる**ので、
+  // フレームが変わるとき・画面サイズが変わるときは必ず捨てる(invalidateAreaRect)。
+  let cachedRect=null;
+  const invalidateAreaRect=()=>{cachedRect=null;};
   const areaRect=()=>{
     if(typeof document==='undefined')return null;
+    if(cachedRect)return cachedRect;
     RHYTHM_PERF.domQuery();
     const area=document.querySelector('[data-rhythm-play-area]');
     if(!area)return null;
     RHYTHM_PERF.layoutRead();
     const rect=area.getBoundingClientRect();
-    return rect&&Number.isFinite(rect.width)&&rect.width>0?rect:null;
+    if(!(rect&&Number.isFinite(rect.width)&&rect.width>0))return null;
+    cachedRect=rect;
+    return cachedRect;
   };
+  // 画面が動く操作では即座に捨てる(iOSのURLバー出入りなども visualViewport で拾う)
+  if(typeof window!=='undefined'&&typeof window.addEventListener==='function'){
+    ['resize','orientationchange','scroll'].forEach(type=>window.addEventListener(type,invalidateAreaRect,{passive:true,capture:true}));
+    if(window.visualViewport&&typeof window.visualViewport.addEventListener==='function'){
+      ['resize','scroll'].forEach(type=>window.visualViewport.addEventListener(type,invalidateAreaRect,{passive:true}));
+    }
+  }
   const laneCoordinate=(clientX,clientY)=>{
     const rect=areaRect();
     if(!rect)return null;
@@ -442,6 +459,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   };
   const tick=()=>{
     raf=0;
+    invalidateAreaRect();
     const paused=typeof document!=='undefined'&&!!document.querySelector('[data-rhythm-pause-menu]');
     const perf=nowPerf();
     sessions.forEach((session,key)=>{
@@ -563,7 +581,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     document.addEventListener('click',event=>{const button=event.target?.closest?.('[data-rhythm-pause-menu] button');if(button&&/リスタート|中断/.test(button.textContent||''))clear();},true);
   }
 
-  return {bind,record,release,clear,slideVisualLaneForIndex,_sessions:sessions};
+  return {bind,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,_sessions:sessions};
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
@@ -641,13 +659,22 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
       return true;
     }finally{syntheticTapKeys.delete(key);}
   };
+  // 指を動かすたびに10要素を querySelectorAll で引き直し、毎回全部へ書き込んでいた。
+  // 要素は覚えておき、状態が変わったサブレーンだけ書き換える(書き込みはstyle再計算を誘発するため)。
+  let glowNodes=null;
   const applyTouchSpanGlow=()=>{
     if(typeof document==='undefined')return;
-    RHYTHM_PERF.domQuery();
     const active=new Set();
     touchStates.forEach(state=>state.subLanes.forEach(lane=>active.add(lane)));
-    document.querySelectorAll('[data-rhythm-sublane-feedback]').forEach((el,index)=>{
-      if(active.has(index))el.dataset.rhythmTouchspan='true';
+    // プレイ画面を作り直すとDOMが入れ替わるので、外れていたら引き直す
+    if(!glowNodes||!glowNodes.length||!glowNodes[0].isConnected){
+      RHYTHM_PERF.domQuery();
+      glowNodes=Array.from(document.querySelectorAll('[data-rhythm-sublane-feedback]'));
+    }
+    glowNodes.forEach((el,index)=>{
+      const want=active.has(index);
+      if(want===(el.dataset.rhythmTouchspan==='true'))return;
+      if(want)el.dataset.rhythmTouchspan='true';
       else delete el.dataset.rhythmTouchspan;
     });
   };
