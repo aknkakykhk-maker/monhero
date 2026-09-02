@@ -78,8 +78,9 @@ check('入力のたびのDOM検索と強制レイアウトを数えている',
   /RHYTHM_PERF\.domQuery\(\);\s*\n\s*const area=document\.querySelector\('\[data-rhythm-play-area\]'\)/.test(data)
   &&/RHYTHM_PERF\.layoutRead\(\);\s*\n\s*const rect=area\.getBoundingClientRect\(\)/.test(data));
 check('SLIDE帯のpolygon更新数を数えている',/RHYTHM_PERF\.slidePolygons\(polygons\.length\)/.test(data));
-check('サブレーン発光の再検索を数えている',
-  /RHYTHM_PERF\.domQuery\(\);\s*\n\s*const active=new Set\(\)/.test(data));
+// 発光の要素はキャッシュするようになったので、実際に引き直したときだけ数える
+check('サブレーン発光は引き直したときだけDOM検索として数える',
+  /if\(!glowNodes[\s\S]{0,80}RHYTHM_PERF\.domQuery\(\);\s*\n\s*glowNodes=Array\.from\(document\.querySelectorAll\('\[data-rhythm-sublane-feedback\]'\)\)/.test(data));
 
 // ── デバッグ画面の中だけに置く ──────────────────────────────────────────
 check('計測UIは音ゲーデバッグ画面の設定タブの中にある',
