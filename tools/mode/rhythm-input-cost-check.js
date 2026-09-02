@@ -127,6 +127,33 @@ check('サブレーン発光の要素を覚えて使い回す',
 check('発光は変わったサブレーンだけ書き換える',
   /if\(want===\(el\.dataset\.rhythmTouchspan==='true'\)\)return;/.test(source));
 
+// ── DOMの変化のたびに全ノーツを引き直していないか ──────────────────────
+// decorate() は area 配下の全ノーツを引き直すので、無関係な変化でも走ると重い。
+// 実際にMutationRecordを作って、走る/走らないを確かめる。
+const observerFilter=[source.match(/const RHYTHM_DECORATE_TARGET='[^']*';/)?.[0],
+  source.match(/const touchesPlayDom=records=>records\.some\([\s\S]*?\n  \}\);/)?.[0]].filter(Boolean).join('\n');
+const observerFilterOk=/RHYTHM_DECORATE_TARGET/.test(observerFilter)&&/touchesPlayDom/.test(observerFilter);
+check('関係する変化だけを拾うフィルタがある',observerFilterOk);
+if(observerFilterOk){
+  const el=(sel,inner=null)=>({nodeType:1,matches:s=>s.split(',').some(one=>one.trim()===sel),
+    querySelector:s=>inner&&s.split(',').some(one=>one.trim()===inner)?{nodeType:1}:null});
+  const ctx={};vm.createContext(ctx);
+  vm.runInContext(`${observerFilter}\nthis.out=touchesPlayDom;`,ctx);
+  const touches=ctx.out;
+  const rec=(added=[],removed=[],type='childList')=>({type,addedNodes:added,removedNodes:removed});
+  check('スコアやコンボの文字だけが変わったときは走らせない',
+    touches([rec([],[],'characterData')])===false);
+  check('関係ない要素が増えただけでは走らせない',
+    touches([rec([el('[data-auto-bgm-picker]')],[])])===false);
+  check('ノーツが増えたら走らせる',
+    touches([rec([el('[data-rhythm-note]')],[])])===true);
+  check('プレイ画面ごと差し替わったら走らせる',
+    touches([rec([el('[data-nothing]','[data-rhythm-note]')],[])])===true);
+  check('ノーツが消えたときも走らせる',
+    touches([rec([],[el('[data-rhythm-note]')])])===true);
+}
+check('走った回数を計測できる',/RHYTHM_PERF\.noteRescan\(\);/.test(source));
+
 // ── 入力の意味・判定条件は変えていない ──────────────────────────────────
 check('入力座標の逆投影(rhythmLaneCoordinateAtPoint)は変更していない',
   source.includes('const rhythmLaneCoordinateAtPoint='));

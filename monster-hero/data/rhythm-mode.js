@@ -64,7 +64,7 @@ const rhythmLifeRatio = life => Math.max(0, Math.min(1, rhythmLifeValue(life) / 
 const RHYTHM_PERF_KEY='mh_rhythm_perf_v1';
 const RHYTHM_PERF_LONG_MS=Object.freeze([16.7,25,33]);
 const RHYTHM_PERF=(()=>{
-  const zero=()=>({frames:0,totalMs:0,maxMs:0,long:[0,0,0],layoutReads:0,domQueries:0,slidePolygons:0,gestureFrames:0});
+  const zero=()=>({frames:0,totalMs:0,maxMs:0,long:[0,0,0],layoutReads:0,domQueries:0,slidePolygons:0,gestureFrames:0,noteRescans:0});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -91,6 +91,7 @@ const RHYTHM_PERF=(()=>{
       last=Number.isFinite(t)?t:null;
     },
     gestureFrame(){if(on)acc.gestureFrames++;},
+    noteRescan(){if(on)acc.noteRescans++;},
     layoutRead(){if(on)acc.layoutReads++;},
     domQuery(){if(on)acc.domQueries++;},
     slidePolygons(count){if(on)acc.slidePolygons+=Number(count)||0;},
@@ -107,6 +108,7 @@ const RHYTHM_PERF=(()=>{
         domQueriesPerFrame:per(acc.domQueries),
         slidePolygonsPerFrame:per(acc.slidePolygons),
         gestureFrames:acc.gestureFrames,
+        noteRescans:acc.noteRescans,
       };
     },
   };
@@ -999,6 +1001,7 @@ const installRhythmGestureVisuals=()=>{
   const decorate=()=>{
     const area=document.querySelector('[data-rhythm-play-area]');
     if(!area)return;
+    RHYTHM_PERF.noteRescan();
     const els=Array.from(area.querySelectorAll('[data-rhythm-note]'));
     els.forEach((el,index)=>{
       if(el.dataset.noteType!=='SLIDE'||el.querySelector('[data-rhythm-slide-body]'))return;
@@ -1013,7 +1016,19 @@ const installRhythmGestureVisuals=()=>{
     const hasGestureNotes=els.some(el=>el.dataset.noteType==='FLICK'||el.dataset.noteType==='SLIDE');
     if(label&&hasGestureNotes&&label.textContent!=='MIX TEST')label.textContent='MIX TEST';
   };
-  const observer=new MutationObserver(decorate);
+  // decorate() は area 配下の全ノーツを引き直すので、DOMのどんな変化でも走ると重い。
+  // (スコア・コンボ・判定表示の書き換えなど、ノーツと無関係な変化でも呼ばれていた)
+  // ノーツ・プレイエリア・モード表記が増減したときだけ走らせる。やることは変えない。
+  const RHYTHM_DECORATE_TARGET='[data-rhythm-note],[data-rhythm-play-area],[data-rhythm-mode-label]';
+  const touchesPlayDom=records=>records.some(record=>{
+    if(record.type!=='childList')return false;
+    const hit=node=>node&&node.nodeType===1
+      &&(node.matches?.(RHYTHM_DECORATE_TARGET)||node.querySelector?.(RHYTHM_DECORATE_TARGET));
+    for(const node of record.addedNodes)if(hit(node))return true;
+    for(const node of record.removedNodes)if(hit(node))return true;
+    return false;
+  });
+  const observer=new MutationObserver(records=>{if(touchesPlayDom(records))decorate();});
   const start=()=>{decorate();observer.observe(document.body,{childList:true,subtree:true});};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
   else start();
