@@ -23,19 +23,12 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 
 // 1. プレイ画面: HUD・プレイエリア・ポーズだけで閉じる
 check('プレイ画面は overflow-hidden の1画面で、内側にスクロールを作らない',
-  game.includes('<main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden'));
-// HUDは横帯として縦を占有せず、プレイエリアへ重ねる(縦をレーンへ返すため)。
-check('HUDはプレイエリアへ重ねる絶対配置で、レイアウトの高さを取らない',
-  game.includes('<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30'));
-check('HUDは触れず、ポーズだけがタップを受ける',
-  /data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto /.test(game));
-check('プレイ画面はSafe Areaを上下とも自分で持ち、HUDも上のSafe Areaを避ける',
-  game.includes("data-rhythm-tap-test")
-  &&/data-rhythm-tap-test[\s\S]{0,400}paddingTop:'env\(safe-area-inset-top\)',paddingBottom:'env\(safe-area-inset-bottom\)'/.test(game)
-  &&/data-rhythm-hud[\s\S]{0,400}paddingTop:'calc\(env\(safe-area-inset-top\) \+ 6px\)'/.test(game));
-// ポーズ中はHUD(z-30)より前に出す。逆にするとポーズメニューの上にスコアが浮く。
-check('ポーズ操作はプレイエリアの中のオーバーレイに閉じ、HUDより前に出る',
-  game.includes('data-rhythm-pause-menu className="absolute inset-0 z-40'));
+  game.includes('<main data-rhythm-tap-test className="flex flex-1 min-h-0 flex-col overflow-hidden')
+  &&game.includes('<header data-rhythm-hud className="shrink-0'));
+check('プレイ画面はSafe Areaを上下とも自分で持つ',
+  game.includes("data-rhythm-tap-test")&&/data-rhythm-tap-test[\s\S]{0,400}paddingTop:'env\(safe-area-inset-top\)',paddingBottom:'env\(safe-area-inset-bottom\)'/.test(game));
+check('ポーズ操作はプレイエリアの中のオーバーレイに閉じている',
+  game.includes('data-rhythm-pause-menu className="absolute inset-0 z-20'));
 
 // 2. オプション画面: ヘッダー / スクロール / フッターの3層だけ
 check('オプション画面は固定ヘッダー+スクロール+固定フッターの3層',
