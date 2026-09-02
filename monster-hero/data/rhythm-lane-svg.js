@@ -15,10 +15,11 @@
     return el;
   };
   const point = (x, y) => `${(Number(x) * 1000).toFixed(3)},${(Number(y) * 1000).toFixed(3)}`;
-  const lanePoints = lane => {
-    const top = rhythmProjectLane(lane, 0), bottom = rhythmProjectLane(lane, 1);
-    return [point(top.left, 0), point(top.right, 0), point(bottom.right, 1), point(bottom.left, 1)].join(' ');
-  };
+  // 上端・下端の2点だけで結ぶとprojectionの曲線から外れ、中間の高さでレーン枠だけが
+  // ノーツより外側へ膨らむ。rhythm-mode.js と同じ刻みでサンプルして曲線へ沿わせる。
+  const edgePoints = boundary => rhythmProjectionEdgeRatios().map(y => point(rhythmProjectBoundary(boundary, y), y));
+  const spanPoints = (leftBoundary, rightBoundary) => [...edgePoints(rightBoundary), ...edgePoints(leftBoundary).reverse()].join(' ');
+  const lanePoints = lane => spanPoints(lane, lane + 1);
   const installStyle = () => {
     if (document.head.querySelector('[data-rhythm-lane-svg-style]')) return;
     const style = document.createElement('style');
@@ -67,9 +68,8 @@
     defs.append(laneFill, pressedFill);
     svg.appendChild(defs);
 
-    const roadLeftTop = rhythmProjectBoundary(0, 0), roadRightTop = rhythmProjectBoundary(RHYTHM_LANE_COUNT, 0);
     svg.appendChild(svgEl('polygon', {
-      points:[point(roadLeftTop,0), point(roadRightTop,0), point(1,1), point(0,1)].join(' '),
+      points:spanPoints(0, RHYTHM_LANE_COUNT),
       fill:'#07111f', 'fill-opacity':'.94'
     }));
 
@@ -89,12 +89,12 @@
       }));
     }
     for (let boundary = 0; boundary <= RHYTHM_LANE_COUNT; boundary++) {
-      svg.appendChild(svgEl('line', {
-        x1:(rhythmProjectBoundary(boundary,0)*1000).toFixed(3), y1:'0',
-        x2:(rhythmProjectBoundary(boundary,1)*1000).toFixed(3), y2:'1000',
-        stroke:boundary === 0 || boundary === RHYTHM_LANE_COUNT ? '#e0f2fe' : '#a5f3fc',
-        'stroke-opacity':boundary === 0 || boundary === RHYTHM_LANE_COUNT ? '.72' : '.46',
-        'stroke-width':boundary === 0 || boundary === RHYTHM_LANE_COUNT ? '2.4' : '1.6'
+      const outer = boundary === 0 || boundary === RHYTHM_LANE_COUNT;
+      svg.appendChild(svgEl('polyline', {
+        points:edgePoints(boundary).join(' '), fill:'none',
+        stroke:outer ? '#e0f2fe' : '#a5f3fc',
+        'stroke-opacity':outer ? '.72' : '.46',
+        'stroke-width':outer ? '2.4' : '1.6'
       }));
     }
 

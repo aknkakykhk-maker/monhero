@@ -34,7 +34,8 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
   document.documentElement.dataset.rhythmGeometryCalibration='ready';
 
   const SVG_NS='http://www.w3.org/2000/svg';
-  let enabled=false,currentArea=null,currentSvg=null,button=null,guideFrame=0;
+  let enabled=false,currentArea=null,currentSvg=null,guideFrame=0;
+  const toggles=new Set();
   const svgEl=(tag,attrs={})=>{
     const el=document.createElementNS(SVG_NS,tag);
     Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));
@@ -66,17 +67,23 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
     group.appendChild(label);
     return label;
   };
-  const setGuideVisible=area=>{
-    const guide=area?.querySelector(':scope > [data-rhythm-lane-svg] [data-rhythm-calibration-guide]');
-    if(guide)guide.style.display=enabled?'':'none';
-    if(button){
+  // プレイ画面へ固定ボタンを浮かせるとHUDへ重なるため、トグルは音ゲーデバッグ画面と
+  // ポーズメニューの中(=その画面自身のUI)に置く。画面ごとの固定レイヤーを増やさない。
+  const syncToggles=()=>{
+    toggles.forEach(toggle=>{
+      if(!toggle.isConnected){toggles.delete(toggle);return;}
       const label=enabled?'座標校正 ON':'座標校正';
       // childListを監視しているため、同じ文字列を毎回textContentへ代入すると
       // 自分自身のMutationObserverを再発火し続けて画面遷移が固まる。実変更時だけ書き換える。
-      if(button.textContent!==label)button.textContent=label;
-      button.setAttribute('aria-pressed',enabled?'true':'false');
-      button.dataset.active=enabled?'true':'false';
-    }
+      if(toggle.textContent!==label)toggle.textContent=label;
+      toggle.setAttribute('aria-pressed',enabled?'true':'false');
+      toggle.dataset.active=enabled?'true':'false';
+    });
+  };
+  const setGuideVisible=area=>{
+    const guide=area?.querySelector(':scope > [data-rhythm-lane-svg] [data-rhythm-calibration-guide]');
+    if(guide)guide.style.display=enabled?'':'none';
+    syncToggles();
   };
 
   const mountGuide=area=>{
@@ -157,27 +164,28 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
     return true;
   };
 
-  const ensureButton=()=>{
-    if(button&&button.isConnected)return button;
-    button=document.createElement('button');
-    button.type='button';
-    button.dataset.rhythmCalibrationToggle='';
-    button.textContent='座標校正';
-    button.setAttribute('aria-pressed','false');
-    Object.assign(button.style,{
-      position:'fixed',top:'calc(env(safe-area-inset-top) + 72px)',right:'8px',zIndex:'100020',
-      minWidth:'76px',minHeight:'34px',padding:'7px 10px',border:'1px solid rgba(103,232,249,.65)',
-      borderRadius:'999px',background:'rgba(2,6,23,.86)',color:'#cffafe',fontSize:'11px',fontWeight:'900',
-      boxShadow:'0 0 14px rgba(34,211,238,.22)',WebkitBackdropFilter:'blur(8px)',backdropFilter:'blur(8px)',
-      touchAction:'manipulation',display:'none'
+  const mountToggle=(host,placement)=>{
+    if(!host||host.querySelector('[data-rhythm-calibration-toggle]'))return;
+    const toggle=document.createElement('button');
+    toggle.type='button';
+    toggle.dataset.rhythmCalibrationToggle=placement;
+    toggle.textContent='座標校正';
+    toggle.setAttribute('aria-pressed','false');
+    Object.assign(toggle.style,{
+      display:'block',width:'100%',minHeight:placement==='pause'?'48px':'44px',
+      margin:placement==='pause'?'0':'0 0 12px',padding:'8px 12px',
+      border:'1px solid rgba(103,232,249,.65)',borderRadius:'12px',background:'rgba(2,6,23,.86)',
+      color:'#cffafe',fontSize:'12px',fontWeight:'900',touchAction:'manipulation'
     });
-    button.addEventListener('click',()=>{
+    toggle.addEventListener('click',()=>{
       enabled=!enabled;
       if(currentArea)mountGuide(currentArea);
       setGuideVisible(currentArea);
     });
-    document.body.appendChild(button);
-    return button;
+    if(placement==='pause')host.appendChild(toggle);
+    else host.prepend(toggle);
+    toggles.add(toggle);
+    syncToggles();
   };
 
   const scheduleGuide=area=>{
@@ -199,24 +207,30 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
     currentSvg=null;
     scheduleGuide(area);
   };
+  const pauseMenuNeedsToggle=()=>{
+    const pause=document.querySelector('[data-rhythm-pause-menu]');
+    return !!pause&&!pause.querySelector('[data-rhythm-calibration-toggle]');
+  };
   const scan=()=>{
-    if(currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected)return;
+    // トグルは音ゲーデバッグ画面(プレイ前)とポーズメニュー(プレイ中)へ置く。
+    mountToggle(document.querySelector('[data-rhythm-debug]'),'debug');
+    mountToggle(document.querySelector('[data-rhythm-pause-menu]'),'pause');
     const area=document.querySelector('[data-rhythm-play-area]');
-    ensureButton().style.display=area?'':'none';
     if(!area){
-      currentArea=null;currentSvg=null;enabled=false;
+      currentArea=null;currentSvg=null;
       return;
     }
     if(currentArea!==area){
-      currentArea=area;currentSvg=null;enabled=false;
+      currentArea=area;currentSvg=null;
     }
     scheduleGuide(area);
   };
   const start=()=>{
     scan();
     new MutationObserver(()=>{
-      // ノーツのDOM増減では座標ガイドを再検索しない。画面自体が差し替わった時だけ再走査する。
-      if(currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected)return;
+      // ノーツのDOM増減では座標ガイドを再検索しない。画面自体が差し替わった時と、
+      // ポーズメニューが開いてトグルを置く必要がある時だけ再走査する。
+      if(currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected&&!pauseMenuNeedsToggle())return;
       scan();
     }).observe(document.body,{childList:true,subtree:true});
     window.addEventListener('resize',()=>{if(currentArea?.isConnected)remountGuide(currentArea);},{passive:true});

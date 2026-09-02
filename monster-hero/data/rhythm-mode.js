@@ -72,10 +72,27 @@ const rhythmNoteVisualSpan=(note,visualLane,yRatio)=>rhythmNoteHasVariableSpan(n
   :rhythmNoteIsSlide(note)
     ?rhythmProjectSlideSpan(Number(visualLane),note,yRatio)
     :rhythmProjectSubLaneSpan(Number(visualLane)*2,2,yRatio);
-const rhythmLanePolygon=lane=>{
-  const top=rhythmProjectLane(lane,0),bottom=rhythmProjectLane(lane,1);
-  return `polygon(${top.left*100}% 0,${top.right*100}% 0,${bottom.right*100}% 100%,${bottom.left*100}% 100%)`;
+// projectionはyに対する曲線(pow 1.24)なので、上端と下端だけを直線で結ぶ台形にすると
+// 中間の高さでレーン枠だけがノーツより外側へ膨らむ。見た目の枠も同じboundary helperを
+// 一定間隔でサンプルし、ノーツ・HOLD帯・SLIDE帯と同じ曲線へ沿わせる。
+const RHYTHM_PROJECTION_EDGE_STEPS=16;
+const rhythmProjectionEdgeRatios=(steps=RHYTHM_PROJECTION_EDGE_STEPS)=>Array.from({length:steps+1},(_,index)=>index/steps);
+const rhythmBoundaryEdgePoints=(boundary,steps=RHYTHM_PROJECTION_EDGE_STEPS)=>rhythmProjectionEdgeRatios(steps).map(y=>({x:rhythmProjectBoundary(boundary,y),y}));
+const rhythmSpanPolygon=(leftBoundary,rightBoundary,steps=RHYTHM_PROJECTION_EDGE_STEPS)=>{
+  const at=(boundary,y)=>`${(rhythmProjectBoundary(boundary,y)*100).toFixed(4)}% ${(y*100).toFixed(4)}%`;
+  const ratios=rhythmProjectionEdgeRatios(steps);
+  const right=ratios.map(y=>at(rightBoundary,y)),left=ratios.map(y=>at(leftBoundary,y)).reverse();
+  return `polygon(${[at(leftBoundary,0),...right,...left.slice(0,-1)].join(',')})`;
 };
+// 1px幅の境界線も同じ曲線に沿わせる。幅だけはpx指定なのでcalcで足す。
+const rhythmBoundaryLinePolygon=(boundary,widthPx=1,steps=RHYTHM_PROJECTION_EDGE_STEPS)=>{
+  const ratios=rhythmProjectionEdgeRatios(steps);
+  const right=ratios.map(y=>`calc(${(rhythmProjectBoundary(boundary,y)*100).toFixed(4)}% + ${widthPx}px) ${(y*100).toFixed(4)}%`);
+  const left=ratios.map(y=>`${(rhythmProjectBoundary(boundary,y)*100).toFixed(4)}% ${(y*100).toFixed(4)}%`).reverse();
+  return `polygon(${[...right,...left].join(',')})`;
+};
+const rhythmLanePolygon=lane=>rhythmSpanPolygon(lane,lane+1);
+const rhythmSubLanePolygon=subLane=>rhythmSpanPolygon(subLane/2,(subLane+1)/2);
 const rhythmProjectTravelProgress=progress=>{
   const p=Number(progress)||0;
   if(p<0)return p*.72;
@@ -847,13 +864,13 @@ const installRhythmGeometryStyles=()=>{
   style.dataset.rhythmGeometryStyle='';
   style.textContent=`
     [data-rhythm-lane]{position:absolute!important;inset:0!important;border:0!important;filter:none!important;background:linear-gradient(180deg,rgba(15,23,42,.76) 0%,rgba(15,23,42,.48) 48%,rgba(8,47,73,.58) 100%)!important}
-    [data-rhythm-lane]::before{content:"";position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:polygon(var(--rhythm-boundary-top) 0,calc(var(--rhythm-boundary-top) + 1px) 0,calc(var(--rhythm-boundary-bottom) + 1px) 100%,var(--rhythm-boundary-bottom) 100%)!important}
+    [data-rhythm-lane]::before{content:"";position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:var(--rhythm-boundary-clip,none)!important}
     [data-rhythm-lane]::after{content:none!important}
-    [data-rhythm-lane]:last-child::after{content:""!important;position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:polygon(calc(var(--rhythm-right-top) - 1px) 0,var(--rhythm-right-top) 0,var(--rhythm-right-bottom) 100%,calc(var(--rhythm-right-bottom) - 1px) 100%)!important}
-    [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:polygon(var(--rhythm-sub-top) 0,calc(var(--rhythm-sub-top) + 1px) 0,calc(var(--rhythm-sub-bottom) + 1px) 100%,var(--rhythm-sub-bottom) 100%)}
+    [data-rhythm-lane]:last-child::after{content:""!important;position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:var(--rhythm-right-clip,none)!important}
+    [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:var(--rhythm-sub-clip,none)}
     [data-rhythm-note]{z-index:2}
     [data-rhythm-lane][data-pressed="true"]{background:linear-gradient(180deg,rgba(34,211,238,.10),rgba(34,211,238,.22) 54%,rgba(217,70,239,.30) 100%)!important;box-shadow:inset 0 0 30px rgba(103,232,249,.48),inset 0 -72px 64px rgba(6,182,212,.34),0 0 15px rgba(34,211,238,.24)!important;border:0!important;filter:none!important}
-    [data-rhythm-note]>span:last-child{transform:scaleY(var(--rhythm-note-depth-scale,1));transform-origin:center;filter:brightness(var(--rhythm-note-depth-brightness,1));transition:filter 40ms linear}
+    [data-rhythm-note]>span:last-child{transform:scale(var(--rhythm-note-size-scale,1)) scaleY(var(--rhythm-note-depth-scale,1));transform-origin:center;filter:brightness(var(--rhythm-note-depth-brightness,1));transition:filter 40ms linear}
     [data-rhythm-judgment-line]{height:4px!important;background:linear-gradient(90deg,#d8b4fe 0%,#ecfeff 50%,#d8b4fe 100%)!important;border-radius:999px;box-shadow:0 0 14px #67e8f9,0 0 28px #c084fc,0 8px 24px rgba(34,211,238,.34)!important}
   `;
   document.head.appendChild(style);
@@ -866,12 +883,8 @@ const rhythmLayoutPlayArea=area=>{
   if(!(rect.width>0&&rect.height>0))return;
   Array.from(area.querySelectorAll('[data-rhythm-lane]')).forEach((lane,index)=>{
     lane.style.clipPath=rhythmLanePolygon(index);
-    lane.style.setProperty('--rhythm-boundary-top',`${(rhythmProjectBoundary(index,0)*100).toFixed(4)}%`);
-    lane.style.setProperty('--rhythm-boundary-bottom',`${(rhythmProjectBoundary(index,1)*100).toFixed(4)}%`);
-    if(index===RHYTHM_LANE_COUNT-1){
-      lane.style.setProperty('--rhythm-right-top',`${(rhythmProjectBoundary(RHYTHM_LANE_COUNT,0)*100).toFixed(4)}%`);
-      lane.style.setProperty('--rhythm-right-bottom',`${(rhythmProjectBoundary(RHYTHM_LANE_COUNT,1)*100).toFixed(4)}%`);
-    }
+    lane.style.setProperty('--rhythm-boundary-clip',rhythmBoundaryLinePolygon(index));
+    if(index===RHYTHM_LANE_COUNT-1)lane.style.setProperty('--rhythm-right-clip',rhythmBoundaryLinePolygon(RHYTHM_LANE_COUNT,-1));
     const label=lane.querySelector('span');
     if(label){
       const labelRect=label.getBoundingClientRect(),labelY=rhythmClamp01((labelRect.top-rect.top+labelRect.height/2)/rect.height),at=rhythmProjectLane(index,labelY);
@@ -880,9 +893,7 @@ const rhythmLayoutPlayArea=area=>{
     }
   });
   Array.from(area.querySelectorAll('[data-rhythm-sublane-boundary]')).forEach((boundary,index)=>{
-    const coordinate=index+.5;
-    boundary.style.setProperty('--rhythm-sub-top',`${(rhythmProjectBoundary(coordinate,0)*100).toFixed(4)}%`);
-    boundary.style.setProperty('--rhythm-sub-bottom',`${(rhythmProjectBoundary(coordinate,1)*100).toFixed(4)}%`);
+    boundary.style.setProperty('--rhythm-sub-clip',rhythmBoundaryLinePolygon(index+.5));
   });
   const line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=line?.getBoundingClientRect();
   if(line&&lineRect){

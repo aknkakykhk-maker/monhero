@@ -83,5 +83,5 @@ ok('ノーツ親の重いdrop-shadowをSVGレイヤー側で解除',lane.include
 ok('プレイ中はレーン全体を再検索しない',lane.includes('currentArea && currentArea.isConnected && currentSvg && currentSvg.isConnected')&&lane.includes("dataset.rhythmPlayActive=currentArea?'true':'false'"));
 ok('座標校正もプレイ中の全体再検索を避ける',calibration.includes('currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected')&&calibration.includes('scheduleGuide(area)'));
 ok('デバッグUI遅延ロード監視は読込後にdisconnect',calibration.includes('loaderObserver?.disconnect()')&&calibration.includes('loaderObserver=null'));
-ok('前回フリーズ対策を維持',calibration.includes('if(button.textContent!==label)button.textContent=label')&&!calibration.includes("button.textContent=enabled?'座標校正 ON':'座標校正';"));
+ok('前回フリーズ対策を維持',calibration.includes('if(toggle.textContent!==label)toggle.textContent=label')&&!calibration.includes("toggle.textContent=enabled?'座標校正 ON':'座標校正';"));
 console.log('OK: 音ゲー譜面制作基盤（視覚エディタSTEP2-C 区間ループ・STEP2-B SLIDE経路編集・STEP2-A HOLD伸縮・実機補正・EASYドラフト実プレイ）');

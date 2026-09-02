@@ -34,13 +34,13 @@ for(const y of [0,.25,.5,.88,1]) for(let subLane=0;subLane<10;subLane++){
   const span=run(`rhythmProjectSubLaneSpan(${subLane},1,${y})`),left=run(`rhythmProjectBoundary(${subLane/2},${y})`),right=run(`rhythmProjectBoundary(${(subLane+1)/2},${y})`);
   assert(close(span.left,left)&&close(span.right,right),`幅1ノーツ端とサブレーン境界が一致 sub=${subLane} y=${y}`);
 }
-assert(calibration.includes("dataset.rhythmGeometryCalibration='ready'")&&calibration.includes("button.dataset.rhythmCalibrationToggle=''")&&calibration.includes("'data-rhythm-calibration-guide':''"),'座標校正トグルとガイドをデバッグ専用レイヤーへ実装');
+assert(calibration.includes("dataset.rhythmGeometryCalibration='ready'")&&calibration.includes("toggle.dataset.rhythmCalibrationToggle=placement")&&calibration.includes("'data-rhythm-calibration-guide':''"),'座標校正トグルとガイドをデバッグ専用レイヤーへ実装');
 assert(calibration.includes('rhythmProjectBoundary(boundary/2,0)')&&calibration.includes('rhythmProjectSubLaneSpan(sample.subLane,sample.width,y)')&&calibration.includes('rhythmProjectSlideSpan(sample.lane,note,y,0)'),'校正ガイドはレーン・可変幅・SLIDEの共通projection helperだけを使用');
 assert(calibration.includes("{subLane:0,width:1")&&calibration.includes("{subLane:2,width:2")&&calibration.includes("{subLane:4,width:3")&&calibration.includes("{subLane:6,width:4"),'TAP/HOLD/FLICK幅1〜4の基準帯を表示');
 assert(calibration.includes("{lane:.5,width:1")&&calibration.includes("{lane:1.5,width:2")&&calibration.includes("{lane:2.5,width:3")&&calibration.includes("{lane:3.5,width:4"),'SLIDE half-lane幅1〜4の基準帯を表示');
 assert(calibration.includes("for(let subLane=0;subLane<10;subLane++)")&&calibration.includes('rhythmProjectSubLaneSpan(subLane,1,judgeY)'),'判定ライン上の10サブレーン中心を同じprojectionで表示');
 assert(indexHtml.includes('data/rhythm-geometry-calibration.js?v='),'座標校正ガイドを起動経路へ登録');
-assert(calibration.includes("const label=enabled?'座標校正 ON':'座標校正';")&&calibration.includes('if(button.textContent!==label)button.textContent=label;')&&!calibration.includes("button.textContent=enabled?'座標校正 ON':'座標校正';"),'MutationObserver監視中は同じボタン文字を再代入せず自己ループを防止');
+assert(calibration.includes("const label=enabled?'座標校正 ON':'座標校正';")&&calibration.includes('if(toggle.textContent!==label)toggle.textContent=label;')&&!calibration.includes("toggle.textContent=enabled?'座標校正 ON':'座標校正';"),'MutationObserver監視中は同じボタン文字を再代入せず自己ループを防止');
 const touchRect={left:0,top:0,width:400,height:800};
 const centerX=run(`rhythmProjectBoundary(2.25,1)`)*touchRect.width;
 const contact=run(`RHYTHM_TOUCH_SPAN_RUNTIME.contactsForTouch({clientX:${centerX},clientY:800,radiusX:45},${JSON.stringify(touchRect)})`);
