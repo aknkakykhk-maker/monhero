@@ -102,8 +102,14 @@
 - HUDはプレイエリアへ**重ねる絶対配置**（`pointer-events-none` + `absolute inset-x-0 top-0 z-30`）で、レイアウト上の高さを持たない
 - ただし**台形の頂点（画面上端・遠近projectionの基準点=yRatio 0）を覆う背景パネルは持たせない**。HUD自身の`<header>`要素には背景色・背景画像を一切付けず、文字には`text-shadow`だけで視認性を確保する
 - HUD本文は、台形が奥へ向かって狭くなる分だけできる**左右の空きウェッジ**（`RHYTHM_PROJECTION_TOP_SCALE=.30`により、画面上端で全体の35%ずつが左右に空く）にだけ置く。中央の台形部分には何も置かない
-  - 左ウェッジ（`data-rhythm-hud-left`、`max-w-[30%]`）: 難易度バッジ・曲名・SCORE見出し＋ランク・スコア・BEST・LIFEゲージ
-  - 右ウェッジ（`data-rhythm-hud-right`、`max-w-[30%]`）: ポーズボタン（`pointer-events-auto`）・COMBO
+  - 左ウェッジ（`data-rhythm-hud-left`）: ランク＋SCORE見出し → スコア → BEST → 難易度バッジ＋TEST表記 → 曲名
+  - 右ウェッジ（`data-rhythm-hud-right`）: ポーズボタン（`pointer-events-auto`） → LIFE（見出し＋数値の行＋その下に横いっぱいのバー） → COMBO
+- **ウェッジは下へ行くほど狭くなるので、行ごとに使える幅を変える**（1つの固定幅で全行を賄うと、いちばん下の行に合わせるしかなく上が無駄になる）。
+  幅は画面幅基準の `vw` で指定する（`%` は親要素基準になり、入れ子だと意図した画面比にならない）。
+  現行値: 左列 `max-w-[30vw]` / 難易度の行 `max-w-[29vw]` / 曲名 `max-w-[26vw]` / 右列 `max-w-[28vw]`
+- **曲名は `truncate` で切らない。** 実機で「あつ杯テー…」と切れて曲が分からない状態になったため、
+  `-webkit-line-clamp:3` で折り返して表示する。`rhythm-hud-wedge-check.js` が `truncate` の再導入を弾く
+- 画面のいちばん上の中央（台形の頂点＝ノーツが湧く消失点）には何も置かない。ここを覆うのはPR #983で失敗した形
 - 現在のプレイエリアは「画面の高さ − 下の余白8px」。iPhone 390×844相当で 701px → 836px（約19%増）
 - **projectionの式は変更していない**。ただしプレイエリアが縦に伸びたぶん `travelPx` が増えるため、
   同じ `noteSpeed` でもノーツの見た目の速度は上がる。`travelMs`（`rhythmTravelMsForSpeed`）は変えていないので、
