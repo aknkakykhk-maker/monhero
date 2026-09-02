@@ -14,6 +14,28 @@ ok('STEP1項目と現行相当の既定値',game.includes('bgmVolume:100, noteSp
 ok('速度・サイズ・タイミングを指定範囲と刻みへnormalize',game.includes("rhythmFiniteStep(source.noteSpeed,RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP")&&game.includes('const RHYTHM_NOTE_SPEED_MIN=1;')&&game.includes('const RHYTHM_NOTE_SPEED_MAX=12;')&&game.includes('const RHYTHM_NOTE_SPEED_STEP=.1;')&&game.includes('rhythmFiniteStep(source.noteSize,80,120,5')&&game.includes('rhythmFiniteStep(source.judgmentTimingOffsetMs,-100,100,5'));
 ok('デバッグ画面だけに44px以上の入口',game.includes('data-rhythm-options-open')&&game.includes("setGameState('RHYTHM_OPTIONS')")&&game.includes('min-h-[44px]'));
 ok('下部固定操作バーと独立スクロール領域',game.includes('data-rhythm-options-scroll')&&game.includes('data-rhythm-options-actions')&&game.includes("env(safe-area-inset-bottom)")&&game.includes('data-rhythm-options-save'));
+ok('数値5項目はスライダーではなく押しやすい−／＋操作',
+  game.includes('const stepper=(key,min,max,step')
+  &&['bgmVolume','noteSeVolume','noteSpeed','noteSize','judgmentTimingOffsetMs'].every(key=>game.includes(`stepper('${key}'`))
+  &&game.includes('data-rhythm-option-stepper={key}')
+  &&game.includes('min-h-[48px] min-w-[48px]')
+  &&!game.match(/const RhythmOptions=[\s\S]*?const RhythmTapTest/)?.[0].includes('type="range"'));
+ok('−／＋は現行刻みを使い上下限でclamp・無効化',
+  game.includes('rhythmStepOptionValue(value,min,max,step,direction)')
+  &&game.includes('disabled={value<=min}')
+  &&game.includes('disabled={value>=max}'));
+const stepperBlock=game.match(/const rhythmStepOptionValue=.*?;/)?.[0];
+assert(stepperBlock,'数値step helperが存在する');
+const stepperSandbox={};
+vm.runInNewContext(`${stepperBlock}\nthis.stepValue=rhythmStepOptionValue;`,stepperSandbox);
+const stepCases=[
+  ['BGM音量',50,0,100,1,49,51],['タップ音量',70,0,100,1,69,71],
+  ['ノーツ速度',6,1,12,.1,5.9,6.1],['ノーツサイズ',100,80,120,5,95,105],
+  ['判定タイミング調整',0,-100,100,5,-5,5],
+];
+stepCases.forEach(([name,value,min,max,step,down,up])=>ok(`${name}の−／＋刻み`,stepperSandbox.stepValue(value,min,max,step,-1)===down&&stepperSandbox.stepValue(value,min,max,step,1)===up));
+ok('全項目の最小・最大clamp',stepCases.every(([,value,min,max,step])=>stepperSandbox.stepValue(min,min,max,step,-1)===min&&stepperSandbox.stepValue(max,min,max,step,1)===max));
+ok('簡易ゲージと現在値を常時表示',game.includes('role="meter"')&&game.includes('aria-valuenow={value}')&&game.includes('<output aria-live="polite"'));
 ok('変更時に保存ボタンを明示',game.includes("data-dirty={dirty?'true':'false'}")&&game.includes("dirty?'変更を保存':'保存'"));
 ok('試聴はボタンの直接イベントから既存音声経路を使う',game.includes('onClick={previewBgm}')&&game.includes("Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume)")&&game.includes('onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)}')&&data.includes('preview:settings=>play(settings)'));
 ok('音ゲーBGM音量だけを専用gainへ反映(メインのbgmGainは経由しない)',
