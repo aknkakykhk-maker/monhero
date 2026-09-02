@@ -3,7 +3,7 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
-    date: "2026-09-02 12:30", type:'new', title:'極限チャレンジに新難易度 GOD を追加',
+    date: "2026-09-02 12:30", type:'update', title:'極限チャレンジに新難易度 GOD を追加',
     assistantNotice:{id:'update_notice_extreme_god_v1',type:'mode'},
     items:['INFINITYを1回以上クリアすると、極限チャレンジの最上位難易度GODが解放されます。敵強度×100、スコア×20、経験値×60、ダイヤ×40、クリア報酬は虹のプシュケー100個です。', '2WAVEごとに強まる専用ルール「神威」と、累計20ターンごとのDISTANCE BREAKを追加しました。WAVE9〜10では与ダメージ低下が強まり、次のBREAKイベントから安全距離がなくなります。', 'GODは10WAVE固定です。クイックモードには追加していません。'],
   },
