@@ -265,6 +265,23 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   return {warm,play,preview:settings=>play(settings),playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,_readSettings:readSettings};
 })();
 
+// 途中追従判定(暫定値。実機確認のうえで調整する)。
+// ・猶予: 外れてからこの時間を超えて戻らなければMISS確定する。iPhoneの指ブレで
+//   1サンプルだけ外れても即失敗にしないための余裕。
+// ・HOLD横ズレ許容: 帯の半分幅に、0.3サブレーン(=0.15レーン)ぶんの余白を足す。
+//   HOLDは動かない的なので、経路を追従するSLIDEより厳しめにしている。
+const RHYTHM_MID_TRACKING_GRACE_MS=120;
+const RHYTHM_HOLD_TRACKING_MARGIN_LANES=.15;
+// note.lane / rhythmLaneCoordinateAtPoint と同じ「整数=レーン中心」座標系で、
+// HOLDの中心と半幅を返す。subLane/width指定はboundary座標系(整数=境界)なので
+// -0.5して中心座標系へ揃える。
+const rhythmHoldTrackedLane=note=>{
+  if(note?.subLane!=null&&Number.isFinite(Number(note.subLane))){
+    const subLane=Number(note.subLane),width=Math.max(1,Math.min(4,Number(note.subLaneWidth)||2));
+    return {center:subLane/2+width/4-.5,half:width/4};
+  }
+  return {center:Number(note?.lane)||0,half:.5};
+};
 const RHYTHM_GESTURE_RUNTIME=(()=>{
   const positions=new Map(),sessions=new Map();
   let raf=0;
@@ -303,16 +320,27 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       if(elapsed<=RHYTHM_FLICK_MAX_MS&&Math.hypot(dx,dy)>=RHYTHM_FLICK_DISTANCE_PX)finishGesture(session,true);
       return;
     }
-    if(session.kind==='SLIDE'){
-      const actual=laneCoordinate(pos.clientX,pos.clientY);
-      if(actual===null){session.note.holdJudgment='MISS';session.failed=true;return;}
-      const chartNow=estimatedSongMs(session)-session.offsetMs;
-      const expected=rhythmSlideExpectedLane(session.note,chartNow);
-      if(Math.abs(actual-expected)>rhythmSlideTrackingTolerance(session.note,chartNow)){
-        session.note.holdJudgment='MISS';
-        session.failed=true;
-      }
+    if(session.kind!=='SLIDE'&&session.kind!=='HOLD')return;
+    const actual=laneCoordinate(pos.clientX,pos.clientY);
+    const chartNow=estimatedSongMs(session)-session.offsetMs;
+    let bad;
+    if(actual===null){
+      bad=true;
+    }else if(session.kind==='SLIDE'){
+      bad=Math.abs(actual-rhythmSlideExpectedLane(session.note,chartNow))>rhythmSlideTrackingTolerance(session.note,chartNow);
+    }else{
+      const tracked=rhythmHoldTrackedLane(session.note);
+      bad=Math.abs(actual-tracked.center)>tracked.half+RHYTHM_HOLD_TRACKING_MARGIN_LANES;
     }
+    if(!bad){session.trackingBadSincePerf=null;return;}
+    if(session.trackingBadSincePerf==null)session.trackingBadSincePerf=pos.perfMs;
+    if(pos.perfMs-session.trackingBadSincePerf<RHYTHM_MID_TRACKING_GRACE_MS)return;
+    session.note.holdJudgment='MISS';
+    session.failed=true;
+    // 猶予を超えて外れたままなら、指を離すのを待たずその場でMISS確定する。
+    // endTimeMsを現在より少し前へ寄せ、本体(scheduleTick)の「endTimeMs到達で
+    // 既存applyJudgmentを呼ぶ」経路をそのまま使ってグレー表示へ切り替える(新しい判定経路は作らない)。
+    session.note.endTimeMs=chartNow-50;
   };
   const tick=()=>{
     raf=0;
@@ -335,7 +363,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         finishGesture(session,false);
         return;
       }
-      if(session.kind==='SLIDE'&&!session.finished)evaluatePosition(session,positions.get(key));
+      if((session.kind==='SLIDE'||session.kind==='HOLD')&&!session.finished)evaluatePosition(session,positions.get(key));
       if(session.releaseRequired&&!session.note.done){
         const releaseDelta=estimatedSongMs(session)-(session.releaseTargetMs+session.offsetMs);
         if(!session.autoCompletionDeferred&&releaseDelta>=-RHYTHM_RELEASE_DEFER_ARM_MS){
@@ -404,7 +432,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{

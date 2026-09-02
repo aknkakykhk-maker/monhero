@@ -3,6 +3,10 @@
 // 公開フラグを true にすると、ヘルプの項目・この更新履歴・助手の告知が同時に出る。
 const CHANGELOG = [
   {
+    date: "2026-09-02 16:00", type:'update', title:'音ゲーHOLD/SLIDEの途中追従判定を強化', releaseFlag:'rhythmMode',
+    items:['HOLDに、経路から外れたまま一定時間戻らないとMISSになる判定を追加しました(これまではSLIDEのみ)。SLIDEも含め、外れてから短い猶予(暫定値)を超えて戻らない場合だけMISSを確定し、指を離す前にその場でグレー表示へ切り替わります。判定窓・スコア計算・1ノーツ1判定の原則は変更していません。'],
+  },
+  {
     date: "2026-09-02 15:05", type:'update', title:'極限チャレンジの難易度を色分け',
     items:['EXTREME・NIGHTMARE・CHAOS・ULTIMATE・INFINITY・GODをそれぞれ固有色にし、上位ほど枠線や発光を少しずつ強くして難易度を見分けやすくしました。'],
   },

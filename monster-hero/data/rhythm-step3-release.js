@@ -110,10 +110,10 @@
       ]
     });
   }
-  if(typeof HELP_CATEGORIES!=='undefined'){
-    const topic=HELP_CATEGORIES.flatMap(category=>category.topics||[]).find(item=>item.id==='rhythm-mode');
-    if(topic)topic.blocks=[{t:'p',text:'曲ごとにEASY・NORMAL・HARD・EXPERT・MASTERの5難易度を遊べる音ゲーモードです。現在は開発中で、デバッグ画面ではEASYのTAP、NORMALのHOLD・2本指入力、HARDのFLICK・SLIDEを確認できます。レーンは上端へ強く収束し、ノーツは奥で小さく、手前へ近づくほど大きく加速して見えます。レーン境界、ノーツ、HOLD／SLIDE帯、判定ライン、タッチ判定は、プレイエリア全体を基準にした同じ遠近座標とレーン中心へ揃えています。HOLDとSLIDEは開始位置で押すだけでなく、終端のタイミングで指を離す必要があります。横長に発光する終端バーが判定ラインへ来たタイミングで指を離します。最後に指を離したタイミングも±200msでMARVELOUS〜BADを判定し、範囲外または+200msを超えて押しっぱなしの場合はMISSです。SLIDE途中はこれまでどおり指位置と経路も照合します。iPhone Safariのポーズ画面は「再開」「リスタート」「中断して音ゲーデバッグへ戻る」をtouchendのcapture段階で処理します。'}];
-  }
+  // 2026-09-01当時のヘルプ文面をここへ固定で書き戻していたが、以降のPRで
+  // monster-hero/data/help.js 本体の rhythm-mode 項目を直接更新するようになったため、
+  // この上書きは「毎回起動するたびに最新のヘルプ文面を古い文面へ差し戻す」不具合になっていた。
+  // help.js 側が正本なので、ここでの上書きは行わない。
 
   // データ引き継ぎの .mhsave 拡張を読み込む。保存形式は従来の引き継ぎコードと同じ。
   if(typeof document!=='undefined'&&!document.querySelector('script[data-mhsave-backup]')){

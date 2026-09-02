@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
-const source=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx'),html=read('monster-hero/index.html'),release=read('monster-hero/data/rhythm-step3-release.js');
+const source=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx'),html=read('monster-hero/index.html'),release=read('monster-hero/data/rhythm-step3-release.js'),help=read('monster-hero/data/help.js');
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 const helper=source.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const rhythmLaneAtPoint=[\s\S]*?\n\};/)?.[0];
 check('共通projection helperを抽出できる',!!helper);
@@ -49,6 +49,6 @@ if(remainingHelper){
 check('SLIDE残り表示は既存のノーツ描画フレームへ統合',release.includes('const originalSlideVisualLaneForIndex=runtime.slideVisualLaneForIndex.bind(runtime)')&&release.includes('runtime.slideVisualLaneForIndex=index=>')&&release.includes('updateBody(index)')&&!release.includes('requestAnimationFrame('));
 check('SLIDE帯の高さだけをCSS変数で短縮',release.includes("body.style.setProperty('--rhythm-slide-visible-height'")&&release.includes('height:var(--rhythm-slide-visible-height,var(--rhythm-slide-height,120px))!important'));
 check('SLIDE入力・判定runtimeは上書きしない',!release.includes('runtime.bind=')&&!release.includes('rhythmMatchInputBatch=')&&!release.includes('RHYTHM_SLIDE_TOLERANCE_LANES='));
-check('SLIDE表示修正と最新HOLD・SLIDE仕様の更新履歴・ヘルプを同時反映',release.includes('SLIDE')&&release.includes('HOLD')&&release.includes('最後に指を離したタイミング')&&release.includes('終端のタイミングで指を離す必要があります'));
+check('最新のHOLD・SLIDE仕様がヘルプへ反映されている',help.includes('SLIDE')&&help.includes('HOLD')&&help.includes('タイミングで指を離します')&&help.includes('横長の発光する終端バー'));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

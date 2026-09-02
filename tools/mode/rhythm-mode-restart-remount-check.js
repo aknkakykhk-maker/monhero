@@ -26,7 +26,8 @@ const bridgeTargetsCurrentVersion=version.build===dataBuild;
 check('data-only橋渡し対象versionはリリース追記と一致',!bridgeTargetsCurrentVersion||version.build===releaseDate);
 check('data-only橋渡し使用時は既存compiledへ正しく写す',!bridgeTargetsCurrentVersion||(compiledBuild===buildDate&&release.includes('if(data?.build===RHYTHM_DATA_BUILD)')&&release.includes('build:RHYTHM_COMPILED_BUILD')));
 check('将来versionを隠さない',!release.includes('if(data?.build!==RHYTHM_DATA_BUILD)'));
-check('更新情報とヘルプにポーズ3ボタン修正を追記',release.includes('CHANGELOG.unshift')&&release.includes("item.id==='rhythm-mode'")&&release.includes('再開')&&release.includes('中断して音ゲーデバッグへ戻る'));
+const help=read('monster-hero/data/help.js');
+check('ヘルプにポーズ・リスタート対応を記載',help.includes("id:'rhythm-mode'")&&help.includes('ポーズ')&&help.includes('リスタート'));
 for(const rel of ['data/rhythm-result-replay-remount.js','data/rhythm-step3-release.js']){
   const file=path.join(ROOT,'monster-hero',rel),buf=fs.readFileSync(file),size=buf.length,hash=crypto.createHash('sha256').update(buf).digest('hex').slice(0,12);
   check(`${rel} のBOOT_SIZESが実サイズと一致`,index.includes(`"${rel}":${size}`));
