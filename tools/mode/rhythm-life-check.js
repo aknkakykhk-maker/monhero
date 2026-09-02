@@ -37,7 +37,11 @@ check('スコアランクは固定スコア基準',rhythmRankForScore(resultScor
 const previousBest=atDown+1,isNewRecord=resultScore>previousBest;
 check('DOWN後の判定ではBESTを更新できない',!isNewRecord&&game.includes('const isNewRecord=score>run.startBestScore;'));
 check('ライフ0でもfinishせず曲・判定処理を継続',!game.includes('if(run.life===0)finish')&&!game.includes('if(run.life<=0)finish')&&game.includes('run.lifeDepleted=true;run.lockedScore=run.score;'));
-check('run開始時にDOWNと固定スコアを初期化',game.includes('lifeDepleted:false,score:0,lockedScore:0,finished:false'));
+// モンスターノーツの蘇生でスコア加算を再開できるよう、差し引く量(scoreOffset)も0から始める
+check('run開始時にDOWNと固定スコアを初期化',game.includes('lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,'));
+check('DOWN中に止まっていた分を遡って加算しない差し引きを持つ',
+  game.includes('run.score=calculatedScore-run.scoreOffset;')
+  &&game.includes('run.scoreOffset=rhythmScoreOffsetAfterRevive(calculatedScore,run.lockedScore);'));
 check('既存BEST形式・保存キーを変更していない',!game.includes('bestLife')&&!game.includes('lockedScore:score')&&game.includes("const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';"));
 check('新しいlocalStorageキーを追加していない',!game.includes('mh_rhythm_life')&&!game.includes('mh_rhythm_down'));
 check('仕様書に不可逆DOWNと固定スコアを記載',docs.includes('不可逆のDOWN')&&docs.includes('固定スコア'));
