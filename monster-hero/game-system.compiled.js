@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c1bddf6728f95f1
+// source-sha256: 3fef9148f3cf0ad5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 13:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 15:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10493,6 +10493,77 @@ const GOD_SETTING = Object.freeze({
   })
 });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING]);
+// 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
+// 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
+const EXTREME_DIFFICULTY_THEMES = Object.freeze({
+  EXTREME: Object.freeze({
+    accent: '#f0abfc',
+    rgb: '232,121,249',
+    background: 'linear-gradient(180deg,#34133f,#160d2b)',
+    action: 'linear-gradient(135deg,#a21caf,#d946ef)',
+    actionText: '#ffffff',
+    glow: 0.26,
+    titleGlow: 0.40,
+    actionGlow: 0.24,
+    shadowBlur: 28
+  }),
+  NIGHTMARE: Object.freeze({
+    accent: '#c4b5fd',
+    rgb: '139,92,246',
+    background: 'linear-gradient(180deg,#25143f,#110b26)',
+    action: 'linear-gradient(135deg,#6d28d9,#8b5cf6)',
+    actionText: '#ffffff',
+    glow: 0.30,
+    titleGlow: 0.44,
+    actionGlow: 0.28,
+    shadowBlur: 30
+  }),
+  CHAOS: Object.freeze({
+    accent: '#fda4af',
+    rgb: '244,63,94',
+    background: 'linear-gradient(180deg,#3d111f,#1d0a13)',
+    action: 'linear-gradient(135deg,#be123c,#f43f5e)',
+    actionText: '#ffffff',
+    glow: 0.34,
+    titleGlow: 0.48,
+    actionGlow: 0.32,
+    shadowBlur: 32
+  }),
+  ULTIMATE: Object.freeze({
+    accent: '#fdba74',
+    rgb: '249,115,22',
+    background: 'linear-gradient(180deg,#3b1a0a,#1e0d08)',
+    action: 'linear-gradient(135deg,#c2410c,#f97316)',
+    actionText: '#ffffff',
+    glow: 0.38,
+    titleGlow: 0.52,
+    actionGlow: 0.36,
+    shadowBlur: 34
+  }),
+  INFINITY: Object.freeze({
+    accent: '#93c5fd',
+    rgb: '59,130,246',
+    background: 'linear-gradient(180deg,#11224d,#09112c)',
+    action: 'linear-gradient(135deg,#1d4ed8,#3b82f6)',
+    actionText: '#ffffff',
+    glow: 0.42,
+    titleGlow: 0.56,
+    actionGlow: 0.40,
+    shadowBlur: 36
+  }),
+  GOD: Object.freeze({
+    accent: '#fde68a',
+    rgb: '245,158,11',
+    background: 'linear-gradient(180deg,#3b2b08,#181106)',
+    action: 'linear-gradient(135deg,#a16207,#f59e0b)',
+    actionText: '#1c1917',
+    glow: 0.48,
+    titleGlow: 0.66,
+    actionGlow: 0.48,
+    shadowBlur: 40
+  })
+});
+const extremeDifficultyTheme = difficultyId => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available));
 const godDivinityLevel = waveNumber => Math.max(1, Math.min(5, Math.floor((Math.max(1, Number(waveNumber) || 1) - 1) / 2) + 1));
 const godDivinityRules = waveNumber => {
@@ -31633,26 +31704,34 @@ function MonsterHeroGame() {
         const active = setting.id === extremeDifficulty;
         const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : false);
         const previewable = (setting.available || debugBattle && setting.debugAvailable) && unlocked;
+        const theme = extremeDifficultyTheme(setting.id);
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
           "aria-disabled": !previewable,
           "data-extreme-difficulty-card": setting.id,
           className: `snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
-            borderColor: active ? '#f0abfc' : 'rgba(255,255,255,.12)',
-            background: previewable ? 'linear-gradient(180deg,#34133f,#160d2b)' : 'linear-gradient(180deg,#1e293b,#0d142b)',
-            boxShadow: active ? '0 0 30px rgba(232,121,249,.35)' : 'none'
+            borderColor: active ? theme.accent : `rgba(${theme.rgb},.28)`,
+            background: previewable ? theme.background : `linear-gradient(180deg,rgba(${theme.rgb},.10),#0d142b)`,
+            boxShadow: active ? `0 0 ${theme.shadowBlur}px rgba(${theme.rgb},${theme.glow})` : 'none'
           }
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black"
         }, "BATTLE DIFFICULTY"), /*#__PURE__*/React.createElement("h3", {
-          className: "text-center text-lg font-black leading-tight text-fuchsia-200"
+          className: "text-center text-lg font-black leading-tight",
+          style: {
+            color: theme.accent,
+            textShadow: active ? `0 0 10px rgba(${theme.rgb},${theme.titleGlow})` : 'none'
+          }
         }, setting.label), /*#__PURE__*/React.createElement("div", {
           className: "mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
         }, setting.available ? `${setting.label}の記録` : '難易度情報'), /*#__PURE__*/React.createElement("b", {
-          className: "block text-right text-base leading-tight text-fuchsia-200"
+          className: "block text-right text-base leading-tight",
+          style: {
+            color: theme.accent
+          }
         }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
         }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : '選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -31674,7 +31753,11 @@ function MonsterHeroGame() {
           className: "mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200"
         }, setting.cardDescription || setting.description), /*#__PURE__*/React.createElement("div", {
           "data-extreme-special-rules": setting.id,
-          className: "mt-1 h-[34px] shrink-0 flex items-center justify-center rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 text-center"
+          className: "mt-1 h-[34px] shrink-0 flex items-center justify-center rounded-lg border px-2 text-center",
+          style: {
+            borderColor: `rgba(${theme.rgb},.58)`,
+            backgroundColor: `rgba(${theme.rgb},.14)`
+          }
         }, /*#__PURE__*/React.createElement("b", {
           className: "text-[10px] leading-tight text-amber-300"
         }, "\u26A0 ", setting.label, " ", extremeRuleSummaryText(setting.id)))) : /*#__PURE__*/React.createElement("div", {
@@ -31688,7 +31771,12 @@ function MonsterHeroGame() {
           "data-extreme-rule-detail-open": setting.id,
           disabled: !previewable,
           onClick: () => setExtremeRuleDetail(setting.id),
-          className: "min-h-[38px] rounded-xl bg-fuchsia-900 border border-fuchsia-400/50 text-fuchsia-100 font-black text-xs disabled:opacity-50"
+          className: "min-h-[38px] rounded-xl border font-black text-xs disabled:opacity-50",
+          style: {
+            backgroundColor: `rgba(${theme.rgb},.18)`,
+            borderColor: `rgba(${theme.rgb},.55)`,
+            color: theme.accent
+          }
         }, previewable ? 'ルール詳細' : 'ルール ？？？'), /*#__PURE__*/React.createElement("button", {
           disabled: !previewable,
           onClick: () => setShowWaveDetails(true),
@@ -31710,7 +31798,12 @@ function MonsterHeroGame() {
             setHeroPickTab('roster');
             setGameState('PICK_HERO');
           },
-          className: "min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500"
+          className: "min-h-[44px] rounded-xl font-black text-sm disabled:bg-slate-800 disabled:text-slate-500",
+          style: previewable ? {
+            background: theme.action,
+            color: theme.actionText,
+            boxShadow: active ? `0 0 18px rgba(${theme.rgb},${theme.actionGlow})` : 'none'
+          } : undefined
         }, previewable ? 'この難易度で挑戦' : '選択できません'), /*#__PURE__*/React.createElement("button", {
           disabled: !setting.available || !unlocked,
           onClick: () => openModeScoreRanking(EXTREME_MODE.id, setting.id, 'EXTREME_DIFFICULTY_SELECT'),
