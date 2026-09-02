@@ -76,6 +76,9 @@ const rhythmNoteVisualSpan=(note,visualLane,yRatio)=>rhythmNoteHasVariableSpan(n
 // 中間の高さでレーン枠だけがノーツより外側へ膨らむ。見た目の枠も同じboundary helperを
 // 一定間隔でサンプルし、ノーツ・HOLD帯・SLIDE帯と同じ曲線へ沿わせる。
 const RHYTHM_PROJECTION_EDGE_STEPS=16;
+// SLIDEはauthored点の間を実時間で細分化して曲線へ沿わせる。点が多い譜面でも描画量が跳ねないよう、
+// レーン枠(静的)より粗い刻みにする。
+const RHYTHM_SLIDE_SEGMENT_STEPS=10;
 const rhythmProjectionEdgeRatios=(steps=RHYTHM_PROJECTION_EDGE_STEPS)=>Array.from({length:steps+1},(_,index)=>index/steps);
 const rhythmBoundaryEdgePoints=(boundary,steps=RHYTHM_PROJECTION_EDGE_STEPS)=>rhythmProjectionEdgeRatios(steps).map(y=>({x:rhythmProjectBoundary(boundary,y),y}));
 const rhythmSpanPolygon=(leftBoundary,rightBoundary,steps=RHYTHM_PROJECTION_EDGE_STEPS)=>{
@@ -912,11 +915,19 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   let firstIndex=0;
   while(firstIndex<source.length&&Number(source[firstIndex].timeMs)<=now)firstIndex++;
   const segments=[];
-  let from=project(now>start?{timeMs:now,lane:rhythmSlideExpectedLane(note,now)}:source[0]);
+  // authored点の間をそのまま直線で結ぶと、projectionの曲線ぶんだけ途中がレーンから外れる。
+  // 点の間隔が長い(=高速でSLIDEが画面より長く伸びる)ほど差が開くので、時間で細分化して沿わせる。
+  const startPoint=now>start?{timeMs:now,lane:rhythmSlideExpectedLane(note,now)}:source[0];
+  let fromPoint=startPoint,from=project(startPoint);
   for(let index=Math.max(1,firstIndex);index<source.length;index++){
-    const to=project(source[index]);
-    segments.push(`${from.left.toFixed(2)},${from.y.toFixed(2)} ${from.right.toFixed(2)},${from.y.toFixed(2)} ${to.right.toFixed(2)},${to.y.toFixed(2)} ${to.left.toFixed(2)},${to.y.toFixed(2)}`);
-    from=to;
+    const toPoint=source[index],fromTime=Number(fromPoint.timeMs),toTime=Number(toPoint.timeMs),spanMs=toTime-fromTime;
+    for(let step=1;step<=RHYTHM_SLIDE_SEGMENT_STEPS;step++){
+      const ratio=step/RHYTHM_SLIDE_SEGMENT_STEPS,timeMs=fromTime+spanMs*ratio;
+      const to=step===RHYTHM_SLIDE_SEGMENT_STEPS?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
+      segments.push(`${from.left.toFixed(2)},${from.y.toFixed(2)} ${from.right.toFixed(2)},${from.y.toFixed(2)} ${to.right.toFixed(2)},${to.y.toFixed(2)} ${to.left.toFixed(2)},${to.y.toFixed(2)}`);
+      from=to;
+    }
+    fromPoint=toPoint;
   }
   return segments;
 };
@@ -948,11 +959,28 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
     });
     for(let index=polygons.length;index<body.childNodes.length;index++)body.childNodes[index].style.display='none';
   }else{
-  const measuredBodyHeight=frameLayout&&Number.isFinite(Number(frameLayout.bodyHeight))?Number(frameLayout.bodyHeight):parseFloat(getComputedStyle(body).height),height=Math.max(0,measuredBodyHeight||0),topY=Math.max(0,Math.min(rect.height,centerY-height));
-  const variableHold=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD',top=variableHold?rhythmNoteVisualSpan(note,lane,topY/rect.height):rhythmProjectLane(lane,topY/rect.height),bottom=variableHold?rhythmNoteVisualSpan(note,lane,yRatio):rhythmProjectLane(lane,yRatio),bodyRatio=variableHold?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO,topHalf=top.width*bodyRatio/2,bottomHalf=bottom.width*bodyRatio/2;
+  const measuredBodyHeight=frameLayout&&Number.isFinite(Number(frameLayout.bodyHeight))?Number(frameLayout.bodyHeight):parseFloat(getComputedStyle(body).height),height=Math.max(0,measuredBodyHeight||0);
+  // 帯の上端と下端だけを直線で結ぶと、projectionが曲線であるぶん途中の高さでレーンから外れる。
+  // さらに帯が画面上端を越えて長い(=高速)場合、clipPathの0%は画面外のyを指すのに
+  // 幅は画面内の0%位置で計算されてしまい、可視範囲の全体が外側へ膨らむ。
+  // 帯の実際の上端(画面外でも可)から下端までを一定間隔でサンプルし、曲線へ沿わせる。
+  const bodyTopY=centerY-height;
+  const variableHold=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD',bodyRatio=variableHold?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO;
+  const edgeAt=ratio=>{
+    const span=variableHold?rhythmNoteVisualSpan(note,lane,rhythmClamp01((bodyTopY+height*ratio)/rect.height)):rhythmProjectLane(lane,rhythmClamp01((bodyTopY+height*ratio)/rect.height)),half=span.width*bodyRatio/2;
+    return {left:span.center-half,right:span.center+half};
+  };
+  // 画面上端はprojectionの曲がりが一番きついので、帯がそこを跨ぐときは必ず点を置く。
+  const topEdgeRatio=height>0?(0-bodyTopY)/height:0;
+  const bodyRatios=topEdgeRatio>1e-6&&topEdgeRatio<1-1e-6
+    ?[...rhythmProjectionEdgeRatios(),topEdgeRatio].sort((a,b)=>a-b)
+    :rhythmProjectionEdgeRatios();
+  const bodyEdges=bodyRatios.map(edgeAt);
+  const bodyRight=bodyEdges.map((edge,index)=>`${(edge.right*100).toFixed(3)}% ${(bodyRatios[index]*100).toFixed(3)}%`);
+  const bodyLeft=bodyEdges.map((edge,index)=>`${(edge.left*100).toFixed(3)}% ${(bodyRatios[index]*100).toFixed(3)}%`).reverse();
   body.style.left=`${(-left).toFixed(2)}px`;
   body.style.width=`${rect.width.toFixed(2)}px`;
-  body.style.clipPath=`polygon(${((top.center-topHalf)*100).toFixed(3)}% 0,${((top.center+topHalf)*100).toFixed(3)}% 0,${((bottom.center+bottomHalf)*100).toFixed(3)}% 100%,${((bottom.center-bottomHalf)*100).toFixed(3)}% 100%)`;
+  body.style.clipPath=`polygon(${[...bodyRight,...bodyLeft].join(',')})`;
   }
   const endBar=el._rhythmEndBar||el.querySelector('[data-rhythm-end-bar]');
   if(endBar)el._rhythmEndBar=endBar;

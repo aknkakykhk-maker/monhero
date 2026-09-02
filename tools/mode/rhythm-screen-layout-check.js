@@ -38,21 +38,31 @@ check('オプション画面は固定ヘッダー+スクロール+固定フッ�
 check('オプションの操作バーはSafe Areaを避けた画面下固定',
   /data-rhythm-options-actions[\s\S]{0,400}paddingBottom:'calc\(\.5rem \+ env\(safe-area-inset-bottom\)\)'/.test(game));
 
-// 3. デバッグ画面: 画面自体はスクロールせず、本文だけがスクロールする
-check('デバッグ画面も固定ヘッダー+スクロール本文の2層',
+// 3. デバッグ画面: 画面自体はスクロールせず、タブで内容を分ける
+check('デバッグ画面は固定ヘッダー+固定タブ+スクロール本文',
   game.includes('<main data-rhythm-debug-screen className="flex flex-1 min-h-0 flex-col overflow-hidden')
-  &&game.includes('<div data-rhythm-debug className="flex-1 min-h-0 overflow-y-auto'));
+  &&game.includes('<nav data-rhythm-debug-tabs')
+  &&/data-rhythm-debug-tabs[\s\S]{0,200}className="grid shrink-0 grid-cols-3/.test(game));
 check('デバッグ画面のヘッダーはsticky(スクロールに乗る固定)ではなくshrink-0',
   !/data-rhythm-debug-screen[\s\S]{0,600}<header className="sticky/.test(game));
-check('譜面制作UIの受け皿はスクロール側なので、ヘッダーの下へ積み上がる',
-  game.includes('data-rhythm-debug className=')&&game.includes('data-rhythm-debug-screen'));
+check('タブはプレイ・譜面制作・設定の3つ',
+  game.includes("[['play','▶ プレイ'],['chart','🎼 譜面制作'],['settings','⚙️ 設定・記録']]"));
+check('入場時は必ずプレイタブから始まる',
+  game.includes("const [rhythmDebugTab,setRhythmDebugTab]=useState('play')")
+  &&game.includes("setRhythmDebugTab('play'); setGameState('RHYTHM_DEBUG')"));
+check('譜面制作UIは初回入場では作らず、開いた後は表示だけ切り替える',
+  game.includes("if(id==='chart')setRhythmChartToolsOpened(true)")
+  &&game.includes('{rhythmChartToolsOpened&&<div data-rhythm-debug hidden={rhythmDebugTab!==\'chart\'}/>}'));
+check('スクロール領域はタブ本文の1つだけ',
+  (game.match(/data-rhythm-debug-screen[\s\S]{0,2000}?overflow-y-auto/g)||[]).length===1);
 
 // 4. body直下の固定レイヤーを作らない
 check('座標校正のトグルを document.body へ固定配置しない',
   !calibration.includes('document.body.appendChild(button)')&&!/position:'fixed'/.test(calibration));
-check('座標校正のトグルはデバッグ画面とポーズメニューの中へ置く',
-  calibration.includes("mountToggle(document.querySelector('[data-rhythm-debug]'),'debug')")
-  &&calibration.includes("mountToggle(document.querySelector('[data-rhythm-pause-menu]'),'pause')"));
+check('座標校正のトグルは設定タブとポーズメニューの中へ置く',
+  calibration.includes("mountToggle(document.querySelector('[data-rhythm-debug-calibration]'),'debug')")
+  &&calibration.includes("mountToggle(document.querySelector('[data-rhythm-pause-menu]'),'pause')")
+  &&game.includes('<div data-rhythm-debug-calibration'));
 check('プレイエリアがあるだけで固定ボタンを出す作りをやめた',
   !calibration.includes("ensureButton().style.display=area?'':'none'"));
 const fixedInDebugUi=debugFiles.filter(name=>{
@@ -115,7 +125,7 @@ const serve=()=>new Promise(resolve=>{
 
     const debugState=await page.evaluate(async()=>{
       const screen=document.createElement('div');
-      screen.dataset.rhythmDebug='';
+      screen.dataset.rhythmDebugCalibration='';
       document.body.appendChild(screen);
       await new Promise(resolve=>setTimeout(resolve,120));
       const toggle=screen.querySelector('[data-rhythm-calibration-toggle]');
@@ -126,7 +136,7 @@ const serve=()=>new Promise(resolve=>{
         label:toggle?toggle.textContent:null
       };
     });
-    check('デバッグ画面が出るとトグルがその中へ入る',debugState.inside,debugState.label||'');
+    check('設定タブが出るとトグルがその中へ入る',debugState.inside,debugState.label||'');
     check('トグルは固定配置ではなく通常フロー',debugState.position==='static'||debugState.position==='relative',String(debugState.position));
     check('body直下へ固定レイヤーを作らない',debugState.outside===0,`${debugState.outside}個`);
 
@@ -139,7 +149,7 @@ const serve=()=>new Promise(resolve=>{
     check('トグルを押すとONへ切り替わる',toggled.label==='座標校正 ON'&&toggled.pressed==='true',`${toggled.label} / aria-pressed=${toggled.pressed}`);
 
     const pauseState=await page.evaluate(async()=>{
-      document.querySelector('[data-rhythm-debug]').remove();
+      document.querySelector('[data-rhythm-debug-calibration]').remove();
       const play=document.createElement('div');
       play.dataset.rhythmPlayArea='';
       document.body.appendChild(play);

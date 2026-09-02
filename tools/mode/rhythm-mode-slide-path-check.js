@@ -7,10 +7,11 @@ check('SLIDE経路描画helperを抽出できる',!!helpers);
 if(helpers){
   const context={RHYTHM_LANE_COUNT:5};vm.runInNewContext(`${helpers}\nthis.out={rhythmSlideExpectedLane,rhythmSlideSegmentPolygons,rhythmProjectLane,rhythmProjectTravelProgress};`,context);
   const h=context.out,note={type:'SLIDE',timeMs:1000,endTimeMs:4000,lane:0,endLane:4,slidePoints:[{timeMs:1000,lane:0},{timeMs:2000,lane:3},{timeMs:3000,lane:1},{timeMs:4000,lane:4}]},travel={visualTime:1000,travelMs:4000,spawnY:0,travelPx:800,noteHalfHeight:10},rect={width:500,height:900};
+  const steps=Number(source.match(/const RHYTHM_SLIDE_SEGMENT_STEPS=(\d+)/)?.[1])||1;
   const all=h.rhythmSlideSegmentPolygons(note,1000,travel,rect),remaining=h.rhythmSlideSegmentPolygons(note,2500,travel,rect);
-  check('slidePointsの全区間を個別polygonへ変換',all.length===note.slidePoints.length-1);
-  check('始点と終点だけを直結する巨大polygonを作らない',all.length===3&&source.includes("createElementNS('http://www.w3.org/2000/svg','polygon')"));
-  check('通過済み区間を除き現在補間位置から残りだけ描画',remaining.length===2&&Math.abs(h.rhythmSlideExpectedLane(note,2500)-2)<1e-9);
+  check('slidePointsの全区間を個別polygonへ変換',all.length===(note.slidePoints.length-1)*steps);
+  check('始点と終点だけを直結する巨大polygonを作らない',all.length===3*steps&&steps>=2&&source.includes("createElementNS('http://www.w3.org/2000/svg','polygon')"));
+  check('通過済み区間を除き現在補間位置から残りだけ描画',remaining.length===2*steps&&Math.abs(h.rhythmSlideExpectedLane(note,2500)-2)<1e-9);
   const widths=all.map(points=>{const n=points.split(/[ ,]/).map(Number);return [n[2]-n[0],n[4]-n[6]];});
   check('各端の帯幅は横移動量でなく同一レーン幅基準',widths.flat().every(width=>width>0&&width<70));
   check('奥から手前へ共通projectionに従って自然に太くなる',widths[0][1]<widths[0][0]);

@@ -83,9 +83,13 @@ const NOTE_CASES=[
   {id:'HOLD 幅1',type:'HOLD',subLane:0,subLaneWidth:1,holdMs:700},
   {id:'HOLD 幅2',type:'HOLD',subLane:4,subLaneWidth:2,holdMs:700},
   {id:'HOLD 幅4',type:'HOLD',subLane:6,subLaneWidth:4,holdMs:700},
+  {id:'HOLD 旧譜面(subLaneなし)',type:'HOLD',lane:0,holdMs:700},
+  {id:'HOLD 長尺(画面より長い)',type:'HOLD',subLane:0,subLaneWidth:2,holdMs:1800},
+  {id:'HOLD 長尺 旧譜面',type:'HOLD',lane:4,holdMs:1800},
   {id:'SLIDE 幅2 直線',type:'SLIDE',lane:1,subLaneWidth:2,holdMs:700},
   {id:'SLIDE 幅1 0.5レーン',type:'SLIDE',lane:.5,subLaneWidth:1,holdMs:700},
   {id:'SLIDE 幅4 移動',type:'SLIDE',lane:2.5,endLane:1,subLaneWidth:4,holdMs:700},
+  {id:'SLIDE 長尺(画面より長い)',type:'SLIDE',lane:2,subLaneWidth:2,holdMs:1800},
 ];
 const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
 
@@ -177,29 +181,62 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
                 const bodyRect=norm(bodyEl.getBoundingClientRect());
                 row.bodyWidthRatio=bodyRect.width;
                 row.bodyLeftRatio=bodyRect.left;
+                // 帯は上端と下端の2点だけを見ても歪みが分からない。実際に描かれる形(clipPath / polygonを
+                // そのまま線形補間した値)を、画面内の複数の高さでprojectionと突き合わせる。
+                const heights=[0,.1,.2,.3,.4,.5,.6,.7,.8,.88,1];
+                row.bandSamples=[];
                 if(note.type==='HOLD'){
-                  const clip=bodyEl.style.clipPath.match(/-?[\d.]+(?=%)/g)?.map(Number)||[];
-                  if(clip.length>=8){
-                    // polygon(topLeft% 0, topRight% 0, bottomRight% 100%, bottomLeft% 100%)
-                    const topLeft=clip[0],topRight=clip[2],bottomRight=clip[4],bottomLeft=clip[6];
-                    const toArea=fraction=>bodyRect.left+fraction/100*bodyRect.width;
-                    row.bandTop={center:(toArea(topLeft)+toArea(topRight))/2,width:toArea(topRight)-toArea(topLeft)};
-                    row.bandBottom={center:(toArea(bottomLeft)+toArea(bottomRight))/2,width:toArea(bottomRight)-toArea(bottomLeft)};
-                    const topY=Math.max(0,Math.min(areaRect.height,centerY-bodyPx));
-                    const topRatio=topY/areaRect.height;
-                    const topSpan=note.subLane!=null?rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,topRatio):rhythmProjectSubLaneSpan(note.lane*2,2,topRatio);
-                    row.bandTopExpectedCenter=topSpan.center;
-                    row.bandTopLaneLeft=rhythmProjectBoundary(0,topRatio);
-                    row.bandTopLaneRight=rhythmProjectBoundary(5,topRatio);
+                  // 「12.3% 0」のような%なしのyも読めるようにして、旧形式(4点)でも同じ物差しで測る
+                  const pairs=[...bodyEl.style.clipPath.matchAll(/(-?[\d.]+)%\s+(-?[\d.]+)(%?)/g)].map(m=>({x:Number(m[1])/100,r:Number(m[2])/100}));
+                  if(pairs.length>=4){
+                    const half=pairs.length/2;
+                    const rightEdge=pairs.slice(0,half),leftEdge=pairs.slice(half).reverse();
+                    const edgeAt=(list,ratio)=>{
+                      if(ratio<=list[0].r)return list[0].x;
+                      for(let index=1;index<list.length;index++){
+                        if(ratio<=list[index].r+1e-9){
+                          const a=list[index-1],b=list[index];
+                          return b.r===a.r?b.x:a.x+(b.x-a.x)*((ratio-a.r)/(b.r-a.r));
+                        }
+                      }
+                      return list[list.length-1].x;
+                    };
+                    const bodyTopY=centerY-bodyPx,variable=note.subLane!=null;
+                    const bandRatio=variable?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO;
+                    heights.forEach(yArea=>{
+                      const y=yArea*areaRect.height;
+                      if(bodyPx<=0||y<bodyTopY-.5||y>centerY+.5)return;
+                      const ratio=(y-bodyTopY)/bodyPx;
+                      const drawnLeft=bodyRect.left+edgeAt(leftEdge,ratio)*bodyRect.width;
+                      const drawnRight=bodyRect.left+edgeAt(rightEdge,ratio)*bodyRect.width;
+                      const span=variable?rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,yArea):rhythmProjectLane(note.lane,yArea);
+                      const expectedHalf=span.width*bandRatio/2;
+                      row.bandSamples.push({yArea,
+                        center:(drawnLeft+drawnRight)/2,width:drawnRight-drawnLeft,
+                        expectedCenter:span.center,expectedWidth:expectedHalf*2,
+                        laneLeft:rhythmProjectBoundary(0,yArea),laneRight:rhythmProjectBoundary(5,yArea)});
+                    });
                   }
                 }
                 if(note.type==='SLIDE'){
-                  const polygon=bodyEl.querySelector('polygon');
-                  const points=(polygon?.getAttribute('points')||'').split(' ').map(pair=>pair.split(',').map(Number));
-                  if(points.length>=4){
-                    const xs=points.map(p=>p[0]/areaRect.width);
-                    row.slideSpan={min:Math.min(...xs),max:Math.max(...xs)};
-                  }
+                  const polys=[...bodyEl.querySelectorAll('polygon')].filter(p=>p.style.display!=='none').map(p=>{
+                    const nums=(p.getAttribute('points')||'').split(/[\s,]+/).filter(Boolean).map(Number);
+                    return nums.length>=8?{y0:nums[1],left0:nums[0],right0:nums[2],y1:nums[5],left1:nums[6],right1:nums[4]}:null;
+                  }).filter(Boolean);
+                  const laneFixed=(note.endLane??note.lane)===note.lane;
+                  heights.forEach(yArea=>{
+                    const y=yArea*areaRect.height;
+                    const seg=polys.find(p=>y>=Math.min(p.y0,p.y1)-.5&&y<=Math.max(p.y0,p.y1)+.5);
+                    if(!seg)return;
+                    const t=seg.y1===seg.y0?0:(y-seg.y0)/(seg.y1-seg.y0);
+                    const drawnLeft=(seg.left0+(seg.left1-seg.left0)*t)/areaRect.width;
+                    const drawnRight=(seg.right0+(seg.right1-seg.right0)*t)/areaRect.width;
+                    const span=rhythmProjectSlideSpan(note.lane,note,yArea,note.timeMs);
+                    row.bandSamples.push({yArea,laneFixed,
+                      center:(drawnLeft+drawnRight)/2,width:drawnRight-drawnLeft,
+                      expectedCenter:span.center,expectedWidth:span.width*RHYTHM_BODY_WIDTH_RATIO,
+                      laneLeft:rhythmProjectBoundary(0,yArea),laneRight:rhythmProjectBoundary(5,yArea)});
+                  });
                 }
               }
               const endBar=el.querySelector('[data-rhythm-end-bar]');
@@ -253,29 +290,43 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
     check('HOLD/SLIDE帯の座標系はプレイエリア幅のまま(noteSizeが波及していない)',bodyScaled.length===0,
       bodyScaled[0]?`${bodyScaled[0].id} サイズ${bodyScaled[0].size}% で幅が${(bodyScaled[0].bodyWidthRatio*100).toFixed(1)}%`:'');
 
-    // 4. HOLD帯の上端・下端がその高さのレーンgeometryに一致する
-    const bandRows=results.filter(row=>row.bandTop);
-    const bandBottomOff=worst(bandRows,row=>Math.abs(row.bandBottom.center-row.expectedCenter));
-    const bandTopOff=worst(bandRows,row=>Math.abs(row.bandTop.center-row.bandTopExpectedCenter));
-    check('HOLD帯の下端中心がノーツ中心と一致',bandBottomOff<=.002,`最大ズレ ${(bandBottomOff*390).toFixed(2)}px`);
-    check('HOLD帯の上端中心もその高さのprojectionと一致',bandTopOff<=.002,`最大ズレ ${(bandTopOff*390).toFixed(2)}px`);
-    const bandOut=bandRows.filter(row=>
-      row.bandBottom.center-row.bandBottom.width/2<row.laneLeft-.002||row.bandBottom.center+row.bandBottom.width/2>row.laneRight+.002||
-      row.bandTop.center-row.bandTop.width/2<row.bandTopLaneLeft-.002||row.bandTop.center+row.bandTop.width/2>row.bandTopLaneRight+.002);
-    check('HOLD帯は速度12×サイズ120%でもレーンの外へはみ出さない',bandOut.length===0,
-      bandOut[0]?`${bandOut[0].id} 速度${bandOut[0].speed} サイズ${bandOut[0].size}%`:'');
-    const bandSizeChanged=Object.values(sizeGroups).filter(group=>group[80]?.bandBottom&&group[120]?.bandBottom
-      &&!near(group[80].bandBottom.width,group[120].bandBottom.width,.002));
-    check('HOLD帯の幅はnoteSizeで変わらない(レーンgeometry基準)',bandSizeChanged.length===0,
+    // 4. HOLD帯が「画面内のどの高さでも」その高さのレーンgeometryに乗る
+    //    上端・下端の2点だけを見ると、間を直線で結んだときの歪みを見逃す。
+    const holdSamples=[];
+    results.filter(row=>row.type==='HOLD').forEach(row=>(row.bandSamples||[]).forEach(sample=>holdSamples.push({row,sample})));
+    check('HOLD帯を画面内の複数の高さで測定できた',holdSamples.length>0,`${holdSamples.length}点`);
+    const holdCenterOff=holdSamples.reduce((max,{sample})=>Math.max(max,Math.abs(sample.center-sample.expectedCenter)),0);
+    const holdWidthOff=holdSamples.reduce((max,{sample})=>Math.max(max,Math.abs(sample.width-sample.expectedWidth)),0);
+    const holdWorst=holdSamples.reduce((worstOne,item)=>Math.abs(item.sample.center-item.sample.expectedCenter)>Math.abs(worstOne.sample.center-worstOne.sample.expectedCenter)?item:worstOne,holdSamples[0]);
+    check('HOLD帯の中心が画面内のどの高さでもprojectionと一致',holdCenterOff<=.006,
+      `最大ズレ ${(holdCenterOff*390).toFixed(2)}px（${holdWorst.row.id} 速度${holdWorst.row.speed} サイズ${holdWorst.row.size}% y=${holdWorst.sample.yArea}）`);
+    check('HOLD帯の幅も画面内のどの高さでもprojectionと一致',holdWidthOff<=.006,`最大ズレ ${(holdWidthOff*390).toFixed(2)}px`);
+    const holdOut=holdSamples.filter(({sample})=>sample.center-sample.width/2<sample.laneLeft-.003||sample.center+sample.width/2>sample.laneRight+.003);
+    check('HOLD帯は速度12×サイズ120%でもレーンの外へはみ出さない',holdOut.length===0,
+      holdOut[0]?`${holdOut[0].row.id} 速度${holdOut[0].row.speed} サイズ${holdOut[0].row.size}% y=${holdOut[0].sample.yArea}`:'');
+    const bandSizeChanged=Object.values(sizeGroups).filter(group=>{
+      const a=group[80]?.bandSamples?.[0],b=group[120]?.bandSamples?.[0];
+      return a&&b&&(!near(a.center,b.center,.002)||!near(a.width,b.width,.002));
+    });
+    check('HOLD帯の位置と幅はnoteSizeで変わらない(レーンgeometry基準)',bandSizeChanged.length===0,
       bandSizeChanged[0]?`${bandSizeChanged[0][80].id}`:'');
 
-    // 5. SLIDE帯もレーン内
-    const slideRows=results.filter(row=>row.slideSpan);
-    const slideOut=slideRows.filter(row=>row.slideSpan.min<Math.min(row.laneLeft,row.bandTopLaneLeft??row.laneLeft)-.01||row.slideSpan.max>Math.max(row.laneRight,row.bandTopLaneRight??row.laneRight)+.01);
+    // 5. SLIDE帯も同じく画面内の各高さで確認する
+    const slideSamples=[];
+    results.filter(row=>row.type==='SLIDE').forEach(row=>(row.bandSamples||[]).forEach(sample=>slideSamples.push({row,sample})));
+    check('SLIDE帯を画面内の複数の高さで測定できた',slideSamples.length>0,`${slideSamples.length}点`);
+    const fixedSlide=slideSamples.filter(({sample})=>sample.laneFixed);
+    const slideCenterOff=fixedSlide.reduce((max,{sample})=>Math.max(max,Math.abs(sample.center-sample.expectedCenter)),0);
+    const slideWidthOff=fixedSlide.reduce((max,{sample})=>Math.max(max,Math.abs(sample.width-sample.expectedWidth)),0);
+    check('直線SLIDE帯の中心が画面内のどの高さでもprojectionと一致',slideCenterOff<=.006,`最大ズレ ${(slideCenterOff*390).toFixed(2)}px`);
+    check('直線SLIDE帯の幅も画面内のどの高さでもprojectionと一致',slideWidthOff<=.006,`最大ズレ ${(slideWidthOff*390).toFixed(2)}px`);
+    const slideOut=slideSamples.filter(({sample})=>sample.center-sample.width/2<sample.laneLeft-.006||sample.center+sample.width/2>sample.laneRight+.006);
     check('SLIDE帯も全速度・全サイズでレーンの外へ出ない',slideOut.length===0,
-      slideOut[0]?`${slideOut[0].id} 速度${slideOut[0].speed} サイズ${slideOut[0].size}%`:'');
-    const slideSizeChanged=Object.values(sizeGroups).filter(group=>group[80]?.slideSpan&&group[120]?.slideSpan
-      &&(!near(group[80].slideSpan.min,group[120].slideSpan.min,.002)||!near(group[80].slideSpan.max,group[120].slideSpan.max,.002)));
+      slideOut[0]?`${slideOut[0].row.id} 速度${slideOut[0].row.speed} サイズ${slideOut[0].row.size}% y=${slideOut[0].sample.yArea}`:'');
+    const slideSizeChanged=Object.values(sizeGroups).filter(group=>{
+      const a=group[80]?.bandSamples?.[0],b=group[120]?.bandSamples?.[0];
+      return group[80]?.type==='SLIDE'&&a&&b&&(!near(a.center,b.center,.002)||!near(a.width,b.width,.002));
+    });
     check('SLIDE帯の位置と幅はnoteSizeで変わらない',slideSizeChanged.length===0,slideSizeChanged[0]?`${slideSizeChanged[0][80].id}`:'');
 
     // 6. ENDバーも同じレーンgeometry基準
