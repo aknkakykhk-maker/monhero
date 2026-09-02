@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 13:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 15:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5737,6 +5737,17 @@ const INFINITY_SETTING = EXTREME_DIFFICULTIES[4];
 // GODは極限チャレンジの正式な最上位難易度。バトルデバッグも同じ定義を参照する。
 const GOD_SETTING = Object.freeze({ id:'GOD', label:'GOD', japanese:'ゴッド', available:true, debugAvailable:true, power:100, score:20, xp:60, gold:40, psyche:100, waveCount:10, unlockRequirement:'INFINITY', rankingId:'ExtremeGOD', recordId:'GOD', description:'神威が2WAVEごとに上昇し、既存の極限統合ルールが段階的に苛烈になる最上位難易度。', cardDescription:'2WAVEごとに神威が上昇。累計ターン圧と20TごとのDISTANCE BREAKを受ける。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.0125, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:20, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING]);
+// 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
+// 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
+const EXTREME_DIFFICULTY_THEMES = Object.freeze({
+  EXTREME:Object.freeze({accent:'#f0abfc',rgb:'232,121,249',background:'linear-gradient(180deg,#34133f,#160d2b)',action:'linear-gradient(135deg,#a21caf,#d946ef)',actionText:'#ffffff',glow:0.26,titleGlow:0.40,actionGlow:0.24,shadowBlur:28}),
+  NIGHTMARE:Object.freeze({accent:'#c4b5fd',rgb:'139,92,246',background:'linear-gradient(180deg,#25143f,#110b26)',action:'linear-gradient(135deg,#6d28d9,#8b5cf6)',actionText:'#ffffff',glow:0.30,titleGlow:0.44,actionGlow:0.28,shadowBlur:30}),
+  CHAOS:Object.freeze({accent:'#fda4af',rgb:'244,63,94',background:'linear-gradient(180deg,#3d111f,#1d0a13)',action:'linear-gradient(135deg,#be123c,#f43f5e)',actionText:'#ffffff',glow:0.34,titleGlow:0.48,actionGlow:0.32,shadowBlur:32}),
+  ULTIMATE:Object.freeze({accent:'#fdba74',rgb:'249,115,22',background:'linear-gradient(180deg,#3b1a0a,#1e0d08)',action:'linear-gradient(135deg,#c2410c,#f97316)',actionText:'#ffffff',glow:0.38,titleGlow:0.52,actionGlow:0.36,shadowBlur:34}),
+  INFINITY:Object.freeze({accent:'#93c5fd',rgb:'59,130,246',background:'linear-gradient(180deg,#11224d,#09112c)',action:'linear-gradient(135deg,#1d4ed8,#3b82f6)',actionText:'#ffffff',glow:0.42,titleGlow:0.56,actionGlow:0.40,shadowBlur:36}),
+  GOD:Object.freeze({accent:'#fde68a',rgb:'245,158,11',background:'linear-gradient(180deg,#3b2b08,#181106)',action:'linear-gradient(135deg,#a16207,#f59e0b)',actionText:'#1c1917',glow:0.48,titleGlow:0.66,actionGlow:0.48,shadowBlur:40}),
+});
+const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available));
 const godDivinityLevel = (waveNumber) => Math.max(1,Math.min(5,Math.floor((Math.max(1,Number(waveNumber)||1)-1)/2)+1));
 const godDivinityRules = (waveNumber) => {
@@ -17163,13 +17174,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;return (
-                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);return (
+                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?theme.accent:`rgba(${theme.rgb},.28)`,background:previewable?theme.background:`linear-gradient(180deg,rgba(${theme.rgb},.10),#0d142b)`,boxShadow:active?`0 0 ${theme.shadowBlur}px rgba(${theme.rgb},${theme.glow})`:'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
-                        <h3 className="text-center text-lg font-black leading-tight text-fuchsia-200">{setting.label}</h3>
+                        <h3 className="text-center text-lg font-black leading-tight" style={{color:theme.accent,textShadow:active?`0 0 10px rgba(${theme.rgb},${theme.titleGlow})`:'none'}}>{setting.label}</h3>
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1">
                           <small className="block text-[8px] text-slate-400 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
-                          <b className="block text-right text-base leading-tight text-fuchsia-200">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
+                          <b className="block text-right text-base leading-tight" style={{color:theme.accent}}>{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
                           <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':'選択できません'}</span>
                         </div>
                         {previewable?<>
@@ -17178,17 +17189,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <p data-extreme-card-description={setting.id} className="mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200">{setting.cardDescription||setting.description}</p>
                           {/* 特殊ルールの中身はカードへ並べず、「ルール詳細」で読ませる。
                               INFINITYのように数が増えても、カードの高さと文字の大きさを変えずに済む */}
-                          <div data-extreme-special-rules={setting.id} className="mt-1 h-[34px] shrink-0 flex items-center justify-center rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 text-center"><b className="text-[10px] leading-tight text-amber-300">⚠ {setting.label} {extremeRuleSummaryText(setting.id)}</b></div>
+                          <div data-extreme-special-rules={setting.id} className="mt-1 h-[34px] shrink-0 flex items-center justify-center rounded-lg border px-2 text-center" style={{borderColor:`rgba(${theme.rgb},.58)`,backgroundColor:`rgba(${theme.rgb},.14)`}}><b className="text-[10px] leading-tight text-amber-300">⚠ {setting.label} {extremeRuleSummaryText(setting.id)}</b></div>
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
                         <div data-extreme-card-actions className="grid gap-1.5 mt-auto pt-2 pb-1">
                           <div className="grid grid-cols-2 gap-1.5">
-                            <button data-extreme-rule-detail-open={setting.id} disabled={!previewable} onClick={()=>setExtremeRuleDetail(setting.id)} className="min-h-[38px] rounded-xl bg-fuchsia-900 border border-fuchsia-400/50 text-fuchsia-100 font-black text-xs disabled:opacity-50">{previewable?'ルール詳細':'ルール ？？？'}</button>
+                            <button data-extreme-rule-detail-open={setting.id} disabled={!previewable} onClick={()=>setExtremeRuleDetail(setting.id)} className="min-h-[38px] rounded-xl border font-black text-xs disabled:opacity-50" style={{backgroundColor:`rgba(${theme.rgb},.18)`,borderColor:`rgba(${theme.rgb},.55)`,color:theme.accent}}>{previewable?'ルール詳細':'ルール ？？？'}</button>
                             <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
                           </div>
                           {/* 極限は難易度そのものが別表なので、通常の難易度は Normal のまま触らない。
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
                               その周回は今までどおり報酬もクリア記録も保存されない(正式プレイと混ざらない) */}
-                          <button disabled={!previewable} onClick={()=>{battleEntryStateRef.current='EXTREME_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;extremeRunRef.current=true;setExtremeRun(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500">{previewable?'この難易度で挑戦':'選択できません'}</button>
+                          <button disabled={!previewable} onClick={()=>{battleEntryStateRef.current='EXTREME_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;extremeRunRef.current=true;setExtremeRun(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl font-black text-sm disabled:bg-slate-800 disabled:text-slate-500" style={previewable?{background:theme.action,color:theme.actionText,boxShadow:active?`0 0 18px rgba(${theme.rgb},${theme.actionGlow})`:'none'}:undefined}>{previewable?'この難易度で挑戦':'選択できません'}</button>
                           <button disabled={!setting.available||!unlocked} onClick={()=>openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={14}/></button>
                         </div>
                       </article>
