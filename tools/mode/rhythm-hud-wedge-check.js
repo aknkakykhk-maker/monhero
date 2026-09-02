@@ -45,7 +45,7 @@ const headerJsx=game.slice(headerStart,headerEnd);
 
 // 位置に効くstyle(font-size, padding-top, text-shadowの有無)だけ残し、それ以外は落とす。
 // 条件式(?:)を含む値は測れないので落とす(text-shadowは値そのものは位置に無関係なので固定文字列に正規化)。
-const LAYOUT_STYLE_PROPS=new Set(['fontSize','paddingTop']);
+const LAYOUT_STYLE_PROPS=new Set(['fontSize','paddingTop','lineHeight','display','WebkitLineClamp','WebkitBoxOrient','overflow']);
 const kebab=name=>name.replace(/[A-Z]/g,c=>`-${c.toLowerCase()}`);
 const inlineStyle=body=>{
   const kept=[];
@@ -78,24 +78,27 @@ const headerHtml=headerJsx
 check('HUDに未変換のJSX式が残っていない',!/\{|\}/.test(headerHtml),headerHtml.match(/\{[^"]{0,40}/)?.[0]||'');
 check('HUDの<header>自身に背景色・背景画像を持たせていない(台形の頂点を覆わないため)',
   !/<header[^>]*style="[^"]*background/.test(headerHtml));
+check('曲名は truncate(1行で…に切る)を使わない(実機で曲名が切れて読めなかったため)',
+  !/data-rhythm-hud-song[^>]*class="[^"]*truncate/.test(headerHtml)&&/data-rhythm-hud-song/.test(headerHtml));
 
 // ── 使われている utility を手書きCSSへ写す(知らないものは失敗させる) ───────────
 const PALETTE={
   'white':'#ffffff','slate-200':'#e2e8f0','slate-300':'#cbd5e1','slate-400':'#94a3b8',
-  'slate-900':'#0f172a','slate-950':'#020617','cyan-200':'#a5f3fc','cyan-300':'#67e8f9','emerald-200':'#a7f3d0',
+  'slate-100':'#f1f5f9','slate-900':'#0f172a','slate-950':'#020617','cyan-200':'#a5f3fc','cyan-300':'#67e8f9','emerald-200':'#a7f3d0',
   'fuchsia-200':'#f5d0fe','fuchsia-300':'#f0abfc','fuchsia-700':'#a21caf',
 };
 const SPACE={'0':'0px','0.5':'2px','1':'4px','1.5':'6px','2':'8px','3':'12px','12':'48px'};
 const STATIC={
   'absolute':'position:absolute','relative':'position:relative','block':'display:block','flex':'display:flex',
   'flex-col':'flex-direction:column','shrink-0':'flex-shrink:0','flex-1':'flex:1 1 0%','min-w-0':'min-width:0',
-  'items-center':'align-items:center','items-start':'align-items:flex-start','items-end':'align-items:end',
+  'items-center':'align-items:center','items-start':'align-items:flex-start','items-end':'align-items:end','items-baseline':'align-items:baseline',
+  'flex-wrap':'flex-wrap:wrap','justify-end':'justify-content:flex-end',
   'justify-between':'justify-content:space-between','justify-center':'justify-content:center','text-left':'text-align:left','text-right':'text-align:right',
   'font-black':'font-weight:900','font-bold':'font-weight:700','leading-none':'line-height:1',
   'tabular-nums':'font-variant-numeric:tabular-nums','truncate':'overflow:hidden;text-overflow:ellipsis;white-space:nowrap',
   'rounded':'border-radius:4px','rounded-full':'border-radius:9999px','rounded-xl':'border-radius:12px',
   'border':'border-width:1px;border-style:solid','inset-x-0':'left:0;right:0','inset-y-0':'top:0;bottom:0',
-  'top-0':'top:0','left-0':'left:0','overflow-hidden':'overflow:hidden',
+  'top-0':'top:0','left-0':'left:0','overflow-hidden':'overflow:hidden','w-full':'width:100%',
   'pointer-events-none':'pointer-events:none','pointer-events-auto':'pointer-events:auto',
 };
 const cssFor=token=>{
@@ -117,8 +120,9 @@ const cssFor=token=>{
     return props.map(prop=>`${prop}:${value}`).join(';');
   }
   if((m=/^max-w-\[(\d+)%\]$/.exec(token)))return `max-width:${m[1]}%`;
+  if((m=/^w-\[(\d+)%\]$/.exec(token)))return `width:${m[1]}%`;
   if((m=/^text-\[(\d+)px\]$/.exec(token)))return `font-size:${m[1]}px`;
-  if((m=/^text-(xs|sm|2xl)$/.exec(token)))return `font-size:${{xs:'12px',sm:'14px','2xl':'24px'}[m[1]]}`;
+  if((m=/^text-(xs|sm|lg|2xl)$/.exec(token)))return `font-size:${{xs:'12px',sm:'14px',lg:'18px','2xl':'24px'}[m[1]]}`;
   if((m=/^tracking-\[([^\]]+)\]$/.exec(token)))return `letter-spacing:${m[1]}`;
   if((m=/^(text|bg|border)-([a-z]+-\d{2,3}|white)$/.exec(token))){
     const hex=PALETTE[m[2]];

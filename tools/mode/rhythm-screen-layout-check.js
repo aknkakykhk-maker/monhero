@@ -30,9 +30,16 @@ check('プレイ画面は overflow-hidden の1画面で、内側にスクロー�
 check('HUDはレイアウトの高さを取らない絶対配置で、台形の中央を覆う背景を持たない',
   game.includes('<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"')
   &&!/data-rhythm-hud[\s\S]{0,50}background:/.test(game));
-check('HUD本文は左右それぞれ幅27%以内に収め、中央の台形へはみ出さない',
-  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[27%]')
-  &&game.includes('data-rhythm-hud-right className="flex max-w-[27%]'));
+// ウェッジは下へ行くほど狭くなるので、行ごとに幅を変える。幅は画面幅基準の vw で持つ
+// (% は親要素基準になり、入れ子だと意図した画面比にならない)。実際の当たりは
+// rhythm-hud-wedge-check.js が実ブラウザで測る。
+check('HUD本文の幅は画面幅基準(vw)で、左右それぞれ上限を持つ',
+  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[30vw]')
+  &&game.includes('data-rhythm-hud-right className="flex w-[28vw] max-w-[28vw]'));
+// 曲名を truncate で切ると、実機で「あつ杯テー…」となって曲が分からなくなる
+check('曲名は truncate で切らずに折り返す',
+  /data-rhythm-hud-song className="(?![^"]*truncate)/.test(game)
+  &&/data-rhythm-hud-song[\s\S]{0,260}WebkitLineClamp/.test(game));
 check('HUDは触れず、ポーズだけがタップを受ける',
   /data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto /.test(game));
 // Safe Areaは index.html の body が padding で確保済み(body{height:100dvh;box-sizing:border-box;
