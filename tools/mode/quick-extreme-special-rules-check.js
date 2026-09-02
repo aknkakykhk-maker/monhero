@@ -34,8 +34,8 @@ assert(source.includes('return hasExtremeSpecialRules(candidate) ? candidate : n
 assert(!source.includes('extremeRunRef.current?extremeSpecialRule(extremeDifficulty'), 'special rule activation must not depend only on extremeRunRef');
 assert(source.includes("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"));
 for (const use of [
-  'applyDistanceEnhancement(d*0.001/100,specialRuleDifficulty)',
-  'applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty)',
+  'applyDistanceEnhancement(d*0.001/100,specialRuleDifficulty,wave)',
+  'applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty,wave)',
   'getMonsterAptPct(m,specialRuleDifficulty)',
   'applyNightmareStatGain(base,after,specialDifficulty)',
 ]) assert(source.includes(use), `${use} must use the shared run rule difficulty`);

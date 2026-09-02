@@ -465,6 +465,10 @@ const ASSISTANT_SCENES = {
     help: 'basics/extreme-challenge',
     lines: [],
   },
+  godDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
   // 種族チャレンジの選択画面。種族→勇者→供モン→確認の各段で言うことが変わるので、
   // 画面から condition(いまの段)を渡す。セリフ本体は speciesChallengeGuide の束から合流する
   speciesChallenge: {
@@ -1078,11 +1082,18 @@ addAssistantLinePack({
       { e:'wink', t:'35ターンごとの段階的なDISTANCE BREAKに備えて、いろんな距離で戦お♪' },
     ],
     infinityDifficulty: [
-      { e:'excited', t:'ついに最後のINFINITY！ 極限のルールが全部のっかってるよ。' },
+      { e:'excited', t:'INFINITYは極限のルールが全部のっかってるよ。' },
       { e:'surprise', t:'敵は50倍…！ ルール詳細をぜんぶ読んでから行こうね。' },
       { e:'normal', t:'25ターンごとにDISTANCE BREAK。長引くほど苦しくなるよ。' },
       { e:'troubled', t:'与ダメは1ターンごとに1pt落ちるの。速さがそのまま強さだね。' },
       { e:'wink', t:'ULTIMATEをクリアしたあなたなら、きっと戦えるはず♪' },
+    ],
+    godDifficulty: [
+      { e:'surprise', t:'GODは敵強度100倍！ INFINITYを越えた最上位の極限だよ！' },
+      { e:'normal', t:'2WAVEごとに神威が上がって、ルールの実効値も厳しくなるよ。' },
+      { e:'troubled', t:'20ターンごとのDISTANCE BREAKと累計ターン低下に気をつけて。' },
+      { e:'surprise', t:'WAVE9からは神域封鎖で安全距離がなくなるよ…！' },
+      { e:'wink', t:'INFINITYをクリアしたあなたの総力戦。ルール詳細を読んで挑も♪' },
     ],
   },
 });

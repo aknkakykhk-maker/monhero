@@ -72,6 +72,21 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 | 完了条件 | Android 16実機で、いちか4曲の試聴と、アレンジ設定後の実画面での再生を確認できること。再現する場合はChrome DevTools(リモートデバッグ)で `AudioContext.state` とデコード結果を採取する |
 | 関連 | 本修正のPR。いちか4曲には128〜248KBの埋め込みPNGジャケットがあるが、デコード阻害は確認できていないため再エンコードしていない |
 
+### KI-008: GOD難易度の助手セリフ(extremeDifficultyGuides)がみゅあ/きき混在検査に落ちる
+
+| 項目 | 内容 |
+| --- | --- |
+| ステータス | 未着手 |
+| 優先度 / 種別 | P3 / 不具合 |
+| 影響 | `node tools/assistant-bond-check.js` の「みゅあとききのセリフが混ざらない」がNGになる。CIには含まれていないため公開には影響しないが、放置すると助手をきき選択中でもGOD/極限の案内がみゅあの語調(`who:'mua'`)のまま出る可能性がある |
+| 再現環境 | main（PR #899「極限チャレンジ新難易度 GOD 正式公開」由来。音ゲー(モンスタービート)開発とは無関係） |
+| 再現手順 | 1. `node tools/assistant-bond-check.js` を実行 2. `godDifficulty` シーンでNGになることを確認 |
+| 期待結果 | `extremeDifficultyGuides` パックのGOD向け行にも、きき選択時に`who:'kiki'`相当の行が用意されている |
+| 実際の結果 | `who:'mua'`のまま(またはきき向け分岐が無い)ため、きき選択中でもみゅあの語調で表示されうる |
+| 回避策 | なし(実際の画面表示に出るかは未確認。この検査はデータ定義の整合だけを見ている) |
+| 完了条件 | `node tools/assistant-bond-check.js` がGODシーンを含め全件成功すること |
+| 関連 | PR #899、`monster-hero/data/assistants.js` の `extremeDifficultyGuides` パック |
+
 ## 新規課題テンプレート
 
 課題 ID は `KI-005` のように連番にします。P0/P1 はこの一覧への追記だけで済ませず、GitHub Issue を作成して
