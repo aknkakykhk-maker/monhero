@@ -1,0 +1,38 @@
+// 失敗したHOLD / SLIDEを、その場で消さずに終端まで薄いグレーで流し続けることを確かめる。
+//
+// 途中で失敗したロングノーツがいきなり消えると、「取り損ねたのか、そもそも無かったのか」が
+// 分からない。表示だけを薄いグレーへ落として最後まで流し、復活しないことを見せる。
+// 判定・コンボ・スコアはここでは一切変えない。
+//
+//   node tools/mode/rhythm-failed-hold-trail-check.js
+const fs=require('fs'),path=require('path');
+const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
+const game=read('monster-hero/src/game-system.jsx'),data=read('monster-hero/data/rhythm-mode.js');
+
+let failed=0;
+const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
+
+check('最終判定をノーツへ控えて、失敗表示の判断に使う',
+  game.includes('note.done=true;note._rhythmFinalJudgment=judgment;'));
+check('失敗して流し続ける条件はHOLD/SLIDEのMISSかつ譜面上の終端前',
+  game.includes("const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note))&&songTimeMs<rhythmReleaseTargetMs(note);"));
+check('TAP・FLICKや終端を過ぎたノーツは従来どおりその場で消す',
+  game.includes('if(note.done&&!failedTrail){el.style.display=\'none\';return;}'));
+check('失敗中は判定範囲外になっても表示を続ける',
+  game.includes('visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18)'));
+check('失敗中は薄く表示する',
+  game.includes("el.style.opacity=failedTrail?'.34':(visible?'1':'0')"));
+check('印は値が変わったときだけ書き換えて、監視の自己発火を避ける',
+  game.includes("if(el.dataset.rhythmFailed!==failedFlag)el.dataset.rhythmFailed=failedFlag;"));
+check('失敗したノーツと帯はグレーへ落とす',
+  data.includes('[data-rhythm-note][data-rhythm-failed="true"]{filter:grayscale(1) brightness(.72)!important}'));
+
+// 判定側へ影響していないこと
+check('判定・コンボ・スコアの計算へ失敗表示を持ち込まない',
+  !game.includes('failedTrail&&run.combo')&&!game.includes('rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:chart,failedTrail')
+  &&game.includes('const nextCombo=rhythmComboAfter(run.combo,judgment);'));
+check('一度失敗したノーツは復活しない(doneのまま扱う)',
+  game.includes('if(!run||run.finished||run.paused||note.done)return;'));
+
+console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
+process.exit(failed?1:0);
