@@ -35,8 +35,8 @@ check('HUDはレイアウトの高さを取らない絶対配置で、台形の�
 // (% は親要素基準になり、入れ子だと意図した画面比にならない)。実際の当たりは
 // rhythm-hud-wedge-check.js が実ブラウザで測る。
 check('HUD本文の幅は画面幅基準(vw)で、左右それぞれ上限を持つ',
-  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[30vw]')
-  &&game.includes('data-rhythm-hud-right className="flex w-[28vw] max-w-[28vw]'));
+  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[35vw]')
+  &&game.includes('data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw]'));
 // 曲名を truncate で切ると、実機で「あつ杯テー…」となって曲が分からなくなる
 check('曲名は truncate で切らずに折り返す',
   /data-rhythm-hud-song className="(?![^"]*truncate)/.test(game)

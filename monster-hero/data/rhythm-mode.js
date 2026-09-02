@@ -56,7 +56,7 @@ const rhythmLifeAfter = (life, judgment) => {
   return Math.max(0, Math.min(RHYTHM_LIFE_MAX, rhythmLifeValue(life) + delta));
 };
 const rhythmLifeRatio = life => Math.max(0, Math.min(1, rhythmLifeValue(life) / RHYTHM_LIFE_MAX));
-const RHYTHM_PROJECTION_TOP_SCALE=.30;
+const RHYTHM_PROJECTION_TOP_SCALE=.18;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
 const RHYTHM_BODY_WIDTH_RATIO=.64;
 // 幅1だけに付ける入力側の余白。隣接する細ノーツの中心までは広げない。

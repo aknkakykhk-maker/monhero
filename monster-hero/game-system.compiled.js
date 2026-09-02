@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f3be477b79264b96
+// source-sha256: eb55a61e37dacbb0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 23:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 23:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15938,7 +15938,7 @@ const RhythmTapTest = ({
     className: "pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"
   }, /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-left": true,
-    className: "min-w-0 max-w-[30vw] text-left"
+    className: "min-w-0 max-w-[35vw] text-left"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-baseline gap-1.5"
   }, /*#__PURE__*/React.createElement("b", {
@@ -15965,7 +15965,7 @@ const RhythmTapTest = ({
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }, "BEST ", Number(bestRecord?.bestScore || 0).toLocaleString()), /*#__PURE__*/React.createElement("div", {
-    className: "mt-1.5 flex max-w-[29vw] flex-wrap items-center gap-1"
+    className: "mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1"
   }, /*#__PURE__*/React.createElement("span", {
     className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none"
   }, difficulty.id), /*#__PURE__*/React.createElement("small", {
@@ -15976,7 +15976,7 @@ const RhythmTapTest = ({
     }
   }, hasHold ? 'HOLD TEST' : 'TAP TEST')), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-song": true,
-    className: "mt-1 max-w-[26vw] text-[10px] font-black text-slate-100",
+    className: "mt-1 max-w-[31vw] text-[10px] font-black text-slate-100",
     style: {
       display: '-webkit-box',
       WebkitLineClamp: '3',
@@ -15987,7 +15987,7 @@ const RhythmTapTest = ({
     }
   }, "\u266A ", song.displayName)), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-right": true,
-    className: "flex w-[28vw] max-w-[28vw] flex-col items-end gap-1.5"
+    className: "flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"
   }, /*#__PURE__*/React.createElement("button", {
     "data-rhythm-pause": true,
     "aria-label": "\u30DD\u30FC\u30BA",
