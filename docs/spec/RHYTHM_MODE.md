@@ -110,6 +110,17 @@
   判定タイミングと先読み時間は従来どおり
 - 検査は `node tools/mode/rhythm-hud-wedge-check.js`（実ブラウザで、台形の頂点がHUDに覆われていないこと・HUD本文がそれが描かれる高さの台形へ一切かぶらないことを実測する）
 
+#### Safe Area は body が1回だけ確保する（重要）
+
+`monster-hero/index.html` の `body` が `height:100dvh; box-sizing:border-box; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom)` を持っており、
+`#root` 以下はすべて**すでにSafe Areaの内側**にある。したがってプレイ画面側で `env(safe-area-inset-*)` を足し直してはいけない。
+
+以前は `main[data-rhythm-tap-test]` が `paddingTop:env(safe-area-inset-top)` を、HUDがさらに `calc(env(safe-area-inset-top) + 6px)` を持っていたため、
+ダイナミックアイランド世代のiPhone（`env(safe-area-inset-top)=59px`）で**上に59px×2＝118pxの空白**ができ、
+プレイエリアの高さも上下で計93px（上59＋下34）失われていた。実機で「上のスペースが広いまま」と指摘されて発覚した。
+
+`rhythm-screen-layout-check.js` がこの二重掛けを、`rhythm-hud-wedge-check.js` が実測でのプレイエリア高さ（`画面 − 上Safe − 下Safe − 下余白8px`）を固定している。
+
 #### 経緯（2026-09-02、実機プレイで発覚した失敗と、その原因）
 
 最初にこの配置を試したとき（PR #983）、HUDに**全幅の背景パネル**（`background: linear-gradient(...)`を`inset-x-0`の`<header>`全体へ）を敷いてしまい、台形の頂点そのものを覆っていた。実機で確認したところ、

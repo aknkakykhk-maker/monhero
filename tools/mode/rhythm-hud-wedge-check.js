@@ -133,9 +133,13 @@ check('HUDのクラスはすべてこの検査のCSSへ写せる',unknown.length
 const utilityCss=tokens.map(token=>`.${token.replace(/[^A-Za-z0-9_-]/g,c=>'\\'+c)}{${cssFor(token)}}`).join('\n');
 
 const LANE_BG='#152033';
+// 実機の index.html は body 側で Safe Area を確保している。ここでも同じ形にして、
+// プレイ画面が env() をもう一度足していないか(=上部に二重の空白が出ないか)を測れるようにする。
+const SAFE_TOP=59,SAFE_BOTTOM=34;   // ダイナミックアイランド世代のiPhone相当
 const PAGE=`<!doctype html><html><head><meta charset="utf-8"><style>
 *{box-sizing:border-box;margin:0;padding:0;border:0 solid transparent}
-html,body{height:100%}body{display:flex;flex-direction:column;font-family:system-ui,sans-serif;background:#020617;color:#fff}
+html{height:100%}
+body{height:100%;padding-top:${SAFE_TOP}px;padding-bottom:${SAFE_BOTTOM}px;display:flex;flex-direction:column;font-family:system-ui,sans-serif;background:#020617;color:#fff}
 main{position:relative;display:flex;flex:1 1 0%;min-height:0;flex-direction:column;overflow:hidden}
 [data-rhythm-play-area]{position:relative;margin:0 8px 8px;flex:1 1 0%;min-height:0;overflow:hidden;background:${LANE_BG}}
 ${utilityCss}
@@ -195,8 +199,10 @@ const HUD_BOTTOM_LIMIT_RATIO=.30;
     console.log(`— ${size.name}`);
     check(`  JSエラーが出ない`,errors.length===0,errors[0]||'');
     const playHeight=measured.play.bottom-measured.play.top;
-    check(`  レーンが画面の高さをそのまま使う`,Math.abs(playHeight-(size.height-8))<1,
-      `プレイ=${playHeight.toFixed(1)}px / 画面=${size.height}px`);
+    // Safe Areaはbodyが1回だけ引く。プレイ画面がenv()を足し直していたらここが合わなくなる。
+    const expected=size.height-SAFE_TOP-SAFE_BOTTOM-8;
+    check(`  レーンがSafe Areaの内側をそのまま使う(Safe Areaの二重掛けが無い)`,Math.abs(playHeight-expected)<1,
+      `プレイ=${playHeight.toFixed(1)}px / 期待=${expected}px (画面${size.height} - 上${SAFE_TOP} - 下${SAFE_BOTTOM} - 余白8)`);
     // 台形の最上部・中心ピクセルは、HUDに覆われずレーン自身の背景色のまま見えていること
     check(`  台形の頂点(最上部中心)はHUDに覆われずレーンの背景のまま`,
       measured.apexColor==='rgb(21, 32, 51)',`実際の色=${measured.apexColor}`);
