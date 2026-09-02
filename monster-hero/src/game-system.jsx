@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 05:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 06:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7436,6 +7436,12 @@ const storeSet = async (key, val, shared=false) => {
 const saveRhythmSettings = async value => {
   const normalized=normalizeRhythmSettings(value); await storeSet(RHYTHM_SETTINGS_KEY,normalized,false); return normalized;
 };
+// モンスターノーツ用のマスモン設定は既存の音ゲー設定・BESTへ混ぜず、専用キーへ分けて保存する。
+// 保存するのは「マスモンの個体IDの並び」だけで、手元にいるかどうかの確認はここでは行わない
+// (マスモン一覧を読む前に保存し直しても、設定が消えないようにするため)。
+const saveRhythmMonsterSlots = async value => {
+  const normalized=sanitizeRhythmMonsterSlotIds(value); await storeSet(RHYTHM_MONSTER_SLOT_KEY,normalized,false); return normalized;
+};
 const saveRhythmBestRecord = async (records,songId,difficultyId,value) => {
   if(!RHYTHM_SONGS.some(song=>song.songId===songId)||!RHYTHM_DIFFICULTIES.some(item=>item.id===difficultyId)) return normalizeRhythmBestRecords(records);
   const normalized=normalizeRhythmBestRecords(records);
@@ -8356,6 +8362,11 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(()=>normalizeRhythmBestRecords(null));
   const [rhythmPlay,setRhythmPlay]=useState(null);
+  // モンスターノーツ用のマスモン設定(最大4体)。保存するのは個体IDの並びだけ
+  const [rhythmMonsterSlotIds,setRhythmMonsterSlotIds]=useState([]);
+  // マスモン一覧を出す設定シート。閉じているあいだは一覧を組み立てない
+  const [rhythmMonsterPickerOpen,setRhythmMonsterPickerOpen]=useState(false);
+  const [rhythmMonsterMessage,setRhythmMonsterMessage]=useState('');
   // 音ゲーデバッグ画面は「プレイ」「譜面制作」「設定・記録」で分ける。
   // 全部を1本のスクロールへ積むと、入った瞬間に何がどこにあるか分からなくなるため。
   const [rhythmDebugTab,setRhythmDebugTab]=useState('play');
@@ -8366,7 +8377,10 @@ function MonsterHeroGame() {
   const openRhythmDebug = async () => {
     const settings=normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false));
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
-    setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmDebugTab('play'); setGameState('RHYTHM_DEBUG');
+    const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
+    setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
+    setRhythmMonsterPickerOpen(false); setRhythmMonsterMessage('');
+    setRhythmDebugTab('play'); setGameState('RHYTHM_DEBUG');
   };
   const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
   const [updateGuidePage, setUpdateGuidePage] = useState(0);
@@ -8940,6 +8954,14 @@ function MonsterHeroGame() {
   // { id, baseId(元のモンスター種id), name, bondXp, distAptPoints(未使用の強化ポイント),
   //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, color(染色もどきで変えた色id、無ければnull), createdAt }
   const [masuMons, setMasuMons] = useState([]);
+  // モンスターノーツ用に設定したマスモンを、保存してあるIDの並びから解決する(§3.2)。
+  // 手放したマスモンと、同じベースモンスターの重複はここで落とす。保存値は書き換えない。
+  const rhythmMonsterSlots = resolveRhythmMonsterSlots(rhythmMonsterSlotIds, masuMons);
+  const rhythmMonsterSlotIdsInUse = rhythmMonsterSlots.map(masu => String(masu.id));
+  const applyRhythmMonsterSlots = async (next, message='') => {
+    const saved = await saveRhythmMonsterSlots(next);
+    setRhythmMonsterSlotIds(saved); setRhythmMonsterMessage(message);
+  };
   const [patternMasuId, setPatternMasuId] = useState(null);
   const [patternSettings, setPatternSettings] = useState(makePatternSettings);
   const [patternStep, setPatternStep] = useState('attach');
@@ -17827,6 +17849,36 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* 性能計測(デバッグ限定)。既定OFF・OFFのあいだは計測処理が一切動かない。
                 プレイヤーの通常プレイには出ないので、更新履歴・ヘルプには載せない */}
             <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}</section>
+            {/* モンスターノーツ用のマスモン設定(RHYTHM_MODE §3.2)。最大4体・同じモンスターの重複禁止・
+                1〜4枠の並び順がそのままモンスターノーツの登場順になる。ノーツ本体はこのあと作る */}
+            <section data-rhythm-monster-slots className="mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3">
+              <div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-fuchsia-200">モンスターノーツ用マスモン</h3><span data-rhythm-monster-count className="shrink-0 text-[9px] font-black text-fuchsia-300">{rhythmMonsterSlots.length} / {RHYTHM_MONSTER_SLOT_MAX}体</span></div>
+              <p className="mt-1 text-[9px] font-bold leading-relaxed text-fuchsia-100/80">設定した順番が、そのままモンスターノーツの登場順になります。同じモンスターは別の個体でも重ねて設定できません。{RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。</p>
+              <ol className="mt-2 space-y-1">{Array.from({length:RHYTHM_MONSTER_SLOT_MAX},(_,index)=>{
+                const masu=rhythmMonsterSlots[index]||null,base=masu?ALL_PLAYER_MONSTERS[masu.baseId]:null;
+                return <li key={index} data-rhythm-monster-slot={index+1} className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 p-2">
+                  <span className="w-4 shrink-0 text-center text-[10px] font-black text-fuchsia-300">{index+1}</span>
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-950">{masu&&base&&<DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/>}</div>
+                  <div className="min-w-0 flex-1">{masu?<React.Fragment><b className="block truncate text-[11px] font-black">{masu.name}</b><small className="block truncate text-[9px] text-slate-400">{base?.name||masu.baseId}</small></React.Fragment>:<small className="text-[10px] font-bold text-slate-500">未設定</small>}</div>
+                  {masu&&<div className="flex shrink-0 gap-1">
+                    <button type="button" aria-label={`${index+1}枠目を前へ`} disabled={index===0} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,-1),'登場順を入れ替えました')} className="min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30">↑</button>
+                    <button type="button" aria-label={`${index+1}枠目を後ろへ`} disabled={index>=rhythmMonsterSlots.length-1} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,1),'登場順を入れ替えました')} className="min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30">↓</button>
+                    <button type="button" data-rhythm-monster-remove aria-label={`${masu.name}を外す`} onClick={()=>applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id),`${masu.name}を外しました`)} className="min-h-[36px] rounded-lg border border-rose-300/50 px-2 text-[10px] font-black text-rose-200">外す</button>
+                  </div>}
+                </li>;})}</ol>
+              <button type="button" data-rhythm-monster-picker-toggle aria-expanded={rhythmMonsterPickerOpen} onClick={()=>{setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);setRhythmMonsterMessage('');}} className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[11px] font-black text-fuchsia-100">{rhythmMonsterPickerOpen?'マスモン一覧を閉じる':'マスモンから設定する'}</button>
+              {rhythmMonsterMessage&&<p data-rhythm-monster-message role="status" className="mt-1 text-[10px] font-bold text-amber-200">{rhythmMonsterMessage}</p>}
+              {rhythmMonsterPickerOpen&&<ul data-rhythm-monster-picker className="mh-scroll mt-2 max-h-64 space-y-1 overflow-y-auto">
+                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).map(masu=>{
+                  const base=ALL_PLAYER_MONSTERS[masu.baseId],issue=rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse,masu.id,masuMons);
+                  return <li key={masu.id}><button type="button" disabled={!!issue} onClick={()=>applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id,masuMons),`${masu.name}を${rhythmMonsterSlots.length+1}枠目に設定しました`)} className={`flex min-h-[44px] w-full items-center gap-2 rounded-xl border p-2 text-left ${issue?'border-white/10 bg-slate-900/40 opacity-50':'border-white/20 bg-slate-900/80'}`}>
+                    <div className="h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-950"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/></div>
+                    <div className="min-w-0 flex-1"><b className="block truncate text-[11px] font-black">{masu.name}</b><small className="block truncate text-[9px] text-slate-400">{base.name}</small></div>
+                    {issue&&<small className="shrink-0 text-[9px] font-bold text-rose-300">{RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue]}</small>}
+                  </button></li>;})}
+                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).length===0&&<li className="rounded-xl border border-white/10 p-3 text-center text-[10px] font-bold text-slate-500">設定できるマスモンがいません</li>}
+              </ul>}
+            </section>
             <section className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"><h3 className="mb-2 text-xs font-black text-cyan-200">保存中の設定</h3><dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{Object.entries(rhythmSettings).map(([key,value])=><React.Fragment key={key}><dt className="break-all text-slate-400">{key}</dt><dd className="break-all text-right font-mono text-white">{String(value)}</dd></React.Fragment>)}</dl></section>
             </div>
             <div hidden={rhythmDebugTab!=='play'}>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f554b2f85ab700d8
+// source-sha256: 693b4e847c4cc4d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 05:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 06:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13218,6 +13218,14 @@ const saveRhythmSettings = async value => {
   await storeSet(RHYTHM_SETTINGS_KEY, normalized, false);
   return normalized;
 };
+// モンスターノーツ用のマスモン設定は既存の音ゲー設定・BESTへ混ぜず、専用キーへ分けて保存する。
+// 保存するのは「マスモンの個体IDの並び」だけで、手元にいるかどうかの確認はここでは行わない
+// (マスモン一覧を読む前に保存し直しても、設定が消えないようにするため)。
+const saveRhythmMonsterSlots = async value => {
+  const normalized = sanitizeRhythmMonsterSlotIds(value);
+  await storeSet(RHYTHM_MONSTER_SLOT_KEY, normalized, false);
+  return normalized;
+};
 const saveRhythmBestRecord = async (records, songId, difficultyId, value) => {
   if (!RHYTHM_SONGS.some(song => song.songId === songId) || !RHYTHM_DIFFICULTIES.some(item => item.id === difficultyId)) return normalizeRhythmBestRecords(records);
   const normalized = normalizeRhythmBestRecords(records);
@@ -16216,6 +16224,11 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
   const [rhythmPlay, setRhythmPlay] = useState(null);
+  // モンスターノーツ用のマスモン設定(最大4体)。保存するのは個体IDの並びだけ
+  const [rhythmMonsterSlotIds, setRhythmMonsterSlotIds] = useState([]);
+  // マスモン一覧を出す設定シート。閉じているあいだは一覧を組み立てない
+  const [rhythmMonsterPickerOpen, setRhythmMonsterPickerOpen] = useState(false);
+  const [rhythmMonsterMessage, setRhythmMonsterMessage] = useState('');
   // 音ゲーデバッグ画面は「プレイ」「譜面制作」「設定・記録」で分ける。
   // 全部を1本のスクロールへ積むと、入った瞬間に何がどこにあるか分からなくなるため。
   const [rhythmDebugTab, setRhythmDebugTab] = useState('play');
@@ -16226,8 +16239,12 @@ function MonsterHeroGame() {
   const openRhythmDebug = async () => {
     const settings = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
     const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+    const monsterSlots = sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY, [], false));
     setRhythmSettings(settings);
     setRhythmBestRecords(records);
+    setRhythmMonsterSlotIds(monsterSlots);
+    setRhythmMonsterPickerOpen(false);
+    setRhythmMonsterMessage('');
     setRhythmDebugTab('play');
     setGameState('RHYTHM_DEBUG');
   };
@@ -16906,6 +16923,15 @@ function MonsterHeroGame() {
   // { id, baseId(元のモンスター種id), name, bondXp, distAptPoints(未使用の強化ポイント),
   //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, color(染色もどきで変えた色id、無ければnull), createdAt }
   const [masuMons, setMasuMons] = useState([]);
+  // モンスターノーツ用に設定したマスモンを、保存してあるIDの並びから解決する(§3.2)。
+  // 手放したマスモンと、同じベースモンスターの重複はここで落とす。保存値は書き換えない。
+  const rhythmMonsterSlots = resolveRhythmMonsterSlots(rhythmMonsterSlotIds, masuMons);
+  const rhythmMonsterSlotIdsInUse = rhythmMonsterSlots.map(masu => String(masu.id));
+  const applyRhythmMonsterSlots = async (next, message = '') => {
+    const saved = await saveRhythmMonsterSlots(next);
+    setRhythmMonsterSlotIds(saved);
+    setRhythmMonsterMessage(message);
+  };
   const [patternMasuId, setPatternMasuId] = useState(null);
   const [patternSettings, setPatternSettings] = useState(makePatternSettings);
   const [patternStep, setPatternStep] = useState('attach');
@@ -33873,6 +33899,115 @@ function MonsterHeroGame() {
     }, label), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-black text-amber-100"
     }, value))))), /*#__PURE__*/React.createElement("section", {
+      "data-rhythm-monster-slots": true,
+      className: "mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-xs font-black text-fuchsia-200"
+    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u7528\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("span", {
+      "data-rhythm-monster-count": true,
+      className: "shrink-0 text-[9px] font-black text-fuchsia-300"
+    }, rhythmMonsterSlots.length, " / ", RHYTHM_MONSTER_SLOT_MAX, "\u4F53")), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-fuchsia-100/80"
+    }, "\u8A2D\u5B9A\u3057\u305F\u9806\u756A\u304C\u3001\u305D\u306E\u307E\u307E\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u306E\u767B\u5834\u9806\u306B\u306A\u308A\u307E\u3059\u3002\u540C\u3058\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u5225\u306E\u500B\u4F53\u3067\u3082\u91CD\u306D\u3066\u8A2D\u5B9A\u3067\u304D\u307E\u305B\u3093\u3002", RHYTHM_MONSTER_SLOT_MAX, "\u4F53\u305D\u308D\u3048\u308B\u5FC5\u8981\u306F\u306A\u304F\u30011\u301C3\u4F53\u3067\u3082\u904A\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("ol", {
+      className: "mt-2 space-y-1"
+    }, Array.from({
+      length: RHYTHM_MONSTER_SLOT_MAX
+    }, (_, index) => {
+      const masu = rhythmMonsterSlots[index] || null,
+        base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+      return /*#__PURE__*/React.createElement("li", {
+        key: index,
+        "data-rhythm-monster-slot": index + 1,
+        className: "flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 p-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "w-4 shrink-0 text-center text-[10px] font-black text-fuchsia-300"
+      }, index + 1), /*#__PURE__*/React.createElement("div", {
+        className: "h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+      }, masu && base && /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: masu.baseId,
+        src: masuDisplayImageUrl(base),
+        alt: masu.name,
+        masuColors: getMasuColors(masu),
+        draggable: false,
+        className: "h-full w-full object-contain"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, masu ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
+        className: "block truncate text-[11px] font-black"
+      }, masu.name), /*#__PURE__*/React.createElement("small", {
+        className: "block truncate text-[9px] text-slate-400"
+      }, base?.name || masu.baseId)) : /*#__PURE__*/React.createElement("small", {
+        className: "text-[10px] font-bold text-slate-500"
+      }, "\u672A\u8A2D\u5B9A")), masu && /*#__PURE__*/React.createElement("div", {
+        className: "flex shrink-0 gap-1"
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "aria-label": `${index + 1}枠目を前へ`,
+        disabled: index === 0,
+        onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, -1), '登場順を入れ替えました'),
+        className: "min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30"
+      }, "\u2191"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "aria-label": `${index + 1}枠目を後ろへ`,
+        disabled: index >= rhythmMonsterSlots.length - 1,
+        onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, 1), '登場順を入れ替えました'),
+        className: "min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30"
+      }, "\u2193"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-rhythm-monster-remove": true,
+        "aria-label": `${masu.name}を外す`,
+        onClick: () => applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id), `${masu.name}を外しました`),
+        className: "min-h-[36px] rounded-lg border border-rose-300/50 px-2 text-[10px] font-black text-rose-200"
+      }, "\u5916\u3059")));
+    })), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-rhythm-monster-picker-toggle": true,
+      "aria-expanded": rhythmMonsterPickerOpen,
+      onClick: () => {
+        setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);
+        setRhythmMonsterMessage('');
+      },
+      className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[11px] font-black text-fuchsia-100"
+    }, rhythmMonsterPickerOpen ? 'マスモン一覧を閉じる' : 'マスモンから設定する'), rhythmMonsterMessage && /*#__PURE__*/React.createElement("p", {
+      "data-rhythm-monster-message": true,
+      role: "status",
+      className: "mt-1 text-[10px] font-bold text-amber-200"
+    }, rhythmMonsterMessage), rhythmMonsterPickerOpen && /*#__PURE__*/React.createElement("ul", {
+      "data-rhythm-monster-picker": true,
+      className: "mh-scroll mt-2 max-h-64 space-y-1 overflow-y-auto"
+    }, masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).map(masu => {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId],
+        issue = rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse, masu.id, masuMons);
+      return /*#__PURE__*/React.createElement("li", {
+        key: masu.id
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        disabled: !!issue,
+        onClick: () => applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id, masuMons), `${masu.name}を${rhythmMonsterSlots.length + 1}枠目に設定しました`),
+        className: `flex min-h-[44px] w-full items-center gap-2 rounded-xl border p-2 text-left ${issue ? 'border-white/10 bg-slate-900/40 opacity-50' : 'border-white/20 bg-slate-900/80'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: masu.baseId,
+        src: masuDisplayImageUrl(base),
+        alt: "",
+        masuColors: getMasuColors(masu),
+        draggable: false,
+        className: "h-full w-full object-contain"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block truncate text-[11px] font-black"
+      }, masu.name), /*#__PURE__*/React.createElement("small", {
+        className: "block truncate text-[9px] text-slate-400"
+      }, base.name)), issue && /*#__PURE__*/React.createElement("small", {
+        className: "shrink-0 text-[9px] font-bold text-rose-300"
+      }, RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue])));
+    }), masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).length === 0 && /*#__PURE__*/React.createElement("li", {
+      className: "rounded-xl border border-white/10 p-3 text-center text-[10px] font-bold text-slate-500"
+    }, "\u8A2D\u5B9A\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093"))), /*#__PURE__*/React.createElement("section", {
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-xs font-black text-cyan-200"
