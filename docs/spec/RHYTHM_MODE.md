@@ -681,6 +681,22 @@ HOMEに必要な機能の方向性:
 
 正式HOMEへの入口と、正式公開時の最終デザインは未実装。
 
+### 音量の独立性（現行仕様）
+
+音ゲーのBGM／タップ音量は、メインゲーム（HOME）の音量設定とは**完全に独立**している。
+
+- 音ゲーBGM: `Audio_.startRhythmTrack` が作る専用の `rhythmGain` ノードを、メインのBGM音量が
+  かかる `bgmGain` を経由せず `ctx.destination` へ直結する。曲ごとの音量差は `safeTrackGain` で
+  正規化する。**以前はrhythmGainがbgmGainへ直列に繋がり、両方の音量設定が掛け算になっていた**
+  （メイン側のBGM音量を下げると音ゲー側をどれだけ上げても小さいまま・無音になる不具合があった）
+- タップ音（SE）: もともとTone.js／`seBus`を使わず専用のAudioContextで鳴らしており、メインの
+  SE音量とは無関係
+- **全体ミュート（タイトル画面の「音がオフです」）だけは共通**に効く。`Audio_.setEnabled` が
+  `window.__mhAudioEnabled` へ反映し、稼働中の音ゲーBGMのgainと、タップ音の`rhythmAudioGloballyEnabled()`
+  判定の両方がこれを見る
+
+`node tools/mode/rhythm-audio-independence-check.js` で確認する。
+
 ---
 
 ## 17. マスモン連携（確定・未実装）

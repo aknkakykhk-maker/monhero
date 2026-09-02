@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b3c351eaec622473
+// source-sha256: 7ec2c3272841e15e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 12:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 12:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3885,6 +3885,15 @@ const Audio_ = (() => {
     seVolumePct = 0,
     pageHidden = false;
   let enabled = false;
+  // 音ゲーのBGM音量は、メインのBGM音量設定(対数カーブ・bgmGain)を経由させず独立させる。
+  // ただし全体ミュート(タイトルの「音がオフです」)だけは共通で効かせる。
+  // 稼働中のgainノードを覚えておき、ミュート切り替え時にまとめて反映する。
+  const activeRhythmGains = new Set();
+  const applyRhythmMute = () => {
+    activeRhythmGains.forEach(entry => {
+      entry.node.gain.value = enabled ? entry.raw : 0;
+    });
+  };
   const load = () => {
     if (ready) return Promise.resolve();
     if (loading) return loading;
@@ -4214,7 +4223,14 @@ const Audio_ = (() => {
         offsetSeconds = 0,
         playing = false,
         stopped = false,
-        naturallyEnded = false;
+        naturallyEnded = false,
+        gainEntry = null;
+      const dropGainEntry = () => {
+        if (gainEntry) {
+          activeRhythmGains.delete(gainEntry);
+          gainEntry = null;
+        }
+      };
       const startSource = offset => {
         if (stopped || offset >= buffer.duration) {
           naturallyEnded = true;
@@ -4222,12 +4238,20 @@ const Audio_ = (() => {
         }
         const nextSource = ctx.createBufferSource(),
           rhythmGain = ctx.createGain();
-        applyTrackGain(track);
-        rhythmGain.gain.value = Math.max(0, Math.min(1, Number(rhythmVolumePct) / 100));
+        const raw = Math.max(0, Math.min(1, Number(rhythmVolumePct) / 100)) * safeTrackGain(track);
+        dropGainEntry();
+        gainEntry = {
+          node: rhythmGain,
+          raw
+        };
+        activeRhythmGains.add(gainEntry);
+        rhythmGain.gain.value = enabled ? raw : 0;
+        // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由せず直接destinationへ繋ぐ。
+        // 全体ミュート(enabled)だけはactiveRhythmGains経由で共通に反映する。
         nextSource.buffer = buffer;
         nextSource.loop = false;
         nextSource.connect(rhythmGain);
-        rhythmGain.connect(bgmGain);
+        rhythmGain.connect(ctx.destination);
         source = nextSource;
         offsetSeconds = offset;
         startedAt = ctx.currentTime;
@@ -4280,6 +4304,7 @@ const Audio_ = (() => {
           const old = source;
           source = null;
           stopSource(old);
+          dropGainEntry();
         }
       };
     } catch (e) {
@@ -4333,6 +4358,8 @@ const Audio_ = (() => {
   };
   const setEnabled = async on => {
     enabled = !!on;
+    if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled;
+    applyRhythmMute();
     if (!enabled) {
       ++bgmRequest;
       stopPreview(false);
@@ -4369,7 +4396,11 @@ const Audio_ = (() => {
     if (enabled && currentKey && !bgmSource) playBGM(currentKey);
   };
   const unlock = async (playTestTone = false) => {
-    if (!enabled) enabled = true;
+    if (!enabled) {
+      enabled = true;
+      if (typeof window !== 'undefined') window.__mhAudioEnabled = true;
+      applyRhythmMute();
+    }
     // resume・決定SEはuser activationが残るイベント処理内で開始し、最初の再生前に待たない。
     const ctx = resumeAudioCtxNoWait();
     let toneStart = null;
@@ -15038,7 +15069,9 @@ const RhythmOptions = ({
     type: "button",
     onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview(draft),
     className: "min-h-[46px] rounded-xl bg-fuchsia-700 text-xs font-black"
-  }, "\u30BF\u30C3\u30D7\u97F3\u8A66\u8074"))), /*#__PURE__*/React.createElement("section", {
+  }, "\u30BF\u30C3\u30D7\u97F3\u8A66\u8074")), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[9px] leading-relaxed text-slate-400"
+  }, "\u3053\u306E\u97F3\u91CF\u306F\u30E1\u30A4\u30F3\u30B2\u30FC\u30E0\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5225\u306B\u3001\u97F3\u30B2\u30FC\u3060\u3051\u3067\u4F7F\u3044\u307E\u3059\u3002\u30BF\u30A4\u30C8\u30EB\u753B\u9762\u306E\u5168\u4F53\u30DF\u30E5\u30FC\u30C8\u306E\u307F\u5171\u901A\u3067\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-black text-cyan-200"
