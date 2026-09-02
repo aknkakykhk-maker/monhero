@@ -18,6 +18,22 @@ const RHYTHM_JUDGMENTS = Object.freeze([
   Object.freeze({ id:'MISS', windowMs:null, scoreRate:0 }),
 ]);
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
+// 音ゲーのライフ(暫定値)。モンスターノーツの「回復 / バリア / 丈夫さ」はライフの数値が
+// 決まっていないと設計できないため、まず数値の管理と表示だけを固定する。
+// この段階ではライフが0になっても曲は止めない(失敗終了は次段階で決める)。
+// スコア・コンボ・BEST・ランキングには一切関与しない。
+const RHYTHM_LIFE_MAX = 1000;
+const RHYTHM_LIFE_DELTA = Object.freeze({ MARVELOUS:2, EXCELLENT:2, GREAT:1, GOOD:0, BAD:-20, MISS:-50 });
+// null / undefined / 空文字は「値なし」として満タン扱いにする(Number()では0になってしまう)。
+const rhythmLifeValue = life => {
+  const raw = life == null || life === '' ? NaN : Number(life);
+  return Number.isFinite(raw) ? raw : RHYTHM_LIFE_MAX;
+};
+const rhythmLifeAfter = (life, judgment) => {
+  const delta = Number(RHYTHM_LIFE_DELTA[judgment]) || 0;
+  return Math.max(0, Math.min(RHYTHM_LIFE_MAX, rhythmLifeValue(life) + delta));
+};
+const rhythmLifeRatio = life => Math.max(0, Math.min(1, rhythmLifeValue(life) / RHYTHM_LIFE_MAX));
 const RHYTHM_PROJECTION_TOP_SCALE=.30;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
 const RHYTHM_BODY_WIDTH_RATIO=.64;

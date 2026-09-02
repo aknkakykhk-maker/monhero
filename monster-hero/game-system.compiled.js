@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5c41701dfb432434
+// source-sha256: 1f5f51c211e4a85b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 15:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 16:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15341,6 +15341,7 @@ const RhythmTapTest = ({
     counts: emptyCounts(),
     fast: 0,
     slow: 0,
+    life: RHYTHM_LIFE_MAX,
     result: null
   });
   const [view, setView] = useState(initialView);
@@ -15404,6 +15405,7 @@ const RhythmTapTest = ({
     run.counts[judgment]++;
     const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
     if (side) run[side.toLowerCase()]++;
+    run.life = rhythmLifeAfter(run.life, judgment);
     const score = rhythmCalculateScore({
       judgments: run.counts,
       maxCombo: run.maxCombo,
@@ -15421,7 +15423,8 @@ const RhythmTapTest = ({
         ...run.counts
       },
       fast: run.fast,
-      slow: run.slow
+      slow: run.slow,
+      life: run.life
     }));
     scheduleJudgmentClear();
   }, [chart.totalNotes, difficulty.maxScore, scheduleJudgmentClear, settings.vibrationEnabled]);
@@ -15583,6 +15586,7 @@ const RhythmTapTest = ({
       counts: emptyCounts(),
       fast: 0,
       slow: 0,
+      life: RHYTHM_LIFE_MAX,
       finished: false,
       paused: false,
       generation,
@@ -15948,7 +15952,26 @@ const RhythmTapTest = ({
   }, "COMBO"), /*#__PURE__*/React.createElement("b", {
     "data-rhythm-combo": true,
     className: "block text-3xl font-black leading-none tabular-nums text-white"
-  }, view.combo)))), /*#__PURE__*/React.createElement("div", {
+  }, view.combo))), /*#__PURE__*/React.createElement("section", {
+    "data-rhythm-life": true,
+    className: "mt-1.5 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-black tracking-[0.16em] text-emerald-200"
+  }, "LIFE"), /*#__PURE__*/React.createElement("div", {
+    className: "relative h-2 flex-1 overflow-hidden rounded-full border border-white/15 bg-slate-900"
+  }, /*#__PURE__*/React.createElement("i", {
+    "data-rhythm-life-bar": true,
+    "aria-hidden": "true",
+    className: "absolute inset-y-0 left-0 rounded-full",
+    style: {
+      width: `${(rhythmLifeRatio(view.life) * 100).toFixed(1)}%`,
+      background: rhythmLifeRatio(view.life) > .5 ? 'linear-gradient(90deg,#34d399,#22d3ee)' : rhythmLifeRatio(view.life) > .25 ? 'linear-gradient(90deg,#fbbf24,#fb923c)' : 'linear-gradient(90deg,#fb7185,#ef4444)',
+      transition: settings.lightweightMode ? 'none' : 'width 140ms linear'
+    }
+  })), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-life-value": true,
+    className: "w-12 text-right text-[10px] font-black tabular-nums text-slate-200"
+  }, view.life))), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
