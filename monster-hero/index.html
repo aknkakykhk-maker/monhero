@@ -275,6 +275,38 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(5) { --mh-extreme-rank-rgb:59,130,246; --mh-extreme-rank-accent:#93c5fd; --mh-extreme-rank-action-a:#1d4ed8; --mh-extreme-rank-action-b:#3b82f6; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.40; --mh-extreme-rank-shadow:16px; }
   #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(6) { --mh-extreme-rank-rgb:245,158,11; --mh-extreme-rank-accent:#fde68a; --mh-extreme-rank-action-a:#a16207; --mh-extreme-rank-action-b:#f59e0b; --mh-extreme-rank-action-text:#1c1917; --mh-extreme-rank-glow:.48; --mh-extreme-rank-shadow:18px; }
 
+  /* 種族チャレンジランキングの14難易度タブ。
+     Beginner〜Legendは通常チャレンジの色、EXTREME〜INFINITYは極限テーマと同じ色にそろえる。
+     未選択も薄い固有色を残し、選択中は白い選択枠と発光で一段強く見せる。 */
+  [data-species-difficulty-tabs] > button {
+    border-style:solid !important;
+    border-width:1px !important;
+    background:rgba(var(--mh-species-rank-rgb),.14) !important;
+    color:var(--mh-species-rank-accent) !important;
+    border-color:rgba(var(--mh-species-rank-rgb),.38) !important;
+    box-shadow:inset 0 0 0 1px rgba(var(--mh-species-rank-rgb),.12);
+  }
+  [data-species-difficulty-tabs] > button.ring-2 {
+    background:var(--mh-species-rank-selected) !important;
+    color:var(--mh-species-rank-selected-text,#fff) !important;
+    border-color:rgba(var(--mh-species-rank-rgb),.82) !important;
+    box-shadow:0 0 0 2px rgba(255,255,255,.88),0 0 var(--mh-species-rank-shadow,12px) rgba(var(--mh-species-rank-rgb),var(--mh-species-rank-glow,.28));
+  }
+  [data-species-difficulty-tabs] > button:nth-child(1)  { --mh-species-rank-rgb:8,145,178; --mh-species-rank-accent:#67e8f9; --mh-species-rank-selected:#0891b2; --mh-species-rank-glow:.20; --mh-species-rank-shadow:10px; }
+  [data-species-difficulty-tabs] > button:nth-child(2)  { --mh-species-rank-rgb:5,150,105; --mh-species-rank-accent:#6ee7b7; --mh-species-rank-selected:#059669; --mh-species-rank-glow:.20; --mh-species-rank-shadow:10px; }
+  [data-species-difficulty-tabs] > button:nth-child(3)  { --mh-species-rank-rgb:79,70,229; --mh-species-rank-accent:#a5b4fc; --mh-species-rank-selected:#4f46e5; --mh-species-rank-glow:.22; --mh-species-rank-shadow:11px; }
+  [data-species-difficulty-tabs] > button:nth-child(4)  { --mh-species-rank-rgb:220,38,38; --mh-species-rank-accent:#fca5a5; --mh-species-rank-selected:#dc2626; --mh-species-rank-glow:.24; --mh-species-rank-shadow:11px; }
+  [data-species-difficulty-tabs] > button:nth-child(5)  { --mh-species-rank-rgb:147,51,234; --mh-species-rank-accent:#d8b4fe; --mh-species-rank-selected:#9333ea; --mh-species-rank-glow:.25; --mh-species-rank-shadow:12px; }
+  [data-species-difficulty-tabs] > button:nth-child(6)  { --mh-species-rank-rgb:226,232,240; --mh-species-rank-accent:#cbd5e1; --mh-species-rank-selected:#e2e8f0; --mh-species-rank-selected-text:#0f172a; --mh-species-rank-glow:.25; --mh-species-rank-shadow:12px; }
+  [data-species-difficulty-tabs] > button:nth-child(7)  { --mh-species-rank-rgb:217,119,6; --mh-species-rank-accent:#fcd34d; --mh-species-rank-selected:#d97706; --mh-species-rank-glow:.27; --mh-species-rank-shadow:12px; }
+  [data-species-difficulty-tabs] > button:nth-child(8)  { --mh-species-rank-rgb:127,29,29; --mh-species-rank-accent:#f87171; --mh-species-rank-selected:#7f1d1d; --mh-species-rank-glow:.29; --mh-species-rank-shadow:13px; }
+  [data-species-difficulty-tabs] > button:nth-child(9)  { --mh-species-rank-rgb:190,24,93; --mh-species-rank-accent:#f9a8d4; --mh-species-rank-selected:#be185d; --mh-species-rank-glow:.31; --mh-species-rank-shadow:13px; }
+  [data-species-difficulty-tabs] > button:nth-child(10) { --mh-species-rank-rgb:232,121,249; --mh-species-rank-accent:#f0abfc; --mh-species-rank-selected:linear-gradient(135deg,#a21caf,#d946ef); --mh-species-rank-glow:.34; --mh-species-rank-shadow:14px; }
+  [data-species-difficulty-tabs] > button:nth-child(11) { --mh-species-rank-rgb:139,92,246; --mh-species-rank-accent:#c4b5fd; --mh-species-rank-selected:linear-gradient(135deg,#6d28d9,#8b5cf6); --mh-species-rank-glow:.37; --mh-species-rank-shadow:14px; }
+  [data-species-difficulty-tabs] > button:nth-child(12) { --mh-species-rank-rgb:244,63,94; --mh-species-rank-accent:#fda4af; --mh-species-rank-selected:linear-gradient(135deg,#be123c,#f43f5e); --mh-species-rank-glow:.40; --mh-species-rank-shadow:15px; }
+  [data-species-difficulty-tabs] > button:nth-child(13) { --mh-species-rank-rgb:249,115,22; --mh-species-rank-accent:#fdba74; --mh-species-rank-selected:linear-gradient(135deg,#c2410c,#f97316); --mh-species-rank-glow:.43; --mh-species-rank-shadow:16px; }
+  [data-species-difficulty-tabs] > button:nth-child(14) { --mh-species-rank-rgb:59,130,246; --mh-species-rank-accent:#93c5fd; --mh-species-rank-selected:linear-gradient(135deg,#1d4ed8,#3b82f6); --mh-species-rank-glow:.46; --mh-species-rank-shadow:17px; }
+
   /* 音ゲー STEP B: 入力面や判定ロジックは触らず、data属性だけでステージに奥行きを付ける。 */
   [data-rhythm-tap-test] {
     background:
