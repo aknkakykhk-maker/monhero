@@ -30,4 +30,15 @@ for (const required of [
   'borderColor:`rgba(${theme.rgb},.58)`',
   'text-[10px] leading-tight text-amber-300',
 ]) assert(source.includes(required), `実装に ${required} が必要です`);
-console.log('OK: 極限チャレンジ6難易度の固有色と段階的な強調を確認');
+
+const rankingStart = source.indexOf('const renderScoreRankingBody = (mode = BATTLE_MODE_CHALLENGE) => {');
+const rankingEnd = source.indexOf('const renderBreederRankingBody', rankingStart);
+assert(rankingStart >= 0 && rankingEnd > rankingStart, 'スコアランキング描画が必要です');
+const rankingBlock = source.slice(rankingStart, rankingEnd);
+assert(rankingBlock.includes('PUBLIC_EXTREME_DIFFICULTIES.map(setting=>{const active=rankingViewDiff===setting.id;const theme=extremeDifficultyTheme(setting.id);return <button'), '極限ランキングタブは既存の難易度テーマを再利用してください');
+assert(rankingBlock.includes('background:theme.action'), '選択中の極限ランキングタブは難易度ごとのaction色を使ってください');
+assert(rankingBlock.includes('backgroundColor:`rgba(${theme.rgb},.14)`'), '未選択の極限ランキングタブも難易度ごとの色を弱めて表示してください');
+assert(rankingBlock.includes('color:active?theme.actionText:theme.accent'), '極限ランキングタブの文字色も選択状態に合わせてください');
+assert(!rankingBlock.includes('style={{backgroundColor:EXTREME_MODE.color,color:\'#0f172a\'}}'), '極限ランキングタブへ固定マゼンタを使わないでください');
+
+console.log('OK: 極限チャレンジ6難易度の固有色・段階的な強調・ランキングタブへのテーマ反映を確認');
