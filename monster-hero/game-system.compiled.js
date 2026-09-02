@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3cdd199c74c58d87
+// source-sha256: 42beb2fee3818864
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 06:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 07:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15134,6 +15134,7 @@ const rhythmTravelMsForSpeed = value => {
     to = RHYTHM_NOTE_TRAVEL_MS_POINTS[index + 1];
   return Math.round(from + (to - from) * (offset - index));
 };
+const rhythmStepOptionValue = (value, min, max, step, direction) => Math.max(min, Math.min(max, Number((Number(value) + direction * step).toFixed(6))));
 const RhythmOptions = ({
   value,
   onSave,
@@ -15155,20 +15156,43 @@ const RhythmOptions = ({
     }));
     setMessage('');
   };
-  const range = (key, min, max, step, suffix = '', decimals = 0) => /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-[1fr_60px] items-center gap-2"
-  }, /*#__PURE__*/React.createElement("input", {
-    "aria-label": key,
-    type: "range",
-    min: min,
-    max: max,
-    step: step,
-    value: draft[key],
-    onChange: event => set(key, Number(event.target.value)),
-    className: "h-11 min-w-0 accent-cyan-400"
-  }), /*#__PURE__*/React.createElement("output", {
-    className: "rounded-lg border border-cyan-400/30 bg-slate-950 px-1 py-2 text-center text-xs font-black tabular-nums"
-  }, decimals > 0 ? Number(draft[key]).toFixed(decimals) : draft[key], suffix));
+  const stepper = (key, min, max, step, suffix = '', decimals = 0) => {
+    const value = Number(draft[key]),
+      percent = Math.max(0, Math.min(100, (value - min) / (max - min) * 100));
+    const change = direction => set(key, rhythmStepOptionValue(value, min, max, step, direction));
+    const display = `${decimals > 0 ? value.toFixed(decimals) : value}${suffix}`;
+    return /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-option-stepper": key,
+      className: "grid grid-cols-[48px_minmax(54px,1fr)_48px_minmax(54px,auto)] items-center gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "aria-label": `${key}を下げる`,
+      disabled: value <= min,
+      onClick: () => change(-1),
+      className: "min-h-[48px] min-w-[48px] rounded-xl border border-white/15 bg-slate-800 text-xl font-black text-slate-100 active:scale-95 disabled:opacity-35"
+    }, "\u2212"), /*#__PURE__*/React.createElement("div", {
+      role: "meter",
+      "aria-label": `${key}の現在量`,
+      "aria-valuemin": min,
+      "aria-valuemax": max,
+      "aria-valuenow": value,
+      className: "h-3 min-w-0 overflow-hidden rounded-full border border-white/15 bg-slate-950"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "block h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400",
+      style: {
+        width: `${percent}%`
+      }
+    })), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "aria-label": `${key}を上げる`,
+      disabled: value >= max,
+      onClick: () => change(1),
+      className: "min-h-[48px] min-w-[48px] rounded-xl border border-white/15 bg-slate-800 text-xl font-black text-slate-100 active:scale-95 disabled:opacity-35"
+    }, "\uFF0B"), /*#__PURE__*/React.createElement("output", {
+      "aria-live": "polite",
+      className: "min-w-[54px] rounded-lg border border-cyan-400/30 bg-slate-950 px-1 py-2 text-center text-xs font-black tabular-nums whitespace-nowrap"
+    }, display));
+  };
   const toggle = (key, label) => /*#__PURE__*/React.createElement("button", {
     type: "button",
     "aria-pressed": draft[key],
@@ -15229,11 +15253,15 @@ const RhythmOptions = ({
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-black text-cyan-200"
-  }, "\uD83D\uDD0A \u97F3\u91CF"), /*#__PURE__*/React.createElement("label", {
-    className: "mt-2 block text-xs font-bold"
-  }, "BGM\u97F3\u91CF", range('bgmVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("label", {
-    className: "mt-2 block text-xs font-bold"
-  }, "\u30BF\u30C3\u30D7\u97F3\u91CF", range('noteSeVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDD0A \u97F3\u91CF"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 text-xs font-bold"
+  }, "BGM\u97F3\u91CF"), stepper('bgmVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 text-xs font-bold"
+  }, "\u30BF\u30C3\u30D7\u97F3\u91CF"), stepper('noteSeVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-xs font-bold"
@@ -15253,17 +15281,23 @@ const RhythmOptions = ({
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-black text-cyan-200"
-  }, "\uD83C\uDFAF \u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("label", {
-    className: "mt-2 block text-xs font-bold"
-  }, "\u30CE\u30FC\u30C4\u901F\u5EA6", range('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, '', 1)), /*#__PURE__*/React.createElement("p", {
+  }, "\uD83C\uDFAF \u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 text-xs font-bold"
+  }, "\u30CE\u30FC\u30C4\u901F\u5EA6"), stepper('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, '', 1)), /*#__PURE__*/React.createElement("p", {
     className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-  }, "1.0\u301C12.0\u30920.1\u523B\u307F\u3067\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u5909\u308F\u308B\u306E\u306F\u30CE\u30FC\u30C4\u304C\u6D41\u308C\u3066\u304F\u308B\u898B\u305F\u76EE\u306E\u901F\u3055\u3060\u3051\u3067\u3001\u8B5C\u9762\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u30FB\u5224\u5B9A\u7A93\u30FB\u30B9\u30B3\u30A2\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF08\u73FE\u5728 \u7D04", rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString(), "ms\uFF09\u3002"), /*#__PURE__*/React.createElement("label", {
-    className: "mt-2 block text-xs font-bold"
-  }, "\u30CE\u30FC\u30C4\u30B5\u30A4\u30BA", range('noteSize', 80, 120, 5, '%')), /*#__PURE__*/React.createElement("p", {
+  }, "1.0\u301C12.0\u30920.1\u523B\u307F\u3067\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u5909\u308F\u308B\u306E\u306F\u30CE\u30FC\u30C4\u304C\u6D41\u308C\u3066\u304F\u308B\u898B\u305F\u76EE\u306E\u901F\u3055\u3060\u3051\u3067\u3001\u8B5C\u9762\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u30FB\u5224\u5B9A\u7A93\u30FB\u30B9\u30B3\u30A2\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF08\u73FE\u5728 \u7D04", rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString(), "ms\uFF09\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 text-xs font-bold"
+  }, "\u30CE\u30FC\u30C4\u30B5\u30A4\u30BA"), stepper('noteSize', 80, 120, 5, '%')), /*#__PURE__*/React.createElement("p", {
     className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-  }, "\u30CE\u30FC\u30C4\u306E\u898B\u305F\u76EE\u306E\u5927\u304D\u3055\u3060\u3051\u3092\u5909\u3048\u307E\u3059\u3002\u5165\u529B\u5224\u5B9A\u306E\u7BC4\u56F2\u30FBHOLD/SLIDE\u5E2F\u30FBEND\u30D0\u30FC\u306E\u4F4D\u7F6E\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("label", {
-    className: "mt-2 block text-xs font-bold"
-  }, "\u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574", range('judgmentTimingOffsetMs', -100, 100, 5, 'ms')), /*#__PURE__*/React.createElement("p", {
+  }, "\u30CE\u30FC\u30C4\u306E\u898B\u305F\u76EE\u306E\u5927\u304D\u3055\u3060\u3051\u3092\u5909\u3048\u307E\u3059\u3002\u5165\u529B\u5224\u5B9A\u306E\u7BC4\u56F2\u30FBHOLD/SLIDE\u5E2F\u30FBEND\u30D0\u30FC\u306E\u4F4D\u7F6E\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-1 text-xs font-bold"
+  }, "\u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574"), stepper('judgmentTimingOffsetMs', -100, 100, 5, 'ms')), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-[9px] leading-relaxed text-slate-400"
   }, "\u5224\u5B9A\u7A93\u306E\u5E45\u306F\u5909\u3048\u305A\u3001\u8868\u793A\u3068\u5165\u529B\u306E\u57FA\u6E96\u3092\u540C\u3058\u91CF\u3060\u3051\u88DC\u6B63\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
     className: card
