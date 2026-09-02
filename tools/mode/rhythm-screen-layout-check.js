@@ -23,12 +23,25 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 
 // 1. プレイ画面: HUD・プレイエリア・ポーズだけで閉じる
 check('プレイ画面は overflow-hidden の1画面で、内側にスクロールを作らない',
-  game.includes('<main data-rhythm-tap-test className="flex flex-1 min-h-0 flex-col overflow-hidden')
-  &&game.includes('<header data-rhythm-hud className="shrink-0'));
-check('プレイ画面はSafe Areaを上下とも自分で持つ',
-  game.includes("data-rhythm-tap-test")&&/data-rhythm-tap-test[\s\S]{0,400}paddingTop:'env\(safe-area-inset-top\)',paddingBottom:'env\(safe-area-inset-bottom\)'/.test(game));
-check('ポーズ操作はプレイエリアの中のオーバーレイに閉じている',
-  game.includes('data-rhythm-pause-menu className="absolute inset-0 z-20'));
+  game.includes('<main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden'));
+// HUDは左右の空きウェッジ(台形が狭くなる分だけ左右に空く三角形の余白)だけに置き、
+// 台形の頂点(中央)には何も置かない・背景パネルも持たない。PR #983は全幅の背景パネルを
+// 敷いてしまい、台形の頂点そのものを覆って遠近感を変えてしまった。
+check('HUDはレイアウトの高さを取らない絶対配置で、台形の中央を覆う背景を持たない',
+  game.includes('<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3"')
+  &&!/data-rhythm-hud[\s\S]{0,50}background:/.test(game));
+check('HUD本文は左右それぞれ幅30%以内に収め、中央の台形へはみ出さない',
+  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[30%]')
+  &&game.includes('data-rhythm-hud-right className="flex max-w-[30%]'));
+check('HUDは触れず、ポーズだけがタップを受ける',
+  /data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto /.test(game));
+check('プレイ画面はSafe Areaを上下とも自分で持ち、HUDも上のSafe Areaを避ける',
+  game.includes("data-rhythm-tap-test")
+  &&/data-rhythm-tap-test[\s\S]{0,400}paddingTop:'env\(safe-area-inset-top\)',paddingBottom:'env\(safe-area-inset-bottom\)'/.test(game)
+  &&/data-rhythm-hud[\s\S]{0,400}paddingTop:'calc\(env\(safe-area-inset-top\) \+ 6px\)'/.test(game));
+// ポーズ中はHUD(z-30)より前に出す。逆にするとポーズメニューの上にスコアが浮く。
+check('ポーズ操作はプレイエリアの中のオーバーレイに閉じ、HUDより前に出る',
+  game.includes('data-rhythm-pause-menu className="absolute inset-0 z-40'));
 
 // 2. オプション画面: ヘッダー / スクロール / フッターの3層だけ
 check('オプション画面は固定ヘッダー+スクロール+固定フッターの3層',
