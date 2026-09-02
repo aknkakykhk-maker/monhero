@@ -41,10 +41,8 @@ const rhythmRankForScore = score => {
   const value = Number.isFinite(Number(score)) ? Number(score) : 0;
   return (RHYTHM_RANKS.find(rank => value >= rank.min) || RHYTHM_RANKS[RHYTHM_RANKS.length - 1]).id;
 };
-// 音ゲーのライフ(暫定値)。モンスターノーツの「回復 / バリア / 丈夫さ」はライフの数値が
-// 決まっていないと設計できないため、まず数値の管理と表示だけを固定する。
-// この段階ではライフが0になっても曲は止めない(失敗終了は次段階で決める)。
-// スコア・コンボ・BEST・ランキングには一切関与しない。
+// 音ゲーのライフ(暫定値)。0へ到達したrunは不可逆のDOWNとなり、曲は止めずに
+// ライフとスコアだけを固定する。将来の回復処理も0からは復帰させない。
 const RHYTHM_LIFE_MAX = 1000;
 const RHYTHM_LIFE_DELTA = Object.freeze({ MARVELOUS:2, EXCELLENT:2, GREAT:1, GOOD:0, BAD:-20, MISS:-50 });
 // null / undefined / 空文字は「値なし」として満タン扱いにする(Number()では0になってしまう)。
@@ -53,6 +51,7 @@ const rhythmLifeValue = life => {
   return Number.isFinite(raw) ? raw : RHYTHM_LIFE_MAX;
 };
 const rhythmLifeAfter = (life, judgment) => {
+  if (rhythmLifeValue(life) <= 0) return 0;
   const delta = Number(RHYTHM_LIFE_DELTA[judgment]) || 0;
   return Math.max(0, Math.min(RHYTHM_LIFE_MAX, rhythmLifeValue(life) + delta));
 };
