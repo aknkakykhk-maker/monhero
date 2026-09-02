@@ -18,12 +18,14 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
 // --- 実装から依存ブロックを抜き出してNode上で動かす ---
+// 性能計測(デバッグ限定)の記録器。areaRect などが呼ぶので、抽出範囲へ含める
+const perf=source.match(/const RHYTHM_PERF_KEY=[\s\S]*?\n\}\)\(\);/)?.[0];
 const projection=source.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const rhythmLaneAtPoint=[\s\S]*?\n\};/)?.[0];
 const flickConsts=source.match(/const RHYTHM_FLICK_DISTANCE_PX = 24;[\s\S]*?const rhythmSlideTrackingTolerance=[\s\S]*?4;/)?.[0];
 const slideHelpers=source.match(/const rhythmSlidePoints=[\s\S]*?const rhythmSlideExpectedLane=[\s\S]*?\n\};/)?.[0];
 const midTrackingConsts=source.match(/const RHYTHM_MID_TRACKING_GRACE_MS=[\s\S]*?const rhythmHoldTrackedLane=[\s\S]*?\n\};/)?.[0];
 const runtimeBody=source.match(/const RHYTHM_GESTURE_RUNTIME=\(\(\)=>\{[\s\S]*?\n\}\)\(\);/)?.[0];
-check('依存ブロックをすべて抽出できる',!!projection&&!!flickConsts&&!!slideHelpers&&!!midTrackingConsts&&!!runtimeBody);
+check('依存ブロックをすべて抽出できる',!!perf&&!!projection&&!!flickConsts&&!!slideHelpers&&!!midTrackingConsts&&!!runtimeBody);
 if(!(projection&&flickConsts&&slideHelpers&&midTrackingConsts&&runtimeBody)){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
 
 check('猶予は暫定120ms',/const RHYTHM_MID_TRACKING_GRACE_MS=120;/.test(midTrackingConsts));
@@ -44,7 +46,7 @@ const context={
   RHYTHM_LANE_COUNT:5,
 };
 vm.createContext(context);
-vm.runInContext(`${projection}\n${flickConsts}\n${slideHelpers}\n${midTrackingConsts}\n${runtimeBody}\nthis.out=RHYTHM_GESTURE_RUNTIME;this.tracked=rhythmHoldTrackedLane;`,context);
+vm.runInContext(`${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${midTrackingConsts}\n${runtimeBody}\nthis.out=RHYTHM_GESTURE_RUNTIME;this.tracked=rhythmHoldTrackedLane;`,context);
 const runtime=context.out;
 
 // レーン座標→実座標(クリック位置)への変換。rhythmLaneCoordinateAtPointの逆算。

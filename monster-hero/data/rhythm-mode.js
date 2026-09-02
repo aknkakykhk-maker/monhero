@@ -56,6 +56,64 @@ const rhythmLifeAfter = (life, judgment) => {
   return Math.max(0, Math.min(RHYTHM_LIFE_MAX, rhythmLifeValue(life) + delta));
 };
 const rhythmLifeRatio = life => Math.max(0, Math.min(1, rhythmLifeValue(life) / RHYTHM_LIFE_MAX));
+// ── 性能計測(デバッグ限定) ─────────────────────────────────────────────────
+// 実機で音ゲー中のカクつきが報告されている。原因を断定せず切り分けるため、
+// フレーム時間と「1フレームあたりのlayout read / DOM検索 / SLIDE polygon更新」を数える。
+// **既定はOFF。OFFのあいだは加算も配列追加も一切しない**(計測のために重くしない)。
+// 判定窓・BPM・noteTime・スコア式・譜面データには一切関与しない。
+const RHYTHM_PERF_KEY='mh_rhythm_perf_v1';
+const RHYTHM_PERF_LONG_MS=Object.freeze([16.7,25,33]);
+const RHYTHM_PERF=(()=>{
+  const zero=()=>({frames:0,totalMs:0,maxMs:0,long:[0,0,0],layoutReads:0,domQueries:0,slidePolygons:0,gestureFrames:0});
+  let on=false,last=null,acc=zero();
+  const api={
+    get enabled(){return on;},
+    setEnabled(next){
+      on=!!next;last=null;acc=zero();
+      try{if(typeof localStorage!=='undefined')localStorage.setItem(RHYTHM_PERF_KEY,on?'1':'0');}catch{}
+      return on;
+    },
+    restore(){try{if(typeof localStorage!=='undefined')on=localStorage.getItem(RHYTHM_PERF_KEY)==='1';}catch{}return on;},
+    reset(){last=null;acc=zero();},
+    // 本体のrAFから毎フレーム1回だけ呼ぶ(計測用のrAFは増やさない)
+    frame(nowMs){
+      if(!on)return;
+      const t=Number(nowMs);
+      if(last!==null&&Number.isFinite(t)){
+        const dt=t-last;
+        // 一時停止・バックグラウンド復帰の巨大な間隔は数えない
+        if(dt>0&&dt<2000){
+          acc.frames++;acc.totalMs+=dt;
+          if(dt>acc.maxMs)acc.maxMs=dt;
+          for(let i=0;i<RHYTHM_PERF_LONG_MS.length;i++)if(dt>RHYTHM_PERF_LONG_MS[i])acc.long[i]++;
+        }
+      }
+      last=Number.isFinite(t)?t:null;
+    },
+    gestureFrame(){if(on)acc.gestureFrames++;},
+    layoutRead(){if(on)acc.layoutReads++;},
+    domQuery(){if(on)acc.domQueries++;},
+    slidePolygons(count){if(on)acc.slidePolygons+=Number(count)||0;},
+    snapshot(){
+      const frames=acc.frames;
+      const per=value=>frames?value/frames:0;
+      return {
+        frames,
+        avgMs:per(acc.totalMs),
+        fps:acc.totalMs?1000*frames/acc.totalMs:0,
+        maxMs:acc.maxMs,
+        over16:acc.long[0],over25:acc.long[1],over33:acc.long[2],
+        layoutReadsPerFrame:per(acc.layoutReads),
+        domQueriesPerFrame:per(acc.domQueries),
+        slidePolygonsPerFrame:per(acc.slidePolygons),
+        gestureFrames:acc.gestureFrames,
+      };
+    },
+  };
+  api.restore();
+  return api;
+})();
+
 const RHYTHM_PROJECTION_TOP_SCALE=.18;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
 const RHYTHM_BODY_WIDTH_RATIO=.64;
@@ -328,8 +386,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   const inputKey=(kind,id)=>`${kind}:${id}`;
   const areaRect=()=>{
     if(typeof document==='undefined')return null;
+    RHYTHM_PERF.domQuery();
     const area=document.querySelector('[data-rhythm-play-area]');
     if(!area)return null;
+    RHYTHM_PERF.layoutRead();
     const rect=area.getBoundingClientRect();
     return rect&&Number.isFinite(rect.width)&&rect.width>0?rect:null;
   };
@@ -416,6 +476,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         }
       }
     });
+    RHYTHM_PERF.gestureFrame();
     if(sessions.size&&typeof requestAnimationFrame==='function')raf=requestAnimationFrame(tick);
   };
   const ensureTick=()=>{
@@ -582,6 +643,7 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   };
   const applyTouchSpanGlow=()=>{
     if(typeof document==='undefined')return;
+    RHYTHM_PERF.domQuery();
     const active=new Set();
     touchStates.forEach(state=>state.subLanes.forEach(lane=>active.add(lane)));
     document.querySelectorAll('[data-rhythm-sublane-feedback]').forEach((el,index)=>{
@@ -1007,6 +1069,8 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
 };
 const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideTravel=null,frameLayout=null)=>{
   if(!el||!area)return;
+  // フレーム共有のrectが渡っていればlayout readは発生しない。渡っていない場合だけ数える
+  if(!frameLayout?.rect)RHYTHM_PERF.layoutRead();
   const rect=frameLayout?.rect||area.getBoundingClientRect();
   if(!(rect.width>0&&rect.height>0))return;
   const noteHeight=Number(frameLayout?.noteHeight)||el.offsetHeight,lane=Number(visualLane),centerY=Number(yPx)+noteHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
@@ -1025,6 +1089,7 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
     body.style.setProperty('--rhythm-slide-area-height',`${rect.height.toFixed(2)}px`);
     body.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
     const polygons=slideTravel?rhythmSlideSegmentPolygons(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2):[];
+    RHYTHM_PERF.slidePolygons(polygons.length);
     polygons.forEach((points,index)=>{
       let segment=body.childNodes[index];
       if(!segment){segment=document.createElementNS('http://www.w3.org/2000/svg','polygon');segment.dataset.rhythmSlideSegment='';body.appendChild(segment);}
