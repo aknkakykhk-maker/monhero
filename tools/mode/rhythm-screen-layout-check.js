@@ -28,17 +28,21 @@ check('プレイ画面は overflow-hidden の1画面で、内側にスクロー�
 // 台形の頂点(中央)には何も置かない・背景パネルも持たない。PR #983は全幅の背景パネルを
 // 敷いてしまい、台形の頂点そのものを覆って遠近感を変えてしまった。
 check('HUDはレイアウトの高さを取らない絶対配置で、台形の中央を覆う背景を持たない',
-  game.includes('<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3"')
+  game.includes('<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"')
   &&!/data-rhythm-hud[\s\S]{0,50}background:/.test(game));
-check('HUD本文は左右それぞれ幅30%以内に収め、中央の台形へはみ出さない',
-  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[30%]')
-  &&game.includes('data-rhythm-hud-right className="flex max-w-[30%]'));
+check('HUD本文は左右それぞれ幅27%以内に収め、中央の台形へはみ出さない',
+  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[27%]')
+  &&game.includes('data-rhythm-hud-right className="flex max-w-[27%]'));
 check('HUDは触れず、ポーズだけがタップを受ける',
   /data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto /.test(game));
-check('プレイ画面はSafe Areaを上下とも自分で持ち、HUDも上のSafe Areaを避ける',
+// Safe Areaは index.html の body が padding で確保済み(body{height:100dvh;box-sizing:border-box;
+// padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)})。
+// プレイ画面側で env() をもう一度足すと二重・三重掛けになり、実機の上部に大きな空白ができる
+// (実際にそうなっていて「上のスペースが広いまま」と指摘された)。ここで足し直さないことを固定する。
+check('プレイ画面はSafe Areaを二重に足さない(bodyがすでに確保している)',
   game.includes("data-rhythm-tap-test")
-  &&/data-rhythm-tap-test[\s\S]{0,400}paddingTop:'env\(safe-area-inset-top\)',paddingBottom:'env\(safe-area-inset-bottom\)'/.test(game)
-  &&/data-rhythm-hud[\s\S]{0,400}paddingTop:'calc\(env\(safe-area-inset-top\) \+ 6px\)'/.test(game));
+  &&!/data-rhythm-tap-test[\s\S]{0,400}env\(safe-area-inset/.test(game)
+  &&!/data-rhythm-hud[\s\S]{0,300}env\(safe-area-inset/.test(game));
 // ポーズ中はHUD(z-30)より前に出す。逆にするとポーズメニューの上にスコアが浮く。
 check('ポーズ操作はプレイエリアの中のオーバーレイに閉じ、HUDより前に出る',
   game.includes('data-rhythm-pause-menu className="absolute inset-0 z-40'));
