@@ -138,6 +138,130 @@ const rhythmMonsterNoteBaseRatios=count=>{
   const size=Math.max(0,Math.min(RHYTHM_MONSTER_SLOT_MAX,Math.floor(Number(count)||0)));
   return RHYTHM_MONSTER_NOTE_BASE_RATIOS.slice(0,size);
 };
+// ── モンスターノーツ本体（RHYTHM_MODE §3.4 / §4） ─────────────────────────────
+// 譜面には **通常のTAPノーツへ1行足すだけ** で書く。
+//   { type:'TAP', timeMs, lane, subLane, subLaneWidth, monsterSlot:1 }
+// monsterSlot はマスモン設定の何枠目かを指す。1枠目→1個目、2枠目→2個目…と対応する(§3.3)。
+// 判定・描画・幅の計算は通常ノーツの経路をそのまま使い、能力発動だけを足す。
+//
+// 初期実装は **TAP専用**(2026-09-03 ユーザー判断)。HOLD / FLICK / SLIDE は
+// 「始点はGREATだが途中でMISSした」ときの能力の扱いを別途決めてから足す。
+const rhythmNoteMonsterSlot=note=>{
+  if(note?.type!=='TAP')return 0;
+  // 譜面の書き間違いを黙って通さないよう、数値で書かれたものだけを受ける
+  const slot=note?.monsterSlot;
+  return typeof slot==='number'&&Number.isInteger(slot)&&slot>=1&&slot<=RHYTHM_MONSTER_SLOT_MAX?slot:0;
+};
+const rhythmChartMonsterNotes=notes=>(Array.isArray(notes)?notes:[]).filter(note=>rhythmNoteMonsterSlot(note)>0);
+// 譜面の書き間違いを機械的に拾う。公開してから「能力ノーツが2個同じ枠だった」と
+// 気づくのでは遅いので、検査ツールから使う。
+const rhythmChartMonsterNoteIssues=notes=>{
+  const all=Array.isArray(notes)?notes:[];
+  const issues=[];
+  all.forEach((note,index)=>{
+    const raw=note?.monsterSlot;
+    if(raw==null)return;
+    if(note?.type!=='TAP')issues.push({index,issue:'not-tap'});
+    else if(!(typeof raw==='number'&&Number.isInteger(raw)&&raw>=1&&raw<=RHYTHM_MONSTER_SLOT_MAX))issues.push({index,issue:'out-of-range'});
+  });
+  const monsterNotes=rhythmChartMonsterNotes(all).slice().sort((a,b)=>Number(a.timeMs)-Number(b.timeMs));
+  const seen=new Set();
+  monsterNotes.forEach((note,order)=>{
+    const slot=rhythmNoteMonsterSlot(note);
+    if(seen.has(slot))issues.push({slot,issue:'duplicate-slot'});
+    seen.add(slot);
+    // 1枠目→1個目、2枠目→2個目…の対応を崩さない(§3.3)
+    if(slot!==order+1)issues.push({slot,order:order+1,issue:'order-mismatch'});
+  });
+  if(monsterNotes.length>RHYTHM_MONSTER_SLOT_MAX)issues.push({issue:'too-many'});
+  return issues;
+};
+
+// ── 能力（§4） ───────────────────────────────────────────────────────────────
+// 能力は **主血統** で決まる(§4.5)。副血統では変えない。
+// ドラゴン / ジョーカー / ゲル はプレイアブル代表が未実装のため、能力をまだ決めない(§4.6)。
+// 「？？？」はレア区分用の血統なので割り当て対象にしない。
+const RHYTHM_MONSTER_ABILITIES=Object.freeze({
+  GENKI:Object.freeze({id:'GENKI',name:'元気',lifeGain:200}),
+  MUTEKI:Object.freeze({id:'MUTEKI',name:'無敵',durationMs:6000}),
+  GAMAN:Object.freeze({id:'GAMAN',name:'我慢',durationMs:15000,reduceRate:.5}),
+  KONJO:Object.freeze({id:'KONJO',name:'根性',reviveLife:50,stockLifeGain:50}),
+});
+const RHYTHM_MONSTER_ABILITY_BY_LINEAGE=Object.freeze({
+  pixie:'GENKI', undine:'GENKI', plant:'GENKI', suezo:'GENKI', tiger:'GENKI',
+  monol:'MUTEKI', ark:'MUTEKI',
+  golem:'GAMAN', mocchi:'GAMAN',
+  ham:'KONJO', zan:'KONJO',
+});
+const rhythmMonsterAbilityForLineage=lineageId=>
+  RHYTHM_MONSTER_ABILITIES[RHYTHM_MONSTER_ABILITY_BY_LINEAGE[String(lineageId||'')]]||null;
+// 能力発動は GREAT 以上(§3.4)。判定窓そのものはモンスターノーツ専用に甘くしない。
+const RHYTHM_MONSTER_ABILITY_JUDGMENTS=Object.freeze(['MARVELOUS','EXCELLENT','GREAT']);
+const rhythmMonsterAbilityTriggers=judgment=>RHYTHM_MONSTER_ABILITY_JUDGMENTS.includes(judgment);
+
+// 能力の状態。プレイ中のライフ計算へ差し込む。runへ持たせて毎フレーム作り直さない。
+const createRhythmMonsterAbilityState=()=>({mutekiUntilMs:0,gamanUntilMs:0,konjoStock:0});
+const rhythmMonsterAbilityRemainingMs=(state,abilityId,songTimeMs)=>{
+  const until=abilityId==='MUTEKI'?Number(state?.mutekiUntilMs):abilityId==='GAMAN'?Number(state?.gamanUntilMs):0;
+  const now=Number(songTimeMs);
+  if(!(Number.isFinite(until)&&Number.isFinite(now)))return 0;
+  return Math.max(0,until-now);
+};
+const rhythmMonsterAbilityActive=(state,abilityId,songTimeMs)=>rhythmMonsterAbilityRemainingMs(state,abilityId,songTimeMs)>0;
+// 負のライフ変化だけを能力で弱める。判定・コンボ・スコアそのものは変えない(§4.2)。
+// 無敵と我慢が同時に有効なときは、強いほう(無敵)が勝つ。
+const rhythmApplyMonsterAbilityToLifeDelta=(state,delta,songTimeMs)=>{
+  const raw=Number(delta)||0;
+  if(raw>=0)return raw;
+  if(rhythmMonsterAbilityActive(state,'MUTEKI',songTimeMs))return 0;
+  if(rhythmMonsterAbilityActive(state,'GAMAN',songTimeMs))
+    return -Math.round(Math.abs(raw)*(1-RHYTHM_MONSTER_ABILITIES.GAMAN.reduceRate));
+  return raw;
+};
+// 能力を通したライフ計算。既存の rhythmLifeAfter は変えずに別入口として足す。
+const rhythmLifeAfterWithMonsterAbilities=(life,judgment,state,songTimeMs)=>{
+  if(rhythmLifeValue(life)<=0)return 0;
+  const delta=rhythmApplyMonsterAbilityToLifeDelta(state,Number(RHYTHM_LIFE_DELTA[judgment])||0,songTimeMs);
+  return Math.max(0,Math.min(RHYTHM_LIFE_MAX,rhythmLifeValue(life)+delta));
+};
+// 根性ストックを持ったままライフが0になったら、自動でライフ50へ復活する(§4.4)。
+const rhythmConsumeKonjoStock=(state,life)=>{
+  if(rhythmLifeValue(life)>0||!(Number(state?.konjoStock)>0))return {life:rhythmLifeValue(life),state,revived:false};
+  return {life:RHYTHM_MONSTER_ABILITIES.KONJO.reviveLife,state:{...state,konjoStock:0},revived:true};
+};
+// モンスターノーツをGREAT以上で取ったときの発動。状態を書き換えず新しい値を返す。
+// applied=false は「取れたが効果が無かった」(DOWN中の元気など)。
+const rhythmActivateMonsterAbility=({ability,state,life,songTimeMs}={})=>{
+  const current=state||createRhythmMonsterAbilityState();
+  const now=Number(songTimeMs)||0,lifeNow=rhythmLifeValue(life);
+  const stay={life:lifeNow,state:current,applied:false,revived:false};
+  if(!ability)return stay;
+  if(ability.id==='GENKI'){
+    // 生存中のみ通常回復として働く。DOWNから復帰できるのは根性だけ(§4.1)
+    if(lifeNow<=0)return stay;
+    return {...stay,life:Math.min(RHYTHM_LIFE_MAX,lifeNow+ability.lifeGain),applied:true};
+  }
+  if(ability.id==='MUTEKI'||ability.id==='GAMAN'){
+    // 重なったときは残り時間を上書きして数え直す（**暫定**。§4.7で未確定のため、
+    // 率を足したり時間を延長したりはしない＝一度の発動より強くならない側へ倒す）
+    const key=ability.id==='MUTEKI'?'mutekiUntilMs':'gamanUntilMs';
+    return {...stay,state:{...current,[key]:now+ability.durationMs},applied:true};
+  }
+  if(ability.id==='KONJO'){
+    // DOWN中に取ったら、その場でライフ50へ復活する(§4.4)
+    if(lifeNow<=0)return {...stay,life:ability.reviveLife,applied:true,revived:true};
+    // ストックは最大1。すでに持っているならライフ+50へ変換する
+    if(Number(current.konjoStock)>0)
+      return {...stay,life:Math.min(RHYTHM_LIFE_MAX,lifeNow+ability.stockLifeGain),applied:true};
+    return {...stay,state:{...current,konjoStock:1},applied:true};
+  }
+  return stay;
+};
+// 蘇生したときのスコアの続き方(2026-09-03 ユーザー判断)。
+// **蘇生ノーツ自身は加算せず、次のノーツから再開する。**
+// DOWN中に止まっていたぶんを遡って足さないよう、そのぶんを差し引く量として持つ。
+const rhythmScoreOffsetAfterRevive=(calculatedScore,lockedScore)=>
+  Math.max(0,(Number(calculatedScore)||0)-(Number(lockedScore)||0));
 // ── 性能計測(デバッグ限定) ─────────────────────────────────────────────────
 // 実機で音ゲー中のカクつきが報告されている。原因を断定せず切り分けるため、
 // フレーム時間と「1フレームあたりのlayout read / DOM検索 / SLIDE polygon更新」を数える。
@@ -1043,6 +1167,32 @@ const atsuCupDebugShortNotes=Object.freeze([
 const ATSU_CUP_DEBUG_SHORT_END_MS=atsuCupDebugGridMs(676);
 const atsuCupDebugShortChart=Object.freeze({level:8,notes:atsuCupDebugShortNotes,totalNotes:atsuCupDebugShortNotes.length,durationMs:ATSU_CUP_DEBUG_SHORT_END_MS});
 
+// DEBUG ONLY: モンスターノーツの確認用。既存の譜面は触らず、専用の1曲として分けてある。
+// 約40秒のあいだに、設定した枠の順どおり4個のモンスターノーツを 20 / 40 / 60 / 80% 付近へ置く(§3.3)。
+// 曲開始直後・終了直前は避け、前後を少し空けて狙って取れるようにしている。
+const monsterNoteTestTap=(timeMs,subLane,monsterSlot=null)=>Object.freeze({
+  type:'TAP',timeMs,lane:Math.floor(subLane/2),subLane,subLaneWidth:2,
+  ...(monsterSlot?{monsterSlot}:{}),
+});
+const MONSTER_NOTE_TEST_DURATION_MS=40000;
+const monsterNoteTestNotes=Object.freeze([
+  monsterNoteTestTap(2000,4), monsterNoteTestTap(2800,2), monsterNoteTestTap(3600,6),
+  monsterNoteTestTap(4400,0), monsterNoteTestTap(5200,8), monsterNoteTestTap(6000,4),
+  monsterNoteTestTap(8000,4,1),   // 20%付近: 1枠目
+  monsterNoteTestTap(10000,2), monsterNoteTestTap(10800,6), monsterNoteTestTap(11600,0),
+  monsterNoteTestTap(12400,8), monsterNoteTestTap(13200,4), monsterNoteTestTap(14000,2),
+  monsterNoteTestTap(16000,4,2),  // 40%付近: 2枠目
+  monsterNoteTestTap(18000,6), monsterNoteTestTap(18800,0), monsterNoteTestTap(19600,8),
+  monsterNoteTestTap(20400,2), monsterNoteTestTap(21200,6), monsterNoteTestTap(22000,4),
+  monsterNoteTestTap(24000,4,3),  // 60%付近: 3枠目
+  monsterNoteTestTap(26000,0), monsterNoteTestTap(26800,8), monsterNoteTestTap(27600,2),
+  monsterNoteTestTap(28400,6), monsterNoteTestTap(29200,4), monsterNoteTestTap(30000,0),
+  monsterNoteTestTap(32000,4,4),  // 80%付近: 4枠目(終盤の復帰チャンス)
+  monsterNoteTestTap(34000,8), monsterNoteTestTap(34800,2), monsterNoteTestTap(35600,6),
+  monsterNoteTestTap(36400,4),
+]);
+const monsterNoteTestChart=Object.freeze({level:3,notes:monsterNoteTestNotes,totalNotes:monsterNoteTestNotes.length,durationMs:MONSTER_NOTE_TEST_DURATION_MS});
+
 const RHYTHM_SONGS = Object.freeze([
   Object.freeze({
     songId:'atsu_cup_theme_test',
@@ -1056,6 +1206,12 @@ const RHYTHM_SONGS = Object.freeze([
   Object.freeze({
     songId:'width_test', displayName:'WIDTH TEST', bgmTrackId:'atsu_cup_theme',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:id==='NORMAL'?widthHoldTestChart:id==='HARD'?widthSlideTestChart:id==='EXPERT'?widthSlideVariableTestChart:id==='MASTER'?widthSlideChangingTestChart:emptyRhythmChart()])))
+  }),
+  Object.freeze({
+    songId:'monster_note_test', displayName:'MONSTER NOTE TEST',
+    debugDescription:'モンスターノーツの確認用（設定した枠の順に4個・約40秒）',
+    bgmTrackId:'atsu_cup_theme', playDurationMs:MONSTER_NOTE_TEST_DURATION_MS,
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?monsterNoteTestChart:emptyRhythmChart()])))
   }),
   Object.freeze({
     songId:'atsu_cup_theme_debug_short',

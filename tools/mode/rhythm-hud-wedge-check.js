@@ -85,7 +85,7 @@ check('曲名は truncate(1行で…に切る)を使わない(実機で曲名が
 const PALETTE={
   'white':'#ffffff','slate-200':'#e2e8f0','slate-300':'#cbd5e1','slate-400':'#94a3b8',
   'slate-100':'#f1f5f9','slate-900':'#0f172a','slate-950':'#020617','cyan-200':'#a5f3fc','cyan-300':'#67e8f9','emerald-200':'#a7f3d0',
-  'fuchsia-200':'#f5d0fe','fuchsia-300':'#f0abfc','fuchsia-700':'#a21caf',
+  'fuchsia-200':'#f5d0fe','fuchsia-300':'#f0abfc','fuchsia-700':'#a21caf','amber-200':'#fde68a',
 };
 const SPACE={'0':'0px','0.5':'2px','1':'4px','1.5':'6px','2':'8px','3':'12px','12':'48px'};
 const STATIC={

@@ -81,6 +81,7 @@ jobs:
           node tools/mode/rhythm-options-step1-check.js
           node tools/mode/rhythm-mode-slide-sublane-check.js
           node tools/mode/rhythm-monster-slots-check.js
+          node tools/mode/rhythm-monster-notes-check.js
           node tools/mode/rhythm-chart-authoring-ui-check.js
           node tools/mode/rhythm-invalid-placement-check.js
           node tools/mode/rhythm-review-mode-check.js
