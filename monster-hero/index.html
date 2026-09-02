@@ -251,6 +251,30 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     }
   }
 
+  /* 極限チャレンジランキングの6難易度タブ。
+     game-system.jsx の EXTREME_DIFFICULTY_THEMES と同じ配色を使い、
+     選択中だけ少し強いグラデーション/発光にする。種族・通常ランキングには当てない。 */
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button {
+    border-style:solid !important;
+    border-width:1px !important;
+    background:rgba(var(--mh-extreme-rank-rgb),.14) !important;
+    color:var(--mh-extreme-rank-accent) !important;
+    border-color:rgba(var(--mh-extreme-rank-rgb),.38) !important;
+    box-shadow:inset 0 0 0 1px rgba(var(--mh-extreme-rank-rgb),.12);
+  }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button.ring-2 {
+    background:linear-gradient(135deg,var(--mh-extreme-rank-action-a),var(--mh-extreme-rank-action-b)) !important;
+    color:var(--mh-extreme-rank-action-text) !important;
+    border-color:rgba(var(--mh-extreme-rank-rgb),.78) !important;
+    box-shadow:0 0 var(--mh-extreme-rank-shadow) rgba(var(--mh-extreme-rank-rgb),var(--mh-extreme-rank-glow));
+  }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(1) { --mh-extreme-rank-rgb:232,121,249; --mh-extreme-rank-accent:#f0abfc; --mh-extreme-rank-action-a:#a21caf; --mh-extreme-rank-action-b:#d946ef; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.24; --mh-extreme-rank-shadow:13px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(2) { --mh-extreme-rank-rgb:139,92,246; --mh-extreme-rank-accent:#c4b5fd; --mh-extreme-rank-action-a:#6d28d9; --mh-extreme-rank-action-b:#8b5cf6; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.28; --mh-extreme-rank-shadow:14px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(3) { --mh-extreme-rank-rgb:244,63,94; --mh-extreme-rank-accent:#fda4af; --mh-extreme-rank-action-a:#be123c; --mh-extreme-rank-action-b:#f43f5e; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.32; --mh-extreme-rank-shadow:14px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(4) { --mh-extreme-rank-rgb:249,115,22; --mh-extreme-rank-accent:#fdba74; --mh-extreme-rank-action-a:#c2410c; --mh-extreme-rank-action-b:#f97316; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.36; --mh-extreme-rank-shadow:15px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(5) { --mh-extreme-rank-rgb:59,130,246; --mh-extreme-rank-accent:#93c5fd; --mh-extreme-rank-action-a:#1d4ed8; --mh-extreme-rank-action-b:#3b82f6; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.40; --mh-extreme-rank-shadow:16px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(6) { --mh-extreme-rank-rgb:245,158,11; --mh-extreme-rank-accent:#fde68a; --mh-extreme-rank-action-a:#a16207; --mh-extreme-rank-action-b:#f59e0b; --mh-extreme-rank-action-text:#1c1917; --mh-extreme-rank-glow:.48; --mh-extreme-rank-shadow:18px; }
+
   /* 音ゲー STEP B: 入力面や判定ロジックは触らず、data属性だけでステージに奥行きを付ける。 */
   [data-rhythm-tap-test] {
     background:
