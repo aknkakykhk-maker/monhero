@@ -45,6 +45,13 @@ assert(rankingCss.includes('background:rgba(var(--mh-extreme-rank-rgb),.14)'), '
 assert(rankingCss.includes('background:linear-gradient(135deg,var(--mh-extreme-rank-action-a),var(--mh-extreme-rank-action-b))'), '選択中タブは難易度ごとのaction色を使ってください');
 assert(!rankingCss.includes('data-species-difficulty-tabs'), '種族ランキング専用セレクタへ干渉しないでください');
 
+const normalizeHex = (value) => {
+  const text = String(value || '').trim().toLowerCase();
+  const hex = text.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/)?.[1];
+  if (!hex) return text;
+  return '#' + (hex.length === 3 ? hex.split('').map(ch => ch + ch).join('') : hex);
+};
+
 themes.forEach((theme, i) => {
   const nth = `> button:nth-child(${i + 1})`;
   const pos = rankingCss.indexOf(nth);
@@ -55,7 +62,8 @@ themes.forEach((theme, i) => {
   assert(css.includes(`--mh-extreme-rank-accent:${theme.accent}`), `${theme.id} のaccentは既存テーマと一致させてください`);
   assert(css.includes(`--mh-extreme-rank-action-a:${theme.action[0]}`), `${theme.id} のaction開始色は既存テーマと一致させてください`);
   assert(css.includes(`--mh-extreme-rank-action-b:${theme.action[1]}`), `${theme.id} のaction終了色は既存テーマと一致させてください`);
-  assert(css.includes(`--mh-extreme-rank-action-text:${theme.actionText}`), `${theme.id} の文字色は既存テーマと一致させてください`);
+  const cssActionText = css.match(/--mh-extreme-rank-action-text:([^;]+)/)?.[1];
+  assert.strictEqual(normalizeHex(cssActionText), normalizeHex(theme.actionText), `${theme.id} の文字色は既存テーマと一致させてください`);
 });
 
 console.log('OK: 極限チャレンジ6難易度の固有色・段階的な強調・ランキングタブへの同色反映を確認');
