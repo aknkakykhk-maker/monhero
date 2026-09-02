@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66de1df791514d1c
+// source-sha256: 75815983c29b9dd3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-31 12:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3592,22 +3592,31 @@ const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.leg
 // 音ゲーは曲データ側で既存track IDだけを持ち、音源・音量・ループ情報は必ずBGM_TRACKSから解決する。
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
 const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
+// ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
+// 旧保存値(3.0〜10.0 / 0.5刻み)はこの範囲の内側なので、そのまま読み込める。
+const RHYTHM_NOTE_SPEED_MIN = 1;
+const RHYTHM_NOTE_SPEED_MAX = 12;
+const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
-const RHYTHM_EFFECT_LEVELS = Object.freeze(['LOW', 'NORMAL', 'HIGH']);
+const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'MINIMAL']);
+const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
-  noteSpeed: 5,
+  bgmVolume: 100,
+  noteSpeed: 6,
   noteSize: 100,
   noteStartPosition: 0,
   displayTimingOffsetMs: 0,
   judgmentTimingOffsetMs: 0,
   fastSlowDisplay: true,
+  judgmentTextDisplay: true,
   judgmentTextPosition: 50,
   comboDisplay: true,
   holdSlideOpacity: 80,
+  laneGlow: 'NORMAL',
   noteSeVolume: 70,
   noteSeEnabled: true,
-  vibrationEnabled: true,
+  vibrationEnabled: false,
   effectAmount: 'NORMAL',
   lightweightMode: false,
   livePartnerVisible: true
@@ -3616,20 +3625,28 @@ const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
   return Number.isFinite(number) && number >= min && number <= max ? number : fallback;
 };
+const rhythmFiniteStep = (value, min, max, step, fallback) => {
+  const number = rhythmFiniteInRange(value, min, max, fallback);
+  // 0.1刻みのような小数stepでも 6.300000000000001 のような値を残さない。
+  return Math.round((Math.round((number - min) / step) * step + min) * 1000) / 1000;
+};
 const normalizeRhythmSettings = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const bool = key => typeof source[key] === 'boolean' ? source[key] : DEFAULT_RHYTHM_SETTINGS[key];
   return {
-    noteSpeed: rhythmFiniteInRange(source.noteSpeed, 1, 20, DEFAULT_RHYTHM_SETTINGS.noteSpeed),
-    noteSize: rhythmFiniteInRange(source.noteSize, 50, 150, DEFAULT_RHYTHM_SETTINGS.noteSize),
+    bgmVolume: rhythmFiniteStep(source.bgmVolume, 0, 100, 1, DEFAULT_RHYTHM_SETTINGS.bgmVolume),
+    noteSpeed: rhythmFiniteStep(source.noteSpeed, RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, DEFAULT_RHYTHM_SETTINGS.noteSpeed),
+    noteSize: rhythmFiniteStep(source.noteSize, 80, 120, 5, DEFAULT_RHYTHM_SETTINGS.noteSize),
     noteStartPosition: rhythmFiniteInRange(source.noteStartPosition, -100, 100, DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
-    displayTimingOffsetMs: rhythmFiniteInRange(source.displayTimingOffsetMs, -500, 500, DEFAULT_RHYTHM_SETTINGS.displayTimingOffsetMs),
-    judgmentTimingOffsetMs: rhythmFiniteInRange(source.judgmentTimingOffsetMs, -500, 500, DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
+    displayTimingOffsetMs: 0,
+    judgmentTimingOffsetMs: rhythmFiniteStep(source.judgmentTimingOffsetMs, -100, 100, 5, DEFAULT_RHYTHM_SETTINGS.judgmentTimingOffsetMs),
     fastSlowDisplay: bool('fastSlowDisplay'),
+    judgmentTextDisplay: bool('judgmentTextDisplay'),
     judgmentTextPosition: rhythmFiniteInRange(source.judgmentTextPosition, 0, 100, DEFAULT_RHYTHM_SETTINGS.judgmentTextPosition),
     comboDisplay: bool('comboDisplay'),
     holdSlideOpacity: rhythmFiniteInRange(source.holdSlideOpacity, 10, 100, DEFAULT_RHYTHM_SETTINGS.holdSlideOpacity),
-    noteSeVolume: rhythmFiniteInRange(source.noteSeVolume, 0, 100, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
+    laneGlow: RHYTHM_LANE_GLOW_LEVELS.includes(source.laneGlow) ? source.laneGlow : DEFAULT_RHYTHM_SETTINGS.laneGlow,
+    noteSeVolume: rhythmFiniteStep(source.noteSeVolume, 0, 100, 1, DEFAULT_RHYTHM_SETTINGS.noteSeVolume),
     noteSeEnabled: bool('noteSeEnabled'),
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
@@ -4179,7 +4196,7 @@ const Audio_ = (() => {
   };
   // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
   // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
-  const startRhythmTrack = async key => {
+  const startRhythmTrack = async (key, rhythmVolumePct = 100) => {
     const track = resolveTrack(key);
     if (!track) return null;
     currentKey = null;
@@ -4203,11 +4220,14 @@ const Audio_ = (() => {
           naturallyEnded = true;
           return false;
         }
-        const nextSource = ctx.createBufferSource();
+        const nextSource = ctx.createBufferSource(),
+          rhythmGain = ctx.createGain();
         applyTrackGain(track);
+        rhythmGain.gain.value = Math.max(0, Math.min(1, Number(rhythmVolumePct) / 100));
         nextSource.buffer = buffer;
         nextSource.loop = false;
-        nextSource.connect(bgmGain);
+        nextSource.connect(rhythmGain);
+        rhythmGain.connect(bgmGain);
         source = nextSource;
         offsetSeconds = offset;
         startedAt = ctx.currentTime;
@@ -10432,12 +10452,12 @@ const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
 // 正式プレイとデバッグ戦で同じ定義を参照し、数値と特殊ルールを二重管理しない。
 const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3];
 const INFINITY_SETTING = EXTREME_DIFFICULTIES[4];
-// GODは公開難易度表へ混ぜず、内部実装・保存しないバトルデバッグだけが参照する。
+// GODは極限チャレンジの正式な最上位難易度。バトルデバッグも同じ定義を参照する。
 const GOD_SETTING = Object.freeze({
   id: 'GOD',
   label: 'GOD',
   japanese: 'ゴッド',
-  available: false,
+  available: true,
   debugAvailable: true,
   power: 100,
   score: 20,
@@ -10448,7 +10468,7 @@ const GOD_SETTING = Object.freeze({
   unlockRequirement: 'INFINITY',
   rankingId: 'ExtremeGOD',
   recordId: 'GOD',
-  description: '神威が2WAVEごとに上昇し、既存の極限統合ルールが段階的に苛烈になる内部難易度。',
+  description: '神威が2WAVEごとに上昇し、既存の極限統合ルールが段階的に苛烈になる最上位難易度。',
   cardDescription: '2WAVEごとに神威が上昇。累計ターン圧と20TごとのDISTANCE BREAKを受ける。',
   specialRules: Object.freeze({
     assistCardEffect: 0.5,
@@ -10473,6 +10493,7 @@ const GOD_SETTING = Object.freeze({
   })
 });
 const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES, GOD_SETTING]);
+const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available));
 const godDivinityLevel = waveNumber => Math.max(1, Math.min(5, Math.floor((Math.max(1, Number(waveNumber) || 1) - 1) / 2) + 1));
 const godDivinityRules = waveNumber => {
   const level = godDivinityLevel(waveNumber);
@@ -11319,7 +11340,7 @@ const helpDataRows = id => {
       });
     // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
-      return EXTREME_DIFFICULTIES.map(s => [s.label, s.available ? `敵×${s.power} ／ スコア×${s.score} ／ 経験値×${s.xp} ／ ダイヤ×${s.gold} ／ 虹のプシュケー ${s.psyche}個` : '？？？（未実装）']);
+      return PUBLIC_EXTREME_DIFFICULTIES.map(s => [s.label, s.available ? `敵×${s.power} ／ スコア×${s.score} ／ 経験値×${s.xp} ／ ダイヤ×${s.gold} ／ 虹のプシュケー ${s.psyche}個` : '？？？（未実装）']);
     // 種族チャレンジで選べる種族と、その種族で連れていけるモンスターの数。
     // モンスターを足すと自動で増えるので、ヘルプへ手で書き写さない
     case 'speciesChallengeLineages':
@@ -14968,7 +14989,212 @@ function PressRepeatButton({
   }, props), children);
 }
 const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
+const RHYTHM_JUDGMENT_DISPLAY_MS = 450;
 const rhythmInputKey = (kind, id) => `${kind}:${id}`;
+// 6.0はSTEP1以前の見た目(2150ms)を厳密に維持しつつ、1.0(約7000ms)〜12.0(約500ms)まで
+// 音ゲーとして意味のある幅へ広げる。整数速度を基準点として0.1刻みで線形補間する。
+// 低速側は等差で「ゆっくり見える」幅を確保し、高速側は約1.27倍ずつの等比で詰めるため、
+// どの帯域でも0.1動かせば見た目が変わる。
+// authored note time・BPM・beatZero・判定窓・入力時刻・スコアには使わず、描画travelだけに使用する。
+const RHYTHM_NOTE_TRAVEL_BASE_MS = 2150;
+const RHYTHM_NOTE_TRAVEL_MS_POINTS = Object.freeze([7000, 6000, 5000, 4000, 3000, RHYTHM_NOTE_TRAVEL_BASE_MS, 1680, 1300, 1020, 800, 630, 500]);
+const rhythmTravelMsForSpeed = value => {
+  // null / undefined / 空文字は「値なし」として既定へ落とす(Number()では0になってしまう)。
+  const raw = value == null || value === '' ? NaN : Number(value),
+    fallback = DEFAULT_RHYTHM_SETTINGS.noteSpeed;
+  const speed = Math.max(RHYTHM_NOTE_SPEED_MIN, Math.min(RHYTHM_NOTE_SPEED_MAX, Number.isFinite(raw) ? raw : fallback));
+  const offset = speed - RHYTHM_NOTE_SPEED_MIN;
+  const index = Math.max(0, Math.min(RHYTHM_NOTE_TRAVEL_MS_POINTS.length - 2, Math.floor(offset)));
+  const from = RHYTHM_NOTE_TRAVEL_MS_POINTS[index],
+    to = RHYTHM_NOTE_TRAVEL_MS_POINTS[index + 1];
+  return Math.round(from + (to - from) * (offset - index));
+};
+const RhythmOptions = ({
+  value,
+  onSave,
+  onBack
+}) => {
+  const [draft, setDraft] = useState(() => normalizeRhythmSettings(value));
+  const [message, setMessage] = useState('');
+  const previewRef = useRef(null);
+  useEffect(() => () => {
+    previewRef.current?.stop();
+    previewRef.current = null;
+  }, []);
+  const savedValue = normalizeRhythmSettings(value),
+    dirty = JSON.stringify(draft) !== JSON.stringify(savedValue);
+  const set = (key, next) => {
+    setDraft(current => normalizeRhythmSettings({
+      ...current,
+      [key]: next
+    }));
+    setMessage('');
+  };
+  const range = (key, min, max, step, suffix = '', decimals = 0) => /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-[1fr_60px] items-center gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    "aria-label": key,
+    type: "range",
+    min: min,
+    max: max,
+    step: step,
+    value: draft[key],
+    onChange: event => set(key, Number(event.target.value)),
+    className: "h-11 min-w-0 accent-cyan-400"
+  }), /*#__PURE__*/React.createElement("output", {
+    className: "rounded-lg border border-cyan-400/30 bg-slate-950 px-1 py-2 text-center text-xs font-black tabular-nums"
+  }, decimals > 0 ? Number(draft[key]).toFixed(decimals) : draft[key], suffix));
+  const toggle = (key, label) => /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-pressed": draft[key],
+    onClick: () => set(key, !draft[key]),
+    className: `min-h-[44px] min-w-[88px] rounded-xl border px-4 text-xs font-black ${draft[key] ? 'border-cyan-200 bg-cyan-600 text-white' : 'border-white/20 bg-slate-900 text-slate-300'}`
+  }, label, " ", draft[key] ? 'ON' : 'OFF');
+  const segments = (key, items) => /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 overflow-hidden rounded-xl border border-white/20"
+  }, items.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    key: id,
+    "aria-pressed": draft[key] === id,
+    onClick: () => set(key, id),
+    className: `min-h-[44px] border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
+  }, label)));
+  const card = 'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-3 shadow-[0_0_18px_rgba(34,211,238,.08)]';
+  const row = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-white/10 py-2 last:border-b-0';
+  const previewBgm = async () => {
+    previewRef.current?.stop();
+    previewRef.current = null;
+    const audio = await Audio_.startRhythmTrack('atsu_cup_theme', draft.bgmVolume);
+    previewRef.current = audio;
+    if (!audio) setMessage('BGMを再生できませんでした');
+  };
+  const resetDraft = () => {
+    setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));
+    setMessage('画面上の値を戻しました（未保存）');
+  };
+  const saveDraft = async () => {
+    const saved = await onSave(draft);
+    setDraft(saved);
+    setMessage('保存しました');
+  };
+  return /*#__PURE__*/React.createElement("main", {
+    "data-rhythm-options": true,
+    className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
+    style: {
+      paddingTop: 'env(safe-area-inset-top)'
+    }
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u3078\u623B\u308B",
+    onClick: onBack,
+    className: "min-h-[44px] min-w-[44px] text-slate-300"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[8px] font-black text-cyan-300"
+  }, "DEBUG\u30FB\u6B63\u5F0F\u30E2\u30FC\u30C9\u5171\u901A\u8A2D\u8A08"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-black"
+  }, "\u2699\uFE0F \u97F3\u30B2\u30FC\u30AA\u30D7\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-options-scroll": true,
+    className: "flex-1 min-h-0 overflow-y-auto px-3 pb-4 pt-3 mh-scroll"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("section", {
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-cyan-200"
+  }, "\uD83D\uDD0A \u97F3\u91CF"), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "BGM\u97F3\u91CF", range('bgmVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "\u30BF\u30C3\u30D7\u97F3\u91CF", range('noteSeVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "\u30BF\u30C3\u30D7\u97F3"), toggle('noteSeEnabled', '')), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: previewBgm,
+    className: "min-h-[46px] rounded-xl bg-indigo-700 text-xs font-black"
+  }, "\u266A BGM\u8A66\u8074"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview(draft),
+    className: "min-h-[46px] rounded-xl bg-fuchsia-700 text-xs font-black"
+  }, "\u30BF\u30C3\u30D7\u97F3\u8A66\u8074"))), /*#__PURE__*/React.createElement("section", {
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-cyan-200"
+  }, "\uD83C\uDFAF \u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "\u30CE\u30FC\u30C4\u901F\u5EA6", range('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, '', 1)), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] leading-relaxed text-slate-400"
+  }, "1.0\u301C12.0\u30920.1\u523B\u307F\u3067\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u5909\u308F\u308B\u306E\u306F\u30CE\u30FC\u30C4\u304C\u6D41\u308C\u3066\u304F\u308B\u898B\u305F\u76EE\u306E\u901F\u3055\u3060\u3051\u3067\u3001\u8B5C\u9762\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u30FB\u5224\u5B9A\u7A93\u30FB\u30B9\u30B3\u30A2\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF08\u73FE\u5728 \u7D04", rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString(), "ms\uFF09\u3002"), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "\u30CE\u30FC\u30C4\u30B5\u30A4\u30BA", range('noteSize', 80, 120, 5, '%')), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] leading-relaxed text-slate-400"
+  }, "\u30CE\u30FC\u30C4\u306E\u898B\u305F\u76EE\u306E\u5927\u304D\u3055\u3060\u3051\u3092\u5909\u3048\u307E\u3059\u3002\u5165\u529B\u5224\u5B9A\u306E\u7BC4\u56F2\u30FBHOLD/SLIDE\u5E2F\u30FBEND\u30D0\u30FC\u306E\u4F4D\u7F6E\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("label", {
+    className: "mt-2 block text-xs font-bold"
+  }, "\u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574", range('judgmentTimingOffsetMs', -100, 100, 5, 'ms')), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[9px] leading-relaxed text-slate-400"
+  }, "\u5224\u5B9A\u7A93\u306E\u5E45\u306F\u5909\u3048\u305A\u3001\u8868\u793A\u3068\u5165\u529B\u306E\u57FA\u6E96\u3092\u540C\u3058\u91CF\u3060\u3051\u88DC\u6B63\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-cyan-200"
+  }, "\uD83D\uDC41 \u8868\u793A"), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "FAST / SLOW\u8868\u793A"), toggle('fastSlowDisplay', '')), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "\u5224\u5B9A\u6587\u5B57\u8868\u793A"), toggle('judgmentTextDisplay', '')), /*#__PURE__*/React.createElement("div", {
+    className: "py-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-xs font-bold"
+  }, "\u30EC\u30FC\u30F3\u767A\u5149"), segments('laneGlow', [['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]))), /*#__PURE__*/React.createElement("section", {
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-cyan-200"
+  }, "\u2728 \u6F14\u51FA\u30FB\u7AEF\u672B"), /*#__PURE__*/React.createElement("div", {
+    className: "py-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-xs font-bold"
+  }, "\u6F14\u51FA\u91CF"), segments('effectAmount', [['NORMAL', '標準'], ['LOW', '少なめ'], ['MINIMAL', '最小']])), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "\u632F\u52D5"), toggle('vibrationEnabled', '')), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "\u8EFD\u91CF\u30E2\u30FC\u30C9"), toggle('lightweightMode', ''))), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-cyan-400/30 bg-cyan-950/25 p-3 text-[10px] leading-relaxed text-cyan-100"
+  }, "\u5224\u5B9A\u3092\u7518\u304F\u3059\u308B\u8A2D\u5B9A\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u7AEF\u672B\u3054\u3068\u306E\u898B\u3048\u65B9\u30FB\u97F3\u91CF\u30FB\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u8ABF\u6574\u3059\u308B\u9805\u76EE\u3067\u3059\u3002"))), /*#__PURE__*/React.createElement("footer", {
+    "data-rhythm-options-actions": true,
+    className: "z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2 shadow-[0_-8px_24px_rgba(2,6,23,.72)]",
+    style: {
+      paddingBottom: 'calc(.5rem + env(safe-area-inset-bottom))'
+    }
+  }, message && /*#__PURE__*/React.createElement("p", {
+    role: "status",
+    className: "mb-1 text-center text-[10px] font-black text-amber-300"
+  }, message), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-[.9fr_1.1fr] gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: resetDraft,
+    className: "min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[11px] font-black"
+  }, "\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: saveDraft,
+    "data-rhythm-options-save": true,
+    "data-dirty": dirty ? 'true' : 'false',
+    className: `min-h-[52px] rounded-xl px-3 font-black ${dirty ? 'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]' : 'bg-amber-600 text-slate-950'}`
+  }, dirty ? '変更を保存' : '保存'))));
+};
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -14983,6 +15209,8 @@ const RhythmTapTest = ({
     frameRef = useRef(null),
     playAreaRef = useRef(null),
     judgmentLineRef = useRef(null),
+    judgmentTimerRef = useRef(null),
+    judgmentRevisionRef = useRef(0),
     startLockRef = useRef(false),
     generationRef = useRef(0),
     mountedRef = useRef(false);
@@ -14994,7 +15222,10 @@ const RhythmTapTest = ({
     done: false,
     activePointerId: null,
     holdJudgment: null,
-    holdDeltaMs: 0
+    holdDeltaMs: 0,
+    ...(note.type === 'SLIDE' ? {
+      _rhythmSlideRenderPoints: rhythmSlidePoints(note)
+    } : {})
   }));
   const initialView = () => ({
     status: 'loading',
@@ -15013,6 +15244,24 @@ const RhythmTapTest = ({
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     frameRef.current = null;
   }, []);
+  const clearJudgmentTimer = useCallback(() => {
+    if (judgmentTimerRef.current !== null) clearTimeout(judgmentTimerRef.current);
+    judgmentTimerRef.current = null;
+    ++judgmentRevisionRef.current;
+  }, []);
+  const scheduleJudgmentClear = useCallback(() => {
+    if (judgmentTimerRef.current !== null) clearTimeout(judgmentTimerRef.current);
+    const revision = ++judgmentRevisionRef.current;
+    judgmentTimerRef.current = setTimeout(() => {
+      if (revision !== judgmentRevisionRef.current) return;
+      judgmentTimerRef.current = null;
+      setView(v => ({
+        ...v,
+        last: '',
+        fastSlow: ''
+      }));
+    }, RHYTHM_JUDGMENT_DISPLAY_MS);
+  }, []);
   const measureTravel = useCallback(() => {
     const area = playAreaRef.current,
       line = judgmentLineRef.current;
@@ -15026,7 +15275,9 @@ const RhythmTapTest = ({
       spawnY,
       judgmentY,
       travelPx: judgmentY - spawnY,
-      playAreaHeight: areaRect.height
+      playAreaHeight: areaRect.height,
+      rect: areaRect,
+      noteHeight
     };
   }, [settings.noteStartPosition]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
@@ -15037,6 +15288,12 @@ const RhythmTapTest = ({
       note.activePointerId = null;
     }
     note.done = true;
+    note._rhythmFinalJudgment = judgment;
+    if (settings.vibrationEnabled && judgment !== 'MISS') {
+      try {
+        navigator.vibrate?.(8);
+      } catch {}
+    }
     const nextCombo = rhythmComboAfter(run.combo, judgment);
     run.combo = nextCombo;
     run.maxCombo = Math.max(run.maxCombo, nextCombo);
@@ -15062,7 +15319,8 @@ const RhythmTapTest = ({
       fast: run.fast,
       slow: run.slow
     }));
-  }, [chart.totalNotes, difficulty.maxScore]);
+    scheduleJudgmentClear();
+  }, [chart.totalNotes, difficulty.maxScore, scheduleJudgmentClear, settings.vibrationEnabled]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -15116,46 +15374,65 @@ const RhythmTapTest = ({
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
       const songTimeMs = run.audio.songTimeMs(),
-        travel = measureTravel();
+        travel = measureTravel(),
+        visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
+        travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
       run.notes.forEach(note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
         const el = laneRefs.current[note.index];
-        if (!el || note.done) {
-          if (el) el.style.display = 'none';
+        if (!el) return;
+        // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
+        // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
+        const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && (note.type === 'HOLD' || rhythmNoteIsSlide(note)) && songTimeMs < rhythmReleaseTargetMs(note);
+        if (note.done && !failedTrail) {
+          el.style.display = 'none';
           return;
         }
-        const visualTime = songTimeMs + settings.displayTimingOffsetMs,
-          travelMs = Math.max(650, 2600 - settings.noteSpeed * 90),
-          progress = 1 - (note.timeMs - visualTime) / travelMs;
-        if (travel) {
-          let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
-          if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
-          el.style.transform = `translate3d(0,${Math.round(yPx)}px,0)`;
-          if (note.type === 'HOLD') {
-            const holdMs = note.activePointerId !== null ? Math.max(0, note.endTimeMs - visualTime) : Math.max(0, note.endTimeMs - note.timeMs);
-            const holdProgress = Math.min(1, Math.max(0, holdMs / travelMs)),
-              bodyPx = Math.max(0, (rhythmProjectTravelProgress(progress) - rhythmProjectTravelProgress(progress - holdProgress)) * travel.travelPx);
-            el.style.setProperty('--rhythm-hold-body', `${Math.round(bodyPx)}px`);
-            el.style.filter = note.activePointerId !== null ? 'brightness(1.3)' : '';
-          }
-          if (note.type === 'SLIDE' || note._rhythmOriginalType === 'SLIDE') {
-            const slideProgress = Math.min(1, Math.max(0, (note.endTimeMs - note.timeMs) / travelMs)),
-              slidePx = Math.max(0, (rhythmProjectTravelProgress(progress) - rhythmProjectTravelProgress(progress - slideProgress)) * travel.travelPx);
-            el.style.setProperty('--rhythm-slide-height', `${Math.round(slidePx)}px`);
-          }
-          const activeSlideLane = RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),
-            visualLane = activeSlideLane === null ? note.lane : activeSlideLane;
-          rhythmLayoutNoteVisual(el, note, yPx, visualLane, playAreaRef.current);
+        const failedFlag = failedTrail ? 'true' : 'false';
+        if (el.dataset.rhythmFailed !== failedFlag) el.dataset.rhythmFailed = failedFlag;
+        const progress = 1 - (note.timeMs - visualTime) / travelMs,
+          visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
+        el.style.opacity = failedTrail ? '.34' : visible ? '1' : '0';
+        if (!visible || !travel) return;
+        let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
+        if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
+        yPx = Math.round(yPx);
+        el.style.transform = `translate3d(0,${yPx}px,0)`;
+        const releaseTargetMs = rhythmReleaseTargetMs(note),
+          releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
+          releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
+          bodyPx = Math.max(0, yPx - releaseYpx);
+        if (note.type === 'HOLD') {
+          el.style.setProperty('--rhythm-hold-body', `${Math.round(bodyPx)}px`);
+          el.style.filter = note.activePointerId !== null ? 'brightness(1.3)' : '';
         }
-        el.style.opacity = note.activePointerId !== null ? '1' : progress < -.1 || progress > 1.18 ? '0' : '1';
+        if (note.type === 'SLIDE' || note._rhythmOriginalType === 'SLIDE') {
+          el.style.setProperty('--rhythm-slide-height', `${Math.round(bodyPx)}px`);
+          el.style.setProperty('--rhythm-slide-visible-height', `${Math.round(bodyPx)}px`);
+        }
+        const activeSlideLane = RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),
+          visualLane = activeSlideLane === null ? note.lane : activeSlideLane;
+        rhythmLayoutNoteVisual(el, note, yPx, visualLane, playAreaRef.current, releaseYpx, {
+          chartNowMs: songTimeMs - settings.judgmentTimingOffsetMs,
+          visualTime,
+          travelMs,
+          spawnY: travel.spawnY,
+          travelPx: travel.travelPx
+        }, {
+          rect: travel.rect,
+          noteHeight: travel.noteHeight,
+          bodyHeight: bodyPx
+        });
       });
-      if (songTimeMs >= chart.durationMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
+      const playEndTimeMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
+      if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
-  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.displayTimingOffsetMs, settings.judgmentTimingOffsetMs, settings.noteSpeed, stopFrame]);
+  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame]);
   const disposeRun = useCallback(() => {
     stopFrame();
+    clearJudgmentTimer();
     RHYTHM_GESTURE_RUNTIME.clear();
     const run = runRef.current;
     if (run) {
@@ -15163,11 +15440,12 @@ const RhythmTapTest = ({
       run.paused = true;
       run.activePointers.clear();
       run.activeTouchInputs?.clear();
+      run.inputFeedbackState?.clear();
       run.audio?.stop();
     }
     runRef.current = null;
     setPressedLanes([]);
-  }, [stopFrame]);
+  }, [clearJudgmentTimer, stopFrame]);
   const beginRun = async startBestValue => {
     if (startLockRef.current) return;
     startLockRef.current = true;
@@ -15177,7 +15455,7 @@ const RhythmTapTest = ({
       ...initialView(),
       status: 'loading'
     });
-    const audio = await Audio_.startRhythmTrack(song.bgmTrackId);
+    const audio = await Audio_.startRhythmTrack(song.bgmTrackId, settings.bgmVolume);
     if (!mountedRef.current || generation !== generationRef.current) {
       audio?.stop();
       return;
@@ -15237,6 +15515,8 @@ const RhythmTapTest = ({
     if (!run || run.finished || run.paused) return;
     run.activePointers.clear();
     run.activeTouchInputs?.clear();
+    run.inputFeedbackState?.clear();
+    run.activePointerFeedback?.clear();
     setPressedLanes([]);
     run.notes.forEach(note => {
       if (note.type === 'HOLD' && note.activePointerId !== null) note.activePointerId = -1;
@@ -15275,12 +15555,25 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
     const now = run.audio.songTimeMs();
+    run.inputFeedbackState = run.inputFeedbackState || new Map();
     rhythmMatchInputBatch(run.notes, inputs, now, settings.judgmentTimingOffsetMs).forEach(({
       input,
       target,
       deltaMs
     }) => {
-      if (!target) return;
+      run.inputFeedbackState.set(input.inputKey, {
+        subLane: Math.max(0, Math.min(9, Math.floor(input.subLaneCoordinate))),
+        empty: !target || target.type === 'TAP'
+      });
+      if (!target) {
+        RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+        if (input.captureTarget && input.pointerId !== undefined) {
+          try {
+            input.captureTarget.setPointerCapture(input.pointerId);
+          } catch {}
+        }
+        return;
+      }
       const judgment = rhythmJudgeTap(deltaMs);
       if (target.type === 'HOLD') {
         target.activePointerId = input.inputKey;
@@ -15298,16 +15591,31 @@ const RhythmTapTest = ({
           last: 'HOLD',
           fastSlow: side || ''
         }));
+        scheduleJudgmentClear();
         return;
       }
       applyJudgment(target, judgment, deltaMs);
     });
+  };
+  const inputMoves = (inputKey, subLaneCoordinate) => {
+    const run = runRef.current,
+      state = run?.inputFeedbackState?.get(inputKey);
+    if (!state || !Number.isFinite(subLaneCoordinate)) return;
+    const subLane = Math.max(0, Math.min(9, Math.floor(subLaneCoordinate)));
+    if (subLane === state.subLane) return;
+    state.subLane = subLane;
+    if (state.empty) inputStarts([{
+      lane: Math.floor(subLane / 2),
+      subLaneCoordinate,
+      inputKey
+    }]);
   };
   const inputEnds = inputs => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
     const now = run.audio.songTimeMs();
     inputs.forEach(input => {
+      run.inputFeedbackState?.delete(input.inputKey);
       const noteIndex = run.activePointers.get(input.inputKey);
       if (noteIndex === undefined) return;
       run.activePointers.delete(input.inputKey);
@@ -15323,16 +15631,15 @@ const RhythmTapTest = ({
       }
     });
   };
-  const setPressedLanes = lanes => {
+  const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
-    const active = lanes instanceof Set ? lanes : new Set(lanes || []);
-    area.querySelectorAll('[data-rhythm-lane]').forEach((el, index) => {
+    const active = new Set(Array.from(coordinates || []).map(value => Math.max(0, Math.min(9, Math.floor(Number(value))))).filter(Number.isFinite)),
+      glowOpacity = settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1';
+    area.querySelectorAll('[data-rhythm-sublane-feedback]').forEach((el, index) => {
       const pressed = active.has(index);
       el.dataset.pressed = pressed ? 'true' : 'false';
-      el.style.backgroundColor = pressed ? 'rgba(34,211,238,0.30)' : '';
-      el.style.boxShadow = pressed ? 'inset 0 0 26px rgba(103,232,249,0.78), inset 0 -72px 58px rgba(6,182,212,0.42), 0 0 18px rgba(34,211,238,0.28)' : '';
-      el.style.borderBottom = pressed ? '3px solid rgba(207,250,254,0.98)' : '3px solid transparent';
+      el.style.opacity = pressed ? glowOpacity : '0';
     });
   };
   const pointerDown = e => {
@@ -15341,19 +15648,43 @@ const RhythmTapTest = ({
     const area = playAreaRef.current;
     if (!area) return;
     const rect = area.getBoundingClientRect(),
-      lane = rhythmLaneAtPoint(e.clientX, e.clientY, rect);
-    if (lane === null) return;
-    setPressedLanes([lane]);
+      lane = rhythmLaneAtPoint(e.clientX, e.clientY, rect),
+      subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(e.clientX, e.clientY, rect);
+    if (lane === null || subLaneCoordinate === null) return;
+    const run = runRef.current;
+    if (run) {
+      run.activePointerFeedback = run.activePointerFeedback || new Map();
+      run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+      setPressedLanes(run.activePointerFeedback.values());
+    }
     inputStarts([{
       lane,
+      subLaneCoordinate,
       inputKey: rhythmInputKey('pointer', e.pointerId),
       captureTarget: e.currentTarget,
       pointerId: e.pointerId
     }]);
   };
+  const pointerMove = e => {
+    if (e.pointerType === 'touch') return;
+    const run = runRef.current;
+    if (!run?.activePointerFeedback?.has(e.pointerId)) return;
+    e.preventDefault();
+    const area = playAreaRef.current;
+    if (!area) return;
+    const subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(e.clientX, e.clientY, area.getBoundingClientRect());
+    if (subLaneCoordinate === null) return;
+    run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
+    setPressedLanes(run.activePointerFeedback.values());
+    inputMoves(rhythmInputKey('pointer', e.pointerId), subLaneCoordinate);
+  };
   const pointerEnd = e => {
     if (e.pointerType === 'touch') return;
-    setPressedLanes([]);
+    const run = runRef.current;
+    if (run?.activePointerFeedback) {
+      run.activePointerFeedback.delete(e.pointerId);
+      setPressedLanes(run.activePointerFeedback.values());
+    } else setPressedLanes([]);
     inputEnds([{
       inputKey: rhythmInputKey('pointer', e.pointerId),
       releaseTarget: e.currentTarget,
@@ -15370,21 +15701,26 @@ const RhythmTapTest = ({
       current.activeTouchInputs = current.activeTouchInputs || new Set();
       const rect = area.getBoundingClientRect(),
         live = new Set(),
-        liveLanes = new Set(),
+        liveSubLanes = [],
         starts = [];
       Array.from(e.touches || []).forEach(touch => {
         const inputKey = rhythmInputKey('touch', touch.identifier);
         live.add(inputKey);
-        const lane = rhythmLaneAtPoint(touch.clientX, touch.clientY, rect);
-        if (lane !== null) liveLanes.add(lane);
-        if (current.activeTouchInputs.has(inputKey)) return;
+        const lane = rhythmLaneAtPoint(touch.clientX, touch.clientY, rect),
+          subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(touch.clientX, touch.clientY, rect);
+        if (subLaneCoordinate !== null) liveSubLanes.push(subLaneCoordinate);
+        if (current.activeTouchInputs.has(inputKey)) {
+          if (subLaneCoordinate !== null) inputMoves(inputKey, subLaneCoordinate);
+          return;
+        }
         current.activeTouchInputs.add(inputKey);
-        if (lane !== null) starts.push({
+        if (lane !== null && subLaneCoordinate !== null) starts.push({
           lane,
+          subLaneCoordinate,
           inputKey
         });
       });
-      setPressedLanes(liveLanes);
+      setPressedLanes(liveSubLanes);
       if (starts.length) inputStarts(starts);
       const ended = [];
       Array.from(current.activeTouchInputs).forEach(inputKey => {
@@ -15511,7 +15847,10 @@ const RhythmTapTest = ({
   }, view.combo)))), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
+    "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
+    "data-rhythm-effect": settings.effectAmount,
     onPointerDown: pointerDown,
+    onPointerMove: pointerMove,
     onPointerUp: pointerEnd,
     onPointerCancel: pointerEnd,
     className: "relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50",
@@ -15519,7 +15858,9 @@ const RhythmTapTest = ({
       touchAction: 'none',
       WebkitTouchCallout: 'none',
       WebkitUserSelect: 'none',
-      userSelect: 'none'
+      userSelect: 'none',
+      '--rhythm-note-size-scale': settings.noteSize / 100,
+      filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "pointer-events-none absolute inset-0 grid grid-cols-5"
@@ -15532,16 +15873,44 @@ const RhythmTapTest = ({
     "aria-hidden": "true",
     className: "relative border-r border-white/20 bg-slate-900/40",
     style: {
-      transition: 'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',
+      transition: settings.lightweightMode ? 'none' : 'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',
       borderBottom: '3px solid transparent',
       boxSizing: 'border-box'
     }
   }, /*#__PURE__*/React.createElement("span", {
     className: "absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500"
   }, lane + 1)))), /*#__PURE__*/React.createElement("div", {
+    className: "pointer-events-none absolute inset-0",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 5
+  }, (_, index) => /*#__PURE__*/React.createElement("i", {
+    key: index,
+    "data-rhythm-sublane-boundary": ""
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "pointer-events-none absolute inset-0",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 10
+  }, (_, subLane) => /*#__PURE__*/React.createElement("i", {
+    key: subLane,
+    "data-rhythm-sublane-feedback": subLane,
+    "data-pressed": "false",
+    className: "absolute inset-0 opacity-0",
+    style: {
+      clipPath: rhythmSubLanePolygon(subLane),
+      background: 'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',
+      boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)' : 'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',
+      filter: settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'brightness(1.08)' : 'brightness(1.22)',
+      transition: settings.lightweightMode ? 'none' : 'opacity 45ms linear'
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
     ref: judgmentLineRef,
     "data-rhythm-judgment-line": true,
-    className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300 shadow-[0_0_18px_#67e8f9,0_0_30px_#c084fc]"
+    className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300",
+    style: {
+      boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
+    }
   }), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
@@ -15549,13 +15918,13 @@ const RhythmTapTest = ({
       bottom: 'calc(12% + 38px)'
     }
   }, /*#__PURE__*/React.createElement("b", {
-    className: `block text-3xl font-black leading-none tracking-wide ${view.last === 'MARVELOUS' ? 'text-fuchsia-100' : view.last === 'EXCELLENT' ? 'text-cyan-100' : view.last === 'GREAT' ? 'text-amber-200' : view.last === 'GOOD' ? 'text-lime-300' : view.last === 'BAD' ? 'text-rose-300' : 'text-white'}`,
+    className: `block text-[26px] font-black leading-none tracking-wide ${view.last === 'MARVELOUS' ? 'text-fuchsia-100' : view.last === 'EXCELLENT' ? 'text-cyan-100' : view.last === 'GREAT' ? 'text-amber-200' : view.last === 'GOOD' ? 'text-lime-300' : view.last === 'BAD' ? 'text-rose-300' : 'text-white'}`,
     style: {
-      textShadow: '0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'
+      textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 7px rgba(255,255,255,.45)' : '0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'
     }
-  }, view.last || (view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : '')), /*#__PURE__*/React.createElement("small", {
-    className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
-  }, view.fastSlow || '—')), chart.notes.map((note, index) => /*#__PURE__*/React.createElement("div", {
+  }, view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? view.last : ''), /*#__PURE__*/React.createElement("small", {
+    className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
+  }, settings.fastSlowDisplay ? view.fastSlow || '—' : '—')), chart.notes.map((note, index) => /*#__PURE__*/React.createElement("div", {
     key: index,
     ref: el => laneRefs.current[index] = el,
     "data-rhythm-note": true,
@@ -15573,8 +15942,20 @@ const RhythmTapTest = ({
     style: {
       height: 'var(--rhythm-hold-body, 0px)'
     }
+  }), (note.type === 'HOLD' || note.type === 'SLIDE') && /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-end-bar": true,
+    "aria-hidden": "true",
+    className: "absolute z-[2] h-2 rounded-full border border-white/80 bg-gradient-to-r from-fuchsia-400 via-cyan-100 to-fuchsia-400 shadow-[0_0_10px_#67e8f9,0_0_18px_#d946ef]",
+    style: {
+      pointerEvents: 'none',
+      transform: 'scaleY(var(--rhythm-end-depth-scale, 1))',
+      boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 7px #67e8f9' : '0 0 10px #67e8f9,0 0 18px #d946ef'
+    }
   }), /*#__PURE__*/React.createElement("span", {
-    className: `absolute inset-0 rounded-full shadow-lg ${note.type === 'HOLD' ? 'bg-gradient-to-b from-emerald-200 to-cyan-500' : 'bg-gradient-to-b from-amber-200 to-fuchsia-500'}`
+    className: `absolute inset-0 rounded-full ${note.type === 'HOLD' ? 'bg-gradient-to-b from-emerald-200 to-cyan-500' : 'bg-gradient-to-b from-amber-200 to-fuchsia-500'}`,
+    style: {
+      boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 2px 6px rgba(15,23,42,.45)' : '0 10px 15px -3px rgba(0,0,0,.24)'
+    }
   }))), view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-pause-menu": true,
     className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
@@ -15641,11 +16022,16 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
   const [rhythmPlay, setRhythmPlay] = useState(null);
+  // 音ゲーデバッグ画面は「プレイ」「譜面制作」「設定・記録」で分ける。
+  // 全部を1本のスクロールへ積むと、入った瞬間に何がどこにあるか分からなくなるため。
+  const [rhythmDebugTab, setRhythmDebugTab] = useState('play');
+  const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
   const openRhythmDebug = async () => {
     const settings = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
     const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
     setRhythmSettings(settings);
     setRhythmBestRecords(records);
+    setRhythmDebugTab('play');
     setGameState('RHYTHM_DEBUG');
   };
   const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
@@ -17261,13 +17647,15 @@ function MonsterHeroGame() {
   const nightmareClearCount = extremeClearCounts[NIGHTMARE_SETTING.id] || 0;
   const chaosClearCount = extremeClearCounts[CHAOS_SETTING.id] || 0;
   const ultimateClearCount = extremeClearCounts[ULTIMATE_SETTING.id] || 0;
+  const infinityClearCount = extremeClearCounts[INFINITY_SETTING.id] || 0;
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
   const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
   const ultimateUnlocked = useMemo(() => isUltimateUnlocked(chaosClearCount), [chaosClearCount]);
   const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);
+  const godUnlocked = useMemo(() => isGodUnlocked(infinityClearCount), [infinityClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
-  const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+  const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
   const activeExtremeBattleSetting = activeExtremeSetting;
   // クイックのEXTREME/NIGHTMAREは通常難易度表に存在しない。カルーセルのonScrollで
   // difficultyが切り替わった直後の再描画でも、クイック用の表から倍率を解決する。
@@ -19368,6 +19756,101 @@ function MonsterHeroGame() {
       setTimeout(() => window.location.reload(), 900);
     } catch {
       setRestoreMsg('コードが正しくありません');
+    }
+  };
+  const buildBackupCodeForFile = () => {
+    if (!hasLocalStorage()) return '';
+    const data = {};
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith('mh_')) data[k] = window.localStorage.getItem(k);
+    }
+    if (!Object.keys(data).length) return '';
+    return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  };
+  const backupFileStamp = () => {
+    const d = new Date();
+    const pad = v => String(v).padStart(2, '0');
+    return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes());
+  };
+  const saveBackupFile = async () => {
+    setRestoreMsg('');
+    try {
+      const code = buildBackupCodeForFile();
+      if (!code) {
+        setRestoreMsg('バックアップファイルを作成できませんでした');
+        return;
+      }
+      const filename = 'MonsterHero_Backup_' + backupFileStamp() + '.mhsave';
+      const blob = new Blob([code], {
+        type: 'application/octet-stream'
+      });
+      const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent || '') || navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+      if (isAppleMobile && typeof File !== 'undefined' && navigator.share && navigator.canShare) {
+        try {
+          const file = new File([blob], filename, {
+            type: 'application/octet-stream'
+          });
+          if (navigator.canShare({
+            files: [file]
+          })) {
+            setRestoreMsg('共有メニューから「ファイルに保存」を選んでください');
+            await navigator.share({
+              files: [file]
+            });
+            setRestoreMsg('バックアップファイルを保存・共有しました');
+            return;
+          }
+        } catch (e) {
+          if (e && e.name === 'AbortError') {
+            setRestoreMsg('保存をキャンセルしました');
+            return;
+          }
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setRestoreMsg('バックアップファイルをダウンロードしました');
+    } catch {
+      setRestoreMsg('バックアップファイルを保存できませんでした');
+    }
+  };
+  const restoreFromBackupFile = () => {
+    setRestoreMsg('');
+    try {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.mhsave,text/plain,application/octet-stream';
+      input.onchange = async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) {
+          setRestoreMsg('バックアップファイルが大きすぎます');
+          return;
+        }
+        try {
+          const text = (await file.text()).trim();
+          const json = decodeURIComponent(escape(atob(text)));
+          const data = JSON.parse(json);
+          if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid');
+          const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
+          if (!keys.length) throw new Error('no-save-keys');
+          keys.forEach(k => window.localStorage.setItem(k, data[k]));
+          setRestoreMsg('復元しました。再読み込みします...');
+          setTimeout(() => window.location.reload(), 900);
+        } catch {
+          setRestoreMsg('バックアップファイルが正しくありません');
+        }
+      };
+      input.click();
+    } catch {
+      setRestoreMsg('バックアップファイルを開けませんでした');
     }
   };
 
@@ -21550,7 +22033,7 @@ function MonsterHeroGame() {
     }
     // 極限チャレンジはスコア×20・経験値×25・ダイヤ×7.5。通常の難易度表ではなく EXTREME_SETTING を使う
     const extreme = extremeRunRef.current;
-    const selectedExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+    const selectedExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
     const quickExtremeSetting = isQuickMode(runMode) ? quickDifficultySetting(difficulty) : null;
     const scoreMult = extreme ? selectedExtremeSetting.score : quickExtremeSetting?.xp || DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
     const goldMult = extreme ? selectedExtremeSetting.gold : quickExtremeSetting?.gold || DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
@@ -21882,7 +22365,7 @@ function MonsterHeroGame() {
   // 獲得数はリザルトに出したいので finalRewardSummary へも足す(報酬付与のあとに走るため関数形で足す)
   const awardClearPsyche = async () => {
     // 極限チャレンジは通常の難易度表ではなく EXTREME_SETTING の個数を配る
-    const selectedExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+    const selectedExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
     const baseGain = extremeRunRef.current ? selectedExtremeSetting.psyche : clearPsycheReward(difficulty);
     const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);
     if (gain <= 0) return 0;
@@ -22350,7 +22833,7 @@ function MonsterHeroGame() {
     const r = speciesChallengeClearResult;
     if (!speciesChallengeBattleRun || !r) return null;
     const speciesName = speciesChallengeSpeciesName(r.speciesId);
-    const labelOf = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+    const labelOf = id => DIFFICULTY_SETTINGS[id]?.label || ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
     const nextLabel = r.nextDifficultyId ? labelOf(r.nextDifficultyId) : null;
     const record = speciesChallengeRecord(speciesChallengeProgress, r.speciesId, r.difficultyId);
     return /*#__PURE__*/React.createElement("div", {
@@ -27436,13 +27919,84 @@ function MonsterHeroGame() {
   }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), /*#__PURE__*/React.createElement("button", {
     className: backupTab === 'import' ? 'active' : '',
     onClick: () => setBackupTab('import')
-  }, "\u5FA9\u5143")), backupTab === 'export' ? /*#__PURE__*/React.createElement(React.Fragment, null, backupCode && /*#__PURE__*/React.createElement("textarea", {
+  }, "\u5FA9\u5143")), backupTab === 'export' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'rgba(15,23,42,.72)',
+      border: '1px solid rgba(255,255,255,.12)',
+      borderRadius: 12,
+      padding: '12px 14px',
+      margin: '10px 0',
+      textAlign: 'left',
+      fontSize: 12,
+      lineHeight: 1.65,
+      color: '#e2e8f0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      color: '#fff',
+      marginBottom: 4
+    }
+  }, "\u4F7F\u3044\u65B9"), /*#__PURE__*/React.createElement("div", null, "1. \u4E0B\u306E\u300C\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u3092\u4FDD\u5B58\u300D\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", null, "2. iPhone / iPad\u306F\u5171\u6709\u30E1\u30CB\u30E5\u30FC\u3067\u300C\u30D5\u30A1\u30A4\u30EB\u306B\u4FDD\u5B58\u300D\u3092\u9078\u3076"), /*#__PURE__*/React.createElement("div", null, "3. Android / PC\u306F\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u30D5\u30A9\u30EB\u30C0\u3078\u76F4\u63A5\u4FDD\u5B58\u3055\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", null, "4. \u7AEF\u672B\u9593\u3067\u79FB\u3059\u3068\u304D\u306FGoogle Drive\u306A\u3069\u3078\u540C\u3058\u30D5\u30A1\u30A4\u30EB\u3092\u7F6E\u304F"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      fontWeight: 900,
+      color: '#fff'
+    }
+  }, "\u4FDD\u5B58\u30D5\u30A1\u30A4\u30EB\u540D"), /*#__PURE__*/React.createElement("code", {
+    style: {
+      display: 'block',
+      marginTop: 2,
+      wordBreak: 'break-all',
+      color: '#c4b5fd'
+    }
+  }, "MonsterHero_Backup_YYYYMMDD_HHMM.mhsave"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 6,
+      color: '#94a3b8'
+    }
+  }, "\u203B YYYYMMDD_HHMM \u306F\u4FDD\u5B58\u3057\u305F\u65E5\u6642\u306B\u7F6E\u304D\u63DB\u308F\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("button", {
+    "data-mhsave-action": "export",
+    className: "mh-dialog-choice",
+    onClick: saveBackupFile
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u3092\u4FDD\u5B58\uFF08.mhsave\uFF09"), backupCode && /*#__PURE__*/React.createElement("textarea", {
     readOnly: true,
     value: backupCode
   }), /*#__PURE__*/React.createElement("button", {
     className: "mh-dialog-choice",
     onClick: generateBackupCode
-  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u4F5C\u6210")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("textarea", {
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u4F5C\u6210")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'rgba(15,23,42,.72)',
+      border: '1px solid rgba(255,255,255,.12)',
+      borderRadius: 12,
+      padding: '12px 14px',
+      margin: '10px 0',
+      textAlign: 'left',
+      fontSize: 12,
+      lineHeight: 1.65,
+      color: '#e2e8f0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 900,
+      color: '#fff',
+      marginBottom: 4
+    }
+  }, "\u4F7F\u3044\u65B9"), /*#__PURE__*/React.createElement("div", null, "1. \u4E0B\u306E\u300C\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u304B\u3089\u5FA9\u5143\u300D\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", null, "2. \u4FDD\u5B58\u3057\u305F ", /*#__PURE__*/React.createElement("code", {
+    style: {
+      color: '#c4b5fd'
+    }
+  }, "MonsterHero_Backup_....mhsave"), " \u3092\u9078\u3076"), /*#__PURE__*/React.createElement("div", null, "3. \u5FA9\u5143\u5F8C\u3001\u30B2\u30FC\u30E0\u306F\u81EA\u52D5\u3067\u518D\u8AAD\u307F\u8FBC\u307F\u3055\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 7,
+      color: '#fbbf24'
+    }
+  }, "\u203B \u9078\u3093\u3060\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u5185\u306E\u30C7\u30FC\u30BF\u3067\u73FE\u5728\u306E\u30BB\u30FC\u30D6\u304C\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("button", {
+    "data-mhsave-action": "import",
+    className: "mh-dialog-choice",
+    onClick: restoreFromBackupFile
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30D5\u30A1\u30A4\u30EB\u304B\u3089\u5FA9\u5143\uFF08.mhsave\uFF09"), /*#__PURE__*/React.createElement("textarea", {
     value: restoreInput,
     onChange: e => setRestoreInput(e.target.value),
     placeholder: "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u8CBC\u308A\u4ED8\u3051"
@@ -27667,7 +28221,7 @@ function MonsterHeroGame() {
       status = rankingStatus(`score:${viewKey}`);
     return /*#__PURE__*/React.createElement(React.Fragment, null, isExtreme ? /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0"
-    }, EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => /*#__PURE__*/React.createElement("button", {
+    }, PUBLIC_EXTREME_DIFFICULTIES.map(setting => /*#__PURE__*/React.createElement("button", {
       key: setting.id,
       onClick: () => {
         setRankingViewDiff(setting.id);
@@ -30356,7 +30910,7 @@ function MonsterHeroGame() {
       }, "\u9589\u3058\u308B"))));
     })(), showWaveDetails && (() => {
       const extreme = gameState === 'EXTREME_DIFFICULTY_SELECT';
-      const extremePreviewSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+      const extremePreviewSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
       const waveDifficulty = extreme ? 'Normal' : safeDifficulty;
       const powerOverride = extreme ? extremePreviewSetting.power : null;
       const label = extreme ? extremePreviewSetting.label : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label;
@@ -30883,7 +31437,7 @@ function MonsterHeroGame() {
           extremeLocked = isExtreme && !extremeUnlocked && !debugBattle,
           speciesLocked = isSpecies && !speciesChallengeUnlocked && !debugBattle,
           rec = isExtreme ? {
-            score: highestModeScore(extremeBestScores, EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => setting.id)),
+            score: highestModeScore(extremeBestScores, PUBLIC_EXTREME_DIFFICULTIES.map(setting => setting.id)),
             wave: 0,
             clears: extremeClearCount
           } : modeRecordFor(m.id, safeDifficulty),
@@ -31011,7 +31565,7 @@ function MonsterHeroGame() {
         compact: true
       })), renderBondRankingBody())));
     })(), gameState === 'EXTREME_DIFFICULTY_SELECT' && (() => {
-      // 未公開難易度は通常導線へ存在ごと出さず、保存しないバトルデバッグから来たときだけ表示する。
+      // 公開中の極限難易度を並べる。バトルデバッグも同じ導線を使い、保存だけを無効化する。
       const difficulties = ALL_EXTREME_DIFFICULTIES.filter(setting => setting.available || debugBattle && setting.debugAvailable);
       const selectedIndex = Math.max(0, difficulties.findIndex(setting => setting.id === extremeDifficulty));
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
@@ -31077,7 +31631,7 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
-        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : false);
+        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : false);
         const previewable = (setting.available || debugBattle && setting.debugAvailable) && unlocked;
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
@@ -31101,7 +31655,7 @@ function MonsterHeroGame() {
           className: "block text-right text-base leading-tight text-fuchsia-200"
         }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : setting.id === 'ULTIMATE' && !ultimateUnlocked ? 'CHAOSクリアで解放' : setting.id === 'INFINITY' && !infinityUnlocked ? 'ULTIMATEクリアで解放' : setting.id === 'GOD' && !godUnlocked ? 'INFINITYクリアで解放' : '選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', setting.score ? `×${setting.score}` : '対象外'], ['ダイヤ', setting.gold ? `×${setting.gold}` : '対象外']].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
@@ -33004,26 +33558,62 @@ function MonsterHeroGame() {
         setRhythmPlay(null);
         setGameState('RHYTHM_DEBUG');
       }
+    }), gameState === 'RHYTHM_OPTIONS' && /*#__PURE__*/React.createElement(RhythmOptions, {
+      value: rhythmSettings,
+      onBack: () => setGameState('RHYTHM_DEBUG'),
+      onSave: async draft => {
+        const saved = await saveRhythmSettings(draft);
+        setRhythmSettings(saved);
+        return saved;
+      }
     }), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
-      "data-rhythm-debug": true,
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll bg-slate-950 p-3 text-white",
+      "data-rhythm-debug-screen": true,
+      className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
       style: {
-        paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+        paddingTop: 'env(safe-area-inset-top)'
       }
     }, /*#__PURE__*/React.createElement("header", {
-      className: "sticky top-0 z-10 mb-3 flex items-center gap-2 rounded-xl bg-slate-950/95 py-1"
+      className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1"
     }, /*#__PURE__*/React.createElement("button", {
       "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
       onClick: () => setGameState('DEBUG_SETTINGS'),
       className: "min-h-[44px] min-w-[44px] text-slate-300"
     }, /*#__PURE__*/React.createElement(ArrowLeft, {
       size: 20
-    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] font-black text-cyan-300"
     }, "DEBUG ONLY\u30FBSTEP 1"), /*#__PURE__*/React.createElement("h2", {
       className: "text-sm font-black"
-    }, "\u97F3\u30B2\u30FC\u57FA\u76E4\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("section", {
+    }, "\u97F3\u30B2\u30FC\u57FA\u76E4\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
+      "data-rhythm-options-open": true,
+      onClick: () => setGameState('RHYTHM_OPTIONS'),
+      className: "min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100"
+    }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("nav", {
+      "data-rhythm-debug-tabs": true,
+      "aria-label": "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u306E\u8868\u793A\u5207\u308A\u66FF\u3048",
+      className: "grid shrink-0 grid-cols-3 border-b border-cyan-400/15 bg-slate-950/95"
+    }, [['play', '▶ プレイ'], ['chart', '🎼 譜面制作'], ['settings', '⚙️ 設定・記録']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+      key: id,
+      type: "button",
+      "aria-pressed": rhythmDebugTab === id,
+      onClick: () => {
+        if (id === 'chart') setRhythmChartToolsOpened(true);
+        setRhythmDebugTab(id);
+      },
+      className: `min-h-[44px] border-b-2 px-1 text-[11px] font-black ${rhythmDebugTab === id ? 'border-cyan-300 bg-cyan-950/50 text-cyan-100' : 'border-transparent text-slate-400'}`
+    }, label))), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pt-3",
+      style: {
+        paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      hidden: rhythmDebugTab !== 'settings'
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-debug-calibration": true,
+      className: "mb-3"
+    }), /*#__PURE__*/React.createElement("section", {
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-xs font-black text-cyan-200"
@@ -33035,7 +33625,9 @@ function MonsterHeroGame() {
       className: "break-all text-slate-400"
     }, key), /*#__PURE__*/React.createElement("dd", {
       className: "break-all text-right font-mono text-white"
-    }, String(value)))))), RHYTHM_SONGS.map(song => {
+    }, String(value))))))), /*#__PURE__*/React.createElement("div", {
+      hidden: rhythmDebugTab !== 'play'
+    }, RHYTHM_SONGS.map(song => {
       const track = rhythmSongTrack(song);
       return /*#__PURE__*/React.createElement("section", {
         key: song.songId,
@@ -33046,7 +33638,9 @@ function MonsterHeroGame() {
         className: "text-[8px] text-indigo-300"
       }, song.songId), /*#__PURE__*/React.createElement("h3", {
         className: "font-black"
-      }, song.displayName), /*#__PURE__*/React.createElement("p", {
+      }, song.displayName), song.debugDescription && /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-[10px] font-bold text-amber-200"
+      }, song.debugDescription), /*#__PURE__*/React.createElement("p", {
         className: "break-all text-[9px] text-slate-400"
       }, "BGM: ", song.bgmTrackId, " / ", track?.src || '未登録')), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2"
@@ -33080,7 +33674,10 @@ function MonsterHeroGame() {
           }
         }, "\u30EA\u30BA\u30E0\u30C6\u30B9\u30C8\u30D7\u30EC\u30A4"));
       })));
-    })), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
+    })), rhythmChartToolsOpened && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-debug": true,
+      hidden: rhythmDebugTab !== 'chart'
+    }))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -34554,7 +35151,7 @@ function MonsterHeroGame() {
           return wave > 0 ? `最高到達 WAVE ${wave}` : '未記録';
         }
         const scores = mode.id === EXTREME_MODE.id ? extremeBestScores : scoreMapFor(mode);
-        const ids = mode.id === EXTREME_MODE.id ? EXTREME_DIFFICULTIES.filter(item => item.available).map(item => item.id) : difficultyIds;
+        const ids = mode.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(item => item.id) : difficultyIds;
         const best = highestModeScore(scores, ids);
         return best > 0 ? `最高スコア ${best.toLocaleString()} pt` : '未記録';
       };
@@ -34620,7 +35217,7 @@ function MonsterHeroGame() {
         className: "font-black text-[13px]"
       }, selected.label, "\u306E\u8A18\u9332")), /*#__PURE__*/React.createElement("div", {
         className: "flex flex-col gap-2"
-      }, selected.id === EXTREME_MODE.id ? EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => {
+      }, selected.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => {
         const score = extremeBestScores[setting.id] || 0;
         const clears = extremeClearCounts[setting.id] || 0;
         const played = score > 0 || clears > 0;

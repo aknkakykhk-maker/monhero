@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+const fs=require('fs');
+const path=require('path');
+const assert=require('assert');
+const ROOT=path.resolve(__dirname,'../..');
+const read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
+const json=file=>JSON.parse(read(file));
+const v1=json('monster-hero/debug/atsu-cup-theme-easy-formal-candidate-v1.json');
+const v2=json('monster-hero/debug/atsu-cup-theme-easy-formal-candidate-v2-review.json');
+const draft=json('tools/mode/authoring/atsu-cup-theme-easy-draft.json');
+const runtime=read('monster-hero/data/rhythm-mode.js');
+const ok=(name,value)=>{assert(value,name);console.log(`OK: ${name}`);};
+const draftMap=new Map(draft.points.map(row=>[Number(row[0]),row]));
+ok('v2-reviewは未完成レビュー状態',v2.candidateVersion===2&&v2.status==='FORMAL_CANDIDATE_REVIEW'&&v2.reviewRequired===true&&v2.runtimeConnected===false&&!['FORMAL','COMPLETE','READY'].includes(v2.status));
+ok('v1の78ノーツをそのまま保持',v2.noteCount===78&&v2.notes.length===78&&JSON.stringify(v2.notes)===JSON.stringify(v1.notes)&&v2.typeCounts.TAP===72&&v2.typeCounts.HOLD===6);
+ok('22候補を正式notes外のpendingReviewsへ分離',v2.pendingReviewCount===22&&v2.pendingReviews.length===22&&v2.pendingReviews.every(row=>!v2.notes.some(note=>Number(note.grid)===Number(row.grid))));
+ok('pending candidateに重複なし',new Set(v2.pendingReviews.map(row=>Number(row.grid))).size===22);
+ok('22候補は元draft由来でstrength/offset一致',v2.pendingReviews.every(row=>{const source=draftMap.get(Number(row.grid));return source&&Number(source[1])===Number(row.sourceStrength)&&Number(source[2])===Number(row.sourcePeakOffsetMs);}));
+ok('review decisionは未入力を許可',v2.pendingReviews.every(row=>row.reviewDecision===null&&row.targetGrid===null)&&v2.policy.allowedReviewDecisions.includes('PENDING'));
+ok('全候補に詳細・近傍・機械推奨・preview note',v2.pendingReviews.every(row=>Number.isFinite(row.timeMs)&&row.timeLabel&&Array.isArray(row.nearbyOnsets)&&row.nearbyOnsets.length===5&&row.machineRecommendation&&row.proposedNote?.type==='TAP'));
+ok('機械推奨4分類の合計は22',Object.values(v2.classificationCounts).reduce((sum,value)=>sum+value,0)===22&&['KEEP_CANDIDATE','SHIFT_CANDIDATE','DROP_CANDIDATE','AMBIGUOUS'].every(key=>Number.isInteger(v2.classificationCounts[key])));
+ok('78ノーツ全尺監査と機械検査を収録',v2.qualityAudit.offsetCount===78&&v2.qualityAudit.withinMs['10']&&v2.qualityAudit.withinMs['20']&&v2.qualityAudit.withinMs['30']&&v2.qualityAudit.withinMs['40']&&v2.qualityAudit.sections.length===3&&v2.qualityAudit.densityWindowGrids===32&&v2.mechanicalValidation.passed===true&&v2.mechanicalValidation.issueCount===0);
+ok('正式runtimeへ未接続',!runtime.includes('atsu-cup-theme-easy-formal-candidate-v2-review'));
+ok('BPM・beatZero・16分基準はv1と同じ',v2.bpm===169&&v2.beatZeroMs===40&&v2.subdivisionsPerBeat===4&&v2.bpm===v1.bpm&&v2.beatZeroMs===v1.beatZeroMs);
+console.log('\nEASY正式候補v2レビュー準備チェック: OK');

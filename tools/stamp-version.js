@@ -1,11 +1,10 @@
-// BUILD_DATE、version.json、更新履歴の最新リリース、index.htmlの本体JSキャッシュキーを「今の日本時間」に揃える。
+// BUILD_DATE、version.json、index.htmlの本体JSキャッシュキーを「今の日本時間」に揃える。
+// CHANGELOGはユーザー向け更新だけの正本とし、デバッグ・内部修正では自動更新しない。
 //
 //   node stamp-version.js            … 現在時刻(JST)で更新する
 //   node stamp-version.js --print    … 更新せず、いま打たれる値だけ表示する
 //
-// これまで手で書き換えていたため、実際より先の時刻(未来の日時)が入ってしまい、
-// 更新履歴に「まだ来ていない時刻」が表示されることがあった。
-// 出荷手順ではこれを実行して、changelog.js に追記する日時もこの値に合わせる。
+// バナー用のbuild番号は全出荷で進める一方、更新履歴は必要な変更だけ別途編集する。
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -44,26 +43,8 @@ if (!/var GAME_BUILD = '[^']*';/.test(index)) {
   console.error('NG: index.html の GAME_BUILD 宣言が見つかりませんでした');
   process.exit(1);
 }
-const changelogPath = path.join(REPO_ROOT, 'monster-hero', 'data', 'changelog.js');
-const changelog = fs.readFileSync(changelogPath, 'utf8');
-const firstDateMatch = changelog.match(/date: "([^"]+)"/);
-if (!firstDateMatch) {
-  console.error('NG: changelog.js の最新エントリ日時が見つかりませんでした');
-  process.exit(1);
-}
-// 同じ日時で並ぶ update / issue は同一リリース。先頭から連続する全エントリを一緒に更新する。
-const latestDate = firstDateMatch[1];
-let inLatestRelease = true;
-const replacedChangelog = changelog.replace(/date: "([^"]+)"/g, (match, date) => {
-  if (!inLatestRelease || date !== latestDate) {
-    inLatestRelease = false;
-    return match;
-  }
-  return `date: "${stamp}"`;
-});
 fs.writeFileSync(GAME_SYSTEM, replaced);
 fs.writeFileSync(path.join(REPO_ROOT, 'monster-hero', 'version.json'), `{"build": "${stamp}"}\n`);
-fs.writeFileSync(changelogPath, replacedChangelog);
 
 // data/*.js のキャッシュキー(?v=)を中身のハッシュに合わせる。
 // 本体(game-system.compiled.js)はGAME_BUILDで毎回更新されるが、データ側は手書きの固定値だったため、
@@ -129,6 +110,6 @@ if (imageChanged) {
   fs.writeFileSync(indexPath, redone);
 }
 
-console.log(`BUILD_DATE、version.json、更新履歴、GAME_BUILD を ${stamp} に更新しました`);
+console.log(`BUILD_DATE、version.json、GAME_BUILD を ${stamp} に更新しました（CHANGELOGは変更しません）`);
 console.log(`data/*.js のキャッシュキー: ${dataKeys.join(' / ')}`);
 console.log(`画像のキャッシュキー: ${imageCount}枚`);

@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const source=fs.readFileSync('monster-hero/data/rhythm-mode.js','utf8');
+const game=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
+const ctx={};vm.createContext(ctx);vm.runInContext(source,ctx);
+const run=code=>vm.runInContext(code,ctx);
+const hold=(subLane,subLaneWidth,index=0,extra={})=>({type:'HOLD',timeMs:1000,endTimeMs:2000,lane:Math.floor(subLane/2),subLane,subLaneWidth,index,done:false,activePointerId:null,...extra});
+const flick=(subLane,subLaneWidth,index=0,extra={})=>({type:'FLICK',timeMs:1000,lane:Math.floor(subLane/2),subLane,subLaneWidth,index,done:false,activePointerId:null,...extra});
+const input=(subLaneCoordinate,key='touch:1')=>({lane:Math.max(0,Math.min(4,Math.floor(subLaneCoordinate/2))),subLaneCoordinate,inputKey:key});
+const match=(notes,inputs)=>run(`rhythmMatchInputBatch(${JSON.stringify(notes)},${JSON.stringify(inputs)},1000,0).map(x=>x.target&&x.target.index)`);
+for(const width of [1,2,3,4]){
+  const span=run(`rhythmNoteVisualSpan(${JSON.stringify(hold(3,width))},1,0.7)`);
+  assert.strictEqual(span.subLaneWidth,width,`HOLD幅${width}の始点投影`);
+  assert.deepEqual(match([hold(3,width)],[input(3+width/2)]),[0],`HOLD幅${width}の開始入力`);
+  const flickSpan=run(`rhythmNoteVisualSpan(${JSON.stringify(flick(3,width))},1,0.7)`);
+  assert.strictEqual(flickSpan.subLaneWidth,width,`FLICK幅${width}の始点投影`);
+  assert.deepEqual(match([flick(3,width)],[input(3+width/2)]),[0],`FLICK幅${width}の開始入力`);
+}
+assert.deepEqual(match([hold(4,1)],[input(3.85)]),[0],'HOLD幅1の最小タッチ許容');
+assert.deepEqual(match([flick(4,1)],[input(3.85)]),[0],'FLICK幅1の最小タッチ許容');
+assert.deepEqual(match([hold(4,1,0),hold(5,1,1)],[input(5)]).filter(x=>x!==null).length,1,'1指で隣接HOLDを二重取得しない');
+assert.deepEqual(match([hold(4,1,0),hold(5,1,1)],[input(4.5,'touch:1'),input(5.5,'touch:2')]),[0,1],'2指で隣接HOLDを同時取得');
+assert.deepEqual(match([flick(4,1,0),flick(5,1,1)],[input(5)]).filter(x=>x!==null).length,1,'1指で隣接FLICKを二重取得しない');
+assert.deepEqual(match([flick(4,1,0),flick(5,1,1)],[input(4.5,'touch:1'),input(5.5,'touch:2')]),[0,1],'2指で隣接FLICKを同時取得');
+assert.deepEqual(match([{type:'HOLD',timeMs:1000,endTimeMs:2000,lane:2,index:0,done:false,activePointerId:null}],[{lane:2,inputKey:'touch:1'}]),[0],'旧5レーンHOLD互換');
+assert.deepEqual(match([{type:'FLICK',timeMs:1000,lane:2,index:0,done:false,activePointerId:null}],[{lane:2,inputKey:'touch:1'}]),[0],'旧5レーンFLICK互換');
+assert.deepEqual(match([hold(2,2,0),{type:'TAP',timeMs:1000,lane:4,subLane:8,subLaneWidth:2,index:1,done:false,activePointerId:null}],[input(3,'touch:1'),input(9,'touch:2')]),[0,1],'HOLD中の別TAP用の独立入力');
+assert.strictEqual(run('RHYTHM_FLICK_DISTANCE_PX'),24,'FLICK成立距離24pxを維持');
+assert.strictEqual(run('RHYTHM_FLICK_MAX_MS'),450,'FLICK成立時間450msを維持');
+assert.strictEqual(run(`(()=>{const n=${JSON.stringify(flick(3,4))};RHYTHM_GESTURE_RUNTIME.bind('touch:9',n,'FLICK',1000,0);return rhythmNoteVisualSpan(n,n.lane,.7).subLaneWidth})()`),4,'FLICK開始後にHOLD化しても可変幅表示を維持');
+assert(source.includes('bodyRatio=variableHold?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO'),'可変幅HOLD帯は始点と同じ幅率');
+assert(source.includes("rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY)"),'ENDバーはHOLDと同じサブレーン投影');
+assert(source.includes('RHYTHM_BODY_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO')===false&&source.includes('variableHold?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO'),'旧HOLD帯幅率を維持');
+assert(/widthHoldTestNotes[\s\S]*\[1800,3200,0,1\][\s\S]*\[8400,10000,6,4\][\s\S]*\[10800,12200,0,1\][\s\S]*\[13000,14400,9,1\][\s\S]*\[15200,17000,4,1\],\[15200,17000,5,1\]/.test(source),'WIDTH TEST NORMALにHOLD幅1〜4・左右端・隣接を収録');
+assert(source.includes("type:'TAP',timeMs:18800")&&source.includes("type:'HOLD',timeMs:18000"),'WIDTH TEST NORMALにHOLD中TAPを収録');
+assert(source.includes("type:'FLICK',timeMs:22200,lane:0,subLane:0,subLaneWidth:1")&&source.includes("type:'FLICK',timeMs:23000,lane:1,subLane:2,subLaneWidth:2")&&source.includes("type:'FLICK',timeMs:23800,lane:2,subLane:4,subLaneWidth:3")&&source.includes("type:'FLICK',timeMs:24600,lane:3,subLane:6,subLaneWidth:4"),'WIDTH TEST NORMALにFLICK幅1〜4を収録');
+assert(source.includes("type:'FLICK',timeMs:25600,lane:4,subLane:9,subLaneWidth:1")&&source.includes("type:'FLICK',timeMs:26600,lane:2,subLane:4,subLaneWidth:1")&&source.includes("type:'FLICK',timeMs:26600,lane:2,subLane:5,subLaneWidth:1"),'WIDTH TEST NORMALに右端・隣接幅1 FLICKを収録');
+assert(source.includes("type:'FLICK',timeMs:27800")&&source.includes("type:'TAP',timeMs:27800")&&source.includes("type:'HOLD',timeMs:29000")&&source.includes("type:'FLICK',timeMs:29800"),'WIDTH TEST NORMALにFLICK+TAP/HOLD混在を収録');
+assert(source.includes('frameLayout?.rect||area.getBoundingClientRect()')&&source.includes('el._rhythmVisualBody||')&&game.includes("if(!visible||!travel)return;"),'共有layout・DOMキャッシュ・非表示skipを維持');
+assert(source.includes("if(!segment){segment=document.createElementNS")&&source.includes("if(segment._rhythmPoints!==points)"),'SLIDE polygon再利用を維持');
+assert(game.includes("applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0)"),'HOLD終端リリース判定経路を維持');
+console.log('OK: 可変幅HOLD/FLICKの投影・入力・互換・FLICK成立条件・性能回帰');

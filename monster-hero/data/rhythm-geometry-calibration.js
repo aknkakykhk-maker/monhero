@@ -1,0 +1,316 @@
+// DEBUG ONLY: 音ゲー表示座標の最終校正ガイド。
+// 既存の5レーンSVG・ノーツ・入力と同じprojection helperだけを使い、通常の判定ロジックは変更しない。
+const RHYTHM_CALIBRATION_DATA_BUILD='2026-09-01 23:05';
+const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
+
+(()=>{
+  // data-onlyのデバッグ出荷でも更新バナーは1回だけ出す。
+  // 開いたままの旧ページは新versionを検知し、更新後の新ページだけ今回buildを既存compiled buildへ橋渡しする。
+  if(typeof window!=='undefined'&&typeof window.fetch==='function'&&!window.__mhRhythmCalibrationBuildBridge){
+    const nativeFetch=window.fetch.bind(window);
+    window.fetch=async(...args)=>{
+      const response=await nativeFetch(...args);
+      try{
+        const input=args[0];
+        const rawUrl=typeof input==='string'?input:(input&&input.url)||'';
+        if(String(rawUrl).includes('version.json')&&typeof Response!=='undefined'){
+          const data=await response.clone().json();
+          if(data?.build===RHYTHM_CALIBRATION_DATA_BUILD){
+            const headers=new Headers(response.headers);
+            headers.set('content-type','application/json; charset=utf-8');
+            return new Response(JSON.stringify({...data,build:RHYTHM_CALIBRATION_COMPILED_BUILD}),{
+              status:response.status,statusText:response.statusText,headers
+            });
+          }
+        }
+      }catch(_e){}
+      return response;
+    };
+    Object.defineProperty(window,'__mhRhythmCalibrationBuildBridge',{value:true,configurable:false});
+  }
+
+  if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
+  if(document.documentElement.dataset.rhythmGeometryCalibration==='ready')return;
+  document.documentElement.dataset.rhythmGeometryCalibration='ready';
+
+  const SVG_NS='http://www.w3.org/2000/svg';
+  let enabled=false,currentArea=null,currentSvg=null,guideFrame=0;
+  const toggles=new Set();
+  const svgEl=(tag,attrs={})=>{
+    const el=document.createElementNS(SVG_NS,tag);
+    Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));
+    return el;
+  };
+  const point=(x,y)=>`${(Number(x)*1000).toFixed(3)},${(Number(y)*1000).toFixed(3)}`;
+  const projectionReady=()=>typeof rhythmProjectBoundary==='function'
+    &&typeof rhythmProjectSubLaneSpan==='function'
+    &&typeof rhythmProjectSlideSpan==='function'
+    &&typeof rhythmClamp01==='function';
+
+  const judgmentRatio=area=>{
+    const areaRect=area.getBoundingClientRect(),line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=line?.getBoundingClientRect();
+    if(!(areaRect.width>0&&areaRect.height>0)||!lineRect)return .88;
+    return rhythmClamp01((lineRect.top-areaRect.top+lineRect.height/2)/areaRect.height);
+  };
+  const quadForSpan=(spanAt,y,halfHeight)=>{
+    const topY=Math.max(0,y-halfHeight),bottomY=Math.min(1,y+halfHeight),top=spanAt(topY),bottom=spanAt(bottomY);
+    return [point(top.left,topY),point(top.right,topY),point(bottom.right,bottomY),point(bottom.left,bottomY)].join(' ');
+  };
+  const addText=(group,text,x,y,attrs={})=>{
+    const label=svgEl('text',{
+      x:(Number(x)*1000).toFixed(3),y:(Number(y)*1000).toFixed(3),
+      'text-anchor':'middle','font-size':'22','font-weight':'900',
+      'paint-order':'stroke','stroke':'#020617','stroke-width':'5','stroke-linejoin':'round',
+      ...attrs
+    });
+    label.textContent=text;
+    group.appendChild(label);
+    return label;
+  };
+  // プレイ画面へ固定ボタンを浮かせるとHUDへ重なるため、トグルは音ゲーデバッグ画面と
+  // ポーズメニューの中(=その画面自身のUI)に置く。画面ごとの固定レイヤーを増やさない。
+  const syncToggles=()=>{
+    toggles.forEach(toggle=>{
+      if(!toggle.isConnected){toggles.delete(toggle);return;}
+      const label=enabled?'座標校正 ON':'座標校正';
+      // childListを監視しているため、同じ文字列を毎回textContentへ代入すると
+      // 自分自身のMutationObserverを再発火し続けて画面遷移が固まる。実変更時だけ書き換える。
+      if(toggle.textContent!==label)toggle.textContent=label;
+      toggle.setAttribute('aria-pressed',enabled?'true':'false');
+      toggle.dataset.active=enabled?'true':'false';
+    });
+  };
+  const setGuideVisible=area=>{
+    const guide=area?.querySelector(':scope > [data-rhythm-lane-svg] [data-rhythm-calibration-guide]');
+    if(guide)guide.style.display=enabled?'':'none';
+    syncToggles();
+  };
+
+  const mountGuide=area=>{
+    if(!area||!projectionReady())return false;
+    const svg=area.querySelector(':scope > [data-rhythm-lane-svg]');
+    if(!svg)return false;
+    currentSvg=svg;
+    if(svg.querySelector('[data-rhythm-calibration-guide]'))return true;
+    const group=svgEl('g',{'data-rhythm-calibration-guide':'','pointer-events':'none'});
+    group.style.display=enabled?'':'none';
+
+    // 青=5メインレーン境界、黄=その中間の10サブレーン境界。
+    for(let boundary=0;boundary<=10;boundary++){
+      const main=boundary%2===0,topX=rhythmProjectBoundary(boundary/2,0),bottomX=rhythmProjectBoundary(boundary/2,1);
+      group.appendChild(svgEl('line',{
+        x1:(topX*1000).toFixed(3),y1:'0',x2:(bottomX*1000).toFixed(3),y2:'1000',
+        stroke:main?'#22d3ee':'#fde047','stroke-opacity':main?'.92':'.78',
+        'stroke-width':main?'3':'1.6','stroke-dasharray':main?'':'7 7'
+      }));
+    }
+
+    const judgeY=judgmentRatio(area);
+    for(const y of [.2,.4,.6,.8,judgeY]){
+      group.appendChild(svgEl('line',{
+        x1:(rhythmProjectBoundary(0,y)*1000).toFixed(3),y1:(y*1000).toFixed(3),
+        x2:(rhythmProjectBoundary(5,y)*1000).toFixed(3),y2:(y*1000).toFixed(3),
+        stroke:y===judgeY?'#f472b6':'#e2e8f0','stroke-opacity':y===judgeY?'.95':'.28',
+        'stroke-width':y===judgeY?'4':'1.2','stroke-dasharray':y===judgeY?'':'5 8'
+      }));
+    }
+
+    // TAP/HOLD/FLICKは同じsubLane spanを使う。幅1〜4を別位置で重ねて端を比較できるようにする。
+    const widthSamples=[
+      {subLane:0,width:1,y:.25,label:'T/H/F W1'},
+      {subLane:2,width:2,y:.42,label:'T/H/F W2'},
+      {subLane:4,width:3,y:.59,label:'T/H/F W3'},
+      {subLane:6,width:4,y:.76,label:'T/H/F W4'},
+    ];
+    widthSamples.forEach(sample=>{
+      const spanAt=y=>rhythmProjectSubLaneSpan(sample.subLane,sample.width,y);
+      group.appendChild(svgEl('polygon',{
+        points:quadForSpan(spanAt,sample.y,.021),fill:'#22c55e','fill-opacity':'.22',
+        stroke:'#86efac','stroke-opacity':'.98','stroke-width':'2.2'
+      }));
+      const center=spanAt(sample.y).center;
+      addText(group,sample.label,center,sample.y+.008,{fill:'#dcfce7'});
+    });
+
+    // SLIDEはhalf-lane中心を含む専用projectionを確認する。幅1〜4が紫の帯。
+    const slideSamples=[
+      {lane:.5,width:1,y:.31,label:'SL W1'},
+      {lane:1.5,width:2,y:.48,label:'SL W2'},
+      {lane:2.5,width:3,y:.65,label:'SL W3'},
+      {lane:3.5,width:4,y:.82,label:'SL W4'},
+    ];
+    slideSamples.forEach(sample=>{
+      const note={type:'SLIDE',timeMs:0,subLaneWidth:sample.width};
+      const spanAt=y=>rhythmProjectSlideSpan(sample.lane,note,y,0);
+      group.appendChild(svgEl('polygon',{
+        points:quadForSpan(spanAt,sample.y,.013),fill:'#c084fc','fill-opacity':'.18',
+        stroke:'#e9d5ff','stroke-opacity':'.94','stroke-width':'1.8'
+      }));
+      addText(group,sample.label,spanAt(sample.y).center,sample.y-.018,{fill:'#f3e8ff','font-size':'18'});
+    });
+
+    // 判定ライン上の10サブレーン中心。既存の入力発光とこの丸が一致するかを実機で確認する。
+    for(let subLane=0;subLane<10;subLane++){
+      const span=rhythmProjectSubLaneSpan(subLane,1,judgeY);
+      group.appendChild(svgEl('circle',{
+        cx:(span.center*1000).toFixed(3),cy:(judgeY*1000).toFixed(3),r:'7',
+        fill:'#f8fafc','fill-opacity':'.96',stroke:'#f472b6','stroke-width':'3'
+      }));
+      addText(group,String(subLane+1),span.center,Math.min(.985,judgeY+.035),{fill:'#fdf2f8','font-size':'17'});
+    }
+
+    addText(group,'5 LANE / 10 SUB / WIDTH 1-4 / SLIDE',.5,.055,{fill:'#f8fafc','font-size':'24'});
+    svg.appendChild(group);
+    return true;
+  };
+
+  const mountToggle=(host,placement)=>{
+    if(!host||host.querySelector('[data-rhythm-calibration-toggle]'))return;
+    const toggle=document.createElement('button');
+    toggle.type='button';
+    toggle.dataset.rhythmCalibrationToggle=placement;
+    toggle.textContent='座標校正';
+    toggle.setAttribute('aria-pressed','false');
+    Object.assign(toggle.style,{
+      display:'block',width:'100%',minHeight:placement==='pause'?'48px':'44px',
+      margin:placement==='pause'?'0':'0 0 12px',padding:'8px 12px',
+      border:'1px solid rgba(103,232,249,.65)',borderRadius:'12px',background:'rgba(2,6,23,.86)',
+      color:'#cffafe',fontSize:'12px',fontWeight:'900',touchAction:'manipulation'
+    });
+    toggle.addEventListener('click',()=>{
+      enabled=!enabled;
+      if(currentArea)mountGuide(currentArea);
+      setGuideVisible(currentArea);
+    });
+    if(placement==='pause')host.appendChild(toggle);
+    else host.prepend(toggle);
+    toggles.add(toggle);
+    syncToggles();
+  };
+
+  const scheduleGuide=area=>{
+    if(guideFrame||typeof requestAnimationFrame!=='function'){
+      if(!guideFrame){mountGuide(area);setGuideVisible(area);}
+      return;
+    }
+    guideFrame=requestAnimationFrame(()=>{
+      guideFrame=0;
+      if(area===currentArea&&area?.isConnected){
+        mountGuide(area);
+        setGuideVisible(area);
+      }
+    });
+  };
+  const remountGuide=area=>{
+    const old=area?.querySelector(':scope > [data-rhythm-lane-svg] [data-rhythm-calibration-guide]');
+    old?.remove();
+    currentSvg=null;
+    scheduleGuide(area);
+  };
+  const pauseMenuNeedsToggle=()=>{
+    const pause=document.querySelector('[data-rhythm-pause-menu]');
+    return !!pause&&!pause.querySelector('[data-rhythm-calibration-toggle]');
+  };
+  const scan=()=>{
+    // トグルは音ゲーデバッグ画面の「設定・記録」タブ(プレイ前)とポーズメニュー(プレイ中)へ置く。
+    mountToggle(document.querySelector('[data-rhythm-debug-calibration]'),'debug');
+    mountToggle(document.querySelector('[data-rhythm-pause-menu]'),'pause');
+    const area=document.querySelector('[data-rhythm-play-area]');
+    if(!area){
+      currentArea=null;currentSvg=null;
+      return;
+    }
+    if(currentArea!==area){
+      currentArea=area;currentSvg=null;
+    }
+    scheduleGuide(area);
+  };
+  const start=()=>{
+    scan();
+    new MutationObserver(()=>{
+      // ノーツのDOM増減では座標ガイドを再検索しない。画面自体が差し替わった時と、
+      // ポーズメニューが開いてトグルを置く必要がある時だけ再走査する。
+      if(currentArea&&currentArea.isConnected&&currentSvg&&currentSvg.isConnected&&!pauseMenuNeedsToggle())return;
+      scan();
+    }).observe(document.body,{childList:true,subtree:true});
+    window.addEventListener('resize',()=>{if(currentArea?.isConnected)remountGuide(currentArea);},{passive:true});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+})();
+
+// DEBUG ONLY: 譜面編集UIは通常プレイでは読み込まず、音ゲーデバッグ画面を開いた時だけ遅延読込する。
+(()=>{
+  if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
+  let loaded=false,loaderObserver=null;
+  const loadReviewMode=()=>{
+    if(document.querySelector('[data-rhythm-review-mode-loader]'))return;
+    const reviewScript=document.createElement('script');
+    reviewScript.dataset.rhythmReviewModeLoader='';
+    reviewScript.src='debug/rhythm-review-mode.js?v=20260902b';
+    document.head.appendChild(reviewScript);
+  };
+  const loadInvalidPlacementUi=()=>{
+    if(document.querySelector('[data-rhythm-invalid-placement-loader]')){loadReviewMode();return;}
+    const invalidScript=document.createElement('script');
+    invalidScript.dataset.rhythmInvalidPlacementLoader='';
+    invalidScript.src='debug/rhythm-invalid-placement.js?v=20260901a';
+    invalidScript.onload=loadReviewMode;
+    document.head.appendChild(invalidScript);
+  };
+  const loadSectionLoopUi=()=>{
+    if(document.querySelector('[data-rhythm-section-loop-loader]')){loadInvalidPlacementUi();return;}
+    const loopScript=document.createElement('script');
+    loopScript.dataset.rhythmSectionLoopLoader='';
+    loopScript.src='debug/rhythm-section-loop.js?v=20260901a';
+    loopScript.onload=loadInvalidPlacementUi;
+    document.head.appendChild(loopScript);
+  };
+  const loadSlidePathUi=()=>{
+    if(document.querySelector('[data-rhythm-slide-path-loader]')){loadSectionLoopUi();return;}
+    const slideScript=document.createElement('script');
+    slideScript.dataset.rhythmSlidePathLoader='';
+    slideScript.src='debug/rhythm-slide-path-editor.js?v=20260901a';
+    slideScript.onload=loadSectionLoopUi;
+    document.head.appendChild(slideScript);
+  };
+  const loadHoldResizeUi=()=>{
+    if(document.querySelector('[data-rhythm-hold-resize-loader]')){loadSlidePathUi();return;}
+    const holdScript=document.createElement('script');
+    holdScript.dataset.rhythmHoldResizeLoader='';
+    holdScript.src='debug/rhythm-hold-resize.js?v=20260901a';
+    holdScript.onload=loadSlidePathUi;
+    document.head.appendChild(holdScript);
+  };
+  const loadOffsetUi=()=>{
+    if(document.querySelector('[data-rhythm-preview-offset-loader]')){loadHoldResizeUi();return;}
+    const offsetScript=document.createElement('script');
+    offsetScript.dataset.rhythmPreviewOffsetLoader='';
+    offsetScript.src='debug/rhythm-preview-offset.js?v=20260901b';
+    offsetScript.onload=loadHoldResizeUi;
+    document.head.appendChild(offsetScript);
+  };
+  const watch=()=>{
+    if(loaderObserver||loaded)return;
+    loaderObserver=new MutationObserver(load);
+    loaderObserver.observe(document.body,{childList:true,subtree:true});
+  };
+  const load=()=>{
+    if(loaded||!document.querySelector('[data-rhythm-debug]'))return;
+    loaded=true;
+    loaderObserver?.disconnect();
+    loaderObserver=null;
+    const script=document.createElement('script');
+    script.dataset.rhythmChartAuthoringLoader='';
+    script.src='debug/rhythm-chart-authoring-ui.js?v=20260902a';
+    script.onload=loadOffsetUi;
+    script.onerror=()=>{loaded=false;script.remove();watch();};
+    document.head.appendChild(script);
+  };
+  const start=()=>{
+    load();
+    if(!loaded)watch();
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+})();

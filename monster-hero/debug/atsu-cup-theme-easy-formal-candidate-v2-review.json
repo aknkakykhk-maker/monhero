@@ -1,0 +1,2468 @@
+{
+  "trackId": "atsu_cup_theme",
+  "difficulty": "EASY",
+  "candidateVersion": 2,
+  "status": "FORMAL_CANDIDATE_REVIEW",
+  "reviewRequired": true,
+  "runtimeConnected": false,
+  "bpm": 169,
+  "beatZeroMs": 40,
+  "subdivisionsPerBeat": 4,
+  "audioDurationMs": 144640,
+  "source": "formal-candidate-v1 + full-length-quality-audit + onset-candidates",
+  "baseCandidate": "atsu-cup-theme-easy-formal-candidate-v1.json",
+  "policy": {
+    "formalNotesRemainFromV1": true,
+    "pendingReviewsAreNotFormalNotes": true,
+    "machineRecommendationsAreAdvisory": true,
+    "userEarDecisionWins": true,
+    "allowedReviewDecisions": [
+      "KEEP",
+      "SHIFT_PREVIOUS_GRID",
+      "SHIFT_NEXT_GRID",
+      "DROP",
+      "PENDING"
+    ],
+    "recommendationRules": {
+      "SHIFT_CANDIDATE": "前後2grid内にoffset絶対値が5ms以上小さいonset候補",
+      "KEEP_CANDIDATE": "offset絶対値35ms以内かつstrength 0.90以上",
+      "DROP_CANDIDATE": "strength 0.90未満かつ前後2gridに別onset候補なし",
+      "AMBIGUOUS": "上記以外"
+    }
+  },
+  "noteCount": 78,
+  "typeCounts": {
+    "TAP": 72,
+    "HOLD": 6
+  },
+  "notes": [
+    {
+      "type": "TAP",
+      "grid": 28,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.36,
+      "sourcePeakOffsetMs": 15
+    },
+    {
+      "type": "TAP",
+      "grid": 40,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.9,
+      "sourcePeakOffsetMs": 20
+    },
+    {
+      "type": "HOLD",
+      "grid": 46,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.25,
+      "sourcePeakOffsetMs": 12,
+      "durationGrids": 8
+    },
+    {
+      "type": "TAP",
+      "grid": 76,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.8,
+      "sourcePeakOffsetMs": 24
+    },
+    {
+      "type": "TAP",
+      "grid": 137,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.82,
+      "sourcePeakOffsetMs": 5
+    },
+    {
+      "type": "TAP",
+      "grid": 219,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.76,
+      "sourcePeakOffsetMs": -3
+    },
+    {
+      "type": "TAP",
+      "grid": 248,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.75,
+      "sourcePeakOffsetMs": -12
+    },
+    {
+      "type": "TAP",
+      "grid": 287,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.72,
+      "sourcePeakOffsetMs": -28
+    },
+    {
+      "type": "TAP",
+      "grid": 306,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.88,
+      "sourcePeakOffsetMs": -25
+    },
+    {
+      "type": "TAP",
+      "grid": 339,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.01,
+      "sourcePeakOffsetMs": -29
+    },
+    {
+      "type": "TAP",
+      "grid": 399,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.94,
+      "sourcePeakOffsetMs": -14
+    },
+    {
+      "type": "TAP",
+      "grid": 408,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.74,
+      "sourcePeakOffsetMs": -3
+    },
+    {
+      "type": "TAP",
+      "grid": 425,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.8,
+      "sourcePeakOffsetMs": 18
+    },
+    {
+      "type": "TAP",
+      "grid": 476,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.84,
+      "sourcePeakOffsetMs": -24
+    },
+    {
+      "type": "TAP",
+      "grid": 499,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.86,
+      "sourcePeakOffsetMs": 30
+    },
+    {
+      "type": "HOLD",
+      "grid": 513,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.68,
+      "sourcePeakOffsetMs": 17,
+      "durationGrids": 4
+    },
+    {
+      "type": "TAP",
+      "grid": 528,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.75,
+      "sourcePeakOffsetMs": 11
+    },
+    {
+      "type": "TAP",
+      "grid": 547,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.83,
+      "sourcePeakOffsetMs": 20
+    },
+    {
+      "type": "TAP",
+      "grid": 579,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.94,
+      "sourcePeakOffsetMs": 19
+    },
+    {
+      "type": "TAP",
+      "grid": 651,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.99,
+      "sourcePeakOffsetMs": -1
+    },
+    {
+      "type": "TAP",
+      "grid": 655,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.92,
+      "sourcePeakOffsetMs": 14
+    },
+    {
+      "type": "TAP",
+      "grid": 700,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.23,
+      "sourcePeakOffsetMs": 0
+    },
+    {
+      "type": "TAP",
+      "grid": 735,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.98,
+      "sourcePeakOffsetMs": -2
+    },
+    {
+      "type": "TAP",
+      "grid": 739,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.95,
+      "sourcePeakOffsetMs": -2
+    },
+    {
+      "type": "TAP",
+      "grid": 798,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.75,
+      "sourcePeakOffsetMs": 7
+    },
+    {
+      "type": "TAP",
+      "grid": 849,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.88,
+      "sourcePeakOffsetMs": -25
+    },
+    {
+      "type": "TAP",
+      "grid": 867,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.06,
+      "sourcePeakOffsetMs": -3
+    },
+    {
+      "type": "TAP",
+      "grid": 899,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.83,
+      "sourcePeakOffsetMs": -18
+    },
+    {
+      "type": "HOLD",
+      "grid": 936,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.29,
+      "sourcePeakOffsetMs": 28,
+      "durationGrids": 4
+    },
+    {
+      "type": "TAP",
+      "grid": 944,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.01,
+      "sourcePeakOffsetMs": 23
+    },
+    {
+      "type": "TAP",
+      "grid": 970,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.17,
+      "sourcePeakOffsetMs": 15
+    },
+    {
+      "type": "TAP",
+      "grid": 974,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.31,
+      "sourcePeakOffsetMs": 30
+    },
+    {
+      "type": "TAP",
+      "grid": 980,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.14,
+      "sourcePeakOffsetMs": 3
+    },
+    {
+      "type": "TAP",
+      "grid": 984,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.79,
+      "sourcePeakOffsetMs": 8
+    },
+    {
+      "type": "TAP",
+      "grid": 988,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 1,
+      "sourcePeakOffsetMs": 8
+    },
+    {
+      "type": "TAP",
+      "grid": 1006,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.79,
+      "sourcePeakOffsetMs": -20
+    },
+    {
+      "type": "TAP",
+      "grid": 1046,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.86,
+      "sourcePeakOffsetMs": -30
+    },
+    {
+      "type": "TAP",
+      "grid": 1062,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.93,
+      "sourcePeakOffsetMs": -15
+    },
+    {
+      "type": "TAP",
+      "grid": 1066,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.47,
+      "sourcePeakOffsetMs": -10
+    },
+    {
+      "type": "TAP",
+      "grid": 1072,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.05,
+      "sourcePeakOffsetMs": -23
+    },
+    {
+      "type": "TAP",
+      "grid": 1084,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.94,
+      "sourcePeakOffsetMs": 7
+    },
+    {
+      "type": "TAP",
+      "grid": 1088,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.74,
+      "sourcePeakOffsetMs": 2
+    },
+    {
+      "type": "TAP",
+      "grid": 1098,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.16,
+      "sourcePeakOffsetMs": 19
+    },
+    {
+      "type": "TAP",
+      "grid": 1120,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.66,
+      "sourcePeakOffsetMs": 22
+    },
+    {
+      "type": "TAP",
+      "grid": 1206,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.98,
+      "sourcePeakOffsetMs": -11
+    },
+    {
+      "type": "TAP",
+      "grid": 1220,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.96,
+      "sourcePeakOffsetMs": -9
+    },
+    {
+      "type": "HOLD",
+      "grid": 1232,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.56,
+      "sourcePeakOffsetMs": -19,
+      "durationGrids": 4
+    },
+    {
+      "type": "TAP",
+      "grid": 1240,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.77,
+      "sourcePeakOffsetMs": -14
+    },
+    {
+      "type": "TAP",
+      "grid": 1268,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.67,
+      "sourcePeakOffsetMs": -14
+    },
+    {
+      "type": "TAP",
+      "grid": 1300,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.19,
+      "sourcePeakOffsetMs": -15
+    },
+    {
+      "type": "TAP",
+      "grid": 1332,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.07,
+      "sourcePeakOffsetMs": -25
+    },
+    {
+      "type": "TAP",
+      "grid": 1336,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.24,
+      "sourcePeakOffsetMs": -20
+    },
+    {
+      "type": "TAP",
+      "grid": 1340,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.22,
+      "sourcePeakOffsetMs": -30
+    },
+    {
+      "type": "TAP",
+      "grid": 1358,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.08,
+      "sourcePeakOffsetMs": -23
+    },
+    {
+      "type": "HOLD",
+      "grid": 1365,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.25,
+      "sourcePeakOffsetMs": -24,
+      "durationGrids": 8
+    },
+    {
+      "type": "TAP",
+      "grid": 1390,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.01,
+      "sourcePeakOffsetMs": -23
+    },
+    {
+      "type": "TAP",
+      "grid": 1400,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.02,
+      "sourcePeakOffsetMs": -20
+    },
+    {
+      "type": "TAP",
+      "grid": 1406,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.97,
+      "sourcePeakOffsetMs": -23
+    },
+    {
+      "type": "TAP",
+      "grid": 1432,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.56,
+      "sourcePeakOffsetMs": -11
+    },
+    {
+      "type": "TAP",
+      "grid": 1438,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 1,
+      "sourcePeakOffsetMs": -18
+    },
+    {
+      "type": "TAP",
+      "grid": 1444,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.25,
+      "sourcePeakOffsetMs": -21
+    },
+    {
+      "type": "TAP",
+      "grid": 1456,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.07,
+      "sourcePeakOffsetMs": -11
+    },
+    {
+      "type": "TAP",
+      "grid": 1462,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.94,
+      "sourcePeakOffsetMs": -13
+    },
+    {
+      "type": "TAP",
+      "grid": 1469,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.31,
+      "sourcePeakOffsetMs": -10
+    },
+    {
+      "type": "TAP",
+      "grid": 1474,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 0.9,
+      "sourcePeakOffsetMs": -23
+    },
+    {
+      "type": "TAP",
+      "grid": 1478,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.15,
+      "sourcePeakOffsetMs": -23
+    },
+    {
+      "type": "TAP",
+      "grid": 1482,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.35,
+      "sourcePeakOffsetMs": -18
+    },
+    {
+      "type": "TAP",
+      "grid": 1488,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.26,
+      "sourcePeakOffsetMs": -6
+    },
+    {
+      "type": "TAP",
+      "grid": 1497,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.92,
+      "sourcePeakOffsetMs": 5
+    },
+    {
+      "type": "TAP",
+      "grid": 1501,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.33,
+      "sourcePeakOffsetMs": -15
+    },
+    {
+      "type": "HOLD",
+      "grid": 1510,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.86,
+      "sourcePeakOffsetMs": -24,
+      "durationGrids": 4
+    },
+    {
+      "type": "TAP",
+      "grid": 1522,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.78,
+      "sourcePeakOffsetMs": 1
+    },
+    {
+      "type": "TAP",
+      "grid": 1528,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.94,
+      "sourcePeakOffsetMs": -11
+    },
+    {
+      "type": "TAP",
+      "grid": 1534,
+      "lane": 0,
+      "subLane": 0,
+      "subLaneWidth": 2,
+      "sourceStrength": 2.12,
+      "sourcePeakOffsetMs": -24
+    },
+    {
+      "type": "TAP",
+      "grid": 1546,
+      "lane": 4,
+      "subLane": 8,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.29,
+      "sourcePeakOffsetMs": -4
+    },
+    {
+      "type": "TAP",
+      "grid": 1555,
+      "lane": 1,
+      "subLane": 2,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.08,
+      "sourcePeakOffsetMs": -8
+    },
+    {
+      "type": "TAP",
+      "grid": 1567,
+      "lane": 3,
+      "subLane": 6,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.18,
+      "sourcePeakOffsetMs": -18
+    },
+    {
+      "type": "TAP",
+      "grid": 1573,
+      "lane": 2,
+      "subLane": 4,
+      "subLaneWidth": 2,
+      "sourceStrength": 1.36,
+      "sourcePeakOffsetMs": -25
+    }
+  ],
+  "qualityAudit": {
+    "offsetCount": 78,
+    "meanOffsetMs": -5.9,
+    "meanAbsoluteOffsetMs": 15.7,
+    "medianOffsetMs": -10.5,
+    "medianAbsoluteOffsetMs": 16,
+    "maxAbsoluteOffsetMs": 30,
+    "withinMs": {
+      "10": {
+        "count": 22,
+        "percentage": 28.2
+      },
+      "20": {
+        "count": 53,
+        "percentage": 67.9
+      },
+      "30": {
+        "count": 78,
+        "percentage": 100
+      },
+      "40": {
+        "count": 78,
+        "percentage": 100
+      }
+    },
+    "driftMsPerMinute": -11.01,
+    "sections": [
+      {
+        "id": "first",
+        "noteCount": 17,
+        "meanOffsetMs": 0.8,
+        "meanAbsoluteOffsetMs": 17.1
+      },
+      {
+        "id": "middle",
+        "noteCount": 24,
+        "meanOffsetMs": 1.4,
+        "meanAbsoluteOffsetMs": 13.8
+      },
+      {
+        "id": "last",
+        "noteCount": 37,
+        "meanOffsetMs": -13.6,
+        "meanAbsoluteOffsetMs": 16.3
+      }
+    ],
+    "densityWindowGrids": 32,
+    "densityBy32Grid": [
+      {
+        "startGrid": 0,
+        "endGrid": 31,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 32,
+        "endGrid": 63,
+        "noteCount": 2
+      },
+      {
+        "startGrid": 64,
+        "endGrid": 95,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 128,
+        "endGrid": 159,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 192,
+        "endGrid": 223,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 224,
+        "endGrid": 255,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 256,
+        "endGrid": 287,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 288,
+        "endGrid": 319,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 320,
+        "endGrid": 351,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 384,
+        "endGrid": 415,
+        "noteCount": 2
+      },
+      {
+        "startGrid": 416,
+        "endGrid": 447,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 448,
+        "endGrid": 479,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 480,
+        "endGrid": 511,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 512,
+        "endGrid": 543,
+        "noteCount": 2
+      },
+      {
+        "startGrid": 544,
+        "endGrid": 575,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 576,
+        "endGrid": 607,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 640,
+        "endGrid": 671,
+        "noteCount": 2
+      },
+      {
+        "startGrid": 672,
+        "endGrid": 703,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 704,
+        "endGrid": 735,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 736,
+        "endGrid": 767,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 768,
+        "endGrid": 799,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 832,
+        "endGrid": 863,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 864,
+        "endGrid": 895,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 896,
+        "endGrid": 927,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 928,
+        "endGrid": 959,
+        "noteCount": 2
+      },
+      {
+        "startGrid": 960,
+        "endGrid": 991,
+        "noteCount": 5
+      },
+      {
+        "startGrid": 992,
+        "endGrid": 1023,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 1024,
+        "endGrid": 1055,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 1056,
+        "endGrid": 1087,
+        "noteCount": 4
+      },
+      {
+        "startGrid": 1088,
+        "endGrid": 1119,
+        "noteCount": 2
+      },
+      {
+        "startGrid": 1120,
+        "endGrid": 1151,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 1184,
+        "endGrid": 1215,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 1216,
+        "endGrid": 1247,
+        "noteCount": 3
+      },
+      {
+        "startGrid": 1248,
+        "endGrid": 1279,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 1280,
+        "endGrid": 1311,
+        "noteCount": 1
+      },
+      {
+        "startGrid": 1312,
+        "endGrid": 1343,
+        "noteCount": 3
+      },
+      {
+        "startGrid": 1344,
+        "endGrid": 1375,
+        "noteCount": 2
+      },
+      {
+        "startGrid": 1376,
+        "endGrid": 1407,
+        "noteCount": 3
+      },
+      {
+        "startGrid": 1408,
+        "endGrid": 1439,
+        "noteCount": 2
+      },
+      {
+        "startGrid": 1440,
+        "endGrid": 1471,
+        "noteCount": 4
+      },
+      {
+        "startGrid": 1472,
+        "endGrid": 1503,
+        "noteCount": 6
+      },
+      {
+        "startGrid": 1504,
+        "endGrid": 1535,
+        "noteCount": 4
+      },
+      {
+        "startGrid": 1536,
+        "endGrid": 1567,
+        "noteCount": 3
+      },
+      {
+        "startGrid": 1568,
+        "endGrid": 1599,
+        "noteCount": 1
+      }
+    ],
+    "maxDensityPer32Grid": 6,
+    "minAdjacentGapGrids": 4,
+    "minAdjacentGapMs": 355,
+    "longGapThresholdGrids": 64,
+    "longGaps": [
+      {
+        "fromGrid": 137,
+        "toGrid": 219,
+        "gapGrids": 82,
+        "gapMs": 7278.1
+      },
+      {
+        "fromGrid": 579,
+        "toGrid": 651,
+        "gapGrids": 72,
+        "gapMs": 6390.5
+      },
+      {
+        "fromGrid": 1120,
+        "toGrid": 1206,
+        "gapGrids": 86,
+        "gapMs": 7633.1
+      }
+    ],
+    "densePairThresholdGrids": 4,
+    "densePairs": [],
+    "holdClearances": [
+      {
+        "grid": 46,
+        "endGrid": 54,
+        "nextGrid": 76,
+        "clearanceGrids": 22
+      },
+      {
+        "grid": 513,
+        "endGrid": 517,
+        "nextGrid": 528,
+        "clearanceGrids": 11
+      },
+      {
+        "grid": 936,
+        "endGrid": 940,
+        "nextGrid": 944,
+        "clearanceGrids": 4
+      },
+      {
+        "grid": 1232,
+        "endGrid": 1236,
+        "nextGrid": 1240,
+        "clearanceGrids": 4
+      },
+      {
+        "grid": 1365,
+        "endGrid": 1373,
+        "nextGrid": 1390,
+        "clearanceGrids": 17
+      },
+      {
+        "grid": 1510,
+        "endGrid": 1514,
+        "nextGrid": 1522,
+        "clearanceGrids": 8
+      }
+    ]
+  },
+  "mechanicalValidation": {
+    "passed": true,
+    "issueCount": 0,
+    "issues": []
+  },
+  "pendingReviewCount": 22,
+  "classificationCounts": {
+    "KEEP_CANDIDATE": 4,
+    "SHIFT_CANDIDATE": 5,
+    "DROP_CANDIDATE": 3,
+    "AMBIGUOUS": 10
+  },
+  "pendingReviews": [
+    {
+      "grid": 124,
+      "timeMs": 11045.917,
+      "timeLabel": "0:11.046",
+      "sourcePeakOffsetMs": -41,
+      "sourceStrength": 0.79,
+      "previousAcceptedGrid": 76,
+      "nextAcceptedGrid": 137,
+      "previousGapGrids": 48,
+      "nextGapGrids": 13,
+      "beatIndex": 31,
+      "subdivisionIndex": 0,
+      "barApproximation": 8,
+      "gridInBar": 12,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 122,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 123,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 124,
+          "strength": 0.79,
+          "sourcePeakOffsetMs": -41
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 125,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 126,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "DROP_CANDIDATE",
+      "machineRecommendationReason": "onset強度0.90未満で前後2gridに別候補がない",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 124,
+        "lane": 4,
+        "subLane": 8,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.79,
+        "sourcePeakOffsetMs": -41
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 185,
+      "timeMs": 16460.118,
+      "timeLabel": "0:16.460",
+      "sourcePeakOffsetMs": -35,
+      "sourceStrength": 0.95,
+      "previousAcceptedGrid": 137,
+      "nextAcceptedGrid": 219,
+      "previousGapGrids": 48,
+      "nextGapGrids": 34,
+      "beatIndex": 46,
+      "subdivisionIndex": 1,
+      "barApproximation": 12,
+      "gridInBar": 9,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 183,
+          "strength": 0.65,
+          "sourcePeakOffsetMs": -28
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 184,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 185,
+          "strength": 0.95,
+          "sourcePeakOffsetMs": -35
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 186,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 187,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": {
+        "deltaGrid": -2,
+        "grid": 183,
+        "strength": 0.65,
+        "sourcePeakOffsetMs": -28
+      },
+      "machineRecommendation": "SHIFT_CANDIDATE",
+      "machineRecommendationReason": "近傍grid 183のoffset絶対値が5ms以上小さい",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 185,
+        "lane": 0,
+        "subLane": 0,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.95,
+        "sourcePeakOffsetMs": -35
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 343,
+      "timeMs": 30483.787,
+      "timeLabel": "0:30.484",
+      "sourcePeakOffsetMs": -39,
+      "sourceStrength": 0.92,
+      "previousAcceptedGrid": 339,
+      "nextAcceptedGrid": 399,
+      "previousGapGrids": 4,
+      "nextGapGrids": 56,
+      "beatIndex": 85,
+      "subdivisionIndex": 3,
+      "barApproximation": 22,
+      "gridInBar": 7,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 341,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 342,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 343,
+          "strength": 0.92,
+          "sourcePeakOffsetMs": -39
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 344,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 345,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 343,
+        "lane": 3,
+        "subLane": 6,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.92,
+        "sourcePeakOffsetMs": -39
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 347,
+      "timeMs": 30838.817,
+      "timeLabel": "0:30.839",
+      "sourcePeakOffsetMs": -34,
+      "sourceStrength": 1.15,
+      "previousAcceptedGrid": 339,
+      "nextAcceptedGrid": 399,
+      "previousGapGrids": 8,
+      "nextGapGrids": 52,
+      "beatIndex": 86,
+      "subdivisionIndex": 3,
+      "barApproximation": 22,
+      "gridInBar": 11,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 345,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 346,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 347,
+          "strength": 1.15,
+          "sourcePeakOffsetMs": -34
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 348,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 349,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "KEEP_CANDIDATE",
+      "machineRecommendationReason": "offsetが35ms以内かつonset強度0.90以上",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 347,
+        "lane": 0,
+        "subLane": 0,
+        "subLaneWidth": 2,
+        "sourceStrength": 1.15,
+        "sourcePeakOffsetMs": -34
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 352,
+      "timeMs": 31282.604,
+      "timeLabel": "0:31.283",
+      "sourcePeakOffsetMs": -38,
+      "sourceStrength": 1.01,
+      "previousAcceptedGrid": 339,
+      "nextAcceptedGrid": 399,
+      "previousGapGrids": 13,
+      "nextGapGrids": 47,
+      "beatIndex": 88,
+      "subdivisionIndex": 0,
+      "barApproximation": 23,
+      "gridInBar": 0,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 350,
+          "strength": 0.84,
+          "sourcePeakOffsetMs": -20
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 351,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 352,
+          "strength": 1.01,
+          "sourcePeakOffsetMs": -38
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 353,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 354,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": {
+        "deltaGrid": -2,
+        "grid": 350,
+        "strength": 0.84,
+        "sourcePeakOffsetMs": -20
+      },
+      "machineRecommendation": "SHIFT_CANDIDATE",
+      "machineRecommendationReason": "近傍grid 350のoffset絶対値が5ms以上小さい",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 352,
+        "lane": 4,
+        "subLane": 8,
+        "subLaneWidth": 2,
+        "sourceStrength": 1.01,
+        "sourcePeakOffsetMs": -38
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 356,
+      "timeMs": 31637.633,
+      "timeLabel": "0:31.638",
+      "sourcePeakOffsetMs": -38,
+      "sourceStrength": 0.9,
+      "previousAcceptedGrid": 339,
+      "nextAcceptedGrid": 399,
+      "previousGapGrids": 17,
+      "nextGapGrids": 43,
+      "beatIndex": 89,
+      "subdivisionIndex": 0,
+      "barApproximation": 23,
+      "gridInBar": 4,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 354,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 355,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 356,
+          "strength": 0.9,
+          "sourcePeakOffsetMs": -38
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 357,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 358,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 356,
+        "lane": 2,
+        "subLane": 4,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.9,
+        "sourcePeakOffsetMs": -38
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 363,
+      "timeMs": 32258.935,
+      "timeLabel": "0:32.259",
+      "sourcePeakOffsetMs": -34,
+      "sourceStrength": 0.9,
+      "previousAcceptedGrid": 339,
+      "nextAcceptedGrid": 399,
+      "previousGapGrids": 24,
+      "nextGapGrids": 36,
+      "beatIndex": 90,
+      "subdivisionIndex": 3,
+      "barApproximation": 23,
+      "gridInBar": 11,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 361,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 362,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 363,
+          "strength": 0.9,
+          "sourcePeakOffsetMs": -34
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 364,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 365,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "KEEP_CANDIDATE",
+      "machineRecommendationReason": "offsetが35ms以内かつonset強度0.90以上",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 363,
+        "lane": 0,
+        "subLane": 0,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.9,
+        "sourcePeakOffsetMs": -34
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 524,
+      "timeMs": 46548.876,
+      "timeLabel": "0:46.549",
+      "sourcePeakOffsetMs": 31,
+      "sourceStrength": 1.02,
+      "previousAcceptedGrid": 513,
+      "nextAcceptedGrid": 528,
+      "previousGapGrids": 11,
+      "nextGapGrids": 4,
+      "beatIndex": 131,
+      "subdivisionIndex": 0,
+      "barApproximation": 33,
+      "gridInBar": 12,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 522,
+          "strength": 0.62,
+          "sourcePeakOffsetMs": 14
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 523,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 524,
+          "strength": 1.02,
+          "sourcePeakOffsetMs": 31
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 525,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 526,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": {
+        "deltaGrid": -2,
+        "grid": 522,
+        "strength": 0.62,
+        "sourcePeakOffsetMs": 14
+      },
+      "machineRecommendation": "SHIFT_CANDIDATE",
+      "machineRecommendationReason": "近傍grid 522のoffset絶対値が5ms以上小さい",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 524,
+        "lane": 0,
+        "subLane": 0,
+        "subLaneWidth": 2,
+        "sourceStrength": 1.02,
+        "sourcePeakOffsetMs": 31
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 629,
+      "timeMs": 55868.402,
+      "timeLabel": "0:55.868",
+      "sourcePeakOffsetMs": -38,
+      "sourceStrength": 0.86,
+      "previousAcceptedGrid": 579,
+      "nextAcceptedGrid": 651,
+      "previousGapGrids": 50,
+      "nextGapGrids": 22,
+      "beatIndex": 157,
+      "subdivisionIndex": 1,
+      "barApproximation": 40,
+      "gridInBar": 5,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 627,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 628,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 629,
+          "strength": 0.86,
+          "sourcePeakOffsetMs": -38
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 630,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 631,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "DROP_CANDIDATE",
+      "machineRecommendationReason": "onset強度0.90未満で前後2gridに別候補がない",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 629,
+        "lane": 3,
+        "subLane": 6,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.86,
+        "sourcePeakOffsetMs": -38
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 718,
+      "timeMs": 63767.811,
+      "timeLabel": "1:03.768",
+      "sourcePeakOffsetMs": 37,
+      "sourceStrength": 0.99,
+      "previousAcceptedGrid": 700,
+      "nextAcceptedGrid": 735,
+      "previousGapGrids": 18,
+      "nextGapGrids": 17,
+      "beatIndex": 179,
+      "subdivisionIndex": 2,
+      "barApproximation": 45,
+      "gridInBar": 14,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 716,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 717,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 718,
+          "strength": 0.99,
+          "sourcePeakOffsetMs": 37
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 719,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 720,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 718,
+        "lane": 1,
+        "subLane": 2,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.99,
+        "sourcePeakOffsetMs": 37
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 755,
+      "timeMs": 67051.834,
+      "timeLabel": "1:07.052",
+      "sourcePeakOffsetMs": 38,
+      "sourceStrength": 1.02,
+      "previousAcceptedGrid": 739,
+      "nextAcceptedGrid": 798,
+      "previousGapGrids": 16,
+      "nextGapGrids": 43,
+      "beatIndex": 188,
+      "subdivisionIndex": 3,
+      "barApproximation": 48,
+      "gridInBar": 3,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 753,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 754,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 755,
+          "strength": 1.02,
+          "sourcePeakOffsetMs": 38
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 756,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 757,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 755,
+        "lane": 4,
+        "subLane": 8,
+        "subLaneWidth": 2,
+        "sourceStrength": 1.02,
+        "sourcePeakOffsetMs": 38
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 831,
+      "timeMs": 73797.396,
+      "timeLabel": "1:13.797",
+      "sourcePeakOffsetMs": -32,
+      "sourceStrength": 0.92,
+      "previousAcceptedGrid": 798,
+      "nextAcceptedGrid": 849,
+      "previousGapGrids": 33,
+      "nextGapGrids": 18,
+      "beatIndex": 207,
+      "subdivisionIndex": 3,
+      "barApproximation": 52,
+      "gridInBar": 15,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 829,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 830,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 831,
+          "strength": 0.92,
+          "sourcePeakOffsetMs": -32
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 832,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 833,
+          "strength": 0.77,
+          "sourcePeakOffsetMs": -30
+        }
+      ],
+      "bestNearbyAlternative": {
+        "deltaGrid": 2,
+        "grid": 833,
+        "strength": 0.77,
+        "sourcePeakOffsetMs": -30
+      },
+      "machineRecommendation": "KEEP_CANDIDATE",
+      "machineRecommendationReason": "offsetが35ms以内かつonset強度0.90以上",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 831,
+        "lane": 0,
+        "subLane": 0,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.92,
+        "sourcePeakOffsetMs": -32
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 930,
+      "timeMs": 82584.379,
+      "timeLabel": "1:22.584",
+      "sourcePeakOffsetMs": 41,
+      "sourceStrength": 0.92,
+      "previousAcceptedGrid": 899,
+      "nextAcceptedGrid": 936,
+      "previousGapGrids": 31,
+      "nextGapGrids": 6,
+      "beatIndex": 232,
+      "subdivisionIndex": 2,
+      "barApproximation": 59,
+      "gridInBar": 2,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 928,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 929,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 930,
+          "strength": 0.92,
+          "sourcePeakOffsetMs": 41
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 931,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 932,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 930,
+        "lane": 2,
+        "subLane": 4,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.92,
+        "sourcePeakOffsetMs": 41
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 1056,
+      "timeMs": 93767.811,
+      "timeLabel": "1:33.768",
+      "sourcePeakOffsetMs": -38,
+      "sourceStrength": 1.94,
+      "previousAcceptedGrid": 1046,
+      "nextAcceptedGrid": 1062,
+      "previousGapGrids": 10,
+      "nextGapGrids": 6,
+      "beatIndex": 264,
+      "subdivisionIndex": 0,
+      "barApproximation": 67,
+      "gridInBar": 0,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 1054,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 1055,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 1056,
+          "strength": 1.94,
+          "sourcePeakOffsetMs": -38
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 1057,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 1058,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 1056,
+        "lane": 2,
+        "subLane": 4,
+        "subLaneWidth": 2,
+        "sourceStrength": 1.94,
+        "sourcePeakOffsetMs": -38
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 1170,
+      "timeMs": 103886.154,
+      "timeLabel": "1:43.886",
+      "sourcePeakOffsetMs": -36,
+      "sourceStrength": 0.94,
+      "previousAcceptedGrid": 1120,
+      "nextAcceptedGrid": 1206,
+      "previousGapGrids": 50,
+      "nextGapGrids": 36,
+      "beatIndex": 292,
+      "subdivisionIndex": 2,
+      "barApproximation": 74,
+      "gridInBar": 2,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 1168,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 1169,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 1170,
+          "strength": 0.94,
+          "sourcePeakOffsetMs": -36
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 1171,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 1172,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 1170,
+        "lane": 1,
+        "subLane": 2,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.94,
+        "sourcePeakOffsetMs": -36
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 1192,
+      "timeMs": 105838.817,
+      "timeLabel": "1:45.839",
+      "sourcePeakOffsetMs": 36,
+      "sourceStrength": 0.88,
+      "previousAcceptedGrid": 1120,
+      "nextAcceptedGrid": 1206,
+      "previousGapGrids": 72,
+      "nextGapGrids": 14,
+      "beatIndex": 298,
+      "subdivisionIndex": 0,
+      "barApproximation": 75,
+      "gridInBar": 8,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 1190,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 1191,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 1192,
+          "strength": 0.88,
+          "sourcePeakOffsetMs": 36
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 1193,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 1194,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "DROP_CANDIDATE",
+      "machineRecommendationReason": "onset強度0.90未満で前後2gridに別候補がない",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 1192,
+        "lane": 4,
+        "subLane": 8,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.88,
+        "sourcePeakOffsetMs": 36
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 1227,
+      "timeMs": 108945.325,
+      "timeLabel": "1:48.945",
+      "sourcePeakOffsetMs": 35,
+      "sourceStrength": 1.02,
+      "previousAcceptedGrid": 1220,
+      "nextAcceptedGrid": 1232,
+      "previousGapGrids": 7,
+      "nextGapGrids": 5,
+      "beatIndex": 306,
+      "subdivisionIndex": 3,
+      "barApproximation": 77,
+      "gridInBar": 11,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 1225,
+          "strength": 0.84,
+          "sourcePeakOffsetMs": -23
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 1226,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 1227,
+          "strength": 1.02,
+          "sourcePeakOffsetMs": 35
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 1228,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 1229,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": {
+        "deltaGrid": -2,
+        "grid": 1225,
+        "strength": 0.84,
+        "sourcePeakOffsetMs": -23
+      },
+      "machineRecommendation": "SHIFT_CANDIDATE",
+      "machineRecommendationReason": "近傍grid 1225のoffset絶対値が5ms以上小さい",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 1227,
+        "lane": 3,
+        "subLane": 6,
+        "subLaneWidth": 2,
+        "sourceStrength": 1.02,
+        "sourcePeakOffsetMs": 35
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 1280,
+      "timeMs": 113649.467,
+      "timeLabel": "1:53.649",
+      "sourcePeakOffsetMs": 41,
+      "sourceStrength": 0.91,
+      "previousAcceptedGrid": 1268,
+      "nextAcceptedGrid": 1300,
+      "previousGapGrids": 12,
+      "nextGapGrids": 20,
+      "beatIndex": 320,
+      "subdivisionIndex": 0,
+      "barApproximation": 81,
+      "gridInBar": 0,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 1278,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 1279,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 1280,
+          "strength": 0.91,
+          "sourcePeakOffsetMs": 41
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 1281,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 1282,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 1280,
+        "lane": 0,
+        "subLane": 0,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.91,
+        "sourcePeakOffsetMs": 41
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 1369,
+      "timeMs": 121548.876,
+      "timeLabel": "2:01.549",
+      "sourcePeakOffsetMs": 41,
+      "sourceStrength": 1.49,
+      "previousAcceptedGrid": 1365,
+      "nextAcceptedGrid": 1390,
+      "previousGapGrids": 4,
+      "nextGapGrids": 21,
+      "beatIndex": 342,
+      "subdivisionIndex": 1,
+      "barApproximation": 86,
+      "gridInBar": 9,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 1367,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 1368,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 1369,
+          "strength": 1.49,
+          "sourcePeakOffsetMs": 41
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 1370,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 1371,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 1369,
+        "lane": 0,
+        "subLane": 0,
+        "subLaneWidth": 2,
+        "sourceStrength": 1.49,
+        "sourcePeakOffsetMs": 41
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 1385,
+      "timeMs": 122968.994,
+      "timeLabel": "2:02.969",
+      "sourcePeakOffsetMs": 41,
+      "sourceStrength": 0.94,
+      "previousAcceptedGrid": 1365,
+      "nextAcceptedGrid": 1390,
+      "previousGapGrids": 20,
+      "nextGapGrids": 5,
+      "beatIndex": 346,
+      "subdivisionIndex": 1,
+      "barApproximation": 87,
+      "gridInBar": 9,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 1383,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 1384,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 1385,
+          "strength": 0.94,
+          "sourcePeakOffsetMs": 41
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 1386,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 1387,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "AMBIGUOUS",
+      "machineRecommendationReason": "耳でフレーズ上の位置を確認する必要がある",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 1385,
+        "lane": 4,
+        "subLane": 8,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.94,
+        "sourcePeakOffsetMs": 41
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 1450,
+      "timeMs": 128738.225,
+      "timeLabel": "2:08.738",
+      "sourcePeakOffsetMs": -33,
+      "sourceStrength": 0.88,
+      "previousAcceptedGrid": 1444,
+      "nextAcceptedGrid": 1456,
+      "previousGapGrids": 6,
+      "nextGapGrids": 6,
+      "beatIndex": 362,
+      "subdivisionIndex": 2,
+      "barApproximation": 91,
+      "gridInBar": 10,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 1448,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 1449,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 1450,
+          "strength": 0.88,
+          "sourcePeakOffsetMs": -33
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 1451,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 1452,
+          "strength": 0.64,
+          "sourcePeakOffsetMs": -16
+        }
+      ],
+      "bestNearbyAlternative": {
+        "deltaGrid": 2,
+        "grid": 1452,
+        "strength": 0.64,
+        "sourcePeakOffsetMs": -16
+      },
+      "machineRecommendation": "SHIFT_CANDIDATE",
+      "machineRecommendationReason": "近傍grid 1452のoffset絶対値が5ms以上小さい",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 1450,
+        "lane": 1,
+        "subLane": 2,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.88,
+        "sourcePeakOffsetMs": -33
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    },
+    {
+      "grid": 1540,
+      "timeMs": 136726.391,
+      "timeLabel": "2:16.726",
+      "sourcePeakOffsetMs": -31,
+      "sourceStrength": 0.95,
+      "previousAcceptedGrid": 1534,
+      "nextAcceptedGrid": 1546,
+      "previousGapGrids": 6,
+      "nextGapGrids": 6,
+      "beatIndex": 385,
+      "subdivisionIndex": 0,
+      "barApproximation": 97,
+      "gridInBar": 4,
+      "nearbyOnsets": [
+        {
+          "deltaGrid": -2,
+          "grid": 1538,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": -1,
+          "grid": 1539,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 0,
+          "grid": 1540,
+          "strength": 0.95,
+          "sourcePeakOffsetMs": -31
+        },
+        {
+          "deltaGrid": 1,
+          "grid": 1541,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        },
+        {
+          "deltaGrid": 2,
+          "grid": 1542,
+          "strength": null,
+          "sourcePeakOffsetMs": null
+        }
+      ],
+      "bestNearbyAlternative": null,
+      "machineRecommendation": "KEEP_CANDIDATE",
+      "machineRecommendationReason": "offsetが35ms以内かつonset強度0.90以上",
+      "proposedNote": {
+        "type": "TAP",
+        "grid": 1540,
+        "lane": 2,
+        "subLane": 4,
+        "subLaneWidth": 2,
+        "sourceStrength": 0.95,
+        "sourcePeakOffsetMs": -31
+      },
+      "reviewDecision": null,
+      "targetGrid": null
+    }
+  ]
+}

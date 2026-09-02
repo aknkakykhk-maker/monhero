@@ -270,7 +270,7 @@ check('バトル中は動的な倍率だけをコンパクトに出す', (() => 
 
 // ---- ヘルプ・更新履歴 ----
 check('ヘルプにINFINITYの解放条件と主要ルールが書いてある',
-  ['ULTIMATEをクリア', '最低10%', '最低30%', '25ターンごと', '距離強化', 'クイックモードにINFINITYはありません']
+  ['ULTIMATEをクリア', '最低10%', '最低30%', '25ターンごと', '距離強化', 'クイックモードにINFINITYとGODはありません']
     .every(text => help.includes(text)));
 check('ヘルプの難易度表は実データから作る（手で書き写していない）',
   help.includes("{ t:'data', id:'extremeDifficulties' }") && !help.includes('敵×50 ／ スコア×20'));

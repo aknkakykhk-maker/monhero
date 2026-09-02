@@ -142,7 +142,18 @@ node tools/build.js --check
 `node mode/rhythm-mode-tap-engine-check.js` は、STEP 2AのTAP判定境界・FAST/SLOW・コンボ・自動MISS・90%＋10%スコア・AudioContext同期・TAP限定テスト譜面・非公開状態を確認する。
 
 `node mode/rhythm-mode-tap-completion-check.js` は、STEP 2Bのプレイエリア基準ノーツ移動、ポーズ／再開／リスタート／中断のライフサイクル、正式リザルト条件、BEST統合、NEW RECORD、音源・入力セッション・rAFのcleanup、非公開状態を確認する。
+`node mode/rhythm-options-step1-check.js` は、既存 `mh_rhythm_settings_v1` の後方互換normalize、音量・速度・サイズ・判定補正・表示・演出・端末設定、直接タップ試聴、保存時だけの確定、判定窓／hitbox／DOM判定ラインの不変を確認する。
+`node mode/rhythm-debug-short-check.js` は、同一のあつ杯テーマ音源を使う約60秒のDEBUG専用総合譜面について、短縮時間、4ノーツ種別、幅1〜4、0.5レーン／可変幅SLIDE、複合入力、audio clock終了、再スタート分離、正式EASY候補とMP3の非変更を確認する。
+`node mode/rhythm-easy-v2-review-check.js` は、EASY正式候補v1の78ノーツを保持したv2-review準備データ、22候補の詳細・機械推奨・未入力decision、全尺品質監査、機械的不正なし、正式runtime未接続を確認する。`node mode/rhythm-easy-v2-review-build.js` でv1・100点draft・282点onset候補から同データを再生成できる。
 `node mode/rhythm-mode-note-perspective-check.js` は、上部・中央・判定ライン付近の5レーンについて、左右境界・中央・ノーツ幅・Touch／Pointer／SLIDE入力の逆投影が同じprojection結果になることと、時刻を変えない非線形Y移動、HOLD／SLIDE帯、判定ライン、番号、押下発光、描画用rAFの一本化を数値と実装経路の両方で確認する。
+`node mode/rhythm-mode-sublane-projection-check.js` は、旧5レーン互換を保つ10サブレーン座標、TAP幅1〜4、左右端、奥／手前の共通projection、サブ境界とHOLD／SLIDE／ENDバーの回帰を確認する。
+`node mode/rhythm-note-geometry-audit.js` は、ノーツ速度1.0〜12.0（0.1刻み・6.0=2150ms）の変換式と、速度1／3／6／10／12 × ノーツサイズ80／100／120％の全組み合わせについて、ノーツ頭・HOLD帯・SLIDE帯・ENDバーの実描画位置を実ブラウザで測り、共通projectionからのズレとレーン外へのはみ出しを検出する。ノーツサイズは頭だけに掛かり、帯とENDバーはレーンgeometry基準のままであることもここで確認する。帯は上端と下端の2点だけを見ると途中の歪みを見逃すため、clipPath／polygonを実際に線形補間した値を**画面内の複数の高さ**で突き合わせる（画面より長い帯のケースも含む）。
+`node mode/rhythm-failed-hold-trail-check.js` は、MISSになったHOLD／SLIDEを譜面上の終端まで薄いグレーで流し続け、TAP／FLICKは従来どおり消えること、判定・コンボ・スコアへ影響していないことを確認する。
+`node mode/rhythm-screen-layout-check.js` は、音ゲーのデバッグ／オプション／プレイの各画面が「固定ヘッダー＋スクロール1つ（＋固定フッター）」で閉じ、座標校正などのデバッグUIが `document.body` 直下の固定レイヤーとしてプレイ画面へ重ならないことを確認する。あわせて実ブラウザで座標校正スクリプトを動かし、トグルがデバッグ画面とポーズメニューの中へ入ること、プレイ中に画面へ浮かないこと、ON/OFFが画面をまたいで保持されることを実測する。
+`node mode/rhythm-mode-tap-width-input-check.js` は、可変幅TAPの10サブレーン入力、幅1の最小タッチ許容、左右端・範囲外、隣接同時押し、旧5レーン互換、描画projectionの逆変換、WIDTH TESTと既存ジェスチャーの回帰を確認する。
+`node mode/rhythm-mode-hold-width-check.js` は、可変幅HOLDの幅1〜4の始点・帯・ENDバー投影、10サブレーン開始入力、幅1許容、旧HOLD互換、1指と1ノーツ、2指同時HOLD、HOLD中TAP、終端判定とSLIDE描画軽量化の回帰を確認する。
+`node mode/rhythm-mode-end-bar-check.js` は、HOLD／SLIDE終端バーがruntimeで延期された値ではなく元のendTimeMsを使い、終点レーンと共通projectionへ揃い、帯と接続して入力を遮らないことを確認する。
+`node mode/rhythm-mode-slide-path-check.js` は、SLIDE帯が判定と同じslidePointsの各区間を一定幅のSVG polygonとして描き、共通projection、通過済み区間の除去、終端バーとの一致、TAP／HOLD／FLICKと判定ロジックの回帰を確認する。あわせて、polygon DOM・slidePoints・frame内レイアウト計測の再利用と表示外更新のスキップも確認する。`node mode/rhythm-mode-slide-sublane-check.js` は、位置・幅補間と幅2の±0.82互換に加え、WIDTH TEST MASTERのS字・ジグザグ・0.5レーン往復・幅1→4→1・多数point・別TAP/HOLD、および多数pointでも1区間1polygonとなることを確認する。
 | `node mode/rhythm-mode-hold-engine-check.js` | 音ゲーSTEP 3AのHOLD終端・早離しMISS・Pointer EventsのpointerId別2本指入力・EASY TAP回帰とNORMAL混在譜面を確認する。 |
 
 | コマンド | 内容 |
@@ -155,6 +166,7 @@ node tools/build.js --check
 | `node mode/ultimate-rules-check.js` | 正式ULTIMATEの解放・報酬・記録共通経路と、累計ターンによる敵強化・供モン加入ボーナス低下、WAVEターンによるトレーニング低下、DISTANCE BREAK、デバッグ戦との分離を代表値で確認する。 |
 | `node mode/ultimate-card-layout-check.js` | iPhone縦画面向けに全極限難易度カードを共通の外寸(400px)へ収め、説明・「特殊ルールあり」の1行・4操作(ルール詳細/全WAVE詳細/挑戦/ランキング)・下余白と、カード・ページドット・助手コメントの分離を確認する。**特殊ルールの本文をカードへ並べていないこと**と、特殊ルール欄の文字を10px未満へ小さくして詰め込んでいないことも見る(ルールが増えるたびにカードを大きくする・文字を小さくする、という直し方を封じるため)。ルール詳細のSafe Area・縦スクロール・44pxの閉じる操作も確認する。 |
 | `node mode/infinity-rules-check.js` | 極限チャレンジ INFINITY を確認する。基本設定(敵×50 / スコア×20 / 経験値×45 / ダイヤ×30 / 虹80 / ULTIMATEクリアで解放)に加えて、**特殊ルールの計算を本体から切り出してそのまま動かし**、敵+0.75%/T・加入B -0.75pt/T(最低10%)・与ダメ -1.0pt/T(最低30%)・トレーニング -0.75pt/T・距離強化50%・ガッツ150%・BREAK 25Tとその倍率・与ダメ低下→BREAKの適用順を数値表で突き合わせる。CHAOSの与ダメ50%と加入B50%、NIGHTMAREのWAVE後強化50%をINFINITYへ重複適用していないこと、既存4難易度(とくにULTIMATEの35T / -0.75pt / 下限25%)が変わっていないこと、記録キーとランキングキーが既存方式のまま分離されていること、クイックへINFINITYを足していないことも見る。 |
+| `node mode/god-rules-check.js` | 極限チャレンジ GOD の正式設定、INFINITYクリア解放、神威Lv1〜5、累計ターン与ダメ低下、20Tごとの上限なしDISTANCE BREAK、Lv5の安全距離消失、複合倍率の最終1回floor、通常/デバッグ導線、既存難易度回帰、Quick除外を確認する。 |
 | `node mode/god-rules-check.js` | 未公開GODの内部設定、神威Lv1〜5、20TごとのDISTANCE BREAK、安全距離のLv5解除、ターン倍率×BREAK倍率の一括適用、170Tまでの有限性、将来用記録・ランキングID、通常非公開・デバッグ限定・Quick非対応を本体helperで確認する。 |
 | `node mode/extreme-rule-detail-browser-check.js` | 「ルール詳細」を実ブラウザで開いて確認する。5難易度すべてで開けて難易度ごとに違う内容が出ること、INFINITYの主要ルールが全部載ること、閉じるとシートだけ消えて**選択中の難易度が変わらない**こと、ULTIMATE未クリアならINFINITYがロックされ解放条件が読めることを、実際に押して確かめる。このサンドボックスはTailwindのCDNへ出られずクラスによる寸法が再現できないため、**見た目(px)の確認にはならない**。 |
 | `node mode/chaos-rules-check.js` | CHAOSの特殊ルール(与ダメージ50%・加入ボーナス50%・消費ガッツ150%、いずれも端数切り捨て)と、極限チャレンジの説明文を確認する。 |

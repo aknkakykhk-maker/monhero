@@ -15,7 +15,7 @@ const help = fs.readFileSync('monster-hero/data/help.js', 'utf8');
 const config = source.slice(source.indexOf('const EXTREME_DIFFICULTIES'), source.indexOf('const normalizeBattleDifficulty'));
 
 // --- ① 難易度表 ---
-for (const name of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) assert(config.includes(`'${name}'`), `${name} must be listed`);
+for (const name of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD']) assert(config.includes(`'${name}'`), `${name} must be listed`);
 assert(/EXTREME[^\n]+available:true[^\n]+power:13[^\n]+score:20[^\n]+xp:25[^\n]+gold:7\.5[^\n]+psyche:30[^\n]+specialRules:Object\.freeze\(\{ assistCardEffect:0\.5 \}\)/.test(config), 'EXTREME settings and its difficulty-specific rule must match the official specification');
 assert(/NIGHTMARE[^\n]+available:true[^\n]+power:15[^\n]+score:20[^\n]+xp:30[^\n]+gold:10[^\n]+psyche:40[^\n]+specialRules/.test(config), 'NIGHTMARE must expose its official values and rules for battle');
 assert(/CHAOS[^\n]+available:true[^\n]+power:20[^\n]+score:20[^\n]+xp:35[^\n]+gold:15[^\n]+psyche:50[^\n]+unlockRequirement:'NIGHTMARE'[^\n]+specialRules:Object\.freeze\(\{ damageDealt:0\.5, allyJoinBonus:0\.5, gutsCost:1\.5 \}\)/.test(config), 'CHAOS must expose its official specification');
@@ -36,9 +36,9 @@ assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_C
 // 種族チャレンジにも同じ形の解放条件が付いたため、開始ボタンは2つのロックを見る
 assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||speciesLocked||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
-assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
+assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
 assert(source.includes('const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);'), 'INFINITY details must unlock from the loaded ULTIMATE clear count');
-assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:false") && source.includes('const previewable=setting.available&&unlocked'), 'CHAOS / ULTIMATE / INFINITY must use their preceding clear state while debug remains available');
+assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:false") && source.includes('const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked'), 'CHAOS / ULTIMATE / INFINITY / GOD must use their preceding clear state while debug remains available');
 assert(source.includes("setting.id==='CHAOS'?'NIGHTMAREクリアで解放'"), 'CHAOS card must show its unlock condition');
 assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(true)}")
   && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
@@ -112,7 +112,7 @@ assert(source.includes("if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE 
 assert(source.includes('<button disabled={!!battleTutorial} onClick={()=>setModeInfoId(m.id)}') && !source.includes("isExtreme?'チャレンジモード最高難度'"), 'the description button must be enabled for every mode');
 assert(source.includes("openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')")
   && source.includes("openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')"), 'the extreme ranking must be reachable from both the mode card and the difficulty card');
-assert(source.includes('const isExtreme = mode === EXTREME_MODE.id;') && source.includes('EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>'), 'the ranking screen must list the extreme tiers instead of the nine challenge difficulties');
+assert(source.includes('const isExtreme = mode === EXTREME_MODE.id;') && source.includes('PUBLIC_EXTREME_DIFFICULTIES.map(setting=><button'), 'the ranking screen must list all published extreme tiers instead of the nine challenge difficulties');
 assert(source.includes("Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY"), 'the legacy ranking screen must not crash on an extreme tier id');
 assert(source.includes('data-extreme-difficulties'), 'dedicated EXTREME difficulty screen must be rendered');
 assert(source.includes("isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT'"), 'EXTREME mode must lead to its dedicated difficulty screen');

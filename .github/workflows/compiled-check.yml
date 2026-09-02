@@ -24,6 +24,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Require update banner stamp for shipped changes
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
+          shipped="$(printf '%s\n' "$changed" | grep -E '^(monster-hero/|index\.html$)' | grep -v '^monster-hero/version\.json$' || true)"
+          if [[ -z "$shipped" ]]; then
+            echo "配信対象の変更なし: 更新バナーstampは不要"
+            exit 0
+          fi
+          if ! printf '%s\n' "$changed" | grep -qx 'monster-hero/version.json'; then
+            echo "NG: 配信対象を変更したのに monster-hero/version.json が更新されていません"
+            echo "デバッグ・内部修正でも node tools/build.js を実行して更新バナー用buildを進めてください"
+            exit 1
+          fi
+          echo "OK: 配信対象の変更に更新バナー用versionが含まれています"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -52,6 +73,22 @@ jobs:
         run: |
           node tools/boot/data-cache-key-check.js
           node tools/mode/rhythm-mode-note-perspective-check.js
+          node tools/mode/rhythm-mode-tap-width-input-check.js
+          node tools/mode/rhythm-mode-restart-remount-check.js
+          node tools/mode/rhythm-judgment-line-first-mount-check.js
+          node tools/mode/rhythm-mode-release-timing-check.js
+          node tools/mode/rhythm-mode-note-se-check.js
+          node tools/mode/rhythm-options-step1-check.js
+          node tools/mode/rhythm-mode-slide-sublane-check.js
+          node tools/mode/rhythm-chart-authoring-ui-check.js
+          node tools/mode/rhythm-invalid-placement-check.js
+          node tools/mode/rhythm-review-mode-check.js
+          node tools/mode/rhythm-easy-ear-review-ui-check.js
+          node tools/mode/rhythm-easy-alignment-audit.js
+          node tools/mode/rhythm-easy-formal-candidate-check.js
+          node tools/mode/rhythm-easy-v2-review-check.js
+          node tools/mode/rhythm-debug-short-check.js
+          node tools/mode/rhythm-easy-ear-review-plan.js
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
