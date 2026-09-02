@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 42beb2fee3818864
+// source-sha256: 5ad616040e7eedd4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 07:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 07:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16267,7 +16267,7 @@ const RhythmTapTest = ({
       bottom: 'calc(12% + 78px)',
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.8)'
     }
-  }, view.ability.monster ? `${view.ability.monster}　` : '', view.ability.ability, "\uFF01"), chart.notes.map((note, index) => {
+  }, view.ability.ability, "\uFF01"), chart.notes.map((note, index) => {
     const monsterSlot = rhythmNoteMonsterSlot(note),
       monster = monsterSlot ? monsters[monsterSlot - 1] || null : null;
     return /*#__PURE__*/React.createElement("div", {
@@ -16306,12 +16306,9 @@ const RhythmTapTest = ({
     }), monster && /*#__PURE__*/React.createElement("span", {
       "data-rhythm-monster-face": true,
       "aria-hidden": "true",
-      className: "absolute left-1/2 top-1/2 overflow-hidden rounded-full border-2 border-amber-200 bg-slate-950/85",
+      className: "absolute left-1/2 top-1/2 flex h-[42px] w-[42px] items-center justify-center",
       style: {
-        width: '34px',
-        height: '34px',
-        transform: 'translate(-50%,-50%) scale(var(--rhythm-note-depth-scale, 1))',
-        boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.75)'
+        transform: 'translate(-50%,-50%) scale(var(--rhythm-note-depth-scale, 1))'
       }
     }, monster.imageUrl && /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: monster.baseId,
