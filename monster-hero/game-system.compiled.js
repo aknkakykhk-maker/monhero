@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 03214d2f65e9966e
+// source-sha256: 8f56ba374f621981
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 08:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 11:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3591,6 +3591,11 @@ const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, tr
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 // 音ゲーは曲データ側で既存track IDだけを持ち、音源・音量・ループ情報は必ずBGM_TRACKSから解決する。
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
+// ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
+// 旧保存値(3.0〜10.0 / 0.5刻み)はこの範囲の内側なので、そのまま読み込める。
+const RHYTHM_NOTE_SPEED_MIN = 1;
+const RHYTHM_NOTE_SPEED_MAX = 12;
+const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'MINIMAL']);
@@ -3622,14 +3627,15 @@ const rhythmFiniteInRange = (value, min, max, fallback) => {
 };
 const rhythmFiniteStep = (value, min, max, step, fallback) => {
   const number = rhythmFiniteInRange(value, min, max, fallback);
-  return Math.round((number - min) / step) * step + min;
+  // 0.1刻みのような小数stepでも 6.300000000000001 のような値を残さない。
+  return Math.round((Math.round((number - min) / step) * step + min) * 1000) / 1000;
 };
 const normalizeRhythmSettings = value => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const bool = key => typeof source[key] === 'boolean' ? source[key] : DEFAULT_RHYTHM_SETTINGS[key];
   return {
     bgmVolume: rhythmFiniteStep(source.bgmVolume, 0, 100, 1, DEFAULT_RHYTHM_SETTINGS.bgmVolume),
-    noteSpeed: rhythmFiniteStep(source.noteSpeed, 3, 10, .5, DEFAULT_RHYTHM_SETTINGS.noteSpeed),
+    noteSpeed: rhythmFiniteStep(source.noteSpeed, RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, DEFAULT_RHYTHM_SETTINGS.noteSpeed),
     noteSize: rhythmFiniteStep(source.noteSize, 80, 120, 5, DEFAULT_RHYTHM_SETTINGS.noteSize),
     noteStartPosition: rhythmFiniteInRange(source.noteStartPosition, -100, 100, DEFAULT_RHYTHM_SETTINGS.noteStartPosition),
     displayTimingOffsetMs: 0,
@@ -14901,13 +14907,23 @@ function PressRepeatButton({
 const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
 const RHYTHM_JUDGMENT_DISPLAY_MS = 450;
 const rhythmInputKey = (kind, id) => `${kind}:${id}`;
-// 6.0はSTEP1以前の見た目(約2150ms)を維持しつつ、3.0/10.0で実機でも明確に差が出る表示時間へ写す。
-// authored note time・判定窓・入力時刻には使わず、描画travelだけに使用する。
+// 6.0はSTEP1以前の見た目(2150ms)を厳密に維持しつつ、1.0(約7000ms)〜12.0(約500ms)まで
+// 音ゲーとして意味のある幅へ広げる。整数速度を基準点として0.1刻みで線形補間する。
+// 低速側は等差で「ゆっくり見える」幅を確保し、高速側は約1.27倍ずつの等比で詰めるため、
+// どの帯域でも0.1動かせば見た目が変わる。
+// authored note time・BPM・beatZero・判定窓・入力時刻・スコアには使わず、描画travelだけに使用する。
 const RHYTHM_NOTE_TRAVEL_BASE_MS = 2150;
+const RHYTHM_NOTE_TRAVEL_MS_POINTS = Object.freeze([7000, 6000, 5000, 4000, 3000, RHYTHM_NOTE_TRAVEL_BASE_MS, 1680, 1300, 1020, 800, 630, 500]);
 const rhythmTravelMsForSpeed = value => {
-  const speed = Math.max(3, Math.min(10, Number(value) || 6));
-  if (speed === 6) return RHYTHM_NOTE_TRAVEL_BASE_MS;
-  return Math.round(speed < 6 ? RHYTHM_NOTE_TRAVEL_BASE_MS + (6 - speed) * 350 : RHYTHM_NOTE_TRAVEL_BASE_MS - (speed - 6) * 237.5);
+  // null / undefined / 空文字は「値なし」として既定へ落とす(Number()では0になってしまう)。
+  const raw = value == null || value === '' ? NaN : Number(value),
+    fallback = DEFAULT_RHYTHM_SETTINGS.noteSpeed;
+  const speed = Math.max(RHYTHM_NOTE_SPEED_MIN, Math.min(RHYTHM_NOTE_SPEED_MAX, Number.isFinite(raw) ? raw : fallback));
+  const offset = speed - RHYTHM_NOTE_SPEED_MIN;
+  const index = Math.max(0, Math.min(RHYTHM_NOTE_TRAVEL_MS_POINTS.length - 2, Math.floor(offset)));
+  const from = RHYTHM_NOTE_TRAVEL_MS_POINTS[index],
+    to = RHYTHM_NOTE_TRAVEL_MS_POINTS[index + 1];
+  return Math.round(from + (to - from) * (offset - index));
 };
 const RhythmOptions = ({
   value,
@@ -14930,8 +14946,8 @@ const RhythmOptions = ({
     }));
     setMessage('');
   };
-  const range = (key, min, max, step, suffix = '') => /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-[1fr_56px] items-center gap-2"
+  const range = (key, min, max, step, suffix = '', decimals = 0) => /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-[1fr_60px] items-center gap-2"
   }, /*#__PURE__*/React.createElement("input", {
     "aria-label": key,
     type: "range",
@@ -14943,7 +14959,7 @@ const RhythmOptions = ({
     className: "h-11 min-w-0 accent-cyan-400"
   }), /*#__PURE__*/React.createElement("output", {
     className: "rounded-lg border border-cyan-400/30 bg-slate-950 px-1 py-2 text-center text-xs font-black tabular-nums"
-  }, draft[key], suffix));
+  }, decimals > 0 ? Number(draft[key]).toFixed(decimals) : draft[key], suffix));
   const toggle = (key, label) => /*#__PURE__*/React.createElement("button", {
     type: "button",
     "aria-pressed": draft[key],
@@ -15028,9 +15044,13 @@ const RhythmOptions = ({
     className: "text-sm font-black text-cyan-200"
   }, "\uD83C\uDFAF \u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("label", {
     className: "mt-2 block text-xs font-bold"
-  }, "\u30CE\u30FC\u30C4\u901F\u5EA6", range('noteSpeed', 3, 10, .5)), /*#__PURE__*/React.createElement("label", {
+  }, "\u30CE\u30FC\u30C4\u901F\u5EA6", range('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, '', 1)), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] leading-relaxed text-slate-400"
+  }, "1.0\u301C12.0\u30920.1\u523B\u307F\u3067\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u5909\u308F\u308B\u306E\u306F\u30CE\u30FC\u30C4\u304C\u6D41\u308C\u3066\u304F\u308B\u898B\u305F\u76EE\u306E\u901F\u3055\u3060\u3051\u3067\u3001\u8B5C\u9762\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u30FB\u5224\u5B9A\u7A93\u30FB\u30B9\u30B3\u30A2\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF08\u73FE\u5728 \u7D04", rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString(), "ms\uFF09\u3002"), /*#__PURE__*/React.createElement("label", {
     className: "mt-2 block text-xs font-bold"
-  }, "\u30CE\u30FC\u30C4\u30B5\u30A4\u30BA", range('noteSize', 80, 120, 5, '%')), /*#__PURE__*/React.createElement("label", {
+  }, "\u30CE\u30FC\u30C4\u30B5\u30A4\u30BA", range('noteSize', 80, 120, 5, '%')), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] leading-relaxed text-slate-400"
+  }, "\u30CE\u30FC\u30C4\u306E\u898B\u305F\u76EE\u306E\u5927\u304D\u3055\u3060\u3051\u3092\u5909\u3048\u307E\u3059\u3002\u5165\u529B\u5224\u5B9A\u306E\u7BC4\u56F2\u30FBHOLD/SLIDE\u5E2F\u30FBEND\u30D0\u30FC\u306E\u4F4D\u7F6E\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("label", {
     className: "mt-2 block text-xs font-bold"
   }, "\u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574", range('judgmentTimingOffsetMs', -100, 100, 5, 'ms')), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-[9px] leading-relaxed text-slate-400"
@@ -15287,7 +15307,7 @@ const RhythmTapTest = ({
         let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
         if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
         yPx = Math.round(yPx);
-        el.style.transform = `translate3d(0,${yPx}px,0) scale(${settings.noteSize / 100})`;
+        el.style.transform = `translate3d(0,${yPx}px,0)`;
         const releaseTargetMs = rhythmReleaseTargetMs(note),
           releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
@@ -15318,7 +15338,7 @@ const RhythmTapTest = ({
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
-  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.judgmentTimingOffsetMs, settings.noteSize, settings.noteSpeed, song.playDurationMs, stopFrame]);
+  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame]);
   const disposeRun = useCallback(() => {
     stopFrame();
     clearJudgmentTimer();
@@ -15748,6 +15768,7 @@ const RhythmTapTest = ({
       WebkitTouchCallout: 'none',
       WebkitUserSelect: 'none',
       userSelect: 'none',
+      '--rhythm-note-size-scale': settings.noteSize / 100,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -15780,23 +15801,19 @@ const RhythmTapTest = ({
     "aria-hidden": "true"
   }, Array.from({
     length: 10
-  }, (_, subLane) => {
-    const top = rhythmProjectSubLaneSpan(subLane, 1, 0),
-      bottom = rhythmProjectSubLaneSpan(subLane, 1, 1);
-    return /*#__PURE__*/React.createElement("i", {
-      key: subLane,
-      "data-rhythm-sublane-feedback": subLane,
-      "data-pressed": "false",
-      className: "absolute inset-0 opacity-0",
-      style: {
-        clipPath: `polygon(${top.left * 100}% 0%,${top.right * 100}% 0%,${bottom.right * 100}% 100%,${bottom.left * 100}% 100%)`,
-        background: 'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',
-        boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)' : 'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',
-        filter: settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'brightness(1.08)' : 'brightness(1.22)',
-        transition: settings.lightweightMode ? 'none' : 'opacity 45ms linear'
-      }
-    });
-  })), /*#__PURE__*/React.createElement("div", {
+  }, (_, subLane) => /*#__PURE__*/React.createElement("i", {
+    key: subLane,
+    "data-rhythm-sublane-feedback": subLane,
+    "data-pressed": "false",
+    className: "absolute inset-0 opacity-0",
+    style: {
+      clipPath: rhythmSubLanePolygon(subLane),
+      background: 'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',
+      boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)' : 'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',
+      filter: settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'brightness(1.08)' : 'brightness(1.22)',
+      transition: settings.lightweightMode ? 'none' : 'opacity 45ms linear'
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
     ref: judgmentLineRef,
     "data-rhythm-judgment-line": true,
     className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300",
@@ -33437,14 +33454,13 @@ function MonsterHeroGame() {
         return saved;
       }
     }), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
-      "data-rhythm-debug": true,
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll bg-slate-950 p-3 text-white",
+      "data-rhythm-debug-screen": true,
+      className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
       style: {
-        paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+        paddingTop: 'env(safe-area-inset-top)'
       }
     }, /*#__PURE__*/React.createElement("header", {
-      className: "sticky top-0 z-10 mb-3 flex items-center gap-2 rounded-xl bg-slate-950/95 py-1"
+      className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1"
     }, /*#__PURE__*/React.createElement("button", {
       "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
       onClick: () => setGameState('DEBUG_SETTINGS'),
@@ -33461,7 +33477,13 @@ function MonsterHeroGame() {
       "data-rhythm-options-open": true,
       onClick: () => setGameState('RHYTHM_OPTIONS'),
       className: "min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100"
-    }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("section", {
+    }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-debug": true,
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pt-3",
+      style: {
+        paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("section", {
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-xs font-black text-cyan-200"
@@ -33520,7 +33542,7 @@ function MonsterHeroGame() {
           }
         }, "\u30EA\u30BA\u30E0\u30C6\u30B9\u30C8\u30D7\u30EC\u30A4"));
       })));
-    })), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
+    }))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',

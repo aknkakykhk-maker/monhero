@@ -147,6 +147,8 @@ node tools/build.js --check
 `node mode/rhythm-easy-v2-review-check.js` は、EASY正式候補v1の78ノーツを保持したv2-review準備データ、22候補の詳細・機械推奨・未入力decision、全尺品質監査、機械的不正なし、正式runtime未接続を確認する。`node mode/rhythm-easy-v2-review-build.js` でv1・100点draft・282点onset候補から同データを再生成できる。
 `node mode/rhythm-mode-note-perspective-check.js` は、上部・中央・判定ライン付近の5レーンについて、左右境界・中央・ノーツ幅・Touch／Pointer／SLIDE入力の逆投影が同じprojection結果になることと、時刻を変えない非線形Y移動、HOLD／SLIDE帯、判定ライン、番号、押下発光、描画用rAFの一本化を数値と実装経路の両方で確認する。
 `node mode/rhythm-mode-sublane-projection-check.js` は、旧5レーン互換を保つ10サブレーン座標、TAP幅1〜4、左右端、奥／手前の共通projection、サブ境界とHOLD／SLIDE／ENDバーの回帰を確認する。
+`node mode/rhythm-note-geometry-audit.js` は、ノーツ速度1.0〜12.0（0.1刻み・6.0=2150ms）の変換式と、速度1／3／6／10／12 × ノーツサイズ80／100／120％の全組み合わせについて、ノーツ頭・HOLD帯・SLIDE帯・ENDバーの実描画位置を実ブラウザで測り、共通projectionからのズレとレーン外へのはみ出しを検出する。ノーツサイズは頭だけに掛かり、帯とENDバーはレーンgeometry基準のままであることもここで確認する。
+`node mode/rhythm-screen-layout-check.js` は、音ゲーのデバッグ／オプション／プレイの各画面が「固定ヘッダー＋スクロール1つ（＋固定フッター）」で閉じ、座標校正などのデバッグUIが `document.body` 直下の固定レイヤーとしてプレイ画面へ重ならないことを確認する。
 `node mode/rhythm-mode-tap-width-input-check.js` は、可変幅TAPの10サブレーン入力、幅1の最小タッチ許容、左右端・範囲外、隣接同時押し、旧5レーン互換、描画projectionの逆変換、WIDTH TESTと既存ジェスチャーの回帰を確認する。
 `node mode/rhythm-mode-hold-width-check.js` は、可変幅HOLDの幅1〜4の始点・帯・ENDバー投影、10サブレーン開始入力、幅1許容、旧HOLD互換、1指と1ノーツ、2指同時HOLD、HOLD中TAP、終端判定とSLIDE描画軽量化の回帰を確認する。
 `node mode/rhythm-mode-end-bar-check.js` は、HOLD／SLIDE終端バーがruntimeで延期された値ではなく元のendTimeMsを使い、終点レーンと共通projectionへ揃い、帯と接続して入力を遮らないことを確認する。
