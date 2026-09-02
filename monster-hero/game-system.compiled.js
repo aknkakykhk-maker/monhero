@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4fc00eeb4b29d7ad
+// source-sha256: ad5df482d461748d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 19:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 19:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15419,12 +15419,18 @@ const RhythmTapTest = ({
     const side = judgment === 'MISS' ? null : rhythmFastSlow(deltaMs);
     if (side) run[side.toLowerCase()]++;
     run.life = rhythmLifeAfter(run.life, judgment);
-    const score = rhythmCalculateScore({
+    const calculatedScore = rhythmCalculateScore({
       judgments: run.counts,
       maxCombo: run.maxCombo,
       totalNotes: chart.totalNotes,
       maxScore: difficulty.maxScore
     });
+    if (!run.lifeDepleted) run.score = calculatedScore;
+    if (!run.lifeDepleted && run.life === 0) {
+      run.lifeDepleted = true;
+      run.lockedScore = run.score;
+    }
+    const score = run.lifeDepleted ? run.lockedScore : run.score;
     setView(v => ({
       ...v,
       score,
@@ -15450,12 +15456,7 @@ const RhythmTapTest = ({
     run.activePointers.clear();
     run.activeTouchInputs?.clear();
     run.audio?.stop();
-    const score = rhythmCalculateScore({
-      judgments: run.counts,
-      maxCombo: run.maxCombo,
-      totalNotes: chart.totalNotes,
-      maxScore: difficulty.maxScore
-    });
+    const score = run.lifeDepleted ? run.lockedScore : run.score;
     const achievements = rhythmResultAchievements(run.counts, chart.totalNotes);
     const result = {
       score,
@@ -15600,6 +15601,9 @@ const RhythmTapTest = ({
       fast: 0,
       slow: 0,
       life: RHYTHM_LIFE_MAX,
+      lifeDepleted: false,
+      score: 0,
+      lockedScore: 0,
       finished: false,
       paused: false,
       generation,

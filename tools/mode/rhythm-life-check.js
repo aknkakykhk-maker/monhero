@@ -1,80 +1,44 @@
-// 音ゲーのライフ(暫定値)を確認する。
-//
-// モンスターノーツの「回復 / バリア / 丈夫さ」はライフの数値が決まっていないと設計できないため、
-// まず数値の管理と表示だけを固定した段階の検査。
-//
-// この段階で守ること:
-//   ・ライフが0になっても曲を止めない(失敗終了はまだ入れない)
-//   ・スコア・コンボ・BEST・ランキングへ一切関与しない
-//   ・BESTの保存形式(mh_rhythm_best_v1)を変えない
-//
+// 音ゲーのライフ0以降の不可逆DOWNとスコア固定を、実装中の純粋関数で確認する。
 //   node tools/mode/rhythm-life-check.js
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const data=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx');
 const docs=read('docs/spec/RHYTHM_MODE.md');
-
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
-// --- 実装を取り出して実際に動かす ---
-const block=data.match(/const RHYTHM_LIFE_MAX = 1000;[\s\S]*?const rhythmLifeRatio = [^\n]*;/)?.[0];
-check('ライフのデータ層を抽出できる',!!block);
-if(!block){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
-const context={};
-vm.createContext(context);
-vm.runInContext(`${block}\nthis.out={RHYTHM_LIFE_MAX,RHYTHM_LIFE_DELTA,rhythmLifeAfter,rhythmLifeRatio};`,context);
-const {RHYTHM_LIFE_MAX,RHYTHM_LIFE_DELTA,rhythmLifeAfter,rhythmLifeRatio}=context.out;
+const dataBlock=data.match(/const RHYTHM_JUDGMENTS = [\s\S]*?const rhythmLifeRatio = [^\n]*;/)?.[0];
+const scoreBlock=game.match(/const rhythmCalculateScore = \([\s\S]*?\n};/)?.[0];
+check('ライフ・スコア・ランクの実装を抽出できる',!!dataBlock&&!!scoreBlock);
+if(!dataBlock||!scoreBlock)process.exit(1);
+const context={};vm.createContext(context);
+vm.runInContext(`${dataBlock}\nconst RHYTHM_JUDGMENT_IDS=RHYTHM_JUDGMENTS.map(item=>item.id);\n${scoreBlock}\nthis.out={RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_RANKS,rhythmRankForScore,RHYTHM_LIFE_MAX,RHYTHM_LIFE_DELTA,rhythmLifeAfter,rhythmLifeRatio,rhythmCalculateScore};`,context);
+const {RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_RANKS,rhythmRankForScore,RHYTHM_LIFE_MAX,RHYTHM_LIFE_DELTA,rhythmLifeAfter,rhythmLifeRatio,rhythmCalculateScore}=context.out;
+check('最大ライフと判定増減値は不変',RHYTHM_LIFE_MAX===1000&&JSON.stringify(RHYTHM_LIFE_DELTA)===JSON.stringify({MARVELOUS:2,EXCELLENT:2,GREAT:1,GOOD:0,BAD:-20,MISS:-50}));
+check('判定窓と通常スコア式は不変',JSON.stringify(RHYTHM_JUDGMENTS.map(x=>[x.id,x.windowMs,x.scoreRate]))===JSON.stringify([['MARVELOUS',25,1],['EXCELLENT',50,.98],['GREAT',100,.9],['GOOD',150,.7],['BAD',200,.3],['MISS',null,0]])&&RHYTHM_SCORE_WEIGHTS.judgment===.9&&RHYTHM_SCORE_WEIGHTS.combo===.1);
+check('ライフ1以上では回復できる',rhythmLifeAfter(1,'MARVELOUS')===3&&rhythmLifeAfter(999,'GREAT')===1000);
+check('ライフ0以降はMARVELOUSでも0固定',rhythmLifeAfter(0,'MARVELOUS')===0&&rhythmLifeAfter(0,'EXCELLENT')===0&&rhythmLifeAfter(0,'GREAT')===0);
+check('減少と表示クランプは従来どおり',rhythmLifeAfter(500,'MISS')===450&&rhythmLifeAfter(500,'BAD')===480&&rhythmLifeRatio(-1)===0&&rhythmLifeRatio(2000)===1);
 
-check('最大ライフは暫定1000',RHYTHM_LIFE_MAX===1000);
-check('判定ごとの増減が暫定値どおり',
-  RHYTHM_LIFE_DELTA.MARVELOUS===2&&RHYTHM_LIFE_DELTA.EXCELLENT===2&&RHYTHM_LIFE_DELTA.GREAT===1
-  &&RHYTHM_LIFE_DELTA.GOOD===0&&RHYTHM_LIFE_DELTA.BAD===-20&&RHYTHM_LIFE_DELTA.MISS===-50,
-  JSON.stringify(RHYTHM_LIFE_DELTA));
-check('良い判定は増え、BAD/MISSだけ減る',
-  ['MARVELOUS','EXCELLENT','GREAT'].every(id=>RHYTHM_LIFE_DELTA[id]>0)
-  &&RHYTHM_LIFE_DELTA.GOOD===0&&RHYTHM_LIFE_DELTA.BAD<0&&RHYTHM_LIFE_DELTA.MISS<RHYTHM_LIFE_DELTA.BAD);
-
-check('満タンからは増えない(上限で頭打ち)',rhythmLifeAfter(RHYTHM_LIFE_MAX,'MARVELOUS')===RHYTHM_LIFE_MAX);
-check('0より下へは落ちない',rhythmLifeAfter(10,'MISS')===0&&rhythmLifeAfter(0,'MISS')===0);
-check('MISSは-50、BADは-20',rhythmLifeAfter(500,'MISS')===450&&rhythmLifeAfter(500,'BAD')===480);
-check('GOODは増減しない',rhythmLifeAfter(500,'GOOD')===500);
-check('壊れた値・未知の判定でも落ちない',
-  rhythmLifeAfter(undefined,'MISS')===RHYTHM_LIFE_MAX-50&&rhythmLifeAfter('x','MISS')===RHYTHM_LIFE_MAX-50
-  &&rhythmLifeAfter(500,'UNKNOWN')===500&&rhythmLifeAfter(null,'MARVELOUS')===RHYTHM_LIFE_MAX);
-check('表示用の比率は0〜1へ収める',
-  rhythmLifeRatio(RHYTHM_LIFE_MAX)===1&&rhythmLifeRatio(0)===0&&rhythmLifeRatio(500)===.5
-  &&rhythmLifeRatio(-100)===0&&rhythmLifeRatio(99999)===1&&rhythmLifeRatio('x')===1);
-
-// 20回MISSで0になる(暫定バランスの目安)
-let life=RHYTHM_LIFE_MAX,misses=0;
-while(life>0&&misses<200){life=rhythmLifeAfter(life,'MISS');misses++;}
-check('満タンからMISS20回で0になる(暫定バランス)',misses===20,`${misses}回`);
-
-// --- 画面側の結線 ---
-check('runとviewの両方でライフを持つ',
-  game.includes('life:RHYTHM_LIFE_MAX,result:null')&&game.includes('life:RHYTHM_LIFE_MAX,finished:false'));
-check('判定確定のたびにライフを更新する',
-  game.includes('run.life=rhythmLifeAfter(run.life,judgment);')&&game.includes('life:run.life}));'));
-check('HUDへライフバーと数値を表示する',
-  game.includes('data-rhythm-life className=')&&game.includes('data-rhythm-life-bar')&&game.includes('data-rhythm-life-value'));
-check('ライフバーの幅は共通のratio helperから出す',
-  game.includes('width:`${(rhythmLifeRatio(view.life)*100).toFixed(1)}%`'));
-check('軽量モードではライフバーのtransitionを止める',
-  game.includes("transition:settings.lightweightMode?'none':'width 140ms linear'"));
-
-// --- この段階で「やらないこと」を守っているか ---
-check('ライフ0で曲を止めたり中断したりしない',
-  !game.includes('run.life<=0')&&!game.includes('view.life<=0')&&!game.includes('life===0'));
-check('スコア計算へライフを持ち込まない',
-  !/rhythmCalculateScore\([^)]*life/.test(game)&&!/const rhythmCalculateScore[\s\S]{0,400}life/.test(data));
-check('BESTの保存形式へライフを足していない',
-  !game.includes('bestLife')&&!game.includes('life:run.life,bestScore')
-  &&game.includes("const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';"));
-check('保存キーを増やしていない',!game.includes('mh_rhythm_life'));
-
-check('仕様書にライフの暫定値と未確定事項を記載',
-  docs.includes('RHYTHM_LIFE_MAX')&&docs.includes('暫定')&&docs.includes('ライフ'));
-
-console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
-process.exit(failed?1:0);
+const ids=RHYTHM_JUDGMENTS.map(x=>x.id),empty=()=>Object.fromEntries(ids.map(id=>[id,0]));
+const run={life:51,lifeDepleted:false,score:0,lockedScore:0,combo:0,maxCombo:0,counts:empty()};
+const apply=judgment=>{run.combo=['MARVELOUS','EXCELLENT','GREAT','GOOD'].includes(judgment)?run.combo+1:0;run.maxCombo=Math.max(run.maxCombo,run.combo);run.counts[judgment]++;run.life=rhythmLifeAfter(run.life,judgment);const calculatedScore=rhythmCalculateScore({judgments:run.counts,maxCombo:run.maxCombo,totalNotes:5,maxScore:1000000});if(!run.lifeDepleted)run.score=calculatedScore;if(!run.lifeDepleted&&run.life===0){run.lifeDepleted=true;run.lockedScore=run.score;}return run.lifeDepleted?run.lockedScore:run.score;};
+const beforeDown=apply('MARVELOUS');apply('MISS'); // 53 -> 3
+check('DOWN前の成功判定は通常どおりスコア加算',beforeDown>0&&run.score>=beforeDown);
+const atDown=apply('MISS'); // 3 -> 0。このMISSまでを含むスコアを固定
+const countsAtDown={...run.counts},comboAtDown=run.combo;
+const afterDown=apply('MARVELOUS');
+check('0到達判定の終了時点でスコアを固定',run.lifeDepleted&&run.lockedScore===atDown);
+check('DOWN後のMARVELOUSでライフ・スコアが増えない',run.life===0&&afterDown===atDown&&run.score===atDown);
+check('DOWN後も判定数・コンボ処理は継続',run.counts.MARVELOUS===countsAtDown.MARVELOUS+1&&run.combo===comboAtDown+1);
+const resultScore=run.lifeDepleted?run.lockedScore:run.score;
+check('リザルトは再計算せず固定スコアを使う',resultScore===atDown&&game.includes('const score=run.lifeDepleted?run.lockedScore:run.score;'));
+check('スコアランクは固定スコア基準',rhythmRankForScore(resultScore)===rhythmRankForScore(atDown)&&game.includes('rank=rhythmRankForScore(view.score)'));
+const previousBest=atDown+1,isNewRecord=resultScore>previousBest;
+check('DOWN後の判定ではBESTを更新できない',!isNewRecord&&game.includes('const isNewRecord=score>run.startBestScore;'));
+check('ライフ0でもfinishせず曲・判定処理を継続',!game.includes('if(run.life===0)finish')&&!game.includes('if(run.life<=0)finish')&&game.includes('run.lifeDepleted=true;run.lockedScore=run.score;'));
+check('run開始時にDOWNと固定スコアを初期化',game.includes('lifeDepleted:false,score:0,lockedScore:0,finished:false'));
+check('既存BEST形式・保存キーを変更していない',!game.includes('bestLife')&&!game.includes('lockedScore:score')&&game.includes("const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';"));
+check('新しいlocalStorageキーを追加していない',!game.includes('mh_rhythm_life')&&!game.includes('mh_rhythm_down'));
+check('仕様書に不可逆DOWNと固定スコアを記載',docs.includes('不可逆のDOWN')&&docs.includes('固定スコア'));
+console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
