@@ -479,9 +479,41 @@ DOWN中でもノーツ判定は続いているため、後から流れてきた�
 - プレイ中不要なMutationObserverはdisconnectまたは早期returnし、全ノーツ再検索を避ける。
 - 軽量モードでは非必須filter / shadow / transition / 演出をさらに抑える。
 
-## 7.3 性能計測
+## 7.3 性能計測 — **実装済み（デバッグ限定）**
 
-デバッグ限定で、修正前後を比較できる簡易計測を用意する方向。
+`RHYTHM_PERF`（`monster-hero/data/rhythm-mode.js`）として実装済み。音ゲーデバッグ画面の
+「⚙️ 設定・記録」タブに「性能計測（デバッグ）」パネルがあり、ON/OFF・記録の表示・クリアができる。
+
+- **既定はOFF。OFFのあいだは加算も配列追加も一切しない**（計測のために本体を重くしない）
+- **計測のために `requestAnimationFrame` を増やさない。** 本体のrAFが受け取るタイムスタンプを使う
+- ON/OFFの記憶は新しい保存キー `mh_rhythm_perf_v1` に分ける（既存の設定・BESTへは触らない）
+- デバッグ専用なので、更新履歴・ヘルプには載せない（CLAUDE.md ⑤の但し書き）
+
+記録している項目と、その計測箇所:
+
+| 項目 | 計測箇所 |
+| --- | --- |
+| フレーム数 / 平均fps / 平均・最悪フレーム時間 | 本体rAF（`scheduleTick` の `tick`） |
+| 16.7ms超 / 25ms超 / 33ms超フレーム数 | 同上 |
+| 1フレームあたりのlayout read数 | `measureTravel`（area / 判定ライン / ノーツの3回）、`areaRect`、`rhythmLayoutNoteVisual`（フレーム共有rectが無い場合のみ） |
+| 1フレームあたりのDOM検索数 | `areaRect`（`querySelector`）、`applyTouchSpanGlow`（`querySelectorAll`） |
+| 1フレームあたりのSLIDE polygon更新数 | `rhythmSlideSegmentPolygons` の戻り値の数 |
+| ジェスチャー側rAFのフレーム数 | `RHYTHM_GESTURE_RUNTIME` の `tick` |
+
+一時停止やバックグラウンド復帰で数秒空いた間隔は、平均を壊さないよう数えない。
+
+検査は `node tools/mode/rhythm-perf-check.js`。
+
+### 静的に確認済みの負荷候補（2026-09-03）
+
+計測前だが、コード上で実在を確認したもの:
+
+- **候補1（別rAF）は実在。** `RHYTHM_GESTURE_RUNTIME` はHOLD/SLIDE/FLICK操作中、本体とは別の `requestAnimationFrame` を回す
+- **候補2（rect反復）は実在。** `areaRect()` は呼ばれるたびに `querySelector` ＋ `getBoundingClientRect()`（＝強制レイアウト）を行い、
+  これがジェスチャーの毎フレームと毎pointermoveで走る
+- **候補5（発光の再検索）は実在。** `applyTouchSpanGlow()` はtouchmoveごとに `querySelectorAll('[data-rhythm-sublane-feedback]')` で10要素を引き直す
+
+ただし**どれが実際のカクつきの主因かは、実機の計測値を見るまで断定しない。**
 
 最低限確認したいもの:
 

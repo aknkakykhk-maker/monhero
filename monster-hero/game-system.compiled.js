@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eb55a61e37dacbb0
+// source-sha256: e72f57f33ed0c821
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 23:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 23:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15384,6 +15384,9 @@ const RhythmTapTest = ({
     const area = playAreaRef.current,
       line = judgmentLineRef.current;
     if (!area || !line) return null;
+    RHYTHM_PERF.layoutRead();
+    RHYTHM_PERF.layoutRead();
+    RHYTHM_PERF.layoutRead();
     const areaRect = area.getBoundingClientRect(),
       lineRect = line.getBoundingClientRect(),
       noteHeight = laneRefs.current.find(Boolean)?.getBoundingClientRect().height || 20;
@@ -15491,7 +15494,8 @@ const RhythmTapTest = ({
   }, [chart.totalNotes, difficulty.maxScore, onComplete, stopFrame]);
   const scheduleTick = useCallback(() => {
     stopFrame();
-    const tick = () => {
+    const tick = frameNowMs => {
+      RHYTHM_PERF.frame(frameNowMs);
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
       const songTimeMs = run.audio.songTimeMs(),
@@ -16214,6 +16218,9 @@ function MonsterHeroGame() {
   // 音ゲーデバッグ画面は「プレイ」「譜面制作」「設定・記録」で分ける。
   // 全部を1本のスクロールへ積むと、入った瞬間に何がどこにあるか分からなくなるため。
   const [rhythmDebugTab, setRhythmDebugTab] = useState('play');
+  // 性能計測(デバッグ限定)。既定OFF。ONの記憶は専用キー mh_rhythm_perf_v1 に分ける
+  const [rhythmPerfOn, setRhythmPerfOn] = useState(() => RHYTHM_PERF.enabled);
+  const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
   const openRhythmDebug = async () => {
     const settings = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
@@ -33825,6 +33832,46 @@ function MonsterHeroGame() {
       "data-rhythm-debug-calibration": true,
       className: "mb-3"
     }), /*#__PURE__*/React.createElement("section", {
+      "data-rhythm-perf-panel": true,
+      className: "mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-xs font-black text-amber-200"
+    }, "\u6027\u80FD\u8A08\u6E2C\uFF08\u30C7\u30D0\u30C3\u30B0\uFF09"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-rhythm-perf-toggle": true,
+      "aria-pressed": rhythmPerfOn,
+      onClick: () => {
+        setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));
+        setRhythmPerfStats(null);
+      },
+      className: `min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn ? 'bg-amber-500 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, rhythmPerfOn ? '計測ON' : '計測OFF')), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80"
+    }, "ON\u306B\u3057\u3066\u304B\u3089\u30D7\u30EC\u30A4\u3059\u308B\u3068\u3001\u30D5\u30EC\u30FC\u30E0\u6642\u9593\u30681\u30D5\u30EC\u30FC\u30E0\u3042\u305F\u308A\u306E\u8CA0\u8377\uFF08\u30EC\u30A4\u30A2\u30A6\u30C8\u6E2C\u5B9A\u30FBDOM\u691C\u7D22\u30FBSLIDE\u5E2F\u306E\u66F4\u65B0\u6570\uFF09\u3092\u8A18\u9332\u3057\u307E\u3059\u3002OFF\u306E\u3042\u3044\u3060\u306F\u8A18\u9332\u51E6\u7406\u305D\u306E\u3082\u306E\u304C\u52D5\u304D\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      className: "min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200",
+      onClick: () => setRhythmPerfStats(RHYTHM_PERF.snapshot())
+    }, "\u3044\u307E\u306E\u8A18\u9332\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      className: "min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200",
+      onClick: () => {
+        RHYTHM_PERF.reset();
+        setRhythmPerfStats(null);
+      }
+    }, "\u8A18\u9332\u3092\u30AF\u30EA\u30A2")), rhythmPerfStats && /*#__PURE__*/React.createElement("dl", {
+      "data-rhythm-perf-stats": true,
+      className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: label
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-400"
+    }, label), /*#__PURE__*/React.createElement("dd", {
+      className: "text-right font-black text-amber-100"
+    }, value))))), /*#__PURE__*/React.createElement("section", {
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-xs font-black text-cyan-200"
