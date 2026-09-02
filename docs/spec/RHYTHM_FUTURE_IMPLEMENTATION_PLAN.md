@@ -83,7 +83,7 @@ DOWN中はスコアを固定し、根性で復活した後からスコア加算�
 
 ---
 
-## 3.2 マスモン設定
+## 3.2 マスモン設定 — **実装済み（2026-09-03 / PR #995）**
 
 - 音ゲー用モンスターは **マスモンから設定**する。
 - **最大4体**まで設定可能。
@@ -110,11 +110,43 @@ DOWN中はスコアを固定し、根性で復活した後からスコア加算�
 
 保存を追加する場合は既存 `mh_*` を壊さず後方互換を持たせる。具体的な保存キーは実装時に現行保存構造を確認して決める。
 
+### 実装（2026-09-03）
+
+保存キーは既存の `mh_rhythm_settings_v1` / `mh_rhythm_best_v1` へ混ぜず、
+**`mh_rhythm_monsters_v1`** へ分けた。持つのはマスモンの個体IDの並び（文字列の配列・最大4件）だけで、
+名前・染色・能力はマスモン本体から毎回引き直す。
+
+実装は `monster-hero/data/rhythm-mode.js` に置き、役割を2つに分けた。
+
+| 関数 | 役割 |
+| --- | --- |
+| `sanitizeRhythmMonsterSlotIds(saved)` | 保存値の**形**だけを整える（配列でなければ空／重複ID除去／4件で打ち切り）。所持確認はしない |
+| `resolveRhythmMonsterSlots(saved, masuMons)` | **使うとき**に手元のマスモンへ解決する。手放した個体と同一 `baseId` の重複はここで落とす |
+
+分けたのは保存を壊さないため。マスモン一覧を読む前に存在確認まで行うと、設定が空として
+保存し直されてプレイヤーの設定が消える（CLAUDE.md ⑦）。落とすのは表示・使用のときだけで、
+保存値そのものは書き換えない。
+
+設定の可否は `rhythmMonsterSlotAddIssue()` が理由（`missing` / `full` / `duplicate-id` /
+`duplicate-base`）で返し、UIはその日本語文（`RHYTHM_MONSTER_SLOT_ISSUE_TEXT`）をそのまま出す。
+追加・削除・並べ替えは `addRhythmMonsterSlot` / `removeRhythmMonsterSlot` / `moveRhythmMonsterSlot`。
+
+UIは音ゲーデバッグ画面の「⚙️ 設定・記録」タブに置いた（`data-rhythm-monster-slots`）。
+4枠を常に並べて空き枠を見せ、一覧から選んで設定する。設定できない相手は押せないようにし、
+理由を横に出す。マスモンの絵は既存の `DyedMonsterImage` + `getMasuColors` をそのまま使い、
+base64で複製しない（§3.5の方針どおり）。
+
+検査は `node tools/mode/rhythm-monster-slots-check.js`。
+
 ---
 
 ## 3.3 1曲あたりの出現回数
 
 **設定した1体につき1回、最大4回。**
+
+配置目安の割合は `RHYTHM_MONSTER_NOTE_BASE_RATIOS`（`[.2,.4,.6,.8]`）と
+`rhythmMonsterNoteBaseRatios(count)` として実装済み。ここにあるのは**目安の割合だけ**で、
+譜面への実配置（下記の配置ルール）は譜面データ側の仕事。
 
 | 設定数 | 出現回数 | 基本位置 |
 | ---: | ---: | --- |

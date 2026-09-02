@@ -56,6 +56,88 @@ const rhythmLifeAfter = (life, judgment) => {
   return Math.max(0, Math.min(RHYTHM_LIFE_MAX, rhythmLifeValue(life) + delta));
 };
 const rhythmLifeRatio = life => Math.max(0, Math.min(1, rhythmLifeValue(life) / RHYTHM_LIFE_MAX));
+// ── モンスターノーツ用のマスモン設定(RHYTHM_MODE §3.2 / 実装計画 §3.2〜3.3) ──────
+// 音ゲー用モンスターはマスモンから設定する。最大4体で、1〜4枠目の並び順が
+// そのままモンスターノーツの登場順になる。4体そろえる必要はなく、1〜3体でも遊べる。
+//
+// 重複禁止は「同じ個体UUID」だけでなく **同じベースモンスター(同 baseId)** まで見る。
+//   ミーア + ミーア → 不可 / ミーア + パンドラ → 可
+// 別モンスターなら、同じ血統・同じ能力でも同時に設定できる。
+//
+// 保存は既存の mh_* を一切触らず、新しいキー mh_rhythm_monsters_v1 へ分ける。
+const RHYTHM_MONSTER_SLOT_KEY='mh_rhythm_monsters_v1';
+const RHYTHM_MONSTER_SLOT_MAX=4;
+// 保存する値は「マスモンの個体ID(文字列)の並び」だけ。名前・染色・能力はマスモン本体から
+// 毎回引き直す。ここへ複製して持つと、育成や染色の変更に追従できなくなるため。
+//
+// **形として整えるだけで、手元にいるかどうかは見ない。**
+// マスモン一覧をまだ読めていない時点で存在確認まで行うと、設定が空として保存され直し、
+// プレイヤーの設定が消えてしまう(CLAUDE.md ⑦「消さない・上書きしない」)。
+const sanitizeRhythmMonsterSlotIds=value=>{
+  const list=Array.isArray(value)?value:(Array.isArray(value?.slots)?value.slots:[]);
+  const ids=[],seen=new Set();
+  for(const raw of list){
+    const id=typeof raw==='string'?raw:(raw&&typeof raw==='object'&&raw.id!=null?String(raw.id):'');
+    if(!id||id==='undefined'||id==='null'||seen.has(id))continue;
+    seen.add(id);ids.push(id);
+    if(ids.length>=RHYTHM_MONSTER_SLOT_MAX)break;
+  }
+  return ids;
+};
+// 実際に使う並び。手元にいないマスモンと、同じベースモンスターの重複をここで落とす。
+// 落とすのは「使うとき」だけで、保存値そのものは書き換えない。
+const resolveRhythmMonsterSlots=(value,masuMons)=>{
+  const owned=Array.isArray(masuMons)?masuMons:[];
+  const byId=new Map(owned.filter(masu=>masu&&masu.id!=null).map(masu=>[String(masu.id),masu]));
+  const slots=[],usedBaseIds=new Set();
+  for(const id of sanitizeRhythmMonsterSlotIds(value)){
+    const masu=byId.get(id);
+    if(!masu)continue;
+    const baseId=String(masu.baseId||'');
+    if(!baseId||usedBaseIds.has(baseId))continue;
+    usedBaseIds.add(baseId);slots.push(masu);
+    if(slots.length>=RHYTHM_MONSTER_SLOT_MAX)break;
+  }
+  return slots;
+};
+// 枠へ足せない理由を返す(足せるなら null)。UI側でそのまま理由を出せるようにしている。
+const rhythmMonsterSlotAddIssue=(value,masuId,masuMons)=>{
+  const owned=Array.isArray(masuMons)?masuMons:[];
+  const target=owned.find(masu=>masu&&String(masu.id)===String(masuId));
+  if(!target||!String(target.baseId||''))return 'missing';
+  const ids=sanitizeRhythmMonsterSlotIds(value);
+  if(ids.length>=RHYTHM_MONSTER_SLOT_MAX)return 'full';
+  if(ids.includes(String(masuId)))return 'duplicate-id';
+  const usedBaseIds=resolveRhythmMonsterSlots(ids,owned).map(masu=>String(masu.baseId||''));
+  if(usedBaseIds.includes(String(target.baseId)))return 'duplicate-base';
+  return null;
+};
+const RHYTHM_MONSTER_SLOT_ISSUE_TEXT=Object.freeze({
+  missing:'このマスモンは設定できません',
+  full:`設定できるのは${RHYTHM_MONSTER_SLOT_MAX}体までです`,
+  'duplicate-id':'すでに設定しています',
+  'duplicate-base':'同じモンスターは重ねて設定できません',
+});
+const addRhythmMonsterSlot=(value,masuId,masuMons)=>{
+  const ids=sanitizeRhythmMonsterSlotIds(value);
+  return rhythmMonsterSlotAddIssue(ids,masuId,masuMons)?ids:[...ids,String(masuId)];
+};
+const removeRhythmMonsterSlot=(value,masuId)=>sanitizeRhythmMonsterSlotIds(value).filter(id=>id!==String(masuId));
+// 並び順は登場順そのものなので、入れ替えられるようにしておく。
+const moveRhythmMonsterSlot=(value,index,delta)=>{
+  const ids=sanitizeRhythmMonsterSlotIds(value),next=Number(index)+Number(delta);
+  if(!(index>=0&&index<ids.length&&next>=0&&next<ids.length))return ids;
+  const moved=ids.slice();[moved[index],moved[next]]=[moved[next],moved[index]];
+  return moved;
+};
+// 設定した1体につき1回、最大4回(§3.3)。20 / 40 / 60 / 80%は機械的な固定秒数ではなく
+// **配置目安**で、実際の時刻は譜面ごとにフレーズ境界へ寄せて決める。
+// ここでは目安の割合だけを持ち、譜面への実配置は譜面データ側の仕事とする。
+const RHYTHM_MONSTER_NOTE_BASE_RATIOS=Object.freeze([.2,.4,.6,.8]);
+const rhythmMonsterNoteBaseRatios=count=>{
+  const size=Math.max(0,Math.min(RHYTHM_MONSTER_SLOT_MAX,Math.floor(Number(count)||0)));
+  return RHYTHM_MONSTER_NOTE_BASE_RATIOS.slice(0,size);
+};
 // ── 性能計測(デバッグ限定) ─────────────────────────────────────────────────
 // 実機で音ゲー中のカクつきが報告されている。原因を断定せず切り分けるため、
 // フレーム時間と「1フレームあたりのlayout read / DOM検索 / SLIDE polygon更新」を数える。
