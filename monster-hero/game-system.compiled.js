@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1f5f51c211e4a85b
+// source-sha256: 4fc00eeb4b29d7ad
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 16:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 19:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3601,6 +3601,19 @@ const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'MINIMAL']);
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
+// ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
+const RHYTHM_RANK_COLORS = Object.freeze({
+  G: 'text-slate-500',
+  F: 'text-slate-300',
+  E: 'text-lime-400',
+  D: 'text-lime-300',
+  C: 'text-amber-300',
+  B: 'text-orange-300',
+  A: 'text-cyan-300',
+  S: 'text-fuchsia-300',
+  SS: 'text-fuchsia-200',
+  M: 'text-yellow-200'
+});
 const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   bgmVolume: 100,
   noteSpeed: 6,
@@ -15862,7 +15875,8 @@ const RhythmTapTest = ({
     };
   }, [view.status]);
   if (view.status === 'result') {
-    const result = view.result;
+    const result = view.result,
+      rank = rhythmRankForScore(view.score);
     return /*#__PURE__*/React.createElement("main", {
       "data-rhythm-result": true,
       className: "flex-1 overflow-y-auto bg-slate-950 p-4 text-white",
@@ -15875,6 +15889,9 @@ const RhythmTapTest = ({
     }, song.displayName, "\u30FB", difficulty.id), /*#__PURE__*/React.createElement("h2", {
       className: "text-center font-black"
     }, "RHYTHM RESULT"), /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-result-rank": true,
+      className: `mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`
+    }, rank), /*#__PURE__*/React.createElement("div", {
       className: "my-3 text-center text-3xl font-black"
     }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("p", {
       className: "text-center text-sm"
@@ -15938,9 +15955,14 @@ const RhythmTapTest = ({
     className: "mt-1 grid grid-cols-2 items-end gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-left"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-[10px] font-black tracking-[0.18em] text-cyan-200"
   }, "SCORE"), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-rank": true,
+    className: `text-sm font-black leading-none ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`
+  }, rhythmRankForScore(view.score))), /*#__PURE__*/React.createElement("b", {
     "data-rhythm-score": true,
     className: "block text-2xl font-black leading-none tabular-nums"
   }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("small", {
