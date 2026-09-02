@@ -103,7 +103,8 @@ check('MASTERに曲がりながら幅1→4→1へ変化する経路を収録す�
 check('MASTERに多数pointの長いSLIDEを収録する',longSlide?.endTimeMs-longSlide?.timeMs>=8000&&longSlide?.slidePoints.length>=16);
 check('MASTERの複雑SLIDE中に別TAPと別HOLDを収録する',master.notes.some(note=>note.type==='TAP'&&note.timeMs>halfLane.timeMs&&note.timeMs<halfLane.endTimeMs)&&master.notes.some(note=>note.type==='HOLD'&&note.timeMs>longSlide.timeMs&&note.endTimeMs<longSlide.endTimeMs));
 check('STEP2B-4の全経路・幅は既存authored範囲内',masterSlides.every(note=>note.slidePoints.every(point=>rhythmSlideAuthoredLane(point.lane)!==null&&(point.subLaneWidth==null||[1,2,3,4].includes(point.subLaneWidth)))));
-check('多数pointでも既存polygonを1区間1枚で再利用する',rhythmSlideSegmentPolygons(longSlide,longSlide.timeMs,{visualTime:longSlide.timeMs,travelMs:10000,spawnY:0,travelPx:700},rect).length===longSlide.slidePoints.length-1);
+const slideSteps=Number(source.match(/const RHYTHM_SLIDE_SEGMENT_STEPS=(\d+)/)?.[1])||1;
+check('多数pointでも既存polygonを区間ごとに再利用する',rhythmSlideSegmentPolygons(longSlide,longSlide.timeMs,{visualTime:longSlide.timeMs,travelMs:10000,spawnY:0,travelPx:700},rect).length===(longSlide.slidePoints.length-1)*slideSteps);
 
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

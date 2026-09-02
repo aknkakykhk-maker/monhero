@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c6c9979bf77f87ae
+// source-sha256: 378627cc29befea1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 11:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 11:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15931,11 +15931,16 @@ function MonsterHeroGame() {
   const [rhythmSettings, setRhythmSettings] = useState(DEFAULT_RHYTHM_SETTINGS);
   const [rhythmBestRecords, setRhythmBestRecords] = useState(() => normalizeRhythmBestRecords(null));
   const [rhythmPlay, setRhythmPlay] = useState(null);
+  // 音ゲーデバッグ画面は「プレイ」「譜面制作」「設定・記録」で分ける。
+  // 全部を1本のスクロールへ積むと、入った瞬間に何がどこにあるか分からなくなるため。
+  const [rhythmDebugTab, setRhythmDebugTab] = useState('play');
+  const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
   const openRhythmDebug = async () => {
     const settings = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
     const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
     setRhythmSettings(settings);
     setRhythmBestRecords(records);
+    setRhythmDebugTab('play');
     setGameState('RHYTHM_DEBUG');
   };
   const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
@@ -33477,13 +33482,30 @@ function MonsterHeroGame() {
       "data-rhythm-options-open": true,
       onClick: () => setGameState('RHYTHM_OPTIONS'),
       className: "min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100"
-    }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("div", {
-      "data-rhythm-debug": true,
+    }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("nav", {
+      "data-rhythm-debug-tabs": true,
+      "aria-label": "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u306E\u8868\u793A\u5207\u308A\u66FF\u3048",
+      className: "grid shrink-0 grid-cols-3 border-b border-cyan-400/15 bg-slate-950/95"
+    }, [['play', '▶ プレイ'], ['chart', '🎼 譜面制作'], ['settings', '⚙️ 設定・記録']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+      key: id,
+      type: "button",
+      "aria-pressed": rhythmDebugTab === id,
+      onClick: () => {
+        if (id === 'chart') setRhythmChartToolsOpened(true);
+        setRhythmDebugTab(id);
+      },
+      className: `min-h-[44px] border-b-2 px-1 text-[11px] font-black ${rhythmDebugTab === id ? 'border-cyan-300 bg-cyan-950/50 text-cyan-100' : 'border-transparent text-slate-400'}`
+    }, label))), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pt-3",
       style: {
         paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
       }
-    }, /*#__PURE__*/React.createElement("section", {
+    }, /*#__PURE__*/React.createElement("div", {
+      hidden: rhythmDebugTab !== 'settings'
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-debug-calibration": true,
+      className: "mb-3"
+    }), /*#__PURE__*/React.createElement("section", {
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-xs font-black text-cyan-200"
@@ -33495,7 +33517,9 @@ function MonsterHeroGame() {
       className: "break-all text-slate-400"
     }, key), /*#__PURE__*/React.createElement("dd", {
       className: "break-all text-right font-mono text-white"
-    }, String(value)))))), RHYTHM_SONGS.map(song => {
+    }, String(value))))))), /*#__PURE__*/React.createElement("div", {
+      hidden: rhythmDebugTab !== 'play'
+    }, RHYTHM_SONGS.map(song => {
       const track = rhythmSongTrack(song);
       return /*#__PURE__*/React.createElement("section", {
         key: song.songId,
@@ -33542,6 +33566,9 @@ function MonsterHeroGame() {
           }
         }, "\u30EA\u30BA\u30E0\u30C6\u30B9\u30C8\u30D7\u30EC\u30A4"));
       })));
+    })), rhythmChartToolsOpened && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-debug": true,
+      hidden: rhythmDebugTab !== 'chart'
     }))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
