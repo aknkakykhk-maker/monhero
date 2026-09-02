@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4fc00eeb4b29d7ad
+// source-sha256: bb652781a8ed0f23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-02 19:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-02 20:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15925,7 +15925,7 @@ const RhythmTapTest = ({
   }
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-tap-test": true,
-    className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
+    className: "relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
     style: {
       paddingTop: 'env(safe-area-inset-top)',
       paddingBottom: 'env(safe-area-inset-bottom)',
@@ -15933,54 +15933,18 @@ const RhythmTapTest = ({
     }
   }, /*#__PURE__*/React.createElement("header", {
     "data-rhythm-hud": true,
-    className: "shrink-0 border-b border-cyan-400/15 bg-slate-950/95 px-3 pb-2 pt-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between gap-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "min-w-0"
-  }, /*#__PURE__*/React.createElement("div", {
+    className: "pointer-events-none absolute inset-x-0 top-0 z-30 px-3 pb-5",
+    style: {
+      paddingTop: 'calc(env(safe-area-inset-top) + 6px)',
+      background: 'linear-gradient(180deg,rgba(2,6,23,.94) 0%,rgba(2,6,23,.78) 40%,rgba(2,6,23,.36) 72%,rgba(2,6,23,0) 100%)'
+    }
+  }, /*#__PURE__*/React.createElement("section", {
+    "data-rhythm-life": true,
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "rounded-md bg-fuchsia-700/80 px-2 py-0.5 text-[11px] font-black"
-  }, difficulty.id), /*#__PURE__*/React.createElement("span", {
-    className: "truncate text-sm font-black"
-  }, song.displayName)), /*#__PURE__*/React.createElement("small", {
-    className: "text-[10px] font-bold tracking-[0.16em] text-cyan-300"
-  }, hasHold ? 'HOLD TEST' : 'TAP TEST')), /*#__PURE__*/React.createElement("button", {
-    "data-rhythm-pause": true,
-    "aria-label": "\u30DD\u30FC\u30BA",
-    className: "flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-white/20 bg-slate-900 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)]",
-    onClick: pause
-  }, "\u2161")), /*#__PURE__*/React.createElement("section", {
-    className: "mt-1 grid grid-cols-2 items-end gap-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-left"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-1.5"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black tracking-[0.18em] text-cyan-200"
-  }, "SCORE"), /*#__PURE__*/React.createElement("b", {
-    "data-rhythm-rank": true,
-    className: `text-sm font-black leading-none ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`
-  }, rhythmRankForScore(view.score))), /*#__PURE__*/React.createElement("b", {
-    "data-rhythm-score": true,
-    className: "block text-2xl font-black leading-none tabular-nums"
-  }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("small", {
-    className: "mt-1 block text-[10px] font-bold text-slate-400"
-  }, "BEST ", Number(bestRecord?.bestScore || 0).toLocaleString())), /*#__PURE__*/React.createElement("div", {
-    className: "text-right"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black tracking-[0.18em] text-fuchsia-300"
-  }, "COMBO"), /*#__PURE__*/React.createElement("b", {
-    "data-rhythm-combo": true,
-    className: "block text-3xl font-black leading-none tabular-nums text-white"
-  }, view.combo))), /*#__PURE__*/React.createElement("section", {
-    "data-rhythm-life": true,
-    className: "mt-1.5 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] font-black tracking-[0.16em] text-emerald-200"
+    className: "text-[9px] font-black leading-none tracking-[0.16em] text-emerald-200"
   }, "LIFE"), /*#__PURE__*/React.createElement("div", {
-    className: "relative h-2 flex-1 overflow-hidden rounded-full border border-white/15 bg-slate-900"
+    className: "relative h-1.5 flex-1 overflow-hidden rounded-full border border-white/15 bg-slate-900"
   }, /*#__PURE__*/React.createElement("i", {
     "data-rhythm-life-bar": true,
     "aria-hidden": "true",
@@ -15992,8 +15956,57 @@ const RhythmTapTest = ({
     }
   })), /*#__PURE__*/React.createElement("b", {
     "data-rhythm-life-value": true,
-    className: "w-12 text-right text-[10px] font-black tabular-nums text-slate-200"
-  }, view.life))), /*#__PURE__*/React.createElement("div", {
+    className: "w-10 text-right text-[10px] font-black leading-none tabular-nums text-slate-200"
+  }, view.life)), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-hud-title": true,
+    className: "mt-1 flex min-w-0 items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 rounded bg-fuchsia-700/80 px-1.5 py-0.5 text-[9px] font-black leading-none"
+  }, difficulty.id), /*#__PURE__*/React.createElement("span", {
+    className: "truncate text-[11px] font-black leading-none"
+  }, song.displayName), /*#__PURE__*/React.createElement("small", {
+    className: "shrink-0 text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300"
+  }, hasHold ? 'HOLD' : 'TAP'), /*#__PURE__*/React.createElement("small", {
+    "data-rhythm-hud-best": true,
+    className: "ml-auto shrink-0 text-[9px] font-bold leading-none text-slate-400"
+  }, "BEST ", Number(bestRecord?.bestScore || 0).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1.5 flex items-start justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-hud-left": true,
+    className: "min-w-0 max-w-[32%] text-left"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-black leading-none tracking-[0.18em] text-cyan-200"
+  }, "SCORE"), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-rank": true,
+    className: `text-sm font-black leading-none ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`
+  }, rhythmRankForScore(view.score))), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-score": true,
+    className: "mt-1 block font-black leading-none tabular-nums",
+    style: {
+      fontSize: 'min(20px,5vw)',
+      textShadow: settings.lightweightMode ? 'none' : '0 1px 6px rgba(2,6,23,.95)'
+    }
+  }, view.score.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-hud-right": true,
+    className: "flex max-w-[32%] flex-col items-end gap-1.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-pause": true,
+    "aria-label": "\u30DD\u30FC\u30BA",
+    className: "pointer-events-auto flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)]",
+    onClick: pause
+  }, "\u2161"), /*#__PURE__*/React.createElement("div", {
+    className: "text-right"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300"
+  }, "COMBO"), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-combo": true,
+    className: "mt-1 block text-2xl font-black leading-none tabular-nums text-white",
+    style: {
+      textShadow: settings.lightweightMode ? 'none' : '0 1px 6px rgba(2,6,23,.95)'
+    }
+  }, view.combo))))), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
     "data-rhythm-lightweight": settings.lightweightMode ? 'true' : 'false',
@@ -16107,7 +16120,7 @@ const RhythmTapTest = ({
     }
   }))), view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-pause-menu": true,
-    className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
+    className: "absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-2xl font-black"
   }, "PAUSE"), /*#__PURE__*/React.createElement("button", {

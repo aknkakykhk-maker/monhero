@@ -149,6 +149,8 @@ node tools/build.js --check
 `node mode/rhythm-mode-sublane-projection-check.js` は、旧5レーン互換を保つ10サブレーン座標、TAP幅1〜4、左右端、奥／手前の共通projection、サブ境界とHOLD／SLIDE／ENDバーの回帰を確認する。
 `node mode/rhythm-note-geometry-audit.js` は、ノーツ速度1.0〜12.0（0.1刻み・6.0=2150ms）の変換式と、速度1／3／6／10／12 × ノーツサイズ80／100／120％の全組み合わせについて、ノーツ頭・HOLD帯・SLIDE帯・ENDバーの実描画位置を実ブラウザで測り、共通projectionからのズレとレーン外へのはみ出しを検出する。ノーツサイズは頭だけに掛かり、帯とENDバーはレーンgeometry基準のままであることもここで確認する。帯は上端と下端の2点だけを見ると途中の歪みを見逃すため、clipPath／polygonを実際に線形補間した値を**画面内の複数の高さ**で突き合わせる（画面より長い帯のケースも含む）。
 `node mode/rhythm-rank-check.js` は、スコアランク(暫定値: G→F→E→D→C→B→A→S→SS→M、絶対スコアのしきい値)の並び・境界値・難易度ごとの上限ランクが自然に下がること、HUD/リザルトへの結線、BESTの保存形式を増やしていないことを確認する。
+
+`node mode/rhythm-hud-overlay-check.js` は、プレイ画面のHUDが「レーンの縦を食っていない」ことを実ブラウザで測る。HUDはプレイエリアへ重ねる絶対配置なので、(1) レイアウト上の高さを持たずレーンが画面の高さをそのまま使えること、(2) スコア・コンボが遠近台形の外側に収まること、(3) HUDの下端が判定側まで伸びてこないこと、を4つの画面サイズで確認する。Tailwindを読めないサンドボックス向けに、JSXのHUDからclassを取り出して手書きCSSへ写して測るため、**知らないTailwindクラスが出てきたら失敗する**(古いCSSで測り続ける事故を防ぐ)。HUDへクラスを足したらこのファイルのCSS表も更新すること。
 `node mode/rhythm-life-check.js` は、音ゲーのライフ(暫定値: 最大1000 / MARVELOUS・EXCELLENT +2 / GREAT +1 / GOOD ±0 / BAD -20 / MISS -50)の増減と0〜最大のクランプ、壊れた値の既定値扱い、HUDのライフバー表示を確認する。あわせて、この段階で入れない約束(ライフ0で曲を止めない・スコア/コンボ/BESTへ関与しない・保存キーを増やさない)が守られているかも検査する。
 `node mode/rhythm-mid-tracking-check.js` は、HOLD/SLIDEの途中追従判定(暫定値)を確認する。猶予(暫定120ms)を超えて経路・帯から外れたままの場合だけMISSを確定すること、猶予内に戻ればカウントをリセットすること、HOLDにも横ズレ判定(帯の半分幅+0.15レーン)が効くこと、途中失敗時は指を離す前にその場でMISS確定させることを、擬似DOM上でbind/record/releaseを直接動かして検証する。
 `node mode/rhythm-audio-independence-check.js` は、音ゲーのBGM専用gainがメインのbgmGainを経由せずdestinationへ直結していること、曲ごとの音量差はsafeTrackGainで正規化すること、タップ音がもともとメインのSE音量と無関係であること、そして全体ミュート(タイトルの「音がオフです」)だけは`window.__mhAudioEnabled`経由で両方に共通で効くことを確認する。
