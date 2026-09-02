@@ -72,5 +72,95 @@ check('実機タイミング補正は譜面エディタの中にだけ作る',
 check('実機タイミング補正はプレイ中に再走査しない',
   offset.includes("document.documentElement.dataset.rhythmPlayActive==='true'"));
 
-console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
-process.exit(failed?1:0);
+// 6. 実際にブラウザで動かして、トグルがその画面の中へ入ることを確かめる
+const http=require('http');
+const PORT=8978;
+const MIME={'.html':'text/html','.js':'text/javascript'};
+const PAGE=`<!doctype html><html><head><meta charset="utf-8"></head><body>
+<script src="/monster-hero/data/rhythm-mode.js"><\/script>
+<script src="/monster-hero/data/rhythm-geometry-calibration.js"><\/script>
+</body></html>`;
+const serve=()=>new Promise(resolve=>{
+  const server=http.createServer((req,res)=>{
+    const rel=decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/,'');
+    const file=path.join(ROOT,rel);
+    if(!file.startsWith(ROOT)||!fs.existsSync(file)||fs.statSync(file).isDirectory()){res.writeHead(404);res.end('not found');return;}
+    res.writeHead(200,{'Content-Type':MIME[path.extname(file).toLowerCase()]||'application/octet-stream'});
+    fs.createReadStream(file).pipe(res);
+  });
+  server.listen(PORT,()=>resolve(server));
+});
+
+(async()=>{
+  let playwright;
+  try{playwright=require(path.join(ROOT,'tools/node_modules/playwright'));}
+  catch{try{playwright=require('playwright');}catch{
+    console.log('（playwright が無いので実ブラウザ確認はスキップしました）');
+    console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
+    process.exit(failed?1:0);
+  }}
+  const server=await serve();
+  let browser;
+  try{
+    browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+    const page=await browser.newPage({viewport:{width:390,height:844}});
+    const errors=[];
+    page.on('pageerror',e=>errors.push(String(e)));
+    await page.route('**/calibration-probe.html',route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:PAGE}));
+    await page.goto(`http://localhost:${PORT}/calibration-probe.html`,{waitUntil:'networkidle'});
+    check('座標校正スクリプトを読み込んでもエラーにならない',errors.length===0,errors[0]||'');
+
+    const beforeAnyScreen=await page.evaluate(()=>document.querySelectorAll('[data-rhythm-calibration-toggle]').length);
+    check('どの音ゲー画面も無い間はトグルを作らない',beforeAnyScreen===0,`${beforeAnyScreen}個`);
+
+    const debugState=await page.evaluate(async()=>{
+      const screen=document.createElement('div');
+      screen.dataset.rhythmDebug='';
+      document.body.appendChild(screen);
+      await new Promise(resolve=>setTimeout(resolve,120));
+      const toggle=screen.querySelector('[data-rhythm-calibration-toggle]');
+      return {
+        inside:!!toggle,
+        position:toggle?getComputedStyle(toggle).position:null,
+        outside:document.querySelectorAll('body > [data-rhythm-calibration-toggle]').length,
+        label:toggle?toggle.textContent:null
+      };
+    });
+    check('デバッグ画面が出るとトグルがその中へ入る',debugState.inside,debugState.label||'');
+    check('トグルは固定配置ではなく通常フロー',debugState.position==='static'||debugState.position==='relative',String(debugState.position));
+    check('body直下へ固定レイヤーを作らない',debugState.outside===0,`${debugState.outside}個`);
+
+    const toggled=await page.evaluate(async()=>{
+      const toggle=document.querySelector('[data-rhythm-calibration-toggle]');
+      toggle.click();
+      await new Promise(resolve=>setTimeout(resolve,60));
+      return {label:toggle.textContent,pressed:toggle.getAttribute('aria-pressed')};
+    });
+    check('トグルを押すとONへ切り替わる',toggled.label==='座標校正 ON'&&toggled.pressed==='true',`${toggled.label} / aria-pressed=${toggled.pressed}`);
+
+    const pauseState=await page.evaluate(async()=>{
+      document.querySelector('[data-rhythm-debug]').remove();
+      const play=document.createElement('div');
+      play.dataset.rhythmPlayArea='';
+      document.body.appendChild(play);
+      await new Promise(resolve=>setTimeout(resolve,120));
+      const duringPlay=document.querySelectorAll('[data-rhythm-calibration-toggle]').length;
+      const pause=document.createElement('div');
+      pause.dataset.rhythmPauseMenu='';
+      play.appendChild(pause);
+      await new Promise(resolve=>setTimeout(resolve,120));
+      const toggle=pause.querySelector('[data-rhythm-calibration-toggle]');
+      return {duringPlay,inPause:!!toggle,label:toggle?toggle.textContent:null,
+        outside:document.querySelectorAll('body > [data-rhythm-calibration-toggle]').length};
+    });
+    check('プレイ中はトグルを画面へ浮かせない',pauseState.duringPlay===0,`${pauseState.duringPlay}個`);
+    check('ポーズメニューを開くとその中にトグルが出る',pauseState.inPause);
+    check('プレイ中もbody直下へ固定レイヤーを作らない',pauseState.outside===0,`${pauseState.outside}個`);
+    check('ON/OFFの状態は画面をまたいで保持する',pauseState.label==='座標校正 ON',pauseState.label||'');
+  }finally{
+    await browser?.close();
+    server.close();
+  }
+  console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
+  process.exit(failed?1:0);
+})();
