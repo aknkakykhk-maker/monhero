@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":101291,"data/rhythm-lane-svg.js":7143,"data/rhythm-geometry-calibration.js":14740,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":334323,"data/help.js":201753,"data/rhythm-step3-release.js":7722,"data/assistants.js":199005,"game-system.compiled.js":2677425,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":100426,"data/rhythm-lane-svg.js":7143,"data/rhythm-geometry-calibration.js":14740,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":334275,"data/help.js":201867,"data/rhythm-step3-release.js":7722,"data/assistants.js":199005,"game-system.compiled.js":2678734,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -313,14 +313,12 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
       radial-gradient(ellipse at 50% -8%,rgba(192,132,252,.20),transparent 35%),
       linear-gradient(180deg,#06091a 0%,#04050d 48%,#02030a 100%) !important;
   }
-  [data-rhythm-hud] {
-    position:relative;
-    z-index:30;
-    background:linear-gradient(180deg,rgba(6,9,26,.98),rgba(7,9,24,.90)) !important;
-    box-shadow:0 10px 28px rgba(2,6,23,.70),0 1px 0 rgba(103,232,249,.12);
-    -webkit-backdrop-filter:blur(10px);
-    backdrop-filter:blur(10px);
-  }
+  /* HUDには背景パネルを一切持たせない。以前ここで
+     background:linear-gradient(...) + backdrop-filter:blur() + box-shadow で
+     画面上部に不透明な帯を敷いており、台形の頂点(消失点)と上部の背景を覆っていた。
+     実機で「中央上部に黒い帯が残っていてレーンが上まで見えない」と指摘されたため撤去した
+     (2026-09-03)。JSX側は元から背景を持っていないので、ここに足さないことが条件になる。
+     文字の視認性はJSX側の text-shadow だけで確保する。 */
   [data-rhythm-score],[data-rhythm-combo] {
     text-shadow:0 0 14px rgba(103,232,249,.22),0 0 26px rgba(217,70,239,.14);
   }
@@ -335,7 +333,9 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
       radial-gradient(ellipse at 50% 4%,rgba(217,70,239,.18),transparent 28%),
       radial-gradient(ellipse at 50% 92%,rgba(34,211,238,.12),transparent 34%),
       linear-gradient(180deg,#050817 0%,#070718 42%,#03040b 100%);
-    box-shadow:inset 0 24px 58px rgba(2,6,23,.82),inset 0 -42px 80px rgba(2,6,23,.68);
+    /* 上端側のinset影は消失点付近を暗く塗り潰してしまうため外した(2026-09-03)。
+       下端側だけ残して判定ライン付近の落ち着きを保つ。 */
+    box-shadow:inset 0 -42px 80px rgba(2,6,23,.68);
   }
   [data-rhythm-play-area]::before {
     content:"";
@@ -466,12 +466,12 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
 <script src="data/breeder.js?v=db8f5cb5742e" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=9a8b6a8844c3" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=6d1756848ae8" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=9e944b7c6669" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=9f1eba7a095c" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=d83a62752510" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=0fe3d2be5060" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=f37a3beaa1c3" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=577c83e3f04b" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=579d7550e24d" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e2ca90a4adce" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
@@ -484,7 +484,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202609031506';
+  var GAME_BUILD = '202609031528';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');

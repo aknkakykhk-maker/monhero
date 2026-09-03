@@ -25,21 +25,24 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 // 1. プレイ画面: HUD・プレイエリア・ポーズだけで閉じる
 check('プレイ画面は overflow-hidden の1画面で、内側にスクロールを作らない',
   game.includes('<main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden'));
-// HUD(<header data-rhythm-hud>)は台形に重ねる絶対配置ではなく、画面上部の薄い帯として
-// 通常のflowに置く(2026-09-03)。以前は台形の外側ウェッジ(HUD本文を左右の空きだけに収める形)
-// だったが、台形の上端を狭く保つ必要があり「レーンが上まで見えない」原因になっていたため、
-// 実領域を持つ薄い帯へ変更した。台形の頂点(中央)に重ねる背景パネルは持たせない
-// (PR #983は全幅の背景パネルを敷いてしまい、台形の頂点そのものを覆って遠近感を変えてしまった)。
-check('HUDはプレイエリアへ重ねる絶対配置ではなく、上の薄い帯として通常のflowに置く',
-  !/<header data-rhythm-hud className="[^"]*\babsolute\b/.test(game)
-  &&game.includes('<header data-rhythm-hud className="relative z-10 shrink-0 px-3 pt-1 pb-1"')
+// HUDは左右の空きウェッジ(台形が狭くなる分だけ左右に空く三角形の余白)だけに置き、
+// 台形の頂点(中央)には何も置かない・背景パネルも持たない。PR #983は全幅の背景パネルを
+// 敷いてしまい、台形の頂点そのものを覆って遠近感を変えてしまった。
+check('HUDはレイアウトの高さを取らない絶対配置で、台形の中央を覆う背景を持たない',
+  game.includes('<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"')
   &&!/data-rhythm-hud[\s\S]{0,50}background:/.test(game));
+// ウェッジは下へ行くほど狭くなるので、行ごとに幅を変える。幅は画面幅基準の vw で持つ
+// (% は親要素基準になり、入れ子だと意図した画面比にならない)。実際の当たりは
+// rhythm-hud-wedge-check.js が実ブラウザで測る。
+check('HUD本文の幅は画面幅基準(vw)で、左右それぞれ上限を持つ',
+  game.includes('data-rhythm-hud-left className="min-w-0 max-w-[35vw]')
+  &&game.includes('data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw]'));
 // 曲名を truncate で切ると、実機で「あつ杯テー…」となって曲が分からなくなる
 check('曲名は truncate で切らずに折り返す',
   /data-rhythm-hud-song className="(?![^"]*truncate)/.test(game)
   &&/data-rhythm-hud-song[\s\S]{0,260}WebkitLineClamp/.test(game));
-check('ポーズボタンはタップ精度を落とさない44px以上を確保する',
-  /data-rhythm-pause aria-label="ポーズ" className="[^"]*min-h-\[44px\][^"]*min-w-\[44px\]/.test(game));
+check('HUDは触れず、ポーズだけがタップを受ける',
+  /data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto /.test(game));
 // Safe Areaは index.html の body が padding で確保済み(body{height:100dvh;box-sizing:border-box;
 // padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)})。
 // プレイ画面側で上下のenv()をもう一度足すと二重・三重掛けになり、実機の上部に大きな空白ができる
