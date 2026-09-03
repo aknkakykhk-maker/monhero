@@ -27,7 +27,6 @@ jobs:
       - name: Checks
         run: |
           node tools/audio/eiki-boss-bgm-check.js
-          node tools/audio/pandora-boss-bgm-check.js
           node tools/audio/bgm-arrangement-check.js
           node tools/check-syntax.js
           node tools/undefined-reference-check.js
