@@ -5,7 +5,7 @@
 //   ・1枠目→1個目、2枠目→2個目…と対応し、1曲あたり設定した体数ぶん・最大4回
 //   ・能力発動は GREAT 以上。判定窓はモンスターノーツ専用に甘くしない
 //   ・能力は **主血統** で決まる（副血統では変えない）
-//   ・元気=ライフ+200 / 無敵=6秒ダメージ0 / 我慢=15秒50%軽減 / 根性=復活ライフ50
+//   ・元気=ライフ+500 / 無敵=6秒ダメージ0 / 我慢=15秒50%軽減 / 根性=復活ライフ50
 //   ・DOWNから復帰できるのは根性だけ
 //   ・DOWN中に根性で蘇生したら、**その蘇生ノーツ自身は加算せず次のノーツから** 再開する
 //
@@ -102,8 +102,8 @@ check('GOOD / BAD / MISS では不発',
 
 // ── 各能力の効き方（§4） ────────────────────────────────────────────────────
 const A=M.RHYTHM_MONSTER_ABILITIES,fresh=()=>M.createRhythmMonsterAbilityState();
-check('元気はライフ+200',
-  M.rhythmActivateMonsterAbility({ability:A.GENKI,state:fresh(),life:500,songTimeMs:0}).life===700);
+check('元気はライフ+500',
+  M.rhythmActivateMonsterAbility({ability:A.GENKI,state:fresh(),life:400,songTimeMs:0}).life===900);
 check('元気は最大ライフを超えない',
   M.rhythmActivateMonsterAbility({ability:A.GENKI,state:fresh(),life:900,songTimeMs:0}).life===M.RHYTHM_LIFE_MAX);
 check('元気はDOWNから復帰させない',

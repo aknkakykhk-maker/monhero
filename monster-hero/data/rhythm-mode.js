@@ -182,7 +182,7 @@ const rhythmChartMonsterNoteIssues=notes=>{
 // ドラゴン / ジョーカー / ゲル はプレイアブル代表が未実装のため、能力をまだ決めない(§4.6)。
 // 「？？？」はレア区分用の血統なので割り当て対象にしない。
 const RHYTHM_MONSTER_ABILITIES=Object.freeze({
-  GENKI:Object.freeze({id:'GENKI',name:'元気',lifeGain:200}),
+  GENKI:Object.freeze({id:'GENKI',name:'元気',lifeGain:500}),
   MUTEKI:Object.freeze({id:'MUTEKI',name:'無敵',durationMs:6000}),
   GAMAN:Object.freeze({id:'GAMAN',name:'我慢',durationMs:15000,reduceRate:.5}),
   KONJO:Object.freeze({id:'KONJO',name:'根性',reviveLife:50,stockLifeGain:50}),
