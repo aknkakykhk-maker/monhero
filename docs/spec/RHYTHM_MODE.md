@@ -1146,7 +1146,7 @@ PR #954の正式候補v1まで実装済み。ただし、これは完成譜面�
 
 ---
 
-## 14A. 自動譜面制作システム V2（確定・STEP1実装済み）
+## 14A. 自動譜面制作システム V2（確定・STEP1〜2実装済み）
 
 ### 目的
 
@@ -1516,7 +1516,50 @@ node tools/mode/rhythm-chart-v2-step1-check.js
 ```
 
 STEP1では `sections` / `phrases` / `charts` を出力せず、scopeにもSTEP2以降が未接続であることを保存する。
-tempo mapの確定、セクション・フレーズ判定、譜面生成、EXPERT / MASTER、自動修正は未実装。
+tempo mapの確定、譜面生成、EXPERT / MASTER、自動修正は未実装。
+
+### V2 STEP2 actual（セクション / フレーズ解析）
+
+`tools/mode/rhythm-chart-v2-step2-analyze.js` で実装済み。STEP1のV2特徴JSONを唯一の入力とし、
+ゲームruntimeや既存譜面を読んで答えを曲別に埋め込まない。STEP1のdownbeat候補から小節を作り、
+各小節のintensity、energy、low / mid / high、onset density、spectral change、accent等をまとめて扱う。
+
+フレーズ境界は次の組み合わせで決める。
+
+- 隣接小節間の特徴novelty
+- intensityの変化量
+- 2 / 4 / 8小節周期
+- 最小2小節、最大8小節
+
+固定4小節分割にはせず、候補境界の強さに応じて2〜8小節の可変長にする。各フレーズは時間方向を
+4点へ再サンプルしたfingerprintを持ち、長さが異なるフレーズ間も同じ特徴空間で比較する。
+類似度しきい値以上のものはrepeat groupと過去フレーズ参照を持つ。
+
+セクションは2〜4フレーズを基準に、フレーズ間noveltyとintensity差で可変分割する。各区間には、
+INTRO / VERSE / BUILD / CHORUS / BREAK / BRIDGE / FINAL_CHORUS / OUTROの候補score上位4件、
+暫定の最上位候補、intensity、confidence、フレーズ一覧、繰り返し元、主要accentを保存する。
+ラベルはSTEP2時点の**候補**であり、低confidenceを確定ラベルとして譜面生成へ直結しない。
+
+保存済みactual:
+
+| trackId | V2構造JSON | 小節 | フレーズ | repeat group | セクション | overall confidence |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `atsu_cup_theme` | `tools/mode/authoring/atsu-cup-theme-v2-structure.json` | 102 | 19 | 1 | 7 | 0.544 |
+| `monster_hero_theme` | `tools/mode/authoring/monster-hero-theme-v2-structure.json` | 110 | 19 | 2 | 8 | 0.552 |
+
+Monster Heroでは、INTRO / BREAK / VERSE / CHORUS / FINAL_CHORUS / OUTRO候補を得た。
+あつ杯テーマでは、VERSE / BRIDGE / CHORUS候補、終端にOUTRO候補を得た。両曲とも全尺を隙間・重複なく覆う。
+
+CLI確認:
+
+```bash
+node tools/mode/rhythm-chart-v2-step2-analyze.js --track atsu_cup_theme --summary
+node tools/mode/rhythm-chart-v2-step2-analyze.js --track monster_hero_theme --summary
+node tools/mode/rhythm-chart-v2-step2-check.js
+```
+
+STEP2出力は `scope.sections=true` / `scope.phrases=true` とし、chart generation、EXPERT / MASTER、
+自動批評、自動修正はfalseのまま保持する。次工程はSTEP3「生成ルールへの構造反映」。
 
 ---
 
