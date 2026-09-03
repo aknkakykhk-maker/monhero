@@ -63,6 +63,8 @@ const headerHtml=headerJsx
   .replace(/\sstyle=\{\{((?:[^{}]|\{[^{}]*\})*)\}\}/g,(_,body)=>inlineStyle(body))
   .replace(/\sref=\{[^}]*\}/g,'')
   .replace(/\son[A-Z][A-Za-z]*=\{[^}]*\}/g,'')
+  // data-... の式は見た目の段階分けで、箱の位置・大きさには効かないので落とす
+  .replace(/\sdata-[a-z-]+=\{[^{}]*\}/g,'')
   .replace(/className=\{`([^`]*)`\}/g,(_,body)=>`class="${body.replace(/\$\{RHYTHM_RANK_COLORS\[[^\]]*\]\}/g,'text-fuchsia-200')}"`)
   .replace(/className=/g,'class=')
   .replace(/\{difficulty\.id\}/g,SAMPLE.difficulty)
@@ -134,7 +136,7 @@ const cssFor=token=>{
   if((m=/^max-w-\[(\d+)%\]$/.exec(token)))return `max-width:${m[1]}%`;
   if((m=/^w-\[(\d+)%\]$/.exec(token)))return `width:${m[1]}%`;
   if((m=/^text-\[(\d+)px\]$/.exec(token)))return `font-size:${m[1]}px`;
-  if((m=/^text-(xs|sm|base|lg|2xl|3xl)$/.exec(token)))return `font-size:${{xs:'12px',sm:'14px',base:'16px',lg:'18px','2xl':'24px','3xl':'30px'}[m[1]]}`;
+  if((m=/^text-(xs|sm|base|lg|xl|2xl|3xl|4xl)$/.exec(token)))return `font-size:${{xs:'12px',sm:'14px',base:'16px',lg:'18px',xl:'20px','2xl':'24px','3xl':'30px','4xl':'36px'}[m[1]]}`;
   if((m=/^tracking-\[([^\]]+)\]$/.exec(token)))return `letter-spacing:${m[1]}`;
   if((m=/^(text|bg|border)-([a-z]+-\d{2,3}|white)$/.exec(token))){
     const hex=PALETTE[m[2]];

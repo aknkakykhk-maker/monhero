@@ -41,11 +41,13 @@ check('描画と横投影は同じ丸め済みY座標を使用',game.includes('y
 check('ノーツY/X/幅をプレイ本体の同じrAFで配置',game.includes('rhythmProjectTravelProgress(progress)*travel.travelPx')&&game.includes('rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:')&&!source.match(/const installRhythmPerspectiveNoteVisuals=[\s\S]*?requestAnimationFrame/));
 check('別座標系のCSS 3D変形を廃止',!html.includes('transform:perspective(')&&!source.includes('const scale=.44+.56*depth'));
 check('既存の同時押しbatchを維持',source.includes('const rhythmMatchInputBatch='));
-check('FLICKは通常TAPと別のシアン表示で上方向を明示',
+// FLICKはシアンから変えた(2026-09-03)。背景の暗い青やHOLDの縁のシアンに紛れて見づらいという
+// 実機の指摘があったため、唯一の暖色であるオレンジにしている。上方向の印はそのまま。
+check('FLICKは通常TAPと別のオレンジ表示で上方向を明示',
   html.includes('[data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child')
-  &&html.includes('linear-gradient(180deg,#ecfeff 0%,#67e8f9 34%,#22d3ee 62%,#0284c7 100%)')
+  &&html.includes('linear-gradient(180deg,#fff7ed 0%,#fdba74 34%,#f97316 62%,#c2410c 100%)')
   &&html.includes('content:"⇧" !important')
-  &&html.includes('rgba(34,211,238,.92)'));
+  &&html.includes('rgba(249,115,22,.92)'));
 check('FLICKの見た目変更だけで判定距離・受付時間は維持',source.includes('const RHYTHM_FLICK_DISTANCE_PX = 24;')&&source.includes('const RHYTHM_FLICK_MAX_MS = 450;'));
 
 const remainingHelper=release.match(/const rhythmSlideRemainingRatio=[\s\S]*?\n  \};/)?.[0];
