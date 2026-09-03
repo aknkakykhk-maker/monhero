@@ -1146,7 +1146,7 @@ PR #954の正式候補v1まで実装済み。ただし、これは完成譜面�
 
 ---
 
-## 14A. 自動譜面制作システム V2（確定・未実装）
+## 14A. 自動譜面制作システム V2（確定・STEP1実装済み）
 
 ### 目的
 
@@ -1473,6 +1473,50 @@ V2は一度に巨大実装せず、既存機能を壊さないよう段階的に
    - 正式候補出力
 
 各STEPで既存譜面を勝手に変更せず、V2出力と現行出力を比較できる状態を維持する。
+
+### V2 STEP1 actual（楽曲特徴・盛り上がり解析）
+
+`tools/mode/rhythm-audio-timing-analyze.js --v2` で実装済み。既存の8kHz mono decode、
+onset envelope、BPM推定を再利用し、既存 `monster-hero/data/rhythm-timing.js` のBPM / beatZeroを
+譜面制作基準として全尺の特徴マップを作る。ゲームruntime・既存譜面・保存・ランキングには接続しない。
+
+解析単位は500ms窓・250ms hop。V2 JSONには次を保存する。
+
+- 音源SHA-256、解析アルゴリズム版、duration、sample rate、窓幅
+- BPM / beatZero / 16分グリッド、4拍子のdownbeat位相候補・時刻・confidence
+- onset時刻・強度・近傍グリッド・offset・accent・confidence
+- energy（RMS / dBFS / 曲内正規化値）
+- low（0〜250Hz）/ mid（250〜2000Hz）/ high（2000〜4000Hz）のRMS・曲内正規化値・attack
+- onset density、spectral brightness / spread / change、直前窓からの変化量
+- sustain候補、強いaccent候補、簡易rhythm pattern集計
+- 各窓の `intensity 0.0〜1.0` とconfidence
+
+intensityは、曲内の外れ値に引っ張られないpercentile正規化後、energy 40%、onset density 20%、
+onset strength 12%、spectral change 13%、low 8%、high 7%を合成する。前後1窓で平滑化し、
+曲内p05〜p98を0〜1へ写す。したがって絶対音量ではなく、**同じ曲の中での盛り上がり推移**を示す。
+
+confidenceは譜面品質点ではなく解析証拠の信頼度。featuresは信号量・dynamic range・onset数・clipping、
+timingは既存制作BPMと独立BPM推定の近さ・自己相関confidence、downbeatは4位相の証拠差を使う。
+overallはfeatures 62%、timing 23%、downbeat 15%で合成する。downbeatの位相差が小さい曲は低confidenceのまま保存し、
+STEP2が別特徴と合わせて再評価できるようにする。
+
+保存済みactual:
+
+| trackId | V2 JSON | 区間数 | onset | intensity平均 / p90 | overall confidence |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `atsu_cup_theme` | `tools/mode/authoring/atsu-cup-theme-v2-features.json` | 578 | 957 | 0.487 / 0.843 | 0.664 |
+| `monster_hero_theme` | `tools/mode/authoring/monster-hero-theme-v2-features.json` | 611 | 931 | 0.479 / 0.864 | 0.680 |
+
+CLI確認:
+
+```bash
+node tools/mode/rhythm-audio-timing-analyze.js --v2 --track atsu_cup_theme --summary --require-ffmpeg
+node tools/mode/rhythm-audio-timing-analyze.js --v2 --track monster_hero_theme --summary --require-ffmpeg
+node tools/mode/rhythm-chart-v2-step1-check.js
+```
+
+STEP1では `sections` / `phrases` / `charts` を出力せず、scopeにもSTEP2以降が未接続であることを保存する。
+tempo mapの確定、セクション・フレーズ判定、譜面生成、EXPERT / MASTER、自動修正は未実装。
 
 ---
 
