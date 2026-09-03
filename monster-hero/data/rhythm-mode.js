@@ -338,7 +338,14 @@ const RHYTHM_PERF=(()=>{
   return api;
 })();
 
-const RHYTHM_PROJECTION_TOP_SCALE=.18;
+// 台形の上端の幅(全体を1としたときの比率)。以前は.18(上端は画面幅の18%)で、
+// レーンの外側・上端寄りの左右に台形へ入らない黒い余白が大きく残り、「レーンが上まで見える
+// ようにしてほしい」と指摘された(2026-09-03)。この余白は元々、HUD本文を台形の外側ウェッジへ
+// 押し込むために意図して確保していたが、HUD(<header data-rhythm-hud>)を実領域を持つ薄い帯
+// (常時表示はランク+SCORE、LIFE+COMBO+ポーズの1行のみ。BEST・難易度・曲名は2行目の細い行)
+// へ変更したことで、HUDが台形の幅に一切関与しなくなったため不要になった。収束方向
+// (上が狭い・下の判定ラインが広い)自体は変えず、上端の余白だけを大きく減らす(暫定値)。
+const RHYTHM_PROJECTION_TOP_SCALE=.55;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
 const RHYTHM_BODY_WIDTH_RATIO=.64;
 // 幅1だけに付ける入力側の余白。隣接する細ノーツの中心までは広げない。
