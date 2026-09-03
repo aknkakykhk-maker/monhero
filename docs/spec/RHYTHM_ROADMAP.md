@@ -43,6 +43,59 @@
 
 ---
 
+## 1-B. 基盤固定ライン（自動検査で確認した断面）
+
+正式譜面の制作へ入るにあたり、**譜面制作中に「なんとなく」で動かさない値・構造**をここに固定する。
+下の項目を変えると遠近・落下速度・判定・入力位置のいずれかが必ず動く。変更したくなった場合は
+譜面側の都合で触らず、先に理由をユーザーへ確認する。
+
+| 固定する対象 | 現在の値・構造 | 置き場所 |
+| --- | --- | --- |
+| レーンの収束率 | `RHYTHM_PROJECTION_TOP_SCALE = .18` | `data/rhythm-mode.js` |
+| 奥行きの曲線 | `TOP + (1-TOP) * pow(clamp01(y), 1.24)` | `data/rhythm-mode.js` |
+| メインレーン / サブレーン | 5 / 10 | `data/rhythm-mode.js` |
+| プレイ画面のHUD | プレイエリアへ重ねる絶対配置。レイアウトの高さを取らない | `src/game-system.jsx` |
+| HUDの背景 | 背景色・背景画像・影・ぼかしを一切持たない（JSX側・`index.html` 側の両方） | `src/game-system.jsx` / `index.html` |
+| プレイエリアの高さ | 画面の上端から下端まで。上端側の inset 影は置かない | `index.html` |
+| ノーツの落下時間 | `rhythmTravelMsForSpeed(noteSpeed)` のみ。**画面の向きで分岐させない** | `src/game-system.jsx` |
+| 判定窓 | モンスターノーツでも共通（能力用に甘くしない） | `data/rhythm-mode.js` |
+| スコアの重み | 判定90% / コンボ10% | `data/rhythm-mode.js` |
+| ライフ | 最大1000。元気 `+500` / 根性の復活 `50` | `data/rhythm-mode.js` |
+| 保存キー | 音ゲーで増やすのはマスモンの枠のみ。既存 `mh_*` は触らない | — |
+
+### 固定時点で通した自動検査
+
+`tools/mode/rhythm-*.js` の全47件、`check-syntax` / `undefined-reference-check` /
+`jsx-text-brace-check` / `render-error-check` / `build.js --check`、
+ヘルプ・助手・起動系の各検査をすべて成功させた状態を基準断面とする。
+
+とくに次の3つは、過去に実際に壊して気づけなかった箇所を機械的に見張るためのもの。
+譜面制作中も落ちたら必ず直す。
+
+- `rhythm-hud-wedge-check.js` / `rhythm-landscape-hud-check.js`
+  … HUDが背景を持たず、プレイエリアが画面上端から始まることを実ブラウザで計測する
+  （`index.html` 側のグローバルCSSも読み込む）
+- `rhythm-orientation-check.js`
+  … 譜面・判定窓・スコア式を画面の向きで分けていないことを見る
+- `rhythm-monster-notes-check.js`
+  … 4能力の効果・重ねがけ・DOWN/復活・枠なし中央表示をまとめて見る
+
+### 毎フレームの余裕（headless Chromiumでの実測）
+
+ノーツは毎フレーム全件を走査する。ノーツ数を変えて1フレームあたりの走査コストを測った結果:
+
+| ノーツ数 | 1フレーム | 16.7msに対して |
+| --- | --- | --- |
+| 52（DEBUG 60s の実数） | 0.03ms | 0.2% |
+| 400 | 0.22ms | 1.3% |
+| 800 | 0.45ms | 2.7% |
+| 1600 | 0.89ms | 5.3% |
+
+正式譜面が想定する規模では余裕があるため、**性能目的の作り替えは行わない**。
+実機でのカクつきはiPhoneのDEBUG計測UIで確認する（STEP 2）。
+
+---
+
 ## 2. 直近の優先順
 
 ### STEP 1: iPhoneで現在のプレイ土台を最終固定
