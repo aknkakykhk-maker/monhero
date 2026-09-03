@@ -79,7 +79,7 @@ const HELP_CATEGORIES = [
       {
         id:'rhythm-notes-and-effects', emoji:'✨', title:'ノーツの色とコンボの演出', releaseFlag:'rhythmMode',
         assistant:'色で見分けられるようにしたよ。コンボもどんどん光るからね♪', expression:'excited',
-        blocks:[{t:'p',text:'ノーツは種類ごとに色を分けています。TAPはピンク、HOLDはシアン（水色）の縁、SLIDEは紫、FLICKはオレンジです。FLICKには上へ払うことが分かるように「⇧」の印も付きます。背景が暗い青なので、FLICKだけ暖色にして見分けやすくしています。'},
+        blocks:[{t:'p',text:'ノーツは種類ごとに色を分けています。TAPはピンク、HOLDはシアン（水色）の縁、SLIDEは紫、FLICKは緑、モンスターノーツは金色の光です。FLICKには上へ払うことが分かるように「⇧」の印も付きます。5種類の色は、どれとどれを比べても十分に離れた色みになるように選んでいます。'},
           {t:'p',text:'コンボ数は100・200・300で色と光り方が変わります。さらに100コンボごとに、画面の中央へお祝いの表示が出ます。'},
           {t:'p',text:'曲を終えたあとのリザルトでは、一度もコンボを切らなければ「FULL COMBO！」、すべてEXCELLENT以上なら「ALL EXCELLENT！！」、すべてMARVELOUSなら「ALL MARVELOUS！！」を大きく表示します。'},
           {t:'note', title:'演出を減らしたいとき', text:'音ゲー設定の「演出量」をMINIMALにするか「軽量モード」を入れると、100コンボごとの演出は出なくなります。端末の「視差効果を減らす」設定を入れている場合も、演出は動かずに表示だけになります。'}],

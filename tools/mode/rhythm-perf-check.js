@@ -102,5 +102,22 @@ check('既存の保存キーを増減していない',
   game.includes("RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1'")
   &&game.includes("RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1'"));
 
+// --- 毎フレームの無駄を作らない（実機のカクつき対策・2026-09-03） ---
+// どれも「同じ値を書き直さない」「変わらないものを測り直さない」だけで、
+// 見た目・判定・スコア・落下速度は変えていない。戻すとカクつきが再発する。
+const gameSrc=require('fs').readFileSync(require('path').join(__dirname,'..','..','monster-hero/src/game-system.jsx'),'utf8');
+check('プレイエリアの寸法を毎フレーム測り直さない（覚えておく）',
+  gameSrc.includes('const travelCacheRef=useRef(null);')
+  &&gameSrc.includes('const cached=travelCacheRef.current;\n  if(cached)return cached;'));
+check('画面の大きさが変わったら測り直す',
+  gameSrc.includes("window.addEventListener('resize',invalidate)")
+  &&gameSrc.includes("window.addEventListener('orientationchange',invalidate)"));
+check('組み上がる前(高さ0)の値は覚えない',gameSrc.includes('if(areaRect.height>0)travelCacheRef.current=result;'));
+check('終わったノーツへ毎フレーム同じ指示を書き直さない',
+  gameSrc.includes('if(el._rhythmHidden!==true){')&&gameSrc.includes('el._rhythmHidden=true;'));
+check('見え方が変わったときだけ書き込む',gameSrc.includes('if(el._rhythmOpacity!==nextOpacity){'));
+check('能力が動いていないあいだは表示の文字列を組み立てない',
+  gameSrc.includes('const hasAbilityBadge=badge&&(')&&gameSrc.includes('if(hasAbilityBadge){'));
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
