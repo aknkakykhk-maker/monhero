@@ -25,15 +25,18 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 // 1. プレイ画面: HUD・プレイエリア・ポーズだけで閉じる
 check('プレイ画面は overflow-hidden の1画面で、内側にスクロールを作らない',
   game.includes('<main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden'));
-// HUDは左右の空きウェッジ(台形が狭くなる分だけ左右に空く三角形の余白)だけに置き、
-// 台形の頂点(中央)には何も置かない・背景パネルも持たない。PR #983は全幅の背景パネルを
-// 敷いてしまい、台形の頂点そのものを覆って遠近感を変えてしまった。
-check('HUDはレイアウトの高さを取らない絶対配置で、台形の中央を覆う背景を持たない',
-  game.includes('<header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"')
+// HUDはプレイエリアに重ねる絶対配置ではなく、プレイエリアの外側・上に置く独立した帯
+// (通常のflowで実際の高さを取る)。PR #983は全幅の背景パネルを敷いてしまい、台形の
+// 頂点そのものを覆って遠近感を変えてしまったため、背景パネルは持たせない(文字影のみ)。
+// 台形の外側ウェッジ(HUDが台形の狭い上端の左右にできる余白だけに収まる形)は、
+// 台形の上端を狭くする必要があり「レーンが上まで見えない」原因になっていたため、
+// 2026-09-03にこの帯レイアウトへ変更した。
+check('HUDはプレイエリアへ重ねる絶対配置ではなく、上の帯として通常のflowに置く',
+  !/<header data-rhythm-hud className="[^"]*\babsolute\b/.test(game)
+  &&game.includes('<header data-rhythm-hud className="relative z-10 flex shrink-0 items-start justify-between gap-2 px-3 pt-1.5 pb-1"')
   &&!/data-rhythm-hud[\s\S]{0,50}background:/.test(game));
-// ウェッジは下へ行くほど狭くなるので、行ごとに幅を変える。幅は画面幅基準の vw で持つ
-// (% は親要素基準になり、入れ子だと意図した画面比にならない)。実際の当たりは
-// rhythm-hud-wedge-check.js が実ブラウザで測る。
+// HUD本文の幅は画面幅基準の vw で持つ(% は親要素基準になり、入れ子だと意図した画面比に
+// ならない)。実際の当たりは rhythm-hud-wedge-check.js が実ブラウザで測る。
 check('HUD本文の幅は画面幅基準(vw)で、左右それぞれ上限を持つ',
   game.includes('data-rhythm-hud-left className="min-w-0 max-w-[35vw]')
   &&game.includes('data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw]'));
