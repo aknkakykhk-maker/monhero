@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3430c3c1f4c59cb1
+// source-sha256: ccf0b511dbd9cd90
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 07:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 07:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11528,6 +11528,11 @@ const helpDataRows = id => {
       return [['ライフ 1', `+${MONSTER_POWER_STAT_WEIGHT.hp}`], ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`], ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`], ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`], ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'], ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`], ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`]];
     case 'assistantBondActions':
       return Object.values(typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS || {}).map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
+    // 音ゲーの難易度ごとの満点と、その満点で届く上限ランク。ランクのしきい値(RHYTHM_RANKS)を
+    // 直接ヘルプへ手で書き写すと、しきい値を調整するたびヘルプだけ古くなるため、
+    // rhythmRankForScoreへ各難易度のmaxScoreをそのまま渡して実データから表を作る
+    case 'rhythmDifficultyRanks':
+      return (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).map(d => [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
     case 'missionsDaily':
     case 'missionsWeekly':
     case 'missionsMonthly':
@@ -11560,7 +11565,8 @@ const HELP_DATA_TITLES = {
   assistantBondActions: '仲良し度が増える行動',
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
-  psycheRewards: '難易度ごとにもらえる虹のプシュケー'
+  psycheRewards: '難易度ごとにもらえる虹のプシュケー',
+  rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク'
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。

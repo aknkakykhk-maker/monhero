@@ -21,20 +21,27 @@ const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
 // スコアランク(暫定値)。G→F→E→D→C→B→A→S→SS→Mの10段階(Mが最上位)。
 // 難易度ごとの割合(%)ではなく絶対スコアのしきい値で判定する。%基準だと
 // EASYで100%を出してもMASTERで100%を出しても同じ最上位ランクになってしまうが、
-// 絶対値にすることでEASYの最大60万点はどれだけ極めてもAが上限になり、
-// MASTERの100万点だけがMへ届く。既存の難易度別最大スコア
-// (EASY 60万 / NORMAL 70万 / HARD 80万 / EXPERT 90万 / MASTER 100万)を
-// そのまま各ランクの境界に使っている。
+// 絶対値にすることでEASYの最大60万点はどれだけ極めてもBが上限になり、
+// MASTERの満点(100万点)だけがMへ届く。
+//
+// 2026-09-04、ユーザー指示で各しきい値を1段ずつ上（=同じ点数で付くランクは1段ずつ下）へ
+// ずらした。旧しきい値ではEXPERTの満点(90万点)もM(旧しきい値900000)に届いてしまい、
+// 「MASTERの満点だけがMになる」という上の説明と実際の挙動が食い違っていた。
+// 難易度別最大スコア(EASY 60万 / NORMAL 70万 / HARD 80万 / EXPERT 90万 / MASTER 100万)を
+// 1段上のランクの境界にそれぞれ使うことで、各難易度の満点が届く上限ランクを
+// 「EASY→B / NORMAL→A / HARD→S / EXPERT→SS / MASTER→M」に変え、Mは
+// MASTERの満点(100万点)でしか届かないようにしている。Gだけは0のまま(最下段なので
+// これ以上下げられない)。
 const RHYTHM_RANKS = Object.freeze([
-  Object.freeze({ id:'M', min:900000 }),
-  Object.freeze({ id:'SS', min:800000 }),
-  Object.freeze({ id:'S', min:700000 }),
-  Object.freeze({ id:'A', min:600000 }),
-  Object.freeze({ id:'B', min:500000 }),
-  Object.freeze({ id:'C', min:400000 }),
-  Object.freeze({ id:'D', min:300000 }),
-  Object.freeze({ id:'E', min:200000 }),
-  Object.freeze({ id:'F', min:100000 }),
+  Object.freeze({ id:'M', min:1000000 }),
+  Object.freeze({ id:'SS', min:900000 }),
+  Object.freeze({ id:'S', min:800000 }),
+  Object.freeze({ id:'A', min:700000 }),
+  Object.freeze({ id:'B', min:600000 }),
+  Object.freeze({ id:'C', min:500000 }),
+  Object.freeze({ id:'D', min:400000 }),
+  Object.freeze({ id:'E', min:300000 }),
+  Object.freeze({ id:'F', min:200000 }),
   Object.freeze({ id:'G', min:0 }),
 ]);
 const rhythmRankForScore = score => {

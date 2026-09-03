@@ -19,6 +19,7 @@ const breeder = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'),
 const assistantsData = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
 const lineagesData = fs.readFileSync(path.join(root, 'monster-hero/data/lineages.js'), 'utf8');
 const allyMonstersData = fs.readFileSync(path.join(root, 'monster-hero/data/ally-monsters.js'), 'utf8');
+const rhythmModeData = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-mode.js'), 'utf8');
 const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 // t:'data' の表は本番の helpDataRows() が実データから作るので、その定義と材料もそのまま持ち込む
 const dataTablePrelude = [
@@ -49,6 +50,8 @@ const dataTablePrelude = [
   (source.match(/^const BREAKTHROUGH_LEVEL_CAP_GAIN = .*$/m) || [''])[0],
   grab(source, 'const BREAKTHROUGH_STARS_PER_TIER', 'const BREAKTHROUGH_LEVEL_CAPS'),
   grab(source, 'const levelUpPointMultiplier =', 'const RAINBOW_STAR_IMAGE'),
+  // 音ゲーの難易度ごとの満点と上限ランクの表は、難易度定義とランクしきい値・判定関数から作る
+  grab(rhythmModeData, 'const RHYTHM_DIFFICULTIES = Object.freeze([', '// 現在のランクから次のランクまでの進捗'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
   "const { useState, useEffect, useRef, useContext } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
