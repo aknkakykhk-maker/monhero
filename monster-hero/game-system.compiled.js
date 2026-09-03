@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 10d024de7ce724c9
+// source-sha256: 51116b2d579c720b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 16:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 19:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3582,6 +3582,13 @@ const BGM_TRACKS = [{
   gain: 1,
   loop: true
 }, {
+  id: 'eiki_boss',
+  name: '綺季一閃 ～花雪に舞う詠姫～',
+  creator: 'オリジナル',
+  src: 'audio/綺季一閃_～花雪に舞う詠姫～.mp3',
+  gain: 1,
+  loop: true
+}, {
   id: 'atsu_cup_theme',
   name: 'あつ杯テーマ',
   creator: 'オリジナル',
@@ -3736,6 +3743,7 @@ const mergeRhythmBestRecord = (current, result) => {
   });
 };
 const pandoraBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Pandora' && (enemyId === 'Moo' || currentWave === 10) ? 'pandora_boss' : null;
+const eikiBossBgmForBattle = (heroId, currentWave, enemyId) => heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
@@ -18780,6 +18788,8 @@ function MonsterHeroGame() {
     if (state === 'BATTLE') {
       // パンドラを勇者モンにした最終ボス戦だけ、モード別のムー戦設定より専用曲を優先する。
       // 供モンや敵にパンドラがいるだけでは発動しないよう、勇者モンの種idだけを渡す。
+      const eikiBossBgm = eikiBossBgmForBattle(mainHero?.id, currentWave, enemyId);
+      if (eikiBossBgm) return eikiBossBgm;
       const pandoraBossBgm = pandoraBossBgmForBattle(mainHero?.id, currentWave, enemyId);
       if (pandoraBossBgm) return pandoraBossBgm;
       // AUTO中はモード別の通常/デュラハン/ムー曲より専用AUTO曲を使う。
