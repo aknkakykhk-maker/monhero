@@ -1464,6 +1464,27 @@ const RHYTHM_SONGS = Object.freeze([
   }),
 ]);
 
+// 先行公開する「音ゲー体験版」で遊べる範囲。ここに書いた1曲・3難易度だけを体験版の画面へ出す。
+// デバッグ画面の曲一覧(RHYTHM_SONGS)とは役割を分ける。デバッグ用の曲を体験版へ出さないため。
+const RHYTHM_DEMO_SONG_ID='monster_hero_theme_candidate';
+const RHYTHM_DEMO_DIFFICULTY_IDS=Object.freeze(['EASY','NORMAL','HARD']);
+const RHYTHM_DEMO_DIFFICULTY_LABELS=Object.freeze({
+  EASY:Object.freeze({name:'EASY', note:'はじめての人向け。TAPが中心で、押す場所も大きく動きません。'}),
+  NORMAL:Object.freeze({name:'NORMAL', note:'ふつうの遊び方。FLICKと幅の違うノーツが増えます。'}),
+  HARD:Object.freeze({name:'HARD', note:'いまの音ゲーでできることをひととおり。SLIDEと長押し中の別ノーツが入ります。'}),
+});
+const rhythmDemoSong=songs=>(songs||[]).find(song=>song.songId===RHYTHM_DEMO_SONG_ID)||null;
+// 体験版で選べる難易度だけを、譜面が入っているものに限って返す。
+// 譜面が空の難易度をボタンに出すと「押せるのに始まらない」状態になるため。
+const rhythmDemoDifficulties=(song,difficulties)=>{
+  if(!song)return [];
+  return (difficulties||[]).filter(difficulty=>{
+    if(!RHYTHM_DEMO_DIFFICULTY_IDS.includes(difficulty.id))return false;
+    const chart=song.difficulties?.[difficulty.id];
+    return !!chart&&Array.isArray(chart.notes)&&chart.notes.length>0;
+  });
+};
+
 const installRhythmGestureVisuals=()=>{
   if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
   if(document.documentElement.dataset.rhythmGestureVisuals==='ready')return;
