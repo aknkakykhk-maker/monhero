@@ -76,14 +76,24 @@ ok('コンボ数は100 / 200 / 300で段階を変える',
 
 // --- 100コンボごとの演出 ---
 ok('節目の刻みを定数で持っている',game.includes('const RHYTHM_COMBO_MILESTONE_STEP = 100'));
-ok('コンボが変わったときだけ判定する（毎フレームの処理を増やさない）',
-  game.includes('},[view.combo,settings.lightweightMode,settings.effectAmount]);'));
-ok('節目をまたいだときだけ出す（同じ節目で何度も出さない）',
-  game.includes('if(Math.floor(combo/RHYTHM_COMBO_MILESTONE_STEP)<=Math.floor(prev/RHYTHM_COMBO_MILESTONE_STEP))return;'));
-ok('軽量モードと演出量MINIMALでは出さない',
-  game.includes("if(settings.lightweightMode||settings.effectAmount==='MINIMAL')return;"));
+// ★2026-09-04に発見・修正したバグの再発防止: 依存をview.combo(毎ノーツ変わる値)にすると、
+// 100→101のような非節目の増加でも毎回effectが再実行され、その後片付け(cleanup)が
+// 「あと少しで消す」予約タイマーを節目と無関係に解除してしまい、100の表示だけが
+// 固まって二度と動かず200・300では何も起きないという不具合になっていた。
+// 依存は「段(tier)が変わったときだけ」動くcomboMilestoneTierだけにする。
+ok('依存はview.comboではなく、段が変わったときだけ動くcomboMilestoneTierだけ（毎ノーツ再実行されるバグの再発防止）',
+  game.includes('const comboMilestoneTier=Math.floor((Number(view.combo)||0)/RHYTHM_COMBO_MILESTONE_STEP);')
+  &&game.includes('},[comboMilestoneTier,settings.lightweightMode,settings.effectAmount]);')
+  &&!/setComboMilestone\([\s\S]{0,400}\},\[view\.combo,/.test(game));
+ok('段が上がったときだけでなく、演出を止める条件でも表示を0へ戻す（出しっぱなしで固まらない）',
+  game.includes("if(settings.lightweightMode||settings.effectAmount==='MINIMAL'||comboMilestoneTier<=0){")
+  &&game.includes('setComboMilestone(0);\n      return;'));
 ok('出しっぱなしにせず、時間で消す',game.includes('setTimeout(()=>setComboMilestone(0),1100)')
   &&game.includes('return ()=>clearTimeout(timer);'));
+ok('100/200/300/400/500以上で演出がどんどん派手になる段(stage)を持つ',
+  game.includes('const comboMilestoneStage=Math.min(5,comboMilestoneTier);')
+  &&game.includes('data-milestone-stage={comboMilestoneStage}')
+  &&html.includes('[data-rhythm-combo-milestone][data-milestone-stage="5"] b{'));
 ok('演出はプレイエリアへ重ね、入力を邪魔しない',
   /data-rhythm-combo-milestone[^>]*pointer-events-none/.test(game));
 ok('演出のCSSがある',html.includes('[data-rhythm-combo-milestone]')&&html.includes('@keyframes mhRhythmComboBurst'));

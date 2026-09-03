@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3411ddd1606b629f
+// source-sha256: 975038a243bb8d8c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 20:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 00:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15551,21 +15551,33 @@ const RhythmTapTest = ({
     result: null
   });
   const [view, setView] = useState(initialView);
-  // 100コンボごとの演出。コンボが変わったときだけ判定するので、毎フレームの処理は増えない。
+  // 100コンボごとの演出。
+  // 「段階(tier)が変わったときだけ」effectを動かすのが肝心で、以前は view.combo(=ノーツを取るたび
+  // 毎回変わる値)を依存にしていたため、100→101など非節目の増加でも毎回effectが再実行され、
+  // その"後片付け"がまだ生きていた表示タイマー(setTimeoutで1.1秒後にcomboMilestoneを0へ戻す処理)を
+  // 節目の直後に即座に解除してしまっていた。結果、100コンボの表示だけがopacity:0のまま固まって
+  // 二度と動かず、200・300では何も起きないように見えるバグになっていた。
+  // tierを先に計算してそれをeffectの依存にすることで、実際に100の位が変わったときだけ動く。
   // 演出量MINIMAL・軽量モードでは出さない(端末を重くしないため)。
   const [comboMilestone, setComboMilestone] = useState(0);
-  const comboSeenRef = useRef(0);
+  const comboMilestoneTier = Math.floor((Number(view.combo) || 0) / RHYTHM_COMBO_MILESTONE_STEP);
   useEffect(() => {
-    const combo = Number(view.combo) || 0;
-    const prev = comboSeenRef.current;
-    comboSeenRef.current = combo;
-    if (settings.lightweightMode || settings.effectAmount === 'MINIMAL') return;
-    if (combo < RHYTHM_COMBO_MILESTONE_STEP) return;
-    if (Math.floor(combo / RHYTHM_COMBO_MILESTONE_STEP) <= Math.floor(prev / RHYTHM_COMBO_MILESTONE_STEP)) return;
-    setComboMilestone(Math.floor(combo / RHYTHM_COMBO_MILESTONE_STEP) * RHYTHM_COMBO_MILESTONE_STEP);
+    if (settings.lightweightMode || settings.effectAmount === 'MINIMAL' || comboMilestoneTier <= 0) {
+      setComboMilestone(0);
+      return;
+    }
+    setComboMilestone(comboMilestoneTier * RHYTHM_COMBO_MILESTONE_STEP);
     const timer = setTimeout(() => setComboMilestone(0), 1100);
     return () => clearTimeout(timer);
-  }, [view.combo, settings.lightweightMode, settings.effectAmount]);
+  }, [comboMilestoneTier, settings.lightweightMode, settings.effectAmount]);
+  // 100→1段階目のように、コンボが伸びるほど演出を派手にする。ただしどこまでも大きくはせず
+  // 500コンボ(5段階目)で頭打ちにする(数字自体はそのまま表示する)。
+  const comboMilestoneStage = Math.min(5, comboMilestoneTier);
+  // ランクゲージ横の「次のランクはここまで」の表示(2026-09-04)。
+  // ランクの判定・しきい値そのものは増やさず、既存のrhythmRankForScore/rhythmRankProgressが
+  // 使っているのと同じRHYTHM_RANKSから素直に導く値。最上位(M)に届いたら「★MAX」を出す。
+  const rankNextId = rhythmNextRankId(view.score);
+  const rankNextLabel = rankNextId ? `→${rankNextId}` : '★MAX';
   // 横画面向けHUD配置(§6.2)で使う。曲名の折り返し行数(WebkitLineClamp)はインラインstyleで
   // 決めるためTailwindのlandscape:だけでは切り替えられず、ここだけJSの向き判定を使う。
   // ほかのHUDレイアウトの出し分けはTailwindのlandscape:バリアントで完結させ、判定・スコア・
@@ -15784,9 +15796,14 @@ const RhythmTapTest = ({
     };
     const isNewRecord = score > run.startBestScore;
     const merged = mergeRhythmBestRecord(run.startBest, result);
+    // フルコンボ等を達成していれば、リザルトの数字を出す前に一度「FULL COMBO!」等を
+    // 大きく見せる(2026-09-04、ユーザーからの要望)。演出量MINIMAL・軽量モードでは
+    // 従来どおりそのままリザルトへ進む(演出だけの分岐で、判定・保存には関わらない)。
+    const celebrateTitle = achievements.allMarvelous ? 'ALL MARVELOUS!!' : achievements.allExcellent ? 'ALL EXCELLENT!!' : achievements.fullCombo ? 'FULL COMBO!' : null;
+    const showCelebrate = !!celebrateTitle && !settings.lightweightMode && settings.effectAmount !== 'MINIMAL';
     setView(v => ({
       ...v,
-      status: 'result',
+      status: showCelebrate ? 'celebrate' : 'result',
       score,
       combo: run.combo,
       maxCombo: run.maxCombo,
@@ -15802,7 +15819,38 @@ const RhythmTapTest = ({
       }
     }));
     onComplete(result, merged);
-  }, [chart.totalNotes, difficulty.maxScore, onComplete, stopFrame]);
+  }, [chart.totalNotes, difficulty.maxScore, onComplete, settings.effectAmount, settings.lightweightMode, stopFrame]);
+  // celebrate画面: 出た瞬間に合成SEを1回鳴らし、既定の時間で自動的にresultへ進む。
+  // 依存はview.statusだけにしてある。もしview.comboなど毎ノーツ変わる値を依存に入れると、
+  // (かつてコンボ演出で実際に踏んだ通り)途中でeffectが再実行されるたびcleanupが走り、
+  // 「あと少しで消す」という予約タイマーが節目と無関係に解除されてしまう。
+  const celebrateTimerRef = useRef(null);
+  useEffect(() => {
+    if (view.status !== 'celebrate') return;
+    RHYTHM_NOTE_SE_RUNTIME.playFullCombo();
+    celebrateTimerRef.current = setTimeout(() => {
+      setView(v => v.status === 'celebrate' ? {
+        ...v,
+        status: 'result'
+      } : v);
+    }, 1300);
+    return () => {
+      if (celebrateTimerRef.current) {
+        clearTimeout(celebrateTimerRef.current);
+        celebrateTimerRef.current = null;
+      }
+    };
+  }, [view.status]);
+  const skipCelebrate = () => {
+    if (celebrateTimerRef.current) {
+      clearTimeout(celebrateTimerRef.current);
+      celebrateTimerRef.current = null;
+    }
+    setView(v => v.status === 'celebrate' ? {
+      ...v,
+      status: 'result'
+    } : v);
+  };
   const scheduleTick = useCallback(() => {
     stopFrame();
     const tick = frameNowMs => {
@@ -16175,7 +16223,7 @@ const RhythmTapTest = ({
   };
   useEffect(() => {
     const area = playAreaRef.current;
-    if (!area || view.status === 'result') return;
+    if (!area || view.status === 'result' || view.status === 'celebrate') return;
     const syncTouches = e => {
       if (e.cancelable) e.preventDefault();
       const current = runRef.current;
@@ -16235,6 +16283,26 @@ const RhythmTapTest = ({
       setPressedLanes([]);
     };
   }, [view.status]);
+  if (view.status === 'celebrate') {
+    const celebrateResult = view.result,
+      celebrateTitle = celebrateResult?.allMarvelous ? 'ALL MARVELOUS!!' : celebrateResult?.allExcellent ? 'ALL EXCELLENT!!' : 'FULL COMBO!';
+    return /*#__PURE__*/React.createElement("main", {
+      "data-rhythm-celebrate": true,
+      className: "flex flex-1 items-center justify-center bg-slate-950 text-white",
+      style: {
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)'
+      },
+      onClick: skipCelebrate
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "px-6 text-center"
+    }, /*#__PURE__*/React.createElement("b", {
+      "data-rhythm-celebrate-slam": true,
+      className: "block text-6xl font-black leading-tight"
+    }, celebrateTitle), /*#__PURE__*/React.createElement("small", {
+      className: "mt-3 block text-sm font-black tracking-[0.3em] text-slate-300"
+    }, "MAX COMBO ", view.maxCombo)));
+  }
   if (view.status === 'result') {
     const result = view.result,
       rank = rhythmRankForScore(view.score);
@@ -16321,7 +16389,10 @@ const RhythmTapTest = ({
   }, rhythmRankForScore(view.score))), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 landscape:min-w-0"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "relative h-1.5 w-20 overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:hidden"
+    className: "flex items-center gap-0.5 landscape:hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-rank-gauge": true,
+    className: "relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"
   }, /*#__PURE__*/React.createElement("i", {
     "aria-hidden": "true",
     className: "absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300",
@@ -16329,6 +16400,9 @@ const RhythmTapTest = ({
       width: `${rhythmRankProgress(view.score)}%`
     }
   })), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-rank-next": true,
+    className: "shrink-0 text-[9px] font-black leading-none text-slate-300"
+  }, rankNextLabel)), /*#__PURE__*/React.createElement("b", {
     "data-rhythm-score": true,
     className: "mt-0.5 block font-black leading-none tabular-nums landscape:mt-0",
     style: {
@@ -16497,10 +16571,11 @@ const RhythmTapTest = ({
     className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
   }, settings.fastSlowDisplay ? view.fastSlow || '—' : '—')), comboMilestone > 0 && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-combo-milestone": true,
+    "data-milestone-stage": comboMilestoneStage,
     "aria-hidden": "true",
     className: "pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"
   }, /*#__PURE__*/React.createElement("b", {
-    className: "block text-5xl font-black leading-none tabular-nums landscape:text-4xl"
+    className: `block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage >= 3 ? 'text-6xl' : 'text-5xl'}`
   }, comboMilestone), /*#__PURE__*/React.createElement("small", {
     className: "mt-1 block text-sm font-black tracking-[0.3em]"
   }, "COMBO")), view.ability && /*#__PURE__*/React.createElement("div", {

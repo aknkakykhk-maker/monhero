@@ -58,7 +58,7 @@ const inlineStyle=body=>{
   }
   return kept.length?` style="${kept.join(';')}"`:'';
 };
-const SAMPLE={difficulty:'MASTER',song:'テスト楽曲テスト楽曲テスト',score:'1,000,000',best:'BEST 1,000,000',combo:'9999',life:'1000',rank:'SS'};
+const SAMPLE={difficulty:'MASTER',song:'テスト楽曲テスト楽曲テスト',score:'1,000,000',best:'BEST 1,000,000',combo:'9999',life:'1000',rank:'SS',rankNext:'★MAX'};
 const headerHtml=headerJsx
   .replace(/\sstyle=\{\{((?:[^{}]|\{[^{}]*\})*)\}\}/g,(_,body)=>inlineStyle(body))
   .replace(/\sref=\{[^}]*\}/g,'')
@@ -72,6 +72,7 @@ const headerHtml=headerJsx
   .replace(/\{view\.score\.toLocaleString\(\)\}/g,SAMPLE.score)
   .replace(/BEST \{Number\(bestRecord\?\.bestScore\|\|0\)\.toLocaleString\(\)\}/g,SAMPLE.best)
   .replace(/\{view\.combo\}/g,SAMPLE.combo)
+  .replace(/\{rankNextLabel\}/g,SAMPLE.rankNext)
   .replace(/\{view\.life\}/g,SAMPLE.life)
   .replace(/\{rhythmRankForScore\(view\.score\)\}/g,SAMPLE.rank)
   .replace(/\{hasHold\?'HOLD TEST':'TAP TEST'\}/g,'HOLD TEST')
