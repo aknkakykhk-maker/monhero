@@ -979,13 +979,37 @@ FLICKはシアン → オレンジ → 緑と変えてきた。
   難易度に合わせず一定（4等分）にしている。目盛りは `[data-rhythm-rank-gauge]` への
   `background-image`（純粋な飾り）で、判定・進捗の計算には一切関与しない
 - バーの伸び自体は既存の `rhythmRankProgress` のまま変えていない
-- 新設の `rhythmNextRankId(score)` で「1つ上のランク」を求め、バーの右に
+- 新設の `rhythmNextRankId(score, maxScore)` で「1つ上のランク」を求め、バーの右に
   `→S` のように小さく添える。最上位(M)なら `★MAX`
 - マイナスや壊れた値は `rhythmRankForScore` と同じくG扱いにフォールバックする
   （`findIndex` が -1 を返すケースを、既存関数と揃えて明示的に処理する）
 
 バー幅を `w-20` → `w-14` に縮め、ラベル分の増加分を吸収することで、
 `rhythm-hud-wedge-check.js`（320×568含む4サイズ）のHUD幅超過を避けている。
+
+##### 難易度の満点を超える次ランクを出さない修正（STEP 0・2026-09-04）
+
+公開直後、Codexレビューで「EASY満点60万点=Aが上限なのに `→S` と表示される」
+（NORMAL / HARDでも同様に、その難易度では絶対に届かない次ランクが出る）指摘があった。
+
+`RHYTHM_RANKS` のしきい値（G〜M）は難易度を跨いだ共通の絶対値で、`rhythmNextRankId`は
+単純にスコアの1つ上のランクを返すだけだったため、EASYで満点(600,000点)に達しても、
+本来EASYでは絶対に届かないはずのS(700,000点)を「次はここまで」として案内してしまっていた。
+
+`rhythmNextRankId(score, maxScore)` に**第2引数**として現在の難易度の満点
+（`RHYTHM_DIFFICULTIES`の`maxScore`、呼び出し側は `difficulty.maxScore` を渡す）を追加し、
+次ランクのしきい値がその満点を超える場合は「次は無い(`★MAX`)」を返すよう修正した。
+`RHYTHM_RANKS`・`rhythmRankForScore`・`rhythmRankProgress`の判定・しきい値そのものは
+一切変更していない（表示だけに追加した上限ガード）。`maxScore`を渡さない・0以下・
+壊れた値のときは今までどおり上限なし（既存呼び出しとの互換を維持）。
+
+| 難易度 | 満点 | 満点時のランク | 満点到達時の次ランク表示 |
+| --- | --- | --- | --- |
+| EASY | 600,000 | A | `★MAX`（旧: 誤って`→S`） |
+| NORMAL | 700,000 | S | `★MAX`（旧: 誤って`→SS`） |
+| HARD | 800,000 | SS | `★MAX`（旧: 誤って`→M`） |
+| EXPERT | 900,000 | M | `★MAX` |
+| MASTER | 1,000,000 | M | `★MAX` |
 
 #### 曲を終えたあとの「FULL COMBO!」演出
 

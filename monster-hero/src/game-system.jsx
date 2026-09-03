@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 00:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 07:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8370,7 +8370,9 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // ランクゲージ横の「次のランクはここまで」の表示(2026-09-04)。
   // ランクの判定・しきい値そのものは増やさず、既存のrhythmRankForScore/rhythmRankProgressが
   // 使っているのと同じRHYTHM_RANKSから素直に導く値。最上位(M)に届いたら「★MAX」を出す。
-  const rankNextId=rhythmNextRankId(view.score);
+  // 難易度のmaxScore(満点)も渡し、EASYで「→S」のようなその難易度では絶対に届かない
+  // 次ランクを出さないようにする(2026-09-04、Codexレビューで指摘された不具合の修正)。
+  const rankNextId=rhythmNextRankId(view.score,difficulty.maxScore);
   const rankNextLabel=rankNextId?`→${rankNextId}`:'★MAX';
   // 横画面向けHUD配置(§6.2)で使う。曲名の折り返し行数(WebkitLineClamp)はインラインstyleで
   // 決めるためTailwindのlandscape:だけでは切り替えられず、ここだけJSの向き判定を使う。

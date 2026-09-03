@@ -13,7 +13,7 @@ const docs=read('docs/spec/RHYTHM_MODE.md'),indexHtml=read('monster-hero/index.h
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
-const block=data.match(/const RHYTHM_RANKS = Object\.freeze\(\[[\s\S]*?const rhythmNextRankId = score => \{[\s\S]*?\n\};/)?.[0];
+const block=data.match(/const RHYTHM_RANKS = Object\.freeze\(\[[\s\S]*?const rhythmNextRankId = \(score, maxScore\) => \{[\s\S]*?\n\};/)?.[0];
 check('ランクのデータ層を抽出できる',!!block);
 if(!block){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
 const context={};
@@ -57,6 +57,32 @@ check('境界値ちょうどでは、そのランクの1つ上を返す(以上�
 check('マイナスや壊れた値もG扱いの次(F)になる',
   rhythmNextRankId(-100)==='F'&&rhythmNextRankId(undefined)==='F'&&rhythmNextRankId('x')==='F');
 
+// --- 難易度の満点(maxScore)を超える次ランクは出さない ---
+// (2026-09-04、PR #1023マージ直後にCodexレビューで指摘: EASY満点60万=Aが上限なのに
+// 「→S」のようなその難易度では絶対に届かない次ランクを表示してしまっていた)
+check('EASY満点(60万)ちょうどではA止まり、maxScoreを渡すと次はもう無い(null=★MAX)',
+  rhythmRankForScore(maxScoreByDifficulty.EASY)==='A'
+  &&rhythmNextRankId(maxScoreByDifficulty.EASY)==='S'
+  &&rhythmNextRankId(maxScoreByDifficulty.EASY,maxScoreByDifficulty.EASY)===null);
+check('NORMAL満点(70万)ちょうどではS止まり、maxScoreを渡すと次はもう無い(null=★MAX)',
+  rhythmRankForScore(maxScoreByDifficulty.NORMAL)==='S'
+  &&rhythmNextRankId(maxScoreByDifficulty.NORMAL)==='SS'
+  &&rhythmNextRankId(maxScoreByDifficulty.NORMAL,maxScoreByDifficulty.NORMAL)===null);
+check('HARD満点(80万)ちょうどではSS止まり、maxScoreを渡すと次はもう無い(null=★MAX)',
+  rhythmRankForScore(maxScoreByDifficulty.HARD)==='SS'
+  &&rhythmNextRankId(maxScoreByDifficulty.HARD)==='M'
+  &&rhythmNextRankId(maxScoreByDifficulty.HARD,maxScoreByDifficulty.HARD)===null);
+check('EXPERT満点(90万)ちょうどは既にM(maxScoreを渡しても無し=★MAX)',
+  rhythmNextRankId(maxScoreByDifficulty.EXPERT,maxScoreByDifficulty.EXPERT)===null);
+check('MASTER満点(100万)ちょうどは既にM(maxScoreを渡しても無し=★MAX)',
+  rhythmNextRankId(maxScoreByDifficulty.MASTER,maxScoreByDifficulty.MASTER)===null);
+check('maxScore以内でまだ届く次ランクは、今までどおり表示する(頭打ちの副作用が無い)',
+  rhythmNextRankId(300000,maxScoreByDifficulty.EASY)==='C'
+  &&rhythmNextRankId(650000,maxScoreByDifficulty.NORMAL)==='S');
+check('maxScoreを渡さない/0以下/壊れているときは今までどおり上限なし(既存呼び出しとの互換)',
+  rhythmNextRankId(600000)==='S'&&rhythmNextRankId(600000,undefined)==='S'&&rhythmNextRankId(600000,'x')==='S'
+  &&rhythmNextRankId(600000,0)==='S'&&rhythmNextRankId(600000,-1)==='S');
+
 // --- 画面側の結線 ---
 check('ランク色マップを持つ',
   game.includes('const RHYTHM_RANK_COLORS = Object.freeze({')&&game.includes("G:'text-slate-500'")&&game.includes("M:'text-yellow-200'"));
@@ -75,10 +101,14 @@ check('丸バッジ横のバーがランクゲージとして目盛りを持つ'
 check('バーの伸び自体はrhythmRankProgressのまま(判定を増やしていない)',
   /data-rhythm-rank-gauge[\s\S]{0,260}rhythmRankProgress\(view\.score\)/.test(game));
 check('バーの横に次のランクを文字でも示す(rhythmNextRankIdを使う)',
-  game.includes('data-rhythm-rank-next')&&game.includes('const rankNextId=rhythmNextRankId(view.score);')
+  game.includes('data-rhythm-rank-next')&&game.includes('const rankNextId=rhythmNextRankId(view.score,difficulty.maxScore);')
   &&game.includes("const rankNextLabel=rankNextId?`→${rankNextId}`:'★MAX';"));
 check('目盛りは見た目だけの背景画像で、判定・スコアには関与しない',
   /\[data-rhythm-rank-gauge\]\{\s*background-image:/.test(indexHtml));
+
+// --- 難易度の満点を超える次ランクを出さない(2026-09-04、Codexレビュー指摘の修正) ---
+check('画面側は難易度のmaxScoreも渡している(EASYで→Sのような届かない次ランクを出さないため)',
+  !game.includes('const rankNextId=rhythmNextRankId(view.score);'));
 
 check('仕様書にランクの暫定値と並びを記載',
   docs.includes('RHYTHM_RANKS')&&docs.includes('G')&&docs.includes('SS')&&docs.includes('M'));
