@@ -1,12 +1,9 @@
-// 音ゲーの横画面HUD配置を実ブラウザで確かめる。
+// 音ゲーの横画面HUD配置(§6.2「案A: サイドウェッジ集約」)を実ブラウザで確かめる。
 //
 // 縦画面のHUD検査(rhythm-hud-wedge-check.js)と同じ考え方を、横画面(landscape)側でも行う。
-// HUD(<header data-rhythm-hud>)はプレイエリアに重ねる絶対配置ではなく、プレイエリアの
-// 外側・上に置く薄い帯にしている(2026-09-03、台形の外側ウェッジへHUD本文を押し込む
-// 旧方式は、台形の上端をわざと狭くする必要があり「レーンが上まで見えない」原因になっていた)。
-//   (1) HUDがプレイエリアに重ならない(構造的に上の帯である)こと
-//   (2) 台形の最上部・中心ピクセルがHUDに覆われていないこと(縦画面と同じ大前提)
-//   (3) HUDの高さが、main全体の高さの一定割合以下に収まっていること
+//   (1) 台形の最上部・中心ピクセルがHUDに覆われていないこと(縦画面と同じ大前提)
+//   (2) HUD本文(左右それぞれ)が、それが描かれる高さの台形の外側に収まっていること
+//   (3) HUDの高さが、縦画面のまま持ち込んだ場合の実測値(約39%)より明確に小さいこと
 //   (4) ポーズボタンは横画面でも44px未満に縮めていないこと(タップ精度を落とさない)
 //   (5) 横画面ではプレイ画面自身が左右のSafe Area(ノッチ)ぶんを確保していること
 //
@@ -20,6 +17,7 @@ const ROOT=path.resolve(__dirname,'../..');
 const {chromium}=require(path.join(ROOT,'tools/node_modules/playwright'));
 const read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const game=read('monster-hero/src/game-system.jsx');
+const rhythm=read('monster-hero/data/rhythm-mode.js');
 
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
@@ -29,6 +27,9 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?
 // run・audio・スコア・コンボ・判定そのものには一切触れない。
 check('向き判定(isLandscape)の宣言がある',
   /const \[isLandscape,setIsLandscape\]=useState/.test(game));
+// tick関数の中でtravelMsの直後にapplyJudgment呼び出しが並ぶため、近接だけを見る検査だと
+// 「たまたま近くにある」を「触っている」と誤検出する。applyJudgmentとbeginRunの関数本体
+// そのものを取り出し、その中にisLandscapeが出てこないことを見る
 const sliceBetween=(startNeedle,endNeedle)=>{
   const start=game.indexOf(startNeedle);
   if(start<0)return '';
@@ -45,8 +46,15 @@ check('向き判定はmatchMediaの購読で、判定処理(applyJudgment)とrun
 check('横画面ではプレイ画面自身が左右のSafe Area(ノッチ)を確保する(bodyは上下しか確保していない)',
   /data-rhythm-tap-test[\s\S]{0,400}landscape:pl-\[env\(safe-area-inset-left\)\]/.test(game)
   &&/data-rhythm-tap-test[\s\S]{0,400}landscape:pr-\[env\(safe-area-inset-right\)\]/.test(game));
-check('HUD(<header>)はプレイエリアへ重ねる絶対配置になっていない(通常のflowで上の帯を占める)',
-  !/<header data-rhythm-hud className="[^"]*\babsolute\b/.test(game));
+
+// ── レーンの台形(遠近)は実装から取り出してそのまま使う ──────────────────────────
+const projectionSource=[
+  rhythm.match(/const RHYTHM_LANE_COUNT\s*=[^\n]*/)[0],
+  rhythm.match(/const RHYTHM_PROJECTION_TOP_SCALE=[^\n]*/)[0],
+  rhythm.match(/const rhythmClamp01=[^\n]*/)[0],
+  rhythm.match(/const rhythmProjectionScale=[^\n]*/)[0],
+].join('\n');
+const rhythmProjectionScale=new Function(`${projectionSource}\nreturn rhythmProjectionScale;`)();
 
 // ── HUDのJSXを取り出してHTMLへ写す(rhythm-hud-wedge-check.jsと同じ変換) ─────────
 const headerStart=game.indexOf('<header data-rhythm-hud');
@@ -67,9 +75,9 @@ const inlineStyle=body=>{
   }
   return kept.length?` style="${kept.join(';')}"`:'';
 };
-// isLandscape?'1':'2' のような三項はinlineStyle側で拾えない(条件式なので前段のガードで落ちる)。
+// isLandscape?'1':'3' のような三項はinlineStyle側で拾えない(条件式なので前段のガードで落ちる)。
 // 横画面検査では1行折り返しを見たいので、先に固定値へ置き換えてから変換する。
-const headerJsxLandscape=headerJsx.replace(/WebkitLineClamp:isLandscape\?'1':'2'/,"WebkitLineClamp:'1'");
+const headerJsxLandscape=headerJsx.replace(/WebkitLineClamp:isLandscape\?'1':'3'/,"WebkitLineClamp:'1'");
 const SAMPLE={difficulty:'MASTER',song:'テスト楽曲テスト楽曲テスト',score:'1,000,000',best:'BEST 1,000,000',combo:'9999',life:'1000',rank:'SS'};
 const headerHtml=headerJsxLandscape
   .replace(/\sstyle=\{\{((?:[^{}]|\{[^{}]*\})*)\}\}/g,(_,body)=>inlineStyle(body))
@@ -106,7 +114,7 @@ const STATIC={
   'items-center':'align-items:center','items-start':'align-items:flex-start','items-end':'align-items:end','items-baseline':'align-items:baseline',
   'flex-wrap':'flex-wrap:wrap','justify-end':'justify-content:flex-end',
   'justify-between':'justify-content:space-between','justify-center':'justify-content:center','text-left':'text-align:left','text-right':'text-align:right',
-  'font-black':'font-weight:900','font-bold':'font-weight:700','leading-none':'line-height:1','leading-tight':'line-height:1.25',
+  'font-black':'font-weight:900','font-bold':'font-weight:700','leading-none':'line-height:1',
   'tabular-nums':'font-variant-numeric:tabular-nums','truncate':'overflow:hidden;text-overflow:ellipsis;white-space:nowrap',
   'rounded':'border-radius:4px','rounded-full':'border-radius:9999px','rounded-xl':'border-radius:12px',
   'border':'border-width:1px;border-style:solid','border-2':'border-width:2px','border-current':'border-color:currentColor',
@@ -120,8 +128,8 @@ const cssFor=token=>{
   if(/^shadow-\[/.test(token))return '';
   if(/^bg-gradient-to-[a-z]+$/.test(token))return '';
   if(/^(from|to)-[a-z]+-\d{2,3}$/.test(token))return '';
-  if(/^bg-slate-950\/80$/.test(token))return 'background-color:rgba(2,6,23,.8)';
   if(/^bg-slate-950\/85$/.test(token))return 'background-color:rgba(2,6,23,.85)';
+  if(/^bg-slate-950\/80$/.test(token))return 'background-color:rgba(2,6,23,.8)';
   if(/^bg-slate-900\/90$/.test(token))return 'background-color:rgba(15,23,42,.9)';
   if(/^bg-fuchsia-700\/85$/.test(token))return 'background-color:rgba(162,28,175,.85)';
   if(/^border-white\/(\d+)$/.test(token)){const m=/^border-white\/(\d+)$/.exec(token);return `border-color:rgba(255,255,255,${Number(m[1])/100})`;}
@@ -141,7 +149,7 @@ const cssFor=token=>{
   if((m=/^min-h-\[(\d+)px\]$/.exec(token)))return `min-height:${m[1]}px`;
   if((m=/^min-w-\[(\d+)px\]$/.exec(token)))return `min-width:${m[1]}px`;
   if((m=/^text-\[(\d+)px\]$/.exec(token)))return `font-size:${m[1]}px`;
-  if((m=/^text-(xs|sm|base|lg|xl|2xl)$/.exec(token)))return `font-size:${{xs:'12px',sm:'14px',base:'16px',lg:'18px',xl:'20px','2xl':'24px'}[m[1]]}`;
+  if((m=/^text-(xs|sm|base|lg|2xl|3xl)$/.exec(token)))return `font-size:${{xs:'12px',sm:'14px',base:'16px',lg:'18px','2xl':'24px','3xl':'30px'}[m[1]]}`;
   if((m=/^tracking-\[([^\]]+)\]$/.exec(token)))return `letter-spacing:${m[1]}`;
   if((m=/^(text|bg|border)-([a-z]+-\d{2,3}|white)$/.exec(token))){
     const hex=PALETTE[m[2]];
@@ -180,8 +188,11 @@ const SIZES=[
   {name:'大きい端末横  926x428',width:926,height:428},
   {name:'小さい端末横  667x375',width:667,height:375},
 ];
-// 横画面は縦幅の余裕が少ないため、HUDの帯はさらに明確に小さくする。
-const HUD_LANDSCAPE_LIMIT_RATIO=.22;
+// 縦画面のまま持ち込んだ場合の実測(§6.3)が約39%。案Aはそれより明確に小さいことを固定する。
+// (実測では端末幅により20.6〜23.7%に収まる。台形が浅い上端付近へ2行分の文字を収める都合上、
+// これ以上詰めるには曲名の折り返し量やSCORE/BESTの並べ方をさらに削る必要があり、実機確認の
+// うえで詰めるかどうかを決める。25%でも縦画面流用の39%からは大きく削れている)
+const HUD_LANDSCAPE_LIMIT_RATIO=.25;
 
 (async()=>{
   const browser=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
@@ -190,15 +201,29 @@ const HUD_LANDSCAPE_LIMIT_RATIO=.22;
     const errors=[];page.on('pageerror',error=>errors.push(String(error)));
     await page.setContent(PAGE);
     const measured=await page.evaluate(()=>{
-      const toPlain=r=>r&&({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});
-      const main=document.querySelector('main').getBoundingClientRect();
-      const header=document.querySelector('[data-rhythm-hud]').getBoundingClientRect();
+      const inkSamples=el=>{
+        const samples=[];
+        el.querySelectorAll('*').forEach(child=>{
+          if(child.children.length>0)return;
+          const hasText=child.textContent.trim().length>0;
+          const cs=getComputedStyle(child);
+          const hasVisibleBg=cs.backgroundColor&&cs.backgroundColor!=='rgba(0, 0, 0, 0)'&&cs.backgroundColor!=='transparent';
+          const hasVisibleBorder=cs.borderTopWidth!=='0px'&&cs.borderTopStyle!=='none';
+          if(!hasText&&!hasVisibleBg&&!hasVisibleBorder)return;
+          const r=child.getBoundingClientRect();
+          if(r.width||r.height)samples.push(r);
+        });
+        return samples;
+      };
       const play=document.querySelector('[data-rhythm-play-area]').getBoundingClientRect();
+      const left=document.querySelector('[data-rhythm-hud-left]');
+      const right=document.querySelector('[data-rhythm-hud-right]');
       const pause=document.querySelector('[data-rhythm-pause]')?.getBoundingClientRect();
+      const toPlain=r=>r&&({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});
       return {
-        main:toPlain(main),
-        header:toPlain(header),
         play:toPlain(play),
+        leftSamples:inkSamples(left).map(toPlain),
+        rightSamples:inkSamples(right).map(toPlain),
         pause:toPlain(pause),
         apexColor:(()=>{
           const cx=Math.round((play.left+play.right)/2);
@@ -210,19 +235,34 @@ const HUD_LANDSCAPE_LIMIT_RATIO=.22;
     });
     console.log(`— ${size.name}`);
     check(`  JSエラーが出ない`,errors.length===0,errors[0]||'');
-    check(`  HUDはプレイエリアより上にあり、重ならない`,
-      measured.header.bottom<=measured.play.top+.5,
-      `header.bottom=${measured.header.bottom.toFixed(1)}px, play.top=${measured.play.top.toFixed(1)}px`);
     check(`  台形の頂点(最上部中心)はHUDに覆われずレーンの背景のまま`,
       measured.apexColor==='rgb(21, 32, 51)',`実際の色=${measured.apexColor}`);
     check(`  ポーズボタンは横画面でも44px未満に縮めていない`,
       measured.pause&&measured.pause.width>=44&&measured.pause.height>=44,
       measured.pause?`${measured.pause.width.toFixed(1)}x${measured.pause.height.toFixed(1)}px`:'見つからない');
-    const mainHeight=measured.main.bottom-measured.main.top;
-    const headerHeight=measured.header.bottom-measured.header.top;
-    const heightRatio=headerHeight/mainHeight;
-    check(`  HUDの帯は横画面のmain全体の高さの${Math.round(HUD_LANDSCAPE_LIMIT_RATIO*100)}%以内に収まる`,
-      heightRatio<=HUD_LANDSCAPE_LIMIT_RATIO,`${(heightRatio*100).toFixed(1)}%`);
+    const half=yRatio=>(measured.play.right-measured.play.left)/2*rhythmProjectionScale(yRatio);
+    const laneEdgeAt=y=>{
+      const ratio=Math.max(0,Math.min(1,(y-measured.play.top)/(measured.play.bottom-measured.play.top)));
+      const center=(measured.play.left+measured.play.right)/2;
+      return {left:center-half(ratio),right:center+half(ratio)};
+    };
+    let maxBottom=0;
+    for(const [label,samples,side] of [['SCORE側',measured.leftSamples,'left'],['COMBO側',measured.rightSamples,'right']]){
+      let worst=null;
+      for(const box of samples){
+        maxBottom=Math.max(maxBottom,box.bottom);
+        const edge=laneEdgeAt(box.bottom);
+        const ok=side==='left'?box.right<=edge.left+.5:box.left>=edge.right-.5;
+        const margin=side==='left'?edge.left-box.right:box.left-edge.right;
+        if(!ok&&(worst===null||margin<worst.margin))worst={box,edge,margin};
+      }
+      check(`  ${label}のHUDは、それが描かれる高さの台形へ一切かぶらない(${samples.length}要素をサンプル)`,
+        worst===null,
+        worst?`bottom=${worst.box.bottom.toFixed(1)}px, HUD側=${(side==='left'?worst.box.right:worst.box.left).toFixed(1)}px, 台形側=${(side==='left'?worst.edge.left:worst.edge.right).toFixed(1)}px`:'');
+    }
+    const bottomRatio=(maxBottom-measured.play.top)/(measured.play.bottom-measured.play.top);
+    check(`  HUD本文は縦画面のまま持ち込んだ場合(約39%)より明確に小さい(${Math.round(HUD_LANDSCAPE_LIMIT_RATIO*100)}%以内)`,
+      bottomRatio<=HUD_LANDSCAPE_LIMIT_RATIO,`${(bottomRatio*100).toFixed(1)}%`);
     await page.close();
   }
   await browser.close();
