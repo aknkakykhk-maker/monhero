@@ -834,10 +834,23 @@ NORMAL / HARD は刻みやゴーストノートまで拾ったdense側から、�
 - 保存キーは増やしていない。設定・BEST・マスモンは既存の `mh_rhythm_*` をそのまま使う
 - 入口は当面デバッグ画面のみ。`RHYTHM_MODE_PUBLIC_RELEASE` が true になったら戻るボタンがHOMEを指す
 
-**未確定**: 公開時に通常HOMEのどこへ入口を置くか。HOMEの施設配置は完成している画面なので、
-勝手に足さずユーザーの判断を待つ。
+### HOMEの入口（2026-09-03にユーザーが決定）
 
-検査は `tools/mode/rhythm-demo-entry-check.js`（27項目）。
+**修行の施設をやめ、その場所を音ゲーに譲った。**表示名は略称の **「モンビー」**
+（正式名称はモンヒロビート）。HOMEの施設ボタンは横幅が狭く、正式名称そのままでは収まらないため。
+
+- CSSは `.mh-home-facility.training` を `.mh-home-facility.rhythm` へ置き換え、位置
+  （`left:0; top:46%; width:38%; height:25%`）はそのまま引き継いだ
+- `RHYTHM_MODE_PUBLIC_RELEASE` が **false** のあいだは、修行と同じように
+  タップしても「準備中」の案内（`RHYTHM_INFO`）だけを出し、本編からは遊べない
+- **true** にすると、そのまま体験版ホーム（`RHYTHM_DEMO_HOME`）へ入る。切り替えは この1行だけ
+- 準備中の案内は修行のCSS（`mh-training-*`）を借りず、体験版ホームに合わせた自前の見た目にした
+- 修行の実装（`TRAINING_*`）は消していない。HOMEから外しただけで、デバッグ画面の
+  「修行テスト」からは今までどおり確認できる
+- ヘルプには公開フラグで伏せない項目 `basics/rhythm-coming-soon` を置き、
+  準備中の案内画面もヘルプから説明できるようにした
+
+検査は `tools/mode/rhythm-demo-entry-check.js`（33項目）。
 
 ---
 

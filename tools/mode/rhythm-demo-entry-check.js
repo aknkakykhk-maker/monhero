@@ -81,8 +81,35 @@ ok('保存キーを増やしていない（設定・BEST・マスモンは既存
 ok('体験版の入口はデバッグ画面から開く（公開フラグはまだ false のまま）',
   game.includes('data-debug-rhythm-demo')&&game.includes('onClick={openRhythmDemo}')
   &&game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
-ok('通常HOMEへは公開導線をまだ足していない',
-  !/mh-home-facility[^"]*rhythm/.test(game));
+// --- HOMEの入口（修行の場所を譲り受けた） ---
+ok('HOMEの施設は「モンビー」になっている',
+  game.includes('mh-home-facility rhythm')&&game.includes('🎵 モンビー'));
+// デバッグ画面の「修行テスト」は開発用に残す。ここで見るのはHOMEの施設だけ。
+ok('修行の施設はHOMEから外した',
+  !game.includes('mh-home-facility training')&&!game.includes('aria-label="修行（準備中）"'));
+ok('修行のCSSを残さず、位置をそのままモンビーへ引き継いでいる',
+  !game.includes('.mh-home-facility.training')
+  &&game.includes('.mh-home-facility.rhythm{left:0;top:46%;width:38%;height:25%}'));
+ok('公開フラグが立つまではHOMEから遊べず「準備中」の案内を出す',
+  game.includes("RHYTHM_MODE_PUBLIC_RELEASE?openRhythmDemo:()=>setGameState('RHYTHM_INFO')")
+  &&game.includes("gameState==='RHYTHM_INFO'")
+  &&game.includes('data-rhythm-info')
+  &&game.includes('モンビーは準備中です'));
+ok('準備中の案内は修行のCSSを借りず、自前の見た目にしてある',(()=>{
+  // 次の画面まで見てしまうと隣のCSSを拾うので、この画面のぶんだけを切り出す。
+  const at=game.indexOf("gameState==='RHYTHM_INFO'");
+  const next=game.indexOf("{gameState===",at+10);
+  const block=game.slice(at,next>at?next:at+3000);
+  return !block.includes('mh-training-')&&block.includes('overflow-y-auto');
+})());
+ok('準備中の案内にもヘルプの説明がある',
+  read('monster-hero/data/help.js').includes("RHYTHM_INFO:      'basics/rhythm-coming-soon'")
+  &&read('monster-hero/data/help.js').includes("id:'rhythm-coming-soon'"));
+ok('準備中のヘルプ項目は公開フラグで伏せない（いま見えないと案内できないため）',(()=>{
+  const help=read('monster-hero/data/help.js');
+  const at=help.indexOf("id:'rhythm-coming-soon'");
+  return at>=0&&!help.slice(at,at+200).includes('releaseFlag');
+})());
 ok('体験版ホームに譜面制作UIを出していない',(()=>{
   const start=game.indexOf("gameState==='RHYTHM_DEMO_HOME'");
   const end=game.indexOf("gameState==='RHYTHM_DEMO_MONSTERS'");
