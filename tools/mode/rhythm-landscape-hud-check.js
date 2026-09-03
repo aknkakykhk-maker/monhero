@@ -23,12 +23,10 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
 // ── 縦画面検査と同じ前提の確認 ────────────────────────────────────────────────
-// isLandscapeは (1)曲名の折り返し行数(WebkitLineClamp)と (2)横画面での見た目の飛行時間
-// 補正(rhythm-landscape-travel-check.js)の2箇所だけで使う。どちらも見た目だけの分岐で、
+// isLandscapeは曲名の折り返し行数(WebkitLineClamp)だけで使う。見た目だけの分岐で、
 // run・audio・スコア・コンボ・判定そのものには一切触れない。
-check('向き判定(isLandscape)の宣言とrefへの控えがある',
-  /const \[isLandscape,setIsLandscape\]=useState/.test(game)
-  &&/const isLandscapeRef=useRef\(isLandscape\);/.test(game));
+check('向き判定(isLandscape)の宣言がある',
+  /const \[isLandscape,setIsLandscape\]=useState/.test(game));
 // tick関数の中でtravelMsの直後にapplyJudgment呼び出しが並ぶため、近接だけを見る検査だと
 // 「たまたま近くにある」を「触っている」と誤検出する。applyJudgmentとbeginRunの関数本体
 // そのものを取り出し、その中にisLandscapeが出てこないことを見る
