@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dfa19b32889444a4
+// source-sha256: c59ae2a8eed2314d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 11:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 12:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15123,6 +15123,20 @@ const rhythmInputKey = (kind, id) => `${kind}:${id}`;
 // authored note time・BPM・beatZero・判定窓・入力時刻・スコアには使わず、描画travelだけに使用する。
 const RHYTHM_NOTE_TRAVEL_BASE_MS = 2150;
 const RHYTHM_NOTE_TRAVEL_MS_POINTS = Object.freeze([7000, 6000, 5000, 4000, 3000, RHYTHM_NOTE_TRAVEL_BASE_MS, 1680, 1300, 1020, 800, 630, 500]);
+// 横画面はプレイエリアの高さが縦画面よりずっと低いため、同じtravelMs(見た目の飛行時間)では
+// ノーツが小さく・追いづらいまま判定ラインへ着き、実機で「奥行きが短すぎて難易度が大幅アップ」
+// と指摘された(2026-09-03)。judgmentタイミング・BPM・noteTime・判定窓・スコア式は変えず、
+// **見た目の飛行時間だけ**をプレイエリアの実測高さに応じて伸ばし、狭い縦幅でも同じくらいの
+// 「見て追える時間」を確保する。縦画面の基準高さ(iPhone 390x844相当、収束率.18の実測と同じ
+// 基準)より低いときだけ伸ばし、基準以上(通常の縦画面)では比率が1未満になるのでそのまま1に
+// 留め、既存の縦画面の挙動を一切変えない。伸ばし過ぎを避けるため上限もかけている(暫定値)。
+const RHYTHM_LANDSCAPE_TRAVEL_REFERENCE_HEIGHT_PX = 743;
+const RHYTHM_LANDSCAPE_TRAVEL_RATIO_MAX = 2.2;
+const rhythmTravelMsHeightRatio = playAreaHeight => {
+  const height = Number(playAreaHeight);
+  if (!(Number.isFinite(height) && height > 0)) return 1;
+  return Math.max(1, Math.min(RHYTHM_LANDSCAPE_TRAVEL_RATIO_MAX, RHYTHM_LANDSCAPE_TRAVEL_REFERENCE_HEIGHT_PX / height));
+};
 const rhythmTravelMsForSpeed = value => {
   // null / undefined / 空文字は「値なし」として既定へ落とす(Number()では0になってしまう)。
   const raw = value == null || value === '' ? NaN : Number(value),
@@ -15421,6 +15435,11 @@ const RhythmTapTest = ({
   // ほかのHUDレイアウトの出し分けはTailwindのlandscape:バリアントで完結させ、判定・スコア・
   // runには一切触らない(§6.1)。
   const [isLandscape, setIsLandscape] = useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(orientation: landscape)').matches);
+  // tick内で毎フレーム最新値を読むための控え。scheduleTickの依存配列へisLandscapeを足すと
+  // 回転のたびにコールバックを作り直すだけで、すでに動いているrAFループ自体は次のpause/resumeまで
+  // 古い値のまま(§6.3「回転してもrunを維持」の趣旨に反し、プレイ中の回転で反映が遅れる)。
+  const isLandscapeRef = useRef(isLandscape);
+  isLandscapeRef.current = isLandscape;
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mql = window.matchMedia('(orientation: landscape)');
@@ -15637,7 +15656,7 @@ const RhythmTapTest = ({
       const songTimeMs = run.audio.songTimeMs(),
         travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
-        travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
+        travelMs = rhythmTravelMsForSpeed(settings.noteSpeed) * (isLandscapeRef.current ? rhythmTravelMsHeightRatio(travel?.playAreaHeight) : 1);
       run.notes.forEach(note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
@@ -16089,7 +16108,7 @@ const RhythmTapTest = ({
     }
   }, /*#__PURE__*/React.createElement("header", {
     "data-rhythm-hud": true,
-    className: "relative z-10 flex shrink-0 items-start justify-between gap-2 px-3 pt-1.5 pb-1"
+    className: "pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"
   }, /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-left": true,
     className: "min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"
