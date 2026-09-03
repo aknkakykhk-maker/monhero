@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 src_path = ROOT / 'monster-hero/src/game-system.jsx'
@@ -26,18 +27,16 @@ if "id:'eiki_boss'" not in src:
     src = '\n'.join(lines) + ('\n' if src.endswith('\n') else '')
 
 if 'const eikiBossBgmForBattle' not in src:
-    lines = src.splitlines()
-    helper_idx = next((i for i, line in enumerate(lines) if line.strip().startswith('const pandoraBossBgmForBattle = ')), None)
-    if helper_idx is None:
+    helper_match = re.search(r"const pandoraBossBgmForBattle = \(heroId, currentWave, enemyId\) =>\s*[\s\S]*?;", src)
+    if not helper_match:
         raise SystemExit('Pandora BGM helper not found')
-    pandora_helper = lines[helper_idx]
+    pandora_helper = helper_match.group(0)
     eiki_helper = pandora_helper.replace('pandoraBossBgmForBattle', 'eikiBossBgmForBattle') \
         .replace("'Pandora'", "'Eiki'") \
         .replace("'pandora_boss'", "'eiki_boss'")
-    if eiki_helper == pandora_helper:
+    if eiki_helper == pandora_helper or "'Eiki'" not in eiki_helper or "'eiki_boss'" not in eiki_helper:
         raise SystemExit('Failed to derive Eiki BGM helper')
-    lines.insert(helper_idx + 1, eiki_helper)
-    src = '\n'.join(lines) + ('\n' if src.endswith('\n') else '')
+    src = src[:helper_match.end()] + '\n' + eiki_helper + src[helper_match.end():]
 
 if 'const eikiBossBgm = eikiBossBgmForBattle' not in src:
     lines = src.splitlines()
