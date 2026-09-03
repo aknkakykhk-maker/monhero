@@ -8,18 +8,18 @@
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const data=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/game-system.jsx');
-const docs=read('docs/spec/RHYTHM_MODE.md');
+const docs=read('docs/spec/RHYTHM_MODE.md'),indexHtml=read('monster-hero/index.html');
 
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
-const block=data.match(/const RHYTHM_RANKS = Object\.freeze\(\[[\s\S]*?const rhythmRankForScore = score => \{[\s\S]*?\n\};/)?.[0];
+const block=data.match(/const RHYTHM_RANKS = Object\.freeze\(\[[\s\S]*?const rhythmNextRankId = score => \{[\s\S]*?\n\};/)?.[0];
 check('ランクのデータ層を抽出できる',!!block);
 if(!block){console.log(`\n${failed}件のNGがあります`);process.exit(1);}
 const context={};
 vm.createContext(context);
-vm.runInContext(`${block}\nthis.out={RHYTHM_RANKS,rhythmRankForScore};`,context);
-const {RHYTHM_RANKS,rhythmRankForScore}=context.out;
+vm.runInContext(`${block}\nthis.out={RHYTHM_RANKS,rhythmRankForScore,rhythmNextRankId};`,context);
+const {RHYTHM_RANKS,rhythmRankForScore,rhythmNextRankId}=context.out;
 
 check('ランクは10段階、G→F→E→D→C→B→A→S→SS→Mの並び',
   RHYTHM_RANKS.map(r=>r.id).join(',')==='M,SS,S,A,B,C,D,E,F,G');
@@ -49,6 +49,14 @@ for(let i=1;i<order.length;i++){
 }
 check('難易度が上がるほど、その満点で届く上限ランクも下がらない',monotonic);
 
+// --- 次のランク(rhythmNextRankId) ---
+check('0点の次はF',rhythmNextRankId(0)==='F');
+check('最上位(M、100万点)の次は無い(null)',rhythmNextRankId(1000000)===null&&rhythmNextRankId(900000)===null);
+check('境界値ちょうどでは、そのランクの1つ上を返す(以上判定と矛盾しない)',
+  rhythmNextRankId(800000)==='M'&&rhythmNextRankId(799999)==='SS');
+check('マイナスや壊れた値もG扱いの次(F)になる',
+  rhythmNextRankId(-100)==='F'&&rhythmNextRankId(undefined)==='F'&&rhythmNextRankId('x')==='F');
+
 // --- 画面側の結線 ---
 check('ランク色マップを持つ',
   game.includes('const RHYTHM_RANK_COLORS = Object.freeze({')&&game.includes("G:'text-slate-500'")&&game.includes("M:'text-yellow-200'"));
@@ -60,6 +68,17 @@ check('ランクはスコアから毎回計算するだけで、保存形式(BES
   !/normalizeRhythmBestRecord[\s\S]{0,600}rank/.test(data)&&!/mergeRhythmBestRecord[\s\S]{0,400}rank/.test(data)
   &&game.includes("const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';"));
 check('保存キーを増やしていない',!game.includes('mh_rhythm_rank'));
+
+// --- ランクゲージ(2026-09-04、ただ伸びるだけの帯だと「ゲージ」に見えないという指摘を反映) ---
+check('丸バッジ横のバーがランクゲージとして目盛りを持つ',
+  game.includes('data-rhythm-rank-gauge')&&indexHtml.includes('[data-rhythm-rank-gauge]{'));
+check('バーの伸び自体はrhythmRankProgressのまま(判定を増やしていない)',
+  /data-rhythm-rank-gauge[\s\S]{0,260}rhythmRankProgress\(view\.score\)/.test(game));
+check('バーの横に次のランクを文字でも示す(rhythmNextRankIdを使う)',
+  game.includes('data-rhythm-rank-next')&&game.includes('const rankNextId=rhythmNextRankId(view.score);')
+  &&game.includes("const rankNextLabel=rankNextId?`→${rankNextId}`:'★MAX';"));
+check('目盛りは見た目だけの背景画像で、判定・スコアには関与しない',
+  /\[data-rhythm-rank-gauge\]\{\s*background-image:/.test(indexHtml));
 
 check('仕様書にランクの暫定値と並びを記載',
   docs.includes('RHYTHM_RANKS')&&docs.includes('G')&&docs.includes('SS')&&docs.includes('M'));

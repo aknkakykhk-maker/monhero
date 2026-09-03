@@ -78,7 +78,7 @@ const inlineStyle=body=>{
 // isLandscape?'1':'3' のような三項はinlineStyle側で拾えない(条件式なので前段のガードで落ちる)。
 // 横画面検査では1行折り返しを見たいので、先に固定値へ置き換えてから変換する。
 const headerJsxLandscape=headerJsx.replace(/WebkitLineClamp:isLandscape\?'1':'3'/,"WebkitLineClamp:'1'");
-const SAMPLE={difficulty:'MASTER',song:'テスト楽曲テスト楽曲テスト',score:'1,000,000',best:'BEST 1,000,000',combo:'9999',life:'1000',rank:'SS'};
+const SAMPLE={difficulty:'MASTER',song:'テスト楽曲テスト楽曲テスト',score:'1,000,000',best:'BEST 1,000,000',combo:'9999',life:'1000',rank:'SS',rankNext:'★MAX'};
 const headerHtml=headerJsxLandscape
   .replace(/\sstyle=\{\{((?:[^{}]|\{[^{}]*\})*)\}\}/g,(_,body)=>inlineStyle(body))
   .replace(/\sref=\{[^}]*\}/g,'')
@@ -92,6 +92,7 @@ const headerHtml=headerJsxLandscape
   .replace(/\{view\.score\.toLocaleString\(\)\}/g,SAMPLE.score)
   .replace(/BEST \{Number\(bestRecord\?\.bestScore\|\|0\)\.toLocaleString\(\)\}/g,SAMPLE.best)
   .replace(/\{view\.combo\}/g,SAMPLE.combo)
+  .replace(/\{rankNextLabel\}/g,SAMPLE.rankNext)
   .replace(/\{view\.life\}/g,SAMPLE.life)
   .replace(/\{rhythmRankForScore\(view\.score\)\}/g,SAMPLE.rank)
   .replace(/\{hasHold\?'HOLD TEST':'TAP TEST'\}/g,'HOLD TEST')

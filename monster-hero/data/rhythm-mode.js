@@ -52,6 +52,18 @@ const rhythmRankProgress = score => {
   const span = next.min - current.min;
   return span > 0 ? Math.max(0, Math.min(100, (value - current.min) / span * 100)) : 100;
 };
+// このスコアの1つ上のランクIDを返す。すでに最上位(M)なら null。
+// ランクゲージ横の「→次のランク」表示に使う(スコアランクの判定そのものは増やさない)。
+// マイナスや壊れた値はどのランクの条件にも一致しない(findIndexが-1を返す)ため、
+// rhythmRankForScoreと同じく最下位(G)として扱う(そうしないと「次はF」ではなく
+// 「次は無い」という誤った答えを返してしまう)。
+const rhythmNextRankId = score => {
+  const value = Number.isFinite(Number(score)) ? Number(score) : 0;
+  const index = RHYTHM_RANKS.findIndex(rank => value >= rank.min);
+  const currentIndex = index < 0 ? RHYTHM_RANKS.length - 1 : index;
+  const next = currentIndex > 0 ? RHYTHM_RANKS[currentIndex - 1] : null;
+  return next ? next.id : null;
+};
 // 音ゲーのライフ(暫定値)。0へ到達したrunは不可逆のDOWNとなり、曲は止めずに
 // ライフとスコアだけを固定する。将来の回復処理も0からは復帰させない。
 const RHYTHM_LIFE_MAX = 1000;
@@ -582,7 +594,34 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     inputGroupHit=false;
     return handled?true:emitEmpty();
   };
-  return {warm,play,preview:settings=>play(settings),playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,_readSettings:readSettings};
+  // フルコンボ等を達成して曲を終えたときの、リザルトへ行く前のお祝い演出で鳴らす1回だけの
+  // 合成音。本物の掛け声(音声ファイル)は用意していないため、上昇アルペジオで代える。
+  // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
+  const playFullCombo=()=>{
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const now=audio.currentTime,level=Math.max(.0001,.05*(settings.volume/100));
+    // E5 → G5 → B5 → E6 の上昇アルペジオ。最後の音だけ長く伸ばして締める。
+    [659.25,783.99,987.77,1318.51].forEach((freq,index,notes)=>{
+      const start=now+index*.09,sustain=index===notes.length-1?.42:.16;
+      const oscillator=audio.createOscillator(),gain=audio.createGain();
+      oscillator.type='triangle';
+      oscillator.frequency.setValueAtTime(freq,start);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(level,start+.012);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+      oscillator.start(start);
+      oscillator.stop(start+sustain+.02);
+      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    });
+    return true;
+  };
+  return {warm,play,preview:settings=>play(settings),playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。

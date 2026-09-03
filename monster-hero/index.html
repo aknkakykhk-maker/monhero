@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":116249,"data/rhythm-lane-svg.js":7143,"data/rhythm-geometry-calibration.js":14740,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":340778,"data/help.js":207611,"data/rhythm-step3-release.js":7722,"data/assistants.js":199786,"game-system.compiled.js":2698835,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":118739,"data/rhythm-lane-svg.js":7143,"data/rhythm-geometry-calibration.js":14740,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":341954,"data/help.js":208148,"data/rhythm-step3-release.js":7722,"data/assistants.js":199786,"game-system.compiled.js":2703410,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -427,6 +427,17 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     background:linear-gradient(90deg,transparent,rgba(34,211,238,.05) 16%,rgba(255,255,255,.13) 50%,rgba(217,70,239,.05) 84%,transparent);
     filter:blur(5px);
   }
+  /* スコアランクのゲージ(2026-09-04)。ただ1色で伸びるだけの帯だと「ゲージ」に見えないという
+     指摘があったため、目盛りの筋を足して段を上っていく見た目にした。ランクは難易度によって
+     届く段数が違う(EASYは7段、MASTERは10段)ため、目盛りの数は難易度に合わせず一定(4等分)に
+     している。正確にどこまで来ているかは、右に添えた「→次のランク」の文字が伝える。
+     見た目だけの背景画像なので、判定・スコア・ゲージの伸び自体には関与しない。 */
+  [data-rhythm-rank-gauge]{
+    background-image:linear-gradient(90deg,
+      transparent 24.5%,rgba(2,6,23,.55) 24.5%,rgba(2,6,23,.55) 25.5%,transparent 25.5%,
+      transparent 49.5%,rgba(2,6,23,.55) 49.5%,rgba(2,6,23,.55) 50.5%,transparent 50.5%,
+      transparent 74.5%,rgba(2,6,23,.55) 74.5%,rgba(2,6,23,.55) 75.5%,transparent 75.5%);
+  }
   /* コンボ数の強調(2026-09-03)。数字が小さくて手応えが伝わらないという指摘があったため、
      大きくしたうえで100・200・300コンボの段階で色と光り方を変える。
      色はノーツの色(ピンク/シアン/紫/オレンジ)とぶつからないよう、白→金→虹寄りに寄せる。 */
@@ -439,17 +450,67 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   [data-rhythm-combo][data-combo-tier="3"]{color:#fff;text-shadow:0 1px 6px rgba(2,6,23,.96),0 0 12px #fff,0 0 22px #f0abfc,0 0 34px #38bdf8}
 
   /* 100コンボごとのお祝い。1.1秒で消える一度きりの表示で、DOMもそのあいだだけ置く。
-     判定・スコア・ノーツの動きには一切関与しない。 */
+     判定・スコア・ノーツの動きには一切関与しない。
+     data-milestone-stage(1〜5)は100/200/300/400/500以上に対応し、段が上がるほど
+     色を熱く・リングを増やし・最後は虹色にして「どんどん派手になる」ようにする(2026-09-04)。 */
   [data-rhythm-combo-milestone]{
+    position:relative;
     animation:mhRhythmComboBurst 1.1s cubic-bezier(.2,.9,.25,1) forwards;
     will-change:transform,opacity;
   }
   [data-rhythm-combo-milestone] b{
+    position:relative;
     background:linear-gradient(180deg,#fff 0%,#fde68a 45%,#fb923c 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 2px 6px rgba(2,6,23,.9)) drop-shadow(0 0 16px rgba(251,191,36,.75));
   }
-  [data-rhythm-combo-milestone] small{color:#fde68a;text-shadow:0 1px 5px rgba(2,6,23,.95),0 0 12px rgba(251,191,36,.7)}
+  [data-rhythm-combo-milestone] small{position:relative;color:#fde68a;text-shadow:0 1px 5px rgba(2,6,23,.95),0 0 12px rgba(251,191,36,.7)}
+  /* stage2(200): 一段熱い色にして光を強める */
+  [data-rhythm-combo-milestone][data-milestone-stage="2"] b{
+    background:linear-gradient(180deg,#fff 0%,#fcd34d 40%,#f97316 100%);
+    filter:drop-shadow(0 2px 6px rgba(2,6,23,.9)) drop-shadow(0 0 20px rgba(249,115,22,.88));
+  }
+  /* stage3(300)以上: 白熱色にして、外周へ広がるリングを1本追加 */
+  [data-rhythm-combo-milestone][data-milestone-stage="3"] b,
+  [data-rhythm-combo-milestone][data-milestone-stage="4"] b{
+    background:linear-gradient(180deg,#fff 0%,#fef3c7 32%,#fb7185 68%,#38bdf8 100%);
+    filter:drop-shadow(0 2px 6px rgba(2,6,23,.9)) drop-shadow(0 0 22px rgba(255,255,255,.88));
+  }
+  [data-rhythm-combo-milestone][data-milestone-stage="3"]::before,
+  [data-rhythm-combo-milestone][data-milestone-stage="4"]::before,
+  [data-rhythm-combo-milestone][data-milestone-stage="5"]::before{
+    content:"";
+    position:absolute;
+    left:50%;top:38%;
+    width:1px;height:1px;
+    margin:0;
+    border-radius:9999px;
+    border:3px solid rgba(255,255,255,.85);
+    transform:translate(-50%,-50%);
+    animation:mhRhythmComboRing 1.1s cubic-bezier(.15,.7,.3,1) forwards;
+    pointer-events:none;
+  }
+  /* stage4(400)以上: リングをもう1本重ねる */
+  [data-rhythm-combo-milestone][data-milestone-stage="4"]::after,
+  [data-rhythm-combo-milestone][data-milestone-stage="5"]::after{
+    content:"";
+    position:absolute;
+    left:50%;top:38%;
+    width:1px;height:1px;
+    margin:0;
+    border-radius:9999px;
+    border:3px solid rgba(251,191,36,.85);
+    transform:translate(-50%,-50%);
+    animation:mhRhythmComboRing 1.1s .12s cubic-bezier(.15,.7,.3,1) forwards;
+    pointer-events:none;
+  }
+  /* stage5(500以上): 最大の演出。文字を虹色に流す */
+  [data-rhythm-combo-milestone][data-milestone-stage="5"] b{
+    background:linear-gradient(90deg,#f87171,#fbbf24,#a3e635,#22d3ee,#a78bfa,#f472b6,#f87171);
+    background-size:300% 100%;
+    animation:mhRhythmComboRainbow 1.1s linear forwards;
+    filter:drop-shadow(0 2px 6px rgba(2,6,23,.9)) drop-shadow(0 0 26px rgba(255,255,255,.92));
+  }
   @keyframes mhRhythmComboBurst{
     0%{opacity:0;transform:translateX(-50%) scale(.6)}
     18%{opacity:1;transform:translateX(-50%) scale(1.12)}
@@ -457,9 +518,19 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     72%{opacity:1;transform:translateX(-50%) scale(1) translateY(0)}
     100%{opacity:0;transform:translateX(-50%) scale(1.02) translateY(-18px)}
   }
+  @keyframes mhRhythmComboRing{
+    0%{width:1px;height:1px;opacity:.9}
+    70%{opacity:.22}
+    100%{width:320px;height:320px;opacity:0}
+  }
+  @keyframes mhRhythmComboRainbow{
+    0%{background-position:0% 50%}
+    100%{background-position:200% 50%}
+  }
   /* 端末の設定で動きを減らしている人には動かさず、表示だけ出す */
   @media (prefers-reduced-motion:reduce){
     [data-rhythm-combo-milestone]{animation:none;opacity:1}
+    [data-rhythm-combo-milestone]::before,[data-rhythm-combo-milestone]::after{animation:none;opacity:0}
   }
 
   /* リザルトの称号。フルコンボしたことが伝わらないという指摘があったため大きく祝う。 */
@@ -471,6 +542,42 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   }
   @keyframes mhRhythmCelebrate{from{transform:scale(1)}to{transform:scale(1.045)}}
   @media (prefers-reduced-motion:reduce){[data-rhythm-result-celebrate] b{animation:none}}
+
+  /* フルコンボ等を達成して曲を終えたときの、リザルトへ行く前の掛け声代わりの演出画面
+     (2026-09-04)。声の音声ファイルは用意していないため、大きな文字の"スラムイン"と
+     合成音(rhythmPlayFullCombo)で代える。1.3秒で自動的にリザルトへ進む(タップでも進む)。 */
+  [data-rhythm-celebrate] { animation:mhRhythmCelebrateFadeIn .25s ease-out both; }
+  [data-rhythm-celebrate-slam]{
+    position:relative;
+    background:linear-gradient(180deg,#fff 0%,#fde68a 35%,#fb923c 70%,#f0abfc 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 3px 10px rgba(2,6,23,.9)) drop-shadow(0 0 26px rgba(251,191,36,.85));
+    animation:mhRhythmCelebrateSlam .6s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  [data-rhythm-celebrate-slam]::before,[data-rhythm-celebrate-slam]::after{
+    content:"";
+    position:absolute;
+    left:50%;top:50%;
+    width:1px;height:1px;
+    border-radius:9999px;
+    border:3px solid rgba(255,255,255,.8);
+    transform:translate(-50%,-50%);
+    animation:mhRhythmComboRing 1s .15s cubic-bezier(.15,.7,.3,1) both;
+    pointer-events:none;
+  }
+  [data-rhythm-celebrate-slam]::after{border-color:rgba(251,191,36,.8);animation-delay:.32s}
+  @keyframes mhRhythmCelebrateFadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes mhRhythmCelebrateSlam{
+    0%{opacity:0;transform:scale(2.1) rotate(-4deg)}
+    55%{opacity:1;transform:scale(.94) rotate(1deg)}
+    75%{transform:scale(1.04) rotate(0deg)}
+    100%{opacity:1;transform:scale(1) rotate(0deg)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    [data-rhythm-celebrate]{animation:none}
+    [data-rhythm-celebrate-slam]{animation:none;opacity:1}
+    [data-rhythm-celebrate-slam]::before,[data-rhythm-celebrate-slam]::after{animation:none;opacity:0}
+  }
 
   [data-rhythm-judgment-display] { z-index:8 !important; }
   [data-rhythm-note] {
@@ -615,12 +722,12 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
 <script src="data/breeder.js?v=db8f5cb5742e" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=6c9a8ccc63f7" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=4c1eb1acac32" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=9e944b7c6669" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=9f1eba7a095c" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=d83a62752510" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=b0fe980cd704" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=386bbd03ab21" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=b5ddfb7ac5c6" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=ae47141e7c66" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e2ca90a4adce" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
@@ -633,7 +740,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202609032055';
+  var GAME_BUILD = '202609040051';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');
