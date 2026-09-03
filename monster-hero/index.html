@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":116249,"data/rhythm-lane-svg.js":7143,"data/rhythm-geometry-calibration.js":14740,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":337606,"data/help.js":204302,"data/rhythm-step3-release.js":7722,"data/assistants.js":199786,"game-system.compiled.js":2689232,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":116249,"data/rhythm-lane-svg.js":7143,"data/rhythm-geometry-calibration.js":14740,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":338272,"data/help.js":204820,"data/rhythm-step3-release.js":7722,"data/assistants.js":199786,"game-system.compiled.js":2689698,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -442,6 +442,104 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     border-color:rgba(207,250,254,.86);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 0 13px rgba(34,211,238,.42) !important;
   }
+  /* FLICKは通常TAPのピンクと明確に分け、上へ払うノーツだと一目で分かるシアン専用表示にする。
+     rhythm-mode.js が後から入れる旧ピンクCSSより高い詳細度にして、判定・入力は触らず見た目だけを上書きする。 */
+  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child {
+    background:linear-gradient(180deg,#ecfeff 0%,#67e8f9 34%,#22d3ee 62%,#0284c7 100%) !important;
+    border-color:rgba(207,250,254,.98) !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 10px rgba(34,211,238,.92),0 0 18px rgba(14,165,233,.58) !important;
+  }
+  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child::before {
+    content:"";
+    position:absolute;
+    left:24%;
+    right:24%;
+    bottom:68%;
+    height:30px;
+    border-radius:999px;
+    pointer-events:none;
+    background:linear-gradient(180deg,transparent 0%,rgba(34,211,238,.10) 24%,rgba(103,232,249,.54) 100%);
+    filter:blur(1.5px);
+  }
+  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child::after {
+    content:"⇧" !important;
+    position:absolute;
+    left:50%;
+    top:-27px;
+    transform:translateX(-50%);
+    color:#ecfeff !important;
+    font-size:22px;
+    font-weight:1000;
+    line-height:1;
+    text-shadow:0 0 5px #fff,0 0 10px #22d3ee,0 0 16px #0284c7 !important;
+    pointer-events:none;
+  }
+  /* モンスターノーツでは上の「最後のspan=ノーツ頭」という旧前提が成立せず、
+     data-rhythm-monster-face が最後のspanになる。実機ではその結果、inset/border/影が
+     マスモン画像へ当たり、四角い枠と左上への位置ずれが出ていた。
+     モンスターノーツだけは高い詳細度で必ず中央・枠なしへ戻す。
+     ノーツ本体には金色の判定芯を残し、白金＋紫/シアンの薄い外周発光だけを足して
+     特別ノーツらしさを出す。派手さは外側へ広げすぎず、押すタイミングは本体の輪郭で読めるようにする。 */
+  [data-rhythm-note][data-rhythm-monster-note] {
+    overflow:visible !important;
+    filter:drop-shadow(0 0 5px rgba(253,224,71,.72)) drop-shadow(0 0 10px rgba(217,70,239,.42)) drop-shadow(0 0 14px rgba(34,211,238,.24));
+  }
+  [data-rhythm-note][data-rhythm-monster-note]::before {
+    content:"";
+    position:absolute;
+    inset:2px -1px;
+    border:1px solid rgba(255,250,205,.98);
+    border-radius:9999px;
+    box-shadow:0 0 5px rgba(253,224,71,.92),0 0 9px rgba(232,121,249,.58),0 0 13px rgba(34,211,238,.34),inset 0 0 4px rgba(255,255,255,.5);
+    pointer-events:none;
+  }
+  [data-rhythm-note][data-rhythm-monster-note]::after {
+    content:"";
+    position:absolute;
+    inset:-4px -6px;
+    border:1px solid rgba(216,180,254,.62);
+    border-radius:9999px;
+    background:
+      radial-gradient(circle at 8% 45%,rgba(255,255,255,.85) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 93% 58%,rgba(103,232,249,.85) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 20% 88%,rgba(253,224,71,.8) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 78% 8%,rgba(232,121,249,.82) 0 1px,transparent 1.8px);
+    box-shadow:0 0 8px rgba(217,70,239,.45),0 0 12px rgba(34,211,238,.28);
+    opacity:.62;
+    pointer-events:none;
+    animation:rhythmMonsterNoteAura 1.15s ease-in-out infinite alternate;
+  }
+  @keyframes rhythmMonsterNoteAura {
+    from { opacity:.48; box-shadow:0 0 6px rgba(217,70,239,.36),0 0 10px rgba(34,211,238,.22); }
+    to { opacity:.82; box-shadow:0 0 10px rgba(217,70,239,.56),0 0 15px rgba(34,211,238,.34); }
+  }
+  [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-monster-face] {
+    inset:auto !important;
+    left:50% !important;
+    top:50% !important;
+    right:auto !important;
+    bottom:auto !important;
+    border:0 !important;
+    outline:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    transform:translate(-50%,-50%) scale(var(--rhythm-note-depth-scale, 1)) scale(1.28) !important;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.58)) drop-shadow(0 0 4px rgba(253,224,71,.55));
+    z-index:2;
+  }
+  [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-monster-face] > * {
+    border:0 !important;
+    outline:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    clip-path:none !important;
+    -webkit-clip-path:none !important;
+  }
+  @media(prefers-reduced-motion:reduce) {
+    [data-rhythm-note][data-rhythm-monster-note]::after { animation:none; opacity:.66; }
+  }
   [data-rhythm-hold-body] {
     border-left:1px solid rgba(167,243,208,.34);
     border-right:1px solid rgba(103,232,249,.28);
@@ -470,8 +568,8 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
 <script src="data/rhythm-lane-svg.js?v=9e944b7c6669" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=9f1eba7a095c" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=d83a62752510" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=d88cbeaf62d9" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=e1b4f989678c" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=ce0f78a19ff3" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=b42d8b4b53f6" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e2ca90a4adce" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
@@ -484,7 +582,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202609032004';
+  var GAME_BUILD = '202609032008';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');
