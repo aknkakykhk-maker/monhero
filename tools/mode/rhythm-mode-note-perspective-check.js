@@ -41,13 +41,15 @@ check('描画と横投影は同じ丸め済みY座標を使用',game.includes('y
 check('ノーツY/X/幅をプレイ本体の同じrAFで配置',game.includes('rhythmProjectTravelProgress(progress)*travel.travelPx')&&game.includes('rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:')&&!source.match(/const installRhythmPerspectiveNoteVisuals=[\s\S]*?requestAnimationFrame/));
 check('別座標系のCSS 3D変形を廃止',!html.includes('transform:perspective(')&&!source.includes('const scale=.44+.56*depth'));
 check('既存の同時押しbatchを維持',source.includes('const rhythmMatchInputBatch='));
-// FLICKはシアンから変えた(2026-09-03)。背景の暗い青やHOLDの縁のシアンに紛れて見づらいという
-// 実機の指摘があったため、唯一の暖色であるオレンジにしている。上方向の印はそのまま。
-check('FLICKは通常TAPと別のオレンジ表示で上方向を明示',
+// FLICKの色はシアン→オレンジ→緑と変えてきた(2026-09-03)。
+// シアンはHOLDの縁と背景の青に紛れ、オレンジはモンスターノーツの金色と色相が25度しか離れて
+// いなかった。既存4色(ピンク330° / 金50° / シアン188° / 紫271°)のいちばん大きな空きは
+// 50°〜188°で、その中の緑(142°)を選んだ。最短距離は46°まで広がる。上方向の印はそのまま。
+check('FLICKは他のどのノーツとも別の緑表示で上方向を明示',
   html.includes('[data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child')
-  &&html.includes('linear-gradient(180deg,#fff7ed 0%,#fdba74 34%,#f97316 62%,#c2410c 100%)')
+  &&html.includes('linear-gradient(180deg,#f0fdf4 0%,#86efac 34%,#22c55e 62%,#15803d 100%)')
   &&html.includes('content:"⇧" !important')
-  &&html.includes('rgba(249,115,22,.92)'));
+  &&html.includes('rgba(34,197,94,.92)'));
 check('FLICKの見た目変更だけで判定距離・受付時間は維持',source.includes('const RHYTHM_FLICK_DISTANCE_PX = 24;')&&source.includes('const RHYTHM_FLICK_MAX_MS = 450;'));
 
 const remainingHelper=release.match(/const rhythmSlideRemainingRatio=[\s\S]*?\n  \};/)?.[0];

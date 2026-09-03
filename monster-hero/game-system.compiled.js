@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cf8edb7bc6d0f464
+// source-sha256: 3411ddd1606b629f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 20:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 20:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15621,7 +15621,15 @@ const RhythmTapTest = ({
       }));
     }, RHYTHM_MONSTER_ABILITY_DISPLAY_MS);
   }, []);
+  // プレイエリア・判定ライン・ノーツの箱の大きさは、画面が回転・リサイズされない限り変わらない。
+  // (ノーツは absolute の固定高さで、奥行きの拡大は子要素のtransformなので外側の高さに響かない)
+  // それなのに毎フレーム getBoundingClientRect を3回呼んでいたため、直前のフレームで数百個の
+  // ノーツへ書き込んだスタイルを、毎フレーム強制的に計算し直させていた。ノーツが増える譜面ほど重く、
+  // これが実機のカクつきの主因だった。測った結果を覚えておき、変わりうるときだけ測り直す。
+  const travelCacheRef = useRef(null);
   const measureTravel = useCallback(() => {
+    const cached = travelCacheRef.current;
+    if (cached) return cached;
     const area = playAreaRef.current,
       line = judgmentLineRef.current;
     if (!area || !line) return null;
@@ -15633,7 +15641,7 @@ const RhythmTapTest = ({
       noteHeight = laneRefs.current.find(Boolean)?.getBoundingClientRect().height || 20;
     const spawnY = -noteHeight + settings.noteStartPosition / 100 * areaRect.height * .2;
     const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteHeight / 2;
-    return {
+    const result = {
       spawnY,
       judgmentY,
       travelPx: judgmentY - spawnY,
@@ -15641,7 +15649,25 @@ const RhythmTapTest = ({
       rect: areaRect,
       noteHeight
     };
+    // まだ組み上がっていない(高さ0)うちは覚えない。おかしな値のまま固定されるのを防ぐ。
+    if (areaRect.height > 0) travelCacheRef.current = result;
+    return result;
   }, [settings.noteStartPosition]);
+  // 画面の大きさが変わったら測り直す。設定(開始位置・ノーツサイズ)を変えたときと、
+  // プレイの状態が切り替わった直後も、いったん捨てて測り直す。
+  useEffect(() => {
+    travelCacheRef.current = null;
+    if (typeof window === 'undefined') return;
+    const invalidate = () => {
+      travelCacheRef.current = null;
+    };
+    window.addEventListener('resize', invalidate);
+    window.addEventListener('orientationchange', invalidate);
+    return () => {
+      window.removeEventListener('resize', invalidate);
+      window.removeEventListener('orientationchange', invalidate);
+    };
+  }, [settings.noteStartPosition, settings.noteSize, view.status]);
   const applyJudgment = useCallback((note, judgment, deltaMs) => {
     const run = runRef.current;
     if (!run || run.finished || run.paused || note.done) return;
@@ -15853,11 +15879,24 @@ const RhythmTapTest = ({
       // 無敵・我慢の残り時間と根性ストックは、毎フレームsetStateせずDOMへ直接書く。
       // スコアやコンボと同じ頻度でReactを走らせると、そのぶんノーツの描画が遅れるため。
       const badge = abilityBadgeRef.current;
-      if (badge) {
+      // 能力が1つも動いていないあいだは、文字列を組み立てること自体をやめる。
+      // 曲の大半は何も出ていないので、毎フレームの文字列生成と小数計算をまるごと省ける。
+      const hasAbilityBadge = badge && (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 || rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 || Number(run.abilities?.konjoStock) > 0);
+      if (badge && !hasAbilityBadge) {
+        if (badge._rhythmBadgeText !== '') {
+          badge.textContent = '';
+          badge._rhythmBadgeText = '';
+        }
+        if (!badge.hidden) badge.hidden = true;
+      }
+      if (hasAbilityBadge) {
         const mutekiMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs),
           gamanMs = rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs);
         const text = [mutekiMs > 0 ? `無敵 ${(mutekiMs / 1000).toFixed(1)}s` : '', gamanMs > 0 ? `我慢 ${(gamanMs / 1000).toFixed(1)}s` : '', Number(run.abilities?.konjoStock) > 0 ? '根性 ストック' : ''].filter(Boolean).join(' / ');
-        if (badge.textContent !== text) badge.textContent = text;
+        if (badge._rhythmBadgeText !== text) {
+          badge.textContent = text;
+          badge._rhythmBadgeText = text;
+        }
         if (badge.hidden !== (text === '')) badge.hidden = text === '';
       }
       const playEndTimeMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;

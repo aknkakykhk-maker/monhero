@@ -21,16 +21,40 @@ const flickBlock=(()=>{
   return at<0?'':html.slice(at,at+400);
 })();
 ok('FLICKに専用の色を当てている',flickBlock.includes('background:linear-gradient'));
-ok('FLICKは暖色（オレンジ系）で、背景の青やHOLDのシアンと被らない',
-  /#f97316|#fdba74|#c2410c/.test(flickBlock)&&!/#22d3ee|#67e8f9|#0284c7/.test(flickBlock));
+ok('FLICKは緑で、背景の青やHOLDのシアンと被らない',
+  /#22c55e|#86efac|#15803d/.test(flickBlock)&&!/#22d3ee|#67e8f9|#0284c7/.test(flickBlock));
 ok('FLICKはTAPのピンク・SLIDEの紫とも被らない',
   !/#ec4899|#f9a8d4|#a855f7|#6d28d9/.test(flickBlock));
-ok('ノーツ4種の色がそれぞれ違う',(()=>{
+ok('FLICKはモンスターノーツの金色とも被らない',!/#fde047|253,224,71/.test(flickBlock));
+// 色相の距離で確かめる。見た目の「似ている」は色相が近いことなので、そこを数字で見張る。
+ok('ノーツ5種の色相が十分に離れている（いちばん近い組でも40度以上）',(()=>{
+  const hue=hex=>{
+    const n=hex.replace('#','');
+    const [r,g,b]=[0,2,4].map(i=>parseInt(n.slice(i,i+2),16)/255);
+    const max=Math.max(r,g,b),min=Math.min(r,g,b);
+    if(max===min)return 0;
+    const d=max-min;
+    const h=max===r?((g-b)/d+(g<b?6:0)):max===g?((b-r)/d+2):((r-g)/d+4);
+    return Math.round(h*60);
+  };
+  const colors={TAP:'#ec4899',HOLD:'#22d3ee',SLIDE:'#a855f7',MONSTER:'#fde047',FLICK:'#22c55e'};
+  const names=Object.keys(colors);
+  let worst=360,pair='';
+  for(let i=0;i<names.length;i++)for(let j=i+1;j<names.length;j++){
+    const a=hue(colors[names[i]]),b=hue(colors[names[j]]);
+    const d=Math.min(Math.abs(a-b),360-Math.abs(a-b));
+    if(d<worst){worst=d;pair=`${names[i]}-${names[j]}`;}
+  }
+  console.log(`      いちばん近い組: ${pair} = ${worst}度`);
+  return worst>=40;
+})());
+ok('ノーツ5種の色が実装に入っている',(()=>{
   const tap=/#ec4899|#f9a8d4/.test(rhythm);        // TAP=ピンク
   const slide=/#a855f7|#6d28d9/.test(rhythm);      // SLIDE=紫
   const hold=/rgba\(34,211,238/.test(html);        // HOLD=シアンの縁
-  const flick=/#f97316/.test(html);                // FLICK=オレンジ
-  return tap&&slide&&hold&&flick;
+  const monster=/253,224,71/.test(html);           // モンスターノーツ=金
+  const flick=/#22c55e/.test(html);                // FLICK=緑
+  return tap&&slide&&hold&&monster&&flick;
 })());
 ok('FLICKは上へ払うことが分かる印を出す',flickBlock.length>0&&html.includes('content:"⇧"'));
 

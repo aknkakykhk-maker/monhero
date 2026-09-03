@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":116249,"data/rhythm-lane-svg.js":7143,"data/rhythm-geometry-calibration.js":14740,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":339912,"data/help.js":207558,"data/rhythm-step3-release.js":7722,"data/assistants.js":199786,"game-system.compiled.js":2696321,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":23075,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":116249,"data/rhythm-lane-svg.js":7143,"data/rhythm-geometry-calibration.js":14740,"data/rhythm-result-replay-remount.js":4062,"data/changelog.js":340778,"data/help.js":207611,"data/rhythm-step3-release.js":7722,"data/assistants.js":199786,"game-system.compiled.js":2698835,"data/images/title-screen-clean.PNG":2621327,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -487,15 +487,18 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     border-color:rgba(207,250,254,.86);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 0 13px rgba(34,211,238,.42) !important;
   }
-  /* FLICKは他のどのノーツとも被らないオレンジにする(2026-09-03)。
-     以前はシアンだったが、HOLDの縁取り(シアン)とレーン・背景の青に紛れて見づらいという指摘があった。
-     ノーツの色は TAP=ピンク / HOLD=シアンの縁 / SLIDE=紫 / FLICK=オレンジ で分ける。
-     背景は暗い青系なので、唯一の暖色であるオレンジがいちばん見分けやすい。
+  /* FLICKは他のどのノーツとも被らない緑にする(2026-09-03)。
+     シアン→オレンジと変えてきたが、オレンジはモンスターノーツの金色の光(#fde047)と
+     色相が25度しか離れておらず「似ていて紛らわしい」という指摘があった。
+     ノーツの色は TAP=ピンク(330°) / モンスター=金(50°) / HOLD=シアン(188°) / SLIDE=紫(271°)。
+     この4色がいちばん大きく空けているのが 50°〜188° の間で、その真ん中あたりの緑(142°)を選んだ。
+     いちばん近い色との距離が 25° → 46° へ広がり、どの色とも見分けやすくなる。
+     背景の暗い青にも埋もれない明るさにしてある。
      rhythm-mode.js が後から入れる旧ピンクCSSより高い詳細度にして、判定・入力は触らず見た目だけを上書きする。 */
   [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child {
-    background:linear-gradient(180deg,#fff7ed 0%,#fdba74 34%,#f97316 62%,#c2410c 100%) !important;
-    border-color:rgba(255,237,213,.98) !important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 10px rgba(249,115,22,.92),0 0 18px rgba(234,88,12,.62) !important;
+    background:linear-gradient(180deg,#f0fdf4 0%,#86efac 34%,#22c55e 62%,#15803d 100%) !important;
+    border-color:rgba(220,252,231,.98) !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 10px rgba(34,197,94,.92),0 0 18px rgba(21,128,61,.62) !important;
   }
   [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child::before {
     content:"";
@@ -506,7 +509,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     height:30px;
     border-radius:999px;
     pointer-events:none;
-    background:linear-gradient(180deg,transparent 0%,rgba(249,115,22,.10) 24%,rgba(253,186,116,.54) 100%);
+    background:linear-gradient(180deg,transparent 0%,rgba(34,197,94,.10) 24%,rgba(134,239,172,.54) 100%);
     filter:blur(1.5px);
   }
   [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child::after {
@@ -515,11 +518,11 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     left:50%;
     top:-27px;
     transform:translateX(-50%);
-    color:#fff7ed !important;
+    color:#f0fdf4 !important;
     font-size:22px;
     font-weight:1000;
     line-height:1;
-    text-shadow:0 0 5px #fff,0 0 10px #f97316,0 0 16px #c2410c !important;
+    text-shadow:0 0 5px #fff,0 0 10px #22c55e,0 0 16px #15803d !important;
     pointer-events:none;
   }
   /* モンスターノーツでは上の「最後のspan=ノーツ頭」という旧前提が成立せず、
@@ -616,8 +619,8 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
 <script src="data/rhythm-lane-svg.js?v=9e944b7c6669" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=9f1eba7a095c" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=d83a62752510" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=3b250dbc9d9b" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=1750e08a22c8" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=b0fe980cd704" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=386bbd03ab21" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e2ca90a4adce" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
@@ -630,7 +633,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202609032038';
+  var GAME_BUILD = '202609032055';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');
