@@ -21,13 +21,16 @@ const requireFfmpeg=process.argv.includes('--require-ffmpeg');
 const write=process.argv.includes('--write');
 const audioPath=path.resolve(arg('--audio',DEFAULT_AUDIO));
 const outputPath=path.resolve(arg('--output',DEFAULT_OUTPUT));
+// 曲を増やしても同じ手順で候補を作れるように、対象トラックを指定できる
+// (既定は従来どおり あつ杯テーマ)。
+const trackId=arg('--track','atsu_cup_theme');
 
 const timingSource=fs.readFileSync(TIMING_FILE,'utf8');
 const timingContext={Object,Number,Math};
 vm.createContext(timingContext);
-vm.runInContext(`${timingSource}\nthis.__timing=RHYTHM_TIMING_DATA.atsu_cup_theme;`,timingContext);
+vm.runInContext(`${timingSource}\nthis.__timing=RHYTHM_TIMING_DATA[${JSON.stringify(trackId)}];`,timingContext);
 const timing=timingContext.__timing;
-if(!timing)throw new Error('atsu_cup_theme timing data is missing');
+if(!timing)throw new Error(`${trackId} timing data is missing`);
 
 const ffmpegVersion=spawnSync('ffmpeg',['-version'],{encoding:'utf8'});
 if(ffmpegVersion.error||ffmpegVersion.status!==0){

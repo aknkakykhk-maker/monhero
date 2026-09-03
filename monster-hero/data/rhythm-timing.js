@@ -19,6 +19,33 @@ const RHYTHM_TIMING_DATA = Object.freeze({
       note:'169 BPMを譜面制作基準とし、全体オフセットは実機プレイ確認後に必要なら微調整する',
     }),
   }),
+  // 体験版の先行公開曲。実音源(bgm-monster-hero-theme.mp3 / 2分32秒)を1msエンベロープで解析し、
+  // 16分グリッド残差が最小になるBPM・位相を全尺で探索して決めた。
+  // 前半・後半それぞれで求めたBPMの差は0.04未満、平均差のドリフトも-1.2msで、
+  // 曲中ずっと一方向へずれ続ける傾向は見られない。
+  monster_hero_theme:Object.freeze({
+    trackId:'monster_hero_theme',
+    audioDurationMs:152761,
+    bpm:173.153,
+    beatMs:346.515,
+    beatZeroMs:206,
+    subdivisionsPerBeat:4,
+    analysis:Object.freeze({
+      method:'onset-grid-residual-1000hz',
+      detectedBpm:173.153,
+      detectedBeatMs:346.515,
+      detectedBeatOffsetMs:206,
+      crossCheckBpm:173.14,
+      peakCount:1384,
+      meanAbsOffsetMs:17.6,
+      medianAbsOffsetMs:15.9,
+      within30msRatio:.788,
+      within40msRatio:.957,
+      driftMs:-1.2,
+      deviceTimingVerified:false,
+      note:'173.153 BPMを譜面制作基準とし、全体オフセットは実機プレイ確認後に必要なら微調整する',
+    }),
+  }),
 });
 
 const rhythmTimingAt=(trackId,beatIndex,subdivisionIndex=0,subdivisions=null)=>{
