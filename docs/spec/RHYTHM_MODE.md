@@ -721,7 +721,7 @@ v2-reviewの `status` は `FORMAL_CANDIDATE_REVIEW`、`reviewRequired=true`、`r
 
 ---
 
-## 12.5 体験版の先行公開曲「Monster Hero」（EASY正式候補v1）
+## 12.5 体験版の先行公開曲「Monster Hero」（EASY / NORMAL / HARD 正式候補v1）
 
 体験版で先行公開する曲は **Monster Hero** で、既存BGM `monster_hero_theme`
 (`monster-hero/audio/bgm-monster-hero-theme.mp3`) をそのまま使う。体験版のために音源を複製しない。
@@ -746,44 +746,75 @@ v2-reviewの `status` は `FORMAL_CANDIDATE_REVIEW`、`reviewRequired=true`、`r
 前半・後半それぞれで求めたBPMの差は0.04未満で、曲中ずっと一方向へずれ続ける傾向は見られない。
 このグリッドを譜面制作の土台として採用し、全体オフセットは実機の耳確認後に必要なら微調整する。
 
-### EASY正式候補v1
+### 譜面候補の作り方（3難易度共通）
 
-`tools/mode/rhythm-monster-hero-easy-build.js` が、実音源のオンセット候補
-(`tools/mode/authoring/monster-hero-theme-onset-candidates.json`) から**決定的に**組み立てる。
+`tools/mode/rhythm-monster-hero-chart-build.js` が、実音源のオンセット候補から**決定的に**組み立てる。
 乱数を使わないので、同じ入力からは必ず同じ譜面になる。方針を変えるときは譜面を手で書き換えず、
-ツール側の `PROFILE` を直して作り直す。
+ツールの `PROFILES` を直して作り直す。
 
-- 176ノーツ（TAP 166 / HOLD 10）
-- 5.6秒〜149.7秒 / 密度 1.22ノーツ/秒
-- 採用したのは実音源ピークとの差が±30ms以内のものだけ（あつ杯テーマ正式候補v1と同じ基準）
-- **8分の位置だけ**を使い、16分裏へは置かない。この曲のオンセットが8分に集中しているため
-- 同時押しを作らない。隣接する幅1TAPを並べないので、可変幅1ノーツ化の制作ルールにも自動的に従う
-- メイン5レーン・幅2のみ。レーンは1つずつしか動かさない（激しい左右移動を作らない）。
+候補ファイルは2つある。どちらも同じ音源・同じグリッドで、拾う音の強さのしきい値だけが違う。
+
+| ファイル | しきい値 | 候補数 | 使う難易度 |
+| --- | --- | --- | --- |
+| `monster-hero-theme-onset-candidates.json` | 0.60 | 372 | EASY |
+| `monster-hero-theme-onset-candidates-dense.json` | 0.30 | 604 | NORMAL / HARD |
+
+EASYはすでにレビューへ出しているため、候補ファイルも強さの下限も動かさない。
+NORMAL / HARD は刻みやゴーストノートまで拾ったdense側から、それぞれの強さで絞る。
+
+共通の決まり:
+
+- 採用するのは実音源ピークとの差が**±30ms以内**のものだけ（あつ杯テーマ正式候補v1と同じ基準）
+- ±30msを超え42ms以内は削除確定ではなく `earReviewGrids` として保留
+- 小節（16グリッド）ごとに、その小節の強さに応じた本数だけ選ぶ
+- HOLDは曲全体へ等間隔で散らす（先頭から詰めると前半へ固まるため）
+- モンスターノーツは4体ぶんを 20 / 40 / 60 / 80% 付近へ、前後を1拍以上空けて置く
+- 曲の頭1.8秒と終わり1.2秒は空ける
+
+### 難易度ごとの制作方針
+
+| | EASY | NORMAL | HARD |
+| --- | --- | --- | --- |
+| ノーツ数 | 176 | 212 | 266 |
+| 密度 | 1.22/秒 | 1.45/秒 | 1.80/秒 |
+| 種別 | TAP / HOLD | ＋FLICK | ＋SLIDE |
+| 内訳 | TAP166 HOLD10 | TAP186 HOLD14 FLICK12 | TAP228 HOLD14 FLICK16 SLIDE8 |
+| 置き場所 | 8分のみ | 8分のみ | 16分裏も使う |
+| 幅 | 2固定 | 1 / 2 / 3 | 1 / 2 / 3 / 4 |
+| レーン移動 | 1つまで | 2つまで | 3つまで |
+| 同時押し | なし | なし | HOLD/SLIDE中の別TAPのみ |
+| 耳確認へ保留 | 25件 | 37件 | 78件 |
+
+補足:
+
+- **EASY** … この曲のオンセットは8分に集中しているため、置き場所も8分に限る。16分裏へは置かない。
+  同時押しを作らないので、隣接する幅1TAPを並べないという可変幅1ノーツ化の制作ルールにも自動的に従う。
   8分でつながる2個は同じレーンへ置く（左右へ振るより易しいため）
-- HOLDは10件だけ。長さは4または8グリッドで、終端は必ず次のノーツより前。
-  先頭から詰めると前半へ固まるため、曲全体へ等間隔で散らしている
-- モンスターノーツは4体ぶんを 20 / 40 / 60 / 80% 付近（35s / 64s / 92s / 125s）へ置き、
-  前後を1拍以上空けて狙って取れるようにしている
-- ±30msを超え42ms以内の25グリッドは削除確定ではなく `earReviewGrids` として保留
+- **NORMAL** … EASYと同じ8分の土台のまま、密度と左右の動きを増やす。
+  可変幅を自然に使い、強い音ほど広く、速い連打は狭くする。FLICKはフレーズの切れ目へ12件
+- **HARD** … 16分裏も使う（ただし音がある位置だけ）。SLIDEは拍頭を起点に12グリッドの区間ごと
+  置き換える形で8件置き、0.5レーン刻み・途中で幅が変わる経路にする。
+  HOLD/SLIDEの最中に、長押ししている指から4サブレーン以上離してTAPを重ねる複合操作を12件入れる
 
 ### 公開状態
 
-- `songId`: `monster_hero_theme_easy_candidate` / 表示名「Monster Hero EASY候補」
+- `songId`: `monster_hero_theme_candidate` / 表示名「Monster Hero 候補」
 - デバッグ画面の曲一覧からだけ選べる。正式な曲選択・BEST・一般ユーザー導線へは出さない
-- `reviewRequired:true` / `runtimeConnected:false`
+- 3難易度とも `reviewRequired:true` / `runtimeConnected:false`
 - 短縮再生（`playDurationMs`）は持たない。全尺で遊ぶ
-- EASY以外の難易度は空のまま
+- EXPERT / MASTER は空のまま（体験版の対象外）
 
 ### 未完了
 
 - ユーザーによるiPhone実機での耳確認（拍・小節・フレーズ・キメに合っているか）
-- `earReviewGrids` 25点の採用・移動・不採用の判断
-- 密度・レーンの流れの手直し
-- NORMAL / HARD の制作
+- `earReviewGrids`（EASY 25 / NORMAL 37 / HARD 78点）の採用・移動・不採用の判断
+- 密度・レーンの流れ・HOLD/FLICK/SLIDEの位置の手直し
+- 3難易度の難易度差が自然かの確認
 - 正式runtime・BESTへの接続
 
-**この検査（`tools/mode/rhythm-monster-hero-easy-check.js`）が全部通っても正式完成譜面にはならない。**
-機械的に確かめられるのは配置の規則だけで、曲に合っているかは実機の耳確認でしか決められない。
+**この検査（`tools/mode/rhythm-monster-hero-chart-check.js` / 109項目）が全部通っても
+正式完成譜面にはならない。** 機械的に確かめられるのは配置の規則だけで、
+曲に合っているかは実機の耳確認でしか決められない。
 
 ---
 

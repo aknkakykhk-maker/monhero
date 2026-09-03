@@ -11,7 +11,9 @@ const TIMING_FILE=path.join(ROOT,'monster-hero/data/rhythm-timing.js');
 const SAMPLE_RATE=8000;
 const ENVELOPE_HZ=200;
 const ONSET_WINDOW_MS=40;
-const STRENGTH_THRESHOLD=.60;
+// 既定は従来どおり0.60。難易度を作り分けるときは --threshold で下げて候補を増やし、
+// 難易度ごとの強さで絞る（同じ音源から作るので、しきい値を下げた集合は上げた集合を必ず含む）。
+const DEFAULT_STRENGTH_THRESHOLD=.60;
 
 const arg=(name,fallback=null)=>{
   const i=process.argv.indexOf(name);
@@ -24,6 +26,7 @@ const outputPath=path.resolve(arg('--output',DEFAULT_OUTPUT));
 // 曲を増やしても同じ手順で候補を作れるように、対象トラックを指定できる
 // (既定は従来どおり あつ杯テーマ)。
 const trackId=arg('--track','atsu_cup_theme');
+const STRENGTH_THRESHOLD=Number(arg('--threshold',DEFAULT_STRENGTH_THRESHOLD));
 
 const timingSource=fs.readFileSync(TIMING_FILE,'utf8');
 const timingContext={Object,Number,Math};
