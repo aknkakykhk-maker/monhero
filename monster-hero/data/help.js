@@ -60,8 +60,12 @@ const HELP_CATEGORIES = [
       {
         id:'rhythm-demo-song', emoji:'🎼', title:'体験版の曲「Monster Hero」', releaseFlag:'rhythmMode',
         assistant:'いちばん最初に遊べるようになるのは、この曲だよ♪', expression:'excited',
-        blocks:[{t:'p',text:'音ゲーの体験版では、まず「Monster Hero」1曲をEASY・NORMAL・HARDの3難易度で遊べるようにする予定です。曲の長さは2分32秒で、テンポは1分あたり173.153拍、拍を4等分した位置（16分）を譜面の基準にしています。EASYはTAPを中心に、8分の位置だけを使い、同時押しを作らず、レーンの移動も1つずつに抑えているので、音ゲーがはじめての方でも拍を取りやすい作りです。HOLDは曲全体に少しだけ入ります。モンスターノーツは曲の20％・40％・60％・80％あたりに1体ずつ、前後を空けて狙いやすい場所へ置いています。'},
-          {t:'note', title:'いまの状態', text:'EASYの譜面はまだ制作中です。実際の音に合っているかを耳で確かめる作業が残っているため、現在はデバッグ画面からのみ全部を通して試せる状態で、ハイスコアの記録には反映されません。NORMALとHARDはこれから作ります。'}],
+        blocks:[{t:'p',text:'音ゲーの体験版では、まず「Monster Hero」1曲をEASY・NORMAL・HARDの3難易度で遊べるようにする予定です。曲の長さは2分32秒で、テンポは1分あたり173.153拍、拍を4等分した位置（16分）を譜面の基準にしています。モンスターノーツはどの難易度でも、曲の20％・40％・60％・80％あたりに1体ずつ、前後を空けて狙いやすい場所へ置いています。'},
+          {t:'p',text:'EASYはTAPとHOLDだけで、8分の位置しか使わず、同時押しを作らず、レーンの移動も1つずつに抑えています。音ゲーがはじめての方でも拍を取りやすい作りです。'},
+          {t:'p',text:'NORMALはEASYと同じ8分の土台のまま、ノーツを少し増やし、左右の動きを広げ、FLICKと幅の違うノーツを加えます。'},
+          {t:'p',text:'HARDは16分の裏も使い、SLIDEと、長押ししている最中に別のノーツを押す場面が入ります。いまの音ゲーでできることをひととおり味わえる難易度です。'},
+          {t:'p',text:'体験版の画面では、曲と難易度をえらび、難易度ごとの自己ベスト（スコアとランク、最大コンボ）を確認してから遊びはじめます。同じ画面から音ゲーの設定（BGM音量・タップ音量・ノーツ速度・ノーツサイズ・判定タイミング調整など）と、モンスターノーツに使うマスモンの設定も開けます。遊び終わったあとのリザルトからは、そのままもう一度遊ぶことも、曲えらびへ戻ることもできます。'},
+          {t:'note', title:'いまの状態', text:'3難易度とも譜面はまだ制作中です。実際の音に合っているかを耳で確かめる作業が残っているため、現在はデバッグ画面からのみ全部を通して試せる状態で、ハイスコアの記録には反映されません。EXPERTとMASTERは体験版の対象外です。'}],
       },
       {
         id:'rhythm-monster-note-display', emoji:'👾', title:'モンスターノーツの表示', releaseFlag:'rhythmMode',
@@ -1126,6 +1130,8 @@ const HELP_SCREEN_COVERAGE = {
   RHYTHM_DEBUG:      'basics/rhythm-mode',
   RHYTHM_OPTIONS:    'basics/rhythm-mode',
   RHYTHM_PLAY:       'basics/rhythm-mode',
+  RHYTHM_DEMO_HOME:     'basics/rhythm-demo-song',
+  RHYTHM_DEMO_MONSTERS: 'basics/rhythm-monster-note-display',
   DEBUG_SETTINGS:   null,
   SPECIES_CHALLENGE_DEBUG: null,
   BREEDER_ICON_DEBUG:'home/profile',

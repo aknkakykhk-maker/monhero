@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 19:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 20:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8297,6 +8297,39 @@ const RhythmOptions=({value,onSave,onBack})=>{
   </main>;
 };
 
+// モンスターノーツ用のマスモン設定。音ゲーデバッグ画面と体験版ホームの両方から使うため、
+// 画面の中へ直接書かずにここで1つにまとめてある。中身と操作はどちらから開いても同じ。
+const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhythmMonsterPickerOpen,setRhythmMonsterPickerOpen,rhythmMonsterMessage,setRhythmMonsterMessage,applyRhythmMonsterSlots,masuMons})=>(
+  <section data-rhythm-monster-slots className="mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3">
+              <div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-fuchsia-200">モンスターノーツ用マスモン</h3><span data-rhythm-monster-count className="shrink-0 text-[9px] font-black text-fuchsia-300">{rhythmMonsterSlots.length} / {RHYTHM_MONSTER_SLOT_MAX}体</span></div>
+              <p className="mt-1 text-[9px] font-bold leading-relaxed text-fuchsia-100/80">設定した順番が、そのままモンスターノーツの登場順になります。同じモンスターは別の個体でも重ねて設定できません。{RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。</p>
+              <ol className="mt-2 space-y-1">{Array.from({length:RHYTHM_MONSTER_SLOT_MAX},(_,index)=>{
+                const masu=rhythmMonsterSlots[index]||null,base=masu?ALL_PLAYER_MONSTERS[masu.baseId]:null;
+                return <li key={index} data-rhythm-monster-slot={index+1} className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 p-2">
+                  <span className="w-4 shrink-0 text-center text-[10px] font-black text-fuchsia-300">{index+1}</span>
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-950">{masu&&base&&<DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/>}</div>
+                  <div className="min-w-0 flex-1">{masu?<React.Fragment><b className="block truncate text-[11px] font-black">{masu.name}</b><small className="block truncate text-[9px] text-slate-400">{base?.name||masu.baseId}</small></React.Fragment>:<small className="text-[10px] font-bold text-slate-500">未設定</small>}</div>
+                  {masu&&<div className="flex shrink-0 gap-1">
+                    <button type="button" aria-label={`${index+1}枠目を前へ`} disabled={index===0} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,-1),'登場順を入れ替えました')} className="min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30">↑</button>
+                    <button type="button" aria-label={`${index+1}枠目を後ろへ`} disabled={index>=rhythmMonsterSlots.length-1} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,1),'登場順を入れ替えました')} className="min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30">↓</button>
+                    <button type="button" data-rhythm-monster-remove aria-label={`${masu.name}を外す`} onClick={()=>applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id),`${masu.name}を外しました`)} className="min-h-[36px] rounded-lg border border-rose-300/50 px-2 text-[10px] font-black text-rose-200">外す</button>
+                  </div>}
+                </li>;})}</ol>
+              <button type="button" data-rhythm-monster-picker-toggle aria-expanded={rhythmMonsterPickerOpen} onClick={()=>{setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);setRhythmMonsterMessage('');}} className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[11px] font-black text-fuchsia-100">{rhythmMonsterPickerOpen?'マスモン一覧を閉じる':'マスモンから設定する'}</button>
+              {rhythmMonsterMessage&&<p data-rhythm-monster-message role="status" className="mt-1 text-[10px] font-bold text-amber-200">{rhythmMonsterMessage}</p>}
+              {rhythmMonsterPickerOpen&&<ul data-rhythm-monster-picker className="mh-scroll mt-2 max-h-64 space-y-1 overflow-y-auto">
+                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).map(masu=>{
+                  const base=ALL_PLAYER_MONSTERS[masu.baseId],issue=rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse,masu.id,masuMons);
+                  return <li key={masu.id}><button type="button" disabled={!!issue} onClick={()=>applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id,masuMons),`${masu.name}を${rhythmMonsterSlots.length+1}枠目に設定しました`)} className={`flex min-h-[44px] w-full items-center gap-2 rounded-xl border p-2 text-left ${issue?'border-white/10 bg-slate-900/40 opacity-50':'border-white/20 bg-slate-900/80'}`}>
+                    <div className="h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-950"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/></div>
+                    <div className="min-w-0 flex-1"><b className="block truncate text-[11px] font-black">{masu.name}</b><small className="block truncate text-[9px] text-slate-400">{base.name}</small></div>
+                    {issue&&<small className="shrink-0 text-[9px] font-bold text-rose-300">{RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue]}</small>}
+                  </button></li>;})}
+                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).length===0&&<li className="rounded-xl border border-white/10 p-3 text-center text-[10px] font-bold text-slate-500">設定できるマスモンがいません</li>}
+              </ul>}
+            </section>
+);
+
 const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onComplete,onExit})=>{
   const chart=song.difficulties[difficulty.id],laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false);
   const hasHold=chart.notes.some(note=>note.type==='HOLD');
@@ -8449,6 +8482,18 @@ function MonsterHeroGame() {
   const [rhythmPerfOn,setRhythmPerfOn]=useState(()=>RHYTHM_PERF.enabled);
   const [rhythmPerfStats,setRhythmPerfStats]=useState(null);
   const [rhythmChartToolsOpened,setRhythmChartToolsOpened]=useState(false);
+  // 音ゲー体験版の入口。デバッグ画面と同じ保存値を読むが、開く画面は体験版ホーム。
+  // 体験版で遊べるのは Monster Hero 1曲・EASY/NORMAL/HARD だけで、デバッグ用の曲は出さない。
+  // 音ゲー設定はデバッグ画面と体験版ホームの両方から開く。閉じたとき元の画面へ戻すため覚えておく
+  const [rhythmOptionsBack,setRhythmOptionsBack]=useState('RHYTHM_DEBUG');
+  const openRhythmDemo = async () => {
+    const settings=normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false));
+    const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
+    const monsterSlots=sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY,[],false));
+    setRhythmSettings(settings); setRhythmBestRecords(records); setRhythmMonsterSlotIds(monsterSlots);
+    setRhythmMonsterPickerOpen(false); setRhythmMonsterMessage('');
+    setGameState('RHYTHM_DEMO_HOME');
+  };
   const openRhythmDebug = async () => {
     const settings=normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false));
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
@@ -17920,13 +17965,88 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} onComplete={async(result,merged)=>{const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);}} onExit={()=>{setRhythmPlay(null);setGameState('RHYTHM_DEBUG');}}/>}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} onComplete={async(result,merged)=>{const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);}} onExit={()=>{const back=rhythmPlay.from==='demo'?'RHYTHM_DEMO_HOME':'RHYTHM_DEBUG';setRhythmPlay(null);setGameState(back);}}/>}
 
-        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState('RHYTHM_DEBUG')} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
+        {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
+
+        {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
+            出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
+            公開フラグ(RHYTHM_MODE_PUBLIC_RELEASE)が false のあいだは、デバッグ画面からしか入れない */}
+        {gameState==='RHYTHM_DEMO_HOME'&&(()=>{
+          const song=rhythmDemoSong(RHYTHM_SONGS);
+          const difficulties=rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES);
+          return (
+          <main data-rhythm-demo-home className="flex h-full flex-1 flex-col bg-slate-950 text-white">
+            <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+              <button aria-label="戻る" onClick={()=>setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS')} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+              <h2 className="text-sm font-black tracking-widest text-cyan-200">🎵 音ゲー</h2>
+              <span data-rhythm-demo-badge className="ml-auto rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200">体験版</span>
+            </header>
+            <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+              <p data-rhythm-demo-notice className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
+                これは音ゲーの体験版です。いまは「Monster Hero」1曲・EASY／NORMAL／HARDの3難易度だけを遊べます。
+                譜面は調整中のため、これから変わることがあります。
+              </p>
+              {!song||difficulties.length===0
+                ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">遊べる譜面がまだありません。</p>
+                :<>
+                <section data-rhythm-demo-song className="mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3">
+                  <h3 className="text-base font-black">Monster Hero</h3>
+                  <p className="mt-1 text-[10px] text-slate-300">オリジナル / 2分32秒</p>
+                </section>
+                <h3 className="mb-2 text-xs font-black text-cyan-200">難易度をえらぶ</h3>
+                <div className="space-y-2">
+                  {difficulties.map(difficulty=>{
+                    const chart=song.difficulties[difficulty.id];
+                    const best=rhythmBestRecord(rhythmBestRecords,song.songId,difficulty.id);
+                    const label=RHYTHM_DEMO_DIFFICULTY_LABELS[difficulty.id];
+                    return <article key={difficulty.id} data-rhythm-demo-difficulty={difficulty.id} className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <b className="text-sm font-black text-cyan-200">{label.name}</b>
+                        <span className="text-[9px] font-mono text-slate-400">{chart.totalNotes}ノーツ</span>
+                      </div>
+                      <p className="mt-1 text-[10px] leading-relaxed text-slate-300">{label.note}</p>
+                      <p data-rhythm-demo-best className="mt-2 text-[10px] font-bold text-amber-200">
+                        {best.clear
+                          ?<>自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}</>
+                          :<>まだ遊んでいません</>}
+                      </p>
+                      <button data-rhythm-demo-start={difficulty.id} className="mt-2 min-h-[48px] w-full rounded-xl bg-fuchsia-700 text-sm font-black"
+                        onClick={()=>{setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}>この難易度で遊ぶ</button>
+                    </article>;
+                  })}
+                </div>
+                </>}
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button data-rhythm-demo-options className="min-h-[48px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-xs font-black text-cyan-100"
+                  onClick={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}>⚙️ 音ゲー設定</button>
+                <button data-rhythm-demo-monsters className="min-h-[48px] rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-xs font-black text-fuchsia-100"
+                  onClick={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}>👾 マスモン設定</button>
+              </div>
+              <p className="mt-2 text-[9px] leading-relaxed text-slate-500">
+                設定したマスモンは、曲の途中で「モンスターノーツ」になって流れてきます。取ると血統ごとの力が働きます。
+              </p>
+            </div>
+          </main>
+          );
+        })()}
+
+        {/* 体験版のマスモン設定。中身はデバッグ画面と同じ部品を使う */}
+        {gameState==='RHYTHM_DEMO_MONSTERS'&&(
+          <main data-rhythm-demo-monsters-screen className="flex h-full flex-1 flex-col bg-slate-950 text-white">
+            <header className="z-10 flex shrink-0 items-center gap-2 border-b border-fuchsia-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+              <button aria-label="戻る" onClick={()=>{setRhythmMonsterPickerOpen(false);setGameState('RHYTHM_DEMO_HOME');}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+              <h2 className="text-sm font-black tracking-widest text-fuchsia-200">👾 マスモン設定</h2>
+            </header>
+            <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+              <RhythmMonsterSlotsPanel rhythmMonsterSlots={rhythmMonsterSlots} rhythmMonsterSlotIdsInUse={rhythmMonsterSlotIdsInUse} rhythmMonsterPickerOpen={rhythmMonsterPickerOpen} setRhythmMonsterPickerOpen={setRhythmMonsterPickerOpen} rhythmMonsterMessage={rhythmMonsterMessage} setRhythmMonsterMessage={setRhythmMonsterMessage} applyRhythmMonsterSlots={applyRhythmMonsterSlots} masuMons={masuMons}/>
+            </div>
+          </main>
+        )}
 
         {gameState==='RHYTHM_DEBUG'&&(
           <main data-rhythm-debug-screen className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
-            <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0 flex-1"><small className="block text-[8px] font-black text-cyan-300">DEBUG ONLY・STEP 1</small><h2 className="text-sm font-black">音ゲー基盤確認</h2></div><button data-rhythm-options-open onClick={()=>setGameState('RHYTHM_OPTIONS')} className="min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100">⚙️ オプション</button></header>
+            <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1"><button aria-label="デバッグ設定へ戻る" onClick={()=>setGameState('DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div className="min-w-0 flex-1"><small className="block text-[8px] font-black text-cyan-300">DEBUG ONLY・STEP 1</small><h2 className="text-sm font-black">音ゲー基盤確認</h2></div><button data-rhythm-options-open onClick={()=>{setRhythmOptionsBack('RHYTHM_DEBUG');setGameState('RHYTHM_OPTIONS');}} className="min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100">⚙️ オプション</button></header>
             <nav data-rhythm-debug-tabs aria-label="音ゲーデバッグの表示切り替え" className="grid shrink-0 grid-cols-3 border-b border-cyan-400/15 bg-slate-950/95">{[['play','▶ プレイ'],['chart','🎼 譜面制作'],['settings','⚙️ 設定・記録']].map(([id,label])=><button key={id} type="button" aria-pressed={rhythmDebugTab===id} onClick={()=>{if(id==='chart')setRhythmChartToolsOpened(true);setRhythmDebugTab(id);}} className={`min-h-[44px] border-b-2 px-1 text-[11px] font-black ${rhythmDebugTab===id?'border-cyan-300 bg-cyan-950/50 text-cyan-100':'border-transparent text-slate-400'}`}>{label}</button>)}</nav>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pt-3" style={{paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <div hidden={rhythmDebugTab!=='settings'}>
@@ -17936,34 +18056,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}</section>
             {/* モンスターノーツ用のマスモン設定(RHYTHM_MODE §3.2)。最大4体・同じモンスターの重複禁止・
                 1〜4枠の並び順がそのままモンスターノーツの登場順になる。ノーツ本体はこのあと作る */}
-            <section data-rhythm-monster-slots className="mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3">
-              <div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-fuchsia-200">モンスターノーツ用マスモン</h3><span data-rhythm-monster-count className="shrink-0 text-[9px] font-black text-fuchsia-300">{rhythmMonsterSlots.length} / {RHYTHM_MONSTER_SLOT_MAX}体</span></div>
-              <p className="mt-1 text-[9px] font-bold leading-relaxed text-fuchsia-100/80">設定した順番が、そのままモンスターノーツの登場順になります。同じモンスターは別の個体でも重ねて設定できません。{RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。</p>
-              <ol className="mt-2 space-y-1">{Array.from({length:RHYTHM_MONSTER_SLOT_MAX},(_,index)=>{
-                const masu=rhythmMonsterSlots[index]||null,base=masu?ALL_PLAYER_MONSTERS[masu.baseId]:null;
-                return <li key={index} data-rhythm-monster-slot={index+1} className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 p-2">
-                  <span className="w-4 shrink-0 text-center text-[10px] font-black text-fuchsia-300">{index+1}</span>
-                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-950">{masu&&base&&<DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/>}</div>
-                  <div className="min-w-0 flex-1">{masu?<React.Fragment><b className="block truncate text-[11px] font-black">{masu.name}</b><small className="block truncate text-[9px] text-slate-400">{base?.name||masu.baseId}</small></React.Fragment>:<small className="text-[10px] font-bold text-slate-500">未設定</small>}</div>
-                  {masu&&<div className="flex shrink-0 gap-1">
-                    <button type="button" aria-label={`${index+1}枠目を前へ`} disabled={index===0} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,-1),'登場順を入れ替えました')} className="min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30">↑</button>
-                    <button type="button" aria-label={`${index+1}枠目を後ろへ`} disabled={index>=rhythmMonsterSlots.length-1} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,1),'登場順を入れ替えました')} className="min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30">↓</button>
-                    <button type="button" data-rhythm-monster-remove aria-label={`${masu.name}を外す`} onClick={()=>applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id),`${masu.name}を外しました`)} className="min-h-[36px] rounded-lg border border-rose-300/50 px-2 text-[10px] font-black text-rose-200">外す</button>
-                  </div>}
-                </li>;})}</ol>
-              <button type="button" data-rhythm-monster-picker-toggle aria-expanded={rhythmMonsterPickerOpen} onClick={()=>{setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);setRhythmMonsterMessage('');}} className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[11px] font-black text-fuchsia-100">{rhythmMonsterPickerOpen?'マスモン一覧を閉じる':'マスモンから設定する'}</button>
-              {rhythmMonsterMessage&&<p data-rhythm-monster-message role="status" className="mt-1 text-[10px] font-bold text-amber-200">{rhythmMonsterMessage}</p>}
-              {rhythmMonsterPickerOpen&&<ul data-rhythm-monster-picker className="mh-scroll mt-2 max-h-64 space-y-1 overflow-y-auto">
-                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).map(masu=>{
-                  const base=ALL_PLAYER_MONSTERS[masu.baseId],issue=rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse,masu.id,masuMons);
-                  return <li key={masu.id}><button type="button" disabled={!!issue} onClick={()=>applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id,masuMons),`${masu.name}を${rhythmMonsterSlots.length+1}枠目に設定しました`)} className={`flex min-h-[44px] w-full items-center gap-2 rounded-xl border p-2 text-left ${issue?'border-white/10 bg-slate-900/40 opacity-50':'border-white/20 bg-slate-900/80'}`}>
-                    <div className="h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-950"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/></div>
-                    <div className="min-w-0 flex-1"><b className="block truncate text-[11px] font-black">{masu.name}</b><small className="block truncate text-[9px] text-slate-400">{base.name}</small></div>
-                    {issue&&<small className="shrink-0 text-[9px] font-bold text-rose-300">{RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue]}</small>}
-                  </button></li>;})}
-                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).length===0&&<li className="rounded-xl border border-white/10 p-3 text-center text-[10px] font-bold text-slate-500">設定できるマスモンがいません</li>}
-              </ul>}
-            </section>
+            <RhythmMonsterSlotsPanel rhythmMonsterSlots={rhythmMonsterSlots} rhythmMonsterSlotIdsInUse={rhythmMonsterSlotIdsInUse} rhythmMonsterPickerOpen={rhythmMonsterPickerOpen} setRhythmMonsterPickerOpen={setRhythmMonsterPickerOpen} rhythmMonsterMessage={rhythmMonsterMessage} setRhythmMonsterMessage={setRhythmMonsterMessage} applyRhythmMonsterSlots={applyRhythmMonsterSlots} masuMons={masuMons}/>
             <section className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"><h3 className="mb-2 text-xs font-black text-cyan-200">保存中の設定</h3><dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{Object.entries(rhythmSettings).map(([key,value])=><React.Fragment key={key}><dt className="break-all text-slate-400">{key}</dt><dd className="break-all text-right font-mono text-white">{String(value)}</dd></React.Fragment>)}</dl></section>
             </div>
             <div hidden={rhythmDebugTab!=='play'}>
@@ -17978,7 +18071,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black">🎵 音ゲーデバッグ<small className="block text-[8px] text-cyan-300">曲・難易度・設定・BEST保存基盤を確認</small></button><button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black">🧬 種族チャレンジ進行確認<small className="block text-[8px] text-emerald-300">種族別の解放・クリア・初回報酬を確認／編集</small></button><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black">🌟 超越確認<small className="block text-[8px] text-amber-200">マーク・演出・必要XPの確認と、試すための準備</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black">🎵 音ゲーデバッグ<small className="block text-[8px] text-cyan-300">曲・難易度・設定・BEST保存基盤を確認</small></button><button data-debug-rhythm-demo onClick={openRhythmDemo} className="w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black">🎼 音ゲー体験版（正式導線）<small className="block text-[8px] text-amber-300">公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度</small></button><button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black">🧬 種族チャレンジ進行確認<small className="block text-[8px] text-emerald-300">種族別の解放・クリア・初回報酬を確認／編集</small></button><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black">🌟 超越確認<small className="block text-[8px] text-amber-200">マーク・演出・必要XPの確認と、試すための準備</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
               {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                   通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
               <button data-debug-rpg-battle onClick={()=>{setRpgBattle(null);setGameState('RPG_DEBUG_SETUP');}} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black">⚔️ ダンジョンRPG戦闘テスト<small className="block text-[8px] text-emerald-300">コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません</small></button>

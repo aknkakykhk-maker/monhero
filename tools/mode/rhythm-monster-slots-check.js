@@ -121,9 +121,17 @@ check('音ゲーデバッグへ入るときに読み込む',
   /const monsterSlots=sanitizeRhythmMonsterSlotIds\(await storeGet\(RHYTHM_MONSTER_SLOT_KEY,\[\],false\)\);/.test(game));
 check('保存してあるIDから、手元のマスモンを解決して使う',
   /const rhythmMonsterSlots = resolveRhythmMonsterSlots\(rhythmMonsterSlotIds, masuMons\);/.test(game));
+// 設定UIは体験版ホームからも開くため、画面へ直接書かずに RhythmMonsterSlotsPanel へまとめてある。
+// どちらから開いても中身が同じであること(部品が1つであること)と、
+// 音ゲーデバッグ画面では設定タブの中に置かれていることを見る。
+check('設定UIは1つの部品にまとまっている',
+  game.includes('const RhythmMonsterSlotsPanel=')
+  &&game.includes('<section data-rhythm-monster-slots')
+  &&(game.match(/<section data-rhythm-monster-slots/g)||[]).length===1);
 check('設定UIは音ゲーデバッグ画面の設定タブの中にある',
-  game.includes('<section data-rhythm-monster-slots')
-  &&/rhythmDebugTab!=='settings'[\s\S]*?data-rhythm-monster-slots/.test(game));
+  /rhythmDebugTab!=='settings'[\s\S]*?<RhythmMonsterSlotsPanel /.test(game));
+check('設定UIは体験版ホームからも開ける',
+  /gameState==='RHYTHM_DEMO_MONSTERS'[\s\S]*?<RhythmMonsterSlotsPanel /.test(game));
 check('4枠を常に並べて、空き枠が分かる',
   /Array\.from\(\{length:RHYTHM_MONSTER_SLOT_MAX\}/.test(game)&&game.includes('未設定'));
 check('設定できない相手は押せないようにして、理由を出す',

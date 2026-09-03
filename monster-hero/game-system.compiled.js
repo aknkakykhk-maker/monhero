@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 51116b2d579c720b
+// source-sha256: 3bbef0f935544c91
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 19:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 20:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15367,6 +15367,128 @@ const RhythmOptions = ({
     className: `min-h-[52px] rounded-xl px-3 font-black ${dirty ? 'bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,.35)]' : 'bg-amber-600 text-slate-950'}`
   }, dirty ? '変更を保存' : '保存'))));
 };
+
+// モンスターノーツ用のマスモン設定。音ゲーデバッグ画面と体験版ホームの両方から使うため、
+// 画面の中へ直接書かずにここで1つにまとめてある。中身と操作はどちらから開いても同じ。
+const RhythmMonsterSlotsPanel = ({
+  rhythmMonsterSlots,
+  rhythmMonsterSlotIdsInUse,
+  rhythmMonsterPickerOpen,
+  setRhythmMonsterPickerOpen,
+  rhythmMonsterMessage,
+  setRhythmMonsterMessage,
+  applyRhythmMonsterSlots,
+  masuMons
+}) => /*#__PURE__*/React.createElement("section", {
+  "data-rhythm-monster-slots": true,
+  className: "mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3"
+}, /*#__PURE__*/React.createElement("div", {
+  className: "flex items-center justify-between gap-2"
+}, /*#__PURE__*/React.createElement("h3", {
+  className: "text-xs font-black text-fuchsia-200"
+}, "\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u7528\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("span", {
+  "data-rhythm-monster-count": true,
+  className: "shrink-0 text-[9px] font-black text-fuchsia-300"
+}, rhythmMonsterSlots.length, " / ", RHYTHM_MONSTER_SLOT_MAX, "\u4F53")), /*#__PURE__*/React.createElement("p", {
+  className: "mt-1 text-[9px] font-bold leading-relaxed text-fuchsia-100/80"
+}, "\u8A2D\u5B9A\u3057\u305F\u9806\u756A\u304C\u3001\u305D\u306E\u307E\u307E\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u306E\u767B\u5834\u9806\u306B\u306A\u308A\u307E\u3059\u3002\u540C\u3058\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u5225\u306E\u500B\u4F53\u3067\u3082\u91CD\u306D\u3066\u8A2D\u5B9A\u3067\u304D\u307E\u305B\u3093\u3002", RHYTHM_MONSTER_SLOT_MAX, "\u4F53\u305D\u308D\u3048\u308B\u5FC5\u8981\u306F\u306A\u304F\u30011\u301C3\u4F53\u3067\u3082\u904A\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("ol", {
+  className: "mt-2 space-y-1"
+}, Array.from({
+  length: RHYTHM_MONSTER_SLOT_MAX
+}, (_, index) => {
+  const masu = rhythmMonsterSlots[index] || null,
+    base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+  return /*#__PURE__*/React.createElement("li", {
+    key: index,
+    "data-rhythm-monster-slot": index + 1,
+    className: "flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 p-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-4 shrink-0 text-center text-[10px] font-black text-fuchsia-300"
+  }, index + 1), /*#__PURE__*/React.createElement("div", {
+    className: "h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+  }, masu && base && /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: masu.baseId,
+    src: masuDisplayImageUrl(base),
+    alt: masu.name,
+    masuColors: getMasuColors(masu),
+    draggable: false,
+    className: "h-full w-full object-contain"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, masu ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
+    className: "block truncate text-[11px] font-black"
+  }, masu.name), /*#__PURE__*/React.createElement("small", {
+    className: "block truncate text-[9px] text-slate-400"
+  }, base?.name || masu.baseId)) : /*#__PURE__*/React.createElement("small", {
+    className: "text-[10px] font-bold text-slate-500"
+  }, "\u672A\u8A2D\u5B9A")), masu && /*#__PURE__*/React.createElement("div", {
+    className: "flex shrink-0 gap-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": `${index + 1}枠目を前へ`,
+    disabled: index === 0,
+    onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, -1), '登場順を入れ替えました'),
+    className: "min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30"
+  }, "\u2191"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": `${index + 1}枠目を後ろへ`,
+    disabled: index >= rhythmMonsterSlots.length - 1,
+    onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, 1), '登場順を入れ替えました'),
+    className: "min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30"
+  }, "\u2193"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-monster-remove": true,
+    "aria-label": `${masu.name}を外す`,
+    onClick: () => applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id), `${masu.name}を外しました`),
+    className: "min-h-[36px] rounded-lg border border-rose-300/50 px-2 text-[10px] font-black text-rose-200"
+  }, "\u5916\u3059")));
+})), /*#__PURE__*/React.createElement("button", {
+  type: "button",
+  "data-rhythm-monster-picker-toggle": true,
+  "aria-expanded": rhythmMonsterPickerOpen,
+  onClick: () => {
+    setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);
+    setRhythmMonsterMessage('');
+  },
+  className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[11px] font-black text-fuchsia-100"
+}, rhythmMonsterPickerOpen ? 'マスモン一覧を閉じる' : 'マスモンから設定する'), rhythmMonsterMessage && /*#__PURE__*/React.createElement("p", {
+  "data-rhythm-monster-message": true,
+  role: "status",
+  className: "mt-1 text-[10px] font-bold text-amber-200"
+}, rhythmMonsterMessage), rhythmMonsterPickerOpen && /*#__PURE__*/React.createElement("ul", {
+  "data-rhythm-monster-picker": true,
+  className: "mh-scroll mt-2 max-h-64 space-y-1 overflow-y-auto"
+}, masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).map(masu => {
+  const base = ALL_PLAYER_MONSTERS[masu.baseId],
+    issue = rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse, masu.id, masuMons);
+  return /*#__PURE__*/React.createElement("li", {
+    key: masu.id
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: !!issue,
+    onClick: () => applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id, masuMons), `${masu.name}を${rhythmMonsterSlots.length + 1}枠目に設定しました`),
+    className: `flex min-h-[44px] w-full items-center gap-2 rounded-xl border p-2 text-left ${issue ? 'border-white/10 bg-slate-900/40 opacity-50' : 'border-white/20 bg-slate-900/80'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: masu.baseId,
+    src: masuDisplayImageUrl(base),
+    alt: "",
+    masuColors: getMasuColors(masu),
+    draggable: false,
+    className: "h-full w-full object-contain"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block truncate text-[11px] font-black"
+  }, masu.name), /*#__PURE__*/React.createElement("small", {
+    className: "block truncate text-[9px] text-slate-400"
+  }, base.name)), issue && /*#__PURE__*/React.createElement("small", {
+    className: "shrink-0 text-[9px] font-bold text-rose-300"
+  }, RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue])));
+}), masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).length === 0 && /*#__PURE__*/React.createElement("li", {
+  className: "rounded-xl border border-white/10 p-3 text-center text-[10px] font-bold text-slate-500"
+}, "\u8A2D\u5B9A\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093")));
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -16434,6 +16556,21 @@ function MonsterHeroGame() {
   const [rhythmPerfOn, setRhythmPerfOn] = useState(() => RHYTHM_PERF.enabled);
   const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
+  // 音ゲー体験版の入口。デバッグ画面と同じ保存値を読むが、開く画面は体験版ホーム。
+  // 体験版で遊べるのは Monster Hero 1曲・EASY/NORMAL/HARD だけで、デバッグ用の曲は出さない。
+  // 音ゲー設定はデバッグ画面と体験版ホームの両方から開く。閉じたとき元の画面へ戻すため覚えておく
+  const [rhythmOptionsBack, setRhythmOptionsBack] = useState('RHYTHM_DEBUG');
+  const openRhythmDemo = async () => {
+    const settings = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
+    const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
+    const monsterSlots = sanitizeRhythmMonsterSlotIds(await storeGet(RHYTHM_MONSTER_SLOT_KEY, [], false));
+    setRhythmSettings(settings);
+    setRhythmBestRecords(records);
+    setRhythmMonsterSlotIds(monsterSlots);
+    setRhythmMonsterPickerOpen(false);
+    setRhythmMonsterMessage('');
+    setGameState('RHYTHM_DEMO_HOME');
+  };
   const openRhythmDebug = async () => {
     const settings = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
     const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
@@ -34014,18 +34151,145 @@ function MonsterHeroGame() {
         setRhythmBestRecords(records);
       },
       onExit: () => {
+        const back = rhythmPlay.from === 'demo' ? 'RHYTHM_DEMO_HOME' : 'RHYTHM_DEBUG';
         setRhythmPlay(null);
-        setGameState('RHYTHM_DEBUG');
+        setGameState(back);
       }
     }), gameState === 'RHYTHM_OPTIONS' && /*#__PURE__*/React.createElement(RhythmOptions, {
       value: rhythmSettings,
-      onBack: () => setGameState('RHYTHM_DEBUG'),
+      onBack: () => setGameState(rhythmOptionsBack),
       onSave: async draft => {
         const saved = await saveRhythmSettings(draft);
         setRhythmSettings(saved);
         return saved;
       }
-    }), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
+    }), gameState === 'RHYTHM_DEMO_HOME' && (() => {
+      const song = rhythmDemoSong(RHYTHM_SONGS);
+      const difficulties = rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES);
+      return /*#__PURE__*/React.createElement("main", {
+        "data-rhythm-demo-home": true,
+        className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1",
+        style: {
+          paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: () => setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS'),
+        className: "min-h-[44px] px-2 text-slate-400"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 18
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-sm font-black tracking-widest text-cyan-200"
+      }, "\uD83C\uDFB5 \u97F3\u30B2\u30FC"), /*#__PURE__*/React.createElement("span", {
+        "data-rhythm-demo-badge": true,
+        className: "ml-auto rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
+      }, "\u4F53\u9A13\u7248")), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
+        style: {
+          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("p", {
+        "data-rhythm-demo-notice": true,
+        className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
+      }, "\u3053\u308C\u306F\u97F3\u30B2\u30FC\u306E\u4F53\u9A13\u7248\u3067\u3059\u3002\u3044\u307E\u306F\u300CMonster Hero\u300D1\u66F2\u30FBEASY\uFF0FNORMAL\uFF0FHARD\u306E3\u96E3\u6613\u5EA6\u3060\u3051\u3092\u904A\u3079\u307E\u3059\u3002 \u8B5C\u9762\u306F\u8ABF\u6574\u4E2D\u306E\u305F\u3081\u3001\u3053\u308C\u304B\u3089\u5909\u308F\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002"), !song || difficulties.length === 0 ? /*#__PURE__*/React.createElement("p", {
+        className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
+      }, "\u904A\u3079\u308B\u8B5C\u9762\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
+        "data-rhythm-demo-song": true,
+        className: "mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-base font-black"
+      }, "Monster Hero"), /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-[10px] text-slate-300"
+      }, "\u30AA\u30EA\u30B8\u30CA\u30EB / 2\u520632\u79D2")), /*#__PURE__*/React.createElement("h3", {
+        className: "mb-2 text-xs font-black text-cyan-200"
+      }, "\u96E3\u6613\u5EA6\u3092\u3048\u3089\u3076"), /*#__PURE__*/React.createElement("div", {
+        className: "space-y-2"
+      }, difficulties.map(difficulty => {
+        const chart = song.difficulties[difficulty.id];
+        const best = rhythmBestRecord(rhythmBestRecords, song.songId, difficulty.id);
+        const label = RHYTHM_DEMO_DIFFICULTY_LABELS[difficulty.id];
+        return /*#__PURE__*/React.createElement("article", {
+          key: difficulty.id,
+          "data-rhythm-demo-difficulty": difficulty.id,
+          className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center justify-between gap-2"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "text-sm font-black text-cyan-200"
+        }, label.name), /*#__PURE__*/React.createElement("span", {
+          className: "text-[9px] font-mono text-slate-400"
+        }, chart.totalNotes, "\u30CE\u30FC\u30C4")), /*#__PURE__*/React.createElement("p", {
+          className: "mt-1 text-[10px] leading-relaxed text-slate-300"
+        }, label.note), /*#__PURE__*/React.createElement("p", {
+          "data-rhythm-demo-best": true,
+          className: "mt-2 text-[10px] font-bold text-amber-200"
+        }, best.clear ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u81EA\u5DF1\u30D9\u30B9\u30C8 ", best.bestScore.toLocaleString(), "\uFF08\u30E9\u30F3\u30AF ", rhythmRankForScore(best.bestScore), "\uFF09 / \u6700\u5927\u30B3\u30F3\u30DC ", best.maxCombo) : /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u904A\u3093\u3067\u3044\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+          "data-rhythm-demo-start": difficulty.id,
+          className: "mt-2 min-h-[48px] w-full rounded-xl bg-fuchsia-700 text-sm font-black",
+          onClick: () => {
+            setRhythmPlay({
+              song,
+              difficulty,
+              from: 'demo'
+            });
+            setGameState('RHYTHM_PLAY');
+          }
+        }, "\u3053\u306E\u96E3\u6613\u5EA6\u3067\u904A\u3076"));
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-4 grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-options": true,
+        className: "min-h-[48px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-xs font-black text-cyan-100",
+        onClick: () => {
+          setRhythmOptionsBack('RHYTHM_DEMO_HOME');
+          setGameState('RHYTHM_OPTIONS');
+        }
+      }, "\u2699\uFE0F \u97F3\u30B2\u30FC\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-monsters": true,
+        className: "min-h-[48px] rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-xs font-black text-fuchsia-100",
+        onClick: () => {
+          setRhythmMonsterPickerOpen(true);
+          setGameState('RHYTHM_DEMO_MONSTERS');
+        }
+      }, "\uD83D\uDC7E \u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2 text-[9px] leading-relaxed text-slate-500"
+      }, "\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u3001\u66F2\u306E\u9014\u4E2D\u3067\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306B\u306A\u3063\u3066\u6D41\u308C\u3066\u304D\u307E\u3059\u3002\u53D6\u308B\u3068\u8840\u7D71\u3054\u3068\u306E\u529B\u304C\u50CD\u304D\u307E\u3059\u3002")));
+    })(), gameState === 'RHYTHM_DEMO_MONSTERS' && /*#__PURE__*/React.createElement("main", {
+      "data-rhythm-demo-monsters-screen": true,
+      className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "z-10 flex shrink-0 items-center gap-2 border-b border-fuchsia-400/15 bg-slate-950/95 px-3 py-1",
+      style: {
+        paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u623B\u308B",
+      onClick: () => {
+        setRhythmMonsterPickerOpen(false);
+        setGameState('RHYTHM_DEMO_HOME');
+      },
+      className: "min-h-[44px] px-2 text-slate-400"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 18
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-sm font-black tracking-widest text-fuchsia-200"
+    }, "\uD83D\uDC7E \u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
+      style: {
+        paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
+      rhythmMonsterSlots: rhythmMonsterSlots,
+      rhythmMonsterSlotIdsInUse: rhythmMonsterSlotIdsInUse,
+      rhythmMonsterPickerOpen: rhythmMonsterPickerOpen,
+      setRhythmMonsterPickerOpen: setRhythmMonsterPickerOpen,
+      rhythmMonsterMessage: rhythmMonsterMessage,
+      setRhythmMonsterMessage: setRhythmMonsterMessage,
+      applyRhythmMonsterSlots: applyRhythmMonsterSlots,
+      masuMons: masuMons
+    }))), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
       "data-rhythm-debug-screen": true,
       className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
       style: {
@@ -34047,7 +34311,10 @@ function MonsterHeroGame() {
       className: "text-sm font-black"
     }, "\u97F3\u30B2\u30FC\u57FA\u76E4\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
       "data-rhythm-options-open": true,
-      onClick: () => setGameState('RHYTHM_OPTIONS'),
+      onClick: () => {
+        setRhythmOptionsBack('RHYTHM_DEBUG');
+        setGameState('RHYTHM_OPTIONS');
+      },
       className: "min-h-[44px] shrink-0 rounded-xl border border-cyan-300/60 bg-cyan-950 px-3 text-[10px] font-black text-cyan-100"
     }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("nav", {
       "data-rhythm-debug-tabs": true,
@@ -34112,116 +34379,16 @@ function MonsterHeroGame() {
       className: "text-slate-400"
     }, label), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-black text-amber-100"
-    }, value))))), /*#__PURE__*/React.createElement("section", {
-      "data-rhythm-monster-slots": true,
-      className: "mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between gap-2"
-    }, /*#__PURE__*/React.createElement("h3", {
-      className: "text-xs font-black text-fuchsia-200"
-    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u7528\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("span", {
-      "data-rhythm-monster-count": true,
-      className: "shrink-0 text-[9px] font-black text-fuchsia-300"
-    }, rhythmMonsterSlots.length, " / ", RHYTHM_MONSTER_SLOT_MAX, "\u4F53")), /*#__PURE__*/React.createElement("p", {
-      className: "mt-1 text-[9px] font-bold leading-relaxed text-fuchsia-100/80"
-    }, "\u8A2D\u5B9A\u3057\u305F\u9806\u756A\u304C\u3001\u305D\u306E\u307E\u307E\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u306E\u767B\u5834\u9806\u306B\u306A\u308A\u307E\u3059\u3002\u540C\u3058\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u5225\u306E\u500B\u4F53\u3067\u3082\u91CD\u306D\u3066\u8A2D\u5B9A\u3067\u304D\u307E\u305B\u3093\u3002", RHYTHM_MONSTER_SLOT_MAX, "\u4F53\u305D\u308D\u3048\u308B\u5FC5\u8981\u306F\u306A\u304F\u30011\u301C3\u4F53\u3067\u3082\u904A\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("ol", {
-      className: "mt-2 space-y-1"
-    }, Array.from({
-      length: RHYTHM_MONSTER_SLOT_MAX
-    }, (_, index) => {
-      const masu = rhythmMonsterSlots[index] || null,
-        base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
-      return /*#__PURE__*/React.createElement("li", {
-        key: index,
-        "data-rhythm-monster-slot": index + 1,
-        className: "flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 p-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "w-4 shrink-0 text-center text-[10px] font-black text-fuchsia-300"
-      }, index + 1), /*#__PURE__*/React.createElement("div", {
-        className: "h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-950"
-      }, masu && base && /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: masu.baseId,
-        src: masuDisplayImageUrl(base),
-        alt: masu.name,
-        masuColors: getMasuColors(masu),
-        draggable: false,
-        className: "h-full w-full object-contain"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, masu ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
-        className: "block truncate text-[11px] font-black"
-      }, masu.name), /*#__PURE__*/React.createElement("small", {
-        className: "block truncate text-[9px] text-slate-400"
-      }, base?.name || masu.baseId)) : /*#__PURE__*/React.createElement("small", {
-        className: "text-[10px] font-bold text-slate-500"
-      }, "\u672A\u8A2D\u5B9A")), masu && /*#__PURE__*/React.createElement("div", {
-        className: "flex shrink-0 gap-1"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "aria-label": `${index + 1}枠目を前へ`,
-        disabled: index === 0,
-        onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, -1), '登場順を入れ替えました'),
-        className: "min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30"
-      }, "\u2191"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "aria-label": `${index + 1}枠目を後ろへ`,
-        disabled: index >= rhythmMonsterSlots.length - 1,
-        onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, 1), '登場順を入れ替えました'),
-        className: "min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30"
-      }, "\u2193"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-rhythm-monster-remove": true,
-        "aria-label": `${masu.name}を外す`,
-        onClick: () => applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id), `${masu.name}を外しました`),
-        className: "min-h-[36px] rounded-lg border border-rose-300/50 px-2 text-[10px] font-black text-rose-200"
-      }, "\u5916\u3059")));
-    })), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      "data-rhythm-monster-picker-toggle": true,
-      "aria-expanded": rhythmMonsterPickerOpen,
-      onClick: () => {
-        setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);
-        setRhythmMonsterMessage('');
-      },
-      className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[11px] font-black text-fuchsia-100"
-    }, rhythmMonsterPickerOpen ? 'マスモン一覧を閉じる' : 'マスモンから設定する'), rhythmMonsterMessage && /*#__PURE__*/React.createElement("p", {
-      "data-rhythm-monster-message": true,
-      role: "status",
-      className: "mt-1 text-[10px] font-bold text-amber-200"
-    }, rhythmMonsterMessage), rhythmMonsterPickerOpen && /*#__PURE__*/React.createElement("ul", {
-      "data-rhythm-monster-picker": true,
-      className: "mh-scroll mt-2 max-h-64 space-y-1 overflow-y-auto"
-    }, masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).map(masu => {
-      const base = ALL_PLAYER_MONSTERS[masu.baseId],
-        issue = rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse, masu.id, masuMons);
-      return /*#__PURE__*/React.createElement("li", {
-        key: masu.id
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        disabled: !!issue,
-        onClick: () => applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id, masuMons), `${masu.name}を${rhythmMonsterSlots.length + 1}枠目に設定しました`),
-        className: `flex min-h-[44px] w-full items-center gap-2 rounded-xl border p-2 text-left ${issue ? 'border-white/10 bg-slate-900/40 opacity-50' : 'border-white/20 bg-slate-900/80'}`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-950"
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: masu.baseId,
-        src: masuDisplayImageUrl(base),
-        alt: "",
-        masuColors: getMasuColors(masu),
-        draggable: false,
-        className: "h-full w-full object-contain"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "block truncate text-[11px] font-black"
-      }, masu.name), /*#__PURE__*/React.createElement("small", {
-        className: "block truncate text-[9px] text-slate-400"
-      }, base.name)), issue && /*#__PURE__*/React.createElement("small", {
-        className: "shrink-0 text-[9px] font-bold text-rose-300"
-      }, RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue])));
-    }), masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).length === 0 && /*#__PURE__*/React.createElement("li", {
-      className: "rounded-xl border border-white/10 p-3 text-center text-[10px] font-bold text-slate-500"
-    }, "\u8A2D\u5B9A\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093"))), /*#__PURE__*/React.createElement("section", {
+    }, value))))), /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
+      rhythmMonsterSlots: rhythmMonsterSlots,
+      rhythmMonsterSlotIdsInUse: rhythmMonsterSlotIdsInUse,
+      rhythmMonsterPickerOpen: rhythmMonsterPickerOpen,
+      setRhythmMonsterPickerOpen: setRhythmMonsterPickerOpen,
+      rhythmMonsterMessage: rhythmMonsterMessage,
+      setRhythmMonsterMessage: setRhythmMonsterMessage,
+      applyRhythmMonsterSlots: applyRhythmMonsterSlots,
+      masuMons: masuMons
+    }), /*#__PURE__*/React.createElement("section", {
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-xs font-black text-cyan-200"
@@ -34312,6 +34479,12 @@ function MonsterHeroGame() {
     }, "\uD83C\uDFB5 \u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
     }, "\u66F2\u30FB\u96E3\u6613\u5EA6\u30FB\u8A2D\u5B9A\u30FBBEST\u4FDD\u5B58\u57FA\u76E4\u3092\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-rhythm-demo": true,
+      onClick: openRhythmDemo,
+      className: "w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black"
+    }, "\uD83C\uDFBC \u97F3\u30B2\u30FC\u4F53\u9A13\u7248\uFF08\u6B63\u5F0F\u5C0E\u7DDA\uFF09", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-amber-300"
+    }, "\u516C\u958B\u3057\u305F\u3068\u304D\u30D7\u30EC\u30A4\u30E4\u30FC\u304C\u901A\u308B\u753B\u9762\u3002Monster Hero 1\u66F2\u30FB3\u96E3\u6613\u5EA6")), /*#__PURE__*/React.createElement("button", {
       "data-debug-species-challenge": true,
       onClick: async () => {
         await loadSpeciesChallengeProgress();
