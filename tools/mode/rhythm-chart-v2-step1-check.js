@@ -11,6 +11,7 @@ const TRACKS=[
   {id:'atsu_cup_theme',file:'tools/mode/authoring/atsu-cup-theme-v2-features.json'},
   {id:'monster_hero_theme',file:'tools/mode/authoring/monster-hero-theme-v2-features.json'},
 ];
+const ffmpegAvailable=spawnSync('ffmpeg',['-version'],{encoding:'utf8'}).status===0;
 let failed=0;
 const check=(name,ok,detail='')=>{
   console.log(`${ok?'✓':'✗'} ${name}${detail?` (${detail})`:''}`);
@@ -46,14 +47,19 @@ const generated=[];
 try{
   for(const track of TRACKS){
     const output=path.join(tempDir,`${track.id}.json`);
-    const run=spawnSync(process.execPath,[ANALYZER,'--v2','--track',track.id,'--write','--output',output,'--require-ffmpeg'],{
-      cwd:ROOT,encoding:'utf8',maxBuffer:8*1024*1024,
-    });
-    check(`${track.id} の実音源解析が成功`,run.status===0,run.status===0?'':(run.stderr||run.stdout).trim());
-    if(run.status!==0||!fs.existsSync(output))continue;
     const committed=path.join(ROOT,track.file);
-    check(`${track.id} の保存JSONは決定的に再生成可能`,fs.readFileSync(output).equals(fs.readFileSync(committed)));
-    const analysis=JSON.parse(fs.readFileSync(output,'utf8'));
+    if(ffmpegAvailable){
+      const run=spawnSync(process.execPath,[ANALYZER,'--v2','--track',track.id,'--write','--output',output,'--require-ffmpeg'],{
+        cwd:ROOT,encoding:'utf8',maxBuffer:8*1024*1024,
+      });
+      check(`${track.id} の実音源解析が成功`,run.status===0,run.status===0?'':(run.stderr||run.stdout).trim());
+      if(run.status!==0||!fs.existsSync(output))continue;
+      check(`${track.id} の保存JSONは決定的に再生成可能`,fs.readFileSync(output).equals(fs.readFileSync(committed)));
+    }else{
+      console.log(`- SKIP ${track.id} の再解析: ffmpegなし（保存JSONの内容・音源hashは引き続き検査）`);
+    }
+    const analysisFile=ffmpegAvailable?output:committed;
+    const analysis=JSON.parse(fs.readFileSync(analysisFile,'utf8'));
     generated.push(analysis);
 
     let invalidNumber=false,nullValue=false;
@@ -61,10 +67,11 @@ try{
       if(typeof value==='number'&&!Number.isFinite(value))invalidNumber=true;
       if(value===null)nullValue=true;
     });
-    check(`${track.id} にNaN / Infinityがない`,!invalidNumber&&!/NaN|Infinity/.test(fs.readFileSync(output,'utf8')));
+    check(`${track.id} にNaN / Infinityがない`,!invalidNumber&&!/NaN|Infinity/.test(fs.readFileSync(analysisFile,'utf8')));
     check(`${track.id} に数値欠損nullがない`,!nullValue);
     check(`${track.id} はSTEP1スキーマ`,analysis.schemaVersion===2&&analysis.analysisType==='rhythm-chart-v2-step1-features');
     check(`${track.id} は音源ハッシュを保持`,/^[0-9a-f]{64}$/.test(analysis.audioSha256));
+    check(`${track.id} の音源ハッシュが実ファイルと一致`,hash(path.join(ROOT,analysis.audio))===analysis.audioSha256);
     check(`${track.id} は全尺を250ms刻みで保持`,analysis.windowMs===500&&analysis.hopMs===250&&analysis.timeline.length>500&&analysis.timeline.at(-1).endMs===analysis.durationMs);
     check(`${track.id} の時系列が昇順`,ascending(analysis.timeline.map(item=>item.startMs))&&analysis.timeline.every((item,index)=>index===0||item.startMs-analysis.timeline[index-1].startMs===250));
     check(`${track.id} のダウンビートが昇順`,analysis.timing.downbeat.beatsPerBar===4&&ascending(analysis.timing.downbeat.timesMs));
