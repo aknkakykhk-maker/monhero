@@ -169,6 +169,13 @@ const utilityCss=tokens.map(token=>{
   return token.startsWith(LANDSCAPE_PREFIX)?`@media (orientation: landscape){${rule}}`:rule;
 }).join('\n');
 
+// index.html のグローバルCSSに書かれたHUD向けの指定も一緒に読む(縦画面検査と同じ理由)。
+// 実機では index.html 側で [data-rhythm-hud] へ背景パネルを敷いており、JSXだけを読む検査では
+// 一切見えなかった。どこに書かれていてもHUDが何も塗らないことを実際の計算済みスタイルで確かめる。
+const indexHtml=read('monster-hero/index.html');
+const hudGlobalCss=[...indexHtml.matchAll(/(^|\})\s*([^{}]*\[data-rhythm-hud\][^{}]*)\{([^{}]*)\}/g)]
+  .map(m=>`${m[2].trim()}{${m[3].trim()}}`).join('\n');
+
 const LANE_BG='#152033';
 // 横画面は上下のSafe Areaが小さく(ホームインジケーターぶんだけ)、代わりに左右へノッチが来る。
 // どちら側に来るかは回転方向で変わるため、ここでは大きい方(59px相当)を両側へ与えて
@@ -181,6 +188,7 @@ body{height:100%;padding:${SAFE_TOP}px ${SAFE_SIDE}px ${SAFE_BOTTOM}px ${SAFE_SI
 main{position:relative;display:flex;flex:1 1 0%;min-height:0;flex-direction:column;overflow:hidden}
 [data-rhythm-play-area]{position:relative;margin:0 8px 8px;flex:1 1 0%;min-height:0;overflow:hidden;background:${LANE_BG}}
 ${utilityCss}
+${hudGlobalCss}
 </style></head><body><main>${headerHtml}<div data-rhythm-play-area=""></div></main></body></html>`;
 
 const SIZES=[
@@ -220,8 +228,19 @@ const HUD_LANDSCAPE_LIMIT_RATIO=.25;
       const right=document.querySelector('[data-rhythm-hud-right]');
       const pause=document.querySelector('[data-rhythm-pause]')?.getBoundingClientRect();
       const toPlain=r=>r&&({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height});
+      const headerEl=document.querySelector('[data-rhythm-hud]');
+      const headerStyle=getComputedStyle(headerEl);
       return {
         play:toPlain(play),
+        header:toPlain(headerEl.getBoundingClientRect()),
+        // pointer-events:none のHUDは elementFromPoint に映らないため、頂点のピクセル色だけでは
+        // 「HUDが敷いた帯」を検出できない。計算済みスタイルで直接確かめる。
+        headerPaint:{
+          backgroundColor:headerStyle.backgroundColor,
+          backgroundImage:headerStyle.backgroundImage,
+          boxShadow:headerStyle.boxShadow,
+          backdropFilter:headerStyle.backdropFilter||headerStyle.webkitBackdropFilter||'none',
+        },
         leftSamples:inkSamples(left).map(toPlain),
         rightSamples:inkSamples(right).map(toPlain),
         pause:toPlain(pause),
@@ -237,6 +256,14 @@ const HUD_LANDSCAPE_LIMIT_RATIO=.25;
     check(`  JSエラーが出ない`,errors.length===0,errors[0]||'');
     check(`  台形の頂点(最上部中心)はHUDに覆われずレーンの背景のまま`,
       measured.apexColor==='rgb(21, 32, 51)',`実際の色=${measured.apexColor}`);
+    const paint=measured.headerPaint;
+    const transparentBg=paint.backgroundColor==='rgba(0, 0, 0, 0)'||paint.backgroundColor==='transparent';
+    check(`  HUDの帯は背景・ぼかし・影を一切持たない(上部を塗り潰さない)`,
+      transparentBg&&paint.backgroundImage==='none'&&paint.boxShadow==='none'&&paint.backdropFilter==='none',
+      `背景色=${paint.backgroundColor} / 背景画像=${paint.backgroundImage} / 影=${paint.boxShadow} / ぼかし=${paint.backdropFilter}`);
+    check(`  HUDはレイアウトの高さを取らず、プレイエリアが上端から始まる`,
+      Math.abs(measured.header.top-measured.play.top)<1,
+      `header.top=${measured.header.top.toFixed(1)}px / play.top=${measured.play.top.toFixed(1)}px`);
     check(`  ポーズボタンは横画面でも44px未満に縮めていない`,
       measured.pause&&measured.pause.width>=44&&measured.pause.height>=44,
       measured.pause?`${measured.pause.width.toFixed(1)}x${measured.pause.height.toFixed(1)}px`:'見つからない');

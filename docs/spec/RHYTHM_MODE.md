@@ -106,6 +106,18 @@
 
 - HUDはプレイエリアへ**重ねる絶対配置**（`pointer-events-none` + `absolute inset-x-0 top-0 z-30`）で、レイアウト上の高さを持たない
 - ただし**台形の頂点（画面上端・遠近projectionの基準点=yRatio 0）を覆う背景パネルは持たせない**。HUD自身の`<header>`要素には背景色・背景画像を一切付けず、文字には`text-shadow`だけで視認性を確保する
+- **この「背景を持たせない」は JSX だけの話ではない。`monster-hero/index.html` のグローバルCSSから
+  `[data-rhythm-hud]` へ背景・`backdrop-filter`・`box-shadow` を当てるのも同じく禁止**。
+  実際に index.html 側で
+  `background:linear-gradient(180deg,rgba(6,9,26,.98),rgba(7,9,24,.90))` +
+  `backdrop-filter:blur(10px)` + `box-shadow:0 10px 28px …,0 1px 0 rgba(103,232,249,.12)`
+  を当てており、画面上部に不透明な黒い帯ができて台形の頂点と背景を覆っていた。
+  JSXしか読まない検査では見えず、実機で「中央上部に黒い帯が残っていてレーンが上まで見えない」と
+  指摘されるまで検出できなかった（2026-09-03に撤去）。
+  現在は `rhythm-hud-wedge-check.js` / `rhythm-landscape-hud-check.js` が index.html 側の
+  `[data-rhythm-hud]` 向け規則も読み込んだうえで、計算済みスタイルの
+  背景色・背景画像・影・ぼかしがすべて無いことを実ブラウザで確かめている
+- プレイエリアの `box-shadow` も、上端側の `inset` 影は消失点付近を暗く塗り潰すので置かない（下端側のみ）
 - HUD本文は、台形が奥へ向かって狭くなる分だけできる**左右の空きウェッジ**（`RHYTHM_PROJECTION_TOP_SCALE=.18`により、画面上端で全体の41%ずつが左右に空く）にだけ置く。中央の台形部分には何も置かない
   - 左ウェッジ（`data-rhythm-hud-left`）: 丸いランクバッジ＋次のランクまでの進捗バー(`rhythmRankProgress`) → スコア → BEST → 難易度バッジ＋TEST表記 → 曲名（2026-09-03、参考にした他アプリの見た目に合わせてランクを文字だけの表示から丸バッジ＋進捗バーへ変更）
   - 右ウェッジ（`data-rhythm-hud-right`）: ハートアイコン＋LIFEバー＋数値 → ポーズボタン（`pointer-events-auto`） → COMBO（同じくLIFEを見出し文字だけの表示からハートアイコン付きのバーへ変更）

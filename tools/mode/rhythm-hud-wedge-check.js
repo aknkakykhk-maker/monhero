@@ -157,6 +157,18 @@ const utilityCss=tokens.map(token=>{
   return token.startsWith(LANDSCAPE_PREFIX)?`@media (orientation: landscape){${rule}}`:rule;
 }).join('\n');
 
+// ── index.html のグローバルCSSに書かれたHUD向けの指定も一緒に読む ────────────────
+// 実機では index.html の <style> が [data-rhythm-hud] へ直接スタイルを当てられる。
+// 実際に background:linear-gradient(...) + backdrop-filter:blur() + box-shadow で
+// 画面上部へ不透明な帯を敷いており、台形の頂点(消失点)を覆っていた。JSXだけを読む検査は
+// これを一切見られず「HUDに背景は無い」と判定してしまい、実機で「中央上部に黒い帯が残っていて
+// レーンが上まで見えない」と指摘されるまで検出できなかった(2026-09-03)。
+// そこで index.html 側の [data-rhythm-hud] 向けの規則もこのページへ流し込み、
+// 「どこに書かれていてもHUDが何も塗らない」ことを実際の計算済みスタイルで確かめる。
+const indexHtml=read('monster-hero/index.html');
+const hudGlobalCss=[...indexHtml.matchAll(/(^|\})\s*([^{}]*\[data-rhythm-hud\][^{}]*)\{([^{}]*)\}/g)]
+  .map(m=>`${m[2].trim()}{${m[3].trim()}}`).join('\n');
+
 const LANE_BG='#152033';
 // 実機の index.html は body 側で Safe Area を確保している。ここでも同じ形にして、
 // プレイ画面が env() をもう一度足していないか(=上部に二重の空白が出ないか)を測れるようにする。
@@ -168,6 +180,7 @@ body{height:100%;padding-top:${SAFE_TOP}px;padding-bottom:${SAFE_BOTTOM}px;displ
 main{position:relative;display:flex;flex:1 1 0%;min-height:0;flex-direction:column;overflow:hidden}
 [data-rhythm-play-area]{position:relative;margin:0 8px 8px;flex:1 1 0%;min-height:0;overflow:hidden;background:${LANE_BG}}
 ${utilityCss}
+${hudGlobalCss}
 </style></head><body><main>${headerHtml}<div data-rhythm-play-area=""></div></main></body></html>`;
 
 const SIZES=[
@@ -208,8 +221,20 @@ const HUD_BOTTOM_LIMIT_RATIO=.30;
       const left=document.querySelector('[data-rhythm-hud-left]');
       const right=document.querySelector('[data-rhythm-hud-right]');
       const toPlain=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom});
+      const header=document.querySelector('[data-rhythm-hud]');
+      const headerStyle=getComputedStyle(header);
       return {
         play:toPlain(play),
+        header:toPlain(header.getBoundingClientRect()),
+        // HUDの箱そのものが何かを塗っていないか(背景・ぼかし・影)。
+        // pointer-events:none のHUDは elementFromPoint に映らないので、頂点のピクセル色
+        // だけでは「HUDが敷いた帯」を検出できない。計算済みスタイルで直接確かめる。
+        headerPaint:{
+          backgroundColor:headerStyle.backgroundColor,
+          backgroundImage:headerStyle.backgroundImage,
+          boxShadow:headerStyle.boxShadow,
+          backdropFilter:headerStyle.backdropFilter||headerStyle.webkitBackdropFilter||'none',
+        },
         leftSamples:inkSamples(left).map(toPlain),
         rightSamples:inkSamples(right).map(toPlain),
         apexColor:(()=>{
@@ -231,6 +256,17 @@ const HUD_BOTTOM_LIMIT_RATIO=.30;
     // 台形の最上部・中心ピクセルは、HUDに覆われずレーン自身の背景色のまま見えていること
     check(`  台形の頂点(最上部中心)はHUDに覆われずレーンの背景のまま`,
       measured.apexColor==='rgb(21, 32, 51)',`実際の色=${measured.apexColor}`);
+    // HUDの箱が背景・ぼかし・影で上部を塗っていないこと(JSXでもindex.htmlでも同じく禁止)。
+    // 実機で「中央上部に黒い帯が残る」原因になっていたのがこれ。
+    const paint=measured.headerPaint;
+    const transparentBg=paint.backgroundColor==='rgba(0, 0, 0, 0)'||paint.backgroundColor==='transparent';
+    check(`  HUDの帯は背景・ぼかし・影を一切持たない(上部を塗り潰さない)`,
+      transparentBg&&paint.backgroundImage==='none'&&paint.boxShadow==='none'&&paint.backdropFilter==='none',
+      `背景色=${paint.backgroundColor} / 背景画像=${paint.backgroundImage} / 影=${paint.boxShadow} / ぼかし=${paint.backdropFilter}`);
+    // HUDは絶対配置のままレイアウト高さを持たない(=プレイエリアが画面の高さをそのまま使う)
+    check(`  HUDはレイアウトの高さを取らず、プレイエリアが上端から始まる`,
+      Math.abs(measured.header.top-measured.play.top)<1,
+      `header.top=${measured.header.top.toFixed(1)}px / play.top=${measured.play.top.toFixed(1)}px`);
     const half=yRatio=>(measured.play.right-measured.play.left)/2*rhythmProjectionScale(yRatio);
     const laneEdgeAt=y=>{
       const ratio=Math.max(0,Math.min(1,(y-measured.play.top)/(measured.play.bottom-measured.play.top)));
