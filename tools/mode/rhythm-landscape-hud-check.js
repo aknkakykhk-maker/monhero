@@ -23,13 +23,28 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
 // ── 縦画面検査と同じ前提の確認 ────────────────────────────────────────────────
-check('横画面のHUD配置はJSの向き判定(isLandscape)を曲名の折り返し行数だけに使う(runやスコアには触れない)',
+// isLandscapeは (1)曲名の折り返し行数(WebkitLineClamp)と (2)横画面での見た目の飛行時間
+// 補正(rhythm-landscape-travel-check.js)の2箇所だけで使う。どちらも見た目だけの分岐で、
+// run・audio・スコア・コンボ・判定そのものには一切触れない。
+check('向き判定(isLandscape)の宣言とrefへの控えがある',
   /const \[isLandscape,setIsLandscape\]=useState/.test(game)
-  &&(game.match(/isLandscape/g)||[]).length<=6, // 宣言・useEffect内2回・JSXでの参照1回程度に収まること
-  `出現回数=${(game.match(/isLandscape/g)||[]).length}`);
-check('向き判定はmatchMediaの購読で、run・audio・スコア・コンボ・判定には触れない',
+  &&/const isLandscapeRef=useRef\(isLandscape\);/.test(game));
+// tick関数の中でtravelMsの直後にapplyJudgment呼び出しが並ぶため、近接だけを見る検査だと
+// 「たまたま近くにある」を「触っている」と誤検出する。applyJudgmentとbeginRunの関数本体
+// そのものを取り出し、その中にisLandscapeが出てこないことを見る
+const sliceBetween=(startNeedle,endNeedle)=>{
+  const start=game.indexOf(startNeedle);
+  if(start<0)return '';
+  const end=game.indexOf(endNeedle,start+startNeedle.length);
+  return end<0?'':game.slice(start,end);
+};
+const applyJudgmentBody=sliceBetween('const applyJudgment=useCallback(','const finish=useCallback(');
+const beginRunBody=sliceBetween('const beginRun=async startBestValue=>{','const pause=()=>{');
+check('applyJudgmentとbeginRunの本体を抽出できる',!!applyJudgmentBody&&!!beginRunBody);
+check('向き判定はmatchMediaの購読で、判定処理(applyJudgment)とrun開始処理(beginRun)には一切出てこない',
   /window\.matchMedia\('\(orientation: landscape\)'\)/.test(game)
-  &&!/isLandscape[\s\S]{0,120}(runRef|beginRun|applyJudgment|audio\.)/.test(game));
+  &&!/isLandscape/.test(applyJudgmentBody)
+  &&!/isLandscape/.test(beginRunBody));
 check('横画面ではプレイ画面自身が左右のSafe Area(ノッチ)を確保する(bodyは上下しか確保していない)',
   /data-rhythm-tap-test[\s\S]{0,400}landscape:pl-\[env\(safe-area-inset-left\)\]/.test(game)
   &&/data-rhythm-tap-test[\s\S]{0,400}landscape:pr-\[env\(safe-area-inset-right\)\]/.test(game));
