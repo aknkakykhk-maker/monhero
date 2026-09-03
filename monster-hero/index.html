@@ -445,7 +445,42 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
   /* モンスターノーツでは上の「最後のspan=ノーツ頭」という旧前提が成立せず、
      data-rhythm-monster-face が最後のspanになる。実機ではその結果、inset/border/影が
      マスモン画像へ当たり、四角い枠と左上への位置ずれが出ていた。
-     モンスターノーツだけは高い詳細度で必ず中央・枠なしへ戻す。 */
+     モンスターノーツだけは高い詳細度で必ず中央・枠なしへ戻す。
+     ノーツ本体には金色の判定芯を残し、白金＋紫/シアンの薄い外周発光だけを足して
+     特別ノーツらしさを出す。派手さは外側へ広げすぎず、押すタイミングは本体の輪郭で読めるようにする。 */
+  [data-rhythm-note][data-rhythm-monster-note] {
+    overflow:visible !important;
+    filter:drop-shadow(0 0 5px rgba(253,224,71,.72)) drop-shadow(0 0 10px rgba(217,70,239,.42)) drop-shadow(0 0 14px rgba(34,211,238,.24));
+  }
+  [data-rhythm-note][data-rhythm-monster-note]::before {
+    content:"";
+    position:absolute;
+    inset:2px -1px;
+    border:1px solid rgba(255,250,205,.98);
+    border-radius:9999px;
+    box-shadow:0 0 5px rgba(253,224,71,.92),0 0 9px rgba(232,121,249,.58),0 0 13px rgba(34,211,238,.34),inset 0 0 4px rgba(255,255,255,.5);
+    pointer-events:none;
+  }
+  [data-rhythm-note][data-rhythm-monster-note]::after {
+    content:"";
+    position:absolute;
+    inset:-4px -6px;
+    border:1px solid rgba(216,180,254,.62);
+    border-radius:9999px;
+    background:
+      radial-gradient(circle at 8% 45%,rgba(255,255,255,.85) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 93% 58%,rgba(103,232,249,.85) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 20% 88%,rgba(253,224,71,.8) 0 1px,transparent 1.8px),
+      radial-gradient(circle at 78% 8%,rgba(232,121,249,.82) 0 1px,transparent 1.8px);
+    box-shadow:0 0 8px rgba(217,70,239,.45),0 0 12px rgba(34,211,238,.28);
+    opacity:.62;
+    pointer-events:none;
+    animation:rhythmMonsterNoteAura 1.15s ease-in-out infinite alternate;
+  }
+  @keyframes rhythmMonsterNoteAura {
+    from { opacity:.48; box-shadow:0 0 6px rgba(217,70,239,.36),0 0 10px rgba(34,211,238,.22); }
+    to { opacity:.82; box-shadow:0 0 10px rgba(217,70,239,.56),0 0 15px rgba(34,211,238,.34); }
+  }
   [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-monster-face] {
     inset:auto !important;
     left:50% !important;
@@ -457,6 +492,9 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     border-radius:0 !important;
     background:transparent !important;
     box-shadow:none !important;
+    transform:translate(-50%,-50%) scale(var(--rhythm-note-depth-scale, 1)) scale(1.28) !important;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.58)) drop-shadow(0 0 4px rgba(253,224,71,.55));
+    z-index:2;
   }
   [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-monster-face] > * {
     border:0 !important;
@@ -466,6 +504,9 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     box-shadow:none !important;
     clip-path:none !important;
     -webkit-clip-path:none !important;
+  }
+  @media(prefers-reduced-motion:reduce) {
+    [data-rhythm-note][data-rhythm-monster-note]::after { animation:none; opacity:.66; }
   }
   [data-rhythm-hold-body] {
     border-left:1px solid rgba(167,243,208,.34);
