@@ -57,12 +57,24 @@ const rhythmRankProgress = score => {
 // マイナスや壊れた値はどのランクの条件にも一致しない(findIndexが-1を返す)ため、
 // rhythmRankForScoreと同じく最下位(G)として扱う(そうしないと「次はF」ではなく
 // 「次は無い」という誤った答えを返してしまう)。
-const rhythmNextRankId = score => {
+//
+// 第2引数maxScoreは現在の難易度の満点(RHYTHM_DIFFICULTIESのmaxScore)。
+// 2026-09-04にPR #1023で追加した直後、EASY(満点60万=A上限)なのに「→S」のような
+// その難易度では絶対に届かない次ランクを表示してしまう不具合が見つかった。
+// RHYTHM_RANKSのしきい値自体は難易度を跨いだ共通のものなので、次ランクのしきい値が
+// 今の難易度の満点を超えるならその難易度では到達不可能と分かる。その場合はnextが
+// 無い(=★MAX)ものとして扱う。RHYTHM_RANKS・rhythmRankForScore・rhythmRankProgressの
+// 判定・しきい値は一切変更しない(表示だけの追加ガード)。maxScoreを渡さない/0以下/壊れた値の
+// ときは今までどおり上限なし(Infinity)として扱い、既存の呼び出し互換を保つ。
+const rhythmNextRankId = (score, maxScore) => {
   const value = Number.isFinite(Number(score)) ? Number(score) : 0;
   const index = RHYTHM_RANKS.findIndex(rank => value >= rank.min);
   const currentIndex = index < 0 ? RHYTHM_RANKS.length - 1 : index;
   const next = currentIndex > 0 ? RHYTHM_RANKS[currentIndex - 1] : null;
-  return next ? next.id : null;
+  if (!next) return null;
+  const parsedMax = Number(maxScore);
+  const cap = Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : Infinity;
+  return next.min <= cap ? next.id : null;
 };
 // 音ゲーのライフ(暫定値)。0へ到達したrunは不可逆のDOWNとなり、曲は止めずに
 // ライフとスコアだけを固定する。将来の回復処理も0からは復帰させない。

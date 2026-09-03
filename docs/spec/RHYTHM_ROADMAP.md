@@ -1,7 +1,7 @@
 # 音ゲー 最新ロードマップ
 
-更新日: 2026-09-03
-確認main: `abea669a18052ec2e0718515edb3a87d5838081b`（PR #1009 マージ後）
+更新日: 2026-09-04
+確認main: `9135ef79619830192bf48c20df7c283a2d2a5125`（PR #1023 マージ後。STEP 0はこの時点のmainから開始した）
 
 この文書は、Monster Hero 音ゲーモードの「ここから何を進めるか」を短く確認するためのロードマップ。
 現行挙動・数値・保存形式は常に最新 `main` と `docs/spec/RHYTHM_MODE.md` を正本とし、この文書は開発順序と公開段階を整理する。
@@ -96,7 +96,66 @@
 
 ---
 
-## 2. 直近の優先順
+## 1-C. STEP 0: 現行HUD最終修正＋基盤固定準備（完了・2026-09-04）
+
+STEP 1（iPhone実機での基盤固定）へ進む前に、公開直後にCodexレビューで指摘された
+ランクゲージの表示不具合だけを先に直した。**レーンgeometry・projection曲線・判定窓・
+入力座標・ノーツ落下時間には一切触れていない**（HUD/表示ロジックのみの変更）。
+
+修正内容:
+
+- `rhythmNextRankId(score, maxScore)` に第2引数`maxScore`（難易度ごとの満点、
+  `RHYTHM_DIFFICULTIES`の`maxScore`）を追加。次ランクのしきい値が今の難易度の満点を
+  超える場合は「次は無い(★MAX)」として扱うようにし、EASY(満点60万=A上限)なのに
+  「→S」のような絶対に届かない次ランクを表示してしまう不具合を直した。
+- ランク自体の判定・しきい値（`RHYTHM_RANKS`）、スコア計算、`rhythmRankForScore`、
+  `rhythmRankProgress`は変更していない。
+
+難易度ごとの満点における期待挙動（確認済み）:
+
+| 難易度 | 満点 | 満点時のランク | 満点到達時の次ランク表示 |
+| --- | --- | --- | --- |
+| EASY | 600,000 | A | ★MAX |
+| NORMAL | 700,000 | S | ★MAX |
+| HARD | 800,000 | SS | ★MAX |
+| EXPERT | 900,000 | M | ★MAX |
+| MASTER | 1,000,000 | M | ★MAX |
+
+回帰確認（`tools/mode/rhythm-*.js`含む自動検査で確認、実機確認は別途iPhoneで実施）:
+
+- ランクゲージ本体・目盛り表示
+- 100コンボごとの演出が200 / 300 / 400 / 500以降も毎回出ること
+- 500以降は最大段階(stage 5)を再利用すること
+- FULL COMBO / ALL EXCELLENT / ALL MARVELOUSのcelebrate画面
+- celebrate → result遷移
+- 軽量モード / 演出量MINIMALでcelebrate・派手な演出をスキップすること
+
+---
+
+## 2. 直近の優先順（STEP 0完了、次はSTEP 1から）
+
+このロードマップでのSTEP番号は、以降そのまま使う。
+
+| STEP | 内容 | 状態 |
+| --- | --- | --- |
+| STEP 0 | 現行HUD最終修正＋基盤固定準備 | 完了（上記1-C） |
+| STEP 1 | iPhoneでプレイ基盤最終固定 | 次はここから |
+| STEP 2 | あつ杯テーマ DEBUG 60sで実機性能確認 | 未着手 |
+| STEP 3 | Monster Hero EASY譜面実機調整・完成 | 未着手 |
+| STEP 4 | Monster Hero NORMAL譜面実機調整・完成 | 未着手 |
+| STEP 5 | Monster Hero HARD譜面実機調整・完成 | 未着手 |
+| STEP 6 | 3難易度を正式runtime/BESTへ接続して総合回帰 | 未着手 |
+| STEP 7 | 体験版公開前監査 | 未着手 |
+| STEP 8 | ユーザーの明示許可後のみ`RHYTHM_MODE_PUBLIC_RELEASE`をtrueにして体験版公開 | 未着手（要ユーザー許可） |
+
+体験版公開後（STEP 8のあと）は、フィードバック → EXPERT / MASTER → 正式HOME →
+2曲目・3曲目 → 永続全国ランキング → 正式曲3曲以上で週間システム、の順で進める
+（詳細は本書「10. 体験版後の正式版ロードマップ」を参照）。
+
+Monster Hero正式候補譜面（EASY / NORMAL / HARD）は自動生成済みだが、
+**自動生成をもって「完成」とは判断しない。** ユーザーがiPhone実機で耳・押しやすさを
+確認しながら1難易度ずつ仕上げる（STEP 3〜5）。`RHYTHM_MODE_PUBLIC_RELEASE`は
+ユーザーが明示的に許可するまでfalseのまま変更しない。
 
 ### STEP 1: iPhoneで現在のプレイ土台を最終固定
 
