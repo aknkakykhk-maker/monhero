@@ -41,6 +41,17 @@ const rhythmRankForScore = score => {
   const value = Number.isFinite(Number(score)) ? Number(score) : 0;
   return (RHYTHM_RANKS.find(rank => value >= rank.min) || RHYTHM_RANKS[RHYTHM_RANKS.length - 1]).id;
 };
+// 現在のランクから次のランクまでの進捗(0〜100)。HUDの丸バッジ横の進捗バーに使う。
+// 最上位ランク(M)のときは100で頭打ちにする。
+const rhythmRankProgress = score => {
+  const value = Number.isFinite(Number(score)) ? Number(score) : 0;
+  const index = RHYTHM_RANKS.findIndex(rank => value >= rank.min);
+  const current = index < 0 ? RHYTHM_RANKS[RHYTHM_RANKS.length - 1] : RHYTHM_RANKS[index];
+  const next = index > 0 ? RHYTHM_RANKS[index - 1] : null;
+  if (!next) return 100;
+  const span = next.min - current.min;
+  return span > 0 ? Math.max(0, Math.min(100, (value - current.min) / span * 100)) : 100;
+};
 // 音ゲーのライフ(暫定値)。0へ到達したrunは不可逆のDOWNとなり、曲は止めずに
 // ライフとスコアだけを固定する。将来の回復処理も0からは復帰させない。
 const RHYTHM_LIFE_MAX = 1000;
