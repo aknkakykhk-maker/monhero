@@ -23,12 +23,10 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
 // ── 縦画面検査と同じ前提の確認 ────────────────────────────────────────────────
-// isLandscapeは (1)曲名の折り返し行数(WebkitLineClamp)と (2)横画面での見た目の飛行時間
-// 補正(rhythm-landscape-travel-check.js)の2箇所だけで使う。どちらも見た目だけの分岐で、
+// isLandscapeは曲名の折り返し行数(WebkitLineClamp)だけで使う。見た目だけの分岐で、
 // run・audio・スコア・コンボ・判定そのものには一切触れない。
-check('向き判定(isLandscape)の宣言とrefへの控えがある',
-  /const \[isLandscape,setIsLandscape\]=useState/.test(game)
-  &&/const isLandscapeRef=useRef\(isLandscape\);/.test(game));
+check('向き判定(isLandscape)の宣言がある',
+  /const \[isLandscape,setIsLandscape\]=useState/.test(game));
 // tick関数の中でtravelMsの直後にapplyJudgment呼び出しが並ぶため、近接だけを見る検査だと
 // 「たまたま近くにある」を「触っている」と誤検出する。applyJudgmentとbeginRunの関数本体
 // そのものを取り出し、その中にisLandscapeが出てこないことを見る
@@ -104,9 +102,9 @@ check('HUDに未変換のJSX式が残っていない',!/\{|\}/.test(headerHtml),
 const PALETTE={
   'white':'#ffffff','slate-200':'#e2e8f0','slate-300':'#cbd5e1','slate-400':'#94a3b8',
   'slate-100':'#f1f5f9','slate-900':'#0f172a','slate-950':'#020617','cyan-200':'#a5f3fc','cyan-300':'#67e8f9','emerald-200':'#a7f3d0',
-  'fuchsia-200':'#f5d0fe','fuchsia-300':'#f0abfc','fuchsia-700':'#a21caf','amber-200':'#fde68a',
+  'fuchsia-200':'#f5d0fe','fuchsia-300':'#f0abfc','fuchsia-700':'#a21caf','amber-200':'#fde68a','rose-400':'#fb7185',
 };
-const SPACE={'0':'0px','0.5':'2px','1':'4px','1.5':'6px','2':'8px','3':'12px','12':'48px','16':'64px'};
+const SPACE={'0':'0px','0.5':'2px','1':'4px','1.5':'6px','2':'8px','3':'12px','7':'28px','8':'32px','12':'48px','14':'56px','16':'64px','20':'80px'};
 const STATIC={
   'absolute':'position:absolute','relative':'position:relative','block':'display:block','flex':'display:flex',
   'inline-block':'display:inline-block',
@@ -119,7 +117,8 @@ const STATIC={
   'font-black':'font-weight:900','font-bold':'font-weight:700','leading-none':'line-height:1',
   'tabular-nums':'font-variant-numeric:tabular-nums','truncate':'overflow:hidden;text-overflow:ellipsis;white-space:nowrap',
   'rounded':'border-radius:4px','rounded-full':'border-radius:9999px','rounded-xl':'border-radius:12px',
-  'border':'border-width:1px;border-style:solid','inset-x-0':'left:0;right:0','inset-y-0':'top:0;bottom:0',
+  'border':'border-width:1px;border-style:solid','border-2':'border-width:2px','border-current':'border-color:currentColor',
+  'inset-x-0':'left:0;right:0','inset-y-0':'top:0;bottom:0',
   'top-0':'top:0','left-0':'left:0','overflow-hidden':'overflow:hidden','w-full':'width:100%',
   'pointer-events-none':'pointer-events:none','pointer-events-auto':'pointer-events:auto','hidden':'display:none',
 };
@@ -127,6 +126,9 @@ const cssFor=token=>{
   if(STATIC[token])return STATIC[token];
   if(/^z-\d+$/.test(token))return `z-index:${token.slice(2)}`;
   if(/^shadow-\[/.test(token))return '';
+  if(/^bg-gradient-to-[a-z]+$/.test(token))return '';
+  if(/^(from|to)-[a-z]+-\d{2,3}$/.test(token))return '';
+  if(/^bg-slate-950\/85$/.test(token))return 'background-color:rgba(2,6,23,.85)';
   if(/^bg-slate-950\/80$/.test(token))return 'background-color:rgba(2,6,23,.8)';
   if(/^bg-slate-900\/90$/.test(token))return 'background-color:rgba(15,23,42,.9)';
   if(/^bg-fuchsia-700\/85$/.test(token))return 'background-color:rgba(162,28,175,.85)';
@@ -147,7 +149,7 @@ const cssFor=token=>{
   if((m=/^min-h-\[(\d+)px\]$/.exec(token)))return `min-height:${m[1]}px`;
   if((m=/^min-w-\[(\d+)px\]$/.exec(token)))return `min-width:${m[1]}px`;
   if((m=/^text-\[(\d+)px\]$/.exec(token)))return `font-size:${m[1]}px`;
-  if((m=/^text-(xs|sm|base|lg|2xl)$/.exec(token)))return `font-size:${{xs:'12px',sm:'14px',base:'16px',lg:'18px','2xl':'24px'}[m[1]]}`;
+  if((m=/^text-(xs|sm|base|lg|2xl|3xl)$/.exec(token)))return `font-size:${{xs:'12px',sm:'14px',base:'16px',lg:'18px','2xl':'24px','3xl':'30px'}[m[1]]}`;
   if((m=/^tracking-\[([^\]]+)\]$/.exec(token)))return `letter-spacing:${m[1]}`;
   if((m=/^(text|bg|border)-([a-z]+-\d{2,3}|white)$/.exec(token))){
     const hex=PALETTE[m[2]];

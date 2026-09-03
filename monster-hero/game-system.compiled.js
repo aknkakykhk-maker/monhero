@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c59ae2a8eed2314d
+// source-sha256: e6198bf16080ca21
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 12:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 12:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15123,20 +15123,9 @@ const rhythmInputKey = (kind, id) => `${kind}:${id}`;
 // authored note time・BPM・beatZero・判定窓・入力時刻・スコアには使わず、描画travelだけに使用する。
 const RHYTHM_NOTE_TRAVEL_BASE_MS = 2150;
 const RHYTHM_NOTE_TRAVEL_MS_POINTS = Object.freeze([7000, 6000, 5000, 4000, 3000, RHYTHM_NOTE_TRAVEL_BASE_MS, 1680, 1300, 1020, 800, 630, 500]);
-// 横画面はプレイエリアの高さが縦画面よりずっと低いため、同じtravelMs(見た目の飛行時間)では
-// ノーツが小さく・追いづらいまま判定ラインへ着き、実機で「奥行きが短すぎて難易度が大幅アップ」
-// と指摘された(2026-09-03)。judgmentタイミング・BPM・noteTime・判定窓・スコア式は変えず、
-// **見た目の飛行時間だけ**をプレイエリアの実測高さに応じて伸ばし、狭い縦幅でも同じくらいの
-// 「見て追える時間」を確保する。縦画面の基準高さ(iPhone 390x844相当、収束率.18の実測と同じ
-// 基準)より低いときだけ伸ばし、基準以上(通常の縦画面)では比率が1未満になるのでそのまま1に
-// 留め、既存の縦画面の挙動を一切変えない。伸ばし過ぎを避けるため上限もかけている(暫定値)。
-const RHYTHM_LANDSCAPE_TRAVEL_REFERENCE_HEIGHT_PX = 743;
-const RHYTHM_LANDSCAPE_TRAVEL_RATIO_MAX = 2.2;
-const rhythmTravelMsHeightRatio = playAreaHeight => {
-  const height = Number(playAreaHeight);
-  if (!(Number.isFinite(height) && height > 0)) return 1;
-  return Math.max(1, Math.min(RHYTHM_LANDSCAPE_TRAVEL_RATIO_MAX, RHYTHM_LANDSCAPE_TRAVEL_REFERENCE_HEIGHT_PX / height));
-};
+// 横画面で「見た目の飛行時間(travelMs)をプレイエリアの高さに応じて伸ばす」対応を一度入れたが、
+// 実機フィードバックで「落下速度が遅くなるのはおかしい、縦画面と同じにしてほしい」と指摘され
+// 取り消した(2026-09-03)。travelMsは向きに関係なく常にrhythmTravelMsForSpeedの値のみを使う。
 const rhythmTravelMsForSpeed = value => {
   // null / undefined / 空文字は「値なし」として既定へ落とす(Number()では0になってしまう)。
   const raw = value == null || value === '' ? NaN : Number(value),
@@ -15435,11 +15424,6 @@ const RhythmTapTest = ({
   // ほかのHUDレイアウトの出し分けはTailwindのlandscape:バリアントで完結させ、判定・スコア・
   // runには一切触らない(§6.1)。
   const [isLandscape, setIsLandscape] = useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(orientation: landscape)').matches);
-  // tick内で毎フレーム最新値を読むための控え。scheduleTickの依存配列へisLandscapeを足すと
-  // 回転のたびにコールバックを作り直すだけで、すでに動いているrAFループ自体は次のpause/resumeまで
-  // 古い値のまま(§6.3「回転してもrunを維持」の趣旨に反し、プレイ中の回転で反映が遅れる)。
-  const isLandscapeRef = useRef(isLandscape);
-  isLandscapeRef.current = isLandscape;
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mql = window.matchMedia('(orientation: landscape)');
@@ -15656,7 +15640,7 @@ const RhythmTapTest = ({
       const songTimeMs = run.audio.songTimeMs(),
         travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
-        travelMs = rhythmTravelMsForSpeed(settings.noteSpeed) * (isLandscapeRef.current ? rhythmTravelMsHeightRatio(travel?.playAreaHeight) : 1);
+        travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
       run.notes.forEach(note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
@@ -16113,35 +16097,43 @@ const RhythmTapTest = ({
     "data-rhythm-hud-left": true,
     className: "min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "landscape:flex landscape:flex-wrap landscape:items-baseline landscape:gap-x-2 landscape:gap-y-0.5"
+    className: "landscape:flex landscape:items-center landscape:gap-2"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-baseline gap-1.5 landscape:min-w-0"
+    className: "flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`,
+    style: {
+      boxShadow: '0 0 8px rgba(103,232,249,.35)'
+    }
   }, /*#__PURE__*/React.createElement("b", {
     "data-rhythm-rank": true,
-    className: `text-lg font-black leading-none ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`,
+    className: "text-sm font-black leading-none",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, rhythmRankForScore(view.score)), /*#__PURE__*/React.createElement("span", {
-    className: "text-[9px] font-black leading-none tracking-[0.18em] text-cyan-200 landscape:hidden",
+  }, rhythmRankForScore(view.score))), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 landscape:min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative h-1.5 w-20 overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:hidden"
+  }, /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    className: "absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300",
     style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+      width: `${rhythmRankProgress(view.score)}%`
     }
-  }, "SCORE")), /*#__PURE__*/React.createElement("b", {
+  })), /*#__PURE__*/React.createElement("b", {
     "data-rhythm-score": true,
     className: "mt-0.5 block font-black leading-none tabular-nums landscape:mt-0",
     style: {
-      fontSize: 'min(20px,5vw)',
+      fontSize: 'min(18px,4.6vw)',
       textShadow: '0 1px 6px rgba(2,6,23,.96)'
     }
   }, view.score.toLocaleString()), /*#__PURE__*/React.createElement("small", {
-    className: "mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:mt-0",
+    className: "mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, "BEST ", Number(bestRecord?.bestScore || 0).toLocaleString())), /*#__PURE__*/React.createElement("div", {
-    className: "landscape:flex landscape:items-center landscape:gap-1 landscape:mt-0.5 landscape:min-w-0"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, "BEST ", Number(bestRecord?.bestScore || 0).toLocaleString()))), /*#__PURE__*/React.createElement("div", {
     className: "mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"
   }, /*#__PURE__*/React.createElement("span", {
     className: "shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none"
@@ -16151,9 +16143,9 @@ const RhythmTapTest = ({
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, hasHold ? 'HOLD TEST' : 'TAP TEST')), /*#__PURE__*/React.createElement("div", {
+  }, hasHold ? 'HOLD TEST' : 'TAP TEST'))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-song": true,
-    className: "mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0 landscape:max-w-none landscape:flex-1 landscape:min-w-0",
+    className: "mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0",
     style: {
       display: '-webkit-box',
       WebkitLineClamp: isLandscape ? '1' : '3',
@@ -16162,34 +16154,21 @@ const RhythmTapTest = ({
       lineHeight: '1.25',
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, "\u266A ", song.displayName))), /*#__PURE__*/React.createElement("div", {
+  }, "\u266A ", song.displayName)), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-right": true,
     className: "flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "landscape:flex landscape:items-center landscape:gap-2"
-  }, /*#__PURE__*/React.createElement("button", {
-    "data-rhythm-pause": true,
-    "aria-label": "\u30DD\u30FC\u30BA",
-    className: "pointer-events-auto flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)]",
-    onClick: pause
-  }, "\u2161"), /*#__PURE__*/React.createElement("div", {
-    "data-rhythm-life": true,
-    className: "w-full landscape:w-auto landscape:flex landscape:items-center landscape:gap-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between gap-1"
+    className: "flex items-center justify-end gap-1"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[8px] font-black leading-none tracking-[0.12em] text-emerald-200",
+    "aria-hidden": "true",
+    className: "text-sm leading-none text-rose-400",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, "LIFE"), /*#__PURE__*/React.createElement("b", {
-    "data-rhythm-life-value": true,
-    className: "text-[9px] font-black leading-none tabular-nums text-slate-200",
-    style: {
-      textShadow: '0 1px 4px rgba(2,6,23,.92)'
-    }
-  }, view.life)), /*#__PURE__*/React.createElement("div", {
-    className: "relative mt-0.5 h-1.5 w-full overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:mt-0 landscape:w-16"
+  }, "\u2665"), /*#__PURE__*/React.createElement("div", {
+    className: "relative h-1.5 w-12 overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:w-14"
   }, /*#__PURE__*/React.createElement("i", {
     "data-rhythm-life-bar": true,
     "aria-hidden": "true",
@@ -16199,16 +16178,27 @@ const RhythmTapTest = ({
       background: rhythmLifeRatio(view.life) > .5 ? 'linear-gradient(90deg,#34d399,#22d3ee)' : rhythmLifeRatio(view.life) > .25 ? 'linear-gradient(90deg,#fbbf24,#fb923c)' : 'linear-gradient(90deg,#fb7185,#ef4444)',
       transition: settings.lightweightMode ? 'none' : 'width 140ms linear'
     }
-  })))), /*#__PURE__*/React.createElement("b", {
+  })), /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-life-value": true,
+    className: "text-[9px] font-black leading-none tabular-nums text-slate-200",
+    style: {
+      textShadow: '0 1px 4px rgba(2,6,23,.92)'
+    }
+  }, view.life)), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-pause": true,
+    "aria-label": "\u30DD\u30FC\u30BA",
+    className: "pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0",
+    onClick: pause
+  }, "\u2161")), /*#__PURE__*/React.createElement("b", {
     ref: abilityBadgeRef,
     "data-rhythm-ability-badge": true,
     hidden: true,
-    className: "block text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5",
+    className: "mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5",
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
   }), /*#__PURE__*/React.createElement("div", {
-    className: "text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"
+    className: "mt-1 text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300",
     style: {
