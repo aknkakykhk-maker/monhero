@@ -21,10 +21,12 @@ if(helper){
     check(`y ${y} の外周幅はprojection scaleと一致`,Math.abs((outerRight-outerLeft)-rhythmProjectLane(2,y).scale)<1e-9);
   }
   check('奥ほど細く判定ライン側ほど広い',rhythmProjectLane(2,0).width<rhythmProjectLane(2,.88).width&&rhythmProjectLane(2,.88).width<rhythmProjectLane(2,1).width);
-  // 収束率は .30 から .18 へ下げた(2026-09-03)。Safe Areaの二重掛けを直してプレイエリアが
-  // 1.44倍の高さになったぶん、同じ収束率だと円錐が寝て奥行きが薄く見えるため。
-  // 上端が細く収束すること・判定線側が十分広いことは変わらず担保する。
-  check('上端は画面幅の20%以下へ収束し、判定線側は87%以上まで広がる',rhythmProjectLane(2,0).scale<=.20&&rhythmProjectLane(2,.88).scale>=.87);
+  // 収束率は .18 から .55 へ上げた(2026-09-03)。.18のときは台形の上端の左右に台形へ入らない
+  // 黒い余白が大きく残り、「レーンが上まで見えるようにしてほしい」と指摘された。この余白は
+  // 元々、HUD本文を台形の外側ウェッジへ押し込むために意図して確保していたが、HUDを実領域を
+  // 持つ薄い帯(<header data-rhythm-hud>)へ変更したことで台形の幅に一切関与しなくなったため
+  // 不要になった。上端が細く収束すること・判定線側が十分広いことは変わらず担保する(暫定値)。
+  check('上端は画面幅の56%以下へ収束し、判定線側は90%以上まで広がる',rhythmProjectLane(2,0).scale<=.56&&rhythmProjectLane(2,.88).scale>=.90);
   const far=rhythmProjectTravelProgress(.2)-rhythmProjectTravelProgress(.1),near=rhythmProjectTravelProgress(.9)-rhythmProjectTravelProgress(.8);
   check('Y移動は時刻を保った自然な非線形遠近',rhythmProjectTravelProgress(0)===0&&rhythmProjectTravelProgress(1)===1&&far>0&&near>far&&near/far<2);
   check('手前の移動量は奥の1.6倍以上で迫り感を保つ',near/far>=1.6);
