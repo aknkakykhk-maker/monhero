@@ -216,6 +216,9 @@ check('マスモンはノーツ中央へ配置し、縦横比を維持',
   &&monsterFaceTag.includes('translate(-50%,-50%)')
   &&game.includes('data-rhythm-monster-face')
   &&game.includes('className="h-full w-full object-contain"'));
+check('iOSの合成境界を含め、染色画像側にも枠・背景・角丸を出さない',
+  game.includes('[data-rhythm-monster-face],[data-rhythm-monster-face]>*{border:0!important;outline:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}')
+  &&game.includes('[data-rhythm-monster-face]>*{clip-path:inset(1px);-webkit-clip-path:inset(1px)}'));
 // 毎フレーム走るtickの中身だけを取り出して、染色や絵の組み立てが混ざっていないか見る
 const tickBody=game.match(/const tick=\(frameNowMs\)=>\{[\s\S]*?frameRef\.current=requestAnimationFrame\(tick\);\};/)?.[0]||'';
 check('毎フレームの処理を抽出できる',!!tickBody);
