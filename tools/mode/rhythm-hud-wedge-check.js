@@ -1,27 +1,20 @@
-// 音ゲーのプレイ画面で、HUD(スコア・コンボ・ライフ等)がレーンの台形と重ならない
-// 「独立した帯」になっていることを実ブラウザで確かめる。
+// 音ゲーのプレイ画面で、HUD(スコア・コンボ・ライフ等)が「レーンの台形の左右にできる空きウェッジ
+// (奥へ向かって狭くなる分だけ左右に空く三角形の余白)だけを使い、台形の頂点(中央・最上部)を
+// 覆っていない」ことを実ブラウザで確かめる。
 //
-// 過去の変遷:
-//   ・HUDを画面上部へ全幅の背景パネルとして重ねる形を試したが(PR #983)、その背景パネルが
-//     台形の頂点(遠近projectionの基準点=yRatio 0)そのものを覆ってしまい、遠近感が変わって
-//     プレイしづらくなった。いったん元の横帯レイアウトへ戻した(PR #984)。
-//   ・次に、HUD本文を台形の外側の左右ウェッジ(奥へ向かって狭くなる分だけ左右に空く三角形の
-//     余白)だけに置く形にした。だがこれは「台形の上端をわざと狭くしてHUDの置き場所を確保する」
-//     設計だったため、上端の左右に台形へ入らない黒い余白が大きく残り、
-//     「せっかく空いているスペースを活かせていない」「レーンが上まで見えるようにしてほしい」と
-//     指摘された(2026-09-03)。
-//   ・そこで、HUD(<header data-rhythm-hud>)をプレイエリアに重ねる絶対配置から、
-//     プレイエリアの**外側・上**に独立した帯として置く形へ変えた。これで台形の上端の幅を
-//     HUDの置き場所のために犠牲にする必要がなくなり、レーンをより上まで広く見せられる。
+// 一度、HUDを画面上部へ全幅の背景パネルとして重ねる形を試したが(PR #983)、その背景パネルが
+// 台形の頂点(遠近projectionの基準点=yRatio 0)そのものを覆ってしまい、
+//   ・見えている台形の始まりが実際より進んだ位置になり、遠近感が変わってプレイしづらくなる
+//   ・パネルの不透明な高さぶん、プレイエリアのDOM上の高さが増えても実際に見える範囲は増えない
+// という2つの問題を実機プレイで指摘され、いったん元の横帯レイアウトへ戻した(PR #984)。
 //
-// この検査では、
-//   (1) HUDがプレイエリアに重ならない(構造的に上の帯である)こと
+// 今回は、HUD本文を台形の外側の左右ウェッジだけに置き、背景パネルを持たせない(文字に影を
+// 付けるだけ)ことで、台形の頂点を一切覆わないようにした。この検査では、
+//   (1) プレイエリアの高さがHUD分だけ実際に増えていること
 //   (2) 台形の最上部の中心ピクセルに、HUDが敷いた不透明な背景が乗っていないこと
-//       (レーン自体の背景と同じ色であること。上の帯である以上ふつうは自明だが、将来また
-//       絶対配置へ戻す変更が入っていないかを継続して見張るための回帰チェック)
-//   (3) HUDが占める高さが、Safe Areaの内側の高さの中に収まっており、二重に余白を消費して
-//       いないこと
-//   (4) HUD自身が全幅の不透明な背景パネルを持たない(文字に影を付けるだけ)こと
+//       (レーン自体の背景と同じ色であること)
+//   (3) HUD本文(左右それぞれ)の実際のインク範囲が、それが描かれている高さの台形の外側に
+//       収まっていること(1点だけでなく、HUDが占める高さの範囲を細かくサンプルして確認する)
 // を実測する。
 //
 //   node tools/mode/rhythm-hud-wedge-check.js
@@ -30,12 +23,19 @@ const ROOT=path.resolve(__dirname,'../..');
 const {chromium}=require(path.join(ROOT,'tools/node_modules/playwright'));
 const read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const game=read('monster-hero/src/game-system.jsx');
+const rhythm=read('monster-hero/data/rhythm-mode.js');
 
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
 
-check('HUD(<header>)はプレイエリアへ重ねる絶対配置になっていない(通常のflowで上の帯を占める)',
-  !/<header data-rhythm-hud className="[^"]*\babsolute\b/.test(game));
+// ── レーンの台形(遠近)は実装から取り出してそのまま使う ──────────────────────────
+const projectionSource=[
+  rhythm.match(/const RHYTHM_LANE_COUNT\s*=[^\n]*/)[0],
+  rhythm.match(/const RHYTHM_PROJECTION_TOP_SCALE=[^\n]*/)[0],
+  rhythm.match(/const rhythmClamp01=[^\n]*/)[0],
+  rhythm.match(/const rhythmProjectionScale=[^\n]*/)[0],
+].join('\n');
+const rhythmProjectionScale=new Function(`${projectionSource}\nreturn rhythmProjectionScale;`)();
 
 // ── HUDのJSXを取り出してHTMLへ写す ──────────────────────────────────────────
 const headerStart=game.indexOf('<header data-rhythm-hud');
@@ -74,10 +74,9 @@ const headerHtml=headerJsx
   .replace(/\{rhythmRankForScore\(view\.score\)\}/g,SAMPLE.rank)
   .replace(/\{hasHold\?'HOLD TEST':'TAP TEST'\}/g,'HOLD TEST')
   .replace(/<i ([^>]*?)\/>/g,'<i $1></i>')
-  .replace(/<b ([^>]*?)\/>/g,'<b $1></b>')
   .replace(/data-rhythm-([a-z-]+)(?=[\s>])/g,'data-rhythm-$1=""');
 check('HUDに未変換のJSX式が残っていない',!/\{|\}/.test(headerHtml),headerHtml.match(/\{[^"]{0,40}/)?.[0]||'');
-check('HUDの<header>自身に背景色・背景画像を持たせていない(文字影だけで読ませる)',
+check('HUDの<header>自身に背景色・背景画像を持たせていない(台形の頂点を覆わないため)',
   !/<header[^>]*style="[^"]*background/.test(headerHtml));
 check('曲名は truncate(1行で…に切る)を使わない(実機で曲名が切れて読めなかったため)',
   !/data-rhythm-hud-song[^>]*class="[^"]*truncate/.test(headerHtml)&&/data-rhythm-hud-song/.test(headerHtml));
@@ -171,12 +170,8 @@ const SIZES=[
   {name:'ふつう     390x844',width:390,height:844},
   {name:'大きい端末 428x926',width:428,height:926},
 ];
-// HUDが上の帯としてこれ以上高さを使うと、レーンの実質的な高さを削りすぎる。
-// 以前の「台形の外側ウェッジへHUD本文を収める」方式でもHUDの実測下端は高さの約30%まで
-// 達しており(rhythm-mode-note-perspective-check.js等の実測値)、この帯方式の実測(小さい
-// 端末で最大24.8%)はそれより小さい。かつ以前は同じ高さ範囲で台形の幅も狭く犠牲にしていた
-// (HUDの置き場所を作るため)のに対し、この方式ではHUDの帯より下は台形の幅を一切削らない。
-const HUD_HEIGHT_LIMIT_RATIO=.26;
+// HUD本文がここより下まで伸びると、台形の外側ウェッジが狭くなりすぎて衝突しやすくなる
+const HUD_BOTTOM_LIMIT_RATIO=.30;
 
 (async()=>{
   const browser=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
@@ -185,14 +180,32 @@ const HUD_HEIGHT_LIMIT_RATIO=.26;
     const errors=[];page.on('pageerror',error=>errors.push(String(error)));
     await page.setContent(PAGE);
     const measured=await page.evaluate(()=>{
-      const toPlain=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom});
-      const main=document.querySelector('main').getBoundingClientRect();
-      const header=document.querySelector('[data-rhythm-hud]').getBoundingClientRect();
+      // text nodeのRange.getClientRects()は、overflow:hidden+ellipsis(truncate)で視覚的に
+      // 切られる前の「クリップ前の行のレイアウト幅」を返してしまい、実際には画面に出ない
+      // 余白まで「はみ出している」と誤検出する。実際に見えている範囲を測るため、要素の
+      // getBoundingClientRect()(overflow:hiddenの効果を含む、実際に描画される箱)を使う。
+      const inkSamples=el=>{
+        const samples=[];
+        el.querySelectorAll('*').forEach(child=>{
+          if(child.children.length>0)return; // 葉要素だけを見る(親の箱は子と重複するため)
+          const hasText=child.textContent.trim().length>0;
+          const cs=getComputedStyle(child);
+          const hasVisibleBg=cs.backgroundColor&&cs.backgroundColor!=='rgba(0, 0, 0, 0)'&&cs.backgroundColor!=='transparent';
+          const hasVisibleBorder=cs.borderTopWidth!=='0px'&&cs.borderTopStyle!=='none';
+          if(!hasText&&!hasVisibleBg&&!hasVisibleBorder)return;
+          const r=child.getBoundingClientRect();
+          if(r.width||r.height)samples.push(r);
+        });
+        return samples;
+      };
       const play=document.querySelector('[data-rhythm-play-area]').getBoundingClientRect();
+      const left=document.querySelector('[data-rhythm-hud-left]');
+      const right=document.querySelector('[data-rhythm-hud-right]');
+      const toPlain=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom});
       return {
-        main:toPlain(main),
-        header:toPlain(header),
         play:toPlain(play),
+        leftSamples:inkSamples(left).map(toPlain),
+        rightSamples:inkSamples(right).map(toPlain),
         apexColor:(()=>{
           // 台形の最上部・中心ピクセルの直前(1px下)を、DOM越しに実際に見える色として調べる。
           const cx=Math.round((play.left+play.right)/2);
@@ -204,23 +217,38 @@ const HUD_HEIGHT_LIMIT_RATIO=.26;
     });
     console.log(`— ${size.name}`);
     check(`  JSエラーが出ない`,errors.length===0,errors[0]||'');
-    check(`  HUDはプレイエリアより上にあり、重ならない`,
-      measured.header.bottom<=measured.play.top+.5,
-      `header.bottom=${measured.header.bottom.toFixed(1)}px, play.top=${measured.play.top.toFixed(1)}px`);
-    const mainHeight=measured.main.bottom-measured.main.top;
-    const headerHeight=measured.header.bottom-measured.header.top;
     const playHeight=measured.play.bottom-measured.play.top;
     // Safe Areaはbodyが1回だけ引く。プレイ画面がenv()を足し直していたらここが合わなくなる。
-    // (HUDの帯ぶんの高さは、レーンのmb-2(8px)を除いた残りをHUDと分け合う形になる)
-    check(`  レーンがSafe Areaの内側をそのまま使う(Safe Areaの二重掛けが無い)`,
-      Math.abs((headerHeight+playHeight+8)-mainHeight)<1,
-      `header=${headerHeight.toFixed(1)}px + プレイ=${playHeight.toFixed(1)}px + 余白8px / main=${mainHeight.toFixed(1)}px`);
+    const expected=size.height-SAFE_TOP-SAFE_BOTTOM-8;
+    check(`  レーンがSafe Areaの内側をそのまま使う(Safe Areaの二重掛けが無い)`,Math.abs(playHeight-expected)<1,
+      `プレイ=${playHeight.toFixed(1)}px / 期待=${expected}px (画面${size.height} - 上${SAFE_TOP} - 下${SAFE_BOTTOM} - 余白8)`);
     // 台形の最上部・中心ピクセルは、HUDに覆われずレーン自身の背景色のまま見えていること
     check(`  台形の頂点(最上部中心)はHUDに覆われずレーンの背景のまま`,
       measured.apexColor==='rgb(21, 32, 51)',`実際の色=${measured.apexColor}`);
-    const heightRatio=headerHeight/mainHeight;
-    check(`  HUDの帯はmain全体の高さの${Math.round(HUD_HEIGHT_LIMIT_RATIO*100)}%以内に収まる(レーンの実質的な高さを削りすぎない)`,
-      heightRatio<=HUD_HEIGHT_LIMIT_RATIO,`${(heightRatio*100).toFixed(1)}%`);
+    const half=yRatio=>(measured.play.right-measured.play.left)/2*rhythmProjectionScale(yRatio);
+    const laneEdgeAt=y=>{
+      const ratio=Math.max(0,Math.min(1,(y-measured.play.top)/(measured.play.bottom-measured.play.top)));
+      const center=(measured.play.left+measured.play.right)/2;
+      return {left:center-half(ratio),right:center+half(ratio)};
+    };
+    let maxBottom=0;
+    for(const [label,samples,side] of [['SCORE側',measured.leftSamples,'left'],['COMBO側',measured.rightSamples,'right']]){
+      let worst=null;
+      for(const box of samples){
+        maxBottom=Math.max(maxBottom,box.bottom);
+        // 要素の下端(台形が最も広がった高さ)で判定するのが最も厳しい
+        const edge=laneEdgeAt(box.bottom);
+        const ok=side==='left'?box.right<=edge.left+.5:box.left>=edge.right-.5;
+        const margin=side==='left'?edge.left-box.right:box.left-edge.right;
+        if(!ok&&(worst===null||margin<worst.margin))worst={box,edge,margin};
+      }
+      check(`  ${label}のHUDは、それが描かれる高さの台形へ一切かぶらない(${samples.length}要素をサンプル)`,
+        worst===null,
+        worst?`bottom=${worst.box.bottom.toFixed(1)}px, HUD側=${(side==='left'?worst.box.right:worst.box.left).toFixed(1)}px, 台形側=${(side==='left'?worst.edge.left:worst.edge.right).toFixed(1)}px`:'');
+    }
+    const bottomRatio=(maxBottom-measured.play.top)/(measured.play.bottom-measured.play.top);
+    check(`  HUD本文は画面上部${Math.round(HUD_BOTTOM_LIMIT_RATIO*100)}%以内に収まる`,bottomRatio<=HUD_BOTTOM_LIMIT_RATIO,
+      `${(bottomRatio*100).toFixed(1)}%`);
     await page.close();
   }
   await browser.close();
