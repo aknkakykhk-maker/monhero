@@ -162,6 +162,8 @@ node tools/build.js --check
 
 `node mode/rhythm-hud-wedge-check.js` は、プレイ画面のHUD(スコア・コンボ・ライフ等)が、レーンの台形の左右にできる空きウェッジ(奥へ向かって狭くなる分だけ左右に空く三角形の余白)だけを使い、台形の頂点(遠近projectionの基準点)を一切覆っていないことを実ブラウザで測る。過去にHUDへ全幅の背景パネルを敷いて台形の頂点を覆ってしまい、遠近感が変わってプレイしづらくなる不具合を実機プレイで出したため、(1)プレイエリアの高さが実際に増えていること、(2)台形の最上部・中心ピクセルがHUDの背景に覆われずレーンの背景色のままであること、(3)HUD本文の実際の描画範囲(葉要素のgetBoundingClientRect。truncateされたテキストノードのクリップ前レイアウト幅は使わない)が、それが描かれる高さの台形へ一切かぶらないこと、を4つの画面サイズ(320〜428px幅)で確認する。JSXのHUDからclassを取り出して手書きCSSへ写すため、知らないTailwindクラスが出てきたら失敗する。
 
+`node mode/rhythm-landscape-hud-check.js` は、横画面(landscape)のHUD配置(§6.2「案A: サイドウェッジ集約」)を実ブラウザで測る。rhythm-hud-wedge-check.jsと同じ考え方を横向きビューポート(844x390 / 926x428 / 667x375)で行う。Tailwindの`landscape:`バリアントは`@media (orientation: landscape)`そのものなので、縦画面用のCSSシムをそのまま流用できず(縦向きビューポートではlandscape:が発火しない)、シム自体をlandscape:プレフィックスに対応させたうえで横向きビューポートを渡す。(1)台形の頂点がHUDに覆われないこと、(2)HUD本文(左右それぞれ)がそれが描かれる高さの台形の外側に収まること、(3)HUD本文の高さが縦画面のまま流用した場合の実測(約39%)より明確に小さいこと(20〜24%程度)、(4)ポーズボタンが横画面でも44px未満に縮んでいないこと、(5)プレイ画面自身が左右のSafe Area(ノッチ)ぶんを`env(safe-area-inset-left/right)`で確保していること、を固定する。isLandscapeという向き判定がrun・audio・スコア・コンボ・判定に一切触れていないことも確認する。
+
 `node mode/rhythm-life-check.js` は、音ゲーの既存ライフ値・判定窓・スコア式を保ったまま、ライフ1以上での回復、0以降の不可逆DOWN、0到達判定までの加点と以降のスコア固定、曲・判定・コンボの継続、リザルトscore・ランク・BESTの固定スコア利用、保存キー不変を実処理で確認する。
 `node mode/rhythm-mid-tracking-check.js` は、HOLD/SLIDEの途中追従判定(暫定値)を確認する。猶予(暫定120ms)を超えて経路・帯から外れたままの場合だけMISSを確定すること、猶予内に戻ればカウントをリセットすること、HOLDにも横ズレ判定(帯の半分幅+0.15レーン)が効くこと、途中失敗時は指を離す前にその場でMISS確定させることを、擬似DOM上でbind/record/releaseを直接動かして検証する。
 `node mode/rhythm-audio-independence-check.js` は、音ゲーのBGM専用gainがメインのbgmGainを経由せずdestinationへ直結していること、曲ごとの音量差はsafeTrackGainで正規化すること、タップ音がもともとメインのSE音量と無関係であること、そして全体ミュート(タイトルの「音がオフです」)だけは`window.__mhAudioEnabled`経由で両方に共通で効くことを確認する。

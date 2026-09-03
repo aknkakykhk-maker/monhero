@@ -45,12 +45,20 @@ check('HUDは触れず、ポーズだけがタップを受ける',
   /data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto /.test(game));
 // Safe Areaは index.html の body が padding で確保済み(body{height:100dvh;box-sizing:border-box;
 // padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)})。
-// プレイ画面側で env() をもう一度足すと二重・三重掛けになり、実機の上部に大きな空白ができる
+// プレイ画面側で上下のenv()をもう一度足すと二重・三重掛けになり、実機の上部に大きな空白ができる
 // (実際にそうなっていて「上のスペースが広いまま」と指摘された)。ここで足し直さないことを固定する。
-check('プレイ画面はSafe Areaを二重に足さない(bodyがすでに確保している)',
+// (index.htmlのbodyが確保しているのは上下だけで、左右は確保していない。横画面のノッチ回避で
+// 左右を足すのは二重掛けにならないので、下の別チェックで許可している)
+check('プレイ画面はSafe Areaの上下を二重に足さない(bodyがすでに確保している)',
   game.includes("data-rhythm-tap-test")
-  &&!/data-rhythm-tap-test[\s\S]{0,400}env\(safe-area-inset/.test(game)
-  &&!/data-rhythm-hud[\s\S]{0,300}env\(safe-area-inset/.test(game));
+  &&!/data-rhythm-tap-test[\s\S]{0,400}env\(safe-area-inset-(top|bottom)\)/.test(game)
+  &&!/data-rhythm-hud[\s\S]{0,300}env\(safe-area-inset-(top|bottom)\)/.test(game));
+// 横画面(landscape)では端末のノッチ/センサーハウジングが画面の左右どちらかへ来る。
+// bodyは上下しか確保していないので、プレイ画面自身が左右のSafe Areaを確保する必要がある。
+// env(safe-area-inset-left/right)は、ノッチが無い側では0になるので両方へ足しても二重掛けにならない。
+check('横画面ではプレイ画面自身が左右のSafe Area(ノッチ)を確保する',
+  /data-rhythm-tap-test[\s\S]{0,400}landscape:pl-\[env\(safe-area-inset-left\)\]/.test(game)
+  &&/data-rhythm-tap-test[\s\S]{0,400}landscape:pr-\[env\(safe-area-inset-right\)\]/.test(game));
 // HUDの中身を書き換えるスクリプトは、並び順ではなく目印(data-*)で対象を探すこと。
 // 以前 rhythm-mode.js が「HUDの最初の<small>」を 'MIX TEST' へ書き換えており、
 // HUDの並びを変えたらBEST行が'MIX TEST'に化けた(実機で発覚)。
