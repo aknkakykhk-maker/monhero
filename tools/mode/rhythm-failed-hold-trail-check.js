@@ -16,12 +16,18 @@ check('最終判定をノーツへ控えて、失敗表示の判断に使う',
   game.includes('note.done=true;note._rhythmFinalJudgment=judgment;'));
 check('失敗して流し続ける条件はHOLD/SLIDEのMISSかつ譜面上の終端前',
   game.includes("const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note))&&songTimeMs<rhythmReleaseTargetMs(note);"));
+// 消す・薄くするという扱いは変えていないが、毎フレーム同じ値を書き直さないようにしたので
+// (遊んでいるうちに重くなる原因だった)、書き方が「変わったときだけ書く」形になっている。
 check('TAP・FLICKや終端を過ぎたノーツは従来どおりその場で消す',
-  game.includes('if(note.done&&!failedTrail){el.style.display=\'none\';return;}'));
+  game.includes("if(note.done&&!failedTrail){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}"));
+check('消したノーツへ毎フレーム同じ指示を書き直さない',
+  game.includes('if(el._rhythmHidden===true){el.style.display=\'\';el._rhythmHidden=false;}'));
 check('失敗中は判定範囲外になっても表示を続ける',
   game.includes('visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18)'));
 check('失敗中は薄く表示する',
-  game.includes("el.style.opacity=failedTrail?'.34':(visible?'1':'0')"));
+  game.includes("const nextOpacity=failedTrail?'.34':(visible?'1':'0');"));
+check('見え方が変わったときだけ書き込む',
+  game.includes("if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}"));
 check('印は値が変わったときだけ書き換えて、監視の自己発火を避ける',
   game.includes("if(el.dataset.rhythmFailed!==failedFlag)el.dataset.rhythmFailed=failedFlag;"));
 check('失敗したノーツと帯はグレーへ落とす',

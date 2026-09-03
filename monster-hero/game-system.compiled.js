@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9d607d6b1562729a
+// source-sha256: cf8edb7bc6d0f464
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-03 20:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-03 20:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3606,6 +3606,8 @@ const RHYTHM_NOTE_SPEED_MAX = 12;
 const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'MINIMAL']);
+// コンボの節目でお祝いを出す刻み。100コンボごと。
+const RHYTHM_COMBO_MILESTONE_STEP = 100;
 const RHYTHM_LANE_GLOW_LEVELS = Object.freeze(['NORMAL', 'LOW', 'NONE']);
 const RHYTHM_JUDGMENT_IDS = Object.freeze(['MARVELOUS', 'EXCELLENT', 'GREAT', 'GOOD', 'BAD', 'MISS']);
 // ランク(G〜M)の表示色(暫定値)。下位ほど地味な色、上位ほど鮮やかにして一目で分かるようにする。
@@ -15549,6 +15551,21 @@ const RhythmTapTest = ({
     result: null
   });
   const [view, setView] = useState(initialView);
+  // 100コンボごとの演出。コンボが変わったときだけ判定するので、毎フレームの処理は増えない。
+  // 演出量MINIMAL・軽量モードでは出さない(端末を重くしないため)。
+  const [comboMilestone, setComboMilestone] = useState(0);
+  const comboSeenRef = useRef(0);
+  useEffect(() => {
+    const combo = Number(view.combo) || 0;
+    const prev = comboSeenRef.current;
+    comboSeenRef.current = combo;
+    if (settings.lightweightMode || settings.effectAmount === 'MINIMAL') return;
+    if (combo < RHYTHM_COMBO_MILESTONE_STEP) return;
+    if (Math.floor(combo / RHYTHM_COMBO_MILESTONE_STEP) <= Math.floor(prev / RHYTHM_COMBO_MILESTONE_STEP)) return;
+    setComboMilestone(Math.floor(combo / RHYTHM_COMBO_MILESTONE_STEP) * RHYTHM_COMBO_MILESTONE_STEP);
+    const timer = setTimeout(() => setComboMilestone(0), 1100);
+    return () => clearTimeout(timer);
+  }, [view.combo, settings.lightweightMode, settings.effectAmount]);
   // 横画面向けHUD配置(§6.2)で使う。曲名の折り返し行数(WebkitLineClamp)はインラインstyleで
   // 決めるためTailwindのlandscape:だけでは切り替えられず、ここだけJSの向き判定を使う。
   // ほかのHUDレイアウトの出し分けはTailwindのlandscape:バリアントで完結させ、判定・スコア・
@@ -15779,15 +15796,29 @@ const RhythmTapTest = ({
         // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
         // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
         const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && (note.type === 'HOLD' || rhythmNoteIsSlide(note)) && songTimeMs < rhythmReleaseTargetMs(note);
+        // 終わったノーツは毎フレーム display を書き直さない。曲が進むほど終わったノーツが増え、
+        // そのぶん無駄な書き込みが積み上がって「遊んでいるうちにカクつく」原因になっていた。
+        // 一度隠したら覚えておき、値が変わるときだけ書く(見た目・判定は変わらない)。
         if (note.done && !failedTrail) {
-          el.style.display = 'none';
+          if (el._rhythmHidden !== true) {
+            el.style.display = 'none';
+            el._rhythmHidden = true;
+          }
           return;
+        }
+        if (el._rhythmHidden === true) {
+          el.style.display = '';
+          el._rhythmHidden = false;
         }
         const failedFlag = failedTrail ? 'true' : 'false';
         if (el.dataset.rhythmFailed !== failedFlag) el.dataset.rhythmFailed = failedFlag;
         const progress = 1 - (note.timeMs - visualTime) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
-        el.style.opacity = failedTrail ? '.34' : visible ? '1' : '0';
+        const nextOpacity = failedTrail ? '.34' : visible ? '1' : '0';
+        if (el._rhythmOpacity !== nextOpacity) {
+          el.style.opacity = nextOpacity;
+          el._rhythmOpacity = nextOpacity;
+        }
         if (!visible || !travel) return;
         let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
         if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
@@ -16189,8 +16220,15 @@ const RhythmTapTest = ({
     }, "BEST SCORE ", result.bestScore.toLocaleString()), result.isNewRecord && /*#__PURE__*/React.createElement("p", {
       "data-rhythm-new-record": true,
       className: "text-center text-xl font-black text-amber-300"
-    }, "NEW RECORD"), /*#__PURE__*/React.createElement("div", {
-      className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black"
+    }, "NEW RECORD"), (result.fullCombo || result.allExcellent || result.allMarvelous) && /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-result-celebrate": true,
+      className: "my-3 text-center"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block text-3xl font-black leading-tight"
+    }, result.allMarvelous ? 'ALL MARVELOUS!!' : result.allExcellent ? 'ALL EXCELLENT!!' : 'FULL COMBO!'), /*#__PURE__*/React.createElement("small", {
+      className: "mt-1 block text-[10px] font-black text-amber-200"
+    }, result.allMarvelous ? 'すべてMARVELOUS。文句なしの完璧です' : result.allExcellent ? 'すべてEXCELLENT以上。ほぼ完璧です' : '一度もコンボを切らずに完走しました')), /*#__PURE__*/React.createElement("div", {
+      className: "my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300"
     }, result.fullCombo && /*#__PURE__*/React.createElement("span", null, "FULL COMBO"), result.allExcellent && /*#__PURE__*/React.createElement("span", null, "ALL EXCELLENT"), result.allMarvelous && /*#__PURE__*/React.createElement("span", null, "ALL MARVELOUS")), /*#__PURE__*/React.createElement("dl", {
       className: "grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4"
     }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
@@ -16336,10 +16374,8 @@ const RhythmTapTest = ({
     }
   }, "COMBO"), /*#__PURE__*/React.createElement("b", {
     "data-rhythm-combo": true,
-    className: "mt-0.5 block text-2xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base",
-    style: {
-      textShadow: '0 1px 6px rgba(2,6,23,.96)'
-    }
+    "data-combo-tier": view.combo >= 300 ? '3' : view.combo >= 200 ? '2' : view.combo >= 100 ? '1' : '0',
+    className: "mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base"
   }, view.combo)))), /*#__PURE__*/React.createElement("div", {
     ref: playAreaRef,
     "data-rhythm-play-area": true,
@@ -16420,7 +16456,15 @@ const RhythmTapTest = ({
     }
   }, view.status === 'error' ? '音源を再生できません' : view.status === 'loading' ? 'LOADING…' : settings.judgmentTextDisplay ? view.last : ''), /*#__PURE__*/React.createElement("small", {
     className: `mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay ? 'text-transparent' : view.fastSlow === 'FAST' ? 'text-cyan-300' : view.fastSlow === 'SLOW' ? 'text-fuchsia-300' : 'text-transparent'}`
-  }, settings.fastSlowDisplay ? view.fastSlow || '—' : '—')), view.ability && /*#__PURE__*/React.createElement("div", {
+  }, settings.fastSlowDisplay ? view.fastSlow || '—' : '—')), comboMilestone > 0 && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-combo-milestone": true,
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-5xl font-black leading-none tabular-nums landscape:text-4xl"
+  }, comboMilestone), /*#__PURE__*/React.createElement("small", {
+    className: "mt-1 block text-sm font-black tracking-[0.3em]"
+  }, "COMBO")), view.ability && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-ability-flash": true,
     className: "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200/80 bg-slate-950/90 px-3 py-1 text-sm font-black text-amber-100",
     style: {
@@ -29211,8 +29255,8 @@ function MonsterHeroGame() {
     }), "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
       className: "mh-home-facility rhythm",
       onClick: RHYTHM_MODE_PUBLIC_RELEASE ? openRhythmDemo : () => setGameState('RHYTHM_INFO'),
-      "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンビー" : "モンビー（準備中）"
-    }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB5 \u30E2\u30F3\u30D3\u30FC", !RHYTHM_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"))), /*#__PURE__*/React.createElement("button", {
+      "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンスタービート" : "モンスタービート（準備中）"
+    }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB5 \u30E2\u30F3\u30B9\u30BF\u30FC\u30D3\u30FC\u30C8", !RHYTHM_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"))), /*#__PURE__*/React.createElement("button", {
       className: `mh-home-facility battle${spotClass('battle')}`,
       onClick: () => {
         setModeSelectTab('mode');
@@ -29265,7 +29309,7 @@ function MonsterHeroGame() {
       className: "block text-[8px] font-black text-cyan-300"
     }, "COMING SOON"), /*#__PURE__*/React.createElement("h2", {
       className: "text-sm font-black tracking-widest text-cyan-200"
-    }, "\u30E2\u30F3\u30D3\u30FC"))), /*#__PURE__*/React.createElement("div", {
+    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u30D3\u30FC\u30C8"))), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3",
       style: {
         paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
@@ -29274,7 +29318,7 @@ function MonsterHeroGame() {
       className: "my-6 text-center text-6xl"
     }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("h3", {
       className: "text-center text-xl font-black text-cyan-200"
-    }, "\u30E2\u30F3\u30D3\u30FC\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
+    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u30D3\u30FC\u30C8\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
       className: "mt-3 text-[11px] leading-relaxed text-slate-300"
     }, "\u66F2\u306B\u5408\u308F\u305B\u3066\u30015\u3064\u306E\u30EC\u30FC\u30F3\u3092\u6D41\u308C\u3066\u304F\u308B\u30CE\u30FC\u30C4\u3092\u6F14\u594F\u3059\u308B\u97F3\u30B2\u30FC\u306E\u30E2\u30FC\u30C9\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
       className: "mt-2 text-[11px] leading-relaxed text-slate-300"

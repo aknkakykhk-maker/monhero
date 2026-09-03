@@ -38,7 +38,7 @@ ${css}
     <button class="mh-home-facility management"><span>M/B管理</span></button>
     <button class="mh-home-facility temple"><span>神殿</span></button>
     <button class="mh-home-facility market"><span>マーケット</span></button>
-    <button class="mh-home-facility training"><span>修行</span></button>
+    <button class="mh-home-facility rhythm"><span>🎵 モンスタービート<small>準備中</small></span></button>
     <button class="mh-home-facility battle"><span>バトル</span></button>
   </nav>
   <button class="mh-home-mission">ミッション</button>
@@ -82,7 +82,7 @@ const SIZES = [
         });
         return { top, bottom };
       };
-      const out = { spots: {}, height: window.innerHeight };
+      const out = { spots: {}, height: window.innerHeight, width: window.innerWidth };
       for (const [name, sel] of Object.entries(spots)) {
         const b = box(sel);
         out.spots[name] = { ...b, atTop: b.bottom > window.innerHeight * 0.5 };
@@ -109,6 +109,11 @@ const SIZES = [
     const wrong = Object.entries(SPOTS).filter(([name, def]) => res.spots[name].atTop !== def.wantTop)
       .map(([name]) => `${name}(下端${Math.round(res.spots[name].bottom)}/画面${res.height})`);
     check('  案内の説明を出す向きが正しい', wrong.length === 0, wrong.join(', '));
+    // ④ 施設のラベルが画面の外へはみ出していないか
+    // (名前を長くしたときに、狭い端末で右や左が切れるのを拾う)
+    const overflow = res.facilities.filter(f => f.left < -0.5 || f.right > res.width + 0.5);
+    check('  施設のラベルが画面からはみ出さない', overflow.length === 0,
+      overflow.map(f => `${f.name}(${Math.round(f.left)}〜${Math.round(f.right)} / 画面${res.width})`).join(', '));
     await page.close();
   }
   await browser.close();
