@@ -90,6 +90,7 @@ jobs:
           node tools/mode/rhythm-easy-formal-candidate-check.js
           node tools/mode/rhythm-easy-v2-review-check.js
           node tools/mode/rhythm-chart-v2-step1-check.js
+          node tools/mode/rhythm-chart-v2-step2-check.js
           node tools/mode/rhythm-debug-short-check.js
           node tools/mode/rhythm-easy-ear-review-plan.js
       - name: Configure GitHub Pages
