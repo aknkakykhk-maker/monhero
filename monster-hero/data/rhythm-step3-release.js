@@ -3,10 +3,9 @@
 // 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
 // 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
-  const RHYTHM_RELEASE_DATE='2026-09-03 22:31';
-  const RHYTHM_DATA_BUILD='2026-09-03 22:31';
-  const RHYTHM_COMPILED_BUILD='2026-09-03 20:55';
-  const RHYTHM_CHANGELOG_DATE='2026-09-01 07:10';
+  const RHYTHM_RELEASE_DATE='2026-09-01 07:10';
+  const RHYTHM_DATA_BUILD='2026-09-01 07:10';
+  const RHYTHM_COMPILED_BUILD='2026-09-01 07:10';
   const RHYTHM_RELEASE_TITLE='iPhoneでバックアップファイル名が変わる問題を修正';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
@@ -81,15 +80,6 @@
   };
   installRhythmReleaseNoteSe();
 
-  // プレイ画面のレーン構造へ触らず、HUDと達成演出だけを追加する表示レイヤー。
-  if(typeof document!=='undefined'&&!document.querySelector('script[data-rhythm-presentation-plus]')){
-    const script=document.createElement('script');
-    script.src='data/rhythm-presentation-plus.js?v=202609032231';
-    script.dataset.rhythmPresentationPlus='true';
-    script.async=false;
-    document.head.appendChild(script);
-  }
-
   if(typeof window!=='undefined'&&typeof window.fetch==='function'&&!window.__mhRhythmDataBuildBridge){
     const nativeFetch=window.fetch.bind(window);
     window.fetch=async(...args)=>{
@@ -113,7 +103,7 @@
 
   if(typeof CHANGELOG!=='undefined'&&!CHANGELOG.some(entry=>entry?.title===RHYTHM_RELEASE_TITLE)){
     CHANGELOG.unshift({
-      date:RHYTHM_CHANGELOG_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
+      date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
       items:[
         'iPhoneの共有メニューへバックアップファイルだけを渡すようにし、「ファイルに保存」で名前が「テキスト」などへ変わる問題を修正しました。',
         '保存名は「MonsterHero_Backup_YYYYMMDD_HHMM.mhsave」を維持します。従来の引き継ぎコード方式と既存のmh_*セーブデータ形式は変更していません。'
