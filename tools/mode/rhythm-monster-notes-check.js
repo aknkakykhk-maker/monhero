@@ -122,8 +122,33 @@ check('我慢は15秒',M.rhythmMonsterAbilityRemainingMs(gaman,'GAMAN',0)===1500
 check('我慢中は50%軽減（MISS -50→-25 / BAD -20→-10）',
   M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',gaman,1000)===475
   &&M.rhythmLifeAfterWithMonsterAbilities(500,'BAD',gaman,1000)===490);
-const both={...muteki,...gaman,mutekiUntilMs:muteki.mutekiUntilMs,gamanUntilMs:gaman.gamanUntilMs};
-check('無敵と我慢が同時なら無敵が勝つ',M.rhythmApplyMonsterAbilityToLifeDelta(both,-50,1500)===0);
+// 無敵と我慢は別の能力として独立して走る(§4.7)。
+// 同じ時刻(t=0)に両方が出た場合、無敵は6秒 / 我慢は15秒なので、
+// 0〜6秒は無敵(ダメージ0)、6〜15秒は我慢(半減)、15秒以降は素のダメージへ戻る。
+const bothAtZero=M.rhythmActivateMonsterAbility({ability:M.RHYTHM_MONSTER_ABILITIES.MUTEKI,
+  state:M.rhythmActivateMonsterAbility({ability:M.RHYTHM_MONSTER_ABILITIES.GAMAN,state:fresh(),life:500,songTimeMs:0}).state,
+  life:500,songTimeMs:0}).state;
+check('無敵を取っても我慢の残り時間は消えない',
+  M.rhythmMonsterAbilityRemainingMs(bothAtZero,'GAMAN',0)===15000&&M.rhythmMonsterAbilityRemainingMs(bothAtZero,'MUTEKI',0)===6000);
+check('両方有効なあいだは強いほう(無敵)が勝つ',M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',bothAtZero,3000)===500);
+check('無敵が切れたら我慢の軽減へ変わる',M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',bothAtZero,9000)===475);
+check('我慢も切れたら素のダメージへ戻る',M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',bothAtZero,16000)===450);
+// 逆の順(我慢が先に切れる)も同じように扱う。t=0で無敵、t=12秒で我慢を取ると
+// 我慢は27秒まで、無敵は6秒までなので、6〜27秒は我慢が効く
+const gamanLater=M.rhythmActivateMonsterAbility({ability:M.RHYTHM_MONSTER_ABILITIES.GAMAN,
+  state:M.rhythmActivateMonsterAbility({ability:M.RHYTHM_MONSTER_ABILITIES.MUTEKI,state:fresh(),life:500,songTimeMs:0}).state,
+  life:500,songTimeMs:12000}).state;
+check('あとから取った我慢は、無敵が切れたあとも自分の時間だけ効く',
+  M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',gamanLater,3000)===500
+  &&M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',gamanLater,20000)===475
+  &&M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',gamanLater,28000)===450);
+// 同じ能力を続けて取ったときは、終わりが遅いほうまで効く(率も残り時間も足さない)
+const mutekiTwice=M.rhythmActivateMonsterAbility({ability:M.RHYTHM_MONSTER_ABILITIES.MUTEKI,state:muteki,life:500,songTimeMs:4000}).state;
+check('同じ能力を続けて取ったら、終わりが遅いほうまで効く',
+  M.rhythmMonsterAbilityRemainingMs(mutekiTwice,'MUTEKI',4000)===6000);
+const gamanTwice=M.rhythmActivateMonsterAbility({ability:M.RHYTHM_MONSTER_ABILITIES.GAMAN,state:gaman,life:500,songTimeMs:5000}).state;
+check('同じ能力の重ねがけで軽減率は強くならない',
+  M.rhythmLifeAfterWithMonsterAbilities(500,'MISS',gamanTwice,6000)===475);
 
 const stocked=M.rhythmActivateMonsterAbility({ability:A.KONJO,state:fresh(),life:500,songTimeMs:0});
 check('根性は生存中ならストックする（ライフは動かない）',stocked.state.konjoStock===1&&stocked.life===500);
