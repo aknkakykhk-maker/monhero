@@ -442,6 +442,31 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     border-color:rgba(207,250,254,.86);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 0 13px rgba(34,211,238,.42) !important;
   }
+  /* モンスターノーツでは上の「最後のspan=ノーツ頭」という旧前提が成立せず、
+     data-rhythm-monster-face が最後のspanになる。実機ではその結果、inset/border/影が
+     マスモン画像へ当たり、四角い枠と左上への位置ずれが出ていた。
+     モンスターノーツだけは高い詳細度で必ず中央・枠なしへ戻す。 */
+  [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-monster-face] {
+    inset:auto !important;
+    left:50% !important;
+    top:50% !important;
+    right:auto !important;
+    bottom:auto !important;
+    border:0 !important;
+    outline:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+  }
+  [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-monster-face] > * {
+    border:0 !important;
+    outline:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    clip-path:none !important;
+    -webkit-clip-path:none !important;
+  }
   [data-rhythm-hold-body] {
     border-left:1px solid rgba(167,243,208,.34);
     border-right:1px solid rgba(103,232,249,.28);
