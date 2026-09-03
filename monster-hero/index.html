@@ -442,6 +442,38 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.PNG', 'data/images/titl
     border-color:rgba(207,250,254,.86);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 0 13px rgba(34,211,238,.42) !important;
   }
+  /* FLICKは通常TAPのピンクと明確に分け、上へ払うノーツだと一目で分かるシアン専用表示にする。
+     rhythm-mode.js が後から入れる旧ピンクCSSより高い詳細度にして、判定・入力は触らず見た目だけを上書きする。 */
+  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child {
+    background:linear-gradient(180deg,#ecfeff 0%,#67e8f9 34%,#22d3ee 62%,#0284c7 100%) !important;
+    border-color:rgba(207,250,254,.98) !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 10px rgba(34,211,238,.92),0 0 18px rgba(14,165,233,.58) !important;
+  }
+  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child::before {
+    content:"";
+    position:absolute;
+    left:24%;
+    right:24%;
+    bottom:68%;
+    height:30px;
+    border-radius:999px;
+    pointer-events:none;
+    background:linear-gradient(180deg,transparent 0%,rgba(34,211,238,.10) 24%,rgba(103,232,249,.54) 100%);
+    filter:blur(1.5px);
+  }
+  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child::after {
+    content:"⇧" !important;
+    position:absolute;
+    left:50%;
+    top:-27px;
+    transform:translateX(-50%);
+    color:#ecfeff !important;
+    font-size:22px;
+    font-weight:1000;
+    line-height:1;
+    text-shadow:0 0 5px #fff,0 0 10px #22d3ee,0 0 16px #0284c7 !important;
+    pointer-events:none;
+  }
   /* モンスターノーツでは上の「最後のspan=ノーツ頭」という旧前提が成立せず、
      data-rhythm-monster-face が最後のspanになる。実機ではその結果、inset/border/影が
      マスモン画像へ当たり、四角い枠と左上への位置ずれが出ていた。
