@@ -209,7 +209,11 @@ const rhythmMonsterAbilityRemainingMs=(state,abilityId,songTimeMs)=>{
 };
 const rhythmMonsterAbilityActive=(state,abilityId,songTimeMs)=>rhythmMonsterAbilityRemainingMs(state,abilityId,songTimeMs)>0;
 // 負のライフ変化だけを能力で弱める。判定・コンボ・スコアそのものは変えない(§4.2)。
-// 無敵と我慢が同時に有効なときは、強いほう(無敵)が勝つ。
+//
+// **無敵と我慢は別の能力として、それぞれの残り時間で独立して走る**(§4.7)。
+// 効果時間が違う(6秒 / 15秒)ので、片方が切れてももう片方はそのまま続く。
+// 両方が有効なあいだは強いほう(無敵)が勝ち、無敵が切れたらそこから我慢の軽減へ変わる。
+// 逆に我慢が先に切れた場合は、無敵が残っているあいだダメージ0のまま。
 const rhythmApplyMonsterAbilityToLifeDelta=(state,delta,songTimeMs)=>{
   const raw=Number(delta)||0;
   if(raw>=0)return raw;
@@ -242,8 +246,9 @@ const rhythmActivateMonsterAbility=({ability,state,life,songTimeMs}={})=>{
     return {...stay,life:Math.min(RHYTHM_LIFE_MAX,lifeNow+ability.lifeGain),applied:true};
   }
   if(ability.id==='MUTEKI'||ability.id==='GAMAN'){
-    // 重なったときは残り時間を上書きして数え直す（**暫定**。§4.7で未確定のため、
-    // 率を足したり時間を延長したりはしない＝一度の発動より強くならない側へ倒す）
+    // 無敵と我慢はそれぞれ別に持つので、片方を取ってももう片方の残り時間は消えない(§4.7)。
+    // 同じ能力を続けて取ったときは、終わりが遅いほう(=いま取ったぶん)まで効く。
+    // 率を足したり残り時間へ足したりはしない。
     const key=ability.id==='MUTEKI'?'mutekiUntilMs':'gamanUntilMs';
     return {...stay,state:{...current,[key]:now+ability.durationMs},applied:true};
   }
