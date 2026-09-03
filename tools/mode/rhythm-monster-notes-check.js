@@ -207,6 +207,15 @@ check('能力は主血統から引く',
   /ability:rhythmMonsterAbilityForLineage\(monsterLineageOf\(masu\.baseId\)\.main\.id\)/.test(game));
 check('ノーツ中央にマスモンの染色済みの絵を出す',
   /data-rhythm-monster-face[\s\S]{0,400}<DyedMonsterImage baseId=\{monster\.baseId\} src=\{monster\.imageUrl\}[\s\S]{0,120}masuColors=\{monster\.colors\}/.test(game));
+const monsterFaceTag=game.match(/<span data-rhythm-monster-face[^>]+>/)?.[0]||'';
+check('マスモンは枠・背景・角丸・切り抜きなしの透過画像として表示',
+  !!monsterFaceTag
+  &&!/(?:^|\s)(?:border|bg-|rounded|overflow-hidden)/.test(monsterFaceTag));
+check('マスモンはノーツ中央へ配置し、縦横比を維持',
+  monsterFaceTag.includes('left-1/2 top-1/2')
+  &&monsterFaceTag.includes('translate(-50%,-50%)')
+  &&game.includes('data-rhythm-monster-face')
+  &&game.includes('className="h-full w-full object-contain"'));
 // 毎フレーム走るtickの中身だけを取り出して、染色や絵の組み立てが混ざっていないか見る
 const tickBody=game.match(/const tick=\(frameNowMs\)=>\{[\s\S]*?frameRef\.current=requestAnimationFrame\(tick\);\};/)?.[0]||'';
 check('毎フレームの処理を抽出できる',!!tickBody);
@@ -214,8 +223,10 @@ check('絵はプレイ中に作り直さない（毎フレームの処理に染�
   !!tickBody&&!/DyedMonsterImage|getRecoloredImage|getDyeRegionMasks|createElement\('canvas'\)/.test(tickBody));
 check('奥行きはレーンと同じ депth scaleへ乗せる（毎フレームJSで書き換えない）'.replace('депth','depth'),
   /data-rhythm-monster-face[\s\S]{0,400}scale\(var\(--rhythm-note-depth-scale, 1\)\)/.test(game));
-check('発動したモンスター名と能力名を短時間出す',
-  game.includes('data-rhythm-ability-flash')&&/\$\{view\.ability\.monster\}　/.test(game));
+const abilityFlash=game.match(/<div data-rhythm-ability-flash[\s\S]{0,600}?<\/div>/)?.[0]||'';
+check('能力発動表示はモンスター名を出さず能力名だけ',
+  abilityFlash.includes('{view.ability.ability}！')
+  &&!abilityFlash.includes('view.ability.monster'));
 check('無敵・我慢の残り時間と根性ストックが分かるUIがある',
   game.includes('data-rhythm-ability-badge')&&game.includes("'根性 ストック'"));
 check('残り時間の更新でsetStateを増やしていない（DOMへ直接書く）',
