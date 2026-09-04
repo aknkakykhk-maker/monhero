@@ -1211,7 +1211,7 @@ PR #954の正式候補v1まで実装済み。ただし、これは完成譜面�
 
 ---
 
-## 14A. 自動譜面制作システム V2（確定・STEP1〜2実装済み）
+## 14A. 自動譜面制作システム V2（確定・STEP1〜3実装済み）
 
 ### 目的
 
@@ -1625,6 +1625,62 @@ node tools/mode/rhythm-chart-v2-step2-check.js
 
 STEP2出力は `scope.sections=true` / `scope.phrases=true` とし、chart generation、EXPERT / MASTER、
 自動批評、自動修正はfalseのまま保持する。次工程はSTEP3「生成ルールへの構造反映」。
+
+### V2 STEP3 actual（生成ルールへの構造反映）
+
+`tools/mode/rhythm-chart-v2-step3-generate.js` で実装済み（`monster_hero_theme`のみ。
+`atsu_cup_theme`は自動生成譜面を持たないため対象外）。V1（`rhythm-monster-hero-chart-build.js`）は
+一切変更せず、`require`もしていない完全に独立した実装。STEP1のintensity（timeline）とSTEP2の
+sections / phrasesだけを新たに読み、それ以外（採用オンセット候補・音ズレ許容・幅/レーン移動/
+HOLD・FLICK・SLIDE・複合操作・モンスター配置の各ルール）はV1と同じロジックを踏襲する。
+
+V1は「小節ごとの採用オンセット強さ合計」の三分位だけで密度を決めていたが、これをそのまま
+密度上限だけに使っても、実測するとMonster Heroは1小節あたりの実オンセット候補数（4〜5件）が
+難易度側の上限を下回っており、上限を変えるだけでは盛り上がりが譜面に出ないことが分かった。
+そのためV2 STEP3では、小節の採用条件そのもの（格子の細かさ・採用に必要な強さ）を段で変える。
+
+- 小節ごとのintensityは、STEP1 timeline（500ms窓）のうちその小節に重なる窓の平均
+- 全小節のintensityから三分位のしきい値を作り、各小節を段0〜2へ分類する
+- セクション種別による調整: `INTRO`/`BREAK`/`OUTRO`は1段下げ、`BUILD`/`PRE_CHORUS`/`CHORUS`/
+  `FINAL_CHORUS`は1段上げ、`VERSE`/`BRIDGE`は調整なし（0〜2でclamp）
+- 段0（静か）は格子を通常の2倍粗く・採用に必要な強さを+0.15、段2（盛り上がり）は
+  格子はそのまま・必要な強さを-0.05し、実際に採用される本数そのものを段で変える
+  （小節ごとの上限 `perBarByIntensity` 自体はV1と同じ値を使う）
+- 反復フレーズ（`repeatedFromPhraseId`）は、小節数が元フレーズと一致する場合だけ、
+  元フレーズと同じフレーズ先頭からの相対グリッドへ音を置く。ただし架空の音は作らない:
+  その位置の近傍(±2グリッド)に、反復先の小節が属する段の採用基準を満たす実オンセット候補が
+  実在する場合だけ採用し、無ければ置かない（`motif.notesGrounded` / `notesAttempted`で記録）
+
+Monster Heroの実測（HARD、`node tools/mode/rhythm-chart-v2-step3-check.js`で自動確認）:
+
+| 区間種別 | 小節あたりノーツ数(平均) |
+| --- | ---: |
+| INTRO / BREAK / OUTRO | 1.86 |
+| CHORUS / FINAL_CHORUS | 2.39 |
+
+保存済みactual:
+
+| 難易度 | ノーツ数 | 内訳 | motif適用 |
+| --- | ---: | --- | --- |
+| EASY | 145 | TAP135 / HOLD10 | 反復フレーズ4件中1件へ適用、音8件中8件を接地 |
+| NORMAL | 170 | TAP144 / HOLD14 / FLICK12 | 反復フレーズ4件中1件へ適用、音9件中9件を接地 |
+| HARD | 232 | TAP194 / HOLD14 / FLICK16 / SLIDE8 | 反復フレーズ4件中1件へ適用、音10件中10件を接地 |
+
+出力: `tools/mode/authoring/monster-hero-theme-v2-chart-<難易度>.json`（`reviewRequired:true` /
+`runtimeConnected:false`の設計資料。V1の`monster-hero/debug/*-formal-candidate-v1.json`や
+`monster-hero/data/rhythm-mode.js`は変更しない）。
+
+CLI確認:
+
+```bash
+node tools/mode/rhythm-chart-v2-step3-generate.js
+node tools/mode/rhythm-chart-v2-step3-generate.js --write
+node tools/mode/rhythm-chart-v2-step3-check.js
+```
+
+次工程はSTEP4「EXPERT / MASTER自動生成」。STEP3時点ではEASY/NORMAL/HARDの3難易度のみで、
+複数候補生成・自動批評・自動プレイ可能性検査・自動修正ループはまだ実装していない
+（それぞれSTEP5〜7の範囲）。
 
 ---
 
