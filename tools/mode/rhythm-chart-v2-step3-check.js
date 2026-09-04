@@ -44,6 +44,8 @@ const gridMs=timing.beatMs/timing.subdivisionsPerBeat;
 const gridTimeMs=g=>timing.beatZeroMs+g*gridMs;
 const BAR=timing.subdivisionsPerBeat*4;
 const structure=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/monster-hero-theme-v2-structure.json'),'utf8'));
+// 曲の側が「小節ごとに実際にいくつ音を持っているか」。生成側と同じ参照源(dense)を使う。
+const denseCandidates=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/monster-hero-theme-onset-candidates-dense.json'),'utf8'));
 const sections=structure.sections;
 const sectionForMs=ms=>{for(const s of sections)if(ms>=s.startMs&&ms<s.endMs)return s;return sections[sections.length-1];};
 const sectionTypeForGrid=grid=>sectionForMs(gridTimeMs(Math.floor(grid/BAR)*BAR)).sectionTypeCandidate;
@@ -292,15 +294,32 @@ for(const difficulty of ['HARD','EXPERT','MASTER']){
   check(`${difficulty}: 盛り上がり区間のほうが静かな区間より密度が高い(構造がgeneration ruleへ反映されている)`,mean(hotBars)>mean(calmBars),`静か${mean(calmBars).toFixed(2)} / 盛り上がり${mean(hotBars).toFixed(2)}`);
   check(`${difficulty}: 盛り上がり区間は静かな区間の1.8倍以上の密度(差がはっきり出ている)`,
     mean(hotBars)>=mean(calmBars)*1.8,`${(mean(hotBars)/Math.max(1e-9,mean(calmBars))).toFixed(2)}倍`);
-  // サビの終盤(FINAL_CHORUS)が、ふつうのサビより薄くならない(以前は全難易度で薄かった)。
+  // サビの終盤(FINAL_CHORUS)が、道具の都合で薄くならない(以前は候補源が終盤ほど薄く、
+  // 全難易度でふつうのサビより薄い譜面になっていた)。
+  //
+  // ただし**ノーツ数そのもの**で比べてはいけない。2026-09-05に
+  // 「終盤にノーツを増やしてるから後半が異常にむずくなる。あくまでも音楽のテンポを
+  //  再現してってほしい」と言われて、小節あたりの上限を「その小節に実際にある音の数」から
+  // 決めるようにしたので、曲側の音が減っていれば譜面も減るのが**正しい**。
+  // そこで「その区間に実際にある音のうち、どれだけを叩かせているか」の割合で比べる。
   const barsOfType=type=>{
     const counts=new Map();
     for(const n of candidates[difficulty].notes){const bar=Math.floor(n.grid/BAR);if(sectionTypeForGrid(bar*BAR)===type)counts.set(bar,(counts.get(bar)||0)+1);}
     return [...counts.values()];
   };
-  const chorus=mean(barsOfType('CHORUS')),finalChorus=mean(barsOfType('FINAL_CHORUS'));
-  check(`${difficulty}: サビの終盤(FINAL_CHORUS)がふつうのサビ(CHORUS)の9割を下回らない`,
-    finalChorus>=chorus*.9,`CHORUS ${chorus.toFixed(2)} / FINAL ${finalChorus.toFixed(2)} 音/小節`);
+  const musicBarsOfType=type=>{
+    const counts=new Map();
+    for(const [grid] of denseCandidates.candidates){
+      const bar=Math.floor(grid/BAR);
+      if(sectionTypeForGrid(bar*BAR)===type)counts.set(bar,(counts.get(bar)||0)+1);
+    }
+    return [...counts.values()];
+  };
+  const shareOf=type=>mean(barsOfType(type))/Math.max(1e-9,mean(musicBarsOfType(type)));
+  const chorusShare=shareOf('CHORUS'),finalShare=shareOf('FINAL_CHORUS');
+  check(`${difficulty}: サビの終盤(FINAL_CHORUS)でも、曲の音を拾う割合がふつうのサビの9割を下回らない`,
+    finalShare>=chorusShare*.9,
+    `CHORUS ${(chorusShare*100).toFixed(0)}% / FINAL ${(finalShare*100).toFixed(0)}%（音の数に対する割合）`);
 }
 
 if(DIFFICULTIES.every(d=>candidates[d])){
@@ -317,7 +336,10 @@ if(DIFFICULTIES.every(d=>candidates[d])){
       profiles.map((row,index)=>`${row.id}:${values[index]}`).join(' / '));
   };
   nonDecreasing(policy=>policy.maxLaneStep,'レーンの跳び幅');
-  nonDecreasing(policy=>policy.maxConsecutiveEighths,'連打の上限');
+  // 連打の上限は、格子の細かさが違うと同じ数でも意味が変わる
+  // (EASY/NORMALは8分格子、HARD以上は16分格子なので、「2連」の重さがまるで違う)。
+  // 連なりの詰まり具合(ノーツ数 ÷ 間隔のグリッド数)へ直してから比べる。
+  nonDecreasing(policy=>Number((policy.maxConsecutiveEighths/policy.latticeGrids).toFixed(3)),'連打の詰まり具合');
   nonDecreasing(policy=>policy.narrowRate,'半ノーツの割合');
   nonDecreasing(policy=>policy.types.length,'使うノーツ種別の数');
   nonDecreasing(policy=>policy.simultaneous?1:0,'長押し中の別タップ・同時押し');

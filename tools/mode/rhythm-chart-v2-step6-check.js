@@ -36,9 +36,16 @@ check('書き出し先が設計資料の置き場(authoring)だけである',
 check('monster-heroからは読み取りしかしない',
   !/writeFileSync\([^)]*monster-hero/.test(source));
 check('乱数を使わない(結果が毎回変わらないため)',!/Math\.random|crypto\.randomBytes/.test(source));
-check('手のモデルのしきい値を定数で明示している',
-  ['HANDS','LANE_SPEED_COMFORT','LANE_SPEED_LIMIT','RESTRIKE_COMFORT_MS','RESTRIKE_LIMIT_MS',
-   'CHORD_MIN_LANE_GAP','RELEASE_MARGIN_MS','END_FLICK_RELEASE_MS'].every(k=>new RegExp(`const ${k}=`).test(source)));
+// 手のモデルの値は rhythm-hand-model.js に一本化してある。
+// (STEP3の生成側とSTEP6の検査側で別々に書いていると、直したつもりで別の物差しになる)
+const handModelSource=fs.readFileSync(path.join(ROOT,'tools/mode/rhythm-hand-model.js'),'utf8');
+check('手のモデルのしきい値を1か所へまとめてある',
+  ['hands','laneSpeedComfort','laneSpeedLimit','restrikeComfortMs','restrikeLimitMs',
+   'fingerMinGapLanes','releaseMarginMs','endFlickReleaseMs'].every(k=>new RegExp(`${k}:`).test(handModelSource))
+  &&source.includes("require('./rhythm-hand-model.js')"));
+check('生成(STEP3)と自動修正(STEP7)も同じ手のモデルを見ている',
+  fs.readFileSync(path.join(ROOT,'tools/mode/rhythm-chart-v2-step3-generate.js'),'utf8').includes("require('./rhythm-hand-model.js')")
+  &&fs.readFileSync(path.join(ROOT,'tools/mode/rhythm-chart-v2-step7-autofix.js'),'utf8').includes("require('./rhythm-hand-model.js')"));
 
 // --- 1. しきい値の較正: 人が確認した既存の正式候補v1が通ること ---
 // ここが落ちたら、道具が厳しすぎて「作った譜面が全部だめ」と言い出す状態になる。
@@ -63,14 +70,30 @@ for(const f of fs.readdirSync(authoring))beforeAuthoring.set(f,hash(path.join(au
 // 道具は --source で決め打ちの場所しか読まないので、
 // 「押せない譜面」を判定できるかは、同じ規則をここで再現して確かめる。
 // (道具本体のしきい値定数を読み出し、それを踏み越える配置が検出されることを見る)
-const readConst=name=>Number((source.match(new RegExp(`const ${name}=([0-9.]+)`))||[])[1]);
-const HANDS=readConst('HANDS'),LIMIT=readConst('LANE_SPEED_LIMIT'),RESTRIKE=readConst('RESTRIKE_LIMIT_MS');
+const {HAND_MODEL,fingerPairFeasible}=require(path.join(ROOT,'tools/mode/rhythm-hand-model.js'));
+const readConst=name=>Number(HAND_MODEL[name]);
+const HANDS=readConst('hands'),LIMIT=readConst('laneSpeedLimit'),RESTRIKE=readConst('restrikeLimitMs');
 check('しきい値を数値として読み出せる',
   Number.isFinite(HANDS)&&Number.isFinite(LIMIT)&&Number.isFinite(RESTRIKE),
   `指${HANDS}本 / 限界${LIMIT}レーン毎秒 / 叩き直し${RESTRIKE}ms`);
 check('指の本数が2本(スマホを両手で持って親指で押す前提)',HANDS===2);
 check('限界のほうが快適より速い(2段のしきい値が逆転していない)',
-  LIMIT>readConst('LANE_SPEED_COMFORT')&&RESTRIKE<readConst('RESTRIKE_COMFORT_MS'));
+  LIMIT>readConst('laneSpeedComfort')&&RESTRIKE<readConst('restrikeComfortMs'));
+// 実機の指摘(2026-09-05)「1枠を隣り合わせで交互に連続押しは物理的に不可能」を、
+// 手のモデルそのものが答えられること。指には太さがあり、幅の広いノーツは端を押せる。
+{
+  const note=(subLane,subLaneWidth)=>({subLane,subLaneWidth});
+  check('幅1が隣り合わせの16分(87ms)交互押しは「押せない」',
+    fingerPairFeasible(note(4,1),note(5,1),87).ok===false);
+  check('同じ幅1どうしでも8分(173ms)なら指1本で押せる',
+    fingerPairFeasible(note(4,1),note(5,1),173).ok===true);
+  check('1レーン以上離れていれば16分でも指2本で押せる',
+    fingerPairFeasible(note(0,1),note(6,1),87).ok===true);
+  check('幅の広いノーツは端を押せるので、重なっていても指2本が入る',
+    fingerPairFeasible(note(0,8),note(2,5),87).ok===true);
+  check('同じ場所を16分で叩き直すのは「押せない」',
+    fingerPairFeasible(note(3,3),note(3,3),87).ok===false);
+}
 
 // 実際の検出力は、道具が読む場所へ「押せない譜面」を置いて確かめる。
 // 既存ファイルを壊さないよう、退避してから戻す。
@@ -109,13 +132,14 @@ try{
 
   // 終点フリックは「弾いて戻す」ぶん指の解放が遅れる。同じ譜面で endFlick の有無だけを変え、
   // 遅れが実際に効いていることを対照で確かめる(遅れが効かなければ、押せない譜面を自動で作ってしまう)。
+  // 終端から8分(173ms)後に2レーン離れたTAPを置く。
+  // endFlickが無ければ「移動が間に合うが忙しい」、あれば指の戻りが80ms遅れて間に合わない。
   const endFlickPair=endFlick=>({...impossible,noteCount:3,typeCounts:{HOLD:2,TAP:1},
     notes:[
       // 片方の指を長いHOLDで塞ぐ
       {type:'HOLD',grid:64,lane:4,subLane:8,subLaneWidth:2,durationGrids:64},
-      // もう片方は終端の直後に同じレーンのTAPが来る。endFlickが無ければ「忙しい」で済む
       {type:'HOLD',grid:64,lane:0,subLane:0,subLaneWidth:2,durationGrids:32,...(endFlick?{endFlick:true}:{})},
-      {type:'TAP',grid:97,lane:0,subLane:0,subLaneWidth:2},
+      {type:'TAP',grid:98,lane:2,subLane:4,subLaneWidth:2},
     ]});
   fs.writeFileSync(victim,JSON.stringify(endFlickPair(false),null,1)+'\n');
   const plainEnd=run('--source','step5','--difficulty','EASY');
