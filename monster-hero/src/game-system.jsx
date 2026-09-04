@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 07:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 08:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2492,7 +2492,9 @@ const BGM_TRACKS = [
   // パンドラ勇者のムー戦では自動優先するが、ほかの曲と同様にBGMアレンジからも選べる
   { id:'pandora_boss', name:'Stay With Me ～Locked Fate～', creator:'オリジナル', src:'audio/bgm-pandora-boss.mp3', gain:1, loop:true },
   { id:'eiki_boss', name:'綺季一閃 ～花雪に舞う詠姫～', creator:'オリジナル', src:'audio/綺季一閃_～花雪に舞う詠姫～.mp3', gain:1, loop:true },
-  { id:'atsu_cup_theme', name:'あつ杯テーマ', creator:'オリジナル', src:'audio/bgm-atsu-cup-theme.mp3' },
+  // 2026-09-05 に「あつ杯テーマ」から「MF × ICHIKA MIX」へ改称した(音源そのものは同じ)。
+  // 保存データが持つのは id なので、名前を変えてもBGMアレンジの設定は影響を受けない。
+  { id:'atsu_cup_theme', name:'MF × ICHIKA MIX', creator:'オリジナル', src:'audio/bgm-atsu-cup-theme.mp3' },
   // もらった音源は5分・約7MBあったので、ほかのBGMと同じ96kbps・44.1kHzへ作り直して約半分にした
   // (tools/mode/rhythm-audio-reencode.js)。「ショート」はモンビー用に頭から2分半ほどを切り出した版で、
   // BGMアレンジからも選べる。どちらも同じ曲なので、好きなほうを好きな場面へ置ける。
@@ -2500,6 +2502,10 @@ const BGM_TRACKS = [
   { id:'six_eternel_remix', name:'SIX ÉTERNEL ドパガキリミックス', creator:'オリジナル', src:'audio/bgm-six-eternel-remix.mp3', gain:1, loop:true },
   { id:'six_eternel_beat', name:'SIX ÉTERNEL（ショート）', creator:'オリジナル', src:'audio/bgm-six-eternel-beat.mp3', gain:1, loop:true },
   { id:'six_eternel_remix_beat', name:'SIX ÉTERNEL ドパガキリミックス（ショート）', creator:'オリジナル', src:'audio/bgm-six-eternel-remix-beat.mp3', gain:1, loop:true },
+  // ボス戦の2曲も、SIX ÉTERNEL と同じようにモンビー用へ2〜3分を切り出した(頭からサビの終わりまで)。
+  // 元の全尺は残したままなので、バトルのBGMは今までどおり変わらない。
+  { id:'pandora_boss_beat', name:'Stay With Me ～Locked Fate～（ショート）', creator:'オリジナル', src:'audio/bgm-pandora-boss-beat.mp3', gain:1, loop:true },
+  { id:'eiki_boss_beat', name:'綺季一閃 ～花雪に舞う詠姫～（ショート）', creator:'オリジナル', src:'audio/bgm-eiki-boss-beat.mp3', gain:1, loop:true },
 ];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
@@ -6386,6 +6392,9 @@ const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 // 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
 const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
 const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
+// モンビー(モンヒロビート)のチュートリアルを見たかどうか。既存のキーには触らず新しく足す。
+// 値が無い既存セーブは「まだ見ていない」として扱うので、後方互換のまま初回案内が出る。
+const RHYTHM_TUTORIAL_SEEN_KEY = 'mh_rhythm_tutorial_seen_v1';
 // マスモンが少ないプレイヤー向けの日次案内。端末の暦日を値として保存し、
 // 既存セーブにキーが無い場合は未表示として安全に扱う。
 const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
@@ -6546,6 +6555,22 @@ const helpDataRows = (id) => {
           `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ${note ? ` ／ ${note}` : ''}`];
       }).filter(Boolean);
     }
+    // 先行公開の曲は5つ(RHYTHM_DEMO_SONG_IDS)。手で書き写すと曲を足したときに古くなるので、
+    // 実データから曲名・難易度の数・レベルの幅・長さを作る。
+    case 'rhythmDemoSongList': {
+      const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
+      const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+      return list.map(song => {
+        const charts = ids.map(id => song.difficulties[id]).filter(chart => chart && chart.notes && chart.notes.length > 0);
+        if (!charts.length) return null;
+        const levels = charts.map(chart => Number(chart.level) || 0);
+        const length = typeof rhythmSongLengthLabel !== 'undefined' ? rhythmSongLengthLabel(song, charts[0]) : '';
+        const name = song.subtitle ? `${song.displayName} ${song.subtitle}` : song.displayName;
+        return [name,
+          `Lv.${Math.min(...levels)}〜${Math.max(...levels)} ／ ${charts.length}難易度${length ? ` ／ ${length}` : ''}`];
+      }).filter(Boolean);
+    }
     case 'missionsDaily':
     case 'missionsWeekly':
     case 'missionsMonthly': {
@@ -6580,6 +6605,7 @@ const HELP_DATA_TITLES = {
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
+  rhythmDemoSongList: '先行公開している曲',
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
@@ -8442,6 +8468,13 @@ const rhythmSnapOptionValue=(value,min,max,step)=>{
   const snapped=min+Math.round((raw-min)/step)*step;
   return Math.max(min,Math.min(max,Number(snapped.toFixed(6))));
 };
+// 縦画面のときだけ出す「横画面にも対応している」案内(2026-09-05・ユーザー指示)。
+// 音ゲー中(RHYTHM_PLAY)には置かない。プレイ中に文字が増えると譜面が読みにくくなるため。
+// 出し分けはCSS(portrait:)だけで行う。JSで向きを見張ると、回すたびに再描画が走って重くなる。
+const RhythmLandscapeHint=({className=''})=>
+  <p data-rhythm-landscape-hint className={`hidden portrait:block rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold leading-relaxed text-cyan-100 ${className}`}>
+    📱 横画面にも対応しています。端末を横にすると、曲の一覧と選んだ曲を左右に並べて見られます。
+  </p>;
 const RhythmOptions=({value,onSave,onBack})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
   const [message,setMessage]=useState('');
@@ -8478,6 +8511,7 @@ const RhythmOptions=({value,onSave,onBack})=>{
     <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"><button aria-label="音ゲーデバッグへ戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div><small className="block text-[8px] font-black text-cyan-300">DEBUG・正式モード共通設計</small><h2 className="text-base font-black">⚙️ オプション</h2></div></header>
     <div data-rhythm-options-scroll className="flex-1 min-h-0 overflow-y-auto px-3 pb-4 pt-3 mh-scroll">
       <div className="space-y-3">
+        <RhythmLandscapeHint/>
         <section className={card}><h3 className="text-sm font-black text-cyan-200">🔊 音量</h3><div className="mt-2"><p className="mb-1 text-xs font-bold">BGM音量</p>{stepper('bgmVolume',0,100,1)}</div><div className="mt-2"><p className="mb-1 text-xs font-bold">タップ音量</p>{stepper('noteSeVolume',0,100,1)}</div><div className={row}><span className="text-xs font-bold">タップ音</span>{toggle('noteSeEnabled','')}</div><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={previewBgm} className="min-h-[46px] rounded-xl bg-indigo-700 text-xs font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-xs font-black">タップ音試聴</button></div><p className="mt-2 text-[9px] leading-relaxed text-slate-400">この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p></section>
         <section className={card}><h3 className="text-sm font-black text-cyan-200">🎯 プレイ</h3><div className="mt-2"><p className="mb-1 text-xs font-bold">ノーツ速度</p>{stepper('noteSpeed',RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,'',1)}</div><p className="mt-1 text-[9px] leading-relaxed text-slate-400">1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約{rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。</p><div className="mt-2"><p className="mb-1 text-xs font-bold">ノーツサイズ</p>{stepper('noteSize',80,120,5,'%')}</div><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。</p><div className="mt-2"><p className="mb-1 text-xs font-bold">判定タイミング調整</p>{stepper('judgmentTimingOffsetMs',-100,100,5,'ms')}</div><p className="mt-2 text-[9px] leading-relaxed text-slate-400">判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。</p></section>
         <section className={card}><h3 className="text-sm font-black text-cyan-200">👁 表示</h3><div className={row}><span className="text-xs font-bold">FAST / SLOW表示</span>{toggle('fastSlowDisplay','')}</div><div className={row}><span className="text-xs font-bold">判定文字表示</span>{toggle('judgmentTextDisplay','')}</div><div className="py-2"><p className="mb-2 text-xs font-bold">レーン発光</p>{segments('laneGlow',[['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']])}</div></section>
@@ -8604,7 +8638,10 @@ const rhythmChartPlayable=(song,difficultyId)=>{
 // 曲えらびで曲を鳴らし始めるまでの間。一覧をなぞって選び替えているあいだに
 // 曲を読み込み直すと、そのたびに引っかかるので、少し止まってから鳴らす。
 const RHYTHM_PREVIEW_DELAY_MS=350;
-const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',preview=false,previewVolume=100})=>{
+// spotClass … チュートリアルで光らせる場所に付けるクラスを返す関数(省略時は光らせない)。
+// 画面側が知っているキー: songList / songLevel / achievement / difficulty
+const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',preview=false,previewVolume=100,spotClass=null})=>{
+  const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   const list=(songs||[]).filter(song=>(difficulties||[]).some(difficulty=>rhythmChartPlayable(song,difficulty.id)));
   const [songId,setSongId]=React.useState(()=>(list[0]&&list[0].songId)||'');
   const [difficultyId,setDifficultyId]=React.useState(()=>'');
@@ -8612,7 +8649,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   // (曲を変えたときに「前の曲にしかない難易度」が残らない)。
   const song=list.find(entry=>entry.songId===songId)||list[0]||null;
   const available=song?(difficulties||[]).filter(difficulty=>rhythmChartPlayable(song,difficulty.id)):[];
-  const difficulty=available.find(entry=>entry.id===difficultyId)||available[0]||null;
+  // EXPERT以上は1つ下の難易度をクリアするまで選べない(2026-09-05・ユーザー指示)。
+  // 一覧からは消さずに鍵つきで見せる。「先に何をクリアすればよいか」が分かるようにするため。
+  const unlocked=item=>!song||rhythmDifficultyUnlocked(song.songId,item.id,bestRecords);
+  const openList=available.filter(unlocked);
+  const picked=available.find(entry=>entry.id===difficultyId);
+  const difficulty=(picked&&unlocked(picked)?picked:null)||openList[0]||null;
   const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
   const best=song&&difficulty?rhythmBestRecord(bestRecords,song.songId,difficulty.id):null;
   // 一覧の「楽曲Lv.」は、いま選んでいる難易度のレベル。その曲に無ければいちばん上の難易度。
@@ -8648,7 +8690,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
 
   return <div data-rhythm-song-select className="flex min-h-0 flex-1 flex-col landscape:flex-row">
     {/* 曲の一覧 */}
-    <div data-rhythm-song-list className="min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2 landscape:border-r landscape:border-white/10">
+    <div data-rhythm-song-list className={`min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2 landscape:border-r landscape:border-white/10${spot('songList')}`}>
       {notice}
       {list.length===0
         ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{emptyText}</p>
@@ -8660,13 +8702,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
               className={`flex w-full items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-900/70'}`}>
               <span className="w-10 shrink-0 text-center">
                 <small className="block text-[7px] font-black leading-none text-slate-400">楽曲Lv.</small>
-                <b data-rhythm-song-row-level className="mt-0.5 block text-xl font-black leading-none tabular-nums text-white">{rowLevel(entry)}</b>
+                <b data-rhythm-song-row-level className={`mt-0.5 block text-xl font-black leading-none tabular-nums text-white${spot('songLevel')}`}>{rowLevel(entry)}</b>
               </span>
               <RhythmSongArt song={entry}/>
               <span className="min-w-0 flex-1">
                 <b className="block text-[13px] font-black leading-tight text-white"
                   style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{entry.displayName}</b>
-                <span className="mt-1 flex items-center gap-1">
+                <span className={`mt-1 flex items-center gap-1${spot('achievement')}`}>
                   {(difficulties||[]).map(item=>{
                     const playable=rhythmChartPlayable(entry,item.id);
                     const markId=rhythmAchievementMarkId(playable,playable?rhythmBestRecord(bestRecords,entry.songId,item.id):null);
@@ -8700,20 +8742,26 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         </div>
 
         {/* 難易度をえらぶ */}
-        <div data-rhythm-difficulty-row className="mt-2 flex flex-wrap gap-1">
+        <div data-rhythm-difficulty-row className={`mt-2 flex flex-wrap gap-1${spot('difficulty')}`}>
           {available.map(item=>{
             const tone=rhythmDifficultyTone(item.id);
-            const on=item.id===difficulty.id;
+            const open=unlocked(item);
+            const on=!!difficulty&&item.id===difficulty.id;
+            const need=rhythmDifficultyUnlockRequirement(item.id);
             return <button key={item.id} type="button" data-rhythm-difficulty={item.id} aria-pressed={on}
-              onClick={()=>setDifficultyId(item.id)}
-              className={`min-h-[52px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${on?tone.on:`${tone.off} bg-slate-900/70`}`}>
-              <span className="block">{item.id}</span>
+              data-rhythm-difficulty-locked={open?'0':'1'} disabled={!open}
+              title={open?undefined:`${need}をクリアすると挑めます`}
+              onClick={()=>{if(open)setDifficultyId(item.id);}}
+              className={`min-h-[52px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${open?(on?tone.on:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
+              <span className="block">{open?item.id:`🔒 ${item.id}`}</span>
               <span className="block text-[9px] font-black tabular-nums opacity-90">Lv.{song.difficulties[item.id].level}</span>
               {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
                   合算なので、そちらとは別のものだと分かるように、ここへ並べて置く */}
               <span data-rhythm-difficulty-best={item.id} className="mt-0.5 block text-[9px] font-black tabular-nums opacity-80">
-                {(()=>{const record=rhythmBestRecord(bestRecords,song.songId,item.id);
-                  return record&&record.clear?record.bestScore.toLocaleString():'—';})()}
+                {open
+                  ?(()=>{const record=rhythmBestRecord(bestRecords,song.songId,item.id);
+                    return record&&record.clear?record.bestScore.toLocaleString():'—';})()
+                  :`${need}で解放`}
               </span>
             </button>;
           })}
@@ -14307,8 +14355,14 @@ function MonsterHeroGame() {
   };
   // いま案内しているページが指している施設。HOMEでその建物だけを明るく強調する
   const tutorialSpot = (() => {
-    if (tutorialStep == null || tutorialKind !== 'tour') return null;
-    const pages = (typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current)) || [];
+    if (tutorialStep == null) return null;
+    // 村の案内(tour)とモンビーの案内(rhythm)は、どちらも「spot を光らせながら進む」形。
+    // 台本だけ切り替えれば同じ仕組みで動く。
+    const pages = tutorialKind === 'rhythm'
+      ? ((typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current)) || [])
+      : tutorialKind === 'tour'
+      ? ((typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current)) || [])
+      : [];
     return pages[tutorialStep]?.spot || null;
   })();
   const spotClass = (name) => (tutorialSpot === name ? ' is-tutorial-spot' : '');
@@ -14341,6 +14395,8 @@ function MonsterHeroGame() {
     // 最初のあいさつを読み終えたら、名前とアイコンを決めるプロフィール画面へ進む
     if (kind === 'intro') { setGameState('PROFILE'); return; }
     if (kind === 'battleGuide') return;
+    // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
+    if (kind === 'rhythm') { if (remember) { try { await storeSet(RHYTHM_TUTORIAL_SEEN_KEY, true, false); } catch {} } return; }
     if (remember) { try { await storeSet(TUTORIAL_SEEN_KEY, true, false); } catch {} }
   };
   useEffect(() => {
@@ -14353,6 +14409,22 @@ function MonsterHeroGame() {
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded]);
+
+  // モンビー(モンヒロビート)の曲えらびを初めて開いたときに、助手の案内を一度だけ出す。
+  // 村の案内・バトルの案内とは別の保存キーなので、互いに邪魔をしない。
+  const rhythmTutorialCheckedRef = useRef(false);
+  useEffect(() => {
+    if (gameState !== 'RHYTHM_DEMO_HOME' || tutorialStep != null || rhythmTutorialCheckedRef.current) return;
+    rhythmTutorialCheckedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      const seen = await storeGet(RHYTHM_TUTORIAL_SEEN_KEY, false, false);
+      if (!cancelled && seen !== true) { setTutorialKind('rhythm'); setTutorialStep(0); }
+    })();
+    return () => { cancelled = true; };
+  }, [gameState, tutorialStep]);
+  // 「もう一度チュートリアルを見る」から呼ぶ。曲えらびへ戻してから案内を始める。
+  const startRhythmTutorial = () => { setGameState('RHYTHM_DEMO_HOME'); setTutorialKind('rhythm'); setTutorialStep(0); };
 
   // 既存の村案内とは別に、バトルチュートリアルをまだ完了していない人へ一度だけ案内する。
   // 初回プロフィール設定や村案内と重ならないよう、それらが閉じたHOMEで判定する。
@@ -18909,12 +18981,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <h2 className="text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 楽曲選択</h2>
               </div>
               <span data-rhythm-demo-badge className="shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200">体験版</span>
+              <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
+                onClick={()=>setGameState('RHYTHM_DEMO_HELP')}
+                className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`}>📖</button>
               <button data-rhythm-demo-monsters aria-label="マスモン設定" title="マスモン設定"
                 onClick={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}
-                className="min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100">👾</button>
+                className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100${spotClass('monsters')}`}>👾</button>
               <button data-rhythm-demo-options aria-label="オプション" title="オプション"
                 onClick={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
-                className="min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100">⚙️</button>
+                className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`}>⚙️</button>
             </header>
             <RhythmSongSelect
               songs={songs}
@@ -18922,11 +18997,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               bestRecords={rhythmBestRecords}
               preview={rhythmSettings.songPreviewEnabled}
               previewVolume={rhythmSettings.bgmVolume}
+              spotClass={spotClass}
               onPlay={(song,difficulty)=>{setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
-              notice={<p data-rhythm-demo-notice data-rhythm-demo-song className="mb-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[9px] font-bold leading-relaxed text-amber-100">
-                これは音ゲーの体験版です。いまは「Monster Hero」1曲・EASY／NORMAL／HARDの3難易度だけを遊べます。
-                譜面は調整中のため、これから変わることがあります。
-              </p>}
+              notice={<>
+                <RhythmLandscapeHint className="mb-2"/>
+                {/* 助手のひとこと。困ったら「📖 遊びかた」を開けばよいと分かるようにする */}
+                <div className="mb-2"><AssistantBubble scene="rhythmHome" compact/></div>
+                <p data-rhythm-demo-notice data-rhythm-demo-song className="mb-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[9px] font-bold leading-relaxed text-amber-100">
+                  これは音ゲーの体験版です。いまは先行公開の5曲を、EASY〜MASTERの5難易度で遊べます。
+                  EXPERT以上は、その曲の1つ下の難易度をクリアすると挑めるようになります。
+                  譜面は調整中のため、これから変わることがあります。
+                </p>
+              </>}
               footer={song=><>
                 {/* 全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く */}
                 <button data-rhythm-demo-ranking onClick={()=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}
@@ -18939,6 +19021,44 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           );
         })()}
 
+        {/* モンビーの「遊びかた」。設定のヘルプにあるモンビーの項目を、
+            モードを離れずにその場で読めるようにしたもの(2026-09-05・ユーザー指示)。
+            本文は data/help.js を参照するだけで、ここには説明文を書かない。
+            2か所に同じ説明があると必ず片方が古くなるため。 */}
+        {gameState==='RHYTHM_DEMO_HELP'&&(()=>{
+          const category=(typeof HELP_CATEGORIES!=='undefined'?HELP_CATEGORIES:[]).find(cat=>cat.id==='basics');
+          const topics=((category&&category.topics)||[]).filter(topic=>String(topic.id||'').startsWith('rhythm-')&&topic.id!=='rhythm-coming-soon');
+          return (
+          <main data-rhythm-demo-help className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
+            <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+              <button aria-label="戻る" onClick={()=>setGameState('RHYTHM_DEMO_HOME')} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+              <div className="min-w-0 flex-1">
+                <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
+                <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">📖 遊びかた</h2>
+              </div>
+            </header>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+              <RhythmLandscapeHint className="mb-3"/>
+              <AssistantBubble scene="rhythmHelp"/>
+              <button data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
+                className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">🎓 もう一度チュートリアルを見る</button>
+              <p className="mt-2 text-[9px] leading-relaxed text-slate-500">曲えらびへ戻って、助手が最初から説明します。何度でも見られます。</p>
+              <div className="mt-4 space-y-3">
+                {topics.length===0
+                  ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">説明がまだありません。</p>
+                  :topics.map(topic=>(
+                    <section key={topic.id} data-rhythm-demo-help-topic={topic.id} className="rounded-2xl border border-amber-300/25 bg-slate-900/70 p-3">
+                      <h3 className="text-sm font-black text-amber-100">{topic.emoji} {topic.title}</h3>
+                      {topic.assistant&&<p className="mt-1 text-[10px] font-bold leading-relaxed text-cyan-200">{topic.assistant}</p>}
+                      <div className="mt-2 space-y-2.5">{renderHelpBlocks(topic.blocks,'#fbbf24')}</div>
+                    </section>
+                  ))}
+              </div>
+            </div>
+          </main>
+          );
+        })()}
+
         {/* 体験版のマスモン設定。中身はデバッグ画面と同じ部品を使う */}
         {gameState==='RHYTHM_DEMO_MONSTERS'&&(
           <main data-rhythm-demo-monsters-screen className="flex h-full flex-1 flex-col bg-slate-950 text-white">
@@ -18947,6 +19067,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h2 className="text-sm font-black tracking-widest text-fuchsia-200">👾 マスモン設定</h2>
             </header>
             <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+              <RhythmLandscapeHint className="mb-3"/>
               <RhythmMonsterSlotsPanel rhythmMonsterSlots={rhythmMonsterSlots} rhythmMonsterSlotIdsInUse={rhythmMonsterSlotIdsInUse} rhythmMonsterPickerOpen={rhythmMonsterPickerOpen} setRhythmMonsterPickerOpen={setRhythmMonsterPickerOpen} rhythmMonsterMessage={rhythmMonsterMessage} setRhythmMonsterMessage={setRhythmMonsterMessage} applyRhythmMonsterSlots={applyRhythmMonsterSlots} masuMons={masuMons}/>
             </div>
           </main>
@@ -18957,7 +19078,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             高い難易度で挑むほど上位に近づく(§3.5・RHYTHM_MODE.md参照)。
             自分のスコアはいちばん高い1件だけが載る(rhythmRankingDedupeByUser)。 */}
         {gameState==='RHYTHM_RANKING'&&(()=>{
-          const song=rhythmDemoSong(RHYTHM_SONGS);
+          // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
+          // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
+          const song=RHYTHM_SONGS.find(entry=>entry.songId===rhythmRanking.songId)||rhythmDemoSong(RHYTHM_SONGS);
           return (
           <main data-rhythm-ranking className="flex h-full flex-1 flex-col bg-slate-950 text-white">
             <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
@@ -18966,8 +19089,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <button aria-label="更新" data-rhythm-ranking-refresh onClick={()=>loadRhythmRanking(song)} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
             </header>
             <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+              <RhythmLandscapeHint className="mb-3"/>
               <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
-                Monster HeroのEASY・NORMAL・HARDをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
+                「{song?.displayName||'—'}」のEASY〜MASTERをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
               </p>
               {rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
               {rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
@@ -22773,7 +22897,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {tutorialStep!=null&&(()=>{
         const intro=tutorialKind==='intro';
         const battleGuide=tutorialKind==='battleGuide';
-        const pages=(battleGuide
+        const rhythm=tutorialKind==='rhythm';
+        const pages=(rhythm
+          ? ((typeof assistantRhythmTutorialPages==='function'&&assistantRhythmTutorialPages(selectedAssistantId))||[])
+          : battleGuide
           ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId))||[])
           : intro
           ? ((typeof assistantIntroPages==='function'&&assistantIntroPages(selectedAssistantId))||[])

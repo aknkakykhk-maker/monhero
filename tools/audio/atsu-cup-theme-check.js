@@ -10,8 +10,12 @@ for (const file of files) {
   const compact = source.replace(/\s+/g, '');
   const block = source.match(/const BGM_TRACKS = \[([\s\S]*?)\];/)?.[1] || '';
   const b = block.replace(/\s+/g, '');
-  check(`${file}: あつ杯テーマを登録曲一覧へ追加`,
-    b.includes("id:'atsu_cup_theme'") && b.includes("name:'あつ杯テーマ'") && b.includes("src:'audio/bgm-atsu-cup-theme.mp3'"));
+  // 2026-09-05、ユーザー指示で表示名を「あつ杯テーマ」→「MF × ICHIKA MIX」へ改称した。
+  // 保存データが持つのは id なので、id と音源のパスが変わっていないことのほうを見張る。
+  check(`${file}: MF × ICHIKA MIX(旧あつ杯テーマ)を登録曲一覧へ追加`,
+    b.includes("id:'atsu_cup_theme'") && b.includes("name:'MF×ICHIKAMIX'") && b.includes("src:'audio/bgm-atsu-cup-theme.mp3'"));
+  check(`${file}: 改称してもtrack IDと音源のパスは変えない(保存データを壊さない)`,
+    b.includes("id:'atsu_cup_theme'") && !b.includes("name:'あつ杯テーマ'"));
   check(`${file}: BGMアレンジ共通選択肢を再利用`,
     compact.includes('BGM_TRACKS.map(track=>') && compact.includes('Audio_.previewBGM(trackId)') && compact.includes('BGM_TRACK_BY_ID[saved]'));
   check(`${file}: あつ杯テーマを既定BGMへ勝手に設定していない`,

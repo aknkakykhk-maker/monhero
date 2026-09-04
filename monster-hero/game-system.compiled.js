@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4ba25a4a9dc864e1
+// source-sha256: a6e96d0a6cbe3d72
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 07:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 08:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3588,9 +3588,12 @@ const BGM_TRACKS = [{
   src: 'audio/綺季一閃_～花雪に舞う詠姫～.mp3',
   gain: 1,
   loop: true
-}, {
+},
+// 2026-09-05 に「あつ杯テーマ」から「MF × ICHIKA MIX」へ改称した(音源そのものは同じ)。
+// 保存データが持つのは id なので、名前を変えてもBGMアレンジの設定は影響を受けない。
+{
   id: 'atsu_cup_theme',
-  name: 'あつ杯テーマ',
+  name: 'MF × ICHIKA MIX',
   creator: 'オリジナル',
   src: 'audio/bgm-atsu-cup-theme.mp3'
 },
@@ -3623,6 +3626,23 @@ const BGM_TRACKS = [{
   name: 'SIX ÉTERNEL ドパガキリミックス（ショート）',
   creator: 'オリジナル',
   src: 'audio/bgm-six-eternel-remix-beat.mp3',
+  gain: 1,
+  loop: true
+},
+// ボス戦の2曲も、SIX ÉTERNEL と同じようにモンビー用へ2〜3分を切り出した(頭からサビの終わりまで)。
+// 元の全尺は残したままなので、バトルのBGMは今までどおり変わらない。
+{
+  id: 'pandora_boss_beat',
+  name: 'Stay With Me ～Locked Fate～（ショート）',
+  creator: 'オリジナル',
+  src: 'audio/bgm-pandora-boss-beat.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'eiki_boss_beat',
+  name: '綺季一閃 ～花雪に舞う詠姫～（ショート）',
+  creator: 'オリジナル',
+  src: 'audio/bgm-eiki-boss-beat.mp3',
   gain: 1,
   loop: true
 }];
@@ -11532,6 +11552,9 @@ const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 // 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
 const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
 const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
+// モンビー(モンヒロビート)のチュートリアルを見たかどうか。既存のキーには触らず新しく足す。
+// 値が無い既存セーブは「まだ見ていない」として扱うので、後方互換のまま初回案内が出る。
+const RHYTHM_TUTORIAL_SEEN_KEY = 'mh_rhythm_tutorial_seen_v1';
 // マスモンが少ないプレイヤー向けの日次案内。端末の暦日を値として保存し、
 // 既存セーブにキーが無い場合は未表示として安全に扱う。
 const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
@@ -11670,6 +11693,22 @@ const helpDataRows = id => {
           return [labels[id] && labels[id].name || id, `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ${note ? ` ／ ${note}` : ''}`];
         }).filter(Boolean);
       }
+    // 先行公開の曲は5つ(RHYTHM_DEMO_SONG_IDS)。手で書き写すと曲を足したときに古くなるので、
+    // 実データから曲名・難易度の数・レベルの幅・長さを作る。
+    case 'rhythmDemoSongList':
+      {
+        const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+        const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
+        const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+        return list.map(song => {
+          const charts = ids.map(id => song.difficulties[id]).filter(chart => chart && chart.notes && chart.notes.length > 0);
+          if (!charts.length) return null;
+          const levels = charts.map(chart => Number(chart.level) || 0);
+          const length = typeof rhythmSongLengthLabel !== 'undefined' ? rhythmSongLengthLabel(song, charts[0]) : '';
+          const name = song.subtitle ? `${song.displayName} ${song.subtitle}` : song.displayName;
+          return [name, `Lv.${Math.min(...levels)}〜${Math.max(...levels)} ／ ${charts.length}難易度${length ? ` ／ ${length}` : ''}`];
+        }).filter(Boolean);
+      }
     case 'missionsDaily':
     case 'missionsWeekly':
     case 'missionsMonthly':
@@ -11704,7 +11743,8 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
-  rhythmDemoSongLevels: '体験版で遊べる難易度とレベル'
+  rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
+  rhythmDemoSongList: '先行公開している曲'
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
@@ -15401,6 +15441,15 @@ const rhythmSnapOptionValue = (value, min, max, step) => {
   const snapped = min + Math.round((raw - min) / step) * step;
   return Math.max(min, Math.min(max, Number(snapped.toFixed(6))));
 };
+// 縦画面のときだけ出す「横画面にも対応している」案内(2026-09-05・ユーザー指示)。
+// 音ゲー中(RHYTHM_PLAY)には置かない。プレイ中に文字が増えると譜面が読みにくくなるため。
+// 出し分けはCSS(portrait:)だけで行う。JSで向きを見張ると、回すたびに再描画が走って重くなる。
+const RhythmLandscapeHint = ({
+  className = ''
+}) => /*#__PURE__*/React.createElement("p", {
+  "data-rhythm-landscape-hint": true,
+  className: `hidden portrait:block rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold leading-relaxed text-cyan-100 ${className}`
+}, "\uD83D\uDCF1 \u6A2A\u753B\u9762\u306B\u3082\u5BFE\u5FDC\u3057\u3066\u3044\u307E\u3059\u3002\u7AEF\u672B\u3092\u6A2A\u306B\u3059\u308B\u3068\u3001\u66F2\u306E\u4E00\u89A7\u3068\u9078\u3093\u3060\u66F2\u3092\u5DE6\u53F3\u306B\u4E26\u3079\u3066\u898B\u3089\u308C\u307E\u3059\u3002");
 const RhythmOptions = ({
   value,
   onSave,
@@ -15516,7 +15565,7 @@ const RhythmOptions = ({
     className: "flex-1 min-h-0 overflow-y-auto px-3 pb-4 pt-3 mh-scroll"
   }, /*#__PURE__*/React.createElement("div", {
     className: "space-y-3"
-  }, /*#__PURE__*/React.createElement("section", {
+  }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, null), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-black text-cyan-200"
@@ -15813,6 +15862,8 @@ const rhythmChartPlayable = (song, difficultyId) => {
 // 曲えらびで曲を鳴らし始めるまでの間。一覧をなぞって選び替えているあいだに
 // 曲を読み込み直すと、そのたびに引っかかるので、少し止まってから鳴らす。
 const RHYTHM_PREVIEW_DELAY_MS = 350;
+// spotClass … チュートリアルで光らせる場所に付けるクラスを返す関数(省略時は光らせない)。
+// 画面側が知っているキー: songList / songLevel / achievement / difficulty
 const RhythmSongSelect = ({
   songs,
   difficulties,
@@ -15822,8 +15873,10 @@ const RhythmSongSelect = ({
   footer = null,
   emptyText = '遊べる譜面がまだありません。',
   preview = false,
-  previewVolume = 100
+  previewVolume = 100,
+  spotClass = null
 }) => {
+  const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   const list = (songs || []).filter(song => (difficulties || []).some(difficulty => rhythmChartPlayable(song, difficulty.id)));
   const [songId, setSongId] = React.useState(() => list[0] && list[0].songId || '');
   const [difficultyId, setDifficultyId] = React.useState(() => '');
@@ -15831,7 +15884,12 @@ const RhythmSongSelect = ({
   // (曲を変えたときに「前の曲にしかない難易度」が残らない)。
   const song = list.find(entry => entry.songId === songId) || list[0] || null;
   const available = song ? (difficulties || []).filter(difficulty => rhythmChartPlayable(song, difficulty.id)) : [];
-  const difficulty = available.find(entry => entry.id === difficultyId) || available[0] || null;
+  // EXPERT以上は1つ下の難易度をクリアするまで選べない(2026-09-05・ユーザー指示)。
+  // 一覧からは消さずに鍵つきで見せる。「先に何をクリアすればよいか」が分かるようにするため。
+  const unlocked = item => !song || rhythmDifficultyUnlocked(song.songId, item.id, bestRecords);
+  const openList = available.filter(unlocked);
+  const picked = available.find(entry => entry.id === difficultyId);
+  const difficulty = (picked && unlocked(picked) ? picked : null) || openList[0] || null;
   const chart = song && difficulty ? song.difficulties[difficulty.id] : null;
   const best = song && difficulty ? rhythmBestRecord(bestRecords, song.songId, difficulty.id) : null;
   // 一覧の「楽曲Lv.」は、いま選んでいる難易度のレベル。その曲に無ければいちばん上の難易度。
@@ -15876,7 +15934,7 @@ const RhythmSongSelect = ({
     className: "flex min-h-0 flex-1 flex-col landscape:flex-row"
   }, /*#__PURE__*/React.createElement("div", {
     "data-rhythm-song-list": true,
-    className: "min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2 landscape:border-r landscape:border-white/10"
+    className: `min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2 landscape:border-r landscape:border-white/10${spot('songList')}`
   }, notice, list.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
   }, emptyText) : /*#__PURE__*/React.createElement("ul", {
@@ -15897,7 +15955,7 @@ const RhythmSongSelect = ({
       className: "block text-[7px] font-black leading-none text-slate-400"
     }, "\u697D\u66F2Lv."), /*#__PURE__*/React.createElement("b", {
       "data-rhythm-song-row-level": true,
-      className: "mt-0.5 block text-xl font-black leading-none tabular-nums text-white"
+      className: `mt-0.5 block text-xl font-black leading-none tabular-nums text-white${spot('songLevel')}`
     }, rowLevel(entry))), /*#__PURE__*/React.createElement(RhythmSongArt, {
       song: entry
     }), /*#__PURE__*/React.createElement("span", {
@@ -15911,7 +15969,7 @@ const RhythmSongSelect = ({
         overflow: 'hidden'
       }
     }, entry.displayName), /*#__PURE__*/React.createElement("span", {
-      className: "mt-1 flex items-center gap-1"
+      className: `mt-1 flex items-center gap-1${spot('achievement')}`
     }, (difficulties || []).map(item => {
       const playable = rhythmChartPlayable(entry, item.id);
       const markId = rhythmAchievementMarkId(playable, playable ? rhythmBestRecord(bestRecords, entry.songId, item.id) : null);
@@ -15950,28 +16008,35 @@ const RhythmSongSelect = ({
     className: "mt-0.5 block text-[10px] font-bold text-slate-400"
   }, rhythmSongLengthLabel(song, chart)))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-difficulty-row": true,
-    className: "mt-2 flex flex-wrap gap-1"
+    className: `mt-2 flex flex-wrap gap-1${spot('difficulty')}`
   }, available.map(item => {
     const tone = rhythmDifficultyTone(item.id);
-    const on = item.id === difficulty.id;
+    const open = unlocked(item);
+    const on = !!difficulty && item.id === difficulty.id;
+    const need = rhythmDifficultyUnlockRequirement(item.id);
     return /*#__PURE__*/React.createElement("button", {
       key: item.id,
       type: "button",
       "data-rhythm-difficulty": item.id,
       "aria-pressed": on,
-      onClick: () => setDifficultyId(item.id),
-      className: `min-h-[52px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${on ? tone.on : `${tone.off} bg-slate-900/70`}`
+      "data-rhythm-difficulty-locked": open ? '0' : '1',
+      disabled: !open,
+      title: open ? undefined : `${need}をクリアすると挑めます`,
+      onClick: () => {
+        if (open) setDifficultyId(item.id);
+      },
+      className: `min-h-[52px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${open ? on ? tone.on : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "block"
-    }, item.id), /*#__PURE__*/React.createElement("span", {
+    }, open ? item.id : `🔒 ${item.id}`), /*#__PURE__*/React.createElement("span", {
       className: "block text-[9px] font-black tabular-nums opacity-90"
     }, "Lv.", song.difficulties[item.id].level), /*#__PURE__*/React.createElement("span", {
       "data-rhythm-difficulty-best": item.id,
       className: "mt-0.5 block text-[9px] font-black tabular-nums opacity-80"
-    }, (() => {
+    }, open ? (() => {
       const record = rhythmBestRecord(bestRecords, song.songId, item.id);
       return record && record.clear ? record.bestScore.toLocaleString() : '—';
-    })()));
+    })() : `${need}で解放`));
   })), /*#__PURE__*/React.createElement("p", {
     "data-rhythm-demo-level": true,
     className: "mt-1.5 text-[10px] font-bold text-slate-300"
@@ -24890,8 +24955,10 @@ function MonsterHeroGame() {
   };
   // いま案内しているページが指している施設。HOMEでその建物だけを明るく強調する
   const tutorialSpot = (() => {
-    if (tutorialStep == null || tutorialKind !== 'tour') return null;
-    const pages = typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current) || [];
+    if (tutorialStep == null) return null;
+    // 村の案内(tour)とモンビーの案内(rhythm)は、どちらも「spot を光らせながら進む」形。
+    // 台本だけ切り替えれば同じ仕組みで動く。
+    const pages = tutorialKind === 'rhythm' ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantIdRef.current) || [] : tutorialKind === 'tour' ? typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current) || [] : [];
     return pages[tutorialStep]?.spot || null;
   })();
   const spotClass = name => tutorialSpot === name ? ' is-tutorial-spot' : '';
@@ -24937,6 +25004,15 @@ function MonsterHeroGame() {
       return;
     }
     if (kind === 'battleGuide') return;
+    // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
+    if (kind === 'rhythm') {
+      if (remember) {
+        try {
+          await storeSet(RHYTHM_TUTORIAL_SEEN_KEY, true, false);
+        } catch {}
+      }
+      return;
+    }
     if (remember) {
       try {
         await storeSet(TUTORIAL_SEEN_KEY, true, false);
@@ -24958,6 +25034,31 @@ function MonsterHeroGame() {
       cancelled = true;
     };
   }, [bootPhase, gameState, dataLoaded]);
+
+  // モンビー(モンヒロビート)の曲えらびを初めて開いたときに、助手の案内を一度だけ出す。
+  // 村の案内・バトルの案内とは別の保存キーなので、互いに邪魔をしない。
+  const rhythmTutorialCheckedRef = useRef(false);
+  useEffect(() => {
+    if (gameState !== 'RHYTHM_DEMO_HOME' || tutorialStep != null || rhythmTutorialCheckedRef.current) return;
+    rhythmTutorialCheckedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      const seen = await storeGet(RHYTHM_TUTORIAL_SEEN_KEY, false, false);
+      if (!cancelled && seen !== true) {
+        setTutorialKind('rhythm');
+        setTutorialStep(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gameState, tutorialStep]);
+  // 「もう一度チュートリアルを見る」から呼ぶ。曲えらびへ戻してから案内を始める。
+  const startRhythmTutorial = () => {
+    setGameState('RHYTHM_DEMO_HOME');
+    setTutorialKind('rhythm');
+    setTutorialStep(0);
+  };
 
   // 既存の村案内とは別に、バトルチュートリアルをまだ完了していない人へ一度だけ案内する。
   // 初回プロフィール設定や村案内と重ならないよう、それらが閉じたHOMEで判定する。
@@ -35514,6 +35615,12 @@ function MonsterHeroGame() {
         "data-rhythm-demo-badge": true,
         className: "shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
       }, "\u4F53\u9A13\u7248"), /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-help": true,
+        "aria-label": "\u904A\u3073\u304B\u305F",
+        title: "\u904A\u3073\u304B\u305F",
+        onClick: () => setGameState('RHYTHM_DEMO_HELP'),
+        className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`
+      }, "\uD83D\uDCD6"), /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-monsters": true,
         "aria-label": "\u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A",
         title: "\u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A",
@@ -35521,7 +35628,7 @@ function MonsterHeroGame() {
           setRhythmMonsterPickerOpen(true);
           setGameState('RHYTHM_DEMO_MONSTERS');
         },
-        className: "min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100"
+        className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100${spotClass('monsters')}`
       }, "\uD83D\uDC7E"), /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-options": true,
         "aria-label": "\u30AA\u30D7\u30B7\u30E7\u30F3",
@@ -35530,13 +35637,14 @@ function MonsterHeroGame() {
           setRhythmOptionsBack('RHYTHM_DEMO_HOME');
           setGameState('RHYTHM_OPTIONS');
         },
-        className: "min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100"
+        className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`
       }, "\u2699\uFE0F")), /*#__PURE__*/React.createElement(RhythmSongSelect, {
         songs: songs,
         difficulties: difficulties,
         bestRecords: rhythmBestRecords,
         preview: rhythmSettings.songPreviewEnabled,
         previewVolume: rhythmSettings.bgmVolume,
+        spotClass: spotClass,
         onPlay: (song, difficulty) => {
           setRhythmPlay({
             song,
@@ -35545,11 +35653,18 @@ function MonsterHeroGame() {
           });
           setGameState('RHYTHM_PLAY');
         },
-        notice: /*#__PURE__*/React.createElement("p", {
+        notice: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
+          className: "mb-2"
+        }), /*#__PURE__*/React.createElement("div", {
+          className: "mb-2"
+        }, /*#__PURE__*/React.createElement(AssistantBubble, {
+          scene: "rhythmHome",
+          compact: true
+        })), /*#__PURE__*/React.createElement("p", {
           "data-rhythm-demo-notice": true,
           "data-rhythm-demo-song": true,
           className: "mb-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[9px] font-bold leading-relaxed text-amber-100"
-        }, "\u3053\u308C\u306F\u97F3\u30B2\u30FC\u306E\u4F53\u9A13\u7248\u3067\u3059\u3002\u3044\u307E\u306F\u300CMonster Hero\u300D1\u66F2\u30FBEASY\uFF0FNORMAL\uFF0FHARD\u306E3\u96E3\u6613\u5EA6\u3060\u3051\u3092\u904A\u3079\u307E\u3059\u3002 \u8B5C\u9762\u306F\u8ABF\u6574\u4E2D\u306E\u305F\u3081\u3001\u3053\u308C\u304B\u3089\u5909\u308F\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002"),
+        }, "\u3053\u308C\u306F\u97F3\u30B2\u30FC\u306E\u4F53\u9A13\u7248\u3067\u3059\u3002\u3044\u307E\u306F\u5148\u884C\u516C\u958B\u306E5\u66F2\u3092\u3001EASY\u301CMASTER\u306E5\u96E3\u6613\u5EA6\u3067\u904A\u3079\u307E\u3059\u3002 EXPERT\u4EE5\u4E0A\u306F\u3001\u305D\u306E\u66F2\u306E1\u3064\u4E0B\u306E\u96E3\u6613\u5EA6\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u6311\u3081\u308B\u3088\u3046\u306B\u306A\u308A\u307E\u3059\u3002 \u8B5C\u9762\u306F\u8ABF\u6574\u4E2D\u306E\u305F\u3081\u3001\u3053\u308C\u304B\u3089\u5909\u308F\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002")),
         footer: song => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
           "data-rhythm-demo-ranking": true,
           onClick: () => {
@@ -35561,6 +35676,59 @@ function MonsterHeroGame() {
           className: "mt-2 text-[9px] leading-relaxed text-slate-500"
         }, "\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u3001\u66F2\u306E\u9014\u4E2D\u3067\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306B\u306A\u3063\u3066\u6D41\u308C\u3066\u304D\u307E\u3059\u3002\u53D6\u308B\u3068\u8840\u7D71\u3054\u3068\u306E\u529B\u304C\u50CD\u304D\u307E\u3059\u3002"))
       }));
+    })(), gameState === 'RHYTHM_DEMO_HELP' && (() => {
+      const category = (typeof HELP_CATEGORIES !== 'undefined' ? HELP_CATEGORIES : []).find(cat => cat.id === 'basics');
+      const topics = (category && category.topics || []).filter(topic => String(topic.id || '').startsWith('rhythm-') && topic.id !== 'rhythm-coming-soon');
+      return /*#__PURE__*/React.createElement("main", {
+        "data-rhythm-demo-help": true,
+        className: "flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white"
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
+        style: {
+          paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: () => setGameState('RHYTHM_DEMO_HOME'),
+        className: "min-h-[44px] px-2 text-slate-400"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 18
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
+      }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
+        className: "text-sm font-black leading-tight tracking-widest text-amber-200"
+      }, "\uD83D\uDCD6 \u904A\u3073\u304B\u305F"))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
+        style: {
+          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
+        className: "mb-3"
+      }), /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "rhythmHelp"
+      }), /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-help-tutorial": true,
+        onClick: startRhythmTutorial,
+        className: "mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white"
+      }, "\uD83C\uDF93 \u3082\u3046\u4E00\u5EA6\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2 text-[9px] leading-relaxed text-slate-500"
+      }, "\u66F2\u3048\u3089\u3073\u3078\u623B\u3063\u3066\u3001\u52A9\u624B\u304C\u6700\u521D\u304B\u3089\u8AAC\u660E\u3057\u307E\u3059\u3002\u4F55\u5EA6\u3067\u3082\u898B\u3089\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-4 space-y-3"
+      }, topics.length === 0 ? /*#__PURE__*/React.createElement("p", {
+        className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
+      }, "\u8AAC\u660E\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002") : topics.map(topic => /*#__PURE__*/React.createElement("section", {
+        key: topic.id,
+        "data-rhythm-demo-help-topic": topic.id,
+        className: "rounded-2xl border border-amber-300/25 bg-slate-900/70 p-3"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-sm font-black text-amber-100"
+      }, topic.emoji, " ", topic.title), topic.assistant && /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-[10px] font-bold leading-relaxed text-cyan-200"
+      }, topic.assistant), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 space-y-2.5"
+      }, renderHelpBlocks(topic.blocks, '#fbbf24')))))));
     })(), gameState === 'RHYTHM_DEMO_MONSTERS' && /*#__PURE__*/React.createElement("main", {
       "data-rhythm-demo-monsters-screen": true,
       className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
@@ -35585,7 +35753,9 @@ function MonsterHeroGame() {
       style: {
         paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
       }
-    }, /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
+    }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
+      className: "mb-3"
+    }), /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
       rhythmMonsterSlots: rhythmMonsterSlots,
       rhythmMonsterSlotIdsInUse: rhythmMonsterSlotIdsInUse,
       rhythmMonsterPickerOpen: rhythmMonsterPickerOpen,
@@ -35595,7 +35765,9 @@ function MonsterHeroGame() {
       applyRhythmMonsterSlots: applyRhythmMonsterSlots,
       masuMons: masuMons
     }))), gameState === 'RHYTHM_RANKING' && (() => {
-      const song = rhythmDemoSong(RHYTHM_SONGS);
+      // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
+      // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
+      const song = RHYTHM_SONGS.find(entry => entry.songId === rhythmRanking.songId) || rhythmDemoSong(RHYTHM_SONGS);
       return /*#__PURE__*/React.createElement("main", {
         "data-rhythm-ranking": true,
         className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
@@ -35622,9 +35794,11 @@ function MonsterHeroGame() {
         style: {
           paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
         }
-      }, /*#__PURE__*/React.createElement("p", {
+      }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
+        className: "mb-3"
+      }), /*#__PURE__*/React.createElement("p", {
         className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
-      }, "Monster Hero\u306EEASY\u30FBNORMAL\u30FBHARD\u3092\u307E\u3068\u3081\u305F\u5408\u7B97\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u304C\u9AD8\u3044\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u305F\u3081\u3001\u9AD8\u3044\u96E3\u6613\u5EA6\u3067\u6311\u3080\u307B\u3069\u4E0A\u4F4D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002\u81EA\u5206\u306E\u30B9\u30B3\u30A2\u306F\u3044\u3061\u3070\u3093\u9AD8\u30441\u4EF6\u3060\u3051\u304C\u8F09\u308A\u307E\u3059\u3002"), rhythmRanking.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+      }, "\u300C", song?.displayName || '—', "\u300D\u306EEASY\u301CMASTER\u3092\u307E\u3068\u3081\u305F\u5408\u7B97\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u304C\u9AD8\u3044\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u305F\u3081\u3001\u9AD8\u3044\u96E3\u6613\u5EA6\u3067\u6311\u3080\u307B\u3069\u4E0A\u4F4D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002\u81EA\u5206\u306E\u30B9\u30B3\u30A2\u306F\u3044\u3061\u3070\u3093\u9AD8\u30441\u4EF6\u3060\u3051\u304C\u8F09\u308A\u307E\u3059\u3002"), rhythmRanking.status === 'loading' && /*#__PURE__*/React.createElement("p", {
         "data-rhythm-ranking-loading": true,
         className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
       }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), rhythmRanking.status === 'error' && /*#__PURE__*/React.createElement("p", {
@@ -44736,7 +44910,8 @@ function MonsterHeroGame() {
     }, "\u30BF\u30C3\u30D7\u3057\u3066\u30D0\u30C8\u30EB\u958B\u59CB"))), tutorialStep != null && (() => {
       const intro = tutorialKind === 'intro';
       const battleGuide = tutorialKind === 'battleGuide';
-      const pages = battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId) || [];
+      const rhythm = tutorialKind === 'rhythm';
+      const pages = rhythm ? typeof assistantRhythmTutorialPages === 'function' && assistantRhythmTutorialPages(selectedAssistantId) || [] : battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId) || [];
       const page = pages[Math.max(0, Math.min(tutorialStep, pages.length - 1))];
       if (!page) return null;
       const who = activeAssistant;

@@ -35,10 +35,10 @@ const context={};
 vm.createContext(context);
 vm.runInContext(
   `${difficultiesBlock}\n${demoIdsLine}\n${rankingBlock}\n`+
-  `this.out={RHYTHM_RANKING_PREFIX,RHYTHM_RANKING_SEPARATOR,rhythmRankingDifficultyKey,parseRhythmRankingDifficultyKey,rhythmRankingCombinedMembers,rhythmRankingDedupeByUser,rhythmRankingEntryFromRow,RHYTHM_RANKING_FETCH_LIMIT,RHYTHM_RANKING_DISPLAY_LIMIT};`,
+  `this.out={RHYTHM_RANKING_PREFIX,RHYTHM_RANKING_SEPARATOR,RHYTHM_DEMO_DIFFICULTY_IDS,rhythmRankingDifficultyKey,parseRhythmRankingDifficultyKey,rhythmRankingCombinedMembers,rhythmRankingDedupeByUser,rhythmRankingEntryFromRow,RHYTHM_RANKING_FETCH_LIMIT,RHYTHM_RANKING_DISPLAY_LIMIT};`,
   context
 );
-const {RHYTHM_RANKING_PREFIX,rhythmRankingDifficultyKey,parseRhythmRankingDifficultyKey,rhythmRankingCombinedMembers,rhythmRankingDedupeByUser,rhythmRankingEntryFromRow,RHYTHM_RANKING_FETCH_LIMIT,RHYTHM_RANKING_DISPLAY_LIMIT}=context.out;
+const {RHYTHM_RANKING_PREFIX,RHYTHM_DEMO_DIFFICULTY_IDS,rhythmRankingDifficultyKey,parseRhythmRankingDifficultyKey,rhythmRankingCombinedMembers,rhythmRankingDedupeByUser,rhythmRankingEntryFromRow,RHYTHM_RANKING_FETCH_LIMIT,RHYTHM_RANKING_DISPLAY_LIMIT}=context.out;
 
 check('キーの接頭辞はRhythm',RHYTHM_RANKING_PREFIX==='Rhythm');
 check('キー生成: songId+難易度idからRhythm-<song>-<難易度>を作る',
@@ -56,8 +56,15 @@ check('キー解析: 接頭辞違い・部品数違い・知らない難易度�
   &&parseRhythmRankingDifficultyKey('Rhythm-song-UNKNOWN')===null
   &&parseRhythmRankingDifficultyKey('')===null
   &&parseRhythmRankingDifficultyKey(undefined)===null);
-check('合算対象は体験版で遊べる難易度(EASY/NORMAL/HARD)だけ。EXPERT/MASTERはまだ含まない',
-  JSON.stringify(rhythmRankingCombinedMembers('song'))===JSON.stringify(['Rhythm-song-EASY','Rhythm-song-NORMAL','Rhythm-song-HARD']));
+// 2026-09-05、先行公開が5曲・5難易度になったのでEXPERT/MASTERも合算へ入る。
+// 見張りたいのは「体験版で遊べる難易度と合算対象がずれていないこと」なので、
+// 数を決め打ちにせず RHYTHM_DEMO_DIFFICULTY_IDS から作った期待値と突き合わせる。
+check('合算対象は体験版で遊べる難易度と一致する(ずれたら気づく)',
+  JSON.stringify(rhythmRankingCombinedMembers('song'))
+  ===JSON.stringify(RHYTHM_DEMO_DIFFICULTY_IDS.map(id=>`Rhythm-song-${id}`)));
+check('いまの合算対象はEASY〜MASTERの5難易度',
+  JSON.stringify(rhythmRankingCombinedMembers('song'))
+  ===JSON.stringify(['Rhythm-song-EASY','Rhythm-song-NORMAL','Rhythm-song-HARD','Rhythm-song-EXPERT','Rhythm-song-MASTER']));
 check('取得件数(200)は表示件数(50)より多い(重複ユーザーぶんを見込む)',
   Number(RHYTHM_RANKING_FETCH_LIMIT)>Number(RHYTHM_RANKING_DISPLAY_LIMIT));
 

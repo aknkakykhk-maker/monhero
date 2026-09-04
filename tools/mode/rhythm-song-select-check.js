@@ -133,13 +133,27 @@ const serve=()=>new Promise(resolve=>{
       }
       best.click();
       await new Promise(resolve=>setTimeout(resolve,150));
-      const buttons=[...host.querySelectorAll('[data-rhythm-difficulty]')];
+      // 2026-09-05、EXPERT以上は前の難易度をクリアするまで鍵が掛かる。
+      // 記録が空のこの検査では鍵つきは押せないのが正しいので、押せるものの中でいちばん上を選ぶ。
+      const all=[...host.querySelectorAll('[data-rhythm-difficulty]')];
+      const buttons=all.filter(button=>button.getAttribute('data-rhythm-difficulty-locked')==='0');
+      const locked=all.filter(button=>button.getAttribute('data-rhythm-difficulty-locked')==='1');
       const before=(host.querySelector('[data-rhythm-demo-level]')||{}).textContent||'';
       buttons[buttons.length-1].click();
       await new Promise(resolve=>setTimeout(resolve,150));
       const after=(host.querySelector('[data-rhythm-demo-level]')||{}).textContent||'';
       const start=host.querySelector('[data-rhythm-demo-start]');
-      return {before,after,count:buttons.length,
+      // 鍵つきを押しても始まる難易度が変わらないこと(押せてしまわないこと)
+      let lockedStayed=true;
+      if(locked.length){
+        locked[locked.length-1].click();
+        await new Promise(resolve=>setTimeout(resolve,150));
+        const afterLocked=host.querySelector('[data-rhythm-demo-start]');
+        lockedStayed=!!afterLocked&&afterLocked.getAttribute('data-rhythm-demo-start')
+          ===(start?start.getAttribute('data-rhythm-demo-start'):'');
+      }
+      return {before,after,count:buttons.length,lockedCount:locked.length,lockedStayed,
+        lockedIds:locked.map(button=>button.getAttribute('data-rhythm-difficulty')).join(','),
         startId:start?start.getAttribute('data-rhythm-demo-start'):'',
         pickedId:buttons[buttons.length-1].getAttribute('data-rhythm-difficulty')};
     });
@@ -147,6 +161,10 @@ const serve=()=>new Promise(resolve=>{
       `${changed.before.trim()} → ${changed.after.trim()}`);
     ok('決定は、いま選んでいる難易度をそのまま始める',changed.startId===changed.pickedId,
       `決定=${changed.startId} / 選択=${changed.pickedId}`);
+    // 記録がまだ無い状態では、EXPERTとMASTERに鍵が掛かっている
+    ok('まだクリアしていないEXPERT・MASTERは鍵つきで押せない',
+      changed.lockedIds==='EXPERT,MASTER'&&changed.lockedStayed,
+      `鍵つき=${changed.lockedIds||'なし'} / 押しても変わらない=${changed.lockedStayed}`);
 
     // 決定を押すと、選んだ曲と難易度がそのまま渡る
     const picked=await page.evaluate(async()=>{

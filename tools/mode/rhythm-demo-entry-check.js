@@ -18,22 +18,50 @@ const rhythm=read('monster-hero/data/rhythm-mode.js');
 // --- 体験版で遊べる範囲がデータ側で決まっている ---
 const ctx={Object,Number,Math};
 vm.createContext(ctx);
-vm.runInContext(`${rhythm}\nthis.__o={RHYTHM_SONGS,RHYTHM_DIFFICULTIES,RHYTHM_DEMO_SONG_ID,RHYTHM_DEMO_DIFFICULTY_IDS,RHYTHM_DEMO_DIFFICULTY_LABELS,rhythmDemoSong,rhythmDemoDifficulties};`,ctx);
+vm.runInContext(`${rhythm}\nthis.__o={RHYTHM_SONGS,RHYTHM_DIFFICULTIES,RHYTHM_DEMO_SONG_ID,RHYTHM_DEMO_SONG_IDS,RHYTHM_DEMO_DIFFICULTY_IDS,RHYTHM_DEMO_DIFFICULTY_LABELS,rhythmDemoSong,rhythmDemoDifficulties,rhythmDifficultyUnlocked,rhythmDifficultyUnlockRequirement};`,ctx);
 const o=ctx.__o;
 const song=o.rhythmDemoSong(o.RHYTHM_SONGS);
 const difficulties=o.rhythmDemoDifficulties(song,o.RHYTHM_DIFFICULTIES);
 
 ok('体験版で遊べる範囲をデータ側で決めている',
   typeof o.RHYTHM_DEMO_SONG_ID==='string'&&Array.isArray(o.RHYTHM_DEMO_DIFFICULTY_IDS));
-ok('体験版の曲はMonster Hero 1曲だけ',!!song&&song.bgmTrackId==='monster_hero_theme',
-  song?song.displayName:'見つからない');
-ok('体験版の難易度はEASY / NORMAL / HARDの3つ',
-  o.RHYTHM_DEMO_DIFFICULTY_IDS.join()==='EASY,NORMAL,HARD');
-ok('EXPERT / MASTER は体験版へ出さない',
-  !o.RHYTHM_DEMO_DIFFICULTY_IDS.includes('EXPERT')&&!o.RHYTHM_DEMO_DIFFICULTY_IDS.includes('MASTER'));
+// 2026-09-05、ユーザー指示で先行公開の5曲・5難易度になった(それまでは Monster Hero 1曲・3難易度)。
+// 「どこまでを体験版へ出すかをデータ側で決めている」という見張りたいことは変えず、
+// 数と中身のほうを新しい仕様へ合わせる。
+const DEMO_SONG_IDS=['mf_ichika_mix','monster_hero','six_eternel_remix','stay_with_me','kiki_issen'];
+ok('体験版の曲は先行公開の5曲',
+  o.RHYTHM_DEMO_SONG_IDS.join()===DEMO_SONG_IDS.join(),o.RHYTHM_DEMO_SONG_IDS.join(' / '));
+ok('体験版の5曲がすべて実在する',
+  DEMO_SONG_IDS.every(id=>o.RHYTHM_SONGS.some(s=>s.songId===id)),
+  DEMO_SONG_IDS.filter(id=>!o.RHYTHM_SONGS.some(s=>s.songId===id)).join(' / ')||'すべてある');
+ok('体験版の難易度はEASY〜MASTERの5つ',
+  o.RHYTHM_DEMO_DIFFICULTY_IDS.join()==='EASY,NORMAL,HARD,EXPERT,MASTER');
 ok('譜面が入っている難易度だけを選べる（押せるのに始まらない状態を作らない）',
-  difficulties.length===3&&difficulties.every(d=>song.difficulties[d.id].notes.length>0),
+  difficulties.length===5&&difficulties.every(d=>song.difficulties[d.id].notes.length>0),
   difficulties.map(d=>`${d.id}(${song.difficulties[d.id].totalNotes})`).join(' / '));
+// 5曲とも5難易度そろっていること。1曲だけ譜面が欠けている状態を見逃さない
+ok('5曲とも5難易度そろっている',
+  DEMO_SONG_IDS.every(id=>{
+    const s=o.RHYTHM_SONGS.find(entry=>entry.songId===id);
+    return !!s&&o.RHYTHM_DEMO_DIFFICULTY_IDS.every(d=>s.difficulties[d]&&s.difficulties[d].notes.length>0);
+  }),
+  DEMO_SONG_IDS.map(id=>{
+    const s=o.RHYTHM_SONGS.find(entry=>entry.songId===id);
+    return `${id}(${s?o.RHYTHM_DEMO_DIFFICULTY_IDS.filter(d=>s.difficulties[d]&&s.difficulties[d].notes.length>0).length:0})`;
+  }).join(' / '));
+// EXPERT以上は前の難易度をクリアするまで選べない(2026-09-05・ユーザー指示)
+ok('EXPERT以上は前の難易度をクリアで解放される',
+  o.rhythmDifficultyUnlocked('monster_hero','EASY',{})===true
+  &&o.rhythmDifficultyUnlocked('monster_hero','HARD',{})===true
+  &&o.rhythmDifficultyUnlocked('monster_hero','EXPERT',{})===false
+  &&o.rhythmDifficultyUnlocked('monster_hero','EXPERT',{monster_hero:{HARD:{clear:true}}})===true
+  &&o.rhythmDifficultyUnlocked('monster_hero','MASTER',{monster_hero:{HARD:{clear:true}}})===false
+  &&o.rhythmDifficultyUnlocked('monster_hero','MASTER',{monster_hero:{EXPERT:{clear:true}}})===true);
+ok('解放は曲ごと（別の曲のクリアでは開かない）',
+  o.rhythmDifficultyUnlocked('monster_hero','EXPERT',{stay_with_me:{HARD:{clear:true}}})===false);
+ok('記録が壊れていても勝手に開かない',
+  o.rhythmDifficultyUnlocked('monster_hero','EXPERT',null)===false
+  &&o.rhythmDifficultyUnlocked('monster_hero','EXPERT',{monster_hero:{HARD:{clear:'yes'}}})===false);
 ok('難易度ごとの説明を持っている',
   o.RHYTHM_DEMO_DIFFICULTY_IDS.every(id=>{
     const label=o.RHYTHM_DEMO_DIFFICULTY_LABELS[id];
@@ -160,6 +188,56 @@ ok('体験版の操作ボタンはiPhoneで押せる大きさ（44px以上）',(
     buttons.push(block.slice(i,end+1));
   }
   return buttons.length>0&&buttons.every(b=>/min-h-\[(4[4-9]|[5-9]\d|\d{3})px\]/.test(b));
+})());
+
+// --- 助手の説明とチュートリアル(2026-09-05・ユーザー指示) ---
+// 「初回のバトルと同じようにチュートリアルを入れて、設定している助手が説明する」ため、
+// 台本はデータ側(assistants.js)に置き、吹き出しは既存のものを使い回す。
+const assistants=read('monster-hero/data/assistants.js');
+ok('モンビーのチュートリアルの台本がデータ側にある',
+  assistants.includes('const ASSISTANT_RHYTHM_TUTORIAL')&&assistants.includes('assistantRhythmTutorialPages'));
+ok('助手ごとに言い回しを変えられる',
+  assistants.includes('const ASSISTANT_RHYTHM_TUTORIAL_SETS')&&/kiki:\s*\[/.test(assistants.slice(assistants.indexOf('ASSISTANT_RHYTHM_TUTORIAL_SETS'))));
+ok('チュートリアルは曲えらびの実際の場所を光らせる',(()=>{
+  const start=assistants.indexOf('const ASSISTANT_RHYTHM_TUTORIAL =');
+  const block=assistants.slice(start,assistants.indexOf('assistantRhythmTutorialPages'));
+  return ['songList','songLevel','achievement','difficulty','monsters','options','help']
+    .every(spot=>block.includes(`spot:'${spot}'`));
+})());
+ok('光らせる場所は画面側にも用意されている',
+  ['songList','songLevel','achievement','difficulty'].every(spot=>game.includes(`spot('${spot}')`))
+  &&['monsters','options','help'].every(spot=>game.includes(`spotClass('${spot}')`)));
+ok('チュートリアルは吹き出しを使い回す（専用の画面を作らない）',
+  game.includes("const rhythm=tutorialKind==='rhythm';")&&game.includes('const pages=(rhythm'));
+ok('初回だけ自動で始まり、専用の保存キーを使う',
+  game.includes("const RHYTHM_TUTORIAL_SEEN_KEY = 'mh_rhythm_tutorial_seen_v1';")
+  &&game.includes("if (gameState !== 'RHYTHM_DEMO_HOME' || tutorialStep != null || rhythmTutorialCheckedRef.current) return;")
+  &&game.includes("if (kind === 'rhythm')"));
+ok('既存のチュートリアルの保存キーを流用していない',
+  !/RHYTHM_TUTORIAL_SEEN_KEY\s*=\s*'mh_tutorial_seen_v1'/.test(game));
+ok('曲えらびから「遊びかた」を開ける',
+  game.includes('data-rhythm-demo-help')&&game.includes("gameState==='RHYTHM_DEMO_HELP'"));
+ok('遊びかたの本文はヘルプを参照する（同じ説明を二重に書かない）',
+  game.includes("cat.id==='basics'")&&game.includes("String(topic.id||'').startsWith('rhythm-')")
+  &&game.includes('renderHelpBlocks(topic.blocks'));
+ok('遊びかたからチュートリアルをやり直せる',
+  game.includes('data-rhythm-demo-help-tutorial')&&game.includes('const startRhythmTutorial'));
+ok('遊びかたの画面がヘルプの対応表に載っている',
+  read('monster-hero/data/help.js').includes("RHYTHM_DEMO_HELP:     'basics/rhythm-tutorial'"));
+
+// --- 縦画面のときの横画面案内(2026-09-05・ユーザー指示) ---
+ok('縦画面のときだけ横画面対応の案内を出す',
+  game.includes('const RhythmLandscapeHint=')&&game.includes('data-rhythm-landscape-hint')
+  &&game.includes('hidden portrait:block'));
+ok('音ゲー中(プレイ画面)には案内を出さない',(()=>{
+  // RhythmTapTest(プレイ本体)の中身と、プレイ画面を出している行の両方に案内が無いこと。
+  // 部品の並び順に頼らないよう、その部品の終わりは「次の画面(RHYTHM_DEMO_HOME)の手前」で切る。
+  const start=game.indexOf('const RhythmTapTest');
+  if(start<0)return false;
+  const end=game.indexOf("gameState==='RHYTHM_DEMO_HOME'");
+  const block=game.slice(start,end>start?end:game.length);
+  const playLine=(game.match(/^.*gameState==='RHYTHM_PLAY'.*$/m)||[''])[0];
+  return !block.includes('<RhythmLandscapeHint')&&!playLine.includes('RhythmLandscapeHint');
 })());
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

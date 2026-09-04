@@ -21,7 +21,9 @@ check('5難易度と最大スコア',JSON.stringify(D.RHYTHM_DIFFICULTIES.map(x=
 check('判定幅とスコア率',JSON.stringify(D.RHYTHM_JUDGMENTS.map(x=>[x.id,x.windowMs,x.scoreRate]))===JSON.stringify([['MARVELOUS',40,1],['EXCELLENT',75,.98],['GREAT',130,.9],['GOOD',170,.7],['BAD',200,.3],['MISS',null,0]]));
 check('判定90%＋コンボ10%',D.RHYTHM_SCORE_WEIGHTS.judgment===.9&&D.RHYTHM_SCORE_WEIGHTS.combo===.1);
 const song=D.RHYTHM_SONGS[0];
-check('あつ杯テーマを既存track IDでテスト登録',D.RHYTHM_SONGS.length>=1&&song.displayName==='あつ杯テーマ'&&song.bgmTrackId==='atsu_cup_theme'&&game.includes("id:'atsu_cup_theme', name:'あつ杯テーマ'"));
+// 2026-09-05、ユーザー指示で音源の名前を「あつ杯テーマ」→「MF × ICHIKA MIX」へ改称した。
+// track ID(atsu_cup_theme)は保存データが持つので変えない。見張るのはそこ。
+check('あつ杯テーマ(現MF × ICHIKA MIX)を既存track IDでテスト登録',D.RHYTHM_SONGS.length>=1&&song.displayName==='あつ杯テーマ'&&song.bgmTrackId==='atsu_cup_theme'&&game.includes("id:'atsu_cup_theme', name:'MF × ICHIKA MIX'"));
 check('全難易度に正式譜面フィールド',D.RHYTHM_SONGS.every(song=>D.RHYTHM_DIFFICULTIES.every(x=>song.difficulties[x.id]&&'level' in song.difficulties[x.id]&&Array.isArray(song.difficulties[x.id].notes)&&song.difficulties[x.id].totalNotes===song.difficulties[x.id].notes.length)));
 
 const logic=game.match(/const RHYTHM_SETTINGS_KEY = [\s\S]*?const rhythmBestRecord = \(records,songId,difficultyId\) => normalizeRhythmBestRecord\(records\?\.\[songId\]\?\.\[difficultyId\]\);/)?.[0];

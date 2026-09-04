@@ -254,8 +254,13 @@ check('あいさつを読み終えるとプロフィールへ進む',
 check('案内の最後からバトルの練習へ入れる',
   has("{page.offer==='battleGuide'&&(") && has("startBattleTutorial('HOME')")
     && has('チュートリアルを見る') && has('今は見ない'));
-check('あいさつと村の案内は同じ吹き出しで台本だけ切り替える',
-  has("const intro=tutorialKind==='intro';") && has("const battleGuide=tutorialKind==='battleGuide';") && has('const pages=(battleGuide'));
+// 2026-09-05、モンビー(モンヒロビート)の案内が加わって3種類になった。
+// 「吹き出しは1つ・台本だけ切り替える」という決まりは変えていないので、
+// 見張る種類のほうを増やす(rhythm を足しただけで、条件は緩めていない)。
+check('あいさつと村の案内とモンビーの案内は同じ吹き出しで台本だけ切り替える',
+  has("const intro=tutorialKind==='intro';") && has("const battleGuide=tutorialKind==='battleGuide';")
+    && has("const rhythm=tutorialKind==='rhythm';") && has('const pages=(rhythm')
+    && has('assistantRhythmTutorialPages(selectedAssistantId)'));
 // 村の案内では、説明している場所だけをHOMEで明るく強調する。
 // 施設だけでなく、ミッション/ギフト(reward)とみゅあの吹き出し(assistant)も指せるようにしている
 const TUTORIAL_SPOTS = ['management', 'temple', 'market', 'battle', 'reward', 'settings', 'assistant'];
