@@ -40,7 +40,7 @@ check('レーン形状と6本の境界線は同じboundary helper',source.includ
 check('押下発光は別楕円ではなくレーン台形本体',source.includes('[data-rhythm-lane]::after{content:none!important}')&&source.includes('[data-rhythm-lane][data-pressed="true"]{background:linear-gradient'));
 check('判定ラインも同じ外周境界',source.includes('left=rhythmProjectBoundary(0,y),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)')&&source.includes("line.style.left=`${(left*100).toFixed(4)}%`")&&source.includes("line.style.right=`${((1-right)*100).toFixed(4)}%`"));
 check('Touch・Pointer・SLIDE追従がclientX/clientYで共通逆投影',game.includes('rhythmLaneAtPoint(e.clientX,e.clientY,rect)')&&game.includes('rhythmLaneAtPoint(touch.clientX,touch.clientY,rect)')&&source.includes('rhythmLaneCoordinateAtPoint(clientX,clientY,rect)'));
-check('描画と横投影は同じ丸め済みY座標を使用',game.includes('yPx=Math.round(yPx);el.style.transform=`translate3d(0,${yPx}px,0)`')&&!game.includes('el.style.transform=`translate3d(0,${yPx}px,0) scale('));
+check('描画と横投影は同じ丸め済みY座標を使用',game.includes('yPx=Math.round(yPx);')&&game.includes('const nextTransform=`translate3d(0,${yPx}px,0)`;')&&game.includes('if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;')&&!game.includes('el.style.transform=`translate3d(0,${yPx}px,0) scale('));
 check('ノーツY/X/幅をプレイ本体の同じrAFで配置',game.includes('rhythmProjectTravelProgress(progress)*travel.travelPx')&&game.includes('rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:')&&!source.match(/const installRhythmPerspectiveNoteVisuals=[\s\S]*?requestAnimationFrame/));
 check('別座標系のCSS 3D変形を廃止',!html.includes('transform:perspective(')&&!source.includes('const scale=.44+.56*depth'));
 check('既存の同時押しbatchを維持',source.includes('const rhythmMatchInputBatch='));

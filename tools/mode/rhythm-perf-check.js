@@ -211,5 +211,31 @@ check('TAP/FLICKで存在しないvisual bodyを毎フレーム再検索しな�
   &&data.includes("el._rhythmVisualBody=body||null;")
   &&data.includes("RHYTHM_PERF.domQuery();body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]')"));
 
+// --- 2026-09-05 の最適化(ユーザー指示「カクつき防止用の最適化をゲームに影響のないように」) ---
+check('縦位置は丸めた値が変わったときだけ書く',
+  gameSrc.includes('const nextTransform=`translate3d(0,${yPx}px,0)`;')
+  &&gameSrc.includes('if(el._rhythmTransform!==nextTransform){')
+  &&!gameSrc.includes('yPx=Math.round(yPx);el.style.transform='));
+check('SLIDEの帯の高さも変わったときだけ書く(HOLDと同じ扱い)',
+  gameSrc.includes('if(el._rhythmSlideBody!==slideBody){')
+  &&!/el\.style\.setProperty\('--rhythm-slide-height',`\$\{Math\.round\(bodyPx\)\}px`\)/.test(gameSrc));
+check('書き込みを飛ばすための控えは、開始時にすべて捨てる',
+  gameSrc.includes('el._rhythmTransform=undefined;')&&gameSrc.includes('el._rhythmSlideBody=undefined;'));
+
+// --- 2026-09-05 の演出強化(判定ラインの拍) ---
+// 演出を足しても毎フレームのJSは増やさない。CSSアニメーションへ寄せる。
+check('判定ラインの脈打ちはCSSアニメーションで、拍は開始時に一度書くだけ',
+  data.includes('@keyframes mhRhythmLinePulse')
+  &&data.includes('animation:mhRhythmLinePulse var(--rhythm-beat,500ms) ease-out infinite')
+  &&gameSrc.includes("judgmentLineRef.current.style.setProperty('--rhythm-beat',`${sideBeatMs}ms`)"));
+check('脈打ちで動かすのは厚みと濃さだけ(判定ラインの位置を変えない)',(()=>{
+  const start=data.indexOf('@keyframes mhRhythmLinePulse');
+  const block=data.slice(start,data.indexOf('}',data.indexOf('100%{',start)));
+  return /transform:scaleY\(/.test(block)&&!/translate/.test(block)&&!/\btop\b|\bbottom\b/.test(block);
+})());
+check('軽量モード・演出量MINIMALでは脈打ちを止める',
+  data.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-line]')
+  &&data.includes('[data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-line]'));
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

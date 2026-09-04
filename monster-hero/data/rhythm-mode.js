@@ -5906,6 +5906,21 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]::after,
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]::after{animation:none!important}
     [data-rhythm-judgment-line]{height:4px!important;background:linear-gradient(90deg,#d8b4fe 0%,#ecfeff 50%,#d8b4fe 100%)!important;border-radius:999px;box-shadow:0 0 14px #67e8f9,0 0 28px #c084fc,0 8px 24px rgba(34,211,238,.34)!important}
+    /* 判定ラインを曲の拍に合わせて静かに脈打たせる(2026-09-05・演出強化)。
+       1拍の長さ(--rhythm-beat)はプレイ開始時に一度だけ書くので、毎フレームのJSは増えない。
+       動かすのは opacity と scaleY だけなので、レイアウトも塗り直しも起こさない。
+       判定ラインの「位置」は変えない(transform-origin を中央にして厚みだけを変える)ので、
+       判定・入力・当たり判定には一切影響しない。 */
+    @keyframes mhRhythmLinePulse{
+      0%{opacity:1;transform:scaleY(1)}
+      12%{opacity:1;transform:scaleY(1.35)}
+      55%{opacity:.86;transform:scaleY(1)}
+      100%{opacity:1;transform:scaleY(1)}}
+    [data-rhythm-judgment-line]{transform-origin:50% 50%;will-change:transform,opacity;
+      animation:mhRhythmLinePulse var(--rhythm-beat,500ms) ease-out infinite}
+    /* 軽量モードと演出量MINIMALでは止める(ほかの演出と同じ扱い) */
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-line],
+    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-line]{animation:none!important;will-change:auto}
   `;
   document.head.appendChild(style);
 };

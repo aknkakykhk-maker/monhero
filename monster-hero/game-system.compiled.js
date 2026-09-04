@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a6e96d0a6cbe3d72
+// source-sha256: 87ece116a63c5f05
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 08:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 08:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16902,8 +16902,12 @@ const RhythmTapTest = ({
         let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
         if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
         if (clearFlash) yPx = travel.judgmentY;
-        yPx = Math.round(yPx);
-        el.style.transform = `translate3d(0,${yPx}px,0)`;
+        yPx = Math.round(yPx); /* 縦位置は1px刻みへ丸めてある。丸めた値が前のフレームと同じなら書き直さない。   見た目は1pxも変わらないのに、書けばそのノーツは合成のやり直し対象になる。   ノーツが奥にいるあいだ(遠近の効きで1フレームの移動が1px未満)はここで止まる */
+        const nextTransform = `translate3d(0,${yPx}px,0)`;
+        if (el._rhythmTransform !== nextTransform) {
+          el.style.transform = nextTransform;
+          el._rhythmTransform = nextTransform;
+        }
         const releaseTargetMs = rhythmReleaseTargetMs(note),
           releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
@@ -16921,8 +16925,12 @@ const RhythmTapTest = ({
           }
         }
         if (note.type === 'SLIDE' || note._rhythmOriginalType === 'SLIDE') {
-          el.style.setProperty('--rhythm-slide-height', `${Math.round(bodyPx)}px`);
-          el.style.setProperty('--rhythm-slide-visible-height', `${Math.round(bodyPx)}px`);
+          /* HOLDの帯と同じで、SLIDEの帯の高さも変わったときだけ書く。   毎フレーム書くと、押していないSLIDEまで毎フレーム塗り直しの対象になる */const slideBody = `${Math.round(bodyPx)}px`;
+          if (el._rhythmSlideBody !== slideBody) {
+            el.style.setProperty('--rhythm-slide-height', slideBody);
+            el.style.setProperty('--rhythm-slide-visible-height', slideBody);
+            el._rhythmSlideBody = slideBody;
+          }
         }
         const activeSlideLane = RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),
           visualLane = activeSlideLane === null ? note.lane : activeSlideLane;
@@ -17088,6 +17096,8 @@ const RhythmTapTest = ({
         el._rhythmHoldFilter = undefined;
         el._rhythmDepthScale = undefined;
         el._rhythmDepthBrightness = undefined;
+        el._rhythmTransform = undefined;
+        el._rhythmSlideBody = undefined;
       }
     });
     rhythmLayoutPlayArea(playAreaRef.current);
@@ -17103,6 +17113,9 @@ const RhythmTapTest = ({
         el.dataset.rhythmSidePhase = 'intro';
       }
     });
+    /* 判定ラインも同じ1拍で脈打たせる。ここで一度書くだけで、あとはCSSが回す。
+       変わるのは厚み(scaleY)と濃さ(opacity)だけなので、判定の位置は動かない */
+    if (judgmentLineRef.current) judgmentLineRef.current.style.setProperty('--rhythm-beat', `${sideBeatMs}ms`);
     startLockRef.current = false;
     setView({
       ...initialView(),
