@@ -13,7 +13,8 @@
   "restrikeComfortMs": 90,
   "restrikeLimitMs": 55,
   "chordMinLaneGap": 1,
-  "releaseMarginMs": 30
+  "releaseMarginMs": 30,
+  "endFlickReleaseMs": 80
  },
  "difficulties": {
   "EASY": {

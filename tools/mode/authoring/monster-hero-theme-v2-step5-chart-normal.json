@@ -29,6 +29,8 @@
    4,
    8
   ],
+  "endFlickMaxCount": 3,
+  "endFlickMinGapGrids": 4,
   "maxLaneStep": 2,
   "simultaneous": false,
   "structureSource": {
@@ -106,7 +108,8 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.86,
    "sourcePeakOffsetMs": 18,
-   "durationGrids": 8
+   "durationGrids": 8,
+   "endFlick": true
   },
   {
    "type": "FLICK",
@@ -908,7 +911,8 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.88,
    "sourcePeakOffsetMs": -12,
-   "durationGrids": 8
+   "durationGrids": 8,
+   "endFlick": true
   },
   {
    "type": "TAP",
@@ -1590,7 +1594,8 @@
    "subLaneWidth": 2,
    "sourceStrength": 0.75,
    "sourcePeakOffsetMs": 28,
-   "durationGrids": 8
+   "durationGrids": 8,
+   "endFlick": true
   },
   {
    "type": "TAP",

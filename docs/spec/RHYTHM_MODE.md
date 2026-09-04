@@ -1818,6 +1818,21 @@ Monster Heroの実測（HARD、`node tools/mode/rhythm-chart-v2-step3-check.js`�
 `runtimeConnected:false`の設計資料。V1の`monster-hero/debug/*-formal-candidate-v1.json`や
 `monster-hero/data/rhythm-mode.js`は変更しない）。
 
+#### 終点フリックの置き方
+
+全ノーツが出そろったあと（同時押し・重ねTAPを入れたあと）に、HOLD / SLIDE のうち
+**終端の前後に1拍（`endFlickMinGapGrids`＝4グリッド）以上の余裕があるもの**だけを選び、
+`endFlick: true` を付ける。弾いたあと指を戻す時間が要るためで、この条件を外すと
+「押せない譜面」を自動で作ってしまう（STEP6が実際に検出する）。
+
+| 難易度 | `endFlickMaxCount` | 実測 |
+| --- | ---: | --- |
+| EASY | 0 | 0件（FLICK自体を使わない難易度のため出さない） |
+| NORMAL | 3 | HOLD3 |
+| HARD | 5 | HOLD4 / SLIDE1 |
+| EXPERT | 7 | HOLD4 / SLIDE3 |
+| MASTER | 9 | HOLD5 / SLIDE4 |
+
 CLI確認:
 
 ```bash
@@ -1975,6 +1990,7 @@ STEP5の自動批評は「8分未満の間隔で3レーン以上跳ぶ組み合�
 | `RESTRIKE_LIMIT_MS` | 55ms | これより短いと同じ指では押せない |
 | `CHORD_MIN_LANE_GAP` | 1 | 同時押しは1レーン以上離れていないと指が2本入らない |
 | `RELEASE_MARGIN_MS` | 30ms | HOLD/SLIDEを離してから次を押すまでの余裕 |
+| `END_FLICK_RELEASE_MS` | 80ms | 終点フリックは「弾いて戻す」ぶん、指の解放がこれだけ遅れる |
 
 ノーツは時刻順に、届く指のうち無理のないほうへ割り当てる。HOLD / SLIDE はその長さのあいだ
 指を占有する（SLIDEは経路のレーンを追う）。届く指が1本も無ければ「押せない」。
@@ -1996,7 +2012,12 @@ STEP5の自動批評は「8分未満の間隔で3レーン以上跳ぶ組み合�
 | | MASTER | 298 | **1** | 24 (8.1%) |
 | V2 STEP5 採用案 | HARD | 232 | 0 | 2 (0.9%) |
 | | EXPERT | 250 | 0 | 24 (9.6%) |
-| | MASTER | 239 | **3** | 1 (0.4%) |
+| | MASTER | 239 | **3** | 2 (0.8%) |
+
+終点フリックを生成に入れたあとも、**押せない件数は1件も増えていない**（MASTERの「忙しい」が
+1件→2件になったのは、`END_FLICK_RELEASE_MS` のぶん指の解放が遅れることを数え始めたため）。
+残っている「押せない」は、いずれも**両手がHOLD / SLIDEで塞がっている最中に3本目が要る**配置で、
+終点フリックとは関係ない。STEP7で直す対象。
 
 **人が確認した既存譜面は全部通り、自動生成した高難易度だけが落ちた。**
 落ちた中身はすべて「前のHOLD/SLIDEを押さえている最中に、もう片方の指も塞がっていて
