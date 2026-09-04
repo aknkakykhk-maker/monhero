@@ -70,7 +70,7 @@ html,body{margin:0;background:#000}
 [data-rhythm-end-bar]{position:absolute;height:8px;background:#f0f}
 </style></head><body>
 <div id="area" data-rhythm-play-area><i data-rhythm-judgment-line style="position:absolute;bottom:12%;left:0;right:0;height:3px"></i>
-<span data-rhythm-side-monster="1"></span><span data-rhythm-side-monster="2"></span><span data-rhythm-side-monster="3"></span><span data-rhythm-side-monster="4"></span></div>
+<span data-rhythm-side-monster="1"><span data-rhythm-side-monster-art><div class="h-full w-full object-contain" style="position:relative;overflow:hidden"><img alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:inherit" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="></div></span></span><span data-rhythm-side-monster="2"><span data-rhythm-side-monster-art><div class="h-full w-full object-contain" style="position:relative;overflow:hidden"><img alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:inherit" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="></div></span></span><span data-rhythm-side-monster="3"><span data-rhythm-side-monster-art><div class="h-full w-full object-contain" style="position:relative;overflow:hidden"><img alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:inherit" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="></div></span></span><span data-rhythm-side-monster="4"><span data-rhythm-side-monster-art><div class="h-full w-full object-contain" style="position:relative;overflow:hidden"><img alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:inherit" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="></div></span></span></div>
 <script src="/monster-hero/data/rhythm-mode.js"><\/script>
 </body></html>`;
 
@@ -323,6 +323,29 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
       });
     });
     check('両サイドのマスモンを4体とも配置できた',sideBoxes.length===4,`${sideBoxes.length}体`);
+
+    // 絵そのものが見えているか。実機で「丸い枠だけ出て絵が出ない」不具合を出した。
+    // 原因は DyedMonsterImage へ className を渡さず、染色ありのとき返る<div>の大きさが
+    // 0pxになっていたこと。枠は span の ::after なので、絵が0pxでも枠だけは正しく出る。
+    // 文字列一致では拾えないので、実際に描かれた大きさを測る。
+    const artSizes=await page.evaluate(()=>{
+      const area=document.querySelector('[data-rhythm-play-area]');
+      return [...area.querySelectorAll('[data-rhythm-side-monster]')].map(el=>{
+        const box=el.getBoundingClientRect();
+        const art=el.querySelector('[data-rhythm-side-monster-art]');
+        const artBox=art?art.getBoundingClientRect():{width:0,height:0};
+        const img=el.querySelector('img');
+        const imgBox=img?img.getBoundingClientRect():{width:0,height:0};
+        return {slot:el.dataset.rhythmSideMonster,box:{width:box.width,height:box.height},
+          art:{width:artBox.width,height:artBox.height},img:{width:imgBox.width,height:imgBox.height}};
+      });
+    });
+    check('マスモンの絵の入れ物が枠と同じ大きさになる(0pxで消えていない)',
+      artSizes.length===4&&artSizes.every(row=>row.art.width>=row.box.width-.5&&row.art.height>=row.box.height-.5&&row.art.width>10),
+      artSizes.map(row=>`枠${row.slot} ${row.art.width.toFixed(0)}x${row.art.height.toFixed(0)}(箱${row.box.width.toFixed(0)})`).join(' / '));
+    check('マスモンの絵そのものが大きさを持つ',
+      artSizes.every(row=>row.img.width>10&&row.img.height>10),
+      artSizes.map(row=>`枠${row.slot} ${row.img.width.toFixed(0)}x${row.img.height.toFixed(0)}`).join(' / '));
     const sideWorst=sideBoxes.reduce((min,box)=>Math.min(min,box.margin),Infinity);
     check('両サイドのマスモンがレーンの台形へ食い込まない(実描画で測定)',sideBoxes.length>0&&sideWorst>=0,
       `いちばん近いところで${(sideWorst*390).toFixed(1)}px`);

@@ -172,6 +172,25 @@ check('保存値に無い既存ユーザーでも既定で補われる',
 check('音ゲーの設定キー(mh_*)を増やしていない',
   !/mh_[a-z_]*side[a-z_]*/i.test(game));
 
+// --- 絵が実際に出る作りになっている ---
+// 実機で「能力中の丸い枠だけ出て、マスモンの絵が出ない」不具合を出した。
+// 原因は DyedMonsterImage へ className を渡さなかったこと。染色ありのときは<div>で返るので、
+// 大きさを与えないと中身が0pxになる。枠は span の ::after なので絵が0pxでも枠だけ出てしまう。
+check('絵の入れ物へ大きさを渡している',
+  game.includes('<span data-rhythm-side-monster-art>')
+  &&game.includes('className="h-full w-full object-contain"'));
+check('CSS側でも入れ物と絵に大きさを与える(Tailwindが読めなくても消えない)',
+  sideCss.includes('[data-rhythm-side-monster-art]{display:block;width:100%;height:100%;')
+  &&sideCss.includes('[data-rhythm-side-monster-art]>*{display:block;width:100%;height:100%;object-fit:contain}'));
+check('収め方は直下の要素にだけ書く(染色マスクの重ね絵を壊さない)',
+  !/\[data-rhythm-side-monster[^\]]*\]\s+img\{/.test(sideCss));
+check('能力中は絵を大きくして目立たせる(跳ねる動きと重ならないよう別の要素で出す)',
+  sideCss.includes('[data-rhythm-side-monster][data-rhythm-side-active="1"] [data-rhythm-side-monster-art]{transform:scale(')
+  &&sideCss.includes('[data-rhythm-side-monster][data-rhythm-side-active="1"]{opacity:1!important}'));
+check('設定した4体は能力に関係なく常に出す(能力中だけ出すのではない)',
+  game.includes('{monsters.map((monster,index)=>{')
+  &&!/data-rhythm-side-monster=\{slot\}[\s\S]{0,200}?abilityOwners/.test(game));
+
 // --- 判定まわりを変えていない ---
 check('入力を邪魔しない(pointer-eventsを持たない)',
   game.includes('data-rhythm-side-monsters aria-hidden="true" className="pointer-events-none absolute inset-0"')
