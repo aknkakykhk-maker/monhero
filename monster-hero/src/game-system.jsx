@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 12:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 13:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8560,7 +8560,7 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
   },[view.status]);
   const skipCelebrate=()=>{if(celebrateTimerRef.current){clearTimeout(celebrateTimerRef.current);celebrateTimerRef.current=null;}setView(v=>v.status==='celebrate'?{...v,status:'result'}:v);};
   const scheduleTick=useCallback(()=>{stopFrame();const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;const songTimeMs=run.audio.songTimeMs(),travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;
-run.notes.forEach(note=>{perfScanned++;if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);if(!note.done&&note.activePointerId===null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>200)applyJudgment(note,'MISS',songTimeMs-note.timeMs);const el=laneRefs.current[note.index];if(!el)return;
+const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);if(!note.done&&note.activePointerId===null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>200)applyJudgment(note,'MISS',songTimeMs-note.timeMs);const el=laneRefs.current[note.index];if(!el)return;
 // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
 // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
 const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note))&&songTimeMs<rhythmReleaseTargetMs(note);
@@ -8572,7 +8572,23 @@ if(el._rhythmHidden===true){el.style.display='';el._rhythmHidden=false;}
 const failedFlag=failedTrail?'true':'false';if(el._rhythmFailedFlag!==failedFlag){el.dataset.rhythmFailed=failedFlag;el._rhythmFailedFlag=failedFlag;}
 const progress=1-(note.timeMs-visualTime)/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);const nextOpacity=failedTrail?'.34':(visible?'1':'0');if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}const nextWillChange=visible?'transform, opacity':'';if(el._rhythmWillChange!==nextWillChange){el.style.willChange=nextWillChange;el._rhythmWillChange=nextWillChange;}
 if(!visible||!travel)return;
-perfDrawn++;let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;yPx=Math.round(yPx);el.style.transform=`translate3d(0,${yPx}px,0)`;const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(releaseTargetMs-visualTime)/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);if(note.type==='HOLD'){el.style.setProperty('--rhythm-hold-body',`${Math.round(bodyPx)}px`);el.style.filter=note.activePointerId!==null?'brightness(1.3)':'';}if(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE'){el.style.setProperty('--rhythm-slide-height',`${Math.round(bodyPx)}px`);el.style.setProperty('--rhythm-slide-visible-height',`${Math.round(bodyPx)}px`);}const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx});});
+perfDrawn++;let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;yPx=Math.round(yPx);el.style.transform=`translate3d(0,${yPx}px,0)`;const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(releaseTargetMs-visualTime)/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);if(note.type==='HOLD'){el.style.setProperty('--rhythm-hold-body',`${Math.round(bodyPx)}px`);el.style.filter=note.activePointerId!==null?'brightness(1.3)':'';}if(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE'){el.style.setProperty('--rhythm-slide-height',`${Math.round(bodyPx)}px`);el.style.setProperty('--rhythm-slide-visible-height',`${Math.round(bodyPx)}px`);}const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx});};
+const notes=run.notes;
+let scanFrom=run.scanFrom||0;
+while(scanFrom<notes.length){
+  const head=notes[scanFrom],headEl=laneRefs.current[head.index];
+  if(!(head.done&&headEl&&headEl._rhythmHidden===true))break;
+  scanFrom++;
+}
+run.scanFrom=scanFrom;
+const scanHorizonMs=visualTime+travelMs*1.2;
+for(let i=scanFrom;i<notes.length;i++){
+  const note=notes[i];
+  if(run.notesReady&&note.timeMs>scanHorizonMs)break;
+  perfScanned++;
+  visitNote(note);
+}
+run.notesReady=true;
 RHYTHM_PERF.notes(perfScanned,perfDrawn);
 // 無敵・我慢の残り時間と根性ストックは、毎フレームsetStateせずDOMへ直接書く。
 // スコアやコンボと同じ頻度でReactを走らせると、そのぶんノーツの描画が遅れるため。
