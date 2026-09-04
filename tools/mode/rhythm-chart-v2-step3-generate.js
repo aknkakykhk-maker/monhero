@@ -43,6 +43,32 @@ const trackId=arg('--track','monster_hero_theme');
 const outputDir=arg('--output-dir',null);
 const config=TRACKS[trackId];
 if(!config){console.error(`STEP3未登録トラックです: ${trackId} (${Object.keys(TRACKS).join(', ')})`);process.exit(1);}
+// STEP5(複数候補・自動批評)が「同じ音源から作り方だけ変えた別案」を作るための上書き口。
+// 既定は上書きなし＝これまでと1バイトも変わらない出力になる(STEP3の決定性チェックが守られる)。
+//   --profile-override '{"HARD":{"latticeGrids":2}}'
+// 生成そのもののロジックは変えず、難易度ごとの制作方針の数値だけを差し替える。
+const profileOverride=(()=>{
+  const raw=arg('--profile-override',null);
+  if(!raw)return null;
+  let parsed;
+  try{parsed=JSON.parse(raw);}catch(e){console.error(`--profile-override がJSONとして読めません: ${e.message}`);process.exit(1);}
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)){console.error('--profile-override は難易度をキーにしたオブジェクトで指定してください');process.exit(1);}
+  return parsed;
+})();
+// 上書きしてよいのは「作り方の数値」だけ。出力の意味づけ(level等)や未知のキーは受け付けない。
+const OVERRIDABLE_KEYS=Object.freeze(new Set(['candidateSource','minStrength','latticeGrids','perBarByIntensity',
+  'maxConsecutiveEighths','maxLaneStep','widths','simultaneous','types',
+  'holdMaxCount','holdMinGapGrids','flickMaxCount','slideMaxCount','chordMaxCount']));
+const overrideLabel=(()=>{
+  if(!profileOverride)return null;
+  for(const [difficulty,patch] of Object.entries(profileOverride)){
+    if(!patch||typeof patch!=='object'||Array.isArray(patch)){console.error(`--profile-override の ${difficulty} はオブジェクトで指定してください`);process.exit(1);}
+    for(const key of Object.keys(patch)){
+      if(!OVERRIDABLE_KEYS.has(key)){console.error(`--profile-override で上書きできないキーです: ${difficulty}.${key} (${[...OVERRIDABLE_KEYS].join(', ')})`);process.exit(1);}
+    }
+  }
+  return Object.entries(profileOverride).map(([d,patch])=>`${d}{${Object.entries(patch).map(([k,v])=>`${k}=${JSON.stringify(v)}`).join(',')}}`).join(' ');
+})();
 
 // --- 全難易度で共通の下地。V1と同じ値を使う（採用基準を変えると比較ができなくなるため） ---
 const COMMON=Object.freeze({
@@ -192,7 +218,7 @@ const tierForBar=barIndex=>{
 };
 
 const buildChart=(difficulty)=>{
-  const P=PROFILES[difficulty];
+  const P=profileOverride&&profileOverride[difficulty]?Object.freeze({...PROFILES[difficulty],...profileOverride[difficulty]}):PROFILES[difficulty];
   const byGrid=CANDIDATE_MAPS[P.candidateSource];
   const inRange=i=>i.grid>=minGrid&&i.grid<=maxGrid;
   const onLattice=i=>i.grid%P.latticeGrids===0;
@@ -547,6 +573,7 @@ for(const difficulty of DIFFICULTIES){
   console.log(`${difficulty}: ${candidate.noteCount}ノーツ (${Object.entries(candidate.typeCounts).map(([k,v])=>`${k}${v}`).join(' / ')})`);
   console.log(`  ${(gridTimeMs(first.grid)/1000).toFixed(1)}s〜${(gridTimeMs(last.grid)/1000).toFixed(1)}s / ${candidate.densityPerSecond}ノーツ毎秒 / 耳確認${candidate.earReviewGrids.length}件`);
   console.log(`  motif: 反復フレーズ${candidate.motif.phrasesTotal}件中${candidate.motif.phrasesApplied}件へ適用 / 音${candidate.motif.notesAttempted}件中${candidate.motif.notesGrounded}件を実オンセットへ接地${candidate.chordCount?` / 同時押し${candidate.chordCount}件`:''}`);
+  if(overrideLabel)console.log(`  作り方の上書き: ${overrideLabel}`);
   if(!write)continue;
   const out=outputDir
     ?path.join(path.resolve(outputDir),`${trackId.replace(/_/g,'-')}-v2-chart-${difficulty.toLowerCase()}.json`)
