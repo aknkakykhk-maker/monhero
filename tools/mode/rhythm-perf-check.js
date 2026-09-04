@@ -135,9 +135,11 @@ check('毎フレームの走査数と実描画数を計測できる(長いフレ
   &&data.includes('worstFrameScanned:acc.worstScanned')
   &&data.includes('headSkippedPerFrame:per(acc.headSkipped)')
   &&gameSrc.includes('RHYTHM_PERF.notes(perfScanned,perfDrawn,scanFrom,run.notesAscending);'));
-// フレーム全体の時間(avgMs)とtick本体の時間の差が「JSではなく描画に消えている時間」。
-// これが分からないと、JSをいくら削っても効かない場合に気づけない。rAFは増やさない。
-check('tick本体の処理時間そのものを計測できる(JSと描画の切り分け用)',
+// tick本体にかかった時間そのもの。これが分からないと、JSをいくら削っても
+// 効かない場合に気づけない。ただしフレーム全体との差を「描画時間」とは呼べない
+// (rAFの間隔には次のリフレッシュ待ち16.7msとコールバック外の処理が含まれる)。
+// 言えるのは「tickの外で起きている時間」までで、そこから先は別に測る。rAFは増やさない。
+check('tick本体の処理時間そのものを計測できる(tickの中か外かの切り分け用)',
   data.includes('tick(ms){if(!on)return;')
   &&data.includes('tickMsPerFrame:per(acc.tickMs)')
   &&data.includes('worstFrameTickMs:acc.worstTickMs')

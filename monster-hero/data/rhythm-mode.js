@@ -355,8 +355,11 @@ const RHYTHM_PERF=(()=>{
     // tickのノーツ走査から呼ぶ。ONのときだけ足し込む(OFFなら即return)
     notes(scanned,drawn,headSkipped,narrowed){if(!on)return;acc.pendingScanned=Number(scanned)||0;acc.pendingDrawn=Number(drawn)||0;
       acc.pendingHeadSkipped=Number(headSkipped)||0;if(narrowed!==undefined)acc.narrowed=!!narrowed;},
-    // 本体のrAFの中身そのものにかかった時間。フレーム全体(avgMs)との差が
-    // 「JSではなくブラウザの描画に消えている時間」になる。rAFは増やさない。
+    // 本体のrAFの中身そのものにかかった時間。
+    // 注意: フレーム全体(avgMs)との差は「描画時間」ではない。rAFの間隔には
+    // 次のリフレッシュを待つ時間(60Hzなら何もしなくても16.7ms)と、この
+    // コールバックの外で走る処理が含まれる。差は「tickの外で起きている時間」
+    // としか言えないので、そこから先は別に測る。rAFは増やさない。
     tick(ms){if(!on)return;const v=Number(ms);if(Number.isFinite(v)&&v>=0)acc.pendingTickMs=v;},
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
