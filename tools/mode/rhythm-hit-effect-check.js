@@ -28,8 +28,8 @@ let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` (${detail})`:''}`);if(!ok)failed++;};
 
 const ctx={};vm.createContext(ctx);
-vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME};`,ctx);
-const {RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME}=ctx.out;
+vm.runInContext(`${source}\nthis.out={RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME};`,ctx);
+const {RHYTHM_HIT_EFFECT_POOL,RHYTHM_HIT_SPARK_COUNT,RHYTHM_HIT_EFFECT_MS,rhythmHitEffectColor,RHYTHM_NOTE_SE_RUNTIME}=ctx.out;
 
 // --- 音 ---
 check('モンスターノーツ専用の音がある',typeof RHYTHM_NOTE_SE_RUNTIME.playMonster==='function');
@@ -56,6 +56,22 @@ check('判定ごとに色が違う',
 check('プレイ開始時に先に作る(曲の途中で10個まとめて作らない)',
   game.includes('rhythmEnsureHitEffects(playAreaRef.current);'));
 check('すでにあれば作り直さない',source.includes("if(layer&&layer._rhythmPool)return layer;"));
+// ★ここが2026-09-05に実機で壊れた点。CSSアニメーションには fill-mode を付けていないので、
+//   終わった瞬間に子要素は「既定の見た目」へ戻る。既定が見える状態(opacity>0)だと、
+//   使い回している10枚ぶんの光が判定ラインに residual として残り、画面が滅茶苦茶になる。
+check('光の既定は消えている(アニメーションが終わったら残らない)',
+  /\[data-rhythm-hit-effect\]>i,\[data-rhythm-hit-effect\]>b,\[data-rhythm-hit-effect\]>u\{[^}]*opacity:0[^}]*\}/.test(source.replace(/\n\s+/g,''))
+  // 子要素へ opacity:0 以外の既定を与えていないこと
+  &&!/\[data-rhythm-hit-effect\]>[ibu][^{]*\{[^}]*opacity:(?!0[;}])/.test(source));
+check('はじける粒を仕込んである(プロセカの着弾の粒)',
+  Number.isInteger(RHYTHM_HIT_SPARK_COUNT)&&RHYTHM_HIT_SPARK_COUNT>=3
+  &&source.includes("for(let spark=0;spark<RHYTHM_HIT_SPARK_COUNT;spark++)item.appendChild(document.createElement('u'));"),
+  `${RHYTHM_HIT_SPARK_COUNT}粒`);
+check('粒の飛ぶ向きはCSSに固定で書いてある(毎回の計算を増やさない)',
+  /\[data-rhythm-hit-effect\]>u:nth-of-type\(1\)\{--rhythm-spark-x:/.test(source));
+check('コンボ数も1つごとに弾む',
+  game.includes("comboText.dataset.rhythmComboPop='1';")
+  &&source.includes('[data-rhythm-combo][data-rhythm-combo-pop="1"]{animation:mhRhythmComboPop'));
 check('発生のたびに要素を作らず、古いものから順に使い回す',
   source.includes('layer._rhythmNext=(layer._rhythmNext+1)%layer._rhythmPool.length;')
   &&!/rhythmSpawnHitEffect[\s\S]{0,900}?createElement/.test(source));
@@ -176,7 +192,13 @@ html,body{margin:0;background:#000}
       const monsterItem=[...layer.children].find(child=>child.dataset.rhythmHitKind==='MONSTER');
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       const monsterRect=monsterItem.querySelector('i').getBoundingClientRect();
-      return {created,after,
+      // ★アニメーションが終わったあと、光が本当に消えているか(残ると画面が滅茶苦茶になる)
+      await new Promise(resolve=>setTimeout(resolve,1400));
+      const leftover=[...layer.children].map(child=>
+        [...child.children].map(part=>Number(getComputedStyle(part).opacity)).reduce((a,b)=>Math.max(a,b),0)
+      ).reduce((a,b)=>Math.max(a,b),0);
+      return {created,after,leftover,
+        sparks:[...layer.children[0].querySelectorAll('u')].length,
         core:{width:coreRect.width,height:coreRect.height,centerX:(coreRect.left+coreRect.width/2-areaRect.left)/areaRect.width},
         ring:{width:ringRect.width},
         monsterWidth:monsterRect.width,
@@ -188,12 +210,15 @@ html,body{margin:0;background:#000}
     check('40回発生させてもDOMが増えない(使い回している)',result.after===result.created,
       `${result.created}枚 → ${result.after}枚`);
     check('光が実際に大きさを持って出ている',result.core.width>10&&result.core.height>0&&result.ring.width>10,
-      `中心の光 ${result.core.width.toFixed(0)}x${result.core.height.toFixed(0)}px / 輪 ${result.ring.width.toFixed(0)}px`);
+      `中心の光 ${result.core.width.toFixed(0)}x${result.core.height.toFixed(0)}px / 光の柱 ${result.ring.width.toFixed(0)}px`);
     check('光がノーツの位置に出る',Math.abs(result.core.centerX-.5)<=.06,
       `中心 ${(result.core.centerX*100).toFixed(1)}%`);
     check('モンスターノーツの光はふつうより大きい',result.monsterWidth>result.core.width*1.15,
       `ふつう ${result.core.width.toFixed(0)}px → モンスター ${result.monsterWidth.toFixed(0)}px`);
     check('CSSアニメーションが実際に動いている',result.running&&result.running!=='none',result.running);
+    check('1枚あたりの粒の数が決めたとおり',result.sparks===RHYTHM_HIT_SPARK_COUNT,`${result.sparks}粒`);
+    check('光が終わったあと画面に残らない(判定ラインに輪が居座らない)',result.leftover===0,
+      `残った不透明度 ${result.leftover}`);
 
     // 軽量モードでは出ない
     const lightweight=await page.evaluate(()=>{
