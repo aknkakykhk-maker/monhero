@@ -16,7 +16,9 @@ vm.runInNewContext(`${data}\nthis.out={RHYTHM_LANE_COUNT,RHYTHM_NOTE_TYPES,RHYTH
 const D=context.out;
 check('5レーン・4ノーツ種別',D.RHYTHM_LANE_COUNT===5&&D.RHYTHM_NOTE_TYPES.join(',')==='TAP,HOLD,FLICK,SLIDE');
 check('5難易度と最大スコア',JSON.stringify(D.RHYTHM_DIFFICULTIES.map(x=>[x.id,x.maxScore]))===JSON.stringify([['EASY',600000],['NORMAL',700000],['HARD',800000],['EXPERT',900000],['MASTER',1000000]]));
-check('判定幅とスコア率',JSON.stringify(D.RHYTHM_JUDGMENTS.map(x=>[x.id,x.windowMs,x.scoreRate]))===JSON.stringify([['MARVELOUS',25,1],['EXCELLENT',50,.98],['GREAT',100,.9],['GOOD',150,.7],['BAD',200,.3],['MISS',null,0]]));
+// 判定幅は 2026-09-05 にゆるくした（実機で「めちゃくちゃむずい」という指摘）。
+// スコア率は変えていない。BADの200msは入力を結びつける窓と同じ値なので動かさない。
+check('判定幅とスコア率',JSON.stringify(D.RHYTHM_JUDGMENTS.map(x=>[x.id,x.windowMs,x.scoreRate]))===JSON.stringify([['MARVELOUS',40,1],['EXCELLENT',75,.98],['GREAT',130,.9],['GOOD',170,.7],['BAD',200,.3],['MISS',null,0]]));
 check('判定90%＋コンボ10%',D.RHYTHM_SCORE_WEIGHTS.judgment===.9&&D.RHYTHM_SCORE_WEIGHTS.combo===.1);
 const song=D.RHYTHM_SONGS[0];
 check('あつ杯テーマを既存track IDでテスト登録',D.RHYTHM_SONGS.length>=1&&song.displayName==='あつ杯テーマ'&&song.bgmTrackId==='atsu_cup_theme'&&game.includes("id:'atsu_cup_theme', name:'あつ杯テーマ'"));

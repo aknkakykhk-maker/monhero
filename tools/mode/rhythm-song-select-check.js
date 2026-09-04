@@ -153,6 +153,21 @@ const serve=()=>new Promise(resolve=>{
     ok('決定を押すと、選んだ曲と難易度で始まる',
       typeof picked.picked==='string'&&picked.picked.startsWith(`${picked.songId}/`),String(picked.picked));
 
+    // 自己ベストは「難易度ごと」に出す。全国ランキングは難易度をまたいだ合算なので、
+    // 曲えらびのほうは難易度別だと分かるようになっていないといけない
+    // （2026-09-05・ユーザー指示）。
+    const perDifficulty=await page.evaluate(()=>{
+      const host=document.getElementById('song-select-probe');
+      const cells=[...host.querySelectorAll('[data-rhythm-difficulty-best]')];
+      const buttons=[...host.querySelectorAll('[data-rhythm-difficulty]')];
+      return {cells:cells.length,buttons:buttons.length,
+        ids:cells.map(cell=>cell.getAttribute('data-rhythm-difficulty-best')),
+        line:(host.querySelector('[data-rhythm-demo-best]')||{}).textContent||''};
+    });
+    ok('難易度ボタンごとに自己ベストが出る',
+      perDifficulty.cells===perDifficulty.buttons&&perDifficulty.cells>=1,
+      `${perDifficulty.cells}件 / ${perDifficulty.ids.join(',')}`);
+
     ok('実行時エラーが出ていない',errors.length===0,errors.slice(0,2).join(' / '));
   }finally{
     if(browser)await browser.close();

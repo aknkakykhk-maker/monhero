@@ -56,6 +56,23 @@ ok('難易度を選べる',game.includes('data-rhythm-difficulty=')&&game.includ
 ok('選んでいる曲の絵と大きさが出る',game.includes('const RhythmSongArt=')&&game.includes('data-rhythm-song-art'));
 ok('曲えらびは1つの部品にまとまっている（画面ごとに書き分けない）',
   game.includes('const RhythmSongSelect=')&&game.includes('<RhythmSongSelect'));
+// 2026-09-05・ユーザー指示で足した4つ。
+ok('曲えらびで選んでいる曲を鳴らす（設定でON/OFFできる）',
+  game.includes('RHYTHM_PREVIEW_DELAY_MS')&&game.includes('Audio_.startRhythmTrack(previewTrackId')
+  &&game.includes('songPreviewEnabled:true')&&game.includes("songPreviewEnabled:bool('songPreviewEnabled')")
+  &&game.includes("toggle('songPreviewEnabled','')"));
+ok('試聴は画面を離れる・曲を選び替えると止まる',
+  /return\s*\(\)=>\{cancelled=true;clearTimeout\(timer\);if\(handle\)handle\.stop\(\);\}/.test(game));
+ok('自己ベストは難易度ごとに出る（全国ランキングの合算とは別）',
+  game.includes('data-rhythm-difficulty-best=')
+  &&game.includes("rhythmBestRecord(bestRecords,song.songId,item.id)"));
+ok('振動は端末が対応していないことを画面に出す',
+  game.includes('const RHYTHM_HAPTICS=')&&game.includes('data-rhythm-vibration-unsupported')
+  &&game.includes('data-rhythm-vibration-test')&&game.includes("'switch' in input"));
+ok('マスモンは出番のあとも動き続ける（歓声の指定を外して別の待機へ戻す）',
+  game.includes('RHYTHM_SIDE_CHEER_MS')&&game.includes("el.dataset.rhythmSidePhase='done'")
+  &&read('monster-hero/data/rhythm-mode.js').includes('data-rhythm-side-phase="done"')
+  &&read('monster-hero/data/rhythm-mode.js').includes('mhRhythmSideSway'));
 ok('自己ベストを出している',game.includes('data-rhythm-demo-best')&&game.includes('rhythmBestRecord(rhythmBestRecords'));
 ok('自己ベストにランクも出している',game.includes('rhythmRankForScore(best.bestScore)'));
 ok('未プレイのときは「まだ遊んでいません」と出す',/まだ遊んでいません/.test(game));

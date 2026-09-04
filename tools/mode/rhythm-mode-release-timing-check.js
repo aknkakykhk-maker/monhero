@@ -10,7 +10,7 @@ vm.createContext(context);
 vm.runInContext(prefix+'\nthis.out={RHYTHM_GESTURE_RUNTIME,rhythmJudgeRelease,rhythmWorseJudgment};',context);
 const {RHYTHM_GESTURE_RUNTIME:runtime,rhythmJudgeRelease,rhythmWorseJudgment}=context.out;
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
-for(const [delta,expected] of [[0,'MARVELOUS'],[25,'MARVELOUS'],[26,'EXCELLENT'],[50,'EXCELLENT'],[51,'GREAT'],[100,'GREAT'],[101,'GOOD'],[150,'GOOD'],[151,'BAD'],[200,'BAD'],[201,'MISS'],[-201,'MISS']])check(`終端 ${delta}ms => ${expected}`,rhythmJudgeRelease(delta)===expected);
+for(const [delta,expected] of [[0,'MARVELOUS'],[40,'MARVELOUS'],[41,'EXCELLENT'],[75,'EXCELLENT'],[76,'GREAT'],[130,'GREAT'],[131,'GOOD'],[170,'GOOD'],[171,'BAD'],[200,'BAD'],[201,'MISS'],[-201,'MISS']])check(`終端 ${delta}ms => ${expected}`,rhythmJudgeRelease(delta)===expected);
 check('開始と終了の悪い方を採用',rhythmWorseJudgment('MARVELOUS','GOOD')==='GOOD'&&rhythmWorseJudgment('GREAT','EXCELLENT')==='GREAT');
 const fresh=(kind='HOLD',startJudgment='MARVELOUS',startDelta=0)=>{runtime.clear();now=0;rafCb=null;const note={type:kind,timeMs:1000,endTimeMs:2000,lane:0,done:false,holdJudgment:null,holdDeltaMs:0,index:0};runtime.bind('touch:1',note,kind,1000,0);note.holdJudgment=startJudgment;note.holdDeltaMs=startDelta;return note;};
 let note=fresh();now=1000;runtime.release('touch:1');check('HOLDは終端ちょうどでMARVELOUS',note.holdJudgment==='MARVELOUS'&&note._rhythmReleaseDeltaMs===0);

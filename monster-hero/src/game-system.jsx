@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 07:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 07:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2536,6 +2536,9 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   livePartnerVisible:true,
   // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
   sideMonsterOpacity:'NORMAL', sideMonsterMotion:'NORMAL', sideMonsterAbilityHighlight:true,
+  // 曲えらびで、選んでいる曲を鳴らすかどうか(2026-09-05)。
+  // 既存の保存値には無いので、読み込み時に既定(ON)で補われる。既存のキーは変えない。
+  songPreviewEnabled:true,
 });
 const rhythmFiniteInRange = (value,min,max,fallback) => {
   const number=Number(value); return Number.isFinite(number)&&number>=min&&number<=max?number:fallback;
@@ -2568,6 +2571,7 @@ const normalizeRhythmSettings = value => {
     sideMonsterOpacity:RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity)?source.sideMonsterOpacity:DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion:RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion)?source.sideMonsterMotion:DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight:bool('sideMonsterAbilityHighlight'),
+    songPreviewEnabled:bool('songPreviewEnabled'),
   };
 };
 const emptyRhythmBestRecord = () => ({bestScore:0,maxCombo:0,clear:false,fullCombo:false,allExcellent:false,allMarvelous:false,judgments:Object.fromEntries(RHYTHM_JUDGMENT_IDS.map(id=>[id,0]))});
@@ -8480,7 +8484,16 @@ const RhythmOptions=({value,onSave,onBack})=>{
           <div className="py-2"><p className="mb-2 text-xs font-bold">濃さ</p>{segments('sideMonsterOpacity',[['NORMAL','はっきり'],['SOFT','ふつう'],['FAINT','うっすら'],['OFF','出さない']])}</div>
           <div className="py-2"><p className="mb-2 text-xs font-bold">動き</p>{segments('sideMonsterMotion',[['NORMAL','跳ねる'],['SMALL','小さく跳ねる'],['NONE','動かない']])}</div>
           <div className={row}><span className="text-xs font-bold">能力中に光らせる</span>{toggle('sideMonsterAbilityHighlight','')}</div></section>
-        <section className={card}><h3 className="text-sm font-black text-cyan-200">✨ 演出・端末</h3><div className="py-2"><p className="mb-2 text-xs font-bold">演出量</p>{segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']])}</div><div className={row}><span className="text-xs font-bold">振動</span>{toggle('vibrationEnabled','')}</div><div className={row}><span className="text-xs font-bold">軽量モード</span>{toggle('lightweightMode','')}</div></section>
+        <section className={card}><h3 className="text-sm font-black text-cyan-200">✨ 演出・端末</h3><div className="py-2"><p className="mb-2 text-xs font-bold">演出量</p>{segments('effectAmount',[['NORMAL','標準'],['LOW','少なめ'],['MINIMAL','最小']])}</div><div className={row}><span className="text-xs font-bold">振動</span><div className="flex items-center gap-2">
+          {/* この端末で振動できるかを出す。iPhoneのSafariには振動のしくみが無い時期が長く、
+              「設定はあるのに何も起きない」状態になっていたため(2026-09-05の指摘) */}
+          <button type="button" data-rhythm-vibration-test disabled={!RHYTHM_HAPTICS.supported()}
+            onClick={()=>RHYTHM_HAPTICS.tap(26)}
+            className="min-h-[44px] rounded-xl border border-white/20 bg-slate-900 px-3 text-[10px] font-black text-slate-200 disabled:opacity-40">試す</button>
+          {toggle('vibrationEnabled','')}
+        </div></div>
+        {!RHYTHM_HAPTICS.supported()&&<p data-rhythm-vibration-unsupported className="pb-2 text-[9px] font-bold leading-relaxed text-amber-200">この端末は振動に対応していないため、ONにしても振動しません（音とエフェクトはそのまま出ます）。</p>}<div className={row}><span className="text-xs font-bold">軽量モード</span>{toggle('lightweightMode','')}</div>
+        <div className={row}><span className="text-xs font-bold">曲えらびで試聴する</span>{toggle('songPreviewEnabled','')}</div></section>
         <section className="rounded-2xl border border-cyan-400/30 bg-cyan-950/25 p-3 text-[10px] leading-relaxed text-cyan-100">判定を甘くする設定ではありません。端末ごとの見え方・音量・タイミングを調整する項目です。</section>
       </div>
     </div>
@@ -8553,7 +8566,10 @@ const rhythmChartPlayable=(song,difficultyId)=>{
 
 // footer は「選んでいる曲」を受け取れる。全国ランキングのように**曲ごとに違うもの**を
 // 置くため。ただの要素を渡してもよい。
-const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。'})=>{
+// 曲えらびで曲を鳴らし始めるまでの間。一覧をなぞって選び替えているあいだに
+// 曲を読み込み直すと、そのたびに引っかかるので、少し止まってから鳴らす。
+const RHYTHM_PREVIEW_DELAY_MS=350;
+const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',preview=false,previewVolume=100})=>{
   const list=(songs||[]).filter(song=>(difficulties||[]).some(difficulty=>rhythmChartPlayable(song,difficulty.id)));
   const [songId,setSongId]=React.useState(()=>(list[0]&&list[0].songId)||'');
   const [difficultyId,setDifficultyId]=React.useState(()=>'');
@@ -8572,6 +8588,22 @@ const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,
     const id=difficulty&&ids.includes(difficulty.id)?difficulty.id:ids[ids.length-1];
     return Number(entry.difficulties[id].level)||0;
   };
+  // 選んでいる曲を鳴らす(音ゲーの曲えらびはたいてい曲が流れている)。
+  // 画面を離れる・曲を選び替える・設定でOFFにする、のどれでも止める。
+  const previewSongId=song?song.songId:'';
+  const previewTrackId=song?song.bgmTrackId:'';
+  React.useEffect(()=>{
+    if(!preview||!previewTrackId)return undefined;
+    let cancelled=false,handle=null;
+    const timer=setTimeout(()=>{
+      Audio_.startRhythmTrack(previewTrackId,previewVolume).then(audio=>{
+        if(cancelled||!audio){audio&&audio.stop();return;}
+        handle=audio;
+      }).catch(()=>{});
+    },RHYTHM_PREVIEW_DELAY_MS);
+    return ()=>{cancelled=true;clearTimeout(timer);if(handle)handle.stop();};
+  },[preview,previewTrackId,previewSongId,previewVolume]);
+
   const pickRandom=()=>{
     if(!list.length)return;
     const nextSong=list[Math.floor(Math.random()*list.length)];
@@ -8635,9 +8667,15 @@ const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,
             const on=item.id===difficulty.id;
             return <button key={item.id} type="button" data-rhythm-difficulty={item.id} aria-pressed={on}
               onClick={()=>setDifficultyId(item.id)}
-              className={`min-h-[44px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${on?tone.on:`${tone.off} bg-slate-900/70`}`}>
+              className={`min-h-[52px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${on?tone.on:`${tone.off} bg-slate-900/70`}`}>
               <span className="block">{item.id}</span>
               <span className="block text-[9px] font-black tabular-nums opacity-90">Lv.{song.difficulties[item.id].level}</span>
+              {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
+                  合算なので、そちらとは別のものだと分かるように、ここへ並べて置く */}
+              <span data-rhythm-difficulty-best={item.id} className="mt-0.5 block text-[9px] font-black tabular-nums opacity-80">
+                {(()=>{const record=rhythmBestRecord(bestRecords,song.songId,item.id);
+                  return record&&record.clear?record.bestScore.toLocaleString():'—';})()}
+              </span>
             </button>;
           })}
         </div>
@@ -8648,7 +8686,7 @@ const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,
         {label&&label.note&&<p className="mt-1 text-[10px] leading-relaxed text-slate-400">{label.note}</p>}
         <p data-rhythm-demo-best className="mt-1.5 text-[10px] font-bold text-amber-200">
           {best&&best.clear
-            ?<>自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}</>
+            ?<>{difficulty.id}の自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}</>
             :<>まだ遊んでいません</>}
         </p>
 
@@ -8665,6 +8703,62 @@ const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,
   </div>;
 };
 
+// ============================================================================
+// 振動(ハプティクス)
+// ============================================================================
+// 【2026-09-05・「オプションにある振動が機能してない」という指摘で作り直した】
+// それまでは navigator.vibrate(8) を呼ぶだけだった。これには2つ問題があった。
+//   1. iPhone(Safari)には Vibration API そのものが無い。呼んでも何も起きない
+//   2. 8msは短すぎて、対応している端末でも無視されることがある
+// そこで、
+//   ・使える端末では navigator.vibrate を少し長め(12ms)で呼ぶ
+//   ・iOSでは、17.4から入った「スイッチ型チェックボックス」を切り替えると端末が
+//     コツンと鳴る仕組みを借りる。画面の外へ置いた見えないスイッチを押して代用する
+//   ・どちらも無い端末では何も起きない(音とエフェクトはこれまでどおり出る)。
+//     オプション画面には「この端末では振動できません」と出して、
+//     「設定はあるのに効かない」状態にしない
+const RHYTHM_HAPTICS=(()=>{
+  let holder=null,built=false,toggled=false;
+  const canVibrate=()=>typeof navigator!=='undefined'&&typeof navigator.vibrate==='function';
+  // iOSのスイッチを1つだけ作って使い回す(押すたびに作ると、そのぶん引っかかる)
+  const iosSwitch=()=>{
+    if(built)return holder;
+    built=true;
+    if(typeof document==='undefined'||!document.body)return null;
+    try{
+      const input=document.createElement('input');
+      input.type='checkbox';
+      // スイッチ表示に対応していない端末では、この仕組みそのものが無い
+      if(!('switch' in input))return null;
+      input.setAttribute('switch','');
+      input.setAttribute('aria-hidden','true');
+      input.tabIndex=-1;
+      const label=document.createElement('label');
+      label.setAttribute('aria-hidden','true');
+      label.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+      label.appendChild(input);
+      document.body.appendChild(label);
+      holder={label,input};
+    }catch{holder=null;}
+    return holder;
+  };
+  return {
+    // この端末で振動できるか(オプション画面の案内に使う)
+    supported:()=>canVibrate()||!!iosSwitch(),
+    // 標準のAPIが無く、iOSのスイッチで代用しているか
+    fallback:()=>!canVibrate()&&!!iosSwitch(),
+    tap:(ms=12)=>{
+      if(canVibrate()){try{navigator.vibrate(ms);}catch{}return;}
+      const entry=iosSwitch();
+      if(!entry)return;
+      try{toggled=!toggled;entry.input.checked=toggled;entry.label.click();}catch{}
+    },
+  };
+})();
+
+// 歓声(mhRhythmSideCheer)の長さ。CSS側と同じ値をここに持つ。
+// 終わったら data-rhythm-side-hit を外して、待機の動きへ戻すために使う。
+const RHYTHM_SIDE_CHEER_MS=700;
 const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhythmMonsterPickerOpen,setRhythmMonsterPickerOpen,rhythmMonsterMessage,setRhythmMonsterMessage,applyRhythmMonsterSlots,masuMons})=>(
   <section data-rhythm-monster-slots className="mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3">
               <div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-fuchsia-200">モンスターノーツ用マスモン</h3><span data-rhythm-monster-count className="shrink-0 text-[9px] font-black text-fuchsia-300">{rhythmMonsterSlots.length} / {RHYTHM_MONSTER_SLOT_MAX}体</span></div>
@@ -8733,6 +8827,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
           data-rhythm-side-monster={slot}
           data-rhythm-side-motion={settings.lightweightMode||settings.effectAmount==='MINIMAL'?'NONE':settings.sideMonsterMotion}
           data-rhythm-side-active="0"
+          data-rhythm-side-phase="intro"
           style={{'--rhythm-side-opacity':opacity,'--rhythm-side-delay':`${index%2===0?0:-250}ms`}}>
           {/* 絵の入れ物を1枚はさむ。跳ねる動き(transform)は外のspanが使っているので、
               能力中の「さらに大きく見せる」はこちらのtransformで出す(重ねて書けないため)。
@@ -8859,8 +8954,17 @@ if(judgment!=='MISS'){
     }
     // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
     if(monsterHit){
+      // モンスターノーツだけは振動も強くする(ふつうのノーツとの違いを指でも分かるように)
+      if(settings.vibrationEnabled)RHYTHM_HAPTICS.tap(26);
       const slot=rhythmNoteMonsterSlot(note),el=slot?sideMonsterRefs.current[slot-1]:null;
-      if(el){el.dataset.rhythmSideHit='';void el.offsetWidth;el.dataset.rhythmSideHit='1';}
+      if(el){
+        el.dataset.rhythmSideHit='';void el.offsetWidth;el.dataset.rhythmSideHit='1';
+        // 出番が済んだので、このあとの待機は最初のぴょんぴょんとは別の動き(ゆらゆら)にする
+        el.dataset.rhythmSidePhase='done';
+        // 歓声(700ms)が終わったら印を外す。外さないと !important の指定が残り続けて
+        // そのマスモンが曲の終わりまで止まったままになる(2026-09-05に出した不具合)
+        setTimeout(()=>{if(el.dataset.rhythmSideHit==='1')el.dataset.rhythmSideHit='0';},RHYTHM_SIDE_CHEER_MS);
+      }
     }
     // 判定文字を一度だけ弾ませる
     const judgmentText=judgmentTextRef.current;
@@ -8870,7 +8974,7 @@ if(judgment!=='MISS'){
     if(comboText){comboText.dataset.rhythmComboPop='';void comboText.offsetWidth;comboText.dataset.rhythmComboPop='1';}
   }
 }
-if(settings.vibrationEnabled&&judgment!=='MISS'){try{navigator.vibrate?.(8);}catch{}}const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
+if(settings.vibrationEnabled&&judgment!=='MISS')RHYTHM_HAPTICS.tap();const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 run.life=rhythmLifeAfterWithMonsterAbilities(run.life,judgment,run.abilities,songTimeMs);
 let revived=false,abilityFlash=null;
@@ -9008,7 +9112,7 @@ const playEndTimeMs=Number.isFinite(Number(song.playDurationMs))?Number(song.pla
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
 const sideBeatMs=rhythmSideMonsterBeatMs(song.bgmTrackId);
-sideMonsterRefs.current.forEach(el=>{if(el){el.style.setProperty('--rhythm-side-beat',`${sideBeatMs}ms`);el.dataset.rhythmSideActive='0';}});
+sideMonsterRefs.current.forEach(el=>{if(el){el.style.setProperty('--rhythm-side-beat',`${sideBeatMs}ms`);el.dataset.rhythmSideActive='0';el.dataset.rhythmSideHit='0';el.dataset.rhythmSidePhase='intro';}});
 startLockRef.current=false;setView({...initialView(),status:'playing'});scheduleTick();};
   useEffect(()=>{mountedRef.current=true;beginRun(bestRecord);return()=>{mountedRef.current=false;++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   const pause=()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.activePointers.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();setPressedLanes([]);run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null)note.activePointerId=-1;});run.paused=true;stopFrame();run.audio.pause();setView(v=>({...v,status:'paused'}));};
@@ -18779,6 +18883,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               difficulties={difficulties}
               difficultyLabels={RHYTHM_DEMO_DIFFICULTY_LABELS}
               bestRecords={rhythmBestRecords}
+              preview={rhythmSettings.songPreviewEnabled}
+              previewVolume={rhythmSettings.bgmVolume}
               onPlay={(song,difficulty)=>{setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
               notice={<p data-rhythm-demo-notice data-rhythm-demo-song className="mb-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[9px] font-bold leading-relaxed text-amber-100">
                 これは音ゲーの体験版です。いまは「Monster Hero」1曲・EASY／NORMAL／HARDの3難易度だけを遊べます。
