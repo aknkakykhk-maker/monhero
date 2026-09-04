@@ -25,5 +25,9 @@ now=1150;runtime.release('touch:1');check('MISSガード後でも+150msで離せ
 note=fresh('SLIDE');const session=[...runtime._sessions.values()][0];session.failed=true;now=1000;runtime.release('touch:1');check('SLIDE途中追従失敗は終端が合ってもMISS',note.holdJudgment==='MISS');
 check('HOLDもruntimeへbindする',source.includes("originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE'"));
 check('旧本体はruntimeが作ったholdJudgmentを1回だけ適用',game.includes("applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0)"));
-check('TAP/FLICKの開始判定条件は変更しない',source.includes("RHYTHM_NOTE_TYPES.includes(note.type)")&&source.includes("(tapOnly&&note.type!=='TAP')")&&source.includes("timeDistance<=200"));
+check('TAP/FLICKの開始判定条件は変更しない',
+  source.includes("RHYTHM_NOTE_TYPES.includes(note.type)")
+  &&source.includes("tapOnly&&note.type!=='TAP'")
+  &&source.includes("const timeDistance=Math.abs(now-(Number(note.timeMs)+offset));")
+  &&source.includes("timeDistance<=200"));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
