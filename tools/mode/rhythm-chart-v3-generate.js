@@ -63,31 +63,49 @@ const PITCHED_BONUS=.18;
 //
 // tapDuringHold は別もので、こちらは「押さえっぱなしの指が1本ふさがった状態で
 // もう1本を動かす」ので本当に難しい。EXPERT以上に置く。
+//
+// 【大きく動かす3つの見せ場について】(2026-09-05・「バリエーションが少ない」という指摘で足した)
+// sweep    … 端から端まで動くSLIDE。SLIDEを持つHARD以上。追従の速さ(maxLaneSpeed)で精査する
+// chordRun … 同時押しの連なり。ペアごと右左へ振る「くねくね」。EXPERT以上
+//             （EASY〜HARDは「大きく離す・太くする」条件で5レーンが埋まり、動かす余地が無い）
+// cross    … 押さえっぱなしより外側を叩かせて指を交差させる。EXPERTで少し、MASTERで中心に
 const PROFILES=Object.freeze({
   EASY:Object.freeze({level:1,lattice:2,maxLaneStep:1,maxRun:2,
     types:['TAP','HOLD'],widths:[3,4,6],narrowRate:0,tapDuringHold:false,
     holdPerMinute:5.6,slidePerMinute:0,flickPerMinute:0,endFlickPerMinute:0,
     chord:Object.freeze({perMinute:2.4,minGapLanes:2,onBeat:true,clearGrids:3,minWidth:3,spacingGrids:16,edge:true}),
+    sweep:null,chordRun:null,crossPerMinute:0,
     accentWidth:10,accentPerMinute:2.4}),
   NORMAL:Object.freeze({level:3,lattice:2,maxLaneStep:2,maxRun:3,
     types:['TAP','HOLD','FLICK'],widths:[2,3,4,6],narrowRate:0,tapDuringHold:false,
     holdPerMinute:6.4,slidePerMinute:0,flickPerMinute:5.6,endFlickPerMinute:1.2,
     chord:Object.freeze({perMinute:3.2,minGapLanes:2,onBeat:true,clearGrids:2,minWidth:3,spacingGrids:12,edge:true}),
+    sweep:null,chordRun:null,crossPerMinute:0,
     accentWidth:10,accentPerMinute:2.4}),
   HARD:Object.freeze({level:5,lattice:1,maxLaneStep:2,maxRun:2,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.04,tapDuringHold:false,
     holdPerMinute:7.2,slidePerMinute:4,flickPerMinute:7.2,endFlickPerMinute:2,
     chord:Object.freeze({perMinute:4,minGapLanes:1.5,onBeat:false,clearGrids:2,minWidth:3,spacingGrids:8,edge:false}),
+    sweep:Object.freeze({perMinute:1.6,minGrids:6,minSpanLanes:2.5,maxLaneSpeed:6,clearBeats:1}),
+    chordRun:null,crossPerMinute:0,
     accentWidth:8,accentPerMinute:2.8}),
   EXPERT:Object.freeze({level:7,lattice:1,maxLaneStep:3,maxRun:5,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.12,tapDuringHold:true,
     holdPerMinute:8,slidePerMinute:4.8,flickPerMinute:8.8,endFlickPerMinute:2.8,
     chord:Object.freeze({perMinute:4.8,minGapLanes:1.25,onBeat:false,clearGrids:1,minWidth:2,spacingGrids:6,edge:false}),
+    sweep:Object.freeze({perMinute:2.4,minGrids:6,minSpanLanes:3,maxLaneSpeed:8,clearBeats:.5}),
+    chordRun:Object.freeze({perMinute:1.6,maxLength:3,minStepMs:165,maxLaneSpeed:8,
+      width:2,shapes:['parallel','swing'],spacingGrids:24}),
+    crossPerMinute:1.2,
     accentWidth:8,accentPerMinute:2.8}),
   MASTER:Object.freeze({level:9,lattice:1,maxLaneStep:4,maxRun:8,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4],narrowRate:.2,tapDuringHold:true,
     holdPerMinute:8.8,slidePerMinute:5.6,flickPerMinute:10.4,endFlickPerMinute:3.6,
     chord:Object.freeze({perMinute:7.2,minGapLanes:1,onBeat:false,clearGrids:1,minWidth:2,spacingGrids:6,edge:false}),
+    sweep:Object.freeze({perMinute:3.2,minGrids:5,minSpanLanes:3.5,maxLaneSpeed:10,clearBeats:.5}),
+    chordRun:Object.freeze({perMinute:2.4,maxLength:4,minStepMs:140,maxLaneSpeed:10,
+      width:2,shapes:['swing','parallel','open'],spacingGrids:20}),
+    crossPerMinute:2.4,
     accentWidth:6,accentPerMinute:3.2}),
 });
 // HOLD・SLIDE・FLICK・同時押し・区切りの一発は、曲の長さに比例させる。
@@ -128,6 +146,7 @@ const COMMON=Object.freeze({
   slideMinMove:.10,       // 音の高さがこれだけ動いていればSLIDEにする
   holdMinGrids:4,
   laneStepFastMax:2,      // 8分より速い間隔では、歩幅いっぱいに跳ばない
+  shapeAvoidRecent:3,     // 直近この数だけの形は、同じくらいふさわしい候補があれば後回しにする
 });
 
 // ============================================================================
@@ -210,6 +229,10 @@ const buildChart=(difficulty,options={})=>{
     flickMax=countOf(P.flickPerMinute),endFlickMax=countOf(P.endFlickPerMinute),
     chordMax=countOf(P.chord?P.chord.perMinute:0),accentMax=countOf(P.accentPerMinute);
   const log=[];
+  // log は「かたまりごとにどの形を当てたか」だけを入れる。
+  // 出来事の説明（同時押しを何組置いたか等）は混ぜず、notice へ分ける
+  // （混ぜると「使った形」の集計に文章が数えられてしまう）。
+  const notice=[];
 
   // --- 1. 拾う音を決める（小節ごとに、優先順位の上位から） ---
   const pool=allOnsets.filter(onset=>
@@ -366,6 +389,8 @@ const buildChart=(difficulty,options={})=>{
   // --- 5. かたまりごとに形を当てる ---
   // 同じフレーズが繰り返されるときは同じ形を使い、2回目以降は左右を反転する。
   const shapeMemory=new Map();
+  // 直近に使った形。同じ形が続かないよう、形を選ぶときに後回しにする材料にする。
+  const recentShapes=[];
   const laneUse=[0,0,0,0,0];
   let lastLane=2;
   const placed=[];
@@ -430,13 +455,14 @@ const buildChart=(difficulty,options={})=>{
       // 音の高さが取れないときは、刻みの細かさから形を選ぶ
       const rhythmShape=minGap<=P.lattice?'fast':(minGap<=BEAT?'beat':'slow');
       const candidates=shapeCandidatesFor({length,heights,maxStep,fastest,allowJack,
-        rhythmShape,rotate:runs.indexOf(runGroup)});
+        rhythmShape,rotate:runs.indexOf(runGroup),recent:recentShapes.slice(-COMMON.shapeAvoidRecent)});
       const chosen=candidates[0];
       if(chosen){offsets=chosen.offsets.slice();patternId=chosen.pattern.id;}
       else offsets=Array.from({length},()=>0);
       if(memoryKey&&!shapeMemory.has(memoryKey))shapeMemory.set(memoryKey,{patternId,offsets:offsets.slice(),mirrored:false});
     }
 
+    if(patternId)recentShapes.push(patternId);
     // 起点を決める。前のノーツからの続き・レーンの偏り・指の条件で選ぶ。
     const pattern=patternId?PATTERN_BY_ID[patternId]:null;
     const min=Math.min(...offsets),max=Math.max(...offsets);
@@ -605,6 +631,10 @@ const buildChart=(difficulty,options={})=>{
       }
       return best;
     };
+    // 同時押しは指を2本とも使う。だから直前・直後に別のノーツがあると、
+    // どちらかの指を叩き直すしかなく、restrikeLimitMs より短い間隔では物理的に押せない。
+    // （置き場所をどう動かしても直らないので、置く前にここで外す）
+    const restrikeGrids=HAND_MODEL.restrikeLimitMs/gridMs;
     const candidates=notes
       .map((note,index)=>({note,index}))
       .filter(({note})=>note.type==='TAP'&&!note.sectionAccent
@@ -612,6 +642,7 @@ const buildChart=(difficulty,options={})=>{
         &&(!CHORD.onBeat||note.grid%BEAT===0)
         &&(gridCount.get(note.grid)||0)===1
         &&nearestOther(note)>=CHORD.clearGrids
+        &&nearestOther(note)>=restrikeGrids
         &&!sustainSpans.some(span=>span.startGrid<note.grid&&note.grid<=span.endGrid))
       .map(entry=>entry.index);
     for(const index of spreadPick(candidates,chordMax,CHORD.spacingGrids)){
@@ -656,11 +687,193 @@ const buildChart=(difficulty,options={})=>{
       notes.push(partner);
       chordCount++;
     }
-    log.push(`同時押し ${chordCount}組（狙い${chordMax}組・置ける場所${candidates.length}箇所）`);
+    notice.push(`同時押し ${chordCount}組（狙い${chordMax}組・置ける場所${candidates.length}箇所）`);
     notes.sort((a,b)=>a.grid-b.grid);
   }
 
-  // --- 10. HOLDの途中で太さが変わる形 ---
+  // --- 10. 同時押しの連なり（右左くねくね） ---
+  // 単発の同時押しは「決めの一発」だが、それだけだと同時押しがいつも点で終わる。
+  // 等間隔に並んだ単押しをまとめて同時押しの列に変え、**ペアごと**動かすと
+  // 「右・左・右」と振られる見せ場になる。
+  //
+  // 【なぜEXPERT以上なのか】
+  // 5レーン（サブレーン10）しかないので、EASY〜HARDの同時押しの条件
+  // （太いノーツ・大きく離す）を満たすと、2つで場所を使い切って**動かす余地が残らない**。
+  //   EASY/NORMAL: 幅3+幅3+間隔4 = 10（余り0）  HARD: 幅3+幅3+間隔3 = 9（余り1＝0.5レーン）
+  // 動けないものを「連なり」と呼んでも意味が無いので、下の難易度には置かない。
+  // EXPERT/MASTER は幅2で作れるため、余り4サブレーン＝2レーンぶん振れる。
+  let chordRunCount=0,chordRunNoteCount=0;
+  const RUN=P.chordRun;
+  if(RUN&&RUN.perMinute>0){
+    const runMax=countOf(RUN.perMinute);
+    const width=RUN.width;
+    // 2つのあいだに空けるサブレーン数。その難易度の「最低限離す」を満たす最小値を使い、
+    // 残りぜんぶを動ける幅（room）に回す。
+    const spanOf=sub=>usableTouchSpan({subLane:sub,subLaneWidth:width});
+    // 見た目にも1レーンは空ける（サブレーン2つ）。数字のうえで指が入っても、
+    // ぴったり隣り合っていると「同時押し」に見えないため。
+    let gapSub=null;
+    for(let g=2;g<=10-2*width;g++){
+      if(separationRange(spanOf(0),spanOf(width+g)).min+1e-9>=P.chord.minGapLanes){gapSub=g;break;}
+    }
+    if(gapSub!=null){
+      const room=10-2*width-gapSub;
+      const sustainSpans=notes.filter(note=>note.type==='HOLD'||note.type==='SLIDE')
+        .map(note=>({startGrid:note.grid,endGrid:note.grid+(Number(note.durationGrids)||0)}));
+      const gridCount=new Map();
+      for(const note of notes)gridCount.set(note.grid,(gridCount.get(note.grid)||0)+1);
+      const usable=note=>note.type==='TAP'&&!note.chord&&!note.sectionAccent&&!note.monsterSlot
+        &&(gridCount.get(note.grid)||0)===1
+        &&!sustainSpans.some(span=>span.startGrid<note.grid&&note.grid<=span.endGrid);
+      // 等間隔に並んだ単押しの並びを探す（間隔がそろっていないと「列」に見えない）
+      const ordered=notes.slice().sort((a,b)=>a.grid-b.grid);
+      const chains=[];
+      for(let i=0;i<ordered.length;i++){
+        if(!usable(ordered[i]))continue;
+        for(let j=i+1;j<ordered.length&&j-i<RUN.maxLength;j++){
+          if(!usable(ordered[j]))break;
+          const step=ordered[i+1].grid-ordered[i].grid;
+          if(ordered[j].grid-ordered[j-1].grid!==step)break;
+          if(step*gridMs<RUN.minStepMs)break;
+          if(step>BEAT*2)break;
+          if(j-i>=2)chains.push({start:i,length:j-i+1,step});
+        }
+      }
+      // 長いものを優先し、曲全体へ散らす
+      chains.sort((a,b)=>b.length-a.length||a.start-b.start);
+      const taken=[];
+      // 形。amp は「ペアが動ける幅（サブレーン）」で、大きいほど大きく振れる。
+      //   swing    … 左のはし ↔ 右のはし を行き来する（右左くねくね）
+      //   parallel … ペアごと、はしからはしへ流れる
+      //   open     … 2つの間隔を広げていく（内から外へ開く）
+      const shapeAt=(shape,index,length,amp)=>{
+        const last=Math.max(1,length-1);
+        const slack=room-amp;
+        if(shape==='swing')return {offset:Math.round(slack/2)+(index%2===0?0:amp),gap:gapSub};
+        if(shape==='open'){
+          const grow=Math.round(amp*index/last);
+          return {offset:Math.round((room-grow)/2),gap:gapSub+grow};
+        }
+        return {offset:Math.round(slack/2)+Math.round(amp*index/last),gap:gapSub};
+      };
+      for(const chain of chains){
+        if(chordRunCount>=runMax)break;
+        const members=[];
+        for(let k=0;k<chain.length;k++)members.push(ordered[chain.start+k]);
+        if(members.some(note=>taken.some(other=>Math.abs(other.grid-note.grid)<RUN.spacingGrids)))continue;
+        if(members.some(note=>note.chord||note.chordRun))continue;
+        const shape=RUN.shapes[chordRunCount%RUN.shapes.length];
+        const stepMs=chain.step*gridMs;
+        // 振り幅は大きいほど見せ場になるが、そのぶん指が速く動く。
+        // いちばん大きいところから1サブレーンずつ落として、最初に条件を満たしたものを採る。
+        let plan=null;
+        for(let amp=room;amp>=2;amp--){
+          const draft=members.map((note,index)=>{
+            const {offset,gap}=shapeAt(shape,index,chain.length,amp);
+            return {note,left:offset,right:offset+width+gap};
+          });
+          if(draft.some(entry=>entry.left<0||entry.right+width>10))continue;
+          // 指の移動速度（ペアごと動くので、左右それぞれの移動を見る）
+          const tooFast=draft.some((entry,index)=>{
+            if(index===0)return false;
+            const before=draft[index-1];
+            const move=Math.max(Math.abs(entry.left-before.left),Math.abs(entry.right-before.right))/2;
+            return move/(stepMs/1000)>RUN.maxLaneSpeed+1e-9;
+          });
+          if(tooFast)continue;
+          // 隣り合う同時押しのあいだで、指が動く距離がその難易度の上限を超えないか
+          const laneStepOk=draft.every((entry,index)=>{
+            if(index===0)return true;
+            const before=draft[index-1];
+            return separationRange(spanOf(before.right),spanOf(entry.left)).min<=P.maxLaneStep+1e-9;
+          });
+          if(!laneStepOk)continue;
+          // 列の外側（直前・直後のノーツ）ともつながるか
+          const outsideOk=[[chain.start-1,draft[0].left,0],
+            [chain.start+chain.length,draft[draft.length-1].right,chain.length-1]]
+            .every(([index,sub,memberIndex])=>{
+              const other=ordered[index];
+              if(!other)return true;
+              const delta=Math.abs(other.grid-members[memberIndex].grid);
+              if(delta===0||delta>=BEAT)return true;
+              return separationRange(spanOf(sub),usableTouchSpan(other)).min<=P.maxLaneStep+1e-9;
+            });
+          if(!outsideOk)continue;
+          // 同時押しは指を2本とも使うので、その前後に別のノーツがあると押せない。
+          // 列の中の隣どうしは minStepMs（restrikeLimitMs より長い）で並ぶので、
+          // 見るのは「列に入っていないノーツ」だけ。
+          const inPlan=new Set(members);
+          const restrikeGrids=HAND_MODEL.restrikeLimitMs/gridMs;
+          const clearOk=members.every(member=>!ordered.some(other=>
+            !inPlan.has(other)&&other.grid!==member.grid
+            &&Math.abs(other.grid-member.grid)<restrikeGrids));
+          if(!clearOk)continue;
+          plan=draft;break;
+        }
+        if(!plan)continue;
+        for(const entry of plan){
+          const note=entry.note;
+          note.subLane=entry.left;note.subLaneWidth=width;note.lane=Math.floor(entry.left/2);
+          note.chordRun=shape;
+          notes.push({type:'TAP',grid:note.grid,lane:Math.floor(entry.right/2),
+            subLane:entry.right,subLaneWidth:width,
+            sourceStrength:note.sourceStrength,sourcePeakOffsetMs:note.sourcePeakOffsetMs,
+            sourceCharacter:note.sourceCharacter,chord:true,chordRun:shape});
+          taken.push(note);
+          chordRunNoteCount++;
+        }
+        chordRunCount++;
+      }
+      notice.push(`同時押しの連なり ${chordRunCount}本（狙い${runMax}本・${chordRunNoteCount}組）`);
+      notes.sort((a,b)=>a.grid-b.grid);
+    }
+  }
+
+  // --- 11. 端から端まで動くSLIDE（スイープ） ---
+  // これまでSLIDEの移動幅は「その難易度の歩幅ぶん」に抑えていたので、実測で最大2.5レーン。
+  // 5レーンの端から端まで走る大きな一本が一度も出ず、SLIDEがどれも同じ大きさに見えていた。
+  //
+  // ここでは経路を作り直すのではなく、**すでに音の高さから作った経路をそのまま引き伸ばす**。
+  // 引き伸ばしは向きを変えない写像なので、「SLIDEの向きが音の高さと合っている」という
+  // 約束は保たれたまま、移動幅だけが大きくなる。
+  // 難易度の精査は「指がレーンを横切る速さ」で行う（maxLaneSpeed）。
+  let sweepCount=0;
+  const SWEEP=P.sweep;
+  if(SWEEP&&SWEEP.perMinute>0){
+    const sweepMax=countOf(SWEEP.perMinute);
+    const ordered=notes.slice().sort((a,b)=>a.grid-b.grid);
+    const clearGrids=Math.round(SWEEP.clearBeats*BEAT);
+    const candidates=[];
+    notes.forEach((note,index)=>{
+      if(note.type!=='SLIDE'||!Array.isArray(note.slidePoints)||note.slidePoints.length<2)return;
+      const duration=Number(note.durationGrids)||0;
+      if(duration<SWEEP.minGrids)return;
+      const lanes=note.slidePoints.map(point=>Number(point.lane));
+      if(Math.max(...lanes)-Math.min(...lanes)<.5)return;   // 動いていない経路は伸ばしても意味が無い
+      if(note.endFlick===true)return;                       // 終点で弾くものは、端で弾かせない
+      // 前後に指を運ぶ余裕があるものだけ（端まで走ったあと、すぐ次を叩けない）
+      const before=ordered.filter(other=>other.grid<note.grid).pop();
+      const after=ordered.find(other=>other.grid>note.grid+duration);
+      if(before&&note.grid-before.grid<clearGrids)return;
+      if(after&&after.grid-(note.grid+duration)<clearGrids)return;
+      candidates.push(index);
+    });
+    for(const index of spreadPick(candidates,sweepMax,BEAT*8)){
+      const note=notes[index];
+      const path=sweepPathFor(note,SWEEP,Number(note.subLaneWidth)||2);
+      if(!path)continue;
+      const lanes=path.map(point=>point.lane);
+      note.slidePoints=path;
+      note.lane=path[0].lane;
+      note.endLane=path[path.length-1].lane;
+      note.sweep=true;
+      note.sweepSpanLanes=Math.round((Math.max(...lanes)-Math.min(...lanes))*10)/10;
+      sweepCount++;
+    }
+    notice.push(`端から端まで動くSLIDE ${sweepCount}本（狙い${sweepMax}本・置ける場所${candidates.length}箇所）`);
+  }
+
+  // --- 12. HOLDの途中で太さが変わる形 ---
   if(P.types.includes('HOLD')){
     const shapes=[
       {id:'open', at:t=>t},
@@ -700,7 +913,7 @@ const buildChart=(difficulty,options={})=>{
     });
   }
 
-  // --- 11. モンスターノーツ（曲の20/40/60/80%あたりへ1体ずつ） ---
+  // --- 13. モンスターノーツ（曲の20/40/60/80%あたりへ1体ずつ） ---
   const monsterSlotGrids=[];
   {
     const first=notes[0].grid,last=notes[notes.length-1].grid;
@@ -721,8 +934,8 @@ const buildChart=(difficulty,options={})=>{
     });
   }
 
-  // --- 12. 指の条件の最終確認 ---
-  // アクセント幅・同時押し・太さの変わるHOLDは、レーンを決めたあとに中心を動かす。
+  // --- 14. 指の条件の最終確認 ---
+  // アクセント幅・同時押し・同時押しの連なり・太さの変わるHOLDは、レーンを決めたあとに中心を動かす。
   // 最後にもう一度全部を見て、「指が2本入らない近さなのに速すぎる」組み合わせが
   // 残っていたら、動かせるノーツ（TAP/FLICK）を左右へ寄せて直す。
   {
@@ -753,10 +966,93 @@ const buildChart=(difficulty,options={})=>{
     }
   }
 
-  // --- 13. 指の本数を超える瞬間を作らない ---
+  // --- 15. 指を交差させる置き方（クロス） ---
+  // 押さえっぱなしのHOLDより**さらに外側**を叩かせると、空いているほうの指が
+  // 押さえている指を越えて取りに行くことになる。これが「指をクロスする配置」。
+  //
+  // 【なぜ押さえっぱなしと組にするのか】
+  // ただの単押しの並びでは、どちらの指でどこを取るかは遊ぶ人の自由なので、
+  // 譜面の側から交差を強いることはできない。片方の指が1か所に固定されて初めて
+  // 「もう1本が、その外側まで行くしかない」という形が作れる。
+  //
+  // 【難易度】EXPERTで少し、MASTERで中心に。HARD以下には置かない
+  // （HARD以下は tapDuringHold が無く、押さえながら別を叩く形そのものを使わないため）。
+  // 動かすのはレーンだけで、音の位置（grid）は動かさない。
+  let crossCount=0;
+  if(P.crossPerMinute>0&&P.tapDuringHold){
+    const crossMax=countOf(P.crossPerMinute);
+    // 経路が動くSLIDEは、その瞬間に指がどこにあるかが変わるので相手にしない。
+    // 押さえた場所が動かないHOLDだけを使う。
+    const holds=notes.filter(note=>note.type==='HOLD');
+    const gridCount=new Map();
+    for(const note of notes)gridCount.set(note.grid,(gridCount.get(note.grid)||0)+1);
+    const ordered=notes.slice().sort((a,b)=>a.grid-b.grid);
+    const conflictsWith=(note,candidate)=>ordered.some(other=>{
+      if(other===note)return false;
+      const deltaMs=(note.grid-other.grid)*gridMs;
+      if(deltaMs===0)return false;
+      if(Math.abs(deltaMs)>=HAND_MODEL.restrikeLimitMs)return false;
+      return !fingerPairFeasible(candidate,other,Math.abs(deltaMs)).ok;
+    });
+    const stepOkWith=(note,candidate)=>ordered.every(other=>{
+      if(other===note||other.grid===note.grid)return true;
+      if(Math.abs(other.grid-note.grid)>=BEAT)return true;
+      return separationRange(usableTouchSpan(candidate),usableTouchSpan(other)).min<=P.maxLaneStep+1e-9;
+    });
+    const candidates=[];
+    notes.forEach((note,index)=>{
+      if(note.type!=='TAP'||note.chord||note.chordRun||note.sectionAccent||note.monsterSlot)return;
+      if((gridCount.get(note.grid)||0)!==1)return;
+      const covering=holds.filter(hold=>hold.grid<note.grid
+        &&note.grid<=hold.grid+(Number(hold.durationGrids)||0));
+      if(covering.length!==1)return;
+      candidates.push({index,hold:covering[0]});
+    });
+    for(const pick of spreadPick(candidates.map(entry=>entry.index),crossMax,BEAT*4)){
+      const entry=candidates.find(item=>item.index===pick);
+      if(!entry)continue;
+      const note=notes[pick];
+      const hold=entry.hold;
+      const holdCenter=noteTouchLane(hold);
+      // 押さえている指が画面の左寄りなら、その**さらに左**を叩かせる（右の指が越える）。
+      const toLeft=holdCenter<=(LANES-1)/2;
+      // 押さえているノーツの外側は狭い。太いままでは入らないので、
+      // その難易度で使える細さまで落としてよい（交差は狙って取る一発なので、細いほうが理にかなう）。
+      const widthOptions=[...new Set([Number(note.subLaneWidth)||2,...P.widths])]
+        .filter(value=>value<=(Number(note.subLaneWidth)||2)).sort((a,b)=>b-a);
+      let placed=null;
+      for(const width of widthOptions){
+        const order=[];
+        if(toLeft)for(let sub=0;sub<=10-width;sub++)order.push(sub);
+        else for(let sub=10-width;sub>=0;sub--)order.push(sub);
+        for(const sub of order){
+          const candidate={subLane:sub,subLaneWidth:width};
+          // 押さえている指より外側にあること（内側では交差にならない）
+          const center=noteTouchLane(candidate);
+          if(toLeft?center>=holdCenter:center<=holdCenter)continue;
+          // 指が2本入る離れかたであること
+          if(separationRange(usableTouchSpan(candidate),usableTouchSpan(hold)).min
+            <HAND_MODEL.fingerMinGapLanes-1e-9)continue;
+          if(conflictsWith(note,candidate))continue;
+          if(!stepOkWith(note,candidate))continue;
+          placed={sub,width};break;
+        }
+        if(placed)break;
+      }
+      if(!placed)continue;
+      note.subLane=placed.sub;
+      note.subLaneWidth=placed.width;
+      note.lane=Math.floor(placed.sub/2);
+      note.cross=true;
+      crossCount++;
+    }
+    notice.push(`指を交差させる置き方 ${crossCount}箇所（狙い${crossMax}箇所・置ける場所${candidates.length}箇所）`);
+  }
+
+  // --- 16. 指の本数を超える瞬間を作らない ---
   // 指は2本しかない。ある瞬間に「押さえっぱなしのHOLD/SLIDE」と「そこで新しく押すノーツ」を
   // 足して2本を超えると、どうやっても押せない。レーンを動かしても直らないので
-  // （12番の直し方では拾えない）、ここであふれたぶんを取り除く。
+  // （14番の直し方では拾えない）、ここであふれたぶんを取り除く。
   // 実測: 速い曲のMASTERで、HOLDを押さえたまま同時押しが来る形が5件出た。
   {
     const sustains=notes.filter(note=>note.type==='HOLD'||note.type==='SLIDE').map(note=>({
@@ -785,12 +1081,12 @@ const buildChart=(difficulty,options={})=>{
       for(const note of ordered.slice(Math.max(0,room)))dropped.add(note);
     }
     if(dropped.size){
-      log.push(`指が足りない瞬間のノーツを${dropped.size}件外した（押さえっぱなし＋同時押しで3本以上になる形）`);
+      notice.push(`指が足りない瞬間のノーツを${dropped.size}件外した（押さえっぱなし＋同時押しで3本以上になる形）`);
       notes=notes.filter(note=>!dropped.has(note));
     }
   }
 
-  return {notes,log,profile:P,runs:runs.length,chordCount,monsterSlotGrids,
+  return {notes,log,notice,profile:P,runs:runs.length,chordCount,chordRunCount,sweepCount,crossCount,monsterSlotGrids,
     targetCount,notesPerSecondTarget:round3(notesPerSecond),
     counts:{holdMax,slideMax,flickMax,endFlickMax,chordMax,accentMax,
       playableMinutes:round3(playableMinutes)}};
@@ -816,6 +1112,87 @@ function spreadPick(candidates,count,minGap){
     rest.splice(bestPos,1);
   }
   return chosen.sort((a,b)=>a-b);
+}
+
+// スイープの中継点の上限。多いほど経路はなめらかだが、譜面データも大きくなる。
+const SWEEP_MAX_POINTS=20;
+// 高さをならす幅（前後いくつぶんの平均を取るか）と、中継点の間隔（グリッド）。
+// 【実測でこの2つに決めた】3曲・全難易度で「端まで走る一本」が何本置けたかを数えると
+//   ならし1/間隔2 → 7本   ならし2/間隔2 → 15本   ならし2/間隔3 → 24本   ならし3/間隔4 → 28本
+// 細かく刻むほど1区間の動きが**大きく**なる（ならす前の段差がそのまま出る）ので、
+// 「細かいほど良い」ではない。ならしを強くしすぎると音の高さから離れるため、
+// 24本取れる ならし2/間隔3 を採る。
+const SWEEP_SMOOTH=2;
+const SWEEP_STRIDE=3;
+// --- 端から端まで動くSLIDE（スイープ）の経路を作る ---
+// ふつうのSLIDEは「その難易度の歩幅ぶん」しか動かさないので、実測で最大2.5レーンだった。
+// スイープは同じ音の高さの動きを**画面いっぱいへ写す**。作り方の違いは2つだけ。
+//   ・高さを3点の移動平均でなめらかにする（大きく走らせるので、細かい上下は経路に写さない）
+//   ・中継点を細かく取る（2グリッドおき。粗いと点と点のあいだで指が瞬間移動することになる）
+// 写像は「高さが上がればレーンも上がる」向きを変えないので、
+// 「SLIDEの向きが音の高さと合っている」という約束はスイープでも保たれる。
+// どこまで大きくするかは、**区間ごとの指の速さが上限を超えない、いちばん大きい倍率**で決める。
+function sweepPathFor(note,SWEEP,width){
+  const startGrid=note.grid,endGrid=note.grid+(Number(note.durationGrids)||0);
+  const raw=[];
+  for(let grid=startGrid;grid<=endGrid;grid++)raw.push(heightByGrid.has(grid)?heightByGrid.get(grid):null);
+  for(let i=0;i<raw.length;i++){
+    if(raw[i]!=null)continue;
+    let before=null,after=null;
+    for(let k=i-1;k>=0;k--)if(raw[k]!=null){before=raw[k];break;}
+    for(let k=i+1;k<raw.length;k++)if(raw[k]!=null){after=raw[k];break;}
+    raw[i]=before!=null&&after!=null?(before+after)/2:(before??after??.5);
+  }
+  const smooth=raw.map((_,i)=>{
+    const from=Math.max(0,i-SWEEP_SMOOTH),to=Math.min(raw.length-1,i+SWEEP_SMOOTH);
+    let sum=0,count=0;
+    for(let k=from;k<=to;k++){sum+=raw[k];count++;}
+    return sum/count;
+  });
+  const lo=Math.min(...smooth),hi=Math.max(...smooth);
+  if(hi-lo<1e-6)return null;
+  // 中継点は細かいほど、1区間あたりの指の動きが小さくなる（＝大きく伸ばせる）。
+  // いちばん細かい1グリッドおきを基本にし、点が増えすぎるときだけ間引く。
+  let stride=SWEEP_STRIDE;
+  while((smooth.length-1)/stride>SWEEP_MAX_POINTS)stride++;
+  const sampled=[];
+  for(let i=0;i<smooth.length;i+=stride)sampled.push({index:i,height:smooth[i]});
+  if(sampled[sampled.length-1].index!==smooth.length-1)
+    sampled.push({index:smooth.length-1,height:smooth[smooth.length-1]});
+  if(sampled.length<2)return null;
+  let scale=(LANES-1)/(hi-lo);
+  for(let i=1;i<sampled.length;i++){
+    const move=Math.abs(sampled[i].height-sampled[i-1].height);
+    const deltaMs=(sampled[i].index-sampled[i-1].index)*gridMs;
+    if(move<1e-9)continue;
+    if(deltaMs<=0)return null;
+    scale=Math.min(scale,SWEEP.maxLaneSpeed*(deltaMs/1000)/move);
+  }
+  // 中継点は0.5レーン刻みへそろえる。そろえたぶんだけ区間の動きが増えることがあるので、
+  // **そろえたあとの経路**でもう一度速さを測り、超えていたら倍率を落として測り直す。
+  // （倍率だけで判断すると、0.4レーンの動きが0.5レーンへ丸められて上限を超える）
+  const buildAt=value=>{
+    const span=value*(hi-lo);
+    if(!(span>=SWEEP.minSpanLanes))return null;
+    const base=(LANES-1-span)/2-lo*value;
+    const points=sampled.map(entry=>({grid:startGrid+entry.index,
+      lane:Math.max(0,Math.min(LANES-1,Math.round((entry.height*value+base)*2)/2)),
+      subLaneWidth:width}));
+    const lanes=points.map(point=>point.lane);
+    if(Math.max(...lanes)-Math.min(...lanes)<SWEEP.minSpanLanes-1e-9)return null;
+    for(let i=1;i<points.length;i++){
+      const deltaMs=(points[i].grid-points[i-1].grid)*gridMs;
+      if(deltaMs<=0)return null;
+      if(Math.abs(lanes[i]-lanes[i-1])/(deltaMs/1000)>SWEEP.maxLaneSpeed+1e-9)return null;
+    }
+    return points;
+  };
+  for(let value=scale;value>0;value*=.92){
+    const points=buildAt(value);
+    if(points)return points;
+    if(value*(hi-lo)<SWEEP.minSpanLanes)break;
+  }
+  return null;
 }
 
 // --- SLIDEの経路を「音の高さの動き」から作る ---
@@ -884,6 +1261,7 @@ for(const difficulty of targets){
   console.log(`  拾った音: ${Object.entries(characterCounts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}${v}`).join(' / ')}`);
   const patterns=results[difficulty].log.reduce((acc,entry)=>{acc[entry.pattern||'—']=(acc[entry.pattern||'—']||0)+1;return acc;},{});
   console.log(`  使った形: ${Object.entries(patterns).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}${v}`).join(' / ')}`);
+  for(const line of results[difficulty].notice||[])console.log(`  ${line}`);
 }
 
 if(explain&&results[explain]){

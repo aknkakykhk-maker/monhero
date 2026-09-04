@@ -267,5 +267,92 @@ for(const difficulty of DIFFICULTIES){
     generator.includes('tapDuringHold:false')&&generator.includes('tapDuringHold:true'));
 }
 
+// (k) 大きく動かす見せ場 — スイープ・同時押しの連なり・クロス
+//
+// 「バリエーションが少ない」という指摘（2026-09-05）で足した3つ。
+// どれも**難易度ごとにどこまで許すか**が本体なので、生成器の定数ではなく
+// 狙いをここへ書いて、出来上がった譜面で確かめる。
+{
+  const MOVE_RULES={
+    EASY:  {sweep:false,chordRun:false,cross:false,maxSweepSpeed:0},
+    NORMAL:{sweep:false,chordRun:false,cross:false,maxSweepSpeed:0},
+    HARD:  {sweep:true, chordRun:false,cross:false,maxSweepSpeed:6},
+    EXPERT:{sweep:true, chordRun:true, cross:true, maxSweepSpeed:8},
+    MASTER:{sweep:true, chordRun:true, cross:true, maxSweepSpeed:10},
+  };
+  const counts={};
+  for(const difficulty of DIFFICULTIES){
+    const notes=charts[difficulty].notes;
+    const rule=MOVE_RULES[difficulty];
+    const sweeps=notes.filter(note=>note.sweep===true);
+    const runs=notes.filter(note=>typeof note.chordRun==='string');
+    const crosses=notes.filter(note=>note.cross===true);
+    counts[difficulty]={sweep:sweeps.length,run:runs.length,cross:crosses.length};
+    // その難易度で許していないものが出ていないか
+    const forbidden=[];
+    if(!rule.sweep&&sweeps.length)forbidden.push(`スイープ${sweeps.length}`);
+    if(!rule.chordRun&&runs.length)forbidden.push(`連なり${runs.length}`);
+    if(!rule.cross&&crosses.length)forbidden.push(`クロス${crosses.length}`);
+    check(`${difficulty}: その難易度で許していない見せ場が出ていない`,forbidden.length===0,
+      forbidden.length?forbidden.join(' / '):'—');
+    // スイープ: 本当に大きく動いているか・追従が速すぎないか
+    const problems=[];
+    for(const note of sweeps){
+      const points=Array.isArray(note.slidePoints)?note.slidePoints:[];
+      const lanes=points.map(point=>Number(point.lane));
+      if(!lanes.length){problems.push(`${note.grid}: 経路が無い`);continue;}
+      if(Math.max(...lanes)-Math.min(...lanes)<2.5)
+        problems.push(`${note.grid}: ${(Math.max(...lanes)-Math.min(...lanes)).toFixed(1)}レーンしか動かない`);
+      for(let i=1;i<points.length;i++){
+        const deltaMs=(points[i].grid-points[i-1].grid)*gridMs;
+        if(deltaMs<=0){problems.push(`${note.grid}: 中継点の順番がおかしい`);break;}
+        const speed=Math.abs(lanes[i]-lanes[i-1])/(deltaMs/1000);
+        if(speed>rule.maxSweepSpeed+.01){problems.push(`${note.grid}: 追従${speed.toFixed(1)}レーン毎秒`);break;}
+      }
+    }
+    if(rule.sweep)check(`${difficulty}: スイープが大きく動き、追従の速さも上限内`,problems.length===0,
+      problems.length?problems.slice(0,3).join(' / '):`${sweeps.length}本 / 上限${rule.maxSweepSpeed}レーン毎秒`);
+    // クロス: 押さえっぱなしより外側にあるか（内側では交差にならない）
+    if(rule.cross&&crosses.length){
+      const holds=notes.filter(note=>note.type==='HOLD');
+      const bad=crosses.filter(note=>{
+        const covering=holds.filter(hold=>hold.grid<note.grid
+          &&note.grid<=hold.grid+(Number(hold.durationGrids)||0));
+        if(covering.length!==1)return true;
+        const holdLane=noteTouchLane(covering[0]),noteLane=noteTouchLane(note);
+        const outside=holdLane<=2?noteLane<holdLane:noteLane>holdLane;
+        const apart=separationRange(usableTouchSpan(note),usableTouchSpan(covering[0])).min
+          >=HAND_MODEL.fingerMinGapLanes-1e-9;
+        return !(outside&&apart);
+      });
+      check(`${difficulty}: クロスが押さえっぱなしの外側にある`,bad.length===0,
+        bad.length?`${bad.length}件が内側`:`${crosses.length}箇所`);
+    }
+  }
+  check('SLIDEを持つ難易度には端まで走る一本がある',
+    counts.HARD.sweep+counts.EXPERT.sweep+counts.MASTER.sweep>=3,
+    DIFFICULTIES.map(d=>`${d} ${counts[d].sweep}`).join(' / '));
+  check('同時押しの連なりはEXPERT以上にある',counts.EXPERT.run>=2&&counts.MASTER.run>=counts.EXPERT.run,
+    DIFFICULTIES.map(d=>`${d} ${counts[d].run}`).join(' / '));
+  check('クロスはMASTERがいちばん多い',counts.MASTER.cross>=1&&counts.MASTER.cross>=counts.EXPERT.cross,
+    DIFFICULTIES.map(d=>`${d} ${counts[d].cross}`).join(' / '));
+  check('生成器は3つの見せ場を難易度ごとに持っている',
+    /sweep:Object\.freeze\(\{perMinute:/.test(generator)
+    &&/chordRun:Object\.freeze\(\{perMinute:/.test(generator)
+    &&/crossPerMinute:/.test(generator)
+    &&generator.includes('sweep:null')&&generator.includes('chordRun:null'),
+    'スイープ / 同時押しの連なり / クロス');
+  check('自動修正は同時押しの離れかたを縮めない',
+    read('tools/mode/rhythm-chart-v2-step7-autofix.js').includes('keepsChord'),
+    '忙しさを直すために設計のほうを壊さない');
+}
+
+// (l) 形の語彙を実際に使い切っているか
+for(const difficulty of DIFFICULTIES){
+  const shapes=(charts[difficulty].shapes||[]).filter(entry=>entry.pattern);
+  const kinds=new Set(shapes.map(entry=>entry.pattern));
+  check(`${difficulty}: 形の語彙を8種類以上使っている`,kinds.size>=8,`${kinds.size}種類`);
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
