@@ -78,8 +78,10 @@ check('dedupe: user_nameが無い行も名無しのブリーダーとして畳�
   return out.length===1&&out[0].score===20;
 })());
 
-check('entry変換: difficulty列からsongId/難易度idを取り出し、partyのオブジェクトをdetailとして残す',(()=>{
-  const row={user_name:'テスト',score:'123456',level:'7',icon:'mia',difficulty:'Rhythm-monster_hero_theme_candidate-HARD',hero:'HARD',party:{maxCombo:50,judgments:{MARVELOUS:10}}};
+// 2026-09-04: party列は既存モードと同じ「配列」の形で送る(スキーマが配列前提でも
+// 衝突しない防御)。先頭要素をdetailとして読む
+check('entry変換: difficulty列からsongId/難易度idを取り出し、party配列の先頭要素をdetailとして残す',(()=>{
+  const row={user_name:'テスト',score:'123456',level:'7',icon:'mia',difficulty:'Rhythm-monster_hero_theme_candidate-HARD',hero:'HARD',party:[{maxCombo:50,judgments:{MARVELOUS:10}}]};
   const entry=rhythmRankingEntryFromRow(row);
   return entry.userName==='テスト'&&entry.score===123456&&entry.level===7&&entry.icon==='mia'
     &&entry.difficultyId==='HARD'&&entry.detail&&entry.detail.maxCombo===50;
@@ -88,9 +90,11 @@ check('entry変換: 壊れた値・欠損値でも落ちずに既定値へ倒れ
   const entry=rhythmRankingEntryFromRow({});
   return entry.userName==='名無しのブリーダー'&&entry.score===0&&entry.level===0&&entry.icon===null&&entry.detail===null;
 })());
-check('entry変換: partyが配列(旧モードの編成データ形式)ならdetailにしない(誤って別モードの行を解釈しない)',(()=>{
-  const entry=rhythmRankingEntryFromRow({difficulty:'Rhythm-song-EASY',party:[{id:'mia'}]});
-  return entry.detail===null;
+check('entry変換: partyが配列でない、空配列、要素がオブジェクトでない場合はdetailをnullにする(壊れたデータでも安全に倒れる)',(()=>{
+  const a=rhythmRankingEntryFromRow({difficulty:'Rhythm-song-EASY',party:{maxCombo:50}});
+  const b=rhythmRankingEntryFromRow({difficulty:'Rhythm-song-EASY',party:[]});
+  const c=rhythmRankingEntryFromRow({difficulty:'Rhythm-song-EASY',party:['broken']});
+  return a.detail===null&&b.detail===null&&c.detail===null;
 })());
 
 // --- 画面側の結線・既存モードとの分離(src/game-system.jsx) ---

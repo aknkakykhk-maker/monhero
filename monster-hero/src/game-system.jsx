@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 09:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 10:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8023,11 +8023,14 @@ const sbInsertRhythmScore = async (row) => {
   }
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
+  const requestId = `rhythm-insert-${row.difficulty}-${Date.now()}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
+    rankingLog(requestId, 'rhythm-insert-start', { difficulty: row.difficulty, clearId: row.clear_id, score: row.score, userName: row.user_name });
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, { method:'POST', headers:{...SB_HEADERS,'Prefer':prefer}, body: JSON.stringify(row), signal: controller.signal });
     const body = await res.text();
+    rankingLog(requestId, 'rhythm-insert-response', { status: res.status, ok: res.ok, error: res.ok ? null : (body || res.statusText) });
     if (!res.ok) {
       const error = new Error(`rhythm ranking insert ${res.status}: ${body || res.statusText}`);
       error.status = res.status; error.body = body;
@@ -8360,7 +8363,7 @@ const RhythmOptions=({value,onSave,onBack})=>{
   const resetDraft=()=>{setDraft(normalizeRhythmSettings(DEFAULT_RHYTHM_SETTINGS));setMessage('画面上の値を戻しました（未保存）');};
   const saveDraft=async()=>{const saved=await onSave(draft);setDraft(saved);setMessage('保存しました');};
   return <main data-rhythm-options className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>
-    <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"><button aria-label="音ゲーデバッグへ戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div><small className="block text-[8px] font-black text-cyan-300">DEBUG・正式モード共通設計</small><h2 className="text-base font-black">⚙️ 音ゲーオプション</h2></div></header>
+    <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"><button aria-label="音ゲーデバッグへ戻る" onClick={onBack} className="min-h-[44px] min-w-[44px] text-slate-300"><ArrowLeft size={20}/></button><div><small className="block text-[8px] font-black text-cyan-300">DEBUG・正式モード共通設計</small><h2 className="text-base font-black">⚙️ オプション</h2></div></header>
     <div data-rhythm-options-scroll className="flex-1 min-h-0 overflow-y-auto px-3 pb-4 pt-3 mh-scroll">
       <div className="space-y-3">
         <section className={card}><h3 className="text-sm font-black text-cyan-200">🔊 音量</h3><div className="mt-2"><p className="mb-1 text-xs font-bold">BGM音量</p>{stepper('bgmVolume',0,100,1)}</div><div className="mt-2"><p className="mb-1 text-xs font-bold">タップ音量</p>{stepper('noteSeVolume',0,100,1)}</div><div className={row}><span className="text-xs font-bold">タップ音</span>{toggle('noteSeEnabled','')}</div><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={previewBgm} className="min-h-[46px] rounded-xl bg-indigo-700 text-xs font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-xs font-black">タップ音試聴</button></div><p className="mt-2 text-[9px] leading-relaxed text-slate-400">この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p></section>
@@ -10071,9 +10074,12 @@ function MonsterHeroGame() {
       judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
       fullCombo: !!result.fullCombo, allExcellent: !!result.allExcellent, allMarvelous: !!result.allMarvelous,
     };
+    // partyは既存モードと同じ「配列」の形で送る(種族チャレンジ等が常に配列で送っているため、
+    // rankingsテーブル側に配列前提のスキーマ制約があっても衝突しないようにする防御)。
+    // 読み出し側(rhythmRankingEntryFromRow)もこの配列の先頭要素をdetailとして読む
     const row = {
       difficulty: difficultyKey, user_name: breederName || '名無しのブリーダー', hero: difficulty.id,
-      party: detail, score: Number(result.score) || 0, level: breederLevel.level, icon: breederIcon,
+      party: [detail], score: Number(result.score) || 0, level: breederLevel.level, icon: breederIcon,
       clear_id: createRunId(),
     };
     const outcome = await persistRankingScore({
@@ -10087,6 +10093,7 @@ function MonsterHeroGame() {
       },
     });
     if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
+    else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', { difficulty: difficultyKey, score: row.score });
   }, [breederName, breederLevel, breederIcon]);
 
   const loadRankings = useCallback(async (targetDiff=null, includeLevels=false, force=false, levelKind='bond') => {
@@ -16929,10 +16936,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <button className={`mh-home-facility management${spotClass('management')}`} onClick={()=>{addAssistantBond('management');setManagementTab('monster');setGameState('MB_MANAGEMENT');}} aria-label="M/B管理"><span><Layers size={18}/>M/B管理</span></button>
               <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={()=>{addAssistantBond('temple');setGameState('TEMPLE');}} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
               <button className={`mh-home-facility market${spotClass('market')}`} onClick={()=>{addAssistantBond('market');setGameState('BREEDER_MARKET');}} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
-              {/* 修行の施設をやめ、その場所を音ゲー「モンスタービート」に譲った(2026-09-03にユーザーが決定)。
+              {/* 修行の施設をやめ、その場所を音ゲー「モンヒロビート」に譲った(2026-09-03にユーザーが決定、
+                  2026-09-04に正式名称を「モンスタービート」から「モンヒロビート」へ変更)。
                   公開フラグが立つまでは修行と同じように「準備中」の案内だけを出し、本編からは遊べない。
                   中身はデバッグ画面の「音ゲー体験版」から確認できる */}
-              <button className="mh-home-facility rhythm" onClick={RHYTHM_MODE_PUBLIC_RELEASE?openRhythmDemo:()=>setGameState('RHYTHM_INFO')} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンスタービート":"モンスタービート（準備中）"}><span>🎵 モンスタービート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}</span></button>
+              <button className="mh-home-facility rhythm" onClick={RHYTHM_MODE_PUBLIC_RELEASE?openRhythmDemo:()=>setGameState('RHYTHM_INFO')} aria-label={RHYTHM_MODE_PUBLIC_RELEASE?"モンヒロビート":"モンヒロビート（準備中）"}><span>🎵 モンヒロビート{!RHYTHM_MODE_PUBLIC_RELEASE&&<small>準備中</small>}</span></button>
               <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
             </nav>
             <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
@@ -16947,17 +16955,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>
         )}
 
-        {/* モンスタービート(音ゲー)の準備中の案内。公開フラグが立つまでHOMEのモンスタービートはここへ来る。
+        {/* モンヒロビート(音ゲー)の準備中の案内。公開フラグが立つまでHOMEのモンヒロビートはここへ来る。
             見た目は体験版ホームに合わせ、修行のCSSは借りない(別の機能の見た目に引きずられないため) */}
         {gameState==='RHYTHM_INFO'&&(
           <main data-rhythm-info className="flex h-full flex-1 flex-col bg-slate-950 text-white">
             <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
               <button aria-label="HOMEへ戻る" onClick={returnToHome} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
-              <div className="min-w-0"><small className="block text-[8px] font-black text-cyan-300">COMING SOON</small><h2 className="text-sm font-black tracking-widest text-cyan-200">モンスタービート</h2></div>
+              <div className="min-w-0"><small className="block text-[8px] font-black text-cyan-300">COMING SOON</small><h2 className="text-sm font-black tracking-widest text-cyan-200">モンヒロビート</h2></div>
             </header>
             <div className="flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
               <div className="my-6 text-center text-6xl">🎵</div>
-              <h3 className="text-center text-xl font-black text-cyan-200">モンスタービートは準備中です</h3>
+              <h3 className="text-center text-xl font-black text-cyan-200">モンヒロビートは準備中です</h3>
               <p className="mt-3 text-[11px] leading-relaxed text-slate-300">
                 曲に合わせて、5つのレーンを流れてくるノーツを演奏する音ゲーのモードです。
               </p>
@@ -18299,7 +18307,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 onClick={()=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}>🏆 全国ランキングを見る</button>}
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button data-rhythm-demo-options className="min-h-[48px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-xs font-black text-cyan-100"
-                  onClick={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}>⚙️ 音ゲー設定</button>
+                  onClick={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}>⚙️ オプション</button>
                 <button data-rhythm-demo-monsters className="min-h-[48px] rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-xs font-black text-fuchsia-100"
                   onClick={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}>👾 マスモン設定</button>
               </div>

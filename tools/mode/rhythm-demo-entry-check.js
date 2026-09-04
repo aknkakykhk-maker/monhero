@@ -82,20 +82,21 @@ ok('体験版の入口はデバッグ画面から開く（公開フラグはま�
   game.includes('data-debug-rhythm-demo')&&game.includes('onClick={openRhythmDemo}')
   &&game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
 // --- HOMEの入口（修行の場所を譲り受けた） ---
-// 略称は「モンビー」だが、画面・ヘルプ・説明には正式名称の「モンスタービート」を使う。
-ok('HOMEの施設は「モンスタービート」になっている',
-  game.includes('mh-home-facility rhythm')&&game.includes('🎵 モンスタービート'));
+// 略称は「モンビー」だが、画面・ヘルプ・説明には正式名称の「モンヒロビート」を使う
+// (2026-09-04にユーザーが「モンスタービート」から改称)。
+ok('HOMEの施設は「モンヒロビート」になっている',
+  game.includes('mh-home-facility rhythm')&&game.includes('🎵 モンヒロビート'));
 // デバッグ画面の「修行テスト」は開発用に残す。ここで見るのはHOMEの施設だけ。
 ok('修行の施設はHOMEから外した',
   !game.includes('mh-home-facility training')&&!game.includes('aria-label="修行（準備中）"'));
-ok('修行のCSSを残さず、位置をそのままモンスタービートへ引き継いでいる',
+ok('修行のCSSを残さず、位置をそのままモンヒロビートへ引き継いでいる',
   !game.includes('.mh-home-facility.training')
   &&game.includes('.mh-home-facility.rhythm{left:0;top:46%;width:38%;height:25%}'));
 ok('公開フラグが立つまではHOMEから遊べず「準備中」の案内を出す',
   game.includes("RHYTHM_MODE_PUBLIC_RELEASE?openRhythmDemo:()=>setGameState('RHYTHM_INFO')")
   &&game.includes("gameState==='RHYTHM_INFO'")
   &&game.includes('data-rhythm-info')
-  &&game.includes('モンスタービートは準備中です'));
+  &&game.includes('モンヒロビートは準備中です'));
 ok('準備中の案内は修行のCSSを借りず、自前の見た目にしてある',(()=>{
   // 次の画面まで見てしまうと隣のCSSを拾うので、この画面のぶんだけを切り出す。
   const at=game.indexOf("gameState==='RHYTHM_INFO'");

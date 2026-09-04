@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e8c3f0a1f45656d0
+// source-sha256: 12a660ba478ef064
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 09:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 10:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13942,9 +13942,16 @@ const sbInsertRhythmScore = async row => {
   }
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
+  const requestId = `rhythm-insert-${row.difficulty}-${Date.now()}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
+    rankingLog(requestId, 'rhythm-insert-start', {
+      difficulty: row.difficulty,
+      clearId: row.clear_id,
+      score: row.score,
+      userName: row.user_name
+    });
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, {
       method: 'POST',
       headers: {
@@ -13955,6 +13962,11 @@ const sbInsertRhythmScore = async row => {
       signal: controller.signal
     });
     const body = await res.text();
+    rankingLog(requestId, 'rhythm-insert-response', {
+      status: res.status,
+      ok: res.ok,
+      error: res.ok ? null : body || res.statusText
+    });
     if (!res.ok) {
       const error = new Error(`rhythm ranking insert ${res.status}: ${body || res.statusText}`);
       error.status = res.status;
@@ -15356,7 +15368,7 @@ const RhythmOptions = ({
     className: "block text-[8px] font-black text-cyan-300"
   }, "DEBUG\u30FB\u6B63\u5F0F\u30E2\u30FC\u30C9\u5171\u901A\u8A2D\u8A08"), /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-black"
-  }, "\u2699\uFE0F \u97F3\u30B2\u30FC\u30AA\u30D7\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("div", {
+  }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-options-scroll": true,
     className: "flex-1 min-h-0 overflow-y-auto px-3 pb-4 pt-3 mh-scroll"
   }, /*#__PURE__*/React.createElement("div", {
@@ -18730,11 +18742,14 @@ function MonsterHeroGame() {
       allExcellent: !!result.allExcellent,
       allMarvelous: !!result.allMarvelous
     };
+    // partyは既存モードと同じ「配列」の形で送る(種族チャレンジ等が常に配列で送っているため、
+    // rankingsテーブル側に配列前提のスキーマ制約があっても衝突しないようにする防御)。
+    // 読み出し側(rhythmRankingEntryFromRow)もこの配列の先頭要素をdetailとして読む
     const row = {
       difficulty: difficultyKey,
       user_name: breederName || '名無しのブリーダー',
       hero: difficulty.id,
-      party: detail,
+      party: [detail],
       score: Number(result.score) || 0,
       level: breederLevel.level,
       icon: breederIcon,
@@ -18758,7 +18773,10 @@ function MonsterHeroGame() {
         await storeSet(RHYTHM_RANKING_PENDING_KEY, list.slice(-RHYTHM_RANKING_PENDING_MAX), false);
       }
     });
-    if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
+    if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);else if (outcome.nationalSaved) console.info('[rhythm-ranking] submitted', {
+      difficulty: difficultyKey,
+      score: row.score
+    });
   }, [breederName, breederLevel, breederIcon]);
   const loadRankings = useCallback(async (targetDiff = null, includeLevels = false, force = false, levelKind = 'bond') => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
@@ -29577,8 +29595,8 @@ function MonsterHeroGame() {
     }), "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
       className: "mh-home-facility rhythm",
       onClick: RHYTHM_MODE_PUBLIC_RELEASE ? openRhythmDemo : () => setGameState('RHYTHM_INFO'),
-      "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンスタービート" : "モンスタービート（準備中）"
-    }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB5 \u30E2\u30F3\u30B9\u30BF\u30FC\u30D3\u30FC\u30C8", !RHYTHM_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"))), /*#__PURE__*/React.createElement("button", {
+      "aria-label": RHYTHM_MODE_PUBLIC_RELEASE ? "モンヒロビート" : "モンヒロビート（準備中）"
+    }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB5 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8", !RHYTHM_MODE_PUBLIC_RELEASE && /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"))), /*#__PURE__*/React.createElement("button", {
       className: `mh-home-facility battle${spotClass('battle')}`,
       onClick: () => {
         setModeSelectTab('mode');
@@ -29631,7 +29649,7 @@ function MonsterHeroGame() {
       className: "block text-[8px] font-black text-cyan-300"
     }, "COMING SOON"), /*#__PURE__*/React.createElement("h2", {
       className: "text-sm font-black tracking-widest text-cyan-200"
-    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u30D3\u30FC\u30C8"))), /*#__PURE__*/React.createElement("div", {
+    }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8"))), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3",
       style: {
         paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
@@ -29640,7 +29658,7 @@ function MonsterHeroGame() {
       className: "my-6 text-center text-6xl"
     }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("h3", {
       className: "text-center text-xl font-black text-cyan-200"
-    }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u30D3\u30FC\u30C8\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
+    }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
       className: "mt-3 text-[11px] leading-relaxed text-slate-300"
     }, "\u66F2\u306B\u5408\u308F\u305B\u3066\u30015\u3064\u306E\u30EC\u30FC\u30F3\u3092\u6D41\u308C\u3066\u304F\u308B\u30CE\u30FC\u30C4\u3092\u6F14\u594F\u3059\u308B\u97F3\u30B2\u30FC\u306E\u30E2\u30FC\u30C9\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
       className: "mt-2 text-[11px] leading-relaxed text-slate-300"
@@ -34662,7 +34680,7 @@ function MonsterHeroGame() {
           setRhythmOptionsBack('RHYTHM_DEMO_HOME');
           setGameState('RHYTHM_OPTIONS');
         }
-      }, "\u2699\uFE0F \u97F3\u30B2\u30FC\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+      }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3"), /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-monsters": true,
         className: "min-h-[48px] rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-xs font-black text-fuchsia-100",
         onClick: () => {

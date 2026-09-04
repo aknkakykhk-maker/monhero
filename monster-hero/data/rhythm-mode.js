@@ -1593,10 +1593,13 @@ const rhythmRankingDedupeByUser=(rows)=>{
   return [...byUser.values()].sort((a,b)=>(Number(b.score)||0)-(Number(a.score)||0));
 };
 // Supabaseの生の行を画面表示用の形へ整える。partyには判定内訳等の詳細をJSONで持たせている
-// (種族チャレンジがpartyへ育て方の詳細を持たせているのと同じ、列を増やさない考え方)
+// (種族チャレンジがpartyへ育て方の詳細を持たせているのと同じ、列を増やさない考え方)。
+// party列は既存モードと同じ「配列」の形で送っており(スキーマの配列前提と衝突しないための
+// 防御)、その先頭要素をdetailとして読む。配列でない・空・要素がオブジェクトでない場合はnull
 const rhythmRankingEntryFromRow=(row)=>{
   const parsed=parseRhythmRankingDifficultyKey(row?.difficulty);
-  const detail=(row?.party&&typeof row.party==='object'&&!Array.isArray(row.party))?row.party:null;
+  const partyDetail=Array.isArray(row?.party)?row.party[0]:null;
+  const detail=(partyDetail&&typeof partyDetail==='object')?partyDetail:null;
   return {
     userName:row?.user_name||'名無しのブリーダー',
     score:Number(row?.score)||0,
