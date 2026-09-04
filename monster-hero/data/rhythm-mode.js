@@ -1088,6 +1088,7 @@ const rhythmInputMatchBounds=(source,now,offset)=>{
 };
 const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
+  const [matchStart,matchEnd]=rhythmInputMatchBounds(source,now,offset);
   return (Array.isArray(inputs)?inputs:[]).map(input=>{
     const key=String(input?.inputKey??'');
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
@@ -1112,9 +1113,8 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const span=inputSpan(note);
       return span?Math.abs(subCoordinate-span.center):0;
     };
-    const [start,end]=rhythmInputMatchBounds(source,now,offset);
     let picked=null,pickedIndex=-1,pickedTimeDistance=Infinity,pickedSpatialDistance=Infinity;
-    for(let index=start;index<end;index++){
+    for(let index=matchStart;index<matchEnd;index++){
       const note=source[index];
       if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP')continue;
       const timeDistance=Math.abs(now-(Number(note.timeMs)+offset));
