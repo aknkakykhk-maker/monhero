@@ -52,7 +52,9 @@ const BEAT=timing.subdivisionsPerBeat;
 // --- 悪さの重みづけ ---
 const COST_IMPOSSIBLE=10000;  // 押せない: 何よりも先に潰す
 const COST_STRAINED=100;      // 忙しい: 次に減らす
-const COST_HARD_JUMP=10;      // 8分未満で3レーン以上跳ぶ: 増やさないための重し
+// 8分未満で3レーン以上跳ぶ配置は、遊ぶ側にはっきり効く難しさなので、
+// 「忙しい」1件(100)を消すためでも増やさない重みにする。
+const COST_HARD_JUMP=120;
 const COST_LANE_SPREAD=1;     // レーンの偏り(いちばん多い-いちばん少ない): 同上
 const COST_MOVE=3;            // 元の場所からの移動(サブレーン1つあたり)。近い場所で直せるならそちらを選ぶ
 const MAX_PASSES=8;           // これ以上は回さない(下がらなくなれば早く止まる)

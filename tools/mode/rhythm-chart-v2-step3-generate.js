@@ -65,7 +65,8 @@ const profileOverride=(()=>{
 // 上書きしてよいのは「作り方の数値」だけ。出力の意味づけ(level等)や未知のキーは受け付けない。
 const OVERRIDABLE_KEYS=Object.freeze(new Set(['candidateSource','minStrength','latticeGrids','perBarByIntensity',
   'maxConsecutiveEighths','maxLaneStep','widths','simultaneous','types',
-  'holdMaxCount','holdMinGapGrids','flickMaxCount','slideMaxCount','chordMaxCount','endFlickMaxCount']));
+  'holdMaxCount','holdMinGapGrids','flickMaxCount','slideMaxCount','chordMaxCount','endFlickMaxCount',
+  'narrowRate','supplementFromTier']));
 const overrideLabel=(()=>{
   if(!profileOverride)return null;
   for(const [difficulty,patch] of Object.entries(profileOverride)){
@@ -86,14 +87,23 @@ const COMMON=Object.freeze({
   monsterSlots:4,
   monsterTargets:[.2,.4,.6,.8],
   monsterClearGrids:4,
-  // 盛り上がる小節で候補が上限に届かないとき、1段細かい候補源から補う音の最低の強さ。
+  // 盛り上がる小節で候補が上限に届かないとき、1段細かい候補源から補う音の下限。
   // 「はっきりした音」だけを足し、弱い音で埋めない。
-  supplementMinStrength:.4,
+  // 以前は絶対値 0.4 で書いていたが、候補源ごとに強さの尺度が違う
+  // (normal は最小0.60 / dense は最小0.30 / step1 は最小0.197)ため、同じ0.4でも
+  // dense では下位1割を落とすだけ、step1 では下位7割を落とす、という別物になっていた。
+  // その結果、サビの終盤(FINAL_CHORUS)のように dense が薄い区間で step1 から補おうとしても
+  // ほぼ全部が弾かれ、ふつうのサビより薄い譜面のままだった。
+  // そこで「その候補源の中で弱いほうから何割を使わないか」という順位で書く。
+  // .1 は、較正済みだった dense の 0.4 と同じ位置(下位9.8%)にあたる。
+  supplementMinStrengthQuantile:.1,
   // 8分未満の間隔では、歩幅いっぱいに跳ばない(最大2レーン)。STEP6の手のモデルと同じ考え方。
   laneStepFastMax:2,
 });
 // 盛り上がりの順位を、セクション種別で±この量だけずらす(段調整の±1段に相当)。
 const SECTION_POSITION_ADJUST=.2;
+// 静かな区間。ここへは候補源からの補充を足さない(静けさを潰さないため)
+const CALM_SECTION_TYPES=new Set(['INTRO','BREAK','OUTRO']);
 // 候補源の細かさの順。盛り上がる小節で足りないときは、この順で1段細かい源から補う。
 const SOURCE_ORDER=Object.freeze(['normal','dense','step1']);
 
@@ -104,24 +114,30 @@ const SOURCE_ORDER=Object.freeze(['normal','dense','step1']);
 // (EASY 1.22 / NORMAL 1.45 / HARD 1.80 ノーツ毎秒)へ合うように実測で置き、
 // EXPERT / MASTER はそこから約1.2倍ずつ(2.2 / 2.7 毎秒)にしている。
 // widths / types / holdMaxCount などの数はV1と同じ。
+// widths / narrowRate は「ノーツは大きいほど簡単・細いほど難しい」に沿って決める。
+// 幅1(半ノーツ)は難しい側なので低い難易度では使わず、高い難易度ほど割合(narrowRate)を増やす。
+// supplementFromTier は「この段以上の小節では、候補が上限に届かないとき1段細かい候補源から補う」。
+// どちらも実機で全難易度を遊んでもらった指摘への対応(2026-09-04):
+//   ・ノーツが少なくて退屈  → perBarByIntensity を上げ、補充を段1(EXPERT以上は段0)まで広げた
+//   ・半ノーツは難しい側なので高難易度用にして → narrowRate を難易度順にし、EASY/NORMALでは0にした
 const PROFILES=Object.freeze({
   EASY:Object.freeze({
     level:1,candidateSource:'normal',minStrength:0,latticeGrids:2,
-    perBarByIntensity:[1,2,2.75],maxConsecutiveEighths:2,maxLaneStep:1,
-    widths:[2],simultaneous:false,types:['TAP','HOLD'],
-    holdMaxCount:10,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:0,
+    perBarByIntensity:[1.2,2.9,4.2],maxConsecutiveEighths:2,maxLaneStep:1,
+    widths:[2,3,4],narrowRate:0,simultaneous:false,types:['TAP','HOLD'],supplementFromTier:1,
+    holdMaxCount:12,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:0,
   }),
   NORMAL:Object.freeze({
-    level:3,candidateSource:'dense',minStrength:.45,latticeGrids:2,
-    perBarByIntensity:[1,2,3.25],maxConsecutiveEighths:4,maxLaneStep:2,
-    widths:[1,2,3],simultaneous:false,types:['TAP','HOLD','FLICK'],
-    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:12,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:3,
+    level:3,candidateSource:'dense',minStrength:.40,latticeGrids:2,
+    perBarByIntensity:[1.4,3.4,5.2],maxConsecutiveEighths:4,maxLaneStep:2,
+    widths:[2,3,4],narrowRate:0,simultaneous:false,types:['TAP','HOLD','FLICK'],supplementFromTier:1,
+    holdMaxCount:16,holdMinGapGrids:10,flickMaxCount:14,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:3,
   }),
   HARD:Object.freeze({
-    level:5,candidateSource:'dense',minStrength:.30,latticeGrids:1,
-    perBarByIntensity:[1.5,2.5,3.5],maxConsecutiveEighths:6,maxLaneStep:3,
-    widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
-    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:16,slideMaxCount:8,chordMaxCount:0,endFlickMaxCount:5,
+    level:5,candidateSource:'dense',minStrength:.24,latticeGrids:1,
+    perBarByIntensity:[1.8,4.3,6.4],maxConsecutiveEighths:6,maxLaneStep:3,
+    widths:[1,2,3,4],narrowRate:.10,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:1,
+    holdMaxCount:18,holdMinGapGrids:10,flickMaxCount:18,slideMaxCount:10,chordMaxCount:0,endFlickMaxCount:5,
   }),
   // EXPERT/MASTERは既存dense候補(しきい値0.30)では供給が頭打ちのため、STEP1の
   // events.onsets(強さ0.197まで持つ)を候補源にする。同時押しは新しい時刻を作らず、
@@ -132,16 +148,16 @@ const PROFILES=Object.freeze({
   // rhythm-chart-v2-step3-check.jsで実測確認しながら較正した値を使う。
   // MASTERのminStrength=0は「事実上のしきい値(0.197)より下を指定し、候補を絞らない」の意図。
   EXPERT:Object.freeze({
-    level:7,candidateSource:'step1',minStrength:.20,latticeGrids:1,
-    perBarByIntensity:[1.5,3.2,4.5],maxConsecutiveEighths:8,maxLaneStep:4,
-    widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
-    holdMaxCount:15,holdMinGapGrids:8,flickMaxCount:18,slideMaxCount:9,chordMaxCount:10,endFlickMaxCount:7,
+    level:7,candidateSource:'step1',minStrength:.14,latticeGrids:1,
+    perBarByIntensity:[2.2,5.4,8],maxConsecutiveEighths:8,maxLaneStep:4,
+    widths:[1,2,3,4],narrowRate:.22,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
+    holdMaxCount:20,holdMinGapGrids:8,flickMaxCount:22,slideMaxCount:11,chordMaxCount:12,endFlickMaxCount:7,
   }),
   MASTER:Object.freeze({
     level:9,candidateSource:'step1',minStrength:0,latticeGrids:1,
-    perBarByIntensity:[2,3.5,5.5],maxConsecutiveEighths:12,maxLaneStep:4,
-    widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
-    holdMaxCount:18,holdMinGapGrids:6,flickMaxCount:22,slideMaxCount:11,chordMaxCount:16,endFlickMaxCount:9,
+    perBarByIntensity:[2.8,6.6,9.6],maxConsecutiveEighths:12,maxLaneStep:4,
+    widths:[1,2,3,4],narrowRate:.32,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
+    holdMaxCount:22,holdMinGapGrids:6,flickMaxCount:26,slideMaxCount:13,chordMaxCount:18,endFlickMaxCount:9,
   }),
 });
 
@@ -152,6 +168,8 @@ const SLIDE_SHAPES=Object.freeze([
   Object.freeze({id:'long',grids:16,steps:[0,.5,1,1.5],widths:[2,2,3,2]}),  // 長めに1.5レーン
   Object.freeze({id:'turn',grids:12,steps:[0,1,.5],widths:[2,3,2]}),        // 折り返し
   Object.freeze({id:'short',grids:8,steps:[0,.5],widths:[2,2]}),            // 短く半レーン
+  Object.freeze({id:'wide',grids:12,steps:[0,.5,1],widths:[4,4,3]}),        // 太くて掴みやすい
+  Object.freeze({id:'taper',grids:16,steps:[0,.5,1,1],widths:[3,3,2,2]}),   // 太いところから細くなる
 ]);
 if(printProfiles){console.log(JSON.stringify(PROFILES));process.exit(0);}
 
@@ -207,6 +225,13 @@ const candidatesFromStep1Onsets=()=>{
   return map;
 };
 const CANDIDATE_MAPS=Object.freeze({normal:loadCandidates('normal'),dense:loadCandidates('dense'),step1:candidatesFromStep1Onsets()});
+// 候補源ごとの補充下限。その源の強さを並べて、下位 supplementMinStrengthQuantile を切る位置。
+const supplementFloorOf=map=>{
+  const strengths=[...map.values()].map(i=>i.strength).sort((a,b)=>a-b);
+  if(!strengths.length)return 0;
+  return strengths[Math.min(strengths.length-1,Math.floor(strengths.length*COMMON.supplementMinStrengthQuantile))];
+};
+const SUPPLEMENT_FLOORS=Object.freeze(Object.fromEntries(Object.entries(CANDIDATE_MAPS).map(([k,v])=>[k,supplementFloorOf(v)])));
 const minGrid=Math.ceil((COMMON.minTimeMs-timing.beatZeroMs)/gridMs);
 const maxGrid=Math.floor((timing.audioDurationMs-COMMON.endPaddingMs-timing.beatZeroMs)/gridMs);
 const minBar=Math.floor(minGrid/BAR),maxBar=Math.floor(maxGrid/BAR);
@@ -293,15 +318,19 @@ const buildChart=(difficulty)=>{
       if(item.strength<minStrength)continue;
       items.push(item);
     }
-    // 盛り上がる小節(段2)で候補が上限に届かないときだけ、1段細かい候補源から補う。
+    // 候補が上限に届かない小節では、1段細かい候補源から補う。
     // この曲はサビの終盤ほど候補源が薄く(normal: サビ4.3/小節 → 終盤2.4/小節)、
-    // 上限をいくら上げても終盤が薄いままだった。補う音は強さ supplementMinStrength 以上に限り、
-    // 静かな小節には足さない(その難易度の候補源の性格を保つ)。
-    if(tier===2&&items.length<cap){
+    // 上限をいくら上げても終盤が薄いままだった。補う音は、その候補源の中で下位でない音に限る。
+    // どの段から補うかは supplementFromTier。当初は段2(盛り上がり)だけに絞っていたが、
+    // 実機で「全体的にノーツが少なくて退屈」と言われたので、段1(EXPERT以上は段0)まで広げた。
+    // 静かな区間(INTRO / BREAK / OUTRO)へは足さない。静けさもその曲の一部で、
+    // ここを埋めると「ずっと同じ濃さ」の譜面になってしまう。
+    const calmSection=CALM_SECTION_TYPES.has(sectionForMs(gridTimeMs(bar*BAR))?.sectionTypeCandidate);
+    if(!calmSection&&tier>=(P.supplementFromTier??2)&&items.length<cap){
       const taken=new Set(items.map(i=>i.grid));
-      const floor=Math.max(minStrength,COMMON.supplementMinStrength);
       for(const source of supplementSources){
         if(items.length>=cap)break;
+        const floor=Math.max(minStrength,SUPPLEMENT_FLOORS[source]);
         const extra=[];
         for(const item of CANDIDATE_MAPS[source].values()){
           if(item.grid<start||item.grid>=end||taken.has(item.grid))continue;
@@ -424,14 +453,19 @@ const buildChart=(difficulty)=>{
   const strengths=spaced.map(i=>i.strength).sort((a,b)=>a-b);
   const pick=r=>strengths[Math.min(strengths.length-1,Math.floor(strengths.length*r))];
   const wideCut=pick(.80),midWideCut=pick(.45);
-  const widthFor=(item,index)=>{
+  // 幅1(半ノーツ)を出す割合。いちばん弱い音から順に、この割合まで細くする
+  const narrowCut=P.narrowRate>0?pick(P.narrowRate):-Infinity;
+  // 「大きいほど簡単・細いほど難しい」に沿って決める。強い音ほど大きく、
+  // 弱い音のうち narrowRate ぶんだけを幅1にする。
+  // 以前は「速い連打なら幅1」にしていたため、NORMALに幅1が44個も出ていた
+  // (実機で「半ノーツは難しい側だから高難易度用の位置づけにして」という指摘があった)。
+  const widthFor=item=>{
     if(P.widths.length===1)return P.widths[0];
-    const prev=spaced[index-1];
-    const fast=prev&&item.grid-prev.grid<=P.latticeGrids;
-    if(fast&&P.widths.includes(1))return 1;
-    if(item.strength>=wideCut)return P.widths[P.widths.length-1];
+    const widest=P.widths[P.widths.length-1];
+    if(item.strength>=wideCut)return widest;
     if(item.strength>=midWideCut&&P.widths.includes(3))return 3;
-    return 2;
+    if(P.widths.includes(1)&&item.strength<=narrowCut)return 1;
+    return P.widths.includes(2)?2:P.widths[0];
   };
 
   // --- レーン決め ---
@@ -464,7 +498,7 @@ const buildChart=(difficulty)=>{
       if(best){dir=Math.sign(best.lane-lane);lane=best.lane;}
     }
     laneUse[lane]++;
-    const width=widthFor(item,index);
+    const width=widthFor(item);
     // 幅のあるノーツは選んだレーンを中心に置く(左端寄せだと右のレーンほど踏めなくなる)。
     const subLane=Math.max(0,Math.min(10-width,lane*2+1-Math.ceil(width/2)));
     notes.push({type:'TAP',grid:item.grid,lane:Math.floor(subLane/2),subLane,subLaneWidth:width,
@@ -510,15 +544,22 @@ const buildChart=(difficulty)=>{
     for(let i=1;i<notes.length-1;i++){
       if(notes[i].type!=='TAP')continue;
       if(notes[i].grid%BEAT!==0)continue;
-      if(notes[i+1].grid-notes[i].grid<6)continue;
-      if(notes[i].grid-notes[i-1].grid<4)continue;
+      // 前後の空きの条件。密度を上げたあとは「6グリッド空き」を満たす拍頭が減り、
+      // EXPERT/MASTERでFLICKが7〜8個しか出なくなっていたので、1拍(4グリッド)まで緩める。
+      // これで無理な配置になっていないかはSTEP6(両手の指のシミュレート)が見張る。
+      if(notes[i+1].grid-notes[i].grid<4)continue;
+      if(notes[i].grid-notes[i-1].grid<3)continue;
       flickCandidates.push({index:i});
     }
     for(const {index} of spread(flickCandidates,P.flickMaxCount,3)){
-      notes[index].type='FLICK';
-      notes[index].subLaneWidth=1;
-      notes[index].subLane=Math.max(0,Math.min(9,notes[index].lane*2));
-      notes[index].lane=Math.floor(notes[index].subLane/2);
+      // FLICKもTAPと同じ幅の決め方に従う。以前は必ず幅1にしていたため、どの難易度でも
+      // FLICKだけ半ノーツになり、種類ごとに大きさが固定されて見えていた
+      // (実機で「ノーツの種類でサイズが固定されている」という指摘があった)。
+      const note=notes[index];
+      note.type='FLICK';
+      const width=Number(note.subLaneWidth)||2;
+      note.subLane=Math.max(0,Math.min(10-width,Number(note.subLane)||0));
+      note.lane=Math.floor(note.subLane/2);
     }
   }
 
@@ -700,9 +741,12 @@ const buildChart=(difficulty)=>{
       perBarCap:'intensity-curve',
       sectionPositionAdjust:SECTION_POSITION_ADJUST,
       supplementSources,
-      supplementMinStrength:COMMON.supplementMinStrength,
+      supplementMinStrengthQuantile:COMMON.supplementMinStrengthQuantile,
+      supplementFloorBySource:SUPPLEMENT_FLOORS,
       laneStepFastMax:COMMON.laneStepFastMax,
       slideShapes:SLIDE_SHAPES.map(s=>s.id),
+      narrowRate:P.narrowRate,
+      supplementFromTier:P.supplementFromTier??2,
       endFlickMaxCount:P.endFlickMaxCount,
       endFlickMinGapGrids:END_FLICK_MIN_GAP_GRIDS,
       maxLaneStep:P.maxLaneStep,

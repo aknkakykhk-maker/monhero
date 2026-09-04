@@ -70,13 +70,13 @@ const VARIANTS=Object.freeze([
   {id:'variety',label:'HOLD/FLICK/SLIDEを増やす', patch:{holdDelta:4,flickDelta:4,slideDelta:3}},
 ]);
 
-// 難易度ごとの狙い(毎秒ノーツ数)。人が耳で確認した既存の正式候補v1の実測
-// (EASY 1.22 / NORMAL 1.45 / HARD 1.80)を中心に±15%、EXPERT / MASTER はそこから
-// 約1.2倍ずつ(2.2 / 2.7)を中心にした帯。ここから離れるほど「狙いの密度」の点が下がる。
+// 難易度ごとの狙い(毎秒ノーツ数)。当初はv1の実測(EASY 1.22 / NORMAL 1.45 / HARD 1.80)へ
+// 合わせていたが、実機で全難易度を遊んで「全体的にノーツが少なくて退屈」という指摘があったため
+// (2026-09-04)、おおよそ1.3〜1.4倍へ引き上げた。ここから離れるほど「狙いの密度」の点が下がる。
 // 判定・スコアには一切関与しない。
 const DENSITY_TARGET=Object.freeze({
-  EASY:{min:1.05,max:1.4},NORMAL:{min:1.25,max:1.65},HARD:{min:1.55,max:2.05},
-  EXPERT:{min:1.9,max:2.5},MASTER:{min:2.3,max:3.1},
+  EASY:{min:1.4,max:1.9},NORMAL:{min:1.7,max:2.3},HARD:{min:2.3,max:3.1},
+  EXPERT:{min:2.8,max:3.7},MASTER:{min:3.3,max:4.4},
 });
 const ALLOWED_TYPES=Object.freeze({
   EASY:['TAP','HOLD'],NORMAL:['TAP','HOLD','FLICK'],
@@ -150,8 +150,17 @@ const scoreChart=(chart,difficulty)=>{
   // 狙いの密度: 帯の中なら満点、外れるほど下がる
   const target=DENSITY_TARGET[difficulty];
   const density=Number(chart.densityPerSecond)||0;
+  // 帯の中なら満点…にすると、下端すれすれの「密度を下げた案」と中心の案が同点になり、
+  // 実際にHARD / EXPERTで薄いほうが僅差で勝っていた(実機で「ノーツが少なくて退屈」と
+  // 言われた原因のひとつ)。帯の中でも中心から離れるほど少しずつ下げる。
+  const targetMid=target?(target.min+target.max)/2:0;
+  const targetHalf=target?(target.max-target.min)/2:1;
   detail.densityTarget=target
-    ?(density>=target.min&&density<=target.max?1:clamp01(1-Math.abs(density<target.min?target.min-density:density-target.max)/target.min))
+    ?(density>=target.min&&density<=target.max
+      ?1-Math.abs(density-targetMid)/targetHalf*.15
+      // 帯の外は「帯の幅」で測る。狙いの密度そのもの(target.min)で割ると、
+      // 少しはみ出しただけでは点がほとんど下がらず、薄い案が居座っていた
+      :clamp01(1-Math.abs(density<target.min?target.min-density:density-target.max)/targetHalf))
     :0;
 
   // 単調さ(少ないほど良い): 同じレーンの連続 / 同じ間隔の連続 / 4つ組パターンの使い回し

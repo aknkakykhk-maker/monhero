@@ -94,10 +94,43 @@ try{
     check(`${difficulty}: 8分未満の間隔で3レーン以上跳ぶ組み合わせが15%以下(以前はEXPERT以上で0↔4の往復ばかりだった)`,
       pairs===0||hardJumps/pairs<=.15,`${hardJumps}/${pairs}`);
     check(`${difficulty}: 小節ごとの上限は盛り上がりの連続値から決めている`,candidate.policy.perBarCap==='intensity-curve');
+
+    // --- 幅の割り当て(2026-09-04の実機指摘への対応) ---
+    // 「ノーツは大きいほど簡単・細いほど難しい」ので、半ノーツ(幅1)は高難易度へ寄せる。
+    const widths={};
+    candidate.notes.forEach(n=>{const w=Number(n.subLaneWidth)||2;widths[w]=(widths[w]||0)+1;});
+    check(`${difficulty}: 幅は難易度で決めた範囲だけを使う`,
+      Object.keys(widths).every(w=>candidate.policy.widths.includes(Number(w))),
+      Object.entries(widths).map(([w,c])=>`幅${w}:${c}`).join(' / '));
+    if(['EASY','NORMAL'].includes(difficulty)){
+      check(`${difficulty}: 半ノーツ(幅1)を出さない(低い難易度では難しい側の幅を使わない)`,!widths[1]);
+      check(`${difficulty}: 幅が1種類だけにならない(大きさのバリエーションがある)`,
+        Object.keys(widths).length>=2,`${Object.keys(widths).length}種類`);
+    }else{
+      check(`${difficulty}: 半ノーツ(幅1)を使う(高い難易度の難しさとして)`,widths[1]>0,`${widths[1]||0}個`);
+    }
+    // 種類ごとに大きさが固定されていないこと(以前はFLICKが必ず幅1だった)
+    for(const type of ['TAP','FLICK']){
+      const ofType=candidate.notes.filter(n=>n.type===type);
+      if(ofType.length<8)continue;
+      check(`${difficulty}: ${type}の大きさが1種類に固定されていない`,
+        new Set(ofType.map(n=>Number(n.subLaneWidth)||2)).size>=2,
+        [...new Set(ofType.map(n=>Number(n.subLaneWidth)||2))].sort().join('/'));
+    }
     check(`${difficulty}: 候補源の補充は静かな区間(INTRO/BREAK/OUTRO)には入らない`,
       candidate.notes.filter(n=>n.supplementedFrom).every(n=>!CALM_SECTIONS.has(sectionTypeForGrid(n.grid))));
-    check(`${difficulty}: 補充した音も強さ0.4以上(弱い音で埋めない)`,
-      candidate.notes.filter(n=>n.supplementedFrom).every(n=>n.sourceStrength>=.4));
+    // 補充で「弱い音を敷き詰めない」ことの確認。以前は絶対値0.4で見ていたが、候補源ごとに
+    // 強さの尺度が違う(normalは最小0.60 / denseは最小0.30 / step1は最小0.197)ため、
+    // 同じ0.4がdenseでは下位1割・step1では下位7割を落とす別物の条件になっていた。
+    // いまはその源の中の順位(下位10%)で切るので、こちらもその源ごとの下限で確かめる。
+    const floors=candidate.policy&&candidate.policy.supplementFloorBySource;
+    check(`${difficulty}: 補充の下限が候補源ごとに記録されている`,
+      !!floors&&['normal','dense','step1'].every(k=>Number.isFinite(floors[k])&&floors[k]>0));
+    if(floors){
+      check(`${difficulty}: 補充した音はその候補源の下位10%より強い(弱い音で埋めない)`,
+        candidate.notes.filter(n=>n.supplementedFrom).every(n=>n.sourceStrength>=floors[n.supplementedFrom]-.005),
+        Object.entries(floors).map(([k,v])=>`${k}${v.toFixed(2)}`).join(' / '));
+    }
     const slides=candidate.notes.filter(n=>n.type==='SLIDE');
     if(slides.length>=4)check(`${difficulty}: SLIDEの形が3種類以上(以前は全部同じ形だった)`,
       new Set(slides.map(n=>n.slideShape)).size>=3,[...new Set(slides.map(n=>n.slideShape))].join('/'));
@@ -194,6 +227,19 @@ if(DIFFICULTIES.every(d=>candidates[d])){
     DIFFICULTIES.every((d,i)=>i===0||candidates[DIFFICULTIES[i-1]].noteCount<candidates[d].noteCount));
   check('難易度が上がるほど密度(ノーツ毎秒)も増える',
     DIFFICULTIES.every((d,i)=>i===0||candidates[DIFFICULTIES[i-1]].densityPerSecond<candidates[d].densityPerSecond));
+  // 半ノーツ(幅1)の割合は難易度が上がるほど増える。「細いほど難しい」ため。
+  const narrowShare=d=>candidates[d].notes.filter(n=>(Number(n.subLaneWidth)||2)===1).length/candidates[d].noteCount;
+  check('半ノーツ(幅1)の割合が難易度順に増える(低い難易度ほど大きいノーツ)',
+    DIFFICULTIES.every((d,i)=>i===0||narrowShare(DIFFICULTIES[i-1])<=narrowShare(d)+1e-9),
+    DIFFICULTIES.map(d=>`${d} ${(narrowShare(d)*100).toFixed(0)}%`).join(' / '));
+  check('難易度ごとの半ノーツの割合が、決めた上限(narrowRate)を超えない',
+    DIFFICULTIES.every(d=>narrowShare(d)<=candidates[d].policy.narrowRate+.05),
+    DIFFICULTIES.map(d=>`${d} ${(narrowShare(d)*100).toFixed(0)}%/${(candidates[d].policy.narrowRate*100).toFixed(0)}%`).join(' / '));
+  // 実機で「全体的にノーツが少なくて退屈」と言われたので、v1(人が確認した譜面)より多いことを見る
+  const V1_DENSITY={EASY:1.22,NORMAL:1.45,HARD:1.80};
+  check('EASY / NORMAL / HARD は既存の正式候補v1より密度が高い(薄い譜面へ戻らない)',
+    Object.entries(V1_DENSITY).every(([d,v])=>candidates[d].densityPerSecond>v),
+    Object.entries(V1_DENSITY).map(([d,v])=>`${d} ${candidates[d].densityPerSecond}>${v}`).join(' / '));
   const endFlickCount=d=>candidates[d].notes.filter(n=>n.endFlick===true).length;
   check('EASYには終点フリックを出さない(FLICK自体を使わない難易度のため)',endFlickCount('EASY')===0);
   check('NORMAL以上には終点フリックが実際に出ている',
