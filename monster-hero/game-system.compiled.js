@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00783cb9f1253bf6
+// source-sha256: 1dc5d6dfb5103cde
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 13:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15648,7 +15648,6 @@ const RhythmTapTest = ({
       style: {
         left: `calc(${note.lane * 20}% + 5px)`,
         width: 'calc(20% - 10px)',
-        willChange: 'transform, opacity',
         pointerEvents: 'none'
       }
     }, note.type === 'HOLD' && /*#__PURE__*/React.createElement("span", {
@@ -16079,7 +16078,9 @@ const RhythmTapTest = ({
         travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
         travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
-      run.notes.forEach(note => {
+      let perfScanned = 0,
+        perfDrawn = 0;
+      const visitNote = note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
         const el = laneRefs.current[note.index];
@@ -16102,7 +16103,10 @@ const RhythmTapTest = ({
           el._rhythmHidden = false;
         }
         const failedFlag = failedTrail ? 'true' : 'false';
-        if (el.dataset.rhythmFailed !== failedFlag) el.dataset.rhythmFailed = failedFlag;
+        if (el._rhythmFailedFlag !== failedFlag) {
+          el.dataset.rhythmFailed = failedFlag;
+          el._rhythmFailedFlag = failedFlag;
+        }
         const progress = 1 - (note.timeMs - visualTime) / travelMs,
           visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
         const nextOpacity = failedTrail ? '.34' : visible ? '1' : '0';
@@ -16110,7 +16114,13 @@ const RhythmTapTest = ({
           el.style.opacity = nextOpacity;
           el._rhythmOpacity = nextOpacity;
         }
+        const nextWillChange = visible ? 'transform, opacity' : '';
+        if (el._rhythmWillChange !== nextWillChange) {
+          el.style.willChange = nextWillChange;
+          el._rhythmWillChange = nextWillChange;
+        }
         if (!visible || !travel) return;
+        perfDrawn++;
         let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
         if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
         yPx = Math.round(yPx);
@@ -16140,7 +16150,28 @@ const RhythmTapTest = ({
           noteHeight: travel.noteHeight,
           bodyHeight: bodyPx
         });
-      });
+      };
+      const notes = run.notes;
+      // 末尾の打ち切りは「ノーツが時刻の昇順に並んでいる」ことが前提。譜面エディタなどから
+      // 並び順が崩れた譜面が来た場合は絞り込まず、従来どおり全ノーツを見る(取りこぼさないため)。
+      if (run.notesAscending === undefined) run.notesAscending = notes.every((n, i) => i === 0 || n.timeMs >= notes[i - 1].timeMs);
+      let scanFrom = run.scanFrom || 0;
+      while (scanFrom < notes.length) {
+        const head = notes[scanFrom],
+          headEl = laneRefs.current[head.index];
+        if (!(head.done && headEl && headEl._rhythmHidden === true)) break;
+        scanFrom++;
+      }
+      run.scanFrom = scanFrom;
+      const scanHorizonMs = visualTime + travelMs * 1.2;
+      for (let i = scanFrom; i < notes.length; i++) {
+        const note = notes[i];
+        if (run.notesReady && run.notesAscending && note.timeMs > scanHorizonMs) break;
+        perfScanned++;
+        visitNote(note);
+      }
+      run.notesReady = true;
+      RHYTHM_PERF.notes(perfScanned, perfDrawn);
       // 無敵・我慢の残り時間と根性ストックは、毎フレームsetStateせずDOMへ直接書く。
       // スコアやコンボと同じ頻度でReactを走らせると、そのぶんノーツの描画が遅れるため。
       const badge = abilityBadgeRef.current;
@@ -34926,7 +34957,7 @@ function MonsterHeroGame() {
     }, "\u8A18\u9332\u3092\u30AF\u30EA\u30A2")), rhythmPerfStats && /*#__PURE__*/React.createElement("dl", {
       "data-rhythm-perf-stats": true,
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
       key: label
     }, /*#__PURE__*/React.createElement("dt", {
       className: "text-slate-400"

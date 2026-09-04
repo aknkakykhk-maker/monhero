@@ -126,6 +126,18 @@ check('入力のrect取得はジェスチャー側と同じ1フレーム1回の�
   gameSrc.includes('const inputAreaRect=area=>RHYTHM_GESTURE_RUNTIME.areaRect(area)||area.getBoundingClientRect();')
   &&data.includes('invalidateAreaRect,areaRect,')
   &&!/const rect=area\.getBoundingClientRect\(\),live=new Set\(\)/.test(gameSrc));
+// 2026-09-04: 「指を触れていない降下中にもカクつく」報告を受けて足した3点。
+check('毎フレームの走査数と実描画数を計測できる(長いフレームの切り分け用)',
+  data.includes('notes(scanned,drawn){if(!on)return;')
+  &&data.includes('notesScannedPerFrame:per(acc.notesScanned)')
+  &&data.includes('worstFrameScanned:acc.worstScanned')
+  &&gameSrc.includes('RHYTHM_PERF.notes(perfScanned,perfDrawn);'));
+check('will-changeは今動いているノーツにだけ付ける(全ノーツへ出しっぱなしにしない)',
+  gameSrc.includes("const nextWillChange=visible?'transform, opacity':'';")
+  &&!gameSrc.includes("willChange:'transform, opacity'"));
+check('失敗表示フラグをdatasetから毎フレーム読み直さない',
+  gameSrc.includes('el._rhythmFailedFlag!==failedFlag')
+  &&!gameSrc.includes('el.dataset.rhythmFailed!==failedFlag'));
 check('サブレーン発光は要素を覚えて、変わったところだけ書き換える',
   gameSrc.includes('glowNodesRef=useRef(null)')
   &&/nodes=glowNodesRef\.current=Array\.from\(area\.querySelectorAll\('\[data-rhythm-sublane-feedback\]'\)\)/.test(gameSrc)

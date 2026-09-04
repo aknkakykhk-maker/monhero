@@ -28,8 +28,10 @@ check('失敗中は薄く表示する',
   game.includes("const nextOpacity=failedTrail?'.34':(visible?'1':'0');"));
 check('見え方が変わったときだけ書き込む',
   game.includes("if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}"));
+// 比較相手はDOM(dataset)ではなく要素へ覚えた値。書き込む条件は同じで、
+// 毎フレームのdataset読み出し(style再計算を誘発する)だけをやめている。
 check('印は値が変わったときだけ書き換えて、監視の自己発火を避ける',
-  game.includes("if(el.dataset.rhythmFailed!==failedFlag)el.dataset.rhythmFailed=failedFlag;"));
+  game.includes("if(el._rhythmFailedFlag!==failedFlag){el.dataset.rhythmFailed=failedFlag;el._rhythmFailedFlag=failedFlag;}"));
 check('失敗したノーツと帯はグレーへ落とす',
   data.includes('[data-rhythm-note][data-rhythm-failed="true"]{filter:grayscale(1) brightness(.72)!important}'));
 
