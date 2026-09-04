@@ -3,9 +3,9 @@
 // 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
 // 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
-  const RHYTHM_RELEASE_DATE='2026-09-01 07:10';
-  const RHYTHM_DATA_BUILD='2026-09-01 07:10';
-  const RHYTHM_COMPILED_BUILD='2026-09-01 07:10';
+  const RHYTHM_RELEASE_DATE='2026-09-04 17:37';
+  const RHYTHM_DATA_BUILD='2026-09-04 17:37';
+  const RHYTHM_COMPILED_BUILD='2026-09-04 17:18';
   const RHYTHM_RELEASE_TITLE='iPhoneでバックアップファイル名が変わる問題を修正';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
