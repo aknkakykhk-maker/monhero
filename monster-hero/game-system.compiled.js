@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b9f143dd78ebc306
+// source-sha256: 56fe566f74d2bd81
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 12:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15621,13 +15621,114 @@ const RhythmTapTest = ({
     judgmentRevisionRef = useRef(0),
     startLockRef = useRef(false),
     generationRef = useRef(0),
-    mountedRef = useRef(false);
+    mountedRef = useRef(false),
+    glowNodesRef = useRef(null);
   const hasHold = chart.notes.some(note => note.type === 'HOLD');
   // モンスターノーツで使うマスモン。枠の順(1〜4)がそのまま登場順(§3.3)。
   // useCallbackの依存を毎回変えないようrefで持つ
   const monsters = Array.isArray(monsterEntries) ? monsterEntries : [];
   const monstersRef = useRef(monsters);
   monstersRef.current = monsters;
+  // ノーツのDOMは譜面が変わらないかぎり同じものでよい。ここをuseMemoで固定しないと、
+  // ノーツを1つ判定して setView するたびに全ノーツ(最大300要素)をReactが作り直し、
+  // ref も付け直すため、タップのたびに一瞬止まって見える(2026-09-04の実機報告)。
+  const noteElements = useMemo(() => chart.notes.map((note, index) => {
+    const monsterSlot = rhythmNoteMonsterSlot(note),
+      monster = monsterSlot ? monsters[monsterSlot - 1] || null : null;
+    return /*#__PURE__*/React.createElement("div", {
+      key: index,
+      ref: el => laneRefs.current[index] = el,
+      "data-rhythm-note": true,
+      "data-note-type": note.type,
+      "data-rhythm-monster-note": monster ? monsterSlot : undefined,
+      className: "absolute top-0 h-5",
+      style: {
+        left: `calc(${note.lane * 20}% + 5px)`,
+        width: 'calc(20% - 10px)',
+        willChange: 'transform, opacity',
+        pointerEvents: 'none'
+      }
+    }, note.type === 'HOLD' && /*#__PURE__*/React.createElement("span", {
+      "data-rhythm-hold-body": true,
+      className: "absolute left-[18%] right-[18%] bottom-1/2 rounded-t-lg bg-gradient-to-t from-emerald-400/90 to-cyan-300/70",
+      style: {
+        height: 'var(--rhythm-hold-body, 0px)'
+      }
+    }), (note.type === 'HOLD' || note.type === 'SLIDE') && /*#__PURE__*/React.createElement("span", {
+      "data-rhythm-end-bar": true,
+      "aria-hidden": "true",
+      className: "absolute z-[2] h-2 rounded-full border border-white/80 bg-gradient-to-r from-fuchsia-400 via-cyan-100 to-fuchsia-400 shadow-[0_0_10px_#67e8f9,0_0_18px_#d946ef]",
+      style: {
+        pointerEvents: 'none',
+        transform: 'scaleY(var(--rhythm-end-depth-scale, 1))',
+        boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 7px #67e8f9' : '0 0 10px #67e8f9,0 0 18px #d946ef'
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      className: `absolute inset-0 rounded-full ${monster ? 'bg-gradient-to-b from-amber-100 to-amber-500 ring-2 ring-amber-200' : note.type === 'HOLD' ? 'bg-gradient-to-b from-emerald-200 to-cyan-500' : 'bg-gradient-to-b from-amber-200 to-fuchsia-500'}`,
+      style: {
+        boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 2px 6px rgba(15,23,42,.45)' : '0 10px 15px -3px rgba(0,0,0,.24)'
+      }
+    }), monster && /*#__PURE__*/React.createElement("span", {
+      "data-rhythm-monster-face": true,
+      "aria-hidden": "true",
+      className: "absolute left-1/2 top-1/2 flex h-[42px] w-[42px] items-center justify-center",
+      style: {
+        transform: 'translate(-50%,-50%) scale(var(--rhythm-note-depth-scale, 1))'
+      }
+    }, monster.imageUrl && /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: monster.baseId,
+      src: monster.imageUrl,
+      alt: "",
+      masuColors: monster.colors,
+      draggable: false,
+      className: "h-full w-full object-contain"
+    })));
+  }), [chart.notes, monsterEntries, settings.lightweightMode, settings.effectAmount]);
+  // レーン枠・サブレーン境界・サブレーン発光も、遊んでいるあいだは中身が変わらない。
+  // 発光の ON/OFF は setPressedLanes が直接DOMへ書くので、Reactが作り直す必要はない。
+  const laneElements = useMemo(() => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "pointer-events-none absolute inset-0 grid grid-cols-5"
+  }, Array.from({
+    length: 5
+  }, (_, lane) => /*#__PURE__*/React.createElement("div", {
+    key: lane,
+    "data-rhythm-lane": lane,
+    "data-pressed": "false",
+    "aria-hidden": "true",
+    className: "relative border-r border-white/20 bg-slate-900/40",
+    style: {
+      transition: settings.lightweightMode ? 'none' : 'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',
+      borderBottom: '3px solid transparent',
+      boxSizing: 'border-box'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500"
+  }, lane + 1)))), /*#__PURE__*/React.createElement("div", {
+    className: "pointer-events-none absolute inset-0",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 5
+  }, (_, index) => /*#__PURE__*/React.createElement("i", {
+    key: index,
+    "data-rhythm-sublane-boundary": ""
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "pointer-events-none absolute inset-0",
+    "aria-hidden": "true"
+  }, Array.from({
+    length: 10
+  }, (_, subLane) => /*#__PURE__*/React.createElement("i", {
+    key: subLane,
+    "data-rhythm-sublane-feedback": subLane,
+    "data-pressed": "false",
+    className: "absolute inset-0 opacity-0",
+    style: {
+      clipPath: rhythmSubLanePolygon(subLane),
+      background: 'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',
+      boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)' : 'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',
+      filter: settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'brightness(1.08)' : 'brightness(1.22)',
+      transition: settings.lightweightMode ? 'none' : 'opacity 45ms linear'
+    }
+  })))), [settings.lightweightMode, settings.effectAmount]);
   const monsterForNote = note => {
     const slot = rhythmNoteMonsterSlot(note);
     return slot ? monstersRef.current[slot - 1] || null : null;
@@ -16274,14 +16375,26 @@ const RhythmTapTest = ({
       }
     });
   };
+  // 入力のたびに getBoundingClientRect() を呼ぶと、そのフレームで書き込み待ちだった
+  // ノーツの位置をすべて確定させられる(強制レイアウト)。指の数ぶん・touchmoveの数ぶん
+  // これが起きるため、タップのたびに一瞬止まって見える原因になる。FLICK/SLIDE側と
+  // 同じ「1フレームに1回だけ測る」キャッシュを共有する(フレームごと・画面サイズ変化ごとに捨てる)。
+  const inputAreaRect = area => RHYTHM_GESTURE_RUNTIME.areaRect(area) || area.getBoundingClientRect();
+  // 指を置くたびに10要素を querySelectorAll で引き直し、押していないサブレーンまで
+  // 毎回書き込んでいた。要素は覚えておき、状態が変わったサブレーンだけ書き換える
+  // (dataset/styleへの書き込みはそのたびにstyle再計算を誘発するため)。
   const setPressedLanes = coordinates => {
     const area = playAreaRef.current;
     if (!area) return;
     const active = new Set(Array.from(coordinates || []).map(value => Math.max(0, Math.min(9, Math.floor(Number(value))))).filter(Number.isFinite)),
       glowOpacity = settings.laneGlow === 'NONE' ? '0' : settings.laneGlow === 'LOW' ? '.35' : '1';
-    area.querySelectorAll('[data-rhythm-sublane-feedback]').forEach((el, index) => {
+    let nodes = glowNodesRef.current;
+    if (!nodes || !nodes.length || !nodes[0].isConnected) nodes = glowNodesRef.current = Array.from(area.querySelectorAll('[data-rhythm-sublane-feedback]'));
+    nodes.forEach((el, index) => {
       const pressed = active.has(index);
-      el.dataset.pressed = pressed ? 'true' : 'false';
+      const want = pressed ? 'true' : 'false';
+      if (el.dataset.pressed === want && (!pressed || el.style.opacity === glowOpacity)) return;
+      el.dataset.pressed = want;
       el.style.opacity = pressed ? glowOpacity : '0';
     });
   };
@@ -16290,7 +16403,7 @@ const RhythmTapTest = ({
     e.preventDefault();
     const area = playAreaRef.current;
     if (!area) return;
-    const rect = area.getBoundingClientRect(),
+    const rect = inputAreaRect(area),
       lane = rhythmLaneAtPoint(e.clientX, e.clientY, rect),
       subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(e.clientX, e.clientY, rect);
     if (lane === null || subLaneCoordinate === null) return;
@@ -16315,7 +16428,7 @@ const RhythmTapTest = ({
     e.preventDefault();
     const area = playAreaRef.current;
     if (!area) return;
-    const subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(e.clientX, e.clientY, area.getBoundingClientRect());
+    const subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(e.clientX, e.clientY, inputAreaRect(area));
     if (subLaneCoordinate === null) return;
     run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
     setPressedLanes(run.activePointerFeedback.values());
@@ -16342,7 +16455,7 @@ const RhythmTapTest = ({
       const current = runRef.current;
       if (!current || current.finished || current.paused) return;
       current.activeTouchInputs = current.activeTouchInputs || new Set();
-      const rect = area.getBoundingClientRect(),
+      const rect = inputAreaRect(area),
         live = new Set(),
         liveSubLanes = [],
         starts = [];
@@ -16376,6 +16489,7 @@ const RhythmTapTest = ({
       });
       if (ended.length) inputEnds(ended);
     };
+    RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();
     area.addEventListener('touchstart', syncTouches, {
       passive: false
     });
@@ -16620,49 +16734,7 @@ const RhythmTapTest = ({
       '--rhythm-note-size-scale': settings.noteSize / 100,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "pointer-events-none absolute inset-0 grid grid-cols-5"
-  }, Array.from({
-    length: 5
-  }, (_, lane) => /*#__PURE__*/React.createElement("div", {
-    key: lane,
-    "data-rhythm-lane": lane,
-    "data-pressed": "false",
-    "aria-hidden": "true",
-    className: "relative border-r border-white/20 bg-slate-900/40",
-    style: {
-      transition: settings.lightweightMode ? 'none' : 'background-color 60ms linear, box-shadow 60ms linear, filter 60ms linear, border-color 60ms linear',
-      borderBottom: '3px solid transparent',
-      boxSizing: 'border-box'
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "absolute bottom-[9%] left-1/2 -translate-x-1/2 text-xs text-slate-500"
-  }, lane + 1)))), /*#__PURE__*/React.createElement("div", {
-    className: "pointer-events-none absolute inset-0",
-    "aria-hidden": "true"
-  }, Array.from({
-    length: 5
-  }, (_, index) => /*#__PURE__*/React.createElement("i", {
-    key: index,
-    "data-rhythm-sublane-boundary": ""
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "pointer-events-none absolute inset-0",
-    "aria-hidden": "true"
-  }, Array.from({
-    length: 10
-  }, (_, subLane) => /*#__PURE__*/React.createElement("i", {
-    key: subLane,
-    "data-rhythm-sublane-feedback": subLane,
-    "data-pressed": "false",
-    className: "absolute inset-0 opacity-0",
-    style: {
-      clipPath: rhythmSubLanePolygon(subLane),
-      background: 'linear-gradient(to bottom,rgba(34,211,238,.12) 0%,rgba(34,211,238,.2) 48%,rgba(103,232,249,.5) 76%,rgba(236,254,255,.94) 88%,rgba(103,232,249,.58) 94%,rgba(34,211,238,.28) 100%)',
-      boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'inset 0 -18px 18px rgba(207,250,254,.38),0 0 8px rgba(103,232,249,.38)' : 'inset 0 -52px 42px rgba(207,250,254,.72),inset 0 -10px 16px rgba(255,255,255,.82),0 0 20px rgba(103,232,249,.72)',
-      filter: settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? 'brightness(1.08)' : 'brightness(1.22)',
-      transition: settings.lightweightMode ? 'none' : 'opacity 45ms linear'
-    }
-  }))), /*#__PURE__*/React.createElement("div", {
+  }, laneElements, /*#__PURE__*/React.createElement("div", {
     ref: judgmentLineRef,
     "data-rhythm-judgment-line": true,
     className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300",
@@ -16698,58 +16770,7 @@ const RhythmTapTest = ({
       bottom: 'calc(12% + 78px)',
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.8)'
     }
-  }, view.ability.ability, "\uFF01"), chart.notes.map((note, index) => {
-    const monsterSlot = rhythmNoteMonsterSlot(note),
-      monster = monsterSlot ? monsters[monsterSlot - 1] || null : null;
-    return /*#__PURE__*/React.createElement("div", {
-      key: index,
-      ref: el => laneRefs.current[index] = el,
-      "data-rhythm-note": true,
-      "data-note-type": note.type,
-      "data-rhythm-monster-note": monster ? monsterSlot : undefined,
-      className: "absolute top-0 h-5",
-      style: {
-        left: `calc(${note.lane * 20}% + 5px)`,
-        width: 'calc(20% - 10px)',
-        willChange: 'transform, opacity',
-        pointerEvents: 'none'
-      }
-    }, note.type === 'HOLD' && /*#__PURE__*/React.createElement("span", {
-      "data-rhythm-hold-body": true,
-      className: "absolute left-[18%] right-[18%] bottom-1/2 rounded-t-lg bg-gradient-to-t from-emerald-400/90 to-cyan-300/70",
-      style: {
-        height: 'var(--rhythm-hold-body, 0px)'
-      }
-    }), (note.type === 'HOLD' || note.type === 'SLIDE') && /*#__PURE__*/React.createElement("span", {
-      "data-rhythm-end-bar": true,
-      "aria-hidden": "true",
-      className: "absolute z-[2] h-2 rounded-full border border-white/80 bg-gradient-to-r from-fuchsia-400 via-cyan-100 to-fuchsia-400 shadow-[0_0_10px_#67e8f9,0_0_18px_#d946ef]",
-      style: {
-        pointerEvents: 'none',
-        transform: 'scaleY(var(--rhythm-end-depth-scale, 1))',
-        boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 7px #67e8f9' : '0 0 10px #67e8f9,0 0 18px #d946ef'
-      }
-    }), /*#__PURE__*/React.createElement("span", {
-      className: `absolute inset-0 rounded-full ${monster ? 'bg-gradient-to-b from-amber-100 to-amber-500 ring-2 ring-amber-200' : note.type === 'HOLD' ? 'bg-gradient-to-b from-emerald-200 to-cyan-500' : 'bg-gradient-to-b from-amber-200 to-fuchsia-500'}`,
-      style: {
-        boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 2px 6px rgba(15,23,42,.45)' : '0 10px 15px -3px rgba(0,0,0,.24)'
-      }
-    }), monster && /*#__PURE__*/React.createElement("span", {
-      "data-rhythm-monster-face": true,
-      "aria-hidden": "true",
-      className: "absolute left-1/2 top-1/2 flex h-[42px] w-[42px] items-center justify-center",
-      style: {
-        transform: 'translate(-50%,-50%) scale(var(--rhythm-note-depth-scale, 1))'
-      }
-    }, monster.imageUrl && /*#__PURE__*/React.createElement(DyedMonsterImage, {
-      baseId: monster.baseId,
-      src: monster.imageUrl,
-      alt: "",
-      masuColors: monster.colors,
-      draggable: false,
-      className: "h-full w-full object-contain"
-    })));
-  }), view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
+  }, view.ability.ability, "\uFF01"), noteElements, view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-pause-menu": true,
     className: "absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
   }, /*#__PURE__*/React.createElement("h3", {

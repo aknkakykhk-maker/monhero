@@ -673,11 +673,17 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
   // フレームが変わるとき・画面サイズが変わるときは必ず捨てる(invalidateAreaRect)。
   let cachedRect=null;
   const invalidateAreaRect=()=>{cachedRect=null;};
-  const areaRect=()=>{
+  // knownArea を渡せると querySelector を省ける(呼び出し側が既に要素を持っている場合)。
+  // ゲーム本体のTAP入力もここを通すので、1フレームのあいだに何本指で触っても
+  // getBoundingClientRect()(=強制レイアウト)は最大1回で済む。
+  const areaRect=(knownArea)=>{
     if(typeof document==='undefined')return null;
     if(cachedRect)return cachedRect;
-    RHYTHM_PERF.domQuery();
-    const area=document.querySelector('[data-rhythm-play-area]');
+    let area=knownArea||null;
+    if(!area){
+      RHYTHM_PERF.domQuery();
+      area=document.querySelector('[data-rhythm-play-area]');
+    }
     if(!area)return null;
     RHYTHM_PERF.layoutRead();
     const rect=area.getBoundingClientRect();
@@ -863,7 +869,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     document.addEventListener('click',event=>{const button=event.target?.closest?.('[data-rhythm-pause-menu] button');if(button&&/リスタート|中断/.test(button.textContent||''))clear();},true);
   }
 
-  return {bind,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,_sessions:sessions};
+  return {bind,record,release,clear,slideVisualLaneForIndex,invalidateAreaRect,areaRect,_sessions:sessions};
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。

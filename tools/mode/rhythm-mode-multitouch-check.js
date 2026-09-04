@@ -14,7 +14,9 @@ check('PR #871の疑似Pointer bridgeを残さない',!data.includes('installRhy
 check('同時入力はbatch matcherを使う',data.includes('const rhythmMatchInputBatch=')&&game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)')&&game.includes('inputStarts(starts)'));
 check('iPhone向けnative Touch Eventsをpassive:falseでplay areaへ直接登録',game.includes("addEventListener('touchstart',syncTouches,{passive:false})")&&game.includes("addEventListener('touchmove',syncTouches,{passive:false})")&&game.includes("addEventListener('touchend',syncTouches,{passive:false})")&&game.includes("addEventListener('touchcancel',syncTouches,{passive:false})"));
 check('touches全体を同期し各touch.identifierを独立管理',game.includes('Array.from(e.touches||[])')&&game.includes("rhythmInputKey('touch',touch.identifier)")&&game.includes('activeTouchInputs'));
-check('同時に始まった複数指を1batchで判定',game.includes('const rect=area.getBoundingClientRect(),live=new Set(),')&&game.includes('starts=[]')&&game.includes('if(starts.length)inputStarts(starts)'));
+// rectは1回だけ測って全部の指で共有する（指ごとに測ると強制レイアウトが指の数だけ起きる）。
+// 実際の測定は inputAreaRect が持つ「1フレームに1回」のキャッシュへ寄せてある。
+check('同時に始まった複数指を1batchで判定',game.includes('const rect=inputAreaRect(area),live=new Set(),')&&game.includes('starts=[]')&&game.includes('if(starts.length)inputStarts(starts)'));
 check('同時に離れた複数指も1batchで終了',game.includes('const ended=[]')&&game.includes('if(ended.length)inputEnds(ended)'));
 check('Touch由来PointerEventの二重処理を防ぐ',game.includes("if(e.pointerType==='touch')return")&&(game.match(/if\(e\.pointerType==='touch'\)return/g)||[]).length>=2);
 check('各指のclientX/clientYから個別レーンを判定',game.includes('rhythmLaneAtPoint(touch.clientX,touch.clientY,rect)'));
