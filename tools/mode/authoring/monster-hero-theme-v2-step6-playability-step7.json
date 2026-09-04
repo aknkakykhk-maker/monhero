@@ -1,0 +1,61 @@
+{
+ "schemaVersion": 1,
+ "analysisType": "rhythm-chart-v2-step6-playability",
+ "trackId": "monster_hero_theme",
+ "source": "step7",
+ "sourceLabel": "V2 STEP7 自動修正後",
+ "reviewRequired": true,
+ "runtimeConnected": false,
+ "handModel": {
+  "hands": 2,
+  "laneSpeedComfort": 10,
+  "laneSpeedLimit": 18,
+  "restrikeComfortMs": 90,
+  "restrikeLimitMs": 55,
+  "chordMinLaneGap": 1,
+  "releaseMarginMs": 30,
+  "endFlickReleaseMs": 80
+ },
+ "difficulties": {
+  "EASY": {
+   "noteCount": 175,
+   "impossibleCount": 0,
+   "strainedCount": 0,
+   "strainedRatio": 0,
+   "byKind": {},
+   "issues": []
+  },
+  "NORMAL": {
+   "noteCount": 197,
+   "impossibleCount": 0,
+   "strainedCount": 0,
+   "strainedRatio": 0,
+   "byKind": {},
+   "issues": []
+  },
+  "HARD": {
+   "noteCount": 261,
+   "impossibleCount": 0,
+   "strainedCount": 0,
+   "strainedRatio": 0,
+   "byKind": {},
+   "issues": []
+  },
+  "EXPERT": {
+   "noteCount": 322,
+   "impossibleCount": 0,
+   "strainedCount": 0,
+   "strainedRatio": 0,
+   "byKind": {},
+   "issues": []
+  },
+  "MASTER": {
+   "noteCount": 394,
+   "impossibleCount": 0,
+   "strainedCount": 0,
+   "strainedRatio": 0,
+   "byKind": {},
+   "issues": []
+  }
+ }
+}
