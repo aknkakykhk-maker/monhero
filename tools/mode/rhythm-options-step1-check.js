@@ -14,12 +14,14 @@ ok('STEP1項目と現行相当の既定値',game.includes('bgmVolume:100, noteSp
 ok('速度・サイズ・タイミングを指定範囲と刻みへnormalize',game.includes("rhythmFiniteStep(source.noteSpeed,RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP")&&game.includes('const RHYTHM_NOTE_SPEED_MIN=1;')&&game.includes('const RHYTHM_NOTE_SPEED_MAX=12;')&&game.includes('const RHYTHM_NOTE_SPEED_STEP=.1;')&&game.includes('rhythmFiniteStep(source.noteSize,80,120,5')&&game.includes('rhythmFiniteStep(source.judgmentTimingOffsetMs,-100,100,5'));
 ok('デバッグ画面だけに44px以上の入口',game.includes('data-rhythm-options-open')&&game.includes("setGameState('RHYTHM_OPTIONS')")&&game.includes('min-h-[44px]'));
 ok('下部固定操作バーと独立スクロール領域',game.includes('data-rhythm-options-scroll')&&game.includes('data-rhythm-options-actions')&&game.includes("env(safe-area-inset-bottom)")&&game.includes('data-rhythm-options-save'));
-ok('数値5項目はスライダーではなく押しやすい−／＋操作',
+// 当初は「−／＋だけ」にしていたが、実機で「プラスマイナスでしか変えられないからめんどう」という
+// 指摘があり(2026-09-04)、スライダーを足した。押しやすい−／＋は微調整用に残す。
+ok('数値5項目はスライダーと押しやすい−／＋の両方で変えられる',
   game.includes('const stepper=(key,min,max,step')
   &&['bgmVolume','noteSeVolume','noteSpeed','noteSize','judgmentTimingOffsetMs'].every(key=>game.includes(`stepper('${key}'`))
   &&game.includes('data-rhythm-option-stepper={key}')
   &&game.includes('min-h-[48px] min-w-[48px]')
-  &&!game.match(/const RhythmOptions=[\s\S]*?const RhythmTapTest/)?.[0].includes('type="range"'));
+  &&game.includes('<input type="range" data-rhythm-option-slider={key}'));
 ok('−／＋は現行刻みを使い上下限でclamp・無効化',
   game.includes('rhythmStepOptionValue(value,min,max,step,direction)')
   &&game.includes('disabled={value<=min}')
@@ -35,7 +37,14 @@ const stepCases=[
 ];
 stepCases.forEach(([name,value,min,max,step,down,up])=>ok(`${name}の−／＋刻み`,stepperSandbox.stepValue(value,min,max,step,-1)===down&&stepperSandbox.stepValue(value,min,max,step,1)===up));
 ok('全項目の最小・最大clamp',stepCases.every(([,value,min,max,step])=>stepperSandbox.stepValue(min,min,max,step,-1)===min&&stepperSandbox.stepValue(max,min,max,step,1)===max));
-ok('簡易ゲージと現在値を常時表示',game.includes('role="meter"')&&game.includes('aria-valuenow={value}')&&game.includes('<output aria-live="polite"'));
+// 簡易ゲージはスライダーの溝そのものになった(いまの値までを色で塗り分ける)。
+// input[type=range] は現在値・最小・最大を暗黙で読み上げるので、role="meter" は要らない。
+ok('現在量が溝の色で見えて、現在値も常時表示',
+  game.includes('<input type="range" data-rhythm-option-slider={key}')
+  &&game.includes('min={min} max={max} step={step} value={value}')
+  &&game.includes('linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%')
+  &&game.includes('aria-label={`${key}を変える`}')
+  &&game.includes('<output aria-live="polite"'));
 ok('変更時に保存ボタンを明示',game.includes("data-dirty={dirty?'true':'false'}")&&game.includes("dirty?'変更を保存':'保存'"));
 ok('試聴はボタンの直接イベントから既存音声経路を使う',game.includes('onClick={previewBgm}')&&game.includes("Audio_.startRhythmTrack('atsu_cup_theme',draft.bgmVolume)")&&game.includes('onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)}')&&data.includes('preview:settings=>play(settings)'));
 ok('音ゲーBGM音量だけを専用gainへ反映(メインのbgmGainは経由しない)',

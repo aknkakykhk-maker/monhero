@@ -76,7 +76,8 @@ check('保存キーを増やしていない',!game.includes('mh_rhythm_celebrate
 // --- 合成音(SE)側 ---
 const seBlock=(()=>{
   const at=rhythm.indexOf('const playFullCombo=()=>{');
-  const end=rhythm.indexOf('return {warm,play,preview',at);
+  // 公開するAPIが増えても切り出しがずれないよう、行頭のreturnだけを目印にする
+  const end=rhythm.indexOf('\n  return {warm,',at);
   return at>=0&&end>at?rhythm.slice(at,end):'';
 })();
 check('専用の合成音(playFullCombo)を持つ',seBlock.length>0);

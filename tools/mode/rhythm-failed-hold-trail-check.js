@@ -18,8 +18,14 @@ check('失敗して流し続ける条件はHOLD/SLIDEのMISSかつ譜面上の�
   game.includes("const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note))&&songTimeMs<rhythmReleaseTargetMs(note);"));
 // 消す・薄くするという扱いは変えていないが、毎フレーム同じ値を書き直さないようにしたので
 // (遊んでいるうちに重くなる原因だった)、書き方が「変わったときだけ書く」形になっている。
-check('TAP・FLICKや終端を過ぎたノーツは従来どおりその場で消す',
-  game.includes("if(note.done&&!failedTrail){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}"));
+// 取れたHOLD / SLIDE / FLICKは、消える前に一瞬だけ判定ラインで光る(2026-09-04に追加)。
+// 「失敗したHOLD / SLIDEを終端まで薄く流す」扱いは変えておらず、光っていないノーツは従来どおり消える。
+check('TAP・終端を過ぎたノーツは従来どおりその場で消す(取れたときの短い光のあいだだけ残る)',
+  game.includes("if(note.done&&!failedTrail&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}")
+  &&game.includes('const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;'));
+check('光るのは取れたときだけで、失敗したノーツは薄いグレーのまま(扱いを混ぜない)',
+  game.includes("const clearedGesture=judgment!=='MISS'&&")
+  &&game.includes("const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&"));
 check('消したノーツへ毎フレーム同じ指示を書き直さない',
   game.includes('if(el._rhythmHidden===true){el.style.display=\'\';el._rhythmHidden=false;}'));
 check('失敗中は判定範囲外になっても表示を続ける',

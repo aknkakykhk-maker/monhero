@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a8d006246b9e3a3c
+// source-sha256: e1e6df0ab320efeb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 23:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 23:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15305,6 +15305,8 @@ function PressRepeatButton({
   }, props), children);
 }
 const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
+// 最後まで取れたHOLD / SLIDE / FLICKを、消える前に光らせておく時間(CSSのアニメーションと同じ長さ)
+const RHYTHM_CLEAR_FLASH_MS = 260;
 const RHYTHM_JUDGMENT_DISPLAY_MS = 450;
 // 能力の発動表示(「ミーア　元気！」)。判定表示より少し長く出して、何が起きたか読めるようにする
 const RHYTHM_MONSTER_ABILITY_DISPLAY_MS = 1400;
@@ -15331,6 +15333,14 @@ const rhythmTravelMsForSpeed = value => {
   return Math.round(from + (to - from) * (offset - index));
 };
 const rhythmStepOptionValue = (value, min, max, step, direction) => Math.max(min, Math.min(max, Number((Number(value) + direction * step).toFixed(6))));
+// スライダーでつまんだ値を、その項目の目盛り(step)に合わせて丸める。
+// 範囲外・数値でない値は必ず範囲の中へ収める(壊れた値を設定へ入れない)。
+const rhythmSnapOptionValue = (value, min, max, step) => {
+  const raw = Number(value);
+  if (!Number.isFinite(raw)) return min;
+  const snapped = min + Math.round((raw - min) / step) * step;
+  return Math.max(min, Math.min(max, Number(snapped.toFixed(6))));
+};
 const RhythmOptions = ({
   value,
   onSave,
@@ -15366,19 +15376,20 @@ const RhythmOptions = ({
       disabled: value <= min,
       onClick: () => change(-1),
       className: "min-h-[48px] min-w-[48px] rounded-xl border border-white/15 bg-slate-800 text-xl font-black text-slate-100 active:scale-95 disabled:opacity-35"
-    }, "\u2212"), /*#__PURE__*/React.createElement("div", {
-      role: "meter",
-      "aria-label": `${key}の現在量`,
-      "aria-valuemin": min,
-      "aria-valuemax": max,
-      "aria-valuenow": value,
-      className: "h-3 min-w-0 overflow-hidden rounded-full border border-white/15 bg-slate-950"
-    }, /*#__PURE__*/React.createElement("i", {
-      className: "block h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400",
+    }, "\u2212"), /*#__PURE__*/React.createElement("input", {
+      type: "range",
+      "data-rhythm-option-slider": key,
+      "aria-label": `${key}を変える`,
+      min: min,
+      max: max,
+      step: step,
+      value: value,
+      onChange: e => set(key, rhythmSnapOptionValue(e.target.value, min, max, step)),
+      className: "mh-rhythm-range h-3 min-w-0 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950",
       style: {
-        width: `${percent}%`
+        background: `linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`
       }
-    })), /*#__PURE__*/React.createElement("button", {
+    }), /*#__PURE__*/React.createElement("button", {
       type: "button",
       "aria-label": `${key}を上げる`,
       disabled: value >= max,
@@ -15979,6 +15990,15 @@ const RhythmTapTest = ({
     }
     note.done = true;
     note._rhythmFinalJudgment = judgment;
+    // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
+    // TAPは指を置いた時点で音が鳴っているので対象にしない。
+    // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
+    const clearedGesture = judgment !== 'MISS' && (note.type === 'HOLD' || rhythmNoteIsSlide(note) || note._rhythmOriginalType === 'FLICK');
+    if (clearedGesture) {
+      RHYTHM_NOTE_SE_RUNTIME.playClear();
+      // 光は演出量の設定に従う(MINIMAL・軽量モードでは出さない)。音は設定に関わらず鳴らす
+      if (!settings.lightweightMode && settings.effectAmount !== 'MINIMAL') note._rhythmClearAt = run.audio?.songTimeMs?.() ?? 0;
+    }
     if (settings.vibrationEnabled && judgment !== 'MISS') {
       try {
         navigator.vibrate?.(8);
@@ -16166,7 +16186,18 @@ const RhythmTapTest = ({
         // 終わったノーツは毎フレーム display を書き直さない。曲が進むほど終わったノーツが増え、
         // そのぶん無駄な書き込みが積み上がって「遊んでいるうちにカクつく」原因になっていた。
         // 一度隠したら覚えておき、値が変わるときだけ書く(見た目・判定は変わらない)。
-        if (note.done && !failedTrail) {
+        // 取れた直後の短いあいだだけ、判定ラインに置いたまま光らせてから消す
+        const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
+        if (clearFlash) {
+          if (el._rhythmClearFlag !== true) {
+            el.dataset.rhythmClear = '1';
+            el._rhythmClearFlag = true;
+          }
+        } else if (el._rhythmClearFlag === true) {
+          delete el.dataset.rhythmClear;
+          el._rhythmClearFlag = false;
+        }
+        if (note.done && !failedTrail && !clearFlash) {
           if (el._rhythmHidden !== true) {
             el.style.display = 'none';
             el._rhythmHidden = true;
@@ -16198,6 +16229,7 @@ const RhythmTapTest = ({
         perfDrawn++;
         let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
         if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
+        if (clearFlash) yPx = travel.judgmentY;
         yPx = Math.round(yPx);
         el.style.transform = `translate3d(0,${yPx}px,0)`;
         const releaseTargetMs = rhythmReleaseTargetMs(note),
@@ -16359,6 +16391,8 @@ const RhythmTapTest = ({
         el._rhythmOpacity = undefined;
         el._rhythmWillChange = undefined;
         el._rhythmFailedFlag = undefined;
+        el._rhythmClearFlag = undefined;
+        delete el.dataset.rhythmClear;
         el._rhythmHoldBody = undefined;
         el._rhythmHoldFilter = undefined;
         el._rhythmDepthScale = undefined;
