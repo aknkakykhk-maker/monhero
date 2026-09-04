@@ -163,15 +163,19 @@ const runtimeRow=note=>{
 
 let runtimeSource=fs.readFileSync(RUNTIME,'utf8');
 // V1・V2のマーカーの中身を覚えておき、書き込む前に「巻き添えで変えていないか」を確かめる
+// いま書き込むマーカー以外の**すべての譜面マーカー**を控える。
+// 名前を並べて持つ方式だと、曲を足したときにここへ書き足し忘れて、
+// 「ほかの曲の譜面を巻き添えで壊しても気づかない」状態になる。
+const OWN_MARKERS=new Set(DIFFICULTIES.map(difficulty=>`${markerPrefix}-${difficulty.toLowerCase()}`));
 const snapshot=source=>{
   const out=[];
-  for(const prefix of ['monster-hero','monster-hero-v2','monster-hero-v3'].filter(name=>name!==markerPrefix)){
-    for(const difficulty of DIFFICULTIES){
-      const begin=`// <${prefix}-${difficulty.toLowerCase()}-notes>`;
-      const end=`// </${prefix}-${difficulty.toLowerCase()}-notes>`;
-      const b=source.indexOf(begin),e=source.indexOf(end);
-      out.push(b<0||e<b?null:source.slice(b,e));
-    }
+  for(const match of source.matchAll(/\/\/ <([a-z0-9-]+)-notes>/g)){
+    const name=match[1];
+    if(OWN_MARKERS.has(name))continue;
+    const begin=`// <${name}-notes>`;
+    const end=`// </${name}-notes>`;
+    const b=source.indexOf(begin),e=source.indexOf(end);
+    out.push(`${name}:${b<0||e<b?'':source.slice(b,e)}`);
   }
   return out;
 };
@@ -203,6 +207,6 @@ if(before.some((text,i)=>text!==after[i])){
   process.exit(1);
 }
 fs.writeFileSync(RUNTIME,runtimeSource);
-console.log(`  ランタイム: ${path.relative(ROOT,RUNTIME)}（<monster-hero-v3-*-notes> の内側だけ）`);
-console.log('\n遊べる形にしました。デバッグ画面の曲選択に「Monster Hero 候補v3」が出ます。');
+console.log(`  ランタイム: ${path.relative(ROOT,RUNTIME)}（<${markerPrefix}-*-notes> の内側だけ）`);
+console.log(`\n遊べる形にしました。デバッグ画面の曲選択に ${trackId} の曲が出ます。`);
 console.log('※ この後は node tools/build.js を実行してください（配信用JSへ反映するため）。');

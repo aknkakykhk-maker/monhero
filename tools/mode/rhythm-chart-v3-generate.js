@@ -186,7 +186,7 @@ const priorityByGrid=new Map(allOnsets.map(onset=>[onset.grid,priorityOf(onset)]
 const buildChart=(difficulty,options={})=>{
   const densityAdjust=Number(options.densityAdjust)||1;
   const P=PROFILES[difficulty];
-  const notes=[];
+  let notes=[];
   // 分あたりの割合を、この曲の長さぶんの個数へ直す
   const playableMinutes=Math.max(.25,(gridTimeMs(maxGrid)-gridTimeMs(minGrid))/60000);
   const countOf=perMinute=>perMinute>0?Math.max(1,Math.round(perMinute*playableMinutes)):0;
@@ -680,6 +680,43 @@ const buildChart=(difficulty,options={})=>{
       if(bestSub===null)continue;
       note.subLane=bestSub;
       note.lane=Math.floor(bestSub/2);
+    }
+  }
+
+  // --- 13. 指の本数を超える瞬間を作らない ---
+  // 指は2本しかない。ある瞬間に「押さえっぱなしのHOLD/SLIDE」と「そこで新しく押すノーツ」を
+  // 足して2本を超えると、どうやっても押せない。レーンを動かしても直らないので
+  // （12番の直し方では拾えない）、ここであふれたぶんを取り除く。
+  // 実測: 速い曲のMASTERで、HOLDを押さえたまま同時押しが来る形が5件出た。
+  {
+    const sustains=notes.filter(note=>note.type==='HOLD'||note.type==='SLIDE').map(note=>({
+      note,
+      startMs:note.grid*gridMs,
+      endMs:(note.grid+(Number(note.durationGrids)||0))*gridMs
+        +(note.endFlick===true?HAND_MODEL.endFlickReleaseMs:0)+HAND_MODEL.releaseMarginMs,
+    }));
+    const byGrid=new Map();
+    for(const note of notes){
+      if(!byGrid.has(note.grid))byGrid.set(note.grid,[]);
+      byGrid.get(note.grid).push(note);
+    }
+    const dropped=new Set();
+    for(const [grid,group] of [...byGrid.entries()].sort((a,b)=>a[0]-b[0])){
+      const timeMs=grid*gridMs;
+      // その瞬間より前に始まって、まだ離していない伸びるノーツ
+      const held=sustains.filter(span=>span.startMs<timeMs&&timeMs<=span.endMs&&!dropped.has(span.note)).length;
+      const room=HAND_MODEL.hands-held;
+      const alive=group.filter(note=>!dropped.has(note));
+      if(alive.length<=room)continue;
+      // 残すのは「同時押しの相方でないもの」を優先し、そこから幅の広い（＝主役の）ノーツを残す
+      const ordered=alive.slice().sort((a,b)=>
+        (a.chord===true?1:0)-(b.chord===true?1:0)
+        ||(Number(b.subLaneWidth)||0)-(Number(a.subLaneWidth)||0));
+      for(const note of ordered.slice(Math.max(0,room)))dropped.add(note);
+    }
+    if(dropped.size){
+      log.push(`指が足りない瞬間のノーツを${dropped.size}件外した（押さえっぱなし＋同時押しで3本以上になる形）`);
+      notes=notes.filter(note=>!dropped.has(note));
     }
   }
 

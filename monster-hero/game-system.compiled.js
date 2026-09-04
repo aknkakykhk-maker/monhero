@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7d1ac87411b205c7
+// source-sha256: 8d12dbf657070c27
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 05:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 05:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3593,6 +3593,38 @@ const BGM_TRACKS = [{
   name: 'あつ杯テーマ',
   creator: 'オリジナル',
   src: 'audio/bgm-atsu-cup-theme.mp3'
+},
+// もらった音源は5分・約7MBあったので、ほかのBGMと同じ96kbps・44.1kHzへ作り直して約半分にした
+// (tools/mode/rhythm-audio-reencode.js)。「ショート」はモンビー用に頭から2分半ほどを切り出した版で、
+// BGMアレンジからも選べる。どちらも同じ曲なので、好きなほうを好きな場面へ置ける。
+{
+  id: 'six_eternel',
+  name: 'SIX ÉTERNEL ―愛はひとつじゃない―',
+  creator: 'オリジナル',
+  src: 'audio/bgm-six-eternel.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'six_eternel_remix',
+  name: 'SIX ÉTERNEL ドパガキリミックス',
+  creator: 'オリジナル',
+  src: 'audio/bgm-six-eternel-remix.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'six_eternel_beat',
+  name: 'SIX ÉTERNEL（ショート）',
+  creator: 'オリジナル',
+  src: 'audio/bgm-six-eternel-beat.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'six_eternel_remix_beat',
+  name: 'SIX ÉTERNEL ドパガキリミックス（ショート）',
+  creator: 'オリジナル',
+  src: 'audio/bgm-six-eternel-remix-beat.mp3',
+  gain: 1,
+  loop: true
 }];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));

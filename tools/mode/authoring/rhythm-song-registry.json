@@ -24,6 +24,30 @@
     "subdivisionsPerBeat": 4,
     "source": "registered"
    }
+  },
+  "six_eternel_beat": {
+   "audio": "monster-hero/audio/bgm-six-eternel-beat.mp3",
+   "audioSha256": "151f94091a341f19dffb41049bf55d4f2296503e6bc6c73f5eb0032015e36e86",
+   "durationMs": 157968,
+   "analyzedTiming": {
+    "bpm": 206.993,
+    "beatZeroMs": 562.4,
+    "beatsPerBar": 3,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "six_eternel_remix_beat": {
+   "audio": "monster-hero/audio/bgm-six-eternel-remix-beat.mp3",
+   "audioSha256": "b1a024d5b16f6e50c93dfc56f1eebd11e6743bd228df5c0c5bd0b97ab0b4d5a5",
+   "durationMs": 150408,
+   "analyzedTiming": {
+    "bpm": 162.641,
+    "beatZeroMs": 1452.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }
