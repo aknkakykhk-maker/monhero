@@ -2585,7 +2585,19 @@ const installRhythmGeometryStyles=()=>{
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */
     [data-rhythm-side-monster]{position:absolute;pointer-events:none;z-index:1;
       opacity:var(--rhythm-side-opacity,.8);will-change:transform}
-    [data-rhythm-side-monster] img{width:100%;height:100%;object-fit:contain;display:block}
+    /* 絵の入れ物。DyedMonsterImage は染色ありのとき<div>で返るので、ここで大きさを与える。
+       object-fit は className(h-full w-full object-contain)側に任せる。
+       ここで全imgへ object-fit を書くと、染色マスクの重ね絵が使う objectFit:inherit を壊す。 */
+    [data-rhythm-side-monster-art]{display:block;width:100%;height:100%;
+      transition:transform 140ms ease-out}
+    /* DyedMonsterImage は染色なしなら<img>、染色ありなら<div>で返る。どちらにも大きさを与える。
+       className(h-full w-full object-contain)だけに任せると、Tailwindが読めない場面で
+       高さ0になって絵が消える(実機で「丸い枠だけ出て絵が出ない」不具合を出した)。
+       収め方は直下の要素にだけ書く。中の重ね絵は objectFit:inherit でここから受け取るので、
+       全imgへ書くとその仕組みを壊す。 */
+    [data-rhythm-side-monster-art]>*{display:block;width:100%;height:100%;object-fit:contain}
+    [data-rhythm-side-monster][data-rhythm-side-active="1"] [data-rhythm-side-monster-art]{transform:scale(1.14)}
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster-art]{transition:none}
     [data-rhythm-side-monster][data-rhythm-side-motion="NORMAL"]{
       animation:mhRhythmSideHop var(--rhythm-side-beat,500ms) ease-in-out infinite;
       animation-delay:var(--rhythm-side-delay,0ms)}
