@@ -24,6 +24,7 @@
    4,
    6
   ],
+  "maxConsecutiveEighths": 2,
   "accentWidth": 10,
   "accentMaxCount": 6,
   "accentGrids": [

@@ -304,7 +304,48 @@ for(const difficulty of ['HARD','EXPERT','MASTER']){
 }
 
 if(DIFFICULTIES.every(d=>candidates[d])){
-  check('難易度が上がるほどノーツ数が増える(EASY<NORMAL<HARD<EXPERT<MASTER)',
+  // --- 配置の難しさが1段ずつ上がる(2026-09-05「配置がハードですらかなりむずい」への対応) ---
+// ノーツ数だけでなく「どれだけ手を動かすか」も難易度順であること。
+// 以前のHARDは16分格子・3レーン跳び・16分6連・半ノーツ・SLIDE・長押し中の別タップが
+// 一度に来ていて、NORMALからの段差が崖になっていた。
+{
+  const profiles=DIFFICULTIES.map(id=>({id,policy:candidates[id]?.policy})).filter(row=>row.policy);
+  const nonDecreasing=(pick,label)=>{
+    const values=profiles.map(row=>Number(pick(row.policy)));
+    check(`配置の難しさ(${label})が難易度順に増える(減らない)`,
+      values.every((value,index)=>index===0||value>=values[index-1]),
+      profiles.map((row,index)=>`${row.id}:${values[index]}`).join(' / '));
+  };
+  nonDecreasing(policy=>policy.maxLaneStep,'レーンの跳び幅');
+  nonDecreasing(policy=>policy.maxConsecutiveEighths,'連打の上限');
+  nonDecreasing(policy=>policy.narrowRate,'半ノーツの割合');
+  nonDecreasing(policy=>policy.types.length,'使うノーツ種別の数');
+  nonDecreasing(policy=>policy.simultaneous?1:0,'長押し中の別タップ・同時押し');
+  // 格子は細かいほど難しいので、向きを逆にして同じ物差しで見る
+  nonDecreasing(policy=>-policy.latticeGrids,'格子の細かさ');
+  // 実際に置かれた譜面でも、8分未満で跳ぶ量が難易度順であること
+  const maxJumps=DIFFICULTIES.map(id=>{
+    const notes=candidates[id]?.notes||[];
+    const center=note=>note.subLane!=null?(note.subLane+(note.subLaneWidth||2)/2)/2-.5:Number(note.lane)||0;
+    let worst=0;
+    for(let index=1;index<notes.length;index++){
+      const gap=notes[index].grid-notes[index-1].grid;
+      if(gap<=0||gap>=timing.subdivisionsPerBeat)continue;
+      worst=Math.max(worst,Math.abs(center(notes[index])-center(notes[index-1])));
+    }
+    return Math.round(worst*10)/10;
+  });
+  check('実際の譜面でも、速い場面で跳ぶ量が難易度順に増える(減らない)',
+    maxJumps.every((value,index)=>index===0||value>=maxJumps[index-1]),
+    DIFFICULTIES.map((id,index)=>`${id}:${maxJumps[index]}レーン`).join(' / '));
+  // HARDまでは「長押ししながら別の指でタップ」を出さない(NORMALからの段差を作らない)
+  for(const id of ['EASY','NORMAL','HARD']){
+    check(`${id}: 長押し中に別のノーツを重ねない(指が3本要る形にしない)`,
+      (candidates[id]?.notes||[]).every(note=>note.overlapWithGrid==null&&note.chordWithGrid==null));
+  }
+}
+
+check('難易度が上がるほどノーツ数が増える(EASY<NORMAL<HARD<EXPERT<MASTER)',
     DIFFICULTIES.every((d,i)=>i===0||candidates[DIFFICULTIES[i-1]].noteCount<candidates[d].noteCount));
   check('難易度が上がるほど密度(ノーツ毎秒)も増える',
     DIFFICULTIES.every((d,i)=>i===0||candidates[DIFFICULTIES[i-1]].densityPerSecond<candidates[d].densityPerSecond));

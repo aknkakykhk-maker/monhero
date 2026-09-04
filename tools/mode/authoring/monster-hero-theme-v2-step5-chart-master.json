@@ -27,6 +27,7 @@
    3,
    4
   ],
+  "maxConsecutiveEighths": 12,
   "accentWidth": 6,
   "accentMaxCount": 8,
   "accentGrids": [
@@ -117,7 +118,7 @@
    2.5
   ],
   "slideShapeCombinations": 1050,
-  "narrowRate": 0.171,
+  "narrowRate": 0.19,
   "supplementFromTier": 0,
   "endFlickMaxCount": 9,
   "endFlickMinGapGrids": 4,
@@ -1766,7 +1767,7 @@
    "grid": 746,
    "lane": 4,
    "subLane": 8,
-   "subLaneWidth": 2,
+   "subLaneWidth": 1,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": 8.952
   },
@@ -1820,7 +1821,7 @@
    "grid": 762,
    "lane": 0,
    "subLane": 1,
-   "subLaneWidth": 4,
+   "subLaneWidth": 3,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -2.107
   },
@@ -2156,7 +2157,7 @@
    "grid": 878,
    "lane": 0,
    "subLane": 0,
-   "subLaneWidth": 2,
+   "subLaneWidth": 1,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": -21.042
   },
@@ -2344,9 +2345,9 @@
   {
    "type": "TAP",
    "grid": 939,
-   "lane": 1,
-   "subLane": 3,
-   "subLaneWidth": 3,
+   "lane": 2,
+   "subLane": 4,
+   "subLaneWidth": 2,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": 14.604
   },
@@ -2489,7 +2490,7 @@
    "grid": 984,
    "lane": 2,
    "subLane": 4,
-   "subLaneWidth": 2,
+   "subLaneWidth": 1,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": -23.69
   },
@@ -3108,9 +3109,9 @@
   {
    "type": "TAP",
    "grid": 1142,
-   "lane": 1,
-   "subLane": 3,
-   "subLaneWidth": 3,
+   "lane": 2,
+   "subLane": 4,
+   "subLaneWidth": 2,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": 3.967
   },
@@ -3329,7 +3330,7 @@
    "grid": 1200,
    "lane": 0,
    "subLane": 0,
-   "subLaneWidth": 2,
+   "subLaneWidth": 1,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": -0.5
   },
@@ -3418,9 +3419,9 @@
   {
    "type": "TAP",
    "grid": 1220,
-   "lane": 3,
-   "subLane": 7,
-   "subLaneWidth": 3,
+   "lane": 4,
+   "subLane": 8,
+   "subLaneWidth": 2,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -3.075
   },
@@ -3593,7 +3594,7 @@
    "grid": 1264,
    "lane": 4,
    "subLane": 8,
-   "subLaneWidth": 2,
+   "subLaneWidth": 1,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": 20.26
   },
@@ -3693,7 +3694,7 @@
    "grid": 1284,
    "lane": 0,
    "subLane": 0,
-   "subLaneWidth": 2,
+   "subLaneWidth": 1,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": 2.685
   },
@@ -3781,18 +3782,18 @@
   {
    "type": "TAP",
    "grid": 1321,
-   "lane": 0,
-   "subLane": 1,
-   "subLaneWidth": 3,
+   "lane": 1,
+   "subLane": 2,
+   "subLaneWidth": 2,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": 22.421
   },
   {
    "type": "TAP",
    "grid": 1322,
-   "lane": 0,
-   "subLane": 1,
-   "subLaneWidth": 3,
+   "lane": 1,
+   "subLane": 2,
+   "subLaneWidth": 2,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": 0.793
   },
@@ -4227,9 +4228,9 @@
   {
    "type": "TAP",
    "grid": 1428,
-   "lane": 1,
-   "subLane": 3,
-   "subLaneWidth": 3,
+   "lane": 2,
+   "subLane": 4,
+   "subLaneWidth": 2,
    "sourceStrength": 0.33,
    "sourcePeakOffsetMs": -6.855
   },
@@ -4586,9 +4587,9 @@
   {
    "type": "TAP",
    "grid": 1520,
-   "lane": 0,
-   "subLane": 1,
-   "subLaneWidth": 3,
+   "lane": 1,
+   "subLane": 2,
+   "subLaneWidth": 2,
    "sourceStrength": 0.34,
    "sourcePeakOffsetMs": 13.3
   },
@@ -4750,7 +4751,7 @@
    "grid": 1574,
    "lane": 1,
    "subLane": 3,
-   "subLaneWidth": 4,
+   "subLaneWidth": 3,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": 0.348
   },
@@ -4886,7 +4887,7 @@
    "grid": 1600,
    "lane": 4,
    "subLane": 8,
-   "subLaneWidth": 2,
+   "subLaneWidth": 1,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": -22
   },
@@ -4951,7 +4952,7 @@
    "grid": 1624,
    "lane": 1,
    "subLane": 2,
-   "subLaneWidth": 2,
+   "subLaneWidth": 1,
    "sourceStrength": 0.26,
    "sourcePeakOffsetMs": -26.09
   },
@@ -5046,7 +5047,7 @@
    "grid": 1646,
    "lane": 1,
    "subLane": 3,
-   "subLaneWidth": 4,
+   "subLaneWidth": 3,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -1.922
   },
@@ -5054,7 +5055,7 @@
    "type": "TAP",
    "grid": 1646,
    "lane": 4,
-   "subLane": 9,
+   "subLane": 8,
    "subLaneWidth": 1,
    "sourceStrength": 0.44,
    "sourcePeakOffsetMs": -1.922,
@@ -5484,7 +5485,7 @@
   "score": 0.8049,
   "playability": {
    "impossible": 0,
-   "strained": 60
+   "strained": 59
   },
   "detail": {
    "onsetFit": 0.5916,
