@@ -1804,8 +1804,19 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   // TAP/FLICKにはこのbodyが存在しない。nullもキャッシュしないと、表示中ずっと毎フレーム
   // querySelectorで「無い」ことを探し直すため、存在しない結果も1回で覚える。
   let body;
-  if(Object.prototype.hasOwnProperty.call(el,'_rhythmVisualBody'))body=el._rhythmVisualBody;
-  else{RHYTHM_PERF.domQuery();body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');el._rhythmVisualBody=body||null;}
+  // TAP/FLICKのDOMにはbodyが後から増えないので「存在しない(null)」も安全にキャッシュできる。
+  // HOLD/SLIDEはSLIDE decorator等でbodyが後付けされる可能性があるため、nullは固定せず、
+  // 見つかるまでは再検索できるようにする。見つけたbodyがDOMから外れた場合も取り直す。
+  const canCacheMissingBody=el.dataset.noteType!=='HOLD'&&el.dataset.noteType!=='SLIDE';
+  if(Object.prototype.hasOwnProperty.call(el,'_rhythmVisualBody')){
+    body=el._rhythmVisualBody;
+    if(body&&!body.isConnected){delete el._rhythmVisualBody;body=undefined;}
+  }
+  if(body===undefined){
+    RHYTHM_PERF.domQuery();
+    body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
+    if(body||canCacheMissingBody)el._rhythmVisualBody=body||null;
+  }
   if(!body)return;
   if(body.hasAttribute('data-rhythm-slide-body')){
     body.style.left=`${(-left).toFixed(2)}px`;

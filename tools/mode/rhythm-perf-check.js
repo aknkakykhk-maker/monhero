@@ -171,9 +171,14 @@ check('ノーツ横位置は毎フレームleftを書かず独立translateで動
   &&data.includes("el.style.translate=nextTranslate")
   &&!data.includes("el.style.left=\`\${left.toFixed(2)}px\`;"));
 check('TAP/FLICKで存在しないvisual bodyを毎フレーム再検索しない',
-  data.includes("Object.prototype.hasOwnProperty.call(el,'_rhythmVisualBody')")
-  &&data.includes("el._rhythmVisualBody=body||null;")
-  &&data.includes("RHYTHM_PERF.domQuery();body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]')"));
+  data.includes("const canCacheMissingBody=el.dataset.noteType!=='HOLD'&&el.dataset.noteType!=='SLIDE';")
+  &&data.includes("Object.prototype.hasOwnProperty.call(el,'_rhythmVisualBody')")
+  &&data.includes("if(body||canCacheMissingBody)el._rhythmVisualBody=body||null;"));
+check('後付けされるHOLD/SLIDE bodyはnullを固定せず再取得できる',
+  data.includes("if(body===undefined){")
+  &&data.includes("RHYTHM_PERF.domQuery();")
+  &&data.includes("body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]')")
+  &&data.includes("if(body||canCacheMissingBody)el._rhythmVisualBody=body||null;"));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
