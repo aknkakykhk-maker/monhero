@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 23:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8375,6 +8375,8 @@ function PressRepeatButton({ onPress, disabled, className, children, ...props })
 }
 
 const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
+// 最後まで取れたHOLD / SLIDE / FLICKを、消える前に光らせておく時間(CSSのアニメーションと同じ長さ)
+const RHYTHM_CLEAR_FLASH_MS=260;
 const RHYTHM_JUDGMENT_DISPLAY_MS=450;
 // 能力の発動表示(「ミーア　元気！」)。判定表示より少し長く出して、何が起きたか読めるようにする
 const RHYTHM_MONSTER_ABILITY_DISPLAY_MS=1400;
@@ -8399,6 +8401,14 @@ const rhythmTravelMsForSpeed=value=>{
   return Math.round(from+(to-from)*(offset-index));
 };
 const rhythmStepOptionValue=(value,min,max,step,direction)=>Math.max(min,Math.min(max,Number((Number(value)+direction*step).toFixed(6))));
+// スライダーでつまんだ値を、その項目の目盛り(step)に合わせて丸める。
+// 範囲外・数値でない値は必ず範囲の中へ収める(壊れた値を設定へ入れない)。
+const rhythmSnapOptionValue=(value,min,max,step)=>{
+  const raw=Number(value);
+  if(!Number.isFinite(raw))return min;
+  const snapped=min+Math.round((raw-min)/step)*step;
+  return Math.max(min,Math.min(max,Number(snapped.toFixed(6))));
+};
 const RhythmOptions=({value,onSave,onBack})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
   const [message,setMessage]=useState('');
@@ -8412,7 +8422,14 @@ const RhythmOptions=({value,onSave,onBack})=>{
     const display=`${decimals>0?value.toFixed(decimals):value}${suffix}`;
     return <div data-rhythm-option-stepper={key} className="grid grid-cols-[48px_minmax(54px,1fr)_48px_minmax(54px,auto)] items-center gap-2">
       <button type="button" aria-label={`${key}を下げる`} disabled={value<=min} onClick={()=>change(-1)} className="min-h-[48px] min-w-[48px] rounded-xl border border-white/15 bg-slate-800 text-xl font-black text-slate-100 active:scale-95 disabled:opacity-35">−</button>
-      <div role="meter" aria-label={`${key}の現在量`} aria-valuemin={min} aria-valuemax={max} aria-valuenow={value} className="h-3 min-w-0 overflow-hidden rounded-full border border-white/15 bg-slate-950"><i className="block h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400" style={{width:`${percent}%`}}/></div>
+      {/* つまんで動かせるスライダー。±ボタンだけだと、音量(0〜100)やノーツ速度のように
+          幅の広い項目で何十回も押すことになるため(実機で「めんどう」という報告があった)。
+          細かく合わせたいときは左右の±で1目盛りずつ動かす。 */}
+      <input type="range" data-rhythm-option-slider={key} aria-label={`${key}を変える`}
+        min={min} max={max} step={step} value={value}
+        onChange={e=>set(key,rhythmSnapOptionValue(e.target.value,min,max,step))}
+        className="mh-rhythm-range h-3 min-w-0 w-full cursor-pointer appearance-none rounded-full border border-white/15 bg-slate-950"
+        style={{background:`linear-gradient(90deg,#d946ef 0%,#22d3ee ${percent}%,#020617 ${percent}%,#020617 100%)`}}/>
       <button type="button" aria-label={`${key}を上げる`} disabled={value>=max} onClick={()=>change(1)} className="min-h-[48px] min-w-[48px] rounded-xl border border-white/15 bg-slate-800 text-xl font-black text-slate-100 active:scale-95 disabled:opacity-35">＋</button>
       <output aria-live="polite" className="min-w-[54px] rounded-lg border border-cyan-400/30 bg-slate-950 px-1 py-2 text-center text-xs font-black tabular-nums whitespace-nowrap">{display}</output>
     </div>;
@@ -8579,7 +8596,17 @@ useEffect(()=>{
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,view.status]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.done=true;note._rhythmFinalJudgment=judgment;if(settings.vibrationEnabled&&judgment!=='MISS'){try{navigator.vibrate?.(8);}catch{}}const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.done=true;note._rhythmFinalJudgment=judgment;
+// HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
+// TAPは指を置いた時点で音が鳴っているので対象にしない。
+// (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
+const clearedGesture=judgment!=='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='FLICK');
+if(clearedGesture){
+  RHYTHM_NOTE_SE_RUNTIME.playClear();
+  // 光は演出量の設定に従う(MINIMAL・軽量モードでは出さない)。音は設定に関わらず鳴らす
+  if(!settings.lightweightMode&&settings.effectAmount!=='MINIMAL')note._rhythmClearAt=run.audio?.songTimeMs?.()??0;
+}
+if(settings.vibrationEnabled&&judgment!=='MISS'){try{navigator.vibrate?.(8);}catch{}}const nextCombo=rhythmComboAfter(run.combo,judgment);run.combo=nextCombo;run.maxCombo=Math.max(run.maxCombo,nextCombo);run.counts[judgment]++;const side=judgment==='MISS'?null:rhythmFastSlow(deltaMs);if(side)run[side.toLowerCase()]++;const songTimeMs=run.audio?.songTimeMs?.()??0;
 // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
 run.life=rhythmLifeAfterWithMonsterAbilities(run.life,judgment,run.abilities,songTimeMs);
 let revived=false,abilityFlash=null;
@@ -8629,12 +8656,16 @@ const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&(note.type==='H
 // 終わったノーツは毎フレーム display を書き直さない。曲が進むほど終わったノーツが増え、
 // そのぶん無駄な書き込みが積み上がって「遊んでいるうちにカクつく」原因になっていた。
 // 一度隠したら覚えておき、値が変わるときだけ書く(見た目・判定は変わらない)。
-if(note.done&&!failedTrail){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}
+// 取れた直後の短いあいだだけ、判定ラインに置いたまま光らせてから消す
+const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;
+if(clearFlash){if(el._rhythmClearFlag!==true){el.dataset.rhythmClear='1';el._rhythmClearFlag=true;}}
+else if(el._rhythmClearFlag===true){delete el.dataset.rhythmClear;el._rhythmClearFlag=false;}
+if(note.done&&!failedTrail&&!clearFlash){if(el._rhythmHidden!==true){el.style.display='none';el._rhythmHidden=true;}return;}
 if(el._rhythmHidden===true){el.style.display='';el._rhythmHidden=false;}
 const failedFlag=failedTrail?'true':'false';if(el._rhythmFailedFlag!==failedFlag){el.dataset.rhythmFailed=failedFlag;el._rhythmFailedFlag=failedFlag;}
 const progress=1-(note.timeMs-visualTime)/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);const nextOpacity=failedTrail?'.34':(visible?'1':'0');if(el._rhythmOpacity!==nextOpacity){el.style.opacity=nextOpacity;el._rhythmOpacity=nextOpacity;}const nextWillChange=visible?'transform, opacity':'';if(el._rhythmWillChange!==nextWillChange){el.style.willChange=nextWillChange;el._rhythmWillChange=nextWillChange;}
 if(!visible||!travel)return;
-perfDrawn++;let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;yPx=Math.round(yPx);el.style.transform=`translate3d(0,${yPx}px,0)`;const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(releaseTargetMs-visualTime)/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);if(note.type==='HOLD'){/* 帯の長さもfilterも「変わったときだけ」書く。とくにfilterを毎フレーム書くと、押していない間もそのノーツが毎フレーム塗り直しになり、画面の広い端末ほど重くなる */const holdBody=`${Math.round(bodyPx)}px`;if(el._rhythmHoldBody!==holdBody){el.style.setProperty('--rhythm-hold-body',holdBody);el._rhythmHoldBody=holdBody;}const holdFilter=note.activePointerId!==null?'brightness(1.3)':'';if(el._rhythmHoldFilter!==holdFilter){el.style.filter=holdFilter;el._rhythmHoldFilter=holdFilter;}}if(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE'){el.style.setProperty('--rhythm-slide-height',`${Math.round(bodyPx)}px`);el.style.setProperty('--rhythm-slide-visible-height',`${Math.round(bodyPx)}px`);}const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx});};
+perfDrawn++;let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;if(clearFlash)yPx=travel.judgmentY;yPx=Math.round(yPx);el.style.transform=`translate3d(0,${yPx}px,0)`;const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(releaseTargetMs-visualTime)/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);if(note.type==='HOLD'){/* 帯の長さもfilterも「変わったときだけ」書く。とくにfilterを毎フレーム書くと、押していない間もそのノーツが毎フレーム塗り直しになり、画面の広い端末ほど重くなる */const holdBody=`${Math.round(bodyPx)}px`;if(el._rhythmHoldBody!==holdBody){el.style.setProperty('--rhythm-hold-body',holdBody);el._rhythmHoldBody=holdBody;}const holdFilter=note.activePointerId!==null?'brightness(1.3)':'';if(el._rhythmHoldFilter!==holdFilter){el.style.filter=holdFilter;el._rhythmHoldFilter=holdFilter;}}if(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE'){el.style.setProperty('--rhythm-slide-height',`${Math.round(bodyPx)}px`);el.style.setProperty('--rhythm-slide-visible-height',`${Math.round(bodyPx)}px`);}const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx});};
 const notes=run.notes;
 // 末尾の打ち切りは「ノーツが時刻の昇順に並んでいる」ことが前提。譜面エディタなどから
 // 並び順が崩れた譜面が来た場合は絞り込まず、従来どおり全ノーツを見る(取りこぼさないため)。
@@ -8678,7 +8709,7 @@ if(hasAbilityBadge){
 }
 const playEndTimeMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame]);
   const disposeRun=useCallback(()=>{stopFrame();clearJudgmentTimer();clearAbilityTimer();RHYTHM_GESTURE_RUNTIME.clear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearJudgmentTimer,stopFrame]);
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume);if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;}});rhythmLayoutPlayArea(playAreaRef.current);startLockRef.current=false;setView({...initialView(),status:'playing'});scheduleTick();};
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume);if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;}});rhythmLayoutPlayArea(playAreaRef.current);startLockRef.current=false;setView({...initialView(),status:'playing'});scheduleTick();};
   useEffect(()=>{mountedRef.current=true;beginRun(bestRecord);return()=>{mountedRef.current=false;++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   const pause=()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.activePointers.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();setPressedLanes([]);run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null)note.activePointerId=-1;});run.paused=true;stopFrame();run.audio.pause();setView(v=>({...v,status:'paused'}));};
   const resume=async()=>{const run=runRef.current;if(!run||run.finished||!run.paused)return;const resumed=await run.audio.resume();if(!resumed)return;run.paused=false;setView(v=>({...v,status:'playing'}));scheduleTick();};

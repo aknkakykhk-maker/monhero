@@ -664,6 +664,30 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     inputGroupHit=false;
     return handled?true:emitEmpty();
   };
+  // HOLD / SLIDE を最後まで取れたとき、FLICK が成立したときに鳴らす。
+  // 開始のタップ音と同じ音だと「指を置いた音」と区別が付かず、取れたのか分からない
+  // (実機で「フリックが成功したのか分かりづらい」という報告があった)。
+  // 少し高いところから上へ抜ける短い音にして、「取れた」ことが耳で分かるようにする。
+  // 音量・ON/OFF・全体ミュートはタップ音と同じ設定を読む(専用の保存キーは増やさない)。
+  const playClear=()=>{
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const now=audio.currentTime,level=Math.max(.0001,.028*(settings.volume/100)),duration=.13;
+    const oscillator=audio.createOscillator(),gain=audio.createGain();
+    oscillator.type='triangle';
+    oscillator.frequency.setValueAtTime(1318.51,now);                    // E6
+    oscillator.frequency.exponentialRampToValueAtTime(1975.53,now+.055); // B6 へ上げて抜ける
+    gain.gain.setValueAtTime(.0001,now);
+    gain.gain.exponentialRampToValueAtTime(level,now+.008);
+    gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
+    oscillator.connect(gain);gain.connect(audio.destination);
+    oscillator.start(now);oscillator.stop(now+duration+.02);
+    oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    return true;
+  };
   // フルコンボ等を達成して曲を終えたときの、リザルトへ行く前のお祝い演出で鳴らす1回だけの
   // 合成音。本物の掛け声(音声ファイル)は用意していないため、上昇アルペジオで代える。
   // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
@@ -691,7 +715,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     });
     return true;
   };
-  return {warm,play,preview:settings=>play(settings),playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,_readSettings:readSettings};
+  return {warm,play,playClear,preview:settings=>play(settings),playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -2209,6 +2233,17 @@ const installRhythmGestureVisuals=()=>{
     /* 終点フリックの終端バー。「ここで弾く」ことが一目で分かるよう、単発FLICKと同じ緑と「⇧」に揃える。
        backgroundのショートハンドで書くとbackground-clipなどを巻き添えでリセットしてしまうため、
        background-imageだけを上書きする(200コンボの演出が消えた不具合と同じ罠を避ける)。 */
+    /* 音ゲーオプションのスライダー。指で掴めるよう、つまみを大きめ(26px)にする。
+       溝の色はJS側で「いまの値まで」を塗り分けるので、ここでは形と、つまみの見た目だけを決める。 */
+    .mh-rhythm-range{-webkit-appearance:none;appearance:none;outline:none;touch-action:pan-y}
+    .mh-rhythm-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;border-radius:9999px;background:#f8fafc;border:2px solid #22d3ee;box-shadow:0 1px 4px rgba(0,0,0,.55)}
+    .mh-rhythm-range::-moz-range-thumb{width:26px;height:26px;border:2px solid #22d3ee;border-radius:9999px;background:#f8fafc;box-shadow:0 1px 4px rgba(0,0,0,.55)}
+    .mh-rhythm-range:focus-visible{box-shadow:0 0 0 2px rgba(34,211,238,.65)}
+    /* HOLD / SLIDE / FLICK を最後まで取れたときに、判定ラインで一度だけ広がって消える光。
+       押した手ごたえを目でも返すためのもので、判定・スコアには関与しない。 */
+    [data-rhythm-note][data-rhythm-clear] > span:last-child{animation:rhythm-clear-pop .26s ease-out forwards}
+    [data-rhythm-note][data-rhythm-clear] > span:not(:last-child){opacity:0}
+    @keyframes rhythm-clear-pop{from{transform:scale(1);opacity:.95}to{transform:scale(2.1);opacity:0}}
     [data-rhythm-end-bar][data-rhythm-end-flick]{background-image:linear-gradient(90deg,#22c55e,#f0fdf4 50%,#22c55e)!important;border-color:rgba(220,252,231,.98)!important}
     [data-rhythm-end-bar][data-rhythm-end-flick]::after{content:"⇧";position:absolute;left:50%;bottom:100%;transform:translateX(-50%) scaleY(calc(1 / var(--rhythm-end-depth-scale, 1)));transform-origin:50% 100%;color:#f0fdf4;font-size:15px;line-height:1;pointer-events:none;text-shadow:0 0 8px #22c55e,0 0 14px #15803d}
     svg[data-rhythm-slide-body]{position:absolute;inset:0;height:var(--rhythm-slide-area-height,0px)!important;overflow:visible;pointer-events:none;filter:drop-shadow(0 0 5px rgba(168,85,247,.38))}
