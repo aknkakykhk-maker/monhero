@@ -1,0 +1,94 @@
+{
+ "schemaVersion": 1,
+ "analysisType": "rhythm-chart-v2-step6-playability",
+ "trackId": "monster_hero_theme",
+ "source": "v1",
+ "sourceLabel": "既存の正式候補v1",
+ "reviewRequired": true,
+ "runtimeConnected": false,
+ "handModel": {
+  "hands": 2,
+  "laneSpeedComfort": 10,
+  "laneSpeedLimit": 18,
+  "restrikeComfortMs": 90,
+  "restrikeLimitMs": 55,
+  "chordMinLaneGap": 1,
+  "releaseMarginMs": 30
+ },
+ "difficulties": {
+  "EASY": {
+   "noteCount": 176,
+   "impossibleCount": 0,
+   "strainedCount": 0,
+   "strainedRatio": 0,
+   "byKind": {},
+   "issues": []
+  },
+  "NORMAL": {
+   "noteCount": 212,
+   "impossibleCount": 0,
+   "strainedCount": 2,
+   "strainedRatio": 0.0094,
+   "byKind": {
+    "strained/手の動きが忙しい": 2
+   },
+   "issues": [
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 83,
+     "grid": 752,
+     "bar": 47,
+     "timeMs": 65351,
+     "lane": 0,
+     "type": "TAP",
+     "detail": "2レーンの移動が173ms(快適には200ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 101,
+     "grid": 880,
+     "bar": 55,
+     "timeMs": 76439,
+     "lane": 0,
+     "type": "TAP",
+     "detail": "2レーンの移動が173ms(快適には200ms欲しい)"
+    }
+   ]
+  },
+  "HARD": {
+   "noteCount": 266,
+   "impossibleCount": 0,
+   "strainedCount": 2,
+   "strainedRatio": 0.0075,
+   "byKind": {
+    "strained/手の動きが忙しい": 2
+   },
+   "issues": [
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 43,
+     "grid": 313,
+     "bar": 19,
+     "timeMs": 27321,
+     "lane": 3,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 195,
+     "grid": 1230,
+     "bar": 76,
+     "timeMs": 106759,
+     "lane": 1,
+     "type": "TAP",
+     "detail": "2レーンの移動が173ms(快適には200ms欲しい)"
+    }
+   ]
+  }
+ }
+}
