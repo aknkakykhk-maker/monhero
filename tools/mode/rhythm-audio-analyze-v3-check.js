@@ -32,8 +32,13 @@ const dspSource=read('tools/mode/rhythm-audio-dsp.js');
 check('乱数を使わない（結果が毎回変わらないため）',
   ![analyzerSource,decodeSource,dspSource].some(source=>/Math\.random|crypto\.randomBytes/.test(source)));
 check('書き出し先は設計資料の置き場（authoring）だけ',
-  /tools\/mode\/authoring\/\$\{trackId\.replace/.test(analyzerSource)
+  /tools\/mode\/authoring/.test(analyzerSource)
   &&!/writeFileSync\([^)]*monster-hero\//.test(analyzerSource));
+check('曲をコードへ埋め込まず、一覧ファイルと --audio で足せる',
+  /rhythm-song-registry\.json/.test(analyzerSource)&&/--audio/.test(analyzerSource)
+  &&!/monster-hero\/audio\/bgm-/.test(analyzerSource));
+check('人が耳で合わせた値（rhythm-timing.js）があればそちらを優先する',
+  /registeredTiming/.test(analyzerSource)&&/source:timing\.source/.test(analyzerSource));
 check('monster-hero からは読み取りしかしない',
   !/writeFileSync\([^)]*monster-hero/.test(analyzerSource)
   &&!/writeFileSync/.test(decodeSource));
@@ -41,10 +46,22 @@ check('設計資料であることを出力に書いている（ランタイム�
   /reviewRequired:true/.test(analyzerSource)&&/runtimeConnected:false/.test(analyzerSource));
 check('ffmpeg が無くてもデコードできる（ブラウザの経路を持っている）',
   /decodeWithChromium/.test(decodeSource)&&/decodeAudioData/.test(decodeSource));
-check('解析のしきい値を定数で明示している',
-  ['SAMPLE_RATE','FFT_SIZE','HOP_SIZE','BANDS','CONTRAST_RADIUS_MS','MIN_ONSET_GAP_MS',
-   'SUSTAIN_DROP','PITCH_WINDOW','PITCH_MIN_CLARITY','CHARACTER']
-    .every(name=>new RegExp(`const ${name}=`).test(analyzerSource)));
+check('解析のしきい値を定数で明示している',(()=>{
+  const featuresSource=read('tools/mode/rhythm-audio-features-v3.js');
+  const analyzerNames=['MIN_ONSET_GAP_MS','SUSTAIN_DROP','PITCH_WINDOW','PITCH_MIN_CLARITY','CHARACTER'];
+  const featureNames=['SAMPLE_RATE','FFT_SIZE','HOP_SIZE','BANDS','CONTRAST_RADIUS_MS'];
+  return analyzerNames.every(name=>new RegExp(`const ${name}=`).test(analyzerSource))
+    &&featureNames.every(name=>new RegExp(`const ${name}=`).test(featuresSource));
+})());
+check('テンポ・拍子・刻みを音から出す道具がある',(()=>{
+  const tempoSource=read('tools/mode/rhythm-audio-tempo-v3.js');
+  return /estimateTempo/.test(tempoSource)&&/estimateMeter/.test(tempoSource)
+    &&/estimateSubdivision/.test(tempoSource)&&/refineByRegression/.test(tempoSource);
+})());
+check('曲の区切り・盛り上がり・繰り返しを音から出す道具がある',(()=>{
+  const structureSource=read('tools/mode/rhythm-audio-structure-v3.js');
+  return /noveltyCurve/.test(structureSource)&&/repeats/.test(structureSource);
+})());
 
 // --- 信号処理の道具が正しいか（分かっている入力で確かめる） ---
 const dsp=require('./rhythm-audio-dsp.js');
@@ -96,8 +113,18 @@ if(before!==null&&before!==fs.readFileSync(outFile,'utf8')){
 }
 const report=JSON.parse(before!==null?before:fs.readFileSync(outFile,'utf8'));
 
-check('出力の型が決めたとおり',report.analysisType==='rhythm-audio-v3'&&report.schemaVersion===1
-  &&Array.isArray(report.onsets)&&Array.isArray(report.pitchCurve)&&Array.isArray(report.sustains));
+check('出力の型が決めたとおり',report.analysisType==='rhythm-audio-v3'&&report.schemaVersion===2
+  &&Array.isArray(report.onsets)&&Array.isArray(report.pitchCurve)&&Array.isArray(report.sustains)
+  &&report.timing&&report.structure&&Array.isArray(report.structure.sections));
+check('テンポ・拍子・刻みが出力に入っている',
+  Number.isFinite(report.timing.bpm)&&Number.isFinite(report.timing.beatZeroMs)
+  &&Number.isInteger(report.timing.beatsPerBar)&&Number.isInteger(report.timing.subdivisionsPerBeat)
+  &&typeof report.timing.source==='string',
+  `${report.timing.bpm} BPM / ${report.timing.beatsPerBar}拍子 / ${report.timing.subdivisionsPerBeat}分割 / ${report.timing.source}`);
+check('曲の区切りが出力に入っている',
+  report.structure.sections.length>=2&&report.structure.bars.length>=8
+  &&report.structure.sections.every(s=>Number.isFinite(s.intensity)&&s.endBarExclusive>s.startBar),
+  `${report.structure.sections.length}区切り / ${report.structure.bars.length}小節`);
 check('音源のハッシュを残している（別の音源に差し替わったら分かる）',
   typeof report.audioSha256==='string'&&report.audioSha256.length===64);
 

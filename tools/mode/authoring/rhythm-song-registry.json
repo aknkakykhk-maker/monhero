@@ -1,0 +1,29 @@
+{
+ "schemaVersion": 1,
+ "songs": {
+  "monster_hero_theme": {
+   "audio": "monster-hero/audio/bgm-monster-hero-theme.mp3",
+   "audioSha256": "083a1d9db2810a4a77a304e8d53fc862b16db71553af7d97040da78fea577fda",
+   "durationMs": 152761,
+   "analyzedTiming": {
+    "bpm": 173.153,
+    "beatZeroMs": 206,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "registered"
+   }
+  },
+  "atsu_cup_theme": {
+   "audio": "monster-hero/audio/bgm-atsu-cup-theme.mp3",
+   "audioSha256": "e93502c4df763a80afae82dc3fcc95cd69670028a4f24566305d74a394e19184",
+   "durationMs": 144640,
+   "analyzedTiming": {
+    "bpm": 169,
+    "beatZeroMs": 40,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "registered"
+   }
+  }
+ }
+}
