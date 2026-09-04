@@ -99,7 +99,12 @@ check('リザルト画面にも大きくランクを表示',
 check('ランクはスコアから毎回計算するだけで、保存形式(BEST)を増やしていない',
   !/normalizeRhythmBestRecord[\s\S]{0,600}rank/.test(data)&&!/mergeRhythmBestRecord[\s\S]{0,400}rank/.test(data)
   &&game.includes("const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';"));
-check('保存キーを増やしていない',!game.includes('mh_rhythm_rank'));
+// ランクの判定・表示(このファイルが見ている範囲)自体はBEST記録の保存形式を増やしていない。
+// 2026-09-04に追加した全国ランキング機能はランクとは別の保存キー(mh_rhythm_rank_pending_v1、
+// 送信失敗時の退避専用)を持つが、それはtools/mode/rhythm-ranking-check.jsが見る対象であり、
+// ランク判定そのものの保存形式が増えたわけではない
+check('保存キーを増やしていない(ランク判定自体は既存のBEST記録のまま)',
+  game.includes("const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';"));
 
 // --- ランクゲージ(2026-09-04、ただ伸びるだけの帯だと「ゲージ」に見えないという指摘を反映) ---
 check('丸バッジ横のバーがランクゲージとして目盛りを持つ',

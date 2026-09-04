@@ -1543,6 +1543,70 @@ const rhythmDemoDifficulties=(song,difficulties)=>{
   });
 };
 
+// モンビー(音ゲー)の全国ランキング。2026-09-04、ユーザー指示で先行公開時から用意する。
+// 既存のSupabase `rankings` テーブル・列は増やさず、種族チャレンジ(Species-<血統>-<難易度>)と
+// 同じやり方で difficulty 列へ Rhythm-<songId>-<難易度id> という専用キーを入れるだけにする。
+// 難易度ごとに別々の行として保存しつつ、表示は複数キーをまとめて取得して1つの
+// 「難易度合算」ランキングにする(=難易度が高いほど満点も高いので、高難易度で挑むほど有利になる)。
+const RHYTHM_RANKING_PREFIX='Rhythm';
+const RHYTHM_RANKING_SEPARATOR='-';
+// songId(monster_hero_theme_candidate等)はアンダースコアのみでハイフンを含まないため、
+// この区切り文字で3つに割ればsongIdを壊さず難易度idまで取り出せる
+const rhythmRankingDifficultyKey=(songId,difficultyId)=>{
+  if(!songId||!RHYTHM_DIFFICULTIES.some(d=>d.id===difficultyId))return null;
+  return `${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}${songId}${RHYTHM_RANKING_SEPARATOR}${difficultyId}`;
+};
+// ランキングキーから曲と難易度へ戻す。知らない形式や難易度はnull(既存キーとして扱わない)
+const parseRhythmRankingDifficultyKey=(key)=>{
+  const parts=String(key??'').trim().split(RHYTHM_RANKING_SEPARATOR);
+  if(parts.length!==3||parts[0]!==RHYTHM_RANKING_PREFIX)return null;
+  const [,songId,difficultyId]=parts;
+  if(!songId||!RHYTHM_DIFFICULTIES.some(d=>d.id===difficultyId))return null;
+  return {songId,difficultyId};
+};
+// 「難易度合算」ランキングを取りに行くときに展開する、実在するキーの一覧。
+// 体験版で遊べる難易度(RHYTHM_DEMO_DIFFICULTY_IDS)だけを対象にする。
+// 将来EXPERT/MASTERを体験版へ追加したときは、そちらの定数を増やすだけで自動的に対象へ入る
+const rhythmRankingCombinedMembers=(songId)=>RHYTHM_DEMO_DIFFICULTY_IDS
+  .map(difficultyId=>rhythmRankingDifficultyKey(songId,difficultyId))
+  .filter(Boolean);
+// 1ページで受け取る生の行数、ユーザーごとに畳んだあと画面へ出す件数、
+// 十分な人数が集まるまでページ送りする上限(下のrhythmRankingDedupeByUserの説明も参照)。
+// 2026-09-04、Codexレビュー指摘: 1回200件で打ち切ると、同じプレイヤーが200回を超えて
+// 高得点を記録した場合にその1人の行だけで埋まり、本来上位に入る他プレイヤーが消えてしまう。
+// 1プレイ=1行で行が際限なく増える点は既存のsbFetchAllBreederRows(ブリーダーLvランキング)と
+// 同じ構造のため、そちらと同じ「ユニークな人数が集まるかページが尽きるまで送る」考え方にした
+const RHYTHM_RANKING_FETCH_LIMIT=200;
+const RHYTHM_RANKING_DISPLAY_LIMIT=50;
+const RHYTHM_RANKING_MAX_PAGES=10;
+// 同じユーザー名の行が複数あっても、いちばん高いスコアの1件だけを残す
+// (「自分のスコアはハイスコア1件のみ」という仕様。書き込み側は1プレイ=1行のまま増やし続け、
+// 表示のときにだけ集約する。既存のaggregateBreederLevelsと同じ考え方)
+const rhythmRankingDedupeByUser=(rows)=>{
+  const byUser=new Map();
+  (rows||[]).forEach(r=>{
+    const name=r?.user_name||'名無しのブリーダー';
+    const score=Number(r?.score)||0;
+    const cur=byUser.get(name);
+    if(!cur||score>(Number(cur.score)||0))byUser.set(name,r);
+  });
+  return [...byUser.values()].sort((a,b)=>(Number(b.score)||0)-(Number(a.score)||0));
+};
+// Supabaseの生の行を画面表示用の形へ整える。partyには判定内訳等の詳細をJSONで持たせている
+// (種族チャレンジがpartyへ育て方の詳細を持たせているのと同じ、列を増やさない考え方)
+const rhythmRankingEntryFromRow=(row)=>{
+  const parsed=parseRhythmRankingDifficultyKey(row?.difficulty);
+  const detail=(row?.party&&typeof row.party==='object'&&!Array.isArray(row.party))?row.party:null;
+  return {
+    userName:row?.user_name||'名無しのブリーダー',
+    score:Number(row?.score)||0,
+    level:Number(row?.level)||0,
+    icon:row?.icon??null,
+    difficultyId:parsed?.difficultyId||row?.hero||null,
+    detail,
+  };
+};
+
 const installRhythmGestureVisuals=()=>{
   if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;
   if(document.documentElement.dataset.rhythmGestureVisuals==='ready')return;

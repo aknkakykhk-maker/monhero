@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ccf0b511dbd9cd90
+// source-sha256: e8c3f0a1f45656d0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 07:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 09:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3605,6 +3605,12 @@ const RHYTHM_NOTE_SPEED_MIN = 1;
 const RHYTHM_NOTE_SPEED_MAX = 12;
 const RHYTHM_NOTE_SPEED_STEP = .1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+// 全国ランキングへの送信に失敗したときだけ退避する専用キー(2026-09-04)。
+// 既存のBEST記録(RHYTHM_BEST_RECORDS_KEY)とは別で、自動の再送はしない
+// (端末内に「送れなかった記録が残っている」という手がかりを残すだけ)。
+// 際限なく増やさないよう直近の件数だけ保つ
+const RHYTHM_RANKING_PENDING_KEY = 'mh_rhythm_rank_pending_v1';
+const RHYTHM_RANKING_PENDING_MAX = 20;
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL', 'LOW', 'MINIMAL']);
 // コンボの節目でお祝いを出す刻み。100コンボごと。
 const RHYTHM_COMBO_MILESTONE_STEP = 100;
@@ -13916,6 +13922,93 @@ const persistRankingScore = async ({
 };
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
+// モンビー(音ゲー)の全国ランキング専用の送受信(2026-09-04)。
+//
+// 既存の sbInsertScore / sbFetchRankings は、difficulty列の値を必ず
+// normalizeRankingDifficulty で検証しており、そこで認めているのは通常バトル・プロ・極限・
+// 種族チャレンジの固定パターンだけ。Rhythm-<songId>-<難易度id> をそのまま渡すと
+// 「unknown ranking difficulty」で例外になる。normalizeRankingDifficultyやその一覧
+// (RANKING_DIFFICULTY_KEYS)は全モードの送受信が経由する共通処理なので、モンビーのために
+// そこを緩めると他モードの検証まで一緒に緩んでしまう。そのため触らず、モンビー専用の
+// 送受信をここへ分けて持つ。テーブル・列は既存の rankings をそのまま使う
+// (difficulty列の値だけで区別する、種族チャレンジと同じ考え方)。
+const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty';
+const sbInsertRhythmScore = async row => {
+  if (typeof row?.clear_id !== 'string' || !row.clear_id.trim()) {
+    throw new Error('rhythm ranking clear_id is required; unsafe insert skipped');
+  }
+  if (!String(row?.difficulty ?? '').startsWith(`${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}`)) {
+    throw new Error(`invalid rhythm ranking difficulty key: ${String(row?.difficulty)}`);
+  }
+  const query = '?on_conflict=clear_id';
+  const prefer = 'resolution=ignore-duplicates,return=minimal';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': prefer
+      },
+      body: JSON.stringify(row),
+      signal: controller.signal
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      const error = new Error(`rhythm ranking insert ${res.status}: ${body || res.statusText}`);
+      error.status = res.status;
+      error.body = body;
+      throw error;
+    }
+    return {
+      saved: true,
+      status: res.status,
+      body
+    };
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('rhythm ranking insert timed out after 8000ms');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 難易度合算表示のため、複数のdifficultyキーをin.(...)でまとめて1回のリクエストにする
+// (種族チャレンジの「全種族」がsbFetchRankings内で行っているのと同じ考え方だが、
+// あちらは既存モードの検証を経由するため触らず、こちらは完全に独立させる)
+const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETCH_LIMIT, offset = 0, requestId = 'untracked') => {
+  const keys = (Array.isArray(difficultyKeys) ? difficultyKeys : [difficultyKeys]).filter(Boolean);
+  if (keys.length === 0) return [];
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${RHYTHM_RANKING_SELECT}&difficulty=in.(${keys.map(k => encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}&offset=${offset}`;
+  rankingLog(requestId, 'rhythm-request-start', {
+    keys,
+    limit,
+    offset,
+    url,
+    table: 'rankings'
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, {
+      headers: SB_HEADERS,
+      signal: controller.signal
+    });
+    const body = await res.text();
+    if (!res.ok) throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    try {
+      return JSON.parse(body);
+    } catch (e) {
+      throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('rhythm ranking fetch timed out after 15000ms');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 // 難易度に依存しない周回開始処理。Normalだけ前周のclear_idや送信ロックを引き継ぐ
 // 分岐が生まれないよう、タイトル復帰と再挑戦の両方からこの1か所を呼ぶ。
 const beginNewRankingRun = ({
@@ -18560,6 +18653,113 @@ function MonsterHeroGame() {
       };
     });
   };
+
+  // モンビー(音ゲー)の全国ランキング(2026-09-04)。読み込み状態・一覧・詳細モーダルの中身を持つ。
+  // 既存のrankingsテーブル・列を増やさず、difficulty列へRhythm-<songId>-<難易度id>を
+  // 入れるだけで対応する(data/rhythm-mode.jsのrhythmRankingDifficultyKey等を参照)。
+  const [rhythmRanking, setRhythmRanking] = useState({
+    status: 'idle',
+    entries: [],
+    error: null,
+    songId: null
+  });
+  const [rhythmRankingDetail, setRhythmRankingDetail] = useState(null);
+  const rhythmRankingRequestRef = useRef(0);
+  // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
+  // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
+  // 古い取得が後から返ってきて新しい取得を上書きしないよう、リクエストIDで最新だけ反映する。
+  //
+  // 2026-09-04、Codexレビュー指摘: 1プレイ=1行のまま増え続けるため、1回のスコア降順取得を
+  // 打ち切ると、同じプレイヤーが多数の高得点行を持つ場合にその1人の行だけで埋まり、
+  // 本来上位に入る他のプレイヤーがユーザー集約後に消えてしまう。ユニークな人数が表示件数
+  // (RHYTHM_RANKING_DISPLAY_LIMIT)ぶん集まるか、行が尽きるか、ページ数の上限
+  // (RHYTHM_RANKING_MAX_PAGES)に達するまでページ送りする(ブリーダーLvランキングの
+  // sbFetchAllBreederRowsと同じ考え方)
+  const loadRhythmRanking = useCallback(async song => {
+    if (!song) return;
+    const requestId = ++rhythmRankingRequestRef.current;
+    setRhythmRanking({
+      status: 'loading',
+      entries: [],
+      error: null,
+      songId: song.songId
+    });
+    try {
+      const keys = rhythmRankingCombinedMembers(song.songId);
+      let rows = [];
+      for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {
+        const pageRows = await sbFetchRhythmRankings(keys, RHYTHM_RANKING_FETCH_LIMIT, page * RHYTHM_RANKING_FETCH_LIMIT, `rhythm-rank-${song.songId}-${Date.now()}-${page}`);
+        if (rhythmRankingRequestRef.current !== requestId) return;
+        rows = rows.concat(Array.isArray(pageRows) ? pageRows : []);
+        if (rhythmRankingDedupeByUser(rows).length >= RHYTHM_RANKING_DISPLAY_LIMIT) break;
+        if (!Array.isArray(pageRows) || pageRows.length < RHYTHM_RANKING_FETCH_LIMIT) break;
+      }
+      const entries = rhythmRankingDedupeByUser(rows).slice(0, RHYTHM_RANKING_DISPLAY_LIMIT).map(rhythmRankingEntryFromRow);
+      setRhythmRanking({
+        status: 'ready',
+        entries,
+        error: null,
+        songId: song.songId
+      });
+    } catch (e) {
+      if (rhythmRankingRequestRef.current !== requestId) return;
+      console.error('[rhythm-ranking] fetch failed:', e && e.message ? e.message : e);
+      setRhythmRanking({
+        status: 'error',
+        entries: [],
+        error: e?.message || String(e),
+        songId: song.songId
+      });
+    }
+  }, []);
+  // 曲を終えたときに全国ランキングへ1件送信する。呼び出し側(onComplete)で
+  // 体験版からのプレイ(rhythmPlay.from==='demo')のときだけ呼び、デバッグプレイは送らない
+  // (通常バトルのdebugBattleRefガードと同じ考え方)。失敗してもBEST記録(mh_rhythm_best_v1)
+  // には影響しない、副作用だけの追加送信として扱う
+  const submitRhythmRankingScore = useCallback(async (song, difficulty, result) => {
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
+    if (!difficultyKey) return;
+    const detail = {
+      songId: song.songId,
+      difficultyId: difficulty.id,
+      judgments: result.judgments,
+      maxCombo: result.maxCombo,
+      fast: result.fast,
+      slow: result.slow,
+      fullCombo: !!result.fullCombo,
+      allExcellent: !!result.allExcellent,
+      allMarvelous: !!result.allMarvelous
+    };
+    const row = {
+      difficulty: difficultyKey,
+      user_name: breederName || '名無しのブリーダー',
+      hero: difficulty.id,
+      party: detail,
+      score: Number(result.score) || 0,
+      level: breederLevel.level,
+      icon: breederIcon,
+      clear_id: createRunId()
+    };
+    const outcome = await persistRankingScore({
+      row,
+      insertScore: sbInsertRhythmScore,
+      saveLocal: async error => {
+        console.error('[rhythm-ranking] national submit failed, saving locally:', error && error.message ? error.message : error);
+        const pending = await storeGet(RHYTHM_RANKING_PENDING_KEY, [], false);
+        const list = Array.isArray(pending) ? pending.slice() : [];
+        list.push({
+          ...row,
+          at: Date.now(),
+          error: {
+            message: error?.message || String(error),
+            status: error?.status || null
+          }
+        });
+        await storeSet(RHYTHM_RANKING_PENDING_KEY, list.slice(-RHYTHM_RANKING_PENDING_MAX), false);
+      }
+    });
+    if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
+  }, [breederName, breederLevel, breederIcon]);
   const loadRankings = useCallback(async (targetDiff = null, includeLevels = false, force = false, levelKind = 'bond') => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
     const byDiff = {};
@@ -34357,6 +34557,7 @@ function MonsterHeroGame() {
       onComplete: async (result, merged) => {
         const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
         setRhythmBestRecords(records);
+        if (rhythmPlay.from === 'demo') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
       },
       onExit: () => {
         const back = rhythmPlay.from === 'demo' ? 'RHYTHM_DEMO_HOME' : 'RHYTHM_DEBUG';
@@ -34445,8 +34646,15 @@ function MonsterHeroGame() {
             setGameState('RHYTHM_PLAY');
           }
         }, "\u3053\u306E\u96E3\u6613\u5EA6\u3067\u904A\u3076"));
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "mt-4 grid grid-cols-2 gap-2"
+      }))), song && /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-ranking": true,
+        className: "mt-3 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100",
+        onClick: () => {
+          loadRhythmRanking(song);
+          setGameState('RHYTHM_RANKING');
+        }
+      }, "\uD83C\uDFC6 \u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 grid grid-cols-2 gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-options": true,
         className: "min-h-[48px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-xs font-black text-cyan-100",
@@ -34497,7 +34705,102 @@ function MonsterHeroGame() {
       setRhythmMonsterMessage: setRhythmMonsterMessage,
       applyRhythmMonsterSlots: applyRhythmMonsterSlots,
       masuMons: masuMons
-    }))), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
+    }))), gameState === 'RHYTHM_RANKING' && (() => {
+      const song = rhythmDemoSong(RHYTHM_SONGS);
+      return /*#__PURE__*/React.createElement("main", {
+        "data-rhythm-ranking": true,
+        className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
+        style: {
+          paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: () => setGameState('RHYTHM_DEMO_HOME'),
+        className: "min-h-[44px] px-2 text-slate-400"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 18
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-sm font-black tracking-widest text-amber-200"
+      }, "\uD83C\uDFC6 \u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u66F4\u65B0",
+        "data-rhythm-ranking-refresh": true,
+        onClick: () => loadRhythmRanking(song),
+        className: "ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200"
+      }, "\u66F4\u65B0")), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
+        style: {
+          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
+      }, "Monster Hero\u306EEASY\u30FBNORMAL\u30FBHARD\u3092\u307E\u3068\u3081\u305F\u5408\u7B97\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u304C\u9AD8\u3044\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u305F\u3081\u3001\u9AD8\u3044\u96E3\u6613\u5EA6\u3067\u6311\u3080\u307B\u3069\u4E0A\u4F4D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002\u81EA\u5206\u306E\u30B9\u30B3\u30A2\u306F\u3044\u3061\u3070\u3093\u9AD8\u30441\u4EF6\u3060\u3051\u304C\u8F09\u308A\u307E\u3059\u3002"), rhythmRanking.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+        "data-rhythm-ranking-loading": true,
+        className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
+      }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), rhythmRanking.status === 'error' && /*#__PURE__*/React.createElement("p", {
+        "data-rhythm-ranking-error": true,
+        className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
+      }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), rhythmRanking.status === 'ready' && rhythmRanking.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
+        "data-rhythm-ranking-empty": true,
+        className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
+      }, "\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u6700\u521D\u306E1\u4EF6\u306B\u306A\u3063\u3066\u307F\u307E\u3057\u3087\u3046\u3002"), rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
+        "data-rhythm-ranking-list": true,
+        className: "space-y-2"
+      }, rhythmRanking.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
+        key: `${entry.userName}-${index}`,
+        "data-rhythm-ranking-row": true,
+        className: "flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-2"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "w-6 shrink-0 text-center text-xs font-black text-amber-200"
+      }, index + 1), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "truncate text-xs font-black text-white"
+      }, entry.userName), /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] text-slate-400"
+      }, RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-')), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 text-right"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "font-mono text-sm font-black text-amber-200"
+      }, entry.score.toLocaleString()), /*#__PURE__*/React.createElement("p", {
+        className: `text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`
+      }, rhythmRankForScore(entry.score))), entry.detail && /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-ranking-detail": true,
+        onClick: () => setRhythmRankingDetail(entry),
+        className: "shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200"
+      }, "\u8A73\u7D30"))))), rhythmRankingDetail && /*#__PURE__*/React.createElement("div", {
+        "data-rhythm-ranking-detail-modal": true,
+        className: "fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3",
+        onClick: () => setRhythmRankingDetail(null)
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4",
+        onClick: e => e.stopPropagation()
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 flex items-center justify-between"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-sm font-black text-amber-200"
+      }, rhythmRankingDetail.userName, " \u306E\u30EA\u30B6\u30EB\u30C8"), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
+        "data-rhythm-ranking-detail-close": true,
+        onClick: () => setRhythmRankingDetail(null),
+        className: "min-h-[44px] min-w-[44px] px-2 text-slate-400"
+      }, "\u2715")), /*#__PURE__*/React.createElement("p", {
+        className: "text-[10px] text-slate-400"
+      }, RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name || rhythmRankingDetail.difficultyId, " / \u30B9\u30B3\u30A2 ", rhythmRankingDetail.score.toLocaleString(), " / \u30E9\u30F3\u30AF ", rhythmRankForScore(rhythmRankingDetail.score)), /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-[10px] text-slate-400"
+      }, "\u6700\u5927\u30B3\u30F3\u30DC ", rhythmRankingDetail.detail?.maxCombo ?? '-'), /*#__PURE__*/React.createElement("dl", {
+        className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
+      }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
+        key: id
+      }, /*#__PURE__*/React.createElement("dt", {
+        className: "text-slate-400"
+      }, id), /*#__PURE__*/React.createElement("dd", {
+        className: "text-right font-mono text-white"
+      }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2 text-[9px] font-black text-amber-200"
+      }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
+    })(), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
       "data-rhythm-debug-screen": true,
       className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
       style: {
