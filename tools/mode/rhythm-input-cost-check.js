@@ -22,11 +22,14 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 const laneConsts=[source.match(/const RHYTHM_LANE_COUNT\s*=[^\n]*/)?.[0],source.match(/const RHYTHM_SUB_LANE_COUNT\s*=[^\n]*/)?.[0]].filter(Boolean).join('\n');
 const perf=source.match(/const RHYTHM_PERF_KEY=[\s\S]*?\n\}\)\(\);/)?.[0];
 const projection=source.match(/const RHYTHM_PROJECTION_TOP_SCALE=[\s\S]*?const rhythmLaneAtPoint=[\s\S]*?\n\};/)?.[0];
+// 2026-09-05、終端の窓(RHYTHM_RELEASE_MAX_MS)を判定表のいちばん外側から作るようにしたので、
+// 切り出す依存に判定表そのものを足す(数字を2か所に持たないための変更に合わせたもの)。
+const judgments=source.match(/const RHYTHM_JUDGMENTS = Object\.freeze\(\[[\s\S]*?const RHYTHM_INPUT_MATCH_WINDOW_MS[\s\S]*?;/)?.[0];
 const flickConsts=source.match(/const RHYTHM_FLICK_DISTANCE_PX = 24;[\s\S]*?const rhythmSlideTrackingTolerance=[\s\S]*?4;/)?.[0];
 const slideHelpers=source.match(/const rhythmSlidePoints=[\s\S]*?const rhythmSlideExpectedLane=[\s\S]*?\n\};/)?.[0];
 const midTracking=source.match(/const RHYTHM_MID_TRACKING_GRACE_MS=[\s\S]*?const rhythmHoldTrackedLane=[\s\S]*?\n\};/)?.[0];
 const runtime=source.match(/const RHYTHM_GESTURE_RUNTIME=\(\(\)=>\{[\s\S]*?\n\}\)\(\);/)?.[0];
-check('依存ブロックをすべて抽出できる',!!laneConsts&&!!perf&&!!projection&&!!flickConsts&&!!slideHelpers&&!!midTracking&&!!runtime);
+check('依存ブロックをすべて抽出できる',!!laneConsts&&!!judgments&&!!perf&&!!projection&&!!flickConsts&&!!slideHelpers&&!!midTracking&&!!runtime);
 if(!(perf&&projection&&flickConsts&&slideHelpers&&midTracking&&runtime))process.exit(1);
 
 // ── 実装が触る最低限のDOMを用意する ──────────────────────────────────────
@@ -57,7 +60,7 @@ context.window={
 };
 let nowMs=0;
 vm.createContext(context);
-vm.runInContext(`${laneConsts}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${midTracking}\n${runtime}\nthis.out={RHYTHM_GESTURE_RUNTIME,RHYTHM_PERF};`,context);
+vm.runInContext(`${laneConsts}\n${judgments}\n${perf}\n${projection}\n${flickConsts}\n${slideHelpers}\n${midTracking}\n${runtime}\nthis.out={RHYTHM_GESTURE_RUNTIME,RHYTHM_PERF};`,context);
 const {RHYTHM_GESTURE_RUNTIME:RUNTIME,RHYTHM_PERF:PERF}=context.out;
 
 check('画面が動く操作でキャッシュを捨てる購読がある',

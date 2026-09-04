@@ -72,6 +72,42 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "pandora_boss": {
+   "audio": "monster-hero/audio/bgm-pandora-boss.mp3",
+   "audioSha256": "b6683818f250cb8777113961ddc522b02a60687f9a3f6830184a3924ec956fd2",
+   "durationMs": 274400,
+   "analyzedTiming": {
+    "bpm": 169.987,
+    "beatZeroMs": 439.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "eiki_boss": {
+   "audio": "monster-hero/audio/綺季一閃_～花雪に舞う詠姫～.mp3",
+   "audioSha256": "099d201c53b1b635a4e00a1f3fe35c8ce3153f0e3c2c4dafa704088ffc47fecb",
+   "durationMs": 261841,
+   "analyzedTiming": {
+    "bpm": 155.011,
+    "beatZeroMs": 188.4,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "six_eternel_remix": {
+   "audio": "monster-hero/audio/bgm-six-eternel-remix.mp3",
+   "audioSha256": "5f56c89739f8053d7c46202bed96eb80579070fda17cb6fa6cd9f9172feb4d2c",
+   "durationMs": 298620,
+   "analyzedTiming": {
+    "bpm": 160.077,
+    "beatZeroMs": 791.9,
+    "beatsPerBar": 3,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

@@ -99,7 +99,7 @@ check('入力の受け付け幅は始点の帯のまま(途中で広がっても
   return inside[0]===0&&outside[0]===null;
 })());
 check('判定窓・離しの判定は変えていない',
-  run('RHYTHM_RELEASE_MAX_MS')===200&&run(`rhythmJudgeRelease(0)`)==='MARVELOUS'&&run(`rhythmJudgeRelease(999)`)==='MISS');
+  run('RHYTHM_RELEASE_MAX_MS')===240&&run(`rhythmJudgeRelease(0)`)==='MARVELOUS'&&run(`rhythmJudgeRelease(999)`)==='MISS');
 check('FLICKの成立距離・時間も変えていない',run('RHYTHM_FLICK_DISTANCE_PX')===24&&run('RHYTHM_FLICK_MAX_MS')===450);
 check('途中追従の猶予と余白も変えていない',run('RHYTHM_MID_TRACKING_GRACE_MS')===120&&run('RHYTHM_HOLD_TRACKING_MARGIN_LANES')===.15);
 

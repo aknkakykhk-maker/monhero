@@ -15,7 +15,7 @@ const context={};vm.createContext(context);
 vm.runInContext(`${dataBlock}\nconst RHYTHM_JUDGMENT_IDS=RHYTHM_JUDGMENTS.map(item=>item.id);\n${scoreBlock}\nthis.out={RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_RANKS,rhythmRankForScore,RHYTHM_LIFE_MAX,RHYTHM_LIFE_DELTA,rhythmLifeAfter,rhythmLifeRatio,rhythmCalculateScore};`,context);
 const {RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_RANKS,rhythmRankForScore,RHYTHM_LIFE_MAX,RHYTHM_LIFE_DELTA,rhythmLifeAfter,rhythmLifeRatio,rhythmCalculateScore}=context.out;
 check('最大ライフと判定増減値は不変',RHYTHM_LIFE_MAX===1000&&JSON.stringify(RHYTHM_LIFE_DELTA)===JSON.stringify({MARVELOUS:2,EXCELLENT:2,GREAT:1,GOOD:0,BAD:-20,MISS:-50}));
-check('判定窓と通常スコア式は不変',JSON.stringify(RHYTHM_JUDGMENTS.map(x=>[x.id,x.windowMs,x.scoreRate]))===JSON.stringify([['MARVELOUS',40,1],['EXCELLENT',75,.98],['GREAT',130,.9],['GOOD',170,.7],['BAD',200,.3],['MISS',null,0]])&&RHYTHM_SCORE_WEIGHTS.judgment===.9&&RHYTHM_SCORE_WEIGHTS.combo===.1);
+check('判定窓と通常スコア式は不変',JSON.stringify(RHYTHM_JUDGMENTS.map(x=>[x.id,x.windowMs,x.scoreRate]))===JSON.stringify([['MARVELOUS',55,1],['EXCELLENT',100,.98],['GREAT',150,.9],['GOOD',200,.7],['BAD',240,.3],['MISS',null,0]])&&RHYTHM_SCORE_WEIGHTS.judgment===.9&&RHYTHM_SCORE_WEIGHTS.combo===.1);
 check('ライフ1以上では回復できる',rhythmLifeAfter(1,'MARVELOUS')===3&&rhythmLifeAfter(999,'GREAT')===1000);
 check('ライフ0以降はMARVELOUSでも0固定',rhythmLifeAfter(0,'MARVELOUS')===0&&rhythmLifeAfter(0,'EXCELLENT')===0&&rhythmLifeAfter(0,'GREAT')===0);
 check('減少と表示クランプは従来どおり',rhythmLifeAfter(500,'MISS')===450&&rhythmLifeAfter(500,'BAD')===480&&rhythmLifeRatio(-1)===0&&rhythmLifeRatio(2000)===1);
