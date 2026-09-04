@@ -1570,10 +1570,15 @@ const parseRhythmRankingDifficultyKey=(key)=>{
 const rhythmRankingCombinedMembers=(songId)=>RHYTHM_DEMO_DIFFICULTY_IDS
   .map(difficultyId=>rhythmRankingDifficultyKey(songId,difficultyId))
   .filter(Boolean);
-// 1回の取得で受け取る生の行数(重複ユーザーぶんを見込んで多めに取る)と、
-// ユーザーごとに畳んだあと画面へ出す件数
+// 1ページで受け取る生の行数、ユーザーごとに畳んだあと画面へ出す件数、
+// 十分な人数が集まるまでページ送りする上限(下のrhythmRankingDedupeByUserの説明も参照)。
+// 2026-09-04、Codexレビュー指摘: 1回200件で打ち切ると、同じプレイヤーが200回を超えて
+// 高得点を記録した場合にその1人の行だけで埋まり、本来上位に入る他プレイヤーが消えてしまう。
+// 1プレイ=1行で行が際限なく増える点は既存のsbFetchAllBreederRows(ブリーダーLvランキング)と
+// 同じ構造のため、そちらと同じ「ユニークな人数が集まるかページが尽きるまで送る」考え方にした
 const RHYTHM_RANKING_FETCH_LIMIT=200;
 const RHYTHM_RANKING_DISPLAY_LIMIT=50;
+const RHYTHM_RANKING_MAX_PAGES=10;
 // 同じユーザー名の行が複数あっても、いちばん高いスコアの1件だけを残す
 // (「自分のスコアはハイスコア1件のみ」という仕様。書き込み側は1プレイ=1行のまま増やし続け、
 // 表示のときにだけ集約する。既存のaggregateBreederLevelsと同じ考え方)

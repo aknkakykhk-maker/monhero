@@ -104,6 +104,23 @@ check('送信はRhythm-接頭辞のキーだけを受け付ける(他モード�
 check('専用の取得関数(sbFetchRhythmRankings)を持ち、複数キーをin.(...)でまとめて取得する',
   game.includes('const sbFetchRhythmRankings = async (difficultyKeys')
   &&/difficulty=in\.\(\$\{keys\.map/.test(game));
+check('取得はoffsetを受け取れる(ページ送りに使う)',
+  /const sbFetchRhythmRankings = async \(difficultyKeys, limit=RHYTHM_RANKING_FETCH_LIMIT, offset=0,/.test(game)
+  &&game.includes('&offset=${offset}`;'));
+// 2026-09-04、Codexレビュー指摘: 1プレイ=1行のまま増え続けるため、1回の取得を打ち切ると
+// 同じプレイヤーの行だけで埋まり、他プレイヤーがユーザー集約後に消えてしまう。
+// ユニークな人数が集まるかページが尽きるまで送るループになっているかを確認する
+check('loadRhythmRankingは、ユニークな人数(表示件数ぶん)が集まるかページが尽きるまでページ送りする',(()=>{
+  const at=game.indexOf('const loadRhythmRanking = useCallback(async (song) => {');
+  const end=game.indexOf('submitRhythmRankingScore',at);
+  const block=at>=0&&end>at?game.slice(at,end):'';
+  return block.includes('for (let page = 0; page < RHYTHM_RANKING_MAX_PAGES; page++) {')
+    &&block.includes('page * RHYTHM_RANKING_FETCH_LIMIT')
+    &&block.includes('rhythmRankingDedupeByUser(rows).length >= RHYTHM_RANKING_DISPLAY_LIMIT')
+    &&block.includes('pageRows.length < RHYTHM_RANKING_FETCH_LIMIT');
+})());
+check('ページ送りに上限(RHYTHM_RANKING_MAX_PAGES)があり、無限に取得し続けない',
+  data.includes('const RHYTHM_RANKING_MAX_PAGES=10;'));
 check('sbInsertRhythmScore/sbFetchRhythmRankingsは、既存モードが必ず経由するnormalizeRankingDifficultyを呼んでいない(検証を共有しない)',(()=>{
   const at=game.indexOf('const sbInsertRhythmScore = async (row) => {');
   const end=game.indexOf('const createRunId',0)>=0&&game.indexOf('const createRunId')<at
