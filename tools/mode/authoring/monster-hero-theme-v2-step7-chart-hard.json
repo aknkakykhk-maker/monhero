@@ -1,6 +1,6 @@
 {
  "schemaVersion": 1,
- "analysisType": "rhythm-chart-v2-step5-chart",
+ "analysisType": "rhythm-chart-v2-step7-chart",
  "trackId": "monster_hero_theme",
  "difficulty": "HARD",
  "candidateVersion": 1,
@@ -1398,7 +1398,7 @@
    "type": "TAP",
    "grid": 1050,
    "lane": 3,
-   "subLane": 7,
+   "subLane": 6,
    "subLaneWidth": 3,
    "sourceStrength": 0.89,
    "sourcePeakOffsetMs": 19
@@ -2497,8 +2497,8 @@
   {
    "type": "TAP",
    "grid": 1632,
-   "lane": 4,
-   "subLane": 8,
+   "lane": 3,
+   "subLane": 6,
    "subLaneWidth": 2,
    "sourceStrength": 0.47,
    "sourcePeakOffsetMs": -19
@@ -2712,5 +2712,58 @@
    "typeBalance": 0.7664,
    "breathing": 1
   }
+ },
+ "step7": {
+  "source": "step5",
+  "fixCount": 2,
+  "passes": 1,
+  "before": {
+   "impossible": 0,
+   "strained": 2,
+   "hardJumps": 0,
+   "spread": 7,
+   "cost": 207
+  },
+  "after": {
+   "impossible": 0,
+   "strained": 0,
+   "hardJumps": 0,
+   "spread": 7,
+   "cost": 7
+  },
+  "weights": {
+   "impossible": 10000,
+   "strained": 100,
+   "hardJump": 10,
+   "laneSpread": 1,
+   "move": 3,
+   "maxPasses": 8
+  },
+  "fixes": [
+   {
+    "grid": 1050,
+    "bar": 65,
+    "timeMs": 91166,
+    "type": "TAP",
+    "move": "サブレーン7→6",
+    "pass": 1,
+    "costBefore": 207,
+    "costAfter": 107,
+    "impossibleAfter": 0,
+    "strainedAfter": 1
+   },
+   {
+    "grid": 1632,
+    "bar": 102,
+    "timeMs": 141584,
+    "type": "TAP",
+    "move": "サブレーン8→6",
+    "pass": 1,
+    "costBefore": 107,
+    "costAfter": 7,
+    "impossibleAfter": 0,
+    "strainedAfter": 0
+   }
+  ]
  }
 }

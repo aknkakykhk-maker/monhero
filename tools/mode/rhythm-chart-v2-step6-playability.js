@@ -59,6 +59,8 @@ const SOURCES=Object.freeze({
     difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
   step3:{label:'V2 STEP3/4 出力',file:d=>`tools/mode/authoring/monster-hero-theme-v2-chart-${d.toLowerCase()}.json`,
     difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
+  step7:{label:'V2 STEP7 自動修正後',file:d=>`tools/mode/authoring/monster-hero-theme-v2-step7-chart-${d.toLowerCase()}.json`,
+    difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
   v1:{label:'既存の正式候補v1',file:d=>`monster-hero/debug/monster-hero-theme-${d.toLowerCase()}-formal-candidate-v1.json`,
     difficulties:['EASY','NORMAL','HARD']},
 });
@@ -82,19 +84,26 @@ const BAR=timing.subdivisionsPerBeat*4;
 // HOLD:      始点から終点まで、同じレーンで指を占有する
 // SLIDE:     始点から終点まで、経路のレーンを追いながら指を占有する
 // endFlick:  終わりを弾いて離すので、指が空くのが END_FLICK_RELEASE_MS だけ遅れる
+// 指が触るのはノーツの中心。note.lane は「いちばん左のレーン」なので、幅3〜4のノーツでは
+// 実際より1〜1.5レーン左を触っていることになり、指の移動距離を短く見積もっていた。
+const laneCenter=note=>note.subLane!=null&&Number.isFinite(Number(note.subLane))
+  ?(Number(note.subLane)+(Number(note.subLaneWidth)||2)/2)/2-.5
+  :Number(note.lane)||0;
 const toActions=notes=>notes.map((note,index)=>{
   const startMs=gridTimeMs(note.grid);
-  const lane=Number(note.lane)||0;
+  const lane=laneCenter(note);
   const endFlick=note.endFlick===true&&(note.type==='HOLD'||note.type==='SLIDE');
   if(note.type==='HOLD'){
     const endMs=gridTimeMs(note.grid+(Number(note.durationGrids)||0));
     return {index,type:note.type,startMs,endMs,startLane:lane,endLane:lane,grid:note.grid,endFlick,note};
   }
   if(note.type==='SLIDE'){
+    // SLIDEの lane は経路の中心線そのもの
     const points=Array.isArray(note.slidePoints)&&note.slidePoints.length?note.slidePoints:null;
     const endGrid=note.grid+(Number(note.durationGrids)||0);
-    const endLane=points?Number(points[points.length-1].lane):Number(note.endLane??lane);
-    return {index,type:note.type,startMs,endMs:gridTimeMs(endGrid),startLane:lane,endLane,grid:note.grid,endFlick,note};
+    // SLIDEは lane が経路の中心線なので、幅ぶんの補正は要らない
+    const endLane=points?Number(points[points.length-1].lane):Number(note.endLane??note.lane??lane);
+    return {index,type:note.type,startMs,endMs:gridTimeMs(endGrid),startLane:Number(note.lane)||0,endLane,grid:note.grid,endFlick,note};
   }
   return {index,type:note.type,startMs,endMs:startMs,startLane:lane,endLane:lane,grid:note.grid,endFlick:false,note};
 }).sort((a,b)=>a.startMs-b.startMs||a.startLane-b.startLane);
@@ -195,6 +204,17 @@ const simulate=actions=>{
   }
   return issues;
 };
+// --- STEP7(自動修正ループ)から使い回せるように、手のモデルをそのまま公開する。
+//     道具ごとにシミュレートを書き直すと、直したつもりで別の物差しになってしまう。 ---
+module.exports={
+  toActions,simulate,
+  handModel:Object.freeze({hands:HANDS,laneSpeedComfort:LANE_SPEED_COMFORT,laneSpeedLimit:LANE_SPEED_LIMIT,
+    restrikeComfortMs:RESTRIKE_COMFORT_MS,restrikeLimitMs:RESTRIKE_LIMIT_MS,
+    chordMinLaneGap:CHORD_MIN_LANE_GAP,releaseMarginMs:RELEASE_MARGIN_MS,endFlickReleaseMs:END_FLICK_RELEASE_MS}),
+  timing,gridTimeMs,BAR,
+};
+if(require.main!==module)return;
+
 // --- 実行 ---
 const DIFFICULTIES=only?[only]:source.difficulties||[(()=>{
   const chart=JSON.parse(fs.readFileSync(source.file(),'utf8'));
