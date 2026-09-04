@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2163ca517de58edc
+// source-sha256: 9e77649698b31a26
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 00:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 01:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3647,7 +3647,11 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   vibrationEnabled: false,
   effectAmount: 'NORMAL',
   lightweightMode: false,
-  livePartnerVisible: true
+  livePartnerVisible: true,
+  // 両サイドのマスモン(2026-09-05)。既存の保存値には無いので、読み込み時は既定で補われる。
+  sideMonsterOpacity: 'NORMAL',
+  sideMonsterMotion: 'NORMAL',
+  sideMonsterAbilityHighlight: true
 });
 const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
@@ -3679,7 +3683,10 @@ const normalizeRhythmSettings = value => {
     vibrationEnabled: bool('vibrationEnabled'),
     effectAmount: RHYTHM_EFFECT_LEVELS.includes(source.effectAmount) ? source.effectAmount : DEFAULT_RHYTHM_SETTINGS.effectAmount,
     lightweightMode: bool('lightweightMode'),
-    livePartnerVisible: bool('livePartnerVisible')
+    livePartnerVisible: bool('livePartnerVisible'),
+    sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
+    sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
+    sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight')
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -15526,6 +15533,24 @@ const RhythmOptions = ({
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-black text-cyan-200"
+  }, "\uD83D\uDC3E \u4E21\u30B5\u30A4\u30C9\u306E\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] leading-relaxed text-slate-400"
+  }, "\u30EC\u30FC\u30F3\u306E\u5916\u5074\u306E\u7A7A\u3044\u305F\u3068\u3053\u308D\u3078\u3001\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u304C\u51FA\u3066\u62CD\u306B\u5408\u308F\u305B\u3066\u8DF3\u306D\u307E\u3059\u3002\u30CE\u30FC\u30C4\u304C\u898B\u3065\u3089\u3044\u3068\u304D\u3084\u3001\u7AEF\u672B\u304C\u71B1\u304F\u306A\u308A\u3084\u3059\u3044\u3068\u304D\u306F\u8584\u304F\u3059\u308B\u304B\u6B62\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "py-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-xs font-bold"
+  }, "\u6FC3\u3055"), segments('sideMonsterOpacity', [['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']])), /*#__PURE__*/React.createElement("div", {
+    className: "py-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "mb-2 text-xs font-bold"
+  }, "\u52D5\u304D"), segments('sideMonsterMotion', [['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']])), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-bold"
+  }, "\u80FD\u529B\u4E2D\u306B\u5149\u3089\u305B\u308B"), toggle('sideMonsterAbilityHighlight', ''))), /*#__PURE__*/React.createElement("section", {
+    className: card
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-cyan-200"
   }, "\u2728 \u6F14\u51FA\u30FB\u7AEF\u672B"), /*#__PURE__*/React.createElement("div", {
     className: "py-2"
   }, /*#__PURE__*/React.createElement("p", {
@@ -15821,6 +15846,42 @@ const RhythmTapTest = ({
     const slot = rhythmNoteMonsterSlot(note);
     return slot ? monstersRef.current[slot - 1] || null : null;
   };
+  // --- 両サイドのマスモン ---
+  // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
+  // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
+  // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
+  const sideMonsterRefs = useRef([]);
+  const sideMonsterElements = useMemo(() => {
+    if (settings.sideMonsterOpacity === 'OFF') return null;
+    const opacity = rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
+    return /*#__PURE__*/React.createElement("div", {
+      "data-rhythm-side-monsters": true,
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute inset-0"
+    }, monsters.map((monster, index) => {
+      if (!monster || !monster.imageUrl) return null;
+      const slot = index + 1;
+      return /*#__PURE__*/React.createElement("span", {
+        key: slot,
+        ref: el => {
+          sideMonsterRefs.current[index] = el;
+        },
+        "data-rhythm-side-monster": slot,
+        "data-rhythm-side-motion": settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'NONE' : settings.sideMonsterMotion,
+        "data-rhythm-side-active": "0",
+        style: {
+          '--rhythm-side-opacity': opacity,
+          '--rhythm-side-delay': `${index % 2 === 0 ? 0 : -250}ms`
+        }
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: monster.baseId,
+        src: monster.imageUrl,
+        alt: "",
+        masuColors: monster.colors,
+        draggable: false
+      }));
+    }));
+  }, [monsterSignature, settings.sideMonsterOpacity, settings.sideMonsterMotion, settings.lightweightMode, settings.effectAmount]);
   const abilityTimerRef = useRef(null),
     abilityRevisionRef = useRef(0),
     abilityBadgeRef = useRef(null);
@@ -16040,10 +16101,21 @@ const RhythmTapTest = ({
       run.life = activated.life;
       if (activated.revived) revived = true;
       if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.konjoOwnerName = monster.name;
-      if (activated.applied) abilityFlash = {
-        monster: monster.name,
-        ability: monster.ability.name
-      };
+      if (activated.applied) {
+        abilityFlash = {
+          monster: monster.name,
+          ability: monster.ability.name
+        };
+        // どのマスモンの能力が効いているかを覚えておく(両サイドの表示で光らせるため)。
+        // 判定・スコア・ライフには一切関係しない、見た目だけの控え。
+        const slot = rhythmNoteMonsterSlot(note);
+        run.abilityOwners = run.abilityOwners || {};
+        if (monster.ability.id === 'MUTEKI' || monster.ability.id === 'GAMAN') run.abilityOwners[monster.ability.id] = slot;
+        if (monster.ability.id === 'KONJO' && Number(activated.state?.konjoStock) > 0) run.abilityOwners.KONJO = slot;
+        // 元気のように一瞬で終わる能力は、少しのあいだだけ光らせる
+        run.abilityFlashSlot = slot;
+        run.abilityFlashUntilMs = songTimeMs + RHYTHM_SIDE_MONSTER_FLASH_MS;
+      }
     }
     const calculatedScore = rhythmCalculateScore({
       judgments: run.counts,
@@ -16314,6 +16386,25 @@ const RhythmTapTest = ({
         }
         if (badge.hidden !== (text === '')) badge.hidden = text === '';
       }
+      // 両サイドのマスモン: 能力が効いている枠だけを光らせる。
+      // 毎フレーム属性を書くと、そのぶん塗り直しが増える。**変わった瞬間だけ**書く。
+      if (settings.sideMonsterAbilityHighlight && sideMonsterRefs.current.length) {
+        const owners = run.abilityOwners || {};
+        const active = new Set();
+        if (rhythmMonsterAbilityRemainingMs(run.abilities, 'MUTEKI', songTimeMs) > 0 && owners.MUTEKI) active.add(owners.MUTEKI);
+        if (rhythmMonsterAbilityRemainingMs(run.abilities, 'GAMAN', songTimeMs) > 0 && owners.GAMAN) active.add(owners.GAMAN);
+        if (Number(run.abilities?.konjoStock) > 0 && owners.KONJO) active.add(owners.KONJO);
+        if (run.abilityFlashSlot && songTimeMs < Number(run.abilityFlashUntilMs)) active.add(run.abilityFlashSlot);
+        const signature = [...active].sort().join(',');
+        if (run.sideMonsterActiveSignature !== signature) {
+          run.sideMonsterActiveSignature = signature;
+          sideMonsterRefs.current.forEach((el, index) => {
+            if (!el) return;
+            const want = active.has(index + 1) ? '1' : '0';
+            if (el.dataset.rhythmSideActive !== want) el.dataset.rhythmSideActive = want;
+          });
+        }
+      }
       const playEndTimeMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
       if (RHYTHM_PERF.enabled) RHYTHM_PERF.tick(performance.now() - perfTickStart, perfTickStart - frameNowMs);
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
@@ -16400,7 +16491,14 @@ const RhythmTapTest = ({
         el._rhythmDepthBrightness = undefined;
       }
     });
-    rhythmLayoutPlayArea(playAreaRef.current);
+    rhythmLayoutPlayArea(playAreaRef.current); /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
+    const sideBeatMs = rhythmSideMonsterBeatMs(song.bgmTrackId);
+    sideMonsterRefs.current.forEach(el => {
+      if (el) {
+        el.style.setProperty('--rhythm-side-beat', `${sideBeatMs}ms`);
+        el.dataset.rhythmSideActive = '0';
+      }
+    });
     startLockRef.current = false;
     setView({
       ...initialView(),
@@ -16898,7 +16996,7 @@ const RhythmTapTest = ({
       '--rhythm-note-size-scale': settings.noteSize / 100,
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
-  }, laneElements, /*#__PURE__*/React.createElement("div", {
+  }, laneElements, sideMonsterElements, /*#__PURE__*/React.createElement("div", {
     ref: judgmentLineRef,
     "data-rhythm-judgment-line": true,
     className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300",

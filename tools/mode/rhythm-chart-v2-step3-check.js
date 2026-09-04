@@ -132,6 +132,11 @@ try{
     const tapers=candidate.notes.filter(n=>Array.isArray(n.holdPoints));
     check(`${difficulty}: 押さえている途中で幅が変わるHOLDがある`,tapers.length>=3,
       `${tapers.length}本 / ${[...new Set(tapers.map(n=>n.holdTaper))].join(' ')}`);
+    check(`${difficulty}: HOLDの幅の変わり方が3種類以上ある`,
+      new Set(tapers.map(n=>n.holdTaper)).size>=3,[...new Set(tapers.map(n=>n.holdTaper))].join('/'));
+    check(`${difficulty}: HOLDの幅の変わり方はSLIDEと同じ語彙から選ぶ`,
+      tapers.every(n=>candidate.policy.holdWidthShapes.includes(n.holdTaper))
+      &&!candidate.policy.holdWidthShapes.includes('flat'));
     check(`${difficulty}: 幅が変わるHOLDの点は時刻順で、幅・位置がレーン内に収まる`,
       tapers.every(n=>n.holdPoints.length>=2
         &&n.holdPoints.every((point,index)=>index===0||point.grid>n.holdPoints[index-1].grid)
@@ -170,9 +175,46 @@ try{
         candidate.notes.filter(n=>n.supplementedFrom).every(n=>n.sourceStrength>=floors[n.supplementedFrom]-.005),
         Object.entries(floors).map(([k,v])=>`${k}${v.toFixed(2)}`).join(' / '));
     }
+    // --- 曲のタイプ(2026-09-05) ---
+    check(`${difficulty}: 曲のタイプを譜面へ記録している`,
+      candidate.policy.songType&&['granularity','sustain','motion','dynamics','regularity']
+        .every(axis=>Number.isFinite(candidate.policy.songType[axis])
+          &&candidate.policy.songType[axis]>=0&&candidate.policy.songType[axis]<=1),
+      candidate.policy.songTypeLabels?.join('/'));
+    check(`${difficulty}: 曲のタイプの効き方も記録している(あとから理由を追える)`,
+      candidate.policy.songTypeEffect&&['density','narrow','hold','slide','flick','contrast']
+        .every(key=>Number.isFinite(candidate.policy.songTypeEffect[key])));
+
+    // --- SLIDEの形は組み合わせで作る(2026-09-05の実機指摘「バリエーションが少なすぎる」) ---
     const slides=candidate.notes.filter(n=>n.type==='SLIDE');
-    if(slides.length>=4)check(`${difficulty}: SLIDEの形が3種類以上(以前は全部同じ形だった)`,
-      new Set(slides.map(n=>n.slideShape)).size>=3,[...new Set(slides.map(n=>n.slideShape))].join('/'));
+    check(`${difficulty}: SLIDEの形は組み合わせで作る(固定リストではない)`,
+      candidate.policy.slideShapeCombinations>=500
+      &&Array.isArray(candidate.policy.slidePaths)&&candidate.policy.slidePaths.length>=6
+      &&Array.isArray(candidate.policy.slideWidthShapes)&&candidate.policy.slideWidthShapes.length>=5,
+      `${candidate.policy.slideShapeCombinations}通り`);
+    if(slides.length>=4){
+      check(`${difficulty}: SLIDEの形が3種類以上(以前は全部同じ形だった)`,
+        new Set(slides.map(n=>n.slideShape)).size>=3,`${new Set(slides.map(n=>n.slideShape)).size}種`);
+      // 以前は「経路しか変わらず、長さも振れ幅も幅も全部同じ」になっていた。4つとも変わることを見張る。
+      for(const [key,label] of [['slidePath','経路'],['slideWidthShape','幅の変わり方']]){
+        check(`${difficulty}: SLIDEの${label}が2種類以上`,
+          new Set(slides.map(n=>n[key])).size>=2,[...new Set(slides.map(n=>n[key]))].join('/'));
+      }
+      check(`${difficulty}: SLIDEの長さが2種類以上`,
+        new Set(slides.map(n=>n.durationGrids)).size>=2,[...new Set(slides.map(n=>n.durationGrids))].sort((a,b)=>a-b).join('/'));
+      check(`${difficulty}: SLIDEの振れ幅が2種類以上`,
+        new Set(slides.map(n=>n.slideReach)).size>=2,[...new Set(slides.map(n=>n.slideReach))].sort((a,b)=>a-b).join('/'));
+      check(`${difficulty}: 途中で太さが増えてから減るSLIDEがある(単調な変化だけにしない)`,
+        slides.some(n=>{
+          const widths=n.slidePoints.map(p=>p.subLaneWidth);
+          const max=Math.max(...widths);
+          return max>widths[0]&&max>widths[widths.length-1];
+        })||slides.some(n=>{
+          const widths=n.slidePoints.map(p=>p.subLaneWidth);
+          const min=Math.min(...widths);
+          return min<widths[0]&&min<widths[widths.length-1];
+        }));
+    }
     if(slides.length)check(`${difficulty}: SLIDEの経路が0〜4レーン・0.5刻みに収まる`,
       slides.every(n=>n.slidePoints.every(p=>p.lane>=0&&p.lane<=4&&Number.isInteger(p.lane*2))));
     const holds=candidate.notes.filter(n=>n.type==='HOLD');

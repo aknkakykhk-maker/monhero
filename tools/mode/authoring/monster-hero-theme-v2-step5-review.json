@@ -60,25 +60,25 @@
       "maxLaneStep": 2
      },
      "duplicateOf": null,
-     "score": 0.8297,
+     "score": 0.8256,
      "detail": {
-      "onsetFit": 0.6454,
+      "onsetFit": 0.6545,
       "structureFit": 1,
-      "densityTarget": 0.982,
-      "monotony": 0.6164,
+      "densityTarget": 0.97,
+      "monotony": 0.5912,
       "handMotion": 1,
-      "typeBalance": 0.6569,
+      "typeBalance": 0.656,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 241,
-     "densityPerSecond": 1.68,
+     "noteCount": 245,
+     "densityPerSecond": 1.7,
      "typeCounts": {
       "HOLD": 12,
-      "TAP": 229
+      "TAP": 233
      }
     },
     {
@@ -88,25 +88,25 @@
       "holdMaxCount": 16
      },
      "duplicateOf": null,
-     "score": 0.8233,
+     "score": 0.8187,
      "detail": {
-      "onsetFit": 0.6454,
+      "onsetFit": 0.6545,
       "structureFit": 1,
-      "densityTarget": 0.982,
-      "monotony": 0.5693,
+      "densityTarget": 0.97,
+      "monotony": 0.5409,
       "handMotion": 1,
-      "typeBalance": 0.6759,
+      "typeBalance": 0.6746,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 241,
-     "densityPerSecond": 1.68,
+     "noteCount": 245,
+     "densityPerSecond": 1.7,
      "typeCounts": {
       "HOLD": 16,
-      "TAP": 225
+      "TAP": 229
      }
     },
     {
@@ -114,25 +114,25 @@
      "label": "既定",
      "override": {},
      "duplicateOf": null,
-     "score": 0.8222,
+     "score": 0.8174,
      "detail": {
-      "onsetFit": 0.6454,
+      "onsetFit": 0.6545,
       "structureFit": 1,
-      "densityTarget": 0.982,
-      "monotony": 0.5693,
+      "densityTarget": 0.97,
+      "monotony": 0.5399,
       "handMotion": 1,
-      "typeBalance": 0.6569,
+      "typeBalance": 0.656,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 241,
-     "densityPerSecond": 1.68,
+     "noteCount": 245,
+     "densityPerSecond": 1.7,
      "typeCounts": {
       "HOLD": 12,
-      "TAP": 229
+      "TAP": 233
      }
     },
     {
@@ -142,25 +142,25 @@
       "maxLaneStep": 1
      },
      "duplicateOf": "base",
-     "score": 0.8222,
+     "score": 0.8174,
      "detail": {
-      "onsetFit": 0.6454,
+      "onsetFit": 0.6545,
       "structureFit": 1,
-      "densityTarget": 0.982,
-      "monotony": 0.5693,
+      "densityTarget": 0.97,
+      "monotony": 0.5399,
       "handMotion": 1,
-      "typeBalance": 0.6569,
+      "typeBalance": 0.656,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 241,
-     "densityPerSecond": 1.68,
+     "noteCount": 245,
+     "densityPerSecond": 1.7,
      "typeCounts": {
       "HOLD": 12,
-      "TAP": 229
+      "TAP": 233
      }
     },
     {
@@ -170,25 +170,25 @@
       "minStrength": 0
      },
      "duplicateOf": "base",
-     "score": 0.8222,
+     "score": 0.8174,
      "detail": {
-      "onsetFit": 0.6454,
+      "onsetFit": 0.6545,
       "structureFit": 1,
-      "densityTarget": 0.982,
-      "monotony": 0.5693,
+      "densityTarget": 0.97,
+      "monotony": 0.5399,
       "handMotion": 1,
-      "typeBalance": 0.6569,
+      "typeBalance": 0.656,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 241,
-     "densityPerSecond": 1.68,
+     "noteCount": 245,
+     "densityPerSecond": 1.7,
      "typeCounts": {
       "HOLD": 12,
-      "TAP": 229
+      "TAP": 233
      }
     },
     {
@@ -198,25 +198,25 @@
       "minStrength": 0.1
      },
      "duplicateOf": "base",
-     "score": 0.8222,
+     "score": 0.8174,
      "detail": {
-      "onsetFit": 0.6454,
+      "onsetFit": 0.6545,
       "structureFit": 1,
-      "densityTarget": 0.982,
-      "monotony": 0.5693,
+      "densityTarget": 0.97,
+      "monotony": 0.5399,
       "handMotion": 1,
-      "typeBalance": 0.6569,
+      "typeBalance": 0.656,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 241,
-     "densityPerSecond": 1.68,
+     "noteCount": 245,
+     "densityPerSecond": 1.7,
      "typeCounts": {
       "HOLD": 12,
-      "TAP": 229
+      "TAP": 233
      }
     },
     {
@@ -224,31 +224,31 @@
      "label": "密度を上げる",
      "override": {
       "perBarByIntensity": [
-       2.2,
+       2.15,
        3.9,
-       5.2
+       5.38
       ]
      },
      "duplicateOf": null,
-     "score": 0.8121,
+     "score": 0.8029,
      "detail": {
-      "onsetFit": 0.6479,
+      "onsetFit": 0.6436,
       "structureFit": 1,
-      "densityTarget": 0.96,
-      "monotony": 0.5299,
+      "densityTarget": 0.92,
+      "monotony": 0.5242,
       "handMotion": 1,
-      "typeBalance": 0.6499,
+      "typeBalance": 0.6497,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 275,
-     "densityPerSecond": 1.91,
+     "noteCount": 276,
+     "densityPerSecond": 1.92,
      "typeCounts": {
       "HOLD": 12,
-      "TAP": 263
+      "TAP": 264
      }
     },
     {
@@ -258,29 +258,29 @@
       "perBarByIntensity": [
        0.5,
        1.9,
-       3.2
+       3.38
       ]
      },
      "duplicateOf": null,
-     "score": 0.7362,
+     "score": 0.7608,
      "detail": {
-      "onsetFit": 0.6574,
+      "onsetFit": 0.6648,
       "structureFit": 1,
-      "densityTarget": 0.56,
-      "monotony": 0.5917,
+      "densityTarget": 0.68,
+      "monotony": 0.6002,
       "handMotion": 1,
-      "typeBalance": 0.6741,
+      "typeBalance": 0.6722,
       "breathing": 0.5625
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 185,
-     "densityPerSecond": 1.29,
+     "noteCount": 190,
+     "densityPerSecond": 1.32,
      "typeCounts": {
       "HOLD": 12,
-      "TAP": 173
+      "TAP": 178
      }
     }
    ]
@@ -295,8 +295,8 @@
    "totalVariants": 8,
    "orderingKept": true,
    "excludedByOrdering": [
-    "strong",
-    "sparse"
+    "sparse",
+    "strong"
    ],
    "excludedByPlayability": [],
    "candidates": [
@@ -307,56 +307,56 @@
       "maxLaneStep": 3
      },
      "duplicateOf": null,
-     "score": 0.8282,
+     "score": 0.833,
      "detail": {
-      "onsetFit": 0.6384,
+      "onsetFit": 0.6389,
       "structureFit": 1,
-      "densityTarget": 0.98,
-      "monotony": 0.5953,
+      "densityTarget": 0.995,
+      "monotony": 0.6085,
       "handMotion": 1,
-      "typeBalance": 0.722,
+      "typeBalance": 0.7199,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 1
+      "strained": 0
      },
-     "noteCount": 281,
-     "densityPerSecond": 1.96,
+     "noteCount": 286,
+     "densityPerSecond": 1.99,
      "typeCounts": {
-      "HOLD": 16,
-      "FLICK": 14,
-      "TAP": 251
+      "HOLD": 17,
+      "FLICK": 13,
+      "TAP": 256
      }
     },
     {
      "variant": "variety",
      "label": "HOLD/FLICK/SLIDEを増やす",
      "override": {
-      "holdMaxCount": 20,
-      "flickMaxCount": 18
+      "holdMaxCount": 21,
+      "flickMaxCount": 17
      },
      "duplicateOf": null,
-     "score": 0.8268,
+     "score": 0.8262,
      "detail": {
-      "onsetFit": 0.6384,
+      "onsetFit": 0.6389,
       "structureFit": 1,
-      "densityTarget": 0.98,
-      "monotony": 0.5741,
+      "densityTarget": 0.995,
+      "monotony": 0.5542,
       "handMotion": 1,
-      "typeBalance": 0.7546,
+      "typeBalance": 0.7518,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 1
+      "strained": 2
      },
-     "noteCount": 281,
-     "densityPerSecond": 1.96,
+     "noteCount": 286,
+     "densityPerSecond": 1.99,
      "typeCounts": {
-      "HOLD": 20,
-      "FLICK": 18,
-      "TAP": 243
+      "HOLD": 21,
+      "FLICK": 17,
+      "TAP": 248
      }
     },
     {
@@ -364,26 +364,26 @@
      "label": "既定",
      "override": {},
      "duplicateOf": null,
-     "score": 0.8248,
+     "score": 0.8243,
      "detail": {
-      "onsetFit": 0.6384,
+      "onsetFit": 0.6389,
       "structureFit": 1,
-      "densityTarget": 0.98,
-      "monotony": 0.5741,
+      "densityTarget": 0.995,
+      "monotony": 0.5542,
       "handMotion": 1,
-      "typeBalance": 0.722,
+      "typeBalance": 0.7199,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 1
+      "strained": 2
      },
-     "noteCount": 281,
-     "densityPerSecond": 1.96,
+     "noteCount": 286,
+     "densityPerSecond": 1.99,
      "typeCounts": {
-      "HOLD": 16,
-      "FLICK": 14,
-      "TAP": 251
+      "HOLD": 17,
+      "FLICK": 13,
+      "TAP": 256
      }
     },
     {
@@ -393,26 +393,88 @@
       "maxLaneStep": 1
      },
      "duplicateOf": null,
-     "score": 0.818,
+     "score": 0.8213,
      "detail": {
-      "onsetFit": 0.6384,
+      "onsetFit": 0.6389,
       "structureFit": 1,
-      "densityTarget": 0.98,
-      "monotony": 0.5314,
+      "densityTarget": 0.995,
+      "monotony": 0.5353,
       "handMotion": 1,
-      "typeBalance": 0.722,
+      "typeBalance": 0.7199,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 281,
-     "densityPerSecond": 1.96,
+     "noteCount": 286,
+     "densityPerSecond": 1.99,
      "typeCounts": {
-      "HOLD": 16,
-      "FLICK": 14,
-      "TAP": 251
+      "HOLD": 17,
+      "FLICK": 13,
+      "TAP": 256
+     }
+    },
+    {
+     "variant": "sparse",
+     "label": "密度を下げる",
+     "override": {
+      "perBarByIntensity": [
+       0.5,
+       2.4,
+       4.42
+      ]
+     },
+     "duplicateOf": null,
+     "score": 0.8142,
+     "detail": {
+      "onsetFit": 0.6343,
+      "structureFit": 1,
+      "densityTarget": 0.9,
+      "monotony": 0.5958,
+      "handMotion": 1,
+      "typeBalance": 0.7447,
+      "breathing": 1
+     },
+     "playability": {
+      "impossible": 0,
+      "strained": 0
+     },
+     "noteCount": 237,
+     "densityPerSecond": 1.67,
+     "typeCounts": {
+      "HOLD": 17,
+      "FLICK": 13,
+      "TAP": 207
+     }
+    },
+    {
+     "variant": "strong",
+     "label": "強い音だけ拾う",
+     "override": {
+      "minStrength": 0.5
+     },
+     "duplicateOf": null,
+     "score": 0.809,
+     "detail": {
+      "onsetFit": 0.6515,
+      "structureFit": 1,
+      "densityTarget": 0.86,
+      "monotony": 0.5846,
+      "handMotion": 1,
+      "typeBalance": 0.7388,
+      "breathing": 1
+     },
+     "playability": {
+      "impossible": 0,
+      "strained": 2
+     },
+     "noteCount": 247,
+     "densityPerSecond": 1.72,
+     "typeCounts": {
+      "HOLD": 17,
+      "FLICK": 13,
+      "TAP": 217
      }
     },
     {
@@ -422,26 +484,26 @@
       "minStrength": 0.3
      },
      "duplicateOf": null,
-     "score": 0.8135,
+     "score": 0.8081,
      "detail": {
-      "onsetFit": 0.628,
+      "onsetFit": 0.6344,
       "structureFit": 1,
-      "densityTarget": 0.945,
-      "monotony": 0.562,
+      "densityTarget": 0.935,
+      "monotony": 0.5305,
       "handMotion": 1,
-      "typeBalance": 0.712,
+      "typeBalance": 0.7106,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 0
      },
-     "noteCount": 306,
-     "densityPerSecond": 2.11,
+     "noteCount": 310,
+     "densityPerSecond": 2.13,
      "typeCounts": {
-      "HOLD": 16,
-      "FLICK": 14,
-      "TAP": 276
+      "HOLD": 17,
+      "FLICK": 13,
+      "TAP": 280
      }
     },
     {
@@ -449,18 +511,18 @@
      "label": "密度を上げる",
      "override": {
       "perBarByIntensity": [
-       2.4,
+       2.34,
        4.4,
-       6.2
+       6.42
       ]
      },
      "duplicateOf": null,
-     "score": 0.8106,
+     "score": 0.8075,
      "detail": {
-      "onsetFit": 0.6325,
+      "onsetFit": 0.6301,
       "structureFit": 1,
       "densityTarget": 0.93,
-      "monotony": 0.5546,
+      "monotony": 0.5388,
       "handMotion": 1,
       "typeBalance": 0.7117,
       "breathing": 1
@@ -472,71 +534,9 @@
      "noteCount": 307,
      "densityPerSecond": 2.14,
      "typeCounts": {
-      "HOLD": 16,
-      "FLICK": 14,
+      "HOLD": 17,
+      "FLICK": 13,
       "TAP": 277
-     }
-    },
-    {
-     "variant": "strong",
-     "label": "強い音だけ拾う",
-     "override": {
-      "minStrength": 0.5
-     },
-     "duplicateOf": null,
-     "score": 0.8077,
-     "detail": {
-      "onsetFit": 0.6497,
-      "structureFit": 1,
-      "densityTarget": 0.855,
-      "monotony": 0.5844,
-      "handMotion": 1,
-      "typeBalance": 0.7394,
-      "breathing": 1
-     },
-     "playability": {
-      "impossible": 0,
-      "strained": 1
-     },
-     "noteCount": 246,
-     "densityPerSecond": 1.71,
-     "typeCounts": {
-      "HOLD": 16,
-      "FLICK": 14,
-      "TAP": 216
-     }
-    },
-    {
-     "variant": "sparse",
-     "label": "密度を下げる",
-     "override": {
-      "perBarByIntensity": [
-       0.5,
-       2.4,
-       4.2
-      ]
-     },
-     "duplicateOf": null,
-     "score": 0.7739,
-     "detail": {
-      "onsetFit": 0.6299,
-      "structureFit": 1,
-      "densityTarget": 0.7,
-      "monotony": 0.5731,
-      "handMotion": 1,
-      "typeBalance": 0.7497,
-      "breathing": 1
-     },
-     "playability": {
-      "impossible": 0,
-      "strained": 1
-     },
-     "noteCount": 229,
-     "densityPerSecond": 1.61,
-     "typeCounts": {
-      "HOLD": 16,
-      "FLICK": 14,
-      "TAP": 199
      }
     }
    ]
@@ -560,93 +560,59 @@
       "minStrength": 0.34
      },
      "duplicateOf": null,
-     "score": 0.8293,
+     "score": 0.8252,
      "detail": {
-      "onsetFit": 0.604,
+      "onsetFit": 0.6081,
       "structureFit": 1,
-      "densityTarget": 0.985,
-      "monotony": 0.6565,
-      "handMotion": 0.9779,
-      "typeBalance": 0.7362,
+      "densityTarget": 0.9587,
+      "monotony": 0.6547,
+      "handMotion": 0.9774,
+      "typeBalance": 0.7364,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 18
+      "strained": 12
      },
-     "noteCount": 386,
-     "densityPerSecond": 2.66,
+     "noteCount": 377,
+     "densityPerSecond": 2.59,
      "typeCounts": {
-      "TAP": 340,
-      "HOLD": 18,
-      "FLICK": 18,
-      "SLIDE": 10
+      "TAP": 332,
+      "HOLD": 19,
+      "FLICK": 17,
+      "SLIDE": 9
      }
     },
     {
      "variant": "variety",
      "label": "HOLD/FLICK/SLIDEを増やす",
      "override": {
-      "holdMaxCount": 22,
-      "flickMaxCount": 22,
-      "slideMaxCount": 13
+      "holdMaxCount": 23,
+      "flickMaxCount": 21,
+      "slideMaxCount": 12
      },
      "duplicateOf": null,
-     "score": 0.8281,
+     "score": 0.8184,
      "detail": {
-      "onsetFit": 0.6066,
+      "onsetFit": 0.5914,
       "structureFit": 1,
-      "densityTarget": 0.9738,
-      "monotony": 0.6497,
-      "handMotion": 0.9799,
-      "typeBalance": 0.756,
+      "densityTarget": 0.955,
+      "monotony": 0.6223,
+      "handMotion": 1,
+      "typeBalance": 0.7505,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 24
+      "strained": 27
      },
-     "noteCount": 403,
-     "densityPerSecond": 2.77,
+     "noteCount": 410,
+     "densityPerSecond": 2.82,
      "typeCounts": {
-      "TAP": 348,
-      "HOLD": 20,
-      "FLICK": 22,
-      "SLIDE": 13
-     }
-    },
-    {
-     "variant": "sparse",
-     "label": "密度を下げる",
-     "override": {
-      "perBarByIntensity": [
-       0.8,
-       3.3,
-       5.4
-      ]
-     },
-     "duplicateOf": null,
-     "score": 0.8181,
-     "detail": {
-      "onsetFit": 0.6209,
-      "structureFit": 1,
-      "densityTarget": 0.9,
-      "monotony": 0.6532,
-      "handMotion": 0.9699,
-      "typeBalance": 0.7603,
-      "breathing": 1
-     },
-     "playability": {
-      "impossible": 0,
-      "strained": 14
-     },
-     "noteCount": 328,
-     "densityPerSecond": 2.26,
-     "typeCounts": {
-      "TAP": 282,
-      "HOLD": 18,
-      "FLICK": 18,
-      "SLIDE": 10
+      "TAP": 356,
+      "HOLD": 21,
+      "FLICK": 21,
+      "SLIDE": 12
      }
     },
     {
@@ -656,55 +622,27 @@
       "maxLaneStep": 4
      },
      "duplicateOf": null,
-     "score": 0.8154,
+     "score": 0.8182,
      "detail": {
-      "onsetFit": 0.5987,
+      "onsetFit": 0.5953,
       "structureFit": 1,
-      "densityTarget": 0.94,
-      "monotony": 0.6303,
-      "handMotion": 0.9812,
-      "typeBalance": 0.7264,
-      "breathing": 1
-     },
-     "playability": {
-      "impossible": 0,
-      "strained": 24
-     },
-     "noteCount": 416,
-     "densityPerSecond": 2.86,
-     "typeCounts": {
-      "TAP": 370,
-      "HOLD": 18,
-      "FLICK": 18,
-      "SLIDE": 10
-     }
-    },
-    {
-     "variant": "base",
-     "label": "既定",
-     "override": {},
-     "duplicateOf": null,
-     "score": 0.8143,
-     "detail": {
-      "onsetFit": 0.5987,
-      "structureFit": 1,
-      "densityTarget": 0.94,
-      "monotony": 0.623,
-      "handMotion": 0.9812,
-      "typeBalance": 0.7264,
+      "densityTarget": 0.9475,
+      "monotony": 0.6331,
+      "handMotion": 1,
+      "typeBalance": 0.7245,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 26
      },
-     "noteCount": 416,
-     "densityPerSecond": 2.86,
+     "noteCount": 413,
+     "densityPerSecond": 2.84,
      "typeCounts": {
-      "TAP": 370,
-      "HOLD": 18,
-      "FLICK": 18,
-      "SLIDE": 10
+      "TAP": 368,
+      "HOLD": 19,
+      "FLICK": 17,
+      "SLIDE": 9
      }
     },
     {
@@ -714,27 +652,55 @@
       "minStrength": 0.14
      },
      "duplicateOf": null,
-     "score": 0.8101,
+     "score": 0.8172,
      "detail": {
-      "onsetFit": 0.6031,
+      "onsetFit": 0.5969,
       "structureFit": 1,
-      "densityTarget": 0.925,
-      "monotony": 0.6189,
-      "handMotion": 0.9631,
-      "typeBalance": 0.7246,
+      "densityTarget": 0.9513,
+      "monotony": 0.6205,
+      "handMotion": 1,
+      "typeBalance": 0.7248,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 16
+      "strained": 22
      },
-     "noteCount": 422,
-     "densityPerSecond": 2.9,
+     "noteCount": 412,
+     "densityPerSecond": 2.83,
      "typeCounts": {
-      "TAP": 376,
-      "HOLD": 18,
-      "FLICK": 18,
-      "SLIDE": 10
+      "TAP": 367,
+      "HOLD": 19,
+      "FLICK": 17,
+      "SLIDE": 9
+     }
+    },
+    {
+     "variant": "base",
+     "label": "既定",
+     "override": {},
+     "duplicateOf": null,
+     "score": 0.8144,
+     "detail": {
+      "onsetFit": 0.5953,
+      "structureFit": 1,
+      "densityTarget": 0.9475,
+      "monotony": 0.6093,
+      "handMotion": 1,
+      "typeBalance": 0.7245,
+      "breathing": 1
+     },
+     "playability": {
+      "impossible": 0,
+      "strained": 25
+     },
+     "noteCount": 413,
+     "densityPerSecond": 2.84,
+     "typeCounts": {
+      "TAP": 368,
+      "HOLD": 19,
+      "FLICK": 17,
+      "SLIDE": 9
      }
     },
     {
@@ -744,27 +710,61 @@
       "maxLaneStep": 2
      },
      "duplicateOf": null,
-     "score": 0.8094,
+     "score": 0.8113,
      "detail": {
-      "onsetFit": 0.5987,
+      "onsetFit": 0.5953,
       "structureFit": 1,
-      "densityTarget": 0.94,
-      "monotony": 0.5926,
-      "handMotion": 0.9812,
-      "typeBalance": 0.7264,
+      "densityTarget": 0.9475,
+      "monotony": 0.5898,
+      "handMotion": 1,
+      "typeBalance": 0.7245,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 27
+      "strained": 28
      },
-     "noteCount": 416,
-     "densityPerSecond": 2.86,
+     "noteCount": 413,
+     "densityPerSecond": 2.84,
      "typeCounts": {
-      "TAP": 370,
-      "HOLD": 18,
-      "FLICK": 18,
-      "SLIDE": 10
+      "TAP": 368,
+      "HOLD": 19,
+      "FLICK": 17,
+      "SLIDE": 9
+     }
+    },
+    {
+     "variant": "sparse",
+     "label": "密度を下げる",
+     "override": {
+      "perBarByIntensity": [
+       0.72,
+       3.3,
+       5.68
+      ]
+     },
+     "duplicateOf": null,
+     "score": 0.8061,
+     "detail": {
+      "onsetFit": 0.605,
+      "structureFit": 1,
+      "densityTarget": 0.85,
+      "monotony": 0.6419,
+      "handMotion": 1,
+      "typeBalance": 0.7535,
+      "breathing": 1
+     },
+     "playability": {
+      "impossible": 0,
+      "strained": 15
+     },
+     "noteCount": 335,
+     "densityPerSecond": 2.3,
+     "typeCounts": {
+      "TAP": 290,
+      "HOLD": 19,
+      "FLICK": 17,
+      "SLIDE": 9
      }
     },
     {
@@ -772,33 +772,33 @@
      "label": "密度を上げる",
      "override": {
       "perBarByIntensity": [
-       2.8,
+       2.7199999999999998,
        5.3,
-       7.4
+       7.68
       ]
      },
      "duplicateOf": null,
-     "score": 0.7132,
+     "score": 0.734,
      "detail": {
-      "onsetFit": 0.5858,
-      "structureFit": 0.9927,
-      "densityTarget": 0.45,
-      "monotony": 0.5986,
-      "handMotion": 0.958,
-      "typeBalance": 0.6946,
+      "onsetFit": 0.5865,
+      "structureFit": 0.9964,
+      "densityTarget": 0.575,
+      "monotony": 0.5822,
+      "handMotion": 0.9576,
+      "typeBalance": 0.6936,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 31
+      "strained": 37
      },
-     "noteCount": 483,
-     "densityPerSecond": 3.32,
+     "noteCount": 476,
+     "densityPerSecond": 3.27,
      "typeCounts": {
-      "TAP": 443,
-      "SLIDE": 10,
-      "HOLD": 12,
-      "FLICK": 18
+      "TAP": 437,
+      "SLIDE": 9,
+      "HOLD": 13,
+      "FLICK": 17
      }
     }
    ]
@@ -807,9 +807,9 @@
    "winner": "variety",
    "winnerLabel": "HOLD/FLICK/SLIDEを増やす",
    "winnerOverride": {
-    "holdMaxCount": 24,
-    "flickMaxCount": 26,
-    "slideMaxCount": 14
+    "holdMaxCount": 25,
+    "flickMaxCount": 25,
+    "slideMaxCount": 13
    },
    "distinctCandidates": 7,
    "totalVariants": 8,
@@ -818,98 +818,72 @@
     "sparse",
     "strong"
    ],
-   "excludedByPlayability": [
-    "calm"
-   ],
+   "excludedByPlayability": [],
    "candidates": [
+    {
+     "variant": "sparse",
+     "label": "密度を下げる",
+     "override": {
+      "perBarByIntensity": [
+       1.1,
+       4.4,
+       7.35
+      ]
+     },
+     "duplicateOf": null,
+     "score": 0.8245,
+     "detail": {
+      "onsetFit": 0.5997,
+      "structureFit": 1,
+      "densityTarget": 0.9778,
+      "monotony": 0.6813,
+      "handMotion": 0.9091,
+      "typeBalance": 0.7442,
+      "breathing": 1
+     },
+     "playability": {
+      "impossible": 0,
+      "strained": 30
+     },
+     "noteCount": 412,
+     "densityPerSecond": 2.79,
+     "typeCounts": {
+      "TAP": 360,
+      "HOLD": 21,
+      "FLICK": 21,
+      "SLIDE": 10
+     }
+    },
     {
      "variant": "variety",
      "label": "HOLD/FLICK/SLIDEを増やす",
      "override": {
-      "holdMaxCount": 24,
-      "flickMaxCount": 26,
-      "slideMaxCount": 14
+      "holdMaxCount": 25,
+      "flickMaxCount": 25,
+      "slideMaxCount": 13
      },
      "duplicateOf": null,
-     "score": 0.8237,
+     "score": 0.8189,
      "detail": {
-      "onsetFit": 0.6002,
+      "onsetFit": 0.6019,
       "structureFit": 1,
-      "densityTarget": 0.97,
-      "monotony": 0.6347,
-      "handMotion": 0.9851,
-      "typeBalance": 0.7493,
+      "densityTarget": 0.95,
+      "monotony": 0.6543,
+      "handMotion": 0.9389,
+      "typeBalance": 0.7472,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 51
+      "strained": 43
      },
-     "noteCount": 467,
-     "densityPerSecond": 3.16,
+     "noteCount": 458,
+     "densityPerSecond": 3.1,
      "typeCounts": {
-      "TAP": 406,
+      "TAP": 399,
       "HOLD": 21,
-      "FLICK": 26,
-      "SLIDE": 14
-     }
-    },
-    {
-     "variant": "base",
-     "label": "既定",
-     "override": {},
-     "duplicateOf": null,
-     "score": 0.821,
-     "detail": {
-      "onsetFit": 0.5943,
-      "structureFit": 1,
-      "densityTarget": 0.98,
-      "monotony": 0.6235,
-      "handMotion": 0.9853,
-      "typeBalance": 0.7283,
-      "breathing": 1
-     },
-     "playability": {
-      "impossible": 0,
-      "strained": 48
-     },
-     "noteCount": 472,
-     "densityPerSecond": 3.19,
-     "typeCounts": {
-      "TAP": 419,
-      "HOLD": 20,
-      "FLICK": 22,
-      "SLIDE": 11
-     }
-    },
-    {
-     "variant": "wide",
-     "label": "手の移動を広げる",
-     "override": {
-      "maxLaneStep": 4
-     },
-     "duplicateOf": "base",
-     "score": 0.821,
-     "detail": {
-      "onsetFit": 0.5943,
-      "structureFit": 1,
-      "densityTarget": 0.98,
-      "monotony": 0.6235,
-      "handMotion": 0.9853,
-      "typeBalance": 0.7283,
-      "breathing": 1
-     },
-     "playability": {
-      "impossible": 0,
-      "strained": 48
-     },
-     "noteCount": 472,
-     "densityPerSecond": 3.19,
-     "typeCounts": {
-      "TAP": 419,
-      "HOLD": 20,
-      "FLICK": 22,
-      "SLIDE": 11
+      "FLICK": 25,
+      "SLIDE": 13
      }
     },
     {
@@ -919,27 +893,27 @@
       "maxLaneStep": 3
      },
      "duplicateOf": null,
-     "score": 0.8197,
+     "score": 0.8139,
      "detail": {
-      "onsetFit": 0.5943,
+      "onsetFit": 0.5908,
       "structureFit": 1,
-      "densityTarget": 0.98,
-      "monotony": 0.6242,
-      "handMotion": 0.9706,
-      "typeBalance": 0.7283,
+      "densityTarget": 0.9533,
+      "monotony": 0.6234,
+      "handMotion": 0.9697,
+      "typeBalance": 0.7295,
       "breathing": 1
      },
      "playability": {
-      "impossible": 1,
-      "strained": 43
+      "impossible": 0,
+      "strained": 46
      },
-     "noteCount": 472,
-     "densityPerSecond": 3.19,
+     "noteCount": 459,
+     "densityPerSecond": 3.11,
      "typeCounts": {
-      "TAP": 419,
-      "HOLD": 20,
-      "FLICK": 22,
-      "SLIDE": 11
+      "TAP": 407,
+      "HOLD": 21,
+      "FLICK": 21,
+      "SLIDE": 10
      }
     },
     {
@@ -947,67 +921,91 @@
      "label": "密度を上げる",
      "override": {
       "perBarByIntensity": [
-       3.2,
+       3.1,
        6.4,
-       9
+       9.35
       ]
      },
      "duplicateOf": null,
-     "score": 0.813,
+     "score": 0.8125,
      "detail": {
-      "onsetFit": 0.5961,
+      "onsetFit": 0.6016,
       "structureFit": 1,
-      "densityTarget": 0.9633,
-      "monotony": 0.6157,
-      "handMotion": 0.9472,
-      "typeBalance": 0.7219,
+      "densityTarget": 0.95,
+      "monotony": 0.6044,
+      "handMotion": 0.9745,
+      "typeBalance": 0.7161,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 58
+      "strained": 47
      },
-     "noteCount": 497,
-     "densityPerSecond": 3.36,
+     "noteCount": 502,
+     "densityPerSecond": 3.4,
      "typeCounts": {
-      "TAP": 444,
+      "TAP": 451,
       "HOLD": 20,
-      "FLICK": 22,
-      "SLIDE": 11
+      "FLICK": 21,
+      "SLIDE": 10
      }
     },
     {
-     "variant": "sparse",
-     "label": "密度を下げる",
-     "override": {
-      "perBarByIntensity": [
-       1.2000000000000002,
-       4.4,
-       7
-      ]
-     },
+     "variant": "base",
+     "label": "既定",
+     "override": {},
      "duplicateOf": null,
-     "score": 0.8047,
+     "score": 0.8106,
      "detail": {
-      "onsetFit": 0.6018,
+      "onsetFit": 0.5908,
       "structureFit": 1,
-      "densityTarget": 0.8667,
-      "monotony": 0.6797,
+      "densityTarget": 0.9533,
+      "monotony": 0.6406,
       "handMotion": 0.9091,
-      "typeBalance": 0.7439,
+      "typeBalance": 0.7295,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 29
+      "strained": 35
      },
-     "noteCount": 421,
-     "densityPerSecond": 2.85,
+     "noteCount": 459,
+     "densityPerSecond": 3.11,
      "typeCounts": {
-      "TAP": 368,
-      "HOLD": 20,
-      "FLICK": 22,
-      "SLIDE": 11
+      "TAP": 407,
+      "HOLD": 21,
+      "FLICK": 21,
+      "SLIDE": 10
+     }
+    },
+    {
+     "variant": "wide",
+     "label": "手の移動を広げる",
+     "override": {
+      "maxLaneStep": 4
+     },
+     "duplicateOf": "base",
+     "score": 0.8106,
+     "detail": {
+      "onsetFit": 0.5908,
+      "structureFit": 1,
+      "densityTarget": 0.9533,
+      "monotony": 0.6406,
+      "handMotion": 0.9091,
+      "typeBalance": 0.7295,
+      "breathing": 1
+     },
+     "playability": {
+      "impossible": 0,
+      "strained": 35
+     },
+     "noteCount": 459,
+     "densityPerSecond": 3.11,
+     "typeCounts": {
+      "TAP": 407,
+      "HOLD": 21,
+      "FLICK": 21,
+      "SLIDE": 10
      }
     },
     {
@@ -1017,27 +1015,27 @@
       "minStrength": 0.04
      },
      "duplicateOf": null,
-     "score": 0.8021,
+     "score": 0.8018,
      "detail": {
-      "onsetFit": 0.5909,
-      "structureFit": 0.9658,
-      "densityTarget": 0.95,
-      "monotony": 0.628,
-      "handMotion": 0.9308,
-      "typeBalance": 0.7204,
+      "onsetFit": 0.5929,
+      "structureFit": 1,
+      "densityTarget": 0.9167,
+      "monotony": 0.6144,
+      "handMotion": 0.9327,
+      "typeBalance": 0.7149,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 49
+      "strained": 43
      },
-     "noteCount": 503,
-     "densityPerSecond": 3.4,
+     "noteCount": 517,
+     "densityPerSecond": 3.5,
      "typeCounts": {
-      "TAP": 450,
-      "HOLD": 20,
-      "FLICK": 22,
-      "SLIDE": 11
+      "TAP": 465,
+      "HOLD": 21,
+      "FLICK": 21,
+      "SLIDE": 10
      }
     },
     {
@@ -1047,27 +1045,27 @@
       "minStrength": 0.24
      },
      "duplicateOf": null,
-     "score": 0.7396,
+     "score": 0.7316,
      "detail": {
-      "onsetFit": 0.5972,
+      "onsetFit": 0.605,
       "structureFit": 1,
-      "densityTarget": 0.5111,
-      "monotony": 0.6577,
-      "handMotion": 0.9598,
-      "typeBalance": 0.759,
+      "densityTarget": 0.4444,
+      "monotony": 0.6853,
+      "handMotion": 0.9381,
+      "typeBalance": 0.7581,
       "breathing": 0.9375
      },
      "playability": {
       "impossible": 0,
-      "strained": 36
+      "strained": 32
      },
-     "noteCount": 381,
-     "densityPerSecond": 2.58,
+     "noteCount": 376,
+     "densityPerSecond": 2.55,
      "typeCounts": {
-      "HOLD": 20,
-      "FLICK": 22,
-      "SLIDE": 11,
-      "TAP": 328
+      "HOLD": 21,
+      "FLICK": 21,
+      "TAP": 324,
+      "SLIDE": 10
      }
     }
    ]
@@ -1093,27 +1091,27 @@
       "minStrength": 0.1
      },
      "duplicateOf": null,
-     "score": 0.8099,
+     "score": 0.8049,
      "detail": {
-      "onsetFit": 0.5897,
+      "onsetFit": 0.5916,
       "structureFit": 1,
-      "densityTarget": 0.9373,
-      "monotony": 0.6287,
-      "handMotion": 0.9525,
-      "typeBalance": 0.7303,
+      "densityTarget": 0.9127,
+      "monotony": 0.6227,
+      "handMotion": 0.9506,
+      "typeBalance": 0.7316,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 64
+      "strained": 60
      },
-     "noteCount": 535,
-     "densityPerSecond": 3.62,
+     "noteCount": 521,
+     "densityPerSecond": 3.53,
      "typeCounts": {
-      "TAP": 474,
-      "HOLD": 22,
-      "SLIDE": 13,
-      "FLICK": 26
+      "TAP": 461,
+      "HOLD": 23,
+      "SLIDE": 12,
+      "FLICK": 25
      }
     },
     {
@@ -1121,63 +1119,33 @@
      "label": "密度を下げる",
      "override": {
       "perBarByIntensity": [
-       1.7999999999999998,
+       1.6800000000000002,
        5.6,
-       8.6
+       9.01
       ]
      },
      "duplicateOf": null,
-     "score": 0.8022,
+     "score": 0.7949,
      "detail": {
-      "onsetFit": 0.5925,
+      "onsetFit": 0.589,
       "structureFit": 1,
-      "densityTarget": 0.8773,
-      "monotony": 0.6456,
-      "handMotion": 0.9444,
-      "typeBalance": 0.7386,
+      "densityTarget": 0.85,
+      "monotony": 0.6452,
+      "handMotion": 0.9283,
+      "typeBalance": 0.7408,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 49
+      "strained": 56
      },
-     "noteCount": 503,
-     "densityPerSecond": 3.4,
+     "noteCount": 487,
+     "densityPerSecond": 3.3,
      "typeCounts": {
-      "TAP": 442,
-      "HOLD": 22,
-      "FLICK": 26,
-      "SLIDE": 13
-     }
-    },
-    {
-     "variant": "calm",
-     "label": "手の移動を抑える",
-     "override": {
-      "maxLaneStep": 3
-     },
-     "duplicateOf": null,
-     "score": 0.7922,
-     "detail": {
-      "onsetFit": 0.5839,
-      "structureFit": 0.9243,
-      "densityTarget": 0.9673,
-      "monotony": 0.6127,
-      "handMotion": 0.9298,
-      "typeBalance": 0.7265,
-      "breathing": 1
-     },
-     "playability": {
-      "impossible": 0,
-      "strained": 57
-     },
-     "noteCount": 551,
-     "densityPerSecond": 3.73,
-     "typeCounts": {
-      "TAP": 490,
-      "HOLD": 22,
-      "FLICK": 26,
-      "SLIDE": 13
+      "TAP": 427,
+      "HOLD": 23,
+      "FLICK": 25,
+      "SLIDE": 12
      }
     },
     {
@@ -1185,27 +1153,27 @@
      "label": "既定",
      "override": {},
      "duplicateOf": null,
-     "score": 0.7912,
+     "score": 0.7834,
      "detail": {
-      "onsetFit": 0.5839,
-      "structureFit": 0.9243,
-      "densityTarget": 0.9673,
-      "monotony": 0.6286,
-      "handMotion": 0.8947,
-      "typeBalance": 0.7265,
+      "onsetFit": 0.588,
+      "structureFit": 0.8966,
+      "densityTarget": 0.9291,
+      "monotony": 0.627,
+      "handMotion": 0.9375,
+      "typeBalance": 0.7294,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 56
+      "strained": 53
      },
-     "noteCount": 551,
-     "densityPerSecond": 3.73,
+     "noteCount": 530,
+     "densityPerSecond": 3.59,
      "typeCounts": {
-      "TAP": 490,
-      "HOLD": 22,
-      "FLICK": 26,
-      "SLIDE": 13
+      "TAP": 470,
+      "HOLD": 23,
+      "FLICK": 25,
+      "SLIDE": 12
      }
     },
     {
@@ -1215,27 +1183,27 @@
       "minStrength": 0
      },
      "duplicateOf": "base",
-     "score": 0.7912,
+     "score": 0.7834,
      "detail": {
-      "onsetFit": 0.5839,
-      "structureFit": 0.9243,
-      "densityTarget": 0.9673,
-      "monotony": 0.6286,
-      "handMotion": 0.8947,
-      "typeBalance": 0.7265,
+      "onsetFit": 0.588,
+      "structureFit": 0.8966,
+      "densityTarget": 0.9291,
+      "monotony": 0.627,
+      "handMotion": 0.9375,
+      "typeBalance": 0.7294,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 56
+      "strained": 53
      },
-     "noteCount": 551,
-     "densityPerSecond": 3.73,
+     "noteCount": 530,
+     "densityPerSecond": 3.59,
      "typeCounts": {
-      "TAP": 490,
-      "HOLD": 22,
-      "FLICK": 26,
-      "SLIDE": 13
+      "TAP": 470,
+      "HOLD": 23,
+      "FLICK": 25,
+      "SLIDE": 12
      }
     },
     {
@@ -1245,59 +1213,89 @@
       "maxLaneStep": 4
      },
      "duplicateOf": "base",
-     "score": 0.7912,
+     "score": 0.7834,
      "detail": {
-      "onsetFit": 0.5839,
-      "structureFit": 0.9243,
-      "densityTarget": 0.9673,
-      "monotony": 0.6286,
-      "handMotion": 0.8947,
-      "typeBalance": 0.7265,
+      "onsetFit": 0.588,
+      "structureFit": 0.8966,
+      "densityTarget": 0.9291,
+      "monotony": 0.627,
+      "handMotion": 0.9375,
+      "typeBalance": 0.7294,
+      "breathing": 1
+     },
+     "playability": {
+      "impossible": 0,
+      "strained": 53
+     },
+     "noteCount": 530,
+     "densityPerSecond": 3.59,
+     "typeCounts": {
+      "TAP": 470,
+      "HOLD": 23,
+      "FLICK": 25,
+      "SLIDE": 12
+     }
+    },
+    {
+     "variant": "calm",
+     "label": "手の移動を抑える",
+     "override": {
+      "maxLaneStep": 3
+     },
+     "duplicateOf": null,
+     "score": 0.7832,
+     "detail": {
+      "onsetFit": 0.588,
+      "structureFit": 0.8966,
+      "densityTarget": 0.9291,
+      "monotony": 0.6256,
+      "handMotion": 0.9375,
+      "typeBalance": 0.7294,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
       "strained": 56
      },
-     "noteCount": 551,
-     "densityPerSecond": 3.73,
+     "noteCount": 530,
+     "densityPerSecond": 3.59,
      "typeCounts": {
-      "TAP": 490,
-      "HOLD": 22,
-      "FLICK": 26,
-      "SLIDE": 13
+      "TAP": 470,
+      "HOLD": 23,
+      "FLICK": 25,
+      "SLIDE": 12
      }
     },
     {
      "variant": "variety",
      "label": "HOLD/FLICK/SLIDEを増やす",
      "override": {
-      "holdMaxCount": 26,
-      "flickMaxCount": 30,
-      "slideMaxCount": 16
+      "holdMaxCount": 27,
+      "flickMaxCount": 29,
+      "slideMaxCount": 15
      },
      "duplicateOf": null,
-     "score": 0.7831,
+     "score": 0.775,
      "detail": {
-      "onsetFit": 0.5862,
-      "structureFit": 0.8897,
-      "densityTarget": 0.9564,
-      "monotony": 0.6245,
-      "handMotion": 0.8953,
-      "typeBalance": 0.7507,
+      "onsetFit": 0.5831,
+      "structureFit": 0.8728,
+      "densityTarget": 0.9264,
+      "monotony": 0.6225,
+      "handMotion": 0.9146,
+      "typeBalance": 0.7534,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 62
+      "strained": 51
      },
-     "noteCount": 546,
-     "densityPerSecond": 3.69,
+     "noteCount": 529,
+     "densityPerSecond": 3.58,
      "typeCounts": {
-      "TAP": 474,
-      "HOLD": 26,
-      "FLICK": 30,
-      "SLIDE": 16
+      "TAP": 458,
+      "HOLD": 27,
+      "FLICK": 29,
+      "SLIDE": 15
      }
     },
     {
@@ -1305,33 +1303,33 @@
      "label": "密度を上げる",
      "override": {
       "perBarByIntensity": [
-       3.8,
+       3.68,
        7.6,
-       10.6
+       11.01
       ]
      },
      "duplicateOf": null,
-     "score": 0.763,
+     "score": 0.7579,
      "detail": {
-      "onsetFit": 0.5918,
-      "structureFit": 0.7509,
-      "densityTarget": 0.9945,
-      "monotony": 0.6113,
-      "handMotion": 0.9569,
-      "typeBalance": 0.7219,
+      "onsetFit": 0.5899,
+      "structureFit": 0.7453,
+      "densityTarget": 0.9864,
+      "monotony": 0.6135,
+      "handMotion": 0.935,
+      "typeBalance": 0.719,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 67
+      "strained": 57
      },
-     "noteCount": 572,
-     "densityPerSecond": 3.87,
+     "noteCount": 576,
+     "densityPerSecond": 3.9,
      "typeCounts": {
-      "TAP": 511,
-      "HOLD": 22,
-      "SLIDE": 13,
-      "FLICK": 26
+      "TAP": 516,
+      "HOLD": 23,
+      "SLIDE": 12,
+      "FLICK": 25
      }
     }
    ]

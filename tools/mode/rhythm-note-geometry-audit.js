@@ -69,7 +69,8 @@ html,body{margin:0;background:#000}
 [data-rhythm-hold-body]{position:absolute;left:18%;right:18%;bottom:50%;height:var(--rhythm-hold-body,0px);background:#0f0}
 [data-rhythm-end-bar]{position:absolute;height:8px;background:#f0f}
 </style></head><body>
-<div id="area" data-rhythm-play-area><i data-rhythm-judgment-line style="position:absolute;bottom:12%;left:0;right:0;height:3px"></i></div>
+<div id="area" data-rhythm-play-area><i data-rhythm-judgment-line style="position:absolute;bottom:12%;left:0;right:0;height:3px"></i>
+<span data-rhythm-side-monster="1"></span><span data-rhythm-side-monster="2"></span><span data-rhythm-side-monster="3"></span><span data-rhythm-side-monster="4"></span></div>
 <script src="/monster-hero/data/rhythm-mode.js"><\/script>
 </body></html>`;
 
@@ -301,6 +302,35 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
        speedMin:SPEED.min});
 
     check('全組み合わせを測定できた',results.length===NOTE_CASES.length*SPEEDS.length*SIZES.length*PROGRESSES.length,`${results.length}件`);
+
+    // 0B. 両サイドのマスモンが、実際に描かれた位置でレーンの台形へ食い込まない
+    const sideBoxes=await page.evaluate(()=>{
+      const area=document.querySelector('[data-rhythm-play-area]');
+      rhythmLayoutSideMonsters(area);
+      const areaRect=area.getBoundingClientRect();
+      return [...area.querySelectorAll('[data-rhythm-side-monster]')].map(el=>{
+        const rect=el.getBoundingClientRect();
+        const left=(rect.left-areaRect.left)/areaRect.width,right=(rect.right-areaRect.left)/areaRect.width;
+        const topRatio=(rect.top-areaRect.top)/areaRect.height,bottomRatio=(rect.bottom-areaRect.top)/areaRect.height;
+        // 箱の上端・中央・下端それぞれで、その高さのレーン境界と比べる
+        const margins=[topRatio,(topRatio+bottomRatio)/2,bottomRatio].map(y=>{
+          const laneLeft=rhythmProjectBoundary(0,Math.max(0,Math.min(1,y)));
+          const laneRight=rhythmProjectBoundary(5,Math.max(0,Math.min(1,y)));
+          return left<.5?laneLeft-right:left-laneRight;
+        });
+        return {slot:el.dataset.rhythmSideMonster,left,right,width:right-left,
+          topRatio,bottomRatio,margin:Math.min(...margins)};
+      });
+    });
+    check('両サイドのマスモンを4体とも配置できた',sideBoxes.length===4,`${sideBoxes.length}体`);
+    const sideWorst=sideBoxes.reduce((min,box)=>Math.min(min,box.margin),Infinity);
+    check('両サイドのマスモンがレーンの台形へ食い込まない(実描画で測定)',sideBoxes.length>0&&sideWorst>=0,
+      `いちばん近いところで${(sideWorst*390).toFixed(1)}px`);
+    check('両サイドのマスモンが画面の外へはみ出さない',
+      sideBoxes.every(box=>box.left>=-.001&&box.right<=1.001&&box.topRatio>=-.001&&box.bottomRatio<=1.001));
+    check('両サイドのマスモンはHUDと判定ラインのあいだに収まる',
+      sideBoxes.every(box=>box.topRatio>=.15&&box.bottomRatio<=.80),
+      sideBoxes.map(box=>`${(box.topRatio*100).toFixed(0)}〜${(box.bottomRatio*100).toFixed(0)}%`).join(' / '));
 
     const near=(a,b,tolerance)=>Math.abs(a-b)<=tolerance;
     const worst=(rows,pick)=>rows.reduce((max,row)=>Math.max(max,pick(row)),0);
