@@ -55,10 +55,16 @@ const serve=()=>new Promise(resolve=>{
       document.body.appendChild(host);
       window.__picked=null;
       const root=ReactDOM.createRoot(host);
+      // 記録を差し替えて描き直せるようにしておく（ひし形の色を見るのに使う）
+      window.__rerender=bestRecords=>root.render(React.createElement(RhythmSongSelect,{
+        songs:RHYTHM_SONGS,
+        difficulties:RHYTHM_DIFFICULTIES,
+        bestRecords,
+        onPlay:(song,difficulty)=>{window.__picked=`${song.songId}/${difficulty.id}`;},
+      }));
       root.render(React.createElement(RhythmSongSelect,{
         songs:RHYTHM_SONGS,
         difficulties:RHYTHM_DIFFICULTIES,
-        difficultyLabels:RHYTHM_DEMO_DIFFICULTY_LABELS,
         bestRecords:[],
         onPlay:(song,difficulty)=>{window.__picked=`${song.songId}/${difficulty.id}`;},
       }));
@@ -167,6 +173,46 @@ const serve=()=>new Promise(resolve=>{
     ok('難易度ボタンごとに自己ベストが出る',
       perDifficulty.cells===perDifficulty.buttons&&perDifficulty.cells>=1,
       `${perDifficulty.cells}件 / ${perDifficulty.ids.join(',')}`);
+
+    // 一覧のひし形は「難易度」ではなく「どこまで極めたか」で色が変わる
+    // （2026-09-05・ユーザー指示）。記録を差し替えて、印が段ごとに変わることを見る。
+    const marks=await page.evaluate(async()=>{
+      const host=document.getElementById('song-select-probe');
+      const songId=(host.querySelector('[data-rhythm-song-row]')||{}).getAttribute
+        ?host.querySelector('[data-rhythm-song-row]').getAttribute('data-rhythm-song-row'):'';
+      const read=()=>[...host.querySelectorAll('[data-rhythm-song-row]')][0]
+        .querySelectorAll('[data-rhythm-achievement]');
+      const seen={};
+      const cases=[
+        ['UNPLAYED',{}],
+        ['CLEAR',{clear:true}],
+        ['FULL_COMBO',{clear:true,fullCombo:true}],
+        ['ALL_EXCELLENT',{clear:true,fullCombo:true,allExcellent:true}],
+        ['ALL_MARVELOUS',{clear:true,fullCombo:true,allExcellent:true,allMarvelous:true}],
+      ];
+      for(const [name,record] of cases){
+        const records={[songId]:Object.fromEntries(RHYTHM_DIFFICULTIES.map(d=>[d.id,record]))};
+        window.__rerender(records);
+        await new Promise(resolve=>setTimeout(resolve,120));
+        const list=[...read()];
+        const target=list.find(el=>el.getAttribute('data-rhythm-achievement')!=='NONE')||list[0];
+        seen[name]={id:target.getAttribute('data-rhythm-achievement'),
+          background:getComputedStyle(target).background||''};
+      }
+      return seen;
+    });
+    ok('ひし形は達成の段ごとに変わる',
+      Object.entries(marks).every(([name,entry])=>entry.id===name),
+      Object.entries(marks).map(([name,entry])=>`${name}→${entry.id}`).join(' / '));
+    ok('同じ曲の難易度どうしで色を変えない（色は達成だけで決まる）',await page.evaluate(()=>{
+      const host=document.getElementById('song-select-probe');
+      const row=host.querySelector('[data-rhythm-song-row]');
+      const ids=[...row.querySelectorAll('[data-rhythm-achievement]')]
+        .map(el=>el.getAttribute('data-rhythm-achievement'))
+        .filter(id=>id!=='NONE');   // 譜面が無い難易度は薄いまま。これは達成の段ではない
+      // 遊べる難易度がどれも同じ達成なら、印もすべて同じになる
+      return ids.length>=2&&new Set(ids).size===1;
+    }));
 
     ok('実行時エラーが出ていない',errors.length===0,errors.slice(0,2).join(' / '));
   }finally{

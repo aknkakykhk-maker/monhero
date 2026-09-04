@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 07:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 07:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6541,7 +6541,9 @@ const helpDataRows = (id) => {
       return ids.map(id => {
         const chart = song.difficulties[id];
         if (!chart) return null;
-        return [(labels[id] && labels[id].name) || id, `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ`];
+        const note = (labels[id] && labels[id].note) || '';
+        return [(labels[id] && labels[id].name) || id,
+          `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ${note ? ` ／ ${note}` : ''}`];
       }).filter(Boolean);
     }
     case 'missionsDaily':
@@ -8528,6 +8530,39 @@ const RHYTHM_DIFFICULTY_TONE=Object.freeze({
 });
 const rhythmDifficultyTone=id=>RHYTHM_DIFFICULTY_TONE[id]||RHYTHM_DIFFICULTY_TONE.EASY;
 
+// 一覧に並ぶひし形の色。
+// 【2026-09-05・ユーザー指示】
+// 「難易度毎にひし形に色分かれてるけどこれは全部同じ色にして、クリアとフルコンボと
+//   オールエクセレントとオールマーベラスで色が変わる感じで（どんどん派手な色合い）」
+// 難易度そのものでは色を変えない。**どこまで極めたか**だけで色が変わる。
+// 上へ行くほど派手になるので、一覧を見ただけで「どの曲をどこまでやったか」が分かる。
+const RHYTHM_ACHIEVEMENT_MARKS=Object.freeze({
+  NONE:      Object.freeze({label:'譜面なし',
+    style:Object.freeze({background:'rgba(255,255,255,.14)'})}),
+  UNPLAYED:  Object.freeze({label:'まだ遊んでいない',
+    style:Object.freeze({background:'rgba(203,213,225,.55)'})}),
+  CLEAR:     Object.freeze({label:'クリア',
+    style:Object.freeze({background:'linear-gradient(135deg,#7dd3fc,#22d3ee)'})}),
+  FULL_COMBO:Object.freeze({label:'フルコンボ',
+    style:Object.freeze({background:'linear-gradient(135deg,#fde68a,#f59e0b)',
+      boxShadow:'0 0 4px rgba(251,191,36,.8)'})}),
+  ALL_EXCELLENT:Object.freeze({label:'オールエクセレント',
+    style:Object.freeze({background:'linear-gradient(135deg,#f0abfc,#a855f7)',
+      boxShadow:'0 0 6px rgba(232,121,249,.85)'})}),
+  ALL_MARVELOUS:Object.freeze({label:'オールマーベラス',
+    style:Object.freeze({background:'linear-gradient(135deg,#fde68a,#f0abfc,#67e8f9,#fde68a)',
+      boxShadow:'0 0 8px rgba(240,171,252,.95),0 0 14px rgba(103,232,249,.6)'})}),
+});
+// 上の段から順に見て、いちばん上の達成を返す。
+const rhythmAchievementMarkId=(playable,record)=>{
+  if(!playable)return 'NONE';
+  if(!record||!record.clear)return 'UNPLAYED';
+  if(record.allMarvelous)return 'ALL_MARVELOUS';
+  if(record.allExcellent)return 'ALL_EXCELLENT';
+  if(record.fullCombo)return 'FULL_COMBO';
+  return 'CLEAR';
+};
+
 // 曲の絵(ジャケット)。実物の絵はまだ無いので、**曲idから決まる色**のタイルに頭文字を出す。
 // 乱数を使わないので、同じ曲はいつも同じ色になる(色で曲を覚えられる)。
 // 絵を用意したら、曲のデータへ artwork:'images/...' を足せばそれを出す。
@@ -8569,7 +8604,7 @@ const rhythmChartPlayable=(song,difficultyId)=>{
 // 曲えらびで曲を鳴らし始めるまでの間。一覧をなぞって選び替えているあいだに
 // 曲を読み込み直すと、そのたびに引っかかるので、少し止まってから鳴らす。
 const RHYTHM_PREVIEW_DELAY_MS=350;
-const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',preview=false,previewVolume=100})=>{
+const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',preview=false,previewVolume=100})=>{
   const list=(songs||[]).filter(song=>(difficulties||[]).some(difficulty=>rhythmChartPlayable(song,difficulty.id)));
   const [songId,setSongId]=React.useState(()=>(list[0]&&list[0].songId)||'');
   const [difficultyId,setDifficultyId]=React.useState(()=>'');
@@ -8580,7 +8615,6 @@ const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,
   const difficulty=available.find(entry=>entry.id===difficultyId)||available[0]||null;
   const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
   const best=song&&difficulty?rhythmBestRecord(bestRecords,song.songId,difficulty.id):null;
-  const label=difficulty&&difficultyLabels?difficultyLabels[difficulty.id]:null;
   // 一覧の「楽曲Lv.」は、いま選んでいる難易度のレベル。その曲に無ければいちばん上の難易度。
   const rowLevel=entry=>{
     const ids=(difficulties||[]).filter(item=>rhythmChartPlayable(entry,item.id)).map(item=>item.id);
@@ -8633,8 +8667,13 @@ const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,
                 <b className="block text-[13px] font-black leading-tight text-white"
                   style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{entry.displayName}</b>
                 <span className="mt-1 flex items-center gap-1">
-                  {(difficulties||[]).map(item=><i key={item.id} aria-hidden="true"
-                    className={`block h-2 w-2 rotate-45 rounded-[1px] ${rhythmChartPlayable(entry,item.id)?rhythmDifficultyTone(item.id).dot:'bg-white/15'}`}/>)}
+                  {(difficulties||[]).map(item=>{
+                    const playable=rhythmChartPlayable(entry,item.id);
+                    const markId=rhythmAchievementMarkId(playable,playable?rhythmBestRecord(bestRecords,entry.songId,item.id):null);
+                    const mark=RHYTHM_ACHIEVEMENT_MARKS[markId];
+                    return <i key={item.id} data-rhythm-achievement={markId} title={`${item.id}: ${mark.label}`}
+                      className="block h-2 w-2 rotate-45 rounded-[1px]" style={mark.style}/>;
+                  })}
                   <small className="ml-1 text-[9px] font-bold text-slate-400">
                     {(difficulties||[]).filter(item=>rhythmChartPlayable(entry,item.id)).length}難易度
                   </small>
@@ -8683,7 +8722,6 @@ const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,
         <p data-rhythm-demo-level className="mt-1.5 text-[10px] font-bold text-slate-300">
           Lv.{chart.level} / {chart.totalNotes}ノーツ
         </p>
-        {label&&label.note&&<p className="mt-1 text-[10px] leading-relaxed text-slate-400">{label.note}</p>}
         <p data-rhythm-demo-best className="mt-1.5 text-[10px] font-bold text-amber-200">
           {best&&best.clear
             ?<>{difficulty.id}の自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}</>
@@ -18881,7 +18919,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <RhythmSongSelect
               songs={songs}
               difficulties={difficulties}
-              difficultyLabels={RHYTHM_DEMO_DIFFICULTY_LABELS}
               bestRecords={rhythmBestRecords}
               preview={rhythmSettings.songPreviewEnabled}
               previewVolume={rhythmSettings.bgmVolume}
