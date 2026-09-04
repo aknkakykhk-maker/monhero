@@ -14,7 +14,9 @@
   const halfLane=value=>{
     const n=Number(value);return Number.isFinite(n)&&n>=0&&n<=4&&Math.abs(n*2-Math.round(n*2))<1e-6;
   };
-  const validWidth=value=>integer(value)&&Number(value)>=1&&Number(value)<=4;
+  // 幅の上限は全幅(=10サブレーン)。以前は4で頭打ちにしていたが、実機で
+  // 「上限を無くして全幅もありに」と言われて撤廃した(2026-09-04)。
+  const validWidth=value=>integer(value)&&Number(value)>=1&&Number(value)<=10;
   const readDraft=editor=>{
     const output=editor?.querySelector('[data-rhythm-chart-output]');
     if(!output)return [];
@@ -39,7 +41,7 @@
     if(!ALLOWED_TYPES.has(type))errors.push(`${prefix}未対応の種類です`);
     if(!finite(note?.timeMs)||Number(note.timeMs)<0)errors.push(`${prefix}開始時刻が不正です`);
     else pushOffGrid(errors,editor,note.timeMs,`${prefix}開始時刻`);
-    if(!validWidth(note?.subLaneWidth))errors.push(`${prefix}幅は1〜4の整数が必要です`);
+    if(!validWidth(note?.subLaneWidth))errors.push(`${prefix}幅は1〜10の整数が必要です`);
     // 終点フリック(endFlick)。書き間違いは画面上では「ただ効かない」だけになるので、ここで拾う。
     if(note?.endFlick!==undefined){
       if(note.endFlick!==true)errors.push(`${prefix}endFlickはtrueだけ書けます`);
@@ -71,7 +73,7 @@
       else pushOffGrid(errors,editor,point.timeMs,`${label}の時刻`);
       if(!halfLane(point?.lane))errors.push(`${label}は0〜4の0.5レーン刻みが必要です`);
       const pointWidth=point?.subLaneWidth??note?.subLaneWidth;
-      if(!validWidth(pointWidth))errors.push(`${label}の幅は1〜4の整数が必要です`);
+      if(!validWidth(pointWidth))errors.push(`${label}の幅は1〜10の整数が必要です`);
       if(pointIndex>0&&finite(point?.timeMs)&&finite(points[pointIndex-1]?.timeMs)&&!(Number(point.timeMs)>Number(points[pointIndex-1].timeMs)))errors.push(`${prefix}SLIDE経路の時刻順が不正です`);
     });
     const first=points[0],last=points[points.length-1];
@@ -104,7 +106,7 @@
     const errors=[],type=editor.querySelector('[data-rhythm-chart-type]')?.value||'',width=Number(editor.querySelector('[data-rhythm-chart-width]')?.value);
     const beat=Number(editor.querySelector('[data-rhythm-chart-beat]')?.value),sub=Number(editor.querySelector('[data-rhythm-chart-sub]')?.value);
     if(!ALLOWED_TYPES.has(type))errors.push('未対応のノーツ種類です');
-    if(!integer(width)||width<1||width>4)errors.push('幅は1〜4の整数にしてください');
+    if(!integer(width)||width<1||width>10)errors.push('幅は1〜10の整数にしてください');
     if(!integer(beat)||beat<0)errors.push('拍は0以上の整数にしてください');
     if(!integer(sub)||sub<0||sub>=DIV)errors.push('16分位置は0〜3にしてください');
     if(type==='SLIDE'){

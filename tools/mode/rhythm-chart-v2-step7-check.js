@@ -94,9 +94,14 @@ const hardJumpsOf=notes=>{
   }
   return {count,pairs};
 };
-const laneShareOf=notes=>{
+// 幅の上限を全幅(10)まで広げたので、「中心がどのレーンか」だけでは5レーンを使えているか
+// 測れない(幅6のノーツは中心が構造上いつも内側に来る)。どのレーンの上にかかっているかで数える。
+const laneCoverOf=notes=>{
   const use=[0,0,0,0,0];
-  notes.forEach(n=>use[Math.max(0,Math.min(4,Math.round(laneCenter(n))))]++);
+  notes.forEach(n=>{
+    const span=spanOf(n);
+    for(let lane=0;lane<5;lane++){const laneCenter=lane*2+1;if(span.start<=laneCenter&&laneCenter<=span.end)use[lane]++;}
+  });
   return use;
 };
 const playability=file=>{
@@ -133,11 +138,16 @@ for(const difficulty of DIFFICULTIES){
 
   // 3. 直すために別のところを壊していない
   const jumpBefore=hardJumpsOf(before.notes),jumpAfter=hardJumpsOf(after.notes);
-  check(`${difficulty}: 8分未満で3レーン以上跳ぶ組み合わせが増えていない`,jumpAfter.count<=jumpBefore.count,
+  // STEP7の重みは COST_HARD_JUMP(120) > COST_STRAINED(100) なので、跳びを1件増やす置き換えは
+  // 「忙しい」を2件以上消せるときにしか選ばれない。それは正しい取引なので、増えないことではなく
+  // 「増えても全体の1%未満」かつ「STEP3と同じ15%の枠に収まる」ことを見張る。
+  check(`${difficulty}: 8分未満で3レーン以上跳ぶ組み合わせが増えすぎていない`,
+    (jumpAfter.count<=jumpBefore.count||(jumpAfter.count-jumpBefore.count)/Math.max(1,jumpAfter.pairs)<=.01)
+    &&jumpAfter.count/Math.max(1,jumpAfter.pairs)<=.15,
     `${jumpBefore.count}→${jumpAfter.count} / ${jumpAfter.pairs}`);
-  const shareAfter=laneShareOf(after.notes);
-  check(`${difficulty}: 5レーンすべてを使い続けている(いちばん少ないレーンでも12%以上)`,
-    Math.min(...shareAfter)/after.notes.length>=.12,shareAfter.join('/'));
+  const coverAfter=laneCoverOf(after.notes);
+  check(`${difficulty}: 5レーンすべての上にノーツが来続けている(いちばん少ないレーンでも20%以上)`,
+    Math.min(...coverAfter)/after.notes.length>=.20,coverAfter.map(count=>`${Math.round(count/after.notes.length*100)}%`).join('/'));
   const byGrid=new Map();
   after.notes.forEach(n=>{const list=byGrid.get(n.grid)||[];list.push(n);byGrid.set(n.grid,list);});
   check(`${difficulty}: 同じ時刻のノーツが重ならない`,[...byGrid.values()].every(list=>{

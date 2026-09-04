@@ -124,20 +124,20 @@ const PROFILES=Object.freeze({
   EASY:Object.freeze({
     level:1,candidateSource:'normal',minStrength:0,latticeGrids:2,
     perBarByIntensity:[1.2,2.9,4.2],maxConsecutiveEighths:2,maxLaneStep:1,
-    widths:[2,3,4],narrowRate:0,simultaneous:false,types:['TAP','HOLD'],supplementFromTier:1,
-    holdMaxCount:12,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:0,
+    widths:[3,4,6],narrowRate:0,simultaneous:false,types:['TAP','HOLD'],supplementFromTier:1,
+    holdMaxCount:12,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:0,accentWidth:10,accentMaxCount:6,holdTaperMaxCount:4,
   }),
   NORMAL:Object.freeze({
     level:3,candidateSource:'dense',minStrength:.40,latticeGrids:2,
     perBarByIntensity:[1.4,3.4,5.2],maxConsecutiveEighths:4,maxLaneStep:2,
-    widths:[2,3,4],narrowRate:0,simultaneous:false,types:['TAP','HOLD','FLICK'],supplementFromTier:1,
-    holdMaxCount:16,holdMinGapGrids:10,flickMaxCount:14,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:3,
+    widths:[2,3,4,6],narrowRate:0,simultaneous:false,types:['TAP','HOLD','FLICK'],supplementFromTier:1,
+    holdMaxCount:16,holdMinGapGrids:10,flickMaxCount:14,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:3,accentWidth:10,accentMaxCount:6,holdTaperMaxCount:5,
   }),
   HARD:Object.freeze({
     level:5,candidateSource:'dense',minStrength:.24,latticeGrids:1,
     perBarByIntensity:[1.8,4.3,6.4],maxConsecutiveEighths:6,maxLaneStep:3,
-    widths:[1,2,3,4],narrowRate:.10,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:1,
-    holdMaxCount:18,holdMinGapGrids:10,flickMaxCount:18,slideMaxCount:10,chordMaxCount:0,endFlickMaxCount:5,
+    widths:[1,2,3,4,5],narrowRate:.10,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:1,
+    holdMaxCount:18,holdMinGapGrids:10,flickMaxCount:18,slideMaxCount:10,chordMaxCount:0,endFlickMaxCount:5,accentWidth:8,accentMaxCount:7,holdTaperMaxCount:6,
   }),
   // EXPERT/MASTERは既存dense候補(しきい値0.30)では供給が頭打ちのため、STEP1の
   // events.onsets(強さ0.197まで持つ)を候補源にする。同時押しは新しい時刻を作らず、
@@ -150,14 +150,14 @@ const PROFILES=Object.freeze({
   EXPERT:Object.freeze({
     level:7,candidateSource:'step1',minStrength:.14,latticeGrids:1,
     perBarByIntensity:[2.2,5.4,8],maxConsecutiveEighths:8,maxLaneStep:4,
-    widths:[1,2,3,4],narrowRate:.22,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
-    holdMaxCount:20,holdMinGapGrids:8,flickMaxCount:22,slideMaxCount:11,chordMaxCount:12,endFlickMaxCount:7,
+    widths:[1,2,3,4,5],narrowRate:.22,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
+    holdMaxCount:20,holdMinGapGrids:8,flickMaxCount:22,slideMaxCount:11,chordMaxCount:12,endFlickMaxCount:7,accentWidth:8,accentMaxCount:7,holdTaperMaxCount:7,
   }),
   MASTER:Object.freeze({
     level:9,candidateSource:'step1',minStrength:0,latticeGrids:1,
     perBarByIntensity:[2.8,6.6,9.6],maxConsecutiveEighths:12,maxLaneStep:4,
     widths:[1,2,3,4],narrowRate:.32,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
-    holdMaxCount:22,holdMinGapGrids:6,flickMaxCount:26,slideMaxCount:13,chordMaxCount:18,endFlickMaxCount:9,
+    holdMaxCount:22,holdMinGapGrids:6,flickMaxCount:26,slideMaxCount:13,chordMaxCount:18,endFlickMaxCount:9,accentWidth:6,accentMaxCount:8,holdTaperMaxCount:8,
   }),
 });
 
@@ -170,6 +170,9 @@ const SLIDE_SHAPES=Object.freeze([
   Object.freeze({id:'short',grids:8,steps:[0,.5],widths:[2,2]}),            // 短く半レーン
   Object.freeze({id:'wide',grids:12,steps:[0,.5,1],widths:[4,4,3]}),        // 太くて掴みやすい
   Object.freeze({id:'taper',grids:16,steps:[0,.5,1,1],widths:[3,3,2,2]}),   // 太いところから細くなる
+  Object.freeze({id:'open',grids:12,steps:[0,.5,.5],widths:[2,4,6]}),       // だんだん開く
+  Object.freeze({id:'close',grids:12,steps:[0,.5,1],widths:[6,4,2]}),       // だんだん閉じる
+  Object.freeze({id:'swell',grids:16,steps:[0,.5,1,1.5],widths:[2,4,4,2]}), // 途中でふくらむ
 ]);
 if(printProfiles){console.log(JSON.stringify(PROFILES));process.exit(0);}
 
@@ -459,14 +462,29 @@ const buildChart=(difficulty)=>{
   // 弱い音のうち narrowRate ぶんだけを幅1にする。
   // 以前は「速い連打なら幅1」にしていたため、NORMALに幅1が44個も出ていた
   // (実機で「半ノーツは難しい側だから高難易度用の位置づけにして」という指摘があった)。
-  const widthFor=item=>{
-    if(P.widths.length===1)return P.widths[0];
-    const widest=P.widths[P.widths.length-1];
-    if(item.strength>=wideCut)return widest;
-    if(item.strength>=midWideCut&&P.widths.includes(3))return 3;
-    if(P.widths.includes(1)&&item.strength<=narrowCut)return 1;
-    return P.widths.includes(2)?2:P.widths[0];
+  // 以前は「いちばん太い/3/2/1」の4分岐だったため、幅の集合を広げても実際には
+  // 3種類しか出ず、幅4が譜面全体で1個だけ、という偏りになっていた。
+  // いまは強さの順位(0=いちばん弱い〜1=いちばん強い)を幅の段へ等分に割り当てる。
+  const widthsAscending=[...P.widths].sort((a,b)=>a-b);
+  const mainWidths=widthsAscending.filter(width=>width>1);
+  const strengthRank=strength=>{
+    let below=0;
+    while(below<strengths.length&&strengths[below]<strength)below++;
+    return strengths.length>1?below/(strengths.length-1):0;
   };
+  const widthFor=item=>{
+    if(!mainWidths.length)return widthsAscending[0];
+    if(widthsAscending[0]===1&&P.narrowRate>0&&item.strength<=narrowCut)return 1;
+    const rank=strengthRank(item.strength);
+    const above=P.narrowRate>0&&widthsAscending[0]===1
+      ?Math.max(0,Math.min(1,(rank-P.narrowRate)/(1-P.narrowRate)))
+      :rank;
+    return mainWidths[Math.max(0,Math.min(mainWidths.length-1,Math.floor(above*mainWidths.length)))];
+  };
+  // 幅の上限が4から全幅(10)になったので、いちばん大きい幅は「区切りの一発」に取っておく。
+  // どこにでも出すと画面が幅広ノーツだらけになり、幅の段階が意味を失う。
+  // 大きいほど簡単なので、低い難易度ほど大きな幅(EASY/NORMAL=全幅10、HARD/EXPERT=8、MASTER=6)にする。
+  const accentWidth=Math.max(1,Math.min(10,Number(P.accentWidth)||0));
 
   // --- レーン決め ---
   // 以前は「いまのレーン ± maxLaneStep」へ機械的に進めて端で折り返していたため、歩幅2だと 0/2/4、
@@ -539,6 +557,47 @@ const buildChart=(difficulty)=>{
     notes[index].durationGrids=durationGrids;
   }
 
+  // --- 押さえている途中で幅が変わるHOLD ---
+  // 実機で「ホールド・スライドは途中から広がったり小さくなったりもほしい」と言われて足した。
+  // SLIDEは以前から形ごとに幅を変えられたが、HOLDは始点から終点までずっと同じ太さだった。
+  // 長いHOLDから順に、広がる → 細くなる → 途中でふくらむ、を順番に割り当てる(乱数は使わない)。
+  // 中心は動かさない(動かすとSLIDEになる)。幅は難易度の widths の範囲に収める。
+  if(P.holdTaperMaxCount>0){
+    const taperCandidates=notes.map((note,index)=>({note,index}))
+      .filter(({note})=>note.type==='HOLD'&&Number(note.durationGrids)>=8)
+      .map(({index})=>({index}));
+    const widest=Math.max(...P.widths),narrowest=Math.min(...P.widths);
+    // 中心を保ったまま幅を変える。はみ出す場合は左右へ寄せる。
+    const centeredSubLane=(note,width)=>{
+      const center=Number(note.subLane)+(Number(note.subLaneWidth)||2)/2;
+      return Math.max(0,Math.min(10-width,Math.round(center-width/2)));
+    };
+    const shapes=['grow','shrink','swell'];
+    spread(taperCandidates,P.holdTaperMaxCount,3).forEach(({index},ordinal)=>{
+      const note=notes[index],startWidth=Number(note.subLaneWidth)||2;
+      const wide=Math.min(widest,Math.max(startWidth+2,startWidth*2));
+      const narrow=Math.max(narrowest,Math.min(startWidth,Math.max(1,Math.round(startWidth/2))));
+      const startGrid=note.grid,endGrid=note.grid+Number(note.durationGrids);
+      const midGrid=startGrid+Math.round(Number(note.durationGrids)/2);
+      const point=(grid,width)=>({grid,subLane:centeredSubLane(note,width),subLaneWidth:width});
+      const build=shape=>{
+        if(shape==='grow')return wide>startWidth?[point(startGrid,startWidth),point(endGrid,wide)]:null;
+        if(shape==='shrink')return narrow<startWidth?[point(startGrid,startWidth),point(endGrid,narrow)]:null;
+        if(wide>startWidth)return [point(startGrid,startWidth),point(midGrid,wide),point(endGrid,startWidth)];
+        return narrow<startWidth?[point(startGrid,startWidth),point(midGrid,narrow),point(endGrid,startWidth)]:null;
+      };
+      // 順番どおりの形が使えない(もういちばん太い / いちばん細い)ときは、次の形へ譲る
+      let shape=null,points=null;
+      for(let k=0;k<shapes.length&&!points;k++){
+        shape=shapes[(ordinal+k)%shapes.length];
+        points=build(shape);
+      }
+      if(!points||points.every(p=>p.subLaneWidth===startWidth))return;
+      note.holdPoints=points;
+      note.holdTaper=shape;
+    });
+  }
+
   if(P.flickMaxCount>0){
     const flickCandidates=[];
     for(let i=1;i<notes.length-1;i++){
@@ -598,7 +657,9 @@ const buildChart=(difficulty)=>{
       const points=shape.steps.map((step,i)=>({
         grid:startGrid+Math.round(shape.grids*(i/lastStep)),
         lane:startLane+direction*step,
-        subLaneWidth:shape.widths[i],
+        // 形が持つ幅は、その難易度で使うと決めた幅の範囲へ収める
+        // (収めないと「幅は難易度で決めた範囲だけを使う」という約束をSLIDEだけが破る)
+        subLaneWidth:Math.max(Math.min(...P.widths),Math.min(Math.max(...P.widths),shape.widths[i])),
       }));
       note.type='SLIDE';
       note.durationGrids=shape.grids;
@@ -682,6 +743,43 @@ const buildChart=(difficulty)=>{
     notes.sort((a,b)=>a.grid-b.grid||a.subLane-b.subLane);
   }
 
+  // --- 区切りの一発を大きく（幅の上限が全幅になったので、いちばん大きい幅はここへ取っておく） ---
+  // セクション（INTRO / VERSE / CHORUS …）の変わり目にいちばん近いノーツを、その難易度の
+  // アクセント幅まで広げる。曲の区切りが目で分かるようにするためで、
+  // 「大きいほど簡単」なので低い難易度ほど大きくする。
+  // 同じ時刻に別のノーツがある(同時押しの相方など)場所は避ける。数はaccentMaxCountまで。
+  const accentGrids=[];
+  if(accentWidth>Math.max(...P.widths)&&P.accentMaxCount>0){
+    // accentWidth はその難易度のふつうの幅より必ず広い(そうでなければ「区切りの一発」に見えない)
+    const sectionStarts=sections
+      .map(section=>Math.round((section.startMs-timing.beatZeroMs)/gridMs))
+      .filter(grid=>grid>minGrid&&grid<maxGrid);
+    const claimed=new Set();
+    for(const startGrid of sectionStarts){
+      if(accentGrids.length>=P.accentMaxCount)break;
+      let bestIndex=-1,bestDistance=Infinity;
+      notes.forEach((note,index)=>{
+        if(claimed.has(index)||note.subLane==null)return;
+        if(note.type==='SLIDE')return;
+        if(notes.some(other=>other!==note&&other.grid===note.grid))return;
+        const distance=Math.abs(note.grid-startGrid);
+        // 区切りから1拍以上離れた音は「その区切りの一発」とは言えないので広げない
+        if(distance>BEAT||distance>=bestDistance)return;
+        bestDistance=distance;bestIndex=index;
+      });
+      if(bestIndex<0)continue;
+      const note=notes[bestIndex];
+      const center=Number(note.subLane)+(Number(note.subLaneWidth)||2)/2;
+      note.subLane=Math.max(0,Math.min(10-accentWidth,Math.round(center-accentWidth/2)));
+      note.subLaneWidth=accentWidth;
+      note.lane=Math.floor(note.subLane/2);
+      note.sectionAccent=true;
+      if(Array.isArray(note.holdPoints))delete note.holdPoints;
+      claimed.add(bestIndex);
+      accentGrids.push(note.grid);
+    }
+  }
+
   const firstGrid=notes[0].grid,lastGrid=notes[notes.length-1].grid;
   const span=lastGrid-firstGrid;
   const used=new Set();
@@ -737,6 +835,8 @@ const buildChart=(difficulty)=>{
       latticeGrids:P.latticeGrids,
       types:[...P.types],
       widths:[...P.widths],
+      accentWidth,accentMaxCount:P.accentMaxCount??0,accentGrids:[...accentGrids],
+      holdTaperMaxCount:P.holdTaperMaxCount??0,
       holdGrids:[4,8,12],
       perBarCap:'intensity-curve',
       sectionPositionAdjust:SECTION_POSITION_ADJUST,
