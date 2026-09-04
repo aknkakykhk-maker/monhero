@@ -1791,13 +1791,22 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   if(!(rect.width>0&&rect.height>0))return;
   const noteHeight=Number(frameLayout?.noteHeight)||el.offsetHeight,lane=Number(visualLane),centerY=Number(yPx)+noteHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
   const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO)),left=rect.width*projected.center-width/2;
-  el.style.left=`${left.toFixed(2)}px`;
-  el.style.width=`${width.toFixed(2)}px`;
+  // 横位置をleftで毎フレーム書くとlayout系の更新になる。縦は本体transformで動かしているため、
+  // CSS Transforms Level 2の独立translateへ横移動だけ分離し、見た目の座標を変えず合成側へ寄せる。
+  // left=0 + translateX(left) なので、HOLD/SLIDEのbodyが使う -left の補正も従来と同じ実座標になる。
+  if(el._rhythmPositionOrigin!==true){el.style.left='0px';el._rhythmPositionOrigin=true;}
+  const nextTranslate=`${left.toFixed(2)}px 0px`;
+  if(el._rhythmTranslate!==nextTranslate){el.style.translate=nextTranslate;el._rhythmTranslate=nextTranslate;}
+  const nextWidth=`${width.toFixed(2)}px`;
+  if(el._rhythmWidth!==nextWidth){el.style.width=nextWidth;el._rhythmWidth=nextWidth;}
   el.style.setProperty('--rhythm-note-depth-scale',(0.56+projected.scale*.44).toFixed(3));
   el.style.setProperty('--rhythm-note-depth-brightness',(0.72+projected.scale*.28).toFixed(3));
-  const body=el._rhythmVisualBody||el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');
+  // TAP/FLICKにはこのbodyが存在しない。nullもキャッシュしないと、表示中ずっと毎フレーム
+  // querySelectorで「無い」ことを探し直すため、存在しない結果も1回で覚える。
+  let body;
+  if(Object.prototype.hasOwnProperty.call(el,'_rhythmVisualBody'))body=el._rhythmVisualBody;
+  else{RHYTHM_PERF.domQuery();body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');el._rhythmVisualBody=body||null;}
   if(!body)return;
-  el._rhythmVisualBody=body;
   if(body.hasAttribute('data-rhythm-slide-body')){
     body.style.left=`${(-left).toFixed(2)}px`;
     body.style.top=`${(-Number(yPx)).toFixed(2)}px`;
