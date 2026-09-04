@@ -127,11 +127,22 @@ check('入力のrect取得はジェスチャー側と同じ1フレーム1回の�
   &&data.includes('invalidateAreaRect,areaRect,')
   &&!/const rect=area\.getBoundingClientRect\(\),live=new Set\(\)/.test(gameSrc));
 // 2026-09-04: 「指を触れていない降下中にもカクつく」報告を受けて足した3点。
+// 実機で「絞り込みが本当に効いているか」まで分かるよう、走査数・実描画数に加えて
+// 先頭スキップ数と絞り込みの有無も渡す形になった(推測で直さないための計測)。
 check('毎フレームの走査数と実描画数を計測できる(長いフレームの切り分け用)',
-  data.includes('notes(scanned,drawn){if(!on)return;')
+  data.includes('notes(scanned,drawn,headSkipped,narrowed){if(!on)return;')
   &&data.includes('notesScannedPerFrame:per(acc.notesScanned)')
   &&data.includes('worstFrameScanned:acc.worstScanned')
-  &&gameSrc.includes('RHYTHM_PERF.notes(perfScanned,perfDrawn);'));
+  &&data.includes('headSkippedPerFrame:per(acc.headSkipped)')
+  &&gameSrc.includes('RHYTHM_PERF.notes(perfScanned,perfDrawn,scanFrom,run.notesAscending);'));
+// フレーム全体の時間(avgMs)とtick本体の時間の差が「JSではなく描画に消えている時間」。
+// これが分からないと、JSをいくら削っても効かない場合に気づけない。rAFは増やさない。
+check('tick本体の処理時間そのものを計測できる(JSと描画の切り分け用)',
+  data.includes('tick(ms){if(!on)return;')
+  &&data.includes('tickMsPerFrame:per(acc.tickMs)')
+  &&data.includes('worstFrameTickMs:acc.worstTickMs')
+  &&gameSrc.includes('const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;')
+  &&gameSrc.includes('if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart);'));
 check('will-changeは今動いているノーツにだけ付ける(全ノーツへ出しっぱなしにしない)',
   gameSrc.includes("const nextWillChange=visible?'transform, opacity':'';")
   &&!gameSrc.includes("willChange:'transform, opacity'"));

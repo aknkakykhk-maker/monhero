@@ -19,8 +19,18 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 // ── 実装が「絞り込み」の形になっているか ──────────────────────────────
 check('1ノーツぶんの処理を関数へ切り出している',game.includes('const visitNote=note=>{'));
 check('終わって非表示にし終えたノーツから先頭を進める',
-  game.includes('if(!(head.done&&headEl&&headEl._rhythmHidden===true))break;')
+  game.includes('if(!(head.done&&(headEl?headEl._rhythmHidden===true:true)))break;')
   &&game.includes('run.scanFrom=scanFrom;'));
+// 要素が無いノーツで先頭が止まると、絞り込みがまるごと効かなくなる。
+// 判定さえ終わっていれば隠す対象は無いので進めてよい、という形になっていること。
+check('要素が無いノーツで先頭が止まらない',
+  game.includes('headEl?headEl._rhythmHidden===true:true'));
+// 実機で「効いているのか」を数字で確かめられること(推測で直さないため)
+check('走査の内訳と絞り込みの有無を計測へ渡している',
+  game.includes('RHYTHM_PERF.notes(perfScanned,perfDrawn,scanFrom,run.notesAscending);'));
+check('tick本体の処理時間そのものを計測している',
+  game.includes('RHYTHM_PERF.tick(performance.now()-perfTickStart);')
+  &&game.includes('const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;'));
 check('出番がまだ遠いノーツで打ち切る',
   game.includes('const scanHorizonMs=visualTime+travelMs*1.2;')
   &&game.includes('if(run.notesReady&&run.notesAscending&&note.timeMs>scanHorizonMs)break;'));
@@ -29,7 +39,6 @@ check('出番がまだ遠いノーツで打ち切る',
 check('昇順でない譜面のときは打ち切りを自動で止める',
   game.includes('if(run.notesAscending===undefined)run.notesAscending=notes.every((n,i)=>i===0||n.timeMs>=notes[i-1].timeMs);'));
 check('初回フレームだけは全ノーツを一巡して初期表示を作る',game.includes('run.notesReady=true;'));
-check('走査数・実描画数を計測へ渡している',game.includes('RHYTHM_PERF.notes(perfScanned,perfDrawn);'));
 
 // ── 絞り込んでも判定・表示を取りこぼさないか(曲全体をシミュレート) ────────
 const chartFile=path.join(ROOT,'monster-hero/debug/monster-hero-theme-hard-formal-candidate-v1.json');
