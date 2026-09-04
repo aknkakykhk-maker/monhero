@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ba41714c809f9817
+// source-sha256: 13bc8c2d081defbc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 01:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 01:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15850,7 +15850,9 @@ const RhythmTapTest = ({
   // レーンの外側に空いている三角形へ、設定したマスモンを置いて拍に合わせて跳ねさせる。
   // 跳ねるのはCSSアニメーションなので毎フレームのJSは走らない。置き場所と大きさは
   // rhythmLayoutSideMonsters が、プレイエリアの大きさが変わったときだけ測り直す。
-  const sideMonsterRefs = useRef([]);
+  const sideMonsterRefs = useRef([]),
+    screenFlashRef = useRef(null),
+    judgmentTextRef = useRef(null);
   const sideMonsterElements = useMemo(() => {
     if (settings.sideMonsterOpacity === 'OFF') return null;
     const opacity = rhythmSideMonsterOpacityValue(settings.sideMonsterOpacity);
@@ -16063,6 +16065,47 @@ const RhythmTapTest = ({
       RHYTHM_NOTE_SE_RUNTIME.playClear();
       // 光は演出量の設定に従う(MINIMAL・軽量モードでは出さない)。音は設定に関わらず鳴らす
       if (!settings.lightweightMode && settings.effectAmount !== 'MINIMAL') note._rhythmClearAt = run.audio?.songTimeMs?.() ?? 0;
+    }
+    // --- 取れたノーツを判定ラインで弾けさせる(2026-09-05「画面演出はあまりかわってない」への対応) ---
+    // 要素は使い回すので、押すたびにDOMは増えない。動くのは transform と opacity だけ。
+    // モンスターノーツは1曲に最大4回しか来ないので、光を大きく長くして特別扱いにする。
+    if (judgment !== 'MISS') {
+      const monsterHit = !!monsterForNote(note);
+      if (monsterHit) RHYTHM_NOTE_SE_RUNTIME.playMonster();
+      if (!settings.lightweightMode && settings.effectAmount !== 'MINIMAL') {
+        const area = playAreaRef.current;
+        // 光の位置と幅はノーツと同じ投影から出す(判定ラインの高さ=1)。
+        const span = rhythmNoteIsSlide(note) ? rhythmProjectSlideSpan(rhythmReleaseLane(note), note, 1, run.audio?.songTimeMs?.() ?? note.timeMs) : rhythmNoteVisualSpan(note, note.lane, 1, run.audio?.songTimeMs?.() ?? note.timeMs);
+        rhythmSpawnHitEffect(area, {
+          centerRatio: span.center,
+          widthRatio: span.width,
+          judgment,
+          monster: monsterHit
+        });
+        if (monsterHit && screenFlashRef.current) {
+          const flash = screenFlashRef.current;
+          flash.dataset.rhythmFlash = '';
+          void flash.offsetWidth;
+          flash.dataset.rhythmFlash = '1';
+        }
+        // そのマスモンが両サイドで大きく跳ねる(どのマスモンの番だったかが分かるように)
+        if (monsterHit) {
+          const slot = rhythmNoteMonsterSlot(note),
+            el = slot ? sideMonsterRefs.current[slot - 1] : null;
+          if (el) {
+            el.dataset.rhythmSideHit = '';
+            void el.offsetWidth;
+            el.dataset.rhythmSideHit = '1';
+          }
+        }
+        // 判定文字を一度だけ弾ませる
+        const judgmentText = judgmentTextRef.current;
+        if (judgmentText) {
+          judgmentText.dataset.rhythmJudgmentPop = '';
+          void judgmentText.offsetWidth;
+          judgmentText.dataset.rhythmJudgmentPop = '1';
+        }
+      }
     }
     if (settings.vibrationEnabled && judgment !== 'MISS') {
       try {
@@ -16494,7 +16537,10 @@ const RhythmTapTest = ({
         el._rhythmDepthBrightness = undefined;
       }
     });
-    rhythmLayoutPlayArea(playAreaRef.current); /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
+    rhythmLayoutPlayArea(playAreaRef.current);
+    /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
+    rhythmEnsureHitEffects(playAreaRef.current);
+    /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
     const sideBeatMs = rhythmSideMonsterBeatMs(song.bgmTrackId);
     sideMonsterRefs.current.forEach(el => {
       if (el) {
@@ -17000,6 +17046,10 @@ const RhythmTapTest = ({
       filter: settings.effectAmount === 'MINIMAL' ? 'saturate(.78)' : settings.effectAmount === 'LOW' ? 'saturate(.92)' : 'none'
     }
   }, laneElements, sideMonsterElements, /*#__PURE__*/React.createElement("div", {
+    ref: screenFlashRef,
+    "data-rhythm-screen-flash": true,
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
     ref: judgmentLineRef,
     "data-rhythm-judgment-line": true,
     className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300",
@@ -17013,6 +17063,8 @@ const RhythmTapTest = ({
       bottom: 'calc(12% + 38px)'
     }
   }, /*#__PURE__*/React.createElement("b", {
+    ref: judgmentTextRef,
+    "data-rhythm-judgment-text": true,
     className: `block text-[26px] font-black leading-none tracking-wide ${view.last === 'MARVELOUS' ? 'text-fuchsia-100' : view.last === 'EXCELLENT' ? 'text-cyan-100' : view.last === 'GREAT' ? 'text-amber-200' : view.last === 'GOOD' ? 'text-lime-300' : view.last === 'BAD' ? 'text-rose-300' : 'text-white'}`,
     style: {
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 7px rgba(255,255,255,.45)' : '0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'
@@ -17030,7 +17082,7 @@ const RhythmTapTest = ({
     className: "mt-1 block text-sm font-black tracking-[0.3em]"
   }, "COMBO")), view.ability && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-ability-flash": true,
-    className: "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border border-amber-200/80 bg-slate-950/90 px-3 py-1 text-sm font-black text-amber-100",
+    className: "pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100",
     style: {
       bottom: 'calc(12% + 78px)',
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.8)'
