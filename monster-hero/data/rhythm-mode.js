@@ -514,6 +514,20 @@ const rhythmLaneAtPoint=(clientX,clientY,rect)=>{
 
 const RHYTHM_FLICK_DISTANCE_PX = 24;
 const RHYTHM_FLICK_MAX_MS = 450;
+// 終点フリック(HOLD / SLIDE の終わりでフリックして離す)。
+// ・受付開始: 終端のこの時間前から。受付に入った瞬間の指の位置を基準にし、
+//   そこから RHYTHM_FLICK_DISTANCE_PX(単発FLICKと同じ距離・方向指定なし)動けば成立する。
+// ・受付中は追従の外れ判定を止める。フリックすれば的から外れるのは当たり前のため。
+// 判定の基準そのもの(判定窓 RHYTHM_RELEASE_MAX_MS / rhythmJudgeRelease)は既存のまま使う。
+// 成立すれば指を離すのを待たずその場で終端判定を出す(単発FLICKと同じ考え方)。
+const RHYTHM_END_FLICK_ARM_MS = 250;
+// 終点フリックを要求するノーツか。endFlick を書いていない既存譜面は必ず false になり、
+// 「終端で離すだけ」という従来の挙動が一切変わらないようにしている。
+const rhythmNoteWantsEndFlick=note=>{
+  if(note?.endFlick!==true)return false;
+  const type=note?._rhythmOriginalType||note?.type;
+  return type==='HOLD'||type==='SLIDE';
+};
 const RHYTHM_SLIDE_TOLERANCE_LANES = .82;
 const RHYTHM_RELEASE_MAX_MS = 200;
 const RHYTHM_RELEASE_DEFER_ARM_MS = 100;
@@ -752,6 +766,20 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     session.note.endTimeMs=songNow-session.offsetMs;
     session.note._rhythmGestureDone=true;
   };
+  // 終点フリックの受付を開始する。終端の RHYTHM_END_FLICK_ARM_MS 前に入ったら、
+  // 「その瞬間の指の位置」を基準として覚え、以後の移動量をフリックとして測る。
+  // 指が動かないまま受付へ入る場合もあるので、tick からも呼んで必ず基準を作る。
+  const armEndFlick=(session,pos)=>{
+    if(!session||!session.endFlickRequired||session.endFlickArmed||session.note.done)return;
+    if((session.releaseTargetMs+session.offsetMs)-estimatedSongMs(session)>RHYTHM_END_FLICK_ARM_MS)return;
+    const at=pos||positions.get(session.key);
+    session.endFlickArmed=true;
+    session.endFlickAnchorX=at?at.clientX:session.startX;
+    session.endFlickAnchorY=at?at.clientY:session.startY;
+    // 受付に入る前の「外れっぱなし」の計測は捨てる。ここから先の移動はフリックの動作なので、
+    // 追従が外れたことを理由にMISSにしてはいけない。
+    session.trackingBadSincePerf=null;
+  };
   const evaluatePosition=(session,pos)=>{
     if(!session||session.finished||session.note.done||!pos)return;
     if(session.kind==='FLICK'){
@@ -761,6 +789,22 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       return;
     }
     if(session.kind!=='SLIDE'&&session.kind!=='HOLD')return;
+    if(session.endFlickRequired){
+      armEndFlick(session,pos);
+      if(session.endFlickArmed){
+        if(!session.endFlickDone){
+          const dx=pos.clientX-session.endFlickAnchorX,dy=pos.clientY-session.endFlickAnchorY;
+          if(Math.hypot(dx,dy)>=RHYTHM_FLICK_DISTANCE_PX){
+            session.endFlickDone=true;
+            // 指を離すのを待たず、その場で終端判定を確定する。
+            // release() が既存の判定合成(開始判定と終端判定の悪いほう)をそのまま行う。
+            release(session.key,false);
+          }
+        }
+        // 受付中は追従の外れを見ない(フリックで的から外れるのは当たり前のため)。
+        return;
+      }
+    }
     const actual=laneCoordinate(pos.clientX,pos.clientY);
     const chartNow=estimatedSongMs(session)-session.offsetMs;
     let bad;
@@ -804,7 +848,12 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
         finishGesture(session,false);
         return;
       }
-      if((session.kind==='SLIDE'||session.kind==='HOLD')&&!session.finished)evaluatePosition(session,positions.get(key));
+      if((session.kind==='SLIDE'||session.kind==='HOLD')&&!session.finished){
+        const pos=positions.get(key);
+        // 指が1本も動いていない(pointermoveが来ない)ままでも受付へ入れるよう、ここでも基準を作る。
+        armEndFlick(session,pos);
+        evaluatePosition(session,pos);
+      }
       if(session.releaseRequired&&!session.note.done){
         const releaseDelta=estimatedSongMs(session)-(session.releaseTargetMs+session.offsetMs);
         if(!session.autoCompletionDeferred&&releaseDelta>=-RHYTHM_RELEASE_DEFER_ARM_MS){
@@ -841,7 +890,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       }
       const songNow=estimatedSongMs(session);
       const releaseDelta=songNow-(session.releaseTargetMs+session.offsetMs);
-      const endJudgment=cancelled?'MISS':rhythmJudgeRelease(releaseDelta);
+      // 終点フリックのノーツは、フリックしないまま離してもMISS。判定窓そのものは変えない。
+      const endJudgment=cancelled?'MISS'
+        :session.endFlickRequired&&!session.endFlickDone?'MISS'
+        :rhythmJudgeRelease(releaseDelta);
       const startJudgment=session.startJudgment||session.note.holdJudgment||'MISS';
       const finalJudgment=session.failed?'MISS':rhythmWorseJudgment(startJudgment,endJudgment);
       const startRank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(startJudgment),endRank=RHYTHM_RELEASE_JUDGMENT_IDS.indexOf(endJudgment);
@@ -850,6 +902,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       session.note._rhythmReleaseJudgment=endJudgment;
       session.note._rhythmReleaseDeltaMs=releaseDelta;
       session.note._rhythmReleaseDone=true;
+      if(session.endFlickRequired)session.note._rhythmEndFlickDone=session.endFlickDone===true;
       // game-system.jsx の既存 inputEnds に最終判定だけ適用させる。
       // document capture は play-area の inputEnds より先に走るため、ここで終了時刻を
       // 現在より十分前へ寄せれば旧「早離し」分岐へ入らず、上で合成した判定が1回だけ反映される。
@@ -865,6 +918,8 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     note._rhythmOriginalType=kind;
     note.type='HOLD';
     const releaseRequired=kind==='HOLD'||kind==='SLIDE';
+    const endFlickRequired=releaseRequired&&rhythmNoteWantsEndFlick(note);
+    if(endFlickRequired)note._rhythmEndFlickRequired=true;
     const releaseTargetMs=releaseRequired?(Number(note.endTimeMs)||Number(note.timeMs)||0):null;
     if(releaseRequired){
       note._rhythmReleaseTargetMs=releaseTargetMs;
@@ -874,7 +929,7 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
       // release() が終端判定を作り、押しっぱなしなら+200ms超でMISSになる。
     }else if(kind==='FLICK')note.endTimeMs=(Number(note.timeMs)||0)+60000;
     const perf=nowPerf();
-    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null});
+    sessions.set(key,{key,note,kind,startSongMs:Number(startSongMs)||0,offsetMs:Number(offsetMs)||0,startPerfMs:perf,lastPerfMs:perf,startX:pos.clientX,startY:pos.clientY,finished:false,failed:false,releaseRequired,releaseTargetMs,startJudgment:null,startDeltaMs:0,expiredGuard:false,autoCompletionDeferred:false,trackingBadSincePerf:null,endFlickRequired,endFlickArmed:false,endFlickAnchorX:pos.clientX,endFlickAnchorY:pos.clientY,endFlickDone:false});
     ensureTick();
   };
   const slideVisualLaneForIndex=index=>{
@@ -1275,6 +1330,56 @@ const widthSlideChangingTestNotes=Object.freeze([
 ]);
 const widthSlideChangingTestChart=Object.freeze({level:9,notes:widthSlideChangingTestNotes,totalNotes:widthSlideChangingTestNotes.length,durationMs:41000});
 
+// 終点フリック(endFlick)の確認用テスト譜面。
+// HOLD / SLIDE の終わりで「フリックして離す」パターン。endFlick を書いていないノーツも
+// わざと混ぜてあり、見分けが付くか・従来どおり離すだけで取れるかを同じ譜面で確かめられる。
+const efHold=(timeMs,endTimeMs,subLane,subLaneWidth,endFlick)=>Object.freeze({
+  type:'HOLD',timeMs,endTimeMs,lane:Math.floor(subLane/2),subLane,subLaneWidth,...(endFlick?{endFlick:true}:{}),
+});
+const efSlide=(points,subLaneWidth,endFlick)=>{
+  const slidePoints=Object.freeze(points.map(([timeMs,lane])=>Object.freeze({timeMs,lane})));
+  return Object.freeze({
+    type:'SLIDE',timeMs:slidePoints[0].timeMs,endTimeMs:slidePoints[slidePoints.length-1].timeMs,
+    lane:slidePoints[0].lane,endLane:slidePoints[slidePoints.length-1].lane,subLaneWidth,slidePoints,
+    ...(endFlick?{endFlick:true}:{}),
+  });
+};
+// EASY: HOLDの終点フリックだけ。幅違いと、最後は左右同時の終点フリック。
+const endFlickHoldTestNotes=Object.freeze([
+  efHold(1800,3000,4,2,true),
+  efHold(4000,5200,0,2,true),
+  efHold(6200,7400,8,2,true),
+  efHold(8400,10000,2,1,true),
+  efHold(11000,12600,6,4,true),
+  efHold(13600,14800,4,2,false),
+  efHold(15800,17400,0,2,true),
+  efHold(15800,17400,8,2,true),
+]);
+const endFlickHoldTestChart=Object.freeze({level:4,notes:endFlickHoldTestNotes,totalNotes:endFlickHoldTestNotes.length,durationMs:19000});
+// NORMAL: SLIDEの終点フリック。動かしている指をそのまま弾いて終われるかを見る。
+const endFlickSlideTestNotes=Object.freeze([
+  efSlide([[1800,0],[2600,1],[3400,2]],2,true),
+  efSlide([[4400,4],[5200,3],[6000,2]],2,true),
+  efSlide([[7000,1],[8000,2],[9000,3]],3,true),
+  efSlide([[10000,2],[10800,2],[11600,2]],2,false),
+  efSlide([[12600,.5],[13600,2],[14600,3.5]],1,true),
+]);
+const endFlickSlideTestChart=Object.freeze({level:6,notes:endFlickSlideTestNotes,totalNotes:endFlickSlideTestNotes.length,durationMs:16500});
+// HARD: TAP / FLICK と混ぜ、終点フリックが2本同時に来る場面も入れる。
+const endFlickMixTestNotes=Object.freeze([
+  Object.freeze({type:'TAP',timeMs:1800,lane:2,subLane:4,subLaneWidth:2}),
+  efHold(2600,3800,0,2,true),
+  efSlide([[4600,4],[5400,3],[6200,2]],2,true),
+  Object.freeze({type:'TAP',timeMs:5400,lane:0,subLane:0,subLaneWidth:2}),
+  efHold(7000,8200,6,2,false),
+  efSlide([[9000,1],[10000,2],[11000,3]],3,true),
+  efHold(9400,11000,0,1,true),
+  Object.freeze({type:'FLICK',timeMs:12000,lane:2,subLane:4,subLaneWidth:2}),
+  efHold(12800,14400,8,2,true),
+  Object.freeze({type:'TAP',timeMs:15200,lane:0,subLane:0,subLaneWidth:2}),
+]);
+const endFlickMixTestChart=Object.freeze({level:8,notes:endFlickMixTestNotes,totalNotes:endFlickMixTestNotes.length,durationMs:17000});
+
 // 同じあつ杯テーマ音源を0秒から使う、約60秒の総合回帰テスト譜面。
 // 正式譜面候補やWIDTH TESTとは分離し、169 BPM / beatZero 40msの16分グリッドへ揃える。
 const atsuCupDebugGridMs=grid=>Math.round(40+Number(grid)*(60000/169/4));
@@ -1570,6 +1675,12 @@ const RHYTHM_SONGS = Object.freeze([
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?widthTestChart:id==='NORMAL'?widthHoldTestChart:id==='HARD'?widthSlideTestChart:id==='EXPERT'?widthSlideVariableTestChart:id==='MASTER'?widthSlideChangingTestChart:emptyRhythmChart()])))
   }),
   Object.freeze({
+    songId:'end_flick_test', displayName:'END FLICK TEST',
+    debugDescription:'終点フリックの確認用（EASY=HOLD／NORMAL=SLIDE／HARD=混在）',
+    bgmTrackId:'atsu_cup_theme',
+    difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='EASY'?endFlickHoldTestChart:id==='NORMAL'?endFlickSlideTestChart:id==='HARD'?endFlickMixTestChart:emptyRhythmChart()])))
+  }),
+  Object.freeze({
     songId:'monster_note_test', displayName:'MONSTER NOTE TEST',
     debugDescription:'モンスターノーツの確認用（設定した枠の順に4個・約40秒）',
     bgmTrackId:'atsu_cup_theme', playDurationMs:MONSTER_NOTE_TEST_DURATION_MS,
@@ -1696,6 +1807,11 @@ const installRhythmGestureVisuals=()=>{
     [data-rhythm-note][data-note-type="FLICK"] > span:last-child{background:linear-gradient(180deg,#f9a8d4,#ec4899 52%,#a21caf)!important;border-color:rgba(253,164,175,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 0 16px rgba(236,72,153,.68)!important}
     [data-rhythm-note][data-note-type="FLICK"] > span:last-child::after{content:"▲";position:absolute;left:50%;top:-18px;transform:translateX(-50%);color:#fdf2f8;font-size:18px;line-height:1;text-shadow:0 0 8px #ec4899,0 0 14px #d946ef}
     [data-rhythm-note][data-note-type="SLIDE"] > span:last-child{background:linear-gradient(180deg,#ddd6fe,#a855f7 58%,#6d28d9)!important;border-color:rgba(221,214,254,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.82),0 0 16px rgba(168,85,247,.64)!important}
+    /* 終点フリックの終端バー。「ここで弾く」ことが一目で分かるよう、単発FLICKと同じ緑と「⇧」に揃える。
+       backgroundのショートハンドで書くとbackground-clipなどを巻き添えでリセットしてしまうため、
+       background-imageだけを上書きする(200コンボの演出が消えた不具合と同じ罠を避ける)。 */
+    [data-rhythm-end-bar][data-rhythm-end-flick]{background-image:linear-gradient(90deg,#22c55e,#f0fdf4 50%,#22c55e)!important;border-color:rgba(220,252,231,.98)!important}
+    [data-rhythm-end-bar][data-rhythm-end-flick]::after{content:"⇧";position:absolute;left:50%;bottom:100%;transform:translateX(-50%) scaleY(calc(1 / var(--rhythm-end-depth-scale, 1)));transform-origin:50% 100%;color:#f0fdf4;font-size:15px;line-height:1;pointer-events:none;text-shadow:0 0 8px #22c55e,0 0 14px #15803d}
     svg[data-rhythm-slide-body]{position:absolute;inset:0;height:var(--rhythm-slide-area-height,0px)!important;overflow:visible;pointer-events:none;filter:drop-shadow(0 0 5px rgba(168,85,247,.38))}
     [data-rhythm-slide-segment]{fill:rgba(168,85,247,.48);stroke:rgba(233,213,255,.56);stroke-width:1}
   `;
