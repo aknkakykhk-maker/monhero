@@ -317,7 +317,11 @@ const rhythmScoreOffsetAfterRevive=(calculatedScore,lockedScore)=>
 const RHYTHM_PERF_KEY='mh_rhythm_perf_v1';
 const RHYTHM_PERF_LONG_MS=Object.freeze([16.7,25,33]);
 const RHYTHM_PERF=(()=>{
-  const zero=()=>({frames:0,totalMs:0,maxMs:0,long:[0,0,0],layoutReads:0,domQueries:0,slidePolygons:0,gestureFrames:0,noteRescans:0});
+  // notesScanned / notesDrawn は「毎フレーム何ノーツを見て、実際に何ノーツ描き替えたか」。
+  // worst* は、いちばん長かったフレームの直前に数えたぶんを保存したもの。
+  // 「長いフレームで何が増えていたのか」を切り分けるために持つ。
+  const zero=()=>({frames:0,totalMs:0,maxMs:0,long:[0,0,0],layoutReads:0,domQueries:0,slidePolygons:0,gestureFrames:0,noteRescans:0,
+    notesScanned:0,notesDrawn:0,pendingScanned:0,pendingDrawn:0,worstScanned:0,worstDrawn:0});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -337,12 +341,16 @@ const RHYTHM_PERF=(()=>{
         // 一時停止・バックグラウンド復帰の巨大な間隔は数えない
         if(dt>0&&dt<2000){
           acc.frames++;acc.totalMs+=dt;
-          if(dt>acc.maxMs)acc.maxMs=dt;
+          acc.notesScanned+=acc.pendingScanned;acc.notesDrawn+=acc.pendingDrawn;
+          if(dt>acc.maxMs){acc.maxMs=dt;acc.worstScanned=acc.pendingScanned;acc.worstDrawn=acc.pendingDrawn;}
           for(let i=0;i<RHYTHM_PERF_LONG_MS.length;i++)if(dt>RHYTHM_PERF_LONG_MS[i])acc.long[i]++;
         }
       }
+      acc.pendingScanned=0;acc.pendingDrawn=0;
       last=Number.isFinite(t)?t:null;
     },
+    // tickのノーツ走査から呼ぶ。ONのときだけ足し込む(OFFなら即return)
+    notes(scanned,drawn){if(!on)return;acc.pendingScanned=Number(scanned)||0;acc.pendingDrawn=Number(drawn)||0;},
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
     layoutRead(){if(on)acc.layoutReads++;},
@@ -362,6 +370,10 @@ const RHYTHM_PERF=(()=>{
         slidePolygonsPerFrame:per(acc.slidePolygons),
         gestureFrames:acc.gestureFrames,
         noteRescans:acc.noteRescans,
+        notesScannedPerFrame:per(acc.notesScanned),
+        notesDrawnPerFrame:per(acc.notesDrawn),
+        worstFrameScanned:acc.worstScanned,
+        worstFrameDrawn:acc.worstDrawn,
       };
     },
   };
