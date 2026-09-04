@@ -121,6 +121,17 @@ const SOURCE_ORDER=Object.freeze(['normal','dense','step1']);
 // どちらも実機で全難易度を遊んでもらった指摘への対応(2026-09-04):
 //   ・ノーツが少なくて退屈  → perBarByIntensity を上げ、補充を段1(EXPERT以上は段0)まで広げた
 //   ・半ノーツは難しい側なので高難易度用にして → narrowRate を難易度順にし、EASY/NORMALでは0にした
+//
+// 【配置の難しさの段差】(2026-09-05「ノーツ数は良いと思うけど配置がハードですらかなりむずい」)
+// ノーツ数はそのままに、**1段上がるごとに新しく増える難しさを1つに絞る**。
+// 以前のHARDは「16分格子・3レーン跳び・16分6連・半ノーツ・SLIDE・長押し中の別タップ」が
+// 一度に来ていて、NORMALからの段差が崖になっていた。
+//
+//   EASY   … 8分格子 / 1レーン跳び / TAP・HOLDだけ
+//   NORMAL … ＋FLICK と2レーン跳び
+//   HARD   … ＋16分格子 と SLIDE（跳びは2レーンのまま・長押し中の別タップは出さない）
+//   EXPERT … ＋3レーン跳び・同時押し・長押し中の別タップ・半ノーツ増
+//   MASTER … ＋4レーン跳び・長い16分の連なり・半ノーツ最多
 const PROFILES=Object.freeze({
   EASY:Object.freeze({
     level:1,candidateSource:'normal',minStrength:0,latticeGrids:2,
@@ -130,14 +141,14 @@ const PROFILES=Object.freeze({
   }),
   NORMAL:Object.freeze({
     level:3,candidateSource:'dense',minStrength:.40,latticeGrids:2,
-    perBarByIntensity:[1.4,3.4,5.2],maxConsecutiveEighths:4,maxLaneStep:2,
+    perBarByIntensity:[1.4,3.4,5.2],maxConsecutiveEighths:3,maxLaneStep:2,
     widths:[2,3,4,6],narrowRate:0,simultaneous:false,types:['TAP','HOLD','FLICK'],supplementFromTier:1,
     holdMaxCount:16,holdMinGapGrids:10,flickMaxCount:14,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:3,accentWidth:10,accentMaxCount:6,holdTaperMaxCount:5,
   }),
   HARD:Object.freeze({
     level:5,candidateSource:'dense',minStrength:.24,latticeGrids:1,
-    perBarByIntensity:[1.8,4.3,6.4],maxConsecutiveEighths:6,maxLaneStep:3,
-    widths:[1,2,3,4,5],narrowRate:.06,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:1,
+    perBarByIntensity:[1.8,4.3,6.4],maxConsecutiveEighths:4,maxLaneStep:2,
+    widths:[1,2,3,4,5],narrowRate:.04,simultaneous:false,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:1,
     holdMaxCount:18,holdMinGapGrids:10,flickMaxCount:18,slideMaxCount:10,chordMaxCount:0,endFlickMaxCount:5,accentWidth:8,accentMaxCount:7,holdTaperMaxCount:6,
   }),
   // EXPERT/MASTERは既存dense候補(しきい値0.30)では供給が頭打ちのため、STEP1の
@@ -150,14 +161,14 @@ const PROFILES=Object.freeze({
   // MASTERのminStrength=0は「事実上のしきい値(0.197)より下を指定し、候補を絞らない」の意図。
   EXPERT:Object.freeze({
     level:7,candidateSource:'step1',minStrength:.14,latticeGrids:1,
-    perBarByIntensity:[2.2,5.4,8],maxConsecutiveEighths:8,maxLaneStep:4,
+    perBarByIntensity:[2.2,5.4,8],maxConsecutiveEighths:8,maxLaneStep:3,
     widths:[1,2,3,4,5],narrowRate:.12,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
     holdMaxCount:20,holdMinGapGrids:8,flickMaxCount:22,slideMaxCount:11,chordMaxCount:12,endFlickMaxCount:7,accentWidth:8,accentMaxCount:7,holdTaperMaxCount:7,
   }),
   MASTER:Object.freeze({
     level:9,candidateSource:'step1',minStrength:0,latticeGrids:1,
     perBarByIntensity:[2.8,6.6,9.6],maxConsecutiveEighths:12,maxLaneStep:4,
-    widths:[1,2,3,4],narrowRate:.18,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
+    widths:[1,2,3,4],narrowRate:.20,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
     holdMaxCount:22,holdMinGapGrids:6,flickMaxCount:26,slideMaxCount:13,chordMaxCount:18,endFlickMaxCount:9,accentWidth:6,accentMaxCount:8,holdTaperMaxCount:8,
   }),
 });
@@ -951,6 +962,7 @@ const buildChart=(difficulty)=>{
       latticeGrids:P.latticeGrids,
       types:[...P.types],
       widths:[...P.widths],
+      maxConsecutiveEighths:P.maxConsecutiveEighths,
       accentWidth,accentMaxCount:P.accentMaxCount??0,accentGrids:[...accentGrids],
       holdTaperMaxCount:P.holdTaperMaxCount??0,
       holdGrids:[4,8,12],

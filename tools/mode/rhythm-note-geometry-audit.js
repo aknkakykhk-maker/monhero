@@ -100,6 +100,14 @@ const NOTE_CASES=[
   {id:'HOLD 全幅10',type:'HOLD',subLane:0,subLaneWidth:10,holdMs:700},
   {id:'HOLD 全幅10 長尺',type:'HOLD',subLane:0,subLaneWidth:10,holdMs:1800},
   {id:'SLIDE 全幅10',type:'SLIDE',lane:2,subLaneWidth:10,holdMs:700},
+  // 実機で「スライドがレーンからはみ出て表示される場面がある」と報告があった(2026-09-05)。
+  // 太いSLIDEが端のレーンを通る形。中心線のまわりへ幅を広げるだけだと外へ出る。
+  {id:'SLIDE 幅5 左端',type:'SLIDE',lane:0,subLaneWidth:5,holdMs:700},
+  {id:'SLIDE 幅5 右端',type:'SLIDE',lane:4,subLaneWidth:5,holdMs:700},
+  {id:'SLIDE 幅8 左端',type:'SLIDE',lane:0,subLaneWidth:8,holdMs:700},
+  {id:'SLIDE 幅4 端へ移動',type:'SLIDE',lane:2,endLane:0,subLaneWidth:4,holdMs:700},
+  {id:'HOLD 幅8 左端',type:'HOLD',subLane:0,subLaneWidth:8,holdMs:700},
+  {id:'HOLD 幅8 右端',type:'HOLD',subLane:2,subLaneWidth:8,holdMs:700},
   // 途中で幅が変わるHOLD(holdPoints)。帯の上端(終端)と下端(始点)の幅が実際に違うかを測る
   {id:'HOLD 幅2→全幅10',type:'HOLD',subLane:4,subLaneWidth:2,holdMs:700,
     holdPoints:[{at:0,subLane:4,subLaneWidth:2},{at:700,subLane:0,subLaneWidth:10}]},

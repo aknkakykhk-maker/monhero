@@ -7,12 +7,13 @@ const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 const context={console};
-vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideWidthAt,rhythmSlideInputSpan,rhythmSlideTrackingTolerance,rhythmSlideExpectedLane,rhythmReleaseLane,rhythmProjectLane,rhythmProjectSlideSpan,rhythmNoteVisualSpan,rhythmNoteHasVariableSpan,rhythmMatchInputBatch,rhythmSlideSegmentPolygons,RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,widthSlideVariableTestChart,widthSlideChangingTestChart};`,context);
+vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideWidthAt,rhythmSlideInputSpan,rhythmSlideTrackingTolerance,rhythmSlideExpectedLane,rhythmReleaseLane,rhythmProjectLane,rhythmProjectSlideSpan,rhythmNoteVisualSpan,rhythmNoteHasVariableSpan,rhythmMatchInputBatch,rhythmSlideSegmentPolygons,rhythmSlideFittedLane,rhythmProjectBoundary,RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,widthSlideVariableTestChart,widthSlideChangingTestChart};`,context);
 const {
   RHYTHM_SONGS,RHYTHM_SLIDE_TOLERANCE_LANES,rhythmSlideAuthoredLane,rhythmSlideWidth,rhythmSlideWidthAt,
   rhythmSlideInputSpan,rhythmSlideTrackingTolerance,rhythmSlideExpectedLane,rhythmReleaseLane,
   rhythmProjectLane,rhythmProjectSlideSpan,rhythmNoteVisualSpan,rhythmNoteHasVariableSpan,
-  rhythmMatchInputBatch,rhythmSlideSegmentPolygons,RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,
+  rhythmMatchInputBatch,rhythmSlideSegmentPolygons,rhythmSlideFittedLane,rhythmProjectBoundary,
+  RHYTHM_GESTURE_RUNTIME,widthSlideTestChart,
   widthSlideVariableTestChart,widthSlideChangingTestChart,
 }=context.out;
 const close=(a,b,epsilon=1e-9)=>Math.abs(Number(a)-Number(b))<epsilon;
@@ -36,6 +37,39 @@ check('SLIDEはTAP/HOLDのleft-edge可変span扱いにはしない',!rhythmNoteH
 // 0や11、小数のような「幅として書けない値」を幅2へ戻す約束はそのまま。
 check('幅指定なし/不正幅は従来の幅2へ正規化する',rhythmSlideWidth(slide)===2&&rhythmSlideWidth(makeSlide({subLaneWidth:0}))===2&&rhythmSlideWidth(makeSlide({subLaneWidth:11}))===2&&rhythmSlideWidth(makeSlide({subLaneWidth:2.5}))===2);
 check('SLIDEはsubLaneWidth 1〜10(全幅)を受け付ける',[1,2,3,4,5,6,7,8,9,10].every(width=>rhythmSlideWidth(makeSlide({subLaneWidth:width}))===width));
+// 太いSLIDEが端のレーンを通ると、中心線のまわりへ幅を広げただけではレーンの外へ出る
+// (実機で「スライドがレーンからはみ出て表示される場面がある」と報告があった 2026-09-05)。
+// 幅は変えずに中心線を内側へ寄せて収める。見た目・入力の受け付け・追従の的が同じだけ動く。
+check('幅2は寄せない(既存の正式候補v1が使う唯一の幅なので、譜面の見た目が変わらない)',
+  [0,.5,1,2,3,3.5,4].every(lane=>close(rhythmSlideFittedLane(lane,2),lane)));
+check('太いSLIDEは中心線を内側へ寄せてレーンへ収める',
+  close(rhythmSlideFittedLane(0,5),.75)&&close(rhythmSlideFittedLane(4,5),3.25)
+  &&close(rhythmSlideFittedLane(0,8),1.5)&&close(rhythmSlideFittedLane(0,10),2)&&close(rhythmSlideFittedLane(4,10),2));
+check('寄せても幅は変わらない',[2,4,5,8,10].every(width=>{
+  const note=makeSlide({subLaneWidth:width,slidePoints:[{timeMs:1000,lane:0},{timeMs:2200,lane:4}]});
+  return close(rhythmProjectSlideSpan(0,note,1,1000).subLaneWidth,width);
+}));
+check('寄せたあとの帯が5レーンの外へ出ない',[1,2,3,4,5,6,7,8,9,10].every(width=>{
+  const note=makeSlide({subLaneWidth:width,slidePoints:[{timeMs:1000,lane:0},{timeMs:2200,lane:4}]});
+  return [0,.5,1,2,3,3.5,4].every(lane=>{
+    const span=rhythmProjectSlideSpan(lane,note,1,1000);
+    return span.left>=rhythmProjectBoundary(0,1)-1e-9&&span.right<=rhythmProjectBoundary(5,1)+1e-9;
+  });
+}));
+check('追従の的も同じだけ寄る(見えている帯をなぞって外れた扱いにならない)',(()=>{
+  // 幅8(=4レーンぶん)は端では収まらないので、中心線がレーン1.5へ寄る。
+  // 追従の的(rhythmSlideExpectedLane)と帯(rhythmProjectSlideSpan)が同じ場所を指すことを見る。
+  const note=makeSlide({subLaneWidth:8,slidePoints:[{timeMs:1000,lane:0},{timeMs:2200,lane:0}]});
+  const expected=rhythmSlideExpectedLane(note,1600);
+  const bandCenter=rhythmProjectSlideSpan(expected,note,1,1600).center;
+  const laneCenter=rhythmProjectLane(expected,1).center;
+  return close(expected,1.5)&&close(bandCenter,laneCenter);
+})());
+check('入力の受け付け幅も同じだけ寄る',(()=>{
+  const note=makeSlide({subLaneWidth:8,lane:0,slidePoints:[{timeMs:1000,lane:0},{timeMs:2200,lane:0}]});
+  const input=rhythmSlideInputSpan(note);
+  return input&&close(input.start,0)&&close(input.end,8)&&close(input.center,4);
+})());
 
 const y=.68,legacySpan=rhythmProjectLane(1.5,y),width1Span=rhythmProjectSlideSpan(1.5,makeSlide({subLaneWidth:1}),y),width2Span=rhythmProjectSlideSpan(1.5,makeSlide({subLaneWidth:2}),y),width4Span=rhythmProjectSlideSpan(1.5,makeSlide({subLaneWidth:4}),y);
 check('SLIDE幅2は旧固定幅projectionと完全互換',close(width2Span.left,legacySpan.left)&&close(width2Span.right,legacySpan.right)&&close(width2Span.center,legacySpan.center));
