@@ -31,6 +31,8 @@
    4,
    8
   ],
+  "endFlickMaxCount": 9,
+  "endFlickMinGapGrids": 4,
   "maxLaneStep": 4,
   "simultaneous": true,
   "structureSource": {
@@ -207,7 +209,8 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.42,
    "sourcePeakOffsetMs": -15.09,
-   "durationGrids": 8
+   "durationGrids": 8,
+   "endFlick": true
   },
   {
    "type": "FLICK",
@@ -824,7 +827,8 @@
      "subLaneWidth": 2
     }
    ],
-   "endLane": 1
+   "endLane": 1,
+   "endFlick": true
   },
   {
    "type": "TAP",
@@ -1135,7 +1139,8 @@
    "subLaneWidth": 4,
    "sourceStrength": 0.68,
    "sourcePeakOffsetMs": -10.975,
-   "durationGrids": 4
+   "durationGrids": 4,
+   "endFlick": true
   },
   {
    "type": "TAP",
@@ -1390,7 +1395,8 @@
      "subLaneWidth": 2
     }
    ],
-   "endLane": 4
+   "endLane": 4,
+   "endFlick": true
   },
   {
    "type": "TAP",
@@ -1878,7 +1884,8 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.49,
    "sourcePeakOffsetMs": 2.98,
-   "durationGrids": 8
+   "durationGrids": 8,
+   "endFlick": true
   },
   {
    "type": "TAP",
@@ -2033,7 +2040,8 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.47,
    "sourcePeakOffsetMs": -8.835,
-   "durationGrids": 4
+   "durationGrids": 4,
+   "endFlick": true
   },
   {
    "type": "TAP",
@@ -2527,7 +2535,8 @@
      "subLaneWidth": 2
     }
    ],
-   "endLane": 4
+   "endLane": 4,
+   "endFlick": true
   },
   {
    "type": "TAP",
@@ -2713,7 +2722,8 @@
    "subLaneWidth": 3,
    "sourceStrength": 0.36,
    "sourcePeakOffsetMs": 26.785,
-   "durationGrids": 4
+   "durationGrids": 4,
+   "endFlick": true
   },
   {
    "type": "TAP",
@@ -3125,7 +3135,8 @@
      "subLaneWidth": 2
     }
    ],
-   "endLane": 4
+   "endLane": 4,
+   "endFlick": true
   }
  ]
 }

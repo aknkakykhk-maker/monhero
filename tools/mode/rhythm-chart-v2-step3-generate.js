@@ -58,7 +58,7 @@ const profileOverride=(()=>{
 // 上書きしてよいのは「作り方の数値」だけ。出力の意味づけ(level等)や未知のキーは受け付けない。
 const OVERRIDABLE_KEYS=Object.freeze(new Set(['candidateSource','minStrength','latticeGrids','perBarByIntensity',
   'maxConsecutiveEighths','maxLaneStep','widths','simultaneous','types',
-  'holdMaxCount','holdMinGapGrids','flickMaxCount','slideMaxCount','chordMaxCount']));
+  'holdMaxCount','holdMinGapGrids','flickMaxCount','slideMaxCount','chordMaxCount','endFlickMaxCount']));
 const overrideLabel=(()=>{
   if(!profileOverride)return null;
   for(const [difficulty,patch] of Object.entries(profileOverride)){
@@ -88,19 +88,19 @@ const PROFILES=Object.freeze({
     level:1,candidateSource:'normal',minStrength:0,latticeGrids:2,
     perBarByIntensity:[2,3,4],maxConsecutiveEighths:2,maxLaneStep:1,
     widths:[2],simultaneous:false,types:['TAP','HOLD'],
-    holdMaxCount:10,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,chordMaxCount:0,
+    holdMaxCount:10,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:0,
   }),
   NORMAL:Object.freeze({
     level:3,candidateSource:'dense',minStrength:.45,latticeGrids:2,
     perBarByIntensity:[3,4,6],maxConsecutiveEighths:4,maxLaneStep:2,
     widths:[1,2,3],simultaneous:false,types:['TAP','HOLD','FLICK'],
-    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:12,slideMaxCount:0,chordMaxCount:0,
+    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:12,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:3,
   }),
   HARD:Object.freeze({
     level:5,candidateSource:'dense',minStrength:.30,latticeGrids:1,
     perBarByIntensity:[5,7,9],maxConsecutiveEighths:6,maxLaneStep:3,
     widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
-    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:16,slideMaxCount:8,chordMaxCount:0,
+    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:16,slideMaxCount:8,chordMaxCount:0,endFlickMaxCount:5,
   }),
   // EXPERT/MASTERは既存dense候補(しきい値0.30)では供給が頭打ちのため、STEP1の
   // events.onsets(強さ0.197まで持つ)を候補源にする。同時押しは新しい時刻を作らず、
@@ -114,13 +114,13 @@ const PROFILES=Object.freeze({
     level:7,candidateSource:'step1',minStrength:.20,latticeGrids:1,
     perBarByIntensity:[7,10,13],maxConsecutiveEighths:8,maxLaneStep:4,
     widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
-    holdMaxCount:15,holdMinGapGrids:8,flickMaxCount:18,slideMaxCount:9,chordMaxCount:10,
+    holdMaxCount:15,holdMinGapGrids:8,flickMaxCount:18,slideMaxCount:9,chordMaxCount:10,endFlickMaxCount:7,
   }),
   MASTER:Object.freeze({
     level:9,candidateSource:'step1',minStrength:0,latticeGrids:1,
     perBarByIntensity:[10,14,18],maxConsecutiveEighths:12,maxLaneStep:4,
     widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
-    holdMaxCount:18,holdMinGapGrids:6,flickMaxCount:22,slideMaxCount:11,chordMaxCount:16,
+    holdMaxCount:18,holdMinGapGrids:6,flickMaxCount:22,slideMaxCount:11,chordMaxCount:16,endFlickMaxCount:9,
   }),
 });
 
@@ -526,6 +526,22 @@ const buildChart=(difficulty)=>{
     if(bestIndex>=0){notes[bestIndex].monsterSlot=index+1;used.add(bestIndex);}
   });
 
+  // --- 終点フリック（HOLD / SLIDE の終わりでフリックして離す） ---
+  // 弾いたあと指を戻す時間が要るので、終端の前後に1拍（4グリッド）以上の余裕がある
+  // HOLD / SLIDE だけを選ぶ。同時押し・重ねTAPが後から入ると余裕の判定が変わってしまうため、
+  // 全ノーツが出そろったこの位置で決める。EASYは0（FLICK自体を使わない難易度のため）。
+  const END_FLICK_MIN_GAP_GRIDS=4;
+  if(P.endFlickMaxCount>0){
+    const endFlickCandidates=[];
+    notes.forEach((note,index)=>{
+      if(note.type!=='HOLD'&&note.type!=='SLIDE')return;
+      const endGrid=note.grid+(Number(note.durationGrids)||0);
+      if(notes.some(other=>other!==note&&Math.abs(other.grid-endGrid)<END_FLICK_MIN_GAP_GRIDS))return;
+      endFlickCandidates.push({index});
+    });
+    for(const {index} of spread(endFlickCandidates,P.endFlickMaxCount,8))notes[index].endFlick=true;
+  }
+
   const typeCounts=notes.reduce((acc,n)=>{acc[n.type]=(acc[n.type]||0)+1;return acc;},{});
   const spanMs=gridTimeMs(lastGrid)-gridTimeMs(firstGrid);
   return {
@@ -548,6 +564,8 @@ const buildChart=(difficulty)=>{
       types:[...P.types],
       widths:[...P.widths],
       holdGrids:[4,8],
+      endFlickMaxCount:P.endFlickMaxCount,
+      endFlickMinGapGrids:END_FLICK_MIN_GAP_GRIDS,
       maxLaneStep:P.maxLaneStep,
       simultaneous:P.simultaneous,
       structureSource:{features:config.featuresInput,structure:config.structureInput},

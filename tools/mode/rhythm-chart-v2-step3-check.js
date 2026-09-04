@@ -76,6 +76,28 @@ try{
       return typeof n.subLane==='number'&&n.subLane>=0&&n.subLane+(n.subLaneWidth||1)<=10;
     }));
     check(`${difficulty}: 採用ノーツの音ズレは±30ms以内`,candidate.notes.every(n=>!finite(n.sourcePeakOffsetMs)||Math.abs(n.sourcePeakOffsetMs)<=30));
+    // --- 終点フリック(HOLD / SLIDEの終わりでフリックして離す) ---
+    const endFlickNotes=candidate.notes.filter(n=>n.endFlick!==undefined);
+    check(`${difficulty}: 終点フリックはtrueだけを書く(falseや0を書き散らかさない)`,
+      endFlickNotes.every(n=>n.endFlick===true));
+    check(`${difficulty}: 終点フリックが付くのはHOLD / SLIDEだけ`,
+      endFlickNotes.every(n=>n.type==='HOLD'||n.type==='SLIDE'));
+    check(`${difficulty}: 終点フリックの数が方針の上限内`,
+      endFlickNotes.length<=candidate.policy.endFlickMaxCount,
+      `${endFlickNotes.length}件 / 上限${candidate.policy.endFlickMaxCount}件`);
+    // 弾いたあと指を戻す時間が要るので、終端の前後に決めたぶんの余裕が空いていること。
+    // ここが崩れると「押せない譜面」を自動で作ってしまう。
+    check(`${difficulty}: 終点フリックの終端の前後に決めた余裕がある`,(()=>{
+      const gap=candidate.policy.endFlickMinGapGrids;
+      if(!Number.isFinite(gap))return false;
+      return endFlickNotes.every(note=>{
+        const endGrid=note.grid+(Number(note.durationGrids)||0);
+        return !candidate.notes.some(o=>o!==note&&Math.abs(o.grid-endGrid)<gap);
+      });
+    })(),`余裕${candidate.policy.endFlickMinGapGrids}グリッド`);
+    // 上の検査はpolicyの値を使うので、policy自体が緩んだら気づけない。最低ラインは固定で見る。
+    check(`${difficulty}: 終点フリックの余裕は最低でも1拍(4グリッド)ある`,
+      candidate.policy.endFlickMinGapGrids>=4);
     check(`${difficulty}: motif統計の範囲が妥当`,candidate.motif&&candidate.motif.phrasesApplied<=candidate.motif.phrasesTotal&&candidate.motif.notesGrounded<=candidate.motif.notesAttempted&&candidate.motif.phrasesTotal>=1);
 
     if(['EASY','NORMAL','HARD'].includes(difficulty)){
@@ -122,6 +144,18 @@ if(DIFFICULTIES.every(d=>candidates[d])){
     DIFFICULTIES.every((d,i)=>i===0||candidates[DIFFICULTIES[i-1]].noteCount<candidates[d].noteCount));
   check('難易度が上がるほど密度(ノーツ毎秒)も増える',
     DIFFICULTIES.every((d,i)=>i===0||candidates[DIFFICULTIES[i-1]].densityPerSecond<candidates[d].densityPerSecond));
+  const endFlickCount=d=>candidates[d].notes.filter(n=>n.endFlick===true).length;
+  check('EASYには終点フリックを出さない(FLICK自体を使わない難易度のため)',endFlickCount('EASY')===0);
+  check('NORMAL以上には終点フリックが実際に出ている',
+    DIFFICULTIES.slice(1).every(d=>endFlickCount(d)>0),
+    DIFFICULTIES.map(d=>`${d}:${endFlickCount(d)}`).join(' / '));
+  check('難易度が上がるほど終点フリックも減らない',
+    DIFFICULTIES.every((d,i)=>i===0||endFlickCount(DIFFICULTIES[i-1])<=endFlickCount(d)));
+  check('HOLDとSLIDEの両方に終点フリックが付く難易度がある(片方だけに偏っていない)',
+    DIFFICULTIES.some(d=>{
+      const kinds=new Set(candidates[d].notes.filter(n=>n.endFlick===true).map(n=>n.type));
+      return kinds.has('HOLD')&&kinds.has('SLIDE');
+    }));
 }
 
 if(candidates.EXPERT&&candidates.MASTER){

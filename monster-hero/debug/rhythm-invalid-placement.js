@@ -40,6 +40,11 @@
     if(!finite(note?.timeMs)||Number(note.timeMs)<0)errors.push(`${prefix}開始時刻が不正です`);
     else pushOffGrid(errors,editor,note.timeMs,`${prefix}開始時刻`);
     if(!validWidth(note?.subLaneWidth))errors.push(`${prefix}幅は1〜4の整数が必要です`);
+    // 終点フリック(endFlick)。書き間違いは画面上では「ただ効かない」だけになるので、ここで拾う。
+    if(note?.endFlick!==undefined){
+      if(note.endFlick!==true)errors.push(`${prefix}endFlickはtrueだけ書けます`);
+      else if(type!=='HOLD'&&type!=='SLIDE')errors.push(`${prefix}終点フリックはHOLD / SLIDEにだけ付けられます`);
+    }
 
     if(type!=='SLIDE'){
       const subLane=Number(note?.subLane),width=Number(note?.subLaneWidth);

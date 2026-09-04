@@ -26,6 +26,8 @@
    4,
    8
   ],
+  "endFlickMaxCount": 0,
+  "endFlickMinGapGrids": 4,
   "maxLaneStep": 1,
   "simultaneous": false,
   "structureSource": {

@@ -49,6 +49,7 @@ const RESTRIKE_COMFORT_MS=90;        // 同じ指で叩き直すのに欲しい�
 const RESTRIKE_LIMIT_MS=55;          // これより短いと同じ指では押せない
 const CHORD_MIN_LANE_GAP=1;          // 同時押しは1レーン以上離れていないと2本の指が入らない
 const RELEASE_MARGIN_MS=30;          // HOLD/SLIDEを離してから次を押すまでの余裕
+const END_FLICK_RELEASE_MS=80;       // 終点フリックは「弾いて戻す」ぶん、指の解放がこれだけ遅れる
 
 const SOURCES=Object.freeze({
   step5:{label:'V2 STEP5 採用案',file:d=>`tools/mode/authoring/monster-hero-theme-v2-step5-chart-${d.toLowerCase()}.json`,
@@ -75,20 +76,22 @@ const BAR=timing.subdivisionsPerBeat*4;
 // TAP/FLICK: その瞬間だけ指を使う
 // HOLD:      始点から終点まで、同じレーンで指を占有する
 // SLIDE:     始点から終点まで、経路のレーンを追いながら指を占有する
+// endFlick:  終わりを弾いて離すので、指が空くのが END_FLICK_RELEASE_MS だけ遅れる
 const toActions=notes=>notes.map((note,index)=>{
   const startMs=gridTimeMs(note.grid);
   const lane=Number(note.lane)||0;
+  const endFlick=note.endFlick===true&&(note.type==='HOLD'||note.type==='SLIDE');
   if(note.type==='HOLD'){
     const endMs=gridTimeMs(note.grid+(Number(note.durationGrids)||0));
-    return {index,type:note.type,startMs,endMs,startLane:lane,endLane:lane,grid:note.grid,note};
+    return {index,type:note.type,startMs,endMs,startLane:lane,endLane:lane,grid:note.grid,endFlick,note};
   }
   if(note.type==='SLIDE'){
     const points=Array.isArray(note.slidePoints)&&note.slidePoints.length?note.slidePoints:null;
     const endGrid=note.grid+(Number(note.durationGrids)||0);
     const endLane=points?Number(points[points.length-1].lane):Number(note.endLane??lane);
-    return {index,type:note.type,startMs,endMs:gridTimeMs(endGrid),startLane:lane,endLane,grid:note.grid,note};
+    return {index,type:note.type,startMs,endMs:gridTimeMs(endGrid),startLane:lane,endLane,grid:note.grid,endFlick,note};
   }
-  return {index,type:note.type,startMs,endMs:startMs,startLane:lane,endLane:lane,grid:note.grid,note};
+  return {index,type:note.type,startMs,endMs:startMs,startLane:lane,endLane:lane,grid:note.grid,endFlick:false,note};
 }).sort((a,b)=>a.startMs-b.startMs||a.startLane-b.startLane);
 
 // --- 両手の指でシミュレートする ---
@@ -164,7 +167,7 @@ const simulate=actions=>{
       const f=fingers[picked.fingerIndex];
       f.lane=action.endLane;
       f.lastHitMs=action.startMs;
-      f.freeAtMs=action.endMs>action.startMs?action.endMs:action.startMs;
+      f.freeAtMs=(action.endMs>action.startMs?action.endMs:action.startMs)+(action.endFlick?END_FLICK_RELEASE_MS:0);
     }
     i=j+1;
   }
@@ -182,7 +185,7 @@ const report={
   runtimeConnected:false,
   handModel:{hands:HANDS,laneSpeedComfort:LANE_SPEED_COMFORT,laneSpeedLimit:LANE_SPEED_LIMIT,
     restrikeComfortMs:RESTRIKE_COMFORT_MS,restrikeLimitMs:RESTRIKE_LIMIT_MS,
-    chordMinLaneGap:CHORD_MIN_LANE_GAP,releaseMarginMs:RELEASE_MARGIN_MS},
+    chordMinLaneGap:CHORD_MIN_LANE_GAP,releaseMarginMs:RELEASE_MARGIN_MS,endFlickReleaseMs:END_FLICK_RELEASE_MS},
   difficulties:{},
 };
 

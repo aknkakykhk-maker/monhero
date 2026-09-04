@@ -38,7 +38,7 @@ check('monster-heroからは読み取りしかしない',
 check('乱数を使わない(結果が毎回変わらないため)',!/Math\.random|crypto\.randomBytes/.test(source));
 check('手のモデルのしきい値を定数で明示している',
   ['HANDS','LANE_SPEED_COMFORT','LANE_SPEED_LIMIT','RESTRIKE_COMFORT_MS','RESTRIKE_LIMIT_MS',
-   'CHORD_MIN_LANE_GAP','RELEASE_MARGIN_MS'].every(k=>new RegExp(`const ${k}=`).test(source)));
+   'CHORD_MIN_LANE_GAP','RELEASE_MARGIN_MS','END_FLICK_RELEASE_MS'].every(k=>new RegExp(`const ${k}=`).test(source)));
 
 // --- 1. しきい値の較正: 人が確認した既存の正式候補v1が通ること ---
 // ここが落ちたら、道具が厳しすぎて「作った譜面が全部だめ」と言い出す状態になる。
@@ -107,6 +107,35 @@ try{
   check('同じレーンに重なった同時押しを「指が2本入らない」と判定する',
     /同時押しが近すぎて指が2本入らない/.test(chord.stdout));
 
+  // 終点フリックは「弾いて戻す」ぶん指の解放が遅れる。同じ譜面で endFlick の有無だけを変え、
+  // 遅れが実際に効いていることを対照で確かめる(遅れが効かなければ、押せない譜面を自動で作ってしまう)。
+  const endFlickPair=endFlick=>({...impossible,noteCount:3,typeCounts:{HOLD:2,TAP:1},
+    notes:[
+      // 片方の指を長いHOLDで塞ぐ
+      {type:'HOLD',grid:64,lane:4,subLane:8,subLaneWidth:2,durationGrids:64},
+      // もう片方は終端の直後に同じレーンのTAPが来る。endFlickが無ければ「忙しい」で済む
+      {type:'HOLD',grid:64,lane:0,subLane:0,subLaneWidth:2,durationGrids:32,...(endFlick?{endFlick:true}:{})},
+      {type:'TAP',grid:97,lane:0,subLane:0,subLaneWidth:2},
+    ]});
+  fs.writeFileSync(victim,JSON.stringify(endFlickPair(false),null,1)+'\n');
+  const plainEnd=run('--source','step5','--difficulty','EASY');
+  check('終点フリックでなければ、終端の直後のノーツは押せる(忙しいだけ)',
+    plainEnd.status===0&&/押せない 0件/.test(plainEnd.stdout)&&/忙しい [1-9]/.test(plainEnd.stdout),
+    (plainEnd.stdout.match(/EASY: .*/)||[''])[0]);
+  fs.writeFileSync(victim,JSON.stringify(endFlickPair(true),null,1)+'\n');
+  const flickEnd=run('--source','step5','--difficulty','EASY');
+  check('終点フリックにすると、同じ配置が「押せない」になる(弾いた指の戻りを数えている)',
+    flickEnd.status===1&&/押せない [1-9]/.test(flickEnd.stdout),
+    (flickEnd.stdout.match(/EASY: .*/)||[''])[0]);
+  check('終点フリックはHOLD / SLIDEにだけ効く(TAPに書いても解放は遅れない)',(()=>{
+    const tapEndFlick={...impossible,noteCount:2,typeCounts:{TAP:2},
+      notes:[{type:'TAP',grid:64,lane:0,subLane:0,subLaneWidth:2,endFlick:true},
+             {type:'TAP',grid:66,lane:0,subLane:0,subLaneWidth:2}]};
+    fs.writeFileSync(victim,JSON.stringify(tapEndFlick,null,1)+'\n');
+    const r=run('--source','step5','--difficulty','EASY');
+    return r.status===0&&/押せない 0件/.test(r.stdout);
+  })());
+
   // 何の問題もない譜面は素通しすること(誤検出しない)
   const fine={...impossible,noteCount:3,typeCounts:{TAP:3},
     notes:[{type:'TAP',grid:64,lane:0,subLane:0,subLaneWidth:2},
@@ -146,7 +175,8 @@ if(fs.existsSync(outFile)){
     &&report.analysisType==='rhythm-chart-v2-step6-playability'
     &&report.reviewRequired===true&&report.runtimeConnected===false);
   check('手のモデルの設定が結果に残る(あとから条件を追える)',
-    report.handModel&&report.handModel.hands===HANDS&&report.handModel.laneSpeedLimit===LIMIT);
+    report.handModel&&report.handModel.hands===HANDS&&report.handModel.laneSpeedLimit===LIMIT
+    &&Number.isFinite(report.handModel.endFlickReleaseMs));
   check('STEP7が使えるよう、問題箇所に小節と時刻が入っている',
     Object.values(report.difficulties).every(d=>Array.isArray(d.issues)
       &&d.issues.every(x=>Number.isFinite(x.bar)&&Number.isFinite(x.timeMs)&&x.severity&&x.kind)));
