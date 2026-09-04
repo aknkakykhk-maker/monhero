@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52c9091e24b2bcc2
+// source-sha256: ff83563e61a8276b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 08:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 08:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15933,9 +15933,14 @@ const RhythmSongSelect = ({
     "data-rhythm-song-select": true,
     className: "flex min-h-0 flex-1 flex-col landscape:flex-row"
   }, /*#__PURE__*/React.createElement("div", {
+    className: "flex min-h-0 flex-1 flex-col landscape:border-r landscape:border-white/10"
+  }, notice && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-song-notice": true,
+    className: "shrink-0 px-2 pt-2"
+  }, notice), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-song-list": true,
-    className: `min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2 landscape:border-r landscape:border-white/10${spot('songList')}`
-  }, notice, list.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: `min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`
+  }, list.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
   }, emptyText) : /*#__PURE__*/React.createElement("ul", {
     className: "space-y-1.5"
@@ -15984,7 +15989,7 @@ const RhythmSongSelect = ({
     }), /*#__PURE__*/React.createElement("small", {
       className: "ml-1 text-[9px] font-bold text-slate-400"
     }, (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).length, "\u96E3\u6613\u5EA6")))));
-  }))), /*#__PURE__*/React.createElement("aside", {
+  })))), /*#__PURE__*/React.createElement("aside", {
     "data-rhythm-song-detail": true,
     className: "shrink-0 border-t border-white/10 bg-slate-950/90 px-3 py-2 landscape:w-[42%] landscape:max-w-[420px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-3",
     style: {
@@ -35664,18 +35669,10 @@ function MonsterHeroGame() {
           });
           setGameState('RHYTHM_PLAY');
         },
-        notice: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
-          className: "mb-2"
-        }), /*#__PURE__*/React.createElement("div", {
-          className: "mb-2"
-        }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        notice: /*#__PURE__*/React.createElement(AssistantBubble, {
           scene: "rhythmHome",
           compact: true
-        })), /*#__PURE__*/React.createElement("p", {
-          "data-rhythm-demo-notice": true,
-          "data-rhythm-demo-song": true,
-          className: "mb-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[9px] font-bold leading-relaxed text-amber-100"
-        }, "\u3053\u308C\u306F\u97F3\u30B2\u30FC\u306E\u4F53\u9A13\u7248\u3067\u3059\u3002\u3044\u307E\u306F\u5148\u884C\u516C\u958B\u306E5\u66F2\u3092\u3001EASY\u301CMASTER\u306E5\u96E3\u6613\u5EA6\u3067\u904A\u3079\u307E\u3059\u3002 EXPERT\u4EE5\u4E0A\u306F\u3001\u305D\u306E\u66F2\u306E1\u3064\u4E0B\u306E\u96E3\u6613\u5EA6\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u6311\u3081\u308B\u3088\u3046\u306B\u306A\u308A\u307E\u3059\u3002 \u8B5C\u9762\u306F\u8ABF\u6574\u4E2D\u306E\u305F\u3081\u3001\u3053\u308C\u304B\u3089\u5909\u308F\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002")),
+        }),
         footer: song => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
           "data-rhythm-demo-ranking": true,
           onClick: () => {
@@ -44983,9 +44980,17 @@ function MonsterHeroGame() {
           color: who.accent
         }
       }, who.name), page.title && /*#__PURE__*/React.createElement("span", {
-        className: "block text-[11px] font-black text-white mt-0.5"
+        className: "block text-[11px] font-black text-white mt-0.5",
+        style: {
+          overflowWrap: 'anywhere',
+          wordBreak: 'break-word'
+        }
       }, page.title), /*#__PURE__*/React.createElement("span", {
-        className: "block text-[13px] text-white leading-relaxed mt-1"
+        className: "block text-[13px] text-white leading-relaxed mt-1",
+        style: {
+          overflowWrap: 'anywhere',
+          wordBreak: 'break-word'
+        }
       }, String(page.t).replace('{name}', breederName || 'あなた')))), topicRef && /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setHelpCatId(page.help.split('/')[0]);

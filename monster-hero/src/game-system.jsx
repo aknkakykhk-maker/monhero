@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 08:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 08:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8689,9 +8689,12 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   };
 
   return <div data-rhythm-song-select className="flex min-h-0 flex-1 flex-col landscape:flex-row">
-    {/* 曲の一覧 */}
-    <div data-rhythm-song-list className={`min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2 landscape:border-r landscape:border-white/10${spot('songList')}`}>
-      {notice}
+    {/* 曲の一覧。案内(notice)はスクロールの**外**へ置き、動くのは曲の並びだけにする。
+        中に入れていたときは、曲を探して指を動かすと案内も一緒に流れて場所を食っていた
+        (2026-09-05・ユーザー指示「固定タブを利用して音楽だけ動かせるようにしたい」)。 */}
+    <div className="flex min-h-0 flex-1 flex-col landscape:border-r landscape:border-white/10">
+      {notice&&<div data-rhythm-song-notice className="shrink-0 px-2 pt-2">{notice}</div>}
+    <div data-rhythm-song-list className={`min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`}>
       {list.length===0
         ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{emptyText}</p>
         :<ul className="space-y-1.5">{list.map(entry=>{
@@ -8724,6 +8727,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
             </button>
           </li>;
         })}</ul>}
+    </div>
     </div>
 
     {/* 選んでいる曲 */}
@@ -18994,6 +18998,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 onClick={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
                 className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`}>⚙️</button>
             </header>
+            {/* 曲えらびの上に固定で出すのは、助手のひとことだけにする(notice)。
+                「これは体験版です…」の長い断り書きと横画面の案内はここから外した。
+                曲を選ぶ画面でいちばん要るのは曲の並びで、読み物は場所を取りすぎるため
+                (2026-09-05・ユーザー指示)。同じ内容はチュートリアルと「📖 遊びかた」にある。 */}
             <RhythmSongSelect
               songs={songs}
               difficulties={difficulties}
@@ -19002,16 +19010,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               previewVolume={rhythmSettings.bgmVolume}
               spotClass={spotClass}
               onPlay={(song,difficulty)=>{setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
-              notice={<>
-                <RhythmLandscapeHint className="mb-2"/>
-                {/* 助手のひとこと。困ったら「📖 遊びかた」を開けばよいと分かるようにする */}
-                <div className="mb-2"><AssistantBubble scene="rhythmHome" compact/></div>
-                <p data-rhythm-demo-notice data-rhythm-demo-song className="mb-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[9px] font-bold leading-relaxed text-amber-100">
-                  これは音ゲーの体験版です。いまは先行公開の5曲を、EASY〜MASTERの5難易度で遊べます。
-                  EXPERT以上は、その曲の1つ下の難易度をクリアすると挑めるようになります。
-                  譜面は調整中のため、これから変わることがあります。
-                </p>
-              </>}
+              notice={<AssistantBubble scene="rhythmHome" compact/>}
               footer={song=><>
                 {/* 全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く */}
                 <button data-rhythm-demo-ranking onClick={()=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}
@@ -22925,8 +22924,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="relative flex-1 min-w-0 rounded-2xl border-2 px-3.5 py-3" style={{borderColor:who.accent,backgroundColor:'rgba(15,23,42,0.96)'}}>
                 <span className="absolute" style={{left:'-9px',bottom:'18px',width:0,height:0,borderTop:'7px solid transparent',borderBottom:'7px solid transparent',borderRight:`9px solid ${who.accent}`}}/>
                 <span className="block text-[10px] font-black tracking-widest" style={{color:who.accent}}>{who.name}</span>
-                {page.title&&<span className="block text-[11px] font-black text-white mt-0.5">{page.title}</span>}
-                <span className="block text-[13px] text-white leading-relaxed mt-1">{String(page.t).replace('{name}', breederName || 'あなた')}</span>
+                {/* 「MARVELOUS→EXCELLENT→…」のように区切りの無い長い連なりは、
+                    ふつうの折り返しでは切れる場所が無く、そのまま吹き出しの外へはみ出す。
+                    どこでも折り返せるようにして、画面の外へ出ないようにする。 */}
+                {page.title&&<span className="block text-[11px] font-black text-white mt-0.5" style={{overflowWrap:'anywhere',wordBreak:'break-word'}}>{page.title}</span>}
+                <span className="block text-[13px] text-white leading-relaxed mt-1" style={{overflowWrap:'anywhere',wordBreak:'break-word'}}>{String(page.t).replace('{name}', breederName || 'あなた')}</span>
               </div>
             </div>
             {topicRef&&(

@@ -232,6 +232,16 @@ const serve=()=>new Promise(resolve=>{
       return ids.length>=2&&new Set(ids).size===1;
     }));
 
+    // 2026-09-05、ユーザー指示「固定タブを利用して音楽だけ動かせるようにしたい」。
+    // 案内(助手のひとこと)はスクロールの外へ出し、動くのは曲の並びだけにした。
+    ok('スクロールするのは曲の一覧だけ（案内はその外にある）',await page.evaluate(()=>{
+      const host=document.getElementById('song-select-probe');
+      const list=host.querySelector('[data-rhythm-song-list]');
+      const notice=host.querySelector('[data-rhythm-song-notice]');
+      if(!list)return false;
+      // 案内があるなら、それは一覧の中にいてはいけない
+      return !notice||!list.contains(notice);
+    }));
     ok('実行時エラーが出ていない',errors.length===0,errors.slice(0,2).join(' / '));
   }finally{
     if(browser)await browser.close();
