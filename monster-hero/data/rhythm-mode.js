@@ -867,11 +867,11 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
 })();
 
 // iPhoneのTouch.radiusXを既存projectionへ通し、実際の接触幅に応じたサブレーン領域として扱う。
-// radiusXは端を拾いすぎないよう70%へ縮小し、隣接サブレーンは25%以上重なった時だけ接触扱いにする。
+// radiusXは端を拾いすぎないよう70%へ縮小し、隣接サブレーンは20%以上重なった時だけ接触扱いにする。
 // 明らかな異常値だけ中心1サブレーンへfallbackする。ゲーム本体の中心1点入力はそのまま残し、
 // 中心以外の新規接触サブレーンだけTAP専用の疑似Pointerで補う。
 const RHYTHM_TOUCH_RADIUS_SCALE=.70;
-const RHYTHM_TOUCH_MIN_SUBLANE_COVERAGE=.25;
+const RHYTHM_TOUCH_MIN_SUBLANE_COVERAGE=.20;
 const RHYTHM_TOUCH_RADIUS_MAX_PLAY_AREA_RATIO=.25;
 const RHYTHM_TOUCH_CENTER_DEADZONE_MIN_PX=6;
 const RHYTHM_TOUCH_CENTER_DEADZONE_MAX_PX=10;
