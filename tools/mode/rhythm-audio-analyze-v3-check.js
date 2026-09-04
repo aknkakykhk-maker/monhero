@@ -121,6 +121,20 @@ check('テンポ・拍子・刻みが出力に入っている',
   &&Number.isInteger(report.timing.beatsPerBar)&&Number.isInteger(report.timing.subdivisionsPerBeat)
   &&typeof report.timing.source==='string',
   `${report.timing.bpm} BPM / ${report.timing.beatsPerBar}拍子 / ${report.timing.subdivisionsPerBeat}分割 / ${report.timing.source}`);
+// あやしさの申告。これが無いと、テンポを外したまま黙って譜面が出来てしまう。
+check('あやしさ（warnings）が出力に入っている',
+  Array.isArray(report.warnings)
+  &&report.warnings.every(warning=>typeof warning.code==='string'
+    &&(warning.severity==='critical'||warning.severity==='notice')
+    &&typeof warning.message==='string'),
+  report.warnings&&report.warnings.length?report.warnings.map(w=>`${w.severity}:${w.code}`).join(' / '):'警告なし');
+check('テンポが一定かどうかを測っている',
+  !report.timing.stability||(Number.isFinite(report.timing.stability.bpmSpread)
+    &&Number.isFinite(report.timing.stability.shiftedShare)
+    &&typeof report.timing.stability.changeSuspected==='boolean'),
+  report.timing.stability
+    ?`ずれた窓 ${(report.timing.stability.shiftedShare*100).toFixed(0)}% / ${report.timing.stability.changeSuspected?'変化あり':'一定'}`
+    :'（人が決めた値を使っているため測っていない）');
 check('曲の区切りが出力に入っている',
   report.structure.sections.length>=2&&report.structure.bars.length>=8
   &&report.structure.sections.every(s=>Number.isFinite(s.intensity)&&s.endBarExclusive>s.startBar),

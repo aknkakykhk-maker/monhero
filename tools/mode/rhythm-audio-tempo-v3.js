@@ -24,7 +24,11 @@ const MIN_BPM=70,MAX_BPM=210;
 // 人が「速い／遅い」と感じる真ん中あたり。同じくらいの点なら、ここに近いほうを選ぶ。
 const PREFERRED_BPM=125;
 const PREFERRED_WIDTH_OCTAVES=.85;
-const GRID_TOLERANCE_MS=28;      // 16分格子に「乗った」と見なすずれ
+// 16分格子に「乗った」と見なすずれ。刻みの幅に対する割合でも抑える。
+// 割合を**きつく**しすぎると、今度は遅いテンポほど窓が広くなり、速い曲を半分・3分の2で読む。
+// 実測: 0.22 へ絞ったら、実曲30曲のうち5曲でテンポが半分・3分の2になった。0.3 が良い。
+const GRID_TOLERANCE_MS=28;
+const GRID_TOLERANCE_RATIO=.3;
 const PHASE_BINS=48;             // 位相を探す細かさ
 
 const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
@@ -70,7 +74,7 @@ const fitAtStep=(onsets,totalWeight,stepMs)=>{
   }
   // 許容幅は刻みの幅に比例させる。固定にすると、細かい格子ほど窓が重なって
   // 「どんな打点でも乗っている」ことになり、細かい格子がいつでも勝ってしまう。
-  const tolerance=Math.min(GRID_TOLERANCE_MS,stepMs*.3);
+  const tolerance=Math.min(GRID_TOLERANCE_MS,stepMs*GRID_TOLERANCE_RATIO);
   const reach=Math.min(Math.floor(PHASE_BINS/2),Math.max(1,Math.round(tolerance/binMs)));
   let best={fit:0,phaseMs:0};
   for(let center=0;center<PHASE_BINS;center++){
@@ -171,6 +175,107 @@ const refineByRegression=(onsets,stepMs,phaseMs,tolerance)=>{
   return {stepMs:step,phaseMs:phase};
 };
 
+// --- テンポが最後まで一定かどうか ---
+//
+// 【なぜ要るか】
+// これから増える曲は、テンポが途中で変わるもの・生演奏でだんだんずれるものもある。
+// そういう曲を「1つのBPM」で押し切ると、**警告も出ないまま**後半だけ音とずれた譜面が
+// 出来上がる。これがいちばん質の悪い壊れ方なので、機械で気づけるようにする。
+//
+// 【やり方】
+// 曲を12秒ほどの窓に切り、窓ごとに
+//   ・そのBPMの格子にどれだけ乗っているか（fit）
+//   ・その窓だけで測り直したBPM（全体の±8%を細かく走査）
+// を出す。「測り直したほうがはっきり当たる」窓を**ずれた窓**と数え、
+// それが曲全体の3割を超えたら、テンポが動いていると見なす。
+const STABILITY_WINDOW_MS=12000;
+// 窓ごとのBPMがこれ以上ずれていたら、その窓は「ずれている」と数える。
+const STABILITY_BPM_SHIFT=.02;
+// **ずれている窓が曲全体のどれだけを占めるか**で決める。
+// 「いちばんずれた窓」で決めると、生っぽい演奏の曲で1〜2窓だけ6〜8%ずれ、
+// テンポが一定の曲まで止めてしまう（実測: 30曲中5曲が誤検出）。
+// 本当にテンポが変わる曲は、変わったあとの窓が**まとまって**ずれる。
+const STABILITY_SHIFTED_SHARE=.3;
+// 「その窓だけ測り直したほうが明らかに当たる」と言えるだけの差。
+// これを付けないと、当たり方が平らな窓でも±8%のどこかがわずかに勝ち、
+// テンポが一定の曲まで「揺れている」ことになる（実測: 30曲中20曲が誤検出）。
+const STABILITY_LOCAL_GAIN=.05;
+// 全体の当たりの半分を割る窓が、これだけの割合を超えたら怪しい。
+// 1つ2つなら、静かな間奏やアウトロでふつうに起こる。
+const STABILITY_BAD_WINDOW_SHARE=.35;
+// 窓ごとのBPMは、**全体のBPMのすぐ近く**だけを探す。
+// 広く探すと、打点の少ない窓が半分・1.5倍のテンポへ流れて、
+// テンポが一定の曲でも「揺れている」ことになってしまう
+// （実測: 実曲30曲のうち20曲が誤って「変化あり」になった）。
+// 見たいのは「同じテンポのままか」なので、±8%あれば足りる。
+const STABILITY_SEARCH_SPAN=.08;
+const localBpmFor=(part,totalWeight,bpm)=>{
+  if(!part.length||totalWeight<=0)return null;
+  let best=null;
+  const steps=40;
+  for(let i=-steps;i<=steps;i++){
+    const candidate=bpm*(1+i*STABILITY_SEARCH_SPAN/steps);
+    const fit=fitAtStep(part,totalWeight,60000/candidate/4).fit;
+    if(!best||fit>best.fit+1e-6)best={bpm:candidate,fit};
+  }
+  return best;
+};
+const analyzeStability=(onsets,bpm,durationMs,phaseMs=0)=>{
+  const stepMs=60000/bpm/4;
+  if(!onsets.length||!(stepMs>0)||!(durationMs>0))return null;
+  const tolerance=Math.min(GRID_TOLERANCE_MS,stepMs*GRID_TOLERANCE_RATIO);
+  const windowMs=Math.max(STABILITY_WINDOW_MS,stepMs*128);
+  const count=Math.max(1,Math.round(durationMs/windowMs));
+  const span=durationMs/count;
+  const windows=[];
+  for(let i=0;i<count;i++){
+    const from=i*span,to=i===count-1?durationMs+1:(i+1)*span;
+    const part=onsets.filter(onset=>onset.ms>=from&&onset.ms<to);
+    let weight=0,onGrid=0;
+    for(const onset of part){
+      weight+=onset.weight;
+      let residual=((onset.ms-phaseMs)%stepMs+stepMs)%stepMs;
+      if(residual>stepMs/2)residual-=stepMs;
+      if(Math.abs(residual)<=tolerance)onGrid+=onset.weight;
+    }
+    const local=weight>0?localBpmFor(part,weight,bpm):null;
+    // その窓を全体のBPMで測ったときの当たり（位相は窓ごとに探す）
+    const baseFit=weight>0?fitAtStep(part,weight,stepMs).fit:0;
+    // 測り直したほうが**はっきり**当たるときだけ「ずれている」と数える
+    const shift=local&&local.fit>baseFit+STABILITY_LOCAL_GAIN?local.bpm/bpm-1:0;
+    windows.push({fromMs:Math.round(from),toMs:Math.round(Math.min(to,durationMs)),
+      onsets:part.length,fit:round(weight>0?onGrid/weight:0),
+      bpm:local?round(local.bpm,2):null,localFit:local?round(local.fit):0,
+      baseFit:round(baseFit),shift:round(shift,4)});
+  }
+  // 打点が少なすぎる窓（間奏・静かなところ）は判定に使わない
+  const usable=windows.filter(window=>window.onsets>=12&&window.bpm);
+  let bpmSpread=0,minFit=1,shiftedShare=0;
+  if(usable.length>=2){
+    bpmSpread=Math.max(...usable.map(window=>Math.abs(window.shift)));
+    minFit=Math.min(...usable.map(window=>window.fit));
+    shiftedShare=usable.filter(window=>Math.abs(window.shift)>=STABILITY_BPM_SHIFT).length/usable.length;
+  }
+  const overallFit=(()=>{
+    let weight=0,onGrid=0;
+    for(const onset of onsets){
+      weight+=onset.weight;
+      let residual=((onset.ms-phaseMs)%stepMs+stepMs)%stepMs;
+      if(residual>stepMs/2)residual-=stepMs;
+      if(Math.abs(residual)<=tolerance)onGrid+=onset.weight;
+    }
+    return weight>0?onGrid/weight:0;
+  })();
+  const badWindows=usable.filter(window=>window.fit<overallFit*.5).length;
+  const badWindowShare=usable.length?badWindows/usable.length:0;
+  const changeSuspected=usable.length>=2
+    &&(shiftedShare>=STABILITY_SHIFTED_SHARE||badWindowShare>STABILITY_BAD_WINDOW_SHARE);
+  return {windowMs:Math.round(span),windows,usableWindows:usable.length,
+    bpmSpread:round(bpmSpread,4),shiftedShare:round(shiftedShare),
+    minWindowFit:round(minFit),overallFit:round(overallFit),
+    badWindowShare:round(badWindowShare),changeSuspected};
+};
+
 const estimateTempo=features=>{
   const {pickPeaks}=require('./rhythm-audio-dsp.js');
   const {pulse,frameMs,frames}=features;
@@ -222,10 +327,15 @@ const estimateTempo=features=>{
     return count?hit/count:0;
   };
   const evaluate=bpm=>{
-    const measured=fitAtStep(onsets,totalWeight,60000/bpm/4);
-    const presence=beatPresence(bpm,measured.phaseMs);
-    return {bpm,fit:measured.fit,phaseMs:measured.phaseMs,presence,
-      score:measured.fit**2*prefer(bpm)*Math.max(.2,presence)};
+    const beatMs=60000/bpm;
+    // テンポ選びは**まっすぐな16分格子だけ**で行う。
+    // 跳ね（シャッフル）の格子も試したが、拍に2箇所しか無いぶん当たりやすく、
+    // 跳ねていない曲まで1.5倍・3分の2のテンポで読み始めた（実測: 実曲30曲のうち5曲が壊れた）。
+    // 跳ねの強さは、テンポが決まったあとに estimateSubdivision で測る。
+    const straight=fitAtStep(onsets,totalWeight,beatMs/4);
+    const presence=beatPresence(bpm,straight.phaseMs);
+    return {bpm,fit:straight.fit,phaseMs:straight.phaseMs,presence,
+      score:straight.fit**2*prefer(bpm)*Math.max(.2,presence)};
   };
   const coarse=[...candidateBpm].map(evaluate).sort((a,b)=>b.score-a.score);
   // 上位だけ、粗い→細かいの3段で詰める（長い曲でもずれないよう0.02%まで）
@@ -300,12 +410,18 @@ const estimateMeter=(features,beatMs,beatZeroMs)=>{
     const on=onCount?onSum/onCount:0,off=offCount?offSum/offCount:0;
     return off>0?on/off:0;
   };
+  // よくある順に少しだけ重みを付ける。ほとんどの曲は4拍子なので、僅差なら4を選ぶほうが外さない。
+  // 5・7拍子は稀だが、当たったときに落とさないよう候補には入れる。
+  // 4拍子・3拍子を基本にし、5拍子だけ足す。
+  // 6拍子・7拍子まで入れると、ふつうの4拍子の曲が6拍子と判定され、
+  // 小節が1.5倍の長さになって曲の区切り・密度の当て方まで変わってしまった
+  // （実測: bgm-title-theme の密度が狙いから+21%ずれた）。
+  const METER_PREFERENCE={4:1.06,3:1.02,5:.96};
   let best=null;
-  for(const meter of [4,3]){
+  for(const meter of [4,3,5]){
     for(let phase=0;phase<meter;phase++){
       const value=scoreOf(meter,phase);
-      // 4拍子を少しだけ優先する（ほとんどの曲は4拍子で、僅差なら4を選ぶほうが外さない）
-      const weighted=value*(meter===4?1.04:1);
+      const weighted=value*(METER_PREFERENCE[meter]||1);
       if(!best||weighted>best.weighted)best={meter,phase,value,weighted};
     }
   }
@@ -345,7 +461,7 @@ const estimateSubdivision=(features,beatMs,beatZeroMs)=>{
   // 位置の割合だけで決めると、跳ねた曲や少しよれた曲で取り違える。
   const fitAt=divisions=>{
     const stepMs=beatMs/divisions;
-    const tolerance=Math.min(GRID_TOLERANCE_MS,stepMs*.3);
+    const tolerance=Math.min(GRID_TOLERANCE_MS,stepMs*GRID_TOLERANCE_RATIO);
     let hit=0;
     for(const {phase,weight} of positions){
       const position=phase*beatMs;
@@ -396,13 +512,14 @@ const detectTiming=async(file,options={})=>{
     confidence:{tempo:tempo.confidence,beat:phase.strength,meter:meter.contrast,grid:subdivision.confidence},
     gridFit:tempo.gridFit,
     beatPresence:tempo.beatPresence,
+    stability:analyzeStability(tempo.onsets,tempo.bpm,features.durationMs,beatZeroMs),
     tempoCandidates:tempo.candidates,
     detail:{subdivisionShare:subdivision.share,onsetSamples:subdivision.samples,
       gridFitByDivision:subdivision.gridFitByDivision},
   };
 };
 
-module.exports={detectTiming,estimateTempo,estimateBeatPhase,estimateMeter,estimateSubdivision,MIN_BPM,MAX_BPM};
+module.exports={detectTiming,estimateTempo,analyzeStability,estimateBeatPhase,estimateMeter,estimateSubdivision,MIN_BPM,MAX_BPM};
 
 if(require.main===module){
   const fs=require('fs');

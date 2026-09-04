@@ -39,6 +39,8 @@ const verbose=process.argv.includes('--verbose');
 const only=arg('--difficulty');
 const sourceKind=arg('--source','step5');
 const trackId=arg('--track','monster_hero_theme');
+// ファイル名は曲idから作る（曲が増えても、ここへ手で書き足さなくてよい）
+const dashed=trackId.replace(/_/g,'-');
 // --file <path>: 1つの譜面JSONだけを検査する(STEP5が候補ごとに呼ぶ)。書き出しはしない。
 const fileArg=arg('--file',null);
 const canWrite=write&&!fileArg;
@@ -57,17 +59,17 @@ const RELEASE_MARGIN_MS=HAND_MODEL.releaseMarginMs;
 const END_FLICK_RELEASE_MS=HAND_MODEL.endFlickReleaseMs;
 
 const SOURCES=Object.freeze({
-  step5:{label:'V2 STEP5 採用案',file:d=>`tools/mode/authoring/monster-hero-theme-v2-step5-chart-${d.toLowerCase()}.json`,
+  step5:{label:'V2 STEP5 採用案',file:d=>`tools/mode/authoring/${dashed}-v2-step5-chart-${d.toLowerCase()}.json`,
     difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
-  step3:{label:'V2 STEP3/4 出力',file:d=>`tools/mode/authoring/monster-hero-theme-v2-chart-${d.toLowerCase()}.json`,
+  step3:{label:'V2 STEP3/4 出力',file:d=>`tools/mode/authoring/${dashed}-v2-chart-${d.toLowerCase()}.json`,
     difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
-  step7:{label:'V2 STEP7 自動修正後',file:d=>`tools/mode/authoring/monster-hero-theme-v2-step7-chart-${d.toLowerCase()}.json`,
+  step7:{label:'V2 STEP7 自動修正後',file:d=>`tools/mode/authoring/${dashed}-v2-step7-chart-${d.toLowerCase()}.json`,
     difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
-  v3:{label:'V3 生成',file:d=>`tools/mode/authoring/monster-hero-theme-v3-chart-${d.toLowerCase()}.json`,
+  v3:{label:'V3 生成',file:d=>`tools/mode/authoring/${dashed}-v3-chart-${d.toLowerCase()}.json`,
     difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
-  v3fixed:{label:'V3 自動修正後',file:d=>`tools/mode/authoring/monster-hero-theme-v3-fixed-${d.toLowerCase()}.json`,
+  v3fixed:{label:'V3 自動修正後',file:d=>`tools/mode/authoring/${dashed}-v3-fixed-${d.toLowerCase()}.json`,
     difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
-  v1:{label:'既存の正式候補v1',file:d=>`monster-hero/debug/monster-hero-theme-${d.toLowerCase()}-formal-candidate-v1.json`,
+  v1:{label:'既存の正式候補v1',file:d=>`monster-hero/debug/${dashed}-${d.toLowerCase()}-formal-candidate-v1.json`,
     difficulties:['EASY','NORMAL','HARD']},
 });
 const source=fileArg
@@ -79,8 +81,20 @@ if(!source){console.error(`未知の --source です: ${sourceKind} (${Object.ke
 const timingContext={Object,Number,Math};
 vm.createContext(timingContext);
 vm.runInContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-timing.js'),'utf8')}\nthis.__t=RHYTHM_TIMING_DATA[${JSON.stringify(trackId)}];`,timingContext);
-const timing=timingContext.__t;
-if(!timing)throw new Error(`${trackId} timing data is missing`);
+// 人が耳で合わせた値が無い曲（これから足す曲）は、V3の音源解析の結果を使う。
+// ここで必ず rhythm-timing.js を要求すると、登録済みの曲しか検査できない。
+const audioAnalysisTiming=()=>{
+  const file=path.join(ROOT,`tools/mode/authoring/${dashed}-v3-audio.json`);
+  if(!fs.existsSync(file))return null;
+  try{
+    const report=JSON.parse(fs.readFileSync(file,'utf8'));
+    const t=report&&report.timing;
+    if(!t||!Number.isFinite(t.beatMs))return null;
+    return {bpm:t.bpm,beatMs:t.beatMs,beatZeroMs:t.beatZeroMs,subdivisionsPerBeat:t.subdivisionsPerBeat};
+  }catch{return null;}
+};
+const timing=timingContext.__t||audioAnalysisTiming();
+if(!timing)throw new Error(`${trackId} の拍の基準が見つかりません（rhythm-timing.js の登録か、V3音源解析の結果が要ります）`);
 const gridMs=timing.beatMs/timing.subdivisionsPerBeat;
 const gridTimeMs=g=>timing.beatZeroMs+g*gridMs;
 const BAR=timing.subdivisionsPerBeat*4;
@@ -300,7 +314,7 @@ for(const difficulty of DIFFICULTIES){
 }
 
 if(canWrite){
-  const out=path.join(ROOT,`tools/mode/authoring/monster-hero-theme-v2-step6-playability-${sourceKind}.json`);
+  const out=path.join(ROOT,`tools/mode/authoring/${dashed}-v2-step6-playability-${sourceKind}.json`);
   fs.writeFileSync(out,JSON.stringify(report,null,1)+'\n');
   console.log(`\n書き出し: ${path.relative(ROOT,out)}`);
 }else if(fileArg){

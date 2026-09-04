@@ -59,28 +59,88 @@ const run=(tool,args)=>spawnSync(process.execPath,[path.join(ROOT,'tools/mode',t
 }
 
 // --- 2. 耳で確認済みの曲でテンポを外していないこと ---
-{
+const checkAnchors=async()=>{
   const {detectTiming}=require('./rhythm-audio-tempo-v3.js');
-  const results=[];
-  const done=(async()=>{
-    for(const anchor of ANCHORS){
-      const timing=await detectTiming(anchor.audio);
-      results.push({anchor,timing});
+  for(const anchor of ANCHORS){
+    const timing=await detectTiming(anchor.audio);
+    const errorPercent=Math.abs(timing.bpm/anchor.bpm-1)*100;
+    check(`耳で確認済みの曲のテンポを当てられる（${path.basename(anchor.audio)}）`,
+      errorPercent<=anchor.tolerancePercent,
+      `${timing.bpm.toFixed(3)} BPM / 正解 ${anchor.bpm} / 誤差 ${errorPercent.toFixed(3)}%`);
+  }
+};
+
+// --- 3. 正解が分かっている「作った音」で確かめる ---
+//
+// 実曲は正解を誰も知らないので、実曲だけを見ていても「外していること」に気づけない。
+// そこで、拍・拍子・跳ね・テンポ変化が分かっている音をその場で作って通す。
+// これから増える曲には、ここに挙げたような癖のあるものが必ず混ざる。
+const SYNTHETIC=[
+  {name:'まっすぐな4拍子150',   opts:{bpm:150,bars:24},            expect:{bpm:150,beatsPerBar:4,clean:true}},
+  {name:'3拍子120',            opts:{bpm:120,beatsPerBar:3,bars:24},expect:{bpm:120,beatsPerBar:3}},
+  {name:'跳ね（シャッフル）130', opts:{bpm:130,bars:24,swing:.62,sixteenths:false},expect:{bpm:130,swing:.56}},
+  {name:'頭に8秒の無音160',     opts:{bpm:160,bars:24,leadSilenceMs:8000},expect:{bpm:160}},
+  // 速い曲は「倍か半分か」が本質的に曖昧（人でも2通りに取れる）。
+  // 大事なのは名前としてのBPMより、**格子が音に乗っているか**なので、そちらを見る。
+  {name:'速い200',             opts:{bpm:200,bars:32},            expect:{gridFit:.9}},
+  {name:'8分だけ145',          opts:{bpm:145,bars:24,sixteenths:false},expect:{bpm:145}},
+  {name:'5拍子140',            opts:{bpm:140,beatsPerBar:5,bars:20},expect:{bpm:140,beatsPerBar:5}},
+  {name:'途中でテンポが変わる',  opts:{bpm:140,tempoChangeBpm:168,bars:32},expect:{unstable:true}},
+];
+const checkSynthetic=async()=>{
+  const {detectTiming}=require('./rhythm-audio-tempo-v3.js');
+  const {buildTrack,writeWav}=require('./rhythm-audio-testtone.js');
+  const {collectWarnings,criticalWarnings}=require('./rhythm-audio-warnings.js');
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'rhythm-testtone-'));
+  try{
+    console.log('\n--- 正解が分かっている音で確かめる ---');
+    for(const item of SYNTHETIC){
+      const track=buildTrack(item.opts);
+      const file=path.join(dir,`${item.name.replace(/[^0-9A-Za-z]/g,'')}.wav`);
+      writeWav(file,track.samples);
+      const timing=await detectTiming(file);
+      if(!timing){check(`${item.name}: テンポを判定できる`,false);continue;}
+      const warnings=collectWarnings({timing:{source:'detected'},detected:timing,
+        durationMs:timing.audioDurationMs,onsetCount:999,sectionCount:2});
+      const critical=criticalWarnings(warnings).map(warning=>warning.code);
+      if(item.expect.bpm){
+        const errorPercent=Math.abs(timing.bpm/item.expect.bpm-1)*100;
+        check(`${item.name}: テンポが合っている`,errorPercent<=1,
+          `${timing.bpm.toFixed(2)} BPM / 正解 ${item.expect.bpm}`);
+      }
+      if(item.expect.beatsPerBar){
+        check(`${item.name}: 拍子が合っている`,timing.beatsPerBar===item.expect.beatsPerBar,
+          `${timing.beatsPerBar}拍子 / 正解 ${item.expect.beatsPerBar}`);
+      }
+      if(item.expect.gridFit){
+        check(`${item.name}: 格子が音に乗っている`,timing.gridFit>=item.expect.gridFit,
+          `格子 ${timing.gridFit} / ${timing.bpm.toFixed(2)} BPM`);
+      }
+      if(item.expect.swing){
+        check(`${item.name}: 跳ねに気づく`,timing.swing.ratio>=item.expect.swing,
+          `跳ね ${timing.swing.ratio.toFixed(2)}`);
+      }
+      if(item.expect.unstable){
+        // ここがこの検査のいちばん大事なところ。テンポが変わる曲を黙って通すと、
+        // 後半だけ音とずれた譜面が、誰にも気づかれないまま出来上がる。
+        check(`${item.name}: テンポが動いていることに気づいて止める`,
+          critical.includes('tempo-unstable'),
+          `揺れ ${(timing.stability?timing.stability.bpmSpread*100:0).toFixed(1)}% / 警告 ${critical.join(',')||'なし'}`);
+      }
+      if(item.expect.clean){
+        check(`${item.name}: きれいな音では止めない`,critical.length===0,
+          `警告 ${critical.join(',')||'なし'}`);
+      }
     }
-  })();
-  done.then(()=>{
-    for(const {anchor,timing} of results){
-      const errorPercent=Math.abs(timing.bpm/anchor.bpm-1)*100;
-      check(`耳で確認済みの曲のテンポを当てられる（${path.basename(anchor.audio)}）`,
-        errorPercent<=anchor.tolerancePercent,
-        `${timing.bpm.toFixed(3)} BPM / 正解 ${anchor.bpm} / 誤差 ${errorPercent.toFixed(3)}%`);
-    }
-    main();
-  }).catch(error=>{
-    check('テンポの判定を実行できる',false,error.message);
-    main();
-  });
-}
+  }finally{
+    fs.rmSync(dir,{recursive:true,force:true});
+  }
+};
+
+checkAnchors()
+  .then(checkSynthetic)
+  .catch(error=>{check('テンポの判定を実行できる',false,error.message);})
+  .then(()=>main());
 
 function main(){
   const tempDir=fs.mkdtempSync(path.join(os.tmpdir(),'rhythm-general-check-'));

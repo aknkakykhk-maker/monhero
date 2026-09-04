@@ -43,6 +43,8 @@ const fileArg=arg('--file',null);
 // 検査が既存の成果物を壊さずに書き出せるよう、行き先を差し替えられるようにする
 const outputDir=arg('--output-dir',null);
 const trackId=arg('--track','monster_hero_theme');
+// ファイル名は曲idから作る（曲が増えても、ここへ手で書き足さなくてよい）
+const dashed=trackId.replace(/_/g,'-');
 
 // 手のモデルはSTEP6のものをそのまま使う。道具ごとに書き直すと、直したつもりで別の物差しになる。
 const step6=require('./rhythm-chart-v2-step6-playability.js');
@@ -60,10 +62,10 @@ const COST_MOVE=3;            // 元の場所からの移動(サブレーン1つ
 const MAX_PASSES=8;           // これ以上は回さない(下がらなくなれば早く止まる)
 
 const SOURCES=Object.freeze({
-  step5:{label:'V2 STEP5 採用案',file:d=>`tools/mode/authoring/monster-hero-theme-v2-step5-chart-${d.toLowerCase()}.json`},
-  step3:{label:'V2 STEP3/4 出力',file:d=>`tools/mode/authoring/monster-hero-theme-v2-chart-${d.toLowerCase()}.json`},
-  v3:{label:'V3 生成',file:d=>`tools/mode/authoring/monster-hero-theme-v3-chart-${d.toLowerCase()}.json`,
-    outFile:d=>`tools/mode/authoring/monster-hero-theme-v3-fixed-${d.toLowerCase()}.json`},
+  step5:{label:'V2 STEP5 採用案',file:d=>`tools/mode/authoring/${dashed}-v2-step5-chart-${d.toLowerCase()}.json`},
+  step3:{label:'V2 STEP3/4 出力',file:d=>`tools/mode/authoring/${dashed}-v2-chart-${d.toLowerCase()}.json`},
+  v3:{label:'V3 生成',file:d=>`tools/mode/authoring/${dashed}-v3-chart-${d.toLowerCase()}.json`,
+    outFile:d=>`tools/mode/authoring/${dashed}-v3-fixed-${d.toLowerCase()}.json`},
 });
 const source=fileArg?{label:`指定ファイル ${fileArg}`,file:()=>path.resolve(ROOT,fileArg)}:SOURCES[sourceKind];
 if(!source){console.error(`未知の --source です: ${sourceKind} (${Object.keys(SOURCES).join(', ')})`);process.exit(1);}
@@ -227,7 +229,7 @@ for(const difficulty of DIFFICULTIES){
     // 入力の系統ごとに書き出し先を変える（V2はSTEP7の名前、V3はV3の名前）
     const relative=source.outFile
       ?source.outFile(key)
-      :`tools/mode/authoring/monster-hero-theme-v2-step7-chart-${key.toLowerCase()}.json`;
+      :`tools/mode/authoring/${dashed}-v2-step7-chart-${key.toLowerCase()}.json`;
     const out=outputDir
       ?path.join(path.resolve(ROOT,outputDir),path.basename(relative))
       :path.join(ROOT,relative);
@@ -243,8 +245,8 @@ for(const difficulty of DIFFICULTIES){
 }
 if(write&&!fileArg){
   const out=outputDir
-    ?path.join(path.resolve(ROOT,outputDir),`monster-hero-theme-v2-step7-autofix-${sourceKind}.json`)
-    :path.join(ROOT,`tools/mode/authoring/monster-hero-theme-v2-step7-autofix-${sourceKind}.json`);
+    ?path.join(path.resolve(ROOT,outputDir),`${dashed}-v2-step7-autofix-${sourceKind}.json`)
+    :path.join(ROOT,`tools/mode/authoring/${dashed}-v2-step7-autofix-${sourceKind}.json`);
   fs.writeFileSync(out,JSON.stringify(report,null,1)+'\n');
   console.log(`\n書き出し: ${path.relative(ROOT,out)}`);
 }else if(fileArg){
