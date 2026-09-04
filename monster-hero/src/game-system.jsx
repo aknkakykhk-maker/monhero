@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 07:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 09:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2505,6 +2505,12 @@ const RHYTHM_NOTE_SPEED_MIN=1;
 const RHYTHM_NOTE_SPEED_MAX=12;
 const RHYTHM_NOTE_SPEED_STEP=.1;
 const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1';
+// 全国ランキングへの送信に失敗したときだけ退避する専用キー(2026-09-04)。
+// 既存のBEST記録(RHYTHM_BEST_RECORDS_KEY)とは別で、自動の再送はしない
+// (端末内に「送れなかった記録が残っている」という手がかりを残すだけ)。
+// 際限なく増やさないよう直近の件数だけ保つ
+const RHYTHM_RANKING_PENDING_KEY = 'mh_rhythm_rank_pending_v1';
+const RHYTHM_RANKING_PENDING_MAX = 20;
 const RHYTHM_EFFECT_LEVELS = Object.freeze(['NORMAL','LOW','MINIMAL']);
 // コンボの節目でお祝いを出す刻み。100コンボごと。
 const RHYTHM_COMBO_MILESTONE_STEP = 100;
@@ -7997,6 +8003,71 @@ const persistRankingScore = async ({ row, insertScore=sbInsertScore, saveLocal }
 
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
+// モンビー(音ゲー)の全国ランキング専用の送受信(2026-09-04)。
+//
+// 既存の sbInsertScore / sbFetchRankings は、difficulty列の値を必ず
+// normalizeRankingDifficulty で検証しており、そこで認めているのは通常バトル・プロ・極限・
+// 種族チャレンジの固定パターンだけ。Rhythm-<songId>-<難易度id> をそのまま渡すと
+// 「unknown ranking difficulty」で例外になる。normalizeRankingDifficultyやその一覧
+// (RANKING_DIFFICULTY_KEYS)は全モードの送受信が経由する共通処理なので、モンビーのために
+// そこを緩めると他モードの検証まで一緒に緩んでしまう。そのため触らず、モンビー専用の
+// 送受信をここへ分けて持つ。テーブル・列は既存の rankings をそのまま使う
+// (difficulty列の値だけで区別する、種族チャレンジと同じ考え方)。
+const RHYTHM_RANKING_SELECT = 'user_name,hero,party,score,level,icon,difficulty';
+const sbInsertRhythmScore = async (row) => {
+  if (typeof row?.clear_id !== 'string' || !row.clear_id.trim()) {
+    throw new Error('rhythm ranking clear_id is required; unsafe insert skipped');
+  }
+  if (!String(row?.difficulty ?? '').startsWith(`${RHYTHM_RANKING_PREFIX}${RHYTHM_RANKING_SEPARATOR}`)) {
+    throw new Error(`invalid rhythm ranking difficulty key: ${String(row?.difficulty)}`);
+  }
+  const query = '?on_conflict=clear_id';
+  const prefer = 'resolution=ignore-duplicates,return=minimal';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, { method:'POST', headers:{...SB_HEADERS,'Prefer':prefer}, body: JSON.stringify(row), signal: controller.signal });
+    const body = await res.text();
+    if (!res.ok) {
+      const error = new Error(`rhythm ranking insert ${res.status}: ${body || res.statusText}`);
+      error.status = res.status; error.body = body;
+      throw error;
+    }
+    return { saved: true, status: res.status, body };
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('rhythm ranking insert timed out after 8000ms');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 難易度合算表示のため、複数のdifficultyキーをin.(...)でまとめて1回のリクエストにする
+// (種族チャレンジの「全種族」がsbFetchRankings内で行っているのと同じ考え方だが、
+// あちらは既存モードの検証を経由するため触らず、こちらは完全に独立させる)
+const sbFetchRhythmRankings = async (difficultyKeys, limit=RHYTHM_RANKING_FETCH_LIMIT, requestId='untracked') => {
+  const keys = (Array.isArray(difficultyKeys) ? difficultyKeys : [difficultyKeys]).filter(Boolean);
+  if (keys.length === 0) return [];
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${RHYTHM_RANKING_SELECT}&difficulty=in.(${keys.map(k=>encodeURIComponent(`"${k}"`)).join(',')})&order=score.desc.nullslast&limit=${limit}`;
+  rankingLog(requestId, 'rhythm-request-start', { keys, limit, url, table: 'rankings' });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
+    const body = await res.text();
+    if (!res.ok) throw new Error(`rhythm ranking fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    try {
+      return JSON.parse(body);
+    } catch (e) {
+      throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('rhythm ranking fetch timed out after 15000ms');
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 // 難易度に依存しない周回開始処理。Normalだけ前周のclear_idや送信ロックを引き継ぐ
 // 分岐が生まれないよう、タイトル復帰と再挑戦の両方からこの1か所を呼ぶ。
 const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef }) => {
@@ -9949,6 +10020,61 @@ function MonsterHeroGame() {
       return { ...prev, [key]: { ...current, loading:false, refreshing:false, error, fetched:current.fetched || fetched } };
     });
   };
+
+  // モンビー(音ゲー)の全国ランキング(2026-09-04)。読み込み状態・一覧・詳細モーダルの中身を持つ。
+  // 既存のrankingsテーブル・列を増やさず、difficulty列へRhythm-<songId>-<難易度id>を
+  // 入れるだけで対応する(data/rhythm-mode.jsのrhythmRankingDifficultyKey等を参照)。
+  const [rhythmRanking, setRhythmRanking] = useState({ status:'idle', entries:[], error:null, songId:null });
+  const [rhythmRankingDetail, setRhythmRankingDetail] = useState(null);
+  const rhythmRankingRequestRef = useRef(0);
+  // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
+  // 同じユーザーの複数行は読み込み側で最高得点の1件だけへ畳む(rhythmRankingDedupeByUser)。
+  // 古い取得が後から返ってきて新しい取得を上書きしないよう、リクエストIDで最新だけ反映する
+  const loadRhythmRanking = useCallback(async (song) => {
+    if (!song) return;
+    const requestId = ++rhythmRankingRequestRef.current;
+    setRhythmRanking({ status:'loading', entries:[], error:null, songId:song.songId });
+    try {
+      const keys = rhythmRankingCombinedMembers(song.songId);
+      const rows = await sbFetchRhythmRankings(keys, RHYTHM_RANKING_FETCH_LIMIT, `rhythm-rank-${song.songId}-${Date.now()}`);
+      if (rhythmRankingRequestRef.current !== requestId) return;
+      const entries = rhythmRankingDedupeByUser(rows).slice(0, RHYTHM_RANKING_DISPLAY_LIMIT).map(rhythmRankingEntryFromRow);
+      setRhythmRanking({ status:'ready', entries, error:null, songId:song.songId });
+    } catch (e) {
+      if (rhythmRankingRequestRef.current !== requestId) return;
+      console.error('[rhythm-ranking] fetch failed:', e && e.message ? e.message : e);
+      setRhythmRanking({ status:'error', entries:[], error:e?.message || String(e), songId:song.songId });
+    }
+  }, []);
+  // 曲を終えたときに全国ランキングへ1件送信する。呼び出し側(onComplete)で
+  // 体験版からのプレイ(rhythmPlay.from==='demo')のときだけ呼び、デバッグプレイは送らない
+  // (通常バトルのdebugBattleRefガードと同じ考え方)。失敗してもBEST記録(mh_rhythm_best_v1)
+  // には影響しない、副作用だけの追加送信として扱う
+  const submitRhythmRankingScore = useCallback(async (song, difficulty, result) => {
+    const difficultyKey = rhythmRankingDifficultyKey(song?.songId, difficulty?.id);
+    if (!difficultyKey) return;
+    const detail = {
+      songId: song.songId, difficultyId: difficulty.id,
+      judgments: result.judgments, maxCombo: result.maxCombo, fast: result.fast, slow: result.slow,
+      fullCombo: !!result.fullCombo, allExcellent: !!result.allExcellent, allMarvelous: !!result.allMarvelous,
+    };
+    const row = {
+      difficulty: difficultyKey, user_name: breederName || '名無しのブリーダー', hero: difficulty.id,
+      party: detail, score: Number(result.score) || 0, level: breederLevel.level, icon: breederIcon,
+      clear_id: createRunId(),
+    };
+    const outcome = await persistRankingScore({
+      row, insertScore: sbInsertRhythmScore,
+      saveLocal: async (error) => {
+        console.error('[rhythm-ranking] national submit failed, saving locally:', error && error.message ? error.message : error);
+        const pending = await storeGet(RHYTHM_RANKING_PENDING_KEY, [], false);
+        const list = Array.isArray(pending) ? pending.slice() : [];
+        list.push({ ...row, at: Date.now(), error: { message: error?.message || String(error), status: error?.status || null } });
+        await storeSet(RHYTHM_RANKING_PENDING_KEY, list.slice(-RHYTHM_RANKING_PENDING_MAX), false);
+      },
+    });
+    if (outcome.error && !outcome.localSaved) console.error('[rhythm-ranking] submit outcome error:', outcome.error?.message || outcome.error);
+  }, [breederName, breederLevel, breederIcon]);
 
   const loadRankings = useCallback(async (targetDiff=null, includeLevels=false, force=false, levelKind='bond') => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
@@ -18104,7 +18230,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} onComplete={async(result,merged)=>{const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);}} onExit={()=>{const back=rhythmPlay.from==='demo'?'RHYTHM_DEMO_HOME':'RHYTHM_DEBUG';setRhythmPlay(null);setGameState(back);}}/>}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} onComplete={async(result,merged)=>{const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='demo'?'RHYTHM_DEMO_HOME':'RHYTHM_DEBUG';setRhythmPlay(null);setGameState(back);}}/>}
 
         {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
 
@@ -18156,7 +18282,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   })}
                 </div>
                 </>}
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              {song&&<button data-rhythm-demo-ranking className="mt-3 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100"
+                onClick={()=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}>🏆 全国ランキングを見る</button>}
+              <div className="mt-2 grid grid-cols-2 gap-2">
                 <button data-rhythm-demo-options className="min-h-[48px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-xs font-black text-cyan-100"
                   onClick={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}>⚙️ 音ゲー設定</button>
                 <button data-rhythm-demo-monsters className="min-h-[48px] rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-xs font-black text-fuchsia-100"
@@ -18182,6 +18310,66 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
           </main>
         )}
+
+        {/* モンビー(音ゲー)の全国ランキング(2026-09-04)。体験版で遊べる難易度(EASY/NORMAL/HARD)を
+            まとめた「難易度合算」の1本のランキングにする。難易度が高いほど満点も高いため、
+            高い難易度で挑むほど上位に近づく(§3.5・RHYTHM_MODE.md参照)。
+            自分のスコアはいちばん高い1件だけが載る(rhythmRankingDedupeByUser)。 */}
+        {gameState==='RHYTHM_RANKING'&&(()=>{
+          const song=rhythmDemoSong(RHYTHM_SONGS);
+          return (
+          <main data-rhythm-ranking className="flex h-full flex-1 flex-col bg-slate-950 text-white">
+            <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+              <button aria-label="戻る" onClick={()=>setGameState('RHYTHM_DEMO_HOME')} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+              <h2 className="text-sm font-black tracking-widest text-amber-200">🏆 全国ランキング</h2>
+              <button aria-label="更新" data-rhythm-ranking-refresh onClick={()=>loadRhythmRanking(song)} className="ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200">更新</button>
+            </header>
+            <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+              <p className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
+                Monster HeroのEASY・NORMAL・HARDをまとめた合算ランキングです。難易度が高いほど満点も高いため、高い難易度で挑むほど上位に近づきます。自分のスコアはいちばん高い1件だけが載ります。
+              </p>
+              {rhythmRanking.status==='loading'&&<p data-rhythm-ranking-loading className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">読み込み中…</p>}
+              {rhythmRanking.status==='error'&&<p data-rhythm-ranking-error className="rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200">読み込めませんでした。電波の良い場所で「更新」をお試しください。</p>}
+              {rhythmRanking.status==='ready'&&rhythmRanking.entries.length===0&&<p data-rhythm-ranking-empty className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300">まだ記録がありません。最初の1件になってみましょう。</p>}
+              {rhythmRanking.status==='ready'&&rhythmRanking.entries.length>0&&<ol data-rhythm-ranking-list className="space-y-2">
+                {rhythmRanking.entries.map((entry,index)=>(
+                  <li key={`${entry.userName}-${index}`} data-rhythm-ranking-row className="flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-2">
+                    <b className="w-6 shrink-0 text-center text-xs font-black text-amber-200">{index+1}</b>
+                    {rankingBreederIcon(entry)}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-black text-white">{entry.userName}</p>
+                      <p className="text-[9px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name||entry.difficultyId||'-'}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-mono text-sm font-black text-amber-200">{entry.score.toLocaleString()}</p>
+                      <p className={`text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`}>{rhythmRankForScore(entry.score)}</p>
+                    </div>
+                    {entry.detail&&<button data-rhythm-ranking-detail onClick={()=>setRhythmRankingDetail(entry)} className="shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200">詳細</button>}
+                  </li>
+                ))}
+              </ol>}
+            </div>
+            {rhythmRankingDetail&&(
+              <div data-rhythm-ranking-detail-modal className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3" onClick={()=>setRhythmRankingDetail(null)}>
+                <div className="w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4" onClick={e=>e.stopPropagation()}>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-black text-amber-200">{rhythmRankingDetail.userName} のリザルト</h3>
+                    <button aria-label="閉じる" data-rhythm-ranking-detail-close onClick={()=>setRhythmRankingDetail(null)} className="min-h-[44px] min-w-[44px] px-2 text-slate-400">✕</button>
+                  </div>
+                  <p className="text-[10px] text-slate-400">{RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name||rhythmRankingDetail.difficultyId} / スコア {rhythmRankingDetail.score.toLocaleString()} / ランク {rhythmRankForScore(rhythmRankingDetail.score)}</p>
+                  <p className="mt-1 text-[10px] text-slate-400">最大コンボ {rhythmRankingDetail.detail?.maxCombo??'-'}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">
+                    {RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt className="text-slate-400">{id}</dt><dd className="text-right font-mono text-white">{rhythmRankingDetail.detail?.judgments?.[id]??0}</dd></React.Fragment>)}
+                  </dl>
+                  <p className="mt-2 text-[9px] font-black text-amber-200">
+                    {rhythmRankingDetail.detail?.allMarvelous?'ALL MARVELOUS!!':rhythmRankingDetail.detail?.allExcellent?'ALL EXCELLENT!!':rhythmRankingDetail.detail?.fullCombo?'FULL COMBO!':''}
+                  </p>
+                </div>
+              </div>
+            )}
+          </main>
+          );
+        })()}
 
         {gameState==='RHYTHM_DEBUG'&&(
           <main data-rhythm-debug-screen className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)'}}>

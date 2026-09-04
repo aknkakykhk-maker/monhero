@@ -91,6 +91,16 @@ const HELP_CATEGORIES = [
         blocks:[{t:'p',text:'モンスターノーツでは、設定したマスモンの染色済み画像を、枠や暗い背景を付けずノーツ中央へ表示します。GREAT以上で能力が出たときは、モンスター名を付けず「元気！」「無敵！」「我慢！」「根性！」のように能力名だけを短く表示します。無敵・我慢の残り時間と根性ストックは従来どおり画面右上で確認できます。'}],
       },
       {
+        id:'rhythm-ranking', emoji:'🏆', title:'全国ランキング', releaseFlag:'rhythmMode',
+        assistant:'難易度をまたいだ、みんなのハイスコアが見られるよ♪', expression:'excited',
+        blocks:[
+          {t:'p',text:'体験版ホームの「🏆 全国ランキングを見る」から、EASY・NORMAL・HARDをまとめた1つのランキングを確認できます。難易度ごとに満点が違うため、高い難易度で挑むほど上位に近づきやすくなります。'},
+          {t:'p',text:'一覧には、順位・アイコン・名前・遊んだ難易度・スコア・ランクを表示します。自分のスコアは、これまでに出した中でいちばん高い1件だけが載ります（それより低いスコアの記録は表示されません）。'},
+          {t:'p',text:'「詳細」ボタンを押すと、その記録の判定内訳（MARVELOUS〜MISSの数）・最大コンボ・達成した称号（フルコンボ等）を確認できます。'},
+          {t:'note', title:'いまの状態', text:'通信状況によっては読み込みに時間がかかったり、失敗することがあります。そのときは「更新」をお試しください。デバッグ画面からのプレイはランキングに反映されません。'},
+        ],
+      },
+      {
         id:'rhythm-options-controls', emoji:'⚙️', title:'音ゲーオプションの数値調整', releaseFlag:'rhythmMode',
         assistant:'−と＋で1段階ずつ動かせるから、スマホでも狙った値に合わせやすいよ♪', expression:'happy',
         blocks:[{t:'p',text:'音ゲーオプションのBGM音量・タップ音量・ノーツ速度・ノーツサイズ・判定タイミング調整は、現在量のゲージと数値を見ながら−／＋ボタンで1段階ずつ変更できます。最小値・最大値ではそれ以上動かず、変更は画面下の「保存」を押した時点で確定します。設定範囲・刻みと実際のプレイへの反映方法は従来どおりです。'}],
@@ -1150,6 +1160,7 @@ const HELP_SCREEN_COVERAGE = {
   RHYTHM_PLAY:       'basics/rhythm-mode',
   RHYTHM_DEMO_HOME:     'basics/rhythm-demo-song',
   RHYTHM_DEMO_MONSTERS: 'basics/rhythm-monster-note-display',
+  RHYTHM_RANKING:       'basics/rhythm-ranking',
   DEBUG_SETTINGS:   null,
   SPECIES_CHALLENGE_DEBUG: null,
   BREEDER_ICON_DEBUG:'home/profile',
