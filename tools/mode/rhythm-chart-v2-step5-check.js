@@ -60,10 +60,16 @@ check('生成器の既定値は生成器自身から読む(写しを持たない
 // STEP5は生成器へ --profile-override を渡す。既定(上書きなし)の出力が変わってしまうと
 // STEP3の決定性が壊れるので、ここでも直接確かめる。
 const genSource=fs.readFileSync(GENERATOR,'utf8');
+// 曲のタイプ(2026-09-05)を足したので、上書きが乗る土台は「素の PROFILES」ではなく
+// 「曲のタイプを効かせたあとの tuned」になった。--print-profiles も tuned を出すので、
+// STEP5の案は曲の性格の上に積まれる(素の値へ戻してしまうと、案を作った瞬間に性格が消える)。
 check('上書き口は既定では何もしない',
   genSource.includes("const raw=arg('--profile-override',null);")
   &&genSource.includes("if(!raw)return null;")
-  &&genSource.includes('profileOverride&&profileOverride[difficulty]?Object.freeze({...PROFILES[difficulty],...profileOverride[difficulty]}):PROFILES[difficulty]'));
+  &&genSource.includes('const tuned=applySongType(difficulty,PROFILES[difficulty]);')
+  &&genSource.includes('profileOverride&&profileOverride[difficulty]?Object.freeze({...tuned,...profileOverride[difficulty]}):tuned'));
+check('--print-profiles は曲のタイプを効かせたあとの値を出す',
+  genSource.includes('applySongType(id,PROFILES[id])'));
 check('上書きできるのは作り方の数値だけ(levelなど出力の意味づけは拒む)',
   genSource.includes('OVERRIDABLE_KEYS')&&!/OVERRIDABLE_KEYS=Object\.freeze\(new Set\(\[[^\]]*'level'/.test(genSource));
 

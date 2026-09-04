@@ -29,6 +29,7 @@
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
+const {SONG_TYPE_EFFECT,songTypeFromFeatures,songTypeLabels}=require('./rhythm-chart-v2-song-type.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const TRACKS=Object.freeze({
@@ -136,7 +137,7 @@ const PROFILES=Object.freeze({
   HARD:Object.freeze({
     level:5,candidateSource:'dense',minStrength:.24,latticeGrids:1,
     perBarByIntensity:[1.8,4.3,6.4],maxConsecutiveEighths:6,maxLaneStep:3,
-    widths:[1,2,3,4,5],narrowRate:.10,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:1,
+    widths:[1,2,3,4,5],narrowRate:.06,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:1,
     holdMaxCount:18,holdMinGapGrids:10,flickMaxCount:18,slideMaxCount:10,chordMaxCount:0,endFlickMaxCount:5,accentWidth:8,accentMaxCount:7,holdTaperMaxCount:6,
   }),
   // EXPERT/MASTERは既存dense候補(しきい値0.30)では供給が頭打ちのため、STEP1の
@@ -150,31 +151,65 @@ const PROFILES=Object.freeze({
   EXPERT:Object.freeze({
     level:7,candidateSource:'step1',minStrength:.14,latticeGrids:1,
     perBarByIntensity:[2.2,5.4,8],maxConsecutiveEighths:8,maxLaneStep:4,
-    widths:[1,2,3,4,5],narrowRate:.22,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
+    widths:[1,2,3,4,5],narrowRate:.12,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
     holdMaxCount:20,holdMinGapGrids:8,flickMaxCount:22,slideMaxCount:11,chordMaxCount:12,endFlickMaxCount:7,accentWidth:8,accentMaxCount:7,holdTaperMaxCount:7,
   }),
   MASTER:Object.freeze({
     level:9,candidateSource:'step1',minStrength:0,latticeGrids:1,
     perBarByIntensity:[2.8,6.6,9.6],maxConsecutiveEighths:12,maxLaneStep:4,
-    widths:[1,2,3,4],narrowRate:.32,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
+    widths:[1,2,3,4],narrowRate:.18,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
     holdMaxCount:22,holdMinGapGrids:6,flickMaxCount:26,slideMaxCount:13,chordMaxCount:18,endFlickMaxCount:9,accentWidth:6,accentMaxCount:8,holdTaperMaxCount:8,
   }),
 });
 
-// SLIDEの形。順番に使い回し、端からはみ出す・他の長いノーツとぶつかる形は次の形へ譲る。
-// steps は始点からの相対レーン(0.5刻み)、widths は各点の幅。
-const SLIDE_SHAPES=Object.freeze([
-  Object.freeze({id:'straight',grids:12,steps:[0,.5,1],widths:[2,3,2]}),     // まっすぐ1レーン
-  Object.freeze({id:'long',grids:16,steps:[0,.5,1,1.5],widths:[2,2,3,2]}),  // 長めに1.5レーン
-  Object.freeze({id:'turn',grids:12,steps:[0,1,.5],widths:[2,3,2]}),        // 折り返し
-  Object.freeze({id:'short',grids:8,steps:[0,.5],widths:[2,2]}),            // 短く半レーン
-  Object.freeze({id:'wide',grids:12,steps:[0,.5,1],widths:[4,4,3]}),        // 太くて掴みやすい
-  Object.freeze({id:'taper',grids:16,steps:[0,.5,1,1],widths:[3,3,2,2]}),   // 太いところから細くなる
-  Object.freeze({id:'open',grids:12,steps:[0,.5,.5],widths:[2,4,6]}),       // だんだん開く
-  Object.freeze({id:'close',grids:12,steps:[0,.5,1],widths:[6,4,2]}),       // だんだん閉じる
-  Object.freeze({id:'swell',grids:16,steps:[0,.5,1,1.5],widths:[2,4,4,2]}), // 途中でふくらむ
+// --- SLIDEの形の作り方 ---
+// 以前は「形」を9個の固定リストで持っていた。実機で「ホールド、スライドのバリエーションが
+// 少なすぎる。無限レベルに増やしてというか発想力を増やしてほしい。固定概念は極力抜いて」と
+// 言われた(2026-09-05)ので、形を並べるのをやめ、**4つの要素の組み合わせで作る**ようにした。
+//
+//   経路の型(7) × 長さ(5) × 振れ幅(5) × 幅の変わり方(6) = 1050通り
+//
+// 乱数は使わない。曲の中で何本目のSLIDEかから、4つの要素を**それぞれ違う周期で**進めるので、
+// 隣り合うSLIDEが同じ形にならず、曲が長くなるほど組み合わせが尽きない。
+//
+// 経路は「始点からの振れ量(0〜1)」を返す関数で書く。実際のレーンは 振れ幅 × この値 × 向き。
+const SLIDE_PATHS=Object.freeze([
+  Object.freeze({id:'line',   at:t=>t}),                                   // まっすぐ
+  Object.freeze({id:'arc',    at:t=>Math.sin(t*Math.PI/2)}),               // 先に大きく動いて落ち着く
+  Object.freeze({id:'ease',   at:t=>t*t*(3-2*t)}),                         // S字（ゆっくり→速く→ゆっくり）
+  Object.freeze({id:'turn',   at:t=>1-Math.abs(1-2*t)}),                   // 行って戻る（山）
+  Object.freeze({id:'hook',   at:t=>t<=.7?t/.7:1-(t-.7)/.3*.5}),           // 行ってから少し戻る（かぎ形）
+  Object.freeze({id:'wave',   at:t=>(1-Math.cos(t*Math.PI*2))/2}),         // ひと往復
+  Object.freeze({id:'stair',  at:t=>Math.min(1,Math.floor(t*3+1e-9)/2)}),  // 階段（3段）
 ]);
-if(printProfiles){console.log(JSON.stringify(PROFILES));process.exit(0);}
+// 幅の変わり方。0〜1の位置に対して「その難易度の幅の何段目か(0=細い〜1=太い)」を返す。
+const WIDTH_SHAPES=Object.freeze([
+  Object.freeze({id:'flat',  at:()=>.5}),                                  // 一定
+  Object.freeze({id:'open',  at:t=>t}),                                    // だんだん開く
+  Object.freeze({id:'close', at:t=>1-t}),                                  // だんだん閉じる
+  Object.freeze({id:'swell', at:t=>1-Math.abs(1-2*t)}),                    // 途中でふくらむ
+  Object.freeze({id:'pinch', at:t=>Math.abs(1-2*t)}),                      // 途中でくびれる
+  Object.freeze({id:'pulse', at:t=>(1-Math.cos(t*Math.PI*4))/2}),          // 太い細いを繰り返す
+]);
+const SLIDE_LENGTH_GRIDS=Object.freeze([8,12,16,24,32]);   // 2拍 / 3拍 / 4拍 / 6拍 / 8拍
+const SLIDE_REACH_LANES=Object.freeze([.5,1,1.5,2,2.5]);   // 始点からどれだけ動くか
+
+// 何本目かから4つの要素を選ぶ。
+// 桁上がり(1本ごとに1つだけ進む)にすると、1曲に10本ほどしかSLIDEが無い譜面では
+// **経路しか変わらず、長さも振れ幅も幅も全部同じ**になる。実際そうなった。
+// そこで4つとも毎回進める。進む歩幅は各リストの長さと互いに素にしてあるので、
+// どの軸も全種類を一巡し、組み合わせが戻ってくるのは 210本目(7と5と5と6の最小公倍数)。
+const slideRecipe=ordinal=>({
+  path:SLIDE_PATHS[ordinal%SLIDE_PATHS.length],
+  length:SLIDE_LENGTH_GRIDS[(ordinal*2)%SLIDE_LENGTH_GRIDS.length],
+  reach:SLIDE_REACH_LANES[(ordinal*3)%SLIDE_REACH_LANES.length],
+  width:WIDTH_SHAPES[(ordinal*5)%WIDTH_SHAPES.length],
+});
+// HOLDは中心を動かさず太さだけが変わる(動かすとSLIDEと区別が付かなくなるため)。
+// 幅の変わり方はSLIDEと同じ語彙を使い回す。'flat' は「変わらない」なので幅変化には使わない。
+const HOLD_WIDTH_SHAPES=Object.freeze(WIDTH_SHAPES.filter(shape=>shape.id!=='flat'));
+
+
 
 // セクション種別ごとの段調整。INTRO/BREAK/OUTROは1段下げて静けさを出し、
 // BUILD系・CHORUS系は1段上げて盛り上げる。VERSE/BRIDGEは調整しない。
@@ -227,6 +262,55 @@ const candidatesFromStep1Onsets=()=>{
   }
   return map;
 };
+// --- 曲のタイプ（性格） ---
+// 難易度だけで作ると、どんな曲でも同じ配分の譜面になってしまう。
+// STEP1で既に取ってある特徴量から曲の性格を5つの軸で出し、難易度プロファイルへ掛け算する。
+// 倍率はすべての難易度へ同じだけ掛かるので、難易度の順（EASY<…<MASTER）は崩れない。
+const songType=songTypeFromFeatures(features);
+const songTypeLabelList=songTypeLabels(songType);
+const songEffect=Object.freeze({
+  density:SONG_TYPE_EFFECT.density(songType),
+  narrow:SONG_TYPE_EFFECT.narrow(songType),
+  lattice:SONG_TYPE_EFFECT.lattice(songType),
+  consecutive:SONG_TYPE_EFFECT.consecutive(songType),
+  hold:SONG_TYPE_EFFECT.hold(songType),
+  holdLength:SONG_TYPE_EFFECT.holdLength(songType),
+  holdTaper:SONG_TYPE_EFFECT.holdTaper(songType),
+  slide:SONG_TYPE_EFFECT.slide(songType),
+  slideReach:SONG_TYPE_EFFECT.slideReach(songType),
+  contrast:SONG_TYPE_EFFECT.contrast(songType),
+  motif:SONG_TYPE_EFFECT.motif(songType),
+  flick:SONG_TYPE_EFFECT.flick(songType),
+});
+// 曲のタイプを効かせたあとの難易度プロファイル。--profile-override はこのあとに掛かるので、
+// STEP5が案を作るときの明示的な指定は、曲タイプより優先される。
+const applySongType=(difficulty,base)=>{
+  const scaleCount=(value,factor)=>Math.max(0,Math.round((Number(value)||0)*factor));
+  return Object.freeze({...base,
+    perBarByIntensity:base.perBarByIntensity.map((value,index)=>{
+      // 静かな段は「抑揚」で下へ、盛り上がる段は上へ動かす。真ん中は密度の倍率だけ。
+      const contrast=index===0?2-songEffect.contrast:index===2?songEffect.contrast:1;
+      return Math.round(value*songEffect.density*contrast*100)/100;
+    }),
+    narrowRate:Math.round(base.narrowRate*songEffect.narrow*1000)/1000,
+    latticeGrids:songEffect.lattice?base.latticeGrids*2:base.latticeGrids,
+    maxConsecutiveEighths:Math.max(2,scaleCount(base.maxConsecutiveEighths,songEffect.consecutive)),
+    holdMaxCount:scaleCount(base.holdMaxCount,songEffect.hold),
+    holdMinGapGrids:Math.max(4,Math.round(base.holdMinGapGrids/songEffect.holdLength)),
+    holdTaperMaxCount:scaleCount(base.holdTaperMaxCount,songEffect.holdTaper),
+    slideMaxCount:scaleCount(base.slideMaxCount,songEffect.slide),
+    flickMaxCount:scaleCount(base.flickMaxCount,songEffect.flick),
+  });
+};
+
+// STEP5は --print-profiles で既定値を読み、それを増減させて案を作る。
+// ここで**曲のタイプを効かせたあと**の値を渡すことで、STEP5の案は曲の性格の上に積まれる。
+// (曲タイプを効かせる前の値を渡すと、案を作った瞬間に曲の性格が消えてしまう)
+if(printProfiles){
+  console.log(JSON.stringify(Object.fromEntries(Object.keys(PROFILES).map(id=>[id,applySongType(id,PROFILES[id])]))));
+  process.exit(0);
+}
+
 const CANDIDATE_MAPS=Object.freeze({normal:loadCandidates('normal'),dense:loadCandidates('dense'),step1:candidatesFromStep1Onsets()});
 // 候補源ごとの補充下限。その源の強さを並べて、下位 supplementMinStrengthQuantile を切る位置。
 const supplementFloorOf=map=>{
@@ -290,7 +374,8 @@ const intensityPosition=barIndex=>{
 };
 
 const buildChart=(difficulty)=>{
-  const P=profileOverride&&profileOverride[difficulty]?Object.freeze({...PROFILES[difficulty],...profileOverride[difficulty]}):PROFILES[difficulty];
+  const tuned=applySongType(difficulty,PROFILES[difficulty]);
+  const P=profileOverride&&profileOverride[difficulty]?Object.freeze({...tuned,...profileOverride[difficulty]}):tuned;
   const byGrid=CANDIDATE_MAPS[P.candidateSource];
   const inRange=i=>i.grid>=minGrid&&i.grid<=maxGrid;
   const onLattice=i=>i.grid%P.latticeGrids===0;
@@ -396,6 +481,8 @@ const buildChart=(difficulty)=>{
   //     motifGapとして数え、無理に置かない。 ---
   let motifPhrasesTotal=0,motifPhrasesApplied=0,motifNotesAttempted=0,motifNotesGrounded=0;
   for(const phrase of phrases){
+    // 拍に素直な曲でだけ反復モチーフを効かせる。崩した曲で機械的に揃えると、かえって曲から離れる。
+    if(!songEffect.motif)break;
     if(!phrase.repeatedFromPhraseId)continue;
     if(phrase.startBar<minBar||phrase.endBarExclusive-1>maxBar)continue;
     motifPhrasesTotal++;
@@ -456,7 +543,9 @@ const buildChart=(difficulty)=>{
   const strengths=spaced.map(i=>i.strength).sort((a,b)=>a-b);
   const pick=r=>strengths[Math.min(strengths.length-1,Math.floor(strengths.length*r))];
   const wideCut=pick(.80),midWideCut=pick(.45);
-  // 幅1(半ノーツ)を出す割合。いちばん弱い音から順に、この割合まで細くする
+  // 幅1(半ノーツ)を出す割合。いちばん弱い音から順に、この割合まで細くする。
+  // 実機で「幅1が多すぎると見た目がしょぼくなる」と言われた(2026-09-05)ので基準値を下げ、
+  // 代わりに**細かい曲でだけ増える**ようにした(曲タイプの granularity が倍率で掛かる)。
   const narrowCut=P.narrowRate>0?pick(P.narrowRate):-Infinity;
   // 「大きいほど簡単・細いほど難しい」に沿って決める。強い音ほど大きく、
   // 弱い音のうち narrowRate ぶんだけを幅1にする。
@@ -558,43 +647,47 @@ const buildChart=(difficulty)=>{
   }
 
   // --- 押さえている途中で幅が変わるHOLD ---
-  // 実機で「ホールド・スライドは途中から広がったり小さくなったりもほしい」と言われて足した。
-  // SLIDEは以前から形ごとに幅を変えられたが、HOLDは始点から終点までずっと同じ太さだった。
-  // 長いHOLDから順に、広がる → 細くなる → 途中でふくらむ、を順番に割り当てる(乱数は使わない)。
-  // 中心は動かさない(動かすとSLIDEになる)。幅は難易度の widths の範囲に収める。
+  // 実機で「ホールド、スライドのバリエーションが少なすぎる。無限レベルに増やして」と言われた。
+  // 形はSLIDEと同じ語彙(WIDTH_SHAPES)を使い、長さで点の数を変える。
+  //   open(開く) / close(閉じる) / swell(ふくらむ) / pinch(くびれる) / pulse(太細を繰り返す)
+  // 中心は動かさない。動かすとSLIDEと区別が付かなくなるため(そちらはSLIDEの役目)。
   if(P.holdTaperMaxCount>0){
     const taperCandidates=notes.map((note,index)=>({note,index}))
       .filter(({note})=>note.type==='HOLD'&&Number(note.durationGrids)>=8)
       .map(({index})=>({index}));
-    const widest=Math.max(...P.widths),narrowest=Math.min(...P.widths);
+    const widthsAsc=[...P.widths].sort((a,b)=>a-b);
     // 中心を保ったまま幅を変える。はみ出す場合は左右へ寄せる。
     const centeredSubLane=(note,width)=>{
       const center=Number(note.subLane)+(Number(note.subLaneWidth)||2)/2;
       return Math.max(0,Math.min(10-width,Math.round(center-width/2)));
     };
-    const shapes=['grow','shrink','swell'];
+    const widthAt=(shape,t)=>widthsAsc[Math.max(0,Math.min(widthsAsc.length-1,
+      Math.round(shape.at(Math.max(0,Math.min(1,t)))*(widthsAsc.length-1))))];
     spread(taperCandidates,P.holdTaperMaxCount,3).forEach(({index},ordinal)=>{
-      const note=notes[index],startWidth=Number(note.subLaneWidth)||2;
-      const wide=Math.min(widest,Math.max(startWidth+2,startWidth*2));
-      const narrow=Math.max(narrowest,Math.min(startWidth,Math.max(1,Math.round(startWidth/2))));
-      const startGrid=note.grid,endGrid=note.grid+Number(note.durationGrids);
-      const midGrid=startGrid+Math.round(Number(note.durationGrids)/2);
-      const point=(grid,width)=>({grid,subLane:centeredSubLane(note,width),subLaneWidth:width});
-      const build=shape=>{
-        if(shape==='grow')return wide>startWidth?[point(startGrid,startWidth),point(endGrid,wide)]:null;
-        if(shape==='shrink')return narrow<startWidth?[point(startGrid,startWidth),point(endGrid,narrow)]:null;
-        if(wide>startWidth)return [point(startGrid,startWidth),point(midGrid,wide),point(endGrid,startWidth)];
-        return narrow<startWidth?[point(startGrid,startWidth),point(midGrid,narrow),point(endGrid,startWidth)]:null;
-      };
-      // 順番どおりの形が使えない(もういちばん太い / いちばん細い)ときは、次の形へ譲る
-      let shape=null,points=null;
-      for(let k=0;k<shapes.length&&!points;k++){
-        shape=shapes[(ordinal+k)%shapes.length];
-        points=build(shape);
+      const note=notes[index],durationGrids=Number(note.durationGrids);
+      // 点の数は長さで決める。pulse のように何度も変わる形は、点が足りないと形が出ない。
+      const shape=HOLD_WIDTH_SHAPES[ordinal%HOLD_WIDTH_SHAPES.length];
+      const pointCount=Math.max(2,Math.min(9,Math.round(durationGrids/BEAT)+1));
+      const seen=new Set();
+      const points=[];
+      for(let i=0;i<pointCount;i++){
+        const t=i/(pointCount-1);
+        const grid=note.grid+Math.round(durationGrids*t);
+        if(seen.has(grid))continue;
+        seen.add(grid);
+        const width=widthAt(shape,t);
+        points.push({grid,subLane:centeredSubLane(note,width),subLaneWidth:width});
       }
-      if(!points||points.every(p=>p.subLaneWidth===startWidth))return;
+      if(points.length<2)return;
+      points[points.length-1].grid=note.grid+durationGrids;
+      // 全部同じ幅になった(その難易度の幅が1段しかない等)なら、幅変化として書かない
+      if(new Set(points.map(point=>point.subLaneWidth)).size<2)return;
+      // 始点の幅は最初の点に合わせる(頭と帯の始まりをそろえる)
+      note.subLaneWidth=points[0].subLaneWidth;
+      note.subLane=points[0].subLane;
+      note.lane=Math.floor(note.subLane/2);
       note.holdPoints=points;
-      note.holdTaper=shape;
+      note.holdTaper=shape.id;
     });
   }
 
@@ -623,9 +716,10 @@ const buildChart=(difficulty)=>{
   }
 
   if(P.slideMaxCount>0){
-    // 形を順番に使い回す。以前は全部「12グリッドで右へ1レーン」の同じ形だった。
-    // 向きは始点の位置で決める(右寄りなら左へ)。端からはみ出す形は次の形へ譲る。
-    const shortest=Math.min(...SLIDE_SHAPES.map(s=>s.grids));
+    // 形は「経路の型 × 長さ × 振れ幅 × 幅の変わり方」で作る(SLIDE_PATHS / WIDTH_SHAPES)。
+    // 何本目かで4つの要素がそれぞれ違う周期で進むので、隣り合うSLIDEが同じ形にならない。
+    // 置けないとき(端からはみ出す・他の長いノーツとぶつかる)は、次の組み合わせへ譲る。
+    const shortest=Math.min(...SLIDE_LENGTH_GRIDS);
     const slideCandidates=[];
     for(let i=1;i<notes.length-1;i++){
       if(notes[i].type!=='TAP')continue;
@@ -635,36 +729,58 @@ const buildChart=(difficulty)=>{
     }
     const chosen=spread(slideCandidates,P.slideMaxCount,8);
     const startGrids=chosen.map(c=>notes[c.index].grid);
+    const widthsAsc=[...P.widths].sort((a,b)=>a-b);
+    // 幅の変わり方(0〜1)を、その難易度で使うと決めた幅の段へ写す。
+    // こうしておけば「幅は難易度で決めた範囲だけを使う」という約束をSLIDEだけが破ることはない。
+    const widthAt=(shape,t)=>widthsAsc[Math.max(0,Math.min(widthsAsc.length-1,
+      Math.round(shape.at(Math.max(0,Math.min(1,t)))*(widthsAsc.length-1))))];
     startGrids.forEach((startGrid,ordinal)=>{
       const note=notes.find(n=>n.grid===startGrid);
       if(!note)return;
-      const fits=shape=>startGrid+shape.grids<=maxGrid
-        &&!notes.some(o=>o!==note&&o.grid>startGrid&&o.grid<=startGrid+shape.grids&&o.type!=='TAP');
-      let shape=null;
-      for(let k=0;k<SLIDE_SHAPES.length&&!shape;k++){
-        const candidate=SLIDE_SHAPES[(ordinal+k)%SLIDE_SHAPES.length];
-        if(fits(candidate))shape=candidate;
+      const fits=grids=>startGrid+grids<=maxGrid
+        &&!notes.some(o=>o!==note&&o.grid>startGrid&&o.grid<=startGrid+grids&&o.type!=='TAP');
+      // 置ける組み合わせが見つかるまで、順番に次の組み合わせを試す。
+      let recipe=null,startLane=0,direction=1;
+      for(let k=0;k<SLIDE_PATHS.length*SLIDE_LENGTH_GRIDS.length&&!recipe;k++){
+        // 置けないときは次の組み合わせへ。4つとも一緒に進むので、長さだけでなく形も変わる。
+        const candidate=slideRecipe(ordinal+k);
+        if(!fits(candidate.length))continue;
+        // 曲がりの大きさは曲のタイプで変える(音がよく動く曲ほど大きく振る)。
+        // 難易度の歩幅(maxLaneStep)より大きくは振らない。0.5レーン刻みへ丸める。
+        const wanted=Math.max(.5,Math.min(P.maxLaneStep/2,candidate.reach*songEffect.slideReach));
+        const reach=Math.round(wanted*2)/2;
+        // 右寄りの始点は左へ、左寄りは右へ。はみ出すなら向きを変え、それでも駄目なら始点を寄せる。
+        let dir=note.lane>=2.5?-1:1,lane=note.lane;
+        if(lane+dir*reach<0||lane+dir*reach>4)dir=-dir;
+        if(lane+dir*reach<0)lane=reach;
+        if(lane+dir*reach>4)lane=4-reach;
+        if(lane<0||lane>4)continue;
+        recipe={...candidate,reach};startLane=lane;direction=dir;
       }
-      if(!shape)return;
-      const reach=Math.max(...shape.steps);
-      // 右寄りの始点は左へ、左寄りは右へ。はみ出すなら向きを変え、それでも駄目なら始点を寄せる。
-      let direction=note.lane>=2.5?-1:1;
-      let startLane=note.lane;
-      if(startLane+direction*reach<0||startLane+direction*reach>4)direction=-direction;
-      if(startLane+direction*reach<0)startLane=reach;
-      if(startLane+direction*reach>4)startLane=4-reach;
-      const lastStep=shape.steps.length-1;
-      const points=shape.steps.map((step,i)=>({
-        grid:startGrid+Math.round(shape.grids*(i/lastStep)),
-        lane:startLane+direction*step,
-        // 形が持つ幅は、その難易度で使うと決めた幅の範囲へ収める
-        // (収めないと「幅は難易度で決めた範囲だけを使う」という約束をSLIDEだけが破る)
-        subLaneWidth:Math.max(Math.min(...P.widths),Math.min(Math.max(...P.widths),shape.widths[i])),
-      }));
+      if(!recipe)return;
+      // 点の数は長さで決める(1拍あたり1点、2〜9点)。多いほど経路がなめらかになるが描画も増える。
+      const pointCount=Math.max(2,Math.min(9,Math.round(recipe.length/BEAT)+1));
+      const seen=new Set();
+      const points=[];
+      for(let i=0;i<pointCount;i++){
+        const t=i/(pointCount-1);
+        const grid=startGrid+Math.round(recipe.length*t);
+        if(seen.has(grid))continue;
+        seen.add(grid);
+        const raw=startLane+direction*recipe.reach*recipe.path.at(t);
+        const lane=Math.max(0,Math.min(4,Math.round(raw*2)/2));
+        points.push({grid,lane,subLaneWidth:widthAt(recipe.width,t)});
+      }
+      if(points.length<2)return;
+      // 最後の点は必ず長さぴったりへ置く(終端バーと帯の終わりを合わせるため)
+      points[points.length-1].grid=startGrid+recipe.length;
       note.type='SLIDE';
-      note.durationGrids=shape.grids;
+      note.durationGrids=recipe.length;
       note.slidePoints=points;
-      note.slideShape=shape.id;
+      note.slideShape=`${recipe.path.id}-${recipe.length}-${recipe.reach}-${recipe.width.id}`;
+      note.slidePath=recipe.path.id;
+      note.slideWidthShape=recipe.width.id;
+      note.slideReach=recipe.reach;
       note.lane=points[0].lane;
       note.endLane=points[points.length-1].lane;
       note.subLaneWidth=points[0].subLaneWidth;
@@ -672,7 +788,7 @@ const buildChart=(difficulty)=>{
       for(let i=notes.length-1;i>=0;i--){
         const other=notes[i];
         if(other===note)continue;
-        if(other.grid>startGrid&&other.grid<=startGrid+shape.grids)notes.splice(i,1);
+        if(other.grid>startGrid&&other.grid<=startGrid+recipe.length)notes.splice(i,1);
       }
     });
   }
@@ -844,7 +960,13 @@ const buildChart=(difficulty)=>{
       supplementMinStrengthQuantile:COMMON.supplementMinStrengthQuantile,
       supplementFloorBySource:SUPPLEMENT_FLOORS,
       laneStepFastMax:COMMON.laneStepFastMax,
-      slideShapes:SLIDE_SHAPES.map(s=>s.id),
+      songType,songTypeLabels:songTypeLabelList,songTypeEffect:songEffect,
+      holdWidthShapes:HOLD_WIDTH_SHAPES.map(shape=>shape.id),
+      slidePaths:SLIDE_PATHS.map(shape=>shape.id),
+      slideWidthShapes:WIDTH_SHAPES.map(shape=>shape.id),
+      slideLengthGrids:[...SLIDE_LENGTH_GRIDS],
+      slideReachLanes:[...SLIDE_REACH_LANES],
+      slideShapeCombinations:SLIDE_PATHS.length*SLIDE_LENGTH_GRIDS.length*SLIDE_REACH_LANES.length*WIDTH_SHAPES.length,
       narrowRate:P.narrowRate,
       supplementFromTier:P.supplementFromTier??2,
       endFlickMaxCount:P.endFlickMaxCount,

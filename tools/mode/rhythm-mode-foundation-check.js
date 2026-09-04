@@ -10,7 +10,9 @@ const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++
 const data=read('monster-hero/data/rhythm-mode.js');
 const game=read('monster-hero/src/game-system.jsx');
 const context={};
-vm.runInNewContext(`${data}\nthis.out={RHYTHM_LANE_COUNT,RHYTHM_NOTE_TYPES,RHYTHM_DIFFICULTIES,RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_SONGS};`,context);
+// 設定のnormalizeは、両サイドのマスモン(2026-09-05)の段階名も rhythm-mode.js から読む。
+// 切り出した normalize だけをVMで動かすので、その定数もここで一緒に取り出して渡す。
+vm.runInNewContext(`${data}\nthis.out={RHYTHM_LANE_COUNT,RHYTHM_NOTE_TYPES,RHYTHM_DIFFICULTIES,RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_SONGS,RHYTHM_SIDE_MONSTER_OPACITIES,RHYTHM_SIDE_MONSTER_MOTIONS};`,context);
 const D=context.out;
 check('5レーン・4ノーツ種別',D.RHYTHM_LANE_COUNT===5&&D.RHYTHM_NOTE_TYPES.join(',')==='TAP,HOLD,FLICK,SLIDE');
 check('5難易度と最大スコア',JSON.stringify(D.RHYTHM_DIFFICULTIES.map(x=>[x.id,x.maxScore]))===JSON.stringify([['EASY',600000],['NORMAL',700000],['HARD',800000],['EXPERT',900000],['MASTER',1000000]]));
@@ -22,7 +24,8 @@ check('全難易度に正式譜面フィールド',D.RHYTHM_SONGS.every(song=>D.
 
 const logic=game.match(/const RHYTHM_SETTINGS_KEY = [\s\S]*?const rhythmBestRecord = \(records,songId,difficultyId\) => normalizeRhythmBestRecord\(records\?\.\[songId\]\?\.\[difficultyId\]\);/)?.[0];
 check('normalizeロジックを抽出できる',!!logic);
-if(logic){const c={RHYTHM_SONGS:D.RHYTHM_SONGS,RHYTHM_DIFFICULTIES:D.RHYTHM_DIFFICULTIES};vm.runInNewContext(`${logic}\nthis.out={DEFAULT_RHYTHM_SETTINGS,normalizeRhythmSettings,normalizeRhythmBestRecord,normalizeRhythmBestRecords};`,c);const L=c.out;
+if(logic){const c={RHYTHM_SONGS:D.RHYTHM_SONGS,RHYTHM_DIFFICULTIES:D.RHYTHM_DIFFICULTIES,
+  RHYTHM_SIDE_MONSTER_OPACITIES:D.RHYTHM_SIDE_MONSTER_OPACITIES,RHYTHM_SIDE_MONSTER_MOTIONS:D.RHYTHM_SIDE_MONSTER_MOTIONS};vm.runInNewContext(`${logic}\nthis.out={DEFAULT_RHYTHM_SETTINGS,normalizeRhythmSettings,normalizeRhythmBestRecord,normalizeRhythmBestRecords};`,c);const L=c.out;
   const settings=L.normalizeRhythmSettings({noteSpeed:'bad',noteSize:999,fastSlowDisplay:'yes',effectAmount:'MAX'});
   check('設定normalizeが欠損・不正値を既定値へ戻す',JSON.stringify(settings)===JSON.stringify(L.DEFAULT_RHYTHM_SETTINGS));
   const record=L.normalizeRhythmBestRecord({bestScore:-1,maxCombo:'12.9',clear:1,MARVELOUS:'7',judgments:{MISS:-3}});
