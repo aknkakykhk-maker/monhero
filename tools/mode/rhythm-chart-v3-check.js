@@ -31,8 +31,10 @@ check('乱数を使わない（結果が毎回変わらないため）',
 check('生成器はランタイムへ書き込まない（設計資料だけを作る）',
   !/writeFileSync\([^)]*monster-hero\//.test(generator)&&/runtimeConnected:false/.test(generator));
 check('ランタイムを書き換えるのはパイプラインのマーカーの内側だけ',
-  /monster-hero-v3-\$\{difficulty\.toLowerCase\(\)\}-notes/.test(pipeline)
-  &&/v1 または 候補v2 の譜面まで書き換えようとしました/.test(pipeline));
+  // マーカー名は曲ごとに変えられる（--markers）。既定は Monster Hero の従来名。
+  /\$\{markerPrefix\}-\$\{difficulty\.toLowerCase\(\)\}-notes/.test(pipeline)
+  &&/monster_hero_theme'\?'monster-hero-v3'/.test(pipeline.replace(/\s+/g,''))
+  &&/ほかの譜面（v1 \/ 候補v2 \/ 候補v3）まで書き換えようとしました/.test(pipeline));
 check('手のモデルは共通のものを使う（道具ごとに別の物差しにしない）',
   generator.includes("require('./rhythm-hand-model.js')"));
 check('形の語彙を別ファイルへ分けてある',

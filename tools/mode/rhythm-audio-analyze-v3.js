@@ -31,6 +31,7 @@ const {audioFeatures,BANDS,SAMPLE_RATE,FFT_SIZE,HOP_SIZE,CONTRAST_RADIUS_MS}=req
 const {detectTiming}=require('./rhythm-audio-tempo-v3.js');
 const {detectStructure}=require('./rhythm-audio-structure-v3.js');
 const {pickPeaks,estimatePitch,biquadBandpass}=require('./rhythm-audio-dsp.js');
+const {collectWarnings,criticalWarnings,formatWarnings}=require('./rhythm-audio-warnings.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -116,12 +117,17 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
     const merged={...base,detected:detected?{bpm:detected.bpm,beatZeroMs:detected.beatZeroMs,
       beatsPerBar:detected.beatsPerBar,subdivisionsPerBeat:detected.subdivisionsPerBeat,
       gridFit:detected.gridFit,beatPresence:detected.beatPresence,
+      stability:detected.stability,
       candidates:detected.tempoCandidates}:null};
     let source='detected';
     const apply=(values,name)=>{
       if(!values)return;
       source=name;
       if(Number.isFinite(values.bpm)){merged.bpm=values.bpm;merged.beatMs=60000/values.bpm;}
+      // 人が書いた beatMs があれば、それをそのまま使う（BPMから割り直さない）。
+      // rhythm-timing.js の beatMs は丸めた値なので、割り直すと1msずれ、
+      // 既にランタイムへ入っている譜面の時刻がわずかに動いてしまう。
+      if(Number.isFinite(values.beatMs)&&values.beatMs>0)merged.beatMs=values.beatMs;
       if(Number.isFinite(values.beatZeroMs))merged.beatZeroMs=values.beatZeroMs;
       if(Number.isFinite(values.beatsPerBar))merged.beatsPerBar=values.beatsPerBar;
       if(Number.isFinite(values.subdivisionsPerBeat))merged.subdivisionsPerBeat=values.subdivisionsPerBeat;
@@ -290,6 +296,10 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
   })();
   const characterCounts=onsets.reduce((acc,onset)=>{acc[onset.character]=(acc[onset.character]||0)+1;return acc;},{});
 
+  // --- 7. あやしさ（このまま譜面にしてよいか） ---
+  const warnings=collectWarnings({timing,detected,durationMs:features.durationMs,
+    onsetCount:onsets.length,sectionCount:structure.sections.length});
+
   const report={
     schemaVersion:2,
     analysisType:'rhythm-audio-v3',
@@ -307,7 +317,9 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
     timing:{bpm:round(timing.bpm,4),beatMs:round(timing.beatMs,4),beatZeroMs:round(timing.beatZeroMs,1),
       beatsPerBar:timing.beatsPerBar,subdivisionsPerBeat:timing.subdivisionsPerBeat,
       gridMs:round(gridMs,4),triplet:!!timing.triplet,swing:timing.swing,
-      source:timing.source,confidence:timing.confidence,detected:timing.detected},
+      source:timing.source,confidence:timing.confidence,detected:timing.detected,
+      stability:detected?detected.stability:null},
+    warnings,
     structure:{sections:structure.sections,bars:structure.bars,repeats:structure.repeats,
       settings:structure.settings},
     summary:{onsetCount:onsets.length,characterCounts,gridFit,swing:timing.swing,
@@ -331,6 +343,12 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
   console.log(`  打点 ${onsets.length}件  ${Object.entries(characterCounts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k} ${v}`).join(' / ')}`);
   console.log(`  格子への乗り: ±15ms ${(gridFit.within15ms*100).toFixed(0)}% / ±30ms ${(gridFit.within30ms*100).toFixed(0)}% / ±43ms ${(gridFit.within43ms*100).toFixed(0)}%`);
   console.log(`  区切り ${structure.sections.length}個 (${structure.sections.map(s=>s.label).join('')}) / 繰り返し ${structure.repeats.length}組 / ${structure.bars.length}小節`);
+  if(warnings.length){
+    console.log(`  あやしい点 ${warnings.length}件（うち止めるべきもの ${criticalWarnings(warnings).length}件）`);
+    for(const line of formatWarnings(warnings))console.log(`    ${line}`);
+  }else{
+    console.log('  あやしい点は見つかりませんでした');
+  }
   console.log(`  音高が取れた打点 ${report.summary.pitchedOnsets}/${onsets.length}  16分ごとの音高 ${report.summary.pitchCurveClear}/${pitchCurve.length}  高さが続く区間 ${sustains.length}件`);
   if(verbose){
     for(const section of structure.sections){

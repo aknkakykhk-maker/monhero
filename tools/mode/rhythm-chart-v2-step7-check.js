@@ -37,7 +37,8 @@ const source=fs.readFileSync(TOOL,'utf8');
 const writeTargets=[...source.matchAll(/fs\.writeFileSync\(([^,]+),/g)].map(m=>m[1].trim());
 check('書き出し先が設計資料の置き場(authoring)だけである',
   writeTargets.length>0&&writeTargets.every(t=>t==='out')
-  &&/tools\/mode\/authoring\/monster-hero-theme-v2-step7-/.test(source));
+  // ファイル名は曲idから作る（曲が増えても道具を触らなくてよいようにしたため）
+  &&/tools\/mode\/authoring\/\$\{dashed\}-v2-step7-/.test(source));
 check('monster-heroからは読み書きしない',!/monster-hero\//.test(source));
 check('乱数を使わない(結果が毎回変わらないため)',!/Math\.random|crypto\.randomBytes/.test(source));
 check('手のモデルはSTEP6のものをそのまま使う(道具ごとに別の物差しを持たない)',

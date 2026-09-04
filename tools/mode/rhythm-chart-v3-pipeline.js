@@ -5,37 +5,41 @@
 //   node tools/mode/rhythm-chart-v3-pipeline.js --write     # 設計資料(authoring/)を更新する
 //   node tools/mode/rhythm-chart-v3-pipeline.js --release   # ランタイム(Monster Hero 候補v3)へ反映する
 //   node tools/mode/rhythm-chart-v3-pipeline.js --reanalyze # 音源の解析からやり直す
+//   node tools/mode/rhythm-chart-v3-pipeline.js --force     # 重い警告を承知のうえで押し切る
+//   node tools/mode/rhythm-chart-v3-pipeline.js --track <曲id> --markers <マーカー名>
+//
+// 曲は --track で切り替える。拍の基準（BPM・拍の頭）は音源解析の結果をそのまま使うので、
+// 新しい曲のために rhythm-timing.js へ手で書き足す必要は無い。
 //
 // 【止まる条件】
 //   ・「押せない」が1件でもある
 //   ・難易度の順（ノーツ数）が崩れている
 //   ・鳴っていない場所にノーツを置いている（音に乗る率が100%でない）
+//   ・音源解析が「重い警告」を出している（テンポが途中で変わる・候補が拮抗している等）
 // どれかに当たれば、ランタイムへは反映しない（終了コード1）。
+// 重い警告は --force で押し切れるが、そのときは何を無視したかを必ず表示する。
 //
 // V1（正式候補v1）・V2（候補v2）の譜面には1バイトも触れない。書き換えるのは
 // <monster-hero-v3-*-notes> マーカーの内側だけで、書き込む前後で他が変わっていないことを確かめる。
 'use strict';
 const fs=require('fs');
 const path=require('path');
-const vm=require('vm');
 const {spawnSync}=require('child_process');
+const {criticalWarnings,formatWarnings}=require('./rhythm-audio-warnings.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
 const release=process.argv.includes('--release');
 const write=release||process.argv.includes('--write');
 const reanalyze=process.argv.includes('--reanalyze');
+const force=process.argv.includes('--force');
 const trackId=arg('--track','monster_hero_theme');
 const dashed=trackId.replace(/_/g,'-');
 const DIFFICULTIES=['EASY','NORMAL','HARD','EXPERT','MASTER'];
+// ランタイムの譜面を入れる場所（マーカー）の名前。曲ごとに別のマーカーを使う。
+// Monster Hero だけは先に <monster-hero-v3-*-notes> で入れてあるので、その名前を保つ。
+const markerPrefix=arg('--markers',trackId==='monster_hero_theme'?'monster-hero-v3':`${dashed}-v3`);
 const RUNTIME=path.join(ROOT,'monster-hero/data/rhythm-mode.js');
-
-const timingContext={Object,Number,Math};
-vm.createContext(timingContext);
-vm.runInContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-timing.js'),'utf8')}\nthis.__t=RHYTHM_TIMING_DATA[${JSON.stringify(trackId)}];`,timingContext);
-const timing=timingContext.__t;
-const gridMs=timing.beatMs/timing.subdivisionsPerBeat;
-const gridTimeMs=grid=>Math.round(timing.beatZeroMs+grid*gridMs);
 
 const runTool=(tool,args)=>spawnSync(process.execPath,[path.join(ROOT,'tools/mode',tool),'--track',trackId,...args],
   {cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
@@ -79,8 +83,27 @@ for(const difficulty of DIFFICULTIES){
 }
 const audio=JSON.parse(fs.readFileSync(audioFile,'utf8'));
 const onsetGrids=new Set(audio.onsets.map(onset=>onset.grid));
+// 拍の基準は解析結果のものをそのまま使う。人が monster-hero/data/rhythm-timing.js へ
+// 登録した値があれば、解析の段で既にそちらが採用されている（source が registered になる）。
+// ここで rhythm-timing.js を直接読むと、登録の無い新しい曲では動かせなくなる。
+const timing=audio.timing;
+const gridMs=timing.gridMs||timing.beatMs/timing.subdivisionsPerBeat;
+const gridTimeMs=grid=>Math.round(timing.beatZeroMs+grid*gridMs);
+
+// --- 音源解析の警告 ---
+// テンポを取り違えたまま出来た譜面は、遊ぶ人には「ゲームが壊れている」ようにしか見えない。
+// 曲は今後も増えるので、あやしいまま黙って通すことだけは無いようにする。
+const warnings=Array.isArray(audio.warnings)?audio.warnings:[];
+const critical=criticalWarnings(warnings);
+if(warnings.length){
+  console.log('\n--- 音源解析からの注意 ---');
+  for(const line of formatWarnings(warnings))console.log(`  ${line}`);
+}
 
 const problems=[];
+if(critical.length&&!force){
+  problems.push(`音源解析が重い警告を出している（${critical.map(warning=>warning.code).join(' / ')}）`);
+}
 if(verify.status!==0)problems.push('「押せない」配置が残っている');
 for(let i=1;i<DIFFICULTIES.length;i++){
   const previous=charts[DIFFICULTIES[i-1]].notes.length,current=charts[DIFFICULTIES[i]].notes.length;
@@ -96,11 +119,21 @@ console.log('\n--- 出荷してよいか ---');
 if(problems.length){
   for(const problem of problems)console.log(`  ✗ ${problem}`);
   console.log('\n問題があるのでランタイムへは反映しません。');
+  if(critical.length&&!force){
+    console.log('（テンポなどを人が確かめたうえで押し切るなら --force、');
+    console.log('  正しい値が分かっているなら monster-hero/data/rhythm-timing.js へ登録するか');
+    console.log('  rhythm-audio-analyze-v3.js に --bpm / --beat-zero を渡してください）');
+  }
   process.exit(1);
 }
 console.log('  ✓ 「押せない」0件');
 console.log(`  ✓ 難易度の順を守っている (${DIFFICULTIES.map(d=>`${d} ${charts[d].notes.length}`).join(' < ')})`);
 console.log('  ✓ すべてのノーツが実際に鳴っている場所に乗っている');
+if(critical.length&&force){
+  console.log(`  ! --force なので重い警告を無視しました（${critical.map(warning=>warning.code).join(' / ')}）`);
+}else if(!critical.length){
+  console.log('  ✓ 音源解析からの重い警告は無し');
+}
 
 if(!release){
   console.log(write?'\n（--release を付けると、ランタイム（Monster Hero 候補v3）へ反映します）'
@@ -132,7 +165,7 @@ let runtimeSource=fs.readFileSync(RUNTIME,'utf8');
 // V1・V2のマーカーの中身を覚えておき、書き込む前に「巻き添えで変えていないか」を確かめる
 const snapshot=source=>{
   const out=[];
-  for(const prefix of ['monster-hero','monster-hero-v2']){
+  for(const prefix of ['monster-hero','monster-hero-v2','monster-hero-v3'].filter(name=>name!==markerPrefix)){
     for(const difficulty of DIFFICULTIES){
       const begin=`// <${prefix}-${difficulty.toLowerCase()}-notes>`;
       const end=`// </${prefix}-${difficulty.toLowerCase()}-notes>`;
@@ -147,12 +180,17 @@ const before=snapshot(runtimeSource);
 console.log('\n--- 遊べる形にする ---');
 for(const difficulty of DIFFICULTIES){
   const chart=charts[difficulty];
-  const out=path.join(ROOT,`monster-hero/debug/monster-hero-theme-${difficulty.toLowerCase()}-formal-candidate-v3.json`);
+  const out=path.join(ROOT,`monster-hero/debug/${dashed}-${difficulty.toLowerCase()}-formal-candidate-v3.json`);
   fs.writeFileSync(out,JSON.stringify({...chart,candidateVersion:3,status:'V3_PIPELINE_CANDIDATE'},null,1)+'\n');
-  const begin=`// <monster-hero-v3-${difficulty.toLowerCase()}-notes>`;
-  const end=`// </monster-hero-v3-${difficulty.toLowerCase()}-notes>`;
+  const begin=`// <${markerPrefix}-${difficulty.toLowerCase()}-notes>`;
+  const end=`// </${markerPrefix}-${difficulty.toLowerCase()}-notes>`;
   const b=runtimeSource.indexOf(begin),e=runtimeSource.indexOf(end);
-  if(b<0||e<b)throw new Error(`rhythm-mode.js の V3 ${difficulty} 譜面マーカーが見つかりません`);
+  if(b<0||e<b){
+    console.error(`✗ rhythm-mode.js に ${begin} … ${end} がありません。`);
+    console.error('  新しい曲をランタイムへ入れるときは、先に rhythm-mode.js へ空のマーカーと曲の登録を足してください。');
+    console.error('  （--markers <名前> で使うマーカー名を変えられます）');
+    process.exit(1);
+  }
   const rows=[...chart.notes].sort((a,b2)=>a.grid-b2.grid).map(runtimeRow);
   const lines=[];
   for(let i=0;i<rows.length;i+=4)lines.push('  '+rows.slice(i,i+4).join(',')+',');
@@ -161,7 +199,7 @@ for(const difficulty of DIFFICULTIES){
 }
 const after=snapshot(runtimeSource);
 if(before.some((text,i)=>text!==after[i])){
-  console.error('✗ v1 または 候補v2 の譜面まで書き換えようとしました。中止します。');
+  console.error('✗ ほかの譜面（v1 / 候補v2 / 候補v3）まで書き換えようとしました。中止します。');
   process.exit(1);
 }
 fs.writeFileSync(RUNTIME,runtimeSource);
