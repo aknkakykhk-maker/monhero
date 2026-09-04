@@ -80,7 +80,12 @@ check('SLIDE開始入力幅もsubLaneWidthへ一致する',close(input1.width,1)
 let result=rhythmMatchInputBatch([makeSlide({subLaneWidth:1})],[{inputKey:'narrow-center',lane:1,subLaneCoordinate:2}],1000,0);
 check('幅1 SLIDEを中心で開始できる',!!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
-result=rhythmMatchInputBatch([makeSlide({subLaneWidth:1})],[{inputKey:'narrow-outside',lane:1,subLaneCoordinate:2.7}],1000,0);
+// 入力側の余白は 2026-09-05 にゆるくした（幅1は .45 サブレーン）。
+// 幅1 SLIDEの開始範囲は 1.5〜2.5 なので、2.95 までが余白の内側、それより外は取らない。
+result=rhythmMatchInputBatch([makeSlide({subLaneWidth:1})],[{inputKey:'narrow-margin',lane:1,subLaneCoordinate:2.9}],1000,0);
+check('幅1 SLIDEは余白の内側なら開始できる',!!result[0].target);
+RHYTHM_GESTURE_RUNTIME.clear();
+result=rhythmMatchInputBatch([makeSlide({subLaneWidth:1})],[{inputKey:'narrow-outside',lane:1,subLaneCoordinate:3.05}],1000,0);
 check('幅1 SLIDEの開始範囲外は取得しない',!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
 result=rhythmMatchInputBatch([makeSlide({subLaneWidth:4})],[{inputKey:'wide-edge',lane:0,subLaneCoordinate:.01}],1000,0);
@@ -90,7 +95,11 @@ RHYTHM_GESTURE_RUNTIME.clear();
 result=rhythmMatchInputBatch([makeSlide()],[{inputKey:'half-start',lane:1,subLaneCoordinate:2}],1000,0);
 check('メインレーン境界上の0.5位置から旧幅SLIDEを開始できる',!!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
-result=rhythmMatchInputBatch([makeSlide()],[{inputKey:'half-outside',lane:1,subLaneCoordinate:3.01}],1000,0);
+// 旧幅(幅2)の開始範囲は 1〜3。余白 .35 サブレーンの内側までは取れる。
+result=rhythmMatchInputBatch([makeSlide()],[{inputKey:'half-margin',lane:1,subLaneCoordinate:3.3}],1000,0);
+check('旧幅SLIDEは余白の内側なら開始できる',!!result[0].target);
+RHYTHM_GESTURE_RUNTIME.clear();
+result=rhythmMatchInputBatch([makeSlide()],[{inputKey:'half-outside',lane:1,subLaneCoordinate:3.4}],1000,0);
 check('旧幅SLIDE開始範囲の外側は取得しない',!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
 const legacy={type:'SLIDE',timeMs:1000,endTimeMs:2000,lane:2,endLane:3,done:false,activePointerId:null,slidePoints:[{timeMs:1000,lane:2},{timeMs:2000,lane:3}]};

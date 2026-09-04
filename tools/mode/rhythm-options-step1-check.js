@@ -74,7 +74,14 @@ ok('サイズはノーツ頭の描画scaleだけで、帯・ENDバー・入力hi
   &&!game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.noteSize'));
 ok('表示と入力で同じ判定offsetを使い窓幅は不変',game.includes('visualTime=songTimeMs-settings.judgmentTimingOffsetMs')&&game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)')&&game.includes('const rhythmJudgeTap = deltaMs => RHYTHM_JUDGMENTS.find'));
 ok('表示切替・レーン発光は入力を消さない',game.includes('settings.judgmentTextDisplay?view.last')&&game.includes('settings.fastSlowDisplay?(view.fastSlow')&&game.includes("settings.laneGlow==='NONE'?'0'")&&game.includes('inputStarts(starts)'));
-ok('振動未対応を安全に扱う',game.includes('try{navigator.vibrate?.(8);}catch{}'));
+// 振動は 2026-09-05 に作り直した（iPhoneには Vibration API が無く、8msは短すぎた）。
+// 見ているのは「対応していない端末で落ちない・黙って何も起きないままにしない」こと。
+ok('振動未対応を安全に扱う',
+  game.includes('const RHYTHM_HAPTICS=')
+  &&game.includes("typeof navigator.vibrate==='function'")
+  &&game.includes('try{navigator.vibrate(ms);}catch{}')
+  &&game.includes("'switch' in input")
+  &&game.includes('data-rhythm-vibration-unsupported'));
 ok('演出量は彩度だけでなくグローも段階化',game.includes("settings.effectAmount==='MINIMAL'?'none'")&&game.includes("settings.effectAmount==='LOW'?'0 0 8px #67e8f9'"));
 ok('軽量モードはtransitionと複数グローを停止',game.includes("transition:settings.lightweightMode?'none'")&&game.match(/settings\.lightweightMode\|\|settings\.effectAmount==='MINIMAL'\?'none'/g)?.length>=4);
 ok('軽量モードでもプレイ領域とDOM判定ラインを維持',game.includes('data-rhythm-lightweight')&&game.includes('data-rhythm-judgment-line')&&game.includes('data-rhythm-note'));

@@ -6,7 +6,9 @@ const data=read('monster-hero/data/rhythm-mode.js'),game=read('monster-hero/src/
 const context={};vm.runInNewContext(`${data}\nthis.out={RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS,RHYTHM_DIFFICULTIES,RHYTHM_SONGS};`,context);const D=context.out;
 const logic=game.match(/const rhythmJudgeTap = [\s\S]*?\n};/)?.[0];check('純粋な判定・コンボ・スコア関数を抽出できる',!!logic);
 if(logic){const c={RHYTHM_JUDGMENTS:D.RHYTHM_JUDGMENTS,RHYTHM_SCORE_WEIGHTS:D.RHYTHM_SCORE_WEIGHTS,RHYTHM_JUDGMENT_IDS:D.RHYTHM_JUDGMENTS.map(x=>x.id)};vm.runInNewContext(`${logic}\nthis.out={rhythmJudgeTap,rhythmFastSlow,rhythmComboAfter,rhythmCalculateScore};`,c);const L=c.out;
-  [[0,'MARVELOUS'],[25,'MARVELOUS'],[26,'EXCELLENT'],[50,'EXCELLENT'],[51,'GREAT'],[100,'GREAT'],[101,'GOOD'],[150,'GOOD'],[151,'BAD'],[200,'BAD'],[201,'MISS'],[-25,'MARVELOUS'],[-200,'BAD'],[-201,'MISS']].forEach(([ms,id])=>check(`判定境界 ${ms}ms = ${id}`,L.rhythmJudgeTap(ms)===id));
+  // 判定の幅は 2026-09-05 にゆるくした（MARVELOUS 25→40 / EXCELLENT 50→75 /
+  // GREAT 100→130 / GOOD 150→170）。見ているのは「境界のちょうど内側と外側」で変わらない。
+  [[0,'MARVELOUS'],[40,'MARVELOUS'],[41,'EXCELLENT'],[75,'EXCELLENT'],[76,'GREAT'],[130,'GREAT'],[131,'GOOD'],[170,'GOOD'],[171,'BAD'],[200,'BAD'],[201,'MISS'],[-40,'MARVELOUS'],[-200,'BAD'],[-201,'MISS']].forEach(([ms,id])=>check(`判定境界 ${ms}ms = ${id}`,L.rhythmJudgeTap(ms)===id));
   check('早押し/遅押しをFAST/SLOWへ分類',L.rhythmFastSlow(-1)==='FAST'&&L.rhythmFastSlow(1)==='SLOW'&&L.rhythmFastSlow(0)===null);
   check('GOODまでコンボ継続、BAD/MISSで切断',['MARVELOUS','EXCELLENT','GREAT','GOOD'].every(id=>L.rhythmComboAfter(4,id)===5)&&['BAD','MISS'].every(id=>L.rhythmComboAfter(4,id)===0));
   const all={MARVELOUS:10,EXCELLENT:0,GREAT:0,GOOD:0,BAD:0,MISS:0};check('判定90%＋コンボ10%でALL MARVELOUSがmaxScore一致',L.rhythmCalculateScore({judgments:all,maxCombo:10,totalNotes:10,maxScore:600000})===600000);

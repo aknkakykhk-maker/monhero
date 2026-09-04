@@ -13,11 +13,16 @@ const input=(subLaneCoordinate,key='touch:1')=>({lane:Math.max(0,Math.min(4,Math
 const close=(a,b)=>Math.abs(Number(a)-Number(b))<1e-10;
 assert.deepEqual(match([note(4,1)],[input(4.5)]),[0],'幅1中央');
 for(const width of [2,3,4]) assert.deepEqual(match([note(3,width)],[input(3+width-.01)]),[0],`幅${width}内側`);
-assert.deepEqual(match([note(3,2)],[input(2.99)]),[null],'幅2範囲外');
+// 入力側の余白(2026-09-05にゆるくした)。見えている帯のふちギリギリを押しても取れるが、
+// その外は取れない。幅1以外は .35 サブレーン、幅1は .45 サブレーン。
+assert.deepEqual(match([note(3,2)],[input(2.7)]),[0],'幅2の余白の内側なら取れる');
+assert.deepEqual(match([note(3,2)],[input(2.6)]),[null],'幅2の余白より外は取れない');
 assert.deepEqual(match([note(0,1)],[input(.5)]),[0],'左端');
 assert.deepEqual(match([note(9,1)],[input(9.5)]),[0],'右端');
-assert.deepEqual(match([note(4,1)],[input(3.85)]),[0],'幅1の最小タッチ許容内');
-assert.deepEqual(match([note(4,1)],[input(3.8)]),[null],'細ノーツ許容を広げすぎない');
+assert.deepEqual(match([note(4,1)],[input(3.6)]),[0],'幅1の最小タッチ許容内');
+// 隣に幅1のノーツが並ぶとき、その中心はサブレーン3.5にある。
+// 余白がそこまで届くと「隣を狙ったのにこちらが取れる」ので、3.5では取れないこと。
+assert.deepEqual(match([note(4,1)],[input(3.5)]),[null],'細ノーツ許容を隣の中心までは広げない');
 assert.strictEqual(match([note(4,1,0),note(5,1,1)],[input(5)]).filter(x=>x!==null).length,1,'1入力1ノーツ');
 assert.deepEqual(match([note(4,1,0),note(5,1,1)],[input(4.5,'touch:1'),input(5.5,'touch:2')]),[0,1],'別指同時取得');
 // 入力候補の探索最適化: 判定の優先順は従来(time差→位置差→index)と同じ。

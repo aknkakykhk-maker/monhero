@@ -9,11 +9,21 @@ const RHYTHM_DIFFICULTIES = Object.freeze([
   Object.freeze({ id:'EXPERT', maxScore:900000 }),
   Object.freeze({ id:'MASTER', maxScore:1000000 }),
 ]);
+// 判定の幅(ms)。ノーツの時刻からこれだけずれても、その判定になる。
+//
+// 【2026-09-05・実機で遊んだユーザーの指摘でゆるくした】
+// 「やってみて思ったけどめちゃくちゃむずいからタップ判定をもう少しゆるくしたほうがいい」
+// それまでは MARVELOUS が±25msで、指が触れてから画面が反応するまでの遅れ(端末差で
+// 20〜40msある)だけで最上位判定を外す幅だった。よその音ゲーの最上位判定は±40〜50msが
+// ふつうなので、そこへ寄せた。
+//   MARVELOUS 25→40 / EXCELLENT 50→75 / GREAT 100→130 / GOOD 150→170
+// BAD(200ms)だけは動かさない。入力とノーツを結びつける窓が±200msで、
+// ここを広げると「まだ来ていないノーツ」まで拾ってしまうため。
 const RHYTHM_JUDGMENTS = Object.freeze([
-  Object.freeze({ id:'MARVELOUS', windowMs:25, scoreRate:1 }),
-  Object.freeze({ id:'EXCELLENT', windowMs:50, scoreRate:.98 }),
-  Object.freeze({ id:'GREAT', windowMs:100, scoreRate:.9 }),
-  Object.freeze({ id:'GOOD', windowMs:150, scoreRate:.7 }),
+  Object.freeze({ id:'MARVELOUS', windowMs:40, scoreRate:1 }),
+  Object.freeze({ id:'EXCELLENT', windowMs:75, scoreRate:.98 }),
+  Object.freeze({ id:'GREAT', windowMs:130, scoreRate:.9 }),
+  Object.freeze({ id:'GOOD', windowMs:170, scoreRate:.7 }),
   Object.freeze({ id:'BAD', windowMs:200, scoreRate:.3 }),
   Object.freeze({ id:'MISS', windowMs:null, scoreRate:0 }),
 ]);
@@ -409,8 +419,16 @@ const RHYTHM_PERF=(()=>{
 const RHYTHM_PROJECTION_TOP_SCALE=.18;
 const RHYTHM_NOTE_WIDTH_RATIO=.78;
 const RHYTHM_BODY_WIDTH_RATIO=.64;
-// 幅1だけに付ける入力側の余白。隣接する細ノーツの中心までは広げない。
-const RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES=.18;
+// 入力側の余白(サブレーン)。見えている帯のふちギリギリを押したときに
+// 「外れた」ことにしないためのもの。指の当たりは点ではなく面なので、
+// 見た目どおりの範囲だけで受けると、狙って押しても外れることがある。
+//
+// 【2026-09-05・「めちゃくちゃむずい」という指摘でどちらも広げた】
+// 幅1のノーツ .18→.45 / それ以外 0→.35(これまでは余白そのものが無かった)。
+// どちらも「隣のノーツの中心」までは届かない大きさに留めてある
+// (幅1が隣り合うとき、隣の中心はサブレーン1.5ぶん先にある)。
+const RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES=.45;
+const RHYTHM_TAP_TOLERANCE_SUB_LANES=.35;
 const rhythmClamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
 const rhythmProjectionScale=yRatio=>RHYTHM_PROJECTION_TOP_SCALE+(1-RHYTHM_PROJECTION_TOP_SCALE)*Math.pow(rhythmClamp01(yRatio),1.24);
 const rhythmProjectBoundary=(boundary,yRatio)=>{
@@ -1290,7 +1308,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const span=inputSpan(note);
       if(!span)return note.lane===lane;
       if(!Number.isFinite(subCoordinate))return note.lane===lane;
-      const tolerance=span.width===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:0;
+      const tolerance=span.width===1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
       return subCoordinate>=span.start-tolerance&&subCoordinate<=span.end+tolerance;
     };
     const spatialDistance=note=>{
@@ -4361,7 +4379,30 @@ const installRhythmGeometryStyles=()=>{
       70%{opacity:0;transform:scale(1.14)}
       100%{opacity:0;transform:scale(1.14)}}
     /* モンスターノーツを取った瞬間、そのマスモンが大きく跳ねる */
+    /* モンスターノーツを取った瞬間の歓声。1回だけ再生する。
+       【2026-09-05に直した不具合】
+       この指定は !important で、しかも「1回だけ」なので、再生が終わったあとも
+       data-rhythm-side-hit="1" が付いたままだと待機の動きを打ち消し続け、
+       そのマスモンが**曲の終わりまで止まったまま**になっていた。
+       いまは歓声が終わったら印を外し、下の「出番のあと」の動きへ戻す。 */
     [data-rhythm-side-monster][data-rhythm-side-hit="1"]{animation:mhRhythmSideCheer 700ms ease-out 1!important}
+    /* 出番のあと(自分のモンスターノーツを取ったあと)の待機。
+       最初のぴょんぴょんとは別の動きにして、「もう出番は済んだ」ことが見て分かるようにする。
+       跳ねるのをやめ、ゆっくり左右へ揺れながら少し傾く。周期は1拍の2倍。 */
+    [data-rhythm-side-monster][data-rhythm-side-phase="done"][data-rhythm-side-motion="NORMAL"]{
+      animation:mhRhythmSideSway calc(var(--rhythm-side-beat,500ms) * 2) ease-in-out infinite;
+      animation-delay:var(--rhythm-side-delay,0ms)}
+    [data-rhythm-side-monster][data-rhythm-side-phase="done"][data-rhythm-side-motion="SMALL"]{
+      animation:mhRhythmSideSwaySmall calc(var(--rhythm-side-beat,500ms) * 2) ease-in-out infinite;
+      animation-delay:var(--rhythm-side-delay,0ms)}
+    @keyframes mhRhythmSideSway{
+      0%{transform:translate3d(-5%,0,0) rotate(-5deg)}
+      50%{transform:translate3d(5%,0,0) rotate(5deg)}
+      100%{transform:translate3d(-5%,0,0) rotate(-5deg)}}
+    @keyframes mhRhythmSideSwaySmall{
+      0%{transform:translate3d(-2%,0,0) rotate(-2deg)}
+      50%{transform:translate3d(2%,0,0) rotate(2deg)}
+      100%{transform:translate3d(-2%,0,0) rotate(-2deg)}}
     @keyframes mhRhythmSideCheer{
       0%{transform:translate3d(0,0,0) scale(1)}
       22%{transform:translate3d(0,-42%,0) scale(1.22)}

@@ -95,7 +95,7 @@ check('デバッグ専用なのでヘルプへ載せていない',!/性能計測
 // ── 守るもの(計測で触っていないこと) ────────────────────────────────────
 const judgments=data.match(/const RHYTHM_JUDGMENTS = [\s\S]*?\n\]\);/)?.[0]||'';
 check('判定窓は変更していない',
-  ['windowMs:25','windowMs:50','windowMs:100','windowMs:150','windowMs:200'].every(w=>judgments.replace(/\s/g,'').includes(w)),
+  ['windowMs:40','windowMs:75','windowMs:130','windowMs:170','windowMs:200'].every(w=>judgments.replace(/\s/g,'').includes(w)),
   judgments?'':'抽出できず');
 check('スコアの重み(判定90% / コンボ10%)は変更していない',
   /RHYTHM_SCORE_WEIGHTS\s*=\s*Object\.freeze\(\{\s*judgment:\s*\.9\s*,\s*combo:\s*\.1\s*\}\)/.test(data.replace(/\n/g,'')));
