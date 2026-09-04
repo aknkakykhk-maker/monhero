@@ -108,14 +108,14 @@ const firstWidth=polygon=>{const coords=polygon.trim().split(/\s+/).slice(0,2).m
 check('SLIDE帯SVGも幅1〜4を反映する',firstWidth(widePolygon)>firstWidth(narrowPolygon)*3.9);
 
 const hard=RHYTHM_SONGS.find(song=>song.songId==='width_test')?.difficulties?.HARD;
-check('WIDTH TEST HARDにSTEP2B-1位置確認譜面を維持する',hard===widthSlideTestChart&&hard.notes.some(note=>note.type==='SLIDE'));
+check('WIDTH TEST HARDにSTEP2B-1位置確認譜面を維持する',hard.notes===widthSlideTestChart.notes&&hard.notes.some(note=>note.type==='SLIDE'));
 const authoredSlides=hard?.notes?.filter(note=>note.type==='SLIDE')||[];
 check('HARDの authored point は0.5刻みを維持する',authoredSlides.length>0&&authoredSlides.every(note=>[note.lane,note.endLane,...note.slidePoints.map(point=>point.lane)].every(lane=>close(Number(lane)*2,Math.round(Number(lane)*2)))));
 check('HARDは旧幅2相当のまま残す',authoredSlides.every(note=>note.subLaneWidth==null));
 
 const expert=RHYTHM_SONGS.find(song=>song.songId==='width_test')?.difficulties?.EXPERT;
 const variableSlides=expert?.notes?.filter(note=>note.type==='SLIDE')||[];
-check('WIDTH TEST EXPERTに可変幅SLIDE確認譜面がある',expert===widthSlideVariableTestChart&&variableSlides.length>=4);
+check('WIDTH TEST EXPERTに可変幅SLIDE確認譜面がある',expert.notes===widthSlideVariableTestChart.notes&&variableSlides.length>=4);
 check('EXPERTに幅1〜4をすべて収録する',[1,2,3,4].every(width=>variableSlides.some(note=>note.subLaneWidth===width)));
 check('STEP2B-2では1ノーツ内の途中幅変化をまだ入れない',variableSlides.every(note=>note.slidePoints.every(point=>point.subLaneWidth==null&&point.width==null)));
 
@@ -127,8 +127,12 @@ check('END幅は最終pointの実効幅を使う',close(rhythmProjectSlideSpan(1
 check('途中追従許容は現在時刻の補間幅に連動する',close(rhythmSlideTrackingTolerance(changing,1300),RHYTHM_SLIDE_TOLERANCE_LANES+.125));
 check('途中の実効幅2でも追従許容±0.82を厳守する',close(rhythmSlideTrackingTolerance(changing,1200),RHYTHM_SLIDE_TOLERANCE_LANES));
 
+// 譜面そのものが入っているかは**ノーツの配列**で見る。
+// RHYTHM_SONGS は難易度レベル（Lv.）だけを差し替えた新しい入れ物を返すことがあるので、
+// 入れ物の同一性（===）で見ると、レベルが変わっただけで落ちてしまう。
+// ノーツの配列は差し替えないので、こちらで見れば「同じ譜面か」を確かめられる。
 const master=RHYTHM_SONGS.find(song=>song.songId==='width_test')?.difficulties?.MASTER,masterSlides=master?.notes?.filter(note=>note.type==='SLIDE')||[];
-check('WIDTH TEST MASTERへSTEP2B-3譜面を追加する',master===widthSlideChangingTestChart&&masterSlides.length>=4);
+check('WIDTH TEST MASTERへSTEP2B-3譜面を追加する',master.notes===widthSlideChangingTestChart.notes&&masterSlides.length>=4);
 check('MASTERに幅1→4・4→1・1→3→2→4を収録する',masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='1,4')&&masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='4,1')&&masterSlides.some(note=>note.slidePoints.map(point=>point.subLaneWidth).join(',')==='1,3,2,4'));
 check('MASTERに幅変化しながら曲がるSLIDEと途中TAPを収録する',masterSlides.some(note=>new Set(note.slidePoints.map(point=>point.lane)).size>=3&&new Set(note.slidePoints.map(point=>point.subLaneWidth)).size>=3)&&master.notes.some(note=>note.type==='TAP'&&masterSlides.some(slide=>note.timeMs>slide.timeMs&&note.timeMs<slide.endTimeMs)));
 const masterSlideAt=timeMs=>masterSlides.find(note=>note.timeMs===timeMs);

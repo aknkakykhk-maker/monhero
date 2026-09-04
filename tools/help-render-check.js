@@ -50,8 +50,10 @@ const dataTablePrelude = [
   (source.match(/^const BREAKTHROUGH_LEVEL_CAP_GAIN = .*$/m) || [''])[0],
   grab(source, 'const BREAKTHROUGH_STARS_PER_TIER', 'const BREAKTHROUGH_LEVEL_CAPS'),
   grab(source, 'const levelUpPointMultiplier =', 'const RAINBOW_STAR_IMAGE'),
-  // 音ゲーの難易度ごとの満点と上限ランクの表は、難易度定義とランクしきい値・判定関数から作る
-  grab(rhythmModeData, 'const RHYTHM_DIFFICULTIES = Object.freeze([', '// 現在のランクから次のランクまでの進捗'),
+  // 音ゲーの表（難易度ごとの満点と上限ランク／体験版の難易度とレベル）は、
+  // 難易度定義・ランクしきい値・曲と譜面の実データから作る。切り出すと材料が足りなくなるので
+  // data/rhythm-mode.js をまるごと持ち込む（このファイルは単体で読める作りになっている）
+  rhythmModeData,
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
   "const { useState, useEffect, useRef, useContext } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"

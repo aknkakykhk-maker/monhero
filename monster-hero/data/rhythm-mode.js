@@ -3897,7 +3897,34 @@ const sixEternelRemixBeatCharts=Object.freeze({
   MASTER:mhChart(9,sixEternelRemixBeatMasterNotes,SIX_ETERNEL_REMIX_BEAT_DURATION_MS),
 });
 
-const RHYTHM_SONGS = Object.freeze([
+// 譜面のレベル（Lv.）。**手で決めない**。tools/mode/rhythm-chart-level.js が
+// 譜面そのもの（詰まり具合・横の移動・細さ・種類・SLIDEの経路）から計算した値を、
+// `node tools/mode/rhythm-chart-level.js --write` がここへ書き写す。
+// 物差しの基準は「Monster Hero 候補v3 の MASTER = Lv.30」。曲が増えても、
+// この基準からの相対でレベルが決まるので、曲どうしを見比べられる。
+// マーカーの内側は書き換えられるので、手で編集しないこと。
+const RHYTHM_CHART_LEVELS = Object.freeze({
+// <rhythm-chart-levels>
+  atsu_cup_theme_test:Object.freeze({EASY:14,NORMAL:8,HARD:8}),
+  width_test:Object.freeze({EASY:12,NORMAL:10,MASTER:2}),
+  wide_width_test:Object.freeze({EASY:12,HARD:2}),
+  end_flick_test:Object.freeze({EASY:5,HARD:4}),
+  monster_note_test:Object.freeze({EASY:5}),
+  monster_hero_theme_candidate:Object.freeze({EASY:7,NORMAL:9,HARD:12}),
+  monster_hero_theme_candidate_v2:Object.freeze({EASY:9,NORMAL:11,HARD:18,EXPERT:27,MASTER:31}),
+  monster_hero_theme_candidate_v3:Object.freeze({EASY:8,NORMAL:10,HARD:15,EXPERT:21,MASTER:30}),
+  six_eternel_beat:Object.freeze({EASY:10,NORMAL:11,HARD:20,EXPERT:26,MASTER:38}),
+  six_eternel_remix_beat:Object.freeze({EASY:7,NORMAL:9,HARD:15,EXPERT:18,MASTER:25}),
+  atsu_cup_theme_debug_short:Object.freeze({HARD:12}),
+// </rhythm-chart-levels>
+});
+// レベルだけを差し替える。表に無い曲・難易度は、譜面が持っている値をそのまま使う。
+const rhythmChartWithLevel=(songId,difficultyId,chart)=>{
+  const levels=RHYTHM_CHART_LEVELS[songId];
+  const level=levels?levels[difficultyId]:undefined;
+  return Number.isFinite(level)&&level!==chart.level?Object.freeze({...chart,level}):chart;
+};
+const RHYTHM_SONG_ENTRIES = [
   Object.freeze({
     songId:'atsu_cup_theme_test',
     displayName:'あつ杯テーマ',
@@ -3995,7 +4022,10 @@ const RHYTHM_SONGS = Object.freeze([
     playDurationMs:ATSU_CUP_DEBUG_SHORT_END_MS,
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='HARD'?atsuCupDebugShortChart:emptyRhythmChart()])))
   }),
-]);
+];
+const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>Object.freeze({...song,
+  difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>
+    [id,rhythmChartWithLevel(song.songId,id,song.difficulties[id])])))})));
 
 // 先行公開する「音ゲー体験版」で遊べる範囲。ここに書いた1曲・3難易度だけを体験版の画面へ出す。
 // デバッグ画面の曲一覧(RHYTHM_SONGS)とは役割を分ける。デバッグ用の曲を体験版へ出さないため。

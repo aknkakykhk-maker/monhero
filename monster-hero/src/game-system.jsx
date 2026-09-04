@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 05:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 05:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6526,6 +6526,20 @@ const helpDataRows = (id) => {
     case 'rhythmDifficultyRanks':
       return (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).map(d =>
         [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
+    // 体験版で遊べる難易度と、そのレベル・ノーツ数。ヘルプへ手で書き写すと、
+    // 譜面を作り直すたびに数字だけ古くなるため、実データからそのまま表にする
+    case 'rhythmDemoSongLevels': {
+      const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      const song = typeof rhythmDemoSong !== 'undefined' ? rhythmDemoSong(songs) : null;
+      if (!song) return [];
+      const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+      const labels = typeof RHYTHM_DEMO_DIFFICULTY_LABELS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_LABELS : {};
+      return ids.map(id => {
+        const chart = song.difficulties[id];
+        if (!chart) return null;
+        return [(labels[id] && labels[id].name) || id, `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ`];
+      }).filter(Boolean);
+    }
     case 'missionsDaily':
     case 'missionsWeekly':
     case 'missionsMonthly': {
@@ -6559,6 +6573,7 @@ const HELP_DATA_TITLES = {
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
@@ -18595,7 +18610,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     return <article key={difficulty.id} data-rhythm-demo-difficulty={difficulty.id} className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
                       <div className="flex items-center justify-between gap-2">
                         <b className="text-sm font-black text-cyan-200">{label.name}</b>
-                        <span className="text-[9px] font-mono text-slate-400">{chart.totalNotes}ノーツ</span>
+                        <span data-rhythm-demo-level className="text-[9px] font-mono text-slate-400">Lv.{chart.level} / {chart.totalNotes}ノーツ</span>
                       </div>
                       <p className="mt-1 text-[10px] leading-relaxed text-slate-300">{label.note}</p>
                       <p data-rhythm-demo-best className="mt-2 text-[10px] font-bold text-amber-200">
