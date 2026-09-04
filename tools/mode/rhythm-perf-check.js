@@ -166,5 +166,14 @@ check('見え方が変わったときだけ書き込む',gameSrc.includes('if(el
 check('能力が動いていないあいだは表示の文字列を組み立てない',
   gameSrc.includes('const hasAbilityBadge=badge&&(')&&gameSrc.includes('if(hasAbilityBadge){'));
 
+check('ノーツ横位置は毎フレームleftを書かず独立translateで動かす',
+  data.includes("if(el._rhythmPositionOrigin!==true){el.style.left='0px';el._rhythmPositionOrigin=true;}")
+  &&data.includes("el.style.translate=nextTranslate")
+  &&!data.includes("el.style.left=\`\${left.toFixed(2)}px\`;"));
+check('TAP/FLICKで存在しないvisual bodyを毎フレーム再検索しない',
+  data.includes("Object.prototype.hasOwnProperty.call(el,'_rhythmVisualBody')")
+  &&data.includes("el._rhythmVisualBody=body||null;")
+  &&data.includes("RHYTHM_PERF.domQuery();body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]')"));
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
