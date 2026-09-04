@@ -31,7 +31,7 @@
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
-const {HAND_MODEL,noteTouchLane}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,noteTouchLane,noteTouchSpan,separationRange}=require('./rhythm-hand-model.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 
@@ -43,7 +43,7 @@ const LEVEL_ANCHOR=Object.freeze({
 });
 // 生の値をレベルへ直す係数。LEVEL_ANCHOR がぴったり30になるよう、
 // tools/mode/rhythm-chart-level.js --calibrate で出した値をここへ書く。
-const LEVEL_SCALE=30.4291;
+const LEVEL_SCALE=30.8737;
 // レベルは仕事量に**そのまま比例**させる（曲がりを付けない）。
 // こうしておくと「Lv.が2倍なら忙しさも2倍」と説明でき、
 // 曲が増えても物差しがぶれない。上限は先の曲のために広く取っておく。
@@ -59,7 +59,13 @@ const WORK=Object.freeze({
   laneBoostMax:1.2,       // 横移動で増える上限
   thinWidth1:.35,         // 幅1の狙いにくさ
   thinWidth2:.15,
-  chord:.5,               // 同時押し
+  // 同時押しの重さは「離れているかどうか」で決める。
+  // 2つ同時に押すこと自体は難しくない（指は2本ある）。難しいのは近いときで、
+  // 指の太さぎりぎりだと狙いが要る。左端と右端なら、ほとんど1つ押すのと変わらない。
+  chordWide:.15,          // 2レーン以上離れた同時押し
+  chordTight:.6,          // 1レーン（指の太さ）しか離れていない同時押し
+  chordWideLanes:2,
+  chordTightLanes:1,
   flick:.25,
   endFlick:.35,
   whileHeld:.5,           // 押さえっぱなしの最中に押す
@@ -89,7 +95,10 @@ const noteWork=(note,previous,context)=>{
   if(width<=1)work+=WORK.thinWidth1;
   else if(width<=2)work+=WORK.thinWidth2;
   // 4. 種類
-  if(context.chord)work+=WORK.chord;
+  if(context.chordGapLanes!=null){
+    const t=clamp((context.chordGapLanes-WORK.chordTightLanes)/(WORK.chordWideLanes-WORK.chordTightLanes),0,1);
+    work+=WORK.chordTight+(WORK.chordWide-WORK.chordTight)*t;
+  }
   if(note.type==='FLICK')work+=WORK.flick;
   if(note.endFlick===true)work+=WORK.endFlick;
   if(context.held)work+=WORK.whileHeld;
@@ -121,22 +130,34 @@ const chartStrain=chart=>{
   // 押さえっぱなしの区間（HOLD/SLIDE）
   const sustains=notes.filter(note=>note.type==='HOLD'||note.type==='SLIDE')
     .map(note=>({startMs:Number(note.timeMs)||0,endMs:Number(note.endTimeMs)||0}));
-  // 同時押しの判定用
+  // 同時押しの判定用。「同じ瞬間に何個あるか」だけでなく、
+  // 「いちばん近い相方とどれだけ離れているか」まで持つ（離れているほど易しい）。
   const sameTime=new Map();
   for(const note of notes){
     const key=Math.round((Number(note.timeMs)||0)/8);
-    sameTime.set(key,(sameTime.get(key)||0)+1);
+    if(!sameTime.has(key))sameTime.set(key,[]);
+    sameTime.get(key).push(note);
   }
+  const chordGapOf=note=>{
+    const group=sameTime.get(Math.round((Number(note.timeMs)||0)/8))||[];
+    if(group.length<2)return null;
+    let best=Infinity;
+    for(const other of group){
+      if(other===note)continue;
+      best=Math.min(best,separationRange(noteTouchSpan(note),noteTouchSpan(other)).min);
+    }
+    return Number.isFinite(best)?best:null;
+  };
   const works=[];
   let previous=null;
   const parts={gap:0,lane:0,thin:0,chord:0,flick:0,held:0,slide:0};
   for(const note of notes){
     const timeMs=Number(note.timeMs)||0;
-    const chord=(sameTime.get(Math.round(timeMs/8))||0)>=2;
+    const chordGapLanes=chordGapOf(note);
     const held=sustains.some(span=>span.startMs<timeMs-1&&timeMs<span.endMs);
-    const work=noteWork(note,previous,{chord,held});
+    const work=noteWork(note,previous,{chordGapLanes,held});
     works.push({timeMs,work});
-    if(chord)parts.chord++;
+    if(chordGapLanes!=null)parts.chord++;
     if(held)parts.held++;
     if(note.type==='FLICK')parts.flick++;
     if((Number(note.subLaneWidth)||2)<=2)parts.thin++;
