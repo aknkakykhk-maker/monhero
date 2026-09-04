@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 56fe566f74d2bd81
+// source-sha256: 00783cb9f1253bf6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 12:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15629,6 +15629,9 @@ const RhythmTapTest = ({
   const monsters = Array.isArray(monsterEntries) ? monsterEntries : [];
   const monstersRef = useRef(monsters);
   monstersRef.current = monsters;
+  // 親(App本体)は rhythmMonsterNoteEntries を描画のたびに map で作り直すため、配列の同一性では
+  // 判定できない。ノーツの見た目に効く項目だけを文字列にして、中身が同じあいだはメモを保つ。
+  const monsterSignature = monsters.map(m => m ? `${m.baseId}|${m.imageUrl}|${JSON.stringify(m.colors || null)}` : '-').join(',');
   // ノーツのDOMは譜面が変わらないかぎり同じものでよい。ここをuseMemoで固定しないと、
   // ノーツを1つ判定して setView するたびに全ノーツ(最大300要素)をReactが作り直し、
   // ref も付け直すため、タップのたびに一瞬止まって見える(2026-09-04の実機報告)。
@@ -15683,7 +15686,7 @@ const RhythmTapTest = ({
       draggable: false,
       className: "h-full w-full object-contain"
     })));
-  }), [chart.notes, monsterEntries, settings.lightweightMode, settings.effectAmount]);
+  }), [chart.notes, monsterSignature, settings.lightweightMode, settings.effectAmount]);
   // レーン枠・サブレーン境界・サブレーン発光も、遊んでいるあいだは中身が変わらない。
   // 発光の ON/OFF は setPressedLanes が直接DOMへ書くので、Reactが作り直す必要はない。
   const laneElements = useMemo(() => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
