@@ -43,7 +43,7 @@ const LEVEL_ANCHOR=Object.freeze({
 });
 // 生の値をレベルへ直す係数。LEVEL_ANCHOR がぴったり30になるよう、
 // tools/mode/rhythm-chart-level.js --calibrate で出した値をここへ書く。
-const LEVEL_SCALE=30.8737;
+const LEVEL_SCALE=26.9469;
 // レベルは仕事量に**そのまま比例**させる（曲がりを付けない）。
 // こうしておくと「Lv.が2倍なら忙しさも2倍」と説明でき、
 // 曲が増えても物差しがぶれない。上限は先の曲のために広く取っておく。
@@ -66,11 +66,19 @@ const WORK=Object.freeze({
   chordTight:.6,          // 1レーン（指の太さ）しか離れていない同時押し
   chordWideLanes:2,
   chordTightLanes:1,
+  // 同時押しが続けて来るか（1つだけの「決めの一発」と、右左へ振られる連なりは別もの）
+  chordChain:.25,
+  chordChainMs:280,
   flick:.25,
   endFlick:.35,
   whileHeld:.5,           // 押さえっぱなしの最中に押す
+  // 押さえている指の**外側**を叩く（指を交差させる）。押さえながら叩くだけより重い。
+  cross:.45,
   slideTurn:.2,           // SLIDEの折り返し1回ぶん
   slideTurnMax:.8,
+  // SLIDEの追従の速さ。端から端まで走る一本は、同じ長さの小さいSLIDEより重い。
+  slideTrack:.5,
+  slideTrackMax:.9,
 });
 
 const clamp=(value,lo,hi)=>Math.max(lo,Math.min(hi,value));
@@ -99,19 +107,25 @@ const noteWork=(note,previous,context)=>{
     const t=clamp((context.chordGapLanes-WORK.chordTightLanes)/(WORK.chordWideLanes-WORK.chordTightLanes),0,1);
     work+=WORK.chordTight+(WORK.chordWide-WORK.chordTight)*t;
   }
+  if(context.chordChain)work+=WORK.chordChain;
   if(note.type==='FLICK')work+=WORK.flick;
   if(note.endFlick===true)work+=WORK.endFlick;
   if(context.held)work+=WORK.whileHeld;
-  // 5. SLIDEの折り返し
-  if(note.type==='SLIDE'&&Array.isArray(note.slidePoints)&&note.slidePoints.length>=3){
-    let turns=0,lastDirection=0;
-    for(let i=1;i<note.slidePoints.length;i++){
-      const delta=(Number(note.slidePoints[i].lane)||0)-(Number(note.slidePoints[i-1].lane)||0);
+  if(context.cross)work+=WORK.cross;
+  // 5. SLIDEの経路（折り返しの多さ と 追従の速さ）
+  if(note.type==='SLIDE'&&Array.isArray(note.slidePoints)&&note.slidePoints.length>=2){
+    const points=note.slidePoints;
+    let turns=0,lastDirection=0,fastest=0;
+    for(let i=1;i<points.length;i++){
+      const delta=(Number(points[i].lane)||0)-(Number(points[i-1].lane)||0);
       const direction=delta>.01?1:delta<-.01?-1:0;
       if(direction&&lastDirection&&direction!==lastDirection)turns++;
       if(direction)lastDirection=direction;
+      const deltaMs=(Number(points[i].timeMs)||0)-(Number(points[i-1].timeMs)||0);
+      if(deltaMs>0)fastest=Math.max(fastest,Math.abs(delta)/(deltaMs/1000));
     }
     work+=Math.min(WORK.slideTurnMax,turns*WORK.slideTurn);
+    work+=Math.min(WORK.slideTrackMax,WORK.slideTrack*fastest/HAND_MODEL.laneSpeedComfort);
   }
   return work;
 };
@@ -129,7 +143,7 @@ const chartStrain=chart=>{
   const spanMs=Math.max(WORK.windowMs,lastMs-firstMs);
   // 押さえっぱなしの区間（HOLD/SLIDE）
   const sustains=notes.filter(note=>note.type==='HOLD'||note.type==='SLIDE')
-    .map(note=>({startMs:Number(note.timeMs)||0,endMs:Number(note.endTimeMs)||0}));
+    .map(note=>({note,startMs:Number(note.timeMs)||0,endMs:Number(note.endTimeMs)||0}));
   // 同時押しの判定用。「同じ瞬間に何個あるか」だけでなく、
   // 「いちばん近い相方とどれだけ離れているか」まで持つ（離れているほど易しい）。
   const sameTime=new Map();
@@ -148,16 +162,36 @@ const chartStrain=chart=>{
     }
     return Number.isFinite(best)?best:null;
   };
+  // 同時押しが続けて来るところ（右左へ振られる連なり）。
+  // ノーツに印が付いていなくても、譜面の形だけで分かるように「同じ瞬間に2つある位置」の
+  // 並びから見つける。ランタイムの譜面には印が入らないため、印には頼らない。
+  const chordTimes=[...sameTime.entries()].filter(([,group])=>group.length>=2)
+    .map(([key])=>key*8).sort((a,b)=>a-b);
+  const chainedChord=timeMs=>chordTimes.some(other=>
+    other<timeMs-1&&timeMs-other<=WORK.chordChainMs);
+  // 押さえている指の外側を叩いているか（＝指を交差させる置き方）。
+  // 押さえているノーツの中心が画面の左寄りなら、そのさらに左を叩くのが交差。
+  const crossOf=(note,timeMs)=>{
+    const covering=sustains.filter(span=>span.startMs<timeMs-1&&timeMs<span.endMs);
+    if(covering.length!==1)return false;
+    const holdLane=noteTouchLane(covering[0].note),noteLane=noteTouchLane(note);
+    if(Math.abs(noteLane-holdLane)<.5)return false;
+    return holdLane<=2?noteLane<holdLane:noteLane>holdLane;
+  };
   const works=[];
   let previous=null;
-  const parts={gap:0,lane:0,thin:0,chord:0,flick:0,held:0,slide:0};
+  const parts={gap:0,lane:0,thin:0,chord:0,chordChain:0,flick:0,held:0,cross:0,slide:0};
   for(const note of notes){
     const timeMs=Number(note.timeMs)||0;
     const chordGapLanes=chordGapOf(note);
     const held=sustains.some(span=>span.startMs<timeMs-1&&timeMs<span.endMs);
-    const work=noteWork(note,previous,{chordGapLanes,held});
+    const chordChain=chordGapLanes!=null&&chainedChord(timeMs);
+    const cross=held&&crossOf(note,timeMs);
+    const work=noteWork(note,previous,{chordGapLanes,held,chordChain,cross});
     works.push({timeMs,work});
     if(chordGapLanes!=null)parts.chord++;
+    if(chordChain)parts.chordChain++;
+    if(cross)parts.cross++;
     if(held)parts.held++;
     if(note.type==='FLICK')parts.flick++;
     if((Number(note.subLaneWidth)||2)<=2)parts.thin++;

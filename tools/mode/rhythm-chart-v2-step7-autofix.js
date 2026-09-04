@@ -72,7 +72,7 @@ if(!source){console.error(`未知の --source です: ${sourceKind} (${Object.ke
 
 // --- ノーツの位置 ---
 // 指が触るのは中心。式は rhythm-hand-model.js に一本化してある(STEP3・STEP6と同じ物差しにするため)。
-const {noteTouchLane}=require('./rhythm-hand-model.js');
+const {noteTouchLane,usableTouchSpan,separationRange}=require('./rhythm-hand-model.js');
 const laneCenter=note=>noteTouchLane(note);
 // 重なり判定のため、どのノーツもサブレーン座標の範囲へ揃える
 const span=note=>{
@@ -106,8 +106,20 @@ const evaluate=notes=>{
 const placements=(notes,index)=>{
   const note=notes[index];
   const width=Number(note.subLaneWidth)||2;
-  const others=notes.filter((o,i)=>i!==index&&o.grid===note.grid).map(span);
+  const sameGrid=notes.filter((other,i)=>i!==index&&other.grid===note.grid);
+  const others=sameGrid.map(span);
   const fits=candidate=>!others.some(o=>overlaps(candidate,o));
+  // 同時押しの相方がいるノーツは、動かすと**同時押しの離れかた**が変わる。
+  // 離れかたは難易度ごとに決めた「置き方」そのもの（EASYほど大きく離す）なので、
+  // 忙しさを直すために縮めてしまうと、譜面の設計のほうが壊れる。
+  // そこで「いま離れているぶんより狭くしない」を条件に足す。
+  // （2026-09-05・同時押しの連なりを入れたときに、EXPERTの1組が1.00レーンまで
+  //   縮められて設計の1.25レーンを割った。実際に出た不具合）
+  const partnerGap=sameGrid.length
+    ?Math.min(...sameGrid.map(other=>separationRange(usableTouchSpan(note),usableTouchSpan(other)).min))
+    :null;
+  const keepsChord=moved=>partnerGap===null||sameGrid.every(other=>
+    separationRange(usableTouchSpan(moved),usableTouchSpan(other)).min+1e-9>=partnerGap);
   const out=[];
   if(note.type==='SLIDE'){
     // 経路の形は変えず、まるごと0.5レーンずつ平行移動する
@@ -123,6 +135,7 @@ const placements=(notes,index)=>{
         slidePoints:points.map(p=>({...p,lane:Number(p.lane)+delta})),
       };
       if(!fits(span(moved)))continue;
+      if(!keepsChord(moved))continue;
       out.push({note:moved,label:`レーン${(lanes[0]).toFixed(1)}→${(lanes[0]+delta).toFixed(1)}`,delta});
     }
     return out;
@@ -138,6 +151,7 @@ const placements=(notes,index)=>{
     const moved={...note,subLane,lane:Math.floor(subLane/2),
       ...(points?{holdPoints:points.map(point=>({...point,subLane:Number(point.subLane)+delta}))}:{})};
     if(!fits({start:subLane,end:subLane+width}))continue;
+    if(!keepsChord(moved))continue;
     out.push({note:moved,label:`サブレーン${note.subLane}→${subLane}`,delta});
   }
   return out;

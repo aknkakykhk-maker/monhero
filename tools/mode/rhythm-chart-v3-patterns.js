@@ -47,6 +47,17 @@ const PATTERNS=Object.freeze([
   // 縦連: 同じ場所の連打。1本の指で叩ける速さのときだけ選ぶ
   Object.freeze({id:'jack',       minLength:2, maxLength:4,
     lanes:length=>Array.from({length},()=>0)}),
+  // ゆれ: 中央を挟んで左右へ1レーンずつ揺れる。跳びが1なのでEASYでも置ける。
+  // トリル（0,1,0,1）は片側にしか行かないので、EASYの見た目が「右へ寄る交互」ばかりに
+  // なっていた。こちらは左右へ均等に振れるので、同じ跳び1でも印象が変わる。
+  Object.freeze({id:'bounce',     minLength:3, maxLength:6, centered:true,
+    lanes:length=>{const base=[0,1,0,-1,0,1];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  // 踊り場つき階段: 同じ場所を2つ続けてから次のレーンへ上がる。
+  // 同じ場所の連打を含むので、1本の指で叩ける速さのときだけ（jackLike）。
+  Object.freeze({id:'plateau_up',  minLength:4, maxLength:6, jackLike:true,
+    lanes:length=>{const base=[0,0,1,1,2,2];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  Object.freeze({id:'plateau_down',minLength:4, maxLength:6, jackLike:true,
+    lanes:length=>{const base=[0,0,-1,-1,-2,-2];return Array.from({length},(_,i)=>base[i%base.length]);}}),
   // 開き: 中央から外へ広がる（盛り上がり）
   Object.freeze({id:'expand',     minLength:3, maxLength:5, centered:true,
     lanes:length=>Array.from({length},(_,i)=>i%2===0?-Math.ceil(i/2):Math.ceil(i/2))}),
@@ -58,7 +69,27 @@ const PATTERNS=Object.freeze([
   // 「閉じ」と同じ並びにならないよう、大きく振る側と小さく振る側を交互にする。
   Object.freeze({id:'zigzag',     minLength:4, maxLength:6, centered:true,
     lanes:length=>{const base=[-2,1,-1,2,0,-2];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  // 小さいジグザグ: 右へ左へ振りながら少しずつ上がる。跳びが2までなのでHARDでも置ける。
+  // zigzag（跳び3）はEXPERT以上でしか組み立てられず、HARDの譜面が階段と交互だけに
+  // なってしまっていたので、その1段下を用意した。
+  Object.freeze({id:'zigzag2_up',  minLength:4, maxLength:6,
+    lanes:length=>{const base=[0,2,1,3,2,4];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  Object.freeze({id:'zigzag2_down',minLength:4, maxLength:6,
+    lanes:length=>{const base=[0,-2,-1,-3,-2,-4];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  // 交差ステップ: 外側と内側を大きく飛び越えながら進む。
+  // 触る場所が「右→左→右」と本体を追い越していくので、指を交差させて取ることになる。
+  // 跳びが3なのでEXPERT以上でしか組み立てられない（＝難易度の精査は跳びの上限で効く）。
+  Object.freeze({id:'cross_step_up',  minLength:4, maxLength:5,
+    lanes:length=>{const base=[0,3,1,4,2];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  Object.freeze({id:'cross_step_down',minLength:4, maxLength:5,
+    lanes:length=>{const base=[0,-3,-1,-4,-2];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  // 端振り: 端から端へ大きく振ってから内側へ収める。跳び4なのでMASTERだけ。
+  Object.freeze({id:'edge_swing', minLength:3, maxLength:6,
+    lanes:length=>{const base=[0,4,1,3,2,4];return Array.from({length},(_,i)=>base[i%base.length]);}}),
 ]);
+// 直近に使った形を避けるとき、候補の上位いくつまでを見るか。
+// 大きくすると語彙は散るが、音の動きに合っていない形まで選ばれてしまう。
+const FRESH_WINDOW=4;
 const PATTERN_BY_ID=Object.freeze(Object.fromEntries(PATTERNS.map(p=>[p.id,p])));
 
 // その長さで実際に何レーン跳ぶか（難易度の maxLaneStep と比べるのに使う）
@@ -87,11 +118,13 @@ const baseRange=offsets=>{
 // maxStep    … その難易度で許すレーンの跳び幅
 // fastest    … その区切りがいちばん細かい刻み（16分など）でできているか
 // allowJack  … 同じ場所の連打を許す間隔か（1本の指で叩ける速さか）
+// recent     … 直前に使った形のid（続けて同じ形にしないため）
 // 返り値: 形の候補（好ましい順）。それぞれ {pattern, offsets, step}
-const shapeCandidatesFor=({length,heights,maxStep,fastest=false,allowJack=false,rhythmShape=null,rotate=0})=>{
+const shapeCandidatesFor=({length,heights,maxStep,fastest=false,allowJack=false,rhythmShape=null,rotate=0,recent=null})=>{
   const build=pattern=>{
     if(length<pattern.minLength||length>pattern.maxLength)return null;
-    if(pattern.id==='jack'&&!allowJack)return null;
+    // 同じ場所を続けて叩く形は、1本の指で叩き直せる速さのときだけ
+    if((pattern.id==='jack'||pattern.jackLike===true)&&!allowJack)return null;
     const offsets=pattern.lanes(length);
     const step=maxStepOf(offsets);
     if(step>maxStep)return null;
@@ -132,41 +165,62 @@ const shapeCandidatesFor=({length,heights,maxStep,fastest=false,allowJack=false,
 
     if(flat){
       // 本当に同じ高さが続く＝同じ音の連打
-      if(allowJack)push('jack');
+      if(allowJack){push('jack');push('plateau_up');}
       if(fastest)push('trill');
-      push('alternate2');
+      push('bounce');push('alternate2');
     }else if(turnRatio>=.55){
+      // 上下に振れる音。振れ幅の大きいものから並べるので、跳びの上限で
+      // 難易度が自然に効く（cross_step は跳び3＝EXPERT以上、zigzag2 は跳び2＝HARD以上）。
       if(fastest)push('trill');
-      push('zigzag');push('alternate3');push('alternate2');
+      push('zigzag');push('zigzag2_up');push('cross_step_up');
+      push('alternate3');push('alternate2');
     }else if(inner(peakIndex)){
-      push('fold_up');push('stair_up');push('expand');
+      push('fold_up');push('stair_up');push('expand');push('zigzag2_up');
     }else if(inner(valleyIndex)){
-      push('fold_down');push('stair_down');push('contract');
+      push('fold_down');push('stair_down');push('contract');push('zigzag2_down');
     }else if(move>=.5){
+      // 上がっていく音。素直な階段が第一候補で、跳ね上がりが大きいときだけ
+      // 大股の形（2つ飛ばし・交差ステップ）を候補に足す。
       if(span>=.22)push('stair2_up');
-      push('stair_up');push('expand');
+      push('stair_up');
+      if(span>=.4)push('cross_step_up');
+      push('expand');push('zigzag2_up');
     }else if(move<=-.5){
       if(span>=.22)push('stair2_down');
-      push('stair_down');push('contract');
+      push('stair_down');
+      if(span>=.4)push('cross_step_down');
+      push('contract');push('zigzag2_down');
     }else{
-      push('fold_up');push('alternate2');push('trill');
+      push('fold_up');push('bounce');push('alternate2');push('trill');push('edge_swing');
     }
   }else if(rhythmShape){
     // 音の高さが取れない（打楽器だけの区切り）。刻みの細かさで形を選ぶ。
     //   細かい＝トリル / 拍ごと＝階段や折り返し / 2つだけ＝交互
-    if(rhythmShape==='fast'){push('trill');push('zigzag');push('alternate2');}
-    else if(rhythmShape==='beat'){push('fold_up');push('stair_up');push('stair_down');push('alternate2');}
-    else{push('alternate2');push('alternate3');}
+    if(rhythmShape==='fast'){push('trill');push('zigzag');push('zigzag2_up');push('alternate2');}
+    else if(rhythmShape==='beat'){push('fold_up');push('stair_up');push('bounce');push('stair_down');push('zigzag2_up');push('alternate2');}
+    else{push('alternate2');push('alternate3');push('edge_swing');}
   }
 
   // 高さが取れないとき（打楽器だけの区間）は、左右で受け合う形を基本にする
   push(length>=4?'alternate3':'alternate2');
   push('stair_up');push('stair_down');push('fold_up');push('fold_down');
+  push('bounce');push('plateau_up');push('plateau_down');
   push('trill');push('jack');
   for(const pattern of PATTERNS)push(pattern.id);
   // 同じ条件がずっと続く区間で、毎回まったく同じ形にならないようにする。
   // 乱数は使わず「何番目の区切りか」で上位2つを入れ替えるだけなので、結果は毎回同じになる。
   if(rotate%2===1&&order.length>=2)[order[0],order[1]]=[order[1],order[0]];
+  // 直前に使った形は後回しにする。
+  // これが無いと、音の高さの動きが同じ区切りが続くたびに同じ形が選ばれ、
+  // 語彙を14種類そろえても実際には上位4〜5種類しか出てこない（実測: EASYで6種類しか出ていなかった）。
+  // 「ふさわしい形」を捨てるのではなく、**同じくらいふさわしい候補の中で**新しいほうを前へ出すだけなので、
+  // 音との対応は崩さない（見るのは上位 FRESH_WINDOW 件だけ）。
+  if(recent&&recent.length&&order.length>=2){
+    const avoid=new Set(recent);
+    const limit=Math.min(order.length,FRESH_WINDOW);
+    const fresh=order.slice(0,limit).findIndex(candidate=>!avoid.has(candidate.pattern.id));
+    if(fresh>0){const [pick]=order.splice(fresh,1);order.unshift(pick);}
+  }
   return order;
 };
 
