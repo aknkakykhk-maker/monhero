@@ -321,7 +321,8 @@ const RHYTHM_PERF=(()=>{
   // worst* は、いちばん長かったフレームの直前に数えたぶんを保存したもの。
   // 「長いフレームで何が増えていたのか」を切り分けるために持つ。
   const zero=()=>({frames:0,totalMs:0,maxMs:0,long:[0,0,0],layoutReads:0,domQueries:0,slidePolygons:0,gestureFrames:0,noteRescans:0,
-    notesScanned:0,notesDrawn:0,pendingScanned:0,pendingDrawn:0,worstScanned:0,worstDrawn:0});
+    notesScanned:0,notesDrawn:0,pendingScanned:0,pendingDrawn:0,worstScanned:0,worstDrawn:0,
+    tickMs:0,pendingTickMs:0,worstTickMs:0,maxTickMs:0,headSkipped:0,pendingHeadSkipped:0,narrowed:null});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -342,15 +343,24 @@ const RHYTHM_PERF=(()=>{
         if(dt>0&&dt<2000){
           acc.frames++;acc.totalMs+=dt;
           acc.notesScanned+=acc.pendingScanned;acc.notesDrawn+=acc.pendingDrawn;
-          if(dt>acc.maxMs){acc.maxMs=dt;acc.worstScanned=acc.pendingScanned;acc.worstDrawn=acc.pendingDrawn;}
+          acc.tickMs+=acc.pendingTickMs;acc.headSkipped+=acc.pendingHeadSkipped;
+          if(acc.pendingTickMs>acc.maxTickMs)acc.maxTickMs=acc.pendingTickMs;
+          if(dt>acc.maxMs){acc.maxMs=dt;acc.worstScanned=acc.pendingScanned;acc.worstDrawn=acc.pendingDrawn;acc.worstTickMs=acc.pendingTickMs;}
           for(let i=0;i<RHYTHM_PERF_LONG_MS.length;i++)if(dt>RHYTHM_PERF_LONG_MS[i])acc.long[i]++;
         }
       }
-      acc.pendingScanned=0;acc.pendingDrawn=0;
+      acc.pendingScanned=0;acc.pendingDrawn=0;acc.pendingTickMs=0;acc.pendingHeadSkipped=0;
       last=Number.isFinite(t)?t:null;
     },
     // tickのノーツ走査から呼ぶ。ONのときだけ足し込む(OFFなら即return)
-    notes(scanned,drawn){if(!on)return;acc.pendingScanned=Number(scanned)||0;acc.pendingDrawn=Number(drawn)||0;},
+    notes(scanned,drawn,headSkipped,narrowed){if(!on)return;acc.pendingScanned=Number(scanned)||0;acc.pendingDrawn=Number(drawn)||0;
+      acc.pendingHeadSkipped=Number(headSkipped)||0;if(narrowed!==undefined)acc.narrowed=!!narrowed;},
+    // 本体のrAFの中身そのものにかかった時間。
+    // 注意: フレーム全体(avgMs)との差は「描画時間」ではない。rAFの間隔には
+    // 次のリフレッシュを待つ時間(60Hzなら何もしなくても16.7ms)と、この
+    // コールバックの外で走る処理が含まれる。差は「tickの外で起きている時間」
+    // としか言えないので、そこから先は別に測る。rAFは増やさない。
+    tick(ms){if(!on)return;const v=Number(ms);if(Number.isFinite(v)&&v>=0)acc.pendingTickMs=v;},
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
     layoutRead(){if(on)acc.layoutReads++;},
@@ -374,6 +384,11 @@ const RHYTHM_PERF=(()=>{
         notesDrawnPerFrame:per(acc.notesDrawn),
         worstFrameScanned:acc.worstScanned,
         worstFrameDrawn:acc.worstDrawn,
+        tickMsPerFrame:per(acc.tickMs),
+        worstFrameTickMs:acc.worstTickMs,
+        maxTickMs:acc.maxTickMs,
+        headSkippedPerFrame:per(acc.headSkipped),
+        narrowed:acc.narrowed,
       };
     },
   };

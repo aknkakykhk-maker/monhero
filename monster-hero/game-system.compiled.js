@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1dc5d6dfb5103cde
+// source-sha256: 4911d796c625f352
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 13:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 16:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16074,6 +16074,7 @@ const RhythmTapTest = ({
       RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();
       const run = runRef.current;
       if (!run || run.finished || run.paused) return;
+      const perfTickStart = RHYTHM_PERF.enabled ? performance.now() : 0;
       const songTimeMs = run.audio.songTimeMs(),
         travel = measureTravel(),
         visualTime = songTimeMs - settings.judgmentTimingOffsetMs,
@@ -16159,7 +16160,10 @@ const RhythmTapTest = ({
       while (scanFrom < notes.length) {
         const head = notes[scanFrom],
           headEl = laneRefs.current[head.index];
-        if (!(head.done && headEl && headEl._rhythmHidden === true)) break;
+        // 判定が終わっていることが先頭を進める条件。表示の後始末(非表示)が残っているあいだは進めない。
+        // 要素そのものが無いノーツは隠す対象が無いので、判定さえ終わっていれば進めてよい
+        // (要素が無いと永久に先頭が止まり、絞り込みがまるごと効かなくなっていた)。
+        if (!(head.done && (headEl ? headEl._rhythmHidden === true : true))) break;
         scanFrom++;
       }
       run.scanFrom = scanFrom;
@@ -16171,7 +16175,7 @@ const RhythmTapTest = ({
         visitNote(note);
       }
       run.notesReady = true;
-      RHYTHM_PERF.notes(perfScanned, perfDrawn);
+      RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
       // 無敵・我慢の残り時間と根性ストックは、毎フレームsetStateせずDOMへ直接書く。
       // スコアやコンボと同じ頻度でReactを走らせると、そのぶんノーツの描画が遅れるため。
       const badge = abilityBadgeRef.current;
@@ -16196,6 +16200,7 @@ const RhythmTapTest = ({
         if (badge.hidden !== (text === '')) badge.hidden = text === '';
       }
       const playEndTimeMs = Number.isFinite(Number(song.playDurationMs)) ? Number(song.playDurationMs) : chart.durationMs;
+      if (RHYTHM_PERF.enabled) RHYTHM_PERF.tick(performance.now() - perfTickStart);
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
@@ -34957,7 +34962,7 @@ function MonsterHeroGame() {
     }, "\u8A18\u9332\u3092\u30AF\u30EA\u30A2")), rhythmPerfStats && /*#__PURE__*/React.createElement("dl", {
       "data-rhythm-perf-stats": true,
       className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
+    }, [['フレーム数', rhythmPerfStats.frames], ['平均fps', rhythmPerfStats.fps.toFixed(1)], ['平均フレーム', `${rhythmPerfStats.avgMs.toFixed(1)}ms`], ['最悪フレーム', `${rhythmPerfStats.maxMs.toFixed(1)}ms`], ['16.7ms超', rhythmPerfStats.over16], ['25ms超', rhythmPerfStats.over25], ['33ms超', rhythmPerfStats.over33], ['レイアウト測定/frame', rhythmPerfStats.layoutReadsPerFrame.toFixed(2)], ['DOM検索/frame', rhythmPerfStats.domQueriesPerFrame.toFixed(2)], ['SLIDE帯更新/frame', rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)], ['ジェスチャーrAF', rhythmPerfStats.gestureFrames], ['ノーツ再検索', rhythmPerfStats.noteRescans], ['走査ノーツ/frame', rhythmPerfStats.notesScannedPerFrame.toFixed(1)], ['実描画ノーツ/frame', rhythmPerfStats.notesDrawnPerFrame.toFixed(1)], ['最悪frameの走査/実描画', `${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`], ['先頭スキップ/frame', rhythmPerfStats.headSkippedPerFrame.toFixed(1)], ['走査の絞り込み', rhythmPerfStats.narrowed === null ? '未計測' : rhythmPerfStats.narrowed ? '有効' : '無効(昇順でない譜面)'], ['tick処理/frame', `${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`], ['最悪frameのtick処理', `${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`], ['tick処理の最大', `${rhythmPerfStats.maxTickMs.toFixed(1)}ms`]].map(([label, value]) => /*#__PURE__*/React.createElement(React.Fragment, {
       key: label
     }, /*#__PURE__*/React.createElement("dt", {
       className: "text-slate-400"
