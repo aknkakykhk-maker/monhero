@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 13:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 13:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8574,6 +8574,9 @@ const progress=1-(note.timeMs-visualTime)/travelMs,visible=failedTrail||note.act
 if(!visible||!travel)return;
 perfDrawn++;let yPx=travel.spawnY+rhythmProjectTravelProgress(progress)*travel.travelPx;if(note.type==='HOLD'&&note.activePointerId!==null)yPx=travel.judgmentY;yPx=Math.round(yPx);el.style.transform=`translate3d(0,${yPx}px,0)`;const releaseTargetMs=rhythmReleaseTargetMs(note),releaseProgress=1-(releaseTargetMs-visualTime)/travelMs,releaseYpx=Math.round(travel.spawnY+rhythmProjectTravelProgress(releaseProgress)*travel.travelPx),bodyPx=Math.max(0,yPx-releaseYpx);if(note.type==='HOLD'){el.style.setProperty('--rhythm-hold-body',`${Math.round(bodyPx)}px`);el.style.filter=note.activePointerId!==null?'brightness(1.3)':'';}if(note.type==='SLIDE'||note._rhythmOriginalType==='SLIDE'){el.style.setProperty('--rhythm-slide-height',`${Math.round(bodyPx)}px`);el.style.setProperty('--rhythm-slide-visible-height',`${Math.round(bodyPx)}px`);}const activeSlideLane=RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),visualLane=activeSlideLane===null?note.lane:activeSlideLane;rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:songTimeMs-settings.judgmentTimingOffsetMs,visualTime,travelMs,spawnY:travel.spawnY,travelPx:travel.travelPx},{rect:travel.rect,noteHeight:travel.noteHeight,bodyHeight:bodyPx});};
 const notes=run.notes;
+// 末尾の打ち切りは「ノーツが時刻の昇順に並んでいる」ことが前提。譜面エディタなどから
+// 並び順が崩れた譜面が来た場合は絞り込まず、従来どおり全ノーツを見る(取りこぼさないため)。
+if(run.notesAscending===undefined)run.notesAscending=notes.every((n,i)=>i===0||n.timeMs>=notes[i-1].timeMs);
 let scanFrom=run.scanFrom||0;
 while(scanFrom<notes.length){
   const head=notes[scanFrom],headEl=laneRefs.current[head.index];
@@ -8584,7 +8587,7 @@ run.scanFrom=scanFrom;
 const scanHorizonMs=visualTime+travelMs*1.2;
 for(let i=scanFrom;i<notes.length;i++){
   const note=notes[i];
-  if(run.notesReady&&note.timeMs>scanHorizonMs)break;
+  if(run.notesReady&&run.notesAscending&&note.timeMs>scanHorizonMs)break;
   perfScanned++;
   visitNote(note);
 }

@@ -23,7 +23,11 @@ check('終わって非表示にし終えたノーツから先頭を進める',
   &&game.includes('run.scanFrom=scanFrom;'));
 check('出番がまだ遠いノーツで打ち切る',
   game.includes('const scanHorizonMs=visualTime+travelMs*1.2;')
-  &&game.includes('if(run.notesReady&&note.timeMs>scanHorizonMs)break;'));
+  &&game.includes('if(run.notesReady&&run.notesAscending&&note.timeMs>scanHorizonMs)break;'));
+// 末尾の打ち切りは「時刻の昇順」が前提。譜面エディタなどから並び順が崩れた譜面が来ても
+// 取りこぼさないよう、昇順でないときは絞り込まず全ノーツを見る形になっていること。
+check('昇順でない譜面のときは打ち切りを自動で止める',
+  game.includes('if(run.notesAscending===undefined)run.notesAscending=notes.every((n,i)=>i===0||n.timeMs>=notes[i-1].timeMs);'));
 check('初回フレームだけは全ノーツを一巡して初期表示を作る',game.includes('run.notesReady=true;'));
 check('走査数・実描画数を計測へ渡している',game.includes('RHYTHM_PERF.notes(perfScanned,perfDrawn);'));
 
@@ -36,8 +40,10 @@ const base=chart.notes.map((n,i)=>({index:i,timeMs:Math.round(beatZero+n.grid*gr
 const releaseTargetMs=n=>n.durationGrids?n.timeMs+n.durationGrids*gridMs:n.timeMs;
 check('検証に使う譜面が時刻の昇順',base.every((n,i)=>i===0||n.timeMs>=base[i-1].timeMs),`${base.length}ノーツ`);
 
-const simulate=narrow=>{
-  const ns=base.map(n=>({...n,done:false,activePointerId:null,hidden:false,everVisible:false}));
+const simulate=(narrow,source=base)=>{
+  const ns=source.map(n=>({...n,done:false,activePointerId:null,hidden:false,everVisible:false}));
+  // 実装と同じく、時刻の昇順でない譜面のときは末尾の打ち切りを行わない
+  const ascending=ns.every((n,i)=>i===0||n.timeMs>=ns[i-1].timeMs);
   const missAt=new Map();let scanFrom=0,ready=false,maxScan=0,totalScan=0,frames=0,unhide=0;
   for(let t=0;t<=160000;t+=1000/60){
     const songTimeMs=t,visualTime=t-offset;let scanned=0;
@@ -45,7 +51,7 @@ const simulate=narrow=>{
     const horizon=visualTime+travelMs*1.2;
     for(let i=narrow?scanFrom:0;i<ns.length;i++){
       const note=ns[i];
-      if(narrow&&ready&&note.timeMs>horizon)break;
+      if(narrow&&ready&&ascending&&note.timeMs>horizon)break;
       scanned++;
       if(!note.done&&note.activePointerId===null&&songTimeMs-(note.timeMs+offset)>200){
         note.done=true;note.judgment='MISS';missAt.set(note.index,Math.round(songTimeMs));
@@ -75,6 +81,15 @@ check('一度隠したノーツが復活しない',narrow.unhide===0);
 check('走査数が実際に減っている',narrow.avgScan<full.avgScan/10,
   `全走査 平均${full.avgScan.toFixed(1)} → 絞込 平均${narrow.avgScan.toFixed(1)} (${(100-narrow.avgScan/full.avgScan*100).toFixed(1)}%減)`);
 check('初回だけは全ノーツを一巡する',narrow.maxScan===base.length,`最大${narrow.maxScan}`);
+
+// 譜面の並び順が崩れていても取りこぼさないこと(打ち切りが自動で止まる)
+const shuffled=base.slice();
+for(let i=shuffled.length-1;i>0;i--){const j=(i*7919+13)%(i+1);[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+const messy=simulate(true,shuffled);
+check('並び順が崩れた譜面でも全ノーツが判定される',
+  messy.missAt.size===base.length,`${messy.missAt.size}/${base.length}`);
+check('並び順が崩れた譜面でもノーツが消えない',
+  messy.ns.every(n=>n.everVisible)&&messy.unhide===0);
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
