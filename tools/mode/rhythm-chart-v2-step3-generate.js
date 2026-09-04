@@ -62,19 +62,39 @@ const PROFILES=Object.freeze({
     level:1,candidateSource:'normal',minStrength:0,latticeGrids:2,
     perBarByIntensity:[2,3,4],maxConsecutiveEighths:2,maxLaneStep:1,
     widths:[2],simultaneous:false,types:['TAP','HOLD'],
-    holdMaxCount:10,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,
+    holdMaxCount:10,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,chordMaxCount:0,
   }),
   NORMAL:Object.freeze({
     level:3,candidateSource:'dense',minStrength:.45,latticeGrids:2,
     perBarByIntensity:[3,4,6],maxConsecutiveEighths:4,maxLaneStep:2,
     widths:[1,2,3],simultaneous:false,types:['TAP','HOLD','FLICK'],
-    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:12,slideMaxCount:0,
+    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:12,slideMaxCount:0,chordMaxCount:0,
   }),
   HARD:Object.freeze({
     level:5,candidateSource:'dense',minStrength:.30,latticeGrids:1,
     perBarByIntensity:[5,7,9],maxConsecutiveEighths:6,maxLaneStep:3,
     widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
-    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:16,slideMaxCount:8,
+    holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:16,slideMaxCount:8,chordMaxCount:0,
+  }),
+  // EXPERT/MASTERは既存dense候補(しきい値0.30)では供給が頭打ちのため、STEP1の
+  // events.onsets(強さ0.197まで持つ)を候補源にする。同時押しは新しい時刻を作らず、
+  // 低域と高域が同時に立ち上がった既存ノーツだけを2レーンへ分ける(chordMaxCount)。
+  // minStrengthはdense(V1/HARD)とstep1(EXPERT/MASTER)で別アルゴリズムの強さ尺度であり、
+  // 同じ数値でも選ばれやすさが違うため、単純な数値の対応では揃わない。
+  // ノーツ数・密度がEASY<NORMAL<HARD<EXPERT<MASTERの順で必ず増えることを
+  // rhythm-chart-v2-step3-check.jsで実測確認しながら較正した値を使う。
+  // MASTERのminStrength=0は「事実上のしきい値(0.197)より下を指定し、候補を絞らない」の意図。
+  EXPERT:Object.freeze({
+    level:7,candidateSource:'step1',minStrength:.20,latticeGrids:1,
+    perBarByIntensity:[7,10,13],maxConsecutiveEighths:8,maxLaneStep:4,
+    widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
+    holdMaxCount:15,holdMinGapGrids:8,flickMaxCount:18,slideMaxCount:9,chordMaxCount:10,
+  }),
+  MASTER:Object.freeze({
+    level:9,candidateSource:'step1',minStrength:0,latticeGrids:1,
+    perBarByIntensity:[10,14,18],maxConsecutiveEighths:12,maxLaneStep:4,
+    widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
+    holdMaxCount:18,holdMinGapGrids:6,flickMaxCount:22,slideMaxCount:11,chordMaxCount:16,
   }),
 });
 
@@ -116,7 +136,20 @@ const loadCandidates=key=>{
   }
   return map;
 };
-const CANDIDATE_MAPS=Object.freeze({normal:loadCandidates('normal'),dense:loadCandidates('dense')});
+// EXPERT/MASTER用: 既存のdenseファイル(しきい値0.30)より広いオンセット候補が要るが、
+// 新しい音源解析(ffmpeg等)を追加せず、STEP1で既に抽出済みのevents.onsets(931件、
+// 強さ0.197まで持つ)をそのまま候補へ転用する。STEP1は解析用途で作った副産物であり、
+// この転用自体は新しい解析を増やさない。
+const candidatesFromStep1Onsets=()=>{
+  const map=new Map();
+  for(const o of features.events.onsets){
+    const grid=o.nearestGridIndex,strength=o.strength,offsetMs=o.gridOffsetMs;
+    const prev=map.get(grid);
+    if(!prev||strength>prev.strength)map.set(grid,{grid,strength,offsetMs});
+  }
+  return map;
+};
+const CANDIDATE_MAPS=Object.freeze({normal:loadCandidates('normal'),dense:loadCandidates('dense'),step1:candidatesFromStep1Onsets()});
 const minGrid=Math.ceil((COMMON.minTimeMs-timing.beatZeroMs)/gridMs);
 const maxGrid=Math.floor((timing.audioDurationMs-COMMON.endPaddingMs-timing.beatZeroMs)/gridMs);
 const minBar=Math.floor(minGrid/BAR),maxBar=Math.floor(maxGrid/BAR);
@@ -415,6 +448,40 @@ const buildChart=(difficulty)=>{
     notes.sort((a,b)=>a.grid-b.grid||a.subLane-b.subLane);
   }
 
+  // --- 同時押し（EXPERT/MASTER限定）: 新しい時刻は作らない。既存のTAPのうち、
+  //     低域と高域が同時に強く立ち上がった瞬間（=1つの音に複数の音域が乗っている）
+  //     だけを、2本指で分けて取る2レーン同時押しへ変える。 ---
+  const chords=[];
+  if(P.chordMaxCount>0){
+    const overlapsRange=(aStart,aWidth,bStart,bWidth)=>aStart<bStart+bWidth&&bStart<aStart+aWidth;
+    const bandsAt=grid=>{
+      const ms=gridTimeMs(grid);
+      let nearest=null,bestDist=Infinity;
+      for(const w of timeline){const d=Math.abs(w.centerMs-ms);if(d<bestDist){bestDist=d;nearest=w;}}
+      return nearest?nearest.frequencyBands:null;
+    };
+    const chordCandidates=[];
+    for(let i=0;i<notes.length;i++){
+      const note=notes[i];
+      if(note.type!=='TAP'||note.chordWithGrid!=null)continue;
+      const bands=bandsAt(note.grid);
+      if(!bands)continue;
+      if(bands.low.attack>=.6&&bands.high.attack>=.6)chordCandidates.push({index:i});
+    }
+    for(const {index} of spread(chordCandidates,P.chordMaxCount,4)){
+      const note=notes[index];
+      const baseStart=note.subLane,baseWidth=note.subLaneWidth||1;
+      const companionLane=baseStart<=4?8:0;
+      if(overlapsRange(companionLane,1,baseStart,baseWidth))continue;
+      const collides=notes.some(o=>o.grid===note.grid&&o.subLane!=null&&overlapsRange(companionLane,1,o.subLane,o.subLaneWidth||1));
+      if(collides)continue;
+      chords.push({type:'TAP',grid:note.grid,lane:Math.floor(companionLane/2),subLane:companionLane,subLaneWidth:1,
+        sourceStrength:note.sourceStrength,sourcePeakOffsetMs:note.sourcePeakOffsetMs,chordWithGrid:note.grid});
+    }
+    notes.push(...chords);
+    notes.sort((a,b)=>a.grid-b.grid||a.subLane-b.subLane);
+  }
+
   const firstGrid=notes[0].grid,lastGrid=notes[notes.length-1].grid;
   const span=lastGrid-firstGrid;
   const used=new Set();
@@ -467,18 +534,19 @@ const buildChart=(difficulty)=>{
     monsterSlotGrids:notes.filter(n=>n.monsterSlot).map(n=>n.grid),
     earReviewGrids:earReview,
     motif:{phrasesTotal:motifPhrasesTotal,phrasesApplied:motifPhrasesApplied,notesAttempted:motifNotesAttempted,notesGrounded:motifNotesGrounded},
+    chordCount:chords.length,
     notes,
   };
 };
 
-const DIFFICULTIES=only?[only]:['EASY','NORMAL','HARD'];
+const DIFFICULTIES=only?[only]:['EASY','NORMAL','HARD','EXPERT','MASTER'];
 for(const difficulty of DIFFICULTIES){
   if(!PROFILES[difficulty])throw new Error(`未知の難易度: ${difficulty}`);
   const candidate=buildChart(difficulty);
   const first=candidate.notes[0],last=candidate.notes[candidate.notes.length-1];
   console.log(`${difficulty}: ${candidate.noteCount}ノーツ (${Object.entries(candidate.typeCounts).map(([k,v])=>`${k}${v}`).join(' / ')})`);
   console.log(`  ${(gridTimeMs(first.grid)/1000).toFixed(1)}s〜${(gridTimeMs(last.grid)/1000).toFixed(1)}s / ${candidate.densityPerSecond}ノーツ毎秒 / 耳確認${candidate.earReviewGrids.length}件`);
-  console.log(`  motif: 反復フレーズ${candidate.motif.phrasesTotal}件中${candidate.motif.phrasesApplied}件へ適用 / 音${candidate.motif.notesAttempted}件中${candidate.motif.notesGrounded}件を実オンセットへ接地`);
+  console.log(`  motif: 反復フレーズ${candidate.motif.phrasesTotal}件中${candidate.motif.phrasesApplied}件へ適用 / 音${candidate.motif.notesAttempted}件中${candidate.motif.notesGrounded}件を実オンセットへ接地${candidate.chordCount?` / 同時押し${candidate.chordCount}件`:''}`);
   if(!write)continue;
   const out=outputDir
     ?path.join(path.resolve(outputDir),`${trackId.replace(/_/g,'-')}-v2-chart-${difficulty.toLowerCase()}.json`)
