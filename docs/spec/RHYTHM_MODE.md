@@ -2831,6 +2831,70 @@ node tools/build.js
 レベルの計算でも、同時押しの重さは**離れているほど軽く**している
 （2レーンで+0.15、指の太さぎりぎりで+0.6）。
 
+### 判定ラインの拍と、毎フレームの書き込みを減らす（2026-09-05）
+
+**演出強化**: 判定ラインを曲の1拍で脈打たせる（`@keyframes mhRhythmLinePulse`）。
+
+- 拍の長さ `--rhythm-beat` は `beginRun` で**一度だけ**書く。毎フレームのJSは増えない。
+- 動かすのは `opacity` と `scaleY` のみ。`transform-origin:50% 50%` なので**線の位置は動かない**。
+  判定・入力・当たり判定には影響しない。
+- 軽量モード / 演出量MINIMAL では `animation:none`。
+
+**最適化**（見た目・判定・スコア・譜面は変えない）:
+
+| やったこと | なぜ効くか |
+| --- | --- |
+| 縦位置 `transform` を、丸めた `yPx` が変わったときだけ書く | 奥にいるノーツは1フレームの移動が1px未満。書けば合成のやり直し対象になるのに、見た目は1pxも変わらない |
+| SLIDE の帯の高さ（`--rhythm-slide-height`）を変わったときだけ書く | HOLD の帯では既に行っていた工夫。SLIDE だけ毎フレーム書いていた |
+
+控え（`el._rhythmTransform` / `el._rhythmSlideBody`）は `beginRun` でも捨てる。
+**控えだけ古く残ると、値が同じだと判断して書き込みを飛ばし、見た目がズレたまま固まる。**
+
+### 先行公開は5曲・5難易度（2026-09-05）
+
+体験版で遊べるのは `RHYTHM_DEMO_SONG_IDS` の5曲。デバッグ画面の曲一覧
+(`RHYTHM_SONGS`) とは役割を分けてあるので、デバッグ用の曲を足しても曲えらびは増えない。
+
+| songId | 表示名 | bgmTrackId | 長さ |
+| --- | --- | --- | --- |
+| `mf_ichika_mix` | MF × ICHIKA MIX | `atsu_cup_theme` | 2:24 |
+| `monster_hero` | Monster Hero | `monster_hero_theme` | 2:32 |
+| `six_eternel_remix` | SIX ÉTERNEL ―愛はひとつじゃない―（ドパガキリミックス） | `six_eternel_remix_beat` | 2:30 |
+| `stay_with_me` | Stay With Me ～Locked Fate～ | `pandora_boss_beat` | 2:51 |
+| `kiki_issen` | 綺季一閃 ～花雪に舞う詠姫～ | `eiki_boss_beat` | 2:33 |
+
+長い曲はモンビー用に切り出したショート音源を使う。バトルで流れる全尺のBGMは別トラックとして
+残してあるので、既存のBGMアレンジ設定に影響しない。
+「あつ杯テーマ」→「MF × ICHIKA MIX」の改称は**表示名だけ**で、track ID と音源のパスは変えていない。
+
+### EXPERT以上は前の難易度をクリアで解放（2026-09-05）
+
+`RHYTHM_DIFFICULTY_UNLOCK_BY = { EXPERT:'HARD', MASTER:'EXPERT' }`。
+判定は `rhythmDifficultyUnlocked(songId, difficultyId, bestRecords)` が行う。
+
+- 解放は**曲ごと**。別の曲のクリアでは開かない。
+- 見るのは既存の自己ベスト (`mh_rhythm_best_v1`) の `clear` だけ。**新しい保存キーは足していない**。
+- 記録が無い・壊れている場合は「解放されていない」に倒す。
+- 鍵つきの難易度も一覧からは消さない。🔒 が付いて `disabled` になり、
+  自己ベストの代わりに「HARDで解放」と出る（`data-rhythm-difficulty-locked`）。
+
+### 縦画面のときの横画面案内（2026-09-05）
+
+`RhythmLandscapeHint` を曲えらび・オプション・マスモン設定・全国ランキング・遊びかたへ置く。
+**プレイ画面には置かない。**
+出し分けは Tailwind の `portrait:` のみ。JSで向きを見張らないのは、回すたびの再描画を避けるため。
+
+### 助手のチュートリアルと「遊びかた」（2026-09-05）
+
+- 台本は `data/assistants.js` の `ASSISTANT_RHYTHM_TUTORIAL` / `ASSISTANT_RHYTHM_TUTORIAL_SETS`。
+  取り出しは `assistantRhythmTutorialPages(assistantId)`。
+- 画面側は `tutorialKind === 'rhythm'` にするだけ。吹き出し・スキップ・もどる／つぎへ・
+  spotの光らせ方は村の案内と共通。
+- 初回自動表示の保存キーは `mh_rhythm_tutorial_seen_v1`（新規）。
+- 「📖 遊びかた」= `RHYTHM_DEMO_HELP` 画面。本文は `HELP_CATEGORIES` の `rhythm-*` 項目を
+  `renderHelpBlocks` で描くだけで、**説明文をこの画面に書かない**。
+  ヘルプの対応表は `RHYTHM_DEMO_HELP: 'basics/rhythm-tutorial'`。
+
 ### 一覧のひし形は「達成」の色にした（2026-09-05）
 
 「難易度毎にひし形に色分かれてるけどこれは全部同じ色にして、

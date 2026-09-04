@@ -48,6 +48,30 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "pandora_boss_beat": {
+   "audio": "monster-hero/audio/bgm-pandora-boss-beat.mp3",
+   "audioSha256": "b70636c619b2d9811607db97e11257a6e3f9b1d33bc8db35e6c9592ed263a71a",
+   "durationMs": 171072,
+   "analyzedTiming": {
+    "bpm": 169.99,
+    "beatZeroMs": 440,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
+   }
+  },
+  "eiki_boss_beat": {
+   "audio": "monster-hero/audio/bgm-eiki-boss-beat.mp3",
+   "audioSha256": "1c3e0cb8b29f2785acc10acd481e40ee37116d51ec77e8a820d6619423b5786d",
+   "durationMs": 153072,
+   "analyzedTiming": {
+    "bpm": 153.153,
+    "beatZeroMs": 830.4,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

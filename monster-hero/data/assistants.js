@@ -434,6 +434,15 @@ const assistantLineMatchesBond = (line, level) => {
 // バトル中・クイックの成長演出・供モンの加入演出には常設しない(テンポを止めないため)。
 // バトル中の案内は「ステータス」やヘルプを開いたときだけ出す。
 const ASSISTANT_SCENES = {
+  // モンビー(モンヒロビート)の曲えらび・遊びかた。本文は下の addAssistantLinePack から合流する。
+  rhythmHome: {
+    help: 'basics/rhythm-mode',
+    lines: [],
+  },
+  rhythmHelp: {
+    help: 'basics/rhythm-mode',
+    lines: [],
+  },
   // 日次案内は通常ログインとデバッグ再生で同じ scene を参照する。
   // 本文は下の addAssistantLinePack から合流するため、ここでは受け皿だけを定義する。
   dailyMasuAdvice: {
@@ -1027,6 +1036,31 @@ const ASSISTANT_LINE_PACKS = [];
 // 束を1つ足す。読み込み順は問わない(合流は下の applyAssistantLinePacks でまとめて行う)
 const addAssistantLinePack = (pack) => { if (pack && pack.id && (pack.lines || pack.conditions)) ASSISTANT_LINE_PACKS.push(pack); };
 
+// モンビー(モンヒロビート)。曲えらびでは「まず何をするか」、遊びかたでは
+// 「困ったらここを見れば分かる」を伝える(2026-09-05・ユーザー指示で追加)。
+addAssistantLinePack({
+  id: 'rhythmModeGuide',
+  label: 'モンビー案内',
+  lines: {
+    rhythmHome: [
+      { e:'excited', t:'曲をえらんで、難易度をえらんで、決定！ それだけで始まるよ♪' },
+      { e:'happy', t:'{name}、どの曲にする？ 迷ったら「ランダム」に決めてもらうのも楽しいよ。' },
+      { e:'normal', t:'えらんでる曲は流れてるから、聴いてから決めていいんだよ。' },
+      { e:'wink', t:'難しいと感じたら、オプションでノーツ速度を下げてみて！' },
+      { e:'normal', t:'EXPERTとMASTERは、1つ下の難易度をクリアすると開くよ。' },
+      { e:'happy', t:'横画面にすると、曲の一覧と選んだ曲を並べて見られるよ♪' },
+    ],
+    rhythmHelp: [
+      { e:'happy', t:'遊びかたはここにぜんぶ書いてあるよ。困ったらいつでも見にきてね♪' },
+      { e:'normal', t:'ノーツの種類も、判定も、スコアの決まり方も、ここで確かめられるよ。' },
+      { e:'wink', t:'説明を読むより体で覚える派なら、上の「もう一度チュートリアル」からどうぞ！' },
+      { e:'excited', t:'{name}が知りたいことは、たぶんこの中のどれかにあるよ♪' },
+      { e:'normal', t:'ここに書いてあることは、設定のヘルプにあるものと同じだよ。' },
+      { e:'happy', t:'読んでも分からなかったら、実際に1回遊んでみるのがいちばん早いかも！' },
+    ],
+  },
+});
+
 // 極限チャレンジ。モード選択(extremeChallenge)ではモード全体に共通する特徴を案内し、
 // EXTREME固有の倍率やアシストカード50%は難易度側(extremeDifficulty)でだけ触れる。
 addAssistantLinePack({
@@ -1617,6 +1651,23 @@ addAssistantLinePack({
       { e:'wink',    t:'これが今のところ、いちばん早い増やし方ですね。' },
       { e:'normal',  t:'WAVE2まで進むのが大事。そこから登録できまつ。' },
       { e:'happy',   t:'短い時間で仲間を増やしたいときに、どうぞ♪' },
+    ],
+    // ---- モンビー(モンヒロビート) ----
+    rhythmHome: [
+      { e:'normal',  t:'曲をえらんで、難易度をえらんで、決定。それだけでつ。' },
+      { e:'happy',   t:'{name}、どの曲にしまつか？ 迷ったら「ランダム」も楽しいでつよ。' },
+      { e:'normal',  t:'えらんでいる曲は流れてまつ。聴いてから決めていいんでつよ。' },
+      { e:'wink',    t:'難しいと感じたら、オプションでノーツ速度を下げてみて♪' },
+      { e:'normal',  t:'EXPERTとMASTERは、1つ下の難易度をクリアすると開きまつ。' },
+      { e:'happy',   t:'横画面にすると、一覧と選んだ曲を並べて見られまつ♪' },
+    ],
+    rhythmHelp: [
+      { e:'happy',   t:'遊びかたはここに全部ありまつ。困ったらいつでもどうぞ♪' },
+      { e:'normal',  t:'ノーツの種類も、判定も、スコアの決まり方もここでつ。' },
+      { e:'wink',    t:'体で覚える派なら、上の「もう一度チュートリアル」から♪' },
+      { e:'excited', t:'{name}が知りたいことは、たぶんこの中のどれかでつ。' },
+      { e:'normal',  t:'書いてあることは、設定のヘルプにあるものと同じでつ。' },
+      { e:'happy',   t:'読んで分からなかったら、1回遊んでみるのが早いかも♪' },
     ],
     // ---- 種族チャレンジ ----
     speciesChallenge: [
@@ -2440,6 +2491,53 @@ const ASSISTANT_TUTORIAL_SETS = {
     { e:'happy',   t:'私はここにいまつ。困ったら、いつでもタップしてほしいでつ♪', title:'それでは、いってらっしゃい', spot:'assistant' },
   ],
 };
+// ---------- モンビー(モンヒロビート)のチュートリアル ----------
+// 初めてモンビーの曲えらびへ入ったときに、設定している助手が説明する(2026-09-05・ユーザー指示)。
+// 村の案内(ASSISTANT_TUTORIAL)と同じ形なので、画面側は tutorialKind を 'rhythm' にするだけで動く。
+//
+//   e,t   … 表情とセリフ。t の {name} はそのときの呼び方に置き換わる
+//   title … 吹き出しの小見出し
+//   spot  … 光らせる場所のキー(曲えらび画面の rhythmTutorialSpotClass と対応)
+//   help  … 'カテゴリid/項目id'。「この話をヘルプで詳しく見る」が出る
+//
+// 【並べ方】曲をえらぶ → 難易度をえらぶ → 遊び方 → まわりの機能、の順。
+// 画面に無いものを光らせないよう、spot は曲えらび画面にある場所だけにする。
+const ASSISTANT_RHYTHM_TUTORIAL = [
+  { e:'excited', t:'{name}、ここが「モンヒロビート」だよ！ 曲に合わせてノーツを取る音ゲーだよ♪', title:'モンビーへようこそ', help:'basics/rhythm-mode' },
+  { e:'normal',  t:'まずは曲えらび。ここに並んでるのが、いま遊べる曲だよ。', title:'曲をえらぶ', spot:'songList', help:'basics/rhythm-demo-song' },
+  { e:'happy',   t:'曲の左の数字は「楽曲Lv.」。大きいほど難しい譜面ってこと。', title:'楽曲Lv.', spot:'songLevel' },
+  { e:'normal',  t:'曲名の下のひし形は、その難易度をどこまで達成したかの印。クリア→フルコンボ→オールエクセレント→オールマーベラスの順に、どんどん派手な色になるよ♪', title:'ひし形は達成の印', spot:'achievement' },
+  { e:'normal',  t:'曲をえらんだら、下(横画面だと右)で難易度をえらんでね。', title:'難易度をえらぶ', spot:'difficulty' },
+  { e:'surprise', t:'EXPERTとMASTERは最初は鍵つき。その曲の1つ下の難易度をクリアすると挑めるようになるよ。', title:'EXPERT以上は解放式', spot:'difficulty', help:'basics/rhythm-difficulty-unlock' },
+  { e:'normal',  t:'ノーツは4種類。TAPは押す、HOLDは押さえ続ける、FLICKは払う、SLIDEはなぞる。', title:'ノーツは4種類', help:'basics/rhythm-mode' },
+  { e:'happy',   t:'タイミングが合うほど良い判定になるよ。MARVELOUS→EXCELLENT→GREAT→GOOD→BADの順ね。', title:'判定は5段階', help:'basics/rhythm-mode' },
+  { e:'excited', t:'続けて取るとコンボがのびて、全部つなぐと「フルコンボ」！ そこからさらに上の称号もあるんだ♪', title:'コンボをつなごう', help:'basics/rhythm-notes-and-effects' },
+  { e:'normal',  t:'設定したマスモンは、曲の途中で「モンスターノーツ」になって流れてくるよ。取ると血統ごとの力が働くの。', title:'マスモンも一緒に', spot:'monsters', help:'basics/rhythm-monster-note-display' },
+  { e:'happy',   t:'ノーツの速さや音量、判定のタイミング補正はオプションで変えられるよ。合わないと感じたらここ！', title:'オプション', spot:'options', help:'basics/rhythm-options-controls' },
+  { e:'excited', t:'スコアは全国ランキングに載るよ。難易度をまたいだ合算だから、上の難易度で挑むほど有利なんだ♪', title:'全国ランキング', help:'basics/rhythm-ranking' },
+  { e:'wink',    t:'説明はいつでも「📖 遊びかた」から見られるよ。それじゃ、いってみよ〜！', title:'それでは、はじめよう', spot:'help' },
+];
+// 助手ごとの言い回し。骨組み(spot・help・順番)は変えない。
+const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
+  kiki: [
+    { e:'excited', t:'{name}、ここが「モンヒロビート」でつ！ 曲に合わせてノーツを取る音ゲーですね♪', title:'モンビーへようこそ', help:'basics/rhythm-mode' },
+    { e:'normal',  t:'まずは曲えらび。ここに並んでいるのが、いま遊べる曲でつ。', title:'曲をえらぶ', spot:'songList', help:'basics/rhythm-demo-song' },
+    { e:'happy',   t:'曲の左の数字は「楽曲Lv.」でつ。大きいほど難しい譜面ということですね。', title:'楽曲Lv.', spot:'songLevel' },
+    { e:'normal',  t:'曲名の下のひし形は、その難易度をどこまで達成したかの印でつ。クリア→フルコンボ→オールエクセレント→オールマーベラスの順に、どんどん派手になりまつ♪', title:'ひし形は達成の印', spot:'achievement' },
+    { e:'normal',  t:'曲をえらんだら、下(横画面なら右)で難易度をえらんでほしいでつ。', title:'難易度をえらぶ', spot:'difficulty' },
+    { e:'surprise', t:'EXPERTとMASTERは最初は鍵つきでつ。その曲の1つ下の難易度をクリアすると挑めまつ。', title:'EXPERT以上は解放式', spot:'difficulty', help:'basics/rhythm-difficulty-unlock' },
+    { e:'normal',  t:'ノーツは4種類。TAPは押す、HOLDは押さえ続ける、FLICKは払う、SLIDEはなぞる、でつ。', title:'ノーツは4種類', help:'basics/rhythm-mode' },
+    { e:'happy',   t:'タイミングが合うほど良い判定になりまつ。MARVELOUS→EXCELLENT→GREAT→GOOD→BADの順ですね。', title:'判定は5段階', help:'basics/rhythm-mode' },
+    { e:'excited', t:'続けて取るとコンボがのびて、全部つなぐと「フルコンボ」でつ！ さらに上の称号もありまつよ♪', title:'コンボをつなごう', help:'basics/rhythm-notes-and-effects' },
+    { e:'normal',  t:'設定したマスモンは、曲の途中で「モンスターノーツ」になって流れてきまつ。取ると血統ごとの力が働きまつ。', title:'マスモンも一緒に', spot:'monsters', help:'basics/rhythm-monster-note-display' },
+    { e:'happy',   t:'ノーツの速さや音量、判定のタイミング補正はオプションで変えられまつ。合わないと感じたらこちらへ。', title:'オプション', spot:'options', help:'basics/rhythm-options-controls' },
+    { e:'excited', t:'スコアは全国ランキングに載りまつ。難易度をまたいだ合算なので、上の難易度ほど有利でつ♪', title:'全国ランキング', help:'basics/rhythm-ranking' },
+    { e:'wink',    t:'説明はいつでも「📖 遊びかた」から見られまつ。それでは、いってらっしゃい♪', title:'それでは、はじめましょ', spot:'help' },
+  ],
+};
+const assistantRhythmTutorialPages = (assistantId) =>
+  ASSISTANT_RHYTHM_TUTORIAL_SETS[assistantId] || ASSISTANT_RHYTHM_TUTORIAL;
+
 const assistantIntroPages = (assistantId) => ASSISTANT_INTRO_SETS[assistantId] || ASSISTANT_INTRO;
 const assistantTutorialPages = (assistantId) => ASSISTANT_TUTORIAL_SETS[assistantId] || ASSISTANT_TUTORIAL;
 
