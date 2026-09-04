@@ -62,6 +62,8 @@ const MAX_PASSES=8;           // これ以上は回さない(下がらなくな�
 const SOURCES=Object.freeze({
   step5:{label:'V2 STEP5 採用案',file:d=>`tools/mode/authoring/monster-hero-theme-v2-step5-chart-${d.toLowerCase()}.json`},
   step3:{label:'V2 STEP3/4 出力',file:d=>`tools/mode/authoring/monster-hero-theme-v2-chart-${d.toLowerCase()}.json`},
+  v3:{label:'V3 生成',file:d=>`tools/mode/authoring/monster-hero-theme-v3-chart-${d.toLowerCase()}.json`,
+    outFile:d=>`tools/mode/authoring/monster-hero-theme-v3-fixed-${d.toLowerCase()}.json`},
 });
 const source=fileArg?{label:`指定ファイル ${fileArg}`,file:()=>path.resolve(ROOT,fileArg)}:SOURCES[sourceKind];
 if(!source){console.error(`未知の --source です: ${sourceKind} (${Object.keys(SOURCES).join(', ')})`);process.exit(1);}
@@ -222,11 +224,15 @@ for(const difficulty of DIFFICULTIES){
   report.difficulties[key]={noteCount:notes.length,fixCount:fixes.length,passes,before,after,fixes};
 
   if(write&&!fileArg){
+    // 入力の系統ごとに書き出し先を変える（V2はSTEP7の名前、V3はV3の名前）
+    const relative=source.outFile
+      ?source.outFile(key)
+      :`tools/mode/authoring/monster-hero-theme-v2-step7-chart-${key.toLowerCase()}.json`;
     const out=outputDir
-      ?path.join(path.resolve(ROOT,outputDir),`monster-hero-theme-v2-step7-chart-${key.toLowerCase()}.json`)
-      :path.join(ROOT,`tools/mode/authoring/monster-hero-theme-v2-step7-chart-${key.toLowerCase()}.json`);
+      ?path.join(path.resolve(ROOT,outputDir),path.basename(relative))
+      :path.join(ROOT,relative);
     const fixed={...chart,
-      analysisType:'rhythm-chart-v2-step7-chart',
+      analysisType:source.outFile?'rhythm-chart-v3-fixed':'rhythm-chart-v2-step7-chart',
       step7:{source:sourceKind,fixCount:fixes.length,passes,before,after,
         weights:report.weights,fixes},
       notes,

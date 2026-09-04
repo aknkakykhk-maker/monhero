@@ -63,6 +63,10 @@ const SOURCES=Object.freeze({
     difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
   step7:{label:'V2 STEP7 自動修正後',file:d=>`tools/mode/authoring/monster-hero-theme-v2-step7-chart-${d.toLowerCase()}.json`,
     difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
+  v3:{label:'V3 生成',file:d=>`tools/mode/authoring/monster-hero-theme-v3-chart-${d.toLowerCase()}.json`,
+    difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
+  v3fixed:{label:'V3 自動修正後',file:d=>`tools/mode/authoring/monster-hero-theme-v3-fixed-${d.toLowerCase()}.json`,
+    difficulties:['EASY','NORMAL','HARD','EXPERT','MASTER']},
   v1:{label:'既存の正式候補v1',file:d=>`monster-hero/debug/monster-hero-theme-${d.toLowerCase()}-formal-candidate-v1.json`,
     difficulties:['EASY','NORMAL','HARD']},
 });
