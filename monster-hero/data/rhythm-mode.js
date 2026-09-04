@@ -322,7 +322,8 @@ const RHYTHM_PERF=(()=>{
   // 「長いフレームで何が増えていたのか」を切り分けるために持つ。
   const zero=()=>({frames:0,totalMs:0,maxMs:0,long:[0,0,0],layoutReads:0,domQueries:0,slidePolygons:0,gestureFrames:0,noteRescans:0,
     notesScanned:0,notesDrawn:0,pendingScanned:0,pendingDrawn:0,worstScanned:0,worstDrawn:0,
-    tickMs:0,pendingTickMs:0,worstTickMs:0,maxTickMs:0,headSkipped:0,pendingHeadSkipped:0,narrowed:null});
+    tickMs:0,pendingTickMs:0,worstTickMs:0,maxTickMs:0,headSkipped:0,pendingHeadSkipped:0,narrowed:null,
+    tickDelayMs:0,pendingDelayMs:0,worstDelayMs:0,maxDelayMs:0});
   let on=false,last=null,acc=zero();
   const api={
     get enabled(){return on;},
@@ -343,13 +344,14 @@ const RHYTHM_PERF=(()=>{
         if(dt>0&&dt<2000){
           acc.frames++;acc.totalMs+=dt;
           acc.notesScanned+=acc.pendingScanned;acc.notesDrawn+=acc.pendingDrawn;
-          acc.tickMs+=acc.pendingTickMs;acc.headSkipped+=acc.pendingHeadSkipped;
+          acc.tickMs+=acc.pendingTickMs;acc.headSkipped+=acc.pendingHeadSkipped;acc.tickDelayMs+=acc.pendingDelayMs;
           if(acc.pendingTickMs>acc.maxTickMs)acc.maxTickMs=acc.pendingTickMs;
-          if(dt>acc.maxMs){acc.maxMs=dt;acc.worstScanned=acc.pendingScanned;acc.worstDrawn=acc.pendingDrawn;acc.worstTickMs=acc.pendingTickMs;}
+          if(acc.pendingDelayMs>acc.maxDelayMs)acc.maxDelayMs=acc.pendingDelayMs;
+          if(dt>acc.maxMs){acc.maxMs=dt;acc.worstScanned=acc.pendingScanned;acc.worstDrawn=acc.pendingDrawn;acc.worstTickMs=acc.pendingTickMs;acc.worstDelayMs=acc.pendingDelayMs;}
           for(let i=0;i<RHYTHM_PERF_LONG_MS.length;i++)if(dt>RHYTHM_PERF_LONG_MS[i])acc.long[i]++;
         }
       }
-      acc.pendingScanned=0;acc.pendingDrawn=0;acc.pendingTickMs=0;acc.pendingHeadSkipped=0;
+      acc.pendingScanned=0;acc.pendingDrawn=0;acc.pendingTickMs=0;acc.pendingHeadSkipped=0;acc.pendingDelayMs=0;
       last=Number.isFinite(t)?t:null;
     },
     // tickのノーツ走査から呼ぶ。ONのときだけ足し込む(OFFなら即return)
@@ -360,7 +362,12 @@ const RHYTHM_PERF=(()=>{
     // 次のリフレッシュを待つ時間(60Hzなら何もしなくても16.7ms)と、この
     // コールバックの外で走る処理が含まれる。差は「tickの外で起きている時間」
     // としか言えないので、そこから先は別に測る。rAFは増やさない。
-    tick(ms){if(!on)return;const v=Number(ms);if(Number.isFinite(v)&&v>=0)acc.pendingTickMs=v;},
+    // ms: tick本体にかかった時間。delayMs: そのフレームが始まってから(rAFのタイムスタンプ)
+    // 実際にこのコールバックが動き出すまでの遅れ。遅れが大きいフレームは、
+    // 「tickへ入る前に」メインスレッドが他の仕事(判定時のReact描画・GC・他のコールバック)で
+    // 塞がっていたことを意味する。tickの中が0msでもJSが無実とは限らないので、ここを見る。
+    tick(ms,delayMs){if(!on)return;const v=Number(ms);if(Number.isFinite(v)&&v>=0)acc.pendingTickMs=v;
+      const d=Number(delayMs);if(Number.isFinite(d)&&d>=0)acc.pendingDelayMs=d;},
     gestureFrame(){if(on)acc.gestureFrames++;},
     noteRescan(){if(on)acc.noteRescans++;},
     layoutRead(){if(on)acc.layoutReads++;},
@@ -387,6 +394,9 @@ const RHYTHM_PERF=(()=>{
         tickMsPerFrame:per(acc.tickMs),
         worstFrameTickMs:acc.worstTickMs,
         maxTickMs:acc.maxTickMs,
+        tickDelayMsPerFrame:per(acc.tickDelayMs),
+        worstFrameDelayMs:acc.worstDelayMs,
+        maxDelayMs:acc.maxDelayMs,
         headSkippedPerFrame:per(acc.headSkipped),
         narrowed:acc.narrowed,
       };

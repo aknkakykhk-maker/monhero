@@ -28,8 +28,10 @@ check('要素が無いノーツで先頭が止まらない',
 // 実機で「効いているのか」を数字で確かめられること(推測で直さないため)
 check('走査の内訳と絞り込みの有無を計測へ渡している',
   game.includes('RHYTHM_PERF.notes(perfScanned,perfDrawn,scanFrom,run.notesAscending);'));
-check('tick本体の処理時間そのものを計測している',
-  game.includes('RHYTHM_PERF.tick(performance.now()-perfTickStart);')
+// tickが0msでも「JSが無実」とは言えないので、フレームが始まってから実際に
+// tickへ入るまでの遅れ(tickへ入る前にメインスレッドが塞がっていた時間)も一緒に渡す。
+check('tick本体の処理時間と、tickへ入るまでの遅れを計測している',
+  game.includes('RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);')
   &&game.includes('const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;'));
 check('出番がまだ遠いノーツで打ち切る',
   game.includes('const scanHorizonMs=visualTime+travelMs*1.2;')
