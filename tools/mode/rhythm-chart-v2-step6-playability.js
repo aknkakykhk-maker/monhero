@@ -44,15 +44,17 @@ const fileArg=arg('--file',null);
 const canWrite=write&&!fileArg;
 
 // --- 手のモデルの定数 ---
-// レーンは0〜4。親指1本がレーンをまたぐ速さと、同じ指で叩き直す間隔を決める。
-const HANDS=2;                       // 親指2本
-const LANE_SPEED_COMFORT=10;         // 快適に動かせる速さ(レーン/秒)。1レーン100ms
-const LANE_SPEED_LIMIT=18;           // ここを超えると押せないとみなす。1レーン約56ms
-const RESTRIKE_COMFORT_MS=90;        // 同じ指で叩き直すのに欲しい間隔
-const RESTRIKE_LIMIT_MS=55;          // これより短いと同じ指では押せない
-const CHORD_MIN_LANE_GAP=1;          // 同時押しは1レーン以上離れていないと2本の指が入らない
-const RELEASE_MARGIN_MS=30;          // HOLD/SLIDEを離してから次を押すまでの余裕
-const END_FLICK_RELEASE_MS=80;       // 終点フリックは「弾いて戻す」ぶん、指の解放がこれだけ遅れる
+// 値は tools/mode/rhythm-hand-model.js に一本化してある(STEP3の生成側と必ず同じ物差しを使うため)。
+const {HAND_MODEL,fingerPairFeasible,fingerPairStrain,noteTouchLane}=require('./rhythm-hand-model.js');
+const HANDS=HAND_MODEL.hands;
+const LANE_SPEED_COMFORT=HAND_MODEL.laneSpeedComfort;
+const LANE_SPEED_LIMIT=HAND_MODEL.laneSpeedLimit;
+const RESTRIKE_COMFORT_MS=HAND_MODEL.restrikeComfortMs;
+const RESTRIKE_LIMIT_MS=HAND_MODEL.restrikeLimitMs;
+// 指の太さ。同時押しの最低レーン差でもあり、時間がずれた連続ノーツの「指2本で分担できる距離」でもある。
+const CHORD_MIN_LANE_GAP=HAND_MODEL.fingerMinGapLanes;
+const RELEASE_MARGIN_MS=HAND_MODEL.releaseMarginMs;
+const END_FLICK_RELEASE_MS=HAND_MODEL.endFlickReleaseMs;
 
 const SOURCES=Object.freeze({
   step5:{label:'V2 STEP5 採用案',file:d=>`tools/mode/authoring/monster-hero-theme-v2-step5-chart-${d.toLowerCase()}.json`,
@@ -86,9 +88,11 @@ const BAR=timing.subdivisionsPerBeat*4;
 // endFlick:  終わりを弾いて離すので、指が空くのが END_FLICK_RELEASE_MS だけ遅れる
 // 指が触るのはノーツの中心。note.lane は「いちばん左のレーン」なので、幅3〜4のノーツでは
 // 実際より1〜1.5レーン左を触っていることになり、指の移動距離を短く見積もっていた。
-const laneCenter=note=>note.subLane!=null&&Number.isFinite(Number(note.subLane))
-  ?(Number(note.subLane)+(Number(note.subLaneWidth)||2)/2)/2-.5
-  :Number(note.lane)||0;
+// 触る点は rhythm-hand-model.js の noteTouchLane に一本化。
+// (以前はここで -.5 していたが、レーン0〜4の中心は 0.5〜4.5 であり、
+//  幅の無いノーツの lane と幅のあるノーツの中心で基準がずれていた。
+//  距離しか使わないので結果は変わらないが、STEP3と同じ式にするため揃える)
+const laneCenter=note=>noteTouchLane(note);
 const toActions=notes=>notes.map((note,index)=>{
   const startMs=gridTimeMs(note.grid);
   const lane=laneCenter(note);
@@ -118,6 +122,26 @@ const simulate=actions=>{
     timeMs:Math.round(action.startMs),bar:Math.floor(action.grid/BAR),
     lane:action.startLane,type:action.type,detail,
   });
+
+  // --- 指の太さ: 「近いのに速い」組み合わせは、指が2本入らず1本でも叩き直せない ---
+  // 実機の指摘(2026-09-05)「1枠を隣り合わせで交互に連続押しは物理的に不可能」への対応。
+  // 指の割り当てシミュレーションだけでは、2本の指を同じ場所に重ねて置くことを止められない
+  // (指に太さが無いモデルだった)。時間差の小さい組み合わせを直接見る。
+  for(let a=1;a<actions.length;a++){
+    const cur=actions[a];
+    for(let b=a-1;b>=0;b--){
+      const prev=actions[b];
+      const dt=cur.startMs-prev.startMs;
+      if(dt>=HAND_MODEL.restrikeLimitMs)break;   // ここより前は1本で叩き直せる間隔
+      if(dt<1)continue;                          // 同時押しは別のルールで見る
+      const feasible=fingerPairFeasible(cur.note,prev.note,dt);
+      if(!feasible.ok){
+        addIssue('impossible','指が2本入らない近さで速すぎる',cur,
+          `${Math.round(dt)}ms前のノーツと重なっていて${feasible.reason}`);
+        break;
+      }
+    }
+  }
 
   // 同じ時刻に複数のノーツ(同時押し)があるときはまとめて配る
   let i=0;

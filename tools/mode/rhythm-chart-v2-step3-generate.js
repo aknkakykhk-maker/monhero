@@ -30,6 +30,7 @@ const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
 const {SONG_TYPE_EFFECT,songTypeFromFeatures,songTypeLabels}=require('./rhythm-chart-v2-song-type.js');
+const {HAND_MODEL,fingerPairFeasible,noteTouchLane}=require('./rhythm-hand-model.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const TRACKS=Object.freeze({
@@ -65,7 +66,7 @@ const profileOverride=(()=>{
 })();
 // 上書きしてよいのは「作り方の数値」だけ。出力の意味づけ(level等)や未知のキーは受け付けない。
 const OVERRIDABLE_KEYS=Object.freeze(new Set(['candidateSource','minStrength','latticeGrids','perBarByIntensity',
-  'maxConsecutiveEighths','maxLaneStep','widths','simultaneous','types',
+  'maxConsecutiveEighths','maxLaneStep','widths','simultaneous','types','musicalShare',
   'holdMaxCount','holdMinGapGrids','flickMaxCount','slideMaxCount','chordMaxCount','endFlickMaxCount',
   'narrowRate','supplementFromTier']));
 const overrideLabel=(()=>{
@@ -100,6 +101,16 @@ const COMMON=Object.freeze({
   supplementMinStrengthQuantile:.1,
   // 8分未満の間隔では、歩幅いっぱいに跳ばない(最大2レーン)。STEP6の手のモデルと同じ考え方。
   laneStepFastMax:2,
+  // 小節あたりの音の数を「盛り上がり」で持ち上げる幅(いちばん静かな小節 → いちばん盛り上がる小節)。
+  // 実機の指摘(2026-09-05)「現状ハードですら後半むずすぎる。多分終盤にノーツを増やしてるから
+  // 後半が異常にむずくなる。サビは盛り上がってむずくするのはいいとおもうけど、あくまでも
+  // 音楽のテンポを再現してってほしい」への対応。
+  // 実測すると、この曲の**リズムの細かさ**は曲を通してほぼ一定(1小節あたり4〜8音)で、
+  // 終盤に増えているのは音量・厚み(intensity)のほうだった。それまでの生成は intensity だけで
+  // 小節の上限を決めていたので、リズムが変わっていないのにノーツだけ倍以上に増え、
+  // 後半だけ休みなく詰まった譜面になっていた。
+  // これからは「その小節に実際にある音の数」を土台にし、盛り上がりはこの倍率の幅でだけ効かせる。
+  musicalLift:[.45,1.35],
 });
 // 盛り上がりの順位を、セクション種別で±この量だけずらす(段調整の±1段に相当)。
 const SECTION_POSITION_ADJUST=.2;
@@ -134,20 +145,20 @@ const SOURCE_ORDER=Object.freeze(['normal','dense','step1']);
 //   MASTER … ＋4レーン跳び・長い16分の連なり・半ノーツ最多
 const PROFILES=Object.freeze({
   EASY:Object.freeze({
-    level:1,candidateSource:'normal',minStrength:0,latticeGrids:2,
-    perBarByIntensity:[1.2,2.9,4.2],maxConsecutiveEighths:2,maxLaneStep:1,
+    level:1,candidateSource:'normal',minStrength:0,latticeGrids:2,musicalShare:.52,
+    perBarByIntensity:[2.0,4.0,5.2],maxConsecutiveEighths:2,maxLaneStep:1,
     widths:[3,4,6],narrowRate:0,simultaneous:false,types:['TAP','HOLD'],supplementFromTier:1,
     holdMaxCount:12,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:0,accentWidth:10,accentMaxCount:6,holdTaperMaxCount:4,
   }),
   NORMAL:Object.freeze({
-    level:3,candidateSource:'dense',minStrength:.40,latticeGrids:2,
-    perBarByIntensity:[1.4,3.4,5.2],maxConsecutiveEighths:3,maxLaneStep:2,
+    level:3,candidateSource:'dense',minStrength:.40,latticeGrids:2,musicalShare:.585,
+    perBarByIntensity:[2.4,4.8,6.2],maxConsecutiveEighths:3,maxLaneStep:2,
     widths:[2,3,4,6],narrowRate:0,simultaneous:false,types:['TAP','HOLD','FLICK'],supplementFromTier:1,
     holdMaxCount:16,holdMinGapGrids:10,flickMaxCount:14,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:3,accentWidth:10,accentMaxCount:6,holdTaperMaxCount:5,
   }),
   HARD:Object.freeze({
-    level:5,candidateSource:'dense',minStrength:.24,latticeGrids:1,
-    perBarByIntensity:[1.8,4.3,6.4],maxConsecutiveEighths:4,maxLaneStep:2,
+    level:5,candidateSource:'dense',minStrength:.24,latticeGrids:1,musicalShare:.75,
+    perBarByIntensity:[3.0,6.0,8.0],maxConsecutiveEighths:2,maxLaneStep:2,
     widths:[1,2,3,4,5],narrowRate:.04,simultaneous:false,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:1,
     holdMaxCount:18,holdMinGapGrids:10,flickMaxCount:18,slideMaxCount:10,chordMaxCount:0,endFlickMaxCount:5,accentWidth:8,accentMaxCount:7,holdTaperMaxCount:6,
   }),
@@ -160,14 +171,14 @@ const PROFILES=Object.freeze({
   // rhythm-chart-v2-step3-check.jsで実測確認しながら較正した値を使う。
   // MASTERのminStrength=0は「事実上のしきい値(0.197)より下を指定し、候補を絞らない」の意図。
   EXPERT:Object.freeze({
-    level:7,candidateSource:'step1',minStrength:.14,latticeGrids:1,
-    perBarByIntensity:[2.2,5.4,8],maxConsecutiveEighths:8,maxLaneStep:3,
+    level:7,candidateSource:'step1',minStrength:.14,latticeGrids:1,musicalShare:.93,
+    perBarByIntensity:[3.6,7.0,9.2],maxConsecutiveEighths:8,maxLaneStep:3,
     widths:[1,2,3,4,5],narrowRate:.12,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
     holdMaxCount:20,holdMinGapGrids:8,flickMaxCount:22,slideMaxCount:11,chordMaxCount:12,endFlickMaxCount:7,accentWidth:8,accentMaxCount:7,holdTaperMaxCount:7,
   }),
   MASTER:Object.freeze({
-    level:9,candidateSource:'step1',minStrength:0,latticeGrids:1,
-    perBarByIntensity:[2.8,6.6,9.6],maxConsecutiveEighths:12,maxLaneStep:4,
+    level:9,candidateSource:'step1',minStrength:0,latticeGrids:1,musicalShare:1.06,
+    perBarByIntensity:[4.2,8.0,10.5],maxConsecutiveEighths:12,maxLaneStep:4,
     widths:[1,2,3,4],narrowRate:.20,simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],supplementFromTier:0,
     holdMaxCount:22,holdMinGapGrids:6,flickMaxCount:26,slideMaxCount:13,chordMaxCount:18,endFlickMaxCount:9,accentWidth:6,accentMaxCount:8,holdTaperMaxCount:8,
   }),
@@ -330,6 +341,18 @@ const supplementFloorOf=map=>{
   return strengths[Math.min(strengths.length-1,Math.floor(strengths.length*COMMON.supplementMinStrengthQuantile))];
 };
 const SUPPLEMENT_FLOORS=Object.freeze(Object.fromEntries(Object.entries(CANDIDATE_MAPS).map(([k,v])=>[k,supplementFloorOf(v)])));
+// 「その小節に実際にある音の数」。難易度によらず同じ物差しで測りたいので、
+// 参照源は dense に固定する(normal は粗すぎ、step1 は弱い音まで拾いすぎる)。
+// 小節あたりの上限は、この数を土台に決める(→ COMMON.musicalLift の説明)。
+const MUSICAL_ONSET_REFERENCE='dense';
+const musicalOnsetsInBar=barIndex=>{
+  const start=barIndex*BAR,end=start+BAR;
+  let count=0;
+  for(const item of CANDIDATE_MAPS[MUSICAL_ONSET_REFERENCE].values()){
+    if(item.grid>=start&&item.grid<end)count++;
+  }
+  return count;
+};
 const minGrid=Math.ceil((COMMON.minTimeMs-timing.beatZeroMs)/gridMs);
 const maxGrid=Math.floor((timing.audioDurationMs-COMMON.endPaddingMs-timing.beatZeroMs)/gridMs);
 const minBar=Math.floor(minGrid/BAR),maxBar=Math.floor(maxGrid/BAR);
@@ -447,12 +470,24 @@ const buildChart=(difficulty)=>{
     }
     return items;
   };
-  // 小節ごとの上限。perBarByIntensity の3つの値を、盛り上がりの順位 0 / 0.5 / 1 に置いた折れ線として読む。
+  // 小節ごとの上限。
+  //
+  // 【土台】その小節に実際にある音の数 × 難易度の割合(musicalShare)
+  //   「音楽のテンポを再現して」への対応。リズムが細かい小節ほどノーツが増え、
+  //   音が少ない小節は盛り上がっていてもノーツが増えない。
+  // 【盛り上がり】そこへ COMMON.musicalLift の幅(0.45〜1.35倍)を掛ける。
+  //   サビは同じ音数でも約3倍の密度になるが、「音が無いのに増える」ことは起きない。
+  // 【天井】perBarByIntensity は絶対の上限として残す。難易度の順(EASY<…<MASTER)は
+  //   この天井で保証されるので、曲が変わっても順序が崩れない。
+  //
   // 端数は次の小節へ持ち越す(誤差拡散)ので、平均は狙いどおりになり、乱数は使わない。
+  const [liftMin,liftMax]=COMMON.musicalLift;
   const capForBar=bar=>{
     const u=intensityPosition(bar);
     const [c0,c1,c2]=P.perBarByIntensity;
-    return u<=.5?c0+(c1-c0)*(u/.5):c1+(c2-c1)*((u-.5)/.5);
+    const ceiling=u<=.5?c0+(c1-c0)*(u/.5):c1+(c2-c1)*((u-.5)/.5);
+    const musical=musicalOnsetsInBar(bar)*(Number(P.musicalShare)||0)*(liftMin+(liftMax-liftMin)*u);
+    return Math.min(ceiling,musical);
   };
 
   // --- 小節ごとに、上限の本数まで拍頭優先→強い順で選ぶ ---
@@ -592,8 +627,31 @@ const buildChart=(difficulty)=>{
   // さらに8分未満の間隔でも歩幅いっぱいに跳ぶので、EXPERT/MASTERは 0↔4 の往復ばかりになり、
   // STEP5の handMotion が0点だった。ここでは「届く範囲のうち、これまで踏んだ回数が少ないレーン」を
   // 選び(同数なら向きが続くほう→近いほう)、近い音ほど歩幅を狭める。乱数は使わない。
+  //
+  // 【指の物理条件】(2026-09-05「1枠を隣り合わせで交互に連続押しは物理的に不可能だから
+  //  そういう譜面は作らないようにして。もちろん速度と押すスピードによる」)
+  // 触る点(ノーツの中心)は幅によって 0.25レーン単位でずれる。同じレーンでも幅が変われば
+  // 中心は動くので、「同じレーンに置いた」だけでは押せる保証にならない。実際、16分(87ms)
+  // おきに中心が0.25〜0.5レーンだけずれる配置がHARDに21箇所、MASTERに80箇所できていた。
+  // 指は2本しかなく太さがあるので、連続する2音は
+  //   ・触る点が1レーン以上離れている(指2本で分担できる)  か
+  //   ・間隔が105ms以上ある(指1本で叩き直せる)
+  // のどちらかでなければ押せない。置き場所を決めるときに、この条件を**満たすものだけ**から選ぶ。
   const laneUse=[0,0,0,0,0];
   const notes=[];
+  const centeredSubLane=(targetLane,width)=>Math.max(0,Math.min(10-width,targetLane*2+1-Math.ceil(width/2)));
+  // いま置こうとしている音が、直前の(まだ指が戻りきらない)音たちと両立するか
+  const placeable=(subLane,width,grid)=>{
+    const candidate={subLane,subLaneWidth:width};
+    for(let k=notes.length-1;k>=0;k--){
+      const before=notes[k];
+      const deltaMs=(grid-before.grid)*gridMs;
+      if(deltaMs>=HAND_MODEL.restrikeLimitMs)break;   // ここより前は指1本でも叩き直せる
+      if(deltaMs<=0)continue;
+      if(!fingerPairFeasible(candidate,before,deltaMs).ok)return false;
+    }
+    return true;
+  };
   let lane=2,dir=1,prevBar=-1;
   spaced.forEach((item,index)=>{
     const bar=Math.floor(item.grid/BAR);
@@ -602,6 +660,7 @@ const buildChart=(difficulty)=>{
     const prev=spaced[index-1];
     const gap=prev?item.grid-prev.grid:Infinity;
     const keepLane=prev&&gap<=P.latticeGrids&&sameBar;
+    let preferred=lane;
     if(!keepLane){
       const maxJump=gap<BEAT?Math.min(P.maxLaneStep,COMMON.laneStepFastMax):P.maxLaneStep;
       let best=null;
@@ -613,12 +672,36 @@ const buildChart=(difficulty)=>{
           ||(key[0]===best.key[0]&&(key[1]<best.key[1]||(key[1]===best.key[1]&&key[2]<best.key[2])));
         if(better)best={lane:candidate,key};
       }
-      if(best){dir=Math.sign(best.lane-lane);lane=best.lane;}
+      if(best)preferred=best.lane;
     }
-    laneUse[lane]++;
     const width=widthFor(item);
-    // 幅のあるノーツは選んだレーンを中心に置く(左端寄せだと右のレーンほど踏めなくなる)。
-    const subLane=Math.max(0,Math.min(10-width,lane*2+1-Math.ceil(width/2)));
+    // 好みの順にレーンを並べ、指の条件を満たす置き方のうち、いちばん好ましいものを採る。
+    // (好み: 歩きで選んだレーンに近い → これまで踏んだ回数が少ない → 番号が小さい)
+    const order=[0,1,2,3,4].sort((a,b)=>{
+      const da=Math.abs(a-preferred),db=Math.abs(b-preferred);
+      if(da!==db)return da-db;
+      if(laneUse[a]!==laneUse[b])return laneUse[a]-laneUse[b];
+      return a-b;
+    });
+    let chosenLane=null,chosenSub=null;
+    for(const candidate of order){
+      // 幅のあるノーツは選んだレーンを中心に置く(左端寄せだと右のレーンほど踏めなくなる)。
+      const sub=centeredSubLane(candidate,width);
+      if(placeable(sub,width,item.grid)){chosenLane=candidate;chosenSub=sub;break;}
+    }
+    if(chosenSub===null){
+      // レーンの中心では収まらないときは、サブレーン単位でずらして探す
+      for(let sub=0;sub<=10-width;sub++){
+        if(!placeable(sub,width,item.grid))continue;
+        chosenSub=sub;chosenLane=Math.floor(sub/2);break;
+      }
+    }
+    // それでも見つからない(直前の音が左右へ散っている)ときは好みのまま置き、STEP6/STEP7へ回す
+    if(chosenSub===null){chosenLane=preferred;chosenSub=centeredSubLane(preferred,width);}
+    if(chosenLane!==lane)dir=Math.sign(chosenLane-lane)||dir;
+    lane=chosenLane;
+    laneUse[lane]++;
+    const subLane=chosenSub;
     notes.push({type:'TAP',grid:item.grid,lane:Math.floor(subLane/2),subLane,subLaneWidth:width,
       sourceStrength:Math.round(item.strength*100)/100,sourcePeakOffsetMs:item.offsetMs,
       ...(item.supplementedFrom?{supplementedFrom:item.supplementedFrom}:{})});
@@ -664,7 +747,7 @@ const buildChart=(difficulty)=>{
   // 中心は動かさない。動かすとSLIDEと区別が付かなくなるため(そちらはSLIDEの役目)。
   if(P.holdTaperMaxCount>0){
     const taperCandidates=notes.map((note,index)=>({note,index}))
-      .filter(({note})=>note.type==='HOLD'&&Number(note.durationGrids)>=8)
+      .filter(({note})=>note.type==='HOLD'&&Number(note.durationGrids)>=4)
       .map(({index})=>({index}));
     const widthsAsc=[...P.widths].sort((a,b)=>a-b);
     // 中心を保ったまま幅を変える。はみ出す場合は左右へ寄せる。
@@ -678,7 +761,10 @@ const buildChart=(difficulty)=>{
       const note=notes[index],durationGrids=Number(note.durationGrids);
       // 点の数は長さで決める。pulse のように何度も変わる形は、点が足りないと形が出ない。
       const shape=HOLD_WIDTH_SHAPES[ordinal%HOLD_WIDTH_SHAPES.length];
-      const pointCount=Math.max(2,Math.min(9,Math.round(durationGrids/BEAT)+1));
+      // 点が2つしか無いと open / close しか形にならない。
+      // 密度の高い難易度は長いHOLDが取りにくく、実際にMASTERで2本しか幅変化が出なくなったので、
+      // 1拍のHOLDでも3点は置いて、ふくらむ・くびれる・繰り返すが出せるようにする。
+      const pointCount=Math.max(3,Math.min(9,Math.round(durationGrids/BEAT)+1));
       const seen=new Set();
       const points=[];
       for(let i=0;i<pointCount;i++){
@@ -939,6 +1025,40 @@ const buildChart=(difficulty)=>{
       endFlickCandidates.push({index});
     });
     for(const {index} of spread(endFlickCandidates,P.endFlickMaxCount,8))notes[index].endFlick=true;
+  }
+
+  // --- 指の条件の最終確認 ---
+  // レーンを決めたあとの後処理(SLIDEの経路づけ・同時押しの割り振り・区切りの幅広ノーツ・
+  // モンスターノーツ)は、ノーツの中心を動かすことがある。最後にもう一度だけ全部を見て、
+  // 「指が2本入らない近さなのに速すぎる」組み合わせが残っていたら、動かせるノーツ
+  // (TAP / FLICK)を左右へ寄せて直す。SLIDEは経路が意味を持つので動かさず、相方を動かす。
+  {
+    const ordered=notes.slice().sort((a,b)=>a.grid-b.grid);
+    const movable=note=>note.type==='TAP'||note.type==='FLICK';
+    const conflictsFor=(note,candidate)=>{
+      for(const other of ordered){
+        if(other===note)continue;
+        const deltaMs=(note.grid-other.grid)*gridMs;
+        if(Math.abs(deltaMs)>=HAND_MODEL.restrikeLimitMs)continue;
+        if(deltaMs===0)continue;   // 同時押しは幅の重なりで別に見ている
+        if(!fingerPairFeasible(candidate,other,Math.abs(deltaMs)).ok)return true;
+      }
+      return false;
+    };
+    for(const note of ordered){
+      if(!movable(note))continue;
+      if(!conflictsFor(note,note))continue;
+      const width=Number(note.subLaneWidth)||2;
+      let bestSub=null,bestDistance=Infinity;
+      for(let sub=0;sub<=10-width;sub++){
+        if(conflictsFor(note,{subLane:sub,subLaneWidth:width}))continue;
+        const distance=Math.abs(sub-Number(note.subLane));
+        if(distance<bestDistance){bestDistance=distance;bestSub=sub;}
+      }
+      if(bestSub===null)continue;   // どこへも逃がせない稀な場合はSTEP7へ回す
+      note.subLane=bestSub;
+      note.lane=Math.floor(bestSub/2);
+    }
   }
 
   const typeCounts=notes.reduce((acc,n)=>{acc[n.type]=(acc[n.type]||0)+1;return acc;},{});

@@ -10,15 +10,15 @@
   "hands": 2,
   "laneSpeedComfort": 10,
   "laneSpeedLimit": 18,
-  "restrikeComfortMs": 90,
-  "restrikeLimitMs": 55,
+  "restrikeComfortMs": 150,
+  "restrikeLimitMs": 105,
   "chordMinLaneGap": 1,
   "releaseMarginMs": 30,
   "endFlickReleaseMs": 80
  },
  "difficulties": {
   "EASY": {
-   "noteCount": 175,
+   "noteCount": 231,
    "impossibleCount": 0,
    "strainedCount": 0,
    "strainedRatio": 0,
@@ -26,7 +26,7 @@
    "issues": []
   },
   "NORMAL": {
-   "noteCount": 197,
+   "noteCount": 264,
    "impossibleCount": 0,
    "strainedCount": 0,
    "strainedRatio": 0,
@@ -34,28 +34,158 @@
    "issues": []
   },
   "HARD": {
-   "noteCount": 261,
+   "noteCount": 355,
    "impossibleCount": 0,
-   "strainedCount": 0,
-   "strainedRatio": 0,
-   "byKind": {},
-   "issues": []
+   "strainedCount": 2,
+   "strainedRatio": 0.0056,
+   "byKind": {
+    "strained/手の動きが忙しい": 2
+   },
+   "issues": [
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 243,
+     "grid": 1322,
+     "bar": 82,
+     "timeMs": 114729,
+     "lane": 2.25,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 299,
+     "grid": 1504,
+     "bar": 94,
+     "timeMs": 130496,
+     "lane": 1.25,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    }
+   ]
   },
   "EXPERT": {
-   "noteCount": 322,
+   "noteCount": 455,
    "impossibleCount": 0,
-   "strainedCount": 0,
-   "strainedRatio": 0,
-   "byKind": {},
-   "issues": []
+   "strainedCount": 1,
+   "strainedRatio": 0.0022,
+   "byKind": {
+    "strained/手の動きが忙しい": 1
+   },
+   "issues": [
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 308,
+     "grid": 1318,
+     "bar": 82,
+     "timeMs": 114383,
+     "lane": 3.5,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    }
+   ]
   },
   "MASTER": {
-   "noteCount": 394,
+   "noteCount": 504,
    "impossibleCount": 0,
-   "strainedCount": 0,
-   "strainedRatio": 0,
-   "byKind": {},
-   "issues": []
+   "strainedCount": 8,
+   "strainedRatio": 0.0159,
+   "byKind": {
+    "strained/手の動きが忙しい": 8
+   },
+   "issues": [
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 199,
+     "grid": 901,
+     "bar": 56,
+     "timeMs": 78259,
+     "lane": 3.25,
+     "type": "TAP",
+     "detail": "1.25レーンの移動が87ms(快適には125ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 345,
+     "grid": 1301,
+     "bar": 81,
+     "timeMs": 112910,
+     "lane": 2.25,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 351,
+     "grid": 1318,
+     "bar": 82,
+     "timeMs": 114383,
+     "lane": 3.5,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 387,
+     "grid": 1402,
+     "bar": 87,
+     "timeMs": 121660,
+     "lane": 0.5,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 391,
+     "grid": 1408,
+     "bar": 88,
+     "timeMs": 122179,
+     "lane": 4.25,
+     "type": "TAP",
+     "detail": "3.75レーンの移動が347ms(快適には375ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 457,
+     "grid": 1613,
+     "bar": 100,
+     "timeMs": 139938,
+     "lane": 2.25,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 470,
+     "grid": 1648,
+     "bar": 103,
+     "timeMs": 142970,
+     "lane": 1.25,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 479,
+     "grid": 1672,
+     "bar": 104,
+     "timeMs": 145049,
+     "lane": 1.25,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    }
+   ]
   }
  }
 }

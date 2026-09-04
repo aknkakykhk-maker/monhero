@@ -67,10 +67,9 @@ const source=fileArg?{label:`指定ファイル ${fileArg}`,file:()=>path.resolv
 if(!source){console.error(`未知の --source です: ${sourceKind} (${Object.keys(SOURCES).join(', ')})`);process.exit(1);}
 
 // --- ノーツの位置 ---
-// 指が触るのは中心。subLane を持つノーツ(TAP/HOLD/FLICK)は左端+幅/2、SLIDEは lane が中心線。
-const laneCenter=note=>note.subLane!=null&&Number.isFinite(Number(note.subLane))
-  ?(Number(note.subLane)+(Number(note.subLaneWidth)||2)/2)/2-.5
-  :Number(note.lane)||0;
+// 指が触るのは中心。式は rhythm-hand-model.js に一本化してある(STEP3・STEP6と同じ物差しにするため)。
+const {noteTouchLane}=require('./rhythm-hand-model.js');
+const laneCenter=note=>noteTouchLane(note);
 // 重なり判定のため、どのノーツもサブレーン座標の範囲へ揃える
 const span=note=>{
   const width=Number(note.subLaneWidth)||2;
@@ -93,7 +92,7 @@ const evaluate=notes=>{
     if(Math.abs(laneCenter(sorted[i])-laneCenter(sorted[i-1]))>=3)hardJumps++;
   }
   const use=[0,0,0,0,0];
-  for(const note of notes)use[Math.max(0,Math.min(4,Math.round(laneCenter(note))))]++;
+  for(const note of notes)use[Math.max(0,Math.min(4,Math.floor(laneCenter(note))))]++;
   const spread=Math.max(...use)-Math.min(...use);
   return {issues,impossible,strained,hardJumps,spread,
     cost:impossible*COST_IMPOSSIBLE+strained*COST_STRAINED+hardJumps*COST_HARD_JUMP+spread*COST_LANE_SPREAD};
