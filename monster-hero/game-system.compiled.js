@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d12dbf657070c27
+// source-sha256: aa62bef89b2ec40a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 05:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 05:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11650,6 +11650,21 @@ const helpDataRows = id => {
     // rhythmRankForScoreへ各難易度のmaxScoreをそのまま渡して実データから表を作る
     case 'rhythmDifficultyRanks':
       return (typeof RHYTHM_DIFFICULTIES !== 'undefined' ? RHYTHM_DIFFICULTIES : []).map(d => [d.id, `満点 ${d.maxScore.toLocaleString()}点 → 上限ランク ${rhythmRankForScore(d.maxScore)}`]);
+    // 体験版で遊べる難易度と、そのレベル・ノーツ数。ヘルプへ手で書き写すと、
+    // 譜面を作り直すたびに数字だけ古くなるため、実データからそのまま表にする
+    case 'rhythmDemoSongLevels':
+      {
+        const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+        const song = typeof rhythmDemoSong !== 'undefined' ? rhythmDemoSong(songs) : null;
+        if (!song) return [];
+        const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+        const labels = typeof RHYTHM_DEMO_DIFFICULTY_LABELS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_LABELS : {};
+        return ids.map(id => {
+          const chart = song.difficulties[id];
+          if (!chart) return null;
+          return [labels[id] && labels[id].name || id, `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ`];
+        }).filter(Boolean);
+      }
     case 'missionsDaily':
     case 'missionsWeekly':
     case 'missionsMonthly':
@@ -11683,7 +11698,8 @@ const HELP_DATA_TITLES = {
   monsterPower: '総合力の内訳',
   monsterLineages: 'モンスターの血統一覧',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
-  rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク'
+  rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
+  rhythmDemoSongLevels: '体験版で遊べる難易度とレベル'
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
@@ -35093,8 +35109,9 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement("b", {
           className: "text-sm font-black text-cyan-200"
         }, label.name), /*#__PURE__*/React.createElement("span", {
+          "data-rhythm-demo-level": true,
           className: "text-[9px] font-mono text-slate-400"
-        }, chart.totalNotes, "\u30CE\u30FC\u30C4")), /*#__PURE__*/React.createElement("p", {
+        }, "Lv.", chart.level, " / ", chart.totalNotes, "\u30CE\u30FC\u30C4")), /*#__PURE__*/React.createElement("p", {
           className: "mt-1 text-[10px] leading-relaxed text-slate-300"
         }, label.note), /*#__PURE__*/React.createElement("p", {
           "data-rhythm-demo-best": true,
