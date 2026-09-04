@@ -74,8 +74,9 @@ check('毎フレームのgeometry測定(measureTravel)を数えている',
   /measureTravel=useCallback[\s\S]{0,220}RHYTHM_PERF\.layoutRead\(\)/.test(game));
 check('ジェスチャー側の別rAFのフレーム数を数えている',
   /RHYTHM_PERF\.gestureFrame\(\);\s*\n\s*if\(sessions\.size/.test(data));
+// 呼び出し側が要素を持っているときは querySelector を省くので const 宣言とは限らない
 check('入力のたびのDOM検索と強制レイアウトを数えている',
-  /RHYTHM_PERF\.domQuery\(\);\s*\n\s*const area=document\.querySelector\('\[data-rhythm-play-area\]'\)/.test(data)
+  /RHYTHM_PERF\.domQuery\(\);\s*\n\s*(?:const )?area=document\.querySelector\('\[data-rhythm-play-area\]'\)/.test(data)
   &&/RHYTHM_PERF\.layoutRead\(\);\s*\n\s*const rect=area\.getBoundingClientRect\(\)/.test(data));
 check('SLIDE帯のpolygon更新数を数えている',/RHYTHM_PERF\.slidePolygons\(polygons\.length\)/.test(data));
 // 発光の要素はキャッシュするようになったので、実際に引き直したときだけ数える
@@ -113,6 +114,22 @@ check('画面の大きさが変わったら測り直す',
   gameSrc.includes("window.addEventListener('resize',invalidate)")
   &&gameSrc.includes("window.addEventListener('orientationchange',invalidate)"));
 check('組み上がる前(高さ0)の値は覚えない',gameSrc.includes('if(areaRect.height>0)travelCacheRef.current=result;'));
+// 2026-09-04: 実機で「ノーツを押したときにカクつく」報告を受けて足した3点。
+// どれも「タップ1回あたりの仕事を減らす」ためのもので、判定・スコアには関与しない。
+check('ノーツのDOMを毎回作り直さない(判定のたびの再生成を止める)',
+  /const noteElements=useMemo\(\(\)=>chart\.notes\.map/.test(gameSrc)
+  &&gameSrc.includes('{noteElements}')
+  &&!/\{chart\.notes\.map\(\(note,index\)=>\{/.test(gameSrc));
+check('レーン枠・サブレーン発光のDOMも毎回作り直さない',
+  /const laneElements=useMemo\(\(\)=><>/.test(gameSrc)&&gameSrc.includes('{laneElements}'));
+check('入力のrect取得はジェスチャー側と同じ1フレーム1回のキャッシュを共有する',
+  gameSrc.includes('const inputAreaRect=area=>RHYTHM_GESTURE_RUNTIME.areaRect(area)||area.getBoundingClientRect();')
+  &&data.includes('invalidateAreaRect,areaRect,')
+  &&!/const rect=area\.getBoundingClientRect\(\),live=new Set\(\)/.test(gameSrc));
+check('サブレーン発光は要素を覚えて、変わったところだけ書き換える',
+  gameSrc.includes('glowNodesRef=useRef(null)')
+  &&/nodes=glowNodesRef\.current=Array\.from\(area\.querySelectorAll\('\[data-rhythm-sublane-feedback\]'\)\)/.test(gameSrc)
+  &&!/area\.querySelectorAll\('\[data-rhythm-sublane-feedback\]'\)\.forEach/.test(gameSrc));
 check('終わったノーツへ毎フレーム同じ指示を書き直さない',
   gameSrc.includes('if(el._rhythmHidden!==true){')&&gameSrc.includes('el._rhythmHidden=true;'));
 check('見え方が変わったときだけ書き込む',gameSrc.includes('if(el._rhythmOpacity!==nextOpacity){'));
