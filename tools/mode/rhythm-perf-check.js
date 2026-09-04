@@ -153,6 +153,27 @@ check('tick本体の処理時間と、tickへ入るまでの遅れを計測で�
 check('will-changeは今動いているノーツにだけ付ける(全ノーツへ出しっぱなしにしない)',
   gameSrc.includes("const nextWillChange=visible?'transform, opacity':'';")
   &&!gameSrc.includes("willChange:'transform, opacity'"));
+// 2026-09-04: iPhone SE2(1.00M画素)では滑らかなのに iPhone 16e(2.96M画素)でカクつく、
+// という報告から。塗り直し(ラスタライズ)の重さは画素数に比例するため、画面の広い端末ほど
+// 不利になり、発熱してGPUが絞られるとそのままカクつきになる。
+// filterの値が毎フレーム変わる要素はGPUで動かすだけでは済まず毎フレーム塗り直しになるので、
+// 「値が実際に変わったときだけ書く」形を固定する。戻すと発熱時に再発する。
+check('ノーツの奥行き(scaleY)と明るさ(filter)を毎フレーム書き直さない',
+  data.includes("const depthScale=(Math.round((0.56+projected.scale*.44)*100)/100).toFixed(2);")
+  &&data.includes("const depthBrightness=(Math.round((0.72+projected.scale*.28)*100)/100).toFixed(2);")
+  &&data.includes("if(el._rhythmDepthScale!==depthScale){")
+  &&data.includes("if(el._rhythmDepthBrightness!==depthBrightness){")
+  &&!data.includes("el.style.setProperty('--rhythm-note-depth-brightness',(0.72+projected.scale*.28).toFixed(3));"));
+check('押している間だけ変わるHOLDのfilterを毎フレーム書き直さない',
+  gameSrc.includes("if(el._rhythmHoldFilter!==holdFilter){el.style.filter=holdFilter;el._rhythmHoldFilter=holdFilter;}")
+  &&!gameSrc.includes("el.style.filter=note.activePointerId!==null?'brightness(1.3)':'';"));
+// 「変わったときだけ書く」を安全に成立させるには、styleを直接書き戻したときに
+// 控えも捨てる必要がある。控えだけ古いと、同じ値と誤判定して書き込みを飛ばし、
+// 実際の見た目とズレたまま固まる(例: 透明のまま出てこない)。
+check('プレイ開始でstyleを戻すとき、覚えている値も一緒に捨てる',
+  gameSrc.includes("el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;")
+  &&gameSrc.includes("el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;"));
+
 check('失敗表示フラグをdatasetから毎フレーム読み直さない',
   gameSrc.includes('el._rhythmFailedFlag!==failedFlag')
   &&!gameSrc.includes('el.dataset.rhythmFailed!==failedFlag'));

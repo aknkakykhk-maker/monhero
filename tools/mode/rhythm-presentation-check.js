@@ -97,6 +97,25 @@ ok('100/200/300/400/500以上で演出がどんどん派手になる段(stage)�
 ok('演出はプレイエリアへ重ね、入力を邪魔しない',
   /data-rhythm-combo-milestone[^>]*pointer-events-none/.test(game));
 ok('演出のCSSがある',html.includes('[data-rhythm-combo-milestone]')&&html.includes('@keyframes mhRhythmComboBurst'));
+// ★2026-09-04に発見・修正したバグの再発防止:
+// [data-rhythm-combo-milestone] b のベース規則は background-clip:text で文字を透明にして
+// グラデーションを見せているが、stage2/3/4/5の上書き規則が `background:` の
+// ショートハンドで色だけ変えようとすると、background-clip も暗黙に初期値(border-box)へ
+// リセットされ、上書き規則のほうが詳細度で勝つため文字がまるごと透明(＝見えない)になる。
+// 200コンボ以降の演出だけ数字が出ない不具合になっていたため、上書き規則は
+// ロングハンドの background-image を使うことで固定する。
+ok('stage2以降の上書き規則がbackground-clipを巻き添えで消さない（ショートハンドを使っていない）',(()=>{
+  const stageOverrideBlock=(()=>{
+    const at=html.indexOf('/* stage2(200)');
+    const end=html.indexOf('@keyframes mhRhythmComboBurst');
+    return at>=0&&end>at?html.slice(at,end):'';
+  })();
+  return stageOverrideBlock.length>0
+    &&stageOverrideBlock.includes('background-image:linear-gradient(180deg,#fff 0%,#fcd34d 40%,#f97316 100%)')
+    &&stageOverrideBlock.includes('background-image:linear-gradient(180deg,#fff 0%,#fef3c7 32%,#fb7185 68%,#38bdf8 100%)')
+    &&stageOverrideBlock.includes('background-image:linear-gradient(90deg,#f87171,#fbbf24,#a3e635,#22d3ee,#a78bfa,#f472b6,#f87171)')
+    &&!/data-milestone-stage="[2-5]"\][^{},]*\{[^}]*\bbackground:linear-gradient/.test(stageOverrideBlock);
+})());
 
 // --- リザルトの称号 ---
 ok('リザルトで達成を大きく祝う',game.includes('data-rhythm-result-celebrate'));
