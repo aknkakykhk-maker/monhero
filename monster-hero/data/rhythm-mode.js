@@ -760,6 +760,37 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
     return true;
   };
+  // モンスターノーツを取ったときの音。実機で「モンスターノーツ踏んだときは音も演出も地味すぎる」と
+  // 言われたので(2026-09-05)、ふつうのノーツとは**はっきり違う音**にする。
+  // 1曲に最大4回しか鳴らないので、ふつうのタップ音より長く・厚くしてよい。
+  //   ・上へ駆け上がる3音(C6→E6→G6)を短い間隔で重ねる
+  //   ・その下へ、丸い低音(C4)を1つ置いて厚みを出す
+  // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
+  const playMonster=()=>{
+    const settings=readSettings();
+    if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
+    const audio=context();
+    if(!audio)return false;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const now=audio.currentTime,volume=settings.volume/100;
+    const tone=(type,freq,start,sustain,peak)=>{
+      const oscillator=audio.createOscillator(),gain=audio.createGain();
+      oscillator.type=type;
+      oscillator.frequency.setValueAtTime(freq,start);
+      gain.gain.setValueAtTime(.0001,start);
+      gain.gain.exponentialRampToValueAtTime(Math.max(.0001,peak*volume),start+.008);
+      gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
+      oscillator.connect(gain);gain.connect(audio.destination);
+      oscillator.start(start);oscillator.stop(start+sustain+.02);
+      oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    };
+    // C6 → E6 → G6 を35msずつずらして駆け上がる
+    [1046.50,1318.51,1567.98].forEach((freq,index,list)=>
+      tone('triangle',freq,now+index*.035,index===list.length-1?.34:.16,.042));
+    // 厚みを出す低音(C4)。上の3音より小さくして、音量が跳ねないようにする
+    tone('sine',261.63,now,.30,.030);
+    return true;
+  };
   // フルコンボ等を達成して曲を終えたときの、リザルトへ行く前のお祝い演出で鳴らす1回だけの
   // 合成音。本物の掛け声(音声ファイル)は用意していないため、上昇アルペジオで代える。
   // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
@@ -787,7 +818,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     });
     return true;
   };
-  return {warm,play,playClear,preview:settings=>play(settings),playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,_readSettings:readSettings};
+  return {warm,play,playClear,playMonster,preview:settings=>play(settings),playEmpty,beginInputGroup,markInputGroupHandled,endInputGroup,playFullCombo,_readSettings:readSettings};
 })();
 
 // 途中追従判定(暫定値。実機確認のうえで調整する)。
@@ -2600,6 +2631,72 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::after{right:1px}
     [data-rhythm-note][data-rhythm-failed="true"]{filter:grayscale(1) brightness(.72)!important}
     [data-rhythm-note][data-rhythm-failed="true"]>span:last-child{box-shadow:none!important;border-color:rgba(148,163,184,.6)!important}
+    /* --- ノーツを取ったときのヒットエフェクト --- */
+    /* 判定ラインの少し上に置き、ノーツの幅に合わせて弾ける。要素は使い回すので増えない。
+       動かすのは transform と opacity だけ。ぼかし・影・色は動かさないので塗り直しは起きない。 */
+    [data-rhythm-hit-layer]{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+    [data-rhythm-hit-effect]{position:absolute;bottom:12%;left:var(--rhythm-hit-center,50%);
+      width:var(--rhythm-hit-width,12%);height:0;pointer-events:none;opacity:0;
+      transform:translate(-50%,50%)}
+    [data-rhythm-hit-effect]>i,[data-rhythm-hit-effect]>b{position:absolute;left:0;right:0;
+      top:0;display:block;border-radius:999px}
+    /* 中心の光: 横へ伸びる帯。ノーツの幅に合わせて出る */
+    [data-rhythm-hit-effect]>i{height:10px;margin-top:-5px;
+      background:radial-gradient(closest-side,var(--rhythm-hit-color,#fff) 0%,rgba(255,255,255,.55) 45%,rgba(255,255,255,0) 100%)}
+    /* 広がる輪: 外へ抜けていく */
+    [data-rhythm-hit-effect]>b{height:0;padding-bottom:26%;margin-top:-13%;
+      border:2px solid var(--rhythm-hit-color,#fff);opacity:.9}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>i{animation:mhRhythmHitCore var(--rhythm-hit-ms,320ms) ease-out 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>b{animation:mhRhythmHitRing var(--rhythm-hit-ms,320ms) ease-out 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]{opacity:1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]{opacity:1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>i{animation:mhRhythmHitCoreBig var(--rhythm-hit-ms,900ms) ease-out 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>b{animation:mhRhythmHitRingBig var(--rhythm-hit-ms,900ms) ease-out 1}
+    @keyframes mhRhythmHitCore{
+      0%{opacity:0;transform:scale(.35,.5)}
+      18%{opacity:1;transform:scale(1.15,1.6)}
+      100%{opacity:0;transform:scale(1.35,.35)}}
+    @keyframes mhRhythmHitRing{
+      0%{opacity:.95;transform:scale(.3)}
+      100%{opacity:0;transform:scale(1.5)}}
+    @keyframes mhRhythmHitCoreBig{
+      0%{opacity:0;transform:scale(.3,.5)}
+      12%{opacity:1;transform:scale(1.5,2.6)}
+      45%{opacity:.85;transform:scale(1.9,1.4)}
+      100%{opacity:0;transform:scale(2.3,.4)}}
+    @keyframes mhRhythmHitRingBig{
+      0%{opacity:1;transform:scale(.25)}
+      55%{opacity:.6;transform:scale(1.8)}
+      100%{opacity:0;transform:scale(2.6)}}
+    /* 画面全体を一瞬だけ染める(モンスターノーツだけ)。あらかじめ置いた1枚の
+       グラデーションの opacity だけを動かすので、塗り直しは起きない。 */
+    [data-rhythm-screen-flash]{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;
+      background:radial-gradient(120% 60% at 50% 100%,rgba(253,224,71,.42) 0%,rgba(253,224,71,.14) 45%,rgba(253,224,71,0) 100%)}
+    [data-rhythm-screen-flash][data-rhythm-flash="1"]{animation:mhRhythmScreenFlash 620ms ease-out 1}
+    @keyframes mhRhythmScreenFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+    /* 演出量MINIMAL・軽量モードでは出さない(音は鳴る) */
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-hit-layer],
+    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-hit-layer],
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-screen-flash],
+    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-screen-flash]{display:none!important}
+    /* 能力名(「ミーア 元気！」)も出た瞬間に大きく弾ませる。1曲に最大4回しか出ないので大きめに。 */
+    [data-rhythm-ability-flash]{animation:mhRhythmAbilityPop 420ms cubic-bezier(.2,1.5,.4,1) 1;
+      transform-origin:center;will-change:transform}
+    @keyframes mhRhythmAbilityPop{
+      0%{transform:translateX(-50%) scale(.5);opacity:0}
+      35%{transform:translateX(-50%) scale(1.18);opacity:1}
+      60%{transform:translateX(-50%) scale(.96)}
+      100%{transform:translateX(-50%) scale(1);opacity:1}}
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-ability-flash],
+    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-ability-flash]{animation:none!important}
+    /* 判定文字を一度だけ弾ませる(プロセカのように、出た瞬間だけ大きく) */
+    [data-rhythm-judgment-text][data-rhythm-judgment-pop="1"]{animation:mhRhythmJudgmentPop 220ms ease-out 1}
+    @keyframes mhRhythmJudgmentPop{
+      0%{transform:scale(.72)}
+      45%{transform:scale(1.16)}
+      100%{transform:scale(1)}}
+    [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-text],
+    [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-text]{animation:none!important}
     /* --- 両サイドのマスモン --- */
     /* 動かすのは transform だけ。影・ぼかし・色は動かさないので、跳ねても塗り直しは起きない。
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */
@@ -2645,6 +2742,14 @@ const installRhythmGeometryStyles=()=>{
       0%{opacity:.95;transform:scale(.92)}
       70%{opacity:0;transform:scale(1.14)}
       100%{opacity:0;transform:scale(1.14)}}
+    /* モンスターノーツを取った瞬間、そのマスモンが大きく跳ねる */
+    [data-rhythm-side-monster][data-rhythm-side-hit="1"]{animation:mhRhythmSideCheer 700ms ease-out 1!important}
+    @keyframes mhRhythmSideCheer{
+      0%{transform:translate3d(0,0,0) scale(1)}
+      22%{transform:translate3d(0,-42%,0) scale(1.22)}
+      48%{transform:translate3d(0,4%,0) scale(.94)}
+      70%{transform:translate3d(0,-14%,0) scale(1.08)}
+      100%{transform:translate3d(0,0,0) scale(1)}}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-side-monster]{animation:none!important}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-side-monster]::after,
@@ -2654,6 +2759,69 @@ const installRhythmGeometryStyles=()=>{
   document.head.appendChild(style);
 };
 installRhythmGeometryStyles();
+
+// --- ノーツを取ったときのヒットエフェクト ---
+// 実機で「画面演出はあまりかわってない」「プロセカ、チュウニズムのようなのを参考に」
+// 「モンスターノーツ踏んだときは音も演出も地味すぎる」と言われて足した(2026-09-05)。
+//
+// 以前は「ノーツ1枚ごとの派手なエフェクトは重いので入れない」としていたが、
+// あのとき実機でカクついた原因は**画面いっぱいのぼかしを押すたびに描き直していた**ことで、
+// エフェクトそのものが重かったわけではない。次を守れば発熱時でも負担は増えない。
+//
+//   ・要素は**あらかじめ作って使い回す**(押すたびにDOMを増やさない)
+//   ・動かすのは transform と opacity **だけ**。ぼかし・影・色は動かさない
+//   ・光り方はCSSアニメーションなので、毎フレームのJSは走らない
+//   ・1回の発生で書くのは「位置・幅・色・種類」の数個だけ
+//
+// 使い回す枚数。同時にこれ以上重なることは実際には無く、足りなければ古いものから奪う。
+const RHYTHM_HIT_EFFECT_POOL=10;
+// ふつうのノーツと、モンスターノーツ(1曲に最大4回)で光の大きさ・長さを変える。
+const RHYTHM_HIT_EFFECT_MS=Object.freeze({NORMAL:320,MONSTER:900});
+const RHYTHM_HIT_EFFECT_JUDGMENT_COLORS=Object.freeze({
+  MARVELOUS:'#f5d0fe',EXCELLENT:'#a5f3fc',GREAT:'#fde68a',GOOD:'#bef264',BAD:'#fda4af',
+});
+const rhythmHitEffectColor=judgment=>RHYTHM_HIT_EFFECT_JUDGMENT_COLORS[String(judgment||'')]||'#e2e8f0';
+// プレイエリアの中に、使い回すエフェクトの入れ物を用意する。すでにあれば作り直さない。
+const rhythmEnsureHitEffects=area=>{
+  if(!area||typeof document==='undefined')return null;
+  let layer=area.querySelector('[data-rhythm-hit-layer]');
+  if(layer&&layer._rhythmPool)return layer;
+  if(!layer){
+    layer=document.createElement('div');
+    layer.dataset.rhythmHitLayer='';
+    area.appendChild(layer);
+  }
+  layer.innerHTML='';
+  layer._rhythmPool=[];
+  layer._rhythmNext=0;
+  for(let index=0;index<RHYTHM_HIT_EFFECT_POOL;index++){
+    const item=document.createElement('span');
+    item.dataset.rhythmHitEffect='';
+    item.appendChild(document.createElement('i'));   // 中心の光
+    item.appendChild(document.createElement('b'));   // 広がる輪
+    layer.appendChild(item);
+    layer._rhythmPool.push(item);
+  }
+  return layer;
+};
+// 判定ラインの高さでノーツの幅に合わせて光らせる。span は 0〜1 のプレイエリア比で受け取る。
+const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false})=>{
+  const layer=rhythmEnsureHitEffects(area);
+  if(!layer||!layer._rhythmPool.length)return null;
+  const item=layer._rhythmPool[layer._rhythmNext%layer._rhythmPool.length];
+  layer._rhythmNext=(layer._rhythmNext+1)%layer._rhythmPool.length;
+  const kind=monster?'MONSTER':'NORMAL';
+  const width=Math.max(.06,Math.min(1,Number(widthRatio)||.1))*(monster?1.5:1.15);
+  item.style.setProperty('--rhythm-hit-center',`${(Math.max(0,Math.min(1,Number(centerRatio)||.5))*100).toFixed(2)}%`);
+  item.style.setProperty('--rhythm-hit-width',`${(width*100).toFixed(2)}%`);
+  item.style.setProperty('--rhythm-hit-color',monster?'#fde047':rhythmHitEffectColor(judgment));
+  item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
+  // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない
+  item.dataset.rhythmHitKind='';
+  void item.offsetWidth;
+  item.dataset.rhythmHitKind=kind;
+  return item;
+};
 
 // --- プレイ画面の両サイドへ出すマスモン ---
 // レーンは奥へ向かって狭くなる台形なので、その外側に「上が広く下が狭い三角形」の空きができる。
