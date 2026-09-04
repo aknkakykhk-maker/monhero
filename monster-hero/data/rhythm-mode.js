@@ -1062,6 +1062,30 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   return {contactsForTouch,isSyntheticTapKey:key=>syntheticTapKeys.has(String(key)),clear,_touchStates:touchStates,_syntheticTapKeys:syntheticTapKeys,_stabilizedMoveTouch:stabilizedMoveTouch,_radiusExpansionAccepted:radiusExpansionAccepted};
 })();
 
+// 入力候補は判定時刻±200msだけ見ればよい。以前は1入力ごとに全ノーツを
+// map→filter→sortして一時配列を作っていたため、長い譜面ほどタップ直前/直後に
+// メインスレッドの仕事とGCを増やしていた。譜面が時刻昇順なら二分探索で候補窓だけへ
+// 絞り、並び順が崩れている譜面だけ従来どおり全範囲へフォールバックする。
+// 候補の優先順(時刻差→入力位置への近さ→元index)は変えない。
+const RHYTHM_INPUT_MATCH_META=new WeakMap();
+const rhythmInputMatchBounds=(source,now,offset)=>{
+  let meta=RHYTHM_INPUT_MATCH_META.get(source);
+  if(!meta){
+    let ascending=true;
+    for(let i=1;i<source.length;i++){
+      const prev=Number(source[i-1]?.timeMs),cur=Number(source[i]?.timeMs);
+      if(!Number.isFinite(prev)||!Number.isFinite(cur)||cur<prev){ascending=false;break;}
+    }
+    meta={ascending};RHYTHM_INPUT_MATCH_META.set(source,meta);
+  }
+  if(!meta.ascending)return [0,source.length];
+  const center=Number(now)-Number(offset),min=center-200,max=center+200;
+  let lo=0,hi=source.length;
+  while(lo<hi){const mid=(lo+hi)>>1;if(Number(source[mid]?.timeMs)<min)lo=mid+1;else hi=mid;}
+  const start=lo;hi=source.length;
+  while(lo<hi){const mid=(lo+hi)>>1;if(Number(source[mid]?.timeMs)<=max)lo=mid+1;else hi=mid;}
+  return [start,lo];
+};
 const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
   return (Array.isArray(inputs)?inputs:[]).map(input=>{
@@ -1088,14 +1112,24 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const span=inputSpan(note);
       return span?Math.abs(subCoordinate-span.center):0;
     };
-    const candidates=source.map((note,index)=>({note,index})).filter(({note,index})=>!claimed.has(index)&&!note.done&&note.activePointerId===null&&RHYTHM_NOTE_TYPES.includes(note.type)&&(!tapOnly||note.type==='TAP')&&acceptsPosition(note)&&Math.abs(now-(note.timeMs+offset))<=200).sort((a,b)=>Math.abs(now-(a.note.timeMs+offset))-Math.abs(now-(b.note.timeMs+offset))||spatialDistance(a.note)-spatialDistance(b.note)||a.index-b.index);
-    const picked=candidates[0];
+    const [start,end]=rhythmInputMatchBounds(source,now,offset);
+    let picked=null,pickedIndex=-1,pickedTimeDistance=Infinity,pickedSpatialDistance=Infinity;
+    for(let index=start;index<end;index++){
+      const note=source[index];
+      if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP')continue;
+      const timeDistance=Math.abs(now-(Number(note.timeMs)+offset));
+      if(!(timeDistance<=200)||!acceptsPosition(note))continue;
+      const distance=spatialDistance(note);
+      if(!picked||timeDistance<pickedTimeDistance||(timeDistance===pickedTimeDistance&&distance<pickedSpatialDistance)){
+        picked=note;pickedIndex=index;pickedTimeDistance=timeDistance;pickedSpatialDistance=distance;
+      }
+    }
     if(!picked)return {input,target:null,deltaMs:null};
-    claimed.add(picked.index);
-    const originalType=picked.note.type;
-    if(originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE')RHYTHM_GESTURE_RUNTIME.bind(key,picked.note,originalType,now,offset);
+    claimed.add(pickedIndex);
+    const originalType=picked.type;
+    if(originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE')RHYTHM_GESTURE_RUNTIME.bind(key,picked,originalType,now,offset);
     RHYTHM_NOTE_SE_RUNTIME.play();
-    return {input,target:picked.note,deltaMs:now-(picked.note.timeMs+offset)};
+    return {input,target:picked,deltaMs:now-(picked.timeMs+offset)};
   });
 };
 

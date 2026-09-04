@@ -20,6 +20,27 @@ assert.deepEqual(match([note(4,1)],[input(3.85)]),[0],'幅1の最小タッチ許
 assert.deepEqual(match([note(4,1)],[input(3.8)]),[null],'細ノーツ許容を広げすぎない');
 assert.strictEqual(match([note(4,1,0),note(5,1,1)],[input(5)]).filter(x=>x!==null).length,1,'1入力1ノーツ');
 assert.deepEqual(match([note(4,1,0),note(5,1,1)],[input(4.5,'touch:1'),input(5.5,'touch:2')]),[0,1],'別指同時取得');
+// 入力候補の探索最適化: 判定の優先順は従来(time差→位置差→index)と同じ。
+assert.deepEqual(match([
+  {type:'TAP',timeMs:1100,lane:2,index:0,done:false,activePointerId:null},
+  {type:'TAP',timeMs:900,lane:2,index:1,done:false,activePointerId:null},
+],[{lane:2,inputKey:'touch:tie'}]),[0],'時刻差・位置差が同じなら元indexが小さい方を選ぶ');
+assert.deepEqual(match([
+  {type:'TAP',timeMs:1080,lane:2,index:0,done:false,activePointerId:null},
+  {type:'TAP',timeMs:950,lane:2,index:1,done:false,activePointerId:null},
+],[{lane:2,inputKey:'touch:nearest'}]),[1],'判定時刻に近いノーツを優先する');
+assert.deepEqual(match([
+  {type:'TAP',timeMs:1000,lane:2,subLane:4,subLaneWidth:4,index:0,done:false,activePointerId:null},
+  {type:'TAP',timeMs:1000,lane:1,subLane:3,subLaneWidth:4,index:1,done:false,activePointerId:null},
+],[input(5.1,'touch:spatial')]),[1],'時刻差が同じなら入力位置に近いノーツを優先する');
+assert.deepEqual(match([
+  {type:'TAP',timeMs:1100,lane:2,index:0,done:false,activePointerId:null},
+  {type:'TAP',timeMs:900,lane:2,index:1,done:false,activePointerId:null},
+  {type:'TAP',timeMs:1000,lane:2,index:2,done:false,activePointerId:null},
+],[{lane:2,inputKey:'touch:unsorted'}]),[2],'時刻順でない譜面は全範囲fallbackして従来どおり拾う');
+assert(source.includes('const RHYTHM_INPUT_MATCH_META=new WeakMap();')&&source.includes('const rhythmInputMatchBounds=(source,now,offset)=>')&&!source.includes('source.map((note,index)=>({note,index})).filter'),'入力ごとの全ノーツmap/filter/sortを廃止して候補時刻窓へ絞る');
+const matchReads=run(`(()=>{let reads=0;const notes=Array.from({length:400},(_,i)=>{const n={type:'TAP',lane:2,index:i,done:false,activePointerId:null};Object.defineProperty(n,'timeMs',{get(){reads++;return i*100;}});return n;});rhythmMatchInputBatch(notes,[{lane:2,inputKey:'touch:perf'}],20000,0);reads=0;rhythmMatchInputBatch(notes,[{lane:2,inputKey:'touch:perf2'}],20000,0);return reads;})()`);
+assert(matchReads<80,`昇順400ノーツの2回目入力は±200ms周辺だけを見る reads=${matchReads}`);
 assert.deepEqual(match([{type:'TAP',timeMs:1000,lane:2,index:0,done:false,activePointerId:null}],[{lane:2,inputKey:'touch:1'}]),[0],'旧5レーンTAP互換');
 for(const y of [.05,.5,.88,1]) for(const sub of [.1,2.5,5.5,9.9]){
   const rect={left:10,top:20,width:400,height:800},left=run(`rhythmProjectBoundary(0,${y})`),right=run(`rhythmProjectBoundary(5,${y})`),x=rect.left+rect.width*(left+(right-left)*sub/10),cy=rect.top+rect.height*y;
