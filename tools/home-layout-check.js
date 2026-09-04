@@ -38,7 +38,7 @@ ${css}
     <button class="mh-home-facility management"><span>M/B管理</span></button>
     <button class="mh-home-facility temple"><span>神殿</span></button>
     <button class="mh-home-facility market"><span>マーケット</span></button>
-    <button class="mh-home-facility rhythm"><span>🎵 モンスタービート<small>準備中</small></span></button>
+    <button class="mh-home-facility rhythm"><span>🎵 モンヒロビート<small>準備中</small></span></button>
     <button class="mh-home-facility battle"><span>バトル</span></button>
   </nav>
   <button class="mh-home-mission">ミッション</button>
