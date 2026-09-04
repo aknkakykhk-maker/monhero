@@ -6,8 +6,8 @@
 //   node tools/mode/rhythm-chart-v3-generate.js --difficulty HARD
 //   node tools/mode/rhythm-chart-v3-generate.js --explain HARD      # どう組み立てたかを並べて見る
 //
-// 入力: tools/mode/authoring/<track>-v3-audio.json     （V3音源解析: 音の性格・高さ・伸び）
-//       tools/mode/authoring/<track>-v2-structure.json （セクション・フレーズ）
+// 入力: tools/mode/authoring/<track>-v3-audio.json
+//       （V3音源解析ひとつ。テンポ・拍子・区切り・盛り上がり・打点・音の高さが全部入っている）
 // 出力: tools/mode/authoring/<track>-v3-chart-<難易度>.json
 //
 // 作り方の根拠はすべて docs/spec/RHYTHM_CHART_DESIGN.md にある。
@@ -33,6 +33,7 @@ const only=arg('--difficulty');
 const explain=arg('--explain');
 const trackId=arg('--track','monster_hero_theme');
 const outputDir=arg('--output-dir',null);
+const inputDir=arg('--input-dir',null);
 const DIFFICULTIES=['EASY','NORMAL','HARD','EXPERT','MASTER'];
 
 // ============================================================================
@@ -49,31 +50,51 @@ const SUSTAIN_BONUS=.22;          // 伸びる音は「押さえる価値があ�
 // 音程のある音（メロディ・歌）は譜面の顔になる。打楽器ばかりの譜面にしないため少し優先する。
 const PITCHED_BONUS=.18;
 
-// 難易度ごとの方針。**拾う量（musicalShare）と、できることだけ**を持つ。
+// 難易度ごとの方針。**できること**だけを持つ。量は DENSITY_TARGET が曲ごとに決める。
 // 拾う順番はすべての難易度で同じなので、下の難易度は上の難易度の部分集合になる。
 const PROFILES=Object.freeze({
-  EASY:Object.freeze({level:1,musicalShare:.285,lattice:2,maxLaneStep:1,maxRun:2,
+  EASY:Object.freeze({level:1,lattice:2,maxLaneStep:1,maxRun:2,
     types:['TAP','HOLD'],widths:[3,4,6],narrowRate:0,simultaneous:false,
-    holdMax:14,slideMax:0,flickMax:0,endFlickMax:0,chordMax:0,accentWidth:10,accentMax:6}),
-  NORMAL:Object.freeze({level:3,musicalShare:.318,lattice:2,maxLaneStep:2,maxRun:3,
+    holdPerMinute:5.6,slidePerMinute:0,flickPerMinute:0,endFlickPerMinute:0,chordPerMinute:0,
+    accentWidth:10,accentPerMinute:2.4}),
+  NORMAL:Object.freeze({level:3,lattice:2,maxLaneStep:2,maxRun:3,
     types:['TAP','HOLD','FLICK'],widths:[2,3,4,6],narrowRate:0,simultaneous:false,
-    holdMax:16,slideMax:0,flickMax:14,endFlickMax:3,chordMax:0,accentWidth:10,accentMax:6}),
-  HARD:Object.freeze({level:5,musicalShare:.443,lattice:1,maxLaneStep:2,maxRun:2,
+    holdPerMinute:6.4,slidePerMinute:0,flickPerMinute:5.6,endFlickPerMinute:1.2,chordPerMinute:0,
+    accentWidth:10,accentPerMinute:2.4}),
+  HARD:Object.freeze({level:5,lattice:1,maxLaneStep:2,maxRun:2,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.04,simultaneous:false,
-    holdMax:18,slideMax:10,flickMax:18,endFlickMax:5,chordMax:0,accentWidth:8,accentMax:7}),
-  EXPERT:Object.freeze({level:7,musicalShare:.497,lattice:1,maxLaneStep:3,maxRun:5,
+    holdPerMinute:7.2,slidePerMinute:4,flickPerMinute:7.2,endFlickPerMinute:2,chordPerMinute:0,
+    accentWidth:8,accentPerMinute:2.8}),
+  EXPERT:Object.freeze({level:7,lattice:1,maxLaneStep:3,maxRun:5,
     types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.12,simultaneous:true,
-    holdMax:20,slideMax:12,flickMax:22,endFlickMax:7,chordMax:12,accentWidth:8,accentMax:7}),
-  MASTER:Object.freeze({level:9,musicalShare:.560,lattice:1,maxLaneStep:4,maxRun:8,
-    types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4],narrowRate:.20,simultaneous:true,
-    holdMax:22,slideMax:14,flickMax:26,endFlickMax:9,chordMax:18,accentWidth:6,accentMax:8}),
+    holdPerMinute:8,slidePerMinute:4.8,flickPerMinute:8.8,endFlickPerMinute:2.8,chordPerMinute:4.8,
+    accentWidth:8,accentPerMinute:2.8}),
+  MASTER:Object.freeze({level:9,lattice:1,maxLaneStep:4,maxRun:8,
+    types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4],narrowRate:.2,simultaneous:true,
+    holdPerMinute:8.8,slidePerMinute:5.6,flickPerMinute:10.4,endFlickPerMinute:3.6,chordPerMinute:7.2,
+    accentWidth:6,accentPerMinute:3.2}),
 });
-// 盛り上がりで小節あたりの上限を持ち上げる幅（V2で実機確認済みの考え方をそのまま使う）。
+// HOLD・SLIDE・FLICK・同時押し・区切りの一発は、曲の長さに比例させる。
+// 「1曲に何個」で持つと、30秒の曲では多すぎ、6分の曲では足りなくなる（実際そうなった）。
+
+// 盛り上がりで小節あたりの取り分を持ち上げる幅。
 // 「その小節に実際にある音の数」を土台にし、音量だけで増やさない。
 const MUSICAL_LIFT=Object.freeze([.45,1.35]);
-const SECTION_POSITION_ADJUST=.2;
-const SECTION_ADJUST=Object.freeze({INTRO:-1,OUTRO:-1,BREAK:-1,VERSE:0,BRIDGE:0,
-  BUILD:1,PRE_CHORUS:1,CHORUS:1,FINAL_CHORUS:1});
+
+// --- 曲ごとに自動でそろえる、譜面の量の目標 ---
+// 前は「その曲の打点の何割を拾うか」で決めていた。これは1曲に合わせた数字で、
+// 打点の多い曲・少ない曲で仕上がりの量がまるで変わってしまい、曲を変えるたびに調整が要った。
+//
+// いまは**1拍あたり何個**を目標にし、テンポの速い曲・遅い曲で極端にならないよう
+// 毎秒の下限・上限で挟む。こうすると、どの曲でも「遊んだ感じの忙しさ」がそろう。
+// 数字は、耳で確認して通した Monster Hero の仕上がり（EASY 1.57 〜 MASTER 3.43 毎秒）から取った。
+const DENSITY_TARGET=Object.freeze({
+  EASY:  Object.freeze({perBeat:.54,minPerSecond:.9, maxPerSecond:2.0}),
+  NORMAL:Object.freeze({perBeat:.62,minPerSecond:1.1,maxPerSecond:2.4}),
+  HARD:  Object.freeze({perBeat:.85,minPerSecond:1.6,maxPerSecond:3.2}),
+  EXPERT:Object.freeze({perBeat:1.03,minPerSecond:2.1,maxPerSecond:4.0}),
+  MASTER:Object.freeze({perBeat:1.19,minPerSecond:2.4,maxPerSecond:4.6}),
+});
 
 const COMMON=Object.freeze({
   minTimeMs:1800,
@@ -96,21 +117,22 @@ const COMMON=Object.freeze({
 // ============================================================================
 // 読み込み
 // ============================================================================
-const readJson=file=>JSON.parse(fs.readFileSync(path.join(ROOT,file),'utf8'));
+const readJson=file=>JSON.parse(fs.readFileSync(path.isAbsolute(file)?file:path.join(ROOT,file),'utf8'));
+const authoring=file=>inputDir?path.join(path.resolve(ROOT,inputDir),file):`tools/mode/authoring/${file}`;
 const dashed=trackId.replace(/_/g,'-');
-const audio=readJson(`tools/mode/authoring/${dashed}-v3-audio.json`);
+// V3の解析だけを入力にする。テンポも区切りも盛り上がりもこの1つに入っているので、
+// 別系統の道具（ffmpegを使うV2のSTEP1/STEP2）に頼らない＝どんな曲でも作れる。
+const audio=readJson(authoring(`${dashed}-v3-audio.json`));
 if(audio.analysisType!=='rhythm-audio-v3')throw new Error('V3音源解析のJSONではありません');
-const structure=readJson(`tools/mode/authoring/${dashed}-v2-structure.json`);
-const timingContext={Object,Number,Math};
-vm.createContext(timingContext);
-vm.runInContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-timing.js'),'utf8')}\nthis.__t=RHYTHM_TIMING_DATA[${JSON.stringify(trackId)}];`,timingContext);
-const timing=timingContext.__t;
-const gridMs=timing.beatMs/timing.subdivisionsPerBeat;
+if(!audio.structure)throw new Error('V3音源解析が古い形です。rhythm-audio-analyze-v3.js を通し直してください');
+const structure=audio.structure;
+const timing=audio.timing;
+const gridMs=timing.gridMs;
 const gridTimeMs=grid=>timing.beatZeroMs+grid*gridMs;
 const BEAT=timing.subdivisionsPerBeat;
-const BAR=BEAT*4;
+const BAR=BEAT*timing.beatsPerBar;
 const minGrid=Math.ceil((COMMON.minTimeMs-timing.beatZeroMs)/gridMs);
-const maxGrid=Math.floor((timing.audioDurationMs-COMMON.endPaddingMs-timing.beatZeroMs)/gridMs);
+const maxGrid=Math.floor((audio.durationMs-COMMON.endPaddingMs-timing.beatZeroMs)/gridMs);
 const minBar=Math.floor(minGrid/BAR),maxBar=Math.floor(maxGrid/BAR);
 
 // 打点をグリッドごとに1つへまとめる（同じ位置に2つ以上あれば強いほうを残す）
@@ -125,35 +147,22 @@ const allOnsets=[...onsetByGrid.values()].sort((a,b)=>a.grid-b.grid);
 const heightByGrid=new Map();
 for(const point of audio.pitchCurve)if(point.height!=null)heightByGrid.set(point.grid,point.height);
 
-// セクション・フレーズ
-const sectionForGrid=grid=>{
-  const ms=gridTimeMs(grid);
-  for(const section of structure.sections)if(ms>=section.startMs&&ms<section.endMs)return section;
-  return structure.sections[structure.sections.length-1]||null;
-};
-const phraseForBar=bar=>structure.phrases.find(p=>bar>=p.startBar&&bar<p.endBarExclusive)||null;
-
-// 盛り上がり（V2と同じ考え方: 小節ごとのintensityの順位＋セクション調整）
-const features=readJson(`tools/mode/authoring/${dashed}-v2-features.json`);
-const barIntensity=bar=>{
-  const start=gridTimeMs(bar*BAR),end=gridTimeMs((bar+1)*BAR);
-  const windows=features.timeline.filter(w=>w.centerMs>=start&&w.centerMs<end);
-  if(windows.length)return windows.reduce((sum,w)=>sum+w.intensity,0)/windows.length;
-  let nearest=features.timeline[0],best=Infinity;
-  for(const w of features.timeline){const d=Math.abs(w.centerMs-(start+end)/2);if(d<best){best=d;nearest=w;}}
-  return nearest?nearest.intensity:.5;
-};
-const barIndices=[];for(let bar=minBar;bar<=maxBar;bar++)barIndices.push(bar);
-const intensitySorted=barIndices.map(barIntensity).sort((a,b)=>a-b);
-const intensityRank=value=>{
-  let below=0;
-  while(below<intensitySorted.length&&intensitySorted[below]<value)below++;
-  return intensitySorted.length>1?below/(intensitySorted.length-1):0;
-};
+// 区切りと盛り上がり（V3の解析がそのまま持っている）
+const sectionForBar=bar=>structure.sections.find(s=>bar>=s.startBar&&bar<s.endBarExclusive)||null;
+const barIntensityMap=new Map(structure.bars.map(entry=>[entry.bar,entry.intensity]));
+// 小節そのものの盛り上がりと、その区切り全体の盛り上がりを半分ずつ混ぜる。
+// 小節だけだと1小節ごとに濃さが暴れ、区切りだけだと中の起伏が消えるため。
 const intensityPosition=bar=>{
-  const section=sectionForGrid(bar*BAR);
-  const adjust=section?(SECTION_ADJUST[section.sectionTypeCandidate]??0):0;
-  return Math.max(0,Math.min(1,intensityRank(barIntensity(bar))+adjust*SECTION_POSITION_ADJUST));
+  const own=barIntensityMap.has(bar)?barIntensityMap.get(bar):.5;
+  const section=sectionForBar(bar);
+  const sectionValue=section?section.intensity:own;
+  return Math.max(0,Math.min(1,own*.5+sectionValue*.5));
+};
+// 繰り返しの区切り（形を使い回すのに使う）
+const repeatSourceBar=bar=>{
+  const section=sectionForBar(bar);
+  if(!section||section.repeatOf==null)return null;
+  return section.repeatOf+(bar-section.startBar);
 };
 const musicalOnsetsInBar=bar=>allOnsets.filter(o=>o.grid>=bar*BAR&&o.grid<(bar+1)*BAR).length;
 
@@ -175,19 +184,44 @@ const priorityByGrid=new Map(allOnsets.map(onset=>[onset.grid,priorityOf(onset)]
 // 1つの難易度を組み立てる
 // ============================================================================
 const buildChart=(difficulty,options={})=>{
+  const densityAdjust=Number(options.densityAdjust)||1;
   const P=PROFILES[difficulty];
   const notes=[];
+  // 分あたりの割合を、この曲の長さぶんの個数へ直す
+  const playableMinutes=Math.max(.25,(gridTimeMs(maxGrid)-gridTimeMs(minGrid))/60000);
+  const countOf=perMinute=>perMinute>0?Math.max(1,Math.round(perMinute*playableMinutes)):0;
+  const holdMax=countOf(P.holdPerMinute),slideMax=countOf(P.slidePerMinute),
+    flickMax=countOf(P.flickPerMinute),endFlickMax=countOf(P.endFlickPerMinute),
+    chordMax=countOf(P.chordPerMinute),accentMax=countOf(P.accentPerMinute);
   const log=[];
 
   // --- 1. 拾う音を決める（小節ごとに、優先順位の上位から） ---
   const pool=allOnsets.filter(onset=>
     onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=COMMON.maxAbsPeakOffsetMs);
+  // 全体で何個置くかを先に決める（1拍あたりの目標を、毎秒の下限・上限で挟む）。
+  // これで曲が変わっても、遊んだ感じの忙しさがそろう。
   const [liftMin,liftMax]=MUSICAL_LIFT;
+  const target=DENSITY_TARGET[difficulty];
+  const beatsPerSecond=1000/timing.beatMs;
+  const playableMs=gridTimeMs((maxBar+1)*BAR)-gridTimeMs(minBar*BAR);
+  const notesPerSecond=Math.max(target.minPerSecond,
+    Math.min(target.maxPerSecond,target.perBeat*beatsPerSecond));
+  const targetCount=Math.round(notesPerSecond*playableMs/1000);
+  // 小節ごとの取り分は「その小節にある音の数 × 盛り上がりの持ち上げ」の比で配る。
+  // どれだけ盛り上がっても、その小節に無い音は叩かせない。
+  const weights=new Map();
+  let weightSum=0;
+  for(let bar=minBar;bar<=maxBar;bar++){
+    const position=intensityPosition(bar);
+    const weight=musicalOnsetsInBar(bar)*(liftMin+(liftMax-liftMin)*position);
+    weights.set(bar,weight);
+    weightSum+=weight;
+  }
+  const scale=weightSum>0?targetCount*densityAdjust/weightSum:0;
   const picked=[];
   let carry=0;
   for(let bar=minBar;bar<=maxBar;bar++){
-    const position=intensityPosition(bar);
-    carry+=musicalOnsetsInBar(bar)*P.musicalShare*(liftMin+(liftMax-liftMin)*position);
+    carry+=weights.get(bar)*scale;
     const limit=Math.floor(carry+1e-9);
     carry-=limit;
     if(limit<=0)continue;
@@ -238,10 +272,10 @@ const buildChart=(difficulty,options={})=>{
       const moves=span.moves??0;
       const wantSlide=P.types.includes('SLIDE')&&moves>=COMMON.slideMinMove&&grids>=COMMON.slideMinGrids;
       if(wantSlide){
-        if(slides>=P.slideMax)continue;
+        if(slides>=slideMax)continue;
         reserved.push({type:'SLIDE',startGrid,endGrid,span});slides++;
       }else{
-        if(!P.types.includes('HOLD')||holds>=P.holdMax)continue;
+        if(!P.types.includes('HOLD')||holds>=holdMax)continue;
         reserved.push({type:'HOLD',startGrid,endGrid,span});holds++;
       }
     }
@@ -360,9 +394,13 @@ const buildChart=(difficulty,options={})=>{
     const maxStep=minGap<BEAT?Math.min(P.maxLaneStep,COMMON.laneStepFastMax):P.maxLaneStep;
 
     // 反復フレーズなら、前に使った形を思い出す
+    // 繰り返しの区切りなら、前に使った形を思い出す（同じフレーズは同じ形で来る）
     const bar=Math.floor(grids[0]/BAR);
-    const phrase=phraseForBar(bar);
-    const memoryKey=phrase?`${phrase.repeatedFromPhraseId||phrase.id}:${grids[0]-phrase.startBar*BAR}:${length}`:null;
+    const section=sectionForBar(bar);
+    const sourceBar=repeatSourceBar(bar);
+    const memoryKey=section
+      ?`${sourceBar!=null?sourceBar:bar-(bar-section.startBar)}:${grids[0]-bar*BAR}:${length}`
+      :null;
     const remembered=memoryKey?shapeMemory.get(memoryKey):null;
 
     let offsets=null,patternId=null,mirrored=false;
@@ -484,7 +522,7 @@ const buildChart=(difficulty,options={})=>{
       .filter(({note})=>note.type==='TAP'&&note.sourceCharacter==='FULL'
         &&!notes.some(other=>other!==note&&other.grid===note.grid))
       .sort((a,b)=>b.note.sourceStrength-a.note.sourceStrength);
-    const chosen=spreadPick(candidates.map(c=>c.index),P.accentMax,8);
+    const chosen=spreadPick(candidates.map(c=>c.index),accentMax,8);
     for(const index of chosen){
       const note=notes[index];
       const width=Math.max(1,Math.min(10,P.accentWidth));
@@ -499,7 +537,7 @@ const buildChart=(difficulty,options={})=>{
   // --- 7. FLICK（切れる音・フレーズの終わり） ---
   // 本物の譜面は、歌の切れ目やしゃくりにフリックを置く。
   // ここでは「かたまりの最後で、そのあと1拍以上あく音」を選ぶ。
-  if(P.flickMax>0&&P.types.includes('FLICK')){
+  if(flickMax>0&&P.types.includes('FLICK')){
     const candidates=[];
     notes.forEach((note,index)=>{
       if(note.type!=='TAP'||note.sectionAccent)return;
@@ -508,12 +546,12 @@ const buildChart=(difficulty,options={})=>{
       if(note.sourceCharacter==='LIGHT')return;
       candidates.push(index);
     });
-    for(const index of spreadPick(candidates,P.flickMax,4))notes[index].type='FLICK';
+    for(const index of spreadPick(candidates,flickMax,4))notes[index].type='FLICK';
   }
 
   // --- 8. 終点フリック（HOLD/SLIDEの終わりで弾く） ---
   // 弾いたあと指を戻す時間が要るので、終わりの前後に1拍以上の余裕があるものだけ。
-  if(P.endFlickMax>0){
+  if(endFlickMax>0){
     const candidates=[];
     notes.forEach((note,index)=>{
       if(note.type!=='HOLD'&&note.type!=='SLIDE')return;
@@ -521,19 +559,19 @@ const buildChart=(difficulty,options={})=>{
       if(notes.some(other=>other!==note&&Math.abs(other.grid-endGrid)<BEAT))return;
       candidates.push(index);
     });
-    for(const index of spreadPick(candidates,P.endFlickMax,3))notes[index].endFlick=true;
+    for(const index of spreadPick(candidates,endFlickMax,3))notes[index].endFlick=true;
   }
 
   // --- 9. 同時押し（上位難易度だけ） ---
   // 新しい時刻は作らない。大きな一発を2レーンへ分けるだけ。
   let chordCount=0;
-  if(P.simultaneous&&P.chordMax>0){
+  if(P.simultaneous&&chordMax>0){
     const candidates=notes
       .map((note,index)=>({note,index}))
       .filter(({note})=>note.type==='TAP'&&note.sourceCharacter==='FULL'&&!note.sectionAccent
         &&note.subLaneWidth<=4&&!notes.some(other=>other!==note&&other.grid===note.grid))
       .map(c=>c.index);
-    for(const index of spreadPick(candidates,P.chordMax,6)){
+    for(const index of spreadPick(candidates,chordMax,6)){
       const note=notes[index];
       const width=Math.min(3,note.subLaneWidth);
       // 指2本ぶん離した相方を作る
@@ -564,7 +602,7 @@ const buildChart=(difficulty,options={})=>{
     const widthsAsc=[...P.widths].sort((a,b)=>a-b);
     const candidates=notes.map((note,index)=>({note,index}))
       .filter(({note})=>note.type==='HOLD'&&Number(note.durationGrids)>=6).map(c=>c.index);
-    spreadPick(candidates,Math.max(2,Math.round(P.holdMax/3)),2).forEach((index,ordinal)=>{
+    spreadPick(candidates,Math.max(2,Math.round(holdMax/3)),2).forEach((index,ordinal)=>{
       const note=notes[index];
       const duration=Number(note.durationGrids);
       const shape=shapes[ordinal%shapes.length];
@@ -645,8 +683,12 @@ const buildChart=(difficulty,options={})=>{
     }
   }
 
-  return {notes,log,profile:P,runs:runs.length,chordCount,monsterSlotGrids};
+  return {notes,log,profile:P,runs:runs.length,chordCount,monsterSlotGrids,
+    targetCount,notesPerSecondTarget:round3(notesPerSecond),
+    counts:{holdMax,slideMax,flickMax,endFlickMax,chordMax,accentMax,
+      playableMinutes:round3(playableMinutes)}};
 };
+const round3=value=>Math.round(value*1000)/1000;
 
 // 候補を曲全体へ散らして選ぶ（かたまって出ないように）
 function spreadPick(candidates,count,minGap){
@@ -710,7 +752,19 @@ const targets=only?[only]:DIFFICULTIES;
 const results={};
 for(const difficulty of targets){
   if(!PROFILES[difficulty]){console.error(`未知の難易度です: ${difficulty}`);process.exit(1);}
-  results[difficulty]=buildChart(difficulty);
+  // 小節ごとの取り分は切り捨てで配るうえ、格子・連なりの上限でも落ちるので、
+  // 実際の数は目標より少なくなる。足りないぶんを補って数回だけやり直す（乱数は使わない）。
+  let result=buildChart(difficulty);
+  let adjust=1;
+  for(let pass=0;pass<4;pass++){
+    const ratio=result.targetCount/Math.max(1,result.notes.length);
+    if(Math.abs(ratio-1)<=.02)break;
+    adjust*=Math.max(.7,Math.min(1.6,ratio));
+    const retry=buildChart(difficulty,{densityAdjust:adjust});
+    if(Math.abs(retry.notes.length-retry.targetCount)>=Math.abs(result.notes.length-result.targetCount))break;
+    result=retry;
+  }
+  results[difficulty]=result;
 }
 
 for(const difficulty of targets){
@@ -748,11 +802,13 @@ if(write){
       reviewRequired:true,
       runtimeConnected:false,
       bpm:timing.bpm,beatZeroMs:timing.beatZeroMs,subdivisionsPerBeat:timing.subdivisionsPerBeat,
+      beatsPerBar:timing.beatsPerBar,timingSource:timing.source,
       source:{audio:`tools/mode/authoring/${dashed}-v3-audio.json`,
-        structure:`tools/mode/authoring/${dashed}-v2-structure.json`,
+
         design:'docs/spec/RHYTHM_CHART_DESIGN.md'},
       policy:{...profile,characterWeight:CHARACTER_WEIGHT,positionWeight:POSITION_WEIGHT,
-        musicalLift:MUSICAL_LIFT},
+        musicalLift:MUSICAL_LIFT,densityTarget:DENSITY_TARGET[difficulty],
+        counts:results[difficulty].counts},
       level:profile.level,
       noteCount:notes.length,
       typeCounts,
