@@ -1359,7 +1359,7 @@ PR #954の正式候補v1まで実装済み。ただし、これは完成譜面�
 
 ---
 
-## 14A. 自動譜面制作システム V2（確定・STEP1〜7実装済み）
+## 14A. 自動譜面制作システム V2（確定・STEP1〜8実装済み）
 
 ### 目的
 
@@ -2169,7 +2169,62 @@ node tools/mode/rhythm-chart-v2-step7-check.js
 node tools/mode/rhythm-chart-v2-step6-playability.js --source step7
 ```
 
-次工程はSTEP8「1コマンド制作パイプライン」。ここまでの成果物はまだランタイムへ接続していない。
+---
+
+### V2 STEP8 actual（1コマンド制作パイプライン）
+
+`tools/mode/rhythm-chart-v2-step8-pipeline.js` で実装済み。検査は
+`tools/mode/rhythm-chart-v2-step8-check.js`。
+
+STEP3（生成）→ STEP5（複数候補・自動批評）→ STEP7（問題区間の自動修正）を順に通し、
+最後にSTEP6（両手の指のシミュレート）で仕上がりを確かめる。ここまでは設計資料を作るだけ。
+
+`--release` を付けたときだけ、出来た譜面を**遊べる形**にする。
+
+1. `monster-hero/debug/monster-hero-theme-<難易度>-formal-candidate-v2.json` を書き出す
+2. `monster-hero/data/rhythm-mode.js` の `<monster-hero-v2-*-notes>` マーカーの内側を差し替える
+
+#### 既存を壊さない作り
+
+- **既存の正式候補v1には1バイトも触らない**。V1のJSONも `<monster-hero-easy-notes>` などの
+  マーカーも読むだけで、書き込む前に「v1のマーカーが変わっていないか」を自分で確かめ、
+  変わっていたら書き込まずに中止する
+- V2は**別の曲**「Monster Hero 候補v2」（`songId: monster_hero_theme_candidate_v2`）として
+  登録するので、v1と並べて遊び比べられる。EXPERT / MASTER はv1に無い
+- 保存データ（`mh_*`）・ランキングには触らない
+- 終点フリックはV2用のヘルパー `mhHoldV2` / `mhSlideV2`（第5引数）で書く。
+  v1のヘルパー（`mhHold` / `mhSlide`）は変えていない
+
+#### 止まる条件
+
+STEP6で「押せない」が1件でもあれば、そこで止めてランタイムへは反映しない（終了コード1）。
+難易度の順（ノーツ数・密度が EASY<NORMAL<HARD<EXPERT<MASTER）が崩れていても止める。
+
+#### 出荷した譜面（Monster Hero 候補v2・耳確認前）
+
+| 難易度 | レベル | ノーツ | 毎秒 | 内訳 | 終点フリック |
+| --- | ---: | ---: | ---: | --- | ---: |
+| EASY | 1 | 175 | 1.22 | TAP165 / HOLD10 | 0 |
+| NORMAL | 3 | 197 | 1.37 | TAP171 / HOLD14 / FLICK12 | 3 |
+| HARD | 5 | 261 | 1.79 | TAP223 / HOLD14 / FLICK16 / SLIDE8 | 5 |
+| EXPERT | 7 | 322 | 2.18 | TAP280 / HOLD15 / FLICK18 / SLIDE9 | 7 |
+| MASTER | 9 | 394 | 2.67 | TAP343 / HOLD18 / FLICK22 / SLIDE11 | 9 |
+
+全難易度でSTEP6の「押せない」「忙しい」がどちらも0件。
+
+CLI確認:
+
+```bash
+node tools/mode/rhythm-chart-v2-step8-pipeline.js            # 通して結果を見るだけ
+node tools/mode/rhythm-chart-v2-step8-pipeline.js --write    # 設計資料を更新
+node tools/mode/rhythm-chart-v2-step8-pipeline.js --release  # 正式候補v2とランタイムへ反映
+node tools/build.js                                          # 反映後は配信用JSを作り直す
+node tools/mode/rhythm-chart-v2-step8-check.js
+```
+
+これでV2は**STEP1〜8がそろい、音源から遊べる譜面までを1コマンドで作れる**状態になった。
+残るのは耳と実機での確認（難易度どうしの差が体感でどうか、など）。
+
 
 
 ## 15. 正式音ゲーホーム（確定・未実装）
