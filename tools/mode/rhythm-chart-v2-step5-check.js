@@ -14,6 +14,7 @@ const fs=require('fs');
 const os=require('os');
 const path=require('path');
 const crypto=require('crypto');
+const vm=require('vm');
 const {spawnSync}=require('child_process');
 
 const ROOT=path.resolve(__dirname,'..','..');
@@ -43,11 +44,17 @@ check('monster-heroからは読み取りしかしない(BPM・グリッドのみ
 check('出力はreviewRequired/runtimeConnectedを持つ設計資料である',
   source.includes('reviewRequired:true')&&source.includes('runtimeConnected:false'));
 // 説明文にV1の名前が出るのは構わない(触らないと書いてある)。実際に起動しないことを見る。
-check('V1生成器を起動しない(V2 STEP3の生成器だけを使う)',
+check('V1生成器を起動しない(V2 STEP3の生成器とSTEP6の検査だけを使う)',
   source.includes("const GENERATOR=path.join(ROOT,'tools/mode/rhythm-chart-v2-step3-generate.js');")
-  &&[...source.matchAll(/spawnSync\(process\.execPath,\[([^,\]]+)/g)].every(m=>m[1].trim()==='GENERATOR'));
+  &&source.includes("const PLAYABILITY=path.join(ROOT,'tools/mode/rhythm-chart-v2-step6-playability.js');")
+  &&[...source.matchAll(/spawnSync\(process\.execPath,\[([^,\]]+)/g)].every(m=>['GENERATOR','PLAYABILITY'].includes(m[1].trim())));
 check('乱数を使わない(順位が毎回変わらないため)',
   !/Math\.random|crypto\.randomBytes/.test(source));
+// 格子(16分か8分か)は難易度の設計そのもの。案として動かすと、HARD以上で16分の無い譜面が勝ってしまう。
+check('候補の作り分けで格子(latticeGrids)を変えない',
+  !/const VARIANTS=Object\.freeze\(\[[\s\S]*?\]\);/.exec(source)[0].includes('latticeGrids'));
+check('生成器の既定値は生成器自身から読む(写しを持たない)',
+  source.includes("'--print-profiles'")&&!/const PROFILE_DEFAULTS=Object\.freeze\(\{\s*EASY:\{perBar/.test(source));
 
 // --- 生成器の上書き口が「既定を変えない」こと ---
 // STEP5は生成器へ --profile-override を渡す。既定(上書きなし)の出力が変わってしまうと
@@ -94,9 +101,16 @@ if(fs.existsSync(reviewFile)){
     if(!entry)continue;
     const cands=entry.candidates||[];
     check(`${difficulty}: 全候補が採点されている`,cands.length>=2&&cands.every(c=>typeof c.score==='number'&&Number.isFinite(c.score)));
-    check(`${difficulty}: 採用案が最高得点である`,
-      cands.length>0&&Math.abs(Math.max(...cands.map(c=>c.score))-(cands.find(c=>c.variant===entry.winner)||{}).score)<1e-9,
-      `採用${entry.winner}`);
+    // 難易度の順を守るために外した案(excludedByOrdering)を除けば、採用案が最高得点。
+    const excluded=new Set([...(entry.excludedByOrdering||[]),...(entry.excludedByPlayability||[])]);
+    const inPlay=cands.filter(c=>!excluded.has(c.variant));
+    check(`${difficulty}: 難易度の順を守る案の中で、採用案が最高得点である`,
+      inPlay.length>0&&Math.abs(Math.max(...inPlay.map(c=>c.score))-(cands.find(c=>c.variant===entry.winner)||{}).score)<1e-9,
+      `採用${entry.winner}${excluded.size?` / 順のため対象外: ${[...excluded].join(',')}`:''}`);
+    check(`${difficulty}: 難易度の順を守れたかを記録している`,typeof entry.orderingKept==='boolean'&&Array.isArray(entry.excludedByOrdering)&&Array.isArray(entry.excludedByPlayability));
+    check(`${difficulty}: 候補ごとにSTEP6(押せるか)の結果を持つ`,cands.every(c=>c.playability&&Number.isInteger(c.playability.impossible)&&Number.isInteger(c.playability.strained)));
+    check(`${difficulty}: 採用案はSTEP6で「押せない」0件`,(cands.find(c=>c.variant===entry.winner)||{}).playability?.impossible===0);
+    check(`${difficulty}: 難易度の順を守る案が1つは残る`,entry.orderingKept===true);
     check(`${difficulty}: 採用案は「効いていない候補」ではない`,
       (cands.find(c=>c.variant===entry.winner)||{}).duplicateOf==null);
     // 全案が同点なら採点が働いていない
@@ -126,6 +140,40 @@ if(fs.existsSync(reviewFile)){
     }
   }
 }
+
+// --- 採用した譜面どうしで、難易度の順が守られていること ---
+// 以前は MASTER に EXPERT よりノーツが少なく16分も無い案を採用していた。
+(()=>{
+  const adopted=DIFFICULTIES.map(d=>{
+    const file=path.join(authoring,`monster-hero-theme-v2-step5-chart-${d.toLowerCase()}.json`);
+    return fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):null;
+  });
+  if(adopted.some(c=>!c))return;
+  const minGap=chart=>{let m=Infinity;for(let i=1;i<chart.notes.length;i++){const g=chart.notes[i].grid-chart.notes[i-1].grid;if(g>0&&g<m)m=g;}return m;};
+  check('採用譜面のノーツ数が EASY<NORMAL<HARD<EXPERT<MASTER',
+    adopted.every((c,i)=>i===0||adopted[i-1].noteCount<c.noteCount),adopted.map(c=>c.noteCount).join(' < '));
+  check('採用譜面の密度(毎秒)も難易度順に増える',
+    adopted.every((c,i)=>i===0||adopted[i-1].densityPerSecond<c.densityPerSecond),adopted.map(c=>c.densityPerSecond).join(' < '));
+  check('採用譜面の最小の間隔は難易度が上がるほど粗くならない(上の難易度で16分が消えない)',
+    adopted.every((c,i)=>i===0||minGap(c)<=minGap(adopted[i-1])),adopted.map(c=>minGap(c)).join(' ≥ '));
+  check('EXPERT / MASTER の採用譜面には16分(隣り合うグリッド)がある',
+    minGap(adopted[3])===1&&minGap(adopted[4])===1);
+  // 区間ごとにも順を守る(静かな区間だけEASYより薄いNORMAL、を作らない)
+  const timingContext={Object,Number,Math};
+  vm.createContext(timingContext);
+  vm.runInContext(`${fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-timing.js'),'utf8')}\nthis.__t=RHYTHM_TIMING_DATA['monster_hero_theme'];`,timingContext);
+  const timing=timingContext.__t,gridMs=timing.beatMs/timing.subdivisionsPerBeat,BAR=timing.subdivisionsPerBeat*4;
+  const structure=JSON.parse(fs.readFileSync(path.join(authoring,'monster-hero-theme-v2-structure.json'),'utf8'));
+  const typeAt=grid=>{const ms=timing.beatZeroMs+grid*gridMs;return (structure.sections.find(x=>ms>=x.startMs&&ms<x.endMs)||{}).sectionTypeCandidate||'?';};
+  // 区間の全小節で割る(音の無い小節も数える)。STEP5本体と同じ許容幅: 8小節以上の区間だけ、0.35音か20%の大きいほう
+  const sectionBars=new Map();
+  {const endMs=Math.max(...structure.sections.map(x=>x.endMs));for(let bar=0;timing.beatZeroMs+bar*BAR*gridMs<endMs;bar++){const t=typeAt(bar*BAR+BAR/2);if(t!=='?')sectionBars.set(t,(sectionBars.get(t)||0)+1);}}
+  const density=chart=>{const c=new Map();for(const n of chart.notes){const t=typeAt(Math.floor(n.grid/BAR)*BAR+BAR/2);c.set(t,(c.get(t)||0)+1);}return Object.fromEntries([...sectionBars].map(([t,total])=>[t,(c.get(t)||0)/total]));};
+  const longSections=[...sectionBars].filter(([,n])=>n>=8).map(([t])=>t);
+  check('採用譜面は、8小節以上あるどの区間でも1つ下の難易度より薄くならない(許容: 小節あたり0.35音か20%)',
+    adopted.every((c,i)=>i===0||longSections.every(t=>{const v=density(adopted[i-1])[t]||0;return (density(c)[t]||0)>=v-Math.max(.35,v*.2)-1e-9;})),
+    adopted.map(c=>{const d=density(c);return ['INTRO','BREAK','VERSE','CHORUS','FINAL_CHORUS'].map(t=>(d[t]||0).toFixed(2)).join('/');}).join(' | '));
+})();
 
 // --- 既存の成果物を壊していないこと ---
 const protectedFiles=[
