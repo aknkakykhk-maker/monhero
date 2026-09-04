@@ -571,6 +571,13 @@ const rhythmSlideExpectedLane=(note,chartTimeMs)=>{
 const rhythmAudioGloballyEnabled=()=>typeof window==='undefined'||window.__mhAudioEnabled!==false;
 const RHYTHM_NOTE_SE_RUNTIME=(()=>{
   let ctx=null,cachedRaw=null,cachedSettings={enabled:true,volume:70},inputGroupDepth=0,inputGroupHit=false;
+  // iPhone Safariで判定が続いたとき、毎回Oscillator/Gain/AudioBufferを新規生成すると、
+  // Web Audio graphの更新とGCがメインrAFの外で単発スパイクを作る候補になる。
+  // 音そのものを短いAudioBufferへ一度だけ焼き、プレイ中は1回のSEにつき
+  // one-shotのAudioBufferSourceNodeだけを生成する。空押しノイズは4種類を先に作って
+  // ローテーションし、毎回Math.randomで全サンプルを作り直さない。
+  let graphCtx=null,emptyFilter=null,emptyCursor=0;
+  const hitBuffers=new Map(),emptyBufferPools=new Map();
   const readSettings=()=>{
     if(typeof localStorage==='undefined')return cachedSettings;
     let raw=null;
@@ -593,11 +600,65 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const AudioContextClass=window.AudioContext||window.webkitAudioContext;
     if(!AudioContextClass)return null;
     try{ctx=new AudioContextClass();}catch{return null;}
+    graphCtx=null;emptyFilter=null;emptyCursor=0;hitBuffers.clear();emptyBufferPools.clear();
     return ctx;
+  };
+  const prepareGraph=audio=>{
+    if(graphCtx===audio&&emptyFilter)return;
+    graphCtx=audio;emptyCursor=0;hitBuffers.clear();emptyBufferPools.clear();
+    emptyFilter=audio.createBiquadFilter();
+    emptyFilter.type='bandpass';
+    emptyFilter.frequency.setValueAtTime(2800,audio.currentTime);
+    emptyFilter.Q.setValueAtTime(.7,audio.currentTime);
+    emptyFilter.connect(audio.destination);
+  };
+  const volumeKey=volume=>Math.round(Math.max(0,Math.min(100,Number(volume)||0))*1000)/1000;
+  const expRamp=(from,to,ratio)=>from*Math.pow(to/from,Math.max(0,Math.min(1,ratio)));
+  const hitBufferFor=(audio,volume)=>{
+    prepareGraph(audio);
+    const key=volumeKey(volume);
+    if(hitBuffers.has(key))return hitBuffers.get(key);
+    const sampleRate=audio.sampleRate||44100,duration=.05,length=Math.max(1,Math.floor(sampleRate*duration));
+    const buffer=audio.createBuffer(1,length,sampleRate),samples=buffer.getChannelData(0);
+    const level=Math.max(.0001,.035*(key/100));
+    let phase=0;
+    for(let i=0;i<samples.length;i++){
+      const t=i/sampleRate,freq=1120*Math.pow(820/1120,Math.min(t,.035)/.035);
+      phase+=Math.PI*2*freq/sampleRate;
+      const triangle=(2/Math.PI)*Math.asin(Math.sin(phase));
+      const gain=t<.045?expRamp(level,.0001,t/.045):.0001;
+      samples[i]=triangle*gain;
+    }
+    hitBuffers.set(key,buffer);
+    return buffer;
+  };
+  const emptyBuffersFor=(audio,volume)=>{
+    prepareGraph(audio);
+    const key=volumeKey(volume);
+    if(emptyBufferPools.has(key))return emptyBufferPools.get(key);
+    const sampleRate=audio.sampleRate||44100,duration=.055,length=Math.max(1,Math.floor(sampleRate*duration));
+    const level=Math.max(.0001,.022*(key/100)),pool=[];
+    for(let variant=0;variant<4;variant++){
+      const buffer=audio.createBuffer(1,length,sampleRate),samples=buffer.getChannelData(0);
+      for(let i=0;i<samples.length;i++){
+        const t=i/sampleRate,base=(Math.random()*2-1)*(1-i/samples.length);
+        samples[i]=base*expRamp(level,.0001,t/duration);
+      }
+      pool.push(buffer);
+    }
+    emptyBufferPools.set(key,pool);
+    return pool;
   };
   const warm=()=>{
     const audio=context();
-    if(audio?.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    if(!audio)return;
+    if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
+    const settings=readSettings();
+    if(settings.enabled&&settings.volume>0&&rhythmAudioGloballyEnabled()){
+      // touchstart/pointerdownのcapture段階で準備し、最初の判定フレームへ初期化コストを持ち込まない。
+      hitBufferFor(audio,settings.volume);
+      emptyBuffersFor(audio,settings.volume);
+    }
   };
   const play=(previewSettings=null)=>{
     if(inputGroupDepth>0)inputGroupHit=true;
@@ -606,17 +667,10 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const oscillator=audio.createOscillator(),gain=audio.createGain(),now=audio.currentTime,level=Math.max(.0001,.035*(settings.volume/100));
-    oscillator.type='triangle';
-    oscillator.frequency.setValueAtTime(1120,now);
-    oscillator.frequency.exponentialRampToValueAtTime(820,now+.035);
-    gain.gain.setValueAtTime(level,now);
-    gain.gain.exponentialRampToValueAtTime(.0001,now+.045);
-    oscillator.connect(gain);
-    gain.connect(audio.destination);
-    oscillator.start(now);
-    oscillator.stop(now+.05);
-    oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
+    const source=audio.createBufferSource(),now=audio.currentTime;
+    source.buffer=hitBufferFor(audio,settings.volume);
+    source.connect(audio.destination);
+    source.start(now);source.stop(now+.05);
     return true;
   };
   const emitEmpty=()=>{
@@ -625,18 +679,10 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     const audio=context();
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
-    const duration=.055,sampleRate=audio.sampleRate||44100,buffer=audio.createBuffer(1,Math.max(1,Math.floor(sampleRate*duration)),sampleRate),samples=buffer.getChannelData(0);
-    for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*(1-i/samples.length);
-    const source=audio.createBufferSource(),filter=audio.createBiquadFilter(),gain=audio.createGain(),now=audio.currentTime,level=Math.max(.0001,.022*(settings.volume/100));
-    source.buffer=buffer;
-    filter.type='bandpass';
-    filter.frequency.setValueAtTime(2800,now);
-    filter.Q.setValueAtTime(.7,now);
-    gain.gain.setValueAtTime(level,now);
-    gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
-    source.connect(filter);filter.connect(gain);gain.connect(audio.destination);
-    source.start(now);source.stop(now+duration);
-    source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect();}catch{}};
+    const pool=emptyBuffersFor(audio,settings.volume),source=audio.createBufferSource(),now=audio.currentTime;
+    source.buffer=pool[emptyCursor++%pool.length];
+    source.connect(emptyFilter);
+    source.start(now);source.stop(now+.055);
     return true;
   };
   const playEmpty=()=>inputGroupDepth>0?true:emitEmpty();
@@ -650,9 +696,7 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     inputGroupHit=false;
     return handled?true:emitEmpty();
   };
-  // フルコンボ等を達成して曲を終えたときの、リザルトへ行く前のお祝い演出で鳴らす1回だけの
-  // 合成音。本物の掛け声(音声ファイル)は用意していないため、上昇アルペジオで代える。
-  // 既存のタップ音と同じ設定(音量・ON/OFF・全体ミュート)を読み、専用の保存キーは増やさない。
+  // フルコンボ演出は曲終了時に1回だけなので、既存の発音方式を維持する。
   const playFullCombo=()=>{
     const settings=readSettings();
     if(!settings.enabled||settings.volume<=0||!rhythmAudioGloballyEnabled())return false;
@@ -660,7 +704,6 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
     if(!audio)return false;
     if(audio.state==='suspended'&&typeof audio.resume==='function')audio.resume().catch(()=>{});
     const now=audio.currentTime,level=Math.max(.0001,.05*(settings.volume/100));
-    // E5 → G5 → B5 → E6 の上昇アルペジオ。最後の音だけ長く伸ばして締める。
     [659.25,783.99,987.77,1318.51].forEach((freq,index,notes)=>{
       const start=now+index*.09,sustain=index===notes.length-1?.42:.16;
       const oscillator=audio.createOscillator(),gain=audio.createGain();
@@ -669,10 +712,8 @@ const RHYTHM_NOTE_SE_RUNTIME=(()=>{
       gain.gain.setValueAtTime(.0001,start);
       gain.gain.exponentialRampToValueAtTime(level,start+.012);
       gain.gain.exponentialRampToValueAtTime(.0001,start+sustain);
-      oscillator.connect(gain);
-      gain.connect(audio.destination);
-      oscillator.start(start);
-      oscillator.stop(start+sustain+.02);
+      oscillator.connect(gain);gain.connect(audio.destination);
+      oscillator.start(start);oscillator.stop(start+sustain+.02);
       oscillator.onended=()=>{try{oscillator.disconnect();gain.disconnect();}catch{}};
     });
     return true;
@@ -1715,7 +1756,7 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-lane]::after{content:none!important}
     [data-rhythm-lane]:last-child::after{content:""!important;position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:var(--rhythm-right-clip,none)!important}
     [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:var(--rhythm-sub-clip,none)}
-    [data-rhythm-note]{z-index:2}
+    [data-rhythm-play-area][data-rhythm-lightweight="true"],[data-rhythm-play-area][data-rhythm-effect="MINIMAL"]{filter:none!important}\n    [data-rhythm-note]{z-index:2}
     [data-rhythm-lane][data-pressed="true"]{background:linear-gradient(180deg,rgba(34,211,238,.10),rgba(34,211,238,.22) 54%,rgba(217,70,239,.30) 100%)!important;box-shadow:inset 0 0 30px rgba(103,232,249,.48),inset 0 -72px 64px rgba(6,182,212,.34),0 0 15px rgba(34,211,238,.24)!important;border:0!important;filter:none!important}
     /* --rhythm-note-depth-brightness は落下中まいフレーム書き換えている。そこへ40msの
        transitionを付けると、目標値が毎フレーム置き換わるので補間はほぼ働かず、

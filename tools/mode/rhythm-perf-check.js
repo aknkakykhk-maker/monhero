@@ -166,5 +166,8 @@ check('見え方が変わったときだけ書き込む',gameSrc.includes('if(el
 check('能力が動いていないあいだは表示の文字列を組み立てない',
   gameSrc.includes('const hasAbilityBadge=badge&&(')&&gameSrc.includes('if(hasAbilityBadge){'));
 
+check('軽量/MINIMALはプレイエリア全体へpost-filterを掛けない',
+  data.includes('[data-rhythm-play-area][data-rhythm-lightweight="true"],[data-rhythm-play-area][data-rhythm-effect="MINIMAL"]{filter:none!important}'));
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
