@@ -1856,11 +1856,21 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   else{RHYTHM_PERF.domQuery();body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');el._rhythmVisualBody=body||null;}
   if(!body)return;
   if(body.hasAttribute('data-rhythm-slide-body')){
-    body.style.left=`${(-left).toFixed(2)}px`;
-    body.style.top=`${(-Number(yPx)).toFixed(2)}px`;
-    body.style.width=`${rect.width.toFixed(2)}px`;
-    body.style.setProperty('--rhythm-slide-area-height',`${rect.height.toFixed(2)}px`);
-    body.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
+    // 位置(left/top)は毎フレーム動くが、幅・高さ・viewBoxはプレイエリアの大きさそのもので
+    // 遊んでいるあいだ変わらない。それでも毎フレーム書き直すと、プレイエリア全面サイズの
+    // SVGを毎フレーム作り直させることになる(とくにviewBoxの再設定は中身の再構築を招く)。
+    // 変わったときだけ書く。見た目は同じ。
+    const slideLeft=`${(-left).toFixed(2)}px`;
+    if(body._rhythmSlideLeft!==slideLeft){body.style.left=slideLeft;body._rhythmSlideLeft=slideLeft;}
+    const slideTop=`${(-Number(yPx)).toFixed(2)}px`;
+    if(body._rhythmSlideTop!==slideTop){body.style.top=slideTop;body._rhythmSlideTop=slideTop;}
+    const slideArea=`${rect.width.toFixed(2)}x${rect.height.toFixed(2)}`;
+    if(body._rhythmSlideArea!==slideArea){
+      body.style.width=`${rect.width.toFixed(2)}px`;
+      body.style.setProperty('--rhythm-slide-area-height',`${rect.height.toFixed(2)}px`);
+      body.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
+      body._rhythmSlideArea=slideArea;
+    }
     const polygons=slideTravel?rhythmSlideSegmentPolygons(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2):[];
     RHYTHM_PERF.slidePolygons(polygons.length);
     polygons.forEach((points,index)=>{

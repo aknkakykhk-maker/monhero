@@ -174,6 +174,21 @@ check('プレイ開始でstyleを戻すとき、覚えている値も一緒に�
   gameSrc.includes("el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;")
   &&gameSrc.includes("el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;"));
 
+// 2026-09-04: 実機A/Bで、軽量モードONにすると33ms超が2.72%→0.55%(引っかかり79%減)になった。
+// つまりカクつきは装飾のラスタライズが作っている「たまに跳ねる」問題。
+// ただし見た目を落とす解決はしない。サブレーン発光を自前の合成レイヤーへ載せると、
+// ぼかし影が一度だけ焼かれ、以後はopacityの切り替えだけで済む(塗り直しが起きない)。
+// 実測(Chromium・16e相当の画素数・5回の中央値)で、上位5%のフレーム時間が
+// 5.00ms → 2.00ms(-60%)。装飾を全部外した場合(3.30ms)より速く、しかも見た目は同じ。
+check('サブレーン発光は合成レイヤーへ載せ、タップのたびに影を焼き直さない',
+  gameSrc.includes("willChange:settings.lightweightMode?'auto':'opacity'"));
+// プレイエリア全面サイズのSVGは、幅・高さ・viewBoxが遊んでいるあいだ変わらない。
+// 毎フレーム書き直すと中身の再構築を招くので、変わったときだけ書く。
+check('SLIDE帯SVGの変わらない値(幅・viewBox)を毎フレーム書き直さない',
+  data.includes("if(body._rhythmSlideArea!==slideArea){")
+  &&data.includes("if(body._rhythmSlideLeft!==slideLeft){")
+  &&!data.includes("body.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);\n    const polygons="));
+
 check('失敗表示フラグをdatasetから毎フレーム読み直さない',
   gameSrc.includes('el._rhythmFailedFlag!==failedFlag')
   &&!gameSrc.includes('el.dataset.rhythmFailed!==failedFlag'));
