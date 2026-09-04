@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 06:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 07:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8493,6 +8493,178 @@ const RhythmOptions=({value,onSave,onBack})=>{
 
 // モンスターノーツ用のマスモン設定。音ゲーデバッグ画面と体験版ホームの両方から使うため、
 // 画面の中へ直接書かずにここで1つにまとめてある。中身と操作はどちらから開いても同じ。
+// ============================================================================
+// 曲えらび(曲選択画面)
+// ============================================================================
+// 2026-09-05・ユーザーが示した音ゲーの曲選択画面を参考にした構成。
+//   ・真ん中に曲の一覧。1行に「楽曲Lv.」「絵」「曲名」「遊べる難易度」
+//   ・選んだ曲の大きな絵と、難易度ボタン、ランダム、決定
+//   ・左の「ジャンルタブ」は曲が増えてから足す(いまは曲が少ないので置かない)
+//   ・オプション(音ゲー設定)とマスモン設定へはヘッダーから入る
+//   ・全国ランキングは曲ごとなので、選んだ曲の欄に置く
+// 縦画面では一覧が上・選んだ曲が下、横画面では左右に並ぶ(landscape:)。
+
+// 難易度の色。EASY=緑 / NORMAL=青 / HARD=橙 / EXPERT=赤 / MASTER=紫。
+// 一覧のひし形も難易度ボタンも同じ色を使い、画面のどこでも同じ意味になるようにする。
+const RHYTHM_DIFFICULTY_TONE=Object.freeze({
+  EASY:  Object.freeze({dot:'bg-emerald-400', on:'border-emerald-300 bg-emerald-600 text-white', off:'border-emerald-400/40 text-emerald-200'}),
+  NORMAL:Object.freeze({dot:'bg-sky-400',     on:'border-sky-300 bg-sky-600 text-white',         off:'border-sky-400/40 text-sky-200'}),
+  HARD:  Object.freeze({dot:'bg-amber-400',   on:'border-amber-300 bg-amber-600 text-white',     off:'border-amber-400/40 text-amber-200'}),
+  EXPERT:Object.freeze({dot:'bg-rose-400',    on:'border-rose-300 bg-rose-600 text-white',       off:'border-rose-400/40 text-rose-200'}),
+  MASTER:Object.freeze({dot:'bg-fuchsia-400', on:'border-fuchsia-300 bg-fuchsia-700 text-white', off:'border-fuchsia-400/40 text-fuchsia-200'}),
+});
+const rhythmDifficultyTone=id=>RHYTHM_DIFFICULTY_TONE[id]||RHYTHM_DIFFICULTY_TONE.EASY;
+
+// 曲の絵(ジャケット)。実物の絵はまだ無いので、**曲idから決まる色**のタイルに頭文字を出す。
+// 乱数を使わないので、同じ曲はいつも同じ色になる(色で曲を覚えられる)。
+// 絵を用意したら、曲のデータへ artwork:'images/...' を足せばそれを出す。
+const rhythmSongArtHue=songId=>{
+  const text=String(songId||'');
+  let hash=0;
+  for(let i=0;i<text.length;i++)hash=(hash*31+text.charCodeAt(i))%360;
+  return hash;
+};
+const RhythmSongArt=({song,large=false})=>{
+  const hue=rhythmSongArtHue(song&&song.songId);
+  const src=song&&typeof song.artwork==='string'?song.artwork:'';
+  const initial=String((song&&song.displayName)||'♪').trim().charAt(0)||'♪';
+  return <span data-rhythm-song-art className={`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full':'w-12'}`}
+    style={{aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`}}>
+    {src
+      ?<img src={src} alt="" className="absolute inset-0 h-full w-full object-cover"/>
+      :<b aria-hidden="true" className={`absolute inset-0 flex items-center justify-center font-black text-white/90 ${large?'text-5xl':'text-xl'}`}
+        style={{textShadow:'0 2px 8px rgba(2,6,23,.55)'}}>{initial}</b>}
+  </span>;
+};
+
+// 曲の長さ。譜面の終わりか、曲の再生時間の指定から出す。
+const rhythmSongLengthLabel=(song,chart)=>{
+  const ms=Number((song&&song.playDurationMs)||(chart&&chart.durationMs)||0);
+  if(!Number.isFinite(ms)||ms<=0)return '';
+  const total=Math.round(ms/1000);
+  return `${Math.floor(total/60)}分${String(total%60).padStart(2,'0')}秒`;
+};
+
+// 譜面が入っている難易度だけを「遊べる」とみなす(押せるのに始まらない状態を作らないため)。
+const rhythmChartPlayable=(song,difficultyId)=>{
+  const chart=song&&song.difficulties&&song.difficulties[difficultyId];
+  return !!chart&&Array.isArray(chart.notes)&&chart.notes.length>0;
+};
+
+// footer は「選んでいる曲」を受け取れる。全国ランキングのように**曲ごとに違うもの**を
+// 置くため。ただの要素を渡してもよい。
+const RhythmSongSelect=({songs,difficulties,difficultyLabels,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。'})=>{
+  const list=(songs||[]).filter(song=>(difficulties||[]).some(difficulty=>rhythmChartPlayable(song,difficulty.id)));
+  const [songId,setSongId]=React.useState(()=>(list[0]&&list[0].songId)||'');
+  const [difficultyId,setDifficultyId]=React.useState(()=>'');
+  // 選んでいる曲・難易度が無くなっても落ちないよう、毎回その場で選び直す
+  // (曲を変えたときに「前の曲にしかない難易度」が残らない)。
+  const song=list.find(entry=>entry.songId===songId)||list[0]||null;
+  const available=song?(difficulties||[]).filter(difficulty=>rhythmChartPlayable(song,difficulty.id)):[];
+  const difficulty=available.find(entry=>entry.id===difficultyId)||available[0]||null;
+  const chart=song&&difficulty?song.difficulties[difficulty.id]:null;
+  const best=song&&difficulty?rhythmBestRecord(bestRecords,song.songId,difficulty.id):null;
+  const label=difficulty&&difficultyLabels?difficultyLabels[difficulty.id]:null;
+  // 一覧の「楽曲Lv.」は、いま選んでいる難易度のレベル。その曲に無ければいちばん上の難易度。
+  const rowLevel=entry=>{
+    const ids=(difficulties||[]).filter(item=>rhythmChartPlayable(entry,item.id)).map(item=>item.id);
+    if(!ids.length)return 0;
+    const id=difficulty&&ids.includes(difficulty.id)?difficulty.id:ids[ids.length-1];
+    return Number(entry.difficulties[id].level)||0;
+  };
+  const pickRandom=()=>{
+    if(!list.length)return;
+    const nextSong=list[Math.floor(Math.random()*list.length)];
+    const ids=(difficulties||[]).filter(item=>rhythmChartPlayable(nextSong,item.id));
+    setSongId(nextSong.songId);
+    if(ids.length)setDifficultyId(ids[Math.floor(Math.random()*ids.length)].id);
+  };
+
+  return <div data-rhythm-song-select className="flex min-h-0 flex-1 flex-col landscape:flex-row">
+    {/* 曲の一覧 */}
+    <div data-rhythm-song-list className="min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2 landscape:border-r landscape:border-white/10">
+      {notice}
+      {list.length===0
+        ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">{emptyText}</p>
+        :<ul className="space-y-1.5">{list.map(entry=>{
+          const selected=!!song&&entry.songId===song.songId;
+          return <li key={entry.songId}>
+            <button type="button" data-rhythm-song-row={entry.songId} aria-pressed={selected}
+              onClick={()=>setSongId(entry.songId)}
+              className={`flex w-full items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-900/70'}`}>
+              <span className="w-10 shrink-0 text-center">
+                <small className="block text-[7px] font-black leading-none text-slate-400">楽曲Lv.</small>
+                <b data-rhythm-song-row-level className="mt-0.5 block text-xl font-black leading-none tabular-nums text-white">{rowLevel(entry)}</b>
+              </span>
+              <RhythmSongArt song={entry}/>
+              <span className="min-w-0 flex-1">
+                <b className="block text-[13px] font-black leading-tight text-white"
+                  style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{entry.displayName}</b>
+                <span className="mt-1 flex items-center gap-1">
+                  {(difficulties||[]).map(item=><i key={item.id} aria-hidden="true"
+                    className={`block h-2 w-2 rotate-45 rounded-[1px] ${rhythmChartPlayable(entry,item.id)?rhythmDifficultyTone(item.id).dot:'bg-white/15'}`}/>)}
+                  <small className="ml-1 text-[9px] font-bold text-slate-400">
+                    {(difficulties||[]).filter(item=>rhythmChartPlayable(entry,item.id)).length}難易度
+                  </small>
+                </span>
+              </span>
+            </button>
+          </li>;
+        })}</ul>}
+    </div>
+
+    {/* 選んでいる曲 */}
+    <aside data-rhythm-song-detail
+      className="shrink-0 border-t border-white/10 bg-slate-950/90 px-3 py-2 landscape:w-[42%] landscape:max-w-[420px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-3"
+      style={{paddingBottom:'calc(0.5rem + env(safe-area-inset-bottom))'}}>
+      {!song||!difficulty
+        ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
+        :<>
+        <div className="flex items-center gap-3 landscape:block">
+          <div className="w-20 shrink-0 landscape:mx-auto landscape:w-40"><RhythmSongArt song={song} large/></div>
+          <div className="min-w-0 flex-1 landscape:mt-2 landscape:text-center">
+            <b data-rhythm-song-title className="block text-sm font-black leading-tight text-white">{song.displayName}</b>
+            <small className="mt-0.5 block text-[10px] font-bold text-slate-400">{rhythmSongLengthLabel(song,chart)}</small>
+          </div>
+        </div>
+
+        {/* 難易度をえらぶ */}
+        <div data-rhythm-difficulty-row className="mt-2 flex flex-wrap gap-1">
+          {available.map(item=>{
+            const tone=rhythmDifficultyTone(item.id);
+            const on=item.id===difficulty.id;
+            return <button key={item.id} type="button" data-rhythm-difficulty={item.id} aria-pressed={on}
+              onClick={()=>setDifficultyId(item.id)}
+              className={`min-h-[44px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${on?tone.on:`${tone.off} bg-slate-900/70`}`}>
+              <span className="block">{item.id}</span>
+              <span className="block text-[9px] font-black tabular-nums opacity-90">Lv.{song.difficulties[item.id].level}</span>
+            </button>;
+          })}
+        </div>
+
+        <p data-rhythm-demo-level className="mt-1.5 text-[10px] font-bold text-slate-300">
+          Lv.{chart.level} / {chart.totalNotes}ノーツ
+        </p>
+        {label&&label.note&&<p className="mt-1 text-[10px] leading-relaxed text-slate-400">{label.note}</p>}
+        <p data-rhythm-demo-best className="mt-1.5 text-[10px] font-bold text-amber-200">
+          {best&&best.clear
+            ?<>自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}</>
+            :<>まだ遊んでいません</>}
+        </p>
+
+        <div className="mt-2 flex gap-2">
+          <button type="button" data-rhythm-song-random onClick={pickRandom}
+            className="min-h-[48px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200">ランダム</button>
+          <button type="button" data-rhythm-demo-start={difficulty.id}
+            onClick={()=>onPlay(song,difficulty)}
+            className="min-h-[48px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white">決定</button>
+        </div>
+        {typeof footer==='function'?footer(song,difficulty):footer}
+        </>}
+    </aside>
+  </div>;
+};
+
 const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhythmMonsterPickerOpen,setRhythmMonsterPickerOpen,rhythmMonsterMessage,setRhythmMonsterMessage,applyRhythmMonsterSlots,masuMons})=>(
   <section data-rhythm-monster-slots className="mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3">
               <div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-fuchsia-200">モンスターノーツ用マスモン</h3><span data-rhythm-monster-count className="shrink-0 text-[9px] font-black text-fuchsia-300">{rhythmMonsterSlots.length} / {RHYTHM_MONSTER_SLOT_MAX}体</span></div>
@@ -18579,63 +18751,47 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* 音ゲー体験版のホーム。デバッグ画面をそのまま公開しないために作った、正式導線の最小構成。
             出すのは Monster Hero 1曲 と EASY/NORMAL/HARD だけで、デバッグ用の曲・譜面制作UIは出さない。
             公開フラグ(RHYTHM_MODE_PUBLIC_RELEASE)が false のあいだは、デバッグ画面からしか入れない */}
+        {/* 曲えらび(体験版ホーム)。よくある音ゲーの曲選択画面と同じ組み立てにしてある。
+            ・真ん中に曲の一覧、下(横画面では右)に選んだ曲の絵・難易度・決定
+            ・オプション / マスモン設定 / 全国ランキングはヘッダーの3つのボタンから
+            ・左の「ジャンルタブ」は曲が増えてから足す(2026-09-05・ユーザー指示で今回は置かない) */}
         {gameState==='RHYTHM_DEMO_HOME'&&(()=>{
-          const song=rhythmDemoSong(RHYTHM_SONGS);
-          const difficulties=rhythmDemoDifficulties(song,RHYTHM_DIFFICULTIES);
+          const songs=rhythmDemoSongs(RHYTHM_SONGS);
+          const difficulties=rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
           return (
-          <main data-rhythm-demo-home className="flex h-full flex-1 flex-col bg-slate-950 text-white">
-            <header className="z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
-              <button aria-label="戻る" onClick={()=>setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS')} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
-              <h2 className="text-sm font-black tracking-widest text-cyan-200">🎵 音ゲー</h2>
-              <span data-rhythm-demo-badge className="ml-auto rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200">体験版</span>
+          <main data-rhythm-demo-home className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
+            <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
+              <button aria-label="戻る" onClick={()=>setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
+              <div className="min-w-0 flex-1">
+                <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
+                <h2 className="text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 楽曲選択</h2>
+              </div>
+              <span data-rhythm-demo-badge className="shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200">体験版</span>
+              <button data-rhythm-demo-monsters aria-label="マスモン設定" title="マスモン設定"
+                onClick={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}
+                className="min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100">👾</button>
+              <button data-rhythm-demo-options aria-label="オプション" title="オプション"
+                onClick={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
+                className="min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100">⚙️</button>
             </header>
-            <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
-              <p data-rhythm-demo-notice className="mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100">
+            <RhythmSongSelect
+              songs={songs}
+              difficulties={difficulties}
+              difficultyLabels={RHYTHM_DEMO_DIFFICULTY_LABELS}
+              bestRecords={rhythmBestRecords}
+              onPlay={(song,difficulty)=>{setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
+              notice={<p data-rhythm-demo-notice data-rhythm-demo-song className="mb-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[9px] font-bold leading-relaxed text-amber-100">
                 これは音ゲーの体験版です。いまは「Monster Hero」1曲・EASY／NORMAL／HARDの3難易度だけを遊べます。
                 譜面は調整中のため、これから変わることがあります。
-              </p>
-              {!song||difficulties.length===0
-                ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">遊べる譜面がまだありません。</p>
-                :<>
-                <section data-rhythm-demo-song className="mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3">
-                  <h3 className="text-base font-black">Monster Hero</h3>
-                  <p className="mt-1 text-[10px] text-slate-300">オリジナル / 2分32秒</p>
-                </section>
-                <h3 className="mb-2 text-xs font-black text-cyan-200">難易度をえらぶ</h3>
-                <div className="space-y-2">
-                  {difficulties.map(difficulty=>{
-                    const chart=song.difficulties[difficulty.id];
-                    const best=rhythmBestRecord(rhythmBestRecords,song.songId,difficulty.id);
-                    const label=RHYTHM_DEMO_DIFFICULTY_LABELS[difficulty.id];
-                    return <article key={difficulty.id} data-rhythm-demo-difficulty={difficulty.id} className="rounded-2xl border border-white/10 bg-slate-900/80 p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <b className="text-sm font-black text-cyan-200">{label.name}</b>
-                        <span data-rhythm-demo-level className="text-[9px] font-mono text-slate-400">Lv.{chart.level} / {chart.totalNotes}ノーツ</span>
-                      </div>
-                      <p className="mt-1 text-[10px] leading-relaxed text-slate-300">{label.note}</p>
-                      <p data-rhythm-demo-best className="mt-2 text-[10px] font-bold text-amber-200">
-                        {best.clear
-                          ?<>自己ベスト {best.bestScore.toLocaleString()}（ランク {rhythmRankForScore(best.bestScore)}） / 最大コンボ {best.maxCombo}</>
-                          :<>まだ遊んでいません</>}
-                      </p>
-                      <button data-rhythm-demo-start={difficulty.id} className="mt-2 min-h-[48px] w-full rounded-xl bg-fuchsia-700 text-sm font-black"
-                        onClick={()=>{setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}>この難易度で遊ぶ</button>
-                    </article>;
-                  })}
-                </div>
-                </>}
-              {song&&<button data-rhythm-demo-ranking className="mt-3 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100"
-                onClick={()=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}>🏆 全国ランキングを見る</button>}
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <button data-rhythm-demo-options className="min-h-[48px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-xs font-black text-cyan-100"
-                  onClick={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}>⚙️ オプション</button>
-                <button data-rhythm-demo-monsters className="min-h-[48px] rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-xs font-black text-fuchsia-100"
-                  onClick={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}>👾 マスモン設定</button>
-              </div>
-              <p className="mt-2 text-[9px] leading-relaxed text-slate-500">
-                設定したマスモンは、曲の途中で「モンスターノーツ」になって流れてきます。取ると血統ごとの力が働きます。
-              </p>
-            </div>
+              </p>}
+              footer={song=><>
+                {/* 全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く */}
+                <button data-rhythm-demo-ranking onClick={()=>{loadRhythmRanking(song);setGameState('RHYTHM_RANKING');}}
+                  className="mt-2 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100">🏆 この曲の全国ランキング</button>
+                <p className="mt-2 text-[9px] leading-relaxed text-slate-500">
+                  設定したマスモンは、曲の途中で「モンスターノーツ」になって流れてきます。取ると血統ごとの力が働きます。
+                </p>
+              </>}/>
           </main>
           );
         })()}

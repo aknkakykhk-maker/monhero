@@ -4034,6 +4034,16 @@ const RHYTHM_DEMO_DIFFICULTY_LABELS=Object.freeze({
   HARD:Object.freeze({name:'HARD', note:'いまの音ゲーでできることをひととおり。SLIDEと長押し中の別ノーツが入ります。'}),
 });
 const rhythmDemoSong=songs=>(songs||[]).find(song=>song.songId===RHYTHM_DEMO_SONG_ID)||null;
+// 体験版の曲えらびに出す曲。いまは1曲だけだが、**曲が増えても画面を書き換えずに済むよう**
+// 配列で持つ(2026-09-05・曲選択画面を一覧の形にしたときに用意した)。
+// 耳で確かめた曲をここへ足せば、そのまま曲えらびの一覧に並ぶ。
+const RHYTHM_DEMO_SONG_IDS=Object.freeze([RHYTHM_DEMO_SONG_ID]);
+const rhythmDemoSongs=songs=>RHYTHM_DEMO_SONG_IDS
+  .map(songId=>(songs||[]).find(song=>song.songId===songId))
+  .filter(Boolean);
+// 体験版で選べる難易度そのもの(曲ごとの絞り込みは rhythmDemoDifficulties が行う)。
+const rhythmDemoDifficultyList=difficulties=>(difficulties||[])
+  .filter(difficulty=>RHYTHM_DEMO_DIFFICULTY_IDS.includes(difficulty.id));
 // 体験版で選べる難易度だけを、譜面が入っているものに限って返す。
 // 譜面が空の難易度をボタンに出すと「押せるのに始まらない」状態になるため。
 const rhythmDemoDifficulties=(song,difficulties)=>{

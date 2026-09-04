@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 69e77e873a35ddfb
+// source-sha256: c65d22c5f313e072
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 06:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 07:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15639,6 +15639,245 @@ const RhythmOptions = ({
 
 // モンスターノーツ用のマスモン設定。音ゲーデバッグ画面と体験版ホームの両方から使うため、
 // 画面の中へ直接書かずにここで1つにまとめてある。中身と操作はどちらから開いても同じ。
+// ============================================================================
+// 曲えらび(曲選択画面)
+// ============================================================================
+// 2026-09-05・ユーザーが示した音ゲーの曲選択画面を参考にした構成。
+//   ・真ん中に曲の一覧。1行に「楽曲Lv.」「絵」「曲名」「遊べる難易度」
+//   ・選んだ曲の大きな絵と、難易度ボタン、ランダム、決定
+//   ・左の「ジャンルタブ」は曲が増えてから足す(いまは曲が少ないので置かない)
+//   ・オプション(音ゲー設定)とマスモン設定へはヘッダーから入る
+//   ・全国ランキングは曲ごとなので、選んだ曲の欄に置く
+// 縦画面では一覧が上・選んだ曲が下、横画面では左右に並ぶ(landscape:)。
+
+// 難易度の色。EASY=緑 / NORMAL=青 / HARD=橙 / EXPERT=赤 / MASTER=紫。
+// 一覧のひし形も難易度ボタンも同じ色を使い、画面のどこでも同じ意味になるようにする。
+const RHYTHM_DIFFICULTY_TONE = Object.freeze({
+  EASY: Object.freeze({
+    dot: 'bg-emerald-400',
+    on: 'border-emerald-300 bg-emerald-600 text-white',
+    off: 'border-emerald-400/40 text-emerald-200'
+  }),
+  NORMAL: Object.freeze({
+    dot: 'bg-sky-400',
+    on: 'border-sky-300 bg-sky-600 text-white',
+    off: 'border-sky-400/40 text-sky-200'
+  }),
+  HARD: Object.freeze({
+    dot: 'bg-amber-400',
+    on: 'border-amber-300 bg-amber-600 text-white',
+    off: 'border-amber-400/40 text-amber-200'
+  }),
+  EXPERT: Object.freeze({
+    dot: 'bg-rose-400',
+    on: 'border-rose-300 bg-rose-600 text-white',
+    off: 'border-rose-400/40 text-rose-200'
+  }),
+  MASTER: Object.freeze({
+    dot: 'bg-fuchsia-400',
+    on: 'border-fuchsia-300 bg-fuchsia-700 text-white',
+    off: 'border-fuchsia-400/40 text-fuchsia-200'
+  })
+});
+const rhythmDifficultyTone = id => RHYTHM_DIFFICULTY_TONE[id] || RHYTHM_DIFFICULTY_TONE.EASY;
+
+// 曲の絵(ジャケット)。実物の絵はまだ無いので、**曲idから決まる色**のタイルに頭文字を出す。
+// 乱数を使わないので、同じ曲はいつも同じ色になる(色で曲を覚えられる)。
+// 絵を用意したら、曲のデータへ artwork:'images/...' を足せばそれを出す。
+const rhythmSongArtHue = songId => {
+  const text = String(songId || '');
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) % 360;
+  return hash;
+};
+const RhythmSongArt = ({
+  song,
+  large = false
+}) => {
+  const hue = rhythmSongArtHue(song && song.songId);
+  const src = song && typeof song.artwork === 'string' ? song.artwork : '';
+  const initial = String(song && song.displayName || '♪').trim().charAt(0) || '♪';
+  return /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-song-art": true,
+    className: `relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large ? 'w-full' : 'w-12'}`,
+    style: {
+      aspectRatio: '1 / 1',
+      background: `linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue + 50) % 360},72%,48%))`
+    }
+  }, src ? /*#__PURE__*/React.createElement("img", {
+    src: src,
+    alt: "",
+    className: "absolute inset-0 h-full w-full object-cover"
+  }) : /*#__PURE__*/React.createElement("b", {
+    "aria-hidden": "true",
+    className: `absolute inset-0 flex items-center justify-center font-black text-white/90 ${large ? 'text-5xl' : 'text-xl'}`,
+    style: {
+      textShadow: '0 2px 8px rgba(2,6,23,.55)'
+    }
+  }, initial));
+};
+
+// 曲の長さ。譜面の終わりか、曲の再生時間の指定から出す。
+const rhythmSongLengthLabel = (song, chart) => {
+  const ms = Number(song && song.playDurationMs || chart && chart.durationMs || 0);
+  if (!Number.isFinite(ms) || ms <= 0) return '';
+  const total = Math.round(ms / 1000);
+  return `${Math.floor(total / 60)}分${String(total % 60).padStart(2, '0')}秒`;
+};
+
+// 譜面が入っている難易度だけを「遊べる」とみなす(押せるのに始まらない状態を作らないため)。
+const rhythmChartPlayable = (song, difficultyId) => {
+  const chart = song && song.difficulties && song.difficulties[difficultyId];
+  return !!chart && Array.isArray(chart.notes) && chart.notes.length > 0;
+};
+
+// footer は「選んでいる曲」を受け取れる。全国ランキングのように**曲ごとに違うもの**を
+// 置くため。ただの要素を渡してもよい。
+const RhythmSongSelect = ({
+  songs,
+  difficulties,
+  difficultyLabels,
+  bestRecords,
+  onPlay,
+  notice = null,
+  footer = null,
+  emptyText = '遊べる譜面がまだありません。'
+}) => {
+  const list = (songs || []).filter(song => (difficulties || []).some(difficulty => rhythmChartPlayable(song, difficulty.id)));
+  const [songId, setSongId] = React.useState(() => list[0] && list[0].songId || '');
+  const [difficultyId, setDifficultyId] = React.useState(() => '');
+  // 選んでいる曲・難易度が無くなっても落ちないよう、毎回その場で選び直す
+  // (曲を変えたときに「前の曲にしかない難易度」が残らない)。
+  const song = list.find(entry => entry.songId === songId) || list[0] || null;
+  const available = song ? (difficulties || []).filter(difficulty => rhythmChartPlayable(song, difficulty.id)) : [];
+  const difficulty = available.find(entry => entry.id === difficultyId) || available[0] || null;
+  const chart = song && difficulty ? song.difficulties[difficulty.id] : null;
+  const best = song && difficulty ? rhythmBestRecord(bestRecords, song.songId, difficulty.id) : null;
+  const label = difficulty && difficultyLabels ? difficultyLabels[difficulty.id] : null;
+  // 一覧の「楽曲Lv.」は、いま選んでいる難易度のレベル。その曲に無ければいちばん上の難易度。
+  const rowLevel = entry => {
+    const ids = (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).map(item => item.id);
+    if (!ids.length) return 0;
+    const id = difficulty && ids.includes(difficulty.id) ? difficulty.id : ids[ids.length - 1];
+    return Number(entry.difficulties[id].level) || 0;
+  };
+  const pickRandom = () => {
+    if (!list.length) return;
+    const nextSong = list[Math.floor(Math.random() * list.length)];
+    const ids = (difficulties || []).filter(item => rhythmChartPlayable(nextSong, item.id));
+    setSongId(nextSong.songId);
+    if (ids.length) setDifficultyId(ids[Math.floor(Math.random() * ids.length)].id);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-song-select": true,
+    className: "flex min-h-0 flex-1 flex-col landscape:flex-row"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-song-list": true,
+    className: "min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2 landscape:border-r landscape:border-white/10"
+  }, notice, list.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
+  }, emptyText) : /*#__PURE__*/React.createElement("ul", {
+    className: "space-y-1.5"
+  }, list.map(entry => {
+    const selected = !!song && entry.songId === song.songId;
+    return /*#__PURE__*/React.createElement("li", {
+      key: entry.songId
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-rhythm-song-row": entry.songId,
+      "aria-pressed": selected,
+      onClick: () => setSongId(entry.songId),
+      className: `flex w-full items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected ? 'border-fuchsia-300 bg-fuchsia-900/50' : 'border-white/10 bg-slate-900/70'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "w-10 shrink-0 text-center"
+    }, /*#__PURE__*/React.createElement("small", {
+      className: "block text-[7px] font-black leading-none text-slate-400"
+    }, "\u697D\u66F2Lv."), /*#__PURE__*/React.createElement("b", {
+      "data-rhythm-song-row-level": true,
+      className: "mt-0.5 block text-xl font-black leading-none tabular-nums text-white"
+    }, rowLevel(entry))), /*#__PURE__*/React.createElement(RhythmSongArt, {
+      song: entry
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "min-w-0 flex-1"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block text-[13px] font-black leading-tight text-white",
+      style: {
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden'
+      }
+    }, entry.displayName), /*#__PURE__*/React.createElement("span", {
+      className: "mt-1 flex items-center gap-1"
+    }, (difficulties || []).map(item => /*#__PURE__*/React.createElement("i", {
+      key: item.id,
+      "aria-hidden": "true",
+      className: `block h-2 w-2 rotate-45 rounded-[1px] ${rhythmChartPlayable(entry, item.id) ? rhythmDifficultyTone(item.id).dot : 'bg-white/15'}`
+    })), /*#__PURE__*/React.createElement("small", {
+      className: "ml-1 text-[9px] font-bold text-slate-400"
+    }, (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).length, "\u96E3\u6613\u5EA6")))));
+  }))), /*#__PURE__*/React.createElement("aside", {
+    "data-rhythm-song-detail": true,
+    className: "shrink-0 border-t border-white/10 bg-slate-950/90 px-3 py-2 landscape:w-[42%] landscape:max-w-[420px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-3",
+    style: {
+      paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+    }
+  }, !song || !difficulty ? /*#__PURE__*/React.createElement("p", {
+    className: "text-xs font-bold text-slate-400"
+  }, "\u904A\u3079\u308B\u66F2\u304C\u3042\u308A\u307E\u305B\u3093\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 landscape:block"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-20 shrink-0 landscape:mx-auto landscape:w-40"
+  }, /*#__PURE__*/React.createElement(RhythmSongArt, {
+    song: song,
+    large: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1 landscape:mt-2 landscape:text-center"
+  }, /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-song-title": true,
+    className: "block text-sm font-black leading-tight text-white"
+  }, song.displayName), /*#__PURE__*/React.createElement("small", {
+    className: "mt-0.5 block text-[10px] font-bold text-slate-400"
+  }, rhythmSongLengthLabel(song, chart)))), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-difficulty-row": true,
+    className: "mt-2 flex flex-wrap gap-1"
+  }, available.map(item => {
+    const tone = rhythmDifficultyTone(item.id);
+    const on = item.id === difficulty.id;
+    return /*#__PURE__*/React.createElement("button", {
+      key: item.id,
+      type: "button",
+      "data-rhythm-difficulty": item.id,
+      "aria-pressed": on,
+      onClick: () => setDifficultyId(item.id),
+      className: `min-h-[44px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${on ? tone.on : `${tone.off} bg-slate-900/70`}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, item.id), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[9px] font-black tabular-nums opacity-90"
+    }, "Lv.", song.difficulties[item.id].level));
+  })), /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-demo-level": true,
+    className: "mt-1.5 text-[10px] font-bold text-slate-300"
+  }, "Lv.", chart.level, " / ", chart.totalNotes, "\u30CE\u30FC\u30C4"), label && label.note && /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] leading-relaxed text-slate-400"
+  }, label.note), /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-demo-best": true,
+    className: "mt-1.5 text-[10px] font-bold text-amber-200"
+  }, best && best.clear ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u81EA\u5DF1\u30D9\u30B9\u30C8 ", best.bestScore.toLocaleString(), "\uFF08\u30E9\u30F3\u30AF ", rhythmRankForScore(best.bestScore), "\uFF09 / \u6700\u5927\u30B3\u30F3\u30DC ", best.maxCombo) : /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u904A\u3093\u3067\u3044\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-random": true,
+    onClick: pickRandom,
+    className: "min-h-[48px] w-[38%] rounded-xl border border-white/20 bg-slate-900 text-xs font-black text-slate-200"
+  }, "\u30E9\u30F3\u30C0\u30E0"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-demo-start": difficulty.id,
+    onClick: () => onPlay(song, difficulty),
+    className: "min-h-[48px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white"
+  }, "\u6C7A\u5B9A")), typeof footer === 'function' ? footer(song, difficulty) : footer)));
+};
 const RhythmMonsterSlotsPanel = ({
   rhythmMonsterSlots,
   rhythmMonsterSlotIdsInUse,
@@ -35054,106 +35293,78 @@ function MonsterHeroGame() {
         return saved;
       }
     }), gameState === 'RHYTHM_DEMO_HOME' && (() => {
-      const song = rhythmDemoSong(RHYTHM_SONGS);
-      const difficulties = rhythmDemoDifficulties(song, RHYTHM_DIFFICULTIES);
+      const songs = rhythmDemoSongs(RHYTHM_SONGS);
+      const difficulties = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
       return /*#__PURE__*/React.createElement("main", {
         "data-rhythm-demo-home": true,
-        className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
+        className: "flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
       }, /*#__PURE__*/React.createElement("header", {
-        className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1",
+        className: "z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
         style: {
           paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
         }
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u623B\u308B",
         onClick: () => setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS'),
-        className: "min-h-[44px] px-2 text-slate-400"
+        className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 18
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-sm font-black tracking-widest text-cyan-200"
-      }, "\uD83C\uDFB5 \u97F3\u30B2\u30FC"), /*#__PURE__*/React.createElement("span", {
+        size: 20
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
+      }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
+        className: "text-sm font-black leading-tight tracking-widest text-cyan-200"
+      }, "\uD83C\uDFB5 \u697D\u66F2\u9078\u629E")), /*#__PURE__*/React.createElement("span", {
         "data-rhythm-demo-badge": true,
-        className: "ml-auto rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
-      }, "\u4F53\u9A13\u7248")), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
-        style: {
-          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("p", {
-        "data-rhythm-demo-notice": true,
-        className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
-      }, "\u3053\u308C\u306F\u97F3\u30B2\u30FC\u306E\u4F53\u9A13\u7248\u3067\u3059\u3002\u3044\u307E\u306F\u300CMonster Hero\u300D1\u66F2\u30FBEASY\uFF0FNORMAL\uFF0FHARD\u306E3\u96E3\u6613\u5EA6\u3060\u3051\u3092\u904A\u3079\u307E\u3059\u3002 \u8B5C\u9762\u306F\u8ABF\u6574\u4E2D\u306E\u305F\u3081\u3001\u3053\u308C\u304B\u3089\u5909\u308F\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002"), !song || difficulties.length === 0 ? /*#__PURE__*/React.createElement("p", {
-        className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
-      }, "\u904A\u3079\u308B\u8B5C\u9762\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
-        "data-rhythm-demo-song": true,
-        className: "mb-3 rounded-2xl border border-indigo-400/40 bg-indigo-950/30 p-3"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-base font-black"
-      }, "Monster Hero"), /*#__PURE__*/React.createElement("p", {
-        className: "mt-1 text-[10px] text-slate-300"
-      }, "\u30AA\u30EA\u30B8\u30CA\u30EB / 2\u520632\u79D2")), /*#__PURE__*/React.createElement("h3", {
-        className: "mb-2 text-xs font-black text-cyan-200"
-      }, "\u96E3\u6613\u5EA6\u3092\u3048\u3089\u3076"), /*#__PURE__*/React.createElement("div", {
-        className: "space-y-2"
-      }, difficulties.map(difficulty => {
-        const chart = song.difficulties[difficulty.id];
-        const best = rhythmBestRecord(rhythmBestRecords, song.songId, difficulty.id);
-        const label = RHYTHM_DEMO_DIFFICULTY_LABELS[difficulty.id];
-        return /*#__PURE__*/React.createElement("article", {
-          key: difficulty.id,
-          "data-rhythm-demo-difficulty": difficulty.id,
-          className: "rounded-2xl border border-white/10 bg-slate-900/80 p-3"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center justify-between gap-2"
-        }, /*#__PURE__*/React.createElement("b", {
-          className: "text-sm font-black text-cyan-200"
-        }, label.name), /*#__PURE__*/React.createElement("span", {
-          "data-rhythm-demo-level": true,
-          className: "text-[9px] font-mono text-slate-400"
-        }, "Lv.", chart.level, " / ", chart.totalNotes, "\u30CE\u30FC\u30C4")), /*#__PURE__*/React.createElement("p", {
-          className: "mt-1 text-[10px] leading-relaxed text-slate-300"
-        }, label.note), /*#__PURE__*/React.createElement("p", {
-          "data-rhythm-demo-best": true,
-          className: "mt-2 text-[10px] font-bold text-amber-200"
-        }, best.clear ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u81EA\u5DF1\u30D9\u30B9\u30C8 ", best.bestScore.toLocaleString(), "\uFF08\u30E9\u30F3\u30AF ", rhythmRankForScore(best.bestScore), "\uFF09 / \u6700\u5927\u30B3\u30F3\u30DC ", best.maxCombo) : /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u904A\u3093\u3067\u3044\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
-          "data-rhythm-demo-start": difficulty.id,
-          className: "mt-2 min-h-[48px] w-full rounded-xl bg-fuchsia-700 text-sm font-black",
-          onClick: () => {
-            setRhythmPlay({
-              song,
-              difficulty,
-              from: 'demo'
-            });
-            setGameState('RHYTHM_PLAY');
-          }
-        }, "\u3053\u306E\u96E3\u6613\u5EA6\u3067\u904A\u3076"));
-      }))), song && /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-ranking": true,
-        className: "mt-3 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100",
-        onClick: () => {
-          loadRhythmRanking(song);
-          setGameState('RHYTHM_RANKING');
-        }
-      }, "\uD83C\uDFC6 \u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 grid grid-cols-2 gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-options": true,
-        className: "min-h-[48px] rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-xs font-black text-cyan-100",
-        onClick: () => {
-          setRhythmOptionsBack('RHYTHM_DEMO_HOME');
-          setGameState('RHYTHM_OPTIONS');
-        }
-      }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3"), /*#__PURE__*/React.createElement("button", {
+        className: "shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
+      }, "\u4F53\u9A13\u7248"), /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-monsters": true,
-        className: "min-h-[48px] rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-xs font-black text-fuchsia-100",
+        "aria-label": "\u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A",
+        title: "\u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A",
         onClick: () => {
           setRhythmMonsterPickerOpen(true);
           setGameState('RHYTHM_DEMO_MONSTERS');
-        }
-      }, "\uD83D\uDC7E \u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-[9px] leading-relaxed text-slate-500"
-      }, "\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u3001\u66F2\u306E\u9014\u4E2D\u3067\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306B\u306A\u3063\u3066\u6D41\u308C\u3066\u304D\u307E\u3059\u3002\u53D6\u308B\u3068\u8840\u7D71\u3054\u3068\u306E\u529B\u304C\u50CD\u304D\u307E\u3059\u3002")));
+        },
+        className: "min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100"
+      }, "\uD83D\uDC7E"), /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-options": true,
+        "aria-label": "\u30AA\u30D7\u30B7\u30E7\u30F3",
+        title: "\u30AA\u30D7\u30B7\u30E7\u30F3",
+        onClick: () => {
+          setRhythmOptionsBack('RHYTHM_DEMO_HOME');
+          setGameState('RHYTHM_OPTIONS');
+        },
+        className: "min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100"
+      }, "\u2699\uFE0F")), /*#__PURE__*/React.createElement(RhythmSongSelect, {
+        songs: songs,
+        difficulties: difficulties,
+        difficultyLabels: RHYTHM_DEMO_DIFFICULTY_LABELS,
+        bestRecords: rhythmBestRecords,
+        onPlay: (song, difficulty) => {
+          setRhythmPlay({
+            song,
+            difficulty,
+            from: 'demo'
+          });
+          setGameState('RHYTHM_PLAY');
+        },
+        notice: /*#__PURE__*/React.createElement("p", {
+          "data-rhythm-demo-notice": true,
+          "data-rhythm-demo-song": true,
+          className: "mb-2 rounded-xl border border-amber-300/40 bg-amber-500/10 p-2 text-[9px] font-bold leading-relaxed text-amber-100"
+        }, "\u3053\u308C\u306F\u97F3\u30B2\u30FC\u306E\u4F53\u9A13\u7248\u3067\u3059\u3002\u3044\u307E\u306F\u300CMonster Hero\u300D1\u66F2\u30FBEASY\uFF0FNORMAL\uFF0FHARD\u306E3\u96E3\u6613\u5EA6\u3060\u3051\u3092\u904A\u3079\u307E\u3059\u3002 \u8B5C\u9762\u306F\u8ABF\u6574\u4E2D\u306E\u305F\u3081\u3001\u3053\u308C\u304B\u3089\u5909\u308F\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002"),
+        footer: song => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+          "data-rhythm-demo-ranking": true,
+          onClick: () => {
+            loadRhythmRanking(song);
+            setGameState('RHYTHM_RANKING');
+          },
+          className: "mt-2 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100"
+        }, "\uD83C\uDFC6 \u3053\u306E\u66F2\u306E\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement("p", {
+          className: "mt-2 text-[9px] leading-relaxed text-slate-500"
+        }, "\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u3001\u66F2\u306E\u9014\u4E2D\u3067\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306B\u306A\u3063\u3066\u6D41\u308C\u3066\u304D\u307E\u3059\u3002\u53D6\u308B\u3068\u8840\u7D71\u3054\u3068\u306E\u529B\u304C\u50CD\u304D\u307E\u3059\u3002"))
+      }));
     })(), gameState === 'RHYTHM_DEMO_MONSTERS' && /*#__PURE__*/React.createElement("main", {
       "data-rhythm-demo-monsters-screen": true,
       className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
