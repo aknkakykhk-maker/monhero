@@ -1211,7 +1211,7 @@ PR #954の正式候補v1まで実装済み。ただし、これは完成譜面�
 
 ---
 
-## 14A. 自動譜面制作システム V2（確定・STEP1〜3実装済み）
+## 14A. 自動譜面制作システム V2（確定・STEP1〜4実装済み）
 
 ### 目的
 
@@ -1678,8 +1678,56 @@ node tools/mode/rhythm-chart-v2-step3-generate.js --write
 node tools/mode/rhythm-chart-v2-step3-check.js
 ```
 
-次工程はSTEP4「EXPERT / MASTER自動生成」。STEP3時点ではEASY/NORMAL/HARDの3難易度のみで、
-複数候補生成・自動批評・自動プレイ可能性検査・自動修正ループはまだ実装していない
+### V2 STEP4 actual（EXPERT / MASTER自動生成）
+
+同じ`rhythm-chart-v2-step3-generate.js`にEXPERT/MASTERの2難易度を追加する形で実装済み
+（新しいファイルには分けていない。STEP3の生成ロジック・motif反映をそのまま使うため）。
+
+EASY/NORMAL/HARDは既存の`monster-hero-theme-onset-candidates(-dense).json`
+（V1と共用、しきい値0.30）を候補源にしているが、この候補源はしきい値0.30止まりのため、
+HARDより上の密度を作ろうとしても供給が頭打ちになることが実測で分かった。新しい音源解析
+（ffmpeg等）を追加する代わりに、STEP1で既に抽出済みの`events.onsets`（931件、強さ0.197まで
+持つ副産物）をEXPERT/MASTER専用の候補源として転用した。
+
+- EXPERT: `candidateSource:'step1'`、`minStrength:.24`基準
+- MASTER: `candidateSource:'step1'`、実質しきい値なし（候補源の下限0.197がそのまま効く）
+- どちらもminStrength・perBarByIntensity・holdMaxCount等の実数値は、
+  「EASY<NORMAL<HARD<EXPERT<MASTERの順でノーツ数・密度が必ず増える」ことを
+  `rhythm-chart-v2-step3-check.js`で実測しながら較正した（dense基準とstep1基準は
+  別アルゴリズムの強さ尺度のため、同じ数値を置いても揃わないことが分かったため）
+
+**同時押し(chord)**: EXPERT/MASTER限定の新しい表現として追加。ドキュメントの狙いどおり
+「同時押し」を入れるが、新しい時刻は作らない。STEP1 timelineの低域(low)・高域(high)の
+`attack`（瞬間的な立ち上がり）が両方とも同時に強い（`>=.6`）TAPノーツだけを対象に、
+2レーンへ分けた2枚のTAPへ変換する。片方は既存ノーツそのまま、もう片方
+(`chordWithGrid`に元ノーツのgridを持つ)は反対側の端（サブレーン0-1か8-9）へ、
+幅1で重ならないように置く。架空の音は作らない（同じ瞬間の低域と高域という、
+実際に検出済みの2つの音域を2本の指へ分けるだけ）。
+
+実測（`rhythm-chart-v2-step3-check.js`で自動確認）:
+
+| 難易度 | ノーツ数 | 密度(毎秒) | 同時押し |
+| --- | ---: | ---: | ---: |
+| HARD | 232 | 1.6 | 0（対象外） |
+| EXPERT | 250 | 1.69 | 10 |
+| MASTER | 298 | 2.02 | 16 |
+
+EXPERT/MASTERも、HARDと同じ「盛り上がり区間のほうが密度が高い」構造反映を維持している
+（EXPERT: 静か1.59/盛り上がり2.89、MASTER: 静か2.38/盛り上がり3.02）。
+
+出力: `tools/mode/authoring/monster-hero-theme-v2-chart-expert.json` /
+`-master.json`（V1・STEP3同様`reviewRequired:true`/`runtimeConnected:false`）。
+
+CLI確認:
+
+```bash
+node tools/mode/rhythm-chart-v2-step3-generate.js
+node tools/mode/rhythm-chart-v2-step3-generate.js --write
+node tools/mode/rhythm-chart-v2-step3-check.js
+```
+
+次工程はSTEP5「複数候補・自動批評」。STEP4時点では各難易度1候補だけを決定的に生成し、
+複数候補の比較・自動プレイ可能性検査の強化・自動修正ループはまだ実装していない
 （それぞれSTEP5〜7の範囲）。
 
 ---

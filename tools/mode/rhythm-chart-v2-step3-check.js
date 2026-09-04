@@ -9,8 +9,9 @@ const {spawnSync}=require('child_process');
 const ROOT=path.resolve(__dirname,'..','..');
 const GENERATOR=path.join(ROOT,'tools/mode/rhythm-chart-v2-step3-generate.js');
 const TRACK_ID='monster_hero_theme';
-const DIFFICULTIES=['EASY','NORMAL','HARD'];
-const ALLOWED_TYPES={EASY:new Set(['TAP','HOLD']),NORMAL:new Set(['TAP','HOLD','FLICK']),HARD:new Set(['TAP','HOLD','FLICK','SLIDE'])};
+const DIFFICULTIES=['EASY','NORMAL','HARD','EXPERT','MASTER'];
+const FULL_TYPES=new Set(['TAP','HOLD','FLICK','SLIDE']);
+const ALLOWED_TYPES={EASY:new Set(['TAP','HOLD']),NORMAL:new Set(['TAP','HOLD','FLICK']),HARD:FULL_TYPES,EXPERT:FULL_TYPES,MASTER:FULL_TYPES};
 const CALM_SECTIONS=new Set(['INTRO','BREAK','OUTRO']);
 const HOT_SECTIONS=new Set(['CHORUS','FINAL_CHORUS','BUILD','PRE_CHORUS']);
 
@@ -76,16 +77,32 @@ try{
     }));
     check(`${difficulty}: 採用ノーツの音ズレは±30ms以内`,candidate.notes.every(n=>!finite(n.sourcePeakOffsetMs)||Math.abs(n.sourcePeakOffsetMs)<=30));
     check(`${difficulty}: motif統計の範囲が妥当`,candidate.motif&&candidate.motif.phrasesApplied<=candidate.motif.phrasesTotal&&candidate.motif.notesGrounded<=candidate.motif.notesAttempted&&candidate.motif.phrasesTotal>=1);
+
+    if(['EASY','NORMAL','HARD'].includes(difficulty)){
+      check(`${difficulty}: 同時押しを使わない難易度`,!candidate.notes.some(n=>n.chordWithGrid!=null)&&candidate.chordCount===0);
+    }else{
+      const chordNotes=candidate.notes.filter(n=>n.chordWithGrid!=null);
+      check(`${difficulty}: 同時押しを使っている`,chordNotes.length>0&&candidate.chordCount===chordNotes.length);
+      check(`${difficulty}: 同時押しは既存ノーツと同じ時刻に、離れたレーンで発生する(新しい時刻を作らない)`,chordNotes.every(n=>{
+        const base=candidate.notes.find(o=>o.grid===n.chordWithGrid&&o!==n&&o.type==='TAP');
+        if(!base)return false;
+        const baseStart=base.subLane,baseWidth=base.subLaneWidth||1;
+        return n.subLane+n.subLaneWidth<=baseStart||baseStart+baseWidth<=n.subLane;
+      }));
+    }
   }
 }finally{
   fs.rmSync(tempDir,{recursive:true,force:true});
 }
 
-if(candidates.HARD){
+const mean=values=>values.length?values.reduce((a,b)=>a+b,0)/values.length:0;
+for(const difficulty of ['HARD','EXPERT','MASTER']){
+  const candidate=candidates[difficulty];
+  if(!candidate)continue;
   // 構造(section種別)が実際に密度へ反映されているかを、生成済みノーツ自体から検証する
   // （アルゴリズムを再実装せず、出力結果の性質として確認する）。
   const notesByBar=new Map();
-  for(const n of candidates.HARD.notes){
+  for(const n of candidate.notes){
     const bar=Math.floor(n.grid/BAR);
     notesByBar.set(bar,(notesByBar.get(bar)||0)+1);
   }
@@ -95,14 +112,31 @@ if(candidates.HARD){
     if(CALM_SECTIONS.has(type))calmBars.push(count);
     else if(HOT_SECTIONS.has(type))hotBars.push(count);
   }
-  const mean=values=>values.length?values.reduce((a,b)=>a+b,0)/values.length:0;
-  check('HARD: INTRO/BREAK/OUTRO区間の小節あたりノーツ数を計測できた',calmBars.length>=2,`${calmBars.length}小節`);
-  check('HARD: CHORUS/FINAL_CHORUS区間の小節あたりノーツ数を計測できた',hotBars.length>=2,`${hotBars.length}小節`);
-  check('HARD: 盛り上がり区間のほうが静かな区間より密度が高い(構造がgeneration ruleへ反映されている)',mean(hotBars)>mean(calmBars),`静か${mean(calmBars).toFixed(2)} / 盛り上がり${mean(hotBars).toFixed(2)}`);
+  check(`${difficulty}: INTRO/BREAK/OUTRO区間の小節あたりノーツ数を計測できた`,calmBars.length>=2,`${calmBars.length}小節`);
+  check(`${difficulty}: CHORUS/FINAL_CHORUS区間の小節あたりノーツ数を計測できた`,hotBars.length>=2,`${hotBars.length}小節`);
+  check(`${difficulty}: 盛り上がり区間のほうが静かな区間より密度が高い(構造がgeneration ruleへ反映されている)`,mean(hotBars)>mean(calmBars),`静か${mean(calmBars).toFixed(2)} / 盛り上がり${mean(hotBars).toFixed(2)}`);
 }
 
-if(candidates.EASY&&candidates.HARD){
-  check('難易度が上がるほどノーツ数が増える',candidates.EASY.noteCount<candidates.NORMAL.noteCount&&candidates.NORMAL.noteCount<candidates.HARD.noteCount);
+if(DIFFICULTIES.every(d=>candidates[d])){
+  check('難易度が上がるほどノーツ数が増える(EASY<NORMAL<HARD<EXPERT<MASTER)',
+    DIFFICULTIES.every((d,i)=>i===0||candidates[DIFFICULTIES[i-1]].noteCount<candidates[d].noteCount));
+  check('難易度が上がるほど密度(ノーツ毎秒)も増える',
+    DIFFICULTIES.every((d,i)=>i===0||candidates[DIFFICULTIES[i-1]].densityPerSecond<candidates[d].densityPerSecond));
+}
+
+if(candidates.EXPERT&&candidates.MASTER){
+  const features=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/monster-hero-theme-v2-features.json'),'utf8'));
+  const bandsAt=grid=>{
+    const ms=gridTimeMs(grid);
+    let nearest=null,bestDist=Infinity;
+    for(const w of features.timeline){const d=Math.abs(w.centerMs-ms);if(d<bestDist){bestDist=d;nearest=w;}}
+    return nearest?nearest.frequencyBands:null;
+  };
+  for(const difficulty of['EXPERT','MASTER']){
+    const chordNotes=candidates[difficulty].notes.filter(n=>n.chordWithGrid!=null);
+    check(`${difficulty}: 同時押しは低域・高域が同時に立ち上がった瞬間だけに発生する`,
+      chordNotes.every(n=>{const bands=bandsAt(n.chordWithGrid);return bands&&bands.low.attack>=.6&&bands.high.attack>=.6;}));
+  }
 }
 
 check('V1・STEP1・STEP2の既存出力を変更していない',protectedFiles.every(file=>hash(file)===beforeHashes.get(file)));
@@ -114,6 +148,8 @@ check('ゲームruntime・保存・ランキングへ接続しない',!sourceTex
 check('構造入力(STEP1/STEP2)を読み込んでいる',sourceText.includes('rhythm-chart-v2-step1-features')&&sourceText.includes('rhythm-chart-v2-step2-structure'));
 check('セクション種別による段調整を実装している',sourceText.includes('SECTION_TIER_ADJUST')&&sourceText.includes('sectionTierAdjust'));
 check('反復フレーズのmotif接地を実装している',sourceText.includes('repeatedFromPhraseId')&&sourceText.includes('motifNotesGrounded'));
+check('EXPERT/MASTERはSTEP1のonsetイベントを候補源にしている(新しい音源解析を増やさない)',sourceText.includes('candidatesFromStep1Onsets')&&sourceText.includes("candidateSource:'step1'"));
+check('同時押し(chord)は新しい時刻を作らず既存ノーツの分割として実装している',sourceText.includes('chordWithGrid')&&sourceText.includes('bandsAt'));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
