@@ -15,8 +15,14 @@
 // V1は「小節ごとの採用オンセット強さ合計」の三分位だけで密度を決めていたが、
 // V2 STEP3ではSTEP1のintensity（楽曲全体を通した盛り上がり推移）とSTEP2の
 // section種別・フレーズ反復（motif）を使って密度・派手さを決める。
-// それ以外（採用基準・幅・レーン移動・HOLD/FLICK/SLIDE・複合操作・モンスター配置）は
-// V1と同じロジックを踏襲する（ここを差し替えるのはV2 STEP4以降の範囲）。
+// 当初は採用基準・幅・レーン移動・HOLD/FLICK/SLIDE・複合操作をV1と同じロジックで踏襲していたが、
+// 仕上がりの点検(2026-09-04)で次の欠点が見つかり、V2側だけ直した(V1は変更しない)。
+//   ・採用ループが「最後に取った音」とだけ間隔を比べ、拍頭を先に取ると同じ小節の裏拍が
+//     負の差で全部捨てられていた → 上限も供給も効かず、どの難易度も2〜3音/小節に張り付いていた
+//   ・レーン歩きが歩幅の倍数しか踏めず、レーン1に1音も来ない／EXPERT以上は0↔4の往復ばかり
+//   ・サビの終盤ほど候補源が薄く、ふつうのサビより薄い譜面になっていた
+//   ・SLIDEが全部同じ形、HOLDが4か8だけ
+//   ・HOLD中の重ねTAPを同時押しへ割っていて、3本目の指が要る配置ができていた
 //
 // 出力はreviewRequired=true / runtimeConnected=falseの設計資料であり、
 // game-system.jsxやmonster-hero/data/rhythm-mode.jsのランタイムには一切接続しない。
@@ -41,6 +47,7 @@ const write=process.argv.includes('--write');
 const only=arg('--difficulty');
 const trackId=arg('--track','monster_hero_theme');
 const outputDir=arg('--output-dir',null);
+const printProfiles=process.argv.includes('--print-profiles');
 const config=TRACKS[trackId];
 if(!config){console.error(`STEP3未登録トラックです: ${trackId} (${Object.keys(TRACKS).join(', ')})`);process.exit(1);}
 // STEP5(複数候補・自動批評)が「同じ音源から作り方だけ変えた別案」を作るための上書き口。
@@ -79,26 +86,40 @@ const COMMON=Object.freeze({
   monsterSlots:4,
   monsterTargets:[.2,.4,.6,.8],
   monsterClearGrids:4,
+  // 盛り上がる小節で候補が上限に届かないとき、1段細かい候補源から補う音の最低の強さ。
+  // 「はっきりした音」だけを足し、弱い音で埋めない。
+  supplementMinStrength:.4,
+  // 8分未満の間隔では、歩幅いっぱいに跳ばない(最大2レーン)。STEP6の手のモデルと同じ考え方。
+  laneStepFastMax:2,
 });
+// 盛り上がりの順位を、セクション種別で±この量だけずらす(段調整の±1段に相当)。
+const SECTION_POSITION_ADJUST=.2;
+// 候補源の細かさの順。盛り上がる小節で足りないときは、この順で1段細かい源から補う。
+const SOURCE_ORDER=Object.freeze(['normal','dense','step1']);
 
-// --- 難易度ごとの制作方針。widths/types/maxLaneStep等はV1と同じ値。perBarByIntensityの
-//     選び方（どの段を使うか）だけがV2で変わる ---
+// --- 難易度ごとの制作方針 ---
+// perBarByIntensity は「盛り上がりの順位 0 / 0.5 / 1 のときの小節あたり上限」(折れ線。端数可)。
+// 採用ループの誤り(最後に取った音とだけ間隔を比べていた)を直すまで、この上限は一度も効いて
+// おらず較正されていなかった。いまの値は、人が耳で確認した既存の正式候補v1の密度
+// (EASY 1.22 / NORMAL 1.45 / HARD 1.80 ノーツ毎秒)へ合うように実測で置き、
+// EXPERT / MASTER はそこから約1.2倍ずつ(2.2 / 2.7 毎秒)にしている。
+// widths / types / holdMaxCount などの数はV1と同じ。
 const PROFILES=Object.freeze({
   EASY:Object.freeze({
     level:1,candidateSource:'normal',minStrength:0,latticeGrids:2,
-    perBarByIntensity:[2,3,4],maxConsecutiveEighths:2,maxLaneStep:1,
+    perBarByIntensity:[1,2,2.75],maxConsecutiveEighths:2,maxLaneStep:1,
     widths:[2],simultaneous:false,types:['TAP','HOLD'],
     holdMaxCount:10,holdMinGapGrids:12,flickMaxCount:0,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:0,
   }),
   NORMAL:Object.freeze({
     level:3,candidateSource:'dense',minStrength:.45,latticeGrids:2,
-    perBarByIntensity:[3,4,6],maxConsecutiveEighths:4,maxLaneStep:2,
+    perBarByIntensity:[1,2,3.25],maxConsecutiveEighths:4,maxLaneStep:2,
     widths:[1,2,3],simultaneous:false,types:['TAP','HOLD','FLICK'],
     holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:12,slideMaxCount:0,chordMaxCount:0,endFlickMaxCount:3,
   }),
   HARD:Object.freeze({
     level:5,candidateSource:'dense',minStrength:.30,latticeGrids:1,
-    perBarByIntensity:[5,7,9],maxConsecutiveEighths:6,maxLaneStep:3,
+    perBarByIntensity:[1.5,2.5,3.5],maxConsecutiveEighths:6,maxLaneStep:3,
     widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
     holdMaxCount:14,holdMinGapGrids:10,flickMaxCount:16,slideMaxCount:8,chordMaxCount:0,endFlickMaxCount:5,
   }),
@@ -112,17 +133,27 @@ const PROFILES=Object.freeze({
   // MASTERのminStrength=0は「事実上のしきい値(0.197)より下を指定し、候補を絞らない」の意図。
   EXPERT:Object.freeze({
     level:7,candidateSource:'step1',minStrength:.20,latticeGrids:1,
-    perBarByIntensity:[7,10,13],maxConsecutiveEighths:8,maxLaneStep:4,
+    perBarByIntensity:[1.5,3.2,4.5],maxConsecutiveEighths:8,maxLaneStep:4,
     widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
     holdMaxCount:15,holdMinGapGrids:8,flickMaxCount:18,slideMaxCount:9,chordMaxCount:10,endFlickMaxCount:7,
   }),
   MASTER:Object.freeze({
     level:9,candidateSource:'step1',minStrength:0,latticeGrids:1,
-    perBarByIntensity:[10,14,18],maxConsecutiveEighths:12,maxLaneStep:4,
+    perBarByIntensity:[2,3.5,5.5],maxConsecutiveEighths:12,maxLaneStep:4,
     widths:[1,2,3,4],simultaneous:true,types:['TAP','HOLD','FLICK','SLIDE'],
     holdMaxCount:18,holdMinGapGrids:6,flickMaxCount:22,slideMaxCount:11,chordMaxCount:16,endFlickMaxCount:9,
   }),
 });
+
+// SLIDEの形。順番に使い回し、端からはみ出す・他の長いノーツとぶつかる形は次の形へ譲る。
+// steps は始点からの相対レーン(0.5刻み)、widths は各点の幅。
+const SLIDE_SHAPES=Object.freeze([
+  Object.freeze({id:'straight',grids:12,steps:[0,.5,1],widths:[2,3,2]}),     // まっすぐ1レーン
+  Object.freeze({id:'long',grids:16,steps:[0,.5,1,1.5],widths:[2,2,3,2]}),  // 長めに1.5レーン
+  Object.freeze({id:'turn',grids:12,steps:[0,1,.5],widths:[2,3,2]}),        // 折り返し
+  Object.freeze({id:'short',grids:8,steps:[0,.5],widths:[2,2]}),            // 短く半レーン
+]);
+if(printProfiles){console.log(JSON.stringify(PROFILES));process.exit(0);}
 
 // セクション種別ごとの段調整。INTRO/BREAK/OUTROは1段下げて静けさを出し、
 // BUILD系・CHORUS系は1段上げて盛り上げる。VERSE/BRIDGEは調整しない。
@@ -216,6 +247,19 @@ const tierForBar=barIndex=>{
   const adjust=section?sectionTierAdjust(section.sectionTypeCandidate):0;
   return Math.max(0,Math.min(2,raw+adjust));
 };
+// 盛り上がりの「順位」(0=いちばん静か〜1=いちばん盛り上がる)。段(3段階)だと CHORUS(0.6) と
+// FINAL_CHORUS(0.9) が同じ段2に潰れ、サビの終盤がふつうのサビより薄くなっていたので、
+// 小節ごとの上限はこの連続値から決める。段は「格子の細かさ・必要な強さ」の切り替えにだけ使う。
+const intensityRank=value=>{
+  let below=0;
+  while(below<sortedIntensities.length&&sortedIntensities[below]<value)below++;
+  return sortedIntensities.length>1?below/(sortedIntensities.length-1):0;
+};
+const intensityPosition=barIndex=>{
+  const section=sectionForMs(gridTimeMs(barIndex*BAR));
+  const adjust=section?sectionTierAdjust(section.sectionTypeCandidate):0;
+  return Math.max(0,Math.min(1,intensityRank(barIntensity(barIndex))+adjust*SECTION_POSITION_ADJUST));
+};
 
 const buildChart=(difficulty)=>{
   const P=profileOverride&&profileOverride[difficulty]?Object.freeze({...PROFILES[difficulty],...profileOverride[difficulty]}):PROFILES[difficulty];
@@ -238,7 +282,8 @@ const buildChart=(difficulty)=>{
   // 実際に採用される本数を増やす。
   const effectiveLatticeGrids=tier=>tier===0?P.latticeGrids*2:P.latticeGrids;
   const effectiveMinStrength=tier=>tier===0?Math.min(1,P.minStrength+.15):tier===2?Math.max(0,P.minStrength-.05):P.minStrength;
-  const admittedInBar=(bar,tier)=>{
+  const supplementSources=SOURCE_ORDER.slice(SOURCE_ORDER.indexOf(P.candidateSource)+1);
+  const admittedInBar=(bar,tier,cap)=>{
     const lattice=effectiveLatticeGrids(tier),minStrength=effectiveMinStrength(tier);
     const start=bar*BAR,end=start+BAR;
     const items=[];
@@ -248,31 +293,67 @@ const buildChart=(difficulty)=>{
       if(item.strength<minStrength)continue;
       items.push(item);
     }
+    // 盛り上がる小節(段2)で候補が上限に届かないときだけ、1段細かい候補源から補う。
+    // この曲はサビの終盤ほど候補源が薄く(normal: サビ4.3/小節 → 終盤2.4/小節)、
+    // 上限をいくら上げても終盤が薄いままだった。補う音は強さ supplementMinStrength 以上に限り、
+    // 静かな小節には足さない(その難易度の候補源の性格を保つ)。
+    if(tier===2&&items.length<cap){
+      const taken=new Set(items.map(i=>i.grid));
+      const floor=Math.max(minStrength,COMMON.supplementMinStrength);
+      for(const source of supplementSources){
+        if(items.length>=cap)break;
+        const extra=[];
+        for(const item of CANDIDATE_MAPS[source].values()){
+          if(item.grid<start||item.grid>=end||taken.has(item.grid))continue;
+          if(!inRange(item)||item.grid%lattice!==0)continue;
+          if(item.strength<floor||Math.abs(item.offsetMs)>COMMON.maxAbsPeakOffsetMs)continue;
+          extra.push({...item,supplementedFrom:source});
+        }
+        // 強い順に、上限までのぶんだけ足す(弱い音で埋めない)
+        extra.sort((a,b)=>b.strength-a.strength||a.grid-b.grid);
+        for(const item of extra){
+          if(items.length>=cap)break;
+          items.push(item);taken.add(item.grid);
+        }
+      }
+    }
     return items;
   };
+  // 小節ごとの上限。perBarByIntensity の3つの値を、盛り上がりの順位 0 / 0.5 / 1 に置いた折れ線として読む。
+  // 端数は次の小節へ持ち越す(誤差拡散)ので、平均は狙いどおりになり、乱数は使わない。
+  const capForBar=bar=>{
+    const u=intensityPosition(bar);
+    const [c0,c1,c2]=P.perBarByIntensity;
+    return u<=.5?c0+(c1-c0)*(u/.5):c1+(c2-c1)*((u-.5)/.5);
+  };
 
-  // --- 小節ごとに、構造反映後の段に応じた採用基準・本数で選ぶ（V1と同じ拍頭優先→強い順） ---
+  // --- 小節ごとに、上限の本数まで拍頭優先→強い順で選ぶ ---
   const picked=[];
+  let capCarry=0;
   for(let bar=minBar;bar<=maxBar;bar++){
     const tier=tierForBar(bar);
-    const items=admittedInBar(bar,tier);
+    capCarry+=capForBar(bar);
+    const limit=Math.floor(capCarry+1e-9);
+    capCarry-=limit;
+    if(limit<=0)continue;
+    const items=admittedInBar(bar,tier,limit);
     if(!items.length)continue;
-    const limit=P.perBarByIntensity[tier];
     items.sort((a,b)=>{
       const beatA=a.grid%BEAT===0?0:1,beatB=b.grid%BEAT===0?0:1;
       if(beatA!==beatB)return beatA-beatB;
       if(b.strength!==a.strength)return b.strength-a.strength;
       return a.grid-b.grid;
     });
-    let inBar=0;
+    const inBar=[];
     for(const item of items){
-      if(inBar>=limit)break;
-      const last=picked[picked.length-1];
-      if(last&&item.grid-last.grid<P.latticeGrids)continue;
-      picked.push(item);
-      picked.sort((a,b)=>a.grid-b.grid);
-      inBar=picked.filter(p=>Math.floor(p.grid/BAR)===bar).length;
+      if(inBar.length>=limit)break;
+      // 近すぎる音は取らない。以前は「最後に取った音」とだけ比べていたため、拍頭を先に取ると
+      // それより前の裏拍が全部(負の差で)弾かれ、上限も供給も効かずどの難易度も2〜3音/小節に
+      // 張り付いていた(V1から引き継いだ誤り)。同じ小節で取った全部と比べる。
+      if(inBar.some(p=>Math.abs(p.grid-item.grid)<P.latticeGrids))continue;
+      inBar.push(item);
     }
+    picked.push(...inBar);
   }
   picked.sort((a,b)=>a.grid-b.grid);
 
@@ -353,6 +434,13 @@ const buildChart=(difficulty)=>{
     return 2;
   };
 
+  // --- レーン決め ---
+  // 以前は「いまのレーン ± maxLaneStep」へ機械的に進めて端で折り返していたため、歩幅2だと 0/2/4、
+  // 歩幅3だと 0/3、歩幅4だと 0/4 しか踏めず、レーン1に1音も来ない譜面になっていた(V1も同じ)。
+  // さらに8分未満の間隔でも歩幅いっぱいに跳ぶので、EXPERT/MASTERは 0↔4 の往復ばかりになり、
+  // STEP5の handMotion が0点だった。ここでは「届く範囲のうち、これまで踏んだ回数が少ないレーン」を
+  // 選び(同数なら向きが続くほう→近いほう)、近い音ほど歩幅を狭める。乱数は使わない。
+  const laneUse=[0,0,0,0,0];
   const notes=[];
   let lane=2,dir=1,prevBar=-1;
   spaced.forEach((item,index)=>{
@@ -360,16 +448,28 @@ const buildChart=(difficulty)=>{
     const sameBar=bar===prevBar;
     if(!sameBar){dir=bar%2===0?1:-1;prevBar=bar;}
     const prev=spaced[index-1];
-    const keepLane=prev&&item.grid-prev.grid<=P.latticeGrids&&sameBar;
+    const gap=prev?item.grid-prev.grid:Infinity;
+    const keepLane=prev&&gap<=P.latticeGrids&&sameBar;
     if(!keepLane){
-      let next=lane+dir*P.maxLaneStep;
-      if(next<0||next>4){dir=-dir;next=lane+dir*P.maxLaneStep;}
-      lane=Math.max(0,Math.min(4,next));
+      const maxJump=gap<BEAT?Math.min(P.maxLaneStep,COMMON.laneStepFastMax):P.maxLaneStep;
+      let best=null;
+      for(let candidate=0;candidate<=4;candidate++){
+        const delta=candidate-lane;
+        if(delta===0||Math.abs(delta)>maxJump)continue;
+        const key=[laneUse[candidate],Math.sign(delta)===dir?0:1,Math.abs(delta)];
+        const better=!best||key[0]<best.key[0]
+          ||(key[0]===best.key[0]&&(key[1]<best.key[1]||(key[1]===best.key[1]&&key[2]<best.key[2])));
+        if(better)best={lane:candidate,key};
+      }
+      if(best){dir=Math.sign(best.lane-lane);lane=best.lane;}
     }
+    laneUse[lane]++;
     const width=widthFor(item,index);
-    const subLane=Math.max(0,Math.min(10-width,lane*2));
+    // 幅のあるノーツは選んだレーンを中心に置く(左端寄せだと右のレーンほど踏めなくなる)。
+    const subLane=Math.max(0,Math.min(10-width,lane*2+1-Math.ceil(width/2)));
     notes.push({type:'TAP',grid:item.grid,lane:Math.floor(subLane/2),subLane,subLaneWidth:width,
-      sourceStrength:Math.round(item.strength*100)/100,sourcePeakOffsetMs:item.offsetMs});
+      sourceStrength:Math.round(item.strength*100)/100,sourcePeakOffsetMs:item.offsetMs,
+      ...(item.supplementedFrom?{supplementedFrom:item.supplementedFrom}:{})});
   });
 
   const holdCandidates=[];
@@ -378,7 +478,8 @@ const buildChart=(difficulty)=>{
     if(note.grid%BEAT!==0)continue;
     const gap=next.grid-note.grid;
     if(gap<P.holdMinGapGrids)continue;
-    const durationGrids=gap>=12?8:4;
+    // 間が広いほど長く押す(1拍 / 2拍 / 3拍)。以前は4か8だけで単調だった。
+    const durationGrids=gap>=20?12:gap>=12?8:4;
     if(note.grid+durationGrids>=next.grid)continue;
     holdCandidates.push({index:i,durationGrids});
   }
@@ -422,38 +523,56 @@ const buildChart=(difficulty)=>{
   }
 
   if(P.slideMaxCount>0){
-    const SLIDE_GRIDS=12;
+    // 形を順番に使い回す。以前は全部「12グリッドで右へ1レーン」の同じ形だった。
+    // 向きは始点の位置で決める(右寄りなら左へ)。端からはみ出す形は次の形へ譲る。
+    const shortest=Math.min(...SLIDE_SHAPES.map(s=>s.grids));
     const slideCandidates=[];
     for(let i=1;i<notes.length-1;i++){
       if(notes[i].type!=='TAP')continue;
       if(notes[i].grid%BEAT!==0)continue;
-      if(notes.some(o=>o!==notes[i]&&o.grid>notes[i].grid&&o.grid<=notes[i].grid+SLIDE_GRIDS&&o.type!=='TAP'))continue;
+      if(notes.some(o=>o!==notes[i]&&o.grid>notes[i].grid&&o.grid<=notes[i].grid+shortest&&o.type!=='TAP'))continue;
       slideCandidates.push({index:i});
     }
     const chosen=spread(slideCandidates,P.slideMaxCount,8);
     const startGrids=chosen.map(c=>notes[c.index].grid);
-    for(const startGrid of startGrids){
+    startGrids.forEach((startGrid,ordinal)=>{
       const note=notes.find(n=>n.grid===startGrid);
-      if(!note)continue;
-      const startLane=note.lane<=2?note.lane:note.lane-1;
-      const points=[0,.5,1].map((r,step)=>({
-        grid:startGrid+Math.round(SLIDE_GRIDS*r),
-        lane:startLane+step*.5,
-        subLaneWidth:step===1?3:2,
+      if(!note)return;
+      const fits=shape=>startGrid+shape.grids<=maxGrid
+        &&!notes.some(o=>o!==note&&o.grid>startGrid&&o.grid<=startGrid+shape.grids&&o.type!=='TAP');
+      let shape=null;
+      for(let k=0;k<SLIDE_SHAPES.length&&!shape;k++){
+        const candidate=SLIDE_SHAPES[(ordinal+k)%SLIDE_SHAPES.length];
+        if(fits(candidate))shape=candidate;
+      }
+      if(!shape)return;
+      const reach=Math.max(...shape.steps);
+      // 右寄りの始点は左へ、左寄りは右へ。はみ出すなら向きを変え、それでも駄目なら始点を寄せる。
+      let direction=note.lane>=2.5?-1:1;
+      let startLane=note.lane;
+      if(startLane+direction*reach<0||startLane+direction*reach>4)direction=-direction;
+      if(startLane+direction*reach<0)startLane=reach;
+      if(startLane+direction*reach>4)startLane=4-reach;
+      const lastStep=shape.steps.length-1;
+      const points=shape.steps.map((step,i)=>({
+        grid:startGrid+Math.round(shape.grids*(i/lastStep)),
+        lane:startLane+direction*step,
+        subLaneWidth:shape.widths[i],
       }));
       note.type='SLIDE';
-      note.durationGrids=SLIDE_GRIDS;
+      note.durationGrids=shape.grids;
       note.slidePoints=points;
+      note.slideShape=shape.id;
       note.lane=points[0].lane;
       note.endLane=points[points.length-1].lane;
-      note.subLaneWidth=2;
+      note.subLaneWidth=points[0].subLaneWidth;
       delete note.subLane;
       for(let i=notes.length-1;i>=0;i--){
         const other=notes[i];
         if(other===note)continue;
-        if(other.grid>startGrid&&other.grid<=startGrid+SLIDE_GRIDS)notes.splice(i,1);
+        if(other.grid>startGrid&&other.grid<=startGrid+shape.grids)notes.splice(i,1);
       }
-    }
+    });
   }
 
   const overlaps=[];
@@ -463,6 +582,8 @@ const buildChart=(difficulty)=>{
       const midGrid=n.grid+Math.round(n.durationGrids/2);
       if(midGrid%P.latticeGrids!==0)continue;
       if(notes.some(o=>o.grid===midGrid))continue;
+      // 別の長いノーツも同時に押さえている最中なら、重ねTAPは3本目の指になる。置かない。
+      if(longNotes.some(o=>o!==n&&o.grid<midGrid&&o.grid+(Number(o.durationGrids)||0)>=midGrid))continue;
       const support=byGrid.get(midGrid);
       if(!support||Math.abs(support.offsetMs)>COMMON.maxAbsPeakOffsetMs)continue;
       const baseSub=n.type==='SLIDE'?Math.round(n.lane*2):n.subLane;
@@ -490,6 +611,12 @@ const buildChart=(difficulty)=>{
     for(let i=0;i<notes.length;i++){
       const note=notes[i];
       if(note.type!=='TAP'||note.chordWithGrid!=null)continue;
+      // HOLD/SLIDE中の重ねTAPは既に2本目の指。それを同時押しへ割ると3本目が要る(STEP6で「押せない」になっていた)。
+      if(note.overlapWithGrid!=null)continue;
+      // 長いノーツを押さえている最中の同時押しも、同じ理由で置かない。
+      if(notes.some(o=>(o.type==='HOLD'||o.type==='SLIDE')&&o.grid<note.grid&&o.grid+(Number(o.durationGrids)||0)>=note.grid))continue;
+      // 同じ時刻に既に2つ以上あるなら、指が足りない。
+      if(notes.filter(o=>o.grid===note.grid).length>=2)continue;
       const bands=bandsAt(note.grid);
       if(!bands)continue;
       if(bands.low.attack>=.6&&bands.high.attack>=.6)chordCandidates.push({index:i});
@@ -497,7 +624,13 @@ const buildChart=(difficulty)=>{
     for(const {index} of spread(chordCandidates,P.chordMaxCount,4)){
       const note=notes[index];
       const baseStart=note.subLane,baseWidth=note.subLaneWidth||1;
-      const companionLane=baseStart<=4?8:0;
+      // 相方は「反対側へ2レーン」に置く。以前は必ず端(サブレーン0か8)に置いていたため、
+      // 直前まで片側で叩いていた手が16分の間に4レーン跳ぶことになり、STEP6で「押せない」になっていた。
+      const baseCenter=baseStart+baseWidth/2;
+      const outward=baseCenter<=5?1:-1;
+      let companionLane=Math.max(0,Math.min(9,Math.round(baseCenter+outward*4-.5)));
+      // 幅広の本体と重なるなら、重ならなくなるまで外側へ寄せる
+      while(overlapsRange(companionLane,1,baseStart,baseWidth)&&companionLane>0&&companionLane<9)companionLane+=outward;
       if(overlapsRange(companionLane,1,baseStart,baseWidth))continue;
       const collides=notes.some(o=>o.grid===note.grid&&o.subLane!=null&&overlapsRange(companionLane,1,o.subLane,o.subLaneWidth||1));
       if(collides)continue;
@@ -563,7 +696,13 @@ const buildChart=(difficulty)=>{
       latticeGrids:P.latticeGrids,
       types:[...P.types],
       widths:[...P.widths],
-      holdGrids:[4,8],
+      holdGrids:[4,8,12],
+      perBarCap:'intensity-curve',
+      sectionPositionAdjust:SECTION_POSITION_ADJUST,
+      supplementSources,
+      supplementMinStrength:COMMON.supplementMinStrength,
+      laneStepFastMax:COMMON.laneStepFastMax,
+      slideShapes:SLIDE_SHAPES.map(s=>s.id),
       endFlickMaxCount:P.endFlickMaxCount,
       endFlickMinGapGrids:END_FLICK_MIN_GAP_GRIDS,
       maxLaneStep:P.maxLaneStep,

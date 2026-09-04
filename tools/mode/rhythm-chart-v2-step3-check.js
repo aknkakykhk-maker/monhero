@@ -76,6 +76,45 @@ try{
       return typeof n.subLane==='number'&&n.subLane>=0&&n.subLane+(n.subLaneWidth||1)<=10;
     }));
     check(`${difficulty}: 採用ノーツの音ズレは±30ms以内`,candidate.notes.every(n=>!finite(n.sourcePeakOffsetMs)||Math.abs(n.sourcePeakOffsetMs)<=30));
+
+    // --- 仕上がりの点検(2026-09-04)で見つけた欠点を見張る ---
+    // レーンは幅の中心で見る(lane はいちばん左のレーンなので、幅広ノーツが左に見える)
+    const center=n=>n.subLane!=null?(n.subLane+(n.subLaneWidth||2)/2)/2-.5:Number(n.lane)||0;
+    const laneShare=[0,0,0,0,0];
+    candidate.notes.forEach(n=>laneShare[Math.max(0,Math.min(4,Math.round(center(n))))]++);
+    check(`${difficulty}: 5レーンすべてを使う(いちばん少ないレーンでも12%以上。以前はレーン1に1音も無かった)`,
+      Math.min(...laneShare)/candidate.notes.length>=.12,laneShare.join('/'));
+    let hardJumps=0,pairs=0;
+    for(let i=1;i<candidate.notes.length;i++){
+      const dg=candidate.notes[i].grid-candidate.notes[i-1].grid;
+      if(dg<=0||dg>=timing.subdivisionsPerBeat)continue;
+      pairs++;
+      if(Math.abs(center(candidate.notes[i])-center(candidate.notes[i-1]))>=3)hardJumps++;
+    }
+    check(`${difficulty}: 8分未満の間隔で3レーン以上跳ぶ組み合わせが15%以下(以前はEXPERT以上で0↔4の往復ばかりだった)`,
+      pairs===0||hardJumps/pairs<=.15,`${hardJumps}/${pairs}`);
+    check(`${difficulty}: 小節ごとの上限は盛り上がりの連続値から決めている`,candidate.policy.perBarCap==='intensity-curve');
+    check(`${difficulty}: 候補源の補充は静かな区間(INTRO/BREAK/OUTRO)には入らない`,
+      candidate.notes.filter(n=>n.supplementedFrom).every(n=>!CALM_SECTIONS.has(sectionTypeForGrid(n.grid))));
+    check(`${difficulty}: 補充した音も強さ0.4以上(弱い音で埋めない)`,
+      candidate.notes.filter(n=>n.supplementedFrom).every(n=>n.sourceStrength>=.4));
+    const slides=candidate.notes.filter(n=>n.type==='SLIDE');
+    if(slides.length>=4)check(`${difficulty}: SLIDEの形が3種類以上(以前は全部同じ形だった)`,
+      new Set(slides.map(n=>n.slideShape)).size>=3,[...new Set(slides.map(n=>n.slideShape))].join('/'));
+    if(slides.length)check(`${difficulty}: SLIDEの経路が0〜4レーン・0.5刻みに収まる`,
+      slides.every(n=>n.slidePoints.every(p=>p.lane>=0&&p.lane<=4&&Number.isInteger(p.lane*2))));
+    const holds=candidate.notes.filter(n=>n.type==='HOLD');
+    if(holds.length>=4)check(`${difficulty}: HOLDの長さが2種類以上`,new Set(holds.map(n=>n.durationGrids)).size>=2);
+    // 3本目の指が要る配置(長いノーツを押さえている最中に、同じ時刻へ他のノーツが2つ以上)
+    const longNotes=candidate.notes.filter(n=>n.type==='HOLD'||n.type==='SLIDE');
+    const byGridCount=new Map();
+    candidate.notes.forEach(n=>byGridCount.set(n.grid,(byGridCount.get(n.grid)||0)+1));
+    let threeFingers=0;
+    for(const [grid,count] of byGridCount){
+      const active=longNotes.filter(l=>l.grid<grid&&l.grid+(Number(l.durationGrids)||0)>=grid).length;
+      if(active+count>2)threeFingers++;
+    }
+    check(`${difficulty}: 3本目の指が要る配置を作らない(HOLD/SLIDE中の同時押し)`,threeFingers===0,`${threeFingers}箇所`);
     // --- 終点フリック(HOLD / SLIDEの終わりでフリックして離す) ---
     const endFlickNotes=candidate.notes.filter(n=>n.endFlick!==undefined);
     check(`${difficulty}: 終点フリックはtrueだけを書く(falseや0を書き散らかさない)`,
@@ -137,6 +176,17 @@ for(const difficulty of ['HARD','EXPERT','MASTER']){
   check(`${difficulty}: INTRO/BREAK/OUTRO区間の小節あたりノーツ数を計測できた`,calmBars.length>=2,`${calmBars.length}小節`);
   check(`${difficulty}: CHORUS/FINAL_CHORUS区間の小節あたりノーツ数を計測できた`,hotBars.length>=2,`${hotBars.length}小節`);
   check(`${difficulty}: 盛り上がり区間のほうが静かな区間より密度が高い(構造がgeneration ruleへ反映されている)`,mean(hotBars)>mean(calmBars),`静か${mean(calmBars).toFixed(2)} / 盛り上がり${mean(hotBars).toFixed(2)}`);
+  check(`${difficulty}: 盛り上がり区間は静かな区間の1.8倍以上の密度(差がはっきり出ている)`,
+    mean(hotBars)>=mean(calmBars)*1.8,`${(mean(hotBars)/Math.max(1e-9,mean(calmBars))).toFixed(2)}倍`);
+  // サビの終盤(FINAL_CHORUS)が、ふつうのサビより薄くならない(以前は全難易度で薄かった)。
+  const barsOfType=type=>{
+    const counts=new Map();
+    for(const n of candidates[difficulty].notes){const bar=Math.floor(n.grid/BAR);if(sectionTypeForGrid(bar*BAR)===type)counts.set(bar,(counts.get(bar)||0)+1);}
+    return [...counts.values()];
+  };
+  const chorus=mean(barsOfType('CHORUS')),finalChorus=mean(barsOfType('FINAL_CHORUS'));
+  check(`${difficulty}: サビの終盤(FINAL_CHORUS)がふつうのサビ(CHORUS)の9割を下回らない`,
+    finalChorus>=chorus*.9,`CHORUS ${chorus.toFixed(2)} / FINAL ${finalChorus.toFixed(2)} 音/小節`);
 }
 
 if(DIFFICULTIES.every(d=>candidates[d])){
@@ -174,6 +224,10 @@ if(candidates.EXPERT&&candidates.MASTER){
 }
 
 check('V1・STEP1・STEP2の既存出力を変更していない',protectedFiles.every(file=>hash(file)===beforeHashes.get(file)));
+// STEP6(両手の指のシミュレート)で「押せない」が0件。生成の段階で3本指の配置を作らないため。
+const step6=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-chart-v2-step6-playability.js'),'--source','step3'],{cwd:ROOT,encoding:'utf8'});
+check('STEP6の両手シミュレートで「押せない」が0件(全難易度)',step6.status===0,
+  (step6.stdout.match(/(EASY|NORMAL|HARD|EXPERT|MASTER): .*/g)||[]).map(l=>l.replace(/\s+/g,' ')).join(' / '));
 
 const sourceText=fs.readFileSync(GENERATOR,'utf8');
 check('V1ジェネレータ本体を読み込んでいない(完全に独立した実装)',!sourceText.includes("require(")||!/require\([^)]*rhythm-monster-hero-chart-build/.test(sourceText));

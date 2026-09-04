@@ -39,6 +39,9 @@ const verbose=process.argv.includes('--verbose');
 const only=arg('--difficulty');
 const sourceKind=arg('--source','step5');
 const trackId=arg('--track','monster_hero_theme');
+// --file <path>: 1つの譜面JSONだけを検査する(STEP5が候補ごとに呼ぶ)。書き出しはしない。
+const fileArg=arg('--file',null);
+const canWrite=write&&!fileArg;
 
 // --- 手のモデルの定数 ---
 // レーンは0〜4。親指1本がレーンをまたぐ速さと、同じ指で叩き直す間隔を決める。
@@ -59,7 +62,9 @@ const SOURCES=Object.freeze({
   v1:{label:'既存の正式候補v1',file:d=>`monster-hero/debug/monster-hero-theme-${d.toLowerCase()}-formal-candidate-v1.json`,
     difficulties:['EASY','NORMAL','HARD']},
 });
-const source=SOURCES[sourceKind];
+const source=fileArg
+  ?{label:`指定ファイル ${path.relative(ROOT,path.resolve(ROOT,fileArg))}`,file:()=>path.resolve(ROOT,fileArg),difficulties:null}
+  :SOURCES[sourceKind];
 if(!source){console.error(`未知の --source です: ${sourceKind} (${Object.keys(SOURCES).join(', ')})`);process.exit(1);}
 
 // --- BPM・グリッド ---
@@ -125,61 +130,81 @@ const simulate=actions=>{
     }
 
     // グループ内の各ノーツを、届く指へ割り当てる。
-    // 「届く指のうち、いちばん無理のないもの」を選ぶ。届く指が1本も無ければ押せない。
-    const used=new Set();
-    for(const action of group){
-      let picked=null;
-      let blockedReason=null;
-      for(const [fi,f] of fingers.entries()){
+    // 以前は1音ずつ「その場で安い指」を取っていたため、同時押しで右手を近い相方へ使ってしまい、
+    // 残った本体に左手が間に合わない(左右を入れ替えれば押せる)配置を「押せない」と誤判定していた。
+    // 同時押しの組は、指の割り当ての全通りを試し、全部押せる組み合わせのうち無理の少ないものを選ぶ。
+    const evaluate=(f,action)=>{
+      // まだ前のHOLD/SLIDEを押さえている指は使えない
+      if(f.freeAtMs+RELEASE_MARGIN_MS>action.startMs)
+        return {ok:false,reason:`前のHOLD/SLIDEを${Math.round(f.freeAtMs-action.startMs)}ms後まで押さえている`};
+      const availableMs=action.startMs-Math.max(f.freeAtMs,f.lastHitMs);
+      const distance=Math.abs(f.lane-action.startLane);
+      // 限界: これを満たせないと、その指では物理的に間に合わない
+      const needLimitMs=distance===0?RESTRIKE_LIMIT_MS:distance/LANE_SPEED_LIMIT*1000;
+      if(availableMs+1e-6<needLimitMs){
+        return {ok:false,reason:distance===0
+          ?`同じレーンを${Math.round(availableMs)}msで叩き直せない(最低${RESTRIKE_LIMIT_MS}ms)`
+          :`${distance}レーンを${Math.round(availableMs)}msで移動できない(最低${Math.round(needLimitMs)}ms)`};
+      }
+      // 快適: これを満たせないと「押せるが忙しい」
+      const needComfortMs=distance===0?RESTRIKE_COMFORT_MS:distance/LANE_SPEED_COMFORT*1000;
+      const strain=availableMs<needComfortMs
+        ?(distance===0
+          ?`同じレーンの叩き直しが${Math.round(availableMs)}ms(快適には${RESTRIKE_COMFORT_MS}ms欲しい)`
+          :`${distance}レーンの移動が${Math.round(availableMs)}ms(快適には${Math.round(needComfortMs)}ms欲しい)`)
+        :null;
+      // 移動が短く、時間に余裕があるほど無理がない
+      return {ok:true,cost:distance*1000+Math.max(0,200-availableMs),strain};
+    };
+    // 各ノーツ×各指の評価を先に取っておく(割り当てを試すあいだ指の状態は動かさない)
+    const table=group.map(action=>fingers.map(f=>evaluate(f,action)));
+    // 割り当ての全通り。null は「その音に使える指が無い」枠で、指が足りないときだけ意味を持つ。
+    let best=null;
+    const tryAssign=(k,used,current)=>{
+      if(k===group.length){
+        let feasible=0,cost=0;
+        current.forEach((fi,idx)=>{if(fi!==null&&table[idx][fi].ok){feasible++;cost+=table[idx][fi].cost;}});
+        const better=!best||feasible>best.feasible||(feasible===best.feasible&&cost<best.cost);
+        if(better)best={feasible,cost,assign:current.slice()};
+        return;
+      }
+      for(let fi=0;fi<fingers.length;fi++){
         if(used.has(fi))continue;
-        // まだ前のHOLD/SLIDEを押さえている指は使えない
-        if(f.freeAtMs+RELEASE_MARGIN_MS>action.startMs){
-          blockedReason??=`前のHOLD/SLIDEを${Math.round(f.freeAtMs-action.startMs)}ms後まで押さえている`;
-          continue;
-        }
-        const availableMs=action.startMs-Math.max(f.freeAtMs,f.lastHitMs);
-        const distance=Math.abs(f.lane-action.startLane);
-        // 限界: これを満たせないと、その指では物理的に間に合わない
-        const needLimitMs=distance===0?RESTRIKE_LIMIT_MS:distance/LANE_SPEED_LIMIT*1000;
-        if(availableMs+1e-6<needLimitMs){
-          blockedReason=distance===0
-            ?`同じレーンを${Math.round(availableMs)}msで叩き直せない(最低${RESTRIKE_LIMIT_MS}ms)`
-            :`${distance}レーンを${Math.round(availableMs)}msで移動できない(最低${Math.round(needLimitMs)}ms)`;
-          continue;
-        }
-        // 快適: これを満たせないと「押せるが忙しい」
-        const needComfortMs=distance===0?RESTRIKE_COMFORT_MS:distance/LANE_SPEED_COMFORT*1000;
-        const strain=availableMs<needComfortMs
-          ?(distance===0
-            ?`同じレーンの叩き直しが${Math.round(availableMs)}ms(快適には${RESTRIKE_COMFORT_MS}ms欲しい)`
-            :`${distance}レーンの移動が${Math.round(availableMs)}ms(快適には${Math.round(needComfortMs)}ms欲しい)`)
-          :null;
-        // 移動が短く、時間に余裕があるほど無理がない
-        const cost=distance*1000+Math.max(0,200-availableMs);
-        if(!picked||cost<picked.cost)picked={fingerIndex:fi,cost,strain};
+        used.add(fi);current.push(fi);tryAssign(k+1,used,current);current.pop();used.delete(fi);
       }
-      if(!picked){
-        addIssue('impossible','押せる指がない',action,blockedReason||'理由不明');
-        continue;
+      current.push(null);tryAssign(k+1,used,current);current.pop();
+    };
+    tryAssign(0,new Set(),[]);
+    group.forEach((action,idx)=>{
+      const fi=best.assign[idx];
+      const result=fi===null?null:table[idx][fi];
+      if(!result||!result.ok){
+        // 押せない理由: 使える指が1本も無いときは、各指が使えない理由を並べる
+        const reasons=table[idx].map(r=>r.ok?null:r.reason).filter(Boolean);
+        const detail=result?result.reason:(reasons.length?reasons[0]:'他のノーツに指を使っていて指が足りない');
+        addIssue('impossible','押せる指がない',action,detail);
+        return;
       }
-      if(picked.strain)addIssue('strained','手の動きが忙しい',action,picked.strain);
-      used.add(picked.fingerIndex);
-      const f=fingers[picked.fingerIndex];
+      if(result.strain)addIssue('strained','手の動きが忙しい',action,result.strain);
+      const f=fingers[fi];
       f.lane=action.endLane;
       f.lastHitMs=action.startMs;
       f.freeAtMs=(action.endMs>action.startMs?action.endMs:action.startMs)+(action.endFlick?END_FLICK_RELEASE_MS:0);
-    }
+    });
     i=j+1;
   }
   return issues;
 };
 // --- 実行 ---
-const DIFFICULTIES=only?[only]:source.difficulties;
+const DIFFICULTIES=only?[only]:source.difficulties||[(()=>{
+  const chart=JSON.parse(fs.readFileSync(source.file(),'utf8'));
+  return chart.difficulty||'FILE';
+})()];
 const report={
   schemaVersion:1,
   analysisType:'rhythm-chart-v2-step6-playability',
   trackId,
-  source:sourceKind,
+  source:fileArg?'file':sourceKind,
   sourceLabel:source.label,
   reviewRequired:true,
   runtimeConnected:false,
@@ -192,7 +217,8 @@ const report={
 let anyImpossible=false;
 console.log(`検査対象: ${source.label}  /  指${HANDS}本・移動の限界${LANE_SPEED_LIMIT}レーン毎秒・叩き直し最低${RESTRIKE_LIMIT_MS}ms\n`);
 for(const difficulty of DIFFICULTIES){
-  const file=path.join(ROOT,source.file(difficulty));
+  const sourceFile=source.file(difficulty);
+  const file=path.isAbsolute(sourceFile)?sourceFile:path.join(ROOT,sourceFile);
   if(!fs.existsSync(file)){console.log(`${difficulty}: 入力が無いので飛ばす (${path.relative(ROOT,file)})`);continue;}
   const chart=JSON.parse(fs.readFileSync(file,'utf8'));
   const actions=toActions(chart.notes||[]);
@@ -225,10 +251,12 @@ for(const difficulty of DIFFICULTIES){
   };
 }
 
-if(write){
+if(canWrite){
   const out=path.join(ROOT,`tools/mode/authoring/monster-hero-theme-v2-step6-playability-${sourceKind}.json`);
   fs.writeFileSync(out,JSON.stringify(report,null,1)+'\n');
   console.log(`\n書き出し: ${path.relative(ROOT,out)}`);
+}else if(fileArg){
+  console.log('\n（--file 指定のときは書き出しません）');
 }else{
   console.log('\n（--write を付けると tools/mode/authoring/ へ書き出します。ランタイムへは接続しません）');
 }
