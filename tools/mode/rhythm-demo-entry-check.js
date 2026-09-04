@@ -48,7 +48,14 @@ ok('「体験版」であることを画面に出している',
   game.includes('data-rhythm-demo-badge')&&game.includes('data-rhythm-demo-notice')&&/体験版/.test(game));
 ok('譜面が調整中であることを断っている',/譜面は調整中/.test(game));
 ok('曲の表示がある',game.includes('data-rhythm-demo-song'));
-ok('難易度を選べる',game.includes('data-rhythm-demo-difficulty=')&&game.includes('data-rhythm-demo-start='));
+// 曲えらびは「一覧から曲 → 難易度 → 決定」の3手。2026-09-05に曲選択画面を
+// よくある音ゲーの形へ作り直したとき、目印を data-rhythm-song-row / data-rhythm-difficulty /
+// data-rhythm-demo-start へ整理した(見ているものは同じ)。
+ok('曲を一覧からえらべる',game.includes('data-rhythm-song-row=')&&game.includes('data-rhythm-song-select'));
+ok('難易度を選べる',game.includes('data-rhythm-difficulty=')&&game.includes('data-rhythm-demo-start='));
+ok('選んでいる曲の絵と大きさが出る',game.includes('const RhythmSongArt=')&&game.includes('data-rhythm-song-art'));
+ok('曲えらびは1つの部品にまとまっている（画面ごとに書き分けない）',
+  game.includes('const RhythmSongSelect=')&&game.includes('<RhythmSongSelect'));
 ok('自己ベストを出している',game.includes('data-rhythm-demo-best')&&game.includes('rhythmBestRecord(rhythmBestRecords'));
 ok('自己ベストにランクも出している',game.includes('rhythmRankForScore(best.bestScore)'));
 ok('未プレイのときは「まだ遊んでいません」と出す',/まだ遊んでいません/.test(game));
