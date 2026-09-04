@@ -70,12 +70,27 @@ ok('難易度ごとの説明を持っている',
 ok('デバッグ用の曲は体験版へ出さない',
   !o.RHYTHM_SONGS.filter(s=>s.songId!==o.RHYTHM_DEMO_SONG_ID).some(s=>s.songId===o.RHYTHM_DEMO_SONG_ID));
 
+const assistants=read('monster-hero/data/assistants.js');
+
 // --- 画面がそろっている ---
 ok('体験版ホームの画面がある',game.includes("gameState==='RHYTHM_DEMO_HOME'")&&game.includes('data-rhythm-demo-home'));
+// 2026-09-05、ユーザー指示で「これは体験版です…」の長い断り書きを曲えらびから外した
+// (曲を選ぶ画面で読み物が場所を取りすぎるため)。断る場所がチュートリアルへ移っただけで、
+// 「体験版であることと、譜面が調整中であることを伝える」という中身は変えていない。
 ok('「体験版」であることを画面に出している',
-  game.includes('data-rhythm-demo-badge')&&game.includes('data-rhythm-demo-notice')&&/体験版/.test(game));
-ok('譜面が調整中であることを断っている',/譜面は調整中/.test(game));
-ok('曲の表示がある',game.includes('data-rhythm-demo-song'));
+  game.includes('data-rhythm-demo-badge')&&/体験版/.test(game));
+ok('体験版であることと譜面が調整中であることをチュートリアルで断っている',(()=>{
+  const start=assistants.indexOf('const ASSISTANT_RHYTHM_TUTORIAL =');
+  if(start<0)return false;
+  const block=assistants.slice(start,assistants.indexOf('assistantRhythmTutorialPages'));
+  return /体験版/.test(block)&&/譜面は調整中/.test(block);
+})());
+ok('ヘルプでも譜面が調整中であることを断っている',/譜面はまだ制作中/.test(read('monster-hero/data/help.js')));
+ok('曲えらびの上に固定で出すのは助手のひとことだけ(読み物で場所を取らない)',
+  /notice=\{<AssistantBubble scene="rhythmHome" compact\/>\}/.test(game)
+  &&!game.includes('data-rhythm-demo-notice'));
+// 曲そのものの表示は、一覧の行と選んでいる曲の見出しで見る
+ok('曲の表示がある',game.includes('data-rhythm-song-row=')&&game.includes('data-rhythm-song-title'));
 // 曲えらびは「一覧から曲 → 難易度 → 決定」の3手。2026-09-05に曲選択画面を
 // よくある音ゲーの形へ作り直したとき、目印を data-rhythm-song-row / data-rhythm-difficulty /
 // data-rhythm-demo-start へ整理した(見ているものは同じ)。
@@ -193,7 +208,6 @@ ok('体験版の操作ボタンはiPhoneで押せる大きさ（44px以上）',(
 // --- 助手の説明とチュートリアル(2026-09-05・ユーザー指示) ---
 // 「初回のバトルと同じようにチュートリアルを入れて、設定している助手が説明する」ため、
 // 台本はデータ側(assistants.js)に置き、吹き出しは既存のものを使い回す。
-const assistants=read('monster-hero/data/assistants.js');
 ok('モンビーのチュートリアルの台本がデータ側にある',
   assistants.includes('const ASSISTANT_RHYTHM_TUTORIAL')&&assistants.includes('assistantRhythmTutorialPages'));
 ok('助手ごとに言い回しを変えられる',
