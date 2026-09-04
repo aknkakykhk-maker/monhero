@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7309b6e5621a09bd
+// source-sha256: a8d006246b9e3a3c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 22:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 23:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8991,14 +8991,59 @@ const PLAYTIME_TICK_MS = 15000; // 数える間隔
 const PLAYTIME_SAVE_MS = 60000; // 保存する間隔(数えるたびに保存すると書き込みが多すぎる)
 const PLAYTIME_MAX_STEP_MS = 60000; // 1回で足してよい上限。スリープ復帰などで飛んだぶんは数えない
 const playtimeDayKey = (now = Date.now()) => new Date(Number(now) + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
-// 保存値が無い・壊れている場合も必ず既定へ落とす(型を確かめてから使う)
+const PLAYTIME_DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const playtimeDayValue = value => typeof value === 'string' && PLAYTIME_DAY_PATTERN.test(value) ? value : null;
+const playtimeSpan = value => {
+  const ms = Number(value?.ms);
+  return {
+    day: playtimeDayValue(value?.day),
+    ms: Number.isFinite(ms) && ms >= 0 ? ms : 0
+  };
+};
+// 保存値が無い・壊れている場合も必ず既定へ落とす(型を確かめてから使う)。
+// days / today / longest は後から足した項目なので、それらを持たない古い保存を読んでも
+// 既定で埋まり、それまでの合計(totalMs)と数え始めた日(since)はそのまま引き継がれる。
 const normalizePlaytime = value => {
   const totalMs = Number(value?.totalMs);
-  const since = value?.since;
+  const days = Number(value?.days);
   return {
     totalMs: Number.isFinite(totalMs) && totalMs >= 0 ? totalMs : 0,
-    since: typeof since === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(since) ? since : null
+    since: playtimeDayValue(value?.since),
+    days: Number.isFinite(days) && days >= 0 ? Math.floor(days) : 0,
+    today: playtimeSpan(value?.today),
+    // 今日のぶん
+    longest: playtimeSpan(value?.longest) // いちばん長く遊んだ日
   };
+};
+// 経過したぶんを足す。日をまたいだら「今日」を0へ戻して遊んだ日数を1増やす。
+// 純粋な関数にしてあるので、日またぎの動きを検査でそのまま確かめられる。
+const advancePlaytime = (current, deltaMs, now = Date.now()) => {
+  const base = normalizePlaytime(current);
+  const delta = Number(deltaMs);
+  if (!(Number.isFinite(delta) && delta > 0)) return base;
+  const day = playtimeDayKey(now);
+  const sameDay = base.today.day === day;
+  const todayMs = (sameDay ? base.today.ms : 0) + delta;
+  return {
+    totalMs: base.totalMs + delta,
+    since: base.since || day,
+    // 同じ日のあいだは増やさない。初日(dayが無い状態)は1日目として数える
+    days: sameDay ? Math.max(1, base.days) : base.days + 1,
+    today: {
+      day,
+      ms: todayMs
+    },
+    longest: todayMs > base.longest.ms ? {
+      day,
+      ms: todayMs
+    } : base.longest
+  };
+};
+// 表示用。前に遊んだのが昨日以前なら、今日はまだ0分として出す
+// (プロフィールを開いた時点ではまだ加算が走っていないことがあるため)
+const playtimeTodayMs = (value, now = Date.now()) => {
+  const base = normalizePlaytime(value);
+  return base.today.day === playtimeDayKey(now) ? base.today.ms : 0;
 };
 const formatPlaytime = ms => {
   const seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
@@ -16879,14 +16924,8 @@ function MonsterHeroGame() {
   const [profileBattleMode, setProfileBattleMode] = useState(null); // プロフィールのバトル記録詳細
   // 遊んだ時間。数えるのはrefだけにして、画面の描き直しを起こさない
   // (15秒ごとにstateを書き換えると、バトル中や音ゲー中に毎回描き直しが走ってしまう)。
-  const playtimeRef = useRef({
-    totalMs: 0,
-    since: null
-  });
-  const [playtimeView, setPlaytimeView] = useState({
-    totalMs: 0,
-    since: null
-  }); // プロフィールを開いたときだけ写す
+  const playtimeRef = useRef(normalizePlaytime(null));
+  const [playtimeView, setPlaytimeView] = useState(() => normalizePlaytime(null)); // プロフィールを開いたときだけ写す
   // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
   // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -17153,7 +17192,16 @@ function MonsterHeroGame() {
       const value = playtimeRef.current;
       storeSet(PLAYTIME_KEY, {
         totalMs: Math.round(value.totalMs),
-        since: value.since
+        since: value.since,
+        days: value.days,
+        today: {
+          day: value.today.day,
+          ms: Math.round(value.today.ms)
+        },
+        longest: {
+          day: value.longest.day,
+          ms: Math.round(value.longest.ms)
+        }
       }, false);
       sinceLastSave = 0;
     };
@@ -17164,11 +17212,7 @@ function MonsterHeroGame() {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       // スリープ・端末の時計合わせなどで大きく飛んだぶんは、遊んでいた時間ではないので数えない
       if (!(delta > 0 && delta <= PLAYTIME_MAX_STEP_MS)) return;
-      const current = playtimeRef.current;
-      playtimeRef.current = {
-        totalMs: current.totalMs + delta,
-        since: current.since || playtimeDayKey(now)
-      };
+      playtimeRef.current = advancePlaytime(playtimeRef.current, delta, now);
       sinceLastSave += delta;
       if (sinceLastSave >= PLAYTIME_SAVE_MS) persist();
     };
@@ -17183,10 +17227,7 @@ function MonsterHeroGame() {
       const saved = normalizePlaytime(await storeGet(PLAYTIME_KEY, null, false));
       if (disposed) return;
       // 読み込みの前に数えたぶんがあれば足しておく(読み込みを待つあいだも遊んでいるため)
-      playtimeRef.current = {
-        totalMs: saved.totalMs + playtimeRef.current.totalMs,
-        since: saved.since || playtimeRef.current.since
-      };
+      playtimeRef.current = advancePlaytime(saved, playtimeRef.current.totalMs);
       last = Date.now();
     })();
     const timer = setInterval(accumulate, PLAYTIME_TICK_MS);
@@ -36526,7 +36567,7 @@ function MonsterHeroGame() {
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black text-teal-200"
     }, "\u30A2\u30A4\u30C6\u30E0\uFF08", Object.values(ownedItems).reduce((sum, n) => sum + (n || 0), 0), "\u500B\uFF09")), /*#__PURE__*/React.createElement("div", {
-      className: "w-full flex flex-col items-center gap-0.5 bg-indigo-950/40 border border-indigo-500/30 px-4 py-2.5 rounded-2xl"
+      className: "w-full flex flex-col items-center gap-1 bg-indigo-950/40 border border-indigo-500/30 px-4 py-2.5 rounded-2xl"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2"
     }, /*#__PURE__*/React.createElement(Timer, {
@@ -36537,6 +36578,16 @@ function MonsterHeroGame() {
     }, "\u30D7\u30EC\u30A4\u6642\u9593"), /*#__PURE__*/React.createElement("span", {
       className: "text-[11px] font-black text-white font-mono"
     }, formatPlaytime(playtimeView.totalMs))), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 text-[9px] font-black text-indigo-300"
+    }, /*#__PURE__*/React.createElement("span", null, "\u4ECA\u65E5 ", /*#__PURE__*/React.createElement("span", {
+      className: "text-white font-mono"
+    }, formatPlaytime(playtimeTodayMs(playtimeView)))), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-600"
+    }, "/"), /*#__PURE__*/React.createElement("span", null, "\u904A\u3093\u3060\u65E5 ", /*#__PURE__*/React.createElement("span", {
+      className: "text-white font-mono"
+    }, playtimeView.days), "\u65E5")), playtimeView.longest.day && /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-500 font-bold"
+    }, "\u3044\u3061\u3070\u3093\u9577\u304B\u3063\u305F\u65E5 ", formatPlaytime(playtimeView.longest.ms), "\uFF08", playtimeView.longest.day, "\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-slate-500 font-bold"
     }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'))), onboarded && !onboardingPreview && (() => {
       const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : null;
