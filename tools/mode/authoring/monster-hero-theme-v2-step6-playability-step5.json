@@ -1,0 +1,400 @@
+{
+ "schemaVersion": 1,
+ "analysisType": "rhythm-chart-v2-step6-playability",
+ "trackId": "monster_hero_theme",
+ "source": "step5",
+ "sourceLabel": "V2 STEP5 採用案",
+ "reviewRequired": true,
+ "runtimeConnected": false,
+ "handModel": {
+  "hands": 2,
+  "laneSpeedComfort": 10,
+  "laneSpeedLimit": 18,
+  "restrikeComfortMs": 90,
+  "restrikeLimitMs": 55,
+  "chordMinLaneGap": 1,
+  "releaseMarginMs": 30
+ },
+ "difficulties": {
+  "EASY": {
+   "noteCount": 134,
+   "impossibleCount": 0,
+   "strainedCount": 0,
+   "strainedRatio": 0,
+   "byKind": {},
+   "issues": []
+  },
+  "NORMAL": {
+   "noteCount": 168,
+   "impossibleCount": 0,
+   "strainedCount": 0,
+   "strainedRatio": 0,
+   "byKind": {},
+   "issues": []
+  },
+  "HARD": {
+   "noteCount": 232,
+   "impossibleCount": 0,
+   "strainedCount": 2,
+   "strainedRatio": 0.0086,
+   "byKind": {
+    "strained/手の動きが忙しい": 2
+   },
+   "issues": [
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 168,
+     "grid": 1257,
+     "bar": 78,
+     "timeMs": 109098,
+     "lane": 2,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 203,
+     "grid": 1517,
+     "bar": 94,
+     "timeMs": 131622,
+     "lane": 2,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    }
+   ]
+  },
+  "EXPERT": {
+   "noteCount": 250,
+   "impossibleCount": 0,
+   "strainedCount": 24,
+   "strainedRatio": 0.096,
+   "byKind": {
+    "strained/手の動きが忙しい": 24
+   },
+   "issues": [
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 57,
+     "grid": 653,
+     "bar": 40,
+     "timeMs": 56775,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 58,
+     "grid": 654,
+     "bar": 40,
+     "timeMs": 56861,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 65,
+     "grid": 687,
+     "bar": 42,
+     "timeMs": 59720,
+     "lane": 1,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 69,
+     "grid": 718,
+     "bar": 44,
+     "timeMs": 62405,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 72,
+     "grid": 731,
+     "bar": 45,
+     "timeMs": 63532,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 114,
+     "grid": 991,
+     "bar": 61,
+     "timeMs": 86055,
+     "lane": 1,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 116,
+     "grid": 992,
+     "bar": 62,
+     "timeMs": 86142,
+     "lane": 4,
+     "type": "HOLD",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 143,
+     "grid": 1151,
+     "bar": 71,
+     "timeMs": 99916,
+     "lane": 1,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 148,
+     "grid": 1167,
+     "bar": 72,
+     "timeMs": 101302,
+     "lane": 1,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 153,
+     "grid": 1197,
+     "bar": 74,
+     "timeMs": 103901,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 181,
+     "grid": 1359,
+     "bar": 84,
+     "timeMs": 117934,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 184,
+     "grid": 1369,
+     "bar": 85,
+     "timeMs": 118801,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 189,
+     "grid": 1391,
+     "bar": 86,
+     "timeMs": 120707,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 205,
+     "grid": 1504,
+     "bar": 94,
+     "timeMs": 130496,
+     "lane": 0,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 209,
+     "grid": 1515,
+     "bar": 94,
+     "timeMs": 131449,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 215,
+     "grid": 1565,
+     "bar": 97,
+     "timeMs": 135780,
+     "lane": 1,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 219,
+     "grid": 1597,
+     "bar": 99,
+     "timeMs": 138552,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 222,
+     "grid": 1613,
+     "bar": 100,
+     "timeMs": 139938,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 223,
+     "grid": 1614,
+     "bar": 100,
+     "timeMs": 140025,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 230,
+     "grid": 1647,
+     "bar": 102,
+     "timeMs": 142884,
+     "lane": 1,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 233,
+     "grid": 1661,
+     "bar": 103,
+     "timeMs": 144096,
+     "lane": 1,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 234,
+     "grid": 1662,
+     "bar": 103,
+     "timeMs": 144183,
+     "lane": 1,
+     "type": "TAP",
+     "detail": "同じレーンの叩き直しが87ms(快適には90ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 248,
+     "grid": 1727,
+     "bar": 107,
+     "timeMs": 149814,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 249,
+     "grid": 1728,
+     "bar": 108,
+     "timeMs": 149900,
+     "lane": 1,
+     "type": "SLIDE",
+     "detail": "1レーンの移動が87ms(快適には100ms欲しい)"
+    }
+   ]
+  },
+  "MASTER": {
+   "noteCount": 239,
+   "impossibleCount": 3,
+   "strainedCount": 1,
+   "strainedRatio": 0.0042,
+   "byKind": {
+    "impossible/押せる指がない": 3,
+    "strained/手の動きが忙しい": 1
+   },
+   "issues": [
+    {
+     "severity": "impossible",
+     "kind": "押せる指がない",
+     "noteIndex": 152,
+     "grid": 1210,
+     "bar": 75,
+     "timeMs": 105027,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "前のHOLD/SLIDEを173ms後まで押さえている"
+    },
+    {
+     "severity": "strained",
+     "kind": "手の動きが忙しい",
+     "noteIndex": 153,
+     "grid": 1214,
+     "bar": 75,
+     "timeMs": 105373,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "4レーンの移動が347ms(快適には400ms欲しい)"
+    },
+    {
+     "severity": "impossible",
+     "kind": "押せる指がない",
+     "noteIndex": 211,
+     "grid": 1586,
+     "bar": 99,
+     "timeMs": 137599,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "前のHOLD/SLIDEを520ms後まで押さえている"
+    },
+    {
+     "severity": "impossible",
+     "kind": "押せる指がない",
+     "noteIndex": 238,
+     "grid": 1730,
+     "bar": 108,
+     "timeMs": 150074,
+     "lane": 4,
+     "type": "TAP",
+     "detail": "前のHOLD/SLIDEを520ms後まで押さえている"
+    }
+   ]
+  }
+ }
+}
