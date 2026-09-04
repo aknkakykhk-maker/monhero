@@ -23,7 +23,7 @@
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
-const {HAND_MODEL,fingerPairFeasible,noteTouchLane}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange}=require('./rhythm-hand-model.js');
 const {LANES,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor}=require('./rhythm-chart-v3-patterns.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
@@ -52,26 +52,42 @@ const PITCHED_BONUS=.18;
 
 // 難易度ごとの方針。**できること**だけを持つ。量は DENSITY_TARGET が曲ごとに決める。
 // 拾う順番はすべての難易度で同じなので、下の難易度は上の難易度の部分集合になる。
+//
+// 【同時押しについて】
+// 同時押しは「2つ同時に押すこと」自体が難しいわけではない。指は2本あるので、
+// 離れた2か所を同時に押すのは、1か所を押すのとほとんど変わらない。
+// 難しさは**置き方**で決まる。だからEASYから出す。かわりに下の難易度ほど
+//   ・拍の頭にだけ置く   ・前後を大きく空ける   ・左右を大きく離す
+//   ・太いノーツで作る   ・数を少なくする
+// という条件を付け、上へ行くほどこの条件をゆるめる（chord の中身）。
+//
+// tapDuringHold は別もので、こちらは「押さえっぱなしの指が1本ふさがった状態で
+// もう1本を動かす」ので本当に難しい。EXPERT以上に置く。
 const PROFILES=Object.freeze({
   EASY:Object.freeze({level:1,lattice:2,maxLaneStep:1,maxRun:2,
-    types:['TAP','HOLD'],widths:[3,4,6],narrowRate:0,simultaneous:false,
-    holdPerMinute:5.6,slidePerMinute:0,flickPerMinute:0,endFlickPerMinute:0,chordPerMinute:0,
+    types:['TAP','HOLD'],widths:[3,4,6],narrowRate:0,tapDuringHold:false,
+    holdPerMinute:5.6,slidePerMinute:0,flickPerMinute:0,endFlickPerMinute:0,
+    chord:Object.freeze({perMinute:2.4,minGapLanes:2,onBeat:true,clearGrids:3,minWidth:3,spacingGrids:16,edge:true}),
     accentWidth:10,accentPerMinute:2.4}),
   NORMAL:Object.freeze({level:3,lattice:2,maxLaneStep:2,maxRun:3,
-    types:['TAP','HOLD','FLICK'],widths:[2,3,4,6],narrowRate:0,simultaneous:false,
-    holdPerMinute:6.4,slidePerMinute:0,flickPerMinute:5.6,endFlickPerMinute:1.2,chordPerMinute:0,
+    types:['TAP','HOLD','FLICK'],widths:[2,3,4,6],narrowRate:0,tapDuringHold:false,
+    holdPerMinute:6.4,slidePerMinute:0,flickPerMinute:5.6,endFlickPerMinute:1.2,
+    chord:Object.freeze({perMinute:3.2,minGapLanes:2,onBeat:true,clearGrids:2,minWidth:3,spacingGrids:12,edge:true}),
     accentWidth:10,accentPerMinute:2.4}),
   HARD:Object.freeze({level:5,lattice:1,maxLaneStep:2,maxRun:2,
-    types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.04,simultaneous:false,
-    holdPerMinute:7.2,slidePerMinute:4,flickPerMinute:7.2,endFlickPerMinute:2,chordPerMinute:0,
+    types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.04,tapDuringHold:false,
+    holdPerMinute:7.2,slidePerMinute:4,flickPerMinute:7.2,endFlickPerMinute:2,
+    chord:Object.freeze({perMinute:4,minGapLanes:1.5,onBeat:false,clearGrids:2,minWidth:3,spacingGrids:8,edge:false}),
     accentWidth:8,accentPerMinute:2.8}),
   EXPERT:Object.freeze({level:7,lattice:1,maxLaneStep:3,maxRun:5,
-    types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.12,simultaneous:true,
-    holdPerMinute:8,slidePerMinute:4.8,flickPerMinute:8.8,endFlickPerMinute:2.8,chordPerMinute:4.8,
+    types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4,5],narrowRate:.12,tapDuringHold:true,
+    holdPerMinute:8,slidePerMinute:4.8,flickPerMinute:8.8,endFlickPerMinute:2.8,
+    chord:Object.freeze({perMinute:4.8,minGapLanes:1.25,onBeat:false,clearGrids:1,minWidth:2,spacingGrids:6,edge:false}),
     accentWidth:8,accentPerMinute:2.8}),
   MASTER:Object.freeze({level:9,lattice:1,maxLaneStep:4,maxRun:8,
-    types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4],narrowRate:.2,simultaneous:true,
-    holdPerMinute:8.8,slidePerMinute:5.6,flickPerMinute:10.4,endFlickPerMinute:3.6,chordPerMinute:7.2,
+    types:['TAP','HOLD','FLICK','SLIDE'],widths:[1,2,3,4],narrowRate:.2,tapDuringHold:true,
+    holdPerMinute:8.8,slidePerMinute:5.6,flickPerMinute:10.4,endFlickPerMinute:3.6,
+    chord:Object.freeze({perMinute:7.2,minGapLanes:1,onBeat:false,clearGrids:1,minWidth:2,spacingGrids:6,edge:false}),
     accentWidth:6,accentPerMinute:3.2}),
 });
 // HOLD・SLIDE・FLICK・同時押し・区切りの一発は、曲の長さに比例させる。
@@ -192,7 +208,7 @@ const buildChart=(difficulty,options={})=>{
   const countOf=perMinute=>perMinute>0?Math.max(1,Math.round(perMinute*playableMinutes)):0;
   const holdMax=countOf(P.holdPerMinute),slideMax=countOf(P.slidePerMinute),
     flickMax=countOf(P.flickPerMinute),endFlickMax=countOf(P.endFlickPerMinute),
-    chordMax=countOf(P.chordPerMinute),accentMax=countOf(P.accentPerMinute);
+    chordMax=countOf(P.chord?P.chord.perMinute:0),accentMax=countOf(P.accentPerMinute);
   const log=[];
 
   // --- 1. 拾う音を決める（小節ごとに、優先順位の上位から） ---
@@ -285,8 +301,8 @@ const buildChart=(difficulty,options={})=>{
   // 押さえている最中の打点は落とす（低い難易度では指が足りない）
   const events=[];
   for(const onset of spaced){
-    if(usedGrids.has(onset.grid)&&!P.simultaneous)continue;
-    if(usedGrids.has(onset.grid)&&P.simultaneous){
+    if(usedGrids.has(onset.grid)&&!P.tapDuringHold)continue;
+    if(usedGrids.has(onset.grid)&&P.tapDuringHold){
       // 上位難易度でも「押さえながら別を叩く」は指が1本しか残らない。
       //   ・同時に押さえているHOLD/SLIDEが2本あるときは置かない（指が足りない）
       //   ・始点の直後と終点の直前は避ける（押さえ始め・離しに指を使うため）
@@ -562,31 +578,85 @@ const buildChart=(difficulty,options={})=>{
     for(const index of spreadPick(candidates,endFlickMax,3))notes[index].endFlick=true;
   }
 
-  // --- 9. 同時押し（上位難易度だけ） ---
-  // 新しい時刻は作らない。大きな一発を2レーンへ分けるだけ。
+  // --- 9. 同時押し ---
+  // 同時押しそのものは難しくない。指は2本あるので、離れた2か所を同時に押すのは
+  // 1か所を押すのとほとんど変わらない。難しさは**置き方**で決まる。
+  // だからEASYから出し、下の難易度ほど置き方を易しくする。
+  //   ・拍の頭にだけ置く（onBeat）
+  //   ・前後を空ける（clearGrids）… 直前直後に別のノーツが無い場所を選ぶ
+  //   ・左右を大きく離す（minGapLanes）… 触る場所どうしの距離
+//   ・いちばん易しい形は「左端と右端」（edge）。EASY・NORMALはこの形だけを作る
+  //   ・太いノーツで作る（minWidth）… 細いノーツの同時押しは狙いが要る
+  //   ・数を少なく、間隔をあけて置く（perMinute / spacingGrids）
+  // 押さえっぱなしの最中には作らない（指が3本要る形になるため）。
   let chordCount=0;
-  if(P.simultaneous&&chordMax>0){
+  const CHORD=P.chord;
+  if(CHORD&&chordMax>0){
+    const sustainSpans=notes.filter(note=>note.type==='HOLD'||note.type==='SLIDE')
+      .map(note=>({startGrid:note.grid,endGrid:note.grid+(Number(note.durationGrids)||0)}));
+    const gridCount=new Map();
+    for(const note of notes)gridCount.set(note.grid,(gridCount.get(note.grid)||0)+1);
+    const nearestOther=note=>{
+      let best=Infinity;
+      for(const other of notes){
+        if(other===note)continue;
+        const distance=Math.abs(other.grid-note.grid);
+        if(distance>0&&distance<best)best=distance;
+      }
+      return best;
+    };
     const candidates=notes
       .map((note,index)=>({note,index}))
-      .filter(({note})=>note.type==='TAP'&&note.sourceCharacter==='FULL'&&!note.sectionAccent
-        &&note.subLaneWidth<=4&&!notes.some(other=>other!==note&&other.grid===note.grid))
-      .map(c=>c.index);
-    for(const index of spreadPick(candidates,chordMax,6)){
+      .filter(({note})=>note.type==='TAP'&&!note.sectionAccent
+        &&note.subLaneWidth>=CHORD.minWidth&&note.subLaneWidth<=4
+        &&(!CHORD.onBeat||note.grid%BEAT===0)
+        &&(gridCount.get(note.grid)||0)===1
+        &&nearestOther(note)>=CHORD.clearGrids
+        &&!sustainSpans.some(span=>span.startGrid<note.grid&&note.grid<=span.endGrid))
+      .map(entry=>entry.index);
+    for(const index of spreadPick(candidates,chordMax,CHORD.spacingGrids)){
       const note=notes[index];
-      const width=Math.min(3,note.subLaneWidth);
-      // 指2本ぶん離した相方を作る
-      const left=Math.max(0,note.subLane-4-width);
-      const right=Math.min(10-width,note.subLane+note.subLaneWidth+4);
-      const partnerSub=note.subLane>=5?left:right;
-      if(partnerSub<0||partnerSub>10-width)continue;
-      const partner={type:'TAP',grid:note.grid,lane:Math.floor(partnerSub/2),
-        subLane:partnerSub,subLaneWidth:width,
+      // 相方の幅。細いノーツの同時押しは狙いが要るので、難易度ごとの下限を守る。
+      const width=Math.max(CHORD.minWidth,Math.min(3,note.subLaneWidth));
+      const baseWidth=CHORD.edge?width:Math.max(CHORD.minWidth,Math.min(4,note.subLaneWidth));
+      // レーンは5つ（サブレーン10）しかない。2つ置いたときに空けられる最大の隙間はここまで。
+      const room=10-baseWidth-width;
+      const need=Math.round(CHORD.minGapLanes*2);
+      if(room<need)continue;
+      // EASY・NORMALは目いっぱい離す（左端と右端）。上位はその難易度の最低限だけ離す。
+      const gapSub=CHORD.edge?room:need;
+      // 元のノーツも動かす。同時押しは決めの一発なので位置を動かしてよく、
+      // 真ん中に置いたままでは5レーンの中で十分に離せない。動きの少ないほうを選ぶ。
+      const leftBase=Math.max(0,Math.min(10-width-gapSub-baseWidth,note.subLane));
+      const rightBase=Math.max(gapSub+width,Math.min(10-baseWidth,note.subLane));
+      const plans=[
+        {base:leftBase,partner:leftBase+baseWidth+gapSub,move:Math.abs(leftBase-note.subLane)},
+        {base:rightBase,partner:rightBase-gapSub-width,move:Math.abs(rightBase-note.subLane)},
+      ].filter(plan=>plan.partner>=0&&plan.partner<=10-width)
+       .sort((a,b)=>a.move-b.move);
+      if(!plans.length)continue;
+      const plan=plans[0];
+      const base={subLane:plan.base,subLaneWidth:baseWidth};
+      // 同時押しのために動かした結果、前後のノーツとの跳びがその難易度の上限を
+      // 超えてはいけない（1拍未満で並ぶノーツだけを見る。1拍あけば跳びではない）。
+      const stepOk=candidate=>notes.every(other=>{
+        if(other===note)return true;
+        if(other.grid===note.grid)return true;
+        if(Math.abs(other.grid-note.grid)>=BEAT)return true;
+        return separationRange(usableTouchSpan(candidate),usableTouchSpan(other)).min<=P.maxLaneStep+1e-9;
+      });
+      if(!stepOk(base)||!stepOk({subLane:plan.partner,subLaneWidth:width}))continue;
+      const partner={type:'TAP',grid:note.grid,lane:Math.floor(plan.partner/2),
+        subLane:plan.partner,subLaneWidth:width,
         sourceStrength:note.sourceStrength,sourcePeakOffsetMs:note.sourcePeakOffsetMs,
         sourceCharacter:note.sourceCharacter,chord:true};
-      if(!fingerPairFeasible(partner,note,1).ok)continue;
+      if(separationRange(noteTouchSpan(partner),noteTouchSpan(base)).min<CHORD.minGapLanes)continue;
+      if(!fingerPairFeasible(partner,base,1).ok)continue;
+      note.subLane=plan.base;note.subLaneWidth=baseWidth;note.lane=Math.floor(plan.base/2);
       notes.push(partner);
       chordCount++;
     }
+    log.push(`同時押し ${chordCount}組（狙い${chordMax}組・置ける場所${candidates.length}箇所）`);
     notes.sort((a,b)=>a.grid-b.grid);
   }
 

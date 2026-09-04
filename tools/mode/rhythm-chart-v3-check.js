@@ -212,5 +212,60 @@ for(const difficulty of DIFFICULTIES){
     `${rests}箇所 / いちばん長い間 ${(longest/1000).toFixed(2)}秒`);
 }
 
+// (j) 同時押し — EASYから出す。難しさは「置き方」で作る
+//
+// 同時押しそのものは難しくない（指は2本あるので、離れた2か所を同時に押すのは
+// 1か所を押すのとほとんど変わらない）。だからEASYから出す。
+// かわりに下の難易度ほど、置き方を易しくする。ここではその**置き方**を確かめる。
+{
+  // 難易度ごとの「守るべき置き方」。生成器の値ではなく、狙いをここへ書く
+  // （生成器の定数をそのまま読むと、生成器が変わったときに一緒に緩んでしまう）。
+  const CHORD_RULES={
+    EASY:  {minGapLanes:2,   onBeat:true, clearGrids:3, minWidth:3},
+    NORMAL:{minGapLanes:2,   onBeat:true, clearGrids:2, minWidth:3},
+    HARD:  {minGapLanes:1.5, onBeat:false,clearGrids:2, minWidth:3},
+    EXPERT:{minGapLanes:1.25,onBeat:false,clearGrids:1, minWidth:2},
+    MASTER:{minGapLanes:1,   onBeat:false,clearGrids:1, minWidth:2},
+  };
+  const counts={};
+  for(const difficulty of DIFFICULTIES){
+    const notes=charts[difficulty].notes;
+    const rule=CHORD_RULES[difficulty];
+    const byGrid=new Map();
+    for(const note of notes){
+      if(!byGrid.has(note.grid))byGrid.set(note.grid,[]);
+      byGrid.get(note.grid).push(note);
+    }
+    const groups=[...byGrid.entries()].filter(([,group])=>group.length>=2);
+    counts[difficulty]=groups.length;
+    const sustains=notes.filter(note=>note.type==='HOLD'||note.type==='SLIDE')
+      .map(note=>({startGrid:note.grid,endGrid:note.grid+(Number(note.durationGrids)||0)}));
+    const problems=[];
+    for(const [grid,group] of groups){
+      if(group.length>HAND_MODEL.hands)problems.push(`${grid}: ${group.length}個同時`);
+      const gap=separationRange(usableTouchSpan(group[0]),usableTouchSpan(group[1])).min;
+      if(gap+1e-9<rule.minGapLanes-.01)problems.push(`${grid}: 間隔${gap.toFixed(2)}レーン`);
+      if(rule.onBeat&&grid%BEAT!==0)problems.push(`${grid}: 拍の頭でない`);
+      if(group.some(note=>(Number(note.subLaneWidth)||0)<rule.minWidth))problems.push(`${grid}: 細すぎる`);
+      const near=notes.some(note=>!group.includes(note)
+        &&Math.abs(note.grid-grid)>0&&Math.abs(note.grid-grid)<rule.clearGrids);
+      if(near)problems.push(`${grid}: 前後が空いていない`);
+      if(sustains.some(span=>span.startGrid<grid&&grid<=span.endGrid))problems.push(`${grid}: 押さえっぱなしの最中`);
+    }
+    check(`${difficulty}: 同時押しがその難易度の置き方を守っている`,problems.length===0,
+      problems.length?problems.slice(0,3).join(' / '):`${groups.length}組 / 最低${rule.minGapLanes}レーン離す`);
+  }
+  check('EASYにも同時押しがある（同時押し自体は難しくないため）',counts.EASY>=1,`${counts.EASY}組`);
+  check('難易度が上がるほど同時押しが増える',
+    DIFFICULTIES.every((d,i)=>i===0||counts[d]>=counts[DIFFICULTIES[i-1]]),
+    DIFFICULTIES.map(d=>`${d} ${counts[d]}`).join(' / '));
+  check('生成器は同時押しの置き方を難易度ごとに持っている',
+    /chord:Object\.freeze\(\{perMinute:/.test(generator)&&generator.includes('minGapLanes')
+    &&generator.includes('onBeat')&&generator.includes('clearGrids')&&generator.includes('minWidth'),
+    '同時押しの条件（間隔・拍の頭・前後の空き・太さ）');
+  check('「押さえながら別を叩く」は同時押しとは別に持っている（EXPERT以上）',
+    generator.includes('tapDuringHold:false')&&generator.includes('tapDuringHold:true'));
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
