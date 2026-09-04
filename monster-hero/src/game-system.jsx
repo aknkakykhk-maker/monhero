@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 22:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 22:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5034,6 +5034,33 @@ const giftTitleDisplay = (gift) => {
   return { label:'ミッション', title:missionTitle || title };
 };
 const missionDailyPeriod = loginBonusPeriodKey;
+// --- 遊んだ時間 ---
+// 新しい保存キーへ足すだけで、既存の保存(mh_*)には一切触らない。
+// 画面が見えているあいだだけ数える(裏に回している時間・端末を置いている時間は遊んでいないため)。
+// 数え始めた日(since)も一緒に持つ。既存プレイヤーは0から始まるので、
+// 「いつからの記録か」が分からないと短すぎると誤解されてしまう。
+const PLAYTIME_KEY = 'mh_playtime_v1';
+const PLAYTIME_TICK_MS = 15000;        // 数える間隔
+const PLAYTIME_SAVE_MS = 60000;        // 保存する間隔(数えるたびに保存すると書き込みが多すぎる)
+const PLAYTIME_MAX_STEP_MS = 60000;    // 1回で足してよい上限。スリープ復帰などで飛んだぶんは数えない
+const playtimeDayKey = (now=Date.now()) => new Date(Number(now)+9*60*60*1000).toISOString().slice(0,10);
+// 保存値が無い・壊れている場合も必ず既定へ落とす(型を確かめてから使う)
+const normalizePlaytime = (value) => {
+  const totalMs = Number(value?.totalMs);
+  const since = value?.since;
+  return {
+    totalMs: Number.isFinite(totalMs) && totalMs >= 0 ? totalMs : 0,
+    since: typeof since === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(since) ? since : null,
+  };
+};
+const formatPlaytime = (ms) => {
+  const seconds = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) return `${hours}時間${String(minutes).padStart(2, '0')}分`;
+  if (minutes > 0) return `${minutes}分`;
+  return '1分未満';
+};
 const missionWeeklyPeriod = (now=Date.now()) => { const d=new Date(Number(now)+5*60*60*1000); const day=d.getUTCDay(); d.setUTCDate(d.getUTCDate()-((day+6)%7)); return d.toISOString().slice(0,10); };
 const missionMonthlyPeriod = (now=Date.now()) => new Date(Number(now)+5*60*60*1000).toISOString().slice(0,7);
 const MISSION_WEEK_ROTATION_EPOCH = '2026-08-24';
@@ -8658,6 +8685,10 @@ function MonsterHeroGame() {
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
   const [modeInfoId, setModeInfoId] = useState(null); // 「？」で開くモード説明
   const [profileBattleMode, setProfileBattleMode] = useState(null); // プロフィールのバトル記録詳細
+  // 遊んだ時間。数えるのはrefだけにして、画面の描き直しを起こさない
+  // (15秒ごとにstateを書き換えると、バトル中や音ゲー中に毎回描き直しが走ってしまう)。
+  const playtimeRef = useRef({ totalMs: 0, since: null });
+  const [playtimeView, setPlaytimeView] = useState({ totalMs: 0, since: null }); // プロフィールを開いたときだけ写す
   // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
   // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -8856,6 +8887,55 @@ function MonsterHeroGame() {
   const [extremeClearCounts, setExtremeClearCounts] = useState({});
   const [extremeDifficultyClearCounts, setExtremeDifficultyClearCounts] = useState({});
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
+  // 遊んだ時間を数える。画面が見えているあいだだけ進み、離れるときと60秒ごとに保存する。
+  useEffect(() => {
+    let disposed = false;
+    let last = Date.now();
+    let sinceLastSave = 0;
+    const persist = () => {
+      const value = playtimeRef.current;
+      storeSet(PLAYTIME_KEY, { totalMs: Math.round(value.totalMs), since: value.since }, false);
+      sinceLastSave = 0;
+    };
+    const accumulate = () => {
+      const now = Date.now();
+      const delta = now - last;
+      last = now;
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      // スリープ・端末の時計合わせなどで大きく飛んだぶんは、遊んでいた時間ではないので数えない
+      if (!(delta > 0 && delta <= PLAYTIME_MAX_STEP_MS)) return;
+      const current = playtimeRef.current;
+      playtimeRef.current = { totalMs: current.totalMs + delta, since: current.since || playtimeDayKey(now) };
+      sinceLastSave += delta;
+      if (sinceLastSave >= PLAYTIME_SAVE_MS) persist();
+    };
+    const onVisibility = () => {
+      if (typeof document === 'undefined') return;
+      if (document.visibilityState === 'visible') last = Date.now();
+      else { accumulate(); persist(); }
+    };
+    (async () => {
+      const saved = normalizePlaytime(await storeGet(PLAYTIME_KEY, null, false));
+      if (disposed) return;
+      // 読み込みの前に数えたぶんがあれば足しておく(読み込みを待つあいだも遊んでいるため)
+      playtimeRef.current = { totalMs: saved.totalMs + playtimeRef.current.totalMs, since: saved.since || playtimeRef.current.since };
+      last = Date.now();
+    })();
+    const timer = setInterval(accumulate, PLAYTIME_TICK_MS);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibility);
+      accumulate();
+      persist();
+    };
+  }, []);
+  // プロフィールを開いたときだけ、いまの値を画面へ写す
+  useEffect(() => {
+    if (gameState !== 'PROFILE') return;
+    setPlaytimeView({ ...playtimeRef.current });
+  }, [gameState]);
   const [onboardingName, setOnboardingName] = useState('');
   const [onboardingIcon, setOnboardingIcon] = useState(null);
   const [showWaveDetails, setShowWaveDetails] = useState(false);
@@ -18819,6 +18899,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <button onClick={()=>setGameState('ITEM_INVENTORY')} className="w-full flex items-center justify-center gap-2 bg-teal-950/40 border border-teal-500/40 px-4 py-2.5 rounded-xl active:scale-95">
                 <Package size={12} className="text-teal-400"/><span className="text-[10px] font-black text-teal-200">アイテム（{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個）</span>
               </button>
+              {/* 遊んだ時間。数え始めた日も一緒に出す(これまで数えていなかったので、
+                  既存のプレイヤーは0から始まる。いつからの記録かが分からないと短すぎると誤解される) */}
+              <div className="w-full flex flex-col items-center gap-0.5 bg-indigo-950/40 border border-indigo-500/30 px-4 py-2.5 rounded-2xl">
+                <div className="flex items-center gap-2">
+                  <Timer size={13} className="text-indigo-300"/>
+                  <span className="text-[10px] font-black text-indigo-200">プレイ時間</span>
+                  <span className="text-[11px] font-black text-white font-mono">{formatPlaytime(playtimeView.totalMs)}</span>
+                </div>
+                <div className="text-[8px] text-slate-500 font-bold">{playtimeView.since?`${playtimeView.since} から数えています`:'いま数え始めたところです'}</div>
+              </div>
             </div>
             {/* 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
                 助手ごとに別々に貯まるので、切り替えても片方が消えることはない */}
