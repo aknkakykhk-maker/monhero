@@ -29,7 +29,9 @@ assert.strictEqual(run('RHYTHM_FLICK_DISTANCE_PX'),24,'FLICK成立距離24pxを�
 assert.strictEqual(run('RHYTHM_FLICK_MAX_MS'),450,'FLICK成立時間450msを維持');
 assert.strictEqual(run(`(()=>{const n=${JSON.stringify(flick(3,4))};RHYTHM_GESTURE_RUNTIME.bind('touch:9',n,'FLICK',1000,0);return rhythmNoteVisualSpan(n,n.lane,.7).subLaneWidth})()`),4,'FLICK開始後にHOLD化しても可変幅表示を維持');
 assert(source.includes('bodyRatio=variableHold?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO'),'可変幅HOLD帯は始点と同じ幅率');
-assert(source.includes("rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY)"),'ENDバーはHOLDと同じサブレーン投影');
+// ENDバーはHOLDと同じサブレーン投影。幅が途中で変わるHOLD(holdPoints)を足したので、
+// 「終端の時刻での幅」を渡すようになった(終わりが細いHOLDで横棒だけ太いままにしない)。
+assert(source.includes("rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note))"),'ENDバーはHOLDと同じサブレーン投影(終端時刻の幅)');
 assert(source.includes('RHYTHM_BODY_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO')===false&&source.includes('variableHold?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO'),'旧HOLD帯幅率を維持');
 assert(/widthHoldTestNotes[\s\S]*\[1800,3200,0,1\][\s\S]*\[8400,10000,6,4\][\s\S]*\[10800,12200,0,1\][\s\S]*\[13000,14400,9,1\][\s\S]*\[15200,17000,4,1\],\[15200,17000,5,1\]/.test(source),'WIDTH TEST NORMALにHOLD幅1〜4・左右端・隣接を収録');
 assert(source.includes("type:'TAP',timeMs:18800")&&source.includes("type:'HOLD',timeMs:18000"),'WIDTH TEST NORMALにHOLD中TAPを収録');

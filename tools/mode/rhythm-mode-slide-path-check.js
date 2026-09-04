@@ -27,5 +27,5 @@ check('polygon DOMは不足分だけ追加し通過済み区間を非表示で�
 check('同一polygon pointsのsetAttributeを省略',source.includes("if(segment._rhythmPoints!==points){segment.setAttribute('points',points);segment._rhythmPoints=points;}"));
 check('SLIDE幅2の許容値と現在幅を使う追従判定',source.includes('const RHYTHM_SLIDE_TOLERANCE_LANES = .82;')&&source.includes('bad=Math.abs(actual-rhythmSlideExpectedLane(session.note,chartNow))>rhythmSlideTrackingTolerance(session.note,chartNow);'));
 check('SLIDE帯は薄い塗りと控えめな発光でも縁を維持',source.includes('fill:rgba(168,85,247,.48)')&&source.includes('stroke:rgba(233,213,255,.56)')&&source.includes('drop-shadow(0 0 5px rgba(168,85,247,.38)'));
-check('TAP・HOLD・FLICK描画分岐を維持',game.includes("note.type==='HOLD'&&<span data-rhythm-hold-body")&&source.includes('[data-note-type="FLICK"]')&&source.includes('rhythmNoteVisualSpan(note,lane,yRatio)'));
+check('TAP・HOLD・FLICK描画分岐を維持',game.includes("note.type==='HOLD'&&<span data-rhythm-hold-body")&&source.includes('[data-note-type="FLICK"]')&&source.includes('rhythmNoteVisualSpan(note,lane,yRatio,slideTravel?.chartNowMs)'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

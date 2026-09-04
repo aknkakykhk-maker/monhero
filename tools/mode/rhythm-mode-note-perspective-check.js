@@ -29,7 +29,10 @@ if(helper){
   check('Y移動は時刻を保った自然な非線形遠近',rhythmProjectTravelProgress(0)===0&&rhythmProjectTravelProgress(1)===1&&far>0&&near>far&&near/far<2);
   check('手前の移動量は奥の1.6倍以上で迫り感を保つ',near/far>=1.6);
 }
-check('TAP・HOLD・FLICK・SLIDE端点が共通projectionを使用',source.includes('const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio)')&&source.includes('span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs)')&&source.includes('const bodyTopY=centerY-height;')&&source.includes('variableHold?rhythmNoteVisualSpan(note,lane,rhythmClamp01((bodyTopY+height*ratio)/rect.height)):rhythmProjectLane(lane,rhythmClamp01((bodyTopY+height*ratio)/rect.height))'));
+check('TAP・HOLD・FLICK・SLIDE端点が共通projectionを使用',source.includes('const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,slideTravel?.chartNowMs)')&&source.includes('span=rhythmProjectSlideSpan(Number(point.lane),note,yRatio,point.timeMs)')&&source.includes('const bodyTopY=centerY-height;')&&source.includes('const yRatioAt=rhythmClamp01((bodyTopY+height*ratio)/rect.height);')
+  &&source.includes('holdSpan?rhythmProjectSubLaneRange(holdSpan.subLane,holdSpan.subLaneWidth,yRatioAt)')
+  &&source.includes(':variableHold?rhythmNoteVisualSpan(note,lane,yRatioAt)')
+  &&source.includes(':rhythmProjectLane(lane,yRatioAt);'));
 check('ノーツの高さと明るさもprojectionに連動',source.includes("--rhythm-note-depth-scale")&&source.includes("--rhythm-note-depth-brightness")&&source.includes('[data-rhythm-note]>span:last-child'));
 check('HOLD帯とSLIDE区間はノーツ中心から同じ境界幅で生成',source.includes('centerY=Number(yPx)+noteHeight/2')&&source.includes('const bodyTopY=centerY-height;')&&source.includes('RHYTHM_BODY_WIDTH_RATIO')&&source.includes('body.style.clipPath=`polygon(${[...bodyRight,...bodyLeft].join(\',\')})`')&&source.includes('const topEdgeRatio=height>0?(0-bodyTopY)/height:0;'));
 check('5レーンはプレイエリア全体へ重ねて同じ投影座標で描画',source.includes('[data-rhythm-lane]{position:absolute!important;inset:0!important;'));

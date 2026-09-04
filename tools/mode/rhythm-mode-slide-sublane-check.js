@@ -32,8 +32,10 @@ check('終端レーンも0.5刻みを維持する',close(rhythmReleaseLane(slide
 const visual=rhythmNoteVisualSpan({type:'SLIDE'},1.25,.72),expected=rhythmProjectLane(1.25,.72);
 check('幅指定なしSLIDE頭は従来幅・連続座標を維持する',close(visual.center,expected.center)&&close(visual.width,expected.width));
 check('SLIDEはTAP/HOLDのleft-edge可変span扱いにはしない',!rhythmNoteHasVariableSpan(slide));
-check('幅指定なし/不正幅は従来の幅2へ正規化する',rhythmSlideWidth(slide)===2&&rhythmSlideWidth(makeSlide({subLaneWidth:0}))===2&&rhythmSlideWidth(makeSlide({subLaneWidth:5}))===2);
-check('SLIDEはsubLaneWidth 1〜4を受け付ける',[1,2,3,4].every(width=>rhythmSlideWidth(makeSlide({subLaneWidth:width}))===width));
+// 幅の上限は4→全幅(10)へ広げた(2026-09-04の実機指摘「上限を無くして全幅もありに」)。
+// 0や11、小数のような「幅として書けない値」を幅2へ戻す約束はそのまま。
+check('幅指定なし/不正幅は従来の幅2へ正規化する',rhythmSlideWidth(slide)===2&&rhythmSlideWidth(makeSlide({subLaneWidth:0}))===2&&rhythmSlideWidth(makeSlide({subLaneWidth:11}))===2&&rhythmSlideWidth(makeSlide({subLaneWidth:2.5}))===2);
+check('SLIDEはsubLaneWidth 1〜10(全幅)を受け付ける',[1,2,3,4,5,6,7,8,9,10].every(width=>rhythmSlideWidth(makeSlide({subLaneWidth:width}))===width));
 
 const y=.68,legacySpan=rhythmProjectLane(1.5,y),width1Span=rhythmProjectSlideSpan(1.5,makeSlide({subLaneWidth:1}),y),width2Span=rhythmProjectSlideSpan(1.5,makeSlide({subLaneWidth:2}),y),width4Span=rhythmProjectSlideSpan(1.5,makeSlide({subLaneWidth:4}),y);
 check('SLIDE幅2は旧固定幅projectionと完全互換',close(width2Span.left,legacySpan.left)&&close(width2Span.right,legacySpan.right)&&close(width2Span.center,legacySpan.center));
@@ -85,7 +87,7 @@ check('STEP2B-2では1ノーツ内の途中幅変化をまだ入れない',varia
 
 const changing=makeSlide({subLaneWidth:3,slidePoints:[{timeMs:1000,lane:.5,subLaneWidth:1},{timeMs:1600,lane:1,subLaneWidth:4},{timeMs:2200,lane:1.5}]});
 check('point幅を位置と同じ時間軸で連続補間する',close(rhythmSlideWidthAt(changing,1300),2.5)&&close(rhythmSlideWidthAt(changing,1900),3.5));
-check('point→note→2の順で幅をfallbackする',rhythmSlideWidthAt(changing,2200)===3&&rhythmSlideWidthAt(makeSlide({slidePoints:[{timeMs:1000,lane:.5},{timeMs:2200,lane:1.5}]}),1600)===2&&rhythmSlideWidthAt(makeSlide({subLaneWidth:4,slidePoints:[{timeMs:1000,lane:.5,subLaneWidth:0},{timeMs:2200,lane:1.5,subLaneWidth:5}]}),1600)===4);
+check('point→note→2の順で幅をfallbackする',rhythmSlideWidthAt(changing,2200)===3&&rhythmSlideWidthAt(makeSlide({slidePoints:[{timeMs:1000,lane:.5},{timeMs:2200,lane:1.5}]}),1600)===2&&rhythmSlideWidthAt(makeSlide({subLaneWidth:4,slidePoints:[{timeMs:1000,lane:.5,subLaneWidth:0},{timeMs:2200,lane:1.5,subLaneWidth:11}]}),1600)===4);
 check('開始ノーツ幅は先頭pointの実効幅を使う',rhythmSlideInputSpan(changing).width===1);
 check('END幅は最終pointの実効幅を使う',close(rhythmProjectSlideSpan(1.5,changing,.7,2200).subLaneWidth,3));
 check('途中追従許容は現在時刻の補間幅に連動する',close(rhythmSlideTrackingTolerance(changing,1300),RHYTHM_SLIDE_TOLERANCE_LANES+.125));

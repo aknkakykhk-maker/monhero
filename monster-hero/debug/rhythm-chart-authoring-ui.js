@@ -137,7 +137,7 @@
       </div>
       <div class="mt-3 grid grid-cols-2 gap-2">
         <label class="text-[9px] text-slate-300">種類<select data-rhythm-chart-type class="mt-1 min-h-[44px] w-full rounded-xl bg-slate-900 px-2 text-sm font-black"><option>TAP</option><option>HOLD</option><option>FLICK</option><option>SLIDE</option></select></label>
-        <label class="text-[9px] text-slate-300">幅<select data-rhythm-chart-width class="mt-1 min-h-[44px] w-full rounded-xl bg-slate-900 px-2 text-sm font-black"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+        <label class="text-[9px] text-slate-300">幅<select data-rhythm-chart-width class="mt-1 min-h-[44px] w-full rounded-xl bg-slate-900 px-2 text-sm font-black"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
         <label class="text-[9px] text-slate-300">拍<input data-rhythm-chart-beat type="number" inputmode="numeric" min="0" value="8" class="mt-1 min-h-[44px] w-full rounded-xl bg-slate-900 px-3 text-sm font-black"></label>
         <label class="text-[9px] text-slate-300">16分位置<select data-rhythm-chart-sub class="mt-1 min-h-[44px] w-full rounded-xl bg-slate-900 px-2 text-sm font-black"><option value="0">0 / 表</option><option value="1">1</option><option value="2">2 / 8分裏</option><option value="3">3</option></select></label>
       </div>

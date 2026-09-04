@@ -111,7 +111,15 @@ const runtimeRow=note=>{
     const points=note.slidePoints.map(p=>`[${gridTimeMs(p.grid??Math.round((p.timeMs-timing.beatZeroMs)/gridMs))},${p.lane},${p.subLaneWidth}]`).join(',');
     return `s(${timeMs},${gridTimeMs(note.grid+note.durationGrids)},[${points}]${endFlick})`;
   }
-  if(note.type==='HOLD')return `h(${timeMs},${note.subLane},${note.subLaneWidth},${gridTimeMs(note.grid+note.durationGrids)}${endFlick})`;
+  if(note.type==='HOLD'){
+    // 押さえている途中で幅が変わるHOLDは、6番目の引数へ [[時刻,左端,幅], ...] を渡す。
+    // 終点フリック(5番目)を書いていなくても位置がずれないよう、必ず両方を並べる。
+    const taper=Array.isArray(note.holdPoints)&&note.holdPoints.length>=2
+      ?`,[${note.holdPoints.map(point=>`[${gridTimeMs(point.grid)},${point.subLane},${point.subLaneWidth}]`).join(',')}]`
+      :'';
+    const flickArg=taper?(note.endFlick===true?',1':',0'):endFlick;
+    return `h(${timeMs},${note.subLane},${note.subLaneWidth},${gridTimeMs(note.grid+note.durationGrids)}${flickArg}${taper})`;
+  }
   if(note.type==='FLICK')return `f(${timeMs},${note.subLane},${note.subLaneWidth})`;
   return `t(${timeMs},${note.subLane},${note.subLaneWidth},${note.monsterSlot||0})`;
 };

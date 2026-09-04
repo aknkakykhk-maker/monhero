@@ -80,10 +80,25 @@ try{
     // --- 仕上がりの点検(2026-09-04)で見つけた欠点を見張る ---
     // レーンは幅の中心で見る(lane はいちばん左のレーンなので、幅広ノーツが左に見える)
     const center=n=>n.subLane!=null?(n.subLane+(n.subLaneWidth||2)/2)/2-.5:Number(n.lane)||0;
-    const laneShare=[0,0,0,0,0];
-    candidate.notes.forEach(n=>laneShare[Math.max(0,Math.min(4,Math.round(center(n))))]++);
-    check(`${difficulty}: 5レーンすべてを使う(いちばん少ないレーンでも12%以上。以前はレーン1に1音も無かった)`,
-      Math.min(...laneShare)/candidate.notes.length>=.12,laneShare.join('/'));
+    // 幅の上限を全幅(10)まで広げたので、「ノーツの中心がどのレーンか」だけでは
+    // 5レーンを使えているか測れない。幅6のノーツは中心が必ず内側へ寄り、
+    // 端のレーンに中心が来ることが構造上ありえないため。
+    // ここでは(1)その幅がどのレーンの上にかかっているか(カバー率)と、
+    // (2)幅3以下の細いノーツの中心の散らばり、の両方を見る。
+    // (2)が「レーン歩きが壊れていないか」(以前レーン1に1音も来なかった不具合)の見張り。
+    const laneCover=[0,0,0,0,0],narrowShare=[0,0,0,0,0];
+    let spanNotes=0,narrowNotes=0;
+    candidate.notes.forEach(n=>{
+      if(n.type==='SLIDE'||n.subLane==null)return;
+      spanNotes++;
+      const width=Number(n.subLaneWidth)||2,start=Number(n.subLane);
+      for(let lane=0;lane<5;lane++){const laneCenter=lane*2+1;if(start<=laneCenter&&laneCenter<=start+width)laneCover[lane]++;}
+      if(width<=3){narrowNotes++;narrowShare[Math.max(0,Math.min(4,Math.round(center(n))))]++;}
+    });
+    check(`${difficulty}: 5レーンすべての上にノーツが来る(いちばん少ないレーンでも20%以上)`,
+      spanNotes>0&&Math.min(...laneCover)/spanNotes>=.20,laneCover.map(count=>`${Math.round(count/Math.max(1,spanNotes)*100)}%`).join('/'));
+    check(`${difficulty}: 細いノーツ(幅3以下)の中心も5レーンへ散る(いちばん少ないレーンでも12%。以前はレーン1に1音も無かった)`,
+      narrowNotes>=20&&Math.min(...narrowShare)/narrowNotes>=.12,narrowShare.join('/'));
     let hardJumps=0,pairs=0;
     for(let i=1;i<candidate.notes.length;i++){
       const dg=candidate.notes[i].grid-candidate.notes[i-1].grid;
@@ -99,9 +114,33 @@ try{
     // 「ノーツは大きいほど簡単・細いほど難しい」ので、半ノーツ(幅1)は高難易度へ寄せる。
     const widths={};
     candidate.notes.forEach(n=>{const w=Number(n.subLaneWidth)||2;widths[w]=(widths[w]||0)+1;});
-    check(`${difficulty}: 幅は難易度で決めた範囲だけを使う`,
-      Object.keys(widths).every(w=>candidate.policy.widths.includes(Number(w))),
+    // 区切りの一発(sectionAccent)だけは、その難易度のふつうの幅より広い accentWidth を使う。
+    check(`${difficulty}: 幅は難易度で決めた範囲＋区切りの一発の幅だけを使う`,
+      Object.keys(widths).every(w=>candidate.policy.widths.includes(Number(w))||Number(w)===candidate.policy.accentWidth),
       Object.entries(widths).map(([w,c])=>`幅${w}:${c}`).join(' / '));
+    check(`${difficulty}: 区切りの一発はふつうの幅より広い`,
+      candidate.policy.accentWidth>Math.max(...candidate.policy.widths),
+      `${candidate.policy.accentWidth} > ${Math.max(...candidate.policy.widths)}`);
+    const accents=candidate.notes.filter(n=>n.sectionAccent);
+    check(`${difficulty}: 区切りの一発は数を絞る(上限内で、譜面全体の3%以下)`,
+      accents.length>0&&accents.length<=candidate.policy.accentMaxCount&&accents.length/candidate.notes.length<=.03,
+      `${accents.length}個 / 上限${candidate.policy.accentMaxCount}`);
+    check(`${difficulty}: 区切りの一発はすべてアクセント幅で、同じ時刻に他のノーツが無い`,
+      accents.every(n=>Number(n.subLaneWidth)===candidate.policy.accentWidth
+        &&!candidate.notes.some(o=>o!==n&&o.grid===n.grid)));
+    // HOLDの途中で幅が変わる形(2026-09-04の実機指摘「途中から広がったり小さくなったりもほしい」)
+    const tapers=candidate.notes.filter(n=>Array.isArray(n.holdPoints));
+    check(`${difficulty}: 押さえている途中で幅が変わるHOLDがある`,tapers.length>=3,
+      `${tapers.length}本 / ${[...new Set(tapers.map(n=>n.holdTaper))].join(' ')}`);
+    check(`${difficulty}: 幅が変わるHOLDの点は時刻順で、幅・位置がレーン内に収まる`,
+      tapers.every(n=>n.holdPoints.length>=2
+        &&n.holdPoints.every((point,index)=>index===0||point.grid>n.holdPoints[index-1].grid)
+        &&n.holdPoints[0].grid===n.grid
+        &&n.holdPoints[n.holdPoints.length-1].grid===n.grid+n.durationGrids
+        &&n.holdPoints.every(point=>candidate.policy.widths.includes(point.subLaneWidth)
+          &&point.subLane>=0&&point.subLane+point.subLaneWidth<=10)));
+    check(`${difficulty}: 幅が変わるHOLDは実際に太さが変わる(同じ幅を並べただけにしない)`,
+      tapers.every(n=>new Set(n.holdPoints.map(point=>point.subLaneWidth)).size>=2));
     if(['EASY','NORMAL'].includes(difficulty)){
       check(`${difficulty}: 半ノーツ(幅1)を出さない(低い難易度では難しい側の幅を使わない)`,!widths[1]);
       check(`${difficulty}: 幅が1種類だけにならない(大きさのバリエーションがある)`,

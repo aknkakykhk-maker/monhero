@@ -90,6 +90,22 @@ const NOTE_CASES=[
   {id:'SLIDE 幅1 0.5レーン',type:'SLIDE',lane:.5,subLaneWidth:1,holdMs:700},
   {id:'SLIDE 幅4 移動',type:'SLIDE',lane:2.5,endLane:1,subLaneWidth:4,holdMs:700},
   {id:'SLIDE 長尺(画面より長い)',type:'SLIDE',lane:2,subLaneWidth:2,holdMs:1800},
+  // 幅の上限を4→全幅(10)へ広げたので、広い幅も同じ物差しで測る(2026-09-04)
+  {id:'TAP 幅6',type:'TAP',subLane:2,subLaneWidth:6},
+  {id:'TAP 幅8',type:'TAP',subLane:1,subLaneWidth:8},
+  {id:'TAP 全幅10',type:'TAP',subLane:0,subLaneWidth:10},
+  {id:'FLICK 全幅10',type:'FLICK',subLane:0,subLaneWidth:10},
+  {id:'HOLD 幅6',type:'HOLD',subLane:2,subLaneWidth:6,holdMs:700},
+  {id:'HOLD 全幅10',type:'HOLD',subLane:0,subLaneWidth:10,holdMs:700},
+  {id:'HOLD 全幅10 長尺',type:'HOLD',subLane:0,subLaneWidth:10,holdMs:1800},
+  {id:'SLIDE 全幅10',type:'SLIDE',lane:2,subLaneWidth:10,holdMs:700},
+  // 途中で幅が変わるHOLD(holdPoints)。帯の上端(終端)と下端(始点)の幅が実際に違うかを測る
+  {id:'HOLD 幅2→全幅10',type:'HOLD',subLane:4,subLaneWidth:2,holdMs:700,
+    holdPoints:[{at:0,subLane:4,subLaneWidth:2},{at:700,subLane:0,subLaneWidth:10}]},
+  {id:'HOLD 幅8→幅2',type:'HOLD',subLane:1,subLaneWidth:8,holdMs:700,
+    holdPoints:[{at:0,subLane:1,subLaneWidth:8},{at:700,subLane:4,subLaneWidth:2}]},
+  {id:'HOLD 幅2→8→2 長尺',type:'HOLD',subLane:4,subLaneWidth:2,holdMs:1800,
+    holdPoints:[{at:0,subLane:4,subLaneWidth:2},{at:900,subLane:1,subLaneWidth:8},{at:1800,subLane:4,subLaneWidth:2}]},
 ];
 const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
 
@@ -131,6 +147,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
               if(source.subLaneWidth!=null)note.subLaneWidth=source.subLaneWidth;
               if(source.holdMs){
                 note.endTimeMs=note.timeMs+source.holdMs;
+                if(source.holdPoints)note.holdPoints=source.holdPoints.map(point=>({timeMs:note.timeMs+point.at,subLane:point.subLane,subLaneWidth:point.subLaneWidth}));
                 if(source.type==='SLIDE'){
                   note.endLane=source.endLane??note.lane;
                   note.slidePoints=[{timeMs:note.timeMs,lane:note.lane},{timeMs:note.endTimeMs,lane:note.endLane}];
@@ -169,9 +186,10 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
               const norm=rect=>({center:(rect.left+rect.width/2-areaRect.left)/areaRect.width,width:rect.width/areaRect.width,left:(rect.left-areaRect.left)/areaRect.width});
               const headRect=norm(head.getBoundingClientRect());
               const centerY=yPx+noteHeight/2,yRatio=Math.max(0,Math.min(1,centerY/areaRect.height));
+              // 頭の幅は「その時刻の幅」。幅が一定のノーツでは従来と同じ値になる。
               const expected=note.type==='SLIDE'
                 ?rhythmProjectSlideSpan(note.lane,note,yRatio,visualTime)
-                :(note.subLane!=null?rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,yRatio):rhythmProjectSubLaneSpan(note.lane*2,2,yRatio));
+                :rhythmNoteVisualSpan(note,note.lane,yRatio,visualTime);
               const row={id:source.id,type:note.type,size,speed,progress,travelMs,bodyPx,
                 head:headRect,expectedCenter:expected.center,expectedWidth:expected.width,
                 laneLeft:rhythmProjectBoundary(0,yRatio),laneRight:rhythmProjectBoundary(5,yRatio)};
@@ -203,7 +221,27 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
                     };
                     const bodyTopY=centerY-bodyPx,variable=note.subLane!=null;
                     const bandRatio=variable?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO;
+                    if(note.holdPoints){
+                      // 幅が途中で変わるHOLDは「高さ→期待幅」を1つの式で書けないので、
+                      // 帯の下端(=始点の時刻)・上端(=終端の時刻)の幅と、その間の変わり方を測る。
+                      const sampleAt=ratio=>{
+                        const left=bodyRect.left+edgeAt(leftEdge,ratio)*bodyRect.width;
+                        const right=bodyRect.left+edgeAt(rightEdge,ratio)*bodyRect.width;
+                        const yArea=Math.max(0,Math.min(1,(bodyTopY+bodyPx*ratio)/areaRect.height));
+                        return {ratio,center:(left+right)/2,width:right-left,left,right,
+                          laneLeft:rhythmProjectBoundary(0,yArea),laneRight:rhythmProjectBoundary(5,yArea)};
+                      };
+                      const headSpan=rhythmNoteVisualSpan(note,note.lane,Math.max(0,Math.min(1,centerY/areaRect.height)),note.timeMs);
+                      const endY=Math.max(0,Math.min(1,(releaseYpx+noteHeight/2)/areaRect.height));
+                      const endSpan=rhythmNoteVisualSpan(note,note.lane,endY,rhythmReleaseTargetMs(note));
+                      row.taper={
+                        bottom:sampleAt(1),bottomExpectedWidth:headSpan.width*bandRatio,bottomExpectedCenter:headSpan.center,
+                        top:sampleAt(0),topExpectedWidth:endSpan.width*bandRatio,topExpectedCenter:endSpan.center,
+                        samples:[0,.25,.5,.75,1].map(sampleAt),
+                      };
+                    }
                     heights.forEach(yArea=>{
+                      if(note.holdPoints)return;
                       const y=yArea*areaRect.height;
                       if(bodyPx<=0||y<bodyTopY-.5||y>centerY+.5)return;
                       const ratio=(y-bodyTopY)/bodyPx;
@@ -246,7 +284,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
                 const endY=Math.max(0,Math.min(1,(releaseYpx+noteHeight/2)/areaRect.height));
                 const endSpan=note.type==='SLIDE'
                   ?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note))
-                  :(note.subLane!=null?rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,endY):rhythmProjectLane(note.lane,endY));
+                  :(note.subLane!=null?rhythmNoteVisualSpan(note,note.lane,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(note.lane,endY));
                 row.endExpectedCenter=endSpan.center;
                 row.endLaneLeft=rhythmProjectBoundary(0,endY);
                 row.endLaneRight=rhythmProjectBoundary(5,endY);
@@ -289,6 +327,39 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
     const bodyScaled=bodyRows.filter(row=>!near(row.bodyWidthRatio,1,.005));
     check('HOLD/SLIDE帯の座標系はプレイエリア幅のまま(noteSizeが波及していない)',bodyScaled.length===0,
       bodyScaled[0]?`${bodyScaled[0].id} サイズ${bodyScaled[0].size}% で幅が${(bodyScaled[0].bodyWidthRatio*100).toFixed(1)}%`:'');
+
+    // 3B. 幅が途中で変わるHOLD(holdPoints)は、帯の下端と上端で実際に幅が違う
+    const taperRows=results.filter(row=>row.taper);
+    check('幅が途中で変わるHOLDを測定できた',taperRows.length>0,`${taperRows.length}件`);
+    const taperBottomOff=worst(taperRows,row=>Math.abs(row.taper.bottom.width-row.taper.bottomExpectedWidth));
+    check('帯の下端(始点の時刻)の幅が始点の幅と一致',taperBottomOff<=.006,`最大ズレ ${(taperBottomOff*390).toFixed(2)}px`);
+    const taperTopOff=worst(taperRows,row=>Math.abs(row.taper.top.width-row.taper.topExpectedWidth));
+    check('帯の上端(終端の時刻)の幅が終端の幅と一致',taperTopOff<=.006,`最大ズレ ${(taperTopOff*390).toFixed(2)}px`);
+    const grew=results.filter(row=>row.taper&&row.id==='HOLD 幅2→全幅10');
+    // 「太い / 細い」は画面上のpxではなく**5レーン全体に対する割合**で見る。
+    // 奥(画面の上)ほどprojectionで全体が細く描かれるため、pxのまま比べると
+    // 高速で帯が奥まで伸びたときに「広がっているのに数字は縮む」ことになる。
+    const fieldRatio=sample=>sample.width/(sample.laneRight-sample.laneLeft);
+    const grewBad=grew.filter(row=>!(fieldRatio(row.taper.top)>fieldRatio(row.taper.bottom)*1.5));
+    check('広がるHOLDは終端へ向かうほど帯が太い(5レーンに対する割合で比較)',grew.length>0&&grewBad.length===0,
+      grewBad[0]?`NG例 ${grewBad[0].id} 速度${grewBad[0].speed} 進み${grewBad[0].progress}: 始点${fieldRatio(grewBad[0].taper.bottom).toFixed(2)} → 終端${fieldRatio(grewBad[0].taper.top).toFixed(2)}割`
+        :`始点${fieldRatio(grew[0].taper.bottom).toFixed(2)} → 終端${fieldRatio(grew[0].taper.top).toFixed(2)}割`);
+    const shrank=results.filter(row=>row.taper&&row.id==='HOLD 幅8→幅2');
+    const shrankBad=shrank.filter(row=>!(fieldRatio(row.taper.top)<fieldRatio(row.taper.bottom)*.75));
+    check('細くなるHOLDは終端へ向かうほど帯が細い(5レーンに対する割合で比較)',shrank.length>0&&shrankBad.length===0,
+      shrankBad[0]?`NG例 速度${shrankBad[0].speed} 進み${shrankBad[0].progress}`
+        :`始点${fieldRatio(shrank[0].taper.bottom).toFixed(2)} → 終端${fieldRatio(shrank[0].taper.top).toFixed(2)}割`);
+    const bump=results.filter(row=>row.taper&&row.id==='HOLD 幅2→8→2 長尺');
+    const bumpBad=bump.filter(row=>{
+      const widths=row.taper.samples.map(fieldRatio);
+      const max=Math.max(...widths);
+      return !(max>widths[widths.length-1]*1.2&&max>widths[0]*1.2);
+    });
+    check('途中で広がってから細くなるHOLDは、帯の途中がいちばん太い',bump.length>0&&bumpBad.length===0,
+      bumpBad[0]?`NG例 速度${bumpBad[0].speed} 進み${bumpBad[0].progress}: ${bumpBad[0].taper.samples.map(sample=>fieldRatio(sample).toFixed(2)).join(' / ')}割`
+        :`${bump[0].taper.samples.map(sample=>fieldRatio(sample).toFixed(2)).join(' / ')}割`);
+    const taperOut=taperRows.filter(row=>row.taper.samples.some(sample=>sample.left<sample.laneLeft-.01||sample.right>sample.laneRight+.01));
+    check('幅が変わるHOLDでも帯が5レーンの外へ出ない',taperOut.length===0,taperOut[0]?`${taperOut[0].id} 速度${taperOut[0].speed}`:'');
 
     // 4. HOLD帯が「画面内のどの高さでも」その高さのレーンgeometryに乗る
     //    上端・下端の2点だけを見ると、間を直線で結んだときの歪みを見逃す。

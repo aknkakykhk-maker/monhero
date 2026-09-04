@@ -124,10 +124,18 @@ const placements=(notes,index)=>{
     }
     return out;
   }
+  // 幅が途中で変わるHOLD(holdPoints)は、いちばん広い時刻でもレーンからはみ出さない範囲だけ動かす。
+  // 点だけ置き去りにすると帯と頭がずれるので、点も同じだけ平行移動する。
+  const points=Array.isArray(note.holdPoints)?note.holdPoints:null;
+  const widest=points?Math.max(width,...points.map(point=>Number(point.subLaneWidth)||width)):width;
+  const lowestStart=points?Math.min(...points.map(point=>Number(point.subLane)??Number(note.subLane))):Number(note.subLane);
   for(let subLane=0;subLane+width<=10;subLane++){
-    const moved={...note,subLane,lane:Math.floor(subLane/2)};
+    const delta=subLane-Number(note.subLane);
+    if(points&&(lowestStart+delta<0||lowestStart+delta+widest>10))continue;
+    const moved={...note,subLane,lane:Math.floor(subLane/2),
+      ...(points?{holdPoints:points.map(point=>({...point,subLane:Number(point.subLane)+delta}))}:{})};
     if(!fits({start:subLane,end:subLane+width}))continue;
-    out.push({note:moved,label:`サブレーン${note.subLane}→${subLane}`,delta:subLane-Number(note.subLane)});
+    out.push({note:moved,label:`サブレーン${note.subLane}→${subLane}`,delta});
   }
   return out;
 };
