@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@babel/core": "^7.28.4",
-    "@babel/preset-react": "^7.27.1"
+    "@babel/preset-react": "^7.27.1",
+    "lamejs": "^1.2.1"
   },
   "optionalDependencies": {
     "canvas": "^3.2.0",

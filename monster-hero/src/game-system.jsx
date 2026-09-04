@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 05:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 05:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2493,6 +2493,13 @@ const BGM_TRACKS = [
   { id:'pandora_boss', name:'Stay With Me ～Locked Fate～', creator:'オリジナル', src:'audio/bgm-pandora-boss.mp3', gain:1, loop:true },
   { id:'eiki_boss', name:'綺季一閃 ～花雪に舞う詠姫～', creator:'オリジナル', src:'audio/綺季一閃_～花雪に舞う詠姫～.mp3', gain:1, loop:true },
   { id:'atsu_cup_theme', name:'あつ杯テーマ', creator:'オリジナル', src:'audio/bgm-atsu-cup-theme.mp3' },
+  // もらった音源は5分・約7MBあったので、ほかのBGMと同じ96kbps・44.1kHzへ作り直して約半分にした
+  // (tools/mode/rhythm-audio-reencode.js)。「ショート」はモンビー用に頭から2分半ほどを切り出した版で、
+  // BGMアレンジからも選べる。どちらも同じ曲なので、好きなほうを好きな場面へ置ける。
+  { id:'six_eternel', name:'SIX ÉTERNEL ―愛はひとつじゃない―', creator:'オリジナル', src:'audio/bgm-six-eternel.mp3', gain:1, loop:true },
+  { id:'six_eternel_remix', name:'SIX ÉTERNEL ドパガキリミックス', creator:'オリジナル', src:'audio/bgm-six-eternel-remix.mp3', gain:1, loop:true },
+  { id:'six_eternel_beat', name:'SIX ÉTERNEL（ショート）', creator:'オリジナル', src:'audio/bgm-six-eternel-beat.mp3', gain:1, loop:true },
+  { id:'six_eternel_remix_beat', name:'SIX ÉTERNEL ドパガキリミックス（ショート）', creator:'オリジナル', src:'audio/bgm-six-eternel-remix-beat.mp3', gain:1, loop:true },
 ];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
