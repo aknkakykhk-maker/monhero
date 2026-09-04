@@ -622,12 +622,21 @@ const buildChart=(difficulty,options={})=>{
       .map(note=>({startGrid:note.grid,endGrid:note.grid+(Number(note.durationGrids)||0)}));
     const gridCount=new Map();
     for(const note of notes)gridCount.set(note.grid,(gridCount.get(note.grid)||0)+1);
+    // 「指がふさがっている時刻」は、ほかのノーツが**始まる**ところだけではない。
+    // HOLD・SLIDEが**終わる**ところも、その指が離れて戻ってくるまで使えない。
+    // (2026-09-05・全尺の Stay With Me HARD で、SLIDEが終わった88ms後に同時押しが来て
+    //  どこへ動かしても直せない「押せない」が1件残った。開始しか見ていなかったのが原因)
     const nearestOther=note=>{
       let best=Infinity;
+      const consider=grid=>{
+        const distance=Math.abs(grid-note.grid);
+        if(distance>0&&distance<best)best=distance;
+      };
       for(const other of notes){
         if(other===note)continue;
-        const distance=Math.abs(other.grid-note.grid);
-        if(distance>0&&distance<best)best=distance;
+        consider(other.grid);
+        const duration=Number(other.durationGrids)||0;
+        if((other.type==='HOLD'||other.type==='SLIDE')&&duration>0)consider(other.grid+duration);
       }
       return best;
     };

@@ -18,7 +18,7 @@ check('5レーン・4ノーツ種別',D.RHYTHM_LANE_COUNT===5&&D.RHYTHM_NOTE_TYP
 check('5難易度と最大スコア',JSON.stringify(D.RHYTHM_DIFFICULTIES.map(x=>[x.id,x.maxScore]))===JSON.stringify([['EASY',600000],['NORMAL',700000],['HARD',800000],['EXPERT',900000],['MASTER',1000000]]));
 // 判定幅は 2026-09-05 にゆるくした（実機で「めちゃくちゃむずい」という指摘）。
 // スコア率は変えていない。BADの200msは入力を結びつける窓と同じ値なので動かさない。
-check('判定幅とスコア率',JSON.stringify(D.RHYTHM_JUDGMENTS.map(x=>[x.id,x.windowMs,x.scoreRate]))===JSON.stringify([['MARVELOUS',40,1],['EXCELLENT',75,.98],['GREAT',130,.9],['GOOD',170,.7],['BAD',200,.3],['MISS',null,0]]));
+check('判定幅とスコア率',JSON.stringify(D.RHYTHM_JUDGMENTS.map(x=>[x.id,x.windowMs,x.scoreRate]))===JSON.stringify([['MARVELOUS',55,1],['EXCELLENT',100,.98],['GREAT',150,.9],['GOOD',200,.7],['BAD',240,.3],['MISS',null,0]]));
 check('判定90%＋コンボ10%',D.RHYTHM_SCORE_WEIGHTS.judgment===.9&&D.RHYTHM_SCORE_WEIGHTS.combo===.1);
 const song=D.RHYTHM_SONGS[0];
 // 2026-09-05、ユーザー指示で音源の名前を「あつ杯テーマ」→「MF × ICHIKA MIX」へ改称した。

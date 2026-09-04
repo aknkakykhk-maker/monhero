@@ -13,10 +13,11 @@ const input=(subLaneCoordinate,key='touch:1')=>({lane:Math.max(0,Math.min(4,Math
 const close=(a,b)=>Math.abs(Number(a)-Number(b))<1e-10;
 assert.deepEqual(match([note(4,1)],[input(4.5)]),[0],'幅1中央');
 for(const width of [2,3,4]) assert.deepEqual(match([note(3,width)],[input(3+width-.01)]),[0],`幅${width}内側`);
-// 入力側の余白(2026-09-05にゆるくした)。見えている帯のふちギリギリを押しても取れるが、
-// その外は取れない。幅1以外は .35 サブレーン、幅1は .45 サブレーン。
-assert.deepEqual(match([note(3,2)],[input(2.7)]),[0],'幅2の余白の内側なら取れる');
-assert.deepEqual(match([note(3,2)],[input(2.6)]),[null],'幅2の余白より外は取れない');
+// 入力側の余白(2026-09-05に2回ゆるくした)。見えている帯のふちギリギリを押しても取れるが、
+// その外は取れない。幅1以外は .60 サブレーン、幅1は .45 サブレーン。
+// 幅1だけ据え置きなのは、幅1どうしが隣り合うと帯のふちから隣の中心まで0.5しかないため。
+assert.deepEqual(match([note(3,2)],[input(2.45)]),[0],'幅2の余白の内側なら取れる');
+assert.deepEqual(match([note(3,2)],[input(2.35)]),[null],'幅2の余白より外は取れない');
 assert.deepEqual(match([note(0,1)],[input(.5)]),[0],'左端');
 assert.deepEqual(match([note(9,1)],[input(9.5)]),[0],'右端');
 assert.deepEqual(match([note(4,1)],[input(3.6)]),[0],'幅1の最小タッチ許容内');

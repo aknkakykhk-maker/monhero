@@ -238,7 +238,7 @@ check('残り時間の更新でsetStateを増やしていない（DOMへ直接�
 // ── 守るもの ────────────────────────────────────────────────────────────────
 const judgments=data.match(/const RHYTHM_JUDGMENTS = [\s\S]*?\n\]\);/)?.[0]||'';
 check('判定窓はモンスターノーツ専用に甘くしていない',
-  ['windowMs:40','windowMs:75','windowMs:130','windowMs:170','windowMs:200'].every(w=>judgments.replace(/\s/g,'').includes(w)));
+  ['windowMs:55','windowMs:100','windowMs:150','windowMs:200','windowMs:240'].every(w=>judgments.replace(/\s/g,'').includes(w)));
 check('スコアの重み（判定90% / コンボ10%）は変更していない',
   /RHYTHM_SCORE_WEIGHTS\s*=\s*Object\.freeze\(\{\s*judgment:\s*\.9\s*,\s*combo:\s*\.1\s*\}\)/.test(data.replace(/\n/g,'')));
 check('ライフの最大値と判定ごとの増減は変更していない',

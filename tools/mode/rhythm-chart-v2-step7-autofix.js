@@ -166,10 +166,31 @@ const autofix=notes=>{
   let passes=0;
   for(;passes<MAX_PASSES;passes++){
     if(state.impossible===0&&state.strained===0)break;
-    // 問題のあるノーツを、押せない→忙しいの順に、譜面の頭から試す
+    // 問題のあるノーツを、押せない→忙しいの順に、譜面の頭から試す。
+    // 「押せない」は2つのノーツの**関係**なので、指摘されたノーツだけでなく
+    // 直前のノーツも動かせるようにする。片方しか動かせないと、
+    // どこへ動かしても別の問題が立つ配置(1つだけ直せないまま残る)が出る。
+    // (2026-09-05・全尺の Stay With Me HARD と ドパガキリミックス EXPERT で
+    //  実際に1件ずつ残った。相手を動かす手が使えれば直せた)
+    // 相手は「直前の1つ」では足りない。実際に出た形は
+    // 「SLIDEが終わり、その88ms後に同時押しが来る」というもので、
+    // 指摘されるのは同時押しの側、動かしたいのはSLIDEの側だった。
+    // 同じgridに相方がいると直前の1つはその相方になってしまい、SLIDEまで届かない。
+    // そこで**1拍前までに始まっている音**を全部いっしょに動かせるようにする。
+    const withNeighbour=indexes=>indexes.flatMap(index=>{
+      const grid=current[index]?.grid;
+      if(!Number.isFinite(grid))return [index];
+      const near=[index];
+      for(let other=0;other<current.length;other++){
+        if(other===index)continue;
+        const otherGrid=current[other]?.grid;
+        if(Number.isFinite(otherGrid)&&otherGrid<=grid&&grid-otherGrid<=BEAT)near.push(other);
+      }
+      return near;
+    });
     const targets=[...new Set([
-      ...state.issues.filter(x=>x.severity==='impossible').map(x=>x.noteIndex),
-      ...state.issues.filter(x=>x.severity==='strained').map(x=>x.noteIndex),
+      ...withNeighbour(state.issues.filter(x=>x.severity==='impossible').map(x=>x.noteIndex)),
+      ...withNeighbour(state.issues.filter(x=>x.severity==='strained').map(x=>x.noteIndex)),
     ])];
     let improvedInPass=false;
     for(const index of targets){

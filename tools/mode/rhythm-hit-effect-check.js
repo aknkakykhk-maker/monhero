@@ -127,7 +127,7 @@ check('判定文字も一度だけ弾む',
 // --- 判定まわりを変えていない ---
 check('判定窓・スコア・コンボの計算に触っていない',
   !/rhythmSpawnHitEffect[^\n]*(score|combo|life|judgeTap|judgeRelease)/i.test(game)
-  &&ctx.out.RHYTHM_NOTE_SE_RUNTIME&&vm.runInContext('RHYTHM_RELEASE_MAX_MS',ctx)===200
+  &&ctx.out.RHYTHM_NOTE_SE_RUNTIME&&vm.runInContext('RHYTHM_RELEASE_MAX_MS',ctx)===240
   &&vm.runInContext("rhythmJudgeRelease(0)",ctx)==='MARVELOUS');
 
 // --- 実ブラウザで、実際に光っていることと、押すたびにDOMが増えないこと ---

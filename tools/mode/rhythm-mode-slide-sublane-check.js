@@ -99,7 +99,9 @@ RHYTHM_GESTURE_RUNTIME.clear();
 result=rhythmMatchInputBatch([makeSlide()],[{inputKey:'half-margin',lane:1,subLaneCoordinate:3.3}],1000,0);
 check('旧幅SLIDEは余白の内側なら開始できる',!!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
-result=rhythmMatchInputBatch([makeSlide()],[{inputKey:'half-outside',lane:1,subLaneCoordinate:3.4}],1000,0);
+// 2026-09-05、押す場所の余白を 幅2以上で .35→.60 へ広げた(ユーザー指示「まだ全然むずい」)。
+// 見張りたいのは「余白の外は取れない」ことなので、見本の位置を新しい余白の外へ動かす。
+result=rhythmMatchInputBatch([makeSlide()],[{inputKey:'half-outside',lane:1,subLaneCoordinate:3.7}],1000,0);
 check('旧幅SLIDE開始範囲の外側は取得しない',!result[0].target);
 RHYTHM_GESTURE_RUNTIME.clear();
 const legacy={type:'SLIDE',timeMs:1000,endTimeMs:2000,lane:2,endLane:3,done:false,activePointerId:null,slidePoints:[{timeMs:1000,lane:2},{timeMs:2000,lane:3}]};
