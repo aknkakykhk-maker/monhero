@@ -2632,42 +2632,62 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-note][data-rhythm-failed="true"]{filter:grayscale(1) brightness(.72)!important}
     [data-rhythm-note][data-rhythm-failed="true"]>span:last-child{box-shadow:none!important;border-color:rgba(148,163,184,.6)!important}
     /* --- ノーツを取ったときのヒットエフェクト --- */
-    /* 判定ラインの少し上に置き、ノーツの幅に合わせて弾ける。要素は使い回すので増えない。
-       動かすのは transform と opacity だけ。ぼかし・影・色は動かさないので塗り直しは起きない。 */
+    /* 判定ラインの高さで、ノーツの幅に合わせて弾ける。要素は使い回すので増えない。
+       動かすのは transform と opacity だけ。ぼかし・影・色は動かさないので塗り直しは起きない。
+
+       ★子要素の既定は必ず opacity:0 にする。
+         ここを 0 以外にしていると、CSSアニメーション(fill-mode なし)が終わった瞬間に
+         元の見た目へ戻ってしまい、判定ラインへ光が10個ぶん residual として残り続ける。
+         実機で「タップのとこがわけわかんないことになってる」と言われた原因がこれ(2026-09-05)。 */
     [data-rhythm-hit-layer]{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
     [data-rhythm-hit-effect]{position:absolute;bottom:12%;left:var(--rhythm-hit-center,50%);
-      width:var(--rhythm-hit-width,12%);height:0;pointer-events:none;opacity:0;
-      transform:translate(-50%,50%)}
-    [data-rhythm-hit-effect]>i,[data-rhythm-hit-effect]>b{position:absolute;left:0;right:0;
-      top:0;display:block;border-radius:999px}
-    /* 中心の光: 横へ伸びる帯。ノーツの幅に合わせて出る */
-    [data-rhythm-hit-effect]>i{height:10px;margin-top:-5px;
-      background:radial-gradient(closest-side,var(--rhythm-hit-color,#fff) 0%,rgba(255,255,255,.55) 45%,rgba(255,255,255,0) 100%)}
-    /* 広がる輪: 外へ抜けていく */
-    [data-rhythm-hit-effect]>b{height:0;padding-bottom:26%;margin-top:-13%;
-      border:2px solid var(--rhythm-hit-color,#fff);opacity:.9}
-    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>i{animation:mhRhythmHitCore var(--rhythm-hit-ms,320ms) ease-out 1}
-    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>b{animation:mhRhythmHitRing var(--rhythm-hit-ms,320ms) ease-out 1}
-    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]{opacity:1}
-    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]{opacity:1}
-    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>i{animation:mhRhythmHitCoreBig var(--rhythm-hit-ms,900ms) ease-out 1}
-    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>b{animation:mhRhythmHitRingBig var(--rhythm-hit-ms,900ms) ease-out 1}
+      width:var(--rhythm-hit-width,12%);height:0;pointer-events:none;
+      transform:translateX(-50%)}
+    [data-rhythm-hit-effect]>i,[data-rhythm-hit-effect]>b,[data-rhythm-hit-effect]>u{
+      position:absolute;display:block;opacity:0;border-radius:999px}
+    /* 中心のフラッシュ: 判定ラインの上で横へ広がる帯(プロセカの着弾の光) */
+    [data-rhythm-hit-effect]>i{left:0;right:0;top:-7px;height:14px;transform-origin:center;
+      background:radial-gradient(closest-side,#fff 0%,var(--rhythm-hit-color,#fff) 40%,rgba(255,255,255,0) 100%)}
+    /* 立ち上がる光の柱: 判定ラインから上へ抜ける(チュウニズムの光柱) */
+    [data-rhythm-hit-effect]>b{left:0;right:0;bottom:0;height:96px;border-radius:999px 999px 0 0;
+      transform-origin:bottom center;
+      background:linear-gradient(to top,var(--rhythm-hit-color,#fff) 0%,rgba(255,255,255,.32) 42%,rgba(255,255,255,0) 100%)}
+    /* はじける粒: 判定ラインから外へ飛ぶ。飛ぶ向きはCSSで固定なので毎回の計算は要らない */
+    [data-rhythm-hit-effect]>u{left:50%;top:0;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;
+      background:var(--rhythm-hit-color,#fff)}
+    [data-rhythm-hit-effect]>u:nth-of-type(1){--rhythm-spark-x:-54px;--rhythm-spark-y:-56px}
+    [data-rhythm-hit-effect]>u:nth-of-type(2){--rhythm-spark-x:-24px;--rhythm-spark-y:-86px}
+    [data-rhythm-hit-effect]>u:nth-of-type(3){--rhythm-spark-x:0px;--rhythm-spark-y:-104px}
+    [data-rhythm-hit-effect]>u:nth-of-type(4){--rhythm-spark-x:24px;--rhythm-spark-y:-86px}
+    [data-rhythm-hit-effect]>u:nth-of-type(5){--rhythm-spark-x:54px;--rhythm-spark-y:-56px}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>i{animation:mhRhythmHitCore var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>b{animation:mhRhythmHitBeam var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="NORMAL"]>u{animation:mhRhythmHitSpark var(--rhythm-hit-ms,340ms) cubic-bezier(.16,.9,.3,1) 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>i{animation:mhRhythmHitCoreBig var(--rhythm-hit-ms,900ms) cubic-bezier(.16,.9,.3,1) 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>b{animation:mhRhythmHitBeamBig var(--rhythm-hit-ms,900ms) cubic-bezier(.16,.9,.3,1) 1}
+    [data-rhythm-hit-effect][data-rhythm-hit-kind="MONSTER"]>u{animation:mhRhythmHitSpark var(--rhythm-hit-ms,900ms) cubic-bezier(.16,.9,.3,1) 1}
     @keyframes mhRhythmHitCore{
-      0%{opacity:0;transform:scale(.35,.5)}
-      18%{opacity:1;transform:scale(1.15,1.6)}
-      100%{opacity:0;transform:scale(1.35,.35)}}
-    @keyframes mhRhythmHitRing{
-      0%{opacity:.95;transform:scale(.3)}
-      100%{opacity:0;transform:scale(1.5)}}
+      0%{opacity:0;transform:scale(.28,.4)}
+      12%{opacity:1;transform:scale(1.02,1.9)}
+      100%{opacity:0;transform:scale(1.34,.28)}}
+    @keyframes mhRhythmHitBeam{
+      0%{opacity:0;transform:scale(.68,.08)}
+      14%{opacity:.82;transform:scale(1,.74)}
+      100%{opacity:0;transform:scale(.52,1.3)}}
+    @keyframes mhRhythmHitSpark{
+      0%{opacity:0;transform:translate(0,0) scale(.3)}
+      12%{opacity:1;transform:translate(calc(var(--rhythm-spark-x,0px)*var(--rhythm-spark-scale,1)*.3),calc(var(--rhythm-spark-y,0px)*var(--rhythm-spark-scale,1)*.3)) scale(1)}
+      100%{opacity:0;transform:translate(calc(var(--rhythm-spark-x,0px)*var(--rhythm-spark-scale,1)),calc(var(--rhythm-spark-y,0px)*var(--rhythm-spark-scale,1))) scale(.2)}}
     @keyframes mhRhythmHitCoreBig{
       0%{opacity:0;transform:scale(.3,.5)}
-      12%{opacity:1;transform:scale(1.5,2.6)}
-      45%{opacity:.85;transform:scale(1.9,1.4)}
-      100%{opacity:0;transform:scale(2.3,.4)}}
-    @keyframes mhRhythmHitRingBig{
-      0%{opacity:1;transform:scale(.25)}
-      55%{opacity:.6;transform:scale(1.8)}
-      100%{opacity:0;transform:scale(2.6)}}
+      9%{opacity:1;transform:scale(1.3,3.2)}
+      42%{opacity:.9;transform:scale(1.7,1.6)}
+      100%{opacity:0;transform:scale(2.1,.3)}}
+    @keyframes mhRhythmHitBeamBig{
+      0%{opacity:0;transform:scale(.7,.1)}
+      10%{opacity:1;transform:scale(1.16,1.5)}
+      48%{opacity:.72;transform:scale(1,2.1)}
+      100%{opacity:0;transform:scale(.6,2.9)}}
     /* 画面全体を一瞬だけ染める(モンスターノーツだけ)。あらかじめ置いた1枚の
        グラデーションの opacity だけを動かすので、塗り直しは起きない。 */
     [data-rhythm-screen-flash]{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;
@@ -2697,6 +2717,14 @@ const installRhythmGeometryStyles=()=>{
       100%{transform:scale(1)}}
     [data-rhythm-play-area][data-rhythm-lightweight="true"] [data-rhythm-judgment-text],
     [data-rhythm-play-area][data-rhythm-effect="MINIMAL"] [data-rhythm-judgment-text]{animation:none!important}
+    /* コンボ数も1つ増えるたびに弾ませる(プロセカのように数字が跳ねる)。
+       HUDはプレイエリアの外にあるので、出す・出さないはJS側の演出量の判定で決める。 */
+    [data-rhythm-combo][data-rhythm-combo-pop="1"]{animation:mhRhythmComboPop 180ms ease-out 1;
+      transform-origin:center}
+    @keyframes mhRhythmComboPop{
+      0%{transform:scale(1.34)}
+      55%{transform:scale(.97)}
+      100%{transform:scale(1)}}
     /* --- 両サイドのマスモン --- */
     /* 動かすのは transform だけ。影・ぼかし・色は動かさないので、跳ねても塗り直しは起きない。
        跳ねる速さは1拍の長さ(--rhythm-side-beat)。曲ごとにプレイ開始時へ一度だけ書く。 */
@@ -2775,8 +2803,10 @@ installRhythmGeometryStyles();
 //
 // 使い回す枚数。同時にこれ以上重なることは実際には無く、足りなければ古いものから奪う。
 const RHYTHM_HIT_EFFECT_POOL=10;
+// 1枚あたりに仕込む「はじける粒」の数。飛ぶ向きはCSS側に書いてある。
+const RHYTHM_HIT_SPARK_COUNT=5;
 // ふつうのノーツと、モンスターノーツ(1曲に最大4回)で光の大きさ・長さを変える。
-const RHYTHM_HIT_EFFECT_MS=Object.freeze({NORMAL:320,MONSTER:900});
+const RHYTHM_HIT_EFFECT_MS=Object.freeze({NORMAL:340,MONSTER:900});
 const RHYTHM_HIT_EFFECT_JUDGMENT_COLORS=Object.freeze({
   MARVELOUS:'#f5d0fe',EXCELLENT:'#a5f3fc',GREAT:'#fde68a',GOOD:'#bef264',BAD:'#fda4af',
 });
@@ -2797,8 +2827,10 @@ const rhythmEnsureHitEffects=area=>{
   for(let index=0;index<RHYTHM_HIT_EFFECT_POOL;index++){
     const item=document.createElement('span');
     item.dataset.rhythmHitEffect='';
-    item.appendChild(document.createElement('i'));   // 中心の光
-    item.appendChild(document.createElement('b'));   // 広がる輪
+    item.appendChild(document.createElement('i'));   // 中心のフラッシュ
+    item.appendChild(document.createElement('b'));   // 立ち上がる光の柱
+    // はじける粒。飛ぶ向きはCSSの nth-of-type で決めてあるので、ここでは数だけ揃える
+    for(let spark=0;spark<RHYTHM_HIT_SPARK_COUNT;spark++)item.appendChild(document.createElement('u'));
     layer.appendChild(item);
     layer._rhythmPool.push(item);
   }
@@ -2816,6 +2848,7 @@ const rhythmSpawnHitEffect=(area,{centerRatio,widthRatio,judgment,monster=false}
   item.style.setProperty('--rhythm-hit-width',`${(width*100).toFixed(2)}%`);
   item.style.setProperty('--rhythm-hit-color',monster?'#fde047':rhythmHitEffectColor(judgment));
   item.style.setProperty('--rhythm-hit-ms',`${RHYTHM_HIT_EFFECT_MS[kind]}ms`);
+  item.style.setProperty('--rhythm-spark-scale',monster?'2.1':'1');
   // 同じ要素をすぐ使い回すときは、アニメーションを一度切らないと最初から再生されない
   item.dataset.rhythmHitKind='';
   void item.offsetWidth;
