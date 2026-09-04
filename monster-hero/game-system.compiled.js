@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 34d10a5880af4864
+// source-sha256: 8f3be0b1ce8555ba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-04 18:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-04 18:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16131,8 +16131,16 @@ const RhythmTapTest = ({
           releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
           bodyPx = Math.max(0, yPx - releaseYpx);
         if (note.type === 'HOLD') {
-          el.style.setProperty('--rhythm-hold-body', `${Math.round(bodyPx)}px`);
-          el.style.filter = note.activePointerId !== null ? 'brightness(1.3)' : '';
+          /* 帯の長さもfilterも「変わったときだけ」書く。とくにfilterを毎フレーム書くと、押していない間もそのノーツが毎フレーム塗り直しになり、画面の広い端末ほど重くなる */const holdBody = `${Math.round(bodyPx)}px`;
+          if (el._rhythmHoldBody !== holdBody) {
+            el.style.setProperty('--rhythm-hold-body', holdBody);
+            el._rhythmHoldBody = holdBody;
+          }
+          const holdFilter = note.activePointerId !== null ? 'brightness(1.3)' : '';
+          if (el._rhythmHoldFilter !== holdFilter) {
+            el.style.filter = holdFilter;
+            el._rhythmHoldFilter = holdFilter;
+          }
         }
         if (note.type === 'SLIDE' || note._rhythmOriginalType === 'SLIDE') {
           el.style.setProperty('--rhythm-slide-height', `${Math.round(bodyPx)}px`);
@@ -16272,7 +16280,15 @@ const RhythmTapTest = ({
       if (el) {
         el.style.display = 'block';
         el.style.opacity = '0';
-        el.style.filter = '';
+        el.style.filter = ''; /* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */
+        el._rhythmHidden = false;
+        el._rhythmOpacity = undefined;
+        el._rhythmWillChange = undefined;
+        el._rhythmFailedFlag = undefined;
+        el._rhythmHoldBody = undefined;
+        el._rhythmHoldFilter = undefined;
+        el._rhythmDepthScale = undefined;
+        el._rhythmDepthBrightness = undefined;
       }
     });
     rhythmLayoutPlayArea(playAreaRef.current);
