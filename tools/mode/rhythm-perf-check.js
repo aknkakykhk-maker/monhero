@@ -139,12 +139,17 @@ check('毎フレームの走査数と実描画数を計測できる(長いフレ
 // 効かない場合に気づけない。ただしフレーム全体との差を「描画時間」とは呼べない
 // (rAFの間隔には次のリフレッシュ待ち16.7msとコールバック外の処理が含まれる)。
 // 言えるのは「tickの外で起きている時間」までで、そこから先は別に測る。rAFは増やさない。
-check('tick本体の処理時間そのものを計測できる(tickの中か外かの切り分け用)',
-  data.includes('tick(ms){if(!on)return;')
+// tickが0msでも「JSが無実」とは言えない(判定時のReact描画・GC・他のコールバックは
+// このコールバックの外で走る)。そこで、フレームが始まってから実際にtickへ入るまでの
+// 遅れも測る。遅れが大きいフレームは、tickへ入る前にメインスレッドが塞がっていた証拠。
+check('tick本体の処理時間と、tickへ入るまでの遅れを計測できる(tickの中か外かの切り分け用)',
+  data.includes('tick(ms,delayMs){if(!on)return;')
   &&data.includes('tickMsPerFrame:per(acc.tickMs)')
   &&data.includes('worstFrameTickMs:acc.worstTickMs')
+  &&data.includes('tickDelayMsPerFrame:per(acc.tickDelayMs)')
+  &&data.includes('worstFrameDelayMs:acc.worstDelayMs')
   &&gameSrc.includes('const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;')
-  &&gameSrc.includes('if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart);'));
+  &&gameSrc.includes('if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);'));
 check('will-changeは今動いているノーツにだけ付ける(全ノーツへ出しっぱなしにしない)',
   gameSrc.includes("const nextWillChange=visible?'transform, opacity':'';")
   &&!gameSrc.includes("willChange:'transform, opacity'"));
