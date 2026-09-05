@@ -48,9 +48,10 @@ check('新規プレイヤーと同じ状態にしてから始める',
 check('きき加入の既読も未読に戻してから始める', /setKikiIntroSeenFlag\(false\)/.test(startFn));
 // 助手を選ぶボタンは本番と同じもの。プレビュー用に別のボタンを作っていない
 check('助手選択は本番と同じボタンをそのまま使う',
-  has("onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}")
+  has("onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();")
+    && has("setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}")
     && (source.match(/chooseAssistant\(who\.id\);markKikiIntroSeen\(\)/g) || []).length === 1);
-check('みゅあ・ききのどちらも選べる(一覧をそのまま出している)', has('{ASSISTANT_LIST.map(who=>('));
+check('助手を全員そのまま出している(一覧を使っている)', has('{ASSISTANT_LIST.map(who=>('));
 // あいさつ→プロフィール→村の案内は既存の仕組み(tutorialKind)をそのまま使う
 check('あいさつは既存の intro をそのまま使う', has("setTutorialKind('intro')"));
 check('あいさつのあとはプロフィールへ進む(既存の処理のまま)',

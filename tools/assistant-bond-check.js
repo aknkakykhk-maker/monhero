@@ -693,7 +693,9 @@ check('読み終えたら既読として保存している',
 // 解放の案内もHOMEへ出るようになったので、アップデートの案内・日次アドバイスが
 // 出ているあいだは待つ(同時に2枚重ならないこと)
 check('アップデートの案内と重ならない',
-  /gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&updateGuideQueue\.length>0/.test(source)
+  // 助手の登場イベントは増えるので、その並び全部ではなく
+  // 「チュートリアル中・登場イベント中は出さない」ことと「更新の案内が出ている条件」だけを見る
+  /gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&[a-zA-Z=&!]*updateGuideQueue\.length>0/.test(source)
     && /if \(updateGuideQueue\.length>0\|\|dailyMasuAdvice\) return null;/.test(unlockBlock));
 // ヘルプにも書いておく(プレイヤーが仕様を確かめられる唯一の場所のため)
 check('ヘルプに案内が出ることが書いてある',

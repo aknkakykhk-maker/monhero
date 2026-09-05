@@ -58,8 +58,11 @@ check('会話を見た瞬間にミラーも更新する',
     && has('storeSet(KIKI_INTRO_SEEN_KEY, true, false); setKikiIntroSeenFlag(true);')
     && has('const markKikiIntroSeen = useCallback(() => {\n    setKikiIntroStep(null);\n    setKikiIntroSeenFlag(true);'));
 check('解放判定は呼び名→state の対応表を通す(今後のイベントも1行足すだけでよい形)',
-  has('const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag };')
-    && has('const isEventReplayUnlocked = (event) => !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];'));
+  /const EVENT_REPLAY_UNLOCK_FLAGS = \{[^}]*kikiIntroSeen: kikiIntroSeenFlag/.test(source)
+    && has('EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey]'));
+// alwaysUnlocked を付けたイベントは、本編でまだ見ていなくても回想から見られる
+check('本編を待たずに見られるイベントを作れる',
+  has('!!(event && event.alwaysUnlocked) ||'));
 
 // --- プロフィール画面の入口 ---
 check('プロフィールに「イベント回想」の入口がある',
@@ -128,7 +131,12 @@ if (from >= 0 && to > from) {
   check('発言者の名前が出る', text(first).includes(ASSISTANTS.find(a => a.id === kikiScript[0].who).name));
   check('発言者に合わせた顔と表情が出る',
     first.includes(`data-face="${kikiScript[0].who}"`) && first.includes(`data-expression="${kikiScript[0].e}"`));
-  check('話していないほうの助手も並ぶ', ASSISTANTS.every(w => first.includes(`data-face="${w.id}"`)));
+  // 顔を並べるのは、その台本に出てくる助手だけ。全員を並べると、
+  // まだ登場していない助手までその場面に映ってしまう
+  const kikiCast = [...new Set(kikiScript.map(l => l.who))];
+  check('話していないほうの助手も並ぶ', kikiCast.every(id => first.includes(`data-face="${id}"`)));
+  check('その会話に出てこない助手は並ばない',
+    ASSISTANTS.filter(w => !kikiCast.includes(w.id)).every(w => !first.includes(`data-face="${w.id}"`)));
   check('タップで次へ進める', /aria-label="次へ"/.test(first) && /つぎへ/.test(text(first)));
   check('どのセリフでも発言者と顔が一致する(何度描画しても同じ)', kikiScript.every((l, i) => {
     const html = render(i);

@@ -145,9 +145,12 @@ ok('マスモン設定はデバッグ画面と体験版で同じ部品を使う'
 ok('保存キーを増やしていない（設定・BEST・マスモンは既存のまま）',
   game.includes("const RHYTHM_SETTINGS_KEY")&&game.includes("const RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1'")
   &&!/mh_rhythm_demo/.test(game));
-ok('体験版の入口はデバッグ画面から開く（公開フラグはまだ false のまま）',
-  game.includes('data-debug-rhythm-demo')&&game.includes('onClick={openRhythmDemo}')
-  &&game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
+// 2026-09-05にプレオープンした。デバッグ画面からの入口はそのまま残してある
+// (公開フラグを切り替えずに中身を確かめられるようにするため)
+ok('体験版の入口はデバッグ画面からも開ける',
+  game.includes('data-debug-rhythm-demo')&&game.includes('onClick={openRhythmDemo}'));
+ok('プレオープンで公開されている（うっかり非公開へ戻っていない）',
+  game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
 // --- HOMEの入口（修行の場所を譲り受けた） ---
 // 略称は「モンビー」だが、画面・ヘルプ・説明には正式名称の「モンヒロビート」を使う
 // (2026-09-04にユーザーが「モンスタービート」から改称)。

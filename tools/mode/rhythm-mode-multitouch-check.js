@@ -25,5 +25,5 @@ check('ノーツ描画もタッチ面を遮らない',game.includes("pointerEven
 check('play areaでブラウザ既定ジェスチャを抑止',game.includes("touchAction:'none'")&&game.includes("WebkitTouchCallout:'none'"));
 check('Pointer Eventsはマウス/ペン用フォールバックとして維持',game.includes("rhythmInputKey('pointer',e.pointerId)")&&game.includes('input.captureTarget.setPointerCapture(input.pointerId)'));
 check('ポーズ/リスタート/中断でtouch IDもcleanup',game.includes('activeTouchInputs?.clear()')&&game.includes('activeTouchInputs:new Set()'));
-check('通常公開はOFF',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
+check('プレオープンで公開されている',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);

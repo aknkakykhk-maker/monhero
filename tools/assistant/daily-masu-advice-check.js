@@ -22,9 +22,14 @@ const { scene, ASSISTANTS, assistantSceneLines } = ctx.__d;
 const linesFor = (id) => assistantSceneLines('dailyMasuAdvice', null, 1, id);
 
 check('ワンポイント本文のsceneが登録されている', !!scene);
-check('助手ごとに本文5件がline packからsceneへ渡されている',
-  ASSISTANTS.every(who => linesFor(who.id).length === 5),
+// 本数は増えてよい(セリフは足していくもの)。
+// 見たいのは「どの助手にも自分のぶんの本文がある」ことと、
+// 説明として成り立つ本数(5件以上)がそろっていること
+check('助手ごとに本文5件以上がline packからsceneへ渡されている',
+  ASSISTANTS.every(who => linesFor(who.id).length >= 5),
   ASSISTANTS.map(who => `${who.name}=${linesFor(who.id).length}件`).join(' / '));
+check('どの助手も自分のセリフを話す(ほかの助手のぶんへ落ちていない)',
+  ASSISTANTS.every(who => linesFor(who.id).some(line => (line.who || 'mua') === who.id)));
 check('本文がすべて空でない', scene?.lines?.every(line => typeof line.t === 'string' && line.t.trim().length > 0));
 check('助手ごとに別の本文になっている',
   ASSISTANTS.length < 2 || new Set(ASSISTANTS.map(who => linesFor(who.id).map(l => l.t).join('|'))).size === ASSISTANTS.length);

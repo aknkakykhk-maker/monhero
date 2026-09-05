@@ -42,7 +42,8 @@ const rhythmScript=index.indexOf('<script src="data/rhythm-mode.js?');
 const gameScript=index.indexOf("script.src = 'game-system.compiled.js");
 check('データファイルを本体より先に読み込む',rhythmScript>0&&gameScript>rhythmScript);
 check('入口はデバッグ設定だけ',game.includes('data-debug-rhythm-mode')&&game.includes("gameState==='RHYTHM_DEBUG'")&&!/gameState==='HOME'[\s\S]{0,1200}data-debug-rhythm-mode/.test(game));
-check('通常公開フラグはOFF',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = false'));
+// 2026-09-05のプレオープンで公開した。うっかり非公開へ戻っていないかを見張る
+check('プレオープンで公開されている',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
 check('独立した新規保存キー',game.includes("'mh_rhythm_settings_v1'")&&game.includes("'mh_rhythm_best_v1'"));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
