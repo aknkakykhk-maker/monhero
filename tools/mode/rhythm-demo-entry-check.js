@@ -85,7 +85,10 @@ ok('体験版であることと譜面が調整中であることをチュート�
   const block=assistants.slice(start,assistants.indexOf('assistantRhythmTutorialPages'));
   return /体験版/.test(block)&&/譜面は調整中/.test(block);
 })());
-ok('ヘルプでも譜面が調整中であることを断っている',/譜面はまだ制作中/.test(read('monster-hero/data/help.js')));
+// プレオープンで遊べるようになったので、ヘルプの「いまの状態」も
+// 「まだ制作中でデバッグ画面からのみ」から「遊べる／調整は続く」へ書き換えた(2026-09-05)。
+// 断っている中身(譜面はこれから変わることがある)は変えていない
+ok('ヘルプでも譜面の調整が続くことを断っている',/調整が入ることがあります/.test(read('monster-hero/data/help.js')));
 ok('曲えらびの上に固定で出すのは助手のひとことだけ(読み物で場所を取らない)',
   /notice=\{<AssistantBubble scene="rhythmHome" compact\/>\}/.test(game)
   &&!game.includes('data-rhythm-demo-notice'));
@@ -100,11 +103,14 @@ ok('選んでいる曲の絵と大きさが出る',game.includes('const RhythmSo
 ok('曲えらびは1つの部品にまとまっている（画面ごとに書き分けない）',
   game.includes('const RhythmSongSelect=')&&game.includes('<RhythmSongSelect'));
 // 2026-09-05・ユーザー指示で足した4つ。
-ok('曲えらびで選んでいる曲を鳴らす（設定でON/OFFできる）',
-  game.includes('RHYTHM_PREVIEW_DELAY_MS')&&game.includes('Audio_.startRhythmTrack(previewTrackId')
+// 鳴らす場所は曲えらびの中からApp本体へ移した(2026-09-05・ユーザー指示
+// 「選んでいた音楽が鳴り続けるようにして」)。ランキングやマスモン設定を開いても止まらない。
+// 顔ぶれと鳴らし直さないことは tools/mode/rhythm-preview-continue-check.js が見ている
+ok('選んでいる曲を鳴らす（設定でON/OFFできる）',
+  game.includes('RHYTHM_PREVIEW_DELAY_MS')&&game.includes('Audio_.startRhythmTrack(rhythmPreviewTrackId')
   &&game.includes('songPreviewEnabled:true')&&game.includes("songPreviewEnabled:bool('songPreviewEnabled')")
   &&game.includes("toggle('songPreviewEnabled','')"));
-ok('試聴は画面を離れる・曲を選び替えると止まる',
+ok('モンビーを離れる・曲を選び替えると止まる',
   /return\s*\(\)=>\{cancelled=true;clearTimeout\(timer\);if\(handle\)handle\.stop\(\);\}/.test(game));
 ok('自己ベストは難易度ごとに出る（全国ランキングの合算とは別）',
   game.includes('data-rhythm-difficulty-best=')
@@ -123,9 +129,14 @@ ok('音ゲー設定へ入れる',game.includes('data-rhythm-demo-options'));
 ok('マスモン設定へ入れる',game.includes('data-rhythm-demo-monsters')&&game.includes("gameState==='RHYTHM_DEMO_MONSTERS'"));
 
 // --- 導線 ---
+// 戻り先は「デバッグ画面から始めたときだけデバッグ画面」。
+// あそびかた練習(from:'tutorial')が増えたので、demo かどうかで分けると練習の戻り先を間違える
+// (2026-09-05・演奏画面での操作チュートリアルを足した)
 ok('体験版から始めたプレイは体験版ホームへ戻る',
   game.includes("setRhythmPlay({song,difficulty,from:'demo'})")
-  &&game.includes("const back=rhythmPlay.from==='demo'?'RHYTHM_DEMO_HOME':'RHYTHM_DEBUG'"));
+  &&game.includes("const back=rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME'"));
+ok('あそびかた練習も曲えらびへ戻る',
+  game.includes("from:'tutorial' }")&&!game.includes("from:'tutorial'?'RHYTHM_DEBUG'"));
 ok('設定を閉じたとき、開いた画面へ戻る',
   game.includes('const [rhythmOptionsBack,setRhythmOptionsBack]')
   &&game.includes('onBack={()=>setGameState(rhythmOptionsBack)}')

@@ -62,14 +62,19 @@ check('横画面ではプレイ画面自身が左右のSafe Area(ノッチ)を�
 // HUDの中身を書き換えるスクリプトは、並び順ではなく目印(data-*)で対象を探すこと。
 // 以前 rhythm-mode.js が「HUDの最初の<small>」を 'MIX TEST' へ書き換えており、
 // HUDの並びを変えたらBEST行が'MIX TEST'に化けた(実機で発覚)。
-check('MIX TEST表記は位置ではなく目印(data-rhythm-mode-label)で書き換える',
+// データ側からHUDの表記を書き換えるのはやめた(2026-09-05)。
+// FLICK/SLIDEを含む譜面ならいつでも'MIX TEST'にしていたので、
+// 体験版から入ったプレイヤーの画面にも出ていた(実機の指摘「ここがデバッグのままになってる」)。
+// いまは表記もReact側が譜面から決める。位置頼みで探す作りへ戻っていないことは、
+// 「そもそも探していない」ことで担保する
+check('データ側からHUDの表記を書き換えていない',
   game.includes('<small data-rhythm-mode-label ')
-  &&rhythmData.includes("document.querySelector('[data-rhythm-mode-label]')")
+  &&!rhythmData.includes("label.textContent='MIX TEST'")
   &&!/previousElementSibling\?\.querySelector\?\('small'\)/.test(rhythmData));
 
 // ポーズ中はHUD(z-30)より前に出す。逆にするとポーズメニューの上にスコアが浮く。
 check('ポーズ操作はプレイエリアの中のオーバーレイに閉じ、HUDより前に出る',
-  game.includes('data-rhythm-pause-menu className="absolute inset-0 z-40'));
+  /data-rhythm-pause-menu [^>]*className="absolute inset-0 z-40/.test(game));
 
 // 2. オプション画面: ヘッダー / スクロール / フッターの3層だけ
 check('オプション画面は固定ヘッダー+スクロール+固定フッターの3層',
@@ -100,9 +105,13 @@ check('スクロール領域はタブ本文の1つだけ',
 // 4. body直下の固定レイヤーを作らない
 check('座標校正のトグルを document.body へ固定配置しない',
   !calibration.includes('document.body.appendChild(button)')&&!/position:'fixed'/.test(calibration));
-check('座標校正のトグルは設定タブとポーズメニューの中へ置く',
+// ポーズ側は「デバッグ画面から始めたプレイ」だけ。
+// 目印(data-rhythm-debug-play)の付いていないポーズには置かない
+// (2026-09-05・実機の指摘。体験版から入ったプレイヤーの画面に「座標校正」が出ていた)
+check('座標校正のトグルは設定タブとデバッグプレイのポーズの中へ置く',
   calibration.includes("mountToggle(document.querySelector('[data-rhythm-debug-calibration]'),'debug')")
-  &&calibration.includes("mountToggle(document.querySelector('[data-rhythm-pause-menu]'),'pause')")
+  &&calibration.includes("mountToggle(debugPauseMenu(),'pause')")
+  &&calibration.includes("document.querySelector('[data-rhythm-pause-menu][data-rhythm-debug-play]')")
   &&game.includes('<div data-rhythm-debug-calibration'));
 check('プレイエリアがあるだけで固定ボタンを出す作りをやめた',
   !calibration.includes("ensureButton().style.display=area?'':'none'"));
@@ -196,16 +205,26 @@ const serve=()=>new Promise(resolve=>{
       document.body.appendChild(play);
       await new Promise(resolve=>setTimeout(resolve,120));
       const duringPlay=document.querySelectorAll('[data-rhythm-calibration-toggle]').length;
+      // 体験版から始めたプレイのポーズ(デバッグの目印なし)には出さない
+      const playerPause=document.createElement('div');
+      playerPause.dataset.rhythmPauseMenu='';
+      play.appendChild(playerPause);
+      await new Promise(resolve=>setTimeout(resolve,120));
+      const inPlayerPause=!!playerPause.querySelector('[data-rhythm-calibration-toggle]');
+      playerPause.remove();
+      // デバッグ画面から始めたプレイのポーズ(目印あり)には出す
       const pause=document.createElement('div');
       pause.dataset.rhythmPauseMenu='';
+      pause.dataset.rhythmDebugPlay='1';
       play.appendChild(pause);
       await new Promise(resolve=>setTimeout(resolve,120));
       const toggle=pause.querySelector('[data-rhythm-calibration-toggle]');
-      return {duringPlay,inPause:!!toggle,label:toggle?toggle.textContent:null,
+      return {duringPlay,inPause:!!toggle,inPlayerPause,label:toggle?toggle.textContent:null,
         outside:document.querySelectorAll('body > [data-rhythm-calibration-toggle]').length};
     });
     check('プレイ中はトグルを画面へ浮かせない',pauseState.duringPlay===0,`${pauseState.duringPlay}個`);
-    check('ポーズメニューを開くとその中にトグルが出る',pauseState.inPause);
+    check('デバッグから始めたプレイのポーズにはトグルが出る',pauseState.inPause);
+    check('体験版から始めたプレイのポーズには出さない',pauseState.inPlayerPause===false);
     check('プレイ中もbody直下へ固定レイヤーを作らない',pauseState.outside===0,`${pauseState.outside}個`);
     check('ON/OFFの状態は画面をまたいで保持する',pauseState.label==='座標校正 ON',pauseState.label||'');
   }finally{

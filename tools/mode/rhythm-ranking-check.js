@@ -156,9 +156,16 @@ check('退避する記録に上限があり、際限なく増やさない',
 check('体験版から始めたプレイ(from===demo)のときだけ送信し、デバッグプレイは送信しない',
   /if\(rhythmPlay\.from==='demo'\)submitRhythmRankingScore\(rhythmPlay\.song,rhythmPlay\.difficulty,result\);/.test(game));
 check('BEST記録の保存(saveRhythmBestRecord)は送信の有無に関わらず必ず行う(先に呼んでいる)',(()=>{
-  const idx=game.indexOf("onComplete={async(result,merged)=>{const records=await saveRhythmBestRecord(");
+  const idx=game.indexOf("const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId");
   const submitIdx=game.indexOf("submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result)");
   return idx>=0&&submitIdx>idx;
+})());
+// あそびかた練習だけは、自己ベストにも全国ランキングにも残さない(2026-09-05)。
+// 練習で自己ベストが上書きされてはいけないので、保存より前で抜ける
+check('あそびかた練習は自己ベストにも送信にも進まない',(()=>{
+  const guard=game.indexOf("if(rhythmPlay.from==='tutorial')return;");
+  const save=game.indexOf("const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId");
+  return guard>=0&&save>guard;
 })());
 
 // --- 画面(一覧・詳細) ---

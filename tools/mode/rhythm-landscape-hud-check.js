@@ -96,6 +96,9 @@ const headerHtml=headerJsxLandscape
   .replace(/\{rankNextLabel\}/g,SAMPLE.rankNext)
   .replace(/\{view\.life\}/g,SAMPLE.life)
   .replace(/\{rhythmRankForScore\(view\.score\)\}/g,SAMPLE.rank)
+  // プレイヤーの画面は譜面のLv.、デバッグから始めたときだけ HOLD TEST / TAP TEST
+  // (2026-09-05・実機の指摘でデバッグ表記を出し分けた)
+  .replace(/\{tutorial\?'れんしゅう':debugPlay\?debugChartLabel:`Lv\.\$\{chart\.level\}`\}/g,'Lv.12')
   .replace(/\{hasHold\?'HOLD TEST':'TAP TEST'\}/g,'HOLD TEST')
   .replace(/<i ([^>]*?)\/>/g,'<i $1></i>')
   .replace(/<b ([^>]*?)\/>/g,'<b $1></b>')

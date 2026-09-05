@@ -36,7 +36,9 @@ const SHORT_PLAY_SONG_IDS=['atsu_cup_theme_debug_short','monster_note_test'];
 check('短縮値を持つのはデバッグ専用曲だけで、既存曲は従来chart終了を維持',
   songs.filter(item=>!SHORT_PLAY_SONG_IDS.includes(item.songId)).every(item=>item.playDurationMs===undefined));
 check('リスタートは新run生成・入力と音声を破棄',game.includes('const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};')&&game.includes('disposeRun();setView({...initialView(),status:\'loading\'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume)'));
-check('音声開始は直接ボタンonClick経路',game.includes("onClick={()=>{setRhythmPlay({song,difficulty});setGameState('RHYTHM_PLAY');}}")&&!game.includes("data-rhythm-tap-start')?.click"));
+// どこから始めたプレイかを from で持つようにしたので 'debug' が付く(2026-09-05)。
+// 音を鳴らし始めるのがボタンのonClick経路のまま(自動クリックを挟んでいない)ことは変わらない
+check('音声開始は直接ボタンonClick経路',game.includes("onClick={()=>{setRhythmPlay({song,difficulty,from:'debug'});setGameState('RHYTHM_PLAY');}}")&&!game.includes("data-rhythm-tap-start')?.click"));
 check('DOM判定ラインを維持',game.includes('data-rhythm-judgment-line')&&!game.includes('<line data-rhythm-judgment-line'));
 const formal=JSON.parse(read('monster-hero/debug/atsu-cup-theme-easy-formal-candidate-v1.json'));
 check('正式EASY候補v1を未完成フル尺候補のまま維持',formal.noteCount===78&&formal.notes.length===78&&formal.typeCounts.TAP===72&&formal.typeCounts.HOLD===6&&formal.earReviewGrids.length===22&&formal.reviewRequired===true&&formal.runtimeConnected===false);
