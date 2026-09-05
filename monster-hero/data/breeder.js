@@ -11,6 +11,10 @@ const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=a17ca7fa2869";
+// マーケットのアイコン商品だけで使う立ち絵。
+// 本体の絵(images-ally.js の SNEGUROCHKA_IMG)とは別ファイルなので、ここで持つ
+const SNEGUROCHKA_MARKET_ICON = "images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe";
+const SNEGUROCHKA_AWAKENED_MARKET_ICON = "images/monsters/SNEGUROCHKA_AWAKENED.PNG?v=52c8eda68793";
 
 // ==================== モンスター円盤石アイコン ====================
 // DISC_STONE_BASE: 円盤石の土台画像(全モンスター共通)。作り方の詳細はBREEDER_MARKET_ITEMS手前のコメント参照。
@@ -24,6 +28,7 @@ const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=3829b6f730f5";
 const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=99f34b0b4228";
 const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=23d828f69f14";
 const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=da09c07c8624";
+const PANDORA_DISC_ICON = "images/disc-icons/pandora-disc.PNG?v=adee72203d0a";
 const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
 
 const BREEDER_EVO_NAMES = {
@@ -178,7 +183,7 @@ const MOMOSUKE_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
 
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
-  { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:'images/breeder-icons/kiki.PNG?v=35362d7b6e3e', cost:1 },
+  { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:KIKI_FACE_ICON, cost:1 },
   { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:1500, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
   { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
   { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:1500, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
@@ -202,17 +207,17 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Ark', name:"アークの円盤石", type:'disc', icon:ARK_DISC_ICON, cost:1500 },
   { id:'iblis_icon', name:"イブリースのアイコン", type:'icon', icon:IBLIS_FACE_ICON, cost:1 },
   { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:1500 },
-  { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA.PNG?v=54c9540841fe', cost:1 },
-  { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA_AWAKENED.PNG?v=52c8eda68793', cost:1 },
+  { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:SNEGUROCHKA_MARKET_ICON, cost:1 },
+  { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:SNEGUROCHKA_AWAKENED_MARKET_ICON, cost:1 },
   { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:SNEGUROCHKA_DISC_ICON, cost:1500 },
   // ウンディーネ。本人アイコン・円盤石アイコン・解放用の円盤石の3商品。
   // アイコンは立ち絵/円盤石の絵をそのまま使い、丸い枠での見え方は
   // MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せる(画像は複製しない)
-  { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:'images/monsters/undine.PNG?v=bf5593ae061a', cost:1 },
+  { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:UNDINE_IMG, cost:1 },
   { id:'undine_disc_icon', name:"ウンディーネの円盤石アイコン", type:'icon', icon:UNDINE_DISC_ICON, cost:1 },
   { id:'Undine', name:"ウンディーネの円盤石", type:'disc', icon:UNDINE_DISC_ICON, cost:1500 },
   // ヤオビクニ
-  { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:'images/monsters/yaobikuni.PNG?v=e23821f9d695', cost:1 },
+  { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:YAOBIKUNI_IMG, cost:1 },
   { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
   { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:1500 },
   // プラント。既存の本体画像と専用円盤石画像を、加工・複製せず各商品で共用する。
@@ -225,8 +230,8 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Mia', name:"ミーアの円盤石", type:'disc', icon:MIA_DISC_ICON, cost:1500 },
   // パンドラ。保存済みの本体・円盤石画像を各商品で共用する。
   { id:'pandora_icon', name:"パンドラのアイコン", type:'icon', icon:PANDORA_IMG, cost:1 },
-  { id:'pandora_disc_icon', name:"パンドラの円盤石アイコン", type:'icon', icon:'images/disc-icons/pandora-disc.PNG?v=adee72203d0a', cost:1 },
-  { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:'images/disc-icons/pandora-disc.PNG?v=adee72203d0a', cost:3000 },
+  { id:'pandora_disc_icon', name:"パンドラの円盤石アイコン", type:'icon', icon:PANDORA_DISC_ICON, cost:1 },
+  { id:'Pandora', name:"パンドラの円盤石", type:'disc', icon:PANDORA_DISC_ICON, cost:3000 },
   // エイキ。ザン・ミタラシ・アーク・イブリースと同じく専用の顔クロップ(EIKI_FACE_ICON)を
   // 商品アイコンにも使うため、パンドラ・ミーアのような MARKET_PROFILE_ICON_STYLES の
   // 拡大・位置調整は不要(元から丸枠向けに切り出し済み)。

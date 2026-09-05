@@ -301,7 +301,11 @@ function loadEmbeddedImages() {
     const s = fs.readFileSync(p, 'utf8');
     const re = /(?:const\s+)?([A-Za-z0-9_$]+)\s*[:=]\s*["'`]((?:data:image\/[a-z+]+;base64,[^"'`]*)|(?:images\/[^"'`]+))["'`]/g;
     let m;
-    while ((m = re.exec(s))) map[m[1]] = m[2];
+    // `images/assistant/face/momosuke_${key}.PNG` のような組み立て式は、
+    // そのままではファイル名にならない。実在確認の対象から外す。
+    // (以前はこれも拾っており、たまたま同じ名前の後ろの行で上書きされて隠れていた。
+    //  2026-09-05に breeder.js の直書きを定数へまとめたら表に出た)
+    while ((m = re.exec(s))) { if (m[2].includes('${')) continue; map[m[1]] = m[2]; }
     const reAlias = /const\s+([A-Za-z0-9_$]+)\s*=\s*([A-Za-z0-9_$]+)\s*;/g;
     while ((m = reAlias.exec(s))) aliases.push([m[1], m[2]]);
   }

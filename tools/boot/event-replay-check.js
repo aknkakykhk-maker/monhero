@@ -169,6 +169,24 @@ check('回想を閉じれば元の画面のBGMへ戻す(依存に入っている
   /\}, \[[^\]]*\beventBgmScene\b[^\]]*\]\);/.test(source)
   && /\}, \[[^\]]*\bbgmArrangement\b[^\]]*\]\);/.test(source));
 
+// --- スキップ ---
+// 長い会話を途中でやめられるようにした(2026-09-05・ユーザー要望
+// 「プロフィールからイベント回想中でスキップで飛ばせるようにしてほしい」)。
+// 最後まで見ていないので「見たことがある」は立てない。回想は何度でも開けるので失うものはない
+check('回想を途中でやめるスキップがある',
+  /const skip=\(\)=>\{ setEventReplay\(null\); \};/.test(source)
+  && /onClick=\{skip\}/.test(source)
+  && /スキップ/.test(source));
+check('スキップは既読フラグを立てない(最後まで見ていないため)',
+  (() => {
+    const i = source.indexOf('const skip=()=>{');
+    if (i < 0) return false;
+    const body = source.slice(i, source.indexOf('};', i));
+    return !/markMomosukeIntroSeen|markKikiIntroSeen/.test(body);
+  })());
+check('最後の1枚ではスキップを出さない(そこは「とじる」だけ)',
+  /\{!last&&<button onClick=\{skip\}/.test(source));
+
 // --- 更新履歴とヘルプ ---
 check('更新履歴に書いてある', /イベント回想/.test(changelogSrc));
 check('ヘルプに書いてある', /イベント回想/.test(helpSrc));
