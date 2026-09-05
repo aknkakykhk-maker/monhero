@@ -3120,6 +3120,36 @@ Stay With Me 4:34 / 綺季一閃 4:21 / ドパガキリミックス 4:58 を、�
 **プレイ画面には置かない。**
 出し分けは Tailwind の `portrait:` のみ。JSで向きを見張らないのは、回すたびの再描画を避けるため。
 
+### 縦⇄横の切り替えボタン（2026-09-05）
+
+**ユーザーの指示**「モンビーのホーム画面に縦画面横画面切り替えボタンを作って／縦なら横に横なら縦に変わるボタン」
+
+端末側の画面回転ロックを入れていると、本体を横にしても画面は縦のまま。
+設定アプリへ戻らずに横で遊べるようにするためのボタン。
+
+- 置き場所は曲えらび（`RHYTHM_DEMO_HOME`）のヘッダーだけ。**演奏画面には置かない。**
+- 部品は `RhythmOrientationButton`（`data-rhythm-orientation-toggle`）。
+  向きの見張り（`matchMedia`）を**この部品の中だけ**に持たせる。画面全体の状態にすると、
+  回すたびにアプリ全部が描き直されて、演奏中のカクつきに直結する。
+- 切り替えは `applyScreenOrientation(target)`。
+  - 横へ: `requestFullscreen()` → `screen.orientation.lock('landscape')`。
+    多くのブラウザは**全画面のあいだしか**向きを固定できないため、先に全画面へ入る。
+    全画面に入れなくても `lock` だけは試す。
+  - 縦へ: `lock('portrait')` →（できなければ `unlock()`）→ `exitFullscreen()`。
+    固定を外すだけだと横のまま残る端末があるので、まず `portrait` を指定する。
+  - 回せなければ `false` を返し、ボタンの下へ「端末の画面の自動回転をオンにして…」の案内を出す。
+    **黙って何も起きないのがいちばん困る。** iOSのSafariには `lock()` が無い。
+- モンビーの外へ出たら `releaseScreenOrientation()` で戻す（`gameState` が `RHYTHM_` 以外になったとき）。
+  戻さないとHOMEやバトルまで横＋全画面のままになり、縦向きで作ってある画面が崩れる。
+  **モンビーの中（`RHYTHM_*`）の移動では戻さない。** 曲えらび→演奏で縦へ戻っては横で遊べない。
+  戻すのは `screenOrientationLockedByUs`（ボタンで固定したときだけ true）のときに限る。
+  端末を横向きに持っているだけの人の画面を、こちらから縦へ倒してしまわないため。
+- ヘッダーのボタンが4つになるので、題名（🎵 楽曲選択）は `truncate` で1行に固定する。
+  折り返すとヘッダーが2行になり、そのぶん曲の一覧が減る。
+- 検査は `tools/mode/rhythm-orientation-toggle-check.js`。
+  偽のブラウザを作って `applyScreenOrientation` をそのまま動かし、
+  全画面→固定の順・縦へ戻すときの `exitFullscreen`・`lock` が無い端末で `false` を返すことを見る。
+
 ### 助手のチュートリアルと「遊びかた」（2026-09-05）
 
 - 台本は `data/assistants.js` の `ASSISTANT_RHYTHM_TUTORIAL` / `ASSISTANT_RHYTHM_TUTORIAL_SETS`。
