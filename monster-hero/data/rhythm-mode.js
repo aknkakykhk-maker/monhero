@@ -7642,6 +7642,7 @@ const RHYTHM_SONG_ENTRIES = [
     displayName:'Stay With Me',
     subtitle:'～Locked Fate～',
     bgmTrackId:'pandora_boss',
+    artwork:'images/song-art/stay-with-me.jpg?v=0a8784f80cf1',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,pandoraBossCharts[id]||emptyRhythmChart()
     ])))
@@ -7651,6 +7652,7 @@ const RHYTHM_SONG_ENTRIES = [
     displayName:'綺季一閃',
     subtitle:'～花雪に舞う詠姫～',
     bgmTrackId:'eiki_boss',
+    artwork:'images/song-art/kiki-issen.jpg?v=49bfb0c27729',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,eikiBossCharts[id]||emptyRhythmChart()
     ])))

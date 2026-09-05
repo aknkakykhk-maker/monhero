@@ -3649,8 +3649,14 @@ iOSでは17.4から入った「スイッチ型チェックボックスを切り�
 **曲の絵（ジャケット）**
 **絵がある曲だけ**が絵になる。無い曲は `songId` から決まる色のタイルに曲名の頭文字が出る
 （乱数を使わないので同じ曲はいつも同じ色）。選ぶのは `rhythmSongArtSrc(song)`。
-2026-09-05時点で絵があるのは `kaze_ga_soyogu` の1曲
-（`images/song-art/kaze-ga-soyogu.jpg`・512×512・78KB）。
+2026-09-05時点で絵があるのは4曲。
+
+| 曲 | ファイル | 大きさ |
+| --- | --- | --- |
+| `stay_with_me` | `images/song-art/stay-with-me.jpg` | 512×512 / 79KB |
+| `kiki_issen` | `images/song-art/kiki-issen.jpg` | 512×512 / 87KB |
+| `kaze_ga_soyogu` | `images/song-art/kaze-ga-soyogu.jpg` | 512×512 / 78KB |
+| `close_to_your_heart` | 同上（風がそよぐ場所と同じ絵・ユーザー指示） | — |
 
 はじめは1枚を**全曲の既定**にしたが、それだと6曲とも同じ絵になって曲の見分けがつかなくなる。
 ユーザー指示「いまのジャケ画は風がそよぐ場所にだけあてはめて」で、曲ごとの指定だけを見る形へ戻した。
