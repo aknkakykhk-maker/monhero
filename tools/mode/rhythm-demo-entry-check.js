@@ -129,9 +129,14 @@ ok('音ゲー設定へ入れる',game.includes('data-rhythm-demo-options'));
 ok('マスモン設定へ入れる',game.includes('data-rhythm-demo-monsters')&&game.includes("gameState==='RHYTHM_DEMO_MONSTERS'"));
 
 // --- 導線 ---
+// 戻り先は「デバッグ画面から始めたときだけデバッグ画面」。
+// あそびかた練習(from:'tutorial')が増えたので、demo かどうかで分けると練習の戻り先を間違える
+// (2026-09-05・演奏画面での操作チュートリアルを足した)
 ok('体験版から始めたプレイは体験版ホームへ戻る',
   game.includes("setRhythmPlay({song,difficulty,from:'demo'})")
-  &&game.includes("const back=rhythmPlay.from==='demo'?'RHYTHM_DEMO_HOME':'RHYTHM_DEBUG'"));
+  &&game.includes("const back=rhythmPlay.from==='debug'?'RHYTHM_DEBUG':'RHYTHM_DEMO_HOME'"));
+ok('あそびかた練習も曲えらびへ戻る',
+  game.includes("from:'tutorial' }")&&!game.includes("from:'tutorial'?'RHYTHM_DEBUG'"));
 ok('設定を閉じたとき、開いた画面へ戻る',
   game.includes('const [rhythmOptionsBack,setRhythmOptionsBack]')
   &&game.includes('onBack={()=>setGameState(rhythmOptionsBack)}')

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d1c2b81e98787520
+// source-sha256: 04b78a34e4958030
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 14:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3706,7 +3706,11 @@ const DEFAULT_RHYTHM_SETTINGS = Object.freeze({
   sideMonsterAbilityHighlight: true,
   // 曲えらびで、選んでいる曲を鳴らすかどうか(2026-09-05)。
   // 既存の保存値には無いので、読み込み時に既定(ON)で補われる。既存のキーは変えない。
-  songPreviewEnabled: true
+  songPreviewEnabled: true,
+  // 演奏中は通知を出さない(2026-09-05・ユーザー相談)。
+  // ブラウザから通知そのものは止められないので、全画面と画面ロック防止でできる範囲だけ行う。
+  // 既定はOFF。勝手に全画面へ入ると「戻れない」と感じる人がいるため
+  quietDuringPlay: false
 });
 const rhythmFiniteInRange = (value, min, max, fallback) => {
   const number = Number(value);
@@ -3742,7 +3746,8 @@ const normalizeRhythmSettings = value => {
     sideMonsterOpacity: RHYTHM_SIDE_MONSTER_OPACITIES.includes(source.sideMonsterOpacity) ? source.sideMonsterOpacity : DEFAULT_RHYTHM_SETTINGS.sideMonsterOpacity,
     sideMonsterMotion: RHYTHM_SIDE_MONSTER_MOTIONS.includes(source.sideMonsterMotion) ? source.sideMonsterMotion : DEFAULT_RHYTHM_SETTINGS.sideMonsterMotion,
     sideMonsterAbilityHighlight: bool('sideMonsterAbilityHighlight'),
-    songPreviewEnabled: bool('songPreviewEnabled')
+    songPreviewEnabled: bool('songPreviewEnabled'),
+    quietDuringPlay: bool('quietDuringPlay')
   };
 };
 const emptyRhythmBestRecord = () => ({
@@ -15716,6 +15721,103 @@ const releaseScreenOrientation = () => {
   }
   return true;
 };
+// ============================================================================
+// 演奏中は通知を出さない
+// ============================================================================
+// 【2026-09-05・ユーザーからの相談】
+// 「演奏中のみ物理的に端末の通知を出さないようにすることは可能？ オプションでオンオフできて」
+// 「演奏中に通知来ると上が見えなくなって無理になる」
+//
+// 【できること・できないこと】
+// ブラウザのページから**端末の通知そのものを止めるしくみは無い**。ここは正直に書いておく。
+// ページ側からできるのは次の2つだけ。
+//   ① 全画面表示へ入る … Androidのブラウザでは、全画面のあいだ画面いちばん上の通知バーが
+//      隠れる。通知が上から降りてくる表示も出にくくなる(端末と設定によっては出る)
+//   ② 画面を消させない(Screen Wake Lock) … 演奏の途中で画面が暗くなる・ロックされるのを防ぐ
+// iPhoneのSafariには、ページからの全画面もWake Lockも無い
+// (ホーム画面へ追加して開いた場合はWake Lockが使えることがある)。
+// 通知そのものを止めたいときは、端末側の「集中モード」を使ってもらうしかない。
+//
+// できないのに「ONにすれば止まる」と見せるのがいちばん困るので、
+// オプションにはこの端末で実際に何ができるかを必ず添える(rhythmQuietModeSupportText)。
+const rhythmQuietModeCan = () => ({
+  fullscreen: typeof document !== 'undefined' && typeof document.documentElement?.requestFullscreen === 'function',
+  wakeLock: typeof navigator !== 'undefined' && !!navigator.wakeLock && typeof navigator.wakeLock.request === 'function'
+});
+const rhythmQuietModeSupportText = () => {
+  const can = rhythmQuietModeCan();
+  const tail = '通知そのものを止めることはブラウザからはできないので、確実に止めたいときは端末の「集中モード」もお使いください。';
+  if (can.fullscreen && can.wakeLock) return `この端末では、演奏のあいだだけ全画面にして、画面が消えないようにできます。全画面のあいだは画面いちばん上の通知バーが隠れるので、通知が降りてくる表示も出にくくなります。${tail}`;
+  if (can.fullscreen) return `この端末では、演奏のあいだだけ全画面にできます。全画面のあいだは画面いちばん上の通知バーが隠れます。画面が消えないようにする機能はこのブラウザにはありません。${tail}`;
+  if (can.wakeLock) return `この端末では、演奏のあいだ画面が消えないようにできます。全画面にする機能がこのブラウザには無いため、通知バーは隠せません。${tail}`;
+  return `この端末のブラウザでは、全画面にすることも画面が消えないようにすることもできません。ONにしても何も起きないので、通知を止めたいときは端末の「集中モード」をお使いください。`;
+};
+const RHYTHM_QUIET_MODE = (() => {
+  let fullscreenByUs = false,
+    wakeLock = null,
+    watching = false;
+  // 画面を伏せる・別のアプリへ行くと、Wake Lockはブラウザが勝手に外す。
+  // 戻ってきたときに取り直さないと、そこから先は画面が消えるようになってしまう
+  const reacquire = async () => {
+    if (!wakeLock && !watching) return;
+    if (typeof document === 'undefined' || document.visibilityState !== 'visible') return;
+    if (wakeLock) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (_) {}
+  };
+  const onVisibility = () => {
+    reacquire();
+  };
+  const enter = async () => {
+    const can = rhythmQuietModeCan();
+    if (can.fullscreen && !document.fullscreenElement) {
+      try {
+        await document.documentElement.requestFullscreen({
+          navigationUI: 'hide'
+        });
+        fullscreenByUs = true;
+      } catch (_) {}
+    }
+    if (can.wakeLock && !wakeLock) {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        if (!watching) {
+          watching = true;
+          document.addEventListener('visibilitychange', onVisibility);
+        }
+      } catch (_) {}
+    }
+    return fullscreenByUs || !!wakeLock;
+  };
+  const exit = async () => {
+    if (wakeLock) {
+      try {
+        await wakeLock.release();
+      } catch (_) {}
+      wakeLock = null;
+    }
+    if (watching) {
+      watching = false;
+      document.removeEventListener('visibilitychange', onVisibility);
+    }
+    // 自分で入った全画面だけ抜ける。縦横の切り替えで入っているぶんまで抜くと、
+    // 演奏が終わった瞬間に画面が縦へ戻ってしまう
+    if (fullscreenByUs) {
+      fullscreenByUs = false;
+      if (typeof document !== 'undefined' && document.fullscreenElement && typeof document.exitFullscreen === 'function') {
+        try {
+          await document.exitFullscreen();
+        } catch (_) {}
+      }
+    }
+  };
+  return {
+    enter,
+    exit,
+    can: rhythmQuietModeCan
+  };
+})();
 // 切り替えボタン本体。向きの見張りをこの中だけで持つのは、
 // 画面全体の状態にすると回すたびにアプリ全部が描き直されるため
 // (プレイ中の描き直しはカクつきに直結する)。
@@ -15871,13 +15973,38 @@ const RhythmTimingCalibrator = ({
     setTaps(next);
     RHYTHM_NOTE_SE_RUNTIME.playEmpty();
   };
-  return /*#__PURE__*/React.createElement("div", {
+
+  // 【2026-09-05・ユーザー指示】「タップ調整が窮屈で見にくい／専用画面に飛ばしたほうがいい」
+  // オプションの中の小さな枠(高さ112px)ではなく、画面いっぱいで開く。
+  // 叩く場所が広いほど、実際のプレイに近い姿勢で測れる。
+  return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-calibrator": true,
-    className: "rounded-2xl border border-cyan-400/40 bg-slate-950/90 p-3"
+    className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
+    style: {
+      paddingTop: 'env(safe-area-inset-top)'
+    }
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u30AA\u30D7\u30B7\u30E7\u30F3\u3078\u623B\u308B",
+    "data-rhythm-calibrator-close": true,
+    onClick: () => {
+      stop();
+      onClose();
+    },
+    className: "min-h-[44px] min-w-[44px] text-slate-300"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[8px] font-black tracking-[0.2em] text-cyan-300"
+  }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-black"
+  }, "\uD83C\uDFAF \u30BF\u30C3\u30D7\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u5408\u308F\u305B\u308B"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex min-h-0 flex-1 flex-col px-4 pb-4 pt-3"
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] font-black text-cyan-100"
-  }, "\uD83C\uDFAF \u30BF\u30C3\u30D7\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u5408\u308F\u305B\u308B"), /*#__PURE__*/React.createElement("p", {
-    className: "mt-1 text-[9px] leading-relaxed text-slate-400"
+    className: "text-[12px] leading-relaxed text-slate-300"
   }, "\u4E0B\u306E\u7DDA\u3078\u30CE\u30FC\u30C4\u304C\u91CD\u306A\u3063\u305F\u77AC\u9593\u306B\u3001\u30EA\u30BA\u30E0\u3088\u304F", RHYTHM_CALIBRATION_TAPS, "\u56DE\u53E9\u3044\u3066\u304F\u3060\u3055\u3044\u3002 \u753B\u9762\u306B\u898B\u3048\u3066\u304B\u3089\u6307\u304C\u89E6\u308C\u308B\u307E\u3067\u306E\u9045\u308C\u306F\u7AEF\u672B\u3054\u3068\u306B\u9055\u3046\u306E\u3067\u3001\u5B9F\u969B\u306B\u53E9\u3044\u3066\u6E2C\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
     ref: areaRef,
     "data-rhythm-calibrator-area": true,
@@ -15885,7 +16012,7 @@ const RhythmTimingCalibrator = ({
       e.preventDefault();
       tap();
     },
-    className: "relative mt-2 h-28 w-full overflow-hidden rounded-xl border border-white/15 bg-slate-900",
+    className: "relative mt-3 min-h-0 flex-1 w-full overflow-hidden rounded-2xl border border-cyan-400/30 bg-slate-900",
     style: {
       touchAction: 'none',
       WebkitUserSelect: 'none',
@@ -15895,45 +16022,48 @@ const RhythmTimingCalibrator = ({
     ref: noteRef,
     "data-rhythm-calibrator-note": true,
     "aria-hidden": "true",
-    className: "absolute left-1/2 top-0 h-4 w-24 -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-200 to-fuchsia-500"
+    className: "absolute left-1/2 top-0 h-6 w-40 -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-200 to-fuchsia-500"
   }), /*#__PURE__*/React.createElement("i", {
     "aria-hidden": "true",
-    className: "absolute inset-x-0 bottom-3 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300"
+    className: "absolute inset-x-0 bottom-8 h-[4px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300"
   }), !running && /*#__PURE__*/React.createElement("span", {
-    className: "absolute inset-0 flex items-center justify-center text-[11px] font-black text-slate-300"
-  }, taps.length ? 'もう一度やるなら「はじめる」' : '「はじめる」を押してね')), /*#__PURE__*/React.createElement("p", {
+    className: "absolute inset-0 flex items-center justify-center px-6 text-center text-[13px] font-black leading-relaxed text-slate-300"
+  }, taps.length ? 'もう一度やるなら「はじめる」' : '「はじめる」を押して、線に重なったら叩いてね'), running && /*#__PURE__*/React.createElement("span", {
+    className: "absolute inset-x-0 bottom-2 text-center text-[11px] font-black text-cyan-200"
+  }, "\u3053\u3053\u3092\u53E9\u304F")), /*#__PURE__*/React.createElement("p", {
     "data-rhythm-calibrator-count": true,
-    className: "mt-1 text-center text-[10px] font-black tabular-nums text-cyan-200"
+    className: "mt-3 text-center text-[14px] font-black tabular-nums text-cyan-200"
   }, taps.length, " / ", RHYTHM_CALIBRATION_TAPS, " \u56DE"), result && taps.length >= RHYTHM_CALIBRATION_TAPS && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-calibrator-result": true,
-    className: "mt-1 text-center text-[10px] font-bold text-amber-200"
-  }, "\u5E73\u5747", result.rawMeanMs > 0 ? '+' : '', result.rawMeanMs, "ms\uFF08", result.droppedCount, "\u56DE\u306F\u5916\u308C\u5024\u3068\u3057\u3066\u9664\u5916\uFF09\u2192 \u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574 ", result.offsetMs > 0 ? '+' : '', result.offsetMs, "ms"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 grid grid-cols-3 gap-2"
+    className: "mt-2 text-center text-[12px] font-bold leading-relaxed text-amber-200"
+  }, "\u5E73\u5747", result.rawMeanMs > 0 ? '+' : '', result.rawMeanMs, "ms\uFF08", result.droppedCount, "\u56DE\u306F\u5916\u308C\u5024\u3068\u3057\u3066\u9664\u5916\uFF09", /*#__PURE__*/React.createElement("br", null), "\u2192 \u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574 ", result.offsetMs > 0 ? '+' : '', result.offsetMs, "ms"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-center text-[11px] text-slate-500"
+  }, "\u3044\u307E\u306E\u5024: ", currentOffsetMs > 0 ? '+' : '', currentOffsetMs, "ms\uFF08\u300C\u3053\u306E\u5024\u306B\u3059\u308B\u300D\u3092\u62BC\u3057\u3066\u3082\u3001\u4FDD\u5B58\u3059\u308B\u307E\u3067\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("footer", {
+    className: "z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-4 pt-2",
+    style: {
+      paddingBottom: 'calc(.5rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-3"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-calibrator-start": true,
     onClick: start,
     disabled: running,
-    className: "min-h-[44px] rounded-xl bg-cyan-700 text-[11px] font-black text-white disabled:opacity-40"
+    className: "min-h-[54px] rounded-xl bg-cyan-700 text-[13px] font-black text-white disabled:opacity-40"
   }, "\u306F\u3058\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-calibrator-apply": true,
     disabled: !result || taps.length < RHYTHM_CALIBRATION_TAPS,
     onClick: () => {
-      if (result) onApply(result.offsetMs);
+      if (result) {
+        onApply(result.offsetMs);
+        stop();
+        onClose();
+      }
     },
-    className: "min-h-[44px] rounded-xl bg-amber-400 text-[11px] font-black text-slate-950 disabled:opacity-40"
-  }, "\u3053\u306E\u5024\u306B\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    "data-rhythm-calibrator-close": true,
-    onClick: () => {
-      stop();
-      onClose();
-    },
-    className: "min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black text-slate-200"
-  }, "\u3068\u3058\u308B")), /*#__PURE__*/React.createElement("p", {
-    className: "mt-1 text-[9px] text-slate-500"
-  }, "\u3044\u307E\u306E\u5024: ", currentOffsetMs > 0 ? '+' : '', currentOffsetMs, "ms\uFF08\u300C\u3053\u306E\u5024\u306B\u3059\u308B\u300D\u3092\u62BC\u3057\u3066\u3082\u3001\u4FDD\u5B58\u3059\u308B\u307E\u3067\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09"));
+    className: "min-h-[54px] rounded-xl bg-amber-400 text-[13px] font-black text-slate-950 disabled:opacity-40"
+  }, "\u3053\u306E\u5024\u306B\u3059\u308B"))));
 };
 const RhythmOptions = ({
   value,
@@ -16011,8 +16141,23 @@ const RhythmOptions = ({
     onClick: () => set(key, id),
     className: `min-h-[44px] border-r border-white/10 px-1 text-[10px] font-black last:border-r-0 ${draft[key] === id ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-300'}`
   }, label)));
-  const card = 'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-3 shadow-[0_0_18px_rgba(34,211,238,.08)]';
-  const row = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-white/10 py-2 last:border-b-0';
+  // 【2026-09-05・ユーザー指示】「オプション画面が窮屈すぎる／サイズ感に余裕を持たして」
+  // 余白(p-4)・項目の間(py-3)・説明文(10px)をひとまわり広げてある。
+  // 数値だけを小さくしていくと、指で押す場所と読む場所がどちらも減っていくので、
+  // 「入る量」ではなく「押せる・読める」ほうを優先する。
+  const card = 'rounded-2xl border border-cyan-400/35 bg-slate-900/85 p-4 shadow-[0_0_18px_rgba(34,211,238,.08)]';
+  const row = 'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 py-3 last:border-b-0';
+  const head = 'text-[15px] font-black text-cyan-200';
+  const label = 'text-[13px] font-bold';
+  const note = 'text-[10px] leading-relaxed text-slate-400';
+  // 数値の項目。見出し → スライダー → 説明、の順で必ず間を空ける
+  const field = (title, control, description = null) => /*#__PURE__*/React.createElement("div", {
+    className: "border-b border-white/10 py-3 last:border-b-0"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: `mb-2 ${label}`
+  }, title), control, description && /*#__PURE__*/React.createElement("p", {
+    className: `mt-2 ${note}`
+  }, description));
   const previewBgm = async () => {
     previewRef.current?.stop();
     previewRef.current = null;
@@ -16029,6 +16174,18 @@ const RhythmOptions = ({
     setDraft(saved);
     setMessage('保存しました');
   };
+  // 「叩いて合わせる」は画面いっぱいで開く(2026-09-05・ユーザー指示
+  // 「タップ調整が窮屈で見にくい／専用画面に飛ばしたほうがいい」)。
+  // gameStateを増やさずここへ重ねるのは、編集中の値(draft)を持ったままにするため。
+  // 別の画面へ飛ばすと、この画面がいったん消えて未保存の変更が全部消える。
+  if (calibrating) return /*#__PURE__*/React.createElement(RhythmTimingCalibrator, {
+    currentOffsetMs: draft.judgmentTimingOffsetMs,
+    onApply: ms => {
+      set('judgmentTimingOffsetMs', ms);
+      setMessage(`判定タイミング調整を ${ms > 0 ? '+' : ''}${ms}ms にしました（未保存）`);
+    },
+    onClose: () => setCalibrating(false)
+  });
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-options": true,
     className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
@@ -16038,130 +16195,81 @@ const RhythmOptions = ({
   }, /*#__PURE__*/React.createElement("header", {
     className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-2"
   }, /*#__PURE__*/React.createElement("button", {
-    "aria-label": "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u3078\u623B\u308B",
+    "aria-label": "\u623B\u308B",
     onClick: onBack,
     className: "min-h-[44px] min-w-[44px] text-slate-300"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
   })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-    className: "block text-[8px] font-black text-cyan-300"
-  }, "DEBUG\u30FB\u6B63\u5F0F\u30E2\u30FC\u30C9\u5171\u901A\u8A2D\u8A08"), /*#__PURE__*/React.createElement("h2", {
+    className: "block text-[8px] font-black tracking-[0.2em] text-cyan-300"
+  }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
     className: "text-base font-black"
   }, "\u2699\uFE0F \u30AA\u30D7\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-options-scroll": true,
-    className: "flex-1 min-h-0 overflow-y-auto px-3 pb-4 pt-3 mh-scroll"
+    className: "flex-1 min-h-0 overflow-y-auto px-3 pb-5 pt-3 mh-scroll"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
+    className: "space-y-4"
   }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, null), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-black text-cyan-200"
-  }, "\uD83D\uDD0A \u97F3\u91CF"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-1 text-xs font-bold"
-  }, "BGM\u97F3\u91CF"), stepper('bgmVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-1 text-xs font-bold"
-  }, "\u30BF\u30C3\u30D7\u97F3\u91CF"), stepper('noteSeVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("div", {
+    className: head
+  }, "\uD83D\uDD0A \u97F3\u91CF"), field('BGM音量', stepper('bgmVolume', 0, 100, 1)), field('タップ音量', stepper('noteSeVolume', 0, 100, 1)), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold"
+    className: label
   }, "\u30BF\u30C3\u30D7\u97F3"), toggle('noteSeEnabled', '')), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 grid grid-cols-2 gap-2"
+    className: "mt-3 grid grid-cols-2 gap-3"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: previewBgm,
-    className: "min-h-[46px] rounded-xl bg-indigo-700 text-xs font-black"
+    className: "min-h-[48px] rounded-xl bg-indigo-700 text-[12px] font-black"
   }, "\u266A BGM\u8A66\u8074"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => RHYTHM_NOTE_SE_RUNTIME.preview(draft),
-    className: "min-h-[46px] rounded-xl bg-fuchsia-700 text-xs font-black"
+    className: "min-h-[48px] rounded-xl bg-fuchsia-700 text-[12px] font-black"
   }, "\u30BF\u30C3\u30D7\u97F3\u8A66\u8074")), /*#__PURE__*/React.createElement("p", {
-    className: "mt-2 text-[9px] leading-relaxed text-slate-400"
+    className: `mt-3 ${note}`
   }, "\u3053\u306E\u97F3\u91CF\u306F\u30E1\u30A4\u30F3\u30B2\u30FC\u30E0\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5225\u306B\u3001\u97F3\u30B2\u30FC\u3060\u3051\u3067\u4F7F\u3044\u307E\u3059\u3002\u30BF\u30A4\u30C8\u30EB\u753B\u9762\u306E\u5168\u4F53\u30DF\u30E5\u30FC\u30C8\u306E\u307F\u5171\u901A\u3067\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-black text-cyan-200"
-  }, "\uD83C\uDFAF \u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-1 text-xs font-bold"
-  }, "\u30CE\u30FC\u30C4\u901F\u5EA6"), stepper('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, '', 1)), /*#__PURE__*/React.createElement("p", {
-    className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-  }, "1.0\u301C12.0\u30920.1\u523B\u307F\u3067\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u5909\u308F\u308B\u306E\u306F\u30CE\u30FC\u30C4\u304C\u6D41\u308C\u3066\u304F\u308B\u898B\u305F\u76EE\u306E\u901F\u3055\u3060\u3051\u3067\u3001\u8B5C\u9762\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u30FB\u5224\u5B9A\u7A93\u30FB\u30B9\u30B3\u30A2\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF08\u73FE\u5728 \u7D04", rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString(), "ms\uFF09\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-1 text-xs font-bold"
-  }, "\u30CE\u30FC\u30C4\u30B5\u30A4\u30BA"), stepper('noteSize', 80, 120, 5, '%')), /*#__PURE__*/React.createElement("p", {
-    className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-  }, "\u30CE\u30FC\u30C4\u306E\u898B\u305F\u76EE\u306E\u5927\u304D\u3055\u3060\u3051\u3092\u5909\u3048\u307E\u3059\u3002\u5165\u529B\u5224\u5B9A\u306E\u7BC4\u56F2\u30FBHOLD/SLIDE\u5E2F\u30FBEND\u30D0\u30FC\u306E\u4F4D\u7F6E\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-1 text-xs font-bold"
-  }, "\u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574"), stepper('judgmentTimingOffsetMs', -100, 100, 5, 'ms')), /*#__PURE__*/React.createElement("p", {
-    className: "mt-2 text-[9px] leading-relaxed text-slate-400"
-  }, "\u5224\u5B9A\u7A93\u306E\u5E45\u306F\u5909\u3048\u305A\u3001\u8868\u793A\u3068\u5165\u529B\u306E\u57FA\u6E96\u3092\u540C\u3058\u91CF\u3060\u3051\u88DC\u6B63\u3057\u307E\u3059\u3002\u6570\u5B57\u3067\u6C7A\u3081\u306B\u304F\u3044\u3068\u304D\u306F\u3001\u4E0B\u306E\u300C\u5408\u308F\u305B\u308B\u300D\u3067\u5B9F\u969B\u306B\u53E9\u3044\u3066\u6E2C\u308C\u307E\u3059\u3002"), !calibrating && /*#__PURE__*/React.createElement("button", {
+    className: head
+  }, "\uD83C\uDFAF \u30D7\u30EC\u30A4"), field('ノーツ速度', stepper('noteSpeed', RHYTHM_NOTE_SPEED_MIN, RHYTHM_NOTE_SPEED_MAX, RHYTHM_NOTE_SPEED_STEP, '', 1), `1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約${rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。`), field('ノーツサイズ', stepper('noteSize', 80, 120, 5, '%'), 'ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。'), field('ノーツの出る位置（奥行き）', stepper('noteStartPosition', -100, 100, 5), 'ノーツが画面のどのあたりから出てくるかを変えます。マイナスにすると奥（画面の上の外側）から、プラスにすると手前寄りから出てきます。判定ラインの位置・判定のタイミング・判定窓・スコアは変わりません。ノーツが流れてくる時間も変わらないので、手前から出すほど見えているあいだの動きは速く見えます。'), field('判定タイミング調整', stepper('judgmentTimingOffsetMs', -100, 100, 5, 'ms'), '判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。数字で決めにくいときは、下の「叩いて合わせる」で実際に叩いて測れます。'), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-calibrator-open": true,
     onClick: () => setCalibrating(true),
-    className: "mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-xs font-black text-cyan-100"
-  }, "\uD83C\uDFAF \u53E9\u3044\u3066\u5408\u308F\u305B\u308B"), calibrating && /*#__PURE__*/React.createElement("div", {
-    className: "mt-2"
-  }, /*#__PURE__*/React.createElement(RhythmTimingCalibrator, {
-    currentOffsetMs: draft.judgmentTimingOffsetMs,
-    onApply: ms => {
-      set('judgmentTimingOffsetMs', ms);
-      setMessage(`判定タイミング調整を ${ms > 0 ? '+' : ''}${ms}ms にしました（未保存）`);
-    },
-    onClose: () => setCalibrating(false)
-  }))), /*#__PURE__*/React.createElement("section", {
+    className: "mt-3 min-h-[52px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-[13px] font-black text-cyan-100"
+  }, "\uD83C\uDFAF \u53E9\u3044\u3066\u5408\u308F\u305B\u308B"), /*#__PURE__*/React.createElement("p", {
+    className: `mt-2 ${note}`
+  }, "\u753B\u9762\u3044\u3063\u3071\u3044\u3067\u958B\u304D\u307E\u3059\u3002\u5408\u308F\u305B\u7D42\u308F\u3063\u3066\u304B\u3089\u623B\u308B\u3068\u3001\u3053\u3053\u306E\u6570\u5B57\u306B\u5165\u308A\u307E\u3059\uFF08\u4FDD\u5B58\u306F\u307E\u3060\u3055\u308C\u307E\u305B\u3093\uFF09\u3002")), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-black text-cyan-200"
+    className: head
   }, "\uD83D\uDC41 \u8868\u793A"), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold"
+    className: label
   }, "FAST / SLOW\u8868\u793A"), toggle('fastSlowDisplay', '')), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold"
-  }, "\u5224\u5B9A\u6587\u5B57\u8868\u793A"), toggle('judgmentTextDisplay', '')), /*#__PURE__*/React.createElement("div", {
-    className: "py-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-2 text-xs font-bold"
-  }, "\u30EC\u30FC\u30F3\u767A\u5149"), segments('laneGlow', [['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]))), /*#__PURE__*/React.createElement("section", {
+    className: label
+  }, "\u5224\u5B9A\u6587\u5B57\u8868\u793A"), toggle('judgmentTextDisplay', '')), field('レーン発光', segments('laneGlow', [['NORMAL', '標準'], ['LOW', '控えめ'], ['NONE', 'なし']]))), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-black text-cyan-200"
+    className: head
   }, "\uD83D\uDC3E \u4E21\u30B5\u30A4\u30C9\u306E\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] leading-relaxed text-slate-400"
-  }, "\u30EC\u30FC\u30F3\u306E\u5916\u5074\u306E\u7A7A\u3044\u305F\u3068\u3053\u308D\u3078\u3001\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u304C\u51FA\u3066\u62CD\u306B\u5408\u308F\u305B\u3066\u8DF3\u306D\u307E\u3059\u3002\u30CE\u30FC\u30C4\u304C\u898B\u3065\u3089\u3044\u3068\u304D\u3084\u3001\u7AEF\u672B\u304C\u71B1\u304F\u306A\u308A\u3084\u3059\u3044\u3068\u304D\u306F\u8584\u304F\u3059\u308B\u304B\u6B62\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "py-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-2 text-xs font-bold"
-  }, "\u6FC3\u3055"), segments('sideMonsterOpacity', [['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']])), /*#__PURE__*/React.createElement("div", {
-    className: "py-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-2 text-xs font-bold"
-  }, "\u52D5\u304D"), segments('sideMonsterMotion', [['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']])), /*#__PURE__*/React.createElement("div", {
+    className: `mt-2 ${note}`
+  }, "\u30EC\u30FC\u30F3\u306E\u5916\u5074\u306E\u7A7A\u3044\u305F\u3068\u3053\u308D\u3078\u3001\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u304C\u51FA\u3066\u62CD\u306B\u5408\u308F\u305B\u3066\u8DF3\u306D\u307E\u3059\u3002\u30CE\u30FC\u30C4\u304C\u898B\u3065\u3089\u3044\u3068\u304D\u3084\u3001\u7AEF\u672B\u304C\u71B1\u304F\u306A\u308A\u3084\u3059\u3044\u3068\u304D\u306F\u8584\u304F\u3059\u308B\u304B\u6B62\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), field('濃さ', segments('sideMonsterOpacity', [['NORMAL', 'はっきり'], ['SOFT', 'ふつう'], ['FAINT', 'うっすら'], ['OFF', '出さない']])), field('動き', segments('sideMonsterMotion', [['NORMAL', '跳ねる'], ['SMALL', '小さく跳ねる'], ['NONE', '動かない']])), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold"
+    className: label
   }, "\u80FD\u529B\u4E2D\u306B\u5149\u3089\u305B\u308B"), toggle('sideMonsterAbilityHighlight', ''))), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-sm font-black text-cyan-200"
-  }, "\u2728 \u6F14\u51FA\u30FB\u7AEF\u672B"), /*#__PURE__*/React.createElement("div", {
-    className: "py-2"
-  }, /*#__PURE__*/React.createElement("p", {
-    className: "mb-2 text-xs font-bold"
-  }, "\u6F14\u51FA\u91CF"), segments('effectAmount', [['NORMAL', '標準'], ['LOW', '少なめ'], ['MINIMAL', '最小']])), /*#__PURE__*/React.createElement("div", {
+    className: head
+  }, "\u2728 \u6F14\u51FA\u30FB\u7AEF\u672B"), field('演出量', segments('effectAmount', [['NORMAL', '標準'], ['LOW', '少なめ'], ['MINIMAL', '最小']])), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold"
+    className: label
   }, "\u632F\u52D5"), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("button", {
@@ -16169,20 +16277,26 @@ const RhythmOptions = ({
     "data-rhythm-vibration-test": true,
     disabled: !RHYTHM_HAPTICS.supported(),
     onClick: () => RHYTHM_HAPTICS.tap(26),
-    className: "min-h-[44px] rounded-xl border border-white/20 bg-slate-900 px-3 text-[10px] font-black text-slate-200 disabled:opacity-40"
+    className: "min-h-[44px] rounded-xl border border-white/20 bg-slate-900 px-3 text-[11px] font-black text-slate-200 disabled:opacity-40"
   }, "\u8A66\u3059"), toggle('vibrationEnabled', ''))), !RHYTHM_HAPTICS.supported() && /*#__PURE__*/React.createElement("p", {
     "data-rhythm-vibration-unsupported": true,
-    className: "pb-2 text-[9px] font-bold leading-relaxed text-amber-200"
+    className: "pb-2 text-[10px] font-bold leading-relaxed text-amber-200"
   }, "\u3053\u306E\u7AEF\u672B\u306F\u632F\u52D5\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u306A\u3044\u305F\u3081\u3001ON\u306B\u3057\u3066\u3082\u632F\u52D5\u3057\u307E\u305B\u3093\uFF08\u97F3\u3068\u30A8\u30D5\u30A7\u30AF\u30C8\u306F\u305D\u306E\u307E\u307E\u51FA\u307E\u3059\uFF09\u3002"), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold"
+    className: label
   }, "\u8EFD\u91CF\u30E2\u30FC\u30C9"), toggle('lightweightMode', '')), /*#__PURE__*/React.createElement("div", {
     className: row
   }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-bold"
-  }, "\u66F2\u3048\u3089\u3073\u3067\u8A66\u8074\u3059\u308B"), toggle('songPreviewEnabled', ''))), /*#__PURE__*/React.createElement("section", {
-    className: "rounded-2xl border border-cyan-400/30 bg-cyan-950/25 p-3 text-[10px] leading-relaxed text-cyan-100"
+    className: label
+  }, "\u66F2\u3048\u3089\u3073\u3067\u8A66\u8074\u3059\u308B"), toggle('songPreviewEnabled', '')), /*#__PURE__*/React.createElement("div", {
+    className: row
+  }, /*#__PURE__*/React.createElement("span", {
+    className: label
+  }, "\u6F14\u594F\u4E2D\u306F\u901A\u77E5\u3092\u51FA\u3055\u306A\u3044"), toggle('quietDuringPlay', '')), /*#__PURE__*/React.createElement("p", {
+    className: `pb-1 ${note}`
+  }, rhythmQuietModeSupportText())), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-cyan-400/30 bg-cyan-950/25 p-4 text-[11px] leading-relaxed text-cyan-100"
   }, "\u5224\u5B9A\u3092\u7518\u304F\u3059\u308B\u8A2D\u5B9A\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u7AEF\u672B\u3054\u3068\u306E\u898B\u3048\u65B9\u30FB\u97F3\u91CF\u30FB\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u8ABF\u6574\u3059\u308B\u9805\u76EE\u3067\u3059\u3002"))), /*#__PURE__*/React.createElement("footer", {
     "data-rhythm-options-actions": true,
     className: "z-20 shrink-0 border-t border-cyan-400/25 bg-slate-950/98 px-3 pt-2 shadow-[0_-8px_24px_rgba(2,6,23,.72)]",
@@ -16191,13 +16305,13 @@ const RhythmOptions = ({
     }
   }, message && /*#__PURE__*/React.createElement("p", {
     role: "status",
-    className: "mb-1 text-center text-[10px] font-black text-amber-300"
+    className: "mb-1 text-center text-[11px] font-black text-amber-300"
   }, message), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-[.9fr_1.1fr] gap-2"
+    className: "grid grid-cols-[.9fr_1.1fr] gap-3"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: resetDraft,
-    className: "min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[11px] font-black"
+    className: "min-h-[52px] rounded-xl border border-white/20 bg-slate-800 px-2 text-[12px] font-black"
   }, "\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: saveDraft,
@@ -16864,6 +16978,9 @@ const RhythmMonsterSlotsPanel = ({
 // デバッグ専用の表示(HOLD TEST / 中断して音ゲーデバッグへ戻る / 座標校正)は、
 // ここが true のときだけ出す。体験版から入ったプレイヤーの画面へ出してはいけない
 // (2026-09-05・実機の指摘「ここがデバッグのままになってる」)。
+// tutorial … 「あそびかた練習」で開いたかどうか。
+// 演奏画面をそのまま使って各ノーツの操作を1つずつ覚える(2026-09-05・ユーザー指示)。
+// 練習なのでライフは減らさず、スコアも記録も残さない。
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -16872,7 +16989,8 @@ const RhythmTapTest = ({
   monsterEntries,
   onComplete,
   onExit,
-  debugPlay = false
+  debugPlay = false,
+  tutorial = false
 }) => {
   const chart = song.difficulties[difficulty.id],
     laneRefs = useRef([]),
@@ -16886,7 +17004,13 @@ const RhythmTapTest = ({
     generationRef = useRef(0),
     mountedRef = useRef(false),
     glowNodesRef = useRef(null);
+  const tutorialBannerRef = useRef(null),
+    tutorialStepRef = useRef(null);
   const hasHold = chart.notes.some(note => note.type === 'HOLD');
+  // デバッグ画面で譜面の中身をひと目で見るための表記。プレイヤーの画面には出さない。
+  // 以前は data/rhythm-mode.js が DOM を直接 'MIX TEST' へ書き換えていて、
+  // 体験版から入ったプレイヤーの画面にも出ていた(2026-09-05・実機の指摘)
+  const debugChartLabel = chart.notes.some(note => note.type === 'FLICK' || note.type === 'SLIDE') ? 'MIX TEST' : hasHold ? 'HOLD TEST' : 'TAP TEST';
   // モンスターノーツで使うマスモン。枠の順(1〜4)がそのまま登場順(§3.3)。
   // useCallbackの依存を毎回変えないようrefで持つ
   const monsters = Array.isArray(monsterEntries) ? monsterEntries : [];
@@ -17289,7 +17413,8 @@ const RhythmTapTest = ({
     if (side) run[side.toLowerCase()]++;
     const songTimeMs = run.audio?.songTimeMs?.() ?? 0;
     // ライフ変化は能力(無敵・我慢)を通してから反映する。判定・コンボ・スコアそのものは変えない(§4.2)
-    run.life = rhythmLifeAfterWithMonsterAbilities(run.life, judgment, run.abilities, songTimeMs);
+    // 練習ではライフを減らさない。途中で倒れると、まだ習っていないノーツまで届かなくなる
+    run.life = tutorial ? RHYTHM_LIFE_MAX : rhythmLifeAfterWithMonsterAbilities(run.life, judgment, run.abilities, songTimeMs);
     let revived = false,
       abilityFlash = null;
     // 根性ストックを持ったままライフが0になったら、その場で自動的にライフ50へ復活する(§4.4)
@@ -17370,7 +17495,7 @@ const RhythmTapTest = ({
     }));
     scheduleJudgmentClear();
     if (abilityFlash) scheduleAbilityClear();
-  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled]);
+  }, [chart.totalNotes, difficulty.maxScore, scheduleAbilityClear, scheduleJudgmentClear, settings.vibrationEnabled, tutorial]);
   const finish = useCallback(() => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
@@ -17463,6 +17588,20 @@ const RhythmTapTest = ({
         travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
       let perfScanned = 0,
         perfDrawn = 0;
+      // 練習の説明。曲の時刻で切り替わる。変わったときだけDOMへ書く(毎フレームReactを動かさない)
+      if (tutorial) {
+        const step = rhythmTutorialStepAt(songTimeMs);
+        if (step !== tutorialStepRef.current) {
+          tutorialStepRef.current = step;
+          const banner = tutorialBannerRef.current;
+          if (banner) {
+            const title = banner.querySelector('[data-rhythm-tutorial-title]'),
+              body = banner.querySelector('[data-rhythm-tutorial-text]');
+            if (title) title.textContent = step.title;
+            if (body) body.textContent = step.text;
+          }
+        }
+      }
       const visitNote = note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
         // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
@@ -17648,7 +17787,7 @@ const RhythmTapTest = ({
       if (songTimeMs >= playEndTimeMs || run.audio.ended()) finish();else frameRef.current = requestAnimationFrame(tick);
     };
     frameRef.current = requestAnimationFrame(tick);
-  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame]);
+  }, [applyJudgment, chart.durationMs, finish, measureTravel, settings.judgmentTimingOffsetMs, settings.noteSpeed, song.playDurationMs, stopFrame, tutorial]);
   const disposeRun = useCallback(() => {
     stopFrame();
     clearJudgmentTimer();
@@ -18180,7 +18319,7 @@ const RhythmTapTest = ({
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, debugPlay ? hasHold ? 'HOLD TEST' : 'TAP TEST' : `Lv.${chart.level}`))), /*#__PURE__*/React.createElement("div", {
+  }, tutorial ? 'れんしゅう' : debugPlay ? debugChartLabel : `Lv.${chart.level}`))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-song": true,
     className: "mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0",
     style: {
@@ -18306,7 +18445,17 @@ const RhythmTapTest = ({
       bottom: 'calc(12% + 78px)',
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.8)'
     }
-  }, view.ability.ability, "\uFF01"), noteElements, view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
+  }, view.ability.ability, "\uFF01"), noteElements, tutorial && /*#__PURE__*/React.createElement("div", {
+    ref: tutorialBannerRef,
+    "data-rhythm-tutorial-banner": true,
+    className: "pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"
+  }, /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-tutorial-title": true,
+    className: "block text-[14px] font-black text-cyan-100"
+  }, RHYTHM_TUTORIAL_STEPS[0].title), /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-tutorial-text": true,
+    className: "mt-1 block text-[11px] font-bold leading-relaxed text-slate-200"
+  }, RHYTHM_TUTORIAL_STEPS[0].text)), view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-pause-menu": true,
     "data-rhythm-debug-play": debugPlay ? '1' : undefined,
     className: "absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
@@ -18322,7 +18471,7 @@ const RhythmTapTest = ({
     "data-rhythm-pause-exit": true,
     className: "min-h-[48px] w-full rounded-xl bg-rose-800 font-black",
     onClick: abort
-  }, debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る'))));
+  }, tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る'))));
 };
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -22367,6 +22516,12 @@ function MonsterHeroGame() {
     });
     return () => cancelAnimationFrame(id);
   }, [gameState, battleMode]);
+  // 演奏が終わったら「演奏中は通知を出さない」で入った全画面と画面ロック防止を戻す。
+  // 演奏中(RHYTHM_PLAY)以外になった時点で戻すので、リザルトや中断でも取り残されない。
+  useEffect(() => {
+    if (gameState === 'RHYTHM_PLAY') return;
+    RHYTHM_QUIET_MODE.exit();
+  }, [gameState]);
   // モンビーの「🔄」で横に固定したまま外へ出たら、向きの固定と全画面を戻す。
   // 戻さないと、HOMEやバトルまで横＋全画面のままになって画面が崩れる。
   // モンビーの中(RHYTHM_*)を移動しているあいだは戻さない。
@@ -25774,12 +25929,18 @@ function MonsterHeroGame() {
     }
     if (kind === 'battleGuide') return;
     // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
+    // モンビーの案内は村の案内とは別のキーへ。片方を見たからもう片方が出ない、を起こさない。
+    // 最後まで読んだときだけ、そのまま「あそびかた練習」(演奏画面で叩いて覚える)へ入る。
+    // スキップした人を練習へ連れて行かないのは、読むのをやめた人がさらに長い画面へ入るのを避けるため
+    // (練習は「📖 遊びかた」からいつでも始められる)。
     if (kind === 'rhythm') {
       if (remember) {
         try {
           await storeSet(RHYTHM_TUTORIAL_SEEN_KEY, true, false);
         } catch {}
       }
+      if (remember && rhythmTutorialToPracticeRef.current) startRhythmPractice();
+      rhythmTutorialToPracticeRef.current = false;
       return;
     }
     if (remember) {
@@ -25807,6 +25968,9 @@ function MonsterHeroGame() {
   // モンビー(モンヒロビート)の曲えらびを初めて開いたときに、助手の案内を一度だけ出す。
   // 村の案内・バトルの案内とは別の保存キーなので、互いに邪魔をしない。
   const rhythmTutorialCheckedRef = useRef(false);
+  // 初回の案内を最後まで読んだときだけ、そのまま「あそびかた練習」へ続ける。
+  // 「もう一度チュートリアルを見る」から開いたときは続けない(読み直したいだけのことが多いため)
+  const rhythmTutorialToPracticeRef = useRef(false);
   useEffect(() => {
     if (gameState !== 'RHYTHM_DEMO_HOME' || tutorialStep != null || rhythmTutorialCheckedRef.current) return;
     rhythmTutorialCheckedRef.current = true;
@@ -25814,6 +25978,7 @@ function MonsterHeroGame() {
     (async () => {
       const seen = await storeGet(RHYTHM_TUTORIAL_SEEN_KEY, false, false);
       if (!cancelled && seen !== true) {
+        rhythmTutorialToPracticeRef.current = true;
         setTutorialKind('rhythm');
         setTutorialStep(0);
       }
@@ -25827,6 +25992,18 @@ function MonsterHeroGame() {
     setGameState('RHYTHM_DEMO_HOME');
     setTutorialKind('rhythm');
     setTutorialStep(0);
+  };
+  // 【2026-09-05・ユーザー指示】「実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
+  // 説明を読むだけでなく、演奏画面をそのまま使って1種類ずつ叩いて覚える。
+  // 記録は残さない(from:'tutorial' を見て onComplete が保存を飛ばす)。
+  const startRhythmPractice = () => {
+    if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+    setRhythmPlay({
+      song: RHYTHM_TUTORIAL_SONG,
+      difficulty: RHYTHM_TUTORIAL_DIFFICULTY,
+      from: 'tutorial'
+    });
+    setGameState('RHYTHM_PLAY');
   };
 
   // 既存の村案内とは別に、バトルチュートリアルをまだ完了していない人へ一度だけ案内する。
@@ -36324,16 +36501,20 @@ function MonsterHeroGame() {
       monsterEntries: rhythmMonsterNoteEntries,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       onComplete: async (result, merged) => {
+        // あそびかた練習は記録を残さない。自己ベストにも全国ランキングにも触れない
+        // (CLAUDE.md ⑦「消さない・上書きしない」。練習で自己ベストが上書きされてはいけない)
+        if (rhythmPlay.from === 'tutorial') return;
         const records = await saveRhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id, merged);
         setRhythmBestRecords(records);
         if (rhythmPlay.from === 'demo') submitRhythmRankingScore(rhythmPlay.song, rhythmPlay.difficulty, result);
       },
       onExit: () => {
-        const back = rhythmPlay.from === 'demo' ? 'RHYTHM_DEMO_HOME' : 'RHYTHM_DEBUG';
+        const back = rhythmPlay.from === 'debug' ? 'RHYTHM_DEBUG' : 'RHYTHM_DEMO_HOME';
         setRhythmPlay(null);
         setGameState(back);
       },
-      debugPlay: rhythmPlay.from !== 'demo'
+      debugPlay: rhythmPlay.from === 'debug',
+      tutorial: rhythmPlay.from === 'tutorial'
     }), gameState === 'RHYTHM_OPTIONS' && /*#__PURE__*/React.createElement(RhythmOptions, {
       value: rhythmSettings,
       onBack: () => setGameState(rhythmOptionsBack),
@@ -36402,6 +36583,7 @@ function MonsterHeroGame() {
         onDifficultyId: setRhythmSelectedDifficultyId,
         spotClass: spotClass,
         onPlay: (song, difficulty) => {
+          /* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。   画面が変わってから頼むと、ブラウザに断られる */if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
           setRhythmPlay({
             song,
             difficulty,
@@ -36457,11 +36639,17 @@ function MonsterHeroGame() {
       }), /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "rhythmHelp"
       }), /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-practice": true,
+        onClick: startRhythmPractice,
+        className: "mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950"
+      }, "\uD83E\uDD41 \u53E9\u3044\u3066\u7DF4\u7FD2\u3059\u308B"), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2 text-[10px] leading-relaxed text-slate-400"
+      }, "\u5B9F\u969B\u306E\u30D7\u30EC\u30A4\u753B\u9762\u3067\u3001\u30BF\u30C3\u30D7\u30FB\u540C\u6642\u62BC\u3057\u30FB\u30DB\u30FC\u30EB\u30C9\u30FB\u30B9\u30E9\u30A4\u30C9\u30FB\u30D5\u30EA\u30C3\u30AF\u30FB\u7D42\u70B9\u30D5\u30EA\u30C3\u30AF\u30FB\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u30921\u3064\u305A\u3064\u7DF4\u7FD2\u3057\u307E\u3059\u3002\u7D0420\u79D2\u3067\u3059\u3002\u30B9\u30B3\u30A2\u3082\u81EA\u5DF1\u30D9\u30B9\u30C8\u3082\u6B8B\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-help-tutorial": true,
         onClick: startRhythmTutorial,
         className: "mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white"
       }, "\uD83C\uDF93 \u3082\u3046\u4E00\u5EA6\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-[9px] leading-relaxed text-slate-500"
+        className: "mt-2 text-[10px] leading-relaxed text-slate-400"
       }, "\u66F2\u3048\u3089\u3073\u3078\u623B\u3063\u3066\u3001\u52A9\u624B\u304C\u6700\u521D\u304B\u3089\u8AAC\u660E\u3057\u307E\u3059\u3002\u4F55\u5EA6\u3067\u3082\u898B\u3089\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "mt-4 space-y-3"
       }, topics.length === 0 ? /*#__PURE__*/React.createElement("p", {
@@ -36768,7 +36956,8 @@ function MonsterHeroGame() {
           onClick: () => {
             setRhythmPlay({
               song,
-              difficulty
+              difficulty,
+              from: 'debug'
             });
             setGameState('RHYTHM_PLAY');
           }

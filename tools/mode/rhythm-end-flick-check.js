@@ -132,9 +132,18 @@ note=start('HOLD',true);
 frame(1800);frame(2000);frame(2200);
 check('押しっぱなしのまま終端を過ぎたら従来どおりMISSガードが働く',note.holdJudgment==='MISS',note.holdJudgment);
 
+// 【2026-09-05・指の置き換えに対応してから】
+// 受付前に離しても、その場では判定を確定しない。持ち替えの途中かもしれないので
+// 「浮いている」状態にして、戻ってこなければ本体のrAFが猶予(200ms)後にMISSにする。
+// 終点フリックのノーツでも持ち替えはできる(押さえ直してから終わりで払う)
 note=start('HOLD',true);
 now=1500;runtime.release('touch:1');// 受付前に離した
-check('受付前に離してもMISS',note.holdJudgment==='MISS',note.holdJudgment);
+check('受付前に離しても、その場では判定を確定しない',note.holdJudgment!=='MISS'&&note.releasedAtMs!=null,note.holdJudgment);
+check('終わりの時刻を書き換えない(押さえ直せば続きから払える)',note.endTimeMs===2000,String(note.endTimeMs));
+// 指が取り消されたときは持ち替えではないので、これまでどおりMISSで確定する
+note=start('HOLD',true);
+now=1500;runtime.release('touch:1',true);
+check('指が取り消されたときはMISSで確定する',note.holdJudgment==='MISS',note.holdJudgment);
 
 // --- 7. 実装の形 ---
 check('受付に入ったら追従の外れ計測を捨てる',source.includes('session.trackingBadSincePerf=null;')

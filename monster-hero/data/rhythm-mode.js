@@ -1408,13 +1408,26 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     //
     // 【どう直したか】
     // **まだ叩いていない、時刻を過ぎたノーツ**（＝遅れて叩いているぶん）を先に見る。
-    // ノーツは前から順に来るので、前を飛ばして次を取ると必ず破綻するため。
     // 遅れ側に候補が無いときだけ、これから来るノーツ（早く押した場合）を見る。
-    // どちらの側でも、そのなかでは時間がいちばん近いもの、同じなら押した位置に
-    // いちばん近いものを選ぶ。
     //
-    // これで「1つめを叩き損ねて2つめのタイミングで叩いた」ときも、
-    // 2つめ(差0ms)のほうが1つめ(差176ms)より近いので2つめが取れる＝ずれ込まない。
+    // 過ぎている側が2つ以上あるときは、**いちばん後ろ（時刻の新しいほう）**を取る。
+    // ここは2026-09-05に2回直している。
+    //   1回目 … 時間の差の**絶対値**でいちばん近いものを選んでいた。
+    //           1つめの0.06秒あとに叩くと、0.088秒先の2つめのほうが「近い」ことになって
+    //           まだ来ていないノーツを取ってしまう
+    //           (ユーザー指摘「次のノーツのBad範囲内に入るとそっちを拾ってる」)。
+    //   2回目 … そこで「過ぎている中でいちばん前」にしたところ、今度は逆に
+    //           **後ろのノーツを巻き込む**ようになった。16分(0.088秒)で並ぶ2つを、
+    //           2つめの時刻ちょうどで叩いても1つめが取られ、2つめは必ずMISSになる。
+    //           1回の入力で2つ崩れる(ユーザー指摘「あとのノーツを巻き込んでる」)。
+    //
+    // 「過ぎている中でいちばん後ろ」なら両方とも起きない。
+    //   ・1つめの0.06秒あと … 2つめはまだ来ていない(過ぎていない)ので1つめが取れる
+    //   ・2つめの時刻ちょうど … 2つめも過ぎているので2つめが取れる。1つめだけがMISS
+    // つまり1つのノーツが取られるのは「次のノーツの時刻が来るまで」。
+    // 判定の受付幅(前後0.24秒)がノーツの間隔(16分で0.088秒)より広くても、
+    // 受け付ける相手が前後へ滑らない。
+    // 同じ時刻に複数あるときだけ、押した位置にいちばん近いものを選ぶ。
     let picked=null,pickedIndex=-1,pickedRank=Infinity,pickedNoteTime=Infinity,pickedSpatialDistance=Infinity;
     for(let index=matchStart;index<matchEnd;index++){
       const note=source[index];
@@ -1424,14 +1437,13 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       if(!(timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS)||!acceptsPosition(note))continue;
       const distance=spatialDistance(note);
       const rank=now>=noteTime?0:1;   // 0=時刻を過ぎている(遅れ) / 1=まだ来ていない(早い)
-      // 同じ組の中では、時刻が早いノーツから順に取る。
-      // 過ぎているノーツが2つ以上あるとき「時間の差が近いほう」で選ぶと、
-      // 前のノーツを飛ばして後ろを取ってしまい、前は必ずMISSになる
-      // (16分で1個分ちょうど遅れて叩くと、まさにこれが起きていた)。
-      // ノーツは前から順に来るので、遅れて叩いたぶんは「まだ残っている中でいちばん前」へ渡す。
+      // 過ぎている側は「いちばん後ろ」、まだ来ていない側は「いちばん前」。
+      // どちらも「いま叩いたのはどれのつもりか」がいちばん自然になる選び方で、
+      // 前後のノーツを巻き込まない(上の説明を参照)。
+      const better=rank===0?noteTime>pickedNoteTime:noteTime<pickedNoteTime;
       if(!picked
         ||rank<pickedRank
-        ||(rank===pickedRank&&(noteTime<pickedNoteTime
+        ||(rank===pickedRank&&(better
           ||(noteTime===pickedNoteTime&&distance<pickedSpatialDistance)))){
         picked=note;pickedIndex=index;pickedRank=rank;pickedNoteTime=noteTime;pickedSpatialDistance=distance;
       }
@@ -6948,6 +6960,85 @@ const RHYTHM_SONG_ENTRIES = [
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[id,id==='HARD'?atsuCupDebugShortChart:emptyRhythmChart()])))
   }),
 ];
+// ============================================================================
+// 操作を覚えるためのチュートリアル譜面
+// ============================================================================
+// 【2026-09-05・ユーザー指示】
+// 「初回チュートリアルモードを作ったのに実装されてなかったからいれて／チュートリアル追加／
+//   実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
+//
+// それまでのチュートリアルは曲えらびの画面で助手が説明するだけで、
+// **実際に叩いて覚える場所が無かった**。ここは演奏画面をそのまま使い、
+// ノーツの種類を1つずつ、間を空けて出す専用の譜面。
+//
+// ・曲は「MF × ICHIKA MIX」(atsu_cup_theme)の頭を使う。拍(355.03ms)に合わせて置くので、
+//   練習でも曲に乗って叩ける。専用の音源は増やさない
+// ・スコア・自己ベスト・全国ランキングには**一切残さない**(遊びの記録ではないため)
+// ・ライフは減っても失敗にならない。何度でも通せる
+// ・説明はノーツが出る前に画面へ出し、叩く番になったら消える
+const RHYTHM_TUTORIAL_TRACK_ID='atsu_cup_theme';
+const RHYTHM_TUTORIAL_BEAT_MS=355.0295857988166;   // rhythm-timing.js の atsu_cup_theme と同じ値
+const RHYTHM_TUTORIAL_BEAT_ZERO_MS=40;
+// 拍番号 → ミリ秒。ここを1か所にしておかないと、説明とノーツがずれる
+const rhythmTutorialMs=beat=>Math.round(RHYTHM_TUTORIAL_BEAT_ZERO_MS+beat*RHYTHM_TUTORIAL_BEAT_MS);
+const rhythmTutorialNotes=(()=>{
+  const t=rhythmTutorialMs;
+  return [
+    // ① タップ … いちばん基本。真ん中で幅を広めにして、まず「重なったら叩く」を覚える
+    mhTap(t(6),3,4,0), mhTap(t(8),3,4,0), mhTap(t(10),3,4,0), mhTap(t(12),3,4,0),
+    // ② 同時押し … 左右の端へ1つずつ。指2本で押す形
+    mhTap(t(17),0,3,0), mhTap(t(17),7,3,0),
+    mhTap(t(19),0,3,0), mhTap(t(19),7,3,0),
+    // ③ ホールド … 押さえたまま、終わりのバーが来たら離す
+    mhHoldV2(t(24),3,4,t(27)),
+    mhHoldV2(t(29),3,4,t(32)),
+    // ④ スライド … 押さえたまま帯をなぞる。左から右へ
+    mhSlideV2(t(37),t(41),[[t(37),0,3],[t(39),2,3],[t(41),4,3]]),
+    // ⑤ フリック … 上へ払う
+    mhFlick(t(46),3,4), mhFlick(t(48),3,4),
+    // ⑥ 終点フリック … 離す代わりに、そのまま上へ払って終わる
+    mhHoldV2(t(53),3,4,t(56),1),
+    // ⑦ モンスターノーツ … 設定していれば絵が出る。設定が無ければただのタップとして流れる
+    mhTap(t(61),3,4,1),
+  ];
+})();
+const RHYTHM_TUTORIAL_END_MS=rhythmTutorialMs(66);
+const RHYTHM_TUTORIAL_CHART=Object.freeze({
+  level:1,notes:Object.freeze(rhythmTutorialNotes),
+  totalNotes:rhythmTutorialNotes.length,durationMs:RHYTHM_TUTORIAL_END_MS,
+});
+// 画面へ出す説明。fromMs から次の説明までのあいだ出しっぱなしにする。
+// ノーツが来る2拍前には出し終えているので、読んでから構えられる
+const RHYTHM_TUTORIAL_STEPS=Object.freeze([
+  {fromMs:0,             title:'まずは「タップ」',       text:'ノーツが下の判定ラインに重なった瞬間に、画面を叩きます。'},
+  {fromMs:rhythmTutorialMs(14), title:'2つ同時に「同時押し」', text:'左右に1つずつ出ます。指を2本置いて、同時に叩きます。'},
+  {fromMs:rhythmTutorialMs(22), title:'押さえ続ける「ホールド」', text:'叩いたまま押さえて、終わりの光る横棒が判定ラインへ来たら離します。'},
+  {fromMs:rhythmTutorialMs(34), title:'なぞる「スライド」',   text:'押さえたまま、帯の道すじを指でなぞります。途中で指を離さないように。'},
+  {fromMs:rhythmTutorialMs(43), title:'払う「フリック」',     text:'緑のノーツは、叩いたあと指を上へ払います。向きは上だけです。'},
+  {fromMs:rhythmTutorialMs(50), title:'「終点フリック」',     text:'終わりの横棒が緑で「⇧」が付いているホールドは、離さずにそのまま上へ払って終わります。'},
+  {fromMs:rhythmTutorialMs(58), title:'「モンスターノーツ」', text:'金色のノーツです。GREATより良い判定で取ると、設定したマスモンの能力が出ます。'},
+  {fromMs:rhythmTutorialMs(63), title:'ここまで！',           text:'おつかれさま。あとは曲をえらんで遊んでみてください。'},
+]);
+// いまの時刻に出す説明。曲が始まる前(マイナス)でも先頭を出す
+const rhythmTutorialStepAt=songTimeMs=>{
+  const now=Number(songTimeMs);
+  let found=RHYTHM_TUTORIAL_STEPS[0];
+  for(const step of RHYTHM_TUTORIAL_STEPS){
+    if(Number.isFinite(now)&&now>=step.fromMs)found=step;
+  }
+  return found;
+};
+const RHYTHM_TUTORIAL_SONG=Object.freeze({
+  songId:'rhythm_tutorial',
+  displayName:'あそびかた練習',
+  bgmTrackId:RHYTHM_TUTORIAL_TRACK_ID,
+  playDurationMs:RHYTHM_TUTORIAL_END_MS,
+  difficulties:Object.freeze({TUTORIAL:RHYTHM_TUTORIAL_CHART}),
+});
+// 練習の満点は EASY と同じ値にしておく。スコアは記録に残さないが、
+// ランクのゲージや「→次のランク」の表示が満点を分母に使うので、0や1にすると壊れる
+const RHYTHM_TUTORIAL_DIFFICULTY=Object.freeze({id:'TUTORIAL',maxScore:600000,label:'れんしゅう'});
+
 const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>Object.freeze({...song,
   difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>
     [id,rhythmChartWithLevel(song.songId,id,song.difficulties[id])])))})));
@@ -7114,16 +7205,16 @@ const installRhythmGestureVisuals=()=>{
       body.setAttribute('aria-hidden','true');
       el.insertBefore(body,el.firstChild);
     });
-    // HUDの中から目印で探す。以前は「HUDの最初の<small>」という位置頼みで拾っていたため、
-    // HUDの並び順を変えたときにBEST行を'MIX TEST'で上書きしてしまう不具合を出した。
-    const label=document.querySelector('[data-rhythm-mode-label]');
-    const hasGestureNotes=els.some(el=>el.dataset.noteType==='FLICK'||el.dataset.noteType==='SLIDE');
-    if(label&&hasGestureNotes&&label.textContent!=='MIX TEST')label.textContent='MIX TEST';
+    // ここでHUDの表記を 'MIX TEST' へ書き換えていた(デバッグ画面で譜面の種類を見るためのもの)。
+    // FLICK/SLIDEを含む譜面ならいつでも書き換えていたので、
+    // 体験版から入ったプレイヤーの画面にも「MIX TEST」と出ていた
+    // (2026-09-05・実機の指摘「ここがデバッグのままになってる」)。
+    // 表記はReact側(data-rhythm-mode-label)が譜面から決めるので、ここでは触らない。
   };
   // decorate() は area 配下の全ノーツを引き直すので、DOMのどんな変化でも走ると重い。
   // (スコア・コンボ・判定表示の書き換えなど、ノーツと無関係な変化でも呼ばれていた)
   // ノーツ・プレイエリア・モード表記が増減したときだけ走らせる。やることは変えない。
-  const RHYTHM_DECORATE_TARGET='[data-rhythm-note],[data-rhythm-play-area],[data-rhythm-mode-label]';
+  const RHYTHM_DECORATE_TARGET='[data-rhythm-note],[data-rhythm-play-area]';
   const touchesPlayDom=records=>records.some(record=>{
     if(record.type!=='childList')return false;
     const hit=node=>node&&node.nodeType===1

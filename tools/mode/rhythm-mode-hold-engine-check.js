@@ -15,14 +15,20 @@ check('終端到達でHOLDを自動確定',game.includes("note.type==='HOLD'&&no
 // 終端100ms手前まで来ていれば、離しても成立する。
 // それより早く離した場合は、すぐMISSにはせず持ち替えの猶予(120ms)を待ち、
 // 戻ってこなければそこでMISSにする(2026-09-05・指の置き換えに対応)
+// 猶予の定数は data/rhythm-mode.js が持つ(持ち替えは「離す側」と「結びつける側」の
+// 両方が同じ数字を見ないと成立しないため。2026-09-05に1か所へまとめた)
 check('終端100ms手前まで来ていれば離しても成立',
-  game.includes('const RHYTHM_HOLD_RELEASE_GRACE_MS=100')
+  data.includes('const RHYTHM_HOLD_RELEASE_GRACE_MS=100')
   && game.includes("if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}"));
 check('それより早い離しは、持ち替えの猶予を待ってからMISS',
-  game.includes('const RHYTHM_HOLD_HANDOVER_GRACE_MS=120')
-  && game.includes('else{note.releasedAtMs=now;}')
+  /const RHYTHM_HOLD_HANDOVER_GRACE_MS=\d+;/.test(data)
+  && game.includes('else{note.releasedAtMs=now;rhythmFloatingNoteAdd(note);}')
   && game.includes("songTimeMs-note.releasedAtMs>=RHYTHM_HOLD_HANDOVER_GRACE_MS")
   && game.includes("applyJudgment(note,'MISS',releasedAt-holdEndMs)"));
+// 離した瞬間に終端判定を作ってしまうと、上の「猶予を待つ」分岐へ一度も入らない。
+// 実際にそうなっていて、持ち替えが一度も成立していなかった(2026-09-05・実機の指摘)
+check('離した瞬間に終端判定を作らない(猶予の分岐へ必ず入る)',
+  data.includes('if(!cancelled&&!session.failed&&releaseDelta<-RHYTHM_HOLD_RELEASE_GRACE_MS){'));
 check('入力ID別Mapで複数入力を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(input.inputKey,target.index)')&&game.includes('run.activePointers.get(input.inputKey)'));
 check('HOLD表示は専用ボディを持ち、rAF内transform/opacity中心',game.includes('data-rhythm-hold-body')&&game.includes("--rhythm-hold-body")&&game.includes('yPx=Math.round(yPx);')&&game.includes('const nextTransform=`translate3d(0,${yPx}px,0)`;')&&game.includes('if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;')&&!game.includes('el.style.transform=`translate3d(0,${yPx}px,0) scale(')&&game.includes('requestAnimationFrame(tick)'));
 check('ポーズ・再スタート・中断で入力管理を残さない',game.includes('run.activePointers.clear();run.activeTouchInputs?.clear();')&&game.includes('activePointers:new Map(),activeTouchInputs:new Set()')&&game.includes('run.finished=true;run.paused=true;run.activePointers.clear();run.activeTouchInputs?.clear();')&&game.includes('disposeRun();'));

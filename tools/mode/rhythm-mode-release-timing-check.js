@@ -7,7 +7,7 @@ const prefix=source.split('const emptyRhythmChart',1)[0];
 let now=0,rafCb=null;
 const context={console,performance:{now:()=>now},requestAnimationFrame:cb=>{rafCb=cb;return 1;},cancelAnimationFrame:()=>{rafCb=null;}};
 vm.createContext(context);
-vm.runInContext(prefix+'\nthis.out={RHYTHM_GESTURE_RUNTIME,rhythmJudgeRelease,rhythmWorseJudgment};',context);
+vm.runInContext(prefix+'\nthis.out={RHYTHM_GESTURE_RUNTIME,rhythmJudgeRelease,rhythmWorseJudgment};\nthis.out2={RHYTHM_FLOATING_NOTES};',context);
 const {RHYTHM_GESTURE_RUNTIME:runtime,rhythmJudgeRelease,rhythmWorseJudgment}=context.out;
 let failed=0;const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 for(const [delta,expected] of [[0,'MARVELOUS'],[55,'MARVELOUS'],[56,'EXCELLENT'],[100,'EXCELLENT'],[101,'GREAT'],[150,'GREAT'],[151,'GOOD'],[200,'GOOD'],[201,'BAD'],[240,'BAD'],[241,'MISS'],[-241,'MISS']])check(`終端 ${delta}ms => ${expected}`,rhythmJudgeRelease(delta)===expected);
@@ -17,7 +17,18 @@ let note=fresh();now=1000;runtime.release('touch:1');check('HOLDは終端ちょ�
 // 判定窓を広げたので、GOODになる遅れも変わる(+150msは今はGREAT)。
 note=fresh('HOLD','MARVELOUS');now=1180;runtime.release('touch:1');check('HOLD終端+180msはGOOD',note.holdJudgment==='GOOD');
 note=fresh('HOLD','GREAT',80);now=1000;runtime.release('touch:1');check('開始GREAT/終了MARVELOUSはGREAT',note.holdJudgment==='GREAT'&&note.holdDeltaMs===80);
-note=fresh();now=709;runtime.release('touch:1');check('240msより早い離しはMISS',note.holdJudgment==='MISS');
+// 【2026-09-05・指の置き換えに対応してから】
+// 終わりよりずっと手前(終わり際の猶予100msより前)で離したときは、その場で判定を確定しない。
+// 持ち替えの途中かもしれないので「浮いている」状態にして、
+// 戻ってこなければ game-system.jsx の rAF が猶予(200ms)後にMISSにする。
+// ここで終端判定を作ってしまうと、猶予を見る分岐へ一度も入らず持ち替えができない
+note=fresh();now=709;runtime.release('touch:1');
+check('終わりよりずっと手前で離したら、その場で判定を確定しない',note.holdJudgment==='MARVELOUS'&&note.releasedAtMs!=null);
+check('浮いているノーツとして控えに入る',context.out2.RHYTHM_FLOATING_NOTES.has(note));
+check('終わりの時刻を書き換えない(戻ってきたら続きから押さえられる)',note.endTimeMs===2000);
+// 指が取り消された(pointercancel)ときは持ち替えではないので、これまでどおり確定させる
+note=fresh();now=709;runtime.release('touch:1',true);
+check('指が取り消されたときはMISSで確定する',note.holdJudgment==='MISS');
 note=fresh();now=1241;runtime.release('touch:1');check('240msより遅い離しはMISS',note.holdJudgment==='MISS');
 note=fresh();now=1000;runtime.release('touch:1',true);check('touchcancel/pointercancelはMISS',note.holdJudgment==='MISS');
 note=fresh();now=1090;let cb=rafCb;cb&&cb();check('終端100ms前から旧自動成功を+241msへ延期',note.endTimeMs===2241);

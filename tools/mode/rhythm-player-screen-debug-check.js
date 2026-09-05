@@ -22,6 +22,7 @@ const root = path.resolve(TOOLS_DIR, '..');
 const web = path.join(root, 'monster-hero');
 const game = fs.readFileSync(path.join(web, 'src/game-system.jsx'), 'utf8');
 const calibration = fs.readFileSync(path.join(web, 'data/rhythm-geometry-calibration.js'), 'utf8');
+const calibrationRhythm = fs.readFileSync(path.join(web, 'data/rhythm-mode.js'), 'utf8');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -36,20 +37,31 @@ const grab = (from, to) => {
 
 // ---- 出し分けの土台 ----
 check('演奏画面が「デバッグから始めたか」を受け取る',
-  /const RhythmTapTest=\(\{[^}]*debugPlay=false\}\)/.test(game));
-check('体験版から始めたときは false になる',
-  game.includes("debugPlay={rhythmPlay.from!=='demo'}"));
+  /const RhythmTapTest=\(\{[^}]*debugPlay=false,tutorial=false\}\)/.test(game));
+check('デバッグ画面から始めたときだけ true になる',
+  game.includes("debugPlay={rhythmPlay.from==='debug'}")
+  && game.includes("setRhythmPlay({song,difficulty,from:'debug'})"));
+check('あそびかた練習も別に見分けている',
+  game.includes("tutorial={rhythmPlay.from==='tutorial'}"));
 check('画面を2つに分けていない(判定や描画を二重管理しない)',
   (game.match(/const RhythmTapTest=/g) || []).length === 1);
 
 // ---- HUD ----
-check('プレイヤーの画面に「HOLD TEST / TAP TEST」を出さない',
-  game.includes("{debugPlay?(hasHold?'HOLD TEST':'TAP TEST'):`Lv.${chart.level}`}"));
+check('プレイヤーの画面に「HOLD TEST / TAP TEST / MIX TEST」を出さない',
+  game.includes("{tutorial?'れんしゅう':debugPlay?debugChartLabel:`Lv.${chart.level}`}"));
+// data/rhythm-mode.js が DOM を直接書き換えて 'MIX TEST' にしていた。
+// React側で出し分けても、こちらが動いていればプレイヤーの画面へ出てしまう
+// (FLICK/SLIDEを含む譜面＝HARD以上のすべての曲で出ていた)
+check('データ側からHUDの表記を書き換えていない',
+  !/label\.textContent='MIX TEST'/.test(calibrationRhythm)
+  && !/querySelector\('\[data-rhythm-mode-label\]'\)/.test(calibrationRhythm));
+check('譜面の中身の表記はデバッグのときだけ使う',
+  /const debugChartLabel=chart\.notes\.some\(note=>note\.type==='FLICK'\|\|note\.type==='SLIDE'\)\?'MIX TEST'/.test(game));
 
 // ---- ポーズ ----
 const pause = grab('data-rhythm-pause-menu', '</div>}</div></main>;');
 check('ポーズの戻り先がプレイヤー向けの言い方になる',
-  pause.includes("{debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}"));
+  pause.includes("{tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}"));
 check('「音ゲーデバッグへ戻る」を無条件では出していない',
   !/>中断して音ゲーデバッグへ戻る</.test(game));
 check('ポーズにデバッグ印を付けるのはデバッグのときだけ',
