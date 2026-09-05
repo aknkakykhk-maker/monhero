@@ -31,7 +31,14 @@ check('離した瞬間に終端判定を作らない(猶予の分岐へ必ず入
   data.includes('if(!cancelled&&!session.failed&&releaseDelta<-RHYTHM_HOLD_RELEASE_GRACE_MS){'));
 check('入力ID別Mapで複数入力を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(input.inputKey,target.index)')&&game.includes('run.activePointers.get(input.inputKey)'));
 check('HOLD表示は専用ボディを持ち、rAF内transform/opacity中心',game.includes('data-rhythm-hold-body')&&game.includes("--rhythm-hold-body")&&game.includes('yPx=Math.round(yPx);')&&game.includes('const nextTransform=`translate3d(0,${yPx}px,0)`;')&&game.includes('if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;')&&!game.includes('el.style.transform=`translate3d(0,${yPx}px,0) scale(')&&game.includes('requestAnimationFrame(tick)'));
-check('ポーズ・再スタート・中断で入力管理を残さない',game.includes('run.activePointers.clear();run.activeTouchInputs?.clear();')&&game.includes('activePointers:new Map(),activeTouchInputs:new Set()')&&game.includes('run.finished=true;run.paused=true;run.activePointers.clear();run.activeTouchInputs?.clear();')&&game.includes('disposeRun();'));
+// 2026-09-05: 持ち替え用の「控えの指」(standbyPointers)を足したので、
+// ポーズ・中断のときはそれも一緒に捨てる。残すと、次のプレイで
+// 前のプレイの指が控えとして残っていることになる
+check('ポーズ・再スタート・中断で入力管理を残さない',
+  game.includes('run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();')
+  &&game.includes('activePointers:new Map(),standbyPointers:new Map(),activeTouchInputs:new Set()')
+  &&game.includes('run.finished=true;run.paused=true;run.activePointers.clear();run.standbyPointers?.clear();run.activeTouchInputs?.clear();')
+  &&game.includes('disposeRun();'));
 check('FLICK/SLIDEはSTEP 3Aの実譜面へ入れない',normal.notes.every(n=>!['FLICK','SLIDE'].includes(n.type)));
 check('プレオープンで公開されている',game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
