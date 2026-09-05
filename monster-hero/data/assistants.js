@@ -3201,7 +3201,7 @@ const ASSISTANT_RHYTHM_TUTORIAL = [
   { e:'excited', t:'{name}、ここが「モンヒロビート」だよ！ 曲に合わせてノーツを取る音ゲーだよ♪', title:'モンビーへようこそ', help:'basics/rhythm-mode' },
   // 曲えらびに出していた「これは体験版です…」の断り書きは、場所を取りすぎるので
   // 画面から外して、代わりにここで話す(2026-09-05・ユーザー指示)。
-  { e:'normal',  t:'いまは体験版で、先行公開の6曲をEASY〜MASTERで遊べるよ。譜面は調整中だから、これから変わることもあるんだ。', title:'いまは体験版だよ', help:'basics/rhythm-demo-song' },
+  { e:'normal',  t:'いまは体験版で、先行公開の7曲をEASY〜MASTERで遊べるよ。譜面は調整中だから、これから変わることもあるんだ。', title:'いまは体験版だよ', help:'basics/rhythm-demo-song' },
   { e:'normal',  t:'まずは曲えらび。ここに並んでるのが、いま遊べる曲だよ。', title:'曲をえらぶ', spot:'songList', help:'basics/rhythm-demo-song' },
   { e:'happy',   t:'曲の左の数字は「楽曲Lv.」。大きいほど難しい譜面ってこと。', title:'楽曲Lv.', spot:'songLevel' },
   { e:'normal',  t:'曲名の下のひし形は、その難易度をどこまで達成したかの印。クリア→フルコンボ→オールエクセレント→オールマーベラスの順に、どんどん派手な色になるよ♪', title:'ひし形は達成の印', spot:'achievement' },
@@ -3219,7 +3219,7 @@ const ASSISTANT_RHYTHM_TUTORIAL = [
 const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
   kiki: [
     { e:'excited', t:'{name}、ここが「モンヒロビート」でつ！ 曲に合わせてノーツを取る音ゲーですね♪', title:'モンビーへようこそ', help:'basics/rhythm-mode' },
-    { e:'normal',  t:'いまは体験版で、先行公開の6曲をEASY〜MASTERで遊べまつ。譜面は調整中なので、これから変わることもありまつ。', title:'いまは体験版でつ', help:'basics/rhythm-demo-song' },
+    { e:'normal',  t:'いまは体験版で、先行公開の7曲をEASY〜MASTERで遊べまつ。譜面は調整中なので、これから変わることもありまつ。', title:'いまは体験版でつ', help:'basics/rhythm-demo-song' },
     { e:'normal',  t:'まずは曲えらび。ここに並んでいるのが、いま遊べる曲でつ。', title:'曲をえらぶ', spot:'songList', help:'basics/rhythm-demo-song' },
     { e:'happy',   t:'曲の左の数字は「楽曲Lv.」でつ。大きいほど難しい譜面ということですね。', title:'楽曲Lv.', spot:'songLevel' },
     { e:'normal',  t:'曲名の下のひし形は、その難易度をどこまで達成したかの印でつ。クリア→フルコンボ→オールエクセレント→オールマーベラスの順に、どんどん派手になりまつ♪', title:'ひし形は達成の印', spot:'achievement' },
@@ -3235,7 +3235,7 @@ const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
   ],
   momosuke: [
     { e:'excited', t:'{name}、ここが「モンヒロビート」！ 曲に合わせて叩けばいいの♪ ちゃんとできるよね〜？♡', title:'モンビーへようこそ', help:'basics/rhythm-mode' },
-    { e:'normal',  t:'いまは体験版で、先行公開の6曲をEASY〜MASTERで遊べるよ。譜面はまだ調整中だから変わるかも。', title:'いまは体験版だよ', help:'basics/rhythm-demo-song' },
+    { e:'normal',  t:'いまは体験版で、先行公開の7曲をEASY〜MASTERで遊べるよ。譜面はまだ調整中だから変わるかも。', title:'いまは体験版だよ', help:'basics/rhythm-demo-song' },
     { e:'normal',  t:'まずは曲えらび。ここに並んでるのが遊べる曲ね。', title:'曲をえらぶ', spot:'songList', help:'basics/rhythm-demo-song' },
     { e:'happy',   t:'曲の左の数字は「楽曲Lv.」。大きいほど難しいってこと♪', title:'楽曲Lv.', spot:'songLevel' },
     { e:'normal',  t:'曲名の下のひし形は達成の印。クリア→フルコンボ→オールエクセレント→オールマーベラスの順に派手になるよ。全部そろえてみせてよ♡', title:'ひし形は達成の印', spot:'achievement' },

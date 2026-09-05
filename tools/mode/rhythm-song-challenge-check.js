@@ -19,6 +19,13 @@ const ROOT=path.resolve(__dirname,'..','..');
 let failed=0;
 const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
 
+// --- 出だしが空きすぎていないか ---
+// 決定を押すとカウントダウンに3.2秒かかる。そこへさらに3秒以上ノーツが来ないと、
+// 「曲は鳴っているのに何も来ない」時間が長すぎて待たされる
+// (2026-09-05・ユーザー指摘「風がそよぐ場所の最初の無音が長いのが気になる」)。
+// 生成器は静かなイントロの取り分を切り上げるまでノーツを置かないので、放っておくと起きる。
+const FIRST_NOTE_LIMIT_MS=3000;
+
 // --- ランタイムに載っている先行公開の曲のレベルを読む ---
 const ctx={console,Object,Number,Math,Array,JSON,String,Boolean,isNaN,parseInt,parseFloat};
 vm.createContext(ctx);
@@ -28,6 +35,22 @@ vm.runInContext(fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js
   +'Object.entries(s.difficulties).map(([k,v])=>[k,Number(v.level)]))})),'
   +'difficulties:RHYTHM_DEMO_DIFFICULTY_IDS};',ctx);
 const {songs,difficulties}=ctx.out;
+
+// 出だし。曲えらびへ出るぶんを全部見る（難易度ごとに別の譜面なので、いちばん遅いものを取る）
+{
+  const firsts=[];
+  vm.runInContext('this.first=RHYTHM_SONGS.filter(s=>RHYTHM_DEMO_SONG_IDS.includes(s.songId))'
+    +'.map(s=>({id:s.songId,name:s.displayName,ms:Math.max(...RHYTHM_DEMO_DIFFICULTY_IDS'
+    +'.map(d=>(s.difficulties[d]&&s.difficulties[d].notes[0])?s.difficulties[d].notes[0].timeMs:0))}));',ctx);
+  for(const entry of ctx.first)firsts.push(entry);
+  const late=firsts.filter(entry=>entry.ms>FIRST_NOTE_LIMIT_MS);
+  ok(`最初のノーツが${FIRST_NOTE_LIMIT_MS/1000}秒より後になっている曲が無い`,late.length===0,
+    firsts.map(entry=>`${entry.name} ${Math.round(entry.ms)}ms`).join(' / '));
+  // 生成器の側にも歯止めが入っていること（データだけ直しても、次の曲でまた起きるため）
+  const generatorHere=fs.readFileSync(path.join(ROOT,'tools/mode/rhythm-chart-v3-generate.js'),'utf8');
+  ok('生成器が「出だしが空きすぎたら1つ置く」を持っている',
+    generatorHere.includes('const firstNoteLimitMs=')&&generatorHere.includes('picked.unshift(head)'));
+}
 // 曲数は固定で書かない(曲を足すたびにここが落ちるだけで、何も守れない)。
 // 見たいのは「複数の曲を並べて散らばりを測れること」なので、下限だけを置く。
 ok('先行公開の曲が複数そろっている',songs.length>=5,`${songs.length}曲`);
@@ -74,7 +97,7 @@ if(REFERENCE&&EXPONENT&&RANGE){
   // 曲id → 解析JSONの名前。ランタイムの曲idから引く。
   const AUDIO={mf_ichika_mix:'atsu-cup-theme',monster_hero:'monster-hero-theme',
     six_eternel_remix:'six-eternel-remix-beat',stay_with_me:'pandora-boss',kiki_issen:'eiki-boss',
-    kaze_ga_soyogu:'kaze-ga-soyogu'};
+    kaze_ga_soyogu:'kaze-ga-soyogu',close_to_your_heart:'close-to-your-heart'};
   const factors=[];
   for(const song of songs){
     const file=path.join(ROOT,`tools/mode/authoring/${AUDIO[song.id]}-v3-audio.json`);

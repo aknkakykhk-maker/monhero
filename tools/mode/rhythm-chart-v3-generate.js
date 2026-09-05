@@ -353,6 +353,34 @@ const buildChart=(difficulty,options={})=>{
   }
   picked.sort((a,b)=>a.grid-b.grid);
 
+  // --- 1b. 出だしが空きすぎないようにする ---
+  //
+  // 小節ごとの取り分は「その小節にある音の数 × 盛り上がり」の比で配るので、
+  // 静かなイントロは取り分が1に満たず、繰り上がるまでノーツが1つも置かれない。
+  // そのため「曲は鳴っているのにノーツだけ来ない」時間が頭にできる。
+  // 実際に Close To Your Heart は最初のノーツが 3.8秒後だった
+  // (2026-09-05・ユーザー指摘「風がそよぐ場所の最初の無音が長いのが気になる」)。
+  //
+  // 決定を押してからカウントダウンに3.2秒かかるので、そこへ3秒以上足すと待たされすぎる。
+  // 出だしに叩ける音があるなら、そのうちいちばん強いものを1つだけ置く。
+  // **音の無いところへ置くことはしない**（pool は実際に鳴っている音しか持っていない）。
+  const firstNoteLimitMs=3000;
+  if(picked.length){
+    const firstMs=gridTimeMs(picked[0].grid);
+    if(firstMs>firstNoteLimitMs){
+      const early=pool.filter(onset=>{
+        const ms=gridTimeMs(onset.grid);
+        return ms>=0&&ms<=firstNoteLimitMs;
+      });
+      if(early.length){
+        // いちばん優先度の高い音を1つ。同点なら早いほうを選ぶ
+        const head=early.slice().sort((a,b)=>
+          (priorityByGrid.get(b.grid)-priorityByGrid.get(a.grid))||(a.grid-b.grid))[0];
+        picked.unshift(head);
+      }
+    }
+  }
+
   // --- 2. 最短の刻みの連なりを難易度なりの長さで止める ---
   const spaced=[];
   let run=1;
