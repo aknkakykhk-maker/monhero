@@ -160,14 +160,16 @@ const replaceBlock=(source,marker,notes)=>{
   return source.slice(0,block.from)+renderBlock(notes)+source.slice(block.to);
 };
 
-// 先行公開している5曲と、その譜面が入っているマーカー名の対応。
+// 先行公開している曲(RHYTHM_DEMO_SONG_IDS)と、その譜面が入っているマーカー名の対応。
 // マーカー名は曲idと違う(音源のidから作られている)ので、ここで1か所にまとめる。
+// 曲を足したらここにも1行足す(rhythm-overlap-reach-check.js が抜けを見つける)。
 const RELEASED_MARKERS=Object.freeze({
   mf_ichika_mix:'atsu-cup-theme-v3',
   monster_hero:'monster-hero-v3',
   six_eternel_remix:'six-eternel-remix-beat-v3',
   stay_with_me:'pandora-boss-v3',
   kiki_issen:'eiki-boss-v3',
+  kaze_ga_soyogu:'kaze-ga-soyogu-v3',
 });
 
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

@@ -92,8 +92,12 @@ check("マーケットに「エイキの円盤石」が3000ダイヤである(�
   /\{ id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:3000 \}/.test(marketSrc));
 check('商品アイコンは専用の顔クロップ(EIKI_FACE_ICON)を使う(全身画像ではない)',
   /\{ id:'eiki_icon', name:"エイキのアイコン", type:'icon', icon:EIKI_FACE_ICON, cost:1 \}/.test(marketSrc));
-check('MARKET_PROFILE_ICON_STYLESにEikiの拡大位置調整を増やしていない(専用の顔クロップがあるため不要)',
-  !/(^|[^_a-zA-Z])Eiki:\s*\{\s*scale/.test(source) && !/eiki_icon:\s*\{\s*scale/.test(source));
+// 顔クロップ(EIKI_FACE_ICON)を持っているアイコンのほうへ、さらに拡大位置調整を足さないこと。
+// 円盤石(id:'Eiki' / 'eiki_disc_icon')の調整は別物で、こちらは
+// 2026-09-05に円盤石11種の大きさをそろえたときに入った正しい調整なので見ない
+// (以前はここの正規表現が円盤石の Eiki: にも当たって、そろえた直後にNGへ変わっていた)。
+check('MARKET_PROFILE_ICON_STYLESにエイキのアイコンの拡大位置調整を増やしていない(専用の顔クロップがあるため不要)',
+  !/eiki_icon:\s*\{\s*scale/.test(source));
 check('更新履歴に新モンスター追加の項目がある', /新モンスター エイキを追加/.test(changelogSrc));
 check('更新履歴のマーケット追加は助手の告知(assistantNotice)付き',
   /title: '新モンスター エイキを追加'[\s\S]{0,400}?assistantNotice: \{ id:'update_notice_eiki_market_v1', type:'market' \}/.test(changelogSrc));

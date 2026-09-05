@@ -238,7 +238,7 @@ const chartLevel=chart=>{
 const loadRuntimeSongs=()=>{
   const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
   const context={Object,Number,Math,JSON,Array,String};
-  vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_DIFFICULTIES};`,context);
+  vm.runInNewContext(`${source}\nthis.out={RHYTHM_SONGS,RHYTHM_DIFFICULTIES,RHYTHM_DEMO_SONG_IDS};`,context);
   return context.out;
 };
 

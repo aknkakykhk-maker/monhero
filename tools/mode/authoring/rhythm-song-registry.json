@@ -108,6 +108,18 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "kaze_ga_soyogu": {
+   "audio": "monster-hero/audio/bgm-kaze-ga-soyogu-basho.mp3",
+   "audioSha256": "e4041cb4ae411f32b3566f8106b75f17b9cab32427b28e3651abf257580a6714",
+   "durationMs": 99659,
+   "analyzedTiming": {
+    "bpm": 118.878,
+    "beatZeroMs": 678.6,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

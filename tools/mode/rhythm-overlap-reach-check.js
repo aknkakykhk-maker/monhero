@@ -35,7 +35,7 @@ const check = (name, ok, detail = '') => {
 // ---- 物差しそのもの ----
 check('指の太さがレーン単位の定義から来ている',
   rt0.FINGER_GAP_SUB === HAND_MODEL.fingerMinGapLanes * 2, `${rt0.FINGER_GAP_SUB}サブレーン`);
-check('先行公開の5曲を全部見ている',
+check('先行公開の曲を全部見ている',
   Object.keys(rt0.RELEASED_MARKERS).length === runtime.RHYTHM_DEMO_SONG_IDS.length
   && runtime.RHYTHM_DEMO_SONG_IDS.every(id => rt0.RELEASED_MARKERS[id]),
   runtime.RHYTHM_DEMO_SONG_IDS.join(' / '));

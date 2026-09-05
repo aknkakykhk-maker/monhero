@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 22:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 23:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2506,6 +2506,8 @@ const BGM_TRACKS = [
   // 元の全尺は残したままなので、バトルのBGMは今までどおり変わらない。
   { id:'pandora_boss_beat', name:'Stay With Me ～Locked Fate～（ショート）', creator:'オリジナル', src:'audio/bgm-pandora-boss-beat.mp3', gain:1, loop:true },
   { id:'eiki_boss_beat', name:'綺季一閃 ～花雪に舞う詠姫～（ショート）', creator:'オリジナル', src:'audio/bgm-eiki-boss-beat.mp3', gain:1, loop:true },
+  // モンビー用に足した1分40秒の穏やかな曲。ほかの曲より譜面をやさしめにしてある。
+  { id:'kaze_ga_soyogu', name:'風がそよぐ場所', creator:'オリジナル', src:'audio/bgm-kaze-ga-soyogu-basho.mp3', gain:1, loop:true },
 ];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
@@ -6750,7 +6752,7 @@ const helpDataRows = (id) => {
           `Lv.${chart.level} ／ ${chart.totalNotes}ノーツ${note ? ` ／ ${note}` : ''}`];
       }).filter(Boolean);
     }
-    // 先行公開の曲は5つ(RHYTHM_DEMO_SONG_IDS)。手で書き写すと曲を足したときに古くなるので、
+    // 先行公開の曲(RHYTHM_DEMO_SONG_IDS)。手で書き写すと曲を足したときに古くなるので、
     // 実データから曲名・難易度の数・レベルの幅・長さを作る。
     case 'rhythmDemoSongList': {
       const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
