@@ -58,6 +58,17 @@ const usableSpan=([lo,hi])=>{
   if(hi-lo<=radius*2){const center=(lo+hi)/2;return [center,center];}
   return [lo+radius,hi-radius];
 };
+// 押さえ続けている指が実際にいられる範囲。
+// usableSpan と違い、端まで寄せられるとは考えない。
+// 次に何が来るかを知らないと端へ寄せて構えることはできないため
+// (2026-09-05・実機の指摘「まだ物理的に押せない(押しづらすぎる？)箇所がある」)。
+// SLIDEを押さえている指は経路に沿うので、中心から動かせない。
+const HOLD_SHIFT_SUB=HAND_MODEL.holdShiftLanes*2;
+const heldSpan=([lo,hi],isSlide)=>{
+  const center=(lo+hi)/2;
+  const shift=isSlide?0:Math.min((hi-lo)/4,HOLD_SHIFT_SUB);
+  return [center-shift,center+shift];
+};
 // 2本の指をいちばん離して置いたときの距離
 const maxSeparation=(a,b)=>Math.max(a[1]-b[0],b[1]-a[0]);
 const noteEndMs=note=>Number(note.endTimeMs??note.timeMs);
@@ -71,12 +82,22 @@ const overlapConflicts=(notes,spanAt)=>{
     const held=notes[i];
     if(!isHeld(held))continue;
     const start=Number(held.timeMs),end=noteEndMs(held);
+    const heldIsSlide=held.type==='SLIDE';
     for(let j=0;j<notes.length;j++){
       if(j===i)continue;
-      const other=notes[j],at=Number(other.timeMs);
-      if(at<start-1||at>end+1)continue;
-      const separation=maxSeparation(usableSpan(spanAt(held,at)),usableSpan(spanAt(other,at)));
-      if(separation+1e-9<FINGER_GAP_SUB)out.push({heldIndex:i,noteIndex:j,timeMs:at,separation});
+      const other=notes[j],otherStart=Number(other.timeMs),otherEnd=noteEndMs(other);
+      // 相手の**開始時刻**だけでなく、2つが重なっている期間ぜんぶを見る。
+      // 開始時点では離れていても、動くSLIDE同士は途中で近づくことがある
+      const from=Math.max(start,otherStart),to=Math.min(end,otherEnd);
+      if(to<from-1)continue;
+      let worst=Infinity,worstAt=from;
+      for(let t=from;t<=to+1;t+=20){
+        const separation=maxSeparation(
+          heldSpan(spanAt(held,t),heldIsSlide),
+          heldSpan(spanAt(other,t),other.type==='SLIDE'));
+        if(separation<worst){worst=separation;worstAt=t;}
+      }
+      if(worst+1e-9<FINGER_GAP_SUB)out.push({heldIndex:i,noteIndex:j,timeMs:worstAt,separation:worst});
     }
   }
   return out;
@@ -93,8 +114,8 @@ const fastPairConflicts=(notes,spanAt)=>{
       if(dt>=HAND_MODEL.restrikeLimitMs)break;   // ここより前は同じ指で叩き直せる
       if(dt<1)continue;                          // 同時押しは重なりの側で見る
       const gap=maxSeparation(
-        usableSpan(spanAt(order[a].note,Number(order[a].note.timeMs))),
-        usableSpan(spanAt(order[b].note,Number(order[b].note.timeMs))));
+        heldSpan(spanAt(order[a].note,Number(order[a].note.timeMs)),order[a].note.type==='SLIDE'),
+        heldSpan(spanAt(order[b].note,Number(order[b].note.timeMs)),order[b].note.type==='SLIDE'));
       if(gap+1e-9<FINGER_GAP_SUB)out.push({laterIndex:order[a].index,earlierIndex:order[b].index,
         timeMs:Number(order[a].note.timeMs),deltaMs:dt,separation:gap});
     }
@@ -149,5 +170,5 @@ const RELEASED_MARKERS=Object.freeze({
   kiki_issen:'eiki-boss-v3',
 });
 
-module.exports={ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
+module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
   noteEndMs,isHeld,overlapConflicts,fastPairConflicts,runtimeRow,markerBlock,renderBlock,replaceBlock,RELEASED_MARKERS};

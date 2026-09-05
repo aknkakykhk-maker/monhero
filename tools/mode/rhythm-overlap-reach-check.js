@@ -51,9 +51,14 @@ check('帯の真上に重なるノーツを見つけられる',
   rt0.overlapConflicts([fakeSlide, onTop], spanAt).length === 1);
 check('離れた場所のノーツは見つけない(何でも落とす検査になっていない)',
   rt0.overlapConflicts([fakeSlide, farAway], spanAt).length === 0);
+// ほぼ同じ場所を 60ms で叩き分ける組み合わせ。指2本は入らず、1本で叩き直すには速すぎる
 check('近いのに速い2音を見つけられる',
   rt0.fastPairConflicts([{type:'TAP',timeMs:0,lane:2,subLane:4,subLaneWidth:2},
-    {type:'TAP',timeMs:60,lane:2,subLane:5,subLaneWidth:2}], spanAt).length === 1);
+    {type:'TAP',timeMs:60,lane:2,subLane:4,subLaneWidth:2}], spanAt).length === 1);
+// 指が2本入る離れ方なら見つけない(何でも落とす検査になっていないこと)
+check('離れていれば速くても見つけない',
+  rt0.fastPairConflicts([{type:'TAP',timeMs:0,lane:0,subLane:0,subLaneWidth:2},
+    {type:'TAP',timeMs:60,lane:4,subLane:8,subLaneWidth:2}], spanAt).length === 0);
 
 // ---- 配信データ ----
 let overlapTotal = 0, fastTotal = 0;

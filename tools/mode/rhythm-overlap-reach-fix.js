@@ -65,31 +65,27 @@ const movedNote=(note,subLane,width)=>{
 const movable=note=>(note.type==='TAP'||note.type==='FLICK'||note.type==='HOLD')
   &&Number.isFinite(Number(note.subLane));
 
+// 指が実際にいられる範囲。検査(rhythm-runtime-notes.js)と同じ物差しを使う。
+// 「端まで寄せて構えられる」とは考えない(2026-09-05・実機の指摘)
+const reach=(note,t)=>rt0.heldSpan(spanAt(note,t),note.type==='SLIDE');
+const apart=(a,at,b,bt)=>rt0.maxSeparation(reach(a,at),reach(b,bt))+1e-9>=GAP;
+
 // candidate を置いたときに、ほかのノーツと指が2本入るか
 const fits=(notes,index,candidate)=>{
   const start=Number(candidate.timeMs),end=rt0.noteEndMs(candidate);
-  // 押さえている帯と重なる時間帯は、始点だけでなく何点かで見る
-  // (HOLDは押さえているあいだずっと指が要るため)
-  const samples=start===end?[start]:[start,(start+end)/2,end];
   for(let j=0;j<notes.length;j++){
     if(j===index)continue;
     const other=notes[j],at=Number(other.timeMs),otherEnd=rt0.noteEndMs(other);
-    // ① 相手が押さえている帯で、こちらの時間と重なる
-    if(rt0.isHeld(other)){
-      for(const t of samples){
-        if(t<at-1||t>otherEnd+1)continue;
-        if(rt0.maxSeparation(rt0.usableSpan(spanAt(other,t)),rt0.usableSpan(spanAt(candidate,t)))+1e-9<GAP)return false;
+    // ① 押さえている帯どうし・帯とノーツ。重なっている期間ぜんぶを見る
+    if(rt0.isHeld(other)||rt0.isHeld(candidate)){
+      const from=Math.max(start,at),to=Math.min(end,otherEnd);
+      if(to>=from-1){
+        for(let t=from;t<=to+1;t+=20)if(!apart(candidate,t,other,t))return false;
       }
     }
-    // ② こちらが押さえている帯で、相手がその最中に来る
-    if(rt0.isHeld(candidate)&&at>=start-1&&at<=end+1){
-      if(rt0.maxSeparation(rt0.usableSpan(spanAt(candidate,at)),rt0.usableSpan(spanAt(other,at)))+1e-9<GAP)return false;
-    }
-    // ③ 同時押し・105ms以内に並ぶ音は、指の太さぶん離れていないと2本入らない
+    // ② 同時押し・105ms以内に並ぶ音は、指の太さぶん離れていないと2本入らない
     const dt=Math.abs(at-start);
-    if(dt<RESTRIKE_MS){
-      if(rt0.maxSeparation(rt0.usableSpan(spanAt(candidate,start)),rt0.usableSpan(spanAt(other,at)))+1e-9<GAP)return false;
-    }
+    if(dt<RESTRIKE_MS&&!apart(candidate,start,other,at))return false;
   }
   return true;
 };

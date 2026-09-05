@@ -888,14 +888,14 @@
       "onsetFit": 0.6091,
       "structureFit": 1,
       "densityTarget": 0.9433,
-      "monotony": 0.6709,
+      "monotony": 0.6704,
       "handMotion": 0.9156,
       "typeBalance": 0.7306,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 32
+      "strained": 33
      },
      "noteCount": 455,
      "densityPerSecond": 3.08,
@@ -911,58 +911,24 @@
      "label": "既定",
      "override": {},
      "duplicateOf": null,
-     "score": 0.8133,
+     "score": 0.8134,
      "detail": {
       "onsetFit": 0.6091,
       "structureFit": 1,
       "densityTarget": 0.9433,
-      "monotony": 0.6578,
+      "monotony": 0.6589,
       "handMotion": 0.8819,
       "typeBalance": 0.7306,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 30
+      "strained": 31
      },
      "noteCount": 455,
      "densityPerSecond": 3.08,
      "typeCounts": {
       "TAP": 403,
-      "HOLD": 21,
-      "FLICK": 21,
-      "SLIDE": 10
-     }
-    },
-    {
-     "variant": "dense",
-     "label": "密度を上げる",
-     "override": {
-      "perBarByIntensity": [
-       4.4399999999999995,
-       8,
-       10.6
-      ]
-     },
-     "duplicateOf": null,
-     "score": 0.8112,
-     "detail": {
-      "onsetFit": 0.607,
-      "structureFit": 1,
-      "densityTarget": 0.94,
-      "monotony": 0.6525,
-      "handMotion": 0.8809,
-      "typeBalance": 0.7309,
-      "breathing": 1
-     },
-     "playability": {
-      "impossible": 0,
-      "strained": 34
-     },
-     "noteCount": 454,
-     "densityPerSecond": 3.07,
-     "typeCounts": {
-      "TAP": 402,
       "HOLD": 21,
       "FLICK": 21,
       "SLIDE": 10
@@ -979,12 +945,12 @@
       ]
      },
      "duplicateOf": null,
-     "score": 0.8111,
+     "score": 0.811,
      "detail": {
       "onsetFit": 0.6102,
       "structureFit": 1,
       "densityTarget": 0.9167,
-      "monotony": 0.6628,
+      "monotony": 0.6622,
       "handMotion": 0.8957,
       "typeBalance": 0.7338,
       "breathing": 1
@@ -1003,6 +969,40 @@
      }
     },
     {
+     "variant": "dense",
+     "label": "密度を上げる",
+     "override": {
+      "perBarByIntensity": [
+       4.4399999999999995,
+       8,
+       10.6
+      ]
+     },
+     "duplicateOf": null,
+     "score": 0.811,
+     "detail": {
+      "onsetFit": 0.607,
+      "structureFit": 1,
+      "densityTarget": 0.94,
+      "monotony": 0.6509,
+      "handMotion": 0.8809,
+      "typeBalance": 0.7309,
+      "breathing": 1
+     },
+     "playability": {
+      "impossible": 0,
+      "strained": 35
+     },
+     "noteCount": 454,
+     "densityPerSecond": 3.07,
+     "typeCounts": {
+      "TAP": 402,
+      "HOLD": 21,
+      "FLICK": 21,
+      "SLIDE": 10
+     }
+    },
+    {
      "variant": "variety",
      "label": "HOLD/FLICK/SLIDEを増やす",
      "override": {
@@ -1011,12 +1011,12 @@
       "slideMaxCount": 13
      },
      "duplicateOf": null,
-     "score": 0.809,
+     "score": 0.8089,
      "detail": {
       "onsetFit": 0.6089,
       "structureFit": 1,
       "densityTarget": 0.8933,
-      "monotony": 0.6697,
+      "monotony": 0.6692,
       "handMotion": 0.8909,
       "typeBalance": 0.7633,
       "breathing": 1
@@ -1087,12 +1087,12 @@
       "minStrength": 0.1
      },
      "duplicateOf": null,
-     "score": 0.8199,
+     "score": 0.8196,
      "detail": {
       "onsetFit": 0.5942,
       "structureFit": 1,
       "densityTarget": 0.9636,
-      "monotony": 0.6758,
+      "monotony": 0.6739,
       "handMotion": 0.9118,
       "typeBalance": 0.7417,
       "breathing": 1
@@ -1207,19 +1207,19 @@
       "slideMaxCount": 15
      },
      "duplicateOf": null,
-     "score": 0.7937,
+     "score": 0.794,
      "detail": {
       "onsetFit": 0.5865,
       "structureFit": 0.9698,
       "densityTarget": 0.8664,
-      "monotony": 0.6847,
+      "monotony": 0.6862,
       "handMotion": 0.8832,
       "typeBalance": 0.7633,
       "breathing": 1
      },
      "playability": {
       "impossible": 0,
-      "strained": 39
+      "strained": 38
      },
      "noteCount": 497,
      "densityPerSecond": 3.36,
