@@ -65,8 +65,11 @@ check('選んでいる曲をApp本体で持っている',
   game.includes('const [rhythmSelectedSongId,setRhythmSelectedSongId]=useState('));
 check('選んでいる難易度もApp本体で持っている',
   game.includes('const [rhythmSelectedDifficultyId,setRhythmSelectedDifficultyId]=useState('));
+// 受け取るものが増えても落ちないよう、末尾の } まで決め打ちしない
+// (2026-09-05に並び替え・助手の畳みを外から渡す view/onView が増えた)。
+// 見たいのは「曲と難易度を外から受け取っていること」だけ。
 check('曲えらびは外から曲を受け取る形になっている',
-  /const RhythmSongSelect=\({[^}]*songId='',difficultyId='',onSongId=null,onDifficultyId=null}\)/.test(game));
+  /const RhythmSongSelect=\({[^}]*songId='',difficultyId='',onSongId=null,onDifficultyId=null[^}]*}\)/.test(game));
 check('曲えらびが自分で曲を覚えていない(戻ると先頭へ戻る作りでない)',
   !/const \[songId,setSongId\]=React\.useState/.test(game));
 check('曲えらびへ選択を渡している',

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cca71bf300b71494
+// source-sha256: 22fa2963a7a50e6e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 23:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 00:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3660,6 +3660,43 @@ const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.leg
 // 音ゲーは曲データ側で既存track IDだけを持ち、音源・音量・ループ情報は必ずBGM_TRACKSから解決する。
 const rhythmSongTrack = song => BGM_TRACK_BY_ID[song?.bgmTrackId] || null;
 const RHYTHM_SETTINGS_KEY = 'mh_rhythm_settings_v1';
+// 曲えらび画面の「見え方」だけを覚えるキー。演奏に関わる設定(mh_rhythm_settings_v1)とは
+// 別に持つ(2026-09-05・ユーザー指示で並び替えと助手の折りたたみを足したときに新設)。
+// 別キーにしたのは、演奏の設定を読み書きする経路へ画面の都合を混ぜないため。
+// 保存値が無い・壊れているときは既定へ落ちるので、これまでのユーザーもそのまま動く。
+const RHYTHM_SELECT_VIEW_KEY = 'mh_rhythm_select_v1';
+// 並び順。id は保存値になるので、増やすことはあっても**名前は変えない**。
+const RHYTHM_SORT_ORDERS = Object.freeze([Object.freeze({
+  id: 'added',
+  label: '入手順',
+  note: '追加された順。いつも同じ並びになります'
+}), Object.freeze({
+  id: 'level',
+  label: '難易度順',
+  note: 'いま選んでいる難易度のLv.が低い順'
+}), Object.freeze({
+  id: 'name',
+  label: '名前順',
+  note: '曲名のあいうえお・アルファベット順'
+}), Object.freeze({
+  id: 'length',
+  label: '長さ順',
+  note: '曲が短い順。軽く1曲遊びたいときに'
+})]);
+const RHYTHM_SORT_IDS = Object.freeze(RHYTHM_SORT_ORDERS.map(item => item.id));
+const DEFAULT_RHYTHM_SELECT_VIEW = Object.freeze({
+  sort: 'added',
+  desc: false,
+  noticeOpen: true
+});
+const normalizeRhythmSelectView = value => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    sort: RHYTHM_SORT_IDS.includes(source.sort) ? source.sort : DEFAULT_RHYTHM_SELECT_VIEW.sort,
+    desc: typeof source.desc === 'boolean' ? source.desc : DEFAULT_RHYTHM_SELECT_VIEW.desc,
+    noticeOpen: typeof source.noticeOpen === 'boolean' ? source.noticeOpen : DEFAULT_RHYTHM_SELECT_VIEW.noticeOpen
+  };
+};
 // ノーツ速度は見た目のtravelだけを変える。1.0〜12.0を0.1刻みで選べ、6.0は従来の見た目(2150ms)を維持する。
 // 旧保存値(3.0〜10.0 / 0.5刻み)はこの範囲の内側なので、そのまま読み込める。
 const RHYTHM_NOTE_SPEED_MIN = 1;
@@ -16605,21 +16642,26 @@ const centerCarouselChild = (root, index, behavior = 'auto') => {
     behavior
   });else root.scrollLeft = left; // 古いブラウザでも位置だけは合わせる
 };
+
+// marked=false は「輪にするために置いた影の行」で使う。同じ目印が3つに増えると、
+// 画面を数えて確かめている検査が本物の3倍を見てしまうため、影には目印を付けない。
 const RhythmSongArt = ({
   song,
-  large = false
+  large = false,
+  marked = true
 }) => {
   const hue = rhythmSongArtHue(song && song.songId);
   const src = typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song && typeof song.artwork === 'string' ? song.artwork : '';
   const initial = String(song && song.displayName || '♪').trim().charAt(0) || '♪';
-  return /*#__PURE__*/React.createElement("span", {
-    "data-rhythm-song-art": true,
+  return /*#__PURE__*/React.createElement("span", _extends({}, marked ? {
+    'data-rhythm-song-art': ''
+  } : {}, {
     className: `relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large ? 'w-full' : 'w-12'}`,
     style: {
       aspectRatio: '1 / 1',
       background: `linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue + 50) % 360},72%,48%))`
     }
-  }, src ? /*#__PURE__*/React.createElement("img", {
+  }), src ? /*#__PURE__*/React.createElement("img", {
     src: src,
     alt: "",
     className: "absolute inset-0 h-full w-full object-cover"
@@ -16638,6 +16680,62 @@ const rhythmSongLengthLabel = (song, chart) => {
   if (!Number.isFinite(ms) || ms <= 0) return '';
   const total = Math.round(ms / 1000);
   return `${Math.floor(total / 60)}分${String(total % 60).padStart(2, '0')}秒`;
+};
+// 曲の長さ(ミリ秒)。並び替えの「長さ順」で使う。譜面が無い曲は 0 ではなく
+// Infinity を返して**いちばん後ろ**へ回す(長さの分からない曲を先頭に集めない)。
+const rhythmSongDurationMs = (song, difficulties) => {
+  const own = Number(song && song.playDurationMs);
+  if (Number.isFinite(own) && own > 0) return own;
+  for (const item of difficulties || []) {
+    const chart = song && song.difficulties && song.difficulties[item.id];
+    const ms = Number(chart && chart.durationMs);
+    if (Number.isFinite(ms) && ms > 0) return ms;
+  }
+  return Infinity;
+};
+// 曲の並び替え。**元の配列は書き換えない**(渡されたのは Object.freeze された曲データで、
+// 並びそのものが「入手順」という意味を持っているため)。
+// 同じ値のときは必ず入手順で決着させる。そうしないと、同じLv.の曲どうしが
+// 描き直しのたびに入れ替わって見える。
+const rhythmSortSongs = (songs, {
+  sort = 'added',
+  desc = false,
+  levelOf = null,
+  difficulties = null
+} = {}) => {
+  const list = (songs || []).map((song, index) => ({
+    song,
+    index
+  }));
+  const compare = (a, b) => {
+    if (sort === 'level') {
+      const av = typeof levelOf === 'function' ? Number(levelOf(a.song)) || 0 : 0;
+      const bv = typeof levelOf === 'function' ? Number(levelOf(b.song)) || 0 : 0;
+      if (av !== bv) return av - bv;
+    } else if (sort === 'name') {
+      const an = rhythmSongFullName(a.song),
+        bn = rhythmSongFullName(b.song);
+      // 日本語も並べたいので localeCompare を使う。使えない環境では素の比較へ落ちる
+      let diff = 0;
+      try {
+        diff = an.localeCompare(bn, 'ja');
+      } catch (e) {
+        diff = an < bn ? -1 : an > bn ? 1 : 0;
+      }
+      if (diff !== 0) return diff;
+    } else if (sort === 'length') {
+      const av = rhythmSongDurationMs(a.song, difficulties),
+        bv = rhythmSongDurationMs(b.song, difficulties);
+      if (av !== bv) return av < bv ? -1 : 1;
+    }
+    return 0;
+  };
+  list.sort((a, b) => {
+    const diff = compare(a, b);
+    if (diff !== 0) return desc ? -diff : diff;
+    return a.index - b.index; // 決着がつかないときは入手順(降順でもここは崩さない)
+  });
+  return list.map(entry => entry.song);
 };
 
 // 譜面が入っている難易度だけを「遊べる」とみなす(押せるのに始まらない状態を作らないため)。
@@ -16674,10 +16772,17 @@ const RhythmSongSelect = ({
   songId = '',
   difficultyId = '',
   onSongId = null,
-  onDifficultyId = null
+  onDifficultyId = null,
+  view = null,
+  onView = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
-  const list = (songs || []).filter(song => (difficulties || []).some(difficulty => rhythmChartPlayable(song, difficulty.id)));
+  const setView = next => {
+    if (typeof onView === 'function') onView(next);
+  };
+  const state = normalizeRhythmSelectView(view);
+  const [sortOpen, setSortOpen] = React.useState(false);
+  const playable = (songs || []).filter(song => (difficulties || []).some(difficulty => rhythmChartPlayable(song, difficulty.id)));
   const setSongId = id => {
     if (typeof onSongId === 'function') onSongId(id);
   };
@@ -16686,7 +16791,8 @@ const RhythmSongSelect = ({
   };
   // 選んでいる曲・難易度が無くなっても落ちないよう、毎回その場で選び直す
   // (曲を変えたときに「前の曲にしかない難易度」が残らない)。
-  const song = list.find(entry => entry.songId === songId) || list[0] || null;
+  // 並び替えても**選んでいる曲は変わらない**(並びは見え方だけの話なので)。
+  const song = playable.find(entry => entry.songId === songId) || playable[0] || null;
   const available = song ? (difficulties || []).filter(difficulty => rhythmChartPlayable(song, difficulty.id)) : [];
   // EXPERT以上は1つ下の難易度をクリアするまで選べない(2026-09-05・ユーザー指示)。
   // 一覧からは消さずに鍵つきで見せる。「先に何をクリアすればよいか」が分かるようにするため。
@@ -16703,6 +16809,14 @@ const RhythmSongSelect = ({
     const id = difficulty && ids.includes(difficulty.id) ? difficulty.id : ids[ids.length - 1];
     return Number(entry.difficulties[id].level) || 0;
   };
+  // 画面に並べる順。並び替えは**見え方だけ**で、遊べる曲も選んでいる曲も変えない。
+  const list = rhythmSortSongs(playable, {
+    sort: state.sort,
+    desc: state.desc,
+    levelOf: rowLevel,
+    difficulties
+  });
+  const sortLabel = (RHYTHM_SORT_ORDERS.find(item => item.id === state.sort) || RHYTHM_SORT_ORDERS[0]).label;
   // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
   // この画面の中で鳴らしていたころは、ランキングやマスモン設定を開いた瞬間に
   // 画面ごと消えて音が止まっていた。
@@ -16717,44 +16831,165 @@ const RhythmSongSelect = ({
     setSongId(nextSong.songId);
     if (ids.length) setDifficultyId(ids[Math.floor(Math.random() * ids.length)].id);
   };
+
+  // ---- 一覧を輪にする(2026-09-05・ユーザー指示
+  //      「1番下にいったら止まるんじゃなくて上に戻ってくるループ式にして」) ----
+  //
+  // 同じ並びを前・本体・後ろの3つぶん置き、指を止めたときに**本体の同じ位置へ**
+  // そっと戻す。見た目は途切れずに繋がり、実際に動いているのは常にまん中になる。
+  //
+  // 端まで来た瞬間に反対側へ飛ばす作りにしなかったのは、指で送っている最中に
+  // 位置が跳ぶと勢い(慣性)が切れて、輪ではなく「引っかかり」に感じるため。
+  // 戻すのは指が離れてスクロールが止まってからにする。
+  //
+  // 曲が1曲しかないときは輪にしない(同じ行が3つ並ぶだけで、かえって分かりにくい)。
+  const loopEnabled = list.length >= 2;
+  const listRef = React.useRef(null);
+  const loopReadyRef = React.useRef(false);
+  const settleRef = React.useRef(null);
+  // 3つぶんのうち、まん中の先頭がどこから始まるか
+  const blockHeight = el => Math.max(1, Math.round(el.scrollHeight / 3));
+  React.useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    if (!loopEnabled) {
+      loopReadyRef.current = false;
+      return;
+    }
+    // 開いた直後は「まん中の先頭」に立たせる。ここが 0 のままだと、
+    // 上へ送ったときに輪ではなく行き止まりになる
+    const put = () => {
+      const node = listRef.current;
+      if (!node) return;
+      if (node.scrollHeight <= node.clientHeight) {
+        loopReadyRef.current = false;
+        return;
+      } // 全部見えているなら輪は要らない
+      if (loopReadyRef.current) return; // もう立っているなら動かさない
+      node.scrollTop = blockHeight(node);
+      loopReadyRef.current = true;
+    };
+    put();
+    // 一覧の高さは外部CDNのTailwindが届いてから決まる。最初に測った時点ではまだ
+    // 画面いっぱいに伸びていて「スクロールできない=輪は要らない」と見えてしまい、
+    // 遅れてCSSが届いても輪が始まらないままだった。大きさが決まったら置き直す。
+    let observer = null;
+    if (typeof ResizeObserver === 'function') {
+      try {
+        observer = new ResizeObserver(() => put());
+        observer.observe(el);
+      } catch (e) {
+        observer = null;
+      }
+    }
+    return () => {
+      if (observer) observer.disconnect();
+      loopReadyRef.current = false;
+    };
+  }, [loopEnabled, list.length, state.sort, state.desc]);
+  const handleListScroll = () => {
+    const el = listRef.current;
+    if (!el || !loopEnabled) return;
+    // ResizeObserver が無い端末でも、動かし始めた時点で輪に入れるようにしておく
+    if (!loopReadyRef.current) {
+      if (el.scrollHeight <= el.clientHeight) return;
+      loopReadyRef.current = true;
+    }
+    if (settleRef.current) clearTimeout(settleRef.current);
+    // 指が離れて動きが止まってから、まん中へ戻す
+    settleRef.current = setTimeout(() => {
+      const node = listRef.current;
+      if (!node || !loopReadyRef.current) return;
+      const block = blockHeight(node);
+      if (block <= 0) return;
+      const top = node.scrollTop;
+      if (top < block * 0.5) node.scrollTop = top + block;else if (top > block * 1.5) node.scrollTop = top - block;
+    }, 140);
+  };
+  React.useEffect(() => () => {
+    if (settleRef.current) clearTimeout(settleRef.current);
+  }, []);
+  // 前・本体・後ろの3つぶん。本体(copy===1)だけが検査やクリックの目印になる
+  // data-rhythm-song-row を持つ。上下のぶんは「同じものの影」なので別の名前にする。
+  const blocks = loopEnabled ? [0, 1, 2] : [1];
   return /*#__PURE__*/React.createElement("div", {
     "data-rhythm-song-select": true,
     className: "flex min-h-0 flex-1 flex-col landscape:flex-row"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex min-h-0 flex-1 flex-col landscape:border-r landscape:border-white/10"
-  }, notice && /*#__PURE__*/React.createElement("div", {
+  }, notice && state.noticeOpen && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-song-notice": true,
-    className: "shrink-0 px-2 pt-2"
+    className: "shrink-0 px-2 pt-2 landscape:hidden"
   }, notice), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-song-toolbar": true,
+    className: "flex shrink-0 items-center gap-1.5 px-2 pt-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-sort": true,
+    onClick: () => setSortOpen(true),
+    className: "flex min-h-[44px] flex-1 items-center justify-between gap-1 rounded-xl border border-white/15 bg-slate-900/80 px-3 text-[11px] font-black text-slate-200"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "truncate"
+  }, "\u4E26\u3073\u66FF\u3048\uFF1A", sortLabel, state.desc ? '（逆）' : ''), /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: "shrink-0 text-slate-400"
+  }, "\u25BE")), notice && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-notice-toggle": true,
+    "aria-pressed": state.noticeOpen,
+    onClick: () => setView({
+      ...state,
+      noticeOpen: !state.noticeOpen
+    }),
+    title: state.noticeOpen ? '助手のひとことを畳む' : '助手のひとことを出す',
+    className: `flex h-[44px] w-[52px] shrink-0 items-center justify-center gap-0.5 rounded-xl border text-[11px] font-black ${state.noticeOpen ? 'border-fuchsia-300/60 bg-fuchsia-900/40 text-fuchsia-100' : 'border-white/15 bg-slate-900/80 text-slate-300'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83D\uDCAC"), /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, state.noticeOpen ? '▲' : '▼'))), /*#__PURE__*/React.createElement("div", {
+    ref: listRef,
+    onScroll: handleListScroll,
     "data-rhythm-song-list": true,
+    "data-rhythm-song-loop": loopEnabled ? '1' : '0',
     className: `min-h-0 flex-1 overflow-y-auto mh-scroll px-2 py-2${spot('songList')}`
   }, list.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
   }, emptyText) : /*#__PURE__*/React.createElement("ul", {
     className: "space-y-1.5"
-  }, list.map(entry => {
+  }, blocks.map(copy => list.map(entry => {
+    const main = copy === 1;
     const selected = !!song && entry.songId === song.songId;
     return /*#__PURE__*/React.createElement("li", {
-      key: entry.songId
-    }, /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      "data-rhythm-song-row": entry.songId,
+      key: `${copy}-${entry.songId}`,
+      "aria-hidden": main ? undefined : 'true'
+    }, /*#__PURE__*/React.createElement("button", _extends({
+      type: "button"
+    }, main ? {
+      'data-rhythm-song-row': entry.songId
+    } : {
+      'data-rhythm-song-row-loop': entry.songId
+    }, {
+      tabIndex: main ? undefined : -1,
       "aria-pressed": selected,
       onClick: () => setSongId(entry.songId),
       className: `flex w-full min-h-[64px] items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected ? 'border-fuchsia-300 bg-fuchsia-900/50' : 'border-white/10 bg-slate-900/70'}`
-    }, /*#__PURE__*/React.createElement("span", {
+    }), /*#__PURE__*/React.createElement("span", {
       className: "w-10 shrink-0 text-center"
     }, /*#__PURE__*/React.createElement("small", {
       className: "block text-[7px] font-black leading-none text-slate-400"
-    }, "\u697D\u66F2Lv."), /*#__PURE__*/React.createElement("b", {
-      "data-rhythm-song-row-level": true,
+    }, "\u697D\u66F2Lv."), /*#__PURE__*/React.createElement("b", _extends({}, main ? {
+      'data-rhythm-song-row-level': ''
+    } : {}, {
       className: `mt-0.5 block text-xl font-black leading-none tabular-nums text-white${spot('songLevel')}`
-    }, rowLevel(entry))), /*#__PURE__*/React.createElement(RhythmSongArt, {
-      song: entry
+    }), rowLevel(entry))), /*#__PURE__*/React.createElement(RhythmSongArt, {
+      song: entry,
+      marked: main
     }), /*#__PURE__*/React.createElement("span", {
       className: "min-w-0 flex-1"
-    }, /*#__PURE__*/React.createElement("b", {
-      "data-rhythm-song-row-title": true,
+    }, /*#__PURE__*/React.createElement("b", _extends({}, main ? {
+      'data-rhythm-song-row-title': ''
+    } : {}, {
       className: "block text-[13px] font-black leading-tight text-white",
       style: {
         display: '-webkit-box',
@@ -16764,34 +16999,39 @@ const RhythmSongSelect = ({
         lineHeight: 1.25,
         height: '2.5em'
       }
-    }, rhythmSongFullName(entry)), /*#__PURE__*/React.createElement("span", {
+    }), rhythmSongFullName(entry)), /*#__PURE__*/React.createElement("span", {
       className: `mt-1 flex items-center gap-1${spot('achievement')}`
     }, (difficulties || []).map(item => {
       const playable = rhythmChartPlayable(entry, item.id);
       const markId = rhythmAchievementMarkId(playable, playable ? rhythmBestRecord(bestRecords, entry.songId, item.id) : null);
       const mark = RHYTHM_ACHIEVEMENT_MARKS[markId];
-      return /*#__PURE__*/React.createElement("i", {
-        key: item.id,
-        "data-rhythm-achievement": markId,
+      return /*#__PURE__*/React.createElement("i", _extends({
+        key: item.id
+      }, main ? {
+        'data-rhythm-achievement': markId
+      } : {}, {
         title: `${item.id}: ${mark.label}`,
         className: "block h-2 w-2 rotate-45 rounded-[1px]",
         style: mark.style
-      });
+      }));
     }), /*#__PURE__*/React.createElement("small", {
       className: "ml-1 text-[9px] font-bold text-slate-400"
     }, (difficulties || []).filter(item => rhythmChartPlayable(entry, item.id)).length, "\u96E3\u6613\u5EA6")))));
-  })))), /*#__PURE__*/React.createElement("aside", {
+  }))))), /*#__PURE__*/React.createElement("aside", {
     "data-rhythm-song-detail": true,
     className: "shrink-0 border-t border-white/10 bg-slate-950/90 px-3 py-2 landscape:w-[42%] landscape:max-w-[420px] landscape:overflow-y-auto landscape:border-l landscape:border-t-0 landscape:py-3",
     style: {
       paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
     }
-  }, !song || !difficulty ? /*#__PURE__*/React.createElement("p", {
+  }, notice && state.noticeOpen && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-song-notice-landscape": true,
+    className: "mb-2 hidden landscape:block"
+  }, notice), !song || !difficulty ? /*#__PURE__*/React.createElement("p", {
     className: "text-xs font-bold text-slate-400"
   }, "\u904A\u3079\u308B\u66F2\u304C\u3042\u308A\u307E\u305B\u3093\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-3 landscape:block"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-20 shrink-0 landscape:mx-auto landscape:w-40"
+    className: "w-16 shrink-0 landscape:mx-auto landscape:w-36"
   }, /*#__PURE__*/React.createElement(RhythmSongArt, {
     song: song,
     large: true
@@ -16812,7 +17052,7 @@ const RhythmSongSelect = ({
     className: "mt-0.5 block text-[10px] font-bold text-slate-400"
   }, rhythmSongLengthLabel(song, chart)))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-difficulty-row": true,
-    className: `mt-2 flex flex-wrap gap-1${spot('difficulty')}`
+    className: `mt-1.5 flex flex-wrap gap-1${spot('difficulty')}`
   }, available.map(item => {
     const tone = rhythmDifficultyTone(item.id);
     const open = unlocked(item);
@@ -16831,7 +17071,7 @@ const RhythmSongSelect = ({
       onClick: () => {
         if (open) setDifficultyId(item.id);
       },
-      className: `flex h-[66px] flex-1 flex-col justify-center rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${open ? on ? tone.on : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
+      className: `flex h-[60px] flex-1 flex-col justify-center rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${open ? on ? tone.on : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "block"
     }, open ? item.id : `🔒 ${item.id}`), /*#__PURE__*/React.createElement("span", {
@@ -16844,13 +17084,15 @@ const RhythmSongSelect = ({
       return record && record.clear ? record.bestScore.toLocaleString() : '—';
     })() : `${need}で解放`));
   })), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[10px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", {
     "data-rhythm-demo-level": true,
-    className: "mt-1.5 text-[10px] font-bold text-slate-300"
-  }, "Lv.", chart.level, " / ", chart.totalNotes, "\u30CE\u30FC\u30C4"), /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-300"
+  }, "Lv.", chart.level, " / ", chart.totalNotes, "\u30CE\u30FC\u30C4"), /*#__PURE__*/React.createElement("span", {
     "data-rhythm-demo-best": true,
-    className: "mt-1.5 text-[10px] font-bold text-amber-200"
-  }, best && best.clear ? /*#__PURE__*/React.createElement(React.Fragment, null, difficulty.id, "\u306E\u81EA\u5DF1\u30D9\u30B9\u30C8 ", best.bestScore.toLocaleString(), "\uFF08\u30E9\u30F3\u30AF ", rhythmRankForScore(best.bestScore), "\uFF09 / \u6700\u5927\u30B3\u30F3\u30DC ", best.maxCombo) : /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u904A\u3093\u3067\u3044\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("div", {
-    className: "mt-2 flex gap-2"
+    className: "text-amber-200"
+  }, best && best.clear ? /*#__PURE__*/React.createElement(React.Fragment, null, difficulty.id, "\u306E\u81EA\u5DF1\u30D9\u30B9\u30C8 ", best.bestScore.toLocaleString(), "\uFF08\u30E9\u30F3\u30AF ", rhythmRankForScore(best.bestScore), "\uFF09 / \u6700\u5927\u30B3\u30F3\u30DC ", best.maxCombo) : /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u904A\u3093\u3067\u3044\u307E\u305B\u3093"))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1.5 flex gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-song-random": true,
@@ -16861,7 +17103,63 @@ const RhythmSongSelect = ({
     "data-rhythm-demo-start": difficulty.id,
     onClick: () => onPlay(song, difficulty),
     className: "min-h-[48px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white"
-  }, "\u6C7A\u5B9A")), typeof footer === 'function' ? footer(song, difficulty) : footer)));
+  }, "\u6C7A\u5B9A")), typeof footer === 'function' ? footer(song, difficulty) : footer)), sortOpen && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-sort-sheet": true,
+    className: "fixed inset-0 z-[9000] flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.72)',
+      zIndex: 9000
+    },
+    onClick: () => setSortOpen(false)
+  }, /*#__PURE__*/React.createElement("section", {
+    onClick: e => e.stopPropagation(),
+    className: "max-h-[80%] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-fuchsia-400/60 bg-slate-900 p-4",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-white"
+  }, "\u66F2\u306E\u4E26\u3073\u66FF\u3048"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold text-slate-400"
+  }, "\u4E26\u3073\u3092\u5909\u3048\u3066\u3082\u3001\u904A\u3079\u308B\u66F2\u30FB\u81EA\u5DF1\u30D9\u30B9\u30C8\u30FB\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 space-y-1.5"
+  }, RHYTHM_SORT_ORDERS.map(item => {
+    const on = item.id === state.sort;
+    return /*#__PURE__*/React.createElement("button", {
+      key: item.id,
+      type: "button",
+      "data-rhythm-sort-option": item.id,
+      "aria-pressed": on,
+      onClick: () => {
+        setView({
+          ...state,
+          sort: item.id
+        });
+        setSortOpen(false);
+      },
+      className: `flex min-h-[52px] w-full flex-col justify-center rounded-xl border-2 px-3 text-left ${on ? 'border-fuchsia-300 bg-fuchsia-900/50' : 'border-white/15 bg-slate-950/60'}`
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "text-xs font-black text-white"
+    }, on ? '● ' : '', item.label), /*#__PURE__*/React.createElement("small", {
+      className: "text-[10px] font-bold text-slate-400"
+    }, item.note));
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-sort-desc": true,
+    "aria-pressed": state.desc,
+    onClick: () => setView({
+      ...state,
+      desc: !state.desc
+    }),
+    className: `mt-3 flex min-h-[52px] w-full items-center justify-between rounded-xl border-2 px-3 text-xs font-black ${state.desc ? 'border-cyan-300 bg-cyan-900/40 text-cyan-100' : 'border-white/15 bg-slate-950/60 text-slate-200'}`
+  }, /*#__PURE__*/React.createElement("span", null, "\u9006\u304B\u3089\u4E26\u3079\u308B"), /*#__PURE__*/React.createElement("span", null, state.desc ? 'ON' : 'OFF')), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-sort-close": true,
+    onClick: () => setSortOpen(false),
+    className: "mt-3 min-h-[52px] w-full rounded-xl bg-slate-700 text-sm font-black text-white"
+  }, "\u3068\u3058\u308B"))));
 };
 
 // ============================================================================
@@ -18958,6 +19256,14 @@ function MonsterHeroGame() {
     return list[0] && list[0].songId || '';
   });
   const [rhythmSelectedDifficultyId, setRhythmSelectedDifficultyId] = useState('');
+  // 曲えらびの見え方(並び順・助手を畳んだか)。演奏の設定とは別のキーで覚える。
+  // 保存に失敗しても画面は動かせるよう、まず画面へ反映してから書き込む。
+  const [rhythmSelectView, setRhythmSelectView] = useState(DEFAULT_RHYTHM_SELECT_VIEW);
+  const saveRhythmSelectView = next => {
+    const value = normalizeRhythmSelectView(next);
+    setRhythmSelectView(value);
+    storeSet(RHYTHM_SELECT_VIEW_KEY, value, false);
+  };
   const openRhythmDemo = async () => {
     const settings = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
     const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
@@ -18967,6 +19273,7 @@ function MonsterHeroGame() {
     setRhythmMonsterSlotIds(monsterSlots);
     setRhythmMonsterPickerOpen(false);
     setRhythmMonsterMessage('');
+    setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
     setGameState('RHYTHM_DEMO_HOME');
   };
   const openRhythmDebug = async () => {
@@ -18978,6 +19285,7 @@ function MonsterHeroGame() {
     setRhythmMonsterSlotIds(monsterSlots);
     setRhythmMonsterPickerOpen(false);
     setRhythmMonsterMessage('');
+    setRhythmSelectView(normalizeRhythmSelectView(await storeGet(RHYTHM_SELECT_VIEW_KEY, DEFAULT_RHYTHM_SELECT_VIEW, false)));
     setRhythmDebugTab('play');
     setGameState('RHYTHM_DEBUG');
   };
@@ -37015,16 +37323,16 @@ function MonsterHeroGame() {
           scene: "rhythmHome",
           compact: true
         }),
+        view: rhythmSelectView,
+        onView: saveRhythmSelectView,
         footer: song => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
           "data-rhythm-demo-ranking": true,
           onClick: () => {
             loadRhythmRanking(song);
             setGameState('RHYTHM_RANKING');
           },
-          className: "mt-2 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100"
-        }, "\uD83C\uDFC6 \u3053\u306E\u66F2\u306E\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement("p", {
-          className: "mt-2 text-[9px] leading-relaxed text-slate-500"
-        }, "\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u3001\u66F2\u306E\u9014\u4E2D\u3067\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306B\u306A\u3063\u3066\u6D41\u308C\u3066\u304D\u307E\u3059\u3002\u53D6\u308B\u3068\u8840\u7D71\u3054\u3068\u306E\u529B\u304C\u50CD\u304D\u307E\u3059\u3002"))
+          className: "mt-1.5 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100"
+        }, "\uD83C\uDFC6 \u3053\u306E\u66F2\u306E\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"))
       }));
     })(), gameState === 'RHYTHM_DEMO_HELP' && (() => {
       const category = (typeof HELP_CATEGORIES !== 'undefined' ? HELP_CATEGORIES : []).find(cat => cat.id === 'basics');
