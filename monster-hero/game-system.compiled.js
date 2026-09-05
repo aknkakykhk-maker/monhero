@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c1bb3bde5e03aa5f
+// source-sha256: e1a7e78e7df550e4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 09:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 09:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16139,7 +16139,7 @@ const RhythmSongSelect = ({
       "data-rhythm-song-row": entry.songId,
       "aria-pressed": selected,
       onClick: () => setSongId(entry.songId),
-      className: `flex w-full items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected ? 'border-fuchsia-300 bg-fuchsia-900/50' : 'border-white/10 bg-slate-900/70'}`
+      className: `flex w-full min-h-[64px] items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected ? 'border-fuchsia-300 bg-fuchsia-900/50' : 'border-white/10 bg-slate-900/70'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "w-10 shrink-0 text-center"
     }, /*#__PURE__*/React.createElement("small", {
@@ -16152,12 +16152,15 @@ const RhythmSongSelect = ({
     }), /*#__PURE__*/React.createElement("span", {
       className: "min-w-0 flex-1"
     }, /*#__PURE__*/React.createElement("b", {
+      "data-rhythm-song-row-title": true,
       className: "block text-[13px] font-black leading-tight text-white",
       style: {
         display: '-webkit-box',
         WebkitLineClamp: 2,
         WebkitBoxOrient: 'vertical',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        lineHeight: 1.25,
+        height: '2.5em'
       }
     }, entry.displayName), /*#__PURE__*/React.createElement("span", {
       className: `mt-1 flex items-center gap-1${spot('achievement')}`
@@ -16194,7 +16197,15 @@ const RhythmSongSelect = ({
     className: "min-w-0 flex-1 landscape:mt-2 landscape:text-center"
   }, /*#__PURE__*/React.createElement("b", {
     "data-rhythm-song-title": true,
-    className: "block text-sm font-black leading-tight text-white"
+    className: "block text-sm font-black leading-tight text-white",
+    style: {
+      display: '-webkit-box',
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: 'vertical',
+      overflow: 'hidden',
+      lineHeight: 1.25,
+      height: '2.5em'
+    }
   }, song.displayName), /*#__PURE__*/React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold text-slate-400"
   }, rhythmSongLengthLabel(song, chart)))), /*#__PURE__*/React.createElement("div", {
@@ -16205,6 +16216,8 @@ const RhythmSongSelect = ({
     const open = unlocked(item);
     const on = !!difficulty && item.id === difficulty.id;
     const need = rhythmDifficultyUnlockRequirement(item.id);
+    // 高さは固定(h-[66px])。ロック中だけ「◯◯で解放」が2行になり、
+    // その曲だけボタンが高くなって下の行までずれていた。
     return /*#__PURE__*/React.createElement("button", {
       key: item.id,
       type: "button",
@@ -16216,7 +16229,7 @@ const RhythmSongSelect = ({
       onClick: () => {
         if (open) setDifficultyId(item.id);
       },
-      className: `min-h-[52px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${open ? on ? tone.on : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
+      className: `flex h-[66px] flex-1 flex-col justify-center rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${open ? on ? tone.on : `${tone.off} bg-slate-900/70` : 'border-white/10 bg-slate-900/70 text-slate-500'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "block"
     }, open ? item.id : `🔒 ${item.id}`), /*#__PURE__*/React.createElement("span", {

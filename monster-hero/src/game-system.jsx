@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 09:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 09:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8831,15 +8831,19 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
           return <li key={entry.songId}>
             <button type="button" data-rhythm-song-row={entry.songId} aria-pressed={selected}
               onClick={()=>setSongId(entry.songId)}
-              className={`flex w-full items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-900/70'}`}>
+              className={`flex w-full min-h-[64px] items-center gap-2 rounded-xl border px-2 py-1.5 text-left ${selected?'border-fuchsia-300 bg-fuchsia-900/50':'border-white/10 bg-slate-900/70'}`}>
               <span className="w-10 shrink-0 text-center">
                 <small className="block text-[7px] font-black leading-none text-slate-400">楽曲Lv.</small>
                 <b data-rhythm-song-row-level className={`mt-0.5 block text-xl font-black leading-none tabular-nums text-white${spot('songLevel')}`}>{rowLevel(entry)}</b>
               </span>
               <RhythmSongArt song={entry}/>
+              {/* 曲名は**必ず2行分**の場所を取る(行の高さ1.25×2行=2.5em で高さを固定)。
+                  1行の曲と2行の曲で行の高さが変わり、一覧の枠がガタガタになっていたため
+                  (2026-09-05・ユーザー指摘「文字数で枠がずれるのがださい」)。
+                  2行を超える曲は省略する。行そのものにも min-h を置いて下限をそろえる。 */}
               <span className="min-w-0 flex-1">
-                <b className="block text-[13px] font-black leading-tight text-white"
-                  style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{entry.displayName}</b>
+                <b data-rhythm-song-row-title className="block text-[13px] font-black leading-tight text-white"
+                  style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:1.25,height:'2.5em'}}>{entry.displayName}</b>
                 <span className={`mt-1 flex items-center gap-1${spot('achievement')}`}>
                   {(difficulties||[]).map(item=>{
                     const playable=rhythmChartPlayable(entry,item.id);
@@ -8868,8 +8872,11 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         :<>
         <div className="flex items-center gap-3 landscape:block">
           <div className="w-20 shrink-0 landscape:mx-auto landscape:w-40"><RhythmSongArt song={song} large/></div>
+          {/* ここも一覧と同じ理由で2行分を確保する。曲名が1行か2行かで
+              「長さ」「難易度ボタン」「ノーツ数」まで丸ごと上下に動いていた。 */}
           <div className="min-w-0 flex-1 landscape:mt-2 landscape:text-center">
-            <b data-rhythm-song-title className="block text-sm font-black leading-tight text-white">{song.displayName}</b>
+            <b data-rhythm-song-title className="block text-sm font-black leading-tight text-white"
+              style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:1.25,height:'2.5em'}}>{song.displayName}</b>
             <small className="mt-0.5 block text-[10px] font-bold text-slate-400">{rhythmSongLengthLabel(song,chart)}</small>
           </div>
         </div>
@@ -8881,11 +8888,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
             const open=unlocked(item);
             const on=!!difficulty&&item.id===difficulty.id;
             const need=rhythmDifficultyUnlockRequirement(item.id);
+            // 高さは固定(h-[66px])。ロック中だけ「◯◯で解放」が2行になり、
+            // その曲だけボタンが高くなって下の行までずれていた。
             return <button key={item.id} type="button" data-rhythm-difficulty={item.id} aria-pressed={on}
               data-rhythm-difficulty-locked={open?'0':'1'} disabled={!open}
               title={open?undefined:`${need}をクリアすると挑めます`}
               onClick={()=>{if(open)setDifficultyId(item.id);}}
-              className={`min-h-[52px] flex-1 rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${open?(on?tone.on:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
+              className={`flex h-[66px] flex-1 flex-col justify-center rounded-xl border-2 px-1 text-[10px] font-black leading-tight ${open?(on?tone.on:`${tone.off} bg-slate-900/70`):'border-white/10 bg-slate-900/70 text-slate-500'}`}>
               <span className="block">{open?item.id:`🔒 ${item.id}`}</span>
               <span className="block text-[9px] font-black tabular-nums opacity-90">Lv.{song.difficulties[item.id].level}</span>
               {/* 自己ベストは**難易度ごと**に出す。全国ランキングは難易度をまたいだ
