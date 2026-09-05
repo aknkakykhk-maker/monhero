@@ -36,11 +36,13 @@ assert.deepEqual(match([
   {type:'TAP',timeMs:1100,lane:2,index:0,done:false,activePointerId:null},
   {type:'TAP',timeMs:900,lane:2,index:1,done:false,activePointerId:null},
 ],[{lane:2,inputKey:'touch:tie'}]),[1],'時間差が同じなら、時刻を過ぎているノーツを先に取る');
-// 過ぎたノーツどうしなら、そのなかで近いほうを取る(順番に消化する)
+// 過ぎたノーツどうしなら、時刻が早いほう(＝前のノーツ)から順に取る。
+// 近いほう(後ろ)を先に取ると、前のノーツは必ず取り逃しになる
+// (2026-09-05・ユーザー指摘「1個目が過ぎて押したときに次のノーツを拾う」)
 assert.deepEqual(match([
   {type:'TAP',timeMs:800,lane:2,index:0,done:false,activePointerId:null},
   {type:'TAP',timeMs:950,lane:2,index:1,done:false,activePointerId:null},
-],[{lane:2,inputKey:'touch:both-late'}]),[1],'過ぎたノーツが2つなら近いほうを取る');
+],[{lane:2,inputKey:'touch:both-late'}]),[0],'過ぎたノーツが2つなら前のほうから取る');
 // まだ来ていないノーツしか無ければ、そのなかで近いほうを取る(早押し)
 assert.deepEqual(match([
   {type:'TAP',timeMs:1200,lane:2,index:0,done:false,activePointerId:null},
@@ -58,7 +60,9 @@ assert.deepEqual(match([
   {type:'TAP',timeMs:1100,lane:2,index:0,done:false,activePointerId:null},
   {type:'TAP',timeMs:900,lane:2,index:1,done:false,activePointerId:null},
   {type:'TAP',timeMs:1000,lane:2,index:2,done:false,activePointerId:null},
-],[{lane:2,inputKey:'touch:unsorted'}]),[2],'時刻順でない譜面は全範囲fallbackして従来どおり拾う');
+// 時刻順でない譜面では二分探索の絞り込みが使えないので、全範囲を見る経路へ落ちる。
+// そのうえで選び方は同じ(過ぎているノーツのうち、いちばん時刻が早いもの＝900ms)
+],[{lane:2,inputKey:'touch:unsorted'}]),[1],'時刻順でない譜面も全範囲fallbackして同じ選び方で拾う');
 assert(source.includes('const RHYTHM_INPUT_MATCH_META=new WeakMap();')&&source.includes('const rhythmInputMatchBounds=(source,now,offset)=>')&&!source.includes('source.map((note,index)=>({note,index})).filter'),'入力ごとの全ノーツmap/filter/sortを廃止して候補時刻窓へ絞る');
 const matchReads=run(`(()=>{let reads=0;const notes=Array.from({length:400},(_,i)=>{const n={type:'TAP',lane:2,index:i,done:false,activePointerId:null};Object.defineProperty(n,'timeMs',{get(){reads++;return i*100;}});return n;});rhythmMatchInputBatch(notes,[{lane:2,inputKey:'touch:perf'}],20000,0);reads=0;rhythmMatchInputBatch(notes,[{lane:2,inputKey:'touch:perf2'}],20000,0);return reads;})()`);
 assert(matchReads<80,`昇順400ノーツの2回目入力は±200ms周辺だけを見る reads=${matchReads}`);

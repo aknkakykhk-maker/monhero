@@ -1360,7 +1360,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     //
     // これで「1つめを叩き損ねて2つめのタイミングで叩いた」ときも、
     // 2つめ(差0ms)のほうが1つめ(差176ms)より近いので2つめが取れる＝ずれ込まない。
-    let picked=null,pickedIndex=-1,pickedRank=Infinity,pickedTimeDistance=Infinity,pickedSpatialDistance=Infinity;
+    let picked=null,pickedIndex=-1,pickedRank=Infinity,pickedNoteTime=Infinity,pickedSpatialDistance=Infinity;
     for(let index=matchStart;index<matchEnd;index++){
       const note=source[index];
       if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP')continue;
@@ -1369,11 +1369,16 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       if(!(timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS)||!acceptsPosition(note))continue;
       const distance=spatialDistance(note);
       const rank=now>=noteTime?0:1;   // 0=時刻を過ぎている(遅れ) / 1=まだ来ていない(早い)
+      // 同じ組の中では、時刻が早いノーツから順に取る。
+      // 過ぎているノーツが2つ以上あるとき「時間の差が近いほう」で選ぶと、
+      // 前のノーツを飛ばして後ろを取ってしまい、前は必ずMISSになる
+      // (16分で1個分ちょうど遅れて叩くと、まさにこれが起きていた)。
+      // ノーツは前から順に来るので、遅れて叩いたぶんは「まだ残っている中でいちばん前」へ渡す。
       if(!picked
         ||rank<pickedRank
-        ||(rank===pickedRank&&(timeDistance<pickedTimeDistance
-          ||(timeDistance===pickedTimeDistance&&distance<pickedSpatialDistance)))){
-        picked=note;pickedIndex=index;pickedRank=rank;pickedTimeDistance=timeDistance;pickedSpatialDistance=distance;
+        ||(rank===pickedRank&&(noteTime<pickedNoteTime
+          ||(noteTime===pickedNoteTime&&distance<pickedSpatialDistance)))){
+        picked=note;pickedIndex=index;pickedRank=rank;pickedNoteTime=noteTime;pickedSpatialDistance=distance;
       }
     }
     if(!picked)return {input,target:null,deltaMs:null};
