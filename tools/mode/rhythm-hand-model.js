@@ -40,6 +40,19 @@ const HAND_MODEL=Object.freeze({
   releaseMarginMs:30,
   // 終点フリックは「弾いて戻す」ぶん、指の解放が遅れる
   endFlickReleaseMs:80,
+  // 押さえている指を、帯の中心からどれだけ横へ寄せられるか(レーン単位)。
+  //
+  // 【2026-09-05・実機の指摘で足した】
+  // 「まだスライド時、物理的に押せない（押しづらすぎる？）箇所がある」
+  //
+  // それまでは「幅の広い帯なら端から端まで好きな場所を押せる」としていた。
+  // 理屈の上ではそれで指が入るのだが、実際には**次に何が来るかを知らないと端へ寄せられない**。
+  // 初見では中心を押さえるのが自然なので、この前提だと押せない配置が素通りしていた。
+  // (先行公開5曲を測ると、この甘さで見逃していた箇所が156あった)
+  //
+  // 中心から寄せられるのは、帯の幅の1/4まで、かつここで決めた上限まで。
+  // SLIDEを押さえている指は経路に沿って動くので寄せる余地が無く、0として扱う。
+  holdShiftLanes:.25,
 });
 
 // ノーツの「指を置ける範囲」。レーン単位([0,5])で返す。
@@ -74,8 +87,16 @@ const separationRange=(a,b)=>({
 // 返り値 { ok, by, reason }
 //   by='twoFinger' … 指2本を1レーン以上離して置ける
 //   by='oneFinger' … 指1本で叩き直せる
+// その指が実際にいられる範囲。
+//   押さえ続けるノーツ(HOLD/SLIDE) … 中心からわずかしか寄せられない(heldTouchSpan)
+//   叩くノーツ(TAP/FLICK)          … 叩く瞬間に狙えるので幅の中を使える(usableTouchSpan)
+// 押さえている指を「端まで寄せて構えられる」と考えていたせいで、
+// 押せない配置が生成でも検査でも素通りしていた(2026-09-05・実機の指摘)。
+const fingerSpan=note=>
+  (note&&(note.type==='HOLD'||note.type==='SLIDE'))?heldTouchSpan(note):usableTouchSpan(note);
+
 const fingerPairFeasible=(noteA,noteB,deltaMs)=>{
-  const a=usableTouchSpan(noteA),b=usableTouchSpan(noteB);
+  const a=fingerSpan(noteA),b=fingerSpan(noteB);
   const {min,max}=separationRange(a,b);
   const dt=Math.max(0,Number(deltaMs)||0);
   if(max+1e-9>=HAND_MODEL.fingerMinGapLanes)return {ok:true,by:'twoFinger'};
@@ -97,13 +118,23 @@ const fingerPairFeasible=(noteA,noteB,deltaMs)=>{
 const fingerPairStrain=(noteA,noteB,deltaMs)=>{
   const feasible=fingerPairFeasible(noteA,noteB,deltaMs);
   if(!feasible.ok||feasible.by==='twoFinger')return null;
-  const {min}=separationRange(usableTouchSpan(noteA),usableTouchSpan(noteB));
+  const {min}=separationRange(fingerSpan(noteA),fingerSpan(noteB));
   const dt=Math.max(0,Number(deltaMs)||0);
   if(dt+1e-9<HAND_MODEL.restrikeComfortMs)
     return `同じ指の叩き直しが${Math.round(dt)}ms(快適には${HAND_MODEL.restrikeComfortMs}ms欲しい)`;
   if(min>dt/1000*HAND_MODEL.laneSpeedComfort+1e-9)
     return `${min.toFixed(2)}レーンの移動が${Math.round(dt)}ms(快適には${HAND_MODEL.laneSpeedComfort}レーン毎秒まで)`;
   return null;
+};
+
+// 押さえ続けているノーツ(HOLD/SLIDE)の「指が実際にいられる範囲」。
+// usableTouchSpan と違って端まで寄せられるとは考えない(HAND_MODEL.holdShiftLanes を参照)。
+const heldTouchSpan=note=>{
+  const [lo,hi]=noteTouchSpan(note);
+  const center=(lo+hi)/2,width=hi-lo;
+  // SLIDEは経路に沿って動くので、中心から寄せる余地が無い
+  const shift=note&&note.type==='SLIDE'?0:Math.min(width/4,HAND_MODEL.holdShiftLanes);
+  return [center-shift,center+shift];
 };
 
 // ノーツの「触る点」の目安(中心)。レーンの偏りを数えるときなど、1点で表したいときに使う。
@@ -113,4 +144,4 @@ const noteTouchLane=note=>{
 };
 
 module.exports={HAND_MODEL,fingerPairFeasible,fingerPairStrain,
-  noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange};
+  noteTouchLane,noteTouchSpan,usableTouchSpan,heldTouchSpan,fingerSpan,separationRange};

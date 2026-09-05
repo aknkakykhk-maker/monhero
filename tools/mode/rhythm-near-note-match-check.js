@@ -42,18 +42,30 @@ const hit=(notes,at,coordinate=6)=>{
 // --- 本題: 遅れて叩いても、次のノーツへ移らない ---
 // 判定の受付幅より狭い間隔で並ぶ形すべてで確かめる。
 // 受付幅(240ms)は8分(176ms)より広いので、次のノーツは必ず候補に入っている。
+//
+// どこで次のノーツへ移るかは「判定の段(MARVELOUS/EXCELLENT/…)」で決まる。
+// 1つめの段が落ちて、2つめのほうが良い段になった瞬間に切り替わる。
+// 時間の近さで決めると2つのちょうど中間で切り替わってしまい、
+// 16分なら0.044秒遅れただけで次へ移る＝これがユーザーの指摘そのものだった。
+// 段で決めるので、実際にはそれよりずっと遅くまで1つめが取れる。
+const RANK=[55,100,150,200,240];   // MARVELOUS / EXCELLENT / GREAT / GOOD / BAD の端
+const rankOf=d=>{const a=Math.abs(d);for(let i=0;i<RANK.length;i++)if(a<=RANK[i])return i;return RANK.length;};
 const GAPS=[[' 16分  88ms',88],[' 8分  176ms',176],['付点8分 264ms',264]];
 for(const [label,gap] of GAPS){
   ok(`${label}間隔は判定の受付幅(${WINDOW}ms)より狭い＝次のノーツも候補に入る`,gap<=WINDOW*2);
-  let wrong=null;
-  // 1つめの時刻から、2つめが来る直前までのあいだは、必ず1つめが取れること
-  for(let late=0;late<gap;late+=4){
+  let wrong=null,switchedAt=null;
+  for(let late=0;late<gap;late+=1){
     if(late>WINDOW)break;
     const got=hit([note(1000,0),note(1000+gap,1)],1000+late);
-    if(got!==0){wrong={late,got};break;}
+    // このタイミングで「どちらを取るのが正しいか」を段で出す
+    const want=rankOf(gap-late)<rankOf(late)?1:0;
+    if(got!==want){wrong={late,got,want};break;}
+    if(got===1&&switchedAt===null)switchedAt=late;
   }
-  ok(`${label}: 遅れて叩いても1つめが取れる（次へ移らない）`,!wrong,
-    wrong?`${wrong.late}ms遅れで${wrong.got===null?'どれにも当たらなかった':`${wrong.got+1}つめを取った`}`:'');
+  ok(`${label}: 判定の段の良いほうを取る（時間の近さで流れない）`,!wrong,
+    wrong?`${wrong.late}ms遅れで${wrong.got===null?'どれにも当たらなかった':`${wrong.got+1}つめ`}(正しくは${wrong.want+1}つめ)`
+      :`${switchedAt===null?'最後まで1つめ':`${switchedAt}ms遅れで2つめへ`}（中間の${Math.round(gap/2)}msよりあとまで1つめが取れる）`);
+  if(switchedAt!==null)ok(`${label}: 切り替わりは間隔の半分より遅い`,switchedAt>gap/2,`${switchedAt}ms > ${gap/2}ms`);
 }
 
 // --- 過ぎているノーツが2つ以上あるときは、いちばん後ろを取る ---
@@ -135,12 +147,24 @@ ok(`受付幅ちょうど(${WINDOW}ms)なら取る`,hit([note(1000,0)],1000+WIND
 }
 
 // --- 実装の書きぶり（絶対値だけで選ぶ形へ戻っていないか） ---
-ok('遅れているノーツを先に見る作りになっている',
-  /const rank=now>=noteTime\?0:1;/.test(source)&&/rank<pickedRank/.test(source));
-// 過ぎている側は「いちばん後ろ」、まだ来ていない側は「いちばん前」。
-// ここを両方とも同じ向きにすると、必ずどちらかの指摘が再発する
-ok('過ぎている側といちばん前の側で、選ぶ向きを変えている',
-  /const better=rank===0\?noteTime>pickedNoteTime:noteTime<pickedNoteTime;/.test(source));
+// 過ぎている側とまだ来ていない側を別々に絞ってから比べる。
+// ここを1本のループで「いちばん近いもの」にすると、判定が次々と流れる状態に戻る
+ok('過ぎている側とまだ来ていない側を別々に絞っている',
+  /passedBest=candidate\(passedBest,note,index,noteTime,inside,distance,true\)/.test(source)
+  &&/upcomingBest=candidate\(upcomingBest,note,index,noteTime,inside,distance,false\)/.test(source));
+// 2つの比べ方は「時間の近さ」ではなく「判定の段」。
+// 近さで比べると2つのちょうど中間で切り替わり、16分なら0.044秒遅れただけで次へ移る
+// (＝「近くに次のノーツがあるときに判定がそっちにいってる」の再発)
+ok('2つの比べ方は判定の段で、近さではない',
+  /const judgeRank=deltaMs=>/.test(source)
+  &&/judgeRank\(upcomingBest\.noteTime-now\)<judgeRank\(now-passedBest\.noteTime\)/.test(source));
+// 同じ段のときは、実際に叩いたつもりである「過ぎている側」を取る
+ok('同じ段なら過ぎている側を取る',
+  /\?upcomingBest:passedBest;/.test(source));
+// 押した位置がノーツの内側にあるものを優先する(幅の広いノーツの内側を押しているのに
+// となりが取られる件への対応)
+ok('同じ時刻なら押した位置が内側のものを優先する',
+  /const isInside=note=>/.test(source)&&/if\(inside!==current\.inside\)/.test(source));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
