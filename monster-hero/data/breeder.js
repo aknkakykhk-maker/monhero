@@ -85,6 +85,34 @@ const TEACHING_CARDS = [
 // 自動では解放されず、ブリーダーマーケットで購入して解放する対象になる。
 const STARTER_TEACHING_IDS = ['oryo','dra','cadmium','mua','atsu','myaru'];
 
+// バトルへ持ち込めるアシストカードの枚数。**ちょうどこの枚数**を選ぶ。
+// これまでは STARTER_TEACHING_IDS.length を上限として使い回していたが、
+// 「最初から持っているカードの枚数」と「持ち込める枚数」は別物なので独立させた。
+// (2026-09-05・ユーザー指摘「6枚しか編成出来ないのに9枚編成になってる」)
+const TEACHING_ROSTER_SIZE = 6;
+
+// 編成の保存値を読むときは必ずここを通す。
+// 保存が無い人の既定値を「解放済みカード全部」にしていたため、マーケットでカードを
+// 買って解放が7枚以上になると編成もその枚数になり、バトルの手札が溢れていた。
+// 解放していないカード・重複・余りを落として、常にちょうど TEACHING_ROSTER_SIZE 枚にする。
+const normalizeTeachingRoster = (saved, unlocked) => {
+  const available = Array.isArray(unlocked) && unlocked.length ? unlocked : STARTER_TEACHING_IDS;
+  const source = Array.isArray(saved) ? saved : [];
+  const picked = [];
+  const take = (id) => {
+    if (picked.length >= TEACHING_ROSTER_SIZE) return;
+    if (typeof id !== 'string' || !id) return;
+    if (!available.includes(id)) return;   // 解放していないカードは持ち込めない
+    if (picked.includes(id)) return;       // 同じカードを二重に持たない
+    picked.push(id);
+  };
+  // 保存されている並びを優先する。プレイヤーが選んだ順は変えない
+  for (const id of source) take(id);
+  // 足りないぶんは解放済みから前から補う(保存が空・壊れている場合の保険)
+  for (const id of available) take(id);
+  return picked;
+};
+
 // ブリーダーマーケット: ブリーダーレベルアップで得たポイントで購入できるアイテム
 // type:'icon' はプロフィールアイコン、type:'disc' はモンスターの円盤石(購入でそのモンスターが解放される)、
 // type:'assist' はアシストカードの解放アイテム。idはicon以外の場合、解放対象(モンスター/カード)のidと一致させる。

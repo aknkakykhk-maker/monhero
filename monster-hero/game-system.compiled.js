@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e5e3942e5933e1d4
+// source-sha256: c9c7353964decd12
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 09:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 10:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18956,7 +18956,7 @@ function MonsterHeroGame() {
   const [editingPartySetIndex, setEditingPartySetIndex] = useState(0);
   const [partySetCopyTarget, setPartySetCopyTarget] = useState(null);
   const [unlockedTeachingIds, setUnlockedTeachingIds] = useState(STARTER_TEACHING_IDS); // 解放済みアシストカードid(初期6枚+購入分、端末保存)
-  const [teachingRosterIds, setTeachingRosterIds] = useState(STARTER_TEACHING_IDS); // アシストカード編成(解放済みの中から周回で使う候補、端末保存)
+  const [teachingRosterIds, setTeachingRosterIds] = useState(() => normalizeTeachingRoster(STARTER_TEACHING_IDS, STARTER_TEACHING_IDS)); // アシストカード編成(解放済みの中から周回で使う候補、端末保存。常にちょうどTEACHING_ROSTER_SIZE枚)
   const [marketTab, setMarketTab] = useState('icon'); // マーケットの表示カテゴリ: 'icon'|'disc'|'assist'
   const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
   const [draftMonsterRoster, setDraftMonsterRoster] = useState([]); // 編成画面での仮選択(決定を押すまでmonsterRosterIdsには反映しない)
@@ -21308,7 +21308,11 @@ function MonsterHeroGame() {
       setDraftAutoSettings(savedAutoSettings);
       const savedUnlockedTeachings = await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false);
       setUnlockedTeachingIds(savedUnlockedTeachings);
-      const savedTeachingRoster = await storeGet('mh_teaching_roster', savedUnlockedTeachings, false);
+      // 保存が無い人の既定値を「解放済み全部」にしていたため、カードを買って解放が
+      // 7枚以上になると編成もその枚数になり、バトルの手札が溢れていた。
+      // 読むときは必ず正規化を通し、常にちょうど TEACHING_ROSTER_SIZE 枚にする。
+      // 保存そのものは書き換えない(次に「決定」を押したときに正しい値で上書きされる)。
+      const savedTeachingRoster = normalizeTeachingRoster(await storeGet('mh_teaching_roster', null, false), savedUnlockedTeachings);
       setTeachingRosterIds(savedTeachingRoster);
       const scores = {};
       const attempts = {};
@@ -22423,7 +22427,7 @@ function MonsterHeroGame() {
       "aria-modal": "true",
       "aria-label": notice.title
     }, /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+      className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
       style: {
         paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
       }
@@ -22661,7 +22665,7 @@ function MonsterHeroGame() {
         });
         // 編成はアシストカード6枚固定。既に6枚埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
         setTeachingRosterIds(prev => {
-          if (prev.length >= STARTER_TEACHING_IDS.length) return prev;
+          if (prev.length >= TEACHING_ROSTER_SIZE) return prev;
           const next = [...prev, item.id];
           storeSet('mh_teaching_roster', next, false);
           return next;
@@ -22693,7 +22697,13 @@ function MonsterHeroGame() {
     });
   };
   const toggleDraftTeaching = id => {
-    setDraftTeachingRoster(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    // ちょうどTEACHING_ROSTER_SIZE枚まで。超える選択はそもそも受け付けない
+    // (受け付けてしまうと「決定」が押せない状態にプレイヤーが自力で入り込める)。
+    setDraftTeachingRoster(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= TEACHING_ROSTER_SIZE) return prev;
+      return [...prev, id];
+    });
   };
   const confirmMonsterRoster = () => {
     if (draftMonsterRoster.length !== STARTER_MONSTER_IDS.length) return;
@@ -22709,7 +22719,7 @@ function MonsterHeroGame() {
     setGameState('MB_MANAGEMENT');
   };
   const confirmTeachingRoster = () => {
-    if (draftTeachingRoster.length !== STARTER_TEACHING_IDS.length) return;
+    if (draftTeachingRoster.length !== TEACHING_ROSTER_SIZE) return;
     setTeachingRosterIds(draftTeachingRoster);
     storeSet('mh_teaching_roster', draftTeachingRoster, false);
     addAssistantBond('partySet');
@@ -29701,7 +29711,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "bg-slate-900 border-2 border-amber-500 rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden",
       style: {
-        maxHeight: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'
+        maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between shrink-0"
@@ -29805,7 +29815,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: `bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden`,
       style: {
-        maxHeight: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'
+        maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'
       }
     }, renderMonsterSummaryHeader({
       mon,
@@ -29975,7 +29985,7 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-title-dialog",
     style: {
-      maxHeight: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
+      maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
       overflowY: 'auto'
     }
   }, /*#__PURE__*/React.createElement("div", {
@@ -31471,7 +31481,7 @@ function MonsterHeroGame() {
     }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setDraftMonsterRoster(monsterRosterIds);
-        setDraftTeachingRoster(teachingRosterIds);
+        setDraftTeachingRoster(normalizeTeachingRoster(teachingRosterIds, unlockedTeachingIds));
         setRosterTab('monster');
         setGameState('ROSTER');
       },
@@ -31482,7 +31492,7 @@ function MonsterHeroGame() {
     }, "\u653E\u7267\u8A2D\u5B9A")) : /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setDraftMonsterRoster(monsterRosterIds);
-        setDraftTeachingRoster(teachingRosterIds);
+        setDraftTeachingRoster(normalizeTeachingRoster(teachingRosterIds, unlockedTeachingIds));
         setRosterTab('teaching');
         setGameState('ROSTER');
       },
@@ -33069,7 +33079,7 @@ function MonsterHeroGame() {
         onClick: e => e.stopPropagation(),
         className: "w-full max-w-md flex flex-col rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950",
         style: {
-          maxHeight: 'calc(100dvh - env(safe-area-inset-top) - 1rem)',
+          maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - 1rem)',
           paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
         }
       }, /*#__PURE__*/React.createElement("header", {
@@ -38157,7 +38167,7 @@ function MonsterHeroGame() {
       className: "flex items-center gap-2 mb-2 shrink-0 bg-purple-950/30 border border-purple-500/30 rounded-2xl px-2 py-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-purple-300 shrink-0 leading-tight"
-    }, "\u7DE8\u6210\u4E2D", /*#__PURE__*/React.createElement("br", null), draftTeachingRoster.length, "/", STARTER_TEACHING_IDS.length), /*#__PURE__*/React.createElement("div", {
+    }, "\u7DE8\u6210\u4E2D", /*#__PURE__*/React.createElement("br", null), draftTeachingRoster.length, "/", TEACHING_ROSTER_SIZE), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex gap-1.5 overflow-x-auto scrollbar-hide min-h-[36px] items-center"
     }, draftTeachingRoster.length === 0 ? /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] text-slate-600 font-bold"
@@ -38171,7 +38181,7 @@ function MonsterHeroGame() {
       }, cardIconNode(t.icon, 32, t.id));
     }))), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold mb-2 px-1 shrink-0"
-    }, "\u89E3\u653E\u6E08\u307F", unlockedTeachingIds.length, "\u679A\u30FB\u3061\u3087\u3046\u3069", STARTER_TEACHING_IDS.length, "\u679A\u9078\u3076\u3068\u300C\u6C7A\u5B9A\u300D\u3067\u304D\u307E\u3059\u30FB\u30A2\u30A4\u30B3\u30F3\u30BF\u30C3\u30D7\u3067\u7DE8\u6210/\u89E3\u9664\u3001i\u30DC\u30BF\u30F3\u3067\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
+    }, "\u89E3\u653E\u6E08\u307F", unlockedTeachingIds.length, "\u679A\u30FB\u3061\u3087\u3046\u3069", TEACHING_ROSTER_SIZE, "\u679A\u9078\u3076\u3068\u300C\u6C7A\u5B9A\u300D\u3067\u304D\u307E\u3059\u30FB\u30A2\u30A4\u30B3\u30F3\u30BF\u30C3\u30D7\u3067\u7DE8\u6210/\u89E3\u9664\u3001i\u30DC\u30BF\u30F3\u3067\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-3 pb-4"
@@ -38201,9 +38211,9 @@ function MonsterHeroGame() {
       })));
     }))), /*#__PURE__*/React.createElement("button", {
       onClick: confirmTeachingRoster,
-      disabled: draftTeachingRoster.length !== STARTER_TEACHING_IDS.length,
-      className: `w-full py-3 rounded-2xl font-black text-sm mt-2 shrink-0 ${draftTeachingRoster.length === STARTER_TEACHING_IDS.length ? 'bg-purple-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
-    }, "\u6C7A\u5B9A (", draftTeachingRoster.length, "/", STARTER_TEACHING_IDS.length, ")"))), rosterDetailMon && renderMonsterDetailModal({
+      disabled: draftTeachingRoster.length !== TEACHING_ROSTER_SIZE,
+      className: `w-full py-3 rounded-2xl font-black text-sm mt-2 shrink-0 ${draftTeachingRoster.length === TEACHING_ROSTER_SIZE ? 'bg-purple-500 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
+    }, "\u6C7A\u5B9A (", draftTeachingRoster.length, "/", TEACHING_ROSTER_SIZE, ")"))), rosterDetailMon && renderMonsterDetailModal({
       mon: rosterDetailMon,
       masu: rosterDetailMon.masuId ? getMasuMon(rosterDetailMon.masuId) : null,
       onClose: () => setRosterDetailMon(null),
@@ -39894,7 +39904,7 @@ function MonsterHeroGame() {
         "data-unique-setting-sheet": true,
         className: "bg-slate-900 border-2 border-violet-500 rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl overflow-hidden",
         style: {
-          maxHeight: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'
+          maxHeight: 'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'
         }
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center justify-between gap-2 shrink-0"
@@ -44465,7 +44475,7 @@ function MonsterHeroGame() {
           background: 'transparent'
         }
       }), /*#__PURE__*/React.createElement("div", {
-        className: "relative w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+        className: "relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
         style: {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
           pointerEvents: 'none'
@@ -44533,7 +44543,7 @@ function MonsterHeroGame() {
         "aria-modal": "true",
         "aria-label": notice.title
       }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+        className: "w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
         style: {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
         }
@@ -44600,7 +44610,7 @@ function MonsterHeroGame() {
           background: 'transparent'
         }
       }), /*#__PURE__*/React.createElement("div", {
-        className: "relative w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4",
+        className: "relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4",
         style: {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
           pointerEvents: 'none'
