@@ -18,7 +18,7 @@ const ROOT=path.resolve(__dirname,'..','..');
 let failed=0;
 const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail?` (${detail})`:''}`);if(!ok)failed++;};
 
-const {RHYTHM_SONGS,RHYTHM_DIFFICULTIES}=loadRuntimeSongs();
+const {RHYTHM_SONGS,RHYTHM_DIFFICULTIES,RHYTHM_DEMO_SONG_IDS}=loadRuntimeSongs();
 const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
 
 // --- 1. 基準点 ---
@@ -68,8 +68,11 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
     const levels=RHYTHM_DIFFICULTIES
       .map(difficulty=>({id:difficulty.id,chart:song.difficulties[difficulty.id]}))
       .filter(entry=>entry.chart.totalNotes>=LEVEL_MIN_NOTES);
-    // テスト用の譜面は、難易度ごとに別々の確認内容を入れてあるので順番を持たない
-    if(!/candidate|six_eternel/.test(song.songId))continue;
+    // テスト用の譜面は、難易度ごとに別々の確認内容を入れてあるので順番を持たない。
+    // 曲えらびへ出る曲(RHYTHM_DEMO_SONG_IDS)は全部見る。以前は songId の綴りで
+    // 拾っていたため、stay_with_me や kiki_issen のような正式曲が丸ごと外れていた。
+    const released=RHYTHM_DEMO_SONG_IDS.includes(song.songId)||/candidate|six_eternel/.test(song.songId);
+    if(!released)continue;
     for(let i=1;i<levels.length;i++){
       if(levels[i].chart.level<levels[i-1].chart.level){
         broken.push(`${song.songId} ${levels[i-1].id}(${levels[i-1].chart.level})→${levels[i].id}(${levels[i].chart.level})`);

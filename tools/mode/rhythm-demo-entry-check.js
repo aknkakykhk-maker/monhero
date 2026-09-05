@@ -26,21 +26,29 @@ const difficulties=o.rhythmDemoDifficulties(song,o.RHYTHM_DIFFICULTIES);
 ok('体験版で遊べる範囲をデータ側で決めている',
   typeof o.RHYTHM_DEMO_SONG_ID==='string'&&Array.isArray(o.RHYTHM_DEMO_DIFFICULTY_IDS));
 // 2026-09-05、ユーザー指示で先行公開の5曲・5難易度になった(それまでは Monster Hero 1曲・3難易度)。
-// 「どこまでを体験版へ出すかをデータ側で決めている」という見張りたいことは変えず、
-// 数と中身のほうを新しい仕様へ合わせる。
-const DEMO_SONG_IDS=['mf_ichika_mix','monster_hero','six_eternel_remix','stay_with_me','kiki_issen'];
-ok('体験版の曲は先行公開の5曲',
-  o.RHYTHM_DEMO_SONG_IDS.join()===DEMO_SONG_IDS.join(),o.RHYTHM_DEMO_SONG_IDS.join(' / '));
-ok('体験版の5曲がすべて実在する',
+// 同日に「風がそよぐ場所」を足して6曲になった。
+// 見張りたいのは「どこまでを体験版へ出すかをデータ側で決めている」ことなので、
+// 曲名を固定で書かない(書くと曲を足すたびにここが落ちるだけで、何も守れない)。
+// そのかわり「並んでいる曲が全部実在して、譜面も入っている」ところまで見る。
+const DEMO_SONG_IDS=o.RHYTHM_DEMO_SONG_IDS;
+ok('体験版の曲がデータ側のリストで決まっている',
+  Array.isArray(DEMO_SONG_IDS)&&DEMO_SONG_IDS.length>0,DEMO_SONG_IDS.join(' / '));
+ok('体験版の曲がすべて実在する',
   DEMO_SONG_IDS.every(id=>o.RHYTHM_SONGS.some(s=>s.songId===id)),
   DEMO_SONG_IDS.filter(id=>!o.RHYTHM_SONGS.some(s=>s.songId===id)).join(' / ')||'すべてある');
+// 先頭は全国ランキングの既定(RHYTHM_DEMO_SONG_ID=RHYTHM_DEMO_SONG_IDS[0])。
+// 曲を足すときにうっかり先頭へ入れると、既存プレイヤーが最初に見るランキングが黙って変わる。
+// 「先頭と既定が同じ」は定義からいつでも真なので見ても意味がない。曲名のほうを固定で書く
+// (ここを変えるのは、ユーザーが既定の曲を変えると決めたときだけ)。
+ok('全国ランキングの既定が mf_ichika_mix のまま(曲を足すときは末尾へ)',
+  o.RHYTHM_DEMO_SONG_ID==='mf_ichika_mix',o.RHYTHM_DEMO_SONG_ID);
 ok('体験版の難易度はEASY〜MASTERの5つ',
   o.RHYTHM_DEMO_DIFFICULTY_IDS.join()==='EASY,NORMAL,HARD,EXPERT,MASTER');
 ok('譜面が入っている難易度だけを選べる（押せるのに始まらない状態を作らない）',
   difficulties.length===5&&difficulties.every(d=>song.difficulties[d.id].notes.length>0),
   difficulties.map(d=>`${d.id}(${song.difficulties[d.id].totalNotes})`).join(' / '));
-// 5曲とも5難易度そろっていること。1曲だけ譜面が欠けている状態を見逃さない
-ok('5曲とも5難易度そろっている',
+// 並んでいる曲がどれも5難易度そろっていること。1曲だけ譜面が欠けている状態を見逃さない
+ok('曲えらびの曲はどれも5難易度そろっている',
   DEMO_SONG_IDS.every(id=>{
     const s=o.RHYTHM_SONGS.find(entry=>entry.songId===id);
     return !!s&&o.RHYTHM_DEMO_DIFFICULTY_IDS.every(d=>s.difficulties[d]&&s.difficulties[d].notes.length>0);

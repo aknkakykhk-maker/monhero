@@ -28,14 +28,16 @@ vm.runInContext(fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js
   +'Object.entries(s.difficulties).map(([k,v])=>[k,Number(v.level)]))})),'
   +'difficulties:RHYTHM_DEMO_DIFFICULTY_IDS};',ctx);
 const {songs,difficulties}=ctx.out;
-ok('先行公開の曲が5曲そろっている',songs.length===5,`${songs.length}曲`);
+// 曲数は固定で書かない(曲を足すたびにここが落ちるだけで、何も守れない)。
+// 見たいのは「複数の曲を並べて散らばりを測れること」なので、下限だけを置く。
+ok('先行公開の曲が複数そろっている',songs.length>=5,`${songs.length}曲`);
 
 // 難易度ごとの散らばり。EASYは元の数字が小さいので、求める幅も小さくしてある。
 // 「全部同じ」を防ぐのが目的なので、ここは**下限**だけを見る（上限は付けない）。
 const MIN_SPREAD={EASY:2,NORMAL:3,HARD:3,EXPERT:4,MASTER:5};
 for(const difficulty of difficulties){
   const levels=songs.map(song=>song.levels[difficulty]).filter(Number.isFinite);
-  if(levels.length<5){ok(`${difficulty}のレベルが5曲ぶんそろっている`,false,`${levels.length}曲`);continue;}
+  if(levels.length<songs.length){ok(`${difficulty}のレベルが全曲ぶんそろっている`,false,`${levels.length}/${songs.length}曲`);continue;}
   const spread=Math.max(...levels)-Math.min(...levels);
   ok(`${difficulty}は曲ごとに難しさが違う（差${MIN_SPREAD[difficulty]}以上）`,
     spread>=MIN_SPREAD[difficulty],
@@ -71,7 +73,8 @@ if(REFERENCE&&EXPONENT&&RANGE){
   const range={min:+RANGE[1],max:+RANGE[2]};
   // 曲id → 解析JSONの名前。ランタイムの曲idから引く。
   const AUDIO={mf_ichika_mix:'atsu-cup-theme',monster_hero:'monster-hero-theme',
-    six_eternel_remix:'six-eternel-remix-beat',stay_with_me:'pandora-boss',kiki_issen:'eiki-boss'};
+    six_eternel_remix:'six-eternel-remix-beat',stay_with_me:'pandora-boss',kiki_issen:'eiki-boss',
+    kaze_ga_soyogu:'kaze-ga-soyogu'};
   const factors=[];
   for(const song of songs){
     const file=path.join(ROOT,`tools/mode/authoring/${AUDIO[song.id]}-v3-audio.json`);

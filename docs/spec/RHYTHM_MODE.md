@@ -4227,3 +4227,58 @@ Tailwindは外部CDNのJITが後からCSSを作るため、間に合わないあ
 検査は `tools/mode/rhythm-start-sequence-check.js`。
 このサンドボックスはCDNへ出られないので、そのまま
 「Tailwindが最後まで来なかったいちばん悪い場合」の検査になる。
+
+### 6曲目「風がそよぐ場所」を足した（2026-09-05）
+
+ユーザー依頼「新曲追加／『風がそよぐ場所』／他と比べて少し簡単めな難易度に／音源だけ取って実装して」。
+渡された動画から音声だけを取り出し、ほかのBGMと同じ 96kbps・44.1kHz のMP3にして
+`monster-hero/audio/bgm-kaze-ga-soyogu-basho.mp3`（1:39・1.14MB）として置いた。
+
+| 項目 | 値 |
+| --- | --- |
+| songId | `kaze_ga_soyogu` |
+| 表示名 | 風がそよぐ場所（副題なし） |
+| bgmTrackId | `kaze_ga_soyogu` |
+| 長さ | 99,659ms（1:39） |
+| テンポ | 118.878 BPM / 4拍子 / 拍の頭 678.6ms |
+| 譜面 | EASY 94 / NORMAL 110 / HARD 157 / EXPERT 208 / MASTER 240 |
+| レベル | EASY 6 / NORMAL 6 / HARD 9 / EXPERT 16 / MASTER 20 |
+
+**「簡単め」は手で薄くしたのではなく、曲そのものから出た。** 量を決めるのは
+`songChallengeFactor(audio)`（テンポ・1秒あたりの打点・拍の立ち方の3つ）なので、
+ゆったりしていて拍が強く立たないこの曲は自動でいちばん薄くなる。
+実際、5難易度すべてで既存5曲より密度が低い。
+
+| 曲 | EASY | NORMAL | HARD | EXPERT | MASTER |
+| --- | --- | --- | --- | --- | --- |
+| monster_hero | 1.68 | 1.94 | 2.68 | 3.23 | 3.74 |
+| six_eternel_remix | 1.54 | 1.74 | 2.40 | 2.93 | 3.37 |
+| kiki_issen | 1.34 | 1.54 | 2.16 | 2.59 | 2.96 |
+| mf_ichika_mix | 1.28 | 1.47 | 2.00 | 2.44 | 2.73 |
+| stay_with_me | 1.18 | 1.37 | 1.87 | 2.28 | 2.55 |
+| **kaze_ga_soyogu** | **1.00** | **1.17** | **1.66** | **2.24** | **2.56** |
+
+（単位はノーツ毎秒。生成器へ曲ごとの手動の重みは一切入れていない。）
+
+EASY と NORMAL はどちらも Lv.6 になった。生の値は 2.211 と 2.544 で差はあるが、
+`Lv = 24.9087 × raw ÷ 10` の四捨五入で EASY が 5.507 と境界のすぐ上にあるため、
+表示上は同じ数字になる。譜面を手で削ればLv.5にできるが、それは
+「パイプラインが出した譜面を人が歪める」ことなので、しない。
+
+**新しい曲をランタイムへ入れる手順**（`--release` はマーカーが無いと止まる）。
+
+1. `tools/mode/authoring/rhythm-song-registry.json` へ `{"audio": "..."}` を足す
+2. `node tools/mode/rhythm-audio-analyze-v3.js --track <id> --write`（BPM・拍の頭が入る）
+3. `data/rhythm-mode.js` へ空のマーカー（`// <<id>-v3-{easy,normal,hard,expert,master}-notes>`）と
+   ノーツ配列の入れ物、`<name>Charts`、`RHYTHM_SONG_ENTRIES` の登録を書く
+4. `game-system.jsx` の `BGM_TRACKS` へ `{ id, name, creator, src, gain, loop }` を足す
+   （曲データは track ID しか持たないので、ここが無いと音が鳴らない）
+5. `RHYTHM_DEMO_SONG_IDS` へ足す（**ここを忘れると曲えらびに出ない**）。
+   先頭は全国ランキングの既定（`RHYTHM_DEMO_SONG_ID`）を指すので、末尾へ足す
+6. `node tools/mode/rhythm-chart-v3-pipeline.js --track <id> --release`
+7. `node tools/mode/rhythm-chart-level.js --write` → `node tools/build.js`
+
+**レベルの並びを見る検査が正式曲を見ていなかった。** `rhythm-chart-level-check.js` の
+「本物の曲は、難易度が上がるほどレベルも上がる」は songId を `/candidate|six_eternel/` で
+拾っていたため、`stay_with_me` `kiki_issen` `mf_ichika_mix` `monster_hero` が丸ごと対象外だった。
+`RHYTHM_DEMO_SONG_IDS` に載っている曲を全部見るようにした（同値は許す。下がったらNG）。
