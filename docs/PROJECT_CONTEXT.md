@@ -96,6 +96,7 @@ BGM は必要な画面で読み込み、SE の一部は Tone.js で生成しま�
 | プロジェクト概要・構成 | `docs/PROJECT_CONTEXT.md` |
 | フォルダ構成の詳細 | `docs/PROJECT_STRUCTURE.md` |
 | 未解決事項・回避策 | `docs/KNOWN_ISSUES.md` |
+| 構造の現状・技術的負債・改善計画 | `docs/refactor/`(`README.md` から読む) |
 | 検証スクリプトの詳細 | `tools/README.md` |
 | Claude 固有の会話・公開フロー | `CLAUDE.md` |
 | 現行ゲーム仕様 | `monster-hero/src/game-system.jsx` と `monster-hero/data/` |
