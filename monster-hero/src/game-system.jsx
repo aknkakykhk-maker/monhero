@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 23:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 23:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9191,9 +9191,9 @@ const rhythmAchievementMarkId=(playable,record)=>{
   return 'CLEAR';
 };
 
-// 曲の絵(ジャケット)。実物の絵はまだ無いので、**曲idから決まる色**のタイルに頭文字を出す。
-// 乱数を使わないので、同じ曲はいつも同じ色になる(色で曲を覚えられる)。
-// 絵を用意したら、曲のデータへ artwork:'images/...' を足せばそれを出す。
+// 曲の絵(ジャケット)の下地の色。曲idから決めるので、同じ曲はいつも同じ色になる。
+// いまは全曲へ既定の絵(RHYTHM_SONG_ART_DEFAULT)が出るので、この色は絵が
+// 読み込まれるまでの下地と、data/rhythm-mode.js が読めなかったときの受け皿になる。
 const rhythmSongArtHue=songId=>{
   const text=String(songId||'');
   let hash=0;
@@ -9221,7 +9221,7 @@ const centerCarouselChild = (root, index, behavior = 'auto') => {
 
 const RhythmSongArt=({song,large=false})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
-  const src=song&&typeof song.artwork==='string'?song.artwork:'';
+  const src=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):(song&&typeof song.artwork==='string'?song.artwork:'');
   const initial=String((song&&song.displayName)||'♪').trim().charAt(0)||'♪';
   return <span data-rhythm-song-art className={`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full':'w-12'}`}
     style={{aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`}}>
