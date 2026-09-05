@@ -3150,6 +3150,116 @@ Stay With Me 4:34 / 綺季一閃 4:21 / ドパガキリミックス 4:58 を、�
   偽のブラウザを作って `applyScreenOrientation` をそのまま動かし、
   全画面→固定の順・縦へ戻すときの `exitFullscreen`・`lock` が無い端末で `false` を返すことを見る。
 
+### 指の持ち替えが一度も成立していなかった（2026-09-05・2回目）
+
+**ユーザーの指摘**「指置き換えも機能してない。してるとしたら時間が短すぎる？」
+
+猶予の長さの問題ではなく、**2か所で塞がっていた**。
+
+1. `rhythmMatchInputBatch` は「いまの時刻の前後 `RHYTHM_INPUT_MATCH_WINDOW_MS`(240ms)以内に
+   **始まる**ノーツ」しか候補にしない。3秒のHOLDを2秒押さえてから持ち替えると、
+   そのノーツの開始時刻はとっくに窓の外なので、置き直した指がどこにも当たらない。
+2. `RHYTHM_GESTURE_RUNTIME.release()` が指を離した瞬間に終端判定を作り、
+   `note.endTimeMs` を「いまより前」へ書き換えていた。そのため `inputEnds` は必ず
+   「終わり際まで来ている」分岐へ入り、猶予を見る分岐へ一度も行かなかった。
+
+直した形。
+
+- `release()` は、終わりより `RHYTHM_HOLD_RELEASE_GRACE_MS` より手前で離したときは
+  **判定を確定させない**。`note.releasedAtMs` を立てて `rhythmFloatingNoteAdd()` するだけ。
+  途中で外れて失敗が確定しているとき(`failed`)と、指が取り消されたとき(`cancelled`)は従来どおり確定させる。
+- 浮いているノーツは `RHYTHM_FLOATING_NOTES` に控え、`rhythmMatchInputBatch` が
+  **開始時刻の窓と関係なく**、ふつうの候補より**先に**拾う
+  (押さえ直しを別のノーツへ吸われると持ち替えが必ず失敗するため)。
+  見るのは「その時刻に見えている帯へ指が乗ったか」(`rhythmHandoverSpanAt`)だけで、時間の近さは見ない。
+- 引き継ぎ時の `bind` へは `picked._rhythmOriginalType||picked.type` を渡す。
+  `bind` が `note.type` を `'HOLD'` へ書き換えているので、これが無いと
+  持ち替えた瞬間にSLIDEがただのHOLDへ変わって経路の追従が消える。
+- 猶予 `RHYTHM_HOLD_HANDOVER_GRACE_MS` は 120ms → **200ms**。
+  離す→置き直すは実測で100〜200msかかる。
+- 猶予の定数は `data/rhythm-mode.js` へ1つだけ置く。
+  持ち替えは「離す側(game-system.jsx)」と「結びつける側(rhythm-mode.js)」の両方が
+  同じ数字を見ないと成立しないため。
+- 検査 `tools/mode/rhythm-hold-handover-check.js` は、本番の `rhythmMatchInputBatch` を
+  偽のブラウザで実際に動かして「1.5秒たってから置き直した指が同じノーツを引き継げる」ことを見る。
+  **前の版はここを文面の一致だけで見ていて、しかも「rhythm-mode.js は releasedAtMs を見ない」という
+  誤った前提を確かめていたため、壊れていることに気づけなかった。**
+
+### プレイ画面に残っていたデバッグ表記（2026-09-05）
+
+**ユーザーの指摘**（ポーズ画面のスクリーンショット）「ここがデバッグのままになってる」
+
+モンビーはデバッグ画面で作って、あとから体験版の導線をかぶせた。そのため演奏画面は
+デバッグ用の文言をそのまま出していた。
+
+- 演奏画面は体験版とデバッグの**両方から開く**ので、画面を分けずに
+  `RhythmTapTest` の `debugPlay`(＝`rhythmPlay.from!=='demo'`)で出し分ける。
+  画面を分けると判定や描画まで二重管理になり、片方だけ直す事故が起きる。
+- HUDの `HOLD TEST` / `TAP TEST` → プレイヤーには譜面の `Lv.` を出す。
+- ポーズの `中断して音ゲーデバッグへ戻る` → `中断して曲えらびへ戻る`。
+- 座標校正のトグルは `[data-rhythm-pause-menu][data-rhythm-debug-play]` にだけ付ける。
+- 検査は `tools/mode/rhythm-player-screen-debug-check.js`。
+  演奏画面のJSXに「DEBUG」「デバッグ」が出し分けなしで残っていないかも見る。
+
+### 押さえている帯に重なるノーツ（2026-09-05）
+
+**ユーザーの指摘**「スライドノーツに他ノーツが重なってるパターンで、
+太さが同じぐらいのスライドノーツにくると物理的に押せない」
+
+SLIDE / HOLD を押さえている指は、その帯から離れられない。
+そこへ重なって別のノーツが来たとき、2本目の指を置く場所が帯から
+**指の太さ(1レーン)ぶん**離れていなければ、指が物理的に入らない。
+太いSLIDEに太いTAPが重なると、2つ合わせて5レーンを超えて置き場所が無くなる。
+
+STEP6 の検査は authoring の grid データで、105ms以内に並ぶ2音と同時押しのレーン差しか
+見ていなかった。長いSLIDEの**途中**に重なるノーツは「もう片方の指へ回す」とだけ判定し、
+その指が入る隙間があるかどうかは誰も測っていなかった。
+
+- 物差しは `tools/mode/rhythm-runtime-notes.js`。
+  配信データ(`monster-hero/data/rhythm-mode.js`)を、ランタイムと同じ関数
+  (`rhythmSlideExpectedLane` / `rhythmSlideWidthAt` / `rhythmHoldSpanAt`)で測る。
+  **見た目・入力の受け付けと同じ幅・位置**になるので、authoring の中間ファイルとずれない。
+- 検査は `tools/mode/rhythm-overlap-reach-check.js`、直すのは
+  `tools/mode/rhythm-overlap-reach-fix.js --write`。
+- 直すのは**重なってきた側**だけ。押さえている帯そのものは動かさない
+  (経路が丸ごと変わって曲との合い方まで崩れるため)。
+  元の位置にいちばん近い、指が入るサブレーンへ寄せる → だめなら幅を細くして寄せ直す →
+  それでも入らないときだけ外す。
+- 2026-09-05 の修正では、先行公開5曲で **64か所**(EXPERT / MASTER中心)と、
+  105ms以内で指が入らない **6か所** を直した。全部「寄せる」で解決し、
+  細くしたもの・外したものは無し。**ノーツ数と楽曲Lv.は変わっていない。**
+
+### 選んでいる曲を鳴らし続ける（2026-09-05）
+
+**ユーザーの指示**「全国ランキング、マスモン設定、オプション場面で音楽がない。
+選んでいた音楽が鳴り続けるようにして」「オプションだけは無音でいい」
+
+鳴らしていたのは `RhythmSongSelect` の中だった。ほかの画面へ移ると部品ごと消えて音も止まる。
+
+- 選んでいる曲・難易度は App本体(`rhythmSelectedSongId` / `rhythmSelectedDifficultyId`)が持つ。
+  `RhythmSongSelect` は受け取って表示するだけ。画面を移っても選択が残る。
+- 鳴らすのは App本体の1つの `useEffect`。鳴らす画面は `RHYTHM_PREVIEW_SCREENS`
+  (曲えらび / 遊びかた / マスモン設定 / 全国ランキング)。
+  **依存に `gameState` を入れない。** 入れると画面を移るたびに鳴らし直しになる。
+- オプション(`RHYTHM_OPTIONS`)は無音のまま。あちらの「♪ BGM試聴」と重なるため(ユーザー指示)。
+  演奏中(`RHYTHM_PLAY`)も外す。あちらは自分で曲を鳴らす。
+- 検査は `tools/mode/rhythm-preview-continue-check.js`。
+
+### マスモン設定を詳しくした（2026-09-05）
+
+**ユーザーの指示**「マスモン設定のとこをUIやレイアウトを整えて。
+モンスターノーツが何がつくかとか説明とかその辺の詳細を追加して」
+
+枠を並べるだけで、設定した結果(何番目に出る・何の能力が出る)が画面のどこにも無かった。
+
+- 枠に「何番目に出るか」「主血統」「その子で何の能力が出るか」を出す。
+- 画面の下へ `RhythmMonsterNoteGuide`(モンスターノーツの説明と能力の一覧)を置く。
+- 能力の効果と血統の割り当ては `RHYTHM_MONSTER_ABILITIES` /
+  `RHYTHM_MONSTER_ABILITY_BY_LINEAGE` から作る。**画面へ数値を書き写さない。**
+  ヘルプ側も `{t:'data', id:'rhythmMonsterAbilities'}` で同じデータから表にする。
+- 助手のひとことは場面 `rhythmMonsters`(3人ぶん)。
+- 検査は `tools/mode/rhythm-monster-guide-check.js`。
+
 ### 助手のチュートリアルと「遊びかた」（2026-09-05）
 
 - 台本は `data/assistants.js` の `ASSISTANT_RHYTHM_TUTORIAL` / `ASSISTANT_RHYTHM_TUTORIAL_SETS`。

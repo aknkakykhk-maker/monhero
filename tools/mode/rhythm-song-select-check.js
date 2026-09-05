@@ -55,19 +55,23 @@ const serve=()=>new Promise(resolve=>{
       document.body.appendChild(host);
       window.__picked=null;
       const root=ReactDOM.createRoot(host);
+      // 選んでいる曲・難易度は本体(App)が持つ形になったので、ここでも同じように
+      // 状態を持つ入れ物をかぶせて渡す(2026-09-05・曲を鳴らし続けるための作り替え)。
+      // 直接 RhythmSongSelect を描くと、押しても何も変わらない部品を見ることになる。
+      const Host=({bestRecords})=>{
+        const [songId,setSongId]=React.useState('');
+        const [difficultyId,setDifficultyId]=React.useState('');
+        return React.createElement(RhythmSongSelect,{
+          songs:RHYTHM_SONGS,
+          difficulties:RHYTHM_DIFFICULTIES,
+          bestRecords,
+          songId,difficultyId,onSongId:setSongId,onDifficultyId:setDifficultyId,
+          onPlay:(song,difficulty)=>{window.__picked=`${song.songId}/${difficulty.id}`;},
+        });
+      };
       // 記録を差し替えて描き直せるようにしておく（ひし形の色を見るのに使う）
-      window.__rerender=bestRecords=>root.render(React.createElement(RhythmSongSelect,{
-        songs:RHYTHM_SONGS,
-        difficulties:RHYTHM_DIFFICULTIES,
-        bestRecords,
-        onPlay:(song,difficulty)=>{window.__picked=`${song.songId}/${difficulty.id}`;},
-      }));
-      root.render(React.createElement(RhythmSongSelect,{
-        songs:RHYTHM_SONGS,
-        difficulties:RHYTHM_DIFFICULTIES,
-        bestRecords:[],
-        onPlay:(song,difficulty)=>{window.__picked=`${song.songId}/${difficulty.id}`;},
-      }));
+      window.__rerender=bestRecords=>root.render(React.createElement(Host,{bestRecords}));
+      root.render(React.createElement(Host,{bestRecords:[]}));
       return true;
     });
     await page.waitForTimeout(600);

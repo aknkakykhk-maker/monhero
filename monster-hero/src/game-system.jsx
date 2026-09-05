@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 13:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6541,6 +6541,19 @@ const localCalendarDate = (now = new Date()) => {
 const rhythmSongFullName = song => (song && song.subtitle)
   ? `${song.displayName} ${song.subtitle}`
   : (song ? song.displayName : '');
+// マスモンの能力は主血統で決まる(§4.5)。画面とヘルプで使う「効果の一文」を実データから作る。
+// ここへ効果を手で書き写すと、値を変えたときに文章だけ古いまま残る。
+// ヘルプの表(helpDataRows の rhythmMonsterAbilities)より前に置く。
+// あとに置くと、ヘルプを開いた瞬間に「初期化前の変数を参照した」で真っ白になる
+// (2026-09-05・rhythmSongFullName で同じことをやってしまった)。
+const rhythmAbilityEffectText=ability=>{
+  if(!ability)return '';
+  if(ability.id==='GENKI')return `取るとライフが +${ability.lifeGain}`;
+  if(ability.id==='MUTEKI')return `${Math.round(ability.durationMs/1000)}秒のあいだライフが減らない`;
+  if(ability.id==='GAMAN')return `${Math.round(ability.durationMs/1000)}秒のあいだライフの減りが${Math.round((1-ability.reduceRate)*100)}%小さくなる`;
+  if(ability.id==='KONJO')return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
+  return '';
+};
 const helpDataRows = (id) => {
   const marketItems = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [];
   const skipIds = new Set(Object.values(SKIP_TICKETS));
@@ -6681,6 +6694,17 @@ const helpDataRows = (id) => {
           `Lv.${Math.min(...levels)}〜${Math.max(...levels)} ／ ${charts.length}難易度${length ? ` ／ ${length}` : ''}`];
       }).filter(Boolean);
     }
+    // モンスターノーツの能力。効果の数値(ライフ+500・6秒・15秒…)をヘルプへ書き写すと、
+    // 値を変えたときにヘルプだけ古いまま残るため、実データから表にする
+    case 'rhythmMonsterAbilities': {
+      const abilities = typeof RHYTHM_MONSTER_ABILITIES !== 'undefined' ? RHYTHM_MONSTER_ABILITIES : {};
+      const byLineage = typeof RHYTHM_MONSTER_ABILITY_BY_LINEAGE !== 'undefined' ? RHYTHM_MONSTER_ABILITY_BY_LINEAGE : {};
+      return Object.values(abilities).map(ability => {
+        const lineages = Object.entries(byLineage).filter(([, id]) => id === ability.id)
+          .map(([lineageId]) => lineageById(lineageId).name);
+        return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}）`];
+      });
+    }
     case 'missionsDaily':
     case 'missionsWeekly':
     case 'missionsMonthly': {
@@ -6716,6 +6740,7 @@ const HELP_DATA_TITLES = {
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
+  rhythmMonsterAbilities: 'モンスターノーツで出る能力',
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
@@ -8543,15 +8568,10 @@ function PressRepeatButton({ onPress, disabled, className, children, ...props })
   return <button type="button" disabled={disabled} onPointerDown={startPress} onPointerUp={clearPress} onPointerCancel={clearPress} onLostPointerCapture={clearPress} onClick={clickPress} className={className} style={{touchAction:'manipulation',WebkitTouchCallout:'none'}} {...props}>{children}</button>;
 }
 
-const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
-// 押さえている途中で指を入れ替えるための猶予(2026-09-05・ユーザー指示で120ms)。
-// 長いHOLD/SLIDEを別の指へ持ち替えるとき、離してから置き直すまでにどうしても間があく。
-// これまでは離した瞬間にMISSにしていたので、持ち替えがまったくできなかった。
-// 離しても、この時間のあいだは「浮いている」だけとして取っておき、
-// 同じノーツの帯へ指が置かれたら何ごともなかったように続きへ戻す。
-// 長くしすぎると「一瞬離しても平気」になって押さえ続ける意味が薄れるので、
-// 指を入れ替えるのに要るぶんだけにしてある
-const RHYTHM_HOLD_HANDOVER_GRACE_MS=120;
+// 終わり際に離す猶予(RHYTHM_HOLD_RELEASE_GRACE_MS)と、
+// 途中で指を持ち替える猶予(RHYTHM_HOLD_HANDOVER_GRACE_MS)は data/rhythm-mode.js が持つ。
+// 持ち替えは「指を離す側(ここ)」と「置き直した指をノーツへ結びつける側(rhythm-mode.js)」の
+// 両方が同じ数字を見ないと成立しないので、先に読み込まれるほうへ1つだけ置いてある。
 // 最後まで取れたHOLD / SLIDE / FLICKを、消える前に光らせておく時間(CSSのアニメーションと同じ長さ)
 const RHYTHM_CLEAR_FLASH_MS=260;
 const RHYTHM_JUDGMENT_DISPLAY_MS=450;
@@ -9013,13 +9033,23 @@ const rhythmChartPlayable=(song,difficultyId)=>{
 // 曲えらびで曲を鳴らし始めるまでの間。一覧をなぞって選び替えているあいだに
 // 曲を読み込み直すと、そのたびに引っかかるので、少し止まってから鳴らす。
 const RHYTHM_PREVIEW_DELAY_MS=350;
+// 選んでいる曲を鳴らし続ける画面。ここに無い画面へ移ると音は止まる。
+//   ・オプション(RHYTHM_OPTIONS) … 「♪ BGM試聴」と重なるので無音のまま(ユーザー指示)
+//   ・演奏中(RHYTHM_PLAY)         … 自分で曲を鳴らす
+//   ・モンビーの外               … HOMEなどへ戻るので止める
+const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING']);
 // spotClass … チュートリアルで光らせる場所に付けるクラスを返す関数(省略時は光らせない)。
 // 画面側が知っているキー: songList / songLevel / achievement / difficulty
-const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',preview=false,previewVolume=100,spotClass=null})=>{
+// 選んでいる曲・難易度は**画面の外(App本体)**で持つ。
+// 中で持っていたころは、ランキングやマスモン設定を開いてこの画面が消えるたびに選択が消え、
+// 戻ってくると先頭の曲へ戻っていた。選んでいた曲を鳴らし続けるのにも、外から見える必要がある
+// (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
+const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
+  songId='',difficultyId='',onSongId=null,onDifficultyId=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   const list=(songs||[]).filter(song=>(difficulties||[]).some(difficulty=>rhythmChartPlayable(song,difficulty.id)));
-  const [songId,setSongId]=React.useState(()=>(list[0]&&list[0].songId)||'');
-  const [difficultyId,setDifficultyId]=React.useState(()=>'');
+  const setSongId=id=>{if(typeof onSongId==='function')onSongId(id);};
+  const setDifficultyId=id=>{if(typeof onDifficultyId==='function')onDifficultyId(id);};
   // 選んでいる曲・難易度が無くなっても落ちないよう、毎回その場で選び直す
   // (曲を変えたときに「前の曲にしかない難易度」が残らない)。
   const song=list.find(entry=>entry.songId===songId)||list[0]||null;
@@ -9039,21 +9069,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
     const id=difficulty&&ids.includes(difficulty.id)?difficulty.id:ids[ids.length-1];
     return Number(entry.difficulties[id].level)||0;
   };
-  // 選んでいる曲を鳴らす(音ゲーの曲えらびはたいてい曲が流れている)。
-  // 画面を離れる・曲を選び替える・設定でOFFにする、のどれでも止める。
-  const previewSongId=song?song.songId:'';
-  const previewTrackId=song?song.bgmTrackId:'';
+  // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
+  // この画面の中で鳴らしていたころは、ランキングやマスモン設定を開いた瞬間に
+  // 画面ごと消えて音が止まっていた。
+  // 外へ「いまこの曲を選んでいる」と伝えるだけにする(保存値が空・曲が入れ替わったときの保険)。
   React.useEffect(()=>{
-    if(!preview||!previewTrackId)return undefined;
-    let cancelled=false,handle=null;
-    const timer=setTimeout(()=>{
-      Audio_.startRhythmTrack(previewTrackId,previewVolume).then(audio=>{
-        if(cancelled||!audio){audio&&audio.stop();return;}
-        handle=audio;
-      }).catch(()=>{});
-    },RHYTHM_PREVIEW_DELAY_MS);
-    return ()=>{cancelled=true;clearTimeout(timer);if(handle)handle.stop();};
-  },[preview,previewTrackId,previewSongId,previewVolume]);
+    if(song&&song.songId!==songId)setSongId(song.songId);
+  },[song?song.songId:'',songId]);
 
   const pickRandom=()=>{
     if(!list.length)return;
@@ -9233,38 +9255,123 @@ const RHYTHM_HAPTICS=(()=>{
 // 歓声(mhRhythmSideCheer)の長さ。CSS側と同じ値をここに持つ。
 // 終わったら data-rhythm-side-hit を外して、待機の動きへ戻すために使う。
 const RHYTHM_SIDE_CHEER_MS=700;
+const rhythmAbilityEmoji=abilityId=>abilityId==='GENKI'?'💚':abilityId==='MUTEKI'?'🛡️':abilityId==='GAMAN'?'🧱':abilityId==='KONJO'?'🔥':'✨';
+const rhythmAbilityTone=abilityId=>abilityId==='GENKI'?'border-emerald-300/50 bg-emerald-950/40 text-emerald-100'
+  :abilityId==='MUTEKI'?'border-cyan-300/50 bg-cyan-950/40 text-cyan-100'
+  :abilityId==='GAMAN'?'border-amber-300/50 bg-amber-950/40 text-amber-100'
+  :abilityId==='KONJO'?'border-rose-300/50 bg-rose-950/40 text-rose-100'
+  :'border-white/20 bg-slate-900/60 text-slate-300';
+// 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
+const rhythmAbilityRows=()=>Object.values(RHYTHM_MONSTER_ABILITIES).map(ability=>({
+  ability,
+  lineages:Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE)
+    .filter(([,id])=>id===ability.id)
+    .map(([lineageId])=>lineageById(lineageId).name),
+}));
+const rhythmSlotAbility=masu=>(masu&&masu.baseId)
+  ?rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id):null;
+
+// モンスターノーツの説明。マスモン設定の画面へ置く「詳細」。
+// 【2026-09-05・ユーザー指示】「マスモン設定のとこをUIやレイアウトを整えて。
+//   モンスターノーツが何がつくかとか説明とかその辺の詳細を追加して」
+// 能力の一覧は実データ(RHYTHM_MONSTER_ABILITIES / RHYTHM_MONSTER_ABILITY_BY_LINEAGE)から作る。
+// 手で書き写すと、値を変えたときにここだけ古いまま残るため。
+const RhythmMonsterNoteGuide=()=>{
+  const ratios=rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio=>`${Math.round(ratio*100)}%`);
+  return <section data-rhythm-monster-guide className="space-y-3">
+    <article className="rounded-2xl border border-amber-300/40 bg-amber-500/10 p-4">
+      <h3 className="text-sm font-black text-amber-100">モンスターノーツとは</h3>
+      <p className="mt-2 text-[11px] font-bold leading-relaxed text-amber-50/90">
+        ここで設定したマスモンは、曲の途中で金色の「モンスターノーツ」になって流れてきます。
+        ノーツの真ん中には、そのマスモンの染色を反映した絵が出ます。
+      </p>
+      <ul className="mt-2 space-y-1 text-[11px] font-bold leading-relaxed text-amber-50/90">
+        <li>・設定した順に、<b>1体につき1回・最大{RHYTHM_MONSTER_SLOT_MAX}回</b>出てきます。</li>
+        <li>・出てくるのは曲のだいたい {ratios.join(' / ')} あたりです（曲の切れ目に合わせるので前後します）。</li>
+        <li>・<b>{RHYTHM_MONSTER_ABILITY_JUDGMENTS.join('・')}</b> で取ると、そのマスモンの能力が出ます。GOOD・BAD・MISSでは出ません。</li>
+        <li>・判定の幅・スコアの計算・コンボの数え方は、ふつうのノーツとまったく同じです。</li>
+        <li>・いまはTAPのノーツだけがモンスターノーツになります。</li>
+      </ul>
+    </article>
+    <article className="rounded-2xl border border-white/15 bg-slate-900/70 p-4">
+      <h3 className="text-sm font-black text-white">どの能力が付くか</h3>
+      <p className="mt-1 text-[10px] font-bold leading-relaxed text-slate-400">
+        能力は<b className="text-slate-200">主血統</b>で決まります。副血統では変わりません。育成・染色でも変わりません。
+      </p>
+      <ul data-rhythm-ability-table className="mt-2 space-y-2">
+        {rhythmAbilityRows().map(({ability,lineages})=>(
+          <li key={ability.id} data-rhythm-ability={ability.id}
+            className={`rounded-xl border p-2.5 ${rhythmAbilityTone(ability.id)}`}>
+            <div className="flex items-baseline gap-1.5">
+              <span aria-hidden="true" className="text-sm leading-none">{rhythmAbilityEmoji(ability.id)}</span>
+              <b className="text-[12px] font-black leading-none">{ability.name}</b>
+            </div>
+            <p className="mt-1.5 text-[11px] font-bold leading-relaxed">{rhythmAbilityEffectText(ability)}</p>
+            <p className="mt-1 text-[10px] font-bold leading-relaxed opacity-80">主血統: {lineages.join(' / ')}</p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[10px] font-bold leading-relaxed text-slate-400">
+        無敵と我慢は効果の長さが違うので、それぞれの残り時間で別々に動きます。
+        両方効いているあいだは無敵が勝ち、無敵が切れたら我慢の軽減に変わります。
+        残り時間と根性を持っているかは、演奏中の画面の右上に出ます。
+      </p>
+    </article>
+  </section>;
+};
+
+// マスモン設定の本体。枠の並び順がそのままモンスターノーツの登場順(§3.3)。
+// 枠には「何番目に出るか」と「その子で何の能力が出るか」まで出す。
+// 名前だけを並べていたころは、設定してもプレイ中に何が起きるのか画面から分からなかった。
 const RhythmMonsterSlotsPanel=({rhythmMonsterSlots,rhythmMonsterSlotIdsInUse,rhythmMonsterPickerOpen,setRhythmMonsterPickerOpen,rhythmMonsterMessage,setRhythmMonsterMessage,applyRhythmMonsterSlots,masuMons})=>(
-  <section data-rhythm-monster-slots className="mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3">
-              <div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-fuchsia-200">モンスターノーツ用マスモン</h3><span data-rhythm-monster-count className="shrink-0 text-[9px] font-black text-fuchsia-300">{rhythmMonsterSlots.length} / {RHYTHM_MONSTER_SLOT_MAX}体</span></div>
-              <p className="mt-1 text-[9px] font-bold leading-relaxed text-fuchsia-100/80">設定した順番が、そのままモンスターノーツの登場順になります。同じモンスターは別の個体でも重ねて設定できません。{RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。</p>
-              <ol className="mt-2 space-y-1">{Array.from({length:RHYTHM_MONSTER_SLOT_MAX},(_,index)=>{
+  <section data-rhythm-monster-slots className="rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-4">
+              <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-black text-fuchsia-200">モンスターノーツ用マスモン</h3><span data-rhythm-monster-count className="shrink-0 rounded-full border border-fuchsia-300/50 px-2 py-0.5 text-[10px] font-black text-fuchsia-200">{rhythmMonsterSlots.length} / {RHYTHM_MONSTER_SLOT_MAX}体</span></div>
+              <p className="mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80">上から順に登場します。同じモンスターは別の個体でも重ねて設定できません。{RHYTHM_MONSTER_SLOT_MAX}体そろえる必要はなく、1〜3体でも遊べます。</p>
+              <ol className="mt-3 space-y-2">{Array.from({length:RHYTHM_MONSTER_SLOT_MAX},(_,index)=>{
                 const masu=rhythmMonsterSlots[index]||null,base=masu?ALL_PLAYER_MONSTERS[masu.baseId]:null;
-                return <li key={index} data-rhythm-monster-slot={index+1} className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 p-2">
-                  <span className="w-4 shrink-0 text-center text-[10px] font-black text-fuchsia-300">{index+1}</span>
-                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-950">{masu&&base&&<DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/>}</div>
-                  <div className="min-w-0 flex-1">{masu?<React.Fragment><b className="block truncate text-[11px] font-black">{masu.name}</b><small className="block truncate text-[9px] text-slate-400">{base?.name||masu.baseId}</small></React.Fragment>:<small className="text-[10px] font-bold text-slate-500">未設定</small>}</div>
-                  {masu&&<div className="flex shrink-0 gap-1">
-                    <button type="button" aria-label={`${index+1}枠目を前へ`} disabled={index===0} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,-1),'登場順を入れ替えました')} className="min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30">↑</button>
-                    <button type="button" aria-label={`${index+1}枠目を後ろへ`} disabled={index>=rhythmMonsterSlots.length-1} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,1),'登場順を入れ替えました')} className="min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30">↓</button>
-                    <button type="button" data-rhythm-monster-remove aria-label={`${masu.name}を外す`} onClick={()=>applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id),`${masu.name}を外しました`)} className="min-h-[36px] rounded-lg border border-rose-300/50 px-2 text-[10px] font-black text-rose-200">外す</button>
-                  </div>}
+                const lineage=masu?monsterLineageOf(masu.baseId).main:null;
+                const ability=rhythmSlotAbility(masu);
+                return <li key={index} data-rhythm-monster-slot={index+1} className="rounded-xl border border-white/10 bg-slate-900/80 p-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-9 shrink-0 rounded-lg border border-fuchsia-300/40 py-0.5 text-center text-[9px] font-black leading-tight text-fuchsia-200">{index+1}<br/>番目</span>
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-950">{masu&&base&&<DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/>}</div>
+                    <div className="min-w-0 flex-1">{masu?<React.Fragment><b className="block truncate text-[12px] font-black">{masu.name}</b><small className="block truncate text-[10px] text-slate-400">{base?.name||masu.baseId}{lineage?` / ${lineage.name}血統`:''}</small></React.Fragment>:<small className="text-[11px] font-bold text-slate-500">未設定</small>}</div>
+                    {masu&&<div className="flex shrink-0 gap-1">
+                      <button type="button" aria-label={`${index+1}枠目を前へ`} disabled={index===0} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,-1),'登場順を入れ替えました')} className="min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30">↑</button>
+                      <button type="button" aria-label={`${index+1}枠目を後ろへ`} disabled={index>=rhythmMonsterSlots.length-1} onClick={()=>applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,index,1),'登場順を入れ替えました')} className="min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30">↓</button>
+                      <button type="button" data-rhythm-monster-remove aria-label={`${masu.name}を外す`} onClick={()=>applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id),`${masu.name}を外しました`)} className="min-h-[40px] rounded-lg border border-rose-300/50 px-2 text-[11px] font-black text-rose-200">外す</button>
+                    </div>}
+                  </div>
+                  {/* 設定した子で「何が起きるか」まで枠の中に出す。
+                      名前だけでは、プレイ中に何が起きるのかここから分からなかった */}
+                  {masu&&<p data-rhythm-monster-slot-ability={ability?ability.id:'none'}
+                    className={`mt-2 rounded-lg border px-2 py-1.5 text-[10px] font-bold leading-relaxed ${rhythmAbilityTone(ability?ability.id:'')}`}>
+                    {ability
+                      ?<>{rhythmAbilityEmoji(ability.id)} {ability.name} — {rhythmAbilityEffectText(ability)}</>
+                      :<>この血統の能力はまだ決まっていません。モンスターノーツにはなりますが、能力は出ません。</>}
+                  </p>}
                 </li>;})}</ol>
-              <button type="button" data-rhythm-monster-picker-toggle aria-expanded={rhythmMonsterPickerOpen} onClick={()=>{setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);setRhythmMonsterMessage('');}} className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[11px] font-black text-fuchsia-100">{rhythmMonsterPickerOpen?'マスモン一覧を閉じる':'マスモンから設定する'}</button>
-              {rhythmMonsterMessage&&<p data-rhythm-monster-message role="status" className="mt-1 text-[10px] font-bold text-amber-200">{rhythmMonsterMessage}</p>}
-              {rhythmMonsterPickerOpen&&<ul data-rhythm-monster-picker className="mh-scroll mt-2 max-h-64 space-y-1 overflow-y-auto">
+              <button type="button" data-rhythm-monster-picker-toggle aria-expanded={rhythmMonsterPickerOpen} onClick={()=>{setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);setRhythmMonsterMessage('');}} className="mt-3 min-h-[48px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[12px] font-black text-fuchsia-100">{rhythmMonsterPickerOpen?'マスモン一覧を閉じる':'マスモンから設定する'}</button>
+              {rhythmMonsterMessage&&<p data-rhythm-monster-message role="status" className="mt-2 text-[11px] font-bold text-amber-200">{rhythmMonsterMessage}</p>}
+              {rhythmMonsterPickerOpen&&<ul data-rhythm-monster-picker className="mh-scroll mt-2 max-h-72 space-y-1.5 overflow-y-auto">
                 {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).map(masu=>{
                   const base=ALL_PLAYER_MONSTERS[masu.baseId],issue=rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse,masu.id,masuMons);
-                  return <li key={masu.id}><button type="button" disabled={!!issue} onClick={()=>applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id,masuMons),`${masu.name}を${rhythmMonsterSlots.length+1}枠目に設定しました`)} className={`flex min-h-[44px] w-full items-center gap-2 rounded-xl border p-2 text-left ${issue?'border-white/10 bg-slate-900/40 opacity-50':'border-white/20 bg-slate-900/80'}`}>
-                    <div className="h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-950"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/></div>
-                    <div className="min-w-0 flex-1"><b className="block truncate text-[11px] font-black">{masu.name}</b><small className="block truncate text-[9px] text-slate-400">{base.name}</small></div>
-                    {issue&&<small className="shrink-0 text-[9px] font-bold text-rose-300">{RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue]}</small>}
+                  const ability=rhythmSlotAbility(masu);
+                  return <li key={masu.id}><button type="button" disabled={!!issue} onClick={()=>applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse,masu.id,masuMons),`${masu.name}を${rhythmMonsterSlots.length+1}枠目に設定しました`)} className={`flex min-h-[48px] w-full items-center gap-2.5 rounded-xl border p-2 text-left ${issue?'border-white/10 bg-slate-900/40 opacity-50':'border-white/20 bg-slate-900/80'}`}>
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-950"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt="" masuColors={getMasuColors(masu)} draggable={false} className="h-full w-full object-contain"/></div>
+                    <div className="min-w-0 flex-1"><b className="block truncate text-[12px] font-black">{masu.name}</b><small className="block truncate text-[10px] text-slate-400">{base.name}{ability?` / ${rhythmAbilityEmoji(ability.id)}${ability.name}`:''}</small></div>
+                    {issue&&<small className="shrink-0 text-[10px] font-bold text-rose-300">{RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue]}</small>}
                   </button></li>;})}
-                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).length===0&&<li className="rounded-xl border border-white/10 p-3 text-center text-[10px] font-bold text-slate-500">設定できるマスモンがいません</li>}
+                {masuMons.filter(masu=>masu&&ALL_PLAYER_MONSTERS[masu.baseId]).length===0&&<li className="rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500">設定できるマスモンがいません</li>}
               </ul>}
             </section>
 );
 
-const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onComplete,onExit})=>{
+// debugPlay … 音ゲーデバッグ画面から始めたプレイかどうか。
+// デバッグ専用の表示(HOLD TEST / 中断して音ゲーデバッグへ戻る / 座標校正)は、
+// ここが true のときだけ出す。体験版から入ったプレイヤーの画面へ出してはいけない
+// (2026-09-05・実機の指摘「ここがデバッグのままになってる」)。
+const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onComplete,onExit,debugPlay=false})=>{
   const chart=song.difficulties[difficulty.id],laneRefs=useRef([]),runRef=useRef(null),frameRef=useRef(null),playAreaRef=useRef(null),judgmentLineRef=useRef(null),judgmentTimerRef=useRef(null),judgmentRevisionRef=useRef(0),startLockRef=useRef(false),generationRef=useRef(0),mountedRef=useRef(false),glowNodesRef=useRef(null);
   const hasHold=chart.notes.some(note=>note.type==='HOLD');
   // モンスターノーツで使うマスモン。枠の順(1〜4)がそのまま登場順(§3.3)。
@@ -9397,7 +9504,7 @@ useEffect(()=>{
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,view.status]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;note.done=true;note._rhythmFinalJudgment=judgment;
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;rhythmFloatingNoteRemove(note);note.done=true;note._rhythmFinalJudgment=judgment;
 // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
 // TAPは指を置いた時点で音が鳴っているので対象にしない。
 // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
@@ -9507,8 +9614,8 @@ const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songT
 // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
 if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
   const holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;
-  if(songTimeMs>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){note.releasedAtMs=null;applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
-  else if(songTimeMs-note.releasedAtMs>=RHYTHM_HOLD_HANDOVER_GRACE_MS){const releasedAt=note.releasedAtMs;note.releasedAtMs=null;applyJudgment(note,'MISS',releasedAt-holdEndMs);}
+  if(songTimeMs>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){note.releasedAtMs=null;rhythmFloatingNoteRemove(note);applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
+  else if(songTimeMs-note.releasedAtMs>=RHYTHM_HOLD_HANDOVER_GRACE_MS){const releasedAt=note.releasedAtMs;note.releasedAtMs=null;rhythmFloatingNoteRemove(note);applyJudgment(note,'MISS',releasedAt-holdEndMs);}
 }if(!note.done&&note.activePointerId===null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_INPUT_MATCH_WINDOW_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);const el=laneRefs.current[note.index];if(!el)return;
 // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
 // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
@@ -9587,8 +9694,8 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
   }
 }
 const playEndTimeMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame]);
-  const disposeRun=useCallback(()=>{stopFrame();clearJudgmentTimer();clearAbilityTimer();RHYTHM_GESTURE_RUNTIME.clear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearJudgmentTimer,stopFrame]);
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume);if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});rhythmLayoutPlayArea(playAreaRef.current);
+  const disposeRun=useCallback(()=>{stopFrame();clearJudgmentTimer();clearAbilityTimer();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearJudgmentTimer,stopFrame]);
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume);if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});rhythmLayoutPlayArea(playAreaRef.current);
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
@@ -9608,7 +9715,7 @@ startLockRef.current=false;setView({...initialView(),status:'playing'});schedule
       // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
       const handover=target.releasedAtMs!=null;
       target.activePointerId=input.inputKey;
-      if(handover)target.releasedAtMs=null;
+      if(handover){target.releasedAtMs=null;rhythmFloatingNoteRemove(target);}
       else{target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;}
       run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);setView(v=>({...v,last:'HOLD',fastSlow:side||''}));scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
   const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;const subLane=Math.max(0,Math.min(9,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey}]);};
@@ -9617,7 +9724,7 @@ startLockRef.current=false;setView({...initialView(),status:'playing'});schedule
     if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
     // まだ途中なら、すぐには失敗にしない。指を入れ替えている途中かもしれないので、
     // 猶予のあいだは「浮いている」ことだけ覚えておく(rAFのvisitNoteが時間切れを見る)
-    else{note.releasedAtMs=now;}if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}});};
+    else{note.releasedAtMs=now;rhythmFloatingNoteAdd(note);}if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}});};
   // 入力のたびに getBoundingClientRect() を呼ぶと、そのフレームで書き込み待ちだった
   // ノーツの位置をすべて確定させられる(強制レイアウト)。指の数ぶん・touchmoveの数ぶん
   // これが起きるため、タップのたびに一瞬止まって見える原因になる。FLICK/SLIDE側と
@@ -9639,9 +9746,9 @@ startLockRef.current=false;setView({...initialView(),status:'playing'});schedule
   <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'すべてMARVELOUS。文句なしの完璧です':result.allExcellent?'すべてEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div><dl className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd></React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>音ゲーデバッグへ戻る</button></div></main>}
-  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{hasHold?'HOLD TEST':'TAP TEST'}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center justify-end gap-1"><span aria-hidden="true" className="text-sm leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♥</span><div className="relative h-1.5 w-12 overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:w-14"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(rhythmLifeRatio(view.life)*100).toFixed(1)}%`,background:rhythmLifeRatio(view.life)>.5?'linear-gradient(90deg,#34d399,#22d3ee)':rhythmLifeRatio(view.life)>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="text-[9px] font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{view.life}</b></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/><div className="mt-1 text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"><span className="block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>COMBO</span><b ref={comboRef} data-rhythm-combo data-combo-tier={view.combo>=300?'3':view.combo>=200?'2':view.combo>=100?'1':'0'} className="mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base">{view.combo}</b></div></div></header><div ref={playAreaRef} data-rhythm-play-area data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/><div ref={judgmentLineRef} data-rhythm-judgment-line className="absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300" style={{boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/><div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:'calc(12% + 38px)'}}><b ref={judgmentTextRef} data-rhythm-judgment-text className={`block text-[26px] font-black leading-none tracking-wide ${view.last==='MARVELOUS'?'text-fuchsia-100':view.last==='EXCELLENT'?'text-cyan-100':view.last==='GREAT'?'text-amber-200':view.last==='GOOD'?'text-lime-300':view.last==='BAD'?'text-rose-300':'text-white'}`} style={{textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 7px rgba(255,255,255,.45)':'0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'}}>{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow||'—'):'—'}</small></div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
+  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{debugPlay?(hasHold?'HOLD TEST':'TAP TEST'):`Lv.${chart.level}`}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center justify-end gap-1"><span aria-hidden="true" className="text-sm leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♥</span><div className="relative h-1.5 w-12 overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:w-14"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(rhythmLifeRatio(view.life)*100).toFixed(1)}%`,background:rhythmLifeRatio(view.life)>.5?'linear-gradient(90deg,#34d399,#22d3ee)':rhythmLifeRatio(view.life)>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="text-[9px] font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{view.life}</b></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/><div className="mt-1 text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"><span className="block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>COMBO</span><b ref={comboRef} data-rhythm-combo data-combo-tier={view.combo>=300?'3':view.combo>=200?'2':view.combo>=100?'1':'0'} className="mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base">{view.combo}</b></div></div></header><div ref={playAreaRef} data-rhythm-play-area data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/><div ref={judgmentLineRef} data-rhythm-judgment-line className="absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300" style={{boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/><div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:'calc(12% + 38px)'}}><b ref={judgmentTextRef} data-rhythm-judgment-text className={`block text-[26px] font-black leading-none tracking-wide ${view.last==='MARVELOUS'?'text-fuchsia-100':view.last==='EXCELLENT'?'text-cyan-100':view.last==='GREAT'?'text-amber-200':view.last==='GOOD'?'text-lime-300':view.last==='BAD'?'text-rose-300':'text-white'}`} style={{textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 7px rgba(255,255,255,.45)':'0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'}}>{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow||'—'):'—'}</small></div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}
-                {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{noteElements}{view.status==='paused'&&<div data-rhythm-pause-menu className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3><button className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>中断して音ゲーデバッグへ戻る</button></div>}</div></main>;
+                {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{noteElements}{view.status==='paused'&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3><button className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</button></div>}</div></main>;
 };
 
 function MonsterHeroGame() {
@@ -9709,6 +9816,14 @@ function MonsterHeroGame() {
   // 体験版で遊べるのは Monster Hero 1曲・EASY/NORMAL/HARD だけで、デバッグ用の曲は出さない。
   // 音ゲー設定はデバッグ画面と体験版ホームの両方から開く。閉じたとき元の画面へ戻すため覚えておく
   const [rhythmOptionsBack,setRhythmOptionsBack]=useState('RHYTHM_DEBUG');
+  // 曲えらびで選んでいる曲・難易度。画面(RhythmSongSelect)の中ではなくここで持つ。
+  // ・ランキングやマスモン設定を開いて戻ってきても、選んでいた曲がそのまま残る
+  // ・選んでいる曲を、曲えらび以外の画面でも鳴らし続けられる
+  const [rhythmSelectedSongId,setRhythmSelectedSongId]=useState(()=>{
+    const list=rhythmDemoSongs(RHYTHM_SONGS);
+    return (list[0]&&list[0].songId)||'';
+  });
+  const [rhythmSelectedDifficultyId,setRhythmSelectedDifficultyId]=useState('');
   const openRhythmDemo = async () => {
     const settings=normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY,DEFAULT_RHYTHM_SETTINGS,false));
     const records=normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY,{},false));
@@ -11129,6 +11244,32 @@ function MonsterHeroGame() {
   // 既存のrankingsテーブル・列を増やさず、difficulty列へRhythm-<songId>-<難易度id>を
   // 入れるだけで対応する(data/rhythm-mode.jsのrhythmRankingDifficultyKey等を参照)。
   const [rhythmRanking, setRhythmRanking] = useState({ status:'idle', entries:[], error:null, songId:null });
+  // ── 選んでいる曲を鳴らし続ける ─────────────────────────────────────────────
+  // 【2026-09-05・ユーザー指示】
+  // 「全国ランキング、マスモン設定、オプション場面で音楽がない。選んでいた音楽が鳴り続けるようにして」
+  // 「オプションだけは無音でいい」
+  //
+  // 曲えらびの中で鳴らしていたころは、ほかの画面へ移った瞬間にその画面ごと消えて音も止まっていた。
+  // 鳴らす・止めるをここ(App本体)へ移し、モンビーの中を移動しているあいだは同じ音を鳴らし続ける。
+  //
+  // オプションを外すのは、あちらに「♪ BGM試聴」があるため。裏で曲が鳴っていると重なって聴けない。
+  // 演奏中(RHYTHM_PLAY)も外す。あちらは自分で曲を鳴らす。
+  const rhythmPreviewSong=rhythmDemoSongs(RHYTHM_SONGS).find(song=>song.songId===rhythmSelectedSongId)||null;
+  const rhythmPreviewTrackId=rhythmSettings.songPreviewEnabled&&RHYTHM_PREVIEW_SCREENS.includes(gameState)&&rhythmPreviewSong
+    ?rhythmPreviewSong.bgmTrackId:'';
+  useEffect(()=>{
+    if(!rhythmPreviewTrackId)return undefined;
+    // 依存に gameState を入れない。入れると画面を移るたびに鳴らし直しになり、
+    // 「鳴り続ける」どころか移動のたびに頭から鳴ってしまう
+    let cancelled=false,handle=null;
+    const timer=setTimeout(()=>{
+      Audio_.startRhythmTrack(rhythmPreviewTrackId,rhythmSettings.bgmVolume).then(audio=>{
+        if(cancelled||!audio){audio&&audio.stop();return;}
+        handle=audio;
+      }).catch(()=>{});
+    },RHYTHM_PREVIEW_DELAY_MS);
+    return ()=>{cancelled=true;clearTimeout(timer);if(handle)handle.stop();};
+  },[rhythmPreviewTrackId,rhythmSettings.bgmVolume]);
   const [rhythmRankingDetail, setRhythmRankingDetail] = useState(null);
   const rhythmRankingRequestRef = useRef(0);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
@@ -19439,7 +19580,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} onComplete={async(result,merged)=>{const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='demo'?'RHYTHM_DEMO_HOME':'RHYTHM_DEBUG';setRhythmPlay(null);setGameState(back);}}/>}
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} onComplete={async(result,merged)=>{const records=await saveRhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id,merged);setRhythmBestRecords(records);if(rhythmPlay.from==='demo')submitRhythmRankingScore(rhythmPlay.song,rhythmPlay.difficulty,result);}} onExit={()=>{const back=rhythmPlay.from==='demo'?'RHYTHM_DEMO_HOME':'RHYTHM_DEBUG';setRhythmPlay(null);setGameState(back);}} debugPlay={rhythmPlay.from!=='demo'}/>}
 
         {gameState==='RHYTHM_OPTIONS'&&<RhythmOptions value={rhythmSettings} onBack={()=>setGameState(rhythmOptionsBack)} onSave={async draft=>{const saved=await saveRhythmSettings(draft);setRhythmSettings(saved);return saved;}}/>}
 
@@ -19485,8 +19626,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               songs={songs}
               difficulties={difficulties}
               bestRecords={rhythmBestRecords}
-              preview={rhythmSettings.songPreviewEnabled}
-              previewVolume={rhythmSettings.bgmVolume}
+              songId={rhythmSelectedSongId}
+              difficultyId={rhythmSelectedDifficultyId}
+              onSongId={setRhythmSelectedSongId}
+              onDifficultyId={setRhythmSelectedDifficultyId}
               spotClass={spotClass}
               onPlay={(song,difficulty)=>{setRhythmPlay({song,difficulty,from:'demo'});setGameState('RHYTHM_PLAY');}}
               notice={<AssistantBubble scene="rhythmHome" compact/>}
@@ -19547,9 +19690,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <button aria-label="戻る" onClick={()=>{setRhythmMonsterPickerOpen(false);setGameState('RHYTHM_DEMO_HOME');}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
               <h2 className="text-sm font-black tracking-widest text-fuchsia-200">👾 マスモン設定</h2>
             </header>
-            <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
-              <RhythmLandscapeHint className="mb-3"/>
+            {/* 【2026-09-05・ユーザー指示】「マスモン設定のとこをUIやレイアウトを整えて。
+                モンスターノーツが何がつくかとか説明とかその辺の詳細を追加して」
+                枠を並べるだけだったのを、①助手のひとこと ②設定枠(何番目・何の能力が出るか)
+                ③モンスターノーツの説明と能力の一覧、の3段に分けた。
+                能力の一覧はデータから作るので、値を変えてもここが古くならない */}
+            <div className="flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3 space-y-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+              <RhythmLandscapeHint/>
+              <AssistantBubble scene="rhythmMonsters" compact/>
               <RhythmMonsterSlotsPanel rhythmMonsterSlots={rhythmMonsterSlots} rhythmMonsterSlotIdsInUse={rhythmMonsterSlotIdsInUse} rhythmMonsterPickerOpen={rhythmMonsterPickerOpen} setRhythmMonsterPickerOpen={setRhythmMonsterPickerOpen} rhythmMonsterMessage={rhythmMonsterMessage} setRhythmMonsterMessage={setRhythmMonsterMessage} applyRhythmMonsterSlots={applyRhythmMonsterSlots} masuMons={masuMons}/>
+              <RhythmMonsterNoteGuide/>
             </div>
           </main>
         )}
@@ -19629,7 +19779,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <section data-rhythm-perf-panel className="mb-3 rounded-2xl border border-amber-400/40 bg-amber-950/20 p-3"><div className="flex items-center justify-between gap-2"><h3 className="text-xs font-black text-amber-200">性能計測（デバッグ）</h3><button type="button" data-rhythm-perf-toggle aria-pressed={rhythmPerfOn} onClick={()=>{setRhythmPerfOn(RHYTHM_PERF.setEnabled(!rhythmPerfOn));setRhythmPerfStats(null);}} className={`min-h-[44px] rounded-xl px-3 text-[11px] font-black ${rhythmPerfOn?'bg-amber-500 text-slate-900':'border border-white/20 bg-slate-900 text-slate-200'}`}>{rhythmPerfOn?'計測ON':'計測OFF'}</button></div><p className="mt-1 text-[9px] font-bold leading-relaxed text-amber-100/80">ONにしてからプレイすると、フレーム時間と1フレームあたりの負荷（レイアウト測定・DOM検索・SLIDE帯の更新数）を記録します。OFFのあいだは記録処理そのものが動きません。</p><div className="mt-2 flex gap-2"><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>setRhythmPerfStats(RHYTHM_PERF.snapshot())}>いまの記録を見る</button><button type="button" className="min-h-[40px] flex-1 rounded-xl border border-white/20 bg-slate-900 text-[11px] font-black text-slate-200" onClick={()=>{RHYTHM_PERF.reset();setRhythmPerfStats(null);}}>記録をクリア</button></div>{rhythmPerfStats&&<dl data-rhythm-perf-stats className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{[['フレーム数',rhythmPerfStats.frames],['平均fps',rhythmPerfStats.fps.toFixed(1)],['平均フレーム',`${rhythmPerfStats.avgMs.toFixed(1)}ms`],['最悪フレーム',`${rhythmPerfStats.maxMs.toFixed(1)}ms`],['16.7ms超',rhythmPerfStats.over16],['25ms超',rhythmPerfStats.over25],['33ms超',rhythmPerfStats.over33],['レイアウト測定/frame',rhythmPerfStats.layoutReadsPerFrame.toFixed(2)],['DOM検索/frame',rhythmPerfStats.domQueriesPerFrame.toFixed(2)],['SLIDE帯更新/frame',rhythmPerfStats.slidePolygonsPerFrame.toFixed(2)],['ジェスチャーrAF',rhythmPerfStats.gestureFrames],['ノーツ再検索',rhythmPerfStats.noteRescans],['走査ノーツ/frame',rhythmPerfStats.notesScannedPerFrame.toFixed(1)],['実描画ノーツ/frame',rhythmPerfStats.notesDrawnPerFrame.toFixed(1)],['最悪frameの走査/実描画',`${rhythmPerfStats.worstFrameScanned} / ${rhythmPerfStats.worstFrameDrawn}`],['先頭スキップ/frame',rhythmPerfStats.headSkippedPerFrame.toFixed(1)],['走査の絞り込み',rhythmPerfStats.narrowed===null?'未計測':(rhythmPerfStats.narrowed?'有効':'無効(昇順でない譜面)')],['tick処理/frame',`${rhythmPerfStats.tickMsPerFrame.toFixed(2)}ms`],['最悪frameのtick処理',`${rhythmPerfStats.worstFrameTickMs.toFixed(1)}ms`],['tick処理の最大',`${rhythmPerfStats.maxTickMs.toFixed(1)}ms`],['frame開始→tick開始の遅れ',`${rhythmPerfStats.tickDelayMsPerFrame.toFixed(2)}ms`],['最悪frameの遅れ',`${rhythmPerfStats.worstFrameDelayMs.toFixed(1)}ms`],['遅れの最大',`${rhythmPerfStats.maxDelayMs.toFixed(1)}ms`]].map(([label,value])=><React.Fragment key={label}><dt className="text-slate-400">{label}</dt><dd className="text-right font-black text-amber-100">{value}</dd></React.Fragment>)}</dl>}</section>
             {/* モンスターノーツ用のマスモン設定(RHYTHM_MODE §3.2)。最大4体・同じモンスターの重複禁止・
                 1〜4枠の並び順がそのままモンスターノーツの登場順になる。ノーツ本体はこのあと作る */}
-            <RhythmMonsterSlotsPanel rhythmMonsterSlots={rhythmMonsterSlots} rhythmMonsterSlotIdsInUse={rhythmMonsterSlotIdsInUse} rhythmMonsterPickerOpen={rhythmMonsterPickerOpen} setRhythmMonsterPickerOpen={setRhythmMonsterPickerOpen} rhythmMonsterMessage={rhythmMonsterMessage} setRhythmMonsterMessage={setRhythmMonsterMessage} applyRhythmMonsterSlots={applyRhythmMonsterSlots} masuMons={masuMons}/>
+            <div className="mb-3"><RhythmMonsterSlotsPanel rhythmMonsterSlots={rhythmMonsterSlots} rhythmMonsterSlotIdsInUse={rhythmMonsterSlotIdsInUse} rhythmMonsterPickerOpen={rhythmMonsterPickerOpen} setRhythmMonsterPickerOpen={setRhythmMonsterPickerOpen} rhythmMonsterMessage={rhythmMonsterMessage} setRhythmMonsterMessage={setRhythmMonsterMessage} applyRhythmMonsterSlots={applyRhythmMonsterSlots} masuMons={masuMons}/></div>
             <section className="mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"><h3 className="mb-2 text-xs font-black text-cyan-200">保存中の設定</h3><dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]">{Object.entries(rhythmSettings).map(([key,value])=><React.Fragment key={key}><dt className="break-all text-slate-400">{key}</dt><dd className="break-all text-right font-mono text-white">{String(value)}</dd></React.Fragment>)}</dl></section>
             </div>
             <div hidden={rhythmDebugTab!=='play'}>

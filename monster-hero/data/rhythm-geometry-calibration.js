@@ -207,14 +207,18 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
     currentSvg=null;
     scheduleGuide(area);
   };
+  // 座標校正はデバッグ専用の道具なので、音ゲーデバッグ画面から始めたプレイの
+  // ポーズメニューにだけ置く。体験版から入ったプレイヤーの画面へ出してはいけない
+  // (2026-09-05・実機の指摘「ここがデバッグのままになってる」)。
+  const debugPauseMenu=()=>document.querySelector('[data-rhythm-pause-menu][data-rhythm-debug-play]');
   const pauseMenuNeedsToggle=()=>{
-    const pause=document.querySelector('[data-rhythm-pause-menu]');
+    const pause=debugPauseMenu();
     return !!pause&&!pause.querySelector('[data-rhythm-calibration-toggle]');
   };
   const scan=()=>{
     // トグルは音ゲーデバッグ画面の「設定・記録」タブ(プレイ前)とポーズメニュー(プレイ中)へ置く。
     mountToggle(document.querySelector('[data-rhythm-debug-calibration]'),'debug');
-    mountToggle(document.querySelector('[data-rhythm-pause-menu]'),'pause');
+    mountToggle(debugPauseMenu(),'pause');
     const area=document.querySelector('[data-rhythm-play-area]');
     if(!area){
       currentArea=null;currentSvg=null;

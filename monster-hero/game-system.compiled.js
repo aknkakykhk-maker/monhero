@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4c170644d584b6a1
+// source-sha256: d1c2b81e98787520
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 13:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 14:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11734,6 +11734,19 @@ const localCalendarDate = (now = new Date()) => {
 // (「Stay With Me」「綺季一閃」だけが出て ～Locked Fate～ ～花雪に舞う詠姫～ が消えていた)。
 // ヘルプの曲一覧は前から副題まで出していたので、画面とヘルプで名前が食い違っていた
 const rhythmSongFullName = song => song && song.subtitle ? `${song.displayName} ${song.subtitle}` : song ? song.displayName : '';
+// マスモンの能力は主血統で決まる(§4.5)。画面とヘルプで使う「効果の一文」を実データから作る。
+// ここへ効果を手で書き写すと、値を変えたときに文章だけ古いまま残る。
+// ヘルプの表(helpDataRows の rhythmMonsterAbilities)より前に置く。
+// あとに置くと、ヘルプを開いた瞬間に「初期化前の変数を参照した」で真っ白になる
+// (2026-09-05・rhythmSongFullName で同じことをやってしまった)。
+const rhythmAbilityEffectText = ability => {
+  if (!ability) return '';
+  if (ability.id === 'GENKI') return `取るとライフが +${ability.lifeGain}`;
+  if (ability.id === 'MUTEKI') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフが減らない`;
+  if (ability.id === 'GAMAN') return `${Math.round(ability.durationMs / 1000)}秒のあいだライフの減りが${Math.round((1 - ability.reduceRate) * 100)}%小さくなる`;
+  if (ability.id === 'KONJO') return `倒れたときに一度だけライフ${ability.reviveLife}で復活（持っているときにもう一度取るとライフ +${ability.stockLifeGain}）`;
+  return '';
+};
 const helpDataRows = id => {
   const marketItems = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
   const skipIds = new Set(Object.values(SKIP_TICKETS));
@@ -11851,6 +11864,17 @@ const helpDataRows = id => {
           return [name, `Lv.${Math.min(...levels)}〜${Math.max(...levels)} ／ ${charts.length}難易度${length ? ` ／ ${length}` : ''}`];
         }).filter(Boolean);
       }
+    // モンスターノーツの能力。効果の数値(ライフ+500・6秒・15秒…)をヘルプへ書き写すと、
+    // 値を変えたときにヘルプだけ古いまま残るため、実データから表にする
+    case 'rhythmMonsterAbilities':
+      {
+        const abilities = typeof RHYTHM_MONSTER_ABILITIES !== 'undefined' ? RHYTHM_MONSTER_ABILITIES : {};
+        const byLineage = typeof RHYTHM_MONSTER_ABILITY_BY_LINEAGE !== 'undefined' ? RHYTHM_MONSTER_ABILITY_BY_LINEAGE : {};
+        return Object.values(abilities).map(ability => {
+          const lineages = Object.entries(byLineage).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name);
+          return [ability.name, `${rhythmAbilityEffectText(ability)}（主血統: ${lineages.join(' / ')}）`];
+        });
+      }
     case 'missionsDaily':
     case 'missionsWeekly':
     case 'missionsMonthly':
@@ -11886,7 +11910,8 @@ const HELP_DATA_TITLES = {
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
-  rhythmDemoSongList: '先行公開している曲'
+  rhythmDemoSongList: '先行公開している曲',
+  rhythmMonsterAbilities: 'モンスターノーツで出る能力'
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
@@ -15546,15 +15571,11 @@ function PressRepeatButton({
     }
   }, props), children);
 }
-const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
-// 押さえている途中で指を入れ替えるための猶予(2026-09-05・ユーザー指示で120ms)。
-// 長いHOLD/SLIDEを別の指へ持ち替えるとき、離してから置き直すまでにどうしても間があく。
-// これまでは離した瞬間にMISSにしていたので、持ち替えがまったくできなかった。
-// 離しても、この時間のあいだは「浮いている」だけとして取っておき、
-// 同じノーツの帯へ指が置かれたら何ごともなかったように続きへ戻す。
-// 長くしすぎると「一瞬離しても平気」になって押さえ続ける意味が薄れるので、
-// 指を入れ替えるのに要るぶんだけにしてある
-const RHYTHM_HOLD_HANDOVER_GRACE_MS = 120;
+
+// 終わり際に離す猶予(RHYTHM_HOLD_RELEASE_GRACE_MS)と、
+// 途中で指を持ち替える猶予(RHYTHM_HOLD_HANDOVER_GRACE_MS)は data/rhythm-mode.js が持つ。
+// 持ち替えは「指を離す側(ここ)」と「置き直した指をノーツへ結びつける側(rhythm-mode.js)」の
+// 両方が同じ数字を見ないと成立しないので、先に読み込まれるほうへ1つだけ置いてある。
 // 最後まで取れたHOLD / SLIDE / FLICKを、消える前に光らせておく時間(CSSのアニメーションと同じ長さ)
 const RHYTHM_CLEAR_FLASH_MS = 260;
 const RHYTHM_JUDGMENT_DISPLAY_MS = 450;
@@ -16362,8 +16383,17 @@ const rhythmChartPlayable = (song, difficultyId) => {
 // 曲えらびで曲を鳴らし始めるまでの間。一覧をなぞって選び替えているあいだに
 // 曲を読み込み直すと、そのたびに引っかかるので、少し止まってから鳴らす。
 const RHYTHM_PREVIEW_DELAY_MS = 350;
+// 選んでいる曲を鳴らし続ける画面。ここに無い画面へ移ると音は止まる。
+//   ・オプション(RHYTHM_OPTIONS) … 「♪ BGM試聴」と重なるので無音のまま(ユーザー指示)
+//   ・演奏中(RHYTHM_PLAY)         … 自分で曲を鳴らす
+//   ・モンビーの外               … HOMEなどへ戻るので止める
+const RHYTHM_PREVIEW_SCREENS = Object.freeze(['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING']);
 // spotClass … チュートリアルで光らせる場所に付けるクラスを返す関数(省略時は光らせない)。
 // 画面側が知っているキー: songList / songLevel / achievement / difficulty
+// 選んでいる曲・難易度は**画面の外(App本体)**で持つ。
+// 中で持っていたころは、ランキングやマスモン設定を開いてこの画面が消えるたびに選択が消え、
+// 戻ってくると先頭の曲へ戻っていた。選んでいた曲を鳴らし続けるのにも、外から見える必要がある
+// (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
 const RhythmSongSelect = ({
   songs,
   difficulties,
@@ -16372,14 +16402,20 @@ const RhythmSongSelect = ({
   notice = null,
   footer = null,
   emptyText = '遊べる譜面がまだありません。',
-  preview = false,
-  previewVolume = 100,
-  spotClass = null
+  spotClass = null,
+  songId = '',
+  difficultyId = '',
+  onSongId = null,
+  onDifficultyId = null
 }) => {
   const spot = name => typeof spotClass === 'function' ? spotClass(name) : '';
   const list = (songs || []).filter(song => (difficulties || []).some(difficulty => rhythmChartPlayable(song, difficulty.id)));
-  const [songId, setSongId] = React.useState(() => list[0] && list[0].songId || '');
-  const [difficultyId, setDifficultyId] = React.useState(() => '');
+  const setSongId = id => {
+    if (typeof onSongId === 'function') onSongId(id);
+  };
+  const setDifficultyId = id => {
+    if (typeof onDifficultyId === 'function') onDifficultyId(id);
+  };
   // 選んでいる曲・難易度が無くなっても落ちないよう、毎回その場で選び直す
   // (曲を変えたときに「前の曲にしかない難易度」が残らない)。
   const song = list.find(entry => entry.songId === songId) || list[0] || null;
@@ -16399,29 +16435,13 @@ const RhythmSongSelect = ({
     const id = difficulty && ids.includes(difficulty.id) ? difficulty.id : ids[ids.length - 1];
     return Number(entry.difficulties[id].level) || 0;
   };
-  // 選んでいる曲を鳴らす(音ゲーの曲えらびはたいてい曲が流れている)。
-  // 画面を離れる・曲を選び替える・設定でOFFにする、のどれでも止める。
-  const previewSongId = song ? song.songId : '';
-  const previewTrackId = song ? song.bgmTrackId : '';
+  // 選んでいる曲を鳴らすのは App本体(rhythmPreviewTrackId)。ここでは鳴らさない。
+  // この画面の中で鳴らしていたころは、ランキングやマスモン設定を開いた瞬間に
+  // 画面ごと消えて音が止まっていた。
+  // 外へ「いまこの曲を選んでいる」と伝えるだけにする(保存値が空・曲が入れ替わったときの保険)。
   React.useEffect(() => {
-    if (!preview || !previewTrackId) return undefined;
-    let cancelled = false,
-      handle = null;
-    const timer = setTimeout(() => {
-      Audio_.startRhythmTrack(previewTrackId, previewVolume).then(audio => {
-        if (cancelled || !audio) {
-          audio && audio.stop();
-          return;
-        }
-        handle = audio;
-      }).catch(() => {});
-    }, RHYTHM_PREVIEW_DELAY_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      if (handle) handle.stop();
-    };
-  }, [preview, previewTrackId, previewSongId, previewVolume]);
+    if (song && song.songId !== songId) setSongId(song.songId);
+  }, [song ? song.songId : '', songId]);
   const pickRandom = () => {
     if (!list.length) return;
     const nextSong = list[Math.floor(Math.random() * list.length)];
@@ -16648,6 +16668,70 @@ const RHYTHM_HAPTICS = (() => {
 // 歓声(mhRhythmSideCheer)の長さ。CSS側と同じ値をここに持つ。
 // 終わったら data-rhythm-side-hit を外して、待機の動きへ戻すために使う。
 const RHYTHM_SIDE_CHEER_MS = 700;
+const rhythmAbilityEmoji = abilityId => abilityId === 'GENKI' ? '💚' : abilityId === 'MUTEKI' ? '🛡️' : abilityId === 'GAMAN' ? '🧱' : abilityId === 'KONJO' ? '🔥' : '✨';
+const rhythmAbilityTone = abilityId => abilityId === 'GENKI' ? 'border-emerald-300/50 bg-emerald-950/40 text-emerald-100' : abilityId === 'MUTEKI' ? 'border-cyan-300/50 bg-cyan-950/40 text-cyan-100' : abilityId === 'GAMAN' ? 'border-amber-300/50 bg-amber-950/40 text-amber-100' : abilityId === 'KONJO' ? 'border-rose-300/50 bg-rose-950/40 text-rose-100' : 'border-white/20 bg-slate-900/60 text-slate-300';
+// 能力ごとに「その能力になる血統」をまとめる。並びは RHYTHM_MONSTER_ABILITIES の順。
+const rhythmAbilityRows = () => Object.values(RHYTHM_MONSTER_ABILITIES).map(ability => ({
+  ability,
+  lineages: Object.entries(RHYTHM_MONSTER_ABILITY_BY_LINEAGE).filter(([, id]) => id === ability.id).map(([lineageId]) => lineageById(lineageId).name)
+}));
+const rhythmSlotAbility = masu => masu && masu.baseId ? rhythmMonsterAbilityForLineage(monsterLineageOf(masu.baseId).main.id) : null;
+
+// モンスターノーツの説明。マスモン設定の画面へ置く「詳細」。
+// 【2026-09-05・ユーザー指示】「マスモン設定のとこをUIやレイアウトを整えて。
+//   モンスターノーツが何がつくかとか説明とかその辺の詳細を追加して」
+// 能力の一覧は実データ(RHYTHM_MONSTER_ABILITIES / RHYTHM_MONSTER_ABILITY_BY_LINEAGE)から作る。
+// 手で書き写すと、値を変えたときにここだけ古いまま残るため。
+const RhythmMonsterNoteGuide = () => {
+  const ratios = rhythmMonsterNoteBaseRatios(RHYTHM_MONSTER_SLOT_MAX).map(ratio => `${Math.round(ratio * 100)}%`);
+  return /*#__PURE__*/React.createElement("section", {
+    "data-rhythm-monster-guide": true,
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("article", {
+    className: "rounded-2xl border border-amber-300/40 bg-amber-500/10 p-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-amber-100"
+  }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u3068\u306F"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[11px] font-bold leading-relaxed text-amber-50/90"
+  }, "\u3053\u3053\u3067\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u3001\u66F2\u306E\u9014\u4E2D\u3067\u91D1\u8272\u306E\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306B\u306A\u3063\u3066\u6D41\u308C\u3066\u304D\u307E\u3059\u3002 \u30CE\u30FC\u30C4\u306E\u771F\u3093\u4E2D\u306B\u306F\u3001\u305D\u306E\u30DE\u30B9\u30E2\u30F3\u306E\u67D3\u8272\u3092\u53CD\u6620\u3057\u305F\u7D75\u304C\u51FA\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("ul", {
+    className: "mt-2 space-y-1 text-[11px] font-bold leading-relaxed text-amber-50/90"
+  }, /*#__PURE__*/React.createElement("li", null, "\u30FB\u8A2D\u5B9A\u3057\u305F\u9806\u306B\u3001", /*#__PURE__*/React.createElement("b", null, "1\u4F53\u306B\u3064\u304D1\u56DE\u30FB\u6700\u5927", RHYTHM_MONSTER_SLOT_MAX, "\u56DE"), "\u51FA\u3066\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("li", null, "\u30FB\u51FA\u3066\u304F\u308B\u306E\u306F\u66F2\u306E\u3060\u3044\u305F\u3044 ", ratios.join(' / '), " \u3042\u305F\u308A\u3067\u3059\uFF08\u66F2\u306E\u5207\u308C\u76EE\u306B\u5408\u308F\u305B\u308B\u306E\u3067\u524D\u5F8C\u3057\u307E\u3059\uFF09\u3002"), /*#__PURE__*/React.createElement("li", null, "\u30FB", /*#__PURE__*/React.createElement("b", null, RHYTHM_MONSTER_ABILITY_JUDGMENTS.join('・')), " \u3067\u53D6\u308B\u3068\u3001\u305D\u306E\u30DE\u30B9\u30E2\u30F3\u306E\u80FD\u529B\u304C\u51FA\u307E\u3059\u3002GOOD\u30FBBAD\u30FBMISS\u3067\u306F\u51FA\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("li", null, "\u30FB\u5224\u5B9A\u306E\u5E45\u30FB\u30B9\u30B3\u30A2\u306E\u8A08\u7B97\u30FB\u30B3\u30F3\u30DC\u306E\u6570\u3048\u65B9\u306F\u3001\u3075\u3064\u3046\u306E\u30CE\u30FC\u30C4\u3068\u307E\u3063\u305F\u304F\u540C\u3058\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("li", null, "\u30FB\u3044\u307E\u306FTAP\u306E\u30CE\u30FC\u30C4\u3060\u3051\u304C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u306B\u306A\u308A\u307E\u3059\u3002"))), /*#__PURE__*/React.createElement("article", {
+    className: "rounded-2xl border border-white/15 bg-slate-900/70 p-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-white"
+  }, "\u3069\u306E\u80FD\u529B\u304C\u4ED8\u304F\u304B"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "\u80FD\u529B\u306F", /*#__PURE__*/React.createElement("b", {
+    className: "text-slate-200"
+  }, "\u4E3B\u8840\u7D71"), "\u3067\u6C7A\u307E\u308A\u307E\u3059\u3002\u526F\u8840\u7D71\u3067\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002\u80B2\u6210\u30FB\u67D3\u8272\u3067\u3082\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("ul", {
+    "data-rhythm-ability-table": true,
+    className: "mt-2 space-y-2"
+  }, rhythmAbilityRows().map(({
+    ability,
+    lineages
+  }) => /*#__PURE__*/React.createElement("li", {
+    key: ability.id,
+    "data-rhythm-ability": ability.id,
+    className: `rounded-xl border p-2.5 ${rhythmAbilityTone(ability.id)}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-baseline gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    className: "text-sm leading-none"
+  }, rhythmAbilityEmoji(ability.id)), /*#__PURE__*/React.createElement("b", {
+    className: "text-[12px] font-black leading-none"
+  }, ability.name)), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1.5 text-[11px] font-bold leading-relaxed"
+  }, rhythmAbilityEffectText(ability)), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] font-bold leading-relaxed opacity-80"
+  }, "\u4E3B\u8840\u7D71: ", lineages.join(' / '))))), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-400"
+  }, "\u7121\u6575\u3068\u6211\u6162\u306F\u52B9\u679C\u306E\u9577\u3055\u304C\u9055\u3046\u306E\u3067\u3001\u305D\u308C\u305E\u308C\u306E\u6B8B\u308A\u6642\u9593\u3067\u5225\u3005\u306B\u52D5\u304D\u307E\u3059\u3002 \u4E21\u65B9\u52B9\u3044\u3066\u3044\u308B\u3042\u3044\u3060\u306F\u7121\u6575\u304C\u52DD\u3061\u3001\u7121\u6575\u304C\u5207\u308C\u305F\u3089\u6211\u6162\u306E\u8EFD\u6E1B\u306B\u5909\u308F\u308A\u307E\u3059\u3002 \u6B8B\u308A\u6642\u9593\u3068\u6839\u6027\u3092\u6301\u3063\u3066\u3044\u308B\u304B\u306F\u3001\u6F14\u594F\u4E2D\u306E\u753B\u9762\u306E\u53F3\u4E0A\u306B\u51FA\u307E\u3059\u3002")));
+};
+
+// マスモン設定の本体。枠の並び順がそのままモンスターノーツの登場順(§3.3)。
+// 枠には「何番目に出るか」と「その子で何の能力が出るか」まで出す。
+// 名前だけを並べていたころは、設定してもプレイ中に何が起きるのか画面から分からなかった。
 const RhythmMonsterSlotsPanel = ({
   rhythmMonsterSlots,
   rhythmMonsterSlotIdsInUse,
@@ -16659,31 +16743,35 @@ const RhythmMonsterSlotsPanel = ({
   masuMons
 }) => /*#__PURE__*/React.createElement("section", {
   "data-rhythm-monster-slots": true,
-  className: "mb-3 rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-3"
+  className: "rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/20 p-4"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between gap-2"
 }, /*#__PURE__*/React.createElement("h3", {
-  className: "text-xs font-black text-fuchsia-200"
+  className: "text-sm font-black text-fuchsia-200"
 }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u7528\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("span", {
   "data-rhythm-monster-count": true,
-  className: "shrink-0 text-[9px] font-black text-fuchsia-300"
+  className: "shrink-0 rounded-full border border-fuchsia-300/50 px-2 py-0.5 text-[10px] font-black text-fuchsia-200"
 }, rhythmMonsterSlots.length, " / ", RHYTHM_MONSTER_SLOT_MAX, "\u4F53")), /*#__PURE__*/React.createElement("p", {
-  className: "mt-1 text-[9px] font-bold leading-relaxed text-fuchsia-100/80"
-}, "\u8A2D\u5B9A\u3057\u305F\u9806\u756A\u304C\u3001\u305D\u306E\u307E\u307E\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u306E\u767B\u5834\u9806\u306B\u306A\u308A\u307E\u3059\u3002\u540C\u3058\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u5225\u306E\u500B\u4F53\u3067\u3082\u91CD\u306D\u3066\u8A2D\u5B9A\u3067\u304D\u307E\u305B\u3093\u3002", RHYTHM_MONSTER_SLOT_MAX, "\u4F53\u305D\u308D\u3048\u308B\u5FC5\u8981\u306F\u306A\u304F\u30011\u301C3\u4F53\u3067\u3082\u904A\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("ol", {
-  className: "mt-2 space-y-1"
+  className: "mt-2 text-[10px] font-bold leading-relaxed text-fuchsia-100/80"
+}, "\u4E0A\u304B\u3089\u9806\u306B\u767B\u5834\u3057\u307E\u3059\u3002\u540C\u3058\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u5225\u306E\u500B\u4F53\u3067\u3082\u91CD\u306D\u3066\u8A2D\u5B9A\u3067\u304D\u307E\u305B\u3093\u3002", RHYTHM_MONSTER_SLOT_MAX, "\u4F53\u305D\u308D\u3048\u308B\u5FC5\u8981\u306F\u306A\u304F\u30011\u301C3\u4F53\u3067\u3082\u904A\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("ol", {
+  className: "mt-3 space-y-2"
 }, Array.from({
   length: RHYTHM_MONSTER_SLOT_MAX
 }, (_, index) => {
   const masu = rhythmMonsterSlots[index] || null,
     base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+  const lineage = masu ? monsterLineageOf(masu.baseId).main : null;
+  const ability = rhythmSlotAbility(masu);
   return /*#__PURE__*/React.createElement("li", {
     key: index,
     "data-rhythm-monster-slot": index + 1,
-    className: "flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900/80 p-2"
+    className: "rounded-xl border border-white/10 bg-slate-900/80 p-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2.5"
   }, /*#__PURE__*/React.createElement("span", {
-    className: "w-4 shrink-0 text-center text-[10px] font-black text-fuchsia-300"
-  }, index + 1), /*#__PURE__*/React.createElement("div", {
-    className: "h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+    className: "w-9 shrink-0 rounded-lg border border-fuchsia-300/40 py-0.5 text-center text-[9px] font-black leading-tight text-fuchsia-200"
+  }, index + 1, /*#__PURE__*/React.createElement("br", null), "\u756A\u76EE"), /*#__PURE__*/React.createElement("div", {
+    className: "h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-950"
   }, masu && base && /*#__PURE__*/React.createElement(DyedMonsterImage, {
     baseId: masu.baseId,
     src: masuDisplayImageUrl(base),
@@ -16694,11 +16782,11 @@ const RhythmMonsterSlotsPanel = ({
   })), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
   }, masu ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", {
-    className: "block truncate text-[11px] font-black"
+    className: "block truncate text-[12px] font-black"
   }, masu.name), /*#__PURE__*/React.createElement("small", {
-    className: "block truncate text-[9px] text-slate-400"
-  }, base?.name || masu.baseId)) : /*#__PURE__*/React.createElement("small", {
-    className: "text-[10px] font-bold text-slate-500"
+    className: "block truncate text-[10px] text-slate-400"
+  }, base?.name || masu.baseId, lineage ? ` / ${lineage.name}血統` : '')) : /*#__PURE__*/React.createElement("small", {
+    className: "text-[11px] font-bold text-slate-500"
   }, "\u672A\u8A2D\u5B9A")), masu && /*#__PURE__*/React.createElement("div", {
     className: "flex shrink-0 gap-1"
   }, /*#__PURE__*/React.createElement("button", {
@@ -16706,20 +16794,23 @@ const RhythmMonsterSlotsPanel = ({
     "aria-label": `${index + 1}枠目を前へ`,
     disabled: index === 0,
     onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, -1), '登場順を入れ替えました'),
-    className: "min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30"
+    className: "min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
   }, "\u2191"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "aria-label": `${index + 1}枠目を後ろへ`,
     disabled: index >= rhythmMonsterSlots.length - 1,
     onClick: () => applyRhythmMonsterSlots(moveRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, index, 1), '登場順を入れ替えました'),
-    className: "min-h-[36px] min-w-[36px] rounded-lg border border-white/20 text-[11px] font-black text-slate-200 disabled:opacity-30"
+    className: "min-h-[40px] min-w-[40px] rounded-lg border border-white/20 text-[12px] font-black text-slate-200 disabled:opacity-30"
   }, "\u2193"), /*#__PURE__*/React.createElement("button", {
     type: "button",
     "data-rhythm-monster-remove": true,
     "aria-label": `${masu.name}を外す`,
     onClick: () => applyRhythmMonsterSlots(removeRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id), `${masu.name}を外しました`),
-    className: "min-h-[36px] rounded-lg border border-rose-300/50 px-2 text-[10px] font-black text-rose-200"
-  }, "\u5916\u3059")));
+    className: "min-h-[40px] rounded-lg border border-rose-300/50 px-2 text-[11px] font-black text-rose-200"
+  }, "\u5916\u3059"))), masu && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-monster-slot-ability": ability ? ability.id : 'none',
+    className: `mt-2 rounded-lg border px-2 py-1.5 text-[10px] font-bold leading-relaxed ${rhythmAbilityTone(ability ? ability.id : '')}`
+  }, ability ? /*#__PURE__*/React.createElement(React.Fragment, null, rhythmAbilityEmoji(ability.id), " ", ability.name, " \u2014 ", rhythmAbilityEffectText(ability)) : /*#__PURE__*/React.createElement(React.Fragment, null, "\u3053\u306E\u8840\u7D71\u306E\u80FD\u529B\u306F\u307E\u3060\u6C7A\u307E\u3063\u3066\u3044\u307E\u305B\u3093\u3002\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u306B\u306F\u306A\u308A\u307E\u3059\u304C\u3001\u80FD\u529B\u306F\u51FA\u307E\u305B\u3093\u3002")));
 })), /*#__PURE__*/React.createElement("button", {
   type: "button",
   "data-rhythm-monster-picker-toggle": true,
@@ -16728,26 +16819,27 @@ const RhythmMonsterSlotsPanel = ({
     setRhythmMonsterPickerOpen(!rhythmMonsterPickerOpen);
     setRhythmMonsterMessage('');
   },
-  className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[11px] font-black text-fuchsia-100"
+  className: "mt-3 min-h-[48px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-900/40 text-[12px] font-black text-fuchsia-100"
 }, rhythmMonsterPickerOpen ? 'マスモン一覧を閉じる' : 'マスモンから設定する'), rhythmMonsterMessage && /*#__PURE__*/React.createElement("p", {
   "data-rhythm-monster-message": true,
   role: "status",
-  className: "mt-1 text-[10px] font-bold text-amber-200"
+  className: "mt-2 text-[11px] font-bold text-amber-200"
 }, rhythmMonsterMessage), rhythmMonsterPickerOpen && /*#__PURE__*/React.createElement("ul", {
   "data-rhythm-monster-picker": true,
-  className: "mh-scroll mt-2 max-h-64 space-y-1 overflow-y-auto"
+  className: "mh-scroll mt-2 max-h-72 space-y-1.5 overflow-y-auto"
 }, masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).map(masu => {
   const base = ALL_PLAYER_MONSTERS[masu.baseId],
     issue = rhythmMonsterSlotAddIssue(rhythmMonsterSlotIdsInUse, masu.id, masuMons);
+  const ability = rhythmSlotAbility(masu);
   return /*#__PURE__*/React.createElement("li", {
     key: masu.id
   }, /*#__PURE__*/React.createElement("button", {
     type: "button",
     disabled: !!issue,
     onClick: () => applyRhythmMonsterSlots(addRhythmMonsterSlot(rhythmMonsterSlotIdsInUse, masu.id, masuMons), `${masu.name}を${rhythmMonsterSlots.length + 1}枠目に設定しました`),
-    className: `flex min-h-[44px] w-full items-center gap-2 rounded-xl border p-2 text-left ${issue ? 'border-white/10 bg-slate-900/40 opacity-50' : 'border-white/20 bg-slate-900/80'}`
+    className: `flex min-h-[48px] w-full items-center gap-2.5 rounded-xl border p-2 text-left ${issue ? 'border-white/10 bg-slate-900/40 opacity-50' : 'border-white/20 bg-slate-900/80'}`
   }, /*#__PURE__*/React.createElement("div", {
-    className: "h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-950"
+    className: "h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-slate-950"
   }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
     baseId: masu.baseId,
     src: masuDisplayImageUrl(base),
@@ -16758,15 +16850,20 @@ const RhythmMonsterSlotsPanel = ({
   })), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1"
   }, /*#__PURE__*/React.createElement("b", {
-    className: "block truncate text-[11px] font-black"
+    className: "block truncate text-[12px] font-black"
   }, masu.name), /*#__PURE__*/React.createElement("small", {
-    className: "block truncate text-[9px] text-slate-400"
-  }, base.name)), issue && /*#__PURE__*/React.createElement("small", {
-    className: "shrink-0 text-[9px] font-bold text-rose-300"
+    className: "block truncate text-[10px] text-slate-400"
+  }, base.name, ability ? ` / ${rhythmAbilityEmoji(ability.id)}${ability.name}` : '')), issue && /*#__PURE__*/React.createElement("small", {
+    className: "shrink-0 text-[10px] font-bold text-rose-300"
   }, RHYTHM_MONSTER_SLOT_ISSUE_TEXT[issue])));
 }), masuMons.filter(masu => masu && ALL_PLAYER_MONSTERS[masu.baseId]).length === 0 && /*#__PURE__*/React.createElement("li", {
-  className: "rounded-xl border border-white/10 p-3 text-center text-[10px] font-bold text-slate-500"
+  className: "rounded-xl border border-white/10 p-4 text-center text-[11px] font-bold text-slate-500"
 }, "\u8A2D\u5B9A\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093")));
+
+// debugPlay … 音ゲーデバッグ画面から始めたプレイかどうか。
+// デバッグ専用の表示(HOLD TEST / 中断して音ゲーデバッグへ戻る / 座標校正)は、
+// ここが true のときだけ出す。体験版から入ったプレイヤーの画面へ出してはいけない
+// (2026-09-05・実機の指摘「ここがデバッグのままになってる」)。
 const RhythmTapTest = ({
   song,
   difficulty,
@@ -16774,7 +16871,8 @@ const RhythmTapTest = ({
   bestRecord,
   monsterEntries,
   onComplete,
-  onExit
+  onExit,
+  debugPlay = false
 }) => {
   const chart = song.difficulties[difficulty.id],
     laneRefs = useRef([]),
@@ -17113,6 +17211,7 @@ const RhythmTapTest = ({
       note.activePointerId = null;
     }
     note.releasedAtMs = null;
+    rhythmFloatingNoteRemove(note);
     note.done = true;
     note._rhythmFinalJudgment = judgment;
     // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
@@ -17372,10 +17471,12 @@ const RhythmTapTest = ({
           const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
           if (songTimeMs >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
             note.releasedAtMs = null;
+            rhythmFloatingNoteRemove(note);
             applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
           } else if (songTimeMs - note.releasedAtMs >= RHYTHM_HOLD_HANDOVER_GRACE_MS) {
             const releasedAt = note.releasedAtMs;
             note.releasedAtMs = null;
+            rhythmFloatingNoteRemove(note);
             applyJudgment(note, 'MISS', releasedAt - holdEndMs);
           }
         }
@@ -17553,6 +17654,7 @@ const RhythmTapTest = ({
     clearJudgmentTimer();
     clearAbilityTimer();
     RHYTHM_GESTURE_RUNTIME.clear();
+    rhythmFloatingNotesClear();
     const run = runRef.current;
     if (run) {
       run.finished = true;
@@ -17588,6 +17690,7 @@ const RhythmTapTest = ({
       return;
     }
     const startBest = normalizeRhythmBestRecord(startBestValue);
+    rhythmFloatingNotesClear();
     runRef.current = {
       audio,
       notes: makeRuntimeNotes(),
@@ -17733,7 +17836,10 @@ const RhythmTapTest = ({
         // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
         const handover = target.releasedAtMs != null;
         target.activePointerId = input.inputKey;
-        if (handover) target.releasedAtMs = null;else {
+        if (handover) {
+          target.releasedAtMs = null;
+          rhythmFloatingNoteRemove(target);
+        } else {
           target.holdJudgment = judgment;
           target.holdDeltaMs = deltaMs;
         }
@@ -17789,6 +17895,7 @@ const RhythmTapTest = ({
       // 猶予のあいだは「浮いている」ことだけ覚えておく(rAFのvisitNoteが時間切れを見る)
       else {
         note.releasedAtMs = now;
+        rhythmFloatingNoteAdd(note);
       }
       if (input.releaseTarget && input.pointerId !== undefined) {
         try {
@@ -18073,7 +18180,7 @@ const RhythmTapTest = ({
     style: {
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, hasHold ? 'HOLD TEST' : 'TAP TEST'))), /*#__PURE__*/React.createElement("div", {
+  }, debugPlay ? hasHold ? 'HOLD TEST' : 'TAP TEST' : `Lv.${chart.level}`))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-song": true,
     className: "mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0",
     style: {
@@ -18201,6 +18308,7 @@ const RhythmTapTest = ({
     }
   }, view.ability.ability, "\uFF01"), noteElements, view.status === 'paused' && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-pause-menu": true,
+    "data-rhythm-debug-play": debugPlay ? '1' : undefined,
     className: "absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-2xl font-black"
@@ -18211,9 +18319,10 @@ const RhythmTapTest = ({
     className: "min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black",
     onClick: restart
   }, "\u30EA\u30B9\u30BF\u30FC\u30C8"), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-pause-exit": true,
     className: "min-h-[48px] w-full rounded-xl bg-rose-800 font-black",
     onClick: abort
-  }, "\u4E2D\u65AD\u3057\u3066\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u3078\u623B\u308B"))));
+  }, debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る'))));
 };
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -18285,6 +18394,14 @@ function MonsterHeroGame() {
   // 体験版で遊べるのは Monster Hero 1曲・EASY/NORMAL/HARD だけで、デバッグ用の曲は出さない。
   // 音ゲー設定はデバッグ画面と体験版ホームの両方から開く。閉じたとき元の画面へ戻すため覚えておく
   const [rhythmOptionsBack, setRhythmOptionsBack] = useState('RHYTHM_DEBUG');
+  // 曲えらびで選んでいる曲・難易度。画面(RhythmSongSelect)の中ではなくここで持つ。
+  // ・ランキングやマスモン設定を開いて戻ってきても、選んでいた曲がそのまま残る
+  // ・選んでいる曲を、曲えらび以外の画面でも鳴らし続けられる
+  const [rhythmSelectedSongId, setRhythmSelectedSongId] = useState(() => {
+    const list = rhythmDemoSongs(RHYTHM_SONGS);
+    return list[0] && list[0].songId || '';
+  });
+  const [rhythmSelectedDifficultyId, setRhythmSelectedDifficultyId] = useState('');
   const openRhythmDemo = async () => {
     const settings = normalizeRhythmSettings(await storeGet(RHYTHM_SETTINGS_KEY, DEFAULT_RHYTHM_SETTINGS, false));
     const records = normalizeRhythmBestRecords(await storeGet(RHYTHM_BEST_RECORDS_KEY, {}, false));
@@ -20201,6 +20318,39 @@ function MonsterHeroGame() {
     error: null,
     songId: null
   });
+  // ── 選んでいる曲を鳴らし続ける ─────────────────────────────────────────────
+  // 【2026-09-05・ユーザー指示】
+  // 「全国ランキング、マスモン設定、オプション場面で音楽がない。選んでいた音楽が鳴り続けるようにして」
+  // 「オプションだけは無音でいい」
+  //
+  // 曲えらびの中で鳴らしていたころは、ほかの画面へ移った瞬間にその画面ごと消えて音も止まっていた。
+  // 鳴らす・止めるをここ(App本体)へ移し、モンビーの中を移動しているあいだは同じ音を鳴らし続ける。
+  //
+  // オプションを外すのは、あちらに「♪ BGM試聴」があるため。裏で曲が鳴っていると重なって聴けない。
+  // 演奏中(RHYTHM_PLAY)も外す。あちらは自分で曲を鳴らす。
+  const rhythmPreviewSong = rhythmDemoSongs(RHYTHM_SONGS).find(song => song.songId === rhythmSelectedSongId) || null;
+  const rhythmPreviewTrackId = rhythmSettings.songPreviewEnabled && RHYTHM_PREVIEW_SCREENS.includes(gameState) && rhythmPreviewSong ? rhythmPreviewSong.bgmTrackId : '';
+  useEffect(() => {
+    if (!rhythmPreviewTrackId) return undefined;
+    // 依存に gameState を入れない。入れると画面を移るたびに鳴らし直しになり、
+    // 「鳴り続ける」どころか移動のたびに頭から鳴ってしまう
+    let cancelled = false,
+      handle = null;
+    const timer = setTimeout(() => {
+      Audio_.startRhythmTrack(rhythmPreviewTrackId, rhythmSettings.bgmVolume).then(audio => {
+        if (cancelled || !audio) {
+          audio && audio.stop();
+          return;
+        }
+        handle = audio;
+      }).catch(() => {});
+    }, RHYTHM_PREVIEW_DELAY_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (handle) handle.stop();
+    };
+  }, [rhythmPreviewTrackId, rhythmSettings.bgmVolume]);
   const [rhythmRankingDetail, setRhythmRankingDetail] = useState(null);
   const rhythmRankingRequestRef = useRef(0);
   // 難易度合算(体験版で遊べる難易度をまとめて取得)のランキングを読み込む。
@@ -36182,7 +36332,8 @@ function MonsterHeroGame() {
         const back = rhythmPlay.from === 'demo' ? 'RHYTHM_DEMO_HOME' : 'RHYTHM_DEBUG';
         setRhythmPlay(null);
         setGameState(back);
-      }
+      },
+      debugPlay: rhythmPlay.from !== 'demo'
     }), gameState === 'RHYTHM_OPTIONS' && /*#__PURE__*/React.createElement(RhythmOptions, {
       value: rhythmSettings,
       onBack: () => setGameState(rhythmOptionsBack),
@@ -36245,8 +36396,10 @@ function MonsterHeroGame() {
         songs: songs,
         difficulties: difficulties,
         bestRecords: rhythmBestRecords,
-        preview: rhythmSettings.songPreviewEnabled,
-        previewVolume: rhythmSettings.bgmVolume,
+        songId: rhythmSelectedSongId,
+        difficultyId: rhythmSelectedDifficultyId,
+        onSongId: setRhythmSelectedSongId,
+        onDifficultyId: setRhythmSelectedDifficultyId,
         spotClass: spotClass,
         onPlay: (song, difficulty) => {
           setRhythmPlay({
@@ -36344,12 +36497,13 @@ function MonsterHeroGame() {
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-sm font-black tracking-widest text-fuchsia-200"
     }, "\uD83D\uDC7E \u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
+      className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3 space-y-3",
       style: {
         paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
       }
-    }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
-      className: "mb-3"
+    }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, null), /*#__PURE__*/React.createElement(AssistantBubble, {
+      scene: "rhythmMonsters",
+      compact: true
     }), /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
       rhythmMonsterSlots: rhythmMonsterSlots,
       rhythmMonsterSlotIdsInUse: rhythmMonsterSlotIdsInUse,
@@ -36359,7 +36513,7 @@ function MonsterHeroGame() {
       setRhythmMonsterMessage: setRhythmMonsterMessage,
       applyRhythmMonsterSlots: applyRhythmMonsterSlots,
       masuMons: masuMons
-    }))), gameState === 'RHYTHM_RANKING' && (() => {
+    }), /*#__PURE__*/React.createElement(RhythmMonsterNoteGuide, null))), gameState === 'RHYTHM_RANKING' && (() => {
       // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
       // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
       const song = RHYTHM_SONGS.find(entry => entry.songId === rhythmRanking.songId) || rhythmDemoSong(RHYTHM_SONGS);
@@ -36548,7 +36702,9 @@ function MonsterHeroGame() {
       className: "text-slate-400"
     }, label), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-black text-amber-100"
-    }, value))))), /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
+    }, value))))), /*#__PURE__*/React.createElement("div", {
+      className: "mb-3"
+    }, /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
       rhythmMonsterSlots: rhythmMonsterSlots,
       rhythmMonsterSlotIdsInUse: rhythmMonsterSlotIdsInUse,
       rhythmMonsterPickerOpen: rhythmMonsterPickerOpen,
@@ -36557,7 +36713,7 @@ function MonsterHeroGame() {
       setRhythmMonsterMessage: setRhythmMonsterMessage,
       applyRhythmMonsterSlots: applyRhythmMonsterSlots,
       masuMons: masuMons
-    }), /*#__PURE__*/React.createElement("section", {
+    })), /*#__PURE__*/React.createElement("section", {
       className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/30 p-3"
     }, /*#__PURE__*/React.createElement("h3", {
       className: "mb-2 text-xs font-black text-cyan-200"
