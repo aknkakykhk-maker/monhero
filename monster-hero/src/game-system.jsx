@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 22:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 22:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6407,15 +6407,46 @@ const MARKET_PROFILE_ICON_STYLES = {
   // 立ち絵が縦長(1024x1536)で顔が小さく写っているため、スネグーラチカ(正方形)と
   // 同じ「顔の高さが丸の約4割」になるよう倍率を上げ、顔の中心が絵の中央より左にある分を横へ寄せている
   undine_icon: { scale: 3.67, x: 7.7, y: 118 },
-  undine_disc_icon: { scale: 1.52, x: 0, y: 2 },
   yaobikuni_icon: { scale: 3.70, x: 6.8, y: 122 },
-  yaobikuni_disc_icon: { scale: 1.55, x: 0, y: 2 },
   mia_icon: { scale: 3.2, x: 0, y: 94 },
-  Mia: { scale: 3.2, x: 0, y: 94 },
   // パンドラ。1.8では顔が小さく、ほかのアイコンより引いて見えた
   // (2026-09-05・ユーザー指摘「少し遠い」)。角と光輪が切れない範囲で寄せた。
   pandora_icon: { scale: 2.4, x: 0, y: 72 },
-  Pandora: { scale: 2.4, x: 0, y: 72 },
+  // プラント。ほかのアイコンが枠の8〜10割を埋めているのに、ここだけ7割ほどしか
+  // 埋まっておらず、1つだけ引いて見えた(2026-09-05・ユーザー指摘「全部見直して統一して」)。
+  // 花の先が切れない範囲で寄せた。
+  plant_icon: { scale: 1.25, x: 0, y: -3 },
+  // みゅあ(アシストカードのアイコン)。顔が枠の中央より左に寄っていた。
+  // 寄せたぶんを覆えるよう倍率も少しだけ上げている(x=2 なら s>=1.04)。
+  mua: { scale: 1.06, x: 2, y: 4 },
+  // --- 円盤石 ---
+  // 円盤石は「円盤そのものを、どれも同じ大きさで真ん中に」出す。
+  // 画像ごとに余白がまったく違い(正方形の絵は中身が97%、1536x1024の絵は幅の64%しかない)、
+  // そのままだと同じ画面に大小の円盤が並ぶ。さらに「◯◯の円盤石」と
+  // 「◯◯の円盤石アイコン」は同じ画像なのに調整が片方にしか無く、別物に見えていた。
+  // ミーア・パンドラの円盤石には顔用の拡大値(s3.2 / s2.4)が付いており、
+  // 円盤が枠からはみ出して顔だけが写っていた(2026-09-05・ユーザー指摘)。
+  //
+  // 下の値は tools/image/disc-icon-values.js が元画像から計算したもの。
+  // 円盤の直径が枠の95%になり、円盤の中心が枠の中心へ来る。
+  // 画像を差し替えたら、その道具を流し直してここへ貼り直す。
+  Zan: { scale: 0.981, x: -0.4, y: -0.4 },
+  Mitarashi: { scale: 1.022, x: 0, y: 0 },
+  Ark: { scale: 0.957, x: 0, y: 0 },
+  Iblis: { scale: 0.957, x: 0, y: 0 },
+  Snegurochka: { scale: 1.487, x: 0.1, y: 1.4 },
+  undine_disc_icon: { scale: 1.489, x: 0, y: 2.1 },
+  Undine: { scale: 1.489, x: 0, y: 2.1 },
+  yaobikuni_disc_icon: { scale: 1.518, x: 0, y: 2.3 },
+  Yaobikuni: { scale: 1.518, x: 0, y: 2.3 },
+  plant_disc_icon: { scale: 0.966, x: 0, y: 0.8 },
+  Plant: { scale: 0.966, x: 0, y: 0.8 },
+  mia_disc_icon: { scale: 0.993, x: 0.2, y: 1.6 },
+  Mia: { scale: 0.993, x: 0.2, y: 1.6 },
+  pandora_disc_icon: { scale: 0.955, x: 0.2, y: 0.8 },
+  Pandora: { scale: 0.955, x: 0.2, y: 0.8 },
+  eiki_disc_icon: { scale: 0.95, x: 0, y: 0.9 },
+  Eiki: { scale: 0.95, x: 0, y: 0.9 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
