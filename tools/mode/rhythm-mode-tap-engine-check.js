@@ -24,7 +24,9 @@ check('20〜30秒・5レーン・複数/連続を含むTAP限定譜面',chart.du
 check('受付幅を過ぎた未処理ノーツを自動MISS',/songTimeMs-\(note\.timeMs\+settings\.judgmentTimingOffsetMs\)>RHYTHM_INPUT_MATCH_WINDOW_MS\)applyJudgment\(note,'MISS'/.test(game));
 check('songTimeはAudioContext.currentTimeと実再生開始時刻が正本',game.includes('startedAt=ctx.currentTime')&&game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&game.includes('songTimeMs:()=>songTimeSeconds()*1000'));
 check('判定処理はDate.now/setInterval/CSS animationを基準にしない',!logic?.includes('Date.now')&&!logic?.includes('setInterval')&&game.includes('requestAnimationFrame(tick)'));
-check('既存BGM track IDを再利用しループしない',game.includes('const startRhythmTrack = async (key,rhythmVolumePct=100)')&&game.includes('nextSource.buffer=buffer; nextSource.loop=false')&&D.RHYTHM_SONGS[0].bgmTrackId==='atsu_cup_theme');
+// 2026-09-05: 第3引数 options を足した(autoStart:false で「用意だけして鳴らさない」)。
+// 既定は今までどおり自動で鳴らすので、プレビューなど他の呼び出しは変わらない
+check('既存BGM track IDを再利用しループしない',game.includes('const startRhythmTrack = async (key,rhythmVolumePct=100,options=null)')&&game.includes('nextSource.buffer=buffer; nextSource.loop=false')&&D.RHYTHM_SONGS[0].bgmTrackId==='atsu_cup_theme');
 check('デバッグの開始導線がある・プレオープンで公開されている',game.includes('data-rhythm-tap-start')&&game.includes("gameState==='RHYTHM_DEBUG'")&&game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
 
 // --- 同じレーンを長押ししながら、別の指で同じレーンをタップできるか ---

@@ -35,7 +35,10 @@ check('短縮終了はsong固有値をaudio clock内でfallback適用',game.incl
 const SHORT_PLAY_SONG_IDS=['atsu_cup_theme_debug_short','monster_note_test'];
 check('短縮値を持つのはデバッグ専用曲だけで、既存曲は従来chart終了を維持',
   songs.filter(item=>!SHORT_PLAY_SONG_IDS.includes(item.songId)).every(item=>item.playDurationMs===undefined));
-check('リスタートは新run生成・入力と音声を破棄',game.includes('const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};')&&game.includes('disposeRun();setView({...initialView(),status:\'loading\'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume)'));
+// 2026-09-05: 曲は「画面が組み上がってから」鳴らすようになったので、
+// 用意する時点では autoStart:false を渡す(鳴らし始めるのは waitUntilPlayable のあと)。
+// リスタートが新しいrunを作って音と入力を捨てるところは変わっていない
+check('リスタートは新run生成・入力と音声を破棄',game.includes('const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};')&&game.includes('disposeRun();setView({...initialView(),status:\'loading\'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false})'));
 // どこから始めたプレイかを from で持つようにしたので 'debug' が付く(2026-09-05)。
 // 音を鳴らし始めるのがボタンのonClick経路のまま(自動クリックを挟んでいない)ことは変わらない
 check('音声開始は直接ボタンonClick経路',game.includes("onClick={()=>{setRhythmPlay({song,difficulty,from:'debug'});setGameState('RHYTHM_PLAY');}}")&&!game.includes("data-rhythm-tap-start')?.click"));

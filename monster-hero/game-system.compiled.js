@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c858473b28afbc32
+// source-sha256: 2a657249ea159eca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 15:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 16:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4304,7 +4304,11 @@ const Audio_ = (() => {
   };
   // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
   // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
-  const startRhythmTrack = async (key, rhythmVolumePct = 100) => {
+  // options.autoStart:false を渡すと「音源の用意だけして、まだ鳴らさない」。
+  // 音ゲー本体は、画面が組み上がるのを待ってから start() で鳴らし始める
+  // (先に鳴らすと、まだノーツを置けていない間に曲だけ進んでMISSが積み上がる)。
+  const startRhythmTrack = async (key, rhythmVolumePct = 100, options = null) => {
+    const autoStart = options?.autoStart !== false;
     const track = resolveTrack(key);
     if (!track) return null;
     currentKey = null;
@@ -4366,8 +4370,15 @@ const Audio_ = (() => {
         return true;
       };
       const songTimeSeconds = () => Math.min(buffer.duration, Math.max(0, offsetSeconds + (playing ? ctx.currentTime - startedAt : 0)));
-      startSource(0);
+      if (autoStart) startSource(0);
       return {
+        // autoStart:false で用意したぶんを、頭から鳴らし始める。
+        // すでに鳴っている・止めたあとなら何もしない(二重に鳴らさない)
+        start: () => {
+          if (playing || stopped || naturallyEnded) return playing;
+          return startSource(0);
+        },
+        started: () => playing,
         songTimeMs: () => songTimeSeconds() * 1000,
         durationMs: buffer.duration * 1000,
         ended: () => naturallyEnded || songTimeSeconds() >= buffer.duration,
@@ -17291,6 +17302,23 @@ const RhythmTapTest = ({
   // ノーツへ書き込んだスタイルを、毎フレーム強制的に計算し直させていた。ノーツが増える譜面ほど重く、
   // これが実機のカクつきの主因だった。測った結果を覚えておき、変わりうるときだけ測り直す。
   const travelCacheRef = useRef(null);
+  // 測った寸法が「遊べる形」になっているか。
+  // 高さが0でないことだけを見ていたため、まだ組み上がっていない最中の値
+  // (Tailwindが効く前・絵の読み込み前・画面の回転中など)をそのまま覚えてしまい、
+  // ノーツが画面の外に置かれたまま固定されて、判定(MISS)だけが進む状態になっていた
+  // (2026-09-05・実機の指摘「初回起動時はよくこの状態になる」)。
+  // リスタートで直っていたのは、そのとき覚えた値を捨てていたからにすぎない。
+  const rhythmTravelLooksReady = (areaRect, lineRect) => {
+    if (!(areaRect.height > 0 && areaRect.width > 0)) return false;
+    // 画面より大きいプレイエリアは、まだ中身が積み上がっている最中。
+    // (実測: レイアウトが効く前は 844pxの画面で 3352px になっていた)
+    const viewportHeight = typeof window !== 'undefined' && window.innerHeight > 0 ? window.innerHeight : 0;
+    if (viewportHeight > 0 && areaRect.height > viewportHeight * 1.5) return false;
+    // 判定ラインがプレイエリアの中に無いなら、まだ置き場所が決まっていない
+    const lineCenter = lineRect.top + lineRect.height / 2;
+    if (!(lineCenter >= areaRect.top && lineCenter <= areaRect.bottom)) return false;
+    return true;
+  };
   const measureTravel = useCallback(() => {
     const cached = travelCacheRef.current;
     if (cached) return cached;
@@ -17305,18 +17333,35 @@ const RhythmTapTest = ({
       noteHeight = laneRefs.current.find(Boolean)?.getBoundingClientRect().height || 20;
     const spawnY = -noteHeight + settings.noteStartPosition / 100 * areaRect.height * .2;
     const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteHeight / 2;
+    // ready:false は「まだノーツを正しい場所へ置けない」。判定を進めてよいかの目印にも使う
+    const ready = rhythmTravelLooksReady(areaRect, lineRect);
     const result = {
       spawnY,
       judgmentY,
       travelPx: judgmentY - spawnY,
       playAreaHeight: areaRect.height,
       rect: areaRect,
-      noteHeight
+      noteHeight,
+      ready
     };
-    // まだ組み上がっていない(高さ0)うちは覚えない。おかしな値のまま固定されるのを防ぐ。
-    if (areaRect.height > 0) travelCacheRef.current = result;
+    // 組み上がっていると確かめられたときだけ覚える。そうでなければ毎フレーム測り直し、
+    // 整った瞬間から正しい位置で流れ始める(遊べない状態のまま固定されない)
+    if (ready) travelCacheRef.current = result;
     return result;
   }, [settings.noteStartPosition]);
+  // 覚えている寸法が今も正しいか。プレイエリアの大きさが変わったら捨てて測り直す。
+  // 絵の読み込みが終わった・画面が回った・セーフエリアが確定した、はどれも resize を
+  // 起こさないことがあるので、window の resize だけでは取りこぼす。
+  useEffect(() => {
+    const area = playAreaRef.current;
+    if (!area || typeof ResizeObserver === 'undefined') return;
+    // 監視するだけでDOMは書き換えないので、自分の変化で自分がまた呼ばれる心配はない
+    const observer = new ResizeObserver(() => {
+      travelCacheRef.current = null;
+    });
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, []);
   // 画面の大きさが変わったら測り直す。設定(開始位置・ノーツサイズ)を変えたときと、
   // プレイの状態が切り替わった直後も、いったん捨てて測り直す。
   useEffect(() => {
@@ -17593,6 +17638,8 @@ const RhythmTapTest = ({
         travelMs = rhythmTravelMsForSpeed(settings.noteSpeed);
       let perfScanned = 0,
         perfDrawn = 0;
+      // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
+      const placeable = !!travel && travel.ready !== false;
       // 練習の説明。曲の時刻で切り替わる。変わったときだけDOMへ書く(毎フレームReactを動かさない)
       if (tutorial) {
         const step = rhythmTutorialStepAt(songTimeMs);
@@ -17623,6 +17670,16 @@ const RhythmTapTest = ({
             rhythmFloatingNoteRemove(note);
             applyJudgment(note, 'MISS', releasedAt - holdEndMs);
           }
+        }
+        // ノーツを画面へ置けない状態(レイアウトがまだ組み上がっていない)のあいだに
+        // 過ぎてしまったぶんは、見えていないのだから取りようがない。
+        // MISSにしてライフとコンボを削るのは理不尽なので、スコアにも数にも入れずに取り除く。
+        // (2026-09-05・実機の指摘「初回起動時はよくこの状態になる」。
+        //  以前はここで見えないノーツを次々MISSにしていて、開幕から立て直せなかった)
+        if (!note.done && note.activePointerId === null && !placeable && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_INPUT_MATCH_WINDOW_MS) {
+          note.done = true;
+          note._rhythmUnplaceable = true;
+          return;
         }
         if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_INPUT_MATCH_WINDOW_MS) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
         const el = laneRefs.current[note.index];
@@ -17811,6 +17868,33 @@ const RhythmTapTest = ({
     runRef.current = null;
     setPressedLanes([]);
   }, [clearAbilityTimer, clearJudgmentTimer, stopFrame]);
+  /* プレイエリアが「遊べる大きさ」になるまで待つ。
+     毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
+     待ち続けて遊べなくなるより始めたほうがましなので諦めて返す。 */
+  const waitUntilPlayable = generation => new Promise(resolve => {
+    const deadline = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + RHYTHM_LAYOUT_WAIT_MAX_MS;
+    const step = () => {
+      if (!mountedRef.current || generation !== generationRef.current) {
+        resolve(false);
+        return;
+      }
+      const area = playAreaRef.current,
+        line = judgmentLineRef.current;
+      if (area && line && rhythmTravelLooksReady(area.getBoundingClientRect(), line.getBoundingClientRect())) {
+        // 測り直させる。待っているあいだに覚えた値があれば、それは整う前のもの
+        travelCacheRef.current = null;
+        resolve(true);
+        return;
+      }
+      if ((typeof performance !== 'undefined' ? performance.now() : Date.now()) >= deadline) {
+        travelCacheRef.current = null;
+        resolve(false);
+        return;
+      }
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(step);else setTimeout(step, 16);
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(step);else setTimeout(step, 16);
+  });
   const beginRun = async startBestValue => {
     if (startLockRef.current) return;
     startLockRef.current = true;
@@ -17820,7 +17904,9 @@ const RhythmTapTest = ({
       ...initialView(),
       status: 'loading'
     });
-    const audio = await Audio_.startRhythmTrack(song.bgmTrackId, settings.bgmVolume);
+    const audio = await Audio_.startRhythmTrack(song.bgmTrackId, settings.bgmVolume, {
+      autoStart: false
+    });
     if (!mountedRef.current || generation !== generationRef.current) {
       audio?.stop();
       return;
@@ -17898,6 +17984,16 @@ const RhythmTapTest = ({
       ...initialView(),
       status: 'playing'
     });
+    /* ここまでで画面の中身はそろっているが、実際に置かれる大きさが決まるのは次の描画のあと。
+       絵の読み込み・レイアウトの反映が終わる前に曲を鳴らし始めると、ノーツを正しい場所へ
+       置けないまま曲だけ進み、MISSが積み上がる(2026-09-05・実機の指摘)。
+       遊べる形になるまで待ってから鳴らす。待てない端末のために上限も置く */
+    await waitUntilPlayable(generation);
+    if (!mountedRef.current || generation !== generationRef.current) {
+      audio.stop();
+      return;
+    }
+    audio.start();
     scheduleTick();
   };
   useEffect(() => {

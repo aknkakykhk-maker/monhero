@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 15:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 16:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2889,7 +2889,11 @@ const Audio_ = (() => {
   const stopBGM = () => { currentKey = null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers(); };
   // 音ゲーの時刻は AudioContext.currentTime と再生offsetだけを正本にする。
   // BufferSourceNodeは一度stopしたら再利用せず、再開のたびにoffsetから作り直す。
-  const startRhythmTrack = async (key,rhythmVolumePct=100) => {
+  // options.autoStart:false を渡すと「音源の用意だけして、まだ鳴らさない」。
+  // 音ゲー本体は、画面が組み上がるのを待ってから start() で鳴らし始める
+  // (先に鳴らすと、まだノーツを置けていない間に曲だけ進んでMISSが積み上がる)。
+  const startRhythmTrack = async (key,rhythmVolumePct=100,options=null) => {
+    const autoStart=options?.autoStart!==false;
     const track=resolveTrack(key); if(!track) return null;
     currentKey=null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers();
     resumeAudioCtxNoWait();
@@ -2912,8 +2916,12 @@ const Audio_ = (() => {
         nextSource.start(0,offset); return true;
       };
       const songTimeSeconds=()=>Math.min(buffer.duration,Math.max(0,offsetSeconds+(playing?ctx.currentTime-startedAt:0)));
-      startSource(0);
+      if(autoStart)startSource(0);
       return {
+        // autoStart:false で用意したぶんを、頭から鳴らし始める。
+        // すでに鳴っている・止めたあとなら何もしない(二重に鳴らさない)
+        start:()=>{if(playing||stopped||naturallyEnded)return playing;return startSource(0);},
+        started:()=>playing,
         songTimeMs:()=>songTimeSeconds()*1000,
         durationMs:buffer.duration*1000,
         ended:()=>naturallyEnded||songTimeSeconds()>=buffer.duration,
@@ -9643,6 +9651,23 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
 // ノーツへ書き込んだスタイルを、毎フレーム強制的に計算し直させていた。ノーツが増える譜面ほど重く、
 // これが実機のカクつきの主因だった。測った結果を覚えておき、変わりうるときだけ測り直す。
 const travelCacheRef=useRef(null);
+// 測った寸法が「遊べる形」になっているか。
+// 高さが0でないことだけを見ていたため、まだ組み上がっていない最中の値
+// (Tailwindが効く前・絵の読み込み前・画面の回転中など)をそのまま覚えてしまい、
+// ノーツが画面の外に置かれたまま固定されて、判定(MISS)だけが進む状態になっていた
+// (2026-09-05・実機の指摘「初回起動時はよくこの状態になる」)。
+// リスタートで直っていたのは、そのとき覚えた値を捨てていたからにすぎない。
+const rhythmTravelLooksReady=(areaRect,lineRect)=>{
+  if(!(areaRect.height>0&&areaRect.width>0))return false;
+  // 画面より大きいプレイエリアは、まだ中身が積み上がっている最中。
+  // (実測: レイアウトが効く前は 844pxの画面で 3352px になっていた)
+  const viewportHeight=typeof window!=='undefined'&&window.innerHeight>0?window.innerHeight:0;
+  if(viewportHeight>0&&areaRect.height>viewportHeight*1.5)return false;
+  // 判定ラインがプレイエリアの中に無いなら、まだ置き場所が決まっていない
+  const lineCenter=lineRect.top+lineRect.height/2;
+  if(!(lineCenter>=areaRect.top&&lineCenter<=areaRect.bottom))return false;
+  return true;
+};
 const measureTravel=useCallback(()=>{
   const cached=travelCacheRef.current;
   if(cached)return cached;
@@ -9652,11 +9677,25 @@ const measureTravel=useCallback(()=>{
   const areaRect=area.getBoundingClientRect(),lineRect=line.getBoundingClientRect(),noteHeight=laneRefs.current.find(Boolean)?.getBoundingClientRect().height||20;
   const spawnY=-noteHeight+(settings.noteStartPosition/100)*areaRect.height*.2;
   const judgmentY=lineRect.top-areaRect.top+lineRect.height/2-noteHeight/2;
-  const result={spawnY,judgmentY,travelPx:judgmentY-spawnY,playAreaHeight:areaRect.height,rect:areaRect,noteHeight};
-  // まだ組み上がっていない(高さ0)うちは覚えない。おかしな値のまま固定されるのを防ぐ。
-  if(areaRect.height>0)travelCacheRef.current=result;
+  // ready:false は「まだノーツを正しい場所へ置けない」。判定を進めてよいかの目印にも使う
+  const ready=rhythmTravelLooksReady(areaRect,lineRect);
+  const result={spawnY,judgmentY,travelPx:judgmentY-spawnY,playAreaHeight:areaRect.height,rect:areaRect,noteHeight,ready};
+  // 組み上がっていると確かめられたときだけ覚える。そうでなければ毎フレーム測り直し、
+  // 整った瞬間から正しい位置で流れ始める(遊べない状態のまま固定されない)
+  if(ready)travelCacheRef.current=result;
   return result;
 },[settings.noteStartPosition]);
+// 覚えている寸法が今も正しいか。プレイエリアの大きさが変わったら捨てて測り直す。
+// 絵の読み込みが終わった・画面が回った・セーフエリアが確定した、はどれも resize を
+// 起こさないことがあるので、window の resize だけでは取りこぼす。
+useEffect(()=>{
+  const area=playAreaRef.current;
+  if(!area||typeof ResizeObserver==='undefined')return;
+  // 監視するだけでDOMは書き換えないので、自分の変化で自分がまた呼ばれる心配はない
+  const observer=new ResizeObserver(()=>{travelCacheRef.current=null;});
+  observer.observe(area);
+  return ()=>observer.disconnect();
+},[]);
 // 画面の大きさが変わったら測り直す。設定(開始位置・ノーツサイズ)を変えたときと、
 // プレイの状態が切り替わった直後も、いったん捨てて測り直す。
 useEffect(()=>{
@@ -9773,6 +9812,8 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
   },[view.status]);
   const skipCelebrate=()=>{if(celebrateTimerRef.current){clearTimeout(celebrateTimerRef.current);celebrateTimerRef.current=null;}setView(v=>v.status==='celebrate'?{...v,status:'result'}:v);};
   const scheduleTick=useCallback(()=>{stopFrame();const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs(),travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;
+// このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
+const placeable=!!travel&&travel.ready!==false;
 // 練習の説明。曲の時刻で切り替わる。変わったときだけDOMへ書く(毎フレームReactを動かさない)
 if(tutorial){const step=rhythmTutorialStepAt(songTimeMs);if(step!==tutorialStepRef.current){tutorialStepRef.current=step;const banner=tutorialBannerRef.current;if(banner){const title=banner.querySelector('[data-rhythm-tutorial-title]'),body=banner.querySelector('[data-rhythm-tutorial-text]');if(title)title.textContent=step.title;if(body)body.textContent=step.text;}}}
 const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);
@@ -9782,7 +9823,14 @@ if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
   const holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;
   if(songTimeMs>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){note.releasedAtMs=null;rhythmFloatingNoteRemove(note);applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
   else if(songTimeMs-note.releasedAtMs>=RHYTHM_HOLD_HANDOVER_GRACE_MS){const releasedAt=note.releasedAtMs;note.releasedAtMs=null;rhythmFloatingNoteRemove(note);applyJudgment(note,'MISS',releasedAt-holdEndMs);}
-}if(!note.done&&note.activePointerId===null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_INPUT_MATCH_WINDOW_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);const el=laneRefs.current[note.index];if(!el)return;
+}
+// ノーツを画面へ置けない状態(レイアウトがまだ組み上がっていない)のあいだに
+// 過ぎてしまったぶんは、見えていないのだから取りようがない。
+// MISSにしてライフとコンボを削るのは理不尽なので、スコアにも数にも入れずに取り除く。
+// (2026-09-05・実機の指摘「初回起動時はよくこの状態になる」。
+//  以前はここで見えないノーツを次々MISSにしていて、開幕から立て直せなかった)
+if(!note.done&&note.activePointerId===null&&!placeable&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_INPUT_MATCH_WINDOW_MS){note.done=true;note._rhythmUnplaceable=true;return;}
+if(!note.done&&note.activePointerId===null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_INPUT_MATCH_WINDOW_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);const el=laneRefs.current[note.index];if(!el)return;
 // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
 // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
 const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note))&&songTimeMs<rhythmReleaseTargetMs(note);
@@ -9861,7 +9909,24 @@ if(settings.sideMonsterAbilityHighlight&&sideMonsterRefs.current.length){
 }
 const playEndTimeMs=Number.isFinite(Number(song.playDurationMs))?Number(song.playDurationMs):chart.durationMs;if(RHYTHM_PERF.enabled)RHYTHM_PERF.tick(performance.now()-perfTickStart,perfTickStart-frameNowMs);if(songTimeMs>=playEndTimeMs||run.audio.ended())finish();else frameRef.current=requestAnimationFrame(tick);};frameRef.current=requestAnimationFrame(tick);},[applyJudgment,chart.durationMs,finish,measureTravel,settings.judgmentTimingOffsetMs,settings.noteSpeed,song.playDurationMs,stopFrame,tutorial]);
   const disposeRun=useCallback(()=>{stopFrame();clearJudgmentTimer();clearAbilityTimer();RHYTHM_GESTURE_RUNTIME.clear();rhythmFloatingNotesClear();const run=runRef.current;if(run){run.finished=true;run.paused=true;run.activePointers.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.audio?.stop();}runRef.current=null;setPressedLanes([]);},[clearAbilityTimer,clearJudgmentTimer,stopFrame]);
-  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume);if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});rhythmLayoutPlayArea(playAreaRef.current);
+  /* プレイエリアが「遊べる大きさ」になるまで待つ。
+     毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
+     待ち続けて遊べなくなるより始めたほうがましなので諦めて返す。 */
+  const waitUntilPlayable=generation=>new Promise(resolve=>{
+    const deadline=(typeof performance!=='undefined'?performance.now():Date.now())+RHYTHM_LAYOUT_WAIT_MAX_MS;
+    const step=()=>{
+      if(!mountedRef.current||generation!==generationRef.current){resolve(false);return;}
+      const area=playAreaRef.current,line=judgmentLineRef.current;
+      if(area&&line&&rhythmTravelLooksReady(area.getBoundingClientRect(),line.getBoundingClientRect())){
+        // 測り直させる。待っているあいだに覚えた値があれば、それは整う前のもの
+        travelCacheRef.current=null;resolve(true);return;
+      }
+      if((typeof performance!=='undefined'?performance.now():Date.now())>=deadline){travelCacheRef.current=null;resolve(false);return;}
+      if(typeof requestAnimationFrame==='function')requestAnimationFrame(step);else setTimeout(step,16);
+    };
+    if(typeof requestAnimationFrame==='function')requestAnimationFrame(step);else setTimeout(step,16);
+  });
+  const beginRun=async startBestValue=>{if(startLockRef.current)return;startLockRef.current=true;const generation=++generationRef.current;disposeRun();setView({...initialView(),status:'loading'});const audio=await Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false});if(!mountedRef.current||generation!==generationRef.current){audio?.stop();return;}if(!audio){startLockRef.current=false;setView(v=>({...v,status:'error'}));return;}const startBest=normalizeRhythmBestRecord(startBestValue);rhythmFloatingNotesClear();runRef.current={audio,notes:makeRuntimeNotes(),activePointers:new Map(),activeTouchInputs:new Set(),combo:0,maxCombo:0,counts:emptyCounts(),fast:0,slow:0,life:RHYTHM_LIFE_MAX,lifeDepleted:false,score:0,lockedScore:0,scoreOffset:0,abilities:createRhythmMonsterAbilityState(),konjoOwnerName:'',finished:false,paused:false,generation,startBest,startBestScore:startBest.bestScore};laneRefs.current.forEach(el=>{if(el){el.style.display='block';el.style.opacity='0';el.style.filter='';/* styleを直接書き戻したら、「前に何を書いたか」の控えも一緒に捨てる。   控えだけ古いまま残ると、値が同じだと判断して書き込みを飛ばし、   実際の見た目とズレたまま固まる(例: 透明のまま出てこない)ため */el._rhythmHidden=false;el._rhythmOpacity=undefined;el._rhythmWillChange=undefined;el._rhythmFailedFlag=undefined;el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;el._rhythmHoldBody=undefined;el._rhythmHoldFilter=undefined;el._rhythmDepthScale=undefined;el._rhythmDepthBrightness=undefined;el._rhythmTransform=undefined;el._rhythmSlideBody=undefined;}});rhythmLayoutPlayArea(playAreaRef.current);
 /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
 rhythmEnsureHitEffects(playAreaRef.current);
 /* 両サイドのマスモンが跳ねる速さを曲の1拍へ合わせる。   プレイ開始時に一度書くだけで、あとはCSSアニメーションが回すので毎フレームのJSは走らない */
@@ -9870,7 +9935,15 @@ sideMonsterRefs.current.forEach(el=>{if(el){el.style.setProperty('--rhythm-side-
 /* 判定ラインも同じ1拍で脈打たせる。ここで一度書くだけで、あとはCSSが回す。
    変わるのは厚み(scaleY)と濃さ(opacity)だけなので、判定の位置は動かない */
 if(judgmentLineRef.current)judgmentLineRef.current.style.setProperty('--rhythm-beat',`${sideBeatMs}ms`);
-startLockRef.current=false;setView({...initialView(),status:'playing'});scheduleTick();};
+startLockRef.current=false;setView({...initialView(),status:'playing'});
+/* ここまでで画面の中身はそろっているが、実際に置かれる大きさが決まるのは次の描画のあと。
+   絵の読み込み・レイアウトの反映が終わる前に曲を鳴らし始めると、ノーツを正しい場所へ
+   置けないまま曲だけ進み、MISSが積み上がる(2026-09-05・実機の指摘)。
+   遊べる形になるまで待ってから鳴らす。待てない端末のために上限も置く */
+await waitUntilPlayable(generation);
+if(!mountedRef.current||generation!==generationRef.current){audio.stop();return;}
+audio.start();
+scheduleTick();};
   useEffect(()=>{mountedRef.current=true;beginRun(bestRecord);return()=>{mountedRef.current=false;++generationRef.current;startLockRef.current=false;disposeRun();};},[]);
   const pause=()=>{const run=runRef.current;if(!run||run.finished||run.paused)return;run.activePointers.clear();run.activeTouchInputs?.clear();run.inputFeedbackState?.clear();run.activePointerFeedback?.clear();setPressedLanes([]);run.notes.forEach(note=>{if(note.type==='HOLD'&&note.activePointerId!==null)note.activePointerId=-1;});run.paused=true;stopFrame();run.audio.pause();setView(v=>({...v,status:'paused'}));};
   const resume=async()=>{const run=runRef.current;if(!run||run.finished||!run.paused)return;const resumed=await run.audio.resume();if(!resumed)return;run.paused=false;setView(v=>({...v,status:'playing'}));scheduleTick();};

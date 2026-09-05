@@ -113,7 +113,17 @@ check('プレイエリアの寸法を毎フレーム測り直さない（覚え�
 check('画面の大きさが変わったら測り直す',
   gameSrc.includes("window.addEventListener('resize',invalidate)")
   &&gameSrc.includes("window.addEventListener('orientationchange',invalidate)"));
-check('組み上がる前(高さ0)の値は覚えない',gameSrc.includes('if(areaRect.height>0)travelCacheRef.current=result;'));
+// 2026-09-05: 「高さが0でなければ覚える」では足りなかった。
+// 組み上がっていない最中のプレイエリアは 844pxの画面で 3352px あり、
+// その値を覚え込んでノーツが画面の外に置かれたまま戻らなくなっていた(実機の指摘)。
+// いまは「遊べる形になっているか」を確かめてから覚える。
+// 実際にその通り動くかは tools/mode/rhythm-first-run-layout-check.js が見る
+check('組み上がっていない値は覚えない',
+  gameSrc.includes('if(ready)travelCacheRef.current=result;')
+  &&gameSrc.includes('const rhythmTravelLooksReady=')
+  &&gameSrc.includes('areaRect.height>viewportHeight*1.5'));
+check('プレイエリアの大きさが変わったら覚え直す',
+  gameSrc.includes('new ResizeObserver(()=>{travelCacheRef.current=null;})'));
 // 2026-09-04: 実機で「ノーツを押したときにカクつく」報告を受けて足した3点。
 // どれも「タップ1回あたりの仕事を減らす」ためのもので、判定・スコアには関与しない。
 check('ノーツのDOMを毎回作り直さない(判定のたびの再生成を止める)',

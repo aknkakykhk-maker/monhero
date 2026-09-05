@@ -21,7 +21,13 @@ if(helper){const c={RHYTHM_JUDGMENTS:context.out.RHYTHM_JUDGMENTS,RHYTHM_JUDGMEN
 check('ノーツ移動は時刻を変えず非線形projectionでpx計算',game.includes('travelPx:judgmentY-spawnY')&&game.includes('rhythmProjectTravelProgress(progress)*travel.travelPx')&&game.includes('yPx=Math.round(yPx);')&&game.includes('const nextTransform=`translate3d(0,${yPx}px,0)`;')&&game.includes('if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;')&&!game.includes('el.style.transform=`translate3d(0,${yPx}px,0) scale('));
 check('ポーズ中は音源とrAFを止め入力・MISSを停止',game.includes('run.paused=true;stopFrame();run.audio.pause()')&&game.includes('run.finished||run.paused||note.done')&&(game.includes("run.paused||view.status!=='playing'")||game.includes('if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();')&&game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)')));
 check('再開は同じoffsetから新しいBufferSourceを生成',game.includes('offsetSeconds=songTimeSeconds()')&&game.includes('const nextSource=ctx.createBufferSource()')&&game.includes('startSource(offsetSeconds)'));
-check('ポーズ中songTimeは進まずAudioContext時刻を正本にする',game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&!/Date\.now\(\)/.test(game.match(/const RhythmTapTest=[\s\S]*?\n};\n\nfunction MonsterHeroGame/)?.[0]||''));
+// 曲の時刻は今も AudioContext だけを正本にする。
+// ただし 2026-09-05 に足した「画面が組み上がるのを待つ」処理は曲の時刻とは無関係の
+// 待ち時間の上限なので、performance.now() が無い場合の控えとして Date.now() を使う。
+// ここで見たいのは「曲の時刻に Date.now() を混ぜていないこと」なので、待ち処理は外して見る
+const tapTestSource=(game.match(/const RhythmTapTest=[\s\S]*?\n};\n\nfunction MonsterHeroGame/)?.[0]||'')
+  .replace(/const waitUntilPlayable=[\s\S]*?\n  \}\);\n/,'');
+check('ポーズ中songTimeは進まずAudioContext時刻を正本にする',game.includes('offsetSeconds+(playing?ctx.currentTime-startedAt:0)')&&!/Date\.now\(\)/.test(tapTestSource));
 check('PAUSEとリザルト再プレイは同じbeginRunを使用',game.includes('const restart=()=>')&&game.includes('beginRun(startBest)')&&game.includes('onClick={()=>beginRun(mergeRhythmBestRecord'));
 check('中断は保存せず共通disposeRunで停止',game.includes('const abort=()=>')&&game.includes('disposeRun();onExit()')&&!/const abort=[^;]*onComplete/.test(game));
 check('正常完走だけBEST保存しReact stateを即時更新',game.includes('onComplete(result,merged)')&&game.includes('saveRhythmBestRecord(rhythmBestRecords')&&game.includes('setRhythmBestRecords(records)'));
