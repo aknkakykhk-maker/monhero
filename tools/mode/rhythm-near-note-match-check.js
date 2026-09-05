@@ -43,13 +43,17 @@ const hit=(notes,at,coordinate=6)=>{
 // 判定の受付幅より狭い間隔で並ぶ形すべてで確かめる。
 // 受付幅(240ms)は8分(176ms)より広いので、次のノーツは必ず候補に入っている。
 //
-// どこで次のノーツへ移るかは「判定の段(MARVELOUS/EXCELLENT/…)」で決まる。
-// 1つめの段が落ちて、2つめのほうが良い段になった瞬間に切り替わる。
-// 時間の近さで決めると2つのちょうど中間で切り替わってしまい、
-// 16分なら0.044秒遅れただけで次へ移る＝これがユーザーの指摘そのものだった。
-// 段で決めるので、実際にはそれよりずっと遅くまで1つめが取れる。
-const RANK=[55,100,150,200,240];   // MARVELOUS / EXCELLENT / GREAT / GOOD / BAD の端
-const rankOf=d=>{const a=Math.abs(d);for(let i=0;i<RANK.length;i++)if(a<=RANK[i])return i;return RANK.length;};
+// どこで次のノーツへ移るかは「次のノーツの時刻が来たかどうか」だけで決まる。
+//
+// 2026-09-05に4回目の作り直しをした。それまでは「判定の段(MARVELOUS/EXCELLENT/…)が
+// 良いほうを取る」にしていたが、これだと**遅れて叩くと必ず次へ移る**。
+//   16分(88ms)で60ms遅れ → 前=EXCELLENT / 次=28ms前でMARVELOUS → 次が取られていた
+// 60msの遅れはごくふつうのズレなので、連続ノーツのたびに起き、しかも取られた次は
+// 本来の時刻には無いので入力が後ろへずれ続ける
+// (ユーザー指摘「連続ノーツ時のタップ判定の引っ張りがなくならない／致命的」)。
+//
+// いまは「次のノーツの時刻が来るまでは、どれだけ遅れても前のノーツ」。
+// 間隔の半分どころか、間隔いっぱいまで1つめが取れる。
 const GAPS=[[' 16分  88ms',88],[' 8分  176ms',176],['付点8分 264ms',264]];
 for(const [label,gap] of GAPS){
   ok(`${label}間隔は判定の受付幅(${WINDOW}ms)より狭い＝次のノーツも候補に入る`,gap<=WINDOW*2);
@@ -57,15 +61,17 @@ for(const [label,gap] of GAPS){
   for(let late=0;late<gap;late+=1){
     if(late>WINDOW)break;
     const got=hit([note(1000,0),note(1000+gap,1)],1000+late);
-    // このタイミングで「どちらを取るのが正しいか」を段で出す
-    const want=rankOf(gap-late)<rankOf(late)?1:0;
-    if(got!==want){wrong={late,got,want};break;}
+    // 次のノーツの時刻が来るまでは、必ず1つめ
+    if(got!==0){wrong={late,got};break;}
     if(got===1&&switchedAt===null)switchedAt=late;
   }
-  ok(`${label}: 判定の段の良いほうを取る（時間の近さで流れない）`,!wrong,
-    wrong?`${wrong.late}ms遅れで${wrong.got===null?'どれにも当たらなかった':`${wrong.got+1}つめ`}(正しくは${wrong.want+1}つめ)`
-      :`${switchedAt===null?'最後まで1つめ':`${switchedAt}ms遅れで2つめへ`}（中間の${Math.round(gap/2)}msよりあとまで1つめが取れる）`);
-  if(switchedAt!==null)ok(`${label}: 切り替わりは間隔の半分より遅い`,switchedAt>gap/2,`${switchedAt}ms > ${gap/2}ms`);
+  ok(`${label}: 次のノーツの時刻が来るまでは前のノーツのまま（引っ張らない）`,!wrong,
+    wrong?`${wrong.late}ms遅れで${wrong.got===null?'どれにも当たらなかった':`${wrong.got+1}つめ`}へ移った`
+      :`${Math.min(gap-1,WINDOW)}ms遅れまで1つめのまま（中間の${Math.round(gap/2)}msをまたいでも流れない）`);
+  // 次のノーツの時刻ちょうどからは2つめへ移ること（前のノーツに居座らない）
+  const atNext=hit([note(1000,0),note(1000+gap,1)],1000+gap);
+  ok(`${label}: 次のノーツの時刻ちょうどからは2つめ`,atNext===1,
+    atNext===1?`${gap}ms遅れ＝2つめの時刻`:'まだ1つめを取っている');
 }
 
 // --- 過ぎているノーツが2つ以上あるときは、いちばん後ろを取る ---
@@ -152,15 +158,15 @@ ok(`受付幅ちょうど(${WINDOW}ms)なら取る`,hit([note(1000,0)],1000+WIND
 ok('過ぎている側とまだ来ていない側を別々に絞っている',
   /passedBest=candidate\(passedBest,note,index,noteTime,inside,distance,true\)/.test(source)
   &&/upcomingBest=candidate\(upcomingBest,note,index,noteTime,inside,distance,false\)/.test(source));
-// 2つの比べ方は「時間の近さ」ではなく「判定の段」。
-// 近さで比べると2つのちょうど中間で切り替わり、16分なら0.044秒遅れただけで次へ移る
-// (＝「近くに次のノーツがあるときに判定がそっちにいってる」の再発)
-ok('2つの比べ方は判定の段で、近さではない',
-  /const judgeRank=deltaMs=>/.test(source)
-  &&/judgeRank\(upcomingBest\.noteTime-now\)<judgeRank\(now-passedBest\.noteTime\)/.test(source));
-// 同じ段のときは、実際に叩いたつもりである「過ぎている側」を取る
-ok('同じ段なら過ぎている側を取る',
-  /\?upcomingBest:passedBest;/.test(source));
+// 2つのうちどちらを取るかは比べない。過ぎている側があるなら必ずそちらを取る。
+//
+// 一時期ここは「判定の段が良いほうを取る(judgeRank)」にしていたが、それだと
+// 連続ノーツで遅れて叩くたびに次へ移る＝引っ張りそのものだった(4回目の作り直しで撤去)。
+// まだ来ていない側を見るのは、過ぎている側が1つも無いとき(＝早押し)だけ。
+ok('過ぎている側があるなら必ずそちらを取る（古いものから消費する）',
+  /const chosen=passedBest\|\|upcomingBest;/.test(source));
+ok('判定の段で比べる形(judgeRank)は残っていない',
+  !/judgeRank/.test(source));
 // 押した位置がノーツの内側にあるものを優先する(幅の広いノーツの内側を押しているのに
 // となりが取られる件への対応)
 ok('同じ時刻なら押した位置が内側のものを優先する',
