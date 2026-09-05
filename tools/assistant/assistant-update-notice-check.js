@@ -22,7 +22,20 @@ assert(unknownTypes.length === 0, `更新履歴に知らない種別がありま
 assert(annotatedEntries.length, 'assistantNotice 付きの更新履歴が必要です');
 assert.strictEqual(officialNotices.length, annotatedEntries.length, '通常通知は changelog のメタデータからだけ生成する必要があります');
 assert.strictEqual(new Set(notices.map(n => n.id)).size, notices.length, '通知IDは一意である必要があります');
-assert(annotatedEntries.every(entry => ['market', 'mode', 'feature'].includes(entry.assistantNotice.type)), '通知種別は market / mode / feature だけです');
+// 告知は大きい追加のときだけ(2026-09-05・ユーザー指示)。種別は market / mode / content の3つだけで、
+// 「それ以外ぜんぶ」の受け皿だった feature は廃止した(あれば告知が増えすぎた頃へ戻っている)
+assert(annotatedEntries.every(entry => ['market', 'mode', 'content'].includes(entry.assistantNotice.type)), '通知種別は market / mode / content だけです');
+assert(!annotatedEntries.some(entry => entry.assistantNotice.type === 'feature'), "廃止した 'feature' の告知が残っています");
+assert(changelog.filter(entry => entry.type === 'fix').every(entry => !entry.assistantNotice), '不具合修正(fix)を助手の告知にしてはいけません');
+// 「小さな変更に付けない」の代表例。絵の追加・並び替え・横画面対応は更新履歴にだけ書く
+for (const title of ['「綺季一閃」「Stay With Me」に曲の絵が付きました', '曲えらびに並び替えを足し', 'スマホを横にしても遊べるようになりました']) {
+  const entry = changelog.find(e => (e.title || '').includes(title));
+  assert(entry && !entry.assistantNotice, `「${title}」は告知にしない(見た目・小さな変更)`);
+}
+// 大きい追加の代表例には残っている
+for (const id of ['update_notice_kaze_ga_soyogu_v1', 'update_notice_momosuke_join_v1', 'update_notice_monhiro_beat_preopen_v1']) {
+  assert(annotatedEntries.some(entry => entry.assistantNotice.id === id && entry.assistantNotice.type === 'content'), `${id} は content の告知として残す`);
+}
 annotatedEntries.forEach(entry => {
   const notice = officialNotices.find(item => item.id === entry.assistantNotice.id);
   assert(notice, `${entry.title} の通知が生成されていません`);
@@ -48,9 +61,9 @@ assert.strictEqual(resetTicketNotice.destination, 'market');
 assert.strictEqual(resetTicketNotice.buttonLabel, 'マーケットを見る');
 const modeNotices = officialNotices.filter(n => annotatedEntries.find(entry => entry.assistantNotice.id === n.id)?.assistantNotice.type === 'mode');
 assert(modeNotices.length && modeNotices.every(n => n.destination === 'battle'), 'mode 通知はバトルへ遷移する必要があります');
-const featureEntry = annotatedEntries.find(entry => entry.assistantNotice.type === 'feature' && entry.assistantNotice.destination);
-const featureNotice = officialNotices.find(n => n.id === featureEntry.assistantNotice.id);
-assert.strictEqual(featureNotice.destination, featureEntry.assistantNotice.destination, 'feature の遷移先を引き継ぐ必要があります');
+const contentEntry = annotatedEntries.find(entry => entry.assistantNotice.type === 'content' && entry.assistantNotice.destination);
+const contentNotice = officialNotices.find(n => n.id === contentEntry.assistantNotice.id);
+assert.strictEqual(contentNotice.destination, contentEntry.assistantNotice.destination, 'content の遷移先を引き継ぐ必要があります');
 
 const noticePlannerSource = game.slice(
   game.indexOf("const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1';"),

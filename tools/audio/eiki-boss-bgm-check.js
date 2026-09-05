@@ -56,9 +56,12 @@ check('ヘルプに発動条件とBGMアレンジ登録を記載',
   help.includes("title:'エイキ専用の最終ボスBGM'") &&
   help.includes('供モンだけがエイキの場合や通常戦・デュラハン戦') &&
   help.includes('綺季一閃 ～花雪に舞う詠姫～'));
-check('更新履歴と助手更新告知を追加',
+// 助手の告知は「大きい追加(マーケット・新モード・新しい遊び)」だけに絞った(2026-09-05・ユーザー指示)。
+// BGMの追加は更新履歴にだけ書き、告知は付けない
+const eikiBgmEntry = changelog.slice(changelog.indexOf("title:'エイキ専用の最終ボスBGMを追加しました'"));
+check('更新履歴に載せ、助手の告知は付けない(BGM追加は大きい追加ではない)',
   changelog.includes("title:'エイキ専用の最終ボスBGMを追加しました'") &&
-  changelog.includes("assistantNotice:{id:'update_notice_eiki_boss_bgm_v1',type:'feature'}") &&
+  !eikiBgmEntry.slice(0, eikiBgmEntry.indexOf('\n  },')).includes('assistantNotice') &&
   changelog.includes('綺季一閃 ～花雪に舞う詠姫～'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
