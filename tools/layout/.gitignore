@@ -1,0 +1,5 @@
+# ここに出るのは検査のためだけに作るCSSで、配信物には入らない。
+# node tools/layout/build-tailwind-for-checks.js でいつでも作り直せるので、gitには入れない。
+.tailwind-for-checks.css
+.tailwind-for-checks.config.js
+.tailwind-for-checks.input.css

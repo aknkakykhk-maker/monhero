@@ -421,6 +421,32 @@ python3 tools/serve.py     # http://localhost:8899
 `python3 -m http.server` ではなくこれを使うこと。標準のものは1リクエストずつしか処理できず、
 BGMのmp3(合計約20MB)を読み込んでいるあいだ他のファイルが返せずページが止まってしまう。
 
+## 画面の見た目をこのサンドボックスで測る（Tailwindの手元ビルド）
+
+本体は Tailwind を CDN (`cdn.tailwindcss.com`) から読んでいる。このサンドボックスは
+外部CDNへ出られないので、**Tailwindのクラスがまったく効かない状態でしか画面を開けない**。
+その状態で位置を測っても「崩れている」のか「CSSが無いだけ」なのか区別できない。
+(実測すると、スタイルが効かないプレイエリアは 844px の画面で 3352px になる)
+
+同じクラス群のCSSを手元に作れば、検査のときだけ差し込んで本物に近い見た目で測れる。
+
+```
+node tools/layout/build-tailwind-for-checks.js
+# → tools/layout/.tailwind-for-checks.css （gitには入れない。いつでも作り直せる）
+```
+
+検査の中では、CDNへのリクエストをこのCSSで置き換える。
+
+```js
+const TW=fs.readFileSync('tools/layout/.tailwind-for-checks.css','utf8');
+await page.route('**cdn.tailwindcss.com**',r=>r.fulfill({status:200,contentType:'text/javascript',
+  body:`(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(TW)};document.head.appendChild(s);})();`}));
+```
+
+**配信物(`monster-hero/`)には一切入らない。** `index.html` は今までどおり CDN 版のままなので、
+プレイヤーへ届くものは変わらない。Play CDN と手元ビルドで細部が違う可能性はあるため、
+ここで測れるのは「大きく崩れていないか」まで。最終的な見た目は実機で確かめる。
+
 ## 出荷手順
 
 1. `game-system.jsx` などを改修する
