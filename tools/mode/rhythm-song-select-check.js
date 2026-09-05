@@ -242,6 +242,57 @@ const serve=()=>new Promise(resolve=>{
       // 案内があるなら、それは一覧の中にいてはいけない
       return !notice||!list.contains(notice);
     }));
+    // 2026-09-05、ユーザー指摘「文字数で枠がずれるのがださい」。
+    // 曲名が1行の曲と2行の曲で行の高さが変わり、一覧も詳細もガタガタになっていた。
+    // 高さの確保はインラインstyle(minHeight)なので、Tailwindを読めないここでも測れる。
+    // ただし折り返しは実機と同じにならないので、曲名の幅をこちらで細くして
+    // 「何行になっても高さが変わらない」ことを直接確かめる。
+    const titleHeights=await page.evaluate(()=>{
+      const host=document.getElementById('song-select-probe');
+      const targets=[...host.querySelectorAll('[data-rhythm-song-row-title]')];
+      const detail=host.querySelector('[data-rhythm-song-title]');
+      const at=width=>targets.map(title=>{
+        title.style.width=width;
+        return Math.round(title.getBoundingClientRect().height);
+      });
+      const wide=at('120px');
+      const narrow=at('34px');   // 1文字ずつ折り返すくらい細くする
+      // 空振り防止。同じ字を「高さを固定していない」入れ物へ入れて、
+      // 本来なら細くしたぶんだけ伸びることを確かめる。
+      let grew=false;
+      if(targets.length){
+        const probe=document.createElement('b');
+        probe.style.cssText='display:block;width:34px;position:absolute;visibility:hidden';
+        probe.style.font=getComputedStyle(targets[0]).font;
+        probe.textContent=targets[0].textContent;
+        host.appendChild(probe);
+        grew=probe.getBoundingClientRect().height>wide[0]+2;
+        probe.remove();
+      }
+      targets.forEach(title=>{title.style.width='';});
+      let detailWide=0,detailNarrow=0;
+      if(detail){
+        detail.style.width='200px';detailWide=Math.round(detail.getBoundingClientRect().height);
+        detail.style.width='34px';detailNarrow=Math.round(detail.getBoundingClientRect().height);
+        detail.style.width='';
+      }
+      return {wide,narrow,unique:[...new Set([...wide,...narrow])],grew,detailWide,detailNarrow};
+    });
+    ok('細くすれば本来は伸びる（この検査が空振りしていない）',titleHeights.grew===true);
+    ok('曲名が何行になっても一覧の高さは変わらない',
+      titleHeights.unique.length===1&&titleHeights.unique[0]>0,
+      `高さ=${titleHeights.unique.join('/')}`);
+    ok('選んだ曲の曲名も高さを固定している（下の難易度が動かない）',
+      titleHeights.detailWide>0&&titleHeights.detailWide===titleHeights.detailNarrow,
+      `広い=${titleHeights.detailWide} / 細い=${titleHeights.detailNarrow}`);
+
+    // 難易度ボタンの高さはTailwindのクラスで決まるので、ここでは書きぶりを見張る。
+    // ロック中だけ「◯◯で解放」が2行になり、その曲だけボタンが高くなっていた。
+    const gameSource=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'utf8');
+    ok('難易度ボタンの高さは固定（min-h ではなく h で決めている）',
+      gameSource.includes('flex h-[66px] flex-1 flex-col justify-center rounded-xl border-2')
+      &&!gameSource.includes('min-h-[52px] flex-1 rounded-xl border-2'));
+
     ok('実行時エラーが出ていない',errors.length===0,errors.slice(0,2).join(' / '));
   }finally{
     if(browser)await browser.close();
