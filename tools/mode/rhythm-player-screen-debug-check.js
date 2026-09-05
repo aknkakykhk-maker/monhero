@@ -62,8 +62,12 @@ check('譜面の中身の表記はデバッグのときだけ使う',
 const pause = grab('data-rhythm-pause-menu', '</div>}</div></main>;');
 check('ポーズの戻り先がプレイヤー向けの言い方になる',
   pause.includes("{tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}"));
+// 「中断して」が付く形だけを見ていたため、結果画面の「音ゲーデバッグへ戻る」
+// (前置きなし)を素通りさせていた。あそびかた練習を終えた画面にそのまま出ていた
+// (2026-09-05・実機の指摘「ここもデバッグに戻るみたいな表記になってる」)。
+// 前置きの有無にかかわらず、出し分け無しで書かれていないかを見る
 check('「音ゲーデバッグへ戻る」を無条件では出していない',
-  !/>中断して音ゲーデバッグへ戻る</.test(game));
+  ![...game.matchAll(/>[^<>{}]*音ゲーデバッグへ戻る</g)].length);
 check('ポーズにデバッグ印を付けるのはデバッグのときだけ',
   pause.includes("data-rhythm-debug-play={debugPlay?'1':undefined}"));
 
@@ -74,9 +78,20 @@ check('座標校正はデバッグ印の付いたポーズにだけ置く',
 check('座標校正のトグルを探すときも同じ条件を使う',
   /const pauseMenuNeedsToggle=\(\)=>\{\s*const pause=debugPauseMenu\(\);/.test(calibration));
 
+// ---- 結果画面 ----
+// 演奏を終えた画面の戻り先も、ポーズと同じように出し分ける。
+// ここだけ更新し忘れており、あそびかた練習の結果に
+// 「音ゲーデバッグへ戻る」が出ていた(2026-09-05・実機の指摘)
+const result = grab('data-rhythm-result', '</main>}');
+check('結果画面の戻り先がプレイヤー向けの言い方になる',
+  result.includes("{debugPlay?'音ゲーデバッグへ戻る':'曲えらびへ戻る'}"));
+
 // ---- 取りこぼしの見張り ----
-// プレイヤーの画面へ出る文字に「DEBUG」「テスト」が混ざっていないか、演奏画面ぶんだけ見る
-const play = grab('const RhythmTapTest=', '\nconst RhythmMonsterSlotsPanel');
+// プレイヤーの画面へ出る文字に「DEBUG」「デバッグ」が混ざっていないか、演奏画面ぶんだけ見る。
+// 切り出す終わりを '\nconst RhythmMonsterSlotsPanel' にしていたが、それは
+// RhythmTapTest より**前**にあるため、範囲が空になって何も見ていなかった
+// (「0件のうち0件」と出ていた)。演奏画面の次に来る定義まで取る
+const play = grab('const RhythmTapTest=', '\nfunction MonsterHeroGame()');
 const stripped = play.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
 for (const word of ['DEBUG', 'デバッグ']) {
   const hits = [...stripped.matchAll(new RegExp(word, 'g'))].length;

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5df1854204ab8146
+// source-sha256: d386583f3d8567f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 21:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 22:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11388,12 +11388,15 @@ const MARKET_PROFILE_ICON_STYLES = {
     x: 3,
     y: 38
   },
-  // 元PNGは左右端まで描画が続くため、縮小すると画像端の直線が枠内に露出する。
-  // 中央の大きさを保ったまま両端を円・角丸枠の外へ逃がし、片側だけを寄せない。
+  // アーク。元PNGは顔そのものが右へ寄っている(目の中心が画像の58.3%＝右へ8.3%)。
+  // 倍率だけを上げていたので「右に寄っている」と見えていた(2026-09-05・ユーザー指摘)。
+  // x でそのぶんを打ち消す。元PNGは左右端まで描画が続くため、寄せたぶんを覆えるだけの
+  // 倍率が要る(x=-8.3 なら s>=1.166。それ未満だと画像端の直線が枠内へ露出する)。
+  // y は冠と光輪が上で切れないところまで下げた。
   ark_icon: {
-    scale: 1.08,
-    x: 0,
-    y: 0
+    scale: 1.17,
+    x: -8.3,
+    y: 4
   },
   kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,
   snegurochka_icon: {
@@ -11406,10 +11409,13 @@ const MARKET_PROFILE_ICON_STYLES = {
     x: 9,
     y: 100
   },
+  // イブリース。1.42は「頭上のボールを枠の外へ出す」ために選んだ倍率だったが、
+  // 顔に寄りすぎて角も上下も切れていた(2026-09-05・ユーザー指摘「近すぎる」)。
+  // 角と光輪が丸ごと入るところまで引いた。ボールは元絵の一部なので出してよい。
   iblis_icon: {
-    scale: 1.42,
-    x: 2,
-    y: -10
+    scale: 1.30,
+    x: 0,
+    y: -11
   },
   // 人魚2体。本人アイコンは顔が丸の中央で大きく見える位置、円盤石アイコンは
   // 円盤が丸へぴったり収まる位置。どちらも画像は加工せず、ここの倍率と位置だけで合わせる。
@@ -11420,40 +11426,133 @@ const MARKET_PROFILE_ICON_STYLES = {
     x: 7.7,
     y: 118
   },
-  undine_disc_icon: {
-    scale: 1.52,
-    x: 0,
-    y: 2
-  },
   yaobikuni_icon: {
     scale: 3.70,
     x: 6.8,
     y: 122
-  },
-  yaobikuni_disc_icon: {
-    scale: 1.55,
-    x: 0,
-    y: 2
   },
   mia_icon: {
     scale: 3.2,
     x: 0,
     y: 94
   },
-  Mia: {
-    scale: 3.2,
-    x: 0,
-    y: 94
-  },
+  // パンドラ。1.8では顔が小さく、ほかのアイコンより引いて見えた
+  // (2026-09-05・ユーザー指摘「少し遠い」)。角と光輪が切れない範囲で寄せた。
   pandora_icon: {
-    scale: 1.8,
+    scale: 2.4,
     x: 0,
-    y: 55
+    y: 72
+  },
+  // プラント。ほかのアイコンが枠の8〜10割を埋めているのに、ここだけ7割ほどしか
+  // 埋まっておらず、1つだけ引いて見えた(2026-09-05・ユーザー指摘「全部見直して統一して」)。
+  // 花の先が切れない範囲で寄せた。
+  plant_icon: {
+    scale: 1.25,
+    x: 0,
+    y: -3
+  },
+  // みゅあ(アシストカードのアイコン)。顔が枠の中央より左に寄っていた。
+  // 寄せたぶんを覆えるよう倍率も少しだけ上げている(x=2 なら s>=1.04)。
+  mua: {
+    scale: 1.06,
+    x: 2,
+    y: 4
+  },
+  // --- 円盤石 ---
+  // 円盤石は「円盤そのものを、どれも同じ大きさで真ん中に」出す。
+  // 画像ごとに余白がまったく違い(正方形の絵は中身が97%、1536x1024の絵は幅の64%しかない)、
+  // そのままだと同じ画面に大小の円盤が並ぶ。さらに「◯◯の円盤石」と
+  // 「◯◯の円盤石アイコン」は同じ画像なのに調整が片方にしか無く、別物に見えていた。
+  // ミーア・パンドラの円盤石には顔用の拡大値(s3.2 / s2.4)が付いており、
+  // 円盤が枠からはみ出して顔だけが写っていた(2026-09-05・ユーザー指摘)。
+  //
+  // 下の値は tools/image/disc-icon-values.js が元画像から計算したもの。
+  // 円盤の直径が枠の95%になり、円盤の中心が枠の中心へ来る。
+  // 画像を差し替えたら、その道具を流し直してここへ貼り直す。
+  Zan: {
+    scale: 0.981,
+    x: -0.4,
+    y: -0.4
+  },
+  Mitarashi: {
+    scale: 1.022,
+    x: 0,
+    y: 0
+  },
+  Ark: {
+    scale: 0.957,
+    x: 0,
+    y: 0
+  },
+  Iblis: {
+    scale: 0.957,
+    x: 0,
+    y: 0
+  },
+  Snegurochka: {
+    scale: 1.487,
+    x: 0.1,
+    y: 1.4
+  },
+  undine_disc_icon: {
+    scale: 1.489,
+    x: 0,
+    y: 2.1
+  },
+  Undine: {
+    scale: 1.489,
+    x: 0,
+    y: 2.1
+  },
+  yaobikuni_disc_icon: {
+    scale: 1.518,
+    x: 0,
+    y: 2.3
+  },
+  Yaobikuni: {
+    scale: 1.518,
+    x: 0,
+    y: 2.3
+  },
+  plant_disc_icon: {
+    scale: 0.966,
+    x: 0,
+    y: 0.8
+  },
+  Plant: {
+    scale: 0.966,
+    x: 0,
+    y: 0.8
+  },
+  mia_disc_icon: {
+    scale: 0.993,
+    x: 0.2,
+    y: 1.6
+  },
+  Mia: {
+    scale: 0.993,
+    x: 0.2,
+    y: 1.6
+  },
+  pandora_disc_icon: {
+    scale: 0.955,
+    x: 0.2,
+    y: 0.8
   },
   Pandora: {
-    scale: 1.8,
+    scale: 0.955,
+    x: 0.2,
+    y: 0.8
+  },
+  eiki_disc_icon: {
+    scale: 0.95,
     x: 0,
-    y: 55
+    y: 0.9
+  },
+  Eiki: {
+    scale: 0.95,
+    x: 0,
+    y: 0.9
   }
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({
@@ -17247,6 +17346,11 @@ const RhythmTapTest = ({
     result: null
   });
   const [view, setView] = useState(initialView);
+  /* 演奏を始める前のカウントダウン(READY→3→2→1)。
+     null のあいだは出さない。曲と毎フレームの処理はこれが終わってから動かす */
+  const [countdownStep, setCountdownStep] = useState(null);
+  const countdownTimerRef = useRef(null);
+  const countdownResolveRef = useRef(null);
   // 100コンボごとの演出。
   // 「段階(tier)が変わったときだけ」effectを動かすのが肝心で、以前は view.combo(=ノーツを取るたび
   // 毎回変わる値)を依存にしていたため、100→101など非節目の増加でも毎回effectが再実行され、
@@ -17319,6 +17423,23 @@ const RhythmTapTest = ({
     abilityTimerRef.current = null;
     ++abilityRevisionRef.current;
   }, []);
+  /* カウントダウンの後始末。disposeRun がこれを呼ぶので、必ず disposeRun より前で定義する。
+     const は「使う場所より後ろ」に書くと初期化前アクセスで画面が真っ白になる */
+  const clearCountdown = useCallback(() => {
+    if (countdownTimerRef.current) {
+      clearTimeout(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    /* 待っている側(beginRun の await)へも必ず答えを返す。
+       タイマーを消すだけだと次の step が走らず、Promise が解決されないまま残り、
+       そのプレイぶんの beginRun がずっと止まったままになる(リスタートのたびに1つ増える) */
+    if (countdownResolveRef.current) {
+      const resolve = countdownResolveRef.current;
+      countdownResolveRef.current = null;
+      resolve(false);
+    }
+    setCountdownStep(null);
+  }, []);
   const scheduleAbilityClear = useCallback(() => {
     if (abilityTimerRef.current !== null) clearTimeout(abilityTimerRef.current);
     const revision = ++abilityRevisionRef.current;
@@ -17349,9 +17470,15 @@ const RhythmTapTest = ({
     // (実測: レイアウトが効く前は 844pxの画面で 3352px になっていた)
     const viewportHeight = typeof window !== 'undefined' && window.innerHeight > 0 ? window.innerHeight : 0;
     if (viewportHeight > 0 && areaRect.height > viewportHeight * 1.5) return false;
-    // 判定ラインがプレイエリアの中に無いなら、まだ置き場所が決まっていない
+    // 判定ラインに厚みが無いなら、まだ形が決まっていない。
+    // 以前は「中心がエリアの中にあること」しか見ておらず、線が高さ0のまま
+    // エリアの先頭に居る状態(スタイルが効く前)をそのまま通していた
+    if (!(lineRect.height > 0)) return false;
     const lineCenter = lineRect.top + lineRect.height / 2;
     if (!(lineCenter >= areaRect.top && lineCenter <= areaRect.bottom)) return false;
+    // 判定ラインは下から12%の位置に置く。エリアの上半分に居るなら、
+    // まだ置き場所が決まっていない(高さ0でなくても、位置だけ未確定のことがある)
+    if (!(lineCenter > areaRect.top + areaRect.height * 0.5)) return false;
     return true;
   };
   const measureTravel = useCallback(() => {
@@ -17889,6 +18016,7 @@ const RhythmTapTest = ({
     stopFrame();
     clearJudgmentTimer();
     clearAbilityTimer();
+    clearCountdown();
     RHYTHM_GESTURE_RUNTIME.clear();
     rhythmFloatingNotesClear();
     const run = runRef.current;
@@ -17903,10 +18031,39 @@ const RhythmTapTest = ({
     }
     runRef.current = null;
     setPressedLanes([]);
-  }, [clearAbilityTimer, clearJudgmentTimer, stopFrame]);
+  }, [clearAbilityTimer, clearCountdown, clearJudgmentTimer, stopFrame]);
   /* プレイエリアが「遊べる大きさ」になるまで待つ。
      毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
      待ち続けて遊べなくなるより始めたほうがましなので諦めて返す。 */
+  /* READY→3→2→1 と数えてから返す。
+     途中で画面を離れた・作り直された(generationが変わった)ら false を返して、
+     呼び出し側が曲を鳴らさずに終われるようにする */
+  const runCountdown = generation => new Promise(resolve => {
+    countdownResolveRef.current = resolve;
+    const done = value => {
+      if (countdownResolveRef.current === resolve) countdownResolveRef.current = null;
+      resolve(value);
+    };
+    let index = 0;
+    const step = () => {
+      if (!mountedRef.current || generation !== generationRef.current) {
+        countdownResolveRef.current = null;
+        clearCountdown();
+        done(false);
+        return;
+      }
+      if (index >= RHYTHM_COUNTDOWN_STEPS.length) {
+        setCountdownStep(null);
+        countdownTimerRef.current = null;
+        done(true);
+        return;
+      }
+      setCountdownStep(RHYTHM_COUNTDOWN_STEPS[index]);
+      index++;
+      countdownTimerRef.current = setTimeout(step, RHYTHM_COUNTDOWN_STEP_MS);
+    };
+    step();
+  });
   const waitUntilPlayable = generation => new Promise(resolve => {
     const deadline = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + RHYTHM_LAYOUT_WAIT_MAX_MS;
     const step = () => {
@@ -18030,6 +18187,17 @@ const RhythmTapTest = ({
       audio.stop();
       return;
     }
+    /* 画面がそろってから READY→3→2→1 と数え、そのあとで曲を鳴らす。
+       選んだ瞬間に曲が始まると構える間が無い(2026-09-05・ユーザー指摘)。
+       ここで数えているあいだにレイアウトも完全に固まる */
+    if (!(await runCountdown(generation))) {
+      audio.stop();
+      return;
+    }
+    if (!mountedRef.current || generation !== generationRef.current) {
+      audio.stop();
+      return;
+    }
     audio.start();
     scheduleTick();
   };
@@ -18045,6 +18213,11 @@ const RhythmTapTest = ({
   }, []);
   const pause = () => {
     const run = runRef.current;
+    /* カウントダウン中は止められない。まだ曲が鳴っていないので、止めても再開できない。
+       ボタンに disabled を付けるのではなくここで弾くのは、HUDの見た目を測る検査
+       (rhythm-hud-wedge-check など)がHUDのJSXをそのまま写して使うため、
+       式や disabled: 変種を持ち込むと測れなくなるから */
+    if (countdownStep !== null) return;
     if (!run || run.finished || run.paused) return;
     run.activePointers.clear();
     run.standbyPointers?.clear();
@@ -18432,7 +18605,7 @@ const RhythmTapTest = ({
     }, "\u3082\u3046\u4E00\u5EA6\u30D7\u30EC\u30A4"), /*#__PURE__*/React.createElement("button", {
       className: "min-h-[48px] rounded-xl bg-indigo-700 font-black",
       onClick: abort
-    }, "\u97F3\u30B2\u30FC\u30C7\u30D0\u30C3\u30B0\u3078\u623B\u308B")));
+    }, debugPlay ? '音ゲーデバッグへ戻る' : '曲えらびへ戻る')));
   }
   return /*#__PURE__*/React.createElement("main", {
     "data-rhythm-tap-test": true,
@@ -18576,6 +18749,12 @@ const RhythmTapTest = ({
     onPointerCancel: pointerEnd,
     className: "relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50",
     style: {
+      /* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+      置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
+      判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
+      外部CSSに任せない */
+      position: 'relative',
+      overflow: 'hidden',
       touchAction: 'none',
       WebkitTouchCallout: 'none',
       WebkitUserSelect: 'none',
@@ -18590,11 +18769,48 @@ const RhythmTapTest = ({
   }), /*#__PURE__*/React.createElement("div", {
     ref: judgmentLineRef,
     "data-rhythm-judgment-line": true,
-    className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300",
     style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: '12%',
+      height: '3px',
+      background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
     }
-  }), /*#__PURE__*/React.createElement("div", {
+  }), countdownStep !== null && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-countdown": true,
+    "aria-live": "assertive",
+    style: {
+      position: 'absolute',
+      inset: 0,
+      zIndex: 20,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px',
+      pointerEvents: 'none',
+      background: 'rgba(2,6,23,.35)'
+    }
+  }, /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-countdown-step": true,
+    style: {
+      fontSize: countdownStep === 'READY' ? '44px' : '88px',
+      fontWeight: 900,
+      lineHeight: 1,
+      color: '#fff',
+      letterSpacing: countdownStep === 'READY' ? '.12em' : '0',
+      textShadow: '0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'
+    }
+  }, countdownStep), /*#__PURE__*/React.createElement("small", {
+    style: {
+      fontSize: '12px',
+      fontWeight: 900,
+      color: '#a5f3fc',
+      textShadow: '0 1px 6px rgba(2,6,23,.95)'
+    }
+  }, "\u307E\u3082\u306A\u304F \u306F\u3058\u307E\u308A\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
@@ -45613,6 +45829,12 @@ function MonsterHeroGame() {
         if (event && event.id === 'momosuke_intro') markMomosukeIntroSeen();
         setEventReplay(null);
       };
+      /* 途中でやめる。最後まで見ていないので「見たことがある」は立てない
+         (2026-09-05・ユーザー要望「イベント回想中でスキップで飛ばせるようにしてほしい」)。
+         回想は何度でも開けるので、飛ばしても失うものはない */
+      const skip = () => {
+        setEventReplay(null);
+      };
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-end justify-center",
         style: {
@@ -45676,13 +45898,18 @@ function MonsterHeroGame() {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
       }, line.t)), /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-center text-[8px] text-slate-500"
-      }, step + 1, " / ", script.length, Object.keys(calls).length > 0 && `　／　${cast.filter(who => calls[who.id]).map(who => `${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`), /*#__PURE__*/React.createElement("button", {
-        onClick: next,
-        className: "mt-3 min-h-[50px] w-full rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]",
+      }, step + 1, " / ", script.length, Object.keys(calls).length > 0 && `　／　${cast.filter(who => calls[who.id]).map(who => `${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`), /*#__PURE__*/React.createElement("div", {
+        className: `mt-3 grid ${last ? 'grid-cols-1' : 'grid-cols-[1fr_2fr]'} gap-2`,
         style: {
           pointerEvents: 'auto'
         }
-      }, last ? 'とじる' : 'つぎへ')));
+      }, !last && /*#__PURE__*/React.createElement("button", {
+        onClick: skip,
+        className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]"
+      }, "\u30B9\u30AD\u30C3\u30D7"), /*#__PURE__*/React.createElement("button", {
+        onClick: next,
+        className: "min-h-[50px] rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]"
+      }, last ? 'とじる' : 'つぎへ'))));
     })(), dailyMasuAdvice && (() => {
       const who = activeAssistant;
       const lines = assistantSceneLinesFor('dailyMasuAdvice');
