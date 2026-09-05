@@ -171,6 +171,8 @@ const RELEASED_MARKERS=Object.freeze({
   kiki_issen:'eiki-boss-v3',
   kaze_ga_soyogu:'kaze-ga-soyogu-v3',
   close_to_your_heart:'close-to-your-heart-v3',
+  eiki_boss_remix:'eiki-boss-remix-v3',
+  pandora_boss_remix:'pandora-boss-remix-v3',
 });
 
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

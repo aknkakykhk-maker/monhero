@@ -34,6 +34,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-08 02:00", type:'feature', title:'モンヒロビート: リミックス2曲を足しました（全9曲）', status:'new',
+    items:[
+      '「綺季一閃 ～花雪に舞う詠姫～ battle remix」（3分38秒）と「Stay With Me ～Locked Fate～ remix」（3分19秒）を足しました。どちらもEASYからMASTERまで5難易度そろっています。',
+      'レベルは 綺季一閃 remix が Lv.7〜25、Stay With Me remix が Lv.8〜26 です。',
+      '元の「綺季一閃」「Stay With Me」とは別の曲としてならぶので、自己ベストと全国ランキングもそれぞれ別に貯まります。元の2曲の譜面と記録はそのままです。',
+      '曲の絵は元の曲と同じものを使っています。',
+      'バトルで流れるBGMは変えていません。',
+    ],
+    assistantNotice:{id:'update_notice_remix_two_songs_v1',type:'content'},
+  },
+  {
     date: "2026-09-08 01:00", type:'fix', title:'モンヒロビート: 画面の端を叩いても反応しないことがあるのを直しました', status:'new',
     items:[
       '左端・右端のノーツを狙って少し外へはみ出して叩くと、何も起きないことがありました。ご不便をおかけしました。',
