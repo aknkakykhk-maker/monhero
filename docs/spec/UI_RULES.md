@@ -61,9 +61,14 @@
 ## 6. レスポンシブとスクロール
 
 - アプリ全体は100dvh内に収め、画面ごとの内部領域だけを `overflow-y-auto` 等でスクロールする構成である。
-- 最大幅600pxを超える端末では中央のゲーム面を広げない。
-- ノッチ対応はHTMLの `env(safe-area-inset-top/bottom)` が担う。
-- 画面幅ごとのブレークポイント仕様書や横画面専用レイアウトは**未確認**。manifestは縦向きを要求する。
+- 最大幅600pxを超える端末では中央のゲーム面を広げない。**例外は横画面のスマホ**(下記)。
+- ノッチ対応はHTMLの `env(safe-area-inset-top/bottom)` が担う。横画面の左右ノッチは、モンビーの演奏画面が自分で `env(safe-area-inset-left/right)` を確保する。
+- **横画面(2026-09-05・#146)**: `@media (orientation: landscape) and (max-height: 600px)`(＝スマホの横持ち)のときだけ、
+  `index.html` の共通CSSが ①コラムを `max-width:1024px` まで広げ、②画面の根 `data-mh-screen` の直下に一覧 `.mh-scroll` がある画面を
+  「左＝見出し・助手・タブ / 右＝一覧(全高)」の2カラムへ組み替える。画面ごとに横画面専用の画面は持たない。
+  HOME は絶対配置なので専用の横画面配置を持つ。タブレット・PC の横長画面(高さ600px超)は縦長コラムのまま。
+  新しい画面はこの骨組み(根に `data-mh-screen`、一覧は根の直下)に合わせる。
+  守れているかは `tools/layout-consistency-check.js`・`tools/landscape-screens-check.js`・`tools/home-layout-check.js` が見張る。
 
 ## 7. 文言・入力
 

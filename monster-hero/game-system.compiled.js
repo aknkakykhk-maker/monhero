@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 819f404e9c675605
+// source-sha256: be2ea32df45ab0f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 02:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 07:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -32684,6 +32684,7 @@ function MonsterHeroGame() {
       const shown = giftTab === 'unclaimed' ? unclaimed : history;
       const claimable = unclaimed.filter(g => giftIsClaimable(g, now));
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-3",
         style: {
           paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
@@ -32758,6 +32759,7 @@ function MonsterHeroGame() {
         sent = missionTab === 'daily' ? state.sentDaily : missionTab === 'weekly' ? state.sentWeekly : state.sentMonthly;
       const resetAt = missionNextReset(missionTab);
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-3",
         style: {
           paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
@@ -32913,6 +32915,7 @@ function MonsterHeroGame() {
       onClick: () => setLoginBonusPopup(null),
       className: "min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white"
     }, "\u9589\u3058\u308B")))), gameState === 'MB_MANAGEMENT' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -32982,6 +32985,7 @@ function MonsterHeroGame() {
       const shown = dexLineageFilter === 'all' ? monsters : monsters.filter(mon => monsterLineageOf(mon.id).main.id === dexLineageFilter);
       const chipClass = on => `shrink-0 min-h-[40px] px-3 rounded-full border text-[10px] font-black whitespace-nowrap active:scale-95 ${on ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-amber-500/30 text-amber-200/80'}`;
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -33114,6 +33118,7 @@ function MonsterHeroGame() {
         className: "text-yellow-300"
       }, "\u4F1A\u5FC3", skill.crit, "%")))));
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0",
         style: {
           paddingTop: 'calc(0.5rem + env(safe-area-inset-top))',
@@ -33247,6 +33252,7 @@ function MonsterHeroGame() {
       const ranges = [[null, '自動'], [0, '零'], [1, '近'], [2, '中'], [3, '遠']];
       const selectedEntries = draftAutoSettings.allies.map(ally => ally.rosterEntry).filter(Boolean);
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -33332,6 +33338,7 @@ function MonsterHeroGame() {
         label: `${autoAllyDetail.mon.name}の確認用詳細`
       }));
     })(), gameState === 'TEMPLE' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -33351,7 +33358,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "temple"
     })), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-md mx-auto space-y-2"
+      className: "w-full max-w-md mx-auto space-y-2 flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setRegenerationSelectedId(null);
@@ -33409,6 +33416,7 @@ function MonsterHeroGame() {
     }), "\u8D85\u8D8A"))), gameState === 'MASU_REGENERATION' && (() => {
       const unlocked = Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -33449,6 +33457,7 @@ function MonsterHeroGame() {
       const selectedBase = regenerationSelectedId ? ALL_PLAYER_MONSTERS[regenerationSelectedId] : null;
       if (!selectedBase) return null;
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -33885,6 +33894,7 @@ function MonsterHeroGame() {
       }, 0);
       const sorted = sortDonationMasuMons(masuMons, donationSortKey, donationSortDir, monsterRosterIds);
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-3",
         style: {
           paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
@@ -34125,6 +34135,7 @@ function MonsterHeroGame() {
       if (!selected) {
         const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
         return /*#__PURE__*/React.createElement("div", {
+          "data-mh-screen": true,
           className: "flex-1 flex flex-col h-full min-h-0 p-4",
           style: {
             paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -34213,6 +34224,7 @@ function MonsterHeroGame() {
       const psycheShort = Math.max(0, TRANSCEND_PSYCHE_COST - psycheHave);
       const goldShort = Math.max(0, TRANSCEND_DIAMOND_COST - gold);
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -34688,6 +34700,7 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString()))));
       }))));
     })(), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 px-4",
       style: {
         paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
@@ -35056,6 +35069,7 @@ function MonsterHeroGame() {
         root.scrollLeft += to.offsetLeft - from.offsetLeft;
       };
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
         style: {
           paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
@@ -35263,6 +35277,7 @@ function MonsterHeroGame() {
         centerCarouselChild(modeDifficultyCarouselRef.current, safe, behavior);
       };
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
         "data-extreme-difficulties": true,
         style: {
@@ -35489,6 +35504,7 @@ function MonsterHeroGame() {
       const speciesRewardClaimed = difficultyId => isSpeciesChallengeFirstRewardClaimed(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       const speciesCleared = difficultyId => isSpeciesChallengeCleared(speciesChallengeProgress, speciesChallengeSelection.speciesId, difficultyId);
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
         style: {
           paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
@@ -35776,6 +35792,7 @@ function MonsterHeroGame() {
       const mode = battleModeInfo(scoreRankingMode);
       const species = scoreRankingMode === BATTLE_MODE_SPECIES_CHALLENGE;
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
         style: {
           paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
@@ -36409,6 +36426,7 @@ function MonsterHeroGame() {
       }));
       const copyText = `${item.id}: { scale: ${values.scale}, x: ${values.x}, y: ${values.y} }`;
       return /*#__PURE__*/React.createElement("main", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -36510,6 +36528,7 @@ function MonsterHeroGame() {
       const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
       const xpRows = [MAX_MASU_LEVEL_CAP, MAX_MASU_LEVEL_CAP + 1, MAX_MASU_LEVEL_CAP + 10, MAX_MASU_LEVEL_CAP + 50, TRANSCEND_LEVEL_CAP - 1];
       return /*#__PURE__*/React.createElement("main", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -36687,6 +36706,7 @@ function MonsterHeroGame() {
         className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-900/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95 disabled:opacity-30"
       }, "\u795E\u6BBF\u306E\u300C\u8D85\u8D8A\u300D\u3092\u958B\u304F"))))));
     })(), gameState === 'BREAKTHROUGH_STAR_DEBUG' && /*#__PURE__*/React.createElement("main", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -36753,6 +36773,7 @@ function MonsterHeroGame() {
         setTimeout(() => setReincarnateAnimation(null), 4100);
       };
       return /*#__PURE__*/React.createElement("main", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
           paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -38784,6 +38805,7 @@ function MonsterHeroGame() {
         setMonsterImageDebugMotionPlaying(null);
       };
       return /*#__PURE__*/React.createElement("main", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-3",
         style: {
           paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
@@ -38906,6 +38928,7 @@ function MonsterHeroGame() {
         key: name
       }, name, ": imgUrl=", v.imgUrl, " / iconUrl=", v.iconUrl, " / faceIconUrl=", v.faceIconUrl)))));
     })(), gameState === 'ASSISTANT_SELECT' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 text-center mb-3",
@@ -38959,6 +38982,7 @@ function MonsterHeroGame() {
     }, "\u3053\u306E\u5B50\u306B\u3059\u308B")))), /*#__PURE__*/React.createElement("p", {
       className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
     }, "3\u4EBA\u3068\u3082\u6700\u521D\u304B\u3089\u9078\u3079\u307E\u3059\u3002\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308B\u306E\u3067\u3001\u3042\u3068\u3067\u5909\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-4 shrink-0",
@@ -39368,6 +39392,7 @@ function MonsterHeroGame() {
         className: "shrink-0 text-fuchsia-400"
       }));
     })())), gameState === 'BREEDER_MARKET' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0"
@@ -39466,6 +39491,7 @@ function MonsterHeroGame() {
         }), "\u8A73\u7D30")) : null
       });
     })))), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0"
@@ -39743,6 +39769,7 @@ function MonsterHeroGame() {
         className: "w-full bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs shrink-0"
       }, "\u9589\u3058\u308B")));
     })(), gameState === 'OWNED_MONSTERS' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0"
@@ -39794,6 +39821,7 @@ function MonsterHeroGame() {
         className: "text-white"
       })));
     })))), gameState === 'PASTURE_SETTINGS' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-2 mb-2 shrink-0"
@@ -39886,6 +39914,7 @@ function MonsterHeroGame() {
       onClick: savePastureSettings,
       className: "w-full min-h-[52px] shrink-0 rounded-2xl bg-emerald-600 text-white font-black shadow-lg active:scale-[.98]"
     }, "\u6C7A\u5B9A\uFF08", draftHomePastureIds.length, "\u4F53\uFF09")), gameState === 'MASU_MONS' && /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0"
@@ -40039,6 +40068,7 @@ function MonsterHeroGame() {
       }, "\u526F\u304C\u7D46Lv.30\u4EE5\u4E0A"), "\u306E\u3068\u304D\u3060\u3051\u9078\u3079\u307E\u3059\u3002\u6761\u4EF6\u3092\u6E80\u305F\u3059\u3068\u526F\u306E\u56FA\u6709\u6280\u304C\u4E3B\u306B\u8A18\u9332\u3055\u308C\u307E\u3059"));
       if (fusionStep === 'main') {
         return /*#__PURE__*/React.createElement("div", {
+          "data-mh-screen": true,
           className: "flex-1 flex flex-col h-full min-h-0 p-4"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex items-center gap-2 mb-2 shrink-0"
@@ -40127,6 +40157,7 @@ function MonsterHeroGame() {
           setFusionStep('confirm');
         };
         return /*#__PURE__*/React.createElement("div", {
+          "data-mh-screen": true,
           className: "flex-1 flex flex-col h-full min-h-0 p-4"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex items-center gap-2 mb-2 shrink-0"
@@ -40313,6 +40344,7 @@ function MonsterHeroGame() {
         const wastedXp = Math.max(0, beforeXp + subXp - afterXp);
         const mainPointsNow = main.distAptPoints || 0;
         return /*#__PURE__*/React.createElement("div", {
+          "data-mh-screen": true,
           className: "flex-1 flex flex-col h-full min-h-0 p-4"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex items-center gap-2 mb-2 shrink-0"
@@ -40709,6 +40741,7 @@ function MonsterHeroGame() {
       // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
       const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
       return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2 mb-2 shrink-0"
@@ -49337,6 +49370,8 @@ const createAnimationStyle = () => {
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:5px}.mh-gift-card{display:flex;flex-direction:column;min-height:80px;padding:5px 8px}.mh-gift-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;height:18px}.mh-gift-heading h3{display:flex;align-items:center;gap:4px;min-width:0;font-size:12px;line-height:18px;color:#fff}.mh-gift-heading h3 span{flex:none;padding:1px 4px;border-radius:5px;background:#78350f;color:#fde68a;font-size:8px;line-height:14px}.mh-gift-heading h3 b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-gift-heading>em{flex:none;padding:1px 6px;border-radius:999px;font-size:8px;line-height:15px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:37px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:76px;height:36px;padding:0 10px;border-radius:10px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap}.mh-gift-main>button:disabled{background:#334155;color:#64748b}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:8px;line-height:12px}
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
+    /* 横画面(#146・2026-09-05)。コラムが画面いっぱいになるので、左右の余白へ施設を振り分ける。左＝吹き出し・M/B管理・モンヒロビート、右＝更新履歴・神殿・マーケット、右下＝ミッションとギフトを横並び、下中央＝バトル。上の max-height:620px は横画面のスマホにも当たるので、この行はそれより後ろに置いて上書きする */
+    @media(orientation:landscape) and (max-height:600px){.mh-home-assistant{left:2%;width:36%;top:calc(70px + env(safe-area-inset-top))}.mh-home-facility>span{padding:6px 12px}.mh-home-facility.management{left:0;top:calc(70px + env(safe-area-inset-top));width:30%;height:calc(50% - 70px - env(safe-area-inset-top))}.mh-home-facility.management>span{left:8%;top:76px}.mh-home-facility.rhythm{left:0;top:58%;width:30%;height:34%}.mh-home-facility.rhythm>span{left:8%;top:20%}.mh-home-facility.temple{right:0;top:30%;width:30%;height:24%}.mh-home-facility.temple>span{right:8%;top:24%}.mh-home-facility.market{right:0;top:54%;width:30%;height:24%}.mh-home-facility.market>span{right:8%;top:24%}.mh-home-mission{right:calc(5% + 120px);top:78%}.mh-home-gift{top:78%}.mh-home-facility.battle{left:30%;right:30%;height:34%}.mh-home-facility.battle>span{padding:8px 16px;font-size:18px;animation:none}.mh-home-masumon-layer{left:30%;right:30%;top:30%;bottom:34%}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}

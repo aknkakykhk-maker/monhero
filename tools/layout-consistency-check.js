@@ -164,6 +164,22 @@ const noScroll = screens.filter(name => {
   return !source.slice(at, at + 9000).includes('overflow-y-auto');
 });
 check('各画面に縦スクロールできる場所がある', noScroll.length === 0, noScroll.join(', '));
+
+// --- ⑤ 横画面(#146・2026-09-05) ---
+// 画面の根には data-mh-screen を付ける。index.html の横画面用CSSは、この印と
+// その直下の一覧(.mh-scroll)だけを見て「左＝見出し・助手・タブ / 右＝一覧(全高)」の2カラムに組み替える。
+// 印を忘れた画面は横画面で縦積みのままになり、一覧が90px程度しか残らない(修正前の実測)。
+// 実際に効いているかは tools/landscape-screens-check.js が実ブラウザで測る。ここは「約束を守っているか」だけ。
+const rootsWithoutMark = (source.match(/<(?:div|main) className="flex-1 flex flex-col h-full min-h-0/g) || []).length;
+check('画面の根(flex-1 flex flex-col h-full min-h-0)にはすべて data-mh-screen が付いている', rootsWithoutMark === 0, `${rootsWithoutMark}件が未対応`);
+const indexHtml = fs.readFileSync(path.join(root, 'monster-hero/index.html'), 'utf8');
+check('index.html に横画面用の共通レイアウトがある',
+  indexHtml.includes('@media (orientation: landscape) and (max-height: 600px)')
+    && indexHtml.includes('[data-mh-screen]:has(> .mh-scroll)')
+    && indexHtml.includes('[data-mh-screen]:has(> .mh-scroll) > .mh-scroll { grid-column: 2; grid-row: 1 / -1;'));
+check('神殿の一覧はスクロールできる(横画面で「限界突破」以降へ届く)',
+  has('space-y-2 flex-1 min-h-0 overflow-y-auto mh-scroll"><button onClick={()=>{setRegenerationSelectedId(null)'));
+check('HOMEに横画面用の配置がある', has('@media(orientation:landscape) and (max-height:600px){.mh-home-assistant'));
 check('HOMEは小さい端末向けの調整がある', has('@media(max-width:350px)') && has('@media(max-height:620px)'));
 check('難易度タブは背の低い端末で縦スクロールできる',
   has('return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>'));
