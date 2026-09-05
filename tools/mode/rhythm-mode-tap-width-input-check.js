@@ -26,11 +26,26 @@ assert.deepEqual(match([note(4,1)],[input(3.6)]),[0],'幅1の最小タッチ許�
 assert.deepEqual(match([note(4,1)],[input(3.5)]),[null],'細ノーツ許容を隣の中心までは広げない');
 assert.strictEqual(match([note(4,1,0),note(5,1,1)],[input(5)]).filter(x=>x!==null).length,1,'1入力1ノーツ');
 assert.deepEqual(match([note(4,1,0),note(5,1,1)],[input(4.5,'touch:1'),input(5.5,'touch:2')]),[0,1],'別指同時取得');
-// 入力候補の探索最適化: 判定の優先順は従来(time差→位置差→index)と同じ。
+// 判定の優先順は「時刻を過ぎたノーツが先 → 時間差 → 位置差」。
+// 2026-09-05 に、時間差の**絶対値**だけで選ぶのをやめた。
+// 絶対値だと、次のノーツとの間隔の半分を超えて遅れた瞬間に判定が次へ移ってしまい、
+// 狙ったノーツと違うものが取れていたため(ユーザー指摘)。
+// ここは now=1000 に対し 1100(まだ来ていない)と 900(過ぎている)で時間差が同じ100msのケース。
+// 過ぎているほうを先に見るので 900 のノーツ(index 1)が取れる。
 assert.deepEqual(match([
   {type:'TAP',timeMs:1100,lane:2,index:0,done:false,activePointerId:null},
   {type:'TAP',timeMs:900,lane:2,index:1,done:false,activePointerId:null},
-],[{lane:2,inputKey:'touch:tie'}]),[0],'時刻差・位置差が同じなら元indexが小さい方を選ぶ');
+],[{lane:2,inputKey:'touch:tie'}]),[1],'時間差が同じなら、時刻を過ぎているノーツを先に取る');
+// 過ぎたノーツどうしなら、そのなかで近いほうを取る(順番に消化する)
+assert.deepEqual(match([
+  {type:'TAP',timeMs:800,lane:2,index:0,done:false,activePointerId:null},
+  {type:'TAP',timeMs:950,lane:2,index:1,done:false,activePointerId:null},
+],[{lane:2,inputKey:'touch:both-late'}]),[1],'過ぎたノーツが2つなら近いほうを取る');
+// まだ来ていないノーツしか無ければ、そのなかで近いほうを取る(早押し)
+assert.deepEqual(match([
+  {type:'TAP',timeMs:1200,lane:2,index:0,done:false,activePointerId:null},
+  {type:'TAP',timeMs:1050,lane:2,index:1,done:false,activePointerId:null},
+],[{lane:2,inputKey:'touch:both-early'}]),[1],'まだ来ていないノーツが2つなら近いほうを取る');
 assert.deepEqual(match([
   {type:'TAP',timeMs:1080,lane:2,index:0,done:false,activePointerId:null},
   {type:'TAP',timeMs:950,lane:2,index:1,done:false,activePointerId:null},
