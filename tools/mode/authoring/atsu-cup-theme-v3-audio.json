@@ -62,42 +62,174 @@
   "gridMs": 88.7574,
   "triplet": false,
   "swing": {
-   "ratio": 0.5,
-   "shift": 0,
-   "samples": 937
+   "ratio": 0.501,
+   "shift": 0.001,
+   "samples": 945
   },
   "source": "registered",
   "confidence": {
-   "tempo": 0,
-   "beat": 0.587,
-   "meter": 1.523,
+   "tempo": 0.259,
+   "beat": 0.537,
+   "meter": 1.443,
    "grid": 1
   },
   "detected": {
-   "bpm": 168.882,
-   "beatZeroMs": 280.7,
+   "bpm": 169.315,
+   "beatZeroMs": 1303.4,
    "beatsPerBar": 4,
    "subdivisionsPerBeat": 4,
-   "gridFit": 0.781,
-   "beatPresence": 0.447,
+   "gridFit": 0.775,
+   "beatPresence": 0.637,
+   "stability": {
+    "windowMs": 12053,
+    "windows": [
+     {
+      "fromMs": 0,
+      "toMs": 12053,
+      "onsets": 94,
+      "fit": 0.753,
+      "bpm": 169.65,
+      "localFit": 0.858,
+      "baseFit": 0.828,
+      "shift": 0
+     },
+     {
+      "fromMs": 12053,
+      "toMs": 24107,
+      "onsets": 88,
+      "fit": 0.9,
+      "bpm": 169.31,
+      "localFit": 0.94,
+      "baseFit": 0.94,
+      "shift": 0
+     },
+     {
+      "fromMs": 24107,
+      "toMs": 36160,
+      "onsets": 82,
+      "fit": 0.864,
+      "bpm": 169.31,
+      "localFit": 0.907,
+      "baseFit": 0.907,
+      "shift": 0
+     },
+     {
+      "fromMs": 36160,
+      "toMs": 48213,
+      "onsets": 78,
+      "fit": 0.84,
+      "bpm": 169.31,
+      "localFit": 0.938,
+      "baseFit": 0.938,
+      "shift": 0
+     },
+     {
+      "fromMs": 48213,
+      "toMs": 60267,
+      "onsets": 77,
+      "fit": 0.925,
+      "bpm": 168.98,
+      "localFit": 0.934,
+      "baseFit": 0.931,
+      "shift": 0
+     },
+     {
+      "fromMs": 60267,
+      "toMs": 72320,
+      "onsets": 86,
+      "fit": 0.702,
+      "bpm": 167.62,
+      "localFit": 0.868,
+      "baseFit": 0.846,
+      "shift": 0
+     },
+     {
+      "fromMs": 72320,
+      "toMs": 84373,
+      "onsets": 91,
+      "fit": 0.846,
+      "bpm": 170.33,
+      "localFit": 0.932,
+      "baseFit": 0.844,
+      "shift": 0.006
+     },
+     {
+      "fromMs": 84373,
+      "toMs": 96427,
+      "onsets": 90,
+      "fit": 0.545,
+      "bpm": 171.01,
+      "localFit": 0.871,
+      "baseFit": 0.718,
+      "shift": 0.01
+     },
+     {
+      "fromMs": 96427,
+      "toMs": 108480,
+      "onsets": 86,
+      "fit": 0.806,
+      "bpm": 167.62,
+      "localFit": 0.896,
+      "baseFit": 0.878,
+      "shift": 0
+     },
+     {
+      "fromMs": 108480,
+      "toMs": 120533,
+      "onsets": 79,
+      "fit": 0.783,
+      "bpm": 168.98,
+      "localFit": 0.969,
+      "baseFit": 0.957,
+      "shift": 0
+     },
+     {
+      "fromMs": 120533,
+      "toMs": 132587,
+      "onsets": 83,
+      "fit": 0.801,
+      "bpm": 168.64,
+      "localFit": 0.956,
+      "baseFit": 0.844,
+      "shift": -0.004
+     },
+     {
+      "fromMs": 132587,
+      "toMs": 144640,
+      "onsets": 91,
+      "fit": 0.492,
+      "bpm": 168.64,
+      "localFit": 0.907,
+      "baseFit": 0.871,
+      "shift": 0
+     }
+    ],
+    "usableWindows": 12,
+    "bpmSpread": 0.01,
+    "shiftedShare": 0,
+    "minWindowFit": 0.492,
+    "overallFit": 0.773,
+    "badWindowShare": 0,
+    "changeSuspected": false
+   },
    "candidates": [
     {
-     "bpm": 168.86,
-     "fit": 0.78,
-     "presence": 0.717,
-     "score": 0.383
+     "bpm": 169.3,
+     "fit": 0.785,
+     "presence": 0.65,
+     "score": 0.35
     },
     {
-     "bpm": 169.29,
-     "fit": 0.817,
-     "presence": 0.647,
-     "score": 0.378
+     "bpm": 170.45,
+     "fit": 0.705,
+     "presence": 0.635,
+     "score": 0.275
     },
     {
-     "bpm": 167.19,
-     "fit": 0.727,
-     "presence": 0.63,
-     "score": 0.295
+     "bpm": 167.2,
+     "fit": 0.707,
+     "presence": 0.618,
+     "score": 0.273
     },
     {
      "bpm": 151.71,
@@ -106,8 +238,141 @@
      "score": 0.248
     }
    ]
+  },
+  "stability": {
+   "windowMs": 12053,
+   "windows": [
+    {
+     "fromMs": 0,
+     "toMs": 12053,
+     "onsets": 94,
+     "fit": 0.753,
+     "bpm": 169.65,
+     "localFit": 0.858,
+     "baseFit": 0.828,
+     "shift": 0
+    },
+    {
+     "fromMs": 12053,
+     "toMs": 24107,
+     "onsets": 88,
+     "fit": 0.9,
+     "bpm": 169.31,
+     "localFit": 0.94,
+     "baseFit": 0.94,
+     "shift": 0
+    },
+    {
+     "fromMs": 24107,
+     "toMs": 36160,
+     "onsets": 82,
+     "fit": 0.864,
+     "bpm": 169.31,
+     "localFit": 0.907,
+     "baseFit": 0.907,
+     "shift": 0
+    },
+    {
+     "fromMs": 36160,
+     "toMs": 48213,
+     "onsets": 78,
+     "fit": 0.84,
+     "bpm": 169.31,
+     "localFit": 0.938,
+     "baseFit": 0.938,
+     "shift": 0
+    },
+    {
+     "fromMs": 48213,
+     "toMs": 60267,
+     "onsets": 77,
+     "fit": 0.925,
+     "bpm": 168.98,
+     "localFit": 0.934,
+     "baseFit": 0.931,
+     "shift": 0
+    },
+    {
+     "fromMs": 60267,
+     "toMs": 72320,
+     "onsets": 86,
+     "fit": 0.702,
+     "bpm": 167.62,
+     "localFit": 0.868,
+     "baseFit": 0.846,
+     "shift": 0
+    },
+    {
+     "fromMs": 72320,
+     "toMs": 84373,
+     "onsets": 91,
+     "fit": 0.846,
+     "bpm": 170.33,
+     "localFit": 0.932,
+     "baseFit": 0.844,
+     "shift": 0.006
+    },
+    {
+     "fromMs": 84373,
+     "toMs": 96427,
+     "onsets": 90,
+     "fit": 0.545,
+     "bpm": 171.01,
+     "localFit": 0.871,
+     "baseFit": 0.718,
+     "shift": 0.01
+    },
+    {
+     "fromMs": 96427,
+     "toMs": 108480,
+     "onsets": 86,
+     "fit": 0.806,
+     "bpm": 167.62,
+     "localFit": 0.896,
+     "baseFit": 0.878,
+     "shift": 0
+    },
+    {
+     "fromMs": 108480,
+     "toMs": 120533,
+     "onsets": 79,
+     "fit": 0.783,
+     "bpm": 168.98,
+     "localFit": 0.969,
+     "baseFit": 0.957,
+     "shift": 0
+    },
+    {
+     "fromMs": 120533,
+     "toMs": 132587,
+     "onsets": 83,
+     "fit": 0.801,
+     "bpm": 168.64,
+     "localFit": 0.956,
+     "baseFit": 0.844,
+     "shift": -0.004
+    },
+    {
+     "fromMs": 132587,
+     "toMs": 144640,
+     "onsets": 91,
+     "fit": 0.492,
+     "bpm": 168.64,
+     "localFit": 0.907,
+     "baseFit": 0.871,
+     "shift": 0
+    }
+   ],
+   "usableWindows": 12,
+   "bpmSpread": 0.01,
+   "shiftedShare": 0,
+   "minWindowFit": 0.492,
+   "overallFit": 0.773,
+   "badWindowShare": 0,
+   "changeSuspected": false
   }
  },
+ "warnings": [],
  "structure": {
   "sections": [
    {
@@ -830,10 +1095,15 @@
    "within30ms": 0.665,
    "within43ms": 0.975
   },
+  "beatClarity": {
+   "onBeatStrength": 0.48,
+   "offBeatStrength": 0.489,
+   "ratio": 0.981
+  },
   "swing": {
-   "ratio": 0.5,
-   "shift": 0,
-   "samples": 937
+   "ratio": 0.501,
+   "shift": 0.001,
+   "samples": 945
   },
   "pitchedOnsets": 678,
   "pitchCurvePoints": 1629,

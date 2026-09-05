@@ -7472,8 +7472,8 @@
   {
    "type": "HOLD",
    "grid": 1484,
-   "lane": 2,
-   "subLane": 4,
+   "lane": 1,
+   "subLane": 2,
    "subLaneWidth": 4,
    "sourceStrength": 0.51,
    "sourcePeakOffsetMs": 9.79,
@@ -7482,17 +7482,17 @@
    "holdPoints": [
     {
      "grid": 1484,
-     "subLane": 4,
+     "subLane": 2,
      "subLaneWidth": 4
     },
     {
      "grid": 1488,
-     "subLane": 5,
+     "subLane": 3,
      "subLaneWidth": 3
     },
     {
      "grid": 1491,
-     "subLane": 6,
+     "subLane": 4,
      "subLaneWidth": 1
     }
    ],
@@ -7510,17 +7510,6 @@
   },
   {
    "type": "TAP",
-   "grid": 1492,
-   "lane": 3,
-   "subLane": 6,
-   "subLaneWidth": 3,
-   "sourceStrength": 0.91,
-   "sourcePeakOffsetMs": 23.97,
-   "sourceCharacter": "FULL",
-   "chord": true
-  },
-  {
-   "type": "TAP",
    "grid": 1496,
    "lane": 0,
    "subLane": 1,
@@ -7528,6 +7517,17 @@
    "sourceStrength": 0.99,
    "sourcePeakOffsetMs": 23.06,
    "sourceCharacter": "FULL"
+  },
+  {
+   "type": "TAP",
+   "grid": 1496,
+   "lane": 3,
+   "subLane": 7,
+   "subLaneWidth": 3,
+   "sourceStrength": 0.99,
+   "sourcePeakOffsetMs": 23.06,
+   "sourceCharacter": "FULL",
+   "chord": true
   },
   {
    "type": "TAP",
@@ -7954,7 +7954,7 @@
     "bar": 92,
     "timeMs": 138318,
     "type": "HOLD",
-    "move": "サブレーン1→4",
+    "move": "サブレーン1→2",
     "pass": 1,
     "costBefore": 1356,
     "costAfter": 1255,

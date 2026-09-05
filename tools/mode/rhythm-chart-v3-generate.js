@@ -49,6 +49,14 @@ const STRENGTH_WEIGHT=1.15;
 const SUSTAIN_BONUS=.22;          // 伸びる音は「押さえる価値がある」ので少し優先する
 // 音程のある音（メロディ・歌）は譜面の顔になる。打楽器ばかりの譜面にしないため少し優先する。
 const PITCHED_BONUS=.18;
+// 「拍の頭の音 ÷ 16分裏の音」がこれを下回る曲は、打点の強弱で拍が立っていないとみなす。
+// 実測: Monster Hero 1.49 / ドパガキリ(ショート) 1.63 / 綺季一閃 1.18 /
+//       Stay With Me 1.03 / MF × ICHIKA MIX 0.98。
+// 1.10 は「Stay With Me と MF × ICHIKA MIX だけが当てはまる」ところに置いてある。
+const BEAT_CLARITY_MIN=1.10;
+// 拍が立っていない曲で、16分裏のうち強いほうから何割を残すか。
+// 残しすぎると直らず、切りすぎると譜面が単調になる。1/3ほどが目安。
+const OFF_BEAT_KEEP=.35;
 
 // 難易度ごとの方針。**できること**だけを持つ。量は DENSITY_TARGET が曲ごとに決める。
 // 拾う順番はすべての難易度で同じなので、下の難易度は上の難易度の部分集合になる。
@@ -235,8 +243,35 @@ const buildChart=(difficulty,options={})=>{
   const notice=[];
 
   // --- 1. 拾う音を決める（小節ごとに、優先順位の上位から） ---
+  // 拍が立っていない曲では、16分裏の弱い音を拾わない。
+  //
+  // 【2026-09-05・「全然テンポにあった譜面になってない」という指摘から】
+  // Stay With Me は格子そのものは曲の頭から終わりまで±7ms以内で合っていた。
+  // ずれていたのではなく、**拾う音**が悪かった。この曲は打点の半分が16分裏にあり、
+  // その強さが拍の頭とほとんど同じ（0.393 対 0.405）。ドラムで拍が刻まれておらず、
+  // ストリングスや持続音の立ち上がりを16分裏として拾っていた。
+  // 結果、HARDで35%・MASTERで42%のノーツが16分裏に乗り、
+  // 曲の聞こえるリズムと関係ない場所を叩かされていた（Monster Heroは3〜5%）。
+  //
+  // そこで「拍の頭の音 ÷ 16分裏の音」の比を見て、拍が立っていない曲では
+  // 16分裏は**拍の頭の平均より強い音だけ**にする。数を減らすのではなく、
+  // 拾う場所を拍の骨格へ寄せる。拍がはっきりしている曲では比が大きいので何も変わらない。
+  const onBeatOrEighth=onset=>((onset.grid%BEAT)+BEAT)%BEAT%2===0;
+  // しきい値は「拍の頭の平均」ではなく、**その曲の16分裏の中での上位いくつか**にする。
+  // 拍の頭の平均を使うと、拍が立っていない曲ほどその値も低くなるので絞れない
+  // （MF × ICHIKA MIX は拍の頭0.480に対して16分裏0.489で、ほとんど落ちなかった）。
+  // 「16分裏のうち強いほうから OFF_BEAT_KEEP だけ残す」なら、曲によらず確実に効く。
+  const offBeatFloor=(()=>{
+    const clarity=audio.summary?.beatClarity;
+    if(!clarity||!(clarity.ratio>0)||clarity.ratio>=BEAT_CLARITY_MIN)return 0;
+    const strengths=allOnsets.filter(onset=>!onBeatOrEighth(onset))
+      .map(onset=>onset.strength).sort((a,b)=>a-b);
+    if(!strengths.length)return 0;
+    return strengths[Math.floor(strengths.length*(1-OFF_BEAT_KEEP))]??0;
+  })();
   const pool=allOnsets.filter(onset=>
-    onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=COMMON.maxAbsPeakOffsetMs);
+    onset.grid%P.lattice===0&&Math.abs(onset.gridOffsetMs)<=COMMON.maxAbsPeakOffsetMs
+    &&(offBeatFloor<=0||onBeatOrEighth(onset)||onset.strength>=offBeatFloor));
   // 全体で何個置くかを先に決める（1拍あたりの目標を、毎秒の下限・上限で挟む）。
   // これで曲が変わっても、遊んだ感じの忙しさがそろう。
   const [liftMin,liftMax]=MUSICAL_LIFT;

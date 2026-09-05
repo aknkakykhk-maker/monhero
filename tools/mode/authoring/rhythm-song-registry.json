@@ -78,11 +78,11 @@
    "audioSha256": "b6683818f250cb8777113961ddc522b02a60687f9a3f6830184a3924ec956fd2",
    "durationMs": 274400,
    "analyzedTiming": {
-    "bpm": 169.987,
-    "beatZeroMs": 439.5,
+    "bpm": 169.99,
+    "beatZeroMs": 440,
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
-    "source": "detected"
+    "source": "command"
    }
   },
   "eiki_boss": {

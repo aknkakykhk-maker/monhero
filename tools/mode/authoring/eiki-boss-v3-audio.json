@@ -1734,6 +1734,11 @@
    "within30ms": 0.687,
    "within43ms": 0.914
   },
+  "beatClarity": {
+   "onBeatStrength": 0.569,
+   "offBeatStrength": 0.483,
+   "ratio": 1.177
+  },
   "swing": {
    "ratio": 0.5,
    "shift": 0,

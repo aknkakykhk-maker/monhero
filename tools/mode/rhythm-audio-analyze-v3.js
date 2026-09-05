@@ -296,6 +296,29 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
   })();
   const characterCounts=onsets.reduce((acc,onset)=>{acc[onset.character]=(acc[onset.character]||0)+1;return acc;},{});
 
+  // 「拍がどれだけはっきりしているか」。拍の頭の音の強さ ÷ 16分裏の音の強さ。
+  //
+  // 【なぜ要るか】2026-09-05、Stay With Me で「全然テンポにあった譜面になってない」
+  // という報告があった。調べると、格子は曲の頭から終わりまで±7ms以内で合っていて、
+  // ずれていたわけではなかった。問題は**拾っている音**のほうで、
+  // この曲は16分裏の音が全体の半分あり、しかもその強さが拍の頭とほぼ同じだった
+  // （拍の頭0.405 / 8分裏0.403 / 16分裏0.393）。つまり打点の強弱で拍が立っていない。
+  // ドラムではなく、ストリングスや持続音の立ち上がりを拾っているためで、
+  // これを叩かせると「曲と関係ないところを押している」ことになる。
+  //
+  // 比べると Monster Hero は 0.583 / 0.573 / 0.391 で16分裏だけがはっきり弱い＝拍がある。
+  // この比を出しておけば、生成側が「この曲は16分裏を拾ってよいか」を判断できる。
+  const beatClarity=(()=>{
+    const at=test=>{
+      const list=onsets.filter(onset=>test(((onset.grid%timing.subdivisionsPerBeat)+timing.subdivisionsPerBeat)%timing.subdivisionsPerBeat));
+      return list.length?list.reduce((sum,onset)=>sum+onset.strength,0)/list.length:0;
+    };
+    const onBeat=at(position=>position===0);
+    const offBeat=at(position=>position%2===1);
+    return {onBeatStrength:round(onBeat),offBeatStrength:round(offBeat),
+      ratio:offBeat>0?round(onBeat/offBeat):null};
+  })();
+
   // --- 7. あやしさ（このまま譜面にしてよいか） ---
   const warnings=collectWarnings({timing,detected,durationMs:features.durationMs,
     onsetCount:onsets.length,sectionCount:structure.sections.length});
@@ -322,7 +345,7 @@ const round=(value,digits=3)=>Math.round(value*10**digits)/10**digits;
     warnings,
     structure:{sections:structure.sections,bars:structure.bars,repeats:structure.repeats,
       settings:structure.settings},
-    summary:{onsetCount:onsets.length,characterCounts,gridFit,swing:timing.swing,
+    summary:{onsetCount:onsets.length,characterCounts,gridFit,beatClarity,swing:timing.swing,
       pitchedOnsets:onsets.filter(onset=>onset.pitchHz>0).length,
       pitchCurvePoints:pitchCurve.length,
       pitchCurveClear:pitchCurve.filter(point=>point.height!=null).length,
