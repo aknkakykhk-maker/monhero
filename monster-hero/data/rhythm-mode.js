@@ -604,11 +604,39 @@ const rhythmReleaseLane=note=>{
   const points=Array.isArray(note?.slidePoints)?note.slidePoints:[];
   return Number(points[points.length-1]?.lane??note?.endLane??note?.lane)||0;
 };
+// レーンの台形の**外側**でも、その高さのサブレーン何個ぶんまで受け付けるか。
+//
+// 【なぜ要るか】(2026-09-05・#156 演奏時の操作性の調査)
+// 叩いた場所は、その高さのレーンの台形の内側でなければ「無かったこと」にしていた。
+// ところが台形は画面の端まで届いていない。判定ライン(下から12%)の高さで実測すると、
+// 390px幅のプレイエリアに対して**左右23pxずつが完全な死角**で、そこを押しても
+// 空打ちの音すら鳴らずに消えていた。
+//
+// 困るのは、いちばん外のレーン(左端・右端)のノーツ。ノーツの当たりは
+// RHYTHM_TAP_TOLERANCE_SUB_LANES(0.6サブレーン)ぶん外側までを受け付ける作りなのに、
+// 台形の外はここで先に落とされるので、**外側だけこの猶予が使えなかった**。
+// 内側へ0.6サブレーンずれても取れるのに、外側は数pxずれただけで無反応になる。
+// スマホは端のレーンほど親指が外へはみ出しやすいので、いちばん起きやすい場所でもある。
+//
+// 【どう決めたか】
+// 猶予(0.6)より広くないと意味がないので1サブレーンにした。少し広いぶんは、
+// ノーツを取れないときでも「空打ち」として音が鳴る＝押したことが伝わる側に倒している
+// (空打ちにスコア・ライフの罰は無い)。
+// 幅はその高さのレーンに比例するので、レーンが細くなる画面の上のほうでは猶予も狭い。
+// 実測: 判定ラインで34px(死角23pxを覆う) / 画面のいちばん上では7pxしか広がらない。
+// 「関係ないところを押しても取れる」にはならない。
+const RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES=1;
 const rhythmLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
   if(!rect||!Number.isFinite(rect.width)||rect.width<=0||!Number.isFinite(rect.height)||rect.height<=0)return null;
   const yRatio=rhythmClamp01((Number(clientY)-rect.top)/rect.height),nx=(Number(clientX)-rect.left)/rect.width;
   const left=rhythmProjectBoundary(0,yRatio),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,yRatio),laneWidth=(right-left)/RHYTHM_LANE_COUNT;
-  if(!Number.isFinite(nx)||nx<left||nx>right||!(laneWidth>0))return null;
+  if(!Number.isFinite(nx)||!(laneWidth>0))return null;
+  // サブレーンはレーンの半分なので、1サブレーン = laneWidth/2
+  const margin=laneWidth/2*RHYTHM_INPUT_EDGE_MARGIN_SUB_LANES;
+  if(nx<left-margin||nx>right+margin)return null;
+  // 台形の外は端のレーンの延長として、そのまま外側の座標を返す。
+  // 受け取る側は subLane を 0〜9 へ丸める(setPressedLanes / inputStarts)ので、
+  // 少しはみ出した値がそのまま使われることはない。
   return (nx-left)/laneWidth-.5;
 };
 const rhythmSubLaneCoordinateAtPoint=(clientX,clientY,rect)=>{
