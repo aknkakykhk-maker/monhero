@@ -78,16 +78,29 @@ check('古いFORMATION_MENUが残っていない', !source.includes('FORMATION_M
 
 // ランキング
 check('一覧の取得件数は50件', has('const RANKING_SCORE_LIMIT = 50;'));
-check('ブリーダーLvは編成(party)を取得しない', has('RANKING_SELECT_NO_PARTY') && has("levelKind === 'bond' ? RANKING_SELECT_FULL : RANKING_SELECT_NO_PARTY"));
+// ブリーダーLvの一覧は名前・レベル・アイコンしか出さないので、重い列を運ばない。
+// もとは「編成(party)だけ落とす(RANKING_SELECT_NO_PARTY)」書き方を見張っていたが、
+// いまは hero / score も落とした専用の列(RANKING_SELECT_BREEDER)になっている。
+// 見たいのは「重い列を運んでいないこと」なので、そちらを見る(2026-09-05)。
+check('ブリーダーLvは重い列(編成・hero・score)を取得しない',
+  has("const RANKING_SELECT_BREEDER = 'user_name,level,icon';")
+    && has('RANKING_SELECT_BREEDER)'));
 check('遅い取得を失敗にしないタイムアウト', has('controller.abort(), 15000'));
 check('画面のエラー文は短い日本語', has('通信が混み合っています。少し待って再読込してください'));
 check('ブリーダーLvの取得がスコア一覧を上書きしない',
   has("} else if (includeLevels && levelKind === 'breeder') {\n        setBreederRankingPool(prev => ({ ...prev, ...poolByDiff }));"));
-check('レベル系ランキングは1回の取得にまとめる', has('const cacheKey = `levels:${levelKind}`;') && has('sbFetchRankings(null, levelLimit, order, 0, requestId, columns)'));
-// ブリーダーLvは名前ごとにまとめて出すため、取得件数が少ないと下位の人が一覧から消える
-check('ブリーダーLvは取得件数を多くする',
-  has('const RANKING_BREEDER_FETCH_LIMIT = 400;')
-    && has("const levelLimit = levelKind === 'bond' ? RANKING_LEVEL_FETCH_LIMIT : RANKING_BREEDER_FETCH_LIMIT;"));
+// 難易度ごとに何回も取らず、絞り込み無しの1回にまとめること。
+// (第1引数の null が「難易度で絞らない」の意味)
+check('レベル系ランキングは1回の取得にまとめる',
+  has('const cacheKey = `levels:${levelKind}`;')
+    && has('sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, RANKING_SELECT_FULL)'));
+// ブリーダーLvは名前ごとにまとめて出すため、上位N件だけ取ると下位の人が一覧から消える。
+// もとは「取得件数を400に増やす」で見張っていたが、いまはページ送りで**全行**読む
+// ようになっており、件数の上限そのものが無くなった。
+// 見たいのは「下位の人が消えないこと」なので、全行を読んでいることを見る(2026-09-05)。
+check('ブリーダーLvは全行を読む（下位の人が一覧から消えない）',
+  has('const sbFetchAllBreederRows = async (requestId=')
+    && has('rows = await sbFetchAllBreederRows(requestId);'));
 check('起動時の先読みは1難易度だけ', has("loadRankings('Normal')"));
 check('前回のランキングを端末に残す', has("const RANKING_CACHE_KEY = 'mh_ranking_cache';") && has('const saveRankingCache = (patch)'));
 check('起動時に前回の内容をそのまま出す', has('hydrateRankingCache(await storeGet(RANKING_CACHE_KEY, null, false))'));

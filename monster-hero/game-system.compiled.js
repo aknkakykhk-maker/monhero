@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 88b2e4f2daae2ad1
+// source-sha256: c6208ba729f64601
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 10:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 10:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4461,6 +4461,51 @@ const Audio_ = (() => {
     await ensure();
   };
   const isEnabled = () => enabled;
+  // いま実際に鳴っている曲を、外(検査)から見るための口。
+  // BGMは <audio> ではなく Web Audio (AudioBufferSourceNode) で鳴らしているので、
+  // document.querySelectorAll('audio') では1つも見えない。
+  // そのため起動まわりの検査(tools/boot/boot-check.js)が「鳴っていない」と誤判定していた
+  // (2026-09-05)。プレイヤーの画面には何も出ないし、ゲームの動きも変えない。
+  const debugPlayingTracks = () => {
+    // 曲キーだけでなく、実際に鳴っている音のファイル名も返す。
+    // 検査は「bgm-title で始まる」のようにファイル名で見たいため。
+    const entry = (kind, key) => {
+      const track = resolveTrack(key);
+      const url = String(track?.url || track?.src || '');
+      return {
+        kind,
+        key: String(key || ''),
+        src: url.split('/').pop().split('?')[0]
+      };
+    };
+    const list = [];
+    // 鳴らしているのは同時に1つ(BGM / 試聴 / ジングル のどれか)
+    if (jingleSource) list.push(entry('jingle', currentKey));else if (previewSource) list.push(entry('preview', previewKey));else if (bgmSource) list.push(entry('bgm', bgmSourceKey));
+    return {
+      enabled,
+      ctxState: (() => {
+        try {
+          return getAudioCtx()?.state || 'none';
+        } catch (e) {
+          return 'none';
+        }
+      })(),
+      playing: list
+    };
+  };
+  // 「その場面で本来どの曲が鳴るはずか」も外から引けるようにする。
+  // 検査がファイル名を書き写すと、既定を変えたときに黙って落ちるため。
+  const debugExpectedSrc = scene => {
+    const track = resolveTrack(DEFAULT_BGM_ARRANGEMENT[scene]);
+    const url = String(track?.url || track?.src || '');
+    return url ? url.split('/').pop().split('?')[0] : null;
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      window.__mhAudioDebug = debugPlayingTracks;
+      window.__mhAudioExpectedSrc = debugExpectedSrc;
+    } catch (e) {}
+  }
   const setSeVolume = pct => {
     seVolumePct = pct;
     if (seBus && Tone) {

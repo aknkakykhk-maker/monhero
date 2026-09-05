@@ -31,7 +31,11 @@ check('旧本体はruntimeが作ったholdJudgmentを1回だけ適用',game.incl
 check('TAP/FLICKの開始判定条件は変更しない',
   source.includes("RHYTHM_NOTE_TYPES.includes(note.type)")
   &&source.includes("tapOnly&&note.type!=='TAP'")
-  &&source.includes("const timeDistance=Math.abs(now-(Number(note.timeMs)+offset));")
+  &&source.includes("const noteTime=Number(note.timeMs)+offset;")
+  &&source.includes("const timeDistance=Math.abs(now-noteTime);")
   &&source.includes("timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS")
-  &&!/timeDistance<=\d/.test(source));
+  &&!/timeDistance<=\d/.test(source)
+  // 2026-09-05、候補が複数あるときの選び方を「時刻を過ぎたノーツが先」に変えた。
+  // 受け付ける広さ(RHYTHM_INPUT_MATCH_WINDOW_MS)は変えていないので、ここも一緒に見る
+  &&source.includes("const rank=now>=noteTime?0:1;"));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
