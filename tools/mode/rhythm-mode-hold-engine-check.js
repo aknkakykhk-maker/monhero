@@ -12,7 +12,17 @@ check('HOLD中の別レーンTAPを含む',holds.some(h=>normal.notes.some(n=>n.
 check('同時2本HOLDを含む',holds.some((a,i)=>holds.some((b,j)=>j>i&&a.timeMs===b.timeMs&&a.lane!==b.lane)));
 check('HOLD開始はTAPと同じ判定幅を使い、完了時に1ノーツとして確定',game.includes("target.type==='HOLD'")&&game.includes('target.holdJudgment=judgment')&&game.includes("applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0)"));
 check('終端到達でHOLDを自動確定',game.includes("note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs"));
-check('終端100ms手前より早い離しはMISS',game.includes('const RHYTHM_HOLD_RELEASE_GRACE_MS=100')&&game.includes('now<holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS')&&game.includes("applyJudgment(note,'MISS',now-holdEndMs)"));
+// 終端100ms手前まで来ていれば、離しても成立する。
+// それより早く離した場合は、すぐMISSにはせず持ち替えの猶予(120ms)を待ち、
+// 戻ってこなければそこでMISSにする(2026-09-05・指の置き換えに対応)
+check('終端100ms手前まで来ていれば離しても成立',
+  game.includes('const RHYTHM_HOLD_RELEASE_GRACE_MS=100')
+  && game.includes("if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}"));
+check('それより早い離しは、持ち替えの猶予を待ってからMISS',
+  game.includes('const RHYTHM_HOLD_HANDOVER_GRACE_MS=120')
+  && game.includes('else{note.releasedAtMs=now;}')
+  && game.includes("songTimeMs-note.releasedAtMs>=RHYTHM_HOLD_HANDOVER_GRACE_MS")
+  && game.includes("applyJudgment(note,'MISS',releasedAt-holdEndMs)"));
 check('入力ID別Mapで複数入力を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(input.inputKey,target.index)')&&game.includes('run.activePointers.get(input.inputKey)'));
 check('HOLD表示は専用ボディを持ち、rAF内transform/opacity中心',game.includes('data-rhythm-hold-body')&&game.includes("--rhythm-hold-body")&&game.includes('yPx=Math.round(yPx);')&&game.includes('const nextTransform=`translate3d(0,${yPx}px,0)`;')&&game.includes('if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;')&&!game.includes('el.style.transform=`translate3d(0,${yPx}px,0) scale(')&&game.includes('requestAnimationFrame(tick)'));
 check('ポーズ・再スタート・中断で入力管理を残さない',game.includes('run.activePointers.clear();run.activeTouchInputs?.clear();')&&game.includes('activePointers:new Map(),activeTouchInputs:new Set()')&&game.includes('run.finished=true;run.paused=true;run.activePointers.clear();run.activeTouchInputs?.clear();')&&game.includes('disposeRun();'));

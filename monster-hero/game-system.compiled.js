@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2653d116369c1b33
+// source-sha256: baaa69ef9dd2e776
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 11:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11722,6 +11722,12 @@ const localCalendarDate = (now = new Date()) => {
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
+
+// 画面へ出す曲名。副題(subtitle)まで入れて1つの名前にする。
+// displayName だけを出していたため、曲えらびもプレイ中も副題が落ちていた
+// (「Stay With Me」「綺季一閃」だけが出て ～Locked Fate～ ～花雪に舞う詠姫～ が消えていた)。
+// ヘルプの曲一覧は前から副題まで出していたので、画面とヘルプで名前が食い違っていた
+const rhythmSongFullName = song => song && song.subtitle ? `${song.displayName} ${song.subtitle}` : song ? song.displayName : '';
 const helpDataRows = id => {
   const marketItems = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
   const skipIds = new Set(Object.values(SKIP_TICKETS));
@@ -11835,7 +11841,7 @@ const helpDataRows = id => {
           if (!charts.length) return null;
           const levels = charts.map(chart => Number(chart.level) || 0);
           const length = typeof rhythmSongLengthLabel !== 'undefined' ? rhythmSongLengthLabel(song, charts[0]) : '';
-          const name = song.subtitle ? `${song.displayName} ${song.subtitle}` : song.displayName;
+          const name = rhythmSongFullName(song);
           return [name, `Lv.${Math.min(...levels)}〜${Math.max(...levels)} ／ ${charts.length}難易度${length ? ` ／ ${length}` : ''}`];
         }).filter(Boolean);
       }
@@ -15535,6 +15541,14 @@ function PressRepeatButton({
   }, props), children);
 }
 const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
+// 押さえている途中で指を入れ替えるための猶予(2026-09-05・ユーザー指示で120ms)。
+// 長いHOLD/SLIDEを別の指へ持ち替えるとき、離してから置き直すまでにどうしても間があく。
+// これまでは離した瞬間にMISSにしていたので、持ち替えがまったくできなかった。
+// 離しても、この時間のあいだは「浮いている」だけとして取っておき、
+// 同じノーツの帯へ指が置かれたら何ごともなかったように続きへ戻す。
+// 長くしすぎると「一瞬離しても平気」になって押さえ続ける意味が薄れるので、
+// 指を入れ替えるのに要るぶんだけにしてある
+const RHYTHM_HOLD_HANDOVER_GRACE_MS = 120;
 // 最後まで取れたHOLD / SLIDE / FLICKを、消える前に光らせておく時間(CSSのアニメーションと同じ長さ)
 const RHYTHM_CLEAR_FLASH_MS = 260;
 const RHYTHM_JUDGMENT_DISPLAY_MS = 450;
@@ -16312,7 +16326,7 @@ const RhythmSongSelect = ({
         lineHeight: 1.25,
         height: '2.5em'
       }
-    }, entry.displayName), /*#__PURE__*/React.createElement("span", {
+    }, rhythmSongFullName(entry)), /*#__PURE__*/React.createElement("span", {
       className: `mt-1 flex items-center gap-1${spot('achievement')}`
     }, (difficulties || []).map(item => {
       const playable = rhythmChartPlayable(entry, item.id);
@@ -16356,7 +16370,7 @@ const RhythmSongSelect = ({
       lineHeight: 1.25,
       height: '2.5em'
     }
-  }, song.displayName), /*#__PURE__*/React.createElement("small", {
+  }, rhythmSongFullName(song)), /*#__PURE__*/React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold text-slate-400"
   }, rhythmSongLengthLabel(song, chart)))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-difficulty-row": true,
@@ -16948,6 +16962,7 @@ const RhythmTapTest = ({
       if (note.activePointerId !== -1) run.activePointers.delete(note.activePointerId);
       note.activePointerId = null;
     }
+    note.releasedAtMs = null;
     note.done = true;
     note._rhythmFinalJudgment = judgment;
     // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
@@ -17201,6 +17216,19 @@ const RhythmTapTest = ({
         perfDrawn = 0;
       const visitNote = note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+        // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
+        // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
+        if (!note.done && note.activePointerId === null && note.releasedAtMs != null) {
+          const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
+          if (songTimeMs >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
+            note.releasedAtMs = null;
+            applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+          } else if (songTimeMs - note.releasedAtMs >= RHYTHM_HOLD_HANDOVER_GRACE_MS) {
+            const releasedAt = note.releasedAtMs;
+            note.releasedAtMs = null;
+            applyJudgment(note, 'MISS', releasedAt - holdEndMs);
+          }
+        }
         if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_INPUT_MATCH_WINDOW_MS) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
         const el = laneRefs.current[note.index];
         if (!el) return;
@@ -17551,9 +17579,14 @@ const RhythmTapTest = ({
       }
       const judgment = rhythmJudgeTap(deltaMs);
       if (target.type === 'HOLD') {
+        // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
+        // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
+        const handover = target.releasedAtMs != null;
         target.activePointerId = input.inputKey;
-        target.holdJudgment = judgment;
-        target.holdDeltaMs = deltaMs;
+        if (handover) target.releasedAtMs = null;else {
+          target.holdJudgment = judgment;
+          target.holdDeltaMs = deltaMs;
+        }
         run.activePointers.set(input.inputKey, target.index);
         if (input.captureTarget && input.pointerId !== undefined) {
           try {
@@ -17598,7 +17631,15 @@ const RhythmTapTest = ({
       if (!note || note.done) return;
       note.activePointerId = null;
       const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
-      if (now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) applyJudgment(note, 'MISS', now - holdEndMs);else applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+      // 終わり際まで来ていれば、そのまま成立させる
+      if (now >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
+        applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+      }
+      // まだ途中なら、すぐには失敗にしない。指を入れ替えている途中かもしれないので、
+      // 猶予のあいだは「浮いている」ことだけ覚えておく(rAFのvisitNoteが時間切れを見る)
+      else {
+        note.releasedAtMs = now;
+      }
       if (input.releaseTarget && input.pointerId !== undefined) {
         try {
           if (input.releaseTarget.hasPointerCapture?.(input.pointerId)) input.releaseTarget.releasePointerCapture(input.pointerId);
@@ -17773,7 +17814,7 @@ const RhythmTapTest = ({
       }
     }, /*#__PURE__*/React.createElement("p", {
       className: "text-center text-xs text-cyan-300"
-    }, song.displayName, "\u30FB", difficulty.id), /*#__PURE__*/React.createElement("h2", {
+    }, rhythmSongFullName(song), "\u30FB", difficulty.id), /*#__PURE__*/React.createElement("h2", {
       className: "text-center font-black"
     }, "RHYTHM RESULT"), /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-rank": true,
@@ -17893,7 +17934,7 @@ const RhythmTapTest = ({
       lineHeight: '1.25',
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, "\u266A ", song.displayName)), /*#__PURE__*/React.createElement("div", {
+  }, "\u266A ", rhythmSongFullName(song))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-right": true,
     className: "flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"
   }, /*#__PURE__*/React.createElement("div", {

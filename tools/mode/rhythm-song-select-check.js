@@ -286,6 +286,24 @@ const serve=()=>new Promise(resolve=>{
       titleHeights.detailWide>0&&titleHeights.detailWide===titleHeights.detailNarrow,
       `広い=${titleHeights.detailWide} / 細い=${titleHeights.detailNarrow}`);
 
+    // 高さを2行で固定しているぶん、長い曲名は入りきらないと途中で切れてしまう。
+    // 副題まで含めた正式な曲名が、実際の幅で最後まで見えているかを測る
+    // (「Stay With Me ～Locked Fate～」のように副題つきの曲がある)
+    const clipped=await page.evaluate(()=>{
+      const list=[...document.querySelectorAll('[data-rhythm-song-row-title]')];
+      const detail=document.querySelector('[data-rhythm-song-title]');
+      const check=el=>({name:(el.textContent||'').trim(),over:el.scrollHeight>el.clientHeight+1});
+      return [...list,...(detail?[detail]:[])].map(check).filter(x=>x.over);
+    });
+    ok('曲名が途中で切れていない（副題まで見えている）',clipped.length===0,
+      clipped.length?clipped.map(x=>x.name).join(' / '):'全部おさまっている');
+
+    // 副題を持つ曲は、画面にも副題まで出ていること
+    const shownNames=await page.evaluate(()=>[...document.querySelectorAll('[data-rhythm-song-row-title]')].map(el=>(el.textContent||'').trim()));
+    const withSubtitle=shownNames.filter(name=>/[～~]/.test(name));
+    ok('副題つきの曲は副題まで出ている',withSubtitle.length>0,
+      withSubtitle.length?withSubtitle.join(' / '):'副題つきの曲名が1つも出ていない');
+
     // 難易度ボタンの高さはTailwindのクラスで決まるので、ここでは書きぶりを見張る。
     // ロック中だけ「◯◯で解放」が2行になり、その曲だけボタンが高くなっていた。
     const gameSource=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'utf8');
