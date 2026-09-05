@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 23:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 23:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9192,8 +9192,8 @@ const rhythmAchievementMarkId=(playable,record)=>{
 };
 
 // 曲の絵(ジャケット)の下地の色。曲idから決めるので、同じ曲はいつも同じ色になる。
-// いまは全曲へ既定の絵(RHYTHM_SONG_ART_DEFAULT)が出るので、この色は絵が
-// 読み込まれるまでの下地と、data/rhythm-mode.js が読めなかったときの受け皿になる。
+// 絵(artwork)を持たない曲はこの色のタイルに曲名の頭文字が出る。絵を持つ曲でも、
+// 絵が届くまでの数フレームと、data/rhythm-mode.js が読めなかったときの受け皿になる。
 const rhythmSongArtHue=songId=>{
   const text=String(songId||'');
   let hash=0;
