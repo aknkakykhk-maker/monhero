@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 12:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 13:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4812,11 +4812,17 @@ const changelogEntryId = entry => {
   for (let i=0;i<source.length;i++) { hash ^= source.charCodeAt(i); hash = Math.imul(hash, 16777619); }
   return `${entry.type || 'notice'}-${(hash >>> 0).toString(36)}`;
 };
-const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(releasedForPlayers).map(entry => Object.freeze({...entry,id:changelogEntryId(entry)}));
+// 開発中の作業メモ(dev:true)は、どちらのタブにも出さない。
+// releaseFlag だけで隠していたころは、公開フラグを true にした瞬間に公開前の作業メモが
+// まとめて更新情報へ並んでしまい、プレイヤーには「見たこともない画面の不具合が直った話」が
+// 延々と続いて見えていた(2026-09-05・ユーザー指摘でモンヒロビートの80件を dev:true にした)。
+// 記録自体は data/changelog.js に残し、出す・出さないだけをここで決める。
+const changelogForPlayers = (entry) => !!entry && entry.dev !== true && releasedForPlayers(entry);
+const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(changelogForPlayers).map(entry => Object.freeze({...entry,id:changelogEntryId(entry)}));
 // 更新履歴から作る助手の告知も、隠している項目のぶんは出さない
-// (data/assistants.js は公開フラグを見られないため、ここで落とす)
+// (data/assistants.js は公開フラグも dev も見られないため、ここで落とす)
 const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : [])
-  .filter(entry => !releasedForPlayers(entry) && typeof entry?.assistantNotice?.id === 'string')
+  .filter(entry => !changelogForPlayers(entry) && typeof entry?.assistantNotice?.id === 'string')
   .map(entry => entry.assistantNotice.id.trim()));
 // どのタブへ出すかを決める。「不具合情報」は issue、それ以外はすべて「更新情報」。
 // 以前は type がタブ名と完全一致するものだけを出していたため、fix / feature / market と
@@ -8585,8 +8591,117 @@ const rhythmSnapOptionValue=(value,min,max,step)=>{
 // 出し分けはCSS(portrait:)だけで行う。JSで向きを見張ると、回すたびに再描画が走って重くなる。
 const RhythmLandscapeHint=({className=''})=>
   <p data-rhythm-landscape-hint className={`hidden portrait:block rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold leading-relaxed text-cyan-100 ${className}`}>
-    📱 横画面にも対応しています。端末を横にすると、曲の一覧と選んだ曲を左右に並べて見られます。
+    📱 横画面にも対応しています。端末を横にすると、曲の一覧と選んだ曲を左右に並べて見られます。曲えらびの「🔄 横」ボタンからも切り替えられます。
   </p>;
+// ============================================================================
+// 縦画面 ⇄ 横画面の切り替え
+// ============================================================================
+// 【2026-09-05・ユーザー指示】
+// 「モンビーのホーム画面に縦画面横画面切り替えボタンを作って／縦なら横に横なら縦に変わるボタン」。
+//
+// 【なぜ要るか】
+// 端末側の画面回転ロックを入れていると、本体を横にしても画面は縦のままになる。
+// モンビーは横画面のほうが曲の一覧と選んだ曲を同時に見られるのに、
+// 回転ロックを解除しに設定アプリまで行かないと横にできなかった。
+//
+// 【どうやるか】
+// ブラウザの screen.orientation.lock() で向きを指定する。多くのブラウザは
+// 「全画面表示のあいだだけ」向きの固定を許すので、必要なら先に全画面へ入る。
+// iOSのSafariのように lock() 自体が無い環境もあるため、できなかったときは
+// 黙って何も起きないのではなく「端末を回してください」と案内へ切り替える。
+const screenOrientationApi=()=>{
+  if(typeof window==='undefined')return null;
+  const o=window.screen&&window.screen.orientation;
+  return (o&&typeof o.lock==='function')?o:null;
+};
+// いま横向きかどうか。screen.orientation が無い端末では画面の比率で見る
+const orientationIsLandscape=()=>{
+  if(typeof window==='undefined')return false;
+  const o=window.screen&&window.screen.orientation;
+  if(o&&typeof o.type==='string')return o.type.indexOf('landscape')===0;
+  if(typeof window.matchMedia==='function')return window.matchMedia('(orientation: landscape)').matches;
+  return window.innerWidth>window.innerHeight;
+};
+// ボタンで横向きに固定したかどうか。モンビーを離れるときに戻すために覚えておく
+// (プレイ画面へ移るだけで戻してしまうと、演奏の途中で縦に戻ってしまう)
+let screenOrientationLockedByUs=false;
+// target: 'landscape' | 'portrait'。回せたら true を返す(回せなければ案内を出す側で使う)
+const applyScreenOrientation=async(target)=>{
+  const orientation=screenOrientationApi();
+  const root=(typeof document!=='undefined')?document.documentElement:null;
+  if(!orientation||!root)return false;
+  if(target==='landscape'){
+    // 全画面に入れなくても lock だけ通ることがあるので、失敗しても先へ進む
+    if(!document.fullscreenElement&&typeof root.requestFullscreen==='function'){
+      try{await root.requestFullscreen({navigationUI:'hide'});}catch(_){}
+    }
+    try{await orientation.lock('landscape');screenOrientationLockedByUs=true;return true;}catch(_){return false;}
+  }
+  // 縦へ戻す。固定を外すだけだと横のまま残る端末があるので、まず portrait を指定する
+  let done=false;
+  try{await orientation.lock('portrait');done=true;}catch(_){}
+  if(!done&&typeof orientation.unlock==='function'){try{orientation.unlock();}catch(_){}}
+  // 全画面のままだと戻したことが分かりにくいので、こちらから入っていたぶんは抜ける
+  if(typeof document!=='undefined'&&document.fullscreenElement&&typeof document.exitFullscreen==='function'){
+    try{await document.exitFullscreen();done=true;}catch(_){}
+  }
+  if(done)screenOrientationLockedByUs=false;
+  return done;
+};
+// モンビーを離れるときの後始末。ボタンで固定したときだけ戻す。
+// これが無いと、横のままHOMEへ戻ったときにゲーム全体が横＋全画面のままになり、
+// 縦向きで作ってあるHOMEやバトルの画面が崩れる。
+// 自分で固定していないとき(端末を横向きに持っているだけ)には何もしない。
+const releaseScreenOrientation=()=>{
+  if(!screenOrientationLockedByUs)return false;
+  screenOrientationLockedByUs=false;
+  const orientation=screenOrientationApi();
+  if(orientation&&typeof orientation.unlock==='function'){try{orientation.unlock();}catch(_){}}
+  if(typeof document!=='undefined'&&document.fullscreenElement&&typeof document.exitFullscreen==='function'){
+    try{document.exitFullscreen();}catch(_){}
+  }
+  return true;
+};
+// 切り替えボタン本体。向きの見張りをこの中だけで持つのは、
+// 画面全体の状態にすると回すたびにアプリ全部が描き直されるため
+// (プレイ中の描き直しはカクつきに直結する)。
+const RhythmOrientationButton=({className=''})=>{
+  const [landscape,setLandscape]=useState(()=>orientationIsLandscape());
+  const [note,setNote]=useState('');
+  useEffect(()=>{
+    if(typeof window==='undefined'||typeof window.matchMedia!=='function')return undefined;
+    const mql=window.matchMedia('(orientation: landscape)');
+    const onChange=()=>setLandscape(orientationIsLandscape());
+    onChange();
+    if(mql.addEventListener)mql.addEventListener('change',onChange);
+    else if(mql.addListener)mql.addListener(onChange);
+    return ()=>{
+      if(mql.removeEventListener)mql.removeEventListener('change',onChange);
+      else if(mql.removeListener)mql.removeListener(onChange);
+    };
+  },[]);
+  useEffect(()=>{
+    if(!note)return undefined;
+    const timer=setTimeout(()=>setNote(''),8000);
+    return ()=>clearTimeout(timer);
+  },[note]);
+  const target=landscape?'portrait':'landscape';
+  const label=landscape?'縦画面にする':'横画面にする';
+  const toggle=async()=>{
+    const ok=await applyScreenOrientation(target);
+    setNote(ok?'':`この端末では画面を回せませんでした。端末の「画面の自動回転」をオンにして、本体を${landscape?'縦':'横'}にしてください。`);
+  };
+  return <div className={`relative shrink-0 ${className}`}>
+    <button data-rhythm-orientation-toggle data-orientation={landscape?'landscape':'portrait'}
+      aria-label={label} title={label} onClick={toggle}
+      className="flex min-h-[44px] min-w-[40px] flex-col items-center justify-center gap-0.5 rounded-xl border border-emerald-400/50 bg-emerald-950/40 leading-none text-emerald-100">
+      <span aria-hidden="true" className="text-base leading-none">🔄</span>
+      <span className="text-[7px] font-black leading-none">{landscape?'縦':'横'}</span>
+    </button>
+    {note!==''&&<p data-rhythm-orientation-note onClick={()=>setNote('')}
+      className="absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-amber-300/50 bg-slate-900/95 px-2 py-1.5 text-[9px] font-bold leading-relaxed text-amber-100 shadow-lg">{note}</p>}
+  </div>;
+};
 // ============================================================================
 // タップのタイミング合わせ
 // ============================================================================
@@ -12644,6 +12759,14 @@ function MonsterHeroGame() {
     });
     return()=>cancelAnimationFrame(id);
   },[gameState,battleMode]);
+  // モンビーの「🔄」で横に固定したまま外へ出たら、向きの固定と全画面を戻す。
+  // 戻さないと、HOMEやバトルまで横＋全画面のままになって画面が崩れる。
+  // モンビーの中(RHYTHM_*)を移動しているあいだは戻さない。
+  // 曲えらび→演奏の移動で縦へ戻ってしまっては、横で遊べないため。
+  useEffect(()=>{
+    if(String(gameState||'').startsWith('RHYTHM_'))return;
+    releaseScreenOrientation();
+  },[gameState]);
   // 極限の難易度画面も通常チャレンジと同じ横カルーセルで、開くたびEXTREMEから見せる。
   useEffect(()=>{
     if(gameState!=='EXTREME_DIFFICULTY_SELECT')return;
@@ -19334,11 +19457,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <main data-rhythm-demo-home className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
             <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
               <button aria-label="戻る" onClick={()=>setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
+              {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
+                  折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
               <div className="min-w-0 flex-1">
                 <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
-                <h2 className="text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 楽曲選択</h2>
+                <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 楽曲選択</h2>
               </div>
               <span data-rhythm-demo-badge className="shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200">体験版</span>
+              {/* 縦⇄横の切り替え。端末の回転ロックを解除しに行かなくても横画面で遊べるようにする
+                  (2026-09-05・ユーザー指示「縦なら横に横なら縦に変わるボタン」) */}
+              <RhythmOrientationButton/>
               <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
                 onClick={()=>setGameState('RHYTHM_DEMO_HELP')}
                 className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`}>📖</button>
