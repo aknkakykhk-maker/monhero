@@ -139,7 +139,7 @@ if (from >= 0 && to > from) {
   check('最後は「とじる」で終わる', /とじる/.test(text(lastHtml)));
   check('進み具合が分かる', /1 \/ /.test(text(first)));
   check('縦画面で見切れない作りになっている',
-    /max-h-\[calc\(100dvh-env\(safe-area-inset-top\)\)\]/.test(first)
+    /max-h-\[calc\(var\(--mh-vh\)-env\(safe-area-inset-top\)\)\]/.test(first)
       && /overflow-y-auto/.test(first)
       && /env\(safe-area-inset-bottom\)/.test(first));
   // 何度でも同じ内容で再生できる(状態が壊れて変な表示にならない)
@@ -156,7 +156,10 @@ check('回想でも同じイベントBGM設定を使う',
 check('対応表に回想イベントのidが載っている',
   /kiki_intro:'kikiIntro'/.test(source.replace(/\s+/g, '')) || /kiki_intro:\s*'kikiIntro'/.test(source));
 check('回想を閉じれば元の画面のBGMへ戻す(依存に入っている)',
-  /bgmArrangement, runMode, eventBgmScene\]/.test(source));
+  // 依存配列の**並びの末尾**を見ていたため、あとから項目が増えると落ちていた
+  // (実際 mainHero?.id などが足されて落ちた)。見たいのは「入っているか」だけ。
+  /\}, \[[^\]]*\beventBgmScene\b[^\]]*\]\);/.test(source)
+  && /\}, \[[^\]]*\bbgmArrangement\b[^\]]*\]\);/.test(source));
 
 // --- 更新履歴とヘルプ ---
 check('更新履歴に書いてある', /イベント回想/.test(changelogSrc));
