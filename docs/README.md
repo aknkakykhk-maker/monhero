@@ -25,6 +25,19 @@ Claude 固有の会話・公開フローは [`CLAUDE.md`](../CLAUDE.md) が正�
 
 コードと食い違ったときは `monster-hero/src/game-system.jsx` と `monster-hero/data/` が正本。
 
+## `refactor/` — 技術監査と基盤改善計画(2026-09-05〜)
+
+| 文書 | 中身 |
+| --- | --- |
+| [`refactor/README.md`](refactor/README.md) | 読む順番と進捗 |
+| [`refactor/CURRENT_ARCHITECTURE.md`](refactor/CURRENT_ARCHITECTURE.md) | いまの構成の地図(行番号つき)と actual / spec の差 |
+| [`refactor/TECH_DEBT_AUDIT.md`](refactor/TECH_DEBT_AUDIT.md) | 技術的負債 30 件と優先度 |
+| [`refactor/REGRESSION_RISK_MAP.md`](refactor/REGRESSION_RISK_MAP.md) | 触ると危険な領域と、拾う検査・検査の穴 |
+| [`refactor/TARGET_ARCHITECTURE.md`](refactor/TARGET_ARCHITECTURE.md) | 目指す構造 |
+| [`refactor/REFACTOR_MASTER_PLAN.md`](refactor/REFACTOR_MASTER_PLAN.md) | STEP 0〜10 の明細と着手順 |
+
+構造を変える PR を作る前に `REGRESSION_RISK_MAP.md` を読む。
+
 ## `sql/` — Supabase へ流す SQL と手順
 
 読み取り専用の監査 → 末尾 `rollback;` の予行演習 → 末尾 `commit;` の実適用 →
@@ -63,6 +76,7 @@ Claude 固有の会話・公開フローは [`CLAUDE.md`](../CLAUDE.md) が正�
 ## 置き場所の決め方
 
 - 今の仕様の説明 → `spec/`
+- 構造の現状・負債・改善計画 → `refactor/`
 - 本番DBを触る SQL と手順 → `sql/<対象>/`
 - 「あのときなぜそうしたか」の記録 → `history/`
 - 役目を終えた単発作業 → `archive/`（再実行しない旨を README に書く）
