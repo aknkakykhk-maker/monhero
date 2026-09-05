@@ -118,7 +118,7 @@ check('ももすけの発言がいちばん多い（主役の回）',
   said('momosuke').length > said('mua').length && said('momosuke').length > said('kiki').length);
 check('「はじめまして」にしていない（3人は元々の知り合い）', !/はじめまして/.test(allText));
 // 呼び方の固定
-check('ももはみゅあを「みゅあ姉」と呼ぶ', /みゅあ姉/.test(said('momosuke')));
+check('ももはみゅあを「みゅあねぇ」と呼ぶ', /みゅあねぇ/.test(said('momosuke')));
 check('ももはききを「ききちゃん」と呼ぶ', /ききちゃん/.test(said('momosuke')));
 check('ききはももを「ももさん」と呼ぶ', /ももさん/.test(said('kiki')));
 check('みゅあはももを「もも」と呼ぶ（「ももさん」ではない）',

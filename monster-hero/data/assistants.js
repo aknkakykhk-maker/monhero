@@ -3022,7 +3022,7 @@ const ASSISTANT_KIKI_INTRO_CALLS = { mua: 'ひめちん', kiki: 'みゅあちん
 // 「はじめまして」を言わせないこと。久しぶりに会った空気にする。
 //
 // 【呼び方は固定】★重要
-//   もも → みゅあ … 「みゅあ姉」
+//   もも → みゅあ … 「みゅあねぇ」
 //   もも → きき   … 「ききちゃん」
 //   きき → もも   … 「ももさん」
 //   みゅあ → もも … 「もも」
@@ -3045,7 +3045,7 @@ const ASSISTANT_MOMOSUKE_INTRO = [
   { who:'mua',      e:'surprise', t:'え、もも！？' },
   { who:'kiki',     e:'surprise', t:'ももさん！？' },
   // STEP3: 3人は元々の知り合い
-  { who:'momosuke', e:'happy',    t:'ん？ あ、みゅあ姉。ききちゃんもいるじゃん♪' },
+  { who:'momosuke', e:'happy',    t:'ん？ あ、みゅあねぇ。ききちゃんもいるじゃん♪' },
   { who:'momosuke', e:'wink',     t:'ひさしぶり〜。ふたりとも元気してた？' },
   // STEP4
   { who:'mua',      e:'troubled', t:'いや、なんでここにいるの？' },
@@ -3057,10 +3057,10 @@ const ASSISTANT_MOMOSUKE_INTRO = [
   { who:'momosuke', e:'wink',     t:'モンビーって呼んでる。かわいいでしょ♡' },
   // STEP6: みゅあは苦手
   { who:'mua',      e:'troubled', t:'……これ、押すところ多くない？' },
-  { who:'momosuke', e:'wink',     t:'え〜？ みゅあ姉、まさかできないの〜？♡' },
+  { who:'momosuke', e:'wink',     t:'え〜？ みゅあねぇ、まさかできないの〜？♡' },
   { who:'mua',      e:'angry',    t:'できるし！' },
   { who:'mua',      e:'crying',   t:'……あれ？ あれっ！？ ちょ、待って、速い速い速い！' },
-  { who:'momosuke', e:'excited',  t:'あははっ、みゅあ姉ざ〜こ♡ ざ〜こ♪' },
+  { who:'momosuke', e:'excited',  t:'あははっ、みゅあねぇざ〜こ♡ ざ〜こ♪' },
   { who:'mua',      e:'angry',    t:'うるさ〜い！ もう一回！ もう一回やらせて！' },
   // STEP7: ききは普通に上手い
   { who:'momosuke', e:'wink',     t:'じゃあ次。ききちゃんは……ちゃんとついてこれるかな〜♡' },
@@ -3089,7 +3089,7 @@ const ASSISTANT_MOMOSUKE_INTRO = [
   { who:'mua',      e:'wink',     t:'案内してもらう子は、プロフィールからいつでも選べるからね！' },
 ];
 // この会話の中だけで使う、3人がお互いを呼ぶ名前。画面の見出しにも使う
-const ASSISTANT_MOMOSUKE_INTRO_CALLS = { mua: 'もも', kiki: 'ももさん', momosuke: 'みゅあ姉／ききちゃん' };
+const ASSISTANT_MOMOSUKE_INTRO_CALLS = { mua: 'もも', kiki: 'ももさん', momosuke: 'みゅあねぇ／ききちゃん' };
 
 // ---------- イベント回想 ----------
 // 一度見た会話イベントを、プロフィール画面から何度でも見返せるようにするための一覧。
