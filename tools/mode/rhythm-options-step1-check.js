@@ -50,7 +50,9 @@ ok('試聴はボタンの直接イベントから既存音声経路を使う',ga
 ok('音ゲーBGM音量だけを専用gainへ反映(メインのbgmGainは経由しない)',
   game.includes('const raw=Math.max(0,Math.min(1,Number(rhythmVolumePct)/100))*safeTrackGain(track);')
   &&game.includes('rhythmGain.connect(ctx.destination);')
-  &&game.includes('Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume)'));
+  // 2026-09-05: 曲は「画面が組み上がってから」鳴らすので autoStart:false を渡している。
+  // 音量が専用gainへ渡るところは変わっていない
+  &&game.includes('Audio_.startRhythmTrack(song.bgmTrackId,settings.bgmVolume,{autoStart:false})'));
 
 const speedBlock=game.match(/const RHYTHM_NOTE_TRAVEL_BASE_MS=2150;[\s\S]*?const rhythmTravelMsForSpeed=value=>\{[\s\S]*?\n\};/);
 ok('速度変換を独立した描画helperに集約',!!speedBlock&&game.includes('travelMs=rhythmTravelMsForSpeed(settings.noteSpeed)'));
