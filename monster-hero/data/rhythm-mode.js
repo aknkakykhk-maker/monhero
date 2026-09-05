@@ -8540,12 +8540,13 @@ const installRhythmPerspectiveNoteVisuals=()=>{
   if(document.documentElement.dataset.rhythmPerspectiveNotes==='ready')return;
   document.documentElement.dataset.rhythmPerspectiveNotes='ready';
 
-  let area=null,laidOutWidth=0,laidOutHeight=0;
+  let area=null,laidOutWidth=0,laidOutHeight=0,sizeWatcher=null;
   const layoutFor=next=>{
     area=next;
     const rect=next?.getBoundingClientRect?.();
     laidOutWidth=rect?.width||0;laidOutHeight=rect?.height||0;
     rhythmLayoutPlayArea(next);
+    watchSize(next);
   };
   const scan=()=>{
     const next=document.querySelector('[data-rhythm-play-area]');
@@ -8566,6 +8567,27 @@ const installRhythmPerspectiveNoteVisuals=()=>{
     if(!(rect.width>0&&rect.height>0))return;
     if(next===area&&rect.width===laidOutWidth&&rect.height===laidOutHeight)return;
     layoutFor(next);
+  };
+  // プレイエリア「そのもの」の大きさが変わったときも測り直す。
+  // window の resize は起きないのに箱だけが変わる場面が実際にある(2026-09-05・実機の指摘
+  // 「初回演奏開始時の表示バグが直ってない」)。
+  //   ・遅れて届いたCDNのCSS(Tailwind)がやっと効いた
+  //   ・セーフエリア(ノッチ)や端末のUIの高さが確定した
+  //   ・上下のHUD・絵の読み込みが終わって箱の高さが縮んだ
+  // 以前はこれを取りこぼしていたので、**その回の演奏のあいだずっと**
+  // 組み上がる前の大きさで計算した位置が残った。サイドのマスモンは
+  // px で置くため、実測で 390px の箱に対して top=953px、つまり画面の外へ出ていた。
+  // リスタートで直っていたのは、そのときプレイエリアの要素ごと作り直されて
+  // MutationObserver 側の scan() が改めて測っていたからにすぎない。
+  //
+  // 監視するのはプレイエリア1つだけで、書き換えるのはその**中身**の style。
+  // 観測している箱自身は触らないので自己ループにならず、
+  // relayout 側も「同じ要素・同じ大きさなら何もしない」で二重に止めている。
+  const watchSize=next=>{
+    if(typeof ResizeObserver==='undefined')return;
+    if(!sizeWatcher)sizeWatcher=new ResizeObserver(()=>relayout());
+    sizeWatcher.disconnect();
+    if(next)sizeWatcher.observe(next);
   };
   const observe=()=>{
     scan();
