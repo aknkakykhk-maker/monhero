@@ -7381,6 +7381,17 @@ const RHYTHM_SONGS = Object.freeze(RHYTHM_SONG_ENTRIES.map(song=>Object.freeze({
 // 先行公開する「音ゲー体験版」で遊べる範囲。ここに書いた曲・難易度だけを体験版の画面へ出す。
 // デバッグ画面の曲一覧(RHYTHM_SONGS)とは役割を分ける。デバッグ用の曲を体験版へ出さないため。
 // 2026-09-05、ユーザー指示で先行公開の5曲・5難易度になり、同日「風がそよぐ場所」を足して6曲になった。
+// 曲の絵(ジャケット)。曲ごとの絵ができるまでは、この1枚を全曲の既定として出す
+// (2026-09-05・ユーザーから絵をもらった。それまでは曲idから決まる色のタイルに頭文字だった)。
+// 曲のデータへ artwork（images/song-art/ 以下のパス）を書けば、その曲だけ差し替わる。
+// 実体は monster-hero/images/ 以下に置き、ここにはパスだけを書く(base64で埋め戻さない)。
+// キャッシュキー(?v=…)は tools/build.js が付け直す。
+const RHYTHM_SONG_ART_DEFAULT='images/song-art/monhero-package.jpg?v=25522a7fcde0';
+const rhythmSongArtSrc=song=>{
+  const own=song&&typeof song.artwork==='string'?song.artwork.trim():'';
+  return own||RHYTHM_SONG_ART_DEFAULT;
+};
+
 const RHYTHM_DEMO_SONG_IDS=Object.freeze([
   'mf_ichika_mix',
   'monster_hero',
