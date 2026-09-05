@@ -97,7 +97,8 @@ if(REFERENCE&&EXPONENT&&RANGE){
   // 曲id → 解析JSONの名前。ランタイムの曲idから引く。
   const AUDIO={mf_ichika_mix:'atsu-cup-theme',monster_hero:'monster-hero-theme',
     six_eternel_remix:'six-eternel-remix-beat',stay_with_me:'pandora-boss',kiki_issen:'eiki-boss',
-    kaze_ga_soyogu:'kaze-ga-soyogu',close_to_your_heart:'close-to-your-heart'};
+    kaze_ga_soyogu:'kaze-ga-soyogu',close_to_your_heart:'close-to-your-heart',
+    eiki_boss_remix:'eiki-boss-remix',pandora_boss_remix:'pandora-boss-remix'};
   const factors=[];
   for(const song of songs){
     const file=path.join(ROOT,`tools/mode/authoring/${AUDIO[song.id]}-v3-audio.json`);

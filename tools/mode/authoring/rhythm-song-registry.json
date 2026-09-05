@@ -132,6 +132,30 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "eiki_boss_remix": {
+   "audio": "monster-hero/audio/bgm-eiki-boss-remix.mp3",
+   "audioSha256": "83093750c9ec8fb66195d6bb1ed290bdf72ba3ce5b289faa032f9b211fd9fde6",
+   "durationMs": 218014,
+   "analyzedTiming": {
+    "bpm": 154.164,
+    "beatZeroMs": 992.5,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "pandora_boss_remix": {
+   "audio": "monster-hero/audio/bgm-pandora-boss-remix.mp3",
+   "audioSha256": "0faa4d713fdccd01e4a3924e95600bcf4fd011f4973dcbff7858a3694e87a825",
+   "durationMs": 199414,
+   "analyzedTiming": {
+    "bpm": 161.718,
+    "beatZeroMs": 452.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }
