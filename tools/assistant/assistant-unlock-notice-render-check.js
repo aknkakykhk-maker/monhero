@@ -30,15 +30,21 @@ const check = (name, ok, detail = '') => {
 };
 
 // --- 画面のJSXを切り出す ---
-const START = '      {/* 解放の案内。';
-const END = '      {/* イベント回想の再生。';
+// 解放の案内は assistantUnlockNoticeNode(scene) という関数にまとまっていて、
+// 画面側はそれを呼ぶだけになっている。ここではその関数の中身をそのまま取り出して描く
+// (画面側の呼び出し行だけを取り出しても、中身が無いので描けない)。
+const START = '  const assistantUnlockNoticeNode = (scene) => {';
+const END = '\n  };\n';
 const from = source.indexOf(START);
-const to = source.indexOf(END, from);
+const to = from < 0 ? -1 : source.indexOf(END, from);
 if (from < 0 || to < 0) {
-  console.log('NG: 解放の案内のJSXを切り出せませんでした');
+  console.log('NG: 解放の案内(assistantUnlockNoticeNode)を切り出せませんでした');
   process.exit(1);
 }
-const jsx = source.slice(from, to);
+const body = source.slice(from + START.length, to);
+// 画面側が実際にこの関数を呼んでいることも確かめる(切り出せても、使われていなければ画面には出ない)
+const calledFromScreen = source.includes("{assistantUnlockNoticeNode(gameState==='PROFILE'?'profile':gameState==='HOME'?'home':null)}");
+const jsx = `{((scene)=>{${body}\n})(P.scene)}`;
 
 // --- 助手データを読む ---
 const ctx = {};
@@ -57,6 +63,7 @@ const AssistantFace = ({ who, size, expression }) => React.createElement('img', 
 
 const transformed = babel.transformSync(
   'const Screen = (P) => { const {bootPhase,gameState,onboarded,onboardingPreview,tutorialStep,kikiIntroStep,'
+  + 'momosukeIntroStep,updateGuideQueue,dailyMasuAdvice,'
   + 'eventReplay,assistantUnlockNoticeOf,assistantUnlockPage,setAssistantUnlockPage,finishAssistantUnlockNotice,'
   + 'activeAssistant,assistantSpeakText,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId,'
   + 'AssistantFace}=P; return (<>\n' + jsx + '\n</>); };\nmodule.exports = { Screen };',
@@ -75,6 +82,7 @@ const render = (over = {}) => {
   const state = Object.assign({
     gameState: 'PROFILE', bondLevel: UNLOCK, seen: [], assistantId: 'mua', page: 0,
     onboarded: true, onboardingPreview: false, tutorialStep: null, kikiIntroStep: null, eventReplay: null,
+    momosukeIntroStep: null, updateGuideQueue: [], dailyMasuAdvice: null,
   }, over);
   const closed = [];
   const paged = [];
@@ -82,6 +90,10 @@ const render = (over = {}) => {
     bootPhase: 'GAME', gameState: state.gameState, onboarded: state.onboarded,
     onboardingPreview: state.onboardingPreview, tutorialStep: state.tutorialStep,
     kikiIntroStep: state.kikiIntroStep, eventReplay: state.eventReplay,
+    momosukeIntroStep: state.momosukeIntroStep,
+    updateGuideQueue: state.updateGuideQueue, dailyMasuAdvice: state.dailyMasuAdvice,
+    // 画面側と同じ導出。ここを実装と合わせておかないと、どの場面の案内かが決まらない
+    scene: state.gameState === 'PROFILE' ? 'profile' : state.gameState === 'HOME' ? 'home' : null,
     assistantUnlockNoticeOf: (scene) => A.assistantUnlockNoticeFor(scene, {
       bondLevel: state.bondLevel, assistantId: state.assistantId,
       callStyles: A.assistantCallStylesOf(state.assistantId),
@@ -166,8 +178,16 @@ check('「閉じる」を押すと既読として記録する', (() => {
   buttons[0]();
   return r.closed.length === 1 && r.closed[0] === 'unlock_call_style_v1';
 })());
+// 案内の本文は data/assistants.js が正本。画面側へ直接書くと、そこだけ助手ごとの
+// 言い分けが効かなくなるので、日本語が残っていないかを見る。
+// ボタンのラベルと、コード中のコメント(説明のための日本語)は対象から外す
 check('画面へ直接書いた本文が混ざっていない',
-  !/[ぁ-んァ-ヶ一-龠]/.test(jsx.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').replace(/>次へ<|>閉じる</g, '><')));
+  !/[ぁ-んァ-ヶ一-龠]/.test(jsx
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+    .replace(/^[ \t]*\/\/.*$/gm, '')
+    .replace(/>次へ<|>閉じる</g, '><')
+    .replace(/'見に行く'/g, "''")));
+check('画面側がこの案内を呼び出している', calledFromScreen);
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

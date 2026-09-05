@@ -39,10 +39,16 @@ const gifts = [
   { id: 'b', rewards: reward, expiresAt: past, claimedAt: null },          // 期限切れ
   { id: 'c', rewards: reward, expiresAt: future, claimedAt: future },      // 受取済み
   { id: 'd', rewards: [{ type: 'unknown_reward' }], expiresAt: future, claimedAt: null }, // 無効
-  { id: 'e', rewards: reward, expiresAt: null, claimedAt: null },          // 期限情報なし
+  { id: 'e', rewards: reward, expiresAt: null, claimedAt: null },          // 期限なし(ずっと受け取れる)
+  { id: 'f', rewards: reward, expiresAt: 'こわれた値', claimedAt: null },   // 期限が読めない
 ];
-check('期限内・未受取・報酬有効だけを数える', m.giftClaimableCount(gifts) === 1, `${m.giftClaimableCount(gifts)}件`);
+// 受け取れるのは a(期限内) と e(期限なし)の2件。
+// 期限を書かないギフトは「期限なし」として受け取れる(新規プレイヤーキャンペーンなど)。
+// 値が入っていて読めないものは、これまでどおり期限切れのままにする
+check('期限内・未受取・報酬有効だけを数える', m.giftClaimableCount(gifts) === 2, `${m.giftClaimableCount(gifts)}件`);
 check('期限切れは受取可能に含めない', m.giftIsClaimable(gifts[1]) === false);
+check('期限なしのギフトは受け取れる', m.giftIsClaimable(gifts[4]) === true);
+check('期限が読めないギフトは受け取れない', m.giftIsClaimable(gifts[5]) === false);
 check('受取済みは受取可能に含めない', m.giftIsClaimable(gifts[2]) === false);
 check('報酬が無効なギフトは含めない', m.giftIsClaimable(gifts[3]) === false);
 

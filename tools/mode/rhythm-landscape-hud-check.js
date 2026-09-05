@@ -89,6 +89,7 @@ const headerHtml=headerJsxLandscape
   .replace(/className=/g,'class=')
   .replace(/\{difficulty\.id\}/g,SAMPLE.difficulty)
   .replace(/\{song\.displayName\}/g,SAMPLE.song)
+  .replace(/\{rhythmSongFullName\(song\)\}/g,SAMPLE.song)
   .replace(/\{view\.score\.toLocaleString\(\)\}/g,SAMPLE.score)
   .replace(/BEST \{Number\(bestRecord\?\.bestScore\|\|0\)\.toLocaleString\(\)\}/g,SAMPLE.best)
   .replace(/\{view\.combo\}/g,SAMPLE.combo)

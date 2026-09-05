@@ -13,7 +13,12 @@ const notices = context.notices;
 const officialNotices = notices.filter(n => n.enabled === true && n.debugOnly !== true);
 const annotatedEntries = changelog.filter(entry => entry.assistantNotice);
 
-assert(changelog.every(entry => ['update', 'issue'].includes(entry.type)), '更新履歴の種別は update / issue だけを使用する必要があります');
+// 更新履歴の種別。画面のタブは「更新情報」「不具合情報」の2つで、
+// issue 以外はすべて更新情報へ出る(game-system.jsx の changelogEntriesOfTab)。
+// ここに無い種別を書くと、画面での扱いが決まっていないまま増えてしまうので止める
+const CHANGELOG_ENTRY_TYPES = ['update', 'issue', 'fix', 'feature', 'market', 'mode'];
+const unknownTypes = [...new Set(changelog.map(entry => entry.type).filter(type => !CHANGELOG_ENTRY_TYPES.includes(type)))];
+assert(unknownTypes.length === 0, `更新履歴に知らない種別があります: ${unknownTypes.join(', ')}`);
 assert(annotatedEntries.length, 'assistantNotice 付きの更新履歴が必要です');
 assert.strictEqual(officialNotices.length, annotatedEntries.length, '通常通知は changelog のメタデータからだけ生成する必要があります');
 assert.strictEqual(new Set(notices.map(n => n.id)).size, notices.length, '通知IDは一意である必要があります');

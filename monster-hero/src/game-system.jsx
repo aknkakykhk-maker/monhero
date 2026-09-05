@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 10:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2632,7 +2632,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', kikiIntro:'original_event_01' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -2656,7 +2656,7 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDull
 // 二重適用は専用フラグ(BGM_PRO_DEFAULT_MIGRATION_KEY)で防ぐ。
 // 会話イベントごとのBGM設定名。イベントを足すときはここへ1行足せば、
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
-const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro' });
+const EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro', momosuke_intro:'momosukeIntro' });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({ proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss' });
 // 既定曲を入れ替えたときの移行のしかたは毎回同じ(「以前の既定のままの枠だけ新しい既定へ」)なので、
@@ -4797,7 +4797,10 @@ const DIST_APTITUDE_COLOR = { S: "text-yellow-300 bg-yellow-950/60 border-yellow
 // そこで data 側には releaseFlag という名札だけを書き、出す・出さないの判断はここでまとめて行う。
 // 公開するときは SPECIES_CHALLENGE_PUBLIC_RELEASE を true にするだけで、
 // ヘルプ・更新履歴・助手の告知が同時に出る(片方だけ先に出てしまうことがない)
-const RHYTHM_MODE_PUBLIC_RELEASE = false;
+// モンヒロビートは2026-09-05のプレオープンで公開した(ユーザー指示)。
+// これを true にしたことで、HOMEの「準備中」がプレオープンの導線に変わり、
+// ヘルプの項目・更新履歴・助手の告知も同時に出るようになっている
+const RHYTHM_MODE_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE };
 const releasedForPlayers = (item) => !item || !item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true;
 const CHANGELOG_TYPES = ['update', 'issue'];
@@ -4815,7 +4818,12 @@ const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).fi
 const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : [])
   .filter(entry => !releasedForPlayers(entry) && typeof entry?.assistantNotice?.id === 'string')
   .map(entry => entry.assistantNotice.id.trim()));
-const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_ENTRIES.filter(entry=>entry.type===type).map(entry=>entry.id)]));
+// どのタブへ出すかを決める。「不具合情報」は issue、それ以外はすべて「更新情報」。
+// 以前は type がタブ名と完全一致するものだけを出していたため、fix / feature / market と
+// 書いた項目がどちらのタブにも出ず、更新履歴に載せたつもりで載っていなかった。
+// 種別を新しく足しても消えないよう、issue 以外は必ず更新情報へ拾う
+const changelogEntriesOfTab = (tab) => CHANGELOG_ENTRIES.filter(entry => tab === 'issue' ? entry.type === 'issue' : entry.type !== 'issue');
+const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogEntriesOfTab(type).map(entry => entry.id)]));
 // 一覧の並べかえに使えるキー。画面の選択肢(MONSTER_SORT_OPTIONS)と必ず同じ顔ぶれにする。
 // 片方にだけ足すと、画面では選べるのに保存だけ弾かれて、開き直すと元に戻る
 // (実際に「総合力」がここへ足されておらず、選んでも次に開くと血統順へ戻っていた)。
@@ -4880,6 +4888,12 @@ const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
 // 既にオンボーディングを終えている(mh_onboarded)ことと合わせて判定する。
 // 新しく始めた人は助手選択を通った時点で見たことにして、あとから誤って流れないようにする。
 const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
+// ももすけ登場の会話。ききのときと同じ考え方で、
+//   ・すでに遊んでいた人 … アップデート後の初回HOMEで1回だけ流す。見終わるとももすけを選べるようになる
+//   ・新しく始めた人     … 最初の助手選択でももすけを選べるので、この会話は流さない(その場で見たことにする)
+// 本編を待たずにプロフィールの回想から見た場合も、最後まで見たらこのキーを立てる
+// (＝解放され、あとから本編で重ねて流れない)。
+const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');
@@ -5055,13 +5069,65 @@ const grantCompensationGifts = (gifts, now=Date.now()) => {
   const added = missing.map(def => ({ ...def, source:'compensation', rewards:def.rewards.map(r=>({...r})), createdAt, expiresAt, claimedAt:null }));
   return { granted:true, gifts:[...added, ...list] };
 };
+// ---------- モンヒロビート プレオープン記念 新規プレイヤーキャンペーン ----------
+// 今回のアップデート以降にはじめてMonster Heroを始めた人へ、1回だけ配る。
+// すでに遊んでいた人には配らない(これが最重要。ここを間違えると全員へ配ってしまう)。
+//
+// 【新規かどうかの見分け方】
+// 「キャンペーンの保存キーを持っていない」だけで決めてはいけない。新しく始めた人も
+// 既存の人も、アップデート直後はどちらも持っていないため。既存の判定(mh_onboarded)で
+// 「はじめての設定をこれから通る人」だけを対象にする。実際の発行は、その設定を
+// 終えた瞬間(finishOnboarding)にだけ行う。
+//
+// 【二重に配らないための決まり】
+// 配布済みフラグ(CAMPAIGN_KEY)だけに頼らず、ギフト側に同じidが無いかも必ず見る。
+// ギフトを足したあとフラグを保存する前に閉じられても、次に開いたときidで気づける。
+// idは固定。ランダムに作らないこと(作ると毎回「まだ無い」と判断してしまう)。
+//
+// 【受取期限】
+// ユーザーからの指定が無いので付けない(expiresAtを書かない＝期限なし)。
+const NEW_PLAYER_CAMPAIGN_ENABLED = true;   // 後からOFFにできるようにしておく
+const NEW_PLAYER_CAMPAIGN_KEY = 'mh_monhiro_beat_preopen_new_player_campaign_v1';
+const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
+  id: 'monhiro_beat_preopen_new_player_v1',
+  title: 'モンヒロビート プレオープン記念',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートのプレオープンを記念して、はじめた方へお贈りします。',
+  rewards: [
+    { type:'diamond', amount:100000 },
+    { type:'rainbowPsyche', amount:100 },
+  ],
+});
+// ギフト一覧へ1件足す。すでに同じidがあれば何もしない(何度呼んでも増えない)
+const grantNewPlayerCampaignGift = (gifts, now=Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (!NEW_PLAYER_CAMPAIGN_ENABLED) return { granted:false, gifts:list };
+  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id)) return { granted:false, gifts:list };
+  const gift = {
+    ...NEW_PLAYER_CAMPAIGN_GIFT,
+    source: 'campaign',
+    rewards: NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r=>({...r})),
+    createdAt: new Date(now).toISOString(),
+    claimedAt: null,
+  };
+  return { granted:true, gifts:[gift, ...list] };
+};
+
 const normalizeGiftRewards = (gift) => {
   if (!gift || !Array.isArray(gift.rewards) || gift.rewards.length === 0) return null;
   const supported = Object.keys(GIFT_REWARD_LABELS);
   const rewards = gift.rewards.map(r=>({ type:r?.type, amount:Math.floor(Number(r?.amount)) }));
   return rewards.every(r=>supported.includes(r.type) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
 };
-const giftIsExpired = (gift, now=Date.now()) => !gift?.expiresAt || !Number.isFinite(Date.parse(gift.expiresAt)) || Date.parse(gift.expiresAt) <= Number(now);
+// 受取期限。expiresAt を書いていないギフトは「期限なし(ずっと受け取れる)」として扱う。
+// ログインボーナス・お詫び・ミッションの3つは必ず30日の期限を入れているので、
+// ここを通る既存のギフトの扱いは何も変わらない。
+// 値が入っていて読めない(壊れている)ときは、これまでどおり期限切れのままにする
+const giftIsExpired = (gift, now=Date.now()) => {
+  if (!gift) return true;
+  if (gift.expiresAt == null) return false;
+  const at = Date.parse(gift.expiresAt);
+  return !Number.isFinite(at) || at <= Number(now);
+};
 // 「今すぐ受け取れるギフト」。未受取・期限内・報酬が有効、の3つを満たすもの。
 // HOMEの通知バッジ・ギフト画面のバッジ・「すべて受け取る」が同じ判定を使う
 const giftIsClaimable = (gift, now=Date.now()) => !!gift && !gift.claimedAt && !giftIsExpired(gift, now) && !!normalizeGiftRewards(gift);
@@ -5081,6 +5147,7 @@ const giftTitleDisplay = (gift) => {
   const fallback = '名称なしギフト';
   const title = typeof gift?.title === 'string' && gift.title.trim() ? gift.title.trim() : fallback;
   if (gift?.source === 'compensation') return { label:'お詫び', title };
+  if (gift?.source === 'campaign') return { label:'キャンペーン', title };
   if (gift?.source !== 'mission') return { label:null, title };
   const missionTitle = title.replace(/^ミッション報酬[「『]?/, '').replace(/[」』]$/, '').trim();
   return { label:'ミッション', title:missionTitle || title };
@@ -6461,6 +6528,13 @@ const localCalendarDate = (now = new Date()) => {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 };
 
+// 画面へ出す曲名。副題(subtitle)まで入れて1つの名前にする。
+// displayName だけを出していたため、曲えらびもプレイ中も副題が落ちていた
+// (「Stay With Me」「綺季一閃」だけが出て ～Locked Fate～ ～花雪に舞う詠姫～ が消えていた)。
+// ヘルプの曲一覧は前から副題まで出していたので、画面とヘルプで名前が食い違っていた
+const rhythmSongFullName = song => (song && song.subtitle)
+  ? `${song.displayName} ${song.subtitle}`
+  : (song ? song.displayName : '');
 const helpDataRows = (id) => {
   const marketItems = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [];
   const skipIds = new Set(Object.values(SKIP_TICKETS));
@@ -6596,7 +6670,7 @@ const helpDataRows = (id) => {
         if (!charts.length) return null;
         const levels = charts.map(chart => Number(chart.level) || 0);
         const length = typeof rhythmSongLengthLabel !== 'undefined' ? rhythmSongLengthLabel(song, charts[0]) : '';
-        const name = song.subtitle ? `${song.displayName} ${song.subtitle}` : song.displayName;
+        const name = rhythmSongFullName(song);
         return [name,
           `Lv.${Math.min(...levels)}〜${Math.max(...levels)} ／ ${charts.length}難易度${length ? ` ／ ${length}` : ''}`];
       }).filter(Boolean);
@@ -8464,6 +8538,14 @@ function PressRepeatButton({ onPress, disabled, className, children, ...props })
 }
 
 const RHYTHM_HOLD_RELEASE_GRACE_MS=100;
+// 押さえている途中で指を入れ替えるための猶予(2026-09-05・ユーザー指示で120ms)。
+// 長いHOLD/SLIDEを別の指へ持ち替えるとき、離してから置き直すまでにどうしても間があく。
+// これまでは離した瞬間にMISSにしていたので、持ち替えがまったくできなかった。
+// 離しても、この時間のあいだは「浮いている」だけとして取っておき、
+// 同じノーツの帯へ指が置かれたら何ごともなかったように続きへ戻す。
+// 長くしすぎると「一瞬離しても平気」になって押さえ続ける意味が薄れるので、
+// 指を入れ替えるのに要るぶんだけにしてある
+const RHYTHM_HOLD_HANDOVER_GRACE_MS=120;
 // 最後まで取れたHOLD / SLIDE / FLICKを、消える前に光らせておく時間(CSSのアニメーションと同じ長さ)
 const RHYTHM_CLEAR_FLASH_MS=260;
 const RHYTHM_JUDGMENT_DISPLAY_MS=450;
@@ -8892,7 +8974,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
                   2行を超える曲は省略する。行そのものにも min-h を置いて下限をそろえる。 */}
               <span className="min-w-0 flex-1">
                 <b data-rhythm-song-row-title className="block text-[13px] font-black leading-tight text-white"
-                  style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:1.25,height:'2.5em'}}>{entry.displayName}</b>
+                  style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:1.25,height:'2.5em'}}>{rhythmSongFullName(entry)}</b>
                 <span className={`mt-1 flex items-center gap-1${spot('achievement')}`}>
                   {(difficulties||[]).map(item=>{
                     const playable=rhythmChartPlayable(entry,item.id);
@@ -8925,7 +9007,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
               「長さ」「難易度ボタン」「ノーツ数」まで丸ごと上下に動いていた。 */}
           <div className="min-w-0 flex-1 landscape:mt-2 landscape:text-center">
             <b data-rhythm-song-title className="block text-sm font-black leading-tight text-white"
-              style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:1.25,height:'2.5em'}}>{song.displayName}</b>
+              style={{display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:1.25,height:'2.5em'}}>{rhythmSongFullName(song)}</b>
             <small className="mt-0.5 block text-[10px] font-bold text-slate-400">{rhythmSongLengthLabel(song,chart)}</small>
           </div>
         </div>
@@ -9200,7 +9282,7 @@ useEffect(()=>{
   window.addEventListener('orientationchange',invalidate);
   return ()=>{window.removeEventListener('resize',invalidate);window.removeEventListener('orientationchange',invalidate);};
 },[settings.noteStartPosition,settings.noteSize,view.status]);
-  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.done=true;note._rhythmFinalJudgment=judgment;
+  const applyJudgment=useCallback((note,judgment,deltaMs)=>{const run=runRef.current;if(!run||run.finished||run.paused||note.done)return;if(note.activePointerId!==null){if(note.activePointerId!==-1)run.activePointers.delete(note.activePointerId);note.activePointerId=null;}note.releasedAtMs=null;note.done=true;note._rhythmFinalJudgment=judgment;
 // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
 // TAPは指を置いた時点で音が鳴っているので対象にしない。
 // (実機で「フリックが成功したのか分かりづらい」「取れた手ごたえがほしい」という報告があった)
@@ -9305,7 +9387,14 @@ const score=run.lifeDepleted?run.lockedScore:run.score;setView(v=>({...v,score,c
   },[view.status]);
   const skipCelebrate=()=>{if(celebrateTimerRef.current){clearTimeout(celebrateTimerRef.current);celebrateTimerRef.current=null;}setView(v=>v.status==='celebrate'?{...v,status:'result'}:v);};
   const scheduleTick=useCallback(()=>{stopFrame();const tick=(frameNowMs)=>{RHYTHM_PERF.frame(frameNowMs);RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();const run=runRef.current;if(!run||run.finished||run.paused)return;const perfTickStart=RHYTHM_PERF.enabled?performance.now():0;const songTimeMs=run.audio.songTimeMs(),travel=measureTravel(),visualTime=songTimeMs-settings.judgmentTimingOffsetMs,travelMs=rhythmTravelMsForSpeed(settings.noteSpeed);let perfScanned=0,perfDrawn=0;
-const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);if(!note.done&&note.activePointerId===null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>200)applyJudgment(note,'MISS',songTimeMs-note.timeMs);const el=laneRefs.current[note.index];if(!el)return;
+const visitNote=note=>{if(note.type==='HOLD'&&note.activePointerId!==null&&songTimeMs>=note.endTimeMs+settings.judgmentTimingOffsetMs)applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);
+// 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
+// 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
+if(!note.done&&note.activePointerId===null&&note.releasedAtMs!=null){
+  const holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;
+  if(songTimeMs>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){note.releasedAtMs=null;applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
+  else if(songTimeMs-note.releasedAtMs>=RHYTHM_HOLD_HANDOVER_GRACE_MS){const releasedAt=note.releasedAtMs;note.releasedAtMs=null;applyJudgment(note,'MISS',releasedAt-holdEndMs);}
+}if(!note.done&&note.activePointerId===null&&songTimeMs-(note.timeMs+settings.judgmentTimingOffsetMs)>RHYTHM_INPUT_MATCH_WINDOW_MS)applyJudgment(note,'MISS',songTimeMs-note.timeMs);const el=laneRefs.current[note.index];if(!el)return;
 // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
 // 「もう取れない」ことが見えるようにするための表示だけの扱いで、判定・スコアには関与しない。
 const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note))&&songTimeMs<rhythmReleaseTargetMs(note);
@@ -9399,9 +9488,21 @@ startLockRef.current=false;setView({...initialView(),status:'playing'});schedule
   const resume=async()=>{const run=runRef.current;if(!run||run.finished||!run.paused)return;const resumed=await run.audio.resume();if(!resumed)return;run.paused=false;setView(v=>({...v,status:'playing'}));scheduleTick();};
   const restart=()=>{const startBest=runRef.current?.startBest;if(startBest)beginRun(startBest);};
   const abort=()=>{++generationRef.current;startLockRef.current=false;disposeRun();onExit();};
-  const inputStarts=inputs=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();run.inputFeedbackState=run.inputFeedbackState||new Map();rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs).forEach(({input,target,deltaMs})=>{run.inputFeedbackState.set(input.inputKey,{subLane:Math.max(0,Math.min(9,Math.floor(input.subLaneCoordinate))),empty:!target||target.type==='TAP'});if(!target){RHYTHM_NOTE_SE_RUNTIME.playEmpty();if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){target.activePointerId=input.inputKey;target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);setView(v=>({...v,last:'HOLD',fastSlow:side||''}));scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
+  const inputStarts=inputs=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();run.inputFeedbackState=run.inputFeedbackState||new Map();rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs).forEach(({input,target,deltaMs})=>{run.inputFeedbackState.set(input.inputKey,{subLane:Math.max(0,Math.min(9,Math.floor(input.subLaneCoordinate))),empty:!target||target.type==='TAP'});if(!target){RHYTHM_NOTE_SE_RUNTIME.playEmpty();if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}return;}const judgment=rhythmJudgeTap(deltaMs);if(target.type==='HOLD'){
+      // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
+      // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
+      const handover=target.releasedAtMs!=null;
+      target.activePointerId=input.inputKey;
+      if(handover)target.releasedAtMs=null;
+      else{target.holdJudgment=judgment;target.holdDeltaMs=deltaMs;}
+      run.activePointers.set(input.inputKey,target.index);if(input.captureTarget&&input.pointerId!==undefined){try{input.captureTarget.setPointerCapture(input.pointerId);}catch{}}const side=rhythmFastSlow(deltaMs);setView(v=>({...v,last:'HOLD',fastSlow:side||''}));scheduleJudgmentClear();return;}applyJudgment(target,judgment,deltaMs);});};
   const inputMoves=(inputKey,subLaneCoordinate)=>{const run=runRef.current,state=run?.inputFeedbackState?.get(inputKey);if(!state||!Number.isFinite(subLaneCoordinate))return;const subLane=Math.max(0,Math.min(9,Math.floor(subLaneCoordinate)));if(subLane===state.subLane)return;state.subLane=subLane;if(state.empty)inputStarts([{lane:Math.floor(subLane/2),subLaneCoordinate,inputKey}]);};
-  const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();inputs.forEach(input=>{run.inputFeedbackState?.delete(input.inputKey);const noteIndex=run.activePointers.get(input.inputKey);if(noteIndex===undefined)return;run.activePointers.delete(input.inputKey);const note=run.notes[noteIndex];if(!note||note.done)return;note.activePointerId=null;const holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;if(now<holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS)applyJudgment(note,'MISS',now-holdEndMs);else applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}});};
+  const inputEnds=inputs=>{const run=runRef.current;if(!run||run.finished||run.paused)return;const now=run.audio.songTimeMs();inputs.forEach(input=>{run.inputFeedbackState?.delete(input.inputKey);const noteIndex=run.activePointers.get(input.inputKey);if(noteIndex===undefined)return;run.activePointers.delete(input.inputKey);const note=run.notes[noteIndex];if(!note||note.done)return;note.activePointerId=null;const holdEndMs=note.endTimeMs+settings.judgmentTimingOffsetMs;
+    // 終わり際まで来ていれば、そのまま成立させる
+    if(now>=holdEndMs-RHYTHM_HOLD_RELEASE_GRACE_MS){applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0);}
+    // まだ途中なら、すぐには失敗にしない。指を入れ替えている途中かもしれないので、
+    // 猶予のあいだは「浮いている」ことだけ覚えておく(rAFのvisitNoteが時間切れを見る)
+    else{note.releasedAtMs=now;}if(input.releaseTarget&&input.pointerId!==undefined){try{if(input.releaseTarget.hasPointerCapture?.(input.pointerId))input.releaseTarget.releasePointerCapture(input.pointerId);}catch{}}});};
   // 入力のたびに getBoundingClientRect() を呼ぶと、そのフレームで書き込み待ちだった
   // ノーツの位置をすべて確定させられる(強制レイアウト)。指の数ぶん・touchmoveの数ぶん
   // これが起きるため、タップのたびに一瞬止まって見える原因になる。FLICK/SLIDE側と
@@ -9416,14 +9517,14 @@ startLockRef.current=false;setView({...initialView(),status:'playing'});schedule
   const pointerEnd=e=>{if(e.pointerType==='touch')return;const run=runRef.current;if(run?.activePointerFeedback){run.activePointerFeedback.delete(e.pointerId);setPressedLanes(run.activePointerFeedback.values());}else setPressedLanes([]);inputEnds([{inputKey:rhythmInputKey('pointer',e.pointerId),releaseTarget:e.currentTarget,pointerId:e.pointerId}]);};
   useEffect(()=>{const area=playAreaRef.current;if(!area||view.status==='result'||view.status==='celebrate')return;const syncTouches=e=>{if(e.cancelable)e.preventDefault();const current=runRef.current;if(!current||current.finished||current.paused)return;current.activeTouchInputs=current.activeTouchInputs||new Set();const rect=inputAreaRect(area),live=new Set(),liveSubLanes=[],starts=[];Array.from(e.touches||[]).forEach(touch=>{const inputKey=rhythmInputKey('touch',touch.identifier);live.add(inputKey);const lane=rhythmLaneAtPoint(touch.clientX,touch.clientY,rect),subLaneCoordinate=rhythmSubLaneCoordinateAtPoint(touch.clientX,touch.clientY,rect);if(subLaneCoordinate!==null)liveSubLanes.push(subLaneCoordinate);if(current.activeTouchInputs.has(inputKey)){if(subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate);return;}current.activeTouchInputs.add(inputKey);if(lane!==null&&subLaneCoordinate!==null)starts.push({lane,subLaneCoordinate,inputKey});});setPressedLanes(liveSubLanes);if(starts.length)inputStarts(starts);const ended=[];Array.from(current.activeTouchInputs).forEach(inputKey=>{if(!live.has(inputKey)){current.activeTouchInputs.delete(inputKey);ended.push({inputKey});}});if(ended.length)inputEnds(ended);};RHYTHM_GESTURE_RUNTIME.invalidateAreaRect();area.addEventListener('touchstart',syncTouches,{passive:false});area.addEventListener('touchmove',syncTouches,{passive:false});area.addEventListener('touchend',syncTouches,{passive:false});area.addEventListener('touchcancel',syncTouches,{passive:false});return()=>{area.removeEventListener('touchstart',syncTouches);area.removeEventListener('touchmove',syncTouches);area.removeEventListener('touchend',syncTouches);area.removeEventListener('touchcancel',syncTouches);setPressedLanes([]);};},[view.status]);
   if(view.status==='celebrate'){const celebrateResult=view.result,celebrateTitle=celebrateResult?.allMarvelous?'ALL MARVELOUS!!':celebrateResult?.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!';return <main data-rhythm-celebrate className="flex flex-1 items-center justify-center bg-slate-950 text-white" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} onClick={skipCelebrate}><div className="px-6 text-center"><b data-rhythm-celebrate-slam className="block text-6xl font-black leading-tight">{celebrateTitle}</b><small className="mt-3 block text-sm font-black tracking-[0.3em] text-slate-300">MAX COMBO {view.maxCombo}</small></div></main>;}
-  if(view.status==='result'){const result=view.result,rank=rhythmRankForScore(view.score);return <main data-rhythm-result className="flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><p className="text-center text-xs text-cyan-300">{song.displayName}・{difficulty.id}</p><h2 className="text-center font-black">RHYTHM RESULT</h2><div data-rhythm-result-rank className={`mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
+  if(view.status==='result'){const result=view.result,rank=rhythmRankForScore(view.score);return <main data-rhythm-result className="flex-1 overflow-y-auto bg-slate-950 p-4 text-white" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><p className="text-center text-xs text-cyan-300">{rhythmSongFullName(song)}・{difficulty.id}</p><h2 className="text-center font-black">RHYTHM RESULT</h2><div data-rhythm-result-rank className={`mx-auto mt-2 flex h-20 w-20 items-center justify-center rounded-full border-4 border-current text-4xl font-black ${RHYTHM_RANK_COLORS[rank]}`}>{rank}</div><div className="my-3 text-center text-3xl font-black">{view.score.toLocaleString()}</div><p className="text-center text-sm">BEST SCORE {result.bestScore.toLocaleString()}</p>{result.isNewRecord&&<p data-rhythm-new-record className="text-center text-xl font-black text-amber-300">NEW RECORD</p>}{/* 達成をひと目で分かるように、いちばん上の称号だけを大きく出す(2026-09-03)。
     ALL MARVELOUS > ALL EXCELLENT > FULL COMBO の順に上位。残りは下に小さく並べる。 */}
 {(result.fullCombo||result.allExcellent||result.allMarvelous)&&<div data-rhythm-result-celebrate className="my-3 text-center">
   <b className="block text-3xl font-black leading-tight">{result.allMarvelous?'ALL MARVELOUS!!':result.allExcellent?'ALL EXCELLENT!!':'FULL COMBO!'}</b>
   <small className="mt-1 block text-[10px] font-black text-amber-200">{result.allMarvelous?'すべてMARVELOUS。文句なしの完璧です':result.allExcellent?'すべてEXCELLENT以上。ほぼ完璧です':'一度もコンボを切らずに完走しました'}</small>
 </div>}
 <div className="my-3 flex flex-wrap justify-center gap-2 text-xs font-black text-slate-300">{result.fullCombo&&<span>FULL COMBO</span>}{result.allExcellent&&<span>ALL EXCELLENT</span>}{result.allMarvelous&&<span>ALL MARVELOUS</span>}</div><dl className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-4">{RHYTHM_JUDGMENT_IDS.map(id=><React.Fragment key={id}><dt>{id}</dt><dd className="text-right font-mono">{view.counts[id]}</dd></React.Fragment>)}<dt>MAX COMBO</dt><dd className="text-right">{view.maxCombo}</dd><dt>FAST</dt><dd className="text-right">{view.fast}</dd><dt>SLOW</dt><dd className="text-right">{view.slow}</dd></dl><div className="mt-5 grid grid-cols-1 gap-2"><button className="min-h-[48px] rounded-xl bg-fuchsia-700 font-black" disabled={startLockRef.current} onClick={()=>beginRun(mergeRhythmBestRecord(runRef.current?.startBest,result))}>もう一度プレイ</button><button className="min-h-[48px] rounded-xl bg-indigo-700 font-black" onClick={abort}>音ゲーデバッグへ戻る</button></div></main>}
-  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{hasHold?'HOLD TEST':'TAP TEST'}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {song.displayName}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center justify-end gap-1"><span aria-hidden="true" className="text-sm leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♥</span><div className="relative h-1.5 w-12 overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:w-14"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(rhythmLifeRatio(view.life)*100).toFixed(1)}%`,background:rhythmLifeRatio(view.life)>.5?'linear-gradient(90deg,#34d399,#22d3ee)':rhythmLifeRatio(view.life)>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="text-[9px] font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{view.life}</b></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/><div className="mt-1 text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"><span className="block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>COMBO</span><b ref={comboRef} data-rhythm-combo data-combo-tier={view.combo>=300?'3':view.combo>=200?'2':view.combo>=100?'1':'0'} className="mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base">{view.combo}</b></div></div></header><div ref={playAreaRef} data-rhythm-play-area data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/><div ref={judgmentLineRef} data-rhythm-judgment-line className="absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300" style={{boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/><div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:'calc(12% + 38px)'}}><b ref={judgmentTextRef} data-rhythm-judgment-text className={`block text-[26px] font-black leading-none tracking-wide ${view.last==='MARVELOUS'?'text-fuchsia-100':view.last==='EXCELLENT'?'text-cyan-100':view.last==='GREAT'?'text-amber-200':view.last==='GOOD'?'text-lime-300':view.last==='BAD'?'text-rose-300':'text-white'}`} style={{textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 7px rgba(255,255,255,.45)':'0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'}}>{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow||'—'):'—'}</small></div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
+  return <main data-rhythm-tap-test className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white landscape:pl-[env(safe-area-inset-left)] landscape:pr-[env(safe-area-inset-right)]" style={{touchAction:'none'}}><header data-rhythm-hud className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 px-3 pt-1.5"><div data-rhythm-hud-left className="min-w-0 max-w-[35vw] text-left landscape:max-w-[28vw]"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center gap-1.5"><div className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-current bg-slate-950/85 landscape:h-7 landscape:w-7 ${RHYTHM_RANK_COLORS[rhythmRankForScore(view.score)]}`} style={{boxShadow:'0 0 8px rgba(103,232,249,.35)'}}><b data-rhythm-rank className="text-sm font-black leading-none" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{rhythmRankForScore(view.score)}</b></div><div className="min-w-0 landscape:min-w-0"><div className="flex items-center gap-0.5 landscape:hidden"><div data-rhythm-rank-gauge className="relative h-1.5 w-14 overflow-hidden rounded-full border border-white/25 bg-slate-950/80"><i aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{width:`${rhythmRankProgress(view.score)}%`}}/></div><b data-rhythm-rank-next className="shrink-0 text-[9px] font-black leading-none text-slate-300">{rankNextLabel}</b></div><b data-rhythm-score className="mt-0.5 block font-black leading-none tabular-nums landscape:mt-0" style={{fontSize:'min(18px,4.6vw)',textShadow:'0 1px 6px rgba(2,6,23,.96)'}}>{view.score.toLocaleString()}</b><small className="mt-0.5 block text-[9px] font-bold leading-none text-slate-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>BEST {Number(bestRecord?.bestScore||0).toLocaleString()}</small></div></div><div className="mt-1.5 flex max-w-[34vw] flex-wrap items-center gap-1 landscape:mt-0 landscape:min-w-0 landscape:shrink"><span className="shrink-0 rounded bg-fuchsia-700/85 px-1.5 py-0.5 text-[9px] font-black leading-none">{difficulty.id}</span><small data-rhythm-mode-label className="text-[9px] font-bold leading-none tracking-[0.14em] text-cyan-300 landscape:hidden" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{hasHold?'HOLD TEST':'TAP TEST'}</small></div></div><div data-rhythm-hud-song className="mt-1 max-w-[31vw] text-[10px] font-black text-slate-100 landscape:mt-0.5 landscape:max-w-none landscape:min-w-0" style={{display:'-webkit-box',WebkitLineClamp:isLandscape?'1':'3',WebkitBoxOrient:'vertical',overflow:'hidden',lineHeight:'1.25',textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♪ {rhythmSongFullName(song)}</div></div><div data-rhythm-hud-right className="flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"><div className="landscape:flex landscape:items-center landscape:gap-2"><div className="flex items-center justify-end gap-1"><span aria-hidden="true" className="text-sm leading-none text-rose-400" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>♥</span><div className="relative h-1.5 w-12 overflow-hidden rounded-full border border-white/25 bg-slate-950/80 landscape:w-14"><i data-rhythm-life-bar aria-hidden="true" className="absolute inset-y-0 left-0 rounded-full" style={{width:`${(rhythmLifeRatio(view.life)*100).toFixed(1)}%`,background:rhythmLifeRatio(view.life)>.5?'linear-gradient(90deg,#34d399,#22d3ee)':rhythmLifeRatio(view.life)>.25?'linear-gradient(90deg,#fbbf24,#fb923c)':'linear-gradient(90deg,#fb7185,#ef4444)',transition:settings.lightweightMode?'none':'width 140ms linear'}}/></div><b data-rhythm-life-value className="text-[9px] font-black leading-none tabular-nums text-slate-200" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>{view.life}</b></div><button data-rhythm-pause aria-label="ポーズ" className="pointer-events-auto mt-1 flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border border-white/20 bg-slate-900/90 text-2xl font-black text-white shadow-[0_0_12px_rgba(103,232,249,0.18)] landscape:mt-0" onClick={pause}>Ⅱ</button></div><b ref={abilityBadgeRef} data-rhythm-ability-badge hidden className="mt-1 block text-right text-[9px] font-black leading-none tracking-[0.06em] text-amber-200 landscape:inline-block landscape:mt-0.5" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}/><div className="mt-1 text-right landscape:flex landscape:items-baseline landscape:gap-1.5 landscape:mt-0.5"><span className="block text-[9px] font-black leading-none tracking-[0.18em] text-fuchsia-300" style={{textShadow:'0 1px 4px rgba(2,6,23,.92)'}}>COMBO</span><b ref={comboRef} data-rhythm-combo data-combo-tier={view.combo>=300?'3':view.combo>=200?'2':view.combo>=100?'1':'0'} className="mt-0.5 block text-3xl font-black leading-none tabular-nums text-white landscape:mt-0 landscape:text-base">{view.combo}</b></div></div></header><div ref={playAreaRef} data-rhythm-play-area data-rhythm-lightweight={settings.lightweightMode?'true':'false'} data-rhythm-effect={settings.effectAmount} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd} className="relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50" style={{touchAction:'none',WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none','--rhythm-note-size-scale':settings.noteSize/100,filter:settings.effectAmount==='MINIMAL'?'saturate(.78)':settings.effectAmount==='LOW'?'saturate(.92)':'none'}}>{laneElements}{sideMonsterElements}<div ref={screenFlashRef} data-rhythm-screen-flash aria-hidden="true"/><div ref={judgmentLineRef} data-rhythm-judgment-line className="absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300" style={{boxShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 8px #67e8f9':'0 0 18px #67e8f9,0 0 30px #c084fc'}}/><div data-rhythm-judgment-display className="pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center" style={{bottom:'calc(12% + 38px)'}}><b ref={judgmentTextRef} data-rhythm-judgment-text className={`block text-[26px] font-black leading-none tracking-wide ${view.last==='MARVELOUS'?'text-fuchsia-100':view.last==='EXCELLENT'?'text-cyan-100':view.last==='GREAT'?'text-amber-200':view.last==='GOOD'?'text-lime-300':view.last==='BAD'?'text-rose-300':'text-white'}`} style={{textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':settings.effectAmount==='LOW'?'0 0 7px rgba(255,255,255,.45)':'0 0 10px rgba(255,255,255,.75),0 0 22px rgba(217,70,239,.35)'}}>{view.status==='error'?'音源を再生できません':view.status==='loading'?'LOADING…':settings.judgmentTextDisplay?view.last:''}</b><small className={`mt-1 block min-h-[16px] text-xs font-black tracking-[0.24em] ${!settings.fastSlowDisplay?'text-transparent':view.fastSlow==='FAST'?'text-cyan-300':view.fastSlow==='SLOW'?'text-fuchsia-300':'text-transparent'}`}>{settings.fastSlowDisplay?(view.fastSlow||'—'):'—'}</small></div>{/* 能力が出たら、どのマスモンの何が出たかを短時間だけ見せる(§3.5) */}
 {comboMilestone>0&&<div data-rhythm-combo-milestone data-milestone-stage={comboMilestoneStage} aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] z-20 -translate-x-1/2 whitespace-nowrap text-center"><b className={`block font-black leading-none tabular-nums landscape:text-4xl ${comboMilestoneStage>=3?'text-6xl':'text-5xl'}`}>{comboMilestone}</b><small className="mt-1 block text-sm font-black tracking-[0.3em]">COMBO</small></div>}
                 {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{noteElements}{view.status==='paused'&&<div data-rhythm-pause-menu className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3><button className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>中断して音ゲーデバッグへ戻る</button></div>}</div></main>;
 };
@@ -10198,6 +10299,8 @@ function MonsterHeroGame() {
   const [assistantChosen, setAssistantChosen] = useState(true);
   // きき加入の会話。null=出さない / 0以上=その位置のセリフを表示中
   const [kikiIntroStep, setKikiIntroStep] = useState(null);
+  // ももすけ登場の会話。きき加入と同じ形。両方まだの人でも同時には出さない(きき→もも の順)
+  const [momosukeIntroStep, setMomosukeIntroStep] = useState(null);
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
   const [assistantBonds, setAssistantBonds] = useState({});
@@ -10331,6 +10434,12 @@ function MonsterHeroGame() {
   const [showAssistantPicker, setShowAssistantPicker] = useState(false); // プロフィールからの助手変更
   // きき加入の会話を見たことがあるか(イベント回想の解放判定に使う。値そのものはKIKI_INTRO_SEEN_KEYの読み取り専用ミラー)
   const [kikiIntroSeenFlag, setKikiIntroSeenFlag] = useState(false);
+  // ももすけ登場の会話を見たことがあるか。これが立っている＝ももすけを助手に選べる
+  // (MOMOSUKE_INTRO_SEEN_KEYの読み取り専用ミラー。見た瞬間はmarkMomosukeIntroSeen側で更新する)
+  const [momosukeIntroSeenFlag, setMomosukeIntroSeenFlag] = useState(false);
+  // 新規プレイヤーキャンペーンの対象か。起動時に「一度もはじめての設定を終えていない」ことで決める。
+  // 既定は false にしておく(判定できないうちは配らない)
+  const [newPlayerCampaignEligible, setNewPlayerCampaignEligible] = useState(false);
   // イベント回想: プロフィールから見返す一覧の開閉と、再生中のイベント({id,step}、nullなら非表示)。
   // どちらもセーブデータには一切書かない(見るだけ)
   const [showEventReplayList, setShowEventReplayList] = useState(false);
@@ -11372,9 +11481,13 @@ function MonsterHeroGame() {
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
   const kikiIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null;
+  // ももすけ登場も同じ扱い。ききの会話が出ているあいだは、そちらを優先する
+  const momosukeIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep != null;
   const eventBgmScene = kikiIntroPlaying
     ? EVENT_BGM_SCENES.kiki_intro
-    : (eventReplay ? (EVENT_BGM_SCENES[eventReplay.id] || null) : null);
+    : momosukeIntroPlaying
+      ? EVENT_BGM_SCENES.momosuke_intro
+      : (eventReplay ? (EVENT_BGM_SCENES[eventReplay.id] || null) : null);
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver) => {
     // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
@@ -11979,7 +12092,7 @@ function MonsterHeroGame() {
       for (const type of CHANGELOG_TYPES) {
         const savedIds = await storeGet(`mh_changelog_seen_ids_${type}`, null, false);
         const legacyDate = await storeGet(`mh_changelog_seen_${type}`, legacyChangelogSeen, false);
-        migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id=>CHANGELOG_IDS_BY_TYPE[type].includes(id)) : CHANGELOG_ENTRIES.filter(entry=>entry.type===type && legacyDate && entry.date<=legacyDate).map(entry=>entry.id);
+        migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id=>CHANGELOG_IDS_BY_TYPE[type].includes(id)) : changelogEntriesOfTab(type).filter(entry=>legacyDate && entry.date<=legacyDate).map(entry=>entry.id);
         if (!Array.isArray(savedIds)) await storeSet(`mh_changelog_seen_ids_${type}`, migratedSeen[type], false);
       }
       setChangelogSeen(migratedSeen);
@@ -12147,8 +12260,13 @@ function MonsterHeroGame() {
         wasOnboarded = !!(hasSavedName && hasSavedIcon);
         await storeSet('mh_onboarded', wasOnboarded, false);
       }
+      // キャンペーンの対象かどうかは、この時点の値で決める。
+      // 下の行で「名前かアイコンが欠けている既存プレイヤー」も未完了へ戻すが、
+      // その人はもう一度はじめての設定を通るだけで、新規ではない(配ってはいけない)
+      const everOnboarded = wasOnboarded === true;
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
+      setNewPlayerCampaignEligible(!everOnboarded);
       // 助手選択は、はじめて遊ぶ人にだけ出す。
       // 既に遊んでいる人は、選択の保存が無くても「みゅあを選んでいる」扱いのまま進める
       setAssistantChosen(!!savedAssistant || wasOnboarded);
@@ -12161,6 +12279,14 @@ function MonsterHeroGame() {
       // 新しく始めた人は、この時点で見たことにしておく(助手選択を通るので会話は不要)。
       // ここで書いておかないと、プロフィールを決め終わったあとに流れてしまう
       else if (!wasOnboarded && kikiIntroSeen !== true) { try { await storeSet(KIKI_INTRO_SEEN_KEY, true, false); setKikiIntroSeenFlag(true); } catch {} }
+      // ももすけ登場の会話も、ききとまったく同じ考え方で出す。
+      // 既存プレイヤー(wasOnboarded)で未閲覧なら流し、新しく始めた人はここで見たことにする
+      // (助手選択でももすけを選べるようにするため。あとから本編で流れてしまうのも防ぐ)。
+      // ききとももが両方未閲覧のときは、ききの会話を先に出し、ももは次の起動へまわす。
+      const momosukeIntroSeen = await storeGet(MOMOSUKE_INTRO_SEEN_KEY, false, false);
+      setMomosukeIntroSeenFlag(momosukeIntroSeen === true);
+      if (wasOnboarded && momosukeIntroSeen !== true && kikiIntroSeen === true) setMomosukeIntroStep(0);
+      else if (!wasOnboarded && momosukeIntroSeen !== true) { try { await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); setMomosukeIntroSeenFlag(true); } catch {} }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
@@ -12445,6 +12571,23 @@ function MonsterHeroGame() {
     await storeSet('mh_breeder_name',name,false);
     await storeSet('mh_breeder_icon',onboardingIcon,false);
     setBreederName(name);setBreederIcon(onboardingIcon);
+    // 新規プレイヤーキャンペーンのプレゼントは、完了フラグを立てる「前」に配る。
+    // 逆にすると、ギフトを足す前に閉じられたときmh_onboardedだけが立ち、
+    // 次に開いたときには対象外になって永久に受け取れなくなる。
+    // 先に配っておけば、途中で閉じられても次にここを通ったときに配り直せる
+    // (同じidのギフトがあれば grantNewPlayerCampaignGift 側で足さない)。
+    // プレビュー(デバッグの見るだけ表示)では、画面にも出さないようここで止める
+    if (!onboardingPreview && NEW_PLAYER_CAMPAIGN_ENABLED && newPlayerCampaignEligible) {
+      try {
+        const issued = await storeGet(NEW_PLAYER_CAMPAIGN_KEY, false, false);
+        if (issued !== true) {
+          const savedGifts = await storeGet('mh_gifts', [], false);
+          const grant = grantNewPlayerCampaignGift(Array.isArray(savedGifts) ? savedGifts : []);
+          if (grant.granted) { await storeSet('mh_gifts', grant.gifts, false); setGifts(grant.gifts); }
+          await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
+        }
+      } catch {}
+    }
     await storeSet('mh_onboarded',true,false);
     const seenUpdateIds=normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY,[],false));
     await storeSet(UPDATE_NOTICE_SEEN_KEY,normalizeSeenUpdateNoticeIds([...seenUpdateIds,...availableUpdateNotices().map(n=>n.id)]),false);
@@ -12927,7 +13070,7 @@ function MonsterHeroGame() {
   // 出す場面でないとき・出すものが無いときは null を返す
   const assistantUnlockNoticeNode = (scene) => {
     if (!scene) return null;
-    if (!(bootPhase==='GAME'&&onboarded&&!onboardingPreview&&tutorialStep==null&&kikiIntroStep==null&&!eventReplay)) return null;
+    if (!(bootPhase==='GAME'&&onboarded&&!onboardingPreview&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&!eventReplay)) return null;
     // アップデートの案内・日次アドバイスと重ならないよう、そちらが出ているあいだは待つ
     if (updateGuideQueue.length>0||dailyMasuAdvice) return null;
     const notice=assistantUnlockNoticeOf(scene);
@@ -12961,11 +13104,21 @@ function MonsterHeroGame() {
     setKikiIntroSeenFlag(true);
     try { storeSet(KIKI_INTRO_SEEN_KEY, true, false); } catch {}
   }, []);
+  // ももすけ登場の会話を見終わったときの処理。ここが「ももすけの解放」そのもの。
+  // 本編で見ても、プロフィールの回想から先に見ても、通るのはこの1か所だけにしてある
+  // (二重に解放したり、見たのに解放されないことが起きないようにするため)。
+  // いま選んでいる助手は変えない(勝手に切り替えないこと。選ぶのはプレイヤー)
+  const markMomosukeIntroSeen = useCallback(() => {
+    setMomosukeIntroStep(null);
+    setMomosukeIntroSeenFlag(true);
+    try { storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false); } catch {}
+  }, []);
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
-  const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag };
-  const isEventReplayUnlocked = (event) => !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
+  const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag, momosukeIntroSeen: momosukeIntroSeenFlag };
+  // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
+  const isEventReplayUnlocked = (event) => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
   // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
   const chooseAssistant = useCallback((id) => {
     const next = normalizeAssistantId(id);
@@ -17564,7 +17717,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             「更新履歴が壊れた」としか分からないので、読み込み直せることをここで伝える */}
         <div className="mh-changelog-list" data-changelog-list>{CHANGELOG_ENTRIES.length===0
           ? <p className="mh-changelog-empty" data-changelog-empty>更新履歴を読み込めませんでした。通信状況を確かめてから、設定の「ゲームを更新」で読み込み直してください。</p>
-          : CHANGELOG_ENTRIES.filter(c=>c.type===changelogTab).map(c=><article key={c.id} className={changelogUnreadIds[changelogTab].includes(c.id)?'unread':''}><time>{c.date}{changelogUnreadIds[changelogTab].includes(c.id)&&<em>NEW</em>}</time><b>{c.title}</b>{(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}</article>)}</div>
+          : changelogEntriesOfTab(changelogTab).map(c=><article key={c.id} className={changelogUnreadIds[changelogTab].includes(c.id)?'unread':''}><time>{c.date}{changelogUnreadIds[changelogTab].includes(c.id)&&<em>NEW</em>}</time><b>{c.title}</b>{(c.items||[]).map((x,j)=><p key={j}>・{x}</p>)}</article>)}</div>
       </div>
     </div>
   ) : showTitleSettings ? (
@@ -17918,7 +18071,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="mh-gift-list flex-1 min-h-0 overflow-y-auto mh-scroll pb-1">{shown.length===0?<div className="mt-16 text-center text-slate-500 font-bold">{giftTab==='unclaimed'?'未受取のギフトはありません':'受取済みのギフトはありません'}</div>:shown.map(g=>{const expired=giftIsExpired(g,now);const valid=!!normalizeGiftRewards(g);const display=giftTitleDisplay(g);return <article key={g.id} title={g.description||g.title||undefined} className={`mh-gift-card rounded-xl border ${g.claimedAt?'bg-slate-900/70 border-slate-700':expired?'bg-red-950/30 border-red-800/60':'bg-cyan-950/30 border-cyan-500/50'}`}>
             <div className="mh-gift-heading"><h3>{display.label&&<span>{display.label}</span>}<b>{display.title}</b></h3><em className={`${g.claimedAt?'bg-slate-700 text-slate-300':expired?'bg-red-900 text-red-200':valid?'bg-cyan-700 text-white':'bg-amber-900 text-amber-200'}`}>{g.claimedAt?'受取済み':expired?'期限切れ':valid?'受取可':'要確認'}</em></div>
             <div className="mh-gift-main"><div className="mh-gift-rewards">{Array.isArray(g.rewards)&&g.rewards.map((r,i)=><span key={i}>{giftRewardText(r)}</span>)}</div>{!g.claimedAt&&<button disabled={expired||!valid} onClick={()=>claimGiftIds([g.id])}>受け取る</button>}</div>
-            <div className="mh-gift-deadline">{g.claimedAt?`受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}`:`受取期限: ${g.expiresAt?new Date(g.expiresAt).toLocaleString('ja-JP'):'期限情報なし'}`}</div>
+            <div className="mh-gift-deadline">{g.claimedAt?`受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}`:`受取期限: ${g.expiresAt?new Date(g.expiresAt).toLocaleString('ja-JP'):'期限なし'}`}</div>
           </article>})}</div>
         </div>})()}
         {gameState==='MISSIONS'&&(()=>{const state=normalizeMissions(missions),defs=MISSION_DEFS[missionTab],sent=missionTab==='daily'?state.sentDaily:missionTab==='weekly'?state.sentWeekly:state.sentMonthly;const resetAt=missionNextReset(missionTab);return <div className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
@@ -19643,7 +19796,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               <div className="w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3">
                 {ASSISTANT_LIST.map(who=>(
-                  <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
+                  <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();markMomosukeIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
                     aria-label={`${who.name}をえらぶ`}
                     className={`rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id===selectedAssistantId?'':'opacity-95'}`}
                     style={{border:`2px solid ${who.id===selectedAssistantId?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:who.id===selectedAssistantId?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
@@ -19656,7 +19809,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 ))}
               </div>
               <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
-                どちらも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
+                3人とも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
               </p>
             </div>
           </div>
@@ -21443,6 +21596,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   const active=who.id===selectedAssistantId;
                   const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
                   const t=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(lv,who.id):null;
+                  // まだ登場の会話を見ていない助手は選べない。どこで会えるかは添えておく
+                  const locked=who.id==='momosuke'&&!momosukeIntroSeenFlag;
+                  if(locked) return(
+                    <div key={who.id} className="w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
+                      <span className="text-2xl" aria-hidden="true">🔒</span>
+                      <span className="min-w-0 flex-1">
+                        <b className="block text-[12px] font-black text-slate-400">？？？</b>
+                        <small className="block text-[9px] text-slate-500 leading-tight">HOMEでの出会いを見ると選べるようになります。</small>
+                      </span>
+                    </div>
+                  );
                   return(
                     <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);setShowAssistantPicker(false);}} aria-pressed={active}
                       className="w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97]"
@@ -22774,6 +22938,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const speaker=assistantById(line.who);
         const last=step===script.length-1;
         const calls=(typeof ASSISTANT_KIKI_INTRO_CALLS!=='undefined'&&ASSISTANT_KIKI_INTRO_CALLS)||{};
+        // 顔を並べるのは、この台本に出てくる助手だけ。
+        // 全員を並べると、まだ登場していない助手までここに映ってしまう
+        const cast=ASSISTANT_LIST.filter(who=>script.some(l=>l.who===who.id));
         const next=()=>{ if(last) markKikiIntroSeen(); else setKikiIntroStep(step+1); };
         return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label="ききが助手に加わりました">
@@ -22783,7 +22950,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-pink-300">あたらしい助手</p>
             {/* 2人を並べて出し、いま話しているほうを明るくする */}
             <div className="mb-3 flex items-end justify-center gap-3">
-              {ASSISTANT_LIST.map(who=>{
+              {cast.map(who=>{
                 const talking=who.id===line.who;
                 return(
                   <div key={who.id} className={`flex flex-col items-center gap-1 ${talking?'':'opacity-35'}`} style={{transform:talking?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
@@ -22805,8 +22972,46 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </div>);
       })()}
 
+      {/* ももすけ登場(モンヒロビート プレオープン)。すでに遊んでいた人へ1回だけ。
+          きき加入と同じ作りで、ききの会話が残っている人はそちらが先に出る */}
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep!=null&&(()=>{
+        const script=(typeof ASSISTANT_MOMOSUKE_INTRO!=='undefined'&&ASSISTANT_MOMOSUKE_INTRO)||[];
+        if(script.length===0) return null;
+        const step=Math.max(0,Math.min(momosukeIntroStep,script.length-1));
+        const line=script[step];
+        const speaker=assistantById(line.who);
+        const last=step===script.length-1;
+        const cast=ASSISTANT_LIST.filter(who=>script.some(l=>l.who===who.id));
+        const next=()=>{ if(last) markMomosukeIntroSeen(); else setMomosukeIntroStep(step+1); };
+        return(
+        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label="ももすけが助手に加わりました">
+          <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
+          <div className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-300 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-pink-200">あたらしい助手</p>
+            {/* 3人を並べて、いま話しているひとりを明るくする */}
+            <div className="mb-3 flex items-end justify-center gap-3">
+              {cast.map(who=>{
+                const talking=who.id===line.who;
+                return(
+                  <div key={who.id} className={`flex flex-col items-center gap-1 ${talking?'':'opacity-35'}`} style={{transform:talking?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
+                    <AssistantFace who={who} size={talking?76:56} accent={who.accent} expression={talking?line.e:'normal'}/>
+                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{who.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
+              <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+            </div>
+            <p className="mt-2 text-center text-[8px] text-slate-500">{step+1} / {script.length}</p>
+            <button onClick={next} className="mt-3 min-h-[50px] w-full rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]" style={{pointerEvents:'auto'}}>{last?'とじる':'つぎへ'}</button>
+          </div>
+        </div>);
+      })()}
+
       {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
-      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&updateGuideQueue.length>0&&(()=>{const notice=updateGuideQueue[0];const pages=Array.isArray(notice.pages)&&notice.pages.length?notice.pages:['新しいアップデートがあるよ♪'];const page=Math.min(updateGuidePage,pages.length-1);const last=page===pages.length-1;const who=activeAssistant;return(
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&momosukeIntroStep==null&&updateGuideQueue.length>0&&(()=>{const notice=updateGuideQueue[0];const pages=Array.isArray(notice.pages)&&notice.pages.length?notice.pages:['新しいアップデートがあるよ♪'];const page=Math.min(updateGuidePage,pages.length-1);const last=page===pages.length-1;const who=activeAssistant;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title}>
           <div className="w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             {notice.debugOnly&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・通常ログインでは表示されません</div>}
@@ -22836,14 +23041,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const speaker=assistantById(line.who);
         const last=step===script.length-1;
         const calls=(event&&event.calls)||{};
-        const next=()=>{ if(last) setEventReplay(null); else setEventReplay(r=>r&&({...r,step:r.step+1})); };
+        const cast=ASSISTANT_LIST.filter(who=>script.some(l=>l.who===who.id));
+        // 回想でも最後まで見たら「見たことがある」として扱う。
+        // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
+        // あとから本編で同じ会話が重ねて流れることもなくなる
+        const next=()=>{
+          if(!last){ setEventReplay(r=>r&&({...r,step:r.step+1})); return; }
+          if(event&&event.id==='momosuke_intro') markMomosukeIntroSeen();
+          setEventReplay(null);
+        };
         return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
           <div className="relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
             <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">回想・{event?.title||''}</p>
             <div className="mb-3 flex items-end justify-center gap-3">
-              {ASSISTANT_LIST.map(who=>{
+              {cast.map(who=>{
                 const talking=who.id===line.who;
                 return(
                   <div key={who.id} className={`flex flex-col items-center gap-1 ${talking?'':'opacity-35'}`} style={{transform:talking?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
@@ -22859,7 +23072,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <p className="mt-2 text-center text-[8px] text-slate-500">
               {step+1} / {script.length}
-              {Object.keys(calls).length>0&&`　／　${ASSISTANT_LIST.filter(who=>calls[who.id]).map(who=>`${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`}
+              {Object.keys(calls).length>0&&`　／　${cast.filter(who=>calls[who.id]).map(who=>`${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`}
             </p>
             <button onClick={next} className="mt-3 min-h-[50px] w-full rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]" style={{pointerEvents:'auto'}}>{last?'とじる':'つぎへ'}</button>
           </div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c6208ba729f64601
+// source-sha256: baaa69ef9dd2e776
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 10:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3845,7 +3845,8 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   autoPostWaveBgm: 'off',
   autoRepeatResultBgm: 'off',
   clear: 'ichika_clear',
-  kikiIntro: 'original_event_01'
+  kikiIntro: 'original_event_01',
+  momosukeIntro: 'six_eternel_remix'
 });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
@@ -3892,7 +3893,8 @@ const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
 // 会話イベントごとのBGM設定名。イベントを足すときはここへ1行足せば、
 // 通常再生・イベント回想の両方で同じ曲が鳴る(画面側の分岐を増やさない)
 const EVENT_BGM_SCENES = Object.freeze({
-  kiki_intro: 'kikiIntro'
+  kiki_intro: 'kikiIntro',
+  momosuke_intro: 'momosukeIntro'
 });
 const BGM_PRO_DEFAULT_MIGRATION_KEY = 'mh_bgm_pro_default_migrated_v1';
 const BGM_PRO_PREVIOUS_DEFAULTS = Object.freeze({
@@ -8557,7 +8559,10 @@ const DIST_APTITUDE_COLOR = {
 // そこで data 側には releaseFlag という名札だけを書き、出す・出さないの判断はここでまとめて行う。
 // 公開するときは SPECIES_CHALLENGE_PUBLIC_RELEASE を true にするだけで、
 // ヘルプ・更新履歴・助手の告知が同時に出る(片方だけ先に出てしまうことがない)
-const RHYTHM_MODE_PUBLIC_RELEASE = false;
+// モンヒロビートは2026-09-05のプレオープンで公開した(ユーザー指示)。
+// これを true にしたことで、HOMEの「準備中」がプレオープンの導線に変わり、
+// ヘルプの項目・更新履歴・助手の告知も同時に出るようになっている
+const RHYTHM_MODE_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE
@@ -8582,7 +8587,12 @@ const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).fi
 // 更新履歴から作る助手の告知も、隠している項目のぶんは出さない
 // (data/assistants.js は公開フラグを見られないため、ここで落とす)
 const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(entry => !releasedForPlayers(entry) && typeof entry?.assistantNotice?.id === 'string').map(entry => entry.assistantNotice.id.trim()));
-const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_ENTRIES.filter(entry => entry.type === type).map(entry => entry.id)]));
+// どのタブへ出すかを決める。「不具合情報」は issue、それ以外はすべて「更新情報」。
+// 以前は type がタブ名と完全一致するものだけを出していたため、fix / feature / market と
+// 書いた項目がどちらのタブにも出ず、更新履歴に載せたつもりで載っていなかった。
+// 種別を新しく足しても消えないよう、issue 以外は必ず更新情報へ拾う
+const changelogEntriesOfTab = tab => CHANGELOG_ENTRIES.filter(entry => tab === 'issue' ? entry.type === 'issue' : entry.type !== 'issue');
+const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogEntriesOfTab(type).map(entry => entry.id)]));
 // 一覧の並べかえに使えるキー。画面の選択肢(MONSTER_SORT_OPTIONS)と必ず同じ顔ぶれにする。
 // 片方にだけ足すと、画面では選べるのに保存だけ弾かれて、開き直すと元に戻る
 // (実際に「総合力」がここへ足されておらず、選んでも次に開くと血統順へ戻っていた)。
@@ -8745,6 +8755,12 @@ const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
 // 既にオンボーディングを終えている(mh_onboarded)ことと合わせて判定する。
 // 新しく始めた人は助手選択を通った時点で見たことにして、あとから誤って流れないようにする。
 const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
+// ももすけ登場の会話。ききのときと同じ考え方で、
+//   ・すでに遊んでいた人 … アップデート後の初回HOMEで1回だけ流す。見終わるとももすけを選べるようになる
+//   ・新しく始めた人     … 最初の助手選択でももすけを選べるので、この会話は流さない(その場で見たことにする)
+// 本編を待たずにプロフィールの回想から見た場合も、最後まで見たらこのキーを立てる
+// (＝解放され、あとから本編で重ねて流れない)。
+const MOMOSUKE_INTRO_SEEN_KEY = 'mh_momosuke_intro_seen_v1';
 const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
 
 // ---------- 助手との仲良し度(親密度) ----------
@@ -9007,6 +9023,62 @@ const grantCompensationGifts = (gifts, now = Date.now()) => {
     gifts: [...added, ...list]
   };
 };
+// ---------- モンヒロビート プレオープン記念 新規プレイヤーキャンペーン ----------
+// 今回のアップデート以降にはじめてMonster Heroを始めた人へ、1回だけ配る。
+// すでに遊んでいた人には配らない(これが最重要。ここを間違えると全員へ配ってしまう)。
+//
+// 【新規かどうかの見分け方】
+// 「キャンペーンの保存キーを持っていない」だけで決めてはいけない。新しく始めた人も
+// 既存の人も、アップデート直後はどちらも持っていないため。既存の判定(mh_onboarded)で
+// 「はじめての設定をこれから通る人」だけを対象にする。実際の発行は、その設定を
+// 終えた瞬間(finishOnboarding)にだけ行う。
+//
+// 【二重に配らないための決まり】
+// 配布済みフラグ(CAMPAIGN_KEY)だけに頼らず、ギフト側に同じidが無いかも必ず見る。
+// ギフトを足したあとフラグを保存する前に閉じられても、次に開いたときidで気づける。
+// idは固定。ランダムに作らないこと(作ると毎回「まだ無い」と判断してしまう)。
+//
+// 【受取期限】
+// ユーザーからの指定が無いので付けない(expiresAtを書かない＝期限なし)。
+const NEW_PLAYER_CAMPAIGN_ENABLED = true; // 後からOFFにできるようにしておく
+const NEW_PLAYER_CAMPAIGN_KEY = 'mh_monhiro_beat_preopen_new_player_campaign_v1';
+const NEW_PLAYER_CAMPAIGN_GIFT = Object.freeze({
+  id: 'monhiro_beat_preopen_new_player_v1',
+  title: 'モンヒロビート プレオープン記念',
+  description: '新規プレイヤーキャンペーンのプレゼントです。モンヒロビートのプレオープンを記念して、はじめた方へお贈りします。',
+  rewards: [{
+    type: 'diamond',
+    amount: 100000
+  }, {
+    type: 'rainbowPsyche',
+    amount: 100
+  }]
+});
+// ギフト一覧へ1件足す。すでに同じidがあれば何もしない(何度呼んでも増えない)
+const grantNewPlayerCampaignGift = (gifts, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  if (!NEW_PLAYER_CAMPAIGN_ENABLED) return {
+    granted: false,
+    gifts: list
+  };
+  if (list.some(item => item?.id === NEW_PLAYER_CAMPAIGN_GIFT.id)) return {
+    granted: false,
+    gifts: list
+  };
+  const gift = {
+    ...NEW_PLAYER_CAMPAIGN_GIFT,
+    source: 'campaign',
+    rewards: NEW_PLAYER_CAMPAIGN_GIFT.rewards.map(r => ({
+      ...r
+    })),
+    createdAt: new Date(now).toISOString(),
+    claimedAt: null
+  };
+  return {
+    granted: true,
+    gifts: [gift, ...list]
+  };
+};
 const normalizeGiftRewards = gift => {
   if (!gift || !Array.isArray(gift.rewards) || gift.rewards.length === 0) return null;
   const supported = Object.keys(GIFT_REWARD_LABELS);
@@ -9016,7 +9088,16 @@ const normalizeGiftRewards = gift => {
   }));
   return rewards.every(r => supported.includes(r.type) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
 };
-const giftIsExpired = (gift, now = Date.now()) => !gift?.expiresAt || !Number.isFinite(Date.parse(gift.expiresAt)) || Date.parse(gift.expiresAt) <= Number(now);
+// 受取期限。expiresAt を書いていないギフトは「期限なし(ずっと受け取れる)」として扱う。
+// ログインボーナス・お詫び・ミッションの3つは必ず30日の期限を入れているので、
+// ここを通る既存のギフトの扱いは何も変わらない。
+// 値が入っていて読めない(壊れている)ときは、これまでどおり期限切れのままにする
+const giftIsExpired = (gift, now = Date.now()) => {
+  if (!gift) return true;
+  if (gift.expiresAt == null) return false;
+  const at = Date.parse(gift.expiresAt);
+  return !Number.isFinite(at) || at <= Number(now);
+};
 // 「今すぐ受け取れるギフト」。未受取・期限内・報酬が有効、の3つを満たすもの。
 // HOMEの通知バッジ・ギフト画面のバッジ・「すべて受け取る」が同じ判定を使う
 const giftIsClaimable = (gift, now = Date.now()) => !!gift && !gift.claimedAt && !giftIsExpired(gift, now) && !!normalizeGiftRewards(gift);
@@ -9076,6 +9157,10 @@ const giftTitleDisplay = gift => {
   const title = typeof gift?.title === 'string' && gift.title.trim() ? gift.title.trim() : fallback;
   if (gift?.source === 'compensation') return {
     label: 'お詫び',
+    title
+  };
+  if (gift?.source === 'campaign') return {
+    label: 'キャンペーン',
     title
   };
   if (gift?.source !== 'mission') return {
@@ -11637,6 +11722,12 @@ const localCalendarDate = (now = new Date()) => {
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
+
+// 画面へ出す曲名。副題(subtitle)まで入れて1つの名前にする。
+// displayName だけを出していたため、曲えらびもプレイ中も副題が落ちていた
+// (「Stay With Me」「綺季一閃」だけが出て ～Locked Fate～ ～花雪に舞う詠姫～ が消えていた)。
+// ヘルプの曲一覧は前から副題まで出していたので、画面とヘルプで名前が食い違っていた
+const rhythmSongFullName = song => song && song.subtitle ? `${song.displayName} ${song.subtitle}` : song ? song.displayName : '';
 const helpDataRows = id => {
   const marketItems = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
   const skipIds = new Set(Object.values(SKIP_TICKETS));
@@ -11750,7 +11841,7 @@ const helpDataRows = id => {
           if (!charts.length) return null;
           const levels = charts.map(chart => Number(chart.level) || 0);
           const length = typeof rhythmSongLengthLabel !== 'undefined' ? rhythmSongLengthLabel(song, charts[0]) : '';
-          const name = song.subtitle ? `${song.displayName} ${song.subtitle}` : song.displayName;
+          const name = rhythmSongFullName(song);
           return [name, `Lv.${Math.min(...levels)}〜${Math.max(...levels)} ／ ${charts.length}難易度${length ? ` ／ ${length}` : ''}`];
         }).filter(Boolean);
       }
@@ -15450,6 +15541,14 @@ function PressRepeatButton({
   }, props), children);
 }
 const RHYTHM_HOLD_RELEASE_GRACE_MS = 100;
+// 押さえている途中で指を入れ替えるための猶予(2026-09-05・ユーザー指示で120ms)。
+// 長いHOLD/SLIDEを別の指へ持ち替えるとき、離してから置き直すまでにどうしても間があく。
+// これまでは離した瞬間にMISSにしていたので、持ち替えがまったくできなかった。
+// 離しても、この時間のあいだは「浮いている」だけとして取っておき、
+// 同じノーツの帯へ指が置かれたら何ごともなかったように続きへ戻す。
+// 長くしすぎると「一瞬離しても平気」になって押さえ続ける意味が薄れるので、
+// 指を入れ替えるのに要るぶんだけにしてある
+const RHYTHM_HOLD_HANDOVER_GRACE_MS = 120;
 // 最後まで取れたHOLD / SLIDE / FLICKを、消える前に光らせておく時間(CSSのアニメーションと同じ長さ)
 const RHYTHM_CLEAR_FLASH_MS = 260;
 const RHYTHM_JUDGMENT_DISPLAY_MS = 450;
@@ -16227,7 +16326,7 @@ const RhythmSongSelect = ({
         lineHeight: 1.25,
         height: '2.5em'
       }
-    }, entry.displayName), /*#__PURE__*/React.createElement("span", {
+    }, rhythmSongFullName(entry)), /*#__PURE__*/React.createElement("span", {
       className: `mt-1 flex items-center gap-1${spot('achievement')}`
     }, (difficulties || []).map(item => {
       const playable = rhythmChartPlayable(entry, item.id);
@@ -16271,7 +16370,7 @@ const RhythmSongSelect = ({
       lineHeight: 1.25,
       height: '2.5em'
     }
-  }, song.displayName), /*#__PURE__*/React.createElement("small", {
+  }, rhythmSongFullName(song)), /*#__PURE__*/React.createElement("small", {
     className: "mt-0.5 block text-[10px] font-bold text-slate-400"
   }, rhythmSongLengthLabel(song, chart)))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-difficulty-row": true,
@@ -16863,6 +16962,7 @@ const RhythmTapTest = ({
       if (note.activePointerId !== -1) run.activePointers.delete(note.activePointerId);
       note.activePointerId = null;
     }
+    note.releasedAtMs = null;
     note.done = true;
     note._rhythmFinalJudgment = judgment;
     // HOLD / SLIDE を最後まで取れた・FLICKが成立したときは、そこで音と光を返す。
@@ -17116,7 +17216,20 @@ const RhythmTapTest = ({
         perfDrawn = 0;
       const visitNote = note => {
         if (note.type === 'HOLD' && note.activePointerId !== null && songTimeMs >= note.endTimeMs + settings.judgmentTimingOffsetMs) applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
-        if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > 200) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
+        // 指を離したまま戻ってこなかったHOLD/SLIDE。持ち替えの猶予を過ぎた時点で失敗にする。
+        // 終わりまで来ていたら、離していても成立させる(終わり際に離すぶんは元から許している)
+        if (!note.done && note.activePointerId === null && note.releasedAtMs != null) {
+          const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
+          if (songTimeMs >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
+            note.releasedAtMs = null;
+            applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+          } else if (songTimeMs - note.releasedAtMs >= RHYTHM_HOLD_HANDOVER_GRACE_MS) {
+            const releasedAt = note.releasedAtMs;
+            note.releasedAtMs = null;
+            applyJudgment(note, 'MISS', releasedAt - holdEndMs);
+          }
+        }
+        if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_INPUT_MATCH_WINDOW_MS) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
         const el = laneRefs.current[note.index];
         if (!el) return;
         // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
@@ -17466,9 +17579,14 @@ const RhythmTapTest = ({
       }
       const judgment = rhythmJudgeTap(deltaMs);
       if (target.type === 'HOLD') {
+        // 持ち替えの途中(離したばかりで浮いている)なら、続きとして引き継ぐ。
+        // 始点の判定は最初に押さえたときのものを保つ(持ち替えで良くも悪くもならない)
+        const handover = target.releasedAtMs != null;
         target.activePointerId = input.inputKey;
-        target.holdJudgment = judgment;
-        target.holdDeltaMs = deltaMs;
+        if (handover) target.releasedAtMs = null;else {
+          target.holdJudgment = judgment;
+          target.holdDeltaMs = deltaMs;
+        }
         run.activePointers.set(input.inputKey, target.index);
         if (input.captureTarget && input.pointerId !== undefined) {
           try {
@@ -17513,7 +17631,15 @@ const RhythmTapTest = ({
       if (!note || note.done) return;
       note.activePointerId = null;
       const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
-      if (now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) applyJudgment(note, 'MISS', now - holdEndMs);else applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+      // 終わり際まで来ていれば、そのまま成立させる
+      if (now >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
+        applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);
+      }
+      // まだ途中なら、すぐには失敗にしない。指を入れ替えている途中かもしれないので、
+      // 猶予のあいだは「浮いている」ことだけ覚えておく(rAFのvisitNoteが時間切れを見る)
+      else {
+        note.releasedAtMs = now;
+      }
       if (input.releaseTarget && input.pointerId !== undefined) {
         try {
           if (input.releaseTarget.hasPointerCapture?.(input.pointerId)) input.releaseTarget.releasePointerCapture(input.pointerId);
@@ -17688,7 +17814,7 @@ const RhythmTapTest = ({
       }
     }, /*#__PURE__*/React.createElement("p", {
       className: "text-center text-xs text-cyan-300"
-    }, song.displayName, "\u30FB", difficulty.id), /*#__PURE__*/React.createElement("h2", {
+    }, rhythmSongFullName(song), "\u30FB", difficulty.id), /*#__PURE__*/React.createElement("h2", {
       className: "text-center font-black"
     }, "RHYTHM RESULT"), /*#__PURE__*/React.createElement("div", {
       "data-rhythm-result-rank": true,
@@ -17808,7 +17934,7 @@ const RhythmTapTest = ({
       lineHeight: '1.25',
       textShadow: '0 1px 4px rgba(2,6,23,.92)'
     }
-  }, "\u266A ", song.displayName)), /*#__PURE__*/React.createElement("div", {
+  }, "\u266A ", rhythmSongFullName(song))), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-hud-right": true,
     className: "flex w-[33vw] max-w-[33vw] flex-col items-end gap-1.5"
   }, /*#__PURE__*/React.createElement("div", {
@@ -18873,6 +18999,8 @@ function MonsterHeroGame() {
   const [assistantChosen, setAssistantChosen] = useState(true);
   // きき加入の会話。null=出さない / 0以上=その位置のセリフを表示中
   const [kikiIntroStep, setKikiIntroStep] = useState(null);
+  // ももすけ登場の会話。きき加入と同じ形。両方まだの人でも同時には出さない(きき→もも の順)
+  const [momosukeIntroStep, setMomosukeIntroStep] = useState(null);
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
   const [assistantBonds, setAssistantBonds] = useState({});
@@ -19006,6 +19134,12 @@ function MonsterHeroGame() {
   const [showAssistantPicker, setShowAssistantPicker] = useState(false); // プロフィールからの助手変更
   // きき加入の会話を見たことがあるか(イベント回想の解放判定に使う。値そのものはKIKI_INTRO_SEEN_KEYの読み取り専用ミラー)
   const [kikiIntroSeenFlag, setKikiIntroSeenFlag] = useState(false);
+  // ももすけ登場の会話を見たことがあるか。これが立っている＝ももすけを助手に選べる
+  // (MOMOSUKE_INTRO_SEEN_KEYの読み取り専用ミラー。見た瞬間はmarkMomosukeIntroSeen側で更新する)
+  const [momosukeIntroSeenFlag, setMomosukeIntroSeenFlag] = useState(false);
+  // 新規プレイヤーキャンペーンの対象か。起動時に「一度もはじめての設定を終えていない」ことで決める。
+  // 既定は false にしておく(判定できないうちは配らない)
+  const [newPlayerCampaignEligible, setNewPlayerCampaignEligible] = useState(false);
   // イベント回想: プロフィールから見返す一覧の開閉と、再生中のイベント({id,step}、nullなら非表示)。
   // どちらもセーブデータには一切書かない(見るだけ)
   const [showEventReplayList, setShowEventReplayList] = useState(false);
@@ -20530,7 +20664,9 @@ function MonsterHeroGame() {
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
   const kikiIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null;
-  const eventBgmScene = kikiIntroPlaying ? EVENT_BGM_SCENES.kiki_intro : eventReplay ? EVENT_BGM_SCENES[eventReplay.id] || null : null;
+  // ももすけ登場も同じ扱い。ききの会話が出ているあいだは、そちらを優先する
+  const momosukeIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep != null;
+  const eventBgmScene = kikiIntroPlaying ? EVENT_BGM_SCENES.kiki_intro : momosukeIntroPlaying ? EVENT_BGM_SCENES.momosuke_intro : eventReplay ? EVENT_BGM_SCENES[eventReplay.id] || null : null;
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver) => {
     // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
@@ -21251,7 +21387,7 @@ function MonsterHeroGame() {
       for (const type of CHANGELOG_TYPES) {
         const savedIds = await storeGet(`mh_changelog_seen_ids_${type}`, null, false);
         const legacyDate = await storeGet(`mh_changelog_seen_${type}`, legacyChangelogSeen, false);
-        migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id => CHANGELOG_IDS_BY_TYPE[type].includes(id)) : CHANGELOG_ENTRIES.filter(entry => entry.type === type && legacyDate && entry.date <= legacyDate).map(entry => entry.id);
+        migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id => CHANGELOG_IDS_BY_TYPE[type].includes(id)) : changelogEntriesOfTab(type).filter(entry => legacyDate && entry.date <= legacyDate).map(entry => entry.id);
         if (!Array.isArray(savedIds)) await storeSet(`mh_changelog_seen_ids_${type}`, migratedSeen[type], false);
       }
       setChangelogSeen(migratedSeen);
@@ -21437,8 +21573,13 @@ function MonsterHeroGame() {
         wasOnboarded = !!(hasSavedName && hasSavedIcon);
         await storeSet('mh_onboarded', wasOnboarded, false);
       }
+      // キャンペーンの対象かどうかは、この時点の値で決める。
+      // 下の行で「名前かアイコンが欠けている既存プレイヤー」も未完了へ戻すが、
+      // その人はもう一度はじめての設定を通るだけで、新規ではない(配ってはいけない)
+      const everOnboarded = wasOnboarded === true;
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
+      setNewPlayerCampaignEligible(!everOnboarded);
       // 助手選択は、はじめて遊ぶ人にだけ出す。
       // 既に遊んでいる人は、選択の保存が無くても「みゅあを選んでいる」扱いのまま進める
       setAssistantChosen(!!savedAssistant || wasOnboarded);
@@ -21454,6 +21595,18 @@ function MonsterHeroGame() {
         try {
           await storeSet(KIKI_INTRO_SEEN_KEY, true, false);
           setKikiIntroSeenFlag(true);
+        } catch {}
+      }
+      // ももすけ登場の会話も、ききとまったく同じ考え方で出す。
+      // 既存プレイヤー(wasOnboarded)で未閲覧なら流し、新しく始めた人はここで見たことにする
+      // (助手選択でももすけを選べるようにするため。あとから本編で流れてしまうのも防ぐ)。
+      // ききとももが両方未閲覧のときは、ききの会話を先に出し、ももは次の起動へまわす。
+      const momosukeIntroSeen = await storeGet(MOMOSUKE_INTRO_SEEN_KEY, false, false);
+      setMomosukeIntroSeenFlag(momosukeIntroSeen === true);
+      if (wasOnboarded && momosukeIntroSeen !== true && kikiIntroSeen === true) setMomosukeIntroStep(0);else if (!wasOnboarded && momosukeIntroSeen !== true) {
+        try {
+          await storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false);
+          setMomosukeIntroSeenFlag(true);
         } catch {}
       }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
@@ -21827,6 +21980,26 @@ function MonsterHeroGame() {
     await storeSet('mh_breeder_icon', onboardingIcon, false);
     setBreederName(name);
     setBreederIcon(onboardingIcon);
+    // 新規プレイヤーキャンペーンのプレゼントは、完了フラグを立てる「前」に配る。
+    // 逆にすると、ギフトを足す前に閉じられたときmh_onboardedだけが立ち、
+    // 次に開いたときには対象外になって永久に受け取れなくなる。
+    // 先に配っておけば、途中で閉じられても次にここを通ったときに配り直せる
+    // (同じidのギフトがあれば grantNewPlayerCampaignGift 側で足さない)。
+    // プレビュー(デバッグの見るだけ表示)では、画面にも出さないようここで止める
+    if (!onboardingPreview && NEW_PLAYER_CAMPAIGN_ENABLED && newPlayerCampaignEligible) {
+      try {
+        const issued = await storeGet(NEW_PLAYER_CAMPAIGN_KEY, false, false);
+        if (issued !== true) {
+          const savedGifts = await storeGet('mh_gifts', [], false);
+          const grant = grantNewPlayerCampaignGift(Array.isArray(savedGifts) ? savedGifts : []);
+          if (grant.granted) {
+            await storeSet('mh_gifts', grant.gifts, false);
+            setGifts(grant.gifts);
+          }
+          await storeSet(NEW_PLAYER_CAMPAIGN_KEY, true, false);
+        }
+      } catch {}
+    }
     await storeSet('mh_onboarded', true, false);
     const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
     await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seenUpdateIds, ...availableUpdateNotices().map(n => n.id)]), false);
@@ -22455,7 +22628,7 @@ function MonsterHeroGame() {
   // 出す場面でないとき・出すものが無いときは null を返す
   const assistantUnlockNoticeNode = scene => {
     if (!scene) return null;
-    if (!(bootPhase === 'GAME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && !eventReplay)) return null;
+    if (!(bootPhase === 'GAME' && onboarded && !onboardingPreview && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && !eventReplay)) return null;
     // アップデートの案内・日次アドバイスと重ならないよう、そちらが出ているあいだは待つ
     if (updateGuideQueue.length > 0 || dailyMasuAdvice) return null;
     const notice = assistantUnlockNoticeOf(scene);
@@ -22519,13 +22692,26 @@ function MonsterHeroGame() {
       storeSet(KIKI_INTRO_SEEN_KEY, true, false);
     } catch {}
   }, []);
+  // ももすけ登場の会話を見終わったときの処理。ここが「ももすけの解放」そのもの。
+  // 本編で見ても、プロフィールの回想から先に見ても、通るのはこの1か所だけにしてある
+  // (二重に解放したり、見たのに解放されないことが起きないようにするため)。
+  // いま選んでいる助手は変えない(勝手に切り替えないこと。選ぶのはプレイヤー)
+  const markMomosukeIntroSeen = useCallback(() => {
+    setMomosukeIntroStep(null);
+    setMomosukeIntroSeenFlag(true);
+    try {
+      storeSet(MOMOSUKE_INTRO_SEEN_KEY, true, false);
+    } catch {}
+  }, []);
   // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
   // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
   // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
   const EVENT_REPLAY_UNLOCK_FLAGS = {
-    kikiIntroSeen: kikiIntroSeenFlag
+    kikiIntroSeen: kikiIntroSeenFlag,
+    momosukeIntroSeen: momosukeIntroSeenFlag
   };
-  const isEventReplayUnlocked = event => !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
+  // alwaysUnlocked のイベントは、本編でまだ見ていなくても回想から見られる
+  const isEventReplayUnlocked = event => !!(event && event.alwaysUnlocked) || !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
   // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
   const chooseAssistant = useCallback(id => {
     const next = normalizeAssistantId(id);
@@ -29963,7 +30149,7 @@ function MonsterHeroGame() {
   }, CHANGELOG_ENTRIES.length === 0 ? /*#__PURE__*/React.createElement("p", {
     className: "mh-changelog-empty",
     "data-changelog-empty": true
-  }, "\u66F4\u65B0\u5C65\u6B74\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u901A\u4FE1\u72B6\u6CC1\u3092\u78BA\u304B\u3081\u3066\u304B\u3089\u3001\u8A2D\u5B9A\u306E\u300C\u30B2\u30FC\u30E0\u3092\u66F4\u65B0\u300D\u3067\u8AAD\u307F\u8FBC\u307F\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002") : CHANGELOG_ENTRIES.filter(c => c.type === changelogTab).map(c => /*#__PURE__*/React.createElement("article", {
+  }, "\u66F4\u65B0\u5C65\u6B74\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u901A\u4FE1\u72B6\u6CC1\u3092\u78BA\u304B\u3081\u3066\u304B\u3089\u3001\u8A2D\u5B9A\u306E\u300C\u30B2\u30FC\u30E0\u3092\u66F4\u65B0\u300D\u3067\u8AAD\u307F\u8FBC\u307F\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002") : changelogEntriesOfTab(changelogTab).map(c => /*#__PURE__*/React.createElement("article", {
     key: c.id,
     className: changelogUnreadIds[changelogTab].includes(c.id) ? 'unread' : ''
   }, /*#__PURE__*/React.createElement("time", null, c.date, changelogUnreadIds[changelogTab].includes(c.id) && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("b", null, c.title), (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
@@ -31325,7 +31511,7 @@ function MonsterHeroGame() {
           onClick: () => claimGiftIds([g.id])
         }, "\u53D7\u3051\u53D6\u308B")), /*#__PURE__*/React.createElement("div", {
           className: "mh-gift-deadline"
-        }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限情報なし'}`));
+        }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限なし'}`));
       })));
     })(), gameState === 'MISSIONS' && (() => {
       const state = normalizeMissions(missions),
@@ -37483,6 +37669,7 @@ function MonsterHeroGame() {
       onClick: () => {
         chooseAssistant(who.id);
         markKikiIntroSeen();
+        markMomosukeIntroSeen();
         setGameState('PROFILE');
         setTutorialKind('intro');
         setTutorialStep(0);
@@ -37514,7 +37701,7 @@ function MonsterHeroGame() {
       }
     }, "\u3053\u306E\u5B50\u306B\u3059\u308B")))), /*#__PURE__*/React.createElement("p", {
       className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
-    }, "\u3069\u3061\u3089\u3082\u6700\u521D\u304B\u3089\u9078\u3079\u307E\u3059\u3002\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308B\u306E\u3067\u3001\u3042\u3068\u3067\u5909\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
+    }, "3\u4EBA\u3068\u3082\u6700\u521D\u304B\u3089\u9078\u3079\u307E\u3059\u3002\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308B\u306E\u3067\u3001\u3042\u3068\u3067\u5909\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-4 shrink-0",
@@ -41453,6 +41640,21 @@ function MonsterHeroGame() {
       const active = who.id === selectedAssistantId;
       const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
       const t = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, who.id) : null;
+      // まだ登場の会話を見ていない助手は選べない。どこで会えるかは添えておく
+      const locked = who.id === 'momosuke' && !momosukeIntroSeenFlag;
+      if (locked) return /*#__PURE__*/React.createElement("div", {
+        key: who.id,
+        className: "w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-2xl",
+        "aria-hidden": "true"
+      }, "\uD83D\uDD12"), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[12px] font-black text-slate-400"
+      }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("small", {
+        className: "block text-[9px] text-slate-500 leading-tight"
+      }, "HOME\u3067\u306E\u51FA\u4F1A\u3044\u3092\u898B\u308B\u3068\u9078\u3079\u308B\u3088\u3046\u306B\u306A\u308A\u307E\u3059\u3002")));
       return /*#__PURE__*/React.createElement("button", {
         key: who.id,
         type: "button",
@@ -44482,6 +44684,9 @@ function MonsterHeroGame() {
       const speaker = assistantById(line.who);
       const last = step === script.length - 1;
       const calls = typeof ASSISTANT_KIKI_INTRO_CALLS !== 'undefined' && ASSISTANT_KIKI_INTRO_CALLS || {};
+      // 顔を並べるのは、この台本に出てくる助手だけ。
+      // 全員を並べると、まだ登場していない助手までここに映ってしまう
+      const cast = ASSISTANT_LIST.filter(who => script.some(l => l.who === who.id));
       const next = () => {
         if (last) markKikiIntroSeen();else setKikiIntroStep(step + 1);
       };
@@ -44514,7 +44719,7 @@ function MonsterHeroGame() {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-pink-300"
       }, "\u3042\u305F\u3089\u3057\u3044\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
         className: "mb-3 flex items-end justify-center gap-3"
-      }, ASSISTANT_LIST.map(who => {
+      }, cast.map(who => {
         const talking = who.id === line.who;
         return /*#__PURE__*/React.createElement("div", {
           key: who.id,
@@ -44555,7 +44760,88 @@ function MonsterHeroGame() {
           pointerEvents: 'auto'
         }
       }, last ? 'とじる' : 'つぎへ')));
-    })(), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && updateGuideQueue.length > 0 && (() => {
+    })(), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep != null && (() => {
+      const script = typeof ASSISTANT_MOMOSUKE_INTRO !== 'undefined' && ASSISTANT_MOMOSUKE_INTRO || [];
+      if (script.length === 0) return null;
+      const step = Math.max(0, Math.min(momosukeIntroStep, script.length - 1));
+      const line = script[step];
+      const speaker = assistantById(line.who);
+      const last = step === script.length - 1;
+      const cast = ASSISTANT_LIST.filter(who => script.some(l => l.who === who.id));
+      const next = () => {
+        if (last) markMomosukeIntroSeen();else setMomosukeIntroStep(step + 1);
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 flex items-end justify-center",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          zIndex: 77000,
+          backgroundColor: 'rgba(2,6,23,.95)'
+        },
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "\u3082\u3082\u3059\u3051\u304C\u52A9\u624B\u306B\u52A0\u308F\u308A\u307E\u3057\u305F"
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: next,
+        "aria-label": "\u6B21\u3078",
+        className: "absolute inset-0 w-full h-full",
+        style: {
+          background: 'transparent'
+        }
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "relative w-full max-w-md max-h-[calc(var(--mh-vh)-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-300 bg-slate-950 p-4",
+        style: {
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+          pointerEvents: 'none'
+        }
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "mb-2 text-center text-[10px] font-black tracking-widest text-pink-200"
+      }, "\u3042\u305F\u3089\u3057\u3044\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
+        className: "mb-3 flex items-end justify-center gap-3"
+      }, cast.map(who => {
+        const talking = who.id === line.who;
+        return /*#__PURE__*/React.createElement("div", {
+          key: who.id,
+          className: `flex flex-col items-center gap-1 ${talking ? '' : 'opacity-35'}`,
+          style: {
+            transform: talking ? 'scale(1)' : 'scale(.86)',
+            transition: 'opacity .18s, transform .18s'
+          }
+        }, /*#__PURE__*/React.createElement(AssistantFace, {
+          who: who,
+          size: talking ? 76 : 56,
+          accent: who.accent,
+          expression: talking ? line.e : 'normal'
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "text-[9px] font-black",
+          style: {
+            color: talking ? who.accent : '#64748b'
+          }
+        }, who.name));
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl border-2 bg-slate-900 px-3 py-3",
+        style: {
+          borderColor: speaker.accent
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block text-[9px] font-black tracking-widest",
+        style: {
+          color: speaker.accent
+        }
+      }, speaker.name), /*#__PURE__*/React.createElement("span", {
+        className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
+      }, line.t)), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2 text-center text-[8px] text-slate-500"
+      }, step + 1, " / ", script.length), /*#__PURE__*/React.createElement("button", {
+        onClick: next,
+        className: "mt-3 min-h-[50px] w-full rounded-2xl bg-pink-400 text-sm font-black text-slate-950 active:scale-[.98]",
+        style: {
+          pointerEvents: 'auto'
+        }
+      }, last ? 'とじる' : 'つぎへ')));
+    })(), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep == null && updateGuideQueue.length > 0 && (() => {
       const notice = updateGuideQueue[0];
       const pages = Array.isArray(notice.pages) && notice.pages.length ? notice.pages : ['新しいアップデートがあるよ♪'];
       const page = Math.min(updateGuidePage, pages.length - 1);
@@ -44614,11 +44900,20 @@ function MonsterHeroGame() {
       const speaker = assistantById(line.who);
       const last = step === script.length - 1;
       const calls = event && event.calls || {};
+      const cast = ASSISTANT_LIST.filter(who => script.some(l => l.who === who.id));
+      // 回想でも最後まで見たら「見たことがある」として扱う。
+      // ももすけ登場を本編より先にここで見た人は、この時点でももすけが解放され、
+      // あとから本編で同じ会話が重ねて流れることもなくなる
       const next = () => {
-        if (last) setEventReplay(null);else setEventReplay(r => r && {
-          ...r,
-          step: r.step + 1
-        });
+        if (!last) {
+          setEventReplay(r => r && {
+            ...r,
+            step: r.step + 1
+          });
+          return;
+        }
+        if (event && event.id === 'momosuke_intro') markMomosukeIntroSeen();
+        setEventReplay(null);
       };
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-end justify-center",
@@ -44649,7 +44944,7 @@ function MonsterHeroGame() {
         className: "mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300"
       }, "\u56DE\u60F3\u30FB", event?.title || ''), /*#__PURE__*/React.createElement("div", {
         className: "mb-3 flex items-end justify-center gap-3"
-      }, ASSISTANT_LIST.map(who => {
+      }, cast.map(who => {
         const talking = who.id === line.who;
         return /*#__PURE__*/React.createElement("div", {
           key: who.id,
@@ -44683,7 +44978,7 @@ function MonsterHeroGame() {
         className: "block text-[13px] font-bold leading-relaxed text-white mt-1"
       }, line.t)), /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-center text-[8px] text-slate-500"
-      }, step + 1, " / ", script.length, Object.keys(calls).length > 0 && `　／　${ASSISTANT_LIST.filter(who => calls[who.id]).map(who => `${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`), /*#__PURE__*/React.createElement("button", {
+      }, step + 1, " / ", script.length, Object.keys(calls).length > 0 && `　／　${cast.filter(who => calls[who.id]).map(who => `${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`), /*#__PURE__*/React.createElement("button", {
         onClick: next,
         className: "mt-3 min-h-[50px] w-full rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]",
         style: {

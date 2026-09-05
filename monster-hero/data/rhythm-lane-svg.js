@@ -98,11 +98,9 @@
       }));
     }
 
-    for (let lane = 0; lane < RHYTHM_LANE_COUNT; lane++) {
-      const at = rhythmProjectLane(lane, .94), label = svgEl('text', { x:(at.center*1000).toFixed(3), y:'950', 'text-anchor':'middle', fill:'#94a3b8', 'fill-opacity':'.62', 'font-size':'28', 'font-weight':'700' });
-      label.textContent = String(lane + 1);
-      svg.appendChild(label);
-    }
+    // 手元のレーン番号(1〜5)はここで描いていた。2026-09-05にユーザー指示で消した。
+    // プレイ中は判定ラインとノーツだけを見るので、番号は目の邪魔になるだけだった。
+    // (以前プレイ画面側の数字を消したときに、こちらのSVGが残っていて実機に出ていた)
 
     area.insertBefore(svg, area.firstChild);
     currentArea = area;

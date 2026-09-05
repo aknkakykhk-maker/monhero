@@ -88,8 +88,10 @@ check('見終わったら保存して、二度と自動再生しない',
     && has('try { storeSet(KIKI_INTRO_SEEN_KEY, true, false); } catch {}'));
 check('HOMEでだけ出す(案内やバトルに割り込まない)',
   has("{bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep!=null&&(()=>{"));
+// 助手の登場イベントは今後も増えるので、並び全部ではなく
+// 「チュートリアル中・きき加入中は出さない」ことだけを見る
 check('アップデート通知と重ならない',
-  has("tutorialStep==null&&kikiIntroStep==null&&updateGuideQueue.length>0"));
+  /tutorialStep==null&&kikiIntroStep==null&&[a-zA-Z=&!]*updateGuideQueue\.length>0/.test(source));
 // ★会話を見ただけで助手が変わったり、仲良し度が動いたりしてはいけない
 // 「見たことにする」処理の中身だけを取り出す(次の関数まで含めて見ないようにする)
 const markSeenBody = (() => {
@@ -138,8 +140,12 @@ if (from >= 0 && to > from) {
   check('発言者の名前が出る', text(first).includes(ASSISTANTS.find(a => a.id === script[0].who).name));
   check('発言者に合わせた顔と表情が出る',
     first.includes(`data-face="${script[0].who}"`) && first.includes(`data-expression="${script[0].e}"`));
+  // 顔を並べるのは、この台本に出てくる助手だけ(ここは みゅあ と きき の2人の会話)。
+  // 全員を並べると、まだ登場していない助手までこの場面に映ってしまう
   check('話していないほうの助手も並ぶ(2人の会話だと分かる)',
-    ASSISTANTS.every(w => first.includes(`data-face="${w.id}"`)));
+    ['mua', 'kiki'].every(id => first.includes(`data-face="${id}"`)));
+  check('この会話に出てこない助手は並ばない',
+    ASSISTANTS.filter(w => !['mua', 'kiki'].includes(w.id)).every(w => !first.includes(`data-face="${w.id}"`)));
   check('タップで次へ進める', /aria-label="次へ"/.test(first) && /つぎへ/.test(text(first)));
   // 全ステップで、発言者の顔と本文が食い違わないこと
   check('どのセリフでも発言者と顔が一致する', script.every((l, i) => {
@@ -173,7 +179,7 @@ check('イベントが終われば元の画面のBGMへ戻す(依存に入って
   /\}, \[[^\]]*\beventBgmScene\b[^\]]*\]\);/.test(source)
   && /\}, \[[^\]]*\bbgmArrangement\b[^\]]*\]\);/.test(source));
 check('曲はBGMアレンジの設定から引く(直接ファイル名を書かない)',
-  has("EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro' })")
+  /EVENT_BGM_SCENES = Object\.freeze\(\{[^}]*kiki_intro:'kikiIntro'/.test(source)
   && !/kikiIntroStep[\s\S]{0,400}bgm-event-0/.test(source));
 
 // --- 更新履歴とヘルプ ---

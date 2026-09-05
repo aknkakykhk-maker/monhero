@@ -54,6 +54,8 @@ const dataTablePrelude = [
   // 難易度定義・ランクしきい値・曲と譜面の実データから作る。切り出すと材料が足りなくなるので
   // data/rhythm-mode.js をまるごと持ち込む（このファイルは単体で読める作りになっている）
   rhythmModeData,
+  // 曲一覧が使う曲名の組み立て。helpDataRows より前にあるので、別に持ち込む
+  grab(source, 'const rhythmSongFullName =', 'const helpDataRows = (id)'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
   "const { useState, useEffect, useRef, useContext } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
