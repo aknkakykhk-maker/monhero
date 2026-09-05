@@ -31,6 +31,8 @@ const html = `<!doctype html><html><head><meta name="viewport" content="width=de
 html,body{margin:0;height:100%}
 body{display:flex;justify-content:center}
 #shell{width:100%;height:100%;max-width:600px;margin:0 auto;display:flex;flex-direction:column;overflow:hidden}
+/* 本体(index.html)と同じ: 横画面のスマホではコラムを広げる(#146) */
+@media (orientation: landscape) and (max-height: 600px){#shell{max-width:1024px}}
 ${css}
 </style></head><body>
 <div id="shell">
@@ -74,6 +76,11 @@ const SIZES = [
   { name: '大きい端末 428x926', width: 428, height: 926 },
   { name: 'Fold6 内側 690x700', width: 690, height: 700 },
   { name: 'Fold6 外側 344x882', width: 344, height: 882 },
+  // 横画面(#146・2026-09-05)。コラムが画面いっぱいになり、施設の配置も横画面用に変わる。
+  // 高さが390pxしか無いので、吹き出しと施設の重なり・上下の切れは縦画面より起きやすい
+  { name: '横画面     844x390', width: 844, height: 390 },
+  { name: '横画面     932x430', width: 932, height: 430 },
+  { name: '横画面 小  667x375', width: 667, height: 375 },
 ];
 
 (async () => {
