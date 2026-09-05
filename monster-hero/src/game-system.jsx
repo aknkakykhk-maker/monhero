@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 02:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 02:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6791,6 +6791,22 @@ const helpDataRows = (id) => {
           `Lv.${Math.min(...levels)}〜${Math.max(...levels)} ／ ${charts.length}難易度${length ? ` ／ ${length}` : ''}`];
       }).filter(Boolean);
     }
+    // 曲えらびの四角い枠に絵が出るかどうか。ヘルプへ「いまはこの4曲」と手で書くと、
+    // 絵を1つ足すたびにヘルプだけ古くなる(実際にそうなった)。実データの artwork から表にする
+    case 'rhythmSongArtwork': {
+      const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+      const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
+      const artOf = song => typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song)
+        : (song && typeof song.artwork === 'string' ? song.artwork : '');
+      // 同じ絵を2曲以上で使っているときは、その旨も出す(いまは風がそよぐ場所とClose To Your Heart)
+      const uses = new Map();
+      list.forEach(song => { const src = artOf(song); if (src) uses.set(src, (uses.get(src) || 0) + 1); });
+      return list.map(song => {
+        const src = artOf(song);
+        return [rhythmSongFullName(song),
+          src ? (uses.get(src) > 1 ? '絵あり（ほかの曲と同じ絵）' : '絵あり') : '色タイルに曲名の頭文字'];
+      });
+    }
     // モンスターノーツの能力。効果の数値(ライフ+500・6秒・15秒…)をヘルプへ書き写すと、
     // 値を変えたときにヘルプだけ古いまま残るため、実データから表にする
     case 'rhythmMonsterAbilities': {
@@ -6837,6 +6853,7 @@ const HELP_DATA_TITLES = {
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
+  rhythmSongArtwork: '曲えらびに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力',
 };
 // ===== 助手(ナビゲーター) ここから =====

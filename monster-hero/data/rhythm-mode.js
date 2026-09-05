@@ -7623,6 +7623,7 @@ const RHYTHM_SONG_ENTRIES = [
     songId:'monster_hero',
     displayName:'Monster Hero',
     bgmTrackId:'monster_hero_theme',
+    artwork:'images/song-art/monster-hero.jpg?v=8f7d0efd07fd',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,monsterHeroV3Charts[id]||emptyRhythmChart()
     ])))
