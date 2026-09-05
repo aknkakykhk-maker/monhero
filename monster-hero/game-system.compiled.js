@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c9c7353964decd12
+// source-sha256: 88b2e4f2daae2ad1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 10:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 10:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16002,6 +16002,26 @@ const rhythmSongArtHue = songId => {
   for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) % 360;
   return hash;
 };
+// 横スワイプのカルーセルで、えらんだカードを中央へ寄せる。
+//
+// 【なぜ scrollIntoView を使わないか】
+// 以前は scrollIntoView({inline:'center',block:'nearest'}) を使っていた。
+// block:'nearest' は「縦は必要な分だけ」という意味で、**動かさない**ではない。
+// 画面の低い端末ではカードが縦に収まりきらず、そのぶん外側まで縦スクロールしてしまい、
+// 画面いちばん上の「← バトル」が上へ追い出されて、指でスクロールしないと戻れなかった
+// (2026-09-05・ユーザー指摘、Galaxy Z Fold6)。
+// ここでは横の位置だけを自分で計算して動かすので、縦は一切動かない。
+const centerCarouselChild = (root, index, behavior = 'auto') => {
+  const el = root && root.children && root.children[index];
+  if (!root || !el) return;
+  const rootBox = root.getBoundingClientRect();
+  const box = el.getBoundingClientRect();
+  const left = root.scrollLeft + (box.left - rootBox.left) - (rootBox.width - box.width) / 2;
+  if (typeof root.scrollTo === 'function') root.scrollTo({
+    left,
+    behavior
+  });else root.scrollLeft = left; // 古いブラウザでも位置だけは合わせる
+};
 const RhythmSongArt = ({
   song,
   large = false
@@ -21783,10 +21803,7 @@ function MonsterHeroGame() {
     if (gameState !== 'BATTLE_MENU' || battleMenuTab !== 'difficulty') return;
     const id = requestAnimationFrame(() => {
       const index = Object.keys(DIFFICULTY_SETTINGS).indexOf(difficulty);
-      difficultyCarouselRef.current?.children[index]?.scrollIntoView({
-        inline: 'center',
-        block: 'nearest'
-      });
+      centerCarouselChild(difficultyCarouselRef.current, index);
     });
     return () => cancelAnimationFrame(id);
   }, [gameState, battleMenuTab]);
@@ -21799,10 +21816,7 @@ function MonsterHeroGame() {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
       const modes = [...BATTLE_MODES, EXTREME_MODE, ...(SPECIES_CHALLENGE_PUBLIC_RELEASE || debugBattle ? [SPECIES_CHALLENGE_MODE] : [])];
       const index = modes.length + Math.max(0, modes.findIndex(m => m.id === battleMode));
-      modeCarouselRef.current?.children[index]?.scrollIntoView({
-        inline: 'center',
-        block: 'nearest'
-      });
+      centerCarouselChild(modeCarouselRef.current, index);
     });
     return () => cancelAnimationFrame(id);
   }, [gameState, modeSelectTab]);
@@ -21813,10 +21827,7 @@ function MonsterHeroGame() {
     setCurrentPickingMon(null);
     setAllyCardIndex(0);
     const id = requestAnimationFrame(() => {
-      allyCarouselRef.current?.children[0]?.scrollIntoView({
-        inline: 'center',
-        block: 'nearest'
-      });
+      centerCarouselChild(allyCarouselRef.current, 0);
     });
     return () => cancelAnimationFrame(id);
   }, [gameState, monSelection]);
@@ -21834,10 +21845,7 @@ function MonsterHeroGame() {
     setDifficulty(start);
     const id = requestAnimationFrame(() => {
       const index = Object.keys(DIFFICULTY_SETTINGS).indexOf(start);
-      modeDifficultyCarouselRef.current?.children[index]?.scrollIntoView({
-        inline: 'center',
-        block: 'nearest'
-      });
+      centerCarouselChild(modeDifficultyCarouselRef.current, index);
     });
     return () => cancelAnimationFrame(id);
   }, [gameState, battleMode]);
@@ -21845,10 +21853,7 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (gameState !== 'EXTREME_DIFFICULTY_SELECT') return;
     setExtremeDifficulty('EXTREME');
-    const id = requestAnimationFrame(() => modeDifficultyCarouselRef.current?.children[0]?.scrollIntoView({
-      inline: 'center',
-      block: 'nearest'
-    }));
+    const id = requestAnimationFrame(() => centerCarouselChild(modeDifficultyCarouselRef.current, 0));
     return () => cancelAnimationFrame(id);
   }, [gameState]);
 
@@ -33302,11 +33307,7 @@ function MonsterHeroGame() {
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(difficulties.length - 1, index));
         setDifficulty(difficulties[safe][0]);
-        difficultyCarouselRef.current?.children[safe]?.scrollIntoView({
-          behavior,
-          inline: 'center',
-          block: 'nearest'
-        });
+        centerCarouselChild(difficultyCarouselRef.current, safe, behavior);
       };
       const mode = battleModeInfo(battleMode);
       // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
@@ -33567,11 +33568,7 @@ function MonsterHeroGame() {
       };
       const scrollToLoopIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(loopModes.length - 1, index));
-        modeCarouselRef.current?.children[safe]?.scrollIntoView({
-          behavior,
-          inline: 'center',
-          block: 'nearest'
-        });
+        centerCarouselChild(modeCarouselRef.current, safe, behavior);
         setBattleMode(loopModes[safe].id);
       };
       // 矢印は端でも止まらない。1つ進む・1つ戻るだけで、位置の戻しはスクロールが止まってから行う
@@ -33793,11 +33790,7 @@ function MonsterHeroGame() {
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(difficulties.length - 1, index));
         setExtremeDifficulty(difficulties[safe].id);
-        modeDifficultyCarouselRef.current?.children[safe]?.scrollIntoView({
-          behavior,
-          inline: 'center',
-          block: 'nearest'
-        });
+        centerCarouselChild(modeDifficultyCarouselRef.current, safe, behavior);
       };
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
@@ -34006,11 +33999,7 @@ function MonsterHeroGame() {
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(difficulties.length - 1, index));
         chooseDifficulty(difficulties[safe][0]);
-        modeDifficultyCarouselRef.current?.children[safe]?.scrollIntoView({
-          behavior,
-          inline: 'center',
-          block: 'nearest'
-        });
+        centerCarouselChild(modeDifficultyCarouselRef.current, safe, behavior);
       };
       const mode = battleModeInfo(battleMode),
         pro = isProMode(battleMode),
@@ -43803,11 +43792,7 @@ function MonsterHeroGame() {
         if (!root) return;
         const next = Math.max(0, Math.min(list.length - 1, allyCardIndex + delta));
         setAllyCardIndex(next);
-        root.children[next]?.scrollIntoView({
-          behavior: 'smooth',
-          inline: 'center',
-          block: 'nearest'
-        });
+        centerCarouselChild(root, next, 'smooth');
       };
       return /*#__PURE__*/React.createElement(React.Fragment, null, allyCarousel && /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1"
