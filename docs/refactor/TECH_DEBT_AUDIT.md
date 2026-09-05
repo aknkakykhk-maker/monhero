@@ -43,7 +43,7 @@
 | TD-24 | Medium | 運用 | Tone.js CDN に SRI が無い(KI-009) | 8 |
 | TD-25 | Medium | 運用 | Supabase の RLS を確認できていない(KI-010)。publishable key はソース埋め込み(仕様どおり) | – |
 | TD-26 | Medium | 構造 | `data/assistants.js`(3,600 行)がセリフ・親密度計算・チュートリアル台本・スパム抑制を1ファイルに持つ | 10 |
-| TD-27 | Low | 配信 | `data/images/title-screen-clean.PNG`(2.6MB)が未参照のまま配信される | 0(要確認) |
+| TD-27 | Low | 配信 | `data/images/title-screen-clean.PNG`(2.6MB)が未参照のまま配信される | **対応済み**(2026-09-06 に削除) |
 | TD-28 | Low | 起動 | `changelog.js` 446KB・`assistants.js` 266KB・`help.js` 256KB を起動時に必ず読む | 10 |
 | TD-29 | Low | 文書 | `tools/README.md` が 385 本の一覧で、変更領域→実行すべき検査の対応が分からない | 1 |
 | TD-30 | Low | 構造 | `RhythmTapTest` のインデント崩れ(列0 の `const`)がトップレベル定義に見える | 9 |
@@ -170,7 +170,7 @@
 
 ### TD-27 未参照の配信物(Low・要確認)
 
-`data/images/title-screen-clean.PNG` 2.6MB。`image-asset-check.js` は `monster-hero/images/` だけを見るため検出されない。削除はユーザー確認後(復元は git から可能)。
+`data/images/title-screen-clean.PNG` 2.6MB。`image-asset-check.js` は `monster-hero/images/` だけを見るため検出されない。**2026-09-06 にユーザー確認のうえ削除済み**(復元は git 履歴から可能)。`data/images/` 配下の未参照検出は検査の穴として残る。
 
 ## 良い点(壊さないために記録)
 

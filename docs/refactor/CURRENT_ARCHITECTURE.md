@@ -295,7 +295,7 @@ tools/harness.js → game-system.jsx を Babel で変換し、EXPORTED_NAMES を
 | D-04 | KI-008 | `KNOWN_ISSUES.md` は `assistant-bond-check` が GOD で NG と記載 | 2026-09-05 の実行では全件 OK |
 | D-05 | 画面一覧 | `UI_RULES.md` §3 は 15 系統のみ | 実際は 74 種(音ゲー・種族・修行・デバッグを含む) |
 | D-06 | 音ゲーの正本 | `RHYTHM_MODE.md`(4,522行)に「確定・未実装」項目が多数 | 実装済み範囲は `RHYTHM_FUTURE_IMPLEMENTATION_PLAN.md` の見出しに「実装済み」印。両文書の対応表は無い |
-| D-07 | 未使用の配信物 | – | `data/images/title-screen-clean.PNG`(2.6MB)は `index.html`/本体/データのどこからも参照されない(`DEVELOPMENT.md` にのみ言及)。`image-asset-check` の対象外ディレクトリ |
+| D-07 | 未使用の配信物 | – | `data/images/title-screen-clean.PNG`(2.6MB)はどこからも参照されていなかった。**2026-09-06 に削除済み**。`data/images/` は `image-asset-check` の対象外ディレクトリ(検査の穴として残る) |
 | D-08 | `game-v4.html` | `PROJECT_STRUCTURE.md` は互換入口として維持と記載 | 同じ(差なし。参考) |
 
-D-01〜D-05 は文書側の更新で解消できる見込み(STEP 0 に含める)。D-07 は「未使用に見えるものを確認なしで消さない」原則に従い、削除はユーザー確認後。
+D-01〜D-05 は文書側の更新で解消できる見込み(STEP 0 に含める)。D-07 はユーザー確認のうえ 2026-09-06 に削除した。
