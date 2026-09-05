@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 21:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 22:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6389,13 +6389,19 @@ const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
   Tiger: { scale: 2.31, x: 3, y: 38 },
-  // 元PNGは左右端まで描画が続くため、縮小すると画像端の直線が枠内に露出する。
-  // 中央の大きさを保ったまま両端を円・角丸枠の外へ逃がし、片側だけを寄せない。
-  ark_icon: { scale: 1.08, x: 0, y: 0 },
+  // アーク。元PNGは顔そのものが右へ寄っている(目の中心が画像の58.3%＝右へ8.3%)。
+  // 倍率だけを上げていたので「右に寄っている」と見えていた(2026-09-05・ユーザー指摘)。
+  // x でそのぶんを打ち消す。元PNGは左右端まで描画が続くため、寄せたぶんを覆えるだけの
+  // 倍率が要る(x=-8.3 なら s>=1.166。それ未満だと画像端の直線が枠内へ露出する)。
+  // y は冠と光輪が上で切れないところまで下げた。
+  ark_icon: { scale: 1.17, x: -8.3, y: 4 },
   kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,
   snegurochka_icon: { scale: 4.28, x: 11, y: 111 },
   snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 },
-  iblis_icon: { scale: 1.42, x: 2, y: -10 },
+  // イブリース。1.42は「頭上のボールを枠の外へ出す」ために選んだ倍率だったが、
+  // 顔に寄りすぎて角も上下も切れていた(2026-09-05・ユーザー指摘「近すぎる」)。
+  // 角と光輪が丸ごと入るところまで引いた。ボールは元絵の一部なので出してよい。
+  iblis_icon: { scale: 1.30, x: 0, y: -11 },
   // 人魚2体。本人アイコンは顔が丸の中央で大きく見える位置、円盤石アイコンは
   // 円盤が丸へぴったり収まる位置。どちらも画像は加工せず、ここの倍率と位置だけで合わせる。
   // 立ち絵が縦長(1024x1536)で顔が小さく写っているため、スネグーラチカ(正方形)と
@@ -6406,8 +6412,10 @@ const MARKET_PROFILE_ICON_STYLES = {
   yaobikuni_disc_icon: { scale: 1.55, x: 0, y: 2 },
   mia_icon: { scale: 3.2, x: 0, y: 94 },
   Mia: { scale: 3.2, x: 0, y: 94 },
-  pandora_icon: { scale: 1.8, x: 0, y: 55 },
-  Pandora: { scale: 1.8, x: 0, y: 55 },
+  // パンドラ。1.8では顔が小さく、ほかのアイコンより引いて見えた
+  // (2026-09-05・ユーザー指摘「少し遠い」)。角と光輪が切れない範囲で寄せた。
+  pandora_icon: { scale: 2.4, x: 0, y: 72 },
+  Pandora: { scale: 2.4, x: 0, y: 72 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
