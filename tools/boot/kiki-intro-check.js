@@ -152,7 +152,7 @@ if (from >= 0 && to > from) {
   check('進み具合が分かる', /1 \/ /.test(text(first)));
   // iPhone縦画面で見切れないための作り
   check('縦画面で見切れない作りになっている',
-    /max-h-\[calc\(100dvh-env\(safe-area-inset-top\)\)\]/.test(first)
+    /max-h-\[calc\(var\(--mh-vh\)-env\(safe-area-inset-top\)\)\]/.test(first)
       && /overflow-y-auto/.test(first)
       && /env\(safe-area-inset-bottom\)/.test(first));
 }
@@ -168,7 +168,10 @@ check('イベントBGMは画面のBGMより先に決まる',
 check('鳴らす条件は会話の表示条件と同じ',
   has("const kikiIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep != null;"));
 check('イベントが終われば元の画面のBGMへ戻す(依存に入っている)',
-  /bgmArrangement, runMode, eventBgmScene\]/.test(source));
+  // 依存配列の**並びの末尾**を見ていたため、あとから項目が増えると落ちていた
+  // (実際 mainHero?.id などが足されて落ちた)。見たいのは「入っているか」だけ。
+  /\}, \[[^\]]*\beventBgmScene\b[^\]]*\]\);/.test(source)
+  && /\}, \[[^\]]*\bbgmArrangement\b[^\]]*\]\);/.test(source));
 check('曲はBGMアレンジの設定から引く(直接ファイル名を書かない)',
   has("EVENT_BGM_SCENES = Object.freeze({ kiki_intro:'kikiIntro' })")
   && !/kikiIntroStep[\s\S]{0,400}bgm-event-0/.test(source));

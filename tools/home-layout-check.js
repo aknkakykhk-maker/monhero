@@ -25,10 +25,15 @@ const check = (name, ok, detail = '') => {
 };
 
 // 本物と同じ組み立て(施設・ミッション・ギフト・設定・みゅあの吹き出し)
+// 本体は #root > div を max-width:600px で中央へ寄せている。
+// 幅の広い端末(折りたたみ)では、そこが効いた状態で測らないと意味が無いので同じにする。
 const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><style>
-html,body{margin:0;height:100%}body{display:flex;flex-direction:column}
+html,body{margin:0;height:100%}
+body{display:flex;justify-content:center}
+#shell{width:100%;height:100%;max-width:600px;margin:0 auto;display:flex;flex-direction:column;overflow:hidden}
 ${css}
 </style></head><body>
+<div id="shell">
 <main class="mh-home-scene">
   <header class="mh-home-status">
     <button class="mh-home-player"><div class="mh-home-avatar"></div><div class="mh-home-player-copy"><strong>あつ</strong><span>ブリーダー Lv.38</span><div class="mh-home-xp"><i style="width:60%"></i></div><small>414 / 651 XP</small></div></button>
@@ -45,7 +50,7 @@ ${css}
   <button class="mh-home-gift">ギフト</button>
   <button class="mh-home-update">更新履歴</button>
   <div class="mh-home-assistant" style="height:70px">みゅあ</div>
-</main></body></html>`;
+</main></div></body></html>`;
 
 // 光らせる場所と、そこを説明するときに吹き出しを上へ寄せるべきか
 // (画面の下半分にあるものは、下に出すと説明が重なってしまう)
@@ -58,12 +63,17 @@ const SPOTS = {
   settings:   { sel: '.mh-home-settings',            wantTop: false },
   assistant:  { sel: '.mh-home-assistant',           wantTop: false },
 };
-// 代表的な画面の大きさ(小さい端末・ふつう・大きい端末)
+// 代表的な画面の大きさ(小さい端末・ふつう・大きい端末・折りたたみ)
+// 折りたたみ端末は「幅が広く、高さが低い」。ふつうのスマホより150pxほど低いので、
+// 縦に置いたものが入りきらないかどうかは、ここで初めて分かる
+// (2026-09-05・ユーザー指摘、Galaxy Z Fold6)。
 const SIZES = [
   { name: 'iPhone SE  375x667', width: 375, height: 667 },
   { name: '小さい端末 320x568', width: 320, height: 568 },
   { name: 'ふつう     390x844', width: 390, height: 844 },
   { name: '大きい端末 428x926', width: 428, height: 926 },
+  { name: 'Fold6 内側 690x700', width: 690, height: 700 },
+  { name: 'Fold6 外側 344x882', width: 344, height: 882 },
 ];
 
 (async () => {
@@ -114,6 +124,11 @@ const SIZES = [
     const overflow = res.facilities.filter(f => f.left < -0.5 || f.right > res.width + 0.5);
     check('  施設のラベルが画面からはみ出さない', overflow.length === 0,
       overflow.map(f => `${f.name}(${Math.round(f.left)}〜${Math.round(f.right)} / 画面${res.width})`).join(', '));
+    // ⑤ 上下に切れていないか。折りたたみ端末は高さが低いので、
+    //    「バトル」のように下端へ置いたものが画面の外へ出ていないかを見る。
+    const cut = res.facilities.filter(f => f.bottom > res.height + 0.5 || f.top < -0.5);
+    check('  施設のラベルが上下に切れない', cut.length === 0,
+      cut.map(f => `${f.name}(上${Math.round(f.top)} 下${Math.round(f.bottom)} / 画面高${res.height})`).join(', '));
     await page.close();
   }
   await browser.close();
