@@ -62,6 +62,9 @@ ok('不具合修正と新機能がどちらも記録されている',(counts.fix
         return {
           articles:articles.length,
           withKind:articles.filter(a=>a.querySelector('.mh-changelog-kind')).length,
+          all:articles.map(a=>({
+            kind:(a.querySelector('.mh-changelog-kind')||{}).textContent||'(札なし)',
+            tone:(a.querySelector('.mh-changelog-kind')||{}).dataset?.kind||''})),
           first:articles.slice(0,5).map(a=>({
             kind:(a.querySelector('.mh-changelog-kind')||{}).textContent||'(札なし)',
             tone:(a.querySelector('.mh-changelog-kind')||{}).dataset?.kind||'',
@@ -71,11 +74,34 @@ ok('不具合修正と新機能がどちらも記録されている',(counts.fix
       ok('更新履歴に項目が並んでいる',view.articles>0,`${view.articles}件`);
       ok('すべての項目に種類の札が付いている',view.articles>0&&view.withKind===view.articles,
         `${view.withKind}/${view.articles}件`);
-      const kinds=new Set(view.first.map(f=>f.kind));
-      ok('直近の並びで種類が見分けられる',kinds.size>=2,
-        view.first.map(f=>`[${f.kind}]${f.title.slice(0,20)}`).join(' / '));
-      ok('不具合修正の札が出ている',view.first.some(f=>f.tone==='fix'),
-        view.first.map(f=>f.tone).join(','));
+      // 2026-09-05: 以前は「直近5件に2種類以上あること」を見ていたが、
+      // 不具合修正を別タブへ移したあとは、たまたま同じ種類が続くと落ちる。
+      // 「その日の並び順」ではなく、一覧全体に複数の種類が出ていることを見る
+      const allKinds=new Set(view.all.map(f=>f.kind));
+      ok('一覧に複数の種類が出ている',allKinds.size>=2,[...allKinds].join(' / '));
+      // 2026-09-05: 不具合修正(fix)は「不具合情報」タブへ移した。
+      // 上にタブがあるのに不具合修正が「更新情報」に並んでいて、分かれている意味が
+      // なかったため(ユーザー指摘)。ここでは「左に混ざっていないこと」と
+      // 「右に出ていること」を両方見る。片方だけだと、全部を片側へ寄せても通ってしまう
+      const tones=(sel)=>page.evaluate(()=>[...document.querySelectorAll('[data-changelog-list] article')]
+        .map(a=>(a.querySelector('.mh-changelog-kind')||{}).dataset?.kind||''));
+      const updateTones=await tones();
+      ok('更新情報タブに不具合修正・調査中が混ざっていない',
+        updateTones.length>0&&!updateTones.some(t=>t==='fix'||t==='issue'),
+        `${updateTones.length}件: ${[...new Set(updateTones)].join(',')}`);
+      const switched=await page.evaluate(()=>{
+        const b=[...document.querySelectorAll('.mh-changelog-tabs button')].find(x=>/不具合情報/.test(x.innerText||''));
+        if(!b)return false;b.click();return true;});
+      ok('不具合情報タブへ切り替えられる',switched);
+      if(switched){
+        await page.waitForTimeout(500);
+        const issueTones=await tones();
+        ok('不具合情報タブに不具合修正が出ている',issueTones.some(t=>t==='fix'),
+          `${issueTones.length}件: ${[...new Set(issueTones)].join(',')}`);
+        ok('不具合情報タブに新機能・改善・マーケットが混ざっていない',
+          issueTones.length>0&&issueTones.every(t=>t==='fix'||t==='issue'),
+          `${[...new Set(issueTones)].join(',')}`);
+      }
     }
   }catch(error){
     ok('確認を最後まで進められる',false,String(error).split('\n')[0]);
