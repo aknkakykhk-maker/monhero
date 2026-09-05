@@ -25,6 +25,16 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-07 18:00", type:'feature', title:'モンヒロビート: 「綺季一閃」「Stay With Me」に曲の絵が付きました', status:'new',
+    items:[
+      '曲えらびで、この2曲が色タイルから絵に変わります。',
+      '絵が付いているのは「Stay With Me ～Locked Fate～」「綺季一閃 ～花雪に舞う詠姫～」「風がそよぐ場所」「Close To Your Heart」の4曲になりました。',
+      'まだ絵の無い曲は、これまでどおり色タイルに曲名の頭文字が出ます。絵ができた曲から順に差し替わります。',
+      '起動のときに読み込むものは増やしていないので、立ち上がりの速さは変わりません。',
+    ],
+    assistantNotice:{id:'update_notice_song_art_two_v1',type:'feature'},
+  },
+  {
     date: "2026-09-07 17:00", type:'feature', title:'モンヒロビート: 7曲目「Close To Your Heart」を足し、出だしの待ち時間を短くしました', status:'new',
     items:[
       '曲えらびに7曲目として「Close To Your Heart」が並びます。2分ちょうどの曲で、EASYはLv.7・175ノーツ、MASTERはLv.30です。絵は「風がそよぐ場所」と同じものを使っています。',
