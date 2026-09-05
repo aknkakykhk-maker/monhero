@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ff83563e61a8276b
+// source-sha256: c1bb3bde5e03aa5f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 08:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 09:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15450,6 +15450,176 @@ const RhythmLandscapeHint = ({
   "data-rhythm-landscape-hint": true,
   className: `hidden portrait:block rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold leading-relaxed text-cyan-100 ${className}`
 }, "\uD83D\uDCF1 \u6A2A\u753B\u9762\u306B\u3082\u5BFE\u5FDC\u3057\u3066\u3044\u307E\u3059\u3002\u7AEF\u672B\u3092\u6A2A\u306B\u3059\u308B\u3068\u3001\u66F2\u306E\u4E00\u89A7\u3068\u9078\u3093\u3060\u66F2\u3092\u5DE6\u53F3\u306B\u4E26\u3079\u3066\u898B\u3089\u308C\u307E\u3059\u3002");
+// ============================================================================
+// タップのタイミング合わせ
+// ============================================================================
+// 【2026-09-05・ユーザー指示】
+// 「レーンとノーツに合わせて何回かタップして調整するみたいなやつ」。
+// 音ゲーによくある形で、一定の間隔で流れてくる目印に合わせて叩き、
+// そのずれの平均から「判定タイミング調整」の値を決める。
+//
+// 【なぜ要るか】
+// 画面に見えてから指が触れて、端末がそれを知らせるまでの遅れは端末ごとに違う。
+// 20〜40msほどあり、いちばん良い判定(±55ms)の半分を食う。
+// 目分量で合わせるのは難しいので、実際に叩いた結果から決める。
+//
+// 【測り方】
+//   ・一定の間隔(RHYTHM_CALIBRATION_BEAT_MS)で目印が判定ラインへ来る
+//   ・そのときのタップの時刻とのずれを集める
+//   ・外れ値(いちばん大きいものといちばん小さいもの)を落として平均を取る
+//     …1回の押し間違いで全部が狂わないようにするため
+//   ・平均を5ms刻みへ丸めて、-100〜+100の範囲に収める(設定と同じ刻み・範囲)
+//
+// 時刻は音と同じ AudioContext ではなく performance.now() を使う。
+// ここでは音を鳴らさず、目印の動きだけに合わせてもらうため。
+const RHYTHM_CALIBRATION_BEAT_MS = 1000; // 目印が来る間隔。1秒ちょうどで数えやすくする
+const RHYTHM_CALIBRATION_TAPS = 8; // 何回叩いてもらうか
+const RHYTHM_CALIBRATION_DROP_EACH_END = 1; // 外れ値として上下いくつずつ落とすか
+const RHYTHM_CALIBRATION_MAX_MS = 100; // 設定の範囲と同じ
+const RHYTHM_CALIBRATION_STEP_MS = 5; // 設定の刻みと同じ
+// 集めたずれから、設定へ入れる値を出す。ここだけ切り出してあるので検査から直接動かせる。
+const rhythmCalibrationOffsetFromTaps = deltas => {
+  const list = (Array.isArray(deltas) ? deltas : []).filter(value => Number.isFinite(Number(value))).map(Number).sort((a, b) => a - b);
+  if (!list.length) return null;
+  // 上下を落とす。落としたあとに何も残らないなら落とさない
+  const drop = list.length > RHYTHM_CALIBRATION_DROP_EACH_END * 2 ? RHYTHM_CALIBRATION_DROP_EACH_END : 0;
+  const used = drop ? list.slice(drop, list.length - drop) : list;
+  const mean = used.reduce((sum, value) => sum + value, 0) / used.length;
+  const stepped = Math.round(mean / RHYTHM_CALIBRATION_STEP_MS) * RHYTHM_CALIBRATION_STEP_MS;
+  return {
+    offsetMs: Math.max(-RHYTHM_CALIBRATION_MAX_MS, Math.min(RHYTHM_CALIBRATION_MAX_MS, stepped)),
+    usedCount: used.length,
+    droppedCount: list.length - used.length,
+    rawMeanMs: Math.round(mean)
+  };
+};
+
+// 実際に叩いてもらう部品。オプションの中へ置く。
+// レーンを1本だけ出し、ノーツが上から降りてきて判定ラインへ来る。それに合わせて叩く。
+// 判定・スコア・譜面には一切関わらない(ここで測るのは「ずれ」だけ)。
+const RhythmTimingCalibrator = ({
+  onApply,
+  onClose,
+  currentOffsetMs = 0
+}) => {
+  const [taps, setTaps] = useState([]);
+  const [running, setRunning] = useState(false);
+  const startRef = useRef(0);
+  const frameRef = useRef(null);
+  const noteRef = useRef(null);
+  const areaRef = useRef(null);
+  const tapsRef = useRef([]);
+  const result = rhythmCalibrationOffsetFromTaps(taps);
+  const stop = useCallback(() => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+    setRunning(false);
+  }, []);
+  useEffect(() => () => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+  }, []);
+  const start = () => {
+    setTaps([]);
+    tapsRef.current = [];
+    startRef.current = performance.now();
+    setRunning(true);
+    const tick = () => {
+      const area = areaRef.current,
+        note = noteRef.current;
+      if (!area || !note) {
+        frameRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      const elapsed = performance.now() - startRef.current;
+      // 1拍ぶんを上から判定ラインまで動かし、着いたら次の拍へ回す
+      const phase = elapsed % RHYTHM_CALIBRATION_BEAT_MS / RHYTHM_CALIBRATION_BEAT_MS;
+      const height = area.clientHeight || 120;
+      note.style.transform = `translate3d(0,${Math.round(phase * (height - 18))}px,0)`;
+      if (tapsRef.current.length >= RHYTHM_CALIBRATION_TAPS) {
+        stop();
+        return;
+      }
+      frameRef.current = requestAnimationFrame(tick);
+    };
+    frameRef.current = requestAnimationFrame(tick);
+  };
+  const tap = () => {
+    if (!running) return;
+    const elapsed = performance.now() - startRef.current;
+    // いちばん近い拍からのずれ。早ければマイナス、遅ければプラス
+    const nearest = Math.round(elapsed / RHYTHM_CALIBRATION_BEAT_MS) * RHYTHM_CALIBRATION_BEAT_MS;
+    const delta = elapsed - nearest;
+    // 最初の1拍は目印がまだ降りきっていないので数えない
+    if (elapsed < RHYTHM_CALIBRATION_BEAT_MS) return;
+    const next = [...tapsRef.current, delta];
+    tapsRef.current = next;
+    setTaps(next);
+    RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-calibrator": true,
+    className: "rounded-2xl border border-cyan-400/40 bg-slate-950/90 p-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] font-black text-cyan-100"
+  }, "\uD83C\uDFAF \u30BF\u30C3\u30D7\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u5408\u308F\u305B\u308B"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] leading-relaxed text-slate-400"
+  }, "\u4E0B\u306E\u7DDA\u3078\u30CE\u30FC\u30C4\u304C\u91CD\u306A\u3063\u305F\u77AC\u9593\u306B\u3001\u30EA\u30BA\u30E0\u3088\u304F", RHYTHM_CALIBRATION_TAPS, "\u56DE\u53E9\u3044\u3066\u304F\u3060\u3055\u3044\u3002 \u753B\u9762\u306B\u898B\u3048\u3066\u304B\u3089\u6307\u304C\u89E6\u308C\u308B\u307E\u3067\u306E\u9045\u308C\u306F\u7AEF\u672B\u3054\u3068\u306B\u9055\u3046\u306E\u3067\u3001\u5B9F\u969B\u306B\u53E9\u3044\u3066\u6E2C\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    ref: areaRef,
+    "data-rhythm-calibrator-area": true,
+    onPointerDown: e => {
+      e.preventDefault();
+      tap();
+    },
+    className: "relative mt-2 h-28 w-full overflow-hidden rounded-xl border border-white/15 bg-slate-900",
+    style: {
+      touchAction: 'none',
+      WebkitUserSelect: 'none',
+      userSelect: 'none'
+    }
+  }, /*#__PURE__*/React.createElement("i", {
+    ref: noteRef,
+    "data-rhythm-calibrator-note": true,
+    "aria-hidden": "true",
+    className: "absolute left-1/2 top-0 h-4 w-24 -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-200 to-fuchsia-500"
+  }), /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    className: "absolute inset-x-0 bottom-3 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300"
+  }), !running && /*#__PURE__*/React.createElement("span", {
+    className: "absolute inset-0 flex items-center justify-center text-[11px] font-black text-slate-300"
+  }, taps.length ? 'もう一度やるなら「はじめる」' : '「はじめる」を押してね')), /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-calibrator-count": true,
+    className: "mt-1 text-center text-[10px] font-black tabular-nums text-cyan-200"
+  }, taps.length, " / ", RHYTHM_CALIBRATION_TAPS, " \u56DE"), result && taps.length >= RHYTHM_CALIBRATION_TAPS && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-calibrator-result": true,
+    className: "mt-1 text-center text-[10px] font-bold text-amber-200"
+  }, "\u5E73\u5747", result.rawMeanMs > 0 ? '+' : '', result.rawMeanMs, "ms\uFF08", result.droppedCount, "\u56DE\u306F\u5916\u308C\u5024\u3068\u3057\u3066\u9664\u5916\uFF09\u2192 \u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574 ", result.offsetMs > 0 ? '+' : '', result.offsetMs, "ms"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 grid grid-cols-3 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-calibrator-start": true,
+    onClick: start,
+    disabled: running,
+    className: "min-h-[44px] rounded-xl bg-cyan-700 text-[11px] font-black text-white disabled:opacity-40"
+  }, "\u306F\u3058\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-calibrator-apply": true,
+    disabled: !result || taps.length < RHYTHM_CALIBRATION_TAPS,
+    onClick: () => {
+      if (result) onApply(result.offsetMs);
+    },
+    className: "min-h-[44px] rounded-xl bg-amber-400 text-[11px] font-black text-slate-950 disabled:opacity-40"
+  }, "\u3053\u306E\u5024\u306B\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-calibrator-close": true,
+    onClick: () => {
+      stop();
+      onClose();
+    },
+    className: "min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black text-slate-200"
+  }, "\u3068\u3058\u308B")), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] text-slate-500"
+  }, "\u3044\u307E\u306E\u5024: ", currentOffsetMs > 0 ? '+' : '', currentOffsetMs, "ms\uFF08\u300C\u3053\u306E\u5024\u306B\u3059\u308B\u300D\u3092\u62BC\u3057\u3066\u3082\u3001\u4FDD\u5B58\u3059\u308B\u307E\u3067\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09"));
+};
 const RhythmOptions = ({
   value,
   onSave,
@@ -15457,6 +15627,8 @@ const RhythmOptions = ({
 }) => {
   const [draft, setDraft] = useState(() => normalizeRhythmSettings(value));
   const [message, setMessage] = useState('');
+  // 「叩いて合わせる」を開いているか。設定そのものではないので保存には入れない
+  const [calibrating, setCalibrating] = useState(false);
   const previewRef = useRef(null);
   useEffect(() => () => {
     previewRef.current?.stop();
@@ -15615,7 +15787,21 @@ const RhythmOptions = ({
     className: "mb-1 text-xs font-bold"
   }, "\u5224\u5B9A\u30BF\u30A4\u30DF\u30F3\u30B0\u8ABF\u6574"), stepper('judgmentTimingOffsetMs', -100, 100, 5, 'ms')), /*#__PURE__*/React.createElement("p", {
     className: "mt-2 text-[9px] leading-relaxed text-slate-400"
-  }, "\u5224\u5B9A\u7A93\u306E\u5E45\u306F\u5909\u3048\u305A\u3001\u8868\u793A\u3068\u5165\u529B\u306E\u57FA\u6E96\u3092\u540C\u3058\u91CF\u3060\u3051\u88DC\u6B63\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+  }, "\u5224\u5B9A\u7A93\u306E\u5E45\u306F\u5909\u3048\u305A\u3001\u8868\u793A\u3068\u5165\u529B\u306E\u57FA\u6E96\u3092\u540C\u3058\u91CF\u3060\u3051\u88DC\u6B63\u3057\u307E\u3059\u3002\u6570\u5B57\u3067\u6C7A\u3081\u306B\u304F\u3044\u3068\u304D\u306F\u3001\u4E0B\u306E\u300C\u5408\u308F\u305B\u308B\u300D\u3067\u5B9F\u969B\u306B\u53E9\u3044\u3066\u6E2C\u308C\u307E\u3059\u3002"), !calibrating && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-calibrator-open": true,
+    onClick: () => setCalibrating(true),
+    className: "mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-xs font-black text-cyan-100"
+  }, "\uD83C\uDFAF \u53E9\u3044\u3066\u5408\u308F\u305B\u308B"), calibrating && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement(RhythmTimingCalibrator, {
+    currentOffsetMs: draft.judgmentTimingOffsetMs,
+    onApply: ms => {
+      set('judgmentTimingOffsetMs', ms);
+      setMessage(`判定タイミング調整を ${ms > 0 ? '+' : ''}${ms}ms にしました（未保存）`);
+    },
+    onClose: () => setCalibrating(false)
+  }))), /*#__PURE__*/React.createElement("section", {
     className: card
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-sm font-black text-cyan-200"

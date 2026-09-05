@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 08:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 09:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8475,9 +8475,138 @@ const RhythmLandscapeHint=({className=''})=>
   <p data-rhythm-landscape-hint className={`hidden portrait:block rounded-xl border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[9px] font-bold leading-relaxed text-cyan-100 ${className}`}>
     📱 横画面にも対応しています。端末を横にすると、曲の一覧と選んだ曲を左右に並べて見られます。
   </p>;
+// ============================================================================
+// タップのタイミング合わせ
+// ============================================================================
+// 【2026-09-05・ユーザー指示】
+// 「レーンとノーツに合わせて何回かタップして調整するみたいなやつ」。
+// 音ゲーによくある形で、一定の間隔で流れてくる目印に合わせて叩き、
+// そのずれの平均から「判定タイミング調整」の値を決める。
+//
+// 【なぜ要るか】
+// 画面に見えてから指が触れて、端末がそれを知らせるまでの遅れは端末ごとに違う。
+// 20〜40msほどあり、いちばん良い判定(±55ms)の半分を食う。
+// 目分量で合わせるのは難しいので、実際に叩いた結果から決める。
+//
+// 【測り方】
+//   ・一定の間隔(RHYTHM_CALIBRATION_BEAT_MS)で目印が判定ラインへ来る
+//   ・そのときのタップの時刻とのずれを集める
+//   ・外れ値(いちばん大きいものといちばん小さいもの)を落として平均を取る
+//     …1回の押し間違いで全部が狂わないようにするため
+//   ・平均を5ms刻みへ丸めて、-100〜+100の範囲に収める(設定と同じ刻み・範囲)
+//
+// 時刻は音と同じ AudioContext ではなく performance.now() を使う。
+// ここでは音を鳴らさず、目印の動きだけに合わせてもらうため。
+const RHYTHM_CALIBRATION_BEAT_MS=1000;      // 目印が来る間隔。1秒ちょうどで数えやすくする
+const RHYTHM_CALIBRATION_TAPS=8;            // 何回叩いてもらうか
+const RHYTHM_CALIBRATION_DROP_EACH_END=1;   // 外れ値として上下いくつずつ落とすか
+const RHYTHM_CALIBRATION_MAX_MS=100;        // 設定の範囲と同じ
+const RHYTHM_CALIBRATION_STEP_MS=5;         // 設定の刻みと同じ
+// 集めたずれから、設定へ入れる値を出す。ここだけ切り出してあるので検査から直接動かせる。
+const rhythmCalibrationOffsetFromTaps=(deltas)=>{
+  const list=(Array.isArray(deltas)?deltas:[]).filter(value=>Number.isFinite(Number(value))).map(Number).sort((a,b)=>a-b);
+  if(!list.length)return null;
+  // 上下を落とす。落としたあとに何も残らないなら落とさない
+  const drop=list.length>RHYTHM_CALIBRATION_DROP_EACH_END*2?RHYTHM_CALIBRATION_DROP_EACH_END:0;
+  const used=drop?list.slice(drop,list.length-drop):list;
+  const mean=used.reduce((sum,value)=>sum+value,0)/used.length;
+  const stepped=Math.round(mean/RHYTHM_CALIBRATION_STEP_MS)*RHYTHM_CALIBRATION_STEP_MS;
+  return {offsetMs:Math.max(-RHYTHM_CALIBRATION_MAX_MS,Math.min(RHYTHM_CALIBRATION_MAX_MS,stepped)),
+    usedCount:used.length,droppedCount:list.length-used.length,rawMeanMs:Math.round(mean)};
+};
+
+// 実際に叩いてもらう部品。オプションの中へ置く。
+// レーンを1本だけ出し、ノーツが上から降りてきて判定ラインへ来る。それに合わせて叩く。
+// 判定・スコア・譜面には一切関わらない(ここで測るのは「ずれ」だけ)。
+const RhythmTimingCalibrator=({onApply,onClose,currentOffsetMs=0})=>{
+  const [taps,setTaps]=useState([]);
+  const [running,setRunning]=useState(false);
+  const startRef=useRef(0);
+  const frameRef=useRef(null);
+  const noteRef=useRef(null);
+  const areaRef=useRef(null);
+  const tapsRef=useRef([]);
+  const result=rhythmCalibrationOffsetFromTaps(taps);
+
+  const stop=useCallback(()=>{
+    if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);
+    frameRef.current=null;setRunning(false);
+  },[]);
+  useEffect(()=>()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);},[]);
+
+  const start=()=>{
+    setTaps([]);tapsRef.current=[];
+    startRef.current=performance.now();
+    setRunning(true);
+    const tick=()=>{
+      const area=areaRef.current,note=noteRef.current;
+      if(!area||!note){frameRef.current=requestAnimationFrame(tick);return;}
+      const elapsed=performance.now()-startRef.current;
+      // 1拍ぶんを上から判定ラインまで動かし、着いたら次の拍へ回す
+      const phase=(elapsed%RHYTHM_CALIBRATION_BEAT_MS)/RHYTHM_CALIBRATION_BEAT_MS;
+      const height=area.clientHeight||120;
+      note.style.transform=`translate3d(0,${Math.round(phase*(height-18))}px,0)`;
+      if(tapsRef.current.length>=RHYTHM_CALIBRATION_TAPS){stop();return;}
+      frameRef.current=requestAnimationFrame(tick);
+    };
+    frameRef.current=requestAnimationFrame(tick);
+  };
+
+  const tap=()=>{
+    if(!running)return;
+    const elapsed=performance.now()-startRef.current;
+    // いちばん近い拍からのずれ。早ければマイナス、遅ければプラス
+    const nearest=Math.round(elapsed/RHYTHM_CALIBRATION_BEAT_MS)*RHYTHM_CALIBRATION_BEAT_MS;
+    const delta=elapsed-nearest;
+    // 最初の1拍は目印がまだ降りきっていないので数えない
+    if(elapsed<RHYTHM_CALIBRATION_BEAT_MS)return;
+    const next=[...tapsRef.current,delta];
+    tapsRef.current=next;setTaps(next);
+    RHYTHM_NOTE_SE_RUNTIME.playEmpty();
+  };
+
+  return <div data-rhythm-calibrator className="rounded-2xl border border-cyan-400/40 bg-slate-950/90 p-3">
+    <p className="text-[11px] font-black text-cyan-100">🎯 タップのタイミングを合わせる</p>
+    <p className="mt-1 text-[9px] leading-relaxed text-slate-400">
+      下の線へノーツが重なった瞬間に、リズムよく{RHYTHM_CALIBRATION_TAPS}回叩いてください。
+      画面に見えてから指が触れるまでの遅れは端末ごとに違うので、実際に叩いて測ります。
+    </p>
+    <div ref={areaRef} data-rhythm-calibrator-area onPointerDown={e=>{e.preventDefault();tap();}}
+      className="relative mt-2 h-28 w-full overflow-hidden rounded-xl border border-white/15 bg-slate-900"
+      style={{touchAction:'none',WebkitUserSelect:'none',userSelect:'none'}}>
+      <i ref={noteRef} data-rhythm-calibrator-note aria-hidden="true"
+        className="absolute left-1/2 top-0 h-4 w-24 -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-200 to-fuchsia-500"/>
+      <i aria-hidden="true" className="absolute inset-x-0 bottom-3 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300"/>
+      {!running&&<span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-slate-300">
+        {taps.length?'もう一度やるなら「はじめる」':'「はじめる」を押してね'}</span>}
+    </div>
+    <p data-rhythm-calibrator-count className="mt-1 text-center text-[10px] font-black tabular-nums text-cyan-200">
+      {taps.length} / {RHYTHM_CALIBRATION_TAPS} 回
+    </p>
+    {result&&taps.length>=RHYTHM_CALIBRATION_TAPS&&(
+      <p data-rhythm-calibrator-result className="mt-1 text-center text-[10px] font-bold text-amber-200">
+        平均{result.rawMeanMs>0?'+':''}{result.rawMeanMs}ms（{result.droppedCount}回は外れ値として除外）→ 判定タイミング調整 {result.offsetMs>0?'+':''}{result.offsetMs}ms
+      </p>
+    )}
+    <div className="mt-2 grid grid-cols-3 gap-2">
+      <button type="button" data-rhythm-calibrator-start onClick={start} disabled={running}
+        className="min-h-[44px] rounded-xl bg-cyan-700 text-[11px] font-black text-white disabled:opacity-40">はじめる</button>
+      <button type="button" data-rhythm-calibrator-apply
+        disabled={!result||taps.length<RHYTHM_CALIBRATION_TAPS}
+        onClick={()=>{if(result)onApply(result.offsetMs);}}
+        className="min-h-[44px] rounded-xl bg-amber-400 text-[11px] font-black text-slate-950 disabled:opacity-40">この値にする</button>
+      <button type="button" data-rhythm-calibrator-close onClick={()=>{stop();onClose();}}
+        className="min-h-[44px] rounded-xl border border-white/20 bg-slate-800 text-[11px] font-black text-slate-200">とじる</button>
+    </div>
+    <p className="mt-1 text-[9px] text-slate-500">いまの値: {currentOffsetMs>0?'+':''}{currentOffsetMs}ms（「この値にする」を押しても、保存するまでは変わりません）</p>
+  </div>;
+};
+
 const RhythmOptions=({value,onSave,onBack})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
   const [message,setMessage]=useState('');
+  // 「叩いて合わせる」を開いているか。設定そのものではないので保存には入れない
+  const [calibrating,setCalibrating]=useState(false);
   const previewRef=useRef(null);
   useEffect(()=>()=>{previewRef.current?.stop();previewRef.current=null;},[]);
   const savedValue=normalizeRhythmSettings(value),dirty=JSON.stringify(draft)!==JSON.stringify(savedValue);
@@ -8513,7 +8642,7 @@ const RhythmOptions=({value,onSave,onBack})=>{
       <div className="space-y-3">
         <RhythmLandscapeHint/>
         <section className={card}><h3 className="text-sm font-black text-cyan-200">🔊 音量</h3><div className="mt-2"><p className="mb-1 text-xs font-bold">BGM音量</p>{stepper('bgmVolume',0,100,1)}</div><div className="mt-2"><p className="mb-1 text-xs font-bold">タップ音量</p>{stepper('noteSeVolume',0,100,1)}</div><div className={row}><span className="text-xs font-bold">タップ音</span>{toggle('noteSeEnabled','')}</div><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={previewBgm} className="min-h-[46px] rounded-xl bg-indigo-700 text-xs font-black">♪ BGM試聴</button><button type="button" onClick={()=>RHYTHM_NOTE_SE_RUNTIME.preview(draft)} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-xs font-black">タップ音試聴</button></div><p className="mt-2 text-[9px] leading-relaxed text-slate-400">この音量はメインゲームの音量設定と別に、音ゲーだけで使います。タイトル画面の全体ミュートのみ共通です。</p></section>
-        <section className={card}><h3 className="text-sm font-black text-cyan-200">🎯 プレイ</h3><div className="mt-2"><p className="mb-1 text-xs font-bold">ノーツ速度</p>{stepper('noteSpeed',RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,'',1)}</div><p className="mt-1 text-[9px] leading-relaxed text-slate-400">1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約{rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。</p><div className="mt-2"><p className="mb-1 text-xs font-bold">ノーツサイズ</p>{stepper('noteSize',80,120,5,'%')}</div><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。</p><div className="mt-2"><p className="mb-1 text-xs font-bold">判定タイミング調整</p>{stepper('judgmentTimingOffsetMs',-100,100,5,'ms')}</div><p className="mt-2 text-[9px] leading-relaxed text-slate-400">判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。</p></section>
+        <section className={card}><h3 className="text-sm font-black text-cyan-200">🎯 プレイ</h3><div className="mt-2"><p className="mb-1 text-xs font-bold">ノーツ速度</p>{stepper('noteSpeed',RHYTHM_NOTE_SPEED_MIN,RHYTHM_NOTE_SPEED_MAX,RHYTHM_NOTE_SPEED_STEP,'',1)}</div><p className="mt-1 text-[9px] leading-relaxed text-slate-400">1.0〜12.0を0.1刻みで調整できます。変わるのはノーツが流れてくる見た目の速さだけで、譜面のタイミング・判定窓・スコアは変わりません（現在 約{rhythmTravelMsForSpeed(draft.noteSpeed).toLocaleString()}ms）。</p><div className="mt-2"><p className="mb-1 text-xs font-bold">ノーツサイズ</p>{stepper('noteSize',80,120,5,'%')}</div><p className="mt-1 text-[9px] leading-relaxed text-slate-400">ノーツの見た目の大きさだけを変えます。入力判定の範囲・HOLD/SLIDE帯・ENDバーの位置は変わりません。</p><div className="mt-2"><p className="mb-1 text-xs font-bold">判定タイミング調整</p>{stepper('judgmentTimingOffsetMs',-100,100,5,'ms')}</div><p className="mt-2 text-[9px] leading-relaxed text-slate-400">判定窓の幅は変えず、表示と入力の基準を同じ量だけ補正します。数字で決めにくいときは、下の「合わせる」で実際に叩いて測れます。</p>{!calibrating&&<button type="button" data-rhythm-calibrator-open onClick={()=>setCalibrating(true)} className="mt-2 min-h-[46px] w-full rounded-xl border border-cyan-300/60 bg-cyan-950/50 text-xs font-black text-cyan-100">🎯 叩いて合わせる</button>}{calibrating&&<div className="mt-2"><RhythmTimingCalibrator currentOffsetMs={draft.judgmentTimingOffsetMs} onApply={ms=>{set('judgmentTimingOffsetMs',ms);setMessage(`判定タイミング調整を ${ms>0?'+':''}${ms}ms にしました（未保存）`);}} onClose={()=>setCalibrating(false)}/></div>}</section>
         <section className={card}><h3 className="text-sm font-black text-cyan-200">👁 表示</h3><div className={row}><span className="text-xs font-bold">FAST / SLOW表示</span>{toggle('fastSlowDisplay','')}</div><div className={row}><span className="text-xs font-bold">判定文字表示</span>{toggle('judgmentTextDisplay','')}</div><div className="py-2"><p className="mb-2 text-xs font-bold">レーン発光</p>{segments('laneGlow',[['NORMAL','標準'],['LOW','控えめ'],['NONE','なし']])}</div></section>
         <section className={card}><h3 className="text-sm font-black text-cyan-200">🐾 両サイドのマスモン</h3>
           <p className="text-[10px] leading-relaxed text-slate-400">レーンの外側の空いたところへ、設定したマスモンが出て拍に合わせて跳ねます。ノーツが見づらいときや、端末が熱くなりやすいときは薄くするか止めてください。</p>

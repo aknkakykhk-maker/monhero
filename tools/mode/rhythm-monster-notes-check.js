@@ -248,5 +248,56 @@ check('既存の rhythmLifeAfter を書き換えず、別入口として足し�
 check('保存キーを増やしていない（設定はマスモンの枠だけ）',
   !/mh_rhythm_(ability|monster_note)/.test(game)&&game.includes("RHYTHM_BEST_RECORDS_KEY = 'mh_rhythm_best_v1'"));
 
+// --- 先行公開の5曲すべてで、モンスターノーツの置き方が仕様どおりか ---
+// 2026-09-05、ユーザーから「綺季一閃でモンスターノーツが連続で出た」という報告。
+// 仕様は「設定した枠の順に1体につき1回・最大4回、前後を空けて狙いやすい場所へ置く」。
+// 実際にゲームへ載っている譜面(ランタイム)を読んで、そのとおりかを全部見る。
+// 譜面を作り直すたびにここで確かめられるようにしておく。
+{
+  const runtime=read('monster-hero/data/rhythm-mode.js');
+  // t(時刻, サブレーン, 幅, 枠) の4つめが枠。1〜4以外は付かない
+  const monsterNotesIn=(marker,difficulty)=>{
+    const begin=runtime.indexOf(`// <${marker}-${difficulty}-notes>`);
+    const end=runtime.indexOf(`// </${marker}-${difficulty}-notes>`);
+    if(begin<0||end<0)return null;
+    const block=runtime.slice(begin,end);
+    const out=[];
+    for(const m of block.matchAll(/\bt\((\d+),[\d.]+,[\d.]+,([1-9])\)/g))
+      out.push({timeMs:Number(m[1]),slot:Number(m[2])});
+    return out.sort((a,b)=>a.timeMs-b.timeMs);
+  };
+  // 体験版に出す5曲のマーカー
+  const MARKERS=['atsu-cup-theme-v3','monster-hero-v3','six-eternel-remix-beat-v3',
+    'pandora-boss-v3','eiki-boss-v3'];
+  const DIFFS=['easy','normal','hard','expert','master'];
+  const MIN_GAP_MS=8000;   // これより近いと「連続で出た」と見える
+  const problems=[];
+  let seen=0;
+  for(const marker of MARKERS)for(const difficulty of DIFFS){
+    const mons=monsterNotesIn(marker,difficulty);
+    if(mons===null){problems.push(`${marker}-${difficulty}: 譜面が見つからない`);continue;}
+    if(!mons.length)continue;
+    seen++;
+    if(mons.length>4)problems.push(`${marker}-${difficulty}: ${mons.length}個(4個まで)`);
+    const slots=mons.map(note=>note.slot);
+    if(new Set(slots).size!==slots.length)
+      problems.push(`${marker}-${difficulty}: 同じ枠が2回出る(${slots.join(',')})`);
+    if(slots.join()!==slots.slice().sort((a,b)=>a-b).join())
+      problems.push(`${marker}-${difficulty}: 枠の順が設定どおりでない(${slots.join(',')})`);
+    for(let i=1;i<mons.length;i++){
+      const gap=mons[i].timeMs-mons[i-1].timeMs;
+      if(gap<MIN_GAP_MS)
+        problems.push(`${marker}-${difficulty}: ${(gap/1000).toFixed(1)}秒しか空いていない`);
+    }
+  }
+  check('先行公開の5曲の譜面を読めた',seen>=25,`${seen}譜面`);
+  check('モンスターノーツは1体1回・最大4回・十分に離れている',problems.length===0,
+    problems.slice(0,3).join(' / ')||`${seen}譜面すべて仕様どおり`);
+}
+// 画面側でも、設定した体数より多い枠は通常ノーツになる(勝手に使い回さない)
+check('設定していない枠のノーツはモンスターノーツにしない',
+  game.includes('const monsterSlot=rhythmNoteMonsterSlot(note),monster=monsterSlot?monsters[monsterSlot-1]||null:null;')
+  &&game.includes("data-rhythm-monster-note={monster?monsterSlot:undefined}"));
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

@@ -86,4 +86,45 @@ ok('演出量は彩度だけでなくグローも段階化',game.includes("setti
 ok('軽量モードはtransitionと複数グローを停止',game.includes("transition:settings.lightweightMode?'none'")&&game.match(/settings\.lightweightMode\|\|settings\.effectAmount==='MINIMAL'\?'none'/g)?.length>=4);
 ok('軽量モードでもプレイ領域とDOM判定ラインを維持',game.includes('data-rhythm-lightweight')&&game.includes('data-rhythm-judgment-line')&&game.includes('data-rhythm-note'));
 ok('仕様書へSTEP1と正式HOME未接続を記録',docs.includes('オプション STEP1')&&docs.includes('通常HOMEや一般公開導線には接続しない')&&docs.includes('正式HOMEへの入口と、正式公開時の最終デザインは未実装'));
+// --- タップのタイミング合わせ(2026-09-05・ユーザー指示) ---
+// 「レーンとノーツに合わせて何回かタップして調整するみたいなやつ」。
+// 計算の部分だけを取り出して、実際に動かして確かめる。
+{
+  const block=game.match(/const RHYTHM_CALIBRATION_BEAT_MS=[\s\S]*?^};$/m)?.[0];
+  ok('タイミング合わせの計算を抽出できる',!!block);
+  if(block){
+    const calCtx={};
+    vm.runInNewContext(`${block}\nthis.out={rhythmCalibrationOffsetFromTaps,RHYTHM_CALIBRATION_TAPS,RHYTHM_CALIBRATION_BEAT_MS,RHYTHM_CALIBRATION_MAX_MS,RHYTHM_CALIBRATION_STEP_MS};`,calCtx);
+    const O=calCtx.out;
+    ok('叩く回数と間隔は数えやすい値',O.RHYTHM_CALIBRATION_TAPS===8&&O.RHYTHM_CALIBRATION_BEAT_MS===1000);
+    ok('出す値の範囲と刻みは設定と同じ',O.RHYTHM_CALIBRATION_MAX_MS===100&&O.RHYTHM_CALIBRATION_STEP_MS===5);
+    ok('叩いていなければ何も出さない',O.rhythmCalibrationOffsetFromTaps([])===null);
+    ok('いつも30ms遅いなら+30msになる',
+      O.rhythmCalibrationOffsetFromTaps([30,30,30,30,30,30,30,30]).offsetMs===30);
+    ok('いつも20ms早いなら-20msになる',
+      O.rhythmCalibrationOffsetFromTaps([-20,-20,-20,-20,-20,-20,-20,-20]).offsetMs===-20);
+    // 1回の押し間違いで全部が狂わないこと(外れ値を上下1つずつ落とす)
+    const withMistake=O.rhythmCalibrationOffsetFromTaps([30,30,30,30,30,30,30,900]);
+    ok('1回の押し間違いに引きずられない',withMistake.offsetMs===30&&withMistake.droppedCount===2);
+    ok('5ms刻みへ丸める',O.rhythmCalibrationOffsetFromTaps([22,23,22,23,22,23,22,23]).offsetMs%5===0);
+    ok('設定の範囲(±100ms)を超えない',
+      O.rhythmCalibrationOffsetFromTaps([500,500,500,500,500,500,500,500]).offsetMs===100
+      &&O.rhythmCalibrationOffsetFromTaps([-500,-500,-500,-500,-500,-500,-500,-500]).offsetMs===-100);
+    // 数でない値が混ざっても、混ざっていないときと同じ結果になること
+    ok('数でない値は数えない',
+      O.rhythmCalibrationOffsetFromTaps([10,null,'x',10,undefined,10]).offsetMs
+      ===O.rhythmCalibrationOffsetFromTaps([10,10,10]).offsetMs);
+  }
+  ok('オプションから「叩いて合わせる」を開ける',
+    game.includes('data-rhythm-calibrator-open')&&game.includes('<RhythmTimingCalibrator'));
+  ok('叩く場所・回数・結果・決定のボタンがある',
+    ['data-rhythm-calibrator-area','data-rhythm-calibrator-count','data-rhythm-calibrator-start',
+     'data-rhythm-calibrator-apply','data-rhythm-calibrator-close'].every(hook=>game.includes(hook)));
+  ok('測った値は判定タイミング調整へ入る(新しい設定を増やさない)',
+    game.includes("onApply={ms=>{set('judgmentTimingOffsetMs',ms);")
+    &&!/mh_rhythm_calibration/.test(game));
+  ok('最初の1拍は数えない(目印が降りきる前のタップを混ぜない)',
+    game.includes('if(elapsed<RHYTHM_CALIBRATION_BEAT_MS)return;'));
+}
+
 console.log(`OK: 音ゲーオプション STEP1 runtime / speed ${slow}ms -> ${normal}ms -> ${fast}ms`);
