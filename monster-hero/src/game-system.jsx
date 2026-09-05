@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 10:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 10:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8735,6 +8735,25 @@ const rhythmSongArtHue=songId=>{
   for(let i=0;i<text.length;i++)hash=(hash*31+text.charCodeAt(i))%360;
   return hash;
 };
+// 横スワイプのカルーセルで、えらんだカードを中央へ寄せる。
+//
+// 【なぜ scrollIntoView を使わないか】
+// 以前は scrollIntoView({inline:'center',block:'nearest'}) を使っていた。
+// block:'nearest' は「縦は必要な分だけ」という意味で、**動かさない**ではない。
+// 画面の低い端末ではカードが縦に収まりきらず、そのぶん外側まで縦スクロールしてしまい、
+// 画面いちばん上の「← バトル」が上へ追い出されて、指でスクロールしないと戻れなかった
+// (2026-09-05・ユーザー指摘、Galaxy Z Fold6)。
+// ここでは横の位置だけを自分で計算して動かすので、縦は一切動かない。
+const centerCarouselChild = (root, index, behavior = 'auto') => {
+  const el = root && root.children && root.children[index];
+  if (!root || !el) return;
+  const rootBox = root.getBoundingClientRect();
+  const box = el.getBoundingClientRect();
+  const left = root.scrollLeft + (box.left - rootBox.left) - (rootBox.width - box.width) / 2;
+  if (typeof root.scrollTo === 'function') root.scrollTo({ left, behavior });
+  else root.scrollLeft = left;   // 古いブラウザでも位置だけは合わせる
+};
+
 const RhythmSongArt=({song,large=false})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
   const src=song&&typeof song.artwork==='string'?song.artwork:'';
@@ -12411,7 +12430,7 @@ function MonsterHeroGame() {
 
   useEffect(()=>{
     if(gameState!=='BATTLE_MENU'||battleMenuTab!=='difficulty')return;
-    const id=requestAnimationFrame(()=>{const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(difficulty);difficultyCarouselRef.current?.children[index]?.scrollIntoView({inline:'center',block:'nearest'});});
+    const id=requestAnimationFrame(()=>{const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(difficulty);centerCarouselChild(difficultyCarouselRef.current,index);});
     return()=>cancelAnimationFrame(id);
   },[gameState,battleMenuTab]);
 
@@ -12423,7 +12442,7 @@ function MonsterHeroGame() {
       // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
       const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])];
       const index=modes.length+Math.max(0,modes.findIndex(m=>m.id===battleMode));
-      modeCarouselRef.current?.children[index]?.scrollIntoView({inline:'center',block:'nearest'});
+      centerCarouselChild(modeCarouselRef.current,index);
     });
     return()=>cancelAnimationFrame(id);
   },[gameState,modeSelectTab]);
@@ -12433,7 +12452,7 @@ function MonsterHeroGame() {
     // 前の画面で開いていた詳細が残っていると、開いた瞬間に別の子が選ばれて見える
     setCurrentPickingMon(null);
     setAllyCardIndex(0);
-    const id=requestAnimationFrame(()=>{allyCarouselRef.current?.children[0]?.scrollIntoView({inline:'center',block:'nearest'});});
+    const id=requestAnimationFrame(()=>{centerCarouselChild(allyCarouselRef.current,0);});
     return()=>cancelAnimationFrame(id);
   },[gameState,monSelection]);
   // 画面を離れるときは位置戻しの見張りを止める(閉じたあとに動かさない)
@@ -12448,7 +12467,7 @@ function MonsterHeroGame() {
     setDifficulty(start);
     const id=requestAnimationFrame(()=>{
       const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(start);
-      modeDifficultyCarouselRef.current?.children[index]?.scrollIntoView({inline:'center',block:'nearest'});
+      centerCarouselChild(modeDifficultyCarouselRef.current,index);
     });
     return()=>cancelAnimationFrame(id);
   },[gameState,battleMode]);
@@ -12456,7 +12475,7 @@ function MonsterHeroGame() {
   useEffect(()=>{
     if(gameState!=='EXTREME_DIFFICULTY_SELECT')return;
     setExtremeDifficulty('EXTREME');
-    const id=requestAnimationFrame(()=>modeDifficultyCarouselRef.current?.children[0]?.scrollIntoView({inline:'center',block:'nearest'}));
+    const id=requestAnimationFrame(()=>centerCarouselChild(modeDifficultyCarouselRef.current,0));
     return()=>cancelAnimationFrame(id);
   },[gameState]);
 
@@ -18345,7 +18364,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             );})()}
             {battleMenuTab==='difficulty'&&(()=>{
               const quick=isQuickMode(battleMode),difficulties=Object.entries(quick?QUICK_DIFFICULTY_SETTINGS:DIFFICULTY_SETTINGS),selectedIndex=difficulties.findIndex(([key])=>key===safeDifficulty);
-              const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setDifficulty(difficulties[safe][0]);difficultyCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});};
+              const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setDifficulty(difficulties[safe][0]);centerCarouselChild(difficultyCarouselRef.current,safe,behavior);};
               const mode=battleModeInfo(battleMode);
               // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
               // クイックモードはスコアを競わないのでスコア倍率は出さず、代わりに経験値倍率を出す
@@ -18413,7 +18432,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 見た目は動かないので、どちらへスワイプしてもいつまでも回り続けるように見える
           const loopModes=[...modes,...modes,...modes];
           const centeredLoopIndex=()=>{const root=modeCarouselRef.current;if(!root)return modes.length+selectedIndex;const c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});return best;};
-          const scrollToLoopIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(loopModes.length-1,index));modeCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});setBattleMode(loopModes[safe].id);};
+          const scrollToLoopIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(loopModes.length-1,index));centerCarouselChild(modeCarouselRef.current,safe,behavior);setBattleMode(loopModes[safe].id);};
           // 矢印は端でも止まらない。1つ進む・1つ戻るだけで、位置の戻しはスクロールが止まってから行う
           const stepMode=(delta)=>scrollToLoopIndex(centeredLoopIndex()+delta);
           // 真ん中のコピーの外にいたら、同じモードが同じ見え方で並んでいる真ん中へ差し替える
@@ -18484,7 +18503,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 公開中の極限難易度を並べる。バトルデバッグも同じ導線を使い、保存だけを無効化する。
           const difficulties=ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available||(debugBattle&&setting.debugAvailable));
           const selectedIndex=Math.max(0,difficulties.findIndex(setting=>setting.id===extremeDifficulty));
-          const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setExtremeDifficulty(difficulties[safe].id);modeDifficultyCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});};
+          const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setExtremeDifficulty(difficulties[safe].id);centerCarouselChild(modeDifficultyCarouselRef.current,safe,behavior);};
           return (
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" data-extreme-difficulties style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState('BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate">極限チャレンジ</h2></div>
@@ -18542,7 +18561,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const selectedDifficulty=species?(speciesChallengeSelection.difficultyId||difficulties[0]?.[0]):safeDifficulty;
           const selectedIndex=Math.max(0,difficulties.findIndex(([key])=>key===selectedDifficulty));
           const chooseDifficulty=id=>species?setSpeciesChallengeSelection(current=>({...current,difficultyId:id,heroId:'',allyIds:[],run:null})):setDifficulty(id);
-          const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));chooseDifficulty(difficulties[safe][0]);modeDifficultyCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});};
+          const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));chooseDifficulty(difficulties[safe][0]);centerCarouselChild(modeDifficultyCarouselRef.current,safe,behavior);};
           const mode=battleModeInfo(battleMode),pro=isProMode(battleMode),ranked=modeHasRanking(battleMode);
           // プロは勇者モン1体＋供モン候補5体をベースモンだけで組むので、それだけの種が解放されている必要がある
           const proReady=getUnlockedBaseMonsterList().length>=PRO_ALLY_POOL_SIZE+1;
@@ -22408,7 +22427,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const savedRawList=gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;
               const rawList=gameState==='PICK_HERO'?debugHeroMonsterList(savedRawList):savedRawList;
               const list=(gameState==='PICK_ALLY'?rawList.filter(m=>m&&!inParty.includes(m.id)):rawList)||[];
-              const stepAlly=(delta)=>{const root=allyCarouselRef.current;if(!root)return;const next=Math.max(0,Math.min(list.length-1,allyCardIndex+delta));setAllyCardIndex(next);root.children[next]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});};
+              const stepAlly=(delta)=>{const root=allyCarouselRef.current;if(!root)return;const next=Math.max(0,Math.min(list.length-1,allyCardIndex+delta));setAllyCardIndex(next);centerCarouselChild(root,next,'smooth');};
               return (<>
             {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンを選択</div>}
             {allyCarousel&&<div className="relative h-0">

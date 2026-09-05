@@ -50,5 +50,26 @@ for(const [text,label] of [[html,'index.html'],[game,'game-system.jsx']]){
   ok(`${label} に 100vh(古い書き方)が無い`,hits===0,hits?`${hits}件`:'');
 }
 
+// --- 横スワイプのカルーセル ---
+// scrollIntoView({block:'nearest'}) は「縦は必要な分だけ」であって「動かさない」ではない。
+// 画面の低い端末ではカードが縦に収まりきらず、そのぶん外側まで縦へスクロールして、
+// 画面いちばん上の「← バトル」が追い出されていた
+// (2026-09-05・ユーザー指摘、Galaxy Z Fold6)。横だけを動かす作りに戻す。
+// コメント(// と /* */)の中の説明文は数えない。
+const gameCode=game.replace(/\/\*[\s\S]*?\*\//g,'').split('\n')
+  .map(line=>line.replace(/^\s*\/\/.*$/,'')).join('\n');
+const strayScroll=(gameCode.match(/scrollIntoView\(/g)||[]).length;
+ok('カルーセルで scrollIntoView を使っていない',strayScroll===0,
+  strayScroll?`${strayScroll}件`:'');
+ok('横だけを動かす中央寄せがある',
+  /const centerCarouselChild = \(root, index, behavior = 'auto'\) =>/.test(game));
+// 中央寄せ関数**の中**だけを見る。修行マップは意図して縦にも動かすので、
+// ファイル全体で top: を禁じてしまうとそちらを巻き添えにする。
+const centerBody=(/const centerCarouselChild = [\s\S]*?\n\};/.exec(game)||[''])[0];
+ok('中央寄せは横(left)だけを動かす',
+  /root\.scrollTo\(\{ left, behavior \}\)/.test(centerBody)&&!/top:/.test(centerBody));
+const calls=(game.match(/centerCarouselChild\(/g)||[]).length;
+ok('カルーセルの中央寄せが全部その関数を通っている',calls>=10,`${calls}件`);
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
