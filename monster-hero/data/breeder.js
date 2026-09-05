@@ -165,6 +165,17 @@ const KIKI_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   cost: 1,
 }));
 
+// 助手ももすけの顔アイコンも、みゅあ・ききと同じ仕様(8表情・各1pt)で並べる。
+// 画像は吹き出しに使っているもの(images/assistant/face/)をそのまま使い、
+// マーケット用に別のファイルを作らない(同じ絵を二重に配信しないため)。
+const MOMOSUKE_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `momosuke_${key}`,
+  name: `ももすけ（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/face/momosuke_${key}.PNG`,
+  cost: 1,
+}));
+
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:'images/breeder-icons/kiki.PNG?v=35362d7b6e3e', cost:1 },
@@ -250,7 +261,8 @@ const BREEDER_MARKET_ITEMS = [
   // 助手みゅあの表情アイコン(8種)。アイコンタブの最後に並ぶ
   ...MYUA_MARKET_ICONS,
   // 助手ききの表情アイコン(8種)。みゅあと同じ並びで続ける
-  ...KIKI_MARKET_ICONS
+  ...KIKI_MARKET_ICONS,
+  ...MOMOSUKE_MARKET_ICONS
 ];
 // 難易度キー → その難易度で使えるスキップチケットのid
 const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
