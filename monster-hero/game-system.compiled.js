@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 53fbaf7d67534201
+// source-sha256: c491514fafe49318
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 16:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 20:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17888,6 +17888,7 @@ const RhythmTapTest = ({
       run.finished = true;
       run.paused = true;
       run.activePointers.clear();
+      run.standbyPointers?.clear();
       run.activeTouchInputs?.clear();
       run.inputFeedbackState?.clear();
       run.audio?.stop();
@@ -17952,6 +17953,7 @@ const RhythmTapTest = ({
       audio,
       notes: makeRuntimeNotes(),
       activePointers: new Map(),
+      standbyPointers: new Map(),
       activeTouchInputs: new Set(),
       combo: 0,
       maxCombo: 0,
@@ -18037,6 +18039,7 @@ const RhythmTapTest = ({
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
     run.activePointers.clear();
+    run.standbyPointers?.clear();
     run.activeTouchInputs?.clear();
     run.inputFeedbackState?.clear();
     run.activePointerFeedback?.clear();
@@ -18082,12 +18085,25 @@ const RhythmTapTest = ({
     rhythmMatchInputBatch(run.notes, inputs, now, settings.judgmentTimingOffsetMs).forEach(({
       input,
       target,
-      deltaMs
+      deltaMs,
+      standby
     }) => {
       run.inputFeedbackState.set(input.inputKey, {
         subLane: Math.max(0, Math.min(9, Math.floor(input.subLaneCoordinate))),
         empty: !target || target.type === 'TAP'
       });
+      // いま押さえている帯へ、持ち替えのために置いた2本目の指。
+      // まだ何も取らないが、1本目が離れたらこの指へそのまま渡す(inputEndsを参照)。
+      // 空打ちの音は鳴らさない(押し損ねたわけではないので)
+      if (!target && standby) {
+        run.standbyPointers.set(input.inputKey, standby.index);
+        if (input.captureTarget && input.pointerId !== undefined) {
+          try {
+            input.captureTarget.setPointerCapture(input.pointerId);
+          } catch {}
+        }
+        return;
+      }
       if (!target) {
         RHYTHM_NOTE_SE_RUNTIME.playEmpty();
         if (input.captureTarget && input.pointerId !== undefined) {
@@ -18141,12 +18157,22 @@ const RhythmTapTest = ({
       inputKey
     }]);
   };
+  // 押さえている帯へ先に置いてあった「控えの指」を探す。
+  // 親指で遊ぶ人は「2本目を置いてから1本目を離す」ので、離した瞬間に渡せないと必ずMISSになる
+  const standbyFingerFor = (run, noteIndex, exceptKey) => {
+    for (const [key, index] of run.standbyPointers) {
+      if (index !== noteIndex || key === exceptKey) continue;
+      return key;
+    }
+    return null;
+  };
   const inputEnds = inputs => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
     const now = run.audio.songTimeMs();
     inputs.forEach(input => {
       run.inputFeedbackState?.delete(input.inputKey);
+      run.standbyPointers.delete(input.inputKey);
       const noteIndex = run.activePointers.get(input.inputKey);
       if (noteIndex === undefined) return;
       run.activePointers.delete(input.inputKey);
@@ -18154,6 +18180,24 @@ const RhythmTapTest = ({
       if (!note || note.done) return;
       note.activePointerId = null;
       const holdEndMs = note.endTimeMs + settings.judgmentTimingOffsetMs;
+      // 先に置いてある指があれば、離したその場でそこへ渡す。
+      // 浮いている状態を経由しないので、猶予の時間切れに巻き込まれない
+      const takeover = standbyFingerFor(run, noteIndex, input.inputKey);
+      if (takeover && !note.done && now < holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
+        note.activePointerId = takeover;
+        note.releasedAtMs = null;
+        rhythmFloatingNoteRemove(note);
+        run.activePointers.set(takeover, noteIndex);
+        run.standbyPointers.delete(takeover);
+        // 経路の追従を続けるため、元の種類で結び直す(SLIDEがただのHOLDへ化けない)
+        RHYTHM_GESTURE_RUNTIME.bind(takeover, note, note._rhythmOriginalType || note.type, now, settings.judgmentTimingOffsetMs);
+        if (input.releaseTarget && input.pointerId !== undefined) {
+          try {
+            if (input.releaseTarget.hasPointerCapture?.(input.pointerId)) input.releaseTarget.releasePointerCapture(input.pointerId);
+          } catch {}
+        }
+        return;
+      }
       // 終わり際まで来ていれば、そのまま成立させる
       if (now >= holdEndMs - RHYTHM_HOLD_RELEASE_GRACE_MS) {
         applyJudgment(note, note.holdJudgment || 'MISS', note.holdDeltaMs || 0);

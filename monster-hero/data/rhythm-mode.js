@@ -1522,6 +1522,35 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
         break;
       }
     }
+    // どれにも当たらなかったとき、いま**押さえられている**HOLD/SLIDEの帯の上に
+    // 指を置いたのなら、それは空打ちではなく「持ち替えのために置いた2本目の指」。
+    //
+    // 【なぜ要るか】(2026-09-05・プレイヤーからの声)
+    //   「左指でスライダーノーツ押さえてて、左指で押さえた状態で右指を置くとミス判定。
+    //     スライダーノーツを左指で押さえる → 同じスライダーノーツを右指で押さえる →
+    //     左指を離して続きを右指で押さえ、左指は自由にする」
+    //   「指置き換えがプロセカの感覚でやってると確実にミス」
+    //
+    // 親指で遊ぶ人は**先に2本目を置いてから1本目を離す**。ところがこちらは
+    // 「離してから置き直す」順番しか想定しておらず、押さえている帯へ置いた2本目は
+    // どのノーツにも当たらない＝空打ちになっていた。しかも1本目を離したときには
+    // 2本目はもう画面に触れているので新しい入力が起きず、引き継ぐきっかけが無い。
+    // 猶予を過ぎて必ずMISSになる、というのがこの声の正体。
+    //
+    // ここでは「控えの指」として返すだけで、判定も音も出さない。
+    // 実際の引き継ぎは、1本目が離れたときに game-system.jsx 側が行う。
+    if(!picked&&!tapOnly&&Number.isFinite(subCoordinate)){
+      for(let index=0;index<source.length;index++){
+        const note=source[index];
+        if(!note||note.done||note.activePointerId===null)continue;
+        if(!(note.type==='HOLD'||rhythmNoteIsSlide(note)||note._rhythmOriginalType==='SLIDE'))continue;
+        if(note.activePointerId===key)continue;   // 自分がいま押さえている指
+        const span=rhythmHandoverSpanAt(note,now-offset);
+        const tolerance=span.width<=1?RHYTHM_NARROW_TAP_TOLERANCE_SUB_LANES:RHYTHM_TAP_TOLERANCE_SUB_LANES;
+        if(subCoordinate<span.start-tolerance||subCoordinate>span.end+tolerance)continue;
+        return {input,target:null,deltaMs:null,standby:note};
+      }
+    }
     if(!picked)return {input,target:null,deltaMs:null};
     claimed.add(pickedIndex);
     // 浮いていたSLIDEを引き継ぐときは、bind へ「元の種類」を渡す。
