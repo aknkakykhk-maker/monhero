@@ -1,3 +1,12 @@
+// 【助手の告知(assistantNotice)は大きい追加のときだけ】(2026-09-05・ユーザー指示)
+// 「毎回更新のたびに助手の説明が入る。でかい実装のときのみにして」。付けてよいのは次の3種類だけ。
+//   market  … マーケットに商品(モンスター・アシストカード・アイテム)が並んだ
+//   mode    … バトルの新モード・新難易度
+//   content … 新しい遊び(新曲・新しい助手・新しい育成システム・キャンペーンなど)
+// 見た目の改善・並び替え・絵の追加・小さな機能・不具合修正には付けない(更新履歴には書く)。
+// 以前の 'feature' は廃止。data/assistants.js が種別を見て、上の3つ以外は告知にしない。
+// 守れているかは node tools/assistant/assistant-update-notice-check.js が見る。
+//
 // 【種別(type)について】
 // 画面のタブは「更新情報」「不具合情報」の2つ。issue は不具合情報タブへ、
 // それ以外(update / fix / feature / market / mode)はすべて更新情報タブへ出る。
@@ -25,6 +34,13 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-07 23:00", type:'update', title:'更新履歴を見出しだけの一覧にし、助手のお知らせを大きな追加のときだけにしました', status:'new',
+    items:[
+      '更新履歴は日付・札・見出しだけが並びます。見出しを押すと、その項目の詳しい内容が開きます（もう一度押すと閉じます）。',
+      '助手が起動時に知らせるお知らせは、マーケットに商品が並んだとき・バトルの新モードや新難易度・新しい遊び（新曲・新しい助手・新しい育成システム・キャンペーンなど）のときだけにしました。見た目の改善や小さな変更は、更新履歴にだけ書きます。',
+    ],
+  },
+  {
     date: "2026-09-07 22:00", type:'feature', title:'スマホを横にしても遊べるようになりました（横画面対応）', status:'new',
     items:[
       'これまで横画面では、縦長の枠の左右に黒い帯が出て、一覧が数行しか見えない状態でした。ご不便をおかけしました。',
@@ -34,7 +50,6 @@ const CHANGELOG = [
       '縦画面の見た目は変わりません。タブレットやパソコンの横長画面もこれまでどおりです。',
       'ホーム画面に追加したアプリ（PWA）も、端末を回すと横画面になります。以前は縦に固定していました。縦のままにしたいときは、端末側の画面回転ロックをお使いください。',
     ],
-    assistantNotice:{id:'update_notice_landscape_v1',type:'feature'},
   },
   {
     date: "2026-09-07 21:00", type:'feature', title:'モンヒロビート: 「Monster Hero」に曲の絵が付きました', status:'new',
@@ -72,7 +87,6 @@ const CHANGELOG = [
       'まだ絵の無い曲は、これまでどおり色タイルに曲名の頭文字が出ます。絵ができた曲から順に差し替わります。',
       '起動のときに読み込むものは増やしていないので、立ち上がりの速さは変わりません。',
     ],
-    assistantNotice:{id:'update_notice_song_art_two_v1',type:'feature'},
   },
   {
     date: "2026-09-07 17:00", type:'feature', title:'モンヒロビート: 7曲目「Close To Your Heart」を足し、出だしの待ち時間を短くしました', status:'new',
@@ -84,7 +98,7 @@ const CHANGELOG = [
       '「風がそよぐ場所」は譜面を作り直した結果、EASYがLv.6→Lv.5になり、NORMALとの差がはっきりしました。',
       'これまでの6曲の譜面は変えていません。自己ベストと全国ランキングもそのまま残ります。',
     ],
-    assistantNotice:{id:'update_notice_close_to_your_heart_v1',type:'feature'},
+    assistantNotice:{id:'update_notice_close_to_your_heart_v1',type:'content'},
   },
   {
     date: "2026-09-07 16:00", type:'feature', title:'モンヒロビート: 曲えらびに並び替えを足し、一覧を広くしました', status:'new',
@@ -96,7 +110,6 @@ const CHANGELOG = [
       '一覧を輪にしました。いちばん下まで送っても止まらず、そのまま先頭の曲へ続きます。',
       '並べ方を変えても、遊べる曲・選んでいる曲・自己ベスト・全国ランキングは何も変わりません。',
     ],
-    assistantNotice:{id:'update_notice_song_select_sort_v1',type:'feature'},
   },
   {
     date: "2026-09-07 15:00", type:'feature', title:'モンヒロビート: 「風がそよぐ場所」に曲の絵が付きました', status:'new',
@@ -105,7 +118,6 @@ const CHANGELOG = [
       'ほかの5曲はこれまでどおり、曲ごとに決まった色のタイルに曲名の頭文字が出ます。絵ができた曲から順に差し替わります。',
       '起動のときに読み込むものは増やしていないので、立ち上がりの速さは変わりません。',
     ],
-    assistantNotice:{id:'update_notice_song_art_v1',type:'feature'},
   },
   {
     date: "2026-09-07 14:00", type:'feature', title:'モンヒロビート: 新しい曲「風がそよぐ場所」を足しました', status:'new',
@@ -115,7 +127,7 @@ const CHANGELOG = [
       '譜面は曲そのものを解析して作っています（118.9BPM・4拍子）。ゆったりした曲なので、ノーツの数もそれに合わせて控えめになりました。',
       '自己ベストも全国ランキングも、ほかの曲と同じように記録されます。',
     ],
-    assistantNotice:{id:'update_notice_kaze_ga_soyogu_v1',type:'feature'},
+    assistantNotice:{id:'update_notice_kaze_ga_soyogu_v1',type:'content'},
   },
   {
     date: "2026-09-07 13:00", type:'fix', title:'モンヒロビート: 結果画面にデバッグ用の表記が出ていたのを直しました', status:'new',
@@ -284,7 +296,6 @@ const CHANGELOG = [
       '練習中はライフが減りません。途中で倒れて最後まで届かなくなることがないようにしています。',
       'スコア・自己ベスト・全国ランキングには一切残りません。何度でもやり直せます。',
     ],
-    assistantNotice:{id:'update_notice_rhythm_practice_v1',type:'feature'},
   },
   {
     date: "2026-09-06 19:00", type:'update', title:'モンヒロビート: オプション画面を見やすくし、項目を2つ足しました', status:'new',
@@ -407,7 +418,7 @@ const CHANGELOG = [
       'スコアは全国ランキングに載ります。難易度をまたいだ合算なので、上の難易度で挑むほど有利です。',
       'プレオープンのため、譜面はこれから調整が入ることがあります。',
     ],
-    assistantNotice:{id:'update_notice_monhiro_beat_preopen_v1',type:'feature'},
+    assistantNotice:{id:'update_notice_monhiro_beat_preopen_v1',type:'content'},
   },
   {
     date: "2026-09-06 07:30", type:'feature', title:'新しい助手「ももすけ」が仲間になりました', status:'new',
@@ -418,7 +429,7 @@ const CHANGELOG = [
       '登場の会話は、プロフィールの「イベント回想」からいつでも見返せます。まだ本編で見ていなくても、こちらから先に見られます。',
       'いま選んでいる助手が勝手に変わることはありません。',
     ],
-    assistantNotice:{id:'update_notice_momosuke_join_v1',type:'feature'},
+    assistantNotice:{id:'update_notice_momosuke_join_v1',type:'content'},
   },
   {
     date: "2026-09-06 07:00", type:'market', title:'マーケットにももすけのアイコンが8種類ならびました', status:'new',
@@ -437,7 +448,7 @@ const CHANGELOG = [
       'どの助手を選んでも対象です。モンヒロビートを遊ばなくても受け取れます。',
       'すでに遊んでいる方はこのキャンペーンの対象外です（このプレゼントは配布されません）。',
     ],
-    assistantNotice:{id:'update_notice_new_player_campaign_v1',type:'feature'},
+    assistantNotice:{id:'update_notice_new_player_campaign_v1',type:'content'},
   },
   {
     date: "2026-09-06 05:00", type:'fix', title:'モンヒロビート: 狙ったノーツと違うノーツが取れてしまうのを直しました', dev:true, releaseFlag:'rhythmMode',
@@ -521,7 +532,6 @@ const CHANGELOG = [
   },
   {
     date: "2026-09-05 05:40", type:'update', title:'新しいBGMを2曲追加しました（SIX ÉTERNEL）', status:'new',
-    assistantNotice:{id:'update_notice_six_eternel_bgm_v1',type:'feature'},
     items:['「SIX ÉTERNEL ―愛はひとつじゃない―」と、その「ドパガキリミックス」の2曲を追加しました。BGMアレンジの登録曲一覧から、ほかの曲と同じようにどの場面へでも選べます。試聴もできます。','どちらの曲にも、頭からサビの終わりまでを切り出した「（ショート）」版があります。2分半ほどで一周するので、短い場面に置きたいときはこちらを選べます。','もらった音源は1曲7MBありましたが、ほかのBGMと同じ音質（96kbps・44.1kHz）へそろえ直して約半分にしました。読み込みが軽くなります。','既存のBGM設定は変えていません。これまで選んでいた曲はそのままです。'],
   },
   {
@@ -602,7 +612,7 @@ const CHANGELOG = [
   },
   {
     date: "2026-09-04 09:11", type:'update', title:'モンスタービートに全国ランキングを追加', dev:true, releaseFlag:'rhythmMode',
-    assistantNotice:{id:'update_notice_rhythm_ranking_v1',type:'feature'},
+    assistantNotice:{id:'update_notice_rhythm_ranking_v1',type:'content'},
     items:['体験版ホームから「🏆 全国ランキングを見る」で、Monster HeroのEASY・NORMAL・HARDをまとめた全国ランキングを見られるようになりました。','難易度ごとに満点が違うため、高い難易度で挑むほど上位に近づきやすくなっています。','自分のスコアは、これまでに出した中でいちばん高い1件だけが載ります。','各記録の「詳細」ボタンから、判定内訳・最大コンボ・達成した称号を確認できます。'],
   },
   {
@@ -639,7 +649,6 @@ const CHANGELOG = [
   },
   {
     date: "2026-09-03 19:21", type:'update', title:'エイキ専用の最終ボスBGMを追加しました', status:'new',
-    assistantNotice:{id:'update_notice_eiki_boss_bgm_v1',type:'feature'},
     items:['エイキを勇者モンにしてムー戦へ進むと、専用曲「綺季一閃 ～花雪に舞う詠姫～」が流れるようになりました。', '供モンだけがエイキの場合や通常戦・デュラハン戦、ほかの勇者モンでは、これまでどおり各モードで設定したBGMが流れます。', 'この曲はBGMアレンジの登録曲一覧から、ほかの曲と同じように選択・試聴できます。'],
   },
   {
@@ -794,7 +803,6 @@ const CHANGELOG = [
   {
     date: "2026-08-31 02:12", type:'update', title:'連撃を含む予測ダメージを修正しました', status:'new',
     items:['エイキの攻撃カードに表示される予測ダメージが、メイン攻撃だけでなく「桜花連舞」「緋桜連華」の全連撃を合算した値になるよう修正しました。ザン・パンドラ・アーク／イブリース・ききの確定追加ヒットもあわせて再確認しています。'],
-    assistantNotice: { id:'update_notice_combo_damage_preview_fix_v1', type:'feature' },
   },
   {
     date: "2026-08-31 01:08", type:'issue', title:'エイキの桜演出を見やすくしました', status:'new',
@@ -991,7 +999,6 @@ const CHANGELOG = [
   },
   {
     date: "2026-08-30 01:31", type: 'update', title: '転生で強化ポイントが減っていた不具合を直しました', status: 'fixed',
-    assistantNotice: { id: 'update_notice_enhance_point_total_v1', type: 'feature' },
     items: [
       '限界突破を重ねると、レベルアップ1回でもらえる強化ポイントが増えます（34回以上で2、35回以上で3）。ところが「読み込んだときの不足補填」と「転生で持てるポイントを数え直すところ」がこの増加ぶんを知らなかったため、転生するたびに増加ぶんが丸ごと消え、同じレベルまで上げ直しても戻りませんでした。数え方を1つにそろえて直しました。',
       'この不具合で減っていたぶんは、アプリを開いた時点で自動的に戻ります（足りないぶんを補うだけなので、二重に増えることはありません）。減っていなかった個体は何も変わりません。',
@@ -1001,7 +1008,7 @@ const CHANGELOG = [
   },
   {
     date: "2026-08-29 16:00", type: 'update', title: 'マンスリーミッションを追加しました', status: 'new',
-    assistantNotice: { id:'update_notice_monthly_missions_v1', type:'feature', destination:'MISSIONS', buttonLabel:'ミッションを見る' },
+    assistantNotice: { id:'update_notice_monthly_missions_v1', type:'content', destination:'MISSIONS', buttonLabel:'ミッションを見る' },
     items: [
       'ミッション画面に「マンスリー」タブを追加しました。毎月1日04:00（日本時間）に更新され、ログイン・バトル・各モード・育成・マーケットなど、1か月のプレイで自然に進みます。',
       '通常マンスリー10項目のうち8項目を達成するとコンプリートです。すべてを必須にせず、遊び方に合わせて達成できます。',
@@ -1464,7 +1471,7 @@ const CHANGELOG = [
     date: "2026-08-23 23:51",
     type: 'update',
     title: '新育成システム「超越」を追加しました',
-    assistantNotice: { id:'update_notice_transcendence_v1', type:'feature' },
+    assistantNotice: { id:'update_notice_transcendence_v1', type:'content' },
     items: [
       '虹★5（限界突破35回）・Lv.400まで育てたマスモンを、神殿の「超越」から超越させられるようになりました。超越するとレベル上限が500になり、Lv.401以降の成長が解放されます。必要なのは虹のプシュケー5,000個とダイヤ1,000,000で、1個体につき1回だけ、取り消しはできません。',
       'Lv.401以降のレベルアップでは通常の強化ポイントの代わりに「超越ポイント」が1つずつ増えます（Lv.400→500で最大100）。虹のプシュケー100個を超越ポイント1と交換することもできます。超越ポイントはマスモン詳細の「強化」から超越強化へ切り替えて使い、ライフ基礎+10／ちから・丈夫さ・ガッツ基礎+3／間合い適性1段階のどれかへ振れます。',
@@ -1506,7 +1513,6 @@ const CHANGELOG = [
     date: "2026-08-23 17:20",
     type: 'update',
     title: '呼び方を決められるようになったことを助手が教えてくれます',
-    assistantNotice: { id:'update_notice_assistant_call_style_guide_v1', type:'feature' },
     items: [
       '助手との仲良し度が呼び方の解放Lvに届いたあとでプロフィール画面を開くと、助手が1回だけ「呼び方を決められるようになったこと」と決め方を説明してくれるようになりました。これまでは解放されても画面のどこにも案内が出ず、気づかないままの方がいらっしゃいました。',
       '説明は助手ごとに用意していて、いま選んでいる助手の呼び方の例に合わせて内容が変わります。読み終えると二度と出ません。あとから見返したいときは、ヘルプの「助手との仲良し度」か、プロフィール画面の「呼び方」をご覧ください。',
@@ -1517,7 +1523,7 @@ const CHANGELOG = [
     date: "2026-08-23 12:11",
     type: 'update',
     title: 'AUTO機能が完成！∞周回はクイックモードのみ利用可能です',
-    assistantNotice: { id:'update_notice_auto_complete_v1', type:'feature' },
+    assistantNotice: { id:'update_notice_auto_complete_v1', type:'content' },
     items: [
       'AUTOをONにすると、戦闘からWAVE10まで自動で進行します。トレーニング、供モン加入、アシストカード選択、固有技強化、必要なときの緊急回復も自動で行います。',
       '∞周回はクイックモードのみ利用可能です。通常AUTOはほかのモードでもこれまでどおり利用できます。',
@@ -1824,7 +1830,7 @@ const CHANGELOG = [
     date: "2026-08-16 18:41",
     type: 'update',
     title: '第2助手「きき」を追加しました',
-    assistantNotice: { id:'update_notice_assistant_kiki_v1', type:'feature', destination:'profile', buttonLabel:'プロフィールを見る' },
+    assistantNotice: { id:'update_notice_assistant_kiki_v1', type:'content', destination:'profile', buttonLabel:'プロフィールを見る' },
     items: [
       '新しい助手「きき」が加わりました。落ち着いた気配り上手なお姉さんタイプで、みゅあとは性格も話し方も反応の内容も違います。どちらも最初から選べて、解放条件はありません。',
       'はじめて遊ぶときは、名前とアイコンを決めるより先に「助手をえらぶ」画面が出ます。選んだ助手が、そのあとのあいさつと村の案内を担当します。',
@@ -2645,7 +2651,7 @@ const CHANGELOG = [
     date: "2026-08-09 00:44",
     type: "update",
     title: "神殿に再生を追加し、合体と寄付を更新しました",
-    assistantNotice: { id:'update_notice_temple_rebirth_v1', type:'feature', destination:'TEMPLE', buttonLabel:'神殿へ行く' },
+    assistantNotice: { id:'update_notice_temple_rebirth_v1', type:'content', destination:'TEMPLE', buttonLabel:'神殿へ行く' },
     items: [
       "神殿の一番上に、解放済みベースモンから個体差のあるマスモンを生み出す「再生」を追加しました。初回無料、以降100ダイヤです",
       "合体は技を引き継がなければ無料、引き継ぐ場合は3000ダイヤになりました。技継承は副モンの絆Lv.30以上で選べます",

@@ -580,7 +580,8 @@ check('ヘルプに超越強化がいつでも使えると書いてある',
 check('助手に超越の案内がある', assistants.includes('transcendence: {') && assistants.includes("help: 'masu/transcendence'"));
 check('更新履歴に超越の追加が載っている',
   changelog.includes('新育成システム「超越」を追加しました')
-  && changelog.includes("assistantNotice: { id:'update_notice_transcendence_v1', type:'feature' }"));
+  // 新しい育成システムは「新しい遊び」なので告知は残す。種別は content(旧 feature は廃止・2026-09-05)
+  && changelog.includes("assistantNotice: { id:'update_notice_transcendence_v1', type:'content' }"));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

@@ -95,7 +95,16 @@ const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : D
 // ---------- 正式アップデートの初回案内 ----------
 // 通常通知の本文は更新履歴を正本とし、assistantNotice を付けた主要更新だけを案内する。
 // debugOnly の検証通知だけは更新履歴と切り離し、通常ログインへ混ざらないようにする。
-const ASSISTANT_UPDATE_NOTICE_TYPES = new Set(['market', 'mode', 'feature']);
+//
+// 【告知は大きい追加のときだけ】(2026-09-05・ユーザー指示「毎回更新のたびに助手の説明が入る。
+// でかい実装のときのみにして: モンスター追加 / 新コンテンツや新難易度 / マーケット追加」)
+//   market  … マーケットに商品(モンスター・アシストカード・アイテム)が並んだ
+//   mode    … バトルの新モード・新難易度
+//   content … 新しい遊び(新曲・新しい助手・新しい育成システム・キャンペーンなど)
+// 見た目の改善・並び替え・絵の追加・小さな機能・不具合修正には付けない。
+// 以前あった 'feature' は「それ以外ぜんぶ」の受け皿になって告知が増えすぎたので廃止した。
+// ここに無い種別は無視される(告知にならない)ので、書き間違えても勝手には出ない。
+const ASSISTANT_UPDATE_NOTICE_TYPES = new Set(['market', 'mode', 'content']);
 const assistantUpdateNoticeFromChangelog = entry => {
   const meta = entry && entry.assistantNotice;
   if (!meta || !ASSISTANT_UPDATE_NOTICE_TYPES.has(meta.type) || typeof meta.id !== 'string' || !meta.id.trim()) return null;

@@ -91,7 +91,9 @@ Claudeは改修内容を実装したら、ユーザーが検証しやすいよ�
 (`data/assistants.js` の `assistantUpdateNoticeFromChangelog`)。この1行は書き忘れても
 画面はふつうに動いてしまい、「並んでいるのに誰も教えてくれない」状態に気づけないため、
 `node tools/boot/market-notice-check.js` を通して確かめる。
-`type` は マーケット=`market` / バトルのモード=`mode` / それ以外=`feature` を使う。
+`type` は マーケット=`market` / バトルの新モード・新難易度=`mode` / 新しい遊び(新曲・新しい助手・新しい育成システム・キャンペーンなど)=`content` の3つだけ。
+**告知は大きい追加のときだけ付ける**(2026年9月にユーザーがそう指示した)。見た目の改善・並び替え・絵の追加・小さな機能・不具合修正には
+付けない(更新履歴には書く)。以前の `feature` は廃止した。`node tools/assistant/assistant-update-notice-check.js` が種別と例を見張る。
 
 > ⚠️ **デバッグ専用の変更(`DEBUG_SETTINGS` 配下の確認ボタン・デバッグ画面など、
 > プレイヤーの通常プレイに一切現れないもの)は、更新履歴(`monster-hero/data/changelog.js`)
