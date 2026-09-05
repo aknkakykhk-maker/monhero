@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 10:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 10:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2947,6 +2947,36 @@ const Audio_ = (() => {
   const setPageHidden = (hidden) => { pageHidden = !!hidden; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
   const setEnabled = async (on) => { enabled = !!on; if (typeof window !== 'undefined') window.__mhAudioEnabled = enabled; applyRhythmMute(); if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
+  // いま実際に鳴っている曲を、外(検査)から見るための口。
+  // BGMは <audio> ではなく Web Audio (AudioBufferSourceNode) で鳴らしているので、
+  // document.querySelectorAll('audio') では1つも見えない。
+  // そのため起動まわりの検査(tools/boot/boot-check.js)が「鳴っていない」と誤判定していた
+  // (2026-09-05)。プレイヤーの画面には何も出ないし、ゲームの動きも変えない。
+  const debugPlayingTracks = () => {
+    // 曲キーだけでなく、実際に鳴っている音のファイル名も返す。
+    // 検査は「bgm-title で始まる」のようにファイル名で見たいため。
+    const entry = (kind, key) => {
+      const track = resolveTrack(key);
+      const url = String(track?.url || track?.src || '');
+      return { kind, key: String(key || ''), src: url.split('/').pop().split('?')[0] };
+    };
+    const list = [];
+    // 鳴らしているのは同時に1つ(BGM / 試聴 / ジングル のどれか)
+    if (jingleSource) list.push(entry('jingle', currentKey));
+    else if (previewSource) list.push(entry('preview', previewKey));
+    else if (bgmSource) list.push(entry('bgm', bgmSourceKey));
+    return { enabled, ctxState: (() => { try { return getAudioCtx()?.state || 'none'; } catch (e) { return 'none'; } })(), playing: list };
+  };
+  // 「その場面で本来どの曲が鳴るはずか」も外から引けるようにする。
+  // 検査がファイル名を書き写すと、既定を変えたときに黙って落ちるため。
+  const debugExpectedSrc = (scene) => {
+    const track = resolveTrack(DEFAULT_BGM_ARRANGEMENT[scene]);
+    const url = String(track?.url || track?.src || '');
+    return url ? url.split('/').pop().split('?')[0] : null;
+  };
+  if (typeof window !== 'undefined') {
+    try { window.__mhAudioDebug = debugPlayingTracks; window.__mhAudioExpectedSrc = debugExpectedSrc; } catch (e) {}
+  }
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };

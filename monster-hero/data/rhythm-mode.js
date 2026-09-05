@@ -1341,15 +1341,39 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const span=inputSpan(note);
       return span?Math.abs(subCoordinate-span.center):0;
     };
-    let picked=null,pickedIndex=-1,pickedTimeDistance=Infinity,pickedSpatialDistance=Infinity;
+    // どのノーツを叩いたことにするかの決め方。
+    //
+    // 【なぜ「近い順」だけではいけないか】
+    // 以前は時間の差を**絶対値**で比べ、いちばん近いものを選んでいた。これだと、
+    // 次のノーツとの間隔の半分を超えて遅れた瞬間、次のノーツのほうが「近い」ことに
+    // なって判定がそちらへ移る。BPM170の8分(176ms間隔)なら89ms、16分(88ms)なら45ms
+    // 遅れただけで、狙ったノーツではなく次のノーツを取ってしまっていた
+    // (2026-09-05・ユーザー指摘「近くに次のノーツがあるときに判定がそっちにいってる」)。
+    // しかも取られた次のノーツは本来の時刻には既に消えているので、1回の遅れで2つ崩れる。
+    //
+    // 【どう直したか】
+    // **まだ叩いていない、時刻を過ぎたノーツ**（＝遅れて叩いているぶん）を先に見る。
+    // ノーツは前から順に来るので、前を飛ばして次を取ると必ず破綻するため。
+    // 遅れ側に候補が無いときだけ、これから来るノーツ（早く押した場合）を見る。
+    // どちらの側でも、そのなかでは時間がいちばん近いもの、同じなら押した位置に
+    // いちばん近いものを選ぶ。
+    //
+    // これで「1つめを叩き損ねて2つめのタイミングで叩いた」ときも、
+    // 2つめ(差0ms)のほうが1つめ(差176ms)より近いので2つめが取れる＝ずれ込まない。
+    let picked=null,pickedIndex=-1,pickedRank=Infinity,pickedTimeDistance=Infinity,pickedSpatialDistance=Infinity;
     for(let index=matchStart;index<matchEnd;index++){
       const note=source[index];
       if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP')continue;
-      const timeDistance=Math.abs(now-(Number(note.timeMs)+offset));
+      const noteTime=Number(note.timeMs)+offset;
+      const timeDistance=Math.abs(now-noteTime);
       if(!(timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS)||!acceptsPosition(note))continue;
       const distance=spatialDistance(note);
-      if(!picked||timeDistance<pickedTimeDistance||(timeDistance===pickedTimeDistance&&distance<pickedSpatialDistance)){
-        picked=note;pickedIndex=index;pickedTimeDistance=timeDistance;pickedSpatialDistance=distance;
+      const rank=now>=noteTime?0:1;   // 0=時刻を過ぎている(遅れ) / 1=まだ来ていない(早い)
+      if(!picked
+        ||rank<pickedRank
+        ||(rank===pickedRank&&(timeDistance<pickedTimeDistance
+          ||(timeDistance===pickedTimeDistance&&distance<pickedSpatialDistance)))){
+        picked=note;pickedIndex=index;pickedRank=rank;pickedTimeDistance=timeDistance;pickedSpatialDistance=distance;
       }
     }
     if(!picked)return {input,target:null,deltaMs:null};

@@ -114,13 +114,18 @@ check('所持数は0でも消さずに出す', has('×{ownedItems[item.id]||0}')
 // 「詳細」のすぐ下に買うボタンがあると、押し間違えて買ってしまう。
 // 間に余白を入れ、買うボタン自体も指で押せる高さにしておく
 check('購入ボタンはカードの下端に揃える', has('<div className="w-full flex items-center justify-center mt-auto pt-2">'));
+// 見たいのは「カードの下へ押し出して間を空ける(mt-auto pt-2)」ことと、
+// 「指で押せる高さ(min-h-[30px])がある」こと。クラスの並びは変わりうるので、
+// 並び全体の丸写しではなく、この2つだけを見る(2026-09-05)。
 check('詳細と購入ボタンを押し間違えない間隔がある',
-  has('mt-auto pt-2') && has("min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-0.5"));
-// プシュケーだけは細いカードからはみ出さないよう通貨名と価格を明示的な2行にし、既存通貨は1行を保つ。
+  has('mt-auto pt-2') && has('min-h-[30px] max-w-full rounded-xl'));
+// 細いカードから通貨表示がはみ出さないこと。
+// もとは「プシュケーだけ通貨名と価格を2行に分ける」作りだったが、
+// いまは絵文字＋数字(🌈 1,200)の短い1行になっている。
+// 見たいのは「カード幅を超えない・途中で折り返さない」ことなので、そちらを見る(2026-09-05)。
 check('購入ボタンの通貨表示がカード内に収まる',
-  has("usesPsyche?'flex-wrap leading-tight text-center':'whitespace-nowrap'")
-    && has('<span className="w-full whitespace-nowrap" aria-hidden="true">🌈 プシュケー</span>')
-    && has('<span className="w-full whitespace-nowrap">×{item.cost.toLocaleString()}</span>'));
+  has('max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap')
+    && has('{usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>'));
 check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
 // ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
@@ -139,13 +144,23 @@ check('Masterの文字色が白飛びしない', has("Master:      { label: \"Ma
 // --- ④ 背の低い端末で下が切れないか ---
 // HOMEは絶対配置の1画面レイアウトで、専用のメディアクエリで小さい端末に対応している。
 // TRAINING_*(修行)は別担当のため対象外にしている
-const ABSOLUTE_LAYOUT_SCREENS = ['HOME'];
+// BATTLEもHOMEと同じく、画面いっぱいを %(h-[5%] など)で分け合う1画面レイアウトで、
+// スクロールさせない設計(スクロールするとノーツや敵の位置がずれる)。
+const ABSOLUTE_LAYOUT_SCREENS = ['HOME', 'BATTLE'];
+// 画面の始まりは、JSXの分岐 {gameState==='X'&&( を探す。
+// 同じ文字列は変数定義(const liteBattleView = gameState==='BATTLE'&&…)にも出るので、
+// 単純な indexOf だとそちらを画面の始まりと取り違え、まるで別の場所を見てしまっていた。
+const screenStart = (name) => {
+  const jsx = source.indexOf(`{gameState==='${name}'&&(`);
+  return jsx >= 0 ? jsx : source.indexOf(`gameState==='${name}'&&`);
+};
 const OUT_OF_SCOPE_SCREENS = (name) => name.startsWith('TRAINING_');
 const screens = [...new Set([...source.matchAll(/gameState==='([A-Z_]+)'&&/g)].map(m => m[1]))];
 check('画面が数えられている', screens.length > 20, `${screens.length}画面`);
 const noScroll = screens.filter(name => {
   if (ABSOLUTE_LAYOUT_SCREENS.includes(name) || OUT_OF_SCOPE_SCREENS(name)) return false;
-  const at = source.indexOf(`gameState==='${name}'&&`);
+  const at = screenStart(name);
+  if (at < 0) return false;
   return !source.slice(at, at + 9000).includes('overflow-y-auto');
 });
 check('各画面に縦スクロールできる場所がある', noScroll.length === 0, noScroll.join(', '));
