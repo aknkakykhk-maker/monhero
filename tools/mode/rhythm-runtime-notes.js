@@ -170,6 +170,7 @@ const RELEASED_MARKERS=Object.freeze({
   stay_with_me:'pandora-boss-v3',
   kiki_issen:'eiki-boss-v3',
   kaze_ga_soyogu:'kaze-ga-soyogu-v3',
+  close_to_your_heart:'close-to-your-heart-v3',
 });
 
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

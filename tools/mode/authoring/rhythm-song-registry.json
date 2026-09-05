@@ -111,11 +111,23 @@
   },
   "kaze_ga_soyogu": {
    "audio": "monster-hero/audio/bgm-kaze-ga-soyogu-basho.mp3",
-   "audioSha256": "e4041cb4ae411f32b3566f8106b75f17b9cab32427b28e3651abf257580a6714",
-   "durationMs": 99659,
+   "audioSha256": "18c384ffb575b1f91a5e61b856313bd2dc3ae2cfc920f3f11062252afadbee81",
+   "durationMs": 99216,
    "analyzedTiming": {
-    "bpm": 118.878,
-    "beatZeroMs": 678.6,
+    "bpm": 118.88,
+    "beatZeroMs": 209,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "close_to_your_heart": {
+   "audio": "monster-hero/audio/bgm-close-to-your-heart.mp3",
+   "audioSha256": "990493074a9113bf32f70cfd43c8a65114aefaf2d8904a4d4253c5df726f9659",
+   "durationMs": 120204,
+   "analyzedTiming": {
+    "bpm": 129.967,
+    "beatZeroMs": 570.5,
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "detected"
