@@ -138,6 +138,42 @@ const DENSITY_TARGET=Object.freeze({
   MASTER:Object.freeze({perBeat:1.19,minPerSecond:2.4,maxPerSecond:4.6}),
 });
 
+// --- 曲ごとの歯ごたえ（曲の性格を譜面の量に出す） ---
+// 【なぜ要るか】
+// 上の DENSITY_TARGET だけだと、量を決めるのは実質「1拍あたり何個 × テンポ」だけになる。
+// テンポは曲によって155〜173しか違わないので、**どの曲もほとんど同じ量**になり、
+// 先行公開の5曲は EASY が全部Lv.8、HARDが15〜16、EXPERTが22〜23と団子になった
+// (2026-09-05・ユーザー指摘「5曲ともレベルが似たりよったり」)。
+// 曲が違えば難しさも違うはずで、その差が出ないと選ぶ楽しみがない。
+//
+// そこで「その曲がどれだけ譜面を詰められるか」を音源から出し、量に掛ける。
+//   1. テンポ         … 速い曲ほど16分が詰まって忙しい
+//   2. 音の詰まり具合 … 毎秒いくつ音が鳴っているか。音が多い曲ほど詰められる
+//   3. 拍のはっきりさ … ドラムで拍が立っている曲は詰めても気持ちよく叩ける。
+//                       立っていない曲は詰めるほど「曲に合っていない」感じになるので薄くする
+//                       （この値は rhythm-audio-analyze-v3.js の beatClarity.ratio）
+// 3つを掛け合わせ、極端にならないよう上下で挟む。
+// 基準は「ふつうの曲」として固定値で持つ。曲が増えても平均を取り直さずに済み、
+// 昔作った譜面が新しい曲のせいで変わることもない。
+const CHALLENGE_REFERENCE=Object.freeze({bpm:170,onsetsPerSecond:7.0,beatClarity:1.30});
+const CHALLENGE_EXPONENT=Object.freeze({bpm:.7,onsets:1,beatClarity:.55});
+const CHALLENGE_RANGE=Object.freeze({min:.78,max:1.26});
+const songChallengeFactor=(audio)=>{
+  const seconds=Number(audio.durationMs)/1000;
+  const summary=audio.summary||{};
+  const bpm=Number(audio.timing&&audio.timing.bpm);
+  const onsetsPerSecond=seconds>0?Number(summary.onsetCount)/seconds:NaN;
+  const clarity=Number(summary.beatClarity&&summary.beatClarity.ratio);
+  // どれか測れなければ、その項目は「ふつう」として1倍にする（昔の解析でも動くように）。
+  const ratio=(value,reference,exponent)=>
+    Number.isFinite(value)&&value>0?Math.pow(value/reference,exponent):1;
+  const raw=ratio(bpm,CHALLENGE_REFERENCE.bpm,CHALLENGE_EXPONENT.bpm)
+    *ratio(onsetsPerSecond,CHALLENGE_REFERENCE.onsetsPerSecond,CHALLENGE_EXPONENT.onsets)
+    *ratio(clarity,CHALLENGE_REFERENCE.beatClarity,CHALLENGE_EXPONENT.beatClarity);
+  const factor=Math.max(CHALLENGE_RANGE.min,Math.min(CHALLENGE_RANGE.max,raw));
+  return {factor,raw,bpm,onsetsPerSecond,beatClarity:clarity};
+};
+
 const COMMON=Object.freeze({
   minTimeMs:1800,
   endPaddingMs:1200,
@@ -278,8 +314,13 @@ const buildChart=(difficulty,options={})=>{
   const target=DENSITY_TARGET[difficulty];
   const beatsPerSecond=1000/timing.beatMs;
   const playableMs=gridTimeMs((maxBar+1)*BAR)-gridTimeMs(minBar*BAR);
+  // 曲の歯ごたえで量を上下させる。
+  // 上限は一緒に動かす（濃い曲がそこで頭打ちになると差が消える）が、
+  // **下限は動かさない**。下限は「これ以下だと間延びして拍が取れない」ための線なので、
+  // 薄い曲だからといって下げてよいものではない。
+  const challenge=songChallengeFactor(audio);
   const notesPerSecond=Math.max(target.minPerSecond,
-    Math.min(target.maxPerSecond,target.perBeat*beatsPerSecond));
+    Math.min(target.maxPerSecond*challenge.factor,target.perBeat*beatsPerSecond*challenge.factor));
   const targetCount=Math.round(notesPerSecond*playableMs/1000);
   // 小節ごとの取り分は「その小節にある音の数 × 盛り上がりの持ち上げ」の比で配る。
   // どれだけ盛り上がっても、その小節に無い音は叩かせない。
@@ -1337,6 +1378,7 @@ if(write){
         design:'docs/spec/RHYTHM_CHART_DESIGN.md'},
       policy:{...profile,characterWeight:CHARACTER_WEIGHT,positionWeight:POSITION_WEIGHT,
         musicalLift:MUSICAL_LIFT,densityTarget:DENSITY_TARGET[difficulty],
+        songChallenge:songChallengeFactor(audio),
         counts:results[difficulty].counts},
       level:profile.level,
       noteCount:notes.length,

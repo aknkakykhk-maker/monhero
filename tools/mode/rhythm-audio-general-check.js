@@ -188,15 +188,39 @@ function main(){
       check(`${song.track}: ノーツ数が難易度順に増える`,
         DIFFICULTIES.every((d,i)=>i===0||charts[d].notes.length>charts[DIFFICULTIES[i-1]].notes.length),
         DIFFICULTIES.map(d=>charts[d].notes.length).join(' < '));
-      check(`${song.track}: 密度が狙いどおり（曲が変わってもそろう）`,(()=>
+      // 2026-09-05、量の決め方を「曲が変わってもそろえる」から
+      // 「曲の歯ごたえに応じて変える」へ変えた（ユーザー指摘「5曲ともレベルが似たりよったり」）。
+      // なので狙いも曲ごとに違う。譜面が持っている歯ごたえ(songChallenge)をそのまま使い、
+      // 出来上がりがその狙いに合っているかを見る。ここは緩めていない
+      // （狙い自体が曲ごとに動くだけで、許す幅は前と同じ15%）。
+      check(`${song.track}: 密度がその曲の狙いどおり`,(()=>
         DIFFICULTIES.every(d=>{
           const chart=charts[d];
           const target=chart.policy.densityTarget;
-          const wanted=Math.max(target.minPerSecond,Math.min(target.maxPerSecond,
-            target.perBeat*1000/(60000/chart.bpm)));
-          return Math.abs(chart.densityPerSecond/wanted-1)<=.15;
+          const factor=Number(chart.policy.songChallenge&&chart.policy.songChallenge.factor);
+          if(!Number.isFinite(factor)||factor<=0)return false;   // 歯ごたえが記録されていなければNG
+          const wanted=Math.max(target.minPerSecond,Math.min(target.maxPerSecond*factor,
+            target.perBeat*1000/(60000/chart.bpm)*factor));
+          // 許す幅は15%。ただしノーツは小節ごとに配って端数を繰り越すので、
+          // **小節数が少ない曲ほど1小節ぶんの端数が全体に効く**。
+          // そこで「2小節ぶん」を幅に足す。37秒の曲(22小節)なら+9%、
+          // 150秒の曲(90小節)なら+2%にしかならないので、長い曲は実質15%のまま。
+          // 譜面には小節数も長さも書いていないので、ノーツ数÷毎秒の密度で秒数を出し、
+          // そこから小節数を求める（1小節 = beatsPerBar 拍）。
+          const seconds=chart.noteCount/chart.densityPerSecond;
+          const barSeconds=(chart.beatsPerBar||4)*60/chart.bpm;
+          const bars=Math.max(1,Math.round(seconds/barSeconds));
+          const allowed=.15+2/bars;
+          return Math.abs(chart.densityPerSecond/wanted-1)<=allowed;
         })
-      )(),DIFFICULTIES.map(d=>`${d} ${charts[d].densityPerSecond}`).join(' / ')+' 毎秒');
+      )(),DIFFICULTIES.map(d=>`${d} ${charts[d].densityPerSecond}`).join(' / ')+' 毎秒'
+        +`（歯ごたえ ${charts.EASY.policy.songChallenge?.factor?.toFixed(2)??'?'}）`);
+      // 歯ごたえが曲によって動いていることも見る。1.0で固定されていたら
+      // 「曲ごとに変える」が効いていない。
+      check(`${song.track}: 歯ごたえを測れている`,
+        Number.isFinite(Number(charts.EASY.policy.songChallenge?.factor))
+        &&Number.isFinite(Number(charts.EASY.policy.songChallenge?.beatClarity)),
+        JSON.stringify(charts.EASY.policy.songChallenge||null));
       const onsetGrids=new Set(audio.onsets.map(onset=>onset.grid));
       check(`${song.track}: 鳴っていない場所へ置いていない`,
         DIFFICULTIES.every(d=>charts[d].notes.every(note=>note.chord||onsetGrids.has(note.grid))));
