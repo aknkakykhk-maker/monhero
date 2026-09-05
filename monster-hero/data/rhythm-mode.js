@@ -910,6 +910,16 @@ const rhythmHoldTrackedLane=(note,chartTimeMs)=>{
 // 実測(iPhone・初回起動・EXPERT)ではレイアウトの確定に数フレームしかかからないので、
 // ふつうは 1〜2フレームで抜ける。1.2秒は「明らかにおかしいときだけ効く」上限。
 const RHYTHM_LAYOUT_WAIT_MAX_MS=1200;
+// 曲えらびで選んだ直後にいきなり曲が鳴り始めるのをやめ、
+// 構える時間を挟んでから演奏を始める(2026-09-05・ユーザー指摘
+// 「そもそも入ってすぐ音楽なるのも良くない？ 3秒から5秒ぐらいしてから演奏がいい」)。
+// ほかの音ゲーと同じく、画面が出てから READY → 3 → 2 → 1 と数えて始める。
+// この待ち時間はレイアウトが固まる時間にもなるので、
+// 「判定ラインやノーツが出そろう前に曲だけ進む」も起きにくくなる。
+// 1つぶんの長さ×段数が待ち時間になる(READY・3・2・1の4段 = 3.2秒)。
+const RHYTHM_COUNTDOWN_STEP_MS=800;
+const RHYTHM_COUNTDOWN_STEPS=Object.freeze(['READY','3','2','1']);
+const RHYTHM_COUNTDOWN_TOTAL_MS=RHYTHM_COUNTDOWN_STEP_MS*RHYTHM_COUNTDOWN_STEPS.length;
 const RHYTHM_HOLD_HANDOVER_GRACE_MS=200;
 // 終わり際に離すぶんの猶予。持ち替えとは別物なので混ぜない
 // (混ぜると「終わりに離す」と「途中で持ち替える」が同じ扱いになる)。

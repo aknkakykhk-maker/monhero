@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5df1854204ab8146
+// source-sha256: df40c170470b25fc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 21:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 21:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17247,6 +17247,11 @@ const RhythmTapTest = ({
     result: null
   });
   const [view, setView] = useState(initialView);
+  /* 演奏を始める前のカウントダウン(READY→3→2→1)。
+     null のあいだは出さない。曲と毎フレームの処理はこれが終わってから動かす */
+  const [countdownStep, setCountdownStep] = useState(null);
+  const countdownTimerRef = useRef(null);
+  const countdownResolveRef = useRef(null);
   // 100コンボごとの演出。
   // 「段階(tier)が変わったときだけ」effectを動かすのが肝心で、以前は view.combo(=ノーツを取るたび
   // 毎回変わる値)を依存にしていたため、100→101など非節目の増加でも毎回effectが再実行され、
@@ -17319,6 +17324,23 @@ const RhythmTapTest = ({
     abilityTimerRef.current = null;
     ++abilityRevisionRef.current;
   }, []);
+  /* カウントダウンの後始末。disposeRun がこれを呼ぶので、必ず disposeRun より前で定義する。
+     const は「使う場所より後ろ」に書くと初期化前アクセスで画面が真っ白になる */
+  const clearCountdown = useCallback(() => {
+    if (countdownTimerRef.current) {
+      clearTimeout(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    /* 待っている側(beginRun の await)へも必ず答えを返す。
+       タイマーを消すだけだと次の step が走らず、Promise が解決されないまま残り、
+       そのプレイぶんの beginRun がずっと止まったままになる(リスタートのたびに1つ増える) */
+    if (countdownResolveRef.current) {
+      const resolve = countdownResolveRef.current;
+      countdownResolveRef.current = null;
+      resolve(false);
+    }
+    setCountdownStep(null);
+  }, []);
   const scheduleAbilityClear = useCallback(() => {
     if (abilityTimerRef.current !== null) clearTimeout(abilityTimerRef.current);
     const revision = ++abilityRevisionRef.current;
@@ -17349,9 +17371,15 @@ const RhythmTapTest = ({
     // (実測: レイアウトが効く前は 844pxの画面で 3352px になっていた)
     const viewportHeight = typeof window !== 'undefined' && window.innerHeight > 0 ? window.innerHeight : 0;
     if (viewportHeight > 0 && areaRect.height > viewportHeight * 1.5) return false;
-    // 判定ラインがプレイエリアの中に無いなら、まだ置き場所が決まっていない
+    // 判定ラインに厚みが無いなら、まだ形が決まっていない。
+    // 以前は「中心がエリアの中にあること」しか見ておらず、線が高さ0のまま
+    // エリアの先頭に居る状態(スタイルが効く前)をそのまま通していた
+    if (!(lineRect.height > 0)) return false;
     const lineCenter = lineRect.top + lineRect.height / 2;
     if (!(lineCenter >= areaRect.top && lineCenter <= areaRect.bottom)) return false;
+    // 判定ラインは下から12%の位置に置く。エリアの上半分に居るなら、
+    // まだ置き場所が決まっていない(高さ0でなくても、位置だけ未確定のことがある)
+    if (!(lineCenter > areaRect.top + areaRect.height * 0.5)) return false;
     return true;
   };
   const measureTravel = useCallback(() => {
@@ -17889,6 +17917,7 @@ const RhythmTapTest = ({
     stopFrame();
     clearJudgmentTimer();
     clearAbilityTimer();
+    clearCountdown();
     RHYTHM_GESTURE_RUNTIME.clear();
     rhythmFloatingNotesClear();
     const run = runRef.current;
@@ -17903,10 +17932,39 @@ const RhythmTapTest = ({
     }
     runRef.current = null;
     setPressedLanes([]);
-  }, [clearAbilityTimer, clearJudgmentTimer, stopFrame]);
+  }, [clearAbilityTimer, clearCountdown, clearJudgmentTimer, stopFrame]);
   /* プレイエリアが「遊べる大きさ」になるまで待つ。
      毎フレーム測り直し、整ったらすぐ返す。整わないまま上限に達したら、
      待ち続けて遊べなくなるより始めたほうがましなので諦めて返す。 */
+  /* READY→3→2→1 と数えてから返す。
+     途中で画面を離れた・作り直された(generationが変わった)ら false を返して、
+     呼び出し側が曲を鳴らさずに終われるようにする */
+  const runCountdown = generation => new Promise(resolve => {
+    countdownResolveRef.current = resolve;
+    const done = value => {
+      if (countdownResolveRef.current === resolve) countdownResolveRef.current = null;
+      resolve(value);
+    };
+    let index = 0;
+    const step = () => {
+      if (!mountedRef.current || generation !== generationRef.current) {
+        countdownResolveRef.current = null;
+        clearCountdown();
+        done(false);
+        return;
+      }
+      if (index >= RHYTHM_COUNTDOWN_STEPS.length) {
+        setCountdownStep(null);
+        countdownTimerRef.current = null;
+        done(true);
+        return;
+      }
+      setCountdownStep(RHYTHM_COUNTDOWN_STEPS[index]);
+      index++;
+      countdownTimerRef.current = setTimeout(step, RHYTHM_COUNTDOWN_STEP_MS);
+    };
+    step();
+  });
   const waitUntilPlayable = generation => new Promise(resolve => {
     const deadline = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + RHYTHM_LAYOUT_WAIT_MAX_MS;
     const step = () => {
@@ -18030,6 +18088,17 @@ const RhythmTapTest = ({
       audio.stop();
       return;
     }
+    /* 画面がそろってから READY→3→2→1 と数え、そのあとで曲を鳴らす。
+       選んだ瞬間に曲が始まると構える間が無い(2026-09-05・ユーザー指摘)。
+       ここで数えているあいだにレイアウトも完全に固まる */
+    if (!(await runCountdown(generation))) {
+      audio.stop();
+      return;
+    }
+    if (!mountedRef.current || generation !== generationRef.current) {
+      audio.stop();
+      return;
+    }
     audio.start();
     scheduleTick();
   };
@@ -18045,6 +18114,11 @@ const RhythmTapTest = ({
   }, []);
   const pause = () => {
     const run = runRef.current;
+    /* カウントダウン中は止められない。まだ曲が鳴っていないので、止めても再開できない。
+       ボタンに disabled を付けるのではなくここで弾くのは、HUDの見た目を測る検査
+       (rhythm-hud-wedge-check など)がHUDのJSXをそのまま写して使うため、
+       式や disabled: 変種を持ち込むと測れなくなるから */
+    if (countdownStep !== null) return;
     if (!run || run.finished || run.paused) return;
     run.activePointers.clear();
     run.standbyPointers?.clear();
@@ -18576,6 +18650,12 @@ const RhythmTapTest = ({
     onPointerCancel: pointerEnd,
     className: "relative mx-2 mb-2 flex-1 min-h-0 overflow-hidden border-x border-cyan-400/50",
     style: {
+      /* position と overflow はここにも直接書く。ノーツも判定ラインもこの箱を基準に
+      置いているので、Tailwindの relative が効く前だと基準が別の要素へ移り、
+      判定ラインが画面の変なところへ出る(2026-09-05)。中身の置き場所に関わるものは
+      外部CSSに任せない */
+      position: 'relative',
+      overflow: 'hidden',
       touchAction: 'none',
       WebkitTouchCallout: 'none',
       WebkitUserSelect: 'none',
@@ -18590,11 +18670,48 @@ const RhythmTapTest = ({
   }), /*#__PURE__*/React.createElement("div", {
     ref: judgmentLineRef,
     "data-rhythm-judgment-line": true,
-    className: "absolute bottom-[12%] left-0 right-0 h-[3px] bg-gradient-to-r from-fuchsia-300 via-cyan-100 to-fuchsia-300",
     style: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: '12%',
+      height: '3px',
+      background: 'linear-gradient(90deg,#f0abfc,#cffafe,#f0abfc)',
       boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 8px #67e8f9' : '0 0 18px #67e8f9,0 0 30px #c084fc'
     }
-  }), /*#__PURE__*/React.createElement("div", {
+  }), countdownStep !== null && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-countdown": true,
+    "aria-live": "assertive",
+    style: {
+      position: 'absolute',
+      inset: 0,
+      zIndex: 20,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px',
+      pointerEvents: 'none',
+      background: 'rgba(2,6,23,.35)'
+    }
+  }, /*#__PURE__*/React.createElement("b", {
+    "data-rhythm-countdown-step": true,
+    style: {
+      fontSize: countdownStep === 'READY' ? '44px' : '88px',
+      fontWeight: 900,
+      lineHeight: 1,
+      color: '#fff',
+      letterSpacing: countdownStep === 'READY' ? '.12em' : '0',
+      textShadow: '0 0 18px rgba(103,232,249,.85),0 2px 10px rgba(2,6,23,.95)'
+    }
+  }, countdownStep), /*#__PURE__*/React.createElement("small", {
+    style: {
+      fontSize: '12px',
+      fontWeight: 900,
+      color: '#a5f3fc',
+      textShadow: '0 1px 6px rgba(2,6,23,.95)'
+    }
+  }, "\u307E\u3082\u306A\u304F \u306F\u3058\u307E\u308A\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
     "data-rhythm-judgment-display": true,
     className: "pointer-events-none absolute left-1/2 z-10 w-[88%] -translate-x-1/2 text-center",
     style: {
