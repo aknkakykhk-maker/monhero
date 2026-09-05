@@ -7615,6 +7615,7 @@ const RHYTHM_SONG_ENTRIES = [
     songId:'mf_ichika_mix',
     displayName:'MF × ICHIKA MIX',
     bgmTrackId:'atsu_cup_theme',
+    artwork:'images/song-art/mf-ichika-mix.jpg?v=c2ae53aa90ca',
     difficulties:Object.freeze(Object.fromEntries(RHYTHM_DIFFICULTIES.map(({id})=>[
       id,atsuCupThemeV3Charts[id]||emptyRhythmChart()
     ])))
