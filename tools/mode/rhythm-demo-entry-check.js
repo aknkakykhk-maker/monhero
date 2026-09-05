@@ -101,11 +101,14 @@ ok('曲えらびの上に固定で出すのは助手のひとことだけ(読み
   /notice=\{<AssistantBubble scene="rhythmHome" compact\/>\}/.test(game)
   &&!game.includes('data-rhythm-demo-notice'));
 // 曲そのものの表示は、一覧の行と選んでいる曲の見出しで見る
-ok('曲の表示がある',game.includes('data-rhythm-song-row=')&&game.includes('data-rhythm-song-title'));
+// 目印は data-rhythm-song-row='…' と直書きしていたが、輪(ループ)のために
+// 「本物の行だけに付ける」形へ変えたので、= 付きの文字では見つからなくなった。
+// 見たいのは「その目印があるか」なので、= を外して名前だけを見る。
+ok('曲の表示がある',game.includes('data-rhythm-song-row')&&game.includes('data-rhythm-song-title'));
 // 曲えらびは「一覧から曲 → 難易度 → 決定」の3手。2026-09-05に曲選択画面を
 // よくある音ゲーの形へ作り直したとき、目印を data-rhythm-song-row / data-rhythm-difficulty /
 // data-rhythm-demo-start へ整理した(見ているものは同じ)。
-ok('曲を一覧からえらべる',game.includes('data-rhythm-song-row=')&&game.includes('data-rhythm-song-select'));
+ok('曲を一覧からえらべる',game.includes('data-rhythm-song-row')&&game.includes('data-rhythm-song-select'));
 ok('難易度を選べる',game.includes('data-rhythm-difficulty=')&&game.includes('data-rhythm-demo-start='));
 ok('選んでいる曲の絵と大きさが出る',game.includes('const RhythmSongArt=')&&game.includes('data-rhythm-song-art'));
 ok('曲えらびは1つの部品にまとまっている（画面ごとに書き分けない）',

@@ -61,11 +61,16 @@ const serve=()=>new Promise(resolve=>{
       const Host=({bestRecords})=>{
         const [songId,setSongId]=React.useState('');
         const [difficultyId,setDifficultyId]=React.useState('');
+        // 並び順と助手の畳みも、本体(App)と同じように外側が持つ
+        const [view,setView]=React.useState(DEFAULT_RHYTHM_SELECT_VIEW);
+        window.__view=view;
         return React.createElement(RhythmSongSelect,{
           songs:RHYTHM_SONGS,
           difficulties:RHYTHM_DIFFICULTIES,
           bestRecords,
           songId,difficultyId,onSongId:setSongId,onDifficultyId:setDifficultyId,
+          view,onView:setView,
+          notice:React.createElement('p',{id:'probe-notice'},'ここに助手のひとことが入る'),
           onPlay:(song,difficulty)=>{window.__picked=`${song.songId}/${difficulty.id}`;},
         });
       };
@@ -311,9 +316,149 @@ const serve=()=>new Promise(resolve=>{
     // 難易度ボタンの高さはTailwindのクラスで決まるので、ここでは書きぶりを見張る。
     // ロック中だけ「◯◯で解放」が2行になり、その曲だけボタンが高くなっていた。
     const gameSource=fs.readFileSync(path.join(ROOT,'monster-hero/src/game-system.jsx'),'utf8');
+    // 高さは 66px → 60px にした(2026-09-05・曲の一覧へ回す高さを増やすため)。
+    // 見張りたいのは「固定の h で決めていること」なので、数字ではなくその書きぶりを見る。
     ok('難易度ボタンの高さは固定（min-h ではなく h で決めている）',
-      gameSource.includes('flex h-[66px] flex-1 flex-col justify-center rounded-xl border-2')
+      /flex h-\[\d+px\] flex-1 flex-col justify-center rounded-xl border-2/.test(gameSource)
       &&!gameSource.includes('min-h-[52px] flex-1 rounded-xl border-2'));
+
+    // ---- 並び替え(2026-09-05・ユーザー指示「曲選択のソートがほしい 入手順 難易度順 名前順」) ----
+    const rowIdsNow=()=>page.evaluate(()=>[...document.getElementById('song-select-probe')
+      .querySelectorAll('[data-rhythm-song-row]')].map(el=>el.getAttribute('data-rhythm-song-row')));
+    const pickSort=async id=>{
+      await page.click('#song-select-probe [data-rhythm-song-sort]');
+      await page.waitForTimeout(150);
+      await page.click(`[data-rhythm-sort-option="${id}"]`);
+      await page.waitForTimeout(200);
+    };
+    ok('並び替えのボタンがある',await page.evaluate(()=>!!document.querySelector('#song-select-probe [data-rhythm-song-sort]')));
+    const addedOrder=await rowIdsNow();
+    // 並び順の種類は data 側(RHYTHM_SORT_ORDERS)が決める。ここで数を書くと増やすたびに落ちる
+    const sortIds=await page.evaluate(()=>RHYTHM_SORT_ORDERS.map(item=>item.id));
+    ok('入手順・難易度順・名前順がそろっている',
+      ['added','level','name'].every(id=>sortIds.includes(id)),sortIds.join(' / '));
+    await page.click('#song-select-probe [data-rhythm-song-sort]');
+    await page.waitForTimeout(200);
+    const optionCount=await page.evaluate(()=>document.querySelectorAll('[data-rhythm-sort-option]').length);
+    ok('並び替えの選択肢が全部シートに出る',optionCount===sortIds.length,`${optionCount}件 / ${sortIds.length}件`);
+    await page.click('[data-rhythm-sort-close]');
+    await page.waitForTimeout(200);
+
+    const orders={};
+    for(const id of sortIds){await pickSort(id);orders[id]=await rowIdsNow();}
+    ok('並び替えで実際に並びが変わる',
+      Object.entries(orders).filter(([id,list])=>list.join()!==addedOrder.join()).length>=2,
+      Object.entries(orders).map(([id,list])=>`${id}=${list.join(',')}`).join(' / '));
+    // 名前順・難易度順・長さ順は、それぞれ「そう並んでいるか」を中身で確かめる。
+    // 難易度は**画面に出ている「楽曲Lv.」の数字**を読む。実装のLv.は
+    // 「いま選んでいる難易度のLv.」なので、検査側で別の計算をすると必ずずれる。
+    const meta=await page.evaluate(()=>{
+      const out={};
+      for(const song of RHYTHM_SONGS){
+        const ids=RHYTHM_DIFFICULTIES.filter(d=>rhythmChartPlayable(song,d.id)).map(d=>d.id);
+        if(!ids.length)continue;
+        out[song.songId]={name:rhythmSongFullName(song),ms:rhythmSongDurationMs(song,RHYTHM_DIFFICULTIES)};
+      }
+      return out;
+    });
+    const shownLevels=()=>page.evaluate(()=>[...document.querySelectorAll('#song-select-probe [data-rhythm-song-row-level]')]
+      .map(el=>Number((el.textContent||'').trim())||0));
+    const nonDecreasing=(list,pick)=>list.every((id,i)=>i===0||pick(meta[list[i-1]])<=pick(meta[id]));
+    if(orders.level){
+      await pickSort('level');
+      const levels=await shownLevels();
+      ok('難易度順は数字が小さいほうから並ぶ',levels.every((v,i)=>i===0||levels[i-1]<=v),levels.join(' ≤ '));
+    }
+    if(orders.length)ok('長さ順は短いほうから並ぶ',nonDecreasing(orders.length,m=>m.ms),
+      orders.length.map(id=>Math.round(meta[id].ms/1000)+'s').join(' ≤ '));
+    if(orders.name)ok('名前順は曲名の順に並ぶ',
+      orders.name.every((id,i)=>i===0||meta[orders.name[i-1]].name.localeCompare(meta[id].name,'ja')<=0),
+      orders.name.map(id=>meta[id].name).join(' → '));
+
+    // 逆順
+    await pickSort('level');
+    await page.click('#song-select-probe [data-rhythm-song-sort]');
+    await page.waitForTimeout(150);
+    await page.click('[data-rhythm-sort-desc]');
+    await page.waitForTimeout(150);
+    await page.click('[data-rhythm-sort-close]');
+    await page.waitForTimeout(250);
+    const descLevels=await shownLevels();
+    ok('「逆から並べる」でひっくり返る',descLevels.every((v,i)=>i===0||descLevels[i-1]>=v),descLevels.join(' ≥ '));
+
+    // 並び替えは見え方だけ。選んでいる曲は動かさない
+    await page.click('#song-select-probe [data-rhythm-song-sort]');
+    await page.waitForTimeout(150);
+    await page.click('[data-rhythm-sort-desc]');
+    await page.waitForTimeout(150);
+    await page.click('[data-rhythm-sort-close]');
+    await page.waitForTimeout(200);
+    await pickSort('added');
+    await page.evaluate(()=>{const rows=[...document.querySelectorAll('#song-select-probe [data-rhythm-song-row]')];
+      (rows[rows.length-1]||rows[0]).click();});
+    await page.waitForTimeout(250);
+    const titleBefore=await page.evaluate(()=>(document.querySelector('#song-select-probe [data-rhythm-song-title]')||{}).textContent||'');
+    await pickSort('name');
+    const titleAfter=await page.evaluate(()=>(document.querySelector('#song-select-probe [data-rhythm-song-title]')||{}).textContent||'');
+    ok('並び替えても選んでいる曲は変わらない',!!titleBefore&&titleBefore===titleAfter,`${titleBefore} → ${titleAfter}`);
+    await pickSort('added');
+
+    // ---- 助手のひとことを畳める(曲の一覧へ回す高さを増やすため) ----
+    // Tailwindを読めないここでは一覧が画面いっぱいに伸びたままなので「高さ」では測れない。
+    // 助手のぶんだけ**一覧の始まる位置が上がる**ことを見る(こちらはCSS無しでも動く)。
+    const listTop=()=>page.evaluate(()=>{const el=document.querySelector('#song-select-probe [data-rhythm-song-list]');
+      return el?Math.round(el.getBoundingClientRect().top):0;});
+    const openedTop=await listTop();
+    ok('助手のひとことに畳むボタンがある',
+      await page.evaluate(()=>!!document.querySelector('#song-select-probe [data-rhythm-song-notice-toggle]')));
+    await page.click('#song-select-probe [data-rhythm-song-notice-toggle]');
+    await page.waitForTimeout(250);
+    const closedTop=await listTop();
+    ok('畳むと曲の一覧がその分だけ上へ広がる',closedTop<openedTop,`一覧の上端 ${openedTop}px → ${closedTop}px`);
+    ok('畳んだら助手のひとことは消える',
+      await page.evaluate(()=>!document.querySelector('#song-select-probe [data-rhythm-song-notice]')));
+    ok('畳んだかどうかは覚える口がある(保存キーと正規化)',
+      gameSource.includes("const RHYTHM_SELECT_VIEW_KEY = 'mh_rhythm_select_v1'")
+      &&gameSource.includes('normalizeRhythmSelectView')
+      &&gameSource.includes('storeSet(RHYTHM_SELECT_VIEW_KEY'));
+    await page.click('#song-select-probe [data-rhythm-song-notice-toggle]');
+    await page.waitForTimeout(250);
+
+    // ---- 一覧を輪にする(2026-09-05・ユーザー指示
+    //      「1番下にいったら止まるんじゃなくて上に戻ってくるループ式にして」) ----
+    const loopState=()=>page.evaluate(()=>{const el=document.querySelector('#song-select-probe [data-rhythm-song-list]');
+      return {loop:el.getAttribute('data-rhythm-song-loop'),top:Math.round(el.scrollTop),
+        max:Math.round(el.scrollHeight-el.clientHeight)};});
+    // このサンドボックスはTailwindを読めないので overflow が効かず、
+    // scrollTop がそもそも動かない。輪の動きは実際にスクロールできるときだけ測る。
+    await page.evaluate(()=>{const el=document.querySelector('#song-select-probe [data-rhythm-song-list]');
+      el.style.overflowY='auto';el.style.height='200px';});
+    await page.waitForTimeout(250);
+    const loop0=await loopState();
+    ok('曲が2つ以上あるときは一覧を輪にする',loop0.loop==='1');
+    if(loop0.max>0){
+      await page.evaluate(()=>{const el=document.querySelector('#song-select-probe [data-rhythm-song-list]');el.scrollTop=el.scrollHeight;});
+      await page.waitForTimeout(400);
+      const bottom=await loopState();
+      ok('いちばん下まで送っても止まらず、続きへ戻る',bottom.top<bottom.max-10,`${bottom.top} / 下端 ${bottom.max}`);
+      await page.evaluate(()=>{const el=document.querySelector('#song-select-probe [data-rhythm-song-list]');el.scrollTop=0;});
+      await page.waitForTimeout(400);
+      const top=await loopState();
+      ok('いちばん上まで送っても止まらず、続きへ戻る',top.top>10,`${top.top}`);
+    }else{
+      console.log('--  輪の動き: この環境では一覧をスクロールできないので測れません');
+    }
+    // 曲が1つしかないときは輪にしない(同じ行が3つ並ぶだけになるため)
+    ok('曲が1つのときは輪にしない',gameSource.includes('const loopEnabled=list.length>=2;'));
+    // 影の行は、数えて確かめる検査の邪魔をしない
+    const rowMarks=await page.evaluate(()=>({
+      rows:document.querySelectorAll('#song-select-probe [data-rhythm-song-row]').length,
+      shadows:document.querySelectorAll('#song-select-probe [data-rhythm-song-row-loop]').length,
+      titles:document.querySelectorAll('#song-select-probe [data-rhythm-song-row-title]').length,
+    }));
+    ok('輪のために置いた影の行には目印を付けない',
+      rowMarks.shadows>0&&rowMarks.titles===rowMarks.rows,
+      `本物${rowMarks.rows} / 影${rowMarks.shadows} / 曲名の目印${rowMarks.titles}`);
 
     ok('実行時エラーが出ていない',errors.length===0,errors.slice(0,2).join(' / '));
   }finally{
