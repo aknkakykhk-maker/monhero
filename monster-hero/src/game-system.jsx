@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 21:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 21:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4837,11 +4837,19 @@ const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).fi
 const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : [])
   .filter(entry => !changelogForPlayers(entry) && typeof entry?.assistantNotice?.id === 'string')
   .map(entry => entry.assistantNotice.id.trim()));
-// どのタブへ出すかを決める。「不具合情報」は issue、それ以外はすべて「更新情報」。
+// どのタブへ出すかを決める。
+// 「不具合情報」は不具合の話をまとめる場所なので、調査中(issue)だけでなく
+// 直したもの(fix)もここへ出す。「更新情報」は新機能・改善・マーケットだけになる
+// (2026-09-05・ユーザー指摘「上にタブがあるから不具合修正とかは右にして」)。
 // 以前は type がタブ名と完全一致するものだけを出していたため、fix / feature / market と
 // 書いた項目がどちらのタブにも出ず、更新履歴に載せたつもりで載っていなかった。
-// 種別を新しく足しても消えないよう、issue 以外は必ず更新情報へ拾う
-const changelogEntriesOfTab = (tab) => CHANGELOG_ENTRIES.filter(entry => tab === 'issue' ? entry.type === 'issue' : entry.type !== 'issue');
+// 種別を新しく足しても消えないよう、下の CHANGELOG_ISSUE_TAB_TYPES 以外は必ず更新情報へ拾う
+const CHANGELOG_ISSUE_TAB_TYPES = Object.freeze(['issue', 'fix']);
+const changelogEntriesOfTab = (tab) => CHANGELOG_ENTRIES.filter(entry => CHANGELOG_ISSUE_TAB_TYPES.includes(entry.type) === (tab === 'issue'));
+// 既読の判定に使う「いま存在するすべてのID」。
+// タブの振り分けを変えると、既読にしたIDが別のタブへ移る。タブごとのID一覧で
+// ふるいにかけると移った先で未読へ戻ってしまうため、こちらで残す・捨てるを決める
+const CHANGELOG_ALL_IDS = new Set(CHANGELOG_ENTRIES.map(entry => entry.id));
 // 更新情報の「種類」の見せ方。データには前から type があったのに画面へ出しておらず、
 // 不具合を直したのか新しく何かが増えたのかが読んでも分からなかった
 // (2026-09-05・ユーザー指摘「直近の更新情報が不具合修正との区別がついてない」)。
@@ -11187,14 +11195,21 @@ function MonsterHeroGame() {
     </article>
   );
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
-  const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!(changelogSeen[type]||[]).includes(id))]));
+  // 既読はタブをまたいで見る。振り分けを変えたとき、前に更新情報で読んだ不具合修正が
+  // 不具合情報タブで未読(NEW)へ戻るのを防ぐ
+  const changelogSeenAnyTab = new Set(CHANGELOG_TYPES.flatMap(type => changelogSeen[type] || []));
+  const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!changelogSeenAnyTab.has(id))]));
   const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length>0]));
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
   const markChangelogTabSeen = (type) => {
     const ids = CHANGELOG_IDS_BY_TYPE[type];
     if (!ids.length || !changelogUnreadIds[type].length) return;
-    setChangelogSeen(prev => ({ ...prev, [type]: ids }));
-    storeSet(`mh_changelog_seen_ids_${type}`, ids, false);
+    // いま出ているIDで上書きすると、振り分けが変わって別のタブへ移ったIDが消え、
+    // 移った先で未読へ戻る。すでに残っているIDへ足す形にする
+    // (消えた項目のIDは CHANGELOG_ALL_IDS で落とすので、たまり続けはしない)
+    const merged = Array.from(new Set([...(changelogSeen[type]||[]).filter(id=>CHANGELOG_ALL_IDS.has(id)), ...ids]));
+    setChangelogSeen(prev => ({ ...prev, [type]: merged }));
+    storeSet(`mh_changelog_seen_ids_${type}`, merged, false);
   };
   const selectChangelogTab = (type) => {
     if (displayedChangelogTabRef.current === type) return;
@@ -12630,7 +12645,9 @@ function MonsterHeroGame() {
       for (const type of CHANGELOG_TYPES) {
         const savedIds = await storeGet(`mh_changelog_seen_ids_${type}`, null, false);
         const legacyDate = await storeGet(`mh_changelog_seen_${type}`, legacyChangelogSeen, false);
-        migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id=>CHANGELOG_IDS_BY_TYPE[type].includes(id)) : changelogEntriesOfTab(type).filter(entry=>legacyDate && entry.date<=legacyDate).map(entry=>entry.id);
+        // ふるいはタブ別ではなく「いま存在するID全部」で行う。タブ別にすると、
+        // 振り分けを変えたときに既読が消えて未読へ戻る
+        migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id=>CHANGELOG_ALL_IDS.has(id)) : changelogEntriesOfTab(type).filter(entry=>legacyDate && entry.date<=legacyDate).map(entry=>entry.id);
         if (!Array.isArray(savedIds)) await storeSet(`mh_changelog_seen_ids_${type}`, migratedSeen[type], false);
       }
       setChangelogSeen(migratedSeen);
