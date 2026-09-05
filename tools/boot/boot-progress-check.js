@@ -63,7 +63,7 @@ for (const [rel, size] of Object.entries(sizes)) {
 check('書かれた大きさが実ファイルと一致する', stale.length === 0, stale.slice(0, 3).join(' / '));
 
 // タイトル画像とBGMは、ゲージの重みとして必ず数に入れておきたい(いちばん大きいので)
-for (const must of ['game-system.compiled.js', 'data/images/title-screen-clean.PNG', 'audio/bgm-title-theme.mp3']) {
+for (const must of ['game-system.compiled.js', 'data/images/title-screen-clean.jpg', 'audio/bgm-title-theme.mp3']) {
   check(`${must} が分母に入っている`, !!sizes[must]);
 }
 
@@ -72,7 +72,7 @@ check('読み込みに失敗してもゲージが止まらない', /function fai
 check('最後に必ず右端まで伸ばす仕組みがある', /function finish\(\)/.test(html) && /bootLoadFinish\(\)/.test(fs.readFileSync(path.join(WEB_ROOT, 'src/game-system.jsx'), 'utf8')));
 
 const MIME = { '.js': 'text/javascript', '.html': 'text/html', '.json': 'application/json',
-  '.png': 'image/png', '.PNG': 'image/png', '.mp3': 'audio/mpeg' };
+  '.png': 'image/png', '.PNG': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.mp3': 'audio/mpeg' };
 const server = http.createServer((req, res) => {
   const rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '') || 'index.html';
   const file = path.join(WEB_ROOT, rel);

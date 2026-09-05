@@ -55,9 +55,10 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 | ステータス | 調査中 |
 | 優先度 / 種別 | P3 / 性能・技術的負債 |
 | 影響 | base64 画像ファイルと BGM が大きく、モバイル回線の通信量、キャッシュ、差分レビューへ負荷がかかる |
-| 現状 | 画像は `data/images/` に分離し、BGM は `preload='none'` で必要時に読み込む。重複画像の検査ツールがある |
+| 現状 | 画像は `data/images/` に分離し、BGM は `preload='none'` で必要時に読み込む。重複画像の検査ツールがある。2026-09-05に起動時の読み込みを 7.2MB → 5.3MB へ削減済み（タイトル画像 2.5MB PNG → 0.67MB JPEG）|
 | 回避策 | `node tools/image/image-report.js` と `node tools/browser/perf-check.js` で増加を確認し、大容量追加を避ける |
 | 完了条件 | 端末・回線別の容量目標を定め、品質を損なわない最適化方針を決める |
+| 調査済み（2026-09-05・これ以上の余地は無い箇所）| ・`monster-hero/images/` の大きいPNG（1254px前後・透明あり）は既に最適化済みで、`sharp` で入れ直すと約30%太る<br>・BGMは既に 64〜96kbps<br>・`home-background.jpg` は品質92で入れ直しても 660KB → 655KB<br>・残る大物は本体JS（約2.7MB）で、これはKI-002の分割が前提 |
 | 関連 | GitHub Issue 未登録 |
 
 ### KI-007: Android実機でBGMが鳴らない報告の切り分けが端末なしでは終わらない
@@ -86,6 +87,36 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 | 回避策 | なし(実際の画面表示に出るかは未確認。この検査はデータ定義の整合だけを見ている) |
 | 完了条件 | `node tools/assistant-bond-check.js` がGODシーンを含め全件成功すること |
 | 関連 | PR #899、`monster-hero/data/assistants.js` の `extremeDifficultyGuides` パック |
+
+### KI-009: 外部CDNから読む Tone.js に完全性検証(SRI)が付いていない
+
+| 項目 | 内容 |
+| --- | --- |
+| ステータス | 保留（このサンドボックスからCDNへ出られずハッシュを取得できないため） |
+| 優先度 / 種別 | P2 / 運用 |
+| 影響 | `cdnjs.cloudflare.com` が配る `Tone.js` が差し替わった場合、そのまま実行される。効果音・BGMの処理を担うため、実行されると影響範囲は広い |
+| 再現環境 | 全環境。デバッグ限定ではなく、通常プレイの音声初期化で読み込む |
+| 再現手順 | 1. `monster-hero/src/game-system.jsx` の `Audio_` の `load()` を見る 2. `s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js'` に `integrity` / `crossOrigin` が無いことを確認 |
+| 期待結果 | `s.integrity = 'sha384-...'` と `s.crossOrigin = 'anonymous'` を付け、中身が変わったら実行せず読み込み失敗として扱う |
+| 実際の結果 | 検証せずに実行する |
+| 回避策 | 読み込みに失敗しても `s.onerror` で先へ進む作りなので、SRIを付けても音が出なくなるだけで進行不能にはならない |
+| 完了条件 | ネットワークのある環境で次を実行してハッシュを求め、`game-system.jsx` へ書いて `node tools/build.js` を通す。<br>`curl -sS https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js \| openssl dgst -sha384 -binary \| openssl base64 -A` |
+| 関連 | `monster-hero/src/game-system.jsx`（Tone.js の読み込み） |
+
+### KI-010: Supabase のランキング表に対するRLSをリポジトリから確認できない
+
+| 項目 | 内容 |
+| --- | --- |
+| ステータス | 保留（サーバー側の設定のため、コードからは確かめられない） |
+| 優先度 / 種別 | P2 / 運用 |
+| 影響 | 公開鍵(`sb_publishable_*`)は誰でも読めるため、行レベルセキュリティ(RLS)が緩いと他人の記録の書き換え・削除ができる |
+| 再現環境 | Supabase の管理画面 |
+| 再現手順 | 1. Supabase の該当プロジェクトを開く 2. ランキング用テーブルの RLS ポリシーを見る |
+| 期待結果 | 匿名キーでは INSERT のみ許可し、UPDATE / DELETE と他人の行の書き換えを禁止している |
+| 実際の結果 | 未確認 |
+| 回避策 | なし |
+| 完了条件 | 管理画面でポリシーを確認し、`docs/sql/` へ現状のポリシーを書き出す |
+| 関連 | `monster-hero/src/game-system.jsx`（ランキング送信）、`docs/sql/` |
 
 ## 新規課題テンプレート
 

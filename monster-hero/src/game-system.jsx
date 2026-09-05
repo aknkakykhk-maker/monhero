@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 20:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 21:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12169,7 +12169,7 @@ function MonsterHeroGame() {
         const image = new Image(); let settled = false;
         const finish = () => { if (!settled) { settled = true; resolve(); } };
         image.onload = async () => { try { if (image.decode) await image.decode(); finish(); } catch (error) { if (!settled) { settled = true; reject(error); } } };
-        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = 'data/images/title-screen-clean.PNG';
+        image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = 'data/images/title-screen-clean.jpg';
         if (image.complete) image.onload();
       });
       say('タイトルBGMを準備中');
@@ -18529,12 +18529,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   );
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
-      <img className="mh-title-visual" src="data/images/title-screen-clean.PNG" alt="モンスターヒーロー グランドチャンピオンクエスト"/>
+      <img className="mh-title-visual" src="data/images/title-screen-clean.jpg" alt="モンスターヒーロー グランドチャンピオンクエスト"/>
       <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
     </main>{updateNotice}</>
   );
-  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src="data/images/title-screen-clean.PNG" alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}</>;
+  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src="data/images/title-screen-clean.jpg" alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}</>;
 
   return (
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
