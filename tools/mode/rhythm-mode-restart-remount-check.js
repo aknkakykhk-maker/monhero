@@ -12,7 +12,20 @@ const version=JSON.parse(read('monster-hero/version.json'));
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'✓':'✗'} ${name}`);if(!ok)failed++;};
 check('リザルト再プレイはclick captureで完全再マウント',script.includes("label==='もう一度プレイ'")&&script.includes('setRunKey(value=>value+1)'));
-check('iPhoneポーズ3ボタンをtouchend captureで判定',script.includes("isPauseResume:label==='再開'")&&script.includes("isPauseRestart:label==='リスタート'")&&script.includes('中断して音ゲーデバッグへ戻る')&&script.includes("document.addEventListener('touchend',onTouchEnd,true)"));
+// ここは以前「ボタンの文言で見分けていること」を要求していた。
+// そのせいでポーズの文言を「中断して音ゲーデバッグへ戻る」から
+// 「曲えらびへ戻る」「練習をやめて曲えらびへ戻る」へ変えたとき、
+// 橋渡しが外れて iPhone で戻るが効かなくなったのに検査は通ってしまった
+// (2026-09-05・実機の指摘)。見分けは文言ではなく data-rhythm-pause-* で行う。
+// 実際に橋渡しが働くかどうかは tools/mode/rhythm-pause-bridge-check.js が
+// 本物のReactとブラウザのイベントで確かめる。
+check('iPhoneポーズ3ボタンをtouchend captureで判定',
+  script.includes('data-rhythm-pause-restart')&&script.includes('data-rhythm-pause-resume')&&script.includes('data-rhythm-pause-exit')
+  &&script.includes("document.addEventListener('touchend',onTouchEnd,true)"));
+check('ポーズの3ボタンには見分けるための印が付いている',
+  source.includes('data-rhythm-pause-resume')&&source.includes('data-rhythm-pause-restart')&&source.includes('data-rhythm-pause-exit'));
+check('見分けられないポーズのボタンは素のclickを潰さない',
+  script.includes('if(!info.isPauseKnown)return;')&&script.includes('info.isPauseKnown&&info.button===lastPauseButton'));
 check('ポーズの再開と中断は元React onClickへ橋渡し',script.includes('bridgePauseClick')&&script.includes('info.button.click()')&&script.includes('bridgingPauseClick'));
 check('ポーズのリスタートは旧runを再利用せず完全再マウント',script.includes('if(info.isPauseRestart)')&&script.includes('remount(event)')&&script.includes('RHYTHM_GESTURE_RUNTIME.clear?.()'));
 check('touchendを旧プレイ入力へ渡さず遮断',script.includes('if(event.cancelable)event.preventDefault()')&&script.includes('event.stopPropagation()')&&script.includes('event.stopImmediatePropagation?.()'));

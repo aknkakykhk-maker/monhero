@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 04b78a34e4958030
+// source-sha256: c858473b28afbc32
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-05 14:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-05 15:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17055,11 +17055,16 @@ const RhythmTapTest = ({
         boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 0 7px #67e8f9' : '0 0 10px #67e8f9,0 0 18px #d946ef'
       }
     }), /*#__PURE__*/React.createElement("span", {
-      className: `absolute inset-0 rounded-full ${monster ? 'bg-gradient-to-b from-amber-100 to-amber-500 ring-2 ring-amber-200' : note.type === 'HOLD' ? 'bg-gradient-to-b from-emerald-200 to-cyan-500' : 'bg-gradient-to-b from-amber-200 to-fuchsia-500'}`,
+      "data-rhythm-note-head": true,
+      className: `absolute inset-0 rounded-full ${monster ? 'bg-gradient-to-b from-amber-100 to-amber-500 ring-2 ring-amber-200' : note.type === 'HOLD' ? 'border-2 border-white/90 bg-gradient-to-b from-cyan-50 to-cyan-400' : 'bg-gradient-to-b from-amber-200 to-fuchsia-500'}`,
       style: {
         boxShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : settings.effectAmount === 'LOW' ? '0 2px 6px rgba(15,23,42,.45)' : '0 10px 15px -3px rgba(0,0,0,.24)'
       }
-    }), monster && /*#__PURE__*/React.createElement("span", {
+    }, !monster && note.type === 'HOLD' && /*#__PURE__*/React.createElement("i", {
+      "data-rhythm-hold-head-mark": true,
+      "aria-hidden": "true",
+      className: "pointer-events-none absolute left-[24%] right-[24%] top-1/2 block h-[2px] -translate-y-1/2 rounded-full bg-sky-950/55"
+    })), monster && /*#__PURE__*/React.createElement("span", {
       "data-rhythm-monster-face": true,
       "aria-hidden": "true",
       className: "absolute left-1/2 top-1/2 flex h-[42px] w-[42px] items-center justify-center",
@@ -18462,9 +18467,11 @@ const RhythmTapTest = ({
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-2xl font-black"
   }, "PAUSE"), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-pause-resume": true,
     className: "min-h-[48px] w-full rounded-xl bg-cyan-700 font-black",
     onClick: resume
   }, "\u518D\u958B"), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-pause-restart": true,
     className: "min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black",
     onClick: restart
   }, "\u30EA\u30B9\u30BF\u30FC\u30C8"), /*#__PURE__*/React.createElement("button", {

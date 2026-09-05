@@ -12,18 +12,27 @@
       let lastPauseTouchAt=0;
       let lastPauseButton=null;
       let bridgingPauseClick=false;
+      // ポーズの3ボタンは data-rhythm-pause-* で見分ける。
+      // 以前は表示中の文字で見分けていたため、「中断して音ゲーデバッグへ戻る」を
+      // 「曲えらびへ戻る」「練習をやめて曲えらびへ戻る」へ書き換えたとき橋渡しが外れ、
+      // iPhoneでは戻るを押しても何も起きない状態になっていた(2026-09-05・実機の指摘)。
+      // 属性なら文言を変えても外れない。属性の無い古い並びのために文言も残す。
       const buttonInfo=target=>{
         const button=target?.closest?.('button');
         if(!button||button.disabled)return null;
         const label=(button.textContent||'').trim();
         const inResult=!!button.closest?.('[data-rhythm-result]');
         const inPause=!!button.closest?.('[data-rhythm-pause-menu]');
+        const isPauseRestart=inPause&&(button.hasAttribute('data-rhythm-pause-restart')||label==='リスタート');
+        const isPauseResume=inPause&&(button.hasAttribute('data-rhythm-pause-resume')||label==='再開');
+        const isPauseExit=inPause&&(button.hasAttribute('data-rhythm-pause-exit')||/戻る$/.test(label));
         return {
           button,label,inResult,inPause,
           isResultReplay:label==='もう一度プレイ'&&inResult,
-          isPauseRestart:label==='リスタート'&&inPause,
-          isPauseResume:label==='再開'&&inPause,
-          isPauseExit:/中断して音ゲーデバッグへ戻る/.test(label)&&inPause,
+          isPauseRestart,isPauseResume,isPauseExit,
+          // どれとも見分けられないポーズ内のボタン。ここを取りこぼしても
+          // 「押しても何も起きない」にはしない(下の onTouchEnd / onClick を参照)
+          isPauseKnown:isPauseRestart||isPauseResume||isPauseExit,
         };
       };
       const stop=event=>{
@@ -50,6 +59,10 @@
       const onTouchEnd=event=>{
         const info=buttonInfo(event.target);
         if(!info?.inPause)return;
+        // 見分けられないボタンは触らない。ここで印だけ付けると、下の onClick が
+        // 「橋渡し済みのghost click」と取り違えて本物のclickまで潰してしまい、
+        // そのボタンが完全に無反応になる
+        if(!info.isPauseKnown)return;
         lastPauseTouchAt=Date.now();
         lastPauseButton=info.button;
         if(info.isPauseRestart){
@@ -65,7 +78,7 @@
         const info=buttonInfo(event.target);
         if(!info)return;
         // touchendを橋渡しした直後のghost clickは二重実行させない。
-        if(info.inPause&&info.button===lastPauseButton&&Date.now()-lastPauseTouchAt<800){
+        if(info.inPause&&info.isPauseKnown&&info.button===lastPauseButton&&Date.now()-lastPauseTouchAt<800){
           stop(event);
           return;
         }
