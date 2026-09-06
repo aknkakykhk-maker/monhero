@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8a80285413995b5c
+// generated-sha256: 0bab333de4346d16
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 07:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 07:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2679,7 +2679,7 @@ const eikiBossBgmForBattle = (heroId, currentWave, enemyId) =>
   heroId === 'Eiki' && (enemyId === 'Moo' || currentWave === 10) ? 'eiki_boss' : null;
 // 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
 // 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ title:'monster_hero_theme_alt', home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'original_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_pro_battle_01', proDullahan:'melo_dullahan_steel_ghost', proMoo:'original_pro_battle_02', extremeBattle:'ichika_battle', extremeDullahan:'melo_dullahan_clockwork', extremeMoo:'ichika_boss', speciesBattle:'original_battle', speciesDullahan:'original_dullahan', speciesMoo:'original_boss', autoBattle:'monster_hero_theme', autoVictoryJingle:'off', autoPostWaveBgm:'off', autoRepeatResultBgm:'off', clear:'ichika_clear', enhance:'original_enhance', result:'original_result', gameOver:'original_game_over', kikiIntro:'original_event_01', momosukeIntro:'six_eternel_remix' });
 // 設定欄を足したときに「前からある近い設定」を引き継ぐための対応表。
 // 種族チャレンジの3枠はチャレンジと同じ曲から始めるので、まだ自分で選んでいない人には
 // そのときのチャレンジの設定(自分で変えていればその曲)がそのまま入る
@@ -13213,15 +13213,21 @@ function MonsterHeroGame() {
       ? EVENT_BGM_SCENES.momosuke_intro
       : (eventReplay ? (EVENT_BGM_SCENES[eventReplay.id] || null) : null);
   // 画面から鳴らすべき曲のキーを決める
-  const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver) => {
+  // allowKeep=false のときは「直前のBGMを維持」を選ばない。
+  // モンビーを開いているあいだバトルのBGMは止まっているので、戻ってきたときに
+  // 維持を選ぶと、維持すべき曲が無くて無音のままになる
+  // (2026-09-07・ユーザー報告「勇者モン選択時のデフォ曲が変わってる」)
+  // モンビーを開いていてバトルのBGMを止めたかどうか。戻ってきたときに鳴らし直す判断に使う
+  const bgmSuspendedByRhythmRef = useRef(false);
+  const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
     // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
     // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
     // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
     if (eventBgmScene) return bgmArrangement[eventBgmScene];
-    if (isGameOver) return 'gameOver';
+    if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。
-      if (autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
+      if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
       return bgmArrangement.clear;
     }
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
@@ -13261,9 +13267,9 @@ function MonsterHeroGame() {
     if (RUN_PHASE_STATES.includes(state)) {
       // AUTO∞の次周開始時はwaveHistoryが0へ戻る中間フェーズでも、直前のBGMを維持する。
       // ここでenhance/resultへ一瞬切り替わると、次のBATTLEでAUTO曲が先頭から再生されてしまう。
-      if (autoRepeatRef.current && !wavesDone) return '__keep_battle_bgm__';
-      if (wavesDone && autoBattleRef.current && bgmArrangement.autoPostWaveBgm !== 'on') return '__keep_battle_bgm__';
-      return wavesDone ? 'result' : 'enhance';
+      if (allowKeep && autoRepeatRef.current && !wavesDone) return '__keep_battle_bgm__';
+      if (allowKeep && wavesDone && autoBattleRef.current && bgmArrangement.autoPostWaveBgm !== 'on') return '__keep_battle_bgm__';
+      return wavesDone ? bgmArrangement.result : bgmArrangement.enhance;
     }
     return null;
   };
@@ -13271,7 +13277,14 @@ function MonsterHeroGame() {
   useEffect(() => {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
     if (gameState === 'RHYTHM_PLAY') return;
-    const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
+    let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null);
+    // ★モンビーを開いているあいだ、バトルのBGMは止まっている(この画面はキーを持たない)。
+    //   戻ってきた最初の1回で「直前のBGMを維持」を選ぶと、維持すべき曲が無いので
+    //   無音のままになる。そこだけは維持せず鳴らし直す
+    if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
+      key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory||[]).length > 0, hp <= 0 || gaveUp, false);
+    }
+    bgmSuspendedByRhythmRef.current = rhythmScreenOpen;
     // AUTO中のWAVE後は曲を止めたり差し替えたりせず、直前の戦闘BGMをそのまま継続する。
     if (key === '__keep_battle_bgm__') {
       if (!audioOn) Audio_.stopBGM();
@@ -13287,7 +13300,7 @@ function MonsterHeroGame() {
     if (!audioOn) { Audio_.stopBGM(); return; }
     if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
@@ -19558,7 +19571,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(var(--mh-vh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
-      {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM']]},
+      {id:'basic',label:'基本',items:[['home','HOME BGM'],['title','タイトル BGM'],['autoBattle','AUTOモード BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM'],
+        // 勇者モン選択などの準備中・WAVE後のリザルト・敗北も選べるようにした
+        // (2026-09-07・ユーザー要望「せっかくだから全て場面のBGMアレンジをできるようにして」)。
+        // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
+        ['enhance','準備・強化フェーズ BGM'],['result','WAVE後リザルト BGM'],['gameOver','敗北 BGM']]},
       {id:'battle',label:'バトル'},
       {id:'event',label:'イベント',items:[['kikiIntro','きき加入イベント BGM']]},
       {id:'other',label:'その他',items:[['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},

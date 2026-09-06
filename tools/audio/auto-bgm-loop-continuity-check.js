@@ -6,7 +6,10 @@ let failed=0;const check=(n,ok)=>{console.log((ok?'OK':'NG')+': '+n);if(!ok)fail
 for(const f of files){const s=fs.readFileSync(path.join(ROOT,f),'utf8');
 check(f+': BGMボタンを上部コントロールから撤去',!s.includes('w-[28px] h-[28px] flex items-center justify-center rounded bg-indigo-800 border border-indigo-400/50 text-[13px] active:scale-90'));
 check(f+': 下部BGMボタン',s.includes('data-auto-bgm-button'));
-check(f+': AUTO∞次周の中間フェーズでBGM継続',s.includes("if (autoRepeatRef.current && !wavesDone) return '__keep_battle_bgm__';"));}
+// allowKeep は「維持を使ってよいか」。モンビーから戻った直後だけ false にして鳴らし直す
+// (2026-09-07。維持を選ぶと、止まっていて維持すべき曲が無く無音になっていた)
+check(f+': AUTO∞次周の中間フェーズでBGM継続',s.includes("if (allowKeep && autoRepeatRef.current && !wavesDone) return '__keep_battle_bgm__';"));
+check(f+': モンビーから戻った直後だけ維持しない',s.includes("key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current"));}
 const help=fs.readFileSync(path.join(ROOT,'monster-hero/data/help.js'),'utf8');const log=fs.readFileSync(path.join(ROOT,'monster-hero/data/changelog.js'),'utf8');
 check('ヘルプに配置変更と次周継続を掲載',help.includes('VIEW／AUTO付近')&&help.includes('曲頭へ戻りません'));
 check('更新履歴に修正を掲載',log.includes('AUTO∞のBGM操作と周回継続を改善しました'));
