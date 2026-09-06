@@ -2,6 +2,10 @@
 //
 //   node build.js          … 変換して書き出す
 //   node build.js --check  … 書き出さず、compiled が最新かどうかだけ確認する(古ければ終了コード1)
+//   node build.js --from-parts … parts を正として game-system.jsx を作り直す(両方が変わって止まったとき用)
+//
+// 編集元は monster-hero/src/parts/*.jsx(parts.json の順)。game-system.jsx はそれを連結した生成物で、
+// compiled はさらにそれを変換したもの。詳しくは tools/harness.js の PARTS_DIR まわりのコメント。
 //
 // 【なぜ事前変換するか】
 // 以前は index.html が @babel/standalone をCDNから読み込み(約2.8MB)、さらに
@@ -17,7 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { REPO_ROOT, GAME_SYSTEM, transformGameSystem } = require('./harness');
+const { REPO_ROOT, GAME_SYSTEM, transformGameSystem, syncPartsAndGameSystem, assembleParts, splitGeneratedFile } = require('./harness');
 
 const OUT_FILE = path.join(REPO_ROOT, 'monster-hero', 'game-system.compiled.js');
 
@@ -53,6 +57,15 @@ function buildFileContents(hash, code) {
 }
 
 if (process.argv.includes('--check')) {
+  // 編集元(parts)と連結生成物(game-system.jsx)が一致しているかを先に見る。
+  // parts だけ直して build.js を忘れると、ここで止まる(compiled の --check と同じ考え方)
+  {
+    const current = splitGeneratedFile(fs.readFileSync(GAME_SYSTEM, 'utf8'));
+    if (current.body !== assembleParts()) {
+      console.error('NG: game-system.jsx が monster-hero/src/parts/ の連結結果と一致しません。node tools/build.js を実行してください');
+      process.exit(1);
+    }
+  }
   const hash = sourceHash();
   const embedded = readEmbeddedHash();
   if (!embedded) {
@@ -73,6 +86,13 @@ if (process.argv.includes('--check')) {
   }
   console.log('OK: game-system.compiled.js は game-system.jsx の正規ビルドと一致しています');
   process.exit(0);
+}
+
+// まず編集元(parts)と game-system.jsx をそろえる。parts が変わっていれば連結し直し、
+// game-system.jsx が直接編集されていれば parts へ書き戻す(両方が別々に変わっていれば止まる)
+{
+  const sync = syncPartsAndGameSystem({ fromParts: process.argv.includes('--from-parts') });
+  if (sync.action !== 'none') console.log(`parts と game-system.jsx をそろえました: ${sync.action}(${sync.reason})`);
 }
 
 // 公開用ビルドではバージョン3箇所を先に同一時刻へ揃える。機能変更後に古い日時の

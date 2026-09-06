@@ -50,6 +50,10 @@
 
 ## 3. `game-system.jsx` の内部地図(行番号は 9f9cfa0 時点)
 
+> 2026-09-06(STEP 2)から、編集元は `monster-hero/src/parts/*.jsx` になり、`game-system.jsx` はそれを `parts.json` の順に連結した生成物。
+> 部品は `10-shared.jsx`(1〜10,525 行相当)、`15-error-boundary.jsx`、`20-app.jsx`(MonsterHeroGame)、`30-bootstrap.jsx`(CSS 注入と createRoot)の 4 つ。
+> 下表の行番号は連結後の `game-system.jsx` で見るときの目安(ヘッダと目印の行ぶん、数行ずれる)。
+
 ファイルは大きく「共有層(1〜10,358行)」「`MonsterHeroGame`(10,359〜25,082行)」「CSS注入と createRoot(〜25,638行)」の3層。
 
 | 行 | 内容 | 主な定義 |
