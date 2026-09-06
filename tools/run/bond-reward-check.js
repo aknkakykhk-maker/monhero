@@ -8,6 +8,8 @@ const source = fs.readFileSync(sourcePath, 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
 const reconcileSource = source.match(/const reconcileMasuPoints = \(masu\) => \{[\s\S]*?\n\};/)?.[0];
 const context = {
+  // 本体は読み込み時に BREEDER_MARKET_ITEMS.push(...)(虹の超越の実)を行うので、data/breeder.js の代わりに空の一覧を置く
+  BREEDER_MARKET_ITEMS: [],
   React: { Component: class { setState() {} }, PureComponent: class { setState() {} }, createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} },
   ALL_PLAYER_MONSTERS: { base: { distAptitude:['C','C','C','C'] } },
 };
