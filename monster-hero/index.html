@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":793954,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":474234,"data/help.js":274973,"data/rhythm-step3-release.js":7722,"data/assistants.js":271738,"game-system.compiled.js":2989934,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":793954,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":475050,"data/help.js":275051,"data/rhythm-step3-release.js":7722,"data/assistants.js":271738,"game-system.compiled.js":2990950,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609070729';
+var GAME_BUILD = '202609070736';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -194,6 +194,28 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
      (縦持ちのまま高さ393pxへ縦積みされると、曲の並びがほぼ見えなくなるため)。 */
   [data-mh-view-rotation="true"] [data-rhythm-song-select] { flex-direction: row; }
   [data-mh-view-rotation="true"] [data-rhythm-song-notice] { display: none; }
+  /* 右側(選んでいる曲・難易度)は、横並びにしたら中でスクロールできないと下が切れる。
+     landscape:overflow-y-auto は当てているが、flexの子は min-height:auto のままだと
+     中身のぶん伸びてしまい、スクロールが起きない
+     (2026-09-07・ユーザー報告「縦横固定ボタンを押すと横画面時に右側の難易度選択のほう
+      スクロールができなくなる」)。器の高さで止めて、中でスクロールさせる。 */
+  [data-mh-view-rotation="true"] [data-rhythm-song-detail] {
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+  [data-mh-view-rotation="true"] [data-rhythm-song-list] { min-height: 0; }
+  /* クイック∞周回の進捗の帯。縦持ちはヘッダーの下、横持ちはヘッダーの空きへ入れる
+     (2026-09-07・ユーザー提案「横画面の場合、上側タブに空きがあるからその辺を利用できないか」)。
+     ★Tailwind の landscape: に頼らず素のCSSで出し分ける。CDNが届かない状況でも
+       どちらか片方だけが必ず出るようにするため(両方出る・両方消えるのが一番困る)。 */
+  [data-quick-run-progress-header] { display: none; }
+  @media (orientation: landscape) {
+    [data-quick-run-band-portrait] { display: none; }
+    [data-quick-run-progress-header] { display: block; }
+  }
+  [data-mh-view-rotation="true"] [data-quick-run-band-portrait] { display: none; }
+  [data-mh-view-rotation="true"] [data-quick-run-progress-header] { display: block; }
   #loading { position:fixed; inset:0; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box; padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom)); color:#fff; text-align:center; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif; background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%); }
   #loading::before { content:""; position:absolute; inset:0; background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px); background-size:39px 41px; opacity:.28; }
   .static-mocchi { position:relative; z-index:1; width:min(42vw,180px); height:min(42vw,180px); margin-bottom:clamp(8px,3vh,24px); }
@@ -815,8 +837,8 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="data/rhythm-lane-svg.js?v=d0b5c2bea35c" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=674613d31335" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=5b944e1f9a4b" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=a6e5805237cc" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=d87dfb0795ce" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
