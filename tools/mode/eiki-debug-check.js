@@ -120,23 +120,16 @@ check('マスモン登録の対象になる(debugOnlyが外れたので通常ど
 console.log('--- ⑤ 勇者特性「桜花連舞」と固有効果「緋桜連華」---');
 check('特性名が 桜花連舞', eiki.trait === '桜花連舞');
 check('固有効果の説明に 緋桜連華 がある', /緋桜連華/.test(eiki.unique.effectDesc));
-// 実装の該当行をそのまま読み、倍率と回数を数える
-const comboBlockStart = source.indexOf("// 勇者特性「桜花連舞」");
-const comboBlockEnd = source.indexOf('// 禁忌解錠の通常攻撃', comboBlockStart);
-const comboBlock = comboBlockStart >= 0 ? source.slice(comboBlockStart, comboBlockEnd) : '';
+// 連撃の倍率と回数はヒット列の共通の正本(ATTACK_COMBO_RULES / buildAttackHits)が持つ
+const rulesStart = source.indexOf('const ATTACK_COMBO_RULES = Object.freeze({');
+const comboBlock = rulesStart >= 0 ? source.slice(rulesStart, source.indexOf('const attackAtonementDmg', rulesStart)) : '';
 check('桜花連舞・緋桜連華の連撃が実装されている', comboBlock.length > 0);
-const heroPart = comboBlock.slice(comboBlock.indexOf("mainHero?.id==='Eiki' && activeMon.id==='Eiki'"), comboBlock.indexOf('// 固有効果「緋桜連華」の連撃'));
-const uniquePart = comboBlock.slice(comboBlock.indexOf('// 固有効果「緋桜連華」の連撃'));
-const countRolls = (text, rate) => (text.match(new RegExp(`rollCombo\\(${rate}\\+comboDmgBonus\\)`, 'g')) || []).length;
-check('桜花連舞: 通常も固有も 10%の連撃×2', countRolls(heroPart, '0\\.1') === 2, `${countRolls(heroPart, '0\\.1')}回`);
-check('桜花連舞: 自身の固有技のときだけ 30%を追加',
-  countRolls(heroPart, '0\\.3') === 1 && /if \(card\.type==='unique' && card\.monId==='Eiki'\) rollCombo\(0\.3\+comboDmgBonus\);/.test(heroPart));
-check('桜花連舞はエイキが勇者モンのときだけ発動',
-  /if \(mainHero\?\.id==='Eiki' && activeMon\.id==='Eiki'\) \{/.test(comboBlock));
-check('緋桜連華: 固有技命中時に 15%の連撃×2', countRolls(uniquePart, '0\\.15') === 2, `${countRolls(uniquePart, '0\\.15')}回`);
-check('緋桜連華は技の出自で判定(引き継いでも出る)',
-  /if \(card\.type==='unique' && card\.monId==='Eiki'\) \{/.test(uniquePart));
-check('連撃はザンと同じ rollCombo を使う(独自計算を増やしていない)',
+check('桜花連舞: 通常も固有も 10%の連撃×2', comboBlock.includes('eikiHero: Object.freeze([0.1, 0.1]),') && comboBlock.includes('for (const rate of ATTACK_COMBO_RULES.eikiHero) combo(rate + comboDmgBonus);'));
+check('桜花連舞: 自身の固有技のときだけ 30%を追加', comboBlock.includes('eikiHeroUnique: 0.3,') && comboBlock.includes("if (isUniqueOf('Eiki')) combo(ATTACK_COMBO_RULES.eikiHeroUnique + comboDmgBonus);"));
+check('桜花連舞はエイキが勇者モンのときだけ発動', comboBlock.includes("if (heroId === 'Eiki' && attackerId === 'Eiki') {"));
+check('緋桜連華: 固有技命中時に 15%の連撃×2', comboBlock.includes('eikiUnique: Object.freeze([0.15, 0.15]),') && comboBlock.includes("if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);"));
+check('緋桜連華は技の出自で判定(引き継いでも出る)', comboBlock.includes("const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;"));
+check('連撃はザンと同じ共通の正本を使う(独自計算を増やしていない)',
   !/const eikiCombo|eikiRollCombo|function eikiCombo/.test(source));
 
 console.log('--- ⑥ 固有技を使うたびのスタック(+3%) ---');

@@ -72,6 +72,11 @@ function MonsterHeroGame() {
     return (list[0]&&list[0].songId)||'';
   });
   const [rhythmSelectedDifficultyId,setRhythmSelectedDifficultyId]=useState('');
+  // 「📖 遊びかた」で開いている項目。null なら項目一覧。
+  // 以前はモンビーの説明を全部つなげて1画面へ流していたので、ただの長文になっていた
+  // (2026-09-06・ユーザー指摘「ただの文章の羅列で見にくすぎる」)。本ゲームのヘルプと同じ
+  // 「一覧 → タップして本文」の2階層にして、本文は data/help.js のカテゴリ rhythm をそのまま使う
+  const [rhythmHelpTopicId,setRhythmHelpTopicId]=useState(null);
   // 曲えらびの見え方(並び順・助手を畳んだか)。演奏の設定とは別のキーで覚える。
   // 保存に失敗しても画面は動かせるよう、まず画面へ反映してから書き込む。
   const [rhythmSelectView,setRhythmSelectView]=useState(DEFAULT_RHYTHM_SELECT_VIEW);
@@ -5981,37 +5986,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // processTurnの実行では渡さない(getPermaBuff('globalComboDmgPct')が既に確定値を持つため)。
   const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo=0) => {
     if (baseDmg<=0) return 0;
-    const guaranteedCrit=getTurnBuff('guaranteedCrit',false);
-    const critMult=1.5+getPermaBuff('critDmgPct');
-    // 禁忌解錠の通常攻撃は、分割前のbaseDmgを基準に50%ずつへ分ける。
-    // 先に半減したmainDmgを追撃の基準にすると 50% + 25% になるため、両ヒットともbaseDmgから計算する。
-    const pandoraSplitNormal=mainHero?.id==='Pandora' && mon?.id==='Pandora' && ['atk','range_atk'].includes(card.type);
-    const mainBaseDmg=pandoraSplitNormal?Math.floor(baseDmg*0.5):baseDmg;
-    const mainDmg=guaranteedCrit?Math.floor(mainBaseDmg*critMult):mainBaseDmg;
-    const comboDmgBonus = getPermaBuff('comboDmgPct');
-    const extraHit=(rate)=>{
-      const raw=Math.floor(baseDmg*rate);
-      return guaranteedCrit?Math.floor(raw*critMult):raw;
-    };
-    let total = mainDmg;
-    if (mainHero?.id==='Zan' && mon?.id==='Zan') total += extraHit(0.3+comboDmgBonus); // 勇者特性「連撃」
-    if (card.type==='unique' && card.monId==='Zan') total += extraHit(0.2+comboDmgBonus); // 固有技「連斬」
-    // エイキの実処理と同じ順・同じ本数で、桜花連舞と緋桜連華の確定連撃を合算する。
-    if (mainHero?.id==='Eiki' && mon?.id==='Eiki') {
-      total += extraHit(0.1+comboDmgBonus);
-      total += extraHit(0.1+comboDmgBonus);
-      if (card.type==='unique' && card.monId==='Eiki') total += extraHit(0.3+comboDmgBonus);
-    }
-    if (card.type==='unique' && card.monId==='Eiki') {
-      total += extraHit(0.15+comboDmgBonus);
-      total += extraHit(0.15+comboDmgBonus);
-    }
-    if (pandoraSplitNormal) total += extraHit(0.5+comboDmgBonus); // 禁忌解錠（通常攻撃の後半50%）
-    if (mainHero?.id==='Pandora' && mon?.id==='Pandora' && card.type==='unique' && card.monId==='Pandora') total += extraHit(1.0+comboDmgBonus); // 禁忌解錠
-    total += extraHit(getPermaBuff('globalComboDmgPct')+additionalGlobalCombo); // きき由来の全体連撃は全モンスター共通の別ヒット
-    // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
-    if (card.type==='unique' && (card.monId==='Ark'||card.monId==='Iblis')) total += Math.floor(mainDmg*0.2);
-    return total;
+    // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する
+    const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct'),
+      guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>false,
+      globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo });
+    // 贖罪の追撃はメインヒットの確定値を基準にする(ランダム会心は予測しない)
+    return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg);
   }, [mainHero, turnBuffs, permaBuffs]);
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
@@ -6442,55 +6422,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const attackStartDist=attackDistance;
         const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist); attackCount++;
         const critRateBonus=getPermaBuff('critRatePct'), critDmgBonus=getPermaBuff('critDmgPct');
-        const isCrit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+critRateBonus));
-        // パンドラ勇者の通常攻撃だけは、分割前のdを共通の基準にして50% + 50%へ分ける。
-        // 自身・引継ぎを問わず固有技は従来の専用分岐を維持する。
-        const pandoraSplitNormal=mainHero?.id==='Pandora' && activeMon.id==='Pandora' && ['atk','range_atk'].includes(card.type);
-        const mainBaseD=pandoraSplitNormal?Math.floor(d*0.5):d;
-        const finalD=isCrit?Math.floor(mainBaseD*(1.5+critDmgBonus)):mainBaseD; if(isCrit) hasCrit=true; totalDmg+=finalD;
+        // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
+        // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
+        const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus,
+          guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<((card.crit||0.1)+critRateBonus),
+          globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd });
+        const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
-        if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan') || activeMon.id==='Eiki' || (card.type==='unique' && card.monId==='Eiki') || pandoraSplitNormal || (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora')) {
-          // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
-          const comboDmgBonus=getPermaBuff('comboDmgPct');
-          const rollCombo=(rate,noAnim=false)=>{
-            const base=Math.floor(d*rate);
-            if (base<=0) return;
-            const crit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+critRateBonus));
-            const final=crit?Math.floor(base*(1.5+critDmgBonus)):base;
-            if (crit) hasCrit=true; totalDmg += final;
-            attackHits.push({dmg:final, isCrit:crit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false, ...(noAnim?{noAnim:true}:{})});
-          };
-          // 勇者特性「連撃」: ザン自身が攻撃していて、かつザンが勇者モンの時のみ、攻撃(通常/固有問わず)に連撃ヒットを追加
-          if (mainHero?.id==='Zan' && activeMon.id==='Zan') rollCombo(0.3+comboDmgBonus);
-          // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
-          if (card.type==='unique' && card.monId==='Zan') rollCombo(0.2+comboDmgBonus);
-          // 勇者特性「桜花連舞」: エイキ自身が攻撃していて、かつエイキが勇者モンのときだけ。
-          //   通常・固有を問わず 与ダメ10%の連撃×2、さらにエイキ自身の固有技なら +30%の追加連撃。
-          //   ザンと同じ rollCombo を呼ぶだけなので、会心・連撃ダメージUPの扱いは完全に共通
-          if (mainHero?.id==='Eiki' && activeMon.id==='Eiki') {
-            rollCombo(0.1+comboDmgBonus);
-            rollCombo(0.1+comboDmgBonus);
-            if (card.type==='unique' && card.monId==='Eiki') rollCombo(0.3+comboDmgBonus);
-          }
-          // 固有効果「緋桜連華」の連撃: 技の出自(card.monId)がエイキなら、誰が使っても発生する
-          // (合体で引き継いだ場合も含む)。ザンの「連斬」と同じ考え方
-          if (card.type==='unique' && card.monId==='Eiki') {
-            rollCombo(0.15+comboDmgBonus);
-            rollCombo(0.15+comboDmgBonus);
-          }
-          // 禁忌解錠の通常攻撃: 分割前のdへ50%と既存の連撃ダメージUPを足した後半ヒット。
-          // 先頭ヒットが専用モーションを再生するため、後半は数値だけを続けて表示する。
-          if (pandoraSplitNormal) rollCombo(0.5+comboDmgBonus,true);
-          // 禁忌解錠: パンドラ自身の固有技だけ、既存の連撃ヒットへ100%を渡す。
-          // 引継ぎ技(card.monId!==Pandora)には連撃させない。
-          if (mainHero?.id==='Pandora' && activeMon.id==='Pandora' && card.type==='unique' && card.monId==='Pandora') rollCombo(1.0+comboDmgBonus,true);
-        }
-        const globalComboRate=getPermaBuff('globalComboDmgPct')+localGlobalComboAdd;
-        if(globalComboRate>0){
-          const base=Math.floor(d*globalComboRate);
-          if(base>0){const crit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+critRateBonus)); const final=crit?Math.floor(base*(1.5+critDmgBonus)):base; if(crit)hasCrit=true; totalDmg+=final; attackHits.push({dmg:final,isCrit:crit,slotIdx,isSpecial:true,skillName:'全体連撃',isUnique:false,noAnim:true});}
-        }
+        // 連撃・全体連撃。専用モーションを続けて再生しないもの(禁忌解錠・全体連撃)は noAnim で数値だけを表示する
+        for (const hit of hits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=rangeMoveTarget; }
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
@@ -6503,7 +6444,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           else if(card.monId==='Ark'||card.monId==='Iblis'){
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
             // noAnim:true → 専用モーションを2回連続再生させず、直前のヒットに続けてダメージ数値だけ表示する
-            const comboAmt=Math.floor(finalD*0.2);
+            const comboAmt=attackAtonementDmg(card, finalD);
             if(comboAmt>0){totalDmg+=comboAmt; attackHits.push({dmg:comboAmt, isCrit:false, slotIdx, isSpecial:true, skillName:'追撃', isUnique:false, noAnim:true});}
             // 中二病: 固有技使用のたびに永続で消費ガッツ+10%・ダメージ倍率+0.1(重複可)
             addPermaBuff('chuuniUniqueStack',1);
@@ -9968,7 +9909,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   (2026-09-05・ユーザー指示「縦なら横に横なら縦に変わるボタン」) */}
               <RhythmOrientationButton/>
               <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
-                onClick={()=>setGameState('RHYTHM_DEMO_HELP')}
+                onClick={()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');}}
                 className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`}>📖</button>
               <button data-rhythm-demo-monsters aria-label="マスモン設定" title="マスモン設定"
                 onClick={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}
@@ -10008,42 +9949,72 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* モンビーの「遊びかた」。設定のヘルプにあるモンビーの項目を、
             モードを離れずにその場で読めるようにしたもの(2026-09-05・ユーザー指示)。
-            本文は data/help.js を参照するだけで、ここには説明文を書かない。
-            2か所に同じ説明があると必ず片方が古くなるため。 */}
+            本文は data/help.js のカテゴリ rhythm を参照するだけで、ここには説明文を書かない。
+            2か所に同じ説明があると必ず片方が古くなるため。
+
+            【2026-09-06・ユーザー指示】「ただの文章の羅列で見にくすぎる／本ゲーム側のように
+            見やすく作って」。以前は全項目を展開して縦に並べていたので、開くといきなり
+            2万字が流れてくる画面になっていた。本ゲームのヘルプと同じ「項目一覧 → タップして本文」
+            の2階層にし、一覧には group の小見出しを挟む。 */}
         {gameState==='RHYTHM_DEMO_HELP'&&(()=>{
-          const category=(typeof HELP_CATEGORIES!=='undefined'?HELP_CATEGORIES:[]).find(cat=>cat.id==='basics');
-          const topics=((category&&category.topics)||[]).filter(topic=>String(topic.id||'').startsWith('rhythm-')&&topic.id!=='rhythm-coming-soon');
+          // 公開フラグで伏せてある項目を出さないよう、生の HELP_CATEGORIES ではなく
+          // ふるい分け済みの HELP_GUIDE から引く
+          const category=helpCategoryById('rhythm');
+          const topics=(category&&category.topics)||[];
+          const topic=rhythmHelpTopicId?topics.find(x=>x.id===rhythmHelpTopicId)||null:null;
+          const accent=(category&&category.color)||'#fbbf24';
+          const topicIndex=topic?topics.findIndex(x=>x.id===topic.id):-1;
+          const nextTopic=topicIndex>=0?topics[topicIndex+1]:null;
           return (
           <main data-rhythm-demo-help className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
             <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
-              <button aria-label="戻る" onClick={()=>setGameState('RHYTHM_DEMO_HOME')} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+              <button aria-label="戻る" data-rhythm-demo-help-back onClick={()=>{if(topic)setRhythmHelpTopicId(null);else setGameState('RHYTHM_DEMO_HOME');}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
               <div className="min-w-0 flex-1">
                 <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
-                <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">📖 遊びかた</h2>
+                <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">{topic?`${topic.emoji} ${topic.title}`:'📖 遊びかた'}</h2>
               </div>
             </header>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+            <div data-rhythm-demo-help-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
               <RhythmLandscapeHint className="mb-3"/>
-              <AssistantBubble scene="rhythmHelp"/>
-              {/* 【2026-09-05・ユーザー指示】「実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
-                  読むだけの案内と、叩いて覚える練習の2つを並べる。練習は記録に残らない */}
-              <button data-rhythm-demo-practice onClick={startRhythmPractice}
-                className="mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950">🥁 叩いて練習する</button>
-              <p className="mt-2 text-[10px] leading-relaxed text-slate-400">実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。</p>
-              <button data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
-                className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">🎓 もう一度チュートリアルを見る</button>
-              <p className="mt-2 text-[10px] leading-relaxed text-slate-400">曲えらびへ戻って、助手が最初から説明します。何度でも見られます。</p>
-              <div className="mt-4 space-y-3">
-                {topics.length===0
-                  ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">説明がまだありません。</p>
-                  :topics.map(topic=>(
-                    <section key={topic.id} data-rhythm-demo-help-topic={topic.id} className="rounded-2xl border border-amber-300/25 bg-slate-900/70 p-3">
-                      <h3 className="text-sm font-black text-amber-100">{topic.emoji} {topic.title}</h3>
-                      {topic.assistant&&<p className="mt-1 text-[10px] font-bold leading-relaxed text-cyan-200">{topic.assistant}</p>}
-                      <div className="mt-2 space-y-2.5">{renderHelpBlocks(topic.blocks,'#fbbf24')}</div>
-                    </section>
-                  ))}
-              </div>
+              {!topic&&(<>
+                <AssistantBubble scene="rhythmHelp"/>
+                {/* 【2026-09-05・ユーザー指示】「実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
+                    読むだけの案内と、叩いて覚える練習の2つを並べる。練習は記録に残らない */}
+                <button data-rhythm-demo-practice onClick={startRhythmPractice}
+                  className="mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950">🥁 叩いて練習する</button>
+                <p className="mt-2 text-[10px] leading-relaxed text-slate-400">実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。</p>
+                <button data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
+                  className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">🎓 もう一度チュートリアルを見る</button>
+                <p className="mt-2 text-[10px] leading-relaxed text-slate-400">曲えらびへ戻って、助手が最初から説明します。何度でも見られます。</p>
+                <div data-rhythm-demo-help-list className="mt-4 space-y-2">
+                  {topics.length===0
+                    ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">説明がまだありません。</p>
+                    :topics.map((x,i)=>(
+                      <React.Fragment key={x.id}>
+                        {x.group&&x.group!==(topics[i-1]||{}).group&&(
+                          <div data-rhythm-demo-help-group className="pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]" style={{color:accent}}>{x.group}</div>
+                        )}
+                        <button data-rhythm-demo-help-open={x.id} onClick={()=>setRhythmHelpTopicId(x.id)}
+                          className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left active:scale-95" style={{borderColor:`${accent}55`,backgroundColor:'rgba(15,23,42,0.7)'}}>
+                          <span className="shrink-0 text-base leading-none">{x.emoji}</span>
+                          <span className="min-w-0 flex-1 text-[12px] font-black leading-tight text-white">{x.title}</span>
+                          <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                        </button>
+                      </React.Fragment>
+                    ))}
+                </div>
+              </>)}
+              {topic&&(
+                <div data-rhythm-demo-help-topic={topic.id} className="space-y-3.5 pb-2">
+                  <p className="text-[10px] font-bold leading-relaxed text-cyan-200">{topic.assistant}</p>
+                  {/* 本文の描き方は本ゲームのヘルプと共通(renderHelpBlocks) */}
+                  {renderHelpBlocks(topic.blocks,accent)}
+                  <div className="flex gap-2 pt-1">
+                    <button data-rhythm-demo-help-list-back onClick={()=>setRhythmHelpTopicId(null)} className="min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
+                    {nextTopic&&<button data-rhythm-demo-help-next onClick={()=>setRhythmHelpTopicId(nextTopic.id)} className="min-h-[48px] flex-1 truncate rounded-2xl px-2 py-3 text-[11px] font-black text-black active:scale-95" style={{backgroundColor:accent}}>次: {nextTopic.title}</button>}
+                  </div>
+                </div>
+              )}
             </div>
           </main>
           );
@@ -14228,7 +14199,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   className={`relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:'bg-slate-900/60 border-slate-800'}`}>
                   {/* 何回選んだかを ×1 / ×2 で明確に出す */}
                   {count>0&&<span className={`absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
-                  <span className={`flex items-center gap-1.5 ${st.tint}`}>{st.icon}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
+                  <span className={`flex items-center gap-1.5 ${st.tint}`}>{cardIconNode(st.icon)}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
                   <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
                     const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
                     const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
@@ -14323,12 +14294,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {cat&&!topic&&(
               <div className="space-y-2">
                 <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{cat.summary}</p>
-                {cat.topics.map(t=>(
-                  <button key={t.id} onClick={()=>{setHelpTopicId(t.id);}} className="w-full rounded-2xl border px-4 py-3 flex items-center gap-3 text-left active:scale-95" style={{borderColor:`${cat.color}55`,backgroundColor:'rgba(15,23,42,0.7)'}}>
-                    <span className="shrink-0 text-base leading-none">{t.emoji}</span>
-                    <span className="flex-1 min-w-0 text-[12px] font-black text-white leading-tight">{t.title}</span>
-                    <ChevronRight size={16} className="shrink-0 text-slate-500"/>
-                  </button>
+                {/* 項目に group が書いてあるカテゴリは、切り替わり目に小見出しを挟む。
+                    モンヒロビートのように項目が20を超えるカテゴリで、どこに何があるかを
+                    一覧のまま見渡せるようにするため(2026-09-06)。group の無いカテゴリは
+                    今までどおり見出し無しで並ぶ */}
+                {cat.topics.map((t,i)=>(
+                  <React.Fragment key={t.id}>
+                    {t.group&&t.group!==(cat.topics[i-1]||{}).group&&(
+                      <div data-help-topic-group className="pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]" style={{color:cat.color}}>{t.group}</div>
+                    )}
+                    <button onClick={()=>{setHelpTopicId(t.id);}} className="w-full rounded-2xl border px-4 py-3 flex items-center gap-3 text-left active:scale-95" style={{borderColor:`${cat.color}55`,backgroundColor:'rgba(15,23,42,0.7)'}}>
+                      <span className="shrink-0 text-base leading-none">{t.emoji}</span>
+                      <span className="flex-1 min-w-0 text-[12px] font-black text-white leading-tight">{t.title}</span>
+                      <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                    </button>
+                  </React.Fragment>
                 ))}
               </div>
             )}
@@ -14341,8 +14321,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 バトルのれんしゅうを始める</button>
                 )}
                 <div className="pt-1 flex gap-2">
-                  <button onClick={()=>setHelpTopicId(null)} className="flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
-                  {nextTopic&&<button onClick={()=>setHelpTopicId(nextTopic.id)} className="flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2" style={{backgroundColor:cat.color}}>次: {nextTopic.title}</button>}
+                  <button onClick={()=>setHelpTopicId(null)} className="min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
+                  {nextTopic&&<button onClick={()=>setHelpTopicId(nextTopic.id)} className="min-h-[48px] flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2" style={{backgroundColor:cat.color}}>次: {nextTopic.title}</button>}
                 </div>
               </div>
             )}

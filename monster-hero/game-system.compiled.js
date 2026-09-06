@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e6bb13396490f2ab
+// source-sha256: 471bc3088ca82d6b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 160fe9d9c2a67369
+// generated-sha256: 30e31798cd9ed73f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 18:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 18:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8727,7 +8727,10 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE
 };
-const releasedForPlayers = item => !item || !item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true;
+// releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
+// 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
+// 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
+const releasedForPlayers = item => !item || (!item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true) && (!item.unreleasedFlag || RELEASE_FLAGS[item.unreleasedFlag] !== true);
 const CHANGELOG_TYPES = ['update', 'issue'];
 // 日付やBUILD_DATEではなく、内容から作った安定IDでお知らせを識別する。同じID・同じ本文は
 // ビルドし直しても未読へ戻らず、本文を変更した場合だけ新しい項目として扱う。
@@ -13117,6 +13120,82 @@ const splitRankingParty = entry => {
 };
 
 // ブリーダー教えカード使用時の専用演出(色・アイコン・掛け声)
+// ==================== 攻撃1枚が生むヒット列(予測表示と実処理の共通の正本) ====================
+// 与ダメージは getDmg(基礎ダメージ)のあと、勇者特性や固有技の連撃・全体連撃で複数のヒットになる。
+// 以前は予測表示(getAttackPredictedDmg)と実処理(processTurn)が別々に同じ分岐を書いていて、
+// 片方だけ直すと「予測と実際が違う」になっていた(docs/refactor/BATTLE_DAMAGE_MAP.md)。
+// ここで 1 か所にまとめ、会心の決め方(乱数か確定か)だけを呼び出し側が渡す。
+// 【順序を変えないこと】メイン → ザン特性 → 連斬 → 桜花連舞 → 緋桜連華 → 禁忌解錠(通常の後半) → 禁忌解錠(固有技) → 全体連撃。
+// 演出(専用モーションの再生・noAnim)がこの順序と skillName に依存している。
+const ATTACK_COMBO_RULES = Object.freeze({
+  zanHero: 0.3,
+  // 勇者特性「連撃」: ザン勇者がザンで攻撃(通常・固有とも)
+  zanUnique: 0.2,
+  // 固有技「連斬」: 技の出自がザンなら誰が使っても(合体で引き継いだ場合も)
+  eikiHero: Object.freeze([0.1, 0.1]),
+  // 勇者特性「桜花連舞」: エイキ勇者がエイキで攻撃(通常・固有とも)
+  eikiHeroUnique: 0.3,
+  // 桜花連舞: さらにエイキ自身の固有技なら追加
+  eikiUnique: Object.freeze([0.15, 0.15]),
+  // 固有効果「緋桜連華」: 技の出自がエイキなら誰が使っても
+  pandoraSplitNormal: 0.5,
+  // 禁忌解錠: パンドラ勇者がパンドラで通常攻撃(atk/range_atk)すると 50%+50% に分ける
+  pandoraUnique: 1.0,
+  // 禁忌解錠: パンドラ自身の固有技は 100% の連撃(引き継いだ技には無い)
+  atonement: 0.2 // 贖罪(アーク・イブリースの固有技): メインの確定値の 20%。実処理では固有技の効果ブロック側で積む
+});
+const buildAttackHits = ({
+  d,
+  card,
+  attackerId,
+  heroId,
+  comboDmgBonus = 0,
+  critDmgBonus = 0,
+  guaranteedCrit = false,
+  rollCrit = () => false,
+  globalComboRate = 0
+}) => {
+  const hits = [];
+  const critMult = 1.5 + critDmgBonus;
+  const isUniqueOf = id => card.type === 'unique' && card.monId === id;
+  const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
+  // 禁忌解錠の通常攻撃は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)
+  const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5) : d;
+  const mainCrit = guaranteedCrit || rollCrit();
+  hits.push({
+    kind: 'main',
+    crit: mainCrit,
+    dmg: mainCrit ? Math.floor(mainBase * critMult) : mainBase,
+    skillName: null,
+    noAnim: false
+  });
+  // 連撃は元ダメージ d を基準にし、会心はメインとは独立に判定する(メインの会心を二重に乗せない)
+  const combo = (rate, skillName = '連撃', noAnim = false) => {
+    const base = Math.floor(d * rate);
+    if (base <= 0) return;
+    const crit = guaranteedCrit || rollCrit();
+    hits.push({
+      kind: 'combo',
+      crit,
+      dmg: crit ? Math.floor(base * critMult) : base,
+      skillName,
+      noAnim
+    });
+  };
+  if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
+  if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);
+  if (heroId === 'Eiki' && attackerId === 'Eiki') {
+    for (const rate of ATTACK_COMBO_RULES.eikiHero) combo(rate + comboDmgBonus);
+    if (isUniqueOf('Eiki')) combo(ATTACK_COMBO_RULES.eikiHeroUnique + comboDmgBonus);
+  }
+  if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);
+  if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);
+  if (heroId === 'Pandora' && attackerId === 'Pandora' && isUniqueOf('Pandora')) combo(ATTACK_COMBO_RULES.pandoraUnique + comboDmgBonus, '連撃', true);
+  if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
+  return hits;
+};
+// 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
+const attackAtonementDmg = (card, mainDmg) => card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis') ? Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement) : 0;
 const TEACHING_FX_STYLE = {
   oryo: {
     icon: "🌸",
@@ -19992,6 +20071,11 @@ function MonsterHeroGame() {
     return list[0] && list[0].songId || '';
   });
   const [rhythmSelectedDifficultyId, setRhythmSelectedDifficultyId] = useState('');
+  // 「📖 遊びかた」で開いている項目。null なら項目一覧。
+  // 以前はモンビーの説明を全部つなげて1画面へ流していたので、ただの長文になっていた
+  // (2026-09-06・ユーザー指摘「ただの文章の羅列で見にくすぎる」)。本ゲームのヘルプと同じ
+  // 「一覧 → タップして本文」の2階層にして、本文は data/help.js のカテゴリ rhythm をそのまま使う
+  const [rhythmHelpTopicId, setRhythmHelpTopicId] = useState(null);
   // 曲えらびの見え方(並び順・助手を畳んだか)。演奏の設定とは別のキーで覚える。
   // 保存に失敗しても画面は動かせるよう、まず画面へ反映してから書き込む。
   const [rhythmSelectView, setRhythmSelectView] = useState(DEFAULT_RHYTHM_SELECT_VIEW);
@@ -28402,37 +28486,20 @@ function MonsterHeroGame() {
   // processTurnの実行では渡さない(getPermaBuff('globalComboDmgPct')が既に確定値を持つため)。
   const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo = 0) => {
     if (baseDmg <= 0) return 0;
-    const guaranteedCrit = getTurnBuff('guaranteedCrit', false);
-    const critMult = 1.5 + getPermaBuff('critDmgPct');
-    // 禁忌解錠の通常攻撃は、分割前のbaseDmgを基準に50%ずつへ分ける。
-    // 先に半減したmainDmgを追撃の基準にすると 50% + 25% になるため、両ヒットともbaseDmgから計算する。
-    const pandoraSplitNormal = mainHero?.id === 'Pandora' && mon?.id === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
-    const mainBaseDmg = pandoraSplitNormal ? Math.floor(baseDmg * 0.5) : baseDmg;
-    const mainDmg = guaranteedCrit ? Math.floor(mainBaseDmg * critMult) : mainBaseDmg;
-    const comboDmgBonus = getPermaBuff('comboDmgPct');
-    const extraHit = rate => {
-      const raw = Math.floor(baseDmg * rate);
-      return guaranteedCrit ? Math.floor(raw * critMult) : raw;
-    };
-    let total = mainDmg;
-    if (mainHero?.id === 'Zan' && mon?.id === 'Zan') total += extraHit(0.3 + comboDmgBonus); // 勇者特性「連撃」
-    if (card.type === 'unique' && card.monId === 'Zan') total += extraHit(0.2 + comboDmgBonus); // 固有技「連斬」
-    // エイキの実処理と同じ順・同じ本数で、桜花連舞と緋桜連華の確定連撃を合算する。
-    if (mainHero?.id === 'Eiki' && mon?.id === 'Eiki') {
-      total += extraHit(0.1 + comboDmgBonus);
-      total += extraHit(0.1 + comboDmgBonus);
-      if (card.type === 'unique' && card.monId === 'Eiki') total += extraHit(0.3 + comboDmgBonus);
-    }
-    if (card.type === 'unique' && card.monId === 'Eiki') {
-      total += extraHit(0.15 + comboDmgBonus);
-      total += extraHit(0.15 + comboDmgBonus);
-    }
-    if (pandoraSplitNormal) total += extraHit(0.5 + comboDmgBonus); // 禁忌解錠（通常攻撃の後半50%）
-    if (mainHero?.id === 'Pandora' && mon?.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') total += extraHit(1.0 + comboDmgBonus); // 禁忌解錠
-    total += extraHit(getPermaBuff('globalComboDmgPct') + additionalGlobalCombo); // きき由来の全体連撃は全モンスター共通の別ヒット
-    // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
-    if (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) total += Math.floor(mainDmg * 0.2);
-    return total;
+    // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する
+    const hits = buildAttackHits({
+      d: baseDmg,
+      card,
+      attackerId: mon?.id,
+      heroId: mainHero?.id,
+      comboDmgBonus: getPermaBuff('comboDmgPct'),
+      critDmgBonus: getPermaBuff('critDmgPct'),
+      guaranteedCrit: getTurnBuff('guaranteedCrit', false),
+      rollCrit: () => false,
+      globalComboRate: getPermaBuff('globalComboDmgPct') + additionalGlobalCombo
+    });
+    // 贖罪の追撃はメインヒットの確定値を基準にする(ランダム会心は予測しない)
+    return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg);
   }, [mainHero, turnBuffs, permaBuffs]);
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
@@ -29135,12 +29202,21 @@ function MonsterHeroGame() {
         attackCount++;
         const critRateBonus = getPermaBuff('critRatePct'),
           critDmgBonus = getPermaBuff('critDmgPct');
-        const isCrit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + critRateBonus;
-        // パンドラ勇者の通常攻撃だけは、分割前のdを共通の基準にして50% + 50%へ分ける。
-        // 自身・引継ぎを問わず固有技は従来の専用分岐を維持する。
-        const pandoraSplitNormal = mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
-        const mainBaseD = pandoraSplitNormal ? Math.floor(d * 0.5) : d;
-        const finalD = isCrit ? Math.floor(mainBaseD * (1.5 + critDmgBonus)) : mainBaseD;
+        // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
+        // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
+        const hits = buildAttackHits({
+          d,
+          card,
+          attackerId: activeMon.id,
+          heroId: mainHero?.id,
+          comboDmgBonus: getPermaBuff('comboDmgPct'),
+          critDmgBonus,
+          guaranteedCrit: getTurnBuff('guaranteedCrit', false),
+          rollCrit: () => Math.random() < (card.crit || 0.1) + critRateBonus,
+          globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd
+        });
+        const isCrit = hits[0].crit;
+        const finalD = hits[0].dmg;
         if (isCrit) hasCrit = true;
         totalDmg += finalD;
         const rangeMoveTarget = card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : null;
@@ -29154,71 +29230,21 @@ function MonsterHeroGame() {
           monId: card.type === 'unique' ? card.monId : undefined,
           rangeMoveTarget
         });
-        if (activeMon.id === 'Zan' || card.type === 'unique' && card.monId === 'Zan' || activeMon.id === 'Eiki' || card.type === 'unique' && card.monId === 'Eiki' || pandoraSplitNormal || mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') {
-          // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
-          const comboDmgBonus = getPermaBuff('comboDmgPct');
-          const rollCombo = (rate, noAnim = false) => {
-            const base = Math.floor(d * rate);
-            if (base <= 0) return;
-            const crit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + critRateBonus;
-            const final = crit ? Math.floor(base * (1.5 + critDmgBonus)) : base;
-            if (crit) hasCrit = true;
-            totalDmg += final;
-            attackHits.push({
-              dmg: final,
-              isCrit: crit,
-              slotIdx,
-              isSpecial: true,
-              skillName: '連撃',
-              isUnique: false,
-              ...(noAnim ? {
-                noAnim: true
-              } : {})
-            });
-          };
-          // 勇者特性「連撃」: ザン自身が攻撃していて、かつザンが勇者モンの時のみ、攻撃(通常/固有問わず)に連撃ヒットを追加
-          if (mainHero?.id === 'Zan' && activeMon.id === 'Zan') rollCombo(0.3 + comboDmgBonus);
-          // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
-          if (card.type === 'unique' && card.monId === 'Zan') rollCombo(0.2 + comboDmgBonus);
-          // 勇者特性「桜花連舞」: エイキ自身が攻撃していて、かつエイキが勇者モンのときだけ。
-          //   通常・固有を問わず 与ダメ10%の連撃×2、さらにエイキ自身の固有技なら +30%の追加連撃。
-          //   ザンと同じ rollCombo を呼ぶだけなので、会心・連撃ダメージUPの扱いは完全に共通
-          if (mainHero?.id === 'Eiki' && activeMon.id === 'Eiki') {
-            rollCombo(0.1 + comboDmgBonus);
-            rollCombo(0.1 + comboDmgBonus);
-            if (card.type === 'unique' && card.monId === 'Eiki') rollCombo(0.3 + comboDmgBonus);
-          }
-          // 固有効果「緋桜連華」の連撃: 技の出自(card.monId)がエイキなら、誰が使っても発生する
-          // (合体で引き継いだ場合も含む)。ザンの「連斬」と同じ考え方
-          if (card.type === 'unique' && card.monId === 'Eiki') {
-            rollCombo(0.15 + comboDmgBonus);
-            rollCombo(0.15 + comboDmgBonus);
-          }
-          // 禁忌解錠の通常攻撃: 分割前のdへ50%と既存の連撃ダメージUPを足した後半ヒット。
-          // 先頭ヒットが専用モーションを再生するため、後半は数値だけを続けて表示する。
-          if (pandoraSplitNormal) rollCombo(0.5 + comboDmgBonus, true);
-          // 禁忌解錠: パンドラ自身の固有技だけ、既存の連撃ヒットへ100%を渡す。
-          // 引継ぎ技(card.monId!==Pandora)には連撃させない。
-          if (mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') rollCombo(1.0 + comboDmgBonus, true);
-        }
-        const globalComboRate = getPermaBuff('globalComboDmgPct') + localGlobalComboAdd;
-        if (globalComboRate > 0) {
-          const base = Math.floor(d * globalComboRate);
-          if (base > 0) {
-            const crit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + critRateBonus;
-            const final = crit ? Math.floor(base * (1.5 + critDmgBonus)) : base;
-            if (crit) hasCrit = true;
-            totalDmg += final;
-            attackHits.push({
-              dmg: final,
-              isCrit: crit,
-              slotIdx,
-              isSpecial: true,
-              skillName: '全体連撃',
-              isUnique: false,
+        // 連撃・全体連撃。専用モーションを続けて再生しないもの(禁忌解錠・全体連撃)は noAnim で数値だけを表示する
+        for (const hit of hits.slice(1)) {
+          if (hit.crit) hasCrit = true;
+          totalDmg += hit.dmg;
+          attackHits.push({
+            dmg: hit.dmg,
+            isCrit: hit.crit,
+            slotIdx,
+            isSpecial: true,
+            skillName: hit.skillName,
+            isUnique: false,
+            ...(hit.noAnim ? {
               noAnim: true
-            });
-          }
+            } : {})
+          });
         }
         if (rangeMoveTarget != null) {
           forcedMoveTarget = rangeMoveTarget;
@@ -29260,7 +29286,7 @@ function MonsterHeroGame() {
           } else if (card.monId === 'Ark' || card.monId === 'Iblis') {
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
             // noAnim:true → 専用モーションを2回連続再生させず、直前のヒットに続けてダメージ数値だけ表示する
-            const comboAmt = Math.floor(finalD * 0.2);
+            const comboAmt = attackAtonementDmg(card, finalD);
             if (comboAmt > 0) {
               totalDmg += comboAmt;
               attackHits.push({
@@ -38131,7 +38157,10 @@ function MonsterHeroGame() {
         "data-rhythm-demo-help": true,
         "aria-label": "\u904A\u3073\u304B\u305F",
         title: "\u904A\u3073\u304B\u305F",
-        onClick: () => setGameState('RHYTHM_DEMO_HELP'),
+        onClick: () => {
+          setRhythmHelpTopicId(null);
+          setGameState('RHYTHM_DEMO_HELP');
+        },
         className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`
       }, "\uD83D\uDCD6"), /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-monsters": true,
@@ -38185,8 +38214,14 @@ function MonsterHeroGame() {
         }, "\uD83C\uDFC6 \u3053\u306E\u66F2\u306E\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"))
       }));
     })(), gameState === 'RHYTHM_DEMO_HELP' && (() => {
-      const category = (typeof HELP_CATEGORIES !== 'undefined' ? HELP_CATEGORIES : []).find(cat => cat.id === 'basics');
-      const topics = (category && category.topics || []).filter(topic => String(topic.id || '').startsWith('rhythm-') && topic.id !== 'rhythm-coming-soon');
+      // 公開フラグで伏せてある項目を出さないよう、生の HELP_CATEGORIES ではなく
+      // ふるい分け済みの HELP_GUIDE から引く
+      const category = helpCategoryById('rhythm');
+      const topics = category && category.topics || [];
+      const topic = rhythmHelpTopicId ? topics.find(x => x.id === rhythmHelpTopicId) || null : null;
+      const accent = category && category.color || '#fbbf24';
+      const topicIndex = topic ? topics.findIndex(x => x.id === topic.id) : -1;
+      const nextTopic = topicIndex >= 0 ? topics[topicIndex + 1] : null;
       return /*#__PURE__*/React.createElement("main", {
         "data-rhythm-demo-help": true,
         className: "flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white"
@@ -38197,7 +38232,10 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u623B\u308B",
-        onClick: () => setGameState('RHYTHM_DEMO_HOME'),
+        "data-rhythm-demo-help-back": true,
+        onClick: () => {
+          if (topic) setRhythmHelpTopicId(null);else setGameState('RHYTHM_DEMO_HOME');
+        },
         className: "min-h-[44px] px-2 text-slate-400"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 18
@@ -38207,14 +38245,15 @@ function MonsterHeroGame() {
         className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
       }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black leading-tight tracking-widest text-amber-200"
-      }, "\uD83D\uDCD6 \u904A\u3073\u304B\u305F"))), /*#__PURE__*/React.createElement("div", {
+      }, topic ? `${topic.emoji} ${topic.title}` : '📖 遊びかた'))), /*#__PURE__*/React.createElement("div", {
+        "data-rhythm-demo-help-scroll": true,
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
         style: {
           paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
         }
       }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
         className: "mb-3"
-      }), /*#__PURE__*/React.createElement(AssistantBubble, {
+      }), !topic && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "rhythmHelp"
       }), /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-practice": true,
@@ -38229,20 +38268,52 @@ function MonsterHeroGame() {
       }, "\uD83C\uDF93 \u3082\u3046\u4E00\u5EA6\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-[10px] leading-relaxed text-slate-400"
       }, "\u66F2\u3048\u3089\u3073\u3078\u623B\u3063\u3066\u3001\u52A9\u624B\u304C\u6700\u521D\u304B\u3089\u8AAC\u660E\u3057\u307E\u3059\u3002\u4F55\u5EA6\u3067\u3082\u898B\u3089\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-4 space-y-3"
+        "data-rhythm-demo-help-list": true,
+        className: "mt-4 space-y-2"
       }, topics.length === 0 ? /*#__PURE__*/React.createElement("p", {
         className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
-      }, "\u8AAC\u660E\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002") : topics.map(topic => /*#__PURE__*/React.createElement("section", {
-        key: topic.id,
+      }, "\u8AAC\u660E\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002") : topics.map((x, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+        key: x.id
+      }, x.group && x.group !== (topics[i - 1] || {}).group && /*#__PURE__*/React.createElement("div", {
+        "data-rhythm-demo-help-group": true,
+        className: "pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]",
+        style: {
+          color: accent
+        }
+      }, x.group), /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-help-open": x.id,
+        onClick: () => setRhythmHelpTopicId(x.id),
+        className: "flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left active:scale-95",
+        style: {
+          borderColor: `${accent}55`,
+          backgroundColor: 'rgba(15,23,42,0.7)'
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 text-base leading-none"
+      }, x.emoji), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1 text-[12px] font-black leading-tight text-white"
+      }, x.title), /*#__PURE__*/React.createElement(ChevronRight, {
+        size: 16,
+        className: "shrink-0 text-slate-500"
+      })))))), topic && /*#__PURE__*/React.createElement("div", {
         "data-rhythm-demo-help-topic": topic.id,
-        className: "rounded-2xl border border-amber-300/25 bg-slate-900/70 p-3"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-sm font-black text-amber-100"
-      }, topic.emoji, " ", topic.title), topic.assistant && /*#__PURE__*/React.createElement("p", {
-        className: "mt-1 text-[10px] font-bold leading-relaxed text-cyan-200"
-      }, topic.assistant), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 space-y-2.5"
-      }, renderHelpBlocks(topic.blocks, '#fbbf24')))))));
+        className: "space-y-3.5 pb-2"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-[10px] font-bold leading-relaxed text-cyan-200"
+      }, topic.assistant), renderHelpBlocks(topic.blocks, accent), /*#__PURE__*/React.createElement("div", {
+        className: "flex gap-2 pt-1"
+      }, /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-help-list-back": true,
+        onClick: () => setRhythmHelpTopicId(null),
+        className: "min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
+      }, "\u9805\u76EE\u4E00\u89A7\u3078"), nextTopic && /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-help-next": true,
+        onClick: () => setRhythmHelpTopicId(nextTopic.id),
+        className: "min-h-[48px] flex-1 truncate rounded-2xl px-2 py-3 text-[11px] font-black text-black active:scale-95",
+        style: {
+          backgroundColor: accent
+        }
+      }, "\u6B21: ", nextTopic.title)))));
     })(), gameState === 'RHYTHM_DEMO_MONSTERS' && /*#__PURE__*/React.createElement("main", {
       "data-rhythm-demo-monsters-screen": true,
       className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
@@ -48207,7 +48278,7 @@ function MonsterHeroGame() {
           className: `absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`
         }, "\xD7", count), /*#__PURE__*/React.createElement("span", {
           className: `flex items-center gap-1.5 ${st.tint}`
-        }, st.icon, /*#__PURE__*/React.createElement("b", {
+        }, cardIconNode(st.icon), /*#__PURE__*/React.createElement("b", {
           className: "text-[13px] font-black text-white leading-none"
         }, option.name)), /*#__PURE__*/React.createElement("span", {
           className: `text-[10px] font-black ${st.tint} leading-tight`
@@ -48392,8 +48463,15 @@ function MonsterHeroGame() {
         className: "space-y-2"
       }, /*#__PURE__*/React.createElement("p", {
         className: "text-[11px] text-slate-400 leading-relaxed mb-3"
-      }, cat.summary), cat.topics.map(t => /*#__PURE__*/React.createElement("button", {
-        key: t.id,
+      }, cat.summary), cat.topics.map((t, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+        key: t.id
+      }, t.group && t.group !== (cat.topics[i - 1] || {}).group && /*#__PURE__*/React.createElement("div", {
+        "data-help-topic-group": true,
+        className: "pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]",
+        style: {
+          color: cat.color
+        }
+      }, t.group), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setHelpTopicId(t.id);
         },
@@ -48409,7 +48487,7 @@ function MonsterHeroGame() {
       }, t.title), /*#__PURE__*/React.createElement(ChevronRight, {
         size: 16,
         className: "shrink-0 text-slate-500"
-      })))), cat && topic && /*#__PURE__*/React.createElement("div", {
+      }))))), cat && topic && /*#__PURE__*/React.createElement("div", {
         className: "space-y-3.5 pb-2"
       }, renderHelpBlocks(topic.blocks, cat.color), topic.launch === 'battleTutorial' && /*#__PURE__*/React.createElement("button", {
         onClick: () => startBattleTutorial('HOME'),
@@ -48421,10 +48499,10 @@ function MonsterHeroGame() {
         className: "pt-1 flex gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setHelpTopicId(null),
-        className: "flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
+        className: "min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
       }, "\u9805\u76EE\u4E00\u89A7\u3078"), nextTopic && /*#__PURE__*/React.createElement("button", {
         onClick: () => setHelpTopicId(nextTopic.id),
-        className: "flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2",
+        className: "min-h-[48px] flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2",
         style: {
           backgroundColor: cat.color
         }

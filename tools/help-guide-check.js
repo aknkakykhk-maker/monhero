@@ -70,7 +70,7 @@ check('ヘルプを開くと必ずカテゴリ一覧から始まる',
     && !/onClick=\{\(\)=>setShowHelp\(true\)\}/.test(source));
 check('戻るは1階層ずつ戻る', has('const goBack = () => { if(topic) setHelpTopicId(null); else if(cat) setHelpCatId(null); else setShowHelp(false); };'));
 check('カテゴリの色をそのまま使う(Tailwindの動的クラスに頼らない)', has('style={{borderColor:c.color,backgroundColor:\'rgba(15,23,42,0.85)\'}}'));
-check('画面はデータから作る(本文をJSXに直書きしていない)', has('{HELP_GUIDE.map(c=>(') && has('{cat.topics.map(t=>(') && has('(blocks || []).map((b, i) => {'));
+check('画面はデータから作る(本文をJSXに直書きしていない)', has('{HELP_GUIDE.map(c=>(') && has('{cat.topics.map((t,i)=>(') && has('(blocks || []).map((b, i) => {'));
 check('ブロックの種類ごとに描き分ける', ['b.t===\'note\'', 'b.t===\'list\'', 'b.t===\'steps\'', 'b.t===\'kv\'', 'b.t===\'data\''].every(has));
 check('助手ボタンと吹き出しがある', has('aria-label="助手のひとことを開く"') && has('<AssistantBubble key={`${helpCatId||\'\'}/${helpTopicId||\'\'}`}'));
 check('助手は開いている階層に応じて話す', has("const assistantLine = topic ? topic.assistant : cat ? cat.assistant : null;") && has("const assistantScene = (!cat && !topic) ? 'helpTop' : null;"));
@@ -110,7 +110,8 @@ check('固有技の最大レベルが実際の値と一致',
   textOf('masu', 'rebirth').includes(`上限はLv.${source.match(/const MAX_UNIQUE_SKILL_LEVEL = (\d+);/)[1]}`));
 check('絆経験値の配分(勇者=満額/供モン1/2/控え1/4)を説明している',
   textOf('masu', 'masumon').includes('半分') && textOf('masu', 'masumon').includes('4分の1'));
-check('会心の説明が実際の倍率と一致', textOf('battle', 'crit').includes('1.5倍') && source.includes('*(1.5+critDmgBonus)'));
+// 会心倍率はヒット列の共通の正本(buildAttackHits)が 1 か所で持つ
+check('会心の説明が実際の倍率と一致', textOf('battle', 'crit').includes('1.5倍') && source.includes('const critMult = 1.5 + critDmgBonus;'));
 check('固有技の会心率の説明が実際の式と一致',
   textOf('battle', 'crit').includes('10% ＋ 固有技レベル×5%') && source.includes('crit: 0.10 + 0.05 * lvl,'));
 check('放牧の上限が実際の値と一致',
