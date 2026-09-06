@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d22a3d4845b6c8cb
+// source-sha256: f6fab9ea2aa285a6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d62a230a954d5041
+// generated-sha256: 5bd6eeab781c8798
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 17:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 17:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7086,7 +7086,25 @@ const _recolorImageData = (data, colorId, baseId, regionIdx) => {
   }
 };
 // imgUrlの画像全体を指定色に染め直した画像をCanvasで生成し、dataURLで返す(色ごとにキャッシュ)
-const _dyeRecolorCache = {};
+// 染め直した絵(dataURL を返す Promise)の控え。1枚が数百KBになるので、無制限に持つと染色した
+// マスモンを多く持つ人が一覧やランキングを行き来するうちに端末のメモリを食い続け、iPhone Safari で
+// タブが読み込み直される原因になる(docs/refactor/TECH_DEBT_AUDIT.md TD-10)。件数で上限を決め、
+// いちばん長く使っていないものから捨てる。捨てても表示中の <img> は受け取った dataURL を
+// そのまま持っているので絵は消えず、次に要ったときに作り直すだけ。
+const DYE_RECOLOR_CACHE_MAX = 96;
+const _dyeRecolorCache = new Map();
+const _dyeRecolorCacheGet = key => {
+  const hit = _dyeRecolorCache.get(key);
+  if (hit) {
+    _dyeRecolorCache.delete(key);
+    _dyeRecolorCache.set(key, hit);
+  } // 使ったものを末尾へ(=新しい側へ)
+  return hit || null;
+};
+const _dyeRecolorCacheSet = (key, promise) => {
+  _dyeRecolorCache.set(key, promise);
+  while (_dyeRecolorCache.size > DYE_RECOLOR_CACHE_MAX) _dyeRecolorCache.delete(_dyeRecolorCache.keys().next().value);
+};
 const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
   // 濃さ(@NN)は重ねるときの透明度で表現するので、染め直した画像そのものには影響しない。
   // ここで外しておかないと、濃さを変えるたびに同じ絵をもう一度作ってしまう
@@ -7098,7 +7116,8 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
   // 設定が同じなら同じ画像を使い回すので、書き分けていないモンスターの負荷は変わらない。
   const dye = _regionDyeSettingFor(baseId, regionIdx);
   const cacheKey = baseId + '::' + dye.gloss + '/' + dye.sat + '::' + imgUrl + '::' + colorId;
-  if (_dyeRecolorCache[cacheKey]) return _dyeRecolorCache[cacheKey];
+  const cached = _dyeRecolorCacheGet(cacheKey);
+  if (cached) return cached;
   const promise = new Promise(resolve => {
     try {
       const img = new window.Image();
@@ -7134,7 +7153,7 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
       resolve(null);
     }
   });
-  _dyeRecolorCache[cacheKey] = promise;
+  _dyeRecolorCacheSet(cacheKey, promise);
   return promise;
 };
 // 部位間の既定色フォールバック: 指定した部位が「元の色」(未設定)のとき、別の部位の色をそのまま

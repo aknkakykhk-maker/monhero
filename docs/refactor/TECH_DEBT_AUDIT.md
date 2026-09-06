@@ -26,7 +26,7 @@
 | TD-07 | High | ライフサイクル | `MonsterHeroGame` 内の `setTimeout` 58 に対し `clearTimeout` 13。画面を離れても残る演出タイマー | 6 |
 | TD-08 | High | 音ゲー | `rhythm-mode.js` 8,624 行のうち 5,916 行が譜面データで、ロジックと同居している | 9 |
 | TD-09 | High | 性能 | 音ゲーのランタイムパッチが document 全体に capture リスナーと `MutationObserver(body, subtree)` を常駐させる | 9 |
-| TD-10 | High | 性能 | 染色キャッシュ(`_dyeRecolorCache` / `_dyeRegionMaskCache`)に上限も破棄も無い | 7 |
+| TD-10 | High | 性能 | 染色キャッシュ(`_dyeRecolorCache` / `_dyeRegionMaskCache`)に上限も破棄も無い | 7(**`_dyeRecolorCache` は 2026-09-06 に 96 件の LRU へ**。`_dyeRegionMaskCache` は種ごとのマスクで件数が種の数に収まるため据え置き) |
 | TD-11 | High | データ分離 | 勇者・モンスター固有の挙動が `mainHero?.id==='X'` の文字列分岐としてロジック中に散在(28 箇所) | 5 |
 | TD-12 | High | 検査 | 検査 326 本のうち CI は 28 本。一括実行の入口が無く、84 本はソース文言への正規表現で壊れやすい | 1 |
 | TD-13 | High | 性能/運用 | Tailwind を CDN から実行時生成(KI-001)。CSS が `index.html` 617 行と `createAnimationStyle` 547 行の2系統 | 7 |
