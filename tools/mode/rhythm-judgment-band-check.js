@@ -1,0 +1,170 @@
+#!/usr/bin/env node
+// 判定ラインの「幅」が、本当に判定窓のとおりに出ているか。
+//
+//   node tools/mode/rhythm-judgment-band-check.js
+//
+// 【なぜ要るか】(2026-09-06・ユーザー指示
+//  「タップ判定ラインの表示を上下goodラインまで広げて真ん中にマーベラスラインを出すような表示に」)
+// 判定はミリ秒(MARVELOUS±55 / GOOD±200)で決まるのに、画面には線が1本しか出ていなかったので、
+// プレイヤーからは「どこからどこまでなら取れるのか」がまったく見えなかった。
+//
+// ここで見たいのは「帯が出ていること」ではなく、
+// **帯の高さが本当に判定窓ぶんになっていること**。
+// 見た目だけそれっぽく置くと、広さがウソになって「見えている幅では取れない」ことになる。
+// そこで、画面から測った寸法(判定ラインの位置・ノーツの高さ・プレイエリアの高さ)と、
+// ノーツが流れる時間から、帯の上下が来るべき位置を**この検査の中で独立に計算**して突き合わせる。
+'use strict';
+const http=require('http'),path=require('path'),fs=require('fs');
+const ROOT=path.resolve(__dirname,'..','..'),PORT=8993;
+let failed=0;
+const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
+const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css',
+  '.png':'image/png','.jpg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg','.ico':'image/x-icon'};
+const serve=()=>new Promise(r=>{const s=http.createServer((req,res)=>{
+  const rel=decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/,''),f=path.join(ROOT,rel);
+  if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){res.writeHead(404);res.end();return;}
+  res.writeHead(200,{'Content-Type':MIME[path.extname(f).toLowerCase()]||'application/octet-stream'});
+  fs.createReadStream(f).pipe(res);});s.listen(PORT,()=>r(s));});
+
+// 演奏画面が組み上がるための最低限のスタイル（外部CDNのCSSはこのサンドボックスから取りに行けない）
+const LAYOUT_CSS=`
+html,body{height:100%;margin:0}
+#root>div,#root>div>div{height:100%}
+[data-rhythm-tap-test]{position:relative;display:flex;flex:1 1 0%;min-height:0;flex-direction:column;overflow:hidden;height:100%}
+[data-rhythm-hud]{position:absolute;left:0;right:0;top:0;z-index:30;display:flex;pointer-events:none}
+[data-rhythm-play-area]{position:relative;flex:1 1 0%;min-height:0;overflow:hidden;margin:0 8px 8px}
+[data-rhythm-note]{position:absolute;top:0;height:20px}
+[data-rhythm-judgment-line]{position:absolute;bottom:12%;left:0;right:0;height:3px}
+[data-rhythm-lane]{position:absolute;inset:0}
+`;
+
+// --- 期待値をこの検査の中で作る（実装の関数は呼ばない） ---
+// ノーツの縦位置は progress(0=出た瞬間 / 1=判定ライン) に対してこの曲がり方で進む。
+// 実装(rhythm-mode.js の rhythmProjectTravelProgress)と同じ式を、ここへ書き写して持つ。
+// 片方だけ変えたら食い違って落ちる＝どちらかが勝手に変わったことに気づける。
+const travelProgress=p=>p<0?p*.72:p>1?1+(p-1)*1.28:p*(.54+.46*p);
+// 既定のノーツ速度 6.0 のときに、ノーツが出てから判定ラインへ着くまでの時間
+const TRAVEL_MS=2150;
+const GOOD_MS=200,MARVELOUS_MS=55;
+
+(async()=>{
+  let playwright;
+  try{playwright=require('playwright');}
+  catch{console.log('SKIP: playwright が入っていないので確認できません');process.exit(0);}
+  const server=await serve();
+  let browser;
+  try{
+    browser=await playwright.chromium.launch({executablePath:'/opt/pw-browsers/chromium',
+      args:['--autoplay-policy=no-user-gesture-required']});
+    const page=await browser.newPage({viewport:{width:390,height:844}});
+    await page.route('**cdn.tailwindcss.com**',route=>route.fulfill({status:200,
+      contentType:'application/javascript',body:`(()=>{const s=document.createElement('style');s.textContent=${JSON.stringify(LAYOUT_CSS)};document.head.appendChild(s);})();`}));
+    await page.addInitScript(()=>{const put=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+      put('mh_breeder_name','テスト');put('mh_breeder_icon','🐣');put('mh_intro_done',true);put('mh_onboarded',true);
+      put('mh_tutorial_seen_v1',true);put('mh_battle_tutorial_seen_v1',true);put('mh_battle_tutorial_guide_shown_v1',true);
+      put('mh_assistant_selected_v1','mua');put('mh_assistant_unlock_seen_v1',true);put('mh_update_notice_seen_v1',true);
+      put('mh_rhythm_tutorial_seen_v1',true);});
+    const clickText=async(pat,nth=0)=>page.evaluate(([s,i])=>{const rx=new RegExp(s);
+      const list=[...document.querySelectorAll('button')].filter(b=>rx.test((b.innerText||'').replace(/\s+/g,' ').trim()));
+      if(!list[i])return false;list[i].click();return true;},[pat,nth]);
+
+    await page.goto(`http://localhost:${PORT}/monster-hero/index.html`,{waitUntil:'load',timeout:60000});
+    await page.waitForFunction(()=>document.body?.innerText.includes('TAP TO START'),{timeout:40000});
+    await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
+    await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
+    await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
+    for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(250);}
+    await clickText('モンヒロビート');
+    // 曲えらびの「決定」は data-rhythm-demo-start が目印。
+    // 文字で探すと、みゅあの吹き出し（「…決定！ それだけで始まるよ♪」）まで拾ってしまい、
+    // そのセリフが出た回だけ吹き出しが開いて演奏へ入れない(セリフは毎回変わる)。
+    await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
+    await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
+    await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});
+    // カウントダウン(READY→3→2→1)が終わって帯が置かれるまで待つ
+    await page.waitForFunction(()=>{
+      const band=document.querySelector('[data-rhythm-judgment-band]');
+      return !!band&&band.getBoundingClientRect().height>1&&getComputedStyle(band).opacity!=='0';
+    },undefined,{timeout:40000}).catch(()=>{});
+
+    const snap=await page.evaluate(()=>{
+      const box=el=>{if(!el)return null;const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height,width:r.width};};
+      const area=document.querySelector('[data-rhythm-play-area]');
+      const band=document.querySelector('[data-rhythm-judgment-band]');
+      return {
+        area:box(area),
+        band:box(band),
+        bandOpacity:band?getComputedStyle(band).opacity:null,
+        bandBackground:band?getComputedStyle(band).backgroundImage:null,
+        core:box(document.querySelector('[data-rhythm-judgment-core]')),
+        edgeTop:box(document.querySelector('[data-rhythm-judgment-edge][data-edge="top"]')),
+        edgeBottom:box(document.querySelector('[data-rhythm-judgment-edge][data-edge="bottom"]')),
+        line:box(document.querySelector('[data-rhythm-judgment-line]')),
+        note:box(document.querySelector('[data-rhythm-note]')),
+      };
+    });
+
+    if(!snap.area||!snap.line){
+      const where=await page.evaluate(()=>document.body.innerText.replace(/\s+/g,' ').slice(0,200));
+      ok('演奏画面へ入れている',false,`プレイエリアか判定ラインが見つかりません / 画面: ${where}`);
+    }else{
+      ok('演奏画面へ入れている',true,`エリア高さ${Math.round(snap.area.height)}px`);
+      ok('判定ラインの「幅」が出ている',
+        !!snap.band&&snap.band.height>1&&snap.bandOpacity!=='0',
+        snap.band?`高さ${Math.round(snap.band.height)}px / 透明度${snap.bandOpacity}`:'要素がありません');
+
+      if(snap.band&&snap.band.height>1){
+        const areaH=snap.area.height;
+        const noteHeight=snap.note?snap.note.height:20;
+        const lineCenter=snap.line.top-snap.area.top+snap.line.height/2;
+        // 既定の設定(ノーツ開始位置0)のときの、ノーツが出てくる位置と流れる距離
+        const spawnY=-noteHeight;
+        const judgmentY=lineCenter-noteHeight/2;
+        const travelPx=judgmentY-spawnY;
+        const yAt=offsetMs=>Math.max(0,Math.min(areaH,
+          spawnY+travelProgress(1+offsetMs/TRAVEL_MS)*travelPx+noteHeight/2));
+        const wantTop=yAt(-GOOD_MS),wantBottom=yAt(GOOD_MS);
+        const gotTop=snap.band.top-snap.area.top,gotBottom=snap.band.bottom-snap.area.top;
+        ok('帯の上のふちがGOODの端（早い側）に合っている',Math.abs(gotTop-wantTop)<=2,
+          `実測 ${gotTop.toFixed(1)}px / 計算 ${wantTop.toFixed(1)}px`);
+        ok('帯の下のふちがGOODの端（遅い側）に合っている',Math.abs(gotBottom-wantBottom)<=2,
+          `実測 ${gotBottom.toFixed(1)}px / 計算 ${wantBottom.toFixed(1)}px`);
+        // 判定ラインの手前と奥では、同じ1msあたりに進むpxが違う。
+        // 曲がりの傾きは判定ラインの直前が1.46、通り過ぎたあとが1.28なので、
+        // **早い側(線より上)のほうが広くなる**。ここを左右対称に均すと
+        // 「見えている幅」と「本当に取れる幅」が食い違うので、そのまま出しているかを見る。
+        const above=lineCenter-gotTop,below=gotBottom-lineCenter;
+        ok('上側のほうが広い（遠近の曲がりを均して左右対称にしていない）',above>below+2,
+          `上 ${above.toFixed(1)}px / 下 ${below.toFixed(1)}px`);
+        ok('判定ラインが帯の中にある',lineCenter>gotTop&&lineCenter<gotBottom,
+          `線 ${lineCenter.toFixed(1)}px / 帯 ${gotTop.toFixed(1)}〜${gotBottom.toFixed(1)}px`);
+
+        if(snap.core){
+          const coreTop=snap.core.top-snap.area.top,coreBottom=snap.core.bottom-snap.area.top;
+          ok('真ん中のMARVELOUSが判定ラインを含んでいる',coreTop<=lineCenter&&lineCenter<=coreBottom,
+            `芯 ${coreTop.toFixed(1)}〜${coreBottom.toFixed(1)}px / 線 ${lineCenter.toFixed(1)}px`);
+          ok('MARVELOUSはGOODより明らかに細い',
+            snap.core.height>0&&snap.core.height<snap.band.height*.5,
+            `芯 ${snap.core.height.toFixed(1)}px / 帯 ${snap.band.height.toFixed(1)}px`);
+          const wantCore=yAt(MARVELOUS_MS)-yAt(-MARVELOUS_MS);
+          ok('MARVELOUSの太さが判定窓ぶんになっている',Math.abs(snap.core.height-wantCore)<=2,
+            `実測 ${snap.core.height.toFixed(1)}px / 計算 ${wantCore.toFixed(1)}px`);
+        }else{
+          ok('真ん中のMARVELOUSが出ている',false,'要素がありません');
+        }
+        ok('GOODの端に線が出ている',!!snap.edgeTop&&!!snap.edgeBottom,
+          snap.edgeTop&&snap.edgeBottom?'上下とも':'足りません');
+        ok('帯は判定ラインへ向かって濃くなる（のっぺりした板になっていない）',
+          typeof snap.bandBackground==='string'&&snap.bandBackground.includes('gradient'),
+          String(snap.bandBackground).slice(0,60));
+      }
+    }
+  }catch(error){
+    ok('検査を最後まで実行できる',false,error.message);
+  }finally{
+    if(browser)await browser.close();
+    server.close();
+  }
+  console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
+  process.exit(failed?1:0);
+})();

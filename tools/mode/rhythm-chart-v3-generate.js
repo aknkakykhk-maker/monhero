@@ -248,9 +248,35 @@ const gridMs=timing.gridMs;
 const gridTimeMs=grid=>timing.beatZeroMs+grid*gridMs;
 const BEAT=timing.subdivisionsPerBeat;
 const BAR=BEAT*timing.beatsPerBar;
+// --- 曲の途中で終わらせる指定（2026-09-06・ユーザー指示「長すぎるから2分ぐらいで
+//     ちょうどいいとこで終わるような作りにして」）---
+// 音源そのものは切らない。デュラハンの2曲はバトルのBGMと同じファイルを使っているので、
+// 切るとバトルの曲まで短くなってしまう（CLAUDE.md ⑥-2「既にある音源が使えるならコピーを作らない」）。
+// かわりに**譜面のほうを途中までにする**。ここで終わりを決めておくと、
+// 量・盛り上がりの配り方・マスモンの出る位置（2割/4割/6割/8割）も、
+// 短くしたぶんに合わせて作り直される（後ろを切り落とすのとは仕上がりが違う）。
+//
+// 終わりの時刻は曲の一覧（rhythm-song-registry.json）の playEndMs に書く。
+// --end で上書きもできるが、書いておけば次に作り直すときも同じところで終わる
+// （引数を覚えていないと元に戻ってしまうため）。
+const registryPlayEndMs=(()=>{
+  try{
+    const registry=readJson('tools/mode/authoring/rhythm-song-registry.json');
+    const value=Number(registry?.songs?.[trackId]?.playEndMs);
+    return Number.isFinite(value)&&value>0?value:null;
+  }catch{return null;}
+})();
+const endArgMs=Number(arg('--end',NaN));
+const chartEndMs=Math.min(Number(audio.durationMs),
+  Number.isFinite(endArgMs)&&endArgMs>0?endArgMs
+    :registryPlayEndMs!==null?registryPlayEndMs:Number(audio.durationMs));
 const minGrid=Math.ceil((COMMON.minTimeMs-timing.beatZeroMs)/gridMs);
-const maxGrid=Math.floor((audio.durationMs-COMMON.endPaddingMs-timing.beatZeroMs)/gridMs);
+const maxGrid=Math.floor((chartEndMs-COMMON.endPaddingMs-timing.beatZeroMs)/gridMs);
 const minBar=Math.floor(minGrid/BAR),maxBar=Math.floor(maxGrid/BAR);
+if(chartEndMs<Number(audio.durationMs)){
+  console.log(`※ 譜面は ${(chartEndMs/1000).toFixed(1)}秒 までで作ります`
+    +`（音源は ${(Number(audio.durationMs)/1000).toFixed(1)}秒。音源そのものは切りません）`);
+}
 
 // 打点をグリッドごとに1つへまとめる（同じ位置に2つ以上あれば強いほうを残す）
 const onsetByGrid=new Map();
@@ -1496,6 +1522,8 @@ if(write){
       runtimeConnected:false,
       bpm:timing.bpm,beatZeroMs:timing.beatZeroMs,subdivisionsPerBeat:timing.subdivisionsPerBeat,
       beatsPerBar:timing.beatsPerBar,timingSource:timing.source,
+      // 譜面としての終わり。音源より短いことがある（playEndMs / --end）。
+      chartEndMs,audioDurationMs:Number(audio.durationMs),
       source:{audio:`tools/mode/authoring/${dashed}-v3-audio.json`,
 
         design:'docs/spec/RHYTHM_CHART_DESIGN.md'},
