@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5b95dc08213466d3
+// source-sha256: 197a9641a9b10c7f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d293bb9bc47a74a0
+// generated-sha256: 0cccb2280793c558
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 18:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 19:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22712,6 +22712,20 @@ function MonsterHeroGame() {
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
   const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'PICK_PRO_ALLIES', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN'];
+  // ===== ランの進行と、いま描いている画面の切り分け =====
+  // gameState は「いま描いている画面」と「ランがどこまで進んだか」の2つを兼ねている。
+  // モンビーを開いたままクイック∞周回を続ける連携(docs/spec/QUICK_RHYTHM_LINK.md)では
+  // この2つが食い違うので、ランの進行を進めてよいかの判定をここへ1か所にまとめておく。
+  //
+  // ★いまは gameState と必ず同じ値・同じ条件になる。挙動は何も変わらない。
+  //   別画面からランを進める拡張は、下の2行(runStage / runProgressAllowed)だけを変える。
+  //
+  // 画面の一覧は上の RUN_PHASE_STATES にバトル本編を足したもので、表を二重に持たない。
+  const RUN_STAGE_SCREENS = [...RUN_PHASE_STATES, 'BATTLE'];
+  // ランがどこまで進んでいるか。ランの画面を描いていなければ null(=ランなし扱い)。
+  const runStage = RUN_STAGE_SCREENS.includes(gameState) ? gameState : null;
+  // ランを進めてよいか。いまは「ランの画面を実際に描いている」ときだけ。
+  const runProgressAllowed = runStage !== null;
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -29729,7 +29743,7 @@ function MonsterHeroGame() {
 
   // 正規リザルトの全報酬演出が完了した場合だけ、AUTO∞の限界突破→次周開始へ進む。
   useEffect(() => {
-    if (gameState !== 'CHAMPION' || !championPresentationComplete || !autoRepeatRef.current || autoRepeatStartingRef.current) return;
+    if (!runProgressAllowed || runStage !== 'CHAMPION' || !championPresentationComplete || !autoRepeatRef.current || autoRepeatStartingRef.current) return;
     if (!isQuickMode(runMode)) {
       setAutoRepeatEnabled(false);
       return;
@@ -29754,12 +29768,12 @@ function MonsterHeroGame() {
         stopAllAuto();
       }
     })();
-  }, [gameState, championPresentationComplete, autoRepeat, autoBattle, runMode]);
+  }, [runStage, runProgressAllowed, championPresentationComplete, autoRepeat, autoBattle, runMode]);
 
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
   // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
   useEffect(() => {
-    const blocked = gameState !== 'BATTLE' || !enemy || enemy.hp <= 0 || isBusy || autoTurnRunningRef.current || autoTurnScheduledRef.current || !!battleScenarioRef.current || battleTutorialStep != null || !!skillPicker || !!showDeckInfo || !!showEnemyInfo || !!showHeroInfo || !!showQuitConfirm || !!skillEffectDetail || !!ultimateDistanceBreakReveal || !!enemyRevivalReveal || !!extremeRuleOpen || !!effect;
+    const blocked = !runProgressAllowed || runStage !== 'BATTLE' || !enemy || enemy.hp <= 0 || isBusy || autoTurnRunningRef.current || autoTurnScheduledRef.current || !!battleScenarioRef.current || battleTutorialStep != null || !!skillPicker || !!showDeckInfo || !!showEnemyInfo || !!showHeroInfo || !!showQuitConfirm || !!skillEffectDetail || !!ultimateDistanceBreakReveal || !!enemyRevivalReveal || !!extremeRuleOpen || !!effect;
     if (!autoBattleRef.current || blocked) return;
     autoTurnScheduledRef.current = true;
     Promise.resolve().then(async () => {
@@ -29780,7 +29794,7 @@ function MonsterHeroGame() {
         if (autoBattleRef.current) setAutoTurnCycle(n => n + 1);
       }
     });
-  }, [autoBattle, autoTurnCycle, gameState, enemy?.hp, isBusy, skillPicker, showDeckInfo, showEnemyInfo, showHeroInfo, showQuitConfirm, skillEffectDetail, ultimateDistanceBreakReveal, enemyRevivalReveal, extremeRuleOpen, effect, battleTutorialStep]);
+  }, [autoBattle, autoTurnCycle, runStage, runProgressAllowed, enemy?.hp, isBusy, skillPicker, showDeckInfo, showEnemyInfo, showHeroInfo, showQuitConfirm, skillEffectDetail, ultimateDistanceBreakReveal, enemyRevivalReveal, extremeRuleOpen, effect, battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -31023,12 +31037,12 @@ function MonsterHeroGame() {
   // AUTO中にWAVE後の画面へ入ったときだけ、各画面の既存handlerを1回だけ呼んで進める。
   // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ処理を二重に開始しない。
   useEffect(() => {
-    if (gameState !== 'WAVE_RESULT' && gameState !== 'REWARD_PICK' && gameState !== 'QUICK_GROWTH' && gameState !== 'PICK_ALLY' && gameState !== 'QUICK_JOIN' && gameState !== 'PICK_TEACHING' && gameState !== 'UPGRADE_SKILL') {
+    if (!runProgressAllowed || runStage !== 'WAVE_RESULT' && runStage !== 'REWARD_PICK' && runStage !== 'QUICK_GROWTH' && runStage !== 'PICK_ALLY' && runStage !== 'QUICK_JOIN' && runStage !== 'PICK_TEACHING' && runStage !== 'UPGRADE_SKILL') {
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
       return;
     }
-    if (gameState === 'WAVE_RESULT' || gameState === 'QUICK_GROWTH' || gameState === 'QUICK_JOIN') {
+    if (runStage === 'WAVE_RESULT' || runStage === 'QUICK_GROWTH' || runStage === 'QUICK_JOIN') {
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
       if (!autoBattleRef.current) return;
@@ -31037,11 +31051,11 @@ function MonsterHeroGame() {
         autoPostWaveScheduledRef.current = false;
         if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
         autoPostWaveRunningRef.current = true;
-        if (gameState === 'WAVE_RESULT') handleNextWave();else if (gameState === 'QUICK_GROWTH') finishQuickGrowth();else finishQuickJoin();
+        if (runStage === 'WAVE_RESULT') handleNextWave();else if (runStage === 'QUICK_GROWTH') finishQuickGrowth();else finishQuickJoin();
       });
       return;
     }
-    if (gameState === 'REWARD_PICK') {
+    if (runStage === 'REWARD_PICK') {
       // WAVE_RESULTの処理中ロックを引き継がず、このトレーニング画面を独立した1回として予約する。
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
@@ -31056,7 +31070,7 @@ function MonsterHeroGame() {
       });
       return;
     }
-    if (gameState === 'PICK_ALLY') {
+    if (runStage === 'PICK_ALLY') {
       // REWARD_PICKの処理中ロックをこの画面への遷移時に引き継がず、同じロックで加入を1回だけ予約する。
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
@@ -31083,7 +31097,7 @@ function MonsterHeroGame() {
       });
       return;
     }
-    if (gameState === 'PICK_TEACHING') {
+    if (runStage === 'PICK_TEACHING') {
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
       if (!autoBattleRef.current) return;
@@ -31107,7 +31121,7 @@ function MonsterHeroGame() {
       });
       return;
     }
-    if (gameState === 'UPGRADE_SKILL') {
+    if (runStage === 'UPGRADE_SKILL') {
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
       if (!autoBattleRef.current) return;
@@ -31149,7 +31163,7 @@ function MonsterHeroGame() {
       });
       return;
     }
-  }, [autoBattle, gameState]);
+  }, [autoBattle, runStage, runProgressAllowed]);
   const upgradeUnique = (monId, diff) => {
     setOwnedUniques(prev => prev.map(u => {
       if (u.monId === monId) {
