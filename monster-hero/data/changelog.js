@@ -34,6 +34,16 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-08 03:00", type:'feature', title:'モンヒロビート: デュラハン戦の2曲を足しました（全11曲）', status:'new',
+    items:[
+      '「デュラハンテーマ」（3分34秒）と「呪われた騎士の時計仕掛け」（4分52秒）を足しました。どちらもEASYからMASTERまで5難易度そろっています。',
+      'レベルは デュラハンテーマ が Lv.7〜26、呪われた騎士の時計仕掛け が Lv.7〜26 です。',
+      'どちらもバトルで流れていた曲です。曲そのものは変えていないので、バトルのBGMはこれまでどおりです。',
+      '曲えらびに新しい絵が付きます。',
+    ],
+    assistantNotice:{id:'update_notice_dullahan_two_songs_v1',type:'content'},
+  },
+  {
     date: "2026-09-08 02:00", type:'feature', title:'モンヒロビート: リミックス2曲を足しました（全9曲）', status:'new',
     items:[
       '「綺季一閃 ～花雪に舞う詠姫～ battle remix」（3分38秒）と「Stay With Me ～Locked Fate～ remix」（3分19秒）を足しました。どちらもEASYからMASTERまで5難易度そろっています。',
