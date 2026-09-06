@@ -89,6 +89,7 @@ node tools/build.js --check
 | `node boot/event-replay-check.js` | イベント回想(プロフィールから、見たことのある会話イベントを何度でも見返す機能)を確認する。 |
 | `node boot/gift-login-check.js` | ギフト受取と、日本時間4時更新のログインボーナスを本番ソースの関数で検証する。 |
 | `node boot/mission-check.js` | デイリー・ウィークリー・マンスリーのJST期間、達成条件、バッジ、ギフト報酬と重複防止を確認する。 |
+| `node boot/screen-error-boundary-check.js` | 画面の描画で例外が出ても真っ白にならず「ホームへ戻る」が出ること(`MhErrorBoundary`)を確かめる。ソースで2段の境界とデバッグ設定の入口を見たあと、実ブラウザでデバッグ設定の「画面エラーの受け止めを試す」を押し、受け止め画面 → ホームへ戻る、を通す。 |
 | `node boot/mission-gift-badge-check.js` | ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、ランキングのタブ分離を確認する。 |
 | `node boot/market-notice-check.js` | マーケットへ商品を足したのに助手の告知(`assistantNotice`)を付け忘れていないか、告知idの重複・種類・本文の有無を確認する。 |
 | `node boot/rainbow-transcend-fruit-market-check.js` | 虹の超越の実が既存IDのまま1000プシュケーで常設販売され、不足時・連続購入・既存ダイヤ商品・2キー保存のロールバックが安全であることを確認する。価格表示がカード内で1行に収まり、ダイヤ購入と色で見分けられることも見る。 |
