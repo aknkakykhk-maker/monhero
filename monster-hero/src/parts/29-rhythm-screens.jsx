@@ -297,7 +297,8 @@ const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP
 // 戻ってくると先頭の曲へ戻っていた。選んでいた曲を鳴らし続けるのにも、外から見える必要がある
 // (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
-  songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null})=>{
+  songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
+  listScrollTop=null,onListScrollTop=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
@@ -359,6 +360,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   const listRef=React.useRef(null);
   const loopReadyRef=React.useRef(false);
   const settleRef=React.useRef(null);
+  // 全国ランキングや遊びかたを見て戻ってきたとき、見ていた場所へ戻すための控え。
+  // 一覧は「同じ並びを3つ重ねて輪にする」作りで、開くたびにまん中の先頭へ立たせるため、
+  // 戻ると必ず先頭に見えていた(2026-09-07・ユーザー報告
+  // 「スクロールが初期位置に戻るからどこまで確認してたかわかりづらくなる」)。
+  // ★覚えるだけで保存はしない。リロードで消えてよい値
+  const restoreTopRef=React.useRef(typeof listScrollTop==='number'&&listScrollTop>0?listScrollTop:null);
+  const rememberTop=()=>{const el=listRef.current; if(el&&typeof onListScrollTop==='function')onListScrollTop(el.scrollTop);};
   // 3つぶんのうち、まん中の先頭がどこから始まるか
   const blockHeight=el=>Math.max(1,Math.round(el.scrollHeight/3));
   React.useEffect(()=>{
@@ -372,7 +380,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       if(!node)return;
       if(node.scrollHeight<=node.clientHeight){loopReadyRef.current=false;return;}   // 全部見えているなら輪は要らない
       if(loopReadyRef.current)return;                  // もう立っているなら動かさない
-      node.scrollTop=blockHeight(node);
+      // 戻ってきたときは、前に見ていた場所から始める。無ければまん中の先頭
+      const saved=restoreTopRef.current;
+      restoreTopRef.current=null;
+      node.scrollTop=(saved!=null&&saved>0&&saved<node.scrollHeight)?saved:blockHeight(node);
       loopReadyRef.current=true;
     };
     put();
@@ -387,6 +398,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   },[loopEnabled,list.length,state.sort,state.desc]);
   const handleListScroll=()=>{
     const el=listRef.current;
+    rememberTop();
     if(!el||!loopEnabled)return;
     // ResizeObserver が無い端末でも、動かし始めた時点で輪に入れるようにしておく
     if(!loopReadyRef.current){
@@ -403,9 +415,22 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       const top=node.scrollTop;
       if(top<block*0.5)node.scrollTop=top+block;
       else if(top>block*1.5)node.scrollTop=top-block;
+      rememberTop();
     },140);
   };
   React.useEffect(()=>()=>{if(settleRef.current)clearTimeout(settleRef.current);},[]);
+  // 輪にしないとき(曲が1つ)は上の put() を通らないので、ここで戻す。
+  // 高さは外部CDNのCSSが届いてから決まるので、少し遅らせてもう一度試す
+  React.useEffect(()=>{
+    if(loopEnabled)return;
+    const saved=restoreTopRef.current;
+    restoreTopRef.current=null;
+    if(saved==null||saved<=0)return;
+    const apply=()=>{const node=listRef.current; if(node&&node.scrollHeight>node.clientHeight)node.scrollTop=saved;};
+    apply();
+    const id=setTimeout(apply,160);
+    return ()=>clearTimeout(id);
+  },[loopEnabled]);
   // 前・本体・後ろの3つぶん。本体(copy===1)だけが検査やクリックの目印になる
   // data-rhythm-song-row を持つ。上下のぶんは「同じものの影」なので別の名前にする。
   const blocks=loopEnabled?[0,1,2]:[1];

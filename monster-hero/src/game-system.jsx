@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 23d145dec5db0813
+// generated-sha256: 0b281a7b77714626
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 06:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 07:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9827,7 +9827,8 @@ const RHYTHM_PREVIEW_SCREENS=Object.freeze(['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP
 // 戻ってくると先頭の曲へ戻っていた。選んでいた曲を鳴らし続けるのにも、外から見える必要がある
 // (2026-09-05・ユーザー指示「選んでいた音楽が鳴り続けるようにして」)。
 const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,footer=null,emptyText='遊べる譜面がまだありません。',spotClass=null,
-  songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null})=>{
+  songId='',difficultyId='',onSongId=null,onDifficultyId=null,view=null,onView=null,
+  listScrollTop=null,onListScrollTop=null})=>{
   const spot=name=>(typeof spotClass==='function'?spotClass(name):'');
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
@@ -9889,6 +9890,13 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   const listRef=React.useRef(null);
   const loopReadyRef=React.useRef(false);
   const settleRef=React.useRef(null);
+  // 全国ランキングや遊びかたを見て戻ってきたとき、見ていた場所へ戻すための控え。
+  // 一覧は「同じ並びを3つ重ねて輪にする」作りで、開くたびにまん中の先頭へ立たせるため、
+  // 戻ると必ず先頭に見えていた(2026-09-07・ユーザー報告
+  // 「スクロールが初期位置に戻るからどこまで確認してたかわかりづらくなる」)。
+  // ★覚えるだけで保存はしない。リロードで消えてよい値
+  const restoreTopRef=React.useRef(typeof listScrollTop==='number'&&listScrollTop>0?listScrollTop:null);
+  const rememberTop=()=>{const el=listRef.current; if(el&&typeof onListScrollTop==='function')onListScrollTop(el.scrollTop);};
   // 3つぶんのうち、まん中の先頭がどこから始まるか
   const blockHeight=el=>Math.max(1,Math.round(el.scrollHeight/3));
   React.useEffect(()=>{
@@ -9902,7 +9910,10 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       if(!node)return;
       if(node.scrollHeight<=node.clientHeight){loopReadyRef.current=false;return;}   // 全部見えているなら輪は要らない
       if(loopReadyRef.current)return;                  // もう立っているなら動かさない
-      node.scrollTop=blockHeight(node);
+      // 戻ってきたときは、前に見ていた場所から始める。無ければまん中の先頭
+      const saved=restoreTopRef.current;
+      restoreTopRef.current=null;
+      node.scrollTop=(saved!=null&&saved>0&&saved<node.scrollHeight)?saved:blockHeight(node);
       loopReadyRef.current=true;
     };
     put();
@@ -9917,6 +9928,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   },[loopEnabled,list.length,state.sort,state.desc]);
   const handleListScroll=()=>{
     const el=listRef.current;
+    rememberTop();
     if(!el||!loopEnabled)return;
     // ResizeObserver が無い端末でも、動かし始めた時点で輪に入れるようにしておく
     if(!loopReadyRef.current){
@@ -9933,9 +9945,22 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
       const top=node.scrollTop;
       if(top<block*0.5)node.scrollTop=top+block;
       else if(top>block*1.5)node.scrollTop=top-block;
+      rememberTop();
     },140);
   };
   React.useEffect(()=>()=>{if(settleRef.current)clearTimeout(settleRef.current);},[]);
+  // 輪にしないとき(曲が1つ)は上の put() を通らないので、ここで戻す。
+  // 高さは外部CDNのCSSが届いてから決まるので、少し遅らせてもう一度試す
+  React.useEffect(()=>{
+    if(loopEnabled)return;
+    const saved=restoreTopRef.current;
+    restoreTopRef.current=null;
+    if(saved==null||saved<=0)return;
+    const apply=()=>{const node=listRef.current; if(node&&node.scrollHeight>node.clientHeight)node.scrollTop=saved;};
+    apply();
+    const id=setTimeout(apply,160);
+    return ()=>clearTimeout(id);
+  },[loopEnabled]);
   // 前・本体・後ろの3つぶん。本体(copy===1)だけが検査やクリックの目印になる
   // data-rhythm-song-row を持つ。上下のぶんは「同じものの影」なので別の名前にする。
   const blocks=loopEnabled?[0,1,2]:[1];
@@ -13049,6 +13074,9 @@ function MonsterHeroGame() {
   // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
   const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
+  // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
+  // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)
+  const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     // バトルへ戻ったら追いつきは終わり。見ている画面では通常の速さで進める
     catchUpUntilRef.current = 0;
@@ -21245,6 +21273,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               notice={<AssistantBubble scene="rhythmHome" compact/>}
               view={rhythmSelectView}
               onView={saveRhythmSelectView}
+              listScrollTop={rhythmSongListScrollRef.current}
+              onListScrollTop={top=>{rhythmSongListScrollRef.current=top;}}
               footer={song=><>
                 {/* 全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く。
                     ここにあったマスモンの説明文は外した。同じ内容が「📖 遊びかた」にあり、
