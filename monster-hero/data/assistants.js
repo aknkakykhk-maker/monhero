@@ -1129,12 +1129,12 @@ const addAssistantLinePack = (pack) => { if (pack && pack.id && (pack.lines || p
 // 出るべき場面で1つずつ伝える。詳しい話はヘルプに任せる。
 addAssistantLinePack({
   id: 'quickRhythmLinkGuide',
-  label: '∞周回×モンビー案内',
+  label: '∞周回×モンヒロビート案内',
   lines: {
     quickRhythmIntro: [
-      { e:'excited', t:'∞周回にしたね！ このまま「🎵 モンビー」から音ゲーで遊べるよ♪' },
+      { e:'excited', t:'∞周回にしたね！ このまま「🎵 モンヒロビート」から音ゲーで遊べるよ♪' },
       { e:'happy', t:'{name}、周回は裏で続くから、待ってるあいだに1曲どう？' },
-      { e:'normal', t:'バトルへ戻りたくなったら、モンビーの左上の「⚔ 戻る」でいつでも戻れるよ。' },
+      { e:'normal', t:'バトルへ戻りたくなったら、モンヒロビートの左上の「⚔ 戻る」でいつでも戻れるよ。' },
       { e:'wink', t:'「🎵 BGM」のすぐ下が入口だよ。省エネ「超」のときも同じ場所にあるからね。' },
       { e:'happy', t:'裏で回せるのはクイックの∞周回だけなんだ。ほかのモードは記録が絡むからね。' },
       { e:'normal', t:'アプリを閉じたり別のアプリへ移ったりすると、そこで周回は止まるよ。' },
@@ -1147,7 +1147,7 @@ addAssistantLinePack({
       { e:'normal', t:'バトルへ戻るときは、左上の「⚔ 戻る」か、帯の中の「⚔ バトルへ戻る」からどうぞ。' },
     ],
     autoQuickRunSettings: [
-      { e:'normal', t:'ここを決めておくと、モンビーからそのまま∞周回を始められるよ。' },
+      { e:'normal', t:'ここを決めておくと、モンヒロビートからそのまま∞周回を始められるよ。' },
       { e:'happy', t:'勇者モンと配置と難易度の3つ。決めてなければ、直前に組んだ編成をそのまま使うね。' },
       { e:'wink', t:'まだ解放してない難易度は選べないよ。並んではいるけどね。' },
       { e:'normal', t:'3つそろうと、下の一言が「始められます」に変わるから目印にしてね。' },
@@ -1160,7 +1160,7 @@ addAssistantLinePack({
 // 「困ったらここを見れば分かる」を伝える(2026-09-05・ユーザー指示で追加)。
 addAssistantLinePack({
   id: 'rhythmModeGuide',
-  label: 'モンビー案内',
+  label: 'モンヒロビート案内',
   lines: {
     rhythmHome: [
       { e:'excited', t:'曲をえらんで、難易度をえらんで、決定！ それだけで始まるよ♪' },
@@ -2636,7 +2636,7 @@ addAssistantLinePack({
       { e:'normal',   t:'絆レベルを上げると、能力もいっしょに伸びるよ。' },
       { e:'wink',     t:'えこひいきしてるでしょ〜？ ……ももは知ってるよ♡' },
       { e:'excited',  t:'枠は限られてるから、だれを残すか考えどころだね。' },
-      { e:'normal',   t:'モンビーのモンスターノーツにも、この子たちが出るよ。' },
+      { e:'normal',   t:'モンヒロビートのモンスターノーツにも、この子たちが出るよ。' },
       { e:'happy',    t:'みんな{name}に育てられて幸せそうじゃん♪' },
     ],
     masuEnhance: [
@@ -3273,7 +3273,7 @@ const ASSISTANT_TUTORIAL_SETS = {
 // 【並べ方】曲をえらぶ → 難易度をえらぶ → 遊び方 → まわりの機能、の順。
 // 画面に無いものを光らせないよう、spot は曲えらび画面にある場所だけにする。
 const ASSISTANT_RHYTHM_TUTORIAL = [
-  { e:'excited', t:'{name}、ここが「モンヒロビート」だよ！ 曲に合わせてノーツを取る音ゲーだよ♪', title:'モンビーへようこそ', help:'rhythm/rhythm-mode' },
+  { e:'excited', t:'{name}、ここが「モンヒロビート」だよ！ 曲に合わせてノーツを取る音ゲーだよ♪', title:'モンヒロビートへようこそ', help:'rhythm/rhythm-mode' },
   // 曲えらびに出していた「これは体験版です…」の断り書きは、場所を取りすぎるので
   // 画面から外して、代わりにここで話す(2026-09-05・ユーザー指示)。
   { e:'normal',  t:'いまは体験版で、公開している曲をEASY〜MASTERで遊べるよ。譜面は調整中だから、これから変わることもあるんだ。', title:'いまは体験版だよ', help:'rhythm/rhythm-demo-song' },
@@ -3293,7 +3293,7 @@ const ASSISTANT_RHYTHM_TUTORIAL = [
 // 助手ごとの言い回し。骨組み(spot・help・順番)は変えない。
 const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
   kiki: [
-    { e:'excited', t:'{name}、ここが「モンヒロビート」でつ！ 曲に合わせてノーツを取る音ゲーですね♪', title:'モンビーへようこそ', help:'rhythm/rhythm-mode' },
+    { e:'excited', t:'{name}、ここが「モンヒロビート」でつ！ 曲に合わせてノーツを取る音ゲーですね♪', title:'モンヒロビートへようこそ', help:'rhythm/rhythm-mode' },
     { e:'normal',  t:'いまは体験版で、公開している曲をEASY〜MASTERで遊べまつ。譜面は調整中なので、これから変わることもありまつ。', title:'いまは体験版でつ', help:'rhythm/rhythm-demo-song' },
     { e:'normal',  t:'まずは曲えらび。ここに並んでいるのが、いま遊べる曲でつ。', title:'曲をえらぶ', spot:'songList', help:'rhythm/rhythm-demo-song' },
     { e:'happy',   t:'曲の左の数字は「楽曲Lv.」でつ。大きいほど難しい譜面ということですね。', title:'楽曲Lv.', spot:'songLevel' },
@@ -3309,7 +3309,7 @@ const ASSISTANT_RHYTHM_TUTORIAL_SETS = {
     { e:'wink',    t:'説明はいつでも「📖 遊びかた」から見られまつ。それでは、いってらっしゃい♪', title:'それでは、はじめましょ', spot:'help' },
   ],
   momosuke: [
-    { e:'excited', t:'{name}、ここが「モンヒロビート」！ 曲に合わせて叩けばいいの♪ ちゃんとできるよね〜？♡', title:'モンビーへようこそ', help:'rhythm/rhythm-mode' },
+    { e:'excited', t:'{name}、ここが「モンヒロビート」！ 曲に合わせて叩けばいいの♪ ちゃんとできるよね〜？♡', title:'モンヒロビートへようこそ', help:'rhythm/rhythm-mode' },
     { e:'normal',  t:'いまは体験版で、公開している曲をEASY〜MASTERで遊べるよ。譜面はまだ調整中だから変わるかも。', title:'いまは体験版だよ', help:'rhythm/rhythm-demo-song' },
     { e:'normal',  t:'まずは曲えらび。ここに並んでるのが遊べる曲ね。', title:'曲をえらぶ', spot:'songList', help:'rhythm/rhythm-demo-song' },
     { e:'happy',   t:'曲の左の数字は「楽曲Lv.」。大きいほど難しいってこと♪', title:'楽曲Lv.', spot:'songLevel' },
