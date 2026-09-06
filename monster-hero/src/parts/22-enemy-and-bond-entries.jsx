@@ -212,14 +212,15 @@ const ATTACK_COMBO_RULES = Object.freeze({
   pandoraUnique: 1.0,                        // 禁忌解錠: パンドラ自身の固有技は 100% の連撃(引き継いだ技には無い)
   atonement: 0.2,                            // 贖罪(アーク・イブリースの固有技): メインの確定値の 20%。実処理では固有技の効果ブロック側で積む
 });
-const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0 }) => {
+// mainCanCrit:false は「メインヒットには会心が乗らない」種類(あつの挑発)。連撃・全体連撃の会心判定は変わらない
+const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
   const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
   // 禁忌解錠の通常攻撃は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)
   const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5) : d;
-  const mainCrit = guaranteedCrit || rollCrit();
+  const mainCrit = mainCanCrit && (guaranteedCrit || rollCrit());
   hits.push({ kind: 'main', crit: mainCrit, dmg: mainCrit ? Math.floor(mainBase * critMult) : mainBase, skillName: null, noAnim: false });
   // 連撃は元ダメージ d を基準にし、会心はメインとは独立に判定する(メインの会心を二重に乗せない)
   const combo = (rate, skillName = '連撃', noAnim = false) => {
