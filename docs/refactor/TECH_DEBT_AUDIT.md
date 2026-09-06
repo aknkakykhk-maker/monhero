@@ -32,11 +32,11 @@
 | TD-13 | High | 性能/運用 | Tailwind を CDN から実行時生成(KI-001)。CSS が `index.html` 617 行と `createAnimationStyle` 547 行の2系統 | 7 |
 | TD-14 | High | セーブ | `storeSet` が失敗を握りつぶす。`localStorage` 直接アクセスが 4 系統に残る | 3 |
 | TD-15 | Medium | データ分離 | ゲームデータの半分が jsx 側(難易度・モード・BGM・ミッション・ログインボーナス等)にあり、`data/` と二分されている | 4 |
-| TD-16 | Medium | 定数 | 難易度 ID 列が jsx と tools 3 ファイルに複製。`RHYTHM_SETTINGS_KEY` が jsx と rhythm-mode で二重定義 | 2 |
+| TD-16 | Medium | 定数 | 難易度 ID 列が jsx と tools 3 ファイルに複製。`RHYTHM_SETTINGS_KEY` が jsx と rhythm-mode で二重定義 | 2(保存キーの一覧は `boot/save-keys-check.js` で文書と突き合わせるようにした。集約そのものは STEP 3 で扱う) |
 | TD-17 | Medium | 重複 | clamp が 6 種(`rpgClamp`, `rhythmClamp01`, `_clampColorAlpha`, `clampSkipCount`, `clampSubLane`, `rpgClampLevel`)、正規化の書き方が関数ごとに異なる | 2 |
 | TD-18 | Medium | セーブ | 起動時ロードの `useEffect` が 424 行で、読込・正規化・移行・補償・通知計画が直列に混在 | 3 |
 | TD-19 | Medium | 文書 | 文書が実装から乖離(`CURRENT_ARCHITECTURE.md` §16 D-01〜D-05) | **対応済み**(2026-09-06) |
-| TD-20 | Medium | 基盤 | `index.html` の `<script>` 順序がグローバル依存の唯一の正本。順序を誤っても構文上は通る | 2 |
+| TD-20 | Medium | 基盤 | `index.html` の `<script>` 順序がグローバル依存の唯一の正本。順序を誤っても構文上は通る | 2(再確認: `undefined-reference-check` が index.html の順に data を実行しており、順序違反は読み込み時例外で拾える。静的な相互参照も 2026-09-06 時点で違反なし。追加の検査は不要と判断) |
 | TD-21 | Medium | 構造 | デバッグ 13 画面と RPG デバッグ戦闘エンジン(474 行)が本体に同居し、配信物に含まれる | 10 |
 | TD-22 | Medium | 描画 | `style={{…}}` 522 箇所、`key={i}` 37 箇所、`React.memo` 0 | 7 |
 | TD-23 | Medium | ライフサイクル | `processTurn`(379 行・17 `await`)の途中で画面が変わったときの中断を、個別ロックだけで守っている | 6 |
