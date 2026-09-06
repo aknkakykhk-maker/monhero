@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f88c9fd41835b6f1
+// source-sha256: 2e38a68d2d6cf1f2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0b281a7b77714626
+// generated-sha256: 8e25a7e04dd5af56
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 07:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 07:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22909,9 +22909,13 @@ function MonsterHeroGame() {
     });
   };
   // いまの周でここまでにクリアしたWAVEぶんの見込み。
-  // 報酬はランの終わりにまとめて配られるので、途中は0のままだった
-  // (2026-09-07・ユーザー報告「1ウェーブが終わらないと加算表記されない」)。
-  // 「このまま終われば入る量」を出しておく。計算は報酬を配るときと同じ関数・同じ倍率を通す
+  // 報酬は「その周が終わったときに、そこまでクリアしたWAVEのぶん」を配る
+  // (awardRunRewards(wave-1) を敗北・リタイアからも呼んでいるので、
+  //  勝ち切らなくてもここまでのぶんは必ず入る)。
+  // 配るのが周の終わりなので、途中の表示は0のままだった
+  // (2026-09-07・ユーザー報告「1周が終わらないと加算されない／本来は1ウェーブごと」)。
+  // WAVEを1つ進めるたびに、そこまでのぶんを足して見せる。
+  // 計算は報酬を配るときと同じ関数・同じ倍率を通すので、表示と実際がずれない
   const quickRunPendingRewards = () => {
     const current = quickRunProgressRef.current;
     if (!current || current.finished || runStage === null) return {
@@ -38809,7 +38813,7 @@ function MonsterHeroGame() {
           className: "font-black text-amber-200"
         }, "+", Math.floor(quickRunProgress.gold + pending.gold).toLocaleString())), (pending.xp > 0 || pending.gold > 0) && /*#__PURE__*/React.createElement("div", {
           className: "col-span-2 text-[9px] text-slate-500"
-        }, "\u3046\u3061\u4ECA\u306E\u5468\u306E\u3076\u3093\uFF08\u7D4C\u9A13\u5024 +", Math.floor(pending.xp).toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", Math.floor(pending.gold).toLocaleString(), "\uFF09\u306F\u3001\u3053\u306E\u5468\u3092\u52DD\u3061\u5207\u3063\u305F\u3068\u304D\u306B\u5165\u308A\u307E\u3059\u3002"));
+        }, "\u3046\u3061\u4ECA\u306E\u5468\u306E\u3076\u3093\uFF08\u7D4C\u9A13\u5024 +", Math.floor(pending.xp).toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", Math.floor(pending.gold).toLocaleString(), "\uFF09\u306F\u3001\u3053\u306E\u5468\u304C\u7D42\u308F\u3063\u305F\u3068\u304D\u306B\u5165\u308A\u307E\u3059\uFF08\u8CA0\u3051\u3066\u3082\u3001\u9014\u4E2D\u3067\u3084\u3081\u3066\u3082\u3001\u3053\u3053\u307E\u3067\u306E\u3076\u3093\u306F\u5165\u308A\u307E\u3059\uFF09\u3002"));
       })(), /*#__PURE__*/React.createElement("div", {
         className: "col-span-2 flex justify-between gap-2"
       }, /*#__PURE__*/React.createElement("dt", {

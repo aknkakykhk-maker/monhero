@@ -2139,9 +2139,13 @@ function MonsterHeroGame() {
     writeQuickRunProgress({ ...current, finished:true });
   };
   // いまの周でここまでにクリアしたWAVEぶんの見込み。
-  // 報酬はランの終わりにまとめて配られるので、途中は0のままだった
-  // (2026-09-07・ユーザー報告「1ウェーブが終わらないと加算表記されない」)。
-  // 「このまま終われば入る量」を出しておく。計算は報酬を配るときと同じ関数・同じ倍率を通す
+  // 報酬は「その周が終わったときに、そこまでクリアしたWAVEのぶん」を配る
+  // (awardRunRewards(wave-1) を敗北・リタイアからも呼んでいるので、
+  //  勝ち切らなくてもここまでのぶんは必ず入る)。
+  // 配るのが周の終わりなので、途中の表示は0のままだった
+  // (2026-09-07・ユーザー報告「1周が終わらないと加算されない／本来は1ウェーブごと」)。
+  // WAVEを1つ進めるたびに、そこまでのぶんを足して見せる。
+  // 計算は報酬を配るときと同じ関数・同じ倍率を通すので、表示と実際がずれない
   const quickRunPendingRewards = () => {
     const current = quickRunProgressRef.current;
     if (!current || current.finished || runStage === null) return { xp:0, gold:0 };
@@ -10248,7 +10252,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {(()=>{const pending=quickRunPendingRewards();return <>
                   <div className="flex justify-between gap-2"><dt className="text-slate-400">経験値</dt><dd className="font-black text-cyan-200">+{Math.floor(quickRunProgress.xp+pending.xp).toLocaleString()}</dd></div>
                   <div className="flex justify-between gap-2"><dt className="text-slate-400">ダイヤ</dt><dd className="font-black text-amber-200">+{Math.floor(quickRunProgress.gold+pending.gold).toLocaleString()}</dd></div>
-                  {(pending.xp>0||pending.gold>0)&&<div className="col-span-2 text-[9px] text-slate-500">うち今の周のぶん（経験値 +{Math.floor(pending.xp).toLocaleString()} ／ ダイヤ +{Math.floor(pending.gold).toLocaleString()}）は、この周を勝ち切ったときに入ります。</div>}
+                  {(pending.xp>0||pending.gold>0)&&<div className="col-span-2 text-[9px] text-slate-500">うち今の周のぶん（経験値 +{Math.floor(pending.xp).toLocaleString()} ／ ダイヤ +{Math.floor(pending.gold).toLocaleString()}）は、この周が終わったときに入ります（負けても、途中でやめても、ここまでのぶんは入ります）。</div>}
                   </>;})()}
                   <div className="col-span-2 flex justify-between gap-2"><dt className="text-slate-400">勇者モン</dt><dd className="truncate font-black text-white">{mainHero?.masuName||mainHero?.name||'—'}</dd></div>
                 </dl>
