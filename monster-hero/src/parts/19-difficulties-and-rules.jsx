@@ -372,8 +372,11 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   ULTIMATE:Object.freeze({accent:'#fdba74',rgb:'249,115,22',background:'linear-gradient(180deg,#3b1a0a,#1e0d08)',action:'linear-gradient(135deg,#c2410c,#f97316)',actionText:'#ffffff',glow:0.38,titleGlow:0.52,actionGlow:0.36,shadowBlur:34}),
   INFINITY:Object.freeze({accent:'#93c5fd',rgb:'59,130,246',background:'linear-gradient(180deg,#11224d,#09112c)',action:'linear-gradient(135deg,#1d4ed8,#3b82f6)',actionText:'#ffffff',glow:0.42,titleGlow:0.56,actionGlow:0.40,shadowBlur:36}),
   GOD:Object.freeze({accent:'#fde68a',rgb:'245,158,11',background:'linear-gradient(180deg,#3b2b08,#181106)',action:'linear-gradient(135deg,#a16207,#f59e0b)',actionText:'#1c1917',glow:0.48,titleGlow:0.66,actionGlow:0.48,shadowBlur:40}),
-  // 金(GOD)の上は色を足すのではなく抜く。白銀に蒼い縁を残した「黄昏」の色にして、最上位だと一目で分かるようにする
-  RAGNAROK:Object.freeze({accent:'#e2e8f0',rgb:'148,163,184',background:'linear-gradient(180deg,#1c2333,#080b12)',action:'linear-gradient(135deg,#475569,#cbd5e1)',actionText:'#0f172a',glow:0.54,titleGlow:0.74,actionGlow:0.54,shadowBlur:44}),
+  // 金(GOD)の上は、白銀へ蒼氷(ラグナロク前の大いなる冬)の輝きを乗せる。
+  // ★灰色にしないこと。未解放カードの背景は rgba(rgb,.10) を濃紺(#0d142b)へ重ねた色なので、
+  //   彩度の低いスレートを使うと「選べないカード」と見分けがつかなくなる(実際にそうなって直した)。
+  //   枠と文字は明るい氷色、ボタンは明→明のグラデーションにして、暗いカードの上で光って見せる
+  RAGNAROK:Object.freeze({accent:'#a5f3fc',rgb:'34,211,238',background:'linear-gradient(180deg,#0d3b4f,#02101a)',action:'linear-gradient(135deg,#22d3ee,#a5f3fc)',actionText:'#083344',glow:0.60,titleGlow:0.84,actionGlow:0.60,shadowBlur:48}),
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available));

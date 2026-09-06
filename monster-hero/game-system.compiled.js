@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 25a05f23d9b34153
+// source-sha256: 0d7d3131cd4e6022
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 44fd4c0621e01bcc
+// generated-sha256: 8293934a7edcd1a7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 18:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 18:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11170,17 +11170,20 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
     actionGlow: 0.48,
     shadowBlur: 40
   }),
-  // 金(GOD)の上は色を足すのではなく抜く。白銀に蒼い縁を残した「黄昏」の色にして、最上位だと一目で分かるようにする
+  // 金(GOD)の上は、白銀へ蒼氷(ラグナロク前の大いなる冬)の輝きを乗せる。
+  // ★灰色にしないこと。未解放カードの背景は rgba(rgb,.10) を濃紺(#0d142b)へ重ねた色なので、
+  //   彩度の低いスレートを使うと「選べないカード」と見分けがつかなくなる(実際にそうなって直した)。
+  //   枠と文字は明るい氷色、ボタンは明→明のグラデーションにして、暗いカードの上で光って見せる
   RAGNAROK: Object.freeze({
-    accent: '#e2e8f0',
-    rgb: '148,163,184',
-    background: 'linear-gradient(180deg,#1c2333,#080b12)',
-    action: 'linear-gradient(135deg,#475569,#cbd5e1)',
-    actionText: '#0f172a',
-    glow: 0.54,
-    titleGlow: 0.74,
-    actionGlow: 0.54,
-    shadowBlur: 44
+    accent: '#a5f3fc',
+    rgb: '34,211,238',
+    background: 'linear-gradient(180deg,#0d3b4f,#02101a)',
+    action: 'linear-gradient(135deg,#22d3ee,#a5f3fc)',
+    actionText: '#083344',
+    glow: 0.60,
+    titleGlow: 0.84,
+    actionGlow: 0.60,
+    shadowBlur: 48
   })
 });
 const extremeDifficultyTheme = difficultyId => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
