@@ -1,19 +1,22 @@
-// モンビーに出す「クイック∞周回の進捗」(docs/spec/QUICK_RHYTHM_LINK.md PR6)を
-// 実ブラウザで確かめる。
+// モンヒロビートを開いたまま、クイック∞周回が**次の周へ入る**ことを確かめる
+// (docs/spec/QUICK_RHYTHM_LINK.md PR6の続き)。
 //
 //   python3 tools/serve.py を起動した状態で
-//   node tools/mode/rhythm-run-progress-check.js
+//   node tools/mode/rhythm-run-loop-check.js
 //
-// 見ているもの:
-//   ① 周回していないときは「ここから始める」側が出る
-//   ② ∞周回中にモンビーへ移ると、進捗の帯が出て WAVE と周回数が動く
-//   ③ 帯をタップすると詳細(周回数・難易度・経験値・ダイヤ・勇者モン)が開く
-//   ④ 詳細の「⚔ バトルへ戻る」でバトルへ戻れる
-//   ⑤ 周回をやめると帯が「周回が終わりました」に変わり、全画面の敗北画面は出ない
+// 2026-09-07・ユーザー報告「周回が1周目が終わったあと2周目に入らない」。
+// 原因は、次の周へ入る条件が championPresentationComplete(CHAMPION画面の報酬演出が
+// 終わったときに立つ)を待っていたこと。モンヒロビートを開いていると画面を描かないので、
+// 演出が動かず永久に立たなかった。
+//
+// ここは1周ぶん(数分)待つので、ほかの検査より時間がかかる。
+// それでも「周回が続くか」は連携の土台なので、実際に通しで見る。
 const { chromium } = require('playwright');
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
-const WATCH_MS = 14000;
+// 1周(10WAVE)を待つ時間。×4速のBeginnerなら30秒ほどで1周する。
+// 直っていれば2周目に入った時点で終わるので、この上限まで待つのは壊れているときだけ
+const LOOP_TIMEOUT_MS = 3 * 60 * 1000;
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ' — ' + detail : ''}`); };
 
@@ -72,11 +75,7 @@ const seed = () => {
     const el = document.querySelector('[data-quick-run-progress]');
     return el ? (el.innerText || '').replace(/\s+/g, ' ').trim() : '';
   });
-  const openRhythm = async () => {
-    await page.evaluate(() => document.querySelector('[data-quick-to-rhythm]')?.click());
-    await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
-    await dismissOverlays();
-  };
+  const autoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.getAttribute('aria-label'));
 
   try {
     await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
@@ -88,28 +87,6 @@ const seed = () => {
     await page.waitForTimeout(2200);
     await dismissOverlays();
 
-    // ---- ① まだ周回していないとき ----
-    // モンビーはデバッグ設定から開ける(公開前のため)。ここでは周回していない状態を見たいだけ
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /モンヒロビート|モンビー/.test(x.innerText || ''));
-      b?.click();
-    });
-    await page.waitForTimeout(1200);
-    const onHomeBeforeRun = await page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]'));
-    if (onHomeBeforeRun) {
-      check('周回していないときは帯を出さない', await page.evaluate(() => !document.querySelector('[data-quick-run-progress]')));
-      check('代わりに「ここから始める」側が出る',
-        await page.evaluate(() => !!document.querySelector('[data-quick-run-start]')));
-      check('まだ編成が無いので案内文のほうを出す',
-        await page.evaluate(() => !!document.querySelector('[data-quick-run-start-hint]')));
-      await page.evaluate(() => document.querySelector('[data-rhythm-back]')?.click());
-      await page.waitForTimeout(1200);
-      await dismissOverlays();
-    } else {
-      console.log('（モンビーの入口が見つからないので①は省略）');
-    }
-
-    // ---- クイックで1ラン始めて∞にする ----
     await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());
     await page.waitForTimeout(1200);
     await page.evaluate(() => {
@@ -131,54 +108,41 @@ const seed = () => {
     await page.waitForTimeout(900);
     await clickExact('習得する');
     await page.waitForTimeout(1800);
-    // 一括実行だとブラウザが重く、待ち時間だけでは間に合わないことがある。
-    // バトル画面(AUTOボタン)が出るまで待ってから先へ進む
     await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 25000 }).catch(() => {});
-    const autoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.getAttribute('aria-label'));
     for (let i = 0; i < 3 && (await autoLabel()) !== 'AUTO ∞'; i++) {
       await page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());
       await page.waitForTimeout(900);
     }
     check('クイックで∞周回を始められる', (await autoLabel()) === 'AUTO ∞', await autoLabel());
 
-    // ---- ② 帯が出て、進む ----
-    await openRhythm();
-    check('モンビーに周回の帯が出る', (await bandText()).length > 0, await bandText());
-    const before = await bandText();
-    await page.waitForTimeout(WATCH_MS);
-    const after = await bandText();
-    check('帯の中身が周回に合わせて動く', after !== before, `${before} → ${after}`);
-    check('帯にWAVEと周回数が出ている', /WAVE\s*\d+\/10/.test(after) && /\d+周目/.test(after), after);
+    // モンヒロビートへ移り、そのまま1周ぶん待つ
+    await page.evaluate(() => document.querySelector('[data-quick-to-rhythm]')?.click());
+    await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
+    await dismissOverlays();
+    check('モンヒロビートへ移れる', await page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]')));
 
-    // ---- ③ 詳細を開く ----
-    await page.evaluate(() => document.querySelector('[data-quick-run-progress] button')?.click());
-    await page.waitForTimeout(600);
-    const detail = await page.evaluate(() => {
-      const el = document.querySelector('[data-quick-run-progress-detail]');
-      return el ? (el.innerText || '').replace(/\s+/g, ' ').trim() : '';
-    });
-    check('タップで詳細が開く', detail.length > 0);
-    check('詳細に周回数・難易度・経験値・ダイヤ・勇者モンが出る',
-      ['周回数', '難易度', '経験値', 'ダイヤ', '勇者モン'].every(word => detail.includes(word)), detail.slice(0, 90));
+    // 帯の移り変わりを1秒ごとに記録する。「2周目に入らない」の実際の姿を見るため
+    const startedAt = Date.now();
+    const trail = [];
+    let reached2 = false;
+    while (Date.now() - startedAt < LOOP_TIMEOUT_MS) {
+      const text = await bandText();
+      const last = trail[trail.length - 1];
+      if (!last || last.text !== text) trail.push({ at: Math.round((Date.now() - startedAt) / 1000), text });
+      if (/2周目/.test(text)) { reached2 = true; break; }
+      await page.waitForTimeout(1000);
+    }
+    const elapsed = Math.round((Date.now() - startedAt) / 1000);
+    console.log('--- 帯の移り変わり ---');
+    for (const t of trail) console.log(`  ${t.at}秒: ${t.text}`);
+    check('モンヒロビートを開いたまま2周目へ入る', reached2, `${elapsed}秒で「${await bandText()}」`);
+    check('モンヒロビートにいるあいだ画面が飛ばされない',
+      await page.evaluate(() => !!document.querySelector('[data-rhythm-demo-home]')));
 
-    // ---- ④ バトルへ戻れる ----
-    await page.evaluate(() => document.querySelector('[data-quick-run-progress-back]')?.click());
-    await page.waitForTimeout(1500);
-    check('詳細からバトルへ戻れる', await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]')));
-    // ★戻ったときに∞周回が切れていないこと
-    //   (2026-09-07・ユーザー報告「バトルへで戻るとオートが切れる」)
-    check('バトルへ戻っても∞周回が切れていない', (await autoLabel()) === 'AUTO ∞', await autoLabel());
-    await page.waitForTimeout(6000);
-    check('戻ったあとも∞周回のまま進む', (await autoLabel()) === 'AUTO ∞', await autoLabel());
-
-    // ---- ⑤ 周回をやめたら帯が変わる ----
-    await openRhythm();
-    // バトルへ戻って∞を切る(モンビーからは切れない仕様なので、いったん戻る)
+    // 2周目に入った状態でバトルへ戻り、∞周回が切れていないことを見る
     await page.evaluate(() => document.querySelector('[data-rhythm-back]')?.click());
-    await page.waitForTimeout(1200);
-    await page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.click());
-    await page.waitForTimeout(1200);
-    check('∞周回を切れる', (await autoLabel()) !== 'AUTO ∞', await autoLabel());
+    await page.waitForTimeout(2500);
+    check('バトルへ戻っても∞周回が切れていない', (await autoLabel()) === 'AUTO ∞', await autoLabel());
 
     check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
   } finally {

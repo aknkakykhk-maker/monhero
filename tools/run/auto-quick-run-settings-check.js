@@ -113,8 +113,9 @@ check('周回テンプレートがあればそちらを優先する',
   app.includes('const repeatTemplateForNewRun = () => repeatRunTemplateRef.current || repeatTemplateFromAutoSettings();'));
 check('∞周回の次の周もその入口を通る',
   app.includes('startRunFromRepeatTemplate(repeatTemplateForNewRun())'));
+// 見出しは正式名称「モンヒロビート」(2026-09-07・ユーザー指示)
 check('AUTO設定の画面に項目がある',
-  app.includes('3. モンビー中に回すクイック周回') && app.includes('auto-quick-hero') && app.includes('auto-quick-difficulty'));
+  app.includes('3. モンヒロビート中に回すクイック周回') && app.includes('auto-quick-hero') && app.includes('auto-quick-difficulty'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

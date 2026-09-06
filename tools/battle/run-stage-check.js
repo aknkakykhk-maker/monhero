@@ -126,7 +126,20 @@ const effectFrom = (head, depsHead) => {
   return source.slice(start, end + 3);
 };
 const championLoop = effectFrom('    if(!runProgressAllowed||runStage!==\'CHAMPION\'', '},[runStage,');
-check('次周開始のループが runStage を見ている', !hasBareGameState(championLoop), hasBareGameState(championLoop) ? 'gameStateが残っています' : '');
+// ★gameState を見てよいのは「その画面を描いているか」の判定だけ。
+//   進行そのものの判定に使うと、別の画面へ移った瞬間にランが止まる。
+//   CHAMPIONの報酬演出の完了は画面を描いたときしか立たないので、
+//   「描いていれば演出を待ち、描いていなければ保存の完了を待つ」の1行だけ gameState を使う
+//   (2026-09-07・モンビーを開いたままだと次の周へ入れなかった件の直し)。
+//   その1行を外したうえで、進行の判定に gameState が残っていないことを見る
+// 依存配列(`},[…]);`)は「何が変わったら考え直すか」の並びで、進行の判定ではない。
+// 条件で使うものは必ずここへ書くので、本文だけを見る
+const championLoopBody = championLoop.slice(0, championLoop.indexOf('},['));
+const championLoopProgress = championLoopBody.replace(/\n\s*if\(gameState==='CHAMPION'\?[^\n]*/, '');
+check('次周開始のループが runStage を見ている', !hasBareGameState(championLoopProgress),
+  hasBareGameState(championLoopProgress) ? 'gameStateが残っています' : '');
+check('演出の完了を待つのは、その画面を描いているときだけ',
+  championLoop.includes("if(gameState==='CHAMPION'? !championPresentationComplete : resultProcessing)return;"));
 
 const turnLoopStart = source.indexOf('    const blocked=!runProgressAllowed||runStage!==\'BATTLE\'');
 // 終端は依存配列の閉じ括弧。中身に足す条件が増えても切り出しがずれないよう、
