@@ -4179,11 +4179,12 @@ function MonsterHeroGame() {
     const goldAfter = withBreakthrough ? diamondSummary.diamondAfter : diamondSummary.normalDiamondAfter;
     const nextItems = withBreakthrough ? { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]:breakthroughPlan.nextPsyche } : ownedItemsRef.current;
     try {
-      await Promise.all([
-        storeSet('mh_masu_mons', next, false),
-        storeSet('mh_gold', goldAfter, false),
-        ...(withBreakthrough ? [storeSet('mh_owned_items', nextItems, false)] : []),
-      ]);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:snapshot, next },
+        { key:'mh_gold', before:gold, next:goldAfter },
+        ...(withBreakthrough ? [{ key:'mh_owned_items', before:ownedItemsRef.current, next:nextItems }] : []),
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('fusion save failed');
     } catch { fusionProcessingRef.current=false; return null; }
     masuMonsRef.current=next; ownedItemsRef.current=nextItems;
     setMasuMons(next); setGold(goldAfter); if (withBreakthrough) setOwnedItems(nextItems);
@@ -4248,9 +4249,12 @@ function MonsterHeroGame() {
     // 途中で失敗したら保存もstateも触らないので、誤って減ることはない
     const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: result.nextPsyche };
     try {
-      await storeSet('mh_masu_mons', next, false);
-      await storeSet('mh_gold', result.nextGold, false);
-      await storeSet('mh_owned_items', nextItems, false);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:result.nextGold },
+        { key:'mh_owned_items', before:ownedItemsRef.current, next:nextItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('breakthrough save failed');
       masuMonsRef.current = next;
       ownedItemsRef.current = nextItems;
       setMasuMons(next); setGold(result.nextGold); setOwnedItems(nextItems);
@@ -4278,9 +4282,12 @@ function MonsterHeroGame() {
     const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?result.nextMasu:m);
     const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: result.nextPsyche };
     try {
-      await storeSet('mh_masu_mons', next, false);
-      await storeSet('mh_gold', result.nextGold, false);
-      await storeSet('mh_owned_items', nextItems, false);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:result.nextGold },
+        { key:'mh_owned_items', before:ownedItemsRef.current, next:nextItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('transcendence save failed');
       masuMonsRef.current = next;
       ownedItemsRef.current = nextItems;
       setMasuMons(next); setGold(result.nextGold); setOwnedItems(nextItems);
@@ -4314,8 +4321,8 @@ function MonsterHeroGame() {
     try {
       const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?applied.nextMasu:m);
       const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: applied.nextPsyche };
-      await storeSet('mh_masu_mons', next, false);
-      await storeSet('mh_owned_items', nextItems, false);
+      const saved = await saveTranscendFruitPair(masuMonsRef.current, ownedItemsRef.current, next, nextItems, storeGet, storeSet);
+      if (!saved) throw new Error('transcend exchange save failed');
       masuMonsRef.current = next; ownedItemsRef.current = nextItems;
       setMasuMons(next); setOwnedItems(nextItems);
       setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?applied.nextMasu:prev);
@@ -4442,8 +4449,11 @@ function MonsterHeroGame() {
     setReincarnateError('');
     const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?result.nextMasu:m);
     try {
-      await storeSet('mh_masu_mons', next, false);
-      await storeSet('mh_gold', result.nextGold, false);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:result.nextGold },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('reincarnation save failed');
       masuMonsRef.current = next;
       setMasuMons(next); setGold(result.nextGold);
       addAssistantBond('reincarnate');
@@ -4465,9 +4475,12 @@ function MonsterHeroGame() {
     try {
       const masu=buildRegeneratedMasu(base);
       const next=[...masuMonsRef.current,masu];
-      await storeSet('mh_masu_mons',next,false);
-      await storeSet('mh_gold',gold-cost,false);
-      await storeSet('mh_temple_regeneration_used_v1',true,false);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:gold-cost },
+        { key:'mh_temple_regeneration_used_v1', before:regenerationUsed, next:true },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('regeneration save failed');
       masuMonsRef.current=next; setMasuMons(next); setGold(gold-cost); setRegenerationUsed(true);
       addAssistantBond('regenerate');
       setRegenerationResult({masu,base,cost});

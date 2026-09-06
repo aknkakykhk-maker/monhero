@@ -20,7 +20,7 @@ const { PARTS_DIR, readPartsManifest } = require(path.join(TOOLS_DIR, 'harness')
 
 const SPAN = 12;
 // storeSet を引数で受け取って mh_masu_mons を保存する取引関数。増やしたらここへ足す
-const SAVE_HELPERS = ['saveTranscendFruitPair('];
+const SAVE_HELPERS = ['saveTranscendFruitPair(', 'saveStoredValuesOrRollback('];
 const BOOT_VARIABLE = 'savedMasuMons'; // 起動時の読込・移行で組み立てる一時変数
 
 let failed = 0;

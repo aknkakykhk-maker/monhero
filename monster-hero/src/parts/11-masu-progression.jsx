@@ -677,25 +677,28 @@ const useTranscendFruitOnMasu = (masu, ownedItems, itemId, amount) => {
 };
 // storeSet は保存先側の失敗を返さないことがあるため、2キーとも再読込してから成功とする。
 // 片方でも期待値と違えば、消費前の組を両方へ書き戻して中途半端な保存を残さない。
-const saveTranscendFruitPair = async (beforeMasuMons, beforeOwnedItems, nextMasuMons, nextOwnedItems, getValue, setValue) => {
+// 複数の保存キーをまとめて更新する取引関数。storeGet / storeSet は引数で受け取る
+// (純粋な部品として、検査からも差し替えて呼べるようにするため)。
+//   entries: [{ key, before, next }, ...]
+// 全部を並列に書く → 全部を読み戻して JSON で比べる → 1 つでも食い違うか例外が出たら
+// 全部を before へ戻す(戻しは allSettled で最後まで試みる)。成立したときだけ true。
+// 「マスモンだけ保存されてダイヤが減っていない」のような片方だけの状態を作らないための正本。
+const saveStoredValuesOrRollback = async (entries, getValue, setValue) => {
   const same = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
+  const list = Array.isArray(entries) ? entries : [];
   try {
-    await Promise.all([
-      setValue('mh_masu_mons', nextMasuMons, false),
-      setValue('mh_owned_items', nextOwnedItems, false),
-    ]);
-    const [savedMasuMons, savedOwnedItems] = await Promise.all([
-      getValue('mh_masu_mons', null, false),
-      getValue('mh_owned_items', null, false),
-    ]);
-    if (same(savedMasuMons, nextMasuMons) && same(savedOwnedItems, nextOwnedItems)) return true;
+    await Promise.all(list.map(({ key, next }) => setValue(key, next, false)));
+    const saved = await Promise.all(list.map(({ key }) => getValue(key, null, false)));
+    if (list.every(({ next }, i) => same(saved[i], next))) return true;
   } catch { /* rollback below */ }
-  await Promise.allSettled([
-    setValue('mh_masu_mons', beforeMasuMons, false),
-    setValue('mh_owned_items', beforeOwnedItems, false),
-  ]);
+  await Promise.allSettled(list.map(({ key, before }) => setValue(key, before, false)));
   return false;
 };
+const saveTranscendFruitPair = (beforeMasuMons, beforeOwnedItems, nextMasuMons, nextOwnedItems, getValue, setValue) =>
+  saveStoredValuesOrRollback([
+    { key:'mh_masu_mons', before:beforeMasuMons, next:nextMasuMons },
+    { key:'mh_owned_items', before:beforeOwnedItems, next:nextOwnedItems },
+  ], getValue, setValue);
 const buildMarketItemPurchase = ({ item, gold=0, breederPoints=0, ownedItems={}, quantity=1 } = {}) => {
   const purchaseQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
   const unitCost = Math.max(0, Math.floor(Number(item?.cost) || 0));
@@ -708,16 +711,11 @@ const buildMarketItemPurchase = ({ item, gold=0, breederPoints=0, ownedItems={},
   if (currency === 'psyche') nextItems[BREAKTHROUGH_ITEM_ID] = balances.psyche - cost;
   return { ok:true, currency, cost, quantity:purchaseQuantity, gold:currency === 'diamond' ? balances.diamond-cost : balances.diamond, breederPoints:currency === 'breederPoint' ? balances.breederPoint-cost : balances.breederPoint, ownedItems:nextItems };
 };
-const saveMarketBalances = async (beforeGold, beforeItems, nextGold, nextItems, getValue, setValue) => {
-  const same = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
-  try {
-    await Promise.all([setValue('mh_gold', nextGold, false), setValue('mh_owned_items', nextItems, false)]);
-    const [savedGold, savedItems] = await Promise.all([getValue('mh_gold', null, false), getValue('mh_owned_items', null, false)]);
-    if (same(savedGold, nextGold) && same(savedItems, nextItems)) return true;
-  } catch { /* rollback below */ }
-  await Promise.allSettled([setValue('mh_gold', beforeGold, false), setValue('mh_owned_items', beforeItems, false)]);
-  return false;
-};
+const saveMarketBalances = (beforeGold, beforeItems, nextGold, nextItems, getValue, setValue) =>
+  saveStoredValuesOrRollback([
+    { key:'mh_gold', before:beforeGold, next:nextGold },
+    { key:'mh_owned_items', before:beforeItems, next:nextItems },
+  ], getValue, setValue);
 const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
 const REINCARNATE_POINTS = 10;
