@@ -60,6 +60,10 @@ node tools/build.js --check
 # ゲーム機能を変更した場合の代表例
 node tools/browser/feature-check.js
 node tools/image/dye-report.js
+
+# 領域ごとにまとめて回す(--list で領域の一覧。all は全部で30分以上)
+node tools/run-checks.js --area required        # CLAUDE.md の必須検査
+node tools/run-checks.js --area battle,masu     # 触った領域のフォルダ
 ```
 
 `npm ci` が 403 になる場合は、まずエラーになった URL と `npm config list` を記録します。
