@@ -81,7 +81,10 @@ assert(source.includes('const hasPowerOverride = powerOverride !== null && power
   && source.includes('const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;'), 'a null override must fall back to the difficulty power');
 // デバッグから入った周回は debugBattleRef が true のままなので、報酬・記録・ランキングをすべて通らない
 assert(!/EXTREME_DIFFICULTY_SELECT';[^\n]*debugBattleRef\.current=/.test(source), 'the EXTREME start button must not overwrite the debug flag');
-assert(source.indexOf('debugBattleRef.current') < source.indexOf('awardRunRewards'), 'debug reward isolation must precede persistent rewards');
+// 位置くらべなので、コメントに名前が出ただけで狂わないよう先に落とす
+// (2026-09-06・進捗の説明コメントに awardRunRewards と書いて実際に落ちた)
+const codeOnly = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+assert(codeOnly.indexOf('debugBattleRef.current') < codeOnly.indexOf('awardRunRewards'), 'debug reward isolation must precede persistent rewards');
 assert(source.includes('EXTREME 検証結果（保存されません）') && /\{debugBattle&&debugOutcome&&\(/.test(source), 'the not-saved notice must only appear on debug plays');
 for (const label of ['ランキング対象外（デバッグ）','デバッグプレイ専用','全WAVE詳細（デバッグ）','デバッグ確認中のため、記録・報酬は保存されません']) {
   assert(!source.includes(label), `official screens must not keep the debug label: ${label}`);

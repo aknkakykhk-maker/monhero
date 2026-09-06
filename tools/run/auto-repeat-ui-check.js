@@ -5,9 +5,16 @@ const path=require('path');
 const source=fs.readFileSync(path.resolve(__dirname,'../../monster-hero/src/game-system.jsx'),'utf8');
 const fail=message=>{throw new Error(message);};
 const between=(from,to)=>{const start=source.indexOf(from),end=source.indexOf(to,start+from.length);if(start<0||end<0)fail(`${from} の範囲を取得できません`);return source.slice(start,end);};
-const repeatToggle=between('const setAutoRepeatEnabled = (enabled) => {','// ランの終了表示');
+// 見たいのは setAutoRepeatEnabled の中身だけ。
+// 以前は「次の大きなコメント(// ランの終了表示)まで」を範囲にしていたが、
+// あいだに別の関数が入ると、その中の stopAllAuto を拾って落ちてしまう
+// (2026-09-06・モンビーから周回を始める startQuickRunFromRhythm を足したときに実際に起きた)。
+// 関数の終わり(行頭2字下げの `};`)までで区切る
+const repeatToggle=between('const setAutoRepeatEnabled = (enabled) => {','\n  };');
 for(const token of ['const next=!!enabled&&isQuickMode(runMode)','autoRepeatRef.current=next','setAutoRepeat(next)','setAutoRepeatBattleSpeed(next)','if(next)setAutoBattleEnabled(true)','else autoRepeatStartingRef.current=false',"if(!next)setEcoModeSafe('off')"])if(!repeatToggle.includes(token))fail(`∞周回切替に ${token} がありません`);
-if(repeatToggle.includes('stopAutoBattle')||repeatToggle.includes('stopAllAuto'))fail('∞周回単独OFFが通常AUTOを停止します');
+// コメントに関数名が出ていても落ちないよう、行コメントを外してから見る
+const repeatToggleCode=repeatToggle.replace(/\/\/[^\n]*/g,'');
+if(repeatToggleCode.includes('stopAutoBattle')||repeatToggleCode.includes('stopAllAuto'))fail('∞周回単独OFFが通常AUTOを停止します');
 const battleToggle=between('const setAutoBattleEnabled = (enabled) => {','// ∞周回は');
 if(!battleToggle.includes('if(!next){stopAllAuto();return;}'))fail('通常AUTO OFFがstopAllAutoを使っていません');
 const cycle=between('const cycleBattleAuto = () => {','// 特殊ルール説明を閉じる正規経路');

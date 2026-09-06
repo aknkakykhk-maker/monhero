@@ -154,7 +154,8 @@ const seed = () => {
     await clickSelector('[data-rhythm-back]');
     await page.waitForTimeout(2000);
     const afterRhythm = await readProgress();
-    const advancedInRhythm = afterRhythm.wave > before.wave || afterRhythm.turn > before.turn;
+    // WAVE10のあと次の周へ入るとWAVEが1へ戻る。「減った」もまた進んだ証拠として数える
+    const advancedInRhythm = afterRhythm.wave > before.wave || afterRhythm.turn > before.turn || afterRhythm.wave < before.wave;
     check('モンビーを開いているあいだも周回が進む', advancedInRhythm,
       `W${before.wave}/T${before.turn} → W${afterRhythm.wave}/T${afterRhythm.turn}`);
     check('モンビーからクイックのバトルへ戻れる', await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]')));

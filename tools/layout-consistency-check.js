@@ -157,8 +157,19 @@ const screenStart = (name) => {
 const OUT_OF_SCOPE_SCREENS = (name) => name.startsWith('TRAINING_');
 const screens = [...new Set([...source.matchAll(/gameState==='([A-Z_]+)'&&/g)].map(m => m[1]))];
 check('画面が数えられている', screens.length > 20, `${screens.length}画面`);
+// 中身を専用のコンポーネントが描く画面。スクロールの持ち主はそのコンポーネント側なので、
+// 分岐の周りを見ても overflow-y-auto は出てこない。
+// ★ここは「窓(9000文字)が隣の画面まではみ出して、たまたま拾えていた」だけだった。
+//   モンビーの曲えらびへ1行足したとき、はみ出しが届かなくなって初めて分かった
+//   (2026-09-06)。実装は前から正しいので、見る対象から外す。
+const COMPONENT_OWNED_SCREENS = {
+  RHYTHM_PLAY: 'RhythmTapTest（演奏中。BATTLEと同じくスクロールさせない設計）',
+  RHYTHM_OPTIONS: 'RhythmOptions',
+  RHYTHM_DEMO_HOME: 'RhythmSongSelect（曲の一覧の中でスクロールする）',
+};
 const noScroll = screens.filter(name => {
   if (ABSOLUTE_LAYOUT_SCREENS.includes(name) || OUT_OF_SCOPE_SCREENS(name)) return false;
+  if (COMPONENT_OWNED_SCREENS[name]) return false;
   const at = screenStart(name);
   if (at < 0) return false;
   return !source.slice(at, at + 9000).includes('overflow-y-auto');
