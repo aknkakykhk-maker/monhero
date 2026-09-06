@@ -110,12 +110,11 @@ if(REFERENCE&&EXPONENT&&RANGE&&RATIO_RANGE&&GAIN){
   const ratioRange={min:+RATIO_RANGE[1],max:+RATIO_RANGE[2]};
   const gain=+GAIN[1];
   const clampRatio=value=>Math.max(ratioRange.min,Math.min(ratioRange.max,value));
-  // 曲id → 解析JSONの名前。ランタイムの曲idから引く。
-  const AUDIO={mf_ichika_mix:'atsu-cup-theme',monster_hero:'monster-hero-theme',
-    six_eternel_remix:'six-eternel-remix-beat',stay_with_me:'pandora-boss',kiki_issen:'eiki-boss',
-    kaze_ga_soyogu:'kaze-ga-soyogu',close_to_your_heart:'close-to-your-heart',
-    eiki_boss_remix:'eiki-boss-remix',pandora_boss_remix:'pandora-boss-remix',
-    dullahan:'dullahan',dullahan_clockwork:'dullahan-clockwork'};
+  // 曲id → 解析JSONの名前。対応表は rhythm-runtime-notes.js が1つだけ持つ
+  // (検査ごとに持つと、曲を足したときに片方だけ古くなる)。
+  const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+  const AUDIO=Object.fromEntries(Object.entries(RELEASED_TRACKS)
+    .map(([songId,trackId])=>[songId,trackId.replace(/_/g,'-')]));
   const factors=[];
   for(const song of songs){
     const file=path.join(ROOT,`tools/mode/authoring/${AUDIO[song.id]}-v3-audio.json`);

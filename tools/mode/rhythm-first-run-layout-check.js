@@ -68,9 +68,19 @@ html,body{height:100%;margin:0}
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
     for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
-    await page.waitForTimeout(1500);
-    await clickText('決定|はじめる|プレイ|▶');
-    await page.waitForTimeout(1000);
+    // 曲えらびの「決定」は data-rhythm-demo-start が目印。
+    // 文字で探していたころは、みゅあの吹き出し（「…決定！ それだけで始まるよ♪」）まで
+    // 拾ってしまい、そのセリフが出た回だけ吹き出しが開いて演奏へ入れなかった。
+    // セリフは毎回変わるので、日によって落ちる検査になっていた(2026-09-06)。
+    await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
+    await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
+    // 「1秒待つ」で測っていたが、機械が混んでいるとまだ演奏画面へ入っていないことがあり、
+    // この検査だけが日によって落ちていた(2026-09-06)。ノーツが並ぶまで待つ。
+    // 組み上がっていない状態はTailwindを止めているあいだずっと続くので、
+    // 待っても「崩れたまま演奏が始まっている」という見たい場面は壊れない。
+    await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000}).catch(()=>{});
+    await page.waitForFunction(()=>document.querySelectorAll('[data-rhythm-note]').length>0,
+      undefined,{timeout:30000}).catch(()=>{});
 
     const snap=()=>page.evaluate(()=>{
       const area=document.querySelector('[data-rhythm-play-area]');
@@ -95,7 +105,14 @@ html,body{height:100%;margin:0}
 
     // ここで組み上がる
     await page.addStyleTag({content:LAYOUT_CSS});
-    await page.waitForTimeout(1500);
+    // 「1.5秒待つ」だと、機械が混んでいる回だけノーツがまだ流れてこず落ちていた。
+    // 出るまで待って、それでも出なければNGにする（見たいことは変えていない）。
+    await page.waitForFunction(()=>[...document.querySelectorAll('[data-rhythm-note]')].some(note=>{
+      const style=getComputedStyle(note);
+      if(style.display==='none'||style.opacity==='0')return false;
+      const rect=note.getBoundingClientRect();
+      return rect.height>0&&rect.bottom>0&&rect.top<window.innerHeight;
+    }),undefined,{timeout:20000}).catch(()=>{});
     const after=await snap();
     ok('組み上がったら大きさを測り直している',after.area!==null&&after.area<=844,
       `エリア高さ${after.area}px（覚えたままの古い値で固まっていないか）`);

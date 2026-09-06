@@ -177,5 +177,23 @@ const RELEASED_MARKERS=Object.freeze({
   dullahan_clockwork:'dullahan-clockwork-v3',
 });
 
+// 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
+// 譜面を作り直すときも、歯ごたえの検査も、曲の長さの検査も、同じ対応表を見る。
+// 検査ごとに持つと、曲を足したときに片方だけ古くなる（実際にそうなった）。
+const RELEASED_TRACKS=Object.freeze({
+  mf_ichika_mix:'atsu_cup_theme',
+  monster_hero:'monster_hero_theme',
+  six_eternel_remix:'six_eternel_remix_beat',
+  stay_with_me:'pandora_boss',
+  kiki_issen:'eiki_boss',
+  kaze_ga_soyogu:'kaze_ga_soyogu',
+  close_to_your_heart:'close_to_your_heart',
+  eiki_boss_remix:'eiki_boss_remix',
+  pandora_boss_remix:'pandora_boss_remix',
+  dullahan:'dullahan',
+  dullahan_clockwork:'dullahan_clockwork',
+});
+
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
+  RELEASED_TRACKS,
   noteEndMs,isHeld,overlapConflicts,fastPairConflicts,runtimeRow,markerBlock,renderBlock,replaceBlock,RELEASED_MARKERS};
