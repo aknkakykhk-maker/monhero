@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 10:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10440,7 +10440,13 @@ scheduleTick();};
     その真ん中に下の判定ラインがちょうど乗る。位置と高さはノーツ速度と画面の高さで変わるので、
     実測から updateJudgmentBand が書き込む。見た目だけの要素で、判定・スコアには関与しない。
     判定ラインと同じ理由でTailwindに頼らず直接書く(CDNのCSSが間に合わなくても必ず出す) */}
-<div ref={judgmentBandRef} data-rhythm-judgment-band aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:0,opacity:0,pointerEvents:'none',transition:settings.lightweightMode?'none':'opacity 220ms ease-out'}}>
+<div ref={judgmentBandRef} data-rhythm-judgment-band aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:0,opacity:0,pointerEvents:'none',
+  /* z-index を必ず持たせる(2026-09-06)。DOMの順番では判定ラインの直前に置いてあるのに、
+     レーンのSVG([data-rhythm-lane-svg])が z-index:1 を持っているため、
+     z-index:auto(=0)のままだと**レーンの下に隠れて色がまったく出なかった**。
+     実測でも、帯をまっ赤に塗りつぶしても画面の色は rgb(14,20,36) のまま変わらなかった。
+     レーン(1)より上、ノーツ(4)・判定ライン(6)より下に置く。 */
+  zIndex:2,transition:settings.lightweightMode?'none':'opacity 220ms ease-out'}}>
   <i data-rhythm-judgment-core aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:0,background:'linear-gradient(180deg,rgba(250,232,255,0),rgba(250,232,255,.26),rgba(250,232,255,0))'}}/>
   <i data-rhythm-judgment-edge data-edge="top" aria-hidden="true" style={{position:'absolute',left:0,right:0,top:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>
   <i data-rhythm-judgment-edge data-edge="bottom" aria-hidden="true" style={{position:'absolute',left:0,right:0,bottom:0,height:'1px',background:'linear-gradient(90deg,rgba(103,232,249,0),rgba(103,232,249,.55),rgba(103,232,249,0))'}}/>

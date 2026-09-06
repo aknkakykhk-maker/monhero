@@ -14,7 +14,7 @@
 // そこで、画面から測った寸法(判定ラインの位置・ノーツの高さ・プレイエリアの高さ)と、
 // ノーツが流れる時間から、帯の上下が来るべき位置を**この検査の中で独立に計算**して突き合わせる。
 'use strict';
-const http=require('http'),path=require('path'),fs=require('fs');
+const http=require('http'),path=require('path'),fs=require('fs'),os=require('os');
 const ROOT=path.resolve(__dirname,'..','..'),PORT=8993;
 let failed=0;
 const ok=(name,cond,detail='')=>{console.log(`${cond?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!cond)failed++;};
@@ -73,7 +73,9 @@ const GOOD_MS=200,MARVELOUS_MS=55;
     await page.getByRole('button',{name:'TAP TO START'}).click({force:true});
     await page.getByRole('button',{name:'トップ画面へ進む'}).click({timeout:30000});
     await page.waitForFunction(()=>document.body.innerText.includes('モンヒロビート'),{timeout:40000});
-    for(let i=0;i<6;i++){if(!(await clickText('受け取る|閉じる|OK|とじる')))break;await page.waitForTimeout(250);}
+    // 配布のお知らせ(「確認」)を閉じずに測ると、画面ぜんぶを覆う 96% の暗い幕ごしに
+    // 撮ることになり、色の差が20分の1以下に潰れる(2026-09-06にここで実際に外した)。
+    for(let i=0;i<8;i++){if(!(await clickText('受け取る|閉じる|OK|とじる|^確認$')))break;await page.waitForTimeout(250);}
     await clickText('モンヒロビート');
     // 曲えらびの「決定」は data-rhythm-demo-start が目印。
     // 文字で探すと、みゅあの吹き出し（「…決定！ それだけで始まるよ♪」）まで拾ってしまい、
@@ -88,7 +90,8 @@ const GOOD_MS=200,MARVELOUS_MS=55;
     },undefined,{timeout:40000}).catch(()=>{});
 
     const snap=await page.evaluate(()=>{
-      const box=el=>{if(!el)return null;const r=el.getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height,width:r.width};};
+      const box=el=>{if(!el)return null;const r=el.getBoundingClientRect();
+        return {top:r.top,bottom:r.bottom,left:r.left,height:r.height,width:r.width};};
       const area=document.querySelector('[data-rhythm-play-area]');
       const band=document.querySelector('[data-rhythm-judgment-band]');
       return {
@@ -157,6 +160,64 @@ const GOOD_MS=200,MARVELOUS_MS=55;
         ok('帯は判定ラインへ向かって濃くなる（のっぺりした板になっていない）',
           typeof snap.bandBackground==='string'&&snap.bandBackground.includes('gradient'),
           String(snap.bandBackground).slice(0,60));
+
+        // --- ここからが本題: 本当に「見えている」か ---
+        // 位置と高さが合っていても、ほかの層の下に隠れていたら意味がない。
+        // 実際にそうなった(2026-09-06・ユーザー指摘「帯の色って反映されてる？」)。
+        // DOMの順番では判定ラインの直前に置いてあったのに、レーンのSVGが z-index:1 を
+        // 持っていたため、z-index:auto の帯はその下へ回り、色がまったく出ていなかった。
+        // まっ赤に塗りつぶしても画面の色は rgb(14,20,36) のまま変わらなかった。
+        // そこで「帯を消す前と後で画面の色がどれだけ変わるか」を画素で測る。
+        const sharp=require(path.join(ROOT,'tools/node_modules/sharp'));
+        // カウントダウンの幕(35%の暗さ)が残っているあいだも色が沈むので、消えてから撮る
+        await page.waitForFunction(()=>!document.querySelector('[data-rhythm-countdown]'),
+          undefined,{timeout:30000}).catch(()=>{});
+        const clip={x:snap.area.left,y:snap.area.top,width:snap.area.width,height:snap.area.height};
+        // ノーツが写り込むと測れないので、撮るあいだだけ隠す（判定には触らない）
+        await page.addStyleTag({content:'[data-rhythm-note]{visibility:hidden!important}'});
+        await page.waitForTimeout(200);
+        const withBand=path.join(os.tmpdir(),'rhythm-band-on.png');
+        const withoutBand=path.join(os.tmpdir(),'rhythm-band-off.png');
+        await page.screenshot({path:withBand,clip});
+        await page.evaluate(()=>{document.querySelector('[data-rhythm-judgment-band]').style.display='none';});
+        await page.waitForTimeout(200);
+        await page.screenshot({path:withoutBand,clip});
+        const on=await sharp(withBand).raw().toBuffer({resolveWithObject:true});
+        const offData=(await sharp(withoutBand).raw().toBuffer({resolveWithObject:true})).data;
+        fs.rmSync(withBand,{force:true});fs.rmSync(withoutBand,{force:true});
+        const rowDiff=y=>{
+          const row=Math.max(0,Math.min(on.info.height-1,Math.round(y)));
+          let best=0;
+          for(let x=Math.round(on.info.width*.30);x<Math.round(on.info.width*.42);x++){
+            const i=(row*on.info.width+x)*on.info.channels;
+            best=Math.max(best,Math.abs(on.data[i]-offData[i]),
+              Math.abs(on.data[i+1]-offData[i+1]),Math.abs(on.data[i+2]-offData[i+2]));
+          }
+          return best;
+        };
+        const bandTop=gotTop,bandBottom=gotBottom;
+        ok('GOODの端の線が画面に出ている（ほかの層の下に隠れていない）',
+          rowDiff(bandTop)>=12&&rowDiff(bandBottom-1)>=12,
+          `上のふち ${rowDiff(bandTop)} / 下のふち ${rowDiff(bandBottom-1)}（12以上）`);
+        ok('帯の中が画面で色づいている',
+          rowDiff(bandTop+(lineCenter-bandTop)*.4)>=4,
+          `帯の中 ${rowDiff(bandTop+(lineCenter-bandTop)*.4)}（4以上）`);
+        if(snap.core){
+          // 芯のどまん中は判定ラインの光(前後10pxのぼかし)と重なるので、そこで測ると
+          // 芯そのものの効き目が埋もれる。線から離れた行のうち、いちばん効いている所を見る。
+          const coreTop=snap.core.top-snap.area.top,coreBottom=snap.core.bottom-snap.area.top;
+          let coreBest=0,coreAt=0;
+          for(let y=Math.ceil(coreTop);y<=Math.floor(coreBottom);y++){
+            if(Math.abs(y-lineCenter)<14)continue;
+            const value=rowDiff(y);
+            if(value>coreBest){coreBest=value;coreAt=y;}
+          }
+          ok('真ん中のMARVELOUSが画面で光っている',coreBest>=6,
+            `芯のいちばん濃い所 ${coreBest}（y=${coreAt} / 6以上）`);
+        }
+        ok('帯の外は変わっていない（画面ぜんぶを塗っていない）',
+          rowDiff(bandTop-25)<=2&&rowDiff(bandBottom+8)<=2,
+          `上 ${rowDiff(bandTop-25)} / 下 ${rowDiff(bandBottom+8)}`);
       }
     }
   }catch(error){
