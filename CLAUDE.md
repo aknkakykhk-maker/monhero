@@ -104,7 +104,9 @@ Claudeは改修内容を実装したら、ユーザーが検証しやすいよ�
 
 ### ⑥ 改修したら必ずビルドと検査を通す
 
-`monster-hero/src/game-system.jsx` を触ったら、コミット前に必ず次を通す。
+ゲーム本体の編集元は `monster-hero/src/parts/*.jsx`(`parts.json` の順に連結)。`monster-hero/src/game-system.jsx` は
+その連結生成物なので、**直すのは parts 側**(直接編集しても parts が未変更なら `build.js` が書き戻す)。
+parts を触ったら、コミット前に必ず次を通す。
 
 ```
 node tools/build.js                      # 配信用JSを作り直す(忘れると変更が反映されない)

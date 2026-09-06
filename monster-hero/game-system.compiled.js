@@ -2,9 +2,17 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 584a0780382f6fe4
+// source-sha256: ef961f673e91bdf7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+// ============================================================
+// このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
+// 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
+// (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
+// generated-sha256: c869a2a98eaeabd4
+// ============================================================
+// ---- part: 10-shared.jsx ----
+
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
   useState,
@@ -128,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 12:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 12:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19426,6 +19434,7 @@ const RhythmTapTest = ({
   }, tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る'))));
 };
 
+// ---- part: 15-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
 // React 18 は描画中に例外が1つ出るとルートごと外してしまい、画面が真っ白のまま何も押せなくなる
 // (実際に「マーケットに入ると進行不能」「定義前の参照で真っ白」を出したことがある)。
@@ -19526,6 +19535,8 @@ class MhErrorBoundary extends React.Component {
 const DebugThrowScreenError = () => {
   throw new Error('デバッグ: 画面エラーの受け止めを試す(わざと投げた例外)');
 };
+
+// ---- part: 20-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
@@ -49210,6 +49221,8 @@ function MonsterHeroGame() {
     })())))
   );
 }
+
+// ---- part: 30-bootstrap.jsx ----
 const createAnimationStyle = () => {
   if (typeof document === 'undefined') return;
   if (document.getElementById('mh-anim-style')) return;

@@ -1,0 +1,21 @@
+{
+  "_comment": "game-system.jsx はこの順に連結して tools/build.js が生成する。新しい部品を足したらここへ並べる(順番が依存の正本)。",
+  "parts": [
+    {
+      "file": "10-shared.jsx",
+      "role": "共有層。定数・純関数・Audio_・染色・保存層・Supabase・小部品・音ゲーの部品(React も DOM も MonsterHeroGame も知らないものと、共有コンポーネント)"
+    },
+    {
+      "file": "15-error-boundary.jsx",
+      "role": "画面のエラー境界 MhErrorBoundary と、デバッグ用にわざと例外を投げる部品"
+    },
+    {
+      "file": "20-app.jsx",
+      "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
+    },
+    {
+      "file": "30-bootstrap.jsx",
+      "role": "CSS 文字列の注入(createAnimationStyle)、ReactDOM.createRoot、HTML ローディングの非表示"
+    }
+  ]
+}
