@@ -28,12 +28,12 @@ for (const difficulty of ['GrandMaster', 'Hell', 'Legend']) {
 // 極限の段階ごとに倍率が違うため、選んだ難易度の設定(battleSetting)の強さとターン倍率を渡す。GOD だけ神威の倍率も掛ける
 assert(source.includes(':createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier)') && source.includes('?createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*divineEnemyMultiplier)'), 'battle must use shared enemy creation and override power for the selected extreme difficulty');
 const enemyFactoryBlock = source.slice(source.indexOf('const createBattleEnemy ='), source.indexOf('\n};', source.indexOf('const createBattleEnemy =')) + 3);
+// 敵の生成はクイック・極限を含む QUICK_DIFFICULTY_SETTINGS(通常難易度は DIFFICULTY_SETTINGS と同じ値)を見るようになった
+const powerTable = Object.fromEntries(Object.entries(expectedPower).map(([difficulty, power]) => [difficulty, { power }]));
 const createBattleEnemy = Function(
-  'ENEMY_SEQUENCE', 'ENEMY_DATA', 'normalizeBattleDifficulty', 'DIFFICULTY_SETTINGS',
+  'ENEMY_SEQUENCE', 'ENEMY_DATA', 'normalizeBattleDifficulty', 'DIFFICULTY_SETTINGS', 'QUICK_DIFFICULTY_SETTINGS',
   `${enemyFactoryBlock}; return createBattleEnemy;`
-)(['Dino'], { Dino:{ name:'Dino', baseHp:100, baseAtk:20 } }, difficulty => difficulty, Object.fromEntries(
-  Object.entries(expectedPower).map(([difficulty, power]) => [difficulty, { power }])
-));
+)(['Dino'], { Dino:{ name:'Dino', baseHp:100, baseAtk:20 } }, difficulty => difficulty, powerTable, powerTable);
 for (const [difficulty, power] of Object.entries(expectedPower)) {
   for (const powerOverride of [null, undefined]) {
     const enemy = createBattleEnemy(1, difficulty, null, powerOverride);

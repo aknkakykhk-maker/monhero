@@ -96,7 +96,8 @@ check('必殺技は技名がそのまま出る', api.enemyActionLabel(enemy, 'SP
 const has = (t) => src.includes(t);
 check('SCANは実戦と同じ定義・同じ状態で評価する', has('enemyActionProbabilities(scanEnemy,scanDist,scanState)'));
 check('SCANは「直前に何をしたか」を実戦と同じ形で渡す', has('enemyActionStateFrom(enemyLastIntent)'));
-check('W1〜W10のカードから戦闘開始前のSCANを開ける', has('setWaveScanPreview({enemy,wave:index+1,difficulty:safeDifficulty})'));
+// 難易度は WAVE ごとの設定(waveDifficulty。極限の段階を含む)を渡す
+check('W1〜W10のカードから戦闘開始前のSCANを開ける', has('setWaveScanPreview({enemy,wave:index+1,difficulty:waveDifficulty})'));
 check('戦闘開始前のSCANは現在の間合いを出さない', has("scanBeforeBattle?'戦闘開始前'"));
 const scanBlock = src.slice(src.indexOf('(showEnemyInfo&&enemy||waveScanPreview)'), src.indexOf('showHeroInfo', src.indexOf('(showEnemyInfo&&enemy||waveScanPreview)')));
 check('SCANは乱数を使わない', !scanBlock.includes('Math.random'));

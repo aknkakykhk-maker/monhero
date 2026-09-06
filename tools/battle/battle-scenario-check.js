@@ -52,7 +52,8 @@ const num = (re, label) => {
   return Number(m[1]);
 };
 const beginnerPower = num(/Beginner:\s*\{[^}]*power:\s*([\d.]+)/, 'Beginnerの敵強度');
-const critMult = num(/isCrit\?Math\.floor\(d\*\((\d+(?:\.\d+)?)\+critDmgBonus\)\)/, 'クリティカル倍率');
+// 会心は分割前の基礎ダメージ(mainBaseD。パンドラの分割に対応した名前)に掛ける
+const critMult = num(/isCrit\?Math\.floor\(mainBaseD\*\((\d+(?:\.\d+)?)\+critDmgBonus\)\)/, 'クリティカル倍率');
 const distMults = (source.match(/const distMult = \[([\d.,\s]+)\]/) || [])[1];
 const DIST_MULT = distMults ? distMults.split(',').map(Number) : null;
 

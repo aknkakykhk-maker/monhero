@@ -170,16 +170,23 @@ NG の行を全件読み、実装側を照らして分類した。**大半は「
 | 判定 | 検査 | 根拠(いまの実装との差) |
 | --- | --- | --- |
 | 直した | `battle/enemy-defeat-check` | `resolveEnemyDefeat` の終端の見つけ方と、攻撃側の呼び出し(`enemyHpAfterOurAttacks`)を現在形へ。同期ロック・共通処理の意図はそのまま |
-| 一部直した(次の古い行が残る) | `battle/battle-balance-check` | 敵生成は `battleSetting.power` とターン倍率(GOD は神威倍率)を渡す形に更新済み。残: vm の環境に `QUICK_DIFFICULTY_SETTINGS` が無い(A 分類と同種) |
-| 一部直した | `battle/battle-carousel-check` | 同上。残: `createBattleEnemy` の呼び出し箇所数が GOD 分岐で変わった(2 → 3) |
-| 一部直した | `mode/nightmare-rules-check` | `applyDistanceEnhancement` が WAVE 番号も受け取る形に更新済み。残: 適性の符号付き補正の呼び出し形 |
+| 直した(2026-09-06 夜) | `battle/battle-balance-check` | 敵生成は `battleSetting.power` とターン倍率(GOD は神威倍率)を渡す形へ。vm に `QUICK_DIFFICULTY_SETTINGS` を渡す |
+| 直した | `battle/battle-carousel-check` | 同上。呼び出し箇所は GOD 分岐で 3 か所 |
+| 直した | `mode/nightmare-rules-check` | 距離強化・符号付き補正・回復の式が WAVE 番号も受け取る形へ |
 | 検査が古い(意図した変更) | `run/ranking-finish-check` | 周回IDのリセットが 4 経路(チャレンジ/クイック/プロ/種族)に増えた、送信 payload に `reached_wave` / `turns` が増えた(#run-stats)、レベル系の取得の引数が `RANKING_SELECT_FULL` に |
 | 検査が古い | `run/unique-skill-point-check` | 購入処理が数量対応(#1126 で 100P 単位など)に変わり、固定していた文字列が変わった |
-| 検査が古い | `battle/dist-aptitude-check`, `battle/battle-scenario-check`, `ranking/ranking-refresh-race-check`, `run/eco-mode-internal-check`, `monster/kiki-assist-check`, `monster/meloso-assist-check`, `ranking/emergency-audio-breeder-check`, `mode/extreme-difficulty-theme-check`, `masu/party-set-check` | いずれも「特定の1行の文字列がある」ことを見ており、その行が別の書き方に変わっている(切り出しの needle が見つからない、`prev.length >= STARTER_TEACHING_IDS.length` の形が変わった、など) |
-| 検査が古い | `battle/battle-mode-check`, `battle/battle-tutorial-check`, `battle/hero-marker-check`, `battle/guard-card-check`, `battle/enemy-scan-check`, `battle/balance-second-card-check`, `battle/rpg-debug-check`, `battle/unique-range-check`, `masu/rebirth-check`, `run/bond-reward-check`, `run/auto-full-run-check`, `run/training-check`, `mode/species-challenge-clear-flow-check`, `mode/species-challenge-unlock-check`, `monster/mermaid-monsters-check`, `monster/market-icon-check`, `monster/plant-check`(「全16種」→ いま 19 種), `assistant/momosuke-check`, `audio/auto-bgm-continuity-check`, `audio/pandora-boss-bgm-check`, `audio/audio-route-check` | 説明文・件数・部品名などの固定文字列。実装の説明文や部品が更新されている |
+| 直した | `battle/dist-aptitude-check`, `battle/battle-scenario-check`, `battle/enemy-scan-check`, `battle/hero-marker-check` | 適性の受け渡しに特別ルールと WAVE 番号、会心の基礎ダメージ名 `mainBaseD`、SCAN の `waveDifficulty`、ききの枚数ボーナス、再計算条件の並び |
+| 検査が古い | `ranking/ranking-refresh-race-check`, `run/eco-mode-internal-check`, `monster/kiki-assist-check`, `monster/meloso-assist-check`, `ranking/emergency-audio-breeder-check`, `mode/extreme-difficulty-theme-check`, `masu/party-set-check` | いずれも「特定の1行の文字列がある」ことを見ており、その行が別の書き方に変わっている(切り出しの needle が見つからない、`prev.length >= STARTER_TEACHING_IDS.length` の形が変わった、など) |
+| 検査が古い | `battle/battle-mode-check`, `battle/battle-tutorial-check`, `battle/guard-card-check`(「ガード枚数」の文言が変わった), `battle/balance-second-card-check`, `battle/rpg-debug-check`, `battle/unique-range-check`, `masu/rebirth-check`, `run/bond-reward-check`, `run/auto-full-run-check`, `run/training-check`, `mode/species-challenge-clear-flow-check`, `mode/species-challenge-unlock-check`, `monster/mermaid-monsters-check`, `monster/market-icon-check`, `monster/plant-check`(「全16種」→ いま 19 種), `assistant/momosuke-check`, `audio/auto-bgm-continuity-check`, `audio/pandora-boss-bgm-check`, `audio/audio-route-check` | 説明文・件数・部品名などの固定文字列。実装の説明文や部品が更新されている |
 | **実装側の確認が要る** | `battle/card-icon-check` | `{st.icon}` を `cardIconNode()` を通さず直接描いている箇所が 1 つある(60-app 内の選択肢一覧)。絵文字前提の直描きなら文字化けの元、というのが検査の主張。意図した表示か要確認 |
 | **実装側の確認が要る** | `monster/golem-balance-check` | ゴーレムの自動ガッツ回復率を実装から読めない(`null`)。式の定数の置き場所が変わっただけか、値が消えたのかを要確認 |
 | **データ側の確認が要る** | `image/dye-edge-check` | Undine の染色マスクの輪郭の塗り残し 22.9%(上限 5%)。マスク画像の品質の問題で、コードではない |
 
 方針: 「検査が古い」は、その領域を触る STEP(バトル → STEP 5、ランキング → STEP 3 の取引関数)で、直す前にその領域の検査を現在形へ言い直してから着手する。
 「実装側の確認が要る」3 件は KNOWN_ISSUES へ移す候補(ユーザー判断)。
+
+## 実行環境の注記(追記)
+
+- `battle/battle-mode-select-check.js` は `run-checks.js --area battle` の中では NG になったが、単体では OK。自分で配信(serve.py)を立てる検査が
+  続くとき、直前の検査の配信が閉じ切る前に次が同じポートを取ろうとして落ちることがある(検査の中身の問題ではない)。
+  一括実行で落ちた実ブラウザ検査は、単体で再実行して判断する。
