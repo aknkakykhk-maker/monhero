@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 12:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 12:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8801,31 +8801,79 @@ const orientationIsLandscape=()=>{
   if(typeof window.matchMedia==='function')return window.matchMedia('(orientation: landscape)').matches;
   return window.innerWidth>window.innerHeight;
 };
-// ボタンで横向きに固定したかどうか。モンビーを離れるときに戻すために覚えておく
-// (プレイ画面へ移るだけで戻してしまうと、演奏の途中で縦に戻ってしまう)
+// ボタンで向きを固定したかどうか。モンビーを離れるときに戻すために覚えておく
+// (プレイ画面へ移るだけで戻してしまうと、演奏の途中で向きが変わってしまう)
 let screenOrientationLockedByUs=false;
-// target: 'landscape' | 'portrait'。回せたら true を返す(回せなければ案内を出す側で使う)
+// 全画面を抜けると、ブラウザが向きの固定も一緒に外す。
+// こちらが知らないうちに外れることがある(端末の「戻る」ボタン・スワイプなど)ので、
+// 外れたことに気づいて控えも合わせておく。合っていないと、モンビーを離れるときに
+// 「もう外れている固定」を外そうとしたり、逆に外し忘れたりする。
+if(typeof document!=='undefined'&&typeof document.addEventListener==='function'){
+  document.addEventListener('fullscreenchange',()=>{
+    if(!document.fullscreenElement)screenOrientationLockedByUs=false;
+  });
+}
+// 向きが**実際に変わる**のを待つ。
+// lock() は「受け付けた」だけで解決することがあり、画面が回るのはそのあと。
+// ここを待たずに次へ進むと、回っていないのに「できた」と扱ってしまい、
+// 押しても何も起きないのに案内も出ない、という状態になる。
+const waitForScreenOrientation=(want,timeoutMs=900)=>{
+  const wantLandscape=want==='landscape';
+  if(orientationIsLandscape()===wantLandscape)return Promise.resolve(true);
+  if(typeof window==='undefined')return Promise.resolve(false);
+  return new Promise(resolve=>{
+    let settled=false;
+    const orientation=window.screen&&window.screen.orientation;
+    const mql=typeof window.matchMedia==='function'?window.matchMedia('(orientation: landscape)'):null;
+    const cleanup=()=>{
+      clearTimeout(timer);
+      if(orientation&&orientation.removeEventListener)orientation.removeEventListener('change',onChange);
+      if(mql){
+        if(mql.removeEventListener)mql.removeEventListener('change',onChange);
+        else if(mql.removeListener)mql.removeListener(onChange);
+      }
+      if(typeof window.removeEventListener==='function')window.removeEventListener('resize',onChange);
+    };
+    const finish=value=>{if(settled)return;settled=true;cleanup();resolve(value);};
+    const onChange=()=>{if(orientationIsLandscape()===wantLandscape)finish(true);};
+    const timer=setTimeout(()=>finish(orientationIsLandscape()===wantLandscape),timeoutMs);
+    if(orientation&&orientation.addEventListener)orientation.addEventListener('change',onChange);
+    if(mql){
+      if(mql.addEventListener)mql.addEventListener('change',onChange);
+      else if(mql.addListener)mql.addListener(onChange);
+    }
+    if(typeof window.addEventListener==='function')window.addEventListener('resize',onChange);
+  });
+};
+// target: 'landscape' | 'portrait'。**実際にその向きになったら** true を返す
+// (ならなければ案内を出す側で使う)。
+//
+// 【2026-09-06・Androidの利用者からの報告「横にはできるけど縦にはできないときがある」】
+// 縦へ戻す側だけ作りが違っていたのが原因だった。前は
+//   ① portrait で固定する → ② 全画面を抜ける → ③ 抜けたら「できた」とみなす
+// という順で、②で**固定が自動的に外れる**。Androidのブラウザは全画面のあいだしか
+// 向きの固定を許さないので、全画面を抜けた瞬間に端末のセンサーの向きへ戻る。
+// 本体を横に持っていれば、そのまま横へ戻ってしまう。しかも③で「できた」と返すので、
+// 画面は横のままなのに案内も出ない＝「押しても何も起きない」になっていた。
+// 本体を縦に持っている人だけたまたま成功するので、「ときがある」という出方になる。
+//
+// いまは縦も横も**同じ道**を通す。全画面へ入り、固定し、実際に向きが変わるまで待つ。
+// 全画面は抜けない(抜けると固定が外れるため)。モンビーを離れるときにまとめて戻す。
 const applyScreenOrientation=async(target)=>{
   const orientation=screenOrientationApi();
   const root=(typeof document!=='undefined')?document.documentElement:null;
   if(!orientation||!root)return false;
-  if(target==='landscape'){
-    // 全画面に入れなくても lock だけ通ることがあるので、失敗しても先へ進む
-    if(!document.fullscreenElement&&typeof root.requestFullscreen==='function'){
-      try{await root.requestFullscreen({navigationUI:'hide'});}catch(_){}
-    }
-    try{await orientation.lock('landscape');screenOrientationLockedByUs=true;return true;}catch(_){return false;}
+  // 向きの固定は「全画面のあいだだけ」許すブラウザが多い。縦へ戻すときも同じ。
+  // ここで入れなくても lock だけ通ることがあるので、失敗しても先へ進む。
+  if(!document.fullscreenElement&&typeof root.requestFullscreen==='function'){
+    try{await root.requestFullscreen({navigationUI:'hide'});}catch(_){}
   }
-  // 縦へ戻す。固定を外すだけだと横のまま残る端末があるので、まず portrait を指定する
-  let done=false;
-  try{await orientation.lock('portrait');done=true;}catch(_){}
-  if(!done&&typeof orientation.unlock==='function'){try{orientation.unlock();}catch(_){}}
-  // 全画面のままだと戻したことが分かりにくいので、こちらから入っていたぶんは抜ける
-  if(typeof document!=='undefined'&&document.fullscreenElement&&typeof document.exitFullscreen==='function'){
-    try{await document.exitFullscreen();done=true;}catch(_){}
-  }
-  if(done)screenOrientationLockedByUs=false;
-  return done;
+  try{await orientation.lock(target);}catch(_){return false;}
+  // 受け付けられても、実際に回るまでは「できた」と言わない
+  if(!await waitForScreenOrientation(target))return false;
+  // 縦でも横でも、固定を持っているあいだは覚えておく(離れるときに戻すため)
+  screenOrientationLockedByUs=true;
+  return true;
 };
 // モンビーを離れるときの後始末。ボタンで固定したときだけ戻す。
 // これが無いと、横のままHOMEへ戻ったときにゲーム全体が横＋全画面のままになり、
@@ -8936,16 +8984,32 @@ const RhythmOrientationButton=({className=''})=>{
     const timer=setTimeout(()=>setNote(''),8000);
     return ()=>clearTimeout(timer);
   },[note]);
+  // 回している最中にもう一度押されると、固定の指示が二重に飛んで
+  // 端末側が混乱する(片方だけ効いて向きと表示が食い違う)。押している間は受け付けない。
+  const [busy,setBusy]=useState(false);
   const target=landscape?'portrait':'landscape';
   const label=landscape?'縦画面にする':'横画面にする';
+  const wanted=landscape?'縦':'横';
   const toggle=async()=>{
-    const ok=await applyScreenOrientation(target);
-    setNote(ok?'':`この端末では画面を回せませんでした。端末の「画面の自動回転」をオンにして、本体を${landscape?'縦':'横'}にしてください。`);
+    if(busy)return;
+    setBusy(true);
+    setNote('');
+    try{
+      const ok=await applyScreenOrientation(target);
+      setLandscape(orientationIsLandscape());
+      if(ok)return;
+      // できなかった理由で案内を書き分ける。
+      // 「回す機能そのものが無い」ブラウザ(iPhoneのSafariなど)と、
+      // 「機能はあるが断られた」場合とで、やってもらうことが違う。
+      setNote(screenOrientationApi()
+        ?`画面を${wanted}にできませんでした。全画面にできないブラウザでは向きを変えられないことがあります。お手数ですが本体を${wanted}向きにしてお使いください。`
+        :`このブラウザには画面を回す機能がありません。端末の「画面の自動回転」をオンにして、本体を${wanted}向きにしてください。`);
+    }finally{setBusy(false);}
   };
   return <div className={`relative shrink-0 ${className}`}>
     <button data-rhythm-orientation-toggle data-orientation={landscape?'landscape':'portrait'}
-      aria-label={label} title={label} onClick={toggle}
-      className="flex min-h-[44px] min-w-[40px] flex-col items-center justify-center gap-0.5 rounded-xl border border-emerald-400/50 bg-emerald-950/40 leading-none text-emerald-100">
+      aria-label={label} title={label} onClick={toggle} disabled={busy} aria-busy={busy?'true':undefined}
+      className="flex min-h-[44px] min-w-[40px] flex-col items-center justify-center gap-0.5 rounded-xl border border-emerald-400/50 bg-emerald-950/40 leading-none text-emerald-100 disabled:opacity-60">
       <span aria-hidden="true" className="text-base leading-none">🔄</span>
       <span className="text-[7px] font-black leading-none">{landscape?'縦':'横'}</span>
     </button>
