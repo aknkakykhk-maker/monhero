@@ -9,6 +9,10 @@
 // iPhone縦画面での寸法は tools/mode/ultimate-card-layout-check.js の静的検査で担保する。
 // 実機での見た目確認の代わりにはならない。
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
+// 公開中の難易度の数を実装から数えるために本体を読む(検査へ枚数を書き写さないため)
+const source = fs.readFileSync(path.resolve(__dirname, '../..', 'monster-hero/src/game-system.jsx'), 'utf8');
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
@@ -82,15 +86,23 @@ const cardsInfo = () => [...document.querySelectorAll('[data-extreme-difficulty-
     const page = await browser.newPage({ viewport: { width: 393, height: 852 } });
     await openDifficultySelect(page, { EXTREME: 3, NIGHTMARE: 3, CHAOS: 3, ULTIMATE: 3 });
     const cards = await page.evaluate(cardsInfo);
-    check('極限の難易度カードが5枚出る', cards.length === 5, cards.map(c => c.id).join(', '));
+    // カードは未解放のぶんも「？？？」で並ぶ。枚数は公開中の難易度の数と一致していればよい
+    // (難易度が増えるたびに数字を書き換えなくて済むよう、実装の一覧から数える)
+    const publicIds = (source.match(/const EXTREME_DIFFICULTIES = Object\.freeze\(\[[\s\S]*?const ALL_EXTREME_DIFFICULTIES = [^\n]+/) || [''])[0]
+      .match(/\{ id:'([A-Z]+)'[^\n]*available:true/g)?.map(text => text.match(/id:'([A-Z]+)'/)[1]) || [];
+    check(`極限の難易度カードが${publicIds.length}枚出る`, cards.length === publicIds.length, cards.map(c => c.id).join(', '));
     check('INFINITYのカードがある', cards.some(c => c.id === 'INFINITY'));
     check('ULTIMATEクリア済みならINFINITYのルール詳細を押せる',
       cards.find(c => c.id === 'INFINITY')?.detailDisabled === false);
-    check('どのカードにもルール詳細・全WAVE詳細・挑戦・ランキングがある',
-      cards.every(c => c.buttons.some(t => t.includes('ルール詳細')) && c.buttons.some(t => t.includes('全WAVE詳細'))
-        && c.buttons.some(t => t.includes('この難易度で挑戦')) && c.buttons.some(t => t.includes('ランキング'))));
+    // 未解放のカードは中身を「？？？」に伏せ、ルール詳細も押せない仕様。
+    // ボタンの有無ではなく「ルール詳細を押せるか」で解放済みを見分ける
+    const unlockedCards = cards.filter(c => c.detailDisabled === false);
+    check('解放済みのカードにルール詳細・全WAVE詳細・挑戦・ランキングがある',
+      unlockedCards.length >= 5 && unlockedCards.every(c => c.buttons.some(t => t.includes('ルール詳細')) && c.buttons.some(t => t.includes('全WAVE詳細'))
+        && c.buttons.some(t => t.includes('この難易度で挑戦')) && c.buttons.some(t => t.includes('ランキング'))),
+      unlockedCards.map(c => c.id).join(', '));
     check('カードには特殊ルールの本文を並べず、あることだけを出す',
-      cards.every(c => /特殊ルールあり/.test(c.ruleSummary))
+      unlockedCards.every(c => /特殊ルールあり/.test(c.ruleSummary))
       && cards.find(c => c.id === 'INFINITY')?.ruleSummary.includes('複合特殊ルールあり')
       && cards.every(c => !c.text.includes('累計Tごと') && !c.text.includes('経過Tごと')),
       cards.find(c => c.id === 'INFINITY')?.ruleSummary);

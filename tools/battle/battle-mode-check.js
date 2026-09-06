@@ -45,7 +45,7 @@ vm.runInContext([
   + 'waveXpGain,waveGoldGain,xpForWavesCleared,goldForWavesCleared,xpForWavesClearedInMode,goldForWavesClearedInMode,'
   + 'bondXpForWavesClearedInMode,waveBondXpGainInMode,'
   + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,highestModeScore,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
-  + 'PRO_RANKING_PREFIX,EXTREME_RANKING_PREFIX,EXTREME_DIFFICULTIES,RANKING_DIFFICULTY_KEYS,rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,'
+  + 'PRO_RANKING_PREFIX,EXTREME_RANKING_PREFIX,EXTREME_DIFFICULTIES,ALL_EXTREME_DIFFICULTIES,RANKING_DIFFICULTY_KEYS,rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,'
   + 'pickJoinCandidates,battleModeAssistantScene,'
   + 'calculateRemainingHp,resolveEffectiveMaxStat,quickGrowStat,resolveQuickGrowthStats};',
 ].join('\n'), ctx);
@@ -200,7 +200,7 @@ check('素の難易度へ戻せる',
 check('知らない難易度は今までどおり弾く', (() => { try { m.normalizeRankingDifficulty('Pro'); return false; } catch { return true; } })());
 // チャレンジ9 + プロ9 + 極限の段階ぶん。重複が無いこと(同じ行を2モードで奪い合わない)を見る
 check('難易度キーの一覧に重複が無い', new Set(m.RANKING_DIFFICULTY_KEYS).size === m.RANKING_DIFFICULTY_KEYS.length
-  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2 + m.EXTREME_DIFFICULTIES.length);
+  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2 + m.ALL_EXTREME_DIFFICULTIES.length);
 // 既存のランキングデータは1行も書き換えない(移行・変換・削除をしない)
 check('既存のランキング行を書き換える処理を足していない',
   !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source) && !has('PATCH') && !has('DELETE FROM') && !has('migrateRanking'));

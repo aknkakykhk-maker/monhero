@@ -50,7 +50,7 @@ const battleStatusAt=source.indexOf('data-ultimate-battle-status={statusRule}');
 assert(battleStatusAt>0,'battle status bar must be keyed by the run rule difficulty');
 const battleStatus=source.slice(battleStatusAt-1200,battleStatusAt+1200);
 assert(battleStatus.includes('ultimateEnemyTurnMultiplier(totalTurnCount,statusRule)')&&!battleStatus.includes('ultimateEnemyTurnMultiplier(elapsedTotalTurns'),'enemy status must use the WAVE-start total turn count');
-assert(battleStatus.includes('ultimateDamageTurnMultiplier(elapsedTotalTurns,statusRule)')&&battleStatus.includes('WAVE開始時 累計{totalTurnCount}T')&&battleStatus.includes('現在 累計{elapsedTotalTurns}T'),'damage status must use elapsed turns and label both turn-count bases');
+assert(battleStatus.includes('extremeDamageTurnMultiplier(elapsedTotalTurns,statusRule,wave)')&&battleStatus.includes('WAVE開始時 累計{totalTurnCount}T')&&battleStatus.includes('現在 累計{elapsedTotalTurns}T'),'damage status must use elapsed turns and label both turn-count bases');
 assert(source.includes('const ultimateAllyJoinMultiplier = (turns, specialDifficulty=ULTIMATE_SETTING.id) =>')&&source.includes('ultimateAllyJoinMultiplier(totalTurns,joinRule)')&&source.includes('precisePercent(multiplier)')&&source.includes('precisePercent(1-multiplier)'),'ally join status must show the shared multiplier at 0.75-point precision');
 assert(!source.includes('applyAllyJoinBonus(100,ULTIMATE_SETTING.id,totalTurns)'),'ally join percentage display must not round through integer battle calculation');
 assert(source.includes('DISTANCE BREAK OVERWRITE')&&source.includes("distanceBreakLevel===1?'⚠':'☠'")&&source.includes('data-distance-break-level'),'level presentation and overwrite reveal must exist');

@@ -7,6 +7,13 @@
 // 出しているので、①解放/ロックの出し分け ②EXTREMEを押してバトルが始まる
 // ③敵の強さが×13 ④通常難易度の敵が壊れていない、を実際に遊んで確かめる。
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
+// 難易度の並びは実装(EXTREME_DIFFICULTIES 〜 ALL_EXTREME_DIFFICULTIES)から読む。
+// 検査へ書き写すと、難易度を足すたびに検査だけが古くなる
+const source = fs.readFileSync(path.resolve(__dirname, '../..', 'monster-hero/src/game-system.jsx'), 'utf8');
+const PUBLIC_EXTREME_IDS = ((source.match(/const EXTREME_DIFFICULTIES = Object\.freeze\(\[[\s\S]*?const ALL_EXTREME_DIFFICULTIES = [^\n]+/) || [''])[0]
+  .match(/\{ id:'([A-Z]+)'[^\n]*available:true/g) || []).map(text => text.match(/id:'([A-Z]+)'/)[1]);
 
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 const results = [];
@@ -151,7 +158,7 @@ const extremeCardInfo = () => {
       label: a.querySelector('h3')?.textContent.trim(),
       locked: a.textContent.includes('？？？'),
     })));
-    check('難易度の並びが仕様どおり', tiers.map(t => t.label).join(',') === 'EXTREME,NIGHTMARE,CHAOS,ULTIMATE,INFINITY', tiers.map(t => t.label).join(','));
+    check('難易度の並びが仕様どおり', tiers.map(t => t.label).join(',') === PUBLIC_EXTREME_IDS.join(','), `${tiers.map(t => t.label).join(',')}（期待 ${PUBLIC_EXTREME_IDS.join(',')}）`);
     check('NIGHTMARE以降は？？？表示', tiers.slice(1).every(t => t.locked) && !tiers[0].locked);
 
     // EXTREMEも通常チャレンジと同じ全WAVE詳細を使い、実戦の×13で表示する

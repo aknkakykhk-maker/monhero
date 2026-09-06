@@ -358,7 +358,11 @@ const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3];
 const INFINITY_SETTING = EXTREME_DIFFICULTIES[4];
 // GODは極限チャレンジの正式な最上位難易度。バトルデバッグも同じ定義を参照する。
 const GOD_SETTING = Object.freeze({ id:'GOD', label:'GOD', japanese:'ゴッド', available:true, debugAvailable:true, power:100, score:20, xp:60, gold:40, psyche:100, waveCount:10, unlockRequirement:'INFINITY', rankingId:'ExtremeGOD', recordId:'GOD', description:'神威が2WAVEごとに上昇し、既存の極限統合ルールが段階的に苛烈になる最上位難易度。', cardDescription:'2WAVEごとに神威が上昇。累計ターン圧と20TごとのDISTANCE BREAKを受ける。', specialRules:Object.freeze({ assistCardEffect:0.5, positiveModifier:0.5, negativeModifier:2.0, distanceEnhancement:0.5, gutsCost:1.5, enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, minimumAllyJoinBonus:0.10, damageTurnRate:0.0125, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningZeroTurns:20, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:20, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) });
-const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING]);
+// RAGNAROKはGODの次の極限難易度。黄昏が2WAVEごとに深まり、W5とW10のボスは倒しても起き上がる。
+// 「不死(revival)」は数値ではなく形のあるルールなので、他の倍率と同じく specialRules へ持たせ、
+// バトル側は難易度名ではなく「そのルールを持っているか」だけを見る(難易度を足しても分岐が増えない)。
+const RAGNAROK_SETTING = Object.freeze({ id:'RAGNAROK', label:'RAGNAROK', japanese:'ラグナロク', available:true, debugAvailable:true, power:200, score:20, xp:80, gold:60, psyche:130, waveCount:10, unlockRequirement:'GOD', rankingId:'ExtremeRAGNAROK', recordId:'RAGNAROK', description:'黄昏が2WAVEごとに深まり、WAVE5とWAVE10のボスは倒しても起き上がる、極限チャレンジの最終難易度。', cardDescription:'2WAVEごとに黄昏が深まる。ボスは死者の再起で蘇り、15TごとのDISTANCE BREAKに安全距離はない。', specialRules:Object.freeze({ assistCardEffect:0.35, positiveModifier:0.35, negativeModifier:2.5, distanceEnhancement:0.35, gutsCost:1.75, enemyTurnRate:0.01, allyJoinPenaltyRate:0.01, minimumAllyJoinBonus:0.05, damageTurnRate:0.015, minimumDamageDealt:0.20, awakeningPenaltyRate:0.0075, awakeningZeroTurns:15, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:15, damageDealtPerLevel:0.5, safeDistanceCount:0, persistsForRun:true }), revival:Object.freeze({ waves:Object.freeze({ 5:1, 10:2 }), hpRate:0.5, atkBoostPerRevival:0.5 }) }) });
+const ALL_EXTREME_DIFFICULTIES = Object.freeze([...EXTREME_DIFFICULTIES,GOD_SETTING,RAGNAROK_SETTING]);
 // 極限チャレンジの難易度カラー。カード構造は共通のまま、上位ほど発光を少しずつ強める。
 // 常時アニメーションは使わず、iPhone縦画面でも視認性と軽さを優先する。
 const EXTREME_DIFFICULTY_THEMES = Object.freeze({
@@ -368,10 +372,15 @@ const EXTREME_DIFFICULTY_THEMES = Object.freeze({
   ULTIMATE:Object.freeze({accent:'#fdba74',rgb:'249,115,22',background:'linear-gradient(180deg,#3b1a0a,#1e0d08)',action:'linear-gradient(135deg,#c2410c,#f97316)',actionText:'#ffffff',glow:0.38,titleGlow:0.52,actionGlow:0.36,shadowBlur:34}),
   INFINITY:Object.freeze({accent:'#93c5fd',rgb:'59,130,246',background:'linear-gradient(180deg,#11224d,#09112c)',action:'linear-gradient(135deg,#1d4ed8,#3b82f6)',actionText:'#ffffff',glow:0.42,titleGlow:0.56,actionGlow:0.40,shadowBlur:36}),
   GOD:Object.freeze({accent:'#fde68a',rgb:'245,158,11',background:'linear-gradient(180deg,#3b2b08,#181106)',action:'linear-gradient(135deg,#a16207,#f59e0b)',actionText:'#1c1917',glow:0.48,titleGlow:0.66,actionGlow:0.48,shadowBlur:40}),
+  // 金(GOD)の上は色を足すのではなく抜く。白銀に蒼い縁を残した「黄昏」の色にして、最上位だと一目で分かるようにする
+  RAGNAROK:Object.freeze({accent:'#e2e8f0',rgb:'148,163,184',background:'linear-gradient(180deg,#1c2333,#080b12)',action:'linear-gradient(135deg,#475569,#cbd5e1)',actionText:'#0f172a',glow:0.54,titleGlow:0.74,actionGlow:0.54,shadowBlur:44}),
 });
 const extremeDifficultyTheme = (difficultyId) => EXTREME_DIFFICULTY_THEMES[difficultyId] || EXTREME_DIFFICULTY_THEMES.EXTREME;
 const PUBLIC_EXTREME_DIFFICULTIES = Object.freeze(ALL_EXTREME_DIFFICULTIES.filter(setting=>setting.available));
-const godDivinityLevel = (waveNumber) => Math.max(1,Math.min(5,Math.floor((Math.max(1,Number(waveNumber)||1)-1)/2)+1));
+// 2WAVEごとに1段上がる段階(Lv1〜5)。GODの「神威」もRAGNAROKの「黄昏」も刻み方は同じで、
+// 段ごとに何を締めるかだけが違う。刻み方をここへ1つだけ置き、難易度側は中身の表だけを持つ。
+const extremeWaveStageLevel = (waveNumber) => Math.max(1,Math.min(5,Math.floor((Math.max(1,Number(waveNumber)||1)-1)/2)+1));
+const godDivinityLevel = (waveNumber) => extremeWaveStageLevel(waveNumber);
 const godDivinityRules = (waveNumber) => {
   const level=godDivinityLevel(waveNumber);
   return Object.freeze({
@@ -386,6 +395,34 @@ const godDivinityRules = (waveNumber) => {
     safeDistanceCount:level>=5?0:1,
   });
 };
+// RAGNAROKの黄昏。GODの神威と同じ2WAVE刻みで、開始時点の値も各段の締め方も一段きつくする。
+// 安全距離はLv1から0（GODはLv5でようやく0になる）。
+const ragnarokTwilightLevel = (waveNumber) => extremeWaveStageLevel(waveNumber);
+const ragnarokTwilightRules = (waveNumber) => {
+  const level=ragnarokTwilightLevel(waveNumber);
+  return Object.freeze({
+    level,
+    enemyMultiplier:1+level*0.20,
+    gutsCost:level>=3?2.0:1.75,
+    distanceEnhancement:level>=2?0.25:0.35,
+    positiveModifier:level>=4?0.25:0.35,
+    negativeModifier:level>=4?3.0:2.5,
+    damageTurnRate:level>=5?0.0175:0.015,
+    minimumDamageDealt:level>=5?0.15:0.20,
+    safeDistanceCount:0,
+  });
+};
+// 「WAVEで段階が動く難易度」の一覧。ここに1行足せば、実効倍率・与ダメ・BREAK・表示まで
+// すべて同じ経路を通るので、難易度名の分岐を各所へ書き足さなくてよい。
+const EXTREME_WAVE_STAGES = Object.freeze({
+  GOD:Object.freeze({ label:'神威', rules:godDivinityRules }),
+  RAGNAROK:Object.freeze({ label:'黄昏', rules:ragnarokTwilightRules }),
+});
+const extremeWaveStage = (difficultyId) => EXTREME_WAVE_STAGES[difficultyId] || null;
+const extremeWaveStageRules = (difficultyId,waveNumber=1) => extremeWaveStage(difficultyId)?.rules(waveNumber) || null;
+const extremeWaveStageLabel = (difficultyId) => extremeWaveStage(difficultyId)?.label || '';
+// 段階ぶんの敵倍率。段階を持たない難易度では1倍(既存の挙動のまま)。
+const extremeWaveEnemyMultiplier = (difficultyId,waveNumber=1) => extremeWaveStageRules(difficultyId,waveNumber)?.enemyMultiplier ?? 1;
 const extremeRuleSetting = (difficultyId) => ALL_EXTREME_DIFFICULTIES.find(setting=>setting.id===difficultyId)||null;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
@@ -408,7 +445,8 @@ const extremeDifficultySetting = (difficultyId) => extremeRuleSetting(difficulty
 const extremeSpecialRule = (difficultyId, rule) =>
   extremeDifficultySetting(difficultyId)?.specialRules?.[rule] ?? 1;
 const effectiveExtremeSpecialRule = (difficultyId, rule, waveNumber=1) => {
-  if(difficultyId===GOD_SETTING.id && Object.prototype.hasOwnProperty.call(godDivinityRules(waveNumber),rule))return godDivinityRules(waveNumber)[rule];
+  const staged=extremeWaveStageRules(difficultyId,waveNumber);
+  if(staged && Object.prototype.hasOwnProperty.call(staged,rule))return staged[rule];
   return extremeSpecialRule(difficultyId,rule);
 };
 const hasExtremeSpecialRules = (difficultyId) => {
@@ -429,7 +467,36 @@ const extremeDistanceBreakRule = (difficultyId) => {
 };
 const effectiveExtremeDistanceBreakRule = (difficultyId,waveNumber=1) => {
   const rule=extremeDistanceBreakRule(difficultyId);
-  return rule&&difficultyId===GOD_SETTING.id?{...rule,safeDistanceCount:godDivinityRules(waveNumber).safeDistanceCount}:rule;
+  const staged=extremeWaveStageRules(difficultyId,waveNumber);
+  return rule&&staged&&Number.isFinite(staged.safeDistanceCount)?{...rule,safeDistanceCount:staged.safeDistanceCount}:rule;
+};
+// 不死(死者の再起)。倒したWAVEごとに何回まで起き上がるかを持つ難易度だけが対象で、
+// 持たない難易度ではnullが返り、撃破処理はこれまでどおり一度で確定する。
+const extremeRevivalRule = (difficultyId) => {
+  const rule=extremeDifficultySetting(difficultyId)?.specialRules?.revival;
+  return rule && rule.waves && typeof rule.waves === 'object' ? rule : null;
+};
+const extremeRevivalCount = (difficultyId,waveNumber) => {
+  const count=Math.floor(Number(extremeRevivalRule(difficultyId)?.waves?.[Math.floor(Number(waveNumber)||0)]));
+  return Number.isFinite(count) && count>0 ? count : 0;
+};
+// 起き上がったあとのライフと攻撃力。maxHpは変えず、いま何回目の復活かで攻撃力だけを積む。
+// 呼び出し側が渡した usedCount(これまでに使った復活回数)が上限に達していればnull。
+const extremeRevivedEnemyStats = (enemy,difficultyId,waveNumber,usedCount=0) => {
+  const rule=extremeRevivalRule(difficultyId);
+  const used=Math.max(0,Math.floor(Number(usedCount)||0));
+  if(!enemy||!rule||used>=extremeRevivalCount(difficultyId,waveNumber))return null;
+  const maxHp=Math.max(1,Math.floor(Number(enemy.maxHp)||0));
+  const rawHpRate=Number(rule.hpRate);
+  const hpRate=Number.isFinite(rawHpRate)?Math.max(0,Math.min(1,rawHpRate)):0.5;
+  const rawBoost=Number(rule.atkBoostPerRevival);
+  const boost=Number.isFinite(rawBoost)?Math.max(0,rawBoost):0;
+  return {
+    hp:Math.max(1,Math.floor(maxHp*hpRate)),
+    atk:Math.floor(Math.max(0,Number(enemy.atk)||0)*(1+boost)),
+    revivalNumber:used+1,
+    remaining:extremeRevivalCount(difficultyId,waveNumber)-(used+1),
+  };
 };
 // 極限本体だけでなく、同名のクイック極限難易度も同じspecialRulesを参照する。
 // これにより今後の難易度もEXTREME_DIFFICULTIESへ定義を足すだけでクイックへ引き継がれる。
@@ -496,6 +563,14 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     ['敵HP/攻撃','神威Lvごと +15% / +30% / +45% / +60% / +75%'],
     ['Lv5','与ダメ低下 -1.5pt/T・最低20%、次のBREAKから安全距離なし'],
   ]);
+  if(difficultyId===RAGNAROK_SETTING.id)push('黄昏',[
+    ['進行','2WAVEごとにLv上昇（W1-2:Lv1 ～ W9-10:Lv5）'],
+    ['敵HP/攻撃','黄昏Lvごと +20% / +40% / +60% / +80% / +100%'],
+    ['Lv2','距離強化 35%→25%'],
+    ['Lv3','消費ガッツ 175%→200%'],
+    ['Lv4','＋補正 35%→25%・−補正 250%→300%'],
+    ['Lv5','与ダメ低下 -1.75pt/T・最低15%'],
+  ]);
   push('カード',[
     rules.assistCardEffect!=null&&['アシストカード効果',specialRulePercent(rules.assistCardEffect)],
   ]);
@@ -527,7 +602,13 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
   if(breakRule)push('DISTANCE BREAK',[
     ['進行',`累計${breakRule.interval}Tごと1距離の弱体Lv上昇`],
     ['弱体倍率',`Lv1 ${specialRulePercent(breakRule.damageDealtPerLevel)} / Lv2 ${specialRulePercent(breakRule.damageDealtPerLevel**2)} / Lv3 ${compactPercent(breakRule.damageDealtPerLevel**3)}（以降も半減）`],
-    ['安全距離',`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`],
+    ['安全距離',breakRule.safeDistanceCount>0?`${breakRule.safeDistanceCount}距離は最後まで弱体化しない`:'なし（4距離すべて弱体化する）'],
+  ]);
+  const revivalRule=extremeRevivalRule(difficultyId);
+  if(revivalRule)push('不死（死者の再起）',[
+    ['対象',Object.entries(revivalRule.waves).map(([waveNumber,count])=>`WAVE${waveNumber}（${count}回）`).join(' / ')],
+    ['復活時',`ライフ${specialRulePercent(revivalRule.hpRate)}で起き上がる（最大ライフは変わらない）`],
+    ['起き上がるたび',`敵の攻撃力 +${specialRulePercent(revivalRule.atkBoostPerRevival)}`],
   ]);
   return groups;
 };
@@ -546,7 +627,7 @@ const applyNightmareStatGain = (before, normalAfter, specialDifficulty=null) => 
 // INFINITYは距離強化だけを50%にし、通常トレーニングへは重ねないので専用ルールを持つ
 // (ここで分けておかないと、ULTIMATE由来のトレーニング低下と50%が二重に掛かってしまう)。
 const applyDistanceEnhancement = (value, specialDifficulty=null, waveNumber=1) => {
-  const distanceRate=specialDifficulty===GOD_SETTING.id?effectiveExtremeSpecialRule(specialDifficulty,'distanceEnhancement',waveNumber):extremeRuleNumber(specialDifficulty,'distanceEnhancement');
+  const distanceRate=extremeWaveStage(specialDifficulty)?effectiveExtremeSpecialRule(specialDifficulty,'distanceEnhancement',waveNumber):extremeRuleNumber(specialDifficulty,'distanceEnhancement');
   return distanceRate!=null ? value*distanceRate : applyNightmareWaveEnhancement(value,specialDifficulty);
 };
 const ultimateEnemyTurnMultiplier = (turns, specialDifficulty=ULTIMATE_SETTING.id) => {
@@ -584,12 +665,15 @@ const ultimateDamageTurnMultiplier = (turns, specialDifficulty=null) => {
   if(rate==null)return 1;
   return Math.max(extremeRuleNumber(specialDifficulty,'minimumDamageDealt')??0,1-Math.max(0,Number(turns)||0)*rate);
 };
-const godDamageTurnMultiplier = (turns,waveNumber) => Math.max(
-  godDivinityRules(waveNumber).minimumDamageDealt,
-  1-Math.max(0,Number(turns)||0)*godDivinityRules(waveNumber).damageTurnRate
-);
-const extremeDamageTurnMultiplier = (turns,specialDifficulty=null,waveNumber=1) => specialDifficulty===GOD_SETTING.id
-  ? godDamageTurnMultiplier(turns,waveNumber) : ultimateDamageTurnMultiplier(turns,specialDifficulty);
+// 段階を持つ難易度は、その難易度・そのWAVEの段階が持つ低下率と下限を使う。
+const extremeStagedDamageTurnMultiplier = (turns,difficultyId,waveNumber) => {
+  const staged=extremeWaveStageRules(difficultyId,waveNumber);
+  if(!staged)return 1;
+  return Math.max(staged.minimumDamageDealt,1-Math.max(0,Number(turns)||0)*staged.damageTurnRate);
+};
+const godDamageTurnMultiplier = (turns,waveNumber) => extremeStagedDamageTurnMultiplier(turns,GOD_SETTING.id,waveNumber);
+const extremeDamageTurnMultiplier = (turns,specialDifficulty=null,waveNumber=1) => extremeWaveStage(specialDifficulty)
+  ? extremeStagedDamageTurnMultiplier(turns,specialDifficulty,waveNumber) : ultimateDamageTurnMultiplier(turns,specialDifficulty);
 const extremeSpecialDamageMultiplier = (turns,slotIndex,breakLevels,specialDifficulty=null,waveNumber=1,cardType=null) => {
   const turnMultiplier=extremeDamageTurnMultiplier(turns,specialDifficulty,waveNumber);
   const breakRule=effectiveExtremeDistanceBreakRule(specialDifficulty,waveNumber);
@@ -598,8 +682,12 @@ const extremeSpecialDamageMultiplier = (turns,slotIndex,breakLevels,specialDiffi
   const breakMultiplier=breakRule&&isMonsterAttack&&level>0?breakRule.damageDealtPerLevel**level:1;
   return turnMultiplier*breakMultiplier;
 };
+// 段階を持つ難易度の与ダメージ。倍率をすべて掛け合わせてから1回だけ切り捨てる
+// (途中でfloorすると、段階とBREAKが重なったときに丸め落ちが二重に効いてしまう)。
+const applyExtremeStagedDamage = (damage,turns,slotIndex,breakLevels,difficultyId,waveNumber,cardType=null) =>
+  Math.floor((Number(damage)||0)*extremeSpecialDamageMultiplier(turns,slotIndex,breakLevels,difficultyId,waveNumber,cardType));
 const applyGodSpecialDamage = (damage,turns,slotIndex,breakLevels,waveNumber,cardType=null) =>
-  Math.floor((Number(damage)||0)*extremeSpecialDamageMultiplier(turns,slotIndex,breakLevels,GOD_SETTING.id,waveNumber,cardType));
+  applyExtremeStagedDamage(damage,turns,slotIndex,breakLevels,GOD_SETTING.id,waveNumber,cardType);
 const ultimateAllyJoinMultiplier = (turns, specialDifficulty=ULTIMATE_SETTING.id) => {
   const rate=extremeRuleNumber(specialDifficulty,'allyJoinPenaltyRate');
   if(rate==null)return 1;
@@ -730,6 +818,7 @@ const isChaosUnlocked = (nightmareClearCount) => (Number(nightmareClearCount) ||
 const isUltimateUnlocked = (chaosClearCount) => (Number(chaosClearCount) || 0) > 0;
 const isInfinityUnlocked = (ultimateClearCount) => (Number(ultimateClearCount) || 0) > 0;
 const isGodUnlocked = (infinityClearCount) => (Number(infinityClearCount) || 0) > 0;
+const isRagnarokUnlocked = (godClearCount) => (Number(godClearCount) || 0) > 0;
 const normalizeBattleDifficulty = (value) => quickDifficultySetting(value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';

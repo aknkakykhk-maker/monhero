@@ -50,7 +50,11 @@ vm.createContext(context);
 {
   const extremeStart = source.indexOf('const EXTREME_DIFFICULTIES = Object.freeze([');
   const extremeEnd = source.indexOf(']);', extremeStart) + 3;
-  vm.runInContext(source.slice(extremeStart, extremeEnd) + '\n' + source.match(/const GOD_SETTING = [^\n]+\n/)[0] + source.match(/const ALL_EXTREME_DIFFICULTIES = [^\n]+\n/)[0], context);
+  // EXTREME_DIFFICULTIES の外で1行定義される難易度(GOD・RAGNAROK…)もランキングの難易度キーに入る。
+  // 難易度が増えるたびに検査へ名前を書き足さなくてよいよう、1行定義をまとめて取り込む
+  const extraSettingLines = (source.slice(extremeEnd, source.indexOf('const ALL_EXTREME_DIFFICULTIES'))
+    .match(/^const [A-Z_]+_SETTING = Object\.freeze\(\{.*\}\);$/gm) || []).join('\n');
+  vm.runInContext(source.slice(extremeStart, extremeEnd) + '\n' + extraSettingLines + '\n' + source.match(/const ALL_EXTREME_DIFFICULTIES = [^\n]+\n/)[0], context);
 }
 vm.runInContext(source.slice(start, end) + '\nthis.api={normalizeRankingDifficulty,sbFetchRankings,sbInsertScore,beginNewRankingRun};', context);
 
