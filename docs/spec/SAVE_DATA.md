@@ -70,6 +70,59 @@
 }
 ```
 
+## 2.5 そのほかのキー(設定・既読・記録・音ゲー)
+
+第2章の表に載っていなかったキー。いずれも `storeGet` / `storeSet` 経由(例外は明記)。一覧は `node tools/boot/save-keys-check.js` が
+コード中の文字列と突き合わせるので、キーを足したらここへも 1 行足す。
+
+| キー | 値・既定値 | 用途 |
+| --- | --- | --- |
+| `mh_audio_muted` | boolean / `false` | ミュート状態 |
+| `mh_battle_speed_v1` | string | バトル速度(`normalizeBattleSpeed` で既定へ) |
+| `mh_login_bonus` | object / `LOGIN_BONUS_DEFAULT` | ログインボーナスの受取状況(期間キーと日数) |
+| `mh_playtime_v1` | object | プレイ時間の累計と日別(`normalizePlaytime`) |
+| `mh_player_id` | string | ランキング送信に使う端末ID。`localStorage` 直接アクセス(`storeGet` を通さない) |
+| `mh_ranking_cache` | object | 全国ランキングの取得結果の控え(表示用。無くても取り直す) |
+| `mh_pro_last_party` | object / `EMPTY_PRO_LAST_PARTY` | プロモードで最後に使った編成(`normalizeProLastParty`) |
+| `mh_home_pasture_ids` | string[] / `[]` | HOME の牧場に出すマスモンの個体ID(`normalizeHomePastureIds`) |
+| `mh_monster_roster_sets_v1` | object | 編成セット(`normalizeMonsterPartySets`)。`mh_monster_roster` は現在のセットの写し |
+| `mh_monster_list_settings` | object / `DEFAULT_MONSTER_LIST_SETTINGS` | マスモン一覧の並び・絞り込み |
+| `mh_fusion_sort_settings` | object / `DEFAULT_FUSION_SORT_SETTINGS` | 合体画面の並び |
+| `mh_donation_sort_settings` | object / `DEFAULT_DONATION_SORT_SETTINGS` | 寄付画面の並び |
+| `mh_temple_regeneration_used_v1` | boolean / `false` | 神殿の再生を一度でも使ったか |
+| `mh_onboarding_step` | string or null | はじめての設定の途中段階(完了で `null`) |
+| `mh_tutorial_seen_v1` | boolean / `false` | 村の案内(チュートリアル)を見たか |
+| `mh_battle_tutorial_seen_v1` | boolean / `false` | バトルのれんしゅうを見たか |
+| `mh_battle_tutorial_guide_shown_v1` | boolean / `false` | バトルのれんしゅうへの誘導を出したか |
+| `mh_rhythm_tutorial_seen_v1` | boolean / `false` | モンビーの練習を見たか |
+| `mh_daily_masu_advice_date_v1` | string | 助手の「今日のマスモン助言」を出した日 |
+| `mh_seen_update_notices_v1` | string[] / `[]` | 助手の更新告知の既読ID(`normalizeSeenUpdateNoticeIds`) |
+| `mh_changelog_seen_ids_<種別>` | string[] | 更新履歴タブごとの既読エントリID(旧 `mh_changelog_seen_<種別>` の日時からは起動時に一度だけ移す) |
+| `mh_assistant_selected_v1` | string / 既定の助手 | 選んでいる助手(`normalizeAssistantId`) |
+| `mh_assistant_bond_v1` / `mh_assistant_bond_<id>_v1` | object / `ASSISTANT_BOND_EMPTY` | 助手ごとの親密度。みゅあは無印、ほかの助手は `<id>` 付き(`assistantBondKeyFor`) |
+| `mh_assistant_call_style` / `mh_assistant_call_style_<id>` | string | 助手の呼び方(さん付けなど)。みゅあは無印(`assistantCallStyleKeyFor`) |
+| `mh_assistant_unlock_seen_v1` | object / `{}` | 助手の解放告知を見たか(`data/assistants.js` の `normalizeAssistantUnlockSeen`) |
+| `mh_extreme_hs_<難易度>` / `mh_extreme_clears_<難易度>` | number / `0` | 極限チャレンジ(`EXTREME` `NIGHTMARE` `CHAOS` `ULTIMATE` `INFINITY` `GOD`)のハイスコアと完走回数 |
+| `mh_rhythm_settings_v1` | object / `DEFAULT_RHYTHM_SETTINGS` | モンビーの演奏設定(`normalizeRhythmSettings`) |
+| `mh_rhythm_select_v1` | object / `DEFAULT_RHYTHM_SELECT_VIEW` | 曲えらび画面の見え方(並び順など) |
+| `mh_rhythm_best_v1` | object | 曲×難易度ごとの BEST(`normalizeRhythmBestRecords`) |
+| `mh_rhythm_monsters_v1` | string[] | モンスターノーツ用のマスモン枠(`data/rhythm-mode.js`) |
+| `mh_rhythm_rank_pending_v1` | object[] | 全国ランキングへ送れなかったモンビーの記録(次回に再送) |
+| `mh_rhythm_perf_v1` | boolean / `false` | 性能計測(デバッグ限定)の ON/OFF |
+| `mh_ranking_debug` | `'1'` のとき有効 | ランキングの詳細ログ(手で `localStorage` に入れるデバッグ用。ゲームは書かない) |
+
+移行・補償のフラグ(第3章の表に載っていないもの):
+
+| キー | 処理 |
+| --- | --- |
+| `mh_masu_level_cap_migrated_v1` / `mh_masu_level_cap_migration_pending_v1` | 限界突破の上限Lv形式への一度きり移行と、その途中経過(中断しても続きから) |
+| `mh_masu_level_cap_compensation_notice_v1` / `mh_masu_level_cap_compensation_notice_seen_v1` | 上記移行で配ったダイヤの補償の案内と、その既読 |
+| `mh_inherited_unique_level_compensation_v1` / `mh_inherited_unique_level_compensation_pending_v1` | 継承固有技Lvの補償を一度だけ行うフラグと、その途中経過 |
+| `mh_unique_lineage_dedupe_migrated_v1` | 継承固有技の系統IDの重複を一度だけ整理した記録 |
+| `mh_monster_roster_sets_migrated_v1` | 編成セット形式への一度きり移行 |
+| `mh_login_pt_to_xp_v1` | 誤って配ったログインポイントを XP へ一度だけ振り替えた記録 |
+| `mh_bgm_dullahan_default_migrated_v1` / `mh_bgm_quick_extreme_default_migrated_v1` | BGM の既定曲を変えたときの一度きりの入れ替え(自分で選んだ曲には触らない) |
+
 ## 3. マイグレーション・補正フラグ
 
 | キー | 処理 |

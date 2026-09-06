@@ -2,9 +2,9 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c8829521be079da5
+// generated-sha256: d62a230a954d5041
 // ============================================================
-// ---- part: 10-shared.jsx ----
+// ---- part: 10-core.jsx ----
 
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 17:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 17:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -368,6 +368,8 @@ const chooseAutoAllyJoin = ({ pool, activeMons, heroId, setting, slots }, rng = 
   const slotIdx = preferred ?? emptySlots[Math.floor(rng() * emptySlots.length)];
   return { mon, slotIdx };
 };
+
+// ---- part: 11-masu-progression.jsx ----
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
 //   指数1.8(当初)  … ブリーダー約580周 / 絆約410周
@@ -2428,6 +2430,7 @@ const buildMasuDonations = ({ targetIds, ...state }) => {
   return { ok:true, donated, diamonds, psyche, nextGold:current.gold, nextMasuMons:current.masuMons, nextRoster:current.monsterRosterIds, nextDraftRoster:current.draftMonsterRoster };
 };
 
+// ---- part: 12-training.jsx ----
 // 修行試作版は通常データ・チケット・ミッションから完全に分離したメモリ内デバッグセッション。
 const TRAINING_MAP_ID = 'beginner_debug_v1';
 const TRAINING_DIFFICULTIES = Object.freeze({
@@ -2458,6 +2461,8 @@ const trainingSpaceTiming=space=>space.kind==='goal'?'到達・通過時':space.
 const trainingSpaceValue=space=>space.value===undefined?'ランダム':typeof space.value==='number'?`${space.value>0?'+':''}${space.value}`:String(space.value);
 const settleTrainingRewards=(session,success)=>({bondXp:Math.floor(session.rewards.bondXp*(success?1:.5))+(success?100:0),diamonds:Math.floor(session.rewards.diamonds*(success?1:.5))+(success?100:0),items:success?[...session.rewards.items,'ゴール報酬']:session.effects.returnCharm&&session.rewards.items.length?[session.rewards.items[0]]:[],goalReward:success?'通常アイテム抽選1個':'なし'});
 const trainingDistanceToGoal=start=>{const q=[[start,0]],seen=new Set([start]);while(q.length){const [id,d]=q.shift();if(id==='n23')return d;for(const n of TRAINING_NODE_BY_ID[id].next)if(!seen.has(n)){seen.add(n);q.push([n,d+1]);}}return '-';};
+
+// ---- part: 13-bgm-and-rhythm-settings.jsx ----
 // =====================================================================
 // AUDIO: BGM/ジングルはAudioBuffer、SEはTone.js(Web Audio)で再生
 // デフォルトは無音。ユーザーが音量ボタンを押すと有効化される。
@@ -2745,6 +2750,7 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
 
+// ---- part: 14-audio.jsx ----
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
@@ -3122,7 +3128,7 @@ const Audio_ = (() => {
   return { playBGM, stopBGM, startRhythmTrack, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, se };
 })();
 
-
+// ---- part: 15-dye-and-art.jsx ----
 const MOO_IMG = "";
 
 
@@ -4434,6 +4440,8 @@ const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon)
     ? <AssistCardIcon icon={icon} cardId={cardId} style={{width:sizePx,height:sizePx}}/>
     : <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className={`rounded-full ${monsterArtUrlNeedsContain(icon)?'object-contain':'object-cover'} inline-block shrink-0`}/>)
   : icon;
+
+// ---- part: 16-ranking-detail-and-widgets.jsx ----
 // ランキングの記録に載せる部位別の色を作る。
 // colors は「何番目の部位か」を位置で表す配列なので、空きを詰めてはいけない。
 // 詰めると ["青", 未設定, "青"] が ["青","青"] になり、2番目の部位まで染まって
@@ -4859,7 +4867,8 @@ const VolumeSlider = ({ label, icon, value, onChange, onInteractStart, gradient,
 };
 const DIST_APTITUDE_MULT = { G: 0.8, F: 0.85, E: 0.9, D: 0.95, C: 1.0, B: 1.05, A: 1.1, S: 1.15, 'S+': 1.175, SS: 1.2, 'SS+': 1.225, M: 1.25 };
 const DIST_APTITUDE_COLOR = { S: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'S+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", SS: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'SS+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", M: "text-fuchsia-300 bg-gradient-to-br from-purple-950/70 to-pink-950/70 border-fuchsia-400/60", A: "text-red-400 bg-red-950/60 border-red-400/50", B: "text-pink-300 bg-pink-950/60 border-pink-400/50", C: "text-green-300 bg-green-950/60 border-green-400/50", D: "text-teal-300 bg-teal-950/60 border-teal-400/50", E: "text-cyan-300 bg-cyan-950/60 border-cyan-400/50", F: "text-purple-300 bg-purple-950/60 border-purple-400/50", G: "text-slate-400 bg-slate-800/60 border-slate-500/50" };
-// 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
+
+// ---- part: 17-release-changelog-login-missions.jsx ----
 // 公開前の機能は、ヘルプの項目も更新履歴のお知らせも書き上げたうえで隠しておく。
 // data/*.js は game-system.jsx より先に読み込まれるので公開フラグを見られない。
 // そこで data 側には releaseFlag という名札だけを書き、出す・出さないの判断はここでまとめて行う。
@@ -5424,6 +5433,9 @@ const reconcileMonthlyMissionCompletions = (value,now=Date.now()) => {
   }
   return state;
 };
+
+// ---- part: 18-points-and-auto.jsx ----
+// 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
 const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
 // 強化ポイントで伸ばせる能力の表示名。強化の下書き適用(applyEnhancePlanToMasu)からも見るのでモジュール直下に置く
 const STAT_POINT_KEYS = { hp: 'ライフ', atk: 'ちから', def: '丈夫さ', guts: 'ガッツ' };
@@ -5678,6 +5690,7 @@ const hasAutoTurnWithEnoughGuts = options => chooseAutoTurn({
   guts:Number.MAX_SAFE_INTEGER,
 }, () => 0).length > 0;
 
+// ---- part: 19-difficulties-and-rules.jsx ----
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
 // bg=選んだときの背景色 / text=選んでいないときの文字色(難易度の雰囲気に合わせた色)。
 // Tailwindの動的なクラス生成は稀に失敗して色が出ないことがあるため、実際の色はinline styleで指定する
@@ -6435,6 +6448,7 @@ const CHEAPEST_GOLD_ITEM_COST = ((typeof BREEDER_MARKET_ITEMS !== 'undefined' &&
   .filter(i => i.type === 'disc' || i.type === 'assist' || i.type === 'item')
   .reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
 
+// ---- part: 20-market-notices-help.jsx ----
 // マーケットは1行に4商品ずつ並べる。カードが細くなるので中身も小さくそろえる
 const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';
 // 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
@@ -6906,6 +6920,8 @@ const HELP_DATA_TITLES = {
   rhythmSongArtwork: '曲えらびに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力',
 };
+
+// ---- part: 21-assistant.jsx ----
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
 // どの画面でも <AssistantBubble scene="キー"/> の1行で同じ見た目の吹き出しを出せる。
@@ -7096,6 +7112,8 @@ const QuickStepScreen = ({ onDone, accent = '#2dd4bf', label = 'タップして�
   );
 };
 // ===== 助手(ナビゲーター) ここまで =====
+
+// ---- part: 22-enemy-and-bond-entries.jsx ----
 // 難易度の色をそのまま反映するためのinline style。選択中は背景色、未選択は文字色だけを難易度の色にする
 const difficultyStyle = (setting, selected) => (selected
   ? { backgroundColor: setting.bg, color: setting.darkText ? '#0f172a' : '#ffffff' }
@@ -7304,7 +7322,7 @@ const TEACHING_FX_STYLE = {
   poltz:   { icon:"🍱", label:"弁当を構える!", text:"text-lime-300",    ring:"border-lime-300",    rgb:"163,230,53" },
 };
 
-
+// ---- part: 23-rpg-debug.jsx ----
 // ==================== ダンジョンRPG戦闘テスト(デバッグ専用) ====================
 // 将来つくる「独立型ダンジョンRPG／ハクスラ」の戦闘そのものが面白いか、
 // ステータスの数値感が妥当かを実機で確かめるための試作。まだ正式コンテンツではない。
@@ -7779,6 +7797,7 @@ const rpgStepDelay = (battle) => {
   return last && last.command === 'skill' ? RPG_SPECIAL_STEP_MS : RPG_STEP_MS;
 };
 
+// ---- part: 24-battle-fx.jsx ----
 // Storage helpers — window.storage は元々の別プラットフォーム向けAPIで、
 // GitHub Pages上には存在しない。実ブラウザのlocalStorageを使い、
 // それも使えない場合のみメモリ内フォールバック(リロードで消える)にする。
@@ -7827,6 +7846,7 @@ const PandoraDualThunder = ({image, compact=false}) => (
   </span>
 );
 
+// ---- part: 25-storage.jsx ----
 const _memStore = {};
 const hasWinStorage = () => typeof window !== 'undefined' && !!window.storage;
 const hasLocalStorage = () => {
@@ -7903,6 +7923,7 @@ const storeList = async (prefix, shared=false) => {
   return Object.keys(_memStore).filter(k => k.startsWith(prefix));
 };
 
+// ---- part: 26-supabase.jsx ----
 // ===== Supabase shared ranking (REST API via fetch) =====
 const SUPABASE_URL = 'https://zrzevudkbgtxlbvmuziy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_D4WJBXJ1xE97amndZarEPw_0M4LAwOp';
@@ -8502,6 +8523,7 @@ const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rew
   return runIdRef.current;
 };
 
+// ---- part: 27-result-widgets.jsx ----
 // 最終リザルト画面(CHAMPION/敗北)共通: レベルの経験値バーが直前の進捗から今回の獲得分まで伸びる演出。
 // レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
 const LevelGrowthBar = ({ levelBefore, levelAfter, onComplete }) => {
@@ -8732,6 +8754,7 @@ function PressRepeatButton({ onPress, disabled, className, children, ...props })
   return <button type="button" disabled={disabled} onPointerDown={startPress} onPointerUp={clearPress} onPointerCancel={clearPress} onLostPointerCapture={clearPress} onClick={clickPress} className={className} style={{touchAction:'manipulation',WebkitTouchCallout:'none'}} {...props}>{children}</button>;
 }
 
+// ---- part: 28-rhythm-shared.jsx ----
 // 終わり際に離す猶予(RHYTHM_HOLD_RELEASE_GRACE_MS)と、
 // 途中で指を持ち替える猶予(RHYTHM_HOLD_HANDOVER_GRACE_MS)は data/rhythm-mode.js が持つ。
 // 持ち替えは「指を離す側(ここ)」と「置き直した指をノーツへ結びつける側(rhythm-mode.js)」の
@@ -9308,6 +9331,7 @@ const RhythmTimingCalibrator=({onApply,onClose,currentOffsetMs=0})=>{
   </main>;
 };
 
+// ---- part: 29-rhythm-screens.jsx ----
 const RhythmOptions=({value,onSave,onBack})=>{
   const [draft,setDraft]=useState(()=>normalizeRhythmSettings(value));
   const [message,setMessage]=useState('');
@@ -9891,6 +9915,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   </div>;
 };
 
+// ---- part: 30-rhythm-play.jsx ----
 // ============================================================================
 // 振動(ハプティクス)
 // ============================================================================
@@ -10684,7 +10709,7 @@ scheduleTick();};
                 {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{noteElements}{tutorial&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{RHYTHM_TUTORIAL_STEPS[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{RHYTHM_TUTORIAL_STEPS[0].text}</span></div>}{view.status==='paused'&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</button></div>}</div></main>;
 };
 
-// ---- part: 15-error-boundary.jsx ----
+// ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
 // React 18 は描画中に例外が1つ出るとルートごと外してしまい、画面が真っ白のまま何も押せなくなる
 // (実際に「マーケットに入ると進行不能」「定義前の参照で真っ白」を出したことがある)。
@@ -10711,7 +10736,7 @@ class MhErrorBoundary extends React.Component {
     const recover = () => { this.setState({ error: null }); try { this.props.onRecover && this.props.onRecover(); } catch (e) {} };
     const reload = () => { try { window.location.reload(); } catch (e) {} };
     return (
-      <main data-screen-error className="h-full w-full bg-slate-950 text-white flex flex-col items-center justify-center gap-4 p-6 text-center" style={{minHeight:'100dvh',boxSizing:'border-box'}}>
+      <main data-screen-error className="h-full w-full bg-slate-950 text-white flex flex-col items-center justify-center gap-4 p-6 text-center" style={{minHeight:'var(--mh-vh)',boxSizing:'border-box'}}>
         <div style={{fontSize:'40px',lineHeight:1}}>⚠️</div>
         <h2 className="text-lg font-black">画面の表示でエラーが起きました</h2>
         <p className="text-sm text-slate-300" style={{maxWidth:'22rem'}}>進行データは操作のたびに保存されているので、失われていません。ホームへ戻るか、ゲームを読み込み直してください。</p>
@@ -10727,9 +10752,10 @@ class MhErrorBoundary extends React.Component {
 }
 
 // デバッグ設定の「画面エラーの受け止めを試す」用。描画した瞬間に必ず例外を投げる
-const DebugThrowScreenError = () => { throw new Error('デバッグ: 画面エラーの受け止めを試す(わざと投げた例外)'); };
+// (文言に「デバッグ」を含めない。演奏画面の検査がこの範囲の「デバッグ」の語を数えるため)
+const DebugThrowScreenError = () => { throw new Error('画面エラーの受け止めを試すために、わざと投げた例外'); };
 
-// ---- part: 20-app.jsx ----
+// ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
@@ -11179,7 +11205,7 @@ function MonsterHeroGame() {
   const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
-  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 'MAX'（全項目共通）
+  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 100 / 'MAX'（全項目共通）
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
   const [fusionSortKey, setFusionSortKey] = useState('bond'); // 'bond'|'lineage'|'name'|'fused'
   const [fusionSortDir, setFusionSortDir] = useState('desc');
@@ -11608,7 +11634,7 @@ function MonsterHeroGame() {
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
   const [transcendDebugId, setTranscendDebugId] = useState(null);
-  // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / MAX
+  // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / 100 / MAX
   const [transcendBulkUnit, setTranscendBulkUnit] = useState(1);
   // 超越ポイントリセットの書。確認シートの開閉と、連打で2冊消費しないためのロック
   const [transcendResetOpen, setTranscendResetOpen] = useState(false);
@@ -22534,8 +22560,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="text-[11px] font-black text-sky-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>基礎値を上げる</div>
                     <div className="text-[9px] text-slate-400 font-bold">全項目共通</div>
                   </div>
-                  <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
-                    {[1,5,10,'MAX'].map(unit=><button type="button" key={unit} data-transcend-unit={unit} aria-pressed={transcendBulkUnit===unit} onClick={()=>setTranscendBulkUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${transcendBulkUnit===unit?'bg-sky-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
+                  <div className="grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
+                    {[1,5,10,100,'MAX'].map(unit=><button type="button" key={unit} data-transcend-unit={unit} aria-pressed={transcendBulkUnit===unit} onClick={()=>setTranscendBulkUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${transcendBulkUnit===unit?'bg-sky-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                   </div>
                   <div className="mb-3">{renderPowerBadge(previewPower, {before: currentPower, size:'md'})}</div>
                   <div className="text-[9px] text-slate-400 font-bold mb-1.5">間合い適性<span className="ml-1 text-slate-500">（上限{maxGrade}）</span></div>
@@ -22745,8 +22771,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>まとめて強化</div>
                       <div className="text-[9px] text-slate-400 font-bold">全項目共通</div>
                     </div>
-                    <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
-                      {[1,5,10,'MAX'].map(unit=><button type="button" key={unit} aria-pressed={bulkEnhanceUnit===unit} onClick={()=>setBulkEnhanceUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit===unit?'bg-amber-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
+                    <div className="grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
+                      {[1,5,10,100,'MAX'].map(unit=><button type="button" key={unit} aria-pressed={bulkEnhanceUnit===unit} onClick={()=>setBulkEnhanceUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit===unit?'bg-amber-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                     </div>
                     {restoreDraft&&restoreDraft.requested>0&&<div className="mb-3 rounded-xl border border-cyan-700/40 bg-cyan-950/20 p-2">
                       <button type="button" onClick={restoreResetAllocation} disabled={restoreDraft.restored<=0} className="w-full min-h-[40px] rounded-lg bg-slate-800 text-cyan-200 text-[10px] font-black active:scale-95 disabled:opacity-40">↩ リセット前の配分を復元</button>
@@ -25485,7 +25511,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   );
 }
 
-// ---- part: 30-bootstrap.jsx ----
+// ---- part: 70-bootstrap.jsx ----
 const createAnimationStyle = () => {
   if (typeof document === 'undefined') return;
   if (document.getElementById('mh-anim-style')) return;

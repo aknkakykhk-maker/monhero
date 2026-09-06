@@ -112,7 +112,7 @@ const seed = () => {
     check('「ホームへ戻る」で受け止め画面が消える', !after.shown);
     check('HOME に戻っている(設定ボタンが見える)', after.home);
 
-    const fatal = errors.filter(e => !e.includes('デバッグ: 画面エラーの受け止めを試す'));
+    const fatal = errors.filter(e => !e.includes('画面エラーの受け止めを試すために、わざと投げた例外'));
     check('わざと投げた例外以外の致命的な JS エラーが出ていない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
   } catch (e) {
     check('実ブラウザで確認できた', false, String(e && e.message || e));

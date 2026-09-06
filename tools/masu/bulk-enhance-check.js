@@ -125,7 +125,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   check('復元しただけではセーブ値が変わらない', JSON.stringify(await stored()) === JSON.stringify(before));
   await click('配分をすべて取消');
 
-  check('1P・5P・10P・MAXの共通切替がある', await page.locator('[aria-label="振り分け単位"] button').count() === 4);
+  check('1P・5P・10P・100P・MAXの共通切替がある', await page.locator('[aria-label="振り分け単位"] button').count() === 5);
 
   await clickExact('1P'); await clickControl('ライフを増やす');
   allocation = await shownAllocation();
