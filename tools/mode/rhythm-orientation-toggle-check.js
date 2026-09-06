@@ -257,7 +257,7 @@ const makeWorld = ({
     // 端末が既に望みの向きなら、回す必要はない(回すと逆に狂う)
     const w = makeWorld({ hasLock: false, sensor: 'landscape' });
     const how = await w.applyScreenOrientation('landscape');
-    check('端末が既に横なら自前回転はしない', how === 'forced' && w.rotation.get() === 0,
+    check('端末が既に横なら自前回転はせず、そう答える', how === 'already' && w.rotation.get() === 0,
       `how=${how} / angle=${w.rotation.get()}`);
     check('もちろん横のまま', w.orientationIsLandscape() === true);
   }
@@ -325,6 +325,24 @@ const makeWorld = ({
     check('内側の画面で横にしたまま離れたら戻す', leaving.releaseScreenOrientation() === true);
     check('離れたら自前回転も戻る', leaving.rotation.get() === 0);
     check('離れたら縦に見える', leaving.orientationIsLandscape() === false);
+  }
+  {
+    // 【Galaxy Z Fold6の画面写真そのもの】(2026-09-06)
+    // 内側の画面(707×823)で「横」→「縦」と押したときの流れ。
+    //   ① 「横」… lock が断られる → 端末は縦なので絵を90度回す → 案内「絵を横向きにしました」
+    //   ② 「縦」… まず絵の回転を解除する(この時点でもう縦) → lock が断られる
+    //             → 端末は縦＝望みどおりなので**回すものが無い**
+    // ②で「絵のほうを縦向きにしました。本体を縦向きに持ち替えてください」と出ていた。
+    // 回していないうえ、本体はもともと縦なので持ち替える必要も無い。二重に間違っていた。
+    const fold = makeWorld({ screenKind: 'inner', sensor: 'portrait' });
+    const first = await fold.applyScreenOrientation('landscape');
+    check('内側の画面で「横」を押すと絵を回す', first === 'forced' && fold.rotation.active() === true,
+      `how=${first} / angle=${fold.rotation.get()}`);
+    const second = await fold.applyScreenOrientation('portrait');
+    check('続けて「縦」を押すと、回すものが無いので「回した」とは言わない',
+      second === 'already', `how=${second}`);
+    check('そのとき絵の回転も外れている', fold.rotation.get() === 0);
+    check('見た目もちゃんと縦になっている', fold.orientationIsLandscape() === false);
   }
   {
     // いちばん質の悪い形。lock() が受け付けられて type まで「横になった」と言うのに、
@@ -456,11 +474,12 @@ const makeWorld = ({
     /fullscreenchange/.test(logic) && /screenOrientationLockedByUs=false/.test(logic));
   check('端末に頼んで駄目なら自前で回す、の二段構えになっている',
     /if\(await lockScreenOrientation\(target\)\)return 'device';/.test(logic)
-    && /return applyForcedRotation\(wantLandscape\)\?'forced':'';/.test(logic));
+    && logic.includes("const done=applyForcedRotation(wantLandscape);")
+    && logic.includes("return done==='rotated'?'forced':done==='already'?'already':'';"));
   check('端末に頼む前に自前回転をいったん戻す（二重に回さない）',
     /RHYTHM_VIEW_ROTATION\.set\(0\);\s*\n\s*if\(await lockScreenOrientation/.test(logic));
   check('端末が既に望みの向きなら自前では回さない',
-    /if\(deviceIsLandscape\(\)===wantLandscape\)\{RHYTHM_VIEW_ROTATION\.set\(0\);return true;\}/.test(logic));
+    /if\(deviceIsLandscape\(\)===wantLandscape\)\{RHYTHM_VIEW_ROTATION\.set\(0\);return 'already';\}/.test(logic));
   check('本体を持ち替えたら測り直す配線がある',
     logic.includes('forcedRotationWantLandscape') && /orientationchange/.test(logic));
   check('「見えている向き」と「端末の向き」を分けている',
@@ -472,6 +491,12 @@ const makeWorld = ({
   check('いまの向きで文言が入れ替わる',
     /const label=landscape\?'縦画面にする':'横画面にする';/.test(button)
     && /const target=landscape\?'portrait':'landscape';/.test(button));
+  // 2026-09-06・Galaxy Z Fold6の画面写真。案内が「絵のほうを縦向きにしました」と言いながら
+  // 同じ案内の中の状態が「絵の回転 なし」になっていた。回していないのに回したと言い、
+  // しかも本体はもともと縦なのに「縦向きに持ち替えてください」と言っていた。
+  check('回していないときに「回した・持ち替えて」と言わない',
+    /if\(how==='already'\)return;/.test(button)
+    && button.indexOf("if(how==='already')return;") < button.indexOf('代わりに絵のほうを'));
   check('端末ごと回ったときは何も言わない（言うことがない）',
     /if\(how==='device'\)return;/.test(button));
   check('自前で回したときは「本体を持ち替えて」と必ず伝える',

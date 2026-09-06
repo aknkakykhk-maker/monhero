@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b71627a2e4d8f95a
+// source-sha256: f6fab9ea2aa285a6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 299e73553729f3cc
+// generated-sha256: 5bd6eeab781c8798
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 17:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 17:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3562,6 +3562,22 @@ const BGM_TRACKS = [{
   name: '呪われた騎士の時計仕掛け',
   creator: 'オリジナル',
   src: 'audio/bgm-dullahan-clockwork.mp3',
+  gain: 1,
+  loop: true
+},
+// モンビーの新曲2曲(2026-09-06)。mp4で受け取った音源から映像を落として入れたもの
+{
+  id: 'melo_toriko',
+  name: 'トリコ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-toriko.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'melo_4u_hitasura',
+  name: '4U ～ひたすら～',
+  creator: 'オリジナル',
+  src: 'audio/bgm-4u-hitasura.mp3',
   gain: 1,
   loop: true
 }, {
@@ -16114,15 +16130,28 @@ const lockScreenOrientation = async target => {
 // レーン判定もノーツの配置もそのまま正しく動く。
 // いま自前回転で「どちら向きにしたいか」。本体を持ち替えたときに測り直すために覚えておく。
 let forcedRotationWantLandscape = null;
+// 戻り値は「実際に何をしたか」。
+//   'rotated' … 絵を回した(本体は向きが変わっていないので、持ち替えてもらう必要がある)
+//   'already' … 端末がもう望みの向きだったので、何もしていない(言うことは無い)
+//
+// 【なぜ分けるか】(2026-09-06・Galaxy Z Fold6の画面写真)
+// 前は両方とも「回した」として扱い、どちらでも
+// 「絵のほうを縦向きにしました。本体を縦向きに持ち替えてお使いください」と案内していた。
+// 実際の画面には「絵の回転 なし」と出ているのに「回しました」と言っており、
+// しかも本体はもともと縦なので、持ち替える必要も無い。案内が二重に間違っていた。
+//
+// これが起きるのは、自前で横にしてから「縦」を押したとき。
+// applyScreenOrientation の頭で自前回転を解除するので、その時点でもう縦になっている。
+// あとは端末に頼んで断られるだけで、回すものが残っていない。
 const applyForcedRotation = wantLandscape => {
   forcedRotationWantLandscape = wantLandscape;
   // 端末そのものが既に望みの向きなら、回す必要はない(回すとかえって狂う)
   if (deviceIsLandscape() === wantLandscape) {
     RHYTHM_VIEW_ROTATION.set(0);
-    return true;
+    return 'already';
   }
   RHYTHM_VIEW_ROTATION.set(RHYTHM_VIEW_ROTATION.preferredAngle());
-  return true;
+  return 'rotated';
 };
 // 【本体を持ち替えたときの追従】
 // 自前回転は「端末が縦のままなので絵を回す」ものなので、**端末が回ったらもう要らない**。
@@ -16142,9 +16171,10 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 }
 // target: 'landscape' | 'portrait'。
 // 戻り値は「どうやってその向きにしたか」。
-//   'device' … 端末そのものが回った(いちばん自然。本体の向きも一緒に変わる)
-//   'forced' … 端末は回らなかったので、絵のほうを回した(本体は持ち替えてもらう)
-//   ''       … どちらもできなかった(まず起きないが、案内を出す側のために残す)
+//   'device'  … 端末そのものが回った(いちばん自然。本体の向きも一緒に変わる)
+//   'forced'  … 端末は回らなかったので、絵のほうを回した(本体は持ち替えてもらう)
+//   'already' … 端末に頼んだ時点でもう望みの向きだった(回すものが無い。言うことも無い)
+//   ''        … どちらもできなかった(まず起きないが、案内を出す側のために残す)
 // ①端末に頼む → ②断られたら自分で回す、の順。
 const applyScreenOrientation = async target => {
   const wantLandscape = target === 'landscape';
@@ -16152,7 +16182,8 @@ const applyScreenOrientation = async target => {
   // 頼む前にいったん戻し、失敗したときだけ改めて自分で回す。
   RHYTHM_VIEW_ROTATION.set(0);
   if (await lockScreenOrientation(target)) return 'device';
-  return applyForcedRotation(wantLandscape) ? 'forced' : '';
+  const done = applyForcedRotation(wantLandscape);
+  return done === 'rotated' ? 'forced' : done === 'already' ? 'already' : '';
 };
 // モンビーを離れるときの後始末。ボタンで固定したときだけ戻す。
 // これが無いと、横のままHOMEへ戻ったときにゲーム全体が横＋全画面のままになり、
@@ -16356,6 +16387,10 @@ const RhythmOrientationButton = ({
       const how = await applyScreenOrientation(target);
       setLandscape(orientationIsLandscape());
       if (how === 'device') return; // 本体ごと回ったので言うことはない
+      // 頼んだ時点でもう望みの向きだった。回すものが無いので、言うことも無い。
+      // ここで「絵を回しました。持ち替えてください」と出すと、回してもいないことを
+      // 言ったうえ、もともと正しい向きで持っている人へ持ち替えさせてしまう
+      if (how === 'already') return;
       if (how === 'forced') {
         // 端末は回ってくれなかったので、絵のほうを回した。
         // 本体の向きはそのままなので、**持ち替えてもらう**必要がある。ここは必ず伝える。

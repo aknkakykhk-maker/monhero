@@ -182,6 +182,30 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "toriko": {
+   "audio": "monster-hero/audio/bgm-toriko.mp3",
+   "audioSha256": "3870d26f6322d8dae8f18f19c6b70008511046ad20863b9921b4bf08c2384e4d",
+   "durationMs": 79341,
+   "analyzedTiming": {
+    "bpm": 134.992,
+    "beatZeroMs": 32.2,
+    "beatsPerBar": 3,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "4u_hitasura": {
+   "audio": "monster-hero/audio/bgm-4u-hitasura.mp3",
+   "audioSha256": "f4fb42472438eb97fb61512fb295479a637707623c958960f2d5df8447711015",
+   "durationMs": 120440,
+   "analyzedTiming": {
+    "bpm": 144.993,
+    "beatZeroMs": 1442.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

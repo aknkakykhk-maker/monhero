@@ -277,7 +277,10 @@ const writeRuntimeLevels=()=>{
       const {level}=levels[difficulty.id];
       if(level>0)cells.push(`${difficulty.id}:${level}`);
     }
-    if(cells.length)lines.push(`  ${song.songId}:Object.freeze({${cells.join(',')}}),`);
+    // 曲idがそのままJSの名前として書けるとはかぎらない(数字で始まる「4u_hitasura」など)。
+    // 引用符なしで書くと構文エラーになり、書き出した直後に読めなくなる(2026-09-06)。
+    const key=/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(song.songId)?song.songId:`'${song.songId}'`;
+    if(cells.length)lines.push(`  ${key}:Object.freeze({${cells.join(',')}}),`);
   }
   const file=path.join(ROOT,RUNTIME_FILE);
   const source=fs.readFileSync(file,'utf8');
