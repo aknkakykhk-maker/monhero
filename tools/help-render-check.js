@@ -138,6 +138,15 @@ for (const cat of HELP_GUIDE) {
   const list = render({ helpCatId: cat.id });
   const t = text(list);
   check(`「${cat.title}」の項目一覧が描ける`, cat.topics.every(x => t.includes(x.title)) && t.includes(cat.assistant), `${cat.topics.length}項目`);
+  // group(小見出し)を付けたカテゴリは、切り替わり目に見出しが出る。
+  // モンヒロビートのように項目が20を超えるカテゴリで、一覧のまま見渡せるようにするためのもの
+  const groups = [...new Set(cat.topics.map(x => x.group).filter(Boolean))];
+  if (groups.length) {
+    const shown = (list.match(/data-help-topic-group[^>]*>([^<]*)</g) || []).map(m => m.replace(/.*>/, '').replace(/<$/, ''));
+    check(`「${cat.title}」の項目一覧に小見出しが出る`,
+      groups.every(g => shown.includes(g)) && shown.length === groups.length,
+      `${shown.join(' / ') || '出ていない'}（データ側 ${groups.length}グループ）`);
+  }
 }
 
 // --- ③ 本文(全項目) ---
@@ -195,7 +204,11 @@ check('顔はいつでもタップして話しかけられる', noDetail.include
 
 // --- 助手の開閉と、最後の項目 ---
 const closed = text(render({ helpCatId: 'battle', helpAssistantOpen: false }));
-check('助手を閉じるとひとことが消える', !closed.includes(HELP_GUIDE[1].assistant) && closed.includes(HELP_GUIDE[1].topics[0].title));
+// 開いているのは battle なので、比べる相手も battle から引く。
+// 以前は HELP_GUIDE[1] と書いていて「2番目のカテゴリ = battle」が前提になっていたため、
+// カテゴリを1つ足しただけで別のカテゴリと比べてしまっていた(2026-09-06)
+const battleCat = HELP_GUIDE.find(c => c.id === 'battle');
+check('助手を閉じるとひとことが消える', !closed.includes(battleCat.assistant) && closed.includes(battleCat.topics[0].title));
 const lastCat = HELP_GUIDE[0];
 const lastTopic = lastCat.topics[lastCat.topics.length - 1];
 check('最後の項目では「次:」を出さない', !text(render({ helpCatId: lastCat.id, helpTopicId: lastTopic.id })).includes('次: '));
