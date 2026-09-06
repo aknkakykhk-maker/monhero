@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8cde89faef51ea0b
+// source-sha256: 5d0cab83372d750d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e788bad295ad9466
+// generated-sha256: 0ded726b585356d1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 23:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 00:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23675,7 +23675,7 @@ function MonsterHeroGame() {
       setEditingPartySetIndex(normalizedPartySets.activeIndex);
       const activeMonsterRoster = normalizedPartySets.rosters[normalizedPartySets.activeIndex];
       setMonsterRosterIds(activeMonsterRoster);
-      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster, Object.keys(DIFFICULTY_SETTINGS));
+      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster, Object.keys(QUICK_DIFFICULTY_SETTINGS));
       setAutoSettings(savedAutoSettings);
       setDraftAutoSettings(savedAutoSettings);
       const savedUnlockedTeachings = await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false);
@@ -24413,7 +24413,11 @@ function MonsterHeroGame() {
   };
   // AUTO設定の正規化で使う「いま選べる顔ぶれ」。読み込み時・下書き・保存で同じものを見る
   const autoSettingsCandidates = () => monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry));
-  const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(DIFFICULTY_SETTINGS);
+  // クイックで選べる難易度は通常の9段階だけではなく、EXTREME〜ULTIMATE も並ぶ。
+  // ここを DIFFICULTY_SETTINGS にしていたため Legend までしか出ていなかった
+  // (2026-09-06・ユーザー指摘「難易度がレジェンドまでしか出てない」)。
+  // 難易度が増えてもここは触らずに済むよう、バトルの難易度選択と同じ表を見る
+  const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(QUICK_DIFFICULTY_SETTINGS);
   const openAutoSettings = () => {
     setDraftAutoSettings(normalizeAutoSettings(autoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
     setGameState('AUTO_SETTINGS');
@@ -34451,7 +34455,7 @@ function MonsterHeroGame() {
         className: "w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"
       }, /*#__PURE__*/React.createElement("option", {
         value: ""
-      }, "\u672A\u8A2D\u5B9A"), Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => {
+      }, "\u672A\u8A2D\u5B9A"), Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key, setting]) => {
         const unlocked = isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
         return /*#__PURE__*/React.createElement("option", {
           key: key,

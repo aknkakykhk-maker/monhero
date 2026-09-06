@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e788bad295ad9466
+// generated-sha256: 0ded726b585356d1
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 23:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 00:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13772,7 +13772,7 @@ function MonsterHeroGame() {
       setEditingPartySetIndex(normalizedPartySets.activeIndex);
       const activeMonsterRoster = normalizedPartySets.rosters[normalizedPartySets.activeIndex];
       setMonsterRosterIds(activeMonsterRoster);
-      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster, Object.keys(DIFFICULTY_SETTINGS));
+      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster, Object.keys(QUICK_DIFFICULTY_SETTINGS));
       setAutoSettings(savedAutoSettings);
       setDraftAutoSettings(savedAutoSettings);
       const savedUnlockedTeachings = await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false);
@@ -14358,7 +14358,11 @@ function MonsterHeroGame() {
   };
   // AUTO設定の正規化で使う「いま選べる顔ぶれ」。読み込み時・下書き・保存で同じものを見る
   const autoSettingsCandidates = () => monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry));
-  const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(DIFFICULTY_SETTINGS);
+  // クイックで選べる難易度は通常の9段階だけではなく、EXTREME〜ULTIMATE も並ぶ。
+  // ここを DIFFICULTY_SETTINGS にしていたため Legend までしか出ていなかった
+  // (2026-09-06・ユーザー指摘「難易度がレジェンドまでしか出てない」)。
+  // 難易度が増えてもここは触らずに済むよう、バトルの難易度選択と同じ表を見る
+  const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(QUICK_DIFFICULTY_SETTINGS);
   const openAutoSettings = () => {
     setDraftAutoSettings(normalizeAutoSettings(autoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
     setGameState('AUTO_SETTINGS');
@@ -19941,7 +19945,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
-              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンビー中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンビー中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
             </div>
             <button onClick={saveAutoSettings} className="w-full max-w-md mx-auto min-h-[52px] shrink-0 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定</button>
             {autoAllyDetail&&renderMonsterDetailModal({mon:autoAllyDetail.mon,masu:autoAllyDetail.masu,onClose:()=>setAutoAllyDetail(null),accent:'indigo',readOnly:true,label:`${autoAllyDetail.mon.name}の確認用詳細`})}
