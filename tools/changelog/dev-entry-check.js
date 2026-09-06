@@ -41,9 +41,11 @@ const grab = (from, to) => {
 // 「出す・出さない」を決めているのは game-system.jsx なので、文面で真似せず本体を呼ぶ。
 // 公開フラグは定義が離れた場所にあるので、その行だけを取り出す
 // (あいだを丸ごと切り取るとJSXまで混ざって読めなくなる)
-const flagLines = ['SPECIES_CHALLENGE_PUBLIC_RELEASE', 'RHYTHM_MODE_PUBLIC_RELEASE']
-  .map(name => (game.match(new RegExp(`^const ${name} = .*$`, 'm')) || [])[0]);
+// 公開フラグは増えるので、名前を書き並べず RELEASE_FLAGS が参照しているものを拾う
+// (足したときにこの検査だけ落ちる、という手戻りを防ぐ)
 const gate = grab('const RELEASE_FLAGS = {', '\n// 一覧の並べかえに使えるキー');
+const flagLines = [...new Set(gate.match(/[A-Z0-9_]+_PUBLIC_RELEASE/g) || [])]
+  .map(name => (game.match(new RegExp(`^const ${name} = .*$`, 'm')) || [])[0]);
 const flags = flagLines.join('\n');
 const context = {};
 vm.createContext(context);

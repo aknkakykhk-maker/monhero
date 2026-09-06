@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b14469599fd7c000
+// generated-sha256: 3b411a1ff8af897b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 21:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 22:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17716,7 +17716,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const blocked=!runProgressAllowed||runStage!=='BATTLE'||!enemy||enemy.hp<=0||isBusy||
       autoTurnRunningRef.current||autoTurnScheduledRef.current||!!battleScenarioRef.current||battleTutorialStep!=null||
       !!skillPicker||!!showDeckInfo||!!showEnemyInfo||!!showHeroInfo||!!showQuitConfirm||!!skillEffectDetail||
-      !!ultimateDistanceBreakReveal||!!enemyRevivalReveal||!!extremeRuleOpen||!!effect;
+      // 末尾の showAutoBgmPicker は「BGM/音量の設定を開いているあいだはターンを進めない」。
+      // ほかの重なり(手札の確認・敵の情報など)と同じ扱いにする。ここが抜けていたため、
+      // 曲を選んでいる最中に敵を倒して画面が変わっていた(2026-09-06・ユーザー報告)
+      !!ultimateDistanceBreakReveal||!!enemyRevivalReveal||!!extremeRuleOpen||!!effect||!!showAutoBgmPicker;
     if(!autoBattleRef.current||blocked)return;
     autoTurnScheduledRef.current=true;
     Promise.resolve().then(async()=>{
@@ -17737,7 +17740,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(autoBattleRef.current)setAutoTurnCycle(n=>n+1);
       }
     });
-  },[autoBattle,autoTurnCycle,runStage,runProgressAllowed,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,skillEffectDetail,ultimateDistanceBreakReveal,enemyRevivalReveal,extremeRuleOpen,effect,battleTutorialStep]);
+  },[autoBattle,autoTurnCycle,runStage,runProgressAllowed,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,skillEffectDetail,ultimateDistanceBreakReveal,enemyRevivalReveal,extremeRuleOpen,effect,battleTutorialStep,showAutoBgmPicker]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -18570,6 +18573,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       autoPostWaveScheduledRef.current=false;
       return;
     }
+    // BGM/音量の設定を開いているあいだは、WAVE後の自動進行も止めておく。
+    // ターン進行だけ止めても、倒した直後のWAVE_RESULT以降が勝手に進んでしまい、
+    // 曲を選び終わる前に画面が変わる(2026-09-06・ユーザー報告)。
+    // 閉じるとこのeffectがもう一度走り、そこから通常どおり進む
+    if(showAutoBgmPicker)return;
     if(runStage==='WAVE_RESULT'||runStage==='QUICK_GROWTH'||runStage==='QUICK_JOIN'){
       autoPostWaveRunningRef.current=false;
       autoPostWaveScheduledRef.current=false;
@@ -18688,7 +18696,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       });
       return;
     }
-  },[autoBattle,runStage,runProgressAllowed]);
+  },[autoBattle,runStage,runProgressAllowed,showAutoBgmPicker]);
 
   const upgradeUnique = (monId, diff) => {
     setOwnedUniques(prev=>prev.map(u=>{
@@ -19525,7 +19533,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         ))}
       </div>
       {updateNotice}
-      {showAutoBgmPicker&&gameState==='BATTLE'&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p></div></div>}
+      {/* ランの途中ならどの画面でも出し続ける。gameState==='BATTLE' に限っていたため、
+          敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
+      {showAutoBgmPicker&&isRunStage(gameState)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p></div></div>}
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
       {ultraEcoSession&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
       <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
