@@ -21,7 +21,7 @@
 | STEP 0 文書同期 | 完了(2026-09-06) | D-01〜D-05・D-07 を解消。監査時点(9f9cfa0)以降に main は #1113 まで進み、モンビーの公開曲は 11 曲になっている |
 | STEP 1 安全網 | 着手中 | 1本目: 一括検査スクリプト `tools/run-checks.js` とベースライン(完了) / 2本目: エラー境界 `MhErrorBoundary`(完了) / 3本目: vm スタブ不足 11 本の修正(完了、NG 58 → 51) / 4本目以降: 残る B・C 分類 51 本のトリアージ |
 | STEP 2 連結ビルドと集約 | 着手中 | 1本目: 編集元を `src/parts/` に分け、`game-system.jsx` を連結生成物にした(完了) / 2本目: 保存キー一覧を SAVE_DATA.md と突き合わせる検査(完了。49 個の未記載を補った) / 3本目以降: 定数・ユーティリティの集約 |
-| STEP 3 保存層 | 着手中 | 1本目: 旧形式セーブの通し検査 `boot/legacy-save-boot-check.js`(完了) / 2本目: `mh_masu_mons` の state 更新と保存が対であることの検査 `masu/masu-save-pairing-check.js`(完了。現状は 35 箇所すべて対で、`saveTranscendFruitPair` のような「storeSet を注入し、読み戻して検証し、失敗なら巻き戻す取引関数」が既にある) / 3本目以降: 複数キー更新の取引関数への寄せ、キーごとの読込関数 |
+| STEP 3 保存層 | 着手中 | 1本目: 旧形式セーブの通し検査 `boot/legacy-save-boot-check.js`(完了) / 2本目: `mh_masu_mons` の state 更新と保存が対であることの検査 `masu/masu-save-pairing-check.js`(完了。現状は 35 箇所すべて対で、`saveTranscendFruitPair` のような「storeSet を注入し、読み戻して検証し、失敗なら巻き戻す取引関数」が既にある) / 3本目: 複数キー更新の正本 `saveStoredValuesOrRollback`(書く→読み戻す→食い違えば全部戻す)を置き、既存 2 本を包みにし、神殿の 6 箇所(合体・限界突破・超越・超越交換・転生・再生)を寄せた(完了。`masu/save-transaction-check.js` で固定) / 4本目以降: 残る複数キー更新(複数体合体・寄付・報酬受取)の寄せ、キーごとの読込関数 |
 | STEP 4 純関数の切り出し | 着手中 | 1本目: 共有層を節ごとに 21 部品へ分けた(移動のみ。完了) / 2本目: 純粋な部品 7 つを `parts.json` で `pure:true` と宣言し `boot/parts-purity-check.js` で守る(完了) / 3本目以降: 19(難易度)から保存処理を出す、jsx 側の表の移動 |
 | STEP 7 描画・キャッシュ | 着手中 | 1本目: 染め直した絵のキャッシュを 96 件の LRU に(完了。dataURL が無制限に溜まらない) / 2本目以降: 一覧行の `React.memo`、静的な `style={{}}` の定数化、CSS 静的化の準備 |
 | STEP 5 バトル計算 | 着手中 | バトル領域の古い検査 7 本を現在形へ(完了)。分岐の対応表 `BATTLE_DAMAGE_MAP.md`(完了)。1本目: 乱数固定の一致検査 `battle/damage-parity-check.js`(完了。2,560 通り一致) / 2本目: ヒット列を純粋な部品の `buildAttackHits` + `ATTACK_COMBO_RULES` に一本化し、実処理と予測をそこへ差し替え(完了) / 残: あつの挑発の変種 |

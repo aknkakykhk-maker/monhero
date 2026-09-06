@@ -97,6 +97,7 @@
   1. `src/save/records/<key>.js` に `load()`(既存の読込+`normalize*`+既定値をそのまま移す)と `update()`(state 更新と `storeSet` を1回で)を置く。
   2. 呼び出し側の `setX(...); storeSet('mh_x', ...)` の対を `updateX(...)` に置き換える。**機械的一括置換はしない。**1 箇所ずつ、順序(保存が先か state が先か)が変わっていないことを確認する。
   3. 複数キーにまたがる処理(購入・報酬・超越リセットの書)は `save/transactions/` に順序を書き、既存の順序(例: マスモン保存 → アイテム減)を保つ。
+     → **3本目(2026-09-06)で着手**: 正本 `saveStoredValuesOrRollback` を `11-masu-progression.jsx` に置き、神殿の 6 箇所を寄せた。`save/transactions/` という別ファイルは、parts の分割(STEP 4)で同じ効果が得られたので作らない。
   4. `localStorage` 直接アクセス(`mh_player_id`、`mh_ranking_debug`)を `storeGet/Set` へ。バックアップの直接アクセスは仕様(SAVE_DATA §6)なので**そのまま**。
   5. `storeSet` の失敗回数を記録する(表示はしない。表示の追加は仕様変更なのでユーザー判断)。
   6. 起動 effect は `records` の `load()` を今と同じ順で呼ぶだけにする。移行フラグ・順序は変えない。
