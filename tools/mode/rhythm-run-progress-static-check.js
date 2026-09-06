@@ -39,14 +39,19 @@ for (const file of files) {
     compact.includes('if(autoRepeatRef.current)addQuickRunProgressRewards(breederXpGain,goldGain);'));
   check(`${rel}: 次の周に入ったら周回数を1つ進める`,
     /setAutoTurnCycle\(n\s*=>\s*n\s*\+\s*1\);\s*countQuickRunLoop\(\);/.test(src));
+  // 2026-09-07。なぜ終わったかを帯へ出すため、理由を引数で渡すようになった
   check(`${rel}: 周回が止まったら「終わった」印を付ける（消さない）`,
-    /stopAutoBattle\(\);[\s\S]{0,200}?finishQuickRunProgress\(\);/.test(src));
+    /stopAutoBattle\(\);[\s\S]{0,400}?finishQuickRunProgress\(reason\);/.test(src));
   check(`${rel}: HOMEへ戻ったら片付ける`,
     /clearRunStage\(\);[\s\S]{0,120}?clearQuickRunProgress\(\);/.test(src));
 
   // ---- 見せ方 ----
+  // 文言は「なぜ終わったか」で変わる。理由が分からないときだけ今までの言い方に戻る
   check(`${rel}: 終わったときは帯の文言が変わる`,
-    src.includes('周回が終わりました（タップで結果へ）'));
+    src.includes('quickRunFinishReasonText(quickRunProgress.reason)'));
+  check(`${rel}: なぜ終わったかを言い分ける`,
+    /const quickRunFinishReasonText\s*=/.test(src)
+    && ['defeat', 'retire', 'hidden', 'manual', 'error'].every((key) => new RegExp(`${key}:`).test(src)));
   // 生成物は `{` が外れて `&&/*#__PURE__*/React.createElement(` になるので、条件式までを見る
   check(`${rel}: 全画面の敗北・リタイア画面はモンビー中に出さない`,
     compact.includes('hp<=0&&!debugBattle&&!rhythmScreenOpen&&') && compact.includes('gaveUp&&!debugBattle&&!rhythmScreenOpen&&'));

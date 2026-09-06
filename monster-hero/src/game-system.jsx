@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1ea85a9b0578b9d5
+// generated-sha256: eb442952b52f72f7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 08:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 08:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11504,10 +11504,17 @@ function MonsterHeroGame() {
   };
   // 明示的な退出・異常終了では通常AUTOと再周回予約をまとめて破棄する。
   // WAVE10正常勝利だけはstopAutoBattle()を直接使い、再周回の意思を維持する。
-  const stopAllAuto = () => {
+  // reason は「なぜ止まったか」。進捗の帯にそのまま出すので、増やすときは
+  // quickRunFinishReasonText にも文言を足す。
+  //   'defeat' 負けた / 'retire' 諦めた / 'hidden' アプリが裏に回った
+  //   'manual' 自分でAUTOを切った / 'error' 続けられなくなった / '' わからない
+  // 何も渡さなければ '' になる(今までと同じ「周回が終わりました」)。
+  // 2026-09-07・ユーザー報告「クイック中に1曲やったら周回が止まってた」。
+  // 帯が「終わりました」としか言わないため、負けたのか裏に回ったのかが分からなかった。
+  const stopAllAuto = (reason = '') => {
     stopAutoBattle();
     // モンビーにいても「周回が終わった」と分かるよう、進捗の帯へ印だけ付ける(消さない)
-    finishQuickRunProgress();
+    finishQuickRunProgress(reason);
     autoRepeatRef.current = false;
     autoRepeatStartingRef.current = false;
     autoRepeatBondAwardMasuIdsRef.current = [];
@@ -13021,6 +13028,19 @@ function MonsterHeroGame() {
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
   const RUN_PHASE_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','PICK_PRO_ALLIES','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION','QUICK_GROWTH','QUICK_JOIN'];
+  // ===== 縦向きでしか作っていない画面 =====
+  // 横画面での作りは、いまのところ3通りある。
+  //   ① 一覧を持つ画面 … data-mh-screen の骨組みに乗っていて、
+  //      「左＝見出し・右＝一覧」の2列へ組み替わる(index.html)
+  //   ② HOME … 施設の置き場所を横向き用に組み替えるCSSを持っている(70-bootstrap.jsx)
+  //   ③ バトルとランの各画面 … どちらも無く、縦向きの高さ配分(h-[24%] など)だけ
+  // ③ は横画面のまま来ると、幅だけ1024pxへ広がって間延びし、演出も真ん中で重なる
+  // (2026-09-07・ユーザー報告「バトルは横画面に対応してないから
+  //  横画面のままバトルに戻ると表示がやばい」)。
+  // ここに入る画面だけ、横画面でも縦向きの幅のまま画面の真ん中へ置く。
+  // ★HOMEは入れない。入れると②のせっかくの横向きの並びを狭い枠へ押し込んでしまう。
+  const PORTRAIT_ONLY_STATES = ['BATTLE',...RUN_PHASE_STATES];
+  const portraitOnlyScreen = PORTRAIT_ONLY_STATES.includes(gameState);
   // ===== ランの進行と、いま描いている画面の切り分け =====
   // gameState は「いま描いている画面」と「ランがどこまで進んだか」の2つを兼ねている。
   // モンビーを開いたままクイック∞周回を続ける連携(docs/spec/QUICK_RHYTHM_LINK.md)では
@@ -13112,11 +13132,19 @@ function MonsterHeroGame() {
   };
   // 周回が終わった(負けた・AUTOを切った)。消さずに「終わった」印だけ付けるので、
   // モンビーにいても帯で気づける(2026-09-06 ユーザー選択)
-  const finishQuickRunProgress = () => {
+  const finishQuickRunProgress = (reason = '') => {
     const current = quickRunProgressRef.current;
     if (!current || current.finished) return;
-    writeQuickRunProgress({ ...current, finished:true });
+    writeQuickRunProgress({ ...current, finished:true, reason:String(reason || '') });
   };
+  // 帯に出す「なぜ終わったか」。分からないときは今までどおりの言い方に戻す
+  const quickRunFinishReasonText = (reason) => ({
+    defeat:'負けたので周回が終わりました（ここまでのぶんは入ります）',
+    retire:'途中でやめたので周回が終わりました（ここまでのぶんは入ります）',
+    hidden:'アプリが裏に回ったので周回が止まりました',
+    manual:'AUTO∞を切ったので周回が終わりました',
+    error:'続けられなくなったので周回が止まりました',
+  }[String(reason || '')] || '周回が終わりました');
   // いまの周でここまでにクリアしたWAVEぶんの見込み。
   // 報酬は「その周が終わったときに、そこまでクリアしたWAVEのぶん」を配る
   // (awardRunRewards(wave-1) を敗北・リタイアからも呼んでいるので、
@@ -13536,20 +13564,32 @@ function MonsterHeroGame() {
   useEffect(() => {
     // 画面が見えなくなったらBGMを止める(他のアプリに切り替えたあとも鳴り続けないように)。
     // 戻ってきたら、止まっているAudioContextを復帰させて鳴らし直す
-    const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto(); };
+    const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto('hidden'); };
     const onVisible = () => { Audio_.setPageHidden(false); Audio_.resumeIfNeeded(); };
     const onVisibilityChange = () => (document.visibilityState === 'hidden' ? onHidden() : onVisible());
+    // ★blur / pagehide は「本当に裏へ回った」以外でも飛ぶ。
+    //   全画面への出入り、システムの画面(コントロールセンターなど)、音声の割り込みでも来る。
+    //   モンヒロビートは演奏のときに全画面と画面消灯の抑止へ入るので、その出入りで
+    //   「アプリが裏に回った」と誤判定され、裏で回していた周回が止まっていた
+    //   (2026-09-07・ユーザー報告「クイック中に1曲やったら周回が止まってた」)。
+    //   本当に見えなくなったかどうかは visibilityState が持っているので、そちらで確かめる。
+    //   他のアプリへ切り替えたときは visibilitychange の hidden が必ず来るので、
+    //   「裏に回ったら止まる」という今までの約束は守られる。
+    const onMaybeHidden = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'hidden') return;
+      onHidden();
+    };
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pageshow', onVisible);
     window.addEventListener('focus', onVisible);
-    window.addEventListener('pagehide', onHidden);
-    window.addEventListener('blur', onHidden);
+    window.addEventListener('pagehide', onMaybeHidden);
+    window.addEventListener('blur', onMaybeHidden);
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pageshow', onVisible);
       window.removeEventListener('focus', onVisible);
-      window.removeEventListener('pagehide', onHidden);
-      window.removeEventListener('blur', onHidden);
+      window.removeEventListener('pagehide', onMaybeHidden);
+      window.removeEventListener('blur', onMaybeHidden);
     };
   }, []);
 
@@ -17925,7 +17965,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   const setAutoBattleEnabled = (enabled) => {
     const next=!!enabled;
-    if(!next){stopAllAuto();return;}
+    // 画面のボタンから切ったときは「自分で切った」と分かるようにする
+    if(!next){stopAllAuto('manual');return;}
     autoBattleRef.current=next;
     setAutoBattle(next);
     if(next){
@@ -17999,7 +18040,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
   // 通常のWAVE結果・選択画面ではOFFにしない。
   useEffect(()=>{
-    if(hp<=0||gaveUp||gameState==='PICK_HERO')stopAllAuto();
+    // なぜ止まったかを帯へ出せるよう、理由を分けて渡す(2026-09-07)
+    if(hp<=0)stopAllAuto('defeat');
+    else if(gaveUp)stopAllAuto('retire');
+    else if(gameState==='PICK_HERO')stopAllAuto('manual');
   },[hp,gaveUp,gameState]);
 
   // 古い描画や将来の呼び出し経路から不正な状態が入っても、通常AUTOは残して∞だけ解除する。
@@ -18034,10 +18078,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setAutoBattle(true);
           setAutoTurnCycle(n=>n+1);
           countQuickRunLoop();
-        }else stopAllAuto();
+        }else stopAllAuto('error');
       } catch (e) {
         console.error('[auto repeat] breakthrough save failed:', e && e.message ? e.message : e);
-        stopAllAuto();
+        stopAllAuto('error');
       }
     })();
   },[runStage,runProgressAllowed,championPresentationComplete,resultProcessing,gameState,autoRepeat,autoBattle,runMode]);
@@ -19862,7 +19906,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         器を増やさず**同じ要素のstyleを差し替えるだけ**にしてあるのは、
         切り替えた瞬間に中身が作り直されると演奏中の状態(音の時計・スコア・押している指)が
         飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
-    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
+    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} data-mh-portrait-layout={portraitOnlyScreen?'true':'false'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
         {ripples.map(r=>(
@@ -21247,7 +21291,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 中身は同じものを使い回す(2つ書くと片方だけ直す事故が起きる)。
           const quickRunBandLabel = quickRunProgress
             ? (quickRunProgress.finished
-              ? '周回が終わりました（タップで結果へ）'
+              // なぜ終わったかまで出す。「終わりました」だけだと、負けたのか
+              // アプリが裏に回ったのか分からなかった(2026-09-07・ユーザー報告)
+              ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）`
               : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp?' ・ 追いつき中':''}`)
             : '';
           const quickRunBandButton = quickRunProgress
@@ -21307,7 +21353,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="col-span-2 flex justify-between gap-2"><dt className="text-slate-400">勇者モン</dt><dd className="truncate font-black text-white">{mainHero?.masuName||mainHero?.name||'—'}</dd></div>
                 </dl>
                 <p className="mt-1 text-[9px] leading-relaxed text-slate-400">{quickRunProgress.finished
-                  ?'周回は止まっています。バトルへ戻ると結果を見られます。'
+                  ?`${quickRunFinishReasonText(quickRunProgress.reason)}。バトルへ戻ると結果を見られます。`
                   :catchingUp
                     ?'演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
                     // 「演奏中は止まる」だけだと、演奏したぶん損をすると読めてしまう
