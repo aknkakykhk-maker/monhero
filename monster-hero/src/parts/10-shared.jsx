@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 13:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 13:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10124,14 +10124,21 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 決めるためTailwindのlandscape:だけでは切り替えられず、ここだけJSの向き判定を使う。
   // ほかのHUDレイアウトの出し分けはTailwindのlandscape:バリアントで完結させ、判定・スコア・
   // runには一切触らない(§6.1)。
-  const [isLandscape,setIsLandscape]=useState(()=>typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(orientation: landscape)').matches);
+  // 自前で画面を回しているあいだも「横向き」として扱う(端末は縦のままなので
+  // matchMedia だけでは縦と答える)。orientationIsLandscape がその両方を見ている。
+  const [isLandscape,setIsLandscape]=useState(()=>orientationIsLandscape());
   useEffect(()=>{
     if(typeof window==='undefined'||typeof window.matchMedia!=='function')return;
     const mql=window.matchMedia('(orientation: landscape)');
-    const onChange=()=>setIsLandscape(mql.matches);
+    const onChange=()=>setIsLandscape(orientationIsLandscape());
     onChange();
+    // 自前で回したときは端末の向きが変わらないので matchMedia は鳴らない
+    const unsubscribeRotation=RHYTHM_VIEW_ROTATION.subscribe(onChange);
     if(mql.addEventListener)mql.addEventListener('change',onChange);else mql.addListener?.(onChange);
-    return()=>{if(mql.removeEventListener)mql.removeEventListener('change',onChange);else mql.removeListener?.(onChange);};
+    return()=>{
+      unsubscribeRotation();
+      if(mql.removeEventListener)mql.removeEventListener('change',onChange);else mql.removeListener?.(onChange);
+    };
   },[]);
   const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;},[]);
   const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;},[]);

@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":763396,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":460615,"data/help.js":263341,"data/rhythm-step3-release.js":7722,"data/assistants.js":267238,"game-system.compiled.js":2922659,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":763396,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":461042,"data/help.js":263491,"data/rhythm-step3-release.js":7722,"data/assistants.js":267238,"game-system.compiled.js":2922987,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609061338';
+var GAME_BUILD = '202609061358';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -113,6 +113,27 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="vendor/react.production.min.js?v=18" onload="__mhBoot.done('vendor/react.production.min.js','画面の土台を読み込み中')" onerror="__mhBoot.fail('vendor/react.production.min.js')"></script>
 <script src="vendor/react-dom.production.min.js?v=18" onload="__mhBoot.done('vendor/react-dom.production.min.js','画面の土台を読み込み中')" onerror="__mhBoot.fail('vendor/react-dom.production.min.js')"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+  /* Tailwind の landscape: は「@media (orientation: landscape)」に展開される。
+     自前で画面を回しているとき(端末が向きの指定を受け付けない端末のための逃げ道)は、
+     端末そのものは縦のままなのでこのメディアクエリが成立せず、53個ある landscape: が
+     ひとつも効かない。横長の器に縦持ち用の並びが入って、一覧がほぼ消える。
+     そこで landscape: を「メディアクエリ **または** 自前回転の目印の中」の両方で
+     効くように差し替える。既存の書き方(landscape:mt-0 など)はそのまま使える。
+     ※ このサンドボックスはTailwindのCDNを取りに行けないため、ここだけは実機での確認が要る */
+  if (typeof tailwind !== 'undefined') {
+    tailwind.config = {
+      plugins: [
+        tailwind.plugin(function ({ addVariant }) {
+          addVariant('landscape', [
+            '@media (orientation: landscape)',
+            '&:is([data-mh-view-rotation="true"] *)',
+          ]);
+        }),
+      ],
+    };
+  }
+</script>
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   /* 画面の高さは、ここで決めた --mh-vh ひとつだけを使う。
@@ -151,6 +172,28 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     [data-mh-screen]:has(> .mh-scroll) > * { min-width: 0; }
     [data-mh-screen]:has(> .mh-scroll) > .mh-scroll { grid-column: 2; grid-row: 1 / -1; min-height: 0; }
   }
+  /* 【自前で画面を回しているとき】(2026-09-06)
+     端末が向きの指定を受け付けない端末のために、絵のほうを90度回して描くことがある。
+     このとき端末は縦のままなので、上の @media (orientation: landscape) は**成立しない**。
+     つまり横長の器に、縦持ち用の並び(見出し・一覧・詳細を縦に積む)が入ることになる。
+     iPhoneで実際にこうなり、高さ393pxへ縦積みされて一覧がほぼ消えた。
+     器の中は確かに横長なので、同じ組み替えをここでも掛ける。
+     [data-mh-view-rotation="true"] は自前で回しているあいだだけ付く目印。 */
+  [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) {
+    display: grid;
+    grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+    grid-template-rows: repeat(8, auto) 1fr;
+    column-gap: 14px;
+    align-content: start;
+  }
+  [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) > * { min-width: 0; }
+  [data-mh-view-rotation="true"] [data-mh-screen]:has(> .mh-scroll) > .mh-scroll { grid-column: 2; grid-row: 1 / -1; min-height: 0; }
+  /* 曲えらびは上の骨組み(data-mh-screen)を使わず、Tailwind の landscape:flex-row だけで
+     左右2列にしている。上の tailwind.config で landscape: 自体を差し替えてあるが、
+     CDNの設定が効かなかったときでも一覧が潰れないよう、同じ組み替えをここにも書いておく
+     (縦持ちのまま高さ393pxへ縦積みされると、曲の並びがほぼ見えなくなるため)。 */
+  [data-mh-view-rotation="true"] [data-rhythm-song-select] { flex-direction: row; }
+  [data-mh-view-rotation="true"] [data-rhythm-song-notice] { display: none; }
   #loading { position:fixed; inset:0; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box; padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom)); color:#fff; text-align:center; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif; background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%); }
   #loading::before { content:""; position:absolute; inset:0; background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px); background-size:39px 41px; opacity:.28; }
   .static-mocchi { position:relative; z-index:1; width:min(42vw,180px); height:min(42vw,180px); margin-bottom:clamp(8px,3vh,24px); }
@@ -771,8 +814,8 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="data/rhythm-lane-svg.js?v=d0b5c2bea35c" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=0d6245961ff9" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=15180cda9969" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=b6481e52db71" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=4d45fbfb2eca" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->

@@ -5076,3 +5076,48 @@ CSSのメディアクエリや Tailwind の `landscape:` も同じ基準なの�
 - `shapeFollowsType:false` … `type` だけ変わって画面の形は動かない端末
 
 3つめを前の見方（`type` を先に見る）にかけると2件NGになることを確かめてある。
+
+### 自前で回すと、横画面用のCSSが1つも効かない（2026-09-06・iPhoneの画面写真）
+
+回したのに曲の一覧がほとんど見えない、という画面が届いた。原因は分かりやすい。
+
+Tailwind の `landscape:` は `@media (orientation: landscape)` に展開される。
+**自前で回しているときは端末そのものが縦のままなので、このメディアクエリは成立しない。**
+つまり `landscape:` が53個あっても1つも効かず、横長の器へ縦持ち用の並び
+（見出し・一覧・詳細を縦に積む）が入る。高さは393pxしかないので一覧が消える。
+
+曲えらびの2列は `landscape:flex-row` ひとつで作っていたので、まるごと効かなかった。
+
+これは最初の版で「分かっている差」として許容と書いたところだが、
+**実際の画面を見れば許容できるものではなかった。**
+「遊べなくなるものではない」と書いたのは、画面を見ずに判断したためで、間違いだった。
+
+#### 直し方
+
+1. `index.html` で **`landscape:` バリアント自体を差し替える**。
+   「メディアクエリ **または** 自前回転の目印の中」の両方で効くようにする。
+   既存の書き方（`landscape:mt-0` など53個）はそのまま使える。
+
+   ```js
+   tailwind.config = { plugins: [ tailwind.plugin(function ({ addVariant }) {
+     addVariant('landscape', [
+       '@media (orientation: landscape)',
+       '&:is([data-mh-view-rotation="true"] *)',
+     ]);
+   }) ] };
+   ```
+
+2. 素のCSSで書いてある横画面用の組み替え（`[data-mh-screen]:has(> .mh-scroll)` の2カラム）にも、
+   同じ内容を `[data-mh-view-rotation="true"]` 付きで足す。
+
+3. JSの向き判定（`isLandscape`、曲名の折り返し行数に使う）も `orientationIsLandscape()` にそろえる。
+
+#### 検査できる範囲と、できない範囲
+
+このサンドボックスは Tailwind の CDN を取りに行けないので、**1の効果は実機でしか確かめられない。**
+そのぶん、CDNの設定が効かなかったときの保険として素のCSSも書いてある
+（`[data-mh-view-rotation="true"] [data-rhythm-song-select] { flex-direction: row }`）。
+**保険のほうは実ブラウザで確かめられる**ので、`rhythm-forced-rotation-check.js` で
+「縦のときは縦積み → 回すと2列 → 戻すと縦積み」を実測している。
+検査側では Tailwind が無いぶん、縦積みだけ手で作ってから測る
+（作らないと初期値の `row` になり、回して `row` になったのか元から `row` だったのか見分けられない）。
