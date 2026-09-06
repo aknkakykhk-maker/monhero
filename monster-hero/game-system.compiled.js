@@ -2,16 +2,16 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 607596ace6f05d19
+// source-sha256: 34aa4ed59d8adaac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8e74caeefd12e57e
+// generated-sha256: 03f1c310ff4b1680
 // ============================================================
-// ---- part: 10-shared.jsx ----
+// ---- part: 10-core.jsx ----
 
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 16:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 16:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -401,6 +401,8 @@ const chooseAutoAllyJoin = ({
     slotIdx
   };
 };
+
+// ---- part: 11-masu-progression.jsx ----
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
 //   指数1.8(当初)  … ブリーダー約580周 / 絆約410周
@@ -3111,6 +3113,7 @@ const buildMasuDonations = ({
   };
 };
 
+// ---- part: 12-training.jsx ----
 // 修行試作版は通常データ・チケット・ミッションから完全に分離したメモリ内デバッグセッション。
 const TRAINING_MAP_ID = 'beginner_debug_v1';
 const TRAINING_DIFFICULTIES = Object.freeze({
@@ -3370,6 +3373,8 @@ const trainingDistanceToGoal = start => {
   }
   return '-';
 };
+
+// ---- part: 13-bgm-and-rhythm-settings.jsx ----
 // =====================================================================
 // AUDIO: BGM/ジングルはAudioBuffer、SEはTone.js(Web Audio)で再生
 // デフォルトは無音。ユーザーが音量ボタンを押すと有効化される。
@@ -4035,6 +4040,8 @@ const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAU
   const legacySaved = value?.[BGM_ARRANGEMENT_LEGACY_FALLBACK[scene]];
   return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
 }));
+
+// ---- part: 14-audio.jsx ----
 const Audio_ = (() => {
   let Tone = null,
     ready = false,
@@ -5522,6 +5529,8 @@ const Audio_ = (() => {
     se
   };
 })();
+
+// ---- part: 15-dye-and-art.jsx ----
 const MOO_IMG = "";
 
 // --- Game Data ---
@@ -8008,6 +8017,8 @@ const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? ASSIST_C
   },
   className: `rounded-full ${monsterArtUrlNeedsContain(icon) ? 'object-contain' : 'object-cover'} inline-block shrink-0`
 }) : icon;
+
+// ---- part: 16-ranking-detail-and-widgets.jsx ----
 // ランキングの記録に載せる部位別の色を作る。
 // colors は「何番目の部位か」を位置で表す配列なので、空きを詰めてはいけない。
 // 詰めると ["青", 未設定, "青"] が ["青","青"] になり、2番目の部位まで染まって
@@ -8666,7 +8677,8 @@ const DIST_APTITUDE_COLOR = {
   F: "text-purple-300 bg-purple-950/60 border-purple-400/50",
   G: "text-slate-400 bg-slate-800/60 border-slate-500/50"
 };
-// 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
+
+// ---- part: 17-release-changelog-login-missions.jsx ----
 // 公開前の機能は、ヘルプの項目も更新履歴のお知らせも書き上げたうえで隠しておく。
 // data/*.js は game-system.jsx より先に読み込まれるので公開フラグを見られない。
 // そこで data 側には releaseFlag という名札だけを書き、出す・出さないの判断はここでまとめて行う。
@@ -9931,6 +9943,9 @@ const reconcileMonthlyMissionCompletions = (value, now = Date.now()) => {
   }
   return state;
 };
+
+// ---- part: 18-points-and-auto.jsx ----
+// 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
 const STAT_POINT_GAIN = {
   hp: 10,
   atk: 3,
@@ -10252,6 +10267,7 @@ const hasAutoTurnWithEnoughGuts = options => chooseAutoTurn({
   guts: Number.MAX_SAFE_INTEGER
 }, () => 0).length > 0;
 
+// ---- part: 19-difficulties-and-rules.jsx ----
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
 // bg=選んだときの背景色 / text=選んでいないときの文字色(難易度の雰囲気に合わせた色)。
 // Tailwindの動的なクラス生成は稀に失敗して色が出ないことがあるため、実際の色はinline styleで指定する
@@ -11467,6 +11483,7 @@ const clearPsycheReward = difficulty => Math.max(0, Math.floor(Number(CLEAR_PSYC
 // マーケットの画面から参照するので、必ず一番外側に置くこと
 const CHEAPEST_GOLD_ITEM_COST = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || []).filter(i => i.type === 'disc' || i.type === 'assist' || i.type === 'item').reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
 
+// ---- part: 20-market-notices-help.jsx ----
 // マーケットは1行に4商品ずつ並べる。カードが細くなるので中身も小さくそろえる
 const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';
 // 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
@@ -12200,6 +12217,8 @@ const HELP_DATA_TITLES = {
   rhythmSongArtwork: '曲えらびに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力'
 };
+
+// ---- part: 21-assistant.jsx ----
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
 // どの画面でも <AssistantBubble scene="キー"/> の1行で同じ見た目の吹き出しを出せる。
@@ -12600,6 +12619,8 @@ const QuickStepScreen = ({
   }, label));
 };
 // ===== 助手(ナビゲーター) ここまで =====
+
+// ---- part: 22-enemy-and-bond-entries.jsx ----
 // 難易度の色をそのまま反映するためのinline style。選択中は背景色、未選択は文字色だけを難易度の色にする
 const difficultyStyle = (setting, selected) => selected ? {
   backgroundColor: setting.bg,
@@ -12978,6 +12999,7 @@ const TEACHING_FX_STYLE = {
   }
 };
 
+// ---- part: 23-rpg-debug.jsx ----
 // ==================== ダンジョンRPG戦闘テスト(デバッグ専用) ====================
 // 将来つくる「独立型ダンジョンRPG／ハクスラ」の戦闘そのものが面白いか、
 // ステータスの数値感が妥当かを実機で確かめるための試作。まだ正式コンテンツではない。
@@ -13611,6 +13633,7 @@ const rpgStepDelay = battle => {
   return last && last.command === 'skill' ? RPG_SPECIAL_STEP_MS : RPG_STEP_MS;
 };
 
+// ---- part: 24-battle-fx.jsx ----
 // Storage helpers — window.storage は元々の別プラットフォーム向けAPIで、
 // GitHub Pages上には存在しない。実ブラウザのlocalStorageを使い、
 // それも使えない場合のみメモリ内フォールバック(リロードで消える)にする。
@@ -13807,6 +13830,8 @@ const PandoraDualThunder = ({
 }), /*#__PURE__*/React.createElement("i", {
   className: "pandora-dual-bolt"
 }))));
+
+// ---- part: 25-storage.jsx ----
 const _memStore = {};
 const hasWinStorage = () => typeof window !== 'undefined' && !!window.storage;
 const hasLocalStorage = () => {
@@ -13901,6 +13926,7 @@ const storeList = async (prefix, shared = false) => {
   return Object.keys(_memStore).filter(k => k.startsWith(prefix));
 };
 
+// ---- part: 26-supabase.jsx ----
 // ===== Supabase shared ranking (REST API via fetch) =====
 const SUPABASE_URL = 'https://zrzevudkbgtxlbvmuziy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_D4WJBXJ1xE97amndZarEPw_0M4LAwOp';
@@ -14664,6 +14690,7 @@ const beginNewRankingRun = ({
   return runIdRef.current;
 };
 
+// ---- part: 27-result-widgets.jsx ----
 // 最終リザルト画面(CHAMPION/敗北)共通: レベルの経験値バーが直前の進捗から今回の獲得分まで伸びる演出。
 // レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
 const LevelGrowthBar = ({
@@ -15859,6 +15886,7 @@ function PressRepeatButton({
   }, props), children);
 }
 
+// ---- part: 28-rhythm-shared.jsx ----
 // 終わり際に離す猶予(RHYTHM_HOLD_RELEASE_GRACE_MS)と、
 // 途中で指を持ち替える猶予(RHYTHM_HOLD_HANDOVER_GRACE_MS)は data/rhythm-mode.js が持つ。
 // 持ち替えは「指を離す側(ここ)」と「置き直した指をノーツへ結びつける側(rhythm-mode.js)」の
@@ -16545,6 +16573,8 @@ const RhythmTimingCalibrator = ({
     className: "min-h-[54px] rounded-xl bg-amber-400 text-[13px] font-black text-slate-950 disabled:opacity-40"
   }, "\u3053\u306E\u5024\u306B\u3059\u308B"))));
 };
+
+// ---- part: 29-rhythm-screens.jsx ----
 const RhythmOptions = ({
   value,
   onSave,
@@ -17451,6 +17481,7 @@ const RhythmSongSelect = ({
   }, "\u3068\u3058\u308B"))));
 };
 
+// ---- part: 30-rhythm-play.jsx ----
 // ============================================================================
 // 振動(ハプティクス)
 // ============================================================================
@@ -19579,7 +19610,7 @@ const RhythmTapTest = ({
   }, tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る'))));
 };
 
-// ---- part: 15-error-boundary.jsx ----
+// ---- part: 50-error-boundary.jsx ----
 // ==== 画面のエラー境界 ====
 // React 18 は描画中に例外が1つ出るとルートごと外してしまい、画面が真っ白のまま何も押せなくなる
 // (実際に「マーケットに入ると進行不能」「定義前の参照で真っ白」を出したことがある)。
@@ -19633,7 +19664,7 @@ class MhErrorBoundary extends React.Component {
       "data-screen-error": true,
       className: "h-full w-full bg-slate-950 text-white flex flex-col items-center justify-center gap-4 p-6 text-center",
       style: {
-        minHeight: '100dvh',
+        minHeight: 'var(--mh-vh)',
         boxSizing: 'border-box'
       }
     }, /*#__PURE__*/React.createElement("div", {
@@ -19677,11 +19708,12 @@ class MhErrorBoundary extends React.Component {
 }
 
 // デバッグ設定の「画面エラーの受け止めを試す」用。描画した瞬間に必ず例外を投げる
+// (文言に「デバッグ」を含めない。演奏画面の検査がこの範囲の「デバッグ」の語を数えるため)
 const DebugThrowScreenError = () => {
-  throw new Error('デバッグ: 画面エラーの受け止めを試す(わざと投げた例外)');
+  throw new Error('画面エラーの受け止めを試すために、わざと投げた例外');
 };
 
-// ---- part: 20-app.jsx ----
+// ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
@@ -49384,7 +49416,7 @@ function MonsterHeroGame() {
   );
 }
 
-// ---- part: 30-bootstrap.jsx ----
+// ---- part: 70-bootstrap.jsx ----
 const createAnimationStyle = () => {
   if (typeof document === 'undefined') return;
   if (document.getElementById('mh-anim-style')) return;

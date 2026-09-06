@@ -1,20 +1,107 @@
 {
-  "_comment": "game-system.jsx はこの順に連結して tools/build.js が生成する。新しい部品を足したらここへ並べる(順番が依存の正本)。",
+  "_comment": "game-system.jsx はこの順に連結して tools/build.js が生成する。新しい部品を足したらここへ並べる(順番が依存の正本)。10〜30 は共有層(MonsterHeroGame を知らないもの)、50 以降が画面。 pure:true の部品は React・JSX・document・window・保存(storeGet/storeSet)・Audio_・fetch・タイマーを一切参照しない「純粋な計算とデータ」で、tools/boot/parts-purity-check.js が守る。",
   "parts": [
     {
-      "file": "10-shared.jsx",
-      "role": "共有層。定数・純関数・Audio_・染色・保存層・Supabase・小部品・音ゲーの部品(React も DOM も MonsterHeroGame も知らないものと、共有コンポーネント)"
+      "file": "10-core.jsx",
+      "role": "共有層の土台。React フック・SVG アイコン・wait・バトル速度・XP/ゴールド表・バトルモード・モード別報酬"
     },
     {
-      "file": "15-error-boundary.jsx",
+      "file": "11-masu-progression.jsx",
+      "role": "マスモン育成の純関数。レベル・絆・限界突破・超越・固有技継承・合体・寄付・再生・血統・総合力・一度きり移行と診断",
+      "pure": true
+    },
+    {
+      "file": "12-training.jsx",
+      "role": "修行(TRAINING。未公開)の定義",
+      "pure": true
+    },
+    {
+      "file": "13-bgm-and-rhythm-settings.jsx",
+      "role": "BGM 一覧、音ゲー設定・BEST の既定値と正規化、BGM アレンジの正規化と既定曲の一度きり移行",
+      "pure": true
+    },
+    {
+      "file": "14-audio.jsx",
+      "role": "Audio_(BGM・ジングル・SE・AudioContext の復帰。音の唯一の入口)"
+    },
+    {
+      "file": "15-dye-and-art.jsx",
+      "role": "染色(色ID・領域マスク解析・再着色・キャッシュ)、模様、モンスターの絵とアイコンの部品"
+    },
+    {
+      "file": "16-ranking-detail-and-widgets.jsx",
+      "role": "ランキング詳細形式(RANKING_DETAIL_VERSION)、合体履歴、★・オーラなどの小部品、色ピッカー、音量スライダー"
+    },
+    {
+      "file": "17-release-changelog-login-missions.jsx",
+      "role": "公開フラグ、更新履歴の整形、一覧設定の正規化、ログインボーナス、助手の親密度、補償ギフト、キャンペーン、プレイ時間、ミッション定義",
+      "pure": true
+    },
+    {
+      "file": "18-points-and-auto.jsx",
+      "role": "強化ポイントの補填と補正、AUTO 設定と自動ターン選択",
+      "pure": true
+    },
+    {
+      "file": "19-difficulties-and-rules.jsx",
+      "role": "スキップチケット、ヘルプ目次、難易度(通常・極限・クイック・種族チャレンジ)、極限の特別ルール、トレーニングの選択肢、極限モードの解放"
+    },
+    {
+      "file": "20-market-notices-help.jsx",
+      "role": "マーケット部品、画像先読みキュー、チュートリアル・更新通知の保存キー、ヘルプの実データ表"
+    },
+    {
+      "file": "21-assistant.jsx",
+      "role": "助手(みゅあ・きき・ももすけ)の文脈と吹き出し AssistantBubble、QuickStepScreen"
+    },
+    {
+      "file": "22-enemy-and-bond-entries.jsx",
+      "role": "難易度の見た目、敵の行動選択と生成、絆ランキングの集計、教えの演出スタイル",
+      "pure": true
+    },
+    {
+      "file": "23-rpg-debug.jsx",
+      "role": "ダンジョン RPG 戦闘テスト(デバッグ専用の別エンジン)",
+      "pure": true
+    },
+    {
+      "file": "24-battle-fx.jsx",
+      "role": "エイキの桜・パンドラの雷などバトル演出の部品"
+    },
+    {
+      "file": "25-storage.jsx",
+      "role": "保存層(storeGet / storeSet / storeList / setStorageWriteBlocked)と音ゲー保存の薄い関数"
+    },
+    {
+      "file": "26-supabase.jsx",
+      "role": "全国ランキング(Supabase REST)。難易度キー、取得、送信、絆Lv、周回ID"
+    },
+    {
+      "file": "27-result-widgets.jsx",
+      "role": "リザルト部品(LevelGrowthBar・CountUpNumber・RewardSummaryCard)、起動ゲージ連携、染色マスクの手動エディタ、長押しボタン"
+    },
+    {
+      "file": "28-rhythm-shared.jsx",
+      "role": "音ゲーの共有部品: 表示時間の定数、入力キー、ノーツ速度、画面回転・静音、タイミング調整"
+    },
+    {
+      "file": "29-rhythm-screens.jsx",
+      "role": "音ゲーのオプション画面・曲えらび・マスモン枠(演奏画面以外)"
+    },
+    {
+      "file": "30-rhythm-play.jsx",
+      "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
+    },
+    {
+      "file": "50-error-boundary.jsx",
       "role": "画面のエラー境界 MhErrorBoundary と、デバッグ用にわざと例外を投げる部品"
     },
     {
-      "file": "20-app.jsx",
+      "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
     {
-      "file": "30-bootstrap.jsx",
+      "file": "70-bootstrap.jsx",
       "role": "CSS 文字列の注入(createAnimationStyle)、ReactDOM.createRoot、HTML ローディングの非表示"
     }
   ]
