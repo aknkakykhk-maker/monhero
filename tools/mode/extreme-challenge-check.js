@@ -36,9 +36,9 @@ assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE,...((SPECIES_C
 // 種族チャレンジにも同じ形の解放条件が付いたため、開始ボタンは2つのロックを見る
 assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||speciesLocked||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
-assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
+assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:false)"), 'debug mode must unlock every EXTREME difficulty regardless of official progress');
 assert(source.includes('const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);'), 'INFINITY details must unlock from the loaded ULTIMATE clear count');
-assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:false") && source.includes('const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked'), 'CHAOS / ULTIMATE / INFINITY / GOD must use their preceding clear state while debug remains available');
+assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:false") && source.includes('const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked'), 'CHAOS / ULTIMATE / INFINITY / GOD must use their preceding clear state while debug remains available');
 assert(source.includes("setting.id==='CHAOS'?'NIGHTMAREクリアで解放'"), 'CHAOS card must show its unlock condition');
 assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(true)}")
   && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
@@ -76,7 +76,7 @@ assert(/if \(!forcedEnemyKey && !extremeRunRef\.current && !debugBattleRef\.curr
   && /if \(!enemy && !extremeRunRef\.current && !debugBattleRef\.current && !speciesChallengeBattleRunRef\.current[^{]*\{/.test(source), 'EXTREME must not touch the challenge attempt / highest-wave records');
 // 敵の強さ: 極限だけ×13を渡し、それ以外は null(=難易度の倍率)のまま。null が 0 扱いされないこと
 assert(source.includes('const battleSetting=extremeRunRef.current?extremeRuleSetting(extremeDifficulty):null;')
-  && source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier)'), 'only an extreme run may override enemy power and apply its turn multiplier');
+  && source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier)'), 'only an extreme run may override enemy power and apply its turn multiplier');
 assert(source.includes('const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));')
   && source.includes('const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;'), 'a null override must fall back to the difficulty power');
 // デバッグから入った周回は debugBattleRef が true のままなので、報酬・記録・ランキングをすべて通らない
@@ -93,7 +93,7 @@ assert(source.includes('await storeSet(extremeBestScoreKey(extremeDifficulty), s
 assert(source.indexOf('if (extremeRunRef.current) {') < source.indexOf('const result = await submitLocalScore(difficulty, score, runIdRef.current);'), 'EXTREME must return before the challenge ranking submission');
 // ランキングはチャレンジ・プロと同じ作り。テーブルも列も増やさず、difficultyへ入れる値だけで分ける
 assert(source.includes("const EXTREME_RANKING_PREFIX = 'Extreme';")
-  && source.includes('...EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),'), 'EXTREME must get its own ranking namespace inside the existing table');
+  && source.includes('...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),'), 'EXTREME must get its own ranking namespace inside the existing table');
 assert(source.includes('const result = await submitLocalScore(rankingDifficultyForMode(EXTREME_MODE.id, extremeDifficulty), score, runIdRef.current);'), 'EXTREME scores must be submitted through the shared ranking path');
 assert(source.includes("if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);"), 'the extreme prefix must be stripped for display');
 // 送信できるのは「共通のキー生成を通った難易度」だけ。ここを緩めると rankings テーブルへ

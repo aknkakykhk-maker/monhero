@@ -725,6 +725,14 @@ function MonsterHeroGame() {
   const [waveResult, setWaveResult] = useState(null);
   // 敵撃破に伴うスコア・報酬・画面遷移を、同じWAVEで二重に確定しないための同期ロック。
   const enemyDefeatResolvedRef = useRef(false);
+  // 不死(死者の再起)で、このWAVEに何回起き上がったか。撃破処理と同じ同期ロックの流れで判定するので
+  // 表示用のstateとは別にrefでも持ち、再描画を待たずに次の撃破判定へ反映する。
+  const enemyRevivalUsedRef = useRef(0);
+  const [enemyRevivalUsed, setEnemyRevivalUsed] = useState(0);
+  // 起き上がった直後のライフ。撃破処理を通さなかったことを呼び出し元へ伝えるために使う
+  const enemyRevivedHpRef = useRef(null);
+  // 起き上がる演出(画面中央の一枚絵)。表示中は次のタップを受けない
+  const [enemyRevivalReveal, setEnemyRevivalReveal] = useState(null);
   // クイックモードの自動成長・供モン加入の簡易表示。どちらもタップか一定時間で次へ進む
   const [quickGrowth, setQuickGrowth] = useState(null); // { stats:[{label,before,after}], nextWave }
   const [quickJoin, setQuickJoin] = useState(null);     // { name, stats:[...], unique:{monName,skillName,before,after} }
@@ -1411,11 +1419,13 @@ function MonsterHeroGame() {
   const chaosClearCount = extremeClearCounts[CHAOS_SETTING.id] || 0;
   const ultimateClearCount = extremeClearCounts[ULTIMATE_SETTING.id] || 0;
   const infinityClearCount = extremeClearCounts[INFINITY_SETTING.id] || 0;
+  const godClearCount = extremeClearCounts[GOD_SETTING.id] || 0;
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
   const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
   const ultimateUnlocked = useMemo(() => isUltimateUnlocked(chaosClearCount), [chaosClearCount]);
   const infinityUnlocked = useMemo(() => isInfinityUnlocked(ultimateClearCount), [ultimateClearCount]);
   const godUnlocked = useMemo(() => isGodUnlocked(infinityClearCount), [infinityClearCount]);
+  const ragnarokUnlocked = useMemo(() => isRagnarokUnlocked(godClearCount), [godClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -3505,7 +3515,9 @@ function MonsterHeroGame() {
   const makeDebugStrongestMonster = () => ({
     ...ALL_PLAYER_MONSTERS.Mocchi,
     name:'🛠 デバッグ最強モン',
-    baseHp:9999, baseAtk:9999, baseDef:9999, baseGuts:9999,
+    // RAGNAROKのように敵強度が跳ね上がった難易度でも、通しで確認できるだけの余裕を持たせる
+    // (以前は9999。敵強度×200では削りきれず、確認の途中で負けてしまうため10倍にした)
+    baseHp:99990, baseAtk:99990, baseDef:99990, baseGuts:99990,
     distAptitude:['M','M','M','M'],
     debugOnly:true,
   });
@@ -5003,7 +5015,7 @@ function MonsterHeroGame() {
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03*getPermaBuff('snegurochkaGutsDiscountStacks')));
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    if(specialRuleDifficulty===GOD_SETTING.id)return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave));
+    if(extremeWaveStage(specialRuleDifficulty))return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave));
     return applyExtremeIntegerRule(cost,specialRuleDifficulty,'gutsCost');
   };
 
@@ -5973,8 +5985,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
     let distanceBrokenDmg;
-    if(specialRuleDifficulty===GOD_SETTING.id){
-      distanceBrokenDmg=applyGodSpecialDamage(finalDmg,elapsedTotalTurns,slotIdx,ultimateDistanceBreakLevels,wave,card.type);
+    if(extremeWaveStage(specialRuleDifficulty)){
+      distanceBrokenDmg=applyExtremeStagedDamage(finalDmg,elapsedTotalTurns,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,wave,card.type);
     }else{
       const turnPressedDmg=Math.floor(finalDmg*ultimateDamageTurnMultiplier(elapsedTotalTurns,specialRuleDifficulty));
       distanceBrokenDmg=applyUltimateDistanceBreak(turnPressedDmg,slotIdx,ultimateDistanceBreakLevels,specialRuleDifficulty,card.type);
@@ -6002,6 +6014,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // distDamageは攻撃カードだけが距離別へ加算し、反射などは空配列のままにする。
   const resolveEnemyDefeat = async ({remainingHp, damage, distDamage=[0,0,0,0]}) => {
     if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
+    // 不死(死者の再起)を持つ難易度の対象WAVEだけ、撃破を確定させずに起き上がらせる。
+    // 撃破ロック(enemyDefeatResolvedRef)はまだ立てない。ここで立てると、起き上がった敵を
+    // もう一度倒したときにWAVEクリアが確定しなくなる。
+    const revivalDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
+    const revived=extremeRevivedEnemyStats(enemy,revivalDifficulty,wave,enemyRevivalUsedRef.current);
+    if (revived) {
+      enemyRevivalUsedRef.current=revived.revivalNumber;
+      setEnemyRevivalUsed(revived.revivalNumber);
+      enemyRevivedHpRef.current=revived.hp;
+      setEnemySkillName(null);
+      Audio_.se.enemySpecial();
+      setEnemy(prev=>prev?{...prev,hp:revived.hp,atk:revived.atk}:prev);
+      setEnemyRevivalReveal({revivalNumber:revived.revivalNumber,remaining:revived.remaining});
+      addPopup('死者の再起！','enemy','text-slate-100 font-black text-3xl drop-shadow-[0_0_18px_rgba(148,163,184,0.9)]');
+      triggerShake(true);
+      await battleWait(1600);
+      setEnemyRevivalReveal(null);
+      return false;
+    }
     enemyDefeatResolvedRef.current = true;
     setEnemySkillName(null);
     if (!autoBattleRef.current || bgmArrangement.autoVictoryJingle === 'on') Audio_.playJingle('victory');
@@ -6562,8 +6593,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) attackDistDamage[si]+=h.dmg; } }
     // このターンに削ったぶんを引いた、敵の本当のライフ。撃破判定と敵の行動へ同じ値を渡す。
     // (enemy はターン開始時の値で止まっているので、必ずここを通してから使う)
-    const enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-totalDmg);
+    let enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-totalDmg);
+    enemyRevivedHpRef.current=null;
     if (enemy && await resolveEnemyDefeat({remainingHp:enemyHpAfterOurAttacks,damage:totalDmg,distDamage:attackDistDamage})) return;
+    // 不死で起き上がったときは撃破が確定していない。敵の行動へ渡すライフも起き上がった後の値にする
+    // (0のままだと、反射で殴り返したときに「HP0の敵をもう一度倒した」ことになってしまう)
+    if (enemyRevivedHpRef.current!=null) enemyHpAfterOurAttacks=enemyRevivedHpRef.current;
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
@@ -6694,7 +6729,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const blocked=gameState!=='BATTLE'||!enemy||enemy.hp<=0||isBusy||
       autoTurnRunningRef.current||autoTurnScheduledRef.current||!!battleScenarioRef.current||battleTutorialStep!=null||
       !!skillPicker||!!showDeckInfo||!!showEnemyInfo||!!showHeroInfo||!!showQuitConfirm||!!skillEffectDetail||
-      !!ultimateDistanceBreakReveal||!!extremeRuleOpen||!!effect;
+      !!ultimateDistanceBreakReveal||!!enemyRevivalReveal||!!extremeRuleOpen||!!effect;
     if(!autoBattleRef.current||blocked)return;
     autoTurnScheduledRef.current=true;
     Promise.resolve().then(async()=>{
@@ -6715,7 +6750,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(autoBattleRef.current)setAutoTurnCycle(n=>n+1);
       }
     });
-  },[autoBattle,autoTurnCycle,gameState,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,skillEffectDetail,ultimateDistanceBreakReveal,extremeRuleOpen,effect,battleTutorialStep]);
+  },[autoBattle,autoTurnCycle,gameState,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,skillEffectDetail,ultimateDistanceBreakReveal,enemyRevivalReveal,extremeRuleOpen,effect,battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -7021,10 +7056,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const battleSetting=extremeRunRef.current?extremeRuleSetting(extremeDifficulty):null;
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const enemyTurnMultiplier=ultimateEnemyTurnMultiplier(totalTurnCount,specialRuleDifficulty);
-    const divineEnemyMultiplier=specialRuleDifficulty===GOD_SETTING.id?godDivinityRules(w).enemyMultiplier:1;
-    const newEnemy=specialRuleDifficulty===GOD_SETTING.id
-      ?createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*divineEnemyMultiplier)
-      :createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier);
+    // 段階を持つ難易度(GODの神威 / RAGNAROKの黄昏)は、そのWAVEの段階ぶんを累計ターン倍率へ重ねる。
+    // 段階を持たない難易度では1倍が返るので、これまでどおりの敵になる。
+    const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(specialRuleDifficulty,w);
+    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
@@ -7060,6 +7095,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       battleScenarioIntentIndexRef.current=0;
     }
     enemyDefeatResolvedRef.current=false;
+    // 不死の回数はWAVEごとに数え直す(前のWAVEで使い切っていても、対象WAVEでは規定回数から始まる)
+    enemyRevivalUsedRef.current=0; setEnemyRevivalUsed(0); enemyRevivedHpRef.current=null; setEnemyRevivalReveal(null);
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
     const firstIntent = getNextEnemyAction(newEnemy,dist,null,{unannounced:true});
     setEnemyIntent(firstIntent);
@@ -7402,7 +7439,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
       const aptDelta=getMonsterAptPct(m,specialRuleDifficulty);
-      if(specialRuleDifficulty===GOD_SETTING.id){const effectiveApt=getMonsterAptPct(m,specialRuleDifficulty,wave);effectiveApt.forEach((value,index)=>{aptDelta[index]=value;});}
+      if(extremeWaveStage(specialRuleDifficulty)){const effectiveApt=getMonsterAptPct(m,specialRuleDifficulty,wave);effectiveApt.forEach((value,index)=>{aptDelta[index]=value;});}
       if (aptDelta.some(d=>d!==0)) setDistAptPct(prev=>prev.map((v,i)=>v+aptDelta[i]));
       const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${formatAptPct(d)}`:null).filter(Boolean).join(' ');
       const newAllyUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
@@ -9222,14 +9259,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?theme.accent:`rgba(${theme.rgb},.28)`,background:previewable?theme.background:`linear-gradient(180deg,rgba(${theme.rgb},.10),#0d142b)`,boxShadow:active?`0 0 ${theme.shadowBlur}px rgba(${theme.rgb},${theme.glow})`:'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:theme.accent,textShadow:active?`0 0 10px rgba(${theme.rgb},${theme.titleGlow})`:'none'}}>{setting.label}</h3>
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1">
                           <small className="block text-[8px] text-slate-400 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
                           <b className="block text-right text-base leading-tight" style={{color:theme.accent}}>{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':'選択できません'}</span>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':setting.id==='INFINITY'&&!infinityUnlocked?'ULTIMATEクリアで解放':setting.id==='GOD'&&!godUnlocked?'INFINITYクリアで解放':setting.id==='RAGNAROK'&&!ragnarokUnlocked?'GODクリアで解放':'選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
@@ -10145,7 +10182,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">1. 難易度</div><div className="grid grid-cols-3 gap-2">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>{setDifficulty(key);const options=getDebugEnemyOptions(key);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);}} className={`min-h-[48px] rounded-xl text-[9px] font-black ${difficulty===key?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div></section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">2. 敵</div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(difficulty).map(({key,enemy:debugEnemy})=><button key={key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
-              <section><div className="text-[10px] text-slate-500 font-black mb-2">3. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 9999・全距離M</small></button></section>
+              <section><div className="text-[10px] text-slate-500 font-black mb-2">3. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 99990・全距離M</small></button></section>
               <button disabled={!getDebugEnemyOptions(difficulty).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={startDebugBattle} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">4. デバッグ戦開始</button>
             </div>
           </div>
@@ -12360,10 +12397,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if(!hasEnemyRate&&!hasDamageRate)return null;
               const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
               const enemyMultiplier=ultimateEnemyTurnMultiplier(totalTurnCount,statusRule);
-              const damageMultiplier=statusRule===GOD_SETTING.id?extremeDamageTurnMultiplier(elapsedTotalTurns,statusRule,wave):ultimateDamageTurnMultiplier(elapsedTotalTurns,statusRule);
+              const damageMultiplier=extremeDamageTurnMultiplier(elapsedTotalTurns,statusRule,wave);
               const hasJoinRate=extremeRuleNumber(statusRule,'allyJoinPenaltyRate')!=null;
+              // 段階(神威・黄昏)と不死の残り回数は難易度名で分岐せず、持っている難易度だけに出す
+              const stageLabel=extremeWaveStageLabel(statusRule);
+              const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(statusRule,wave);
+              const revivalTotal=extremeRevivalCount(statusRule,wave);
               return <div data-ultimate-battle-status={statusRule} className="shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100">
-                <span className="text-amber-300">{statusRule}{statusRule===GOD_SETTING.id?` 神威 Lv.${godDivinityLevel(wave)}`:''}</span>{hasEnemyRate&&<span>敵強化 +{compactPercent(enemyMultiplier*(statusRule===GOD_SETTING.id?godDivinityRules(wave).enemyMultiplier:1)-1)}（WAVE開始時 累計{totalTurnCount}T）</span>}{hasDamageRate&&<span>与ダメ {compactPercent(damageMultiplier)}（現在 累計{elapsedTotalTurns}T）</span>}{hasJoinRate&&<span>加入B {compactPercent(ultimateAllyJoinMultiplier(elapsedTotalTurns,statusRule))}（現在）</span>}{extremeDistanceBreakRule(statusRule)&&<span>BREAK {ultimateDistanceBreakLevels.map((level,index)=>level>0?`${RANGE_LABELS[index]}Lv${level}`:null).filter(Boolean).join(' / ')||'未発生'}</span>}
+                <span className="text-amber-300">{statusRule}{stageLabel?` ${stageLabel} Lv.${extremeWaveStageLevel(wave)}`:''}</span>{revivalTotal>0&&<span className="text-slate-200">不死 残り{Math.max(0,revivalTotal-enemyRevivalUsed)}回</span>}{hasEnemyRate&&<span>敵強化 +{compactPercent(enemyMultiplier*stagedEnemyMultiplier-1)}（WAVE開始時 累計{totalTurnCount}T）</span>}{hasDamageRate&&<span>与ダメ {compactPercent(damageMultiplier)}（現在 累計{elapsedTotalTurns}T）</span>}{hasJoinRate&&<span>加入B {compactPercent(ultimateAllyJoinMultiplier(elapsedTotalTurns,statusRule))}（現在）</span>}{extremeDistanceBreakRule(statusRule)&&<span>BREAK {ultimateDistanceBreakLevels.map((level,index)=>level>0?`${RANGE_LABELS[index]}Lv${level}`:null).filter(Boolean).join(' / ')||'未発生'}</span>}
               </div>;
             })()}
             {(()=>{const rule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return [NIGHTMARE_SETTING.id,CHAOS_SETTING.id].includes(rule)&&<div data-extreme-battle-status={rule} className="shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[9px] font-black leading-none text-purple-100"><span className="text-amber-300">{rule}</span>{extremeSpecialRuleLines(rule).map(([label,value])=><span key={label} className="text-center whitespace-nowrap">{label} {value}</span>)}</div>;})()}
@@ -13874,6 +13915,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="mt-5 text-xl font-black text-white">{RANGE_LABELS[ultimateDistanceBreakReveal.distance]}距離 BREAK Lv{ultimateDistanceBreakReveal.level}</div>
           <div className="mt-2 rounded-xl border border-red-300/50 bg-black/40 py-2 text-sm font-black text-red-200">与ダメージ {100*(0.5**ultimateDistanceBreakReveal.level)}%</div>
           <div className="mt-4 border-t border-red-300/20 pt-3 text-[10px] text-purple-100"><span className="font-black text-slate-400">現在のBREAK：</span><br/><span className="font-black">{ultimateDistanceBreakLevels.map((level,index)=>level>0?`${RANGE_LABELS[index]} Lv${level}`:null).filter(Boolean).join(' / ')||'なし'}</span></div>
+        </div>
+      </div>}
+      {/* 不死(死者の再起)。倒したはずの敵が起き上がったことを、DISTANCE BREAKと同じ作りの
+          一枚絵で知らせる。ここを飛ばすと「倒したのに次のWAVEへ行かない」と見えてしまう */}
+      {gameState==='BATTLE'&&enemyRevivalReveal!=null&&<div data-extreme-revival-reveal className="fixed inset-0 flex items-center justify-center p-5 text-center" style={{zIndex:91000,background:'radial-gradient(circle,rgba(51,65,85,.82),rgba(2,6,23,.98))'}} role="dialog" aria-modal="true" aria-label="死者の再起">
+        <div className="w-full max-w-xs rounded-3xl border-2 border-slate-200 bg-slate-950/95 px-5 py-7 shadow-[0_0_56px_rgba(203,213,225,.7)]" style={{animation:'mhExtremeRuleIn .38s ease-out'}}>
+          <div className="text-xs font-black tracking-[.24em] text-slate-300">{specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)||RAGNAROK_SETTING.id}</div>
+          <div className="mt-2 text-2xl font-black italic tracking-wider text-slate-100">DEAD RISING</div>
+          <div className="mt-5 text-xl font-black text-white">死者の再起 {enemyRevivalReveal.revivalNumber}回目</div>
+          <div className="mt-2 rounded-xl border border-slate-300/50 bg-black/40 py-2 text-sm font-black text-slate-200">ライフ半分で起き上がり、攻撃力+50%</div>
+          <div className="mt-4 border-t border-slate-300/20 pt-3 text-[10px] text-slate-300"><span className="font-black text-slate-400">残りの再起：</span><span className="font-black">{enemyRevivalReveal.remaining}回</span></div>
         </div>
       </div>}
       {/* WAVE1で一度だけ出す特殊ルールの案内。本文は「ルール詳細」と同じ
