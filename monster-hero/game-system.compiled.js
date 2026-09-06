@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 492f28eec188aaf0
+// source-sha256: 78fccf979cacb510
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 03abeb66c7001eeb
+// generated-sha256: 6698a9a8972ebae8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 02:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20787,7 +20787,18 @@ function MonsterHeroGame() {
   const battleSpeedRef = useRef(1);
   // AUTO∞中だけ×4へ固定し、開始前の通常設定は保存を書き換えずメモリ上に退避する。
   const autoRepeatBattleSpeedRef = useRef(null);
-  const battleMs = useCallback(baseMs => Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current))), []);
+  // ===== 演奏で止まっていたぶんの追いつき(docs/spec/QUICK_RHYTHM_LINK.md PR7) =====
+  // ★シミュレータは作らない。本物のループの待ち時間を詰めて速く回すだけなので、
+  //   報酬(経験値・ダイヤ・絆)を配る経路は今までどおり1つのまま。
+  //   数値をどこにも二重に持たないので、食い違いようがない(§4.3)。
+  const CATCH_UP_SPEED = 4;
+  // 追いつきをいつまで続けるか(時刻)。0なら追いつき中でない
+  const catchUpUntilRef = useRef(0);
+  const battleMs = useCallback(baseMs => {
+    const base = Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current)));
+    if (!(catchUpUntilRef.current > Date.now())) return base;
+    return Math.max(0, Math.round(base / CATCH_UP_SPEED));
+  }, []);
   const battleWait = useCallback(baseMs => new Promise(resolve => setTimeout(resolve, battleMs(baseMs))), [battleMs]);
   const setAutoRepeatBattleSpeed = enabled => {
     if (enabled) {
@@ -22807,6 +22818,8 @@ function MonsterHeroGame() {
   const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   const returnToBackgroundRun = () => {
+    // バトルへ戻ったら追いつきは終わり。見ている画面では通常の速さで進める
+    catchUpUntilRef.current = 0;
     if (runStageRef.current) setGameState(runStageRef.current);
   };
   // ===== モンビーで見せる周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
@@ -22865,6 +22878,78 @@ function MonsterHeroGame() {
     setQuickRunDetailOpen(false);
     setQuickRunStartError(false);
   };
+  // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
+  // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
+  // 気づけない仕組みなので、出るべき場面で1度だけ、みゅあが伝える。
+  // ★保存キーは新しく足す(既存の mh_* は触らない・CLAUDE.md ⑦)。
+  // ★公開フラグが false のあいだは、ヘルプ・更新履歴・告知と同じくこれも出さない。
+  const QUICK_RHYTHM_INTRO_KEY = 'mh_quick_rhythm_intro_seen_v1';
+  const QUICK_RHYTHM_BACKGROUND_KEY = 'mh_quick_rhythm_bg_seen_v1';
+  const [quickRhythmIntroSeen, setQuickRhythmIntroSeen] = useState(true);
+  const [quickRhythmBackgroundSeen, setQuickRhythmBackgroundSeen] = useState(true);
+  const quickRhythmGuideReleased = RELEASE_FLAGS.quickRhythmLink === true;
+  // ∞周回にしたバトル画面で1度だけ。周回中のあいだ出し、閉じるか一度見たら二度と出さない
+  const quickRhythmIntroVisible = quickRhythmGuideReleased && !quickRhythmIntroSeen && gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true;
+  const dismissQuickRhythmIntro = () => {
+    setQuickRhythmIntroSeen(true);
+    storeSet(QUICK_RHYTHM_INTRO_KEY, true, false);
+  };
+  // 裏で周回したままモンビーを開いた最初の1回だけ
+  const quickRhythmBackgroundVisible = quickRhythmGuideReleased && !quickRhythmBackgroundSeen && rhythmBackgroundRun;
+  const dismissQuickRhythmBackground = () => {
+    setQuickRhythmBackgroundSeen(true);
+    storeSet(QUICK_RHYTHM_BACKGROUND_KEY, true, false);
+  };
+  // ---- 演奏で止まっていたぶんの追いつき(PR7) ----
+  // 追いつける上限は「1曲ぶん」。長い曲でも5分までにして、
+  // タブを閉じていた時間まで遡ることは決してしない(∞周回の既存方針と同じ)
+  const CATCH_UP_MAX_PAUSED_MS = 5 * 60 * 1000;
+  const [catchingUp, setCatchingUp] = useState(false);
+  const rhythmPlayStartedAtRef = useRef(0);
+  const stopCatchUp = () => {
+    catchUpUntilRef.current = 0;
+    setCatchingUp(false);
+  };
+  const beginCatchUp = pausedMs => {
+    const paused = Math.min(Math.max(0, Number(pausedMs) || 0), CATCH_UP_MAX_PAUSED_MS);
+    // 4倍で回すなら、止まっていた時間の1/3を走れば取り戻せる
+    const needMs = Math.round(paused / (CATCH_UP_SPEED - 1));
+    if (needMs < 1000) {
+      stopCatchUp();
+      return;
+    }
+    catchUpUntilRef.current = Date.now() + needMs;
+    setCatchingUp(true);
+  };
+  // 演奏に入った時刻を控え、演奏から出たら取り戻しに入る。
+  // 裏で周回していないとき・バトルへ戻ったときは何もしない
+  useEffect(() => {
+    if (gameState === 'RHYTHM_PLAY') {
+      rhythmPlayStartedAtRef.current = Date.now();
+      stopCatchUp();
+      return;
+    }
+    const startedAt = rhythmPlayStartedAtRef.current;
+    rhythmPlayStartedAtRef.current = 0;
+    if (!startedAt) return;
+    if (!rhythmScreenOpen || runStageRef.current == null || !autoRepeatRef.current) {
+      stopCatchUp();
+      return;
+    }
+    beginCatchUp(Date.now() - startedAt);
+  }, [gameState]);
+  // 追いつきが終わったら表示も戻す。バトルへ戻ったときとランが終わったときも止める
+  useEffect(() => {
+    if (!catchingUp) return;
+    if (!rhythmScreenOpen || runStage === null) {
+      stopCatchUp();
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (!(catchUpUntilRef.current > Date.now())) stopCatchUp();
+    }, Math.max(500, catchUpUntilRef.current - Date.now()));
+    return () => clearTimeout(timer);
+  }, [catchingUp, rhythmScreenOpen, runStage]);
   // ∞周回中だけ出す「周回を止めずにモンビーへ」の入口。
   // returnToHome を通すと stopAllAuto で周回が終わってしまうので、
   // openRhythmDemo(画面を切り替えるだけ)を直接呼ぶ。
@@ -23549,6 +23634,10 @@ function MonsterHeroGame() {
         await storeSet('mh_unique_lineage_dedupe_migrated_v1', true, false);
       }
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
+      // 画面のなかの使い方案内(PR8)。読めなかったときは「まだ見ていない」側へ倒さず、
+      // 見た扱い(=出さない)にする。案内が二度出るより、出ないほうが害が小さい
+      setQuickRhythmIntroSeen((await storeGet(QUICK_RHYTHM_INTRO_KEY, true, false)) !== false);
+      setQuickRhythmBackgroundSeen((await storeGet(QUICK_RHYTHM_BACKGROUND_KEY, true, false)) !== false);
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
       // #827の誤式で34/35凸の過去レベルへ倍率が遡及され、既に増えた分だけを先に1回修復する。
@@ -34551,7 +34640,12 @@ function MonsterHeroGame() {
           value: key,
           disabled: !unlocked
         }, setting.label, unlocked ? '' : '（未解放）');
-      }))), /*#__PURE__*/React.createElement("p", {
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "pt-1"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "autoQuickRunSettings",
+        compact: true
+      })), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] leading-relaxed text-slate-400"
       }, autoQuickRunConfigured(draftAutoSettings) ? '✅ 3つとも決まっています。モンヒロビートから周回を始められます。' : 'まだ使えません（3つとも決めると使えます）。')))), /*#__PURE__*/React.createElement("button", {
         onClick: saveAutoSettings,
@@ -38601,7 +38695,7 @@ function MonsterHeroGame() {
         className: `shrink-0 text-[10px] font-black ${quickRunProgress.finished ? 'text-amber-200' : 'text-fuchsia-200'}`
       }, quickRunProgress.finished ? '⏹' : '⚔'), /*#__PURE__*/React.createElement("span", {
         className: "min-w-0 flex-1 truncate text-[10px] font-black text-slate-200"
-      }, quickRunProgress.finished ? '周回が終わりました（タップで結果へ）' : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目`), /*#__PURE__*/React.createElement("span", {
+      }, quickRunProgress.finished ? '周回が終わりました（タップで結果へ）' : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}`), /*#__PURE__*/React.createElement("span", {
         className: "shrink-0 text-[9px] font-black text-slate-400"
       }, quickRunDetailOpen ? '▲' : '▼')), quickRunDetailOpen && /*#__PURE__*/React.createElement("div", {
         "data-quick-run-progress-detail": true,
@@ -38640,14 +38734,29 @@ function MonsterHeroGame() {
         className: "truncate font-black text-white"
       }, mainHero?.masuName || mainHero?.name || '—'))), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-      }, quickRunProgress.finished ? '周回は止まっています。バトルへ戻ると結果を見られます。' : 'ここにいるあいだも周回は進みます。演奏中だけ止まり、曲が終わると続きから動きます。'), /*#__PURE__*/React.createElement("button", {
+      }, quickRunProgress.finished ? '周回は止まっています。バトルへ戻ると結果を見られます。' : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。' : 'ここにいるあいだも周回は進みます。演奏中だけ止まり、曲が終わると続きから動きます。'), /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-quick-run-progress-back": true,
         onClick: () => {
           if (runStageRef.current) returnToBackgroundRun();
         },
         className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]"
-      }, "\u2694 \u30D0\u30C8\u30EB\u3078\u623B\u308B"))), !quickRunProgress && !runStage && /*#__PURE__*/React.createElement("div", {
+      }, "\u2694 \u30D0\u30C8\u30EB\u3078\u623B\u308B"))), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
+        "data-quick-rhythm-background": true,
+        className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-start gap-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "quickRhythmBackground",
+        compact: true
+      })), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: dismissQuickRhythmBackground,
+        "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
+        className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+      }, "\xD7"))), !quickRunProgress && !runStage && /*#__PURE__*/React.createElement("div", {
         "data-quick-run-start": true,
         className: "shrink-0 border-b border-white/10 bg-slate-900/60 px-3 py-1.5"
       }, repeatTemplateForNewRun() ? /*#__PURE__*/React.createElement("button", {
@@ -45923,7 +46032,22 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black uppercase tracking-tighter leading-none"
       }, RANGE_LABELS[i], "\u8DDD\u96E2")));
-    }))), /*#__PURE__*/React.createElement("div", {
+    }))), quickRhythmIntroVisible && /*#__PURE__*/React.createElement("div", {
+      "data-quick-rhythm-intro": true,
+      className: "shrink-0 border-t border-fuchsia-400/30 bg-slate-950/95 px-2 py-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start gap-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, /*#__PURE__*/React.createElement(AssistantBubble, {
+      scene: "quickRhythmIntro",
+      compact: true
+    })), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: dismissQuickRhythmIntro,
+      "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
+      className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+    }, "\xD7"))), /*#__PURE__*/React.createElement("div", {
       className: "h-[24%] shrink-0 bg-slate-900/95 p-1 flex flex-col relative border-t border-white/10"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1"

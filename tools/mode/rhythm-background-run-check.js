@@ -123,6 +123,9 @@ const seed = () => {
     await clickExact('習得する');
     await page.waitForTimeout(1800);
 
+    // 一括実行だとブラウザが重く、待ち時間だけでは間に合わないことがある。
+    // バトル画面(AUTOボタン)が出るまで待ってから先へ進む
+    await page.waitForFunction(() => !!document.querySelector('button[aria-label^="AUTO"]'), { timeout: 25000 }).catch(() => {});
     // AUTO を ∞ まで回す(OFF → ON → ∞)
     const autoLabel = async () => page.evaluate(() => document.querySelector('button[aria-label^="AUTO"]')?.getAttribute('aria-label'));
     for (let i = 0; i < 3 && (await autoLabel()) !== 'AUTO ∞'; i++) {

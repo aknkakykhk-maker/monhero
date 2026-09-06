@@ -348,7 +348,9 @@ for (const match of source.matchAll(/\bscene=(?:"([A-Za-z][A-Za-z0-9]*)"|\{([^}\
   const withoutProps = match[2].replace(/\.\s*[A-Za-z_$][\w$]*/g, '');
   for (const id of withoutProps.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
     const declaration = source.match(new RegExp(`const\\s+${id[1]}\\s*=([^\\n;]+)`));
-    if (declaration) addQuotedSceneRefs(declaration[1]);
+    // `typeof x === 'object'` のような型くらべの文字列は場面名ではない。
+    // たどった先がこの形だと 'object' を場面として拾ってしまう(前からの誤検知)
+    if (declaration && !/typeof/.test(declaration[1])) addQuotedSceneRefs(declaration[1]);
   }
 }
 const missingSceneRefs = [...sceneRefs].filter(scene => !a.ASSISTANT_SCENES[scene]).sort();

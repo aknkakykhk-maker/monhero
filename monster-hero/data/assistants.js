@@ -498,6 +498,21 @@ const assistantLineMatchesBond = (line, level) => {
 // バトル中・クイックの成長演出・供モンの加入演出には常設しない(テンポを止めないため)。
 // バトル中の案内は「ステータス」やヘルプを開いたときだけ出す。
 const ASSISTANT_SCENES = {
+  // クイック∞周回 × モンビーの連携(docs/spec/QUICK_RHYTHM_LINK.md PR8)。
+  // 「別の画面へ移っても裏で進む」「演奏中だけ止まる」は遊んでいるだけでは気づけないので、
+  // 公開と同時に画面のなかでも伝える。本文は下の addAssistantLinePack から合流する。
+  quickRhythmIntro: {
+    help: 'home/roster',
+    lines: [],
+  },
+  quickRhythmBackground: {
+    help: 'home/roster',
+    lines: [],
+  },
+  autoQuickRunSettings: {
+    help: 'home/roster',
+    lines: [],
+  },
   // モンビー(モンヒロビート)の曲えらび・遊びかた。本文は下の addAssistantLinePack から合流する。
   rhythmHome: {
     help: 'rhythm/rhythm-mode',
@@ -1108,6 +1123,38 @@ const ASSISTANT_LINE_PACKS = [];
 
 // 束を1つ足す。読み込み順は問わない(合流は下の applyAssistantLinePacks でまとめて行う)
 const addAssistantLinePack = (pack) => { if (pack && pack.id && (pack.lines || pack.conditions)) ASSISTANT_LINE_PACKS.push(pack); };
+
+// クイック∞周回とモンビーの行き来(docs/spec/QUICK_RHYTHM_LINK.md PR8)。
+// 「バトル画面から移れる」「移っても裏で進む」「演奏中だけ止まる」の3つだけを、
+// 出るべき場面で1つずつ伝える。詳しい話はヘルプに任せる。
+addAssistantLinePack({
+  id: 'quickRhythmLinkGuide',
+  label: '∞周回×モンビー案内',
+  lines: {
+    quickRhythmIntro: [
+      { e:'excited', t:'∞周回にしたね！ このまま「🎵 モンビー」から音ゲーで遊べるよ♪' },
+      { e:'happy', t:'{name}、周回は裏で続くから、待ってるあいだに1曲どう？' },
+      { e:'normal', t:'バトルへ戻りたくなったら、モンビーの左上の「⚔ 戻る」でいつでも戻れるよ。' },
+      { e:'wink', t:'「🎵 BGM」のすぐ下が入口だよ。省エネ「超」のときも同じ場所にあるからね。' },
+      { e:'happy', t:'裏で回せるのはクイックの∞周回だけなんだ。ほかのモードは記録が絡むからね。' },
+      { e:'normal', t:'アプリを閉じたり別のアプリへ移ったりすると、そこで周回は止まるよ。' },
+    ],
+    quickRhythmBackground: [
+      { e:'excited', t:'ここにいるあいだも周回は進んでるよ！ 経験値もダイヤも貯まってる♪' },
+      { e:'normal', t:'演奏してるあいだだけは止まるの。曲が終わったら、その分を取り戻すからね。' },
+      { e:'happy', t:'上の帯をタップすると、何周めか・どれだけ貯まったかを見られるよ。' },
+      { e:'wink', t:'{name}、遊んでるあいだに強くなってるって、ちょっと得した気分でしょ？' },
+      { e:'normal', t:'バトルへ戻るときは、左上の「⚔ 戻る」か、帯の中の「⚔ バトルへ戻る」からどうぞ。' },
+    ],
+    autoQuickRunSettings: [
+      { e:'normal', t:'ここを決めておくと、モンビーからそのまま∞周回を始められるよ。' },
+      { e:'happy', t:'勇者モンと配置と難易度の3つ。決めてなければ、直前に組んだ編成をそのまま使うね。' },
+      { e:'wink', t:'まだ解放してない難易度は選べないよ。並んではいるけどね。' },
+      { e:'normal', t:'3つそろうと、下の一言が「始められます」に変わるから目印にしてね。' },
+      { e:'happy', t:'{name}が育ててる子を選んでおくと、放っておくだけで絆も伸びるよ♪' },
+    ],
+  },
+});
 
 // モンビー(モンヒロビート)。曲えらびでは「まず何をするか」、遊びかたでは
 // 「困ったらここを見れば分かる」を伝える(2026-09-05・ユーザー指示で追加)。
