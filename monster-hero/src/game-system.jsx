@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 12:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10523,8 +10523,53 @@ scheduleTick();};
                 {view.ability&&<div data-rhythm-ability-flash className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full border-2 border-amber-200 bg-slate-950/90 px-4 py-1.5 text-lg font-black text-amber-100" style={{bottom:'calc(12% + 78px)',textShadow:settings.lightweightMode||settings.effectAmount==='MINIMAL'?'none':'0 0 10px rgba(251,191,36,.8)'}}>{view.ability.ability}！</div>}{noteElements}{tutorial&&<div ref={tutorialBannerRef} data-rhythm-tutorial-banner className="pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"><b data-rhythm-tutorial-title className="block text-[14px] font-black text-cyan-100">{RHYTHM_TUTORIAL_STEPS[0].title}</b><span data-rhythm-tutorial-text className="mt-1 block text-[11px] font-bold leading-relaxed text-slate-200">{RHYTHM_TUTORIAL_STEPS[0].text}</span></div>}{view.status==='paused'&&<div data-rhythm-pause-menu data-rhythm-debug-play={debugPlay?'1':undefined} className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-5"><h3 className="text-2xl font-black">PAUSE</h3><button data-rhythm-pause-resume className="min-h-[48px] w-full rounded-xl bg-cyan-700 font-black" onClick={resume}>再開</button><button data-rhythm-pause-restart className="min-h-[48px] w-full rounded-xl bg-fuchsia-700 font-black" onClick={restart}>リスタート</button><button data-rhythm-pause-exit className="min-h-[48px] w-full rounded-xl bg-rose-800 font-black" onClick={abort}>{tutorial?'練習をやめて曲えらびへ戻る':debugPlay?'中断して音ゲーデバッグへ戻る':'中断して曲えらびへ戻る'}</button></div>}</div></main>;
 };
 
+// ==== 画面のエラー境界 ====
+// React 18 は描画中に例外が1つ出るとルートごと外してしまい、画面が真っ白のまま何も押せなくなる
+// (実際に「マーケットに入ると進行不能」「定義前の参照で真っ白」を出したことがある)。
+// ここで受け止めて「ホームへ戻る / 読み込み直す」を出す。保存は操作ごとに済んでいるので進行は失われない。
+// 正常時は子をそのまま返すだけで、DOM も描画順も変えない。
+// 2段で使う: ルート直下(戻る先が無いので読み込み直しだけ)と、MonsterHeroGame の中(gameState を HOME へ戻せる)。
+class MhErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null, screen: props.screen }; }
+  static getDerivedStateFromError(error) { return { error: error || new Error('unknown') }; }
+  static getDerivedStateFromProps(props, state) {
+    // 画面(gameState)が変わったら、前の画面で起きたエラーは捨てて描き直す
+    if (props.screen !== state.screen) return { screen: props.screen, error: null };
+    return null;
+  }
+  componentDidCatch(error, info) {
+    try {
+      const stack = info && info.componentStack ? info.componentStack.split('\n').filter(Boolean).slice(0, 3).join(' ') : '';
+      window.__mhErr && window.__mhErr('[screen-error] ' + (this.props.screen || 'root') + ': ' + (error && error.message) + ' ' + stack);
+    } catch (e) {}
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    const detail = String(this.state.error && (this.state.error.stack || this.state.error.message) || this.state.error);
+    const recover = () => { this.setState({ error: null }); try { this.props.onRecover && this.props.onRecover(); } catch (e) {} };
+    const reload = () => { try { window.location.reload(); } catch (e) {} };
+    return (
+      <main data-screen-error className="h-full w-full bg-slate-950 text-white flex flex-col items-center justify-center gap-4 p-6 text-center" style={{minHeight:'100dvh',boxSizing:'border-box'}}>
+        <div style={{fontSize:'40px',lineHeight:1}}>⚠️</div>
+        <h2 className="text-lg font-black">画面の表示でエラーが起きました</h2>
+        <p className="text-sm text-slate-300" style={{maxWidth:'22rem'}}>進行データは操作のたびに保存されているので、失われていません。ホームへ戻るか、ゲームを読み込み直してください。</p>
+        {this.props.onRecover && <button onClick={recover} className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-black shadow-lg active:scale-95" style={{maxWidth:'20rem'}}>ホームへ戻る</button>}
+        <button onClick={reload} className="w-full bg-slate-700 text-white py-3 rounded-2xl font-black shadow-lg active:scale-95" style={{maxWidth:'20rem'}}>ゲームを読み込み直す</button>
+        <details className="text-left text-xs text-slate-500" style={{maxWidth:'22rem',width:'100%'}}>
+          <summary>くわしい内容(不具合報告に添えてください)</summary>
+          <pre style={{whiteSpace:'pre-wrap',wordBreak:'break-all',marginTop:'8px'}}>{this.props.screen ? `画面: ${this.props.screen}\n` : ''}{detail}</pre>
+        </details>
+      </main>
+    );
+  }
+}
+
+// デバッグ設定の「画面エラーの受け止めを試す」用。描画した瞬間に必ず例外を投げる
+const DebugThrowScreenError = () => { throw new Error('デバッグ: 画面エラーの受け止めを試す(わざと投げた例外)'); };
+
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
+  const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -19058,6 +19103,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   return (
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
     <AssistantBondContext.Provider value={assistantBondValue}>
+    {/* 画面の描画で例外が出ても真っ白にせず、「ホームへ戻る」を出す(gameState が変わればエラーは捨てる) */}
+    <MhErrorBoundary screen={gameState} onRecover={()=>{ setDebugThrowScreenError(false); try { returnToHome(); } catch (e) { setGameState('HOME'); } }}>
     <div onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
@@ -20633,6 +20680,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
             <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button data-debug-rhythm-mode onClick={openRhythmDebug} className="w-full min-h-[64px] rounded-2xl border-2 border-cyan-300 bg-indigo-950 text-cyan-100 font-black">🎵 音ゲーデバッグ<small className="block text-[8px] text-cyan-300">曲・難易度・設定・BEST保存基盤を確認</small></button><button data-debug-rhythm-demo onClick={openRhythmDemo} className="w-full min-h-[64px] rounded-2xl border-2 border-amber-300 bg-amber-950/40 text-amber-100 font-black">🎼 音ゲー体験版（正式導線）<small className="block text-[8px] text-amber-300">公開したときプレイヤーが通る画面。Monster Hero 1曲・3難易度</small></button><button data-debug-species-challenge onClick={async()=>{await loadSpeciesChallengeProgress();setGameState('SPECIES_CHALLENGE_DEBUG');}} className="w-full min-h-[64px] bg-emerald-950 border-2 border-emerald-400 text-emerald-100 rounded-2xl font-black">🧬 種族チャレンジ進行確認<small className="block text-[8px] text-emerald-300">種族別の解放・クリア・初回報酬を確認／編集</small></button><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button data-debug-transcend onClick={()=>{setTranscendDebugId(null);setGameState('TRANSCEND_DEBUG');}} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-amber-300 text-amber-100 rounded-2xl font-black">🌟 超越確認<small className="block text-[8px] text-amber-200">マーク・演出・必要XPの確認と、試すための準備</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+              {/* 画面エラーの受け止め(MhErrorBoundary)を実際に試す。押すとこの画面の描画で例外が起き、真っ白の代わりに「ホームへ戻る」が出るはず */}
+              <button data-debug-screen-error onClick={()=>setDebugThrowScreenError(true)} className="w-full min-h-[48px] rounded-2xl border border-rose-400/70 bg-rose-950/40 text-rose-100 font-black text-sm">⚠️ 画面エラーの受け止めを試す</button>
+              {debugThrowScreenError&&<DebugThrowScreenError/>}
               {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
                   通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
               <button data-debug-rpg-battle onClick={()=>{setRpgBattle(null);setGameState('RPG_DEBUG_SETUP');}} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black">⚔️ ダンジョンRPG戦闘テスト<small className="block text-[8px] text-emerald-300">コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません</small></button>
@@ -25252,6 +25302,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         );})()}
     </div>
+    </MhErrorBoundary>
     </AssistantBondContext.Provider>
   );
 }
@@ -25806,7 +25857,8 @@ createAnimationStyle();
 // ==== GitHub Pages 用: グローバルからReact/フックを取得してレンダリング ====
 const rootEl = document.getElementById('root');
 const _root = ReactDOM.createRoot(rootEl);
-_root.render(React.createElement(MonsterHeroGame));
+// ルート直下にもエラー境界を置く(MonsterHeroGame 自体の描画で落ちたときは戻る先が無いので、読み込み直しだけを出す)
+_root.render(React.createElement(MhErrorBoundary, { screen: 'root' }, React.createElement(MonsterHeroGame)));
 
 // ==== 起動時: HTMLのローディング表示を消す ====
 // 事前ロードの進捗表示はReact側の起動画面(bootPhase)が受け持つので、

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 01592f82228fdc00
+// source-sha256: 584a0780382f6fe4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 12:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 12:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19425,8 +19425,110 @@ const RhythmTapTest = ({
     onClick: abort
   }, tutorial ? '練習をやめて曲えらびへ戻る' : debugPlay ? '中断して音ゲーデバッグへ戻る' : '中断して曲えらびへ戻る'))));
 };
+
+// ==== 画面のエラー境界 ====
+// React 18 は描画中に例外が1つ出るとルートごと外してしまい、画面が真っ白のまま何も押せなくなる
+// (実際に「マーケットに入ると進行不能」「定義前の参照で真っ白」を出したことがある)。
+// ここで受け止めて「ホームへ戻る / 読み込み直す」を出す。保存は操作ごとに済んでいるので進行は失われない。
+// 正常時は子をそのまま返すだけで、DOM も描画順も変えない。
+// 2段で使う: ルート直下(戻る先が無いので読み込み直しだけ)と、MonsterHeroGame の中(gameState を HOME へ戻せる)。
+class MhErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      error: null,
+      screen: props.screen
+    };
+  }
+  static getDerivedStateFromError(error) {
+    return {
+      error: error || new Error('unknown')
+    };
+  }
+  static getDerivedStateFromProps(props, state) {
+    // 画面(gameState)が変わったら、前の画面で起きたエラーは捨てて描き直す
+    if (props.screen !== state.screen) return {
+      screen: props.screen,
+      error: null
+    };
+    return null;
+  }
+  componentDidCatch(error, info) {
+    try {
+      const stack = info && info.componentStack ? info.componentStack.split('\n').filter(Boolean).slice(0, 3).join(' ') : '';
+      window.__mhErr && window.__mhErr('[screen-error] ' + (this.props.screen || 'root') + ': ' + (error && error.message) + ' ' + stack);
+    } catch (e) {}
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    const detail = String(this.state.error && (this.state.error.stack || this.state.error.message) || this.state.error);
+    const recover = () => {
+      this.setState({
+        error: null
+      });
+      try {
+        this.props.onRecover && this.props.onRecover();
+      } catch (e) {}
+    };
+    const reload = () => {
+      try {
+        window.location.reload();
+      } catch (e) {}
+    };
+    return /*#__PURE__*/React.createElement("main", {
+      "data-screen-error": true,
+      className: "h-full w-full bg-slate-950 text-white flex flex-col items-center justify-center gap-4 p-6 text-center",
+      style: {
+        minHeight: '100dvh',
+        boxSizing: 'border-box'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: '40px',
+        lineHeight: 1
+      }
+    }, "\u26A0\uFE0F"), /*#__PURE__*/React.createElement("h2", {
+      className: "text-lg font-black"
+    }, "\u753B\u9762\u306E\u8868\u793A\u3067\u30A8\u30E9\u30FC\u304C\u8D77\u304D\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-slate-300",
+      style: {
+        maxWidth: '22rem'
+      }
+    }, "\u9032\u884C\u30C7\u30FC\u30BF\u306F\u64CD\u4F5C\u306E\u305F\u3073\u306B\u4FDD\u5B58\u3055\u308C\u3066\u3044\u308B\u306E\u3067\u3001\u5931\u308F\u308C\u3066\u3044\u307E\u305B\u3093\u3002\u30DB\u30FC\u30E0\u3078\u623B\u308B\u304B\u3001\u30B2\u30FC\u30E0\u3092\u8AAD\u307F\u8FBC\u307F\u76F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), this.props.onRecover && /*#__PURE__*/React.createElement("button", {
+      onClick: recover,
+      className: "w-full bg-emerald-600 text-white py-3 rounded-2xl font-black shadow-lg active:scale-95",
+      style: {
+        maxWidth: '20rem'
+      }
+    }, "\u30DB\u30FC\u30E0\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+      onClick: reload,
+      className: "w-full bg-slate-700 text-white py-3 rounded-2xl font-black shadow-lg active:scale-95",
+      style: {
+        maxWidth: '20rem'
+      }
+    }, "\u30B2\u30FC\u30E0\u3092\u8AAD\u307F\u8FBC\u307F\u76F4\u3059"), /*#__PURE__*/React.createElement("details", {
+      className: "text-left text-xs text-slate-500",
+      style: {
+        maxWidth: '22rem',
+        width: '100%'
+      }
+    }, /*#__PURE__*/React.createElement("summary", null, "\u304F\u308F\u3057\u3044\u5185\u5BB9(\u4E0D\u5177\u5408\u5831\u544A\u306B\u6DFB\u3048\u3066\u304F\u3060\u3055\u3044)"), /*#__PURE__*/React.createElement("pre", {
+      style: {
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all',
+        marginTop: '8px'
+      }
+    }, this.props.screen ? `画面: ${this.props.screen}\n` : '', detail)));
+  }
+}
+
+// デバッグ設定の「画面エラーの受け止めを試す」用。描画した瞬間に必ず例外を投げる
+const DebugThrowScreenError = () => {
+  throw new Error('デバッグ: 画面エラーの受け止めを試す(わざと投げた例外)');
+};
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
+  const [debugThrowScreenError, setDebugThrowScreenError] = useState(false); // デバッグ設定から画面エラーの受け止めを試すためだけの印
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -32346,6 +32448,16 @@ function MonsterHeroGame() {
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
     React.createElement(AssistantBondContext.Provider, {
       value: assistantBondValue
+    }, /*#__PURE__*/React.createElement(MhErrorBoundary, {
+      screen: gameState,
+      onRecover: () => {
+        setDebugThrowScreenError(false);
+        try {
+          returnToHome();
+        } catch (e) {
+          setGameState('HOME');
+        }
+      }
     }, /*#__PURE__*/React.createElement("div", {
       onPointerDown: rippleOnPointerDown,
       onPointerMove: rippleOnPointerMove,
@@ -38074,6 +38186,10 @@ function MonsterHeroGame() {
     }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
     }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-screen-error": true,
+      onClick: () => setDebugThrowScreenError(true),
+      className: "w-full min-h-[48px] rounded-2xl border border-rose-400/70 bg-rose-950/40 text-rose-100 font-black text-sm"
+    }, "\u26A0\uFE0F \u753B\u9762\u30A8\u30E9\u30FC\u306E\u53D7\u3051\u6B62\u3081\u3092\u8A66\u3059"), debugThrowScreenError && /*#__PURE__*/React.createElement(DebugThrowScreenError, null), /*#__PURE__*/React.createElement("button", {
       "data-debug-rpg-battle": true,
       onClick: () => {
         setRpgBattle(null);
@@ -49091,7 +49207,7 @@ function MonsterHeroGame() {
         onClick: () => setRosterSkillDetail(null),
         className: "w-full bg-amber-600 text-white py-3 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95"
       }, "\u9589\u3058\u308B")));
-    })()))
+    })())))
   );
 }
 const createAnimationStyle = () => {
@@ -49643,7 +49759,10 @@ createAnimationStyle();
 // ==== GitHub Pages 用: グローバルからReact/フックを取得してレンダリング ====
 const rootEl = document.getElementById('root');
 const _root = ReactDOM.createRoot(rootEl);
-_root.render(React.createElement(MonsterHeroGame));
+// ルート直下にもエラー境界を置く(MonsterHeroGame 自体の描画で落ちたときは戻る先が無いので、読み込み直しだけを出す)
+_root.render(React.createElement(MhErrorBoundary, {
+  screen: 'root'
+}, React.createElement(MonsterHeroGame)));
 
 // ==== 起動時: HTMLのローディング表示を消す ====
 // 事前ロードの進捗表示はReact側の起動画面(bootPhase)が受け持つので、

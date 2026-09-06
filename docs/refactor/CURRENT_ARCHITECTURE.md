@@ -246,7 +246,7 @@
 | `key={i}` 系 | 37 | 並べ替えが起きる一覧では注意 |
 | `new Image()` | 5 | 先読みキュー(同時 2 本)・染色 |
 | 染色キャッシュ | `_dyeRecolorCache`(dataURL の Promise)、`_dyeRegionMaskCache` | 上限・破棄なし |
-| エラー境界 | なし | `componentDidCatch` / `getDerivedStateFromError` 0 件 |
+| エラー境界 | `MhErrorBoundary` 2 段(2026-09-06 追加) | ルート直下(読み込み直しのみ)と `MonsterHeroGame` の中(`gameState` が変わればエラーを捨て、「ホームへ戻る」で `returnToHome`) |
 
 CSS は `index.html` の `<style>` 617 行(起動画面・Tailwind が来る前の最低限の形)と、本体が注入する `createAnimationStyle` 547 行の2系統。
 それ以外は Tailwind ユーティリティ(CDN)。

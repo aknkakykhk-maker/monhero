@@ -5,7 +5,7 @@ const path = require('path');
 const source = fs.readFileSync(path.join(TOOLS_DIR, '..', 'monster-hero', 'src', 'game-system.jsx'), 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
 const context = {
-  React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} },
+  React: { Component: class { setState() {} }, PureComponent: class { setState() {} }, createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} },
   ALL_PLAYER_MONSTERS: { base: { distAptitude:['C','C','C','C'] } },
 };
 vm.createContext(context);
