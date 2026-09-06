@@ -48,8 +48,11 @@ const RHYTHM_CALIBRATION_COMPILED_BUILD='2026-09-01 20:24';
     &&typeof rhythmClamp01==='function';
 
   const judgmentRatio=area=>{
-    const areaRect=area.getBoundingClientRect(),line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=line?.getBoundingClientRect();
-    if(!(areaRect.width>0&&areaRect.height>0)||!lineRect)return .88;
+    // 自前で画面を回しているときは「回す前の箱」で測る(RHYTHM_VIEW_ROTATION)。
+    // 回っていないときはそのままの値なので、既存の校正結果は変わらない
+    const box=el=>(typeof RHYTHM_VIEW_ROTATION!=='undefined')?RHYTHM_VIEW_ROTATION.rectOf(el):el?.getBoundingClientRect?.();
+    const areaRect=box(area),line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=box(line);
+    if(!areaRect||!(areaRect.width>0&&areaRect.height>0)||!lineRect)return .88;
     return rhythmClamp01((lineRect.top-areaRect.top+lineRect.height/2)/areaRect.height);
   };
   const quadForSpan=(spanAt,y,halfHeight)=>{

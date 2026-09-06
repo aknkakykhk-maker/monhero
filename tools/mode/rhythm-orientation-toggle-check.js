@@ -21,12 +21,33 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //   ・exitFullscreen() は固定を外し、センサーの向きへ戻す
 //   ・向きが変わったら change / resize を鳴らす
 // この土台がないと、壊れている実装でも検査は通ってしまう(実際に通していた)。
+//
+// 【二の矢: 自前で画面を回す】(2026-09-06・ユーザーからの相談
+//  「端末の設定とか関係なく強制的に画面の向きを変えられないの？」)
+// 端末の向きを変える手段は screen.orientation.lock() ひとつしか無く、
+// Androidは全画面中のみ・iOSのSafariには存在しない・アプリ内ブラウザは全画面を塞ぐ。
+// つまりAPIに頼るかぎり「できない端末」は必ず残る。
+// そこで端末が断ったら、端末は縦のまま**絵のほうを90度回して描く**(RHYTHM_VIEW_ROTATION)。
+// この検査では、本物の RHYTHM_VIEW_ROTATION を rhythm-mode.js から読んで同じ器で動かし、
+//   ・断られても必ずどちらかの向きになること
+//   ・自前で回したときは「見えている向き」が入れ替わること
+//   ・端末が回ったら自前回転をやめること(二重に回すと横倒しになる)
+//   ・離れるときは自前回転も戻すこと
+//   ・座標の読み替えが往復で一致すること(ここがずれると押した場所と違うレーンが鳴る)
+// までを見る。
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
 const root = path.resolve(TOOLS_DIR, '..');
 const game = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
+const rhythmData = fs.readFileSync(path.join(root, 'monster-hero/data/rhythm-mode.js'), 'utf8');
+// 自前回転の変換は本物をそのまま動かす(検査用に写すと、写し間違いに気づけないため)
+const viewRotationSource = (() => {
+  const i = rhythmData.indexOf('const RHYTHM_VIEW_ROTATION=(()=>{');
+  const j = rhythmData.indexOf('const rhythmReleaseTargetMs=', i);
+  return i >= 0 && j > i ? rhythmData.slice(i, j) : '';
+})();
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -42,6 +63,7 @@ const grab = (from, to) => {
 // ---- 本体の関数をそのまま動かす ----
 const logic = grab('const screenOrientationApi=', 'const RhythmOrientationButton=');
 check('向きを切り替える処理がひとまとまりになっている', logic.length > 0);
+check('自前回転の変換(RHYTHM_VIEW_ROTATION)を本物から読めている', viewRotationSource.length > 0);
 
 // 実機に近い偽のブラウザ。
 //   sensor … 本体を実際にどちら向きに持っているか(固定が外れたときに戻る向き)
@@ -59,6 +81,8 @@ const makeWorld = ({
   const toSensor = () => setType(`${state.sensor}-primary`);
   const orientation = {
     get type() { return state.type; },
+    // 端末を自然な向きから何度回しているか。どちら回りに回せば素直な絵になるかの判断に使う
+    get angle() { return state.type.startsWith('landscape') ? 90 : 0; },
     addEventListener: (t, fn) => { if (t === 'change') listeners.orientation.push(fn); },
     removeEventListener: (t, fn) => { listeners.orientation = listeners.orientation.filter(f => f !== fn); },
   };
@@ -103,12 +127,15 @@ const makeWorld = ({
       addEventListener: (t, fn) => { if (t === 'change') listeners.media.push(fn); },
       removeEventListener: (t, fn) => { listeners.media = listeners.media.filter(f => f !== fn); },
     }),
-    addEventListener: (t, fn) => { if (t === 'resize') listeners.window.push(fn); },
+    addEventListener: (t, fn) => { if (t === 'resize' || t === 'orientationchange') listeners.window.push(fn); },
     removeEventListener: (t, fn) => { listeners.window = listeners.window.filter(f => f !== fn); },
+    // 自前で回したときは端末が動かないので resize は鳴らない。本体はここで自分で鳴らし、
+    // 「端末が回ったときとまったく同じ道」で測り直しを走らせる。その配線もここで見る
+    dispatchEvent: () => { listeners.window.forEach(fn => { try { fn(); } catch (_) {} }); return true; },
   };
   const context = {
     window: windowStub, document: documentStub, screen: windowStub.screen,
-    setTimeout, clearTimeout, Promise,
+    setTimeout, clearTimeout, Promise, Event,
   };
   // 端末の「戻る」やスワイプなど、こちらが頼んでいないのに全画面が外れる状況。
   // ボタンからの exitFullscreen とは別物なので、専用の入り口を用意する。
@@ -119,8 +146,12 @@ const makeWorld = ({
     fireFullscreenChange();
   };
   vm.createContext(context);
-  vm.runInContext(`${logic}\nglobalThis.x={orientationIsLandscape,applyScreenOrientation,releaseScreenOrientation,screenOrientationApi};`, context);
-  return { ...context.x, calls, state, dropFullscreenOutside };
+  // 自前回転の変換を先に置いてから本体を動かす(本体はこれを使う)
+  vm.runInContext(viewRotationSource, context);
+  vm.runInContext(`${logic}\nglobalThis.x={orientationIsLandscape,deviceIsLandscape,applyScreenOrientation,releaseScreenOrientation,screenOrientationApi,rotation:RHYTHM_VIEW_ROTATION};`, context);
+  // 本体を実際に回す(端末の自動回転が入っている人が持ち替えたときの再現)
+  const turnDevice = (next) => { state.sensor = next; if (!state.locked) setType(`${next}-primary`); };
+  return { ...context.x, calls, state, dropFullscreenOutside, turnDevice };
 };
 
 (async () => {
@@ -129,7 +160,8 @@ const makeWorld = ({
     const w = makeWorld({ sensor: 'portrait' });
     check('はじめは縦だと分かる', w.orientationIsLandscape() === false);
     const ok = await w.applyScreenOrientation('landscape');
-    check('横にできる', ok === true);
+    check('横にできる', ok === 'device', String(ok));
+    check('端末そのものが回ったと分かる（自前回転は使っていない）', w.rotation.get() === 0);
     check('全画面へ入ってから固定している', w.calls.join(',') === 'requestFullscreen,lock:landscape', w.calls.join(','));
     check('横になったと分かる', w.orientationIsLandscape() === true);
   }
@@ -142,7 +174,7 @@ const makeWorld = ({
     const back = await w.applyScreenOrientation('portrait');
     check('本体を横に持ったままでも縦にできる', w.orientationIsLandscape() === false,
       `いまの向き ${w.state.type}`);
-    check('縦にできたと正しく返す', back === true);
+    check('縦にできたと正しく返す', back === 'device', String(back));
     // 全画面を抜けると固定が外れて横へ戻ってしまう。だから縦のあいだは抜けない
     check('縦のあいだは全画面を抜けない（抜けると固定が外れて横へ戻るため）',
       !w.calls.includes('exitFullscreen'), w.calls.join(','));
@@ -155,32 +187,119 @@ const makeWorld = ({
     const w = makeWorld({ sensor: 'portrait' });
     await w.applyScreenOrientation('landscape');
     const back = await w.applyScreenOrientation('portrait');
-    check('本体が縦向きなら当然縦へ戻せる', back === true && w.orientationIsLandscape() === false);
+    check('本体が縦向きなら当然縦へ戻せる', back === 'device' && w.orientationIsLandscape() === false);
   }
 
-  // ---- ④ 回らなかったら「できた」と言わない ----
+  // ---- ④ 端末が断っても、自前で回して必ず決着する（今回の本題）----
+  // ここが「端末の設定に関係なく横で遊べる」を保証している部分。
+  // 断られたら黙って諦める、が今までの姿だった。
   {
-    // 全画面へ入れないブラウザでは lock も通らない
+    // 全画面へ入れないブラウザ(アプリ内ブラウザなど)では lock も通らない
     const w = makeWorld({ noFullscreen: true });
-    check('全画面へ入れないと false を返す', (await w.applyScreenOrientation('landscape')) === false);
-    check('向きも変わっていない', w.orientationIsLandscape() === false);
+    const how = await w.applyScreenOrientation('landscape');
+    check('全画面へ入れない端末でも横になる', how === 'forced', String(how));
+    check('そのとき端末は縦のまま（回っていない）', w.deviceIsLandscape() === false, w.state.type);
+    check('でも遊ぶ人から見れば横になっている', w.orientationIsLandscape() === true);
+    check('絵を90度回している', w.rotation.active() === true, `angle=${w.rotation.get()}`);
   }
   {
+    // iOSのSafariのように lock そのものが無い端末
     const noLock = makeWorld({ hasLock: false });
-    check('lock が無い端末では false を返す', (await noLock.applyScreenOrientation('landscape')) === false);
-    check('lock が無い端末では何も呼ばない(勝手に全画面にしない)', noLock.calls.length === 0, noLock.calls.join(','));
+    check('lock が無い端末でも横になる', (await noLock.applyScreenOrientation('landscape')) === 'forced');
+    check('lock が無い端末では端末に頼まない(勝手に全画面にしない)', noLock.calls.length === 0, noLock.calls.join(','));
+    check('lock が無い端末でも見えている向きは横', noLock.orientationIsLandscape() === true);
+
     const blocked = makeWorld({ lockFails: true });
-    check('lock を断られたら false を返す', (await blocked.applyScreenOrientation('landscape')) === false);
+    check('lock を断られても横になる', (await blocked.applyScreenOrientation('landscape')) === 'forced');
   }
   {
     // 固定は受け付けられたのに向きが変わらない端末。「受け付けた＝できた」にしない
     const stubborn = makeWorld({ sensor: 'portrait' });
-    // lock は成功扱いだが、向きは変えない差し替え
     const api = stubborn.screenOrientationApi();
     api.lock = async () => { stubborn.calls.push('lock:landscape'); };
-    const ok = await stubborn.applyScreenOrientation('landscape');
-    check('固定を受け付けられても向きが変わらなければ false を返す', ok === false,
-      `いまの向き ${stubborn.state.type}`);
+    const how = await stubborn.applyScreenOrientation('landscape');
+    check('固定を受け付けられても向きが変わらなければ自前で回す', how === 'forced',
+      `いまの向き ${stubborn.state.type} / how=${how}`);
+    check('そのときも見えている向きは横', stubborn.orientationIsLandscape() === true);
+  }
+  {
+    // 報告そのものの形。lock が効かない端末で、本体を横に持ったまま「縦」を押す
+    const w = makeWorld({ hasLock: false, sensor: 'landscape' });
+    await w.applyScreenOrientation('landscape');
+    const back = await w.applyScreenOrientation('portrait');
+    check('lock が効かない端末でも、本体を横に持ったまま縦にできる',
+      back === 'forced' && w.orientationIsLandscape() === false,
+      `how=${back} / 端末=${w.state.type} / angle=${w.rotation.get()}`);
+  }
+  {
+    // 端末が既に望みの向きなら、回す必要はない(回すと逆に狂う)
+    const w = makeWorld({ hasLock: false, sensor: 'landscape' });
+    const how = await w.applyScreenOrientation('landscape');
+    check('端末が既に横なら自前回転はしない', how === 'forced' && w.rotation.get() === 0,
+      `how=${how} / angle=${w.rotation.get()}`);
+    check('もちろん横のまま', w.orientationIsLandscape() === true);
+  }
+  {
+    // 自動回転が入っている人が、案内どおり本体を持ち替えたとき。
+    // 端末も回った上にこちらも回ったままだと、二重になって横倒しの絵になる
+    const w = makeWorld({ hasLock: false, sensor: 'portrait' });
+    await w.applyScreenOrientation('landscape');
+    check('まず自前で回っている', w.rotation.active() === true);
+    w.turnDevice('landscape');
+    check('本体を横に持ち替えたら自前回転はやめる（二重に回さない）', w.rotation.get() === 0,
+      `angle=${w.rotation.get()}`);
+    check('持ち替えたあとも横のまま', w.orientationIsLandscape() === true, w.state.type);
+  }
+  {
+    // 一度自前で回したあと、端末に頼み直せる状況になったら端末側を使う。
+    // 自前で回したまま端末にも頼むと二重になるので、頼む前に必ず戻す
+    const w = makeWorld({ hasLock: false, sensor: 'portrait' });
+    await w.applyScreenOrientation('landscape');
+    const api = { lock: async (want) => { w.state.locked = want; }, type: 'portrait-primary' };
+    check('自前で回した状態から始まっている', w.rotation.active() === true);
+    await w.applyScreenOrientation('portrait');
+    check('縦へ戻したら自前回転も戻る', w.rotation.get() === 0, `angle=${w.rotation.get()}`);
+    check('縦になっている', w.orientationIsLandscape() === false);
+    void api;
+  }
+  // ---- ④-2 座標の読み替えが往復で一致する ----
+  // ここがずれると「押した場所と違うレーンが鳴る」「ノーツが横に流れる」になる。
+  // 実際に遊べるかどうかは、この一致にかかっている。
+  {
+    const w = makeWorld({ hasLock: false, sensor: 'portrait' });
+    const R = w.rotation;
+    [90, 270].forEach((angle) => {
+      R.set(angle);
+      const vw = w.state.type.startsWith('landscape') ? 800 : 400;
+      const vh = w.state.type.startsWith('landscape') ? 400 : 800;
+      // 点: 器の中 → 画面 → 器の中 で元に戻るか
+      const back = R.point(...Object.values(R.unpoint(321, 177)));
+      check(`点の読み替えが往復で一致する(${angle}度)`,
+        Math.abs(back.x - 321) < 1e-9 && Math.abs(back.y - 177) < 1e-9, JSON.stringify(back));
+      // 箱: 器の中の箱の四隅を画面へ出し、その外接箱を戻すと元の箱になるか
+      const l = 120, t = 60, bw = 300, bh = 210;
+      const cs = [[l, t], [l + bw, t], [l, t + bh], [l + bw, t + bh]].map(([x, y]) => R.unpoint(x, y));
+      const L = Math.min(...cs.map(c => c.clientX)), Rr = Math.max(...cs.map(c => c.clientX));
+      const T = Math.min(...cs.map(c => c.clientY)), B = Math.max(...cs.map(c => c.clientY));
+      const box = R.rect({ left: L, top: T, right: Rr, bottom: B, width: Rr - L, height: B - T });
+      check(`箱の読み替えが往復で一致する(${angle}度)`,
+        Math.abs(box.left - l) < 1e-9 && Math.abs(box.top - t) < 1e-9
+        && Math.abs(box.width - bw) < 1e-9 && Math.abs(box.height - bh) < 1e-9, JSON.stringify(box));
+      // 器いっぱいが画面いっぱいをちょうど覆うか(すき間も食み出しも無い)
+      const full = [[0, 0], [vh, 0], [0, vw], [vh, vw]].map(([x, y]) => R.unpoint(x, y));
+      const okX = Math.min(...full.map(c => c.clientX)) === 0 && Math.max(...full.map(c => c.clientX)) === vw;
+      const okY = Math.min(...full.map(c => c.clientY)) === 0 && Math.max(...full.map(c => c.clientY)) === vh;
+      check(`回した器が画面をちょうど覆う(${angle}度)`, okX && okY, `vw=${vw} vh=${vh}`);
+      // 幅と高さが入れ替わる = 縦の画面が横の器になる
+      const style = R.frameStyle();
+      check(`器の大きさが縦横入れ替わっている(${angle}度)`,
+        style.width === `${vh}px` && style.height === `${vw}px`, `${style.width} x ${style.height}`);
+    });
+    R.set(0);
+    check('回していないときは点をそのまま返す',
+      R.point(10, 20).x === 10 && R.point(10, 20).y === 20);
+    check('回していないときは箱をそのまま返す', R.rect({ left: 1, top: 2, width: 3, height: 4 }).left === 1);
+    check('回していないときは器のCSSを作らない', R.frameStyle() === null);
   }
 
   // ---- ⑤ モンビーを離れたときの後始末 ----
@@ -210,6 +329,16 @@ const makeWorld = ({
     dropped.calls.length = 0;
     check('全画面が勝手に外れたら、固定の控えも下ろす', dropped.releaseScreenOrientation() === false);
     check('もう外れている固定を、あとから外そうとしない', dropped.calls.length === 0, dropped.calls.join(','));
+
+    // 自前で回したままモンビーを離れると、ゲーム全体(HOME・バトル)が横倒しになる。
+    // 端末に頼めなかった人ほどこの状態になるので、必ず戻す
+    const forced = makeWorld({ hasLock: false, sensor: 'portrait' });
+    await forced.applyScreenOrientation('landscape');
+    check('自前で回っている状態から離れる', forced.rotation.active() === true);
+    check('自前回転だけのときも「戻した」と答える', forced.releaseScreenOrientation() === true);
+    check('離れたら自前回転も戻る', forced.rotation.get() === 0);
+    check('戻したあとは縦に見える', forced.orientationIsLandscape() === false);
+    check('もう一度離れても二重に戻さない', forced.releaseScreenOrientation() === false);
   }
 
   check('モンビーの外へ出たら後始末を呼んでいる',
@@ -220,10 +349,31 @@ const makeWorld = ({
   // ---- ⑥ 実装の作り ----
   check('向きが実際に変わるまで待ってから答える',
     logic.includes('waitForScreenOrientation') && /if\(!await waitForScreenOrientation\(target\)\)return false;/.test(logic));
-  check('縦と横で同じ道を通す（縦だけ別の順で処理しない）',
-    !/target==='landscape'/.test(logic));
+  {
+    // 端末に頼む部分は縦でも横でもまったく同じ道でなければならない。
+    // 前は縦のときだけ「固定してから全画面を抜ける」という別の順で、そこで固定が外れていた。
+    // (applyScreenOrientation 側の const wantLandscape=target==='landscape' は、
+    //  自前回転へ渡すための読み替えなので道が分かれるわけではない)
+    const lockPath = logic.slice(logic.indexOf('const lockScreenOrientation='),
+      logic.indexOf('// --- 二の矢'));
+    check('端末に頼む部分は縦と横で同じ道を通す（縦だけ別の順で処理しない）',
+      lockPath.length > 0 && !/target===/.test(lockPath) && !/portrait/.test(lockPath), lockPath.length ? '' : '見つからない');
+    check('固定を持っているあいだは全画面を抜けない（抜けると固定が外れるため）',
+      lockPath.length > 0 && !lockPath.includes('exitFullscreen'));
+  }
   check('全画面が外れたら固定の控えも下ろす',
     /fullscreenchange/.test(logic) && /screenOrientationLockedByUs=false/.test(logic));
+  check('端末に頼んで駄目なら自前で回す、の二段構えになっている',
+    /if\(await lockScreenOrientation\(target\)\)return 'device';/.test(logic)
+    && /return applyForcedRotation\(wantLandscape\)\?'forced':'';/.test(logic));
+  check('端末に頼む前に自前回転をいったん戻す（二重に回さない）',
+    /RHYTHM_VIEW_ROTATION\.set\(0\);\s*\n\s*if\(await lockScreenOrientation/.test(logic));
+  check('端末が既に望みの向きなら自前では回さない',
+    /if\(deviceIsLandscape\(\)===wantLandscape\)\{RHYTHM_VIEW_ROTATION\.set\(0\);return true;\}/.test(logic));
+  check('本体を持ち替えたら測り直す配線がある',
+    logic.includes('forcedRotationWantLandscape') && /orientationchange/.test(logic));
+  check('「見えている向き」と「端末の向き」を分けている',
+    logic.includes('const deviceIsLandscape=') && /RHYTHM_VIEW_ROTATION\.active\(\)\?!device:device/.test(logic));
 
   // ---- ⑦ ボタンの作り ----
   const button = grab('const RhythmOrientationButton=', '\n// ============================================================================\n// タップのタイミング合わせ');
@@ -231,9 +381,13 @@ const makeWorld = ({
   check('いまの向きで文言が入れ替わる',
     /const label=landscape\?'縦画面にする':'横画面にする';/.test(button)
     && /const target=landscape\?'portrait':'landscape';/.test(button));
-  check('回せなかったら案内を出す', /setNote\(screenOrientationApi\(\)/.test(button));
-  check('できなかった理由で案内を書き分ける',
-    button.includes('このブラウザには画面を回す機能がありません') && button.includes('全画面にできないブラウザでは'));
+  check('端末ごと回ったときは何も言わない（言うことがない）',
+    /if\(how==='device'\)return;/.test(button));
+  check('自前で回したときは「本体を持ち替えて」と必ず伝える',
+    /if\(how==='forced'\)\{/.test(button)
+    && button.includes('代わりに絵のほうを') && button.includes('持ち替えて'));
+  check('どちらもできなかったときの案内も残してある',
+    button.includes('お手数ですが本体を'));
   check('押している間は二重に受け付けない', button.includes('if(busy)return;') && button.includes('disabled={busy}'));
   check('押したあとに今の向きを取り直す', button.includes('setLandscape(orientationIsLandscape())'));
   check('案内は押すと消える／時間でも消える',

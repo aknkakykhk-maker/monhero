@@ -39,7 +39,17 @@ check('5レーンはプレイエリア全体へ重ねて同じ投影座標で描
 check('レーン形状と6本の境界線は同じboundary helper',source.includes('lane.style.clipPath=rhythmLanePolygon(index)')&&source.includes("--rhythm-boundary-clip")&&source.includes('rhythmBoundaryLinePolygon(index)')&&source.includes('rhythmBoundaryLinePolygon(RHYTHM_LANE_COUNT,-1)'));
 check('押下発光は別楕円ではなくレーン台形本体',source.includes('[data-rhythm-lane]::after{content:none!important}')&&source.includes('[data-rhythm-lane][data-pressed="true"]{background:linear-gradient'));
 check('判定ラインも同じ外周境界',source.includes('left=rhythmProjectBoundary(0,y),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,y)')&&source.includes("line.style.left=`${(left*100).toFixed(4)}%`")&&source.includes("line.style.right=`${((1-right)*100).toFixed(4)}%`"));
-check('Touch・Pointer・SLIDE追従がclientX/clientYで共通逆投影',game.includes('rhythmLaneAtPoint(e.clientX,e.clientY,rect)')&&game.includes('rhythmLaneAtPoint(touch.clientX,touch.clientY,rect)')&&source.includes('rhythmLaneCoordinateAtPoint(clientX,clientY,rect)'));
+// 2026-09-06: 自前で画面を回せるようにしたので、指の位置は inputPoint(=RHYTHM_VIEW_ROTATION.point)
+// を通してから逆投影する(回していないときは受け取った値をそのまま返す)。
+// 見たいことは変わっていない。「Touch も Pointer も SLIDE追従も、clientX/clientY から
+// 同じ1本の逆投影(rhythmLaneCoordinateAtPoint)へ入る」ことを引き続き確かめる。
+check('Touch・Pointer・SLIDE追従がclientX/clientYで共通逆投影',
+  game.includes('const inputPoint=(clientX,clientY)=>RHYTHM_VIEW_ROTATION.point(clientX,clientY);')
+  &&game.includes('p=inputPoint(e.clientX,e.clientY),lane=rhythmLaneAtPoint(p.x,p.y,rect)')
+  &&game.includes('const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect)')
+  &&source.includes('rhythmLaneCoordinateAtPoint(clientX,clientY,rect)')
+  // SLIDE追従が使う「覚えている指の位置」も、覚える時点で同じ読み替えを通っている
+  &&source.includes('const p=RHYTHM_VIEW_ROTATION.point(clientX,clientY);'));
 check('描画と横投影は同じ丸め済みY座標を使用',game.includes('yPx=Math.round(yPx);')&&game.includes('const nextTransform=`translate3d(0,${yPx}px,0)`;')&&game.includes('if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;')&&!game.includes('el.style.transform=`translate3d(0,${yPx}px,0) scale('));
 check('ノーツY/X/幅をプレイ本体の同じrAFで配置',game.includes('rhythmProjectTravelProgress(progress)*travel.travelPx')&&game.includes('rhythmLayoutNoteVisual(el,note,yPx,visualLane,playAreaRef.current,releaseYpx,{chartNowMs:')&&!source.match(/const installRhythmPerspectiveNoteVisuals=[\s\S]*?requestAnimationFrame/));
 check('別座標系のCSS 3D変形を廃止',!html.includes('transform:perspective(')&&!source.includes('const scale=.44+.56*depth'));

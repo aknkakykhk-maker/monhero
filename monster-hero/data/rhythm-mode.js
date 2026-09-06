@@ -634,6 +634,126 @@ const rhythmJudgmentBandLayout=(travel,travelMs)=>{
     marvelousTop:yAt(-marvelous),marvelousBottom:yAt(marvelous),
   };
 };
+// ============================================================================
+// 自前で画面を回す(向きの固定が効かない端末のための二の矢)
+// ============================================================================
+// 【2026-09-06・ユーザーからの相談】
+// 「これって端末の設定とか関係なく強制的に画面の向きを変えられないの？」
+//
+// 【答え: APIでは無理】
+// ページから端末の向きを変える手段は screen.orientation.lock() ひとつしか無く、
+//   ・Androidは**全画面のあいだしか**許さない(抜けた瞬間に外れる)
+//   ・iOSのSafariには機能そのものが無い(iPhone・iPadは全滅)
+//   ・LINE・X・Instagramなどのアプリ内ブラウザは全画面を塞いでいるので断られる
+//   ・ブラウザ側の判断でいつでも拒否できる
+// これに頼るかぎり「できない端末」は必ず残る。仕様の壁なので直しようがない。
+//
+// 【そこで、端末ではなく**こちらの画面のほう**を回す】
+// 端末は縦のまま、モンビーの絵を90度回して描く。ただのCSSなので許可もAPIも要らず、
+// 端末の「画面の自動回転」の設定にも一切左右されない。どのブラウザでも必ず効く。
+//
+// 【回すと座標がずれるので、そこだけ引き受ける】
+// CSSで回すと getBoundingClientRect() も指の位置(clientX/clientY)も**回ったあとの値**で
+// 返ってくる。レーン判定もノーツの配置もこの値を使っているので、素直に回すと
+// 「押した場所と違うレーンが反応する」「ノーツが横に流れる」ことになる。
+// そこで、回転を打ち消す変換をここに1組だけ置き、測る側・読む側はすべてこれを通す。
+//
+// 回していないとき(既定)は**そのまま返すだけ**にしてある。既存の端末の挙動を
+// 1ビットも変えないための作り(CLAUDE.md ⑦)。
+//
+// 【変換の中身】
+// 器は position:fixed / 左上そろえ / 幅=画面の高さ・高さ=画面の幅 とし、
+//   transform: rotate(90deg) translateY(-100%)  (transform-origin: 0 0)
+// を掛ける。器の中の点 (x,y) は画面上の (vw-y, x) へ移る(vw = 画面の幅)。
+// したがって逆向きは、画面上の (X,Y) → 器の中の (Y, vw-X)。
+const RHYTHM_VIEW_ROTATION=(()=>{
+  // 0 = 回していない / 90 = 右へ90度 / 270 = 左へ90度
+  let angle=0;
+  const listeners=new Set();
+  const vw=()=>(typeof window==='undefined')?0:(window.innerWidth||0);
+  const vh=()=>(typeof window==='undefined')?0:(window.innerHeight||0);
+  const get=()=>angle;
+  const active=()=>angle===90||angle===270;
+  const set=next=>{
+    const value=(next===90||next===270)?next:0;
+    if(value===angle)return angle;
+    angle=value;
+    listeners.forEach(fn=>{try{fn(angle);}catch(_){}});
+    // 自前で回しても端末は回っていないので resize は鳴らない。
+    // ところが「測り直す」しくみ(レーンの形・判定ラインの左右・当たり判定の箱・
+    // ノーツの走る距離)はどれも resize を合図にしている。ここで自分で鳴らして、
+    // **端末が回ったときとまったく同じ道**を通す。
+    // 値が変わったときだけ通るので、これが引き金になって回り続けることはない。
+    if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'){
+      try{window.dispatchEvent(new Event('resize'));}catch(_){}
+    }
+    return angle;
+  };
+  const subscribe=fn=>{
+    if(typeof fn!=='function')return()=>{};
+    listeners.add(fn);
+    return()=>{listeners.delete(fn);};
+  };
+  // 器に掛けるCSS。幅と高さは画面の縦横を入れ替えたもの
+  const frameStyle=()=>{
+    if(!active())return null;
+    return{
+      position:'fixed',left:0,top:0,
+      width:`${vh()}px`,height:`${vw()}px`,
+      // index.html に「#root > div { max-width:600px; margin:0 auto }」がある。
+      // 縦持ちのコラム幅を決めている大事なCSSだが、ここでは器の幅(=画面の高さ)を
+      // 600pxへ切り詰めてしまい、器が画面を覆えなくなる。今どきのスマホは
+      // 高さが600pxを超えるので**必ず**踏む。実ブラウザの検査で見つけた(2026-09-06)。
+      maxWidth:'none',maxHeight:'none',margin:0,
+      transform:angle===90?'rotate(90deg) translateY(-100%)':'rotate(-90deg) translateX(-100%)',
+      transformOrigin:'0 0',
+    };
+  };
+  // 画面上の点 → 器の中の点
+  const point=(clientX,clientY)=>{
+    const x=Number(clientX),y=Number(clientY);
+    if(angle===90)return{x:y,y:vw()-x};
+    if(angle===270)return{x:vh()-y,y:x};
+    return{x,y};
+  };
+  // 器の中の点 → 画面上の点(こちらから合成のタップを撃つときに使う)
+  const unpoint=(x,y)=>{
+    const px=Number(x),py=Number(y);
+    if(angle===90)return{clientX:vw()-py,clientY:px};
+    if(angle===270)return{clientX:py,clientY:vh()-px};
+    return{clientX:px,clientY:py};
+  };
+  // 画面上の箱(getBoundingClientRect の値) → 器の中の箱。
+  // 90度回っているので**幅と高さが入れ替わる**。
+  const rect=box=>{
+    if(!box||!active())return box;
+    const left=angle===90?box.top:vh()-box.bottom;
+    const top=angle===90?vw()-box.right:box.left;
+    const width=box.height,height=box.width;
+    return{left,top,right:left+width,bottom:top+height,width,height,x:left,y:top};
+  };
+  // 要素を「器の中の座標」で測る。測る側はこれだけを使えばよい
+  const rectOf=el=>{
+    if(!el||typeof el.getBoundingClientRect!=='function')return null;
+    return rect(el.getBoundingClientRect());
+  };
+  // 指の当たりの半径も90度ぶん入れ替わる
+  const touch=t=>{
+    if(!t||!active())return t;
+    const p=point(t.clientX,t.clientY);
+    return{identifier:t.identifier,clientX:p.x,clientY:p.y,
+      radiusX:Number(t.radiusY)||0,radiusY:Number(t.radiusX)||0,force:t.force};
+  };
+  // どちら回りにすると「持っている向きから見て正しい上下」になるか。
+  // screen.orientation.angle は端末を自然な向きから何度回したかを表すので、
+  // その逆を掛ければ、いま持っている向きに対して素直な絵になる。
+  const preferredAngle=()=>{
+    const current=(typeof window!=='undefined'&&window.screen&&window.screen.orientation)
+      ? Number(window.screen.orientation.angle) : NaN;
+    return current===90?270:90;
+  };
+  return{get,active,set,subscribe,point,unpoint,rect,rectOf,touch,frameStyle,preferredAngle};
+})();
 const rhythmReleaseTargetMs=note=>Number(note?._rhythmReleaseTargetMs??note?._rhythmReleaseOriginalEndTimeMs??note?.endTimeMs??note?.timeMs)||0;
 const rhythmReleaseLane=note=>{
   const points=Array.isArray(note?.slidePoints)?note.slidePoints:[];
@@ -1030,12 +1150,16 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     }
     if(!area)return null;
     RHYTHM_PERF.layoutRead();
-    const rect=area.getBoundingClientRect();
+    // 自前で回しているときは「回す前の箱」に直してから配る。
+    // ここが唯一の配り元なので、レーン判定も追従もまとめて正しくなる
+    const rect=RHYTHM_VIEW_ROTATION.rectOf(area);
     if(!(rect&&Number.isFinite(rect.width)&&rect.width>0))return null;
     cachedRect=rect;
     return cachedRect;
   };
   // 画面が動く操作では即座に捨てる(iOSのURLバー出入りなども visualViewport で拾う)
+  // 自前で画面を回したときも、覚えている箱は必ず捨てる(ズレると入力位置がずれる)
+  RHYTHM_VIEW_ROTATION.subscribe(invalidateAreaRect);
   if(typeof window!=='undefined'&&typeof window.addEventListener==='function'){
     ['resize','orientationchange','scroll'].forEach(type=>window.addEventListener(type,invalidateAreaRect,{passive:true,capture:true}));
     if(window.visualViewport&&typeof window.visualViewport.addEventListener==='function'){
@@ -1168,7 +1292,10 @@ const RHYTHM_GESTURE_RUNTIME=(()=>{
     if(!raf&&sessions.size&&typeof requestAnimationFrame==='function')raf=requestAnimationFrame(tick);
   };
   const record=(key,clientX,clientY)=>{
-    const pos={clientX:Number(clientX)||0,clientY:Number(clientY)||0,perfMs:nowPerf()};
+    // 自前で回しているときは、覚える前に「回す前の座標」へ直す。
+    // ここを通った値がフリックの距離(dx/dy)にもレーンの追従(laneCoordinate)にも使われる
+    const p=RHYTHM_VIEW_ROTATION.point(clientX,clientY);
+    const pos={clientX:Number(p.x)||0,clientY:Number(p.y)||0,perfMs:nowPerf()};
     positions.set(String(key),pos);
     evaluatePosition(sessions.get(String(key)),pos);
   };
@@ -1335,9 +1462,12 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
   };
   const dispatchTapProbe=(area,touch,subLane)=>{
     if(!area?.dispatchEvent)return false;
-    const rect=area.getBoundingClientRect();
-    if(!(rect.width>0&&rect.height>0))return false;
-    const id=++nextSyntheticPointerId,key=`pointer:${id}`,point=pointForSubLane(subLane,touch.clientY,rect);
+    const rect=RHYTHM_VIEW_ROTATION.rectOf(area);
+    if(!(rect&&rect.width>0&&rect.height>0))return false;
+    // 出す先はDOMなので、撃つ座標だけは「回したあと」へ戻す。
+    // (受け取る側がまた回す前へ直すので、行って帰って元の場所になる)
+    const local=pointForSubLane(subLane,touch.clientY,rect);
+    const id=++nextSyntheticPointerId,key=`pointer:${id}`,point=RHYTHM_VIEW_ROTATION.unpoint(local.clientX,local.clientY);
     syntheticTapKeys.add(key);
     try{
       area.dispatchEvent(makePointerEvent('pointerdown',id,point));
@@ -1370,10 +1500,12 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     const eventArea=event.target?.closest?.('[data-rhythm-play-area]'),fallbackArea=document.querySelector('[data-rhythm-play-area]'),area=eventArea||fallbackArea;
     if(!area)return;
     if(isStart&&!eventArea)return;
-    const rect=area.getBoundingClientRect();
-    if(!(rect.width>0&&rect.height>0))return;
+    const rect=RHYTHM_VIEW_ROTATION.rectOf(area);
+    if(!(rect&&rect.width>0&&rect.height>0))return;
     const actions=[];
-    Array.from(event.changedTouches||[]).forEach(touch=>{
+    // 自前で回しているときは、指のほうも「回す前」にそろえてから配る。
+    // 当たりの半径(radiusX)も90度ぶん入れ替わるので RHYTHM_VIEW_ROTATION.touch がまとめて直す
+    Array.from(event.changedTouches||[]).map(t=>RHYTHM_VIEW_ROTATION.touch(t)).forEach(touch=>{
       const id=Number(touch.identifier),previous=touchStates.get(id),stabilized=previous&&!isStart?stabilizedMoveTouch(previous,touch,rect):{touch,centerAnchorX:Number(touch.clientX),centerMoved:false},next=contactsForTouch(stabilized.touch,rect);
       if(!next)return;
       const previousSet=new Set(previous?.subLanes||[]),candidateEntered=next.subLanes.filter(lane=>!previousSet.has(lane)),centerChanged=!previous||previous.centerSubLane!==next.centerSubLane;
@@ -10291,8 +10423,8 @@ const rhythmSideMonsterBeatMs=trackId=>{
 };
 const rhythmLayoutSideMonsters=area=>{
   if(!area)return;
-  const rect=area.getBoundingClientRect();
-  if(!(rect.width>0&&rect.height>0))return;
+  const rect=RHYTHM_VIEW_ROTATION.rectOf(area);
+  if(!(rect&&rect.width>0&&rect.height>0))return;
   Array.from(area.querySelectorAll('[data-rhythm-side-monster]')).forEach(el=>{
     const box=rhythmSideMonsterBox(Number(el.dataset.rhythmSideMonster),rect.width,rect.height);
     const next=`${box.left.toFixed(1)},${box.top.toFixed(1)},${box.size.toFixed(1)}`;
@@ -10307,15 +10439,15 @@ const rhythmLayoutSideMonsters=area=>{
 
 const rhythmLayoutPlayArea=area=>{
   if(!area)return;
-  const rect=area.getBoundingClientRect();
-  if(!(rect.width>0&&rect.height>0))return;
+  const rect=RHYTHM_VIEW_ROTATION.rectOf(area);
+  if(!(rect&&rect.width>0&&rect.height>0))return;
   Array.from(area.querySelectorAll('[data-rhythm-lane]')).forEach((lane,index)=>{
     lane.style.clipPath=rhythmLanePolygon(index);
     lane.style.setProperty('--rhythm-boundary-clip',rhythmBoundaryLinePolygon(index));
     if(index===RHYTHM_LANE_COUNT-1)lane.style.setProperty('--rhythm-right-clip',rhythmBoundaryLinePolygon(RHYTHM_LANE_COUNT,-1));
     const label=lane.querySelector('span');
     if(label){
-      const labelRect=label.getBoundingClientRect(),labelY=rhythmClamp01((labelRect.top-rect.top+labelRect.height/2)/rect.height),at=rhythmProjectLane(index,labelY);
+      const labelRect=RHYTHM_VIEW_ROTATION.rectOf(label),labelY=rhythmClamp01((labelRect.top-rect.top+labelRect.height/2)/rect.height),at=rhythmProjectLane(index,labelY);
       label.style.left=`${at.center*100}%`;
       label.style.transform='translateX(-50%)';
     }
@@ -10324,7 +10456,7 @@ const rhythmLayoutPlayArea=area=>{
     boundary.style.setProperty('--rhythm-sub-clip',rhythmBoundaryLinePolygon(index+.5));
   });
   rhythmLayoutSideMonsters(area);
-  const line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=line?.getBoundingClientRect();
+  const line=area.querySelector('[data-rhythm-judgment-line]'),lineRect=RHYTHM_VIEW_ROTATION.rectOf(line);
   if(line&&lineRect){
     const y=rhythmClamp01((lineRect.top-rect.top+lineRect.height/2)/rect.height),left=rhythmProjectBoundary(0,y),right=rhythmProjectBoundary(RHYTHM_LANE_COUNT,y);
     line.style.left=`${(left*100).toFixed(4)}%`;
@@ -10361,8 +10493,8 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   if(!el||!area)return;
   // フレーム共有のrectが渡っていればlayout readは発生しない。渡っていない場合だけ数える
   if(!frameLayout?.rect)RHYTHM_PERF.layoutRead();
-  const rect=frameLayout?.rect||area.getBoundingClientRect();
-  if(!(rect.width>0&&rect.height>0))return;
+  const rect=frameLayout?.rect||RHYTHM_VIEW_ROTATION.rectOf(area);
+  if(!(rect&&rect.width>0&&rect.height>0))return;
   const noteHeight=Number(frameLayout?.noteHeight)||el.offsetHeight,lane=Number(visualLane),centerY=Number(yPx)+noteHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
   const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,slideTravel?.chartNowMs),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO)),left=rect.width*projected.center-width/2;
   // 横位置をleftで毎フレーム書くとlayout系の更新になる。縦は本体transformで動かしているため、
@@ -10502,7 +10634,7 @@ const installRhythmPerspectiveNoteVisuals=()=>{
   let area=null,laidOutWidth=0,laidOutHeight=0,sizeWatcher=null;
   const layoutFor=next=>{
     area=next;
-    const rect=next?.getBoundingClientRect?.();
+    const rect=RHYTHM_VIEW_ROTATION.rectOf(next);
     laidOutWidth=rect?.width||0;laidOutHeight=rect?.height||0;
     rhythmLayoutPlayArea(next);
     watchSize(next);
@@ -10522,8 +10654,8 @@ const installRhythmPerspectiveNoteVisuals=()=>{
   const relayout=()=>{
     const next=document.querySelector('[data-rhythm-play-area]');
     if(!next)return;
-    const rect=next.getBoundingClientRect();
-    if(!(rect.width>0&&rect.height>0))return;
+    const rect=RHYTHM_VIEW_ROTATION.rectOf(next);
+    if(!(rect&&rect.width>0&&rect.height>0))return;
     if(next===area&&rect.width===laidOutWidth&&rect.height===laidOutHeight)return;
     layoutFor(next);
   };
