@@ -6348,26 +6348,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         else if (card.subType==='stun_atsu') {
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
-          const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul); totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
-          // 勇者特性「連撃」: ザンが勇者モンの時、ザンの攻撃(あつの挑発シリーズ含む)に連撃ヒットを追加
-          // ザンは1発30%、エイキ(桜花連舞)は10%を2発。倍率と回数だけが違うので、
-          // 連撃を積む処理そのものは1つにまとめてある(あつの挑発は固有技ではないので追加30%は無い)
-          const stunComboRates=(stunMon?.id==='Zan' && mainHero?.id==='Zan') ? [0.3]
-            : (stunMon?.id==='Eiki' && mainHero?.id==='Eiki') ? [0.1,0.1] : [];
-          for (const rate of stunComboRates) {
-            const comboBase=Math.floor(d*(rate+getPermaBuff('comboDmgPct')));
-            if (comboBase>0) {
-              const comboCrit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+getPermaBuff('critRatePct')));
-              const comboFinal=comboCrit?Math.floor(comboBase*(1.5+getPermaBuff('critDmgPct'))):comboBase;
-              if (comboCrit) hasCrit=true; totalDmg+=comboFinal;
-              attackHits.push({dmg:comboFinal, isCrit:comboCrit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
-            }
-          }
-          const globalComboRate=getPermaBuff('globalComboDmgPct')+localGlobalComboAdd;
-          if(globalComboRate>0){
-            const comboBase=Math.floor(d*globalComboRate);
-            if(comboBase>0){const comboCrit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+getPermaBuff('critRatePct'))); const comboFinal=comboCrit?Math.floor(comboBase*(1.5+getPermaBuff('critDmgPct'))):comboBase; if(comboCrit)hasCrit=true; totalDmg+=comboFinal; attackHits.push({dmg:comboFinal,isCrit:comboCrit,slotIdx,isSpecial:true,skillName:'全体連撃',isUnique:false,noAnim:true});}
-          }
+          const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul);
+          // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
+          // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く(倍率は ATTACK_COMBO_RULES)
+          const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct'),
+            guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<((card.crit||0.1)+getPermaBuff('critRatePct')),
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false });
+          totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
+          for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
         else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',1+(card.baseValue-1)*effMul); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); hpBeforeEnemyAttack=Math.max(1,hpBeforeEnemyAttack-selfDmgAmt); setHp(hpBeforeEnemyAttack); }
         // ポルツ: すぐには何も起きず、「有効な敵の攻撃を受けた回数」ぶんだけ待機する。
