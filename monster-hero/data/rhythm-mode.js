@@ -10853,6 +10853,12 @@ const RHYTHM_SIDE_MONSTER_ANCHORS=Object.freeze([.30,.52]);
 const RHYTHM_SIDE_MONSTER_FILL=.72;
 // プレイエリア幅に対する最大の大きさ。大きすぎるとノーツから目線が外れる。
 const RHYTHM_SIDE_MONSTER_MAX_RATIO=.17;
+// プレイエリア**高さ**に対する最大の大きさ。
+// 幅だけで決めていたころ、横持ちは幅が広く高さが低いので、同じ「幅の17%」でも
+// 画面の半分近くを占めてしまい、とくに上の段が巨大に見えていた
+// (2026-09-07・ユーザー報告「縦画面だと普通だけど横画面だと上側のマスモンがでかい」)。
+// 上下2段を置いても重ならず、縦持ちの見え方(高さの約9%)と近くなる値。
+const RHYTHM_SIDE_MONSTER_HEIGHT_RATIO=.20;
 // 能力を取った瞬間の強調を出しておく時間(元気のように一瞬で終わる能力のため)
 const RHYTHM_SIDE_MONSTER_FLASH_MS=1200;
 // 跳ねる高さ(自分の大きさに対する割合)。段階はオプションで選べる。
@@ -10873,7 +10879,10 @@ const rhythmSideMonsterBox=(slot,areaWidth,areaHeight)=>{
   // まず真ん中の高さで大きさを決め、そのあと**箱の下端**でも収まるか確かめて縮める。
   // 台形は下へ行くほど空きが狭くなるので、真ん中だけで決めると下の角がレーンへ食い込む。
   const freeAt=y=>Math.max(0,rhythmProjectBoundary(0,Math.max(0,Math.min(1,y))));
-  const sizeFor=free=>Math.max(24,Math.min(RHYTHM_SIDE_MONSTER_MAX_RATIO,free*RHYTHM_SIDE_MONSTER_FILL)*width);
+  // ★幅だけでなく高さでも頭打ちにする。横持ちは幅が広く高さが低いので、
+  //   幅だけで決めると画面の半分近くを占めてしまう(2026-09-07・ユーザー報告)
+  const heightCap=height>0?height*RHYTHM_SIDE_MONSTER_HEIGHT_RATIO:Infinity;
+  const sizeFor=free=>Math.max(24,Math.min(Math.min(RHYTHM_SIDE_MONSTER_MAX_RATIO,free*RHYTHM_SIDE_MONSTER_FILL)*width,heightCap));
   let size=sizeFor(freeAt(centerY));
   for(let pass=0;pass<3;pass++){
     const bottomRatio=height>0?centerY+size/2/height:centerY;
