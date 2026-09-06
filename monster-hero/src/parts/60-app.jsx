@@ -527,6 +527,8 @@ function MonsterHeroGame() {
   // WAVE10正常勝利だけはstopAutoBattle()を直接使い、再周回の意思を維持する。
   const stopAllAuto = () => {
     stopAutoBattle();
+    // モンビーにいても「周回が終わった」と分かるよう、進捗の帯へ印だけ付ける(消さない)
+    finishQuickRunProgress();
     autoRepeatRef.current = false;
     autoRepeatStartingRef.current = false;
     autoRepeatBondAwardMasuIdsRef.current = [];
@@ -2083,6 +2085,46 @@ function MonsterHeroGame() {
   const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   const returnToBackgroundRun = () => { if (runStageRef.current) setGameState(runStageRef.current); };
+  // ===== モンビーで見せる周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
+  // ★保存しない。リロードで消えてよい値だけをここに置く(設計書 §6「新しい保存キーを作らない」)。
+  //   周回そのものの記録は、今までどおり既存の mh_quick_* が正本。
+  const [quickRunProgress, setQuickRunProgress] = useState(null);
+  // 帯をタップして開く詳細と、周回を始められなかったときの一言
+  const [quickRunDetailOpen, setQuickRunDetailOpen] = useState(false);
+  const [quickRunStartError, setQuickRunStartError] = useState(false);
+  // setTimeout や await のあとから触るので、同期の控えも持つ
+  const quickRunProgressRef = useRef(null);
+  const writeQuickRunProgress = (next) => { quickRunProgressRef.current = next; setQuickRunProgress(next); };
+  // ∞周回を始めたとき。すでに数えているならそのまま続ける(∞を入れ直しても0へ戻さない)
+  const beginQuickRunProgress = () => {
+    if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+    writeQuickRunProgress({ loops:1, xp:0, gold:0, finished:false });
+  };
+  // 1周ぶんの報酬。報酬を配る処理から、実際に配った値をそのまま受け取る(数字を二重に持たない)
+  const addQuickRunProgressRewards = (xpGain, goldGain) => {
+    const current = quickRunProgressRef.current;
+    if (!current || current.finished) return;
+    writeQuickRunProgress({ ...current,
+      xp:current.xp + (Number.isFinite(xpGain) ? xpGain : 0),
+      gold:current.gold + (Number.isFinite(goldGain) ? goldGain : 0) });
+  };
+  const countQuickRunLoop = () => {
+    const current = quickRunProgressRef.current;
+    if (!current || current.finished) return;
+    writeQuickRunProgress({ ...current, loops:current.loops + 1 });
+  };
+  // 周回が終わった(負けた・AUTOを切った)。消さずに「終わった」印だけ付けるので、
+  // モンビーにいても帯で気づける(2026-09-06 ユーザー選択)
+  const finishQuickRunProgress = () => {
+    const current = quickRunProgressRef.current;
+    if (!current || current.finished) return;
+    writeQuickRunProgress({ ...current, finished:true });
+  };
+  const clearQuickRunProgress = () => {
+    if (quickRunProgressRef.current) writeQuickRunProgress(null);
+    setQuickRunDetailOpen(false);
+    setQuickRunStartError(false);
+  };
   // ∞周回中だけ出す「周回を止めずにモンビーへ」の入口。
   // returnToHome を通すと stopAllAuto で周回が終わってしまうので、
   // openRhythmDemo(画面を切り替えるだけ)を直接呼ぶ。
@@ -4718,6 +4760,8 @@ function MonsterHeroGame() {
     }
 
     const goldGain = applyQuickDiamondPolicy(goldForWavesClearedInMode(wavesCleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current);
+    // ∞周回の進捗表示のぶんだけ、実際に配った値をそのまま足しておく(モンビーで見せる用・保存しない)
+    if (autoRepeatRef.current) addQuickRunProgressRewards(breederXpGain, goldGain);
     const goldBefore = gold;
     const goldAfter = gold + goldGain;
     setGold(goldAfter);
@@ -5590,6 +5634,8 @@ function MonsterHeroGame() {
     // HOMEへ戻った時点でランは終わり。段階を残すと、次にランの画面を開いたときに
     // 「前のランの続き」と見なされてしまう
     clearRunStage();
+    // モンビーの進捗の帯も、ランと一緒に片付ける
+    clearQuickRunProgress();
     debugBattleRef.current = false;
     // 正式実装前のモンスターを勇者モン選択へ出すしるしも、HOMEへ戻る時点で必ず落とす
     debugMonsterPreviewRef.current = false;
@@ -6771,6 +6817,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(next)setAutoBattleEnabled(true);
     else autoRepeatStartingRef.current=false;
     if(!next)setEcoModeSafe('off');
+    // モンビーで見せる進捗を数えはじめる(∞にしたときだけ。切ったときの印は周回を止める側で付ける)
+    if(next)beginQuickRunProgress();
+  };
+  // モンビーから∞周回を始める(docs/spec/QUICK_RHYTHM_LINK.md PR6)。
+  // 編成は repeatTemplateForNewRun() ＝「1周目に自分で組んだ編成」→ 無ければAUTO設定の事前設定。
+  // どちらも無いときは false を返し、呼び出し側が理由を出す。
+  const startQuickRunFromRhythm = () => {
+    if (runStageRef.current) return false;               // すでに何か走っている
+    const template = repeatTemplateForNewRun();
+    if (!template) return false;
+    // ★先に∞の意思を立てる。setAutoRepeatEnabled は描画時の runMode を見るため、
+    //   まだクイックへ切り替わっていないこの時点では使えない
+    autoRepeatRef.current = true;
+    setAutoRepeat(true);
+    setAutoRepeatBattleSpeed(true);
+    const result = startRunFromRepeatTemplate(template); // 中で stopAutoBattle を通る
+    if (!result.ok) { stopAllAuto(); clearQuickRunProgress(); return false; }
+    autoBattleRef.current = true;
+    setAutoBattle(true);
+    setAutoTurnCycle(n => n + 1);
+    beginQuickRunProgress();
+    return true;
   };
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
@@ -6830,6 +6898,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           autoBattleRef.current=true;
           setAutoBattle(true);
           setAutoTurnCycle(n=>n+1);
+          countQuickRunLoop();
         }else stopAllAuto();
       } catch (e) {
         console.error('[auto repeat] breakthrough save failed:', e && e.message ? e.message : e);
@@ -10061,6 +10130,42 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 onClick={()=>{setRhythmOptionsBack('RHYTHM_DEMO_HOME');setGameState('RHYTHM_OPTIONS');}}
                 className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`}>⚙️</button>
             </header>
+            {/* ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
+                常に出すのは1行だけ。曲の一覧を押し下げないよう、詳細はタップで開く。
+                演奏中(RHYTHM_PLAY)はこの画面ではないので、そもそも出ない */}
+            {quickRunProgress&&<div data-quick-run-progress className="shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80">
+              <button type="button" onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
+                className="flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]">
+                <span className={`shrink-0 text-[10px] font-black ${quickRunProgress.finished?'text-amber-200':'text-fuchsia-200'}`}>{quickRunProgress.finished?'⏹':'⚔'}</span>
+                <span className="min-w-0 flex-1 truncate text-[10px] font-black text-slate-200">{quickRunProgress.finished
+                  ?'周回が終わりました（タップで結果へ）'
+                  :`WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目`}</span>
+                <span className="shrink-0 text-[9px] font-black text-slate-400">{quickRunDetailOpen?'▲':'▼'}</span>
+              </button>
+              {quickRunDetailOpen&&<div data-quick-run-progress-detail className="border-t border-white/10 px-3 py-2">
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">周回数</dt><dd className="font-black text-white">{quickRunProgress.loops}周</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">難易度</dt><dd className="font-black text-white">{quickDifficultySetting(difficulty)?.label||difficulty}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">経験値</dt><dd className="font-black text-cyan-200">+{Math.floor(quickRunProgress.xp).toLocaleString()}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">ダイヤ</dt><dd className="font-black text-amber-200">+{Math.floor(quickRunProgress.gold).toLocaleString()}</dd></div>
+                  <div className="col-span-2 flex justify-between gap-2"><dt className="text-slate-400">勇者モン</dt><dd className="truncate font-black text-white">{mainHero?.masuName||mainHero?.name||'—'}</dd></div>
+                </dl>
+                <p className="mt-1 text-[9px] leading-relaxed text-slate-400">{quickRunProgress.finished
+                  ?'周回は止まっています。バトルへ戻ると結果を見られます。'
+                  :'ここにいるあいだも周回は進みます。演奏中だけ止まり、曲が終わると続きから動きます。'}</p>
+                <button type="button" data-quick-run-progress-back onClick={()=>{if(runStageRef.current)returnToBackgroundRun();}}
+                  className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ バトルへ戻る</button>
+              </div>}
+            </div>}
+            {/* 周回していないときだけ「ここから始める」を出す。
+                編成は「1周目に自分で組んだもの」→ 無ければAUTO設定の事前設定(PR5) */}
+            {!quickRunProgress&&!runStage&&<div data-quick-run-start className="shrink-0 border-b border-white/10 bg-slate-900/60 px-3 py-1.5">
+              {repeatTemplateForNewRun()
+                ? <button type="button" data-quick-run-start-button onClick={()=>{if(!startQuickRunFromRhythm())setQuickRunStartError(true);}}
+                    className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ 裏でクイックの∞周回を始める</button>
+                : <p data-quick-run-start-hint className="text-[9px] leading-relaxed text-slate-400">裏で周回を回すには、クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンビー中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。</p>}
+              {quickRunStartError&&<p className="mt-1 text-[9px] font-black text-red-300">いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。</p>}
+            </div>}
             {/* 曲えらびの上に固定で出すのは、助手のひとことだけにする(notice)。
                 「これは体験版です…」の長い断り書きと横画面の案内はここから外した。
                 曲を選ぶ画面でいちばん要るのは曲の並びで、読み物は場所を取りすぎるため
@@ -14865,9 +14970,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 {speciesChallengeBattleRun&&<button data-species-champion-back onClick={()=>{const keepSaving=speciesChallengeSaveRunRef.current;const keepDebug=speciesChallengeFromDebugRef.current;runResultActionOnce(()=>{returnToHome();openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug});});}} disabled={resultActionPending} className="w-full max-w-xs bg-cyan-700 text-white py-3.5 rounded-2xl font-black shrink-0 mt-2 disabled:opacity-50">種族チャレンジ選択へ戻る</button>}<button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>)}
 
       {/* GAME OVER */}
-      {hp<=0&&!debugBattle&&(<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
+      {hp<=0&&!debugBattle&&!rhythmScreenOpen&&(<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
 
-      {gaveUp&&!debugBattle&&(<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultRetire" compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
+      {gaveUp&&!debugBattle&&!rhythmScreenOpen&&(<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center overflow-y-auto mh-scroll"><div className="m-auto w-full flex flex-col items-center">{masuRegisterButtonNode()}{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultRetire" compact/></div></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
 
       {/* マスモン登録: ラン終了画面(CHAMPION/敗北/リタイア)から名前を付けて登録するモーダル */}
       {showMasuRegisterModal&&(

@@ -17,6 +17,9 @@ const { chromium } = require('playwright');
 const PAGE_URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 // 進んだかどうかを見る時間。×1速でもWAVEかターンのどちらかは必ず動く長さ
 const WATCH_MS = 12000;
+// 進んだかどうか。WAVE10のあと次の周へ入るとWAVEが1へ戻るので、
+// 「減った」もまた進んだ証拠として数える(∞周回をまたぐと数字だけでは追えない)
+const advanced = (before, after) => after.wave > before.wave || after.turn > before.turn || after.wave < before.wave;
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ' — ' + detail : ''}`); };
 const seed = () => {
@@ -97,7 +100,7 @@ const seed = () => {
     await page.waitForTimeout(WATCH_MS);
     const during = await progress();
     // ★開いているあいだも進むこと。止めてしまうと、放置で回す超省エネの意味が薄れる
-    check('BGM設定を開いているあいだも周回が進む', during.wave>before.wave||during.turn>before.turn,
+    check('BGM設定を開いているあいだも周回が進む', advanced(before, during),
       `W${before.wave}/T${before.turn} → W${during.wave}/T${during.turn}`);
     // ★進んで画面が変わってもパネルは開いたまま。ここが閉じると曲を選びきれない
     check('周回が進んでもBGM設定は開いたまま', await opened());
@@ -109,7 +112,7 @@ const seed = () => {
     const closed = await progress();
     await page.waitForTimeout(WATCH_MS);
     const after = await progress();
-    check('閉じたあとも周回が続く', after.wave>closed.wave||after.turn>closed.turn,
+    check('閉じたあとも周回が続く', advanced(closed, after),
       `W${closed.wave}/T${closed.turn} → W${after.wave}/T${after.turn}`);
 
     check('操作中に致命的なJSエラーが出ない', fatal.length===0, fatal.slice(0,2).join(' / '));

@@ -134,7 +134,7 @@
 | 3 | ランの段階を進める入口を `advanceRunStage` の1つへ寄せる。**挙動は変えない** | **完了**（2026-09-06）。`battle/run-stage-check.js` を拡張 |
 | 4 | モンビーの非演奏画面で周回を継続し、演奏中は止める。バトル音を消す。往復の動線 | **完了**（2026-09-06）。`mode/rhythm-background-run-check.js`（実ブラウザ）と `battle/run-stage-check.js` を追加・拡張 |
 | 5 | **M/B管理のAUTO設定に「モンビー中に回す編成・難易度」を足す** | **完了**（2026-09-06）。`run/auto-quick-run-settings-check.js`（正規化をvmで実際に動かす）と `run/auto-quick-run-settings-browser-check.js`（実ブラウザ7/7）を追加 |
-| 6 | モンビー側の進捗表示、モンビーから周回を始めるトグル（[中身は下](#pr6-の中身2026-09-06-ユーザー決定)） | 実ブラウザ |
+| 6 | モンビー側の進捗表示、モンビーから周回を始めるトグル（[中身は下](#pr6-の中身2026-09-06-ユーザー決定)） | **完了**（2026-09-06）。`mode/rhythm-run-progress-check.js`（実ブラウザ12/12）と `mode/rhythm-run-progress-static-check.js`（保存しないこと・終了の見せ方）を追加 |
 | 7 | 演奏中ぶんのヘッドレス追いつき（**一致検査を先に**） | 乱数固定で本物とシミュレータが一致すること |
 | 8 | **画面のなかで使い方を伝える**（[中身は下](#pr8-の中身2026-09-06-ユーザー指示)） | 一度きりの案内が二重に出ないこと・助手の検査 |
 | 9 | **公開フラグ `QUICK_RHYTHM_LINK_PUBLIC_RELEASE` を true にする** | これでヘルプ・更新履歴・助手の告知が同時に出る |
@@ -184,6 +184,26 @@
 - 全画面の敗北画面（`hp<=0` / `gaveUp`）は、モンビーを開いている間は出さない。
   いまは `gameState` を見ずに出しているので、PR6でここも `!rhythmScreenOpen` にする
 - タップするとバトル側（結果画面）へ戻り、そこで今までどおりの結果を見せる
+
+#### PR6で入ったもの（2026-09-06）
+
+置き場所は**ヘッダーの直下の1行**にした（設計時は「⚔ 戻る の隣」としていたが、
+ヘッダーには既にボタンが4つ並んでいて入らない。曲の一覧も押し下げない）。
+
+| 置いたもの | すること |
+| --- | --- |
+| `quickRunProgress`（state＋ref） | `{ loops, xp, gold, finished }` だけを持つ。**保存しない**（リロードで消えてよい） |
+| `beginQuickRunProgress()` | ∞にしたときに数えはじめる。入れ直しても0へ戻さない |
+| `addQuickRunProgressRewards()` | `awardRunRewards` が**実際に配った値**をそのまま足す（数字を二重に持たない） |
+| `countQuickRunLoop()` | 次の周に入ったら周回数を1つ進める |
+| `finishQuickRunProgress()` | `stopAllAuto` から呼ぶ。**消さずに印だけ**付けるので、モンビーにいても終わりに気づける |
+| `startQuickRunFromRhythm()` | モンビーから∞周回を始める。`repeatTemplateForNewRun()` を通すので、編成は「1周目に自分で組んだもの」→ 無ければAUTO設定の事前設定 |
+
+`hp<=0` / `gaveUp` の全画面表示も `!rhythmScreenOpen` にした（帯で知らせるほうに寄せた）。
+
+**始めるときの順番に注意**。`setAutoRepeatEnabled` は描画時の `runMode` を見るため、
+まだクイックへ切り替わっていないモンビーからは使えない。
+`autoRepeatRef` を直接立ててから `startRunFromRepeatTemplate` を呼ぶ。
 
 ### PR8 の中身（2026-09-06 ユーザー指示）
 
