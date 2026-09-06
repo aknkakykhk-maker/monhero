@@ -11,6 +11,16 @@ for(const file of files){
   check(file+': バトル中は一時選択を優先',s.includes("if (autoBgmOverride === '__none__') return '__silence_bgm__';")&&s.includes('if (autoBgmOverride) return autoBgmOverride;')&&s.includes('if (autoBattleRef.current) return bgmArrangement.autoBattle;'));
   check(file+': BGMなしはBGMだけ停止',s.includes("if (key === '__silence_bgm__')")&&s.includes('Audio_.stopBGM();'));
   check(file+': 登録曲一覧をBGM選択へ利用',/BGM_TRACKS\.map\(/.test(s));
+  // ★曲を選んでいる最中にランが進むと、画面が変わってパネルが閉じてしまう
+  //   (2026-09-06・ユーザー報告「敵を倒すと設定画面から戻されて曲を選ぶ時間がない」)。
+  //   ①ターン進行 ②WAVE後の自動進行 の両方を止め、③パネルはランの途中なら出し続ける
+  // 配信用JSは空白の入った形へ整形されるので、空白を潰してから見る
+  const compact=s.replace(/\s+/g,'');
+  check(file+': BGM設定を開いている間はターンを進めない',compact.includes('||!!showAutoBgmPicker;'));
+  check(file+': BGM設定を開いている間はWAVE後も進めない',compact.includes('if(showAutoBgmPicker)return;'));
+  check(file+': BGM設定はランの途中ならどの画面でも出し続ける',compact.includes('showAutoBgmPicker&&isRunStage(gameState)&&'));
+  // 「バトル画面のときだけ出す」へ戻っていないこと。配信用JSは引用符が変わることがあるので編集元だけで見る
+  if(file.includes('/src/')) check(file+': バトル画面限定へ戻っていない',!compact.includes("showAutoBgmPicker&&gameState==='BATTLE'"));
   if(file.includes('/src/')) { check(file+': BGMボタン常設',s.includes('バトルBGMと音量を調整')&&!s.includes('{(autoBattle||autoRepeat)&&<button data-auto-bgm-button')); check(file+': BGM/SEパネル',s.includes('BGM / 音量')&&s.includes('label=\"SE\"')&&s.includes('label=\"BGM\"')&&s.includes('バトル中に再生するBGM')); }
 }
 const help=fs.readFileSync(path.join(ROOT,'monster-hero/data/help.js'),'utf8');

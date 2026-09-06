@@ -116,16 +116,27 @@ check('モンビーを開いている間は、ランが進んでも画面が切�
 
 // ---- ③ 進行を回す3つのループが runStage を見ている ----
 const hasBareGameState = (text) => /[^a-zA-Z]gameState[^a-zA-Z]/.test(text);
-const championLoop = slice('    if(!runProgressAllowed||runStage!==\'CHAMPION\'', '},[runStage,runProgressAllowed,championPresentationComplete,autoRepeat,autoBattle,runMode]);');
+// effect の切り出しは「本文の先頭 → 依存配列の閉じ括弧」で行う。
+// 依存名を終端に使うと、条件を1つ足しただけで切り出せなくなる(実際にそうなった)
+const effectFrom = (head, depsHead) => {
+  const start = source.indexOf(head);
+  const deps = source.indexOf(depsHead, start);
+  const end = source.indexOf(']);', deps);
+  if (start < 0 || deps < 0 || end < 0) throw new Error(`本体から切り出せません: ${head.slice(0, 40)}`);
+  return source.slice(start, end + 3);
+};
+const championLoop = effectFrom('    if(!runProgressAllowed||runStage!==\'CHAMPION\'', '},[runStage,');
 check('次周開始のループが runStage を見ている', !hasBareGameState(championLoop), hasBareGameState(championLoop) ? 'gameStateが残っています' : '');
 
 const turnLoopStart = source.indexOf('    const blocked=!runProgressAllowed||runStage!==\'BATTLE\'');
-const turnLoopEnd = source.indexOf('battleTutorialStep]);', turnLoopStart);
-const turnLoop = turnLoopStart > 0 && turnLoopEnd > turnLoopStart ? source.slice(turnLoopStart, turnLoopEnd) : null;
+// 終端は依存配列の閉じ括弧。中身に足す条件が増えても切り出しがずれないよう、
+// 特定の依存名ではなく「最初に現れる ]);」で区切る
+const turnLoopEnd = source.indexOf(']);', turnLoopStart);
+const turnLoop = turnLoopStart > 0 && turnLoopEnd > turnLoopStart ? source.slice(turnLoopStart, turnLoopEnd + 3) : null;
 check('ターン進行のループが runStage を見ている', turnLoop !== null && !hasBareGameState(turnLoop),
   turnLoop === null ? 'ループを切り出せません' : (hasBareGameState(turnLoop) ? 'gameStateが残っています' : ''));
 
-const postWaveLoop = slice('  // AUTO中にWAVE後の画面へ入ったときだけ、各画面の既存handlerを1回だけ呼んで進める。', '},[autoBattle,runStage,runProgressAllowed]);');
+const postWaveLoop = effectFrom('  // AUTO中にWAVE後の画面へ入ったときだけ、各画面の既存handlerを1回だけ呼んで進める。', '},[autoBattle,');
 check('WAVE後の進行が runStage を見ている', !hasBareGameState(postWaveLoop), hasBareGameState(postWaveLoop) ? 'gameStateが残っています' : '');
 check('WAVE後の各段がすべて runStage で分岐している',
   ['WAVE_RESULT','REWARD_PICK','QUICK_GROWTH','PICK_ALLY','QUICK_JOIN','PICK_TEACHING','UPGRADE_SKILL']
