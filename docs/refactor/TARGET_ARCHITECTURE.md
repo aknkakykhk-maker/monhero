@@ -50,7 +50,11 @@ monster-hero/
     rhythm-charts/    曲ごとの譜面ファイル(rhythm-mode.js から分離)
 ```
 
-ファイルを分けても、**ブラウザが受け取るのは今と同じ `game-system.compiled.js` 1本**(`build.js` が `src/` を決められた順で連結してから Babel にかける)。
+ファイルを分けても、**ブラウザが受け取るのは今と同じ `game-system.compiled.js` 1本**(`build.js` が `src/parts/` を `parts.json` の順で連結してから Babel にかける)。
+
+> 実装(2026-09-06・STEP 2)では、連結結果を `src/game-system.jsx` として**生成物のまま残す**形にした。検査 300 本以上と
+> `undefined-reference-check` / `render-error-check` が `game-system.jsx` を読む前提で書かれているため、連結後の1枚を置いておけば
+> それらを1本も書き換えずに済む。`game-system.jsx` を直接編集した場合は `build.js` が parts へ書き戻す(モバイル編集の経路を残すため)。
 これにより:
 
 - `index.html`・キャッシュキー・起動ゲージの SIZES・`build.js --check`・`compiled-runtime-check` はそのまま使える。

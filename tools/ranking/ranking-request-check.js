@@ -46,6 +46,12 @@ const context = {
   },
 };
 vm.createContext(context);
+// 切り出した範囲(RANKING_DIFFICULTY_KEYS)が極限の難易度一覧を参照するので、本体の定義をそのまま渡す
+{
+  const extremeStart = source.indexOf('const EXTREME_DIFFICULTIES = Object.freeze([');
+  const extremeEnd = source.indexOf(']);', extremeStart) + 3;
+  vm.runInContext(source.slice(extremeStart, extremeEnd) + '\n' + source.match(/const GOD_SETTING = [^\n]+\n/)[0] + source.match(/const ALL_EXTREME_DIFFICULTIES = [^\n]+\n/)[0], context);
+}
 vm.runInContext(source.slice(start, end) + '\nthis.api={normalizeRankingDifficulty,sbFetchRankings,sbInsertScore,beginNewRankingRun};', context);
 
 const checks = [];

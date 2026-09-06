@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { REPO_ROOT, GAME_SYSTEM } = require('./harness');
+const { REPO_ROOT, GAME_SYSTEM, PARTS_DIR, readPartsManifest } = require('./harness');
 
 // JSTの「YYYY-MM-DD HH:MM」を作る(実行環境のタイムゾーンに依存しないよう明示的に変換する)
 function nowJst() {
@@ -44,6 +44,18 @@ if (!/var GAME_BUILD = '[^']*';/.test(index)) {
   process.exit(1);
 }
 fs.writeFileSync(GAME_SYSTEM, replaced);
+// 編集元は parts 側なので、BUILD_DATE を持つ部品にも同じ値を書く(game-system.jsx と parts を同時に進め、
+// build.js の「どちらが変わったか」の判定で食い違いにならないようにする)
+for (const name of readPartsManifest()) {
+  const partPath = path.join(PARTS_DIR, name);
+  const before = fs.readFileSync(partPath, 'utf8');
+  if (!/const BUILD_DATE = "[^"]*";/.test(before)) continue;
+  const after = before.replace(/const BUILD_DATE = "[^"]*";/, `const BUILD_DATE = "${stamp}";`);
+  if (after !== before) fs.writeFileSync(partPath, after);
+}
+// 両方に同じ値を書いたので本文は一致しているが、game-system.jsx のヘッダに書いたハッシュが古いまま残る。
+// ここで書き直しておかないと、次に parts を編集したとき build.js が「両方が別々に変わった」と誤って止まる
+require('./harness').syncPartsAndGameSystem();
 fs.writeFileSync(path.join(REPO_ROOT, 'monster-hero', 'version.json'), `{"build": "${stamp}"}\n`);
 
 // data/*.js のキャッシュキー(?v=)を中身のハッシュに合わせる。

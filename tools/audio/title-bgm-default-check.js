@@ -71,9 +71,10 @@ for (const file of files) {
   const byKeyLine = source.match(/const BGM_TRACK_BY_KEY = [^\n]+;/)?.[0];
   const defaultsLine = source.match(/const DEFAULT_BGM_ARRANGEMENT = Object\.freeze\(\{[^;]+\}\);/)?.[0];
   const legacyLine = source.match(/const BGM_ARRANGEMENT_LEGACY_FALLBACK = [^\n]+;/)?.[0];
+  const toggleLine = source.match(/const BGM_TOGGLE_SCENES = [^\n]+;/)?.[0]; // ON/OFF だけの場面(AUTO の勝利ジングル等)。normalize が参照する
   const normalizeLine = source.match(/const normalizeBgmArrangement = [\s\S]*?\n\}\)\);/)?.[0];
   check('normalizeBgmArrangementまわりを取り出せる',
-    !!(trackBlock && byIdLine && byKeyLine && defaultsLine && legacyLine && normalizeLine));
+    !!(trackBlock && byIdLine && byKeyLine && defaultsLine && legacyLine && toggleLine && normalizeLine));
   let normalizeBgmArrangement = null;
   try {
     normalizeBgmArrangement = Function(`
@@ -82,6 +83,7 @@ for (const file of files) {
       ${byKeyLine}
       ${defaultsLine}
       ${legacyLine}
+      ${toggleLine}
       ${normalizeLine}
       return normalizeBgmArrangement;
     `)();

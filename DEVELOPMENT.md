@@ -26,8 +26,11 @@
 
 ### ゲーム本体
 
-- 配信元ソースは `monster-hero/src/game-system.jsx`。`monster-hero/game-system.compiled.js` は
-  **`node tools/build.js` だけで生成する**。正規ビルド不能時は Bun や別の Babel などで代替生成せず、
+- **編集元は `monster-hero/src/parts/*.jsx`**(`parts.json` の順に連結する)。`monster-hero/src/game-system.jsx` は
+  parts を連結した生成物、`monster-hero/game-system.compiled.js` はそれを変換した配信物で、どちらも
+  **`node tools/build.js` だけで生成する**。game-system.jsx を直接編集してしまった場合も、parts 側が未変更なら
+  `build.js` が parts へ書き戻す(両方が別々に変わっていれば止まるので、`--from-parts` か parts の戻しで解決する)。
+  検査ツールは今までどおり連結後の `game-system.jsx` を読む。正規ビルド不能時は Bun や別の Babel などで代替生成せず、
   未完了として扱う。`src` だけが更新された状態を配信可能・完了扱いにせず、変更後は正規ビルドで
   生成物を同期して `node tools/build.js --check` を通す。
 - モンスター・技などの定義は対応する `monster-hero/data/*.js` に置き、巨大な base64 画像は

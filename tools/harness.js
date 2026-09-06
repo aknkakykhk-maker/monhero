@@ -9,6 +9,114 @@ const babel = require('@babel/core');
 const REPO_ROOT = path.resolve(__dirname, '..');
 const GAME_SYSTEM = path.join(REPO_ROOT, 'monster-hero', 'src', 'game-system.jsx');
 
+// ==== 編集元の部品(parts)と、連結生成物 game-system.jsx ====
+// game-system.jsx は 25,000 行を超える1枚岩だったので、編集元を monster-hero/src/parts/*.jsx に分け、
+// game-system.jsx は parts を parts.json の順に連結した「生成物」にした(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 2)。
+// 生成物を残す理由: 検査 300 本以上と undefined-reference-check / render-error-check が game-system.jsx を
+// 読む前提で書かれており、連結後の1枚を今までどおり置いておけば、それらを1本も書き換えずに済む。
+// 部品ごとの区切りには目印の行(PART_MARK)を入れ、game-system.jsx 側を直接編集した場合でも
+// parts へ書き戻せるようにしてある(build.js の syncPartsAndGameSystem)。
+const PARTS_DIR = path.join(REPO_ROOT, 'monster-hero', 'src', 'parts');
+const PARTS_MANIFEST = path.join(PARTS_DIR, 'parts.json');
+const PART_MARK_PREFIX = '// ---- part: ';
+const PART_MARK_SUFFIX = ' ----';
+const partMark = (name) => `${PART_MARK_PREFIX}${name}${PART_MARK_SUFFIX}`;
+const GENERATED_HEADER_KEY = 'generated-sha256:';
+
+function readPartsManifest() {
+  const manifest = JSON.parse(fs.readFileSync(PARTS_MANIFEST, 'utf8'));
+  const names = (manifest.parts || []).map((p) => (typeof p === 'string' ? p : p.file));
+  if (!names.length) throw new Error('parts.json に部品がありません');
+  return names;
+}
+
+// parts を順に連結した本文(ヘッダ無し)。末尾は必ず改行1つにそろえる
+function assembleParts() {
+  return readPartsManifest().map((name) => {
+    const body = fs.readFileSync(path.join(PARTS_DIR, name), 'utf8').replace(/\n*$/, '\n');
+    return `${partMark(name)}\n${body}`;
+  }).join('\n');
+}
+
+function sha16(text) {
+  return require('crypto').createHash('sha256').update(text).digest('hex').slice(0, 16);
+}
+
+function generatedHeader(hash) {
+  return [
+    '// ============================================================',
+    '// このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。',
+    '// 編集は parts/ 側で行い、`node tools/build.js` で作り直します。',
+    '// (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)',
+    `// ${GENERATED_HEADER_KEY} ${hash}`,
+    '// ============================================================',
+    '',
+  ].join('\n');
+}
+
+// game-system.jsx を「ヘッダ」「本文」「ヘッダに書かれたハッシュ」に分ける。ヘッダが無ければ hash は null
+function splitGeneratedFile(text) {
+  const m = text.match(/^\/\/ =+\n(?:\/\/[^\n]*\n)*?\/\/ generated-sha256: ([0-9a-f]+)\n\/\/ =+\n\n?/);
+  if (!m) return { header: '', body: text, hash: null };
+  return { header: m[0], body: text.slice(m[0].length), hash: m[1] };
+}
+
+// 連結本文を目印の行で parts へ分け直す(game-system.jsx を直接編集したときの書き戻し)
+function splitBodyIntoParts(body) {
+  const names = readPartsManifest();
+  const out = new Map();
+  const re = new RegExp(`^${PART_MARK_PREFIX.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}(.+?)${PART_MARK_SUFFIX.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'm');
+  let rest = body;
+  const first = rest.match(re);
+  if (!first || first.index !== 0) throw new Error('game-system.jsx の先頭に部品の目印(// ---- part: ... ----)がありません。parts から作り直してください: node tools/build.js --from-parts');
+  while (rest.length) {
+    const m = rest.match(re);
+    if (!m) break;
+    const name = m[1];
+    if (!names.includes(name)) throw new Error(`parts.json に無い部品の目印です: ${name}`);
+    const afterMark = rest.slice(m.index + m[0].length + 1);
+    const next = afterMark.match(re);
+    const content = next ? afterMark.slice(0, next.index) : afterMark;
+    // 連結時に部品のあいだへ入れた空行1つを外し、末尾は改行1つにそろえる
+    out.set(name, content.replace(/\n*$/, '\n'));
+    rest = next ? afterMark.slice(next.index) : '';
+  }
+  for (const name of names) if (!out.has(name)) throw new Error(`部品 ${name} の目印が game-system.jsx にありません`);
+  return out;
+}
+
+// parts と game-system.jsx のどちらが新しいかを見て、そろえる。
+//   ・どちらも未変更 → 何もしない
+//   ・parts だけ変わった → game-system.jsx を作り直す
+//   ・game-system.jsx だけ変わった(モバイルで直接編集など) → parts へ書き戻してから作り直す
+//   ・両方が別々に変わった → 止める(どちらを正とするか人が決める)
+// dryRun のときは書かず、必要な動作だけ返す
+function syncPartsAndGameSystem({ dryRun = false, fromParts = false } = {}) {
+  const assembled = assembleParts();
+  const assembledHash = sha16(assembled);
+  const exists = fs.existsSync(GAME_SYSTEM);
+  const current = exists ? splitGeneratedFile(fs.readFileSync(GAME_SYSTEM, 'utf8')) : { body: '', hash: null };
+  const bodyHash = sha16(current.body);
+  const write = () => { if (!dryRun) fs.writeFileSync(GAME_SYSTEM, generatedHeader(assembledHash) + assembled); };
+  if (fromParts || !exists || current.hash === null) { write(); return { action: 'assembled', reason: fromParts ? '--from-parts' : 'game-system.jsx にヘッダが無い(初回)' }; }
+  if (bodyHash === assembledHash) {
+    if (current.hash !== assembledHash) write(); // 本文は同じでヘッダのハッシュだけ古い
+    return { action: 'none' };
+  }
+  const partsChanged = assembledHash !== current.hash;
+  const jsxChanged = bodyHash !== current.hash;
+  if (partsChanged && !jsxChanged) { write(); return { action: 'assembled', reason: 'parts が変わった' }; }
+  if (jsxChanged && !partsChanged) {
+    const pieces = splitBodyIntoParts(current.body);
+    if (!dryRun) {
+      for (const [name, content] of pieces) fs.writeFileSync(path.join(PARTS_DIR, name), content);
+      fs.writeFileSync(GAME_SYSTEM, generatedHeader(sha16(assembleParts())) + assembleParts());
+    }
+    return { action: 'split', reason: 'game-system.jsx が直接編集されていたので parts へ書き戻した' };
+  }
+  throw new Error('parts と game-system.jsx の両方が別々に変更されています。どちらを正とするか決めて、parts を正にするなら `node tools/build.js --from-parts`、game-system.jsx を正にするなら parts を git checkout で戻してから `node tools/build.js` を実行してください');
+}
+
 // game-system.jsx をBabelで変換する。構文エラーはここで例外になる(check-syntax.jsもこれを使う)
 function transformGameSystem() {
   const src = fs.readFileSync(GAME_SYSTEM, 'utf8');
@@ -346,4 +454,4 @@ function artSourcePath(...parts) {
   return path.join(REPO_ROOT, 'tools', 'art-sources', ...parts);
 }
 
-module.exports = { REPO_ROOT, GAME_SYSTEM, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, artSourcePath, createCanvas };
+module.exports = { REPO_ROOT, GAME_SYSTEM, PARTS_DIR, PARTS_MANIFEST, readPartsManifest, assembleParts, syncPartsAndGameSystem, splitGeneratedFile, generatedHeader, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, artSourcePath, createCanvas };

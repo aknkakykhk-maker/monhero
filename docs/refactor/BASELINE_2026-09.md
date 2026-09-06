@@ -10,7 +10,7 @@
 | --- | ---: |
 | 検査本数 | 336 |
 | OK | 278 |
-| NG | 58 |
+| NG | 58(→ 2026-09-06 の A 修正後 51) |
 | 所要時間(全部・直列) | 約 19 分 |
 
 CI 相当(`--area ci` 28 本)と CLAUDE.md の必須検査(`--area required` 14 本)は**全件 OK**。NG はすべて CI に入っていない検査。
@@ -35,23 +35,25 @@ CI 相当(`--area ci` 28 本)と CLAUDE.md の必須検査(`--area required` 14 
 
 ## NG の分類
 
-### A. 検査側の vm スタブ不足(本体が増やしたグローバルを検査の実行環境が用意していない)(11本)
+### A. 検査側の vm スタブ不足(本体が増やしたグローバルを検査の実行環境が用意していない)(11本 → **2026-09-06 に検査側を修正**)
 
-| 検査 | 最後に出た行 |
+本体が後から足した定義(`BREEDER_MARKET_ITEMS` への push、`GOD_SETTING`、`BGM_TOGGLE_SCENES`、`normalizeTranscendStatPoints`、`applyNightmareSignedModifier`、`normalizeAutoRepeatBreakthroughLevel`)を各検査の vm へ渡し、`RANGE_LABELS` の二重宣言は切り出し範囲を行単位に直した。実装は触っていない。
+
+| 検査 | 修正後 |
 | --- | --- |
-| `audio/title-bgm-default-check.js` | ReferenceError: BGM_TOGGLE_SCENES is not defined |
-| `battle/dist-aptitude-check.js` | SyntaxError: Identifier 'RANGE_LABELS' has already been declared(検査の切り出し範囲が本体の定義と重なる) |
-| `battle/unique-range-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
-| `masu/donation-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
-| `masu/pasture-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
-| `run/auto-repeat-bond-level-cap-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
-| `run/bond-reward-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
-| `run/unique-skill-point-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
-| `ranking/ranking-normal-display-check.js` | ReferenceError: GOD_SETTING is not defined |
-| `ranking/ranking-request-check.js` | ReferenceError: EXTREME_DIFFICULTIES is not defined |
-| `run/unique-initial-in-battle-check.js` | ReferenceError: normalizeTranscendStatPoints is not defined |
+| `audio/title-bgm-default-check.js` | OK |
+| `masu/donation-check.js` | OK |
+| `masu/pasture-check.js` | OK |
+| `run/auto-repeat-bond-level-cap-check.js` | OK |
+| `ranking/ranking-normal-display-check.js` | OK |
+| `ranking/ranking-request-check.js` | OK |
+| `run/unique-initial-in-battle-check.js` | OK |
+| `battle/dist-aptitude-check.js` | 読み込みは通るようになり、残りは B 分類(期待文言のずれ): NG: マスモン強化でも補正値(%)を出す |
+| `battle/unique-range-check.js` | 読み込みは通るようになり、残りは B 分類(期待文言のずれ):  |
+| `run/bond-reward-check.js` | 読み込みは通るようになり、残りは B 分類(期待文言のずれ):  |
+| `run/unique-skill-point-check.js` | 読み込みは通るようになり、残りは B 分類(期待文言のずれ):  |
 
-### B. 検査の期待が実装の現在の形と合っていない(文言・構造の正規表現、または実装側の乖離)。要トリアージ(34本)
+### B. 検査の期待が実装の現在の形と合っていない(文言・構造の正規表現、または実装側の乖離)。要トリアージ(38本)
 
 | 検査 | 最後に出た行 |
 | --- | --- |
@@ -89,6 +91,11 @@ CI 相当(`--area ci` 28 本)と CLAUDE.md の必須検査(`--area required` 14 
 | `run/eco-mode-internal-check.js` |  |
 | `run/ranking-finish-check.js` | 92/102 項目OK |
 | `run/training-check.js` | OK: 折りたたみDEBUG操作 |
+
+| `battle/dist-aptitude-check.js` | NG: マスモン強化でも補正値(%)を出す(A の修正後に残ったもの) |
+| `battle/unique-range-check.js` | (A の修正後に残ったもの) |
+| `run/bond-reward-check.js` | (A の修正後に残ったもの) |
+| `run/unique-skill-point-check.js` | (A の修正後に残ったもの) |
 
 ### C. 実ブラウザ検査。Tailwind CDN が届かない環境での見た目依存、または要素の探し方が古い。要トリアージ(13本)
 
@@ -135,6 +142,6 @@ CI 相当(`--area ci` 28 本)と CLAUDE.md の必須検査(`--area required` 14 
 
 ## 次にやること(STEP 1 の残り・別 PR)
 
-1. A 分類: `tools/harness.js` と各検査の vm スタブに、本体が後から足したグローバル(`BREEDER_MARKET_ITEMS`, `GOD_SETTING`, `EXTREME_DIFFICULTIES`, `BGM_TOGGLE_SCENES`, `normalizeTranscendStatPoints` など)を渡す。`RANGE_LABELS` の二重宣言は検査側の切り出し範囲の見直し。
+1. A 分類: 2026-09-06 に対応済み(11 本中 7 本が OK、4 本は B 分類として残る)。
 2. B 分類: 1 本ずつ「検査が古い」のか「実装が仕様から外れた」のかを判定する。実装側の乖離と判明したものは `KNOWN_ISSUES.md` へ移す(例: `battle/card-icon-check` の「`st.icon` を直接描いている箇所」、`monster/golem-balance-check` の「自動回復 null」、`image/dye-edge-check` の Undine の塗り残し)。
 3. C 分類: 通信のある環境(または Tailwind の手元ビルド `tools/layout/`)で再実行して切り分ける。

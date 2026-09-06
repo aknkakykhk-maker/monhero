@@ -24,7 +24,7 @@ const has = (needle) => source.includes(needle);
 const grab = (a, b) => source.slice(source.indexOf(a), source.indexOf(b));
 
 // --- 本番の計算をそのまま動かす ---
-const ctx = { ALL_PLAYER_MONSTERS: { Mocchi: { id:'Mocchi', unique:{ name:'もちもちアタック', baseMult:1 }, distAptitude:['C','C','C','C'], baseHp:100, baseAtk:100, baseDef:100, baseGuts:100 } } };
+const ctx = { BREEDER_MARKET_ITEMS: [] /* 切り出した範囲が読み込み時に push するため空で用意 */, ALL_PLAYER_MONSTERS: { Mocchi: { id:'Mocchi', unique:{ name:'もちもちアタック', baseMult:1 }, distAptitude:['C','C','C','C'], baseHp:100, baseAtk:100, baseDef:100, baseGuts:100 } } };
 vm.createContext(ctx);
 vm.runInContext([
   // 絆Lvの計算から寄付ダイヤの換算までを、本番の定義のまま持ってくる

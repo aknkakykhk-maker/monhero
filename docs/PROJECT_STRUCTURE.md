@@ -17,8 +17,9 @@
           └─ Supabase RESTランキング
 
 開発
-  monster-hero/src/game-system.jsx
+  monster-hero/src/parts/*.jsx (編集元。parts.json の順)
     └─ node tools/build.js
+         ├─ monster-hero/src/game-system.jsx (連結生成物。検査ツールはこれを読む)
          └─ monster-hero/game-system.compiled.js
 ```
 
@@ -62,7 +63,8 @@
 | パス | 所有する責務 | 編集規則 |
 | --- | --- | --- |
 | `index.html` | PWAメタ情報、safe area、依存読込順、本体再試行 | 起動経路変更時のみ編集 |
-| `src/game-system.jsx` | React UI、ゲームロジック、音声、保存、ランキング、染色 | ゲーム本体の編集元 |
+| `src/parts/*.jsx` + `parts.json` | ゲーム本体の編集元。`10-shared`(共有層)/ `15-error-boundary` / `20-app`(MonsterHeroGame)/ `30-bootstrap`(CSS注入と createRoot) | 部品を足したら `parts.json` へ順に並べる |
+| `src/game-system.jsx` | parts を連結した生成物(部品の区切りに `// ---- part: … ----` の目印) | 直接編集せず `node tools/build.js` で生成。直接編集しても parts が未変更なら build.js が書き戻す |
 | `game-system.compiled.js` | Babel変換済み配信物 | 直接編集せず `node tools/build.js` で生成 |
 | `game-v4.html` | 旧URLから `index.html` へのリダイレクト | 互換入口として維持 |
 | `manifest.json` | PWA名、start URL、縦画面、アイコン | PWA仕様変更時に編集 |
@@ -133,7 +135,7 @@ Node依存は `tools/package.json` / `package-lock.json` に閉じ、ゲーム�
 ## 6. 変更フローと境界
 
 1. ルール文書と関連コード・データを確認する。
-2. 本体は `src/game-system.jsx`、定義は対応する `data/*.js` を編集する。
+2. 本体は `src/parts/*.jsx`、定義は対応する `data/*.js` を編集する。
 3. 本体変更時は `node tools/build.js` で生成物を同期する。
 4. `node tools/check-syntax.js` と `node tools/build.js --check`、変更領域の個別検査を実行する。
 5. 機能公開時だけversionとchangelogを更新する。文書だけなら更新しない。
