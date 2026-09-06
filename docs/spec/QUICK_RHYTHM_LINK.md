@@ -133,7 +133,7 @@
 | 2 | `runStage` を入れてランの進行を画面から分ける。**挙動は変えない**（バトル画面では今までどおり） | **完了**（2026-09-06）。`battle/run-stage-check.js`(切り分け)と `battle/auto-run-browser-check.js`(実ブラウザでAUTOが進むこと)を追加 |
 | 3 | ランの段階を進める入口を `advanceRunStage` の1つへ寄せる。**挙動は変えない** | **完了**（2026-09-06）。`battle/run-stage-check.js` を拡張 |
 | 4 | モンビーの非演奏画面で周回を継続し、演奏中は止める。バトル音を消す。往復の動線 | **完了**（2026-09-06）。`mode/rhythm-background-run-check.js`（実ブラウザ）と `battle/run-stage-check.js` を追加・拡張 |
-| 5 | **M/B管理のAUTO設定に「モンビー中に回す編成・難易度」を足す** | 既存の `mh_auto_settings_v1` へ項目を足す（新しい保存キーを作らない） |
+| 5 | **M/B管理のAUTO設定に「モンビー中に回す編成・難易度」を足す** | **完了**（2026-09-06）。`run/auto-quick-run-settings-check.js`（正規化をvmで実際に動かす）と `run/auto-quick-run-settings-browser-check.js`（実ブラウザ7/7）を追加 |
 | 6 | モンビー側の進捗表示、モンビーから周回を始めるトグル（[中身は下](#pr6-の中身2026-09-06-ユーザー決定)） | 実ブラウザ |
 | 7 | 演奏中ぶんのヘッドレス追いつき（**一致検査を先に**） | 乱数固定で本物とシミュレータが一致すること |
 | 8 | **公開フラグ `QUICK_RHYTHM_LINK_PUBLIC_RELEASE` を true にする** | これでヘルプ・更新履歴・助手の告知が同時に出る |
@@ -148,6 +148,24 @@
 - 置き場所は M/B管理のAUTO設定（`mh_auto_settings_v1`）。**新しい保存キーは作らない**
 - 設定するのは 勇者モン / 供モン / クイックの難易度 の3つ
 - 設定が無いときは、これまでどおり周回テンプレートを使う（設定 → テンプレート の順に見る）
+
+#### PR5で入ったもの（2026-09-06）
+
+`mh_auto_settings_v1` へ `quickRun:{ heroRosterEntry, distance, difficulty }` を足した。
+**新しい保存キーは作っていない**（CLAUDE.md ⑦）。
+
+| 置いたもの | 場所 | すること |
+| --- | --- | --- |
+| `quickRun` の既定値と正規化 | `18-points-and-auto.jsx` | 項目の無い既存の保存値を未設定で補い、候補外の勇者モン・範囲外の距離・知らない難易度は未設定へ落とす（勝手に補完しない） |
+| `autoQuickRunConfigured(settings)` | 同上 | 3つそろっているかの判定だけ。`distance:0`（零距離）を未設定と取り違えない |
+| `repeatTemplateFromAutoSettings()` | `60-app.jsx` | 設定から周回テンプレートと同じ形を作る。難易度が未解放・勇者モンがいないときは `null` |
+| `repeatTemplateForNewRun()` | 同上 | `repeatRunTemplateRef.current || repeatTemplateFromAutoSettings()`。**1周目に自分で組んだ編成を優先**し、設定で置き換えない |
+| 「3. モンビー中に回すクイック周回」 | AUTO設定の画面 | 勇者モン・配置距離（零/近/中/遠）・難易度。未解放の難易度は選べない |
+
+∞周回の次の周も `repeatTemplateForNewRun()` を通す。周回中はテンプレートが必ずあるので
+動きは今までどおりで、テンプレートが失われていたときだけ設定で続けられる。
+
+**この時点ではまだ「モンビーから周回を始める」動線は無い**（PR6でつなぐ）。
 
 ### PR6 の中身（2026-09-06 ユーザー決定）
 
