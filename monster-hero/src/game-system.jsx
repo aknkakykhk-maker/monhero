@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 831bf25239090b8c
+// generated-sha256: 23d145dec5db0813
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 02:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 06:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13089,6 +13089,21 @@ function MonsterHeroGame() {
     if (!current || current.finished) return;
     writeQuickRunProgress({ ...current, finished:true });
   };
+  // いまの周でここまでにクリアしたWAVEぶんの見込み。
+  // 報酬はランの終わりにまとめて配られるので、途中は0のままだった
+  // (2026-09-07・ユーザー報告「1ウェーブが終わらないと加算表記されない」)。
+  // 「このまま終われば入る量」を出しておく。計算は報酬を配るときと同じ関数・同じ倍率を通す
+  const quickRunPendingRewards = () => {
+    const current = quickRunProgressRef.current;
+    if (!current || current.finished || runStage === null) return { xp:0, gold:0 };
+    const cleared = Math.max(0, (Number(wave) || 1) - 1);
+    if (cleared <= 0) return { xp:0, gold:0 };
+    const { xpMult, goldMult } = runRewardMultipliers();
+    return {
+      xp: applyQuickXpPolicy(xpForWavesClearedInMode(cleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current),
+      gold: applyQuickDiamondPolicy(goldForWavesClearedInMode(cleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current),
+    };
+  };
   const clearQuickRunProgress = () => {
     if (quickRunProgressRef.current) writeQuickRunProgress(null);
     setQuickRunDetailOpen(false);
@@ -15748,6 +15763,18 @@ function MonsterHeroGame() {
 
   // クリアしたWAVE数に応じてブリーダー経験値・ゴールド・勇者モンの絆経験値をまとめて加算(端末保存)。
   // 最終リザルト画面(CHAMPION/敗北)に出す獲得内訳もここで組み立てる
+  // ランの報酬倍率。報酬を配る awardRunRewards と、モンヒロビートの進捗に出す見込みが
+  // 同じ式を通るように1か所へまとめてある(数値を二重に持たない)
+  const runRewardMultipliers = () => {
+    const extreme = extremeRunRef.current;
+    const selectedExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+    const quickExtremeSetting = isQuickMode(runMode) ? quickDifficultySetting(difficulty) : null;
+    const scoreMult = extreme ? selectedExtremeSetting.score : (quickExtremeSetting?.xp || DIFFICULTY_SETTINGS[difficulty]?.score || 1.0);
+    const goldMult = extreme ? selectedExtremeSetting.gold : (quickExtremeSetting?.gold || DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0);
+    // 経験値はスコアと倍率が違う(極限はスコア×20に対して経験値×25)ので別に持つ
+    const xpMult = extreme ? selectedExtremeSetting.xp : scoreMult;
+    return { scoreMult, goldMult, xpMult };
+  };
   const awardRunRewards = async (wavesCleared) => {
     // awaitより前に同期ロックする。敗北effectとボタン連打が同時に到達しても報酬は一度だけ。
     if (rewardsAwardedRef.current) return;
@@ -15760,13 +15787,7 @@ function MonsterHeroGame() {
     if (wavesCleared < wave) await saveMissionProgress('battle');
     if (wavesCleared <= 0) { setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldBefore: gold, goldAfter: gold, heroBondGain: null, allyBondGains: [], waveHistory }); return; }
     // 極限チャレンジはスコア×20・経験値×25・ダイヤ×7.5。通常の難易度表ではなく EXTREME_SETTING を使う
-    const extreme = extremeRunRef.current;
-    const selectedExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
-    const quickExtremeSetting = isQuickMode(runMode) ? quickDifficultySetting(difficulty) : null;
-    const scoreMult = extreme ? selectedExtremeSetting.score : (quickExtremeSetting?.xp || DIFFICULTY_SETTINGS[difficulty]?.score || 1.0);
-    const goldMult = extreme ? selectedExtremeSetting.gold : (quickExtremeSetting?.gold || DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0);
-    // 経験値はスコアと倍率が違う(極限はスコア×20に対して経験値×25)ので別に持つ
-    const xpMult = extreme ? selectedExtremeSetting.xp : scoreMult;
+    const { scoreMult, goldMult, xpMult } = runRewardMultipliers();
 
     // クイックモードは経験値とダイヤだけ1.5倍(スコア倍率は難易度のまま)
     const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
@@ -17903,7 +17924,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   // 正規リザルトの全報酬演出が完了した場合だけ、AUTO∞の限界突破→次周開始へ進む。
   useEffect(()=>{
-    if(!runProgressAllowed||runStage!=='CHAMPION'||!championPresentationComplete||!autoRepeatRef.current||autoRepeatStartingRef.current)return;
+    if(!runProgressAllowed||runStage!=='CHAMPION'||!autoRepeatRef.current||autoRepeatStartingRef.current)return;
+    // ★演出の完了(championPresentationComplete)は CHAMPION 画面を描いたときだけ立つ。
+    //   モンビーを開いていると画面を描かないので、そのまま待つと永久に次の周へ入れない
+    //   (2026-09-07・ユーザー報告「1周目が終わったあと2周目に入らない」)。
+    //   画面を描いているときは今までどおり演出の完了を待ち、
+    //   描いていないときは保存(resultProcessing)の完了だけを待って進む
+    if(gameState==='CHAMPION'? !championPresentationComplete : resultProcessing)return;
     if(!isQuickMode(runMode)){setAutoRepeatEnabled(false);return;}
     if(document.visibilityState==='hidden')return;
     autoRepeatStartingRef.current=true;
@@ -17928,7 +17955,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         stopAllAuto();
       }
     })();
-  },[runStage,runProgressAllowed,championPresentationComplete,autoRepeat,autoBattle,runMode]);
+  },[runStage,runProgressAllowed,championPresentationComplete,resultProcessing,gameState,autoRepeat,autoBattle,runMode]);
 
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
   // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
@@ -21169,8 +21196,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
                   <div className="flex justify-between gap-2"><dt className="text-slate-400">周回数</dt><dd className="font-black text-white">{quickRunProgress.loops}周</dd></div>
                   <div className="flex justify-between gap-2"><dt className="text-slate-400">難易度</dt><dd className="font-black text-white">{quickDifficultySetting(difficulty)?.label||difficulty}</dd></div>
-                  <div className="flex justify-between gap-2"><dt className="text-slate-400">経験値</dt><dd className="font-black text-cyan-200">+{Math.floor(quickRunProgress.xp).toLocaleString()}</dd></div>
-                  <div className="flex justify-between gap-2"><dt className="text-slate-400">ダイヤ</dt><dd className="font-black text-amber-200">+{Math.floor(quickRunProgress.gold).toLocaleString()}</dd></div>
+                  {(()=>{const pending=quickRunPendingRewards();return <>
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">経験値</dt><dd className="font-black text-cyan-200">+{Math.floor(quickRunProgress.xp+pending.xp).toLocaleString()}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">ダイヤ</dt><dd className="font-black text-amber-200">+{Math.floor(quickRunProgress.gold+pending.gold).toLocaleString()}</dd></div>
+                  {(pending.xp>0||pending.gold>0)&&<div className="col-span-2 text-[9px] text-slate-500">うち今の周のぶん（経験値 +{Math.floor(pending.xp).toLocaleString()} ／ ダイヤ +{Math.floor(pending.gold).toLocaleString()}）は、この周を勝ち切ったときに入ります。</div>}
+                  </>;})()}
                   <div className="col-span-2 flex justify-between gap-2"><dt className="text-slate-400">勇者モン</dt><dd className="truncate font-black text-white">{mainHero?.masuName||mainHero?.name||'—'}</dd></div>
                 </dl>
                 <p className="mt-1 text-[9px] leading-relaxed text-slate-400">{quickRunProgress.finished

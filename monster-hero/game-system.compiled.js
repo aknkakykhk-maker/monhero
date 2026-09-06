@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e262b6314a8ab453
+// source-sha256: 403f0a0161fee9d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 831bf25239090b8c
+// generated-sha256: 23d145dec5db0813
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 02:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 06:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22873,6 +22873,30 @@ function MonsterHeroGame() {
       finished: true
     });
   };
+  // いまの周でここまでにクリアしたWAVEぶんの見込み。
+  // 報酬はランの終わりにまとめて配られるので、途中は0のままだった
+  // (2026-09-07・ユーザー報告「1ウェーブが終わらないと加算表記されない」)。
+  // 「このまま終われば入る量」を出しておく。計算は報酬を配るときと同じ関数・同じ倍率を通す
+  const quickRunPendingRewards = () => {
+    const current = quickRunProgressRef.current;
+    if (!current || current.finished || runStage === null) return {
+      xp: 0,
+      gold: 0
+    };
+    const cleared = Math.max(0, (Number(wave) || 1) - 1);
+    if (cleared <= 0) return {
+      xp: 0,
+      gold: 0
+    };
+    const {
+      xpMult,
+      goldMult
+    } = runRewardMultipliers();
+    return {
+      xp: applyQuickXpPolicy(xpForWavesClearedInMode(cleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current),
+      gold: applyQuickDiamondPolicy(goldForWavesClearedInMode(cleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current)
+    };
+  };
   const clearQuickRunProgress = () => {
     if (quickRunProgressRef.current) writeQuickRunProgress(null);
     setQuickRunDetailOpen(false);
@@ -26791,6 +26815,22 @@ function MonsterHeroGame() {
 
   // クリアしたWAVE数に応じてブリーダー経験値・ゴールド・勇者モンの絆経験値をまとめて加算(端末保存)。
   // 最終リザルト画面(CHAMPION/敗北)に出す獲得内訳もここで組み立てる
+  // ランの報酬倍率。報酬を配る awardRunRewards と、モンヒロビートの進捗に出す見込みが
+  // 同じ式を通るように1か所へまとめてある(数値を二重に持たない)
+  const runRewardMultipliers = () => {
+    const extreme = extremeRunRef.current;
+    const selectedExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+    const quickExtremeSetting = isQuickMode(runMode) ? quickDifficultySetting(difficulty) : null;
+    const scoreMult = extreme ? selectedExtremeSetting.score : quickExtremeSetting?.xp || DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
+    const goldMult = extreme ? selectedExtremeSetting.gold : quickExtremeSetting?.gold || DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
+    // 経験値はスコアと倍率が違う(極限はスコア×20に対して経験値×25)ので別に持つ
+    const xpMult = extreme ? selectedExtremeSetting.xp : scoreMult;
+    return {
+      scoreMult,
+      goldMult,
+      xpMult
+    };
+  };
   const awardRunRewards = async wavesCleared => {
     // awaitより前に同期ロックする。敗北effectとボタン連打が同時に到達しても報酬は一度だけ。
     if (rewardsAwardedRef.current) return;
@@ -26816,13 +26856,11 @@ function MonsterHeroGame() {
       return;
     }
     // 極限チャレンジはスコア×20・経験値×25・ダイヤ×7.5。通常の難易度表ではなく EXTREME_SETTING を使う
-    const extreme = extremeRunRef.current;
-    const selectedExtremeSetting = ALL_EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
-    const quickExtremeSetting = isQuickMode(runMode) ? quickDifficultySetting(difficulty) : null;
-    const scoreMult = extreme ? selectedExtremeSetting.score : quickExtremeSetting?.xp || DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
-    const goldMult = extreme ? selectedExtremeSetting.gold : quickExtremeSetting?.gold || DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
-    // 経験値はスコアと倍率が違う(極限はスコア×20に対して経験値×25)ので別に持つ
-    const xpMult = extreme ? selectedExtremeSetting.xp : scoreMult;
+    const {
+      scoreMult,
+      goldMult,
+      xpMult
+    } = runRewardMultipliers();
 
     // クイックモードは経験値とダイヤだけ1.5倍(スコア倍率は難易度のまま)
     const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
@@ -30071,7 +30109,13 @@ function MonsterHeroGame() {
 
   // 正規リザルトの全報酬演出が完了した場合だけ、AUTO∞の限界突破→次周開始へ進む。
   useEffect(() => {
-    if (!runProgressAllowed || runStage !== 'CHAMPION' || !championPresentationComplete || !autoRepeatRef.current || autoRepeatStartingRef.current) return;
+    if (!runProgressAllowed || runStage !== 'CHAMPION' || !autoRepeatRef.current || autoRepeatStartingRef.current) return;
+    // ★演出の完了(championPresentationComplete)は CHAMPION 画面を描いたときだけ立つ。
+    //   モンビーを開いていると画面を描かないので、そのまま待つと永久に次の周へ入れない
+    //   (2026-09-07・ユーザー報告「1周目が終わったあと2周目に入らない」)。
+    //   画面を描いているときは今までどおり演出の完了を待ち、
+    //   描いていないときは保存(resultProcessing)の完了だけを待って進む
+    if (gameState === 'CHAMPION' ? !championPresentationComplete : resultProcessing) return;
     if (!isQuickMode(runMode)) {
       setAutoRepeatEnabled(false);
       return;
@@ -30099,7 +30143,7 @@ function MonsterHeroGame() {
         stopAllAuto();
       }
     })();
-  }, [runStage, runProgressAllowed, championPresentationComplete, autoRepeat, autoBattle, runMode]);
+  }, [runStage, runProgressAllowed, championPresentationComplete, resultProcessing, gameState, autoRepeat, autoBattle, runMode]);
 
   // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
   // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
@@ -38714,19 +38758,24 @@ function MonsterHeroGame() {
         className: "text-slate-400"
       }, "\u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("dd", {
         className: "font-black text-white"
-      }, quickDifficultySetting(difficulty)?.label || difficulty)), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("dt", {
-        className: "text-slate-400"
-      }, "\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("dd", {
-        className: "font-black text-cyan-200"
-      }, "+", Math.floor(quickRunProgress.xp).toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("dt", {
-        className: "text-slate-400"
-      }, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("dd", {
-        className: "font-black text-amber-200"
-      }, "+", Math.floor(quickRunProgress.gold).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      }, quickDifficultySetting(difficulty)?.label || difficulty)), (() => {
+        const pending = quickRunPendingRewards();
+        return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between gap-2"
+        }, /*#__PURE__*/React.createElement("dt", {
+          className: "text-slate-400"
+        }, "\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("dd", {
+          className: "font-black text-cyan-200"
+        }, "+", Math.floor(quickRunProgress.xp + pending.xp).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between gap-2"
+        }, /*#__PURE__*/React.createElement("dt", {
+          className: "text-slate-400"
+        }, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("dd", {
+          className: "font-black text-amber-200"
+        }, "+", Math.floor(quickRunProgress.gold + pending.gold).toLocaleString())), (pending.xp > 0 || pending.gold > 0) && /*#__PURE__*/React.createElement("div", {
+          className: "col-span-2 text-[9px] text-slate-500"
+        }, "\u3046\u3061\u4ECA\u306E\u5468\u306E\u3076\u3093\uFF08\u7D4C\u9A13\u5024 +", Math.floor(pending.xp).toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", Math.floor(pending.gold).toLocaleString(), "\uFF09\u306F\u3001\u3053\u306E\u5468\u3092\u52DD\u3061\u5207\u3063\u305F\u3068\u304D\u306B\u5165\u308A\u307E\u3059\u3002"));
+      })(), /*#__PURE__*/React.createElement("div", {
         className: "col-span-2 flex justify-between gap-2"
       }, /*#__PURE__*/React.createElement("dt", {
         className: "text-slate-400"

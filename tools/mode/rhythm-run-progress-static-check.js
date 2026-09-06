@@ -52,6 +52,23 @@ for (const file of files) {
     compact.includes('hp<=0&&!debugBattle&&!rhythmScreenOpen&&') && compact.includes('gaveUp&&!debugBattle&&!rhythmScreenOpen&&'));
   check(`${rel}: 詳細からバトルへ戻れる`, src.includes('data-quick-run-progress-back'));
 
+  // ---- 次の周へ入れること ----
+  // ★CHAMPIONの報酬演出の完了(championPresentationComplete)は、その画面を描いたときだけ立つ。
+  //   モンヒロビートを開いていると画面を描かないので、待つと永久に次の周へ入れない
+  //   (2026-09-07・ユーザー報告「1周目が終わったあと2周目に入らない」「戻るとオートが切れる」)。
+  check(`${rel}: 画面を描いていないときは演出の完了を待たない`,
+    compact.includes("if(gameState==='CHAMPION'?!championPresentationComplete:resultProcessing)return;"));
+  check(`${rel}: その判定に必要なものを依存に入れている`,
+    /championPresentationComplete,\s*resultProcessing,\s*gameState/.test(compact.replace(/\s+/g, ' ')) || compact.includes('championPresentationComplete,resultProcessing,gameState'));
+
+  // ---- 報酬の見込み ----
+  // 報酬はランの終わりにまとめて配られるので、途中は0のままだった
+  check(`${rel}: 今の周のぶんを見込みとして出す`, src.includes('const quickRunPendingRewards ='));
+  check(`${rel}: 見込みも報酬を配るときと同じ倍率を通す`,
+    /quickRunPendingRewards[\s\S]{0,600}?runRewardMultipliers\(\)/.test(src));
+  check(`${rel}: 倍率の式は1か所にまとまっている`,
+    (src.match(/const scoreMult = extreme \?/g) || []).length === 1);
+
   // ---- モンビーから始める ----
   check(`${rel}: 始める入口は共通のテンプレート選びを通る`,
     /startQuickRunFromRhythm[\s\S]{0,400}?repeatTemplateForNewRun\(\)/.test(src));
