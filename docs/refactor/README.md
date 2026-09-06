@@ -20,7 +20,7 @@
 | STEP 0 文書同期 | 完了(2026-09-06) | D-01〜D-05・D-07 を解消。監査時点(9f9cfa0)以降に main は #1113 まで進み、モンビーの公開曲は 11 曲になっている |
 | STEP 1 安全網 | 着手中 | 1本目: 一括検査スクリプト `tools/run-checks.js` とベースライン(完了) / 2本目: エラー境界 `MhErrorBoundary`(完了) / 3本目: vm スタブ不足 11 本の修正(完了、NG 58 → 51) / 4本目以降: 残る B・C 分類 51 本のトリアージ |
 | STEP 2 連結ビルドと集約 | 着手中 | 1本目: 編集元を `src/parts/` に分け、`game-system.jsx` を連結生成物にした(完了) / 2本目: 保存キー一覧を SAVE_DATA.md と突き合わせる検査(完了。49 個の未記載を補った) / 3本目以降: 定数・ユーティリティの集約 |
-| STEP 3 保存層 | 着手中 | 1本目: 旧形式セーブの通し検査 `boot/legacy-save-boot-check.js`(完了) / 2本目以降: キーごとの読込・更新関数(`mh_gifts` → `mh_breeder_xp` → `mh_gold` → `mh_owned_items` → `mh_missions` → `mh_masu_mons`) |
+| STEP 3 保存層 | 着手中 | 1本目: 旧形式セーブの通し検査 `boot/legacy-save-boot-check.js`(完了) / 2本目: `mh_masu_mons` の state 更新と保存が対であることの検査 `masu/masu-save-pairing-check.js`(完了。現状は 35 箇所すべて対で、`saveTranscendFruitPair` のような「storeSet を注入し、読み戻して検証し、失敗なら巻き戻す取引関数」が既にある) / 3本目以降: 複数キー更新の取引関数への寄せ、キーごとの読込関数 |
 | STEP 4 純関数の切り出し | 着手中 | 1本目: 共有層を節ごとに 21 部品へ分けた(移動のみ。完了) / 2本目: 純粋な部品 7 つを `parts.json` で `pure:true` と宣言し `boot/parts-purity-check.js` で守る(完了) / 3本目以降: 19(難易度)から保存処理を出す、jsx 側の表の移動 |
 | STEP 5〜10 | 未着手 | |
 
