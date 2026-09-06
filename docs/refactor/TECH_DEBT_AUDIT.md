@@ -22,7 +22,7 @@
 | TD-03 | Critical | 基盤 | data 配下のファイルが `React.createElement` / `window.fetch` を実行時に上書きしている | 9 |
 | TD-04 | High | 構造 | `MonsterHeroGame` が 14,723 行・`useState` 417 個の単一コンポーネント | 6, 7 |
 | TD-05 | High | 構造 | 本体が export の無い 25,638 行の1ファイルで、検査は識別子名に依存して中身を抜き出している | 2, 4 |
-| TD-06 | High | バトル | 与ダメージの「予測表示」と「実処理」が別実装で、勇者・固有技の分岐を二重に持つ | 5 |
+| TD-06 | High | バトル | 与ダメージの「予測表示」と「実処理」が別実装で、勇者・固有技の分岐を二重に持つ | 5(**2026-09-06 に一本化**: `buildAttackHits` / `ATTACK_COMBO_RULES`。残るのはあつの挑発の変種のみ) |
 | TD-07 | High | ライフサイクル | `MonsterHeroGame` 内の `setTimeout` 58 に対し `clearTimeout` 13。画面を離れても残る演出タイマー | 6 |
 | TD-08 | High | 音ゲー | `rhythm-mode.js` 8,624 行のうち 5,916 行が譜面データで、ロジックと同居している | 9 |
 | TD-09 | High | 性能 | 音ゲーのランタイムパッチが document 全体に capture リスナーと `MutationObserver(body, subtree)` を常駐させる | 9 |

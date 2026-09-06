@@ -31,7 +31,7 @@ assert(gameSource.includes("if(t.id==='kiki') return `次の${level+2}ターン 
   "prev.length >= STARTER_TEACHING_IDS.length",
   "getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo)",
 ].forEach(text=>assert(gameSource.includes(text),`実装結線が不足: ${text}`));
-assert(gameSource.includes("total += extraHit(getPermaBuff('globalComboDmgPct')+additionalGlobalCombo)"),'共通予測に全体連撃を含める');
+assert(gameSource.includes("globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo") && gameSource.includes("if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true);"),'共通予測に全体連撃を含める');
 assert(gameSource.includes('const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({ scale:2.37, x:0, y:19 })'),'ききの顔寄り調整値を1か所で定義する');
 assert(gameSource.includes('kiki: KIKI_FACE_ICON_ADJUSTMENT')&&gameSource.includes('kiki_icon: KIKI_FACE_ICON_ADJUSTMENT'),'アシストカードと既存プロフィール用設定で同じ調整値を再利用する');
 assert(gameSource.includes('ASSIST_CARD_ICON_STYLES[cardId]'),'画像パスではなくアシストカードIDで専用表示を適用する');

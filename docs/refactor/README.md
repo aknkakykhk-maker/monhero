@@ -10,6 +10,7 @@
 | [`REGRESSION_RISK_MAP.md`](REGRESSION_RISK_MAP.md) | 領域ごとの危険度、壊れ方、拾う検査、検査の穴、触らない領域 | **変更に着手する前に必ず** |
 | [`TARGET_ARCHITECTURE.md`](TARGET_ARCHITECTURE.md) | 目指す形(連結ビルドで複数ファイル、保存はキーごとの更新関数、1 画面 1 コンポーネント、画面単位のライフサイクル) | 設計に迷ったとき |
 | [`REFACTOR_MASTER_PLAN.md`](REFACTOR_MASTER_PLAN.md) | STEP 0〜10 の明細(目的・対象・変更内容・変更しないもの・依存・リスク・検査・完了条件)と着手順 | 次にやる PR を決めるとき |
+| [`BATTLE_DAMAGE_MAP.md`](BATTLE_DAMAGE_MAP.md) | 予測ダメージと実ダメージの分岐の対応表と、一本化の形(STEP 5 の作業表) | STEP 5 に着手するとき |
 | [`BASELINE_2026-09.md`](BASELINE_2026-09.md) | 変更前に全検査を回した結果(OK / NG の一覧と分類)。ここに無い NG が出たら「その変更で壊した」 | 検査が落ちたとき |
 
 ## 進捗
@@ -23,7 +24,8 @@
 | STEP 3 保存層 | 着手中 | 1本目: 旧形式セーブの通し検査 `boot/legacy-save-boot-check.js`(完了) / 2本目: `mh_masu_mons` の state 更新と保存が対であることの検査 `masu/masu-save-pairing-check.js`(完了。現状は 35 箇所すべて対で、`saveTranscendFruitPair` のような「storeSet を注入し、読み戻して検証し、失敗なら巻き戻す取引関数」が既にある) / 3本目以降: 複数キー更新の取引関数への寄せ、キーごとの読込関数 |
 | STEP 4 純関数の切り出し | 着手中 | 1本目: 共有層を節ごとに 21 部品へ分けた(移動のみ。完了) / 2本目: 純粋な部品 7 つを `parts.json` で `pure:true` と宣言し `boot/parts-purity-check.js` で守る(完了) / 3本目以降: 19(難易度)から保存処理を出す、jsx 側の表の移動 |
 | STEP 7 描画・キャッシュ | 着手中 | 1本目: 染め直した絵のキャッシュを 96 件の LRU に(完了。dataURL が無制限に溜まらない) / 2本目以降: 一覧行の `React.memo`、静的な `style={{}}` の定数化、CSS 静的化の準備 |
-| STEP 5・6・8〜10 | 未着手 | |
+| STEP 5 バトル計算 | 着手中 | バトル領域の古い検査 7 本を現在形へ(完了)。分岐の対応表 `BATTLE_DAMAGE_MAP.md`(完了)。1本目: 乱数固定の一致検査 `battle/damage-parity-check.js`(完了。2,560 通り一致) / 2本目: ヒット列を純粋な部品の `buildAttackHits` + `ATTACK_COMBO_RULES` に一本化し、実処理と予測をそこへ差し替え(完了) / 残: あつの挑発の変種 |
+| STEP 6・8〜10 | 未着手 | |
 
 ## 守ること(要約)
 

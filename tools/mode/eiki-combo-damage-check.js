@@ -26,41 +26,16 @@ const check = (name, ok, detail = '') => {
 
 // --- 実装から連撃ブロックを切り出す ---
 // 囲っている if(...) ごと取る。中身だけを取ると閉じ括弧が余って関数にできない
-const start = source.indexOf("        if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan') || activeMon.id==='Eiki'");
-const end = source.indexOf('        const globalComboRate=', start);
-if (start < 0 || end < 0) { console.error('NG: 連撃ブロックを切り出せません'); process.exit(1); }
-const block = source.slice(start, end);
-
-// このブロックが読む外の値をすべて引数にして、そのまま動かせる関数にする
-const runCombo = new Function(
-  'd', 'card', 'activeMon', 'mainHero', 'slotIdx',
-  'getPermaBuff', 'getTurnBuff', 'critRateBonus', 'critDmgBonus',
-  'attackHits', 'state', 'pandoraSplitNormal',
-  `let hasCrit=false, totalDmg=0;\n${block}\nreturn { totalDmg, hasCrit };`
-);
-
+// ヒット列の共通の正本(buildAttackHits)を本体から取り出して動かす。連撃(メイン以外)だけを見る
+const rulesStart = source.indexOf('const ATTACK_COMBO_RULES = Object.freeze({');
+const rulesEnd = source.indexOf('\n// 贖罪の追撃(アーク・イブリースの固有技)', rulesStart);
+if (rulesStart < 0 || rulesEnd < 0) { console.log('NG: buildAttackHits を本体から取り出せません'); process.exit(1); }
+const { buildAttackHits } = new Function(`${source.slice(rulesStart, rulesEnd)}\nreturn { buildAttackHits };`)();
 const simulate = ({ heroId, activeId, cardType, cardMonId, d = 1000, comboDmgPct = 0 }) => {
-  const attackHits = [];
-  const perma = { comboDmgPct };
-  const realRandom = Math.random;
-  Math.random = () => 1; // 会心しない側に固定する(会心はメイン攻撃と同じ既存処理)
-  let res;
-  try {
-    res = runCombo(
-      d,
-      { type: cardType, monId: cardMonId, crit: 0 },
-      { id: activeId },
-      { id: heroId },
-      0,
-      (key, def = 0) => perma[key] ?? def,
-      (key, def = false) => def,
-      0, 0,
-      attackHits, null, false
-    );
-  } finally { Math.random = realRandom; }
-  return { hits: attackHits.map(h => h.dmg), total: res.totalDmg };
+  const hits = buildAttackHits({ d, card: { type: cardType, monId: cardMonId, crit: 0 }, attackerId: activeId, heroId, comboDmgBonus: comboDmgPct, critDmgBonus: 0, guaranteedCrit: false, rollCrit: () => false, globalComboRate: 0 });
+  const combos = hits.slice(1).map(h => h.dmg); // 先頭はメインヒット
+  return { hits: combos, total: combos.reduce((a, b) => a + b, 0) };
 };
-
 const D = 1000;
 console.log(`--- ① 桜花連舞(勇者=エイキ) 元ダメージ ${D} ---`);
 const normal = simulate({ heroId: 'Eiki', activeId: 'Eiki', cardType: 'atk', cardMonId: undefined, d: D });

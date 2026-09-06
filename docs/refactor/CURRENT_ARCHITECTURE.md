@@ -200,7 +200,7 @@
 | 概念 | 実装 |
 | --- | --- |
 | 与ダメージ(実) | `processTurn`(16,608〜16,987)内で `getDmg(...)` → 会心ロール → 連撃 `rollCombo` → `attackHits` 蓄積 |
-| 与ダメージ(予測表示) | `getAttackPredictedDmg`(16,313) が同じ勇者特性・固有技分岐(ザン 0.3/0.2、エイキ、パンドラ分割)を**別実装**で持つ |
+| 与ダメージ(予測表示) | `getAttackPredictedDmg` は 2026-09-06 から実処理と同じ `buildAttackHits`(`22-enemy-and-bond-entries.jsx`)を `rollCrit: () => false` で呼ぶ。分岐の倍率は `ATTACK_COMBO_RULES` の 1 表 |
 | 被ダメージ | `getIncomingDamageBeforeTurnReduction` → `applyTurnDamageReduction` → `getPredictedDamage`。実処理(`handleEnemyTurn`)と予測が同じ関数を通る(こちらは一本化済み) |
 | 敵AI | `chooseEnemyAction` / `evaluateEnemyActions`(7,074〜7,138) |
 | 極限ルール | `extreme*` / `ultimate*` / `god*` の純関数群(6,003〜6,260) |

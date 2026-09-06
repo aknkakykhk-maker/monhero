@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90b1343633730b76
+// source-sha256: f4ea241bb6de80dc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 328ddb48f2e7a279
+// generated-sha256: 2dbacae710ce2068
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 18:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 18:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12978,6 +12978,82 @@ const splitRankingParty = entry => {
 };
 
 // ブリーダー教えカード使用時の専用演出(色・アイコン・掛け声)
+// ==================== 攻撃1枚が生むヒット列(予測表示と実処理の共通の正本) ====================
+// 与ダメージは getDmg(基礎ダメージ)のあと、勇者特性や固有技の連撃・全体連撃で複数のヒットになる。
+// 以前は予測表示(getAttackPredictedDmg)と実処理(processTurn)が別々に同じ分岐を書いていて、
+// 片方だけ直すと「予測と実際が違う」になっていた(docs/refactor/BATTLE_DAMAGE_MAP.md)。
+// ここで 1 か所にまとめ、会心の決め方(乱数か確定か)だけを呼び出し側が渡す。
+// 【順序を変えないこと】メイン → ザン特性 → 連斬 → 桜花連舞 → 緋桜連華 → 禁忌解錠(通常の後半) → 禁忌解錠(固有技) → 全体連撃。
+// 演出(専用モーションの再生・noAnim)がこの順序と skillName に依存している。
+const ATTACK_COMBO_RULES = Object.freeze({
+  zanHero: 0.3,
+  // 勇者特性「連撃」: ザン勇者がザンで攻撃(通常・固有とも)
+  zanUnique: 0.2,
+  // 固有技「連斬」: 技の出自がザンなら誰が使っても(合体で引き継いだ場合も)
+  eikiHero: Object.freeze([0.1, 0.1]),
+  // 勇者特性「桜花連舞」: エイキ勇者がエイキで攻撃(通常・固有とも)
+  eikiHeroUnique: 0.3,
+  // 桜花連舞: さらにエイキ自身の固有技なら追加
+  eikiUnique: Object.freeze([0.15, 0.15]),
+  // 固有効果「緋桜連華」: 技の出自がエイキなら誰が使っても
+  pandoraSplitNormal: 0.5,
+  // 禁忌解錠: パンドラ勇者がパンドラで通常攻撃(atk/range_atk)すると 50%+50% に分ける
+  pandoraUnique: 1.0,
+  // 禁忌解錠: パンドラ自身の固有技は 100% の連撃(引き継いだ技には無い)
+  atonement: 0.2 // 贖罪(アーク・イブリースの固有技): メインの確定値の 20%。実処理では固有技の効果ブロック側で積む
+});
+const buildAttackHits = ({
+  d,
+  card,
+  attackerId,
+  heroId,
+  comboDmgBonus = 0,
+  critDmgBonus = 0,
+  guaranteedCrit = false,
+  rollCrit = () => false,
+  globalComboRate = 0
+}) => {
+  const hits = [];
+  const critMult = 1.5 + critDmgBonus;
+  const isUniqueOf = id => card.type === 'unique' && card.monId === id;
+  const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
+  // 禁忌解錠の通常攻撃は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)
+  const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5) : d;
+  const mainCrit = guaranteedCrit || rollCrit();
+  hits.push({
+    kind: 'main',
+    crit: mainCrit,
+    dmg: mainCrit ? Math.floor(mainBase * critMult) : mainBase,
+    skillName: null,
+    noAnim: false
+  });
+  // 連撃は元ダメージ d を基準にし、会心はメインとは独立に判定する(メインの会心を二重に乗せない)
+  const combo = (rate, skillName = '連撃', noAnim = false) => {
+    const base = Math.floor(d * rate);
+    if (base <= 0) return;
+    const crit = guaranteedCrit || rollCrit();
+    hits.push({
+      kind: 'combo',
+      crit,
+      dmg: crit ? Math.floor(base * critMult) : base,
+      skillName,
+      noAnim
+    });
+  };
+  if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
+  if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);
+  if (heroId === 'Eiki' && attackerId === 'Eiki') {
+    for (const rate of ATTACK_COMBO_RULES.eikiHero) combo(rate + comboDmgBonus);
+    if (isUniqueOf('Eiki')) combo(ATTACK_COMBO_RULES.eikiHeroUnique + comboDmgBonus);
+  }
+  if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);
+  if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);
+  if (heroId === 'Pandora' && attackerId === 'Pandora' && isUniqueOf('Pandora')) combo(ATTACK_COMBO_RULES.pandoraUnique + comboDmgBonus, '連撃', true);
+  if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
+  return hits;
+};
+// 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
+const attackAtonementDmg = (card, mainDmg) => card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis') ? Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement) : 0;
 const TEACHING_FX_STYLE = {
   oryo: {
     icon: "🌸",
@@ -28255,37 +28331,20 @@ function MonsterHeroGame() {
   // processTurnの実行では渡さない(getPermaBuff('globalComboDmgPct')が既に確定値を持つため)。
   const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo = 0) => {
     if (baseDmg <= 0) return 0;
-    const guaranteedCrit = getTurnBuff('guaranteedCrit', false);
-    const critMult = 1.5 + getPermaBuff('critDmgPct');
-    // 禁忌解錠の通常攻撃は、分割前のbaseDmgを基準に50%ずつへ分ける。
-    // 先に半減したmainDmgを追撃の基準にすると 50% + 25% になるため、両ヒットともbaseDmgから計算する。
-    const pandoraSplitNormal = mainHero?.id === 'Pandora' && mon?.id === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
-    const mainBaseDmg = pandoraSplitNormal ? Math.floor(baseDmg * 0.5) : baseDmg;
-    const mainDmg = guaranteedCrit ? Math.floor(mainBaseDmg * critMult) : mainBaseDmg;
-    const comboDmgBonus = getPermaBuff('comboDmgPct');
-    const extraHit = rate => {
-      const raw = Math.floor(baseDmg * rate);
-      return guaranteedCrit ? Math.floor(raw * critMult) : raw;
-    };
-    let total = mainDmg;
-    if (mainHero?.id === 'Zan' && mon?.id === 'Zan') total += extraHit(0.3 + comboDmgBonus); // 勇者特性「連撃」
-    if (card.type === 'unique' && card.monId === 'Zan') total += extraHit(0.2 + comboDmgBonus); // 固有技「連斬」
-    // エイキの実処理と同じ順・同じ本数で、桜花連舞と緋桜連華の確定連撃を合算する。
-    if (mainHero?.id === 'Eiki' && mon?.id === 'Eiki') {
-      total += extraHit(0.1 + comboDmgBonus);
-      total += extraHit(0.1 + comboDmgBonus);
-      if (card.type === 'unique' && card.monId === 'Eiki') total += extraHit(0.3 + comboDmgBonus);
-    }
-    if (card.type === 'unique' && card.monId === 'Eiki') {
-      total += extraHit(0.15 + comboDmgBonus);
-      total += extraHit(0.15 + comboDmgBonus);
-    }
-    if (pandoraSplitNormal) total += extraHit(0.5 + comboDmgBonus); // 禁忌解錠（通常攻撃の後半50%）
-    if (mainHero?.id === 'Pandora' && mon?.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') total += extraHit(1.0 + comboDmgBonus); // 禁忌解錠
-    total += extraHit(getPermaBuff('globalComboDmgPct') + additionalGlobalCombo); // きき由来の全体連撃は全モンスター共通の別ヒット
-    // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
-    if (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) total += Math.floor(mainDmg * 0.2);
-    return total;
+    // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する
+    const hits = buildAttackHits({
+      d: baseDmg,
+      card,
+      attackerId: mon?.id,
+      heroId: mainHero?.id,
+      comboDmgBonus: getPermaBuff('comboDmgPct'),
+      critDmgBonus: getPermaBuff('critDmgPct'),
+      guaranteedCrit: getTurnBuff('guaranteedCrit', false),
+      rollCrit: () => false,
+      globalComboRate: getPermaBuff('globalComboDmgPct') + additionalGlobalCombo
+    });
+    // 贖罪の追撃はメインヒットの確定値を基準にする(ランダム会心は予測しない)
+    return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg);
   }, [mainHero, turnBuffs, permaBuffs]);
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
@@ -28962,12 +29021,21 @@ function MonsterHeroGame() {
         attackCount++;
         const critRateBonus = getPermaBuff('critRatePct'),
           critDmgBonus = getPermaBuff('critDmgPct');
-        const isCrit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + critRateBonus;
-        // パンドラ勇者の通常攻撃だけは、分割前のdを共通の基準にして50% + 50%へ分ける。
-        // 自身・引継ぎを問わず固有技は従来の専用分岐を維持する。
-        const pandoraSplitNormal = mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
-        const mainBaseD = pandoraSplitNormal ? Math.floor(d * 0.5) : d;
-        const finalD = isCrit ? Math.floor(mainBaseD * (1.5 + critDmgBonus)) : mainBaseD;
+        // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
+        // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
+        const hits = buildAttackHits({
+          d,
+          card,
+          attackerId: activeMon.id,
+          heroId: mainHero?.id,
+          comboDmgBonus: getPermaBuff('comboDmgPct'),
+          critDmgBonus,
+          guaranteedCrit: getTurnBuff('guaranteedCrit', false),
+          rollCrit: () => Math.random() < (card.crit || 0.1) + critRateBonus,
+          globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd
+        });
+        const isCrit = hits[0].crit;
+        const finalD = hits[0].dmg;
         if (isCrit) hasCrit = true;
         totalDmg += finalD;
         const rangeMoveTarget = card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : null;
@@ -28981,71 +29049,21 @@ function MonsterHeroGame() {
           monId: card.type === 'unique' ? card.monId : undefined,
           rangeMoveTarget
         });
-        if (activeMon.id === 'Zan' || card.type === 'unique' && card.monId === 'Zan' || activeMon.id === 'Eiki' || card.type === 'unique' && card.monId === 'Eiki' || pandoraSplitNormal || mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') {
-          // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
-          const comboDmgBonus = getPermaBuff('comboDmgPct');
-          const rollCombo = (rate, noAnim = false) => {
-            const base = Math.floor(d * rate);
-            if (base <= 0) return;
-            const crit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + critRateBonus;
-            const final = crit ? Math.floor(base * (1.5 + critDmgBonus)) : base;
-            if (crit) hasCrit = true;
-            totalDmg += final;
-            attackHits.push({
-              dmg: final,
-              isCrit: crit,
-              slotIdx,
-              isSpecial: true,
-              skillName: '連撃',
-              isUnique: false,
-              ...(noAnim ? {
-                noAnim: true
-              } : {})
-            });
-          };
-          // 勇者特性「連撃」: ザン自身が攻撃していて、かつザンが勇者モンの時のみ、攻撃(通常/固有問わず)に連撃ヒットを追加
-          if (mainHero?.id === 'Zan' && activeMon.id === 'Zan') rollCombo(0.3 + comboDmgBonus);
-          // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
-          if (card.type === 'unique' && card.monId === 'Zan') rollCombo(0.2 + comboDmgBonus);
-          // 勇者特性「桜花連舞」: エイキ自身が攻撃していて、かつエイキが勇者モンのときだけ。
-          //   通常・固有を問わず 与ダメ10%の連撃×2、さらにエイキ自身の固有技なら +30%の追加連撃。
-          //   ザンと同じ rollCombo を呼ぶだけなので、会心・連撃ダメージUPの扱いは完全に共通
-          if (mainHero?.id === 'Eiki' && activeMon.id === 'Eiki') {
-            rollCombo(0.1 + comboDmgBonus);
-            rollCombo(0.1 + comboDmgBonus);
-            if (card.type === 'unique' && card.monId === 'Eiki') rollCombo(0.3 + comboDmgBonus);
-          }
-          // 固有効果「緋桜連華」の連撃: 技の出自(card.monId)がエイキなら、誰が使っても発生する
-          // (合体で引き継いだ場合も含む)。ザンの「連斬」と同じ考え方
-          if (card.type === 'unique' && card.monId === 'Eiki') {
-            rollCombo(0.15 + comboDmgBonus);
-            rollCombo(0.15 + comboDmgBonus);
-          }
-          // 禁忌解錠の通常攻撃: 分割前のdへ50%と既存の連撃ダメージUPを足した後半ヒット。
-          // 先頭ヒットが専用モーションを再生するため、後半は数値だけを続けて表示する。
-          if (pandoraSplitNormal) rollCombo(0.5 + comboDmgBonus, true);
-          // 禁忌解錠: パンドラ自身の固有技だけ、既存の連撃ヒットへ100%を渡す。
-          // 引継ぎ技(card.monId!==Pandora)には連撃させない。
-          if (mainHero?.id === 'Pandora' && activeMon.id === 'Pandora' && card.type === 'unique' && card.monId === 'Pandora') rollCombo(1.0 + comboDmgBonus, true);
-        }
-        const globalComboRate = getPermaBuff('globalComboDmgPct') + localGlobalComboAdd;
-        if (globalComboRate > 0) {
-          const base = Math.floor(d * globalComboRate);
-          if (base > 0) {
-            const crit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + critRateBonus;
-            const final = crit ? Math.floor(base * (1.5 + critDmgBonus)) : base;
-            if (crit) hasCrit = true;
-            totalDmg += final;
-            attackHits.push({
-              dmg: final,
-              isCrit: crit,
-              slotIdx,
-              isSpecial: true,
-              skillName: '全体連撃',
-              isUnique: false,
+        // 連撃・全体連撃。専用モーションを続けて再生しないもの(禁忌解錠・全体連撃)は noAnim で数値だけを表示する
+        for (const hit of hits.slice(1)) {
+          if (hit.crit) hasCrit = true;
+          totalDmg += hit.dmg;
+          attackHits.push({
+            dmg: hit.dmg,
+            isCrit: hit.crit,
+            slotIdx,
+            isSpecial: true,
+            skillName: hit.skillName,
+            isUnique: false,
+            ...(hit.noAnim ? {
               noAnim: true
-            });
-          }
+            } : {})
+          });
         }
         if (rangeMoveTarget != null) {
           forcedMoveTarget = rangeMoveTarget;
@@ -29087,7 +29105,7 @@ function MonsterHeroGame() {
           } else if (card.monId === 'Ark' || card.monId === 'Iblis') {
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
             // noAnim:true → 専用モーションを2回連続再生させず、直前のヒットに続けてダメージ数値だけ表示する
-            const comboAmt = Math.floor(finalD * 0.2);
+            const comboAmt = attackAtonementDmg(card, finalD);
             if (comboAmt > 0) {
               totalDmg += comboAmt;
               attackHits.push({
@@ -48033,7 +48051,7 @@ function MonsterHeroGame() {
           className: `absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`
         }, "\xD7", count), /*#__PURE__*/React.createElement("span", {
           className: `flex items-center gap-1.5 ${st.tint}`
-        }, st.icon, /*#__PURE__*/React.createElement("b", {
+        }, cardIconNode(st.icon), /*#__PURE__*/React.createElement("b", {
           className: "text-[13px] font-black text-white leading-none"
         }, option.name)), /*#__PURE__*/React.createElement("span", {
           className: `text-[10px] font-black ${st.tint} leading-tight`

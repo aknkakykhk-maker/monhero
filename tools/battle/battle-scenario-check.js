@@ -52,7 +52,8 @@ const num = (re, label) => {
   return Number(m[1]);
 };
 const beginnerPower = num(/Beginner:\s*\{[^}]*power:\s*([\d.]+)/, 'Beginnerの敵強度');
-const critMult = num(/isCrit\?Math\.floor\(d\*\((\d+(?:\.\d+)?)\+critDmgBonus\)\)/, 'クリティカル倍率');
+// 会心倍率はヒット列の共通の正本(buildAttackHits)が持つ
+const critMult = num(/const critMult = (\d+(?:\.\d+)?) \+ critDmgBonus;/, 'クリティカル倍率');
 const distMults = (source.match(/const distMult = \[([\d.,\s]+)\]/) || [])[1];
 const DIST_MULT = distMults ? distMults.split(',').map(Number) : null;
 

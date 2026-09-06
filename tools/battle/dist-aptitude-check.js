@@ -78,10 +78,12 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 攻撃側モンスター自身のグレードだけを見ていない`, !flat.includes('aptBonus=DIST_APTITUDE_MULT[getDistAptitude(mon,slotIdx)]-1.0'));
   check(`${label}: グレードは段階シフトしない`, /getDistAptitude=\(mon,slotIdx\)=>\(?mon&&mon\.distAptitude&&mon\.distAptitude\[slotIdx\]\)?\|\|'C'/.test(flat));
   check(`${label}: 技レベルの判定も合計補正を使う`, flat.includes('pct=distTotalBonus(dist,aptOverride)*100'));
-  check(`${label}: 勇者モンの適性を編成へ入れる`, flat.includes('setDistAptPct(getMonsterAptPct(m))'));
+  // 極限の特別ルール(ナイトメアの符号付き補正)と WAVE 番号も渡すようになった
+  check(`${label}: 勇者モンの適性を編成へ入れる`, flat.includes('setDistAptPct(getMonsterAptPct(m,specialRuleDifficulty,wave))'));
   check(`${label}: 供モン合流で加算する`, flat.includes('setDistAptPct(prev=>prev.map((v,i)=>v+aptDelta[i]))'));
   check(`${label}: 旧仕様の段階加算が残っていない`, !code.includes('distAptBonus') && !code.includes('getMonsterAptDelta') && !code.includes('aptGradeToDelta'));
-  check(`${label}: ダメージ計算の再計算条件に補正値を入れる`, flat.includes('waveBuffs,distDmgBonus,distAptPct]'));
+  // 再計算条件は極限(DISTANCE BREAK・ターン数)ぶんが後ろに増えたので、補正値が並びに入っていることだけを見る
+  check(`${label}: ダメージ計算の再計算条件に補正値を入れる`, flat.includes('waveBuffs,distDmgBonus,distAptPct,'));
 }
 
 // 表示
@@ -93,7 +95,8 @@ check('スロットのバッジも合計補正を出す', has('const totalBonus=
 // 補正0%も「補正が無い」という情報なので、枠ごとに常に出す
 check('補正0%でもバッジを出す', has('const totalBonus=distTotalBonus(i); return(<div') && !has('return totalBonus!==0&&'));
 check('WAVEリザルトの適性込み合計も編成合計を使う', has('const aptPct=(distAptPct[i]||0)*100;'));
-check('マスモン強化でも補正値(%)を出す', (source.match(/formatAptPct\(aptGradeToPct\(/g) || []).length >= 3);
+// 補正値(%)の表示は formatAptPct(aptGradeToPct(…)) と、差分表示の formatAptBonus(…) のどちらかを通す
+check('マスモン強化でも補正値(%)を出す', ((source.match(/formatAptPct\(/g) || []).length + (source.match(/formatAptBonus\(/g) || []).length) >= 3);
 // ヘルプの本文は data/help.js にデータとして持っている
 const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 check('ヘルプが新しい仕様を説明している',
