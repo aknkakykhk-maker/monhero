@@ -195,6 +195,55 @@ const splitRankingParty = (entry) => {
 };
 
 // ブリーダー教えカード使用時の専用演出(色・アイコン・掛け声)
+// ==================== 攻撃1枚が生むヒット列(予測表示と実処理の共通の正本) ====================
+// 与ダメージは getDmg(基礎ダメージ)のあと、勇者特性や固有技の連撃・全体連撃で複数のヒットになる。
+// 以前は予測表示(getAttackPredictedDmg)と実処理(processTurn)が別々に同じ分岐を書いていて、
+// 片方だけ直すと「予測と実際が違う」になっていた(docs/refactor/BATTLE_DAMAGE_MAP.md)。
+// ここで 1 か所にまとめ、会心の決め方(乱数か確定か)だけを呼び出し側が渡す。
+// 【順序を変えないこと】メイン → ザン特性 → 連斬 → 桜花連舞 → 緋桜連華 → 禁忌解錠(通常の後半) → 禁忌解錠(固有技) → 全体連撃。
+// 演出(専用モーションの再生・noAnim)がこの順序と skillName に依存している。
+const ATTACK_COMBO_RULES = Object.freeze({
+  zanHero: 0.3,                              // 勇者特性「連撃」: ザン勇者がザンで攻撃(通常・固有とも)
+  zanUnique: 0.2,                            // 固有技「連斬」: 技の出自がザンなら誰が使っても(合体で引き継いだ場合も)
+  eikiHero: Object.freeze([0.1, 0.1]),       // 勇者特性「桜花連舞」: エイキ勇者がエイキで攻撃(通常・固有とも)
+  eikiHeroUnique: 0.3,                       // 桜花連舞: さらにエイキ自身の固有技なら追加
+  eikiUnique: Object.freeze([0.15, 0.15]),   // 固有効果「緋桜連華」: 技の出自がエイキなら誰が使っても
+  pandoraSplitNormal: 0.5,                   // 禁忌解錠: パンドラ勇者がパンドラで通常攻撃(atk/range_atk)すると 50%+50% に分ける
+  pandoraUnique: 1.0,                        // 禁忌解錠: パンドラ自身の固有技は 100% の連撃(引き継いだ技には無い)
+  atonement: 0.2,                            // 贖罪(アーク・イブリースの固有技): メインの確定値の 20%。実処理では固有技の効果ブロック側で積む
+});
+const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0 }) => {
+  const hits = [];
+  const critMult = 1.5 + critDmgBonus;
+  const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
+  const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
+  // 禁忌解錠の通常攻撃は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)
+  const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5) : d;
+  const mainCrit = guaranteedCrit || rollCrit();
+  hits.push({ kind: 'main', crit: mainCrit, dmg: mainCrit ? Math.floor(mainBase * critMult) : mainBase, skillName: null, noAnim: false });
+  // 連撃は元ダメージ d を基準にし、会心はメインとは独立に判定する(メインの会心を二重に乗せない)
+  const combo = (rate, skillName = '連撃', noAnim = false) => {
+    const base = Math.floor(d * rate);
+    if (base <= 0) return;
+    const crit = guaranteedCrit || rollCrit();
+    hits.push({ kind: 'combo', crit, dmg: crit ? Math.floor(base * critMult) : base, skillName, noAnim });
+  };
+  if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
+  if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);
+  if (heroId === 'Eiki' && attackerId === 'Eiki') {
+    for (const rate of ATTACK_COMBO_RULES.eikiHero) combo(rate + comboDmgBonus);
+    if (isUniqueOf('Eiki')) combo(ATTACK_COMBO_RULES.eikiHeroUnique + comboDmgBonus);
+  }
+  if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);
+  if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);
+  if (heroId === 'Pandora' && attackerId === 'Pandora' && isUniqueOf('Pandora')) combo(ATTACK_COMBO_RULES.pandoraUnique + comboDmgBonus, '連撃', true);
+  if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
+  return hits;
+};
+// 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
+const attackAtonementDmg = (card, mainDmg) => (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) ? Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement) : 0;
+
+
 const TEACHING_FX_STYLE = {
   oryo:    { icon:"🌸", label:"闘気上昇!",   text:"text-red-300",     ring:"border-red-300",     rgb:"239,68,68" },
   dra:     { icon:"🐉", label:"鉄壁化!",     text:"text-emerald-300", ring:"border-emerald-300", rgb:"16,185,129" },
