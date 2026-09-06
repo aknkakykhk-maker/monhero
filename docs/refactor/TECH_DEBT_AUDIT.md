@@ -35,7 +35,7 @@
 | TD-16 | Medium | 定数 | 難易度 ID 列が jsx と tools 3 ファイルに複製。`RHYTHM_SETTINGS_KEY` が jsx と rhythm-mode で二重定義 | 2 |
 | TD-17 | Medium | 重複 | clamp が 6 種(`rpgClamp`, `rhythmClamp01`, `_clampColorAlpha`, `clampSkipCount`, `clampSubLane`, `rpgClampLevel`)、正規化の書き方が関数ごとに異なる | 2 |
 | TD-18 | Medium | セーブ | 起動時ロードの `useEffect` が 424 行で、読込・正規化・移行・補償・通知計画が直列に混在 | 3 |
-| TD-19 | Medium | 文書 | 文書が実装から乖離(`CURRENT_ARCHITECTURE.md` §16 D-01〜D-05) | 0 |
+| TD-19 | Medium | 文書 | 文書が実装から乖離(`CURRENT_ARCHITECTURE.md` §16 D-01〜D-05) | **対応済み**(2026-09-06) |
 | TD-20 | Medium | 基盤 | `index.html` の `<script>` 順序がグローバル依存の唯一の正本。順序を誤っても構文上は通る | 2 |
 | TD-21 | Medium | 構造 | デバッグ 13 画面と RPG デバッグ戦闘エンジン(474 行)が本体に同居し、配信物に含まれる | 10 |
 | TD-22 | Medium | 描画 | `style={{…}}` 522 箇所、`key={i}` 37 箇所、`React.memo` 0 | 7 |

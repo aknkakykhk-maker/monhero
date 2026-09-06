@@ -18,11 +18,11 @@
 
 | 系統 | `gameState` | 役割 |
 | --- | --- | --- |
-| 入口 | `TITLE` | 難易度、開始、ランキング、ヘルプ、更新履歴、プロフィール導線 |
+| 入口 | `HOME`(`gameState` の初期値。タイトル画面は `gameState` ではなく起動段階 `bootPhase==='TITLE'` が担う) | 難易度、開始、ランキング、ヘルプ、更新履歴、プロフィール導線 |
 | 管理 | `PROFILE` | 名前、アイコン、レベル、通貨、各管理画面への入口、バックアップ |
 | 管理 | `BREEDER_MARKET` | アイコン、円盤石、教え、消耗品の購入 |
 | 管理 | `ROSTER` | モンスター／教えカード編成の下書きと確定 |
-| 管理 | `AUTO_SETTINGS` | AUTO方針・供モン・配置距離の下書きと確定（戦闘処理とは未接続） |
+| 管理 | `AUTO_SETTINGS` | AUTO方針・供モン・配置距離の下書きと確定（`chooseAutoTurn` を通じて戦闘処理へ接続済み） |
 | 管理 | `OWNED_MONSTERS` | ベースモン一覧 |
 | 管理 | `MASU_MONS` | マスモン一覧・詳細 |
 | 管理 | `ITEM_INVENTORY` | 消耗品一覧と使用対象選択 |
@@ -32,6 +32,9 @@
 | 戦闘 | `BATTLE` | 敵予告、4距離枠、手札、カード割当、実行 |
 | WAVE間 | `WAVE_RESULT`, `REWARD_PICK`, `UPGRADE_SKILL` | 結果、能力報酬、技強化 |
 | 終了 | `CHAMPION` | 完走リザルト。敗北・降参は戦闘側の終了表示を共有 |
+
+この表は主要な系統だけを載せている。実際の `gameState` は 74 種あり(音ゲー・種族チャレンジ・修行・デバッグを含む)、
+全一覧は [`docs/refactor/CURRENT_ARCHITECTURE.md`](../refactor/CURRENT_ARCHITECTURE.md) §4 を見る。
 
 初回起動と判定された場合は `PROFILE` へ誘導し、戻る操作でオンボーディング完了を保存する。
 

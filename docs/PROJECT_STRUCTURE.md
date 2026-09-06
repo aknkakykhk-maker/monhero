@@ -90,7 +90,8 @@
 
 ## 4. 本体ソース内の責務配置
 
-`game-system.jsx` は16,000行を超える単一ファイルで、概ね次の順序で並ぶ。
+`game-system.jsx` は25,000行を超える単一ファイルで、概ね次の順序で並ぶ。行番号つきの詳しい地図は
+[`docs/refactor/CURRENT_ARCHITECTURE.md`](refactor/CURRENT_ARCHITECTURE.md) にある。
 
 1. 内蔵SVGアイコン、待機、build日時、経験値曲線。
 2. `Audio_`（BGM、ジングル、Tone.js SE、モバイル音声解除）。
@@ -106,14 +107,13 @@
 
 ## 5. ツール構造
 
-`tools/` は162本ある。置き場所の決め方は2つだけ。
+`tools/` は390本ある(2026-09-06 時点。数は増えるので正本は `tools/README.md`)。置き場所の決め方は2つだけ。
 
-- **`tools/` 直下(21本)** … `CLAUDE.md` の必須手順と CI ワークフローが名指しする定番と、
+- **`tools/` 直下(30本)** … `CLAUDE.md` の必須手順と CI ワークフローが名指しする定番と、
   その裏方(`build.js` / `harness.js` / `stamp-*.js`)。**ここは動かさない。**
   動かすと `CLAUDE.md` と `.github/workflows/compiled-check.yml` の書き換えが必要になり、
   CI は1つでも落ちるとデプロイを黙って飛ばすため、事故がいちばん起きやすい。
-- **`tools/<分類>/`(141本)** … 場面ごとの検査。`boot` `battle` `mode` `run` `masu`
-  `monster` `ranking` `assistant` `audio` `image` `browser` の11フォルダ。
+- **`tools/<分類>/`(360本)** … 場面ごとの検査。`assistant` `audio` `battle` `boot` `browser` `changelog` `image` `layout` `masu` `mode` `monster` `ranking` `run` の13フォルダ。
 
 分類フォルダのスクリプトは1つ下の階層にあるので、`__dirname` の代わりに
 `TOOLS_DIR`(= `tools/` 直下)を使い、共通ヘルパーは `require('../harness')` で読む。
