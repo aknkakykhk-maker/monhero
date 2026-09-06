@@ -38,7 +38,14 @@ check('runStage を画面とは別のstateとして持っている',
   && definition.includes('const runStageRef = useRef(null);'));
 check('ランの段階を変える入口が advanceRunStage の1つだけある',
   definition.includes('const advanceRunStage = (stage) => {')
-  && definition.includes('if (!runBackgroundAllowed) setGameState(stage);'));
+  && definition.includes('if (!runBackgroundAllowedRef.current) setGameState(stage);'));
+// ★ここを値で読むと、setTimeout や await の後から呼ばれたときに
+//   「バトル画面で作られたときの古い値」を掴み、モンビーへ移った直後に敵を倒した瞬間
+//   画面がバトルへ飛び戻る(2026-09-06に実際に出た不具合)
+check('advanceRunStage は呼ばれた時点の値(ref)で画面を切り替えるか決める',
+  definition.includes('const runBackgroundAllowedRef = useRef(false);')
+  && definition.includes('runBackgroundAllowedRef.current = runBackgroundAllowed;')
+  && !/if \(!runBackgroundAllowed\) setGameState/.test(definition));
 check('ランから抜けるときに段階を捨てる helper がある',
   definition.includes('const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };')
   && source.includes('    clearRunStage();'));
@@ -52,7 +59,9 @@ check('演奏中(RHYTHM_PLAY)は裏回しの対象に入れていない',
 // 画面と段階を与えて評価し直す(Reactが再描画で計算し直すのと同じ)。
 // 数式を検査へ書き写さないため、read() は本体が作った値をそのまま返す。
 const evaluateWith = (initialGameState, { runStage: initialRunStage = null, autoRepeat = true, quick = true } = {}) => {
-  const sandbox = { console, useRef: () => ({ current: initialRunStage }) };
+  // useRef は「初期値を持つただの入れ物」。runStageRef には段階を、
+  // runBackgroundAllowedRef には本体が描画のたびに入れ直す値がそのまま入る
+  const sandbox = { console, useRef: (init) => ({ current: init === undefined ? initialRunStage : init }) };
   vm.createContext(sandbox);
   vm.runInContext(`let gameState=${JSON.stringify(initialGameState)}; const setGameState=(v)=>{gameState=v;};
 const autoRepeat=${autoRepeat}; const runMode=${JSON.stringify(quick ? 'quick' : 'challenge')}; const isQuickMode=(m)=>m==='quick';

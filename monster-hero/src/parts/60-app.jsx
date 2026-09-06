@@ -2061,6 +2061,13 @@ function MonsterHeroGame() {
     && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
   // ランの画面を描かずに段階だけ進めてよいか。モンビーを開いている間はそのまま進める
   const runBackgroundAllowed = rhythmScreenOpen;
+  // ★advanceRunStage は setTimeout や await の後から呼ばれる。
+  //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
+  //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
+  //   (2026-09-06・ユーザー報告「モンビーを押すと一瞬で戻る」の原因)。
+  //   呼ばれた時点の値で判断するため、必ずこの控えを見る
+  const runBackgroundAllowedRef = useRef(false);
+  runBackgroundAllowedRef.current = runBackgroundAllowed;
   // ランの段階を1つ進める唯一の入口。
   // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
   // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
@@ -2068,7 +2075,7 @@ function MonsterHeroGame() {
   const advanceRunStage = (stage) => {
     runStageRef.current = stage;
     setRunStage(stage);
-    if (!runBackgroundAllowed) setGameState(stage);
+    if (!runBackgroundAllowedRef.current) setGameState(stage);
   };
   // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
   const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };

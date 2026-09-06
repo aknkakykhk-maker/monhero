@@ -7,7 +7,13 @@
 // これを true にしたことで、HOMEの「準備中」がプレオープンの導線に変わり、
 // ヘルプの項目・更新履歴・助手の告知も同時に出るようになっている
 const RHYTHM_MODE_PUBLIC_RELEASE = true;
-const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE };
+// クイック∞周回とモンビーの連携(docs/spec/QUICK_RHYTHM_LINK.md)。
+// 裏で周回が続くところまでは動くが、周回の進捗表示・モンビーからの開始・
+// 演奏中ぶんの追いつきがまだ無いので、遊ぶ人には案内しない。
+// ★出来上がってからここを true にする(2026-09-06・ユーザー指示「出来てからにして」)。
+// true にすれば、ヘルプの項目・更新履歴・助手の告知が同時に出る
+const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = false;
+const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
