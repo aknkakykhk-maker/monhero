@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9925fbc420d75799
+// source-sha256: 205ed84ca63fb25d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a65a69279f307f1a
+// generated-sha256: 2c73166692c634ba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 18:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 18:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24560,10 +24560,12 @@ function MonsterHeroGame() {
   const makeDebugStrongestMonster = () => ({
     ...ALL_PLAYER_MONSTERS.Mocchi,
     name: '🛠 デバッグ最強モン',
-    baseHp: 9999,
-    baseAtk: 9999,
-    baseDef: 9999,
-    baseGuts: 9999,
+    // RAGNAROKのように敵強度が跳ね上がった難易度でも、通しで確認できるだけの余裕を持たせる
+    // (以前は9999。敵強度×200では削りきれず、確認の途中で負けてしまうため10倍にした)
+    baseHp: 99990,
+    baseAtk: 99990,
+    baseDef: 99990,
+    baseGuts: 99990,
     distAptitude: ['M', 'M', 'M', 'M'],
     debugOnly: true
   });
@@ -38958,7 +38960,7 @@ function MonsterHeroGame() {
       className: "block"
     }, "\uD83D\uDEE0 \u30C7\u30D0\u30C3\u30B0\u6700\u5F37\u30E2\u30F3"), /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] opacity-80"
-    }, "DEBUG\u5C02\u7528\u30FB\u30E9\u30A4\u30D5/\u3061\u304B\u3089/\u4E08\u592B\u3055/\u6700\u5927\u30AC\u30C3\u30C4 9999\u30FB\u5168\u8DDD\u96E2M"))), /*#__PURE__*/React.createElement("button", {
+    }, "DEBUG\u5C02\u7528\u30FB\u30E9\u30A4\u30D5/\u3061\u304B\u3089/\u4E08\u592B\u3055/\u6700\u5927\u30AC\u30C3\u30C4 99990\u30FB\u5168\u8DDD\u96E2M"))), /*#__PURE__*/React.createElement("button", {
       disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
