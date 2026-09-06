@@ -1,6 +1,6 @@
 # クイック∞周回 × モンヒロビート 連携 — 設計書
 
-2026-09-06 にユーザーと決めた内容をまとめたもの。**進捗は §7 のPR表を見る**（2026-09-06 時点で PR3 まで完了）。
+2026-09-06 にユーザーと決めた内容をまとめたもの。**進捗は §7 のPR表を見る**（2026-09-06 時点で PR4 まで完了。連携そのものは動いている）。
 着手するときは、まず [`docs/refactor/REGRESSION_RISK_MAP.md`](../refactor/REGRESSION_RISK_MAP.md) を読むこと。
 
 ## 1. 何をしたいか
@@ -132,7 +132,7 @@
 | 1 | この設計書 | — |
 | 2 | `runStage` を入れてランの進行を画面から分ける。**挙動は変えない**（バトル画面では今までどおり） | **完了**（2026-09-06）。`battle/run-stage-check.js`(切り分け)と `battle/auto-run-browser-check.js`(実ブラウザでAUTOが進むこと)を追加 |
 | 3 | ランの段階を進める入口を `advanceRunStage` の1つへ寄せる。**挙動は変えない** | **完了**（2026-09-06）。`battle/run-stage-check.js` を拡張 |
-| 4 | モンビーの非演奏画面で周回を継続し、演奏中は止める。バトル音を消す。バトル→モンビーの動線 | 実ブラウザで「モンビーへ移っても周回が続く」「演奏に入ると止まる」「曲が終わると再開する」 |
+| 4 | モンビーの非演奏画面で周回を継続し、演奏中は止める。バトル音を消す。往復の動線 | **完了**（2026-09-06）。`mode/rhythm-background-run-check.js`（実ブラウザ）と `battle/run-stage-check.js` を追加・拡張 |
 | 5 | モンビー側の進捗表示、モンビーから周回を始めるトグル | 実ブラウザ |
 | 6 | 演奏中ぶんのヘッドレス追いつき（**一致検査を先に**） | 乱数固定で本物とシミュレータが一致すること |
 | 7 | ヘルプ・更新履歴・助手の告知（`type:'content'`） | `help-coverage-check` ほか |
@@ -167,6 +167,28 @@ const advanceRunStage = (stage) => {              // ランの段階を進める
 `runBackgroundAllowed` が固定の false なので**挙動は何も変わっていない**。
 
 **PR4では `runBackgroundAllowed` を「モンビーの非演奏画面ならtrue」にするだけでよい。**
+
+## 7-3. PR4で入ったもの（2026-09-06）
+
+`runBackgroundAllowed` を固定の false から実際の条件へ変えて、連携を有効にした。
+
+```js
+const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING'];
+const rhythmScreenOpen = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'].includes(gameState);
+const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode)
+  && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
+const runBackgroundAllowed = rhythmScreenOpen;   // モンビーを開いている間は画面を切り替えない
+const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
+```
+
+- **演奏中(`RHYTHM_PLAY`)は `RHYTHM_BACKGROUND_RUN_SCREENS` に入れない** → 進行が止まる
+- ただし `rhythmScreenOpen` には入れる → 演奏中に飛び込みでランが進んでも**画面がバトルへ飛ばない**
+- 音は `Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume)` で消す。
+  保存値は変えないので、モンビーを出れば元の音量へ戻る
+- 動線は バトル画面の `data-quick-to-rhythm`（`openRhythmDemo` を直接呼ぶ。`returnToHome` を通さない）と、
+  モンビーの `data-rhythm-back`（周回中は「⚔ 戻る」になり `returnToBackgroundRun()` でランの段階へ戻る）
+
+実ブラウザで、モンビー滞在中に **WAVE 2 → WAVE 7〜8** まで進むことを確認済み。
 
 > ⚠ PR2のとき、変更範囲だけを見て検査を選んだせいで
 > `run/auto-repeat-internal-check` `run/auto-repeat-initial-teaching-check`

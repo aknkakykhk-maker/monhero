@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 93d14841d6fc317c
+// source-sha256: b9d32daa75860eec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ad7e149af1af1878
+// generated-sha256: cd2b5a4e712b01b7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 20:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 20:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22728,10 +22728,21 @@ function MonsterHeroGame() {
   const [runStage, setRunStage] = useState(null);
   // 同じターンの中で参照するための控え。setStateの反映を待たずに読む
   const runStageRef = useRef(null);
-  // ランの画面を描かずに段階だけ進めてよいか。
-  // ★PR4でモンビーの非演奏画面をここへ足す。いまは常に false なので、
-  //   ランの段階が変わるときは必ず画面も一緒に切り替わる(これまでどおり)。
-  const runBackgroundAllowed = false;
+  // ===== モンビーを開いたままクイック∞周回を続ける(docs/spec/QUICK_RHYTHM_LINK.md) =====
+  // モンビーのうち、裏で周回を続けてよい画面。60fpsも精密入力も要らないところだけを並べる。
+  // 演奏中(RHYTHM_PLAY)はここに**入れない**。16.6msごとに全ノーツを走査して判定しているので、
+  // バトルのstate更新が割り込むと入力の取りこぼしとカクつきになる(REGRESSION_RISK_MAP.md §4-1)。
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME', 'RHYTHM_DEMO_HELP', 'RHYTHM_DEMO_MONSTERS', 'RHYTHM_RANKING'];
+  // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
+  // 演奏中に画面がバトルへ飛ぶのを防ぐため、RHYTHM_PLAY もここへ入れる
+  const rhythmScreenOpen = [...RHYTHM_BACKGROUND_RUN_SCREENS, 'RHYTHM_PLAY'].includes(gameState);
+  // 裏で周回してよい状態か。
+  //  ・クイックの∞周回だけ(チャレンジ・プロ・極限・種族は全国ランキング対象なので裏で回さない)
+  //  ・演奏中は止める(曲が終われば自動で再開する)
+  //  ・タブが見えていないときは、これまでどおり stopAllAuto で止まる
+  const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
+  // ランの画面を描かずに段階だけ進めてよいか。モンビーを開いている間はそのまま進める
+  const runBackgroundAllowed = rhythmScreenOpen;
   // ランの段階を1つ進める唯一の入口。
   // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
   // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
@@ -22746,8 +22757,12 @@ function MonsterHeroGame() {
     runStageRef.current = null;
     setRunStage(null);
   };
-  // ランを進めてよいか。いまは「ランの画面を実際に描いている」ときだけ。
-  const runProgressAllowed = runStage !== null && gameState === runStage;
+  // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
+  // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
+  const returnToBackgroundRun = () => {
+    if (runStageRef.current) setGameState(runStageRef.current);
+  };
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -22848,9 +22863,12 @@ function MonsterHeroGame() {
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
+  // モンビーを開いている間は、裏で回っているバトルのSEを鳴らさない。
+  // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
+  // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
   useEffect(() => {
-    Audio_.setSeVolume(ultraEcoSession ? 0 : seVolume);
-  }, [seVolume, ultraEcoSession]);
+    Audio_.setSeVolume(ultraEcoSession || rhythmScreenOpen ? 0 : seVolume);
+  }, [seVolume, ultraEcoSession, rhythmScreenOpen]);
   useEffect(() => {
     Audio_.setBgmVolume(bgmVolume);
   }, [bgmVolume]);
@@ -38255,10 +38273,20 @@ function MonsterHeroGame() {
           paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
         }
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u623B\u308B",
-        onClick: () => setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS'),
+        "data-rhythm-back": true,
+        "aria-label": rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
+        title: rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
+        onClick: () => {
+          if (rhythmBackgroundRun) {
+            returnToBackgroundRun();
+            return;
+          }
+          setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
+        },
         className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      }, rhythmBackgroundRun ? /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black leading-tight text-fuchsia-200"
+      }, "\u2694", /*#__PURE__*/React.createElement("br", null), "\u623B\u308B") : /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
       })), /*#__PURE__*/React.createElement("div", {
         className: "min-w-0 flex-1"
@@ -45605,6 +45633,17 @@ function MonsterHeroGame() {
     }, "AUTO"), /*#__PURE__*/React.createElement("span", {
       className: "block text-[7px]"
     }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && /*#__PURE__*/React.createElement("button", {
+      "data-quick-to-rhythm": true,
+      type: "button",
+      onClick: openRhythmDemo,
+      "aria-label": "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D3\u30FC\u3078",
+      title: "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D3\u30FC\u3078",
+      className: "min-h-[24px] w-full rounded-md border border-fuchsia-300 bg-fuchsia-700 font-black text-[7px] leading-[9px] text-fuchsia-50 active:scale-90"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, "\u30E2\u30F3\u30D3\u30FC")), gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: cycleEcoMode,
       "aria-label": `省エネ ${ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'}`,
