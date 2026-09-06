@@ -24,7 +24,7 @@
 | STEP 3 保存層 | 着手中 | 1本目: 旧形式セーブの通し検査 `boot/legacy-save-boot-check.js`(完了) / 2本目: `mh_masu_mons` の state 更新と保存が対であることの検査 `masu/masu-save-pairing-check.js`(完了。現状は 35 箇所すべて対で、`saveTranscendFruitPair` のような「storeSet を注入し、読み戻して検証し、失敗なら巻き戻す取引関数」が既にある) / 3本目以降: 複数キー更新の取引関数への寄せ、キーごとの読込関数 |
 | STEP 4 純関数の切り出し | 着手中 | 1本目: 共有層を節ごとに 21 部品へ分けた(移動のみ。完了) / 2本目: 純粋な部品 7 つを `parts.json` で `pure:true` と宣言し `boot/parts-purity-check.js` で守る(完了) / 3本目以降: 19(難易度)から保存処理を出す、jsx 側の表の移動 |
 | STEP 7 描画・キャッシュ | 着手中 | 1本目: 染め直した絵のキャッシュを 96 件の LRU に(完了。dataURL が無制限に溜まらない) / 2本目以降: 一覧行の `React.memo`、静的な `style={{}}` の定数化、CSS 静的化の準備 |
-| STEP 5 バトル計算 | 準備中 | バトル領域の古い検査 7 本を現在形へ(完了)。分岐の対応表 `BATTLE_DAMAGE_MAP.md`(完了)。次: ヒット列の純関数と乱数固定の一致検査 |
+| STEP 5 バトル計算 | 着手中 | バトル領域の古い検査 7 本を現在形へ(完了)。分岐の対応表 `BATTLE_DAMAGE_MAP.md`(完了)。1本目: 乱数固定の一致検査 `battle/damage-parity-check.js`(完了。2,560 通り一致) / 2本目: ヒット列の純関数 `buildAttackHits` へ差し替え |
 | STEP 6・8〜10 | 未着手 | |
 
 ## 守ること(要約)
