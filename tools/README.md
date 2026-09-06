@@ -89,6 +89,7 @@ node tools/build.js --check
 | `node boot/event-replay-check.js` | イベント回想(プロフィールから、見たことのある会話イベントを何度でも見返す機能)を確認する。 |
 | `node boot/gift-login-check.js` | ギフト受取と、日本時間4時更新のログインボーナスを本番ソースの関数で検証する。 |
 | `node boot/mission-check.js` | デイリー・ウィークリー・マンスリーのJST期間、達成条件、バッジ、ギフト報酬と重複防止を確認する。 |
+| `node boot/legacy-save-boot-check.js` | 旧形式のセーブ(マスモン導入前・各種一度きり移行の前)を localStorage に入れて実ブラウザで2回起動し、旧 `mh_bond_xp` からマスモンが作られること、旧キーを消さないこと、ダイヤ・XP・ハイスコアが変わらないこと、既存プレイヤー扱いになること、2回目の起動で何も二重適用されないことを確かめる。保存層・起動時読込を触る前の安全網。 |
 | `node boot/save-keys-check.js` | 本体とデータが使う保存キー(`mh_*`)がすべて `docs/spec/SAVE_DATA.md` に載っているかを確かめる。キーを足したら文書へも 1 行足す。保存キーでない `mh_` 文字列(URL のクエリ)は検査の中に理由つきで除外してある。 |
 | `node boot/screen-error-boundary-check.js` | 画面の描画で例外が出ても真っ白にならず「ホームへ戻る」が出ること(`MhErrorBoundary`)を確かめる。ソースで2段の境界とデバッグ設定の入口を見たあと、実ブラウザでデバッグ設定の「画面エラーの受け止めを試す」を押し、受け止め画面 → ホームへ戻る、を通す。 |
 | `node boot/mission-gift-badge-check.js` | ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、ランキングのタブ分離を確認する。 |
