@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 13:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 14:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8968,6 +8968,24 @@ const releaseScreenOrientation=()=>{
   }
   return true;
 };
+// 切り替えがうまくいかなかったときに、端末のいまの状態を1行で出す。
+//
+// 【なぜ要るか】(2026-09-06)
+// 「Galaxyだと開いた状態だとだめ・案内も出ないらしい」という報告が届いたが、
+// こちらの筋書きではどの道を通っても案内が出るはずで、説明が付かなかった。
+// 手元に無い端末について、伝聞で当て推量を重ねても当たらない。
+// うまくいかなかったときだけ、そのとき端末が答えた値をそのまま画面へ出す。
+// 画面を撮って送ってもらえれば、次はもう推測しなくて済む。
+const screenOrientationStateLine=()=>{
+  if(typeof window==='undefined')return '';
+  const o=window.screen&&window.screen.orientation;
+  const type=(o&&typeof o.type==='string')?o.type:'なし';
+  const angle=(o&&Number.isFinite(Number(o.angle)))?`${Number(o.angle)}度`:'不明';
+  const full=(typeof document!=='undefined'&&document.fullscreenElement)?'あり':'なし';
+  const rot=RHYTHM_VIEW_ROTATION.active()?`${RHYTHM_VIEW_ROTATION.get()}度`:'なし';
+  const lock=screenOrientationApi()?'あり':'なし';
+  return `画面 ${window.innerWidth}×${window.innerHeight} / 端末 ${type} ${angle} / 全画面 ${full} / 回す機能 ${lock} / 絵の回転 ${rot}`;
+};
 // 自前回転をReactから使うためのフック。
 // 器のCSSは RHYTHM_VIEW_ROTATION.frameStyle() が持っているので、ここでは
 // 「変わったら描き直す」ことと「画面の大きさを追いかける」ことだけをする。
@@ -9083,11 +9101,9 @@ const RhythmOrientationButton=({className=''})=>{
       unsubscribe();
     };
   },[]);
-  useEffect(()=>{
-    if(!note)return undefined;
-    const timer=setTimeout(()=>setNote(''),8000);
-    return ()=>clearTimeout(timer);
-  },[note]);
+  // 案内は押すまで消さない。「本体を持ち替えてください」は**やってもらうこと**が
+  // 書いてあるので、8秒で消すと気づかないまま終わる。実際に「案内も出ない」という
+  // 報告が届いたが、出ていたのに消えたあとだった可能性がある(2026-09-06)。
   // 回している最中にもう一度押されると、固定の指示が二重に飛んで
   // 端末側が混乱する(片方だけ効いて向きと表示が食い違う)。押している間は受け付けない。
   const [busy,setBusy]=useState(false);
@@ -9105,10 +9121,10 @@ const RhythmOrientationButton=({className=''})=>{
       if(how==='forced'){
         // 端末は回ってくれなかったので、絵のほうを回した。
         // 本体の向きはそのままなので、**持ち替えてもらう**必要がある。ここは必ず伝える。
-        setNote(`この端末は画面を回せないので、代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてお使いください。`);
+        setNote(`この端末は画面を回せないので、代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてお使いください。\n${screenOrientationStateLine()}`);
         return;
       }
-      setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。`);
+      setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。\n${screenOrientationStateLine()}`);
     }finally{setBusy(false);}
   };
   return <div className={`relative shrink-0 ${className}`}>
@@ -9119,7 +9135,8 @@ const RhythmOrientationButton=({className=''})=>{
       <span className="text-[7px] font-black leading-none">{landscape?'縦':'横'}</span>
     </button>
     {note!==''&&<p data-rhythm-orientation-note onClick={()=>setNote('')}
-      className="absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-amber-300/50 bg-slate-900/95 px-2 py-1.5 text-[9px] font-bold leading-relaxed text-amber-100 shadow-lg">{note}</p>}
+      style={{whiteSpace:'pre-line'}}
+      className="absolute right-0 top-full z-40 mt-1 w-56 rounded-xl border border-amber-300/50 bg-slate-900/95 px-2 py-1.5 text-[9px] font-bold leading-relaxed text-amber-100 shadow-lg">{note}<span className="mt-1 block text-[8px] font-black text-amber-300/80">タップで閉じる</span></p>}
   </div>;
 };
 // ============================================================================
@@ -10124,14 +10141,21 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
   // 決めるためTailwindのlandscape:だけでは切り替えられず、ここだけJSの向き判定を使う。
   // ほかのHUDレイアウトの出し分けはTailwindのlandscape:バリアントで完結させ、判定・スコア・
   // runには一切触らない(§6.1)。
-  const [isLandscape,setIsLandscape]=useState(()=>typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(orientation: landscape)').matches);
+  // 自前で画面を回しているあいだも「横向き」として扱う(端末は縦のままなので
+  // matchMedia だけでは縦と答える)。orientationIsLandscape がその両方を見ている。
+  const [isLandscape,setIsLandscape]=useState(()=>orientationIsLandscape());
   useEffect(()=>{
     if(typeof window==='undefined'||typeof window.matchMedia!=='function')return;
     const mql=window.matchMedia('(orientation: landscape)');
-    const onChange=()=>setIsLandscape(mql.matches);
+    const onChange=()=>setIsLandscape(orientationIsLandscape());
     onChange();
+    // 自前で回したときは端末の向きが変わらないので matchMedia は鳴らない
+    const unsubscribeRotation=RHYTHM_VIEW_ROTATION.subscribe(onChange);
     if(mql.addEventListener)mql.addEventListener('change',onChange);else mql.addListener?.(onChange);
-    return()=>{if(mql.removeEventListener)mql.removeEventListener('change',onChange);else mql.removeListener?.(onChange);};
+    return()=>{
+      unsubscribeRotation();
+      if(mql.removeEventListener)mql.removeEventListener('change',onChange);else mql.removeListener?.(onChange);
+    };
   },[]);
   const stopFrame=useCallback(()=>{if(frameRef.current!==null)cancelAnimationFrame(frameRef.current);frameRef.current=null;},[]);
   const clearJudgmentTimer=useCallback(()=>{if(judgmentTimerRef.current!==null)clearTimeout(judgmentTimerRef.current);judgmentTimerRef.current=null;++judgmentRevisionRef.current;},[]);

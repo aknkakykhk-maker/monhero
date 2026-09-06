@@ -48,6 +48,12 @@ html,body{height:100%;margin:0}
 [data-rhythm-judgment-line]{position:absolute;bottom:12%;left:0;right:0;height:3px}
 [data-rhythm-lane]{position:absolute;inset:0}
 [data-rhythm-side-monster]{position:absolute}
+/* このサンドボックスはTailwindのCDNを取りに行けないので、flex / flex-col が効かない。
+   曲えらびの「縦のときは縦積み」だけ手で作る(これが無いと初期値の row になり、
+   回して row になったのか、はじめから row だったのかを見分けられない)。
+   index.html 側の保険は [data-mh-view-rotation="true"] を前に付けたぶん詳細度が高いので、
+   あとから書いたこれより優先される。 */
+[data-rhythm-song-select]{display:flex;flex-direction:column}
 `;
 
 const VIEW={width:390,height:844};
@@ -85,6 +91,42 @@ const VIEW={width:390,height:844};
     // 「決定」は目印で押す。文字で探すと、みゅあの吹き出しのセリフを拾うことがある
     await page.waitForSelector('[data-rhythm-demo-start]',{timeout:30000});
     await page.addStyleTag({content:LAYOUT_CSS});
+
+    // ---- ⓪ 曲えらびの並び ----
+    // 【2026-09-06・iPhoneの画面写真】自前で回したのに、曲の一覧がほとんど見えなかった。
+    // Tailwind の landscape: は「@media (orientation: landscape)」に展開されるが、
+    // 自前で回しているときは端末そのものが縦のままなのでこれが成立せず、
+    // 53個ある landscape: がひとつも効かない。横長の器へ縦持ち用の並び
+    // (見出し・一覧・詳細を縦に積む)が入り、高さ393pxへ押し込められて一覧が消える。
+    //
+    // index.html の tailwind.config で landscape: 自体を差し替えてあるが、
+    // このサンドボックスはTailwindのCDNを取りに行けないので、そこは実機でしか確かめられない。
+    // 代わりに「CDNの設定が効かなかったときの保険」として素のCSSも書いてあり、
+    // **こちらは実ブラウザで確かめられる**。ここではその保険が効くことを見る。
+    {
+      const before=await page.evaluate(()=>{
+        const el=document.querySelector('[data-rhythm-song-select]');
+        return el?getComputedStyle(el).flexDirection:null;
+      });
+      ok('曲えらびは縦のときは縦積み',before==='column',String(before));
+      await page.evaluate(()=>RHYTHM_VIEW_ROTATION.set(90));
+      await page.waitForTimeout(300);
+      const after=await page.evaluate(()=>{
+        const el=document.querySelector('[data-rhythm-song-select]');
+        const rot=document.querySelector('[data-mh-view-rotation="true"]');
+        return {dir:el?getComputedStyle(el).flexDirection:null,marked:!!rot};
+      });
+      ok('自前で回すと目印が付く',after.marked);
+      ok('自前で回すと曲えらびが左右2列になる（一覧が潰れない）',after.dir==='row',
+        `flex-direction=${after.dir}`);
+      await page.evaluate(()=>RHYTHM_VIEW_ROTATION.set(0));
+      await page.waitForTimeout(300);
+      const back=await page.evaluate(()=>{
+        const el=document.querySelector('[data-rhythm-song-select]');
+        return el?getComputedStyle(el).flexDirection:null;
+      });
+      ok('戻すと縦積みに戻る',back==='column',String(back));
+    }
     await page.evaluate(()=>document.querySelector('[data-rhythm-demo-start]').click());
     await page.waitForSelector('[data-rhythm-play-area]',{timeout:30000});
     await page.addStyleTag({content:LAYOUT_CSS});
