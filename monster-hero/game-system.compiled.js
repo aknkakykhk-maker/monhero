@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e38a68d2d6cf1f2
+// source-sha256: 7da584ff3c744fe2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8e25a7e04dd5af56
+// generated-sha256: 8a80285413995b5c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 07:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 07:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38705,6 +38705,25 @@ function MonsterHeroGame() {
     }), gameState === 'RHYTHM_DEMO_HOME' && (() => {
       const songs = rhythmDemoSongs(RHYTHM_SONGS);
       const difficulties = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+      // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
+      // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
+      // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
+      // (2026-09-07・ユーザー提案)。縦は余白が無いので今までどおり下に置く。
+      // 中身は同じものを使い回す(2つ書くと片方だけ直す事故が起きる)。
+      const quickRunBandLabel = quickRunProgress ? quickRunProgress.finished ? '周回が終わりました（タップで結果へ）' : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
+      const quickRunBandButton = quickRunProgress ? /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: () => setQuickRunDetailOpen(open => !open),
+        "aria-expanded": quickRunDetailOpen,
+        "aria-label": "\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u306E\u9032\u6357",
+        className: "flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `shrink-0 text-[10px] font-black ${quickRunProgress.finished ? 'text-amber-200' : 'text-fuchsia-200'}`
+      }, quickRunProgress.finished ? '⏹' : '⚔'), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1 truncate text-[10px] font-black text-slate-200"
+      }, quickRunBandLabel), /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 text-[9px] font-black text-slate-400"
+      }, quickRunDetailOpen ? '▲' : '▼')) : null;
       return /*#__PURE__*/React.createElement("main", {
         "data-rhythm-demo-home": true,
         className: "flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
@@ -38735,7 +38754,10 @@ function MonsterHeroGame() {
         className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
       }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
         className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
-      }, "\uD83C\uDFB5 \u697D\u66F2\u9078\u629E")), /*#__PURE__*/React.createElement("span", {
+      }, "\uD83C\uDFB5 \u697D\u66F2\u9078\u629E")), quickRunProgress && /*#__PURE__*/React.createElement("div", {
+        "data-quick-run-progress-header": true,
+        className: "min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70"
+      }, quickRunBandButton), /*#__PURE__*/React.createElement("span", {
         "data-rhythm-demo-badge": true,
         className: "shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
       }, "\u4F53\u9A13\u7248"), /*#__PURE__*/React.createElement(RhythmOrientationButton, null), /*#__PURE__*/React.createElement("button", {
@@ -38768,19 +38790,9 @@ function MonsterHeroGame() {
       }, "\u2699\uFE0F")), quickRunProgress && /*#__PURE__*/React.createElement("div", {
         "data-quick-run-progress": true,
         className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: () => setQuickRunDetailOpen(open => !open),
-        "aria-expanded": quickRunDetailOpen,
-        "aria-label": "\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u306E\u9032\u6357",
-        className: "flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: `shrink-0 text-[10px] font-black ${quickRunProgress.finished ? 'text-amber-200' : 'text-fuchsia-200'}`
-      }, quickRunProgress.finished ? '⏹' : '⚔'), /*#__PURE__*/React.createElement("span", {
-        className: "min-w-0 flex-1 truncate text-[10px] font-black text-slate-200"
-      }, quickRunProgress.finished ? '周回が終わりました（タップで結果へ）' : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}`), /*#__PURE__*/React.createElement("span", {
-        className: "shrink-0 text-[9px] font-black text-slate-400"
-      }, quickRunDetailOpen ? '▲' : '▼')), quickRunDetailOpen && /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("div", {
+        "data-quick-run-band-portrait": true
+      }, quickRunBandButton), quickRunDetailOpen && /*#__PURE__*/React.createElement("div", {
         "data-quick-run-progress-detail": true,
         className: "border-t border-white/10 px-3 py-2"
       }, /*#__PURE__*/React.createElement("dl", {

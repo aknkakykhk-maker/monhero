@@ -10204,6 +10204,24 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='RHYTHM_DEMO_HOME'&&(()=>{
           const songs=rhythmDemoSongs(RHYTHM_SONGS);
           const difficulties=rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+          // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
+          // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
+          // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
+          // (2026-09-07・ユーザー提案)。縦は余白が無いので今までどおり下に置く。
+          // 中身は同じものを使い回す(2つ書くと片方だけ直す事故が起きる)。
+          const quickRunBandLabel = quickRunProgress
+            ? (quickRunProgress.finished
+              ? '周回が終わりました（タップで結果へ）'
+              : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp?' ・ 追いつき中':''}`)
+            : '';
+          const quickRunBandButton = quickRunProgress
+            ? <button type="button" onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
+                className="flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]">
+                <span className={`shrink-0 text-[10px] font-black ${quickRunProgress.finished?'text-amber-200':'text-fuchsia-200'}`}>{quickRunProgress.finished?'⏹':'⚔'}</span>
+                <span className="min-w-0 flex-1 truncate text-[10px] font-black text-slate-200">{quickRunBandLabel}</span>
+                <span className="shrink-0 text-[9px] font-black text-slate-400">{quickRunDetailOpen?'▲':'▼'}</span>
+              </button>
+            : null;
           return (
           <main data-rhythm-demo-home className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
             <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
@@ -10219,6 +10237,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
                 <h2 className="truncate text-sm font-black leading-tight tracking-widest text-cyan-200">🎵 楽曲選択</h2>
               </div>
+              {/* 横持ちはここに余白があるので、周回の帯をヘッダーへ入れる(縦持ちでは出さない) */}
+              {quickRunProgress&&<div data-quick-run-progress-header className="min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70">{quickRunBandButton}</div>}
               <span data-rhythm-demo-badge className="shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200">体験版</span>
               {/* 縦⇄横の切り替え。端末の回転ロックを解除しに行かなくても横画面で遊べるようにする
                   (2026-09-05・ユーザー指示「縦なら横に横なら縦に変わるボタン」) */}
@@ -10237,14 +10257,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 常に出すのは1行だけ。曲の一覧を押し下げないよう、詳細はタップで開く。
                 演奏中(RHYTHM_PLAY)はこの画面ではないので、そもそも出ない */}
             {quickRunProgress&&<div data-quick-run-progress className="shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80">
-              <button type="button" onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
-                className="flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]">
-                <span className={`shrink-0 text-[10px] font-black ${quickRunProgress.finished?'text-amber-200':'text-fuchsia-200'}`}>{quickRunProgress.finished?'⏹':'⚔'}</span>
-                <span className="min-w-0 flex-1 truncate text-[10px] font-black text-slate-200">{quickRunProgress.finished
-                  ?'周回が終わりました（タップで結果へ）'
-                  :`WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp?' ・ 追いつき中':''}`}</span>
-                <span className="shrink-0 text-[9px] font-black text-slate-400">{quickRunDetailOpen?'▲':'▼'}</span>
-              </button>
+              {/* 横持ちのときはヘッダーの中に同じものを出しているので、こちらは隠す */}
+              <div data-quick-run-band-portrait>{quickRunBandButton}</div>
               {quickRunDetailOpen&&<div data-quick-run-progress-detail className="border-t border-white/10 px-3 py-2">
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
                   <div className="flex justify-between gap-2"><dt className="text-slate-400">周回数</dt><dd className="font-black text-white">{quickRunProgress.loops}周</dd></div>
