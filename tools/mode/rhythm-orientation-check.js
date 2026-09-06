@@ -54,7 +54,12 @@ context.window.addEventListener=(type,fn)=>{
   listeners.get(type).push(fn);
 };
 vm.createContext(context);
-vm.runInContext(`${block}\ninstallRhythmPerspectiveNoteVisuals();`,context);
+// 2026-09-06: 箱の測定は RHYTHM_VIEW_ROTATION を通すようになった(自前で画面を回すため)。
+// 検査用に写すと写し間違いに気づけないので、本物をそのまま持ってきて同じ器で動かす。
+// 回していないときは受け取った値をそのまま返すので、ここで見たいことは何も変わらない。
+const viewRotation=source.match(/const RHYTHM_VIEW_ROTATION=\(\(\)=>\{[\s\S]*?\n\}\)\(\);/)?.[0];
+check('自前回転の変換(RHYTHM_VIEW_ROTATION)を本物から読めている',!!viewRotation);
+vm.runInContext(`${viewRotation}\n${block}\ninstallRhythmPerspectiveNoteVisuals();`,context);
 
 check('初回に一度だけ組み立てる',layoutCalls===1,`${layoutCalls}回`);
 check('回転・リサイズを購読している',listeners.has('resize')&&listeners.has('orientationchange'),

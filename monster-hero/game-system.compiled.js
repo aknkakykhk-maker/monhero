@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef961f673e91bdf7
+// source-sha256: 1b3203e3c5267e85
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c869a2a98eaeabd4
+// generated-sha256: 48dbb42ede2dfcfd
 // ============================================================
 // ---- part: 10-shared.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 12:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 13:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15934,13 +15934,37 @@ const screenOrientationApi = () => {
   const o = window.screen && window.screen.orientation;
   return o && typeof o.lock === 'function' ? o : null;
 };
-// いま横向きかどうか。screen.orientation が無い端末では画面の比率で見る
-const orientationIsLandscape = () => {
+// 端末そのものがいま横向きか。
+//
+// 【なぜ画面の形を先に見るか】(2026-09-06・Galaxy Z Fold6での報告)
+// 折りたたみを開いた内側の画面のような**大きい画面では、端末が向きの指定を無視することがある**。
+// やっかいなのは、無視されても lock() は例外を投げず、素通りして成功したように見えること。
+// このとき screen.orientation.type だけが「横になった」と言い、画面は1ミリも動かない、
+// ということが起きうる。type を信じると「回った」と勘違いして、そこで話が終わってしまう。
+//
+// 画面の形(ビューポートの幅と高さ)は、遊ぶ人が実際に見ているものそのもので、
+// 勘違いのしようがない。CSSのメディアクエリ (orientation: landscape) や Tailwind の
+// landscape: も同じ基準なので、こちらへそろえておけば画面の並びと判断が食い違わない。
+// screen.orientation.type は、どちらも使えない環境のための最後の手段に下げた。
+//
+// これがあるから waitForScreenOrientation が「受け付けられたのに回っていない」を見抜けて、
+// 自前で回すほう(二の矢)へ進める。
+const deviceIsLandscape = () => {
   if (typeof window === 'undefined') return false;
+  if (typeof window.matchMedia === 'function') return window.matchMedia('(orientation: landscape)').matches;
+  const w = Number(window.innerWidth),
+    h = Number(window.innerHeight);
+  if (w > 0 && h > 0) return w > h;
   const o = window.screen && window.screen.orientation;
   if (o && typeof o.type === 'string') return o.type.indexOf('landscape') === 0;
-  if (typeof window.matchMedia === 'function') return window.matchMedia('(orientation: landscape)').matches;
-  return window.innerWidth > window.innerHeight;
+  return false;
+};
+// 遊ぶ人から見ていま横向きか。自前で回しているあいだは端末の向きと**逆**になる
+// (端末は縦のまま、絵だけ90度回して横向きに見せているため)。
+// ボタンの表示も案内も、端末の都合ではなく見えている向きで決めたいのでこちらを使う。
+const orientationIsLandscape = () => {
+  const device = deviceIsLandscape();
+  return RHYTHM_VIEW_ROTATION.active() ? !device : device;
 };
 // ボタンで向きを固定したかどうか。モンビーを離れるときに戻すために覚えておく
 // (プレイ画面へ移るだけで戻してしまうと、演奏の途中で向きが変わってしまう)
@@ -16005,7 +16029,7 @@ const waitForScreenOrientation = (want, timeoutMs = 900) => {
 //
 // いまは縦も横も**同じ道**を通す。全画面へ入り、固定し、実際に向きが変わるまで待つ。
 // 全画面は抜けない(抜けると固定が外れるため)。モンビーを離れるときにまとめて戻す。
-const applyScreenOrientation = async target => {
+const lockScreenOrientation = async target => {
   const orientation = screenOrientationApi();
   const root = typeof document !== 'undefined' ? document.documentElement : null;
   if (!orientation || !root) return false;
@@ -16029,12 +16053,70 @@ const applyScreenOrientation = async target => {
   screenOrientationLockedByUs = true;
   return true;
 };
+// --- 二の矢: 端末が回ってくれないなら、こちらの絵を回す ---
+//
+// 【なぜ要るか】(2026-09-06・ユーザーからの相談)
+// 「端末の設定とか関係なく強制的に画面の向きを変えられないの？」
+// 端末の向きを変える手段は screen.orientation.lock() ひとつしか無く、Androidは全画面中のみ・
+// iOSのSafariには機能そのものが無い・アプリ内ブラウザは全画面を塞いでいる。
+// つまりAPIに頼るかぎり「できない端末」は必ず残る。
+//
+// そこで、端末は縦のまま**絵のほうを90度回して描く**。ただのCSSなので、
+// 許可もAPIも端末の「画面の自動回転」の設定も一切関係なく、どのブラウザでも必ず効く。
+// 指の位置と箱の測定は RHYTHM_VIEW_ROTATION が回転を打ち消すので、
+// レーン判定もノーツの配置もそのまま正しく動く。
+// いま自前回転で「どちら向きにしたいか」。本体を持ち替えたときに測り直すために覚えておく。
+let forcedRotationWantLandscape = null;
+const applyForcedRotation = wantLandscape => {
+  forcedRotationWantLandscape = wantLandscape;
+  // 端末そのものが既に望みの向きなら、回す必要はない(回すとかえって狂う)
+  if (deviceIsLandscape() === wantLandscape) {
+    RHYTHM_VIEW_ROTATION.set(0);
+    return true;
+  }
+  RHYTHM_VIEW_ROTATION.set(RHYTHM_VIEW_ROTATION.preferredAngle());
+  return true;
+};
+// 【本体を持ち替えたときの追従】
+// 自前回転は「端末が縦のままなので絵を回す」ものなので、**端末が回ったらもう要らない**。
+// 端末の自動回転が入っている人が本体を横にすると、端末も回った上にこちらも回ったままで
+// 二重になり、横倒しの絵になってしまう。向きが変わったら必ず測り直す。
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  const recheck = () => {
+    if (forcedRotationWantLandscape === null) return;
+    applyForcedRotation(forcedRotationWantLandscape);
+  };
+  window.addEventListener('orientationchange', recheck);
+  window.addEventListener('resize', recheck);
+  if (typeof window.matchMedia === 'function') {
+    const mql = window.matchMedia('(orientation: landscape)');
+    if (mql.addEventListener) mql.addEventListener('change', recheck);else if (mql.addListener) mql.addListener(recheck);
+  }
+}
+// target: 'landscape' | 'portrait'。
+// 戻り値は「どうやってその向きにしたか」。
+//   'device' … 端末そのものが回った(いちばん自然。本体の向きも一緒に変わる)
+//   'forced' … 端末は回らなかったので、絵のほうを回した(本体は持ち替えてもらう)
+//   ''       … どちらもできなかった(まず起きないが、案内を出す側のために残す)
+// ①端末に頼む → ②断られたら自分で回す、の順。
+const applyScreenOrientation = async target => {
+  const wantLandscape = target === 'landscape';
+  // 自前で回したまま端末に頼むと、端末が回った上にこちらも回って二重になる。
+  // 頼む前にいったん戻し、失敗したときだけ改めて自分で回す。
+  RHYTHM_VIEW_ROTATION.set(0);
+  if (await lockScreenOrientation(target)) return 'device';
+  return applyForcedRotation(wantLandscape) ? 'forced' : '';
+};
 // モンビーを離れるときの後始末。ボタンで固定したときだけ戻す。
 // これが無いと、横のままHOMEへ戻ったときにゲーム全体が横＋全画面のままになり、
 // 縦向きで作ってあるHOMEやバトルの画面が崩れる。
 // 自分で固定していないとき(端末を横向きに持っているだけ)には何もしない。
 const releaseScreenOrientation = () => {
-  if (!screenOrientationLockedByUs) return false;
+  // 自前で回しているぶんは必ず戻す。残したままHOMEへ帰るとゲーム全体が横倒しになる
+  const hadForcedRotation = RHYTHM_VIEW_ROTATION.active();
+  forcedRotationWantLandscape = null;
+  RHYTHM_VIEW_ROTATION.set(0);
+  if (!screenOrientationLockedByUs) return hadForcedRotation;
   screenOrientationLockedByUs = false;
   const orientation = screenOrientationApi();
   if (orientation && typeof orientation.unlock === 'function') {
@@ -16048,6 +16130,30 @@ const releaseScreenOrientation = () => {
     } catch (_) {}
   }
   return true;
+};
+// 自前回転をReactから使うためのフック。
+// 器のCSSは RHYTHM_VIEW_ROTATION.frameStyle() が持っているので、ここでは
+// 「変わったら描き直す」ことと「画面の大きさを追いかける」ことだけをする。
+// 回していないときは null を返すので、画面の作りは今までと1ミリも変わらない。
+const useRhythmForcedRotationStyle = () => {
+  const [angle, setAngle] = useState(() => RHYTHM_VIEW_ROTATION.get());
+  const [, bumpSize] = useState(0);
+  useEffect(() => {
+    setAngle(RHYTHM_VIEW_ROTATION.get());
+    return RHYTHM_VIEW_ROTATION.subscribe(setAngle);
+  }, []);
+  useEffect(() => {
+    if (angle === 0 || typeof window === 'undefined') return undefined;
+    // 器の大きさは画面の縦横をそのまま使うので、変わったら測り直す
+    const onResize = () => bumpSize(n => n + 1);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, [angle]);
+  return angle === 0 ? null : RHYTHM_VIEW_ROTATION.frameStyle();
 };
 // ============================================================================
 // 演奏中は通知を出さない
@@ -16160,8 +16266,12 @@ const RhythmOrientationButton = ({
     const onChange = () => setLandscape(orientationIsLandscape());
     onChange();
     if (mql.addEventListener) mql.addEventListener('change', onChange);else if (mql.addListener) mql.addListener(onChange);
+    // 自前で回したときは端末の向きが変わらないので、matchMedia は鳴らない。
+    // 見えている向きが変わったことをこちらから知らせる
+    const unsubscribe = RHYTHM_VIEW_ROTATION.subscribe(onChange);
     return () => {
       if (mql.removeEventListener) mql.removeEventListener('change', onChange);else if (mql.removeListener) mql.removeListener(onChange);
+      unsubscribe();
     };
   }, []);
   useEffect(() => {
@@ -16180,13 +16290,16 @@ const RhythmOrientationButton = ({
     setBusy(true);
     setNote('');
     try {
-      const ok = await applyScreenOrientation(target);
+      const how = await applyScreenOrientation(target);
       setLandscape(orientationIsLandscape());
-      if (ok) return;
-      // できなかった理由で案内を書き分ける。
-      // 「回す機能そのものが無い」ブラウザ(iPhoneのSafariなど)と、
-      // 「機能はあるが断られた」場合とで、やってもらうことが違う。
-      setNote(screenOrientationApi() ? `画面を${wanted}にできませんでした。全画面にできないブラウザでは向きを変えられないことがあります。お手数ですが本体を${wanted}向きにしてお使いください。` : `このブラウザには画面を回す機能がありません。端末の「画面の自動回転」をオンにして、本体を${wanted}向きにしてください。`);
+      if (how === 'device') return; // 本体ごと回ったので言うことはない
+      if (how === 'forced') {
+        // 端末は回ってくれなかったので、絵のほうを回した。
+        // 本体の向きはそのままなので、**持ち替えてもらう**必要がある。ここは必ず伝える。
+        setNote(`この端末は画面を回せないので、代わりに絵のほうを${wanted}向きにしました。本体を${wanted}向きに持ち替えてお使いください。`);
+        return;
+      }
+      setNote(`画面を${wanted}にできませんでした。お手数ですが本体を${wanted}向きにしてお使いください。`);
     } finally {
       setBusy(false);
     }
@@ -17953,9 +18066,9 @@ const RhythmTapTest = ({
     RHYTHM_PERF.layoutRead();
     RHYTHM_PERF.layoutRead();
     RHYTHM_PERF.layoutRead();
-    const areaRect = area.getBoundingClientRect(),
-      lineRect = line.getBoundingClientRect(),
-      noteHeight = laneRefs.current.find(Boolean)?.getBoundingClientRect().height || 20;
+    const areaRect = RHYTHM_VIEW_ROTATION.rectOf(area),
+      lineRect = RHYTHM_VIEW_ROTATION.rectOf(line),
+      noteHeight = RHYTHM_VIEW_ROTATION.rectOf(laneRefs.current.find(Boolean))?.height || 20;
     const spawnY = -noteHeight + settings.noteStartPosition / 100 * areaRect.height * .2;
     const judgmentY = lineRect.top - areaRect.top + lineRect.height / 2 - noteHeight / 2;
     // ready:false は「まだノーツを正しい場所へ置けない」。判定を進めてよいかの目印にも使う
@@ -18579,7 +18692,7 @@ const RhythmTapTest = ({
       }
       const area = playAreaRef.current,
         line = judgmentLineRef.current;
-      if (area && line && rhythmTravelLooksReady(area.getBoundingClientRect(), line.getBoundingClientRect())) {
+      if (area && line && rhythmTravelLooksReady(RHYTHM_VIEW_ROTATION.rectOf(area), RHYTHM_VIEW_ROTATION.rectOf(line))) {
         // 測り直させる。待っているあいだに覚えた値があれば、それは整う前のもの
         travelCacheRef.current = null;
         resolve(true);
@@ -18907,7 +19020,10 @@ const RhythmTapTest = ({
   // ノーツの位置をすべて確定させられる(強制レイアウト)。指の数ぶん・touchmoveの数ぶん
   // これが起きるため、タップのたびに一瞬止まって見える原因になる。FLICK/SLIDE側と
   // 同じ「1フレームに1回だけ測る」キャッシュを共有する(フレームごと・画面サイズ変化ごとに捨てる)。
-  const inputAreaRect = area => RHYTHM_GESTURE_RUNTIME.areaRect(area) || area.getBoundingClientRect();
+  const inputAreaRect = area => RHYTHM_GESTURE_RUNTIME.areaRect(area) || RHYTHM_VIEW_ROTATION.rectOf(area);
+  // 指の位置も「回す前の座標」へそろえてからレーンに直す。
+  // 自前で回していないときは受け取った値をそのまま返すだけ
+  const inputPoint = (clientX, clientY) => RHYTHM_VIEW_ROTATION.point(clientX, clientY);
   // 指を置くたびに10要素を querySelectorAll で引き直し、押していないサブレーンまで
   // 毎回書き込んでいた。要素は覚えておき、状態が変わったサブレーンだけ書き換える
   // (dataset/styleへの書き込みはそのたびにstyle再計算を誘発するため)。
@@ -18932,8 +19048,9 @@ const RhythmTapTest = ({
     const area = playAreaRef.current;
     if (!area) return;
     const rect = inputAreaRect(area),
-      lane = rhythmLaneAtPoint(e.clientX, e.clientY, rect),
-      subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(e.clientX, e.clientY, rect);
+      p = inputPoint(e.clientX, e.clientY),
+      lane = rhythmLaneAtPoint(p.x, p.y, rect),
+      subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(p.x, p.y, rect);
     if (lane === null || subLaneCoordinate === null) return;
     const run = runRef.current;
     if (run) {
@@ -18956,7 +19073,8 @@ const RhythmTapTest = ({
     e.preventDefault();
     const area = playAreaRef.current;
     if (!area) return;
-    const subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(e.clientX, e.clientY, inputAreaRect(area));
+    const mp = inputPoint(e.clientX, e.clientY),
+      subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(mp.x, mp.y, inputAreaRect(area));
     if (subLaneCoordinate === null) return;
     run.activePointerFeedback.set(e.pointerId, subLaneCoordinate);
     setPressedLanes(run.activePointerFeedback.values());
@@ -18990,8 +19108,9 @@ const RhythmTapTest = ({
       Array.from(e.touches || []).forEach(touch => {
         const inputKey = rhythmInputKey('touch', touch.identifier);
         live.add(inputKey);
-        const lane = rhythmLaneAtPoint(touch.clientX, touch.clientY, rect),
-          subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(touch.clientX, touch.clientY, rect);
+        const tp = inputPoint(touch.clientX, touch.clientY),
+          lane = rhythmLaneAtPoint(tp.x, tp.y, rect),
+          subLaneCoordinate = rhythmSubLaneCoordinateAtPoint(tp.x, tp.y, rect);
         if (subLaneCoordinate !== null) liveSubLanes.push(subLaneCoordinate);
         if (current.activeTouchInputs.has(inputKey)) {
           if (subLaneCoordinate !== null) inputMoves(inputKey, subLaneCoordinate);
@@ -20021,34 +20140,50 @@ function MonsterHeroGame() {
   }, []);
   // タップ中(押している間)は指を離すまでスライドしても波紋が付いてくるようにする。
   // 動くたびに出すと出過ぎるので、時間と距離の両方で間引く
+  // 自前で画面を回しているときだけ、いちばん外の箱へ掛けるCSSが返る(ふだんは null)
+  const forcedRotationStyle = useRhythmForcedRotationStyle();
   const rippleDragRef = useRef(false);
   const rippleLastAtRef = useRef(0);
   const rippleLastPosRef = useRef({
     x: 0,
     y: 0
   });
+  // 自前で画面を回しているときは、押した場所も箱も「回す前」でそろえないと
+  // 波紋が見当違いの場所に出る(見た目だけの飾りだが、ずれると壊れて見える)
+  const ripplePoint = e => {
+    const p = RHYTHM_VIEW_ROTATION.point(e.clientX, e.clientY);
+    const rect = RHYTHM_VIEW_ROTATION.rectOf(e.currentTarget);
+    return rect ? {
+      x: p.x - rect.left,
+      y: p.y - rect.top,
+      clientX: p.x,
+      clientY: p.y
+    } : null;
+  };
   const rippleOnPointerDown = useCallback(e => {
     rippleDragRef.current = true;
     rippleLastAtRef.current = performance.now();
+    const at = ripplePoint(e);
+    if (!at) return;
     rippleLastPosRef.current = {
-      x: e.clientX,
-      y: e.clientY
+      x: at.clientX,
+      y: at.clientY
     };
-    const rect = e.currentTarget.getBoundingClientRect();
-    spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
+    spawnRipple(at.x, at.y);
   }, [spawnRipple]);
   const rippleOnPointerMove = useCallback(e => {
     if (!rippleDragRef.current) return;
+    const at = ripplePoint(e);
+    if (!at) return;
     const now = performance.now();
-    const moved = Math.hypot(e.clientX - rippleLastPosRef.current.x, e.clientY - rippleLastPosRef.current.y);
+    const moved = Math.hypot(at.clientX - rippleLastPosRef.current.x, at.clientY - rippleLastPosRef.current.y);
     if (now - rippleLastAtRef.current < 70 || moved < 24) return;
     rippleLastAtRef.current = now;
     rippleLastPosRef.current = {
-      x: e.clientX,
-      y: e.clientY
+      x: at.clientX,
+      y: at.clientY
     };
-    const rect = e.currentTarget.getBoundingClientRect();
-    spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
+    spawnRipple(at.x, at.y);
   }, [spawnRipple]);
   const rippleOnPointerEnd = useCallback(() => {
     rippleDragRef.current = false;
@@ -32470,12 +32605,13 @@ function MonsterHeroGame() {
         }
       }
     }, /*#__PURE__*/React.createElement("div", {
+      "data-mh-view-rotation": forcedRotationStyle ? 'true' : 'false',
       onPointerDown: rippleOnPointerDown,
       onPointerMove: rippleOnPointerMove,
       onPointerUp: rippleOnPointerEnd,
       onPointerCancel: rippleOnPointerEnd,
       className: "h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans",
-      style: {
+      style: forcedRotationStyle || {
         height: '100%'
       }
     }, /*#__PURE__*/React.createElement("div", {

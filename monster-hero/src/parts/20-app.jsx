@@ -384,25 +384,36 @@ function MonsterHeroGame() {
   }, []);
   // タップ中(押している間)は指を離すまでスライドしても波紋が付いてくるようにする。
   // 動くたびに出すと出過ぎるので、時間と距離の両方で間引く
+  // 自前で画面を回しているときだけ、いちばん外の箱へ掛けるCSSが返る(ふだんは null)
+  const forcedRotationStyle = useRhythmForcedRotationStyle();
   const rippleDragRef = useRef(false);
   const rippleLastAtRef = useRef(0);
   const rippleLastPosRef = useRef({ x: 0, y: 0 });
+  // 自前で画面を回しているときは、押した場所も箱も「回す前」でそろえないと
+  // 波紋が見当違いの場所に出る(見た目だけの飾りだが、ずれると壊れて見える)
+  const ripplePoint = (e) => {
+    const p = RHYTHM_VIEW_ROTATION.point(e.clientX, e.clientY);
+    const rect = RHYTHM_VIEW_ROTATION.rectOf(e.currentTarget);
+    return rect ? { x: p.x - rect.left, y: p.y - rect.top, clientX: p.x, clientY: p.y } : null;
+  };
   const rippleOnPointerDown = useCallback((e) => {
     rippleDragRef.current = true;
     rippleLastAtRef.current = performance.now();
-    rippleLastPosRef.current = { x: e.clientX, y: e.clientY };
-    const rect = e.currentTarget.getBoundingClientRect();
-    spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
+    const at = ripplePoint(e);
+    if (!at) return;
+    rippleLastPosRef.current = { x: at.clientX, y: at.clientY };
+    spawnRipple(at.x, at.y);
   }, [spawnRipple]);
   const rippleOnPointerMove = useCallback((e) => {
     if (!rippleDragRef.current) return;
+    const at = ripplePoint(e);
+    if (!at) return;
     const now = performance.now();
-    const moved = Math.hypot(e.clientX - rippleLastPosRef.current.x, e.clientY - rippleLastPosRef.current.y);
+    const moved = Math.hypot(at.clientX - rippleLastPosRef.current.x, at.clientY - rippleLastPosRef.current.y);
     if (now - rippleLastAtRef.current < 70 || moved < 24) return;
     rippleLastAtRef.current = now;
-    rippleLastPosRef.current = { x: e.clientX, y: e.clientY };
-    const rect = e.currentTarget.getBoundingClientRect();
-    spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
+    rippleLastPosRef.current = { x: at.clientX, y: at.clientY };
+    spawnRipple(at.x, at.y);
   }, [spawnRipple]);
   const rippleOnPointerEnd = useCallback(() => { rippleDragRef.current = false; }, []);
   const [rankingViewDiff, setRankingViewDiff] = useState('Normal');
@@ -8536,7 +8547,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     <AssistantBondContext.Provider value={assistantBondValue}>
     {/* 画面の描画で例外が出ても真っ白にせず、「ホームへ戻る」を出す(gameState が変わればエラーは捨てる) */}
     <MhErrorBoundary screen={gameState} onRecover={()=>{ setDebugThrowScreenError(false); try { returnToHome(); } catch (e) { setGameState('HOME'); } }}>
-    <div onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
+    {/* 自前で画面を回しているときは、この一番外の箱だけを90度回す。
+        器を増やさず**同じ要素のstyleを差し替えるだけ**にしてあるのは、
+        切り替えた瞬間に中身が作り直されると演奏中の状態(音の時計・スコア・押している指)が
+        飛んでしまうため。回していないときは今までと同じ style={{height:'100%'}} に戻る */}
+    <div data-mh-view-rotation={forcedRotationStyle?'true':'false'} onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={forcedRotationStyle||{height:'100%'}}>
       {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
         {ripples.map(r=>(

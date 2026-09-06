@@ -19,7 +19,11 @@ check('touches全体を同期し各touch.identifierを独立管理',game.include
 check('同時に始まった複数指を1batchで判定',game.includes('const rect=inputAreaRect(area),live=new Set(),')&&game.includes('starts=[]')&&game.includes('if(starts.length)inputStarts(starts)'));
 check('同時に離れた複数指も1batchで終了',game.includes('const ended=[]')&&game.includes('if(ended.length)inputEnds(ended)'));
 check('Touch由来PointerEventの二重処理を防ぐ',game.includes("if(e.pointerType==='touch')return")&&(game.match(/if\(e\.pointerType==='touch'\)return/g)||[]).length>=2);
-check('各指のclientX/clientYから個別レーンを判定',game.includes('rhythmLaneAtPoint(touch.clientX,touch.clientY,rect)'));
+// 2026-09-06: 自前で画面を回せるようにしたので、指の位置は inputPoint(=RHYTHM_VIEW_ROTATION.point)
+// を通してからレーンに直す(回していないときは受け取った値をそのまま返す)。
+// 見たいこと(指ごとに clientX/clientY からレーンを出している)は変わっていない。
+check('各指のclientX/clientYから個別レーンを判定',
+  game.includes('const tp=inputPoint(touch.clientX,touch.clientY),lane=rhythmLaneAtPoint(tp.x,tp.y,rect)'));
 check('レーン表示は入力面を分断しない非操作div',game.includes('pointer-events-none absolute inset-0 grid grid-cols-5')&&!game.includes('onTouchStart={touchStart}'));
 check('ノーツ描画もタッチ面を遮らない',game.includes("pointerEvents:'none'"));
 check('play areaでブラウザ既定ジェスチャを抑止',game.includes("touchAction:'none'")&&game.includes("WebkitTouchCallout:'none'"));
