@@ -96,7 +96,7 @@ check('スロットのバッジも合計補正を出す', has('const totalBonus=
 check('補正0%でもバッジを出す', has('const totalBonus=distTotalBonus(i); return(<div') && !has('return totalBonus!==0&&'));
 check('WAVEリザルトの適性込み合計も編成合計を使う', has('const aptPct=(distAptPct[i]||0)*100;'));
 // 補正値(%)の表示は formatAptPct(aptGradeToPct(…)) と、差分表示の formatAptBonus(…) のどちらかを通す
-check('マスモン強化でも補正値(%)を出す', ((source.match(/formatAptPct\(aptGradeToPct\(/g) || []).length + (source.match(/formatAptBonus\(/g) || []).length) >= 3);
+check('マスモン強化でも補正値(%)を出す', ((source.match(/formatAptPct\(/g) || []).length + (source.match(/formatAptBonus\(/g) || []).length) >= 3);
 // ヘルプの本文は data/help.js にデータとして持っている
 const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 check('ヘルプが新しい仕様を説明している',
