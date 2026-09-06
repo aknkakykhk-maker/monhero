@@ -90,6 +90,7 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
   const stun = slice("const stunMon=slots[slotIdx];", "else if (card.subType==='buff_myaru')");
   check('あつの挑発も buildAttackHits を通し、メインの会心だけ無し(mainCanCrit:false)にしている',
     stun.text.includes('buildAttackHits({') && stun.text.includes('mainCanCrit:false') && !stun.text.includes('stunComboRates'));
+  check('予測表示も同じ条件でメインの会心を外している', predictedArrow.includes("mainCanCrit:card.subType!=='stun_atsu'"));
   // 切り出した範囲は else-if ブロックの閉じ } で終わるので、その 1 文字だけ落として関数本体にする
   const makeStun = () => Function('d0', 'card', 'stunMon0', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', `
     let totalDmg = 0, hasCrit = false, attackCount = 0; const attackHits = [];
@@ -110,16 +111,15 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
         const mainHero = { id: heroId }; const mon = { id: attackerId };
         const actual = makeStun()(d, stunCard, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, mathWith(() => 1), shared.buildAttackHits);
         const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(stunCard, mon, d, localGlobal);
-        // 予測はメインにも確定会心を乗せるので、確定会心のときだけメイン 1 発ぶんの差(floor(d×会心倍率) − d)が出る。
-        // これは一本化前からの差で、表示だけの話なので今回は変えていない(BATTLE_DAMAGE_MAP.md §2.5)
-        const knownGap = turn.guaranteedCrit ? Math.floor(d * (1.5 + perma.critDmgPct)) - d : 0;
+        // 予測側も mainCanCrit:false を渡すので、確定会心のときもメインには会心が乗らず、実処理と完全に一致する
+        const knownGap = 0;
         const direct = shared.buildAttackHits({ d, card: stunCard, attackerId, heroId, comboDmgBonus: combo, critDmgBonus: 0.1, guaranteedCrit: turn.guaranteedCrit, rollCrit: () => false, globalComboRate: global + localGlobal, mainCanCrit: false });
         stunCases++;
         if (actual.totalDmg !== predicted - knownGap || actual.totalDmg !== direct.reduce((s, h) => s + h.dmg, 0)
           || actual.attackHits[0].isCrit !== false || actual.attackCount !== 1)
           stunMismatches.push(`${heroId}/${attackerId} d=${d} combo=${combo} global=${global}+${localGlobal} ${critMode}: 実${actual.totalDmg} 予測${predicted} 直接${direct.reduce((s, h) => s + h.dmg, 0)}`);
       }
-  check(`あつの挑発: 乱数を固定すると実処理の合計が予測(メインの確定会心差を除く)と一致し、メインは会心なし(${stunCases} 通り)`, stunMismatches.length === 0, stunMismatches.slice(0, 5).join(' / '));
+  check(`あつの挑発: 乱数を固定すると実処理の合計が予測と一致し、メインは会心なし(${stunCases} 通り)`, stunMismatches.length === 0, stunMismatches.slice(0, 5).join(' / '));
   const perma = { comboDmgPct: 0, globalComboDmgPct: 0.1, critDmgPct: 0, critRatePct: 0 };
   const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
   const zan = makeStun()(100, stunCard, { id: 'Zan' }, { id: 'Zan' }, getPermaBuff, (k, def) => def, 0, 1, mathWith(() => 1), shared.buildAttackHits).attackHits;

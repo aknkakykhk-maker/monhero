@@ -105,7 +105,7 @@ node tools/build.js --check
 | `node battle/battle-check.js` | 実際にWAVEを自動で戦い、距離撃の取得・撃破ファンファーレ・引き継ぎ技の強化を確認する。 |
 | `node battle/battle-balance-check.js` | 難易度カードと全WAVE詳細が共通の敵生成を使い、WAVE1の敵情報を難易度カードへ戻していないことを確認する。 |
 | `node battle/battle-scenario-check.js` | バトルのれんしゅう(台本どおりに動くバトル)の数値を、実際の計算式で検算する。 |
-| `node battle/damage-parity-check.js` | 与ダメージの予測表示(`getAttackPredictedDmg`)と実処理(`processTurn` の攻撃ブロック)を本体から切り出し、乱数を固定して同じ入力で回し、合計が一致することを確かめる(勇者 5 種 × 攻撃者 × カード 8 種 × 補正 × 会心 = 2,560 通り)。あつの挑発(`stun_atsu`。メインに会心が乗らない)のブロックも切り出し、`buildAttackHits` を `mainCanCrit:false` で通していることと、予測との一致(確定会心時のメイン 1 発ぶんの既知差だけ許容)を 320 通りで見る。一本化(STEP 5)の前後で等価であることの安全網。 |
+| `node battle/damage-parity-check.js` | 与ダメージの予測表示(`getAttackPredictedDmg`)と実処理(`processTurn` の攻撃ブロック)を本体から切り出し、乱数を固定して同じ入力で回し、合計が一致することを確かめる(勇者 5 種 × 攻撃者 × カード 8 種 × 補正 × 会心 = 2,560 通り)。あつの挑発(`stun_atsu`。メインに会心が乗らない)のブロックも切り出し、`buildAttackHits` を `mainCanCrit:false` で通していることと、予測との完全一致を 320 通りで見る。一本化(STEP 5)の前後で等価であることの安全網。 |
 | `node battle/battle-damage-preview-check.js` | 味方の連撃・追撃を含む共通予測と、選択中ガードを反映した敵の予定ダメージ表示を確認する。おりょう・ゴーレム・モッチー/ミタラシ・ききのように「使ったターンからすぐ効く」カードを攻撃カードより先に選んだとき、カード選択中の「合計DMG」がその上乗せぶんを正しく含むかを、実際の処理(processTurn)と同じ並び順で検算する。 |
 | `node battle/battle-card-gesture-check.js` | カード名を含むカード全体から約10pxでスワイプへ切り替わり、終了後のclickを無効化しつつ通常タップと技変更を維持することを確認する。 |
 | `node auto-turn-check.js` | AUTOの1ターン判断helperについて、ガッツ・枚数・割当先・固有技の所有枠・スロット上限の合法判定、4方針、固定乱数、入力stateの非破壊性を確認する。 |
