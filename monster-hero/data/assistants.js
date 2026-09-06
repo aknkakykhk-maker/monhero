@@ -547,6 +547,10 @@ const ASSISTANT_SCENES = {
     help: 'basics/extreme-challenge',
     lines: [],
   },
+  ragnarokDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
   // 種族チャレンジの選択画面。種族→勇者→供モン→確認の各段で言うことが変わるので、
   // 画面から condition(いまの段)を渡す。セリフ本体は speciesChallengeGuide の束から合流する
   speciesChallenge: {
@@ -1206,6 +1210,13 @@ addAssistantLinePack({
       { e:'surprise', t:'WAVE9からは神域封鎖で安全距離がなくなるよ…！' },
       { e:'wink', t:'INFINITYをクリアしたあなたの総力戦。ルール詳細を読んで挑も♪' },
     ],
+    ragnarokDifficulty: [
+      { e:'surprise', t:'RAGNAROKは敵強度200倍…！ GODを越えた、いちばん奥の難易度だよ。' },
+      { e:'normal', t:'2WAVEごとに黄昏が深まって、最後は敵が2倍まで上がるの。' },
+      { e:'troubled', t:'DISTANCE BREAKは15ターンごと。安全な距離はひとつも無いよ…！' },
+      { e:'surprise', t:'WAVE5とWAVE10のボスは、倒しても起き上がるからね。油断しないで！' },
+      { e:'wink', t:'長引くほど苦しくなるから、短く決めるのがコツ。がんばって♪' },
+    ],
   },
 });
 
@@ -1816,6 +1827,14 @@ addAssistantLinePack({
       { e:'troubled', t:'与ダメージは累計ターンで下がり、DISTANCE BREAKは20ターンごとでつ。' },
       { e:'surprise', t:'WAVE9からは神域封鎖…安全距離も候補になってしまいまつ。' },
       { e:'wink',     t:'報酬は虹のプシュケー100個。ルール詳細を読んでから挑みましょ♪' },
+    ],
+    // RAGNAROKはGODクリア後に解放される最終難易度。GODと同じ理由でききの側にも用意する
+    ragnarokDifficulty: [
+      { e:'surprise', t:'RAGNAROKは敵強度×200。GODのさらに上でつ…！' },
+      { e:'normal',   t:'2WAVEごとに黄昏Lvが上がって、最後は敵が2倍になりまつ。' },
+      { e:'troubled', t:'DISTANCE BREAKは15ターンごと。安全な距離はありませんでつ。' },
+      { e:'surprise', t:'WAVE5とWAVE10のボスは、倒しても起き上がりまつ…！' },
+      { e:'wink',     t:'報酬は虹のプシュケー130個。短期決着を狙いましょ♪' },
     ],
     // ---- はじめて ----
     onboarding: [

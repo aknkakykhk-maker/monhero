@@ -17,8 +17,9 @@ const EXTREME_RANKING_PREFIX = 'Extreme';
 const RANKING_DIFFICULTY_KEYS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
-  ...EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),
-  `${EXTREME_RANKING_PREFIX}${GOD_SETTING.id}`,
+  // GOD以降も同じ表(ALL_EXTREME_DIFFICULTIES)から作る。難易度を足すたびにここへ1行書き足すと
+  // 書き忘れでランキングだけ落ちるので、正本を1つにしておく
+  ...ALL_EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),
 ]);
 // 種族チャレンジは「種族(主血統) × 難易度」ごとに独立したランキングになる。
 // 既存 rankings テーブルの difficulty 列(自由文字列)へ Species-<血統id>-<難易度id> の形で入れるだけなので、

@@ -21,8 +21,11 @@ const extremeEnd = source.indexOf(']);', extremeStart) + 3;
 const context = { DIFFICULTY_SETTINGS: { Normal: {}, Hard: {}, Master: {} }, String, Error, Object };
 vm.createContext(context);
 vm.runInContext(source.slice(extremeStart, extremeEnd), context);
-// GOD は EXTREME_DIFFICULTIES の外で定義され、ランキングの難易度キー一覧はそれも含む
-vm.runInContext(source.match(/const GOD_SETTING = [^\n]+\n/)[0] + source.match(/const ALL_EXTREME_DIFFICULTIES = [^\n]+\n/)[0], context);
+// EXTREME_DIFFICULTIES の外で1行定義される難易度(GOD・RAGNAROK…)もランキングの難易度キーに入る。
+// 難易度が増えるたびに検査へ名前を書き足さなくてよいよう、1行定義をまとめて取り込む
+const extraSettingLines = (source.slice(extremeEnd, source.indexOf('const ALL_EXTREME_DIFFICULTIES'))
+  .match(/^const [A-Z_]+_SETTING = Object\.freeze\(\{.*\}\);$/gm) || []).join('\n');
+vm.runInContext(extraSettingLines + '\n' + source.match(/const ALL_EXTREME_DIFFICULTIES = [^\n]+\n/)[0], context);
 vm.runInContext(`${source.slice(normalizeStart, normalizeEnd)}\n${source.slice(stateKeyStart, stateKeyEnd)}\nthis.key=rankingDifficultyKey;`, context);
 
 const checks = [];

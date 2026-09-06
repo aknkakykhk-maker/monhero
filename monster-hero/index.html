@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":793954,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":465090,"data/help.js":269306,"data/rhythm-step3-release.js":7722,"data/assistants.js":267214,"game-system.compiled.js":2933867,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":793954,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":466725,"data/help.js":271548,"data/rhythm-step3-release.js":7722,"data/assistants.js":268554,"game-system.compiled.js":2947399,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609061837';
+var GAME_BUILD = '202609061840';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -335,10 +335,10 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     }
   }
 
-  /* 極限チャレンジランキングの6難易度タブ。
+  /* 極限チャレンジランキングの7難易度タブ。
      game-system.jsx の EXTREME_DIFFICULTY_THEMES と同じ配色を使い、
      選択中だけ少し強いグラデーション/発光にする。種族・通常ランキングには当てない。 */
-  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button {
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(7)):not(:has(> button:nth-child(8))) > button {
     border-style:solid !important;
     border-width:1px !important;
     background:rgba(var(--mh-extreme-rank-rgb),.14) !important;
@@ -346,18 +346,19 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     border-color:rgba(var(--mh-extreme-rank-rgb),.38) !important;
     box-shadow:inset 0 0 0 1px rgba(var(--mh-extreme-rank-rgb),.12);
   }
-  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button.ring-2 {
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(7)):not(:has(> button:nth-child(8))) > button.ring-2 {
     background:linear-gradient(135deg,var(--mh-extreme-rank-action-a),var(--mh-extreme-rank-action-b)) !important;
     color:var(--mh-extreme-rank-action-text) !important;
     border-color:rgba(var(--mh-extreme-rank-rgb),.78) !important;
     box-shadow:0 0 var(--mh-extreme-rank-shadow) rgba(var(--mh-extreme-rank-rgb),var(--mh-extreme-rank-glow));
   }
-  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(1) { --mh-extreme-rank-rgb:232,121,249; --mh-extreme-rank-accent:#f0abfc; --mh-extreme-rank-action-a:#a21caf; --mh-extreme-rank-action-b:#d946ef; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.24; --mh-extreme-rank-shadow:13px; }
-  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(2) { --mh-extreme-rank-rgb:139,92,246; --mh-extreme-rank-accent:#c4b5fd; --mh-extreme-rank-action-a:#6d28d9; --mh-extreme-rank-action-b:#8b5cf6; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.28; --mh-extreme-rank-shadow:14px; }
-  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(3) { --mh-extreme-rank-rgb:244,63,94; --mh-extreme-rank-accent:#fda4af; --mh-extreme-rank-action-a:#be123c; --mh-extreme-rank-action-b:#f43f5e; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.32; --mh-extreme-rank-shadow:14px; }
-  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(4) { --mh-extreme-rank-rgb:249,115,22; --mh-extreme-rank-accent:#fdba74; --mh-extreme-rank-action-a:#c2410c; --mh-extreme-rank-action-b:#f97316; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.36; --mh-extreme-rank-shadow:15px; }
-  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(5) { --mh-extreme-rank-rgb:59,130,246; --mh-extreme-rank-accent:#93c5fd; --mh-extreme-rank-action-a:#1d4ed8; --mh-extreme-rank-action-b:#3b82f6; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.40; --mh-extreme-rank-shadow:16px; }
-  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(6)):not(:has(> button:nth-child(7))) > button:nth-child(6) { --mh-extreme-rank-rgb:245,158,11; --mh-extreme-rank-accent:#fde68a; --mh-extreme-rank-action-a:#a16207; --mh-extreme-rank-action-b:#f59e0b; --mh-extreme-rank-action-text:#1c1917; --mh-extreme-rank-glow:.48; --mh-extreme-rank-shadow:18px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(7)):not(:has(> button:nth-child(8))) > button:nth-child(1) { --mh-extreme-rank-rgb:232,121,249; --mh-extreme-rank-accent:#f0abfc; --mh-extreme-rank-action-a:#a21caf; --mh-extreme-rank-action-b:#d946ef; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.24; --mh-extreme-rank-shadow:13px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(7)):not(:has(> button:nth-child(8))) > button:nth-child(2) { --mh-extreme-rank-rgb:139,92,246; --mh-extreme-rank-accent:#c4b5fd; --mh-extreme-rank-action-a:#6d28d9; --mh-extreme-rank-action-b:#8b5cf6; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.28; --mh-extreme-rank-shadow:14px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(7)):not(:has(> button:nth-child(8))) > button:nth-child(3) { --mh-extreme-rank-rgb:244,63,94; --mh-extreme-rank-accent:#fda4af; --mh-extreme-rank-action-a:#be123c; --mh-extreme-rank-action-b:#f43f5e; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.32; --mh-extreme-rank-shadow:14px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(7)):not(:has(> button:nth-child(8))) > button:nth-child(4) { --mh-extreme-rank-rgb:249,115,22; --mh-extreme-rank-accent:#fdba74; --mh-extreme-rank-action-a:#c2410c; --mh-extreme-rank-action-b:#f97316; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.36; --mh-extreme-rank-shadow:15px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(7)):not(:has(> button:nth-child(8))) > button:nth-child(5) { --mh-extreme-rank-rgb:59,130,246; --mh-extreme-rank-accent:#93c5fd; --mh-extreme-rank-action-a:#1d4ed8; --mh-extreme-rank-action-b:#3b82f6; --mh-extreme-rank-action-text:#fff; --mh-extreme-rank-glow:.40; --mh-extreme-rank-shadow:16px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(7)):not(:has(> button:nth-child(8))) > button:nth-child(6) { --mh-extreme-rank-rgb:245,158,11; --mh-extreme-rank-accent:#fde68a; --mh-extreme-rank-action-a:#a16207; --mh-extreme-rank-action-b:#f59e0b; --mh-extreme-rank-action-text:#1c1917; --mh-extreme-rank-glow:.48; --mh-extreme-rank-shadow:18px; }
+  #root div[class~="flex"][class~="gap-1.5"][class~="overflow-x-auto"][class~="pb-2"][class~="shrink-0"]:has(> button:nth-child(7)):not(:has(> button:nth-child(8))) > button:nth-child(7) { --mh-extreme-rank-rgb:148,163,184; --mh-extreme-rank-accent:#e2e8f0; --mh-extreme-rank-action-a:#475569; --mh-extreme-rank-action-b:#cbd5e1; --mh-extreme-rank-action-text:#0f172a; --mh-extreme-rank-glow:.54; --mh-extreme-rank-shadow:19px; }
 
   /* 種族チャレンジランキングの14難易度タブ。
      Beginner〜Legendは通常チャレンジの色、EXTREME〜INFINITYは極限テーマと同じ色にそろえる。
@@ -814,12 +815,12 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="data/rhythm-lane-svg.js?v=d0b5c2bea35c" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=fe6a585d3948" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=b27595bdaaa3" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=39f4d2a75ed1" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=a805c66b6f31" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
-<script src="data/assistants.js?v=f55bdfdcac29" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
+<script src="data/assistants.js?v=77d717c6572d" onload="__mhBoot.done('data/assistants.js','みゅあを呼んでいます')" onerror="__mhBoot.fail('data/assistants.js')"></script>
 <script>
 (function(){
   // game-system.compiled.js は tools/build.js が game-system.jsx から生成した変換済みJS。

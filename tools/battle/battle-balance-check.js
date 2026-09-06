@@ -26,7 +26,9 @@ for (const difficulty of ['GrandMaster', 'Hell', 'Legend']) {
 }
 
 // 極限の段階ごとに倍率が違うため、選んだ難易度の設定(battleSetting)の強さとターン倍率を渡す。GOD だけ神威の倍率も掛ける
-assert(source.includes(':createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier)') && source.includes('?createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*divineEnemyMultiplier)'), 'battle must use shared enemy creation and override power for the selected extreme difficulty');
+// 神威・黄昏のようなWAVEで動く段階も、段階を持たない難易度(1倍)も同じ1本の生成経路を通す
+assert(source.includes('const stagedEnemyMultiplier=extremeWaveEnemyMultiplier(specialRuleDifficulty,w);')
+  && source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*stagedEnemyMultiplier)'), 'battle must use shared enemy creation and override power for the selected extreme difficulty');
 const enemyFactoryBlock = source.slice(source.indexOf('const createBattleEnemy ='), source.indexOf('\n};', source.indexOf('const createBattleEnemy =')) + 3);
 // 敵の生成はクイック・極限を含む QUICK_DIFFICULTY_SETTINGS(通常難易度は DIFFICULTY_SETTINGS と同じ値)を見るようになった
 const powerTable = Object.fromEntries(Object.entries(expectedPower).map(([difficulty, power]) => [difficulty, { power }]));

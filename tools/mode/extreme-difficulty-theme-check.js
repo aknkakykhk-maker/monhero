@@ -5,7 +5,7 @@ const assert = require('assert');
 const root = path.join(__dirname, '..', '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 const index = fs.readFileSync(path.join(root, 'monster-hero/index.html'), 'utf8');
-const order = ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD'];
+const order = ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY','GOD','RAGNAROK'];
 const start = source.indexOf('const EXTREME_DIFFICULTY_THEMES = Object.freeze({');
 const end = source.indexOf('const PUBLIC_EXTREME_DIFFICULTIES', start);
 assert(start >= 0 && end > start, '難易度テーマ定義が必要です');
@@ -25,7 +25,7 @@ const themes = order.map((id, index) => {
   assert(Number.isFinite(glow), `${id} のglowが必要です`);
   return { id, accent, rgb, action, actionText, glow };
 });
-assert.strictEqual(new Set(themes.map(t => t.accent)).size, order.length, '6難易度は別々の色にしてください');
+assert.strictEqual(new Set(themes.map(t => t.accent)).size, order.length, '極限の各難易度は別々の色にしてください');
 for (let i = 1; i < themes.length; i++) assert(themes[i].glow > themes[i-1].glow, `${themes[i].id} は一つ前より強い発光にしてください`);
 for (const required of [
   'const theme=extremeDifficultyTheme(setting.id);',
@@ -35,11 +35,13 @@ for (const required of [
   'text-[10px] leading-tight text-amber-300',
 ]) assert(source.includes(required), `実装に ${required} が必要です`);
 
-const rankingCssStart = index.indexOf('/* 極限チャレンジランキングの6難易度タブ。');
-const rankingCssEnd = index.indexOf('/* 音ゲー STEP B:', rankingCssStart);
+const rankingCssStart = index.indexOf('/* 極限チャレンジランキングの7難易度タブ。');
+// 極限タブのCSSだけを切り出す。ここを種族タブの塊まで広げてしまうと、
+// 「種族用セレクタへ干渉していない」の確認が常に落ちてしまう(実装ではなく検査側の取り違え)
+const rankingCssEnd = index.indexOf('/* 種族チャレンジランキングの', rankingCssStart);
 assert(rankingCssStart >= 0 && rankingCssEnd > rankingCssStart, '極限ランキングタブ用CSSが必要です');
 const rankingCss = index.slice(rankingCssStart, rankingCssEnd);
-assert(rankingCss.includes(':has(> button:nth-child(6)):not(:has(> button:nth-child(7)))'), '6難易度だけを対象にして通常ランキングへ波及させないでください');
+assert(rankingCss.includes(':has(> button:nth-child(7)):not(:has(> button:nth-child(8)))'), '7難易度だけを対象にして通常ランキングへ波及させないでください');
 assert(rankingCss.includes('> button.ring-2'), '選択中タブは別の強調を持たせてください');
 assert(rankingCss.includes('background:rgba(var(--mh-extreme-rank-rgb),.14)'), '未選択タブは難易度色を弱めて表示してください');
 assert(rankingCss.includes('background:linear-gradient(135deg,var(--mh-extreme-rank-action-a),var(--mh-extreme-rank-action-b))'), '選択中タブは難易度ごとのaction色を使ってください');
@@ -53,7 +55,9 @@ const normalizeHex = (value) => {
 };
 
 themes.forEach((theme, i) => {
-  const nth = `> button:nth-child(${i + 1})`;
+  // 色を宣言している行だけを拾う。セレクタの絞り込み(:has(> button:nth-child(7)))にも
+  // 同じ文字列が出るので、「{」まで含めて探さないと絞り込み側を掴んでしまう
+  const nth = `> button:nth-child(${i + 1}) {`;
   const pos = rankingCss.indexOf(nth);
   assert(pos >= 0, `${theme.id} のランキングタブ色が必要です`);
   const next = rankingCss.indexOf('> button:nth-child(', pos + nth.length);
@@ -66,4 +70,4 @@ themes.forEach((theme, i) => {
   assert.strictEqual(normalizeHex(cssActionText), normalizeHex(theme.actionText), `${theme.id} の文字色は既存テーマと一致させてください`);
 });
 
-console.log('OK: 極限チャレンジ6難易度の固有色・段階的な強調・ランキングタブへの同色反映を確認');
+console.log(`OK: 極限チャレンジ${order.length}難易度の固有色・段階的な強調・ランキングタブへの同色反映を確認`);
