@@ -14178,7 +14178,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   className={`relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:'bg-slate-900/60 border-slate-800'}`}>
                   {/* 何回選んだかを ×1 / ×2 で明確に出す */}
                   {count>0&&<span className={`absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
-                  <span className={`flex items-center gap-1.5 ${st.tint}`}>{st.icon}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
+                  <span className={`flex items-center gap-1.5 ${st.tint}`}>{cardIconNode(st.icon)}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
                   <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{(extremeRuleNumber(specialRule,'awakeningZeroTurns')!=null||extremeRuleNumber(specialRule,'waveEnhancement')!=null)&&(()=>{
                     const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
                     const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];

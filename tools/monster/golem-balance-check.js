@@ -45,7 +45,8 @@ const num = (re, label) => {
   return Number(m[1]);
 };
 // 毎ターンの自動ガッツ回復率(強化なしのラン開始時)
-const gutsRecoveryRate = num(/const gutsRecoveryRate=Math\.max\(0,([\d.]+)\+\(autoHpRecoveryRate-0\.1\)\)/, '自動ガッツ回復率');
+// 基本の回復率は currentAutoGutsRecovery が持ち、gutsRecoveryRate はそこへ氷結の支配者(絶氷の楔)の補正を掛けたもの
+const gutsRecoveryRate = num(/const currentAutoGutsRecovery=Math\.max\(0,([\d.]+)\+\(autoHpRecoveryRate-0\.1\)\)/, '自動ガッツ回復率');
 // ラン開始時の手持ちガッツは最大の半分
 const startGutsRatio = num(/setMaxGuts\(m\.baseGuts\); setGuts\(Math\.floor\(m\.baseGuts\*([\d.]+)\)\)/, '開始時ガッツの割合');
 // ゴーレムの勇者特性「怪力」の倍率
@@ -136,8 +137,10 @@ check('ゴーレム: ちからは全種で1位', sortedAtk[0].name === golem.nam
 
 // --- ④ 闘志(合掌の効果)の効果量が、表示と実装で一致していること ---
 // 表示だけ直して実装を直し忘れる(逆も)と、遊んでいる側からは絶対に気付けない。
-const toushiCode = num(/card\.monId==='Golem'\)\{addPermaBuff\('atkPct',([\d.]+)\*effMul\)/, '闘志の効果量(実装)');
-const toushiCodeLocal = num(/card\.monId==='Golem'\)\{addPermaBuff\('atkPct',[\d.]+\*effMul\); localOryoAdd\+=([\d.]+)\*effMul/, '闘志の効果量(使ったターン)');
+// 効果量は localBoostFromCard の表が持ち、processTurn は同じ boost を永続(addPermaBuff)とそのターン(localOryoAdd)の両方へ渡す
+const toushiCode = num(/card\.type==='unique' && card\.monId==='Golem'\) return \{ oryo: ([\d.]+) \}/, '闘志の効果量(実装)');
+const toushiCodeLocal = /card\.monId==='Golem'\)\{const boost=localBoostFromCard\(card\)\.oryo\*effMul; addPermaBuff\('atkPct',boost\); localOryoAdd\+=boost;/.test(source) ? toushiCode : null;
+if (toushiCodeLocal === null) console.log('NG: 闘志の効果量(使ったターン)を実装から読める');
 const toushiDesc = (golem.unique.effectDesc || '').match(/([\d.]+)%/);
 check('闘志: 実装の効果量が7.5%', toushiCode === 0.075, `${(toushiCode * 100).toFixed(1)}%`);
 check('闘志: 使ったターンにも同じ量が乗る', toushiCodeLocal === toushiCode,
