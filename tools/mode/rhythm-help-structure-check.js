@@ -115,10 +115,19 @@ ok('プレイヤー向けの説明に開発用の言葉が混ざっていない'
 // このサンドボックスは外部CDN(Tailwind)へ出られずアプリを起動して目で見る確認ができないため、
 // 画面のJSXだけを切り出し、状態と外の関数を差し替えて react-dom/server で文字列にする。
 (() => {
-  const React=require('react');
-  const ReactDOMServer=require('react-dom/server');
-  const babel=require('@babel/core');
-  const PRESET_REACT=require.resolve('@babel/preset-react');
+  // react / react-dom は tools/package.json の optionalDependencies で、
+  // CI は npm ci --omit=optional なので入っていない(help-render-check.js が CI の並びに
+  // 入っていないのも同じ理由)。無いときは描く部分だけを飛ばし、①〜⑦の静的な確認は続ける。
+  let React, ReactDOMServer, babel, PRESET_REACT;
+  try{
+    React=require('react');
+    ReactDOMServer=require('react-dom/server');
+    babel=require('@babel/core');
+    PRESET_REACT=require.resolve('@babel/preset-react');
+  }catch(e){
+    console.log('SKIP: 遊びかたを実際に描く確認 — react が入っていないため飛ばしました（手元では実行されます）');
+    return;
+  }
   const START="        {gameState==='RHYTHM_DEMO_HELP'&&(()=>{";
   const from=game.indexOf(START);
   const to=game.indexOf('\n        })()}', from);
