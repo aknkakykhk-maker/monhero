@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2114d5b8fc69df96
+// source-sha256: e93a5a666eaf2825
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e1615e3b9c73328b
+// generated-sha256: 68222267d5a9bebe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 18:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8752,7 +8752,10 @@ const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE
 };
-const releasedForPlayers = item => !item || !item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true;
+// releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
+// 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
+// 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
+const releasedForPlayers = item => !item || (!item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true) && (!item.unreleasedFlag || RELEASE_FLAGS[item.unreleasedFlag] !== true);
 const CHANGELOG_TYPES = ['update', 'issue'];
 // 日付やBUILD_DATEではなく、内容から作った安定IDでお知らせを識別する。同じID・同じ本文は
 // ビルドし直しても未読へ戻らず、本文を変更した場合だけ新しい項目として扱う。
@@ -19948,6 +19951,11 @@ function MonsterHeroGame() {
     return list[0] && list[0].songId || '';
   });
   const [rhythmSelectedDifficultyId, setRhythmSelectedDifficultyId] = useState('');
+  // 「📖 遊びかた」で開いている項目。null なら項目一覧。
+  // 以前はモンビーの説明を全部つなげて1画面へ流していたので、ただの長文になっていた
+  // (2026-09-06・ユーザー指摘「ただの文章の羅列で見にくすぎる」)。本ゲームのヘルプと同じ
+  // 「一覧 → タップして本文」の2階層にして、本文は data/help.js のカテゴリ rhythm をそのまま使う
+  const [rhythmHelpTopicId, setRhythmHelpTopicId] = useState(null);
   // 曲えらびの見え方(並び順・助手を畳んだか)。演奏の設定とは別のキーで覚える。
   // 保存に失敗しても画面は動かせるよう、まず画面へ反映してから書き込む。
   const [rhythmSelectView, setRhythmSelectView] = useState(DEFAULT_RHYTHM_SELECT_VIEW);
@@ -38036,7 +38044,10 @@ function MonsterHeroGame() {
         "data-rhythm-demo-help": true,
         "aria-label": "\u904A\u3073\u304B\u305F",
         title: "\u904A\u3073\u304B\u305F",
-        onClick: () => setGameState('RHYTHM_DEMO_HELP'),
+        onClick: () => {
+          setRhythmHelpTopicId(null);
+          setGameState('RHYTHM_DEMO_HELP');
+        },
         className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`
       }, "\uD83D\uDCD6"), /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-monsters": true,
@@ -38090,8 +38101,14 @@ function MonsterHeroGame() {
         }, "\uD83C\uDFC6 \u3053\u306E\u66F2\u306E\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"))
       }));
     })(), gameState === 'RHYTHM_DEMO_HELP' && (() => {
-      const category = (typeof HELP_CATEGORIES !== 'undefined' ? HELP_CATEGORIES : []).find(cat => cat.id === 'basics');
-      const topics = (category && category.topics || []).filter(topic => String(topic.id || '').startsWith('rhythm-') && topic.id !== 'rhythm-coming-soon');
+      // 公開フラグで伏せてある項目を出さないよう、生の HELP_CATEGORIES ではなく
+      // ふるい分け済みの HELP_GUIDE から引く
+      const category = helpCategoryById('rhythm');
+      const topics = category && category.topics || [];
+      const topic = rhythmHelpTopicId ? topics.find(x => x.id === rhythmHelpTopicId) || null : null;
+      const accent = category && category.color || '#fbbf24';
+      const topicIndex = topic ? topics.findIndex(x => x.id === topic.id) : -1;
+      const nextTopic = topicIndex >= 0 ? topics[topicIndex + 1] : null;
       return /*#__PURE__*/React.createElement("main", {
         "data-rhythm-demo-help": true,
         className: "flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white"
@@ -38102,7 +38119,10 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u623B\u308B",
-        onClick: () => setGameState('RHYTHM_DEMO_HOME'),
+        "data-rhythm-demo-help-back": true,
+        onClick: () => {
+          if (topic) setRhythmHelpTopicId(null);else setGameState('RHYTHM_DEMO_HOME');
+        },
         className: "min-h-[44px] px-2 text-slate-400"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 18
@@ -38112,14 +38132,15 @@ function MonsterHeroGame() {
         className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
       }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black leading-tight tracking-widest text-amber-200"
-      }, "\uD83D\uDCD6 \u904A\u3073\u304B\u305F"))), /*#__PURE__*/React.createElement("div", {
+      }, topic ? `${topic.emoji} ${topic.title}` : '📖 遊びかた'))), /*#__PURE__*/React.createElement("div", {
+        "data-rhythm-demo-help-scroll": true,
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
         style: {
           paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
         }
       }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
         className: "mb-3"
-      }), /*#__PURE__*/React.createElement(AssistantBubble, {
+      }), !topic && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "rhythmHelp"
       }), /*#__PURE__*/React.createElement("button", {
         "data-rhythm-demo-practice": true,
@@ -38134,20 +38155,52 @@ function MonsterHeroGame() {
       }, "\uD83C\uDF93 \u3082\u3046\u4E00\u5EA6\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("p", {
         className: "mt-2 text-[10px] leading-relaxed text-slate-400"
       }, "\u66F2\u3048\u3089\u3073\u3078\u623B\u3063\u3066\u3001\u52A9\u624B\u304C\u6700\u521D\u304B\u3089\u8AAC\u660E\u3057\u307E\u3059\u3002\u4F55\u5EA6\u3067\u3082\u898B\u3089\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-4 space-y-3"
+        "data-rhythm-demo-help-list": true,
+        className: "mt-4 space-y-2"
       }, topics.length === 0 ? /*#__PURE__*/React.createElement("p", {
         className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
-      }, "\u8AAC\u660E\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002") : topics.map(topic => /*#__PURE__*/React.createElement("section", {
-        key: topic.id,
+      }, "\u8AAC\u660E\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002") : topics.map((x, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+        key: x.id
+      }, x.group && x.group !== (topics[i - 1] || {}).group && /*#__PURE__*/React.createElement("div", {
+        "data-rhythm-demo-help-group": true,
+        className: "pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]",
+        style: {
+          color: accent
+        }
+      }, x.group), /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-help-open": x.id,
+        onClick: () => setRhythmHelpTopicId(x.id),
+        className: "flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left active:scale-95",
+        style: {
+          borderColor: `${accent}55`,
+          backgroundColor: 'rgba(15,23,42,0.7)'
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 text-base leading-none"
+      }, x.emoji), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1 text-[12px] font-black leading-tight text-white"
+      }, x.title), /*#__PURE__*/React.createElement(ChevronRight, {
+        size: 16,
+        className: "shrink-0 text-slate-500"
+      })))))), topic && /*#__PURE__*/React.createElement("div", {
         "data-rhythm-demo-help-topic": topic.id,
-        className: "rounded-2xl border border-amber-300/25 bg-slate-900/70 p-3"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-sm font-black text-amber-100"
-      }, topic.emoji, " ", topic.title), topic.assistant && /*#__PURE__*/React.createElement("p", {
-        className: "mt-1 text-[10px] font-bold leading-relaxed text-cyan-200"
-      }, topic.assistant), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 space-y-2.5"
-      }, renderHelpBlocks(topic.blocks, '#fbbf24')))))));
+        className: "space-y-3.5 pb-2"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-[10px] font-bold leading-relaxed text-cyan-200"
+      }, topic.assistant), renderHelpBlocks(topic.blocks, accent), /*#__PURE__*/React.createElement("div", {
+        className: "flex gap-2 pt-1"
+      }, /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-help-list-back": true,
+        onClick: () => setRhythmHelpTopicId(null),
+        className: "min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
+      }, "\u9805\u76EE\u4E00\u89A7\u3078"), nextTopic && /*#__PURE__*/React.createElement("button", {
+        "data-rhythm-demo-help-next": true,
+        onClick: () => setRhythmHelpTopicId(nextTopic.id),
+        className: "min-h-[48px] flex-1 truncate rounded-2xl px-2 py-3 text-[11px] font-black text-black active:scale-95",
+        style: {
+          backgroundColor: accent
+        }
+      }, "\u6B21: ", nextTopic.title)))));
     })(), gameState === 'RHYTHM_DEMO_MONSTERS' && /*#__PURE__*/React.createElement("main", {
       "data-rhythm-demo-monsters-screen": true,
       className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
@@ -48262,8 +48315,15 @@ function MonsterHeroGame() {
         className: "space-y-2"
       }, /*#__PURE__*/React.createElement("p", {
         className: "text-[11px] text-slate-400 leading-relaxed mb-3"
-      }, cat.summary), cat.topics.map(t => /*#__PURE__*/React.createElement("button", {
-        key: t.id,
+      }, cat.summary), cat.topics.map((t, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+        key: t.id
+      }, t.group && t.group !== (cat.topics[i - 1] || {}).group && /*#__PURE__*/React.createElement("div", {
+        "data-help-topic-group": true,
+        className: "pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]",
+        style: {
+          color: cat.color
+        }
+      }, t.group), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setHelpTopicId(t.id);
         },
@@ -48279,7 +48339,7 @@ function MonsterHeroGame() {
       }, t.title), /*#__PURE__*/React.createElement(ChevronRight, {
         size: 16,
         className: "shrink-0 text-slate-500"
-      })))), cat && topic && /*#__PURE__*/React.createElement("div", {
+      }))))), cat && topic && /*#__PURE__*/React.createElement("div", {
         className: "space-y-3.5 pb-2"
       }, renderHelpBlocks(topic.blocks, cat.color), topic.launch === 'battleTutorial' && /*#__PURE__*/React.createElement("button", {
         onClick: () => startBattleTutorial('HOME'),
@@ -48291,10 +48351,10 @@ function MonsterHeroGame() {
         className: "pt-1 flex gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setHelpTopicId(null),
-        className: "flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
+        className: "min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
       }, "\u9805\u76EE\u4E00\u89A7\u3078"), nextTopic && /*#__PURE__*/React.createElement("button", {
         onClick: () => setHelpTopicId(nextTopic.id),
-        className: "flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2",
+        className: "min-h-[48px] flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2",
         style: {
           backgroundColor: cat.color
         }
