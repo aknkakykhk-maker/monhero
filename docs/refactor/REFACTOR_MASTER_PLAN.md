@@ -123,6 +123,9 @@
 
 ### STEP 5: バトル計算の一本化
 
+> 現状の分岐を写した作業表: [`BATTLE_DAMAGE_MAP.md`](BATTLE_DAMAGE_MAP.md)(2026-09-06)。ヒット列 9 種のうち式が違うものは無く、
+> 実処理側の「全体連撃」だけ同じ塊が 2 か所にある。
+
 - **目的**: 予測ダメージと実ダメージの二重実装を無くし、勇者特性・固有技の連撃を 1 つの表から読む。
 - **対象**: `getAttackPredictedDmg`(16,313)、`processTurn` の 16,752〜16,790、`getDmg`、`boostsForCardDamage`。
 - **変更内容**:
