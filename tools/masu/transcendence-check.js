@@ -478,7 +478,9 @@ check('二重実行を処理ロックで防ぐ',
 check('保存が済んでから演出を出す（保存失敗時はロックを外して消費しない）', (() => {
   const at = source.indexOf('const executeMasuTranscendence');
   const body = at < 0 ? '' : source.slice(at, at + 2600);
-  return body.indexOf("storeSet('mh_masu_mons'") < body.indexOf('setTranscendAnimation(')
+  // 保存は取引関数(saveStoredValuesOrRollback: 書く→読み戻す→食い違えば全部戻す)を通す
+  return body.indexOf("{ key:'mh_masu_mons'") < body.indexOf('setTranscendAnimation(')
+    && body.indexOf('saveStoredValuesOrRollback(') < body.indexOf('setTranscendAnimation(')
     && body.includes('catch {') && body.includes('transcendProcessingRef.current=false;');
 })());
 check('超越マークは共通コンポーネントを使い回す',
@@ -535,7 +537,7 @@ check('強化画面を開いているあいだは詳細モーダルを重ねな�
   && source.includes('{masuMonDetail&&!MASU_ENHANCE_STATES.includes(gameState)&&')
   && !source.includes("{masuMonDetail&&gameState!=='MASU_ENHANCE'&&"));
 check('超越強化はまとめて振れる（1Pずつ何十回も押させない）',
-  source.includes('data-transcend-unit={unit}') && source.includes("{[1,5,10,'MAX'].map(unit=><button type=\"button\" key={unit} data-transcend-unit=")
+  source.includes('data-transcend-unit={unit}') && source.includes("{[1,5,10,100,'MAX'].map(unit=><button type=\"button\" key={unit} data-transcend-unit=")
   && source.includes('PressRepeatButton aria-label={`${label}の基礎値を上げる`}'));
 // 交換は振り分けと混ざらないよう専用のシートへ分けている
 check('プシュケーの変換は専用のシートで行う',
@@ -551,10 +553,10 @@ check('超越の実は種類を明示選択して1・10・MAXを使う',
   && source.includes('if (amount > 1) { setTranscendFruitConfirmAmount(amount); return; }'));
 check('超越の実の保存は既存2キーを再読込検証し、失敗時は両方を戻してからstateへ反映しない',
   source.includes('const saved = await saveTranscendFruitPair(')
-  && source.includes("getValue('mh_masu_mons', null, false)")
-  && source.includes("getValue('mh_owned_items', null, false)")
-  && source.includes("setValue('mh_masu_mons', beforeMasuMons, false)")
-  && source.includes("setValue('mh_owned_items', beforeOwnedItems, false)")
+  && source.includes("{ key:'mh_masu_mons', before:beforeMasuMons, next:nextMasuMons }")
+  && source.includes("{ key:'mh_owned_items', before:beforeOwnedItems, next:nextOwnedItems }")
+  && source.includes('const saved = await Promise.all(list.map(({ key }) => getValue(key, null, false)));')
+  && source.includes('await Promise.allSettled(list.map(({ key, before }) => setValue(key, before, false)));')
   && source.includes('if (!saved) {')
   && source.includes('transcendFruitProcessingRef.current = true'));
 check('超越の実シートはSafe Area内を縦スクロールでき、ボタンは44px以上',

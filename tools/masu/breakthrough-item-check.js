@@ -159,7 +159,7 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
     execBody.indexOf('if (!result.ok)') < execBody.indexOf('BREAKTHROUGH_ITEM_ID]: result.nextPsyche'));
   check(`${label}: 減らすのは成立後の1回だけ`,
     (execBody.match(/\[BREAKTHROUGH_ITEM_ID\]: result\.nextPsyche/g) || []).length === 1
-    && /storeSet\('mh_owned_items', nextItems, false\)/.test(execBody));
+    && /key:\s*'mh_owned_items',\s*before:\s*ownedItemsRef\.current,\s*next:\s*nextItems\s*\}/.test(execBody));
 
   // 画面表示
   check(`${label}: 限界突破の確認画面に必要数と所持数を出す`,

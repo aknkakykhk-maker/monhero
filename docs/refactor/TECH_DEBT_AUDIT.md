@@ -63,6 +63,7 @@
 - **影響**: どこか1箇所で `storeSet` を書き忘れると「画面上は反映されたが再起動で戻る」。逆に `storeSet` だけ書くと state と食い違う。複数キー更新の途中で例外が出ると片方だけ保存される(超越リセットの書はコメントで順序を明記して回避している = 個別対応)。
 - **方針**: キーごとの「更新関数」(state 更新と保存を1回で行う)を用意し、35 箇所を機械的にではなく1箇所ずつ置き換える。キー名・形式は変えない。
 - **追記(2026-09-06)**: 35 箇所を調べた結果、いまは全部が対になっていた(`masu/masu-save-pairing-check.js` で固定)。複数キーの更新は `saveTranscendFruitPair`(storeSet を注入、読み戻して検証、失敗なら巻き戻し)の形が既にあり、これを他の複数キー更新(購入・報酬・合体)にも広げるのが次の一手。
+- **追記(2026-09-06, STEP 3 3本目)**: 複数キー更新の正本として `saveStoredValuesOrRollback(entries, getValue, setValue)` を `11-masu-progression.jsx` に置いた(全部並列に書く → 全部読み戻して JSON 比較 → 1 つでも違うか例外なら全部 before へ戻す)。`saveTranscendFruitPair` と `saveMarketBalances` はその薄い包みにし、神殿の合体・限界突破・超越・超越交換・転生・再生の 6 箇所を、逐次 `await storeSet(...)` から取引関数へ寄せた(失敗時は既存の catch 経路へ流すだけで、成功時の順序・state 更新・演出は変えていない)。単体の挙動は `masu/save-transaction-check.js` で固定。残る複数キー更新(複数体合体、寄付、マーケット購入の一部、報酬受取)は次の PR で 1 か所ずつ。
 
 ### TD-03 グローバルの実行時上書き(Critical)
 

@@ -243,6 +243,7 @@ const EXPORTED_NAMES = [
   'changeTranscendFruitOwnedCount',
   'consumeTranscendFruit',
   'useTranscendFruitOnMasu',
+  'saveStoredValuesOrRollback',
   'saveTranscendFruitPair',
   'buildMarketItemPurchase',
   'saveMarketBalances',

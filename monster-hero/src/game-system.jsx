@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 30e31798cd9ed73f
+// generated-sha256: a65a69279f307f1a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 18:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 18:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1049,25 +1049,28 @@ const useTranscendFruitOnMasu = (masu, ownedItems, itemId, amount) => {
 };
 // storeSet は保存先側の失敗を返さないことがあるため、2キーとも再読込してから成功とする。
 // 片方でも期待値と違えば、消費前の組を両方へ書き戻して中途半端な保存を残さない。
-const saveTranscendFruitPair = async (beforeMasuMons, beforeOwnedItems, nextMasuMons, nextOwnedItems, getValue, setValue) => {
+// 複数の保存キーをまとめて更新する取引関数。storeGet / storeSet は引数で受け取る
+// (純粋な部品として、検査からも差し替えて呼べるようにするため)。
+//   entries: [{ key, before, next }, ...]
+// 全部を並列に書く → 全部を読み戻して JSON で比べる → 1 つでも食い違うか例外が出たら
+// 全部を before へ戻す(戻しは allSettled で最後まで試みる)。成立したときだけ true。
+// 「マスモンだけ保存されてダイヤが減っていない」のような片方だけの状態を作らないための正本。
+const saveStoredValuesOrRollback = async (entries, getValue, setValue) => {
   const same = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
+  const list = Array.isArray(entries) ? entries : [];
   try {
-    await Promise.all([
-      setValue('mh_masu_mons', nextMasuMons, false),
-      setValue('mh_owned_items', nextOwnedItems, false),
-    ]);
-    const [savedMasuMons, savedOwnedItems] = await Promise.all([
-      getValue('mh_masu_mons', null, false),
-      getValue('mh_owned_items', null, false),
-    ]);
-    if (same(savedMasuMons, nextMasuMons) && same(savedOwnedItems, nextOwnedItems)) return true;
+    await Promise.all(list.map(({ key, next }) => setValue(key, next, false)));
+    const saved = await Promise.all(list.map(({ key }) => getValue(key, null, false)));
+    if (list.every(({ next }, i) => same(saved[i], next))) return true;
   } catch { /* rollback below */ }
-  await Promise.allSettled([
-    setValue('mh_masu_mons', beforeMasuMons, false),
-    setValue('mh_owned_items', beforeOwnedItems, false),
-  ]);
+  await Promise.allSettled(list.map(({ key, before }) => setValue(key, before, false)));
   return false;
 };
+const saveTranscendFruitPair = (beforeMasuMons, beforeOwnedItems, nextMasuMons, nextOwnedItems, getValue, setValue) =>
+  saveStoredValuesOrRollback([
+    { key:'mh_masu_mons', before:beforeMasuMons, next:nextMasuMons },
+    { key:'mh_owned_items', before:beforeOwnedItems, next:nextOwnedItems },
+  ], getValue, setValue);
 const buildMarketItemPurchase = ({ item, gold=0, breederPoints=0, ownedItems={}, quantity=1 } = {}) => {
   const purchaseQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
   const unitCost = Math.max(0, Math.floor(Number(item?.cost) || 0));
@@ -1080,16 +1083,11 @@ const buildMarketItemPurchase = ({ item, gold=0, breederPoints=0, ownedItems={},
   if (currency === 'psyche') nextItems[BREAKTHROUGH_ITEM_ID] = balances.psyche - cost;
   return { ok:true, currency, cost, quantity:purchaseQuantity, gold:currency === 'diamond' ? balances.diamond-cost : balances.diamond, breederPoints:currency === 'breederPoint' ? balances.breederPoint-cost : balances.breederPoint, ownedItems:nextItems };
 };
-const saveMarketBalances = async (beforeGold, beforeItems, nextGold, nextItems, getValue, setValue) => {
-  const same = (actual, expected) => JSON.stringify(actual) === JSON.stringify(expected);
-  try {
-    await Promise.all([setValue('mh_gold', nextGold, false), setValue('mh_owned_items', nextItems, false)]);
-    const [savedGold, savedItems] = await Promise.all([getValue('mh_gold', null, false), getValue('mh_owned_items', null, false)]);
-    if (same(savedGold, nextGold) && same(savedItems, nextItems)) return true;
-  } catch { /* rollback below */ }
-  await Promise.allSettled([setValue('mh_gold', beforeGold, false), setValue('mh_owned_items', beforeItems, false)]);
-  return false;
-};
+const saveMarketBalances = (beforeGold, beforeItems, nextGold, nextItems, getValue, setValue) =>
+  saveStoredValuesOrRollback([
+    { key:'mh_gold', before:beforeGold, next:nextGold },
+    { key:'mh_owned_items', before:beforeItems, next:nextItems },
+  ], getValue, setValue);
 const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
 const REINCARNATE_POINTS = 10;
@@ -15107,11 +15105,12 @@ function MonsterHeroGame() {
     const goldAfter = withBreakthrough ? diamondSummary.diamondAfter : diamondSummary.normalDiamondAfter;
     const nextItems = withBreakthrough ? { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]:breakthroughPlan.nextPsyche } : ownedItemsRef.current;
     try {
-      await Promise.all([
-        storeSet('mh_masu_mons', next, false),
-        storeSet('mh_gold', goldAfter, false),
-        ...(withBreakthrough ? [storeSet('mh_owned_items', nextItems, false)] : []),
-      ]);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:snapshot, next },
+        { key:'mh_gold', before:gold, next:goldAfter },
+        ...(withBreakthrough ? [{ key:'mh_owned_items', before:ownedItemsRef.current, next:nextItems }] : []),
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('fusion save failed');
     } catch { fusionProcessingRef.current=false; return null; }
     masuMonsRef.current=next; ownedItemsRef.current=nextItems;
     setMasuMons(next); setGold(goldAfter); if (withBreakthrough) setOwnedItems(nextItems);
@@ -15176,9 +15175,12 @@ function MonsterHeroGame() {
     // 途中で失敗したら保存もstateも触らないので、誤って減ることはない
     const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: result.nextPsyche };
     try {
-      await storeSet('mh_masu_mons', next, false);
-      await storeSet('mh_gold', result.nextGold, false);
-      await storeSet('mh_owned_items', nextItems, false);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:result.nextGold },
+        { key:'mh_owned_items', before:ownedItemsRef.current, next:nextItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('breakthrough save failed');
       masuMonsRef.current = next;
       ownedItemsRef.current = nextItems;
       setMasuMons(next); setGold(result.nextGold); setOwnedItems(nextItems);
@@ -15206,9 +15208,12 @@ function MonsterHeroGame() {
     const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?result.nextMasu:m);
     const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: result.nextPsyche };
     try {
-      await storeSet('mh_masu_mons', next, false);
-      await storeSet('mh_gold', result.nextGold, false);
-      await storeSet('mh_owned_items', nextItems, false);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:result.nextGold },
+        { key:'mh_owned_items', before:ownedItemsRef.current, next:nextItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('transcendence save failed');
       masuMonsRef.current = next;
       ownedItemsRef.current = nextItems;
       setMasuMons(next); setGold(result.nextGold); setOwnedItems(nextItems);
@@ -15242,8 +15247,8 @@ function MonsterHeroGame() {
     try {
       const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?applied.nextMasu:m);
       const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: applied.nextPsyche };
-      await storeSet('mh_masu_mons', next, false);
-      await storeSet('mh_owned_items', nextItems, false);
+      const saved = await saveTranscendFruitPair(masuMonsRef.current, ownedItemsRef.current, next, nextItems, storeGet, storeSet);
+      if (!saved) throw new Error('transcend exchange save failed');
       masuMonsRef.current = next; ownedItemsRef.current = nextItems;
       setMasuMons(next); setOwnedItems(nextItems);
       setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?applied.nextMasu:prev);
@@ -15370,8 +15375,11 @@ function MonsterHeroGame() {
     setReincarnateError('');
     const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?result.nextMasu:m);
     try {
-      await storeSet('mh_masu_mons', next, false);
-      await storeSet('mh_gold', result.nextGold, false);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:result.nextGold },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('reincarnation save failed');
       masuMonsRef.current = next;
       setMasuMons(next); setGold(result.nextGold);
       addAssistantBond('reincarnate');
@@ -15393,9 +15401,12 @@ function MonsterHeroGame() {
     try {
       const masu=buildRegeneratedMasu(base);
       const next=[...masuMonsRef.current,masu];
-      await storeSet('mh_masu_mons',next,false);
-      await storeSet('mh_gold',gold-cost,false);
-      await storeSet('mh_temple_regeneration_used_v1',true,false);
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:masuMonsRef.current, next },
+        { key:'mh_gold', before:gold, next:gold-cost },
+        { key:'mh_temple_regeneration_used_v1', before:regenerationUsed, next:true },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('regeneration save failed');
       masuMonsRef.current=next; setMasuMons(next); setGold(gold-cost); setRegenerationUsed(true);
       addAssistantBond('regenerate');
       setRegenerationResult({masu,base,cost});
