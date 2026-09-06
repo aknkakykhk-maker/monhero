@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a50243f1202a1e66
+// generated-sha256: 46a926c863e0cf72
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 08:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 08:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13211,9 +13211,18 @@ function MonsterHeroGame() {
   //   (ユーザー指示「止めるまでは増えてくけど止めたらリセットされるみたいな感じで」)。
   // ★数字はモンビーの帯とまったく同じもの(quickRunProgress ＋ quickRunPendingRewards)を使う。
   //   別々に数えると、同じ周回なのに画面によって違う値が出てしまう
-  const quickRunBattleBandNode = gameState==='BATTLE' && isQuickMode(runMode) && autoRepeat===true
-    && quickRunProgress && !quickRunProgress.finished
-    ? (() => {
+  // ★ここは「その場で組み立てる」のではなく「描くときに呼ぶ関数」にする。
+  //   見込み報酬は quickRunPendingRewards() → runRewardMultipliers() を通るが、
+  //   その runRewardMultipliers はこの行よりずっと下で定義されている。
+  //   const で即座に組み立てると ∞ にした瞬間に
+  //   「Cannot access 'runRewardMultipliers' before initialization」で画面が落ちる
+  //   (2026-09-07。実ブラウザ検査 quick-run-battle-band-browser-check.js が拾った。
+  //    CLAUDE.md ⑥ の「描画した瞬間だけ落ちる」と同じ型)。
+  //   関数にしておけば、呼ばれるのは描画のときなので、そのころには全部そろっている。
+  const renderQuickRunBattleBand = () => {
+    if (!(gameState==='BATTLE' && isQuickMode(runMode) && autoRepeat===true
+      && quickRunProgress && !quickRunProgress.finished)) return null;
+    return (() => {
         const pending = quickRunPendingRewards();
         const totalXp = Math.floor(quickRunProgress.xp + pending.xp);
         const totalGold = Math.floor(quickRunProgress.gold + pending.gold);
@@ -13230,8 +13239,8 @@ function MonsterHeroGame() {
             <p className="mt-0.5 text-[8px] leading-tight text-slate-500">AUTO∞を切るまで積み上がります（切ると0から数えなおしです）。</p>
           </section>
         );
-      })()
-    : null;
+      })();
+  };
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -23782,8 +23791,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </div>
                     <div data-ultra-ally-log className="mt-1 h-[42px] overflow-hidden rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center leading-tight">{slotSkill&&<div className="truncate text-[11px] font-black text-indigo-200">{slotSkill.name}</div>}{popups.filter(p=>['hero','life','guts'].includes(p.side)).map(p=><div key={p.id} className={`${p.color} truncate text-sm font-black`}>{p.text}</div>)}</div>
                   </section>
-                  {/* 空いたところへ周回の積み上がりを出す(2026-09-07・ユーザー指示) */}
-                  {quickRunBattleBandNode}
+                  {/* 空いたところへ周回の積み上がりを出す(2026-09-07・ユーザー指示)。
+                      ★中身は描くときに組み立てる(関数で呼ぶ)。上のほうで const にすると、
+                        見込み報酬の計算がまだ定義されておらず ∞ にした瞬間に画面が落ちる */}
+                  {renderQuickRunBattleBand()}
                 </div>
                 <div className="shrink-0 border-t border-white/10 bg-slate-900 p-1">
                   <div className="flex items-center justify-between gap-1 px-1">

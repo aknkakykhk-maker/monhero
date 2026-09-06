@@ -6,7 +6,11 @@
 //   「無限周回時の空いてるスペースにもモンビーの帯のように進捗状況を表示するようにしたい」
 //   「止めるまでは増えてくけど止めたらリセットされるみたいな感じで」
 //
-// ここで守りたいのは3つ。
+// ここで守りたいのは4つ。
+//   0. 中身は「描くときに呼ぶ関数」にする。const で即座に組み立てると、
+//      見込み報酬が通る runRewardMultipliers がまだ定義されておらず、
+//      ∞にした瞬間に「Cannot access 'runRewardMultipliers' before initialization」で
+//      画面が落ちる(2026-09-07に実際に出した。CLAUDE.md ⑥ と同じ型)
 //   1. 数字はモンビーの帯とまったく同じもの(quickRunProgress ＋ quickRunPendingRewards)を使う。
 //      別々に数えると、同じ周回なのに画面によって違う値が出る
 //   2. ∞を切ったら消える(finished を残さない)。モンビー側は「終わったよ」と知らせる役目が
@@ -35,6 +39,14 @@ for (const file of files) {
 
   check(`${rel}: バトル画面の帯がある`, src.includes('data-quick-run-battle-band'));
 
+  // ★中身は描くときに組み立てる。上のほうで const にすると ∞ にした瞬間に落ちる。
+  //   生成物は const が外れて `renderQuickRunBattleBand = () => {` になるので、
+  //   空白を潰したうえで名前と形だけを見る
+  check(`${rel}: 帯は描くときに呼ぶ関数にしている`,
+    compact.includes('renderQuickRunBattleBand=()=>{')
+    && compact.includes('renderQuickRunBattleBand()')
+    && !compact.includes('quickRunBattleBandNode='));
+
   // 出す条件。∞周回中・クイック・バトル画面で、まだ終わっていないときだけ
   check(`${rel}: クイックの∞周回中だけ出す`,
     compact.includes("gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true&&quickRunProgress&&!quickRunProgress.finished"));
@@ -44,7 +56,7 @@ for (const file of files) {
 
   // 数字はモンビーの帯と同じ出どころ
   check(`${rel}: 数字はモンビーの帯と同じものを使う`,
-    /const quickRunBattleBandNode[\s\S]{0,600}quickRunPendingRewards\(\)/.test(src)
+    /const renderQuickRunBattleBand[\s\S]{0,900}quickRunPendingRewards\(\)/.test(src)
     && compact.includes('quickRunProgress.xp+pending.xp')
     && compact.includes('quickRunProgress.gold+pending.gold'));
   // 生成物は日本語を 周目 のように書き出すので、文言ではなく
@@ -57,9 +69,9 @@ for (const file of files) {
 
   // 置き場所。超省エネの上側(空いているところ)であって、ボタンの帯ではない
   check(`${rel}: 超省エネの空いたところへ置いている`,
-    /data-ultra-ally-log[\s\S]{0,900}?quickRunBattleBandNode/.test(src));
+    /data-ultra-ally-log[\s\S]{0,1600}?renderQuickRunBattleBand\(\)/.test(src));
   check(`${rel}: ボタンの帯へ割り込ませていない`,
-    !/quickRunBattleBandNode[\s\S]{0,400}?data-auto-bgm-button/.test(src));
+    !/renderQuickRunBattleBand\(\)[\s\S]{0,400}?data-auto-bgm-button/.test(src));
 
   // 作るのは1か所だけ(2つ書くと片方だけ直す事故になる)
   const defs = (src.match(/data-quick-run-battle-band/g) || []).length;
