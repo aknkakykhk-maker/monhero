@@ -40,10 +40,15 @@ check('反射は渡された最新のライフから引く(ターン開始時の
 const enemyTurnFn = slice('const handleEnemyTurn = async (lastActionType', '  const useEmergency = async () => {');
 check('敵の行動中に、古い enemy.hp を読んでいる箇所が無い',
   !/enemy\.hp/.test(enemyTurnFn), (enemyTurnFn.match(/.{0,40}enemy\.hp.{0,40}/g) || []).join(' 、 '));
+// RAGNAROKの不死(死者の再起)で起き上がったときは、この値へ復活後のライフを入れ直すので
+// const ではなく let。「1か所で出して使い回す」という肝心なところは変わっていない
 check('このターンに削ったぶんを1か所で出して使い回す(撃破判定と敵の行動でずれない)',
-  has('const enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-totalDmg);')
+  has('let enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-totalDmg);')
     && has('resolveEnemyDefeat({remainingHp:enemyHpAfterOurAttacks,damage:totalDmg,distDamage:attackDistDamage})')
     && has('executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);'));
+// 起き上がったあとも同じ値を使い回す(0のままだと、反射でHP0の敵をもう一度倒すことになる)
+check('不死で起き上がったら、その値へ復活後のライフを入れ直す',
+  has('if (enemyRevivedHpRef.current!=null) enemyHpAfterOurAttacks=enemyRevivedHpRef.current;'));
 // 何もしなかったターン(緊急回復)は、こちらのダメージが無いので既定値のままでよい
 check('緊急回復から敵が動くときは既定値のまま(こちらの与ダメが無いため)',
   has("await handleEnemyTurn('none',{},acting,hpAfterRecovery);"));

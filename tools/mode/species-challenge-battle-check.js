@@ -15,7 +15,9 @@ assert(start.includes('extremeRuleSetting(run.difficultyId)') && start.includes(
 // 以前はここで initialBattleDistanceRef.current=0 と slots[0] を決め打ちしており、
 // 種族チャレンジだけ必ず零距離スタートになっていた(他モードは距離を選べる)。
 // 距離を決め打ちに戻すと以下の2つが同時に落ちる
-assert(start.includes("setGameState('PICK_SLOT')") && start.includes('setCurrentPickingMon(hero)'),
+// ラン段階の遷移は advanceRunStage を通す(docs/spec/QUICK_RHYTHM_LINK.md PR3)。
+// PICK_SLOT へ進むという意味は変わっていない
+assert(start.includes("advanceRunStage('PICK_SLOT')") && start.includes('setCurrentPickingMon(hero)'),
   '勇者モンの配置距離は他モードと同じPICK_SLOTで選ばせる');
 // 「もう書いていないこと」を見る検査は、説明のコメントに書いた同じ文字列へ反応してしまう。
 // 実際に動くコードだけを見たいので、行コメントを落としてから判定する
@@ -25,7 +27,7 @@ assert(!/initialBattleDistanceRef\.current\s*=\s*0/.test(startCode) && !/const i
   '出撃時に距離0・スロット0を決め打ちしない');
 // PICK_SLOT で置いたあとは setupMon が距離を確定してアシストカード選択へ合流する
 const setupHero = source.slice(source.indexOf('const setupMon ='), source.indexOf('// 「この編成で開始」'));
-assert(setupHero.includes('initialBattleDistanceRef.current=slotIdx') && setupHero.includes("setGameState('PICK_TEACHING')"),
+assert(setupHero.includes('initialBattleDistanceRef.current=slotIdx') && setupHero.includes("advanceRunStage('PICK_TEACHING')"),
   '選んだ距離をそのまま初期距離にして、既存のアシストカード選択からWAVE1へ合流する');
 // 種族チャレンジは通常の勇者選択(PICK_HERO)を持たないので、PICK_SLOTの選び直しは選択画面へ戻す
 assert(source.includes("if(!mainHero&&speciesChallengeBattleRunRef.current){") && source.includes("setSpeciesChallengeSelection(current=>({...current,step:'confirm'}));"),
@@ -41,7 +43,7 @@ const training = source.slice(source.indexOf('const handleTraining ='), source.i
 const joinPool = source.slice(source.indexOf('const speciesChallengeJoinPool = () =>'), source.indexOf('const joinOfferSize = () =>'));
 assert(joinPool.includes('speciesChallengeUnjoinedAllies(run).map(resolveRosterEntryToMon)'), 'WAVE2/4/6候補はSTEP1D未加入helperとBase/Masu resolverを使う');
 assert(training.includes('const avail=speciesChallengeJoinPool()'), 'WAVE2/4/6の供モン選択はその共通helperから候補を作る');
-assert(training.includes('joinWaves.includes(wave)') && training.includes("setGameState('PICK_ALLY')"), '候補がある加入WAVEだけ既存供モン選択UIを出す');
+assert(training.includes('joinWaves.includes(wave)') && training.includes("advanceRunStage('PICK_ALLY')"), '候補がある加入WAVEだけ既存供モン選択UIを出す');
 assert(training.includes('initBattle(wave+1,slots,ownedUniques,ownedTeachings,nDef)'), '候補なしでも既存の次WAVE開始へ進む');
 
 const setup = source.slice(source.indexOf('const setupMon ='), source.indexOf('// 「この編成で開始」'));
@@ -55,7 +57,7 @@ assert(source.includes('speciesChallengeBattleRun?<button') && source.includes('
 assert(source.includes('data-species-champion-back') && source.includes('openSpeciesChallengeSelection({saveProgress:keepSaving,fromDebug:keepDebug});'), '本番のCHAMPIONからも種族チャレンジ選択へ戻れる');
 const retryFn = source.slice(source.indexOf('const handleRetry = () => {'), source.indexOf('const runResultActionOnce ='));
 assert(retryFn.includes('if (speciesChallengeBattleRunRef.current) {')
-  && retryFn.indexOf('openSpeciesChallengeSelection({ saveProgress: keepSaving, fromDebug: keepDebug });') < retryFn.indexOf("setGameState('PICK_HERO')"), '敗北・リタイアの再挑戦は通常のPICK_HEROへ落ちない');
+  && retryFn.indexOf('openSpeciesChallengeSelection({ saveProgress: keepSaving, fromDebug: keepDebug });') < retryFn.indexOf("advanceRunStage('PICK_HERO')"), '敗北・リタイアの再挑戦は通常のPICK_HEROへ落ちない');
 assert(source.includes('...((SPECIES_CHALLENGE_PUBLIC_RELEASE||debugBattle)?[SPECIES_CHALLENGE_MODE]:[])') && !source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常')).includes('BATTLE_MODE_SPECIES_CHALLENGE'), '共通BATTLE MODEへ入口を出す(公開前はデバッグのときだけ)');
 // 公開の切り替えは1か所だけ。公開後は true のまま(false へ戻すと、
 // すでに遊んだ人の全国ランキングだけが止まる)

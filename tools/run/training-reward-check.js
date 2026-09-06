@@ -141,9 +141,9 @@ check('NIGHTMARE 走り込み 550 (増分100の半分)',
 check('クイックはトレーニング画面へ行かず自動成長する',
   has('} else if (isQuickMode(runMode)) {') && has('beginQuickGrowth();'));
 check('トレーニングを開くのはクイック以外の分岐だけ',
-  (source.match(/setGameState\('REWARD_PICK'\)/g) || []).length === 1);
-check('開くたびに前回の選択を空へ戻す', has('setTrainingPicks([]);\n      setGameState(\'REWARD_PICK\');'));
-const rewardAuto = slice("    if(gameState==='REWARD_PICK'){", "    if(gameState==='PICK_ALLY'){");
+  (source.match(/advanceRunStage\('REWARD_PICK'\)/g) || []).length === 1);
+check('開くたびに前回の選択を空へ戻す', has('setTrainingPicks([]);\n      advanceRunStage(\'REWARD_PICK\');'));
+const rewardAuto = slice("    if(runStage==='REWARD_PICK'){", "    if(runStage==='PICK_ALLY'){");
 check('AUTO OFFではREWARD_PICKを自動処理しない', rewardAuto.includes('if(!autoBattleRef.current)return;'));
 check('AUTO ONのREWARD_PICKは専用ロックで1回だけ処理する',
   has('const autoPostWaveRunningRef = useRef(false);') && has('const autoPostWaveScheduledRef = useRef(false);')
@@ -154,7 +154,7 @@ check('AUTO ONのREWARD_PICKは専用ロックで1回だけ処理する',
 check('AUTOトレーニングは決めたpicksをhandleTrainingへ直接渡す',
   /const picks=chooseAutoTrainingPicks\(autoSettings\.strategy\);\s*handleTraining\(picks\);/.test(rewardAuto));
 check('AUTO後も供モン等の既存遷移を自動選択しない',
-  !slice('// AUTO中にREWARD_PICKへ入ったときだけ', 'const upgradeUnique').includes("setGameState('PICK_ALLY')"));
+  !slice('// AUTO中にREWARD_PICKへ入ったときだけ', 'const upgradeUnique').includes("advanceRunStage('PICK_ALLY')"));
 
 // ---- ③ 画面 ----
 const START = "      {gameState==='REWARD_PICK'&&(()=>{";

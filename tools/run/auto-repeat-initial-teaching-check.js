@@ -66,7 +66,7 @@ check('見つからないときのフォールバック先は今までのラン�
 const confirm = slice('const confirmPickTeaching = (explicitTeaching=null) => {', '// トレーニング(旧「能力覚醒」)を確定する');
 const create = slice('const createRepeatRunTemplate =', 'const resolveRepeatRunTemplate =');
 const startRun = slice('const startRunFromRepeatTemplate =', 'const updateNoticeVisible =');
-const autoPick = slice("if(gameState==='PICK_TEACHING'){", "if(gameState==='UPGRADE_SKILL'){");
+const autoPick = slice("if(runStage==='PICK_TEACHING'){", "if(runStage==='UPGRADE_SKILL'){");
 
 check('テンプレートは安定したIDだけを持つ（カードそのものは持たない）',
   create.includes('initialTeachingId:null')
@@ -85,7 +85,7 @@ check('∞がONでなくても覚える（autoRepeatの状態を見ない）', !
 // 1周目でも覚えられるように、テンプレートは PICK_TEACHING へ入る前に作られている
 check('1周目もPICK_TEACHINGへ入る前にテンプレートができている', (() => {
   const at = source.indexOf('repeatRunTemplateRef.current=createRepeatRunTemplate({ hero:m, allies:[] });');
-  const next = source.indexOf("setGameState('PICK_TEACHING')", at);
+  const next = source.indexOf("advanceRunStage('PICK_TEACHING')", at);
   return at > 0 && next > at && next - at < 200;
 })());
 check('次の周回でもテンプレートを持ち越す（IDは正規化して渡す）',
