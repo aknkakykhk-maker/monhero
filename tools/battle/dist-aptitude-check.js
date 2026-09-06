@@ -22,11 +22,15 @@ const has = (needle) => source.includes(needle);
 
 // --- 補正値の計算は本番の定義をそのまま動かして確かめる ---
 const grab = (startNeedle, endNeedle) => source.slice(source.indexOf(startNeedle), source.indexOf(endNeedle));
-const ctx = {};
+// getMonsterAptPct はナイトメアの符号付き補正を通すが、この検査は通常難易度の換算だけを見るので素通しにする
+const ctx = { applyNightmareSignedModifier: (value) => value };
 vm.createContext(ctx);
 vm.runInContext([
   grab('const RANGE_LABELS =', 'const rangeAttackDamageMultiplier'),
-  grab('const DIST_APTITUDE_GRADES =', 'const DIST_APTITUDE_COLOR'),
+  // DIST_APTITUDE_GRADES(前方)と DIST_APTITUDE_MULT(後方)は離れているので、間を丸ごと取らず行単位で取る
+  // (間には RANGE_LABELS など既に取った定義が入っており、二重宣言になる)
+  source.match(/const DIST_APTITUDE_GRADES = [^\n]+\n/)[0],
+  grab('const DIST_APTITUDE_MULT', 'const DIST_APTITUDE_COLOR'),
   grab('const aptGradeToPct =', '// マスモンが「これまでに得たはずの強化ポイント総数」'),
   'globalThis.__m={aptGradeToPct,getMonsterAptPct,formatAptPct,formatAptBonus};',
 ].join('\n'), ctx);

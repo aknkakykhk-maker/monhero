@@ -5,7 +5,7 @@ const vm = require('vm');
 const path = require('path');
 const source = fs.readFileSync(path.join(TOOLS_DIR, '..', 'monster-hero', 'src', 'game-system.jsx'), 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
-const context = { React: { Component: class { setState() {} }, PureComponent: class { setState() {} }, createElement:()=>null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
+const context = { BREEDER_MARKET_ITEMS: [] /* 本体が読み込み時に push するため空で用意 */, React: { Component: class { setState() {} }, PureComponent: class { setState() {} }, createElement:()=>null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
 vm.createContext(context);
 vm.runInContext(`${prefix}\nglobalThis.__pasture={normalizeHomePastureIds};`, context);
 const { normalizeHomePastureIds } = context.__pasture;

@@ -68,6 +68,9 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext([
   "const INHERITED_UNIQUE_LEVEL_KEY_PREFIX = 'inhId:';",
+  // mergeMasuIntoMon が超越ぶんの正規化を呼ぶので、その定義も本体から取る
+  slice('const TRANSCEND_STAT_KEYS =', 'const isTranscended'),
+  slice('const normalizeTranscendStatPoints =', '// --- マスモンの絆レベル'),
   slice('const inheritedUniqueLevelKey = (unique) =>', 'const isValidInheritedUnique'),
   slice('const OWN_UNIQUE_KEY =', '// 構造ベースの冪等移行'),
   slice('const resolveInheritedUniqueDefinition = (unique) =>', '// 継承固有技は、ラン内stateがまだ無い間も'),

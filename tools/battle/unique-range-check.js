@@ -12,6 +12,8 @@ const check = (label, ok) => {
 
 const uniqueChunk = source.slice(source.indexOf('const INHERITED_UNIQUE_LEVEL_KEY_PREFIX'), source.indexOf('// 転生では個体'));
 const uniqueContext = {
+  // 切り出した範囲に「虹の超越の実」を BREEDER_MARKET_ITEMS.push する処理が含まれるので、空の一覧を置く
+  BREEDER_MARKET_ITEMS: [],
   INITIAL_MASU_LEVEL_CAP:30,
   MAX_UNIQUE_SKILL_LEVEL:8,
   // 切り出した範囲に限界突破の★の定数が含まれるので、外にある値だけ補う
@@ -25,7 +27,9 @@ const uniqueContext = {
 vm.createContext(uniqueContext);
 // 超越(Lv上限を伸ばす育成)の定数・正規化。切り出した範囲の normalizeMasuProgression が使う
 const transcendChunk = source.slice(source.indexOf('const TRANSCEND_LEVEL_CAP ='), source.indexOf('// --- マスモンの絆レベル'));
-vm.runInContext(`${transcendChunk}\n${uniqueChunk};globalThis.out={uniqueLineageId,normalizeInheritedUniqueLineages,migrateInheritedUniqueLevelIds,resolveInheritedUniqueLevel};`, uniqueContext);
+// 切り出した範囲の normalizeMasuProgression が自動連続突破の上限Lvの正規化も呼ぶので、その定義も渡す
+const autoRepeatChunk = source.slice(source.indexOf('const AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL'), source.indexOf('const MAX_UNIQUE_SKILL_LEVEL'));
+vm.runInContext(`${transcendChunk}\n${autoRepeatChunk}\n${uniqueChunk};globalThis.out={uniqueLineageId,normalizeInheritedUniqueLineages,migrateInheritedUniqueLevelIds,resolveInheritedUniqueLevel};`, uniqueContext);
 const { uniqueLineageId, normalizeInheritedUniqueLineages, migrateInheritedUniqueLevelIds, resolveInheritedUniqueLevel } = uniqueContext.out;
 
 check('表示名ではなく固有技系統ID(monId/lineageId)を使う',
