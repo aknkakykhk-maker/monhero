@@ -25,7 +25,8 @@ for (const difficulty of ['GrandMaster', 'Hell', 'Legend']) {
   }
 }
 
-assert(source.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,extremeRunRef.current?(EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING).power:null)'), 'battle must use shared enemy creation and override power for the selected extreme difficulty');
+// 極限の段階ごとに倍率が違うため、選んだ難易度の設定(battleSetting)の強さとターン倍率を渡す。GOD だけ神威の倍率も掛ける
+assert(source.includes(':createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier)') && source.includes('?createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier*divineEnemyMultiplier)'), 'battle must use shared enemy creation and override power for the selected extreme difficulty');
 const enemyFactoryBlock = source.slice(source.indexOf('const createBattleEnemy ='), source.indexOf('\n};', source.indexOf('const createBattleEnemy =')) + 3);
 const createBattleEnemy = Function(
   'ENEMY_SEQUENCE', 'ENEMY_DATA', 'normalizeBattleDifficulty', 'DIFFICULTY_SETTINGS',
