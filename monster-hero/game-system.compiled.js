@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b9d32daa75860eec
+// source-sha256: e5ad5e40931ac240
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cd2b5a4e712b01b7
+// generated-sha256: b14469599fd7c000
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 20:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 21:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8748,9 +8748,16 @@ const DIST_APTITUDE_COLOR = {
 // これを true にしたことで、HOMEの「準備中」がプレオープンの導線に変わり、
 // ヘルプの項目・更新履歴・助手の告知も同時に出るようになっている
 const RHYTHM_MODE_PUBLIC_RELEASE = true;
+// クイック∞周回とモンビーの連携(docs/spec/QUICK_RHYTHM_LINK.md)。
+// 裏で周回が続くところまでは動くが、周回の進捗表示・モンビーからの開始・
+// 演奏中ぶんの追いつきがまだ無いので、遊ぶ人には案内しない。
+// ★出来上がってからここを true にする(2026-09-06・ユーザー指示「出来てからにして」)。
+// true にすれば、ヘルプの項目・更新履歴・助手の告知が同時に出る
+const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = false;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
-  rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE
+  rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
+  quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE
 };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
@@ -22743,6 +22750,13 @@ function MonsterHeroGame() {
   const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode) && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
   // ランの画面を描かずに段階だけ進めてよいか。モンビーを開いている間はそのまま進める
   const runBackgroundAllowed = rhythmScreenOpen;
+  // ★advanceRunStage は setTimeout や await の後から呼ばれる。
+  //   そこで値をそのまま読むと「バトル画面で作られたときの古い値」を掴んでしまい、
+  //   モンビーへ移った直後に敵を倒した瞬間、画面がバトルへ飛び戻る
+  //   (2026-09-06・ユーザー報告「モンビーを押すと一瞬で戻る」の原因)。
+  //   呼ばれた時点の値で判断するため、必ずこの控えを見る
+  const runBackgroundAllowedRef = useRef(false);
+  runBackgroundAllowedRef.current = runBackgroundAllowed;
   // ランの段階を1つ進める唯一の入口。
   // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
   // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
@@ -22750,7 +22764,7 @@ function MonsterHeroGame() {
   const advanceRunStage = stage => {
     runStageRef.current = stage;
     setRunStage(stage);
-    if (!runBackgroundAllowed) setGameState(stage);
+    if (!runBackgroundAllowedRef.current) setGameState(stage);
   };
   // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
   const clearRunStage = () => {

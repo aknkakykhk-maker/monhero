@@ -34,7 +34,10 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // まだ作りかけ(周回の進捗表示・モンビーからの開始・演奏中ぶんの追いつきが未実装)。
+    // QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで、この項目も助手の告知も出さない
     date: "2026-09-06 21:40", type:'update', title:'∞周回を止めずにモンヒロビートで遊べるようにしました', status:'new',
+    releaseFlag:'quickRhythmLink',
     assistantNotice:{id:'update_notice_quick_rhythm_link_v1',type:'content'},
     items:[
       'クイックの∞周回中、バトル画面のAUTOボタンの下に「🎵 モンビー」が出ます。ここから移ると、周回を止めずにモンヒロビートを開けます。',

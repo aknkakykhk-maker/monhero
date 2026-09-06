@@ -7,7 +7,8 @@
 // 見ているもの:
 //   ① ∞周回中のバトル画面に「モンビーへ」の入口が出る
 //   ② モンビーへ移っても周回が止まらない(WAVEかターンが進む)
-//   ③ モンビーからバトルへ戻れる(段階の続きから)
+//   ③ 敵を倒しても画面がバトルへ飛び戻らない
+//   ④ モンビーからバトルへ戻れる(段階の続きから)
 //
 // 「止まらないこと」は静的検査では拾えない。条件式が正しくても動かないことがあるので、
 // ここは必ず実ブラウザで見る。
@@ -143,6 +144,12 @@ const seed = () => {
     await dismissOverlays();
     check('モンビーへ移れる（周回を止めずに）', await onRhythmHome());
     await page.waitForTimeout(WATCH_MS);
+    // ★このあいだに敵を何体か倒しているはず。倒したときの段階の切り替えで
+    //   画面がバトルへ飛び戻らないことを確かめる。
+    //   advanceRunStage が古い値を掴んでいると、ここでモンビーから追い出される
+    //   (2026-09-06・ユーザー報告「モンビーを押すと一瞬で戻る」)
+    check('敵を倒しても画面がバトルへ飛び戻らない', await onRhythmHome(),
+      await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 60)));
     // いったんバトルへ戻して、進んだかどうかを読む
     await clickSelector('[data-rhythm-back]');
     await page.waitForTimeout(2000);
