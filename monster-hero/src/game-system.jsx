@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8000e6ffc3d7dabe
+// generated-sha256: 48dbb42ede2dfcfd
 // ============================================================
 // ---- part: 10-shared.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 13:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 13:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8800,13 +8800,29 @@ const screenOrientationApi=()=>{
   const o=window.screen&&window.screen.orientation;
   return (o&&typeof o.lock==='function')?o:null;
 };
-// 端末そのものがいま横向きか。screen.orientation が無い端末では画面の比率で見る
+// 端末そのものがいま横向きか。
+//
+// 【なぜ画面の形を先に見るか】(2026-09-06・Galaxy Z Fold6での報告)
+// 折りたたみを開いた内側の画面のような**大きい画面では、端末が向きの指定を無視することがある**。
+// やっかいなのは、無視されても lock() は例外を投げず、素通りして成功したように見えること。
+// このとき screen.orientation.type だけが「横になった」と言い、画面は1ミリも動かない、
+// ということが起きうる。type を信じると「回った」と勘違いして、そこで話が終わってしまう。
+//
+// 画面の形(ビューポートの幅と高さ)は、遊ぶ人が実際に見ているものそのもので、
+// 勘違いのしようがない。CSSのメディアクエリ (orientation: landscape) や Tailwind の
+// landscape: も同じ基準なので、こちらへそろえておけば画面の並びと判断が食い違わない。
+// screen.orientation.type は、どちらも使えない環境のための最後の手段に下げた。
+//
+// これがあるから waitForScreenOrientation が「受け付けられたのに回っていない」を見抜けて、
+// 自前で回すほう(二の矢)へ進める。
 const deviceIsLandscape=()=>{
   if(typeof window==='undefined')return false;
+  if(typeof window.matchMedia==='function')return window.matchMedia('(orientation: landscape)').matches;
+  const w=Number(window.innerWidth),h=Number(window.innerHeight);
+  if(w>0&&h>0)return w>h;
   const o=window.screen&&window.screen.orientation;
   if(o&&typeof o.type==='string')return o.type.indexOf('landscape')===0;
-  if(typeof window.matchMedia==='function')return window.matchMedia('(orientation: landscape)').matches;
-  return window.innerWidth>window.innerHeight;
+  return false;
 };
 // 遊ぶ人から見ていま横向きか。自前で回しているあいだは端末の向きと**逆**になる
 // (端末は縦のまま、絵だけ90度回して横向きに見せているため)。

@@ -67,10 +67,27 @@ check('自前回転の変換(RHYTHM_VIEW_ROTATION)を本物から読めている
 
 // 実機に近い偽のブラウザ。
 //   sensor … 本体を実際にどちら向きに持っているか(固定が外れたときに戻る向き)
+// screen … 画面の種類。折りたたみ端末(Galaxy Z Fold6)を再現するために足した。
+//   'phone' … ふつうのスマホ(400×800)
+//   'inner' … 折りたたみを**開いた**内側の画面。1856×2160 のほぼ正方形(縮小して 856×1080)。
+//             ここがいちばん大事なところで、**大きい画面では向きの指定が無視される**。
+//             lock() は例外も投げず「受け付けた」ように見えるのに、画面は1ミリも回らない。
+//   'cover' … 折りたたんだ外側の画面。細長いふつうのスマホと同じで lock は効く。
 const makeWorld = ({
   hasLock = true, lockFails = false, requireFullscreenForLock = true,
-  sensor = 'portrait', noFullscreen = false,
+  sensor = 'portrait', noFullscreen = false, screenKind = 'phone',
+  // shapeFollowsType=false … type だけ変わって**画面の形は動かない**端末の再現。
+  //   大きい画面で向きの指定が無視されると、こういう見え方になることがある。
+  //   「端末が言う向き」を信じると、回っていないのに「できた」で終わってしまう。
+  shapeFollowsType = true,
 } = {}) => {
+  // 内側の画面は大きいので、端末側が向きの指定を黙って無視する
+  const ignoresLock = screenKind === 'inner';
+  const SIZE = {
+    phone: { portrait: [400, 800], landscape: [800, 400] },
+    inner: { portrait: [856, 1080], landscape: [1080, 856] },
+    cover: { portrait: [320, 800], landscape: [800, 320] },
+  }[screenKind];
   const calls = [];
   const listeners = { orientation: [], media: [], window: [], document: [] };
   const state = { type: `${sensor}-primary`, fullscreen: null, locked: null, sensor };
@@ -92,6 +109,10 @@ const makeWorld = ({
       if (lockFails) throw new Error('NotSupportedError');
       // Androidのブラウザは全画面のあいだしか固定を許さない
       if (requireFullscreenForLock && !state.fullscreen) throw new Error('SecurityError');
+      // 大きい画面(折りたたみを開いた内側)では、受け付けた顔をして何も起きない。
+      // 例外も投げないので、呼んだ側からは成功と見分けが付かない。
+      // 効いていないのだから固定も持っていない(本体を回せば素直に付いてくる)
+      if (ignoresLock) return;
       state.locked = want;
       setType(`${want}-primary`);
     };
@@ -120,10 +141,11 @@ const makeWorld = ({
   }
   const windowStub = {
     screen: { orientation },
-    get innerWidth() { return state.type.startsWith('landscape') ? 800 : 400; },
-    get innerHeight() { return state.type.startsWith('landscape') ? 400 : 800; },
+    get innerWidth() { return SIZE[shapeFollowsType ? (state.type.startsWith('landscape') ? 'landscape' : 'portrait') : sensor][0]; },
+    get innerHeight() { return SIZE[shapeFollowsType ? (state.type.startsWith('landscape') ? 'landscape' : 'portrait') : sensor][1]; },
     matchMedia: (q) => ({
-      get matches() { return /landscape/.test(q) === state.type.startsWith('landscape'); },
+      // メディアクエリは「幅が高さより大きいか」で決まる。type ではない
+      get matches() { return /landscape/.test(q) === (windowStub.innerWidth > windowStub.innerHeight); },
       addEventListener: (t, fn) => { if (t === 'change') listeners.media.push(fn); },
       removeEventListener: (t, fn) => { listeners.media = listeners.media.filter(f => f !== fn); },
     }),
@@ -262,6 +284,75 @@ const makeWorld = ({
     check('縦になっている', w.orientationIsLandscape() === false);
     void api;
   }
+  // ---- ④-3 折りたたみ端末(Galaxy Z Fold6)----
+  // 報告された端末はこれだった(2026-09-06)。この端末には画面が2つある。
+  //   外側(たたんだまま) … 細長いふつうのスマホ。向きの固定は効く
+  //   内側(開いたとき)   … 1856×2160 のほぼ正方形。**大きい画面なので向きの指定が無視される**
+  // 内側では lock() が例外も投げずに素通りし、画面は1ミリも回らない。
+  // 呼んだ側からは成功と見分けが付かないので、前の作りは「できた」と返して終わっていた。
+  // 「横にはできるけど縦にはできない**ときがある**」の「ときがある」は、
+  // たたんだまま遊べば効いて、開いて遊ぶと効かない、という出方だったと考えると筋が通る。
+  {
+    // 外側の画面: ふつうのスマホと同じで、端末ごと回る
+    const cover = makeWorld({ screenKind: 'cover', sensor: 'portrait' });
+    check('たたんだ外側の画面では端末ごと回る',
+      (await cover.applyScreenOrientation('landscape')) === 'device');
+    check('外側の画面では自前で回す必要がない', cover.rotation.get() === 0);
+    check('外側の画面では縦へも戻せる',
+      (await cover.applyScreenOrientation('portrait')) === 'device'
+      && cover.orientationIsLandscape() === false);
+  }
+  {
+    // 内側の画面: lock は素通り。ここが報告そのもの
+    const inner = makeWorld({ screenKind: 'inner', sensor: 'portrait' });
+    check('開いた内側の画面は、はじめは縦', inner.orientationIsLandscape() === false);
+    const toLandscape = await inner.applyScreenOrientation('landscape');
+    check('内側の画面では端末が回ってくれないと気づく（受け付けた顔をしても信じない）',
+      toLandscape === 'forced', `how=${toLandscape}`);
+    check('端末は実際に回っていない', inner.deviceIsLandscape() === false, inner.state.type);
+    check('それでも遊ぶ人から見れば横になる', inner.orientationIsLandscape() === true);
+    check('自前で回している', inner.rotation.active() === true, `angle=${inner.rotation.get()}`);
+
+    // そして本題。ここが「縦にできない」と言われていたところ
+    const back = await inner.applyScreenOrientation('portrait');
+    check('内側の画面でも縦へ戻せる（報告そのもの）',
+      inner.orientationIsLandscape() === false, `how=${back} / ${inner.state.type}`);
+    check('縦へ戻したら自前回転もやめている', inner.rotation.get() === 0);
+
+    // 離れるときの後始末
+    const leaving = makeWorld({ screenKind: 'inner', sensor: 'portrait' });
+    await leaving.applyScreenOrientation('landscape');
+    check('内側の画面で横にしたまま離れたら戻す', leaving.releaseScreenOrientation() === true);
+    check('離れたら自前回転も戻る', leaving.rotation.get() === 0);
+    check('離れたら縦に見える', leaving.orientationIsLandscape() === false);
+  }
+  {
+    // いちばん質の悪い形。lock() が受け付けられて type まで「横になった」と言うのに、
+    // 画面の形は1ミリも動かない(大きい画面で向きの指定が無視されるとこうなる)。
+    // 「端末が言う向き」を信じると、回っていないのに「できた」で話が終わる。
+    // 画面の形で見ているから、回っていないと見抜いて自前で回すほうへ進める。
+    const liar = makeWorld({ screenKind: 'inner', sensor: 'portrait', shapeFollowsType: false });
+    const api = liar.screenOrientationApi();
+    api.lock = async (want) => { liar.state.type = `${want}-primary`; };  // 形は変えない
+    const how = await liar.applyScreenOrientation('landscape');
+    check('端末が「横になった」と言っても、画面が動いていなければ信じない',
+      how === 'forced', `how=${how} / type=${liar.state.type}`);
+    check('そのときは自前で回して、ちゃんと横にする',
+      liar.orientationIsLandscape() === true && liar.rotation.active() === true,
+      `angle=${liar.rotation.get()}`);
+  }
+  {
+    // 開いたまま横にしたあと、たたんで外側の画面へ移ると resize が飛ぶ。
+    // そのとき本体が横向きなら端末が自分で横になるので、自前回転は要らなくなる
+    const folding = makeWorld({ screenKind: 'inner', sensor: 'portrait' });
+    await folding.applyScreenOrientation('landscape');
+    check('開いたまま自前で横にしている', folding.rotation.active() === true);
+    folding.turnDevice('landscape');
+    check('本体を横に持ち替えたら自前回転はやめる', folding.rotation.get() === 0,
+      `angle=${folding.rotation.get()}`);
+    check('持ち替えたあとも横のまま', folding.orientationIsLandscape() === true, folding.state.type);
+  }
+
   // ---- ④-2 座標の読み替えが往復で一致する ----
   // ここがずれると「押した場所と違うレーンが鳴る」「ノーツが横に流れる」になる。
   // 実際に遊べるかどうかは、この一致にかかっている。
