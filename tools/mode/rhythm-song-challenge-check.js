@@ -57,7 +57,10 @@ ok('先行公開の曲が複数そろっている',songs.length>=5,`${songs.leng
 
 // 難易度ごとの散らばり。EASYは元の数字が小さいので、求める幅も小さくしてある。
 // 「全部同じ」を防ぐのが目的なので、ここは**下限**だけを見る（上限は付けない）。
-const MIN_SPREAD={EASY:2,NORMAL:3,HARD:3,EXPERT:4,MASTER:5};
+// 2026-09-06、ユーザー指摘「どの曲も難易度が似たりよったり。もっと振れ幅がほしい」を受けて
+// 歯ごたえを強めて使うようにしたので、要求する差もそのぶん引き上げた。
+// ここを下げるのは「また団子に戻す」ことなので、落ちたら譜面の作り方を見直す。
+const MIN_SPREAD={EASY:3,NORMAL:3,HARD:6,EXPERT:7,MASTER:10};
 for(const difficulty of difficulties){
   const levels=songs.map(song=>song.levels[difficulty]).filter(Number.isFinite);
   if(levels.length<songs.length){ok(`${difficulty}のレベルが全曲ぶんそろっている`,false,`${levels.length}/${songs.length}曲`);continue;}
@@ -89,11 +92,24 @@ ok('下限（間延びしない最低量）は歯ごたえで下げない',
 const REFERENCE=/CHALLENGE_REFERENCE=Object\.freeze\(\{bpm:([\d.]+),onsetsPerSecond:([\d.]+),beatClarity:([\d.]+)\}\)/.exec(generator);
 const EXPONENT=/CHALLENGE_EXPONENT=Object\.freeze\(\{bpm:([\d.]+),onsets:([\d.]+),beatClarity:([\d.]+)\}\)/.exec(generator);
 const RANGE=/CHALLENGE_RANGE=Object\.freeze\(\{min:([\d.]+),max:([\d.]+)\}\)/.exec(generator);
+const RATIO_RANGE=/CHALLENGE_RATIO_RANGE=Object\.freeze\(\{min:([\d.]+),max:([\d.]+)\}\)/.exec(generator);
+const GAIN=/CHALLENGE_GAIN=([\d.]+);/.exec(generator);
 ok('歯ごたえの基準・効き・上下の挟みが生成器に書いてある',!!(REFERENCE&&EXPONENT&&RANGE));
-if(REFERENCE&&EXPONENT&&RANGE){
+ok('測れた差を強めて使っている（CHALLENGE_GAIN が1より大きい）',!!GAIN&&+GAIN[1]>1,
+  GAIN?`CHALLENGE_GAIN=${GAIN[1]}`:'生成器に CHALLENGE_GAIN がありません');
+ok('1項目だけが暴れても全部が決まらないようにしてある（項目ごとの挟み）',!!RATIO_RANGE,
+  RATIO_RANGE?`CHALLENGE_RATIO_RANGE ${RATIO_RANGE[1]}〜${RATIO_RANGE[2]}`:'生成器に CHALLENGE_RATIO_RANGE がありません');
+ok('歯ごたえを譜面の中身（種類・細さ）にも効かせている（薄い曲を軽くする方向へ）',
+  /CHALLENGE_VOCABULARY_EXPONENT/.test(generator)
+  &&/narrowRate:base\.narrowRate\*vocab/.test(generator)
+  &&/const vocab=Math\.min\(1,Math\.pow\(challengeForProfile,CHALLENGE_VOCABULARY_EXPONENT\)\)/.test(generator));
+if(REFERENCE&&EXPONENT&&RANGE&&RATIO_RANGE&&GAIN){
   const ref={bpm:+REFERENCE[1],ops:+REFERENCE[2],clarity:+REFERENCE[3]};
   const exp={bpm:+EXPONENT[1],ops:+EXPONENT[2],clarity:+EXPONENT[3]};
   const range={min:+RANGE[1],max:+RANGE[2]};
+  const ratioRange={min:+RATIO_RANGE[1],max:+RATIO_RANGE[2]};
+  const gain=+GAIN[1];
+  const clampRatio=value=>Math.max(ratioRange.min,Math.min(ratioRange.max,value));
   // 曲id → 解析JSONの名前。ランタイムの曲idから引く。
   const AUDIO={mf_ichika_mix:'atsu-cup-theme',monster_hero:'monster-hero-theme',
     six_eternel_remix:'six-eternel-remix-beat',stay_with_me:'pandora-boss',kiki_issen:'eiki-boss',
@@ -106,10 +122,10 @@ if(REFERENCE&&EXPONENT&&RANGE){
     if(!AUDIO[song.id]||!fs.existsSync(file)){ok(`${song.name} の音源解析がある`,false,song.id);continue;}
     const audio=JSON.parse(fs.readFileSync(file,'utf8'));
     const seconds=Number(audio.durationMs)/1000;
-    const raw=Math.pow(Number(audio.timing.bpm)/ref.bpm,exp.bpm)
-      *Math.pow((Number(audio.summary.onsetCount)/seconds)/ref.ops,exp.ops)
-      *Math.pow(Number(audio.summary.beatClarity.ratio)/ref.clarity,exp.clarity);
-    factors.push({name:song.name,factor:Math.max(range.min,Math.min(range.max,raw))});
+    const raw=clampRatio(Math.pow(Number(audio.timing.bpm)/ref.bpm,exp.bpm))
+      *clampRatio(Math.pow((Number(audio.summary.onsetCount)/seconds)/ref.ops,exp.ops))
+      *clampRatio(Math.pow(Number(audio.summary.beatClarity.ratio)/ref.clarity,exp.clarity));
+    factors.push({name:song.name,factor:Math.max(range.min,Math.min(range.max,Math.pow(raw,gain)))});
   }
   const values=factors.map(entry=>+entry.factor.toFixed(3));
   // 見たいのは「曲ごとに歯ごたえが変わること」であって、
@@ -117,13 +133,14 @@ if(REFERENCE&&EXPONENT&&RANGE){
   // 2026-09-06、曲が11曲になったところで 綺季一閃 と 呪われた騎士の時計仕掛け が
   // どちらも 0.983 になり、この検査が落ちた。別々の音源・別々の解析から出た偶然の一致で、
   // 「テンポも密度も拍のはっきりさも似ている2曲」というだけ。直すところが実装側に無い。
-  // 曲が増えるほど、挟み込んだ幅(0.78〜1.26)の中では一致が普通に起きる。
+  // 曲が増えるほど、挟み込んだ幅の中では一致が普通に起きる。
   // そこで「値が散らばっているか」を見る形にした。歯ごたえが定数へ潰れる
   // (＝曲ごとの差が無くなる)本当の壊れ方は、幅と種類の両方で必ず捕まえられる。
+  // 2026-09-06、差を強めて使うようにしたので要求する幅も 0.3 → 0.6 へ上げた。
   const spread=Math.max(...values)-Math.min(...values);
   const distinct=new Set(values).size;
-  ok('歯ごたえが曲ごとに散らばっている',spread>=.3&&distinct>=Math.ceil(values.length*.8),
-    `幅 ${spread.toFixed(3)}(0.3以上) / 種類 ${distinct}(${values.length}曲中 ${Math.ceil(values.length*.8)}以上) — `
+  ok('歯ごたえが曲ごとに散らばっている',spread>=.6&&distinct>=Math.ceil(values.length*.8),
+    `幅 ${spread.toFixed(3)}(0.6以上) / 種類 ${distinct}(${values.length}曲中 ${Math.ceil(values.length*.8)}以上) — `
     +factors.map(entry=>`${entry.name} ${entry.factor.toFixed(3)}`).join(' / '));
   // 挟みに全部張り付くと差が消える。実際に効いている（＝中に収まっている）ことを見る。
   const inside=factors.filter(entry=>entry.factor>range.min+1e-9&&entry.factor<range.max-1e-9);

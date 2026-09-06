@@ -47,7 +47,7 @@ const LEVEL_ANCHOR=Object.freeze({
 // 自動修正が1拍前まで動かせる／拍が立たない曲は16分裏を絞る／曲ごとの歯ごたえで量を変える）
 // ので、基準の譜面も変わった。--calibrate で取り直した値。
 // 基準(Monster Hero 候補v3 MASTER = 30)そのものは動かしていない。
-const LEVEL_SCALE=24.9087;
+const LEVEL_SCALE=23.2739;
 // レベルは仕事量に**そのまま比例**させる（曲がりを付けない）。
 // こうしておくと「Lv.が2倍なら忙しさも2倍」と説明でき、
 // 曲が増えても物差しがぶれない。上限は先の曲のために広く取っておく。
@@ -234,6 +234,28 @@ const chartLevel=chart=>{
   return {level:levelFromRaw(strain.raw),strain};
 };
 
+// --- 1曲ぶんのレベルを、難易度の順に並べて出す ---
+// レベルは整数なので、生の値がちゃんと上がっていても丸めると同じ数字になることがある。
+// 2026-09-06、Stay With Me が EASY 生2.107(→Lv.5) / NORMAL 生2.421(→Lv.5) となり、
+// 曲えらびに「EASY Lv.5 / NORMAL Lv.5」と同じ数字が2つ並んだ。
+// 譜面は確かにNORMALのほうが重い（ノーツ271→309・フリック0→19）のに、
+// プレイヤーには「同じ難しさ」または「表示の不具合」に見える。
+// そこで、**生の値が確かに上なら、表示のレベルも必ず1以上上げる**。
+// 生の値そのものは変えないので、内訳（--verbose）を見れば本当の値が分かる。
+const songLevels=(song,difficulties)=>{
+  const out={};
+  let previous=null;
+  for(const difficulty of difficulties){
+    const {level,strain}=chartLevel(song.difficulties[difficulty.id]);
+    if(!strain){out[difficulty.id]={level:0,strain:null};continue;}
+    let shown=level;
+    if(previous&&strain.raw>previous.raw&&shown<=previous.level)shown=Math.min(LEVEL_MAX,previous.level+1);
+    out[difficulty.id]={level:shown,strain};
+    previous={level:shown,raw:strain.raw};
+  }
+  return out;
+};
+
 // --- ランタイムの曲を読む ---
 const loadRuntimeSongs=()=>{
   const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),'utf8');
@@ -250,8 +272,9 @@ const writeRuntimeLevels=()=>{
   const lines=[];
   for(const song of RHYTHM_SONGS){
     const cells=[];
+    const levels=songLevels(song,RHYTHM_DIFFICULTIES);
     for(const difficulty of RHYTHM_DIFFICULTIES){
-      const {level}=chartLevel(song.difficulties[difficulty.id]);
+      const {level}=levels[difficulty.id];
       if(level>0)cells.push(`${difficulty.id}:${level}`);
     }
     if(cells.length)lines.push(`  ${song.songId}:Object.freeze({${cells.join(',')}}),`);
@@ -271,7 +294,7 @@ const writeRuntimeLevels=()=>{
   return lines.length;
 };
 
-module.exports={chartLevel,chartStrain,levelFromRaw,loadRuntimeSongs,writeRuntimeLevels,LEVEL_MIN_NOTES,
+module.exports={chartLevel,chartStrain,songLevels,levelFromRaw,loadRuntimeSongs,writeRuntimeLevels,LEVEL_MIN_NOTES,
   LEVEL_ANCHOR,LEVEL_SCALE,LEVEL_GAMMA,LEVEL_MIN,LEVEL_MAX,WORK};
 
 if(require.main===module){
@@ -294,16 +317,16 @@ if(require.main===module){
     process.exit(0);
   }
   for(const song of RHYTHM_SONGS){
+    const levels=songLevels(song,RHYTHM_DIFFICULTIES);
     const cells=RHYTHM_DIFFICULTIES.map(difficulty=>{
-      const chart=song.difficulties[difficulty.id];
-      const {level,strain}=chartLevel(chart);
+      const {level,strain}=levels[difficulty.id];
       if(!strain)return `${difficulty.id.slice(0,2)} —`;
       return `${difficulty.id.slice(0,2)} Lv.${String(level).padStart(2)}`;
     });
     console.log(`${song.displayName.padEnd(30)} ${cells.join(' / ')}`);
     if(verbose){
       for(const difficulty of RHYTHM_DIFFICULTIES){
-        const {level,strain}=chartLevel(song.difficulties[difficulty.id]);
+        const {level,strain}=levels[difficulty.id];
         if(!strain)continue;
         console.log(`    ${difficulty.id.padEnd(6)} Lv.${String(level).padStart(2)}`
           +`  生${String(strain.raw).padEnd(6)} ピーク${String(strain.peak).padEnd(6)} 平均${String(strain.average).padEnd(6)}`

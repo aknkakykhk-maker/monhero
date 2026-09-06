@@ -11,7 +11,7 @@
 'use strict';
 const fs=require('fs');
 const path=require('path');
-const {chartLevel,chartStrain,loadRuntimeSongs,LEVEL_ANCHOR,LEVEL_MIN,LEVEL_MAX,LEVEL_MIN_NOTES}
+const {chartLevel,chartStrain,songLevels,loadRuntimeSongs,LEVEL_ANCHOR,LEVEL_MIN,LEVEL_MAX,LEVEL_MIN_NOTES}
   =require('./rhythm-chart-level.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
@@ -38,9 +38,12 @@ const runtime=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js')
 {
   const mismatched=[];
   for(const song of RHYTHM_SONGS){
+    // 曲えらびに出る数字は songLevels() が決める（生の値が上なら表示も必ず1以上上げる）。
+    // 1難易度ずつ chartLevel() で測ると、その手当てのぶんだけ食い違って見える。
+    const levels=songLevels(song,RHYTHM_DIFFICULTIES);
     for(const difficulty of RHYTHM_DIFFICULTIES){
       const chart=song.difficulties[difficulty.id];
-      const computed=chartLevel(chart).level;
+      const computed=levels[difficulty.id].level;
       // 数個しか無い確認用の型は測れない（そのときは譜面が持っている値をそのまま使う）
       if(chart.totalNotes<LEVEL_MIN_NOTES)continue;
       if(chart.level!==computed)mismatched.push(`${song.songId} ${difficulty.id}: 表 ${chart.level} / 計算 ${computed}`);
