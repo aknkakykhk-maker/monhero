@@ -109,5 +109,88 @@ const devWords=['デバッグ画面','WIDTH TEST','TAPER TEST','暫定値','DEBU
 const dirty=rhythm.topics.flatMap(t=>{const text=helpPlainText(t);return devWords.filter(w=>text.includes(w)).map(w=>`${t.id}:${w}`);});
 ok('プレイヤー向けの説明に開発用の言葉が混ざっていない',dirty.length===0,dirty.join(' / ')||`${devWords.length}語を確認`);
 
+// --- ⑧ 「📖 遊びかた」を実際にReactで描く ---
+// 静的に文字列を探すだけだと「書いてはあるが描くと落ちる」を拾えない。
+// ユーザーから指摘を受けたのはまさにこの画面なので、一覧と本文の両方を実際に描いて確かめる。
+// このサンドボックスは外部CDN(Tailwind)へ出られずアプリを起動して目で見る確認ができないため、
+// 画面のJSXだけを切り出し、状態と外の関数を差し替えて react-dom/server で文字列にする。
+(() => {
+  const React=require('react');
+  const ReactDOMServer=require('react-dom/server');
+  const babel=require('@babel/core');
+  const PRESET_REACT=require.resolve('@babel/preset-react');
+  const START="        {gameState==='RHYTHM_DEMO_HELP'&&(()=>{";
+  const from=game.indexOf(START);
+  const to=game.indexOf('\n        })()}', from);
+  if(from<0||to<0){ok('遊びかたのJSXを切り出せる',false);return;}
+  const jsx=game.slice(from,to+'\n        })()}'.length);
+  const stub=({size})=>React.createElement('i',{'data-size':size});
+  let Screen;
+  try{
+    const code=babel.transformSync(
+      `${helpSrc}\n`
+      +'const releasedForPlayers = () => true;\n'
+      +'const HELP_GUIDE = HELP_CATEGORIES;\n'
+      +"const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;\n"
+      // 本文の描き方は本ゲームのヘルプと共通(renderHelpBlocks)。ここでは中身が出たことだけ見たいので
+      // 同じ引数で受け取り、ブロックの文字をそのまま並べる差し替えを使う
+      +"const renderHelpBlocks = (blocks, accent) => (blocks||[]).map((b,i)=>React.createElement('div',{key:i},"
+      +"  b.t==='kv'?b.rows.map(r=>r.join(': ')).join(' / ')"
+      +" :(b.t==='list'||b.t==='steps')?b.items.join(' / ')"
+      +" :b.t==='data'?`[表:${b.id}]`"
+      +" :String(b.title? b.title+': ':'')+String(b.text||'')));\n"
+      +"const RhythmLandscapeHint = () => null;\n"
+      +"const AssistantBubble = ({scene}) => React.createElement('div',null,`[助手:${scene}]`);\n"
+      +'const RhythmHelpScreen = ({ gameState, rhythmHelpTopicId, setRhythmHelpTopicId, setGameState,\n'
+      +'  ArrowLeft, ChevronRight, startRhythmPractice, startRhythmTutorial }) => (<>\n'
+      +jsx+'\n</>);\nmodule.exports={RhythmHelpScreen};',
+      {presets:[[PRESET_REACT,{runtime:'classic'}]],filename:'rhythm-help-structure-check.jsx'});
+    const scope={exports:{}};
+    new Function('module','exports','React',code.code)(scope,scope.exports,React);
+    Screen=scope.exports.RhythmHelpScreen;
+  }catch(e){ok('遊びかたの画面を組み立てられる',false,String(e).split('\n')[0]);return;}
+  const noop=()=>{};
+  const render=state=>ReactDOMServer.renderToStaticMarkup(React.createElement(Screen,{
+    gameState:'RHYTHM_DEMO_HELP', rhythmHelpTopicId:null,
+    setRhythmHelpTopicId:noop, setGameState:noop,
+    ArrowLeft:stub, ChevronRight:stub, startRhythmPractice:noop, startRhythmTutorial:noop, ...state}));
+  const plain=html=>html.replace(/<[^>]*>/g,'');
+  let list='';
+  try{list=render({});}catch(e){ok('遊びかたの項目一覧が描ける',false,String(e).split('\n')[0]);return;}
+  const listText=plain(list);
+  ok('遊びかたの項目一覧が描ける',
+    rhythm.topics.every(t=>listText.includes(t.title)),
+    rhythm.topics.filter(t=>!listText.includes(t.title)).map(t=>t.id).join(' / ')||`${rhythm.topics.length}項目`);
+  const shownGroups=(list.match(/data-rhythm-demo-help-group[^>]*>([^<]*)</g)||[]).map(m=>m.replace(/.*>/,'').replace(/<$/,''));
+  const groups=[...new Set(rhythm.topics.map(t=>t.group))];
+  ok('遊びかたの項目一覧に小見出しが出る',
+    groups.every(g=>shownGroups.includes(g))&&shownGroups.length===groups.length,
+    shownGroups.join(' / ')||'出ていない');
+  ok('項目一覧では本文をまだ出さない',
+    !listText.includes(rhythm.topics[0].blocks.find(b=>b.t==='p').text.slice(0,30)),
+    '開くまで本文は出さない');
+  ok('練習とチュートリアルの導線が一覧にある',
+    list.includes('data-rhythm-demo-practice')&&list.includes('data-rhythm-demo-help-tutorial'));
+  // 全項目の本文を1つずつ開いて、最後まで描けるか
+  const bodyNg=[];
+  for(const t of rhythm.topics){
+    try{
+      const body=plain(render({rhythmHelpTopicId:t.id}));
+      const missing=(t.blocks||[]).some(b=>{
+        if(b.t==='kv')return b.rows.some(r=>!body.includes(r[0])||!body.includes(r[1]));
+        if(b.t==='list'||b.t==='steps')return b.items.some(x=>!body.includes(x));
+        if(b.t==='data')return !body.includes(`[表:${b.id}]`);
+        return !body.includes(String(b.text).slice(0,40));
+      });
+      if(missing||!body.includes(t.title))bodyNg.push(t.id);
+    }catch(e){bodyNg.push(`${t.id}(${String(e).split('\n')[0]})`);}
+  }
+  ok('全項目の本文が最後まで描ける',bodyNg.length===0,bodyNg.join(' / ')||`${rhythm.topics.length}項目`);
+  const first=render({rhythmHelpTopicId:rhythm.topics[0].id});
+  ok('本文から次の項目へ進める',first.includes('data-rhythm-demo-help-next')&&plain(first).includes(`次: ${rhythm.topics[1].title}`));
+  const last=render({rhythmHelpTopicId:rhythm.topics[rhythm.topics.length-1].id});
+  ok('最後の項目では「次:」を出さない',!plain(last).includes('次: '));
+})();
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
