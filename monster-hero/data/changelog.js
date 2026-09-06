@@ -34,6 +34,16 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-08 18:00", type:'update', title:'モンヒロビートに新曲を2曲追加しました', status:'new',
+    assistantNotice:{id:'update_notice_toriko_4u_v1',type:'content'},
+    items:[
+      '「トリコ」（1分19秒）と「4U ～ひたすら～」（2分00秒）を追加しました。どちらもEASY・NORMAL・HARD・EXPERT・MASTERの5難易度で遊べます。',
+      '「トリコ」は EASY Lv.3 / NORMAL Lv.5 / HARD Lv.6 / EXPERT Lv.11 / MASTER Lv.16。短めの曲で、いまある中ではやさしい部類です。',
+      '「4U ～ひたすら～」は EASY Lv.5 / NORMAL Lv.6 / HARD Lv.9 / EXPERT Lv.15 / MASTER Lv.19。2分あるぶんノーツが多めです。',
+      'レベルは手で決めず、譜面から計算した値をそのまま使っています。曲えらびの一覧にもそのまま出ます。',
+    ],
+  },
+  {
     date: "2026-09-08 12:00", type:'update', title:'モンヒロビート: どの端末でも「🔄」で縦横を切り替えられるようにしました', status:'new',
     items:[
       'iPhoneのSafariや、LINE・Xなどのアプリの中で開いたときは、ブラウザが画面の向きを変えることを許していません。これまでは「切り替えられませんでした」と案内を出すことしかできませんでした。',

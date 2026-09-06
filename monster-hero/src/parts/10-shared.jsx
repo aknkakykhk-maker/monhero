@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 14:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 17:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2486,6 +2486,9 @@ const BGM_TRACKS = [
   // デュラハン戦用。A(時計仕掛け)をクイック、B(鋼鉄の亡霊)をプロの既定にする。
   // -Another- の2曲は既定では使わないが、BGMアレンジからどの枠へも選べる
   { id:'melo_dullahan_clockwork', name:'呪われた騎士の時計仕掛け', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork.mp3', gain:1, loop:true },
+  // モンビーの新曲2曲(2026-09-06)。mp4で受け取った音源から映像を落として入れたもの
+  { id:'melo_toriko', name:'トリコ', creator:'オリジナル', src:'audio/bgm-toriko.mp3', gain:1, loop:true },
+  { id:'melo_4u_hitasura', name:'4U ～ひたすら～', creator:'オリジナル', src:'audio/bgm-4u-hitasura.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
