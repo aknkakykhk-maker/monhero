@@ -7,7 +7,7 @@ const sourcePath = path.join(TOOLS_DIR, '..', 'monster-hero', 'src', 'game-syste
 const source = fs.readFileSync(sourcePath, 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
 const context = {
-  React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} },
+  React: { Component: class { setState() {} }, PureComponent: class { setState() {} }, createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} },
   ALL_PLAYER_MONSTERS: {
     Ark: { id:'Ark', name:'アーク', baseHp:100, baseAtk:20, baseDef:20, baseGuts:20, distAptitude:['C','C','C','C'] },
     Suezo: { id:'Suezo', name:'スエゾー', baseHp:50, baseAtk:10, baseDef:10, baseGuts:10, distAptitude:['C','C','C','C'] },

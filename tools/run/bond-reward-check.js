@@ -8,7 +8,7 @@ const source = fs.readFileSync(sourcePath, 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
 const reconcileSource = source.match(/const reconcileMasuPoints = \(masu\) => \{[\s\S]*?\n\};/)?.[0];
 const context = {
-  React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} },
+  React: { Component: class { setState() {} }, PureComponent: class { setState() {} }, createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} },
   ALL_PLAYER_MONSTERS: { base: { distAptitude:['C','C','C','C'] } },
 };
 vm.createContext(context);

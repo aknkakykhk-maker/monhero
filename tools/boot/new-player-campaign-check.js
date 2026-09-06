@@ -16,7 +16,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const source = fs.readFileSync(path.join(TOOLS_DIR, '..', 'monster-hero', 'src', 'game-system.jsx'), 'utf8');
 const prefix = source.slice(source.indexOf('const LOGIN_BONUS_REWARDS'), source.indexOf('const STAT_POINT_GAIN'));
-const context = { React:{ createElement(){}, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
+const context = { React:{ Component: class { setState() {} }, PureComponent: class { setState() {} }, createElement(){}, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
 vm.createContext(context);
 vm.runInContext(`${prefix}\nglobalThis.x={grantNewPlayerCampaignGift,NEW_PLAYER_CAMPAIGN_GIFT,NEW_PLAYER_CAMPAIGN_KEY,NEW_PLAYER_CAMPAIGN_ENABLED,buildGiftClaim,giftIsExpired,giftIsClaimable,giftTitleDisplay,normalizeGiftRewards,giftClaimableCount};`, context);
 const { grantNewPlayerCampaignGift, NEW_PLAYER_CAMPAIGN_GIFT, NEW_PLAYER_CAMPAIGN_KEY, NEW_PLAYER_CAMPAIGN_ENABLED,

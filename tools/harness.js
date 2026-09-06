@@ -215,6 +215,8 @@ function makeBrowserStubs() {
     useEffect: noop, useCallback: (f) => f, useMemo: (f) => f(), useRef: (v) => ({ current: v }),
     useReducer: (_r, v) => [v, noop], useContext: () => ({}), createContext: () => ({}),
     memo: (c) => c, forwardRef: (c) => c,
+    // 本体は class X extends React.Component を持つ(エラー境界)。読み込み時に評価されるので土台だけ要る
+    Component: class { setState() {} }, PureComponent: class { setState() {} },
   };
   const ReactDOM = { createRoot: () => ({ render: noop, unmount: noop }), render: noop };
   const windowStub = {

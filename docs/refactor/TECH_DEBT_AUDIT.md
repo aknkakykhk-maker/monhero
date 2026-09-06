@@ -17,7 +17,7 @@
 
 | ID | 優先度 | 区分 | 題名 | 対応 STEP |
 | --- | --- | --- | --- | --- |
-| TD-01 | Critical | エラー耐性 | React のエラー境界が無く、描画中の例外1つで全画面が真っ白になる | 1 |
+| TD-01 | Critical | エラー耐性 | React のエラー境界が無く、描画中の例外1つで全画面が真っ白になる | **対応済み**(2026-09-06 `MhErrorBoundary`。`boot/screen-error-boundary-check.js`) |
 | TD-02 | Critical | セーブ | 同じ保存キーを書く場所が分散し、state と storage を呼び出し側が手で同期している | 3 |
 | TD-03 | Critical | 基盤 | data 配下のファイルが `React.createElement` / `window.fetch` を実行時に上書きしている | 9 |
 | TD-04 | High | 構造 | `MonsterHeroGame` が 14,723 行・`useState` 417 個の単一コンポーネント | 6, 7 |
