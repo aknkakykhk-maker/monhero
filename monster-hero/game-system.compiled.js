@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 78fccf979cacb510
+// source-sha256: e262b6314a8ab453
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6698a9a8972ebae8
+// generated-sha256: 831bf25239090b8c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 02:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 02:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22961,14 +22961,14 @@ function MonsterHeroGame() {
     "data-quick-to-rhythm": true,
     type: "button",
     onClick: openRhythmDemo,
-    "aria-label": "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D3\u30FC\u3078",
-    title: "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D3\u30FC\u3078",
+    "aria-label": "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u3078",
+    title: "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u3078",
     className: "shrink-0 min-h-[24px] min-w-[42px] rounded-md border border-fuchsia-300 bg-fuchsia-700 px-1.5 font-black text-[7px] leading-[9px] text-fuchsia-50 active:scale-90"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[11px] leading-none"
   }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
-    className: "mt-0.5 block"
-  }, "\u30E2\u30F3\u30D3\u30FC")) : null;
+    className: "mt-0.5 block text-[6px] leading-[8px]"
+  }, "\u30E2\u30F3\u30D2\u30ED", /*#__PURE__*/React.createElement("br", null), "\u30D3\u30FC\u30C8")) : null;
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -34591,7 +34591,7 @@ function MonsterHeroGame() {
         className: "space-y-3"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
         className: "text-sm font-black text-indigo-200"
-      }, "3. \u30E2\u30F3\u30D3\u30FC\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE"), /*#__PURE__*/React.createElement("p", {
+      }, "3. \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE"), /*#__PURE__*/React.createElement("p", {
         className: "text-[9px] leading-relaxed text-slate-400 mt-1"
       }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u304B\u3089\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u3068\u304D\u306E\u7DE8\u6210\u3067\u3059\u3002\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u306E3\u3064\u3092\u6C7A\u3081\u308B\u3068\u4F7F\u3048\u307E\u3059\u3002\u6C7A\u3081\u3066\u3044\u306A\u3044\u3042\u3044\u3060\u306F\u3001\u3044\u3064\u3082\u3069\u304A\u308A\u30D0\u30C8\u30EB\u753B\u9762\u30671\u5468\u76EE\u3092\u7D44\u3093\u3067\u304B\u3089\u221E\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002")), /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"
@@ -38769,7 +38769,7 @@ function MonsterHeroGame() {
       }, "\u2694 \u88CF\u3067\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B") : /*#__PURE__*/React.createElement("p", {
         "data-quick-run-start-hint": true,
         className: "text-[9px] leading-relaxed text-slate-400"
-      }, "\u88CF\u3067\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\u3001\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D3\u30FC\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), quickRunStartError && /*#__PURE__*/React.createElement("p", {
+      }, "\u88CF\u3067\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\u3001\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), quickRunStartError && /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[9px] font-black text-red-300"
       }, "\u3044\u307E\u5468\u56DE\u3092\u59CB\u3081\u3089\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u7DE8\u6210\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u304C\u898B\u5F53\u305F\u3089\u306A\u3044\u304B\u3001\u96E3\u6613\u5EA6\u304C\u307E\u3060\u89E3\u653E\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement(RhythmSongSelect, {
         songs: songs,
