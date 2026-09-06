@@ -142,9 +142,16 @@ const DEFAULT_AUTO_SETTINGS = Object.freeze({
     { rosterEntry:null, slot:null },
     { rosterEntry:null, slot:null },
   ],
+  // クイックの∞周回を、バトル画面を通らずに始めるための事前設定
+  // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
+  // ここが未設定(どれかが null)のあいだは、これまでどおり
+  // 「1周目に自分で組んだ編成」= 周回テンプレートだけを使う。
+  // ★新しい保存キーは作らず、既存の mh_auto_settings_v1 へ項目を足す形にしてある。
+  //   項目の無い既存ユーザーは normalizeAutoSettings が未設定で補う
+  quickRun:{ heroRosterEntry:null, distance:null, difficulty:null },
 });
 // roster entry が正本。候補外・重複・壊れた距離は、安全な未指定/自動へ落とす。
-const normalizeAutoSettings = (value, validRosterEntries = null) => {
+const normalizeAutoSettings = (value, validRosterEntries = null, validDifficultyIds = null) => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const valid = validRosterEntries == null ? null : new Set(Array.isArray(validRosterEntries) ? validRosterEntries : []);
   const seen = new Set();
@@ -156,7 +163,28 @@ const normalizeAutoSettings = (value, validRosterEntries = null) => {
     const slot = raw.slot === null || raw.slot === undefined ? null : Number(raw.slot);
     return { rosterEntry, slot:Number.isInteger(slot) && slot >= 0 && slot <= 3 ? slot : null };
   });
-  return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies };
+  // クイック周回の事前設定。ここも「壊れていたら未設定へ落とす」だけで、勝手に補完しない。
+  // 難易度は解放状況までは見ない(解放は端末の記録しだいで変わるため、使う直前に確かめる)
+  const rawQuick = source.quickRun && typeof source.quickRun === 'object' && !Array.isArray(source.quickRun) ? source.quickRun : {};
+  const quickHero = typeof rawQuick.heroRosterEntry === 'string' && rawQuick.heroRosterEntry.length > 0 ? rawQuick.heroRosterEntry : null;
+  const quickDistanceRaw = rawQuick.distance === null || rawQuick.distance === undefined ? null : Number(rawQuick.distance);
+  const quickDifficulty = typeof rawQuick.difficulty === 'string' && rawQuick.difficulty.length > 0 ? rawQuick.difficulty : null;
+  const quickDifficultyIds = validDifficultyIds == null ? null : new Set(Array.isArray(validDifficultyIds) ? validDifficultyIds : []);
+  const quickRun = {
+    heroRosterEntry:quickHero && (!valid || valid.has(quickHero)) ? quickHero : null,
+    distance:Number.isInteger(quickDistanceRaw) && quickDistanceRaw >= 0 && quickDistanceRaw <= 3 ? quickDistanceRaw : null,
+    difficulty:quickDifficulty && (!quickDifficultyIds || quickDifficultyIds.has(quickDifficulty)) ? quickDifficulty : null,
+  };
+  return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies, quickRun };
+};
+// クイック周回の事前設定が3つとも埋まっているか。
+// 1つでも欠けていたら「未設定」で、周回テンプレートのほうを使う
+const autoQuickRunConfigured = (settings) => {
+  const quick = settings && typeof settings === 'object' ? settings.quickRun : null;
+  return !!(quick && typeof quick === 'object'
+    && typeof quick.heroRosterEntry === 'string' && quick.heroRosterEntry.length > 0
+    && Number.isInteger(quick.distance) && quick.distance >= 0 && quick.distance <= 3
+    && typeof quick.difficulty === 'string' && quick.difficulty.length > 0);
 };
 
 // AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、

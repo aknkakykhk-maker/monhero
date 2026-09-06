@@ -2818,7 +2818,7 @@ function MonsterHeroGame() {
       setEditingPartySetIndex(normalizedPartySets.activeIndex);
       const activeMonsterRoster = normalizedPartySets.rosters[normalizedPartySets.activeIndex];
       setMonsterRosterIds(activeMonsterRoster);
-      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster);
+      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster, Object.keys(DIFFICULTY_SETTINGS));
       setAutoSettings(savedAutoSettings);
       setDraftAutoSettings(savedAutoSettings);
       const savedUnlockedTeachings = await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false);
@@ -3402,19 +3402,28 @@ function MonsterHeroGame() {
     }
     return ALL_PLAYER_MONSTERS[entry] || null;
   };
+  // AUTO設定の正規化で使う「いま選べる顔ぶれ」。読み込み時・下書き・保存で同じものを見る
+  const autoSettingsCandidates = () => monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry));
+  const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(DIFFICULTY_SETTINGS);
   const openAutoSettings = () => {
-    const candidates = monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry));
-    setDraftAutoSettings(normalizeAutoSettings(autoSettings, candidates));
+    setDraftAutoSettings(normalizeAutoSettings(autoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
     setGameState('AUTO_SETTINGS');
   };
   const updateDraftAutoAlly = (index, patch) => {
     setDraftAutoSettings(current => normalizeAutoSettings({
       ...current,
       allies:current.allies.map((ally, allyIndex) => allyIndex === index ? { ...ally, ...patch } : ally),
-    }, monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry))));
+    }, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
+  };
+  // クイック周回の事前設定を1項目ずつ書き換える。供モンと同じく、正規化を通してから持つ
+  const updateDraftAutoQuickRun = (patch) => {
+    setDraftAutoSettings(current => normalizeAutoSettings({
+      ...current,
+      quickRun:{ ...(current.quickRun || {}), ...patch },
+    }, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
   };
   const saveAutoSettings = async () => {
-    const normalized = normalizeAutoSettings(draftAutoSettings, monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)));
+    const normalized = normalizeAutoSettings(draftAutoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS);
     await storeSet(AUTO_SETTINGS_KEY, normalized, false);
     setAutoSettings(normalized);
     setDraftAutoSettings(normalized);
@@ -5256,6 +5265,35 @@ function MonsterHeroGame() {
     extremeDifficulty:extremeRunRef.current ? extremeDifficulty : null,
   });
 
+  // AUTO設定の「クイック周回の事前設定」から、周回テンプレートと同じ形を作る
+  // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
+  // 1周目をバトル画面で組まなくても∞周回を始められるようにするためのもので、
+  // 作るだけならここは副作用を持たない。実際に始めるのは startRunFromRepeatTemplate。
+  // 設定が欠けている・勇者モンがいない・難易度が未解放のときは null を返し、
+  // 呼び出し側はこれまでどおり周回テンプレート(1周目に自分で組んだ編成)を使う。
+  const repeatTemplateFromAutoSettings = (settings = autoSettings) => {
+    if (!autoQuickRunConfigured(settings)) return null;
+    const quick = settings.quickRun;
+    if (!isQuickDifficultyUnlocked(quick.difficulty, clearCounts, proClearCounts, extremeDifficultyClearCounts)) return null;
+    if (!resolveRosterEntryToMon(quick.heroRosterEntry)) return null;
+    return Object.freeze({
+      runMode:BATTLE_MODE_QUICK,
+      difficulty:quick.difficulty,
+      initialTeachingId:null,
+      heroRosterEntry:quick.heroRosterEntry,
+      initialDistance:quick.distance,
+      quickRewardPolicy:normalizeQuickRewardPolicy(quickRewardPolicy),
+      proAllyRosterEntries:[],
+      extremeRun:false,
+      extremeDifficulty:null,
+    });
+  };
+  // 周回を始めるときに使うテンプレート。
+  // 「1周目に自分で組んだ編成」があればそれを優先し、無ければAUTO設定の事前設定を使う。
+  // (設定 → テンプレート ではなく テンプレート → 設定 の順にするのは、
+  //  いま回している編成を、設定のほうで勝手に置き換えないため)
+  const repeatTemplateForNewRun = () => repeatRunTemplateRef.current || repeatTemplateFromAutoSettings();
+
   // 保存したIDを毎回いまのroster/マスモン正本へ引き直す。消失・利用不可・Pro制約違反は
   // 別個体で補完せず、5BがAUTO∞を停止できる失敗値として返す。
   const resolveRepeatRunTemplate = (template) => {
@@ -6780,7 +6818,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(!autoRepeatRef.current||!isQuickMode(runMode)||document.visibilityState==='hidden')return;
         await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
         if(!autoRepeatRef.current||!isQuickMode(runMode)||document.visibilityState==='hidden')return;
-        const repeatResult=startRunFromRepeatTemplate(repeatRunTemplateRef.current);
+        // ∞周回の途中なら周回テンプレートが必ずあるので、ここでの動きは今までどおり。
+        // テンプレートが失われていたときだけ、AUTO設定の事前設定で続けられる
+        const repeatResult=startRunFromRepeatTemplate(repeatTemplateForNewRun());
         if(repeatResult.ok){
           autoRepeatStartingRef.current=false;
           autoBattleRef.current=true;
@@ -8944,6 +8984,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto space-y-4 pb-3">
               <section className="rounded-2xl border border-indigo-500/40 bg-slate-950/70 p-3"><h3 className="text-sm font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-slate-700 bg-slate-900'}`}><span className="block text-xs font-black">{label}</span><span className="block mt-1 text-[9px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
               <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className="rounded-2xl border border-indigo-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未指定（ランダム）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${ally.slot===slot?'ring-2 ring-white border-white':slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}`}>{label}</button>)}</div></div></div>)}</section>
+              {/* モンヒロビートから∞周回を始めるための事前設定(docs/spec/QUICK_RHYTHM_LINK.md PR5)。
+                  3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
+                  「1周目に自分で組んだ編成」をそのまま繰り返す */}
+              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンビー中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
             </div>
             <button onClick={saveAutoSettings} className="w-full max-w-md mx-auto min-h-[52px] shrink-0 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定</button>
             {autoAllyDetail&&renderMonsterDetailModal({mon:autoAllyDetail.mon,masu:autoAllyDetail.masu,onClose:()=>setAutoAllyDetail(null),accent:'indigo',readOnly:true,label:`${autoAllyDetail.mon.name}の確認用詳細`})}

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5a88bf8f51dbd78f
+// source-sha256: 8cde89faef51ea0b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7b3666e9c5ca4490
+// generated-sha256: e788bad295ad9466
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 23:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 23:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10200,10 +10200,21 @@ const DEFAULT_AUTO_SETTINGS = Object.freeze({
   }, {
     rosterEntry: null,
     slot: null
-  }]
+  }],
+  // クイックの∞周回を、バトル画面を通らずに始めるための事前設定
+  // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
+  // ここが未設定(どれかが null)のあいだは、これまでどおり
+  // 「1周目に自分で組んだ編成」= 周回テンプレートだけを使う。
+  // ★新しい保存キーは作らず、既存の mh_auto_settings_v1 へ項目を足す形にしてある。
+  //   項目の無い既存ユーザーは normalizeAutoSettings が未設定で補う
+  quickRun: {
+    heroRosterEntry: null,
+    distance: null,
+    difficulty: null
+  }
 });
 // roster entry が正本。候補外・重複・壊れた距離は、安全な未指定/自動へ落とす。
-const normalizeAutoSettings = (value, validRosterEntries = null) => {
+const normalizeAutoSettings = (value, validRosterEntries = null, validDifficultyIds = null) => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const valid = validRosterEntries == null ? null : new Set(Array.isArray(validRosterEntries) ? validRosterEntries : []);
   const seen = new Set();
@@ -10220,10 +10231,29 @@ const normalizeAutoSettings = (value, validRosterEntries = null) => {
       slot: Number.isInteger(slot) && slot >= 0 && slot <= 3 ? slot : null
     };
   });
+  // クイック周回の事前設定。ここも「壊れていたら未設定へ落とす」だけで、勝手に補完しない。
+  // 難易度は解放状況までは見ない(解放は端末の記録しだいで変わるため、使う直前に確かめる)
+  const rawQuick = source.quickRun && typeof source.quickRun === 'object' && !Array.isArray(source.quickRun) ? source.quickRun : {};
+  const quickHero = typeof rawQuick.heroRosterEntry === 'string' && rawQuick.heroRosterEntry.length > 0 ? rawQuick.heroRosterEntry : null;
+  const quickDistanceRaw = rawQuick.distance === null || rawQuick.distance === undefined ? null : Number(rawQuick.distance);
+  const quickDifficulty = typeof rawQuick.difficulty === 'string' && rawQuick.difficulty.length > 0 ? rawQuick.difficulty : null;
+  const quickDifficultyIds = validDifficultyIds == null ? null : new Set(Array.isArray(validDifficultyIds) ? validDifficultyIds : []);
+  const quickRun = {
+    heroRosterEntry: quickHero && (!valid || valid.has(quickHero)) ? quickHero : null,
+    distance: Number.isInteger(quickDistanceRaw) && quickDistanceRaw >= 0 && quickDistanceRaw <= 3 ? quickDistanceRaw : null,
+    difficulty: quickDifficulty && (!quickDifficultyIds || quickDifficultyIds.has(quickDifficulty)) ? quickDifficulty : null
+  };
   return {
     strategy: AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random',
-    allies
+    allies,
+    quickRun
   };
+};
+// クイック周回の事前設定が3つとも埋まっているか。
+// 1つでも欠けていたら「未設定」で、周回テンプレートのほうを使う
+const autoQuickRunConfigured = settings => {
+  const quick = settings && typeof settings === 'object' ? settings.quickRun : null;
+  return !!(quick && typeof quick === 'object' && typeof quick.heroRosterEntry === 'string' && quick.heroRosterEntry.length > 0 && Number.isInteger(quick.distance) && quick.distance >= 0 && quick.distance <= 3 && typeof quick.difficulty === 'string' && quick.difficulty.length > 0);
 };
 
 // AUTOの1ターンぶんの選択だけを組み立てる。実際の選択stateや戦闘進行には触れず、
@@ -23645,7 +23675,7 @@ function MonsterHeroGame() {
       setEditingPartySetIndex(normalizedPartySets.activeIndex);
       const activeMonsterRoster = normalizedPartySets.rosters[normalizedPartySets.activeIndex];
       setMonsterRosterIds(activeMonsterRoster);
-      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster);
+      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster, Object.keys(DIFFICULTY_SETTINGS));
       setAutoSettings(savedAutoSettings);
       setDraftAutoSettings(savedAutoSettings);
       const savedUnlockedTeachings = await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false);
@@ -24381,9 +24411,11 @@ function MonsterHeroGame() {
     }
     return ALL_PLAYER_MONSTERS[entry] || null;
   };
+  // AUTO設定の正規化で使う「いま選べる顔ぶれ」。読み込み時・下書き・保存で同じものを見る
+  const autoSettingsCandidates = () => monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry));
+  const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(DIFFICULTY_SETTINGS);
   const openAutoSettings = () => {
-    const candidates = monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry));
-    setDraftAutoSettings(normalizeAutoSettings(autoSettings, candidates));
+    setDraftAutoSettings(normalizeAutoSettings(autoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
     setGameState('AUTO_SETTINGS');
   };
   const updateDraftAutoAlly = (index, patch) => {
@@ -24393,10 +24425,20 @@ function MonsterHeroGame() {
         ...ally,
         ...patch
       } : ally)
-    }, monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry))));
+    }, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
+  };
+  // クイック周回の事前設定を1項目ずつ書き換える。供モンと同じく、正規化を通してから持つ
+  const updateDraftAutoQuickRun = patch => {
+    setDraftAutoSettings(current => normalizeAutoSettings({
+      ...current,
+      quickRun: {
+        ...(current.quickRun || {}),
+        ...patch
+      }
+    }, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
   };
   const saveAutoSettings = async () => {
-    const normalized = normalizeAutoSettings(draftAutoSettings, monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)));
+    const normalized = normalizeAutoSettings(draftAutoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS);
     await storeSet(AUTO_SETTINGS_KEY, normalized, false);
     setAutoSettings(normalized);
     setDraftAutoSettings(normalized);
@@ -27467,6 +27509,35 @@ function MonsterHeroGame() {
     extremeDifficulty: extremeRunRef.current ? extremeDifficulty : null
   });
 
+  // AUTO設定の「クイック周回の事前設定」から、周回テンプレートと同じ形を作る
+  // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
+  // 1周目をバトル画面で組まなくても∞周回を始められるようにするためのもので、
+  // 作るだけならここは副作用を持たない。実際に始めるのは startRunFromRepeatTemplate。
+  // 設定が欠けている・勇者モンがいない・難易度が未解放のときは null を返し、
+  // 呼び出し側はこれまでどおり周回テンプレート(1周目に自分で組んだ編成)を使う。
+  const repeatTemplateFromAutoSettings = (settings = autoSettings) => {
+    if (!autoQuickRunConfigured(settings)) return null;
+    const quick = settings.quickRun;
+    if (!isQuickDifficultyUnlocked(quick.difficulty, clearCounts, proClearCounts, extremeDifficultyClearCounts)) return null;
+    if (!resolveRosterEntryToMon(quick.heroRosterEntry)) return null;
+    return Object.freeze({
+      runMode: BATTLE_MODE_QUICK,
+      difficulty: quick.difficulty,
+      initialTeachingId: null,
+      heroRosterEntry: quick.heroRosterEntry,
+      initialDistance: quick.distance,
+      quickRewardPolicy: normalizeQuickRewardPolicy(quickRewardPolicy),
+      proAllyRosterEntries: [],
+      extremeRun: false,
+      extremeDifficulty: null
+    });
+  };
+  // 周回を始めるときに使うテンプレート。
+  // 「1周目に自分で組んだ編成」があればそれを優先し、無ければAUTO設定の事前設定を使う。
+  // (設定 → テンプレート ではなく テンプレート → 設定 の順にするのは、
+  //  いま回している編成を、設定のほうで勝手に置き換えないため)
+  const repeatTemplateForNewRun = () => repeatRunTemplateRef.current || repeatTemplateFromAutoSettings();
+
   // 保存したIDを毎回いまのroster/マスモン正本へ引き直す。消失・利用不可・Pro制約違反は
   // 別個体で補完せず、5BがAUTO∞を停止できる失敗値として返す。
   const resolveRepeatRunTemplate = template => {
@@ -29832,7 +29903,9 @@ function MonsterHeroGame() {
         if (!autoRepeatRef.current || !isQuickMode(runMode) || document.visibilityState === 'hidden') return;
         await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
         if (!autoRepeatRef.current || !isQuickMode(runMode) || document.visibilityState === 'hidden') return;
-        const repeatResult = startRunFromRepeatTemplate(repeatRunTemplateRef.current);
+        // ∞周回の途中なら周回テンプレートが必ずあるので、ここでの動きは今までどおり。
+        // テンプレートが失われていたときだけ、AUTO設定の事前設定で続けられる
+        const repeatResult = startRunFromRepeatTemplate(repeatTemplateForNewRun());
         if (repeatResult.ok) {
           autoRepeatStartingRef.current = false;
           autoBattleRef.current = true;
@@ -34332,7 +34405,62 @@ function MonsterHeroGame() {
         }),
         "aria-pressed": ally.slot === slot,
         className: `min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${ally.slot === slot ? 'ring-2 ring-white border-white' : slot === null ? 'bg-slate-700 border-slate-500 text-white' : `${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}`
-      }, label)))))))), /*#__PURE__*/React.createElement("button", {
+      }, label))))))), /*#__PURE__*/React.createElement("section", {
+        className: "space-y-3"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+        className: "text-sm font-black text-indigo-200"
+      }, "3. \u30E2\u30F3\u30D3\u30FC\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE"), /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] leading-relaxed text-slate-400 mt-1"
+      }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u304B\u3089\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u3068\u304D\u306E\u7DE8\u6210\u3067\u3059\u3002\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u306E3\u3064\u3092\u6C7A\u3081\u308B\u3068\u4F7F\u3048\u307E\u3059\u3002\u6C7A\u3081\u3066\u3044\u306A\u3044\u3042\u3044\u3060\u306F\u3001\u3044\u3064\u3082\u3069\u304A\u308A\u30D0\u30C8\u30EB\u753B\u9762\u30671\u5468\u76EE\u3092\u7D44\u3093\u3067\u304B\u3089\u221E\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002")), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"
+      }, /*#__PURE__*/React.createElement("label", {
+        className: "block text-xs font-black text-white",
+        htmlFor: "auto-quick-hero"
+      }, "\u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("select", {
+        id: "auto-quick-hero",
+        value: draftAutoSettings.quickRun?.heroRosterEntry || '',
+        onChange: event => updateDraftAutoQuickRun({
+          heroRosterEntry: event.target.value || null
+        }),
+        className: "w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"
+      }, /*#__PURE__*/React.createElement("option", {
+        value: ""
+      }, "\u672A\u8A2D\u5B9A\uFF08\u3053\u306E\u6A5F\u80FD\u3092\u4F7F\u308F\u306A\u3044\uFF09"), monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)).map(entry => /*#__PURE__*/React.createElement("option", {
+        key: entry,
+        value: entry
+      }, autoRosterLabel(entry)))), renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black text-slate-300 mb-1.5"
+      }, "\u914D\u7F6E\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-4 gap-1"
+      }, ranges.filter(([slot]) => slot !== null).map(([slot, label]) => /*#__PURE__*/React.createElement("button", {
+        key: label,
+        onClick: () => updateDraftAutoQuickRun({
+          distance: slot
+        }),
+        "aria-pressed": draftAutoSettings.quickRun?.distance === slot,
+        className: `min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance === slot ? 'ring-2 ring-white border-white' : ''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`
+      }, label)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+        className: "block text-[10px] font-black text-slate-300 mb-1.5",
+        htmlFor: "auto-quick-difficulty"
+      }, "\u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("select", {
+        id: "auto-quick-difficulty",
+        value: draftAutoSettings.quickRun?.difficulty || '',
+        onChange: event => updateDraftAutoQuickRun({
+          difficulty: event.target.value || null
+        }),
+        className: "w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"
+      }, /*#__PURE__*/React.createElement("option", {
+        value: ""
+      }, "\u672A\u8A2D\u5B9A"), Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => {
+        const unlocked = isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
+        return /*#__PURE__*/React.createElement("option", {
+          key: key,
+          value: key,
+          disabled: !unlocked
+        }, setting.label, unlocked ? '' : '（未解放）');
+      }))), /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] leading-relaxed text-slate-400"
+      }, autoQuickRunConfigured(draftAutoSettings) ? '✅ 3つとも決まっています。モンヒロビートから周回を始められます。' : 'まだ使えません（3つとも決めると使えます）。')))), /*#__PURE__*/React.createElement("button", {
         onClick: saveAutoSettings,
         className: "w-full max-w-md mx-auto min-h-[52px] shrink-0 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
       }, "\u6C7A\u5B9A"), autoAllyDetail && renderMonsterDetailModal({

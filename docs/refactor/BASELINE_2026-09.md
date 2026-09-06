@@ -97,12 +97,13 @@ CI 相当(`--area ci` 28 本)と CLAUDE.md の必須検査(`--area required` 14 
 | `run/bond-reward-check.js` | (A の修正後に残ったもの) |
 | `run/unique-skill-point-check.js` | (A の修正後に残ったもの) |
 
-### C. 実ブラウザ検査。Tailwind CDN が届かない環境での見た目依存、または要素の探し方が古い。要トリアージ(15本)
+### C. 実ブラウザ検査。Tailwind CDN が届かない環境での見た目依存、または要素の探し方が古い。要トリアージ(16本)
 
 | 検査 | 最後に出た行 |
 | --- | --- |
 | `audio/bgm-arrangement-layout-check.js` | NG: 本物と同じCSSを用意できる — 0KB / `page.addStyleTag: content: expected string, got object`(2026-09-06 追記。CDN の Tailwind を取り込めず CSS が空になるための失敗で、PR3 時点=`552adee3` でも同じように落ちることを確認済み) |
 | `mode/rhythm-judgment-band-check.js` | NG: 検査を最後まで実行できる — `Cannot find module '/home/user/monhero/tools/node_modules/sharp'`(2026-09-06 追記。画像を作る `sharp` がこの環境に入っていないだけで、実装とは関係ない) |
+| `masu/masu-growth-breakdown-check.js` | NG: 本物と同じCSSを用意できる — 0KB / 4項目の現在値がそろわない(2026-09-06 追記。`bgm-arrangement-layout-check` と同じく Tailwind を取り込めず CSS が空になるための失敗) |
 | `audio/title-bgm-check.js` | NG  タップだけでタイトルBGMが鳴る(他ページへ移動しなくてよい) — 拒否された再生 0回 |
 | `battle/battle-check.js` | NG  ファンファーレのあとBGMが戻る — (無音) |
 | `battle/battle-menu-browser-check.js` | } |
