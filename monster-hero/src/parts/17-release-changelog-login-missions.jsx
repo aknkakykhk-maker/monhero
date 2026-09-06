@@ -8,7 +8,12 @@
 // ヘルプの項目・更新履歴・助手の告知も同時に出るようになっている
 const RHYTHM_MODE_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE };
-const releasedForPlayers = (item) => !item || !item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true;
+// releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
+// 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
+// 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
+const releasedForPlayers = (item) => !item
+  || ((!item.releaseFlag || RELEASE_FLAGS[item.releaseFlag] === true)
+    && (!item.unreleasedFlag || RELEASE_FLAGS[item.unreleasedFlag] !== true));
 const CHANGELOG_TYPES = ['update', 'issue'];
 // 日付やBUILD_DATEではなく、内容から作った安定IDでお知らせを識別する。同じID・同じ本文は
 // ビルドし直しても未読へ戻らず、本文を変更した場合だけ新しい項目として扱う。

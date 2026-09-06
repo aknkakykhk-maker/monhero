@@ -70,7 +70,7 @@ check('ヘルプを開くと必ずカテゴリ一覧から始まる',
     && !/onClick=\{\(\)=>setShowHelp\(true\)\}/.test(source));
 check('戻るは1階層ずつ戻る', has('const goBack = () => { if(topic) setHelpTopicId(null); else if(cat) setHelpCatId(null); else setShowHelp(false); };'));
 check('カテゴリの色をそのまま使う(Tailwindの動的クラスに頼らない)', has('style={{borderColor:c.color,backgroundColor:\'rgba(15,23,42,0.85)\'}}'));
-check('画面はデータから作る(本文をJSXに直書きしていない)', has('{HELP_GUIDE.map(c=>(') && has('{cat.topics.map(t=>(') && has('(blocks || []).map((b, i) => {'));
+check('画面はデータから作る(本文をJSXに直書きしていない)', has('{HELP_GUIDE.map(c=>(') && has('{cat.topics.map((t,i)=>(') && has('(blocks || []).map((b, i) => {'));
 check('ブロックの種類ごとに描き分ける', ['b.t===\'note\'', 'b.t===\'list\'', 'b.t===\'steps\'', 'b.t===\'kv\'', 'b.t===\'data\''].every(has));
 check('助手ボタンと吹き出しがある', has('aria-label="助手のひとことを開く"') && has('<AssistantBubble key={`${helpCatId||\'\'}/${helpTopicId||\'\'}`}'));
 check('助手は開いている階層に応じて話す', has("const assistantLine = topic ? topic.assistant : cat ? cat.assistant : null;") && has("const assistantScene = (!cat && !topic) ? 'helpTop' : null;"));

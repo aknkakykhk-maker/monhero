@@ -72,6 +72,11 @@ function MonsterHeroGame() {
     return (list[0]&&list[0].songId)||'';
   });
   const [rhythmSelectedDifficultyId,setRhythmSelectedDifficultyId]=useState('');
+  // 「📖 遊びかた」で開いている項目。null なら項目一覧。
+  // 以前はモンビーの説明を全部つなげて1画面へ流していたので、ただの長文になっていた
+  // (2026-09-06・ユーザー指摘「ただの文章の羅列で見にくすぎる」)。本ゲームのヘルプと同じ
+  // 「一覧 → タップして本文」の2階層にして、本文は data/help.js のカテゴリ rhythm をそのまま使う
+  const [rhythmHelpTopicId,setRhythmHelpTopicId]=useState(null);
   // 曲えらびの見え方(並び順・助手を畳んだか)。演奏の設定とは別のキーで覚える。
   // 保存に失敗しても画面は動かせるよう、まず画面へ反映してから書き込む。
   const [rhythmSelectView,setRhythmSelectView]=useState(DEFAULT_RHYTHM_SELECT_VIEW);
@@ -9933,7 +9938,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   (2026-09-05・ユーザー指示「縦なら横に横なら縦に変わるボタン」) */}
               <RhythmOrientationButton/>
               <button data-rhythm-demo-help aria-label="遊びかた" title="遊びかた"
-                onClick={()=>setGameState('RHYTHM_DEMO_HELP')}
+                onClick={()=>{setRhythmHelpTopicId(null);setGameState('RHYTHM_DEMO_HELP');}}
                 className={`min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`}>📖</button>
               <button data-rhythm-demo-monsters aria-label="マスモン設定" title="マスモン設定"
                 onClick={()=>{setRhythmMonsterPickerOpen(true);setGameState('RHYTHM_DEMO_MONSTERS');}}
@@ -9973,42 +9978,72 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* モンビーの「遊びかた」。設定のヘルプにあるモンビーの項目を、
             モードを離れずにその場で読めるようにしたもの(2026-09-05・ユーザー指示)。
-            本文は data/help.js を参照するだけで、ここには説明文を書かない。
-            2か所に同じ説明があると必ず片方が古くなるため。 */}
+            本文は data/help.js のカテゴリ rhythm を参照するだけで、ここには説明文を書かない。
+            2か所に同じ説明があると必ず片方が古くなるため。
+
+            【2026-09-06・ユーザー指示】「ただの文章の羅列で見にくすぎる／本ゲーム側のように
+            見やすく作って」。以前は全項目を展開して縦に並べていたので、開くといきなり
+            2万字が流れてくる画面になっていた。本ゲームのヘルプと同じ「項目一覧 → タップして本文」
+            の2階層にし、一覧には group の小見出しを挟む。 */}
         {gameState==='RHYTHM_DEMO_HELP'&&(()=>{
-          const category=(typeof HELP_CATEGORIES!=='undefined'?HELP_CATEGORIES:[]).find(cat=>cat.id==='basics');
-          const topics=((category&&category.topics)||[]).filter(topic=>String(topic.id||'').startsWith('rhythm-')&&topic.id!=='rhythm-coming-soon');
+          // 公開フラグで伏せてある項目を出さないよう、生の HELP_CATEGORIES ではなく
+          // ふるい分け済みの HELP_GUIDE から引く
+          const category=helpCategoryById('rhythm');
+          const topics=(category&&category.topics)||[];
+          const topic=rhythmHelpTopicId?topics.find(x=>x.id===rhythmHelpTopicId)||null:null;
+          const accent=(category&&category.color)||'#fbbf24';
+          const topicIndex=topic?topics.findIndex(x=>x.id===topic.id):-1;
+          const nextTopic=topicIndex>=0?topics[topicIndex+1]:null;
           return (
           <main data-rhythm-demo-help className="flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white">
             <header className="z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
-              <button aria-label="戻る" onClick={()=>setGameState('RHYTHM_DEMO_HOME')} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
+              <button aria-label="戻る" data-rhythm-demo-help-back onClick={()=>{if(topic)setRhythmHelpTopicId(null);else setGameState('RHYTHM_DEMO_HOME');}} className="min-h-[44px] px-2 text-slate-400"><ArrowLeft size={18}/></button>
               <div className="min-w-0 flex-1">
                 <small className="block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300">MONBEAT</small>
-                <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">📖 遊びかた</h2>
+                <h2 className="text-sm font-black leading-tight tracking-widest text-amber-200">{topic?`${topic.emoji} ${topic.title}`:'📖 遊びかた'}</h2>
               </div>
             </header>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
+            <div data-rhythm-demo-help-scroll className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3" style={{paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>
               <RhythmLandscapeHint className="mb-3"/>
-              <AssistantBubble scene="rhythmHelp"/>
-              {/* 【2026-09-05・ユーザー指示】「実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
-                  読むだけの案内と、叩いて覚える練習の2つを並べる。練習は記録に残らない */}
-              <button data-rhythm-demo-practice onClick={startRhythmPractice}
-                className="mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950">🥁 叩いて練習する</button>
-              <p className="mt-2 text-[10px] leading-relaxed text-slate-400">実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。</p>
-              <button data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
-                className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">🎓 もう一度チュートリアルを見る</button>
-              <p className="mt-2 text-[10px] leading-relaxed text-slate-400">曲えらびへ戻って、助手が最初から説明します。何度でも見られます。</p>
-              <div className="mt-4 space-y-3">
-                {topics.length===0
-                  ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">説明がまだありません。</p>
-                  :topics.map(topic=>(
-                    <section key={topic.id} data-rhythm-demo-help-topic={topic.id} className="rounded-2xl border border-amber-300/25 bg-slate-900/70 p-3">
-                      <h3 className="text-sm font-black text-amber-100">{topic.emoji} {topic.title}</h3>
-                      {topic.assistant&&<p className="mt-1 text-[10px] font-bold leading-relaxed text-cyan-200">{topic.assistant}</p>}
-                      <div className="mt-2 space-y-2.5">{renderHelpBlocks(topic.blocks,'#fbbf24')}</div>
-                    </section>
-                  ))}
-              </div>
+              {!topic&&(<>
+                <AssistantBubble scene="rhythmHelp"/>
+                {/* 【2026-09-05・ユーザー指示】「実際の音ゲー画面でやり方や各ノーツの操作方法などまで作って」
+                    読むだけの案内と、叩いて覚える練習の2つを並べる。練習は記録に残らない */}
+                <button data-rhythm-demo-practice onClick={startRhythmPractice}
+                  className="mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950">🥁 叩いて練習する</button>
+                <p className="mt-2 text-[10px] leading-relaxed text-slate-400">実際のプレイ画面で、タップ・同時押し・ホールド・スライド・フリック・終点フリック・モンスターノーツを1つずつ練習します。約20秒です。スコアも自己ベストも残りません。</p>
+                <button data-rhythm-demo-help-tutorial onClick={startRhythmTutorial}
+                  className="mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white">🎓 もう一度チュートリアルを見る</button>
+                <p className="mt-2 text-[10px] leading-relaxed text-slate-400">曲えらびへ戻って、助手が最初から説明します。何度でも見られます。</p>
+                <div data-rhythm-demo-help-list className="mt-4 space-y-2">
+                  {topics.length===0
+                    ?<p className="rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300">説明がまだありません。</p>
+                    :topics.map((x,i)=>(
+                      <React.Fragment key={x.id}>
+                        {x.group&&x.group!==(topics[i-1]||{}).group&&(
+                          <div data-rhythm-demo-help-group className="pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]" style={{color:accent}}>{x.group}</div>
+                        )}
+                        <button data-rhythm-demo-help-open={x.id} onClick={()=>setRhythmHelpTopicId(x.id)}
+                          className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left active:scale-95" style={{borderColor:`${accent}55`,backgroundColor:'rgba(15,23,42,0.7)'}}>
+                          <span className="shrink-0 text-base leading-none">{x.emoji}</span>
+                          <span className="min-w-0 flex-1 text-[12px] font-black leading-tight text-white">{x.title}</span>
+                          <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                        </button>
+                      </React.Fragment>
+                    ))}
+                </div>
+              </>)}
+              {topic&&(
+                <div data-rhythm-demo-help-topic={topic.id} className="space-y-3.5 pb-2">
+                  <p className="text-[10px] font-bold leading-relaxed text-cyan-200">{topic.assistant}</p>
+                  {/* 本文の描き方は本ゲームのヘルプと共通(renderHelpBlocks) */}
+                  {renderHelpBlocks(topic.blocks,accent)}
+                  <div className="flex gap-2 pt-1">
+                    <button data-rhythm-demo-help-list-back onClick={()=>setRhythmHelpTopicId(null)} className="min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
+                    {nextTopic&&<button data-rhythm-demo-help-next onClick={()=>setRhythmHelpTopicId(nextTopic.id)} className="min-h-[48px] flex-1 truncate rounded-2xl px-2 py-3 text-[11px] font-black text-black active:scale-95" style={{backgroundColor:accent}}>次: {nextTopic.title}</button>}
+                  </div>
+                </div>
+              )}
             </div>
           </main>
           );
@@ -14273,12 +14308,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {cat&&!topic&&(
               <div className="space-y-2">
                 <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{cat.summary}</p>
-                {cat.topics.map(t=>(
-                  <button key={t.id} onClick={()=>{setHelpTopicId(t.id);}} className="w-full rounded-2xl border px-4 py-3 flex items-center gap-3 text-left active:scale-95" style={{borderColor:`${cat.color}55`,backgroundColor:'rgba(15,23,42,0.7)'}}>
-                    <span className="shrink-0 text-base leading-none">{t.emoji}</span>
-                    <span className="flex-1 min-w-0 text-[12px] font-black text-white leading-tight">{t.title}</span>
-                    <ChevronRight size={16} className="shrink-0 text-slate-500"/>
-                  </button>
+                {/* 項目に group が書いてあるカテゴリは、切り替わり目に小見出しを挟む。
+                    モンヒロビートのように項目が20を超えるカテゴリで、どこに何があるかを
+                    一覧のまま見渡せるようにするため(2026-09-06)。group の無いカテゴリは
+                    今までどおり見出し無しで並ぶ */}
+                {cat.topics.map((t,i)=>(
+                  <React.Fragment key={t.id}>
+                    {t.group&&t.group!==(cat.topics[i-1]||{}).group&&(
+                      <div data-help-topic-group className="pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]" style={{color:cat.color}}>{t.group}</div>
+                    )}
+                    <button onClick={()=>{setHelpTopicId(t.id);}} className="w-full rounded-2xl border px-4 py-3 flex items-center gap-3 text-left active:scale-95" style={{borderColor:`${cat.color}55`,backgroundColor:'rgba(15,23,42,0.7)'}}>
+                      <span className="shrink-0 text-base leading-none">{t.emoji}</span>
+                      <span className="flex-1 min-w-0 text-[12px] font-black text-white leading-tight">{t.title}</span>
+                      <ChevronRight size={16} className="shrink-0 text-slate-500"/>
+                    </button>
+                  </React.Fragment>
                 ))}
               </div>
             )}
@@ -14291,8 +14335,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 バトルのれんしゅうを始める</button>
                 )}
                 <div className="pt-1 flex gap-2">
-                  <button onClick={()=>setHelpTopicId(null)} className="flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
-                  {nextTopic&&<button onClick={()=>setHelpTopicId(nextTopic.id)} className="flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2" style={{backgroundColor:cat.color}}>次: {nextTopic.title}</button>}
+                  <button onClick={()=>setHelpTopicId(null)} className="min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
+                  {nextTopic&&<button onClick={()=>setHelpTopicId(nextTopic.id)} className="min-h-[48px] flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2" style={{backgroundColor:cat.color}}>次: {nextTopic.title}</button>}
                 </div>
               </div>
             )}

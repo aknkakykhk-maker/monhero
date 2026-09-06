@@ -197,12 +197,18 @@ ok('準備中の案内は修行のCSSを借りず、自前の見た目にして�
   return !block.includes('mh-training-')&&block.includes('overflow-y-auto');
 })());
 ok('準備中の案内にもヘルプの説明がある',
-  read('monster-hero/data/help.js').includes("RHYTHM_INFO:      'basics/rhythm-coming-soon'")
+  read('monster-hero/data/help.js').includes("RHYTHM_INFO:      'rhythm/rhythm-coming-soon'")
   &&read('monster-hero/data/help.js').includes("id:'rhythm-coming-soon'"));
-ok('準備中のヘルプ項目は公開フラグで伏せない（いま見えないと案内できないため）',(()=>{
+// 準備中の項目は「モンビーがまだ公開されていないあいだだけ」出るのが正しい。
+// releaseFlag(公開したら出す)を付けると準備中に見えず、何も付けないと公開後も
+// 「準備中」の項目が並んで、遊べているのに準備中に見える(2026-09-06に実際そうなっていた)。
+// RHYTHM_INFO の画面が出るのと同じ条件になるよう unreleasedFlag で伏せる。
+ok('準備中のヘルプ項目は、モンビーが公開されていないあいだだけ出る',(()=>{
   const help=read('monster-hero/data/help.js');
   const at=help.indexOf("id:'rhythm-coming-soon'");
-  return at>=0&&!help.slice(at,at+200).includes('releaseFlag');
+  if(at<0)return false;
+  const head=help.slice(at,at+200);
+  return head.includes("unreleasedFlag:'rhythmMode'")&&!/[^n]releaseFlag/.test(head);
 })());
 ok('体験版ホームに譜面制作UIを出していない',(()=>{
   const start=game.indexOf("gameState==='RHYTHM_DEMO_HOME'");
@@ -256,13 +262,15 @@ ok('既存のチュートリアルの保存キーを流用していない',
   !/RHYTHM_TUTORIAL_SEEN_KEY\s*=\s*'mh_tutorial_seen_v1'/.test(game));
 ok('曲えらびから「遊びかた」を開ける',
   game.includes('data-rhythm-demo-help')&&game.includes("gameState==='RHYTHM_DEMO_HELP'"));
+// 2026-09-06: モンビーの説明を basics から専用カテゴリ rhythm へ独立させた。
+// 参照先が変わっただけで、「本文はヘルプを参照する(同じ説明を二重に書かない)」という
+// 見たいことは変わっていない
 ok('遊びかたの本文はヘルプを参照する（同じ説明を二重に書かない）',
-  game.includes("cat.id==='basics'")&&game.includes("String(topic.id||'').startsWith('rhythm-')")
-  &&game.includes('renderHelpBlocks(topic.blocks'));
+  game.includes("helpCategoryById('rhythm')")&&game.includes('renderHelpBlocks(topic.blocks'));
 ok('遊びかたからチュートリアルをやり直せる',
   game.includes('data-rhythm-demo-help-tutorial')&&game.includes('const startRhythmTutorial'));
 ok('遊びかたの画面がヘルプの対応表に載っている',
-  read('monster-hero/data/help.js').includes("RHYTHM_DEMO_HELP:     'basics/rhythm-tutorial'"));
+  read('monster-hero/data/help.js').includes("RHYTHM_DEMO_HELP:     'rhythm/rhythm-tutorial'"));
 
 // --- 縦画面のときの横画面案内(2026-09-05・ユーザー指示) ---
 ok('縦画面のときだけ横画面対応の案内を出す',
