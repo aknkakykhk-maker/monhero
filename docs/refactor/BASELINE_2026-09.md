@@ -1,0 +1,140 @@
+# 検査ベースライン(2026-09-06)
+
+`main` 2088577(PR #1114 まで、コード変更なし)に対して `node tools/run-checks.js --area all` を実行した結果。
+**リファクタリングの前に「何が通り、何が通っていないか」を固定するための記録**であり、ここに載っている NG は今回の変更で壊れたものではない。
+以降の STEP では、この一覧に無い NG が出たら「その変更で壊した」とみなす。逆にここにある NG は、別 PR でトリアージ(検査を直す / 実装の乖離を直す / 廃止する)する。
+
+## 結果の要約
+
+| 項目 | 値 |
+| --- | ---: |
+| 検査本数 | 336 |
+| OK | 278 |
+| NG | 58 |
+| 所要時間(全部・直列) | 約 19 分 |
+
+CI 相当(`--area ci` 28 本)と CLAUDE.md の必須検査(`--area required` 14 本)は**全件 OK**。NG はすべて CI に入っていない検査。
+
+## 領域ごとの内訳
+
+| 領域 | 本数 | OK | NG | 最長(秒) |
+| --- | ---: | ---: | ---: | ---: |
+| root | 26 | 26 | 0 | 14 |
+| boot | 17 | 17 | 0 | 10 |
+| assistant | 5 | 4 | 1 | 0 |
+| mode | 133 | 127 | 6 | 77 |
+| audio | 15 | 10 | 5 | 48 |
+| battle | 29 | 11 | 18 | 84 |
+| browser | 2 | 1 | 1 | 4 |
+| changelog | 4 | 4 | 0 | 11 |
+| image | 15 | 14 | 1 | 15 |
+| masu | 36 | 30 | 6 | 51 |
+| monster | 12 | 6 | 6 | 56 |
+| ranking | 23 | 17 | 6 | 32 |
+| run | 19 | 11 | 8 | 4 |
+
+## NG の分類
+
+### A. 検査側の vm スタブ不足(本体が増やしたグローバルを検査の実行環境が用意していない)(11本)
+
+| 検査 | 最後に出た行 |
+| --- | --- |
+| `audio/title-bgm-default-check.js` | ReferenceError: BGM_TOGGLE_SCENES is not defined |
+| `battle/dist-aptitude-check.js` | SyntaxError: Identifier 'RANGE_LABELS' has already been declared(検査の切り出し範囲が本体の定義と重なる) |
+| `battle/unique-range-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
+| `masu/donation-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
+| `masu/pasture-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
+| `run/auto-repeat-bond-level-cap-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
+| `run/bond-reward-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
+| `run/unique-skill-point-check.js` | ReferenceError: BREEDER_MARKET_ITEMS is not defined |
+| `ranking/ranking-normal-display-check.js` | ReferenceError: GOD_SETTING is not defined |
+| `ranking/ranking-request-check.js` | ReferenceError: EXTREME_DIFFICULTIES is not defined |
+| `run/unique-initial-in-battle-check.js` | ReferenceError: normalizeTranscendStatPoints is not defined |
+
+### B. 検査の期待が実装の現在の形と合っていない(文言・構造の正規表現、または実装側の乖離)。要トリアージ(34本)
+
+| 検査 | 最後に出た行 |
+| --- | --- |
+| `assistant/momosuke-check.js` | 1件のNGがあります |
+| `audio/audio-route-check.js` | ✓ monster-hero/game-system.compiled.js: 同一BGMの重複ソースを作らない |
+| `audio/auto-bgm-continuity-check.js` | OK: 今後の更新バナー・更新情報確認を開発ルール化 |
+| `audio/pandora-boss-bgm-check.js` | 2件のNGがあります |
+| `battle/balance-second-card-check.js` | 4件のNGがあります |
+| `battle/battle-balance-check.js` | } |
+| `battle/battle-carousel-check.js` | } |
+| `battle/battle-mode-check.js` | 4件のNGがあります |
+| `battle/battle-scenario-check.js` |  |
+| `battle/battle-tutorial-check.js` | NG: 練習中はチャレンジ以外の「難易度を選ぶ」を押せない |
+| `battle/card-icon-check.js` | NG: iconをそのまま描いている箇所が残っていない — st.icon — cardIconNode() を通すこと |
+| `battle/enemy-defeat-check.js` | NG  通常攻撃・固有技・連撃・追撃の合計が共通撃破処理へ進む |
+| `battle/enemy-scan-check.js` | 1件のNGがあります |
+| `battle/guard-card-check.js` | NG: 強化画面の予告も同じ式を使う |
+| `battle/hero-marker-check.js` | NG: 枚数の計算がその値を使う |
+| `battle/rpg-debug-check.js` | 2件NG |
+| `masu/party-set-check.js` | } |
+| `masu/rebirth-check.js` | 2件のNGがあります |
+| `mode/extreme-difficulty-theme-check.js` | } |
+| `mode/nightmare-rules-check.js` | } |
+| `mode/species-challenge-clear-flow-check.js` | 1件NG |
+| `mode/species-challenge-unlock-check.js` |  |
+| `monster/golem-balance-check.js` | NG: 自動ガッツ回復率を実装から読める |
+| `monster/kiki-assist-check.js` | } |
+| `monster/market-icon-check.js` | NG: 対象アイコンを共通部品で拡大・位置調整する |
+| `monster/meloso-assist-check.js` | } |
+| `monster/mermaid-monsters-check.js` | 1件のNGがあります |
+| `monster/plant-check.js` | OK: Plant助手告知IDは1件だけ |
+| `ranking/emergency-audio-breeder-check.js` | } |
+| `ranking/ranking-refresh-race-check.js` |  |
+| `run/auto-full-run-check.js` | NG: WAVE10はAUTO停止後に既存の終了ロック・報酬・記録・CHAMPIONを通る |
+| `run/eco-mode-internal-check.js` |  |
+| `run/ranking-finish-check.js` | 92/102 項目OK |
+| `run/training-check.js` | OK: 折りたたみDEBUG操作 |
+
+### C. 実ブラウザ検査。Tailwind CDN が届かない環境での見た目依存、または要素の探し方が古い。要トリアージ(13本)
+
+| 検査 | 最後に出た行 |
+| --- | --- |
+| `audio/title-bgm-check.js` | NG  タップだけでタイトルBGMが鳴る(他ページへ移動しなくてよい) — 拒否された再生 0回 |
+| `battle/battle-check.js` | NG  ファンファーレのあとBGMが戻る — (無音) |
+| `battle/battle-menu-browser-check.js` | } |
+| `battle/battle-tutorial-v2-check.js` | 1件のNGがあります |
+| `battle/wave-result-layout-check.js` | } |
+| `browser/feature-check.js` | NG  トップにバージョンが表示される — ver 2026-09-06 10:25 |
+| `image/dye-edge-check.js` | NG: Undine: 輪郭の塗り残しが 22.89% (上限 5%)。染めても元の色の縁が残ります |
+| `masu/bulk-enhance-check.js` | } |
+| `masu/fusion-animation-browser-check.js` | Error: ボタンが見つかりません: /神殿/ |
+| `mode/extreme-browser-check.js` | NG  通常の難易度画面が開く(極限の影響なし) — バトル モード選択ブリーダーLv絆Lv 左右にスワイプしてモードを選択 BATTLE MODE 🏆 チャレンジモード 強化を選んでじっくり攻略する、基本のモード 最高 |
+| `mode/extreme-rule-detail-browser-check.js` | 3件のNGがあります |
+| `ranking/breeder-ranking-browser-check.js` | } |
+| `ranking/ranking-check.js` | NG  ランキングを開ける — ボタンが見つからない |
+
+## 実行環境についての注記
+
+- このサンドボックスは外部 CDN(Tailwind)へ出られないため、実ブラウザ検査は見た目が崩れた状態で動く。C 分類の一部はそれが原因の可能性があるが、実機や通信のある環境で再実行して切り分けるまでは「検査が古い」と断定しない。
+- `tools/package-lock.json` の playwright(1.62)は `chromium-1234` / `chromium_headless_shell-1234` を探すが、この環境に入っているのは 1194 だった。今回はローカルにだけ 1234 → 1194 のリンクを作って動かした(リポジトリには入れていない)。`headless: true` で起動する検査はこのリンクが無いと 0.5 秒で落ちる。
+- `run-checks.js` は、自分で `serve.py` を立てる検査(`boot-check` など)の前に共有の配信を止める。初回の実行ではここを誤ってポートを取り合い `boot-check` が落ちたが、直したあとは OK。
+
+## 所要時間の長いもの(CI へ足すときの参考)
+
+| 検査 | 秒 |
+| --- | ---: |
+| `battle/battle-check.js` | 84 |
+| `mode/extreme-browser-check.js` | 77 |
+| `monster/mermaid-browser-check.js` | 56 |
+| `masu/bulk-enhance-check.js` | 51 |
+| `mode/rhythm-audio-general-check.js` | 50 |
+| `mode/extreme-rule-detail-browser-check.js` | 49 |
+| `audio/bgm-check.js` | 48 |
+| `masu/masu-enhance-layer-check.js` | 42 |
+| `mode/rhythm-chart-v2-step5-check.js` | 41 |
+| `ranking/bond-levels-table-check.js` | 32 |
+| `ranking/ranking-run-stats-check.js` | 31 |
+| `masu/masu-growth-breakdown-check.js` | 25 |
+
+`--area required` は約 1 分、`--area ci` は約 2 分。A 分類の 11 本はスタブに定数を足すだけで直る見込みが高く、直したら `battle` / `masu` / `run` / `ranking` の領域を CI 候補にできる。
+
+## 次にやること(STEP 1 の残り・別 PR)
+
+1. A 分類: `tools/harness.js` と各検査の vm スタブに、本体が後から足したグローバル(`BREEDER_MARKET_ITEMS`, `GOD_SETTING`, `EXTREME_DIFFICULTIES`, `BGM_TOGGLE_SCENES`, `normalizeTranscendStatPoints` など)を渡す。`RANGE_LABELS` の二重宣言は検査側の切り出し範囲の見直し。
+2. B 分類: 1 本ずつ「検査が古い」のか「実装が仕様から外れた」のかを判定する。実装側の乖離と判明したものは `KNOWN_ISSUES.md` へ移す(例: `battle/card-icon-check` の「`st.icon` を直接描いている箇所」、`monster/golem-balance-check` の「自動回復 null」、`image/dye-edge-check` の Undine の塗り残し)。
+3. C 分類: 通信のある環境(または Tailwind の手元ビルド `tools/layout/`)で再実行して切り分ける。

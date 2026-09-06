@@ -61,6 +61,7 @@ function parseArgs(argv) {
     else if (a === '--area') opts.areas.push(...String(argv[++i] || '').split(',').filter(Boolean));
     else if (a === '--timeout') opts.timeoutSec = Number(argv[++i]) || opts.timeoutSec;
     else if (a === '--json') opts.json = argv[++i];
+    else if (a === '--script') opts.scripts = (opts.scripts || []).concat(String(argv[++i] || '').split(',').filter(Boolean));
     else if (a.startsWith('--area=')) opts.areas.push(...a.slice(7).split(',').filter(Boolean));
     else if (!a.startsWith('--')) opts.areas.push(a);
   }
@@ -101,6 +102,8 @@ function scriptMeta(command) {
   return {
     exists: true,
     needsServer: /localhost:8899|:8899\//.test(src),
+    // 自分で serve.py や http.createServer を立てる検査。共有の配信と同じポートを取り合うので、その間は共有側を止める
+    ownServer: /spawn(?:Sync)?\([^\n]*(?:serve\.py|python)|createServer\(/.test(src),
     needsPlaywright: /require\(['"]playwright['"]\)/.test(src),
     needsCanvas: /require\(['"]canvas['"]\)|loadDyeModule\(/.test(src),
   };
@@ -144,7 +147,7 @@ function runOne(command, timeoutSec) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const areas = discoverAreas();
-  if (opts.list || opts.areas.length === 0) {
+  if (opts.list || (opts.areas.length === 0 && !(opts.scripts && opts.scripts.length))) {
     console.log('領域と検査の一覧(--area <名前> で実行。all で全部):');
     for (const [name, list] of areas) {
       console.log(`\n[${name}] ${list.length}本`);
@@ -158,13 +161,15 @@ async function main() {
   if (unknown.length) { console.error(`NG: 知らない領域: ${unknown.join(', ')}(--list で確認)`); process.exit(2); }
   const commands = [];
   for (const a of wanted) for (const c of areas.get(a)) if (!commands.includes(c)) commands.push(c);
+  for (const c of opts.scripts || []) if (!commands.includes(c)) commands.push(c);
 
   const hasPlaywright = canResolve('playwright');
   const hasCanvas = canResolve('canvas');
-  const anyServer = commands.some(c => scriptMeta(c).needsServer);
-  let server = { stop() {}, note: '配信は起動しない(--no-server)' };
-  if (anyServer && opts.server) server = await startServer();
-  console.log(`検査 ${commands.length} 本 / 領域: ${wanted.join(', ')} / playwright: ${hasPlaywright ? 'あり' : 'なし'} / canvas: ${hasCanvas ? 'あり' : 'なし'} / ${server.note}`);
+  // 共有の配信(serve.py)は、要る検査の直前に起動し、自分で配信を立てる検査の前には止める(ポートの取り合いを避ける)
+  let server = null;
+  const ensureServer = async () => { if (!server && opts.server) { server = await startServer(); console.log(`  (${server.note})`); } };
+  const releaseServer = async () => { if (server) { server.stop(); server = null; for (let i = 0; i < 50 && await portOpen(SERVER_PORT); i++) await new Promise(r => setTimeout(r, 100)); } };
+  console.log(`検査 ${commands.length} 本 / 領域: ${wanted.join(', ')} / playwright: ${hasPlaywright ? 'あり' : 'なし'} / canvas: ${hasCanvas ? 'あり' : 'なし'} / 配信: ${opts.server ? '必要なときだけ自動起動' : '起動しない(--no-server)'}`);
 
   const results = [];
   const started = Date.now();
@@ -175,13 +180,16 @@ async function main() {
       if (!meta.exists) res = { status: 'MISSING', sec: 0, output: '' };
       else if (meta.needsPlaywright && !hasPlaywright) res = { status: 'SKIP', sec: 0, output: 'playwright が無い' };
       else if (meta.needsCanvas && !hasCanvas) res = { status: 'SKIP', sec: 0, output: 'canvas が無い' };
-      else res = runOne(command, opts.timeoutSec);
+      else {
+        if (meta.ownServer) await releaseServer(); else if (meta.needsServer) await ensureServer();
+        res = runOne(command, opts.timeoutSec);
+      }
       results.push({ command, ...res, needsServer: !!meta.needsServer, needsPlaywright: !!meta.needsPlaywright });
       const mark = res.status === 'OK' ? 'OK  ' : res.status === 'SKIP' ? 'SKIP' : res.status === 'NG' ? 'NG  ' : res.status;
       console.log(`${mark} ${res.sec.toFixed(1).padStart(6)}s  ${command}`);
     }
   } finally {
-    server.stop();
+    await releaseServer();
   }
 
   const count = s => results.filter(r => r.status === s).length;
