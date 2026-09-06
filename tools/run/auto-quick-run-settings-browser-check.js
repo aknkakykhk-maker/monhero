@@ -93,6 +93,18 @@ const seed = () => {
     check('まだ使えないと出ている',
       await page.evaluate(() => (document.body.innerText || '').includes('まだ使えません')));
 
+    // クイックは通常の9段階だけでなく EXTREME〜ULTIMATE も選べる。
+    // Legend までしか出ていなかった(2026-09-06・ユーザー指摘)
+    const options = await page.evaluate(() => [...document.querySelectorAll('#auto-quick-difficulty option')]
+      .filter(o => o.value).map(o => ({ value:o.value, disabled:o.disabled })));
+    const values = options.map(o => o.value);
+    check('クイックで遊べる難易度がすべて並ぶ',
+      ['Beginner', 'Legend', 'EXTREME', 'NIGHTMARE', 'CHAOS', 'ULTIMATE'].every(id => values.includes(id)),
+      values.join(','));
+    check('未解放の難易度は一覧には出るが選べない',
+      options.some(o => o.value === 'ULTIMATE' && o.disabled) && options.some(o => o.value === 'Beginner' && !o.disabled),
+      options.filter(o => ['Beginner', 'ULTIMATE'].includes(o.value)).map(o => `${o.value}:${o.disabled ? '選べない' : '選べる'}`).join(' / '));
+
     // 勇者モン・距離・難易度をえらぶ
     await page.evaluate(() => {
       const s = document.querySelector('#auto-quick-hero');

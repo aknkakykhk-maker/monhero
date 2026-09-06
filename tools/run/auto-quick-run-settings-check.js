@@ -86,7 +86,21 @@ check('壊れた入力でも判定は false', configured(null) === false && conf
 // ---- 本体の使いかた ----
 const app = fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
 check('読み込み時の正規化へ難易度の一覧を渡している',
-  /normalizeAutoSettings\(await storeGet\(AUTO_SETTINGS_KEY[^)]*\)[^)]*, activeMonsterRoster, Object\.keys\(DIFFICULTY_SETTINGS\)\)/.test(app));
+  /normalizeAutoSettings\(await storeGet\(AUTO_SETTINGS_KEY[^)]*\)[^)]*, activeMonsterRoster, Object\.keys\(QUICK_DIFFICULTY_SETTINGS\)\)/.test(app));
+// クイックは通常の9段階だけでなく EXTREME〜ULTIMATE も選べる。
+// DIFFICULTY_SETTINGS だけを見ていると Legend までしか出ない
+// (2026-09-06・ユーザー指摘「難易度がレジェンドまでしか出てない」)
+check('難易度の顔ぶれはバトルの難易度選択と同じ表から取る',
+  app.includes('const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(QUICK_DIFFICULTY_SETTINGS);')
+  && app.includes('{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked('));
+// 「DIFFICULTY_SETTINGS を見ている箇所」はランキングの集計などにもあるので、
+// ここで見るのはAUTO設定に関わる2か所だけに絞る
+check('AUTO設定が通常の難易度表だけを見ている形へ戻っていない',
+  !app.includes('const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(DIFFICULTY_SETTINGS);')
+  && !app.includes('activeMonsterRoster, Object.keys(DIFFICULTY_SETTINGS))')
+  && !app.includes('Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked='));
+check('未解放の難易度は選べないだけで一覧には出す',
+  /QUICK_DIFFICULTY_SETTINGS\)\.map\(\(\[key,setting\]\)=>\{const unlocked=[\s\S]{0,220}?disabled=\{!unlocked\}[\s\S]{0,60}?未解放/.test(app));
 check('事前設定から周回テンプレートを作れる', app.includes('const repeatTemplateFromAutoSettings ='));
 check('未解放の難易度では始めない',
   /repeatTemplateFromAutoSettings[\s\S]{0,700}?isQuickDifficultyUnlocked\(quick\.difficulty/.test(app));
