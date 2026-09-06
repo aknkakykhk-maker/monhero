@@ -75,9 +75,12 @@ check('毎フレームのgeometry測定(measureTravel)を数えている',
 check('ジェスチャー側の別rAFのフレーム数を数えている',
   /RHYTHM_PERF\.gestureFrame\(\);\s*\n\s*if\(sessions\.size/.test(data));
 // 呼び出し側が要素を持っているときは querySelector を省くので const 宣言とは限らない
+// 2026-09-06: 箱の測定は RHYTHM_VIEW_ROTATION.rectOf(area) を通すようになった
+// (自前で画面を回すため。回していないときは getBoundingClientRect の値をそのまま返す)。
+// 見たいこと(DOM検索と強制レイアウトを数えている)は変わっていない。
 check('入力のたびのDOM検索と強制レイアウトを数えている',
   /RHYTHM_PERF\.domQuery\(\);\s*\n\s*(?:const )?area=document\.querySelector\('\[data-rhythm-play-area\]'\)/.test(data)
-  &&/RHYTHM_PERF\.layoutRead\(\);\s*\n\s*const rect=area\.getBoundingClientRect\(\)/.test(data));
+  &&/RHYTHM_PERF\.layoutRead\(\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*const rect=RHYTHM_VIEW_ROTATION\.rectOf\(area\)/.test(data));
 check('SLIDE帯のpolygon更新数を数えている',/RHYTHM_PERF\.slidePolygons\(polygons\.length\)/.test(data));
 // 発光の要素はキャッシュするようになったので、実際に引き直したときだけ数える
 check('サブレーン発光は引き直したときだけDOM検索として数える',
@@ -133,9 +136,11 @@ check('ノーツのDOMを毎回作り直さない(判定のたびの再生成を
 check('レーン枠・サブレーン発光のDOMも毎回作り直さない',
   /const laneElements=useMemo\(\(\)=><>/.test(gameSrc)&&gameSrc.includes('{laneElements}'));
 check('入力のrect取得はジェスチャー側と同じ1フレーム1回のキャッシュを共有する',
-  gameSrc.includes('const inputAreaRect=area=>RHYTHM_GESTURE_RUNTIME.areaRect(area)||area.getBoundingClientRect();')
+  gameSrc.includes('const inputAreaRect=area=>RHYTHM_GESTURE_RUNTIME.areaRect(area)||RHYTHM_VIEW_ROTATION.rectOf(area);')
   &&data.includes('invalidateAreaRect,areaRect,')
-  &&!/const rect=area\.getBoundingClientRect\(\),live=new Set\(\)/.test(gameSrc));
+  &&!/const rect=area\.getBoundingClientRect\(\),live=new Set\(\)/.test(gameSrc)
+  // 自前で画面を回したときも、覚えている箱は必ず捨てる(ズレると入力位置がずれる)
+  &&data.includes('RHYTHM_VIEW_ROTATION.subscribe(invalidateAreaRect);'));
 // 2026-09-04: 「指を触れていない降下中にもカクつく」報告を受けて足した3点。
 // 実機で「絞り込みが本当に効いているか」まで分かるよう、走査数・実描画数に加えて
 // 先頭スキップ数と絞り込みの有無も渡す形になった(推測で直さないための計測)。
