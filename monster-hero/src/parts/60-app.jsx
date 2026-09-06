@@ -2045,10 +2045,22 @@ function MonsterHeroGame() {
   const [runStage, setRunStage] = useState(null);
   // 同じターンの中で参照するための控え。setStateの反映を待たずに読む
   const runStageRef = useRef(null);
-  // ランの画面を描かずに段階だけ進めてよいか。
-  // ★PR4でモンビーの非演奏画面をここへ足す。いまは常に false なので、
-  //   ランの段階が変わるときは必ず画面も一緒に切り替わる(これまでどおり)。
-  const runBackgroundAllowed = false;
+  // ===== モンビーを開いたままクイック∞周回を続ける(docs/spec/QUICK_RHYTHM_LINK.md) =====
+  // モンビーのうち、裏で周回を続けてよい画面。60fpsも精密入力も要らないところだけを並べる。
+  // 演奏中(RHYTHM_PLAY)はここに**入れない**。16.6msごとに全ノーツを走査して判定しているので、
+  // バトルのstate更新が割り込むと入力の取りこぼしとカクつきになる(REGRESSION_RISK_MAP.md §4-1)。
+  const RHYTHM_BACKGROUND_RUN_SCREENS = ['RHYTHM_DEMO_HOME','RHYTHM_DEMO_HELP','RHYTHM_DEMO_MONSTERS','RHYTHM_RANKING'];
+  // モンビーを開いているか(演奏中も含む)。開いている間はランが進んでも画面を切り替えない。
+  // 演奏中に画面がバトルへ飛ぶのを防ぐため、RHYTHM_PLAY もここへ入れる
+  const rhythmScreenOpen = [...RHYTHM_BACKGROUND_RUN_SCREENS,'RHYTHM_PLAY'].includes(gameState);
+  // 裏で周回してよい状態か。
+  //  ・クイックの∞周回だけ(チャレンジ・プロ・極限・種族は全国ランキング対象なので裏で回さない)
+  //  ・演奏中は止める(曲が終われば自動で再開する)
+  //  ・タブが見えていないときは、これまでどおり stopAllAuto で止まる
+  const rhythmBackgroundRun = runStage !== null && autoRepeat === true && isQuickMode(runMode)
+    && RHYTHM_BACKGROUND_RUN_SCREENS.includes(gameState);
+  // ランの画面を描かずに段階だけ進めてよいか。モンビーを開いている間はそのまま進める
+  const runBackgroundAllowed = rhythmScreenOpen;
   // ランの段階を1つ進める唯一の入口。
   // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
   // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
@@ -2060,8 +2072,10 @@ function MonsterHeroGame() {
   };
   // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
   const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };
-  // ランを進めてよいか。いまは「ランの画面を実際に描いている」ときだけ。
-  const runProgressAllowed = runStage !== null && gameState === runStage;
+  // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
+  const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
+  // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
+  const returnToBackgroundRun = () => { if (runStageRef.current) setGameState(runStageRef.current); };
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -2152,7 +2166,10 @@ function MonsterHeroGame() {
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
-  useEffect(() => { Audio_.setSeVolume(ultraEcoSession ? 0 : seVolume); }, [seVolume, ultraEcoSession]);
+  // モンビーを開いている間は、裏で回っているバトルのSEを鳴らさない。
+  // 曲の試聴・演奏と重なると邪魔になるため(超省エネと同じ考え方)。
+  // 音量の保存値そのものは変えないので、モンビーを出れば元の音量へ戻る
+  useEffect(() => { Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume); }, [seVolume, ultraEcoSession, rhythmScreenOpen]);
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
 
   // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
@@ -9937,7 +9954,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
           <main data-rhythm-demo-home className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
             <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
-              <button aria-label="戻る" onClick={()=>setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS')} className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300"><ArrowLeft size={20}/></button>
+              {/* 裏でクイック∞周回が回っているあいだは、HOMEではなくバトルへ戻す。
+                  HOMEへ抜けると returnToHome を通らないぶん周回が宙ぶらりんになるので、
+                  やめるときはバトル画面で∞を切ってから戻ってもらう */}
+              <button data-rhythm-back aria-label={rhythmBackgroundRun?'クイックのバトルへ戻る':'戻る'} title={rhythmBackgroundRun?'クイックのバトルへ戻る':'戻る'}
+                onClick={()=>{if(rhythmBackgroundRun){returnToBackgroundRun();return;}setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS');}}
+                className="min-h-[44px] min-w-[44px] shrink-0 text-slate-300">{rhythmBackgroundRun?<span className="text-[10px] font-black leading-tight text-fuchsia-200">⚔<br/>戻る</span>:<ArrowLeft size={20}/>}</button>
               {/* ボタンが4つ並ぶので、題名は縮んでも1行のまま(truncate)にする。
                   折り返すとヘッダーが2行になり、そのぶん曲の一覧が減るため */}
               <div className="min-w-0 flex-1">
@@ -12981,6 +13003,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[7px]">VIEW</span></button><button data-auto-bgm-button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="バトルBGMと音量を調整" title="BGM / 音量" className="shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"><span className="block text-[13px] leading-none">🎵</span><span className="mt-0.5 block text-[7px] font-black leading-none">BGM</span></button>
                   <div className="w-[44px] shrink-0 flex flex-col gap-0.5">
                     <button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={cycleBattleAuto} aria-pressed={autoBattle} aria-label={`AUTO ${autoRepeat?'∞':autoBattle?'ON':'OFF'}`} className={`h-8 w-full px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat?'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]':autoBattle?'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]':'border-slate-500 bg-slate-800 text-slate-300'}`}><span className="block">AUTO</span><span className="block text-[7px]">{autoRepeat?'∞':autoBattle?'ON':'OFF'}</span></button>
+                    {/* ∞周回中だけ、周回を止めずにモンビーへ移れる入口を出す。
+                        returnToHome を通すと stopAllAuto で周回が終わってしまうので、
+                        openRhythmDemo(画面を切り替えるだけ)を直接呼ぶ */}
+                    {gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true&&<button data-quick-to-rhythm type="button" onClick={openRhythmDemo} aria-label="周回を続けたままモンビーへ" title="周回を続けたままモンビーへ" className="min-h-[24px] w-full rounded-md border border-fuchsia-300 bg-fuchsia-700 font-black text-[7px] leading-[9px] text-fuchsia-50 active:scale-90"><span className="block">🎵</span><span className="block">モンビー</span></button>}
                     {gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true&&<button type="button" onClick={cycleEcoMode} aria-label={`省エネ ${ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'}`} className={`min-h-[24px] w-full rounded-md border font-black text-[7px] leading-[9px] active:scale-90 ${ecoMode==='lite'?'border-emerald-300 bg-emerald-700 text-emerald-50':ecoMode==='ultra'?'border-lime-200 bg-lime-500 text-slate-950':'border-slate-500 bg-slate-700 text-slate-200'}`}><span className="block">省エネ</span><span className="block">{ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'}</span></button>}
                   </div>
                   {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!autoBattle&&!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`min-h-[44px] min-w-[84px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={12}/> Action</button>);})()}
