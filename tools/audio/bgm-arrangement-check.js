@@ -90,12 +90,14 @@ for (const file of files) {
   check(`${file}: 会話イベント中は画面より優先してイベントBGMを鳴らす`,
     /EVENT_BGM_SCENES/.test(source) && /kiki_intro:'kikiIntro'/.test(compact) &&
     /if \(eventBgmScene\) return bgmArrangement\[eventBgmScene\];/.test(source) &&
-    source.indexOf('if (eventBgmScene) return bgmArrangement[eventBgmScene];') < source.indexOf("if (isGameOver) return 'gameOver';"));
+    // 2026-09-07。敗北BGMも設定から引くようにしたので、比べる相手を
+    // 'gameOver' 直書きから bgmArrangement.gameOver へ変えた（前後関係を見る意図は同じ）
+    source.indexOf('if (eventBgmScene) return bgmArrangement[eventBgmScene];') < source.indexOf('if (isGameOver) return bgmArrangement.gameOver;'));
   check(`${file}: 通常再生もイベント回想も同じイベントBGM設定を使う`,
     /kikiIntroPlaying[\s\S]{0,200}EVENT_BGM_SCENES\.kiki_intro/.test(source) &&
     /eventReplay\s*\?\s*\(?EVENT_BGM_SCENES\[eventReplay\.id\]\s*\|\|\s*null\)?\s*:\s*null/.test(source));
   check(`${file}: イベントが終われば元の画面のBGMへ戻る（依存に入れて鳴らし直す）`,
-    /bgmArrangement, runMode, eventBgmScene, mainHero\?\.id(?:, autoBattle)?(?:, autoBgmOverride)?\]/.test(source));
+    /bgmArrangement, runMode, eventBgmScene, mainHero\?\.id(?:, autoBattle)?(?:, autoBgmOverride)?(?:, rhythmScreenOpen)?\]/.test(source));
   check(`${file}: 旧保存のデュラハン・boss選択を新規キーへ継承`,
     /quickMoo:'boss'/.test(compact) && /proDullahan:'dullahan'/.test(compact) && /proMoo:'boss'/.test(compact) &&
     /extremeDullahan:'dullahan'/.test(compact) && /extremeMoo:'boss'/.test(compact) && /BGM_TRACK_BY_ID\[legacySaved\]/.test(source));

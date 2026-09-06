@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7da584ff3c744fe2
+// source-sha256: c1ead7b1dd14eb90
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8a80285413995b5c
+// generated-sha256: 1ea85a9b0578b9d5
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 07:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 08:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3974,6 +3974,9 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   autoPostWaveBgm: 'off',
   autoRepeatResultBgm: 'off',
   clear: 'ichika_clear',
+  enhance: 'original_enhance',
+  result: 'original_result',
+  gameOver: 'original_game_over',
   kikiIntro: 'original_event_01',
   momosukeIntro: 'six_eternel_remix'
 });
@@ -23032,6 +23035,65 @@ function MonsterHeroGame() {
   }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
     className: "mt-0.5 block text-[6px] leading-[8px]"
   }, "\u30E2\u30F3\u30D2\u30ED", /*#__PURE__*/React.createElement("br", null), "\u30D3\u30FC\u30C8")) : null;
+  // ===== ∞周回の進捗を、バトル画面の空いているところにも出す =====
+  // 超省エネは演出を出さないぶん画面が大きく空くので、そこへ積み上がりを置く
+  // (2026-09-07・ユーザー指示「無限周回時の空いてるスペースにも
+  //  モンビーの帯のように進捗状況を表示するようにしたい」)。
+  // ★∞を切ったら消える(＝0から数えなおし)。
+  //   モンビー側の帯は「終わったよ」と知らせる役目があるので finished でも残すが、
+  //   バトル画面は本人が切った直後なので残す意味がない
+  //   (ユーザー指示「止めるまでは増えてくけど止めたらリセットされるみたいな感じで」)。
+  // ★数字はモンビーの帯とまったく同じもの(quickRunProgress ＋ quickRunPendingRewards)を使う。
+  //   別々に数えると、同じ周回なのに画面によって違う値が出てしまう
+  // ★ここは「その場で組み立てる」のではなく「描くときに呼ぶ関数」にする。
+  //   見込み報酬は quickRunPendingRewards() → runRewardMultipliers() を通るが、
+  //   その runRewardMultipliers はこの行よりずっと下で定義されている。
+  //   const で即座に組み立てると ∞ にした瞬間に
+  //   「Cannot access 'runRewardMultipliers' before initialization」で画面が落ちる
+  //   (2026-09-07。実ブラウザ検査 quick-run-battle-band-browser-check.js が拾った。
+  //    CLAUDE.md ⑥ の「描画した瞬間だけ落ちる」と同じ型)。
+  //   関数にしておけば、呼ばれるのは描画のときなので、そのころには全部そろっている。
+  const renderQuickRunBattleBand = () => {
+    if (!(gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && quickRunProgress && !quickRunProgress.finished)) return null;
+    return (() => {
+      const pending = quickRunPendingRewards();
+      const totalXp = Math.floor(quickRunProgress.xp + pending.xp);
+      const totalGold = Math.floor(quickRunProgress.gold + pending.gold);
+      return /*#__PURE__*/React.createElement("section", {
+        "data-quick-run-battle-band": true,
+        className: "shrink-0 rounded-xl border border-fuchsia-400/30 bg-slate-900/95 px-2 py-1.5"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "flex min-w-0 items-center gap-1 text-[9px] font-black text-fuchsia-200"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0"
+      }, "\u2694"), /*#__PURE__*/React.createElement("span", {
+        className: "truncate"
+      }, "\u221E\u5468\u56DE\u306E\u3042\u3057\u3042\u3068")), /*#__PURE__*/React.createElement("span", {
+        "data-quick-run-battle-loops": true,
+        className: "shrink-0 font-mono text-[10px] font-black text-white"
+      }, quickRunProgress.loops, "\u5468\u76EE \u30FB WAVE ", wave, "/10")), /*#__PURE__*/React.createElement("dl", {
+        className: "mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px]"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between gap-1"
+      }, /*#__PURE__*/React.createElement("dt", {
+        className: "text-slate-400"
+      }, "\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("dd", {
+        "data-quick-run-battle-xp": true,
+        className: "font-mono font-black text-cyan-200"
+      }, "+", totalXp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between gap-1"
+      }, /*#__PURE__*/React.createElement("dt", {
+        className: "text-slate-400"
+      }, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("dd", {
+        "data-quick-run-battle-gold": true,
+        className: "font-mono font-black text-amber-200"
+      }, "+", totalGold.toLocaleString()))), /*#__PURE__*/React.createElement("p", {
+        className: "mt-0.5 text-[8px] leading-tight text-slate-500"
+      }, "AUTO\u221E\u3092\u5207\u308B\u307E\u3067\u7A4D\u307F\u4E0A\u304C\u308A\u307E\u3059\uFF08\u5207\u308B\u30680\u304B\u3089\u6570\u3048\u306A\u304A\u3057\u3067\u3059\uFF09\u3002"));
+    })();
+  };
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -23040,15 +23102,21 @@ function MonsterHeroGame() {
   const momosukeIntroPlaying = gameState === 'HOME' && onboarded && tutorialStep == null && kikiIntroStep == null && momosukeIntroStep != null;
   const eventBgmScene = kikiIntroPlaying ? EVENT_BGM_SCENES.kiki_intro : momosukeIntroPlaying ? EVENT_BGM_SCENES.momosuke_intro : eventReplay ? EVENT_BGM_SCENES[eventReplay.id] || null : null;
   // 画面から鳴らすべき曲のキーを決める
-  const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver) => {
+  // allowKeep=false のときは「直前のBGMを維持」を選ばない。
+  // モンビーを開いているあいだバトルのBGMは止まっているので、戻ってきたときに
+  // 維持を選ぶと、維持すべき曲が無くて無音のままになる
+  // (2026-09-07・ユーザー報告「勇者モン選択時のデフォ曲が変わってる」)
+  // モンビーを開いていてバトルのBGMを止めたかどうか。戻ってきたときに鳴らし直す判断に使う
+  const bgmSuspendedByRhythmRef = useRef(false);
+  const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver, allowKeep = true) => {
     // 会話イベント中は画面(HOME/PROFILE)より優先してイベントBGMを鳴らす。
     // 通常再生(きき加入)も、プロフィールからのイベント回想も同じ設定を使う。
     // イベントが終わればこの判定を抜けるので、元の画面のBGMへそのまま戻る
     if (eventBgmScene) return bgmArrangement[eventBgmScene];
-    if (isGameOver) return 'gameOver';
+    if (isGameOver) return bgmArrangement.gameOver;
     if (!debugBattleRef.current && currentWave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) {
       // AUTO∞は最終リザルトでも直前の戦闘BGMを継続する。設定をONにした場合だけ従来のクリアBGMへ切り替える。
-      if (autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
+      if (allowKeep && autoRepeatRef.current && bgmArrangement.autoRepeatResultBgm !== 'on') return '__keep_battle_bgm__';
       return bgmArrangement.clear;
     }
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
@@ -23100,9 +23168,9 @@ function MonsterHeroGame() {
     if (RUN_PHASE_STATES.includes(state)) {
       // AUTO∞の次周開始時はwaveHistoryが0へ戻る中間フェーズでも、直前のBGMを維持する。
       // ここでenhance/resultへ一瞬切り替わると、次のBATTLEでAUTO曲が先頭から再生されてしまう。
-      if (autoRepeatRef.current && !wavesDone) return '__keep_battle_bgm__';
-      if (wavesDone && autoBattleRef.current && bgmArrangement.autoPostWaveBgm !== 'on') return '__keep_battle_bgm__';
-      return wavesDone ? 'result' : 'enhance';
+      if (allowKeep && autoRepeatRef.current && !wavesDone) return '__keep_battle_bgm__';
+      if (allowKeep && wavesDone && autoBattleRef.current && bgmArrangement.autoPostWaveBgm !== 'on') return '__keep_battle_bgm__';
+      return wavesDone ? bgmArrangement.result : bgmArrangement.enhance;
     }
     return null;
   };
@@ -23110,7 +23178,14 @@ function MonsterHeroGame() {
   useEffect(() => {
     // 専用sourceの開始・停止はRhythmTapTestが管理する。通常BGM effectから触ると二重再生や途中停止になる。
     if (gameState === 'RHYTHM_PLAY') return;
-    const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
+    let key = bootPhase === 'GAME' ? bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? bgmArrangement.title : null;
+    // ★モンビーを開いているあいだ、バトルのBGMは止まっている(この画面はキーを持たない)。
+    //   戻ってきた最初の1回で「直前のBGMを維持」を選ぶと、維持すべき曲が無いので
+    //   無音のままになる。そこだけは維持せず鳴らし直す
+    if (key === '__keep_battle_bgm__' && bgmSuspendedByRhythmRef.current) {
+      key = bgmKeyForState(gameState, wave, enemy?.id, (waveHistory || []).length > 0, hp <= 0 || gaveUp, false);
+    }
+    bgmSuspendedByRhythmRef.current = rhythmScreenOpen;
     // AUTO中のWAVE後は曲を止めたり差し替えたりせず、直前の戦闘BGMをそのまま継続する。
     if (key === '__keep_battle_bgm__') {
       if (!audioOn) Audio_.stopBGM();
@@ -23128,7 +23203,7 @@ function MonsterHeroGame() {
       return;
     }
     if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode, eventBgmScene, mainHero?.id, autoBattle, autoBgmOverride, rhythmScreenOpen]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   // 超省エネではBGMを選んで鳴らしてもSEだけは常に0。保存済みSE音量そのものは変更しない。
@@ -32806,7 +32881,11 @@ function MonsterHeroGame() {
     const categories = [{
       id: 'basic',
       label: '基本',
-      items: [['home', 'HOME BGM'], ['title', 'タイトル BGM'], ['autoBattle', 'AUTOモード BGM'], ['management', 'M/B管理 BGM'], ['clear', 'ゲームクリア BGM']]
+      items: [['home', 'HOME BGM'], ['title', 'タイトル BGM'], ['autoBattle', 'AUTOモード BGM'], ['management', 'M/B管理 BGM'], ['clear', 'ゲームクリア BGM'],
+      // 勇者モン選択などの準備中・WAVE後のリザルト・敗北も選べるようにした
+      // (2026-09-07・ユーザー要望「せっかくだから全て場面のBGMアレンジをできるようにして」)。
+      // 既定値は今まで鳴っていた曲そのものなので、これまでの音は変わらない
+      ['enhance', '準備・強化フェーズ BGM'], ['result', 'WAVE後リザルト BGM'], ['gameOver', '敗北 BGM']]
     }, {
       id: 'battle',
       label: 'バトル'
@@ -38834,7 +38913,10 @@ function MonsterHeroGame() {
         className: "truncate font-black text-white"
       }, mainHero?.masuName || mainHero?.name || '—'))), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-      }, quickRunProgress.finished ? '周回は止まっています。バトルへ戻ると結果を見られます。' : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。' : 'ここにいるあいだも周回は進みます。演奏中だけ止まり、曲が終わると続きから動きます。'), /*#__PURE__*/React.createElement("button", {
+      }, quickRunProgress.finished ? '周回は止まっています。バトルへ戻ると結果を見られます。' : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
+      // 「演奏中は止まる」だけだと、演奏したぶん損をすると読めてしまう
+      // (2026-09-07・ユーザー指摘)。止まったぶんはあとで取り戻すことまで書く
+      : 'ここにいるあいだも周回は進みます。演奏中だけ止まりますが、そのぶんは曲のあとに速く進んで取り戻すので、損にはなりません。'), /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-quick-run-progress-back": true,
         onClick: () => {
@@ -44894,7 +44976,7 @@ function MonsterHeroGame() {
     }, slotSkill.name), popups.filter(p => ['hero', 'life', 'guts'].includes(p.side)).map(p => /*#__PURE__*/React.createElement("div", {
       key: p.id,
       className: `${p.color} truncate text-sm font-black`
-    }, p.text))))), /*#__PURE__*/React.createElement("div", {
+    }, p.text)))), renderQuickRunBattleBand()), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 border-t border-white/10 bg-slate-900 p-1"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-1 px-1"
