@@ -145,3 +145,18 @@ CI 相当(`--area ci` 28 本)と CLAUDE.md の必須検査(`--area required` 14 
 1. A 分類: 2026-09-06 に対応済み(11 本中 7 本が OK、4 本は B 分類として残る)。
 2. B 分類: 1 本ずつ「検査が古い」のか「実装が仕様から外れた」のかを判定する。実装側の乖離と判明したものは `KNOWN_ISSUES.md` へ移す(例: `battle/card-icon-check` の「`st.icon` を直接描いている箇所」、`monster/golem-balance-check` の「自動回復 null」、`image/dye-edge-check` の Undine の塗り残し)。
 3. C 分類: 通信のある環境(または Tailwind の手元ビルド `tools/layout/`)で再実行して切り分ける。
+
+## 2026-09-06 夕: 共有層の分割後に全件を回した結果
+
+`main` #1125 + 共有層の 21 分割(PR 未マージ時点)で `--area all` を実行: 340 本 / NG 54 → ベースラインの 51 本に対して**新しい NG が 3 本**あり、原因を切り分けた。
+
+| 検査 | 原因 | 対応 |
+| --- | --- | --- |
+| `viewport-height-check.js` | エラー境界(#1117)の受け止め画面が `100dvh` を直書きしていた(Android のナビゲーションバーで下端が隠れる、と決めた事項に反する) | `var(--mh-vh)` に直した |
+| `mode/rhythm-player-screen-debug-check.js` | エラー境界(#1117)のわざと投げる例外の文言に「デバッグ」があり、演奏画面の範囲(`RhythmTapTest` 〜 `MonsterHeroGame`)で数えられていた | 文言から「デバッグ」を外した |
+| `battle/rpg-debug-layout-check.js` | 分割のとき、離れた位置にあった説明コメントを定義の直前へ動かしたが、その行を切り出しの終端に使っていた | コメントを元の位置へ戻した |
+
+3 本とも直したうえで、上記 3 本 + `required` + `ci` が OK。新しく足した検査(`boot/legacy-save-boot-check` / `boot/save-keys-check` / `boot/screen-error-boundary-check` / `boot/parts-purity-check`)はすべて OK。
+main 側で足された `mode/rhythm-forced-rotation-check.js` も OK。残る NG はベースラインと同じ 51 本。
+
+教訓: `required` と `ci` だけでは #1117 の 2 件の退行を拾えなかった。**本体を触る PR では、少なくとも `boot` `battle` `mode` の領域まで回す**(所要 10 分程度)。

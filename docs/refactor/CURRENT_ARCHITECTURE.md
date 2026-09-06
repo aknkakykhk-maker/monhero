@@ -51,7 +51,34 @@
 ## 3. `game-system.jsx` の内部地図(行番号は 9f9cfa0 時点)
 
 > 2026-09-06(STEP 2)から、編集元は `monster-hero/src/parts/*.jsx` になり、`game-system.jsx` はそれを `parts.json` の順に連結した生成物。
-> 部品は `10-shared.jsx`(1〜10,525 行相当)、`15-error-boundary.jsx`、`20-app.jsx`(MonsterHeroGame)、`30-bootstrap.jsx`(CSS 注入と createRoot)の 4 つ。
+> 部品は共有層 21 個(`10-core` 〜 `30-rhythm-play`。2026-09-06 に旧 `10-shared` を節ごとに分けた。役割は `parts.json`)と、`50-error-boundary.jsx`、`60-app.jsx`(MonsterHeroGame)、`70-bootstrap.jsx`(CSS 注入と createRoot)。
+>
+> | 部品 | 役割 |
+> | --- | --- |
+> | `10-core.jsx` | 共有層の土台。React フック・SVG アイコン・wait・バトル速度・XP/ゴールド表・バトルモード・モード別報酬 |
+> | `11-masu-progression.jsx` | マスモン育成の純関数。レベル・絆・限界突破・超越・固有技継承・合体・寄付・再生・血統・総合力・一度きり移行と診断 |
+> | `12-training.jsx` | 修行(TRAINING。未公開)の定義 |
+> | `13-bgm-and-rhythm-settings.jsx` | BGM 一覧、音ゲー設定・BEST の既定値と正規化、BGM アレンジの正規化と既定曲の一度きり移行 |
+> | `14-audio.jsx` | Audio_(BGM・ジングル・SE・AudioContext の復帰。音の唯一の入口) |
+> | `15-dye-and-art.jsx` | 染色(色ID・領域マスク解析・再着色・キャッシュ)、模様、モンスターの絵とアイコンの部品 |
+> | `16-ranking-detail-and-widgets.jsx` | ランキング詳細形式(RANKING_DETAIL_VERSION)、合体履歴、★・オーラなどの小部品、色ピッカー、音量スライダー |
+> | `17-release-changelog-login-missions.jsx` | 公開フラグ、更新履歴の整形、一覧設定の正規化、ログインボーナス、助手の親密度、補償ギフト、キャンペーン、プレイ時間、ミッション定義 |
+> | `18-points-and-auto.jsx` | 強化ポイントの補填と補正、AUTO 設定と自動ターン選択 |
+> | `19-difficulties-and-rules.jsx` | スキップチケット、ヘルプ目次、難易度(通常・極限・クイック・種族チャレンジ)、極限の特別ルール、トレーニングの選択肢、極限モードの解放 |
+> | `20-market-notices-help.jsx` | マーケット部品、画像先読みキュー、チュートリアル・更新通知の保存キー、ヘルプの実データ表 |
+> | `21-assistant.jsx` | 助手(みゅあ・きき・ももすけ)の文脈と吹き出し AssistantBubble、QuickStepScreen |
+> | `22-enemy-and-bond-entries.jsx` | 難易度の見た目、敵の行動選択と生成、絆ランキングの集計、教えの演出スタイル |
+> | `23-rpg-debug.jsx` | ダンジョン RPG 戦闘テスト(デバッグ専用の別エンジン) |
+> | `24-battle-fx.jsx` | エイキの桜・パンドラの雷などバトル演出の部品 |
+> | `25-storage.jsx` | 保存層(storeGet / storeSet / storeList / setStorageWriteBlocked)と音ゲー保存の薄い関数 |
+> | `26-supabase.jsx` | 全国ランキング(Supabase REST)。難易度キー、取得、送信、絆Lv、周回ID |
+> | `27-result-widgets.jsx` | リザルト部品(LevelGrowthBar・CountUpNumber・RewardSummaryCard)、起動ゲージ連携、染色マスクの手動エディタ、長押しボタン |
+> | `28-rhythm-shared.jsx` | 音ゲーの共有部品: 表示時間の定数、入力キー、ノーツ速度、画面回転・静音、タイミング調整 |
+> | `29-rhythm-screens.jsx` | 音ゲーのオプション画面・曲えらび・マスモン枠(演奏画面以外) |
+> | `30-rhythm-play.jsx` | 音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない |
+> | `50-error-boundary.jsx` | 画面のエラー境界 MhErrorBoundary と、デバッグ用にわざと例外を投げる部品 |
+> | `60-app.jsx` | MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX) |
+> | `70-bootstrap.jsx` | CSS 文字列の注入(createAnimationStyle)、ReactDOM.createRoot、HTML ローディングの非表示 |
 > 下表の行番号は連結後の `game-system.jsx` で見るときの目安(ヘッダと目印の行ぶん、数行ずれる)。
 
 ファイルは大きく「共有層(1〜10,358行)」「`MonsterHeroGame`(10,359〜25,082行)」「CSS注入と createRoot(〜25,638行)」の3層。

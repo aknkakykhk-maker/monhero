@@ -63,7 +63,7 @@
 | パス | 所有する責務 | 編集規則 |
 | --- | --- | --- |
 | `index.html` | PWAメタ情報、safe area、依存読込順、本体再試行 | 起動経路変更時のみ編集 |
-| `src/parts/*.jsx` + `parts.json` | ゲーム本体の編集元。`10-shared`(共有層)/ `15-error-boundary` / `20-app`(MonsterHeroGame)/ `30-bootstrap`(CSS注入と createRoot) | 部品を足したら `parts.json` へ順に並べる |
+| `src/parts/*.jsx` + `parts.json` | ゲーム本体の編集元。10〜30 が共有層(MonsterHeroGame を知らないもの)、`50-error-boundary` / `60-app`(MonsterHeroGame)/ `70-bootstrap`(CSS注入と createRoot)。各部品の役割は `parts.json` の `role` を見る | 部品を足したら `parts.json` へ順に並べる |
 | `src/game-system.jsx` | parts を連結した生成物(部品の区切りに `// ---- part: … ----` の目印) | 直接編集せず `node tools/build.js` で生成。直接編集しても parts が未変更なら build.js が書き戻す |
 | `game-system.compiled.js` | Babel変換済み配信物 | 直接編集せず `node tools/build.js` で生成 |
 | `game-v4.html` | 旧URLから `index.html` へのリダイレクト | 互換入口として維持 |

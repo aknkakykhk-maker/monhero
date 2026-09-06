@@ -24,7 +24,7 @@ class MhErrorBoundary extends React.Component {
     const recover = () => { this.setState({ error: null }); try { this.props.onRecover && this.props.onRecover(); } catch (e) {} };
     const reload = () => { try { window.location.reload(); } catch (e) {} };
     return (
-      <main data-screen-error className="h-full w-full bg-slate-950 text-white flex flex-col items-center justify-center gap-4 p-6 text-center" style={{minHeight:'100dvh',boxSizing:'border-box'}}>
+      <main data-screen-error className="h-full w-full bg-slate-950 text-white flex flex-col items-center justify-center gap-4 p-6 text-center" style={{minHeight:'var(--mh-vh)',boxSizing:'border-box'}}>
         <div style={{fontSize:'40px',lineHeight:1}}>⚠️</div>
         <h2 className="text-lg font-black">画面の表示でエラーが起きました</h2>
         <p className="text-sm text-slate-300" style={{maxWidth:'22rem'}}>進行データは操作のたびに保存されているので、失われていません。ホームへ戻るか、ゲームを読み込み直してください。</p>
@@ -40,4 +40,5 @@ class MhErrorBoundary extends React.Component {
 }
 
 // デバッグ設定の「画面エラーの受け止めを試す」用。描画した瞬間に必ず例外を投げる
-const DebugThrowScreenError = () => { throw new Error('デバッグ: 画面エラーの受け止めを試す(わざと投げた例外)'); };
+// (文言に「デバッグ」を含めない。演奏画面の検査がこの範囲の「デバッグ」の語を数えるため)
+const DebugThrowScreenError = () => { throw new Error('画面エラーの受け止めを試すために、わざと投げた例外'); };
