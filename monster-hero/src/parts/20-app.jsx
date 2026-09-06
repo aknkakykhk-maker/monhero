@@ -447,7 +447,7 @@ function MonsterHeroGame() {
   const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
-  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 'MAX'（全項目共通）
+  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 100 / 'MAX'（全項目共通）
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
   const [fusionSortKey, setFusionSortKey] = useState('bond'); // 'bond'|'lineage'|'name'|'fused'
   const [fusionSortDir, setFusionSortDir] = useState('desc');
@@ -876,7 +876,7 @@ function MonsterHeroGame() {
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
   const [transcendDebugId, setTranscendDebugId] = useState(null);
-  // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / MAX
+  // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / 100 / MAX
   const [transcendBulkUnit, setTranscendBulkUnit] = useState(1);
   // 超越ポイントリセットの書。確認シートの開閉と、連打で2冊消費しないためのロック
   const [transcendResetOpen, setTranscendResetOpen] = useState(false);
@@ -11802,8 +11802,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="text-[11px] font-black text-sky-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>基礎値を上げる</div>
                     <div className="text-[9px] text-slate-400 font-bold">全項目共通</div>
                   </div>
-                  <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
-                    {[1,5,10,'MAX'].map(unit=><button type="button" key={unit} data-transcend-unit={unit} aria-pressed={transcendBulkUnit===unit} onClick={()=>setTranscendBulkUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${transcendBulkUnit===unit?'bg-sky-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
+                  <div className="grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
+                    {[1,5,10,100,'MAX'].map(unit=><button type="button" key={unit} data-transcend-unit={unit} aria-pressed={transcendBulkUnit===unit} onClick={()=>setTranscendBulkUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${transcendBulkUnit===unit?'bg-sky-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                   </div>
                   <div className="mb-3">{renderPowerBadge(previewPower, {before: currentPower, size:'md'})}</div>
                   <div className="text-[9px] text-slate-400 font-bold mb-1.5">間合い適性<span className="ml-1 text-slate-500">（上限{maxGrade}）</span></div>
@@ -12013,8 +12013,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>まとめて強化</div>
                       <div className="text-[9px] text-slate-400 font-bold">全項目共通</div>
                     </div>
-                    <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
-                      {[1,5,10,'MAX'].map(unit=><button type="button" key={unit} aria-pressed={bulkEnhanceUnit===unit} onClick={()=>setBulkEnhanceUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit===unit?'bg-amber-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
+                    <div className="grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
+                      {[1,5,10,100,'MAX'].map(unit=><button type="button" key={unit} aria-pressed={bulkEnhanceUnit===unit} onClick={()=>setBulkEnhanceUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit===unit?'bg-amber-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                     </div>
                     {restoreDraft&&restoreDraft.requested>0&&<div className="mb-3 rounded-xl border border-cyan-700/40 bg-cyan-950/20 p-2">
                       <button type="button" onClick={restoreResetAllocation} disabled={restoreDraft.restored<=0} className="w-full min-h-[40px] rounded-lg bg-slate-800 text-cyan-200 text-[10px] font-black active:scale-95 disabled:opacity-40">↩ リセット前の配分を復元</button>
