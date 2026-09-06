@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7fd09a8f9fe0b5a7
+// source-sha256: f93da20ec5a7ee7f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 10:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19218,6 +19218,12 @@ const RhythmTapTest = ({
       height: 0,
       opacity: 0,
       pointerEvents: 'none',
+      /* z-index を必ず持たせる(2026-09-06)。DOMの順番では判定ラインの直前に置いてあるのに、
+         レーンのSVG([data-rhythm-lane-svg])が z-index:1 を持っているため、
+         z-index:auto(=0)のままだと**レーンの下に隠れて色がまったく出なかった**。
+         実測でも、帯をまっ赤に塗りつぶしても画面の色は rgb(14,20,36) のまま変わらなかった。
+         レーン(1)より上、ノーツ(4)・判定ライン(6)より下に置く。 */
+      zIndex: 2,
       transition: settings.lightweightMode ? 'none' : 'opacity 220ms ease-out'
     }
   }, /*#__PURE__*/React.createElement("i", {
