@@ -82,5 +82,52 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
   check('エイキ勇者の固有技: メイン → 桜花連舞×2 → +30% → 緋桜連華×2 → 全体連撃 の順と本数', hits.length === 7 && hits[0].dmg === 100, names);
 }
 
+
+// --- あつの挑発(stun_atsu): メインに会心が乗らない以外は同じヒット列 ---
+// processTurn のバフ・デバフ側ブロックを取り出し、通常攻撃と同じ buildAttackHits(mainCanCrit:false)を通していることと、
+// 乱数を固定したときの合計が「予測の合計」と一致すること(確定会心のときだけ、メイン分の会心差が出る)を確かめる。
+{
+  const stun = slice("const stunMon=slots[slotIdx];", "else if (card.subType==='buff_myaru')");
+  check('あつの挑発も buildAttackHits を通し、メインの会心だけ無し(mainCanCrit:false)にしている',
+    stun.text.includes('buildAttackHits({') && stun.text.includes('mainCanCrit:false') && !stun.text.includes('stunComboRates'));
+  // 切り出した範囲は else-if ブロックの閉じ } で終わるので、その 1 文字だけ落として関数本体にする
+  const makeStun = () => Function('d0', 'card', 'stunMon0', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', `
+    let totalDmg = 0, hasCrit = false, attackCount = 0; const attackHits = [];
+    const slots = { [slotIdx]: stunMon0 }; const effMul = 1; const localOryoAdd = 0, localDmgModAdd = 0;
+    const getDmg = () => d0; const setImmediateTurnBuff = () => {};
+    ${stun.text.replace(/\}\s*$/, '')}
+    return { totalDmg, attackHits, hasCrit, attackCount };
+  `);
+  let stunCases = 0; const stunMismatches = [];
+  const stunCard = { type: 'debuff', subType: 'stun_atsu', baseValue: 1.5 };
+  for (const heroId of heroes) for (const attackerId of [heroId, 'Suezo'])
+    for (const d of [100, 333]) for (const combo of [0, 0.05]) for (const global of [0, 0.1]) for (const localGlobal of [0, 0.03])
+      for (const critMode of ['none', 'guaranteed']) {
+        const perma = { comboDmgPct: combo, globalComboDmgPct: global, critDmgPct: 0.1, critRatePct: 0 };
+        const turn = { guaranteedCrit: critMode === 'guaranteed' };
+        const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
+        const getTurnBuff = (k, def) => (k in turn ? turn[k] : def);
+        const mainHero = { id: heroId }; const mon = { id: attackerId };
+        const actual = makeStun()(d, stunCard, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, mathWith(() => 1), shared.buildAttackHits);
+        const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(stunCard, mon, d, localGlobal);
+        // 予測はメインにも確定会心を乗せるので、確定会心のときだけメイン 1 発ぶんの差(floor(d×会心倍率) − d)が出る。
+        // これは一本化前からの差で、表示だけの話なので今回は変えていない(BATTLE_DAMAGE_MAP.md §2.5)
+        const knownGap = turn.guaranteedCrit ? Math.floor(d * (1.5 + perma.critDmgPct)) - d : 0;
+        const direct = shared.buildAttackHits({ d, card: stunCard, attackerId, heroId, comboDmgBonus: combo, critDmgBonus: 0.1, guaranteedCrit: turn.guaranteedCrit, rollCrit: () => false, globalComboRate: global + localGlobal, mainCanCrit: false });
+        stunCases++;
+        if (actual.totalDmg !== predicted - knownGap || actual.totalDmg !== direct.reduce((s, h) => s + h.dmg, 0)
+          || actual.attackHits[0].isCrit !== false || actual.attackCount !== 1)
+          stunMismatches.push(`${heroId}/${attackerId} d=${d} combo=${combo} global=${global}+${localGlobal} ${critMode}: 実${actual.totalDmg} 予測${predicted} 直接${direct.reduce((s, h) => s + h.dmg, 0)}`);
+      }
+  check(`あつの挑発: 乱数を固定すると実処理の合計が予測(メインの確定会心差を除く)と一致し、メインは会心なし(${stunCases} 通り)`, stunMismatches.length === 0, stunMismatches.slice(0, 5).join(' / '));
+  const perma = { comboDmgPct: 0, globalComboDmgPct: 0.1, critDmgPct: 0, critRatePct: 0 };
+  const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
+  const zan = makeStun()(100, stunCard, { id: 'Zan' }, { id: 'Zan' }, getPermaBuff, (k, def) => def, 0, 1, mathWith(() => 1), shared.buildAttackHits).attackHits;
+  check('あつの挑発(ザン勇者): メイン → 連撃 30% → 全体連撃(noAnim)の順で 3 ヒット',
+    zan.length === 3 && zan[0].dmg === 100 && zan[1].skillName === '連撃' && zan[1].dmg === 30 && zan[2].skillName === '全体連撃' && zan[2].dmg === 10 && zan[2].noAnim === true);
+  const eiki = makeStun()(100, stunCard, { id: 'Eiki' }, { id: 'Eiki' }, getPermaBuff, (k, def) => def, 0, 1, mathWith(() => 1), shared.buildAttackHits).attackHits;
+  check('あつの挑発(エイキ勇者): メイン → 連撃 10%×2 → 全体連撃の 4 ヒット(固有技ぶんの 30% は付かない)',
+    eiki.length === 4 && eiki[1].dmg === 10 && eiki[2].dmg === 10 && eiki[3].skillName === '全体連撃');
+}
 console.log(failed ? `${failed}件のNGがあります` : 'すべてOK');
 process.exit(failed ? 1 : 0);

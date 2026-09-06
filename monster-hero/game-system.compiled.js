@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e93a5a666eaf2825
+// source-sha256: 2e1dd9319e929e75
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 68222267d5a9bebe
+// generated-sha256: f0561d0b3125bbc6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 18:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13027,6 +13027,7 @@ const ATTACK_COMBO_RULES = Object.freeze({
   // 禁忌解錠: パンドラ自身の固有技は 100% の連撃(引き継いだ技には無い)
   atonement: 0.2 // 贖罪(アーク・イブリースの固有技): メインの確定値の 20%。実処理では固有技の効果ブロック側で積む
 });
+// mainCanCrit:false は「メインヒットには会心が乗らない」種類(あつの挑発)。連撃・全体連撃の会心判定は変わらない
 const buildAttackHits = ({
   d,
   card,
@@ -13036,7 +13037,8 @@ const buildAttackHits = ({
   critDmgBonus = 0,
   guaranteedCrit = false,
   rollCrit = () => false,
-  globalComboRate = 0
+  globalComboRate = 0,
+  mainCanCrit = true
 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
@@ -13044,7 +13046,7 @@ const buildAttackHits = ({
   const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
   // 禁忌解錠の通常攻撃は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)
   const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5) : d;
-  const mainCrit = guaranteedCrit || rollCrit();
+  const mainCrit = mainCanCrit && (guaranteedCrit || rollCrit());
   hits.push({
     kind: 'main',
     crit: mainCrit,
@@ -28928,6 +28930,20 @@ function MonsterHeroGame() {
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
           const d = Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul);
+          // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
+          // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く(倍率は ATTACK_COMBO_RULES)
+          const stunHits = buildAttackHits({
+            d,
+            card,
+            attackerId: stunMon?.id,
+            heroId: mainHero?.id,
+            comboDmgBonus: getPermaBuff('comboDmgPct'),
+            critDmgBonus: getPermaBuff('critDmgPct'),
+            guaranteedCrit: getTurnBuff('guaranteedCrit', false),
+            rollCrit: () => Math.random() < (card.crit || 0.1) + getPermaBuff('critRatePct'),
+            globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
+            mainCanCrit: false
+          });
           totalDmg += d;
           attackCount++;
           attackHits.push({
@@ -28935,45 +28951,20 @@ function MonsterHeroGame() {
             isCrit: false,
             slotIdx
           });
-          // 勇者特性「連撃」: ザンが勇者モンの時、ザンの攻撃(あつの挑発シリーズ含む)に連撃ヒットを追加
-          // ザンは1発30%、エイキ(桜花連舞)は10%を2発。倍率と回数だけが違うので、
-          // 連撃を積む処理そのものは1つにまとめてある(あつの挑発は固有技ではないので追加30%は無い)
-          const stunComboRates = stunMon?.id === 'Zan' && mainHero?.id === 'Zan' ? [0.3] : stunMon?.id === 'Eiki' && mainHero?.id === 'Eiki' ? [0.1, 0.1] : [];
-          for (const rate of stunComboRates) {
-            const comboBase = Math.floor(d * (rate + getPermaBuff('comboDmgPct')));
-            if (comboBase > 0) {
-              const comboCrit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + getPermaBuff('critRatePct');
-              const comboFinal = comboCrit ? Math.floor(comboBase * (1.5 + getPermaBuff('critDmgPct'))) : comboBase;
-              if (comboCrit) hasCrit = true;
-              totalDmg += comboFinal;
-              attackHits.push({
-                dmg: comboFinal,
-                isCrit: comboCrit,
-                slotIdx,
-                isSpecial: true,
-                skillName: '連撃',
-                isUnique: false
-              });
-            }
-          }
-          const globalComboRate = getPermaBuff('globalComboDmgPct') + localGlobalComboAdd;
-          if (globalComboRate > 0) {
-            const comboBase = Math.floor(d * globalComboRate);
-            if (comboBase > 0) {
-              const comboCrit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + getPermaBuff('critRatePct');
-              const comboFinal = comboCrit ? Math.floor(comboBase * (1.5 + getPermaBuff('critDmgPct'))) : comboBase;
-              if (comboCrit) hasCrit = true;
-              totalDmg += comboFinal;
-              attackHits.push({
-                dmg: comboFinal,
-                isCrit: comboCrit,
-                slotIdx,
-                isSpecial: true,
-                skillName: '全体連撃',
-                isUnique: false,
+          for (const hit of stunHits.slice(1)) {
+            if (hit.crit) hasCrit = true;
+            totalDmg += hit.dmg;
+            attackHits.push({
+              dmg: hit.dmg,
+              isCrit: hit.crit,
+              slotIdx,
+              isSpecial: true,
+              skillName: hit.skillName,
+              isUnique: false,
+              ...(hit.noAnim ? {
                 noAnim: true
-              });
-            }
+              } : {})
+            });
           }
         } else if (card.subType === 'buff_myaru') {
           setNextTurnBuff('atkMult', 1 + (card.baseValue - 1) * effMul);
