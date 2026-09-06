@@ -481,8 +481,16 @@ const makeWorld = ({
     button.includes('お手数ですが本体を'));
   check('押している間は二重に受け付けない', button.includes('if(busy)return;') && button.includes('disabled={busy}'));
   check('押したあとに今の向きを取り直す', button.includes('setLandscape(orientationIsLandscape())'));
-  check('案内は押すと消える／時間でも消える',
-    button.includes("onClick={()=>setNote('')}") && button.includes('setTimeout(()=>setNote'));
+  // 2026-09-06: 時間で消すのをやめた。「本体を持ち替えてください」は**やってもらうこと**が
+  // 書いてあるので、8秒で消すと気づかないまま終わる。実際に「案内も出ない」という報告が届いた。
+  check('案内は押すまで消えない（やってもらうことが書いてあるため）',
+    button.includes("onClick={()=>setNote('')}")
+    && !button.includes('setTimeout(()=>setNote')
+    && button.includes('タップで閉じる'));
+  check('うまくいかなかったときは端末のいまの状態も出す（推測せずに済むように）',
+    button.includes('screenOrientationStateLine()')
+    && logic.includes('const screenOrientationStateLine=')
+    && logic.includes('window.innerWidth')&&logic.includes('全画面'));
   check('向きの見張りはこのボタンの中だけ(画面全体を描き直さない)',
     button.includes("matchMedia('(orientation: landscape)')")
     && !/const \[rhythmIsLandscape/.test(game));
