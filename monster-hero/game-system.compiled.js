@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c81e7fba2675d980
+// source-sha256: 411ca9d22d0b1bf3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0bab333de4346d16
+// generated-sha256: bd84955cff5884f8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 07:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 08:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23035,6 +23035,54 @@ function MonsterHeroGame() {
   }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
     className: "mt-0.5 block text-[6px] leading-[8px]"
   }, "\u30E2\u30F3\u30D2\u30ED", /*#__PURE__*/React.createElement("br", null), "\u30D3\u30FC\u30C8")) : null;
+  // ===== ∞周回の進捗を、バトル画面の空いているところにも出す =====
+  // 超省エネは演出を出さないぶん画面が大きく空くので、そこへ積み上がりを置く
+  // (2026-09-07・ユーザー指示「無限周回時の空いてるスペースにも
+  //  モンビーの帯のように進捗状況を表示するようにしたい」)。
+  // ★∞を切ったら消える(＝0から数えなおし)。
+  //   モンビー側の帯は「終わったよ」と知らせる役目があるので finished でも残すが、
+  //   バトル画面は本人が切った直後なので残す意味がない
+  //   (ユーザー指示「止めるまでは増えてくけど止めたらリセットされるみたいな感じで」)。
+  // ★数字はモンビーの帯とまったく同じもの(quickRunProgress ＋ quickRunPendingRewards)を使う。
+  //   別々に数えると、同じ周回なのに画面によって違う値が出てしまう
+  const quickRunBattleBandNode = gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && quickRunProgress && !quickRunProgress.finished ? (() => {
+    const pending = quickRunPendingRewards();
+    const totalXp = Math.floor(quickRunProgress.xp + pending.xp);
+    const totalGold = Math.floor(quickRunProgress.gold + pending.gold);
+    return /*#__PURE__*/React.createElement("section", {
+      "data-quick-run-battle-band": true,
+      className: "shrink-0 rounded-xl border border-fuchsia-400/30 bg-slate-900/95 px-2 py-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "flex min-w-0 items-center gap-1 text-[9px] font-black text-fuchsia-200"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0"
+    }, "\u2694"), /*#__PURE__*/React.createElement("span", {
+      className: "truncate"
+    }, "\u221E\u5468\u56DE\u306E\u3042\u3057\u3042\u3068")), /*#__PURE__*/React.createElement("span", {
+      "data-quick-run-battle-loops": true,
+      className: "shrink-0 font-mono text-[10px] font-black text-white"
+    }, quickRunProgress.loops, "\u5468\u76EE \u30FB WAVE ", wave, "/10")), /*#__PURE__*/React.createElement("dl", {
+      className: "mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px]"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between gap-1"
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-400"
+    }, "\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("dd", {
+      "data-quick-run-battle-xp": true,
+      className: "font-mono font-black text-cyan-200"
+    }, "+", totalXp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between gap-1"
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-400"
+    }, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("dd", {
+      "data-quick-run-battle-gold": true,
+      className: "font-mono font-black text-amber-200"
+    }, "+", totalGold.toLocaleString()))), /*#__PURE__*/React.createElement("p", {
+      className: "mt-0.5 text-[8px] leading-tight text-slate-500"
+    }, "AUTO\u221E\u3092\u5207\u308B\u307E\u3067\u7A4D\u307F\u4E0A\u304C\u308A\u307E\u3059\uFF08\u5207\u308B\u30680\u304B\u3089\u6570\u3048\u306A\u304A\u3057\u3067\u3059\uFF09\u3002"));
+  })() : null;
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -44914,7 +44962,7 @@ function MonsterHeroGame() {
     }, slotSkill.name), popups.filter(p => ['hero', 'life', 'guts'].includes(p.side)).map(p => /*#__PURE__*/React.createElement("div", {
       key: p.id,
       className: `${p.color} truncate text-sm font-black`
-    }, p.text))))), /*#__PURE__*/React.createElement("div", {
+    }, p.text)))), quickRunBattleBandNode), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 border-t border-white/10 bg-slate-900 p-1"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between gap-1 px-1"

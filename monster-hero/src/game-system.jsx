@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0bab333de4346d16
+// generated-sha256: bd84955cff5884f8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 07:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 08:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13201,6 +13201,37 @@ function MonsterHeroGame() {
   const quickToRhythmButtonNode = gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true
     ? <button data-quick-to-rhythm type="button" onClick={openRhythmDemo} aria-label="周回を続けたままモンヒロビートへ" title="周回を続けたままモンヒロビートへ" className="shrink-0 min-h-[24px] min-w-[42px] rounded-md border border-fuchsia-300 bg-fuchsia-700 px-1.5 font-black text-[7px] leading-[9px] text-fuchsia-50 active:scale-90"><span className="block text-[11px] leading-none">🎵</span><span className="mt-0.5 block text-[6px] leading-[8px]">モンヒロ<br/>ビート</span></button>
     : null;
+  // ===== ∞周回の進捗を、バトル画面の空いているところにも出す =====
+  // 超省エネは演出を出さないぶん画面が大きく空くので、そこへ積み上がりを置く
+  // (2026-09-07・ユーザー指示「無限周回時の空いてるスペースにも
+  //  モンビーの帯のように進捗状況を表示するようにしたい」)。
+  // ★∞を切ったら消える(＝0から数えなおし)。
+  //   モンビー側の帯は「終わったよ」と知らせる役目があるので finished でも残すが、
+  //   バトル画面は本人が切った直後なので残す意味がない
+  //   (ユーザー指示「止めるまでは増えてくけど止めたらリセットされるみたいな感じで」)。
+  // ★数字はモンビーの帯とまったく同じもの(quickRunProgress ＋ quickRunPendingRewards)を使う。
+  //   別々に数えると、同じ周回なのに画面によって違う値が出てしまう
+  const quickRunBattleBandNode = gameState==='BATTLE' && isQuickMode(runMode) && autoRepeat===true
+    && quickRunProgress && !quickRunProgress.finished
+    ? (() => {
+        const pending = quickRunPendingRewards();
+        const totalXp = Math.floor(quickRunProgress.xp + pending.xp);
+        const totalGold = Math.floor(quickRunProgress.gold + pending.gold);
+        return (
+          <section data-quick-run-battle-band className="shrink-0 rounded-xl border border-fuchsia-400/30 bg-slate-900/95 px-2 py-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex min-w-0 items-center gap-1 text-[9px] font-black text-fuchsia-200"><span className="shrink-0">⚔</span><span className="truncate">∞周回のあしあと</span></span>
+              <span data-quick-run-battle-loops className="shrink-0 font-mono text-[10px] font-black text-white">{quickRunProgress.loops}周目 ・ WAVE {wave}/10</span>
+            </div>
+            <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px]">
+              <div className="flex justify-between gap-1"><dt className="text-slate-400">経験値</dt><dd data-quick-run-battle-xp className="font-mono font-black text-cyan-200">+{totalXp.toLocaleString()}</dd></div>
+              <div className="flex justify-between gap-1"><dt className="text-slate-400">ダイヤ</dt><dd data-quick-run-battle-gold className="font-mono font-black text-amber-200">+{totalGold.toLocaleString()}</dd></div>
+            </dl>
+            <p className="mt-0.5 text-[8px] leading-tight text-slate-500">AUTO∞を切るまで積み上がります（切ると0から数えなおしです）。</p>
+          </section>
+        );
+      })()
+    : null;
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -23749,6 +23780,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </div>
                     <div data-ultra-ally-log className="mt-1 h-[42px] overflow-hidden rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center leading-tight">{slotSkill&&<div className="truncate text-[11px] font-black text-indigo-200">{slotSkill.name}</div>}{popups.filter(p=>['hero','life','guts'].includes(p.side)).map(p=><div key={p.id} className={`${p.color} truncate text-sm font-black`}>{p.text}</div>)}</div>
                   </section>
+                  {/* 空いたところへ周回の積み上がりを出す(2026-09-07・ユーザー指示) */}
+                  {quickRunBattleBandNode}
                 </div>
                 <div className="shrink-0 border-t border-white/10 bg-slate-900 p-1">
                   <div className="flex items-center justify-between gap-1 px-1">
