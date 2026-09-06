@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 411ca9d22d0b1bf3
+// source-sha256: bd0367850b94dc17
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: bd84955cff5884f8
+// generated-sha256: a50243f1202a1e66
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 08:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 08:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -38902,7 +38902,10 @@ function MonsterHeroGame() {
         className: "truncate font-black text-white"
       }, mainHero?.masuName || mainHero?.name || '—'))), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-      }, quickRunProgress.finished ? '周回は止まっています。バトルへ戻ると結果を見られます。' : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。' : 'ここにいるあいだも周回は進みます。演奏中だけ止まり、曲が終わると続きから動きます。'), /*#__PURE__*/React.createElement("button", {
+      }, quickRunProgress.finished ? '周回は止まっています。バトルへ戻ると結果を見られます。' : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
+      // 「演奏中は止まる」だけだと、演奏したぶん損をすると読めてしまう
+      // (2026-09-07・ユーザー指摘)。止まったぶんはあとで取り戻すことまで書く
+      : 'ここにいるあいだも周回は進みます。演奏中だけ止まりますが、そのぶんは曲のあとに速く進んで取り戻すので、損にはなりません。'), /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-quick-run-progress-back": true,
         onClick: () => {

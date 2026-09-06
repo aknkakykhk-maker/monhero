@@ -10322,7 +10322,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   ?'周回は止まっています。バトルへ戻ると結果を見られます。'
                   :catchingUp
                     ?'演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
-                    :'ここにいるあいだも周回は進みます。演奏中だけ止まり、曲が終わると続きから動きます。'}</p>
+                    // 「演奏中は止まる」だけだと、演奏したぶん損をすると読めてしまう
+                    // (2026-09-07・ユーザー指摘)。止まったぶんはあとで取り戻すことまで書く
+                    :'ここにいるあいだも周回は進みます。演奏中だけ止まりますが、そのぶんは曲のあとに速く進んで取り戻すので、損にはなりません。'}</p>
                 <button type="button" data-quick-run-progress-back onClick={()=>{if(runStageRef.current)returnToBackgroundRun();}}
                   className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ バトルへ戻る</button>
               </div>}
