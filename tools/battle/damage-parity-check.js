@@ -29,13 +29,17 @@ const slice = (from, to, fromIndex = 0) => {
 // --- 予測: useCallback の中の関数だけを取り出す ---
 const pred = slice('const getAttackPredictedDmg = useCallback(', ', [mainHero, turnBuffs, permaBuffs]);');
 const predictedArrow = pred.text.slice('const getAttackPredictedDmg = useCallback('.length);
-const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', `return (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math);
+// 共通の正本(buildAttackHits / attackAtonementDmg)も本体から取り出す
+const rules = slice('const ATTACK_COMBO_RULES = Object.freeze({', '\n// 贖罪の追撃(アーク・イブリースの固有技)');
+const atone = source.slice(source.indexOf('const attackAtonementDmg ='), source.indexOf('\n', source.indexOf('const attackAtonementDmg =')));
+const shared = Function(`${rules.text}\n${atone}\nreturn { buildAttackHits, attackAtonementDmg, ATTACK_COMBO_RULES };`)();
+const makePredicted = (mainHero, getPermaBuff, getTurnBuff) => Function('mainHero', 'getPermaBuff', 'getTurnBuff', 'Math', 'buildAttackHits', 'attackAtonementDmg', `return (${predictedArrow});`)(mainHero, getPermaBuff, getTurnBuff, Math, shared.buildAttackHits, shared.attackAtonementDmg);
 
 // --- 実処理: processTurn の攻撃ブロック(会心判定 〜 全体連撃)を取り出す ---
 const anchor = source.indexOf("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist)");
 if (anchor < 0) throw new Error('processTurn の攻撃ブロックが見つからない');
 const act = slice("const critRateBonus=getPermaBuff('critRatePct'), critDmgBonus=getPermaBuff('critDmgPct');", 'if (rangeMoveTarget!=null)', anchor);
-const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', `
+const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getPermaBuff', 'getTurnBuff', 'localGlobalComboAdd', 'slotIdx', 'Math', 'buildAttackHits', `
   let totalDmg = 0, hasCrit = false; const attackHits = [];
   ${act.text}
   return { totalDmg, attackHits, hasCrit };
@@ -43,7 +47,7 @@ const makeActual = (rng) => Function('d', 'card', 'activeMon', 'mainHero', 'getP
   .bind(null);
 const mathWith = (random) => Object.assign(Object.create(Math), { random, floor: Math.floor, max: Math.max, min: Math.min });
 
-check('予測と実処理の両方を本体から切り出せる', predictedArrow.includes('extraHit') && act.text.includes('rollCombo'));
+check('予測と実処理の両方が共通の buildAttackHits を使っている', predictedArrow.includes('buildAttackHits(') && act.text.includes('buildAttackHits('));
 
 const heroes = ['Zan', 'Eiki', 'Pandora', 'Ark', 'Golem'];
 const uniqueOwners = ['Zan', 'Eiki', 'Pandora', 'Ark', 'Iblis', 'Suezo'];
@@ -59,7 +63,7 @@ for (const heroId of heroes) for (const attackerId of [heroId, 'Suezo']) for (co
       const mainHero = { id: heroId }; const mon = { id: attackerId };
       const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(card, mon, d, localGlobal);
       const M = mathWith(() => 1); // 乱数会心は起きない(guaranteedCrit だけが会心)
-      const actual = makeActual()(d, card, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, M);
+      const actual = makeActual()(d, card, mon, mainHero, getPermaBuff, getTurnBuff, localGlobal, 1, M, shared.buildAttackHits);
       // 贖罪の追撃は予測にだけ入っている(実処理では固有技の効果ブロック側)
       const atonement = card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')
         ? Math.floor((() => { const split = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type); const mb = split ? Math.floor(d * 0.5) : d; return turn.guaranteedCrit ? Math.floor(mb * 1.6) : mb; })() * 0.2)
@@ -73,7 +77,7 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
 {
   const perma = { comboDmgPct: 0, globalComboDmgPct: 0.1, critDmgPct: 0, critRatePct: 0 };
   const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def); const getTurnBuff = (k, def) => def;
-  const hits = makeActual()(100, { type: 'unique', monId: 'Eiki' }, { id: 'Eiki' }, { id: 'Eiki' }, getPermaBuff, getTurnBuff, 0, 1, mathWith(() => 1)).attackHits;
+  const hits = makeActual()(100, { type: 'unique', monId: 'Eiki' }, { id: 'Eiki' }, { id: 'Eiki' }, getPermaBuff, getTurnBuff, 0, 1, mathWith(() => 1), shared.buildAttackHits).attackHits;
   const names = hits.map(h => h.skillName || 'main').join(',');
   check('エイキ勇者の固有技: メイン → 桜花連舞×2 → +30% → 緋桜連華×2 → 全体連撃 の順と本数', hits.length === 7 && hits[0].dmg === 100, names);
 }

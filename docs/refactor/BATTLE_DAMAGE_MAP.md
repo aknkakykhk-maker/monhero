@@ -37,7 +37,17 @@ STEP 5「バトル計算の一本化」で、**予測表示(`getAttackPredictedD
 実処理はヒットごとに `attackHits.push({dmg, isCrit, slotIdx, isSpecial, skillName, isUnique, monId, noAnim})` を積み、`totalDmg` に加算する。
 予測は合計値だけを返す。
 
-## 3. 一本化の形(案)
+## 2.5 一本化後の形(2026-09-06 実施)
+
+`buildAttackHits`(`src/parts/22-enemy-and-bond-entries.jsx`。純粋な部品)がヒット列を作り、実処理は `rollCrit: () => Math.random() < …`、
+予測は `rollCrit: () => false`(確定会心 `guaranteedCrit` だけ反映)で呼ぶ。倍率は `ATTACK_COMBO_RULES` の表 1 か所。
+贖罪の追撃は `attackAtonementDmg` で、実処理では固有技の効果ブロック側(順序を変えないため)、予測では合計に足す。
+実処理側にあった全体連撃の重複 2 か所のうち、通常攻撃側は `buildAttackHits` へ吸収した。
+**残っている変種**: あつの挑発(`stun_atsu`。バフカード扱いの攻撃)は、メインに会心が無く連撃はザン・エイキの勇者特性だけ、という別の規則で
+`processTurn` の中に独自に書かれたまま。ここは規則が違うので、無理に同じ関数へ入れず、次に触るときに `buildAttackHits` へ
+「メインの会心なし」の選択肢を足して寄せる。
+
+## 3. 一本化の形(案・実施前の記録)
 
 ```text
 buildAttackHits({ d, card, mon, mainHero, permaBuffs, turnBuffs, additionalGlobalCombo, rollCrit })

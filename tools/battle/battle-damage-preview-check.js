@@ -3,14 +3,16 @@ const assert = require('assert');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 
 assert(source.includes('const getAttackPredictedDmg = useCallback'), '攻撃1枚の共通予測関数が必要');
-assert(source.includes("mainHero?.id==='Zan' && mon?.id==='Zan'"), 'ザン勇者特性の連撃を予測する');
-assert(source.includes("card.type==='unique' && card.monId==='Zan'"), '連斬の連撃を予測する');
-assert(source.includes("mainHero?.id==='Eiki' && mon?.id==='Eiki'"), 'エイキ勇者特性の連撃を予測する');
-assert(source.includes("card.type==='unique' && card.monId==='Eiki'"), 'エイキ固有技の連撃を予測する');
-assert(source.includes("const pandoraSplitNormal=mainHero?.id==='Pandora' && mon?.id==='Pandora' && ['atk','range_atk'].includes(card.type)"), 'パンドラ勇者の通常攻撃分割を予測する');
-assert(source.includes('const mainBaseDmg=pandoraSplitNormal?Math.floor(baseDmg*0.5):baseDmg;'), 'パンドラ通常攻撃の1ヒット目を分割前ダメージの50%にする');
-assert(source.includes('if (pandoraSplitNormal) total += extraHit(0.5+comboDmgBonus)'), 'パンドラ通常攻撃の連撃を分割前ダメージ基準で予測する');
-assert(source.includes("card.monId==='Ark'||card.monId==='Iblis'"), '贖罪の追撃を予測する');
+// 予測と実処理はヒット列の共通の正本 buildAttackHits を使う(分岐は ATTACK_COMBO_RULES にまとまっている)
+assert(source.includes('const buildAttackHits = ({') && (source.match(/buildAttackHits\(\{/g)||[]).length >= 2, '定義と、実処理・予測の2か所の呼び出しがある');
+assert(source.includes("if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);"), 'ザン勇者特性の連撃');
+assert(source.includes("if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);"), '連斬の連撃');
+assert(source.includes("if (heroId === 'Eiki' && attackerId === 'Eiki') {"), 'エイキ勇者特性の連撃');
+assert(source.includes("if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);"), 'エイキ固有技の連撃');
+assert(source.includes("const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);"), 'パンドラ勇者の通常攻撃分割');
+assert(source.includes('const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5) : d;'), 'パンドラ通常攻撃の1ヒット目を分割前ダメージの50%にする');
+assert(source.includes("if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);") && source.includes('pandoraSplitNormal: 0.5,'), 'パンドラ通常攻撃の連撃を分割前ダメージ基準で積む');
+assert(source.includes("(card.monId === 'Ark' || card.monId === 'Iblis')) ? Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement)") && source.includes('attackAtonementDmg(card, hits[0].dmg)'), '贖罪の追撃を予測する');
 assert((source.match(/getAttackPredictedDmg\(/g)||[]).length >= 4, '合計と個別表示が共通予測関数を使う');
 assert(source.includes('const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'), '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
 assert(source.includes('(予定: ${plannedDmg})'), '敵予告は軽減後の予定値を表示する');
