@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8408394eb0498379
+// source-sha256: 607596ace6f05d19
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ec65eb01495a4b1b
+// generated-sha256: 8e74caeefd12e57e
 // ============================================================
 // ---- part: 10-shared.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 14:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 16:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20244,7 +20244,7 @@ function MonsterHeroGame() {
   const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
-  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 'MAX'（全項目共通）
+  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 100 / 'MAX'（全項目共通）
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
   const [fusionSortKey, setFusionSortKey] = useState('bond'); // 'bond'|'lineage'|'name'|'fused'
   const [fusionSortDir, setFusionSortDir] = useState('desc');
@@ -20729,7 +20729,7 @@ function MonsterHeroGame() {
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
   const [transcendDebugId, setTranscendDebugId] = useState(null);
-  // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / MAX
+  // 超越強化の振り分け単位。通常強化(bulkEnhanceUnit)と同じ 1 / 5 / 10 / 100 / MAX
   const [transcendBulkUnit, setTranscendBulkUnit] = useState(1);
   // 超越ポイントリセットの書。確認シートの開閉と、連打で2冊消費しないためのロック
   const [transcendResetOpen, setTranscendResetOpen] = useState(false);
@@ -42309,10 +42309,10 @@ function MonsterHeroGame() {
       }), "\u57FA\u790E\u5024\u3092\u4E0A\u3052\u308B"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 font-bold"
       }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3",
+        className: "grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3",
         role: "group",
         "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
-      }, [1, 5, 10, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
+      }, [1, 5, 10, 100, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
         type: "button",
         key: unit,
         "data-transcend-unit": unit,
@@ -42909,10 +42909,10 @@ function MonsterHeroGame() {
       }), "\u307E\u3068\u3081\u3066\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-400 font-bold"
       }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3",
+        className: "grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3",
         role: "group",
         "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
-      }, [1, 5, 10, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
+      }, [1, 5, 10, 100, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
         type: "button",
         key: unit,
         "aria-pressed": bulkEnhanceUnit === unit,

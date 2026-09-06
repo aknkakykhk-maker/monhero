@@ -25,7 +25,7 @@ if (direct) {
 check('通常強化の能力・適性に直接入力がある', source.includes('data-direct-point-input="normal-stat"') && source.includes('data-direct-point-input="normal-apt"') && source.includes('const setPlanExact ='));
 check('超越強化の能力・適性にも直接入力がある', source.includes('data-direct-point-input="transcend-stat"') && source.includes('data-direct-point-input="transcend-apt"') && source.includes('const setTranscendPlanExact ='));
 check('スマホで数字キーボードを出す', (source.match(/inputMode="numeric"/g)||[]).length >= 4 && (source.match(/pattern="\[0-9\]\*"/g)||[]).length >= 4);
-check('従来の1P/5P/10P/MAXと長押しを残す', source.includes("{[1,5,10,'MAX'].map") && source.includes('PressRepeatButton') && source.includes('bulkEnhanceUnit') && source.includes('transcendBulkUnit'));
+check('従来の1P/5P/10P/100P/MAXと長押しを残す', source.includes("{[1,5,10,100,'MAX'].map") && source.includes('PressRepeatButton') && source.includes('bulkEnhanceUnit') && source.includes('transcendBulkUnit'));
 check('ヘルプへ数値直接入力を反映', help.includes('使いたいポイント数を直接入力'));
 check('更新履歴へ反映', changelog.includes('強化ポイントを数値で直接入力できるようにしました'));
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
