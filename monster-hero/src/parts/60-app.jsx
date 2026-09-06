@@ -2095,6 +2095,9 @@ function MonsterHeroGame() {
   // ランを進めてよいか。ランの画面を描いているとき、またはモンビーの非演奏画面で裏回し中。
   const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
+  // 曲えらびの一覧をどこまで見ていたか。全国ランキングや遊びかたを見て戻ったとき、
+  // その場所から続けられるようにするための控え(保存はしない・リロードで消えてよい)
+  const rhythmSongListScrollRef = useRef(0);
   const returnToBackgroundRun = () => {
     // バトルへ戻ったら追いつきは終わり。見ている画面では通常の速さで進める
     catchUpUntilRef.current = 0;
@@ -10291,6 +10294,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               notice={<AssistantBubble scene="rhythmHome" compact/>}
               view={rhythmSelectView}
               onView={saveRhythmSelectView}
+              listScrollTop={rhythmSongListScrollRef.current}
+              onListScrollTop={top=>{rhythmSongListScrollRef.current=top;}}
               footer={song=><>
                 {/* 全国ランキングは曲ごとなので、いま選んでいる曲のぶんを開く。
                     ここにあったマスモンの説明文は外した。同じ内容が「📖 遊びかた」にあり、
