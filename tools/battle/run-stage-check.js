@@ -152,8 +152,9 @@ check('ランの段階の遷移はすべて advanceRunStage を通っている',
 // ---- 動線と音 ----
 check('∞周回中のバトルからモンビーへ移れる（returnToHomeを通さない）',
   source.includes('data-quick-to-rhythm') && source.includes('onClick={openRhythmDemo}'));
+// 中身が増えても落ちないよう、1行そのままではなく「段階へ戻していること」を見る
 check('モンビーからクイックのバトルへ戻れる',
-  source.includes('const returnToBackgroundRun = () => { if (runStageRef.current) setGameState(runStageRef.current); };')
+  /const returnToBackgroundRun = \(\) => \{[\s\S]{0,300}?if \(runStageRef\.current\) setGameState\(runStageRef\.current\);/.test(source)
   && source.includes('data-rhythm-back') && source.includes('if(rhythmBackgroundRun){returnToBackgroundRun();return;}'));
 check('モンビーを開いている間はバトルのSEを鳴らさない',
   source.includes('Audio_.setSeVolume((ultraEcoSession || rhythmScreenOpen) ? 0 : seVolume);'));
