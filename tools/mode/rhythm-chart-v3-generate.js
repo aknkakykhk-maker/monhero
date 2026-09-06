@@ -130,12 +130,21 @@ const MUSICAL_LIFT=Object.freeze([.45,1.35]);
 // いまは**1拍あたり何個**を目標にし、テンポの速い曲・遅い曲で極端にならないよう
 // 毎秒の下限・上限で挟む。こうすると、どの曲でも「遊んだ感じの忙しさ」がそろう。
 // 数字は、耳で確認して通した Monster Hero の仕上がり（EASY 1.57 〜 MASTER 3.43 毎秒）から取った。
+// 【下限について】(2026-09-06)
+// 下限は「これ以下だと間延びして拍が取れない」ための線で、歯ごたえでは動かさない。
+// ただし線そのものが高すぎた。実測すると、いちばんゆったりした2曲
+// (風がそよぐ場所・Stay With Me)は EASY から MASTER まで**全部この下限に張り付いて**いて、
+// 曲の性格がまったく譜面へ出ていなかった。EASYのレベル幅が Lv.5〜8 のまま動かなかったのは
+// これが理由(ユーザー指摘「どの曲も難易度が似たりよったり」)。
+// そこで下限を2割下げた。BPM119の曲のEASYで毎秒0.72＝1拍半に1つなので、
+// 拍が取れなくなるほどではない。この値にしたところ、
+// **先行公開の11曲はどれも下限に当たらなくなった**（＝下限は本来の安全柵に戻った）。
 const DENSITY_TARGET=Object.freeze({
-  EASY:  Object.freeze({perBeat:.54,minPerSecond:.9, maxPerSecond:2.0}),
-  NORMAL:Object.freeze({perBeat:.62,minPerSecond:1.1,maxPerSecond:2.4}),
-  HARD:  Object.freeze({perBeat:.85,minPerSecond:1.6,maxPerSecond:3.2}),
-  EXPERT:Object.freeze({perBeat:1.03,minPerSecond:2.1,maxPerSecond:4.0}),
-  MASTER:Object.freeze({perBeat:1.19,minPerSecond:2.4,maxPerSecond:4.6}),
+  EASY:  Object.freeze({perBeat:.54,minPerSecond:.72,maxPerSecond:2.0}),
+  NORMAL:Object.freeze({perBeat:.62,minPerSecond:.88,maxPerSecond:2.4}),
+  HARD:  Object.freeze({perBeat:.85,minPerSecond:1.28,maxPerSecond:3.2}),
+  EXPERT:Object.freeze({perBeat:1.03,minPerSecond:1.68,maxPerSecond:4.0}),
+  MASTER:Object.freeze({perBeat:1.19,minPerSecond:1.92,maxPerSecond:4.6}),
 });
 
 // --- 曲ごとの歯ごたえ（曲の性格を譜面の量に出す） ---
@@ -157,7 +166,31 @@ const DENSITY_TARGET=Object.freeze({
 // 昔作った譜面が新しい曲のせいで変わることもない。
 const CHALLENGE_REFERENCE=Object.freeze({bpm:170,onsetsPerSecond:7.0,beatClarity:1.30});
 const CHALLENGE_EXPONENT=Object.freeze({bpm:.7,onsets:1,beatClarity:.55});
-const CHALLENGE_RANGE=Object.freeze({min:.78,max:1.26});
+// --- 差の出し方（2026-09-06・ユーザー指摘「どの曲も難易度が似たりよったり。もっと振れ幅がほしい」）---
+// 上の3つ（テンポ・音の詰まり具合・拍のはっきりさ）は、同じジャンルの曲だと**似た値になる**。
+// 実測すると11曲の生の値は 0.793〜1.656 に固まっていて、しかも 0.78〜1.26 で
+// 切り落としていたため、譜面の量は EASY で1.9倍しか違わなかった。
+// これでは「どの曲も似たりよったり」になる。
+//
+// そこで、測った差を**そのまま**ではなく**強めて**使う。生の値を CHALLENGE_GAIN 乗する。
+// 1.0 のときは今までどおり。1より大きいと、1.0から離れている曲ほど大きく離れる
+// （0.85→0.75、1.25→1.48 のように、濃い曲はより濃く、薄い曲はより薄くなる）。
+// 「測り方を変える」のではなく「測れた差を素直に見せる」ための一手。
+const CHALLENGE_GAIN=1.8;
+// 3つのうち1つだけが暴れても、そこで全部が決まらないようにする。
+// 実測で Close To Your Heart の「拍のはっきりさ」だけが 4.73 と出た(ほかの曲は0.98〜1.88)。
+// この曲は同じ解析で「拍のところに音が無い拍が多い」とも言われていて、
+// **音が少なくてその少ない音がぴったり拍に乗っている**ため、割り算の下が小さくなって
+// 比が跳ね上がっただけだった。強めて使う以上、こういう跳ねをそのまま乗せてはいけない。
+// そこで、掛け合わせる前に1項目ずつ挟む。
+const CHALLENGE_RATIO_RANGE=Object.freeze({min:.75,max:1.40});
+// 挟み込みは「おかしな音源が来たときの安全柵」であって、曲どうしの差を潰すためのものではない。
+// 強めたぶん柵も広げる。ここが狭いと、せっかく強めた差がまた潰れる。
+const CHALLENGE_RANGE=Object.freeze({min:.60,max:1.90});
+// 歯ごたえを「中身」へ効かせるときの控えめさ。
+// 量(ノーツ数)は factor をそのまま掛けるが、中身は factor^この値 で効かせる。
+// 1にすると、量と中身の両方が同じだけ動いて難しさが二乗で開き、EASYがEASYでなくなる。
+const CHALLENGE_VOCABULARY_EXPONENT=.7;
 const songChallengeFactor=(audio)=>{
   const seconds=Number(audio.durationMs)/1000;
   const summary=audio.summary||{};
@@ -165,13 +198,18 @@ const songChallengeFactor=(audio)=>{
   const onsetsPerSecond=seconds>0?Number(summary.onsetCount)/seconds:NaN;
   const clarity=Number(summary.beatClarity&&summary.beatClarity.ratio);
   // どれか測れなければ、その項目は「ふつう」として1倍にする（昔の解析でも動くように）。
-  const ratio=(value,reference,exponent)=>
-    Number.isFinite(value)&&value>0?Math.pow(value/reference,exponent):1;
+  const ratio=(value,reference,exponent)=>{
+    if(!(Number.isFinite(value)&&value>0))return 1;
+    return Math.max(CHALLENGE_RATIO_RANGE.min,
+      Math.min(CHALLENGE_RATIO_RANGE.max,Math.pow(value/reference,exponent)));
+  };
   const raw=ratio(bpm,CHALLENGE_REFERENCE.bpm,CHALLENGE_EXPONENT.bpm)
     *ratio(onsetsPerSecond,CHALLENGE_REFERENCE.onsetsPerSecond,CHALLENGE_EXPONENT.onsets)
     *ratio(clarity,CHALLENGE_REFERENCE.beatClarity,CHALLENGE_EXPONENT.beatClarity);
-  const factor=Math.max(CHALLENGE_RANGE.min,Math.min(CHALLENGE_RANGE.max,raw));
-  return {factor,raw,bpm,onsetsPerSecond,beatClarity:clarity};
+  // 測れた差を強めてから挟む。
+  const gained=Math.pow(raw,CHALLENGE_GAIN);
+  const factor=Math.max(CHALLENGE_RANGE.min,Math.min(CHALLENGE_RANGE.max,gained));
+  return {factor,raw,gained,bpm,onsetsPerSecond,beatClarity:clarity};
 };
 
 const COMMON=Object.freeze({
@@ -264,7 +302,44 @@ const priorityByGrid=new Map(allOnsets.map(onset=>[onset.grid,priorityOf(onset)]
 // ============================================================================
 const buildChart=(difficulty,options={})=>{
   const densityAdjust=Number(options.densityAdjust)||1;
-  const P=PROFILES[difficulty];
+  // 難易度の方針を、この曲の歯ごたえで少しだけ動かす。
+  //
+  // 【なぜ要るか】(2026-09-06・ユーザー指摘「どの曲も難易度が似たりよったり。もっと振れ幅がほしい」)
+  // これまで曲ごとに変わるのは**量(ノーツ数)だけ**で、中身は全曲まったく同じだった。
+  // 実測すると、EASYは11曲すべてが「細いノーツ0% / 押しながら0 / フリック0」で、
+  // 違うのは同時押しの数(8〜24)とノーツ数だけ。密度は1.9倍違うのに Lv. は5〜8に団子だった。
+  // レベルは「詰まり具合 × 横の移動 × 細さ × 種類 × 経路」で決まるので、
+  // 量しか動かないと、いくら密度を振っても Lv. は広がらない。
+  //
+  // 【何を動かして、何を動かさないか】
+  // 動かすのは**割合(1分あたり何個・細いノーツの率)だけ**。
+  // 「できること」(使える種類・使える幅・格子・レーンの飛び幅・連続の上限・
+  // 押さえながら叩くか・同時押しの置き方の条件)は難易度の身分そのものなので**動かさない**。
+  // こうしないと「EASYなのにEXPERTの形が出る」ことになり、遊べるかどうかの保証も崩れる。
+  const challengeForProfile=songChallengeFactor(audio).factor;
+  // **減らす方向にだけ効かせる。** 増やす方向にも効かせると、
+  // 難易度ごとに決めてある置き方（跳びの上限・同時押しの置き場所・クロスの外側）を
+  // 置く側が守りきれなくなり、実測で「EASYで1.5レーン跳ぶ」「HARDの同時押しが
+  // NORMALより少ない」「クロスが押さえっぱなしの内側に来る」が同時に出た(2026-09-06)。
+  // 濃い曲はその難易度の既定どおりにし、薄い曲だけ中身もやさしくする。
+  const vocab=Math.min(1,Math.pow(challengeForProfile,CHALLENGE_VOCABULARY_EXPONENT));
+  const scaleRate=value=>Number.isFinite(value)&&value>0?value*vocab:value;
+  const P=(()=>{
+    const base=PROFILES[difficulty];
+    return Object.freeze({...base,
+      holdPerMinute:scaleRate(base.holdPerMinute),
+      slidePerMinute:scaleRate(base.slidePerMinute),
+      flickPerMinute:scaleRate(base.flickPerMinute),
+      endFlickPerMinute:scaleRate(base.endFlickPerMinute),
+      accentPerMinute:scaleRate(base.accentPerMinute),
+      crossPerMinute:scaleRate(base.crossPerMinute),
+      // 細いノーツの率（vocab は1以下なので、減る方向にしか動かない）
+      narrowRate:base.narrowRate*vocab,
+      chord:base.chord?Object.freeze({...base.chord,perMinute:scaleRate(base.chord.perMinute)}):base.chord,
+      sweep:base.sweep?Object.freeze({...base.sweep,perMinute:scaleRate(base.sweep.perMinute)}):base.sweep,
+      chordRun:base.chordRun?Object.freeze({...base.chordRun,perMinute:scaleRate(base.chordRun.perMinute)}):base.chordRun,
+    });
+  })();
   let notes=[];
   // 分あたりの割合を、この曲の長さぶんの個数へ直す
   const playableMinutes=Math.max(.25,(gridTimeMs(maxGrid)-gridTimeMs(minGrid))/60000);
@@ -758,7 +833,26 @@ const buildChart=(difficulty,options={})=>{
         &&nearestOther(note)>=restrikeGrids
         &&!sustainSpans.some(span=>span.startGrid<note.grid&&note.grid<=span.endGrid))
       .map(entry=>entry.index);
-    for(const index of spreadPick(candidates,chordMax,CHORD.spacingGrids)){
+    // 選んだ場所が「置いてみたら条件に合わなかった」ときは、そのぶんを取り戻す。
+    // (2026-09-06) ここは元は spreadPick で狙いの数ちょうどを選び、
+    // 置けなかったぶんはそのまま欠けていた。譜面が濃くなると欠ける数が増え、
+    // 「HARDのほうがNORMALより同時押しが少ない」という逆転が実際に起きた。
+    // 置ける場所はまだ残っているので、狙いの数に届くまで選び直す。
+    const tried=new Set();
+    const nextBatch=()=>{
+      const rest=candidates.filter(index=>!tried.has(index));
+      if(!rest.length)return [];
+      const picked=spreadPick(rest,chordMax-chordCount,CHORD.spacingGrids);
+      for(const index of picked)tried.add(index);
+      return picked;
+    };
+    const queue=[];
+    for(let round=0;round<8&&chordCount<chordMax;round++){
+      const batch=nextBatch();
+      if(!batch.length)break;
+      queue.length=0;queue.push(...batch);
+    for(const index of queue){
+      if(chordCount>=chordMax)break;
       const note=notes[index];
       // 相方の幅。細いノーツの同時押しは狙いが要るので、難易度ごとの下限を守る。
       const width=Math.max(CHORD.minWidth,Math.min(3,note.subLaneWidth));
@@ -799,6 +893,7 @@ const buildChart=(difficulty,options={})=>{
       note.subLane=plan.base;note.subLaneWidth=baseWidth;note.lane=Math.floor(plan.base/2);
       notes.push(partner);
       chordCount++;
+    }
     }
     notice.push(`同時押し ${chordCount}組（狙い${chordMax}組・置ける場所${candidates.length}箇所）`);
     notes.sort((a,b)=>a.grid-b.grid);

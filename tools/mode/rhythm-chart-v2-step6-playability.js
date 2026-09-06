@@ -93,7 +93,23 @@ const audioAnalysisTiming=()=>{
     return {bpm:t.bpm,beatMs:t.beatMs,beatZeroMs:t.beatZeroMs,subdivisionsPerBeat:t.subdivisionsPerBeat};
   }catch{return null;}
 };
-const timing=timingContext.__t||audioAnalysisTiming();
+// --file でよその曲の譜面を直接渡されたときは、**その譜面が持っているテンポ**を使う。
+// (2026-09-06) ここは元は trackId（既定 monster_hero_theme）だけを見ていたので、
+// BPM128の曲の譜面をBPM173の物差しで測っていた。
+// 1グリッドを117msではなく87msとして数えるため、実際には叩き直せる間隔なのに
+// 「87msでは同じ指で叩き直せない」と誤って「押せない」を出していた
+// （rhythm-audio-general-check.js が --file で渡すので、その曲だけ件数が跳ねていた）。
+const fileTiming=()=>{
+  if(!fileArg)return null;
+  try{
+    const chart=JSON.parse(fs.readFileSync(path.resolve(ROOT,fileArg),'utf8'));
+    const bpm=Number(chart&&chart.bpm);
+    const subdivisionsPerBeat=Number(chart&&chart.subdivisionsPerBeat);
+    if(!(bpm>0)||!(subdivisionsPerBeat>0))return null;
+    return {bpm,beatMs:60000/bpm,beatZeroMs:Number(chart.beatZeroMs)||0,subdivisionsPerBeat};
+  }catch{return null;}
+};
+const timing=fileTiming()||timingContext.__t||audioAnalysisTiming();
 if(!timing)throw new Error(`${trackId} の拍の基準が見つかりません（rhythm-timing.js の登録か、V3音源解析の結果が要ります）`);
 const gridMs=timing.beatMs/timing.subdivisionsPerBeat;
 const gridTimeMs=g=>timing.beatZeroMs+g*gridMs;

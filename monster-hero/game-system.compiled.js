@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eba3f21294abad71
+// source-sha256: 053c43ac647ddb46
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 08:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 10:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12084,6 +12084,26 @@ const helpDataRows = id => {
           return [name, `Lv.${Math.min(...levels)}〜${Math.max(...levels)} ／ ${charts.length}難易度${length ? ` ／ ${length}` : ''}`];
         }).filter(Boolean);
       }
+    // 難易度ごとに「いちばんやさしい曲」と「いちばん難しい曲」がどれだけ離れているか。
+    // 「同じEASYでもLv.5〜8」のようにヘルプへ手で書くと、曲を足すたびにヘルプだけ古くなる
+    // (実際にそうなった)。実データのレベル表から幅を作る
+    case 'rhythmDifficultySpread':
+      {
+        const songs = typeof RHYTHM_SONGS !== 'undefined' ? RHYTHM_SONGS : [];
+        const list = typeof rhythmDemoSongs !== 'undefined' ? rhythmDemoSongs(songs) : [];
+        const ids = typeof RHYTHM_DEMO_DIFFICULTY_IDS !== 'undefined' ? RHYTHM_DEMO_DIFFICULTY_IDS : [];
+        return ids.map(id => {
+          const entries = list.map(song => ({
+            song,
+            chart: song.difficulties[id]
+          })).filter(entry => entry.chart && entry.chart.notes && entry.chart.notes.length > 0 && Number.isFinite(Number(entry.chart.level)) && Number(entry.chart.level) > 0);
+          if (!entries.length) return null;
+          const levels = entries.map(entry => Number(entry.chart.level));
+          const low = entries[levels.indexOf(Math.min(...levels))];
+          const high = entries[levels.indexOf(Math.max(...levels))];
+          return [id, `Lv.${Math.min(...levels)}〜${Math.max(...levels)}` + `（やさしい順の先頭: ${rhythmSongFullName(low.song)} ／ いちばん重い: ${rhythmSongFullName(high.song)}）`];
+        }).filter(Boolean);
+      }
     // 曲えらびの四角い枠に絵が出るかどうか。ヘルプへ「いまはこの4曲」と手で書くと、
     // 絵を1つ足すたびにヘルプだけ古くなる(実際にそうなった)。実データの artwork から表にする
     case 'rhythmSongArtwork':
@@ -12149,6 +12169,7 @@ const HELP_DATA_TITLES = {
   rhythmDifficultyRanks: '音ゲーの難易度ごとの満点と上限ランク',
   rhythmDemoSongLevels: '体験版で遊べる難易度とレベル',
   rhythmDemoSongList: '先行公開している曲',
+  rhythmDifficultySpread: '同じ難易度でも曲でどれだけ違うか',
   rhythmSongArtwork: '曲えらびに絵が出る曲',
   rhythmMonsterAbilities: 'モンスターノーツで出る能力'
 };
