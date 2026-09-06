@@ -173,6 +173,8 @@ const RELEASED_MARKERS=Object.freeze({
   close_to_your_heart:'close-to-your-heart-v3',
   eiki_boss_remix:'eiki-boss-remix-v3',
   pandora_boss_remix:'pandora-boss-remix-v3',
+  dullahan:'dullahan-v3',
+  dullahan_clockwork:'dullahan-clockwork-v3',
 });
 
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

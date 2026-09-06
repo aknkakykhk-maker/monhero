@@ -156,6 +156,30 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "dullahan": {
+   "audio": "monster-hero/audio/bgm-dullahan.mp3",
+   "audioSha256": "434fcea866a3cc465ef9da34f5eced94f34db1737765a95df5d116885f73f3dc",
+   "durationMs": 214600,
+   "analyzedTiming": {
+    "bpm": 149.999,
+    "beatZeroMs": 602.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
+  },
+  "dullahan_clockwork": {
+   "audio": "monster-hero/audio/bgm-dullahan-clockwork.mp3",
+   "audioSha256": "e87bd8466b2ccce70fe28b6275b4cb03818f3c5b710f757514884b407bff5de6",
+   "durationMs": 292214,
+   "analyzedTiming": {
+    "bpm": 152.002,
+    "beatZeroMs": 99.8,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }
