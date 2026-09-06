@@ -43,11 +43,13 @@ check('配信用JSにも王冠が入っている', compiled.includes('isHeroSlot
 check('勇者特性の加算を1か所で決めている',
   has("const heroCardBonus = useMemo(() => (mainHero?.id === 'Ham' ? 1 : 0), [mainHero]);"));
 check('枚数の計算がその値を使う',
-  has('limit += heroCardBonus;') && has('}, [effectiveMaxGuts, slots, heroCardBonus]);'));
+  // きき加入後は、ききの枚数ボーナスも同じ場所で足す
+  has('limit += heroCardBonus + kikiCardBonus;') && has('}, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);'));
 check('計算と別に条件を書き足していない',
   !has("if (mainHero?.id === 'Ham') limit += 1;"));
 check('増えていることを画面にも出す',
-  has('{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}'));
+  // バッジは横並びの中で潰れないよう shrink-0 が付いた
+  has('{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}'));
 
 // --- ④ ヘルプ ---
 check('ヘルプに王冠の説明がある',
