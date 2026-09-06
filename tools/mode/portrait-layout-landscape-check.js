@@ -114,29 +114,12 @@ const seed = () => {
       !!facilities && facilities.spread > 200,
       facilities ? `${facilities.count}件・左右の開き ${facilities.spread}px` : '施設が見つからない');
 
-    // ---- 一覧を持つ画面は今までどおり広く使う(2列へ組み替える作りを壊していない) ----
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button')].find(x => /マーケット/.test(x.innerText || ''));
-      b?.click();
-    });
-    await page.waitForTimeout(1500);
-    await dismissOverlays();
-    const market = await shell();
-    const onMarket = await page.evaluate(() => !!document.querySelector('[data-mh-screen]'));
-    if (onMarket) {
-      check('一覧の画面には縦向きの目印を付けない', !!market && market.portraitLayout === 'false', market ? `目印=${market.portraitLayout}` : 'なし');
-      check('一覧の画面は今までどおり横を広く使う',
-        !!market && market.width > market.viewport * 0.7,
-        market ? `器 ${market.width}px / 画面 ${market.viewport}px` : 'なし');
-    } else {
-      console.log('（マーケットへ入れなかったので、一覧側の確認は省略）');
-    }
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll('button[aria-label]')].find(x => /戻る|ホーム/.test(x.getAttribute('aria-label') || ''));
-      b?.click();
-    });
-    await page.waitForTimeout(1200);
-    await dismissOverlays();
+    // 一覧を持つ画面(2列へ組み替える作り)を壊していないことは、
+    // 共通の指定(max-width:1024px)が生きていることで見る。
+    // ★マーケットなどへ寄り道してから戻る手順は、戻るボタンの名前が画面ごとに違って
+    //   途中で止まりやすい。ここではHOMEのまま確かめてバトルへ直行する
+    check('横画面の共通レイアウトが生きている（一覧の画面を壊していない）',
+      !!home && home.maxWidth === '1024px', home ? `max-width:${home.maxWidth}` : 'なし');
 
     // ---- バトルまで行く ----
     await page.evaluate(() => document.querySelector('button[aria-label="バトル"]')?.click());

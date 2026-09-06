@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0759dcffaee89f72
+// source-sha256: 2849aa4254e17077
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: eb442952b52f72f7
+// generated-sha256: 07f172bb12ec968a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 08:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 08:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4438,6 +4438,10 @@ const Audio_ = (() => {
   // (先に鳴らすと、まだノーツを置けていない間に曲だけ進んでMISSが積み上がる)。
   const startRhythmTrack = async (key, rhythmVolumePct = 100, options = null) => {
     const autoStart = options?.autoStart !== false;
+    // 曲えらびの試聴だけ輪にする。演奏本体は1回で終わるのが正しいので既定は false のまま
+    // (2026-09-07・ユーザー指示「曲選択時、曲が流れるが最後まで行くと
+    //  そのまま終わって無音になる。ループするようにして」)。
+    const loop = options?.loop === true;
     const track = resolveTrack(key);
     if (!track) return null;
     currentKey = null;
@@ -4481,7 +4485,7 @@ const Audio_ = (() => {
         // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由せず直接destinationへ繋ぐ。
         // 全体ミュート(enabled)だけはactiveRhythmGains経由で共通に反映する。
         nextSource.buffer = buffer;
-        nextSource.loop = false;
+        nextSource.loop = loop;
         nextSource.connect(rhythmGain);
         rhythmGain.connect(ctx.destination);
         source = nextSource;
@@ -22181,7 +22185,11 @@ function MonsterHeroGame() {
     let cancelled = false,
       handle = null;
     const timer = setTimeout(() => {
-      Audio_.startRhythmTrack(rhythmPreviewTrackId, rhythmSettings.bgmVolume).then(audio => {
+      // ★輪にする。曲えらびは眺めている時間が長いので、1周で無音になると
+      //   「音が止まった＝何か壊れた」と見える(2026-09-07・ユーザー指示)
+      Audio_.startRhythmTrack(rhythmPreviewTrackId, rhythmSettings.bgmVolume, {
+        loop: true
+      }).then(audio => {
         if (cancelled || !audio) {
           audio && audio.stop();
           return;

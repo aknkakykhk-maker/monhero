@@ -1579,7 +1579,9 @@ function MonsterHeroGame() {
     // 「鳴り続ける」どころか移動のたびに頭から鳴ってしまう
     let cancelled=false,handle=null;
     const timer=setTimeout(()=>{
-      Audio_.startRhythmTrack(rhythmPreviewTrackId,rhythmSettings.bgmVolume).then(audio=>{
+      // ★輪にする。曲えらびは眺めている時間が長いので、1周で無音になると
+      //   「音が止まった＝何か壊れた」と見える(2026-09-07・ユーザー指示)
+      Audio_.startRhythmTrack(rhythmPreviewTrackId,rhythmSettings.bgmVolume,{loop:true}).then(audio=>{
         if(cancelled||!audio){audio&&audio.stop();return;}
         handle=audio;
       }).catch(()=>{});

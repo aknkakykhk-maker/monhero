@@ -186,6 +186,10 @@ const Audio_ = (() => {
   // (先に鳴らすと、まだノーツを置けていない間に曲だけ進んでMISSが積み上がる)。
   const startRhythmTrack = async (key,rhythmVolumePct=100,options=null) => {
     const autoStart=options?.autoStart!==false;
+    // 曲えらびの試聴だけ輪にする。演奏本体は1回で終わるのが正しいので既定は false のまま
+    // (2026-09-07・ユーザー指示「曲選択時、曲が流れるが最後まで行くと
+    //  そのまま終わって無音になる。ループするようにして」)。
+    const loop=options?.loop===true;
     const track=resolveTrack(key); if(!track) return null;
     currentKey=null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers();
     resumeAudioCtxNoWait();
@@ -202,7 +206,7 @@ const Audio_ = (() => {
         rhythmGain.gain.value=enabled?raw:0;
         // 音ゲー専用の音量なので、メインのBGM音量(bgmGain)は経由せず直接destinationへ繋ぐ。
         // 全体ミュート(enabled)だけはactiveRhythmGains経由で共通に反映する。
-        nextSource.buffer=buffer; nextSource.loop=false; nextSource.connect(rhythmGain);rhythmGain.connect(ctx.destination);
+        nextSource.buffer=buffer; nextSource.loop=loop; nextSource.connect(rhythmGain);rhythmGain.connect(ctx.destination);
         source=nextSource; offsetSeconds=offset; startedAt=ctx.currentTime; playing=true;
         nextSource.onended=()=>{if(source===nextSource&&playing){playing=false;naturallyEnded=true;source=null;}};
         nextSource.start(0,offset); return true;
