@@ -6800,10 +6800,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const blocked=!runProgressAllowed||runStage!=='BATTLE'||!enemy||enemy.hp<=0||isBusy||
       autoTurnRunningRef.current||autoTurnScheduledRef.current||!!battleScenarioRef.current||battleTutorialStep!=null||
       !!skillPicker||!!showDeckInfo||!!showEnemyInfo||!!showHeroInfo||!!showQuitConfirm||!!skillEffectDetail||
-      // 末尾の showAutoBgmPicker は「BGM/音量の設定を開いているあいだはターンを進めない」。
-      // ほかの重なり(手札の確認・敵の情報など)と同じ扱いにする。ここが抜けていたため、
-      // 曲を選んでいる最中に敵を倒して画面が変わっていた(2026-09-06・ユーザー報告)
-      !!ultimateDistanceBreakReveal||!!enemyRevivalReveal||!!extremeRuleOpen||!!effect||!!showAutoBgmPicker;
+      // ★showAutoBgmPicker はここへ入れない。BGM/音量の設定を開いていても周回は進める。
+      //   いちど「曲を選ぶ時間がない」への対策として止めたが、放置で回す超省エネでは
+      //   曲を選んでいるあいだ周回が止まってしまい、かえって困る
+      //   (2026-09-06・ユーザー報告「超省エネでBGM選択中にオートが止まる」)。
+      //   選ぶ時間は、設定をランの途中ならどの画面でも開いたままにすることで確保している
+      !!ultimateDistanceBreakReveal||!!enemyRevivalReveal||!!extremeRuleOpen||!!effect;
     if(!autoBattleRef.current||blocked)return;
     autoTurnScheduledRef.current=true;
     Promise.resolve().then(async()=>{
@@ -6824,7 +6826,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(autoBattleRef.current)setAutoTurnCycle(n=>n+1);
       }
     });
-  },[autoBattle,autoTurnCycle,runStage,runProgressAllowed,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,skillEffectDetail,ultimateDistanceBreakReveal,enemyRevivalReveal,extremeRuleOpen,effect,battleTutorialStep,showAutoBgmPicker]);
+  },[autoBattle,autoTurnCycle,runStage,runProgressAllowed,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,skillEffectDetail,ultimateDistanceBreakReveal,enemyRevivalReveal,extremeRuleOpen,effect,battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -7657,11 +7659,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       autoPostWaveScheduledRef.current=false;
       return;
     }
-    // BGM/音量の設定を開いているあいだは、WAVE後の自動進行も止めておく。
-    // ターン進行だけ止めても、倒した直後のWAVE_RESULT以降が勝手に進んでしまい、
-    // 曲を選び終わる前に画面が変わる(2026-09-06・ユーザー報告)。
-    // 閉じるとこのeffectがもう一度走り、そこから通常どおり進む
-    if(showAutoBgmPicker)return;
+    // ★BGM/音量の設定を開いていても、ここは止めない。
+    //   放置で回している最中に曲を選ぶと周回が止まってしまうため
+    //   (2026-09-06・ユーザー報告「超省エネでBGM選択中にオートが止まる」)。
+    //   設定はランの途中ならどの画面でも開いたままなので、進んでも選び続けられる
     if(runStage==='WAVE_RESULT'||runStage==='QUICK_GROWTH'||runStage==='QUICK_JOIN'){
       autoPostWaveRunningRef.current=false;
       autoPostWaveScheduledRef.current=false;
@@ -7780,7 +7781,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       });
       return;
     }
-  },[autoBattle,runStage,runProgressAllowed,showAutoBgmPicker]);
+  },[autoBattle,runStage,runProgressAllowed]);
 
   const upgradeUnique = (monId, diff) => {
     setOwnedUniques(prev=>prev.map(u=>{

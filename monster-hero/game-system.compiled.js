@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 077c355c1fbb5a7b
+// source-sha256: 5a88bf8f51dbd78f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: da223716ac4c585d
+// generated-sha256: 7b3666e9c5ca4490
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 22:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 23:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29850,10 +29850,12 @@ function MonsterHeroGame() {
   // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
   useEffect(() => {
     const blocked = !runProgressAllowed || runStage !== 'BATTLE' || !enemy || enemy.hp <= 0 || isBusy || autoTurnRunningRef.current || autoTurnScheduledRef.current || !!battleScenarioRef.current || battleTutorialStep != null || !!skillPicker || !!showDeckInfo || !!showEnemyInfo || !!showHeroInfo || !!showQuitConfirm || !!skillEffectDetail ||
-    // 末尾の showAutoBgmPicker は「BGM/音量の設定を開いているあいだはターンを進めない」。
-    // ほかの重なり(手札の確認・敵の情報など)と同じ扱いにする。ここが抜けていたため、
-    // 曲を選んでいる最中に敵を倒して画面が変わっていた(2026-09-06・ユーザー報告)
-    !!ultimateDistanceBreakReveal || !!enemyRevivalReveal || !!extremeRuleOpen || !!effect || !!showAutoBgmPicker;
+    // ★showAutoBgmPicker はここへ入れない。BGM/音量の設定を開いていても周回は進める。
+    //   いちど「曲を選ぶ時間がない」への対策として止めたが、放置で回す超省エネでは
+    //   曲を選んでいるあいだ周回が止まってしまい、かえって困る
+    //   (2026-09-06・ユーザー報告「超省エネでBGM選択中にオートが止まる」)。
+    //   選ぶ時間は、設定をランの途中ならどの画面でも開いたままにすることで確保している
+    !!ultimateDistanceBreakReveal || !!enemyRevivalReveal || !!extremeRuleOpen || !!effect;
     if (!autoBattleRef.current || blocked) return;
     autoTurnScheduledRef.current = true;
     Promise.resolve().then(async () => {
@@ -29874,7 +29876,7 @@ function MonsterHeroGame() {
         if (autoBattleRef.current) setAutoTurnCycle(n => n + 1);
       }
     });
-  }, [autoBattle, autoTurnCycle, runStage, runProgressAllowed, enemy?.hp, isBusy, skillPicker, showDeckInfo, showEnemyInfo, showHeroInfo, showQuitConfirm, skillEffectDetail, ultimateDistanceBreakReveal, enemyRevivalReveal, extremeRuleOpen, effect, battleTutorialStep, showAutoBgmPicker]);
+  }, [autoBattle, autoTurnCycle, runStage, runProgressAllowed, enemy?.hp, isBusy, skillPicker, showDeckInfo, showEnemyInfo, showHeroInfo, showQuitConfirm, skillEffectDetail, ultimateDistanceBreakReveal, enemyRevivalReveal, extremeRuleOpen, effect, battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -31122,11 +31124,10 @@ function MonsterHeroGame() {
       autoPostWaveScheduledRef.current = false;
       return;
     }
-    // BGM/音量の設定を開いているあいだは、WAVE後の自動進行も止めておく。
-    // ターン進行だけ止めても、倒した直後のWAVE_RESULT以降が勝手に進んでしまい、
-    // 曲を選び終わる前に画面が変わる(2026-09-06・ユーザー報告)。
-    // 閉じるとこのeffectがもう一度走り、そこから通常どおり進む
-    if (showAutoBgmPicker) return;
+    // ★BGM/音量の設定を開いていても、ここは止めない。
+    //   放置で回している最中に曲を選ぶと周回が止まってしまうため
+    //   (2026-09-06・ユーザー報告「超省エネでBGM選択中にオートが止まる」)。
+    //   設定はランの途中ならどの画面でも開いたままなので、進んでも選び続けられる
     if (runStage === 'WAVE_RESULT' || runStage === 'QUICK_GROWTH' || runStage === 'QUICK_JOIN') {
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
@@ -31248,7 +31249,7 @@ function MonsterHeroGame() {
       });
       return;
     }
-  }, [autoBattle, runStage, runProgressAllowed, showAutoBgmPicker]);
+  }, [autoBattle, runStage, runProgressAllowed]);
   const upgradeUnique = (monId, diff) => {
     setOwnedUniques(prev => prev.map(u => {
       if (u.monId === monId) {
