@@ -130,11 +130,26 @@
 | # | 内容 | 検査 |
 | --- | --- | --- |
 | 1 | この設計書 | — |
-| 2 | `runStage` を入れてランの進行を画面から分ける。**挙動は変えない**（バトル画面では今までどおり） | 既存のバトル・AUTO検査が全部通ること。`runStage` と `gameState` が並走することの検査を足す |
+| 2 | `runStage` を入れてランの進行を画面から分ける。**挙動は変えない**（バトル画面では今までどおり） | **完了**（2026-09-06）。`battle/run-stage-check.js`(切り分け)と `battle/auto-run-browser-check.js`(実ブラウザでAUTOが進むこと)を追加 |
 | 3 | モンビーの非演奏画面で周回を継続し、演奏中は止める。バトル音を消す。バトル→モンビーの動線 | 実ブラウザで「モンビーへ移っても周回が続く」「演奏に入ると止まる」「曲が終わると再開する」 |
 | 4 | モンビー側の進捗表示、モンビーから周回を始めるトグル | 実ブラウザ |
 | 5 | 演奏中ぶんのヘッドレス追いつき（**一致検査を先に**） | 乱数固定で本物とシミュレータが一致すること |
 | 6 | ヘルプ・更新履歴・助手の告知（`type:'content'`） | `help-coverage-check` ほか |
+
+## 7-1. PR2で入ったもの（2026-09-06）
+
+`60-app.jsx` に次の3つを置き、ランの進行を回す3つのループがこれだけを見るようにした。
+バトル画面を描いている間は `runStage === gameState` で、**挙動は何も変わっていない**。
+
+```js
+const RUN_STAGE_SCREENS = [...RUN_PHASE_STATES,'BATTLE'];  // 画面の表は既存の定数を再利用
+const runStage = RUN_STAGE_SCREENS.includes(gameState) ? gameState : null;
+const runProgressAllowed = runStage !== null;              // ← PR3で変えるのはこの行
+```
+
+寄せたループは、ターン進行・WAVE後の各段・次周開始の3つ。
+**PR3では `runProgressAllowed` に「モンビーの非演奏画面ならtrue」を足し、
+`runStage` を画面から離れても保つようにする。**
 
 ## 8. まだ決めていないこと
 

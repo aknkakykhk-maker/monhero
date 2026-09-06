@@ -27,7 +27,9 @@ assert(has('if(entries.length>0)return processTurn(entries);'), 'AUTOが合法�
 assert(has('const lacksOnlyGuts=hasAutoTurnWithEnoughGuts({'), 'AUTOがガッツ不足だけの行動不能を判定していません');
 assert(has("if(lacksOnlyGuts&&autoBattleRef.current&&gameState==='BATTLE'&&enemy&&enemy.hp>0&&hp>0"), '緊急回復前にAUTO・戦闘・生存状態を再確認していません');
 assert(has('&&!battleScenarioRef.current&&battleTutorialStep==null)return useEmergency();'), '練習を除外して既存の緊急回復を再利用していません');
-assert(has("const blocked=gameState!=='BATTLE'||!enemy||enemy.hp<=0||isBusy||"), 'BATTLE・敵・busyの実行条件がありません');
+// ラン進行の判定は runStage / runProgressAllowed へ寄せた(docs/spec/QUICK_RHYTHM_LINK.md PR2)。
+// 「バトル中か」の意味は変わっていない。切り分けそのものは battle/run-stage-check.js が見る
+assert(has("const blocked=!runProgressAllowed||runStage!=='BATTLE'||!enemy||enemy.hp<=0||isBusy||"), 'BATTLE・敵・busyの実行条件がありません');
 assert(has('!!battleScenarioRef.current||battleTutorialStep!=null||'), 'バトル練習のAUTO禁止がありません');
 assert(has("addPopup('AUTO停止：使えるカードがありません'"), '合法行動なしのAUTO停止がありません');
 assert(has('if(isBusy||autoBattleRef.current) return;'), '手動カード選択・割当のAUTOガードがありません');
@@ -38,7 +40,7 @@ assert(has("setSelectedCards([]);setCardAssignments({});setPendingCard(null);set
 assert(has('const stopAutoBattle = () => {'), 'AUTO停止helperがありません');
 assert(has('autoBattleRef.current = false;\n    autoTurnScheduledRef.current = false;\n    autoPostWaveScheduledRef.current = false;\n    setAutoBattle(false);'), 'AUTO停止helperがref・予約・stateを停止していません');
 assert(has('autoPostWaveScheduledRef.current = false;'), 'AUTO停止helperがWAVE後の予約を停止していません');
-assert(has("if(gameState!=='WAVE_RESULT'&&gameState!=='REWARD_PICK'&&gameState!=='QUICK_GROWTH'&&gameState!=='PICK_ALLY'&&gameState!=='QUICK_JOIN'&&gameState!=='PICK_TEACHING'&&gameState!=='UPGRADE_SKILL')"), 'WAVE結果・Quick結果・既存選択画面がWAVE後AUTOロックを再利用していません');
+assert(has("if(!runProgressAllowed||(runStage!=='WAVE_RESULT'&&runStage!=='REWARD_PICK'&&runStage!=='QUICK_GROWTH'&&runStage!=='PICK_ALLY'&&runStage!=='QUICK_JOIN'&&runStage!=='PICK_TEACHING'&&runStage!=='UPGRADE_SKILL'))"), 'WAVE結果・Quick結果・既存選択画面がWAVE後AUTOロックを再利用していません');
 // ラン開始時の1枚だけはAUTO∞で覚えたカードを選び直す。覚えていない・見つからないときは
 // これまでどおり現在の提示候補と既存の初回判定(!enemy)でランダムに選ぶ
 assert(has('const choice=fixedInitial||chooseAutoTeachingCard(teachingPool,ownedTeachings,!enemy);'), 'AUTOが現在の提示候補と既存の初回判定を使用していません');
