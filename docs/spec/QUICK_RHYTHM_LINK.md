@@ -1,6 +1,6 @@
 # クイック∞周回 × モンヒロビート 連携 — 設計書
 
-2026-09-06 にユーザーと決めた内容をまとめたもの。**進捗は §7 のPR表を見る**（2026-09-06 時点で PR2 まで完了）。
+2026-09-06 にユーザーと決めた内容をまとめたもの。**進捗は §7 のPR表を見る**（2026-09-06 時点で PR3 まで完了）。
 着手するときは、まず [`docs/refactor/REGRESSION_RISK_MAP.md`](../refactor/REGRESSION_RISK_MAP.md) を読むこと。
 
 ## 1. 何をしたいか
@@ -131,10 +131,11 @@
 | --- | --- | --- |
 | 1 | この設計書 | — |
 | 2 | `runStage` を入れてランの進行を画面から分ける。**挙動は変えない**（バトル画面では今までどおり） | **完了**（2026-09-06）。`battle/run-stage-check.js`(切り分け)と `battle/auto-run-browser-check.js`(実ブラウザでAUTOが進むこと)を追加 |
-| 3 | モンビーの非演奏画面で周回を継続し、演奏中は止める。バトル音を消す。バトル→モンビーの動線 | 実ブラウザで「モンビーへ移っても周回が続く」「演奏に入ると止まる」「曲が終わると再開する」 |
-| 4 | モンビー側の進捗表示、モンビーから周回を始めるトグル | 実ブラウザ |
-| 5 | 演奏中ぶんのヘッドレス追いつき（**一致検査を先に**） | 乱数固定で本物とシミュレータが一致すること |
-| 6 | ヘルプ・更新履歴・助手の告知（`type:'content'`） | `help-coverage-check` ほか |
+| 3 | ランの段階を進める入口を `advanceRunStage` の1つへ寄せる。**挙動は変えない** | **完了**（2026-09-06）。`battle/run-stage-check.js` を拡張 |
+| 4 | モンビーの非演奏画面で周回を継続し、演奏中は止める。バトル音を消す。バトル→モンビーの動線 | 実ブラウザで「モンビーへ移っても周回が続く」「演奏に入ると止まる」「曲が終わると再開する」 |
+| 5 | モンビー側の進捗表示、モンビーから周回を始めるトグル | 実ブラウザ |
+| 6 | 演奏中ぶんのヘッドレス追いつき（**一致検査を先に**） | 乱数固定で本物とシミュレータが一致すること |
+| 7 | ヘルプ・更新履歴・助手の告知（`type:'content'`） | `help-coverage-check` ほか |
 
 ## 7-1. PR2で入ったもの（2026-09-06）
 
@@ -148,8 +149,30 @@ const runProgressAllowed = runStage !== null;              // ← PR3で変え�
 ```
 
 寄せたループは、ターン進行・WAVE後の各段・次周開始の3つ。
-**PR3では `runProgressAllowed` に「モンビーの非演奏画面ならtrue」を足し、
-`runStage` を画面から離れても保つようにする。**
+
+## 7-2. PR3で入ったもの（2026-09-06）
+
+`runStage` を画面から独立した state にし、段階を進める入口を1つへ寄せた。
+
+```js
+const [runStage, setRunStage] = useState(null);   // 画面(gameState)とは別に持つ
+const runBackgroundAllowed = false;               // ← PR4で「モンビーの非演奏画面ならtrue」にする
+const advanceRunStage = (stage) => {              // ランの段階を進める唯一の入口
+  runStageRef.current = stage; setRunStage(stage);
+  if (!runBackgroundAllowed) setGameState(stage); // いまは必ず画面も一緒に切り替わる
+};
+```
+
+ラン段階への `setGameState('…')` 26箇所をこの入口へ置き換えた。
+`runBackgroundAllowed` が固定の false なので**挙動は何も変わっていない**。
+
+**PR4では `runBackgroundAllowed` を「モンビーの非演奏画面ならtrue」にするだけでよい。**
+
+> ⚠ PR2のとき、変更範囲だけを見て検査を選んだせいで
+> `run/auto-repeat-internal-check` `run/auto-repeat-initial-teaching-check`
+> `mode/species-challenge-auto-join-check` `run/auto-unique-upgrade-check` を壊したまま出した
+> （どれも進行ループを文字列で切り出していた）。PR3で直してある。
+> **この領域を触るPRでは `node tools/run-checks.js --area run,battle` を必ず回すこと。**
 
 ## 8. まだ決めていないこと
 

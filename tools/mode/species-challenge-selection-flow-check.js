@@ -116,7 +116,7 @@ assert(confirmButton.includes("if(species){"), '「この難易度で挑戦」�
 assert(confirmButton.includes("step:'hero'") && confirmButton.includes("setGameState('SPECIES_CHALLENGE_SELECT');return;"),
   '難易度確定後は種族チャレンジの勇者選択へ戻す');
 const speciesBranch = confirmButton.slice(confirmButton.indexOf('if(species){'), confirmButton.indexOf('battleEntryStateRef.current='));
-assert(!speciesBranch.includes("setGameState('PICK_HERO')"), '種族チャレンジは通常のPICK_HEROへ入らない');
+assert(!speciesBranch.includes("advanceRunStage('PICK_HERO')"), '種族チャレンジは通常のPICK_HEROへ入らない');
 assert(!speciesBranch.includes('debugBattleRef.current=false') && !speciesBranch.includes('setDebugBattle(false)'),
   '種族チャレンジの分岐でdebugBattleをfalseへ戻さない');
 const battleModes = source.slice(source.indexOf('const BATTLE_MODES = ['), source.indexOf('// 極限チャレンジは通常の3モードとは別に持っている'));

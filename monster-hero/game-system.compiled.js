@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 197a9641a9b10c7f
+// source-sha256: 93d14841d6fc317c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0cccb2280793c558
+// generated-sha256: ad7e149af1af1878
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 19:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 20:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22718,14 +22718,36 @@ function MonsterHeroGame() {
   // この2つが食い違うので、ランの進行を進めてよいかの判定をここへ1か所にまとめておく。
   //
   // ★いまは gameState と必ず同じ値・同じ条件になる。挙動は何も変わらない。
-  //   別画面からランを進める拡張は、下の2行(runStage / runProgressAllowed)だけを変える。
+  //   別画面からランを進める拡張は、runBackgroundAllowed(下)を true にするだけでよくする。
   //
   // 画面の一覧は上の RUN_PHASE_STATES にバトル本編を足したもので、表を二重に持たない。
   const RUN_STAGE_SCREENS = [...RUN_PHASE_STATES, 'BATTLE'];
-  // ランがどこまで進んでいるか。ランの画面を描いていなければ null(=ランなし扱い)。
-  const runStage = RUN_STAGE_SCREENS.includes(gameState) ? gameState : null;
+  const isRunStage = value => RUN_STAGE_SCREENS.includes(value);
+  // ランがどこまで進んでいるか。ランをしていなければ null。
+  // 画面(gameState)とは別に持つので、ランの画面を描いていなくても段階だけ進められる。
+  const [runStage, setRunStage] = useState(null);
+  // 同じターンの中で参照するための控え。setStateの反映を待たずに読む
+  const runStageRef = useRef(null);
+  // ランの画面を描かずに段階だけ進めてよいか。
+  // ★PR4でモンビーの非演奏画面をここへ足す。いまは常に false なので、
+  //   ランの段階が変わるときは必ず画面も一緒に切り替わる(これまでどおり)。
+  const runBackgroundAllowed = false;
+  // ランの段階を1つ進める唯一の入口。
+  // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
+  // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
+  // (直接呼ぶと runStage が置いていかれ、別画面でランが進まなくなる)。
+  const advanceRunStage = stage => {
+    runStageRef.current = stage;
+    setRunStage(stage);
+    if (!runBackgroundAllowed) setGameState(stage);
+  };
+  // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
+  const clearRunStage = () => {
+    runStageRef.current = null;
+    setRunStage(null);
+  };
   // ランを進めてよいか。いまは「ランの画面を実際に描いている」ときだけ。
-  const runProgressAllowed = runStage !== null;
+  const runProgressAllowed = runStage !== null && gameState === runStage;
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -27257,7 +27279,7 @@ function MonsterHeroGame() {
     // (setupMon は runMode / difficulty / extremeRunRef を読むが、上でセット済みのものが
     //  次の描画で反映されるため、PICK_SLOT を押す時点では正しい値になっている)
     setCurrentPickingMon(hero);
-    setGameState('PICK_SLOT');
+    advanceRunStage('PICK_SLOT');
   };
 
   // WAVE10を勝ち切ったときだけ呼ぶ。敗北・リタイア・途中離脱からは呼ばない。
@@ -27485,7 +27507,7 @@ function MonsterHeroGame() {
       initialTeachingId: resolved.initialTeachingId
     });
     setTeachingPool([...getActiveTeachingCards()]);
-    setGameState('PICK_TEACHING');
+    advanceRunStage('PICK_TEACHING');
     return {
       ok: true,
       runId: runIdRef.current
@@ -27782,6 +27804,9 @@ function MonsterHeroGame() {
   };
   const returnToHome = () => {
     stopAllAuto();
+    // HOMEへ戻った時点でランは終わり。段階を残すと、次にランの画面を開いたときに
+    // 「前のランの続き」と見なされてしまう
+    clearRunStage();
     debugBattleRef.current = false;
     // 正式実装前のモンスターを勇者モン選択へ出すしるしも、HOMEへ戻る時点で必ず落とす
     debugMonsterPreviewRef.current = false;
@@ -28213,7 +28238,7 @@ function MonsterHeroGame() {
     });
     setRunFinalizing(false);
     applyResetAllState();
-    setGameState('PICK_HERO');
+    advanceRunStage('PICK_HERO');
   };
   const runResultActionOnce = action => {
     if (resultActionRef.current) return;
@@ -28711,7 +28736,7 @@ function MonsterHeroGame() {
       }),
       goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode)
     }]);
-    setTimeout(() => setGameState('WAVE_RESULT'), battleMs(500));
+    setTimeout(() => advanceRunStage('WAVE_RESULT'), battleMs(500));
     return true;
   };
 
@@ -29833,7 +29858,7 @@ function MonsterHeroGame() {
         // 報酬・クリア記録・全国ランキング送信は finishSpeciesChallengeClear の中で
         // 通常バトルと同じ共通処理(awardRunRewards / recordClearOnce)を通している
         await finishSpeciesChallengeClear();
-        setGameState('CHAMPION');
+        advanceRunStage('CHAMPION');
         setResultProcessing(false);
         return;
       }
@@ -29852,7 +29877,7 @@ function MonsterHeroGame() {
       } catch (e) {
         console.error('[result] award rewards failed:', e && e.message ? e.message : e);
       }
-      setGameState('CHAMPION');
+      advanceRunStage('CHAMPION');
       await submitRunScoreOnce();
       setResultProcessing(false);
     } else if (isQuickMode(runMode)) {
@@ -29861,7 +29886,7 @@ function MonsterHeroGame() {
     } else {
       // 前のWAVEで選んだ内容が残らないよう、毎回まっさらにしてから開く
       setTrainingPicks([]);
-      setGameState('REWARD_PICK');
+      advanceRunStage('REWARD_PICK');
     }
   };
 
@@ -29916,7 +29941,7 @@ function MonsterHeroGame() {
     });
     quickAdvanceRef.current = null;
     Audio_.se.levelUp();
-    setGameState('QUICK_GROWTH');
+    advanceRunStage('QUICK_GROWTH');
   };
   // 自動成長の表示を閉じて次へ進む。供モンが合流するWAVEなら選択画面へ、それ以外は次のWAVEへ
   const finishQuickGrowth = () => {
@@ -29930,7 +29955,7 @@ function MonsterHeroGame() {
     const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
     if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
       setMonSelection(avail);
-      setGameState('PICK_ALLY');
+      advanceRunStage('PICK_ALLY');
     } else {
       initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def, null, null, null, nextStats);
     }
@@ -30391,7 +30416,7 @@ function MonsterHeroGame() {
     setHand(pool.slice(0, 5));
     setDeck(pool.slice(5));
     setGraveyard([]);
-    setGameState('BATTLE');
+    advanceRunStage('BATTLE');
     setExtremeRuleOpen(showExtremeRule);
     setIsBusy(showExtremeRule || !!breakPending);
     if (breakPending) {
@@ -30510,7 +30535,7 @@ function MonsterHeroGame() {
     setCurrentPickingMon(null);
     battleScenarioIntentIndexRef.current = 0;
     setBattleTutorialLastAction(null);
-    setGameState('PICK_HERO');
+    advanceRunStage('PICK_HERO');
   };
   // 台本で「これを選ぶ」と決めているもの。決めていないものは押せなくする(選択肢を1つに絞る)
   const battleScenario = battleScenarioRef.current;
@@ -30761,7 +30786,7 @@ function MonsterHeroGame() {
         setProHeroPreset(null);
         // 前回候補のうち、今回の勇者と同じ種だけは候補から外す。それ以外の有効な候補は初期選択として残す。
         setProAllyPool(prev => prev.filter(mon => mon.id !== m.id));
-        setGameState('PICK_PRO_ALLIES');
+        advanceRunStage('PICK_PRO_ALLIES');
         return;
       }
       repeatRunTemplateRef.current = createRepeatRunTemplate({
@@ -30769,7 +30794,7 @@ function MonsterHeroGame() {
         allies: []
       });
       setTeachingPool([...getActiveTeachingCards()]);
-      setGameState('PICK_TEACHING');
+      advanceRunStage('PICK_TEACHING');
     } else {
       if (speciesJoin) {
         speciesChallengeBattleRunRef.current = speciesJoin.state;
@@ -30853,7 +30878,7 @@ function MonsterHeroGame() {
         });
         quickAdvanceRef.current = null;
         Audio_.se.levelUp();
-        setGameState('QUICK_JOIN');
+        advanceRunStage('QUICK_JOIN');
         setCurrentPickingMon(null);
         return;
       }
@@ -30870,7 +30895,7 @@ function MonsterHeroGame() {
       });
       setTimeout(() => {
         setEffect(null);
-        setGameState('UPGRADE_SKILL');
+        advanceRunStage('UPGRADE_SKILL');
       }, battleMs(1400));
     }
     setCurrentPickingMon(null);
@@ -30891,7 +30916,7 @@ function MonsterHeroGame() {
       allies: proAllyPool
     });
     setTeachingPool([...getActiveTeachingCards()]);
-    setGameState('PICK_TEACHING');
+    advanceRunStage('PICK_TEACHING');
   };
   const confirmPickTeaching = (explicitTeaching = null) => {
     const teaching = explicitTeaching || selectedTeachingCard;
@@ -30996,13 +31021,13 @@ function MonsterHeroGame() {
       const avail = speciesChallengeJoinPool() || pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
       if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
         setMonSelection(avail);
-        setGameState('PICK_ALLY');
+        advanceRunStage('PICK_ALLY');
       } else if (joinWaves.includes(wave) && speciesChallengeBattleRunRef.current) {
         // 種族チャレンジは連れていける供モンの数がその種族の頭数で決まるので、
         // 「合流するWAVEなのに加入できる子がいない」が普通に起きる。そのWAVEを素通りさせると
         // 強化ポイントと固有技強化・ガッツ回復の機会まで一緒に失うため、加入なしでも同じ画面へ進める
         setUpgradePoints(prev => prev + (Math.floor(Math.random() * 4) + 1));
-        setGameState('UPGRADE_SKILL');
+        advanceRunStage('UPGRADE_SKILL');
       } else if ([1, 3, 5, 7, 9].includes(wave)) {
         const activeCards = getActiveTeachingCards();
         const upgradeableIds = ownedTeachings.filter(ot => ot.evoLevel < 2).map(ot => ot.id);
@@ -31017,7 +31042,7 @@ function MonsterHeroGame() {
           if (!pool.find(p => p.id === random.id)) pool.push(random);
         }
         setTeachingPool(pool);
-        setGameState('PICK_TEACHING');
+        advanceRunStage('PICK_TEACHING');
       } else {
         initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nDef);
       }
@@ -31031,7 +31056,7 @@ function MonsterHeroGame() {
       return !owned || owned.evoLevel < 2;
     });
     setTeachingPool(availableTeachings.sort(() => Math.random() - 0.5).slice(0, 4));
-    setGameState('PICK_TEACHING');
+    advanceRunStage('PICK_TEACHING');
   };
 
   // AUTO中にWAVE後の画面へ入ったときだけ、各画面の既存handlerを1回だけ呼んで進める。
@@ -35860,7 +35885,7 @@ function MonsterHeroGame() {
             setDebugOutcome(null);
             setMonSelection(getActiveMonsterList());
             setHeroPickTab('roster');
-            setGameState('PICK_HERO');
+            advanceRunStage('PICK_HERO');
           },
           className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key === 'Beginner' ? battleTutorialSpotClass('battleStart') : ''}`,
           style: {
@@ -36345,7 +36370,7 @@ function MonsterHeroGame() {
             setProAllyPool([]);
             setMonSelection(getActiveMonsterList());
             setHeroPickTab('roster');
-            setGameState('PICK_HERO');
+            advanceRunStage('PICK_HERO');
           },
           className: "min-h-[44px] rounded-xl font-black text-sm disabled:bg-slate-800 disabled:text-slate-500",
           style: previewable ? {
@@ -36631,7 +36656,7 @@ function MonsterHeroGame() {
             setProAllyPool(pro ? lastProParty.allyBaseIds.map(id => baseMons.find(mon => mon.id === id)).filter(mon => mon && mon.id !== savedHero?.id) : []);
             setMonSelection(pro ? baseMons : getActiveMonsterList());
             setHeroPickTab(pro ? 'base' : 'roster');
-            setGameState('PICK_HERO');
+            advanceRunStage('PICK_HERO');
           },
           className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key === 'Beginner' ? battleTutorialSpotClass('battleStart') : ''}`,
           style: {
@@ -46368,7 +46393,7 @@ function MonsterHeroGame() {
             }
             setProHeroPreset(null);
             setCurrentPickingMon(m);
-            setGameState('PICK_SLOT');
+            advanceRunStage('PICK_SLOT');
           },
           onDetail: () => setCurrentPickingMon(m),
           selectLabel: `${m.name}を勇者モンに選ぶ`,
@@ -46548,7 +46573,7 @@ function MonsterHeroGame() {
         onClick: () => setCurrentPickingMon(null),
         className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95"
       }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('PICK_SLOT'),
+        onClick: () => advanceRunStage('PICK_SLOT'),
         className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
       }, gameState === 'PICK_HERO' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
     })), gameState === 'PICK_PRO_ALLIES' && (() => {
@@ -46576,7 +46601,7 @@ function MonsterHeroGame() {
         setSlots([null, null, null, null]);
         setCurrentPickingMon(null);
         clearSlotUniqueSelection();
-        setGameState('PICK_HERO');
+        advanceRunStage('PICK_HERO');
       };
       return /*#__PURE__*/React.createElement("div", {
         style: {

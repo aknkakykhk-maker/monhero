@@ -52,7 +52,7 @@ assert(pool.indexOf('if (speciesPool) return speciesPool;') < pool.indexOf('getA
   '編成やプロモードの候補より先に種族チャレンジを判定する');
 
 // AUTOのPICK_ALLYが、手動と同じ joinCandidatePool() を通っている
-const autoPick = source.slice(source.indexOf("if(gameState==='PICK_ALLY'){"), source.indexOf("if(gameState==='PICK_TEACHING'){"));
+const autoPick = source.slice(source.indexOf("if(runStage==='PICK_ALLY'){"), source.indexOf("if(runStage==='PICK_TEACHING'){"));
 assert(autoPick.includes('pool:joinCandidatePool(),'), 'AUTOの加入候補もjoinCandidatePool()から取る');
 assert(!/pool:\s*getActiveMonsterList\(\)/.test(autoPick), 'AUTOが編成を直接candidateにしない');
 
@@ -68,9 +68,9 @@ const training = source.slice(source.indexOf('const handleTraining ='), source.i
 const noJoinAt = training.indexOf("} else if(joinWaves.includes(wave)&&speciesChallengeBattleRunRef.current){");
 assert(noJoinAt >= 0, '種族チャレンジは加入なしの合流WAVEを別扱いする');
 const noJoinBranch = training.slice(noJoinAt, training.indexOf('} else if([1,3,5,7,9].includes(wave)){', noJoinAt));
-assert(noJoinBranch.includes("setGameState('UPGRADE_SKILL')"), '加入なしでもガッツ回復のある固有技強化画面へ進む');
+assert(noJoinBranch.includes("advanceRunStage('UPGRADE_SKILL')"), '加入なしでもガッツ回復のある固有技強化画面へ進む');
 assert(noJoinBranch.includes('setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1))'), '加入時と同じ強化ポイントを配る');
-assert(training.indexOf("setGameState('PICK_ALLY')") < noJoinAt, '加入できる子がいるときは今までどおり供モン選択を優先する');
+assert(training.indexOf("advanceRunStage('PICK_ALLY')") < noJoinAt, '加入できる子がいるときは今までどおり供モン選択を優先する');
 assert(!/} else if\(joinWaves\.includes\(wave\)\)\{/.test(training), '通常モードの合流WAVEの進み方は変えない');
 const upgradeScreen = source.slice(source.indexOf("{gameState==='UPGRADE_SKILL'&&("), source.indexOf('{/* WAVE RESULT */}'));
 assert(upgradeScreen.includes('data-guts-recovery-button'), 'その画面にガッツ回復の操作がある');

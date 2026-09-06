@@ -186,7 +186,8 @@ check('勇者モン選択にタブがある', has("setHeroPickTab(key); setCurre
 // プロモードはタブを出さず、つねにベースモンの一覧になる
 check('ベースモンタブは解放済みの種を全部出す', has("gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection"));
 check('タブは勇者モン選択だけに出す', has("{gameState==='PICK_HERO'&&(\n            <div className=\"shrink-0 w-full max-w-md mx-auto mb-2\">"));
-check('挑戦するたびに編成タブから始まる', has("setHeroPickTab('roster');setGameState('PICK_HERO');"));
+// ラン段階の遷移は advanceRunStage を通す(docs/spec/QUICK_RHYTHM_LINK.md PR3)
+check('挑戦するたびに編成タブから始まる', has("setHeroPickTab('roster');advanceRunStage('PICK_HERO');"));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

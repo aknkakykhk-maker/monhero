@@ -30,10 +30,11 @@ check('所持ポイントと上限を超えない', Object.values(result.allocat
 check('不正rngは失敗してポイントを確定しない', choose([{key:'a',level:0}],1,8,()=>1)===null);
 check('純粋helperはReact stateと画面を変更しない', !/\bset[A-Z]|gameState|recoverGutsWithPoint/.test(helper));
 
-const auto = slice("if(gameState==='UPGRADE_SKILL')", 'const upgradeUnique');
+// ラン進行は runStage で分岐する(docs/spec/QUICK_RHYTHM_LINK.md PR2)
+const auto = slice("if(runStage==='UPGRADE_SKILL')", 'const upgradeUnique');
 check('AUTOはガッツ回復を呼ばない', !/recoverGutsWithPoint|setGuts/.test(auto));
 check('AUTOは最終stateを同期計算して一括反映する', auto.includes('const plan=chooseAutoUniqueUpgradePlan') && auto.indexOf('const nextOwnedUniques') < auto.indexOf('setOwnedUniques(nextOwnedUniques)'));
-check('既存の次処理を1回だけ呼ぶ', (auto.match(/continueAfterUniqueUpgrade\(\)/g)||[]).length===1 && !/setGameState\(['"](?:PICK_ALLY|BATTLE)['"]\)/.test(auto));
+check('既存の次処理を1回だけ呼ぶ', (auto.match(/continueAfterUniqueUpgrade\(\)/g)||[]).length===1 && !/advanceRunStage\(['"](?:PICK_ALLY|BATTLE)['"]\)/.test(auto));
 check('既存AUTOロックを再利用する', /autoPostWaveRunningRef|autoPostWaveScheduledRef/.test(auto));
 const manual = slice('const upgradeUnique =', '// 強化ポイントを使って');
 const inherited = slice('const upgradeInheritedUnique =', '// 固有技の強化フェーズ');

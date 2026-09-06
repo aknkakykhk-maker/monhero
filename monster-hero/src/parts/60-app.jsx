@@ -2035,14 +2035,33 @@ function MonsterHeroGame() {
   // この2つが食い違うので、ランの進行を進めてよいかの判定をここへ1か所にまとめておく。
   //
   // ★いまは gameState と必ず同じ値・同じ条件になる。挙動は何も変わらない。
-  //   別画面からランを進める拡張は、下の2行(runStage / runProgressAllowed)だけを変える。
+  //   別画面からランを進める拡張は、runBackgroundAllowed(下)を true にするだけでよくする。
   //
   // 画面の一覧は上の RUN_PHASE_STATES にバトル本編を足したもので、表を二重に持たない。
   const RUN_STAGE_SCREENS = [...RUN_PHASE_STATES,'BATTLE'];
-  // ランがどこまで進んでいるか。ランの画面を描いていなければ null(=ランなし扱い)。
-  const runStage = RUN_STAGE_SCREENS.includes(gameState) ? gameState : null;
+  const isRunStage = (value) => RUN_STAGE_SCREENS.includes(value);
+  // ランがどこまで進んでいるか。ランをしていなければ null。
+  // 画面(gameState)とは別に持つので、ランの画面を描いていなくても段階だけ進められる。
+  const [runStage, setRunStage] = useState(null);
+  // 同じターンの中で参照するための控え。setStateの反映を待たずに読む
+  const runStageRef = useRef(null);
+  // ランの画面を描かずに段階だけ進めてよいか。
+  // ★PR4でモンビーの非演奏画面をここへ足す。いまは常に false なので、
+  //   ランの段階が変わるときは必ず画面も一緒に切り替わる(これまでどおり)。
+  const runBackgroundAllowed = false;
+  // ランの段階を1つ進める唯一の入口。
+  // 画面を切り替えてよいときは gameState も一緒に動かす(いまは必ず切り替わる)。
+  // ラン進行の遷移は、ここを通さずに setGameState を直接呼ばないこと
+  // (直接呼ぶと runStage が置いていかれ、別画面でランが進まなくなる)。
+  const advanceRunStage = (stage) => {
+    runStageRef.current = stage;
+    setRunStage(stage);
+    if (!runBackgroundAllowed) setGameState(stage);
+  };
+  // ランから抜けた(HOMEへ戻った・やり直した)ときに段階を捨てる
+  const clearRunStage = () => { runStageRef.current = null; setRunStage(null); };
   // ランを進めてよいか。いまは「ランの画面を実際に描いている」ときだけ。
-  const runProgressAllowed = runStage !== null;
+  const runProgressAllowed = runStage !== null && gameState === runStage;
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -5107,7 +5126,7 @@ function MonsterHeroGame() {
     // (setupMon は runMode / difficulty / extremeRunRef を読むが、上でセット済みのものが
     //  次の描画で反映されるため、PICK_SLOT を押す時点では正しい値になっている)
     setCurrentPickingMon(hero);
-    setGameState('PICK_SLOT');
+    advanceRunStage('PICK_SLOT');
   };
 
   // WAVE10を勝ち切ったときだけ呼ぶ。敗北・リタイア・途中離脱からは呼ばない。
@@ -5246,7 +5265,7 @@ function MonsterHeroGame() {
     // 次の周回へ持ち越すのは元のテンプレートそのまま。初回アシストカードだけは
     // 読み込み時の正規化(文字列のIDでなければnull)を通した値を使う
     repeatRunTemplateRef.current=Object.freeze({ ...template, initialTeachingId:resolved.initialTeachingId });
-    setTeachingPool([...getActiveTeachingCards()]); setGameState('PICK_TEACHING');
+    setTeachingPool([...getActiveTeachingCards()]); advanceRunStage('PICK_TEACHING');
     return { ok:true, runId:runIdRef.current };
   };
 
@@ -5492,6 +5511,9 @@ function MonsterHeroGame() {
 
   const returnToHome = () => {
     stopAllAuto();
+    // HOMEへ戻った時点でランは終わり。段階を残すと、次にランの画面を開いたときに
+    // 「前のランの続き」と見なされてしまう
+    clearRunStage();
     debugBattleRef.current = false;
     // 正式実装前のモンスターを勇者モン選択へ出すしるしも、HOMEへ戻る時点で必ず落とす
     debugMonsterPreviewRef.current = false;
@@ -5729,7 +5751,7 @@ function MonsterHeroGame() {
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
     applyResetAllState();
-    setGameState('PICK_HERO');
+    advanceRunStage('PICK_HERO');
   };
 
   const runResultActionOnce = (action) => {
@@ -6085,7 +6107,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>setGameState('WAVE_RESULT'),battleMs(500));
+    setTimeout(()=>advanceRunStage('WAVE_RESULT'),battleMs(500));
     return true;
   };
 
@@ -6802,7 +6824,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 報酬・クリア記録・全国ランキング送信は finishSpeciesChallengeClear の中で
         // 通常バトルと同じ共通処理(awardRunRewards / recordClearOnce)を通している
         await finishSpeciesChallengeClear();
-        setGameState('CHAMPION');
+        advanceRunStage('CHAMPION');
         setResultProcessing(false);
         return;
       }
@@ -6819,7 +6841,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await awardRunRewards(10);
         await recordClearOnce();
       } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
-      setGameState('CHAMPION');
+      advanceRunStage('CHAMPION');
       await submitRunScoreOnce();
       setResultProcessing(false);
     } else if (isQuickMode(runMode)) {
@@ -6828,7 +6850,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else {
       // 前のWAVEで選んだ内容が残らないよう、毎回まっさらにしてから開く
       setTrainingPicks([]);
-      setGameState('REWARD_PICK');
+      advanceRunStage('REWARD_PICK');
     }
   };
 
@@ -6859,7 +6881,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     });
     quickAdvanceRef.current = null;
     Audio_.se.levelUp();
-    setGameState('QUICK_GROWTH');
+    advanceRunStage('QUICK_GROWTH');
   };
   // 自動成長の表示を閉じて次へ進む。供モンが合流するWAVEなら選択画面へ、それ以外は次のWAVEへ
   const finishQuickGrowth = () => {
@@ -6873,7 +6895,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
     if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
       setMonSelection(avail);
-      setGameState('PICK_ALLY');
+      advanceRunStage('PICK_ALLY');
     } else {
       initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def, null, null, null, nextStats);
     }
@@ -7168,7 +7190,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const showExtremeRule = w === 1 && !!specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&!!extremeDistanceBreakRule(specialRuleDifficulty);
-    setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule||!!breakPending);
+    setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); advanceRunStage('BATTLE'); setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule||!!breakPending);
     if(breakPending){
       const breakRule=effectiveExtremeDistanceBreakRule(specialRuleDifficulty,w);
       const picked=drawUltimateDistanceBreak(ultimateDistanceBreakLevelsRef.current,Math.random,breakRule?.safeDistanceCount??1);
@@ -7243,7 +7265,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setHeroPickTab('base'); setCurrentPickingMon(null);
     battleScenarioIntentIndexRef.current = 0;
     setBattleTutorialLastAction(null);
-    setGameState('PICK_HERO');
+    advanceRunStage('PICK_HERO');
   };
   // 台本で「これを選ぶ」と決めているもの。決めていないものは押せなくする(選択肢を1つに絞る)
   const battleScenario = battleScenarioRef.current;
@@ -7435,11 +7457,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         setProHeroPreset(null);
         // 前回候補のうち、今回の勇者と同じ種だけは候補から外す。それ以外の有効な候補は初期選択として残す。
         setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));
-        setGameState('PICK_PRO_ALLIES');
+        advanceRunStage('PICK_PRO_ALLIES');
         return;
       }
       repeatRunTemplateRef.current=createRepeatRunTemplate({ hero:m, allies:[] });
-      setTeachingPool([...getActiveTeachingCards()]); setGameState('PICK_TEACHING');
+      setTeachingPool([...getActiveTeachingCards()]); advanceRunStage('PICK_TEACHING');
     } else {
       if (speciesJoin) {
         speciesChallengeBattleRunRef.current=speciesJoin.state;
@@ -7479,13 +7501,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         });
         quickAdvanceRef.current=null;
         Audio_.se.levelUp();
-        setGameState('QUICK_JOIN');
+        advanceRunStage('QUICK_JOIN');
         setCurrentPickingMon(null);
         return;
       }
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
       setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
-      setTimeout(()=>{setEffect(null); setGameState('UPGRADE_SKILL');},battleMs(1400));
+      setTimeout(()=>{setEffect(null); advanceRunStage('UPGRADE_SKILL');},battleMs(1400));
     }
     setCurrentPickingMon(null);
   };
@@ -7502,7 +7524,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
     repeatRunTemplateRef.current=createRepeatRunTemplate({ hero:mainHero, allies:proAllyPool });
     setTeachingPool([...getActiveTeachingCards()]);
-    setGameState('PICK_TEACHING');
+    advanceRunStage('PICK_TEACHING');
   };
 
   const confirmPickTeaching = (explicitTeaching=null) => {
@@ -7562,13 +7584,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const avail=speciesChallengeJoinPool()
         ||pickJoinCandidates(joinCandidatePool(),activeIds,mainHero?.id,joinOfferSize());
       if(joinWaves.includes(wave)&&slots.filter(s=>s).length<4&&avail.length>0){
-        setMonSelection(avail); setGameState('PICK_ALLY');
+        setMonSelection(avail); advanceRunStage('PICK_ALLY');
       } else if(joinWaves.includes(wave)&&speciesChallengeBattleRunRef.current){
         // 種族チャレンジは連れていける供モンの数がその種族の頭数で決まるので、
         // 「合流するWAVEなのに加入できる子がいない」が普通に起きる。そのWAVEを素通りさせると
         // 強化ポイントと固有技強化・ガッツ回復の機会まで一緒に失うため、加入なしでも同じ画面へ進める
         setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
-        setGameState('UPGRADE_SKILL');
+        advanceRunStage('UPGRADE_SKILL');
       } else if([1,3,5,7,9].includes(wave)){
         const activeCards=getActiveTeachingCards();
         const upgradeableIds=ownedTeachings.filter(ot=>ot.evoLevel<2).map(ot=>ot.id);
@@ -7578,7 +7600,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if(upgradeableCards.length>0) pool.push(...upgradeableCards.sort(()=>Math.random()-0.5).slice(0,2));
         const needed=4-pool.length; if(needed>0&&notOwnedCards.length>0) pool.push(...notOwnedCards.sort(()=>Math.random()-0.5).slice(0,needed));
         while(pool.length<4&&activeCards.length>=4){const random=activeCards[Math.floor(Math.random()*activeCards.length)]; if(!pool.find(p=>p.id===random.id)) pool.push(random);}
-        setTeachingPool(pool); setGameState('PICK_TEACHING');
+        setTeachingPool(pool); advanceRunStage('PICK_TEACHING');
       } else { initBattle(wave+1,slots,ownedUniques,ownedTeachings,nDef); }
     },battleMs(900));
   };
@@ -7587,7 +7609,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const continueAfterUniqueUpgrade = () => {
     const availableTeachings=getActiveTeachingCards().filter(tc=>{const owned=ownedTeachings.find(ot=>ot.id===tc.id); return!owned||owned.evoLevel<2;});
     setTeachingPool(availableTeachings.sort(()=>Math.random()-0.5).slice(0,4));
-    setGameState('PICK_TEACHING');
+    advanceRunStage('PICK_TEACHING');
   };
 
   // AUTO中にWAVE後の画面へ入ったときだけ、各画面の既存handlerを1回だけ呼んで進める。
@@ -9158,7 +9180,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className={`text-center text-[7px] tracking-[.2em] font-black ${key==='EXTREME'?'text-fuchsia-300':'text-slate-400'}`}>{key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'}</div><h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}</h3>{(()=>{const rec=recordBox(key);return(
                 <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="block text-[8px] text-slate-400 font-black">{rec.label}</small><b className={`block text-right text-base leading-tight ${rec.valueColor}`}>{rec.value}</b><span className="block text-right text-[9px] text-amber-300">{rec.sub}</span></div>
               );})()}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div><div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div><div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button>{/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
-                ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
+                ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');advanceRunStage('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
                 スキップはクイックモード専用。チャレンジで使えるとスコアを出さずに報酬だけ取れてしまい、
                 ランキングを競う意味が薄れるため */}{(()=>{const tid=SKIP_TICKETS[key];if(!quick)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">スキップはクイックモード専用</div>);if(!tid)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">この難易度はスキップできません</div>);if(!skipAllowedByPolicy(quickRewardPolicy))return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight">スキップは「育成」方針のときだけ使えます</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
               {/* ランキングへの導線はモードのタブのすぐ下へ移したので、ここには助手コメントだけを置く */}
@@ -9299,7 +9321,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           {/* 極限は難易度そのものが別表なので、通常の難易度は Normal のまま触らない。
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
                               その周回は今までどおり報酬もクリア記録も保存されない(正式プレイと混ざらない) */}
-                          <button disabled={!previewable} onClick={()=>{battleEntryStateRef.current='EXTREME_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;extremeRunRef.current=true;setExtremeRun(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl font-black text-sm disabled:bg-slate-800 disabled:text-slate-500" style={previewable?{background:theme.action,color:theme.actionText,boxShadow:active?`0 0 18px rgba(${theme.rgb},${theme.actionGlow})`:'none'}:undefined}>{previewable?'この難易度で挑戦':'選択できません'}</button>
+                          <button disabled={!previewable} onClick={()=>{battleEntryStateRef.current='EXTREME_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;extremeRunRef.current=true;setExtremeRun(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');advanceRunStage('PICK_HERO');}} className="min-h-[44px] rounded-xl font-black text-sm disabled:bg-slate-800 disabled:text-slate-500" style={previewable?{background:theme.action,color:theme.actionText,boxShadow:active?`0 0 18px rgba(${theme.rgb},${theme.actionGlow})`:'none'}:undefined}>{previewable?'この難易度で挑戦':'選択できません'}</button>
                           <button disabled={!setting.available||!unlocked} onClick={()=>openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={14}/></button>
                         </div>
                       </article>
@@ -9388,7 +9410,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             // debugBattle が false へ戻り、保存なしのはずの確認が記録を残してしまう。
                             // 難易度を確定したら、そのまま種族チャレンジの勇者選択へ戻す
                             if(species){Audio_.se.tap();setSpeciesChallengeSelection(current=>({...current,difficultyId:key,heroId:'',allyIds:[],run:null,step:'hero'}));setGameState('SPECIES_CHALLENGE_SELECT');return;}
-                            battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?(species?'🔒 前の難易度クリアで解放':'🔒 同じ難易度クリアで解放'):pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                            battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';clearSlotUniqueSelection();setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');advanceRunStage('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?(species?'🔒 前の難易度クリアで解放':'🔒 同じ難易度クリアで解放'):pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* 種族チャレンジは全国ランキング前(ranked=false)でも、この種族の記録へ入れるようにする。
@@ -13284,7 +13306,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   mon: m,
                   selected: proHeroPreset?.heroBaseId===m.id,
                   disabled: !scenarioPicksHero(m.id),
-                  onSelect: ()=>{if(proHeroPreset?.heroBaseId===m.id){setupMon(m,proHeroPreset.heroDistance);return;}setProHeroPreset(null);setCurrentPickingMon(m);setGameState('PICK_SLOT');},
+                  onSelect: ()=>{if(proHeroPreset?.heroBaseId===m.id){setupMon(m,proHeroPreset.heroDistance);return;}setProHeroPreset(null);setCurrentPickingMon(m);advanceRunStage('PICK_SLOT');},
                   onDetail: ()=>setCurrentPickingMon(m),
                   selectLabel: `${m.name}を勇者モンに選ぶ`,
                   activeClass: 'active:bg-indigo-900/30',
@@ -13386,7 +13408,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   </>),
             },
             footer: (
-              <div className="flex gap-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className={`flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`}>{gameState==='PICK_HERO'?'勇者モンに選ぶ':'この供モンを選ぶ'}</button></div>
+              <div className="flex gap-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95">戻る</button><button onClick={()=>advanceRunStage('PICK_SLOT')} className={`flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`}>{gameState==='PICK_HERO'?'勇者モンに選ぶ':'この供モンを選ぶ'}</button></div>
             ),
           })}
         </div>
@@ -13411,7 +13433,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setProAllyDetail(null);
           setProEditingAllyIndex(null);
           setProHeroPreset(mainHero?{heroBaseId:mainHero.id,heroDistance:initialBattleDistanceRef.current}:null);
-          setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);clearSlotUniqueSelection();setGameState('PICK_HERO');
+          setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);clearSlotUniqueSelection();advanceRunStage('PICK_HERO');
         };
         return (
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">

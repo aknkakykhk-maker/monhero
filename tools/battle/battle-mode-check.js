@@ -217,8 +217,8 @@ check('ライフとガッツをバフ込み実効最大値まで全回復する'
   growthBlock.includes('setHp(nextEffectiveMaxHp); setGuts(nextEffectiveMaxGuts);'));
 check('表示する値と実際に入れる値が同じ', growthBlock.includes('setMaxHp(after.hp); setAtk(after.atk); setDef(after.def); setMaxGuts(after.guts);') && growthBlock.includes("{ label: 'ライフ', before: before.hp, after: after.hp }"));
 check('敵には成長も回復もかけない', !growthBlock.includes('setEnemy') && !growthBlock.includes('enemy.'));
-check('クイックでは教えの選択画面へ進まない', !grab(source, 'const finishQuickGrowth', 'const rollQuickUniqueUpgrade').includes("setGameState('PICK_TEACHING')"));
-check('成長のあとに伴モン合流のWAVEなら選択画面へ', grab(source, 'const finishQuickGrowth', 'const rollQuickUniqueUpgrade').includes("setGameState('PICK_ALLY')"));
+check('クイックでは教えの選択画面へ進まない', !grab(source, 'const finishQuickGrowth', 'const rollQuickUniqueUpgrade').includes("advanceRunStage('PICK_TEACHING')"));
+check('成長のあとに伴モン合流のWAVEなら選択画面へ', grab(source, 'const finishQuickGrowth', 'const rollQuickUniqueUpgrade').includes("advanceRunStage('PICK_ALLY')"));
 check('確定した成長後ステータスを次WAVEへ明示的に渡す',
   growthBlock.includes('effectiveMaxHp: nextEffectiveMaxHp, effectiveMaxGuts: nextEffectiveMaxGuts')
     && grab(source, 'const finishQuickGrowth', 'const rollQuickUniqueUpgrade').includes('null, null, null, nextStats'));
@@ -275,7 +275,7 @@ check('名前に内部idをそのまま出さない',
 check('強化フェーズの固有技もマスモン名を出す',
   has("const heading=inherited ? `${holderMon?.name||'？'} ← ${ownerMon?.name||'？'}の技` : (holderMon?.masuName||holderMon?.name||ownerMon?.name||'');")
     && has('holderMon:slots.find(sl=>sl&&sl.id===u.monId)||null'));
-check('クイックは固有技の選択画面を出さない', has('setGameState(\'QUICK_JOIN\');') && !grab(source, 'if (isQuickMode(runMode)) {\n        // クイックモードは固有技', 'setGameState(\'QUICK_JOIN\')').includes('UPGRADE_SKILL'));
+check('クイックは固有技の選択画面を出さない', has('advanceRunStage(\'QUICK_JOIN\');') && !grab(source, 'if (isQuickMode(runMode)) {\n        // クイックモードは固有技', 'advanceRunStage(\'QUICK_JOIN\')').includes('UPGRADE_SKILL'));
 check('加入のステータス変化と固有技上昇を1画面で出す',
   has("{quickJoin.name}が仲間になった！") && has('固有技アップ！') && has('Lv.{quickJoin.unique.before} → '));
 
@@ -615,7 +615,7 @@ check('横スライドは開くたびに先頭から見せる',
 // プロだけ早く return するので、関数の最後にある片付けを通らない。
 // 閉じ忘れると、WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見える
 check('勇者モンの詳細を開いたまま次の画面へ行かない',
-  has('if (isProMode(runMode)) {') && has('setCurrentPickingMon(null);') && has("setGameState('PICK_PRO_ALLIES');"));
+  has('if (isProMode(runMode)) {') && has('setCurrentPickingMon(null);') && has("advanceRunStage('PICK_PRO_ALLIES');"));
 check('供モン合流を開くときも開いていた詳細を閉じる',
   has("// 前の画面で開いていた詳細が残っていると、開いた瞬間に別の子が選ばれて見える\n    setCurrentPickingMon(null);"));
 // 画面を切り替える早い return が増えたときの取りこぼしを見つけるための目安
@@ -625,7 +625,7 @@ check('チャレンジ・クイックの供モン一覧はこれまでどおり2
   has("allyCarousel?'flex items-start gap-2.5") && has(":'grid grid-cols-2 gap-2.5'"));
 // 勇者モンを決めたあと、プロだけ供モン候補を選ぶ画面へ寄り道する
 check('プロだけ供モン候補の画面をはさむ',
-  has("if (isProMode(runMode)) {") && has("setGameState('PICK_PRO_ALLIES');")
+  has("if (isProMode(runMode)) {") && has("advanceRunStage('PICK_PRO_ALLIES');")
     && has("{gameState==='PICK_PRO_ALLIES'&&(()=>{"));
 check('プロ開始時に有効な前回編成だけを初期選択へ入れる',
   has('setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);')
@@ -636,7 +636,7 @@ check('勇者を変更しても有効な前回供モンを残し、同じ種だ�
   has('setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));'));
 check('候補が5体そろうまで始められない',
   has('const ready=!!mainHero&&proAllyPool.length===need;') && has('<button disabled={!ready}')
-    && has('onClick={confirmProParty}') && has("setGameState('PICK_TEACHING');"));
+    && has('onClick={confirmProParty}') && has("advanceRunStage('PICK_TEACHING');"));
 check('現在の6枠を一覧にして1枠ずつ変更できる',
   has('[["勇者モン",mainHero],...Array.from({length:need}') && has('setProEditingAllyIndex(i-1)')
     && has('変えたい枠だけ「変更」を押してください'));

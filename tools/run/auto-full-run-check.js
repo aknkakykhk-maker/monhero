@@ -18,16 +18,16 @@ const finalizer = grab('const handleNextWave = async () => {', '\n  // ===== ク
 check('既存のpost-wave同期ロックを使う',
   controller.includes('autoPostWaveRunningRef.current') && controller.includes('autoPostWaveScheduledRef.current'));
 check('WAVE_RESULTで既存handleNextWaveを呼ぶ',
-  controller.includes("if(gameState==='WAVE_RESULT') handleNextWave();"));
+  controller.includes("if(runStage==='WAVE_RESULT') handleNextWave();"));
 check('QUICK_GROWTHで既存finishQuickGrowthを呼ぶ',
-  controller.includes("else if(gameState==='QUICK_GROWTH') finishQuickGrowth();"));
+  controller.includes("else if(runStage==='QUICK_GROWTH') finishQuickGrowth();"));
 check('QUICK_JOINで既存finishQuickJoinを呼ぶ',
   controller.includes('else finishQuickJoin();'));
 check('AUTO OFFなら予約もhandler実行もしない',
   (controller.match(/if\(!autoBattleRef\.current\)return;/g) || []).length >= 3
     && controller.includes('if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;'));
 check('追加3画面も画面遷移ごとにロックをリセットする',
-  controller.includes("if(gameState==='WAVE_RESULT'||gameState==='QUICK_GROWTH'||gameState==='QUICK_JOIN')")
+  controller.includes("if(runStage==='WAVE_RESULT'||runStage==='QUICK_GROWTH'||runStage==='QUICK_JOIN')")
     && controller.includes('autoPostWaveRunningRef.current=false;'));
 check('AUTO controllerはWAVE・Quickの計算や直接遷移を再実装しない',
   !/setWave\(|setGameState\(|awardRunRewards|recordClearOnce|resolveQuickGrowthStats|quickGrowStat/.test(controller));
@@ -37,8 +37,9 @@ check('WAVE10はAUTO停止後に既存の終了ロック・報酬・記録・CHA
   finalizer.includes('stopAutoBattle();')
     && finalizer.indexOf('runFinalizingRef.current = true;') < finalizer.indexOf('await awardRunRewards(10);')
     && finalizer.indexOf('await awardRunRewards(10);') < finalizer.indexOf('await recordClearOnce();')
-    && finalizer.indexOf('await recordClearOnce();') < finalizer.indexOf("setGameState('CHAMPION');")
-    && finalizer.indexOf("setGameState('CHAMPION');") < finalizer.indexOf('await submitRunScoreOnce();'));
+    // CHAMPIONへ進む箇所は種族チャレンジ/デバッグの早期分岐にもあるので、本流(最後の1つ)を見る
+    && finalizer.indexOf('await recordClearOnce();') < finalizer.lastIndexOf("advanceRunStage('CHAMPION');")
+    && finalizer.indexOf("advanceRunStage('CHAMPION');") < finalizer.indexOf('await submitRunScoreOnce();'));
 check('AUTO controllerから自動Retry・マスモン登録を実行しない',
   !/retry|returnToHome|register|masu/i.test(controller));
 check('通常AUTOのcontrollerをクイックモード限定にしない',
