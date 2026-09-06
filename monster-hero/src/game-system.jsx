@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3b411a1ff8af897b
+// generated-sha256: da223716ac4c585d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 22:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 22:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13009,6 +13009,16 @@ function MonsterHeroGame() {
   const runProgressAllowed = runStage !== null && (gameState === runStage || rhythmBackgroundRun);
   // モンビーからクイックのバトルへ戻る。ランの段階そのものへ戻すので、続きから遊べる
   const returnToBackgroundRun = () => { if (runStageRef.current) setGameState(runStageRef.current); };
+  // ∞周回中だけ出す「周回を止めずにモンビーへ」の入口。
+  // returnToHome を通すと stopAllAuto で周回が終わってしまうので、
+  // openRhythmDemo(画面を切り替えるだけ)を直接呼ぶ。
+  // 通常のバトル画面と超省エネの簡易画面の両方へ同じものを置くので、ここで1つ作って使い回す
+  // (2026-09-06・ユーザー指摘「超省エネではまだいけない」。片方にしか無かった)。
+  // 置き場所は🎵BGMボタンのすぐ下。AUTOの下に縦積みすると省エネと並んで押し間違えるため
+  // (2026-09-06・ユーザー指摘「オートの下よりBGMの上か下のほうが配置的に良さそう」)。
+  const quickToRhythmButtonNode = gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true
+    ? <button data-quick-to-rhythm type="button" onClick={openRhythmDemo} aria-label="周回を続けたままモンビーへ" title="周回を続けたままモンビーへ" className="shrink-0 min-h-[24px] min-w-[42px] rounded-md border border-fuchsia-300 bg-fuchsia-700 px-1.5 font-black text-[7px] leading-[9px] text-fuchsia-50 active:scale-90"><span className="block text-[11px] leading-none">🎵</span><span className="mt-0.5 block">モンビー</span></button>
+    : null;
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -19537,8 +19547,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           敵を倒してWAVE_RESULTへ移った瞬間に消えて、曲を選べなくなっていた */}
       {showAutoBgmPicker&&isRunStage(gameState)&&<div data-auto-bgm-picker className="fixed inset-0 flex items-end justify-center bg-black/55 p-3" style={{zIndex:2147483647}} onClick={()=>setShowAutoBgmPicker(false)}><div className="w-full max-w-sm rounded-2xl border border-indigo-300/40 bg-slate-950 p-4 text-left shadow-2xl" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between gap-2 mb-3"><div><div className="text-sm font-black text-white">BGM / 音量</div><div className="text-[10px] text-slate-400">{ultraEcoSession?'超省エネ中：SEはOFF固定':(autoBattle||autoRepeat)?'AUTO中のBGMを一時変更':'このバトル中のBGMを一時変更'}</div></div><button type="button" onClick={()=>setShowAutoBgmPicker(false)} className="min-w-[44px] min-h-[44px] rounded-xl bg-slate-800 text-slate-200 font-black">×</button></div><div className="mb-2">{ultraEcoSession?<div className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-xs font-black text-slate-400">🔕 SE 0　超省エネ中はOFF固定</div>:<VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>}</div><div className="mb-3"><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div><label className="block"><span className="text-xs font-black text-slate-300">再生するBGM</span><select aria-label="バトル中に再生するBGM" value={autoBgmOverride||(autoBattle||autoRepeat?bgmArrangement.autoBattle:bgmKeyForState(gameState,wave,enemy?.id,(waveHistory||[]).length>0,hp<=0||gaveUp))} onChange={e=>selectAutoRuntimeBgm(e.target.value)} className="mt-1 w-full min-h-[48px] rounded-xl border border-white/15 bg-slate-900 px-3 text-sm text-white"><option value="__none__">BGMなし</option>{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><p className="mt-2 text-[10px] leading-relaxed text-slate-400">BGMの一時選択は保存済みBGMアレンジを変更しません。SE/BGM音量はHOMEの音量設定と共通です。</p></div></div>}
       {/* AUTO∞の超省エネ中は、BATTLEから中間画面・CHAMPION・次周まで同じ暗さを保つ。 */}
-      {ultraEcoSession&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
-      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
+      {/* モンビーを開いている間は外す。曲えらびや譜面まで暗いままだと遊べない
+          (超省エネはバトルを見ないための暗幕なので、見る画面へ移ったら役目が終わる) */}
+      {ultraEcoSession&&!rhythmScreenOpen&&<div data-ultra-eco-session-dimmer className="fixed inset-0 bg-black/55 pointer-events-none" style={{zIndex:2147483646}} aria-hidden="true"/>}
+      {/* 画面の揺れはアプリ全体にかかるので、モンビーを開いている間は掛けない。
+          裏でバトルが進んでいるだけなのに、曲えらびや演奏の画面まで揺れてしまう
+          (2026-09-06・ユーザー指摘「演出が残ってた（画面が揺れるなど）」) */}
+      <div className="relative z-10 h-full flex flex-col" style={screenShake&&!ecoBattleView&&!rhythmScreenOpen?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* HOME: 背景・将来のマスモン・施設操作・情報UIの順に重ねる */}
         {gameState==='HOME'&&(
@@ -23383,7 +23398,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="shrink-0 border-t border-white/10 bg-slate-900 p-1">
                   <div className="flex items-center justify-between gap-1 px-1">
                     <div className="min-w-0 flex-1"><div className="text-[8px] font-black uppercase tracking-wider text-indigo-300">Action Cards</div><div className="truncate text-[9px] font-bold text-slate-300">AUTO∞で進行中</div></div>
-                    <button onClick={()=>setShowDeckInfo(true)} className="flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"><Layers size={9}/>VIEW</button><button data-auto-bgm-button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="バトルBGMと音量を調整" title="BGM / 音量" className="shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"><span className="block text-[13px] leading-none">🎵</span><span className="mt-0.5 block text-[7px] font-black leading-none">BGM</span></button>
+                    <button onClick={()=>setShowDeckInfo(true)} className="flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"><Layers size={9}/>VIEW</button>
+                    {/* 超省エネでも🎵の縦列は通常のバトル画面と同じ並びにする */}
+                    <div className="shrink-0 flex flex-col gap-0.5">
+                      <button data-auto-bgm-button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="バトルBGMと音量を調整" title="BGM / 音量" className="shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"><span className="block text-[13px] leading-none">🎵</span><span className="mt-0.5 block text-[7px] font-black leading-none">BGM</span></button>
+                      {quickToRhythmButtonNode}
+                    </div>
                     <div className="w-[44px] shrink-0 flex flex-col gap-0.5"><button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={cycleBattleAuto} aria-pressed={autoBattle} aria-label={`AUTO ${autoRepeat?'∞':autoBattle?'ON':'OFF'}`} className="h-8 w-full rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-[8px] font-black leading-tight text-slate-950"><span className="block">AUTO</span><span className="block text-[7px]">{autoRepeat?'∞':autoBattle?'ON':'OFF'}</span></button><button type="button" onClick={cycleEcoMode} aria-label="省エネ 超" className="min-h-[24px] w-full rounded-md border border-lime-200 bg-lime-500 text-[7px] font-black leading-[9px] text-slate-950"><span className="block">省エネ</span><span className="block">超</span></button></div>
                     <button disabled className="min-h-[44px] min-w-[84px] shrink-0 rounded-full border-2 border-black bg-slate-700 px-2 text-[11px] font-black uppercase text-slate-400 opacity-50"><Play fill="currentColor" size={12} className="inline mr-1"/>Action</button>
                   </div>
@@ -23943,13 +23963,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
                 <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}</span>
                 <div className="flex items-center gap-0.5 shrink-0">
-                  <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[7px]">VIEW</span></button><button data-auto-bgm-button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="バトルBGMと音量を調整" title="BGM / 音量" className="shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"><span className="block text-[13px] leading-none">🎵</span><span className="mt-0.5 block text-[7px] font-black leading-none">BGM</span></button>
+                  <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[7px]">VIEW</span></button>
+                  {/* 🎵の縦列。BGMの下にモンビーを並べる(どちらも音に関わる入口なので隣り合わせにする) */}
+                  <div className="shrink-0 flex flex-col gap-0.5">
+                    <button data-auto-bgm-button type="button" onClick={()=>setShowAutoBgmPicker(true)} aria-label="バトルBGMと音量を調整" title="BGM / 音量" className="shrink-0 min-h-[32px] min-w-[42px] rounded-lg border border-indigo-400/50 bg-indigo-800 px-1.5 text-indigo-100 active:scale-90"><span className="block text-[13px] leading-none">🎵</span><span className="mt-0.5 block text-[7px] font-black leading-none">BGM</span></button>
+                    {quickToRhythmButtonNode}
+                  </div>
                   <div className="w-[44px] shrink-0 flex flex-col gap-0.5">
                     <button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={cycleBattleAuto} aria-pressed={autoBattle} aria-label={`AUTO ${autoRepeat?'∞':autoBattle?'ON':'OFF'}`} className={`h-8 w-full px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoRepeat?'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]':autoBattle?'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]':'border-slate-500 bg-slate-800 text-slate-300'}`}><span className="block">AUTO</span><span className="block text-[7px]">{autoRepeat?'∞':autoBattle?'ON':'OFF'}</span></button>
-                    {/* ∞周回中だけ、周回を止めずにモンビーへ移れる入口を出す。
-                        returnToHome を通すと stopAllAuto で周回が終わってしまうので、
-                        openRhythmDemo(画面を切り替えるだけ)を直接呼ぶ */}
-                    {gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true&&<button data-quick-to-rhythm type="button" onClick={openRhythmDemo} aria-label="周回を続けたままモンビーへ" title="周回を続けたままモンビーへ" className="min-h-[24px] w-full rounded-md border border-fuchsia-300 bg-fuchsia-700 font-black text-[7px] leading-[9px] text-fuchsia-50 active:scale-90"><span className="block">🎵</span><span className="block">モンビー</span></button>}
                     {gameState==='BATTLE'&&isQuickMode(runMode)&&autoRepeat===true&&<button type="button" onClick={cycleEcoMode} aria-label={`省エネ ${ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'}`} className={`min-h-[24px] w-full rounded-md border font-black text-[7px] leading-[9px] active:scale-90 ${ecoMode==='lite'?'border-emerald-300 bg-emerald-700 text-emerald-50':ecoMode==='ultra'?'border-lime-200 bg-lime-500 text-slate-950':'border-slate-500 bg-slate-700 text-slate-200'}`}><span className="block">省エネ</span><span className="block">{ecoMode==='lite'?'簡易':ecoMode==='ultra'?'超':'OFF'}</span></button>}
                   </div>
                   {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!autoBattle&&!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`min-h-[44px] min-w-[84px] shrink-0 px-2 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] whitespace-nowrap active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={12}/> Action</button>);})()}
@@ -25744,7 +25765,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       )}
 
       {/* EFFECT OVERLAY */}
-      {effect&&(<div className="fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
+      {/* 合流・トレーニング完了などの全画面演出も、モンビーを開いている間は出さない。
+          裏で進んでいるだけのものが曲えらびの上へ全面表示され、操作を奪ってしまう。
+          止めるのは見た目だけで、ランの進行そのものは今までどおり進む */}
+      {effect&&!rhythmScreenOpen&&(<div className="fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
         {effect.type==='unique'&&(
           <>
             <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(168,85,247,0.5) 0%, rgba(99,102,241,0.35) 35%, rgba(0,0,0,0) 68%)', animation:'auraPulse 600ms ease-out infinite'}}></div>

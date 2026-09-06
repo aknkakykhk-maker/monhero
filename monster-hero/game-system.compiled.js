@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4d8e0a45d1cb269e
+// source-sha256: 077c355c1fbb5a7b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 3b411a1ff8af897b
+// generated-sha256: da223716ac4c585d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-06 22:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-06 22:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22777,6 +22777,25 @@ function MonsterHeroGame() {
   const returnToBackgroundRun = () => {
     if (runStageRef.current) setGameState(runStageRef.current);
   };
+  // ∞周回中だけ出す「周回を止めずにモンビーへ」の入口。
+  // returnToHome を通すと stopAllAuto で周回が終わってしまうので、
+  // openRhythmDemo(画面を切り替えるだけ)を直接呼ぶ。
+  // 通常のバトル画面と超省エネの簡易画面の両方へ同じものを置くので、ここで1つ作って使い回す
+  // (2026-09-06・ユーザー指摘「超省エネではまだいけない」。片方にしか無かった)。
+  // 置き場所は🎵BGMボタンのすぐ下。AUTOの下に縦積みすると省エネと並んで押し間違えるため
+  // (2026-09-06・ユーザー指摘「オートの下よりBGMの上か下のほうが配置的に良さそう」)。
+  const quickToRhythmButtonNode = gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true ? /*#__PURE__*/React.createElement("button", {
+    "data-quick-to-rhythm": true,
+    type: "button",
+    onClick: openRhythmDemo,
+    "aria-label": "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D3\u30FC\u3078",
+    title: "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D3\u30FC\u3078",
+    className: "shrink-0 min-h-[24px] min-w-[42px] rounded-md border border-fuchsia-300 bg-fuchsia-700 px-1.5 font-black text-[7px] leading-[9px] text-fuchsia-50 active:scale-90"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[11px] leading-none"
+  }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
+    className: "mt-0.5 block"
+  }, "\u30E2\u30F3\u30D3\u30FC")) : null;
   // いま会話イベントを流しているなら、そのイベントのBGM設定名。流していなければnull。
   // きき加入の通常再生と、プロフィールからのイベント回想の両方をここで1つにまとめる。
   // 判定はそれぞれの表示条件と同じものを使い、「画面には出ていないのに曲だけ変わる」を防ぐ
@@ -33181,7 +33200,7 @@ function MonsterHeroGame() {
       value: track.id
     }, track.name)))), /*#__PURE__*/React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-    }, "BGM\u306E\u4E00\u6642\u9078\u629E\u306F\u4FDD\u5B58\u6E08\u307FBGM\u30A2\u30EC\u30F3\u30B8\u3092\u5909\u66F4\u3057\u307E\u305B\u3093\u3002SE/BGM\u97F3\u91CF\u306FHOME\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5171\u901A\u3067\u3059\u3002"))), ultraEcoSession && /*#__PURE__*/React.createElement("div", {
+    }, "BGM\u306E\u4E00\u6642\u9078\u629E\u306F\u4FDD\u5B58\u6E08\u307FBGM\u30A2\u30EC\u30F3\u30B8\u3092\u5909\u66F4\u3057\u307E\u305B\u3093\u3002SE/BGM\u97F3\u91CF\u306FHOME\u306E\u97F3\u91CF\u8A2D\u5B9A\u3068\u5171\u901A\u3067\u3059\u3002"))), ultraEcoSession && !rhythmScreenOpen && /*#__PURE__*/React.createElement("div", {
       "data-ultra-eco-session-dimmer": true,
       className: "fixed inset-0 bg-black/55 pointer-events-none",
       style: {
@@ -33190,7 +33209,7 @@ function MonsterHeroGame() {
       "aria-hidden": "true"
     }), /*#__PURE__*/React.createElement("div", {
       className: "relative z-10 h-full flex flex-col",
-      style: screenShake && !ecoBattleView ? {
+      style: screenShake && !ecoBattleView && !rhythmScreenOpen ? {
         animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
       } : undefined
     }, gameState === 'HOME' && /*#__PURE__*/React.createElement("main", {
@@ -44381,7 +44400,9 @@ function MonsterHeroGame() {
       className: "flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"
     }, /*#__PURE__*/React.createElement(Layers, {
       size: 9
-    }), "VIEW"), /*#__PURE__*/React.createElement("button", {
+    }), "VIEW"), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 flex flex-col gap-0.5"
+    }, /*#__PURE__*/React.createElement("button", {
       "data-auto-bgm-button": true,
       type: "button",
       onClick: () => setShowAutoBgmPicker(true),
@@ -44392,7 +44413,7 @@ function MonsterHeroGame() {
       className: "block text-[13px] leading-none"
     }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
       className: "mt-0.5 block text-[7px] font-black leading-none"
-    }, "BGM")), /*#__PURE__*/React.createElement("div", {
+    }, "BGM")), quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
       className: "w-[44px] shrink-0 flex flex-col gap-0.5"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
@@ -45631,7 +45652,9 @@ function MonsterHeroGame() {
       size: 9
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px]"
-    }, "VIEW")), /*#__PURE__*/React.createElement("button", {
+    }, "VIEW")), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 flex flex-col gap-0.5"
+    }, /*#__PURE__*/React.createElement("button", {
       "data-auto-bgm-button": true,
       type: "button",
       onClick: () => setShowAutoBgmPicker(true),
@@ -45642,7 +45665,7 @@ function MonsterHeroGame() {
       className: "block text-[13px] leading-none"
     }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
       className: "mt-0.5 block text-[7px] font-black leading-none"
-    }, "BGM")), /*#__PURE__*/React.createElement("div", {
+    }, "BGM")), quickToRhythmButtonNode), /*#__PURE__*/React.createElement("div", {
       className: "w-[44px] shrink-0 flex flex-col gap-0.5"
     }, /*#__PURE__*/React.createElement("button", {
       type: "button",
@@ -45656,17 +45679,6 @@ function MonsterHeroGame() {
     }, "AUTO"), /*#__PURE__*/React.createElement("span", {
       className: "block text-[7px]"
     }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && /*#__PURE__*/React.createElement("button", {
-      "data-quick-to-rhythm": true,
-      type: "button",
-      onClick: openRhythmDemo,
-      "aria-label": "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D3\u30FC\u3078",
-      title: "\u5468\u56DE\u3092\u7D9A\u3051\u305F\u307E\u307E\u30E2\u30F3\u30D3\u30FC\u3078",
-      className: "min-h-[24px] w-full rounded-md border border-fuchsia-300 bg-fuchsia-700 font-black text-[7px] leading-[9px] text-fuchsia-50 active:scale-90"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block"
-    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("span", {
-      className: "block"
-    }, "\u30E2\u30F3\u30D3\u30FC")), gameState === 'BATTLE' && isQuickMode(runMode) && autoRepeat === true && /*#__PURE__*/React.createElement("button", {
       type: "button",
       onClick: cycleEcoMode,
       "aria-label": `省エネ ${ecoMode === 'lite' ? '簡易' : ecoMode === 'ultra' ? '超' : 'OFF'}`,
@@ -49780,7 +49792,7 @@ function MonsterHeroGame() {
         setShowMasuRegisterModal(false);
       },
       className: "w-3/5 bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95"
-    }, "\u767B\u9332\u3059\u308B")))), effect && /*#__PURE__*/React.createElement("div", {
+    }, "\u767B\u9332\u3059\u308B")))), effect && !rhythmScreenOpen && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden",
       style: {
         position: 'fixed',

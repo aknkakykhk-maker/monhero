@@ -159,6 +159,25 @@ const seed = () => {
       `W${before.wave}/T${before.turn} → W${afterRhythm.wave}/T${afterRhythm.turn}`);
     check('モンビーからクイックのバトルへ戻れる', await page.evaluate(() => !!document.querySelector('button[aria-label^="AUTO"]')));
 
+    // ---- ⑤ 超省エネでもモンビーへ行ける ----
+    // 超省エネは画面ごと簡易表示へ差し替わる。入口を通常のバトル画面にしか置いていなかったため
+    // 「超省エネではまだいけない」状態だった(2026-09-06・ユーザー報告)
+    const ecoLabel = () => page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.getAttribute('aria-label'));
+    for (let i = 0; i < 4 && (await ecoLabel()) !== '省エネ 超'; i++) {
+      await page.evaluate(() => document.querySelector('button[aria-label^="省エネ"]')?.click());
+      await page.waitForTimeout(700);
+    }
+    check('超省エネに切り替えられる', (await ecoLabel()) === '省エネ 超', await ecoLabel());
+    check('超省エネの画面にもモンビーへの入口が出る',
+      await page.evaluate(() => !!document.querySelector('[data-ultra-battle-view] [data-quick-to-rhythm]')));
+    await clickSelector('[data-quick-to-rhythm]');
+    await page.waitForFunction(() => !!document.querySelector('[data-rhythm-demo-home]'), { timeout: 15000 }).catch(() => {});
+    await dismissOverlays();
+    check('超省エネからモンビーへ移れる', await onRhythmHome());
+    // 超省エネの暗幕はバトルを見ないためのもの。モンビーでは外れていないと譜面が暗くて遊べない
+    check('モンビーでは超省エネの暗幕が外れている',
+      await page.evaluate(() => !document.querySelector('[data-ultra-eco-session-dimmer]')));
+
     check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
   } finally {
     await browser.close();
