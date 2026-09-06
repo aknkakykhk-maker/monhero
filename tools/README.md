@@ -67,6 +67,7 @@ node tools/build.js --check
 | `node boot-flow-check.js` | 音声失敗時のTITLE遷移、全画面タイトルタップ、同期的な多重実行防止、GAME準備と演出の並列化を静的に確認する。 |
 | `node update-notice-check.js` | 新バージョンの定期検知、常時表示、キャッシュ回避付き更新を静的に確認する。 |
 | `node stamp-version.js` | BUILD_DATE、version.json、本体JSのキャッシュキーを現在の日本時間に揃える。手で書くと未来の時刻が入るので必ずこれを使う。 |
+| `node run-checks.js --area required` | **検査を領域ごとにまとめて回す入口。**`required` は CLAUDE.md ⑤⑥ の必須検査、`ci` は `compiled-check.yml` と同じ並び、`battle` `masu` `mode` などはフォルダ単位、`all` は全部(30分以上)。`--list` で一覧、`--json <出力先>` で結果を保存。実ブラウザ検査に必要な配信(`serve.py`)は自動で起動し、playwright が無い環境ではそれを要る検査を SKIP にする。検査の中身や判定は変えず、既存スクリプトを順に呼ぶだけ。 |
 | `node stamp-boot-sizes.js` | 起動時に読み込むファイルの実サイズ(バイト)を `index.html` の `__mhBoot` へ書き込む。`build.js` から自動で呼ばれる。 |
 | `node boot/data-cache-key-check.js` | index.htmlが読み込むdata/*.jsのキャッシュキーが中身と一致しているか確認する(古いデータが読まれて画面が真っ暗になるのを防ぐ)。 |
 
