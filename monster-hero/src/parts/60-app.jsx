@@ -6001,10 +6001,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // processTurnの実行では渡さない(getPermaBuff('globalComboDmgPct')が既に確定値を持つため)。
   const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo=0) => {
     if (baseDmg<=0) return 0;
-    // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する
+    // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する。
+    // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
     const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct'),
       guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>false,
-      globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo });
+      globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu' });
     // 贖罪の追撃はメインヒットの確定値を基準にする(ランダム会心は予測しない)
     return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg);
   }, [mainHero, turnBuffs, permaBuffs]);
