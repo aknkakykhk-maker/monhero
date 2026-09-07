@@ -7164,8 +7164,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     autoRepeatRef.current=next;
     setAutoRepeat(next);
     setAutoRepeatBattleSpeed(next);
+    // ★「次周を始めている最中」の印は、入れるときも切るときも必ず戻す。
+    //   ONのときに戻していなかったため、前の周回が途中で止まって印が残ると、
+    //   ∞を入れ直しても CHAMPION から次の周へ入れないままだった
+    //   (2026-09-07・ユーザー報告「バトルへ戻ってもう一度無限周回にしても
+    //    モンビー画面で裏周回が機能しない」)。
+    autoRepeatStartingRef.current=false;
     if(next)setAutoBattleEnabled(true);
-    else autoRepeatStartingRef.current=false;
     if(!next)setEcoModeSafe('off');
     // モンビーで見せる進捗を数えはじめる(∞にしたときだけ。切ったときの印は周回を止める側で付ける)
     if(next)beginQuickRunProgress();
@@ -7199,6 +7204,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const resumeQuickRunFromRhythm = () => {
     if (!runStageRef.current) return false;              // ランが残っていない
     if (!isQuickMode(runMode)) return false;
+    // 止まったときに「次周を始めている最中」の印が残っていることがある。
+    // 残ったままだと CHAMPION から次の周へ入れないので、必ず戻す
+    autoRepeatStartingRef.current = false;
     autoRepeatRef.current = true;
     setAutoRepeat(true);
     setAutoRepeatBattleSpeed(true);

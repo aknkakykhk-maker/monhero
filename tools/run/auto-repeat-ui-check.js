@@ -11,12 +11,19 @@ const between=(from,to)=>{const start=source.indexOf(from),end=source.indexOf(to
 // (2026-09-06・モンビーから周回を始める startQuickRunFromRhythm を足したときに実際に起きた)。
 // 関数の終わり(行頭2字下げの `};`)までで区切る
 const repeatToggle=between('const setAutoRepeatEnabled = (enabled) => {','\n  };');
-for(const token of ['const next=!!enabled&&isQuickMode(runMode)','autoRepeatRef.current=next','setAutoRepeat(next)','setAutoRepeatBattleSpeed(next)','if(next)setAutoBattleEnabled(true)','else autoRepeatStartingRef.current=false',"if(!next)setEcoModeSafe('off')"])if(!repeatToggle.includes(token))fail(`∞周回切替に ${token} がありません`);
+// 2026-09-07。「次周を始めている最中」の印は、入れるときも切るときも必ず戻す。
+// ONのときに戻していなかったため、印が残ると∞を入れ直しても次の周へ入れなかった
+// (ユーザー報告「バトルへ戻ってもう一度無限周回にしても裏周回が機能しない」)。
+// else でだけ戻す書き方から、無条件で戻す書き方へ変えた。
+for(const token of ['const next=!!enabled&&isQuickMode(runMode)','autoRepeatRef.current=next','setAutoRepeat(next)','setAutoRepeatBattleSpeed(next)','if(next)setAutoBattleEnabled(true)','autoRepeatStartingRef.current=false',"if(!next)setEcoModeSafe('off')"])if(!repeatToggle.includes(token))fail(`∞周回切替に ${token} がありません`);
+// ★ON/OFFのどちらでも戻ることを、条件つきでないことで確かめる
+if(/else\s+autoRepeatStartingRef\.current=false/.test(repeatToggle))fail('∞周回切替: 印を戻すのが else の中だけになっています(ONのときも戻すこと)');
 // コメントに関数名が出ていても落ちないよう、行コメントを外してから見る
 const repeatToggleCode=repeatToggle.replace(/\/\/[^\n]*/g,'');
 if(repeatToggleCode.includes('stopAutoBattle')||repeatToggleCode.includes('stopAllAuto'))fail('∞周回単独OFFが通常AUTOを停止します');
 const battleToggle=between('const setAutoBattleEnabled = (enabled) => {','// ∞周回は');
-if(!battleToggle.includes('if(!next){stopAllAuto();return;}'))fail('通常AUTO OFFがstopAllAutoを使っていません');
+// 2026-09-07。止まった理由を帯へ出すため、引数で理由を渡すようになった
+if(!battleToggle.includes("if(!next){stopAllAuto('manual');return;}"))fail('通常AUTO OFFがstopAllAutoを使っていません');
 const cycle=between('const cycleBattleAuto = () => {','// 特殊ルール説明を閉じる正規経路');
 for(const token of ['if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}','if(autoBattleRef.current){','if(isQuickMode(runMode))setAutoRepeatEnabled(true);','else setAutoBattleEnabled(false);','setAutoBattleEnabled(true);'])if(!cycle.includes(token))fail(`統合AUTOの循環処理に ${token} がありません`);
 const battleControls=between('<span className={`flex-1 min-w-0 flex flex-wrap','{/* 使うカードが決まっている番は');

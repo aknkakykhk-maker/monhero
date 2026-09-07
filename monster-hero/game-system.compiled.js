@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8a1ba9639ce6e4e4
+// source-sha256: 0c19a574aba827fd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5a9b339de92e2cd6
+// generated-sha256: 2759ac3e602427c3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30418,7 +30418,13 @@ function MonsterHeroGame() {
     autoRepeatRef.current = next;
     setAutoRepeat(next);
     setAutoRepeatBattleSpeed(next);
-    if (next) setAutoBattleEnabled(true);else autoRepeatStartingRef.current = false;
+    // ★「次周を始めている最中」の印は、入れるときも切るときも必ず戻す。
+    //   ONのときに戻していなかったため、前の周回が途中で止まって印が残ると、
+    //   ∞を入れ直しても CHAMPION から次の周へ入れないままだった
+    //   (2026-09-07・ユーザー報告「バトルへ戻ってもう一度無限周回にしても
+    //    モンビー画面で裏周回が機能しない」)。
+    autoRepeatStartingRef.current = false;
+    if (next) setAutoBattleEnabled(true);
     if (!next) setEcoModeSafe('off');
     // モンビーで見せる進捗を数えはじめる(∞にしたときだけ。切ったときの印は周回を止める側で付ける)
     if (next) beginQuickRunProgress();
@@ -30456,6 +30462,9 @@ function MonsterHeroGame() {
   const resumeQuickRunFromRhythm = () => {
     if (!runStageRef.current) return false; // ランが残っていない
     if (!isQuickMode(runMode)) return false;
+    // 止まったときに「次周を始めている最中」の印が残っていることがある。
+    // 残ったままだと CHAMPION から次の周へ入れないので、必ず戻す
+    autoRepeatStartingRef.current = false;
     autoRepeatRef.current = true;
     setAutoRepeat(true);
     setAutoRepeatBattleSpeed(true);
