@@ -544,7 +544,10 @@ const paintCanvasNote=note=>{
   const clearFlash=note.done&&Number.isFinite(note._rhythmClearAt)&&songTimeMs-note._rhythmClearAt<RHYTHM_CLEAR_FLASH_MS;
   const face=faceRefs.current[note.index]||null;
   const hideFace=()=>{if(face&&face._rhythmFaceShown!==false){face.style.display='none';face._rhythmFaceShown=false;}};
-  if(note.done&&!failedTrail&&!clearFlash){hideFace();return;}
+  // 取り終えたノーツは、弾ける演出が済んでからマスモンの絵を隠し、「片付け済み」の印を付ける。
+  // 走査の先頭(scanFrom)はこの印まで進めない(DOM 版が要素の非表示を待つのと同じ)。
+  // これが無いと取った瞬間に走査から外れ、絵が隠れずに判定ラインへ残った(2026-09-07・実機「canvas 版でマスモンが残る」)
+  if(note.done&&!failedTrail&&!clearFlash){hideFace();note._rhythmCanvasSettled=true;return;}
   const progress=1-(note.timeMs-visualTime)/travelMs,visible=failedTrail||note.activePointerId!==null||(progress>=-.1&&progress<=1.18);
   if(!visible||!travel||!canvasReady){hideFace();return;}
   perfDrawn++;
@@ -618,7 +621,7 @@ while(scanFrom<notes.length){
   // 判定が終わっていることが先頭を進める条件。表示の後始末(非表示)が残っているあいだは進めない。
   // 要素そのものが無いノーツは隠す対象が無いので、判定さえ終わっていれば進めてよい
   // (要素が無いと永久に先頭が止まり、絞り込みがまるごと効かなくなっていた)。
-  if(!(head.done&&(headEl?headEl._rhythmHidden===true:true)))break;
+  if(!(head.done&&(canvasNotes?head._rhythmCanvasSettled===true:(headEl?headEl._rhythmHidden===true:true))))break;
   scanFrom++;
 }
 run.scanFrom=scanFrom;
