@@ -38,7 +38,17 @@ const changelogEntryId = entry => {
 // 延々と続いて見えていた(2026-09-05・ユーザー指摘でモンヒロビートの80件を dev:true にした)。
 // 記録自体は data/changelog.js に残し、出す・出さないだけをここで決める。
 const changelogForPlayers = (entry) => !!entry && entry.dev !== true && releasedForPlayers(entry);
-const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(changelogForPlayers).map(entry => Object.freeze({...entry,id:changelogEntryId(entry)}));
+// ★並び順は「日付の新しい順」をここで決める。data/changelog.js の書いてある順には頼らない。
+//   別のファイル(data/rhythm-step3-release.js)が起動時に CHANGELOG.unshift で古い項目を
+//   先頭へ差し込むため、書いてある順のままだと 2026-09-04 の項目が最新として並んでいた
+//   (2026-09-07・ユーザー指摘「更新履歴の時間とか並ぶ順番がおかしい」)。
+//   日付は "YYYY-MM-DD HH:MM" の固定書式なので、文字列のまま比べれば時刻まで正しく並ぶ。
+//   日付が無い・壊れている項目は最後へ回す(消さない・CLAUDE.md ⑦)。
+const changelogSortKey = (entry) => (typeof entry?.date === 'string' ? entry.date : '');
+const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(changelogForPlayers)
+  .map(entry => Object.freeze({...entry,id:changelogEntryId(entry)}))
+  .slice()
+  .sort((a, b) => (changelogSortKey(b) > changelogSortKey(a) ? 1 : changelogSortKey(b) < changelogSortKey(a) ? -1 : 0));
 // 更新履歴から作る助手の告知も、隠している項目のぶんは出さない
 // (data/assistants.js は公開フラグも dev も見られないため、ここで落とす)
 const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : [])
