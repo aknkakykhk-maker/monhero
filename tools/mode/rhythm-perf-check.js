@@ -229,8 +229,17 @@ check('粒・影の層・ENDバーを別の合成レイヤーへ載せない(ノ
   check('TAP/FLICK のノーツ全体には drop-shadow(毎フレームのぼかし)を掛けず、光は粒の box-shadow に焼き込む',
     !/\[data-rhythm-note\] \{\s*z-index:5;\s*filter:/.test(indexHtml)
     &&indexHtml.includes('[data-rhythm-note][data-note-type="HOLD"],[data-rhythm-note][data-note-type="SLIDE"] {\n    filter:drop-shadow(')
-    &&indexHtml.includes('0 0 12px rgba(217,70,239,.32),0 0 6px rgba(255,255,255,.20),0 0 10px rgba(217,70,239,.18) !important;')
+    &&indexHtml.includes('box-shadow:inset 0 1px 0 rgba(255,255,255,.58),0 0 12px rgba(217,70,239,.32) !important;')
+    &&!indexHtml.includes('0 0 12px rgba(217,70,239,.32),0 0 6px rgba(255,255,255,.20)')
     &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] {\n    overflow:visible !important;\n    filter:none;'));
+  // 2026-09-07・実機「モンスターノーツを取ったあとに飛ぶ」。光の脈動は opacity だけで動かし、
+  // 弾ける演出(0.26秒)のあいだは影付きの外周の光・影の層・絵のぼかしを外す。
+  check('モンスターノーツの光の脈動は opacity だけ(box-shadow をキーフレームで変えない)',
+    /@keyframes rhythmMonsterNoteAura \{\s*from \{ opacity:[\d.]+; \}\s*to \{ opacity:[\d.]+; \}\s*\}/.test(indexHtml));
+  check('弾ける演出のあいだは外周の光・影の層・絵のぼかしを外す',
+    indexHtml.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head]::before,')
+    &&indexHtml.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head] > [data-rhythm-note-shade] { display:none; }')
+    &&indexHtml.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-monster-face] { filter:none !important; }'));
 }
 check('HOLD帯の箱は基準の高さで固定し、いまの長さは scaleY で表す(height/left/width を毎フレーム書かない)',
   data.includes('const rhythmHoldBodyBaseHeight=(body,note,height,slideTravel)=>{')
