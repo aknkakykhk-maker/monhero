@@ -38,8 +38,20 @@ const m = ctx.__m;
 
 const resetTicketDefinition = breederSource.match(/\{ id:'unique_skill_reset_ticket',[^\n]+/u)?.[0] || '';
 check('リセット券はマーケットで1000ダイヤの消耗アイテム', /type:'item'/.test(resetTicketDefinition)&&/cost:1000/.test(resetTicketDefinition)&&!/shop:false/.test(resetTicketDefinition));
-check('リセット券は所持済み扱いにならず連続購入できる', has("if (item.type === 'item') return false;")&&has("[item.id]: (prev[item.id] || 0) + 1"));
-check('ダイヤ不足では購入せず、購入時はダイヤと所持数を既存キーへ保存する', has('if (gold < item.cost) return;')&&has("storeSet('mh_gold', next, false)")&&has("storeSet('mh_owned_items', next, false)"));
+// ★購入処理は「計算(buildMarketItemPurchase)」と「保存(saveMarketBalances)」へ分かれた。
+//   金額の判定もアイテムの増やし方も1か所にまとまり、保存はダイヤと所持数を
+//   まとめて書いて失敗したら巻き戻す形になっている(片方だけ書かれることがない)。
+check('リセット券は所持済み扱いにならず連続購入できる',
+  has("if (item.type === 'item') return false;")
+  && has("const nextItems = item.type === 'item' ? { ...ownedItems, [item.id]:ownedItemCount(ownedItems, item.id) + purchaseQuantity } : ownedItems;"));
+check('足りないときは購入しない',
+  has('if (!item || item.available === false || balances[currency] < cost) return { ok:false')
+  && has('if (!purchase.ok) return;'));
+check('ダイヤと所持数は既存キーへまとめて保存し、失敗したら巻き戻す',
+  has("{ key:'mh_gold', before:beforeGold, next:nextGold },")
+  && has("{ key:'mh_owned_items', before:beforeItems, next:nextItems },")
+  && has('saveStoredValuesOrRollback(')
+  && has('const saved = await saveMarketBalances(gold, ownedItemsRef.current, purchase.gold, purchase.ownedItems, storeGet, storeSet);'));
 
 // Lv30(上限)まで育ち、固有技が最大まで行っているマスモン
 const maxedMasu = {

@@ -32,23 +32,43 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
       && code.includes('ranking clear_id is required; unsafe insert skipped')
       && !/sbInsertScore\s*=\s*async\s*\(row,\s*idempotent/.test(code));
   check(`${label}: clear_id未対応時に非冪等POSTへ退避しない`, code.includes('unsafe insert skipped') && !code.includes("if (!saved && clearIdUnsupported) await sbInsertScore"));
+  // ★リセットを呼ぶ経路は増える方向(周回テンプレート開始・再挑戦・HOMEへ戻る・デバッグ)なので下限で見る。
+  //   大事なのは「難易度ごとに別の書き方をしていない」こと
   check(`${label}: Normalを含む全難易度で共通の周回IDリセットを使う`,
-    code.includes('const beginNewRankingRun') && (code.match(/beginNewRankingRun\(\{/g) || []).length === 2);
+    code.includes('const beginNewRankingRun') && (code.match(/beginNewRankingRun\(\{/g) || []).length >= 2
+      && !/Normal[^\n]{0,60}runIdRef\.current\s*=/.test(code));
   check(`${label}: UNIQUE違反のHTTP statusとPostgres codeを診断ログへ残す`,
     code.includes("errorCode = JSON.parse(body)?.code") && code.includes("res.status === 409 && errorCode === '23505'")
       && code.includes('status: res.status') && /errorCode,\s*isUniqueViolation,\s*error:/s.test(code));
   check(`${label}: 最終画面の遷移ボタンを同期ロックする`, code.includes('resultActionRef.current') && code.includes('runResultActionOnce'));
   check(`${label}: 終了処理中は画面全体の入力を遮断する`, code.includes('resultProcessing') && code.includes('aria-label') && code.includes('touchAction'));
   check(`${label}: ランキングPOSTに8秒の上限`, code.includes("new Error('ranking insert timed out after 8000ms')") && code.includes('signal: controller.signal'));
+  // ★到達WAVE(reached_wave)とクリアターン(turns)が、値があるときだけ足されるようになった。
+  //   難易度ごとに別のpayloadを作らない(variants を復活させない)ことは今までどおり見る
+  // 生成物は同じ内容でも改行・空白の入り方が変わるので、空白を潰してから見る
+  const compact = code.replace(/\s+/g, '');
   check(`${label}: 全難易度を全項目の単一payloadで1回だけPOST`,
-    /const row = \{\s*difficulty: diff,\s*user_name: name,\s*hero: heroName,\s*party,\s*score: finalScore,\s*level,\s*icon,\s*clear_id: clearId\s*\}/s.test(code)
+    compact.includes('constrow={difficulty:diff,user_name:name,hero:heroName,party,score:finalScore,level,icon,clear_id:clearId,')
+      && compact.includes('...(reachedWave!=null?{reached_wave:reachedWave}:{})')
+      && compact.includes('...(clearTurns!=null?{turns:clearTurns}:{})')
       && !code.includes('const variants = ['));
   check(`${label}: 全国保存とローカル保存の成功判定を分離`,
     /nationalSaved: false,\s*localSaved/s.test(code) && /if \(!result(?:\?\.nationalSaved|\.nationalSaved)\)/.test(code));
 
   const nextWave = code.slice(code.indexOf('const handleNextWave'), code.indexOf('// スロットで現在選べる固有技一覧'));
   check(`${label}: ムー撃破処理がランキングPOSTを直接待たない`, !/await\s+submitLocalScore/.test(nextWave));
-  check(`${label}: リザルト表示後もランキング保存完了まで入力ロック`, nextWave.indexOf("advanceRunStage('CHAMPION')") < nextWave.indexOf('await submitRunScoreOnce()') && nextWave.indexOf('await submitRunScoreOnce()') < nextWave.indexOf('setResultProcessing(false)'));
+  // ★通常クリアの枝だけを見る。手前に種族チャレンジの枝(finishSpeciesChallengeClear のあと
+  //   すぐ CHAMPION へ進み、ランキングはその中で送る)が入ったため、全体の indexOf で見ると
+  //   種族チャレンジ側の行を拾って順序が逆に見えていた(2026-09-07に検査を追随)
+  //   区切りは通常クリアの枝にしかない行(かかったターン数の記録)から見る
+  const normalClear = nextWave.slice(nextWave.indexOf('runClearTurnsRef.current = totalTurnCountRef.current;'));
+  check(`${label}: リザルト表示後もランキング保存完了まで入力ロック`,
+    normalClear.indexOf("advanceRunStage('CHAMPION')") < normalClear.indexOf('await submitRunScoreOnce()')
+      && normalClear.indexOf('await submitRunScoreOnce()') < normalClear.indexOf('setResultProcessing(false)'));
+  // 種族チャレンジの枝も、ランキング送信を済ませてからロックを外す
+  check(`${label}: 種族チャレンジも保存を済ませてからロックを外す`,
+    /await finishSpeciesChallengeClear\(\);\s*advanceRunStage\('CHAMPION'\);\s*setResultProcessing\(false\);/.test(nextWave)
+      && code.includes('const finishSpeciesChallengeClear = async () => {'));
 
   const submit = code.slice(code.indexOf('const submitLocalScore'), code.indexOf('const handleSaveName'));
   check(`${label}: ランキング保存を自己ベスト判定より先に完了`,
@@ -67,9 +87,14 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: ランキング取得列を必要項目に限定`, code.includes("RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon'") && code.includes("RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon'"));
   check(`${label}: 起動時はNormalとMasterを優先`, code.includes("['Normal', 'Master', ...allDiffs.filter"));
   check(`${label}: スコアは同時取得し一部失敗も完了扱い`, code.includes('Promise.allSettled(diffs.map(loadOne))'));
-  check(`${label}: レベル系は難易度で絞らず1回で取得`, code.includes('sbFetchRankings(null, levelLimit, order, 0, requestId, columns)'));
-  // ブリーダーLvは1人が何行も持つので、絆と同じ件数だと下位の人が1行も取れず一覧から消えていた
-  check(`${label}: ブリーダーLvは多めに取る`, code.includes("const levelLimit = levelKind === 'bond' ? RANKING_LEVEL_FETCH_LIMIT : RANKING_BREEDER_FETCH_LIMIT;"));
+  check(`${label}: 絆Lvは難易度で絞らず1回で取得`,
+    code.includes("sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, RANKING_SELECT_FULL)"));
+  // ★ブリーダーLvは1人が何行も持つので、上位N件だけ取ると下位の人が1行も取れず一覧から消える。
+  //   「多めに取る」から「ページ送りで全行取る」へ変わった(2026-09-07に検査を追随)
+  check(`${label}: ブリーダーLvはページ送りで全行取る`,
+    compact.includes('rows=awaitsbFetchAllBreederRows(requestId);')
+      && compact.includes("constsbFetchAllBreederRows=async(requestId='untracked')=>{")
+      && code.includes('RANKING_BREEDER_MAX_PAGES') && code.includes('RANKING_BREEDER_MAX_ROWS'));
   // 一覧は50件まで見せる。1難易度ぶんの取得なので、20件から増やしても通信は +25KB 程度
   // (実測 tools/ranking/ranking-dye-cost-check.js。描画も 31ms → 45ms でほぼ変わらない)
   check(`${label}: 一覧の取得上限は50件`, code.includes('const RANKING_SCORE_LIMIT = 50;'));
