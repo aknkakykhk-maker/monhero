@@ -7,6 +7,23 @@ const {spawnSync}=require('child_process');
 const ROOT=path.resolve(__dirname,'..','..');
 const track='monster_hero_theme_alt';
 const dashed='monster-hero-theme-alt';
+// CIにはffmpeg/Playwrightが無いので、作業用tmpへだけffmpeg-staticを入れる。
+// package.json / package-lock / 本番依存は変更しない。
+const ffRoot='/tmp/mh-alt-ffmpeg';
+fs.rmSync(ffRoot,{recursive:true,force:true});
+const npmInstall=spawnSync('npm',['install','--prefix',ffRoot,'--no-save','--no-package-lock','ffmpeg-static'],{
+  cwd:ROOT,encoding:'utf8',maxBuffer:16*1024*1024
+});
+if(npmInstall.status!==0){
+  console.error(npmInstall.stdout||'');
+  console.error(npmInstall.stderr||'');
+  process.exit(npmInstall.status||1);
+}
+const ffmpegPath=require(path.join(ffRoot,'node_modules/ffmpeg-static'));
+const ffBin=path.join(ffRoot,'bin');
+fs.mkdirSync(ffBin,{recursive:true});
+fs.symlinkSync(ffmpegPath,path.join(ffBin,'ffmpeg'));
+process.env.PATH=ffBin+path.delimiter+process.env.PATH;
 const run=(script,args)=>{
   const r=spawnSync(process.execPath,[path.join(ROOT,'tools/mode',script),...args],{
     cwd:ROOT,encoding:'utf8',maxBuffer:128*1024*1024
