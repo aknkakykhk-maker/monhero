@@ -86,6 +86,25 @@ const PATTERNS=Object.freeze([
   // 端振り: 端から端へ大きく振ってから内側へ収める。跳び4なのでMASTERだけ。
   Object.freeze({id:'edge_swing', minLength:3, maxLength:6,
     lanes:length=>{const base=[0,4,1,3,2,4];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  // --- 2026-09-07 に足した形(「バリエーションがまだ少ない」への対応) ---
+  // 長い階段: 6〜8個で端から端まで昇る/降りる。ゆっくりの区間(8分以下)でしか組めない長さ。
+  // 4個までの階段しか無いと、長いフレーズが「階段→階段」に割れて、同じ形の繰り返しに見えていた。
+  Object.freeze({id:'stair_up_long',   minLength:6, maxLength:8,
+    lanes:length=>Array.from({length},(_,i)=>Math.min(i,4)-(i>4?i-4:0))}),
+  Object.freeze({id:'stair_down_long', minLength:6, maxLength:8,
+    lanes:length=>Array.from({length},(_,i)=>-(Math.min(i,4)-(i>4?i-4:0)))}),
+  // コール＆レスポンス: 短い呼びかけ(0,1,0)を、1つ上/下で受ける(1,2,1)。跳び1なのでEASYから。
+  // 同じ音形が2回続くフレーズに当てると、「呼んで、返す」の形が画面に出る。
+  Object.freeze({id:'echo_up',   minLength:4, maxLength:6,
+    lanes:length=>{const base=[0,1,0,1,2,1];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  Object.freeze({id:'echo_down', minLength:4, maxLength:6,
+    lanes:length=>{const base=[0,-1,0,-1,-2,-1];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  // 外→内→外 / 内→外→内: 中央を軸に開いて閉じる。跳び2なのでNORMALから(centered)。
+  // 「開き」「閉じ」は一方通行で終わるので、往復する形を別に持つ。
+  Object.freeze({id:'out_in_out', minLength:4, maxLength:7, centered:true,
+    lanes:length=>{const base=[-2,0,2,0,-2,0,2];return Array.from({length},(_,i)=>base[i%base.length]);}}),
+  Object.freeze({id:'in_out_in',  minLength:4, maxLength:7, centered:true,
+    lanes:length=>{const base=[0,-2,0,2,0,-2,0];return Array.from({length},(_,i)=>base[i%base.length]);}}),
 ]);
 // 直近に使った形を避けるとき、候補の上位いくつまでを見るか。
 // 大きくすると語彙は散るが、音の動きに合っていない形まで選ばれてしまう。
@@ -175,30 +194,30 @@ const shapeCandidatesFor=({length,heights,maxStep,fastest=false,allowJack=false,
       push('zigzag');push('zigzag2_up');push('cross_step_up');
       push('alternate3');push('alternate2');
     }else if(inner(peakIndex)){
-      push('fold_up');push('stair_up');push('expand');push('zigzag2_up');
+      push('fold_up');push('stair_up');push('out_in_out');push('expand');push('zigzag2_up');push('echo_up');
     }else if(inner(valleyIndex)){
-      push('fold_down');push('stair_down');push('contract');push('zigzag2_down');
+      push('fold_down');push('stair_down');push('in_out_in');push('contract');push('zigzag2_down');push('echo_down');
     }else if(move>=.5){
       // 上がっていく音。素直な階段が第一候補で、跳ね上がりが大きいときだけ
-      // 大股の形（2つ飛ばし・交差ステップ）を候補に足す。
+      // 大股の形（2つ飛ばし・交差ステップ）を候補に足す。長いフレーズなら長い階段。
       if(span>=.22)push('stair2_up');
-      push('stair_up');
+      push('stair_up');push('stair_up_long');
       if(span>=.4)push('cross_step_up');
-      push('expand');push('zigzag2_up');
+      push('echo_up');push('expand');push('zigzag2_up');
     }else if(move<=-.5){
       if(span>=.22)push('stair2_down');
-      push('stair_down');
+      push('stair_down');push('stair_down_long');
       if(span>=.4)push('cross_step_down');
-      push('contract');push('zigzag2_down');
+      push('echo_down');push('contract');push('zigzag2_down');
     }else{
-      push('fold_up');push('bounce');push('alternate2');push('trill');push('edge_swing');
+      push('fold_up');push('bounce');push('echo_up');push('alternate2');push('trill');push('out_in_out');push('edge_swing');
     }
   }else if(rhythmShape){
     // 音の高さが取れない（打楽器だけの区切り）。刻みの細かさで形を選ぶ。
     //   細かい＝トリル / 拍ごと＝階段や折り返し / 2つだけ＝交互
-    if(rhythmShape==='fast'){push('trill');push('zigzag');push('zigzag2_up');push('alternate2');}
-    else if(rhythmShape==='beat'){push('fold_up');push('stair_up');push('bounce');push('stair_down');push('zigzag2_up');push('alternate2');}
-    else{push('alternate2');push('alternate3');push('edge_swing');}
+    if(rhythmShape==='fast'){push('trill');push('zigzag');push('zigzag2_up');push('alternate2');push('in_out_in');}
+    else if(rhythmShape==='beat'){push('fold_up');push('stair_up');push('bounce');push('stair_down');push('echo_up');push('zigzag2_up');push('alternate2');}
+    else{push('alternate2');push('alternate3');push('stair_up_long');push('edge_swing');}
   }
 
   // 高さが取れないとき（打楽器だけの区間）は、左右で受け合う形を基本にする
@@ -221,10 +240,60 @@ const shapeCandidatesFor=({length,heights,maxStep,fastest=false,allowJack=false,
     const fresh=order.slice(0,limit).findIndex(candidate=>!avoid.has(candidate.pattern.id));
     if(fresh>0){const [pick]=order.splice(fresh,1);order.unshift(pick);}
   }
+  // 候補ごとに「音との合いかた」の順位を残す(0がいちばん合っている)。
+  // 直前を避ける入れ替えのあとで付ける(先に付けると、下の rankShapes が入れ替えを元に戻してしまう)。
+  // rankShapes は、この順位が同じくらいの候補(上位 FRESH_WINDOW 件)の中でしか入れ替えない。
+  order.forEach((candidate,index)=>{candidate.fit=index;});
   return order;
 };
 
-module.exports={LANES,PATTERNS,PATTERN_BY_ID,mirror,fitToLanes,baseRange,maxStepOf,shapeCandidatesFor};
+// --- 譜面文法: 候補を「音との合いかた」だけでなく、つなぎ・使用回数・場面で点数化して選ぶ ---
+//
+// 【なぜ要るか】(2026-09-07・ユーザー指摘「同じようなレーン移動、同じような配置が繰り返されやすい」)
+// shapeCandidatesFor は候補を「音に合う順」に並べるだけで、選ぶのは常に先頭だった。
+// 「直前と同じ形を避ける」は入っていたが、
+//   ・その曲で何度も使った形が、直前でさえなければまた選ばれる
+//   ・前の形の終わりと次の形の始まりの向きが合わず、手の流れが途切れる
+//   ・同じ候補列が出るたびに同じ順で決まる(散らしが「偶数番目か」の1ビットしか無い)
+// が残っていた。ここでは**上位 FRESH_WINDOW 件(＝音との合いかたが同じくらいの候補)の中だけ**で
+// 次を足して点数化する。音に合わない形が上がってくることは無い。
+//
+//   ・音との合いかた … 順位そのもの(最優先。1段で 2 点)
+//   ・つなぎ         … 前の形の最後の動きと、次の形の最初の動きが同じ向きなら 1 点(流れる)、
+//                      前の形の終わりから次の始まりまでが跳びの上限を超えるなら 2 点引く
+//   ・使用回数       … その曲でその形を使った回数 × 0.5 点(語彙を均す)
+//   ・場面           … 呼び出し側が渡す好み(サビで「開き」を前へ、イントロで交互を前へ、など)
+//   ・散らし         … 決定的なハッシュ(曲・難易度・かたまり番号)で 0〜0.9 点。乱数は使わない
+const hash32=text=>{let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0);};
+const firstMove=offsets=>offsets.length>=2?Math.sign(offsets[1]-offsets[0]):0;
+const lastMove=offsets=>offsets.length>=2?Math.sign(offsets[offsets.length-1]-offsets[offsets.length-2]):0;
+const rankShapes=(candidates,{usage=null,previousOffsets=null,prefer=null,seed='',maxStep=4}={})=>{
+  if(!candidates||candidates.length<2)return candidates||[];
+  const limit=Math.min(candidates.length,FRESH_WINDOW);
+  const head=candidates.slice(0,limit),tail=candidates.slice(limit);
+  const scored=head.map((candidate,index)=>{
+    let score=candidate.fit*2;
+    const id=candidate.pattern.id;
+    if(usage)score+=(usage.get?usage.get(id)||0:usage[id]||0)*.5;
+    if(previousOffsets&&previousOffsets.length>=2){
+      const prev=lastMove(previousOffsets),next=firstMove(candidate.offsets);
+      // 同じ向きへ続けば流れる。ただし3つ続けて同じ向きに進む(ずっと右へ)のは避けたいので、
+      // 呼び出し側が prefer.turn=true を渡したときは逆向きを前へ出す
+      if(prev!==0&&next!==0){
+        if(prefer&&prefer.turn){score+=prev===next?1:-1;}
+        else score+=prev===next?-1:0;
+      }
+    }
+    if(prefer&&prefer.ids&&prefer.ids[id])score-=prefer.ids[id];
+    score+=(hash32(`${seed}:${id}`)%10)/10;
+    return {candidate,score,index};
+  });
+  scored.sort((a,b)=>a.score-b.score||a.index-b.index);
+  return scored.map(entry=>entry.candidate).concat(tail);
+};
+
+module.exports={LANES,PATTERNS,PATTERN_BY_ID,mirror,fitToLanes,baseRange,maxStepOf,shapeCandidatesFor,rankShapes,hash32,FRESH_WINDOW};
+
 
 if(require.main===module){
   console.log('形の語彙（長さ5のとき）:');

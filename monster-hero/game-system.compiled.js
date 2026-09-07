@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f0081a1730bdeb31
+// source-sha256: 8a1026c9ef0efc88
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9ed0bcb91523b153
+// generated-sha256: 0b2ef76b0ea8133e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 12:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 13:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18925,12 +18925,17 @@ const RhythmTapTest = ({
         // MISSにしてライフとコンボを削るのは理不尽なので、スコアにも数にも入れずに取り除く。
         // (2026-09-05・実機の指摘「初回起動時はよくこの状態になる」。
         //  以前はここで見えないノーツを次々MISSにしていて、開幕から立て直せなかった)
-        if (!note.done && note.activePointerId === null && !placeable && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_INPUT_MATCH_WINDOW_MS) {
+        // 【2026-09-07】浮いているノーツ(releasedAtMs)は、ここでは失敗にしない。
+        // 持ち替えのために離した HOLD/SLIDE は activePointerId が null に戻るので、下の「始点を過ぎたのに
+        // 誰も押していない → MISS」にそのまま当たっていた。始点から240ms以上たった HOLD を離すと、
+        // 上の猶予(200ms)を見る前に次のフレームで MISS になり、「離してから置き直す」持ち替えが
+        // 実際にはできていなかった(rhythm-input-scenario-check.js で見つけた)。
+        if (!note.done && note.activePointerId === null && note.releasedAtMs == null && !placeable && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_INPUT_MATCH_WINDOW_MS) {
           note.done = true;
           note._rhythmUnplaceable = true;
           return;
         }
-        if (!note.done && note.activePointerId === null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_INPUT_MATCH_WINDOW_MS) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
+        if (!note.done && note.activePointerId === null && note.releasedAtMs == null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_INPUT_MATCH_WINDOW_MS) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
         const el = laneRefs.current[note.index];
         if (!el) return;
         // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
@@ -19354,10 +19359,12 @@ const RhythmTapTest = ({
     disposeRun();
     onExit();
   };
-  const inputStarts = inputs => {
+  // ageMs … 入力イベントが起きてから処理されるまでの遅れ(rhythmInputAgeMs)。判定に使う曲の時刻から差し引く。
+  //          指が触れた瞬間の曲の時刻で判定するためのもので、判定窓そのものは変えない
+  const inputStarts = (inputs, ageMs = 0) => {
     const run = runRef.current;
     if (!run || run.finished || run.paused) return;
-    const now = run.audio.songTimeMs();
+    const now = run.audio.songTimeMs() - (Number(ageMs) > 0 ? Number(ageMs) : 0);
     run.inputFeedbackState = run.inputFeedbackState || new Map();
     rhythmMatchInputBatch(run.notes, inputs, now, settings.judgmentTimingOffsetMs).forEach(({
       input,
@@ -19540,7 +19547,7 @@ const RhythmTapTest = ({
       inputKey: rhythmInputKey('pointer', e.pointerId),
       captureTarget: e.currentTarget,
       pointerId: e.pointerId
-    }]);
+    }], rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN));
   };
   const pointerMove = e => {
     if (e.pointerType === 'touch') return;
@@ -19600,7 +19607,8 @@ const RhythmTapTest = ({
         });
       });
       setPressedLanes(liveSubLanes);
-      if (starts.length) inputStarts(starts);
+      const ageMs = rhythmInputAgeMs(e.timeStamp, typeof performance !== 'undefined' ? performance.now() : NaN);
+      if (starts.length) inputStarts(starts, ageMs);
       const ended = [];
       Array.from(current.activeTouchInputs).forEach(inputKey => {
         if (!live.has(inputKey)) {
