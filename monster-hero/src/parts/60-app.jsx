@@ -7199,10 +7199,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // モンビーから∞周回を始める(docs/spec/QUICK_RHYTHM_LINK.md PR6)。
   // 編成は repeatTemplateForNewRun() ＝「1周目に自分で組んだ編成」→ 無ければAUTO設定の事前設定。
   // どちらも無いときは false を返し、呼び出し側が理由を出す。
+  // ★挑戦そのものが終わっているか(負けた・リタイアした)。
+  //   段階(runStage)は returnToHome まで残るので、負けたあとも runStage!==null のまま。
+  //   それを「まだ続けられる」と読んでいたため、モンヒロビートの帯が負けたあとにも
+  //   「▶ 周回を再開する」を出し、押すと死んだランの続きから動きだしていた
+  //   (2026-09-07・ユーザー報告「裏周回で負けた場合にもう一度再開にすると
+  //    負けたときの続きからになってる。負けた場合は最初からにしないとおかしい。
+  //    またそれで勝った場合に進行不能バグが起きてる可能性がある」)。
+  //   続けられるかどうかは、段階ではなく「勝負がついたかどうか」で見る。
+  // ※ここに置くのは、上の runStage の定義ひとまとまり(advanceRunStage〜clearRunStage)を
+  //   tools/battle/run-stage-check.js がそのまま切り出して動かすため。
+  //   hp・gaveUp を使う式をそこへ混ぜると、検査が読み込めなくなる。
+  const runResultFinished = hp <= 0 || gaveUp;
+  const runResultFinishedRef = useRef(false);
+  runResultFinishedRef.current = runResultFinished;
+  // 止まった周回を「続きから」再開してよいのは、挑戦がまだ生きているときだけ
+  const quickRunResumable = runStage !== null && !runResultFinished;
   const startQuickRunFromRhythm = () => {
-    if (runStageRef.current) return false;               // すでに何か走っている
+    // 段階が残っていても、勝負がついている(負けた・リタイアした)なら畳んで始め直せる。
+    // まだ生きている挑戦の上へ新しいランを重ねるのだけを止める
+    if (runStageRef.current && !runResultFinishedRef.current) return false;
     const template = repeatTemplateForNewRun();
     if (!template) return false;
+    // 終わったランの数えかけを持ち越さない(1周目から数え直す)
+    if (runStageRef.current) clearQuickRunProgress();
     // ★先に∞の意思を立てる。setAutoRepeatEnabled は描画時の runMode を見るため、
     //   まだクイックへ切り替わっていないこの時点では使えない
     autoRepeatRef.current = true;
@@ -7218,12 +7238,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // 止まった周回を、バトルへ行かずにその場で再開する
   // (2026-09-07・ユーザー指示「これもバトルへ行かなくても再開できるようにして」)。
-  // ★止まってもランが残っているとき(アプリが裏に回った・自分でAUTOを切った)だけ。
-  //   負けた・やめたあとはランが無いので、こちらではなく「新しく始める」を出す。
+  // ★「続きから」なので、挑戦がまだ生きているとき(アプリが裏に回った・自分でAUTOを切った)だけ。
+  //   負けた・リタイアしたあとは続きが無いので、こちらではなく「新しく始める」を出す。
+  //   ランの段階は負けても残るため、段階の有無では判断できない
+  //   (2026-09-07・ユーザー報告「負けた場合にもう一度再開にすると負けたときの続きからになってる」)。
   // 数えていた周回数と報酬はそのまま続ける(WAVEの途中から続くのに
   // 「1周目」へ戻ると、何が起きたのか分からなくなるため)。
   const resumeQuickRunFromRhythm = () => {
     if (!runStageRef.current) return false;              // ランが残っていない
+    if (runResultFinishedRef.current) return false;      // 勝負がついている(続きが無い)
     if (!isQuickMode(runMode)) return false;
     // 止まったときに「次周を始めている最中」の印が残っていることがある。
     // 残ったままだと CHAMPION から次の周へ入れないので、必ず戻す
@@ -10632,11 +10655,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="col-span-2 flex justify-between gap-2"><dt className="text-slate-400">勇者モン</dt><dd className="truncate font-black text-white">{mainHero?.masuName||mainHero?.name||'—'}</dd></div>
                 </dl>
                 <p className="mt-1 text-[9px] leading-relaxed text-slate-400">{quickRunProgress.finished
-                  // 止まっていても、ランが残っていればここから再開できる。
-                  // 負けた・やめたあとはランが無いので、結果を見に行ってもらう
-                  ?(runStage!==null
+                  // 止まっていても、挑戦がまだ生きていれば続きから再開できる。
+                  // ★負けた・リタイアしたあとは「続き」が無い。ランの段階は残るので、
+                  //   段階の有無ではなく勝負がついたかどうかで分ける
+                  //   (2026-09-07・ユーザー報告「負けた場合は最初からにしないとおかしい」)
+                  ?(quickRunResumable
                     ?`${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。`
-                    :`${quickRunFinishReasonText(quickRunProgress.reason)}。バトルへ戻ると結果を見られます。`)
+                    :`${quickRunFinishReasonText(quickRunProgress.reason)}。続きはないので、始めるときは1周目からになります。バトルへ戻ると結果を見られます。`)
                   :catchingUp
                     ?'演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
                     // ★仕様が「曲の長さぶんの周回クリア」へ変わったので、文言もそちらへ合わせる
@@ -10647,25 +10672,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       ?'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは2周・3分台は3周…）。'
                       :'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'}</p>
                 {/* ===== ここから操作。状態は3つだけ(2026-09-07に整理) =====
-                      ① 回っている            … バトルへ戻る ／ ここで周回をやめる
-                      ② 止まった・ランは残る  … 周回を再開する ／ バトルへ戻る
-                      ③ 止まった・ランも終了  … 新しく周回を始める ／ バトルへ戻る(結果を見る)
+                      ① 回っている                … バトルへ戻る ／ ここで周回をやめる
+                      ② 止まった・挑戦は生きている … 周回を再開する ／ バトルへ戻る
+                      ③ 止まった・勝負がついた     … 新しく周回を始める ／ バトルへ戻る(結果を見る)
+                    ★②と③の分かれ目は quickRunResumable。ランの段階(runStage)は負けても
+                      残るので、段階の有無で分けると負けたあとに②が出てしまう
+                      (2026-09-07・ユーザー報告)。
                     ★どの状態でも「バトルへ戻る」は出す。行き先を失わないため */}
-                {quickRunProgress.finished&&runStage!==null&&<button type="button" data-quick-run-resume
+                {quickRunProgress.finished&&quickRunResumable&&<button type="button" data-quick-run-resume
                   onClick={()=>{resumeQuickRunFromRhythm();}}
                   className="mt-2 min-h-[44px] w-full rounded-xl border border-emerald-300/60 bg-emerald-800/70 text-[11px] font-black text-emerald-50 active:scale-[.98]">▶ 周回を再開する</button>}
-                {quickRunProgress.finished&&runStage===null&&repeatTemplateForNewRun()&&<button type="button" data-quick-run-restart
+                {quickRunProgress.finished&&!quickRunResumable&&repeatTemplateForNewRun()&&<button type="button" data-quick-run-restart
+                  disabled={resultProcessing}
                   onClick={()=>{if(!startQuickRunFromRhythm())setQuickRunStartError(true);}}
-                  className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ 新しく周回を始める</button>}
+                  className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98] disabled:opacity-50">{resultProcessing?'結果を記録しています…':'⚔ 1周目から新しく始める'}</button>}
                 {quickRunStartError&&<p className="mt-1 text-[9px] font-black text-red-300">いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。</p>}
                 <button type="button" data-quick-run-progress-back onClick={()=>{if(runStageRef.current)returnToBackgroundRun();}}
-                  className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">{quickRunProgress.finished&&runStage===null?'⚔ バトルへ戻って結果を見る':'⚔ バトルへ戻る'}</button>
+                  className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">{quickRunProgress.finished&&!quickRunResumable?'⚔ バトルへ戻って結果を見る':'⚔ バトルへ戻る'}</button>
                 {/* バトルへ行かずにここで終わらせる(2026-09-07・ユーザー指示
                     「バトルにいかなくてもクイック周回を止められるようにしたい」)。
                     やめ方は「あきらめる」と同じで、そこまでにクリアしたWAVEの報酬が
                     その場で入る(ユーザー選択「その周も終わらせて報酬を受け取る」)。
                     ★時間をかけて積み上げるものなので、誤って押しても止まらないよう確認をはさむ */}
-                {!quickRunProgress.finished&&runStage!==null&&(quickRunStopConfirm
+                {!quickRunProgress.finished&&quickRunResumable&&(quickRunStopConfirm
                   ? <div data-quick-run-stop-confirm className="mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 p-2">
                       <p className="text-[9px] leading-relaxed text-amber-100">周回をやめますか？ いまの周もここで終わり、クリアしたWAVEぶんの報酬が入ります。</p>
                       <div className="mt-1.5 grid grid-cols-2 gap-2">
