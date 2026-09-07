@@ -1,13 +1,17 @@
-// モンヒロビートにいるまま、バトルへ行かずに周回を止められるかを見張る。
+// モンヒロビートの帯から、バトルへ行かずに周回を止める・再開する・始め直せるかを見張る。
 //
 //   node tools/mode/rhythm-run-stop-check.js
 //
 // 2026-09-07・ユーザー指示
 //   「バトルにいかなくてもクイック周回を止められるようにしたい」
-//   やめ方は「その周も終わらせて報酬を受け取る」(ユーザー選択)。
+//   「これもバトルへ行かなくても再開できるようにして」
+//   「色々小出しに出しちゃってるから一旦整理して実装修正して」
 //
-// これまでは帯に「⚔ バトルへ戻る」しか無く、止めるにはいったんバトルへ戻って
-// AUTOを切る必要があった。
+// ★整理した結果、帯の操作は次の3つの状態しかない。
+//   ① 回っている           … バトルへ戻る ／ ここで周回をやめる
+//   ② 止まった・ランは残る … 周回を再開する ／ バトルへ戻る
+//   ③ 止まった・ランも終了 … 新しく周回を始める ／ バトルへ戻って結果を見る
+//   どの状態でも「バトルへ戻る」は必ず出す(行き先を失わないため)。
 const fs = require('fs');
 const path = require('path');
 
@@ -42,8 +46,24 @@ for (const file of files) {
   // 周回中(まだ終わっていない・ランがある)ときだけ出す
   check(`${rel}: 周回しているときだけ出す`,
     compact.includes('!quickRunProgress.finished&&runStage!==null&&(quickRunStopConfirm'));
-  // 「バトルへ戻る」は残す(やめずに戻りたい人のため)
+  // 「バトルへ戻る」はどの状態でも出す(やめずに戻りたい人のため)
   check(`${rel}: 「バトルへ戻る」も残っている`, src.includes('data-quick-run-progress-back'));
+
+  // ---- ② 止まった・ランは残っている ----
+  check(`${rel}: ランが残っていれば「再開する」を出す`,
+    src.includes('data-quick-run-resume')
+    && compact.includes('quickRunProgress.finished&&runStage!==null&&'));
+  check(`${rel}: 再開はランが残っているときだけ通す`,
+    compact.includes('constresumeQuickRunFromRhythm=()=>{if(!runStageRef.current)returnfalse;'));
+  check(`${rel}: 再開しても周回数と報酬は続ける`,
+    compact.includes("writeQuickRunProgress({...current,finished:false,reason:''});"));
+
+  // ---- ③ 止まった・ランも終わった ----
+  check(`${rel}: ランが無いときは「新しく始める」を出す`,
+    src.includes('data-quick-run-restart')
+    && compact.includes('quickRunProgress.finished&&runStage===null&&repeatTemplateForNewRun()&&'));
+  check(`${rel}: ランが無いときの「バトルへ戻る」は結果を見に行く言い方`,
+    compact.includes("quickRunProgress.finished&&runStage===null?'⚔バトルへ戻って結果を見る':'⚔バトルへ戻る'"));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

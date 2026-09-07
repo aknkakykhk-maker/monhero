@@ -35,6 +35,16 @@
 const CHANGELOG = [
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
+    date: "2026-09-07 17:40", type:'update', title:'モンヒロビートから周回を再開できるようにし、帯の操作を整理しました', status:'new',
+    releaseFlag:'quickRhythmLink',
+    items:[
+      'アプリが裏に回るなどで止まったとき、まだ挑戦の途中が残っていれば「▶ 周回を再開する」で続きから回せます。数えていた周回数と報酬もそのまま続きます。',
+      '負けたり途中でやめたりして挑戦そのものが終わっているときは「⚔ 新しく周回を始める」が出ます。',
+      '帯のボタンを「回っている」「止まったが挑戦は残っている」「挑戦も終わった」の3つの状態で整理しました。どの状態でも「バトルへ戻る」は出ています。',
+    ],
+  },
+  {
+    // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
     date: "2026-09-07 17:00", type:'fix', title:'演奏中の説明が古い仕組みのままだったのを直しました', status:'new',
     releaseFlag:'quickRhythmLink',
     items:[
