@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5ea6a16a6e674969
+// generated-sha256: 286128be22031932
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13179,6 +13179,8 @@ function MonsterHeroGame() {
   // 帯をタップして開く詳細と、周回を始められなかったときの一言
   const [quickRunDetailOpen, setQuickRunDetailOpen] = useState(false);
   const [quickRunStartError, setQuickRunStartError] = useState(false);
+  // 「ここで周回をやめる」を押したときの確認。誤って止めないよう1段はさむ
+  const [quickRunStopConfirm, setQuickRunStopConfirm] = useState(false);
   // setTimeout や await のあとから触るので、同期の控えも持つ
   const quickRunProgressRef = useRef(null);
   const writeQuickRunProgress = (next) => { quickRunProgressRef.current = next; setQuickRunProgress(next); };
@@ -17186,7 +17188,8 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
-    stopAllAuto();
+    // 帯に「途中でやめた」と出せるよう、理由を渡す(2026-09-07)
+    stopAllAuto('retire');
     if (debugBattleRef.current) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
@@ -21579,6 +21582,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     :'ここにいるあいだも周回は進みます。演奏中だけ止まりますが、そのぶんは曲のあとに速く進んで取り戻すので、損にはなりません。'}</p>
                 <button type="button" data-quick-run-progress-back onClick={()=>{if(runStageRef.current)returnToBackgroundRun();}}
                   className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ バトルへ戻る</button>
+                {/* バトルへ行かずにここで終わらせる(2026-09-07・ユーザー指示
+                    「バトルにいかなくてもクイック周回を止められるようにしたい」)。
+                    やめ方は「あきらめる」と同じで、そこまでにクリアしたWAVEの報酬が
+                    その場で入る(ユーザー選択「その周も終わらせて報酬を受け取る」)。
+                    ★時間をかけて積み上げるものなので、誤って押しても止まらないよう確認をはさむ */}
+                {!quickRunProgress.finished&&runStage!==null&&(quickRunStopConfirm
+                  ? <div data-quick-run-stop-confirm className="mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 p-2">
+                      <p className="text-[9px] leading-relaxed text-amber-100">周回をやめますか？ いまの周もここで終わり、クリアしたWAVEぶんの報酬が入ります。</p>
+                      <div className="mt-1.5 grid grid-cols-2 gap-2">
+                        <button type="button" onClick={()=>setQuickRunStopConfirm(false)}
+                          className="min-h-[44px] rounded-lg border border-white/20 text-[10px] font-black text-slate-300 active:scale-[.98]">続ける</button>
+                        <button type="button" data-quick-run-stop-yes onClick={()=>{setQuickRunStopConfirm(false);void handleGiveUp();}}
+                          className="min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]">やめる</button>
+                      </div>
+                    </div>
+                  : <button type="button" data-quick-run-stop onClick={()=>setQuickRunStopConfirm(true)}
+                      className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]">⏹ ここで周回をやめる</button>)}
               </div>}
             </div>}
             {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}

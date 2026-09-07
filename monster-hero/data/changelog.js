@@ -35,6 +35,15 @@
 const CHANGELOG = [
   {
     // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
+    date: "2026-09-07 15:40", type:'update', title:'モンヒロビートにいるまま、クイックの周回をやめられるようにしました', status:'new',
+    releaseFlag:'quickRhythmLink',
+    items:[
+      '進捗の帯を開くと「⏹ ここで周回をやめる」が出ます。バトルへ戻らなくてもその場で終われます。',
+      'やめ方は「あきらめる」と同じで、そこまでにクリアしたWAVEぶんの報酬が入ります。押すと一度確認が出るので、誤って止めることはありません。',
+    ],
+  },
+  {
+    // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
     date: "2026-09-07 15:00", type:'fix', title:'横向きの曲えらびで「周回を始める」が大きく出すぎていたのを直しました', status:'new',
     releaseFlag:'quickRhythmLink',
     items:[
