@@ -2189,6 +2189,10 @@ function MonsterHeroGame() {
   // ∞周回を始めたとき。すでに数えているならそのまま続ける(∞を入れ直しても0へ戻さない)
   const beginQuickRunProgress = () => {
     if (quickRunProgressRef.current && !quickRunProgressRef.current.finished) return;
+    // 数え直すときは、前の演奏ぶんの知らせも一緒に落とす。
+    // 残っていると1周目なのに「演奏で2周ぶん入りました」が出たままになる
+    // (2026-09-07・ユーザー指摘「再度始めても消えない」)
+    setRhythmPlayRunAward(null);
     writeQuickRunProgress({ loops:1, xp:0, gold:0, finished:false });
   };
   // 1周ぶんの報酬。報酬を配る処理から、実際に配った値をそのまま受け取る(数字を二重に持たない)
@@ -2394,16 +2398,18 @@ function MonsterHeroGame() {
     if (!rhythmScreenOpen || runStageRef.current == null || !autoRepeatRef.current) { stopCatchUp(); return; }
     beginCatchUp(Date.now() - startedAt);
   }, [gameState]);
-  // 「演奏で ◯周ぶん入りました」は、しばらくしたらふつうの進捗表示へ戻す。
-  // ★以前は次の演奏に入るまで消えず、5周目のまま「2周ぶん入りました」が居座っていた
+  // 「演奏で ◯周ぶん入りました」は、3秒でふつうの進捗表示(WAVE ◯/10 ・ ◯周目)へ戻す。
+  // ★以前は次の演奏に入るまで消えず、3周目のまま「2周ぶん入りました」が居座っていた
   //   (2026-09-07・ユーザー指摘「演奏後の表示が戻らない / 時間で戻すようにして」)。
-  //   詳細(内訳)を開いているあいだは読んでいる最中なので消さず、閉じてから数える。
+  // ★詳細(内訳)を開いているあいだは止める作りにしたが、開いたままにしている人には
+  //   いつまでも戻らなかった。この帯はいま何WAVEかを出す唯一の場所なので、
+  //   開いていても必ず戻す(2026-09-07・ユーザー指摘「表示が戻らないし再度始めても消えない /
+  //   この間だといま何ウェーブかもわからない / 消えるのが12秒は長すぎる・3秒ぐらいでいい」)。
   useEffect(() => {
     if (!rhythmPlayRunAwardState) return;
-    if (quickRunDetailOpen) return;
     const timer = setTimeout(() => setRhythmPlayRunAward(null), RHYTHM_PLAY_RUN_AWARD_SHOW_MS);
     return () => clearTimeout(timer);
-  }, [rhythmPlayRunAwardState, quickRunDetailOpen]);
+  }, [rhythmPlayRunAwardState]);
   // 追いつきが終わったら表示も戻す。バトルへ戻ったときとランが終わったときも止める
   useEffect(() => {
     if (!catchingUp) return;
