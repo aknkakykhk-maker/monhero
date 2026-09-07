@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 08:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 09:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -232,6 +232,29 @@ const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
 const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) =>
   [challengeClears, proClears, extremeClears]
     .some(clears => (Number(clears?.[difficulty]) || 0) > 0);
+// ===== モンヒロビートで1曲遊んだぶんを、クイック∞周回の何周ぶんにするか =====
+// (2026-09-07・ユーザー提案)
+//   「演奏に入った段階でのバトルの周分をクリア時のみ少量扱いにする」
+//   「長い曲が損する形になるから時間で周回クリア数を決める」
+//   「0〜2、2周回クリア扱い。そこから1分ごとに1周ずつ増える」
+//   「あくまでも決められてる曲の時間で決めて、ポーズしたりで掛かってる時間は関係なし」
+//
+// ★見るのは「曲の決められた長さ」だけ。実際にかかった時間・ポーズ・やり直しは一切見ない。
+//   そうしないと、止めている時間だけ稼げてしまう。
+//   2分25秒 → 2周 / 3分00秒 → 3周 / 3分30秒 → 3周（分の切り捨て、下限2周）。
+const RHYTHM_PLAY_RUN_LOOP_MIN = 2;
+const rhythmPlayRunLoops = (durationMs) => {
+  const ms = Number(durationMs);
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  return Math.max(RHYTHM_PLAY_RUN_LOOP_MIN, Math.floor(ms / 60000));
+};
+// 演奏を「周回クリア扱い」にしてよいか。
+// ★過去にその難易度をクイックで1回でもクリアしていること(2026-09-07・ユーザー指示)。
+//   これが無いと、勝てないほど高い難易度でも演奏さえすればクリア扱いになってしまう。
+//   判定には既存の mh_quick_clears_<難易度> をそのまま読む(新しい保存キーは作らない)。
+const rhythmPlayRunLoopsAllowed = (difficulty, quickClears) =>
+  (Number(quickClears?.[difficulty]) || 0) > 0;
+
 // モード選択カードの最高スコアは、現在の選択難易度ではなく、そのモードで
 // 記録対象になっている全難易度の自己ベストから求める。未プレイ・壊れた値は0として扱う。
 const highestModeScore = (scores, difficultyIds) => Math.max(0, ...difficultyIds.map(diff => {
