@@ -34,6 +34,15 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    // まだ作りかけの連携ぶん。QUICK_RHYTHM_LINK_PUBLIC_RELEASE を true にするまで出さない
+    date: "2026-09-07 20:10", type:'update', title:'演奏で入った周回を、曲のリザルトで見られるようにしました', status:'new',
+    releaseFlag:'quickRhythmLink',
+    items:[
+      '曲のリザルト画面に「クイック∞周回 +◯周」が出るようにしました。何周目から何周目になったかと、入った経験値・ダイヤ・絆・虹のプシュケーもそこで確かめられます。',
+      'そのぶん、曲えらびの帯からは演奏1回ごとの知らせを外しました。帯はいつも「WAVE ◯/10 ・ ◯周目」だけを出すので、いま何WAVEかが分からなくなりません。',
+    ],
+  },
+  {
     // 公開前の機能の不具合修正なので dev:true
     date: "2026-09-07 19:40", type:'fix', title:'演奏後の帯の表示が元に戻らなかったのを直しました', status:'new',
     releaseFlag:'quickRhythmLink', dev:true,
