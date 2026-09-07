@@ -19,13 +19,15 @@ const fakeStyle=()=>{const s={};s.setProperty=(k,v)=>{s[k]=v;};return s;};
 const fakeEl=(note)=>{
   const el={style:fakeStyle(),offsetHeight:20,dataset:{}};
   let body=null;
-  if(note.type==='HOLD'){body={style:fakeStyle(),hasAttribute:()=>false};}
-  if(note.type==='SLIDE'){
+  // 帯の要素は譜面の種類(元の種類)で作られる。触って HOLD に化けた FLICK には帯の要素が無い
+  const visualType=note._rhythmOriginalType||note.type;
+  if(visualType==='HOLD'){body={style:fakeStyle(),hasAttribute:()=>false};}
+  if(visualType==='SLIDE'){
     body={style:fakeStyle(),hasAttribute:name=>name==='data-rhythm-slide-body',childNodes:[],setAttribute(){},};
     body.appendChild=node=>{body.childNodes.push(node);};
   }
   el._rhythmVisualBody=body;
-  el._rhythmEndBar=(note.type==='HOLD'||note.type==='SLIDE')?{style:fakeStyle()}:null;
+  el._rhythmEndBar=(visualType==='HOLD'||visualType==='SLIDE')?{style:fakeStyle()}:null;
   el.querySelector=()=>null;
   return {el,body};
 };
@@ -46,13 +48,16 @@ const CASES=[
   {id:'SLIDE 幅2 直線',type:'SLIDE',lane:1,subLaneWidth:2,holdMs:700},
   {id:'SLIDE 幅4 移動',type:'SLIDE',lane:2.5,endLane:1,subLaneWidth:4,holdMs:700},
   {id:'SLIDE 長尺',type:'SLIDE',lane:2,subLaneWidth:2,holdMs:1800},
+  // 指で触った FLICK。判定のために type が 'HOLD'・終端が60秒先に化ける(RHYTHM_GESTURE_RUNTIME.bind)。
+  // 帯も終わりの横棒も無いまま描かれなければならない(2026-09-08・実機「レーンに白いあとが出続けた」)
+  {id:'FLICK 触ったあと(HOLD 化・終端60秒先)',type:'FLICK',subLane:8,subLaneWidth:2,touched:true,holdMs:60000},
 ];
 const SPEEDS=[1,6,12],PROGRESSES=[.5,.9,1.05];
 // 速度→走行時間の変換は game-system.jsx 側にあるので、ここでは代表値(速度1・6・12)を直接使う
 const travelMsForSpeed=speed=>({1:7000,6:2150,12:500})[speed];
 const yFor=p=>spawnY+run(`rhythmProjectTravelProgress(${p})`)*travelPx;
 const parseClip=clip=>[...String(clip||'').matchAll(/(-?[\d.]+)%\s+(-?[\d.]+)%/g)].map(m=>({x:Number(m[1])/100,r:Number(m[2])/100}));
-let worstHead=0,worstBand=0,worstSlide=0,worstEnd=0,measured=0;
+let worstHead=0,worstBand=0,worstSlide=0,worstEnd=0,measured=0,touchedLeak=0;
 for(const source of CASES)for(const speed of SPEEDS)for(const progress of PROGRESSES){
   const travelMs=travelMsForSpeed(speed);
   const note={type:source.type,timeMs:10000,lane:source.lane??Math.floor((source.subLane??0)/2),index:0};
@@ -63,6 +68,7 @@ for(const source of CASES)for(const speed of SPEEDS)for(const progress of PROGRE
     if(source.holdPoints)note.holdPoints=source.holdPoints.map(p=>({timeMs:note.timeMs+p.at,subLane:p.subLane,subLaneWidth:p.subLaneWidth}));
     if(source.type==='SLIDE'){note.endLane=source.endLane??note.lane;note.slidePoints=[{timeMs:note.timeMs,lane:note.lane},{timeMs:note.endTimeMs,lane:note.endLane}];}
   }
+  if(source.touched){note._rhythmOriginalType=note.type;note._rhythmGestureType=note.type;note.type='HOLD';}
   const yPx=Math.round(yFor(progress)),releaseYpx=Math.round(yFor(progress-(source.holdMs||0)/travelMs)),bodyPx=Math.max(0,yPx-releaseYpx);
   const visualTime=note.timeMs-(1-progress)*travelMs;
   const slideTravel={chartNowMs:visualTime,visualTime,travelMs,spawnY,travelPx};
@@ -72,6 +78,11 @@ for(const source of CASES)for(const speed of SPEEDS)for(const progress of PROGRE
   const geo=run(`rhythmNoteCanvasGeometry(__note,${yPx},__note.lane,__rect,${noteHeight},${hasBody?releaseYpx:'null'},__travel,${hasBody?bodyPx:0})`);
   measured++;
   const {el,body}=ctx.__fake;
+  if(source.touched){
+    // 終端(60秒先)の座標と長い帯の高さを渡しても、帯・横棒は出ない。粒は FLICK のまま
+    if(geo.band!==null||geo.end!==null||geo.slide!==null)touchedLeak++;
+    continue;
+  }
   // 粒: DOM は left=0 + translate + width。中心 = translate + width/2
   const domLeft=parseFloat(el.style.translate),domWidth=parseFloat(el.style.width);
   worstHead=Math.max(worstHead,Math.abs(domLeft+domWidth/2-geo.head.cx),Math.abs(domWidth-geo.head.w));
@@ -103,6 +114,8 @@ check('粒の中心と幅が DOM 版と一致(0.05px 以内)',worstHead<=.05,`�
 check('HOLD 帯の外周が DOM 版の clipPath と一致(0.05px 以内・点の数も同じ)',worstBand<=.05,`最大ズレ ${worstBand.toFixed(3)}px`);
 check('SLIDE 帯の区切りが DOM 版の polygon と一致(0.05px 以内・数も同じ)',worstSlide<=.05,`最大ズレ ${worstSlide.toFixed(3)}px`);
 check('終わりの横棒の中心と幅が DOM 版と一致(0.05px 以内)',worstEnd<=.05,`最大ズレ ${worstEnd.toFixed(3)}px`);
+check('触って HOLD に化けた FLICK には帯も横棒も付かない(終端60秒先の帯を渡しても)',touchedLeak===0,`${touchedLeak}件で帯か横棒が出た`);
+check('canvas 版は粒の種類を元の種類(rhythmNoteVisualType)で決める',/HEADS\[rhythmNoteVisualType\(note\)\]/.test(source)&&/rhythmNoteIsHold\(note\)&&height>0/.test(source));
 // 判定・入力には触っていない
 check('canvas 版は判定・入力の関数を呼ばない',!/rhythmNoteCanvasGeometry[\s\S]*?\n};/.test(source)||!/const rhythmNoteCanvasGeometry=[\s\S]*?\n};/.exec(source)[0].match(/rhythmMatchInputBatch|applyJudgment|rhythmJudge/));
 console.log(failed?`\n${failed}件のNGがあります`:'\nOK: canvas 版の座標は DOM 版と一致');

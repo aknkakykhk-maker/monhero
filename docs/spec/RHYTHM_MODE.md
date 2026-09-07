@@ -5571,10 +5571,20 @@ canvas を選んだときだけ canvas になる（次の演奏から）。
 | 失敗した HOLD/SLIDE（灰色・opacity .34） | 灰色の色で、透明度 .34 |
 | 押さえている HOLD（brightness 1.3） | 白を .22 の濃さで重ねる |
 
+**種類は `note.type` ではなく元の種類（`rhythmNoteVisualType` = `_rhythmOriginalType || type`）で見る。**
+指で触ると HOLD / FLICK / SLIDE は判定のために `type` が `'HOLD'` に化け、FLICK は終端（`endTimeMs`）を
+60秒先へ置いて指の動きを待つ（`RHYTHM_GESTURE_RUNTIME.bind`）。DOM 版は帯の要素を譜面の種類で作るので
+影響が無かったが、canvas 版は `note.type` を見て帯を作っていたため、触って取り損ねた FLICK が
+「終端が60秒先の失敗した HOLD」になり、レーン全体の薄い灰色の帯が1分間残った
+（2026-09-08・実機「レーンに白いあとが出続けた」。実ゲームを Playwright で動かし、描いたノーツを
+フレームごとに記録して、譜面では FLICK の index 2 が `type:'HOLD'`・帯の上端が画面の1万px上、で特定した）。
+帯を持つか（`rhythmNoteHasBody`）・粒の色・HOLD の印・FLICK の矢印は、すべて元の種類で決める。
+「取り損ねて終端まで薄く流す」条件（tick の `failedTrail`）も、DOM 版・canvas 版とも `rhythmNoteHasBody` で見る。
+
 ### 検査
 
-- `tools/mode/rhythm-canvas-geometry-check.js`（CI）… DOM 版の書き込みと canvas 版の座標を 11種 × 速度3 × 進み3 で突き合わせる（0.05px 以内。実測 0.01px）
-- `tools/mode/rhythm-canvas-render-check.js`（Playwright）… 粒の中心に画素があり、空きは透明で、種類ごとの色が出て、1フレームの JS が 4ms 未満（実測 7ノーツで中央値 0.40ms）
+- `tools/mode/rhythm-canvas-geometry-check.js`（CI）… DOM 版の書き込みと canvas 版の座標を 11種 × 速度3 × 進み3 で突き合わせる（0.05px 以内。実測 0.01px）。触って HOLD に化けた FLICK に、60秒先の終端と長い帯の高さを渡しても帯・横棒が出ないことも見る
+- `tools/mode/rhythm-canvas-render-check.js`（Playwright）… 粒の中心に画素があり、空きは透明で、種類ごとの色が出て、取り損ねた HOLD は薄い灰色で残り、触って取り損ねた FLICK のレーンには何も残らず、1フレームの JS が 4ms 未満（実測 9ノーツで中央値 0.40ms）
 
 ### 実機での比べかた
 
