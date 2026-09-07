@@ -218,6 +218,18 @@
     "subdivisionsPerBeat": 4,
     "source": "detected"
    }
+  },
+  "monster_hero_theme_alt": {
+   "audio": "monster-hero/audio/bgm-monster-hero-theme-alt.mp3",
+   "audioSha256": "6b4eb065c2e238d68225deb33d4340c2a8491eb4a8edef3cd7e351e56e50b0f9",
+   "durationMs": 154720,
+   "analyzedTiming": {
+    "bpm": 171.097,
+    "beatZeroMs": 1268.3,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   }
   }
  }
 }

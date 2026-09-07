@@ -34,6 +34,16 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-08 07:35", type:'update', title:'モンヒロビートに新曲「Monster Hero -Another-」を追加しました', status:'new',
+    assistantNotice:{id:'update_notice_monster_hero_another_v1',type:'content'},
+    items:[
+      '「Monster Hero -Another-」（約155秒）を追加しました。本編ですでに使っている別テイクのBGMをそのまま使い、音源は複製していません。ジャケットは「Monster Hero」と同じ絵です。',
+      'EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.18 ／ MASTER Lv.24。ノーツ数は 225 ／ 260 ／ 359 ／ 434 ／ 495 です。',
+      '譜面はAnotherの音源そのものを解析して作っています（約171.1BPM・4拍子）。元の「Monster Hero」の譜面コピーではありません。',
+      '自己ベスト・全国ランキングは「Monster Hero」と別の曲として記録されます。EXPERT以上は、同じ曲の1つ下の難易度をクリアすると遊べます。',
+    ],
+  },
+  {
     // canvas 版の不具合修正。公開前(デバッグ画面で選んだときだけ動いていた頃)の直しなので、
     // プレイヤーは一度も見ていない → dev:true(記録として残す。画面には出ない)
     date: "2026-09-07 23:56", type:'fix', title:'モンヒロビート（canvas 版）: 触って取り損ねた FLICK のあとに、レーン全体の薄い帯が残っていました',
