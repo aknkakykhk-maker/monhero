@@ -229,6 +229,11 @@
     "beatsPerBar": 4,
     "subdivisionsPerBeat": 4,
     "source": "detected"
+   },
+   "challengeProfile": {
+    "audioSha256": "6b4eb065c2e238d68225deb33d4340c2a8491eb4a8edef3cd7e351e56e50b0f9",
+    "onsetCount": 1108,
+    "beatClarityRatio": 1.193
    }
   }
  }
