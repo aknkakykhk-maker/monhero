@@ -136,7 +136,7 @@ const match = (notes, timeMs, key, subCoordinate) => rt.rhythmMatchInputBatch(no
 // ここが前回の見落とし。release() が終端判定を作って endTimeMs を書き換えていたため、
 // 猶予を見る分岐へ一度も入らなかった
 check('終わりよりずっと手前で離したら、その場で判定を確定させない',
-  /if\(!cancelled&&!session\.failed&&releaseDelta<-RHYTHM_HOLD_RELEASE_GRACE_MS\)\{/.test(rhythm)
+  /if\(!cancelled&&!session\.failed&&!session\.endFlickDone&&releaseDelta<-RHYTHM_HOLD_RELEASE_GRACE_MS\)\{/.test(rhythm)
   && /session\.note\.releasedAtMs=songNow-session\.offsetMs;\s*rhythmFloatingNoteAdd\(session\.note\);/.test(rhythm));
 check('途中で外れて失敗が確定したときは、これまでどおり確定させる',
   /if\(!cancelled&&!session\.failed&&/.test(rhythm));

@@ -28,35 +28,10 @@
   "NORMAL": {
    "noteCount": 212,
    "impossibleCount": 0,
-   "strainedCount": 2,
-   "strainedRatio": 0.0094,
-   "byKind": {
-    "strained/手の動きが忙しい": 2
-   },
-   "issues": [
-    {
-     "severity": "strained",
-     "kind": "手の動きが忙しい",
-     "noteIndex": 101,
-     "grid": 880,
-     "bar": 55,
-     "timeMs": 76439,
-     "lane": 0.25,
-     "type": "TAP",
-     "detail": "2レーンの移動が173ms(快適には200ms欲しい)"
-    },
-    {
-     "severity": "strained",
-     "kind": "手の動きが忙しい",
-     "noteIndex": 118,
-     "grid": 992,
-     "bar": 62,
-     "timeMs": 86142,
-     "lane": 4.25,
-     "type": "TAP",
-     "detail": "2レーンの移動が173ms(快適には200ms欲しい)"
-    }
-   ]
+   "strainedCount": 0,
+   "strainedRatio": 0,
+   "byKind": {},
+   "issues": []
   },
   "HARD": {
    "noteCount": 266,

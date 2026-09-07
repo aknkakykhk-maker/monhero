@@ -75,7 +75,7 @@ ok('サイズはノーツ頭の描画scaleだけで、帯・ENDバー・入力hi
   &&!game.includes('scale(${settings.noteSize/100})')
   &&!game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.noteSize'));
 ok('表示と入力で同じ判定offsetを使い窓幅は不変',game.includes('visualTime=songTimeMs-settings.judgmentTimingOffsetMs')&&game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)')&&game.includes('const rhythmJudgeTap = deltaMs => RHYTHM_JUDGMENTS.find'));
-ok('表示切替・レーン発光は入力を消さない',game.includes('settings.judgmentTextDisplay?view.last')&&game.includes('settings.fastSlowDisplay?(view.fastSlow')&&game.includes("settings.laneGlow==='NONE'?'0'")&&game.includes('inputStarts(starts)'));
+ok('表示切替・レーン発光は入力を消さない',game.includes('settings.judgmentTextDisplay?view.last')&&game.includes('settings.fastSlowDisplay?(view.fastSlow')&&game.includes("settings.laneGlow==='NONE'?'0'")&&game.includes('inputStarts(starts,ageMs)'));
 // 振動は 2026-09-05 に作り直した（iPhoneには Vibration API が無く、8msは短すぎた）。
 // 見ているのは「対応していない端末で落ちない・黙って何も起きないままにしない」こと。
 ok('振動未対応を安全に扱う',
