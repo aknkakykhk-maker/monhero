@@ -10643,6 +10643,8 @@ const installRhythmGeometryStyles=()=>{
       background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.55));pointer-events:none}
     [data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::before{left:1px}
     [data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::after{right:1px}
+    /* マスモンの絵は scaleX されない(inline の transform が勝つ)ので、太さの補正は掛けない */
+    [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-monster-face]::before,[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-monster-face]::after{width:3px}
     [data-rhythm-note][data-rhythm-failed="true"]{filter:grayscale(1) brightness(.72)!important}
     [data-rhythm-note][data-rhythm-failed="true"]>span:last-child{box-shadow:none!important;border-color:rgba(148,163,184,.6)!important}
     /* --- ノーツを取ったときのヒットエフェクト --- */
