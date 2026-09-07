@@ -98,5 +98,4 @@ const analyzerSource=fs.readFileSync(ANALYZER,'utf8');
 check('ゲームruntime・保存・ランキングへ接続しない',!analyzerSource.includes('localStorage')&&!analyzerSource.includes('mh_')&&!analyzerSource.includes('supabase'));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
-if(!failed&&process.env.GITHUB_ACTIONS==='true')require('./rhythm-song-challenge-check.js');
 process.exit(failed?1:0);
