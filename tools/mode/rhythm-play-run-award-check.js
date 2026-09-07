@@ -96,11 +96,16 @@ for (const file of files) {
   check(`${rel}: 演奏に入るとき前回の表示を消す`,
     compact.includes('setRhythmPlayRunAward(null);'));
   // ★2026-09-07・ユーザー指摘「演奏後の表示が戻らない / 時間で戻すようにして」。
-  //   次の演奏に入るまで消えず、5周目のまま「2周ぶん入りました」が居座っていた。
-  //   詳細(内訳)を開いているあいだは読んでいる最中なので数えない。
+  //   次の演奏に入るまで消えず、3周目のまま「2周ぶん入りました」が居座っていた。
   check(`${rel}: 時間が経ったらふつうの進捗表示へ戻す`,
-    compact.includes('setTimeout(()=>setRhythmPlayRunAward(null),RHYTHM_PLAY_RUN_AWARD_SHOW_MS)')
-    && compact.includes('if(quickRunDetailOpen)return;'));
+    compact.includes('setTimeout(()=>setRhythmPlayRunAward(null),RHYTHM_PLAY_RUN_AWARD_SHOW_MS)'));
+  // ★詳細(内訳)を開いているあいだは止める作りにしたが、開いたままの人には戻らなかった。
+  //   この帯はいま何WAVEかを出す唯一の場所なので、開いていても必ず戻す
+  //   (2026-09-07・ユーザー指摘「この間だといま何ウェーブかもわからない」)
+  check(`${rel}: 詳細を開いていても戻す`, !compact.includes('if(quickRunDetailOpen)return;'));
+  // 周回を数え直すときも落とす。1周目なのに「2周ぶん入りました」が残っていた
+  check(`${rel}: 周回を数え直すときも消す`,
+    /beginQuickRunProgress=\(\)=>\{[\s\S]{0,200}?setRhythmPlayRunAward\(null\);[\s\S]{0,120}?writeQuickRunProgress\(\{loops:1/.test(compact));
 
   // ---- 見せ方 ----
   check(`${rel}: 帯に何周ぶん入ったかを出す`,
