@@ -115,15 +115,37 @@ if(REFERENCE&&EXPONENT&&RANGE&&RATIO_RANGE&&GAIN){
   const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
   const AUDIO=Object.fromEntries(Object.entries(RELEASED_TRACKS)
     .map(([songId,trackId])=>[songId,trackId.replace(/_/g,'-')]));
+  const registry=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json'),'utf8'));
   const factors=[];
   for(const song of songs){
+    const trackId=RELEASED_TRACKS[song.id];
     const file=path.join(ROOT,`tools/mode/authoring/${AUDIO[song.id]}-v3-audio.json`);
-    if(!AUDIO[song.id]||!fs.existsSync(file)){ok(`${song.name} の音源解析がある`,false,song.id);continue;}
-    const audio=JSON.parse(fs.readFileSync(file,'utf8'));
-    const seconds=Number(audio.durationMs)/1000;
-    const raw=clampRatio(Math.pow(Number(audio.timing.bpm)/ref.bpm,exp.bpm))
-      *clampRatio(Math.pow((Number(audio.summary.onsetCount)/seconds)/ref.ops,exp.ops))
-      *clampRatio(Math.pow(Number(audio.summary.beatClarity.ratio)/ref.clarity,exp.clarity));
+    let durationMs,bpm,onsetCount,beatClarityRatio;
+    if(AUDIO[song.id]&&fs.existsSync(file)){
+      const audio=JSON.parse(fs.readFileSync(file,'utf8'));
+      durationMs=Number(audio.durationMs);
+      bpm=Number(audio.timing.bpm);
+      onsetCount=Number(audio.summary.onsetCount);
+      beatClarityRatio=Number(audio.summary.beatClarity.ratio);
+    }else{
+      // 本編BGMをそのまま再利用する曲など、巨大なauthoring JSONを配信変更へ
+      // 同梱しない場合は、実音源解析時にregistryへ固定した最小プロフィールを使う。
+      // 音源が差し替わったらSHAが一致しなくなるので、古い値で検査を通すことはない。
+      const entry=trackId?registry.songs?.[trackId]:null;
+      const profile=entry?.challengeProfile;
+      const valid=!!entry&&!!profile&&profile.audioSha256===entry.audioSha256
+        &&Number.isFinite(Number(entry.durationMs))&&Number.isFinite(Number(entry.analyzedTiming?.bpm))
+        &&Number.isFinite(Number(profile.onsetCount))&&Number.isFinite(Number(profile.beatClarityRatio));
+      if(!valid){ok(`${song.name} の歯ごたえ解析値がある`,false,song.id);continue;}
+      durationMs=Number(entry.durationMs);
+      bpm=Number(entry.analyzedTiming.bpm);
+      onsetCount=Number(profile.onsetCount);
+      beatClarityRatio=Number(profile.beatClarityRatio);
+    }
+    const seconds=durationMs/1000;
+    const raw=clampRatio(Math.pow(bpm/ref.bpm,exp.bpm))
+      *clampRatio(Math.pow((onsetCount/seconds)/ref.ops,exp.ops))
+      *clampRatio(Math.pow(beatClarityRatio/ref.clarity,exp.clarity));
     factors.push({name:song.name,factor:Math.max(range.min,Math.min(range.max,Math.pow(raw,gain)))});
   }
   const values=factors.map(entry=>+entry.factor.toFixed(3));
