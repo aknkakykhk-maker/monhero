@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c2a203db32ffca4f
+// source-sha256: be364a22443c0b27
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 155e79638a9beefb
+// generated-sha256: b471c495dc655587
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 11:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 11:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30480,10 +30480,30 @@ function MonsterHeroGame() {
   // モンビーから∞周回を始める(docs/spec/QUICK_RHYTHM_LINK.md PR6)。
   // 編成は repeatTemplateForNewRun() ＝「1周目に自分で組んだ編成」→ 無ければAUTO設定の事前設定。
   // どちらも無いときは false を返し、呼び出し側が理由を出す。
+  // ★挑戦そのものが終わっているか(負けた・リタイアした)。
+  //   段階(runStage)は returnToHome まで残るので、負けたあとも runStage!==null のまま。
+  //   それを「まだ続けられる」と読んでいたため、モンヒロビートの帯が負けたあとにも
+  //   「▶ 周回を再開する」を出し、押すと死んだランの続きから動きだしていた
+  //   (2026-09-07・ユーザー報告「裏周回で負けた場合にもう一度再開にすると
+  //    負けたときの続きからになってる。負けた場合は最初からにしないとおかしい。
+  //    またそれで勝った場合に進行不能バグが起きてる可能性がある」)。
+  //   続けられるかどうかは、段階ではなく「勝負がついたかどうか」で見る。
+  // ※ここに置くのは、上の runStage の定義ひとまとまり(advanceRunStage〜clearRunStage)を
+  //   tools/battle/run-stage-check.js がそのまま切り出して動かすため。
+  //   hp・gaveUp を使う式をそこへ混ぜると、検査が読み込めなくなる。
+  const runResultFinished = hp <= 0 || gaveUp;
+  const runResultFinishedRef = useRef(false);
+  runResultFinishedRef.current = runResultFinished;
+  // 止まった周回を「続きから」再開してよいのは、挑戦がまだ生きているときだけ
+  const quickRunResumable = runStage !== null && !runResultFinished;
   const startQuickRunFromRhythm = () => {
-    if (runStageRef.current) return false; // すでに何か走っている
+    // 段階が残っていても、勝負がついている(負けた・リタイアした)なら畳んで始め直せる。
+    // まだ生きている挑戦の上へ新しいランを重ねるのだけを止める
+    if (runStageRef.current && !runResultFinishedRef.current) return false;
     const template = repeatTemplateForNewRun();
     if (!template) return false;
+    // 終わったランの数えかけを持ち越さない(1周目から数え直す)
+    if (runStageRef.current) clearQuickRunProgress();
     // ★先に∞の意思を立てる。setAutoRepeatEnabled は描画時の runMode を見るため、
     //   まだクイックへ切り替わっていないこの時点では使えない
     autoRepeatRef.current = true;
@@ -30503,12 +30523,15 @@ function MonsterHeroGame() {
   };
   // 止まった周回を、バトルへ行かずにその場で再開する
   // (2026-09-07・ユーザー指示「これもバトルへ行かなくても再開できるようにして」)。
-  // ★止まってもランが残っているとき(アプリが裏に回った・自分でAUTOを切った)だけ。
-  //   負けた・やめたあとはランが無いので、こちらではなく「新しく始める」を出す。
+  // ★「続きから」なので、挑戦がまだ生きているとき(アプリが裏に回った・自分でAUTOを切った)だけ。
+  //   負けた・リタイアしたあとは続きが無いので、こちらではなく「新しく始める」を出す。
+  //   ランの段階は負けても残るため、段階の有無では判断できない
+  //   (2026-09-07・ユーザー報告「負けた場合にもう一度再開にすると負けたときの続きからになってる」)。
   // 数えていた周回数と報酬はそのまま続ける(WAVEの途中から続くのに
   // 「1周目」へ戻ると、何が起きたのか分からなくなるため)。
   const resumeQuickRunFromRhythm = () => {
     if (!runStageRef.current) return false; // ランが残っていない
+    if (runResultFinishedRef.current) return false; // 勝負がついている(続きが無い)
     if (!isQuickMode(runMode)) return false;
     // 止まったときに「次周を始めている最中」の印が残っていることがある。
     // 残ったままだと CHAMPION から次の周へ入れないので、必ず戻す
@@ -39266,28 +39289,31 @@ function MonsterHeroGame() {
       }, mainHero?.masuName || mainHero?.name || '—'))), /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[9px] leading-relaxed text-slate-400"
       }, quickRunProgress.finished
-      // 止まっていても、ランが残っていればここから再開できる。
-      // 負けた・やめたあとはランが無いので、結果を見に行ってもらう
-      ? runStage !== null ? `${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。` : `${quickRunFinishReasonText(quickRunProgress.reason)}。バトルへ戻ると結果を見られます。` : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
+      // 止まっていても、挑戦がまだ生きていれば続きから再開できる。
+      // ★負けた・リタイアしたあとは「続き」が無い。ランの段階は残るので、
+      //   段階の有無ではなく勝負がついたかどうかで分ける
+      //   (2026-09-07・ユーザー報告「負けた場合は最初からにしないとおかしい」)
+      ? quickRunResumable ? `${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。` : `${quickRunFinishReasonText(quickRunProgress.reason)}。続きはないので、始めるときは1周目からになります。バトルへ戻ると結果を見られます。` : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
       // ★仕様が「曲の長さぶんの周回クリア」へ変わったので、文言もそちらへ合わせる
       //   (2026-09-07・ユーザー指摘「演奏中の文言ってこれであってる？仕様変わったよね？」。
       //    追いつき方式のころの説明が残っていた)。
       //   まだその難易度をクリアしていない人には入らないので、そこも言い分ける
-      : rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts) ? 'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは2周・3分台は3周…）。' : 'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'), quickRunProgress.finished && runStage !== null && /*#__PURE__*/React.createElement("button", {
+      : rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts) ? 'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは2周・3分台は3周…）。' : 'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'), quickRunProgress.finished && quickRunResumable && /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-quick-run-resume": true,
         onClick: () => {
           resumeQuickRunFromRhythm();
         },
         className: "mt-2 min-h-[44px] w-full rounded-xl border border-emerald-300/60 bg-emerald-800/70 text-[11px] font-black text-emerald-50 active:scale-[.98]"
-      }, "\u25B6 \u5468\u56DE\u3092\u518D\u958B\u3059\u308B"), quickRunProgress.finished && runStage === null && repeatTemplateForNewRun() && /*#__PURE__*/React.createElement("button", {
+      }, "\u25B6 \u5468\u56DE\u3092\u518D\u958B\u3059\u308B"), quickRunProgress.finished && !quickRunResumable && repeatTemplateForNewRun() && /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-quick-run-restart": true,
+        disabled: resultProcessing,
         onClick: () => {
           if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
         },
-        className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]"
-      }, "\u2694 \u65B0\u3057\u304F\u5468\u56DE\u3092\u59CB\u3081\u308B"), quickRunStartError && /*#__PURE__*/React.createElement("p", {
+        className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98] disabled:opacity-50"
+      }, resultProcessing ? '結果を記録しています…' : '⚔ 1周目から新しく始める'), quickRunStartError && /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[9px] font-black text-red-300"
       }, "\u3044\u307E\u5468\u56DE\u3092\u59CB\u3081\u3089\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u7DE8\u6210\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u304C\u898B\u5F53\u305F\u3089\u306A\u3044\u304B\u3001\u96E3\u6613\u5EA6\u304C\u307E\u3060\u89E3\u653E\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
         type: "button",
@@ -39296,7 +39322,7 @@ function MonsterHeroGame() {
           if (runStageRef.current) returnToBackgroundRun();
         },
         className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]"
-      }, quickRunProgress.finished && runStage === null ? '⚔ バトルへ戻って結果を見る' : '⚔ バトルへ戻る'), !quickRunProgress.finished && runStage !== null && (quickRunStopConfirm ? /*#__PURE__*/React.createElement("div", {
+      }, quickRunProgress.finished && !quickRunResumable ? '⚔ バトルへ戻って結果を見る' : '⚔ バトルへ戻る'), !quickRunProgress.finished && quickRunResumable && (quickRunStopConfirm ? /*#__PURE__*/React.createElement("div", {
         "data-quick-run-stop-confirm": true,
         className: "mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 p-2"
       }, /*#__PURE__*/React.createElement("p", {

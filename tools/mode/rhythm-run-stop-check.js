@@ -8,10 +8,17 @@
 //   「色々小出しに出しちゃってるから一旦整理して実装修正して」
 //
 // ★整理した結果、帯の操作は次の3つの状態しかない。
-//   ① 回っている           … バトルへ戻る ／ ここで周回をやめる
-//   ② 止まった・ランは残る … 周回を再開する ／ バトルへ戻る
-//   ③ 止まった・ランも終了 … 新しく周回を始める ／ バトルへ戻って結果を見る
+//   ① 回っている                … バトルへ戻る ／ ここで周回をやめる
+//   ② 止まった・挑戦は生きている … 周回を再開する ／ バトルへ戻る
+//   ③ 止まった・勝負がついた     … 1周目から新しく始める ／ バトルへ戻って結果を見る
 //   どの状態でも「バトルへ戻る」は必ず出す(行き先を失わないため)。
+//
+// ★②と③の分かれ目は quickRunResumable (= runStage!==null && hp>0 && !gaveUp)。
+//   ランの段階(runStage)は returnToHome まで残るので、**負けても runStage!==null のまま**。
+//   段階の有無で分けていたため、負けたあとに②が出て、押すと死んだランの続きから
+//   動きだしていた(2026-09-07・ユーザー報告「裏周回で負けた場合にもう一度再開にすると
+//   負けたときの続きからになってる。負けた場合は最初からにしないとおかしい。
+//   またそれで勝った場合に進行不能バグが起きてる可能性がある」)。
 const fs = require('fs');
 const path = require('path');
 
@@ -45,25 +52,39 @@ for (const file of files) {
   check(`${rel}: 「あきらめる」は理由つきで止める`, compact.includes("stopAllAuto('retire');"));
   // 周回中(まだ終わっていない・ランがある)ときだけ出す
   check(`${rel}: 周回しているときだけ出す`,
-    compact.includes('!quickRunProgress.finished&&runStage!==null&&(quickRunStopConfirm'));
+    compact.includes('!quickRunProgress.finished&&quickRunResumable&&(quickRunStopConfirm'));
   // 「バトルへ戻る」はどの状態でも出す(やめずに戻りたい人のため)
   check(`${rel}: 「バトルへ戻る」も残っている`, src.includes('data-quick-run-progress-back'));
 
-  // ---- ② 止まった・ランは残っている ----
-  check(`${rel}: ランが残っていれば「再開する」を出す`,
+  // ---- 続けられるかどうかの判定 ----
+  check(`${rel}: 続けられるかは勝負がついたかで決める`,
+    compact.includes('construnResultFinished=hp<=0||gaveUp;')
+    && compact.includes('constquickRunResumable=runStage!==null&&!runResultFinished;'));
+  check(`${rel}: 段階の有無だけで再開を出さない`,
+    !compact.includes('quickRunProgress.finished&&runStage!==null&&'));
+
+  // ---- ② 止まった・挑戦は生きている ----
+  check(`${rel}: 挑戦が生きていれば「再開する」を出す`,
     src.includes('data-quick-run-resume')
-    && compact.includes('quickRunProgress.finished&&runStage!==null&&'));
-  check(`${rel}: 再開はランが残っているときだけ通す`,
-    compact.includes('constresumeQuickRunFromRhythm=()=>{if(!runStageRef.current)returnfalse;'));
+    && compact.includes('quickRunProgress.finished&&quickRunResumable&&'));
+  // 空白を潰すと行コメントが式の間へ挟まって見えるので、あいだは正規表現で読み飛ばす
+  check(`${rel}: 再開は勝負がついていないときだけ通す`,
+    /constresumeQuickRunFromRhythm=\(\)=>\{if\(!runStageRef\.current\)returnfalse;[\s\S]{0,200}?if\(runResultFinishedRef\.current\)returnfalse;/.test(compact));
   check(`${rel}: 再開しても周回数と報酬は続ける`,
     compact.includes("writeQuickRunProgress({...current,finished:false,reason:''});"));
 
-  // ---- ③ 止まった・ランも終わった ----
-  check(`${rel}: ランが無いときは「新しく始める」を出す`,
+  // ---- ③ 止まった・勝負がついた ----
+  check(`${rel}: 勝負がついたら「1周目から新しく始める」を出す`,
     src.includes('data-quick-run-restart')
-    && compact.includes('quickRunProgress.finished&&runStage===null&&repeatTemplateForNewRun()&&'));
-  check(`${rel}: ランが無いときの「バトルへ戻る」は結果を見に行く言い方`,
-    compact.includes("quickRunProgress.finished&&runStage===null?'⚔バトルへ戻って結果を見る':'⚔バトルへ戻る'"));
+    && compact.includes('quickRunProgress.finished&&!quickRunResumable&&repeatTemplateForNewRun()&&'));
+  // 負けたあとは段階が残っていても始め直せる。数えかけも持ち越さない
+  check(`${rel}: 勝負がついたランの上からでも始め直せる`,
+    compact.includes('if(runStageRef.current&&!runResultFinishedRef.current)returnfalse;')
+    && compact.includes('if(runStageRef.current)clearQuickRunProgress();'));
+  // 結果の記録が終わるまでは押させない(周回IDが記録の途中で入れ替わらないように)
+  check(`${rel}: 記録中は始め直せない`, compact.includes('disabled={resultProcessing}') || compact.includes('disabled:resultProcessing'));
+  check(`${rel}: 勝負がついたときの「バトルへ戻る」は結果を見に行く言い方`,
+    compact.includes("quickRunProgress.finished&&!quickRunResumable?'⚔バトルへ戻って結果を見る':'⚔バトルへ戻る'"));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
