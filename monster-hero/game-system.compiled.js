@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bcf39ecf2b9d777d
+// source-sha256: 9457c0b307e2e2ee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 286128be22031932
+// generated-sha256: 26cb16c1b7b67ee9
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41460,7 +41460,17 @@ function MonsterHeroGame() {
       className: "text-[8px] font-black text-emerald-300"
     }, "\u2713 \u4F7F\u7528\u4E2D") : /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] text-slate-500"
-    }, "\u30BF\u30C3\u30D7\u3067\u4F7F\u7528")))), /*#__PURE__*/React.createElement("div", {
+    }, "\u30BF\u30C3\u30D7\u3067\u4F7F\u7528")))), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-party-set-edit-toggle": true,
+      onClick: () => toggleScreenNote('partySetEdit'),
+      "aria-expanded": screenNoteOpen.partySetEdit === true,
+      className: "mt-1 flex min-h-[36px] w-full items-center justify-between gap-2 rounded-lg px-1 text-left text-[9px] font-black text-slate-400 active:scale-[.995]"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "min-w-0 truncate"
+    }, "\u30BB\u30C3\u30C8\u540D\u3092\u5909\u3048\u308B\u30FB\u307B\u304B\u306E\u30BB\u30C3\u30C8\u3078\u30B3\u30D4\u30FC"), /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0"
+    }, screenNoteOpen.partySetEdit === true ? '閉じる ▲' : '開く ▼')), screenNoteOpen.partySetEdit === true && /*#__PURE__*/React.createElement("div", {
       className: "mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end"
     }, /*#__PURE__*/React.createElement("label", {
       className: "min-w-0 text-[8px] font-black text-slate-400"
@@ -41476,7 +41486,7 @@ function MonsterHeroGame() {
     })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setPartySetCopyTarget(partySetCopyTarget == null ? (editingPartySetIndex + 1) % MONSTER_PARTY_SET_COUNT : null),
       className: "min-h-[38px] rounded-lg border border-amber-500/50 px-3 text-[10px] font-black text-amber-200"
-    }, "\u7DE8\u6210\u3092\u30B3\u30D4\u30FC")), partySetCopyTarget != null && /*#__PURE__*/React.createElement("div", {
+    }, "\u7DE8\u6210\u3092\u30B3\u30D4\u30FC")), screenNoteOpen.partySetEdit === true && partySetCopyTarget != null && /*#__PURE__*/React.createElement("div", {
       className: "mt-2 rounded-xl bg-amber-950/40 p-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] font-bold text-amber-100 mb-1"
@@ -41526,9 +41536,7 @@ function MonsterHeroGame() {
         style: monsterArtFitStyle(base.id),
         className: "w-full h-full object-cover"
       }));
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-slate-500 font-bold mb-1 px-1 shrink-0"
-    }, "\u89E3\u653E\u6E08\u307F", unlockedMonsterIds.length, "\u4F53\u30FB\u3061\u3087\u3046\u3069", STARTER_MONSTER_IDS.length, "\u4F53\u9078\u3076\u3068\u300C\u6C7A\u5B9A\u300D\u3067\u304D\u307E\u3059\u30FB\u30A2\u30A4\u30B3\u30F3\u30BF\u30C3\u30D7\u3067\u7DE8\u6210/\u89E3\u9664\u3001i\u30DC\u30BF\u30F3\u3067\u8A73\u7D30\u30FB\u540C\u3058\u7A2E\u306F1\u4F53\u307E\u3067(\u30DE\u30B9\u30E2\u30F3\u542B\u3080)"), renderMonsterSortFilterBar(), /*#__PURE__*/React.createElement("div", {
+    }))), renderScreenNote('partyPick', `解放済み${unlockedMonsterIds.length}体。ちょうど${STARTER_MONSTER_IDS.length}体選ぶと「決定」できます。`, ['アイコンをタップすると編成に入れたり外したりできます。', 'カードの「i」ボタンでそのモンスターの詳細を見られます。', '同じ種は1体までです（マスモンも含めて数えます）。']), renderMonsterSortFilterBar(), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-3 pb-4"
@@ -41965,37 +41973,11 @@ function MonsterHeroGame() {
           className: "ml-0.5"
         }, fusionSortDir === 'asc' ? '▲' : '▼'));
       }));
-      const fusionGuide = /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 mt-2 bg-black/40 border border-violet-500/30 rounded-2xl p-3 space-y-1.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-violet-300 uppercase tracking-wider"
-      }, "\u5408\u4F53\u306E\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-300 leading-relaxed"
-      }, "\u30FB", /*#__PURE__*/React.createElement("span", {
-        className: "text-white font-bold"
-      }, "\u4E3B"), "\u304C\u6B8B\u308A\u3001", /*#__PURE__*/React.createElement("span", {
-        className: "text-white font-bold"
-      }, "\u526F"), "\u306F\u6D88\u6EC5\u3057\u307E\u3059\u3002\u526F\u306E\u7D46\u7D4C\u9A13\u5024\u306F\u7D2F\u8A08\u306E\u307E\u307E\u4E3B\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-300 leading-relaxed"
-      }, "\u30FB\u4E0A\u304C\u3063\u305F\u7D46\u30EC\u30D9\u30EB\u306E\u6570\u3060\u3051\u3001\u4E3B\u304C", /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300 font-bold"
-      }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8"), "\u3092\u7372\u5F97\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-300 leading-relaxed"
-      }, "\u30FB\u4E3B\u306E\u540D\u524D\u30FB\u898B\u305F\u76EE\u30FB\u9593\u5408\u3044\u9069\u6027\u30FB\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316\u306F", /*#__PURE__*/React.createElement("span", {
-        className: "text-white font-bold"
-      }, "\u305D\u306E\u307E\u307E\u7DAD\u6301"), "\u3055\u308C\u307E\u3059(\u526F\u306E\u5F37\u5316\u306F\u5F15\u304D\u7D99\u304C\u308C\u307E\u305B\u3093)"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-300 leading-relaxed"
-      }, "\u30FB\u6280\u3092\u5F15\u304D\u7D99\u304C\u306A\u3044\u5408\u4F53\u306F", /*#__PURE__*/React.createElement("span", {
-        className: "text-cyan-300 font-bold"
-      }, "0\u30C0\u30A4\u30E4"), "\u3001\u5F15\u304D\u7D99\u3050\u5408\u4F53\u306F", /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300 font-bold"
-      }, "3000\u30C0\u30A4\u30E4"), "\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-amber-200 leading-relaxed border-t border-white/10 pt-1.5"
-      }, "\u30FB", /*#__PURE__*/React.createElement("span", {
-        className: "font-bold"
-      }, "\u56FA\u6709\u6280\u306E\u5F15\u304D\u7D99\u304E"), "\u306F\u3001", /*#__PURE__*/React.createElement("span", {
-        className: "font-bold"
-      }, "\u526F\u304C\u7D46Lv.30\u4EE5\u4E0A"), "\u306E\u3068\u304D\u3060\u3051\u9078\u3079\u307E\u3059\u3002\u6761\u4EF6\u3092\u6E80\u305F\u3059\u3068\u526F\u306E\u56FA\u6709\u6280\u304C\u4E3B\u306B\u8A18\u9332\u3055\u308C\u307E\u3059"));
+      // ルールは5行あって画面の3分の1を占めていた。主役はモンスターの一覧なので、
+      // ふだんは1行だけ出して「詳しく」で開く
+      // (2026-09-07・ユーザー指摘「モンスターの部分がメインなのに
+      //  他でスペースを取りすぎて肝心なとこが窮屈で見にくい」)
+      const fusionGuide = renderScreenNote('fusion', '主が残り、副は消えます。副の絆経験値はそのまま主へ加わります。', ['上がった絆レベルの数だけ、主が強化ポイントを獲得します。', '主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます（副の強化は引き継がれません）。', '技を引き継がない合体は0ダイヤ、引き継ぐ合体は3000ダイヤです。', '固有技の引き継ぎは、副が絆Lv.30以上のときだけ選べます。条件を満たすと副の固有技が主に記録されます。']);
       if (fusionStep === 'main') {
         return /*#__PURE__*/React.createElement("div", {
           "data-mh-screen": true,
