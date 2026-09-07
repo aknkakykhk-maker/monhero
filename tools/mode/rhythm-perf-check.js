@@ -130,7 +130,8 @@ check('プレイエリアの大きさが変わったら覚え直す',
 // 2026-09-04: 実機で「ノーツを押したときにカクつく」報告を受けて足した3点。
 // どれも「タップ1回あたりの仕事を減らす」ためのもので、判定・スコアには関与しない。
 check('ノーツのDOMを毎回作り直さない(判定のたびの再生成を止める)',
-  /const noteElements=useMemo\(\(\)=>chart\.notes\.map/.test(gameSrc)
+  // canvas 化(2026-09-07)以降は「canvas のときはノーツ要素を作らない」分岐が入るが、useMemo で固定していることは同じ
+  /const noteElements=useMemo\(\(\)=>(canvasNotes\?null:)?chart\.notes\.map/.test(gameSrc)
   &&gameSrc.includes('{noteElements}')
   &&!/\{chart\.notes\.map\(\(note,index\)=>\{/.test(gameSrc));
 check('レーン枠・サブレーン発光のDOMも毎回作り直さない',

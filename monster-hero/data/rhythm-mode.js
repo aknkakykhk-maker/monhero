@@ -11203,6 +11203,13 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-lane]:last-child::after{content:""!important;position:absolute;inset:0!important;pointer-events:none;opacity:1!important;filter:none!important;background:linear-gradient(180deg,rgba(216,180,254,.26),rgba(103,232,249,.34) 72%,rgba(236,254,255,.72));clip-path:var(--rhythm-right-clip,none)!important}
     [data-rhythm-sublane-boundary]{display:block;position:absolute;z-index:1;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(216,180,254,.12),rgba(103,232,249,.20) 70%,rgba(236,254,255,.38));clip-path:var(--rhythm-sub-clip,none)}
     [data-rhythm-note]{z-index:2}
+    /* canvas でノーツを描くとき(2026-09-07)。canvas はノーツと同じ層に置く。
+       マスモンの絵だけは DOM の要素のまま canvas の上へ重ね、tick が transform で動かす(絵の染色を触らないため)。 */
+    [data-rhythm-note-canvas]{position:absolute;left:0;top:0;pointer-events:none;z-index:5}
+    [data-rhythm-canvas-face]{position:absolute;left:0;top:0;width:42px;height:42px;pointer-events:none;z-index:6;will-change:transform}
+    [data-rhythm-canvas-face]>[data-rhythm-canvas-face-art]{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:scale(var(--rhythm-face-scale,1));filter:drop-shadow(0 1px 2px rgba(0,0,0,.58)) drop-shadow(0 0 4px rgba(253,224,71,.55))}
+    [data-rhythm-canvas-face][data-rhythm-clear="1"]>[data-rhythm-canvas-face-art]{animation:rhythm-clear-pop .26s ease-out forwards;filter:none}
+    [data-rhythm-canvas-face]>[data-rhythm-canvas-face-art]>*{border:0!important;outline:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;clip-path:none!important}
     [data-rhythm-lane][data-pressed="true"]{background:linear-gradient(180deg,rgba(34,211,238,.10),rgba(34,211,238,.22) 54%,rgba(217,70,239,.30) 100%)!important;box-shadow:inset 0 0 30px rgba(103,232,249,.48),inset 0 -72px 64px rgba(6,182,212,.34),0 0 15px rgba(34,211,238,.24)!important;border:0!important;filter:none!important}
     /* --rhythm-note-depth-brightness は落下中まいフレーム書き換えている。そこへ40msの
        transitionを付けると、目標値が毎フレーム置き換わるので補間はほぼ働かず、
@@ -11763,6 +11770,337 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
     endBar.style.setProperty('--rhythm-end-depth-scale',(0.52+end.scale*.48).toFixed(3));
   }
 };
+
+// ===================== ノーツを canvas 1枚へ描く(2026-09-07) =====================
+// 演奏中の発熱対策。DOM のまま軽くする案(幅を scaleX・帯を scaleY・明るさを影の層)は iPhone(WebKit)で
+// 逆効果だったため撤回し、ノーツ・HOLD帯・SLIDE帯・終わりの横棒・矢印・モンスターノーツの光を、
+// プレイエリアと同じ大きさの canvas 1枚へ毎フレーム描き直す。
+// ブラウザ側の「どこが変わったか」の調べ直し・要素ごとの塗り直し・レイヤーの合成が、canvas 1枚ぶんで済む。
+//
+// 変わらないもの: 判定・入力・スコア・譜面・投影(rhythmProjectLane など)。座標は DOM 版と同じ式から出す。
+// 変わるもの: ぼかし(box-shadow / drop-shadow)は毎フレーム計算せず、種類ごとに一度だけ描いた画像(3分割)を貼る。
+// マスモンの絵(染色済み・透明部分あり)だけは DOM の要素のまま、canvas の上へ重ねて transform で動かす。
+// 公開フラグ RELEASE_FLAGS.rhythmCanvasNotes と、デバッグ画面の上書き(mh_rhythm_canvas_v1)で DOM 版と切り替える。
+const RHYTHM_CANVAS_KEY='mh_rhythm_canvas_v1';
+const rhythmCanvasNotesPreference=()=>{try{if(typeof localStorage==='undefined')return '';const value=localStorage.getItem(RHYTHM_CANVAS_KEY);return value==='canvas'||value==='dom'?value:'';}catch{return '';}};
+const rhythmCanvasNotesSetPreference=value=>{
+  const next=value==='canvas'||value==='dom'?value:'';
+  try{if(typeof localStorage!=='undefined'){if(next)localStorage.setItem(RHYTHM_CANVAS_KEY,next);else localStorage.removeItem(RHYTHM_CANVAS_KEY);}}catch{}
+  return next;
+};
+// 公開フラグが立っていれば canvas。デバッグ画面の上書き('canvas' / 'dom')があればそちらが勝つ(実機で交互に比べるため)
+const rhythmCanvasNotesActive=flagOn=>{const pref=rhythmCanvasNotesPreference();if(pref==='canvas')return true;if(pref==='dom')return false;return flagOn===true;};
+
+// SLIDE の帯の区切り。rhythmSlideSegmentPolygons と同じ手順で、文字列ではなく数値で返す(canvas 用)。
+const rhythmSlideSegmentQuads=(note,chartNowMs,travel,rect,noteHalfHeight=Number(travel.noteHalfHeight)||0)=>{
+  const source=note?._rhythmSlideRenderPoints||rhythmSlidePoints(note),start=Number(source[0]?.timeMs)||0,end=Number(source[source.length-1]?.timeMs)||start;
+  const now=Math.max(start,Math.min(end,Number(chartNowMs)||start));
+  const project=point=>{
+    const progress=1-(Number(point.timeMs)-Number(travel.visualTime))/Number(travel.travelMs),y=Number(travel.spawnY)+rhythmProjectTravelProgress(progress)*Number(travel.travelPx)+noteHalfHeight,yRatio=rhythmClamp01(y/rect.height),span=rhythmProjectSlideSpan(point.lane,note,yRatio,point.timeMs),half=rect.width*span.width*RHYTHM_BODY_WIDTH_RATIO/2;
+    return {y,left:rect.width*span.center-half,right:rect.width*span.center+half};
+  };
+  let firstIndex=0;
+  while(firstIndex<source.length&&Number(source[firstIndex].timeMs)<=now)firstIndex++;
+  const quads=[];
+  const startPoint=now>start?{timeMs:now,lane:rhythmSlideExpectedLane(note,now)}:source[0];
+  let fromPoint=startPoint,from=project(startPoint);
+  for(let index=Math.max(1,firstIndex);index<source.length;index++){
+    const toPoint=source[index],fromTime=Number(fromPoint.timeMs),toTime=Number(toPoint.timeMs),spanMs=toTime-fromTime;
+    for(let step=1;step<=RHYTHM_SLIDE_SEGMENT_STEPS;step++){
+      const ratio=step/RHYTHM_SLIDE_SEGMENT_STEPS,timeMs=fromTime+spanMs*ratio;
+      const to=step===RHYTHM_SLIDE_SEGMENT_STEPS?project(toPoint):project({timeMs,lane:rhythmSlideExpectedLane(note,timeMs)});
+      quads.push({l0:from.left,r0:from.right,y0:from.y,l1:to.left,r1:to.right,y1:to.y});
+      from=to;
+    }
+    fromPoint=toPoint;
+  }
+  return quads;
+};
+
+// ノーツ1個ぶんの「描く座標」(プレイエリア基準の px)。DOM 版 rhythmLayoutNoteVisual と同じ投影・同じ式。
+// 判定には使わない(描くためだけ)。tools/mode/rhythm-canvas-geometry-check.js が投影と突き合わせる。
+//   head: 粒の中心(cx,cy)・幅 w・高さ h(ノーツ要素の高さ)・奥行き scale
+//   band: HOLD 帯の外周(右の縁を上→下、左の縁を下→上)
+//   slide: SLIDE 帯の区切り(四角形の並び)
+//   end:  終わりの横棒の中心・幅・奥行き
+const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=null,slideTravel=null,bodyHeight=0)=>{
+  const lane=Number(visualLane),centerY=Number(yPx)+noteHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
+  const chartNowMs=slideTravel?.chartNowMs;
+  const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,chartNowMs);
+  const projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO));
+  const out={centerY,yRatio,scale:projected.scale,head:{cx:rect.width*projected.center,cy:centerY,w:width,h:noteHeight},band:null,slide:null,end:null};
+  const height=Math.max(0,Number(bodyHeight)||0);
+  if(rhythmNoteIsSlide(note)){
+    if(slideTravel)out.slide=rhythmSlideSegmentQuads(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
+  }else if(note.type==='HOLD'&&height>0){
+    // 帯の上端(画面外でも可)から下端までを一定間隔でサンプルし、投影の曲線へ沿わせる(DOM 版の clipPath と同じ点)
+    const bodyTopY=centerY-height;
+    const variableHold=rhythmNoteHasVariableSpan(note),bodyRatio=variableHold?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO;
+    const holdAnchors=variableHold&&rhythmNoteHasHoldPoints(note)&&slideTravel&&Number(slideTravel.travelMs)>0
+      ?(()=>{
+        const travelMs=Number(slideTravel.travelMs),visualTime=Number(slideTravel.visualTime);
+        const yAtMs=timeMs=>Number(slideTravel.spawnY)+rhythmProjectTravelProgress(1-(Number(timeMs)-visualTime)/travelMs)*Number(slideTravel.travelPx)+noteHeight/2;
+        const headMs=Math.max(Number(note.timeMs)||0,Number(slideTravel.chartNowMs)||0),endMs=rhythmReleaseTargetMs(note);
+        const times=[endMs,...note.holdPoints.map(point=>Number(point.timeMs)),headMs]
+          .filter(timeMs=>Number.isFinite(timeMs)&&timeMs>=Math.min(headMs,endMs)&&timeMs<=Math.max(headMs,endMs));
+        const anchors=times.map(timeMs=>({ratio:rhythmClamp01((yAtMs(timeMs)-bodyTopY)/height),span:rhythmHoldSpanAt(note,timeMs)})).sort((a,b)=>a.ratio-b.ratio);
+        return anchors.length>=2?anchors:null;
+      })()
+      :null;
+    const holdSpanAtRatio=ratio=>{
+      if(!holdAnchors)return null;
+      if(ratio<=holdAnchors[0].ratio)return holdAnchors[0].span;
+      for(let index=1;index<holdAnchors.length;index++){
+        const a=holdAnchors[index-1],b=holdAnchors[index];
+        if(ratio<=b.ratio){
+          const gap=b.ratio-a.ratio;
+          if(!(gap>1e-9))return b.span;
+          const p=(ratio-a.ratio)/gap;
+          return {subLane:a.span.subLane+(b.span.subLane-a.span.subLane)*p,subLaneWidth:a.span.subLaneWidth+(b.span.subLaneWidth-a.span.subLaneWidth)*p};
+        }
+      }
+      return holdAnchors[holdAnchors.length-1].span;
+    };
+    const edgeAt=ratio=>{
+      const yRatioAt=rhythmClamp01((bodyTopY+height*ratio)/rect.height);
+      const holdSpan=holdSpanAtRatio(ratio);
+      const span=holdSpan?rhythmProjectSubLaneRange(holdSpan.subLane,holdSpan.subLaneWidth,yRatioAt)
+        :variableHold?rhythmNoteVisualSpan(note,lane,yRatioAt)
+        :rhythmProjectLane(lane,yRatioAt);
+      const half=span.width*bodyRatio/2;
+      return {y:bodyTopY+height*ratio,left:rect.width*(span.center-half),right:rect.width*(span.center+half)};
+    };
+    const topEdgeRatio=(0-bodyTopY)/height;
+    const extraRatios=[
+      ...(topEdgeRatio>1e-6&&topEdgeRatio<1-1e-6?[topEdgeRatio]:[]),
+      ...(holdAnchors?holdAnchors.map(anchor=>anchor.ratio).filter(ratio=>ratio>1e-6&&ratio<1-1e-6):[]),
+    ];
+    const bodyRatios=extraRatios.length?[...rhythmProjectionEdgeRatios(),...extraRatios].sort((a,b)=>a-b):rhythmProjectionEdgeRatios();
+    out.band=bodyRatios.map(edgeAt);
+  }
+  if((note.type==='HOLD'||rhythmNoteIsSlide(note))&&Number.isFinite(Number(releaseYpx))&&releaseYpx!==null){
+    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height);
+    const end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY);
+    out.end={cx:rect.width*end.center,cy:Number(releaseYpx)+noteHeight/2,w:Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO),scale:end.scale};
+  }
+  return out;
+};
+
+// 描画そのもの。色は DOM 版(index.html / Tailwind / rhythm-mode.js の CSS)と同じ値。
+const RHYTHM_CANVAS_RENDERER=(()=>{
+  const HEAD_H=12;          // 粒の高さ(ノーツ要素 20px から inset 4px 0 を引いた値)
+  const GLOW=20;            // 光の画像の余白(px)。いちばん広い光(18px)が収まる
+  const CAP=28;             // 3分割画像の両端の幅(角丸7px + 縁取り + 余白)
+  const MID=8;              // 3分割画像の中央の幅(横に伸ばす)
+  const easeOut=t=>1-(1-t)*(1-t);
+  const HEADS={
+    TAP:    {radius:5,gradient:['#fde68a','#d946ef'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',glow:[[12,'rgba(217,70,239,.32)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
+    HOLD:   {radius:5,gradient:['#ecfeff','#22d3ee'],border:'rgba(207,250,254,.86)',inset:'rgba(255,255,255,.72)',glow:[[13,'rgba(34,211,238,.42)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
+    FLICK:  {radius:5,gradient:['#f0fdf4',['#86efac',.34],['#22c55e',.62],'#15803d'],border:'rgba(220,252,231,.98)',inset:'rgba(255,255,255,.95)',glow:[[10,'rgba(34,197,94,.92)'],[18,'rgba(21,128,61,.62)'],[6,'rgba(255,255,255,.20)']]},
+    SLIDE:  {radius:5,gradient:['#ddd6fe',['#a855f7',.58],'#6d28d9'],border:'rgba(221,214,254,.95)',inset:'rgba(255,255,255,.82)',glow:[[16,'rgba(168,85,247,.64)'],[6,'rgba(255,255,255,.20)'],[10,'rgba(217,70,239,.18)']]},
+    MONSTER:{radius:5,gradient:['#fef3c7','#f59e0b'],border:'rgba(255,255,255,.72)',inset:'rgba(255,255,255,.58)',ring:'#fde68a',glow:[[12,'rgba(217,70,239,.32)'],[5,'rgba(253,224,71,.72)'],[10,'rgba(217,70,239,.42)'],[14,'rgba(34,211,238,.24)']]},
+    FAILED: {radius:5,gradient:['#94a3b8','#475569'],border:'rgba(148,163,184,.6)',inset:'rgba(255,255,255,.3)',glow:[]},
+  };
+  let canvas=null,ctx=null,dpr=1,cssW=0,cssH=0,frameNow=0,effect='FULL',lightweight=false,sizeScale=1,drawn=0;
+  const sprites=new Map();
+  const roundRectPath=(c,x,y,w,h,r)=>{
+    const rr=Math.max(0,Math.min(r,w/2,h/2));
+    c.beginPath();c.moveTo(x+rr,y);c.lineTo(x+w-rr,y);c.arcTo(x+w,y,x+w,y+rr,rr);c.lineTo(x+w,y+h-rr);c.arcTo(x+w,y+h,x+w-rr,y+h,rr);
+    c.lineTo(x+rr,y+h);c.arcTo(x,y+h,x,y+h-rr,rr);c.lineTo(x,y+rr);c.arcTo(x,y,x+rr,y,rr);c.closePath();
+  };
+  const makeSpriteCanvas=(w,h)=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w*dpr));c.height=Math.max(1,Math.ceil(h*dpr));const g=c.getContext('2d');g.scale(dpr,dpr);return {canvas:c,ctx:g,w,h};};
+  // 光の画像(3分割)。角丸の四角の外側へ box-shadow 相当のぼかしを一度だけ描く。
+  // 高さは HEAD_H(+余白)で固定し、貼るときに奥行きぶんだけ縦へ伸縮する。
+  const glowSprite=(key,radius,glows,outsetX=0,outsetY=0)=>{
+    const id=`glow:${key}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const w=CAP*2+MID,h=HEAD_H+GLOW*2,s=makeSpriteCanvas(w,h);
+    const c=s.ctx;
+    // 形は余白(GLOW)の内側に置く。貼るときは「粒の左端 - GLOW」から貼るので、形が粒にぴったり重なる
+    const shape=()=>roundRectPath(c,GLOW-outsetX,GLOW-outsetY,w-GLOW*2+outsetX*2,HEAD_H+outsetY*2,radius+outsetX);
+    for(const [blur,color] of glows){
+      c.save();c.shadowBlur=blur;c.shadowColor=color;c.fillStyle=color;shape();c.fill();c.restore();
+    }
+    // 形の中身は消して、外へにじむ光だけを残す(粒の本体は毎フレーム別に描く)
+    c.save();c.globalCompositeOperation='destination-out';c.fillStyle='#000';shape();c.fill();c.restore();
+    const sprite={...s,capL:CAP,capR:CAP,mid:MID,glow:GLOW};sprites.set(id,sprite);return sprite;
+  };
+  // 3分割画像を、幅 w・高さ h(粒の高さ)の箱へ貼る。両端は幅そのまま、中央だけ横へ伸ばす。縦は h/HEAD_H で伸縮。
+  const draw3Slice=(sprite,cx,cy,w,h,alpha=1)=>{
+    const sy=h/HEAD_H,marginY=sprite.glow*sy,top=cy-h/2-marginY,height=h+marginY*2;
+    const left=cx-w/2-sprite.glow,right=cx+w/2+sprite.glow,total=right-left;
+    const capW=sprite.capL,mid=sprite.mid,srcH=sprite.h;
+    ctx.globalAlpha=alpha;
+    if(total<=capW*2){
+      // 粒がとても細いときは全体を横へ縮める
+      ctx.drawImage(sprite.canvas,0,0,sprite.w*dpr,srcH*dpr,left,top,total,height);
+    }else{
+      ctx.drawImage(sprite.canvas,0,0,capW*dpr,srcH*dpr,left,top,capW,height);
+      ctx.drawImage(sprite.canvas,capW*dpr,0,mid*dpr,srcH*dpr,left+capW,top,total-capW*2,height);
+      ctx.drawImage(sprite.canvas,(capW+mid)*dpr,0,capW*dpr,srcH*dpr,right-capW,top,capW,height);
+    }
+    ctx.globalAlpha=1;
+  };
+  // 矢印(FLICK / 終点フリック)。三角に緑の光。
+  const arrowSprite=(key,w,h,glows,gradientStops)=>{
+    const id=`arrow:${key}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const margin=14,s=makeSpriteCanvas(w+margin*2,h+margin*2),c=s.ctx;
+    const tri=()=>{c.beginPath();c.moveTo(margin+w/2,margin);c.lineTo(margin+w,margin+h);c.lineTo(margin,margin+h);c.closePath();};
+    for(const [blur,color] of glows){c.save();c.shadowBlur=blur;c.shadowColor=color;c.fillStyle=color;tri();c.fill();c.restore();}
+    const g=c.createLinearGradient(0,margin,0,margin+h);gradientStops.forEach(([offset,color])=>g.addColorStop(offset,color));
+    c.fillStyle=g;tri();c.fill();
+    const sprite={...s,margin,tw:w,th:h};sprites.set(id,sprite);return sprite;
+  };
+  // モンスターノーツの外周の光(::before / ::after 相当)。粒の箱に対する内外の差(dx,dy)で描く。
+  const auraSprite=(key,dx,dy,radius,border,glows,dots)=>{
+    const id=`aura:${key}:${dpr}`;
+    if(sprites.has(id))return sprites.get(id);
+    const w=CAP*2+MID,h=HEAD_H+GLOW*2,s=makeSpriteCanvas(w,h),c=s.ctx;
+    const x=GLOW-dx,y=GLOW-dy,bw=w-GLOW*2+dx*2,bh=HEAD_H+dy*2;
+    for(const [blur,color] of glows){c.save();c.shadowBlur=blur;c.shadowColor=color;c.strokeStyle=color;c.lineWidth=1;roundRectPath(c,x,y,bw,bh,radius);c.stroke();c.restore();}
+    c.strokeStyle=border;c.lineWidth=1;roundRectPath(c,x+.5,y+.5,bw-1,bh-1,radius);c.stroke();
+    (dots||[]).forEach(([px,py,color])=>{c.fillStyle=color;c.beginPath();c.arc(x+bw*px,y+bh*py,1,0,Math.PI*2);c.fill();});
+    const sprite={...s,capL:CAP,capR:CAP,mid:MID,glow:GLOW};sprites.set(id,sprite);return sprite;
+  };
+  const headStyle=(note,failed,monster)=>failed?HEADS.FAILED:monster?HEADS.MONSTER:HEADS[note.type]||HEADS.TAP;
+  const fillGradient=(x,y,h,stops)=>{
+    const g=ctx.createLinearGradient(0,y,0,y+h);
+    stops.forEach((stop,index)=>{const offset=Array.isArray(stop)?stop[1]:index/(stops.length-1);const color=Array.isArray(stop)?stop[0]:stop;g.addColorStop(offset,color);});
+    return g;
+  };
+  const drawHead=(note,geo,opts)=>{
+    const {failed,monster,wide,brightness,depthScale,alpha,pop,pressed}=opts;
+    const style=headStyle(note,failed,monster);
+    const sizeMul=sizeScale*(pop?1+1.1*easeOut(pop):1);
+    const w=geo.head.w*sizeMul,h=HEAD_H*depthScale*sizeMul,cx=geo.head.cx,cy=geo.head.cy,radius=(wide?7:style.radius)*sizeMul;
+    const x=cx-w/2,y=cy-h/2;
+    ctx.globalAlpha=alpha;
+    if(style.glow.length&&!failed)draw3Slice(glowSprite(monster?'MONSTER':note.type,style.radius,style.glow),cx,cy,w,h,alpha);
+    if(monster&&!failed){
+      // 外側の光(::after)は 1.15 秒で薄く・濃くを繰り返す(opacity だけ)。内側(::before)は固定
+      const pulse=.40+(.82-.40)*(0.5-0.5*Math.cos((frameNow/1150)*Math.PI));
+      draw3Slice(auraSprite('outer',6,4,9999,'rgba(216,180,254,.62)',[[8,'rgba(217,70,239,.45)'],[12,'rgba(34,211,238,.28)']],[[.08,.45,'rgba(255,255,255,.85)'],[.93,.58,'rgba(103,232,249,.85)'],[.20,.88,'rgba(253,224,71,.8)'],[.78,.08,'rgba(232,121,249,.82)']]),cx,cy,w,h,alpha*pulse);
+      draw3Slice(auraSprite('inner',1,-2,9999,'rgba(255,250,205,.98)',[[5,'rgba(253,224,71,.92)'],[9,'rgba(232,121,249,.58)'],[13,'rgba(34,211,238,.34)']]),cx,cy,w,h,alpha);
+    }
+    ctx.globalAlpha=alpha;
+    if(style.ring){ctx.lineWidth=2*sizeMul;ctx.strokeStyle=style.ring;roundRectPath(ctx,x-1*sizeMul,y-1*sizeMul,w+2*sizeMul,h+2*sizeMul,radius+1);ctx.stroke();}
+    roundRectPath(ctx,x,y,w,h,radius);
+    ctx.fillStyle=fillGradient(x,y,h,style.gradient);ctx.fill();
+    ctx.lineWidth=1;ctx.strokeStyle=style.border;ctx.stroke();
+    // 上端の白い筋(inset 0 1px 0)
+    ctx.fillStyle=style.inset;ctx.fillRect(x+radius/2,y+1,Math.max(0,w-radius),1);
+    if(wide&&!monster){
+      const bar=ctx.createLinearGradient(0,y,0,y+h);bar.addColorStop(0,'rgba(255,255,255,.95)');bar.addColorStop(1,'rgba(255,255,255,.55)');
+      ctx.fillStyle=bar;ctx.fillRect(x+1,y+1,3,h-2);ctx.fillRect(x+w-4,y+1,3,h-2);
+    }
+    if(note.type==='HOLD'&&!monster){ctx.fillStyle='rgba(8,47,73,.55)';ctx.fillRect(x+w*.24,cy-1,w*.52,2);}
+    // 奥ほど暗い(filter:brightness 相当。不透明な粒の上では黒を (1-明るさ) の濃さで重ねると同じ色になる)
+    if(brightness<1){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
+    if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();}
+    if(note.type==='FLICK'&&!failed){
+      const sprite=arrowSprite('flick',26,19,[[5,'rgba(34,197,94,.95)'],[11,'rgba(21,128,61,.7)'],[2,'rgba(2,6,23,.9)']],[[0,'#ffffff'],[.38,'#bbf7d0'],[1,'#22c55e']]);
+      const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
+      ctx.drawImage(sprite.canvas,cx-aw/2,y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale,aw,ah);
+    }
+    ctx.globalAlpha=1;
+  };
+  const drawBand=(geo,opts)=>{
+    const {failed,alpha,pressed}=opts,band=geo.band;
+    if(!band||band.length<2)return;
+    const top=band[0].y,bottom=band[band.length-1].y;
+    ctx.globalAlpha=alpha;
+    ctx.beginPath();
+    band.forEach((edge,index)=>{if(index===0)ctx.moveTo(edge.right,edge.y);else ctx.lineTo(edge.right,edge.y);});
+    for(let index=band.length-1;index>=0;index--)ctx.lineTo(band[index].left,band[index].y);
+    ctx.closePath();
+    // 帯のまわりの光(ノーツ全体の drop-shadow 相当)は、外周の太い半透明の線で出す
+    if(!failed&&effect!=='MINIMAL'&&!lightweight){ctx.lineWidth=5;ctx.strokeStyle='rgba(180,240,255,.16)';ctx.lineJoin='round';ctx.stroke();}
+    const g=ctx.createLinearGradient(0,bottom,0,top);
+    if(failed){g.addColorStop(0,'rgba(120,130,145,.9)');g.addColorStop(1,'rgba(150,160,175,.7)');}
+    else{g.addColorStop(0,'rgba(6,182,212,.9)');g.addColorStop(1,'rgba(165,243,252,.7)');}
+    ctx.fillStyle=g;ctx.fill();
+    if(pressed&&!failed){ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();}
+    ctx.globalAlpha=1;
+  };
+  const drawSlide=(geo,opts)=>{
+    const {failed,alpha}=opts,quads=geo.slide;
+    if(!quads||!quads.length)return;
+    ctx.globalAlpha=alpha;
+    if(!failed&&effect!=='MINIMAL'&&!lightweight){
+      // ぼかし(drop-shadow 5px)の代わりに、外周をなぞる太い半透明の線
+      ctx.beginPath();
+      ctx.moveTo(quads[0].r0,quads[0].y0);
+      quads.forEach(q=>ctx.lineTo(q.r1,q.y1));
+      for(let index=quads.length-1;index>=0;index--)ctx.lineTo(quads[index].l1,quads[index].y1);
+      ctx.lineTo(quads[0].l0,quads[0].y0);ctx.closePath();
+      ctx.lineWidth=6;ctx.lineJoin='round';ctx.strokeStyle='rgba(168,85,247,.16)';ctx.stroke();
+    }
+    ctx.fillStyle=failed?'rgba(120,120,135,.48)':'rgba(168,85,247,.48)';
+    ctx.strokeStyle=failed?'rgba(190,190,200,.5)':'rgba(233,213,255,.56)';ctx.lineWidth=1;
+    quads.forEach(q=>{ctx.beginPath();ctx.moveTo(q.l0,q.y0);ctx.lineTo(q.r0,q.y0);ctx.lineTo(q.r1,q.y1);ctx.lineTo(q.l1,q.y1);ctx.closePath();ctx.fill();ctx.stroke();});
+    ctx.globalAlpha=1;
+  };
+  const drawEndBar=(note,geo,opts)=>{
+    const {failed,alpha}=opts,end=geo.end;
+    if(!end)return;
+    // DOM 版: top = releaseY + noteH/2 - 4、高さ 8px を scaleY(0.52+0.48*奥行き) で中心基準に伸縮 → 中心は end.cy のまま
+    const flick=note.endFlick===true,h=8*(0.52+end.scale*.48),w=end.w,x=end.cx-w/2,top=end.cy-h/2;
+    ctx.globalAlpha=alpha;
+    if(!failed&&effect!=='MINIMAL'&&!lightweight){
+      const sprite=glowSprite(flick?'endFlick':'end',4,effect==='LOW'?[[7,'#67e8f9']]:[[10,'#67e8f9'],[18,'#d946ef']]);
+      draw3Slice(sprite,end.cx,end.cy,w,h,alpha);
+    }
+    roundRectPath(ctx,x,top,w,h,h/2);
+    const g=ctx.createLinearGradient(x,0,x+w,0);
+    if(failed){g.addColorStop(0,'#94a3b8');g.addColorStop(.5,'#e2e8f0');g.addColorStop(1,'#94a3b8');}
+    else if(flick){g.addColorStop(0,'#22c55e');g.addColorStop(.5,'#f0fdf4');g.addColorStop(1,'#22c55e');}
+    else{g.addColorStop(0,'#e879f9');g.addColorStop(.5,'#cffafe');g.addColorStop(1,'#e879f9');}
+    ctx.fillStyle=g;ctx.fill();
+    ctx.lineWidth=1;ctx.strokeStyle=failed?'rgba(148,163,184,.6)':flick?'rgba(220,252,231,.98)':'rgba(255,255,255,.8)';ctx.stroke();
+    if(flick&&!failed){
+      const sprite=arrowSprite('endFlick',24,17,[[4,'rgba(34,197,94,.95)'],[2,'rgba(2,6,23,.85)']],[[0,'#f0fdf4'],[.6,'#4ade80'],[1,'#16a34a']]);
+      const aw=sprite.tw+sprite.margin*2,ah=sprite.th+sprite.margin*2;
+      ctx.drawImage(sprite.canvas,end.cx-aw/2,top-2-(sprite.th+sprite.margin),aw,ah);
+    }
+    ctx.globalAlpha=1;
+  };
+  return {
+    attach(next){canvas=next||null;ctx=canvas?canvas.getContext('2d'):null;},
+    release(){canvas=null;ctx=null;sprites.clear();},
+    get drawn(){return drawn;},
+    // 毎フレームの最初に呼ぶ。プレイエリアの大きさ・画素密度が変わっていたら canvas を作り直し、全面を消す
+    begin(rect,options={}){
+      if(!canvas||!ctx||!rect||!(rect.width>0&&rect.height>0))return false;
+      const nextDpr=Math.min(Number(options.dpr)||(typeof devicePixelRatio==='number'?devicePixelRatio:1)||1,options.lightweight?2:3);
+      if(nextDpr!==dpr){dpr=nextDpr;sprites.clear();}
+      if(cssW!==rect.width||cssH!==rect.height||canvas.width!==Math.round(rect.width*dpr)||canvas.height!==Math.round(rect.height*dpr)){
+        cssW=rect.width;cssH=rect.height;
+        canvas.width=Math.round(cssW*dpr);canvas.height=Math.round(cssH*dpr);
+        canvas.style.width=`${cssW}px`;canvas.style.height=`${cssH}px`;
+      }
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.clearRect(0,0,cssW,cssH);
+      frameNow=Number(options.nowMs)||0;effect=options.effect||'FULL';lightweight=!!options.lightweight;sizeScale=Number(options.sizeScale)||1;drawn=0;
+      return true;
+    },
+    // ノーツ1個。geo は rhythmNoteCanvasGeometry の結果。opts: {failed,monster,wide,pressed,alpha,pop(0..1|null),depthScale,brightness,hideBody}
+    drawNote(note,geo,opts){
+      if(!ctx||!geo)return;
+      drawn++;
+      const o={failed:false,monster:false,wide:false,pressed:false,alpha:1,pop:null,depthScale:1,brightness:1,...opts};
+      if(o.pop===null){
+        if(geo.band)drawBand(geo,o);
+        if(geo.slide)drawSlide(geo,o);
+        drawEndBar(note,geo,o);
+      }
+      const headOpts=o.pop===null?o:{...o,alpha:o.alpha*.95*(1-easeOut(o.pop)),brightness:1};
+      drawHead(note,geo,headOpts);
+    },
+    end(){},
+    clear(){if(ctx&&cssW&&cssH){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,cssW,cssH);}},
+  };
+})();
 
 // レーンのDOMが入れ替わった時だけ静的形状を設定する。ノーツはプレイ本体の1本のrAFから直接配置する。
 const installRhythmPerspectiveNoteVisuals=()=>{

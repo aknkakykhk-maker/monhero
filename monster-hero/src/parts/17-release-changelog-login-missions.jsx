@@ -16,7 +16,11 @@ const RHYTHM_MODE_PUBLIC_RELEASE = true;
 // これが true になると、ヘルプの項目・更新履歴・みゅあの告知・画面のなかの使い方案内が
 // 同時に出る(片方だけ先に出ることが起きないよう、4つとも同じフラグで出入りする)。
 const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
-const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE };
+// モンヒロビートのノーツを canvas 1枚へ描く方式(発熱対策・docs/spec/RHYTHM_MODE.md)。
+// false のあいだは従来の要素(DOM)で描き、デバッグ画面の「ノーツの描き方」で上書きしたときだけ canvas になる。
+// 実機で「冷ました状態で最初の1分・交互に」比べて問題が無ければ true にする。true にすると更新履歴・ヘルプの項目が出る。
+const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = false;
+const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
 // 遊べているのに準備中の項目が並ぶ(ヘルプのモンヒロビートで実際にそうなっていた・2026-09-06)。
