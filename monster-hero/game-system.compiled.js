@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4354e8f25b7815da
+// source-sha256: fc8391071fefadf3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b4446edb8023e4a7
+// generated-sha256: 07241a8d32df4ce8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 23:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 23:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18966,8 +18966,12 @@ const RhythmTapTest = ({
             face._rhythmFaceShown = false;
           }
         };
+        // 取り終えたノーツは、弾ける演出が済んでからマスモンの絵を隠し、「片付け済み」の印を付ける。
+        // 走査の先頭(scanFrom)はこの印まで進めない(DOM 版が要素の非表示を待つのと同じ)。
+        // これが無いと取った瞬間に走査から外れ、絵が隠れずに判定ラインへ残った(2026-09-07・実機「canvas 版でマスモンが残る」)
         if (note.done && !failedTrail && !clearFlash) {
           hideFace();
+          note._rhythmCanvasSettled = true;
           return;
         }
         const progress = 1 - (note.timeMs - visualTime) / travelMs,
@@ -19188,7 +19192,7 @@ const RhythmTapTest = ({
         // 判定が終わっていることが先頭を進める条件。表示の後始末(非表示)が残っているあいだは進めない。
         // 要素そのものが無いノーツは隠す対象が無いので、判定さえ終わっていれば進めてよい
         // (要素が無いと永久に先頭が止まり、絞り込みがまるごと効かなくなっていた)。
-        if (!(head.done && (headEl ? headEl._rhythmHidden === true : true))) break;
+        if (!(head.done && (canvasNotes ? head._rhythmCanvasSettled === true : headEl ? headEl._rhythmHidden === true : true))) break;
         scanFrom++;
       }
       run.scanFrom = scanFrom;

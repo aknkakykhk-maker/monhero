@@ -243,6 +243,12 @@ check('FLICKの矢印は疑似要素ではなく [data-rhythm-flick-arrow] と�
   &&gameSrc.includes("note.type==='FLICK'&&<i data-rhythm-flick-arrow aria-hidden=\"true\"/>")
   &&!/\[data-note-type="FLICK"\][^\n]*::after\{content:"▲"/.test(data));
 
+// 2026-09-07・実機「canvas 版でモンスターノーツを押したらマスモンが残る」。canvas 版は要素が無いので、
+// 取った瞬間に走査の先頭が進んでしまい、絵を隠す処理と弾ける演出が一度も走らなかった。
+// 片付け済みの印(_rhythmCanvasSettled)まで走査を続ける。
+check('canvas 版は取り終えたノーツを片付ける(絵を隠す・弾け終わる)まで走査の先頭を進めない',
+  gameSrc.includes("if(note.done&&!failedTrail&&!clearFlash){hideFace();note._rhythmCanvasSettled=true;return;}")
+  &&gameSrc.includes("canvasNotes?head._rhythmCanvasSettled===true:(headEl?headEl._rhythmHidden===true:true)"));
 check('失敗表示フラグをdatasetから毎フレーム読み直さない',
   gameSrc.includes('el._rhythmFailedFlag!==failedFlag')
   &&!gameSrc.includes('el.dataset.rhythmFailed!==failedFlag'));
