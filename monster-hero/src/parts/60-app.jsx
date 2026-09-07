@@ -2219,19 +2219,23 @@ function MonsterHeroGame() {
     if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
     return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty));
   };
-  // 配るのは経験値とダイヤだけ。絆・マスモン・ミッション・限界突破は動かさない
-  // (演奏で増えるのは「周回を回した成果」に限る、という線引き。
-  //  報酬を配る道を増やしすぎないため)。
-  // ★1周ぶんの値は awardRunRewards とまったく同じ関数・同じ倍率を通すので、
+  // ★配るものは「実際に1周クリアしたとき」とそろえる。
+  //   経験値とダイヤだけにしていたころは、演奏するより裏で回したほうが得になっていた
+  //   (2026-09-07・ユーザー指摘「基本は同じにしないと無限周回のほうがいいみたいにならない？」)。
+  //   ブリーダー経験値・ダイヤ・マスモンの絆経験値・虹のプシュケー・クリア回数・
+  //   ミッション・助手の絆まで、1周クリアと同じものを周回数ぶん入れる。
+  // ★値はどれも awardRunRewards / awardClearPsyche とまったく同じ関数・同じ倍率を通すので、
   //   「実際に1周勝ったとき」と必ず一致する。
-  const awardRhythmPlayRunLoops = (loops) => {
+  // ★触らないのは記録(最高スコア・最高WAVE)だけ。演奏にはスコアが無く、
+  //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
+  const awardRhythmPlayRunLoops = async (loops) => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
     const { goldMult, xpMult } = runRewardMultipliers();
-    const oneXp = applyQuickXpPolicy(xpForWavesClearedInMode(10, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
-    const oneGold = applyQuickDiamondPolicy(goldForWavesClearedInMode(10, goldMult, runMode), runMode, quickRewardPolicyRunRef.current);
+    const policy = quickRewardPolicyRunRef.current;
+    // ---- ブリーダー経験値 ----
+    const oneXp = applyQuickXpPolicy(xpForWavesClearedInMode(10, xpMult, runMode), runMode, policy);
     const xpGain = Math.floor(oneXp * count);
-    const goldGain = Math.floor(oneGold * count);
     if (xpGain > 0) {
       const before = levelInfo(breederXp);
       const nextXp = breederXp + xpGain;
@@ -2244,15 +2248,60 @@ function MonsterHeroGame() {
         storeSet('mh_breeder_points_granted', Math.max(0, after.level - 1), false);
       }
     }
+    // ---- ダイヤ ----
+    const oneGold = applyQuickDiamondPolicy(goldForWavesClearedInMode(10, goldMult, runMode), runMode, policy);
+    const goldGain = Math.floor(oneGold * count);
     if (goldGain > 0) {
       const nextGold = gold + goldGain;
       setGold(nextGold);
       storeSet('mh_gold', nextGold, false);
     }
+    // ---- マスモンの絆経験値 ----
+    // 配る相手の決め方(勇者=1 / 参加した供モン=1/2 / 控え=1/4)も、
+    // AUTO∞のときの上限(ブリーダーLv)も、1周クリアとまったく同じものを通す
+    const oneBond = applyQuickXpPolicy(bondXpForWavesClearedInMode(10, xpMult, runMode), runMode, policy);
+    const bondGain = Math.floor(oneBond * count);
+    const bondAwards = bondGain > 0 ? buildRunBondAwards({
+      gain: bondGain,
+      heroMasuId: mainHero?.masuId,
+      participantMasuIds: slots.filter(s => s?.masuId).map(s => s.masuId),
+      monsterRosterIds,
+      masuMons,
+    }) : [];
+    if (bondAwards.length > 0) {
+      const cap = autoRepeatRef.current ? levelInfo(breederXp).level : null;
+      const awardByMasuId = new Map(bondAwards.map(award => [String(award.masuId), award]));
+      const next = (masuMonsRef.current || masuMons).map(m => {
+        const award = awardByMasuId.get(String(m.id));
+        if (!award) return m;
+        return applyBondXpGain(m, award.gain, cap).masu;
+      });
+      masuMonsRef.current = next;
+      setMasuMons(next);
+      await storeSet('mh_masu_mons', next, false);
+      // 次の周が終わったときの限界突破が、この演奏で育った子も見られるようにする
+      autoRepeatBondAwardMasuIdsRef.current = autoRepeatRef.current ? bondAwards.map(award => award.masuId) : [];
+    }
+    // ---- 虹のプシュケー ----
+    // 難易度ごとの個数(CLEAR_PSYCHE_REWARD)と報酬方針は awardClearPsyche と同じものを通す
+    const onePsyche = applyQuickPsychePolicy(clearPsycheReward(difficulty), runMode, policy);
+    const psycheGain = Math.max(0, Math.floor(onePsyche * count));
+    if (psycheGain > 0) {
+      const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID) + psycheGain };
+      ownedItemsRef.current = nextItems;
+      setOwnedItems(nextItems);
+      await storeSet('mh_owned_items', nextItems, false);
+    }
+    // ---- クリア回数・ミッション・助手の絆 ----
+    // 記録(最高スコア・最高WAVE)は触らない。演奏にはスコアが無いため
+    const nextQuick = (quickClearCounts[difficulty] || 0) + count;
+    setQuickClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextQuick) }));
+    await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
+    for (let i = 0; i < count; i++) { await saveMissionProgress('quickClear'); addAssistantBond('quickClear'); }
     // 帯の数字も、実際に配った値をそのまま足す(2か所で数えない)
     addQuickRunProgressRewards(xpGain, goldGain);
     for (let i = 0; i < count; i++) countQuickRunLoop();
-    return { loops: count, xp: xpGain, gold: goldGain };
+    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
@@ -10362,9 +10411,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
           if(rhythmPlay.from!=='tutorial'){
             const loops=rhythmPlayLoopsFor(rhythmPlay.song,rhythmPlay.difficulty);
-            const awarded=loops>0?awardRhythmPlayRunLoops(loops):null;
+            const awarded=loops>0?await awardRhythmPlayRunLoops(loops):null;
             if(awarded){
               setRhythmPlayRunAward(awarded);
+              // 限界突破も、通常の周回が終わったときと同じように走らせる
+              // (ここを抜かすと「演奏だけしていると限界突破されない」差が出る)
+              try{await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);}catch(_){}
               // その周は「クリアした」ことにして、次の周から始める
               // (ユーザー提案「5周目クリア扱いになって無限周回は6周目から始まる」)。
               // 始められなかったとき(編成が失われたなど)は、いまのランをそのまま続ける
@@ -10458,7 +10510,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="flex justify-between gap-2"><dt className="text-slate-400">ダイヤ</dt><dd className="font-black text-amber-200">+{Math.floor(quickRunProgress.gold+pending.gold).toLocaleString()}</dd></div>
                   {(pending.xp>0||pending.gold>0)&&<div className="col-span-2 text-[9px] text-slate-500">うち今の周のぶん（経験値 +{Math.floor(pending.xp).toLocaleString()} ／ ダイヤ +{Math.floor(pending.gold).toLocaleString()}）は、この周が終わったときに入ります（負けても、途中でやめても、ここまでのぶんは入ります）。</div>}
                   {/* 直前の演奏で入ったぶん(2026-09-07・ユーザー提案) */}
-                  {rhythmPlayRunAward&&<div data-quick-run-play-award className="col-span-2 rounded-lg border border-cyan-400/30 bg-cyan-950/30 px-2 py-1 text-[9px] leading-relaxed text-cyan-100">さっきの演奏で <b className="text-white">{rhythmPlayRunAward.loops}周</b>ぶん入りました（経験値 +{rhythmPlayRunAward.xp.toLocaleString()} ／ ダイヤ +{rhythmPlayRunAward.gold.toLocaleString()}）。曲の長さで決まります。</div>}
+                  {rhythmPlayRunAward&&<div data-quick-run-play-award className="col-span-2 rounded-lg border border-cyan-400/30 bg-cyan-950/30 px-2 py-1 text-[9px] leading-relaxed text-cyan-100">さっきの演奏で <b className="text-white">{rhythmPlayRunAward.loops}周</b>ぶん入りました（経験値 +{rhythmPlayRunAward.xp.toLocaleString()} ／ ダイヤ +{rhythmPlayRunAward.gold.toLocaleString()}{rhythmPlayRunAward.bond>0?` ／ 絆 +${rhythmPlayRunAward.bond.toLocaleString()}`:''}{rhythmPlayRunAward.psyche>0?` ／ 🌈 +${rhythmPlayRunAward.psyche.toLocaleString()}`:''}）。入るものは実際に1周クリアしたときと同じで、数は曲の長さで決まります。</div>}
                   </>;})()}
                   <div className="col-span-2 flex justify-between gap-2"><dt className="text-slate-400">勇者モン</dt><dd className="truncate font-black text-white">{mainHero?.masuName||mainHero?.name||'—'}</dd></div>
                 </dl>
