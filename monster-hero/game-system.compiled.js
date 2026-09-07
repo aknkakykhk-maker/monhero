@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4287ef064ac1c14b
+// source-sha256: 1c85f372d1dcad8c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 44982b9d465dfb34
+// generated-sha256: 4277dc301cf4ca80
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 09:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 09:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22914,6 +22914,15 @@ function MonsterHeroGame() {
   // ★保存しない。リロードで消えてよい値だけをここに置く(設計書 §6「新しい保存キーを作らない」)。
   //   周回そのものの記録は、今までどおり既存の mh_quick_* が正本。
   const [quickRunProgress, setQuickRunProgress] = useState(null);
+  // 直前の演奏で何周ぶん入ったか。帯へ1回だけ出す(保存しない)。
+  // 演奏から抜けた直後の effect からも見るので、同期の控え(ref)も持つ
+  const [rhythmPlayRunAwardState, setRhythmPlayRunAwardState] = useState(null);
+  const rhythmPlayRunAwardRef = useRef(null);
+  const rhythmPlayRunAward = rhythmPlayRunAwardState;
+  const setRhythmPlayRunAward = next => {
+    rhythmPlayRunAwardRef.current = next;
+    setRhythmPlayRunAwardState(next);
+  };
   // 帯をタップして開く詳細と、周回を始められなかったときの一言
   const [quickRunDetailOpen, setQuickRunDetailOpen] = useState(false);
   const [quickRunStartError, setQuickRunStartError] = useState(false);
@@ -23003,6 +23012,73 @@ function MonsterHeroGame() {
     setQuickRunDetailOpen(false);
     setQuickRunStartError(false);
   };
+  // ===== 演奏1曲ぶんを、クイック∞周回の周回クリアとして反映する =====
+  // (2026-09-07・ユーザー提案)
+  //   「演奏に入った段階でのバトルの周分をクリア時のみ少量扱いにする」
+  //   「長い曲が損する形になるから時間で周回クリア数を決める」
+  //
+  // 曲の長さ(その難易度の譜面の長さ)。曲そのものに再生時間の指定があればそちらを優先する。
+  // 見た目の「2分25秒」を出しているのと同じ求め方(rhythmSongLengthLabel)にそろえる
+  const rhythmPlaySongDurationMs = (song, rhythmDifficulty) => {
+    const own = Number(song?.playDurationMs);
+    if (Number.isFinite(own) && own > 0) return own;
+    const ms = Number(song?.difficulties?.[rhythmDifficulty?.id]?.durationMs);
+    return Number.isFinite(ms) && ms > 0 ? ms : 0;
+  };
+  // 今回の演奏が何周ぶんになるか。0 なら何も起きない(いつもどおり)。
+  // ★過去にその難易度をクイックでクリアしていないと 0。
+  //   勝てないほど高い難易度でも演奏さえすればクリア扱い、を防ぐ(ユーザー指示)
+  const rhythmPlayLoopsFor = (song, rhythmDifficulty) => {
+    if (!runStageRef.current || !autoRepeatRef.current || !isQuickMode(runMode)) return 0;
+    if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
+    return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty));
+  };
+  // 配るのは経験値とダイヤだけ。絆・マスモン・ミッション・限界突破は動かさない
+  // (演奏で増えるのは「周回を回した成果」に限る、という線引き。
+  //  報酬を配る道を増やしすぎないため)。
+  // ★1周ぶんの値は awardRunRewards とまったく同じ関数・同じ倍率を通すので、
+  //   「実際に1周勝ったとき」と必ず一致する。
+  const awardRhythmPlayRunLoops = loops => {
+    const count = Math.max(0, Math.trunc(Number(loops) || 0));
+    if (count <= 0) return null;
+    const {
+      goldMult,
+      xpMult
+    } = runRewardMultipliers();
+    const oneXp = applyQuickXpPolicy(xpForWavesClearedInMode(10, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
+    const oneGold = applyQuickDiamondPolicy(goldForWavesClearedInMode(10, goldMult, runMode), runMode, quickRewardPolicyRunRef.current);
+    const xpGain = Math.floor(oneXp * count);
+    const goldGain = Math.floor(oneGold * count);
+    if (xpGain > 0) {
+      const before = levelInfo(breederXp);
+      const nextXp = breederXp + xpGain;
+      const after = levelInfo(nextXp);
+      setBreederXp(nextXp);
+      storeSet('mh_breeder_xp', nextXp, false);
+      const gainedLevels = after.level - before.level;
+      if (gainedLevels > 0) {
+        setBreederPoints(prev => {
+          const next = prev + gainedLevels;
+          storeSet('mh_breeder_points', next, false);
+          return next;
+        });
+        storeSet('mh_breeder_points_granted', Math.max(0, after.level - 1), false);
+      }
+    }
+    if (goldGain > 0) {
+      const nextGold = gold + goldGain;
+      setGold(nextGold);
+      storeSet('mh_gold', nextGold, false);
+    }
+    // 帯の数字も、実際に配った値をそのまま足す(2か所で数えない)
+    addQuickRunProgressRewards(xpGain, goldGain);
+    for (let i = 0; i < count; i++) countQuickRunLoop();
+    return {
+      loops: count,
+      xp: xpGain,
+      gold: goldGain
+    };
+  };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
   // 気づけない仕組みなので、出るべき場面で1度だけ、みゅあが伝える。
@@ -23047,16 +23123,24 @@ function MonsterHeroGame() {
     setCatchingUp(true);
   };
   // 演奏に入った時刻を控え、演奏から出たら取り戻しに入る。
-  // 裏で周回していないとき・バトルへ戻ったときは何もしない
+  // 裏で周回していないとき・バトルへ戻ったときは何もしない。
+  // ★曲を最後まで演奏できたときは「曲の長さで何周ぶん」を配るので、追いつきは使わない
+  //   (2026-09-07・ユーザー提案)。追いつきが残るのは、途中でやめたときだけ。
+  //   その場合はいまの周がそのまま続いているので、止まっていたぶんを取り戻すのが正しい。
   useEffect(() => {
     if (gameState === 'RHYTHM_PLAY') {
       rhythmPlayStartedAtRef.current = Date.now();
+      setRhythmPlayRunAward(null);
       stopCatchUp();
       return;
     }
     const startedAt = rhythmPlayStartedAtRef.current;
     rhythmPlayStartedAtRef.current = 0;
     if (!startedAt) return;
+    if (rhythmPlayRunAwardRef.current) {
+      stopCatchUp();
+      return;
+    }
     if (!rhythmScreenOpen || runStageRef.current == null || !autoRepeatRef.current) {
       stopCatchUp();
       return;
@@ -38833,6 +38917,22 @@ function MonsterHeroGame() {
       monsterEntries: rhythmMonsterNoteEntries,
       bestRecord: rhythmBestRecord(rhythmBestRecords, rhythmPlay.song.songId, rhythmPlay.difficulty.id),
       onComplete: async (result, merged) => {
+        // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
+        // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
+        // (1秒だけ演奏してやめる、で稼げないようにするため)。
+        // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
+        if (rhythmPlay.from !== 'tutorial') {
+          const loops = rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty);
+          const awarded = loops > 0 ? awardRhythmPlayRunLoops(loops) : null;
+          if (awarded) {
+            setRhythmPlayRunAward(awarded);
+            // その周は「クリアした」ことにして、次の周から始める
+            // (ユーザー提案「5周目クリア扱いになって無限周回は6周目から始まる」)。
+            // 始められなかったとき(編成が失われたなど)は、いまのランをそのまま続ける
+            const repeat = repeatTemplateForNewRun();
+            if (repeat) startRunFromRepeatTemplate(repeat);
+          }
+        }
         // あそびかた練習は記録を残さない。自己ベストにも全国ランキングにも触れない
         // (CLAUDE.md ⑦「消さない・上書きしない」。練習で自己ベストが上書きされてはいけない)
         if (rhythmPlay.from === 'tutorial') return;
@@ -38866,7 +38966,9 @@ function MonsterHeroGame() {
       const quickRunBandLabel = quickRunProgress ? quickRunProgress.finished
       // なぜ終わったかまで出す。「終わりました」だけだと、負けたのか
       // アプリが裏に回ったのか分からなかった(2026-09-07・ユーザー報告)
-      ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）` : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
+      ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）`
+      // 演奏から戻った直後は、その1曲で何周ぶん入ったかを先に伝える
+      : rhythmPlayRunAward ? `演奏で ${rhythmPlayRunAward.loops}周ぶん入りました ・ ${quickRunProgress.loops}周目` : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
       const quickRunBandButton = quickRunProgress ? /*#__PURE__*/React.createElement("button", {
         type: "button",
         onClick: () => setQuickRunDetailOpen(open => !open),
@@ -38981,7 +39083,12 @@ function MonsterHeroGame() {
           className: "font-black text-amber-200"
         }, "+", Math.floor(quickRunProgress.gold + pending.gold).toLocaleString())), (pending.xp > 0 || pending.gold > 0) && /*#__PURE__*/React.createElement("div", {
           className: "col-span-2 text-[9px] text-slate-500"
-        }, "\u3046\u3061\u4ECA\u306E\u5468\u306E\u3076\u3093\uFF08\u7D4C\u9A13\u5024 +", Math.floor(pending.xp).toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", Math.floor(pending.gold).toLocaleString(), "\uFF09\u306F\u3001\u3053\u306E\u5468\u304C\u7D42\u308F\u3063\u305F\u3068\u304D\u306B\u5165\u308A\u307E\u3059\uFF08\u8CA0\u3051\u3066\u3082\u3001\u9014\u4E2D\u3067\u3084\u3081\u3066\u3082\u3001\u3053\u3053\u307E\u3067\u306E\u3076\u3093\u306F\u5165\u308A\u307E\u3059\uFF09\u3002"));
+        }, "\u3046\u3061\u4ECA\u306E\u5468\u306E\u3076\u3093\uFF08\u7D4C\u9A13\u5024 +", Math.floor(pending.xp).toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", Math.floor(pending.gold).toLocaleString(), "\uFF09\u306F\u3001\u3053\u306E\u5468\u304C\u7D42\u308F\u3063\u305F\u3068\u304D\u306B\u5165\u308A\u307E\u3059\uFF08\u8CA0\u3051\u3066\u3082\u3001\u9014\u4E2D\u3067\u3084\u3081\u3066\u3082\u3001\u3053\u3053\u307E\u3067\u306E\u3076\u3093\u306F\u5165\u308A\u307E\u3059\uFF09\u3002"), rhythmPlayRunAward && /*#__PURE__*/React.createElement("div", {
+          "data-quick-run-play-award": true,
+          className: "col-span-2 rounded-lg border border-cyan-400/30 bg-cyan-950/30 px-2 py-1 text-[9px] leading-relaxed text-cyan-100"
+        }, "\u3055\u3063\u304D\u306E\u6F14\u594F\u3067 ", /*#__PURE__*/React.createElement("b", {
+          className: "text-white"
+        }, rhythmPlayRunAward.loops, "\u5468"), "\u3076\u3093\u5165\u308A\u307E\u3057\u305F\uFF08\u7D4C\u9A13\u5024 +", rhythmPlayRunAward.xp.toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", rhythmPlayRunAward.gold.toLocaleString(), "\uFF09\u3002\u66F2\u306E\u9577\u3055\u3067\u6C7A\u307E\u308A\u307E\u3059\u3002"));
       })(), /*#__PURE__*/React.createElement("div", {
         className: "col-span-2 flex justify-between gap-2"
       }, /*#__PURE__*/React.createElement("dt", {
