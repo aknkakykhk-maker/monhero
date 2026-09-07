@@ -11122,8 +11122,7 @@ const installRhythmGestureVisuals=()=>{
     [data-rhythm-note][data-note-type="SLIDE"] > [data-rhythm-note-head]{background:linear-gradient(180deg,#ddd6fe,#a855f7 58%,#6d28d9)!important;border-color:rgba(221,214,254,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.82),0 0 16px rgba(168,85,247,.64)!important}
     /* 上へ払う矢印。文字(▲)の疑似要素だと幅広ノーツの縁取り(::before/::after)と場所を取り合ううえ、
        端末のフォントで大きさが変わる。実体のある要素へ切り出し、clip-path で三角を描く。
-       粒は scaleX(--rhythm-note-width-scale) で横に伸びるので、矢印だけは同じ比率で戻す
-       (毎フレーム書き換えないよう、0.05刻みに丸めた --rhythm-note-cap-scale を使う)。 */
+       --rhythm-note-cap-scale は発熱対策(粒を scaleX で縮める案・撤回済み)の名残で、いまは書かれないので 1 のまま。 */
     [data-rhythm-flick-arrow]{position:absolute;left:50%;bottom:calc(100% + 2px);z-index:2;width:24px;height:17px;
       transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));transform-origin:50% 100%;
       background:linear-gradient(180deg,#f0fdf4,#4ade80 60%,#16a34a);
@@ -11150,13 +11149,7 @@ const installRhythmGestureVisuals=()=>{
       transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-end-width-scale, 1))) scaleY(calc(1 / var(--rhythm-end-depth-scale, 1)));transform-origin:50% 100%;
       background:linear-gradient(180deg,#f0fdf4,#4ade80 60%,#16a34a);clip-path:polygon(50% 0,100% 100%,0 100%);
       filter:drop-shadow(0 0 4px rgba(34,197,94,.95)) drop-shadow(0 1px 2px rgba(2,6,23,.85));pointer-events:none}
-    /* 発熱対策(2026-09-07)。プレイエリア全面のSVGへ drop-shadow を掛けると、帯の形が変わる
-       毎フレーム、全面ぶんの画素をぼかし直す(画面の広い端末ほど重い)。ぼかしはやめ、帯の外周に
-       半透明の太い線(data-rhythm-slide-glow)を1本敷いて同じ発光に見せる。線は帯と一緒に描かれるだけ。
-       位置(left/top)も毎フレーム書かず transform で動かす。 */
-    svg[data-rhythm-slide-body]{position:absolute;inset:0;height:var(--rhythm-slide-area-height,0px)!important;overflow:visible;pointer-events:none;transform-origin:0 0}
-    [data-rhythm-slide-glow]{fill:none;stroke:rgba(168,85,247,.12);stroke-width:12;stroke-linejoin:round;stroke-linecap:round}
-    [data-rhythm-slide-glow][data-rhythm-slide-glow-inner]{stroke:rgba(168,85,247,.22);stroke-width:6}
+    svg[data-rhythm-slide-body]{position:absolute;inset:0;height:var(--rhythm-slide-area-height,0px)!important;overflow:visible;pointer-events:none;filter:drop-shadow(0 0 5px rgba(168,85,247,.38))}
     [data-rhythm-slide-segment]{fill:rgba(168,85,247,.48);stroke:rgba(233,213,255,.56);stroke-width:1}
   `;
   document.head.appendChild(style);
@@ -11217,36 +11210,14 @@ const installRhythmGeometryStyles=()=>{
        実測(デスクトップChromium・266ノーツ/同時表示5)で、毎フレームの
        style+layoutが 0.786ms → 0.332ms と半分以下になった。
        明るさは元から位置の関数として滑らかに変わるため、見た目は変えていない。 */
-    [data-rhythm-note]>[data-rhythm-note-head]{transform:scale(var(--rhythm-note-size-scale,1)) scaleX(var(--rhythm-note-width-scale,1)) scaleY(var(--rhythm-note-depth-scale,1));transform-origin:center}
-    /* 発熱対策(2026-09-07)。落ちる途中の幅は要素の width ではなく scaleX で表す。
-       要素の幅は「判定ラインの手前での幅」で固定し(1回だけ書く)、毎フレームはこの変数だけが変わる。
-       width を毎フレーム書くと、そのたびにレイアウト(寸法の計算)と塗り直しが走っていた。
-       明るさ(奥ほど暗い)も filter:brightness() をやめ、粒の上に重ねた黒い層(data-rhythm-note-shade)の
-       opacity で同じ色を作る。不透明な画素では c×b と c×(1-(1-b)) は同じ値なので見た目は変わらない。
-       filter の値が毎フレーム変わると粒を毎フレーム塗り直すが、opacity は合成側で掛けるだけで済む。
-       マスモンの絵(data-rhythm-monster-face)は透明な部分があるので影の層が使えず、従来どおり filter で暗くする
-       (絵のノーツは1曲に数個なので、負担は増えない)。 */
-    [data-rhythm-note]>[data-rhythm-note-head]:not(:last-child){transform:scaleX(var(--rhythm-note-width-scale,1));transform-origin:center}
-    [data-rhythm-note]>[data-rhythm-monster-face]{filter:brightness(var(--rhythm-note-depth-brightness,1))}
-    /* 粒の端の丸み。箱を scaleX で縮めると丸い端が横に潰れて角丸の長方形に見えるので、横の半径だけ
-       縮める比率の逆数で大きくしておく(border-radius の「横 / 縦」の書き方)。縮めたあとに元の丸い端に戻る。
-       この比率(--rhythm-note-cap-scale)は 0.05 刻みにして、書き換え(=粒の塗り直し)を1回の落下で10回ほどに抑える。
-       0.05 のずれは半径にして0.5px未満なので目では分からない。 */
-    [data-rhythm-note]>[data-rhythm-note-head]{border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px}
-    [data-rhythm-note-shade]{position:absolute;inset:0;z-index:1;border-radius:inherit;background:#020617;opacity:calc(1 - var(--rhythm-note-depth-brightness,1));pointer-events:none}
-    [data-rhythm-note][data-note-type="HOLD"]>[data-rhythm-note-head]>[data-rhythm-note-shade]{inset:-2px}
-    /* 粒・影の層・ENDバーを will-change で別の合成レイヤーへ載せる案は、iPhone(WebKit)で逆効果だった
-       (2026-09-07・実機「発熱のない状態でも以前よりカクつく」)。ノーツが現れるたびにレイヤーを3〜4枚作って消す
-       負担が連続ノーツで積み上がり、親の filter(index.html の drop-shadow)も子が動くたびに作り直しになる。
-       ノーツは以前と同じ「本体1枚」(tick が付ける will-change)のまま、中の粒は transform / opacity の変化で
-       塗り直されるが、塗り直すのは粒の画素ぶんだけで、レイアウトは起きない。 */
+    [data-rhythm-note]>[data-rhythm-note-head]{transform:scale(var(--rhythm-note-size-scale,1)) scaleY(var(--rhythm-note-depth-scale,1));transform-origin:center;filter:brightness(var(--rhythm-note-depth-brightness,1))}
     /* 幅広ノーツ(5サブレーン以上)は、丸い粒を横に引き伸ばした形だと「どこからどこまでか」が
        読み取りにくい。プロセカ・チュウニズムの幅広ノーツと同じく、角を落とした棒にして
        両端へ明るい縁を置く。塗りは静的なCSSだけで作るので、毎フレームの負担は増えない。 */
-    [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]{border-radius:calc(7px / var(--rhythm-note-cap-scale,1)) / 7px!important}
+    [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]{border-radius:7px!important}
     [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::before,
     [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::after{
-      content:"";position:absolute;top:1px;bottom:1px;width:calc(3px / var(--rhythm-note-cap-scale,1));border-radius:3px;
+      content:"";position:absolute;top:1px;bottom:1px;width:3px;border-radius:3px;
       background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.55));pointer-events:none}
     [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::before{left:1px}
     [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::after{right:1px}
@@ -11654,26 +11625,9 @@ const rhythmSlideSegmentPolygons=(note,chartNowMs,travel,rect,noteHalfHeight=Num
   }
   return segments;
 };
-// HOLD帯の箱の「基準の高さ」。帯は落ちるあいだ毎フレーム伸びるが、箱の height を毎フレーム書くと
-// レイアウトが走る。箱は「その演奏でいちばん長くなる長さ」で固定し、いまの長さは scaleY で表す。
-// clipPath の座標は箱に対する % なので、箱ごと縮めても帯の形は同じになる
-// (rhythm-note-geometry-audit.js が実測で確かめる)。
-// いちばん長くなるのは、頭が見えている最後(進み1.18)まで落ちたとき。押さえて頭が判定ラインに
-// 止まると終端だけが降りてくるので、帯はそこから短くなる一方になる。
-const RHYTHM_NOTE_VISIBLE_END_PROGRESS=1.18;
-const rhythmHoldBodyBaseHeight=(body,note,height,slideTravel)=>{
-  let base=Number(body._rhythmBodyBase)||0;
-  if(!(base>0)&&slideTravel&&Number(slideTravel.travelMs)>0&&Number.isFinite(Number(slideTravel.travelPx))){
-    const travelMs=Number(slideTravel.travelMs),travelPx=Number(slideTravel.travelPx);
-    const holdMs=Math.max(0,rhythmReleaseTargetMs(note)-(Number(note.timeMs)||0));
-    const yAt=progress=>rhythmProjectTravelProgress(progress)*travelPx;
-    base=Math.ceil(yAt(RHYTHM_NOTE_VISIBLE_END_PROGRESS)-yAt(RHYTHM_NOTE_VISIBLE_END_PROGRESS-holdMs/travelMs))+2;
-  }
-  // 見積もりより長くなった(速度を変えた直後など)ときだけ、余裕を持って取り直す
-  if(!(base>=height))base=Math.ceil(height*1.25)+2;
-  body._rhythmBodyBase=base;
-  return Math.max(1,base);
-};
+// 2026-09-07: 「幅は scaleX・帯は scaleY・明るさは影の層」で描く発熱対策を試したが、iPhone(WebKit)で
+// 以前よりカクつく・モンスターノーツを取ったあとに飛ぶ、という報告が続いたため、描き方はこの版(0c3a016)へ戻した。
+// 発熱の対策は canvas 化で仕切り直す(docs/spec/RHYTHM_MODE.md「演奏中の発熱対策」)。
 const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideTravel=null,frameLayout=null)=>{
   if(!el||!area)return;
   // フレーム共有のrectが渡っていればlayout readは発生しない。渡っていない場合だけ数える
@@ -11681,35 +11635,22 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const rect=frameLayout?.rect||RHYTHM_VIEW_ROTATION.rectOf(area);
   if(!(rect&&rect.width>0&&rect.height>0))return;
   const noteHeight=Number(frameLayout?.noteHeight)||el.offsetHeight,lane=Number(visualLane),centerY=Number(yPx)+noteHeight/2,yRatio=rhythmClamp01(centerY/rect.height);
-  const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,slideTravel?.chartNowMs),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO));
-  // 発熱対策(2026-09-07)。要素の幅は「判定ラインの手前(yRatio=1)での幅」で固定し、
-  // 落ちる途中の幅はそれに対する比率(scaleX)で表す。width を毎フレーム書くと、そのたびに
-  // レイアウトと塗り直しが走っていた。scaleX は1以下なので粒がぼやけることはない。
-  // 幅が途中で変わるHOLD(holdPoints)や SLIDE は時刻で幅が変わるので、基準幅も変わったときだけ書き直す。
-  const nearest=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,1,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,1,slideTravel?.chartNowMs),nearestWidth=rect.width*nearest.width,baseWidth=Math.max(1,Math.min(nearestWidth,Math.max(4,nearestWidth*RHYTHM_NOTE_WIDTH_RATIO)));
+  const projected=rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(lane,note,yRatio,slideTravel?.chartNowMs):rhythmNoteVisualSpan(note,lane,yRatio,slideTravel?.chartNowMs),projectedWidth=rect.width*projected.width,width=Math.min(projectedWidth,Math.max(4,projectedWidth*RHYTHM_NOTE_WIDTH_RATIO)),left=rect.width*projected.center-width/2;
   // 横位置をleftで毎フレーム書くとlayout系の更新になる。縦は本体transformで動かしているため、
   // CSS Transforms Level 2の独立translateへ横移動だけ分離し、見た目の座標を変えず合成側へ寄せる。
   // left=0 + translateX(left) なので、HOLD/SLIDEのbodyが使う -left の補正も従来と同じ実座標になる。
-  // 粒は基準幅の箱の中心で scaleX されるので、箱の中心(= left + baseWidth/2)が投影の中心に来るように置く。
-  const left=rect.width*projected.center-baseWidth/2;
   if(el._rhythmPositionOrigin!==true){el.style.left='0px';el._rhythmPositionOrigin=true;}
   const nextTranslate=`${left.toFixed(2)}px 0px`;
   if(el._rhythmTranslate!==nextTranslate){el.style.translate=nextTranslate;el._rhythmTranslate=nextTranslate;}
-  const nextWidth=`${baseWidth.toFixed(2)}px`;
+  const nextWidth=`${width.toFixed(2)}px`;
   if(el._rhythmWidth!==nextWidth){el.style.width=nextWidth;el._rhythmWidth=nextWidth;}
-  // 幅の比率は 0.01 刻み(基準幅60pxなら0.6px)。目では区別できず、書き込み(=粒の塗り直し)の回数が減る
-  const widthScale=(Math.round(Math.min(1,width/baseWidth)*100)/100).toFixed(2);
-  if(el._rhythmWidthScale!==widthScale){el.style.setProperty('--rhythm-note-width-scale',widthScale);el._rhythmWidthScale=widthScale;}
-  // 端の丸み(border-radius)と FLICK の矢印は scaleX を打ち消す必要があり、変えると粒を塗り直す。0.05刻みで回数を抑える
-  const capScale=(Math.max(.05,Math.round(Math.min(1,width/baseWidth)*20)/20)).toFixed(2);
-  if(el._rhythmCapScale!==capScale){el.style.setProperty('--rhythm-note-cap-scale',capScale);el._rhythmCapScale=capScale;}
-  // 奥行きの拡大率と明るさは、それぞれ transform:scaleY() と、粒に重ねた影の層の opacity へ入る
-  // (以前は filter:brightness() だった。filterの値が毎フレーム変わると、その要素はGPUで動かすだけでは
-  // 済まず毎フレーム「塗り直し(ラスタライズ)」が必要になる。塗り直しの重さは画素数に比例するので、
+  // 奥行きの拡大率と明るさは、それぞれ transform:scaleY() と filter:brightness() へ入る。
+  // filterの値が毎フレーム変わると、その要素はGPUで動かすだけでは済まず毎フレーム
+  // 「塗り直し(ラスタライズ)」が必要になる。塗り直しの重さは画素数に比例するので、
   // 画面の広い端末(iPhone 16e=2.96M画素)ではSE2(1.00M画素)の約3倍の負担になり、
-  // 発熱してGPUが絞られるとそのままカクつきになる)。
+  // 発熱してGPUが絞られるとそのままカクつきになる。
   //
-  // 0.01刻みへ丸め、値が実際に変わったときだけ書く。
+  // そこで0.01刻みへ丸め、値が実際に変わったときだけ書く。
   //   ・明るさ … 0.72〜1.00を0.01刻み(=1%刻み)。目では区別できない
   //   ・拡大率 … 0.56〜1.00を0.01刻み。ノーツ高さ22pxなら1段0.22pxで画素より細かい
   // 実測(Chromium・16e相当の画素数・同時表示4ノーツ)で
@@ -11726,13 +11667,14 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   else{RHYTHM_PERF.domQuery();body=el.querySelector('[data-rhythm-hold-body],[data-rhythm-slide-body]');el._rhythmVisualBody=body||null;}
   if(!body)return;
   if(body.hasAttribute('data-rhythm-slide-body')){
-    // 位置は毎フレーム動くが、幅・高さ・viewBoxはプレイエリアの大きさそのもので
+    // 位置(left/top)は毎フレーム動くが、幅・高さ・viewBoxはプレイエリアの大きさそのもので
     // 遊んでいるあいだ変わらない。それでも毎フレーム書き直すと、プレイエリア全面サイズの
     // SVGを毎フレーム作り直させることになる(とくにviewBoxの再設定は中身の再構築を招く)。
     // 変わったときだけ書く。見た目は同じ。
-    // 位置も left/top ではなく transform で動かす(left/top はレイアウトを起こす)。
-    const slideTransform=`translate(${(-left).toFixed(2)}px,${(-Number(yPx)).toFixed(2)}px)`;
-    if(body._rhythmSlideTransform!==slideTransform){body.style.transform=slideTransform;body._rhythmSlideTransform=slideTransform;}
+    const slideLeft=`${(-left).toFixed(2)}px`;
+    if(body._rhythmSlideLeft!==slideLeft){body.style.left=slideLeft;body._rhythmSlideLeft=slideLeft;}
+    const slideTop=`${(-Number(yPx)).toFixed(2)}px`;
+    if(body._rhythmSlideTop!==slideTop){body.style.top=slideTop;body._rhythmSlideTop=slideTop;}
     const slideArea=`${rect.width.toFixed(2)}x${rect.height.toFixed(2)}`;
     if(body._rhythmSlideArea!==slideArea){
       body.style.width=`${rect.width.toFixed(2)}px`;
@@ -11742,33 +11684,13 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
     }
     const polygons=slideTravel?rhythmSlideSegmentPolygons(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2):[];
     RHYTHM_PERF.slidePolygons(polygons.length);
-    // 発光の線は帯の外周1本(区切りごとに線を引くと、区切りの横線が帯の中に見えてしまう)。
-    // 帯の区切り(polygon)は "左,上 右,上 右,下 左,下" の順なので、右の縁を上から下へ、左の縁を下から上へたどる。
-    // 太くて薄い線と、細くて少し濃い線の2本を重ね、ぼかしに近い柔らかさにする(線は帯と一緒に描かれるだけ)
-    let glows=body._rhythmSlideGlows;
-    if(!glows){glows=[0,1].map(inner=>{const glow=document.createElementNS('http://www.w3.org/2000/svg','path');glow.dataset.rhythmSlideGlow='';if(inner)glow.dataset.rhythmSlideGlowInner='';glow.setAttribute('aria-hidden','true');return glow;});glows.forEach(glow=>body.insertBefore(glow,body.firstChild));glows.reverse();body._rhythmSlideGlows=glows;}
-    if(polygons.length){
-      const rightEdge=[],leftEdge=[];
-      polygons.forEach((points,index)=>{
-        const corner=points.split(' ');
-        if(index===0){rightEdge.push(corner[1]);leftEdge.push(corner[0]);}
-        rightEdge.push(corner[2]);leftEdge.push(corner[3]);
-      });
-      const outline=`M${rightEdge.join('L')}L${leftEdge.reverse().join('L')}Z`;
-      glows.forEach(glow=>{
-        if(glow._rhythmOutline!==outline){glow.setAttribute('d',outline);glow._rhythmOutline=outline;}
-        if(glow._rhythmShown!==true){glow.style.display='';glow._rhythmShown=true;}
-      });
-    }else glows.forEach(glow=>{if(glow._rhythmShown!==false){glow.style.display='none';glow._rhythmShown=false;}});
-    // 区切りは発光の線(最初の2つの子)の後ろに並ぶ
-    const segmentOffset=glows.length;
     polygons.forEach((points,index)=>{
-      let segment=body.childNodes[index+segmentOffset];
+      let segment=body.childNodes[index];
       if(!segment){segment=document.createElementNS('http://www.w3.org/2000/svg','polygon');segment.dataset.rhythmSlideSegment='';body.appendChild(segment);}
       segment.style.display='';
       if(segment._rhythmPoints!==points){segment.setAttribute('points',points);segment._rhythmPoints=points;}
     });
-    for(let index=polygons.length+segmentOffset;index<body.childNodes.length;index++)body.childNodes[index].style.display='none';
+    for(let index=polygons.length;index<body.childNodes.length;index++)body.childNodes[index].style.display='none';
   }else{
   const measuredBodyHeight=frameLayout&&Number.isFinite(Number(frameLayout.bodyHeight))?Number(frameLayout.bodyHeight):parseFloat(getComputedStyle(body).height),height=Math.max(0,measuredBodyHeight||0);
   // 帯の上端と下端だけを直線で結ぶと、projectionが曲線であるぶん途中の高さでレーンから外れる。
@@ -11827,31 +11749,21 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   const bodyEdges=bodyRatios.map(edgeAt);
   const bodyRight=bodyEdges.map((edge,index)=>`${(edge.right*100).toFixed(3)}% ${(bodyRatios[index]*100).toFixed(3)}%`);
   const bodyLeft=bodyEdges.map((edge,index)=>`${(edge.left*100).toFixed(3)}% ${(bodyRatios[index]*100).toFixed(3)}%`).reverse();
-  // 箱(left/width/height)は変わったときだけ書き、毎フレームは transform と clipPath だけを書く。
-  // clipPath は形そのものが毎フレーム変わるので塗り直しは残るが、帯の画素ぶんだけで済む。
-  const baseHeight=rhythmHoldBodyBaseHeight(body,note,height,slideTravel);
-  const bodyBox=`${rect.width.toFixed(2)}x${baseHeight.toFixed(2)}`;
-  if(body._rhythmBodyBox!==bodyBox){body.style.left='0px';body.style.width=`${rect.width.toFixed(2)}px`;body.style.height=`${baseHeight.toFixed(2)}px`;body.style.transformOrigin='50% 100%';body._rhythmBodyBox=bodyBox;}
-  const bodyTransform=`translate(${(-left).toFixed(2)}px,0px) scaleY(${(height/baseHeight).toFixed(4)})`;
-  if(body._rhythmBodyTransform!==bodyTransform){body.style.transform=bodyTransform;body._rhythmBodyTransform=bodyTransform;}
+  body.style.left=`${(-left).toFixed(2)}px`;
+  body.style.width=`${rect.width.toFixed(2)}px`;
   body.style.clipPath=`polygon(${[...bodyRight,...bodyLeft].join(',')})`;
   }
   const endBar=el._rhythmEndBar||el.querySelector('[data-rhythm-end-bar]');
   if(endBar)el._rhythmEndBar=endBar;
   if(endBar&&Number.isFinite(releaseYpx)){
-    const endSpanAt=endY=>rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY);
-    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=endSpanAt(endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
-    // ENDバーも粒と同じく、箱は「判定ラインの手前での幅」で固定し、位置と幅は transform で表す
-    // (left/top/width を毎フレーム書くとレイアウトが走る)。矢印(::after)は逆の scale で元の形に戻す。
-    const barBase=Math.max(10,rect.width*endSpanAt(1).width*RHYTHM_NOTE_WIDTH_RATIO),barBox=barBase.toFixed(2);
-    if(endBar._rhythmBarBox!==barBox){endBar.style.left='0px';endBar.style.top='0px';endBar.style.width=`${barBox}px`;endBar._rhythmBarBox=barBox;}
-    const endDepth=(0.52+end.scale*.48).toFixed(3),endWidthScale=(Math.round(Math.min(1,barWidth/barBase)*200)/200).toFixed(3);
-    if(endBar._rhythmEndDepth!==endDepth){endBar.style.setProperty('--rhythm-end-depth-scale',endDepth);endBar._rhythmEndDepth=endDepth;}
-    if(endBar._rhythmEndWidth!==endWidthScale){endBar.style.setProperty('--rhythm-end-width-scale',endWidthScale);endBar._rhythmEndWidth=endWidthScale;}
-    const barTransform=`translate(${(rect.width*end.center-left-barBase/2).toFixed(2)}px,${(Number(releaseYpx)-Number(yPx)+noteHeight/2-4).toFixed(2)}px) scaleX(${endWidthScale}) scaleY(${endDepth})`;
-    if(endBar._rhythmBarTransform!==barTransform){endBar.style.transform=barTransform;endBar._rhythmBarTransform=barTransform;}
+    const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height),end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY),barWidth=Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO);
+    endBar.style.left=`${(rect.width*end.center-left-barWidth/2).toFixed(2)}px`;
+    endBar.style.top=`${(Number(releaseYpx)-Number(yPx)+noteHeight/2-4).toFixed(2)}px`;
+    endBar.style.width=`${barWidth.toFixed(2)}px`;
+    endBar.style.setProperty('--rhythm-end-depth-scale',(0.52+end.scale*.48).toFixed(3));
   }
 };
+
 // レーンのDOMが入れ替わった時だけ静的形状を設定する。ノーツはプレイ本体の1本のrAFから直接配置する。
 const installRhythmPerspectiveNoteVisuals=()=>{
   if(typeof document==='undefined'||typeof MutationObserver==='undefined')return;

@@ -112,7 +112,7 @@ check('幅5サブレーン以上を「幅広ノーツ」として扱う',run('RH
 check('幅広ノーツは角を落とした棒にして、両端へ明るい縁を置く',
   // 2026-09-07: 角丸は scaleX の逆比で書く(発熱対策)。セレクタも span:last-child から粒の名指しへ。
   // 絵が入るノーツでは最後のspanが絵になるので、縁取りが絵へ付いて縦線に見えていた。
-  source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]{border-radius:calc(7px / var(--rhythm-note-cap-scale,1)) / 7px!important}')
+  source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]{border-radius:7px!important}')
   &&source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::before')
   &&source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::after'));
 check('プレイ画面のノーツへ data-rhythm-note-wide を付けている',

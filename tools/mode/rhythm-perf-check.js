@@ -201,71 +201,16 @@ check('サブレーン発光は合成レイヤーへ載せ、タップのたび�
 // 毎フレーム書き直すと中身の再構築を招くので、変わったときだけ書く。
 check('SLIDE帯SVGの変わらない値(幅・viewBox)を毎フレーム書き直さない',
   data.includes("if(body._rhythmSlideArea!==slideArea){")
-  &&data.includes("if(body._rhythmSlideTransform!==slideTransform){")
+  &&data.includes("if(body._rhythmSlideLeft!==slideLeft){")
   &&!data.includes("body.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);\n    const polygons="));
 
-// --- 2026-09-07 の発熱対策(ユーザー指示「演出状態やゲーム性を落とさずに熱が持ちにくい仕組みに」) ---
-// 毎フレームの書き込みを「レイアウトを起こさないもの(transform / opacity / 影の層)」だけにする。
-// 実測(tools/mode/rhythm-render-cost-check.js・同時表示10ノーツ)で、1フレームあたり
-// 塗り直し 11回→4回、ラスタライズ 2.84ms→0.79ms、レイアウト 0.325ms→0.045ms。
-// TAP/FLICK は落ちているあいだレイアウトも塗り直しも 0 になった。戻すと発熱が再発する。
-check('ノーツの幅は基準幅で固定し、落ちる途中の幅は scaleX で表す(width を毎フレーム書かない)',
-  data.includes("const nextWidth=`${baseWidth.toFixed(2)}px`;")
-  &&data.includes("if(el._rhythmWidthScale!==widthScale){el.style.setProperty('--rhythm-note-width-scale',widthScale);")
-  &&data.includes('scaleX(var(--rhythm-note-width-scale,1)) scaleY(var(--rhythm-note-depth-scale,1))')
-  &&!data.includes("const nextWidth=`${width.toFixed(2)}px`;"));
-check('奥行きの明るさは filter ではなく影の層(data-rhythm-note-shade)の opacity で作る',
-  data.includes('[data-rhythm-note-shade]{position:absolute;inset:0;z-index:1;border-radius:inherit;background:#020617;opacity:calc(1 - var(--rhythm-note-depth-brightness,1))')
-  &&!data.includes('transform-origin:center;filter:brightness(var(--rhythm-note-depth-brightness,1))}')
-  &&gameSrc.includes('{!monster&&<i data-rhythm-note-shade aria-hidden="true"/>}'));
-// 2026-09-07・実機「発熱のない状態でも以前よりカクつく」。粒・影の層・ENDバーを will-change で別レイヤーへ載せると、
-// iPhone(WebKit)ではノーツが現れるたびのレイヤーの出し入れが連続ノーツで積み上がり、親の filter も毎フレーム作り直しになる。
-// ノーツは本体1枚(tick が付ける will-change)のままにする。
-check('粒・影の層・ENDバーを別の合成レイヤーへ載せない(ノーツは本体1枚のまま)',
-  !data.includes('[data-rhythm-note-head]{will-change')&&!data.includes('[data-rhythm-note-shade]{will-change')
-  &&!data.includes('data-rhythm-live')&&!gameSrc.includes('rhythmLive'));
+// ★2026-09-07・ユーザー指摘「モンスターノーツとフリックノーツによく分からない縦線がある」。
+//   ノーツの子は [hold-body] → [end-bar] → [note-head] → (絵があれば)[monster-face] の順なので、
+//   マスモンの絵が入るノーツでは **最後のspanが絵** になる。span:last-child で装飾を書くと
+//   色も枠も光も絵のほうへ付いてしまう。粒は必ず [data-rhythm-note-head] で名指しする。
+//   注意書き自体に span:last-child と書くので、まず /* … */ のコメントを外してから見る
 {
   const indexHtml=fs.readFileSync(path.join(ROOT,'monster-hero/index.html'),'utf8');
-  check('TAP/FLICK のノーツ全体には drop-shadow(毎フレームのぼかし)を掛けず、光は粒の box-shadow に焼き込む',
-    !/\[data-rhythm-note\] \{\s*z-index:5;\s*filter:/.test(indexHtml)
-    &&indexHtml.includes('[data-rhythm-note][data-note-type="HOLD"],[data-rhythm-note][data-note-type="SLIDE"] {\n    filter:drop-shadow(')
-    &&indexHtml.includes('box-shadow:inset 0 1px 0 rgba(255,255,255,.58),0 0 12px rgba(217,70,239,.32) !important;')
-    &&!indexHtml.includes('0 0 12px rgba(217,70,239,.32),0 0 6px rgba(255,255,255,.20)')
-    &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] {\n    overflow:visible !important;\n    filter:none;'));
-  // 2026-09-07・実機「モンスターノーツを取ったあとに飛ぶ」。光の脈動は opacity だけで動かし、
-  // 弾ける演出(0.26秒)のあいだは影付きの外周の光・影の層・絵のぼかしを外す。
-  check('モンスターノーツの光の脈動は opacity だけ(box-shadow をキーフレームで変えない)',
-    /@keyframes rhythmMonsterNoteAura \{\s*from \{ opacity:[\d.]+; \}\s*to \{ opacity:[\d.]+; \}\s*\}/.test(indexHtml));
-  check('弾ける演出のあいだは外周の光・影の層・絵のぼかしを外す',
-    indexHtml.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head]::before,')
-    &&indexHtml.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head] > [data-rhythm-note-shade] { display:none; }')
-    &&indexHtml.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-monster-face] { filter:none !important; }'));
-}
-check('HOLD帯の箱は基準の高さで固定し、いまの長さは scaleY で表す(height/left/width を毎フレーム書かない)',
-  data.includes('const rhythmHoldBodyBaseHeight=(body,note,height,slideTravel)=>{')
-  &&data.includes("if(body._rhythmBodyBox!==bodyBox){body.style.left='0px';")
-  &&data.includes('scaleY(${(height/baseHeight).toFixed(4)})')
-  &&data.includes('if(body._rhythmBodyTransform!==bodyTransform){body.style.transform=bodyTransform;')
-  &&!data.includes("body.style.left=`${(-left).toFixed(2)}px`;"));
-check('SLIDE帯のSVGは left/top ではなく transform で動かし、drop-shadow を掛けない',
-  data.includes("const slideTransform=`translate(${(-left).toFixed(2)}px,${(-Number(yPx)).toFixed(2)}px)`;")
-  &&!data.includes('body.style.left=slideLeft;')
-  &&!data.includes('drop-shadow(0 0 5px rgba(168,85,247,.38))')
-  &&data.includes('[data-rhythm-slide-glow]{fill:none;stroke:rgba(168,85,247,.12);stroke-width:12'));
-// 2026-09-07・実機「モンスターノーツの描画が壊れてる」。ノーツ要素の箱は基準幅で固定されるので、
-// 箱の ::before/::after に掛けた装飾は遠くでも手前の大きさのまま残る。装飾は粒(data-rhythm-note-head)に掛ける。
-{
-  const indexHtml=fs.readFileSync(path.join(ROOT,'monster-hero/index.html'),'utf8');
-  check('index.html の装飾はノーツ要素の箱(基準幅で固定)ではなく粒に掛ける(モンスターノーツの光・角丸)',
-    !/\[data-rhythm-note\]\[data-rhythm-monster-note\]::(before|after)/.test(indexHtml)
-    &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::before {')
-    &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::after {')
-    &&indexHtml.includes('border-radius:calc(5px / var(--rhythm-note-cap-scale,1)) / 5px !important;'));
-  // ★2026-09-07・ユーザー指摘「モンスターノーツとフリックノーツによく分からない縦線がある」。
-  //   ノーツの子は [hold-body] → [end-bar] → [note-head] → (絵があれば)[monster-face] の順なので、
-  //   マスモンの絵が入るノーツでは **最後のspanが絵** になる。span:last-child で装飾を書くと
-  //   色も枠も光も絵のほうへ付いてしまう。粒は必ず [data-rhythm-note-head] で名指しする。
-  //   注意書き自体に span:last-child と書くので、まず /* … */ のコメントを外してから見る
   const noteDecorLastChild=(src)=>src.replace(/\/\*[\s\S]*?\*\//g,'').split('\n')
     .filter(line=>line.includes('data-rhythm-note')&&line.includes('span:last-child'))
     .map(line=>line.trim().slice(0,80));
@@ -274,6 +219,20 @@ check('SLIDE帯のSVGは left/top ではなく transform で動かし、drop-sha
     check(`${name}: ノーツの装飾を span:last-child で書いていない(マスモンの絵に当たる)`,
       bad.length===0,bad[0]||'');
   }
+  // 2026-09-07・実機「モンスターノーツを取ったあとに飛ぶ」。光の脈動は opacity だけで動かし、
+  // 弾ける演出(0.26秒)のあいだは影付きの外周の光・絵のぼかしを外す。
+  check('モンスターノーツの光の脈動は opacity だけ(box-shadow をキーフレームで変えない)',
+    /@keyframes rhythmMonsterNoteAura \{\s*from \{ opacity:[\d.]+; \}\s*to \{ opacity:[\d.]+; \}\s*\}/.test(indexHtml));
+  check('弾ける演出のあいだは外周の光・絵のぼかしを外す',
+    indexHtml.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head]::before,')
+    &&indexHtml.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head]::after { display:none; }')
+    &&indexHtml.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-monster-face] { filter:none !important; }'));
+  // 2026-09-07: 「幅は scaleX・帯は scaleY・明るさは影の層・粒を別レイヤーへ」の発熱対策は iPhone で
+  // 以前よりカクついたため撤回した(docs/spec/RHYTHM_MODE.md)。戻ってきていないことを見張る。
+  check('撤回した発熱対策(scaleX の幅・影の層・別レイヤー・帯の scaleY)が戻ってきていない',
+    !data.includes('--rhythm-note-width-scale')&&!data.includes('data-rhythm-note-shade')
+    &&!data.includes('rhythmHoldBodyBaseHeight')&&!data.includes('data-rhythm-live')
+    &&!gameSrc.includes('data-rhythm-note-shade')&&!indexHtml.includes('data-rhythm-note-shade'));
 }
 // ★矢印は粒の ::after ではなく実体のある要素で描く。幅広ノーツ(5サブレーン以上)の両端の縁取りが
 //   粒の ::before/::after を使っているため、疑似要素で矢印を作ると幅広のFLICKで場所を取り合う。
@@ -282,15 +241,6 @@ check('FLICKの矢印は疑似要素ではなく [data-rhythm-flick-arrow] と�
   &&data.includes('clip-path:polygon(50% 0,100% 100%,0 100%);')
   &&gameSrc.includes("note.type==='FLICK'&&<i data-rhythm-flick-arrow aria-hidden=\"true\"/>")
   &&!/\[data-note-type="FLICK"\][^\n]*::after\{content:"▲"/.test(data));
-check('粒の端の丸みと FLICK の矢印は 0.05 刻みの比率(--rhythm-note-cap-scale)で scaleX を打ち消す(塗り直しを1回の落下で10回ほどに抑える)',
-  data.includes("const capScale=(Math.max(.05,Math.round(Math.min(1,width/baseWidth)*20)/20)).toFixed(2);")
-  &&data.includes('[data-rhythm-note]>[data-rhythm-note-head]{border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px}')
-  &&data.includes('transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));'));
-check('ENDバーは基準幅で固定し、位置と幅は transform で表す(left/top/width を毎フレーム書かない)',
-  data.includes("if(endBar._rhythmBarBox!==barBox){endBar.style.left='0px';endBar.style.top='0px';")
-  &&data.includes('if(endBar._rhythmBarTransform!==barTransform){endBar.style.transform=barTransform;')
-  &&data.includes('scaleX(calc(1 / var(--rhythm-end-width-scale, 1))) scaleY(calc(1 / var(--rhythm-end-depth-scale, 1)))')
-  &&!data.includes("endBar.style.left=`${(rect.width*end.center-left-barWidth/2).toFixed(2)}px`;"));
 
 check('失敗表示フラグをdatasetから毎フレーム読み直さない',
   gameSrc.includes('el._rhythmFailedFlag!==failedFlag')

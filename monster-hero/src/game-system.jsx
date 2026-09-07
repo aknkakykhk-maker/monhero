@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a4e615e7039eec12
+// generated-sha256: f0eb8b2c4f3a461c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 22:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10389,10 +10389,7 @@ const RhythmTapTest=({song,difficulty,settings,bestRecord,monsterEntries,onCompl
                 白いふちと1本の線で「叩く粒」だと分かるようにする。線はspanではないので、
                 幅広ノーツの両端バーが使う >span:last-child::before/::after とはぶつからない。
                 判定・当たり判定・幅・速さは一切変えていない(見た目だけ) */}
-                {!monster&&note.type==='HOLD'&&<i data-rhythm-hold-head-mark aria-hidden="true" className="pointer-events-none absolute left-[24%] right-[24%] top-1/2 block h-[2px] -translate-y-1/2 rounded-full bg-sky-950/55"/>}{/* 奥ほど暗く見せる影の層(発熱対策・2026-09-07)。以前は粒に filter:brightness() を掛けていたが、
-                filter の値が毎フレーム変わると粒を毎フレーム塗り直す。黒い層の opacity(= 1 - 明るさ)なら合成側で掛けるだけで済み、
-                不透明な粒の上では同じ色になる。マスモンの絵は透明な部分があるので、絵のノーツには付けない(従来どおり filter) */}
-                {!monster&&<i data-rhythm-note-shade aria-hidden="true"/>}{/* 上へ払う矢印。以前は粒の ::after に「⇧」の文字で出していたが、
+                {!monster&&note.type==='HOLD'&&<i data-rhythm-hold-head-mark aria-hidden="true" className="pointer-events-none absolute left-[24%] right-[24%] top-1/2 block h-[2px] -translate-y-1/2 rounded-full bg-sky-950/55"/>}{/* 上へ払う矢印。以前は粒の ::after に「⇧」の文字で出していたが、
                 幅広ノーツ(5サブレーン以上)の両端の縁取りが同じ ::before/::after を使うため、幅広のFLICKでは
                 矢印と縁取りが場所を取り合い、どちらでもない縦線が残っていた(2026-09-07・ユーザー指摘)。
                 実体のある要素へ切り出し、形はCSS(clip-path)の三角で描く。文字と違って端末のフォントに左右されず、大きさもそろう */}

@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":850709,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":500048,"data/help.js":285340,"data/rhythm-step3-release.js":7722,"data/assistants.js":274157,"game-system.compiled.js":3027579,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":840680,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":500927,"data/help.js":284669,"data/rhythm-step3-release.js":7722,"data/assistants.js":274157,"game-system.compiled.js":3027453,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609072217';
+var GAME_BUILD = '202609072240';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -705,12 +705,6 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
   [data-rhythm-judgment-display] { z-index:8 !important; }
   [data-rhythm-note] {
     z-index:5;
-  }
-  /* ノーツ全体への drop-shadow は、粒が毎フレーム動く(scaleX / 明るさ)たびにぼかしを作り直す(GPUで毎フレーム)。
-     iPhone で「発熱のない状態でも以前よりカクつく」原因の1つだったので(2026-09-07)、数の多い TAP/FLICK からは外し、
-     同じ光を粒の box-shadow へ焼き込む(box-shadow は粒と一緒に一度だけ描かれる)。
-     HOLD/SLIDE は帯の光がこの filter だけで出ている(帯の box-shadow は clip-path で切れる)ので、そこだけ残す。 */
-  [data-rhythm-note][data-note-type="HOLD"],[data-rhythm-note][data-note-type="SLIDE"] {
     filter:drop-shadow(0 0 6px rgba(255,255,255,.20)) drop-shadow(0 0 10px rgba(217,70,239,.18));
   }
   /* ★装飾は必ず [data-rhythm-note-head](粒)を名指しで指す。span:last-child と書くと、
@@ -720,10 +714,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
   [data-rhythm-note] > [data-rhythm-note-head] {
     inset:4px 0 !important;
     border:1px solid rgba(255,255,255,.72);
-    /* 粒は scaleX で縮むので、横の半径だけ逆比で大きくして角の丸みを保つ(発熱対策・2026-09-07) */
-    border-radius:calc(5px / var(--rhythm-note-cap-scale,1)) / 5px !important;
-    /* 影(ぼかし)は粒を描き直すたびに計算される。落ちる粒は幅と明るさで毎フレーム近く描き直されるので、影は増やさない
-       (ノーツ全体の drop-shadow を外したぶんを足したら、iPhone でかえって引っかかった・2026-09-07)。 */
+    border-radius:5px !important;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.58),0 0 12px rgba(217,70,239,.32) !important;
   }
   [data-rhythm-note][data-note-type="HOLD"] > [data-rhythm-note-head] {
@@ -763,25 +754,16 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
      特別ノーツらしさを出す。派手さは外側へ広げすぎず、押すタイミングは本体の輪郭で読めるようにする。 */
   [data-rhythm-note][data-rhythm-monster-note] {
     overflow:visible !important;
-    filter:none;
+    filter:drop-shadow(0 0 5px rgba(253,224,71,.72)) drop-shadow(0 0 10px rgba(217,70,239,.42)) drop-shadow(0 0 14px rgba(34,211,238,.24));
   }
-  /* ノーツ全体の3重の drop-shadow は毎フレームのぼかしになるので外す。粒には輪(Tailwindの ring-amber-200 の2px)と金の光1つだけ。
-     紫・シアンの外周の光は ::before/::after が持っている。 */
-  [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head] {
-    box-shadow:0 0 0 2px #fde68a,0 0 10px rgba(253,224,71,.62) !important;
-  }
-  /* 発熱対策(2026-09-07)以降、ノーツ要素の箱は「判定ラインの手前での幅」で固定され、粒だけが scaleX で縮む。
-     光を箱に掛けると遠くでも手前の大きさのまま残る(実機で「モンスターノーツの描画が壊れてる」)ので、
-     粒(data-rhythm-note-head)の ::before/::after に掛けて粒と一緒に縮める。
-     横に潰れる角丸と左右の線の太さは --rhythm-note-cap-scale の逆比で戻す。 */
+  /* 外周の光は粒(data-rhythm-note-head)の ::before/::after に掛ける。ノーツ要素の箱に掛けると、
+     幅広ノーツの縁取りが使う粒の疑似要素と取り合わずに済む一方で、粒の inset(4px 0)ぶんだけ箱より細い。 */
   [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::before {
     content:"";
     position:absolute;
     inset:2px -1px;
     border:1px solid rgba(255,250,205,.98);
-    border-left-width:calc(1px / var(--rhythm-note-cap-scale,1));
-    border-right-width:calc(1px / var(--rhythm-note-cap-scale,1));
-    border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px;
+    border-radius:9999px;
     box-shadow:0 0 5px rgba(253,224,71,.92),0 0 9px rgba(232,121,249,.58),0 0 13px rgba(34,211,238,.34),inset 0 0 4px rgba(255,255,255,.5);
     pointer-events:none;
   }
@@ -790,9 +772,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     position:absolute;
     inset:-4px -6px;
     border:1px solid rgba(216,180,254,.62);
-    border-left-width:calc(1px / var(--rhythm-note-cap-scale,1));
-    border-right-width:calc(1px / var(--rhythm-note-cap-scale,1));
-    border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px;
+    border-radius:9999px;
     background:
       radial-gradient(circle at 8% 45%,rgba(255,255,255,.85) 0 1px,transparent 1.8px),
       radial-gradient(circle at 93% 58%,rgba(103,232,249,.85) 0 1px,transparent 1.8px),
@@ -811,11 +791,10 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     to { opacity:.82; }
   }
   /* 取った瞬間の弾ける演出(rhythm-clear-pop・0.26秒)のあいだは、粒を2.1倍へ拡大しながら描く。
-     影付きの外周の光・影の層・絵のぼかしを一緒に拡大すると、その0.26秒だけ描き直しが重くなり
+     影付きの外周の光・絵のぼかしを一緒に拡大すると、その0.26秒だけ描き直しが重くなり
      iPhone でフレームが飛んだ。弾けている粒は光だけで十分なので、そのあいだは外す。 */
   [data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head]::before,
-  [data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head]::after,
-  [data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head] > [data-rhythm-note-shade] { display:none; }
+  [data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head]::after { display:none; }
   [data-rhythm-note][data-rhythm-clear] > [data-rhythm-monster-face] { filter:none !important; }
   [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-monster-face] {
     inset:auto !important;
@@ -868,12 +847,12 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="data/breeder.js?v=8df97497b791" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=cda681ba2ad7" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=be475346aaa8" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=d0b5c2bea35c" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=7380fde1202d" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=9f7aeb943e7e" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=236b25604092" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=ca9848e1a4a0" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->

@@ -18,7 +18,9 @@
 //   node tools/mode/rhythm-render-cost-check.js --report   # 数値だけ出す(しきい値で落とさない)
 const fs=require('fs'),path=require('path'),http=require('http');
 const ROOT=path.resolve(__dirname,'../..'),PORT=8981;
-const REPORT_ONLY=process.argv.includes('--report');
+// 2026-09-07: 「レイアウトを起こさない描き方」は iPhone で逆効果だったため撤回した。この検査は数値を出す道具として残し、
+// しきい値は --strict のときだけ見る(canvas 化のときに物差しとして使い直す)。
+const REPORT_ONLY=!process.argv.includes('--strict');
 // --types=TAP,HOLD のように種類を絞ると、どの種類が負担を作っているかを切り分けられる(数値だけ出す)
 const TYPE_FILTER=(process.argv.find(arg=>arg.startsWith('--types='))||'').slice(8).split(',').filter(Boolean);
 const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css'};
