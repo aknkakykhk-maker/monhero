@@ -5271,3 +5271,65 @@ SLIDE+TAP・FLICK・終点フリック・入力の古さの補正・リスター
 
 [`RHYTHM_CHART_CORPUS.md`](RHYTHM_CHART_CORPUS.md)。設計だけで、まだ実装していない。
 
+
+## 演奏中の発熱対策・描き方の見直し（2026-09-07）
+
+ユーザーの問い「演奏中の発熱が気になる。設定で省エネにする以外で、今の演出状態やゲーム性を落とさずに
+熱が持ちにくい仕組みは？」。設定（軽量モード・演出量）は演出を減らす方法なので、ここでは
+**同じ見た目のまま、毎フレームの仕事を減らす**方法を取った。
+
+### 何が熱を作っていたか
+
+発熱は毎フレームの仕事量でほぼ決まる。ノーツの縦の移動は以前から `transform`（合成側）だけだったが、
+`rhythmLayoutNoteVisual` が毎フレーム次を書いていた。
+
+| 書いていたもの | 起きること |
+| --- | --- |
+| 粒の `width`（遠近で幅が変わる） | レイアウト＋粒の塗り直し |
+| 粒の `filter:brightness()`（奥ほど暗い） | 粒の塗り直し（GPUで動かすだけでは済まない） |
+| HOLD帯の `height` / `left` / `width` / `clipPath` | レイアウト＋帯の塗り直し |
+| SLIDE帯SVGの `left` / `top` と `drop-shadow` | レイアウト＋**プレイエリア全面**のぼかし直し |
+| ENDバーの `left` / `top` / `width` | レイアウト |
+
+塗り直しは画素数に比例するので、画面の広い端末ほど不利になる（16e は SE2 の約3倍）。
+
+### 変えたこと（見た目は同じ、判定・スコア・譜面は触らない）
+
+- **粒の幅**: 要素の幅は「判定ラインの手前（yRatio=1）での幅」で固定し（1回だけ書く）、落ちる途中の幅は
+  `--rhythm-note-width-scale` を `scaleX` として頭の `transform` へ足す。粒の中心 = 要素の中心なので、
+  `translate` は `center×幅 − 基準幅/2`。帯・ENDバーの `-left` 補正も同じ値で成り立つ。
+  端の丸みが scaleX で潰れるので、横の半径だけ逆比で大きくする（`border-radius: calc(9999px / 比率) / 9999px`）。
+  この比率（`--rhythm-note-cap-scale`）は 0.05 刻みにして、半径の書き換え（=塗り直し）を1回の落下で10回ほどに抑える。
+  FLICK の矢印（`::after`）も同じ比率で scaleX を打ち消す。
+- **明るさ**: `filter:brightness(b)` をやめ、粒の上に黒い層 `<i data-rhythm-note-shade>` を重ねて
+  `opacity: 1 − b` にする。不透明な画素では同じ色になる。マスモンの絵（透明部分あり）だけは従来どおり filter。
+- **合成レイヤー**: 粒・影の層・ENDバー・マスモンの絵は、本体の tick が付ける `data-rhythm-live="1"`
+  （will-change を付ける条件と同じ「いま見えている」）のあいだだけ `will-change` で自分のレイヤーに載せる。
+  出しっぱなしにするとノーツの数だけレイヤーを抱える。
+- **HOLD帯**: 箱は「その演奏でいちばん長くなる長さ」（頭が進み1.18まで落ちたときの帯の長さ、
+  `rhythmHoldBodyBaseHeight`）で固定し、いまの長さは `scaleY`（origin 下端）で表す。`clipPath` の座標は
+  箱に対する % なので、箱ごと縮めても形は同じ（幾何監査がそのまま通る）。横位置は `translate`。
+- **SLIDE帯**: SVG の位置は `transform`。`drop-shadow` を外し、帯の外周を1本の `<path>` でたどって
+  太くて薄い線＋細くて少し濃い線の2本（`data-rhythm-slide-glow`）を敷き、ぼかしに近い柔らかさにする。
+  区切りごとに線を引くと帯の中に横線が出るので、外周1本にする。これが唯一の見た目のトレードオフ。
+- **ENDバー**: 箱は判定ラインの手前での幅で固定し、位置と幅は `translate + scaleX`。矢印（⇧）は逆の scaleX で戻す。
+
+### 数字（`tools/mode/rhythm-render-cost-check.js`・Chromium・同時表示10ノーツ・1フレームあたり）
+
+| | 変更前 | 変更後 |
+| --- | --- | --- |
+| レイアウト | 1.00回 / 0.325ms | 1.00回 / 0.045ms（SLIDE の SVG の形の更新だけ） |
+| 塗り直し（Paint） | 11.00回 / 0.585ms | 4.00回 / 0.176ms |
+| ラスタライズ | 10.00回 / 2.837ms | 3.00回 / 0.691ms |
+| TAP/FLICK だけ | — | レイアウト 0・塗り直し 0 |
+| HOLD だけ | — | レイアウト 0・塗り直し 3回（帯の clipPath ぶん） |
+
+実機の温度は測っていない（サンドボックスに実機が無い）。本番URLで演奏して確かめる。
+
+### 検査
+
+- `tools/mode/rhythm-render-cost-check.js` … 実ブラウザのトレースで上の数字を数え、TAP/FLICK のレイアウト・塗り直しが 0、
+  HOLD のレイアウトが 0、全種類でレイアウト≦1・塗り直し≦6 を要求する（Playwright が無い環境では SKIP）
+- `tools/mode/rhythm-note-geometry-audit.js` … 粒・帯・ENDバーの実描画位置を投影と突き合わせる。transform 越しでも
+  `getBoundingClientRect` で測るので、書き方を変えても同じ物差しで通る（通った）
+- `rhythm-perf-check.js` / `rhythm-mode-slide-path-check.js` / `rhythm-options-step1-check.js` … 新しい書き方を文字列で固定

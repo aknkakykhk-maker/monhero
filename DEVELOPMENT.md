@@ -1197,3 +1197,17 @@ const releasedForPlayers = (item) => !item
 超える。上限は「歩幅」と「その時間で指が動ける距離」の**小さいほう**にする（`stepLimitLanes`）。
 距離だけの上限は、間隔が短いところで必ず嘘になる。
 
+
+## 「毎フレーム書く」なら、書けるのは transform と opacity だけ
+
+音ゲーのノーツは縦の移動こそ `transform` だったが、遠近の幅は `width`、奥の暗さは `filter:brightness()`、
+HOLD 帯は `height`、SLIDE 帯は `left/top` と `drop-shadow` を毎フレーム書いていた。どれも「値を変えたら
+そのフレームで寸法の計算か画素の作り直しが走る」性質のもので、画面の広い端末ほど熱くなる。
+
+同じ見た目は、`width` → 基準幅で固定して `scaleX`、`brightness` → 黒い層の `opacity`、`height` → `scaleY`、
+`left/top` → `translate` で作れる（`docs/spec/RHYTHM_MODE.md` の「演奏中の発熱対策」）。
+ただし scale で形が歪むもの（丸い端・矢印）は逆の scale で戻す必要があり、その書き換えは塗り直しになる。
+刻みを粗く（0.05）して回数を抑える。
+
+「軽く見える書き方」は目で確かめられないので、`rhythm-render-cost-check.js` のように**実ブラウザのトレースで
+レイアウト回数・塗り直し回数を数える**検査を先に作り、変更前の数字を取ってから直す。
