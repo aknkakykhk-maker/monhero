@@ -59,13 +59,22 @@ check('未来の日時がない', future.length === 0,
 //   (git が使えない環境ではこの確認だけ飛ばす)
 try {
   const { execFileSync } = require('child_process');
-  const log = execFileSync('git', ['log', '--reverse', '--format=%H %ad', '--date=format:%Y-%m-%d %H:%M',
+  // コミット時刻は UNIX 秒(%at)で受け取り、こちらで日本時間へ直す。git の --date=format: は実行環境の
+  // 時間帯で出るので、UTC の環境(CI・サンドボックス)では全項目が9時間ずれて 150件のNGになった(2026-09-07)。
+  const jst = sec => { const d = new Date(sec * 1000 + 9 * 3600 * 1000); const p = n => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
+  const log = execFileSync('git', ['log', '--reverse', '--format=%H %at',
     '--', 'monster-hero/data/changelog.js'], { cwd: root, encoding: 'utf8' }).trim().split('\n');
+  // 浅い clone(サンドボックス・CI の fetch-depth)では、いちばん古いコミットがファイルの全行を「追加」した
+  // 扱いになり、そこにある項目はすべてそのコミットの時刻と比べられて全件NGになる(2026-09-07・149件)。
+  // 浅い clone のときは、その境界のコミットで初めて現れた項目は照合しない(それより新しい項目は照合する)。
+  let boundary = null;
+  try { if (execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: root, encoding: 'utf8' }).trim() === 'true') boundary = (log[0] || '').split(' ')[0]; } catch {}
   const timeOf = new Map();
   for (const line of log) {
     if (!line.trim()) continue;
-    const [sha, ...rest] = line.split(' ');
-    const when = rest.join(' ');
+    const [sha, at] = line.split(' ');
+    const when = sha === boundary ? null : jst(Number(at));
     const diff = execFileSync('git', ['show', sha, '--format=', '-U0', '--', 'monster-hero/data/changelog.js'],
       { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
     for (const m2 of diff.matchAll(/^\+.*?title:'((?:[^'\\]|\\.)*)'/gm)) {

@@ -218,11 +218,20 @@ check('奥行きの明るさは filter ではなく影の層(data-rhythm-note-sh
   data.includes('[data-rhythm-note-shade]{position:absolute;inset:0;z-index:1;border-radius:inherit;background:#020617;opacity:calc(1 - var(--rhythm-note-depth-brightness,1))')
   &&!data.includes('transform-origin:center;filter:brightness(var(--rhythm-note-depth-brightness,1))}')
   &&gameSrc.includes('{!monster&&<i data-rhythm-note-shade aria-hidden="true"/>}'));
-check('粒・影の層・ENDバーは見えているノーツ(data-rhythm-live)だけ合成レイヤーへ載せる',
-  data.includes('[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-note-head],[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-monster-face],[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-end-bar]{will-change:transform}')
-  &&data.includes('[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-note-head]>[data-rhythm-note-shade]{will-change:opacity}')
-  &&gameSrc.includes("if(visible)el.dataset.rhythmLive='1';else delete el.dataset.rhythmLive;")
-  &&!data.includes('[data-rhythm-note-head]{will-change'));
+// 2026-09-07・実機「発熱のない状態でも以前よりカクつく」。粒・影の層・ENDバーを will-change で別レイヤーへ載せると、
+// iPhone(WebKit)ではノーツが現れるたびのレイヤーの出し入れが連続ノーツで積み上がり、親の filter も毎フレーム作り直しになる。
+// ノーツは本体1枚(tick が付ける will-change)のままにする。
+check('粒・影の層・ENDバーを別の合成レイヤーへ載せない(ノーツは本体1枚のまま)',
+  !data.includes('[data-rhythm-note-head]{will-change')&&!data.includes('[data-rhythm-note-shade]{will-change')
+  &&!data.includes('data-rhythm-live')&&!gameSrc.includes('rhythmLive'));
+{
+  const indexHtml=fs.readFileSync(path.join(ROOT,'monster-hero/index.html'),'utf8');
+  check('TAP/FLICK のノーツ全体には drop-shadow(毎フレームのぼかし)を掛けず、光は粒の box-shadow に焼き込む',
+    !/\[data-rhythm-note\] \{\s*z-index:5;\s*filter:/.test(indexHtml)
+    &&indexHtml.includes('[data-rhythm-note][data-note-type="HOLD"],[data-rhythm-note][data-note-type="SLIDE"] {\n    filter:drop-shadow(')
+    &&indexHtml.includes('0 0 12px rgba(217,70,239,.32),0 0 6px rgba(255,255,255,.20),0 0 10px rgba(217,70,239,.18) !important;')
+    &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] {\n    overflow:visible !important;\n    filter:none;'));
+}
 check('HOLD帯の箱は基準の高さで固定し、いまの長さは scaleY で表す(height/left/width を毎フレーム書かない)',
   data.includes('const rhythmHoldBodyBaseHeight=(body,note,height,slideTravel)=>{')
   &&data.includes("if(body._rhythmBodyBox!==bodyBox){body.style.left='0px';")

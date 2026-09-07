@@ -34,6 +34,14 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-07 19:12", type:'fix', title:'モンヒロビート: 発熱対策のあと iPhone で以前よりカクつくことがあったのを直しました', status:'new',
+    releaseFlag:'rhythmMode',
+    items:[
+      '発熱対策で粒などを別の描画レイヤーへ載せていましたが、iPhone ではノーツが現れるたびの出し入れが負担になり、連続ノーツでカクつきが出ていました。ノーツを以前と同じ1枚に戻しました（幅や帯を伸び縮みで描く省エネの部分はそのままです）。',
+      'TAP／FLICK のノーツ全体に掛けていたぼかしの光を、粒に焼き込んだ光へ置き換えました。毎フレームぼかしを作り直さなくなります。見た目の光はほぼ同じです。',
+    ],
+  },
+  {
     date: "2026-09-07 18:32", type:'update', title:'モンヒロビートに新曲「禁断のレジスタンス」を追加しました', status:'new',
     assistantNotice:{id:'update_notice_kindan_no_resistance_v1',type:'content'},
     items:[
