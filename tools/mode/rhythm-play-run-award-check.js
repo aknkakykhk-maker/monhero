@@ -76,7 +76,15 @@ for (const file of files) {
     /rhythmPlay\.from!=='tutorial'[\s\S]{0,400}?rhythmPlayLoopsFor\(rhythmPlay\.song,rhythmPlay\.difficulty\)/.test(compact.replace(/\s+/g, ''))
     || /rhythmPlay\.from!=='tutorial'\)\{[\s\S]{0,400}?rhythmPlayLoopsFor/.test(src));
   check(`${rel}: その周は締めて次の周から始める`,
-    /awardRhythmPlayRunLoops\(loops\)[\s\S]{0,700}?startRunFromRepeatTemplate\(repeat\)/.test(src));
+    /awardRhythmPlayRunLoops\(loops\)[\s\S]{0,900}?startRunFromRepeatTemplate\(repeat\)/.test(src));
+  // ★startRunFromRepeatTemplate は中で stopAutoBattle() を通る。
+  //   そのあとAUTOを入れ直さないと、報酬だけ入って周回が止まる
+  //   (2026-09-07・ユーザー報告「演奏後周回が止まってる」。
+  //    通常の次周開始では入れ直していたのに、演奏ぶんの側で漏らしていた)
+  check(`${rel}: 次の周を始めたらAUTOを入れ直す`,
+    compact.includes('startRunFromRepeatTemplate(repeat);if(started.ok){autoRepeatStartingRef.current=false;autoBattleRef.current=true;setAutoBattle(true);setAutoTurnCycle(n=>n+1);}'));
+  check(`${rel}: 始められなかったときは理由つきで止める`,
+    /startRunFromRepeatTemplate\(repeat\)[\s\S]{0,300}?stopAllAuto\('error'\)/.test(src));
   // 生成物は `from !== 'tutorial'` のように空白が入るので、空白を潰してから見る
   check(`${rel}: 練習(あそびかた)では何も配らない`,
     compact.includes("rhythmPlay.from!=='tutorial'"));

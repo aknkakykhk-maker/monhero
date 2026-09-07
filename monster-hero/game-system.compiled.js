@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 411306f5e8b01085
+// source-sha256: 8a1ba9639ce6e4e4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 55ab01cd671c660c
+// generated-sha256: 5a9b339de92e2cd6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39009,9 +39009,21 @@ function MonsterHeroGame() {
             } catch (_) {}
             // その周は「クリアした」ことにして、次の周から始める
             // (ユーザー提案「5周目クリア扱いになって無限周回は6周目から始まる」)。
-            // 始められなかったとき(編成が失われたなど)は、いまのランをそのまま続ける
+            // 始められなかったとき(編成が失われたなど)は、いまのランをそのまま続ける。
+            // ★startRunFromRepeatTemplate は中で stopAutoBattle() を通るので、
+            //   そのあと必ずAUTOを入れ直す。ここを抜かすと報酬だけ入って周回が止まる
+            //   (2026-09-07・ユーザー報告「演奏後周回が止まってる」。
+            //    通常の次周開始の処理では入れ直していたのに、こちらで漏らしていた)
             const repeat = repeatTemplateForNewRun();
-            if (repeat) startRunFromRepeatTemplate(repeat);
+            if (repeat) {
+              const started = startRunFromRepeatTemplate(repeat);
+              if (started.ok) {
+                autoRepeatStartingRef.current = false;
+                autoBattleRef.current = true;
+                setAutoBattle(true);
+                setAutoTurnCycle(n => n + 1);
+              } else stopAllAuto('error');
+            }
           }
         }
         // あそびかた練習は記録を残さない。自己ベストにも全国ランキングにも触れない

@@ -10480,9 +10480,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               try{await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);}catch(_){}
               // その周は「クリアした」ことにして、次の周から始める
               // (ユーザー提案「5周目クリア扱いになって無限周回は6周目から始まる」)。
-              // 始められなかったとき(編成が失われたなど)は、いまのランをそのまま続ける
+              // 始められなかったとき(編成が失われたなど)は、いまのランをそのまま続ける。
+              // ★startRunFromRepeatTemplate は中で stopAutoBattle() を通るので、
+              //   そのあと必ずAUTOを入れ直す。ここを抜かすと報酬だけ入って周回が止まる
+              //   (2026-09-07・ユーザー報告「演奏後周回が止まってる」。
+              //    通常の次周開始の処理では入れ直していたのに、こちらで漏らしていた)
               const repeat=repeatTemplateForNewRun();
-              if(repeat)startRunFromRepeatTemplate(repeat);
+              if(repeat){
+                const started=startRunFromRepeatTemplate(repeat);
+                if(started.ok){
+                  autoRepeatStartingRef.current=false;
+                  autoBattleRef.current=true;
+                  setAutoBattle(true);
+                  setAutoTurnCycle(n=>n+1);
+                }else stopAllAuto('error');
+              }
             }
           }
           // あそびかた練習は記録を残さない。自己ベストにも全国ランキングにも触れない
