@@ -171,7 +171,7 @@ const SPEEDS=[1,3,6,10,12],SIZES=[80,100,120],PROGRESSES=[.5,.9];
                 svg.dataset.rhythmSlideBody='';el.appendChild(svg);
               }
               if(note.type==='HOLD'||note.type==='SLIDE'){const bar=document.createElement('span');bar.dataset.rhythmEndBar='';el.appendChild(bar);}
-              const head=document.createElement('span');el.appendChild(head);
+              const head=document.createElement('span');head.dataset.rhythmNoteHead='';el.appendChild(head);
               area.appendChild(el);
 
               const areaRect=area.getBoundingClientRect(),lineRect=line.getBoundingClientRect();
