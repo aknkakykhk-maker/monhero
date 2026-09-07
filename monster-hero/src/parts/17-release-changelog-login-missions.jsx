@@ -12,7 +12,10 @@ const RHYTHM_MODE_PUBLIC_RELEASE = true;
 // 演奏中ぶんの追いつきがまだ無いので、遊ぶ人には案内しない。
 // ★出来上がってからここを true にする(2026-09-06・ユーザー指示「出来てからにして」)。
 // true にすれば、ヘルプの項目・更新履歴・助手の告知が同時に出る
-const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = false;
+// 2026-09-07・ユーザー指示「公開フラグは出してok」。実機でひととおり確認してもらったうえで公開。
+// これが true になると、ヘルプの項目・更新履歴・みゅあの告知・画面のなかの使い方案内が
+// 同時に出る(片方だけ先に出ることが起きないよう、4つとも同じフラグで出入りする)。
+const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると

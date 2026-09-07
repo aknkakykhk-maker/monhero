@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b471c495dc655587
+// generated-sha256: 9ed0bcb91523b153
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 11:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 12:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4928,7 +4928,10 @@ const RHYTHM_MODE_PUBLIC_RELEASE = true;
 // 演奏中ぶんの追いつきがまだ無いので、遊ぶ人には案内しない。
 // ★出来上がってからここを true にする(2026-09-06・ユーザー指示「出来てからにして」)。
 // true にすれば、ヘルプの項目・更新履歴・助手の告知が同時に出る
-const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = false;
+// 2026-09-07・ユーザー指示「公開フラグは出してok」。実機でひととおり確認してもらったうえで公開。
+// これが true になると、ヘルプの項目・更新履歴・みゅあの告知・画面のなかの使い方案内が
+// 同時に出る(片方だけ先に出ることが起きないよう、4つとも同じフラグで出入りする)。
+const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
