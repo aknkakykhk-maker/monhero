@@ -105,8 +105,11 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
     check(`${label}: ${part.replace('(', '')} を使うのは共通実装だけ`, times === 1, `${times}か所`);
   }
   // 呼び出し側: 一覧を出すすべての画面が共通実装を通ること
+  // 共通カードを通す画面は増える方向でしかないので下限で見る。
+  // 固定数(6か所)で見ていたころは、限界突破・転生・寄付・再生・超越・合体をあとから
+  // 共通カードへ寄せた時点で落ちたままになっていた(2026-09-07に下限へ改めた)。
   const cardCalls = (code.match(/renderMonsterCardBody\(\{/g) || []).length;
-  check(`${label}: すべての一覧画面が共通カードを呼ぶ`, cardCalls === 6, `${cardCalls}か所(編成2・ベースモン一覧・マスモン一覧・放牧設定・勇者モン選択/供モン選択)`);
+  check(`${label}: すべての一覧画面が共通カードを呼ぶ`, cardCalls >= 13, `${cardCalls}か所(編成2・ベースモン一覧・マスモン一覧・放牧設定・勇者モン選択/供モン選択・限界突破・転生・寄付・再生・超越・合体2)`);
   const pickStart = code.indexOf('const pickMasu');
   const pickEnd = pickStart > 0 ? code.indexOf('詳細を見る', pickStart) : -1;
   const pick = pickStart > 0 && pickEnd > 0 ? code.slice(pickStart, pickEnd) : '';

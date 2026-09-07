@@ -440,7 +440,11 @@ const createAnimationStyle = () => {
     @keyframes mhReincarnateBack{0%,100%{transform:translateY(-1%) scale(1.04);filter:brightness(.9) blur(.25px)}38%{opacity:.5;transform:translateY(-4%) scale(1.09);filter:brightness(1.16) blur(.55px)}68%{opacity:.26;transform:translateY(1%) scale(1.02);filter:brightness(.96) blur(.2px)}}
     @keyframes mhReincarnateFoot{0%,100%{opacity:.38;transform:translateY(2%) scale(.96);filter:brightness(1.05)}45%{opacity:.7;transform:translateY(-5%) scale(1.08);filter:brightness(1.3)}72%{opacity:.47;transform:translateY(-1%) scale(1.01);filter:brightness(1.12)}}
     @keyframes mhReincarnateSpark{0%,30%{opacity:0;transform:translate(0,0) scale(.5)}42%{opacity:.8}78%,100%{opacity:0;transform:translate(8px,-28px) scale(.15)}}
-    .mh-reincarnate-badge{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);min-width:max-content;border:1px solid #bae6fd;border-radius:9999px;padding:2px 6px;background:linear-gradient(90deg,#5b21b6,#1d4ed8);color:#fff;font-size:7px;font-weight:1000;line-height:1;white-space:nowrap;z-index:6;box-shadow:0 1px 5px #020617,0 0 6px #818cf8}.mh-reincarnate-badge.is-small{bottom:-8px;padding:1px 4px;font-size:6px}.mh-reincarnate-aura.is-home{inset:-25%}.mh-reincarnate-aura.is-home .mh-reincarnate-flame.is-back{opacity:.24}.mh-reincarnate-aura.is-home .mh-reincarnate-sparks{transform:scale(.7)}
+    .mh-reincarnate-badge{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);min-width:max-content;border:1px solid #bae6fd;border-radius:9999px;padding:2px 6px;background:linear-gradient(90deg,#5b21b6,#1d4ed8);color:#fff;font-size:7px;font-weight:1000;line-height:1;white-space:nowrap;z-index:6;box-shadow:0 1px 5px #020617,0 0 6px #818cf8}.mh-reincarnate-badge.is-small{bottom:-8px;padding:1px 4px;font-size:6px}
+    /* 一覧カード用。絵のすぐ下は名前の行なので、そこへ重ねると名前が読めなくなる
+       (2026-09-07・ユーザー指摘「3枚目 名前表示がおかしい」)。
+       行の中にふつうに並べる形にして、重なりそのものを起こさない */
+    .mh-reincarnate-badge.is-inline{position:static;transform:none;left:auto;bottom:auto;padding:1px 5px;font-size:7px}.mh-reincarnate-aura.is-home{inset:-25%}.mh-reincarnate-aura.is-home .mh-reincarnate-flame.is-back{opacity:.24}.mh-reincarnate-aura.is-home .mh-reincarnate-sparks{transform:scale(.7)}
     /* 超越マーク。虹★(画像の下)・転生バッジ(画像の下)と重ならないよう画像の上側へ置く。
        画像は使わず、虹と金のグラデーションと「超」の1文字だけで最終育成らしさを出す。
        親の overflow:hidden で切れないよう、置く側は overflow-visible にしておくこと。 */

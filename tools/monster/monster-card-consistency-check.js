@@ -43,8 +43,33 @@ for (const file of files) {
     && !compact.includes('className="relativew-14h-14mx-autorounded-fulloverflow-visible"'));
   check(`${rel}: 寄付が独自の高さを持っていない`, !compact.includes('min-h-[122px]'));
   check(`${rel}: 再生が独自の高さを持っていない`, !compact.includes('min-h-[104px]'));
-  // 高さは1か所(MONSTER_CARD_STYLE)で決める
-  check(`${rel}: カードの高さは1か所で決める`, compact.includes("minHeight:'152px'"));
+  check(`${rel}: 合体が独自の高さを持っていない`, !compact.includes('min-h-[88px]'));
+  // 高さは1か所(MONSTER_CARD_STYLE)で決める。
+  // 2026-09-07・ユーザー指摘「1枚目 まだ窮屈 / 2枚目 このサイズ感がいい」。
+  // 空の行を確保するのをやめ、出す行のぶんだけの高さにしたので下限だけを持つ
+  check(`${rel}: カードの高さは1か所で決める`, compact.includes("minHeight:'96px'"));
+  // 生成物では `(node) =>` の括弧が外れて `node =>` になるので、どちらでも通る形で見る
+  check(`${rel}: 中身の無い行は高さを取らない`,
+    /monsterCardStatus=\(?node\)?=>node\?/.test(compact)
+    && /monsterCardPower=\(?power\)?=>power==null\?null:/.test(compact));
+  // 絆Lvと強化Pは同じ行(別々の行にしていたころは、それだけで17px使っていた)
+  // 生成物では `(node||sub)?` の括弧が外れて `node||sub?` になる
+  check(`${rel}: 絆Lvと強化Pを同じ行に出す`, /monsterCardInfo=\(node,sub\)=>\(?node\|\|sub\)?\?/.test(compact));
+  // ★2026-09-07・ユーザー指摘「3枚目 名前表示がおかしい」。
+  //   転生バッジ(.mh-reincarnate-badge)は絵の枠の下へ絶対配置されるが、
+  //   一覧カードでは絵のすぐ下が名前の行なので、そのまま重なって名前が読めなかった。
+  //   一覧では行の中へふつうに並べる is-inline を使い、badge には渡さない。
+  //   (この重なりは実ブラウザ検査では拾えない。基準にしている `relative` も
+  //    Tailwind のクラスで、CDNが届かないこの環境では効かないため)
+  check(`${rel}: 転生バッジを名前の上へ重ねない`,
+    !/badge:<ReincarnateBadge/.test(compact) && !/badge:\/\*#__PURE__\*\/React\.createElement\(ReincarnateBadge/.test(compact));
+  check(`${rel}: 一覧の転生バッジは行の中に並べる`,
+    compact.includes('<ReincarnateBadgecount={masu.reincarnateCount}className="is-inline"/>')
+    || compact.includes('className:"is-inline"'));
+  // 「選択中／未選択」の帯はやめ、角のチェックで表す(枠の色と二重になっていて1行ぶん無駄だった)
+  check(`${rel}: 選択状態は角のチェックで出す`,
+    !compact.includes("{selected?'選択中':'未選択'}")
+    && (compact.match(/absolutetop-1left-1z-10w-6h-6rounded-fullbg-(indigo|pink|violet|purple)-500/g) || []).length >= 4);
 
   // ---- 画面の説明をたためる ----
   check(`${rel}: たためる説明の部品がある`,

@@ -23,10 +23,11 @@ const count = (needle) => source.split(needle).length - 1;
 // --- ① モンスターカードの統一 ---
 check('カードの共通サイズを1か所で決めている',
   has("const MONSTER_CARD_CLASS = 'w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1 active:scale-95 select-none';")
-    && has("const MONSTER_CARD_STYLE = { minHeight: '152px' };")
+    && has("const MONSTER_CARD_STYLE = { minHeight: '96px' };")
     && has("const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';"));
-check('中身が無くても同じ高さの行を確保する',
-  has("style={{height:'14px'}}") && has("style={{height:'22px'}}") && has("style={{height:'13px'}}") && has("style={{height:'18px'}}"));
+// 行の高さは共通部品の中だけで決める。画面ごとに書くとそこだけずれる
+check('行の高さは共通部品の中で決めている',
+  has("style={{height:'14px'}}") && has("style={{height:'16px'}}") && has("style={{height:'18px'}}"));
 // カードを描く画面は増えていくので件数は決め打ちにせず、「外枠のクラスを使う行は
 // 必ず共通サイズも指定する」で見る。片方だけ書いた画面があるとそこだけ高さがずれる
 const cardLines = source.split('\n').filter(line => line.includes('MONSTER_CARD_CLASS') && !line.includes('const MONSTER_CARD_CLASS'));
@@ -39,10 +40,13 @@ check('カードを描く画面はすべて共通クラスと共通サイズを�
 check('カードの中身は共通部品1か所だけで組み立てる',
   count('MONSTER_CARD_ICON_CLASS') === 2 && count('monsterCardSub(') === 1 && count('monsterCardStatus(') === 1,
   `アイコン${count('MONSTER_CARD_ICON_CLASS') - 1}か所 / 補足行${count('monsterCardSub(')}か所 / 状態行${count('monsterCardStatus(')}か所`);
-// 中身が無いときは行ごと消さずnullを渡す。消すとカードごとに高さが変わる
-check('強化ポイントや編成中バッジが無くても行が消えない',
-  has('{monsterCardSub(') && has('{monsterCardStatus(status)}')
-    && has("style={{height:'13px'}}>{node||null}") && has("style={{height:'18px'}}>{node||null}"));
+// ★2026-09-07・ユーザー指摘「1枚目 まだ窮屈 / 2枚目 このサイズ感がいい」。
+// 以前は中身が無くても行を確保していたため、絆Lvしか出さない画面(合体の主・副など)でも
+// 総合力・強化P・状態の3行ぶん(約59px)が空のまま場所を取っていた。
+// 1つの画面の中では出す行がそろっているので、空の行は作らないことにした。
+check('出す行が無いときは行ごと作らない',
+  has('const monsterCardStatus = (node) => node ?') && has('const monsterCardPower = (power) => power==null ? null :')
+    && has('{monsterCardStatus(status)}'));
 check('マスモンの個体名は転生オーラより前面に固定する',
   has('mh-monster-card-name text-[10px]')
     && has('.mh-reincarnate-aura{position:absolute;z-index:-1;')
