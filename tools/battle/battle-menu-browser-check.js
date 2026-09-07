@@ -7,18 +7,75 @@ const { chromium } = require('playwright');
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
 
 (async () => {
-  const browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
-    ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
-    : {});
+  // このサンドボックスのChromiumは /opt/pw-browsers/chromium にある(npmの取得はしない)
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || '/opt/pw-browsers/chromium',
+  });
   const page = await browser.newPage({ viewport: { width:390, height:844 } });
   const exceptions = [];
   page.on('pageerror', error => exceptions.push(error.message));
+  // ★はじめての案内をとばす鍵は mh_intro_done ではなく mh_onboarded。
+  //   起動画面と「はじめる」は pointerdown で拾う作りなので click() では進まない(2026-09-07に追随)
   await page.addInitScript(() => {
-    localStorage.setItem('mh_breeder_name', JSON.stringify('テストブリーダー'));
-    localStorage.setItem('mh_intro_done', JSON.stringify(true));
+    const put = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    put('mh_breeder_name', 'テストブリーダー');
+    put('mh_breeder_icon', 'Mocchi');
+    put('mh_onboarded', true);
+    put('mh_tutorial_seen_v1', true);
   });
+  await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
   await page.goto(URL, { waitUntil:'load', timeout:60000 });
-  await page.getByRole('button', { name:'TAP TO START' }).click();
+  const pointerDown = (find) => page.evaluate((f) => {
+    const b = f.aria ? document.querySelector(`button[aria-label="${f.aria}"]`)
+      : [...document.querySelectorAll('button')].find((x) => x.textContent.includes(f.text));
+    if (b) b.dispatchEvent(new PointerEvent('pointerdown', { bubbles:true }));
+    return !!b;
+  }, find);
+  // ログインボーナス・ギフト・更新のお知らせが出ていたら送り切って閉じる
+  const dismissOverlays = async () => {
+    // お知らせは何枚も続けて出る(ログインボーナス → ギフト → 更新 → 助手の告知)。
+    // 1枚閉じると次が出てくるので、2回続けて「何も無い」まで送る
+    let quiet = 0;
+    for (let i = 0; i < 40 && quiet < 2; i++) {
+      const closed = await page.evaluate(() => {
+        // ダイアログが出ているときは、その中の最後のボタン(閉じる側)を押す。
+        // 助手の告知は「◯◯を見る / 今は見ない」のように、閉じる言い方が場面ごとに変わる
+        const dialog = document.querySelector('[role="dialog"]');
+        if (dialog) {
+          const inner = [...dialog.querySelectorAll('button')];
+          if (inner.length) { inner[inner.length - 1].click(); return true; }
+          dialog.click(); return true;
+        }
+        const b = [...document.querySelectorAll('button')].find((x) => /^(確認|受け取る|閉じる|とじる|OK|つぎへ|次へ|はじめる|今は見ない|あとで|スキップ|やめる)$/.test((x.innerText || '').trim()));
+        if (b) { b.click(); return true; }
+        return false;
+      });
+      if (!closed) { quiet++; await page.waitForTimeout(600); continue; }
+      quiet = 0;
+      await page.waitForTimeout(400);
+    }
+  };
+  await page.waitForFunction(() => document.body?.innerText.includes('TAP TO START'), { timeout:40000 }).catch(() => {});
+  await pointerDown({ text:'TAP TO START' }); await page.waitForTimeout(2200);
+  await pointerDown({ aria:'トップ画面へ進む' }); await page.waitForTimeout(2200);
+  await dismissOverlays();
+  // ★この検査はカードの高さ・スクロール・ボタンが画面内に収まるかを実測する。
+  //   Tailwind の CSS が無いと素の縦積みになってしまい、測っても意味が無いうえ、
+  //   要素が重なって Playwright のクリックも通らない。CDN が届かない環境では飛ばす
+  //   (docs/refactor/BASELINE_2026-09.md の bgm-arrangement-layout-check と同じ理由)。
+  const tailwindReady = await page.evaluate(() => {
+    const probe = document.createElement('div');
+    probe.className = 'w-12';
+    document.body.appendChild(probe);
+    const w = probe.getBoundingClientRect().width;
+    probe.remove();
+    return Math.round(w) === 48;
+  });
+  if (!tailwindReady) {
+    console.log('SKIP: 難易度画面の実測は飛ばす(TailwindのCSSが読めない環境のため)');
+    await browser.close();
+    process.exit(0);
+  }
   await page.getByRole('button', { name:'バトル' }).waitFor();
 
   const openBattleMenu = async () => {

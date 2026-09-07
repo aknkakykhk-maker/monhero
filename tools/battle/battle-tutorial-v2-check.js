@@ -117,8 +117,10 @@ const check = (name, ok, detail = '') => {
     check('チャレンジ・クイック・プロの3つを説明する',
       ['チャレンジ', 'クイック', 'プロ'].every(w => allSaid.includes(w)),
       `${said.length}ステップぶん読んだ`);
+    // ★モードごとの「何がうれしいか」に触れているか。プロの説明は
+    //   「難しい」から「ベースモンだけで挑む」という言い方へ変わった
     check('3つのモードの中身にも触れる',
-      allSaid.includes('スコア') && allSaid.includes('1.5倍') && allSaid.includes('難しい'));
+      allSaid.includes('スコア') && allSaid.includes('1.5倍') && allSaid.includes('ベースモンだけ'));
 
     // --- ③ 練習中は台本から外れる操作を止める ---
     check('練習中は戻るが押せない', await page.getByRole('button', { name: '戻る' }).isDisabled());
