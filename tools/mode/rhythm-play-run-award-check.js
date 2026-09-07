@@ -42,11 +42,29 @@ for (const file of files) {
     && compact.includes('Number(song?.difficulties?.[rhythmDifficulty?.id]?.durationMs)'));
 
   // ---- 配るもの ----
+  // ★実際に1周クリアしたときと同じものを入れる。
+  //   経験値とダイヤだけにしていたころは、演奏より裏で回したほうが得だった
+  //   (2026-09-07・ユーザー指摘)
   check(`${rel}: 1周ぶんの値は報酬を配るのと同じ関数を通す`,
-    compact.includes('applyQuickXpPolicy(xpForWavesClearedInMode(10,xpMult,runMode),runMode,quickRewardPolicyRunRef.current)')
-    && compact.includes('applyQuickDiamondPolicy(goldForWavesClearedInMode(10,goldMult,runMode),runMode,quickRewardPolicyRunRef.current)'));
+    compact.includes('applyQuickXpPolicy(xpForWavesClearedInMode(10,xpMult,runMode),runMode,policy)')
+    && compact.includes('applyQuickDiamondPolicy(goldForWavesClearedInMode(10,goldMult,runMode),runMode,policy)'));
+  check(`${rel}: マスモンの絆経験値も同じ関数で配る`,
+    compact.includes('applyQuickXpPolicy(bondXpForWavesClearedInMode(10,xpMult,runMode),runMode,policy)')
+    && compact.includes('buildRunBondAwards({') && compact.includes("storeSet('mh_masu_mons',next,false)"));
+  check(`${rel}: 虹のプシュケーも同じ個数の決め方で配る`,
+    compact.includes('applyQuickPsychePolicy(clearPsycheReward(difficulty),runMode,policy)')
+    && compact.includes("storeSet('mh_owned_items',nextItems,false)"));
+  check(`${rel}: クリア回数・ミッション・助手の絆も周回ぶん進める`,
+    compact.includes('storeSet(clearCountKey(BATTLE_MODE_QUICK,difficulty),nextQuick,false)')
+    && compact.includes("saveMissionProgress('quickClear');addAssistantBond('quickClear');"));
+  check(`${rel}: 限界突破も通常の周回と同じように走らせる`,
+    compact.includes('executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current)'));
+  // 記録(最高スコア・最高WAVE)は触らない。演奏にはスコアが無いため
+  check(`${rel}: 記録(最高スコア・最高WAVE)は触らない`,
+    !/awardRhythmPlayRunLoops[\s\S]{0,3000}?(bestScoreKey|bestWaveKey|setQuickHighScores|setQuickHighestWaves)/.test(src));
   check(`${rel}: 周回数ぶんを掛ける`,
-    compact.includes('constxpGain=Math.floor(oneXp*count);') && compact.includes('constgoldGain=Math.floor(oneGold*count);'));
+    compact.includes('constxpGain=Math.floor(oneXp*count);') && compact.includes('constgoldGain=Math.floor(oneGold*count);')
+    && compact.includes('constbondGain=Math.floor(oneBond*count);') && compact.includes('constpsycheGain=Math.max(0,Math.floor(onePsyche*count));'));
   check(`${rel}: 帯の数字も実際に配った値をそのまま足す`,
     compact.includes('addQuickRunProgressRewards(xpGain,goldGain);'));
   check(`${rel}: 周回数もそのぶん進める`,
@@ -58,7 +76,7 @@ for (const file of files) {
     /rhythmPlay\.from!=='tutorial'[\s\S]{0,400}?rhythmPlayLoopsFor\(rhythmPlay\.song,rhythmPlay\.difficulty\)/.test(compact.replace(/\s+/g, ''))
     || /rhythmPlay\.from!=='tutorial'\)\{[\s\S]{0,400}?rhythmPlayLoopsFor/.test(src));
   check(`${rel}: その周は締めて次の周から始める`,
-    /awardRhythmPlayRunLoops\(loops\)[\s\S]{0,400}?startRunFromRepeatTemplate\(repeat\)/.test(src));
+    /awardRhythmPlayRunLoops\(loops\)[\s\S]{0,700}?startRunFromRepeatTemplate\(repeat\)/.test(src));
   // 生成物は `from !== 'tutorial'` のように空白が入るので、空白を潰してから見る
   check(`${rel}: 練習(あそびかた)では何も配らない`,
     compact.includes("rhythmPlay.from!=='tutorial'"));

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c85f372d1dcad8c
+// source-sha256: c6762cff906314c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4277dc301cf4ca80
+// generated-sha256: e4e6ab59e032e946
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 09:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 09:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23033,22 +23033,26 @@ function MonsterHeroGame() {
     if (!rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts)) return 0;
     return rhythmPlayRunLoops(rhythmPlaySongDurationMs(song, rhythmDifficulty));
   };
-  // 配るのは経験値とダイヤだけ。絆・マスモン・ミッション・限界突破は動かさない
-  // (演奏で増えるのは「周回を回した成果」に限る、という線引き。
-  //  報酬を配る道を増やしすぎないため)。
-  // ★1周ぶんの値は awardRunRewards とまったく同じ関数・同じ倍率を通すので、
+  // ★配るものは「実際に1周クリアしたとき」とそろえる。
+  //   経験値とダイヤだけにしていたころは、演奏するより裏で回したほうが得になっていた
+  //   (2026-09-07・ユーザー指摘「基本は同じにしないと無限周回のほうがいいみたいにならない？」)。
+  //   ブリーダー経験値・ダイヤ・マスモンの絆経験値・虹のプシュケー・クリア回数・
+  //   ミッション・助手の絆まで、1周クリアと同じものを周回数ぶん入れる。
+  // ★値はどれも awardRunRewards / awardClearPsyche とまったく同じ関数・同じ倍率を通すので、
   //   「実際に1周勝ったとき」と必ず一致する。
-  const awardRhythmPlayRunLoops = loops => {
+  // ★触らないのは記録(最高スコア・最高WAVE)だけ。演奏にはスコアが無く、
+  //   埋める値そのものが存在しないため(CLAUDE.md ⑦「消さない・上書きしない」)。
+  const awardRhythmPlayRunLoops = async loops => {
     const count = Math.max(0, Math.trunc(Number(loops) || 0));
     if (count <= 0) return null;
     const {
       goldMult,
       xpMult
     } = runRewardMultipliers();
-    const oneXp = applyQuickXpPolicy(xpForWavesClearedInMode(10, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
-    const oneGold = applyQuickDiamondPolicy(goldForWavesClearedInMode(10, goldMult, runMode), runMode, quickRewardPolicyRunRef.current);
+    const policy = quickRewardPolicyRunRef.current;
+    // ---- ブリーダー経験値 ----
+    const oneXp = applyQuickXpPolicy(xpForWavesClearedInMode(10, xpMult, runMode), runMode, policy);
     const xpGain = Math.floor(oneXp * count);
-    const goldGain = Math.floor(oneGold * count);
     if (xpGain > 0) {
       const before = levelInfo(breederXp);
       const nextXp = breederXp + xpGain;
@@ -23065,10 +23069,64 @@ function MonsterHeroGame() {
         storeSet('mh_breeder_points_granted', Math.max(0, after.level - 1), false);
       }
     }
+    // ---- ダイヤ ----
+    const oneGold = applyQuickDiamondPolicy(goldForWavesClearedInMode(10, goldMult, runMode), runMode, policy);
+    const goldGain = Math.floor(oneGold * count);
     if (goldGain > 0) {
       const nextGold = gold + goldGain;
       setGold(nextGold);
       storeSet('mh_gold', nextGold, false);
+    }
+    // ---- マスモンの絆経験値 ----
+    // 配る相手の決め方(勇者=1 / 参加した供モン=1/2 / 控え=1/4)も、
+    // AUTO∞のときの上限(ブリーダーLv)も、1周クリアとまったく同じものを通す
+    const oneBond = applyQuickXpPolicy(bondXpForWavesClearedInMode(10, xpMult, runMode), runMode, policy);
+    const bondGain = Math.floor(oneBond * count);
+    const bondAwards = bondGain > 0 ? buildRunBondAwards({
+      gain: bondGain,
+      heroMasuId: mainHero?.masuId,
+      participantMasuIds: slots.filter(s => s?.masuId).map(s => s.masuId),
+      monsterRosterIds,
+      masuMons
+    }) : [];
+    if (bondAwards.length > 0) {
+      const cap = autoRepeatRef.current ? levelInfo(breederXp).level : null;
+      const awardByMasuId = new Map(bondAwards.map(award => [String(award.masuId), award]));
+      const next = (masuMonsRef.current || masuMons).map(m => {
+        const award = awardByMasuId.get(String(m.id));
+        if (!award) return m;
+        return applyBondXpGain(m, award.gain, cap).masu;
+      });
+      masuMonsRef.current = next;
+      setMasuMons(next);
+      await storeSet('mh_masu_mons', next, false);
+      // 次の周が終わったときの限界突破が、この演奏で育った子も見られるようにする
+      autoRepeatBondAwardMasuIdsRef.current = autoRepeatRef.current ? bondAwards.map(award => award.masuId) : [];
+    }
+    // ---- 虹のプシュケー ----
+    // 難易度ごとの個数(CLEAR_PSYCHE_REWARD)と報酬方針は awardClearPsyche と同じものを通す
+    const onePsyche = applyQuickPsychePolicy(clearPsycheReward(difficulty), runMode, policy);
+    const psycheGain = Math.max(0, Math.floor(onePsyche * count));
+    if (psycheGain > 0) {
+      const nextItems = {
+        ...ownedItemsRef.current,
+        [BREAKTHROUGH_ITEM_ID]: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID) + psycheGain
+      };
+      ownedItemsRef.current = nextItems;
+      setOwnedItems(nextItems);
+      await storeSet('mh_owned_items', nextItems, false);
+    }
+    // ---- クリア回数・ミッション・助手の絆 ----
+    // 記録(最高スコア・最高WAVE)は触らない。演奏にはスコアが無いため
+    const nextQuick = (quickClearCounts[difficulty] || 0) + count;
+    setQuickClearCounts(prev => ({
+      ...prev,
+      [difficulty]: Math.max(prev[difficulty] || 0, nextQuick)
+    }));
+    await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
+    for (let i = 0; i < count; i++) {
+      await saveMissionProgress('quickClear');
+      addAssistantBond('quickClear');
     }
     // 帯の数字も、実際に配った値をそのまま足す(2か所で数えない)
     addQuickRunProgressRewards(xpGain, goldGain);
@@ -23076,7 +23134,9 @@ function MonsterHeroGame() {
     return {
       loops: count,
       xp: xpGain,
-      gold: goldGain
+      gold: goldGain,
+      bond: bondGain,
+      psyche: psycheGain
     };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
@@ -38923,9 +38983,14 @@ function MonsterHeroGame() {
         // 練習(tutorial)は記録も報酬も動かさないので、その前に判定しない
         if (rhythmPlay.from !== 'tutorial') {
           const loops = rhythmPlayLoopsFor(rhythmPlay.song, rhythmPlay.difficulty);
-          const awarded = loops > 0 ? awardRhythmPlayRunLoops(loops) : null;
+          const awarded = loops > 0 ? await awardRhythmPlayRunLoops(loops) : null;
           if (awarded) {
             setRhythmPlayRunAward(awarded);
+            // 限界突破も、通常の周回が終わったときと同じように走らせる
+            // (ここを抜かすと「演奏だけしていると限界突破されない」差が出る)
+            try {
+              await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
+            } catch (_) {}
             // その周は「クリアした」ことにして、次の周から始める
             // (ユーザー提案「5周目クリア扱いになって無限周回は6周目から始まる」)。
             // 始められなかったとき(編成が失われたなど)は、いまのランをそのまま続ける
@@ -39088,7 +39153,7 @@ function MonsterHeroGame() {
           className: "col-span-2 rounded-lg border border-cyan-400/30 bg-cyan-950/30 px-2 py-1 text-[9px] leading-relaxed text-cyan-100"
         }, "\u3055\u3063\u304D\u306E\u6F14\u594F\u3067 ", /*#__PURE__*/React.createElement("b", {
           className: "text-white"
-        }, rhythmPlayRunAward.loops, "\u5468"), "\u3076\u3093\u5165\u308A\u307E\u3057\u305F\uFF08\u7D4C\u9A13\u5024 +", rhythmPlayRunAward.xp.toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", rhythmPlayRunAward.gold.toLocaleString(), "\uFF09\u3002\u66F2\u306E\u9577\u3055\u3067\u6C7A\u307E\u308A\u307E\u3059\u3002"));
+        }, rhythmPlayRunAward.loops, "\u5468"), "\u3076\u3093\u5165\u308A\u307E\u3057\u305F\uFF08\u7D4C\u9A13\u5024 +", rhythmPlayRunAward.xp.toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", rhythmPlayRunAward.gold.toLocaleString(), rhythmPlayRunAward.bond > 0 ? ` ／ 絆 +${rhythmPlayRunAward.bond.toLocaleString()}` : '', rhythmPlayRunAward.psyche > 0 ? ` ／ 🌈 +${rhythmPlayRunAward.psyche.toLocaleString()}` : '', "\uFF09\u3002\u5165\u308B\u3082\u306E\u306F\u5B9F\u969B\u306B1\u5468\u30AF\u30EA\u30A2\u3057\u305F\u3068\u304D\u3068\u540C\u3058\u3067\u3001\u6570\u306F\u66F2\u306E\u9577\u3055\u3067\u6C7A\u307E\u308A\u307E\u3059\u3002"));
       })(), /*#__PURE__*/React.createElement("div", {
         className: "col-span-2 flex justify-between gap-2"
       }, /*#__PURE__*/React.createElement("dt", {

@@ -341,10 +341,24 @@
 **過去にその難易度をクイックで1回でもクリアしていること**。判定は既存の
 `mh_quick_clears_<難易度>` をそのまま読む（新しい保存キーは作らない）。
 
-**配るもの**: 経験値とダイヤだけ。絆・マスモン・ミッション・限界突破は動かさない
-（報酬を配る道を増やしすぎないための線引き）。1周ぶんの値は `awardRunRewards` と
-**まったく同じ関数・同じ倍率**（`xpForWavesClearedInMode` / `goldForWavesClearedInMode`
-＋ `runRewardMultipliers` ＋ 報酬方針）を通すので、実際に1周勝ったときと必ず一致する。
+**配るもの**: **実際に1周クリアしたときと同じもの**。
+
+| 入るもの | 通す関数（＝1周クリアと同じ） |
+| --- | --- |
+| ブリーダー経験値 | `xpForWavesClearedInMode(10, …)` ＋ 報酬方針 |
+| ダイヤ | `goldForWavesClearedInMode(10, …)` ＋ 報酬方針 |
+| マスモンの絆経験値 | `bondXpForWavesClearedInMode(10, …)` ＋ `buildRunBondAwards` ＋ AUTO∞の上限 |
+| 虹のプシュケー | `clearPsycheReward(difficulty)` ＋ 報酬方針 |
+| クリア回数・ミッション・助手の絆 | `clearCountKey` / `saveMissionProgress('quickClear')` / `addAssistantBond` |
+| 限界突破 | `executeAutoRepeatBreakthroughs`（通常の周回と同じ） |
+
+**触らないのは記録（最高スコア・最高到達WAVE）だけ**。演奏にはスコアが無く、
+埋める値そのものが存在しないため（CLAUDE.md ⑦「消さない・上書きしない」）。
+
+> ⚠ 最初は「経験値とダイヤだけ」で作ったが、それだと
+> **演奏するより裏で回したほうが得**になってしまう
+> （2026-09-07・ユーザー指摘「基本は同じにしないと無限周回のほうがいいみたいにならない？」）。
+> 遊び方を2つ用意するときは、**どちらを選んでも損しない**ことをまず確かめる。
 
 **どこで反映するか**: `onComplete`（最後まで演奏したとき）だけ。途中でやめたら何も入らない
 （1秒だけ演奏してやめる、で稼げないようにするため）。反映したらその周は締めて、
