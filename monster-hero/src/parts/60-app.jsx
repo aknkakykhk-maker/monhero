@@ -11391,11 +11391,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" role="tablist" aria-label="編成セット">
                     {monsterPartySets.names.map((name,index)=><button key={index} role="tab" aria-selected={editingPartySetIndex===index} onClick={()=>switchMonsterPartySet(index)} className={`shrink-0 min-w-[92px] min-h-[44px] rounded-xl border px-2 py-1 text-left active:scale-95 ${editingPartySetIndex===index?'border-indigo-300 bg-indigo-600/40':'border-slate-700 bg-slate-800'}`}><span className="block text-[10px] font-black truncate">{index+1}. {name}</span>{monsterPartySets.activeIndex===index?<span className="text-[8px] font-black text-emerald-300">✓ 使用中</span>:<span className="text-[8px] text-slate-500">タップで使用</span>}</button>)}
                   </div>
-                  <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end">
+                  {/* セット名を変えるのもコピーも、毎回やることではない。
+                      畳んでおいて、必要なときだけ開く(2026-09-07・ユーザー指摘
+                      「モンスターの部分がメインなのに他でスペースを取りすぎ」) */}
+                  <button type="button" data-party-set-edit-toggle onClick={()=>toggleScreenNote('partySetEdit')}
+                    aria-expanded={screenNoteOpen.partySetEdit===true}
+                    className="mt-1 flex min-h-[36px] w-full items-center justify-between gap-2 rounded-lg px-1 text-left text-[9px] font-black text-slate-400 active:scale-[.995]">
+                    <span className="min-w-0 truncate">セット名を変える・ほかのセットへコピー</span>
+                    <span className="shrink-0">{screenNoteOpen.partySetEdit===true?'閉じる ▲':'開く ▼'}</span>
+                  </button>
+                  {screenNoteOpen.partySetEdit===true&&<div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end">
                     <label className="min-w-0 text-[8px] font-black text-slate-400">セット名<input key={`${editingPartySetIndex}:${monsterPartySets.names[editingPartySetIndex]}`} defaultValue={monsterPartySets.names[editingPartySetIndex]} maxLength={20} onBlur={e=>renameMonsterPartySet(editingPartySetIndex,e.target.value)} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}} className="mt-0.5 block w-full min-w-0 rounded-lg border border-slate-600 bg-slate-950 px-2 py-2 text-[12px] text-white"/></label>
                     <button onClick={()=>setPartySetCopyTarget(partySetCopyTarget==null?((editingPartySetIndex+1)%MONSTER_PARTY_SET_COUNT):null)} className="min-h-[38px] rounded-lg border border-amber-500/50 px-3 text-[10px] font-black text-amber-200">編成をコピー</button>
-                  </div>
-                  {partySetCopyTarget!=null&&<div className="mt-2 rounded-xl bg-amber-950/40 p-2"><div className="text-[9px] font-bold text-amber-100 mb-1">「{monsterPartySets.names[editingPartySetIndex]}」の編成内容をコピーする先（名前は変わりません）</div><div className="flex flex-wrap gap-1">{monsterPartySets.names.map((name,index)=>index===editingPartySetIndex?null:<button key={index} onClick={()=>setPartySetCopyTarget(index)} className={`min-h-[34px] max-w-[120px] truncate rounded-lg border px-2 text-[9px] font-black ${partySetCopyTarget===index?'border-amber-300 bg-amber-600 text-white':'border-slate-600 text-slate-300'}`}>{index+1}. {name}</button>)}</div><div className="mt-2 flex gap-2"><button onClick={()=>setPartySetCopyTarget(null)} className="flex-1 min-h-[36px] rounded-lg bg-slate-700 text-[10px] font-black">やめる</button><button onClick={()=>copyMonsterPartySet(partySetCopyTarget)} className="flex-1 min-h-[36px] rounded-lg bg-amber-500 text-slate-950 text-[10px] font-black">このセットへ上書き</button></div></div>}
+                  </div>}
+                  {screenNoteOpen.partySetEdit===true&&partySetCopyTarget!=null&&<div className="mt-2 rounded-xl bg-amber-950/40 p-2"><div className="text-[9px] font-bold text-amber-100 mb-1">「{monsterPartySets.names[editingPartySetIndex]}」の編成内容をコピーする先（名前は変わりません）</div><div className="flex flex-wrap gap-1">{monsterPartySets.names.map((name,index)=>index===editingPartySetIndex?null:<button key={index} onClick={()=>setPartySetCopyTarget(index)} className={`min-h-[34px] max-w-[120px] truncate rounded-lg border px-2 text-[9px] font-black ${partySetCopyTarget===index?'border-amber-300 bg-amber-600 text-white':'border-slate-600 text-slate-300'}`}>{index+1}. {name}</button>)}</div><div className="mt-2 flex gap-2"><button onClick={()=>setPartySetCopyTarget(null)} className="flex-1 min-h-[36px] rounded-lg bg-slate-700 text-[10px] font-black">やめる</button><button onClick={()=>copyMonsterPartySet(partySetCopyTarget)} className="flex-1 min-h-[36px] rounded-lg bg-amber-500 text-slate-950 text-[10px] font-black">このセットへ上書き</button></div></div>}
                 </div>
                 {/* 編成中のモンスターを小さいアイコンで並べ、タップで編成から外せる */}
                 <div className="flex items-center gap-2 mb-2 shrink-0 bg-indigo-950/30 border border-indigo-500/30 rounded-2xl px-2 py-2">
@@ -11416,7 +11425,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     }))}
                   </div>
                 </div>
-                <div className="text-[9px] text-slate-500 font-bold mb-1 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細・同じ種は1体まで(マスモン含む)</div>
+                {renderScreenNote('partyPick',
+                  `解放済み${unlockedMonsterIds.length}体。ちょうど${STARTER_MONSTER_IDS.length}体選ぶと「決定」できます。`,
+                  ['アイコンをタップすると編成に入れたり外したりできます。',
+                   'カードの「i」ボタンでそのモンスターの詳細を見られます。',
+                   '同じ種は1体までです（マスモンも含めて数えます）。'])}
                 {renderMonsterSortFilterBar()}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   <div className="grid grid-cols-3 gap-3 pb-4">
@@ -11670,16 +11683,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               })}
             </div>
           );
-          const fusionGuide = (
-            <div className="shrink-0 mt-2 bg-black/40 border border-violet-500/30 rounded-2xl p-3 space-y-1.5">
-              <div className="text-[9px] font-black text-violet-300 uppercase tracking-wider">合体のルール</div>
-              <div className="text-[9px] text-slate-300 leading-relaxed">・<span className="text-white font-bold">主</span>が残り、<span className="text-white font-bold">副</span>は消滅します。副の絆経験値は累計のまま主に加算されます</div>
-              <div className="text-[9px] text-slate-300 leading-relaxed">・上がった絆レベルの数だけ、主が<span className="text-amber-300 font-bold">強化ポイント</span>を獲得します</div>
-              <div className="text-[9px] text-slate-300 leading-relaxed">・主の名前・見た目・間合い適性・ステータス強化は<span className="text-white font-bold">そのまま維持</span>されます(副の強化は引き継がれません)</div>
-              <div className="text-[9px] text-slate-300 leading-relaxed">・技を引き継がない合体は<span className="text-cyan-300 font-bold">0ダイヤ</span>、引き継ぐ合体は<span className="text-amber-300 font-bold">3000ダイヤ</span>です</div>
-              <div className="text-[9px] text-amber-200 leading-relaxed border-t border-white/10 pt-1.5">・<span className="font-bold">固有技の引き継ぎ</span>は、<span className="font-bold">副が絆Lv.30以上</span>のときだけ選べます。条件を満たすと副の固有技が主に記録されます</div>
-            </div>
-          );
+          // ルールは5行あって画面の3分の1を占めていた。主役はモンスターの一覧なので、
+          // ふだんは1行だけ出して「詳しく」で開く
+          // (2026-09-07・ユーザー指摘「モンスターの部分がメインなのに
+          //  他でスペースを取りすぎて肝心なとこが窮屈で見にくい」)
+          const fusionGuide = renderScreenNote('fusion',
+            '主が残り、副は消えます。副の絆経験値はそのまま主へ加わります。',
+            ['上がった絆レベルの数だけ、主が強化ポイントを獲得します。',
+             '主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます（副の強化は引き継がれません）。',
+             '技を引き継がない合体は0ダイヤ、引き継ぐ合体は3000ダイヤです。',
+             '固有技の引き継ぎは、副が絆Lv.30以上のときだけ選べます。条件を満たすと副の固有技が主に記録されます。']);
 
           if (fusionStep==='main') {
             return (

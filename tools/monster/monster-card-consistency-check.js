@@ -62,6 +62,14 @@ for (const file of files) {
     !/text-\[10px\]text-slate-400mb-3">絆Lv\./.test(compact));
   check(`${rel}: 限界突破と転生が畳める説明を使っている`,
     compact.includes("renderScreenNote('rebirth'") && compact.includes("renderScreenNote('reincarnate'"));
+  // 2026-09-07・ユーザー指摘「モンスターの部分がメインなのに他でスペースを取りすぎ」。
+  // 合体のルール(5行)と編成の説明も畳んだ側へ移した
+  check(`${rel}: 合体のルールを畳んだ側に置いている`,
+    compact.includes("renderScreenNote('fusion'")
+    && !compact.includes('<divclassName="text-[9px]font-blacktext-violet-300uppercasetracking-wider">合体のルール'));
+  check(`${rel}: 編成の説明を畳んだ側に置いている`, compact.includes("renderScreenNote('partyPick'"));
+  check(`${rel}: 編成のセット名・コピーも畳める`,
+    src.includes('data-party-set-edit-toggle') && compact.includes("toggleScreenNote('partySetEdit')"));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
