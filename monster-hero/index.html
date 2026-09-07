@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":798186,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":492829,"data/help.js":284489,"data/rhythm-step3-release.js":7722,"data/assistants.js":274157,"game-system.compiled.js":3027020,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":809099,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":495107,"data/help.js":285231,"data/rhythm-step3-release.js":7722,"data/assistants.js":274157,"game-system.compiled.js":3027376,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609071718';
+var GAME_BUILD = '202609071756';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -710,7 +710,8 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
   [data-rhythm-note] > span:last-child {
     inset:4px 0 !important;
     border:1px solid rgba(255,255,255,.72);
-    border-radius:5px !important;
+    /* 粒は scaleX で縮むので、横の半径だけ逆比で大きくして角の丸みを保つ(発熱対策・2026-09-07) */
+    border-radius:calc(5px / var(--rhythm-note-cap-scale,1)) / 5px !important;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.58),0 0 12px rgba(217,70,239,.32) !important;
   }
   [data-rhythm-note][data-note-type="HOLD"] > span:last-child {
@@ -747,7 +748,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     position:absolute;
     left:50%;
     top:-27px;
-    transform:translateX(-50%);
+    transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));
     color:#f0fdf4 !important;
     font-size:22px;
     font-weight:1000;
@@ -765,21 +766,29 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     overflow:visible !important;
     filter:drop-shadow(0 0 5px rgba(253,224,71,.72)) drop-shadow(0 0 10px rgba(217,70,239,.42)) drop-shadow(0 0 14px rgba(34,211,238,.24));
   }
-  [data-rhythm-note][data-rhythm-monster-note]::before {
+  /* 発熱対策(2026-09-07)以降、ノーツ要素の箱は「判定ラインの手前での幅」で固定され、粒だけが scaleX で縮む。
+     光を箱に掛けると遠くでも手前の大きさのまま残る(実機で「モンスターノーツの描画が壊れてる」)ので、
+     粒(data-rhythm-note-head)の ::before/::after に掛けて粒と一緒に縮める。
+     横に潰れる角丸と左右の線の太さは --rhythm-note-cap-scale の逆比で戻す。 */
+  [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::before {
     content:"";
     position:absolute;
     inset:2px -1px;
     border:1px solid rgba(255,250,205,.98);
-    border-radius:9999px;
+    border-left-width:calc(1px / var(--rhythm-note-cap-scale,1));
+    border-right-width:calc(1px / var(--rhythm-note-cap-scale,1));
+    border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px;
     box-shadow:0 0 5px rgba(253,224,71,.92),0 0 9px rgba(232,121,249,.58),0 0 13px rgba(34,211,238,.34),inset 0 0 4px rgba(255,255,255,.5);
     pointer-events:none;
   }
-  [data-rhythm-note][data-rhythm-monster-note]::after {
+  [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::after {
     content:"";
     position:absolute;
     inset:-4px -6px;
     border:1px solid rgba(216,180,254,.62);
-    border-radius:9999px;
+    border-left-width:calc(1px / var(--rhythm-note-cap-scale,1));
+    border-right-width:calc(1px / var(--rhythm-note-cap-scale,1));
+    border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px;
     background:
       radial-gradient(circle at 8% 45%,rgba(255,255,255,.85) 0 1px,transparent 1.8px),
       radial-gradient(circle at 93% 58%,rgba(103,232,249,.85) 0 1px,transparent 1.8px),
@@ -819,7 +828,7 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
     -webkit-clip-path:none !important;
   }
   @media(prefers-reduced-motion:reduce) {
-    [data-rhythm-note][data-rhythm-monster-note]::after { animation:none; opacity:.66; }
+    [data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::after { animation:none; opacity:.66; }
   }
   [data-rhythm-hold-body] {
     border-left:1px solid rgba(167,243,208,.34);
@@ -845,12 +854,12 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="data/breeder.js?v=8df97497b791" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=e36ca7fbd818" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=e597923e60fc" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=d0b5c2bea35c" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=a82858498479" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=803c276c97d2" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=eb11a5c2cc6d" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=53c184c7439b" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->

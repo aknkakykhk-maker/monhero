@@ -201,8 +201,59 @@ check('サブレーン発光は合成レイヤーへ載せ、タップのたび�
 // 毎フレーム書き直すと中身の再構築を招くので、変わったときだけ書く。
 check('SLIDE帯SVGの変わらない値(幅・viewBox)を毎フレーム書き直さない',
   data.includes("if(body._rhythmSlideArea!==slideArea){")
-  &&data.includes("if(body._rhythmSlideLeft!==slideLeft){")
+  &&data.includes("if(body._rhythmSlideTransform!==slideTransform){")
   &&!data.includes("body.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);\n    const polygons="));
+
+// --- 2026-09-07 の発熱対策(ユーザー指示「演出状態やゲーム性を落とさずに熱が持ちにくい仕組みに」) ---
+// 毎フレームの書き込みを「レイアウトを起こさないもの(transform / opacity / 影の層)」だけにする。
+// 実測(tools/mode/rhythm-render-cost-check.js・同時表示10ノーツ)で、1フレームあたり
+// 塗り直し 11回→4回、ラスタライズ 2.84ms→0.79ms、レイアウト 0.325ms→0.045ms。
+// TAP/FLICK は落ちているあいだレイアウトも塗り直しも 0 になった。戻すと発熱が再発する。
+check('ノーツの幅は基準幅で固定し、落ちる途中の幅は scaleX で表す(width を毎フレーム書かない)',
+  data.includes("const nextWidth=`${baseWidth.toFixed(2)}px`;")
+  &&data.includes("if(el._rhythmWidthScale!==widthScale){el.style.setProperty('--rhythm-note-width-scale',widthScale);")
+  &&data.includes('scaleX(var(--rhythm-note-width-scale,1)) scaleY(var(--rhythm-note-depth-scale,1))')
+  &&!data.includes("const nextWidth=`${width.toFixed(2)}px`;"));
+check('奥行きの明るさは filter ではなく影の層(data-rhythm-note-shade)の opacity で作る',
+  data.includes('[data-rhythm-note-shade]{position:absolute;inset:0;z-index:1;border-radius:inherit;background:#020617;opacity:calc(1 - var(--rhythm-note-depth-brightness,1))')
+  &&!data.includes('transform-origin:center;filter:brightness(var(--rhythm-note-depth-brightness,1))}')
+  &&gameSrc.includes('{!monster&&<i data-rhythm-note-shade aria-hidden="true"/>}'));
+check('粒・影の層・ENDバーは見えているノーツ(data-rhythm-live)だけ合成レイヤーへ載せる',
+  data.includes('[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-note-head],[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-monster-face],[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-end-bar]{will-change:transform}')
+  &&data.includes('[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-note-head]>[data-rhythm-note-shade]{will-change:opacity}')
+  &&gameSrc.includes("if(visible)el.dataset.rhythmLive='1';else delete el.dataset.rhythmLive;")
+  &&!data.includes('[data-rhythm-note-head]{will-change'));
+check('HOLD帯の箱は基準の高さで固定し、いまの長さは scaleY で表す(height/left/width を毎フレーム書かない)',
+  data.includes('const rhythmHoldBodyBaseHeight=(body,note,height,slideTravel)=>{')
+  &&data.includes("if(body._rhythmBodyBox!==bodyBox){body.style.left='0px';")
+  &&data.includes('scaleY(${(height/baseHeight).toFixed(4)})')
+  &&data.includes('if(body._rhythmBodyTransform!==bodyTransform){body.style.transform=bodyTransform;')
+  &&!data.includes("body.style.left=`${(-left).toFixed(2)}px`;"));
+check('SLIDE帯のSVGは left/top ではなく transform で動かし、drop-shadow を掛けない',
+  data.includes("const slideTransform=`translate(${(-left).toFixed(2)}px,${(-Number(yPx)).toFixed(2)}px)`;")
+  &&!data.includes('body.style.left=slideLeft;')
+  &&!data.includes('drop-shadow(0 0 5px rgba(168,85,247,.38))')
+  &&data.includes('[data-rhythm-slide-glow]{fill:none;stroke:rgba(168,85,247,.12);stroke-width:12'));
+// 2026-09-07・実機「モンスターノーツの描画が壊れてる」。ノーツ要素の箱は基準幅で固定されるので、
+// 箱の ::before/::after に掛けた装飾は遠くでも手前の大きさのまま残る。装飾は粒(data-rhythm-note-head)に掛ける。
+{
+  const indexHtml=fs.readFileSync(path.join(ROOT,'monster-hero/index.html'),'utf8');
+  check('index.html の装飾はノーツ要素の箱(基準幅で固定)ではなく粒に掛ける(モンスターノーツの光・角丸・FLICKの矢印)',
+    !/\[data-rhythm-note\]\[data-rhythm-monster-note\]::(before|after)/.test(indexHtml)
+    &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::before {')
+    &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::after {')
+    &&indexHtml.includes('border-radius:calc(5px / var(--rhythm-note-cap-scale,1)) / 5px !important;')
+    &&indexHtml.includes('transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));'));
+}
+check('粒の端の丸みと FLICK の矢印は 0.05 刻みの比率(--rhythm-note-cap-scale)で scaleX を打ち消す(塗り直しを1回の落下で10回ほどに抑える)',
+  data.includes("const capScale=(Math.max(.05,Math.round(Math.min(1,width/baseWidth)*20)/20)).toFixed(2);")
+  &&data.includes('[data-rhythm-note]>[data-rhythm-note-head]{border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px}')
+  &&data.includes('transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));'));
+check('ENDバーは基準幅で固定し、位置と幅は transform で表す(left/top/width を毎フレーム書かない)',
+  data.includes("if(endBar._rhythmBarBox!==barBox){endBar.style.left='0px';endBar.style.top='0px';")
+  &&data.includes('if(endBar._rhythmBarTransform!==barTransform){endBar.style.transform=barTransform;')
+  &&data.includes('scaleX(calc(1 / var(--rhythm-end-width-scale, 1))) scaleY(calc(1 / var(--rhythm-end-depth-scale, 1)))')
+  &&!data.includes("endBar.style.left=`${(rect.width*end.center-left-barWidth/2).toFixed(2)}px`;"));
 
 check('失敗表示フラグをdatasetから毎フレーム読み直さない',
   gameSrc.includes('el._rhythmFailedFlag!==failedFlag')

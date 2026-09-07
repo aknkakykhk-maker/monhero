@@ -1,0 +1,16 @@
+{
+  "measuredAt": "2026-09-07",
+  "notes": 10,
+  "frames": 120,
+  "perFrame": {
+    "frames": 120,
+    "layout": 1,
+    "recalc": 3,
+    "paint": 4,
+    "raster": 3.225,
+    "layoutMs": 0.05284166666666667,
+    "recalcMs": 0.7709416666666667,
+    "paintMs": 0.18814166666666668,
+    "rasterMs": 0.7616916666666668
+  }
+}
