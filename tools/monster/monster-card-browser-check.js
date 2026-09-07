@@ -29,7 +29,9 @@ const seed = () => {
   // 一覧に並ぶマスモンを用意する(絆Lvや凸は既定のまま)
   put('mh_masu_mons', [1, 2, 3, 4, 5, 6].map((n) => ({
     id: `test-${n}`, baseId: ['Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie', 'Monol'][n - 1],
-    name: `テスト${n}`, bondXp: 400 * n, colors: [], rebirthCount: 0, reincarnateCount: 0,
+    // 転生の回数を入れて、転生バッジが名前に重ならないかも見られるようにする
+    // (2026-09-07・ユーザー指摘「3枚目 名前表示がおかしい」)
+    name: `テスト${n}`, bondXp: 400 * n, colors: [], rebirthCount: 0, reincarnateCount: n % 2,
   })));
 };
 
@@ -70,12 +72,18 @@ const seed = () => {
   //   grid-cols-3 が効かないので、カードは縦に積まれて画面いっぱいに広がってしまう。
   //   そのかわり「共通のカードを通っているか」は確実に分かる:
   //     ・名前の行に付く .mh-monster-card-name の数 ＝ 共通カードで描いた枚数
-  //     ・器のボタンに MONSTER_CARD_STYLE(152px)が入っているか
+  //     ・器のボタンに MONSTER_CARD_STYLE(96px)が入っているか
+  //
+  // ★「バッジが名前に重なる」(2026-09-07・ユーザー指摘「3枚目 名前表示がおかしい」)も
+  //   ここでは測れない。バッジは絵の枠の `relative` を基準に置いているが、その `relative` も
+  //   Tailwind のクラスなので効かず、まったく別の場所へ飛んでしまう
+  //   (実際に旧実装へ戻して測ったら、名前 y=2758 に対しバッジ y=842 と1900pxずれた)。
+  //   そちらは monster-card-consistency-check.js が「絵の下へ絶対配置しないこと」で見る。
   const cards = () => page.evaluate(() => {
     const names = [...document.querySelectorAll('.mh-monster-card-name')];
     if (!names.length) return null;
     // 名前の行を持つカードの器(高さを直に指定しているもの)を数える
-    const shells = names.map((el) => el.closest('[style*="152px"]')).filter(Boolean);
+    const shells = names.map((el) => el.closest('[style*="96px"]')).filter(Boolean);
     return { count: names.length, shells: shells.length };
   });
 

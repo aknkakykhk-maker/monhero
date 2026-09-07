@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c19a574aba827fd
+// source-sha256: e361341216dda4a3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2759ac3e602427c3
+// generated-sha256: 4189e61aa97c110f
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21489,46 +21489,46 @@ function MonsterHeroGame() {
     }, line))));
   };
   const MONSTER_CARD_CLASS = 'w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1 active:scale-95 select-none';
+  // ★カードの高さは「出す行のぶんだけ」。以前は中身が無くても空の行を確保していたため、
+  //   絆Lvしか出さない画面(合体の主・副など)でも総合力・強化P・状態の3行ぶん(約59px)が
+  //   空のまま場所を取り、一覧に並ぶ数が減っていた
+  //   (2026-09-07・ユーザー指摘「1枚目 まだ窮屈 / 2枚目 このサイズ感がいい」)。
+  //   1つの画面の中では出す行がそろっているので、空の行を捨てても高さは食い違わない。
   const MONSTER_CARD_STYLE = {
-    minHeight: '152px'
+    minHeight: '96px'
   };
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
-  // 名前・情報・補足・状態の4行。中身が無くても同じ高さの空欄を確保する
   const monsterCardName = (node, className = 'text-white', band = false) => /*#__PURE__*/React.createElement("div", {
     className: `mh-monster-card-name text-[10px] font-black w-full text-center ${band ? 'min-h-[26px] px-1 py-0.5 rounded-md border border-pink-300/50 bg-slate-950/80 whitespace-normal break-words leading-[11px] flex items-center justify-center shadow-inner' : 'h-[14px] truncate leading-tight'} ${className}`,
     style: band ? {
       textShadow: '0 1px 2px rgba(0,0,0,.95)'
     } : undefined
   }, node);
-  const monsterCardInfo = node => /*#__PURE__*/React.createElement("div", {
-    className: "w-full flex items-center justify-center",
+  // 絆Lvと強化Pは同じ行に並べる。別々の行にしていたころは、それだけで17px使っていた
+  const monsterCardInfo = (node, sub) => node || sub ? /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex items-center justify-center gap-1.5 leading-none",
     style: {
       height: '14px'
     }
-  }, node || null);
-  // 総合力の行。一覧では「どれが強いか」がいちばん知りたい情報なので、強化Pより上に置く
-  const monsterCardPower = power => /*#__PURE__*/React.createElement("div", {
+  }, node || null, sub || null) : null;
+  // 総合力の行。一覧では「どれが強いか」がいちばん知りたい情報なので、いちばん目立つ位置に置く
+  const monsterCardPower = power => power == null ? null : /*#__PURE__*/React.createElement("div", {
     className: "w-full flex items-center justify-center gap-1 leading-none",
     style: {
       height: '16px'
     }
-  }, power == null ? null : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", {
     className: "text-[7px] text-amber-400/80 font-black uppercase"
   }, "\u7DCF\u5408\u529B"), /*#__PURE__*/React.createElement("span", {
     className: "text-[11px] font-mono font-black text-amber-200 tabular-nums"
-  }, formatMonsterPower(power))));
-  const monsterCardSub = node => /*#__PURE__*/React.createElement("div", {
-    className: "w-full flex items-center justify-center",
-    style: {
-      height: '13px'
-    }
-  }, node || null);
-  const monsterCardStatus = node => /*#__PURE__*/React.createElement("div", {
+  }, formatMonsterPower(power)));
+  const monsterCardSub = node => node || null;
+  const monsterCardStatus = node => node ? /*#__PURE__*/React.createElement("div", {
     className: "w-full flex items-center justify-center",
     style: {
       height: '18px'
     }
-  }, node || null);
+  }, node) : null;
   // マスモンの絆Lvと上限。細かいXPの進み具合は詳細画面で見るので、一覧ではゲージを出さない
   const monsterCardBond = (lvl, cap) => /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] text-pink-300 font-black flex items-center gap-0.5 leading-none whitespace-nowrap"
@@ -21599,11 +21599,11 @@ function MonsterHeroGame() {
     }), badge, masu && /*#__PURE__*/React.createElement(ReincarnateAura, {
       count: masu.reincarnateCount,
       className: "is-small"
-    })), monsterCardName(masu ? masu.name : base.name, nameBand ? 'text-white' : masu ? 'text-pink-200' : 'text-white', nameBand), monsterCardInfo(info !== undefined ? info : masu ? monsterCardBond(masuBondLevelInfo(masu), normalizeMasuProgression(masu).levelCap) : null), monsterCardPower(power), monsterCardSub(sub !== undefined ? sub : masu && (masu.distAptPoints || 0) > 0 ? /*#__PURE__*/React.createElement("span", {
+    })), monsterCardName(masu ? masu.name : base.name, nameBand ? 'text-white' : masu ? 'text-pink-200' : 'text-white', nameBand), monsterCardInfo(info !== undefined ? info : masu ? monsterCardBond(masuBondLevelInfo(masu), normalizeMasuProgression(masu).levelCap) : null, monsterCardSub(sub !== undefined ? sub : masu && (masu.distAptPoints || 0) > 0 ? /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] text-amber-300 font-black flex items-center gap-0.5"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 7
-    }), "\u5F37\u5316P ", masu.distAptPoints) : null), monsterCardStatus(status), extra);
+    }), "\u5F37\u5316P ", masu.distAptPoints) : null)), monsterCardPower(power), monsterCardStatus(status), extra);
   };
   // mon引数は素のモンスター種、またはresolveRosterEntryToMonで解決済みのマスモン反映後オブジェクトのどちらもあり得る。
   // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
@@ -35509,8 +35509,9 @@ function MonsterHeroGame() {
           }, renderMonsterCardBody({
             masu,
             base,
-            badge: /*#__PURE__*/React.createElement(ReincarnateBadge, {
-              count: masu.reincarnateCount
+            status: /*#__PURE__*/React.createElement(ReincarnateBadge, {
+              count: masu.reincarnateCount,
+              className: "is-inline"
             })
           }));
         })));
@@ -41569,8 +41570,8 @@ function MonsterHeroGame() {
     }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => copyMonsterPartySet(partySetCopyTarget),
       className: "flex-1 min-h-[36px] rounded-lg bg-amber-500 text-slate-950 text-[10px] font-black"
-    }, "\u3053\u306E\u30BB\u30C3\u30C8\u3078\u4E0A\u66F8\u304D")))), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-2 shrink-0 bg-indigo-950/30 border border-indigo-500/30 rounded-2xl px-2 py-2"
+    }, "\u3053\u306E\u30BB\u30C3\u30C8\u3078\u4E0A\u66F8\u304D"))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 flex items-center gap-2 border-t border-indigo-500/20 pt-1.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-indigo-300 shrink-0 leading-tight"
     }, "\u7DE8\u6210\u4E2D", /*#__PURE__*/React.createElement("br", null), draftMonsterRoster.length, "/", STARTER_MONSTER_IDS.length), /*#__PURE__*/React.createElement("div", {
@@ -41601,7 +41602,7 @@ function MonsterHeroGame() {
         style: monsterArtFitStyle(base.id),
         className: "w-full h-full object-cover"
       }));
-    }))), renderScreenNote('partyPick', `解放済み${unlockedMonsterIds.length}体。ちょうど${STARTER_MONSTER_IDS.length}体選ぶと「決定」できます。`, ['アイコンをタップすると編成に入れたり外したりできます。', 'カードの「i」ボタンでそのモンスターの詳細を見られます。', '同じ種は1体までです（マスモンも含めて数えます）。']), renderMonsterSortFilterBar(), /*#__PURE__*/React.createElement("div", {
+    })))), renderScreenNote('partyPick', `解放済み${unlockedMonsterIds.length}体。ちょうど${STARTER_MONSTER_IDS.length}体選ぶと「決定」できます。`, ['アイコンをタップすると編成に入れたり外したりできます。', 'カードの「i」ボタンでそのモンスターの詳細を見られます。', '同じ種は1体までです（マスモンも含めて数えます）。']), renderMonsterSortFilterBar(), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-3 gap-3 pb-4"
@@ -41613,18 +41614,22 @@ function MonsterHeroGame() {
           key: e.key,
           className: "relative"
         }, /*#__PURE__*/React.createElement("button", {
+          "aria-pressed": selected,
           onClick: () => toggleDraftMonster(e.entryId),
           style: MONSTER_CARD_STYLE,
-          className: `${MONSTER_CARD_CLASS} ${selected ? 'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400' : 'bg-slate-900 border-slate-800'}`
+          className: `${MONSTER_CARD_CLASS} relative ${selected ? 'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400' : 'bg-slate-900 border-slate-800'}`
         }, renderMonsterCardBody({
           base: m,
           info: /*#__PURE__*/React.createElement("div", {
             className: "text-[8px] text-slate-500 font-bold text-center leading-none"
-          }, "\u30D9\u30FC\u30B9\u30E2\u30F3"),
-          status: monsterDisplayFlags.active ? /*#__PURE__*/React.createElement("span", {
-            className: `text-[8px] font-black px-2 py-0.5 rounded-full ${selected ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500'}`
-          }, selected ? '選択中' : '未選択') : null
-        })), /*#__PURE__*/React.createElement("button", {
+          }, "\u30D9\u30FC\u30B9\u30E2\u30F3")
+        }), selected && /*#__PURE__*/React.createElement("div", {
+          className: "absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-indigo-500 border-2 border-white flex items-center justify-center shadow-lg"
+        }, /*#__PURE__*/React.createElement(Check, {
+          size: 13,
+          className: "text-white",
+          strokeWidth: 4
+        }))), /*#__PURE__*/React.createElement("button", {
           onClick: ev => {
             ev.stopPropagation();
             setRosterDetailMon(m);
@@ -41642,19 +41647,23 @@ function MonsterHeroGame() {
         key: e.key,
         className: "relative"
       }, /*#__PURE__*/React.createElement("button", {
+        "aria-pressed": selected,
         onClick: () => toggleDraftMonster(e.entryId),
         style: MONSTER_CARD_STYLE,
-        className: `${MONSTER_CARD_CLASS} ${selected ? 'bg-pink-900/40 border-pink-400 ring-2 ring-pink-400' : 'bg-slate-900 border-pink-900/50'}`
+        className: `${MONSTER_CARD_CLASS} relative ${selected ? 'bg-pink-900/40 border-pink-400 ring-2 ring-pink-400' : 'bg-slate-900 border-pink-900/50'}`
       }, renderMonsterCardBody({
         masu,
         base,
         badge: /*#__PURE__*/React.createElement("div", {
           className: "absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight"
-        }, "\u30DE\u30B9\u30E2\u30F3"),
-        status: monsterDisplayFlags.active ? /*#__PURE__*/React.createElement("span", {
-          className: `text-[8px] font-black px-2 py-0.5 rounded-full ${selected ? 'bg-pink-500 text-white' : 'bg-slate-800 text-slate-500'}`
-        }, selected ? '選択中' : '未選択') : null
-      })), /*#__PURE__*/React.createElement("button", {
+        }, "\u30DE\u30B9\u30E2\u30F3")
+      }), selected && /*#__PURE__*/React.createElement("div", {
+        className: "absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-pink-500 border-2 border-white flex items-center justify-center shadow-lg"
+      }, /*#__PURE__*/React.createElement(Check, {
+        size: 13,
+        className: "text-white",
+        strokeWidth: 4
+      }))), /*#__PURE__*/React.createElement("button", {
         onClick: ev => {
           ev.stopPropagation();
           setMasuMonDetail(masu);
@@ -41698,15 +41707,20 @@ function MonsterHeroGame() {
         key: t.id,
         className: "relative"
       }, /*#__PURE__*/React.createElement("button", {
+        "aria-pressed": selected,
         onClick: () => toggleDraftTeaching(t.id),
-        className: `w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected ? 'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400' : 'bg-slate-900 border-slate-800'}`
+        className: `w-full relative rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected ? 'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400' : 'bg-slate-900 border-slate-800'}`
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-10 h-10 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30"
       }, cardIconNode(t.icon, 40, t.id)), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-white truncate w-full text-center"
-      }, t.baseName), /*#__PURE__*/React.createElement("div", {
-        className: `text-[8px] font-black px-2 py-0.5 rounded-full ${selected ? 'bg-purple-500 text-white' : 'bg-slate-800 text-slate-500'}`
-      }, selected ? '選択中' : '未選択')), /*#__PURE__*/React.createElement("button", {
+      }, t.baseName), selected && /*#__PURE__*/React.createElement("div", {
+        className: "absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-purple-500 border-2 border-white flex items-center justify-center shadow-lg"
+      }, /*#__PURE__*/React.createElement(Check, {
+        size: 13,
+        className: "text-white",
+        strokeWidth: 4
+      }))), /*#__PURE__*/React.createElement("button", {
         onClick: e => {
           e.stopPropagation();
           setRosterDetailTeaching(t);
@@ -42070,7 +42084,6 @@ function MonsterHeroGame() {
         }, sortMasuList(masuMons).map(masu => {
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
           if (!base) return null;
-          const lvl = masuBondLevelInfo(masu);
           return /*#__PURE__*/React.createElement("div", {
             key: masu.id,
             className: "relative"
@@ -42081,28 +42094,14 @@ function MonsterHeroGame() {
               setFusionSubIds([]);
               setFusionStep('sub');
             },
-            className: "w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95"
-          }, /*#__PURE__*/React.createElement("div", {
-            className: "relative w-12 h-12 shrink-0"
-          }, /*#__PURE__*/React.createElement("div", {
-            className: `w-12 h-12 rounded-full overflow-hidden border ${fusedBorder(masu)}`
-          }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-            baseId: masu.baseId,
-            src: base.iconUrl,
-            alt: masu.name,
-            draggable: false,
-            masuColors: getMasuColors(masu),
-            className: "w-full h-full object-cover"
-          })), /*#__PURE__*/React.createElement(RebirthStars, {
-            count: masu.rebirthCount,
-            className: "mh-rebirth-stars-overlay"
-          })), /*#__PURE__*/React.createElement("div", {
-            className: "text-[9px] font-black text-violet-200 truncate w-full text-center"
-          }, masu.name), /*#__PURE__*/React.createElement("div", {
-            className: "text-[7px] text-pink-300 font-black flex items-center gap-0.5"
-          }, /*#__PURE__*/React.createElement(Heart, {
-            size: 6
-          }), "\u7D46Lv.", lvl.level)), /*#__PURE__*/React.createElement("button", {
+            style: MONSTER_CARD_STYLE,
+            className: `${MONSTER_CARD_CLASS} border-violet-900/50 bg-slate-900`
+          }, renderMonsterCardBody({
+            masu,
+            base,
+            mon: null,
+            sub: null
+          })), /*#__PURE__*/React.createElement("button", {
             onClick: ev => {
               ev.stopPropagation();
               setMasuMonDetail(masu);
@@ -42211,7 +42210,6 @@ function MonsterHeroGame() {
         }, candidates.map(masu => {
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
           if (!base) return null;
-          const lvl = masuBondLevelInfo(masu);
           const selected = fusionSubIds.includes(masu.id);
           return /*#__PURE__*/React.createElement("div", {
             key: masu.id,
@@ -42219,28 +42217,14 @@ function MonsterHeroGame() {
           }, /*#__PURE__*/React.createElement("button", {
             "aria-pressed": selected,
             onClick: () => toggleFusionSub(masu.id),
-            className: `w-full min-h-[88px] rounded-2xl border-2 p-2 flex flex-col items-center gap-1 active:scale-95 ${selected ? 'border-violet-300 bg-violet-900/70 ring-2 ring-violet-400/70' : 'border-violet-900/50 bg-slate-900'}`
-          }, /*#__PURE__*/React.createElement("div", {
-            className: "relative w-12 h-12 shrink-0"
-          }, /*#__PURE__*/React.createElement("div", {
-            className: `w-12 h-12 rounded-full overflow-hidden border ${fusedBorder(masu)}`
-          }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-            baseId: masu.baseId,
-            src: base.iconUrl,
-            alt: masu.name,
-            draggable: false,
-            masuColors: getMasuColors(masu),
-            className: "w-full h-full object-cover"
-          })), /*#__PURE__*/React.createElement(RebirthStars, {
-            count: masu.rebirthCount,
-            className: "mh-rebirth-stars-overlay"
-          })), /*#__PURE__*/React.createElement("div", {
-            className: "text-[9px] font-black text-violet-200 truncate w-full text-center"
-          }, masu.name), /*#__PURE__*/React.createElement("div", {
-            className: "text-[7px] text-pink-300 font-black flex items-center gap-0.5"
-          }, /*#__PURE__*/React.createElement(Heart, {
-            size: 6
-          }), "\u7D46Lv.", lvl.level), selected && /*#__PURE__*/React.createElement("div", {
+            style: MONSTER_CARD_STYLE,
+            className: `${MONSTER_CARD_CLASS} relative ${selected ? 'border-violet-300 bg-violet-900/70 ring-2 ring-violet-400/70' : 'border-violet-900/50 bg-slate-900'}`
+          }, renderMonsterCardBody({
+            masu,
+            base,
+            mon: null,
+            sub: null
+          }), selected && /*#__PURE__*/React.createElement("div", {
             className: "absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-violet-500 border-2 border-white flex items-center justify-center shadow-lg"
           }, /*#__PURE__*/React.createElement(Check, {
             size: 13,
@@ -51336,7 +51320,11 @@ const createAnimationStyle = () => {
     @keyframes mhReincarnateBack{0%,100%{transform:translateY(-1%) scale(1.04);filter:brightness(.9) blur(.25px)}38%{opacity:.5;transform:translateY(-4%) scale(1.09);filter:brightness(1.16) blur(.55px)}68%{opacity:.26;transform:translateY(1%) scale(1.02);filter:brightness(.96) blur(.2px)}}
     @keyframes mhReincarnateFoot{0%,100%{opacity:.38;transform:translateY(2%) scale(.96);filter:brightness(1.05)}45%{opacity:.7;transform:translateY(-5%) scale(1.08);filter:brightness(1.3)}72%{opacity:.47;transform:translateY(-1%) scale(1.01);filter:brightness(1.12)}}
     @keyframes mhReincarnateSpark{0%,30%{opacity:0;transform:translate(0,0) scale(.5)}42%{opacity:.8}78%,100%{opacity:0;transform:translate(8px,-28px) scale(.15)}}
-    .mh-reincarnate-badge{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);min-width:max-content;border:1px solid #bae6fd;border-radius:9999px;padding:2px 6px;background:linear-gradient(90deg,#5b21b6,#1d4ed8);color:#fff;font-size:7px;font-weight:1000;line-height:1;white-space:nowrap;z-index:6;box-shadow:0 1px 5px #020617,0 0 6px #818cf8}.mh-reincarnate-badge.is-small{bottom:-8px;padding:1px 4px;font-size:6px}.mh-reincarnate-aura.is-home{inset:-25%}.mh-reincarnate-aura.is-home .mh-reincarnate-flame.is-back{opacity:.24}.mh-reincarnate-aura.is-home .mh-reincarnate-sparks{transform:scale(.7)}
+    .mh-reincarnate-badge{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);min-width:max-content;border:1px solid #bae6fd;border-radius:9999px;padding:2px 6px;background:linear-gradient(90deg,#5b21b6,#1d4ed8);color:#fff;font-size:7px;font-weight:1000;line-height:1;white-space:nowrap;z-index:6;box-shadow:0 1px 5px #020617,0 0 6px #818cf8}.mh-reincarnate-badge.is-small{bottom:-8px;padding:1px 4px;font-size:6px}
+    /* 一覧カード用。絵のすぐ下は名前の行なので、そこへ重ねると名前が読めなくなる
+       (2026-09-07・ユーザー指摘「3枚目 名前表示がおかしい」)。
+       行の中にふつうに並べる形にして、重なりそのものを起こさない */
+    .mh-reincarnate-badge.is-inline{position:static;transform:none;left:auto;bottom:auto;padding:1px 5px;font-size:7px}.mh-reincarnate-aura.is-home{inset:-25%}.mh-reincarnate-aura.is-home .mh-reincarnate-flame.is-back{opacity:.24}.mh-reincarnate-aura.is-home .mh-reincarnate-sparks{transform:scale(.7)}
     /* 超越マーク。虹★(画像の下)・転生バッジ(画像の下)と重ならないよう画像の上側へ置く。
        画像は使わず、虹と金のグラデーションと「超」の1文字だけで最終育成らしさを出す。
        親の overflow:hidden で切れないよう、置く側は overflow-visible にしておくこと。 */
