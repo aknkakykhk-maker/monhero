@@ -19,7 +19,9 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 // モンヒロビートのノーツを canvas 1枚へ描く方式(発熱対策・docs/spec/RHYTHM_MODE.md)。
 // false のあいだは従来の要素(DOM)で描き、デバッグ画面の「ノーツの描き方」で上書きしたときだけ canvas になる。
 // 実機で「冷ました状態で最初の1分・交互に」比べて問題が無ければ true にする。true にすると更新履歴・ヘルプの項目が出る。
-const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = false;
+// 2026-09-08・実機で比べてもらい、マスモンの絵が残る・失敗した HOLD/SLIDE が消える・触った FLICK の帯が残る、を直したうえで
+// ユーザー「問題なし」→ 公開。デバッグ画面の「ノーツの描き方」で「要素」を選べば従来の描き方へ戻せる。
+const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = { speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE, rhythmMode:RHYTHM_MODE_PUBLIC_RELEASE, quickRhythmLink:QUICK_RHYTHM_LINK_PUBLIC_RELEASE, rhythmCanvasNotes:RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると

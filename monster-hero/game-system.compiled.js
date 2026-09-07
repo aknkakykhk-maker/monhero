@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c468a6f2b38f1ffd
+// source-sha256: b81c081298460d62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0a75ad8e52602c46
+// generated-sha256: 13973ff33d8dffc7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 23:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 00:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8802,7 +8802,9 @@ const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
 // モンヒロビートのノーツを canvas 1枚へ描く方式(発熱対策・docs/spec/RHYTHM_MODE.md)。
 // false のあいだは従来の要素(DOM)で描き、デバッグ画面の「ノーツの描き方」で上書きしたときだけ canvas になる。
 // 実機で「冷ました状態で最初の1分・交互に」比べて問題が無ければ true にする。true にすると更新履歴・ヘルプの項目が出る。
-const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = false;
+// 2026-09-08・実機で比べてもらい、マスモンの絵が残る・失敗した HOLD/SLIDE が消える・触った FLICK の帯が残る、を直したうえで
+// ユーザー「問題なし」→ 公開。デバッグ画面の「ノーツの描き方」で「要素」を選べば従来の描き方へ戻せる。
+const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = true;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
@@ -39916,7 +39918,7 @@ function MonsterHeroGame() {
       className: "text-xs font-black text-cyan-200"
     }, "\u30CE\u30FC\u30C4\u306E\u63CF\u304D\u65B9\uFF08\u691C\u8A3C\u7528\uFF09"), /*#__PURE__*/React.createElement("p", {
       className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
-    }, "canvas 1\u679A\u306B\u63CF\u304F\u65B9\u5F0F\uFF08\u767A\u71B1\u5BFE\u7B56\uFF09\u3068\u3001\u3053\u308C\u307E\u3067\u306E\u8981\u7D20\u3054\u3068\u306B\u63CF\u304F\u65B9\u5F0F\u3092\u5207\u308A\u66FF\u3048\u307E\u3059\u3002\u6B21\u306E\u6F14\u594F\u304B\u3089\u52B9\u304D\u307E\u3059\u3002\u300C\u81EA\u52D5\u300D\u306F\u516C\u958B\u8A2D\u5B9A\uFF08\u3044\u307E\u306F\u8981\u7D20\uFF09\u306B\u5F93\u3044\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    }, "canvas 1\u679A\u306B\u63CF\u304F\u65B9\u5F0F\uFF08\u767A\u71B1\u5BFE\u7B56\uFF09\u3068\u3001\u3053\u308C\u307E\u3067\u306E\u8981\u7D20\u3054\u3068\u306B\u63CF\u304F\u65B9\u5F0F\u3092\u5207\u308A\u66FF\u3048\u307E\u3059\u3002\u6B21\u306E\u6F14\u594F\u304B\u3089\u52B9\u304D\u307E\u3059\u3002\u300C\u81EA\u52D5\u300D\u306F\u516C\u958B\u8A2D\u5B9A\uFF08\u3044\u307E\u306F", RELEASE_FLAGS.rhythmCanvasNotes ? 'canvas' : '要素', "\uFF09\u306B\u5F93\u3044\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 flex gap-2"
     }, [['', '自動'], ['dom', '要素'], ['canvas', 'canvas']].map(([value, label]) => /*#__PURE__*/React.createElement("button", {
       key: value || 'auto',
