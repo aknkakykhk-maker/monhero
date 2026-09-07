@@ -95,22 +95,25 @@ for (const file of files) {
     compact.includes('if(rhythmPlayRunAwardRef.current){stopCatchUp();return;}'));
   check(`${rel}: 演奏に入るとき前回の表示を消す`,
     compact.includes('setRhythmPlayRunAward(null);'));
-  // ★2026-09-07・ユーザー指摘「演奏後の表示が戻らない / 時間で戻すようにして」。
-  //   次の演奏に入るまで消えず、3周目のまま「2周ぶん入りました」が居座っていた。
-  check(`${rel}: 時間が経ったらふつうの進捗表示へ戻す`,
-    compact.includes('setTimeout(()=>setRhythmPlayRunAward(null),RHYTHM_PLAY_RUN_AWARD_SHOW_MS)'));
-  // ★詳細(内訳)を開いているあいだは止める作りにしたが、開いたままの人には戻らなかった。
-  //   この帯はいま何WAVEかを出す唯一の場所なので、開いていても必ず戻す
-  //   (2026-09-07・ユーザー指摘「この間だといま何ウェーブかもわからない」)
-  check(`${rel}: 詳細を開いていても戻す`, !compact.includes('if(quickRunDetailOpen)return;'));
-  // 周回を数え直すときも落とす。1周目なのに「2周ぶん入りました」が残っていた
+  // ★帯へ出していたころは、時間で消す仕掛け(RHYTHM_PLAY_RUN_AWARD_SHOW_MS)が要った。
+  //   出しっぱなしだといま何WAVE・何周目かが読めず、詳細を開いていると止まるようにしたら
+  //   開いたままの人には戻らなかった。曲リザルトへ移したので、この仕掛けごと不要になった。
+  check(`${rel}: 時間で消す仕掛けを残していない`,
+    !compact.includes('setTimeout(()=>setRhythmPlayRunAward(null)') && !compact.includes('if(quickRunDetailOpen)return;'));
+  // 周回を数え直すときは落とす。1周目なのに前の演奏ぶんが残らないように
   check(`${rel}: 周回を数え直すときも消す`,
     /beginQuickRunProgress=\(\)=>\{[\s\S]{0,200}?setRhythmPlayRunAward\(null\);[\s\S]{0,120}?writeQuickRunProgress\(\{loops:1/.test(compact));
 
-  // ---- 見せ方 ----
-  check(`${rel}: 帯に何周ぶん入ったかを出す`,
-    compact.includes('rhythmPlayRunAward.loops}周ぶん入りました') || compact.includes('rhythmPlayRunAward.loops,'));
-  check(`${rel}: 詳細にも内訳を出す`, src.includes('data-quick-run-play-award'));
+  // ---- 見せ方(渡すところ) ----
+  // ★2026-09-07・ユーザー提案「曲リザルトの画面でいくつ分入ったかとか、何周分から
+  //   プラスでいくつ入って何周分になったとかを出すほうがいい。そうしたら帯にわざわざ
+  //   何周分追加とか表示する必要もない」。
+  //   帯は「WAVE ◯/10 ・ ◯周目」を出す唯一の場所なので、知らせを重ねない。
+  check(`${rel}: 足す前と後を控えている`,
+    compact.includes('constfromLoop=quickRunProgressRef.current?quickRunProgressRef.current.loops:0;')
+    && compact.includes('consttoLoop=quickRunProgressRef.current?quickRunProgressRef.current.loops:fromLoop;'));
+  check(`${rel}: リザルトへ渡している`, compact.includes('quickRunAward={rhythmPlayRunAward}') || compact.includes('quickRunAward:rhythmPlayRunAward'));
+  check(`${rel}: 帯には演奏ぶんの知らせを重ねない`, !src.includes('data-quick-run-play-award'));
 
   // ---- 文言が仕様に追いついているか ----
   // ★2026-09-07・ユーザー指摘「演奏中の文言ってこれであってる？仕様変わったよね？」。
@@ -124,6 +127,26 @@ for (const file of files) {
   check(`${rel}: 入らない人には別の説明を出す`,
     compact.includes('rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts)?')
     && compact.includes('この難易度をクイックで一度クリアすると'));
+}
+
+// ---- 見せ方(出すところ) ----
+// リザルトの画面は音ゲー本体(30-rhythm-play.jsx)の中にある
+for (const file of [
+  path.join(root, 'monster-hero/src/parts/30-rhythm-play.jsx'),
+  path.join(root, 'monster-hero/game-system.compiled.js'),
+]) {
+  const rel = path.relative(root, file);
+  const src = fs.readFileSync(file, 'utf8');
+  const compact = src.replace(/\s+/g, '');
+  check(`${rel}: 曲リザルトへ何周ぶん入ったかを出す`,
+    compact.includes('quickRunAward&&quickRunAward.loops>0&&') && src.includes('data-rhythm-result-quick-run'));
+  // 生成物では日本語が \u… へ逃がされることがあるので、変数の並びだけでも通るようにする
+  check(`${rel}: 何周目から何周目になったかを出す`,
+    (compact.includes('{quickRunAward.fromLoop}周目') && compact.includes('{quickRunAward.toLoop}周目'))
+    || (compact.includes('quickRunAward.fromLoop,') && compact.includes('quickRunAward.toLoop,')));
+  check(`${rel}: 経験値・ダイヤ・絆・プシュケーの内訳も出す`,
+    compact.includes('quickRunAward.xp||0') && compact.includes('quickRunAward.gold||0')
+    && compact.includes('quickRunAward.bond>0&&') && compact.includes('quickRunAward.psyche>0&&'));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

@@ -2349,8 +2349,12 @@ function MonsterHeroGame() {
     for (let i = 0; i < count; i++) { await saveMissionProgress('quickClear'); addAssistantBond('quickClear'); }
     // 帯の数字も、実際に配った値をそのまま足す(2か所で数えない)
     addQuickRunProgressRewards(xpGain, goldGain);
+    // 曲リザルトで「◯周目 → ◯周目」と出すため、足す前と後を控える
+    // (2026-09-07・ユーザー提案「何周分からプラスでいくつ入って何周分になったとかを出すほうがいい」)
+    const fromLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : 0;
     for (let i = 0; i < count; i++) countQuickRunLoop();
-    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain };
+    const toLoop = quickRunProgressRef.current ? quickRunProgressRef.current.loops : fromLoop;
+    return { loops: count, xp: xpGain, gold: goldGain, bond: bondGain, psyche: psycheGain, fromLoop, toLoop };
   };
   // ---- 画面のなかでの使い方案内(docs/spec/QUICK_RHYTHM_LINK.md PR8) ----
   // ヘルプと更新履歴は探しに行った人しか読まない。この連携は遊んでいるだけでは
@@ -2398,18 +2402,11 @@ function MonsterHeroGame() {
     if (!rhythmScreenOpen || runStageRef.current == null || !autoRepeatRef.current) { stopCatchUp(); return; }
     beginCatchUp(Date.now() - startedAt);
   }, [gameState]);
-  // 「演奏で ◯周ぶん入りました」は、3秒でふつうの進捗表示(WAVE ◯/10 ・ ◯周目)へ戻す。
-  // ★以前は次の演奏に入るまで消えず、3周目のまま「2周ぶん入りました」が居座っていた
-  //   (2026-09-07・ユーザー指摘「演奏後の表示が戻らない / 時間で戻すようにして」)。
-  // ★詳細(内訳)を開いているあいだは止める作りにしたが、開いたままにしている人には
-  //   いつまでも戻らなかった。この帯はいま何WAVEかを出す唯一の場所なので、
-  //   開いていても必ず戻す(2026-09-07・ユーザー指摘「表示が戻らないし再度始めても消えない /
-  //   この間だといま何ウェーブかもわからない / 消えるのが12秒は長すぎる・3秒ぐらいでいい」)。
-  useEffect(() => {
-    if (!rhythmPlayRunAwardState) return;
-    const timer = setTimeout(() => setRhythmPlayRunAward(null), RHYTHM_PLAY_RUN_AWARD_SHOW_MS);
-    return () => clearTimeout(timer);
-  }, [rhythmPlayRunAwardState]);
+  // ★「演奏で ◯周ぶん入りました」を曲えらびの帯へ出していたころは、時間で消す仕掛けが要った
+  //   (出しっぱなしだと、いま何WAVE・何周目かが読めなくなるため)。
+  //   いまは曲リザルトで出すので、時間で消す必要はない。リザルトを閉じれば画面ごと消え、
+  //   次の演奏に入るときに下の effect が改めて null にする
+  //   (2026-09-07・ユーザー提案「曲リザルトの画面で出すほうがいい」)。
   // 追いつきが終わったら表示も戻す。バトルへ戻ったときとランが終わったときも止める
   useEffect(() => {
     if (!catchingUp) return;
@@ -10497,7 +10494,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
-        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} onComplete={async(result,merged)=>{
+        {gameState==='RHYTHM_PLAY'&&rhythmPlay&&<RhythmTapTest song={rhythmPlay.song} difficulty={rhythmPlay.difficulty} settings={rhythmSettings} monsterEntries={rhythmMonsterNoteEntries} bestRecord={rhythmBestRecord(rhythmBestRecords,rhythmPlay.song.songId,rhythmPlay.difficulty.id)} quickRunAward={rhythmPlayRunAward} onComplete={async(result,merged)=>{
           // ===== 演奏1曲ぶんを、裏の∞周回の周回クリアとして反映する(2026-09-07・ユーザー提案) =====
           // 最後まで演奏したこの場でだけ行う。途中でやめたときは onComplete を通らないので何も入らない
           // (1秒だけ演奏してやめる、で稼げないようにするため)。
@@ -10556,10 +10553,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // なぜ終わったかまで出す。「終わりました」だけだと、負けたのか
               // アプリが裏に回ったのか分からなかった(2026-09-07・ユーザー報告)
               ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）`
-              // 演奏から戻った直後は、その1曲で何周ぶん入ったかを先に伝える
-              : rhythmPlayRunAward
-                ? `演奏で ${rhythmPlayRunAward.loops}周ぶん入りました ・ ${quickRunProgress.loops}周目`
-                : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp?' ・ 追いつき中':''}`)
+              // ★演奏で何周ぶん入ったかは曲リザルトで出す。ここはいま何WAVE・何周目かを
+              //   出す唯一の場所なので、知らせを重ねない
+              //   (2026-09-07・ユーザー提案「曲リザルトの画面で出すほうがいい。
+              //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)
+              : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp?' ・ 追いつき中':''}`)
             : '';
           const quickRunBandButton = quickRunProgress
             ? <button type="button" onClick={()=>setQuickRunDetailOpen(open=>!open)} aria-expanded={quickRunDetailOpen} aria-label="クイック周回の進捗"
@@ -10627,7 +10625,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="flex justify-between gap-2"><dt className="text-slate-400">ダイヤ</dt><dd className="font-black text-amber-200">+{Math.floor(quickRunProgress.gold+pending.gold).toLocaleString()}</dd></div>
                   {(pending.xp>0||pending.gold>0)&&<div className="col-span-2 text-[9px] text-slate-500">うち今の周のぶん（経験値 +{Math.floor(pending.xp).toLocaleString()} ／ ダイヤ +{Math.floor(pending.gold).toLocaleString()}）は、この周が終わったときに入ります（負けても、途中でやめても、ここまでのぶんは入ります）。</div>}
                   {/* 直前の演奏で入ったぶん(2026-09-07・ユーザー提案) */}
-                  {rhythmPlayRunAward&&<div data-quick-run-play-award className="col-span-2 rounded-lg border border-cyan-400/30 bg-cyan-950/30 px-2 py-1 text-[9px] leading-relaxed text-cyan-100">さっきの演奏で <b className="text-white">{rhythmPlayRunAward.loops}周</b>ぶん入りました（経験値 +{rhythmPlayRunAward.xp.toLocaleString()} ／ ダイヤ +{rhythmPlayRunAward.gold.toLocaleString()}{rhythmPlayRunAward.bond>0?` ／ 絆 +${rhythmPlayRunAward.bond.toLocaleString()}`:''}{rhythmPlayRunAward.psyche>0?` ／ 🌈 +${rhythmPlayRunAward.psyche.toLocaleString()}`:''}）。入るものは実際に1周クリアしたときと同じで、数は曲の長さで決まります。</div>}
+                  {/* 演奏で何周ぶん入ったかは、曲リザルト([data-rhythm-result-quick-run])で出す。
+                      ここは進捗を見る場所なので、演奏1回ごとの知らせは重ねない
+                      (2026-09-07・ユーザー提案) */}
                   </>;})()}
                   <div className="col-span-2 flex justify-between gap-2"><dt className="text-slate-400">勇者モン</dt><dd className="truncate font-black text-white">{mainHero?.masuName||mainHero?.name||'—'}</dd></div>
                 </dl>
