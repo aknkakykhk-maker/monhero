@@ -26,7 +26,13 @@ check('songTimeはAudioContext.currentTimeと実再生開始時刻が正本',gam
 check('判定処理はDate.now/setInterval/CSS animationを基準にしない',!logic?.includes('Date.now')&&!logic?.includes('setInterval')&&game.includes('requestAnimationFrame(tick)'));
 // 2026-09-05: 第3引数 options を足した(autoStart:false で「用意だけして鳴らさない」)。
 // 既定は今までどおり自動で鳴らすので、プレビューなど他の呼び出しは変わらない
-check('既存BGM track IDを再利用しループしない',game.includes('const startRhythmTrack = async (key,rhythmVolumePct=100,options=null)')&&game.includes('nextSource.buffer=buffer; nextSource.loop=false')&&D.RHYTHM_SONGS[0].bgmTrackId==='atsu_cup_theme');
+// 2026-09-07: 曲えらびの試聴だけ輪にできるよう options.loop を足した。
+// 演奏本体は今までどおり1回で終わるので、既定が false のままであることを見る。
+check('既存BGM track IDを再利用し、演奏本体はループしない(輪にするのは試聴だけ)',
+  game.includes('const startRhythmTrack = async (key,rhythmVolumePct=100,options=null)')
+  &&game.includes('const loop=options?.loop===true;')
+  &&game.includes('nextSource.buffer=buffer; nextSource.loop=loop;')
+  &&D.RHYTHM_SONGS[0].bgmTrackId==='atsu_cup_theme');
 check('デバッグの開始導線がある・プレオープンで公開されている',game.includes('data-rhythm-tap-start')&&game.includes("gameState==='RHYTHM_DEBUG'")&&game.includes('const RHYTHM_MODE_PUBLIC_RELEASE = true'));
 
 // --- 同じレーンを長押ししながら、別の指で同じレーンをタップできるか ---

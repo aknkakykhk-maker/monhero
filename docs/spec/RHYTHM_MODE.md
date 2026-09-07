@@ -5355,3 +5355,171 @@ Chromium の計測では塗り直しが減っていたが、WebKit では次の2
 
 教訓: **Chromium のトレースで減った数字が WebKit で同じ向きに出るとは限らない。** レイヤーを増やす種類の最適化は、
 実機で連続ノーツを見てから採用する。
+
+## 14曲目「禁断のレジスタンス」と、動画1本から曲を足す手順（2026-09-07）
+
+ユーザー依頼「モンスタービート新曲実装／動画は音源のみ／タイトルは動画ファイルから」。
+あわせて「**今後ここでは新曲実装を動画ファイルとジャケット画像を投げるだけにする**から手順を覚えといて」。
+以降この節が、その「投げるだけ」を受けたときに通す手順書になる。
+
+### 受け取ったもの
+
+| もの | 中身 |
+| --- | --- |
+| 動画 | `禁断のレジスタンス_2026_09_07_17_44_47.mp4`（2.75MB / 2:43 / H.264 360×640 + AAC 44.1kHz ステレオ） |
+| ジャケット | 1254×1254 のPNG（2.43MB） |
+
+曲名は**動画のファイル名**から取る。ファイル名はUTF-8を16進で綴った形で届くことがあるので、
+その場合はデコードしてから読む（`E7A681E696AD…` → `禁断のレジスタンス`）。
+
+### ① 音声の取り出しには ffmpeg が要る（この箱には無い）
+
+`tools/mode/rhythm-audio-reencode.js` はデコードを Chromium の `decodeAudioData` に任せているが、
+**Playwright の Chromium は AAC を持っていない**（`canPlayType('audio/mp4; codecs="mp4a.40.2"')` が空文字）。
+mp4 をそのまま渡すと `EncodingError: Unable to decode audio data` で止まる。
+
+ほかに手元にあるものも使えない。
+
+| 候補 | 結果 |
+| --- | --- |
+| `/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux` | Playwright 用に mjpeg/VP8/webm だけへ削ってある。AAC も mp3 も無い |
+| `apt-get install ffmpeg` | パッケージ索引が古く 404（`apt-get update` から要る） |
+| python の `av` / `soundfile` / `librosa` など | 入っていない |
+| `mpg123` / `sox` / `faad` / `lame` | 入っていない |
+
+**使えたのは `npm i ffmpeg-static`**（静的ビルドを1本落としてくるだけ。約80MB）。
+リポジトリの依存には足さない。作業用の場所へ入れて、音声を取り出すのにだけ使う。
+
+```bash
+cd <作業用ディレクトリ> && npm init -y && npm install ffmpeg-static
+FF=<作業用ディレクトリ>/node_modules/ffmpeg-static/ffmpeg
+# 映像とタグを落として、いったん素のWAVにする（CLAUDE.md ⑥-2 の -map_metadata -1 -vn）
+$FF -v error -y -i src.mp4 -map_metadata -1 -vn -ac 2 -ar 44100 -c:a pcm_s16le full.wav
+```
+
+**mp3にするのはここからリポジトリのツールへ戻す。** ffmpeg でそのままmp3にすると、
+既存のBGMと作り方が変わってしまう。WAVは Chromium も読めるので、あとは今までどおり。
+
+```bash
+node tools/mode/rhythm-audio-reencode.js --in full.wav \
+  --out monster-hero/audio/bgm-<slug>.mp3 --kbps 96 --rate 32000
+```
+
+27.5MB → 1.87MB。既存曲と同じ **MPEG1 Layer3 / 96kbps / 32000Hz / ステレオ**で、
+ID3タグも埋め込みジャケットも付かない（lamejs が素のPCMから作るため）。
+
+### ② 頭の無音は「1拍より短いなら切らない」
+
+切るときは拍の長さの倍数で、というのは前からの決まり（`kaze_ga_soyogu` で 3拍子と取り違えた）。
+この曲は 180 BPM ＝ 1拍 333ms に対して**頭の無音が 340ms、最初に音が出るのが 307ms**。
+1拍ぶん切ると最初の音の立ち上がりを削ることになるので、**切らない**。
+
+無音の長さそのものは問題にならない。生成器に「出だしが3秒空いたら1つ置く」歯止めがあり、
+実際この曲の最初のノーツは 2.4〜2.7秒に来ている。
+
+### ③ ジャケットは 512×512 のJPEGへ
+
+```bash
+node -e "require('./tools/node_modules/sharp')('art.png')
+  .resize(512,512,{fit:'cover'}).jpeg({quality:80,mozjpeg:true})
+  .toFile('monster-hero/images/song-art/<slug>.jpg')"
+```
+
+1254px・2.43MB → 512px・50KB（**約50分の1**）。`?v=` は手で書かない。
+`tools/build.js`（`stamp-version.js`）が中身のハッシュから付け直す。
+
+### ④ 名前は5か所で綴りが違う
+
+| どこ | この曲での値 |
+| --- | --- |
+| songId（`RHYTHM_SONG_ENTRIES` / `RHYTHM_DEMO_SONG_IDS` / レベル表） | `kindan_no_resistance` |
+| 音源の一覧の id（`rhythm-song-registry.json`・`RELEASED_TRACKS`） | `kindan_no_resistance` |
+| BGMのtrack id（`BGM_TRACKS` / `bgmTrackId`） | `melo_kindan_no_resistance` |
+| 譜面のマーカー名（`RELEASED_MARKERS`・`// <…-notes>`） | `kindan-no-resistance-v3` |
+| ファイル名 | `audio/bgm-kindan-no-resistance.mp3` / `images/song-art/kindan-no-resistance.jpg` |
+
+マーカー名は `--markers` を省くと **音源のidの `_` を `-` にして `-v3` を足した形**が既定になる。
+ここを合わせておけば `--markers` は要らない。
+
+> ⚠️ **songId にハイフンを入れてはいけない。** 全国ランキングは既存の `rankings` テーブルの
+> `difficulty` 列へ `Rhythm-<songId>-<難易度id>` と書き、読むときは `-` で3つに割って戻す
+> (`parseRhythmRankingDifficultyKey`)。songId にハイフンがあると4つ以上に割れて `null` になり、
+> **その曲のランキングだけが黙って空になる**。区切りはアンダースコアだけを使うこと。
+> ランキング側に曲ごとの登録は要らない(テーブルも列も増やさない)。
+
+### ⑤ 通した順番
+
+```bash
+# 1. 音源の一覧へ {"audio":"monster-hero/audio/bgm-<slug>.mp3"} を1件足す
+# 2. 解析（BPM・拍の頭・durationMs・audioSha256 が一覧へ入る）
+node tools/mode/rhythm-audio-analyze-v3.js --track <track_id> --write
+# 3. 設計資料まで作って、出荷してよいかを見る（まだランタイムへは入らない）
+node tools/mode/rhythm-chart-v3-pipeline.js --track <track_id> --write
+# 4. ここで rhythm-mode.js へ「空のマーカー・ノーツ配列の入れ物・<name>Charts・
+#    RHYTHM_SONG_ENTRIES・RHYTHM_DEMO_SONG_IDS(末尾)」を書く。
+#    tools/mode/rhythm-runtime-notes.js の RELEASED_MARKERS / RELEASED_TRACKS にも1行ずつ。
+#    monster-hero/src/parts/13-bgm-and-rhythm-settings.jsx の BGM_TRACKS にも1行。
+# 5. 譜面を流し込む（マーカーが無いとここで止まる）
+node tools/mode/rhythm-chart-v3-pipeline.js --track <track_id> --release
+# 6. レベルを計算して書き戻す → ビルド
+node tools/mode/rhythm-chart-level.js --write
+node tools/build.js
+# 7. 更新履歴に1件（assistantNotice は type:'content'）。ヘルプは実データ由来なので触らない
+node tools/run-checks.js --area required
+node tools/run-checks.js --area mode
+node tools/run-checks.js --area audio   # BGM_TRACKS の src が実在するmp3かを見る
+```
+
+**ヘルプへは手で書かない。** 曲の一覧・絵の有無・レベルの幅は
+`{t:'data', id:'rhythmDemoSongList' / 'rhythmSongArtwork' / 'rhythmDemoSongLevels' / 'rhythmDifficultySpread'}`
+が `RHYTHM_SONGS` から作るので、曲を足した時点で自動で載る（`20-market-notices-help.jsx`）。
+
+`--area audio` の `bgm-arrangement-check.js` が、`BGM_TRACKS` の全 `src` について
+「そのファイルが実在し、ID3かフレーム同期を持つ 1024バイト超のmp3か」を確かめる。
+**`RHYTHM_SONGS[].bgmTrackId` が `BGM_TRACKS` に在るかを突き合わせる検査は無い**ので、
+BGM_TRACKS への1行を書き忘れると「曲えらびには並ぶのに無音で始まる」。ここは目で確かめる。
+
+**助手の告知は付ける。** 新曲は「新しい遊び」なので `type:'content'`。
+`assistantNotice:{id:'update_notice_<slug>_v1',type:'content'}` を更新履歴のエントリへ1行。
+遷移先は付けない（`toriko` / `4u_hitasura` / `kaze_ga_soyogu` と同じ扱い）。
+
+### ⑥ この曲の中身
+
+| 項目 | 値 |
+| --- | --- |
+| songId / bgmTrackId | `kindan_no_resistance` / `melo_kindan_no_resistance` |
+| 表示名 | 禁断のレジスタンス（副題なし） |
+| 長さ | 163,440ms（2:43）。切り出しなしの全尺 |
+| テンポ | 179.997 BPM / 4拍子 / 拍の頭 75.9ms / 跳ねなし |
+| 格子への乗り | ±15ms 51% / ±30ms 80% / **±43ms 100%**（あやしい点 0件） |
+| 打点 | 1198件（PUNCH 563 / FULL 359 / BODY 248 / LIGHT 28）・区切り13個・122小節 |
+| ノーツ数 | 278 / 318 / 429 / 522 / 615 |
+| レベル | 7 / 9 / 13 / 18 / 27 |
+| 毎秒ノーツ | 1.76 / 2.01 / 2.70 / 3.28 / **3.86**（MASTERは全曲でいちばん濃い。次は monster_hero の 3.74） |
+| 最初のノーツ | 2.4〜2.7秒 |
+| 絵 | `images/song-art/kindan-no-resistance.jpg`（512×512 / 50KB） |
+
+速くて打点が多いぶん、`songChallengeFactor` が上へ振れて自動で濃い譜面になった。
+量に手は入れていない。
+
+### ⑧ 足していないもの（分かったうえで見送った）
+
+**演奏画面の両サイドで跳ねるマスモンの速さ**（`RHYTHM_TRACK_BEAT_MS`）は足していない。
+
+- キーは songId ではなく**音源のid**。載っていない曲は `rhythmSideMonsterBeatMs` が
+  **エラーも警告も出さずに 500ms 固定**へ落ちる（この曲の1拍は 333ms）
+- 見張り役の `tools/mode/rhythm-side-monster-check.js` は「載っている行の値が
+  `data/rhythm-timing.js` と合っているか」しか見ないので、**抜けは検出できない**
+- 正本は `data/rhythm-timing.js`。ここへ足すと解析のテンポが `detected` から
+  `registered` へ変わるため、譜面の作り直しに影響が出る
+- 公開している13曲のうち **11曲（`toriko` / `4u_hitasura` を含む直近の曲すべて）が既定値のまま**で、
+  曲を足すときに埋める運用になっていない
+
+1曲だけ足すとかえって揃わないため、この曲でも見送った。直すなら
+「全曲ぶんを一度に埋め、検査を『先行公開の曲が全部載っているか』へ広げる」を別の作業として行う。
+
+### ⑦ 増えたのは譜面ぶんだけ
+
+起動時に読むもの（`index.html` の `SIZES`）で増えたのは `data/rhythm-mode.js` の
+809,099 → 849,066バイト（**約40KB**）だけ。mp3もジャケットも `SIZES` に入らない
+（曲えらびを開いたときに初めて読む側にある）。ここが増えていたら入れ方を間違えている。

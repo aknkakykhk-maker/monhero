@@ -33,7 +33,7 @@ check('TAP・HOLD・FLICK・SLIDE端点が共通projectionを使用',source.incl
   &&source.includes('holdSpan?rhythmProjectSubLaneRange(holdSpan.subLane,holdSpan.subLaneWidth,yRatioAt)')
   &&source.includes(':variableHold?rhythmNoteVisualSpan(note,lane,yRatioAt)')
   &&source.includes(':rhythmProjectLane(lane,yRatioAt);'));
-check('ノーツの高さと明るさもprojectionに連動',source.includes("--rhythm-note-depth-scale")&&source.includes("--rhythm-note-depth-brightness")&&source.includes('[data-rhythm-note]>span:last-child'));
+check('ノーツの高さと明るさもprojectionに連動',source.includes("--rhythm-note-depth-scale")&&source.includes("--rhythm-note-depth-brightness")&&source.includes('[data-rhythm-note]>[data-rhythm-note-head]'));
 check('HOLD帯とSLIDE区間はノーツ中心から同じ境界幅で生成',source.includes('centerY=Number(yPx)+noteHeight/2')&&source.includes('const bodyTopY=centerY-height;')&&source.includes('RHYTHM_BODY_WIDTH_RATIO')&&source.includes('body.style.clipPath=`polygon(${[...bodyRight,...bodyLeft].join(\',\')})`')&&source.includes('const topEdgeRatio=height>0?(0-bodyTopY)/height:0;'));
 check('5レーンはプレイエリア全体へ重ねて同じ投影座標で描画',source.includes('[data-rhythm-lane]{position:absolute!important;inset:0!important;'));
 check('レーン形状と6本の境界線は同じboundary helper',source.includes('lane.style.clipPath=rhythmLanePolygon(index)')&&source.includes("--rhythm-boundary-clip")&&source.includes('rhythmBoundaryLinePolygon(index)')&&source.includes('rhythmBoundaryLinePolygon(RHYTHM_LANE_COUNT,-1)'));
@@ -59,9 +59,11 @@ check('既存の同時押しbatchを維持',source.includes('const rhythmMatchIn
 // いなかった。既存4色(ピンク330° / 金50° / シアン188° / 紫271°)のいちばん大きな空きは
 // 50°〜188°で、その中の緑(142°)を選んだ。最短距離は46°まで広がる。上方向の印はそのまま。
 check('FLICKは他のどのノーツとも別の緑表示で上方向を明示',
-  html.includes('[data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child')
+  html.includes('[data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > [data-rhythm-note-head]')
   &&html.includes('linear-gradient(180deg,#f0fdf4 0%,#86efac 34%,#22c55e 62%,#15803d 100%)')
-  &&html.includes('content:"⇧" !important')
+  // 2026-09-07: 上方向の印は文字(⇧)ではなく clip-path の三角([data-rhythm-flick-arrow])で描く。
+  // 文字だと端末のフォント次第で細く小さくなり、幅広ノーツの縁取り(粒の::before/::after)とも場所を取り合う。
+  &&html.includes('[data-rhythm-flick-arrow] {')
   &&html.includes('rgba(34,197,94,.92)'));
 check('FLICKの見た目変更だけで判定距離・受付時間は維持',source.includes('const RHYTHM_FLICK_DISTANCE_PX = 24;')&&source.includes('const RHYTHM_FLICK_MAX_MS = 450;'));
 

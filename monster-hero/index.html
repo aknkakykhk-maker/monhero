@@ -40,7 +40,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 // ここでは各ファイルの実サイズを重みにして、実際に受け取ったバイト数で動かす。
 window.__mhBoot = (function () {
   // 起動時に読み込むファイルの実サイズ(バイト)。tools/build.js が実ファイルから書き込む
-  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":808951,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":495858,"data/help.js":285160,"data/rhythm-step3-release.js":7722,"data/assistants.js":274157,"game-system.compiled.js":3027146,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
+  var SIZES = {"vendor/react.production.min.js":10751,"vendor/react-dom.production.min.js":131835,"data/images/images-ally.js":6638,"data/images/images-enemy.js":1347,"data/ally-monsters.js":21919,"data/lineages.js":8467,"data/breeder.js":25616,"data/enemy-monsters.js":1785,"data/skills.js":4375,"data/rhythm-mode.js":850647,"data/rhythm-lane-svg.js":7147,"data/rhythm-geometry-calibration.js":15405,"data/rhythm-result-replay-remount.js":5401,"data/changelog.js":498426,"data/help.js":285340,"data/rhythm-step3-release.js":7722,"data/assistants.js":274157,"game-system.compiled.js":3027579,"data/images/title-screen-clean.jpg":699051,"audio/bgm-title-theme.mp3":270378}; /* BOOT_SIZES */
   var total = 0, k;
   for (k in SIZES) total += SIZES[k];
   var got = {};   // ファイルごとに「いま何バイト受け取ったか」
@@ -98,7 +98,7 @@ window.__mhBoot = (function () {
 })();
 // 本体JSのキャッシュキー。ここで一度だけ宣言し、下の読み込み処理でも同じ値を使う。
 // 先読みと <script> のURLがずれると、同じ2.7MBを2回取りに行くことになる
-var GAME_BUILD = '202609071916';
+var GAME_BUILD = '202609072126';
 window.__mhGameBuild = GAME_BUILD;
 // 起動でいちばん大きいのは本体JS(約2.7MB)。いちばん後ろで読むため、そこへ来ると
 // ゲージが止まって見えていた。先に取りはじめて、受け取ったバイト数をそのまま出す。
@@ -713,14 +713,18 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
   [data-rhythm-note][data-note-type="HOLD"],[data-rhythm-note][data-note-type="SLIDE"] {
     filter:drop-shadow(0 0 6px rgba(255,255,255,.20)) drop-shadow(0 0 10px rgba(217,70,239,.18));
   }
-  [data-rhythm-note] > span:last-child {
+  /* ★装飾は必ず [data-rhythm-note-head](粒)を名指しで指す。span:last-child と書くと、
+     マスモンの絵が入るノーツでは最後の子が絵(data-rhythm-monster-face)になるため、
+     枠も色も光も「絵」のほうへ付く。2026-09-07・ユーザー指摘
+     「モンスターノーツとフリックノーツによく分からない縦線がある」の原因がこれだった。 */
+  [data-rhythm-note] > [data-rhythm-note-head] {
     inset:4px 0 !important;
     border:1px solid rgba(255,255,255,.72);
     /* 粒は scaleX で縮むので、横の半径だけ逆比で大きくして角の丸みを保つ(発熱対策・2026-09-07) */
     border-radius:calc(5px / var(--rhythm-note-cap-scale,1)) / 5px !important;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.58),0 0 12px rgba(217,70,239,.32),0 0 6px rgba(255,255,255,.20),0 0 10px rgba(217,70,239,.18) !important;
   }
-  [data-rhythm-note][data-note-type="HOLD"] > span:last-child {
+  [data-rhythm-note][data-note-type="HOLD"] > [data-rhythm-note-head] {
     border-color:rgba(207,250,254,.86);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 0 13px rgba(34,211,238,.42) !important;
   }
@@ -732,35 +736,22 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
      いちばん近い色との距離が 25° → 46° へ広がり、どの色とも見分けやすくなる。
      背景の暗い青にも埋もれない明るさにしてある。
      rhythm-mode.js が後から入れる旧ピンクCSSより高い詳細度にして、判定・入力は触らず見た目だけを上書きする。 */
-  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child {
+  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > [data-rhythm-note-head] {
     background:linear-gradient(180deg,#f0fdf4 0%,#86efac 34%,#22c55e 62%,#15803d 100%) !important;
     border-color:rgba(220,252,231,.98) !important;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 10px rgba(34,197,94,.92),0 0 18px rgba(21,128,61,.62),0 0 6px rgba(255,255,255,.20) !important;
   }
-  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child::before {
-    content:"";
-    position:absolute;
-    left:24%;
-    right:24%;
-    bottom:68%;
-    height:30px;
-    border-radius:999px;
-    pointer-events:none;
-    background:linear-gradient(180deg,transparent 0%,rgba(34,197,94,.10) 24%,rgba(134,239,172,.54) 100%);
-    filter:blur(1.5px);
-  }
-  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child::after {
-    content:"⇧" !important;
-    position:absolute;
-    left:50%;
-    top:-27px;
-    transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));
-    color:#f0fdf4 !important;
-    font-size:22px;
-    font-weight:1000;
-    line-height:1;
-    text-shadow:0 0 5px #fff,0 0 10px #22c55e,0 0 16px #15803d !important;
-    pointer-events:none;
+  /* ★矢印と、粒の上へ立ちのぼる光は、粒の ::before / ::after では作らない(2026-09-07)。
+     幅広ノーツ(5サブレーン以上)の両端の縁取りが同じ ::before / ::after を使っているため、
+     幅広のFLICKでは両者が場所を取り合い、縁取りのはずの縦線が中途半端に残っていた。
+     矢印は rhythm-mode.js が [data-rhythm-flick-arrow] という実体のある要素で描く。
+     ここではその矢印を、ふつうのFLICKより一回り大きく・強く光らせるだけにする。 */
+  [data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > [data-rhythm-note-head] > [data-rhythm-flick-arrow] {
+    width:26px !important;
+    height:19px !important;
+    bottom:calc(100% + 3px) !important;
+    background:linear-gradient(180deg,#ffffff 0%,#bbf7d0 38%,#22c55e 100%) !important;
+    filter:drop-shadow(0 0 5px rgba(34,197,94,.95)) drop-shadow(0 0 11px rgba(21,128,61,.7)) drop-shadow(0 1px 2px rgba(2,6,23,.9)) !important;
   }
   /* モンスターノーツでは上の「最後のspan=ノーツ頭」という旧前提が成立せず、
      data-rhythm-monster-face が最後のspanになる。実機ではその結果、inset/border/影が
@@ -864,12 +855,12 @@ window.__mhBoot.prefetch('data/images/title-screen-clean.jpg', 'data/images/titl
 <script src="data/breeder.js?v=8df97497b791" onload="__mhBoot.done('data/breeder.js','ブリーダーデータを読み込み中')" onerror="__mhBoot.fail('data/breeder.js')"></script>
 <script src="data/enemy-monsters.js?v=756038184df4" onload="__mhBoot.done('data/enemy-monsters.js','敵データを読み込み中')" onerror="__mhBoot.fail('data/enemy-monsters.js')"></script>
 <script src="data/skills.js?v=06be9af9b367" onload="__mhBoot.done('data/skills.js','技データを読み込み中')" onerror="__mhBoot.fail('data/skills.js')"></script>
-<script src="data/rhythm-mode.js?v=80498f28092b" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
+<script src="data/rhythm-mode.js?v=bda382baba2c" onload="__mhBoot.done('data/rhythm-mode.js','音ゲーデータを読み込み中')" onerror="__mhBoot.fail('data/rhythm-mode.js')"></script>
 <script src="data/rhythm-lane-svg.js?v=d0b5c2bea35c" onload="__mhBoot.done('data/rhythm-lane-svg.js','音ゲーレーンを読み込み中')" onerror="__mhBoot.fail('data/rhythm-lane-svg.js')"></script>
 <script src="data/rhythm-geometry-calibration.js?v=1e490f73b5e2" onload="__mhBoot.done('data/rhythm-geometry-calibration.js','音ゲー座標校正を読み込み中')" onerror="__mhBoot.fail('data/rhythm-geometry-calibration.js')"></script>
 <script src="data/rhythm-result-replay-remount.js?v=25f459cc2892" onload="__mhBoot.done('data/rhythm-result-replay-remount.js','音ゲー再プレイ処理を読み込み中')" onerror="__mhBoot.fail('data/rhythm-result-replay-remount.js')"></script>
-<script src="data/changelog.js?v=c95fe6aba177" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
-<script src="data/help.js?v=cf2f5c21bf5b" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
+<script src="data/changelog.js?v=3074402fa670" onload="__mhBoot.done('data/changelog.js','更新情報を読み込み中')" onerror="__mhBoot.fail('data/changelog.js')"></script>
+<script src="data/help.js?v=9f7aeb943e7e" onload="__mhBoot.done('data/help.js','ヘルプを読み込み中')" onerror="__mhBoot.fail('data/help.js')"></script>
 <script data-mhsave-backup src="data/mhsave-backup.js?v=7845a4fd261f" onload="__mhBoot.done('data/mhsave-backup.js','バックアップ機能を読み込み中')" onerror="__mhBoot.fail('data/mhsave-backup.js')"></script>
 <script src="data/rhythm-step3-release.js?v=e09b26e107d5" onload="__mhBoot.done('data/rhythm-step3-release.js','音ゲー更新情報を読み込み中')" onerror="__mhBoot.fail('data/rhythm-step3-release.js')"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->

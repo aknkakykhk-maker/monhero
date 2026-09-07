@@ -110,9 +110,11 @@ check('幅5サブレーン以上を「幅広ノーツ」として扱う',run('RH
   &&run(`rhythmNoteIsWide({type:'SLIDE',subLaneWidth:6})`)===true
   &&run(`rhythmNoteIsWide({type:'SLIDE',subLaneWidth:2})`)===false);
 check('幅広ノーツは角を落とした棒にして、両端へ明るい縁を置く',
-  source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child{border-radius:7px!important}')
-  &&source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::before')
-  &&source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::after'));
+  // 2026-09-07: 角丸は scaleX の逆比で書く(発熱対策)。セレクタも span:last-child から粒の名指しへ。
+  // 絵が入るノーツでは最後のspanが絵になるので、縁取りが絵へ付いて縦線に見えていた。
+  source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]{border-radius:calc(7px / var(--rhythm-note-cap-scale,1)) / 7px!important}')
+  &&source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::before')
+  &&source.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::after'));
 check('プレイ画面のノーツへ data-rhythm-note-wide を付けている',
   read('monster-hero/src/game-system.jsx').includes(`data-rhythm-note-wide={rhythmNoteIsWide(note)?'1':undefined}`));
 

@@ -177,6 +177,7 @@ const RELEASED_MARKERS=Object.freeze({
   dullahan_clockwork:'dullahan-clockwork-v3',
   toriko:'toriko-v3',
   '4u_hitasura':'4u-hitasura-v3',
+  kindan_no_resistance:'kindan-no-resistance-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -196,6 +197,7 @@ const RELEASED_TRACKS=Object.freeze({
   dullahan_clockwork:'dullahan_clockwork',
   toriko:'toriko',
   '4u_hitasura':'4u_hitasura',
+  kindan_no_resistance:'kindan_no_resistance',
 });
 
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

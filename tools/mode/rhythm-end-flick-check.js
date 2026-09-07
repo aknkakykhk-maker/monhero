@@ -160,12 +160,18 @@ check('終点フリックの終端バーだけ色と印を変える',
   source.includes('[data-rhythm-end-bar][data-rhythm-end-flick]{')
   &&source.includes('[data-rhythm-end-bar][data-rhythm-end-flick]::after{'));
 // 「ここで弾く」の合図は単発FLICKと同じにする。別の記号・別の色にすると覚えることが増える。
+// 2026-09-07・ユーザー指摘「フリックの矢印が小さくて見にくい」。文字(⇧)をやめ、
+// 単発FLICK・終点フリックとも clip-path の三角を同じ大きさ(24×17px)で描く形にそろえた。
 const html=fs.readFileSync(path.join(ROOT,'monster-hero/index.html'),'utf8');
-const flickMark=(html.match(/content:"([^"]+)" !important;/)||[])[1];
-check('印は単発FLICKと同じ記号',flickMark==='⇧'&&source.includes('content:"⇧"'),`FLICK=${flickMark}`);
+check('印は単発FLICKと同じ形（clip-pathの三角。端末のフォントに左右されない）',
+  source.includes('clip-path:polygon(50% 0,100% 100%,0 100%);')
+  &&html.includes('[data-rhythm-flick-arrow] {')
+  &&!/content:"[⇧▲]"/.test(source)&&!/content:"[⇧▲]"/.test(html));
+check('印の大きさは単発FLICKとそろえる',
+  (source.match(/width:24px;height:17px;/g)||[]).length>=2);
 check('色も単発FLICKと同じ緑（判定と違う操作に見えないように）',
   /\[data-rhythm-end-bar\]\[data-rhythm-end-flick\]\{[^}]*#22c55e/.test(source)
-  &&/\[data-rhythm-end-bar\]\[data-rhythm-end-flick\]::after\{[^}]*#22c55e/.test(source));
+  &&/\[data-rhythm-end-bar\]\[data-rhythm-end-flick\]::after\{[\s\S]*?#4ade80/.test(source));
 check('印は奥行きの縦つぶれを打ち消す',
   source.includes('scaleY(calc(1 / var(--rhythm-end-depth-scale, 1)))'));
 // 200コンボの演出が消えたのと同じ罠(backgroundショートハンドがbackground-clip等を巻き添えにする)を避ける
@@ -195,7 +201,7 @@ check('既存の正式候補v1・既存テスト譜面へ終点フリックを�
   [monsterHeroEasyNotes,monsterHeroNormalNotes,monsterHeroHardNotes,atsuCupGestureTestNotes,atsuCupHoldTestNotes]
     .every(notes=>!notes.some(n=>n.endFlick!==undefined)));
 
-// --- 11. 実ブラウザで、本当に「⇧」が出るか ---
+// --- 11. 実ブラウザで、本当に矢印が出るか ---
 // CSSの文字列が入っていることと、実際にその記号が描かれることは別。
 // 200コンボの演出が「書いてあるのに見えない」不具合を出したのと同じ種類の見落としを防ぐ。
 (async()=>{
@@ -225,14 +231,17 @@ check('既存の正式候補v1・既存テスト譜面へ終点フリックを�
     const read=sel=>page.evaluate(s=>{
       const el=document.querySelector(s),base=getComputedStyle(el),after=getComputedStyle(el,'::after');
       return {bg:base.backgroundImage,border:base.borderTopColor,content:after.content,
-              color:after.color,transform:after.transform,fontSize:after.fontSize};
+              color:after.color,transform:after.transform,fontSize:after.fontSize,
+              clip:after.clipPath,width:after.width,height:after.height};
     },sel);
     const plain=await read('#plain'),flick=await read('#flick');
     check('終点フリックではない終端バーには印が出ない(既存ノーツの見た目が変わらない)',
       plain.content==='none',plain.content);
     check('終点フリックではない終端バーの色は元のまま',
       plain.bg.includes('232, 121, 249'),plain.bg.slice(0,48));
-    check('実ブラウザで「⇧」が描かれる',flick.content==='"⇧"',flick.content);
+    check('実ブラウザで矢印(三角)が描かれる',
+      /polygon/.test(flick.clip)&&flick.width==='24px'&&flick.height==='17px',
+      `${flick.clip} / ${flick.width}×${flick.height}`);
     check('実ブラウザで終端バーが緑になる',
       flick.bg.includes('34, 197, 94')&&!flick.bg.includes('232, 121, 249'),flick.bg.slice(0,48));
     check('印の縦つぶれが実際に打ち消される(scaleY 0.6 → 約1.67)',(()=>{
