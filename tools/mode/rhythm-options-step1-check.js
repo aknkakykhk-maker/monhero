@@ -71,7 +71,7 @@ ok('0.1刻みのどこでもtravelが必ず変わる',speedMonotonic);
 ok('速度は判定関数・入力照合へ渡さない',!game.includes('rhythmJudgeTap(deltaMs,settings.noteSpeed)')&&!game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.noteSpeed)'));
 ok('サイズはノーツ頭の描画scaleだけで、帯・ENDバー・入力hitboxへ渡さない',
   game.includes("'--rhythm-note-size-scale':settings.noteSize/100")
-  &&data.includes('transform:scale(var(--rhythm-note-size-scale,1)) scaleX(var(--rhythm-note-width-scale,1)) scaleY(var(--rhythm-note-depth-scale,1))')
+  &&data.includes('transform:scale(var(--rhythm-note-size-scale,1)) scaleY(var(--rhythm-note-depth-scale,1))')
   &&!game.includes('scale(${settings.noteSize/100})')
   &&!game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.noteSize'));
 ok('表示と入力で同じ判定offsetを使い窓幅は不変',game.includes('visualTime=songTimeMs-settings.judgmentTimingOffsetMs')&&game.includes('rhythmMatchInputBatch(run.notes,inputs,now,settings.judgmentTimingOffsetMs)')&&game.includes('const rhythmJudgeTap = deltaMs => RHYTHM_JUDGMENTS.find'));
