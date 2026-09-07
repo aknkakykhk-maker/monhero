@@ -10502,6 +10502,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <span className="shrink-0 text-[9px] font-black text-slate-400">{quickRunDetailOpen?'▲':'▼'}</span>
               </button>
             : null;
+          // 周回していないときの「ここから始める」。帯と同じく、縦持ちはヘッダーの下・
+          // 横持ちはヘッダーの空きへ入れる。中身は1つ作って使い回す(2つ書くと片方だけ直す事故になる)。
+          // ★塗りつぶしをやめて枠だけにし、主張を抑える。モンヒロビートだけで遊ぶ人には
+          //   関係のないボタンなので、大きく出しすぎない(2026-09-07・ユーザー指摘)
+          const quickRunStartNode = !quickRunProgress && !runStage
+            ? (repeatTemplateForNewRun()
+              ? <button type="button" data-quick-run-start-button onClick={()=>{if(!startQuickRunFromRhythm())setQuickRunStartError(true);}}
+                  className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]">⚔ 裏でクイックの∞周回を始める</button>
+              : <p data-quick-run-start-hint className="px-1 py-1 text-[9px] leading-relaxed text-slate-500">裏で周回を回すには、クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。</p>)
+            : null;
           return (
           <main data-rhythm-demo-home className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white">
             <header className="z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1" style={{paddingTop:'calc(0.25rem + env(safe-area-inset-top))'}}>
@@ -10519,6 +10529,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
               {/* 横持ちはここに余白があるので、周回の帯をヘッダーへ入れる(縦持ちでは出さない) */}
               {quickRunProgress&&<div data-quick-run-progress-header className="min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70">{quickRunBandButton}</div>}
+              {/* 周回していないときの入口も、横持ちではここへ入れる(縦持ちでは出さない) */}
+              {quickRunStartNode&&<div data-quick-run-start-header className="min-w-0 max-w-[260px] flex-1">{quickRunStartNode}</div>}
               <span data-rhythm-demo-badge className="shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200">体験版</span>
               {/* 縦⇄横の切り替え。端末の回転ロックを解除しに行かなくても横画面で遊べるようにする
                   (2026-09-05・ユーザー指示「縦なら横に横なら縦に変わるボタン」) */}
@@ -10571,12 +10583,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             </div>}
             {/* 周回していないときだけ「ここから始める」を出す。
-                編成は「1周目に自分で組んだもの」→ 無ければAUTO設定の事前設定(PR5) */}
-            {!quickRunProgress&&!runStage&&<div data-quick-run-start className="shrink-0 border-b border-white/10 bg-slate-900/60 px-3 py-1.5">
-              {repeatTemplateForNewRun()
-                ? <button type="button" data-quick-run-start-button onClick={()=>{if(!startQuickRunFromRhythm())setQuickRunStartError(true);}}
-                    className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ 裏でクイックの∞周回を始める</button>
-                : <p data-quick-run-start-hint className="text-[9px] leading-relaxed text-slate-400">裏で周回を回すには、クイックで1度∞周回を始めるか、M/B管理の「AUTO設定 → モンヒロビート中に回すクイック周回」で勇者モン・配置距離・難易度を決めてください。</p>}
+                編成は「1周目に自分で組んだもの」→ 無ければAUTO設定の事前設定(PR5)。
+                ★周回中の帯と同じく、縦持ちはヘッダーの下・横持ちはヘッダーの空きへ入れる。
+                  横持ちで下に置いたままだと画面の幅いっぱいの大きな帯になってしまっていた。
+                  モンヒロビートだけで遊ぶ人もいるので、塗りつぶしをやめて枠だけにし、
+                  主張を抑える(2026-09-07・ユーザー指摘
+                  「クイック前の場所は変わってない」「主張は強くしすぎないほうがいい」)。 */}
+            {!quickRunProgress&&!runStage&&<div data-quick-run-start data-quick-run-start-portrait className="shrink-0 border-b border-white/10 bg-slate-900/40 px-3 py-1">
+              {quickRunStartNode}
               {quickRunStartError&&<p className="mt-1 text-[9px] font-black text-red-300">いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。</p>}
             </div>}
             {/* 曲えらびの上に固定で出すのは、助手のひとことだけにする(notice)。
