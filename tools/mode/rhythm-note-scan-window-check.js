@@ -19,7 +19,8 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 // ── 実装が「絞り込み」の形になっているか ──────────────────────────────
 check('1ノーツぶんの処理を関数へ切り出している',game.includes('const visitNote=note=>{'));
 check('終わって非表示にし終えたノーツから先頭を進める',
-  game.includes('if(!(head.done&&(headEl?headEl._rhythmHidden===true:true)))break;')
+  // canvas 版は要素が無いので「片付け済みの印(_rhythmCanvasSettled)」を待つ(2026-09-07・#1188)
+  game.includes('if(!(head.done&&(canvasNotes?head._rhythmCanvasSettled===true:(headEl?headEl._rhythmHidden===true:true))))break;')
   &&game.includes('run.scanFrom=scanFrom;'));
 // 要素が無いノーツで先頭が止まると、絞り込みがまるごと効かなくなる。
 // 判定さえ終わっていれば隠す対象は無いので進めてよい、という形になっていること。

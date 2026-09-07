@@ -479,6 +479,14 @@ const rhythmProjectSubLaneSpan=(subLane,width,yRatio)=>rhythmProjectSubLaneRange
 // TAP/HOLDはsubLaneで可変幅、SLIDEはlane/slidePoints.laneを中心線として幅1〜4へ対応する。
 const rhythmNoteHasVariableSpan=note=>(note?.type==='TAP'||note?.type==='HOLD'||note?.type==='FLICK'||note?._rhythmOriginalType==='FLICK')&&note?.subLane!=null&&Number.isFinite(Number(note.subLane));
 const rhythmNoteIsSlide=note=>note?.type==='SLIDE'||note?._rhythmOriginalType==='SLIDE';
+// 描くときに見る「元の種類」。指で触ると HOLD / FLICK / SLIDE は判定のために type が 'HOLD' へ化ける
+// (RHYTHM_GESTURE_RUNTIME.bind。FLICK は終端を60秒先へ置いて指の動きを待つ)。
+// 見た目の判断に note.type を使うと、触って取り損ねた FLICK が「終端が60秒先の失敗した HOLD」に見えてしまい、
+// canvas 版ではレーン全体の薄い灰色の帯が1分間残った(2026-09-08・実機「レーンに白いあとが出続けた」)。
+const rhythmNoteVisualType=note=>note?._rhythmOriginalType||note?.type;
+const rhythmNoteIsHold=note=>rhythmNoteVisualType(note)==='HOLD';
+// 帯を持つ(=取り損ねたとき終端まで薄く流す)のは、元が HOLD か SLIDE のノーツだけ
+const rhythmNoteHasBody=note=>rhythmNoteIsHold(note)||rhythmNoteIsSlide(note);
 const rhythmSlideAuthoredLane=lane=>{
   const value=Number(lane),doubled=Math.round(value*2);
   if(!Number.isFinite(value)||Math.abs(value*2-doubled)>1e-6||doubled<0||doubled>RHYTHM_SUB_LANE_COUNT-2)return null;
@@ -11832,7 +11840,7 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
   const height=Math.max(0,Number(bodyHeight)||0);
   if(rhythmNoteIsSlide(note)){
     if(slideTravel)out.slide=rhythmSlideSegmentQuads(note,slideTravel.chartNowMs,slideTravel,rect,noteHeight/2);
-  }else if(note.type==='HOLD'&&height>0){
+  }else if(rhythmNoteIsHold(note)&&height>0){
     // 帯の上端(画面外でも可)から下端までを一定間隔でサンプルし、投影の曲線へ沿わせる(DOM 版の clipPath と同じ点)
     const bodyTopY=centerY-height;
     const variableHold=rhythmNoteHasVariableSpan(note),bodyRatio=variableHold?RHYTHM_NOTE_WIDTH_RATIO:RHYTHM_BODY_WIDTH_RATIO;
@@ -11878,9 +11886,9 @@ const rhythmNoteCanvasGeometry=(note,yPx,visualLane,rect,noteHeight,releaseYpx=n
     const bodyRatios=extraRatios.length?[...rhythmProjectionEdgeRatios(),...extraRatios].sort((a,b)=>a-b):rhythmProjectionEdgeRatios();
     out.band=bodyRatios.map(edgeAt);
   }
-  if((note.type==='HOLD'||rhythmNoteIsSlide(note))&&Number.isFinite(Number(releaseYpx))&&releaseYpx!==null){
+  if(rhythmNoteHasBody(note)&&Number.isFinite(Number(releaseYpx))&&releaseYpx!==null){
     const endY=rhythmClamp01((Number(releaseYpx)+noteHeight/2)/rect.height);
-    const end=rhythmNoteHasVariableSpan(note)&&note.type==='HOLD'?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY);
+    const end=rhythmNoteHasVariableSpan(note)&&rhythmNoteIsHold(note)?rhythmNoteVisualSpan(note,lane,endY,rhythmReleaseTargetMs(note)):rhythmNoteIsSlide(note)?rhythmProjectSlideSpan(rhythmReleaseLane(note),note,endY,rhythmReleaseTargetMs(note)):rhythmProjectLane(rhythmReleaseLane(note),endY);
     out.end={cx:rect.width*end.center,cy:Number(releaseYpx)+noteHeight/2,w:Math.max(10,rect.width*end.width*RHYTHM_NOTE_WIDTH_RATIO),scale:end.scale};
   }
   return out;
@@ -11963,7 +11971,7 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
     (dots||[]).forEach(([px,py,color])=>{c.fillStyle=color;c.beginPath();c.arc(x+bw*px,y+bh*py,1,0,Math.PI*2);c.fill();});
     const sprite={...s,capL:CAP,capR:CAP,mid:MID,glow:GLOW};sprites.set(id,sprite);return sprite;
   };
-  const headStyle=(note,failed,monster)=>failed?HEADS.FAILED:monster?HEADS.MONSTER:HEADS[note.type]||HEADS.TAP;
+  const headStyle=(note,failed,monster)=>failed?HEADS.FAILED:monster?HEADS.MONSTER:HEADS[rhythmNoteVisualType(note)]||HEADS.TAP;
   const fillGradient=(x,y,h,stops)=>{
     const g=ctx.createLinearGradient(0,y,0,y+h);
     stops.forEach((stop,index)=>{const offset=Array.isArray(stop)?stop[1]:index/(stops.length-1);const color=Array.isArray(stop)?stop[0]:stop;g.addColorStop(offset,color);});
@@ -11994,11 +12002,11 @@ const RHYTHM_CANVAS_RENDERER=(()=>{
       const bar=ctx.createLinearGradient(0,y,0,y+h);bar.addColorStop(0,'rgba(255,255,255,.95)');bar.addColorStop(1,'rgba(255,255,255,.55)');
       ctx.fillStyle=bar;ctx.fillRect(x+1,y+1,3,h-2);ctx.fillRect(x+w-4,y+1,3,h-2);
     }
-    if(note.type==='HOLD'&&!monster){ctx.fillStyle='rgba(8,47,73,.55)';ctx.fillRect(x+w*.24,cy-1,w*.52,2);}
+    if(rhythmNoteIsHold(note)&&!monster){ctx.fillStyle='rgba(8,47,73,.55)';ctx.fillRect(x+w*.24,cy-1,w*.52,2);}
     // 奥ほど暗い(filter:brightness 相当。不透明な粒の上では黒を (1-明るさ) の濃さで重ねると同じ色になる)
     if(brightness<1){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle=`rgba(2,6,23,${(1-brightness).toFixed(3)})`;ctx.fill();}
     if(pressed){roundRectPath(ctx,x,y,w,h,radius);ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();}
-    if(note.type==='FLICK'&&!failed){
+    if(rhythmNoteVisualType(note)==='FLICK'&&!failed){
       const sprite=arrowSprite('flick',26,19,[[5,'rgba(34,197,94,.95)'],[11,'rgba(21,128,61,.7)'],[2,'rgba(2,6,23,.9)']],[[0,'#ffffff'],[.38,'#bbf7d0'],[1,'#22c55e']]);
       const aw=(sprite.tw+sprite.margin*2)*sizeMul,ah=(sprite.th+sprite.margin*2)*sizeMul*depthScale;
       ctx.drawImage(sprite.canvas,cx-aw/2,y-3*sizeMul*depthScale-(sprite.th+sprite.margin)*sizeMul*depthScale,aw,ah);

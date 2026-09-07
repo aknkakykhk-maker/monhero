@@ -14,8 +14,15 @@ const check=(name,ok,detail='')=>{console.log(`${ok?'✓':'✗'} ${name}${detail
 
 check('最終判定をノーツへ控えて、失敗表示の判断に使う',
   game.includes('note.done=true;note._rhythmFinalJudgment=judgment;'));
-check('失敗して流し続ける条件はHOLD/SLIDEのMISSかつ譜面上の終端前',
-  game.includes("const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note))&&songTimeMs<rhythmReleaseTargetMs(note);"));
+// 「HOLD/SLIDE か」は note.type ではなく元の種類(rhythmNoteHasBody)で見る。触った FLICK は判定のために
+// type が 'HOLD'・終端が60秒先に化けるので、note.type で見ると取り損ねた FLICK が1分間「失敗した HOLD」として残る
+// (2026-09-08・実機「レーンに白いあとが出続けた」。canvas 版はその帯を実際に描いていた)
+check('失敗して流し続ける条件は元の種類が HOLD/SLIDE のMISSかつ譜面上の終端前',
+  game.includes("const failedTrail=note.done&&note._rhythmFinalJudgment==='MISS'&&rhythmNoteHasBody(note)&&songTimeMs<rhythmReleaseTargetMs(note);")
+  &&!game.includes("note._rhythmFinalJudgment==='MISS'&&(note.type==='HOLD'||rhythmNoteIsSlide(note))"));
+check('元の種類を見る補助関数がある(触った FLICK を帯持ちにしない)',
+  data.includes("const rhythmNoteVisualType=note=>note?._rhythmOriginalType||note?.type;")
+  &&data.includes("const rhythmNoteHasBody=note=>rhythmNoteIsHold(note)||rhythmNoteIsSlide(note);"));
 // 消す・薄くするという扱いは変えていないが、毎フレーム同じ値を書き直さないようにしたので
 // (遊んでいるうちに重くなる原因だった)、書き方が「変わったときだけ書く」形になっている。
 // 取れたHOLD / SLIDE / FLICKは、消える前に一瞬だけ判定ラインで光る(2026-09-04に追加)。
