@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e42f8316e7f5a73c
+// source-sha256: bcf39ecf2b9d777d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5ea6a16a6e674969
+// generated-sha256: 286128be22031932
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22970,6 +22970,8 @@ function MonsterHeroGame() {
   // 帯をタップして開く詳細と、周回を始められなかったときの一言
   const [quickRunDetailOpen, setQuickRunDetailOpen] = useState(false);
   const [quickRunStartError, setQuickRunStartError] = useState(false);
+  // 「ここで周回をやめる」を押したときの確認。誤って止めないよう1段はさむ
+  const [quickRunStopConfirm, setQuickRunStopConfirm] = useState(false);
   // setTimeout や await のあとから触るので、同期の控えも持つ
   const quickRunProgressRef = useRef(null);
   const writeQuickRunProgress = next => {
@@ -28880,7 +28882,8 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
-    stopAllAuto();
+    // 帯に「途中でやめた」と出せるよう、理由を渡す(2026-09-07)
+    stopAllAuto('retire');
     if (debugBattleRef.current) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
@@ -39180,7 +39183,31 @@ function MonsterHeroGame() {
           if (runStageRef.current) returnToBackgroundRun();
         },
         className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]"
-      }, "\u2694 \u30D0\u30C8\u30EB\u3078\u623B\u308B"))), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
+      }, "\u2694 \u30D0\u30C8\u30EB\u3078\u623B\u308B"), !quickRunProgress.finished && runStage !== null && (quickRunStopConfirm ? /*#__PURE__*/React.createElement("div", {
+        "data-quick-run-stop-confirm": true,
+        className: "mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 p-2"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] leading-relaxed text-amber-100"
+      }, "\u5468\u56DE\u3092\u3084\u3081\u307E\u3059\u304B\uFF1F \u3044\u307E\u306E\u5468\u3082\u3053\u3053\u3067\u7D42\u308F\u308A\u3001\u30AF\u30EA\u30A2\u3057\u305FWAVE\u3076\u3093\u306E\u5831\u916C\u304C\u5165\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: () => setQuickRunStopConfirm(false),
+        className: "min-h-[44px] rounded-lg border border-white/20 text-[10px] font-black text-slate-300 active:scale-[.98]"
+      }, "\u7D9A\u3051\u308B"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-quick-run-stop-yes": true,
+        onClick: () => {
+          setQuickRunStopConfirm(false);
+          void handleGiveUp();
+        },
+        className: "min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]"
+      }, "\u3084\u3081\u308B"))) : /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-quick-run-stop": true,
+        onClick: () => setQuickRunStopConfirm(true),
+        className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]"
+      }, "\u23F9 \u3053\u3053\u3067\u5468\u56DE\u3092\u3084\u3081\u308B")))), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
         "data-quick-rhythm-background": true,
         className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
       }, /*#__PURE__*/React.createElement("div", {

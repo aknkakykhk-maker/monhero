@@ -2173,6 +2173,8 @@ function MonsterHeroGame() {
   // 帯をタップして開く詳細と、周回を始められなかったときの一言
   const [quickRunDetailOpen, setQuickRunDetailOpen] = useState(false);
   const [quickRunStartError, setQuickRunStartError] = useState(false);
+  // 「ここで周回をやめる」を押したときの確認。誤って止めないよう1段はさむ
+  const [quickRunStopConfirm, setQuickRunStopConfirm] = useState(false);
   // setTimeout や await のあとから触るので、同期の控えも持つ
   const quickRunProgressRef = useRef(null);
   const writeQuickRunProgress = (next) => { quickRunProgressRef.current = next; setQuickRunProgress(next); };
@@ -6180,7 +6182,8 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
-    stopAllAuto();
+    // 帯に「途中でやめた」と出せるよう、理由を渡す(2026-09-07)
+    stopAllAuto('retire');
     if (debugBattleRef.current) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
@@ -10573,6 +10576,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     :'ここにいるあいだも周回は進みます。演奏中だけ止まりますが、そのぶんは曲のあとに速く進んで取り戻すので、損にはなりません。'}</p>
                 <button type="button" data-quick-run-progress-back onClick={()=>{if(runStageRef.current)returnToBackgroundRun();}}
                   className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ バトルへ戻る</button>
+                {/* バトルへ行かずにここで終わらせる(2026-09-07・ユーザー指示
+                    「バトルにいかなくてもクイック周回を止められるようにしたい」)。
+                    やめ方は「あきらめる」と同じで、そこまでにクリアしたWAVEの報酬が
+                    その場で入る(ユーザー選択「その周も終わらせて報酬を受け取る」)。
+                    ★時間をかけて積み上げるものなので、誤って押しても止まらないよう確認をはさむ */}
+                {!quickRunProgress.finished&&runStage!==null&&(quickRunStopConfirm
+                  ? <div data-quick-run-stop-confirm className="mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 p-2">
+                      <p className="text-[9px] leading-relaxed text-amber-100">周回をやめますか？ いまの周もここで終わり、クリアしたWAVEぶんの報酬が入ります。</p>
+                      <div className="mt-1.5 grid grid-cols-2 gap-2">
+                        <button type="button" onClick={()=>setQuickRunStopConfirm(false)}
+                          className="min-h-[44px] rounded-lg border border-white/20 text-[10px] font-black text-slate-300 active:scale-[.98]">続ける</button>
+                        <button type="button" data-quick-run-stop-yes onClick={()=>{setQuickRunStopConfirm(false);void handleGiveUp();}}
+                          className="min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]">やめる</button>
+                      </div>
+                    </div>
+                  : <button type="button" data-quick-run-stop onClick={()=>setQuickRunStopConfirm(true)}
+                      className="mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]">⏹ ここで周回をやめる</button>)}
               </div>}
             </div>}
             {/* 裏で周回したままモンビーを開いた最初の1回だけ(PR8) */}
