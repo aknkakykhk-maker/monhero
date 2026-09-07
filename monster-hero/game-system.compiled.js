@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2ce3aef1c5930a4e
+// source-sha256: e9eeddb4df26e8d9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9c4a5e8e61af0153
+// generated-sha256: fdcff56e5a93da84
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 13:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 13:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8817,10 +8817,17 @@ const changelogEntryId = entry => {
 // 延々と続いて見えていた(2026-09-05・ユーザー指摘でモンヒロビートの80件を dev:true にした)。
 // 記録自体は data/changelog.js に残し、出す・出さないだけをここで決める。
 const changelogForPlayers = entry => !!entry && entry.dev !== true && releasedForPlayers(entry);
+// ★並び順は「日付の新しい順」をここで決める。data/changelog.js の書いてある順には頼らない。
+//   別のファイル(data/rhythm-step3-release.js)が起動時に CHANGELOG.unshift で古い項目を
+//   先頭へ差し込むため、書いてある順のままだと 2026-09-04 の項目が最新として並んでいた
+//   (2026-09-07・ユーザー指摘「更新履歴の時間とか並ぶ順番がおかしい」)。
+//   日付は "YYYY-MM-DD HH:MM" の固定書式なので、文字列のまま比べれば時刻まで正しく並ぶ。
+//   日付が無い・壊れている項目は最後へ回す(消さない・CLAUDE.md ⑦)。
+const changelogSortKey = entry => typeof entry?.date === 'string' ? entry.date : '';
 const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(changelogForPlayers).map(entry => Object.freeze({
   ...entry,
   id: changelogEntryId(entry)
-}));
+})).slice().sort((a, b) => changelogSortKey(b) > changelogSortKey(a) ? 1 : changelogSortKey(b) < changelogSortKey(a) ? -1 : 0);
 // 更新履歴から作る助手の告知も、隠している項目のぶんは出さない
 // (data/assistants.js は公開フラグも dev も見られないため、ここで落とす)
 const HIDDEN_UPDATE_NOTICE_IDS = new Set((typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(entry => !changelogForPlayers(entry) && typeof entry?.assistantNotice?.id === 'string').map(entry => entry.assistantNotice.id.trim()));
