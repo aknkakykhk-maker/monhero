@@ -78,25 +78,45 @@ check('両チケットが共通処理を使い結果表示に実付与量を渡�
     && /id:'training_ticket'[^\n]*bondXp:15/.test(fs.readFileSync(path.join(TOOLS_DIR, '..', 'monster-hero', 'data', 'breeder.js'), 'utf8'))
     && /id:'training_ticket_l'[^\n]*bondXp:150/.test(fs.readFileSync(path.join(TOOLS_DIR, '..', 'monster-hero', 'data', 'breeder.js'), 'utf8')));
 
-// --- 虹★4・5のレベルアップ強化ポイント倍率 ---
-const gainLevelsAt = (rebirthCount, from, to) => applyBondXpGain({
-  id:`rainbow-${rebirthCount}`, rebirthCount, levelCap:rebirthCount === 34 ? 330 : 400,
+// --- レベル帯ごとの強化ポイント倍率 ---
+// ★以前は「凸の数(34凸で×2・35凸で×3)」で決めていたが、いまは**到達したレベルの帯**で決まる。
+//   Lv2〜270 は+1 / Lv271〜330 は+2 / Lv331〜400 は+3。Lv401以降は超越ポイントの領域。
+//   凸の数は上限(levelCap)を伸ばすだけで、倍率そのものには関わらない
+//   (34/35凸になっても過去のLv1〜270へ遡って×2/×3を付け直さない、という判断のため)。
+//   検査はこの新しい仕様で見る。levelUpPointMultiplier(凸ベースの旧式)は、
+//   2026-08-29の不具合版で増えたぶんを戻す移行処理からしか使わない。
+const gainLevelsAt = (rebirthCount, from, to, levelCap = 400) => applyBondXpGain({
+  id:`band-${rebirthCount}`, rebirthCount, levelCap,
   bondXp:totalBondXpForLevel(from), distAptPoints:0,
 }, totalBondXpForLevel(to) - totalBondXpForLevel(from));
-for (const [count, multiplier] of [[33,1],[34,2],[35,3]]) {
-  const result = gainLevelsAt(count, count === 35 ? 330 : 270, count === 35 ? 331 : 271);
-  check(`${count}凸は1Lvにつき+${multiplier}`, result.gainedLevels === 1 && result.gainedPoints === multiplier && result.masu.distAptPoints === multiplier);
+for (const [label, from, to, points] of [
+  ['Lv2〜270の帯は1Lvにつき+1', 2, 3, 1],
+  ['Lv271〜330の帯は1Lvにつき+2', 270, 271, 2],
+  ['Lv331〜400の帯は1Lvにつき+3', 330, 331, 3],
+]) {
+  const result = gainLevelsAt(35, from, to);
+  check(label, result.gainedLevels === 1 && result.gainedPoints === points && result.masu.distAptPoints === points,
+    `+${result.gainedPoints}`);
 }
-const rainbow4Multi = gainLevelsAt(34,270,280);
-const rainbow5Multi = gainLevelsAt(35,330,340);
-check('34凸で複数Lv上昇は上昇Lv数×2', rainbow4Multi.gainedLevels === 10 && rainbow4Multi.gainedPoints === 20);
-check('35凸で複数Lv上昇は上昇Lv数×3', rainbow5Multi.gainedLevels === 10 && rainbow5Multi.gainedPoints === 30);
-check('Lv330までは虹4倍率', gainLevelsAt(34,329,330).gainedPoints === 2);
-check('35凸後のLv331～400は虹5倍率', gainLevelsAt(35,331,400).gainedPoints === 69 * 3);
-check('35凸/Lv400で停止', gainLevelsAt(35,400,401).gainedLevels === 0);
+// 凸の数は倍率に関わらない(同じレベル帯なら同じ)
+check('倍率は凸の数では変わらない',
+  [33,34,35].every(n => gainLevelsAt(n,270,271,400).gainedPoints === 2));
+const band2Multi = gainLevelsAt(34,270,280,330);
+const band3Multi = gainLevelsAt(35,330,340);
+check('Lv271〜330を複数Lv上がると上昇Lv数×2', band2Multi.gainedLevels === 10 && band2Multi.gainedPoints === 20);
+check('Lv331〜400を複数Lv上がると上昇Lv数×3', band3Multi.gainedLevels === 10 && band3Multi.gainedPoints === 30);
+check('Lv330までは×2のまま', gainLevelsAt(34,329,330,330).gainedPoints === 2);
+check('Lv331〜400は×3', gainLevelsAt(35,331,400).gainedPoints === 69 * 3);
+check('Lv400で止まる', gainLevelsAt(35,400,401).gainedLevels === 0);
+// 帯をまたいだときは「×いくつ」と言い切れないので、表示用の倍率は出さない
+check('帯をまたぐときは×表示を出さない', gainLevelsAt(35,269,272).pointMultiplier === 1);
 check('経験値取得方法に依存せず共通処理だけが倍率を決める',
-  /const pointMultiplier = levelUpPointMultiplier\(masu\?\.rebirthCount\)/.test(source)
-  && ['applyBondXpGain(masu, gain)','applyBondXpGain(prepared, gainedXp)','applyBondXpGain(m, award.gain, autoRepeatBondLevelCap)'].every(call=>source.includes(call)));
+  /const gainedPoints = gainedEnhancePointsBetweenLevels\(before\.level, Math\.min\(cap, after\.level\)\)/.test(source)
+  // 入り口(バトル・チケット・合体・AUTO∞)がどれでも、ポイントは共通処理が決める。
+  // 合体側の変数名は prepared → nextMain へ変わっている(処理は同じ)
+  && ['applyBondXpGain(masu, gain)','applyBondXpGain(nextMain, gainedXp)','applyBondXpGain(m, award.gain, autoRepeatBondLevelCap)'].every(call=>source.includes(call))
+  // 呼び出し側が自前でポイントを計算していないこと(倍率を2か所に持たない)
+  && !/levelUpPointMultiplier\(|levelEnhancePointMultiplier\(/.test(source.slice(source.indexOf('const handleFusion'))));
 
 // --- 必要経験値の緩和(0.05 → 0.025) ---
 // 1レベルぶんの必要XP = round(50 × Lv^1.4 × BOND_XP_DISCOUNT)。係数を下げると必要XPが下がる

@@ -48,7 +48,10 @@ const has = (t) => source.includes(t);
 check('デッキを組むときに同じ式を使う', has('for(let i=0;i<guardCardCount(gBonus);i++)'));
 check('デッキへ渡すのはガードレベル', has('const nGB = nGrdL;'));
 check('レベルアップの案内も同じ式を使う', /guardCardCount\(nGrdL\)>guardCardCount\(currentGuardLevel\)/.test(source));
-check('強化画面の予告も同じ式を使う', /ガード枚数 \{guardCardCount\(curGL\)\} → \{guardCardCount\(nextGL\)\}/.test(source));
+// ★以前は「能力覚醒」画面に『ガード枚数 ◯ → ◯』の予告があり、そこを見ていた。
+//   その画面は #639 で「トレーニング」へ置き換わり、予告ごと無くなっている。
+//   いまは強化の演出で「枚数UP」を伝えるので、そちらが同じ式から出ているかを見る。
+check('枚数が増えたときは演出で伝える', source.includes("guardCountUp?' 枚数UP':''"));
 // 「最大3枚」のような、式と食い違う数の直書きが残っていないこと
 check('案内文に古い枚数が直書きされていない', !/カード枚数は最大3枚/.test(source));
 check('案内文が上限を式から出している', has('最大${MAX_GUARD_CARD_COUNT}枚です'));

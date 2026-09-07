@@ -54,7 +54,8 @@ check('セリフは短く保つ(スマホで読める長さ)',
 check('セリフを画面のJSXへ直接書いていない',
   steps.every(s => !source.includes(s.t.replace('{name}', '')))
     && stepsV2.every(s => !source.includes(s.t.replace('{name}', '')))
-    && has("const battleTutorialSteps = (battleTutorialVariant === 'v2'"));
+    // ★v1とv2の役割が入れ替わった。いまは v2 が本番の入口、v1 がデバッグからだけのお試し
+    && has("const battleTutorialSteps = (battleTutorialVariant === 'v1'"));
 
 // --- ② 流れ ---
 const order = steps.map(s => s.at);
@@ -170,8 +171,10 @@ check('記録を残さない戦いではミッションも進めない',
     && has('if (debugBattleRef.current) return;'));
 // 練習は強化フェーズまで通して見せる。デバッグ戦の打ち切りに吸われると
 // 「次へ進む」を押しても画面が変わらず、そこから先のステップに進めない
+// ★台本(battleScenarioRef)があるときは、デバッグ戦の打ち切りを通さず強化フェーズまで見せる。
+//   条件そのものは変わっていないが、種族チャレンジと極限の距離ルールが同じ行へ足された
 check('練習は強化フェーズまで進める',
-  has('if (debugBattleRef.current && !battleScenarioRef.current) {'));
+  has('if (debugBattleRef.current && !speciesChallengeBattleRunRef.current && !battleScenarioRef.current'));
 
 // --- ④ 入口は3つ・戻り先を覚える ---
 check('デバッグ設定から開始できる', has('<button onClick={()=>startBattleTutorial()}') && has('バトルチュートリアル開始'));
@@ -187,9 +190,10 @@ check('ヘルプ側に項目がある', helpSrc.includes("launch: 'battleTutoria
 // 呼び出し口は、定義を除いて デバッグ(v1)・デバッグ(v2お試し)・はじめての案内2つ・ヘルプ の5つ
 const entryCalls = (source.match(/startBattleTutorial\(/g) || []).length;
 check('入口は決めた5つだけ', entryCalls === 5, `${entryCalls}か所`);
-check('新しい台本はデバッグからだけ開ける',
-  (source.match(/startBattleTutorial\('DEBUG_SETTINGS','v2'\)/g) || []).length === 1
-    && !/startBattleTutorial\('HOME',\s*'v2'\)/.test(source));
+// 役割が入れ替わったので、デバッグ専用は v1 のほう
+check('お試しの台本はデバッグからだけ開ける',
+  (source.match(/startBattleTutorial\('DEBUG_SETTINGS','v1'\)/g) || []).length === 1
+    && !/startBattleTutorial\('HOME',\s*'v1'\)/.test(source));
 check('デバッグ設定の入口はデバッグ設定の中にある',
   source.indexOf('バトルチュートリアル開始') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
 check('終わったら始めた場所へ帰る',
@@ -242,7 +246,8 @@ check('操作の番でも「やめる」は残す',
 check('吹き出し以外は操作を邪魔しない', has("pointerEvents:'none'") && has("pointerEvents:'auto'"));
 check('みゅあの顔と吹き出しは共通のものを使う',
   has('<AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>')
-    && has('assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)'));
+    // 呼び方(さん付け・呼び捨て)と選んでいる助手も渡すようになった
+    && has('assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)'));
 check('つぎへとスキップ(やめる)がある',
   has("{last?'おわる':'つぎへ'}") && has('<button onClick={()=>endBattleTutorial(false)}') && has('やめる</button>'));
 // 押してほしいものだけを押せるようにする。枠全体を光らせると
@@ -286,8 +291,10 @@ check('台本のspotは画面側に用意されているものだけ',
   spotNames.filter(name => !SPOTS.includes(name)).join(', '));
 // 一覧の外枠だけを光らせると画面からはみ出して「どこを押すのか」が分からない。
 // 勇者モン選択はカード1枚ずつを光らせる
+// カードが共通実装になり、光らせるクラスは extraButtonClass で1枚ずつ渡す形になった
 check('勇者モンはカード1枚ずつを光らせる',
-  has("${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}") && !has("battleTutorialSpotClass('monList')"));
+  has("extraButtonClass: scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''")
+    && !has("battleTutorialSpotClass('monList')"));
 // 詳細を開くと画面いっぱいのモーダルが出るので、上のみゅあの帯と名前が重ならないようにする
 check('詳細と吹き出しが重ならない',
   has("paddingTop: battleTutorial?'calc(4.25rem + env(safe-area-inset-top))':undefined") && has('zIndex,paddingTop'));
@@ -301,7 +308,7 @@ check('練習中は戻る・リタイアを止める',
 
 // --- 将来の移行 ---
 check('開始と終了が1つの関数にまとまっている',
-  has('const startBattleTutorial = (returnTo = \'DEBUG_SETTINGS\', variant = \'v1\') => {')
+  has('const startBattleTutorial = (returnTo = \'DEBUG_SETTINGS\', variant = \'v2\') => {')
     && has('const endBattleTutorial = async (completed = false) => {'));
 
 // --- ⑥ 新しい入口の台本(V2・お試し) ---
@@ -321,10 +328,11 @@ check('新しい台本もセリフを短く保つ', stepsV2.every(s => s.t.lengt
 check('新しい台本のidも重複していない', new Set(stepsV2.map(s => s.id)).size === stepsV2.length);
 check('新しい台本の表情もすべて用意されているもの', stepsV2.every(s => ASSISTANT_EXPRESSIONS.includes(s.e)));
 // 初回でクイック・プロを実際に遊ばせない
+// 極限・種族チャレンジの解放条件と同じ disabled にまとまった
 check('練習中はチャレンジ以外の「難易度を選ぶ」を押せない',
-  has('disabled={!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE}'));
+  has('disabled={extremeLocked||speciesLocked||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)}'));
 check('新しい難易度選択でも練習中はビギナーだけ',
-  has("disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')}"));
+  has("disabled={!!battleTutorial&&key!=='Beginner'}"));
 check('練習中の難易度選択はビギナーから始まる',
   has("const start=battleTutorialStep!=null?'Beginner':BATTLE_DEFAULT_DIFFICULTY;"));
 check('新しい画面でも押してほしい場所だけ光らせる',

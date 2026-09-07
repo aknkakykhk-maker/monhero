@@ -57,7 +57,15 @@ check('重複整理でも旧位置Lvを削除・改名しない', normalized[0].
 check('別系統の固有技を残す', normalized[0].inheritedUniques.some(u => u.lineageId === 'Suezo'));
 check('正規化は冪等', JSON.stringify(normalizeInheritedUniqueLineages(normalized)) === JSON.stringify(normalized));
 check('今回専用の移行フラグを使う', source.includes("mh_unique_lineage_dedupe_migrated_v1"));
-check('合体候補と実行時の両方で系統IDを判定する', (source.match(/ownedUniqueIds = new Set\(\[uniqueLineageId/g) || []).length === 2);
+// ★以前は候補表示と実行時が別々に系統IDを数えており、「2か所にあること」を見ていた。
+//   いまは buildFusionInheritancePlan が1か所で決め、両方がその結果(entries[].inherited)を
+//   読むだけになっている(そちらのほうが食い違いようがない)。判定の一本化を見る形へ改めた。
+check('合体の継承判定は1か所(buildFusionInheritancePlan)で決める',
+  source.includes('const buildFusionInheritancePlan = ({ main, subs, selectedSubIds }) => {')
+  && (source.match(/buildFusionInheritancePlan\(\{ main/g) || []).length === 2);
+check('候補表示も実行もその結果を読む',
+  source.includes('inheritancePlan.entries[subIndex]?.inherited')
+  && /const inheritancePlan = buildFusionInheritancePlan\(\{ main, subs:selectedSubs/.test(source));
 
 const rangeChunk = source.slice(source.indexOf('const RANGE_LABELS'), source.indexOf('// モンスターごとの間合い'));
 const rangeContext = {};

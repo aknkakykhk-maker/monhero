@@ -20,7 +20,8 @@ for(const token of [
   "const ultraBattleView = gameState==='BATTLE'&&ultraEcoSession",
   'const ecoBattleView = liteBattleView||ultraBattleView',
 ])if(!eco.includes(token))fail(`省エネ状態に ${token} がありません`);
-const stopAll=between('const stopAllAuto = () => {','const [monSelection');
+// ★止まった理由を帯へ出すため、引数つき(reason)になった(2026-09-07)
+const stopAll=between("const stopAllAuto = (reason = '') => {",'const [monSelection');
 if(!stopAll.includes("setEcoModeSafe('off')"))fail('stopAllAutoで省エネをOFFにしていません');
 
 const battle=between("{gameState==='BATTLE'&&(",' {/* スキップ: 勇者モンと供モン3体を選ぶ */}'.trimStart());
@@ -53,9 +54,11 @@ for(const token of [
   'const ultraAudioSessionRef = useRef(null)',
   'if (ultraEcoSession)',
   '},[ultraEcoSession])',
-  'ultraAudioSessionRef.current={mutedBefore:audioMuted,automaticallyMuted:!audioMuted,manuallyChanged:false}',
+  // クイックの独立ミュート(quickMuted)も控えるようになった
+  'ultraAudioSessionRef.current={mutedBefore:audioMuted,quickMutedBefore:quickMuted,automaticallyMuted:!audioMuted,manuallyChanged:false}',
   'if (!audioMuted) toggleQuickMute(true)',
-  '!session.mutedBefore&&session.automaticallyMuted&&!session.manuallyChanged&&audioMuted',
+  // 戻すときも quickMuted を見る。「手動で変えていなければ開始前の状態へ正確に戻す」は同じ
+  'if (!session.manuallyChanged&&quickMuted!==session.quickMutedBefore) toggleQuickMute(true)',
   'if (automatic!==true) noteUltraAudioManualChange()',
 ])if(!has(token))fail(`ultra音声状態管理 ${token} がありません`);
 

@@ -68,10 +68,13 @@ check('あつの挑発(アシストカード)の攻撃は半減しない', has('
 // 効果量そのものはバランス調整で変わるので、数字ではなく「*effMul が掛かっているか」を見る。
 // (実際にゴーレムの闘志を 0.1 → 0.075 にしたときここが落ちた。見たいのは半減の結線であって
 //  効果量ではないので、数字を書き写さない形にしてある)
-const buffHalved = (fn, key) => new RegExp(`${fn}\\('${key}',[\\d.]+\\*effMul\\)`).test(source);
+// 効果量は固定値のこともあれば段階の値(tier.atk など)のこともあるので、
+// 「数字」ではなく「その引数に *effMul が掛かっているか」だけを見る
+const buffHalved = (fn, key) => new RegExp(`${fn}\\('${key}',[^)]*\\*effMul\\)`).test(source);
 check('固有技の数値効果も半減する',
   buffHalved('addPermaBuff', 'dmgCutPct') && buffHalved('addPermaBuff', 'atkPct')
-    && buffHalved('addPermaBuff', 'comboDmgPct') && has('effectiveMaxGuts*0.5*effMul')
+    // ガッツ回復は現在値ではなく「そのときの上限」から出すので liveEffectiveMaxGuts() を通る
+    && buffHalved('addPermaBuff', 'comboDmgPct') && has('liveEffectiveMaxGuts()*0.5*effMul')
     && buffHalved('addPermaBuff', 'critRatePct') && buffHalved('addWaveBuff', 'enemyAtkDebuffPct'));
 check('半減したことを画面に出す', has("addPopup('2枚目以降 効果半減'"));
 check('ダメージ予測も同じ数え方を使う',
@@ -136,9 +139,11 @@ const descEnd = source.indexOf('const getFullEvolutionDetails');
 vm.runInContext(`${myaruRateSrc[0]}${source.slice(descStart, descEnd)}\nglobalThis.__d = getDynamicDesc; globalThis.__r = myaruSelfDamageRate;`, descCtx);
 const desc = (level) => descCtx.__d({ id: 'cadmium' }, true, level);
 
-check('計算の説明文', desc(0) === 'ガッツ自動回復 0.5%アップ・ガッツ上限 3%アップ', desc(0));
-check('理論の説明文', desc(1) === 'ライフ自動回復 0.5%アップ・ガッツ自動回復 0.5%アップ・ライフ/ガッツ上限 5%アップ', desc(1));
-check('叡智の説明文', desc(2) === 'ライフ自動回復 1%アップ・ガッツ自動回復 1%アップ・ライフ/ガッツ上限 7%アップ', desc(2));
+// ★自動回復は「使ったターンではなく次のターンから効く」ので、説明文にそう書き足された。
+//   検査もその文言で見る(効くタイミングを黙って書き換えないため)
+check('計算の説明文', desc(0) === 'ガッツ自動回復 0.5%アップ（次のターンから）・ガッツ上限 3%アップ', desc(0));
+check('理論の説明文', desc(1) === 'ライフ自動回復 0.5%アップ（次のターンから）・ガッツ自動回復 0.5%アップ（次のターンから）・ライフ/ガッツ上限 5%アップ', desc(1));
+check('叡智の説明文', desc(2) === 'ライフ自動回復 1%アップ（次のターンから）・ガッツ自動回復 1%アップ（次のターンから）・ライフ/ガッツ上限 7%アップ', desc(2));
 check('0.5%が四捨五入で1%にならない', !desc(0).includes('1%'));
 
 // 他カードの説明文が小数表示で崩れていないこと

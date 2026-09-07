@@ -1,8 +1,19 @@
 // 修行デバッグ試作版が通常データから隔離され、タイル盤面・自動移動・全効果・道具を備えることを静的確認する。
 const fs=require('fs');const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');const breeder=fs.readFileSync('monster-hero/data/breeder.js','utf8');let failed=false;const check=(n,v)=>{console.log(`${v?'OK':'NG'}: ${n}`);failed||=!v;};
-check('HOMEは実装予定の紹介画面のみ',/修行（準備中）/.test(source)&&/gameState==='TRAINING_INFO'/.test(source)&&/通常プレイから修行本編は開始できません/.test(source));
+// ★2026-09-03にユーザーが決定し、HOMEの修行の施設はモンヒロビートへ譲った。
+//   入口は無くなったが、紹介画面(TRAINING_INFO)自体は残っていて、
+//   助手の告知(NOTICE_DESTINATIONS の training)からだけ開く。
+//   「通常プレイから本編は始められない」という約束は変わっていない。
+check('HOMEに修行の施設は無い',!/mh-home-facility[^\n]*openTrainingInfo/.test(source));
+check('紹介画面は残っていて、本編は始められないと書いてある',
+  /gameState==='TRAINING_INFO'/.test(source)&&/修行は準備中です/.test(source)&&/通常プレイから修行本編は開始できません/.test(source));
 check('重トレーニングチケットの内部ID・価格・絆XP効果を維持',/id:'training_ticket_l'[^\n]*name:"重トレーニングチケット"[^\n]*cost:1000[^\n]*bondXp:150/.test(breeder));
-check('デバッグ設定に修行テスト導線',/gameState==='DEBUG_SETTINGS'[\s\S]{0,1200}修行テスト/.test(source));
+// デバッグ画面は項目が増えていくので、距離ではなく「その画面の中にあるか」で見る
+check('デバッグ設定に修行テスト導線',(()=>{
+  const a=source.indexOf("{gameState==='DEBUG_SETTINGS'&&(");
+  const b=source.indexOf("{gameState==='MONSTER_IMAGE_DEBUG'&&(",a);
+  return a>=0&&b>a&&source.slice(a,b).includes('修行テスト');
+})());
 check('保存禁止バナーを常時表示',(source.match(/DEBUG・報酬や進行状況は保存されません/g)||[]).length>=4&&/DEBUG保存なし/.test(source));
 check('24マスの分岐タイルマップ',/TRAINING_BEGINNER_NODES/.test(source)&&(source.match(/\['n\d+'/g)||[]).length>=24&&/mh-tile-board/.test(source)&&/mh-training-tile/.test(source));
 check('出目ぶん自動移動し分岐時だけ方向選択',/advanceTraining/.test(source)&&/chooseTrainingBranch/.test(source)&&/branchOptions/.test(source)&&/出目ぶん自動で進みます/.test(source)&&!/chooseTrainingDestination/.test(source));

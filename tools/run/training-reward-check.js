@@ -168,7 +168,7 @@ if (from >= 0 && to > from) {
   const transformed = babel.transformSync(
     'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
     + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, trainingGainRate, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
-    + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass,\n'
+    + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass, cardIconNode,\n'
     + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => (<>\n'
     + jsx + '\n</>);\nmodule.exports = { Screen };',
     { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'training-reward-check.jsx' });
@@ -186,6 +186,8 @@ if (from >= 0 && to > from) {
     resolveTrainingStats: T.resolveTrainingStats, resolveTrainingStep: T.resolveTrainingStep,
     TRAINING_PICK_COUNT: T.TRAINING_PICK_COUNT, TRAINING_OPTIONS: T.TRAINING_OPTIONS,
     handleTraining: () => {}, AssistantBubble: () => null, battleTutorialSpotClass: () => '',
+    // アイコンは共通部品(cardIconNode)を通すようになった。見た目は見ないので置き換えて描く
+    cardIconNode: (icon) => React.createElement('i', { 'data-card-icon': String(icon) }),
     Trophy: Icon('trophy'), Heart: Icon('heart'), Sword: Icon('sword'), ShieldCheck: Icon('shield'), Sparkles: Icon('sparkles'),
   }));
   const text = (html) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
