@@ -234,6 +234,17 @@ check('SLIDE帯のSVGは left/top ではなく transform で動かし、drop-sha
   &&!data.includes('body.style.left=slideLeft;')
   &&!data.includes('drop-shadow(0 0 5px rgba(168,85,247,.38))')
   &&data.includes('[data-rhythm-slide-glow]{fill:none;stroke:rgba(168,85,247,.12);stroke-width:12'));
+// 2026-09-07・実機「モンスターノーツの描画が壊れてる」。ノーツ要素の箱は基準幅で固定されるので、
+// 箱の ::before/::after に掛けた装飾は遠くでも手前の大きさのまま残る。装飾は粒(data-rhythm-note-head)に掛ける。
+{
+  const indexHtml=fs.readFileSync(path.join(ROOT,'monster-hero/index.html'),'utf8');
+  check('index.html の装飾はノーツ要素の箱(基準幅で固定)ではなく粒に掛ける(モンスターノーツの光・角丸・FLICKの矢印)',
+    !/\[data-rhythm-note\]\[data-rhythm-monster-note\]::(before|after)/.test(indexHtml)
+    &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::before {')
+    &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::after {')
+    &&indexHtml.includes('border-radius:calc(5px / var(--rhythm-note-cap-scale,1)) / 5px !important;')
+    &&indexHtml.includes('transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));'));
+}
 check('粒の端の丸みと FLICK の矢印は 0.05 刻みの比率(--rhythm-note-cap-scale)で scaleX を打ち消す(塗り直しを1回の落下で10回ほどに抑える)',
   data.includes("const capScale=(Math.max(.05,Math.round(Math.min(1,width/baseWidth)*20)/20)).toFixed(2);")
   &&data.includes('[data-rhythm-note]>[data-rhythm-note-head]{border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px}')
