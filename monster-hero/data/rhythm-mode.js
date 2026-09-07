@@ -10344,7 +10344,7 @@ const RHYTHM_TUTORIAL_STEPS=Object.freeze([
   {fromMs:rhythmTutorialMs(22), title:'押さえ続ける「ホールド」', text:'叩いたまま押さえて、終わりの光る横棒が判定ラインへ来たら離します。'},
   {fromMs:rhythmTutorialMs(34), title:'なぞる「スライド」',   text:'押さえたまま、帯の道すじを指でなぞります。途中で指を離さないように。'},
   {fromMs:rhythmTutorialMs(43), title:'払う「フリック」',     text:'緑のノーツは、叩いたあと指を上へ払います。向きは上だけです。'},
-  {fromMs:rhythmTutorialMs(50), title:'「終点フリック」',     text:'終わりの横棒が緑で「⇧」が付いているホールドは、離さずにそのまま上へ払って終わります。'},
+  {fromMs:rhythmTutorialMs(50), title:'「終点フリック」',     text:'終わりの横棒が緑で上向きの矢印が付いているホールドは、離さずにそのまま上へ払って終わります。'},
   {fromMs:rhythmTutorialMs(58), title:'「モンスターノーツ」', text:'金色のノーツです。GREATより良い判定で取ると、設定したマスモンの能力が出ます。'},
   {fromMs:rhythmTutorialMs(63), title:'ここまで！',           text:'おつかれさま。あとは曲をえらんで遊んでみてください。'},
 ]);
@@ -10523,10 +10523,24 @@ const installRhythmGestureVisuals=()=>{
   document.documentElement.dataset.rhythmGestureVisuals='ready';
   const style=document.createElement('style');
   style.textContent=`
-    [data-rhythm-note][data-note-type="FLICK"] > span:last-child{background:linear-gradient(180deg,#f9a8d4,#ec4899 52%,#a21caf)!important;border-color:rgba(253,164,175,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 0 16px rgba(236,72,153,.68)!important}
-    [data-rhythm-note][data-note-type="FLICK"] > span:last-child::after{content:"▲";position:absolute;left:50%;top:-18px;transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));color:#fdf2f8;font-size:18px;line-height:1;text-shadow:0 0 8px #ec4899,0 0 14px #d946ef}
-    [data-rhythm-note][data-note-type="SLIDE"] > span:last-child{background:linear-gradient(180deg,#ddd6fe,#a855f7 58%,#6d28d9)!important;border-color:rgba(221,214,254,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.82),0 0 16px rgba(168,85,247,.64)!important}
-    /* 終点フリックの終端バー。「ここで弾く」ことが一目で分かるよう、単発FLICKと同じ緑と「⇧」に揃える。
+    /* ★ノーツの見た目は必ず [data-rhythm-note-head](粒)を名指しで指す。span:last-child で書くと、
+       マスモンの絵が入るノーツでは最後の子が絵(data-rhythm-monster-face)になるため、
+       色も矢印も幅広の縁取りも「絵」のほうへ付いてしまう。実際に
+       「モンスターノーツとフリックノーツによく分からない縦線がある」という不具合になった(2026-09-07)。 */
+    /* FLICKは緑。ヘルプ・終点フリックの終端バー・練習の説明がいずれも「緑」で揃えてあるのに、
+       ここだけピンク(#ec4899)になっていて、紫のSLIDE・ピンクのTAPと見分けにくかった。 */
+    [data-rhythm-note][data-note-type="FLICK"] > [data-rhythm-note-head]{background:linear-gradient(180deg,#bbf7d0,#22c55e 52%,#15803d)!important;border-color:rgba(220,252,231,.98)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 0 16px rgba(34,197,94,.7)!important}
+    [data-rhythm-note][data-note-type="SLIDE"] > [data-rhythm-note-head]{background:linear-gradient(180deg,#ddd6fe,#a855f7 58%,#6d28d9)!important;border-color:rgba(221,214,254,.95)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.82),0 0 16px rgba(168,85,247,.64)!important}
+    /* 上へ払う矢印。文字(▲)の疑似要素だと幅広ノーツの縁取り(::before/::after)と場所を取り合ううえ、
+       端末のフォントで大きさが変わる。実体のある要素へ切り出し、clip-path で三角を描く。
+       粒は scaleX(--rhythm-note-width-scale) で横に伸びるので、矢印だけは同じ比率で戻す
+       (毎フレーム書き換えないよう、0.05刻みに丸めた --rhythm-note-cap-scale を使う)。 */
+    [data-rhythm-flick-arrow]{position:absolute;left:50%;bottom:calc(100% + 2px);z-index:2;width:24px;height:17px;
+      transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));transform-origin:50% 100%;
+      background:linear-gradient(180deg,#f0fdf4,#4ade80 60%,#16a34a);
+      clip-path:polygon(50% 0,100% 100%,0 100%);
+      filter:drop-shadow(0 0 4px rgba(34,197,94,.95)) drop-shadow(0 1px 2px rgba(2,6,23,.85));pointer-events:none}
+    /* 終点フリックの終端バー。「ここで弾く」ことが一目で分かるよう、単発FLICKと同じ緑・同じ矢印に揃える。
        backgroundのショートハンドで書くとbackground-clipなどを巻き添えでリセットしてしまうため、
        background-imageだけを上書きする(200コンボの演出が消えた不具合と同じ罠を避ける)。 */
     /* 音ゲーオプションのスライダー。指で掴めるよう、つまみを大きめ(26px)にする。
@@ -10537,11 +10551,16 @@ const installRhythmGestureVisuals=()=>{
     .mh-rhythm-range:focus-visible{box-shadow:0 0 0 2px rgba(34,211,238,.65)}
     /* HOLD / SLIDE / FLICK を最後まで取れたときに、判定ラインで一度だけ広がって消える光。
        押した手ごたえを目でも返すためのもので、判定・スコアには関与しない。 */
-    [data-rhythm-note][data-rhythm-clear] > span:last-child{animation:rhythm-clear-pop .26s ease-out forwards}
-    [data-rhythm-note][data-rhythm-clear] > span:not(:last-child){opacity:0}
+    [data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head],[data-rhythm-note][data-rhythm-clear] > [data-rhythm-monster-face]{animation:rhythm-clear-pop .26s ease-out forwards}
+    [data-rhythm-note][data-rhythm-clear] > [data-rhythm-hold-body],[data-rhythm-note][data-rhythm-clear] > [data-rhythm-end-bar]{opacity:0}
     @keyframes rhythm-clear-pop{from{transform:scale(1);opacity:.95}to{transform:scale(2.1);opacity:0}}
     [data-rhythm-end-bar][data-rhythm-end-flick]{background-image:linear-gradient(90deg,#22c55e,#f0fdf4 50%,#22c55e)!important;border-color:rgba(220,252,231,.98)!important}
-    [data-rhythm-end-bar][data-rhythm-end-flick]::after{content:"⇧";position:absolute;left:50%;bottom:100%;transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-end-width-scale, 1))) scaleY(calc(1 / var(--rhythm-end-depth-scale, 1)));transform-origin:50% 100%;color:#f0fdf4;font-size:15px;line-height:1;pointer-events:none;text-shadow:0 0 8px #22c55e,0 0 14px #15803d}
+    /* 終点フリックの矢印も、単発FLICKと同じ大きさ・同じ形(clip-pathの三角)にそろえる。
+       文字(⇧)のままだと端末のフォント次第で細く小さく出るため、実体のある三角にする。 */
+    [data-rhythm-end-bar][data-rhythm-end-flick]::after{content:"";position:absolute;left:50%;bottom:calc(100% + 2px);width:24px;height:17px;
+      transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-end-width-scale, 1))) scaleY(calc(1 / var(--rhythm-end-depth-scale, 1)));transform-origin:50% 100%;
+      background:linear-gradient(180deg,#f0fdf4,#4ade80 60%,#16a34a);clip-path:polygon(50% 0,100% 100%,0 100%);
+      filter:drop-shadow(0 0 4px rgba(34,197,94,.95)) drop-shadow(0 1px 2px rgba(2,6,23,.85));pointer-events:none}
     /* 発熱対策(2026-09-07)。プレイエリア全面のSVGへ drop-shadow を掛けると、帯の形が変わる
        毎フレーム、全面ぶんの画素をぼかし直す(画面の広い端末ほど重い)。ぼかしはやめ、帯の外周に
        半透明の太い線(data-rhythm-slide-glow)を1本敷いて同じ発光に見せる。線は帯と一緒に描かれるだけ。
@@ -10609,7 +10628,7 @@ const installRhythmGeometryStyles=()=>{
        実測(デスクトップChromium・266ノーツ/同時表示5)で、毎フレームの
        style+layoutが 0.786ms → 0.332ms と半分以下になった。
        明るさは元から位置の関数として滑らかに変わるため、見た目は変えていない。 */
-    [data-rhythm-note]>span:last-child{transform:scale(var(--rhythm-note-size-scale,1)) scaleX(var(--rhythm-note-width-scale,1)) scaleY(var(--rhythm-note-depth-scale,1));transform-origin:center}
+    [data-rhythm-note]>[data-rhythm-note-head]{transform:scale(var(--rhythm-note-size-scale,1)) scaleX(var(--rhythm-note-width-scale,1)) scaleY(var(--rhythm-note-depth-scale,1));transform-origin:center}
     /* 発熱対策(2026-09-07)。落ちる途中の幅は要素の width ではなく scaleX で表す。
        要素の幅は「判定ラインの手前での幅」で固定し(1回だけ書く)、毎フレームはこの変数だけが変わる。
        width を毎フレーム書くと、そのたびにレイアウト(寸法の計算)と塗り直しが走っていた。
@@ -10636,17 +10655,15 @@ const installRhythmGeometryStyles=()=>{
     /* 幅広ノーツ(5サブレーン以上)は、丸い粒を横に引き伸ばした形だと「どこからどこまでか」が
        読み取りにくい。プロセカ・チュウニズムの幅広ノーツと同じく、角を落とした棒にして
        両端へ明るい縁を置く。塗りは静的なCSSだけで作るので、毎フレームの負担は増えない。 */
-    [data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child{border-radius:calc(7px / var(--rhythm-note-cap-scale,1)) / 7px!important}
-    [data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::before,
-    [data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::after{
+    [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]{border-radius:calc(7px / var(--rhythm-note-cap-scale,1)) / 7px!important}
+    [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::before,
+    [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::after{
       content:"";position:absolute;top:1px;bottom:1px;width:calc(3px / var(--rhythm-note-cap-scale,1));border-radius:3px;
       background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.55));pointer-events:none}
-    [data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::before{left:1px}
-    [data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::after{right:1px}
-    /* マスモンの絵は scaleX されない(inline の transform が勝つ)ので、太さの補正は掛けない */
-    [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-monster-face]::before,[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-monster-face]::after{width:3px}
+    [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::before{left:1px}
+    [data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::after{right:1px}
     [data-rhythm-note][data-rhythm-failed="true"]{filter:grayscale(1) brightness(.72)!important}
-    [data-rhythm-note][data-rhythm-failed="true"]>span:last-child{box-shadow:none!important;border-color:rgba(148,163,184,.6)!important}
+    [data-rhythm-note][data-rhythm-failed="true"]>[data-rhythm-note-head]{box-shadow:none!important;border-color:rgba(148,163,184,.6)!important}
     /* --- ノーツを取ったときのヒットエフェクト --- */
     /* 判定ラインの高さで、ノーツの幅に合わせて弾ける。要素は使い回すので増えない。
        動かすのは transform と opacity だけ。ぼかし・影・色は動かさないので塗り直しは起きない。

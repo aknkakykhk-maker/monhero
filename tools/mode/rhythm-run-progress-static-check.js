@@ -77,8 +77,12 @@ for (const file of files) {
   // ---- モンビーから始める ----
   check(`${rel}: 始める入口は共通のテンプレート選びを通る`,
     /startQuickRunFromRhythm[\s\S]{0,400}?repeatTemplateForNewRun\(\)/.test(src));
-  check(`${rel}: すでにランが走っているときは始めない`,
-    /startQuickRunFromRhythm[\s\S]{0,200}?if\s*\(runStageRef\.current\)\s*return false;/.test(src));
+  // 2026-09-07: 負けた・あきらめた挑戦は runStage が残ったままなので、
+  // 「走っている」だけで断ると新しく始められなくなる。決着していないときだけ断る。
+  check(`${rel}: まだ決着していないランが走っているときは始めない`,
+    /startQuickRunFromRhythm[\s\S]{0,240}?if\s*\(\s*runStageRef\.current\s*&&\s*!runResultFinishedRef\.current\s*\)\s*return false;/.test(src));
+  check(`${rel}: 決着したランが残っているときは数え直してから始める`,
+    /startQuickRunFromRhythm[\s\S]{0,400}?if\s*\(\s*runStageRef\.current\s*\)\s*clearQuickRunProgress\(\);/.test(src));
   check(`${rel}: 始められないときは案内文を出す`, src.includes('data-quick-run-start-hint'));
 }
 
