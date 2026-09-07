@@ -34,6 +34,16 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-07 18:32", type:'update', title:'モンヒロビートに新曲「禁断のレジスタンス」を追加しました', status:'new',
+    assistantNotice:{id:'update_notice_kindan_no_resistance_v1',type:'content'},
+    items:[
+      '「禁断のレジスタンス」（2分43秒）を追加しました。EASY・NORMAL・HARD・EXPERT・MASTERの5難易度で遊べます。曲えらびの一覧にジャケットの絵も出ます。',
+      'レベルは EASY Lv.7 ／ NORMAL Lv.9 ／ HARD Lv.13 ／ EXPERT Lv.18 ／ MASTER Lv.27。ノーツ数は 278 ／ 318 ／ 429 ／ 522 ／ 615 です。',
+      '譜面は曲そのものを解析して作っています（180.0BPM・4拍子）。速くて打点の多い曲なので、MASTERは1秒あたり3.86ノーツと、いまある曲の中でいちばん詰まった譜面になりました。EXPERT以上は、同じ曲の1つ下の難易度をクリアすると遊べます。',
+      'レベルは手で決めず、譜面から計算した値をそのまま使っています。自己ベストも全国ランキングも、ほかの曲と同じように記録されます。',
+    ],
+  },
+  {
     date: "2026-09-07 18:05", type:'fix', title:'モンヒロビート: ノーツに出ていた変な縦線を消し、フリックを見やすくしました', status:'new',
     releaseFlag:'rhythmMode',
     items:[
