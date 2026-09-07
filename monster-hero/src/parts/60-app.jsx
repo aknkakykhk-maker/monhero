@@ -10571,9 +10571,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   ?`${quickRunFinishReasonText(quickRunProgress.reason)}。バトルへ戻ると結果を見られます。`
                   :catchingUp
                     ?'演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
-                    // 「演奏中は止まる」だけだと、演奏したぶん損をすると読めてしまう
-                    // (2026-09-07・ユーザー指摘)。止まったぶんはあとで取り戻すことまで書く
-                    :'ここにいるあいだも周回は進みます。演奏中だけ止まりますが、そのぶんは曲のあとに速く進んで取り戻すので、損にはなりません。'}</p>
+                    // ★仕様が「曲の長さぶんの周回クリア」へ変わったので、文言もそちらへ合わせる
+                    //   (2026-09-07・ユーザー指摘「演奏中の文言ってこれであってる？仕様変わったよね？」。
+                    //    追いつき方式のころの説明が残っていた)。
+                    //   まだその難易度をクリアしていない人には入らないので、そこも言い分ける
+                    :rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts)
+                      ?'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは2周・3分台は3周…）。'
+                      :'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'}</p>
                 <button type="button" data-quick-run-progress-back onClick={()=>{if(runStageRef.current)returnToBackgroundRun();}}
                   className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ バトルへ戻る</button>
                 {/* バトルへ行かずにここで終わらせる(2026-09-07・ユーザー指示

@@ -86,5 +86,15 @@ if (pack) {
 check('配信用JSにも案内が入っている',
   compiled.includes('quickRhythmIntroVisible') && compiled.includes('mh_quick_rhythm_bg_seen_v1'));
 
+// ---- 助手のセリフが仕様に追いついているか ----
+// 2026-09-07。仕組みを「曲の長さぶんの周回クリア」へ変えたとき、
+// 助手のセリフには追いつき方式のころの言い回しが残っていた
+// (ユーザー指摘「演奏中の文言ってこれであってる？仕様変わったよね？」)。
+// 仕組みを変えたら、それを説明している文も必ず一緒に直す。
+check('助手のセリフに追いつき方式のころの言い回しが残っていない',
+  !assistants.includes('その分を取り戻すからね') && !assistants.includes('そのぶんを取り戻しまつ'));
+check('助手が「曲の長さぶんの周回が入る」と伝える',
+  assistants.includes('曲の長さぶんの周回が入る'));
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
