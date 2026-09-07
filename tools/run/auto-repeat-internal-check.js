@@ -13,8 +13,9 @@ for(const pattern of [
 ]) if(!pattern.test(source)) fail('AUTO∞が初期OFFのstate/ref構成ではありません');
 if(/['"]mh_[^'"]*(?:repeat|infinity)/.test(source)) fail('AUTO∞を永続化する保存キーがあります');
 
-const stopAll=between('const stopAllAuto = () => {','const [monSelection');
-for(const token of ['stopAutoBattle()','autoRepeatRef.current = false','autoRepeatStartingRef.current = false','autoRepeatBondAwardMasuIdsRef.current = []','setAutoRepeat(false)'])if(!stopAll.includes(token))fail(`stopAllAutoに ${token} がありません`);
+// ★止まった理由を帯へ出すため、引数つき(reason)になった(2026-09-07)
+const stopAll=between("const stopAllAuto = (reason = '') => {",'const [monSelection');
+for(const token of ['stopAutoBattle()','finishQuickRunProgress(reason)','autoRepeatRef.current = false','autoRepeatStartingRef.current = false','autoRepeatBondAwardMasuIdsRef.current = []','setAutoRepeat(false)'])if(!stopAll.includes(token))fail(`stopAllAutoに ${token} がありません`);
 const victory=between('const handleNextWave = async () => {','// ===== クイックモード');
 const finalizeOrder=['await awardRunRewards(10)','await recordClearOnce()',"advanceRunStage('CHAMPION')",'await submitRunScoreOnce()','setResultProcessing(false)'];
 let cursor=-1;
@@ -26,7 +27,7 @@ if(!source.includes('const getMasuMon = (masuId) => masuMonsRef.current.find'))f
 const reset=between('const applyResetAllState = () => {','const createRepeatRunTemplate');
 if(!reset.includes('autoRepeatBondAwardMasuIdsRef.current = []'))fail('新しいrun開始時に前周の絆報酬対象を消していません');
 const presentation=between('// 正規リザルトの全報酬演出が完了した場合だけ','// 操作可能なBATTLEへ');
-for(const token of ["runStage!=='CHAMPION'",'!championPresentationComplete','!autoRepeatRef.current','autoRepeatStartingRef.current',"if(!isQuickMode(runMode)){setAutoRepeatEnabled(false);return;}",'document.visibilityState===\'hidden\'','await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current)','startRunFromRepeatTemplate(repeatTemplateForNewRun())','if(repeatResult.ok)','autoBattleRef.current=true','setAutoBattle(true)','stopAllAuto()'])if(!presentation.includes(token))fail(`結果表示後の再周回処理 ${token} がありません`);
+for(const token of ["runStage!=='CHAMPION'",'!championPresentationComplete','!autoRepeatRef.current','autoRepeatStartingRef.current',"if(!isQuickMode(runMode)){setAutoRepeatEnabled(false);return;}",'document.visibilityState===\'hidden\'','await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current)','startRunFromRepeatTemplate(repeatTemplateForNewRun())','if(repeatResult.ok)','autoBattleRef.current=true','setAutoBattle(true)',"stopAllAuto('error')"])if(!presentation.includes(token))fail(`結果表示後の再周回処理 ${token} がありません`);
 if(presentation.indexOf('await executeAutoRepeatBreakthroughs')>presentation.indexOf('startRunFromRepeatTemplate'))fail('限界突破の保存完了前に次周を開始しています');
 if((presentation.match(/startRunFromRepeatTemplate\(/g)||[]).length!==1)fail('結果表示後のテンプレート開始呼び出しが1箇所ではありません');
 // 次周に使うテンプレートは「1周目に自分で組んだ編成」が最優先。
@@ -40,15 +41,23 @@ const extremeAuto=between('// 特殊ルール説明を閉じる正規経路','//
 for(const token of ['const closeExtremeRule = () =>','requestAnimationFrame','autoBattleRef.current','autoRepeatRef.current',"document.visibilityState==='hidden'",'closeExtremeRule()'])if(!extremeAuto.includes(token))fail(`極限ルールのAUTO通過処理 ${token} がありません`);
 if(!source.includes('onClick={closeExtremeRule}'))fail('極限ルールの手動操作が共通handlerを使っていません');
 
+// ★止め方は同じで、渡す理由だけが分かれた(2026-09-07・帯へ「なぜ止まったか」を出すため)
 for(const token of [
-  "if(hp<=0||gaveUp||gameState==='PICK_HERO')stopAllAuto()",
+  "if(hp<=0)stopAllAuto('defeat');",
+  "else if(gaveUp)stopAllAuto('retire');",
+  "else if(gameState==='PICK_HERO')stopAllAuto('manual');",
   'const returnToHome = () => {\n    stopAllAuto()',
-  'const handleGiveUp = useCallback(async () => {\n    stopAllAuto()',
+  // あきらめるは理由つき(帯に「途中でやめた」と出す)
+  'const handleGiveUp = useCallback(async () => {',
+  "    stopAllAuto('retire');",
   'const handleRetry = () => {\n    stopAllAuto()',
-  "const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto(); }",
+  "const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto('hidden'); }",
   'const startBattleTutorial =', 'const startDebugBattle =',
 ])if(!source.includes(token))fail(`停止経路 ${token} がありません`);
-if(!source.includes("window.addEventListener('pagehide', onHidden)"))fail('pagehide停止がありません');
+// ★blur/pagehide は「他のアプリへ行った」以外でも飛ぶので、visibilityState で裏を取ってから止める
+//   (2026-09-07・ユーザー報告「クイック中に1曲やったら周回が止まってた」)
+if(!source.includes("window.addEventListener('pagehide', onMaybeHidden)"))fail('pagehide停止がありません');
+if(!source.includes("if (typeof document !== 'undefined' && document.visibilityState !== 'hidden') return;"))fail('blur/pagehideの裏取りがありません');
 if(/autoRepeat[\s\S]{0,300}(?:handleRetry|masuRegister|registerMasu)/i.test(victory))fail('自動Retryまたはマスモン自動登録の疑いがあります');
 if(/setInterval[\s\S]{0,200}autoRepeat|(?:elapsed|offline)[\s\S]{0,200}autoRepeat/i.test(source))fail('オフライン/経過時間による再周回の疑いがあります');
 console.log('auto repeat internal check passed');

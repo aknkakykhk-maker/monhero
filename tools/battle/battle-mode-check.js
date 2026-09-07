@@ -121,9 +121,11 @@ check('実処理が経験値・ダイヤ・絆経験値にモード倍率を使�
     && has('const gain = applyQuickXpPolicy(bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);'));
 // ダイヤ優先が効くのは通常クリアの最終ダイヤだけ。スキップは「育成」方針でしか使えないので、
 // スキップ側へ方針を掛ける処理は残っていてはいけない(残すと経験値0のまま使えてしまう)
+// ★通す場所は増えた(演奏1曲ぶんの付与・モンヒロビートの帯に出す見込み)。
+//   大事なのは「通常クリアの付与が1回だけ」と「どの経路もダイヤの出し方を別に持たない」こと
 check('ダイヤ優先は通常クリアの最終ダイヤへ一度だけ適用する',
   count('applyQuickDiamondPolicy(goldForWavesClearedInMode(wavesCleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current)') === 1
-    && count('applyQuickDiamondPolicy') === 2);
+    && count('applyQuickDiamondPolicy(') === count('applyQuickDiamondPolicy(goldForWavesClearedInMode'));
 check('クリア報酬は共通付与地点で一度だけ報酬方針を適用する',
   has('const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);')
     && count('applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current)') === 1);
@@ -399,10 +401,18 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 通常戦の曲をモードで切り替える`, flat.includes('returnbgmArrangement[modeBgm.normal]'));
   check(`${label}: 専用戦の曲もモードで切り替える`, flat.includes("enemyId==='Durahan'||currentWave===9)returnbgmArrangement[modeBgm.dullahan]") && flat.includes("enemyId==='Moo'||currentWave===10)returnbgmArrangement[modeBgm.moo]"));
 }
-check('モード別BGMの既定値がある',
-  has("quickBattle:'ichika_battle'") && has("proBattle:'original_battle'") && has("extremeBattle:'original_battle'")
-    && ['dullahan','quickDullahan','proDullahan','extremeDullahan'].every(key=>has(`${key}:'original_dullahan'`))
-    && ['boss','quickMoo','proMoo','extremeMoo'].every(key=>has(`${key}:'original_boss'`)));
+// ★2026-09-05にモードごとの既定曲を入れ替えた(クイックは原曲・極限はいちか)。
+//   検査は「4モード×3用途ぶんの既定が全部ある」ことを見るのが目的なので、その値へ追随する
+// ★4モード×3用途ぶんの既定が「全部そろっている」ことを見るのが目的。
+//   曲そのものは調整で入れ替わる(デュラハン戦BGMを足したときにプロ・極限が別曲になった)ので、
+//   曲名を並べるのではなく DEFAULT_BGM_ARRANGEMENT に全キーがあることで見る。
+//   どの曲かは tools/audio/bgm-arrangement-coverage-check.js の担当。
+check('モード別BGMの既定値がある', (() => {
+  const def = source.match(/const DEFAULT_BGM_ARRANGEMENT = Object\.freeze\(\{([\s\S]*?)\}\);/)?.[1] || '';
+  return ['battle','dullahan','boss','quickBattle','quickDullahan','quickMoo',
+    'proBattle','proDullahan','proMoo','extremeBattle','extremeDullahan','extremeMoo']
+    .every(key => new RegExp(`\\b${key}:'[a-z0-9_]+'`).test(def));
+})());
 check('新しいBGM項目は既存設定から補われる', has("proDullahan:'dullahan'") && has("extremeMoo:'boss'") && has('BGM_TRACK_BY_ID[legacySaved]'));
 check('BGMアレンジ画面に4モード×3用途がそろっている',
   ['battle','dullahan','boss','quickBattle','quickDullahan','quickMoo','proBattle','proDullahan','proMoo','extremeBattle','extremeDullahan','extremeMoo']
@@ -450,9 +460,10 @@ check('モード選択は極限チャレンジを含む全モードを横スラ�
     && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'),
   'モード一覧はモード選択と難易度選択の2か所とも同じ並べ方');
+// 極限の一覧は「公開ぶんだけ」の共通定義(PUBLIC_EXTREME_DIFFICULTIES)へまとまった
 check('モードカードは選択難易度固定でなくモード内最高スコアを表示する',
   has('modeBestScore=ranked?highestModeScore(isProMode(m.id)?proHighScores:highScores,Object.keys(DIFFICULTY_SETTINGS)):rec.score')
-    && has('EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>setting.id)')
+    && has('highestModeScore(extremeBestScores,PUBLIC_EXTREME_DIFFICULTIES.map(setting=>setting.id))')
     && has("ranked?'最高スコア'")
     && has("ranked?`${modeBestScore.toLocaleString()} pt`"));
 check('上のタブはモード選択・ブリーダーLv・絆Lvの3つ',
@@ -486,9 +497,11 @@ check('クイック難易度画面に同じ高さで状態が分かる3択を出
 check('クイックの全難易度カードは報酬方針で外寸とボタン位置が変わらない',
   has("quick?'h-[366px] flex flex-col':''") && has("${quick?'mt-auto':''}")
     && has('data-difficulty-card={key}') && has('data-difficulty-carousel'));
+// ★見た目は組み直したが、守りたいのは「折り返さない(whitespace-nowrap)」ことと
+//   「経験値・虹のプシュケー・ダイヤの3行が同じ大きさで並ぶ」こと
 check('クリア報酬は見出しを横書きに保ち、同じ高さの3行へ収める',
-  has('min-h-[54px] rounded-xl border border-fuchsia-400/35')
-    && has('shrink-0 whitespace-nowrap text-[10px] leading-tight text-fuchsia-200 font-black')
+  has('flex-1 min-w-0 text-left whitespace-nowrap leading-[1.35]')
+    && has('経験値：{quick&&quickRewardPolicy!==QUICK_REWARD_POLICY_GROWTH')
     && has('虹のプシュケー：{applyQuickPsychePolicy') && has('💎 ダイヤ：{quick?bonusLabel'));
 check('クイック難易度画面の助手は縦画面向けのコンパクト表示にする',
   has('data-difficulty-assistant') && has('faceSize={quick?48:56} compact={quick}'));

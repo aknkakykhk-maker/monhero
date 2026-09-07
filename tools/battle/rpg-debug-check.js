@@ -422,7 +422,10 @@ check('同じ能力なら攻撃側が味方でも敵でも回避率・クリテ�
   && R.rpgDamage({ atk: mirrorA.atk, mult: 1, def: mirrorB.def }) === R.rpgDamage({ atk: mirrorB.atk, mult: 1, def: mirrorA.def }));
 
 // ================= ③ 通常ゲームからの分離 =================
-const rpgUi = grab(source, '{/* ===== ダンジョンRPG戦闘テスト', "{gameState==='DEBUG_SETTINGS'&&(");
+// ★終端は「RPGの3画面の直後」で切る。以前は DEBUG_SETTINGS までを RPG の画面として
+//   読んでいたが、あいだにモンヒロビートの画面群が入ったため、そちらが使う masuMons まで
+//   「RPG がマスモンを使っている」と誤って拾っていた(2026-09-07)。
+const rpgUi = grab(source, '{/* ===== ダンジョンRPG戦闘テスト', "{gameState==='RHYTHM_PLAY'&&rhythmPlay&&");
 const debugScreen = grab(source, "{gameState==='DEBUG_SETTINGS'&&(", "{gameState==='MONSTER_IMAGE_DEBUG'&&(");
 check('入口はデバッグ設定の中にだけある',
   debugScreen.includes('data-debug-rpg-battle') && debugScreen.includes("setGameState('RPG_DEBUG_SETUP')")
@@ -714,7 +717,7 @@ check('間の取り方は plan を読むだけで書き換えない',
 // モーションの種類は通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion から決める。
 // RPG用に別のモーションデータを持たないので、モンスターを足しても更新漏れが起きない
 check('モーションの種類は通常バトルと同じ atkMotion から決める',
-  source.includes("const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', pandoraDualThunder:'Thunder' });")
+  source.includes("const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', pandoraDualThunder:'Thunder' });")
   && source.includes('RPG_MOTION_BY_ATK[ALL_PLAYER_MONSTERS[monId]?.atkMotion]'));
 const atkMotionKinds = [...new Set(Object.values(R.ALL_PLAYER_MONSTERS).map(m => m.atkMotion))];
 const motionMap = (source.match(/const RPG_MOTION_BY_ATK = Object\.freeze\(\{([^}]*)\}\)/) || [])[1] || '';

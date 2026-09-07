@@ -193,3 +193,56 @@ NG の行を全件読み、実装側を照らして分類した。**大半は「
 - `battle/battle-mode-select-check.js` は `run-checks.js --area battle` の中では NG になったが、単体では OK。自分で配信(serve.py)を立てる検査が
   続くとき、直前の検査の配信が閉じ切る前に次が同じポートを取ろうとして落ちることがある(検査の中身の問題ではない)。
   一括実行で落ちた実ブラウザ検査は、単体で再実行して判断する。
+
+---
+
+## 2026-09-07 追記: `--area run,battle` の NG 17本を解消した
+
+ユーザー指示「NGは解消しておきたい」。**実装は一切変えていない**。落ちていた17本はすべて
+「実装が変わったのに検査が追随していない」か「この環境では測れないものを測ろうとしていた」で、
+`node tools/run-checks.js --area run,battle` は **56本すべてOK / NG 0** になった。
+
+### ① 実装の変更に検査が追随していなかったもの(13本)
+
+| 検査 | 何が変わっていたか |
+| --- | --- |
+| `run/auto-repeat-internal-check` | `stopAllAuto` が理由つき(`reason`)になり、停止経路が defeat/retire/manual/hidden に分かれた。`blur`/`pagehide` は `visibilityState` で裏を取る `onMaybeHidden` 経由になった |
+| `run/eco-mode-internal-check` | 同じく `stopAllAuto` の引数。超省エネの音声退避が `quickMuted` も控えるようになった |
+| `run/training-reward-check` | 画面がアイコンを共通部品(`cardIconNode`)で描くようになり、評価用の props に無くて落ちていた |
+| `run/training-check` | HOMEの修行の施設はモンヒロビートへ譲った(入口は無いが紹介画面は残る)。デバッグ画面は項目が増えたので距離ではなく画面の範囲で見る |
+| `run/bond-reward-check` | 強化ポイントの倍率が「凸の数」から**到達レベルの帯**(〜270=+1 / 271〜330=+2 / 331〜400=+3)へ変わっていた |
+| `run/unique-skill-point-check` | マーケットの購入が「計算(`buildMarketItemPurchase`)＋巻き戻せる保存(`saveMarketBalances`)」へ整理された |
+| `run/ranking-finish-check` | 周回IDリセットの経路が増え、POSTに `reached_wave`/`turns` が足され、ブリーダーLvの取得がページ送りへ変わり、勝利処理の手前に種族チャレンジの枝が入っていた |
+| `battle/guard-card-check` | 「能力覚醒」画面の予告を見ていたが、その画面は #639 で「トレーニング」へ置き換わっている |
+| `battle/rpg-debug-check` | RPG画面の切り出し終端が `DEBUG_SETTINGS` のままで、あいだに入ったモンヒロビートの `masuMons` まで拾っていた。モーション表にエイキも増えていた |
+| `battle/unique-range-check` | 合体の継承判定が2か所からの重複計算 → `buildFusionInheritancePlan` 1か所へ集約されていた |
+| `battle/balance-second-card-check` | 効果量が固定値から段階の値になり、自動回復の説明に「（次のターンから）」が足されていた |
+| `battle/battle-mode-check` | ダイヤ方針を通す経路が増え、モード別BGMの既定曲が入れ替わり、モードカードと報酬の見出しが組み直されていた |
+| `battle/battle-tutorial-check` / `-v2-check` | **v1とv2の役割が入れ替わっていた**(v2=本番の入口 / v1=デバッグからだけのお試し)。プロの説明も「難しい」→「ベースモンだけで挑む」へ |
+| `battle/enemy-defeat-check` | 画面の切り替えが `setGameState` 直呼びから `advanceRunStage` へ統一されていた |
+
+### ② ブラウザ検査の導線が古かったもの(2本)
+
+`battle/battle-check` と `battle/battle-menu-browser-check` は、**起動から先へ1歩も進めていなかった**。
+
+- はじめての案内をとばす鍵が `mh_intro_done` → `mh_onboarded`(＋`mh_tutorial_seen_v1`)
+- 起動画面と「はじめる」は `pointerdown` で拾う作りなので `click()` では進まない
+- 「召喚開始」でいきなり始まる作りは無くなり、HOME →「バトル」→ モード選択 → 難易度 の順になった
+- 確定ボタンの名前が「決定」→「勇者モンに選ぶ」「この供モンを選ぶ」へ
+- 「攻撃覚醒」は「トレーニング」(4種類から2つ選ぶ)へ
+- ログインボーナス・ギフト・更新のお知らせ・助手の告知が続けて出るので、送り切ってから進む必要がある
+
+### ③ この環境では測れないもの(理由つきで飛ばす)
+
+| 何を | なぜ測れないか |
+| --- | --- |
+| `battle/battle-check` の上部ヘッダーの実測 | Tailwind の CDN が届かず `w-*`/`p-*` が効かない。ボタンが0px近くまで潰れ、TURN と SCORE の左右関係も崩れる |
+| `battle/battle-check` のファンファーレ | ヘッドレスChromiumは自動再生を止めるので `<audio>` がひとつも動かない(この表の「(無音)」がそれ) |
+| `battle/battle-menu-browser-check` 全体 | カードの高さ・スクロール・ボタンが画面内に収まるかの実測なので、Tailwind が無いと意味が無い |
+
+どれも `w-12` の実測(48pxになるか)や `<audio>` の有無で**環境を判定してから飛ばす**ようにした。
+CDNが届く環境では今までどおり測る。黙って通すのではなく、飛ばした理由を必ず1行出す。
+
+> ⚠ **教訓**: 検査が落ちたまま放置されると、「本当に壊したとき」に気づけなくなる。
+> とくにブラウザ検査は、画面の作りが変わると**入口で止まって全項目NG**になり、
+> 一見「大量に壊れた」ように見える。まず**どこまで進めているか**を出してから中身を疑うこと。
