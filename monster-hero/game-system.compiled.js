@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2245d7c8237f279a
+// source-sha256: e42f8316e7f5a73c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c9a91b85d0ddc111
+// generated-sha256: 5ea6a16a6e674969
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -39037,6 +39037,21 @@ function MonsterHeroGame() {
       }, quickRunBandLabel), /*#__PURE__*/React.createElement("span", {
         className: "shrink-0 text-[9px] font-black text-slate-400"
       }, quickRunDetailOpen ? '▲' : '▼')) : null;
+      // 周回していないときの「ここから始める」。帯と同じく、縦持ちはヘッダーの下・
+      // 横持ちはヘッダーの空きへ入れる。中身は1つ作って使い回す(2つ書くと片方だけ直す事故になる)。
+      // ★塗りつぶしをやめて枠だけにし、主張を抑える。モンヒロビートだけで遊ぶ人には
+      //   関係のないボタンなので、大きく出しすぎない(2026-09-07・ユーザー指摘)
+      const quickRunStartNode = !quickRunProgress && !runStage ? repeatTemplateForNewRun() ? /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-quick-run-start-button": true,
+        onClick: () => {
+          if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
+        },
+        className: "flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
+      }, "\u2694 \u88CF\u3067\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B") : /*#__PURE__*/React.createElement("p", {
+        "data-quick-run-start-hint": true,
+        className: "px-1 py-1 text-[9px] leading-relaxed text-slate-500"
+      }, "\u88CF\u3067\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\u3001\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002") : null;
       return /*#__PURE__*/React.createElement("main", {
         "data-rhythm-demo-home": true,
         className: "flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
@@ -39070,7 +39085,10 @@ function MonsterHeroGame() {
       }, "\uD83C\uDFB5 \u697D\u66F2\u9078\u629E")), quickRunProgress && /*#__PURE__*/React.createElement("div", {
         "data-quick-run-progress-header": true,
         className: "min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70"
-      }, quickRunBandButton), /*#__PURE__*/React.createElement("span", {
+      }, quickRunBandButton), quickRunStartNode && /*#__PURE__*/React.createElement("div", {
+        "data-quick-run-start-header": true,
+        className: "min-w-0 max-w-[260px] flex-1"
+      }, quickRunStartNode), /*#__PURE__*/React.createElement("span", {
         "data-rhythm-demo-badge": true,
         className: "shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
       }, "\u4F53\u9A13\u7248"), /*#__PURE__*/React.createElement(RhythmOrientationButton, null), /*#__PURE__*/React.createElement("button", {
@@ -39179,18 +39197,9 @@ function MonsterHeroGame() {
         className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
       }, "\xD7"))), !quickRunProgress && !runStage && /*#__PURE__*/React.createElement("div", {
         "data-quick-run-start": true,
-        className: "shrink-0 border-b border-white/10 bg-slate-900/60 px-3 py-1.5"
-      }, repeatTemplateForNewRun() ? /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-quick-run-start-button": true,
-        onClick: () => {
-          if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
-        },
-        className: "flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]"
-      }, "\u2694 \u88CF\u3067\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B") : /*#__PURE__*/React.createElement("p", {
-        "data-quick-run-start-hint": true,
-        className: "text-[9px] leading-relaxed text-slate-400"
-      }, "\u88CF\u3067\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\u3001\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), quickRunStartError && /*#__PURE__*/React.createElement("p", {
+        "data-quick-run-start-portrait": true,
+        className: "shrink-0 border-b border-white/10 bg-slate-900/40 px-3 py-1"
+      }, quickRunStartNode, quickRunStartError && /*#__PURE__*/React.createElement("p", {
         className: "mt-1 text-[9px] font-black text-red-300"
       }, "\u3044\u307E\u5468\u56DE\u3092\u59CB\u3081\u3089\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u7DE8\u6210\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u304C\u898B\u5F53\u305F\u3089\u306A\u3044\u304B\u3001\u96E3\u6613\u5EA6\u304C\u307E\u3060\u89E3\u653E\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement(RhythmSongSelect, {
         songs: songs,

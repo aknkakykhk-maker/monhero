@@ -89,7 +89,8 @@ const seed = () => {
     // (1周回すのに数分かかるうえ、ここで見たいのは「どちらが出るか」だけ)
     await page.evaluate(() => {
       const host = document.querySelector('[data-rhythm-demo-home]') || document.body;
-      for (const name of ['data-quick-run-progress-header', 'data-quick-run-band-portrait']) {
+      for (const name of ['data-quick-run-progress-header', 'data-quick-run-band-portrait',
+        'data-quick-run-start-header', 'data-quick-run-start-portrait']) {
         if (document.querySelector(`[${name}]`)) continue;
         const el = document.createElement('div');
         el.setAttribute(name, '');
@@ -103,6 +104,11 @@ const seed = () => {
       (await styleOf('[data-quick-run-progress-header]', 'display')) === 'none'
       && (await styleOf('[data-quick-run-band-portrait]', 'display')) !== 'none',
       `ヘッダー側:${await styleOf('[data-quick-run-progress-header]', 'display')} / 下:${await styleOf('[data-quick-run-band-portrait]', 'display')}`);
+    // 周回していないときの「ここから始める」も同じ置き分け(2026-09-07)
+    check('縦持ちは「始める」もヘッダーの下に出す',
+      (await styleOf('[data-quick-run-start-header]', 'display')) === 'none'
+      && (await styleOf('[data-quick-run-start-portrait]', 'display')) !== 'none',
+      `ヘッダー側:${await styleOf('[data-quick-run-start-header]', 'display')} / 下:${await styleOf('[data-quick-run-start-portrait]', 'display')}`);
 
     // ---- 縦横ボタンで横持ちにする ----
     const before = await page.evaluate(() => document.querySelector('[data-mh-view-rotation]')?.getAttribute('data-mh-view-rotation'));
@@ -150,6 +156,10 @@ const seed = () => {
       (await styleOf('[data-quick-run-progress-header]', 'display')) === 'block'
       && (await styleOf('[data-quick-run-band-portrait]', 'display')) === 'none',
       `ヘッダー側:${await styleOf('[data-quick-run-progress-header]', 'display')} / 下:${await styleOf('[data-quick-run-band-portrait]', 'display')}`);
+    check('横持ちは「始める」もヘッダーの空きへ入れる',
+      (await styleOf('[data-quick-run-start-header]', 'display')) === 'block'
+      && (await styleOf('[data-quick-run-start-portrait]', 'display')) === 'none',
+      `ヘッダー側:${await styleOf('[data-quick-run-start-header]', 'display')} / 下:${await styleOf('[data-quick-run-start-portrait]', 'display')}`);
 
     check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
   } finally {
