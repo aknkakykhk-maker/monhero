@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: ea4dc6206674a0b9
+// generated-sha256: 55ab01cd671c660c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18196,6 +18196,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     beginQuickRunProgress();
     return true;
   };
+  // 止まった周回を、バトルへ行かずにその場で再開する
+  // (2026-09-07・ユーザー指示「これもバトルへ行かなくても再開できるようにして」)。
+  // ★止まってもランが残っているとき(アプリが裏に回った・自分でAUTOを切った)だけ。
+  //   負けた・やめたあとはランが無いので、こちらではなく「新しく始める」を出す。
+  // 数えていた周回数と報酬はそのまま続ける(WAVEの途中から続くのに
+  // 「1周目」へ戻ると、何が起きたのか分からなくなるため)。
+  const resumeQuickRunFromRhythm = () => {
+    if (!runStageRef.current) return false;              // ランが残っていない
+    if (!isQuickMode(runMode)) return false;
+    autoRepeatRef.current = true;
+    setAutoRepeat(true);
+    setAutoRepeatBattleSpeed(true);
+    autoBattleRef.current = true;
+    setAutoBattle(true);
+    setAutoTurnCycle(n => n + 1);
+    const current = quickRunProgressRef.current;
+    if (current) writeQuickRunProgress({ ...current, finished:false, reason:'' });
+    else beginQuickRunProgress();
+    return true;
+  };
   // バトル内ではAUTO系を1ボタンで循環する。表示用stateは持たず、既存の同期refから次の状態だけを決める。
   const cycleBattleAuto = () => {
     if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}
@@ -21574,7 +21594,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="col-span-2 flex justify-between gap-2"><dt className="text-slate-400">勇者モン</dt><dd className="truncate font-black text-white">{mainHero?.masuName||mainHero?.name||'—'}</dd></div>
                 </dl>
                 <p className="mt-1 text-[9px] leading-relaxed text-slate-400">{quickRunProgress.finished
-                  ?`${quickRunFinishReasonText(quickRunProgress.reason)}。バトルへ戻ると結果を見られます。`
+                  // 止まっていても、ランが残っていればここから再開できる。
+                  // 負けた・やめたあとはランが無いので、結果を見に行ってもらう
+                  ?(runStage!==null
+                    ?`${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。`
+                    :`${quickRunFinishReasonText(quickRunProgress.reason)}。バトルへ戻ると結果を見られます。`)
                   :catchingUp
                     ?'演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
                     // ★仕様が「曲の長さぶんの周回クリア」へ変わったので、文言もそちらへ合わせる
@@ -21584,8 +21608,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     :rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts)
                       ?'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは2周・3分台は3周…）。'
                       :'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'}</p>
+                {/* ===== ここから操作。状態は3つだけ(2026-09-07に整理) =====
+                      ① 回っている            … バトルへ戻る ／ ここで周回をやめる
+                      ② 止まった・ランは残る  … 周回を再開する ／ バトルへ戻る
+                      ③ 止まった・ランも終了  … 新しく周回を始める ／ バトルへ戻る(結果を見る)
+                    ★どの状態でも「バトルへ戻る」は出す。行き先を失わないため */}
+                {quickRunProgress.finished&&runStage!==null&&<button type="button" data-quick-run-resume
+                  onClick={()=>{resumeQuickRunFromRhythm();}}
+                  className="mt-2 min-h-[44px] w-full rounded-xl border border-emerald-300/60 bg-emerald-800/70 text-[11px] font-black text-emerald-50 active:scale-[.98]">▶ 周回を再開する</button>}
+                {quickRunProgress.finished&&runStage===null&&repeatTemplateForNewRun()&&<button type="button" data-quick-run-restart
+                  onClick={()=>{if(!startQuickRunFromRhythm())setQuickRunStartError(true);}}
+                  className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ 新しく周回を始める</button>}
+                {quickRunStartError&&<p className="mt-1 text-[9px] font-black text-red-300">いま周回を始められませんでした。編成のモンスターが見当たらないか、難易度がまだ解放されていません。</p>}
                 <button type="button" data-quick-run-progress-back onClick={()=>{if(runStageRef.current)returnToBackgroundRun();}}
-                  className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">⚔ バトルへ戻る</button>
+                  className="mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]">{quickRunProgress.finished&&runStage===null?'⚔ バトルへ戻って結果を見る':'⚔ バトルへ戻る'}</button>
                 {/* バトルへ行かずにここで終わらせる(2026-09-07・ユーザー指示
                     「バトルにいかなくてもクイック周回を止められるようにしたい」)。
                     やめ方は「あきらめる」と同じで、そこまでにクリアしたWAVEの報酬が
