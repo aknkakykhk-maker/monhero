@@ -115,6 +115,16 @@ for(const difficulty of DIFFICULTIES){
   if(off.length)problems.push(`${difficulty}: 鳴っていない場所へ置いたノーツが${off.length}件ある`);
 }
 
+// --- 品質レポート(6つの軸) ---
+// 押せる(ゲート)・音・読める・流れ・飽きない・難易度なり。1つの点数にまとめない。
+// 書き出すと authoring/<曲>-v3-quality.json に残るので、次に作り直したときに前と比べられる。
+{
+  const quality=runTool('rhythm-chart-quality-report.js',['--source',sourceKind,...(write?['--write']:[])]);
+  console.log(`\n${quality.status===0?'✓':'✗'} 品質レポート（押せる / 音 / 読める / 流れ / 飽きない / 難易度）`);
+  for(const line of (quality.stdout||'').trim().split('\n'))if(line.trim()&&!/^■/.test(line))console.log(`    ${line.trim()}`);
+  if(quality.status!==0)problems.push('品質レポートのゲート（押せない0件）を通っていない');
+}
+
 console.log('\n--- 出荷してよいか ---');
 if(problems.length){
   for(const problem of problems)console.log(`  ✗ ${problem}`);
@@ -208,5 +218,19 @@ if(before.some((text,i)=>text!==after[i])){
 }
 fs.writeFileSync(RUNTIME,runtimeSource);
 console.log(`  ランタイム: ${path.relative(ROOT,RUNTIME)}（<${markerPrefix}-*-notes> の内側だけ）`);
+// --- 配信データの物差しで最後にもう一度そろえる ---
+// 配信データを測る側(rhythm-runtime-notes.js / rhythm-overlap-reach-check.js)は、叩くノーツにも
+// 「中心からわずかしか狙えない」物差し(heldSpan)を使う。設計側(rhythm-hand-model.js)は叩くノーツに
+// 幅の中を使わせるので、設計側で押せる配置が配信側では「指が入らない」と出ることがある。
+// これまでは公開のあとに人が rhythm-overlap-reach-fix.js を手で回していた(回し忘れると検査が落ちる)。
+// ここで自動で回す。動かすのはレーンだけで、外すノーツは件数として出る。
+{
+  const fix=spawnSync(process.execPath,[path.join(ROOT,'tools/mode/rhythm-overlap-reach-fix.js'),'--write'],
+    {cwd:ROOT,encoding:'utf8',maxBuffer:64*1024*1024});
+  const summary=(fix.stdout||'').trim().split('\n').filter(line=>/押せない重なり|マーカー|直しました|書き換え/.test(line));
+  console.log(`  ${fix.status===0?'✓':'✗'} 配信データの物差しでそろえる（rhythm-overlap-reach-fix.js --write）`);
+  for(const line of summary)console.log(`    ${line.trim()}`);
+  if(fix.status!==0){console.error((fix.stderr||fix.stdout||'').trim().split('\n').slice(-5).join('\n'));process.exit(1);}
+}
 console.log(`\n遊べる形にしました。デバッグ画面の曲選択に ${trackId} の曲が出ます。`);
 console.log('※ この後は node tools/build.js を実行してください（配信用JSへ反映するため）。');

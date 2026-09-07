@@ -365,8 +365,12 @@ FAST / SLOW表示あり。
 
 - HOLD / SLIDE は終端タイミングで指を離す必要がある
 - 終端の離し判定も開始時と同じ ±25 / 50 / 100 / 150 / 200ms を使う
-- ±200msを超えた離しはMISS
-- 終端から+200msを超えて押しっぱなしでもMISS
+- 早く離すほう（音が終わる前）は、これまでどおり判定表で見る。±240ms（BAD）より早い離しはMISS
+- **遅く離すほう（押しっぱなしを含む）は、どれだけ遅くても GOOD より下にしない**
+  （2026-09-07。`rhythmJudgeReleaseLenient` / `RHYTHM_RELEASE_LATE_FLOOR`）。
+  それまでは +240ms を超えるとMISSだった。親指で押さえていると音が終わってから離すのはふつうの
+  動きで、これでコンボが切れると「取れているのに切れた」と感じる。プロセカ・CHUNITHMは離す時刻を見ず、
+  Quaverは離し忘れがGOODでコンボは続く。終点フリックが要るノーツは、弾かずに終わるとMISSのまま
 - 最終判定は「始点判定」と「終端判定」の悪い方
 - SLIDEは途中の経路追従に失敗した場合もMISS
 - HOLD / SLIDEを±200msの終端判定幅内で正常に離した場合は、開始入力と同じ仮ノーツSEを1回鳴らす
@@ -2712,9 +2716,11 @@ V2（`rhythm-chart-v2-step*`）はそのまま残し、V3は別系統として�
 | `rhythm-audio-tempo-v3.js` | **テンポ・拍の頭・拍子・刻み・跳ねを音から自動で出す** |
 | `rhythm-audio-structure-v3.js` | **曲の区切り・盛り上がり・繰り返しを音から自動で出す** |
 | `rhythm-audio-analyze-v3.js` | 上を束ね、打点ごとの性格・伸び・音の高さまで1つのJSONへ |
-| `rhythm-chart-v3-patterns.js` | 形の語彙（14種）と、音の高さの動きからの選び方 |
-| `rhythm-chart-v3-generate.js` | 譜面の組み立て |
-| `rhythm-chart-v3-pipeline.js` | 解析→生成→自動修正→検証→ランタイム反映（1コマンド） |
+| `rhythm-chart-v3-patterns.js` | 形の語彙（28種）と、音の高さの動きからの選び方。`rankShapes` が譜面文法（つなぎ・使用回数・場面・決定的な散らし）で点数化する |
+| `rhythm-chart-v3-generate.js` | 譜面の組み立て。フレーズの指紋で同じ形を当て、息継ぎを入れ、置くたびに直近2拍を両手でシミュレートする |
+| `rhythm-hand-simulate.js` | **両手の指のシミュレート（ビームサーチで数ノーツ先まで見る）**。STEP6・STEP7・生成・品質レポートが共通で使う |
+| `rhythm-chart-quality-report.js` | **品質の6軸**（押せる／音／読める／流れ／飽きない／難易度なり）。`--baseline` で前回と比べる |
+| `rhythm-chart-v3-pipeline.js` | 解析→生成→自動修正→検証→品質レポート→ランタイム反映→配信データの物差しでそろえる（`rhythm-overlap-reach-fix.js --write` を自動で回す）（1コマンド） |
 | `rhythm-chart-v3-check.js` | 上の主張が出来上がった譜面で本当かを測る |
 | `rhythm-audio-general-check.js` | **登録の無い曲を人手なしで通せることを毎回確かめる** |
 | `authoring/rhythm-song-registry.json` | 曲の一覧。`--audio` で足すと自動で登録される |
@@ -5210,3 +5216,58 @@ Tailwind の `landscape:` は `@media (orientation: landscape)` に展開され�
 
 `tools/help-render-check.js` は全カテゴリ・全項目を実際にReactで描くので、新しい22項目も
 「開いた瞬間に落ちないか」まで通っている。
+
+## 譜面制作と操作感の全面見直し（2026-09-07）
+
+ユーザー指示「自動譜面制作システム＋プレイ操作＋ゲームフィールの全面品質強化」。
+譜面の作りかたは [`RHYTHM_CHART_DESIGN.md`](RHYTHM_CHART_DESIGN.md)（1.1 / 3.1.5〜3.1.7 / 5 / 8.6 / 10）に書いた。
+ここでは**遊ぶ側**（ランタイム）で変えたことを残す。
+
+### 変えたこと
+
+| 何 | 前 | 後 | 検査 |
+| --- | --- | --- | --- |
+| HOLD／SLIDE を遅く離す | +240ms を超えると MISS | どれだけ遅くても GOOD で止まる（早離しは判定表のまま） | `rhythm-mode-release-timing-check.js` / `rhythm-input-scenario-check.js` |
+| 判定に使う時刻 | イベントを**処理した**瞬間の曲の時刻 | 指が**触れた**瞬間（`event.timeStamp` との差を最大 80ms 差し引く。基準の違う値・未来・古すぎる値は 0） | `rhythm-input-scenario-check.js`（`rhythmInputAgeMs`） |
+| 離してから置き直す持ち替え | 押し始めから 240ms 以上たった HOLD は、離した**次のフレーム**で「誰も押していない→MISS」に当たって失敗していた | 浮いているノーツ（`releasedAtMs`）は自動 MISS から除く | `rhythm-input-scenario-check.js` |
+| 終点フリックを弾いたあと | 終端の 100ms より前に弾くと「浮いている」扱いになり、猶予の経路で確定していた | 弾いた時点で確定（判定表どおり） | 同上 |
+
+### 見つけかた
+
+`tools/mode/rhythm-input-scenario-check.js`（新規）は、本番の入力関数（`rhythmMatchInputBatch` /
+`RHYTHM_GESTURE_RUNTIME` / `rhythmJudgeReleaseLenient` / `rhythmInputAgeMs`）を Node で動かし、
+実機の確認項目（高速TAP・交互・隣接・端レーン・同時押し・HOLD・HOLD+TAP・持ち替え2通り・SLIDE・
+SLIDE+TAP・FLICK・終点フリック・入力の古さの補正・リスタート）を1つの表で見る。
+検査側の `tick` は本体の `visitNote` と**同じ順・同じ条件**で書いてある。
+それまでの `rhythm-finger-swap-check.js` は自前の `tick` に自動 MISS の条件を持っておらず、
+本体の不具合（上の3行目）をすり抜けていた。
+
+### 入力の経路（確認した事実）
+
+- 指の座標→レーン→対象ノーツ→判定→SE→演出は、`touchstart` のハンドラの中で同期に終わる。
+  `setState` は HUD の数字を更新するためだけで、判定はそれを待たない
+- 判定の時刻は AudioContext 基準（`songTimeMs`）。描画の `visualTime` は同じ時刻からタイミング補正を引いたもの、
+  判定は `note.timeMs + 補正` と比べるので、見た目と判定はずれない
+- ノーツ速度（`travelMs`）・タイミング補正・振動・演出量は、設定値がそのまま `scheduleTick` / `applyJudgment` で読まれている
+- 振動は iPhone Safari では Vibration API が無く、iOS 17.4 のスイッチ型チェックボックスで代用している。
+  無い端末では設定画面に「この端末では振動できません」と出る
+
+### 実機で見るもの
+
+[`RHYTHM_DEVICE_CHECKLIST.md`](RHYTHM_DEVICE_CHECKLIST.md) に 30 項目の表を置いた。
+自動検査が通っても「操作感まで完成した」とは言わない。
+
+### 残っている不一致（次に直すもの）
+
+設計側（`rhythm-hand-model.js`）は叩くノーツに「幅の中を使える」物差し（`usableTouchSpan`）を、
+配信データの検査（`rhythm-runtime-notes.js`）は叩くノーツにも「中心からわずかしか狙えない」物差し
+（`heldSpan`）を使っている。後者のほうが厳しいので、設計側で押せる配置が配信側で
+「指が入らない」と出る（今回の作り直しでは 343 か所をレーンだけ寄せた。外したノーツは 0）。
+これまでは公開のあとに人が `rhythm-overlap-reach-fix.js` を手で回していたが、回し忘れると
+`rhythm-overlap-reach-check.js` が落ちるので、パイプラインの `--release` が自動で回すようにした。
+物差しを1つにそろえる（どちらが正しいかを実機で決める）のは、次の課題として残す。
+
+### 参考譜面コーパス
+
+[`RHYTHM_CHART_CORPUS.md`](RHYTHM_CHART_CORPUS.md)。設計だけで、まだ実装していない。
+

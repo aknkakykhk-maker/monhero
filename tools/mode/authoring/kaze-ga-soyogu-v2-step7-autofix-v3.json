@@ -33,15 +33,15 @@
     "impossible": 0,
     "strained": 0,
     "hardJumps": 0,
-    "spread": 34,
-    "cost": 34
+    "spread": 27,
+    "cost": 27
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "hardJumps": 0,
-    "spread": 34,
-    "cost": 34
+    "spread": 27,
+    "cost": 27
    },
    "fixes": []
   },
@@ -53,15 +53,15 @@
     "impossible": 0,
     "strained": 0,
     "hardJumps": 0,
-    "spread": 25,
-    "cost": 25
+    "spread": 27,
+    "cost": 27
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "hardJumps": 0,
-    "spread": 25,
-    "cost": 25
+    "spread": 27,
+    "cost": 27
    },
    "fixes": []
   },
@@ -73,15 +73,15 @@
     "impossible": 0,
     "strained": 0,
     "hardJumps": 0,
-    "spread": 52,
-    "cost": 52
+    "spread": 42,
+    "cost": 42
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "hardJumps": 0,
-    "spread": 52,
-    "cost": 52
+    "spread": 42,
+    "cost": 42
    },
    "fixes": []
   },
@@ -92,51 +92,38 @@
    "before": {
     "impossible": 0,
     "strained": 0,
-    "hardJumps": 0,
-    "spread": 55,
-    "cost": 55
+    "hardJumps": 1,
+    "spread": 47,
+    "cost": 167
    },
    "after": {
     "impossible": 0,
     "strained": 0,
-    "hardJumps": 0,
-    "spread": 55,
-    "cost": 55
+    "hardJumps": 1,
+    "spread": 47,
+    "cost": 167
    },
    "fixes": []
   },
   "MASTER": {
    "noteCount": 191,
-   "fixCount": 1,
-   "passes": 1,
+   "fixCount": 0,
+   "passes": 0,
    "before": {
     "impossible": 0,
-    "strained": 1,
+    "strained": 0,
     "hardJumps": 1,
-    "spread": 46,
-    "cost": 266
+    "spread": 41,
+    "cost": 161
    },
    "after": {
     "impossible": 0,
     "strained": 0,
     "hardJumps": 1,
-    "spread": 46,
-    "cost": 166
+    "spread": 41,
+    "cost": 161
    },
-   "fixes": [
-    {
-     "grid": 492,
-     "bar": 30,
-     "timeMs": 62288,
-     "type": "TAP",
-     "move": "サブレーン3→2",
-     "pass": 1,
-     "costBefore": 266,
-     "costAfter": 166,
-     "impossibleAfter": 0,
-     "strainedAfter": 0
-    }
-   ]
+   "fixes": []
   }
  }
 }

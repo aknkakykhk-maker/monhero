@@ -28,7 +28,7 @@ check('それより早い離しは、持ち替えの猶予を待ってからMISS
 // 離した瞬間に終端判定を作ってしまうと、上の「猶予を待つ」分岐へ一度も入らない。
 // 実際にそうなっていて、持ち替えが一度も成立していなかった(2026-09-05・実機の指摘)
 check('離した瞬間に終端判定を作らない(猶予の分岐へ必ず入る)',
-  data.includes('if(!cancelled&&!session.failed&&releaseDelta<-RHYTHM_HOLD_RELEASE_GRACE_MS){'));
+  data.includes('if(!cancelled&&!session.failed&&!session.endFlickDone&&releaseDelta<-RHYTHM_HOLD_RELEASE_GRACE_MS){'));
 check('入力ID別Mapで複数入力を独立管理',game.includes('activePointers:new Map()')&&game.includes('run.activePointers.set(input.inputKey,target.index)')&&game.includes('run.activePointers.get(input.inputKey)'));
 check('HOLD表示は専用ボディを持ち、rAF内transform/opacity中心',game.includes('data-rhythm-hold-body')&&game.includes("--rhythm-hold-body")&&game.includes('yPx=Math.round(yPx);')&&game.includes('const nextTransform=`translate3d(0,${yPx}px,0)`;')&&game.includes('if(el._rhythmTransform!==nextTransform){el.style.transform=nextTransform;')&&!game.includes('el.style.transform=`translate3d(0,${yPx}px,0) scale(')&&game.includes('requestAnimationFrame(tick)'));
 // 2026-09-05: 持ち替え用の「控えの指」(standbyPointers)を足したので、

@@ -29,11 +29,16 @@ check('終わりの時刻を書き換えない(戻ってきたら続きから押
 // 指が取り消された(pointercancel)ときは持ち替えではないので、これまでどおり確定させる
 note=fresh();now=709;runtime.release('touch:1',true);
 check('指が取り消されたときはMISSで確定する',note.holdJudgment==='MISS');
-note=fresh();now=1241;runtime.release('touch:1');check('240msより遅い離しはMISS',note.holdJudgment==='MISS');
+// 【2026-09-07】離すのが遅いほう(押しっぱなしを含む)は GOOD より下にしない(rhythmJudgeReleaseLenient)。
+// 早く離すほうは音が終わる前に手を離しているので、これまでどおり判定表で見る。
+note=fresh();now=1241;runtime.release('touch:1');check('240msより遅い離しはGOODで止まる(MISSにしない)',note.holdJudgment==='GOOD');
+note=fresh();now=1900;runtime.release('touch:1');check('どれだけ遅く離してもGOODより下にならない',note.holdJudgment==='GOOD');
+note=fresh('HOLD','GREAT',80);now=1500;runtime.release('touch:1');check('始点がGREATで遅く離すと、GREATとGOODの悪いほう(GOOD)',note.holdJudgment==='GOOD');
+check('早すぎる離しは今までどおりMISS',rhythmJudgeRelease(-241)==='MISS');
 note=fresh();now=1000;runtime.release('touch:1',true);check('touchcancel/pointercancelはMISS',note.holdJudgment==='MISS');
 note=fresh();now=1090;let cb=rafCb;cb&&cb();check('終端100ms前から旧自動成功を+241msへ延期',note.endTimeMs===2241);
-now=1220;cb=rafCb;cb&&cb();check('押しっぱなしは+240ms到達前にMISSガード',note.holdJudgment==='MISS');
-now=1180;runtime.release('touch:1');check('MISSガード後でも+180msで離せばGOODへ確定',note.holdJudgment==='GOOD');
+now=1220;cb=rafCb;cb&&cb();check('押しっぱなしは+240ms到達前にGOODで確定する(MISSにしない)',note.holdJudgment==='GOOD');
+now=1180;runtime.release('touch:1');check('確定後でも+180msで離せばGOODのまま',note.holdJudgment==='GOOD');
 note=fresh('SLIDE');const session=[...runtime._sessions.values()][0];session.failed=true;now=1000;runtime.release('touch:1');check('SLIDE途中追従失敗は終端が合ってもMISS',note.holdJudgment==='MISS');
 check('HOLDもruntimeへbindする',source.includes("originalType==='HOLD'||originalType==='FLICK'||originalType==='SLIDE'"));
 check('旧本体はruntimeが作ったholdJudgmentを1回だけ適用',game.includes("applyJudgment(note,note.holdJudgment||'MISS',note.holdDeltaMs||0)"));

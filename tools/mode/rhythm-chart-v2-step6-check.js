@@ -59,9 +59,24 @@ check('人が耳で確認した既存の正式候補v1は「押せない」が0�
   &&/NORMAL: \d+ノーツ  押せない 0件/.test(v1.stdout)
   &&/HARD: \d+ノーツ  押せない 0件/.test(v1.stdout),
   (v1.stdout.match(/(EASY|NORMAL|HARD): .*/g)||[]).join(' / '));
-// 逆に「忙しい」も出ないほど緩いと、何も見張れていない。実際に少しは出るはず。
-check('既存の正式候補v1でも「忙しい」は少しは検出される(緩すぎない)',
-  /忙しい [1-9]\d*件/.test(v1.stdout));
+// 逆に「忙しい」も出ないほど緩いと、何も見張れていない。
+// 2026-09-07 に指の割り当てを先読み(ビームサーチ)にしてから、v1の譜面は「忙しい」0件になった
+// (楽な指の使い方が実在する)。緩すぎないことは、わざと忙しい配置(同じ場所を120msで叩き直す＝
+// 限界105msは超えるが快適150msには足りない)で確かめる。
+{
+  const {simulateNotes}=require(path.join(ROOT,'tools/mode/rhythm-hand-simulate.js'));
+  const timing={beatMs:480,subdivisionsPerBeat:4,beatZeroMs:0,beatsPerBar:4};   // 1グリッド=120ms
+  // 片方の指はHOLDでふさいでおく(空いていると2本で交互に取れてしまう)
+  const busy=[
+    {type:'HOLD',grid:-10,durationGrids:20,lane:4,subLane:8,subLaneWidth:2},
+    {type:'TAP',grid:0,lane:1,subLane:2,subLaneWidth:2},
+    {type:'TAP',grid:1,lane:1,subLane:2,subLaneWidth:2},
+    {type:'TAP',grid:2,lane:1,subLane:2,subLaneWidth:2},
+  ];
+  const result=simulateNotes(busy,timing);
+  check('わざと忙しい配置(同じ場所を120msで叩き直す)では「忙しい」が検出される(緩すぎない)',
+    result.impossible===0&&result.strained>=1,`押せない${result.impossible} / 忙しい${result.strained}`);
+}
 
 // --- 2. わざと押せない譜面を作って、捕まえられるか ---
 const tempDir=fs.mkdtempSync(path.join(os.tmpdir(),'rhythm-v2-step6-check-'));

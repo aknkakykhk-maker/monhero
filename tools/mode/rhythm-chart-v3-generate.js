@@ -24,7 +24,8 @@ const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
 const {HAND_MODEL,fingerPairFeasible,noteTouchLane,noteTouchSpan,usableTouchSpan,separationRange}=require('./rhythm-hand-model.js');
-const {LANES,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor}=require('./rhythm-chart-v3-patterns.js');
+const {simulateNotes}=require('./rhythm-hand-simulate.js');
+const {LANES,PATTERN_BY_ID,mirror,fitToLanes,maxStepOf,shapeCandidatesFor,rankShapes,hash32}=require('./rhythm-chart-v3-patterns.js');
 
 const ROOT=path.resolve(__dirname,'..','..');
 const arg=(name,fallback=null)=>{const i=process.argv.indexOf(name);return i>=0&&i+1<process.argv.length?process.argv[i+1]:fallback;};
@@ -309,6 +310,51 @@ const repeatSourceBar=bar=>{
 };
 const musicalOnsetsInBar=bar=>allOnsets.filter(o=>o.grid>=bar*BAR&&o.grid<(bar+1)*BAR).length;
 
+// --- 区切りの役割(場面) ---
+// 構造解析は「サビ」「Aメロ」の名前を付けない(外すと譜面まで外れるため)。ここでも名前は付けず、
+// 譜面づくりに要る3つだけを出す。
+//   intro  … 曲の頭の、盛り上がりが低い区切り(読みやすく・語彙を絞る)
+//   climax … 盛り上がりが上位の区切り(開き・幅・端振りを前へ出す)
+//   outro  … 曲の終わりの、盛り上がりが落ちた区切り(収束)
+//   body   … それ以外(基本の語彙)
+// 実際の曲にその構造が無ければ、該当なし(body)のままになる。固定の型は押し付けない。
+const sectionRoles=(()=>{
+  const list=Array.isArray(structure.sections)?structure.sections:[];
+  const roles=new Map();
+  if(!list.length)return roles;
+  const sorted=list.map(s=>s.intensity).sort((a,b)=>a-b);
+  const high=sorted[Math.floor(sorted.length*.7)]??1;
+  list.forEach((section,index)=>{
+    let role='body';
+    if(index===0&&section.intensity<.5)role='intro';
+    else if(index===list.length-1&&section.intensity<.5&&list.length>=3)role='outro';
+    else if(section.intensity>=high&&section.intensity>=.5)role='climax';
+    roles.set(section,role);
+  });
+  return roles;
+})();
+const sectionRoleForBar=bar=>{const section=sectionForBar(bar);return section?sectionRoles.get(section)||'body':'body';};
+// 場面ごとの「形の好み」。点数を引くほど前へ出る(rankShapes の prefer.ids)。
+// 音との合いかたが同じくらいの候補の中でしか効かないので、サビだからといって音に合わない形は出ない。
+const SECTION_SHAPE_PREFERENCE=Object.freeze({
+  intro:Object.freeze({alternate2:.6,stair_up:.4,stair_down:.4,fold_up:.3,bounce:.3}),
+  climax:Object.freeze({expand:.8,out_in_out:.8,in_out_in:.5,edge_swing:.6,alternate3:.4,cross_step_up:.3,cross_step_down:.3}),
+  outro:Object.freeze({contract:.8,fold_down:.4,stair_down:.3,in_out_in:.3}),
+  body:Object.freeze({}),
+});
+// フレーズの指紋: 刻み(相対グリッド)と音の高さの上下(±1/0)を並べたもの。
+// 区切りの繰り返し(repeatOf)が取れなかった曲でも、同じリズム・同じ動きのフレーズには
+// 同じ形を当てられる(2回目は左右反転)。
+const motifKeyOf=(grids,heights)=>{
+  const gaps=grids.slice(1).map((g,i)=>g-grids[i]);
+  const contour=[];
+  for(let i=1;i<heights.length;i++){
+    const a=heights[i-1],b=heights[i];
+    contour.push(a==null||b==null?'?':(b-a>.04?'+':(a-b>.04?'-':'='))); 
+  }
+  return `${grids.length}|${gaps.join(',')}|${contour.join('')}`;
+};
+
 // ============================================================================
 // 優先順位（すべての難易度で共通。ここが「同じ骨格の濃淡」の土台）
 // ============================================================================
@@ -483,12 +529,21 @@ const buildChart=(difficulty,options={})=>{
   }
 
   // --- 2. 最短の刻みの連なりを難易度なりの長さで止める ---
+  // --- 2b. 息継ぎ ---
+  // 最短の刻みがその難易度の上限(maxRun)まで続いたら、そのあと半拍〜1拍は
+  // 装飾の音(拍の頭でない・大きな一発でない)を拾わない。難所のあとに手を休ませるため。
+  // 背骨(拍の頭・大きな一発)はそのまま残すので、曲を叩いている感じは消えない。
+  // (外部の公開基準にも「速い連なりのあとにはフレーズごとに休みを置く」がある。
+  //  docs/spec/RHYTHM_CHART_DESIGN.md 5章)
+  const breathGrids=P.lattice>1?BEAT:Math.round(BEAT/2);
+  const isBackbone=onset=>((onset.grid%BEAT)+BEAT)%BEAT===0||onset.character==='FULL';
   const spaced=[];
-  let run=1;
+  let run=1,breathUntil=-Infinity;
   for(const onset of picked){
     const last=spaced[spaced.length-1];
+    if(onset.grid<breathUntil&&!isBackbone(onset))continue;
     if(last&&onset.grid-last.grid<=P.lattice){
-      if(run>=P.maxRun)continue;
+      if(run>=P.maxRun){breathUntil=onset.grid+breathGrids;continue;}
       run++;
     }else run=1;
     spaced.push(onset);
@@ -594,10 +649,16 @@ const buildChart=(difficulty,options={})=>{
   // --- 5. かたまりごとに形を当てる ---
   // 同じフレーズが繰り返されるときは同じ形を使い、2回目以降は左右を反転する。
   const shapeMemory=new Map();
+  // フレーズの指紋 → 使った形(区切りの繰り返しが取れない曲でも、同じフレーズは同じ形にする)
+  const motifMemory=new Map();
   // 直近に使った形。同じ形が続かないよう、形を選ぶときに後回しにする材料にする。
   const recentShapes=[];
+  // その曲でそれぞれの形を使った回数(語彙を均すため。多く使った形ほど後回しになる)
+  const shapeUsage=new Map();
+  // 直前のかたまりの並び(つなぎの向きを見る)と、同じ向きへ流れ続けた回数
+  let lastOffsets=null,driftCount=0,lastDirection=0;
   const laneUse=[0,0,0,0,0];
-  let lastLane=2;
+  let lastLane=2,lastPlacedGrid=-Infinity;
   const placed=[];
   const placeable=(subLane,width,grid)=>{
     const candidate={subLane,subLaneWidth:width};
@@ -627,6 +688,11 @@ const buildChart=(difficulty,options={})=>{
     }
   };
   const centeredSubLane=(lane,width)=>Math.max(0,Math.min(10-width,lane*2+1-Math.ceil(width/2)));
+  // 跳びの上限。難易度の歩幅(maxLaneStep)だけでなく、**その時間で指が動ける距離**でも抑える。
+  // MASTERの歩幅4は「1拍あれば4レーン動ける」の意味で、97msで4レーンは限界(18レーン毎秒)を超える。
+  // 同時押し・連なり・クロスは形を決めたあとに中心を動かすので、ここで時間も見る
+  // (実測: クロスで外側へ寄せたTAPの97ms後に反対の端のTAPが来て、自動修正でも直らなかった)。
+  const stepLimitLanes=deltaGrids=>Math.min(P.maxLaneStep,HAND_MODEL.laneSpeedLimit*(Math.abs(deltaGrids)*gridMs/1000)*.9);
 
   for(const runGroup of runs){
     const list=runGroup.events;
@@ -647,96 +713,176 @@ const buildChart=(difficulty,options={})=>{
     const memoryKey=section
       ?`${sourceBar!=null?sourceBar:bar-(bar-section.startBar)}:${grids[0]-bar*BAR}:${length}`
       :null;
-    const remembered=memoryKey?shapeMemory.get(memoryKey):null;
+    const motifKey=motifKeyOf(grids,heights);
+    const remembered=(memoryKey?shapeMemory.get(memoryKey):null)||(length>=3?motifMemory.get(motifKey):null)||null;
+    const chunkIndex=runs.indexOf(runGroup);
+    const role=sectionRoleForBar(bar);
 
-    let offsets=null,patternId=null,mirrored=false;
+    // --- 形の候補を作る ---
+    // 覚えている形(同じフレーズ)があればそれを先頭に、続けて音に合う順(＋文法の点数)の候補を並べる。
+    // 先頭の形が「起点をどこに置いても指の条件を満たさない」ときは次の候補を試す。
+    // 以前は先頭だけを試して、置けなければ1音ずつ逃がす fallback へ落ちていた。
+    // fallback は形にならない(読めない)うえ、左端から順に空きを探すので継ぎ目で大きく跳んでいた
+    // (実測: MASTERで8%が fallback、HARDで継ぎ目に3レーンの跳び)。
+    const attempts=[];
+    let rememberedAttempt=null;
     if(remembered&&remembered.offsets.length===length){
-      patternId=remembered.patternId;
-      mirrored=!remembered.mirrored;
-      offsets=mirrored?mirror(remembered.offsets):remembered.offsets.slice();
-      if(maxStepOf(offsets)>maxStep){offsets=null;patternId=null;mirrored=false;}
+      // 同じフレーズは同じ形で。2回目は左右反転、3回目は「少し発展」(文法で選び直す＝直前を避けた別の形)、
+      // 4回目は元へ…と3つで一巡させる。ずっと同じ形だと、左右対称の形(トリル・縦連・ゆれ)は
+      // 反転しても見た目が変わらず、同じフレーズが続く曲で7回同じ形が並んだ(実測)。
+      const count=(remembered.count||1)+1;
+      const develop=count%3===0;
+      const mirroredNow=!develop&&count%2===0;
+      const offsetsNow=mirroredNow?mirror(remembered.offsets):remembered.offsets.slice();
+      if(develop)remembered.count=count;
+      else if(maxStepOf(offsetsNow)<=maxStep)rememberedAttempt={offsets:offsetsNow,patternId:remembered.patternId,mirrored:mirroredNow,fromMemory:true,count};
     }
-    if(!offsets){
+    if(rememberedAttempt)attempts.push(rememberedAttempt);
+    {
       // 音の高さが取れないときは、刻みの細かさから形を選ぶ
       const rhythmShape=minGap<=P.lattice?'fast':(minGap<=BEAT?'beat':'slow');
       const candidates=shapeCandidatesFor({length,heights,maxStep,fastest,allowJack,
-        rhythmShape,rotate:runs.indexOf(runGroup),recent:recentShapes.slice(-COMMON.shapeAvoidRecent)});
-      const chosen=candidates[0];
-      if(chosen){offsets=chosen.offsets.slice();patternId=chosen.pattern.id;}
-      else offsets=Array.from({length},()=>0);
-      if(memoryKey&&!shapeMemory.has(memoryKey))shapeMemory.set(memoryKey,{patternId,offsets:offsets.slice(),mirrored:false});
+        rhythmShape,rotate:chunkIndex,recent:recentShapes.slice(-COMMON.shapeAvoidRecent)});
+      // 音との合いかたが同じくらいの候補の中で、つなぎ・使用回数・場面・決定的な散らしで選ぶ(譜面文法)
+      const ranked=rankShapes(candidates,{usage:shapeUsage,previousOffsets:lastOffsets,
+        prefer:{ids:SECTION_SHAPE_PREFERENCE[role]||{},turn:driftCount>=2},
+        seed:`${trackId}:${difficulty}:${chunkIndex}`,maxStep});
+      for(const chosen of ranked.slice(0,6))attempts.push({offsets:chosen.offsets.slice(),patternId:chosen.pattern.id,mirrored:false,fromMemory:false});
+      if(!attempts.length)attempts.push({offsets:Array.from({length},()=>0),patternId:null,mirrored:false,fromMemory:false});
     }
 
-    if(patternId)recentShapes.push(patternId);
-    // 起点を決める。前のノーツからの続き・レーンの偏り・指の条件で選ぶ。
-    const pattern=patternId?PATTERN_BY_ID[patternId]:null;
-    const min=Math.min(...offsets),max=Math.max(...offsets);
-    const bases=[];
-    for(let base=-min;base<=LANES-1-max;base++)bases.push(base);
     const widths=list.map(event=>widthFor(event.onset,event.kind));
-    const score=base=>{
-      const lanes=fitToLanes(offsets,base);
-      if(!lanes)return null;
-      let cost=0;
-      // 前のかたまりからの続き（近いほどよい。ただし同じ場所に張り付かない）
-      const step=Math.abs(lanes[0]-lastLane);
-      cost+=Math.abs(step-1)*2;
-      // 中央前提の形は中央へ
-      if(pattern&&pattern.centered)cost+=Math.abs(base-2)*3;
-      // レーンの偏りをならす
-      for(const lane of lanes)cost+=laneUse[lane]*.05;
-      return {lanes,cost};
-    };
-    let best=null;
-    for(const base of bases){
-      const scored=score(base);
-      if(!scored)continue;
-      // 指の条件を満たすか、置きながら確かめる
-      let ok=true;
-      const trial=[];
-      for(let i=0;i<length;i++){
-        const width=widths[i];
-        const subLane=centeredSubLane(scored.lanes[i],width);
-        const previous=placed.concat(trial);
-        const candidate={subLane,subLaneWidth:width,grid:grids[i]};
-        let feasible=true;
-        for(let k=previous.length-1;k>=0;k--){
-          const before=previous[k];
-          const deltaMs=(grids[i]-before.grid)*gridMs;
-          if(deltaMs>=HAND_MODEL.restrikeLimitMs)break;
-          if(deltaMs<=0)continue;
-          if(!fingerPairFeasible(candidate,before,deltaMs).ok){feasible=false;break;}
+    const pattern0=null;
+    let best=null,offsets=null,patternId=null,mirrored=false,motifSource=null;
+    for(const attempt of attempts){
+      offsets=attempt.offsets;patternId=attempt.patternId;mirrored=attempt.mirrored;
+      const pattern=patternId?PATTERN_BY_ID[patternId]:null;
+      const min=Math.min(...offsets),max=Math.max(...offsets);
+      const bases=[];
+      for(let base=-min;base<=LANES-1-max;base++)bases.push(base);
+      const score=base=>{
+        const lanes=fitToLanes(offsets,base);
+        if(!lanes)return null;
+        let cost=0;
+        // 前のかたまりからの続き（近いほどよい。ただし同じ場所に張り付かない）
+        const step=Math.abs(lanes[0]-lastLane);
+        cost+=Math.abs(step-1)*2;
+        // かたまりの継ぎ目でも、1拍未満で続くなら跳びはその難易度の上限まで
+        // (形の中だけ守っても、継ぎ目で3レーン跳んでは意味が無い)
+        if(grids[0]-lastPlacedGrid<BEAT&&step>maxStep+1e-9)return null;
+        // 手の流れ: 直前のかたまりが右へ抜けたなら右隣から、左へ抜けたなら左隣から始めると自然。
+        // ただし同じ向きへ3かたまり以上流れ続けると端に張り付くので、そのときは折り返す側を好む
+        const direction=Math.sign(lanes[0]-lastLane);
+        if(lastDirection!==0&&direction!==0)cost+=(driftCount>=2?direction===lastDirection:direction!==lastDirection)?1.5:0;
+        // 中央前提の形は中央へ
+        if(pattern&&pattern.centered)cost+=Math.abs(base-2)*3;
+        // 同じフレーズの3回目以降は、起点を1つずらして「少し発展」させる(HARD以上)
+        if(attempt.fromMemory&&attempt.count>=3&&P.level>=5&&remembered.base!=null)cost+=Math.abs(Math.abs(base-remembered.base)-1)*.8;
+        // レーンの偏りをならす
+        for(const lane of lanes)cost+=laneUse[lane]*.05;
+        // 同点のときの決定的な散らし(乱数は使わない)
+        cost+=(hash32(`${trackId}:${difficulty}:${chunkIndex}:${base}`)%10)/20;
+        return {lanes,cost};
+      };
+      for(const base of bases){
+        const scored=score(base);
+        if(!scored)continue;
+        // 指の条件を満たすか、置きながら確かめる
+        let ok=true;
+        const trial=[];
+        for(let i=0;i<length;i++){
+          const width=widths[i];
+          const subLane=centeredSubLane(scored.lanes[i],width);
+          const previous=placed.concat(trial);
+          // 種類も持たせる。押さえるノーツ(HOLD/SLIDE)は帯の端まで指を寄せられない(heldTouchSpan)ので、
+          // 種類が無いと「叩くノーツ」として甘く見積もり、置いたあとで「押せない」が出ていた
+          // (実測: 先行公開の2曲のMASTER/EXPERTに1件ずつ残っていた)
+          const candidate={type:list[i].kind==='TAP'?'TAP':list[i].kind,subLane,subLaneWidth:width,grid:grids[i],
+            ...(list[i].reserved?{durationGrids:list[i].reserved.endGrid-list[i].reserved.startGrid}:{})};
+          let feasible=true;
+          for(let k=previous.length-1;k>=0;k--){
+            const before=previous[k];
+            const deltaMs=(grids[i]-before.grid)*gridMs;
+            if(deltaMs>=HAND_MODEL.restrikeLimitMs)break;
+            if(deltaMs<=0)continue;
+            if(!fingerPairFeasible(candidate,before,deltaMs).ok){feasible=false;break;}
+          }
+          if(!feasible){ok=false;break;}
+          trial.push(candidate);
         }
-        if(!feasible){ok=false;break;}
-        trial.push(candidate);
+        if(!ok)continue;
+        // 指の太さだけでは「4レーンを217msで動けない」のような**届かない**配置を拾えない。
+        // 直近2拍ぶんの置いた音といっしょに両手をシミュレートし、この試しの音に「押せない」が
+        // 出る起点は捨てる(実測: 207BPMの曲のMASTERで、SLIDEの始点が届かず自動修正でも直らなかった)。
+        // 窓の外の指は自由と見なすので甘めだが、自動修正が最後にもう一度全体を見る。
+        const windowFrom=grids[0]-BEAT*2;
+        const recentPlaced=placed.filter(note=>note.grid>=windowFrom);
+        const sim=simulateNotes(recentPlaced.concat(trial),timing,{beam:4});
+        if(sim.issues.some(issue=>issue.severity==='impossible'&&issue.noteIndex>=recentPlaced.length)){continue;}
+        if(!best||scored.cost<best.cost)best={...scored,base,trial};
       }
-      if(!ok)continue;
-      if(!best||scored.cost<best.cost)best={...scored,base,trial};
+      if(best){
+        if(attempt.fromMemory){remembered.count=attempt.count;motifSource=remembered.firstGrid;}
+        else{
+          const memo={patternId,offsets:offsets.slice(),mirrored:false,count:1,firstGrid:grids[0],base:best.base};
+          if(memoryKey&&!shapeMemory.has(memoryKey))shapeMemory.set(memoryKey,memo);
+          if(length>=3&&!motifMemory.has(motifKey))motifMemory.set(motifKey,memo);
+        }
+        break;
+      }
     }
+    if(patternId&&best){recentShapes.push(patternId);shapeUsage.set(patternId,(shapeUsage.get(patternId)||0)+1);}
     if(!best){
-      // どの起点でも置けないときは、1つずつ逃がす（まれ）
+      // どの形・どの起点でも置けないときは、1つずつ逃がす（まれ）。
+      // 逃がす先は左端からではなく、**直前のノーツに近い順**に探す(継ぎ目で大きく跳ばないため)
       const lanes=[];
+      let fromLane=lastLane;
+      const windowFrom=grids[0]-BEAT*2;
+      const trialSoFar=[];
       for(let i=0;i<length;i++){
         const width=widths[i];
+        const center=centeredSubLane(fromLane,width);
+        const order=[];
+        for(let sub=0;sub<=10-width;sub++)order.push(sub);
+        order.sort((a,b)=>Math.abs(a-center)-Math.abs(b-center)||a-b);
         let chosen=null;
-        for(let sub=0;sub<=10-width;sub++){
+        for(const sub of order){
           if(!placeable(sub,width,grids[i]))continue;
-          chosen=sub;break;
+          // ここでも両手をシミュレートして「届く」場所だけを採る
+          const candidate={type:list[i].kind==='TAP'?'TAP':list[i].kind,subLane:sub,subLaneWidth:width,grid:grids[i],
+            ...(list[i].reserved?{durationGrids:list[i].reserved.endGrid-list[i].reserved.startGrid}:{})};
+          const recentPlaced=placed.filter(note=>note.grid>=windowFrom).concat(trialSoFar);
+          const sim=simulateNotes(recentPlaced.concat([candidate]),timing,{beam:4});
+          if(sim.issues.some(issue=>issue.severity==='impossible'&&issue.noteIndex===recentPlaced.length))continue;
+          chosen=sub;trialSoFar.push(candidate);break;
         }
-        if(chosen==null)chosen=centeredSubLane(2,width);
+        if(chosen==null)chosen=center;
         lanes.push(chosen);
+        fromLane=Math.floor(chosen/2);
       }
       best={lanes:lanes.map(sub=>Math.floor(sub/2)),cost:0,base:null,
-        trial:lanes.map((sub,i)=>({subLane:sub,subLaneWidth:widths[i],grid:grids[i]}))};
-      patternId='fallback';
+        trial:lanes.map((sub,i)=>({type:list[i].kind==='TAP'?'TAP':list[i].kind,subLane:sub,subLaneWidth:widths[i],grid:grids[i]}))};
+      patternId='fallback';mirrored=false;
+      offsets=lanes.map(sub=>Math.floor(sub/2));
     }
+    lastOffsets=offsets.slice();
 
+    if(remembered&&remembered.base==null&&best.base!=null)remembered.base=best.base;
+    {
+      const firstLane=best.lanes?best.lanes[0]:Math.floor(best.trial[0].subLane/2);
+      const lastOf=best.lanes?best.lanes[best.lanes.length-1]:Math.floor(best.trial[best.trial.length-1].subLane/2);
+      const direction=Math.sign(lastOf-firstLane)||Math.sign(firstLane-lastLane);
+      driftCount=direction!==0&&direction===lastDirection?driftCount+1:0;
+      if(direction!==0)lastDirection=direction;
+    }
     list.forEach((event,i)=>{
       const item=best.trial[i];
       const lane=Math.floor(item.subLane/2);
       laneUse[Math.max(0,Math.min(4,best.lanes?best.lanes[i]:lane))]++;
       lastLane=best.lanes?best.lanes[i]:lane;
-      placed.push({grid:grids[i],subLane:item.subLane,subLaneWidth:item.subLaneWidth});
+      lastPlacedGrid=grids[i];
+      placed.push({type:event.kind==='TAP'?'TAP':event.kind,grid:grids[i],subLane:item.subLane,subLaneWidth:item.subLaneWidth,
+        ...(event.reserved?{durationGrids:event.reserved.endGrid-event.reserved.startGrid}:{})});
       const note={type:event.kind==='TAP'?'TAP':event.kind,grid:grids[i],
         lane:Math.floor(item.subLane/2),subLane:item.subLane,subLaneWidth:item.subLaneWidth,
         sourceStrength:event.onset?Math.round(event.onset.strength*100)/100:0,
@@ -755,7 +901,8 @@ const buildChart=(difficulty,options={})=>{
     });
     log.push({fromGrid:grids[0],toGrid:grids[length-1],length,pattern:patternId,mirrored,
       lanes:best.lanes?best.lanes.slice():null,
-      heights:heights.map(h=>h==null?null:Math.round(h*100)/100)});
+      heights:heights.map(h=>h==null?null:Math.round(h*100)/100),
+      motifKey,motifSource,role});
   }
 
   notes.sort((a,b)=>a.grid-b.grid);
@@ -864,9 +1011,13 @@ const buildChart=(difficulty,options={})=>{
     // 置けなかったぶんはそのまま欠けていた。譜面が濃くなると欠ける数が増え、
     // 「HARDのほうがNORMALより同時押しが少ない」という逆転が実際に起きた。
     // 置ける場所はまだ残っているので、狙いの数に届くまで選び直す。
+    // 同時押しは「決めの一発」なので、盛り上がっている小節を優先する(静かな区切りには置きにくくする)。
+    // 置ける場所が足りないときだけ、静かな小節も使う。
+    const intense=candidates.filter(index=>intensityPosition(Math.floor(notes[index].grid/BAR))>=.4);
+    const preferred=intense.length>=chordMax*1.5?new Set(intense):null;
     const tried=new Set();
     const nextBatch=()=>{
-      const rest=candidates.filter(index=>!tried.has(index));
+      const rest=candidates.filter(index=>!tried.has(index)&&(!preferred||preferred.has(index)||tried.size>=intense.length));
       if(!rest.length)return [];
       const picked=spreadPick(rest,chordMax-chordCount,CHORD.spacingGrids);
       for(const index of picked)tried.add(index);
@@ -907,7 +1058,7 @@ const buildChart=(difficulty,options={})=>{
         if(other===note)return true;
         if(other.grid===note.grid)return true;
         if(Math.abs(other.grid-note.grid)>=BEAT)return true;
-        return separationRange(usableTouchSpan(candidate),usableTouchSpan(other)).min<=P.maxLaneStep+1e-9;
+        return separationRange(usableTouchSpan(candidate),usableTouchSpan(other)).min<=stepLimitLanes(other.grid-note.grid)+1e-9;
       });
       if(!stepOk(base)||!stepOk({subLane:plan.partner,subLaneWidth:width}))continue;
       const partner={type:'TAP',grid:note.grid,lane:Math.floor(plan.partner/2),
@@ -1019,7 +1170,7 @@ const buildChart=(difficulty,options={})=>{
           const laneStepOk=draft.every((entry,index)=>{
             if(index===0)return true;
             const before=draft[index-1];
-            return separationRange(spanOf(before.right),spanOf(entry.left)).min<=P.maxLaneStep+1e-9;
+            return separationRange(spanOf(before.right),spanOf(entry.left)).min<=stepLimitLanes(chain.step)+1e-9;
           });
           if(!laneStepOk)continue;
           // 列の外側（直前・直後のノーツ）ともつながるか
@@ -1030,7 +1181,7 @@ const buildChart=(difficulty,options={})=>{
               if(!other)return true;
               const delta=Math.abs(other.grid-members[memberIndex].grid);
               if(delta===0||delta>=BEAT)return true;
-              return separationRange(spanOf(sub),usableTouchSpan(other)).min<=P.maxLaneStep+1e-9;
+              return separationRange(spanOf(sub),usableTouchSpan(other)).min<=stepLimitLanes(delta)+1e-9;
             });
           if(!outsideOk)continue;
           // 同時押しは指を2本とも使うので、その前後に別のノーツがあると押せない。
@@ -1097,6 +1248,14 @@ const buildChart=(difficulty,options={})=>{
       const path=sweepPathFor(note,SWEEP,Number(note.subLaneWidth)||2);
       if(!path)continue;
       const lanes=path.map(point=>point.lane);
+      // 引き伸ばした始点・終点が、直前・直後のノーツから指の限界の速さで届くこと。
+      // 前後の空き(clearBeats)は時間の条件でしかなく、207BPMの曲では半拍が145msしか無い。
+      // 端まで走る始点が4レーン先にあると、同じ指では217msでも届かない(実測で自動修正でも直らなかった)
+      const before=ordered.filter(other=>other.grid<note.grid).pop();
+      const after=ordered.find(other=>other.grid>note.grid+(Number(note.durationGrids)||0));
+      const reachable=(other,lane,gapGrids)=>!other||Math.abs(noteTouchLane(other)-lane)<=HAND_MODEL.laneSpeedLimit*(gapGrids*gridMs/1000)*.9;
+      if(!reachable(before,lanes[0],before?note.grid-before.grid:0))continue;
+      if(!reachable(after,lanes[lanes.length-1],after?after.grid-(note.grid+(Number(note.durationGrids)||0)):0))continue;
       note.slidePoints=path;
       note.lane=path[0].lane;
       note.endLane=path[path.length-1].lane;
@@ -1231,7 +1390,7 @@ const buildChart=(difficulty,options={})=>{
     const stepOkWith=(note,candidate)=>ordered.every(other=>{
       if(other===note||other.grid===note.grid)return true;
       if(Math.abs(other.grid-note.grid)>=BEAT)return true;
-      return separationRange(usableTouchSpan(candidate),usableTouchSpan(other)).min<=P.maxLaneStep+1e-9;
+      return separationRange(usableTouchSpan(candidate),usableTouchSpan(other)).min<=stepLimitLanes(other.grid-note.grid)+1e-9;
     });
     const candidates=[];
     notes.forEach((note,index)=>{
@@ -1242,7 +1401,10 @@ const buildChart=(difficulty,options={})=>{
       if(covering.length!==1)return;
       candidates.push({index,hold:covering[0]});
     });
-    for(const pick of spreadPick(candidates.map(entry=>entry.index),crossMax,BEAT*4)){
+    // 置ける場所は狭い(押さえている指の外側で、前後から届く範囲)ので、狙いの数だけ選んで
+    // 置けなければ終わり、ではなく、曲全体へ散らした候補を順に試して狙いの数まで置く
+    for(const pick of spreadPick(candidates.map(entry=>entry.index),candidates.length,BEAT*4)){
+      if(crossCount>=crossMax)break;
       const entry=candidates.find(item=>item.index===pick);
       if(!entry)continue;
       const note=notes[pick];

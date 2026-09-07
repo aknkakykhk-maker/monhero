@@ -72,7 +72,7 @@ if(!source){console.error(`未知の --source です: ${sourceKind} (${Object.ke
 
 // --- ノーツの位置 ---
 // 指が触るのは中心。式は rhythm-hand-model.js に一本化してある(STEP3・STEP6と同じ物差しにするため)。
-const {noteTouchLane,usableTouchSpan,separationRange}=require('./rhythm-hand-model.js');
+const {HAND_MODEL,noteTouchLane,usableTouchSpan,separationRange}=require('./rhythm-hand-model.js');
 const laneCenter=note=>noteTouchLane(note);
 // 重なり判定のため、どのノーツもサブレーン座標の範囲へ揃える
 const span=note=>{
@@ -120,6 +120,19 @@ const placements=(notes,index)=>{
     :null;
   const keepsChord=moved=>partnerGap===null||sameGrid.every(other=>
     separationRange(usableTouchSpan(moved),usableTouchSpan(other)).min+1e-9>=partnerGap);
+  // 指を交差させる置き方(cross)は、押さえっぱなしのHOLDの**外側**にあることが本体。
+  // 忙しさを直すために内側へ寄せると、ただの「押さえながら叩く」に戻ってしまう。
+  // 動かすなら同じ側(外側)の中だけにする(2026-09-07)。
+  const crossHold=note.cross===true?notes.find(other=>other.type==='HOLD'&&other.grid<note.grid
+    &&note.grid<=other.grid+(Number(other.durationGrids)||0)):null;
+  const keepsCross=moved=>{
+    if(!crossHold)return true;
+    const holdLane=laneCenter(crossHold),before=laneCenter(note),after=laneCenter(moved);
+    const sameSide=holdLane<=2?(before<holdLane?after<holdLane:after>holdLane):(before>holdLane?after>holdLane:after<holdLane);
+    // 押さえている指と2本入る離れかたも保つ(近づけると交差ではなく「指が入らない」になる)
+    const apart=separationRange(usableTouchSpan(moved),usableTouchSpan(crossHold)).min>=HAND_MODEL.fingerMinGapLanes-1e-9;
+    return sameSide&&apart;
+  };
   const out=[];
   if(note.type==='SLIDE'){
     // 経路の形は変えず、まるごと0.5レーンずつ平行移動する
@@ -152,6 +165,7 @@ const placements=(notes,index)=>{
       ...(points?{holdPoints:points.map(point=>({...point,subLane:Number(point.subLane)+delta}))}:{})};
     if(!fits({start:subLane,end:subLane+width}))continue;
     if(!keepsChord(moved))continue;
+    if(!keepsCross(moved))continue;
     out.push({note:moved,label:`サブレーン${note.subLane}→${subLane}`,delta});
   }
   return out;
@@ -184,7 +198,10 @@ const autofix=notes=>{
       for(let other=0;other<current.length;other++){
         if(other===index)continue;
         const otherGrid=current[other]?.grid;
-        if(Number.isFinite(otherGrid)&&otherGrid<=grid&&grid-otherGrid<=BEAT)near.push(other);
+        // 前だけでなく**後ろ**も見る。「押せない」は組み合わせなので、指摘が前のノーツに付いていても
+        // 動かすべきなのは後ろのノーツのことがある(2026-09-07: HOLD中の2つのTAPで、前のTAPに指摘が
+        // 付いたが、直るのは後ろのTAPを寄せたときだけだった)
+        if(Number.isFinite(otherGrid)&&Math.abs(grid-otherGrid)<=BEAT)near.push(other);
       }
       return near;
     });

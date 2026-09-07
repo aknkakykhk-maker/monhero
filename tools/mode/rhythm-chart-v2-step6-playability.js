@@ -115,153 +115,17 @@ const gridMs=timing.beatMs/timing.subdivisionsPerBeat;
 const gridTimeMs=g=>timing.beatZeroMs+g*gridMs;
 const BAR=timing.subdivisionsPerBeat*4;
 
-// --- ノーツを「指の仕事」へ均す ---
-// TAP/FLICK: その瞬間だけ指を使う
-// HOLD:      始点から終点まで、同じレーンで指を占有する
-// SLIDE:     始点から終点まで、経路のレーンを追いながら指を占有する
-// endFlick:  終わりを弾いて離すので、指が空くのが END_FLICK_RELEASE_MS だけ遅れる
-// 指が触るのはノーツの中心。note.lane は「いちばん左のレーン」なので、幅3〜4のノーツでは
-// 実際より1〜1.5レーン左を触っていることになり、指の移動距離を短く見積もっていた。
-// 触る点は rhythm-hand-model.js の noteTouchLane に一本化。
-// (以前はここで -.5 していたが、レーン0〜4の中心は 0.5〜4.5 であり、
-//  幅の無いノーツの lane と幅のあるノーツの中心で基準がずれていた。
-//  距離しか使わないので結果は変わらないが、STEP3と同じ式にするため揃える)
+// --- ノーツを「指の仕事」へ均す・両手の指でシミュレートする ---
+// 本体は rhythm-hand-simulate.js へ移した(2026-09-07)。
+// あちらは「いま届く指のうち近いほう」だけでなく**数ノーツ先まで見て**指を割り当てる
+// (ビームサーチ)。その場最適だと、
+//   いまのノーツだけなら右手が楽 → でも右手を使うと数十ms後のノーツが取れない
+// という配置を「押せない」と誤判定していた(合成テストで再現できた)。
+// 手のモデルの値(rhythm-hand-model.js)も、押せる/忙しいの式も同じものを使う。
+const handSimulate=require('./rhythm-hand-simulate.js');
 const laneCenter=note=>noteTouchLane(note);
-const toActions=notes=>notes.map((note,index)=>{
-  const startMs=gridTimeMs(note.grid);
-  const lane=laneCenter(note);
-  const endFlick=note.endFlick===true&&(note.type==='HOLD'||note.type==='SLIDE');
-  if(note.type==='HOLD'){
-    const endMs=gridTimeMs(note.grid+(Number(note.durationGrids)||0));
-    return {index,type:note.type,startMs,endMs,startLane:lane,endLane:lane,grid:note.grid,endFlick,note};
-  }
-  if(note.type==='SLIDE'){
-    // SLIDEの lane は経路の中心線そのもの
-    const points=Array.isArray(note.slidePoints)&&note.slidePoints.length?note.slidePoints:null;
-    const endGrid=note.grid+(Number(note.durationGrids)||0);
-    // SLIDEは lane が経路の中心線なので、幅ぶんの補正は要らない
-    const endLane=points?Number(points[points.length-1].lane):Number(note.endLane??note.lane??lane);
-    return {index,type:note.type,startMs,endMs:gridTimeMs(endGrid),startLane:Number(note.lane)||0,endLane,grid:note.grid,endFlick,note};
-  }
-  return {index,type:note.type,startMs,endMs:startMs,startLane:lane,endLane:lane,grid:note.grid,endFlick:false,note};
-}).sort((a,b)=>a.startMs-b.startMs||a.startLane-b.startLane);
-
-// --- 両手の指でシミュレートする ---
-const simulate=actions=>{
-  // 指の初期位置は中央寄りの2レーン。曲が始まる前なので好きな場所に置ける
-  const fingers=Array.from({length:HANDS},(_,i)=>({lane:i===0?1:3,freeAtMs:-Infinity,lastHitMs:-Infinity}));
-  const issues=[];
-  const addIssue=(severity,kind,action,detail)=>issues.push({
-    severity,kind,noteIndex:action.index,grid:action.grid,
-    timeMs:Math.round(action.startMs),bar:Math.floor(action.grid/BAR),
-    lane:action.startLane,type:action.type,detail,
-  });
-
-  // --- 指の太さ: 「近いのに速い」組み合わせは、指が2本入らず1本でも叩き直せない ---
-  // 実機の指摘(2026-09-05)「1枠を隣り合わせで交互に連続押しは物理的に不可能」への対応。
-  // 指の割り当てシミュレーションだけでは、2本の指を同じ場所に重ねて置くことを止められない
-  // (指に太さが無いモデルだった)。時間差の小さい組み合わせを直接見る。
-  for(let a=1;a<actions.length;a++){
-    const cur=actions[a];
-    for(let b=a-1;b>=0;b--){
-      const prev=actions[b];
-      const dt=cur.startMs-prev.startMs;
-      if(dt>=HAND_MODEL.restrikeLimitMs)break;   // ここより前は1本で叩き直せる間隔
-      if(dt<1)continue;                          // 同時押しは別のルールで見る
-      const feasible=fingerPairFeasible(cur.note,prev.note,dt);
-      if(!feasible.ok){
-        addIssue('impossible','指が2本入らない近さで速すぎる',cur,
-          `${Math.round(dt)}ms前のノーツと重なっていて${feasible.reason}`);
-        break;
-      }
-    }
-  }
-
-  // 同じ時刻に複数のノーツ(同時押し)があるときはまとめて配る
-  let i=0;
-  while(i<actions.length){
-    let j=i;
-    while(j+1<actions.length&&Math.abs(actions[j+1].startMs-actions[i].startMs)<1)j++;
-    const group=actions.slice(i,j+1);
-
-    if(group.length>HANDS){
-      addIssue('impossible','同時に押す数が指より多い',group[0],
-        `同じ瞬間に${group.length}個(指は${HANDS}本)`);
-    }
-    if(group.length===2){
-      const gap=Math.abs(group[0].startLane-group[1].startLane);
-      if(gap<CHORD_MIN_LANE_GAP){
-        addIssue('impossible','同時押しが近すぎて指が2本入らない',group[0],
-          `レーン差${gap}(最低${CHORD_MIN_LANE_GAP})`);
-      }
-    }
-
-    // グループ内の各ノーツを、届く指へ割り当てる。
-    // 以前は1音ずつ「その場で安い指」を取っていたため、同時押しで右手を近い相方へ使ってしまい、
-    // 残った本体に左手が間に合わない(左右を入れ替えれば押せる)配置を「押せない」と誤判定していた。
-    // 同時押しの組は、指の割り当ての全通りを試し、全部押せる組み合わせのうち無理の少ないものを選ぶ。
-    const evaluate=(f,action)=>{
-      // まだ前のHOLD/SLIDEを押さえている指は使えない
-      if(f.freeAtMs+RELEASE_MARGIN_MS>action.startMs)
-        return {ok:false,reason:`前のHOLD/SLIDEを${Math.round(f.freeAtMs-action.startMs)}ms後まで押さえている`};
-      const availableMs=action.startMs-Math.max(f.freeAtMs,f.lastHitMs);
-      const distance=Math.abs(f.lane-action.startLane);
-      // 限界: これを満たせないと、その指では物理的に間に合わない
-      const needLimitMs=distance===0?RESTRIKE_LIMIT_MS:distance/LANE_SPEED_LIMIT*1000;
-      if(availableMs+1e-6<needLimitMs){
-        return {ok:false,reason:distance===0
-          ?`同じレーンを${Math.round(availableMs)}msで叩き直せない(最低${RESTRIKE_LIMIT_MS}ms)`
-          :`${distance}レーンを${Math.round(availableMs)}msで移動できない(最低${Math.round(needLimitMs)}ms)`};
-      }
-      // 快適: これを満たせないと「押せるが忙しい」
-      const needComfortMs=distance===0?RESTRIKE_COMFORT_MS:distance/LANE_SPEED_COMFORT*1000;
-      const strain=availableMs<needComfortMs
-        ?(distance===0
-          ?`同じレーンの叩き直しが${Math.round(availableMs)}ms(快適には${RESTRIKE_COMFORT_MS}ms欲しい)`
-          :`${distance}レーンの移動が${Math.round(availableMs)}ms(快適には${Math.round(needComfortMs)}ms欲しい)`)
-        :null;
-      // 移動が短く、時間に余裕があるほど無理がない
-      return {ok:true,cost:distance*1000+Math.max(0,200-availableMs),strain};
-    };
-    // 各ノーツ×各指の評価を先に取っておく(割り当てを試すあいだ指の状態は動かさない)
-    const table=group.map(action=>fingers.map(f=>evaluate(f,action)));
-    // 割り当ての全通り。null は「その音に使える指が無い」枠で、指が足りないときだけ意味を持つ。
-    let best=null;
-    const tryAssign=(k,used,current)=>{
-      if(k===group.length){
-        let feasible=0,cost=0;
-        current.forEach((fi,idx)=>{if(fi!==null&&table[idx][fi].ok){feasible++;cost+=table[idx][fi].cost;}});
-        const better=!best||feasible>best.feasible||(feasible===best.feasible&&cost<best.cost);
-        if(better)best={feasible,cost,assign:current.slice()};
-        return;
-      }
-      for(let fi=0;fi<fingers.length;fi++){
-        if(used.has(fi))continue;
-        used.add(fi);current.push(fi);tryAssign(k+1,used,current);current.pop();used.delete(fi);
-      }
-      current.push(null);tryAssign(k+1,used,current);current.pop();
-    };
-    tryAssign(0,new Set(),[]);
-    group.forEach((action,idx)=>{
-      const fi=best.assign[idx];
-      const result=fi===null?null:table[idx][fi];
-      if(!result||!result.ok){
-        // 押せない理由: 使える指が1本も無いときは、各指が使えない理由を並べる
-        const reasons=table[idx].map(r=>r.ok?null:r.reason).filter(Boolean);
-        const detail=result?result.reason:(reasons.length?reasons[0]:'他のノーツに指を使っていて指が足りない');
-        addIssue('impossible','押せる指がない',action,detail);
-        return;
-      }
-      if(result.strain)addIssue('strained','手の動きが忙しい',action,result.strain);
-      const f=fingers[fi];
-      f.lane=action.endLane;
-      f.lastHitMs=action.startMs;
-      f.freeAtMs=(action.endMs>action.startMs?action.endMs:action.startMs)+(action.endFlick?END_FLICK_RELEASE_MS:0);
-    });
-    i=j+1;
-  }
-  return issues;
-};
+const toActions=notes=>handSimulate.toActions(notes,gridTimeMs,BAR);
+const simulate=actions=>handSimulate.simulateActions(actions).issues;
 // --- STEP7(自動修正ループ)から使い回せるように、手のモデルをそのまま公開する。
 //     道具ごとにシミュレートを書き直すと、直したつもりで別の物差しになってしまう。 ---
 module.exports={
