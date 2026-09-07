@@ -17,7 +17,9 @@ const rhythm=read('monster-hero/data/rhythm-mode.js');
 
 // --- FLICKの色 ---
 const flickBlock=(()=>{
-  const at=html.indexOf('[data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > span:last-child {');
+  // 2026-09-07: セレクタは span:last-child から [data-rhythm-note-head] へ。
+  // マスモンの絵が入るノーツでは最後のspanが絵になるため、色が絵へ付いてしまっていた。
+  const at=html.indexOf('[data-rhythm-note][data-note-type="FLICK"][data-note-type="FLICK"] > [data-rhythm-note-head] {');
   return at<0?'':html.slice(at,at+400);
 })();
 ok('FLICKに専用の色を当てている',flickBlock.includes('background:linear-gradient'));
@@ -56,7 +58,14 @@ ok('ノーツ5種の色が実装に入っている',(()=>{
   const flick=/#22c55e/.test(html);                // FLICK=緑
   return tap&&slide&&hold&&monster&&flick;
 })());
-ok('FLICKは上へ払うことが分かる印を出す',flickBlock.length>0&&html.includes('content:"⇧"'));
+// 2026-09-07・ユーザー指摘「フリックの矢印が小さくて見にくい」。文字(⇧)をやめ、
+// clip-path の三角を実体のある要素([data-rhythm-flick-arrow])で描く形にした。
+// 文字だと端末のフォント次第で細く小さくなるうえ、幅広ノーツの縁取り(粒の::before/::after)と場所を取り合う。
+ok('FLICKは上へ払うことが分かる印を出す',
+  flickBlock.length>0
+  &&rhythm.includes('[data-rhythm-flick-arrow]{position:absolute;')
+  &&rhythm.includes('clip-path:polygon(50% 0,100% 100%,0 100%);')
+  &&html.includes('[data-rhythm-flick-arrow] {'));
 
 // --- コンボの強調 ---
 // data-combo-tier の中に「>=300」の「>」が入るので、タグを正規表現で切らずに前後関係で見る。

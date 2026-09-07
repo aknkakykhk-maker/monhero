@@ -50,13 +50,13 @@ check('光っているあいだは消さず、判定ラインに置いたまま�
   &&game.includes('if(clearFlash)yPx=travel.judgmentY;'));
 check('光る時間はCSSのアニメーションと同じ長さ',(()=>{
   const ms=Number((game.match(/const RHYTHM_CLEAR_FLASH_MS=(\d+);/)||[])[1]);
-  const css=Number((rhythm.match(/\[data-rhythm-note\]\[data-rhythm-clear\] > span:last-child\{animation:rhythm-clear-pop \.(\d+)s/)||[])[1]);
+  const css=Number((rhythm.match(/\[data-rhythm-note\]\[data-rhythm-clear\] > \[data-rhythm-note-head\][^{]*\{animation:rhythm-clear-pop \.(\d+)s/)||[])[1]);
   return Number.isFinite(ms)&&Number.isFinite(css)&&Math.abs(ms-css*10)<=10;
 })(),`JS ${(game.match(/const RHYTHM_CLEAR_FLASH_MS=(\d+);/)||[])[1]}ms`);
 check('やり直したときに光の印も捨てる',
   game.includes("el._rhythmClearFlag=undefined;delete el.dataset.rhythmClear;"));
 check('光は入力を邪魔しない(ノーツ本体の表示だけを変える)',
-  rhythm.includes('[data-rhythm-note][data-rhythm-clear] > span:last-child{animation:rhythm-clear-pop'));
+  rhythm.includes('[data-rhythm-note][data-rhythm-clear] > [data-rhythm-note-head],[data-rhythm-note][data-rhythm-clear] > [data-rhythm-monster-face]{animation:rhythm-clear-pop'));
 
 // --- 3. 判定・スコアを変えていない ---
 check('判定窓・スコア・コンボの計算に触っていない',

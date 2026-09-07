@@ -39,14 +39,51 @@ const BAD_FORMAT = entries.filter(e => !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(e
 check('日付の書式がそろっている', BAD_FORMAT.length === 0,
   BAD_FORMAT.slice(0, 3).map(e => e.date).join(' / '));
 
-// ★未来の日付を書かない。実際より先の日付にすると、直したはずの項目が
-//   いつまでも一覧の先頭に居座る(実際に 2026-09-08 の項目が12件あった)
-const BUILD_DATE = (fs.readFileSync(path.join(root, 'monster-hero/src/parts/10-core.jsx'), 'utf8')
-  .match(/const BUILD_DATE = "([^"]+)"/) || [])[1] || '';
-const today = BUILD_DATE.slice(0, 10);
-const future = entries.filter(e => today && e.date.slice(0, 10) > today);
-check('未来の日付がない', future.length === 0,
-  `${future.length}件${future.length ? `(例: ${future[0].date} / いまは ${today})` : ''}`);
+// ★未来の日時を書かない。実際より先にすると、その項目がいつまでも一覧の先頭に居座る。
+//   ★★2026-09-07・ユーザー指摘「更新情報の時間がおかしい / さっき直したんじゃないの？ /
+//     ちゃんとリアルタイムで合わせて」。1回目の修正では**日付(YYYY-MM-DD)だけ**を比べていたため、
+//     同じ日の未来時刻(いま17時なのに 23:30 / 21:00 / 20:40 …)を8件見逃していた。
+//     日付ではなく**日時**で比べる。
+const nowJst = (() => {
+  const d = new Date(Date.now() + 9 * 3600 * 1000); // JST
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+})();
+const future = entries.filter(e => e.date > nowJst);
+check('未来の日時がない', future.length === 0,
+  `${future.length}件${future.length ? `(例: ${future[0].date} / いまは ${nowJst})` : ''}`);
+
+// ★日時は「そのエントリが入ったコミットの時刻(JST)」に合わせる。
+//   適当な連番(21:00 / 20:40 / 20:10 …)を振ると、実際の作業時刻とずれていく。
+//   git のコミット日時と突き合わせ、1時間以上ずれているものを拾う。
+//   (git が使えない環境ではこの確認だけ飛ばす)
+try {
+  const { execFileSync } = require('child_process');
+  const log = execFileSync('git', ['log', '--reverse', '--format=%H %ad', '--date=format:%Y-%m-%d %H:%M',
+    '--', 'monster-hero/data/changelog.js'], { cwd: root, encoding: 'utf8' }).trim().split('\n');
+  const timeOf = new Map();
+  for (const line of log) {
+    if (!line.trim()) continue;
+    const [sha, ...rest] = line.split(' ');
+    const when = rest.join(' ');
+    const diff = execFileSync('git', ['show', sha, '--format=', '-U0', '--', 'monster-hero/data/changelog.js'],
+      { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    for (const m2 of diff.matchAll(/^\+.*?title:'((?:[^'\\]|\\.)*)'/gm)) {
+      if (!timeOf.has(m2[1])) timeOf.set(m2[1], when);
+    }
+  }
+  const drift = [];
+  for (const m2 of changelog.matchAll(/date: "([^"]+)"[^\n]*?title:'((?:[^'\\]|\\.)*)'/g)) {
+    const real = timeOf.get(m2[2]);
+    if (!real) continue;
+    const gap = Math.abs(new Date(`${m2[1]}:00`) - new Date(`${real}:00`)) / 3600000;
+    if (gap >= 1) drift.push(`${m2[1]}(実際 ${real}) ${m2[2].slice(0, 20)}`);
+  }
+  check('日時が実際のコミット時刻と合っている', drift.length === 0,
+    `${drift.length}件${drift.length ? `(例: ${drift[0]})` : ''}`);
+} catch (e) {
+  console.log(`--  コミット時刻との突き合わせは飛ばす(${e && e.message ? e.message.split('\n')[0] : e})`);
+}
 
 // ---- 書いてある順 ----
 // ここが崩れていても表示は日付順に直すが、書くときも新しいものを上へ足すのが本来

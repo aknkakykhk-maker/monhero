@@ -238,13 +238,32 @@ check('SLIDE帯のSVGは left/top ではなく transform で動かし、drop-sha
 // 箱の ::before/::after に掛けた装飾は遠くでも手前の大きさのまま残る。装飾は粒(data-rhythm-note-head)に掛ける。
 {
   const indexHtml=fs.readFileSync(path.join(ROOT,'monster-hero/index.html'),'utf8');
-  check('index.html の装飾はノーツ要素の箱(基準幅で固定)ではなく粒に掛ける(モンスターノーツの光・角丸・FLICKの矢印)',
+  check('index.html の装飾はノーツ要素の箱(基準幅で固定)ではなく粒に掛ける(モンスターノーツの光・角丸)',
     !/\[data-rhythm-note\]\[data-rhythm-monster-note\]::(before|after)/.test(indexHtml)
     &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::before {')
     &&indexHtml.includes('[data-rhythm-note][data-rhythm-monster-note] > [data-rhythm-note-head]::after {')
-    &&indexHtml.includes('border-radius:calc(5px / var(--rhythm-note-cap-scale,1)) / 5px !important;')
-    &&indexHtml.includes('transform:translateX(-50%) scaleX(calc(1 / var(--rhythm-note-cap-scale,1)));'));
+    &&indexHtml.includes('border-radius:calc(5px / var(--rhythm-note-cap-scale,1)) / 5px !important;'));
+  // ★2026-09-07・ユーザー指摘「モンスターノーツとフリックノーツによく分からない縦線がある」。
+  //   ノーツの子は [hold-body] → [end-bar] → [note-head] → (絵があれば)[monster-face] の順なので、
+  //   マスモンの絵が入るノーツでは **最後のspanが絵** になる。span:last-child で装飾を書くと
+  //   色も枠も光も絵のほうへ付いてしまう。粒は必ず [data-rhythm-note-head] で名指しする。
+  //   注意書き自体に span:last-child と書くので、まず /* … */ のコメントを外してから見る
+  const noteDecorLastChild=(src)=>src.replace(/\/\*[\s\S]*?\*\//g,'').split('\n')
+    .filter(line=>line.includes('data-rhythm-note')&&line.includes('span:last-child'))
+    .map(line=>line.trim().slice(0,80));
+  for(const [name,src] of [['index.html',indexHtml],['data/rhythm-mode.js',data]]){
+    const bad=noteDecorLastChild(src);
+    check(`${name}: ノーツの装飾を span:last-child で書いていない(マスモンの絵に当たる)`,
+      bad.length===0,bad[0]||'');
+  }
 }
+// ★矢印は粒の ::after ではなく実体のある要素で描く。幅広ノーツ(5サブレーン以上)の両端の縁取りが
+//   粒の ::before/::after を使っているため、疑似要素で矢印を作ると幅広のFLICKで場所を取り合う。
+check('FLICKの矢印は疑似要素ではなく [data-rhythm-flick-arrow] という要素で描く(幅広ノーツの縁取りと衝突させない)',
+  data.includes('[data-rhythm-flick-arrow]{position:absolute;')
+  &&data.includes('clip-path:polygon(50% 0,100% 100%,0 100%);')
+  &&gameSrc.includes("note.type==='FLICK'&&<i data-rhythm-flick-arrow aria-hidden=\"true\"/>")
+  &&!/\[data-note-type="FLICK"\][^\n]*::after\{content:"▲"/.test(data));
 check('粒の端の丸みと FLICK の矢印は 0.05 刻みの比率(--rhythm-note-cap-scale)で scaleX を打ち消す(塗り直しを1回の落下で10回ほどに抑える)',
   data.includes("const capScale=(Math.max(.05,Math.round(Math.min(1,width/baseWidth)*20)/20)).toFixed(2);")
   &&data.includes('[data-rhythm-note]>[data-rhythm-note-head]{border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px}')

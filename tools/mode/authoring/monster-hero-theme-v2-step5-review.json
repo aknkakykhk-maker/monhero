@@ -470,7 +470,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 1
+      "strained": 0
      },
      "noteCount": 260,
      "densityPerSecond": 1.81,
@@ -528,7 +528,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 1
+      "strained": 0
      },
      "noteCount": 232,
      "densityPerSecond": 1.62,
@@ -571,7 +571,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 10
+      "strained": 1
      },
      "noteCount": 355,
      "densityPerSecond": 2.44,
@@ -601,7 +601,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 12
+      "strained": 2
      },
      "noteCount": 363,
      "densityPerSecond": 2.5,
@@ -629,7 +629,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 11
+      "strained": 2
      },
      "noteCount": 355,
      "densityPerSecond": 2.44,
@@ -663,7 +663,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 11
+      "strained": 2
      },
      "noteCount": 355,
      "densityPerSecond": 2.44,
@@ -695,7 +695,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 12
+      "strained": 2
      },
      "noteCount": 351,
      "densityPerSecond": 2.41,
@@ -729,7 +729,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 9
+      "strained": 0
      },
      "noteCount": 355,
      "densityPerSecond": 2.44,
@@ -759,7 +759,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 2
+      "strained": 0
      },
      "noteCount": 355,
      "densityPerSecond": 2.44,
@@ -789,7 +789,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 9
+      "strained": 0
      },
      "noteCount": 335,
      "densityPerSecond": 2.3,
@@ -835,7 +835,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 32
+      "strained": 7
      },
      "noteCount": 455,
      "densityPerSecond": 3.08,
@@ -865,7 +865,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 24
+      "strained": 3
      },
      "noteCount": 475,
      "densityPerSecond": 3.21,
@@ -895,7 +895,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 33
+      "strained": 5
      },
      "noteCount": 455,
      "densityPerSecond": 3.08,
@@ -923,7 +923,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 31
+      "strained": 4
      },
      "noteCount": 455,
      "densityPerSecond": 3.08,
@@ -957,7 +957,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 27
+      "strained": 6
      },
      "noteCount": 444,
      "densityPerSecond": 3,
@@ -991,7 +991,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 35
+      "strained": 9
      },
      "noteCount": 454,
      "densityPerSecond": 3.07,
@@ -1023,7 +1023,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 37
+      "strained": 4
      },
      "noteCount": 434,
      "densityPerSecond": 2.93,
@@ -1053,7 +1053,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 27
+      "strained": 9
      },
      "noteCount": 348,
      "densityPerSecond": 2.36,
@@ -1099,7 +1099,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 45
+      "strained": 13
      },
      "noteCount": 484,
      "densityPerSecond": 3.28,
@@ -1127,7 +1127,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 43
+      "strained": 14
      },
      "noteCount": 504,
      "densityPerSecond": 3.42,
@@ -1157,7 +1157,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 43
+      "strained": 14
      },
      "noteCount": 504,
      "densityPerSecond": 3.42,
@@ -1187,7 +1187,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 43
+      "strained": 14
      },
      "noteCount": 504,
      "densityPerSecond": 3.42,
@@ -1219,7 +1219,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 38
+      "strained": 11
      },
      "noteCount": 497,
      "densityPerSecond": 3.36,
@@ -1253,7 +1253,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 46
+      "strained": 13
      },
      "noteCount": 502,
      "densityPerSecond": 3.4,
@@ -1283,7 +1283,7 @@
      },
      "playability": {
       "impossible": 0,
-      "strained": 52
+      "strained": 15
      },
      "noteCount": 504,
      "densityPerSecond": 3.42,
@@ -1317,7 +1317,7 @@
      },
      "playability": {
       "impossible": 1,
-      "strained": 40
+      "strained": 14
      },
      "noteCount": 498,
      "densityPerSecond": 3.38,

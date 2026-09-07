@@ -41,9 +41,11 @@ check('押し始めの線はspanではない',!!mark&&mark[1]!=='span',mark?`<${
 check('押し始めの線は長押しのときだけ出す',/\{!monster&&note\.type==='HOLD'&&<\w+ data-rhythm-hold-head-mark/.test(source));
 check('押し始めの線は入力を奪わない',!!mark&&/pointer-events-none/.test(mark[2]));
 
-// 幅広ノーツの両端バーは >span:last-child の擬似要素。粒の中の線とは別の場所に出る
+// 幅広ノーツの両端バーは粒(data-rhythm-note-head)の擬似要素。粒の中の線とは別の場所に出る。
+// 2026-09-07: セレクタを span:last-child から [data-rhythm-note-head] へ変えた。
+// マスモンの絵が入るノーツでは最後のspanが絵になるため、縁取りが絵へ付いて縦線に見えていた。
 check('幅広ノーツの両端バーは今までどおり粒の擬似要素',
-  rhythm.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>span:last-child::before'));
+  rhythm.includes('[data-rhythm-note][data-rhythm-note-wide="1"]>[data-rhythm-note-head]::before'));
 
 // 見た目だけの変更であることの裏取り(幅と当たり判定の値は不変)
 check('ノーツの幅の割合は変えていない',rhythm.includes('const RHYTHM_NOTE_WIDTH_RATIO=.78;'));
