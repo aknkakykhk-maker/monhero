@@ -10753,6 +10753,7 @@ const RHYTHM_SONG_ENTRIES = [
     songId:'six_eternel_remix',
     displayName:'SIX ÉTERNEL ―愛はひとつじゃない―',
     subtitle:'ドパガキリミックス',
+    artwork:'images/song-art/six-eternel.jpg?v=25486603b6de',
     // 2026-09-05、ユーザー指示「いいとこで切れてたからショートバージョンを採用して」。
     // 全尺(4分58秒)ではなく、頭からサビの終わりまでを切り出した2分30秒のほうを使う。
     bgmTrackId:'six_eternel_remix_beat',
