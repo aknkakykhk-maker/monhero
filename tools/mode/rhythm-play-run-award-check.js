@@ -92,6 +92,19 @@ for (const file of files) {
   check(`${rel}: 帯に何周ぶん入ったかを出す`,
     compact.includes('rhythmPlayRunAward.loops}周ぶん入りました') || compact.includes('rhythmPlayRunAward.loops,'));
   check(`${rel}: 詳細にも内訳を出す`, src.includes('data-quick-run-play-award'));
+
+  // ---- 文言が仕様に追いついているか ----
+  // ★2026-09-07・ユーザー指摘「演奏中の文言ってこれであってる？仕様変わったよね？」。
+  //   追いつき方式のころの説明(「そのぶんは曲のあとに速く進んで取り戻すので、損にはなりません」)が
+  //   帯に残っていた。仕組みを変えたら、それを説明している文も必ず一緒に直す。
+  check(`${rel}: 帯の説明が「曲の長さぶんの周回が入る」になっている`,
+    compact.includes('曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります'));
+  check(`${rel}: 追いつき方式のころの説明が残っていない`,
+    !compact.includes('そのぶんは曲のあとに速く進んで取り戻すので、損にはなりません'));
+  // まだその難易度をクリアしていない人には入らないので、そこも言い分ける
+  check(`${rel}: 入らない人には別の説明を出す`,
+    compact.includes('rhythmPlayRunLoopsAllowed(difficulty,quickClearCounts)?')
+    && compact.includes('この難易度をクイックで一度クリアすると'));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
