@@ -182,8 +182,7 @@ for(const line of status){
 }
 const finalPayload=JSON.stringify({
   summary:{registryEntry:reg,levels,counts,durationSeconds:Number(seconds)},
-  diff,
-  newFiles
+  diff
 });
 const chunkSize=48000,chunks=Math.ceil(finalPayload.length/chunkSize);
 console.log('[MH_ALT_FINAL_BEGIN] chunks='+chunks+' chars='+finalPayload.length);
