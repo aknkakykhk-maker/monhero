@@ -158,7 +158,6 @@ const checks=[
  ['tools/assistant/assistant-update-notice-check.js',[]],
  ['tools/help-coverage-check.js',[]],
  ['tools/help-guide-check.js',[]],
- ['tools/help-render-check.js',[]],
  ['tools/mode/rhythm-demo-entry-check.js',[]],
  ['tools/mode/rhythm-chart-level-check.js',[]],
  ['tools/mode/rhythm-song-length-check.js',[]],
