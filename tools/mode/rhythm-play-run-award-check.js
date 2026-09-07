@@ -95,6 +95,12 @@ for (const file of files) {
     compact.includes('if(rhythmPlayRunAwardRef.current){stopCatchUp();return;}'));
   check(`${rel}: 演奏に入るとき前回の表示を消す`,
     compact.includes('setRhythmPlayRunAward(null);'));
+  // ★2026-09-07・ユーザー指摘「演奏後の表示が戻らない / 時間で戻すようにして」。
+  //   次の演奏に入るまで消えず、5周目のまま「2周ぶん入りました」が居座っていた。
+  //   詳細(内訳)を開いているあいだは読んでいる最中なので数えない。
+  check(`${rel}: 時間が経ったらふつうの進捗表示へ戻す`,
+    compact.includes('setTimeout(()=>setRhythmPlayRunAward(null),RHYTHM_PLAY_RUN_AWARD_SHOW_MS)')
+    && compact.includes('if(quickRunDetailOpen)return;'));
 
   // ---- 見せ方 ----
   check(`${rel}: 帯に何周ぶん入ったかを出す`,

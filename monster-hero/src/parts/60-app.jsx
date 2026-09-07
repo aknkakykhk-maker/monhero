@@ -2394,6 +2394,16 @@ function MonsterHeroGame() {
     if (!rhythmScreenOpen || runStageRef.current == null || !autoRepeatRef.current) { stopCatchUp(); return; }
     beginCatchUp(Date.now() - startedAt);
   }, [gameState]);
+  // 「演奏で ◯周ぶん入りました」は、しばらくしたらふつうの進捗表示へ戻す。
+  // ★以前は次の演奏に入るまで消えず、5周目のまま「2周ぶん入りました」が居座っていた
+  //   (2026-09-07・ユーザー指摘「演奏後の表示が戻らない / 時間で戻すようにして」)。
+  //   詳細(内訳)を開いているあいだは読んでいる最中なので消さず、閉じてから数える。
+  useEffect(() => {
+    if (!rhythmPlayRunAwardState) return;
+    if (quickRunDetailOpen) return;
+    const timer = setTimeout(() => setRhythmPlayRunAward(null), RHYTHM_PLAY_RUN_AWARD_SHOW_MS);
+    return () => clearTimeout(timer);
+  }, [rhythmPlayRunAwardState, quickRunDetailOpen]);
   // 追いつきが終わったら表示も戻す。バトルへ戻ったときとランが終わったときも止める
   useEffect(() => {
     if (!catchingUp) return;

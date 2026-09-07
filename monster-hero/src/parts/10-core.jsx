@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -243,6 +243,11 @@ const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extre
 //   そうしないと、止めている時間だけ稼げてしまう。
 //   2分25秒 → 2周 / 3分00秒 → 3周 / 3分30秒 → 3周（分の切り捨て、下限2周）。
 const RHYTHM_PLAY_RUN_LOOP_MIN = 2;
+// 「演奏で ◯周ぶん入りました」を帯に出しておく時間。
+// ★出しっぱなしにしていたため、次の演奏に入るまでずっと同じ文が残っていた
+//   (2026-09-07・ユーザー指摘「演奏後の表示が戻らない / 時間で戻すようにして」)。
+//   読むには足りて、居座らない長さにする。
+const RHYTHM_PLAY_RUN_AWARD_SHOW_MS = 12000;
 const rhythmPlayRunLoops = (durationMs) => {
   const ms = Number(durationMs);
   if (!Number.isFinite(ms) || ms <= 0) return 0;

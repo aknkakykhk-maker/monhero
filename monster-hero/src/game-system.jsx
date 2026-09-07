@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4189e61aa97c110f
+// generated-sha256: 761153ee0910075a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 10:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 10:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -250,6 +250,11 @@ const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extre
 //   そうしないと、止めている時間だけ稼げてしまう。
 //   2分25秒 → 2周 / 3分00秒 → 3周 / 3分30秒 → 3周（分の切り捨て、下限2周）。
 const RHYTHM_PLAY_RUN_LOOP_MIN = 2;
+// 「演奏で ◯周ぶん入りました」を帯に出しておく時間。
+// ★出しっぱなしにしていたため、次の演奏に入るまでずっと同じ文が残っていた
+//   (2026-09-07・ユーザー指摘「演奏後の表示が戻らない / 時間で戻すようにして」)。
+//   読むには足りて、居座らない長さにする。
+const RHYTHM_PLAY_RUN_AWARD_SHOW_MS = 12000;
 const rhythmPlayRunLoops = (durationMs) => {
   const ms = Number(durationMs);
   if (!Number.isFinite(ms) || ms <= 0) return 0;
@@ -13400,6 +13405,16 @@ function MonsterHeroGame() {
     if (!rhythmScreenOpen || runStageRef.current == null || !autoRepeatRef.current) { stopCatchUp(); return; }
     beginCatchUp(Date.now() - startedAt);
   }, [gameState]);
+  // 「演奏で ◯周ぶん入りました」は、しばらくしたらふつうの進捗表示へ戻す。
+  // ★以前は次の演奏に入るまで消えず、5周目のまま「2周ぶん入りました」が居座っていた
+  //   (2026-09-07・ユーザー指摘「演奏後の表示が戻らない / 時間で戻すようにして」)。
+  //   詳細(内訳)を開いているあいだは読んでいる最中なので消さず、閉じてから数える。
+  useEffect(() => {
+    if (!rhythmPlayRunAwardState) return;
+    if (quickRunDetailOpen) return;
+    const timer = setTimeout(() => setRhythmPlayRunAward(null), RHYTHM_PLAY_RUN_AWARD_SHOW_MS);
+    return () => clearTimeout(timer);
+  }, [rhythmPlayRunAwardState, quickRunDetailOpen]);
   // 追いつきが終わったら表示も戻す。バトルへ戻ったときとランが終わったときも止める
   useEffect(() => {
     if (!catchingUp) return;
