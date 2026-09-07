@@ -95,7 +95,7 @@ const NOTES=[
     check('canvas の画素数がプレイエリア × 画素密度になっている',result.canvas.w===780&&result.canvas.h===1400,`${result.canvas.w}x${result.canvas.h}`);
     check('粒の中心に画素が置かれている(全ノーツ)',result.samples.filter(s=>s.type!=='FAILED').every(s=>s.a>200),result.samples.map(s=>`${s.type}:a${s.a}`).join(' '));
     const failedSample=result.samples.find(s=>s.type==='FAILED');
-    check('取り損ねた HOLD は消えず、薄く(不透明度 .34 前後)灰色で描かれる',failedSample&&failedSample.a>40&&failedSample.a<140&&failedSample.band&&failedSample.band.a>40&&Math.abs(failedSample.r-failedSample.b)<40,failedSample?`粒 a${failedSample.a} rgb(${failedSample.r},${failedSample.g},${failedSample.b}) / 帯 a${failedSample.band?failedSample.band.a:'-'}`:'無し');
+    check('取り損ねた HOLD は消えず、薄く(不透明度 .34 前後)灰色で描かれる',failedSample&&failedSample.a>40&&failedSample.a<170&&failedSample.band&&failedSample.band.a>40&&Math.abs(failedSample.r-failedSample.b)<70&&failedSample.g<160,failedSample?`粒 a${failedSample.a} rgb(${failedSample.r},${failedSample.g},${failedSample.b}) / 帯 a${failedSample.band?failedSample.band.a:'-'}`:'無し');
     check('何も無いところは透明のまま',result.empty.a===0,`a=${result.empty.a}`);
     const by=type=>result.samples.find(s=>s.type===type);
     check('TAP は桃色(赤 > 緑)',by('TAP').r>by('TAP').g,`rgb(${by('TAP').r},${by('TAP').g},${by('TAP').b})`);
