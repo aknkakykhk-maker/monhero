@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 82842b624aa4149e
+// source-sha256: 4354e8f25b7815da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f0eb8b2c4f3a461c
+// generated-sha256: b4446edb8023e4a7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-07 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-07 23:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8799,10 +8799,15 @@ const RHYTHM_MODE_PUBLIC_RELEASE = true;
 // これが true になると、ヘルプの項目・更新履歴・みゅあの告知・画面のなかの使い方案内が
 // 同時に出る(片方だけ先に出ることが起きないよう、4つとも同じフラグで出入りする)。
 const QUICK_RHYTHM_LINK_PUBLIC_RELEASE = true;
+// モンヒロビートのノーツを canvas 1枚へ描く方式(発熱対策・docs/spec/RHYTHM_MODE.md)。
+// false のあいだは従来の要素(DOM)で描き、デバッグ画面の「ノーツの描き方」で上書きしたときだけ canvas になる。
+// 実機で「冷ました状態で最初の1分・交互に」比べて問題が無ければ true にする。true にすると更新履歴・ヘルプの項目が出る。
+const RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE = false;
 const RELEASE_FLAGS = {
   speciesChallenge: SPECIES_CHALLENGE_PUBLIC_RELEASE,
   rhythmMode: RHYTHM_MODE_PUBLIC_RELEASE,
-  quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE
+  quickRhythmLink: QUICK_RHYTHM_LINK_PUBLIC_RELEASE,
+  rhythmCanvasNotes: RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE
 };
 // releaseFlag = そのフラグが立つまで出さない。unreleasedFlag = そのフラグが立ったら出さない。
 // 逆向きの名札が要るのは「準備中です」の案内で、公開したあとも残っていると
@@ -18230,7 +18235,16 @@ const RhythmTapTest = ({
   // ノーツのDOMは譜面が変わらないかぎり同じものでよい。ここをuseMemoで固定しないと、
   // ノーツを1つ判定して setView するたびに全ノーツ(最大300要素)をReactが作り直し、
   // ref も付け直すため、タップのたびに一瞬止まって見える(2026-09-04の実機報告)。
-  const noteElements = useMemo(() => chart.notes.map((note, index) => {
+  // ノーツを canvas 1枚へ描くか(発熱対策・2026-09-07)。公開フラグとデバッグ画面の上書きで決まり、演奏の途中では変えない
+  const canvasNotes = useState(() => rhythmCanvasNotesActive(RELEASE_FLAGS.rhythmCanvasNotes))[0];
+  const noteCanvasRef = useRef(null),
+    faceRefs = useRef([]);
+  useEffect(() => {
+    if (!canvasNotes) return undefined;
+    RHYTHM_CANVAS_RENDERER.attach(noteCanvasRef.current);
+    return () => RHYTHM_CANVAS_RENDERER.release();
+  }, [canvasNotes]);
+  const noteElements = useMemo(() => canvasNotes ? null : chart.notes.map((note, index) => {
     const monsterSlot = rhythmNoteMonsterSlot(note),
       monster = monsterSlot ? monsters[monsterSlot - 1] || null : null;
     return /*#__PURE__*/React.createElement("div", {
@@ -18291,6 +18305,31 @@ const RhythmTapTest = ({
       className: "h-full w-full object-contain"
     })));
   }), [chart.notes, monsterSignature, settings.lightweightMode, settings.effectAmount]);
+  // canvas で描くときも、マスモンの絵(染色済み・透明部分あり)だけは要素のまま canvas の上へ重ねる。
+  // 位置と大きさは tick が transform で書く。絵が無いノーツには要素を作らない
+  const canvasFaceElements = useMemo(() => canvasNotes ? chart.notes.map((note, index) => {
+    const monsterSlot = rhythmNoteMonsterSlot(note),
+      monster = monsterSlot ? monsters[monsterSlot - 1] || null : null;
+    if (!monster) return null;
+    return /*#__PURE__*/React.createElement("span", {
+      key: index,
+      ref: el => faceRefs.current[index] = el,
+      "data-rhythm-canvas-face": true,
+      "aria-hidden": "true",
+      style: {
+        display: 'none'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      "data-rhythm-canvas-face-art": true
+    }, monster.imageUrl && /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: monster.baseId,
+      src: monster.imageUrl,
+      alt: "",
+      masuColors: monster.colors,
+      draggable: false,
+      className: "h-full w-full object-contain"
+    })));
+  }).filter(Boolean) : null, [canvasNotes, chart.notes, monsterSignature]);
   // レーン枠・サブレーン境界・サブレーン発光も、遊んでいるあいだは中身が変わらない。
   // 発光の ON/OFF は setPressedLanes が直接DOMへ書くので、Reactが作り直す必要はない。
   const laneElements = useMemo(() => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -18908,6 +18947,89 @@ const RhythmTapTest = ({
       updateJudgmentBand(travel, travelMs);
       // このフレームでノーツを正しい場所へ置けるか。置けないなら判定も進めない(下のvisitNoteを参照)
       const placeable = !!travel && travel.ready !== false;
+      // canvas で描くフレームの準備(全面を消し、大きさが変わっていれば作り直す)。DOM 版では何もしない
+      const canvasReady = canvasNotes && placeable && RHYTHM_CANVAS_RENDERER.begin(travel.rect, {
+        nowMs: frameNowMs,
+        effect: settings.effectAmount,
+        lightweight: settings.lightweightMode,
+        sizeScale: settings.noteSize / 100
+      });
+      // canvas 版のノーツ1個。見えるか・どこに置くかの決め方は DOM 版(下の visitNote)と同じ式。
+      // 判定はここへ来る前に visitNote が済ませている。描くだけで、judgment・score・input には触らない
+      const paintCanvasNote = note => {
+        const failedTrail = note.done && note._rhythmFinalJudgment === 'MISS' && (note.type === 'HOLD' || rhythmNoteIsSlide(note)) && songTimeMs < rhythmReleaseTargetMs(note);
+        const clearFlash = note.done && Number.isFinite(note._rhythmClearAt) && songTimeMs - note._rhythmClearAt < RHYTHM_CLEAR_FLASH_MS;
+        const face = faceRefs.current[note.index] || null;
+        const hideFace = () => {
+          if (face && face._rhythmFaceShown !== false) {
+            face.style.display = 'none';
+            face._rhythmFaceShown = false;
+          }
+        };
+        if (note.done && !failedTrail && !clearFlash) {
+          hideFace();
+          return;
+        }
+        const progress = 1 - (note.timeMs - visualTime) / travelMs,
+          visible = failedTrail || note.activePointerId !== null || progress >= -.1 && progress <= 1.18;
+        if (!visible || !travel || !canvasReady) {
+          hideFace();
+          return;
+        }
+        perfDrawn++;
+        let yPx = travel.spawnY + rhythmProjectTravelProgress(progress) * travel.travelPx;
+        if (note.type === 'HOLD' && note.activePointerId !== null) yPx = travel.judgmentY;
+        if (clearFlash) yPx = travel.judgmentY;
+        yPx = Math.round(yPx);
+        const releaseTargetMs = rhythmReleaseTargetMs(note),
+          releaseProgress = 1 - (releaseTargetMs - visualTime) / travelMs,
+          releaseYpx = Math.round(travel.spawnY + rhythmProjectTravelProgress(releaseProgress) * travel.travelPx),
+          bodyPx = Math.max(0, yPx - releaseYpx);
+        const hasBody = note.type === 'HOLD' || rhythmNoteIsSlide(note);
+        const activeSlideLane = RHYTHM_GESTURE_RUNTIME.slideVisualLaneForIndex(note.index),
+          visualLane = activeSlideLane === null ? note.lane : activeSlideLane;
+        const geo = rhythmNoteCanvasGeometry(note, yPx, visualLane, travel.rect, travel.noteHeight, hasBody ? releaseYpx : null, {
+          chartNowMs: songTimeMs - settings.judgmentTimingOffsetMs,
+          visualTime,
+          travelMs,
+          spawnY: travel.spawnY,
+          travelPx: travel.travelPx
+        }, hasBody ? bodyPx : 0);
+        const monster = !!monsterForNote(note);
+        const depthScale = Math.round((0.56 + geo.scale * .44) * 100) / 100,
+          brightness = Math.round((0.72 + geo.scale * .28) * 100) / 100;
+        RHYTHM_CANVAS_RENDERER.drawNote(note, geo, {
+          failed: failedTrail,
+          monster,
+          wide: rhythmNoteIsWide(note),
+          pressed: note.type === 'HOLD' && note.activePointerId !== null,
+          alpha: failedTrail ? .34 : 1,
+          pop: clearFlash ? Math.min(1, (songTimeMs - note._rhythmClearAt) / RHYTHM_CLEAR_FLASH_MS) : null,
+          depthScale,
+          brightness
+        });
+        if (face) {
+          const transform = `translate(${(geo.head.cx - 21).toFixed(1)}px,${(geo.head.cy - 21).toFixed(1)}px)`;
+          if (face._rhythmFaceTransform !== transform) {
+            face.style.transform = transform;
+            face._rhythmFaceTransform = transform;
+          }
+          const scale = (depthScale * 1.28).toFixed(3);
+          if (face._rhythmFaceScale !== scale) {
+            face.style.setProperty('--rhythm-face-scale', scale);
+            face._rhythmFaceScale = scale;
+          }
+          const clearFlag = clearFlash ? '1' : '';
+          if (face._rhythmFaceClear !== clearFlag) {
+            if (clearFlag) face.dataset.rhythmClear = '1';else delete face.dataset.rhythmClear;
+            face._rhythmFaceClear = clearFlag;
+          }
+          if (face._rhythmFaceShown !== true) {
+            face.style.display = '';
+            face._rhythmFaceShown = true;
+          }
+        }
+      };
       // 練習の説明。曲の時刻で切り替わる。変わったときだけDOMへ書く(毎フレームReactを動かさない)
       if (tutorial) {
         const step = rhythmTutorialStepAt(songTimeMs);
@@ -18955,6 +19077,10 @@ const RhythmTapTest = ({
           return;
         }
         if (!note.done && note.activePointerId === null && note.releasedAtMs == null && songTimeMs - (note.timeMs + settings.judgmentTimingOffsetMs) > RHYTHM_INPUT_MATCH_WINDOW_MS) applyJudgment(note, 'MISS', songTimeMs - note.timeMs);
+        if (canvasNotes) {
+          paintCanvasNote(note);
+          return;
+        }
         const el = laneRefs.current[note.index];
         if (!el) return;
         // 失敗したHOLD/SLIDEはその場で消さず、譜面上の終端まで薄いグレーで流し続ける。
@@ -19074,6 +19200,7 @@ const RhythmTapTest = ({
         visitNote(note);
       }
       run.notesReady = true;
+      if (canvasNotes) RHYTHM_CANVAS_RENDERER.end();
       RHYTHM_PERF.notes(perfScanned, perfDrawn, scanFrom, run.notesAscending);
       // 無敵・我慢の残り時間と根性ストックは、毎フレームsetStateせずDOMへ直接書く。
       // スコアやコンボと同じ頻度でReactを走らせると、そのぶんノーツの描画が遅れるため。
@@ -19276,6 +19403,17 @@ const RhythmTapTest = ({
         el._rhythmSlideBody = undefined;
       }
     });
+    faceRefs.current.forEach(el => {
+      if (el) {
+        el.style.display = 'none';
+        delete el.dataset.rhythmClear;
+        el._rhythmFaceShown = false;
+        el._rhythmFaceClear = undefined;
+        el._rhythmFaceTransform = undefined;
+        el._rhythmFaceScale = undefined;
+      }
+    });
+    if (canvasNotes) RHYTHM_CANVAS_RENDERER.clear();
     rhythmLayoutPlayArea(playAreaRef.current);
     updateJudgmentBand(measureTravel(), rhythmTravelMsForSpeed(settings.noteSpeed));
     /* 使い回すヒットエフェクトを先に作っておく。曲の途中で10個まとめて作ると、そこで一瞬引っかかる */
@@ -20048,7 +20186,11 @@ const RhythmTapTest = ({
       bottom: 'calc(12% + 78px)',
       textShadow: settings.lightweightMode || settings.effectAmount === 'MINIMAL' ? 'none' : '0 0 10px rgba(251,191,36,.8)'
     }
-  }, view.ability.ability, "\uFF01"), noteElements, tutorial && /*#__PURE__*/React.createElement("div", {
+  }, view.ability.ability, "\uFF01"), canvasNotes ? /*#__PURE__*/React.createElement("canvas", {
+    ref: noteCanvasRef,
+    "data-rhythm-note-canvas": true,
+    "aria-hidden": "true"
+  }) : noteElements, canvasFaceElements, tutorial && /*#__PURE__*/React.createElement("div", {
     ref: tutorialBannerRef,
     "data-rhythm-tutorial-banner": true,
     className: "pointer-events-none absolute inset-x-3 top-[14%] z-20 rounded-2xl border border-cyan-300/50 bg-slate-950/92 px-3 py-2.5 text-center shadow-[0_0_18px_rgba(34,211,238,.18)]"
@@ -20249,6 +20391,8 @@ function MonsterHeroGame() {
   // 性能計測(デバッグ限定)。既定OFF。ONの記憶は専用キー mh_rhythm_perf_v1 に分ける
   const [rhythmPerfOn, setRhythmPerfOn] = useState(() => RHYTHM_PERF.enabled);
   const [rhythmPerfStats, setRhythmPerfStats] = useState(null);
+  // ノーツの描き方の上書き(検証用・デバッグ限定)。'' = 公開設定に従う / 'dom' / 'canvas'
+  const [rhythmCanvasPref, setRhythmCanvasPref] = useState(() => rhythmCanvasNotesPreference());
   const [rhythmChartToolsOpened, setRhythmChartToolsOpened] = useState(false);
   // 音ゲー体験版の入口。デバッグ画面と同じ保存値を読むが、開く画面は体験版ホーム。
   // 体験版で遊べるのは Monster Hero 1曲・EASY/NORMAL/HARD だけで、デバッグ用の曲は出さない。
@@ -39760,7 +39904,23 @@ function MonsterHeroGame() {
       className: "text-slate-400"
     }, label), /*#__PURE__*/React.createElement("dd", {
       className: "text-right font-black text-amber-100"
-    }, value))))), /*#__PURE__*/React.createElement("div", {
+    }, value))))), /*#__PURE__*/React.createElement("section", {
+      "data-rhythm-canvas-panel": true,
+      className: "mb-3 rounded-2xl border border-cyan-400/40 bg-cyan-950/20 p-3"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-xs font-black text-cyan-200"
+    }, "\u30CE\u30FC\u30C4\u306E\u63CF\u304D\u65B9\uFF08\u691C\u8A3C\u7528\uFF09"), /*#__PURE__*/React.createElement("p", {
+      className: "mt-1 text-[9px] font-bold leading-relaxed text-cyan-100/80"
+    }, "canvas 1\u679A\u306B\u63CF\u304F\u65B9\u5F0F\uFF08\u767A\u71B1\u5BFE\u7B56\uFF09\u3068\u3001\u3053\u308C\u307E\u3067\u306E\u8981\u7D20\u3054\u3068\u306B\u63CF\u304F\u65B9\u5F0F\u3092\u5207\u308A\u66FF\u3048\u307E\u3059\u3002\u6B21\u306E\u6F14\u594F\u304B\u3089\u52B9\u304D\u307E\u3059\u3002\u300C\u81EA\u52D5\u300D\u306F\u516C\u958B\u8A2D\u5B9A\uFF08\u3044\u307E\u306F\u8981\u7D20\uFF09\u306B\u5F93\u3044\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, [['', '自動'], ['dom', '要素'], ['canvas', 'canvas']].map(([value, label]) => /*#__PURE__*/React.createElement("button", {
+      key: value || 'auto',
+      type: "button",
+      "data-rhythm-canvas-pref": value || 'auto',
+      "aria-pressed": rhythmCanvasPref === value,
+      onClick: () => setRhythmCanvasPref(rhythmCanvasNotesSetPreference(value)),
+      className: `min-h-[40px] flex-1 rounded-xl text-[11px] font-black ${rhythmCanvasPref === value ? 'bg-cyan-400 text-slate-900' : 'border border-white/20 bg-slate-900 text-slate-200'}`
+    }, label)))), /*#__PURE__*/React.createElement("div", {
       className: "mb-3"
     }, /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
       rhythmMonsterSlots: rhythmMonsterSlots,

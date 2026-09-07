@@ -5534,3 +5534,50 @@ BGM_TRACKS への1行を書き忘れると「曲えらびには並ぶのに無�
 理由の整理。DOM のまま軽くする案は、Chromium では減った数字が WebKit で逆に出ることがあり、
 実機で描き直しの量を数える手段も無い。発熱の対策は、描き直しを自分で持つ canvas 化で仕切り直す
 （公開フラグで DOM 版と切り替えられる形にし、実機では「冷ました状態で最初の1分・交互に」で比べる）。
+
+## ノーツを canvas 1枚へ描く（2026-09-07・公開フラグ `rhythmCanvasNotes`）
+
+発熱対策の本命。DOM のまま軽くする案が iPhone で逆効果だったため（上の節）、ノーツ・HOLD 帯・SLIDE 帯・
+終わりの横棒・矢印・モンスターノーツの光を、プレイエリアと同じ大きさの `<canvas data-rhythm-note-canvas>` 1枚へ
+毎フレーム描き直す方式にした。
+
+### 作り
+
+| 部品 | 場所 | 役割 |
+| --- | --- | --- |
+| `rhythmNoteCanvasGeometry` | `data/rhythm-mode.js` | ノーツ1個の「描く座標」。DOM 版 `rhythmLayoutNoteVisual` と同じ投影・同じ式（粒の中心と幅・HOLD 帯の外周・SLIDE 帯の四角形・横棒） |
+| `rhythmSlideSegmentQuads` | 同上 | `rhythmSlideSegmentPolygons` の数値版 |
+| `RHYTHM_CANVAS_RENDERER` | 同上 | `attach / begin / drawNote / end / clear`。光(box-shadow・drop-shadow 相当)は種類ごとに一度だけ描いた3分割の画像を貼る。粒の本体・帯・横棒は角丸・多角形の塗り |
+| `paintCanvasNote` | `30-rhythm-play.jsx` の tick | 見えるか・どこに置くかは DOM 版 `visitNote` と同じ式。判定は visitNote が済ませた後に描くだけ |
+| `data-rhythm-canvas-face` | 同上 | マスモンの絵（染色済み・透明部分あり）は要素のまま canvas の上へ重ね、transform で動かす |
+| `rhythmCanvasNotesActive(flag)` | `data/rhythm-mode.js` | 公開フラグ `RELEASE_FLAGS.rhythmCanvasNotes` と、デバッグ画面の上書き `mh_rhythm_canvas_v1`（'dom' / 'canvas'）で決める。演奏の途中では変えない |
+
+DOM 版はそのまま残してある。フラグが false のあいだは DOM 版で、デバッグ画面「音ゲーデバッグ → 設定・記録 → ノーツの描き方」で
+canvas を選んだときだけ canvas になる（次の演奏から）。
+
+### 描き方の対応
+
+| DOM 版 | canvas 版 |
+| --- | --- |
+| 粒: 角丸5px・縦の色の階調・1px の縁・上端の白い筋・box-shadow の光 | 角丸の塗り＋縁＋筋、光は3分割画像（両端はそのまま、中央だけ横へ伸ばす） |
+| 奥ほど暗い `filter:brightness(b)` | 粒の形に黒を `1-b` の濃さで重ねる（不透明な粒では同じ色） |
+| 奥行きの `scaleY`・ノーツサイズの `scale` | 粒の高さ・幅をその倍率で描く |
+| HOLD 帯: clipPath の多角形＋縦の階調 | 同じ点の多角形を塗る。外周の光は太い半透明の線 |
+| SLIDE 帯: polygon ごとの塗りと縁＋drop-shadow | 同じ四角形を塗る。ぼかしは外周の太い半透明の線 |
+| 終わりの横棒: 横の階調・縁・光・`scaleY` | 同じ。終点フリックは緑と三角の画像 |
+| FLICK の矢印（要素・drop-shadow） | 三角の画像（光ごと一度だけ描く） |
+| モンスターノーツ: 金の粒・輪・::before/::after の光・脈動 | 同じ色の粒と輪、光は2枚の3分割画像、脈動は透明度 |
+| 取った瞬間の弾け（scale 1→2.1・opacity .95→0・0.26秒） | 同じ数値で描く。帯と横棒はそのあいだ描かない |
+| 失敗した HOLD/SLIDE（灰色・opacity .34） | 灰色の色で、透明度 .34 |
+| 押さえている HOLD（brightness 1.3） | 白を .22 の濃さで重ねる |
+
+### 検査
+
+- `tools/mode/rhythm-canvas-geometry-check.js`（CI）… DOM 版の書き込みと canvas 版の座標を 11種 × 速度3 × 進み3 で突き合わせる（0.05px 以内。実測 0.01px）
+- `tools/mode/rhythm-canvas-render-check.js`（Playwright）… 粒の中心に画素があり、空きは透明で、種類ごとの色が出て、1フレームの JS が 4ms 未満（実測 7ノーツで中央値 0.40ms）
+
+### 実機での比べかた
+
+熱でフレーム時間が変わるので、「冷ました端末で、同じ曲の最初の1分だけ、要素 → canvas → 要素 → canvas と交互に」見る。
+デバッグ画面の「ノーツの描き方」で切り替え、性能計測の「最悪フレーム」「33ms超」と、体感のカクつき・熱で判断する。
+問題が無ければ `RHYTHM_CANVAS_NOTES_PUBLIC_RELEASE` を true にする（更新履歴とヘルプの項目が同時に出る）。

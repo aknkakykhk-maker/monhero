@@ -170,6 +170,10 @@ node tools/build.js --check
 
 `node mode/rhythm-input-cost-check.js` は、「指の座標 → レーン」の変換1回ごとに強制レイアウトが走っていないかを、擬似DOM上で実際に動かして数える。同じフレームのあいだは `getBoundingClientRect()` を測り直さず共有する作りにしたので、12回の指移動でレイアウト測定が1回に収まることを実測する。ただし**キャッシュがズレると入力位置がずれる**ため、この検査の主目的は鮮度の確認で、フレームが変わったら測り直すこと・resize / orientationchange / scroll で捨てることを固定する。あわせてサブレーン発光の要素キャッシュと差分更新、入力の逆投影・途中追従の猶予を変えていないことも確認する。
 
+`node mode/rhythm-canvas-geometry-check.js` は、canvas 版のノーツ座標(`rhythmNoteCanvasGeometry`)が DOM 版(`rhythmLayoutNoteVisual`)と同じ場所を指しているかを Node 上で突き合わせる(2026-09-07・canvas 化)。要素もどきへ DOM 版の書き込み(width / translate・HOLD 帯の clipPath・SLIDE 帯の polygon・ENDバーの left/top/width)を受け取り、11種のノーツ × 速度3 × 進み3 で 0.05px 以内を要求する。CI で回す。
+
+`node mode/rhythm-canvas-render-check.js` は、canvas 版の描画(`RHYTHM_CANVAS_RENDERER`)を実ブラウザ(Playwright Chromium)で動かし、粒の中心に画素が置かれること・何も無い場所が透明のままなこと・種類ごとの色(TAP=桃・FLICK=緑・HOLD=水色・SLIDE=紫・モンスター=金)・120フレーム描き続けたときの1フレームの JS 時間(中央値 4ms 未満)を確かめる。`--shot <path.png>` で描いた絵を保存できる。Playwright が無い環境では SKIP。
+
 `node mode/rhythm-render-cost-check.js` は、音ゲーのノーツ描画が1フレームあたりどれだけ「レイアウト」と「塗り直し」を起こしているかを、本番の `rhythm-mode.js` を読み込んだ実ブラウザ(Playwright Chromium)のトレースで数える(発熱対策の物差し・2026-09-07)。本体と同じ構造のノーツ(TAP×6・FLICK×1・HOLD×2・SLIDE×1)を本体の tick と同じ順で毎フレーム動かし、TAP/FLICK はレイアウトも塗り直しも 0、HOLD はレイアウト 0、全種類でレイアウト≦1(SLIDE の SVG の形の更新だけ)・塗り直し≦6 を要求する。`--report` で数値だけ、`--types=TAP,HOLD` で種類を絞って切り分け、`--write` で `mode/authoring/rhythm-render-cost.json` へ書き出す。Playwright が無い環境では SKIP。
 
 `node mode/rhythm-perf-check.js` は、音ゲーの性能計測(デバッグ限定)が「計測のために本体を重くしていない」ことを確かめる。記録器を実際にNode上で動かし、既定OFF・OFFのあいだは一切記録しないこと・フレーム時間と16.7/25/33ms超の数え方・一時停止で空いた数秒を平均へ混ぜないことを検証する。あわせて、計測用のrequestAnimationFrameを増やしていないこと、各計測箇所(measureTravel / areaRect / ジェスチャー側rAF / SLIDE polygon / サブレーン発光)へ結線されていること、判定窓・スコア式・既存の保存キーを変えていないこと、デバッグ専用なので更新履歴・ヘルプへ載せていないことも固定する。
