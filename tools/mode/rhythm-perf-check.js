@@ -132,7 +132,7 @@ check('プレイエリアの大きさが変わったら覚え直す',
 check('ノーツのDOMを毎回作り直さない(判定のたびの再生成を止める)',
   // canvas 化(2026-09-07)以降は「canvas のときはノーツ要素を作らない」分岐が入るが、useMemo で固定していることは同じ
   /const noteElements=useMemo\(\(\)=>(canvasNotes\?null:)?chart\.notes\.map/.test(gameSrc)
-  &&gameSrc.includes('{noteElements}')
+  &&/[{:]noteElements\}/.test(gameSrc)
   &&!/\{chart\.notes\.map\(\(note,index\)=>\{/.test(gameSrc));
 check('レーン枠・サブレーン発光のDOMも毎回作り直さない',
   /const laneElements=useMemo\(\(\)=><>/.test(gameSrc)&&gameSrc.includes('{laneElements}'));
