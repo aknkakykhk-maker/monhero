@@ -10627,12 +10627,11 @@ const installRhythmGeometryStyles=()=>{
     [data-rhythm-note]>[data-rhythm-note-head]{border-radius:calc(9999px / var(--rhythm-note-cap-scale,1)) / 9999px}
     [data-rhythm-note-shade]{position:absolute;inset:0;z-index:1;border-radius:inherit;background:#020617;opacity:calc(1 - var(--rhythm-note-depth-brightness,1));pointer-events:none}
     [data-rhythm-note][data-note-type="HOLD"]>[data-rhythm-note-head]>[data-rhythm-note-shade]{inset:-2px}
-    /* 落ちているノーツの粒・影の層・ENDバー・マスモンの絵は、自分の合成レイヤーへ載せる。
-       こうすると transform と opacity の変化が合成側だけで済み、粒は落ちているあいだ一度も塗り直されない。
-       出しっぱなしにするとノーツの数だけレイヤーを抱えるので、本体の tick が「いま見えている」ノーツにだけ
-       data-rhythm-live を付ける(will-change を付ける条件と同じ)。 */
-    [data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-note-head],[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-monster-face],[data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-end-bar]{will-change:transform}
-    [data-rhythm-note][data-rhythm-live="1"]>[data-rhythm-note-head]>[data-rhythm-note-shade]{will-change:opacity}
+    /* 粒・影の層・ENDバーを will-change で別の合成レイヤーへ載せる案は、iPhone(WebKit)で逆効果だった
+       (2026-09-07・実機「発熱のない状態でも以前よりカクつく」)。ノーツが現れるたびにレイヤーを3〜4枚作って消す
+       負担が連続ノーツで積み上がり、親の filter(index.html の drop-shadow)も子が動くたびに作り直しになる。
+       ノーツは以前と同じ「本体1枚」(tick が付ける will-change)のまま、中の粒は transform / opacity の変化で
+       塗り直されるが、塗り直すのは粒の画素ぶんだけで、レイアウトは起きない。 */
     /* 幅広ノーツ(5サブレーン以上)は、丸い粒を横に引き伸ばした形だと「どこからどこまでか」が
        読み取りにくい。プロセカ・チュウニズムの幅広ノーツと同じく、角を落とした棒にして
        両端へ明るい縁を置く。塗りは静的なCSSだけで作るので、毎フレームの負担は増えない。 */
@@ -11092,8 +11091,8 @@ const rhythmLayoutNoteVisual=(el,note,yPx,visualLane,area,releaseYpx=null,slideT
   if(el._rhythmTranslate!==nextTranslate){el.style.translate=nextTranslate;el._rhythmTranslate=nextTranslate;}
   const nextWidth=`${baseWidth.toFixed(2)}px`;
   if(el._rhythmWidth!==nextWidth){el.style.width=nextWidth;el._rhythmWidth=nextWidth;}
-  // 幅の比率は 0.005 刻み(基準幅60pxなら0.3px)。目では区別できず、書き込みの回数が減る
-  const widthScale=(Math.round(Math.min(1,width/baseWidth)*200)/200).toFixed(3);
+  // 幅の比率は 0.01 刻み(基準幅60pxなら0.6px)。目では区別できず、書き込み(=粒の塗り直し)の回数が減る
+  const widthScale=(Math.round(Math.min(1,width/baseWidth)*100)/100).toFixed(2);
   if(el._rhythmWidthScale!==widthScale){el.style.setProperty('--rhythm-note-width-scale',widthScale);el._rhythmWidthScale=widthScale;}
   // 端の丸み(border-radius)と FLICK の矢印は scaleX を打ち消す必要があり、変えると粒を塗り直す。0.05刻みで回数を抑える
   const capScale=(Math.max(.05,Math.round(Math.min(1,width/baseWidth)*20)/20)).toFixed(2);

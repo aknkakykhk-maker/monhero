@@ -190,7 +190,8 @@ const WARMUP_FRAMES=30,MEASURE_FRAMES=120,TRAVEL_MS=2150;
       console.log(`書き出し: ${path.relative(ROOT,outPath)}`);
     }
     if(!REPORT_ONLY&&!TYPE_FILTER.length){
-      // 帯を持たない TAP/FLICK は、落ちているあいだ何も塗り直さない(粒・影の層は合成レイヤーで transform と opacity だけ)。
+      // 帯を持たない TAP/FLICK は、落ちているあいだレイアウトも Paint も起こさない(粒は transform と opacity の変化だけ。
+      // ノーツ本体1枚のラスタライズは残るが、粒の画素ぶんで済む)。粒を別レイヤーへ載せる案は iPhone で逆効果だった(2026-09-07)。
       const taps=NOTES.filter(note=>note.type==='TAP'||note.type==='FLICK');
       const tapStats=await measure(taps);
       show('TAP+FLICK',taps,tapStats);
