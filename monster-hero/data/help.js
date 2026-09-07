@@ -486,6 +486,7 @@ const HELP_CATEGORIES = [
         assistant:'どの曲もEASYからMASTERまであるよ。まずはLv.のいちばん低いところからね♪', expression:'excited',
         blocks:[
           {t:'p',text:'モンヒロビートでは、公開している曲をそれぞれEASY・NORMAL・HARD・EXPERT・MASTERの5難易度で遊べます。曲は少しずつ増えていきます。'},
+          {t:'note', title:'Monster Hero -Another-', text:'「Monster Hero -Another-」は「Monster Hero」とは別テイクの曲です。曲えらびでは別の曲として記録されます。ジャケットは「Monster Hero」と同じ絵を使っています。'},
           {t:'data', id:'rhythmDemoSongList'},
           {t:'note', title:'曲によっては途中までを遊びます', text:'長い曲は、曲の区切りのよいところまでを遊ぶ形にしています。上の表に出ている長さが、実際に遊ぶ長さです。終わりぎわは音がすっと小さくなって終わります。バトルで流れるほうの曲は最後まで鳴るので、そちらは変わりません。'},
           {t:'p',text:'曲えらびの画面は「一覧から曲をえらぶ → 難易度をえらぶ → 決定」の3手です。'},
