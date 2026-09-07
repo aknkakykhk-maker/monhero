@@ -26,6 +26,8 @@ const NOTES=[
   {type:'TAP',subLane:6,subLaneWidth:2,progress:.5,monster:true},
   {type:'TAP',subLane:2,subLaneWidth:6,progress:.95},
   {type:'HOLD',subLane:6,subLaneWidth:4,holdMs:500,progress:1.0,endFlick:true},
+  // 取り損ねた HOLD は消さず、終端まで薄い灰色で流す(実機「途中で判定ミスるとノーツ自体が消える」の再発防止)
+  {type:'HOLD',subLane:8,subLaneWidth:2,holdMs:900,progress:.75,failed:true},
 ];
 (async()=>{
   let playwright;
@@ -72,8 +74,8 @@ const NOTES=[
           const visualTime=note.timeMs-(1-progress)*travelMs,hasBody=note.type==='HOLD'||note.type==='SLIDE';
           const geo=rhythmNoteCanvasGeometry(note,yPx,note.lane,areaRect,noteHeight,hasBody?releaseYpx:null,{chartNowMs:visualTime,visualTime,travelMs,spawnY,travelPx},hasBody?bodyPx:0);
           const depthScale=Math.round((0.56+geo.scale*.44)*100)/100,brightness=Math.round((0.72+geo.scale*.28)*100)/100;
-          RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:false,monster:!!source.monster,wide:note.subLaneWidth>=5,pressed:false,alpha:1,pop:null,depthScale,brightness});
-          heads.push({type:source.monster?'MONSTER':note.type,cx:geo.head.cx,cy:geo.head.cy});
+          RHYTHM_CANVAS_RENDERER.drawNote(note,geo,{failed:!!source.failed,monster:!!source.monster,wide:note.subLaneWidth>=5,pressed:false,alpha:source.failed?.34:1,pop:null,depthScale,brightness});
+          heads.push({type:source.failed?'FAILED':source.monster?'MONSTER':note.type,cx:geo.head.cx,cy:geo.head.cy,band:geo.band&&geo.band.length?{x:(geo.band[3].left+geo.band[3].right)/2,y:geo.band[3].y}:null});
         });
         RHYTHM_CANVAS_RENDERER.end();
         return {ok,heads};
@@ -81,7 +83,7 @@ const NOTES=[
       const first=frame(0,true);
       const g=canvas.getContext('2d'),dpr=canvas.width/areaRect.width;
       const pixel=(x,y)=>{const d=g.getImageData(Math.round(x*dpr),Math.round(y*dpr),1,1).data;return {r:d[0],g:d[1],b:d[2],a:d[3]};};
-      const samples=first.heads.map(h=>({type:h.type,...pixel(h.cx,h.cy)}));
+      const samples=first.heads.map(h=>({type:h.type,...pixel(h.cx,h.cy),band:h.band?pixel(h.band.x,h.band.y):null}));
       const empty=pixel(areaRect.width*.5,areaRect.height*.1);
       // 120フレーム描き続けたときの JS 時間
       const times=[];
@@ -91,7 +93,9 @@ const NOTES=[
     },{notes:NOTES,travelMs:2150});
     check('フレームの準備(begin)が通り、全ノーツを描いた',result.ok===true&&result.drawn===NOTES.length,`${result.drawn}/${NOTES.length}`);
     check('canvas の画素数がプレイエリア × 画素密度になっている',result.canvas.w===780&&result.canvas.h===1400,`${result.canvas.w}x${result.canvas.h}`);
-    check('粒の中心に画素が置かれている(全ノーツ)',result.samples.every(s=>s.a>200),result.samples.map(s=>`${s.type}:a${s.a}`).join(' '));
+    check('粒の中心に画素が置かれている(全ノーツ)',result.samples.filter(s=>s.type!=='FAILED').every(s=>s.a>200),result.samples.map(s=>`${s.type}:a${s.a}`).join(' '));
+    const failedSample=result.samples.find(s=>s.type==='FAILED');
+    check('取り損ねた HOLD は消えず、薄く(不透明度 .34 前後)灰色で描かれる',failedSample&&failedSample.a>40&&failedSample.a<140&&failedSample.band&&failedSample.band.a>40&&Math.abs(failedSample.r-failedSample.b)<40,failedSample?`粒 a${failedSample.a} rgb(${failedSample.r},${failedSample.g},${failedSample.b}) / 帯 a${failedSample.band?failedSample.band.a:'-'}`:'無し');
     check('何も無いところは透明のまま',result.empty.a===0,`a=${result.empty.a}`);
     const by=type=>result.samples.find(s=>s.type===type);
     check('TAP は桃色(赤 > 緑)',by('TAP').r>by('TAP').g,`rgb(${by('TAP').r},${by('TAP').g},${by('TAP').b})`);
