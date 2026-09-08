@@ -32,6 +32,9 @@ for(const token of [
 const reset=between('const applyResetAllState = () => {','const createRepeatRunTemplate');
 if(!reset.includes('autoRepeatBondAwardMasuIdsRef.current = []'))fail('新しいrun開始時に前周の絆報酬対象を消していません');
 const presentation=between('// 正規リザルトの全報酬演出が完了した場合だけ','// 操作可能なBATTLEへ');
+if(!presentation.includes('const breakthroughResult = await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current)'))fail('自動限凸の保存結果を受け取っていません');
+if(!presentation.includes("if(breakthroughResult?.saveFailed){stopAllAuto('error');return;}"))fail('自動限凸の保存失敗時にAUTO∞を止めていません');
+if(presentation.indexOf("if(breakthroughResult?.saveFailed){stopAllAuto('error');return;}") > presentation.indexOf('startRunFromRepeatTemplate('))fail('保存失敗の停止判定が次周開始より後ろです');
 for(const token of ["runStage!=='CHAMPION'",'!championPresentationComplete','!autoRepeatRef.current','autoRepeatStartingRef.current',"if(!isQuickMode(runMode)){setAutoRepeatEnabled(false);return;}",'document.visibilityState===\'hidden\'','await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current)','startRunFromRepeatTemplate(repeatTemplateForNewRun())','if(repeatResult.ok)','autoBattleRef.current=true','setAutoBattle(true)',"stopAllAuto('error')"])if(!presentation.includes(token))fail(`結果表示後の再周回処理 ${token} がありません`);
 if(presentation.indexOf('await executeAutoRepeatBreakthroughs')>presentation.indexOf('startRunFromRepeatTemplate'))fail('限界突破の保存完了前に次周を開始しています');
 if((presentation.match(/startRunFromRepeatTemplate\(/g)||[]).length!==1)fail('結果表示後のテンプレート開始呼び出しが1箇所ではありません');
