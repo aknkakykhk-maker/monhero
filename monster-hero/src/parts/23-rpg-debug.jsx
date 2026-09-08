@@ -420,7 +420,7 @@ const rpgResolveStep = (battle, varianceOn, rng = rpgDefaultRng) => {
 //
 // どのモーションを使うかは、通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion で決める。
 // RPG用にモーションのデータを別に持たないので、モンスターを足しても更新漏れが起きない。
-const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', pandoraDualThunder:'Thunder' });
+const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', kenshiTwinBlade:'Dash', pandoraDualThunder:'Thunder' });
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = (anim) => {
   if (!anim) return undefined;
@@ -428,6 +428,9 @@ const attackMotionAnimation = (anim) => {
   if (anim.motion==='pandoraDualThunder') return undefined;
   // エイキはザンと同じ高速斬撃の動き(zanComboDash)をそのまま使う。
   // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
+  // 剣士モッチーの二刀流は、ザンの残像ダッシュとは別の「X字に振り抜く」動き。
+  // 斬撃の軌跡(KenshiTwinSlash)は枠を動かすのではなく、攻撃中だけ重ねて出す
+  if (anim.twinBlade) return 'kenshiTwinBladeSlash 420ms ease-out forwards';
   if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
   if (anim.charge) return 'specialCharge 650ms ease-out forwards';
   if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards');

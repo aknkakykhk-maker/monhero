@@ -92,6 +92,90 @@ const createAnimationStyle = () => {
         0% { opacity: 0; } 30% { opacity: .9; } 100% { opacity: 0; }
       }
     }
+    /* 剣士モッチーの二刀流。1撃目を右上→左下(＼)、2撃目を左上→右下(／)へ振り抜き、
+       2本合わせてX字になるようにする。ザンの残像ダッシュと違って移動は小さく、
+       体をひねって踏み込むだけにしてある(丸い体型を崩さないため)。
+       連撃が何本あってもこのモーションは1回しか流さない(ヒットの束は
+       60-app.jsx の isComboDashMotion がまとめて処理する)ので、
+       永久追加連撃が増えてもターンの長さは変わらない。 */
+    @keyframes kenshiTwinBladeSlash {
+      0% {
+        transform: translate(0,0) scale(1) rotate(0deg);
+        filter: drop-shadow(0 0 4px rgba(148,163,184,0.45));
+      }
+      14% {
+        /* 右上へ小さく踏み込んで構える */
+        transform: translate(26px,-16px) scale(1.06) rotate(-9deg);
+        filter: drop-shadow(0 0 12px rgba(167,139,250,0.85));
+      }
+      34% {
+        /* 1撃目 ＼ : 右上から左下へ振り抜く */
+        transform: translate(-34px,18px) scale(1.1) rotate(11deg);
+        filter: drop-shadow(30px -18px 0 rgba(167,139,250,0.34)) drop-shadow(0 0 18px rgba(196,181,253,0.95));
+      }
+      52% {
+        /* 左上へ返す */
+        transform: translate(-26px,-16px) scale(1.06) rotate(9deg);
+        filter: drop-shadow(0 0 14px rgba(103,232,249,0.8));
+      }
+      74% {
+        /* 2撃目 ／ : 左上から右下へ振り抜く */
+        transform: translate(34px,18px) scale(1.1) rotate(-11deg);
+        filter: drop-shadow(-30px -18px 0 rgba(103,232,249,0.34)) drop-shadow(0 0 20px rgba(255,255,255,0.95));
+      }
+      88% {
+        transform: translate(0,0) scale(1.02) rotate(0deg);
+        filter: drop-shadow(0 0 16px rgba(255,255,255,0.85));
+      }
+      100% {
+        transform: translate(0,0) scale(1) rotate(0deg);
+        filter: drop-shadow(0 0 0 rgba(0,0,0,0));
+      }
+    }
+    /* 斬撃の軌跡。＼と／の2本だけを重ねてX字にする。要素2枚・@keyframes1本に抑える */
+    .kenshi-twin-slash {
+      position: absolute;
+      inset: 0;
+      overflow: visible;
+      pointer-events: none;
+      z-index: 21;
+    }
+    .kenshi-twin-slash__blade {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 104px;
+      height: 7px;
+      margin: -3.5px 0 0 -52px;
+      opacity: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.95) 42%, var(--kenshi-slash-color) 72%, rgba(255,255,255,0) 100%);
+      box-shadow: 0 0 10px var(--kenshi-slash-color);
+      will-change: transform, opacity;
+      /* 本体モーション(420ms)のうち、1撃目の振り抜き(34%≒143ms)と
+         2撃目(74%≒311ms)へ軌跡の濃いところが重なるよう、遅れと長さを合わせてある。
+         2本とも420ms以内に消えるので、モーションが終わった瞬間に軌跡が途中で切れることはない */
+      animation: kenshiTwinSlashSweep 150ms ease-out forwards;
+      animation-delay: var(--kenshi-slash-delay);
+    }
+    @keyframes kenshiTwinSlashSweep {
+      0%   { opacity: 0; transform: rotate(var(--kenshi-slash-angle)) scaleX(.15); }
+      22%  { opacity: 1; transform: rotate(var(--kenshi-slash-angle)) scaleX(1.05); }
+      58%  { opacity: .85; transform: rotate(var(--kenshi-slash-angle)) scaleX(1.15); }
+      100% { opacity: 0; transform: rotate(var(--kenshi-slash-angle)) scaleX(1.25); }
+    }
+    /* 動きを減らす設定の端末では、振り抜きも軌跡も動かさず淡く光らせるだけにする */
+    @media (prefers-reduced-motion: reduce) {
+      @keyframes kenshiTwinBladeSlash {
+        0% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+        40% { filter: drop-shadow(0 0 16px rgba(196,181,253,0.9)); }
+        100% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+      }
+      .kenshi-twin-slash__blade { animation: kenshiTwinSlashFade 150ms ease-out forwards; }
+      @keyframes kenshiTwinSlashFade {
+        0% { opacity: 0; } 35% { opacity: .85; } 100% { opacity: 0; }
+      }
+    }
     @keyframes zanComboDash {
       0% {
         transform: translate(0,0) scale(1) skewX(0deg);

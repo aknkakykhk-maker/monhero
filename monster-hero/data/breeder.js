@@ -30,11 +30,7 @@ const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=23d828f69f14";
 const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=da09c07c8624";
 const PANDORA_DISC_ICON = "images/disc-icons/pandora-disc.PNG?v=adee72203d0a";
 const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
-// 剣士モッチーは正式実装まではデバッグ専用(ally-monsters.js の debugOnly)。
-// 円盤石の絵だけ先に作ってあり、BREEDER_MARKET_ITEMS へはまだ登録していない
-// (エイキと同じ手順。正式実装のときに「〜のアイコン」「〜の円盤石アイコン」
-//  「〜の円盤石」の3商品と MARKET_PROFILE_ICON_STYLES の値をまとめて足す)。
-// 絵は node tools/image/make-disc-icon.js が土台へ重ねて作ったもの
+// 剣士モッチーの円盤石。絵は node tools/image/make-disc-icon.js が共通の土台へ重ねて作ったもの
 const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=57ec53a942c7";
 
 const BREEDER_EVO_NAMES = {
@@ -244,6 +240,11 @@ const BREEDER_MARKET_ITEMS = [
   { id:'eiki_icon', name:"エイキのアイコン", type:'icon', icon:EIKI_FACE_ICON, cost:1 },
   { id:'eiki_disc_icon', name:"エイキの円盤石アイコン", type:'icon', icon:EIKI_DISC_ICON, cost:1 },
   { id:'Eiki', name:"エイキの円盤石", type:'disc', icon:EIKI_DISC_ICON, cost:3000 },
+  // 剣士モッチー。エイキと同じく専用の顔クロップ(KENSHI_MOCCHI_FACE_ICON)を商品アイコンにも使うため、
+  // 本人アイコン側の MARKET_PROFILE_ICON_STYLES は不要(元から丸枠向けに切り出し済み)。
+  { id:'kenshi_mocchi_icon', name:"剣士モッチーのアイコン", type:'icon', icon:KENSHI_MOCCHI_FACE_ICON, cost:1 },
+  { id:'kenshi_mocchi_disc_icon', name:"剣士モッチーの円盤石アイコン", type:'icon', icon:KENSHI_MOCCHI_DISC_ICON, cost:1 },
+  { id:'KenshiMocchi', name:"剣士モッチーの円盤石", type:'disc', icon:KENSHI_MOCCHI_DISC_ICON, cost:3000 },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   { id:'transcend_reset_scroll', name:"超越ポイントリセットの書", type:'item', emoji:"🌠", cost:10000, usage:'transcendReset', desc:"マスモンに使うと、超越強化へ使った超越ポイントがすべて未使用の超越Pへ戻る。絆レベル・絆経験値・通常の強化・超越済みかどうかは変わらない。虹のプシュケーは戻らない。" },
   { id:'unique_skill_reset_ticket', name:"スキルポイントリセット券", type:'item', emoji:"🎟️", cost:1000, usage:'uniqueSkillReset', desc:"マスモン詳細の「固有技強化」で使うと、その個体の固有技に配分したポイントをすべて未使用の固有技Pへ戻せる。固有技以外の育成状態は変わらない。" },

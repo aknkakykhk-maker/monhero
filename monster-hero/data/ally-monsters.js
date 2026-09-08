@@ -13,7 +13,7 @@ const HERO_ATK_NAMES = {
   Zan:    ["シングルショット","ミラージュシフト","サマーソルト","レッグアーク","ソニックナイフ","ダブルサマー","ダブルショット","トリプルサマー","アサルトダンス"],
   Eiki:   ["桜牙","花裂き","桜風刃","花霞斬","桜月輪","桜嵐刃","千花連刃","桜閃爪","桜華絶閃爪"],
   Mitarashi: ["もんた","もちき","ガッチョ","もっちゃん","ガッチャー","桜吹雪","もっさん","枝垂れ桜","もっさま"],
-  KenshiMocchi: ["二刀斬り","閃刃","双牙斬","疾風二刀","十字斬","星屑斬り","双竜連斬","双剣乱舞","黒銀双閃"],
+  KenshiMocchi: ["エッジもんた","もちき・リープ","ガッチョスラント","エアリアルもっちゃん","ガッチャー・クロス","黒桜吹雪","もっさんスピン","枝垂れクロス","バーストもっさま"],
   Ark:    ["我が瞳の真理を見よ","闇を裂く刃となれ","神剣よ断罪を下せ","星屑の記憶よ甦れ","世界を揺らせ","終わりなき祈りよ響け","白き誓い切なる願い","神光よ汚れを祓え","蒼き荊よ咎を穿て"],
   Iblis:  ["我が瞳の真理を見よ","闇を裂く刃となれ","神剣よ断罪を下せ","星屑の記憶よ甦れ","世界を揺らせ","終わりなき祈りよ響け","白き誓い切なる願い","神光よ汚れを祓え","蒼き荊よ咎を穿て"],
   Snegurochka: ["アイスブレード","アクアウィップ","アクアウェイブ","スプラッシュ","超アイスブレード","超アクアウィップ","ドルフィンブロー","ブラッドミスト","ジングルベル"],
@@ -52,15 +52,15 @@ const ALL_PLAYER_MONSTERS = {
   // 勇者特性「桜花連舞」と固有効果「緋桜連華」の連撃は、ザンの既存 rollCombo をそのまま使う。
   // 攻撃モーションはザンの zanCombo を土台にした専用種別(桜の花びらを攻撃時だけ重ねる)。
   Eiki:   { id:'Eiki',   name:"エイキ", emoji:"🌸", imgUrl:EIKI_IMG, iconUrl:EIKI_ICON, faceIconUrl:EIKI_FACE_ICON, atkMotion:'eikiSakuraCombo', trait:"桜花連舞", traitDesc:"勇者モン選択時：攻撃後、与ダメ10%の連撃を2回。自身の固有技使用時は、さらに与ダメ30%の連撃を1回追加。", baseHp:400, baseGuts:135, baseAtk:165, baseDef:20, plusStats:{hp:150,atk:50,def:20,guts:45}, distAptitude:['A','A','C','C'], unique:{name:"華影緋閃",icon:EIKI_ICON,monId:"Eiki",baseMult:2.8,baseGuts:56,evoLevel:0,names:["華影緋閃","氷花一閃","桜月斬華","緋雪乱刃","花氷双牙","千華氷嵐","緋桜六華閃","絶影桜華乱舞","絶華緋閃・零桜"],effectDesc:"緋桜連華：与ダメ15%で連撃×2＆連撃ダメージ+3%・攻撃力+3%(永続/重複可/次のターンから)"}},
-  // 剣士モッチー(モッチー×？？？のレア)。★正式実装まではデバッグ専用(debugOnly:true)。
-  //   ・debugOnly により図鑑(dexMonsterList)・RPG一覧・マスモン登録から外れる
-  //   ・通常ロースターは unlockedMonsterIds で絞るので、解放しない限り出てこない
-  //   ・マーケット(円盤石)は正式実装時に登録する。いまは商品化しない(円盤石の絵だけ用意済み)
-  // ★ここでの能力値・勇者特性・固有技は仮の値。「まずはモデリングだけ」という依頼のため、
-  //   中身は同じモッチー血統のモッチー/ミタラシで既に実装済みのもの(もち肌・モッチ砲)を
-  //   そのまま借りている(新しい効果を勝手に作らない)。正式実装のときに差し替える。
-  //   通常技の名前だけは二刀流に合わせてある(未登録だとモッチーの技名が静かに出るため)。
-  KenshiMocchi: { id:'KenshiMocchi', name:"剣士モッチー", emoji:"🗡️", imgUrl:KENSHI_MOCCHI_IMG, iconUrl:KENSHI_MOCCHI_ICON, faceIconUrl:KENSHI_MOCCHI_FACE_ICON, atkMotion:'default', debugOnly:true, trait:"もち肌", traitDesc:"勇者モン選択時：被ダメージ20%軽減", baseHp:520, baseGuts:120, baseAtk:165, baseDef:95, plusStats:{hp:200,atk:55,def:20,guts:25}, distAptitude:['A','A','D','E'], unique:{name:"モッチ砲",icon:KENSHI_MOCCHI_ICON,monId:"KenshiMocchi",baseMult:2.2,baseGuts:44,evoLevel:0,names:["モッチ砲","大モッチ砲","超モッチ砲","超モッチ砲2","超モッチ砲3","超モッチ砲ゴッド","超モッチ砲ブルー","身勝手のモッチ砲 兆","身勝手のモッチ砲 極"],effectDesc:"攻防一体：敵被ダメ10%増(WAVE限定/このターンから)＆味方の被ダメージ3%軽減(永続/次のターンから)"}},
+  // 剣士モッチー(モッチー×？？？のレア)。2026年9月に正式実装。
+  // 「高火力・低耐久・近接向けの攻撃特化型」。基礎総合力はエイキ付近で、エイキより攻撃へ寄せてある。
+  // 勇者特性「二刀流」と固有効果「ソードスキル」の実体は次の3か所。
+  //   ・カード枚数+1 … 60-app.jsx の heroCardBonus(HERO_CARD_BONUS_MONSTER_IDS)。ハムと同じ共通ルールを通る
+  //   ・通常攻撃の50%+50%、自身の固有技での10%連撃×3、ソードスキルの20%連撃×2、
+  //     連撃パワーで増える永久10%連撃 … 22-enemy-and-bond-entries.jsx の buildAttackHits(ヒット列の正本)
+  //   ・連撃ダメージ+3%・連撃パワー・永久追加連撃の積み上げ … 60-app.jsx の固有技効果ブロック
+  // 連撃はどれも「分割前の基準ダメージ」基準で、直前のヒットからは計算しない。
+  KenshiMocchi: { id:'KenshiMocchi', name:"剣士モッチー", emoji:"🗡️", imgUrl:KENSHI_MOCCHI_IMG, iconUrl:KENSHI_MOCCHI_ICON, faceIconUrl:KENSHI_MOCCHI_FACE_ICON, atkMotion:'kenshiTwinBlade', trait:"二刀流", traitDesc:"勇者モン選択時：同時使用可能枚数+1。通常攻撃のダメージが50%になる代わりに、与ダメージ50%の連撃を行う。自身の固有技使用時は、与ダメージ10%の連撃を3回追加。", baseHp:350, baseGuts:130, baseAtk:185, baseDef:25, plusStats:{hp:200,atk:55,def:20,guts:25}, distAptitude:['A','A','C','D'], unique:{name:"ソニック・リープ",icon:KENSHI_MOCCHI_ICON,monId:"KenshiMocchi",baseMult:2.4,baseGuts:48,evoLevel:0,names:["ソニック・リープ","ホリゾンタル・スクエア","ヴォーパル・ストライク","デュアル・サーキュラー","ブラック・テンペスト","ブラック・チェイン","ナイトメア・レイド","ジ・エクリプス","スターバースト・ストリーム"],effectDesc:"ソードスキル：与ダメ20%で連撃×2＆連撃ダメージ+3%(永続)。連撃パワー+1。3充填ごとに10%連撃+1(永続・重複可)"}},
   Mitarashi: { id:'Mitarashi', name:"ミタラシ", emoji:"🐉", imgUrl:MITARASHI_IMG, iconUrl:MITARASHI_ICON, faceIconUrl:MITARASHI_FACE_ICON, atkMotion:'default', trait:"もち肌", traitDesc:"勇者モン選択時：被ダメージ20%軽減", baseHp:630, baseGuts:90, baseAtk:140, baseDef:105, plusStats:{hp:250,atk:30,def:30,guts:10}, distAptitude:['D','D','B','B'], unique:{name:"モッチ砲",icon:MITARASHI_ICON,monId:"Mitarashi",baseMult:2.2,baseGuts:44,evoLevel:0,names:["モッチ砲","大モッチ砲","超モッチ砲","超モッチ砲2","超モッチ砲3","超モッチ砲ゴッド","超モッチ砲ブルー","身勝手のモッチ砲 兆","身勝手のモッチ砲 極"],effectDesc:"攻防一体：敵被ダメ10%増(WAVE限定/このターンから)＆味方の被ダメージ3%軽減(永続/次のターンから)"}},
   Ark:    { id:'Ark',    name:"アーク", emoji:"🦊", imgUrl:ARK_IMG, iconUrl:ARK_ICON, faceIconUrl:ARK_FACE_ICON, atkMotion:'floatStab', trait:"中二病", traitDesc:"勇者モン選択時：敵の攻撃を2回まで被ダメージ50%カット(WAVE毎に回数リセット)＆固有技使用時、消費ガッツ10%増・ダメージ倍率+0.1(永続/重複可/次のターンから)", baseHp:440, baseGuts:120, baseAtk:130, baseDef:90, plusStats:{hp:210,atk:50,def:30,guts:30}, distAptitude:['E','B','C','B'], unique:{name:"祈れ輪廻の環よ",icon:ARK_ICON,monId:"Ark",baseMult:2.8,baseGuts:56,evoLevel:0,names:["祈れ輪廻の環よ","裁きの光よ下れ","今こそ真なる目醒め","聖夜の鐘を鳴響け","熾天の剣よ降り立て","聖光よ奇跡を灯せ","終焉に救いを与えよ","天の慈悲を示されよ","永劫の贖いを全うせよ"],effectDesc:"贖罪：与ダメの20%で追撃＆次ターン消費ガッツ15%増・被ダメージ50%減(1回)"}},
   Iblis:  { id:'Iblis',  name:"イブリース", emoji:"🐏", imgUrl:IBLIS_IMG, iconUrl:IBLIS_ICON, faceIconUrl:IBLIS_FACE_ICON, atkMotion:'floatStab', trait:"中二病", traitDesc:"勇者モン選択時：敵の攻撃を2回まで被ダメージ50%カット(WAVE毎に回数リセット)＆固有技使用時、消費ガッツ10%増・ダメージ倍率+0.1(永続/重複可/次のターンから)", baseHp:360, baseGuts:125, baseAtk:145, baseDef:75, plusStats:{hp:180,atk:60,def:25,guts:35}, distAptitude:['D','B','E','B'], unique:{name:"祈れ輪廻の環よ",icon:IBLIS_ICON,monId:"Iblis",baseMult:2.8,baseGuts:56,evoLevel:0,names:["祈れ輪廻の環よ","裁きの光よ下れ","今こそ真なる目醒め","聖夜の鐘を鳴響け","熾天の剣よ降り立て","聖光よ奇跡を灯せ","終焉に救いを与えよ","天の慈悲を示されよ","永劫の贖いを全うせよ"],effectDesc:"贖罪：与ダメの20%で追撃＆次ターン消費ガッツ15%増・被ダメージ50%減(1回)"}},
