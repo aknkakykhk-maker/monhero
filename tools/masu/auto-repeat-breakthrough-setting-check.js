@@ -42,9 +42,12 @@ assert.strictEqual(legacyUpdate.autoRepeatBreakthroughLevel, 55, '従来の数�
 const saverStart = source.indexOf('const setMasuAutoRepeatBreakthrough =');
 const saverEnd = source.indexOf('const useUniqueSkillResetTicket', saverStart);
 const saver = source.slice(saverStart, saverEnd);
-assert.ok(saver.includes("storeSet('mh_masu_mons', next, false)"), '既存mh_masu_monsへ保存');
+assert.ok(saver.includes("saveStoredValuesOrRollback([") && saver.includes("{ key:'mh_masu_mons', before, next }"), '個体設定を既存mh_masu_monsへ読み戻し検証つきで保存');
 assert.deepStrictEqual(saver.match(/mh_[a-z0-9_]+/g), ['mh_masu_mons'], '新しいmh_*キーなし');
 assert.ok(saver.includes('String(m.id) === String(masuId) ? updated : m'), '対象個体だけを更新');
+assert.ok(saver.includes('if (!saved)') && saver.indexOf('if (!saved)') < saver.indexOf('masuMonsRef.current = next'), '保存失敗時に個体state/refへ進まない');
+assert.ok(saver.includes('自動限界突破の設定を保存できませんでした'), '個体設定の保存失敗を案内');
+assert.ok(saver.includes('masuMonsRef.current = next') && saver.includes('setMasuMons(next)'), '保存成功後に最新個体ref/stateを同期');
 
 const detailStart = source.indexOf('{masuMonDetail&&!MASU_ENHANCE_STATES.includes(gameState)&&');
 const detailEnd = source.indexOf('{/* 固有技設定:', detailStart);
