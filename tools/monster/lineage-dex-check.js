@@ -82,6 +82,16 @@ check('図鑑全体の対象は20体', monsters.length === 20, `${monsters.lengt
   }
   check('種族の先頭はその種族を代表するモンスター', badHead.length === 0, badHead.join(' / '));
   // 絞り込みのチップは図鑑の並びから作るので、こちらも同じ順になる
+  // 並べ替えで顔ぶれが変わっていないこと(落ちる・重複する・混ざる)。
+  // 体数だけを見ていると、1体落ちて1体重複したときに気づけない
+  const expected = Object.values(A.ALL_PLAYER_MONSTERS).filter(m => m && !m.debugOnly).map(m => m.id).sort();
+  const got = monsters.map(m => m.id);
+  check('並べ替えても顔ぶれが変わらない(落ちも重複もない)',
+    got.length === new Set(got).size && JSON.stringify([...got].sort()) === JSON.stringify(expected),
+    `${got.length}体 / 重複${got.length - new Set(got).size}件`);
+  // 何度呼んでも同じ並びであること(呼ぶたびに変わると図鑑の番号や前後移動がぶれる)
+  check('何度呼んでも同じ並びになる',
+    JSON.stringify(A.dexMonsterList().map(m => m.id)) === JSON.stringify(got));
   const chips = A.dexMainLineages().map(l => l.id);
   check('血統の絞り込みチップも同じ順に並ぶ', JSON.stringify(chips) === JSON.stringify(appeared),
     A.dexMainLineages().map(l => l.name).join(' / '));

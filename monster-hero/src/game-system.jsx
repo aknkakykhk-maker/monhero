@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 958333fe7e39ec01
+// generated-sha256: 45471c7530b174ee
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 16:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 16:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20638,13 +20638,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lineageChip=(lineage)=><DexLineageChip lineage={lineage} iconUrl={lineageIconUrl(lineage)}/>;
           const tabs=[['basic','基本'],['stats','能力'],['skills','技']];
           const tab=tabs.some(([id])=>id===dexTab)?dexTab:'basic';
-          // 「主血統」「区分」のような短い値は、ラベルと向かい合う右揃えのままにする。
-          // 「特性の効果」のような長い文は、右揃えだと折り返すたびに行頭がずれて読みにくいので、
-          // ラベルを上に置いて幅いっぱいの左揃えにする
-          // (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い」)
-          const DEX_ROW_WRAP_LENGTH=24;
-          const row=(label,value)=>(
-            typeof value==='string'&&value.length>=DEX_ROW_WRAP_LENGTH
+          // 図鑑の1行。値は左揃えにする。
+          // 以前は text-right だったが、折り返すたびに行頭がずれて読みにくかった
+          // (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い」。ザンの特性の効果は
+          //  最終行が「撃」1文字だけになっていた)。1行に収まる短い値は flex の justify-between が
+          //  右端へ寄せるので、text-right を外しても見た目は1pxも変わらない(実測で確認済み)。
+          // 「特性の効果」のように必ず長くなる値だけは block:true でラベルを上に置き、
+          // 幅いっぱいを使って行数を減らす(文字数で機械的に決めると、端末の幅しだいで
+          //  同じ行の見た目が入れ替わってしまうため、呼ぶ側が明示する)
+          const row=(label,value,{block=false}={})=>(
+            block
               ? (
                 <div className="border-b border-amber-500/15 py-1.5 last:border-b-0">
                   <span className="block text-[10px] font-black text-amber-300/90">{label}</span>
@@ -20654,7 +20657,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               : (
                 <div className="flex items-start justify-between gap-3 border-b border-amber-500/15 py-1.5 last:border-b-0">
                   <span className="text-[10px] font-black text-amber-300/90 shrink-0">{label}</span>
-                  <span className="text-[11px] font-bold text-white text-right min-w-0 break-words">{value}</span>
+                  <span className="text-[11px] font-bold text-white min-w-0 break-words">{value}</span>
                 </div>
               )
           );
@@ -20723,7 +20726,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {row('副血統', sub.name)}
                       {row('区分', monsterCategoryName(category))}
                       {row('勇者特性', mon.trait||'なし')}
-                      {row('特性の効果', mon.traitDesc||'特性なし')}
+                      {row('特性の効果', mon.traitDesc||'特性なし', {block:true})}
                     </div>)}
                     {tab==='stats'&&(<div data-dex-tab-stats>
                       <div className="text-[9px] font-black text-amber-300/90 mb-1">その種の基礎能力（育てたマスモンの値ではありません）</div>

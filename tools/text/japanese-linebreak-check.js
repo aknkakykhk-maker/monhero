@@ -48,15 +48,36 @@ const texts = [];
 for (const mon of Object.values(ALL_PLAYER_MONSTERS)) {
   if (!mon || mon.debugOnly) continue;
   const desc = MONSTER_DEX_DESCRIPTIONS[mon.id];
-  if (desc) texts.push({ who: `${mon.name}の図鑑説明`, text: desc });
-  if (mon.traitDesc) texts.push({ who: `${mon.name}の特性の効果`, text: mon.traitDesc });
-  if (mon.unique?.effectDesc) texts.push({ who: `${mon.name}の固有効果`, text: mon.unique.effectDesc });
+  // 画面に出る字の大きさもいっしょに持つ(図鑑の説明は10px、特性の効果は11px、固有効果は9px)
+  if (desc) texts.push({ who: `${mon.name}の図鑑説明`, text: desc, size: 10 });
+  if (mon.traitDesc) texts.push({ who: `${mon.name}の特性の効果`, text: mon.traitDesc, size: 11 });
+  if (mon.unique?.effectDesc) texts.push({ who: `${mon.name}の固有効果`, text: mon.unique.effectDesc, size: 9 });
+}
+// 禁則は共通CSSの1行で画面全体に効くので、図鑑まわりだけでなく
+// ヘルプ・更新履歴・助手(みゅあ)のセリフからも長文を集めて確かめる。
+// ここが図鑑だけだと、共通CSSが消えたとき図鑑以外では誰も気づけない
+const collectStrings = (src, minLength) => {
+  const out = [];
+  // ソースに書いてある日本語の文字列リテラル(長いものだけ)をそのまま拾う
+  for (const m of src.matchAll(/'((?:[^'\\\n]|\\.){24,})'/g)) {
+    const t = m[1].replace(/\\'/g, "'");
+    if (t.length >= minLength && /[ぁ-んァ-ヶ一-龠]/.test(t) && !/\$\{/.test(t)) out.push(t);
+  }
+  return out;
+};
+for (const [label, rel] of [['ヘルプ', 'monster-hero/data/help.js'], ['更新履歴', 'monster-hero/data/changelog.js'], ['助手のセリフ', 'monster-hero/data/assistants.js']]) {
+  const src = fs.readFileSync(path.join(root, rel), 'utf8');
+  // 全部測ると時間がかかるので、長いものから順に一定数だけ見る(長いほど折り返しが多い)
+  const picked = [...new Set(collectStrings(src, 30))].sort((a, b) => b.length - a.length).slice(0, 40);
+  picked.forEach((t, i) => texts.push({ who: `${label}の文${i + 1}`, text: t, size: 11 }));
 }
 check('実データから日本語の長文を集められる', texts.length > 0, `${texts.length}件`);
 if (failed) { console.log(`\n${failed}件のNGがあります`); process.exit(1); }
 
-// 行頭に来てはいけない文字(JIS X 4051 の行頭禁則の主なもの)
-const BAD_HEAD = /[ー。、』」）】〉》〕｝ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ・：；！？]/;
+// 行頭に来てはいけない文字(JIS X 4051 の行頭禁則の主なもの)。
+// 中黒「・」は行頭にも行末にも置ける文字なので入れない(入れると、単に中黒で
+// 折り返しただけの正しい行まで違反として拾ってしまう。実際そうなった)
+const BAD_HEAD = /[ー。、』」）】〉》〕｝ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ：；！？]/;
 
 (async () => {
   let chromium;
@@ -72,12 +93,12 @@ const BAD_HEAD = /[ー。、』」）】〉》〕｝ぁぃぅぇぉっゃゅょ�
   const bodyRule = (source.match(/body \{ line-break: [^}]*\}/) || [''])[0];
   await page.addStyleTag({ content: bodyRule });
 
-  const measure = (text, width) => page.evaluate(({ text, width }) => {
+  const measure = (text, width, size = 10) => page.evaluate(({ text, width, size }) => {
     const root = document.getElementById('root');
     root.innerHTML = '';
     const p = document.createElement('p');
     // 図鑑の説明文・特性の効果と同じ字の大きさ・太さ・行送り
-    p.style.cssText = `width:${width}px; font-size:10px; line-height:1.625; font-weight:700; margin:0; overflow-wrap:break-word;`;
+    p.style.cssText = `width:${width}px; font-size:${size}px; line-height:1.625; font-weight:700; margin:0; overflow-wrap:break-word;`;
     p.textContent = text;
     root.appendChild(p);
     const node = p.firstChild, range = document.createRange();
@@ -91,7 +112,7 @@ const BAD_HEAD = /[ー。、』」）】〉》〕｝ぁぃぅぇぉっゃゅょ�
     }
     if (cur) out.push(cur);
     return out;
-  }, { text, width });
+  }, { text, width, size });
 
   // 図鑑の情報カードは、狭い端末(iPhone SE)から広い端末まで幅が変わる。
   // 実機で問題が出た360px前後を含む範囲を、1px刻みで全部見る
@@ -99,9 +120,9 @@ const BAD_HEAD = /[ー。、』」）】〉》〕｝ぁぃぅぇぉっゃゅょ�
   for (let w = 240; w <= 400; w += 1) WIDTHS.push(w);
 
   const bad = [];
-  for (const { who, text } of texts) {
+  for (const { who, text, size } of texts) {
     for (const w of WIDTHS) {
-      const lines = await measure(text, w);
+      const lines = await measure(text, w, size);
       const ng = lines.filter(l => BAD_HEAD.test(l[0]));
       if (ng.length) { bad.push({ who, w, heads: ng.map(l => l[0]), lines }); break; }
     }
@@ -116,9 +137,14 @@ const BAD_HEAD = /[ー。、』」）】〉》〕｝ぁぃぅぇぉっゃゅょ�
   // --- ③ 図鑑の「基本」タブ: 長い値は左揃えで、行頭がそろうこと ---
   // 右揃えのまま折り返すと、行頭が行ごとにずれて読みにくい
   // (実機のザンでは最終行が「撃」の1文字だけになっていた)
-  check('図鑑の行は、長い値だけ見出しを上に置いて左揃えにしている',
-    /const DEX_ROW_WRAP_LENGTH=\d+;/.test(source)
-    && /typeof value==='string'&&value\.length>=DEX_ROW_WRAP_LENGTH/.test(source));
+  // 値を右揃えにすると、折り返したときだけ行頭がずれる。1行に収まる短い値は
+  // flex の justify-between が右端へ寄せるので、右揃えを外しても見た目は変わらない
+  check('図鑑の行は値を右揃えにしていない', /const row=\(label,value,\{block=false\}=\{\}\)=>/.test(source)
+    && !/text-\[11px\] font-bold text-white text-right/.test(source));
+  // 必ず長くなる値は、文字数の勘ではなく呼ぶ側が明示する(端末の幅しだいで見た目が入れ替わらない)
+  check('必ず長くなる値(特性の効果)はラベルを上に置いている',
+    /row\('特性の効果', mon\.traitDesc\|\|'特性なし', \{block:true\}\)/.test(source)
+    && !/DEX_ROW_WRAP_LENGTH/.test(source));
   const longValue = texts.find(t => t.who.endsWith('特性の効果') && t.text.length >= 60)?.text || texts[0].text;
   const rowSpread = (align) => page.evaluate(({ text, align }) => {
     const root = document.getElementById('root');
@@ -152,9 +178,9 @@ const BAD_HEAD = /[ー。、』」）】〉》〕｝ぁぃぅぇぉっゃゅょ�
   // 指定を外すと本当に破れることも確かめる(検査が素通りしていないことの確認)
   await page.setContent('<!doctype html><html lang="ja"><head><meta charset="utf-8"></head><body><div id="root"></div></body></html>');
   let brokenFound = false;
-  for (const { text } of texts) {
+  for (const { text, size } of texts) {
     for (const w of WIDTHS) {
-      const lines = await measure(text, w);
+      const lines = await measure(text, w, size);
       if (lines.some(l => BAD_HEAD.test(l[0]))) { brokenFound = true; break; }
     }
     if (brokenFound) break;

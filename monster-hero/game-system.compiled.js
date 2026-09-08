@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 00deb107f86e8000
+// source-sha256: 55d62416a0c7e815
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 958333fe7e39ec01
+// generated-sha256: 45471c7530b174ee
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 16:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 16:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -35333,12 +35333,17 @@ function MonsterHeroGame() {
       });
       const tabs = [['basic', '基本'], ['stats', '能力'], ['skills', '技']];
       const tab = tabs.some(([id]) => id === dexTab) ? dexTab : 'basic';
-      // 「主血統」「区分」のような短い値は、ラベルと向かい合う右揃えのままにする。
-      // 「特性の効果」のような長い文は、右揃えだと折り返すたびに行頭がずれて読みにくいので、
-      // ラベルを上に置いて幅いっぱいの左揃えにする
-      // (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い」)
-      const DEX_ROW_WRAP_LENGTH = 24;
-      const row = (label, value) => typeof value === 'string' && value.length >= DEX_ROW_WRAP_LENGTH ? /*#__PURE__*/React.createElement("div", {
+      // 図鑑の1行。値は左揃えにする。
+      // 以前は text-right だったが、折り返すたびに行頭がずれて読みにくかった
+      // (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い」。ザンの特性の効果は
+      //  最終行が「撃」1文字だけになっていた)。1行に収まる短い値は flex の justify-between が
+      //  右端へ寄せるので、text-right を外しても見た目は1pxも変わらない(実測で確認済み)。
+      // 「特性の効果」のように必ず長くなる値だけは block:true でラベルを上に置き、
+      // 幅いっぱいを使って行数を減らす(文字数で機械的に決めると、端末の幅しだいで
+      //  同じ行の見た目が入れ替わってしまうため、呼ぶ側が明示する)
+      const row = (label, value, {
+        block = false
+      } = {}) => block ? /*#__PURE__*/React.createElement("div", {
         className: "border-b border-amber-500/15 py-1.5 last:border-b-0"
       }, /*#__PURE__*/React.createElement("span", {
         className: "block text-[10px] font-black text-amber-300/90"
@@ -35349,7 +35354,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[10px] font-black text-amber-300/90 shrink-0"
       }, label), /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-bold text-white text-right min-w-0 break-words"
+        className: "text-[11px] font-bold text-white min-w-0 break-words"
       }, value));
       const skillPills = (list, accent) => /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-1.5"
@@ -35470,7 +35475,9 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll mt-2 pr-0.5"
       }, tab === 'basic' && /*#__PURE__*/React.createElement("div", {
         "data-dex-tab-basic": true
-      }, row('主血統', main.name), row('副血統', sub.name), row('区分', monsterCategoryName(category)), row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし')), tab === 'stats' && /*#__PURE__*/React.createElement("div", {
+      }, row('主血統', main.name), row('副血統', sub.name), row('区分', monsterCategoryName(category)), row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし', {
+        block: true
+      })), tab === 'stats' && /*#__PURE__*/React.createElement("div", {
         "data-dex-tab-stats": true
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black text-amber-300/90 mb-1"
