@@ -113,6 +113,42 @@ const BAD_HEAD = /[ー。、』」）】〉》〕｝ぁぃぅぇぉっゃゅょ�
     bad[0].lines.forEach(l => console.log(`    ${BAD_HEAD.test(l[0]) ? '⚠' : ' '} ${l}`));
   }
 
+  // --- ③ 図鑑の「基本」タブ: 長い値は左揃えで、行頭がそろうこと ---
+  // 右揃えのまま折り返すと、行頭が行ごとにずれて読みにくい
+  // (実機のザンでは最終行が「撃」の1文字だけになっていた)
+  check('図鑑の行は、長い値だけ見出しを上に置いて左揃えにしている',
+    /const DEX_ROW_WRAP_LENGTH=\d+;/.test(source)
+    && /typeof value==='string'&&value\.length>=DEX_ROW_WRAP_LENGTH/.test(source));
+  const longValue = texts.find(t => t.who.endsWith('特性の効果') && t.text.length >= 60)?.text || texts[0].text;
+  const rowSpread = (align) => page.evaluate(({ text, align }) => {
+    const root = document.getElementById('root');
+    root.innerHTML = '';
+    const span = document.createElement('span');
+    // 右揃えのときはラベルぶん狭く、左揃えのときは幅いっぱい(実装と同じ)
+    span.style.cssText = `display:block; width:${align === 'right' ? 246 : 318}px; font-size:11px; line-height:1.625; font-weight:700; overflow-wrap:break-word; text-align:${align};`;
+    span.textContent = text;
+    root.appendChild(span);
+    const node = span.firstChild, range = document.createRange();
+    const lefts = []; let top = null, start = 0;
+    for (let i = 0; i < text.length; i++) {
+      range.setStart(node, i); range.setEnd(node, i + 1);
+      const t = Math.round(range.getBoundingClientRect().top);
+      if (top === null) { top = t; start = i; }
+      if (t !== top) {
+        range.setStart(node, start); range.setEnd(node, start + 1);
+        lefts.push(Math.round(range.getBoundingClientRect().left));
+        top = t; start = i;
+      }
+    }
+    range.setStart(node, start); range.setEnd(node, start + 1);
+    lefts.push(Math.round(range.getBoundingClientRect().left));
+    return { spread: Math.max(...lefts) - Math.min(...lefts), lines: lefts.length };
+  }, { text: longValue, align });
+  const right = await rowSpread('right');
+  const left = await rowSpread('left');
+  check('長い値を左揃えにすると行頭がそろう', left.spread === 0 && right.spread > 0,
+    `右揃え: ばらつき${right.spread}px(${right.lines}行) → 左揃え: ばらつき${left.spread}px(${left.lines}行)`);
+
   // 指定を外すと本当に破れることも確かめる(検査が素通りしていないことの確認)
   await page.setContent('<!doctype html><html lang="ja"><head><meta charset="utf-8"></head><body><div id="root"></div></body></html>');
   let brokenFound = false;
