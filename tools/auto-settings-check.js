@@ -3,6 +3,9 @@
 const fs = require('fs');
 const vm = require('vm');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
+const help = fs.readFileSync('monster-hero/data/help.js', 'utf8');
+const changelog = fs.readFileSync('monster-hero/data/changelog.js', 'utf8');
+const saveSpec = fs.readFileSync('docs/spec/SAVE_DATA.md', 'utf8');
 const start = source.indexOf("const AUTO_SETTINGS_KEY = 'mh_auto_settings_v1';");
 const end = source.indexOf('// 難易度。', start);
 if (start < 0 || end < 0) throw new Error('AUTO設定の正規化定義が見つかりません');
@@ -49,6 +52,10 @@ assert(source.includes('id="auto-breakthrough-reserve-gold"') && source.includes
 assert(source.includes('残すダイヤを1000減らす') && source.includes('残すダイヤを1000増やす'), 'ダイヤの±操作がありません');
 assert(source.includes('残す虹のプシュケーを10減らす') && source.includes('残す虹のプシュケーを10増やす'), '虹のプシュケーの±操作がありません');
 assert(source.includes('updateDraftAutoBreakthroughReserve'), '残高保護をAUTO設定の下書きへ接続していません');
+assert(help.includes("title:'AUTO∞の自動限界突破'"), 'ヘルプにAUTO∞自動限界突破の説明がありません');
+assert(help.includes('ブリーダーLvに自動追従') && help.includes('残すダイヤ') && help.includes('残す虹のプシュケー'), 'ヘルプに追従・残高保護の説明が不足しています');
+assert(changelog.includes('AUTO∞の自動限界突破をまとめて設定できるようにしました'), '更新履歴にAUTO∞自動限凸改善がありません');
+assert(saveSpec.includes('autoRepeatBreakthroughMode') && saveSpec.includes('breakthroughReserve'), 'SAVE_DATAに自動限凸の保存項目がありません');
 assert(source.includes("k.startsWith('mh_')"), 'mh_キーのバックアップ処理が見つかりません');
 assert(source.includes('onClick={()=>setAutoAllyDetail({ mon, masu })}'), '選択済み供モンの詳細導線が見つかりません');
 assert(source.includes('autoAllyDetail&&renderMonsterDetailModal({mon:autoAllyDetail.mon,masu:autoAllyDetail.masu'), '共通モンスター詳細UIの再利用が見つかりません');
