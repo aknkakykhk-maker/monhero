@@ -3873,10 +3873,17 @@ function MonsterHeroGame() {
   };
   const saveAutoSettings = async () => {
     const normalized = normalizeAutoSettings(draftAutoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS);
-    await storeSet(AUTO_SETTINGS_KEY, normalized, false);
+    const saved = await saveStoredValuesOrRollback([
+      { key:AUTO_SETTINGS_KEY, before:autoSettings, next:normalized },
+    ], storeGet, storeSet);
+    if (!saved) {
+      window.alert('AUTO設定を保存できませんでした。もう一度お試しください。');
+      return false;
+    }
     setAutoSettings(normalized);
     setDraftAutoSettings(normalized);
     setGameState('MB_MANAGEMENT');
+    return true;
   };
   const autoRosterLabel = (entry) => {
     const mon = resolveRosterEntryToMon(entry);
