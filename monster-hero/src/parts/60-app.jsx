@@ -7124,8 +7124,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // 剣士モッチーはX字に振り抜く別のモーション(twinBlade)を使う
               const isTwinBlade = hitMotion==='kenshiTwinBlade';
               setAttackAnim({slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
-              Audio_.se.zanSlash(); // ザン系の高めなシュシュ音(エイキ・剣士モッチーも同じ音を使う)
-              await battleWait(hitMotion==='eikiSakuraCombo'?500:(isTwinBlade?420:320));
+              if(isTwinBlade){
+                // 1撃目＼→2撃目／へSEを合わせ、X字完成時だけ短い画面シェイクを入れる。
+                // 追加連撃の本数に関係なく、この560msを1攻撃につき1回だけ流す。
+                await battleWait(135);
+                Audio_.se.zanSlash();
+                await battleWait(180);
+                Audio_.se.zanSlash();
+                await battleWait(115);
+                triggerShake();
+                await battleWait(130);
+              }else{
+                Audio_.se.zanSlash(); // ザン/エイキの既存SEと尺は変えない
+                await battleWait(hitMotion==='eikiSakuraCombo'?500:320);
+              }
               setAttackAnim(null);
               setSlotSkill(null);
               await battleWait(100);
@@ -7162,12 +7174,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               setAttackAnim({slotIndex: animSlot, charge:true});
               Audio_.se.special();
               await battleWait(650);
-              setAttackAnim({slotIndex: animSlot, charge:false, motion, sakura: motion==='eikiSakuraCombo'});
-              await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?520:500)));
+              const isKenshiTwin=motion==='kenshiTwinBlade';
+              setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo'});
+              if(isKenshiTwin){
+                await battleWait(135); Audio_.se.zanSlash();
+                await battleWait(180); Audio_.se.zanSlash();
+                await battleWait(115); triggerShake();
+                await battleWait(130);
+              }else{
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?520:500)));
+              }
             } else {
-              setAttackAnim({slotIndex: animSlot, motion, sakura: motion==='eikiSakuraCombo'});
-              if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-              await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)));
+              const isKenshiTwin=motion==='kenshiTwinBlade';
+              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo'});
+              if(isKenshiTwin){
+                await battleWait(135); Audio_.se.zanSlash();
+                await battleWait(180); Audio_.se.zanSlash();
+                await battleWait(115); triggerShake();
+                await battleWait(130);
+              }else{
+                if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)));
+              }
             }
             setAttackAnim(null);
             setSlotSkill(null);
@@ -11319,7 +11347,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if(isDashMotion){
               const isTwin=atkMotion==='kenshiTwinBlade';
               setMonsterImageDebugMotionPlaying({zanCombo:!isTwin,twinBlade:isTwin,sakura:atkMotion==='eikiSakuraCombo'});
-              await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?420:320)));
+              await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?560:320)));
             }else{
               setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
               await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?520:500)));

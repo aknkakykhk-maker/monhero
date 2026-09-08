@@ -100,88 +100,232 @@ const createAnimationStyle = () => {
         0% { opacity: 0; } 30% { opacity: .9; } 100% { opacity: 0; }
       }
     }
-    /* 剣士モッチーの二刀流。1撃目を右上→左下(＼)、2撃目を左上→右下(／)へ振り抜き、
-       2本合わせてX字になるようにする。ザンの残像ダッシュと違って移動は小さく、
-       体をひねって踏み込むだけにしてある(丸い体型を崩さないため)。
-       連撃が何本あってもこのモーションは1回しか流さない(ヒットの束は
-       60-app.jsx の isComboDashMotion がまとめて処理する)ので、
-       永久追加連撃が増えてもターンの長さは変わらない。 */
+    /* 剣士モッチーの二刀流。
+       その場で小さく振る旧演出ではなく、いったん沈んでから敵位置まで高速で斬り込み、
+       ＼で通り抜け→反転→／で切り返し→敵位置で巨大X字を光らせて帰還する。
+       本体の残像は画像複製ではなく drop-shadow で軽く作り、追加DOMは攻撃中の固定要素だけ。
+       永久追加連撃が増えても本体フルモーションは1攻撃1セットなので戦闘時間は増えない。 */
     @keyframes kenshiTwinBladeSlash {
       0% {
-        transform: translate(0,0) scale(1) rotate(0deg);
-        filter: drop-shadow(0 0 4px rgba(148,163,184,0.45));
+        transform: translate3d(0,0,0) scale(1) rotate(0deg);
+        filter: drop-shadow(0 0 4px rgba(148,163,184,.45));
       }
-      14% {
-        /* 右上へ小さく踏み込んで構える */
-        transform: translate(26px,-16px) scale(1.06) rotate(-9deg);
-        filter: drop-shadow(0 0 12px rgba(167,139,250,0.85));
+      9% {
+        transform: translate3d(0,10px,0) scale(.95) rotate(-3deg);
+        filter: drop-shadow(0 0 13px rgba(139,92,246,.9)) drop-shadow(0 0 18px rgba(34,211,238,.72));
       }
-      34% {
-        /* 1撃目 ＼ : 右上から左下へ振り抜く */
-        transform: translate(-34px,18px) scale(1.1) rotate(11deg);
-        filter: drop-shadow(30px -18px 0 rgba(167,139,250,0.34)) drop-shadow(0 0 18px rgba(196,181,253,0.95));
+      23% {
+        transform: translate3d(68px,-116px,0) scale(1.11) rotate(-13deg) skewX(-8deg);
+        filter:
+          drop-shadow(-28px 42px 0 rgba(139,92,246,.34))
+          drop-shadow(-54px 78px 0 rgba(139,92,246,.16))
+          drop-shadow(0 0 22px rgba(196,181,253,.98));
       }
-      52% {
-        /* 左上へ返す */
-        transform: translate(-26px,-16px) scale(1.06) rotate(9deg);
-        filter: drop-shadow(0 0 14px rgba(103,232,249,0.8));
+      36% {
+        transform: translate3d(-86px,-188px,0) scale(1.17) rotate(17deg) skewX(10deg);
+        filter:
+          drop-shadow(38px 8px 0 rgba(139,92,246,.38))
+          drop-shadow(82px 24px 0 rgba(139,92,246,.16))
+          drop-shadow(0 0 28px rgba(255,255,255,.98));
       }
-      74% {
-        /* 2撃目 ／ : 左上から右下へ振り抜く */
-        transform: translate(34px,18px) scale(1.1) rotate(-11deg);
-        filter: drop-shadow(-30px -18px 0 rgba(103,232,249,0.34)) drop-shadow(0 0 20px rgba(255,255,255,0.95));
+      47% {
+        transform: translate3d(-92px,-178px,0) scale(.98) rotate(10deg) skewX(0deg);
+        filter: drop-shadow(0 0 16px rgba(139,92,246,.72));
       }
-      88% {
-        transform: translate(0,0) scale(1.02) rotate(0deg);
-        filter: drop-shadow(0 0 16px rgba(255,255,255,0.85));
+      59% {
+        transform: translate3d(-58px,-126px,0) scale(1.08) rotate(12deg) skewX(7deg);
+        filter:
+          drop-shadow(30px 38px 0 rgba(34,211,238,.32))
+          drop-shadow(58px 72px 0 rgba(34,211,238,.14))
+          drop-shadow(0 0 22px rgba(103,232,249,.95));
+      }
+      72% {
+        transform: translate3d(90px,-188px,0) scale(1.17) rotate(-18deg) skewX(-10deg);
+        filter:
+          drop-shadow(-40px 8px 0 rgba(34,211,238,.4))
+          drop-shadow(-84px 24px 0 rgba(34,211,238,.17))
+          drop-shadow(0 0 30px rgba(255,255,255,1));
+      }
+      78%, 86% {
+        transform: translate3d(0,-170px,0) scale(1.12) rotate(0deg) skewX(0deg);
+        filter: drop-shadow(0 0 30px rgba(255,255,255,1)) drop-shadow(0 0 42px rgba(103,232,249,.75));
+      }
+      93% {
+        transform: translate3d(0,-54px,0) scale(1.04) rotate(0deg);
+        filter: drop-shadow(0 24px 0 rgba(255,255,255,.16)) drop-shadow(0 0 18px rgba(196,181,253,.75));
       }
       100% {
-        transform: translate(0,0) scale(1) rotate(0deg);
+        transform: translate3d(0,0,0) scale(1) rotate(0deg);
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
     }
-    /* 斬撃の軌跡。＼と／の2本だけを重ねてX字にする。要素2枚・@keyframes1本に抑える */
+
     .kenshi-twin-slash {
-      position: absolute;
-      inset: 0;
-      overflow: visible;
-      pointer-events: none;
-      z-index: 21;
+      position:absolute;
+      inset:0;
+      overflow:visible;
+      pointer-events:none;
+      z-index:24;
+      isolation:isolate;
     }
     .kenshi-twin-slash__blade {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 104px;
-      height: 7px;
-      margin: -3.5px 0 0 -52px;
-      opacity: 0;
-      border-radius: 999px;
-      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.95) 42%, var(--kenshi-slash-color) 72%, rgba(255,255,255,0) 100%);
-      box-shadow: 0 0 10px var(--kenshi-slash-color);
-      will-change: transform, opacity;
-      /* 本体モーション(420ms)のうち、1撃目の振り抜き(34%≒143ms)と
-         2撃目(74%≒311ms)へ軌跡の濃いところが重なるよう、遅れと長さを合わせてある。
-         2本とも420ms以内に消えるので、モーションが終わった瞬間に軌跡が途中で切れることはない */
-      animation: kenshiTwinSlashSweep 150ms ease-out forwards;
-      animation-delay: var(--kenshi-slash-delay);
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:190px;
+      height:16px;
+      margin:-8px 0 0 -95px;
+      opacity:0;
+      border-radius:999px;
+      clip-path:polygon(0 50%,10% 22%,78% 0,100% 50%,78% 100%,10% 78%);
+      transform-origin:var(--kenshi-slash-origin);
+      background:linear-gradient(90deg,
+        rgba(255,255,255,0) 0%,
+        var(--kenshi-slash-color) 20%,
+        rgba(255,255,255,1) 49%,
+        var(--kenshi-slash-color) 76%,
+        rgba(255,255,255,0) 100%);
+      box-shadow:
+        0 0 5px rgba(255,255,255,.98),
+        0 0 15px var(--kenshi-slash-color),
+        0 0 30px var(--kenshi-slash-color);
+      will-change:transform,opacity;
+      animation:kenshiTwinSlashSweep 210ms cubic-bezier(.08,.82,.18,1) forwards;
+      animation-delay:var(--kenshi-slash-delay);
+    }
+    .kenshi-twin-slash__blade::before {
+      content:'';
+      position:absolute;
+      left:6%;
+      right:6%;
+      top:50%;
+      height:4px;
+      transform:translateY(-50%);
+      border-radius:999px;
+      background:linear-gradient(90deg,transparent,#fff 18%,#fff 82%,transparent);
+      box-shadow:0 0 7px #fff;
+    }
+    .kenshi-twin-slash__blade::after {
+      content:'';
+      position:absolute;
+      inset:-9px -4px;
+      border-radius:999px;
+      background:linear-gradient(90deg,transparent,var(--kenshi-slash-color),transparent);
+      opacity:.48;
+      filter:blur(8px);
+      z-index:-1;
     }
     @keyframes kenshiTwinSlashSweep {
-      0%   { opacity: 0; transform: rotate(var(--kenshi-slash-angle)) scaleX(.15); }
-      22%  { opacity: 1; transform: rotate(var(--kenshi-slash-angle)) scaleX(1.05); }
-      58%  { opacity: .85; transform: rotate(var(--kenshi-slash-angle)) scaleX(1.15); }
-      100% { opacity: 0; transform: rotate(var(--kenshi-slash-angle)) scaleX(1.25); }
+      0% {
+        opacity:0;
+        transform:translate3d(0,-16px,0) rotate(var(--kenshi-slash-angle)) scaleX(.06) scaleY(.55);
+      }
+      18% { opacity:1; }
+      46% {
+        opacity:1;
+        transform:translate3d(0,0,0) rotate(var(--kenshi-slash-angle)) scaleX(1.04) scaleY(1.08);
+      }
+      72% {
+        opacity:.92;
+        transform:translate3d(var(--kenshi-slash-sweep-x),8px,0) rotate(var(--kenshi-slash-angle)) scaleX(1.18) scaleY(.94);
+      }
+      100% {
+        opacity:0;
+        transform:translate3d(var(--kenshi-slash-sweep-x),14px,0) rotate(var(--kenshi-slash-angle)) scaleX(1.28) scaleY(.55);
+      }
     }
-    /* 動きを減らす設定の端末では、振り抜きも軌跡も動かさず淡く光らせるだけにする */
+
+    .kenshi-twin-slash__speed {
+      position:absolute;
+      height:2px;
+      opacity:0;
+      border-radius:999px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.92),rgba(103,232,249,.8),transparent);
+      box-shadow:0 0 7px rgba(103,232,249,.72);
+      transform-origin:0 50%;
+      will-change:transform,opacity;
+      animation:kenshiTwinSpeedLine 250ms ease-out forwards;
+      animation-delay:var(--kenshi-speed-delay);
+    }
+    @keyframes kenshiTwinSpeedLine {
+      0% { opacity:0; transform:rotate(var(--kenshi-speed-angle)) translate3d(0,0,0) scaleX(.25); }
+      24% { opacity:.9; }
+      72% { opacity:.72; transform:rotate(var(--kenshi-speed-angle)) translate3d(var(--kenshi-speed-x),var(--kenshi-speed-y),0) scaleX(1.15); }
+      100% { opacity:0; transform:rotate(var(--kenshi-speed-angle)) translate3d(var(--kenshi-speed-x),var(--kenshi-speed-y),0) scaleX(1.35); }
+    }
+
+    .kenshi-twin-slash__impact {
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:34px;
+      height:34px;
+      margin:-17px 0 0 -17px;
+      opacity:0;
+      z-index:5;
+      animation:kenshiTwinImpact 560ms ease-out forwards;
+    }
+    .kenshi-twin-slash__impact-core {
+      position:absolute;
+      inset:-48px;
+      border-radius:50%;
+      background:radial-gradient(circle,
+        rgba(255,255,255,1) 0%,
+        rgba(255,255,255,.95) 8%,
+        rgba(103,232,249,.72) 24%,
+        rgba(139,92,246,.42) 46%,
+        rgba(139,92,246,0) 72%);
+      filter:blur(.4px);
+    }
+    .kenshi-twin-slash__impact-ring {
+      position:absolute;
+      inset:-22px;
+      border:3px solid rgba(255,255,255,.92);
+      border-radius:50%;
+      box-shadow:0 0 12px rgba(255,255,255,.95),0 0 24px rgba(103,232,249,.82),0 0 34px rgba(139,92,246,.62);
+    }
+    @keyframes kenshiTwinImpact {
+      0%,74% { opacity:0; transform:scale(.25); }
+      77% { opacity:1; transform:scale(.62); }
+      81% { opacity:1; transform:scale(1.22); }
+      86% { opacity:.72; transform:scale(2.05); }
+      88%,100% { opacity:0; transform:scale(2.55); }
+    }
+
+    .kenshi-twin-slash__shard {
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:22px;
+      height:3px;
+      margin:-1.5px 0 0 -11px;
+      opacity:0;
+      border-radius:999px;
+      background:linear-gradient(90deg,#fff,rgba(103,232,249,.95),rgba(139,92,246,.65),transparent);
+      box-shadow:0 0 7px rgba(255,255,255,.85);
+      animation:kenshiTwinShard 150ms ease-out forwards;
+      animation-delay:calc(430ms + var(--kenshi-shard-delay));
+    }
+    @keyframes kenshiTwinShard {
+      0% { opacity:0; transform:translate3d(0,0,0) rotate(var(--kenshi-shard-angle)) scaleX(.35); }
+      20% { opacity:1; }
+      100% { opacity:0; transform:translate3d(var(--kenshi-shard-x),var(--kenshi-shard-y),0) rotate(var(--kenshi-shard-angle)) scaleX(1.15); }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       @keyframes kenshiTwinBladeSlash {
-        0% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
-        40% { filter: drop-shadow(0 0 16px rgba(196,181,253,0.9)); }
-        100% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+        0% { filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
+        45% { filter:drop-shadow(0 0 20px rgba(196,181,253,.95)); }
+        100% { filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
       }
-      .kenshi-twin-slash__blade { animation: kenshiTwinSlashFade 150ms ease-out forwards; }
+      .kenshi-twin-slash__blade { animation:kenshiTwinSlashFade 180ms ease-out forwards; }
+      .kenshi-twin-slash__speed, .kenshi-twin-slash__shard { display:none; }
+      .kenshi-twin-slash__impact { animation:kenshiTwinImpactReduced 560ms ease-out forwards; }
       @keyframes kenshiTwinSlashFade {
-        0% { opacity: 0; } 35% { opacity: .85; } 100% { opacity: 0; }
+        0% { opacity:0; } 35% { opacity:.95; } 100% { opacity:0; }
+      }
+      @keyframes kenshiTwinImpactReduced {
+        0%,70% { opacity:0; } 80% { opacity:.9; transform:scale(1); } 100% { opacity:0; transform:scale(1.7); }
       }
     }
     @keyframes zanComboDash {
