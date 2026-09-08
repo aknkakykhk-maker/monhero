@@ -49,14 +49,16 @@ const mathWith = (random) => Object.assign(Object.create(Math), { random, floor:
 
 check('予測と実処理の両方が共通の buildAttackHits を使っている', predictedArrow.includes('buildAttackHits(') && act.text.includes('buildAttackHits('));
 
-const heroes = ['Zan', 'Eiki', 'Pandora', 'Ark', 'Golem'];
-const uniqueOwners = ['Zan', 'Eiki', 'Pandora', 'Ark', 'Iblis', 'Suezo'];
+const heroes = ['Zan', 'Eiki', 'Pandora', 'KenshiMocchi', 'Ark', 'Golem'];
+const uniqueOwners = ['Zan', 'Eiki', 'Pandora', 'KenshiMocchi', 'Ark', 'Iblis', 'Suezo'];
 const cards = [{ type: 'atk' }, { type: 'range_atk', rangeIdx: 1 }, ...uniqueOwners.map(id => ({ type: 'unique', monId: id }))];
 let cases = 0; const mismatches = [];
 for (const heroId of heroes) for (const attackerId of [heroId, 'Suezo']) for (const card of cards)
   for (const d of [100, 333]) for (const combo of [0, 0.05]) for (const global of [0, 0.1]) for (const localGlobal of [0, 0.03])
-    for (const critMode of ['none', 'guaranteed']) {
-      const perma = { comboDmgPct: combo, globalComboDmgPct: global, critDmgPct: 0.1, critRatePct: 0 };
+    for (const critMode of ['none', 'guaranteed']) for (const extra of [0, 2]) {
+      // 剣士モッチーの永久追加連撃(ソードスキルで増える本数)も、予測と実処理の両方へ同じ数が
+      // 渡っていなければならない。0本と2本の両方を回す(組み合わせは extra で分ける)
+      const perma = { comboDmgPct: combo, globalComboDmgPct: global, critDmgPct: 0.1, critRatePct: 0, kenshiExtraCombo: extra };
       const turn = { guaranteedCrit: critMode === 'guaranteed' };
       const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
       const getTurnBuff = (k, def) => (k in turn ? turn[k] : def);
@@ -103,8 +105,9 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
   const stunCard = { type: 'debuff', subType: 'stun_atsu', baseValue: 1.5 };
   for (const heroId of heroes) for (const attackerId of [heroId, 'Suezo'])
     for (const d of [100, 333]) for (const combo of [0, 0.05]) for (const global of [0, 0.1]) for (const localGlobal of [0, 0.03])
-      for (const critMode of ['none', 'guaranteed']) {
-        const perma = { comboDmgPct: combo, globalComboDmgPct: global, critDmgPct: 0.1, critRatePct: 0 };
+      for (const critMode of ['none', 'guaranteed']) for (const extra of [0, 2]) {
+        // あつの挑発でも、剣士モッチーの永久追加連撃の本数は予測と実処理へ同じ数が渡る
+        const perma = { comboDmgPct: combo, globalComboDmgPct: global, critDmgPct: 0.1, critRatePct: 0, kenshiExtraCombo: extra };
         const turn = { guaranteedCrit: critMode === 'guaranteed' };
         const getPermaBuff = (k, def = 0) => (k in perma ? perma[k] : def);
         const getTurnBuff = (k, def) => (k in turn ? turn[k] : def);
@@ -113,7 +116,9 @@ check(`乱数を固定すると予測と実処理の合計が一致する(${case
         const predicted = makePredicted(mainHero, getPermaBuff, getTurnBuff)(stunCard, mon, d, localGlobal);
         // 予測側も mainCanCrit:false を渡すので、確定会心のときもメインには会心が乗らず、実処理と完全に一致する
         const knownGap = 0;
-        const direct = shared.buildAttackHits({ d, card: stunCard, attackerId, heroId, comboDmgBonus: combo, critDmgBonus: 0.1, guaranteedCrit: turn.guaranteedCrit, rollCrit: () => false, globalComboRate: global + localGlobal, mainCanCrit: false });
+        // 実処理・予測と同じ引数で呼ぶ。永久追加連撃の本数(kenshiExtraCombos)を渡し忘れると、
+        // ここだけ剣士モッチーの追撃が抜けて「実と予測は合っているのに直接だけ足りない」になる
+        const direct = shared.buildAttackHits({ d, card: stunCard, attackerId, heroId, comboDmgBonus: combo, critDmgBonus: 0.1, guaranteedCrit: turn.guaranteedCrit, rollCrit: () => false, globalComboRate: global + localGlobal, mainCanCrit: false, kenshiExtraCombos: extra });
         stunCases++;
         if (actual.totalDmg !== predicted - knownGap || actual.totalDmg !== direct.reduce((s, h) => s + h.dmg, 0)
           || actual.attackHits[0].isCrit !== false || actual.attackCount !== 1)

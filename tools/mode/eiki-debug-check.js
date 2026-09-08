@@ -101,8 +101,10 @@ check('MARKET_PROFILE_ICON_STYLESにエイキのアイコンの拡大位置調�
 check('更新履歴に新モンスター追加の項目がある', /新モンスター エイキを追加/.test(changelogSrc));
 check('更新履歴のマーケット追加は助手の告知(assistantNotice)付き',
   /title: '新モンスター エイキを追加'[\s\S]{0,400}?assistantNotice: \{ id:'update_notice_eiki_market_v1', type:'market' \}/.test(changelogSrc));
+// 3000ダイヤの円盤石は増えていくので、並びを丸ごと写さない(1体足すだけで落ちるため)。
+// 見たいのは「エイキが3000ダイヤ側の並びに居るか」だけ
 check('ヘルプのマーケット項目にエイキが載っている(アイコン・円盤石の一覧)',
-  /パンドラ・エイキの円盤石は各3000ダイヤ/.test(helpSrc));
+  /エイキ[^]{0,30}の円盤石は各3000ダイヤ/.test(helpSrc) || /・エイキ・[^]{0,30}円盤石は各3000ダイヤ/.test(helpSrc));
 check('ヘルプの図鑑項目にエイキ専用の解説がある', /title:'エイキ', text:'エイキは「ザン × ？？？」のレアモンスター/.test(helpSrc));
 check('はじめから解放されるモンスターには入れない(円盤石購入で解放する仕様のまま)',
   !/STARTER_MONSTER_IDS[^\n]*Eiki/.test(source));
@@ -147,8 +149,12 @@ check('永続・重複は addPermaBuff の加算でそのまま成立',
 console.log('--- ⑦ 攻撃モーション ---');
 check('専用モーション種別が eikiSakuraCombo', eiki.atkMotion === 'eikiSakuraCombo');
 check('ザン本体のモーション種別は変えていない', ALL_PLAYER_MONSTERS.Zan.atkMotion === 'zanCombo');
-check('ザンと同じ高速斬撃の動きを共有する',
-  source.includes("const isComboDashMotion = hitMotion==='zanCombo' || hitMotion==='eikiSakuraCombo';"));
+// 同じ見せ方を共有する種は増えていく(剣士モッチーの二刀流など)ので、行を丸ごと写さない。
+// 見たいのは「ザンとエイキが同じ判定へ入っているか」だけ
+check('ザンと同じ高速斬撃の動きを共有する', (() => {
+  const line = (source.match(/^.*const isComboDashMotion = .*$/m) || [''])[0];
+  return line.includes("hitMotion==='zanCombo'") && line.includes("hitMotion==='eikiSakuraCombo'");
+})());
 check('RPG表示のモーションもザンと同じDash', /eikiSakuraCombo:'Dash'/.test(source));
 check('花びらは攻撃中だけ描く(常時アニメーションにしない)',
   source.includes('{isAnimating&&attackAnim.sakura&&<EikiSakuraPetals/>}')
@@ -167,8 +173,9 @@ check('花びらはtransformとopacityだけを動かす(レイアウトを作�
   /@keyframes eikiSakuraFall \{[\s\S]*?\}/.test(source)
   && !/@keyframes eikiSakuraFall \{[\s\S]*?(width|height|top:|left:)\s*[0-9]/.test(source.slice(source.indexOf('@keyframes eikiSakuraFall'), source.indexOf('@keyframes eikiSakuraFall') + 400)));
 check('動きを減らす設定の端末では流さない', source.includes('@media (prefers-reduced-motion: reduce)') && source.includes('eikiSakuraFade'));
+// ここも他の種が増えると分岐が伸びるので、エイキ=500ms・ザン=320ms の対応だけを見る
 check('エイキだけ斬撃後に短い余韻を残し、ザンは従来320msのまま',
-  source.includes("battleWait(hitMotion==='eikiSakuraCombo'?500:320)"));
+  /battleWait\(hitMotion==='eikiSakuraCombo'\?500:[^)]*320\)/.test(source));
 
 console.log('--- ⑧ 画像・染色・円盤石 ---');
 const imgFile = (rel) => path.join(ROOT, 'monster-hero', rel);
