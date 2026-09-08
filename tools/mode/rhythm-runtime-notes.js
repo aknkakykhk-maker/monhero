@@ -179,6 +179,7 @@ const RELEASED_MARKERS=Object.freeze({
   toriko:'toriko-v3',
   '4u_hitasura':'4u-hitasura-v3',
   kindan_no_resistance:'kindan-no-resistance-v3',
+  crossing_field:'crossing-field-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -200,6 +201,7 @@ const RELEASED_TRACKS=Object.freeze({
   toriko:'toriko',
   '4u_hitasura':'4u_hitasura',
   kindan_no_resistance:'kindan_no_resistance',
+  crossing_field:'crossing_field',
 });
 
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,
