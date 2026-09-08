@@ -65,6 +65,8 @@ const MARKET_PROFILE_ICON_STYLES = {
   Pandora: { scale: 0.955, x: 0.2, y: 0.8 },
   eiki_disc_icon: { scale: 0.95, x: 0, y: 0.9 },
   Eiki: { scale: 0.95, x: 0, y: 0.9 },
+  kenshi_mocchi_disc_icon: { scale: 0.95, x: 0, y: 0 },
+  KenshiMocchi: { scale: 0.95, x: 0, y: 0 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
 // 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。

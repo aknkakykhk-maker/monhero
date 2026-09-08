@@ -200,8 +200,16 @@ const splitRankingParty = (entry) => {
 // 以前は予測表示(getAttackPredictedDmg)と実処理(processTurn)が別々に同じ分岐を書いていて、
 // 片方だけ直すと「予測と実際が違う」になっていた(docs/refactor/BATTLE_DAMAGE_MAP.md)。
 // ここで 1 か所にまとめ、会心の決め方(乱数か確定か)だけを呼び出し側が渡す。
-// 【順序を変えないこと】メイン → ザン特性 → 連斬 → 桜花連舞 → 緋桜連華 → 禁忌解錠(通常の後半) → 禁忌解錠(固有技) → 全体連撃。
+// 【順序を変えないこと】メイン → ザン特性 → 連斬 → 桜花連舞 → 緋桜連華 → 禁忌解錠(通常の後半) → 禁忌解錠(固有技)
+//   → 二刀流(通常の後半) → 二刀流(固有技の10%×3) → ソードスキル(20%×2) → 永久追加連撃 → 全体連撃。
 // 演出(専用モーションの再生・noAnim)がこの順序と skillName に依存している。
+// 勇者モンに選んだときだけ効く「同時使用可能枚数+1」を持つ種。
+// ハムの「連続攻撃」と剣士モッチーの「二刀流」は名前が違うだけで効果は同じなので、
+// 種ごとに処理を書かず、この一覧と cardLimit の共通ルールへ乗せる。
+// 1つのスロットへ何枚重ねられるか(60-app.jsx の slotMaxUses)も、この一覧を通す。
+// 勇者モンにした本人のカードだけ複数枚まとめて使える(ただし固有技は山札に1枚しか無い)
+const HERO_CARD_BONUS_MONSTER_IDS = Object.freeze(['Ham', 'KenshiMocchi']);
+const heroCardBonusOf = (heroId) => (HERO_CARD_BONUS_MONSTER_IDS.includes(heroId) ? 1 : 0);
 const ATTACK_COMBO_RULES = Object.freeze({
   zanHero: 0.3,                              // 勇者特性「連撃」: ザン勇者がザンで攻撃(通常・固有とも)
   zanUnique: 0.2,                            // 固有技「連斬」: 技の出自がザンなら誰が使っても(合体で引き継いだ場合も)
@@ -210,16 +218,30 @@ const ATTACK_COMBO_RULES = Object.freeze({
   eikiUnique: Object.freeze([0.15, 0.15]),   // 固有効果「緋桜連華」: 技の出自がエイキなら誰が使っても
   pandoraSplitNormal: 0.5,                   // 禁忌解錠: パンドラ勇者がパンドラで通常攻撃(atk/range_atk)すると 50%+50% に分ける
   pandoraUnique: 1.0,                        // 禁忌解錠: パンドラ自身の固有技は 100% の連撃(引き継いだ技には無い)
+  kenshiSplitNormal: 0.5,                    // 二刀流: 剣士モッチー勇者が剣士モッチーで通常攻撃(atk/range_atk)すると 50%+50% に分ける
+  kenshiHeroUnique: Object.freeze([0.1, 0.1, 0.1]), // 二刀流: さらに剣士モッチー自身の固有技なら 10% を3回追加
+  kenshiUnique: Object.freeze([0.2, 0.2]),   // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても
+  kenshiExtraCombo: 0.1,                     // ソードスキルの連撃パワーが3充填されるたび、この率の連撃が1本ずつ永久に増える
   atonement: 0.2,                            // 贖罪(アーク・イブリースの固有技): メインの確定値の 20%。実処理では固有技の効果ブロック側で積む
 });
+// ソードスキルの「連撃パワー」が満タンになる数。ここに達するたびに永久10%連撃が1本増え、0へ戻る
+const KENSHI_COMBO_POWER_MAX = 3;
 // mainCanCrit:false は「メインヒットには会心が乗らない」種類(あつの挑発)。連撃・全体連撃の会心判定は変わらない
-const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
   const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);
-  // 禁忌解錠の通常攻撃は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)
-  const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5) : d;
+  // 二刀流も禁忌解錠と同じ「通常攻撃を50%+50%へ分ける」形。固有技は分割しない(メイン100%のまま)
+  const kenshiHero = heroId === 'KenshiMocchi' && attackerId === 'KenshiMocchi';
+  const kenshiSplitNormal = kenshiHero && ['atk', 'range_atk'].includes(card.type);
+  // 分割は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)。
+  // 二刀流は「合計は元のまま」が仕様なので、d が奇数のときの余り1をメインへ寄せる
+  // (両方 floor にすると d=1001 が 500+500=1000 になり、1だけ減る)。
+  // 禁忌解錠は公開済みの挙動をそのまま保つため、こちらは従来どおり両方 floor のまま。
+  const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5)
+    : kenshiSplitNormal ? d - Math.floor(d * 0.5)
+    : d;
   const mainCrit = mainCanCrit && (guaranteedCrit || rollCrit());
   hits.push({ kind: 'main', crit: mainCrit, dmg: mainCrit ? Math.floor(mainBase * critMult) : mainBase, skillName: null, noAnim: false });
   // 連撃は元ダメージ d を基準にし、会心はメインとは独立に判定する(メインの会心を二重に乗せない)
@@ -238,6 +260,16 @@ const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critD
   if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);
   if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);
   if (heroId === 'Pandora' && attackerId === 'Pandora' && isUniqueOf('Pandora')) combo(ATTACK_COMBO_RULES.pandoraUnique + comboDmgBonus, '連撃', true);
+  // 勇者特性「二刀流」: 通常攻撃のもう半分と、自身の固有技のときの10%×3
+  if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);
+  if (kenshiHero && isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiHeroUnique) combo(rate + comboDmgBonus);
+  // 固有効果「ソードスキル」: 技の出自が剣士モッチーなら誰が使っても(合体で引き継いだ場合も)
+  if (isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);
+  // ソードスキルの連撃パワーが3充填されるたびに1本ずつ増える永久連撃。
+  // 本数に上限は設けない。率にも連撃ダメージ補正(comboDmgBonus)が乗る
+  if (attackerId === 'KenshiMocchi') {
+    for (let i = 0; i < kenshiExtraCombos; i++) combo(ATTACK_COMBO_RULES.kenshiExtraCombo + comboDmgBonus);
+  }
   if (globalComboRate > 0) combo(globalComboRate, '全体連撃', true); // きき由来の全体連撃は全モンスター共通の別ヒット
   return hits;
 };

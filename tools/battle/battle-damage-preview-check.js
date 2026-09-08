@@ -10,8 +10,30 @@ assert(source.includes("if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUniqu
 assert(source.includes("if (heroId === 'Eiki' && attackerId === 'Eiki') {"), 'エイキ勇者特性の連撃');
 assert(source.includes("if (isUniqueOf('Eiki')) for (const rate of ATTACK_COMBO_RULES.eikiUnique) combo(rate + comboDmgBonus);"), 'エイキ固有技の連撃');
 assert(source.includes("const pandoraSplitNormal = heroId === 'Pandora' && attackerId === 'Pandora' && ['atk', 'range_atk'].includes(card.type);"), 'パンドラ勇者の通常攻撃分割');
-assert(source.includes('const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5) : d;'), 'パンドラ通常攻撃の1ヒット目を分割前ダメージの50%にする');
+assert(source.includes("const kenshiSplitNormal = kenshiHero && ['atk', 'range_atk'].includes(card.type);"), '剣士モッチー勇者の通常攻撃分割');
+// 通常攻撃を「分割前ダメージの50%」から始める種は今後も増えるので、条件のidを並べて持たない。
+// 見たいのは「その条件のときだけ Math.floor(d * 0.5) から始まるか」と「両方の種が条件に居るか」
+{
+  // mainBase という名前は別の用途(合体元のベースモン)でも使われているので、
+  // 「分割前ダメージの半分」を作っている代入式だけを、セミコロンまで丸ごと取り出す
+  // (条件が増えて複数行になっても拾えるようにしてある)
+  const mainBaseExpr = (source.match(/const mainBase = (?:(?!;)[\s\S])*?Math\.floor\(d \* 0\.5\)(?:(?!;)[\s\S])*?;/) || [''])[0];
+  assert(mainBaseExpr.includes('pandoraSplitNormal') && mainBaseExpr.includes('kenshiSplitNormal') && mainBaseExpr.includes(': d;'),
+    `通常攻撃を分割する勇者特性(禁忌解錠・二刀流)の1ヒット目を、分割前ダメージの50%にする（実装: ${mainBaseExpr || '見つからない'}）`);
+  // 禁忌解錠は公開済みの挙動そのまま(両方 floor)。二刀流は「合計は元のまま」が仕様なので、
+  // 奇数の余り1をメインへ寄せる。どちらの丸めなのかを取り違えると1ダメージ変わる
+  assert(/pandoraSplitNormal \? Math\.floor\(d \* 0\.5\)/.test(mainBaseExpr),
+    'パンドラの分割は従来どおり両方切り捨てのまま');
+  assert(/kenshiSplitNormal \? d - Math\.floor\(d \* 0\.5\)/.test(mainBaseExpr),
+    '剣士モッチーの分割は、奇数のときの余りをメインへ寄せて合計を保つ');
+}
 assert(source.includes("if (pandoraSplitNormal) combo(ATTACK_COMBO_RULES.pandoraSplitNormal + comboDmgBonus, '連撃', true);") && source.includes('pandoraSplitNormal: 0.5,'), 'パンドラ通常攻撃の連撃を分割前ダメージ基準で積む');
+assert(source.includes('if (kenshiSplitNormal) combo(ATTACK_COMBO_RULES.kenshiSplitNormal + comboDmgBonus);') && source.includes('kenshiSplitNormal: 0.5,'), '剣士モッチー通常攻撃の連撃を分割前ダメージ基準で積む');
+assert(source.includes("if (isUniqueOf('KenshiMocchi')) for (const rate of ATTACK_COMBO_RULES.kenshiUnique) combo(rate + comboDmgBonus);"), 'ソードスキルの連撃');
+// 永久追加連撃の本数は永続バフから読む。予測(getAttackPredictedDmg)にも同じ本数を渡していないと
+// 「予測より実際が多い」になるので、buildAttackHits を呼ぶ3か所すべてで渡していることを見る
+assert((source.match(/kenshiExtraCombos:getPermaBuff\('kenshiExtraCombo'\)/g) || []).length === 3,
+  '剣士モッチーの永久追加連撃の本数を、予測と実処理の両方へ渡す');
 assert(source.includes("(card.monId === 'Ark' || card.monId === 'Iblis')) ? Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement)") && source.includes('attackAtonementDmg(card, hits[0].dmg)'), '贖罪の追撃を予測する');
 assert((source.match(/getAttackPredictedDmg\(/g)||[]).length >= 4, '合計と個別表示が共通予測関数を使う');
 assert(source.includes('const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'), '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
@@ -32,6 +54,11 @@ const deterministicPreview=({kind,baseDmg=1000,combo=0})=>{
   if(kind==='eikiHeroUnique') total+=extraHit(baseDmg,0.1+combo)*2+extraHit(baseDmg,0.3+combo)+extraHit(baseDmg,0.15+combo)*2;
   if(kind==='eikiInheritedUnique') total+=extraHit(baseDmg,0.15+combo)*2;
   if(kind==='pandoraUnique') total+=extraHit(baseDmg,1+combo);
+  // 剣士モッチー: 通常攻撃はメインが50%になり、そのぶん50%の連撃が付く(合計は元のまま)。
+  // 自身の固有技はメイン100%＋10%×3(二刀流)＋20%×2(ソードスキル)。extra は永久追加連撃の本数
+  if(kind==='kenshiHeroNormal') total=(baseDmg-Math.floor(baseDmg*0.5))+extraHit(baseDmg,0.5+combo);
+  if(kind==='kenshiHeroUnique') total+=extraHit(baseDmg,0.1+combo)*3+extraHit(baseDmg,0.2+combo)*2;
+  if(kind==='kenshiInheritedUnique') total+=extraHit(baseDmg,0.2+combo)*2;
   if(kind==='atonement') total+=Math.floor(baseDmg*0.2);
   if(kind==='globalCombo') total+=extraHit(baseDmg,combo);
   return total;
@@ -42,6 +69,11 @@ assert.strictEqual(deterministicPreview({kind:'eikiHeroNormal'}),1200, 'エイ�
 assert.strictEqual(deterministicPreview({kind:'eikiHeroUnique'}),1800, 'エイキ自身の固有技予測はメイン+10%×2+30%+15%×2');
 assert.strictEqual(deterministicPreview({kind:'eikiInheritedUnique'}),1300, '継承したエイキ固有技の予測はメイン+15%×2');
 assert.strictEqual(deterministicPreview({kind:'pandoraUnique'}),2000, 'パンドラ固有技の予測はメイン+100%');
+assert.strictEqual(deterministicPreview({kind:'kenshiHeroNormal'}),1000, '剣士モッチー通常攻撃の予測は500+500(合計は元のまま)');
+assert.strictEqual(deterministicPreview({kind:'kenshiHeroUnique'}),1700, '剣士モッチー自身の固有技予測はメイン+10%×3+20%×2');
+assert.strictEqual(deterministicPreview({kind:'kenshiInheritedUnique'}),1400, '継承した剣士モッチー固有技の予測はメイン+20%×2');
+assert.strictEqual(deterministicPreview({kind:'kenshiHeroNormal',combo:0.03}),1030, '連撃強化は二刀流の後半へも加算する(500+530)');
+assert.strictEqual(deterministicPreview({kind:'kenshiHeroNormal',baseDmg:1001}),1001, '二刀流は基準ダメージが奇数でも合計が減らない(501+500)');
 assert.strictEqual(deterministicPreview({kind:'atonement'}),1200, 'アーク/イブリース固有技の予測はメイン+20%');
 assert.strictEqual(deterministicPreview({kind:'globalCombo',combo:0.07}),1070, 'きき全体連撃の予測はメイン+全体連撃率');
 assert.strictEqual(deterministicPreview({kind:'eikiHeroUnique',combo:0.03}),1949, '連撃強化はエイキの5連撃すべてへ加算する（各ヒット切り捨て）');
@@ -112,7 +144,7 @@ const localBoostFromCard = (card) => {
   if (card.subType==='atk_buff') return { oryo: 0.1 }; // おりょうの力Lv0相当
   if (card.subType==='buff_kiki') return { combo: 0.03 }; // ききの応援Lv0相当
   if (card.type==='unique' && card.monId==='Golem') return { oryo: 0.075 };
-  if (card.type==='unique' && (card.monId==='Mocchi'||card.monId==='Mitarashi'||card.monId==='KenshiMocchi')) return { dmgMod: 0.1 }; // ← モデル
+  if (card.type==='unique' && (card.monId==='Mocchi'||card.monId==='Mitarashi')) return { dmgMod: 0.1 }; // ← モデル
   return null;
 };
 

@@ -14,8 +14,14 @@ assert(breederSource.includes(`images/breeder-icons/kiki.PNG?v=35362d7b6e3e`));
 // ききのカード上限+1は、その+1ぶんをどのモンスターへ重ねて使ってもよい
 // (以前はハムの連続攻撃だけが同じスロットへの複数割当を許していて、
 //  ききの+1は「違うモンスターにしか使えない」状態になっていた)
-assert(gameSource.includes("const slotMaxUses = (mon) => ((mainHero?.id==='Ham'&&mon?.id==='Ham')||kikiCardBonus>0) ? cardLimit : 1;"),
-  'ききのカード上限+1が同じモンスターへ重ねて使えない(slotMaxUsesが古いまま)');
+// 条件は勇者特性を持つ種が増えるたびに伸びるので、行を丸ごと写さない
+// (実際に剣士モッチーの二刀流を足したとき、値が何も変わっていないのに落ちた)。
+// 見たいのは「kikiCardBonus>0 のときも cardLimit まで許すか」だけ
+{
+  const slotMaxUsesLine = (gameSource.match(/^.*const slotMaxUses = .*$/m) || [''])[0];
+  assert(slotMaxUsesLine.includes('kikiCardBonus>0') && slotMaxUsesLine.includes('? cardLimit : 1;'),
+    `ききのカード上限+1が同じモンスターへ重ねて使えない(slotMaxUsesが古いまま): ${slotMaxUsesLine.trim() || '見つからない'}`);
+}
 assert((gameSource.match(/=slotMaxUses\((?:targetMon|s)\);/g)||[]).length===3,
   'カード割当のチェック箇所(ドラッグ・予測・スロット表示)がslotMaxUsesに揃っていない');
 // カードをタップしたときの説明文(getDynamicDesc)も、バランス調整後の継続ターン数と一致していること

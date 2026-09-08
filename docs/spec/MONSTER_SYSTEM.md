@@ -14,7 +14,7 @@
 
 ## 2. 現在の種
 
-`ALL_PLAYER_MONSTERS` には19種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Mia、Pandora、Monol、Oboro、Plant、Zan、Mitarashi、Ark、Iblis、Snegurochka、Undine、Yaobikuni、Eiki）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、MiaとPandoraを含む残り11種は初期解放されず、マーケットで対応する円盤石を購入すると解放される。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
+`ALL_PLAYER_MONSTERS` には20種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Mia、Pandora、Monol、Oboro、Plant、Zan、Mitarashi、KenshiMocchi、Ark、Iblis、Snegurochka、Undine、Yaobikuni、Eiki）がある。初期解放は `STARTER_MONSTER_IDS` の8種（Mocchi、Suezo、Golem、Tiger、Ham、Pixie、Monol、Oboro）で、MiaとPandoraを含む残り12種は初期解放されず、マーケットで対応する円盤石を購入すると解放される。解放状況は `mh_unlocked_monsters` に持ち、モンスター図鑑の登録数もこの値をそのまま使う。
 
 各定義の必須実装項目は次のとおり。
 
@@ -68,9 +68,32 @@
 | ヤオビクニ | ウンディーネ | モッチー | 派生種 |
 | スネグーラチカ | ウンディーネ | ？？？ | レア |
 | パンドラ | ピクシー | ？？？ | レア |
+| エイキ | ザン | ？？？ | レア |
+| 剣士モッチー | モッチー | ？？？ | レア |
 
 プラント血統は代表モンスターとしてプラントを持つ。「ドラゴン」「ジョーカー」「ゲル」「？？？」は、いまのところその血統単体のプレイアブルモンスターがいない。
 これらの血統は血統カタログの `monId`（その血統を代表するモンスター）を持たないため、画面では名前だけで表示する。存在しない画像は作らない。
+
+### 剣士モッチー（2026年9月に正式実装）
+
+| 項目 | 値 |
+| --- | --- |
+| 内部ID / 表示名 | `KenshiMocchi` / 剣士モッチー |
+| 血統・区分 | モッチー × ？？？ ＝ レア |
+| 基礎能力 | ライフ350 / ちから185 / 丈夫さ25 / ガッツ130 |
+| 距離適性 | 零A・近A・中C・遠D |
+| 攻撃モーション | `kenshiTwinBlade`（X字の二刀流） |
+| 勇者特性 | 二刀流 |
+| 固有技 | ソニック・リープ（`baseMult` 2.4 / `baseGuts` 48） |
+| 固有効果 | ソードスキル |
+| 円盤石 | 3000ダイヤ（`STARTER_MONSTER_IDS` には入れない） |
+
+「高火力・低耐久・近接向けの攻撃特化型」。基礎総合力はエイキ付近で、エイキより攻撃へ寄せてある。
+勇者特性・固有効果の戦闘上の扱い（ヒット列・連撃パワー・永久追加連撃）は
+[`BATTLE_SYSTEM.md`](BATTLE_SYSTEM.md) の「剣士モッチー」を正本とする。
+
+固有技の威力と消費は既存の共通式（`baseMult + Lv×0.5` / `floor(baseGuts × 現在倍率 ÷ baseMult)`）を
+そのまま通るので、Lv0が2.4倍・48、Lv8が6.4倍・128になる。剣士モッチー専用の成長式は作っていない。
 
 **将来予定（未実装）**: 「○○血統限定モード」の参加判定にこの血統データをそのまま使う想定である。
 現時点でモード側の実装はなく、血統データと図鑑表示までが実装済みである。

@@ -5476,10 +5476,11 @@ function MonsterHeroGame() {
   // 1回のランに同じ種は1体しか入らないので、種idの一致で特定できる
   // (マスモンは名前を自由に付けられるため、名前で見分けることはできない)
   const isHeroSlotMon = (mon) => !!(mon && mainHero && mon.id === mainHero.id);
-  // 勇者モンの特性で増える同時使用枚数(ハムの「連続攻撃」)。
+  // 勇者モンの特性で増える同時使用枚数(ハムの「連続攻撃」・剣士モッチーの「二刀流」)。
   // 「勇者モンに選んだときだけ効く」特性なので、効いていることが画面から分かるように
-  // 枚数表示の横にも出す。計算と表示で食い違わないよう、ここを唯一の出どころにする
-  const heroCardBonus = useMemo(() => (mainHero?.id === 'Ham' ? 1 : 0), [mainHero]);
+  // 枚数表示の横にも出す。計算と表示で食い違わないよう、ここを唯一の出どころにする。
+  // 対象の種は HERO_CARD_BONUS_MONSTER_IDS の一覧が持つ(種ごとの分岐をここへ書かない)
+  const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);
   const kikiCardBonus = getPermaBuff('kikiCardBonusTurns')>0 ? 1 : 0;
   const cardLimit = useMemo(() => {
     const allyCount = slots.filter(s => s !== null).length;
@@ -5490,11 +5491,13 @@ function MonsterHeroGame() {
     return limit;
   }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
   // 1つのスロット(モンスター)へ同じターンに割り当てられる枚数の上限。
-  // 通常は1枠1枚。ハムが勇者モンのときはハム自身の連続攻撃で複数枚OK、
+  // 通常は1枠1枚。枚数+1の勇者特性(ハムの「連続攻撃」・剣士モッチーの「二刀流」)を持つ種が
+  // 勇者モンのときは、その本人のカードだけ複数枚OK。
   // ききのカード上限+1が効いているときは、その+1ぶんをどのモンスターへ重ねても使えるようにする
   // (どちらも実処理(processTurn)ではなく枚数の上限だけの話なので、cardLimitまで許す)。
+  // 対象の種は cardLimit と同じ HERO_CARD_BONUS_MONSTER_IDS が持つ(種ごとの分岐をここへ書かない)。
   // 割当のチェックと予測表示の両方がここを通ることで、判定がずれない
-  const slotMaxUses = (mon) => ((mainHero?.id==='Ham'&&mon?.id==='Ham')||kikiCardBonus>0) ? cardLimit : 1;
+  const slotMaxUses = (mon) => ((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? cardLimit : 1;
 
   const getCardGuts = (card) => {
     if (!card) return 0;
@@ -6314,7 +6317,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
     const defenseRate = Math.min(0.5,effectiveDef*0.00015);
-    const dmgBase = Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi'||mainHero?.id==='KenshiMocchi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
+    const dmgBase = Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
@@ -6399,7 +6402,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // uniqueは自分のモンスターのスロットのみ(合体で引き継いだ固有技はownerSlotIdxで判定する。
       // monIdは技の出自(元モンスター)を表すため、継承技だとtargetMon.idとは一致しない)
       if(c.type==='unique' && c.ownerSlotIdx!==slotIdx){ setFocusedCard(null); return; }
-      // 既存の割当数チェック(ハム勇者時・ききのカード上限+1が効いているときは複数可)
+      // 既存の割当数チェック(枚数+1の勇者特性を持つ勇者モン本人のカード・
+      // ききのカード上限+1が効いているときは複数可)
       const assignedCount=Object.values(cardAssignments).filter(v=>v===slotIdx).length;
       const maxUses=slotMaxUses(targetMon);
       const alreadySelected=selectedCards.includes(cardIndex);
@@ -6455,7 +6459,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       return { combo: 0.03+level*0.02 };
     }
     if (card.type==='unique' && card.monId==='Golem') return { oryo: 0.075 };
-    if (card.type==='unique' && (card.monId==='Mocchi'||card.monId==='Mitarashi'||card.monId==='KenshiMocchi')) return { dmgMod: 0.1 };
+    if (card.type==='unique' && (card.monId==='Mocchi'||card.monId==='Mitarashi')) return { dmgMod: 0.1 };
     return null;
   };
   // 固有技は「自分の効果を乗せてから、その同じカードで攻撃する」(processTurnの並び。
@@ -6536,7 +6540,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (baseDmg<=0) return 0;
     // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する。
     // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
-    const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct'),
+    const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct'), kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
       guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>false,
       globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu' });
     // 贖罪の追撃はメインヒットの確定値を基準にする(ランダム会心は予測しない)
@@ -6885,7 +6889,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul);
           // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
           // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く(倍率は ATTACK_COMBO_RULES)
-          const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct'),
+          const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct'), kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<((card.crit||0.1)+getPermaBuff('critRatePct')),
             globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
@@ -6948,20 +6952,35 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // モッチー/ミタラシは「被ダメージを割合で軽減」、モノリスは「丈夫さそのものを上げる」。
           // 見た目が似ているので取り違えやすいが、丈夫さはガードの軽減量にも効くぶん意味が違う。
           // 説明文(effectDesc)と食い違っていないかは tools/unique-effect-check.js が見張る
-          if(card.monId==='Mocchi'||card.monId==='Mitarashi'||card.monId==='KenshiMocchi'){addPermaBuff('dmgCutPct',0.03*effMul); const boost=localBoostFromCard(card).dmgMod*effMul; addWaveBuff('enemyTakenDmgBonus',boost); localDmgModAdd+=boost; addPopup('被ダメ軽減UP!','hero','text-emerald-400 text-lg font-bold');}
+          if(card.monId==='Mocchi'||card.monId==='Mitarashi'){addPermaBuff('dmgCutPct',0.03*effMul); const boost=localBoostFromCard(card).dmgMod*effMul; addWaveBuff('enemyTakenDmgBonus',boost); localDmgModAdd+=boost; addPopup('被ダメ軽減UP!','hero','text-emerald-400 text-lg font-bold');}
           else if(card.monId==='Golem'){const boost=localBoostFromCard(card).oryo*effMul; addPermaBuff('atkPct',boost); localOryoAdd+=boost; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
           else if(card.monId==='Zan'){addPermaBuff('comboDmgPct',0.03*effMul); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
           // 緋桜連華: 連撃ダメージ+3%はザンの連斬と同じ comboDmgPct、攻撃力+3%はゴーレムの闘志と
           // 同じ atkPct へ積む。どちらも addPermaBuff なので「永続・重複可・次のターンから」になる
           // (このターンのダメージ計算は localOryoAdd を通すが、ここでは足さないので反映は次ターン)
           else if(card.monId==='Eiki'){addPermaBuff('comboDmgPct',0.03*effMul); addPermaBuff('atkPct',0.03*effMul); addPopup('緋桜連華!','hero','text-pink-300 text-lg font-bold');}
+          // ソードスキル: 連撃ダメージ+3%はザン・エイキと同じ comboDmgPct へ積む。
+          // それに加えて「連撃パワー」を1貯め、3たまるごとに永久10%連撃(kenshiExtraCombo)を1本増やして0へ戻す。
+          // どちらも addPermaBuff / writePermaBuffs なので「永続・重複可・次のターンから」になり、
+          // 本数にも +3% の回数にも上限は設けない。ヒット列側(buildAttackHits)がこの本数を読む
+          else if(card.monId==='KenshiMocchi'){
+            addPermaBuff('comboDmgPct',0.03*effMul);
+            const nextPower=livePermaBuff('kenshiComboPower')+1;
+            if(nextPower>=KENSHI_COMBO_POWER_MAX){
+              writePermaBuffs(p=>({...p,kenshiComboPower:0,kenshiExtraCombo:(p.kenshiExtraCombo||0)+1}));
+              addPopup('ソードスキル! 連撃+1','hero','text-violet-300 text-lg font-bold');
+            }else{
+              writePermaBuffs(p=>({...p,kenshiComboPower:nextPower}));
+              addPopup(`ソードスキル! 連撃パワー ${nextPower}/${KENSHI_COMBO_POWER_MAX}`,'hero','text-violet-300 text-lg font-bold');
+            }
+          }
         }
         const attackStartDist=attackDistance;
         const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist); attackCount++;
         const critRateBonus=getPermaBuff('critRatePct'), critDmgBonus=getPermaBuff('critDmgPct');
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
-        const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus,
+        const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<((card.crit||0.1)+critRateBonus),
           globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
@@ -7026,8 +7045,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 固有技(hit.isUnique)の場合は技の出自(hit.monId)側のatkMotionを優先する。合体で引き継いだ
           // 固有技を別のモンスターが使う場合でも、元モンスターの専用モーションを再現するため
           const hitMotion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[hit.slotIdx]?.atkMotion;
-          // 高速斬撃＋連撃をまとめて見せるモーション。ザンとエイキが同じ見せ方を共有する
-          const isComboDashMotion = hitMotion==='zanCombo' || hitMotion==='eikiSakuraCombo';
+          // 高速斬撃＋連撃をまとめて見せるモーション。ザン・エイキ・剣士モッチーが同じ見せ方を共有する。
+          // モーションは1回だけ流し、ダメージ数値だけを立て続けに出すので、
+          // 剣士モッチーの永久追加連撃が何本に増えてもターンの長さは変わらない
+          const isComboDashMotion = hitMotion==='zanCombo' || hitMotion==='eikiSakuraCombo' || hitMotion==='kenshiTwinBlade';
           const isZanGroupStart = hit.skillName!=='連撃' && isComboDashMotion;
           if (isZanGroupStart) {
             // ザンの連撃グループ: 残像のような一瞬の突進を1回だけ見せ、モーションが終わってからダメージをバババッと立て続けに表示する
@@ -7042,20 +7063,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 setAttackAnim({slotIndex: animSlot, charge:true});
                 await battleWait(650);
               }
-              // 花びらはエイキのときだけ。ザン本体の見た目は一切変えない
-              setAttackAnim({slotIndex: animSlot, zanCombo:true, sakura: hitMotion==='eikiSakuraCombo'});
-              Audio_.se.zanSlash(); // ザン系の高めなシュシュ音(エイキも同じ音を使う)
-              await battleWait(hitMotion==='eikiSakuraCombo'?500:320);
+              // 花びらはエイキのときだけ。ザン本体の見た目は一切変えない。
+              // 剣士モッチーはX字に振り抜く別のモーション(twinBlade)を使う
+              const isTwinBlade = hitMotion==='kenshiTwinBlade';
+              setAttackAnim({slotIndex: animSlot, zanCombo: !isTwinBlade, twinBlade: isTwinBlade, sakura: hitMotion==='eikiSakuraCombo'});
+              Audio_.se.zanSlash(); // ザン系の高めなシュシュ音(エイキ・剣士モッチーも同じ音を使う)
+              await battleWait(hitMotion==='eikiSakuraCombo'?500:(isTwinBlade?420:320));
               setAttackAnim(null);
               setSlotSkill(null);
               await battleWait(100);
             }
+            // 数値を出す間隔。ザン(最大3ヒット)・エイキ(最大6ヒット)はこれまでどおり1本140msだが、
+            // 剣士モッチーのソードスキルは永久追加連撃で本数が青天井に増えるので、
+            // 本数が7本以上になったら間隔を詰めて、出しきるまでの時間が伸び続けないようにする
+            // (840ms=6本ぶんを目安にし、目で追える下限30msで止める)
+            const comboStepMs=Math.max(30,Math.min(140,Math.floor(840/group.length)));
             for (const h of group) {
               const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if(h.isCrit) triggerShake();
               addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
               setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));
-              await battleWait(140);
+              await battleWait(comboStepMs);
             }
             if (hit.rangeMoveTarget!=null) {
               setEnemyDist(hit.rangeMoveTarget);
@@ -11182,14 +11210,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // パンドラの分身(pandoraDualThunder)は枠を動かすのではなく専用コンポーネントが要るため、ここでは対象外にする
           const atkMotion=base.atkMotion||'default';
           const motionSupported=atkMotion!=='default'&&atkMotion!=='pandoraDualThunder';
-          const isDashMotion=atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo';
+          const isDashMotion=atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo'||atkMotion==='kenshiTwinBlade';
           const playMotionPreview=async()=>{
             if(!motionSupported||monsterImageDebugMotionPlaying)return;
             setMonsterImageDebugMotionPlaying({charge:true});
             await new Promise(r=>setTimeout(r,650));
             if(isDashMotion){
-              setMonsterImageDebugMotionPlaying({zanCombo:true,sakura:atkMotion==='eikiSakuraCombo'});
-              await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:320));
+              const isTwin=atkMotion==='kenshiTwinBlade';
+              setMonsterImageDebugMotionPlaying({zanCombo:!isTwin,twinBlade:isTwin,sakura:atkMotion==='eikiSakuraCombo'});
+              await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?420:320)));
             }else{
               setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
               await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?520:500)));
@@ -11214,6 +11243,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}>
                       <DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>
                       {monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}
+                      {monsterImageDebugMotionPlaying?.twinBlade&&<KenshiTwinSlash/>}
                     </div>
                   </div>
                   <button onClick={playMotionPreview} disabled={!!monsterImageDebugMotionPlaying} className="mt-2 w-full min-h-[42px] rounded-xl bg-cyan-700 text-[10px] font-black disabled:opacity-40">{monsterImageDebugMotionPlaying?'再生中…':'攻撃モーションを再生'}</button>
@@ -13541,6 +13571,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="text-[7px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"><Sword size={7}/> 連撃 +{Math.round(getPermaBuff('comboDmgPct')*100)}%</div>
                 {getPermaBuff('globalComboDmgPct')>0&&<div className="text-[7px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"><Sword size={7}/> 全体連撃 +{Math.round(getPermaBuff('globalComboDmgPct')*100)}%</div>}
                 {kikiCardBonus>0&&<div className="text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"><PlusCircle size={7}/> カード上限 +1（残り{Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）</div>}
+                {/* ソードスキル(剣士モッチー)。既存の永続バフ表示と同じ帯へ並べる。
+                    連撃パワーは3たまるごとに永久追加連撃へ変わるので、両方が見えないと進み具合が分からない */}
+                {(getPermaBuff('kenshiComboPower')>0||getPermaBuff('kenshiExtraCombo')>0)&&<div className="text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"><Sword size={7}/> 連撃パワー {getPermaBuff('kenshiComboPower')}/{KENSHI_COMBO_POWER_MAX}{getPermaBuff('kenshiExtraCombo')>0?`・追加連撃 +${getPermaBuff('kenshiExtraCombo')}`:''}</div>}
                 <div className={`text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery',0.1)>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50'}`}><Heart size={7}/> ライフ回復 {Math.round(getPermaBuff('autoHpRecovery',0.1)*100)}%</div>
                 <div className="text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round(applyIceRulerAutoGutsRecovery(Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'),mainHero?.id,iceLockActive,heroDist,enemyDist)*100)}%</div>
                 {/* ポルツの待機。あと何回ぶん敵の攻撃で発動するかを出す(0になったら消える。得た効果は残る) */}
@@ -13662,7 +13695,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {slots.map((s,i)=>{
                   // Count how many cards already assigned to this slot
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
-                  // 通常は1枠1枚。ハム勇者モンが居る『ハムのスロット』は連続攻撃で複数枚OK。
+                  // 通常は1枠1枚。枚数+1の勇者特性(ハムの連続攻撃・剣士モッチーの二刀流)を持つ
+                  // 勇者モンが居ると、その本人のスロットだけ複数枚OK。
                   // ききのカード上限+1が効いているときも、その+1ぶんはどのスロットへ重ねてよい
                   const maxUses=slotMaxUses(s);
                   const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
@@ -13792,6 +13826,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                         ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="object-contain drop-shadow-md"/>}/>
                         :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                      {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる */}
+                      {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
                       {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}
                       {isAnimating&&attackAnim.sakura&&<EikiSakuraPetals/>}
                     </div>

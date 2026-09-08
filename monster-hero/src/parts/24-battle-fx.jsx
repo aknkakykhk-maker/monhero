@@ -36,6 +36,21 @@ const EikiSakuraPetals = () => (
     ))}
   </span>
 );
+// 剣士モッチーの二刀流の斬撃軌跡。攻撃モーションが出ているあいだだけ重ねる
+// (エイキの花びらと同じ考え方で、常時アニメーションにはしない)。
+// ＼と／の2本だけで、要素2枚・CSSアニメーション1本に抑えてある。
+const KENSHI_TWIN_SLASHES = Object.freeze([
+  { angle:'-38deg', delay:'100ms', color:'rgba(167,139,250,.95)' },  // 1撃目 ＼(右上→左下)
+  { angle:'38deg',  delay:'270ms', color:'rgba(103,232,249,.95)' },  // 2撃目 ／(左上→右下)
+]);
+const KenshiTwinSlash = () => (
+  <span className="kenshi-twin-slash" aria-hidden="true">
+    {KENSHI_TWIN_SLASHES.map((blade, index) => (
+      <span key={index} className="kenshi-twin-slash__blade"
+        style={{ '--kenshi-slash-angle':blade.angle, '--kenshi-slash-delay':blade.delay, '--kenshi-slash-color':blade.color }}/>
+    ))}
+  </span>
+);
 const PandoraDualThunder = ({image, compact=false}) => (
   <span className={`pandora-dual-thunder${compact?' pandora-dual-thunder--compact':''}`} aria-hidden="true">
     <span className="pandora-dual-center">{React.cloneElement(image,{alt:''})}</span>
