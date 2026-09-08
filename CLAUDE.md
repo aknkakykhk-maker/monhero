@@ -307,3 +307,36 @@ ChatGPT・Codex・Claude Code で共通のため [`AGENTS.md`](AGENTS.md) の
 - **変更のたびに新しいワークフロー(yml)を作らない。** 置いてよいのは
   `compiled-check.yml`(CIと公開)と `build-and-check.yml`(手動実行のビルド・検査)の2つだけ
 - **古いPRをそのままマージしない。** baseが古いと、その後mainへ入った変更を巻き戻す
+
+### ⑨ 大きいファイルを読まない(AIの文脈・トークンを浪費しない)
+
+2026-09-08にユーザーが指摘した(「他の作業をさせるとトークン量がかなりえぐい」)。
+このリポジトリには**1ファイルで数MBのものが複数ある**。1回でも全文を開くと、その後の
+やりとり全部にその中身が乗り続け、作業が途中で頭打ちになる。**依頼の大小に関係なく、
+次の作法を守る。**
+
+**絶対に全文を開かないファイル**
+
+| ファイル | 大きさ | 代わりにすること |
+| --- | --- | --- |
+| `monster-hero/src/game-system.jsx` | 2.7MB | 自動生成物。**読む必要がない**。直すのは `src/parts/*.jsx` |
+| `monster-hero/game-system.compiled.js` | 3.0MB | 同上。`node tools/build.js` が作る |
+| `monster-hero/src/parts/60-app.jsx` | 1.5MB | `grep -n` で行を特定し `sed -n '開始,終了p'` で前後だけ読む |
+| `monster-hero/data/rhythm-mode.js` | 0.9MB | 譜面データ。曲IDで `grep -n` してから範囲読み |
+| `monster-hero/data/changelog.js` | 0.5MB | 新しい項目は**先頭に足す**規則なので `head -80` で足りる |
+| `tools/mode/authoring/*.json` | 0.4MB〜 | 中身を読まず、ツール経由で扱う |
+
+**打ってはいけないコマンド**
+
+- 素の `git diff` / `git show` / `git diff --cached`
+  → 生成物2本で数MB流れ込む。`.gitattributes` で `-diff` にしてあるので通常は畳まれるが、
+    それでも**まず `--stat` を見て、必要なファイルだけ `git diff -- <path>` で見る**
+- 除外なしの `grep -r`(生成物にヒットして巨大な行がそのまま出る)
+  → `grep -rn --exclude='game-system*' --exclude='*.compiled.js' <語> monster-hero/src/parts`
+
+**作業の進め方**
+
+- 変更箇所は「探してから読む」。`grep -n` → 行番号 → `sed -n` の順を徹底する
+- 検査ツールの出力は最後の数行だけ見る(`2>&1 | tail -20`)。全部貼らない
+- 長い作業(土台の見直しなど)は、区切りで `docs/` に進捗メモを1枚残して**会話を切る**。
+  中断したまま別の依頼を重ねない
