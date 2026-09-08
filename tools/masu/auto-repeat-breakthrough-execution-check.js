@@ -2,6 +2,8 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const m = require('../harness').loadDyeModule();
 const makeXp = level => m.totalBondXpForLevel(level);
 const makeBreederXp = level => Array.from({ length:Math.max(0, level - 1) }, (_, index) => m.xpForBreederLevel(index + 1)).reduce((sum, xp) => sum + xp, 0);
@@ -60,4 +62,13 @@ const manual = m.buildMasuBreakthrough({
   masu:makeMasu({ id:'manual', cap:100, count:14, setting:0, level:100 }), skillKey:'own', gold:100000, psycheOwned:1000,
 });
 assert.ok(manual.ok && manual.nextMasu.levelCap === 105, '手動限界突破は変更なし');
+const execStart = source.indexOf('const executeAutoRepeatBreakthroughs = async');
+const execEnd = source.indexOf('// 限界突破: レベルはそのままで上限だけ上げる', execStart);
+const exec = source.slice(execStart, execEnd);
+assert.ok(exec.includes('saveStoredValuesOrRollback(['), 'AUTO∞自動限凸も3キー取引保存を使う');
+assert.ok(exec.includes("{ key:'mh_masu_mons', before:beforeMasuMons, next:result.nextMasuMons }"), '個体データを取引へ含める');
+assert.ok(exec.includes("{ key:'mh_gold', before:beforeGold, next:result.nextGold }"), 'ダイヤを取引へ含める');
+assert.ok(exec.includes("{ key:'mh_owned_items', before:beforeOwnedItems, next:result.nextOwnedItems }"), '所持アイテムを取引へ含める');
+assert.ok(exec.includes("if (!saved) return { ...result, succeededMasuIds:[], saveFailed:true };"), '保存失敗時はstate/refを進めず成功扱いもしない');
+assert.ok(!exec.includes('await Promise.all(['), 'AUTO∞自動限凸の3キー直書きPromise.allを残さない');
 console.log('✅ AUTO∞自動限界突破の候補判定チェックOK');
