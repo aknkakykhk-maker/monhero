@@ -218,7 +218,7 @@ const createAnimationStyle = () => {
     @keyframes kenshiTwinSlashSweep {
       0% {
         opacity:0;
-        transform:translate3d(calc(var(--kenshi-slash-sweep-x) * -1),-16px,0) rotate(var(--kenshi-slash-angle)) scaleX(.06) scaleY(.55);
+        transform:translate3d(0,-16px,0) rotate(var(--kenshi-slash-angle)) scaleX(.06) scaleY(.55);
       }
       18% { opacity:1; }
       46% {
@@ -231,7 +231,7 @@ const createAnimationStyle = () => {
       }
       100% {
         opacity:0;
-        transform:translate3d(calc(var(--kenshi-slash-sweep-x) * 1.35),14px,0) rotate(var(--kenshi-slash-angle)) scaleX(1.28) scaleY(.55);
+        transform:translate3d(var(--kenshi-slash-sweep-x),14px,0) rotate(var(--kenshi-slash-angle)) scaleX(1.28) scaleY(.55);
       }
     }
 
