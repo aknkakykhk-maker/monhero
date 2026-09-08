@@ -24,6 +24,11 @@ if(victory.includes('startRunFromRepeatTemplate('))fail('結果表示前の勝�
 const rewards=between('const awardRunRewards = async (wavesCleared) => {','// スキップ:');
 for(const token of ['const bondAwards = buildRunBondAwards({','autoRepeatBondAwardMasuIdsRef.current = autoRepeatRef.current','bondAwards.map(award => award.masuId)'])if(!rewards.includes(token))fail(`絆報酬対象IDの引き継ぎ ${token} がありません`);
 if(!source.includes('const getMasuMon = (masuId) => masuMonsRef.current.find'))fail('次周の個体解決が最新masuMonsRefを使っていません');
+const breakthroughExec=between('const executeAutoRepeatBreakthroughs = async (masuIds) => {','// 限界突破: レベルはそのままで上限だけ上げる');
+for(const token of [
+  'reserveGold:autoSettings?.breakthroughReserve?.gold || 0',
+  'reservePsyche:autoSettings?.breakthroughReserve?.psyche || 0',
+])if(!breakthroughExec.includes(token))fail(`自動限凸の資源保護接続 ${token} がありません`);
 const reset=between('const applyResetAllState = () => {','const createRepeatRunTemplate');
 if(!reset.includes('autoRepeatBondAwardMasuIdsRef.current = []'))fail('新しいrun開始時に前周の絆報酬対象を消していません');
 const presentation=between('// 正規リザルトの全報酬演出が完了した場合だけ','// 操作可能なBATTLEへ');
