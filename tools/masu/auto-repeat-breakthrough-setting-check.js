@@ -10,10 +10,18 @@ assert.deepStrictEqual(Array.from(m.autoRepeatBreakthroughLevelOptions(69)), [],
 assert.deepStrictEqual(Array.from(m.autoRepeatBreakthroughLevelOptions(70)), [35], 'Lv70はLv35まで');
 assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(100), 50, 'Lv100は最大Lv50');
 assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(153), 75, 'Lv153は最大Lv75');
+assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(360), 180, 'ブリーダーLv360は通常5刻み区間の最終Lv180');
+assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(399), 180, 'Lv199相当の途中値は実到達cap Lv180まで');
+assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(400), 200, 'ブリーダーLv400で次の実到達cap Lv200');
+assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(700), 330, 'ブリーダーLv700は半分350でも実到達cap Lv330');
+assert.deepStrictEqual(Array.from(m.autoRepeatBreakthroughLevelOptions(700)).slice(-5), [180,200,230,270,330], 'Lv180以降は実際の限界突破capだけを候補にする');
 assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(800), 400, 'ブリーダーLv800で通常限界突破の実上限Lv400');
 assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(1000), 400, 'ブリーダーLvがさらに上がっても追従上限はLv400を超えない');
 assert.strictEqual(Math.max(...m.autoRepeatBreakthroughLevelOptions(1000)), 400, '固定Lv候補もLv400を超えない');
-assert.strictEqual(m.buildAutoRepeatBreakthroughUpdate({id:'legacy405'}, 405).autoRepeatBreakthroughLevel, 400, '旧Lv405設定は実効上限Lv400へ安全に引き継ぐ');
+
+assert.strictEqual(m.buildAutoRepeatBreakthroughUpdate({id:'legacy185'}, 185).autoRepeatBreakthroughLevel, 180, '旧Lv185設定は従来どおり実効Lv180へ引き継ぐ');
+assert.strictEqual(m.buildAutoRepeatBreakthroughUpdate({id:'legacy195'}, 195).autoRepeatBreakthroughLevel, 180, '旧Lv195設定も次のLv200を超えない実効Lv180へ引き継ぐ');
+assert.strictEqual(m.buildAutoRepeatBreakthroughUpdate({id:'legacy205'}, 205).autoRepeatBreakthroughLevel, 200, '旧Lv205設定は実効Lv200へ引き継ぐ');assert.strictEqual(m.buildAutoRepeatBreakthroughUpdate({id:'legacy405'}, 405).autoRepeatBreakthroughLevel, 400, '旧Lv405設定は実効上限Lv400へ安全に引き継ぐ');
 assert.strictEqual(m.buildAutoRepeatBreakthroughUpdate({id:'legacy500'}, 500).autoRepeatBreakthroughLevel, 400, '旧Lv500設定も実効上限Lv400へ安全に引き継ぐ');
 assert.ok(!source.includes('AUTO_REPEAT_BREAKTHROUGH_LEVEL_LIMIT'), '固定Lv100定数を撤去');
 
