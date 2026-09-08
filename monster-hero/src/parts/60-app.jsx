@@ -4497,15 +4497,21 @@ function MonsterHeroGame() {
   const resetMasuUniqueSetting = (masuId) => updateMasuUniqueSetting(masuId, buildUniqueSettingReset);
   // AUTO∞自動限界突破の個体設定を、既存 mh_masu_mons のその個体へ保存する。
   // off / follow / fixed の3モードだけを扱い、限界突破そのものの費用・条件は変えない。
-  const setMasuAutoRepeatBreakthrough = (masuId, mode, level = 0) => {
-    const masu = getMasuMon(masuId);
+  const setMasuAutoRepeatBreakthrough = async (masuId, mode, level = 0) => {
+    const before = masuMonsRef.current;
+    const masu = before.find(m => String(m.id) === String(masuId));
     if (!masu) return null;
     const updated = buildAutoRepeatBreakthroughSettingUpdate(masu, mode, level);
-    setMasuMons(prev => {
-      const next = prev.map(m => String(m.id) === String(masuId) ? updated : m);
-      storeSet('mh_masu_mons', next, false);
-      return next;
-    });
+    const next = before.map(m => String(m.id) === String(masuId) ? updated : m);
+    const saved = await saveStoredValuesOrRollback([
+      { key:'mh_masu_mons', before, next },
+    ], storeGet, storeSet);
+    if (!saved) {
+      window.alert('自動限界突破の設定を保存できませんでした。もう一度お試しください。');
+      return null;
+    }
+    masuMonsRef.current = next;
+    setMasuMons(next);
     setMasuMonDetail(prev => prev && String(prev.id) === String(masuId) ? updated : prev);
     Audio_.se.tap();
     return updated;
