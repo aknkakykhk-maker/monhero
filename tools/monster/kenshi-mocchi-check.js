@@ -359,24 +359,33 @@ check('状態表示に連撃パワーと追加連撃を出している',
 
 console.log('--- ⑨ 専用の二刀流モーション ---');
 check('atkMotion が専用種別になっている', mon.atkMotion === 'kenshiTwinBlade', String(mon.atkMotion));
-check('X字に振り抜く keyframes がある', /@keyframes kenshiTwinBladeSlash \{/.test(source));
-check('斬撃の軌跡は＼と／の2本', /KENSHI_TWIN_SLASHES = Object\.freeze\(\[/.test(source)
-  && /angle:'-38deg'/.test(source) && /angle:'38deg'/.test(source));
-check('本番とDEBUGが同じ入口(attackMotionAnimation)を通る',
-  /if \(anim\.twinBlade\) return 'kenshiTwinBladeSlash 420ms ease-out forwards';/.test(source));
-// 軌跡(2本目は270ms遅れ)がモーション(420ms)より先に終わること。
-// 尺が合っていないと、振り抜きの途中で軌跡だけ消える/軌跡が出たまま切れる
-check('斬撃の軌跡はモーションの尺(420ms)に収まる',
-  /animation: kenshiTwinSlashSweep 150ms ease-out forwards;/.test(source)
-  && /delay:'270ms'/.test(source) && 270 + 150 <= 420);
-// 待ち時間も同じ420ms。ここがずれると、モーションの途中でダメージ数値が出はじめる
-check('本番とDEBUGの待ち時間もモーションと同じ420ms',
-  /isTwinBlade\?420:320/.test(source) && /isTwin\?420:320/.test(source));
-// 連撃をまとめて1回だけ流す作りに乗せる。永久追加連撃が増えてもターンの長さが変わらない
-check('連撃はまとめて1回だけモーションを流す(ザン・エイキと同じ束ね方)',
+check('敵へ大きく斬り込む専用 keyframes がある',
+  /@keyframes kenshiTwinBladeSlash \{/.test(source)
+  && /translate3d\(68px,-116px,0\)/.test(source)
+  && /translate3d\(-86px,-188px,0\)/.test(source)
+  && /translate3d\(90px,-188px,0\)/.test(source));
+check('斬撃は＼と／の2本で、190px級の大型3層表現',
+  /KENSHI_TWIN_SLASHES = Object\.freeze\(\[/.test(source)
+  && /angle:'-38deg'/.test(source) && /angle:'38deg'/.test(source)
+  && /width:190px;/.test(source)
+  && /kenshi-twin-slash__blade::before/.test(source)
+  && /kenshi-twin-slash__blade::after/.test(source));
+check('残像・速度線・X字決めの閃光/衝撃波/光片がある',
+  /KENSHI_TWIN_SPEED_LINES = Object\.freeze/.test(source)
+  && /KENSHI_TWIN_SHARDS = Object\.freeze/.test(source)
+  && /kenshi-twin-slash__impact-core/.test(source)
+  && /kenshi-twin-slash__impact-ring/.test(source)
+  && /@keyframes kenshiTwinImpact/.test(source)
+  && /@keyframes kenshiTwinShard/.test(source));
+check('本番とDEBUGが同じ入口で560msの派手モーションを通る',
+  /if \(anim\.twinBlade\) return 'kenshiTwinBladeSlash 560ms cubic-bezier\(\.18,\.76,\.2,1\) forwards';/.test(source));
+check('2本の斬撃SEとX字完成時の画面シェイクを入れる',
+  /await battleWait\(135\);[\s\S]{0,120}?Audio_\.se\.zanSlash\(\);[\s\S]{0,180}?await battleWait\(180\);[\s\S]{0,120}?Audio_\.se\.zanSlash\(\);[\s\S]{0,180}?triggerShake\(\);/.test(source));
+check('本番と画像DEBUGの待ち時間が560msにそろっている',
+  /isTwin\?560:320/.test(source)
+  && /animation:kenshiTwinImpact 560ms ease-out forwards;/.test(source));
+check('連撃はまとめて1回だけフルモーションを流す',
   /const isComboDashMotion = hitMotion==='zanCombo' \|\| hitMotion==='eikiSakuraCombo' \|\| hitMotion==='kenshiTwinBlade';/.test(source));
-// 永久追加連撃が増えてもターンが伸び続けないよう、数値を出す間隔は本数で詰める。
-// ザン(最大3ヒット)・エイキ(最大6ヒット)はこれまでどおり1本140msのままであることも確かめる
 check('連撃の数値表示は本数が増えると間隔を詰める(ターンが伸び続けない)',
   /const comboStepMs=Math\.max\(30,Math\.min\(140,Math\.floor\(840\/group\.length\)\)\);/.test(source)
   && /await battleWait\(comboStepMs\);/.test(source));
@@ -387,10 +396,13 @@ check('連撃の数値表示は本数が増えると間隔を詰める(ターン
     16 * step(16) < 1000 && 32 * step(32) < 1200, `16本 ${16 * step(16)}ms / 32本 ${32 * step(32)}ms`);
 }
 check('RPG表示のモーション対応表にも入れている', /kenshiTwinBlade:'Dash'/.test(source));
-check('既存モンスターのモーションは変えていない',
+check('既存のザン・エイキのモーション尺は変えていない',
   /zanCombo:'Dash', eikiSakuraCombo:'Dash'/.test(source)
   && /if \(anim\.zanCombo\) return 'zanComboDash 320ms ease-out forwards';/.test(source));
-check('動きを減らす設定への代替がある', /@keyframes kenshiTwinSlashFade \{/.test(source));
+check('動きを減らす設定では高速移動・速度線・光片を抑える',
+  /@media \(prefers-reduced-motion: reduce\)/.test(source)
+  && /\.kenshi-twin-slash__speed, \.kenshi-twin-slash__shard \{ display:none; \}/.test(source)
+  && /@keyframes kenshiTwinImpactReduced/.test(source));
 
 console.log('--- ⑩ ビルド生成物 ---');
 check('compiled にも反映されている(ビルド済み)',
