@@ -301,26 +301,21 @@ check('永久追加連撃に上限を書いていない', !/kenshiExtraCombo[^\n
 // permaBuffs はラン開始でだけ初期化され、WAVEを跨いでも保持される(セーブデータには入らない)
 check('連撃パワー・永久追加連撃はランの永続バフに持つ(WAVEを跨いで保持)',
   /writePermaBuffs\(p=>\(\{\.\.\.p,kenshiComboPower:/.test(source));
-// 同じターンに剣士モッチーの固有技を2枚使えるようになったので、そのときの積み上がりも見る。
-// 連撃ダメージ+3%は2枚目で半減(effMul)、連撃パワーは回数なので半減せず1たまる
+// 剣士モッチーのカードを同じターンに複数枚使えるようになったので、2枚目の扱いも見る。
+// 連撃ダメージ+3%は2枚目で半減(effMul)、連撃パワーは回数なので半減しない
 check('2枚目の連撃ダメージ+3%には半減(effMul)が掛かる',
   /else if\(card\.monId==='KenshiMocchi'\)\{\s*\n?\s*addPermaBuff\('comboDmgPct',0\.03\*effMul\);/.test(source));
 check('連撃パワーは2枚目でも1たまる(回数なので半減しない)',
   /const nextPower=livePermaBuff\('kenshiComboPower'\)\+1;/.test(source)
   && !/kenshiComboPower.*\*effMul/.test(source));
-// 同じターンの2枚目は ref(livePermaBuff)を読むので、1枚目のぶんが反映されて2までたまる
-check('同じターンに2枚使うと連撃パワーが2たまる(refを読んでいる)', (() => {
-  const MAX = 3;
-  const perma = { comboDmgPct: 0, kenshiComboPower: 0, kenshiExtraCombo: 0 };
-  const use = (halved) => {
-    const effMul = halved ? 0.5 : 1;
-    perma.comboDmgPct += 0.03 * effMul;
-    const next = perma.kenshiComboPower + 1;
-    if (next >= MAX) { perma.kenshiComboPower = 0; perma.kenshiExtraCombo += 1; }
-    else perma.kenshiComboPower = next;
-  };
-  use(false); use(true);
-  return perma.kenshiComboPower === 2 && Math.abs(perma.comboDmgPct - 0.045) < 1e-9;
+// 固有技は山札に1枚しか入らない(buildDeck が pool.push を1回だけ行う)。
+// 「同じターンに固有技を2回撃って連撃パワーを一気に2ためる」ことはできない。
+// ここが崩れると、連撃パワーの貯まる速さがそもそも変わってしまう
+check('固有技は1スロットにつき1枚しか山札へ入らない(同じターンに2回は撃てない)', (() => {
+  const deck = source.match(/const options=getAvailableUniquesForSlot\(s,cUniques,idx,cInhEvo\);[\s\S]*?\n\s*\}\n/);
+  if (!deck) return false;
+  return (deck[0].match(/pool\.push\(\{\.\.\.u,/g) || []).length === 1
+    && !/for\s*\([^)]*\)\s*pool\.push/.test(deck[0]);
 })());
 
 check('ラン開始時に永続バフごと0へ戻る',

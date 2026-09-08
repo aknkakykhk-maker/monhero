@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 96c17615d12a8a42
+// generated-sha256: f70b7e799a858ce6
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 14:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 15:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7535,7 +7535,8 @@ const splitRankingParty = (entry) => {
 // 勇者モンに選んだときだけ効く「同時使用可能枚数+1」を持つ種。
 // ハムの「連続攻撃」と剣士モッチーの「二刀流」は名前が違うだけで効果は同じなので、
 // 種ごとに処理を書かず、この一覧と cardLimit の共通ルールへ乗せる。
-// (1つのスロットへ何枚重ねられるか(slotMaxUses)はハムの連続攻撃だけの話なので、こことは別)
+// 1つのスロットへ何枚重ねられるか(60-app.jsx の slotMaxUses)も、この一覧を通す。
+// 勇者モンにした本人のカードだけ複数枚まとめて使える(ただし固有技は山札に1枚しか無い)
 const HERO_CARD_BONUS_MONSTER_IDS = Object.freeze(['Ham', 'KenshiMocchi']);
 const heroCardBonusOf = (heroId) => (HERO_CARD_BONUS_MONSTER_IDS.includes(heroId) ? 1 : 0);
 const ATTACK_COMBO_RULES = Object.freeze({
@@ -17615,7 +17616,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // uniqueは自分のモンスターのスロットのみ(合体で引き継いだ固有技はownerSlotIdxで判定する。
       // monIdは技の出自(元モンスター)を表すため、継承技だとtargetMon.idとは一致しない)
       if(c.type==='unique' && c.ownerSlotIdx!==slotIdx){ setFocusedCard(null); return; }
-      // 既存の割当数チェック(ハム勇者時・ききのカード上限+1が効いているときは複数可)
+      // 既存の割当数チェック(枚数+1の勇者特性を持つ勇者モン本人のカード・
+      // ききのカード上限+1が効いているときは複数可)
       const assignedCount=Object.values(cardAssignments).filter(v=>v===slotIdx).length;
       const maxUses=slotMaxUses(targetMon);
       const alreadySelected=selectedCards.includes(cardIndex);
@@ -24887,7 +24889,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {slots.map((s,i)=>{
                   // Count how many cards already assigned to this slot
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
-                  // 通常は1枠1枚。ハム勇者モンが居る『ハムのスロット』は連続攻撃で複数枚OK。
+                  // 通常は1枠1枚。枚数+1の勇者特性(ハムの連続攻撃・剣士モッチーの二刀流)を持つ
+                  // 勇者モンが居ると、その本人のスロットだけ複数枚OK。
                   // ききのカード上限+1が効いているときも、その+1ぶんはどのスロットへ重ねてよい
                   const maxUses=slotMaxUses(s);
                   const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);

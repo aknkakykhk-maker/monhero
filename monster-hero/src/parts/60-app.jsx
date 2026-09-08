@@ -6399,7 +6399,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // uniqueは自分のモンスターのスロットのみ(合体で引き継いだ固有技はownerSlotIdxで判定する。
       // monIdは技の出自(元モンスター)を表すため、継承技だとtargetMon.idとは一致しない)
       if(c.type==='unique' && c.ownerSlotIdx!==slotIdx){ setFocusedCard(null); return; }
-      // 既存の割当数チェック(ハム勇者時・ききのカード上限+1が効いているときは複数可)
+      // 既存の割当数チェック(枚数+1の勇者特性を持つ勇者モン本人のカード・
+      // ききのカード上限+1が効いているときは複数可)
       const assignedCount=Object.values(cardAssignments).filter(v=>v===slotIdx).length;
       const maxUses=slotMaxUses(targetMon);
       const alreadySelected=selectedCards.includes(cardIndex);
@@ -13671,7 +13672,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {slots.map((s,i)=>{
                   // Count how many cards already assigned to this slot
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
-                  // 通常は1枠1枚。ハム勇者モンが居る『ハムのスロット』は連続攻撃で複数枚OK。
+                  // 通常は1枠1枚。枚数+1の勇者特性(ハムの連続攻撃・剣士モッチーの二刀流)を持つ
+                  // 勇者モンが居ると、その本人のスロットだけ複数枚OK。
                   // ききのカード上限+1が効いているときも、その+1ぶんはどのスロットへ重ねてよい
                   const maxUses=slotMaxUses(s);
                   const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);

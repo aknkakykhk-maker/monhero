@@ -206,7 +206,8 @@ const splitRankingParty = (entry) => {
 // 勇者モンに選んだときだけ効く「同時使用可能枚数+1」を持つ種。
 // ハムの「連続攻撃」と剣士モッチーの「二刀流」は名前が違うだけで効果は同じなので、
 // 種ごとに処理を書かず、この一覧と cardLimit の共通ルールへ乗せる。
-// (1つのスロットへ何枚重ねられるか(slotMaxUses)はハムの連続攻撃だけの話なので、こことは別)
+// 1つのスロットへ何枚重ねられるか(60-app.jsx の slotMaxUses)も、この一覧を通す。
+// 勇者モンにした本人のカードだけ複数枚まとめて使える(ただし固有技は山札に1枚しか無い)
 const HERO_CARD_BONUS_MONSTER_IDS = Object.freeze(['Ham', 'KenshiMocchi']);
 const heroCardBonusOf = (heroId) => (HERO_CARD_BONUS_MONSTER_IDS.includes(heroId) ? 1 : 0);
 const ATTACK_COMBO_RULES = Object.freeze({
