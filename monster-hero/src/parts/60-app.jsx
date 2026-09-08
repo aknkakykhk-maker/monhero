@@ -3855,20 +3855,21 @@ function MonsterHeroGame() {
       : mode === 'off' ? 'OFF' : `Lv${fixedLevel}まで固定`;
     if (!window.confirm(`所有マスモン${currentMons.length}体のAUTO∞ 自動限界突破を「${label}」へ一括変更しますか？\n\nこの操作はすぐ保存され、個別設定も上書きされます。`)) return false;
     const next = currentMons.map(masu => buildAutoRepeatBreakthroughSettingUpdate(masu, mode, fixedLevel));
-    try {
-      await storeSet('mh_masu_mons', next, false);
-      masuMonsRef.current = next;
-      setMasuMons(next);
-      setMasuMonDetail(prev => {
-        if (!prev) return prev;
-        return next.find(masu => String(masu.id) === String(prev.id)) || prev;
-      });
-      Audio_.se.tap();
-      return true;
-    } catch {
+    const saved = await saveStoredValuesOrRollback([
+      { key:'mh_masu_mons', before:currentMons, next },
+    ], storeGet, storeSet);
+    if (!saved) {
       window.alert('一括設定を保存できませんでした。もう一度お試しください。');
       return false;
     }
+    masuMonsRef.current = next;
+    setMasuMons(next);
+    setMasuMonDetail(prev => {
+      if (!prev) return prev;
+      return next.find(masu => String(masu.id) === String(prev.id)) || prev;
+    });
+    Audio_.se.tap();
+    return true;
   };
   const saveAutoSettings = async () => {
     const normalized = normalizeAutoSettings(draftAutoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS);
