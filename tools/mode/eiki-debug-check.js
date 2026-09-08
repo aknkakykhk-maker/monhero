@@ -261,7 +261,11 @@ console.log('--- ⑩ 既存デバッグ画面(モンスター画像・染色確�
 check('MONSTER_IMAGE_DEBUGの選択肢へ debugOnly モンスターを所持を問わず差し込んでいる',
   /Object\.values\(ALL_PLAYER_MONSTERS\)\.forEach\(mon=>\{if\(mon\?\.debugOnly&&!owned\.some\(m=>m\.baseId===mon\.id\)\)owned\.push\(\{id:`debug-preview-\$\{mon\.id\}`/.test(source));
 check('元画像の表示も本番と同じ収め方(monsterArtFitStyle)を通す(丸枠だけ実物より切れて見えるのを防ぐ)',
-  /palette===null\?<img src=\{src\} alt=\{label\} className=\{`w-full h-full \$\{fit\}`\} style=\{monsterArtFitStyle\(base\.id,undefined\)\}\/>/.test(source));
+  /palette===null\?<img src=\{src\} alt=\{label\} className=\{`w-full h-full \$\{fit\}`\} style=\{\{\.\.\.monsterArtFitStyle\(base\.id,undefined\),/.test(source));
+// 染色マスクの縮尺は img の className に書いた object-cover / object-contain から決まる
+// (monsterArtMaskSize)。ここを style 側へ移すと、どの検査も落ちないまま染色だけがずれる
+check('収め方(object-fit)は className に書いたままにする(マスクの縮尺がここから決まる)',
+  /className=\{`w-full h-full \$\{fit\}`\}/.test(source));
 check('攻撃モーションを同じ画面でその場で再生できる(atkMotionがdefault以外のときだけ)',
   source.includes("const motionSupported=atkMotion!=='default'&&atkMotion!=='pandoraDualThunder';")
   && source.includes('攻撃モーション確認（atkMotion: {atkMotion}）')

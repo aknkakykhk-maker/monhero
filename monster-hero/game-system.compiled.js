@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 97cdd589e9b6c0ff
+// source-sha256: 3be93d63ac2370c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 20c1fecb1a960b90
+// generated-sha256: 4c43aad545189720
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 12:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 13:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -41096,6 +41096,13 @@ function MonsterHeroGame() {
         iconUrl: base.iconUrl,
         faceIconUrl: base.faceIconUrl
       };
+      // プロフィールアイコンは本番(BreederIcon)で MARKET_PROFILE_ICON_STYLES の拡大・位置調整が掛かる。
+      // ライガー・ミーア・パンドラ等は faceIconUrl が立ち絵そのままなので、これが無いとプレビューだけ
+      // 全身が写り、本番とまったく別物になる。idは本番と同じ一覧(breederIconOptions)から絵で引き当てる
+      // (base.id を直に使うと、同じidで登録されている円盤石用の値を誤って拾う)
+      const profileIconStyle = marketProfileIconStyle((breederIconOptions({
+        includeUnowned: true
+      }).find(o => String(o.src || '').split('?')[0] === String(base.faceIconUrl || '').split('?')[0]) || {}).id);
       const oldSources = isTiger ? {
         imgUrl: TIGER_ROLLBACK_IMG,
         iconUrl: TIGER_ROLLBACK_ICON,
@@ -41113,11 +41120,14 @@ function MonsterHeroGame() {
         backgroundSize: '16px 16px',
         backgroundPosition: '0 0,0 8px,8px -8px,-8px 0'
       };
-      const renderPair = (label, sourceKey, palette, frameClass = 'h-32', fit = 'object-contain') => /*#__PURE__*/React.createElement("section", {
+      const frameNote = note => note ? /*#__PURE__*/React.createElement("small", {
+        className: "mt-0.5 block text-[7px] font-normal text-slate-400"
+      }, note) : null;
+      const renderPair = (label, sourceKey, palette, frameClass = 'h-32', fit = 'object-contain', imgStyle = null, note = '') => /*#__PURE__*/React.createElement("section", {
         className: "rounded-xl bg-black/30 p-2"
       }, /*#__PURE__*/React.createElement("b", {
         className: "block mb-2 text-center text-[9px] text-cyan-200"
-      }, label), /*#__PURE__*/React.createElement("div", {
+      }, label, frameNote(note)), /*#__PURE__*/React.createElement("div", {
         className: `grid gap-2 ${variants.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`
       }, variants.map(([name, sources]) => /*#__PURE__*/React.createElement("div", {
         key: name,
@@ -41128,18 +41138,20 @@ function MonsterHeroGame() {
       }, palette === null ? /*#__PURE__*/React.createElement("img", {
         src: sources[sourceKey],
         alt: `${name}${label}`,
-        className: `w-full h-full ${fit}`
+        className: `w-full h-full ${fit}`,
+        style: imgStyle || undefined
       }) : /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: "Tiger",
         src: sources[sourceKey],
         alt: `${name}${label}`,
         masuColors: palette,
-        className: `w-full h-full ${fit}`
+        className: `w-full h-full ${fit}`,
+        style: imgStyle || undefined
       })), /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] font-black"
       }, name)))));
-      const renderCurrent = (label, sourceKey, palette, frameClass = 'h-32', fit = 'object-contain') => {
-        if (isTiger) return renderPair(label, sourceKey, palette, frameClass, fit);
+      const renderCurrent = (label, sourceKey, palette, frameClass = 'h-32', fit = 'object-contain', imgStyle = null, note = '') => {
+        if (isTiger) return renderPair(label, sourceKey, palette, frameClass, fit, imgStyle, note);
         const src = oldSources[sourceKey];
         // 染色なし(元画像)の表示も、本番と同じ収め方(MONSTER_ART_CONTAIN_IDSのcontain上書き)を通す。
         // ここを通さないと、縦長の立ち絵(ウンディーネ・エイキ等)の「元画像」だけ本番よりきつく
@@ -41148,20 +41160,24 @@ function MonsterHeroGame() {
           className: "rounded-xl bg-black/30 p-2 text-center"
         }, /*#__PURE__*/React.createElement("b", {
           className: "block mb-2 text-[9px] text-cyan-200"
-        }, label), /*#__PURE__*/React.createElement("div", {
+        }, label, frameNote(note)), /*#__PURE__*/React.createElement("div", {
           className: `${frameClass} overflow-hidden border border-white/20`,
           style: bgStyle
         }, palette === null ? /*#__PURE__*/React.createElement("img", {
           src: src,
           alt: label,
           className: `w-full h-full ${fit}`,
-          style: monsterArtFitStyle(base.id, undefined)
+          style: {
+            ...monsterArtFitStyle(base.id, undefined),
+            ...(imgStyle || {})
+          }
         }) : /*#__PURE__*/React.createElement(DyedMonsterImage, {
           baseId: base.id,
           src: src,
           alt: label,
           masuColors: palette,
-          className: `w-full h-full ${fit}`
+          className: `w-full h-full ${fit}`,
+          style: imgStyle || undefined
         })));
       };
       const colorText = c => {
@@ -41293,7 +41309,7 @@ function MonsterHeroGame() {
         className: "text-[10px] font-black text-cyan-300"
       }, "\u5B9F\u969B\u306E\u8868\u793A\u6761\u4EF6"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
-      }, renderCurrent('バトル／立ち絵', 'imgUrl', colors, 'h-36', 'object-contain'), renderCurrent('一覧／全身アイコン', 'iconUrl', colors, 'h-24', 'object-cover'), renderCurrent('詳細／大きな全身表示', 'imgUrl', colors, 'h-40', 'object-contain'), renderCurrent('顔アイコン', 'faceIconUrl', colors, 'h-20 rounded-full', 'object-cover'), renderCurrent('プロフィール／選択アイコン', 'faceIconUrl', colors, 'h-16 rounded-full', 'object-cover'), renderCurrent('小型／編成枠', 'imgUrl', colors, 'h-12 rounded-full', 'object-contain')), motionSupported && /*#__PURE__*/React.createElement("section", {
+      }, renderCurrent('バトル／立ち絵', 'imgUrl', colors, 'aspect-square', 'object-contain', null, '本番 64px・角丸なし'), renderCurrent('一覧／全身アイコン', 'iconUrl', colors, 'aspect-square rounded-full', 'object-cover', null, '本番 48px・丸'), renderCurrent('詳細／大きな全身表示', 'imgUrl', colors, 'h-40', 'object-contain', null, '本番 図鑑詳細の横長枠'), renderCurrent('顔アイコン', 'faceIconUrl', colors, 'aspect-square rounded-full', 'object-contain', profileIconStyle, '本番 プロフィール80px・丸'), renderCurrent('プロフィール／選択アイコン', 'faceIconUrl', colors, 'aspect-square rounded-2xl', 'object-contain', profileIconStyle, '本番 選択マス約59px・角丸'), renderCurrent('小型／編成枠', 'imgUrl', colors, 'aspect-square rounded-full', 'object-contain', null, '本番 40px・丸')), motionSupported && /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3"
       }, /*#__PURE__*/React.createElement("h3", {
         className: "mb-2 text-[10px] font-black text-cyan-300"

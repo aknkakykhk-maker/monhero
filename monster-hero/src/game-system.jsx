@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 20c1fecb1a960b90
+// generated-sha256: 4c43aad545189720
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 12:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 13:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22323,16 +22323,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const colors=Array.from({length:regionCount},(_,i)=>monsterImageDebugColors===null?(getMasuColors(selected)[i]||null):(monsterImageDebugColors[i]||null));
           const isTiger=selected.baseId==='Tiger';
           const productionSources={imgUrl:base.imgUrl,iconUrl:base.iconUrl,faceIconUrl:base.faceIconUrl};
+          // プロフィールアイコンは本番(BreederIcon)で MARKET_PROFILE_ICON_STYLES の拡大・位置調整が掛かる。
+          // ライガー・ミーア・パンドラ等は faceIconUrl が立ち絵そのままなので、これが無いとプレビューだけ
+          // 全身が写り、本番とまったく別物になる。idは本番と同じ一覧(breederIconOptions)から絵で引き当てる
+          // (base.id を直に使うと、同じidで登録されている円盤石用の値を誤って拾う)
+          const profileIconStyle=marketProfileIconStyle((breederIconOptions({includeUnowned:true}).find(o=>String(o.src||'').split('?')[0]===String(base.faceIconUrl||'').split('?')[0])||{}).id);
           const oldSources=isTiger?{imgUrl:TIGER_ROLLBACK_IMG,iconUrl:TIGER_ROLLBACK_ICON,faceIconUrl:TIGER_ROLLBACK_ICON}:productionSources;
           const newSources=productionSources;
           const variants=isTiger&&monsterImageDebugTigerMode==='compare'?[['旧',oldSources],['新',newSources]]:[[isTiger&&monsterImageDebugTigerMode==='new'?'新':'本番',isTiger&&monsterImageDebugTigerMode==='new'?newSources:oldSources]];
           const bgStyle=monsterImageDebugBg==='white'?{background:'#fff'}:monsterImageDebugBg==='black'?{background:'#000'}:{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'};
-          const renderPair=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=><section className="rounded-xl bg-black/30 p-2"><b className="block mb-2 text-center text-[9px] text-cyan-200">{label}</b><div className={`grid gap-2 ${variants.length===2?'grid-cols-2':'grid-cols-1'}`}>{variants.map(([name,sources])=><div key={name} className="text-center"><div className={`${frameClass} overflow-hidden border border-white/20 flex items-center justify-center`} style={bgStyle}>{palette===null?<img src={sources[sourceKey]} alt={`${name}${label}`} className={`w-full h-full ${fit}`}/>:<DyedMonsterImage baseId="Tiger" src={sources[sourceKey]} alt={`${name}${label}`} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div><small className="text-[8px] font-black">{name}</small></div>)}</div></section>;
-          const renderCurrent=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=>{if(isTiger)return renderPair(label,sourceKey,palette,frameClass,fit);const src=oldSources[sourceKey];
+          const frameNote=(note)=>note?<small className="mt-0.5 block text-[7px] font-normal text-slate-400">{note}</small>:null;
+          const renderPair=(label,sourceKey,palette,frameClass='h-32',fit='object-contain',imgStyle=null,note='')=><section className="rounded-xl bg-black/30 p-2"><b className="block mb-2 text-center text-[9px] text-cyan-200">{label}{frameNote(note)}</b><div className={`grid gap-2 ${variants.length===2?'grid-cols-2':'grid-cols-1'}`}>{variants.map(([name,sources])=><div key={name} className="text-center"><div className={`${frameClass} overflow-hidden border border-white/20 flex items-center justify-center`} style={bgStyle}>{palette===null?<img src={sources[sourceKey]} alt={`${name}${label}`} className={`w-full h-full ${fit}`} style={imgStyle||undefined}/>:<DyedMonsterImage baseId="Tiger" src={sources[sourceKey]} alt={`${name}${label}`} masuColors={palette} className={`w-full h-full ${fit}`} style={imgStyle||undefined}/>}</div><small className="text-[8px] font-black">{name}</small></div>)}</div></section>;
+          const renderCurrent=(label,sourceKey,palette,frameClass='h-32',fit='object-contain',imgStyle=null,note='')=>{if(isTiger)return renderPair(label,sourceKey,palette,frameClass,fit,imgStyle,note);const src=oldSources[sourceKey];
             // 染色なし(元画像)の表示も、本番と同じ収め方(MONSTER_ART_CONTAIN_IDSのcontain上書き)を通す。
             // ここを通さないと、縦長の立ち絵(ウンディーネ・エイキ等)の「元画像」だけ本番よりきつく
             // 切り取られて出てしまい、確認画面のほうが実際の見え方より悪く見えてしまう
-            return <section className="rounded-xl bg-black/30 p-2 text-center"><b className="block mb-2 text-[9px] text-cyan-200">{label}</b><div className={`${frameClass} overflow-hidden border border-white/20`} style={bgStyle}>{palette===null?<img src={src} alt={label} className={`w-full h-full ${fit}`} style={monsterArtFitStyle(base.id,undefined)}/>:<DyedMonsterImage baseId={base.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div></section>};
+            return <section className="rounded-xl bg-black/30 p-2 text-center"><b className="block mb-2 text-[9px] text-cyan-200">{label}{frameNote(note)}</b><div className={`${frameClass} overflow-hidden border border-white/20`} style={bgStyle}>{palette===null?<img src={src} alt={label} className={`w-full h-full ${fit}`} style={{...monsterArtFitStyle(base.id,undefined),...(imgStyle||{})}}/>:<DyedMonsterImage baseId={base.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`} style={imgStyle||undefined}/>}</div></section>};
           const colorText=(c)=>{if(!c)return '元の色';const{base,alpha}=splitColorAlpha(c);const name=_parseCustomColorId(base)?`カスタム(${base})`:(MASU_COLOR_LABELS[base]||base);return alpha<MASU_COLOR_ALPHA_MAX?`${name} 濃さ${alpha}%`:name;};
           // 専用の攻撃モーション(atkMotion)を、本番のバトル画面とまったく同じ関数・同じCSSで再生する。
           // パンドラの分身(pandoraDualThunder)は枠を動かすのではなく専用コンポーネントが要るため、ここでは対象外にする
@@ -22361,7 +22367,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="grid grid-cols-3 gap-2">{[['checker','市松模様'],['white','白'],['black','黒']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugBg(id)} className={`min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg===id?'ring-2 ring-cyan-500':'border-white/10'}`} style={id==='white'?{background:'#fff',color:'#000'}:id==='black'?{background:'#000'}:{background:'#64748b'}}>{label}</button>)}</div>
               <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色（{regionCount}部位）</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>
               <div className="grid grid-cols-2 gap-2">{renderCurrent('元画像','imgUrl',null)}{renderCurrent('実際の合成後プレビュー','imgUrl',colors)}{Array.from({length:regionCount},(_,i)=>renderCurrent(`染色${i+1}のみ`,'imgUrl',colors.map((c,j)=>i===j?c:null)))}</div>
-              <h3 className="text-[10px] font-black text-cyan-300">実際の表示条件</h3><div className="grid grid-cols-2 gap-2">{renderCurrent('バトル／立ち絵','imgUrl',colors,'h-36','object-contain')}{renderCurrent('一覧／全身アイコン','iconUrl',colors,'h-24','object-cover')}{renderCurrent('詳細／大きな全身表示','imgUrl',colors,'h-40','object-contain')}{renderCurrent('顔アイコン','faceIconUrl',colors,'h-20 rounded-full','object-cover')}{renderCurrent('プロフィール／選択アイコン','faceIconUrl',colors,'h-16 rounded-full','object-cover')}{renderCurrent('小型／編成枠','imgUrl',colors,'h-12 rounded-full','object-contain')}</div>
+              <h3 className="text-[10px] font-black text-cyan-300">実際の表示条件</h3><div className="grid grid-cols-2 gap-2">{renderCurrent('バトル／立ち絵','imgUrl',colors,'aspect-square','object-contain',null,'本番 64px・角丸なし')}{renderCurrent('一覧／全身アイコン','iconUrl',colors,'aspect-square rounded-full','object-cover',null,'本番 48px・丸')}{renderCurrent('詳細／大きな全身表示','imgUrl',colors,'h-40','object-contain',null,'本番 図鑑詳細の横長枠')}{renderCurrent('顔アイコン','faceIconUrl',colors,'aspect-square rounded-full','object-contain',profileIconStyle,'本番 プロフィール80px・丸')}{renderCurrent('プロフィール／選択アイコン','faceIconUrl',colors,'aspect-square rounded-2xl','object-contain',profileIconStyle,'本番 選択マス約59px・角丸')}{renderCurrent('小型／編成枠','imgUrl',colors,'aspect-square rounded-full','object-contain',null,'本番 40px・丸')}</div>
               {motionSupported&&(
                 <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
                   <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>

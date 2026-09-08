@@ -181,6 +181,35 @@ const artRel = String(mon.imgUrl).split('?')[0];
     source.includes('const normalizeMask=(image,outside,regionCount=3)=>')
     && source.includes('normalizeMask(image,outsideRef.current,dyeRegionCount(target.baseId))'));
 
+  // 「実際の表示条件」の枠は、本番と同じ形(縦横比・角丸・収め方)でなければ意味が無い。
+  // 以前は高さだけを指定していたため、幅がグリッドの列いっぱいに広がり、
+  // 本番では丸いアイコンが横長のカプセルになっていた(2026-09-08・ユーザー指摘)。
+  // 本番の実物: 一覧48px丸/cover・編成枠40px丸/contain・バトル64px正方形/contain・
+  //             プロフィール80px丸/contain・アイコン選択マス約59px角丸/contain
+  const frames = [
+    ['バトル／立ち絵', 'imgUrl', 'aspect-square', 'object-contain'],
+    ['一覧／全身アイコン', 'iconUrl', 'aspect-square rounded-full', 'object-cover'],
+    ['顔アイコン', 'faceIconUrl', 'aspect-square rounded-full', 'object-contain'],
+    ['プロフィール／選択アイコン', 'faceIconUrl', 'aspect-square rounded-2xl', 'object-contain'],
+    ['小型／編成枠', 'imgUrl', 'aspect-square rounded-full', 'object-contain'],
+  ];
+  for (const [label, sourceKey, frameClass, fit] of frames) {
+    // ラベルごとに1本の呼び出しとして照合する(同じ枠指定が他のラベルにもあるため、
+    // 文字列がどこかに在るだけでは「その枠が正しい」ことにならない)
+    check(`「${label}」の枠が本番と同じ形になっている`,
+      source.includes(`renderCurrent('${label}','${sourceKey}',colors,'${frameClass}','${fit}'`),
+      `${frameClass} / ${fit}`);
+  }
+  // 高さだけの枠(幅が列いっぱいに広がる)へ戻っていないか。丸を指定したのに横長のカプセルになる
+  check('丸・角丸の枠に高さだけの指定が残っていない',
+    !/renderCurrent\('(?:一覧／全身アイコン|顔アイコン|プロフィール／選択アイコン|小型／編成枠)','[^']*',colors,'h-\d+/.test(source));
+  // 顔アイコンは本番(BreederIcon)で MARKET_PROFILE_ICON_STYLES の拡大・位置調整が掛かる。
+  // これが無いと、faceIconUrl が立ち絵そのままのモンスター(ライガー・ミーア・パンドラ等)だけ
+  // プレビューに全身が写り、本番とまったく別物になる
+  check('顔アイコンの枠へ本番と同じ拡大・位置調整を渡している',
+    source.includes('const profileIconStyle=marketProfileIconStyle(')
+    && (source.match(/renderCurrent\('(?:顔アイコン|プロフィール／選択アイコン)'[^)]*profileIconStyle/g) || []).length === 2);
+
   console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
   process.exit(failed ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
