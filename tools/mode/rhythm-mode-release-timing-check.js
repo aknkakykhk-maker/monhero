@@ -52,10 +52,9 @@ check('TAP/FLICKの開始判定条件は変更しない',
   &&source.includes("timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS")
   &&!/timeDistance<=\d/.test(source)
   // 2026-09-05、候補が複数あるときの選び方を4回目の作り直しで
-  // 「過ぎている側があるなら必ずそちらを取る(古いものから消費する)」へ戻した。
-  // 判定の段で比べる形(judgeRank)は、連続ノーツで遅れて叩くと必ず次へ移る
-  // ＝引っ張りの原因だったのでやめている。
+  // 判定段の比較や過去側100%固定ではなく、前75%へ寄せた所有境界を使う。
+  // +60ms程度の遅押しを次へ飛ばさず、次ノーツ直前の早押しを前へ吸わせ続けない。
   // 受け付ける広さ(RHYTHM_INPUT_MATCH_WINDOW_MS)は変えていないので、ここも一緒に見る
   &&source.includes("if(now>=noteTime)passedBest=")
-  &&source.includes("const chosen=passedBest||upcomingBest;"));
+  &&source.includes("const chosen=chooseTapTarget(passedBest,upcomingBest);")&&source.includes("RHYTHM_TAP_TARGET_PREVIOUS_SHARE=.75"));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
