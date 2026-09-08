@@ -4,6 +4,14 @@ const createAnimationStyle = () => {
   const style = document.createElement('style');
   style.id = 'mh-anim-style';
   style.textContent = `
+    /* 日本語の行の折り返し(禁則処理)。既定のままだと Chromium も Safari も禁則がゆるく、
+       長音「ー」や小書き仮名「っ」が行頭へ出てしまう
+       (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い / ほとんどのモンスターが悪い」。
+        実機では「恐ろしいモンスタ / ー。」「通常攻撃のダメ / ージが」のように折り返していた)。
+       line-break:strict で JIS X 4051 の厳しい禁則になる。実測では、幅240〜400pxで
+       起きていた59通りの禁則違反が全部直った(tools/text/japanese-linebreak-check.js)。
+       日本語以外の折り返しには影響しない(英単語の分割は word-break/overflow-wrap が担当)。 */
+    body { line-break: strict; }
     @keyframes attackFly {
       0% {
         transform: translateY(0) scale(1);

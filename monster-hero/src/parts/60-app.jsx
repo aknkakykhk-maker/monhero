@@ -9396,11 +9396,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lineageChip=(lineage)=><DexLineageChip lineage={lineage} iconUrl={lineageIconUrl(lineage)}/>;
           const tabs=[['basic','基本'],['stats','能力'],['skills','技']];
           const tab=tabs.some(([id])=>id===dexTab)?dexTab:'basic';
+          // 「主血統」「区分」のような短い値は、ラベルと向かい合う右揃えのままにする。
+          // 「特性の効果」のような長い文は、右揃えだと折り返すたびに行頭がずれて読みにくいので、
+          // ラベルを上に置いて幅いっぱいの左揃えにする
+          // (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い」)
+          const DEX_ROW_WRAP_LENGTH=24;
           const row=(label,value)=>(
-            <div className="flex items-start justify-between gap-3 border-b border-amber-500/15 py-1.5 last:border-b-0">
-              <span className="text-[10px] font-black text-amber-300/90 shrink-0">{label}</span>
-              <span className="text-[11px] font-bold text-white text-right min-w-0 break-words">{value}</span>
-            </div>
+            typeof value==='string'&&value.length>=DEX_ROW_WRAP_LENGTH
+              ? (
+                <div className="border-b border-amber-500/15 py-1.5 last:border-b-0">
+                  <span className="block text-[10px] font-black text-amber-300/90">{label}</span>
+                  <span className="mt-1 block text-[11px] font-bold leading-relaxed text-white break-words">{value}</span>
+                </div>
+              )
+              : (
+                <div className="flex items-start justify-between gap-3 border-b border-amber-500/15 py-1.5 last:border-b-0">
+                  <span className="text-[10px] font-black text-amber-300/90 shrink-0">{label}</span>
+                  <span className="text-[11px] font-bold text-white text-right min-w-0 break-words">{value}</span>
+                </div>
+              )
           );
           const skillPills=(list,accent)=>(
             <div className="grid grid-cols-2 gap-1.5">

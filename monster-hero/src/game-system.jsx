@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f70b7e799a858ce6
+// generated-sha256: e543777446b2655c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 15:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 16:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1479,11 +1479,36 @@ const lineageIconUrl = (lineage) => {
 const monsterDexDescription = (monsterId) =>
   (typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[monsterId])
   || 'この個体の記録はまだ集まっていません。調査が進むと図鑑へ追記されます。';
-// 図鑑に並ぶモンスター。ALL_PLAYER_MONSTERS の定義順をそのまま図鑑の並びにする
+// 図鑑に並ぶモンスター。**主血統(種族)ごとにまとめて**並べる。
+// 血統の並びは MONSTER_LINEAGES の定義順、同じ血統の中は ALL_PLAYER_MONSTERS の定義順。
+// 以前は ALL_PLAYER_MONSTERS の定義順そのままだったので、モンスターを足した順に並び、
+// 同じ種族が離れて出ていた(2026-09-08・ユーザー指摘「図鑑の全てが種族順になってない」。
+// 剣士モッチーがモッチー・ミタラシと離れてエイキの隣に出ていた)。
 // デバッグ専用個体(debugOnly)は図鑑に出さない。ここは図鑑だけでなく、血統の絞り込み
 // (dexMainLineages)と種族チャレンジの種族一覧・メンバー表示も見ているので、
-// 正式実装前のモンスターがそれらへ混ざらないよう、この1か所で除いている
-const dexMonsterList = () => (typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && !mon.debugOnly) : []);
+// 正式実装前のモンスターがそれらへ混ざらないよう、この1か所で除いている。
+// 並び順は表示だけの話で、保存(mh_unlocked_monsters)は種のidを持つので影響しない
+const dexMonsterList = () => {
+  if (typeof ALL_PLAYER_MONSTERS === 'undefined') return [];
+  const list = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && !mon.debugOnly);
+  const order = typeof MONSTER_LINEAGES !== 'undefined' ? Object.keys(MONSTER_LINEAGES) : [];
+  // 血統カタログに無い主血統は末尾へ回す(並びから消さない)
+  const rank = (mon) => {
+    const id = monsterLineageOf(mon.id).main?.id;
+    const i = order.indexOf(id);
+    return i < 0 ? order.length : i;
+  };
+  // 同じ血統の中は、その血統を代表するモンスター(血統カタログの monId)を先頭にし、
+  // あとは元の並びのまま。血統の絞り込みで「ウンディーネ」を選んだのに先頭が
+  // スネグーラチカ、という分かりにくさをなくす(sortは安定だが添字で保険もかける)
+  const isRepresentative = (mon) => lineageById(monsterLineageOf(mon.id).main?.id)?.monId === mon.id;
+  return list
+    .map((mon, i) => ({ mon, i }))
+    .sort((a, b) => (rank(a.mon) - rank(b.mon))
+      || ((isRepresentative(b.mon) ? 1 : 0) - (isRepresentative(a.mon) ? 1 : 0))
+      || (a.i - b.i))
+    .map(x => x.mon);
+};
 // 図鑑の絞り込みに出す主血統。実際に登場する主血統だけを、図鑑の並び順で並べる
 const dexMainLineages = () => {
   const seen = new Set();
@@ -20613,11 +20638,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lineageChip=(lineage)=><DexLineageChip lineage={lineage} iconUrl={lineageIconUrl(lineage)}/>;
           const tabs=[['basic','基本'],['stats','能力'],['skills','技']];
           const tab=tabs.some(([id])=>id===dexTab)?dexTab:'basic';
+          // 「主血統」「区分」のような短い値は、ラベルと向かい合う右揃えのままにする。
+          // 「特性の効果」のような長い文は、右揃えだと折り返すたびに行頭がずれて読みにくいので、
+          // ラベルを上に置いて幅いっぱいの左揃えにする
+          // (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い」)
+          const DEX_ROW_WRAP_LENGTH=24;
           const row=(label,value)=>(
-            <div className="flex items-start justify-between gap-3 border-b border-amber-500/15 py-1.5 last:border-b-0">
-              <span className="text-[10px] font-black text-amber-300/90 shrink-0">{label}</span>
-              <span className="text-[11px] font-bold text-white text-right min-w-0 break-words">{value}</span>
-            </div>
+            typeof value==='string'&&value.length>=DEX_ROW_WRAP_LENGTH
+              ? (
+                <div className="border-b border-amber-500/15 py-1.5 last:border-b-0">
+                  <span className="block text-[10px] font-black text-amber-300/90">{label}</span>
+                  <span className="mt-1 block text-[11px] font-bold leading-relaxed text-white break-words">{value}</span>
+                </div>
+              )
+              : (
+                <div className="flex items-start justify-between gap-3 border-b border-amber-500/15 py-1.5 last:border-b-0">
+                  <span className="text-[10px] font-black text-amber-300/90 shrink-0">{label}</span>
+                  <span className="text-[11px] font-bold text-white text-right min-w-0 break-words">{value}</span>
+                </div>
+              )
           );
           const skillPills=(list,accent)=>(
             <div className="grid grid-cols-2 gap-1.5">
@@ -26903,6 +26942,14 @@ const createAnimationStyle = () => {
   const style = document.createElement('style');
   style.id = 'mh-anim-style';
   style.textContent = `
+    /* 日本語の行の折り返し(禁則処理)。既定のままだと Chromium も Safari も禁則がゆるく、
+       長音「ー」や小書き仮名「っ」が行頭へ出てしまう
+       (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い / ほとんどのモンスターが悪い」。
+        実機では「恐ろしいモンスタ / ー。」「通常攻撃のダメ / ージが」のように折り返していた)。
+       line-break:strict で JIS X 4051 の厳しい禁則になる。実測では、幅240〜400pxで
+       起きていた59通りの禁則違反が全部直った(tools/text/japanese-linebreak-check.js)。
+       日本語以外の折り返しには影響しない(英単語の分割は word-break/overflow-wrap が担当)。 */
+    body { line-break: strict; }
     @keyframes attackFly {
       0% {
         transform: translateY(0) scale(1);

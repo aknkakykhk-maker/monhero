@@ -50,6 +50,43 @@ const monsters = A.dexMonsterList();
 // ---------- ① 血統がすべて揃っている ----------
 check('図鑑にモンスターが並ぶ', monsters.length > 0, `${monsters.length}体`);
 check('図鑑全体の対象は20体', monsters.length === 20, `${monsters.length}体`);
+// ---------- ①-2 図鑑は種族(主血統)順に並ぶ ----------
+// 以前は ALL_PLAYER_MONSTERS の定義順そのままで、モンスターを足した順に並んでいたため
+// 同じ種族が離れて出ていた(2026-09-08・ユーザー指摘「図鑑の全てが種族順になってない」)。
+// 期待する並びを検査側へ書き写すと、モンスターを足すたびに検査だけが古くなるので、
+// 「まとまっているか」「血統カタログの順か」を性質として確かめる
+{
+  const mains = monsters.map(mon => A.monsterLineageOf(mon.id).main?.id);
+  // 同じ主血統が飛び飛びに出ていないか(いちど途切れた血統が後からまた出てこないか)
+  const seen = new Set(); const scattered = [];
+  let prev = null;
+  for (const id of mains) {
+    if (id !== prev && seen.has(id)) scattered.push(id);
+    seen.add(id); prev = id;
+  }
+  check('同じ種族(主血統)がひとまとまりで並ぶ', scattered.length === 0,
+    scattered.length ? `離れて出ている: ${[...new Set(scattered)].join(' / ')}` : `${seen.size}種族`);
+  // 血統の並びは血統カタログ(MONSTER_LINEAGES)の定義順
+  const catalog = Object.keys(A.MONSTER_LINEAGES);
+  const appeared = [...new Set(mains)];
+  const sorted = [...appeared].sort((a, b) => catalog.indexOf(a) - catalog.indexOf(b));
+  check('種族の並びが血統カタログの定義順', JSON.stringify(appeared) === JSON.stringify(sorted),
+    appeared.map(id => A.MONSTER_LINEAGES[id]?.name || id).join(' / '));
+  // 血統の先頭は、その血統を代表するモンスター(カタログの monId)
+  const badHead = [];
+  for (const id of appeared) {
+    const rep = A.MONSTER_LINEAGES[id]?.monId;
+    if (!rep) continue; // 代表モンスターが居ない血統(ドラゴン・ジョーカー等)は対象外
+    const head = monsters.find(mon => A.monsterLineageOf(mon.id).main?.id === id);
+    if (head && head.id !== rep) badHead.push(`${A.MONSTER_LINEAGES[id].name}の先頭が${head.name}`);
+  }
+  check('種族の先頭はその種族を代表するモンスター', badHead.length === 0, badHead.join(' / '));
+  // 絞り込みのチップは図鑑の並びから作るので、こちらも同じ順になる
+  const chips = A.dexMainLineages().map(l => l.id);
+  check('血統の絞り込みチップも同じ順に並ぶ', JSON.stringify(chips) === JSON.stringify(appeared),
+    A.dexMainLineages().map(l => l.name).join(' / '));
+}
+
 const missing = monsters.filter(mon => !A.monsterLineageOf(mon.id).known).map(mon => mon.name);
 check('全プレイヤーモンスターに血統が設定されている', missing.length === 0, missing.join(' / '));
 const broken = monsters.filter(mon => {
