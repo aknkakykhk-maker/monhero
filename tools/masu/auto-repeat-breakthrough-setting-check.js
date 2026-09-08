@@ -20,7 +20,19 @@ assert.ok(normalizer.includes('autoRepeatBreakthroughLevel: normalizeAutoRepeatB
 assert.ok(!normalizer.includes('autoRepeatBreakthrough:'), '旧booleanを正本にしない');
 assert.ok(source.includes("if (value === 'follow') return 'follow';"), '自動追従modeを保持');
 assert.ok(source.includes("return level > 0 ? 'fixed' : 'off';"), 'mode欠損の既存数値設定はfixedへ継承');
-assert.ok(source.includes("autoRepeatBreakthroughMode: normalizedLevel > 0 ? 'fixed' : 'off'"), '従来の個体別Lv変更はfixed/OFFとして保存');
+const sample = { id:'setting', autoRepeatBreakthroughLevel:45 };
+const follow = m.buildAutoRepeatBreakthroughSettingUpdate(sample, 'follow', 50);
+assert.strictEqual(follow.autoRepeatBreakthroughMode, 'follow', 'followを個体設定へ保存');
+assert.strictEqual(follow.autoRepeatBreakthroughLevel, 0, 'followは固定Lvを正本にしない');
+const fixed = m.buildAutoRepeatBreakthroughSettingUpdate(sample, 'fixed', 50);
+assert.strictEqual(fixed.autoRepeatBreakthroughMode, 'fixed', 'fixedを個体設定へ保存');
+assert.strictEqual(fixed.autoRepeatBreakthroughLevel, 50, 'fixedは指定Lvを保存');
+const invalidFixed = m.buildAutoRepeatBreakthroughSettingUpdate(sample, 'fixed', 51);
+assert.strictEqual(invalidFixed.autoRepeatBreakthroughMode, 'off', '不正な固定LvはOFFへ落とす');
+assert.strictEqual(invalidFixed.autoRepeatBreakthroughLevel, 0, '不正な固定Lvを残さない');
+const legacyUpdate = m.buildAutoRepeatBreakthroughUpdate(sample, 55);
+assert.strictEqual(legacyUpdate.autoRepeatBreakthroughMode, 'fixed', '従来の数値更新helperはfixed互換');
+assert.strictEqual(legacyUpdate.autoRepeatBreakthroughLevel, 55, '従来の数値更新helperはLvを維持');
 
 const saverStart = source.indexOf('const setMasuAutoRepeatBreakthrough =');
 const saverEnd = source.indexOf('const useUniqueSkillResetTicket', saverStart);
@@ -32,10 +44,14 @@ assert.ok(saver.includes('String(m.id) === String(masuId) ? updated : m'), '対�
 const detailStart = source.indexOf('{masuMonDetail&&!MASU_ENHANCE_STATES.includes(gameState)&&');
 const detailEnd = source.indexOf('{/* 固有技設定:', detailStart);
 const detail = source.slice(detailStart, detailEnd);
-assert.ok(detail.includes('<select') && detail.includes('<option value={0}>OFF</option>'), 'スマホ向けselectとOFF');
+assert.ok(detail.includes('<select') && detail.includes('<option value="off">OFF</option>'), 'スマホ向けselectとOFF');
+assert.ok(detail.includes('<option value="follow">ブリーダーLvに自動追従</option>'), '個体ごとに自動追従を選べる');
+assert.ok(detail.includes('value={`fixed:${level}`}') && detail.includes('Lv{level}まで固定'), '固定Lvを5刻みで選べる');
+assert.ok(detail.includes("value.startsWith('fixed:')") && detail.includes("setMasuAutoRepeatBreakthrough(masu.id,'follow')"), 'selectから3モードを保存へ接続');
 assert.ok(detail.includes('autoBreakthroughLevels.map'), '利用可能な5刻み選択肢だけを生成');
-assert.ok(detail.includes('設定可能上限：'), '現在の設定可能上限を表示');
-// UIは次の段階でfollow選択肢へ拡張する。この段階では既存UIの固定Lv操作を壊していないことだけ確認する。
+assert.ok(detail.includes('現在の追従上限：'), '現在の自動追従上限を表示');
+assert.ok(detail.includes('ブリーダーLv上昇に合わせて自動で伸びます'), '追従の意味を画面で説明');
+assert.ok(detail.includes('w-full min-h-[48px]'), '縦画面で押しやすい幅と高さを確保');
 assert.ok(source.includes('reserveGold = 0, reservePsyche = 0'), '残高保護は未設定なら従来どおり0');
 assert.ok(source.includes('result.nextGold < protectedGold || result.nextPsyche < protectedPsyche'), '限凸後残高で保護判定');
 
