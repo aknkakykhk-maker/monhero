@@ -38,9 +38,13 @@ const source = read('monster-hero/src/game-system.jsx');
 // --- 固有技の効果分岐だけを切り出す ---
 // card.monId==='X' は getDmg やザンの連撃判定にも出てくるので、
 // 「固有技を使ったときの効果」を書いている範囲へ先に絞ってから探す。
-// 範囲は processTurn の中の、モッチーの分岐からアーク/イブリースの分岐までの間。
-const EFFECT_FROM = "if(card.monId==='Mocchi'||card.monId==='Mitarashi')";
-const EFFECT_TO = "else if(card.monId==='Ark'||card.monId==='Iblis'){";
+// 範囲は processTurn の中の、モッチーの分岐からアークの分岐までの間。
+// 目印には「||で並んだidの一覧」を書かない。同じ効果を共有する新しいモンスターを
+// 1体足すだけで一致しなくなり、この検査が丸ごと機能停止する
+// (実際に剣士モッチーを足したとき、NGにも気づけず素通りしかけた)。
+// 先頭のidだけを見れば、分岐の順番を入れ替えないかぎり一意に決まる。
+const EFFECT_FROM = "if(card.monId==='Mocchi'";
+const EFFECT_TO = "else if(card.monId==='Ark'";
 const effectRegion = (() => {
   const from = source.indexOf(EFFECT_FROM);
   const to = source.indexOf(EFFECT_TO, from);
@@ -66,7 +70,8 @@ const RULES = [
       // 敵被ダメ増は「使ったターンからすぐ効く」ため、値は共有関数 localBoostFromCard に
       // 集約されている(processTurnとカード選択中のプレビューの両方がここを参照する)。
       // branch(processTurnのモッチー分岐)ではなく、その定義側で値を確かめる
-      { re: /monId==='Mocchi'\|\|card\.monId==='Mitarashi'\)\) return \{ dmgMod: ([\d.]+) \};/, mustSay: '敵被ダメ', unit: '%', note: '敵の被ダメージ増加', target: 'source' },
+      // ここも同じ理由でidを並べない([^)\n]* が「||card.monId==='…'」の並びを丸ごと飲む)
+      { re: /monId==='Mocchi'[^)\n]*\)\) return \{ dmgMod: ([\d.]+) \};/, mustSay: '敵被ダメ', unit: '%', note: '敵の被ダメージ増加', target: 'source' },
     ],
     forbid: [{ re: /addPermaBuff\('defPct'/, why: 'モッチーは丈夫さは上げない(被ダメージ軽減)' }],
     usesSharedBoost: 'dmgMod',

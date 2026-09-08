@@ -66,8 +66,21 @@ assert(source.includes("if (card.subType==='atk_buff') return { oryo: card.baseV
   'おりょうの力の値の出どころが変わっている。モデル側も直すこと');
 assert(source.includes("if (card.type==='unique' && card.monId==='Golem') return { oryo: 0.075 };"),
   'ゴーレムの与ダメージ増加(0.075)が変わっている。モデル側も直すこと');
-assert(source.includes("if (card.type==='unique' && (card.monId==='Mocchi'||card.monId==='Mitarashi')) return { dmgMod: 0.1 };"),
-  'モッチー/ミタラシの敵被ダメ増加(0.1)が変わっている。モデル側も直すこと');
+// 目印に「||で並んだidの一覧」を書かない。同じ効果を共有する新しいモンスターを1体足すだけで
+// 一致しなくなり、値が変わっていなくてもここで落ちる(実際に剣士モッチーを足したとき落ちた)。
+// 見たいのは「モッチー系の敵被ダメ増加が 0.1 のままか」だけなので、idの並びは飲み込む
+assert(/if \(card\.type==='unique' && \(card\.monId==='Mocchi'[^)\n]*\)\) return \{ dmgMod: 0\.1 \};/.test(source),
+  'モッチー系の敵被ダメ増加(0.1)が変わっている。モデル側も直すこと');
+// モデル側が実装と同じ顔ぶれを見ているか(片方だけ増えていないか)も突き合わせる
+{
+  const ids = (source.match(/if \(card\.type==='unique' && \(card\.monId==='Mocchi'[^)\n]*\)\) return \{ dmgMod: 0\.1 \};/) || [''])[0]
+    .match(/monId==='([A-Za-z]+)'/g) || [];
+  const modelIds = (fs.readFileSync(__filename, 'utf8')
+    .match(/if \(card\.type==='unique' && \(card\.monId==='Mocchi'[^)\n]*\)\) return \{ dmgMod: 0\.1 \}; \/\/ ← モデル/) || [''])[0]
+    .match(/monId==='([A-Za-z]+)'/g) || [];
+  assert(ids.length > 0 && ids.join(',') === modelIds.join(','),
+    `モッチー系の敵被ダメ増加を持つモンスターが実装とモデルでずれている（実装: ${ids.join(',')} / モデル: ${modelIds.join(',')}）`);
+}
 assert(/return \{ combo: 0\.03\+level\*0\.02 \};/.test(source),
   'ききの応援の全体連撃(0.03+Lv*0.02)が変わっている。モデル側も直すこと');
 
@@ -99,7 +112,7 @@ const localBoostFromCard = (card) => {
   if (card.subType==='atk_buff') return { oryo: 0.1 }; // おりょうの力Lv0相当
   if (card.subType==='buff_kiki') return { combo: 0.03 }; // ききの応援Lv0相当
   if (card.type==='unique' && card.monId==='Golem') return { oryo: 0.075 };
-  if (card.type==='unique' && (card.monId==='Mocchi'||card.monId==='Mitarashi')) return { dmgMod: 0.1 };
+  if (card.type==='unique' && (card.monId==='Mocchi'||card.monId==='Mitarashi'||card.monId==='KenshiMocchi')) return { dmgMod: 0.1 }; // ← モデル
   return null;
 };
 

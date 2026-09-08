@@ -101,7 +101,12 @@ check('Lvの指定は1〜50へ丸める',
   R.rpgPointsForLevel(0) === 0 && R.rpgPointsForLevel(999) === 49 && R.rpgPointsForLevel('こわれた値') === 0);
 
 const list = R.rpgMonsterList();
-check('正式なベースモン定義から候補を作っている', list.length === Object.keys(R.ALL_PLAYER_MONSTERS).length && list.length >= 12, `${list.length}種`);
+// 正式実装前のモンスター(debugOnly)は候補から外れるので、比べる相手も外したうえで数える。
+// 全体の数と比べていたため、debugOnly のモンスターが1体でも居ると必ず落ちていた
+// (下の行が「debugOnly は入らない」と要求しているので、そもそも両立しない条件だった)。
+const released = Object.values(R.ALL_PLAYER_MONSTERS).filter(mon => mon && !mon.debugOnly);
+check('正式なベースモン定義から候補を作っている', list.length === released.length && list.length >= 12,
+  `${list.length}種 / 正式実装済み ${released.length}種`);
 check('デバッグ専用モンスターは候補に入らない', list.every(m => !m.debugOnly));
 check('既存4ステータスは ALL_PLAYER_MONSTERS の現在値から毎回計算する',
   list.every(mon => {
