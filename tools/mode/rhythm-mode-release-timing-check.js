@@ -51,11 +51,13 @@ check('TAP/FLICKの開始判定条件は変更しない',
   &&source.includes("const timeDistance=Math.abs(now-noteTime);")
   &&source.includes("timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS")
   &&!/timeDistance<=\d/.test(source)
-  // 2026-09-05、候補が複数あるときの選び方を4回目の作り直しで
-  // 「過ぎている側があるなら必ずそちらを取る(古いものから消費する)」へ戻した。
-  // 判定の段で比べる形(judgeRank)は、連続ノーツで遅れて叩くと必ず次へ移る
-  // ＝引っ張りの原因だったのでやめている。
-  // 受け付ける広さ(RHYTHM_INPUT_MATCH_WINDOW_MS)は変えていないので、ここも一緒に見る
+  // 2026-09-08、候補が重なったときの「入力の持ち主」だけは意図的に5案目へ変更した。
+  // 受付幅そのものは上のRHYTHM_INPUT_MATCH_WINDOW_MSで固定し、所有権は別定数で見る。
+  // 前へ最低65msを残し、次がMARVELOUS早側へ入ったあとのみ次へ渡す。
   &&source.includes("if(now>=noteTime)passedBest=")
-  &&source.includes("const chosen=passedBest||upcomingBest;"));
+  &&source.includes("const RHYTHM_TAP_TARGET_PAST_HOLD_MS = 65;")
+  &&source.includes("RHYTHM_TAP_TARGET_NEXT_EARLY_MS = RHYTHM_JUDGMENTS.find")
+  &&source.includes("let chosen=passedBest||upcomingBest;")
+  &&source.includes("const handoffAt=Math.max(")
+  &&source.includes("if(now>handoffAt)chosen=upcomingBest;"));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
