@@ -33,6 +33,22 @@ for (const brokenReserve of [
   assert(safe.breakthroughReserve.gold === 0 && safe.breakthroughReserve.psyche === 0, '壊れた資源保護値を0へ戻せません');
 }
 assert(source.includes("await storeSet(AUTO_SETTINGS_KEY, normalized, false)"), '決定時の保存処理が見つかりません');
+assert(source.includes("const [autoBreakthroughBulkValue, setAutoBreakthroughBulkValue] = useState('follow')"), '自動限凸一括設定の一時stateがありません');
+assert(source.includes("setAutoBreakthroughBulkValue('follow')"), 'AUTO設定を開くたび一括候補を安全な初期値へ戻していません');
+const bulkStart = source.indexOf('const applyAutoBreakthroughBulk = async () => {');
+const bulkEnd = source.indexOf('const saveAutoSettings = async () => {', bulkStart);
+const bulk = source.slice(bulkStart, bulkEnd);
+assert(bulk.includes("window.confirm(`所有マスモン${currentMons.length}体"), '一括変更前の確認がありません');
+assert(bulk.includes("storeSet('mh_masu_mons', next, false)"), '一括設定を既存mh_masu_monsへ保存していません');
+assert(bulk.includes('masuMonsRef.current = next') && bulk.includes('setMasuMons(next)'), '一括保存後に最新個体ref/stateを同期していません');
+assert(!bulk.includes('AUTO_SETTINGS_KEY'), '一括設定をAUTO設定へ永続化して新規個体へ自動適用する形になっています');
+assert(source.includes('data-auto-breakthrough-bulk-settings'), 'AUTO設定画面に自動限凸セクションがありません');
+assert(source.includes('全員 ブリーダーLvに自動追従') && source.includes('全員OFF') && source.includes('全員 Lv{level}まで固定'), '一括設定の3モードがそろっていません');
+assert(source.includes('今後新しく入手するマスモンは自動ではONになりません'), '新規個体には自動適用しない説明がありません');
+assert(source.includes('id="auto-breakthrough-reserve-gold"') && source.includes('id="auto-breakthrough-reserve-psyche"'), '残高保護の数値入力がありません');
+assert(source.includes('残すダイヤを1000減らす') && source.includes('残すダイヤを1000増やす'), 'ダイヤの±操作がありません');
+assert(source.includes('残す虹のプシュケーを10減らす') && source.includes('残す虹のプシュケーを10増やす'), '虹のプシュケーの±操作がありません');
+assert(source.includes('updateDraftAutoBreakthroughReserve'), '残高保護をAUTO設定の下書きへ接続していません');
 assert(source.includes("k.startsWith('mh_')"), 'mh_キーのバックアップ処理が見つかりません');
 assert(source.includes('onClick={()=>setAutoAllyDetail({ mon, masu })}'), '選択済み供モンの詳細導線が見つかりません');
 assert(source.includes('autoAllyDetail&&renderMonsterDetailModal({mon:autoAllyDetail.mon,masu:autoAllyDetail.masu'), '共通モンスター詳細UIの再利用が見つかりません');
