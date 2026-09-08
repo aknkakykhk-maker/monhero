@@ -211,17 +211,28 @@ const centerCarouselChild = (root, index, behavior = 'auto') => {
 
 // marked=false は「輪にするために置いた影の行」で使う。同じ目印が3つに増えると、
 // 画面を数えて確かめている検査が本物の3倍を見てしまうため、影には目印を付けない。
-const RhythmSongArt=({song,large=false,marked=true})=>{
+// onZoom を渡すと、絵のある曲だけ「押せる絵」になる(押すと拡大して見られる)。
+// 一覧の行は曲を選ぶボタンそのものなので、渡さない(ボタンの中にボタンは置けない)。
+const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
   const src=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):(song&&typeof song.artwork==='string'?song.artwork:'');
   const initial=String((song&&song.displayName)||'♪').trim().charAt(0)||'♪';
-  return <span {...(marked?{'data-rhythm-song-art':''}:{})} className={`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full':'w-12'}`}
-    style={{aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`}}>
+  const zoomable=!!src&&typeof onZoom==='function';
+  const inner=<>
     {src
       ?<img src={src} alt="" className="absolute inset-0 h-full w-full object-cover"/>
       :<b aria-hidden="true" className={`absolute inset-0 flex items-center justify-center font-black text-white/90 ${large?'text-5xl':'text-xl'}`}
         style={{textShadow:'0 2px 8px rgba(2,6,23,.55)'}}>{initial}</b>}
-  </span>;
+    {/* 押せることが見て分かるように、右下に小さな虫めがねを出す */}
+    {zoomable&&<i aria-hidden="true" className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-slate-950/70 text-[10px] leading-none"
+      style={{backgroundColor:'rgba(2,6,23,.7)'}}>🔍</i>}
+  </>;
+  const shape=`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full':'w-12'}`;
+  const box={aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`};
+  if(zoomable)return <button type="button" {...(marked?{'data-rhythm-song-art':''}:{})} data-rhythm-song-art-zoom
+    onClick={onZoom} aria-label={`${rhythmSongFullName(song)}のジャケットを大きく見る`}
+    className={shape} style={box}>{inner}</button>;
+  return <span {...(marked?{'data-rhythm-song-art':''}:{})} className={shape} style={box}>{inner}</span>;
 };
 
 // 曲の長さ。譜面の終わりか、曲の再生時間の指定から出す。
@@ -303,6 +314,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
   const [sortOpen,setSortOpen]=React.useState(false);
+  // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
+  // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
+  const [artZoom,setArtZoom]=React.useState(false);
   const playable=(songs||[]).filter(song=>(difficulties||[]).some(difficulty=>rhythmChartPlayable(song,difficulty.id)));
   const setSongId=id=>{if(typeof onSongId==='function')onSongId(id);};
   const setDifficultyId=id=>{if(typeof onDifficultyId==='function')onDifficultyId(id);};
@@ -513,7 +527,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
         :<>
         <div className="flex items-center gap-3 landscape:block">
-          <div className="w-16 shrink-0 landscape:mx-auto landscape:w-36"><RhythmSongArt song={song} large/></div>
+          <div className="w-16 shrink-0 landscape:mx-auto landscape:w-36"><RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/></div>
           {/* ここも一覧と同じ理由で2行分を確保する。曲名が1行か2行かで
               「長さ」「難易度ボタン」「ノーツ数」まで丸ごと上下に動いていた。 */}
           <div className="min-w-0 flex-1 landscape:mt-2 landscape:text-center">
@@ -575,6 +589,21 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
 
     {/* 並び替えのシート。行を1本増やさずに済むよう、選ぶところは下から出す。
         並びを変えても、選んでいる曲・難易度・自己ベスト・全国ランキングは何も変わらない。 */}
+    {/* ジャケットの拡大。曲えらびの上に重ねるだけで、選んでいる曲・難易度・再生中の曲は動かさない。
+        Tailwindが遅れて届いても真っ黒の背景と中央寄せだけは効くよう、位置と色は style にも書く。 */}
+    {artZoom&&song&&<div data-rhythm-song-art-modal role="dialog" aria-modal="true" aria-label={`${rhythmSongFullName(song)}のジャケット`}
+      className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-4"
+      style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:9000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}
+      onClick={()=>setArtZoom(false)}>
+      <img src={typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):song.artwork} alt={`${rhythmSongFullName(song)}のジャケット`}
+        onClick={e=>e.stopPropagation()}
+        className="max-h-[74vh] w-auto max-w-[92vw] rounded-2xl border border-white/25 object-contain"
+        style={{maxHeight:'74vh',maxWidth:'92vw'}}/>
+      <b className="mt-3 max-w-[92vw] text-center text-sm font-black leading-tight text-white">{rhythmSongFullName(song)}</b>
+      <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
+        className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
+        style={{minHeight:'52px'}}>とじる</button>
+    </div>}
     {sortOpen&&<div data-rhythm-sort-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
       style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}
       onClick={()=>setSortOpen(false)}>
