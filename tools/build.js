@@ -73,6 +73,19 @@ if (process.argv.includes('--check')) {
     process.exit(1);
   }
   if (embedded !== hash) {
+    // TEMP: ChatGPT handoff only. Print the exact canonical diff so the generated file can be recovered
+    // from CI without changing workflow definitions. This block is reverted immediately after recovery.
+    const expected = buildFileContents(hash, transformGameSystem());
+    const oldPath = '/tmp/mh-compiled-old.js';
+    const newPath = '/tmp/mh-compiled-new.js';
+    fs.writeFileSync(oldPath, fs.readFileSync(OUT_FILE, 'utf8'));
+    fs.writeFileSync(newPath, expected);
+    const diff = require('child_process').spawnSync('diff', ['-u', '--label', 'OLD', '--label', 'NEW', oldPath, newPath], {
+      encoding: 'utf8', maxBuffer: 20 * 1024 * 1024
+    }).stdout || '';
+    console.log('===MH_CANONICAL_DIFF_BEGIN===');
+    console.log(Buffer.from(diff, 'utf8').toString('base64'));
+    console.log('===MH_CANONICAL_DIFF_END===');
     console.error('NG: game-system.compiled.js が game-system.jsx より古いです。node build.js を実行してください');
     console.error(`  compiled: ${embedded} / jsx: ${hash}`);
     process.exit(1);
