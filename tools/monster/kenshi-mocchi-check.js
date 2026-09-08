@@ -105,8 +105,36 @@ check('図鑑説明が指定文のまま',
 
 console.log('--- ④ 正式実装で表へ出ていること ---');
 check('debugOnly を外している(正式実装済み)', mon.debugOnly === undefined || mon.debugOnly === false);
-check('図鑑一覧(dexMonsterList)は debugOnly だけを外す作りのまま(剣士モッチー自身は対象外にならない)',
-  /const dexMonsterList = \(\) => \(typeof ALL_PLAYER_MONSTERS !== 'undefined' \? Object\.values\(ALL_PLAYER_MONSTERS\)\.filter\(mon => mon && !mon\.debugOnly\) : \[\]\);/.test(source));
+// 図鑑の一覧は種族順に並べ替えるようになったので、実装の行を丸ごと写さない。
+// 見たいのは「除いているのは debugOnly だけで、剣士モッチーを外す条件を足していないか」。
+// 実際に切り出して動かし、剣士モッチーが図鑑の並びに居ることまで確かめる
+{
+  const dexSrc = source.match(/const dexMonsterList = \(\) => \{[\s\S]*?\n\};/);
+  check('図鑑一覧(dexMonsterList)を取り出せる', !!dexSrc);
+  if (dexSrc) {
+    check('除いているのは debugOnly だけ(剣士モッチーを名指しで外していない)',
+      /!mon\.debugOnly/.test(dexSrc[0]) && !/KenshiMocchi/.test(dexSrc[0]));
+    // 血統まわりの関数ごと切り出して、本物の並びを作る
+    const region = (from, to) => { const i = source.indexOf(from), j = source.indexOf(to, i); return (i >= 0 && j > i) ? source.slice(i, j) : null; };
+    const lineageRegion = region('const UNKNOWN_LINEAGE =', '// ==================== 総合力');
+    check('血統まわりの実装を取り出せる', !!lineageRegion);
+    if (lineageRegion) {
+      const dexCtx = { console, Object, Array, Set, Map, String, Number };
+      vm.createContext(dexCtx);
+      vm.runInContext([imagesSrc, allySrc, lineageSrc, lineageRegion,
+        'globalThis.__dex = { dexMonsterList, monsterLineageOf };'].join('\n'), dexCtx);
+      const dexList = dexCtx.__dex.dexMonsterList();
+      const names = dexList.map(m => m.id);
+      check('剣士モッチーが図鑑の並びに入っている', names.includes(ID), `${names.length}体中 ${names.indexOf(ID) + 1}番目`);
+      // 種族順なので、モッチー血統の3体(モッチー・剣士モッチー・ミタラシ)が続いて並ぶ
+      const mocchiRun = names.filter((_, i) => dexCtx.__dex.monsterLineageOf(names[i]).main?.id === 'mocchi');
+      const first = names.indexOf(mocchiRun[0]);
+      const contiguous = mocchiRun.every((id, k) => names[first + k] === id);
+      check('剣士モッチーはモッチー種のとなりに並ぶ(種族順)', contiguous && mocchiRun.includes(ID),
+        mocchiRun.map(id => ALL_PLAYER_MONSTERS[id]?.name).join(' → '));
+    }
+  }
+}
 const marketStart = breederSrc.indexOf('const BREEDER_MARKET_ITEMS = [');
 const marketSrc = marketStart >= 0 ? breederSrc.slice(marketStart) : '';
 check('マーケットの商品一覧を取り出せる', marketStart >= 0);

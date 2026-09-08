@@ -1080,11 +1080,36 @@ const lineageIconUrl = (lineage) => {
 const monsterDexDescription = (monsterId) =>
   (typeof MONSTER_DEX_DESCRIPTIONS !== 'undefined' && MONSTER_DEX_DESCRIPTIONS?.[monsterId])
   || 'この個体の記録はまだ集まっていません。調査が進むと図鑑へ追記されます。';
-// 図鑑に並ぶモンスター。ALL_PLAYER_MONSTERS の定義順をそのまま図鑑の並びにする
+// 図鑑に並ぶモンスター。**主血統(種族)ごとにまとめて**並べる。
+// 血統の並びは MONSTER_LINEAGES の定義順、同じ血統の中は ALL_PLAYER_MONSTERS の定義順。
+// 以前は ALL_PLAYER_MONSTERS の定義順そのままだったので、モンスターを足した順に並び、
+// 同じ種族が離れて出ていた(2026-09-08・ユーザー指摘「図鑑の全てが種族順になってない」。
+// 剣士モッチーがモッチー・ミタラシと離れてエイキの隣に出ていた)。
 // デバッグ専用個体(debugOnly)は図鑑に出さない。ここは図鑑だけでなく、血統の絞り込み
 // (dexMainLineages)と種族チャレンジの種族一覧・メンバー表示も見ているので、
-// 正式実装前のモンスターがそれらへ混ざらないよう、この1か所で除いている
-const dexMonsterList = () => (typeof ALL_PLAYER_MONSTERS !== 'undefined' ? Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && !mon.debugOnly) : []);
+// 正式実装前のモンスターがそれらへ混ざらないよう、この1か所で除いている。
+// 並び順は表示だけの話で、保存(mh_unlocked_monsters)は種のidを持つので影響しない
+const dexMonsterList = () => {
+  if (typeof ALL_PLAYER_MONSTERS === 'undefined') return [];
+  const list = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && !mon.debugOnly);
+  const order = typeof MONSTER_LINEAGES !== 'undefined' ? Object.keys(MONSTER_LINEAGES) : [];
+  // 血統カタログに無い主血統は末尾へ回す(並びから消さない)
+  const rank = (mon) => {
+    const id = monsterLineageOf(mon.id).main?.id;
+    const i = order.indexOf(id);
+    return i < 0 ? order.length : i;
+  };
+  // 同じ血統の中は、その血統を代表するモンスター(血統カタログの monId)を先頭にし、
+  // あとは元の並びのまま。血統の絞り込みで「ウンディーネ」を選んだのに先頭が
+  // スネグーラチカ、という分かりにくさをなくす(sortは安定だが添字で保険もかける)
+  const isRepresentative = (mon) => lineageById(monsterLineageOf(mon.id).main?.id)?.monId === mon.id;
+  return list
+    .map((mon, i) => ({ mon, i }))
+    .sort((a, b) => (rank(a.mon) - rank(b.mon))
+      || ((isRepresentative(b.mon) ? 1 : 0) - (isRepresentative(a.mon) ? 1 : 0))
+      || (a.i - b.i))
+    .map(x => x.mon);
+};
 // 図鑑の絞り込みに出す主血統。実際に登場する主血統だけを、図鑑の並び順で並べる
 const dexMainLineages = () => {
   const seen = new Set();
