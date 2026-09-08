@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 55d62416a0c7e815
+// source-sha256: 64010ceecc5d7e2a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 45471c7530b174ee
+// generated-sha256: 2e1ec69ac068cd81
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 16:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 18:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1755,11 +1755,19 @@ const monsterDexDescription = monsterId => typeof MONSTER_DEX_DESCRIPTIONS !== '
 const dexMonsterList = () => {
   if (typeof ALL_PLAYER_MONSTERS === 'undefined') return [];
   const list = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && !mon.debugOnly);
-  const order = typeof MONSTER_LINEAGES !== 'undefined' ? Object.keys(MONSTER_LINEAGES) : [];
-  // 血統カタログに無い主血統は末尾へ回す(並びから消さない)
-  const rank = mon => {
+  // 血統の並びは「ALL_PLAYER_MONSTERS でその血統が最初に出てくる順」。
+  // ここを血統カタログ(MONSTER_LINEAGES)の定義順にすると、カタログでは
+  // プラントが dragon/joker より後ろに置かれているせいでプラント種だけが末尾へ動き、
+  // 図鑑の絞り込みチップだけでなく、それを使っている種族チャレンジの種族タブと
+  // 超越の実の並びまで巻き添えで変わってしまう(実測で確認)。
+  // 初出順なら、今までのチップの並びが1つも変わらないまま図鑑だけが種族順になる
+  const order = [];
+  for (const mon of list) {
     const id = monsterLineageOf(mon.id).main?.id;
-    const i = order.indexOf(id);
+    if (id && !order.includes(id)) order.push(id);
+  }
+  const rank = mon => {
+    const i = order.indexOf(monsterLineageOf(mon.id).main?.id);
     return i < 0 ? order.length : i;
   };
   // 同じ血統の中は、その血統を代表するモンスター(血統カタログの monId)を先頭にし、
