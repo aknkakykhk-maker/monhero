@@ -4753,21 +4753,27 @@ function MonsterHeroGame() {
   };
   // 正規bondAwardsで確定した対象IDを渡し、保存完了まで待ってから次周へ進める。
   const executeAutoRepeatBreakthroughs = async (masuIds) => {
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeGold = goldRef.current;
+    const beforeOwnedItems = ownedItemsRef.current;
     const result = buildAutoRepeatBreakthroughs({
       masuIds,
-      masuMons:masuMonsRef.current,
-      gold:goldRef.current,
-      ownedItems:ownedItemsRef.current,
+      masuMons:beforeMasuMons,
+      gold:beforeGold,
+      ownedItems:beforeOwnedItems,
       breederXp,
       reserveGold:autoSettings?.breakthroughReserve?.gold || 0,
       reservePsyche:autoSettings?.breakthroughReserve?.psyche || 0,
     });
     if (result.succeededMasuIds.length === 0) return result;
-    await Promise.all([
-      storeSet('mh_masu_mons', result.nextMasuMons, false),
-      storeSet('mh_gold', result.nextGold, false),
-      storeSet('mh_owned_items', result.nextOwnedItems, false),
-    ]);
+    // 自動限界突破も手動と同じ3キー取引にする。
+    // 1つでも保存できなければ全部beforeへ戻し、state/refも進めない。
+    const saved = await saveStoredValuesOrRollback([
+      { key:'mh_masu_mons', before:beforeMasuMons, next:result.nextMasuMons },
+      { key:'mh_gold', before:beforeGold, next:result.nextGold },
+      { key:'mh_owned_items', before:beforeOwnedItems, next:result.nextOwnedItems },
+    ], storeGet, storeSet);
+    if (!saved) return { ...result, succeededMasuIds:[], saveFailed:true };
     masuMonsRef.current = result.nextMasuMons;
     goldRef.current = result.nextGold;
     ownedItemsRef.current = result.nextOwnedItems;
