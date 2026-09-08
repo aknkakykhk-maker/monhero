@@ -70,6 +70,14 @@ Claudeは改修内容を実装したら、ユーザーが検証しやすいよ�
 `node tools/boot/changelog-order-check.js` が、未来の日時・書式・並びの逆転に加えて、
 **gitのコミット時刻と1時間以上ずれていないか**まで見張る。
 
+**前に書いたお知らせも古くなる**(2026-09-08・ユーザー指摘「お知らせの詳細が前のままだからなおしといてね」)。
+譜面を作り直したり数字が変わったときは、新しい項目を足すだけでなく
+**前に書いた項目の数字も直す**。更新履歴の `items` は
+**そのまま助手(みゅあ)の告知の本文になる**(`assistantUpdateNoticeFromChangelog`)ので、
+放っておくと助手が古い数字を読み上げる。
+`node tools/changelog/song-numbers-check.js` が、お知らせに書いた曲のレベルとノーツ数を
+実データと突き合わせる(「Lv.11→9」のように変化を書いている行は対象外)。
+
 > なお、画面に出る並び順は `CHANGELOG_ENTRIES` が日付の降順に並べ替えて決めている。
 > `data/rhythm-step3-release.js` が起動時に `CHANGELOG.unshift` で古い項目を先頭へ
 > 差し込むため、書いてある順に頼ると先頭が古いままになるので、そこは触らないこと。
@@ -245,6 +253,11 @@ HOMEの配置(みゅあの吹き出し・施設・はじめての案内)を触�
 - **名前は5か所で綴りが違う**(songId / 音源の一覧のid / BGMのtrack id / 譜面のマーカー名 /
   ファイル名)。`tools/mode/rhythm-runtime-notes.js` の `RELEASED_MARKERS` と
   `RELEASED_TRACKS` への1行ずつを書き忘れると、検査だけが静かに対象外になる
+- **出来上がったレベルを既存曲と見比べる。** 自動で出る歯ごたえは音源から測れることしか見ないので、
+  曲の雰囲気と食い違うことがある(実際に crossing field が EASY Lv.11・MASTER Lv.38 になった)。
+  既存の帯(EASY 4〜9 / MASTER 15〜27)から外れたら、曲の一覧の `challengeFactor` に数字を書いて
+  その曲だけ決め直す。**測り方(`CHALLENGE_*`)は触らない**(ほかの曲まで変わる)。
+  決めた理由は `docs/spec/RHYTHM_MODE.md` に残す(`rhythm-song-challenge-check.js` が見張る)
 - **音量をそろえてから入れる。** ⑥-2 のとおり -14 LUFS / 真のピーク -1 dBTP へ。
   そろえ忘れると「その曲だけ小さい」と必ず言われる(実際に言われた)。
   `node tools/audio/rhythm-loudness-check.js` で確かめる
