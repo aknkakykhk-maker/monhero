@@ -1,7 +1,12 @@
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // 顔アイコンが実ブラウザで正しくデコード・描画されるかを確認する。
-// アイコン選択画面と同じレイアウト(4列・aspect-square・object-cover)を再現して
-// out/face-icons-in-browser.png に書き出すので、切り出し位置の目視確認にも使える。
+// アイコン選択画面と同じレイアウト(4列・aspect-square・角丸16px・object-contain)を
+// 再現して out/face-icons-in-browser.png に書き出すので、切り出し位置の目視確認にも使える。
+//
+// 本番(20-market-notices-help.jsx の BreederIcon)は object-contain で、さらに
+// MARKET_PROFILE_ICON_STYLES の拡大・位置調整が掛かる。ここでは調整前の素の絵を見るため
+// 変形は掛けないが、収め方(contain)まで違うと「本番の見え方を確かめた」ことにならないので
+// そこはそろえてある(以前は cover で、顔クロップを作っていない絵の見え方が本番と別物だった)。
 //
 //   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node image/face-render-check.js
@@ -27,7 +32,7 @@ const IDS = ['MOCCHI', 'SUEZO', 'PIXIE', 'GOLEM', 'MITARASHI', 'IBLIS', 'TIGER',
       cell.style.cssText = 'aspect-ratio:1;border-radius:16px;overflow:hidden;border:2px solid #475569';
       const im = document.createElement('img');
       im.src = url;
-      im.style.cssText = 'width:100%;height:100%;object-fit:cover';
+      im.style.cssText = 'width:100%;height:100%;object-fit:contain';
       cell.appendChild(im); g.appendChild(cell); n++;
     }
     return n;
