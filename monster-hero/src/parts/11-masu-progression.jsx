@@ -1092,11 +1092,19 @@ const monsterDexDescription = (monsterId) =>
 const dexMonsterList = () => {
   if (typeof ALL_PLAYER_MONSTERS === 'undefined') return [];
   const list = Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && !mon.debugOnly);
-  const order = typeof MONSTER_LINEAGES !== 'undefined' ? Object.keys(MONSTER_LINEAGES) : [];
-  // 血統カタログに無い主血統は末尾へ回す(並びから消さない)
-  const rank = (mon) => {
+  // 血統の並びは「ALL_PLAYER_MONSTERS でその血統が最初に出てくる順」。
+  // ここを血統カタログ(MONSTER_LINEAGES)の定義順にすると、カタログでは
+  // プラントが dragon/joker より後ろに置かれているせいでプラント種だけが末尾へ動き、
+  // 図鑑の絞り込みチップだけでなく、それを使っている種族チャレンジの種族タブと
+  // 超越の実の並びまで巻き添えで変わってしまう(実測で確認)。
+  // 初出順なら、今までのチップの並びが1つも変わらないまま図鑑だけが種族順になる
+  const order = [];
+  for (const mon of list) {
     const id = monsterLineageOf(mon.id).main?.id;
-    const i = order.indexOf(id);
+    if (id && !order.includes(id)) order.push(id);
+  }
+  const rank = (mon) => {
+    const i = order.indexOf(monsterLineageOf(mon.id).main?.id);
     return i < 0 ? order.length : i;
   };
   // 同じ血統の中は、その血統を代表するモンスター(血統カタログの monId)を先頭にし、
