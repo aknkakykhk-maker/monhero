@@ -9,7 +9,12 @@ if (start < 0 || end < 0) throw new Error('AUTO設定の正規化定義が見つ
 const context = {};
 vm.runInNewContext(`${source.slice(start, end)};this.normalizeAutoSettings=normalizeAutoSettings;`, context);
 const normalize = value => JSON.parse(JSON.stringify(context.normalizeAutoSettings(value, ['Mocchi','masu:one','masu:two'])));
-const expectedDefault = {strategy:'random',allies:[{rosterEntry:null,slot:null},{rosterEntry:null,slot:null},{rosterEntry:null,slot:null}]};
+const expectedDefault = {
+  strategy:'random',
+  allies:[{rosterEntry:null,slot:null},{rosterEntry:null,slot:null},{rosterEntry:null,slot:null}],
+  breakthroughReserve:{gold:0,psyche:0},
+  quickRun:{heroRosterEntry:null,distance:null,difficulty:null},
+};
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 assert(JSON.stringify(normalize(null)) === JSON.stringify(expectedDefault), 'キーなしを既定値へ戻せません');
 assert(JSON.stringify(normalize({strategy:'unknown',allies:'broken'})) === JSON.stringify(expectedDefault), '壊れた値を既定値へ戻せません');
@@ -17,6 +22,16 @@ const normalized = normalize({strategy:'offense',allies:[{rosterEntry:'masu:one'
 assert(normalized.strategy === 'offense', '有効な方針を保持できません');
 assert(normalized.allies[0].rosterEntry === 'masu:one' && normalized.allies[0].slot === 3, 'masu roster entryまたは距離を保持できません');
 assert(normalized.allies[1].rosterEntry === null && normalized.allies[2].rosterEntry === null, '重複または候補外のentryを除外できません');
+const reserve = normalize({breakthroughReserve:{gold:12345.9,psyche:87.9}});
+assert(reserve.breakthroughReserve.gold === 12345 && reserve.breakthroughReserve.psyche === 87, '資源保護を0以上の整数として保持できません');
+for (const brokenReserve of [
+  {gold:-1,psyche:-1},
+  {gold:'x',psyche:NaN},
+  {gold:Infinity,psyche:[]},
+]) {
+  const safe = normalize({breakthroughReserve:brokenReserve});
+  assert(safe.breakthroughReserve.gold === 0 && safe.breakthroughReserve.psyche === 0, '壊れた資源保護値を0へ戻せません');
+}
 assert(source.includes("await storeSet(AUTO_SETTINGS_KEY, normalized, false)"), '決定時の保存処理が見つかりません');
 assert(source.includes("k.startsWith('mh_')"), 'mh_キーのバックアップ処理が見つかりません');
 assert(source.includes('onClick={()=>setAutoAllyDetail({ mon, masu })}'), '選択済み供モンの詳細導線が見つかりません');
