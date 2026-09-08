@@ -763,13 +763,19 @@ const normalizeMasuProgression = (masu) => ({
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0)),
 });
-const buildAutoRepeatBreakthroughUpdate = (masu, level) => {
-  const normalizedLevel = normalizeAutoRepeatBreakthroughLevel(level);
+const buildAutoRepeatBreakthroughSettingUpdate = (masu, mode, level = 0) => {
+  const normalizedMode = mode === 'follow' ? 'follow' : mode === 'fixed' ? 'fixed' : 'off';
+  const normalizedLevel = normalizedMode === 'fixed' ? normalizeAutoRepeatBreakthroughLevel(level) : 0;
   return {
     ...masu,
-    autoRepeatBreakthroughMode: normalizedLevel > 0 ? 'fixed' : 'off',
+    autoRepeatBreakthroughMode: normalizedMode === 'fixed' && normalizedLevel <= 0 ? 'off' : normalizedMode,
     autoRepeatBreakthroughLevel: normalizedLevel,
   };
+};
+// 従来の数値UI・古い呼び出しは fixed/OFF としてそのまま扱えるよう残す。
+const buildAutoRepeatBreakthroughUpdate = (masu, level) => {
+  const normalizedLevel = normalizeAutoRepeatBreakthroughLevel(level);
+  return buildAutoRepeatBreakthroughSettingUpdate(masu, normalizedLevel > 0 ? 'fixed' : 'off', normalizedLevel);
 };
 // 固有技ポイントの仮配分を検証して反映した個体を返す。UI操作中は呼ばず、確定時だけ保存へ渡す。
 const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
