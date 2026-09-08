@@ -430,7 +430,7 @@ const attackMotionAnimation = (anim) => {
   // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
   // 剣士モッチーは敵まで高速で斬り込み、二度通り抜けてX字を完成させる専用モーション。
   // KenshiTwinSlash は斬撃・速度線・決めの閃光を攻撃中だけ重ねる。
-  if (anim.twinBlade) return 'kenshiTwinBladeSlash 560ms cubic-bezier(.18,.76,.2,1) forwards';
+  if (anim.twinBlade || anim.motion==='kenshiTwinBlade') return 'kenshiTwinBladeSlash 560ms cubic-bezier(.18,.76,.2,1) forwards';
   if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
   if (anim.charge) return 'specialCharge 650ms ease-out forwards';
   if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards');
