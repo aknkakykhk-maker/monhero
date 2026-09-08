@@ -97,26 +97,39 @@ const MAX_BOND_LEVEL_ITERATIONS = TRANSCEND_LEVEL_CAP - 1;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL = 35;
-// ブリーダーLvの半分以下を5刻みに切り下げ、Lv35未満ならOFFだけにする。
-const autoRepeatBreakthroughMaxLevel = (breederLevel) => {
-  const maxLevel = Math.floor(Math.max(0, Number(breederLevel) || 0) / (BREAKTHROUGH_LEVEL_CAP_GAIN * 2)) * BREAKTHROUGH_LEVEL_CAP_GAIN;
-  // ブリーダーLvには実質上限が無いが、通常の限界突破はLv400が上限。
-  // 追従表示や固定Lv候補だけがLv405以上へ伸びないよう、実際の育成上限で止める。
-  const cappedLevel = Math.min(MAX_MASU_LEVEL_CAP, maxLevel);
-  return cappedLevel >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL ? cappedLevel : 0;
-};
-const autoRepeatBreakthroughLevelOptions = (breederLevel) => {
-  const maxLevel = autoRepeatBreakthroughMaxLevel(breederLevel);
+// AUTO∞で選べる上限は「数値上の5刻み」ではなく、実際の限界突破で到達できるlevelCapだけにする。
+// Lv180以降は 200→230→270→330→400 と飛ぶため、Lv185/350などを表示すると実挙動とズレる。
+// 参照先の breakthroughLevelCap / FINAL_BREAKTHROUGH_COUNT はこのファイル後方で定義されるが、
+// この関数群が実行されるのはモジュール初期化完了後なので同じ正本を安全に再利用できる。
+const autoRepeatBreakthroughReachableLevels = () => {
   const levels = [];
-  for (let level = AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL; level <= maxLevel; level += BREAKTHROUGH_LEVEL_CAP_GAIN) levels.push(level);
+  for (let count = 1; count <= FINAL_BREAKTHROUGH_COUNT; count++) {
+    const cap = breakthroughLevelCap(count);
+    if (cap >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL && cap <= MAX_MASU_LEVEL_CAP && levels[levels.length - 1] !== cap) levels.push(cap);
+  }
   return levels;
+};
+// ブリーダーLvの半分以下で、実際に到達できる最大levelCapを返す。
+const autoRepeatBreakthroughLevelOptions = (breederLevel) => {
+  const limit = Math.floor(Math.max(0, Number(breederLevel) || 0) / 2);
+  return autoRepeatBreakthroughReachableLevels().filter(level => level <= limit);
+};
+const autoRepeatBreakthroughMaxLevel = (breederLevel) => {
+  const levels = autoRepeatBreakthroughLevelOptions(breederLevel);
+  return levels.length ? levels[levels.length - 1] : 0;
 };
 const normalizeAutoRepeatBreakthroughLevel = (value) => {
   const level = Math.floor(Number(value) || 0);
   if (level < AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL || level % BREAKTHROUGH_LEVEL_CAP_GAIN !== 0) return 0;
-  // 旧仕様では高いブリーダーLvでLv405以上も保存できたが、通常限界突破の実上限はLv400。
-  // 既存の「できるところまで自動」の意味を保ったまま、現行の実上限へ丸めて引き継ぐ。
-  return Math.min(MAX_MASU_LEVEL_CAP, level);
+  // 旧仕様はLv180以降も5刻みを保存できた。たとえばLv185は実際にはLv180で止まっていたため、
+  // 「指定値以下で到達できる最大cap」へ丸めれば、既存ユーザーの実効挙動を変えず現行仕様へ移せる。
+  const levels = autoRepeatBreakthroughReachableLevels();
+  let normalized = 0;
+  for (const cap of levels) {
+    if (cap > level) break;
+    normalized = cap;
+  }
+  return normalized;
 };
 // AUTO∞自動限界突破の個体設定。
 // 既存個体は数値の autoRepeatBreakthroughLevel が入っていれば fixed としてそのまま引き継ぐ。
