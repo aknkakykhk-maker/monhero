@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2e1ec69ac068cd81
+// generated-sha256: 6c017c863e8e4528
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 18:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 19:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -496,20 +496,49 @@ const MAX_BOND_LEVEL_ITERATIONS = TRANSCEND_LEVEL_CAP - 1;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL = 35;
-// ブリーダーLvの半分以下を5刻みに切り下げ、Lv35未満ならOFFだけにする。
-const autoRepeatBreakthroughMaxLevel = (breederLevel) => {
-  const maxLevel = Math.floor(Math.max(0, Number(breederLevel) || 0) / (BREAKTHROUGH_LEVEL_CAP_GAIN * 2)) * BREAKTHROUGH_LEVEL_CAP_GAIN;
-  return maxLevel >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL ? maxLevel : 0;
-};
-const autoRepeatBreakthroughLevelOptions = (breederLevel) => {
-  const maxLevel = autoRepeatBreakthroughMaxLevel(breederLevel);
+// AUTO∞で選べる上限は「数値上の5刻み」ではなく、実際の限界突破で到達できるlevelCapだけにする。
+// Lv180以降は 200→230→270→330→400 と飛ぶため、Lv185/350などを表示すると実挙動とズレる。
+// 参照先の breakthroughLevelCap / FINAL_BREAKTHROUGH_COUNT はこのファイル後方で定義されるが、
+// この関数群が実行されるのはモジュール初期化完了後なので同じ正本を安全に再利用できる。
+const autoRepeatBreakthroughReachableLevels = () => {
   const levels = [];
-  for (let level = AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL; level <= maxLevel; level += BREAKTHROUGH_LEVEL_CAP_GAIN) levels.push(level);
+  for (let count = 1; count <= FINAL_BREAKTHROUGH_COUNT; count++) {
+    const cap = breakthroughLevelCap(count);
+    if (cap >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL && cap <= MAX_MASU_LEVEL_CAP && levels[levels.length - 1] !== cap) levels.push(cap);
+  }
   return levels;
+};
+// ブリーダーLvの半分以下で、実際に到達できる最大levelCapを返す。
+const autoRepeatBreakthroughLevelOptions = (breederLevel) => {
+  const limit = Math.floor(Math.max(0, Number(breederLevel) || 0) / 2);
+  return autoRepeatBreakthroughReachableLevels().filter(level => level <= limit);
+};
+const autoRepeatBreakthroughMaxLevel = (breederLevel) => {
+  const levels = autoRepeatBreakthroughLevelOptions(breederLevel);
+  return levels.length ? levels[levels.length - 1] : 0;
 };
 const normalizeAutoRepeatBreakthroughLevel = (value) => {
   const level = Math.floor(Number(value) || 0);
-  return level >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL && level % BREAKTHROUGH_LEVEL_CAP_GAIN === 0 ? level : 0;
+  if (level < AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL || level % BREAKTHROUGH_LEVEL_CAP_GAIN !== 0) return 0;
+  // 旧仕様はLv180以降も5刻みを保存できた。たとえばLv185は実際にはLv180で止まっていたため、
+  // 「指定値以下で到達できる最大cap」へ丸めれば、既存ユーザーの実効挙動を変えず現行仕様へ移せる。
+  const levels = autoRepeatBreakthroughReachableLevels();
+  let normalized = 0;
+  for (const cap of levels) {
+    if (cap > level) break;
+    normalized = cap;
+  }
+  return normalized;
+};
+// AUTO∞自動限界突破の個体設定。
+// 既存個体は数値の autoRepeatBreakthroughLevel が入っていれば fixed としてそのまま引き継ぐ。
+// follow だけは保存した固定Lvを使わず、その時点のブリーダーLvから実効上限を求める。
+const normalizeAutoRepeatBreakthroughMode = (value, levelValue) => {
+  if (value === 'follow') return 'follow';
+  if (value === 'off') return 'off';
+  const level = normalizeAutoRepeatBreakthroughLevel(levelValue);
+  if (value === 'fixed') return level > 0 ? 'fixed' : 'off';
+  return level > 0 ? 'fixed' : 'off';
 };
 const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 固有技の強化ポイントは、技を上げるほかに「いまのガッツを戻す」ことにも使える。
@@ -1132,7 +1161,8 @@ const transferableReincarnateBonus = (masu) => ({
 });
 const normalizeMasuProgression = (masu) => ({
   ...masu,
-  // 旧booleanは曖昧な上限へ移行せずOFF。数値設定だけを正本として読む。
+  // 旧booleanは曖昧な上限へ移行せずOFF。既存の数値設定は fixed として互換維持する。
+  autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
   autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
@@ -1151,10 +1181,20 @@ const normalizeMasuProgression = (masu) => ({
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0)),
 });
-const buildAutoRepeatBreakthroughUpdate = (masu, level) => ({
-  ...masu,
-  autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(level),
-});
+const buildAutoRepeatBreakthroughSettingUpdate = (masu, mode, level = 0) => {
+  const normalizedMode = mode === 'follow' ? 'follow' : mode === 'fixed' ? 'fixed' : 'off';
+  const normalizedLevel = normalizedMode === 'fixed' ? normalizeAutoRepeatBreakthroughLevel(level) : 0;
+  return {
+    ...masu,
+    autoRepeatBreakthroughMode: normalizedMode === 'fixed' && normalizedLevel <= 0 ? 'off' : normalizedMode,
+    autoRepeatBreakthroughLevel: normalizedLevel,
+  };
+};
+// 従来の数値UI・古い呼び出しは fixed/OFF としてそのまま扱えるよう残す。
+const buildAutoRepeatBreakthroughUpdate = (masu, level) => {
+  const normalizedLevel = normalizeAutoRepeatBreakthroughLevel(level);
+  return buildAutoRepeatBreakthroughSettingUpdate(masu, normalizedLevel > 0 ? 'fixed' : 'off', normalizedLevel);
+};
 // 固有技ポイントの仮配分を検証して反映した個体を返す。UI操作中は呼ばず、確定時だけ保存へ渡す。
 const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
   const normalized = normalizeMasuProgression(masu);
@@ -2313,26 +2353,38 @@ const buildMasuBreakthrough = ({ masu, skillKey, gold, psycheOwned = 0 }) => {
 };
 // AUTO∞の自動限界突破候補を、呼び出し時点の最新残高から順番に確定する。
 // 費用・素材数・次の上限はbuildMasuBreakthroughだけに計算させ、ここではAUTO専用上限だけを追加判定する。
-const buildAutoRepeatBreakthroughs = ({ masuIds, masuMons, gold, ownedItems, breederXp }) => {
+const buildAutoRepeatBreakthroughs = ({
+  masuIds, masuMons, gold, ownedItems, breederXp,
+  reserveGold = 0, reservePsyche = 0,
+}) => {
   let nextMasuMons = Array.isArray(masuMons) ? masuMons : [];
   let nextGold = donationDiamondValue(gold);
   let nextOwnedItems = { ...(ownedItems || {}) };
   const succeededMasuIds = [];
   const seen = new Set();
-  const breederLevelLimit = levelInfo(breederXp).level / 2;
+  const breederLevel = levelInfo(breederXp).level;
+  const breederLevelLimit = breederLevel / 2;
+  const followLevelLimit = autoRepeatBreakthroughMaxLevel(breederLevel);
+  const protectedGold = donationDiamondValue(reserveGold);
+  const protectedPsyche = Math.max(0, Math.floor(Number(reservePsyche) || 0));
   for (const rawId of Array.isArray(masuIds) ? masuIds : []) {
     const id = String(rawId);
     if (seen.has(id)) continue;
     seen.add(id);
     const masu = nextMasuMons.find(entry => String(entry.id) === id);
     if (!masu) continue;
-    const settingLevel = normalizeMasuProgression(masu).autoRepeatBreakthroughLevel;
-    if (settingLevel <= 0) continue;
+    const normalized = normalizeMasuProgression(masu);
+    const settingLevel = normalized.autoRepeatBreakthroughMode === 'follow'
+      ? followLevelLimit
+      : normalized.autoRepeatBreakthroughLevel;
+    if (settingLevel <= 0 || normalized.autoRepeatBreakthroughMode === 'off') continue;
     const result = buildMasuBreakthrough({
       masu, skillKey:'', gold:nextGold,
       psycheOwned:ownedItemCount(nextOwnedItems, BREAKTHROUGH_ITEM_ID),
     });
     if (!result.ok || result.nextMasu.levelCap > settingLevel || result.nextMasu.levelCap > breederLevelLimit) continue;
+    // 「いま残高があるか」ではなく、この1回を実行した後も保護残高以上残る場合だけ成立させる。
+    if (result.nextGold < protectedGold || result.nextPsyche < protectedPsyche) continue;
     nextMasuMons = nextMasuMons.map(entry => String(entry.id) === id ? result.nextMasu : entry);
     nextGold = result.nextGold;
     nextOwnedItems = { ...nextOwnedItems, [BREAKTHROUGH_ITEM_ID]:result.nextPsyche };
@@ -5703,6 +5755,9 @@ const DEFAULT_AUTO_SETTINGS = Object.freeze({
     { rosterEntry:null, slot:null },
     { rosterEntry:null, slot:null },
   ],
+  // AUTO∞自動限界突破で最低限残しておく資源。0なら従来どおり保護なし。
+  // 既存の mh_auto_settings_v1 に足し、項目が無い旧セーブは正規化で0へ落とす。
+  breakthroughReserve:{ gold:0, psyche:0 },
   // クイックの∞周回を、バトル画面を通らずに始めるための事前設定
   // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
   // ここが未設定(どれかが null)のあいだは、これまでどおり
@@ -5711,6 +5766,11 @@ const DEFAULT_AUTO_SETTINGS = Object.freeze({
   //   項目の無い既存ユーザーは normalizeAutoSettings が未設定で補う
   quickRun:{ heroRosterEntry:null, distance:null, difficulty:null },
 });
+const normalizeAutoReserveAmount = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(amount));
+};
 // roster entry が正本。候補外・重複・壊れた距離は、安全な未指定/自動へ落とす。
 const normalizeAutoSettings = (value, validRosterEntries = null, validDifficultyIds = null) => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -5724,6 +5784,12 @@ const normalizeAutoSettings = (value, validRosterEntries = null, validDifficulty
     const slot = raw.slot === null || raw.slot === undefined ? null : Number(raw.slot);
     return { rosterEntry, slot:Number.isInteger(slot) && slot >= 0 && slot <= 3 ? slot : null };
   });
+  const rawReserve = source.breakthroughReserve && typeof source.breakthroughReserve === 'object' && !Array.isArray(source.breakthroughReserve)
+    ? source.breakthroughReserve : {};
+  const breakthroughReserve = {
+    gold:normalizeAutoReserveAmount(rawReserve.gold),
+    psyche:normalizeAutoReserveAmount(rawReserve.psyche),
+  };
   // クイック周回の事前設定。ここも「壊れていたら未設定へ落とす」だけで、勝手に補完しない。
   // 難易度は解放状況までは見ない(解放は端末の記録しだいで変わるため、使う直前に確かめる)
   const rawQuick = source.quickRun && typeof source.quickRun === 'object' && !Array.isArray(source.quickRun) ? source.quickRun : {};
@@ -5736,7 +5802,7 @@ const normalizeAutoSettings = (value, validRosterEntries = null, validDifficulty
     distance:Number.isInteger(quickDistanceRaw) && quickDistanceRaw >= 0 && quickDistanceRaw <= 3 ? quickDistanceRaw : null,
     difficulty:quickDifficulty && (!quickDifficultyIds || quickDifficultyIds.has(quickDifficulty)) ? quickDifficulty : null,
   };
-  return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies, quickRun };
+  return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies, breakthroughReserve, quickRun };
 };
 // クイック周回の事前設定が3つとも埋まっているか。
 // 1つでも欠けていたら「未設定」で、周回テンプレートのほうを使う
@@ -12234,6 +12300,9 @@ function MonsterHeroGame() {
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
   const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
+  // 自動限界突破の一括変更は「その場で既存個体へ適用」する操作なのでAUTO設定には保存しない。
+  // 新しく入手したマスモンまで勝手にONにしないため、画面を開くたび初期候補へ戻す。
+  const [autoBreakthroughBulkValue, setAutoBreakthroughBulkValue] = useState('follow');
   const [autoAllyDetail, setAutoAllyDetail] = useState(null); // AUTO設定: 選択中の供モン詳細（確認専用）
   const [monsterPartySets, setMonsterPartySets] = useState(() => normalizeMonsterPartySets(null, STARTER_MONSTER_IDS));
   const [editingPartySetIndex, setEditingPartySetIndex] = useState(0);
@@ -15068,6 +15137,7 @@ function MonsterHeroGame() {
   const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(QUICK_DIFFICULTY_SETTINGS);
   const openAutoSettings = () => {
     setDraftAutoSettings(normalizeAutoSettings(autoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
+    setAutoBreakthroughBulkValue('follow');
     setGameState('AUTO_SETTINGS');
   };
   const updateDraftAutoAlly = (index, patch) => {
@@ -15083,12 +15153,53 @@ function MonsterHeroGame() {
       quickRun:{ ...(current.quickRun || {}), ...patch },
     }, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
   };
+  const updateDraftAutoBreakthroughReserve = (patch) => {
+    setDraftAutoSettings(current => normalizeAutoSettings({
+      ...current,
+      breakthroughReserve:{ ...(current.breakthroughReserve || {}), ...patch },
+    }, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
+  };
+  const applyAutoBreakthroughBulk = async () => {
+    const currentMons = Array.isArray(masuMonsRef.current) ? masuMonsRef.current : [];
+    if (currentMons.length <= 0) return false;
+    const value = autoBreakthroughBulkValue;
+    const fixedLevel = value.startsWith('fixed:') ? Number(value.slice(6)) : 0;
+    const availableLevels = autoRepeatBreakthroughLevelOptions(breederLevel.level);
+    const mode = value === 'follow' ? 'follow' : value === 'off' ? 'off' : 'fixed';
+    if (mode === 'fixed' && !availableLevels.includes(fixedLevel)) return false;
+    const label = mode === 'follow' ? 'ブリーダーLvに自動追従'
+      : mode === 'off' ? 'OFF' : `Lv${fixedLevel}まで固定`;
+    if (!window.confirm(`所有マスモン${currentMons.length}体のAUTO∞ 自動限界突破を「${label}」へ一括変更しますか？\n\nこの操作はすぐ保存され、個別設定も上書きされます。`)) return false;
+    const next = currentMons.map(masu => buildAutoRepeatBreakthroughSettingUpdate(masu, mode, fixedLevel));
+    const saved = await saveStoredValuesOrRollback([
+      { key:'mh_masu_mons', before:currentMons, next },
+    ], storeGet, storeSet);
+    if (!saved) {
+      window.alert('一括設定を保存できませんでした。もう一度お試しください。');
+      return false;
+    }
+    masuMonsRef.current = next;
+    setMasuMons(next);
+    setMasuMonDetail(prev => {
+      if (!prev) return prev;
+      return next.find(masu => String(masu.id) === String(prev.id)) || prev;
+    });
+    Audio_.se.tap();
+    return true;
+  };
   const saveAutoSettings = async () => {
     const normalized = normalizeAutoSettings(draftAutoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS);
-    await storeSet(AUTO_SETTINGS_KEY, normalized, false);
+    const saved = await saveStoredValuesOrRollback([
+      { key:AUTO_SETTINGS_KEY, before:autoSettings, next:normalized },
+    ], storeGet, storeSet);
+    if (!saved) {
+      window.alert('AUTO設定を保存できませんでした。もう一度お試しください。');
+      return false;
+    }
     setAutoSettings(normalized);
     setDraftAutoSettings(normalized);
     setGameState('MB_MANAGEMENT');
+    return true;
   };
   const autoRosterLabel = (entry) => {
     const mon = resolveRosterEntryToMon(entry);
@@ -15700,16 +15811,23 @@ function MonsterHeroGame() {
   const setMasuInitialUnique = (masuId, settingKey) => updateMasuUniqueSetting(masuId, masu =>
     buildUniqueSettingUpdate(masu, { order:normalizeUniqueOrder(masu), initialKey:settingKey }));
   const resetMasuUniqueSetting = (masuId) => updateMasuUniqueSetting(masuId, buildUniqueSettingReset);
-  // 設定だけを個体データへ保存する。AUTO∞の周回・限界突破処理からはまだ参照しない。
-  const setMasuAutoRepeatBreakthrough = (masuId, level) => {
-    const masu = getMasuMon(masuId);
+  // AUTO∞自動限界突破の個体設定を、既存 mh_masu_mons のその個体へ保存する。
+  // off / follow / fixed の3モードだけを扱い、限界突破そのものの費用・条件は変えない。
+  const setMasuAutoRepeatBreakthrough = async (masuId, mode, level = 0) => {
+    const before = masuMonsRef.current;
+    const masu = before.find(m => String(m.id) === String(masuId));
     if (!masu) return null;
-    const updated = buildAutoRepeatBreakthroughUpdate(masu, level);
-    setMasuMons(prev => {
-      const next = prev.map(m => String(m.id) === String(masuId) ? updated : m);
-      storeSet('mh_masu_mons', next, false);
-      return next;
-    });
+    const updated = buildAutoRepeatBreakthroughSettingUpdate(masu, mode, level);
+    const next = before.map(m => String(m.id) === String(masuId) ? updated : m);
+    const saved = await saveStoredValuesOrRollback([
+      { key:'mh_masu_mons', before, next },
+    ], storeGet, storeSet);
+    if (!saved) {
+      window.alert('自動限界突破の設定を保存できませんでした。もう一度お試しください。');
+      return null;
+    }
+    masuMonsRef.current = next;
+    setMasuMons(next);
     setMasuMonDetail(prev => prev && String(prev.id) === String(masuId) ? updated : prev);
     Audio_.se.tap();
     return updated;
@@ -15964,19 +16082,27 @@ function MonsterHeroGame() {
   };
   // 正規bondAwardsで確定した対象IDを渡し、保存完了まで待ってから次周へ進める。
   const executeAutoRepeatBreakthroughs = async (masuIds) => {
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeGold = goldRef.current;
+    const beforeOwnedItems = ownedItemsRef.current;
     const result = buildAutoRepeatBreakthroughs({
       masuIds,
-      masuMons:masuMonsRef.current,
-      gold:goldRef.current,
-      ownedItems:ownedItemsRef.current,
+      masuMons:beforeMasuMons,
+      gold:beforeGold,
+      ownedItems:beforeOwnedItems,
       breederXp,
+      reserveGold:autoSettings?.breakthroughReserve?.gold || 0,
+      reservePsyche:autoSettings?.breakthroughReserve?.psyche || 0,
     });
     if (result.succeededMasuIds.length === 0) return result;
-    await Promise.all([
-      storeSet('mh_masu_mons', result.nextMasuMons, false),
-      storeSet('mh_gold', result.nextGold, false),
-      storeSet('mh_owned_items', result.nextOwnedItems, false),
-    ]);
+    // 自動限界突破も手動と同じ3キー取引にする。
+    // 1つでも保存できなければ全部beforeへ戻し、state/refも進めない。
+    const saved = await saveStoredValuesOrRollback([
+      { key:'mh_masu_mons', before:beforeMasuMons, next:result.nextMasuMons },
+      { key:'mh_gold', before:beforeGold, next:result.nextGold },
+      { key:'mh_owned_items', before:beforeOwnedItems, next:result.nextOwnedItems },
+    ], storeGet, storeSet);
+    if (!saved) return { ...result, succeededMasuIds:[], saveFailed:true };
     masuMonsRef.current = result.nextMasuMons;
     goldRef.current = result.nextGold;
     ownedItemsRef.current = result.nextOwnedItems;
@@ -18599,7 +18725,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       try {
         // await中に保存まで完了する。素材不足の個体は既存判定がスキップするだけなので周回を止めない。
         if(!autoRepeatRef.current||!isQuickMode(runMode)||document.visibilityState==='hidden')return;
-        await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
+        const breakthroughResult = await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
+        // 素材不足・残高保護は「その個体を見送る」だけで周回継続。
+        // ただし保存失敗はデータ整合性の問題なので、そのまま次周へ進めずAUTO∞を止める。
+        if(breakthroughResult?.saveFailed){stopAllAuto('error');return;}
         if(!autoRepeatRef.current||!isQuickMode(runMode)||document.visibilityState==='hidden')return;
         // ∞周回の途中なら周回テンプレートが必ずあるので、ここでの動きは今までどおり。
         // テンプレートが失われていたときだけ、AUTO設定の事前設定で続けられる
@@ -20784,6 +20913,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           ];
           const ranges = [[null,'自動'],[0,'零'],[1,'近'],[2,'中'],[3,'遠']];
           const selectedEntries = draftAutoSettings.allies.map(ally=>ally.rosterEntry).filter(Boolean);
+          const autoBreakthroughBulkLevels = autoRepeatBreakthroughLevelOptions(breederLevel.level);
+          const autoBreakthroughBulkMax = autoRepeatBreakthroughMaxLevel(breederLevel.level);
+          const reserveGold = draftAutoSettings.breakthroughReserve?.gold || 0;
+          const reservePsyche = draftAutoSettings.breakthroughReserve?.psyche || 0;
           return <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('MB_MANAGEMENT')} className="p-3 text-slate-400 active:scale-90" aria-label="M/B管理へ戻る"><ArrowLeft size={20}/></button><div><h2 className="text-xl font-black italic text-indigo-300">AUTO設定</h2><p className="text-[9px] text-slate-400 font-bold">将来のAUTO用事前設定</p></div></div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto space-y-4 pb-3">
@@ -20793,6 +20926,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   3つとも決めたときだけ使う。決めていないあいだは、これまでどおり
                   「1周目に自分で組んだ編成」をそのまま繰り返す */}
               <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">3. モンヒロビート中に回すクイック周回</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">モンヒロビートから∞周回を始めるときの編成です。勇者モン・配置距離・難易度の3つを決めると使えます。決めていないあいだは、いつもどおりバトル画面で1周目を組んでから∞にしてください。</p></div><div className="rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor="auto-quick-hero">勇者モン</label><select id="auto-quick-hero" value={draftAutoSettings.quickRun?.heroRosterEntry||''} onChange={event=>updateDraftAutoQuickRun({heroRosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定（この機能を使わない）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(draftAutoSettings.quickRun?.heroRosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-4 gap-1">{ranges.filter(([slot])=>slot!==null).map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoQuickRun({distance:slot})} aria-pressed={draftAutoSettings.quickRun?.distance===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${draftAutoSettings.quickRun?.distance===slot?'ring-2 ring-white border-white':''} ${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}>{label}</button>)}</div></div><div><label className="block text-[10px] font-black text-slate-300 mb-1.5" htmlFor="auto-quick-difficulty">難易度</label><select id="auto-quick-difficulty" value={draftAutoSettings.quickRun?.difficulty||''} onChange={event=>updateDraftAutoQuickRun({difficulty:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未設定</option>{Object.entries(QUICK_DIFFICULTY_SETTINGS).map(([key,setting])=>{const unlocked=isQuickDifficultyUnlocked(key,clearCounts,proClearCounts,extremeDifficultyClearCounts);return <option key={key} value={key} disabled={!unlocked}>{setting.label}{unlocked?'':'（未解放）'}</option>;})}</select></div><div className="pt-1"><AssistantBubble scene="autoQuickRunSettings" compact/></div><p className="text-[9px] leading-relaxed text-slate-400">{autoQuickRunConfigured(draftAutoSettings)?'✅ 3つとも決まっています。モンヒロビートから周回を始められます。':'まだ使えません（3つとも決めると使えます）。'}</p></div></section>
+              <section data-auto-breakthrough-bulk-settings className="rounded-2xl border border-cyan-500/40 bg-cyan-950/20 p-3 space-y-3">
+                <div><h3 className="text-sm font-black text-cyan-200">4. AUTO∞ 自動限界突破</h3><p className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">現在所有しているマスモンをまとめて設定し、限界突破で使い切らないようダイヤと虹のプシュケーを残せます。</p></div>
+                <div className="rounded-xl border border-cyan-500/30 bg-slate-950/70 p-3 space-y-2">
+                  <div className="text-[10px] font-black text-cyan-200">所有マスモンへ一括設定</div>
+                  <select aria-label="所有マスモンのAUTO∞ 自動限界突破一括設定" value={autoBreakthroughBulkValue} onChange={event=>setAutoBreakthroughBulkValue(event.target.value)} className="w-full min-h-[48px] rounded-xl border border-cyan-400/50 bg-slate-900 px-3 text-center text-xs font-black text-white">
+                    <option value="off">全員OFF</option>
+                    <option value="follow">全員 ブリーダーLvに自動追従</option>
+                    {autoBreakthroughBulkLevels.map(level=><option key={level} value={`fixed:${level}`}>全員 Lv{level}まで固定</option>)}
+                  </select>
+                  <div className="text-[8px] font-bold leading-relaxed text-slate-400">ブリーダーLv{breederLevel.level} ／ 現在の追従上限：{autoBreakthroughBulkMax>0?`Lv${autoBreakthroughBulkMax}`:'まだ対象外'} ／ 所有 {masuMons.length}体</div>
+                  <button type="button" disabled={masuMons.length<=0} onClick={applyAutoBreakthroughBulk} className="w-full min-h-[48px] rounded-xl border border-cyan-300 bg-cyan-700 text-xs font-black text-white active:scale-[.98] disabled:opacity-40">この内容を全マスモンに一括適用</button>
+                  <p className="text-[8px] font-bold leading-relaxed text-amber-200/90">※確認後すぐ保存します。個別設定は上書きされます。今後新しく入手するマスモンは自動ではONになりません。</p>
+                </div>
+                <div className="rounded-xl border border-amber-500/30 bg-slate-950/70 p-3 space-y-3">
+                  <div><div className="text-[10px] font-black text-amber-200">資源を残す</div><p className="mt-1 text-[8px] font-bold leading-relaxed text-slate-400">限界突破後にこの数を下回る場合、その個体の自動限界突破だけ見送ります。0なら保護なしです。</p></div>
+                  <div className="space-y-1.5"><div className="flex items-center justify-between gap-2"><label htmlFor="auto-breakthrough-reserve-gold" className="text-[10px] font-black text-white">残すダイヤ</label><span className="text-[8px] font-bold text-slate-400">所持 {gold.toLocaleString()}</span></div><div className="grid grid-cols-[48px_1fr_48px] gap-2"><button type="button" aria-label="残すダイヤを1000減らす" onClick={()=>updateDraftAutoBreakthroughReserve({gold:Math.max(0,reserveGold-1000)})} className="min-h-[48px] rounded-xl border border-slate-600 bg-slate-800 text-lg font-black">−</button><input id="auto-breakthrough-reserve-gold" type="number" inputMode="numeric" min="0" step="1000" value={reserveGold} onChange={event=>updateDraftAutoBreakthroughReserve({gold:Number(event.target.value)})} className="min-w-0 min-h-[48px] rounded-xl border border-amber-400/50 bg-slate-900 px-2 text-center text-sm font-black text-white"/><button type="button" aria-label="残すダイヤを1000増やす" onClick={()=>updateDraftAutoBreakthroughReserve({gold:reserveGold+1000})} className="min-h-[48px] rounded-xl border border-slate-600 bg-slate-800 text-lg font-black">＋</button></div></div>
+                  <div className="space-y-1.5"><div className="flex items-center justify-between gap-2"><label htmlFor="auto-breakthrough-reserve-psyche" className="text-[10px] font-black text-white">残す虹のプシュケー</label><span className="text-[8px] font-bold text-slate-400">所持 {ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="grid grid-cols-[48px_1fr_48px] gap-2"><button type="button" aria-label="残す虹のプシュケーを10減らす" onClick={()=>updateDraftAutoBreakthroughReserve({psyche:Math.max(0,reservePsyche-10)})} className="min-h-[48px] rounded-xl border border-slate-600 bg-slate-800 text-lg font-black">−</button><input id="auto-breakthrough-reserve-psyche" type="number" inputMode="numeric" min="0" step="10" value={reservePsyche} onChange={event=>updateDraftAutoBreakthroughReserve({psyche:Number(event.target.value)})} className="min-w-0 min-h-[48px] rounded-xl border border-amber-400/50 bg-slate-900 px-2 text-center text-sm font-black text-white"/><button type="button" aria-label="残す虹のプシュケーを10増やす" onClick={()=>updateDraftAutoBreakthroughReserve({psyche:reservePsyche+10})} className="min-h-[48px] rounded-xl border border-slate-600 bg-slate-800 text-lg font-black">＋</button></div></div>
+                  <p className="text-[8px] font-bold leading-relaxed text-cyan-200/80">残高保護は下の「決定」を押したときにAUTO設定へ保存されます。</p>
+                </div>
+              </section>
             </div>
             <button onClick={saveAutoSettings} className="w-full max-w-md mx-auto min-h-[52px] shrink-0 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定</button>
             {autoAllyDetail&&renderMonsterDetailModal({mon:autoAllyDetail.mon,masu:autoAllyDetail.masu,onClose:()=>setAutoAllyDetail(null),accent:'indigo',readOnly:true,label:`${autoAllyDetail.mon.name}の確認用詳細`})}
@@ -23672,7 +23825,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const masuNorm = normalizeMasuProgression(masu);
           const autoBreakthroughMaxLevel = autoRepeatBreakthroughMaxLevel(breederLevel.level);
           const autoBreakthroughLevels = autoRepeatBreakthroughLevelOptions(breederLevel.level);
-          const autoBreakthroughSelectedLevel = autoBreakthroughLevels.includes(masuNorm.autoRepeatBreakthroughLevel) ? masuNorm.autoRepeatBreakthroughLevel : 0;
+          const autoBreakthroughSelectedValue = masuNorm.autoRepeatBreakthroughMode === 'follow'
+            ? 'follow'
+            : (masuNorm.autoRepeatBreakthroughMode === 'fixed' && autoBreakthroughLevels.includes(masuNorm.autoRepeatBreakthroughLevel)
+              ? `fixed:${masuNorm.autoRepeatBreakthroughLevel}` : 'off');
           const masuLvl = masuBondLevelInfo(masu);
           // 「元 ＋ 基礎UP(超越) ＋ 通常強化 ＝ 現在」の内訳。値は既存の計算からそのまま引く
           const growth = masuGrowthBreakdown(masu, mergedMasu);
@@ -23691,12 +23847,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             },
             bodyExtra: (<>
               <section data-auto-repeat-breakthrough-setting className="rounded-xl border border-cyan-500/40 bg-cyan-950/30 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0"><div className="text-[11px] font-black text-cyan-200">AUTO∞ 自動限界突破</div><div className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">∞周回中、設定Lvまで素材があれば自動で限界突破します</div><div className="mt-1 text-[8px] font-bold text-cyan-300/80">設定可能上限：{autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}` : 'OFF'}（ブリーダーLv{breederLevel.level}の半分）</div></div>
-                  <select aria-label={`${masu.name}のAUTO∞ 自動限界突破上限`} value={autoBreakthroughSelectedLevel} onChange={event=>setMasuAutoRepeatBreakthrough(masu.id,Number(event.target.value))} className="min-h-[48px] min-w-[112px] shrink-0 rounded-xl border border-cyan-400/60 bg-slate-900 px-3 text-center text-xs font-black text-white">
-                    <option value={0}>OFF</option>
-                    {autoBreakthroughLevels.map(level=><option key={level} value={level}>Lv{level}まで</option>)}
+                <div className="space-y-2">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-black text-cyan-200">AUTO∞ 自動限界突破</div>
+                    <div className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">OFF・ブリーダーLv自動追従・固定Lvから選べます</div>
+                    <div className="mt-1 text-[8px] font-bold text-cyan-300/80">現在の追従上限：{autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}` : 'まだ対象外'}（ブリーダーLv{breederLevel.level}の半分以下で到達可能／最大Lv400）</div>
+                  </div>
+                  <select aria-label={`${masu.name}のAUTO∞ 自動限界突破設定`} value={autoBreakthroughSelectedValue} onChange={event=>{
+                    const value=event.target.value;
+                    if(value==='follow')setMasuAutoRepeatBreakthrough(masu.id,'follow');
+                    else if(value.startsWith('fixed:'))setMasuAutoRepeatBreakthrough(masu.id,'fixed',Number(value.slice(6)));
+                    else setMasuAutoRepeatBreakthrough(masu.id,'off');
+                  }} className="w-full min-h-[48px] rounded-xl border border-cyan-400/60 bg-slate-900 px-3 text-center text-xs font-black text-white">
+                    <option value="off">OFF</option>
+                    <option value="follow">ブリーダーLvに自動追従</option>
+                    {autoBreakthroughLevels.map(level=><option key={level} value={`fixed:${level}`}>Lv{level}まで固定</option>)}
                   </select>
+                  <div className="text-[8px] font-bold leading-relaxed text-slate-400">
+                    {masuNorm.autoRepeatBreakthroughMode==='follow'
+                      ? `自動追従中：現在は${autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}まで` : '限界突破OFF相当'}。ブリーダーLv上昇に合わせて自動で伸びます。`
+                      : masuNorm.autoRepeatBreakthroughMode==='fixed'
+                        ? `固定中：Lv${masuNorm.autoRepeatBreakthroughLevel}まで。ブリーダーLvが上がっても自動では伸びません。`
+                        : 'OFF：AUTO∞ではこの個体を自動限界突破しません。'}
+                  </div>
                 </div>
               </section>
               <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30"><div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>{orderUniqueChoicesByMasuOrder(masu, getRebirthSkillChoices(masu)).map(skill=>{const current=uniqueSkillAtLevel(skill.unique,skill.level);return <button key={skill.key} onClick={()=>setRosterSkillDetail({mon:{...mergedMasu,unique:current},kind:'unique'})} className="w-full flex justify-between text-[9px] py-1 text-left"><span className="truncate">{current.name}</span><span className="text-amber-300 font-black shrink-0">Lv.{skill.level} ›</span></button>;})}</div>
