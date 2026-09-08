@@ -11,6 +11,7 @@
 | [`TARGET_ARCHITECTURE.md`](TARGET_ARCHITECTURE.md) | 目指す形(連結ビルドで複数ファイル、保存はキーごとの更新関数、1 画面 1 コンポーネント、画面単位のライフサイクル) | 設計に迷ったとき |
 | [`REFACTOR_MASTER_PLAN.md`](REFACTOR_MASTER_PLAN.md) | STEP 0〜10 の明細(目的・対象・変更内容・変更しないもの・依存・リスク・検査・完了条件)と着手順 | 次にやる PR を決めるとき |
 | [`BATTLE_DAMAGE_MAP.md`](BATTLE_DAMAGE_MAP.md) | 予測ダメージと実ダメージの分岐の対応表と、一本化の形(STEP 5 の作業表) | STEP 5 に着手するとき |
+| [`EXECUTION_PLAN.md`](EXECUTION_PLAN.md) | STEP ごとの担当モデル(Sonnet 5 / Opus 5)と effort、切り出し順、コピペ用の指示文 | **新しいチャットを始めるとき** |
 | [`BASELINE_2026-09.md`](BASELINE_2026-09.md) | 変更前に全検査を回した結果(OK / NG の一覧と分類)。ここに無い NG が出たら「その変更で壊した」 | 検査が落ちたとき |
 
 ## 進捗
