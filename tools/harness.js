@@ -198,6 +198,8 @@ const EXPORTED_NAMES = [
   'BREAKTHROUGH_LEVEL_CAP_GAIN',
   'autoRepeatBreakthroughMaxLevel',
   'autoRepeatBreakthroughLevelOptions',
+  'buildAutoRepeatBreakthroughSettingUpdate',
+  'buildAutoRepeatBreakthroughUpdate',
   'BREAKTHROUGH_LEVEL_CAPS',
   'breakthroughLevelCap',
   'levelUpPointMultiplier',
