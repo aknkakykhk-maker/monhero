@@ -170,9 +170,31 @@ check('剣士モッチー専用の枚数分岐を書き足していない',
 check('AUTOへ手動と同じ枚数ルールを渡している',
   source.includes('hand, slots, guts, cardLimit, strategy:autoSettings.strategy,')
   && source.includes('getCardGuts, cardNeedsMonster, slotMaxUses,'));
-// 1つのスロットへ重ねられる枚数はハムの連続攻撃とききの上限+1だけの話。剣士モッチーの+1は別のモンスターへ使う
-check('同じスロットへ重ねる条件は変えていない(ハムの連続攻撃のまま)',
-  source.includes("const slotMaxUses = (mon) => ((mainHero?.id==='Ham'&&mon?.id==='Ham')||kikiCardBonus>0) ? cardLimit : 1;"));
+// 1つのスロットへ重ねられる枚数も、枚数+1の勇者特性を持つ種の共通ルール(heroCardBonusOf)へ乗せる。
+// 種ごとの分岐(mainHero?.id==='Ham' のような直書き)へ戻っていないことを見る
+check('同じスロットへ重ねる条件も共通ルールで決めている',
+  source.includes("const slotMaxUses = (mon) => ((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? cardLimit : 1;"));
+{
+  // 実際に同じ式を動かして、ハム・ききの既存の答えが1つも変わっていないことと、
+  // 剣士モッチーだけが新しく重ねられるようになったことを突き合わせる
+  // 判定に使う heroCardBonusOf は、検査側に書き写さず実装から切り出したものを使う
+  const bonusSrc2 = source.match(/const HERO_CARD_BONUS_MONSTER_IDS = [\s\S]*?const heroCardBonusOf = [^\n]+\n/);
+  const bonusOf = bonusSrc2 ? vm.runInNewContext(`${bonusSrc2[0]}heroCardBonusOf;`, { Object }) : (() => 0);
+  const before = (heroId, monId, kiki, limit) => ((heroId === 'Ham' && monId === 'Ham') || kiki > 0) ? limit : 1;
+  const after = (heroId, monId, kiki, limit) => ((bonusOf(heroId) > 0 && monId === heroId) || kiki > 0) ? limit : 1;
+  const ids = [null, 'Ham', 'KenshiMocchi', 'Zan', 'Eiki', 'Pandora', 'Mocchi'];
+  const diff = [];
+  for (const h of ids) for (const m of ids) for (const kiki of [0, 1]) for (const limit of [1, 2, 3, 4]) {
+    if (before(h, m, kiki, limit) !== after(h, m, kiki, limit)) diff.push(`${h}/${m}/きき${kiki}/上限${limit}`);
+  }
+  check('答えが変わるのは「勇者=剣士モッチー かつ 剣士モッチーのカード」だけ(ハム・きき・他は従来どおり)',
+    diff.length > 0 && diff.every(d => d.startsWith('KenshiMocchi/KenshiMocchi/きき0/')),
+    `${diff.length}件: ${diff.slice(0, 4).join(' / ')}`);
+  check('勇者ハムはハムのカードを重ねられる(従来どおり)', after('Ham', 'Ham', 0, 3) === 3);
+  check('勇者剣士モッチーも剣士モッチーのカードを重ねられる', after('KenshiMocchi', 'KenshiMocchi', 0, 3) === 3);
+  check('勇者剣士モッチーでも他のモンスターのカードは1枚のまま', after('KenshiMocchi', 'Zan', 0, 3) === 1);
+  check('勇者でない剣士モッチー(供モン)は重ねられない', after('Zan', 'KenshiMocchi', 0, 3) === 1);
+}
 
 console.log('--- ⑥ ヒット列(二刀流・ソードスキル)を実装から切り出して実測 ---');
 const rulesSrc = source.match(/const ATTACK_COMBO_RULES = Object\.freeze\(\{[\s\S]*?\n\}\);\n/);
@@ -279,6 +301,28 @@ check('永久追加連撃に上限を書いていない', !/kenshiExtraCombo[^\n
 // permaBuffs はラン開始でだけ初期化され、WAVEを跨いでも保持される(セーブデータには入らない)
 check('連撃パワー・永久追加連撃はランの永続バフに持つ(WAVEを跨いで保持)',
   /writePermaBuffs\(p=>\(\{\.\.\.p,kenshiComboPower:/.test(source));
+// 同じターンに剣士モッチーの固有技を2枚使えるようになったので、そのときの積み上がりも見る。
+// 連撃ダメージ+3%は2枚目で半減(effMul)、連撃パワーは回数なので半減せず1たまる
+check('2枚目の連撃ダメージ+3%には半減(effMul)が掛かる',
+  /else if\(card\.monId==='KenshiMocchi'\)\{\s*\n?\s*addPermaBuff\('comboDmgPct',0\.03\*effMul\);/.test(source));
+check('連撃パワーは2枚目でも1たまる(回数なので半減しない)',
+  /const nextPower=livePermaBuff\('kenshiComboPower'\)\+1;/.test(source)
+  && !/kenshiComboPower.*\*effMul/.test(source));
+// 同じターンの2枚目は ref(livePermaBuff)を読むので、1枚目のぶんが反映されて2までたまる
+check('同じターンに2枚使うと連撃パワーが2たまる(refを読んでいる)', (() => {
+  const MAX = 3;
+  const perma = { comboDmgPct: 0, kenshiComboPower: 0, kenshiExtraCombo: 0 };
+  const use = (halved) => {
+    const effMul = halved ? 0.5 : 1;
+    perma.comboDmgPct += 0.03 * effMul;
+    const next = perma.kenshiComboPower + 1;
+    if (next >= MAX) { perma.kenshiComboPower = 0; perma.kenshiExtraCombo += 1; }
+    else perma.kenshiComboPower = next;
+  };
+  use(false); use(true);
+  return perma.kenshiComboPower === 2 && Math.abs(perma.comboDmgPct - 0.045) < 1e-9;
+})());
+
 check('ラン開始時に永続バフごと0へ戻る',
   (source.match(/writePermaBuffs\(\{autoHpRecovery:0\.1\}\); setWaveBuffs\(\{\}\);/g) || []).length >= 2);
 check('セーブデータ(mh_*)へ保存していない', !/mh_kenshi/.test(source));

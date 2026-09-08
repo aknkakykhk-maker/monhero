@@ -5488,11 +5488,13 @@ function MonsterHeroGame() {
     return limit;
   }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
   // 1つのスロット(モンスター)へ同じターンに割り当てられる枚数の上限。
-  // 通常は1枠1枚。ハムが勇者モンのときはハム自身の連続攻撃で複数枚OK、
+  // 通常は1枠1枚。枚数+1の勇者特性(ハムの「連続攻撃」・剣士モッチーの「二刀流」)を持つ種が
+  // 勇者モンのときは、その本人のカードだけ複数枚OK。
   // ききのカード上限+1が効いているときは、その+1ぶんをどのモンスターへ重ねても使えるようにする
   // (どちらも実処理(processTurn)ではなく枚数の上限だけの話なので、cardLimitまで許す)。
+  // 対象の種は cardLimit と同じ HERO_CARD_BONUS_MONSTER_IDS が持つ(種ごとの分岐をここへ書かない)。
   // 割当のチェックと予測表示の両方がここを通ることで、判定がずれない
-  const slotMaxUses = (mon) => ((mainHero?.id==='Ham'&&mon?.id==='Ham')||kikiCardBonus>0) ? cardLimit : 1;
+  const slotMaxUses = (mon) => ((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? cardLimit : 1;
 
   const getCardGuts = (card) => {
     if (!card) return 0;
