@@ -35,6 +35,7 @@ const APPROVED_MASKS = {
   Plant: 'images/monsters/plant-dye-mask.PNG',
   Eiki: 'images/monsters/eiki-dye-mask.PNG',
   Pandora: 'images/monsters/pandora-dye-mask.PNG',
+  KenshiMocchi: 'images/monsters/kenshi-mocchi-dye-mask.PNG',
 };
 // これ未満しか染まらない画素を「染まっていない」とみなす
 const COVER_MIN = 0.5;

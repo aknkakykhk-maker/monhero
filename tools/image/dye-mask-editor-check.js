@@ -3,13 +3,19 @@ const fs = require('fs');
 const vm = require('vm');
 const assert = require('assert');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
-const pick = name => {
+const pickExpr = name => {
   const match = source.match(new RegExp(`const ${name}=(.*?);\\n`));
   assert(match, `${name} が見つかりません`);
-  return vm.runInNewContext(`(${match[1]})`);
+  return match[1];
 };
-const findOutside = pick('findOutside');
-const normalizeMask = pick('normalizeMask');
+const pickDecl = name => {
+  const match = source.match(new RegExp(`const ${name}=.*?;\\n`));
+  assert(match, `${name} が見つかりません`);
+  return match[0];
+};
+const findOutside = vm.runInNewContext(`(${pickExpr('findOutside')})`);
+// normalizeMask は部位の純色一覧(MASK_REGION_RGB)を参照するので、同じスクリプトで先に宣言する
+const normalizeMask = vm.runInNewContext(`${pickDecl('MASK_REGION_RGB')}(${pickExpr('normalizeMask')})`);
 const w=5,h=5,body=new Uint8ClampedArray(w*h*4);
 // 3x3の輪郭で囲み、中央は「目などの意図的な透明穴」として残す。
 for(let y=1;y<=3;y++)for(let x=1;x<=3;x++)if(x===1||x===3||y===1||y===3)body[(y*w+x)*4+3]=255;
@@ -22,6 +28,36 @@ image.data.set([0,255,0,255],(2*w+2)*4);
 normalizeMask(image,outside);
 assert.equal(image.data[3],0,'PNG正規化で本体外を透明化する');
 assert.equal(image.data[(2*w+2)*4+3],255,'PNG正規化で輪郭内の透明穴にある編集結果を維持する');
+// 5部位マスク(パンドラ・剣士モッチー)の黄=④・マゼンタ=⑤が、正規化で赤へ潰れないこと。
+// 以前は「最大チャンネルへ丸める」書き方だったため、この2色が両方とも赤になり、
+// 「合成」「ゲームで試す」「PNG書出」のすべてで④⑤が確認できなかった
+{
+  const at = (x,y) => (y*w+x)*4;
+  const five = { data: new Uint8ClampedArray(w*h*4) };
+  five.data.set([255,255,0,255], at(1,1));   // 黄 = 染色④
+  five.data.set([255,0,255,255], at(3,1));   // マゼンタ = 染色⑤
+  five.data.set([128,128,0,255], at(2,1));   // 赤と緑の中間(境目のにじみ)
+  normalizeMask(five, outside, 5);
+  assert.deepEqual([...five.data.slice(at(1,1),at(1,1)+4)],[255,255,0,255],'PNG正規化で黄(染色④)がそのまま残る');
+  assert.deepEqual([...five.data.slice(at(3,1),at(3,1)+4)],[255,0,255,255],'PNG正規化でマゼンタ(染色⑤)がそのまま残る');
+}
+// 3部位のモンスターでは黄・マゼンタへ寄せない(対応するマスクが無く、染色が丸ごと消えるため)。
+// 境目のにじみが赤へ寄るのは、以前の「最大チャンネルへ丸める」書き方と同じ結果
+{
+  const at = (x,y) => (y*w+x)*4;
+  const three = { data: new Uint8ClampedArray(w*h*4) };
+  three.data.set([128,128,0,255], at(1,1));   // 赤と緑の中間(境目のにじみ)
+  three.data.set([200,0,255,255], at(3,1));   // 青寄りの中間
+  normalizeMask(three, outside);
+  assert.deepEqual([...three.data.slice(at(1,1),at(1,1)+4)],[255,0,0,255],'3部位では赤と緑の中間が赤へ寄る');
+  assert.deepEqual([...three.data.slice(at(3,1),at(3,1)+4)],[0,0,255,255],'3部位では青寄りの中間が青へ寄る');
+}
+assert(source.includes('normalizeMask(image,outsideRef.current,dyeRegionCount(target.baseId))')
+  && source.includes('normalizeMask(context().getImageData(0,0,c.width,c.height),outsideRef.current,dyeRegionCount(target.baseId))'),
+  '合成・PNG書出・ゲームで試すのすべてが部位数を渡す');
+// 塗れる色は部位数ぶんだけ出す(3部位のモンスターへ黄・マゼンタで塗れてしまわないように)
+assert(source.includes("MASK_PALETTE.slice(0,Math.max(3,dyeRegionCount(target.baseId)))"),'色パレットを部位数ぶんに絞る');
+assert(source.includes("MASK_REGION_CSS=['#f00','#0f0','#00f','#ff0','#f0f']")&&source.includes('urls.slice(0,MASK_REGION_CSS.length)'),'既存マスクの読み直しも5部位ぶん行う');
 assert(source.includes("if(color!=='eraser'&&!body[global+3])continue"),'ブラシの色描画は本体アルファ内だけ');
 assert(source.includes("if((color!=='eraser'&&!body[d+3])"),'塗りつぶしの色描画は本体アルファ内だけ');
 assert(source.includes('範囲外を掃除') && source.includes('checkpoint();context().putImageData(image'),'一括掃除をUndo対象にする');

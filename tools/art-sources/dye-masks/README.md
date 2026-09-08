@@ -8,6 +8,7 @@
 | `undine-dye-mask.PNG` | `node tools/image/undine-dye-mask-check.js` の正解見本(256x384) |
 | `yaobikuni-dye-mask.PNG` | ヤオビクニの差し替え前の原本。今の検査は配信中の `yaobikuni-dye-mask2.PNG` を使うため、比較・巻き戻し用に保管しているだけ |
 | `pandora-dye-mask.PNG` | パンドラの部位分けの原本。ゲーム本体は埋め込みの部位マップ(`PANDORA_EXACT_REGION_2BIT`)を使うので、このPNGは配信していない。部位を描き直したくなったときの元データとして保管している |
+| `kenshi-mocchi-dye-mask.PNG` | 剣士モッチー(5部位)の原本。届いたときのまま(背景が不透明な黒・境目にアンチエイリアスあり)。配信中の `monster-hero/images/monsters/kenshi-mocchi-dye-mask.PNG` は、これを本番と同じ判定で読み直して純色へそろえたもの(`node tools/image/convert-dye-mask.js … --snap`)で、どの画素がどの染色になるかは同じ。953KB→37KB になるので配信側だけ差し替えている |
 
 モッチー・プラントの正式マスクはここではなく配信フォルダ(`monster-hero/images/monsters/`)にある。
 ゲームが実際に読み込んで染め分けに使っているためで、検査もその配信中のPNGを正本として比べる

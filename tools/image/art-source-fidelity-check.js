@@ -38,6 +38,12 @@ const PAIRS = [
     source: 'tools/art-sources/monsters/PLANT.PNG',
     // make-plant-dye-mask.js が原本から作り直す。向きも大きさも違う
   },
+  {
+    id: 'KenshiMocchi',
+    art: 'monster-hero/images/monsters/kenshi-mocchi.png',
+    source: 'tools/art-sources/monsters/KENSHI_MOCCHI-original.png',
+    // 加工は減色だけ(余白は切っていない)。原本と同じ座標系なので画素どうしで比べられる
+  },
 ];
 
 // 「絵として見えている」とみなすアルファ。これ以上の画素が消えていたら数える
