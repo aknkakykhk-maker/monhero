@@ -4450,11 +4450,12 @@ function MonsterHeroGame() {
   const setMasuInitialUnique = (masuId, settingKey) => updateMasuUniqueSetting(masuId, masu =>
     buildUniqueSettingUpdate(masu, { order:normalizeUniqueOrder(masu), initialKey:settingKey }));
   const resetMasuUniqueSetting = (masuId) => updateMasuUniqueSetting(masuId, buildUniqueSettingReset);
-  // 設定だけを個体データへ保存する。AUTO∞の周回・限界突破処理からはまだ参照しない。
-  const setMasuAutoRepeatBreakthrough = (masuId, level) => {
+  // AUTO∞自動限界突破の個体設定を、既存 mh_masu_mons のその個体へ保存する。
+  // off / follow / fixed の3モードだけを扱い、限界突破そのものの費用・条件は変えない。
+  const setMasuAutoRepeatBreakthrough = (masuId, mode, level = 0) => {
     const masu = getMasuMon(masuId);
     if (!masu) return null;
-    const updated = buildAutoRepeatBreakthroughUpdate(masu, level);
+    const updated = buildAutoRepeatBreakthroughSettingUpdate(masu, mode, level);
     setMasuMons(prev => {
       const next = prev.map(m => String(m.id) === String(masuId) ? updated : m);
       storeSet('mh_masu_mons', next, false);
@@ -12377,7 +12378,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const masuNorm = normalizeMasuProgression(masu);
           const autoBreakthroughMaxLevel = autoRepeatBreakthroughMaxLevel(breederLevel.level);
           const autoBreakthroughLevels = autoRepeatBreakthroughLevelOptions(breederLevel.level);
-          const autoBreakthroughSelectedLevel = autoBreakthroughLevels.includes(masuNorm.autoRepeatBreakthroughLevel) ? masuNorm.autoRepeatBreakthroughLevel : 0;
+          const autoBreakthroughSelectedValue = masuNorm.autoRepeatBreakthroughMode === 'follow'
+            ? 'follow'
+            : (masuNorm.autoRepeatBreakthroughMode === 'fixed' && autoBreakthroughLevels.includes(masuNorm.autoRepeatBreakthroughLevel)
+              ? `fixed:${masuNorm.autoRepeatBreakthroughLevel}` : 'off');
           const masuLvl = masuBondLevelInfo(masu);
           // 「元 ＋ 基礎UP(超越) ＋ 通常強化 ＝ 現在」の内訳。値は既存の計算からそのまま引く
           const growth = masuGrowthBreakdown(masu, mergedMasu);
@@ -12396,12 +12400,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             },
             bodyExtra: (<>
               <section data-auto-repeat-breakthrough-setting className="rounded-xl border border-cyan-500/40 bg-cyan-950/30 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0"><div className="text-[11px] font-black text-cyan-200">AUTO∞ 自動限界突破</div><div className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">∞周回中、設定Lvまで素材があれば自動で限界突破します</div><div className="mt-1 text-[8px] font-bold text-cyan-300/80">設定可能上限：{autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}` : 'OFF'}（ブリーダーLv{breederLevel.level}の半分）</div></div>
-                  <select aria-label={`${masu.name}のAUTO∞ 自動限界突破上限`} value={autoBreakthroughSelectedLevel} onChange={event=>setMasuAutoRepeatBreakthrough(masu.id,Number(event.target.value))} className="min-h-[48px] min-w-[112px] shrink-0 rounded-xl border border-cyan-400/60 bg-slate-900 px-3 text-center text-xs font-black text-white">
-                    <option value={0}>OFF</option>
-                    {autoBreakthroughLevels.map(level=><option key={level} value={level}>Lv{level}まで</option>)}
+                <div className="space-y-2">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-black text-cyan-200">AUTO∞ 自動限界突破</div>
+                    <div className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">OFF・ブリーダーLv自動追従・固定Lvから選べます</div>
+                    <div className="mt-1 text-[8px] font-bold text-cyan-300/80">現在の追従上限：{autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}` : 'まだ対象外'}（ブリーダーLv{breederLevel.level}の半分を5刻み）</div>
+                  </div>
+                  <select aria-label={`${masu.name}のAUTO∞ 自動限界突破設定`} value={autoBreakthroughSelectedValue} onChange={event=>{
+                    const value=event.target.value;
+                    if(value==='follow')setMasuAutoRepeatBreakthrough(masu.id,'follow');
+                    else if(value.startsWith('fixed:'))setMasuAutoRepeatBreakthrough(masu.id,'fixed',Number(value.slice(6)));
+                    else setMasuAutoRepeatBreakthrough(masu.id,'off');
+                  }} className="w-full min-h-[48px] rounded-xl border border-cyan-400/60 bg-slate-900 px-3 text-center text-xs font-black text-white">
+                    <option value="off">OFF</option>
+                    <option value="follow">ブリーダーLvに自動追従</option>
+                    {autoBreakthroughLevels.map(level=><option key={level} value={`fixed:${level}`}>Lv{level}まで固定</option>)}
                   </select>
+                  <div className="text-[8px] font-bold leading-relaxed text-slate-400">
+                    {masuNorm.autoRepeatBreakthroughMode==='follow'
+                      ? `自動追従中：現在は${autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}まで` : '限界突破OFF相当'}。ブリーダーLv上昇に合わせて自動で伸びます。`
+                      : masuNorm.autoRepeatBreakthroughMode==='fixed'
+                        ? `固定中：Lv${masuNorm.autoRepeatBreakthroughLevel}まで。ブリーダーLvが上がっても自動では伸びません。`
+                        : 'OFF：AUTO∞ではこの個体を自動限界突破しません。'}
+                  </div>
                 </div>
               </section>
               <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30"><div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>{orderUniqueChoicesByMasuOrder(masu, getRebirthSkillChoices(masu)).map(skill=>{const current=uniqueSkillAtLevel(skill.unique,skill.level);return <button key={skill.key} onClick={()=>setRosterSkillDetail({mon:{...mergedMasu,unique:current},kind:'unique'})} className="w-full flex justify-between text-[9px] py-1 text-left"><span className="truncate">{current.name}</span><span className="text-amber-300 font-black shrink-0">Lv.{skill.level} ›</span></button>;})}</div>
