@@ -100,7 +100,10 @@ const AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL = 35;
 // ブリーダーLvの半分以下を5刻みに切り下げ、Lv35未満ならOFFだけにする。
 const autoRepeatBreakthroughMaxLevel = (breederLevel) => {
   const maxLevel = Math.floor(Math.max(0, Number(breederLevel) || 0) / (BREAKTHROUGH_LEVEL_CAP_GAIN * 2)) * BREAKTHROUGH_LEVEL_CAP_GAIN;
-  return maxLevel >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL ? maxLevel : 0;
+  // ブリーダーLvには実質上限が無いが、通常の限界突破はLv400が上限。
+  // 追従表示や固定Lv候補だけがLv405以上へ伸びないよう、実際の育成上限で止める。
+  const cappedLevel = Math.min(MAX_MASU_LEVEL_CAP, maxLevel);
+  return cappedLevel >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL ? cappedLevel : 0;
 };
 const autoRepeatBreakthroughLevelOptions = (breederLevel) => {
   const maxLevel = autoRepeatBreakthroughMaxLevel(breederLevel);
