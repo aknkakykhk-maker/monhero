@@ -142,6 +142,9 @@ const DEFAULT_AUTO_SETTINGS = Object.freeze({
     { rosterEntry:null, slot:null },
     { rosterEntry:null, slot:null },
   ],
+  // AUTO∞自動限界突破で最低限残しておく資源。0なら従来どおり保護なし。
+  // 既存の mh_auto_settings_v1 に足し、項目が無い旧セーブは正規化で0へ落とす。
+  breakthroughReserve:{ gold:0, psyche:0 },
   // クイックの∞周回を、バトル画面を通らずに始めるための事前設定
   // (docs/spec/QUICK_RHYTHM_LINK.md PR5)。
   // ここが未設定(どれかが null)のあいだは、これまでどおり
@@ -150,6 +153,11 @@ const DEFAULT_AUTO_SETTINGS = Object.freeze({
   //   項目の無い既存ユーザーは normalizeAutoSettings が未設定で補う
   quickRun:{ heroRosterEntry:null, distance:null, difficulty:null },
 });
+const normalizeAutoReserveAmount = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(amount));
+};
 // roster entry が正本。候補外・重複・壊れた距離は、安全な未指定/自動へ落とす。
 const normalizeAutoSettings = (value, validRosterEntries = null, validDifficultyIds = null) => {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -163,6 +171,12 @@ const normalizeAutoSettings = (value, validRosterEntries = null, validDifficulty
     const slot = raw.slot === null || raw.slot === undefined ? null : Number(raw.slot);
     return { rosterEntry, slot:Number.isInteger(slot) && slot >= 0 && slot <= 3 ? slot : null };
   });
+  const rawReserve = source.breakthroughReserve && typeof source.breakthroughReserve === 'object' && !Array.isArray(source.breakthroughReserve)
+    ? source.breakthroughReserve : {};
+  const breakthroughReserve = {
+    gold:normalizeAutoReserveAmount(rawReserve.gold),
+    psyche:normalizeAutoReserveAmount(rawReserve.psyche),
+  };
   // クイック周回の事前設定。ここも「壊れていたら未設定へ落とす」だけで、勝手に補完しない。
   // 難易度は解放状況までは見ない(解放は端末の記録しだいで変わるため、使う直前に確かめる)
   const rawQuick = source.quickRun && typeof source.quickRun === 'object' && !Array.isArray(source.quickRun) ? source.quickRun : {};
@@ -175,7 +189,7 @@ const normalizeAutoSettings = (value, validRosterEntries = null, validDifficulty
     distance:Number.isInteger(quickDistanceRaw) && quickDistanceRaw >= 0 && quickDistanceRaw <= 3 ? quickDistanceRaw : null,
     difficulty:quickDifficulty && (!quickDifficultyIds || quickDifficultyIds.has(quickDifficulty)) ? quickDifficulty : null,
   };
-  return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies, quickRun };
+  return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies, breakthroughReserve, quickRun };
 };
 // クイック周回の事前設定が3つとも埋まっているか。
 // 1つでも欠けていたら「未設定」で、周回テンプレートのほうを使う

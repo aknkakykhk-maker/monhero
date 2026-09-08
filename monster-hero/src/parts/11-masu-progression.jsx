@@ -97,20 +97,49 @@ const MAX_BOND_LEVEL_ITERATIONS = TRANSCEND_LEVEL_CAP - 1;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL = 35;
-// ブリーダーLvの半分以下を5刻みに切り下げ、Lv35未満ならOFFだけにする。
-const autoRepeatBreakthroughMaxLevel = (breederLevel) => {
-  const maxLevel = Math.floor(Math.max(0, Number(breederLevel) || 0) / (BREAKTHROUGH_LEVEL_CAP_GAIN * 2)) * BREAKTHROUGH_LEVEL_CAP_GAIN;
-  return maxLevel >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL ? maxLevel : 0;
-};
-const autoRepeatBreakthroughLevelOptions = (breederLevel) => {
-  const maxLevel = autoRepeatBreakthroughMaxLevel(breederLevel);
+// AUTO∞で選べる上限は「数値上の5刻み」ではなく、実際の限界突破で到達できるlevelCapだけにする。
+// Lv180以降は 200→230→270→330→400 と飛ぶため、Lv185/350などを表示すると実挙動とズレる。
+// 参照先の breakthroughLevelCap / FINAL_BREAKTHROUGH_COUNT はこのファイル後方で定義されるが、
+// この関数群が実行されるのはモジュール初期化完了後なので同じ正本を安全に再利用できる。
+const autoRepeatBreakthroughReachableLevels = () => {
   const levels = [];
-  for (let level = AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL; level <= maxLevel; level += BREAKTHROUGH_LEVEL_CAP_GAIN) levels.push(level);
+  for (let count = 1; count <= FINAL_BREAKTHROUGH_COUNT; count++) {
+    const cap = breakthroughLevelCap(count);
+    if (cap >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL && cap <= MAX_MASU_LEVEL_CAP && levels[levels.length - 1] !== cap) levels.push(cap);
+  }
   return levels;
+};
+// ブリーダーLvの半分以下で、実際に到達できる最大levelCapを返す。
+const autoRepeatBreakthroughLevelOptions = (breederLevel) => {
+  const limit = Math.floor(Math.max(0, Number(breederLevel) || 0) / 2);
+  return autoRepeatBreakthroughReachableLevels().filter(level => level <= limit);
+};
+const autoRepeatBreakthroughMaxLevel = (breederLevel) => {
+  const levels = autoRepeatBreakthroughLevelOptions(breederLevel);
+  return levels.length ? levels[levels.length - 1] : 0;
 };
 const normalizeAutoRepeatBreakthroughLevel = (value) => {
   const level = Math.floor(Number(value) || 0);
-  return level >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL && level % BREAKTHROUGH_LEVEL_CAP_GAIN === 0 ? level : 0;
+  if (level < AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL || level % BREAKTHROUGH_LEVEL_CAP_GAIN !== 0) return 0;
+  // 旧仕様はLv180以降も5刻みを保存できた。たとえばLv185は実際にはLv180で止まっていたため、
+  // 「指定値以下で到達できる最大cap」へ丸めれば、既存ユーザーの実効挙動を変えず現行仕様へ移せる。
+  const levels = autoRepeatBreakthroughReachableLevels();
+  let normalized = 0;
+  for (const cap of levels) {
+    if (cap > level) break;
+    normalized = cap;
+  }
+  return normalized;
+};
+// AUTO∞自動限界突破の個体設定。
+// 既存個体は数値の autoRepeatBreakthroughLevel が入っていれば fixed としてそのまま引き継ぐ。
+// follow だけは保存した固定Lvを使わず、その時点のブリーダーLvから実効上限を求める。
+const normalizeAutoRepeatBreakthroughMode = (value, levelValue) => {
+  if (value === 'follow') return 'follow';
+  if (value === 'off') return 'off';
+  const level = normalizeAutoRepeatBreakthroughLevel(levelValue);
+  if (value === 'fixed') return level > 0 ? 'fixed' : 'off';
+  return level > 0 ? 'fixed' : 'off';
 };
 const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 固有技の強化ポイントは、技を上げるほかに「いまのガッツを戻す」ことにも使える。
@@ -733,7 +762,8 @@ const transferableReincarnateBonus = (masu) => ({
 });
 const normalizeMasuProgression = (masu) => ({
   ...masu,
-  // 旧booleanは曖昧な上限へ移行せずOFF。数値設定だけを正本として読む。
+  // 旧booleanは曖昧な上限へ移行せずOFF。既存の数値設定は fixed として互換維持する。
+  autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode(masu?.autoRepeatBreakthroughMode, masu?.autoRepeatBreakthroughLevel),
   autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(masu?.autoRepeatBreakthroughLevel),
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
@@ -752,10 +782,20 @@ const normalizeMasuProgression = (masu) => ({
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0)),
 });
-const buildAutoRepeatBreakthroughUpdate = (masu, level) => ({
-  ...masu,
-  autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel(level),
-});
+const buildAutoRepeatBreakthroughSettingUpdate = (masu, mode, level = 0) => {
+  const normalizedMode = mode === 'follow' ? 'follow' : mode === 'fixed' ? 'fixed' : 'off';
+  const normalizedLevel = normalizedMode === 'fixed' ? normalizeAutoRepeatBreakthroughLevel(level) : 0;
+  return {
+    ...masu,
+    autoRepeatBreakthroughMode: normalizedMode === 'fixed' && normalizedLevel <= 0 ? 'off' : normalizedMode,
+    autoRepeatBreakthroughLevel: normalizedLevel,
+  };
+};
+// 従来の数値UI・古い呼び出しは fixed/OFF としてそのまま扱えるよう残す。
+const buildAutoRepeatBreakthroughUpdate = (masu, level) => {
+  const normalizedLevel = normalizeAutoRepeatBreakthroughLevel(level);
+  return buildAutoRepeatBreakthroughSettingUpdate(masu, normalizedLevel > 0 ? 'fixed' : 'off', normalizedLevel);
+};
 // 固有技ポイントの仮配分を検証して反映した個体を返す。UI操作中は呼ばず、確定時だけ保存へ渡す。
 const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
   const normalized = normalizeMasuProgression(masu);
@@ -1914,26 +1954,38 @@ const buildMasuBreakthrough = ({ masu, skillKey, gold, psycheOwned = 0 }) => {
 };
 // AUTO∞の自動限界突破候補を、呼び出し時点の最新残高から順番に確定する。
 // 費用・素材数・次の上限はbuildMasuBreakthroughだけに計算させ、ここではAUTO専用上限だけを追加判定する。
-const buildAutoRepeatBreakthroughs = ({ masuIds, masuMons, gold, ownedItems, breederXp }) => {
+const buildAutoRepeatBreakthroughs = ({
+  masuIds, masuMons, gold, ownedItems, breederXp,
+  reserveGold = 0, reservePsyche = 0,
+}) => {
   let nextMasuMons = Array.isArray(masuMons) ? masuMons : [];
   let nextGold = donationDiamondValue(gold);
   let nextOwnedItems = { ...(ownedItems || {}) };
   const succeededMasuIds = [];
   const seen = new Set();
-  const breederLevelLimit = levelInfo(breederXp).level / 2;
+  const breederLevel = levelInfo(breederXp).level;
+  const breederLevelLimit = breederLevel / 2;
+  const followLevelLimit = autoRepeatBreakthroughMaxLevel(breederLevel);
+  const protectedGold = donationDiamondValue(reserveGold);
+  const protectedPsyche = Math.max(0, Math.floor(Number(reservePsyche) || 0));
   for (const rawId of Array.isArray(masuIds) ? masuIds : []) {
     const id = String(rawId);
     if (seen.has(id)) continue;
     seen.add(id);
     const masu = nextMasuMons.find(entry => String(entry.id) === id);
     if (!masu) continue;
-    const settingLevel = normalizeMasuProgression(masu).autoRepeatBreakthroughLevel;
-    if (settingLevel <= 0) continue;
+    const normalized = normalizeMasuProgression(masu);
+    const settingLevel = normalized.autoRepeatBreakthroughMode === 'follow'
+      ? followLevelLimit
+      : normalized.autoRepeatBreakthroughLevel;
+    if (settingLevel <= 0 || normalized.autoRepeatBreakthroughMode === 'off') continue;
     const result = buildMasuBreakthrough({
       masu, skillKey:'', gold:nextGold,
       psycheOwned:ownedItemCount(nextOwnedItems, BREAKTHROUGH_ITEM_ID),
     });
     if (!result.ok || result.nextMasu.levelCap > settingLevel || result.nextMasu.levelCap > breederLevelLimit) continue;
+    // 「いま残高があるか」ではなく、この1回を実行した後も保護残高以上残る場合だけ成立させる。
+    if (result.nextGold < protectedGold || result.nextPsyche < protectedPsyche) continue;
     nextMasuMons = nextMasuMons.map(entry => String(entry.id) === id ? result.nextMasu : entry);
     nextGold = result.nextGold;
     nextOwnedItems = { ...nextOwnedItems, [BREAKTHROUGH_ITEM_ID]:result.nextPsyche };
