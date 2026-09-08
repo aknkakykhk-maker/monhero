@@ -3,10 +3,10 @@
 // 更新後のページだけ今回buildを既存compiled buildへ橋渡しし、同じバナーの無限再表示を防ぐ。
 // 条件は今回buildとの完全一致だけなので、将来の別buildはそのまま検知される。
 (()=>{
-  const RHYTHM_RELEASE_DATE='2026-09-04 18:06';
-  const RHYTHM_DATA_BUILD='2026-09-04 18:06';
-  const RHYTHM_COMPILED_BUILD='2026-09-04 17:18';
-  const RHYTHM_RELEASE_TITLE='iPhoneでバックアップファイル名が変わる問題を修正';
+  const RHYTHM_RELEASE_DATE='2026-09-08 19:59';
+  const RHYTHM_DATA_BUILD='2026-09-08 19:59';
+  const RHYTHM_COMPILED_BUILD='2026-09-08 19:24';
+  const RHYTHM_RELEASE_TITLE='モンヒロビート: 連続TAPの判定が前のノーツへ引っ張られる問題を修正しました';
 
   const rhythmSlideRemainingRatio=(startMs,endMs,chartNowMs)=>{
     const start=Number(startMs)||0,end=Number(endMs)||start,now=Number(chartNowMs);
@@ -101,14 +101,14 @@
     Object.defineProperty(window,'__mhRhythmDataBuildBridge',{value:true,configurable:false});
   }
 
+  const RHYTHM_LEGACY_RELEASE_TITLE='iPhoneでバックアップファイル名が変わる問題を修正';
+  if(typeof CHANGELOG!=='undefined'&&!CHANGELOG.some(entry=>entry?.title===RHYTHM_LEGACY_RELEASE_TITLE)){
+    CHANGELOG.push({date:'2026-09-04 18:06',type:'update',title:RHYTHM_LEGACY_RELEASE_TITLE,
+      items:['iPhoneの共有メニューへバックアップファイルだけを渡すようにし、「ファイルに保存」で名前が「テキスト」などへ変わる問題を修正しました。','保存名は「MonsterHero_Backup_YYYYMMDD_HHMM.mhsave」を維持します。従来の引き継ぎコード方式と既存のmh_*セーブデータ形式は変更していません。']});
+  }
   if(typeof CHANGELOG!=='undefined'&&!CHANGELOG.some(entry=>entry?.title===RHYTHM_RELEASE_TITLE)){
-    CHANGELOG.unshift({
-      date:RHYTHM_RELEASE_DATE,type:'update',title:RHYTHM_RELEASE_TITLE,status:'new',
-      items:[
-        'iPhoneの共有メニューへバックアップファイルだけを渡すようにし、「ファイルに保存」で名前が「テキスト」などへ変わる問題を修正しました。',
-        '保存名は「MonsterHero_Backup_YYYYMMDD_HHMM.mhsave」を維持します。従来の引き継ぎコード方式と既存のmh_*セーブデータ形式は変更していません。'
-      ]
-    });
+    CHANGELOG.unshift({date:RHYTHM_RELEASE_DATE,type:'fix',title:RHYTHM_RELEASE_TITLE,status:'new',
+      items:['前のノーツを取り逃したあと、次を少し早めに叩いたときに古いノーツへ吸われ、連打が1音ずつ後ろへずれる問題を修正しました。','判定幅は変えず、近いTAP同士でどちらへ入力を渡すかだけを見直しました。']});
   }
   // 2026-09-01当時のヘルプ文面をここへ固定で書き戻していたが、以降のPRで
   // monster-hero/data/help.js 本体の rhythm-mode 項目を直接更新するようになったため、
