@@ -111,8 +111,8 @@
   },
   "kaze_ga_soyogu": {
    "audio": "monster-hero/audio/bgm-kaze-ga-soyogu-basho.mp3",
-   "audioSha256": "18c384ffb575b1f91a5e61b856313bd2dc3ae2cfc920f3f11062252afadbee81",
-   "durationMs": 99216,
+   "audioSha256": "9cc789151e7ec4c96c74a653cd0f96938c478f4636f11a3a850537aefaaf30dd",
+   "durationMs": 99250,
    "analyzedTiming": {
     "bpm": 118.88,
     "beatZeroMs": 209,
@@ -209,7 +209,7 @@
   },
   "kindan_no_resistance": {
    "audio": "monster-hero/audio/bgm-kindan-no-resistance.mp3",
-   "audioSha256": "234b41e80b0f553f88dc4b2dfc4482dbd6826f61cbbc0ecf40bbd3b0e416a946",
+   "audioSha256": "efca5c01d0b738b44317dafd6504f9b7a4212a638878cc085a9703635f2df65d",
    "durationMs": 163440,
    "analyzedTiming": {
     "bpm": 179.997,
@@ -234,6 +234,18 @@
     "audioSha256": "6b4eb065c2e238d68225deb33d4340c2a8491eb4a8edef3cd7e351e56e50b0f9",
     "onsetCount": 1108,
     "beatClarityRatio": 1.193
+   }
+  },
+  "crossing_field": {
+   "audio": "monster-hero/audio/bgm-crossing-field.mp3",
+   "audioSha256": "1e2e7cc1d3d53d1ac999bc5c03e1534e635de515b297daf65c00bcab21ce294f",
+   "durationMs": 89208,
+   "analyzedTiming": {
+    "bpm": 178.97,
+    "beatZeroMs": 792.7,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "command"
    }
   }
  }
