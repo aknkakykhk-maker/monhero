@@ -10,6 +10,9 @@ assert.deepStrictEqual(Array.from(m.autoRepeatBreakthroughLevelOptions(69)), [],
 assert.deepStrictEqual(Array.from(m.autoRepeatBreakthroughLevelOptions(70)), [35], 'Lv70はLv35まで');
 assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(100), 50, 'Lv100は最大Lv50');
 assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(153), 75, 'Lv153は最大Lv75');
+assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(800), 400, 'ブリーダーLv800で通常限界突破の実上限Lv400');
+assert.strictEqual(m.autoRepeatBreakthroughMaxLevel(1000), 400, 'ブリーダーLvがさらに上がっても追従上限はLv400を超えない');
+assert.strictEqual(Math.max(...m.autoRepeatBreakthroughLevelOptions(1000)), 400, '固定Lv候補もLv400を超えない');
 assert.ok(!source.includes('AUTO_REPEAT_BREAKTHROUGH_LEVEL_LIMIT'), '固定Lv100定数を撤去');
 
 const normalizeStart = source.indexOf('const normalizeMasuProgression =');
