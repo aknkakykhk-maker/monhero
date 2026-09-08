@@ -42,6 +42,12 @@ const RHYTHM_JUDGMENTS = Object.freeze([
 // 判定表から作れば、窓を変えるだけで両方そろう。
 const RHYTHM_INPUT_MATCH_WINDOW_MS = RHYTHM_JUDGMENTS
   .reduce((widest,judgment)=>Number.isFinite(judgment.windowMs)?Math.max(widest,judgment.windowMs):widest,0);
+// タップの「どのノーツを狙ったか」は判定ランクとは別に決める。
+// 判定窓は遊びやすさのため最大±240msを維持するが、その全域を前ノーツの所有時間にはしない。
+// 隣り合う候補の間は前ノーツへ75%寄せ、次ノーツが早取りできる範囲もMARVELOUS窓以内に制限する。
+// これで16分88msなら切替は前から66ms地点: +60msの遅押しは前、次の-22ms以降は次を狙った入力として扱う。
+const RHYTHM_TAP_TARGET_PREVIOUS_SHARE=.75;
+const RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS=RHYTHM_JUDGMENTS.find(judgment=>judgment.id==='MARVELOUS')?.windowMs||55;
 const RHYTHM_SCORE_WEIGHTS = Object.freeze({ judgment:.9, combo:.1 });
 // スコアランク(暫定値)。G→F→E→D→C→B→A→S→SS→Mの10段階(Mが最上位)。
 // 難易度ごとの割合(%)ではなく絶対スコアのしきい値で判定する。%基準だと
@@ -1625,6 +1631,20 @@ const rhythmInputMatchBounds=(source,now,offset)=>{
   while(lo<hi){const mid=(lo+hi)>>1;if(Number(source[mid]?.timeMs)<=max)lo=mid+1;else hi=mid;}
   return [start,lo];
 };
+const rhythmChooseTapTarget=(passed,upcoming,now)=>{
+  if(!passed)return upcoming;
+  if(!upcoming)return passed;
+  const gap=upcoming.noteTime-passed.noteTime;
+  if(!(gap>0))return passed;
+  // 時刻だけでは「前を遅く叩いた」のか「次を少し早く叩いた」のか判別不能な帯がある。
+  // そこで中間点ではなく前へ寄せた境界を作る。密な連打で+60ms程度の遅れを次へ飛ばさず、
+  // 一方で次ノーツ直前の早押しを取り逃した前ノーツへ吸わせ続けない。
+  const switchAt=Math.max(
+    passed.noteTime+gap*RHYTHM_TAP_TARGET_PREVIOUS_SHARE,
+    upcoming.noteTime-RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS
+  );
+  return now>=switchAt?upcoming:passed;
+};
 const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
   const [matchStart,matchEnd]=rhythmInputMatchBounds(source,now,offset);
@@ -1722,36 +1742,14 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       if(now>=noteTime)passedBest=candidate(passedBest,note,index,noteTime,inside,distance,true);
       else upcomingBest=candidate(upcomingBest,note,index,noteTime,inside,distance,false);
     }
-    // 過ぎている側とまだ来ていない側のどちらを取るか。
+    // 過ぎている側とまだ来ていない側の両方がある場合は、判定ランクの良し悪しではなく
+    // 「ノーツ間のどこまでを前ノーツの所有時間にするか」で決める。
     //
-    // 【いまの決まり】過ぎている側があるなら、必ずそちらを取る。
-    // まだ来ていない側を見るのは、過ぎている側に候補が1つも無いとき(＝早押し)だけ。
-    //
-    // 【なぜ「判定の段が良いほう」をやめたか（2026-09-05・4回目の作り直し）】
-    // 一時期ここは「判定の段(MARVELOUS/EXCELLENT/…)が良くなるほうを取る」にしていた。
-    // 次のノーツをほぼぴったり叩いたときにそちらを取りたかったため。
-    // ところがこれは、**連続ノーツで遅れて叩くと必ず次へ移る**作りだった。
-    //
-    //   16分(88ms間隔) A=1.000秒 / B=1.088秒 で 1.060秒に叩く
-    //     前 = 60ms遅れ → EXCELLENT の段
-    //     次 = 28ms前   → MARVELOUS の段  ← 段が良いのでこちらが取られていた
-    //
-    // 60msの遅れは音ゲーとしてはごくふつうのズレなのに、狙った1つめではなく
-    // 2つめが消費される。2つめは本来の時刻には既に無いので、次の入力は3つめへ…と
-    // **後ろへ後ろへずれ続ける**。実機の指摘「連続ノーツ時のタップ判定の引っ張りが
-    // なくならない／音ゲーとしてこれは致命的」はこれ。
-    //
-    // 【トレードオフ】戻したことで、次の1件は元に戻る。
-    //   A=1.000秒 / B=1.100秒 で、Aを叩き忘れたままBを1.099秒にジャストで叩くと、
-    //   99ms遅れのAが取られ、Bは次の入力へ回る。
-    // これは「1回の入力で取れるのは1つ」「古いものから順に消費する」という
-    // 当たり前の形であって、引っ張りのように**連鎖して崩れることはない**。
-    // 叩き忘れたAはもともとMISSになる音なので、失うものはAだけで止まる。
-    //
-    // 過ぎている側の中では、これまでどおり「いちばん後ろ(時刻の新しいほう)」を取る。
-    // これで「次のノーツの時刻が来るまでは前のノーツ」という区切りになり、
-    // 受付幅(前後240ms)がノーツの間隔より広くても、受け付ける相手が前後へ滑らない。
-    const chosen=passedBest||upcomingBest;
+    // 単純な近い方(50:50)や判定ランク優先は、16分で60ms遅れただけでも次ノーツへ飛び、
+    // 以後の入力まで1つ先へずれる前方引っ張りを起こした。一方、前を100%優先すると
+    // 次ノーツの10ms程度の早押しまで取り逃した前ノーツへ吸われ、1つ後ろへずれ続ける。
+    // そのため前75% / 次25%を基本にし、次側の早取りはMARVELOUS窓より広げない。
+    const chosen=rhythmChooseTapTarget(passedBest,upcomingBest,now);
     let picked=chosen?chosen.note:null,pickedIndex=chosen?chosen.index:-1;
     // 持ち替え待ちで浮いているノーツは、開始時刻がどれだけ前でも候補へ入れる。
     // ふつうの候補より**先に**取る。押さえ直しをほかのノーツへ吸われると、

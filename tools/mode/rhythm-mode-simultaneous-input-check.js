@@ -21,6 +21,8 @@ assert.strictEqual(out.filter(x=>x.lane!==null).length,1,'one note must not be c
 const src=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 assert(src.includes("addEventListener('touchstart',syncTouches,{passive:false})"),'native non-passive touchstart required');
 assert(src.includes('Array.from(e.touches||[])'),'all currently active touches must be synchronized');
+assert(src.includes("movedTouchInputs=e.type==='touchmove'?new Set(Array.from(e.changedTouches||[])"),'only changed touches may be treated as movement');
+assert(src.includes('if(movedTouchInputs?.has(inputKey)&&subLaneCoordinate!==null)inputMoves(inputKey,subLaneCoordinate)'),'an existing opposite finger must not retrigger on another finger touchstart/touchend');
 assert(src.includes('inputStarts(starts,ageMs)'),'simultaneous starts must be submitted as one batch');
 assert(src.includes('inputEnds(ended)'),'simultaneous ends must be submitted as one batch');
 assert(src.includes('activeTouchInputs'),'active touch ids must be tracked independently');
