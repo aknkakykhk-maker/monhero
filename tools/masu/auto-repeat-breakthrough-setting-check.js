@@ -15,8 +15,12 @@ assert.ok(!source.includes('AUTO_REPEAT_BREAKTHROUGH_LEVEL_LIMIT'), '固定Lv100
 const normalizeStart = source.indexOf('const normalizeMasuProgression =');
 const normalizeEnd = source.indexOf('// 固有技ポイントの仮配分', normalizeStart);
 const normalizer = source.slice(normalizeStart, normalizeEnd);
-assert.ok(normalizer.includes('autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel'), '数値項目を正本として正規化');
+assert.ok(normalizer.includes('autoRepeatBreakthroughMode: normalizeAutoRepeatBreakthroughMode'), '新しいmodeを後方互換つきで正規化');
+assert.ok(normalizer.includes('autoRepeatBreakthroughLevel: normalizeAutoRepeatBreakthroughLevel'), '固定Lvの数値項目を正本として正規化');
 assert.ok(!normalizer.includes('autoRepeatBreakthrough:'), '旧booleanを正本にしない');
+assert.ok(source.includes("if (value === 'follow') return 'follow';"), '自動追従modeを保持');
+assert.ok(source.includes("return level > 0 ? 'fixed' : 'off';"), 'mode欠損の既存数値設定はfixedへ継承');
+assert.ok(source.includes("autoRepeatBreakthroughMode: normalizedLevel > 0 ? 'fixed' : 'off'"), '従来の個体別Lv変更はfixed/OFFとして保存');
 
 const saverStart = source.indexOf('const setMasuAutoRepeatBreakthrough =');
 const saverEnd = source.indexOf('const useUniqueSkillResetTicket', saverStart);
@@ -31,5 +35,8 @@ const detail = source.slice(detailStart, detailEnd);
 assert.ok(detail.includes('<select') && detail.includes('<option value={0}>OFF</option>'), 'スマホ向けselectとOFF');
 assert.ok(detail.includes('autoBreakthroughLevels.map'), '利用可能な5刻み選択肢だけを生成');
 assert.ok(detail.includes('設定可能上限：'), '現在の設定可能上限を表示');
+// UIは次の段階でfollow選択肢へ拡張する。この段階では既存UIの固定Lv操作を壊していないことだけ確認する。
+assert.ok(source.includes('reserveGold = 0, reservePsyche = 0'), '残高保護は未設定なら従来どおり0');
+assert.ok(source.includes('result.nextGold < protectedGold || result.nextPsyche < protectedPsyche'), '限凸後残高で保護判定');
 
 console.log('✅ AUTO∞自動限界突破の上限設定・保存チェックOK');
