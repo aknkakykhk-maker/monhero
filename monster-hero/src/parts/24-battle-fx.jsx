@@ -36,18 +36,61 @@ const EikiSakuraPetals = () => (
     ))}
   </span>
 );
-// 剣士モッチーの二刀流の斬撃軌跡。攻撃モーションが出ているあいだだけ重ねる
-// (エイキの花びらと同じ考え方で、常時アニメーションにはしない)。
-// ＼と／の2本だけで、要素2枚・CSSアニメーション1本に抑えてある。
+// 剣士モッチーの二刀流演出。
+// 本体は kenshiTwinBladeSlash で敵まで高速移動し、ここでは斬撃・速度線・X字の決め演出だけを重ねる。
+// 常時DOMは増やさず、攻撃中だけ描画する。永久追加連撃が何本に増えても、この演出自体は1攻撃1セット。
 const KENSHI_TWIN_SLASHES = Object.freeze([
-  { angle:'-38deg', delay:'100ms', color:'rgba(167,139,250,.95)' },  // 1撃目 ＼(右上→左下)
-  { angle:'38deg',  delay:'270ms', color:'rgba(103,232,249,.95)' },  // 2撃目 ／(左上→右下)
+  { angle:'-38deg', delay:'135ms', color:'rgba(139,92,246,.98)', origin:'90% 50%', sweepX:'-18px' }, // 1撃目 ＼
+  { angle:'38deg',  delay:'315ms', color:'rgba(34,211,238,.98)', origin:'10% 50%', sweepX:'18px' },  // 2撃目 ／
+]);
+const KENSHI_TWIN_SPEED_LINES = Object.freeze([
+  { left:'8%',  top:'72%', delay:'35ms',  angle:'-20deg', travelX:'-38px', travelY:'-118px', width:'74px' },
+  { left:'26%', top:'82%', delay:'70ms',  angle:'-14deg', travelX:'20px',  travelY:'-138px', width:'92px' },
+  { left:'68%', top:'78%', delay:'238ms', angle:'18deg',  travelX:'-18px', travelY:'-132px', width:'88px' },
+  { left:'82%', top:'66%', delay:'270ms', angle:'24deg',  travelX:'34px',  travelY:'-116px', width:'68px' },
+]);
+const KENSHI_TWIN_SHARDS = Object.freeze([
+  { x:'-76px', y:'-42px', angle:'-34deg', delay:'0ms' },
+  { x:'-54px', y:'38px',  angle:'24deg',  delay:'12ms' },
+  { x:'-18px', y:'-70px', angle:'-8deg',  delay:'22ms' },
+  { x:'28px',  y:'-62px', angle:'18deg',  delay:'8ms' },
+  { x:'60px',  y:'-28px', angle:'36deg',  delay:'18ms' },
+  { x:'72px',  y:'34px',  angle:'52deg',  delay:'28ms' },
 ]);
 const KenshiTwinSlash = () => (
   <span className="kenshi-twin-slash" aria-hidden="true">
     {KENSHI_TWIN_SLASHES.map((blade, index) => (
-      <span key={index} className="kenshi-twin-slash__blade"
-        style={{ '--kenshi-slash-angle':blade.angle, '--kenshi-slash-delay':blade.delay, '--kenshi-slash-color':blade.color }}/>
+      <span key={`blade-${index}`} className="kenshi-twin-slash__blade"
+        style={{
+          '--kenshi-slash-angle':blade.angle,
+          '--kenshi-slash-delay':blade.delay,
+          '--kenshi-slash-color':blade.color,
+          '--kenshi-slash-origin':blade.origin,
+          '--kenshi-slash-sweep-x':blade.sweepX,
+        }}/>
+    ))}
+    {KENSHI_TWIN_SPEED_LINES.map((line, index) => (
+      <span key={`speed-${index}`} className="kenshi-twin-slash__speed"
+        style={{
+          left:line.left, top:line.top, width:line.width,
+          '--kenshi-speed-delay':line.delay,
+          '--kenshi-speed-angle':line.angle,
+          '--kenshi-speed-x':line.travelX,
+          '--kenshi-speed-y':line.travelY,
+        }}/>
+    ))}
+    <span className="kenshi-twin-slash__impact">
+      <span className="kenshi-twin-slash__impact-core"/>
+      <span className="kenshi-twin-slash__impact-ring"/>
+    </span>
+    {KENSHI_TWIN_SHARDS.map((shard, index) => (
+      <span key={`shard-${index}`} className="kenshi-twin-slash__shard"
+        style={{
+          '--kenshi-shard-x':shard.x,
+          '--kenshi-shard-y':shard.y,
+          '--kenshi-shard-angle':shard.angle,
+          '--kenshi-shard-delay':shard.delay,
+        }}/>
     ))}
   </span>
 );
