@@ -42,8 +42,9 @@ const bulkStart = source.indexOf('const applyAutoBreakthroughBulk = async () => 
 const bulkEnd = source.indexOf('const saveAutoSettings = async () => {', bulkStart);
 const bulk = source.slice(bulkStart, bulkEnd);
 assert(bulk.includes("window.confirm(`所有マスモン${currentMons.length}体"), '一括変更前の確認がありません');
-assert(bulk.includes("storeSet('mh_masu_mons', next, false)"), '一括設定を既存mh_masu_monsへ保存していません');
-assert(bulk.includes('masuMonsRef.current = next') && bulk.includes('setMasuMons(next)'), '一括保存後に最新個体ref/stateを同期していません');
+assert(bulk.includes("saveStoredValuesOrRollback([") && bulk.includes("{ key:'mh_masu_mons', before:currentMons, next }"), '一括設定を読み戻し検証つきで既存mh_masu_monsへ保存していません');
+assert(bulk.includes('if (!saved)') && bulk.indexOf('if (!saved)') < bulk.indexOf('masuMonsRef.current = next'), '一括保存失敗時にstateへ進む可能性があります');
+assert(bulk.includes('masuMonsRef.current = next') && bulk.includes('setMasuMons(next)'), '一括保存成功後に最新個体ref/stateを同期していません');
 assert(!bulk.includes('AUTO_SETTINGS_KEY'), '一括設定をAUTO設定へ永続化して新規個体へ自動適用する形になっています');
 assert(source.includes('data-auto-breakthrough-bulk-settings'), 'AUTO設定画面に自動限凸セクションがありません');
 assert(source.includes('全員 ブリーダーLvに自動追従') && source.includes('全員OFF') && source.includes('全員 Lv{level}まで固定'), '一括設定の3モードがそろっていません');
