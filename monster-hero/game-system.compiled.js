@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f2752be70dde8c03
+// source-sha256: 3be93d63ac2370c5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2f272c67039b1886
+// generated-sha256: 4c43aad545189720
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 12:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 13:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3638,6 +3638,15 @@ const BGM_TRACKS = [{
   name: '禁断のレジスタンス',
   creator: 'オリジナル',
   src: 'audio/bgm-kindan-no-resistance.mp3',
+  gain: 1,
+  loop: true
+},
+// モンビーの新曲(2026-09-08)。同じくmp4で受け取った音源から映像を落として入れたもの
+{
+  id: 'melo_crossing_field',
+  name: 'crossing field',
+  creator: 'オリジナル',
+  src: 'audio/bgm-crossing-field.mp3',
   gain: 1,
   loop: true
 }, {
@@ -17425,23 +17434,19 @@ const centerCarouselChild = (root, index, behavior = 'auto') => {
 
 // marked=false は「輪にするために置いた影の行」で使う。同じ目印が3つに増えると、
 // 画面を数えて確かめている検査が本物の3倍を見てしまうため、影には目印を付けない。
+// onZoom を渡すと、絵のある曲だけ「押せる絵」になる(押すと拡大して見られる)。
+// 一覧の行は曲を選ぶボタンそのものなので、渡さない(ボタンの中にボタンは置けない)。
 const RhythmSongArt = ({
   song,
   large = false,
-  marked = true
+  marked = true,
+  onZoom = null
 }) => {
   const hue = rhythmSongArtHue(song && song.songId);
   const src = typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song && typeof song.artwork === 'string' ? song.artwork : '';
   const initial = String(song && song.displayName || '♪').trim().charAt(0) || '♪';
-  return /*#__PURE__*/React.createElement("span", _extends({}, marked ? {
-    'data-rhythm-song-art': ''
-  } : {}, {
-    className: `relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large ? 'w-full' : 'w-12'}`,
-    style: {
-      aspectRatio: '1 / 1',
-      background: `linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue + 50) % 360},72%,48%))`
-    }
-  }), src ? /*#__PURE__*/React.createElement("img", {
+  const zoomable = !!src && typeof onZoom === 'function';
+  const inner = /*#__PURE__*/React.createElement(React.Fragment, null, src ? /*#__PURE__*/React.createElement("img", {
     src: src,
     alt: "",
     className: "absolute inset-0 h-full w-full object-cover"
@@ -17451,7 +17456,35 @@ const RhythmSongArt = ({
     style: {
       textShadow: '0 2px 8px rgba(2,6,23,.55)'
     }
-  }, initial));
+  }, initial), zoomable && /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true",
+    className: "absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-slate-950/70 text-[10px] leading-none",
+    style: {
+      backgroundColor: 'rgba(2,6,23,.7)'
+    }
+  }, "\uD83D\uDD0D"));
+  const shape = `relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large ? 'w-full' : 'w-12'}`;
+  const box = {
+    aspectRatio: '1 / 1',
+    background: `linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue + 50) % 360},72%,48%))`
+  };
+  if (zoomable) return /*#__PURE__*/React.createElement("button", _extends({
+    type: "button"
+  }, marked ? {
+    'data-rhythm-song-art': ''
+  } : {}, {
+    "data-rhythm-song-art-zoom": true,
+    onClick: onZoom,
+    "aria-label": `${rhythmSongFullName(song)}のジャケットを大きく見る`,
+    className: shape,
+    style: box
+  }), inner);
+  return /*#__PURE__*/React.createElement("span", _extends({}, marked ? {
+    'data-rhythm-song-art': ''
+  } : {}, {
+    className: shape,
+    style: box
+  }), inner);
 };
 
 // 曲の長さ。譜面の終わりか、曲の再生時間の指定から出す。
@@ -17564,6 +17597,9 @@ const RhythmSongSelect = ({
   };
   const state = normalizeRhythmSelectView(view);
   const [sortOpen, setSortOpen] = React.useState(false);
+  // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
+  // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
+  const [artZoom, setArtZoom] = React.useState(false);
   const playable = (songs || []).filter(song => (difficulties || []).some(difficulty => rhythmChartPlayable(song, difficulty.id)));
   const setSongId = id => {
     if (typeof onSongId === 'function') onSongId(id);
@@ -17846,7 +17882,8 @@ const RhythmSongSelect = ({
     className: "w-16 shrink-0 landscape:mx-auto landscape:w-36"
   }, /*#__PURE__*/React.createElement(RhythmSongArt, {
     song: song,
-    large: true
+    large: true,
+    onZoom: () => setArtZoom(true)
   })), /*#__PURE__*/React.createElement("div", {
     className: "min-w-0 flex-1 landscape:mt-2 landscape:text-center"
   }, /*#__PURE__*/React.createElement("b", {
@@ -17915,7 +17952,43 @@ const RhythmSongSelect = ({
     "data-rhythm-demo-start": difficulty.id,
     onClick: () => onPlay(song, difficulty),
     className: "min-h-[48px] flex-1 rounded-xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-base font-black text-white"
-  }, "\u6C7A\u5B9A")), typeof footer === 'function' ? footer(song, difficulty) : footer)), sortOpen && /*#__PURE__*/React.createElement("div", {
+  }, "\u6C7A\u5B9A")), typeof footer === 'function' ? footer(song, difficulty) : footer)), artZoom && song && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-song-art-modal": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${rhythmSongFullName(song)}のジャケット`,
+    className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-4",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.92)',
+      zIndex: 9000,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    onClick: () => setArtZoom(false)
+  }, /*#__PURE__*/React.createElement("img", {
+    src: typeof rhythmSongArtSrc !== 'undefined' ? rhythmSongArtSrc(song) : song.artwork,
+    alt: `${rhythmSongFullName(song)}のジャケット`,
+    onClick: e => e.stopPropagation(),
+    className: "max-h-[74vh] w-auto max-w-[92vw] rounded-2xl border border-white/25 object-contain",
+    style: {
+      maxHeight: '74vh',
+      maxWidth: '92vw'
+    }
+  }), /*#__PURE__*/React.createElement("b", {
+    className: "mt-3 max-w-[92vw] text-center text-sm font-black leading-tight text-white"
+  }, rhythmSongFullName(song)), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-rhythm-song-art-close": true,
+    onClick: () => setArtZoom(false),
+    className: "mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white",
+    style: {
+      minHeight: '52px'
+    }
+  }, "\u3068\u3058\u308B")), sortOpen && /*#__PURE__*/React.createElement("div", {
     "data-rhythm-sort-sheet": true,
     className: "fixed inset-0 z-[9000] flex items-end justify-center",
     style: {

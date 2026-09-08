@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2f272c67039b1886
+// generated-sha256: 4c43aad545189720
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 12:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 13:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2528,6 +2528,8 @@ const BGM_TRACKS = [
   { id:'melo_4u_hitasura', name:'4U ～ひたすら～', creator:'オリジナル', src:'audio/bgm-4u-hitasura.mp3', gain:1, loop:true },
   // モンビーの新曲(2026-09-07)。同じくmp4で受け取った音源から映像を落として入れたもの
   { id:'melo_kindan_no_resistance', name:'禁断のレジスタンス', creator:'オリジナル', src:'audio/bgm-kindan-no-resistance.mp3', gain:1, loop:true },
+  // モンビーの新曲(2026-09-08)。同じくmp4で受け取った音源から映像を落として入れたもの
+  { id:'melo_crossing_field', name:'crossing field', creator:'オリジナル', src:'audio/bgm-crossing-field.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -9817,17 +9819,28 @@ const centerCarouselChild = (root, index, behavior = 'auto') => {
 
 // marked=false は「輪にするために置いた影の行」で使う。同じ目印が3つに増えると、
 // 画面を数えて確かめている検査が本物の3倍を見てしまうため、影には目印を付けない。
-const RhythmSongArt=({song,large=false,marked=true})=>{
+// onZoom を渡すと、絵のある曲だけ「押せる絵」になる(押すと拡大して見られる)。
+// 一覧の行は曲を選ぶボタンそのものなので、渡さない(ボタンの中にボタンは置けない)。
+const RhythmSongArt=({song,large=false,marked=true,onZoom=null})=>{
   const hue=rhythmSongArtHue(song&&song.songId);
   const src=typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):(song&&typeof song.artwork==='string'?song.artwork:'');
   const initial=String((song&&song.displayName)||'♪').trim().charAt(0)||'♪';
-  return <span {...(marked?{'data-rhythm-song-art':''}:{})} className={`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full':'w-12'}`}
-    style={{aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`}}>
+  const zoomable=!!src&&typeof onZoom==='function';
+  const inner=<>
     {src
       ?<img src={src} alt="" className="absolute inset-0 h-full w-full object-cover"/>
       :<b aria-hidden="true" className={`absolute inset-0 flex items-center justify-center font-black text-white/90 ${large?'text-5xl':'text-xl'}`}
         style={{textShadow:'0 2px 8px rgba(2,6,23,.55)'}}>{initial}</b>}
-  </span>;
+    {/* 押せることが見て分かるように、右下に小さな虫めがねを出す */}
+    {zoomable&&<i aria-hidden="true" className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-slate-950/70 text-[10px] leading-none"
+      style={{backgroundColor:'rgba(2,6,23,.7)'}}>🔍</i>}
+  </>;
+  const shape=`relative block shrink-0 overflow-hidden rounded-lg border border-white/20 ${large?'w-full':'w-12'}`;
+  const box={aspectRatio:'1 / 1',background:`linear-gradient(135deg,hsl(${hue},66%,28%),hsl(${(hue+50)%360},72%,48%))`};
+  if(zoomable)return <button type="button" {...(marked?{'data-rhythm-song-art':''}:{})} data-rhythm-song-art-zoom
+    onClick={onZoom} aria-label={`${rhythmSongFullName(song)}のジャケットを大きく見る`}
+    className={shape} style={box}>{inner}</button>;
+  return <span {...(marked?{'data-rhythm-song-art':''}:{})} className={shape} style={box}>{inner}</span>;
 };
 
 // 曲の長さ。譜面の終わりか、曲の再生時間の指定から出す。
@@ -9909,6 +9922,9 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
   const setView=next=>{if(typeof onView==='function')onView(next);};
   const state=normalizeRhythmSelectView(view);
   const [sortOpen,setSortOpen]=React.useState(false);
+  // ジャケットを大きく見ているか(2026-09-08・ユーザー指示「モンビー中のジャケットをタップすると拡大画像が見れるように」)。
+  // 画面(gameState)は増やさない。曲えらびの上に重ねるだけなので、閉じれば元の場所に戻る。
+  const [artZoom,setArtZoom]=React.useState(false);
   const playable=(songs||[]).filter(song=>(difficulties||[]).some(difficulty=>rhythmChartPlayable(song,difficulty.id)));
   const setSongId=id=>{if(typeof onSongId==='function')onSongId(id);};
   const setDifficultyId=id=>{if(typeof onDifficultyId==='function')onDifficultyId(id);};
@@ -10119,7 +10135,7 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
         ?<p className="text-xs font-bold text-slate-400">遊べる曲がありません。</p>
         :<>
         <div className="flex items-center gap-3 landscape:block">
-          <div className="w-16 shrink-0 landscape:mx-auto landscape:w-36"><RhythmSongArt song={song} large/></div>
+          <div className="w-16 shrink-0 landscape:mx-auto landscape:w-36"><RhythmSongArt song={song} large onZoom={()=>setArtZoom(true)}/></div>
           {/* ここも一覧と同じ理由で2行分を確保する。曲名が1行か2行かで
               「長さ」「難易度ボタン」「ノーツ数」まで丸ごと上下に動いていた。 */}
           <div className="min-w-0 flex-1 landscape:mt-2 landscape:text-center">
@@ -10181,6 +10197,21 @@ const RhythmSongSelect=({songs,difficulties,bestRecords,onPlay,notice=null,foote
 
     {/* 並び替えのシート。行を1本増やさずに済むよう、選ぶところは下から出す。
         並びを変えても、選んでいる曲・難易度・自己ベスト・全国ランキングは何も変わらない。 */}
+    {/* ジャケットの拡大。曲えらびの上に重ねるだけで、選んでいる曲・難易度・再生中の曲は動かさない。
+        Tailwindが遅れて届いても真っ黒の背景と中央寄せだけは効くよう、位置と色は style にも書く。 */}
+    {artZoom&&song&&<div data-rhythm-song-art-modal role="dialog" aria-modal="true" aria-label={`${rhythmSongFullName(song)}のジャケット`}
+      className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-4"
+      style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:9000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}
+      onClick={()=>setArtZoom(false)}>
+      <img src={typeof rhythmSongArtSrc!=='undefined'?rhythmSongArtSrc(song):song.artwork} alt={`${rhythmSongFullName(song)}のジャケット`}
+        onClick={e=>e.stopPropagation()}
+        className="max-h-[74vh] w-auto max-w-[92vw] rounded-2xl border border-white/25 object-contain"
+        style={{maxHeight:'74vh',maxWidth:'92vw'}}/>
+      <b className="mt-3 max-w-[92vw] text-center text-sm font-black leading-tight text-white">{rhythmSongFullName(song)}</b>
+      <button type="button" data-rhythm-song-art-close onClick={()=>setArtZoom(false)}
+        className="mt-3 min-h-[52px] w-full max-w-xs rounded-xl bg-slate-700 text-sm font-black text-white"
+        style={{minHeight:'52px'}}>とじる</button>
+    </div>}
     {sortOpen&&<div data-rhythm-sort-sheet className="fixed inset-0 z-[9000] flex items-end justify-center"
       style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.72)',zIndex:9000}}
       onClick={()=>setSortOpen(false)}>
