@@ -7403,7 +7403,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       try {
         // await中に保存まで完了する。素材不足の個体は既存判定がスキップするだけなので周回を止めない。
         if(!autoRepeatRef.current||!isQuickMode(runMode)||document.visibilityState==='hidden')return;
-        await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
+        const breakthroughResult = await executeAutoRepeatBreakthroughs(autoRepeatBondAwardMasuIdsRef.current);
+        // 素材不足・残高保護は「その個体を見送る」だけで周回継続。
+        // ただし保存失敗はデータ整合性の問題なので、そのまま次周へ進めずAUTO∞を止める。
+        if(breakthroughResult?.saveFailed){stopAllAuto('error');return;}
         if(!autoRepeatRef.current||!isQuickMode(runMode)||document.visibilityState==='hidden')return;
         // ∞周回の途中なら周回テンプレートが必ずあるので、ここでの動きは今までどおり。
         // テンプレートが失われていたときだけ、AUTO設定の事前設定で続けられる
