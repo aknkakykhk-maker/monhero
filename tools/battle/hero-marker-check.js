@@ -41,12 +41,17 @@ check('配信用JSにも王冠が入っている', compiled.includes('isHeroSlot
 
 // --- ③ 同時使用枚数の加算 ---
 check('勇者特性の加算を1か所で決めている',
-  has("const heroCardBonus = useMemo(() => (mainHero?.id === 'Ham' ? 1 : 0), [mainHero]);"));
+  has("const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);"));
+// 対象の種は一覧で持つ。同じ効果(ハムの「連続攻撃」・剣士モッチーの「二刀流」)を
+// 種ごとの分岐でコピーすると、増えるたびに手動とAUTOで食い違う元になる
+check('加算する種を一覧で持っている(種ごとの分岐にしていない)',
+  has("const HERO_CARD_BONUS_MONSTER_IDS = Object.freeze(['Ham', 'KenshiMocchi']);")
+  && has("const heroCardBonusOf = (heroId) => (HERO_CARD_BONUS_MONSTER_IDS.includes(heroId) ? 1 : 0);"));
 check('枚数の計算がその値を使う',
   // きき加入後は、ききの枚数ボーナスも同じ場所で足す
   has('limit += heroCardBonus + kikiCardBonus;') && has('}, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);'));
 check('計算と別に条件を書き足していない',
-  !has("if (mainHero?.id === 'Ham') limit += 1;"));
+  !has("if (mainHero?.id === 'Ham') limit += 1;") && !has("if (mainHero?.id === 'KenshiMocchi') limit += 1;"));
 check('増えていることを画面にも出す',
   // バッジは横並びの中で潰れないよう shrink-0 が付いた
   has('{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}'));

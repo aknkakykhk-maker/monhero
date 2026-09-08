@@ -721,11 +721,16 @@ check('間の取り方は plan を読むだけで書き換えない',
 // --- 攻撃モーション(通常バトルからの流用) ---
 // モーションの種類は通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion から決める。
 // RPG用に別のモーションデータを持たないので、モンスターを足しても更新漏れが起きない
-check('モーションの種類は通常バトルと同じ atkMotion から決める',
-  source.includes("const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', pandoraDualThunder:'Thunder' });")
-  && source.includes('RPG_MOTION_BY_ATK[ALL_PLAYER_MONSTERS[monId]?.atkMotion]'));
 const atkMotionKinds = [...new Set(Object.values(R.ALL_PLAYER_MONSTERS).map(m => m.atkMotion))];
 const motionMap = (source.match(/const RPG_MOTION_BY_ATK = Object\.freeze\(\{([^}]*)\}\)/) || [])[1] || '';
+// 対応表の中身を丸ごと写さない。モンスターを1体足して1行増えるだけで、割り当てが何も変わって
+// いなくてもここが落ちるため(実際に剣士モッチーを足したとき落ちた)。
+// 見たいのは「対応表から引いているか」と「既存の割り当てが変わっていないか」の2つ
+check('モーションの種類は通常バトルと同じ atkMotion から決める',
+  !!motionMap && source.includes('RPG_MOTION_BY_ATK[ALL_PLAYER_MONSTERS[monId]?.atkMotion]'));
+check('既存モンスターの割り当ては変えていない',
+  ["default:'Attack'", "floatStab:'Float'", "waterBurst:'Water'", "zanCombo:'Dash'", "eikiSakuraCombo:'Dash'", "pandoraDualThunder:'Thunder'"]
+    .every(pair => motionMap.includes(pair)), motionMap.trim());
 check('本編にある atkMotion がすべて対応表に載っている',
   atkMotionKinds.every(kind => motionMap.includes(`${kind}:`)),
   `本編 ${atkMotionKinds.join(' / ')}`);

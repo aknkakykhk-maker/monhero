@@ -53,9 +53,19 @@ const effectRegion = (() => {
 check('固有技の効果を書いている範囲を取り出せる', !!effectRegion);
 if (!effectRegion) { console.log('\n1件のNGがあります'); process.exit(1); }
 const branchOf = (monId) => {
-  // 1行で書かれているので、その行末までで足りる
-  const m = effectRegion.match(new RegExp(`card\\.monId==='${monId}'[^\\n]*`));
-  return m ? m[0] : null;
+  // 多くは1行で書かれているが、剣士モッチーのように複数行の分岐もあるので、
+  // 対応する } までを波括弧の対応で取る(行末までにすると2行目以降を見落とす)
+  const m = effectRegion.match(new RegExp(`card\\.monId==='${monId}'`));
+  if (!m) return null;
+  const start = m.index;
+  const brace = effectRegion.indexOf('{', start);
+  if (brace < 0) return effectRegion.slice(start).split('\n')[0];
+  let depth = 0;
+  for (let i = brace; i < effectRegion.length; i++) {
+    if (effectRegion[i] === '{') depth++;
+    else if (effectRegion[i] === '}') { depth--; if (depth === 0) return effectRegion.slice(start, i + 1); }
+  }
+  return effectRegion.slice(start);
 };
 
 // 効果の「意味」まで見るために、実装で使っている関数とキーを明示的に突き合わせる。
@@ -99,6 +109,18 @@ const RULES = [
     impl: [{ re: /addPermaBuff\('comboDmgPct',([\d.]+)\*effMul\)/, mustSay: '連撃ダメージ', unit: '%', note: '連撃ダメージの増加' }],
     forbid: [],
   },
+  {
+    // 剣士モッチーのソードスキルは、ザンの連斬・エイキの緋桜連華と同じ comboDmgPct へ積む。
+    // 連撃パワーと永久追加連撃は割合ではないので、ここでは説明文に載っているかだけを見る
+    // (数値の実測は tools/monster/kenshi-mocchi-check.js がヒット列から行う)
+    monId: 'KenshiMocchi', label: '剣士モッチー(ソニック・リープ)',
+    impl: [{ re: /addPermaBuff\('comboDmgPct',([\d.]+)\*effMul\)/, mustSay: '連撃ダメージ', unit: '%', note: '連撃ダメージの増加' }],
+    forbid: [
+      { re: /addPermaBuff\('dmgCutPct'/, why: '剣士モッチーはモッチー系の被ダメージ軽減を持たない(攻撃特化)' },
+      { re: /kenshiComboPower[^\n]*\*effMul/, why: '連撃パワーは回数なので2枚目でも半減させない' },
+    ],
+    mustSayExtra: ['連撃パワー', '上限なし'],
+  },
 ];
 
 // 説明文に「その数字」がパーセントとして出てくるか。3% / 7.5% / 10% のいずれの書き方でも拾う
@@ -126,6 +148,11 @@ for (const rule of RULES) {
   }
   for (const f of rule.forbid) {
     check(`${rule.label}: ${f.why}`, !f.re.test(branch), branch.match(f.re)?.[0] || '');
+  }
+  // 割合では表せない要素(回数の積み上げ・上限の有無など)は、説明文に載っているかだけを見る。
+  // 数値そのものの検証は種ごとの専用checkが行う
+  for (const word of (rule.mustSayExtra || [])) {
+    check(`${rule.label}: 説明文が「${word}」に触れている`, desc.includes(word), desc);
   }
   // 値の定義元(localBoostFromCard)を、processTurnのこの分岐が実際に参照していること。
   // 定義と参照が別の場所にあるので、繋がりが切れていないかをここで確かめる
