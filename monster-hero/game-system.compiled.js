@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 16d57598e74f8717
+// source-sha256: 7d6cb840ee66cf66
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2c0b3d4bf8052549
+// generated-sha256: 0747905504ad1fb4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 22:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-09 00:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14150,9 +14150,9 @@ const attackMotionAnimation = anim => {
   if (anim.motion === 'pandoraDualThunder') return undefined;
   // エイキはザンと同じ高速斬撃の動き(zanComboDash)をそのまま使う。
   // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
-  // 剣士モッチーの二刀流は、ザンの残像ダッシュとは別の「X字に振り抜く」動き。
-  // 斬撃の軌跡(KenshiTwinSlash)は枠を動かすのではなく、攻撃中だけ重ねて出す
-  if (anim.twinBlade) return 'kenshiTwinBladeSlash 420ms ease-out forwards';
+  // 剣士モッチーは敵まで高速で斬り込み、二度通り抜けてX字を完成させる専用モーション。
+  // KenshiTwinSlash は斬撃・速度線・決めの閃光を攻撃中だけ重ねる。
+  if (anim.twinBlade || anim.motion === 'kenshiTwinBlade') return 'kenshiTwinBladeSlash 560ms cubic-bezier(.18,.76,.2,1) forwards';
   if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
   if (anim.charge) return 'specialCharge 650ms ease-out forwards';
   if (anim.charge === false) return anim.motion === 'floatStab' ? 'floatStabLunge 700ms ease-in forwards' : anim.motion === 'waterBurst' ? 'waterBurstLunge 520ms ease-out forwards' : 'specialLunge 500ms ease-in forwards';
@@ -14376,31 +14376,128 @@ const EikiSakuraPetals = () => /*#__PURE__*/React.createElement("span", {
     '--eiki-petal-spin': petal.spin
   }
 })));
-// 剣士モッチーの二刀流の斬撃軌跡。攻撃モーションが出ているあいだだけ重ねる
-// (エイキの花びらと同じ考え方で、常時アニメーションにはしない)。
-// ＼と／の2本だけで、要素2枚・CSSアニメーション1本に抑えてある。
+// 剣士モッチーの二刀流演出。
+// 本体は kenshiTwinBladeSlash で敵まで高速移動し、ここでは斬撃・速度線・X字の決め演出だけを重ねる。
+// 常時DOMは増やさず、攻撃中だけ描画する。永久追加連撃が何本に増えても、この演出自体は1攻撃1セット。
 const KENSHI_TWIN_SLASHES = Object.freeze([{
   angle: '-38deg',
-  delay: '100ms',
-  color: 'rgba(167,139,250,.95)'
+  delay: '135ms',
+  color: 'rgba(139,92,246,.98)',
+  origin: '90% 50%',
+  sweepX: '-18px'
 },
-// 1撃目 ＼(右上→左下)
+// 1撃目 ＼
 {
   angle: '38deg',
-  delay: '270ms',
-  color: 'rgba(103,232,249,.95)'
-} // 2撃目 ／(左上→右下)
+  delay: '315ms',
+  color: 'rgba(34,211,238,.98)',
+  origin: '10% 50%',
+  sweepX: '18px'
+} // 2撃目 ／
 ]);
+const KENSHI_TWIN_SPEED_LINES = Object.freeze([{
+  left: '8%',
+  top: '72%',
+  delay: '35ms',
+  angle: '-20deg',
+  travelX: '-38px',
+  travelY: '-118px',
+  width: '74px'
+}, {
+  left: '26%',
+  top: '82%',
+  delay: '70ms',
+  angle: '-14deg',
+  travelX: '20px',
+  travelY: '-138px',
+  width: '92px'
+}, {
+  left: '68%',
+  top: '78%',
+  delay: '238ms',
+  angle: '18deg',
+  travelX: '-18px',
+  travelY: '-132px',
+  width: '88px'
+}, {
+  left: '82%',
+  top: '66%',
+  delay: '270ms',
+  angle: '24deg',
+  travelX: '34px',
+  travelY: '-116px',
+  width: '68px'
+}]);
+const KENSHI_TWIN_SHARDS = Object.freeze([{
+  x: '-76px',
+  y: '-42px',
+  angle: '-34deg',
+  delay: '0ms'
+}, {
+  x: '-54px',
+  y: '38px',
+  angle: '24deg',
+  delay: '12ms'
+}, {
+  x: '-18px',
+  y: '-70px',
+  angle: '-8deg',
+  delay: '22ms'
+}, {
+  x: '28px',
+  y: '-62px',
+  angle: '18deg',
+  delay: '8ms'
+}, {
+  x: '60px',
+  y: '-28px',
+  angle: '36deg',
+  delay: '18ms'
+}, {
+  x: '72px',
+  y: '34px',
+  angle: '52deg',
+  delay: '28ms'
+}]);
 const KenshiTwinSlash = () => /*#__PURE__*/React.createElement("span", {
   className: "kenshi-twin-slash",
   "aria-hidden": "true"
 }, KENSHI_TWIN_SLASHES.map((blade, index) => /*#__PURE__*/React.createElement("span", {
-  key: index,
+  key: `blade-${index}`,
   className: "kenshi-twin-slash__blade",
   style: {
     '--kenshi-slash-angle': blade.angle,
     '--kenshi-slash-delay': blade.delay,
-    '--kenshi-slash-color': blade.color
+    '--kenshi-slash-color': blade.color,
+    '--kenshi-slash-origin': blade.origin,
+    '--kenshi-slash-sweep-x': blade.sweepX
+  }
+})), KENSHI_TWIN_SPEED_LINES.map((line, index) => /*#__PURE__*/React.createElement("span", {
+  key: `speed-${index}`,
+  className: "kenshi-twin-slash__speed",
+  style: {
+    left: line.left,
+    top: line.top,
+    width: line.width,
+    '--kenshi-speed-delay': line.delay,
+    '--kenshi-speed-angle': line.angle,
+    '--kenshi-speed-x': line.travelX,
+    '--kenshi-speed-y': line.travelY
+  }
+})), /*#__PURE__*/React.createElement("span", {
+  className: "kenshi-twin-slash__impact"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "kenshi-twin-slash__impact-core"
+}), /*#__PURE__*/React.createElement("span", {
+  className: "kenshi-twin-slash__impact-ring"
+})), KENSHI_TWIN_SHARDS.map((shard, index) => /*#__PURE__*/React.createElement("span", {
+  key: `shard-${index}`,
+  className: "kenshi-twin-slash__shard",
+  style: {
+    '--kenshi-shard-x': shard.x,
+    '--kenshi-shard-y': shard.y,
+    '--kenshi-shard-angle': shard.angle,
+    '--kenshi-shard-delay': shard.delay
   }
 })));
 const PandoraDualThunder = ({
@@ -30838,8 +30935,20 @@ function MonsterHeroGame() {
                 twinBlade: isTwinBlade,
                 sakura: hitMotion === 'eikiSakuraCombo'
               });
-              Audio_.se.zanSlash(); // ザン系の高めなシュシュ音(エイキ・剣士モッチーも同じ音を使う)
-              await battleWait(hitMotion === 'eikiSakuraCombo' ? 500 : isTwinBlade ? 420 : 320);
+              if (isTwinBlade) {
+                // 1撃目＼→2撃目／へSEを合わせ、X字完成時だけ短い画面シェイクを入れる。
+                // 追加連撃の本数に関係なく、この560msを1攻撃につき1回だけ流す。
+                await battleWait(135);
+                Audio_.se.zanSlash();
+                await battleWait(180);
+                Audio_.se.zanSlash();
+                await battleWait(115);
+                triggerShake();
+                await battleWait(130);
+              } else {
+                Audio_.se.zanSlash(); // ザン/エイキの既存SEと尺は変えない
+                await battleWait(hitMotion === 'eikiSakuraCombo' ? 500 : 320);
+              }
               setAttackAnim(null);
               setSlotSkill(null);
               await battleWait(100);
@@ -30886,21 +30995,45 @@ function MonsterHeroGame() {
               });
               Audio_.se.special();
               await battleWait(650);
+              const isKenshiTwin = motion === 'kenshiTwinBlade';
               setAttackAnim({
                 slotIndex: animSlot,
                 charge: false,
                 motion,
+                twinBlade: isKenshiTwin,
                 sakura: motion === 'eikiSakuraCombo'
               });
-              await battleWait(motion === 'pandoraDualThunder' ? 900 : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? 520 : 500);
+              if (isKenshiTwin) {
+                await battleWait(135);
+                Audio_.se.zanSlash();
+                await battleWait(180);
+                Audio_.se.zanSlash();
+                await battleWait(115);
+                triggerShake();
+                await battleWait(130);
+              } else {
+                await battleWait(motion === 'pandoraDualThunder' ? 900 : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? 520 : 500);
+              }
             } else {
+              const isKenshiTwin = motion === 'kenshiTwinBlade';
               setAttackAnim({
                 slotIndex: animSlot,
                 motion,
+                twinBlade: isKenshiTwin,
                 sakura: motion === 'eikiSakuraCombo'
               });
-              if (hit.isSpecial) Audio_.se.special();else if (hit.isCrit) Audio_.se.crit();else Audio_.se.attack();
-              await battleWait(motion === 'pandoraDualThunder' ? 900 : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? 520 : 450);
+              if (isKenshiTwin) {
+                await battleWait(135);
+                Audio_.se.zanSlash();
+                await battleWait(180);
+                Audio_.se.zanSlash();
+                await battleWait(115);
+                triggerShake();
+                await battleWait(130);
+              } else {
+                if (hit.isSpecial) Audio_.se.special();else if (hit.isCrit) Audio_.se.crit();else Audio_.se.attack();
+                await battleWait(motion === 'pandoraDualThunder' ? 900 : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? 520 : 450);
+              }
             }
             setAttackAnim(null);
             setSlotSkill(null);
@@ -41644,7 +41777,7 @@ function MonsterHeroGame() {
             twinBlade: isTwin,
             sakura: atkMotion === 'eikiSakuraCombo'
           });
-          await new Promise(r => setTimeout(r, atkMotion === 'eikiSakuraCombo' ? 500 : isTwin ? 420 : 320));
+          await new Promise(r => setTimeout(r, atkMotion === 'eikiSakuraCombo' ? 500 : isTwin ? 560 : 320));
         } else {
           setMonsterImageDebugMotionPlaying({
             charge: false,
@@ -51847,88 +51980,232 @@ const createAnimationStyle = () => {
         0% { opacity: 0; } 30% { opacity: .9; } 100% { opacity: 0; }
       }
     }
-    /* 剣士モッチーの二刀流。1撃目を右上→左下(＼)、2撃目を左上→右下(／)へ振り抜き、
-       2本合わせてX字になるようにする。ザンの残像ダッシュと違って移動は小さく、
-       体をひねって踏み込むだけにしてある(丸い体型を崩さないため)。
-       連撃が何本あってもこのモーションは1回しか流さない(ヒットの束は
-       60-app.jsx の isComboDashMotion がまとめて処理する)ので、
-       永久追加連撃が増えてもターンの長さは変わらない。 */
+    /* 剣士モッチーの二刀流。
+       その場で小さく振る旧演出ではなく、いったん沈んでから敵位置まで高速で斬り込み、
+       ＼で通り抜け→反転→／で切り返し→敵位置で巨大X字を光らせて帰還する。
+       本体の残像は画像複製ではなく drop-shadow で軽く作り、追加DOMは攻撃中の固定要素だけ。
+       永久追加連撃が増えても本体フルモーションは1攻撃1セットなので戦闘時間は増えない。 */
     @keyframes kenshiTwinBladeSlash {
       0% {
-        transform: translate(0,0) scale(1) rotate(0deg);
-        filter: drop-shadow(0 0 4px rgba(148,163,184,0.45));
+        transform: translate3d(0,0,0) scale(1) rotate(0deg);
+        filter: drop-shadow(0 0 4px rgba(148,163,184,.45));
       }
-      14% {
-        /* 右上へ小さく踏み込んで構える */
-        transform: translate(26px,-16px) scale(1.06) rotate(-9deg);
-        filter: drop-shadow(0 0 12px rgba(167,139,250,0.85));
+      9% {
+        transform: translate3d(0,10px,0) scale(.95) rotate(-3deg);
+        filter: drop-shadow(0 0 13px rgba(139,92,246,.9)) drop-shadow(0 0 18px rgba(34,211,238,.72));
       }
-      34% {
-        /* 1撃目 ＼ : 右上から左下へ振り抜く */
-        transform: translate(-34px,18px) scale(1.1) rotate(11deg);
-        filter: drop-shadow(30px -18px 0 rgba(167,139,250,0.34)) drop-shadow(0 0 18px rgba(196,181,253,0.95));
+      23% {
+        transform: translate3d(68px,-116px,0) scale(1.11) rotate(-13deg) skewX(-8deg);
+        filter:
+          drop-shadow(-28px 42px 0 rgba(139,92,246,.34))
+          drop-shadow(-54px 78px 0 rgba(139,92,246,.16))
+          drop-shadow(0 0 22px rgba(196,181,253,.98));
       }
-      52% {
-        /* 左上へ返す */
-        transform: translate(-26px,-16px) scale(1.06) rotate(9deg);
-        filter: drop-shadow(0 0 14px rgba(103,232,249,0.8));
+      36% {
+        transform: translate3d(-86px,-188px,0) scale(1.17) rotate(17deg) skewX(10deg);
+        filter:
+          drop-shadow(38px 8px 0 rgba(139,92,246,.38))
+          drop-shadow(82px 24px 0 rgba(139,92,246,.16))
+          drop-shadow(0 0 28px rgba(255,255,255,.98));
       }
-      74% {
-        /* 2撃目 ／ : 左上から右下へ振り抜く */
-        transform: translate(34px,18px) scale(1.1) rotate(-11deg);
-        filter: drop-shadow(-30px -18px 0 rgba(103,232,249,0.34)) drop-shadow(0 0 20px rgba(255,255,255,0.95));
+      47% {
+        transform: translate3d(-92px,-178px,0) scale(.98) rotate(10deg) skewX(0deg);
+        filter: drop-shadow(0 0 16px rgba(139,92,246,.72));
       }
-      88% {
-        transform: translate(0,0) scale(1.02) rotate(0deg);
-        filter: drop-shadow(0 0 16px rgba(255,255,255,0.85));
+      59% {
+        transform: translate3d(-58px,-126px,0) scale(1.08) rotate(12deg) skewX(7deg);
+        filter:
+          drop-shadow(30px 38px 0 rgba(34,211,238,.32))
+          drop-shadow(58px 72px 0 rgba(34,211,238,.14))
+          drop-shadow(0 0 22px rgba(103,232,249,.95));
+      }
+      72% {
+        transform: translate3d(90px,-188px,0) scale(1.17) rotate(-18deg) skewX(-10deg);
+        filter:
+          drop-shadow(-40px 8px 0 rgba(34,211,238,.4))
+          drop-shadow(-84px 24px 0 rgba(34,211,238,.17))
+          drop-shadow(0 0 30px rgba(255,255,255,1));
+      }
+      78%, 86% {
+        transform: translate3d(0,-170px,0) scale(1.12) rotate(0deg) skewX(0deg);
+        filter: drop-shadow(0 0 30px rgba(255,255,255,1)) drop-shadow(0 0 42px rgba(103,232,249,.75));
+      }
+      93% {
+        transform: translate3d(0,-54px,0) scale(1.04) rotate(0deg);
+        filter: drop-shadow(0 24px 0 rgba(255,255,255,.16)) drop-shadow(0 0 18px rgba(196,181,253,.75));
       }
       100% {
-        transform: translate(0,0) scale(1) rotate(0deg);
+        transform: translate3d(0,0,0) scale(1) rotate(0deg);
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
     }
-    /* 斬撃の軌跡。＼と／の2本だけを重ねてX字にする。要素2枚・@keyframes1本に抑える */
+
     .kenshi-twin-slash {
-      position: absolute;
-      inset: 0;
-      overflow: visible;
-      pointer-events: none;
-      z-index: 21;
+      position:absolute;
+      inset:0;
+      overflow:visible;
+      pointer-events:none;
+      z-index:24;
+      isolation:isolate;
     }
     .kenshi-twin-slash__blade {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 104px;
-      height: 7px;
-      margin: -3.5px 0 0 -52px;
-      opacity: 0;
-      border-radius: 999px;
-      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.95) 42%, var(--kenshi-slash-color) 72%, rgba(255,255,255,0) 100%);
-      box-shadow: 0 0 10px var(--kenshi-slash-color);
-      will-change: transform, opacity;
-      /* 本体モーション(420ms)のうち、1撃目の振り抜き(34%≒143ms)と
-         2撃目(74%≒311ms)へ軌跡の濃いところが重なるよう、遅れと長さを合わせてある。
-         2本とも420ms以内に消えるので、モーションが終わった瞬間に軌跡が途中で切れることはない */
-      animation: kenshiTwinSlashSweep 150ms ease-out forwards;
-      animation-delay: var(--kenshi-slash-delay);
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:190px;
+      height:16px;
+      margin:-8px 0 0 -95px;
+      opacity:0;
+      border-radius:999px;
+      clip-path:polygon(0 50%,10% 22%,78% 0,100% 50%,78% 100%,10% 78%);
+      transform-origin:var(--kenshi-slash-origin);
+      background:linear-gradient(90deg,
+        rgba(255,255,255,0) 0%,
+        var(--kenshi-slash-color) 20%,
+        rgba(255,255,255,1) 49%,
+        var(--kenshi-slash-color) 76%,
+        rgba(255,255,255,0) 100%);
+      box-shadow:
+        0 0 5px rgba(255,255,255,.98),
+        0 0 15px var(--kenshi-slash-color),
+        0 0 30px var(--kenshi-slash-color);
+      will-change:transform,opacity;
+      animation:kenshiTwinSlashSweep 210ms cubic-bezier(.08,.82,.18,1) forwards;
+      animation-delay:var(--kenshi-slash-delay);
+    }
+    .kenshi-twin-slash__blade::before {
+      content:'';
+      position:absolute;
+      left:6%;
+      right:6%;
+      top:50%;
+      height:4px;
+      transform:translateY(-50%);
+      border-radius:999px;
+      background:linear-gradient(90deg,transparent,#fff 18%,#fff 82%,transparent);
+      box-shadow:0 0 7px #fff;
+    }
+    .kenshi-twin-slash__blade::after {
+      content:'';
+      position:absolute;
+      inset:-9px -4px;
+      border-radius:999px;
+      background:linear-gradient(90deg,transparent,var(--kenshi-slash-color),transparent);
+      opacity:.48;
+      filter:blur(8px);
+      z-index:-1;
     }
     @keyframes kenshiTwinSlashSweep {
-      0%   { opacity: 0; transform: rotate(var(--kenshi-slash-angle)) scaleX(.15); }
-      22%  { opacity: 1; transform: rotate(var(--kenshi-slash-angle)) scaleX(1.05); }
-      58%  { opacity: .85; transform: rotate(var(--kenshi-slash-angle)) scaleX(1.15); }
-      100% { opacity: 0; transform: rotate(var(--kenshi-slash-angle)) scaleX(1.25); }
+      0% {
+        opacity:0;
+        transform:translate3d(0,-16px,0) rotate(var(--kenshi-slash-angle)) scaleX(.06) scaleY(.55);
+      }
+      18% { opacity:1; }
+      46% {
+        opacity:1;
+        transform:translate3d(0,0,0) rotate(var(--kenshi-slash-angle)) scaleX(1.04) scaleY(1.08);
+      }
+      72% {
+        opacity:.92;
+        transform:translate3d(var(--kenshi-slash-sweep-x),8px,0) rotate(var(--kenshi-slash-angle)) scaleX(1.18) scaleY(.94);
+      }
+      100% {
+        opacity:0;
+        transform:translate3d(var(--kenshi-slash-sweep-x),14px,0) rotate(var(--kenshi-slash-angle)) scaleX(1.28) scaleY(.55);
+      }
     }
-    /* 動きを減らす設定の端末では、振り抜きも軌跡も動かさず淡く光らせるだけにする */
+
+    .kenshi-twin-slash__speed {
+      position:absolute;
+      height:2px;
+      opacity:0;
+      border-radius:999px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.92),rgba(103,232,249,.8),transparent);
+      box-shadow:0 0 7px rgba(103,232,249,.72);
+      transform-origin:0 50%;
+      will-change:transform,opacity;
+      animation:kenshiTwinSpeedLine 250ms ease-out forwards;
+      animation-delay:var(--kenshi-speed-delay);
+    }
+    @keyframes kenshiTwinSpeedLine {
+      0% { opacity:0; transform:rotate(var(--kenshi-speed-angle)) translate3d(0,0,0) scaleX(.25); }
+      24% { opacity:.9; }
+      72% { opacity:.72; transform:rotate(var(--kenshi-speed-angle)) translate3d(var(--kenshi-speed-x),var(--kenshi-speed-y),0) scaleX(1.15); }
+      100% { opacity:0; transform:rotate(var(--kenshi-speed-angle)) translate3d(var(--kenshi-speed-x),var(--kenshi-speed-y),0) scaleX(1.35); }
+    }
+
+    .kenshi-twin-slash__impact {
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:34px;
+      height:34px;
+      margin:-17px 0 0 -17px;
+      opacity:0;
+      z-index:5;
+      animation:kenshiTwinImpact 560ms ease-out forwards;
+    }
+    .kenshi-twin-slash__impact-core {
+      position:absolute;
+      inset:-48px;
+      border-radius:50%;
+      background:radial-gradient(circle,
+        rgba(255,255,255,1) 0%,
+        rgba(255,255,255,.95) 8%,
+        rgba(103,232,249,.72) 24%,
+        rgba(139,92,246,.42) 46%,
+        rgba(139,92,246,0) 72%);
+      filter:blur(.4px);
+    }
+    .kenshi-twin-slash__impact-ring {
+      position:absolute;
+      inset:-22px;
+      border:3px solid rgba(255,255,255,.92);
+      border-radius:50%;
+      box-shadow:0 0 12px rgba(255,255,255,.95),0 0 24px rgba(103,232,249,.82),0 0 34px rgba(139,92,246,.62);
+    }
+    @keyframes kenshiTwinImpact {
+      0%,74% { opacity:0; transform:scale(.25); }
+      77% { opacity:1; transform:scale(.62); }
+      81% { opacity:1; transform:scale(1.22); }
+      86% { opacity:.72; transform:scale(2.05); }
+      88%,100% { opacity:0; transform:scale(2.55); }
+    }
+
+    .kenshi-twin-slash__shard {
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:22px;
+      height:3px;
+      margin:-1.5px 0 0 -11px;
+      opacity:0;
+      border-radius:999px;
+      background:linear-gradient(90deg,#fff,rgba(103,232,249,.95),rgba(139,92,246,.65),transparent);
+      box-shadow:0 0 7px rgba(255,255,255,.85);
+      animation:kenshiTwinShard 150ms ease-out forwards;
+      animation-delay:calc(430ms + var(--kenshi-shard-delay));
+    }
+    @keyframes kenshiTwinShard {
+      0% { opacity:0; transform:translate3d(0,0,0) rotate(var(--kenshi-shard-angle)) scaleX(.35); }
+      20% { opacity:1; }
+      100% { opacity:0; transform:translate3d(var(--kenshi-shard-x),var(--kenshi-shard-y),0) rotate(var(--kenshi-shard-angle)) scaleX(1.15); }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       @keyframes kenshiTwinBladeSlash {
-        0% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
-        40% { filter: drop-shadow(0 0 16px rgba(196,181,253,0.9)); }
-        100% { filter: drop-shadow(0 0 0 rgba(0,0,0,0)); }
+        0% { filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
+        45% { filter:drop-shadow(0 0 20px rgba(196,181,253,.95)); }
+        100% { filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
       }
-      .kenshi-twin-slash__blade { animation: kenshiTwinSlashFade 150ms ease-out forwards; }
+      .kenshi-twin-slash__blade { animation:kenshiTwinSlashFade 180ms ease-out forwards; }
+      .kenshi-twin-slash__speed, .kenshi-twin-slash__shard { display:none; }
+      .kenshi-twin-slash__impact { animation:kenshiTwinImpactReduced 560ms ease-out forwards; }
       @keyframes kenshiTwinSlashFade {
-        0% { opacity: 0; } 35% { opacity: .85; } 100% { opacity: 0; }
+        0% { opacity:0; } 35% { opacity:.95; } 100% { opacity:0; }
+      }
+      @keyframes kenshiTwinImpactReduced {
+        0%,70% { opacity:0; } 80% { opacity:.9; transform:scale(1); } 100% { opacity:0; transform:scale(1.7); }
       }
     }
     @keyframes zanComboDash {
