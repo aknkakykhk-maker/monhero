@@ -31,7 +31,7 @@
 | `mh_auto_settings_v1` | object / `{strategy:'random', allies:[{rosterEntry:null,slot:null} × 3], breakthroughReserve:{gold:0,psyche:0}, quickRun:{heroRosterEntry:null,distance:null,difficulty:null}}` | AUTO用の事前設定。方針・供モン・クイック周回設定に加え、AUTO∞自動限界突破で最低限残すダイヤ/虹のプシュケーを `breakthroughReserve` に保存する。欠損・不正値は0へ正規化し、0は保護なし |
 | `mh_unlocked_teachings` | string[] / 初期6枚 | 解放済み教えID |
 | `mh_teaching_roster` | string[] / 解放済み一覧 | 教え候補編成 |
-| `mh_masu_mons` | object[] / `[]` | マスモン個体一覧。AUTO∞自動限界突破は個体ごとに `autoRepeatBreakthroughMode`（`off` / `fixed` / `follow`）と既存の `autoRepeatBreakthroughLevel` を持つ。旧データで数値Lvがあれば `fixed` として保持し、旧boolean・欠損・不正値はOFFへ落とす。`uniqueSkillPoints`（未使用の固有技ポイント）など後から足した項目も既定値へ正規化する |
+| `mh_masu_mons` | object[] / `[]` | マスモン個体一覧。AUTO∞自動限界突破は個体ごとに `autoRepeatBreakthroughMode`（`off` / `fixed` / `follow`）と既存の `autoRepeatBreakthroughLevel` を持つ。旧データで数値Lvがあれば `fixed` として保持する。旧仕様で保存できたLv405以上の5刻み値は、通常限界突破の実上限と同じLv400へ丸めて意味を保つ。旧boolean・欠損・不正値はOFFへ落とす。`uniqueSkillPoints`（未使用の固有技ポイント）など後から足した項目も既定値へ正規化する |
 | `mh_changelog_seen` | string / `''` | 最後に既読にした更新日時 |
 | `mh_onboarded` | boolean or null | 初回プロフィール誘導完了 |
 | `mh_kiki_intro_seen_v1` | boolean / `false` | きき加入の会話を見たか。既存プレイヤーへ1回だけ流すための判定に使う |
