@@ -1,21 +1,11 @@
 #!/usr/bin/env node
-// 叩いたとき「狙ったノーツ」ではなく「次のノーツ」を取っていないかを確かめる。
+// 近接TAPの「前へ流れる／後ろへ引っ張られる」を両方まとめて検査する。
 //
 //   node tools/mode/rhythm-near-note-match-check.js
 //
-// 【なぜ要るか】
-// どのノーツを叩いたことにするかを、時間の差の**絶対値**がいちばん小さいもので
-// 決めていた。これだと次のノーツとの間隔の半分を超えて遅れた瞬間、
-// 次のノーツのほうが「近い」ことになって判定がそちらへ移る。
-// BPM170の8分(176ms間隔)なら89ms、16分(88ms)なら45ms遅れただけで起きていた
-// (2026-09-05・ユーザー指摘「近くに次のノーツがあるときに判定がそっちにいってる」)。
-// しかも取られた次のノーツは本来の時刻には既に消えているので、1回の遅れで2つ崩れる。
-//
-// いまは「時刻を過ぎたノーツ(遅れて叩いているぶん)」を先に見て、
-// そのなかでは**いちばん後ろ**(時刻の新しいほう)を取る。
-// つまり1つのノーツが取られるのは「次のノーツの時刻が来るまで」。
-// 前へ流れる(1回目の指摘)ことも、後ろを巻き込む(2回目の指摘)こともない。
-// この検査は、その順番が守られているかを実際に関数を動かして確かめる。
+// 判定ランクの幅(最大±240ms)と「どのノーツを狙った入力か」は別問題。
+// 単純な近い方は遅押しを次へ飛ばし、過去側100%固定は次ノーツ直前の早押しを前へ吸う。
+// 現行は前75%へ寄せた所有境界を使い、次側の早取りはMARVELOUS窓以内へ制限する。
 'use strict';
 const fs=require('fs');
 const path=require('path');
@@ -28,148 +18,98 @@ const source=fs.readFileSync(path.join(ROOT,'monster-hero/data/rhythm-mode.js'),
 const prefix=source.split('const emptyRhythmChart',1)[0];
 const ctx={console,performance:{now:()=>0},requestAnimationFrame:()=>1,cancelAnimationFrame:()=>{}};
 vm.createContext(ctx);
-vm.runInContext(prefix+'\nthis.out={rhythmMatchInputBatch,RHYTHM_INPUT_MATCH_WINDOW_MS,RHYTHM_JUDGMENTS};',ctx);
-const {rhythmMatchInputBatch,RHYTHM_INPUT_MATCH_WINDOW_MS:WINDOW}=ctx.out;
+vm.runInContext(prefix+'\nthis.out={rhythmMatchInputBatch,RHYTHM_INPUT_MATCH_WINDOW_MS,RHYTHM_JUDGMENTS,RHYTHM_TAP_TARGET_PREVIOUS_SHARE,RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS};',ctx);
+const {
+  rhythmMatchInputBatch,
+  RHYTHM_INPUT_MATCH_WINDOW_MS:WINDOW,
+  RHYTHM_TAP_TARGET_PREVIOUS_SHARE:PREVIOUS_SHARE,
+  RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS:UPCOMING_EARLY,
+}=ctx.out;
 
 const note=(timeMs,index,extra={})=>({type:'TAP',timeMs,lane:2,subLane:5,subLaneWidth:2,
   done:false,activePointerId:null,index,...extra});
-// 叩いた結果、何番めのノーツが取れたか(0始まり)。取れなければ null
-const hit=(notes,at,coordinate=6)=>{
-  const result=rhythmMatchInputBatch(notes,[{inputKey:`k${at}`,lane:2,subLaneCoordinate:coordinate}],at,0);
+const hit=(notes,at,coordinate=6,offset=0)=>{
+  const result=rhythmMatchInputBatch(notes,[{inputKey:`k${at}`,lane:2,subLaneCoordinate:coordinate}],at,offset);
   return result[0].target?result[0].target.index:null;
 };
+const switchDelay=gap=>Math.max(gap*PREVIOUS_SHARE,gap-UPCOMING_EARLY);
 
-// --- 本題: 遅れて叩いても、次のノーツへ移らない ---
-// 判定の受付幅より狭い間隔で並ぶ形すべてで確かめる。
-// 受付幅(240ms)は8分(176ms)より広いので、次のノーツは必ず候補に入っている。
-//
-// どこで次のノーツへ移るかは「次のノーツの時刻が来たかどうか」だけで決まる。
-//
-// 2026-09-05に4回目の作り直しをした。それまでは「判定の段(MARVELOUS/EXCELLENT/…)が
-// 良いほうを取る」にしていたが、これだと**遅れて叩くと必ず次へ移る**。
-//   16分(88ms)で60ms遅れ → 前=EXCELLENT / 次=28ms前でMARVELOUS → 次が取られていた
-// 60msの遅れはごくふつうのズレなので、連続ノーツのたびに起き、しかも取られた次は
-// 本来の時刻には無いので入力が後ろへずれ続ける
-// (ユーザー指摘「連続ノーツ時のタップ判定の引っ張りがなくならない／致命的」)。
-//
-// いまは「次のノーツの時刻が来るまでは、どれだけ遅れても前のノーツ」。
-// 間隔の半分どころか、間隔いっぱいまで1つめが取れる。
-const GAPS=[[' 16分  88ms',88],[' 8分  176ms',176],['付点8分 264ms',264]];
+ok('所有境界は前75%寄せ',PREVIOUS_SHARE===.75,String(PREVIOUS_SHARE));
+ok('次ノーツの早取り上限はMARVELOUS窓55ms',UPCOMING_EARLY===55,String(UPCOMING_EARLY));
+
+console.log('\n--- 前方引っ張りを戻さない / 後方引っ張りも止める ---');
+const GAPS=[['16分 88ms',88],['3連相当 118ms',118],['8分 176ms',176],['付点8分 264ms',264]];
 for(const [label,gap] of GAPS){
-  ok(`${label}間隔は判定の受付幅(${WINDOW}ms)より狭い＝次のノーツも候補に入る`,gap<=WINDOW*2);
-  let wrong=null,switchedAt=null;
-  for(let late=0;late<gap;late+=1){
-    if(late>WINDOW)break;
-    const got=hit([note(1000,0),note(1000+gap,1)],1000+late);
-    // 次のノーツの時刻が来るまでは、必ず1つめ
-    if(got!==0){wrong={late,got};break;}
-    if(got===1&&switchedAt===null)switchedAt=late;
-  }
-  ok(`${label}: 次のノーツの時刻が来るまでは前のノーツのまま（引っ張らない）`,!wrong,
-    wrong?`${wrong.late}ms遅れで${wrong.got===null?'どれにも当たらなかった':`${wrong.got+1}つめ`}へ移った`
-      :`${Math.min(gap-1,WINDOW)}ms遅れまで1つめのまま（中間の${Math.round(gap/2)}msをまたいでも流れない）`);
-  // 次のノーツの時刻ちょうどからは2つめへ移ること（前のノーツに居座らない）
-  const atNext=hit([note(1000,0),note(1000+gap,1)],1000+gap);
-  ok(`${label}: 次のノーツの時刻ちょうどからは2つめ`,atNext===1,
-    atNext===1?`${gap}ms遅れ＝2つめの時刻`:'まだ1つめを取っている');
+  const sw=switchDelay(gap);
+  const before=Math.max(0,Math.ceil(sw)-1),at=Math.ceil(sw);
+  ok(`${label}: 所有境界の直前は前ノーツ`,
+    hit([note(1000,0),note(1000+gap,1)],1000+before)===0,
+    `境界=${sw.toFixed(1)}ms / ${before}ms遅れ`);
+  ok(`${label}: 所有境界から次ノーツ`,
+    hit([note(1000,0),note(1000+gap,1)],1000+at)===1,
+    `境界=${sw.toFixed(1)}ms / 次の${(gap-at).toFixed(1)}ms前`);
+  ok(`${label}: 次ノーツ時刻ちょうどなら次ノーツ`,
+    hit([note(1000,0),note(1000+gap,1)],1000+gap)===1);
 }
 
-// --- 過ぎているノーツが2つ以上あるときは、いちばん後ろを取る ---
-// 2つめの時刻ちょうどに叩いたら、1つめがまだ残っていても**2つめ**を取る。
-//
-// ここは2026-09-05に2回直している。
-//   1回目 … 時間の差の絶対値で選んでいた → 遅れて叩くと次のノーツへ移る(上のブロック)
-//   2回目 … そこで「過ぎている中でいちばん前」にした → 今度は**後ろを巻き込む**ようになった。
-//           16分で並ぶ2つを2つめの時刻ちょうどで叩いても1つめが取られ、2つめは必ずMISS。
-//           1回の入力で2つ崩れる(ユーザー指摘「あとのノーツを巻き込んでる」)
-//
-// 「過ぎている中でいちばん後ろ」なら両方とも起きない。
-// 1つのノーツが取られるのは「次のノーツの時刻が来るまで」で、そこから先は次のノーツのもの。
-// 上のブロック(遅れて叩いても1つめが取れる)と、このブロック(2つめの時刻なら2つめ)は
-// **セットで**成り立っていなければならない。片方だけ直すと必ずもう片方が壊れる
-for(const [label,gap] of GAPS){
-  const got=hit([note(1000,0),note(1000+gap,1)],1000+gap);
-  ok(`${label}: 2つめの時刻に叩いたら2つめが取れる(1つめを巻き込まない)`,
-    got===1,got===null?'どれにも当たらない':`${got+1}つめ`);
-  // 1つめは巻き込まれずに残っているので、そのあと取り逃しとして数えられる
-  const notes=[note(1000,0),note(1000+gap,1)];
-  const first=hit(notes,1000+gap);
-  ok(`${label}: 巻き込まれなかった1つめは、まだ判定が確定していない`,
-    first===1&&notes[0].done===false);
-}
+ok('16分で+60ms遅れは前ノーツのまま',
+  hit([note(1000,0),note(1088,1)],1060)===0,
+  'A=+60ms / B=-28ms');
+ok('16分で次ノーツ10ms前は次ノーツ',
+  hit([note(1000,0),note(1088,1)],1078)===1,
+  'A=+78ms / B=-10ms');
+ok('BAD級の過去ノーツより、ほぼジャストの次ノーツ',
+  hit([note(1000,0),note(1240,1)],1239)===1,
+  'A=+239ms(BAD) / B=-1ms');
 
-// --- ずれ込まない: 1つめが取り逃しとして確定したあとは、2つめが取れる ---
-// 取り逃しの確定(MISS)は受付幅を過ぎた時点。そこまで来ればもう候補に残らないので、
-// 以降の入力は次のノーツへ渡る＝1つずつずれ続けることはない
-for(const [label,gap] of GAPS){
-  const missed=note(1000,0);missed.done=true;
-  const got=hit([missed,note(1000+gap,1)],1000+gap);
-  ok(`${label}: 1つめが取り逃しになったあとは、2つめが取れる（ずれ込まない）`,got===1,
-    got===null?'どれにも当たらない':`${got+1}つめ`);
-}
-
-// --- 連打を順に叩けば順に取れる ---
+console.log('\n--- 連続入力で位相がずれ続けない ---');
 {
-  const notes=[note(1000,0),note(1176,1),note(1352,2)];
-  const order=[];
-  for(const at of [1000,1176,1352]){
-    const index=hit(notes,at);
-    order.push(index===null?'なし':index+1);
+  const notes=[note(1000,0),note(1088,1),note(1176,2),note(1264,3)],picked=[];
+  for(const at of [1060,1148,1236,1324]){
+    const index=hit(notes,at);picked.push(index);
     if(index!==null)notes[index].done=true;
   }
-  ok('8分3連打を正確に叩けば1→2→3の順に取れる',order.join(',')==='1,2,3',order.join(','));
+  ok('16分を毎回+60ms遅く叩いても0→1→2→3',picked.join(',')==='0,1,2,3',picked.join(','));
+}
+{
+  const notes=[note(1000,0),note(1088,1),note(1176,2),note(1264,3)],picked=[];
+  for(const at of [1078,1166,1254]){
+    const index=hit(notes,at);picked.push(index);
+    if(index!==null)notes[index].done=true;
+  }
+  ok('1つめMISS後に各ノーツを10ms早く叩いても1→2→3へ追従',picked.join(',')==='1,2,3',picked.join(','));
 }
 
-// --- 早く押した場合は、これから来るノーツを取る ---
-ok('1つめより前に押せば1つめが取れる',hit([note(1000,0),note(1176,1)],950)===0);
-ok('1つめを取ったあとなら、2つめを早めに押しても2つめが取れる',
-  hit([note(1000,0,{done:true}),note(1176,1)],1100)===1);
-
-// --- 同時押しは押した位置で選ぶ（時刻が同じなので順番では決まらない） ---
+console.log('\n--- 空間・同時押し・受付窓は従来どおり ---');
 {
   const pair=()=>[
     {type:'TAP',timeMs:1000,lane:0,subLane:1,subLaneWidth:2,done:false,activePointerId:null,index:0},
     {type:'TAP',timeMs:1000,lane:4,subLane:8,subLaneWidth:2,done:false,activePointerId:null,index:1}];
   const left=rhythmMatchInputBatch(pair(),[{inputKey:'L',lane:0,subLaneCoordinate:2}],1000,0)[0].target;
   const right=rhythmMatchInputBatch(pair(),[{inputKey:'R',lane:4,subLaneCoordinate:9}],1000,0)[0].target;
-  ok('同時押しは押した位置に近いほうを取る',left&&right&&left.index===0&&right.index===1,
-    `左=${left?left.index+1:'なし'} / 右=${right?right.index+1:'なし'}`);
+  ok('同時押しは押した位置に近いほう',left&&right&&left.index===0&&right.index===1);
 }
-
-// --- 受付の外は取らない ---
-ok(`受付幅より遅い(${WINDOW+1}ms)ときは取らない`,hit([note(1000,0)],1000+WINDOW+1)===null);
+ok(`受付幅より遅い(${WINDOW+1}ms)と取らない`,hit([note(1000,0)],1000+WINDOW+1)===null);
 ok(`受付幅ちょうど(${WINDOW}ms)なら取る`,hit([note(1000,0)],1000+WINDOW)===0);
 
-// --- 判定タイミング調整(offset)を入れてもこの順番が保たれる ---
-{
-  const withOffset=(at,offset)=>{
-    const notes=[note(1000,0),note(1176,1)];
-    const result=rhythmMatchInputBatch(notes,[{inputKey:'o',lane:2,subLaneCoordinate:6}],at,offset);
-    return result[0].target?result[0].target.index:null;
-  };
-  ok('タイミング調整+50msでも、遅れて叩いて次へ移らない',withOffset(1150,50)===0,
-    `${withOffset(1150,50)}`);
-  ok('タイミング調整-50msでも、遅れて叩いて次へ移らない',withOffset(1050,-50)===0);
+console.log('\n--- 判定タイミングoffsetでも所有境界は同じ ---');
+for(const offset of [50,-50]){
+  const gap=176,sw=Math.ceil(switchDelay(gap));
+  ok(`offset ${offset>=0?'+':''}${offset}ms: 境界直前は前`,
+    hit([note(1000,0),note(1176,1)],1000+offset+sw-1,6,offset)===0);
+  ok(`offset ${offset>=0?'+':''}${offset}ms: 境界から次`,
+    hit([note(1000,0),note(1176,1)],1000+offset+sw,6,offset)===1);
 }
 
-// --- 実装の書きぶり（絶対値だけで選ぶ形へ戻っていないか） ---
-// 過ぎている側とまだ来ていない側を別々に絞ってから比べる。
-// ここを1本のループで「いちばん近いもの」にすると、判定が次々と流れる状態に戻る
-ok('過ぎている側とまだ来ていない側を別々に絞っている',
+console.log('\n--- 実装ガード ---');
+ok('過去側と未来側を別々に絞る',
   /passedBest=candidate\(passedBest,note,index,noteTime,inside,distance,true\)/.test(source)
   &&/upcomingBest=candidate\(upcomingBest,note,index,noteTime,inside,distance,false\)/.test(source));
-// 2つのうちどちらを取るかは比べない。過ぎている側があるなら必ずそちらを取る。
-//
-// 一時期ここは「判定の段が良いほうを取る(judgeRank)」にしていたが、それだと
-// 連続ノーツで遅れて叩くたびに次へ移る＝引っ張りそのものだった(4回目の作り直しで撤去)。
-// まだ来ていない側を見るのは、過ぎている側が1つも無いとき(＝早押し)だけ。
-ok('過ぎている側があるなら必ずそちらを取る（古いものから消費する）',
-  /const chosen=passedBest\|\|upcomingBest;/.test(source));
-ok('判定の段で比べる形(judgeRank)は残っていない',
-  !/judgeRank/.test(source));
-// 押した位置がノーツの内側にあるものを優先する(幅の広いノーツの内側を押しているのに
-// となりが取られる件への対応)
-ok('同じ時刻なら押した位置が内側のものを優先する',
+ok('共通の所有境界関数を通す',
+  /const rhythmChooseTapTarget=\(passed,upcoming,now\)=>/.test(source)
+  &&/const chosen=rhythmChooseTapTarget\(passedBest,upcomingBest,now\);/.test(source));
+ok('判定段の良い方を選ぶ旧judgeRankは残っていない',!/judgeRank/.test(source));
+ok('同時刻では押した位置の内側を優先',
   /const isInside=note=>/.test(source)&&/if\(inside!==current\.inside\)/.test(source));
 
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');

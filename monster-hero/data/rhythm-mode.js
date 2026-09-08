@@ -1631,6 +1631,20 @@ const rhythmInputMatchBounds=(source,now,offset)=>{
   while(lo<hi){const mid=(lo+hi)>>1;if(Number(source[mid]?.timeMs)<=max)lo=mid+1;else hi=mid;}
   return [start,lo];
 };
+const rhythmChooseTapTarget=(passed,upcoming,now)=>{
+  if(!passed)return upcoming;
+  if(!upcoming)return passed;
+  const gap=upcoming.noteTime-passed.noteTime;
+  if(!(gap>0))return passed;
+  // 時刻だけでは「前を遅く叩いた」のか「次を少し早く叩いた」のか判別不能な帯がある。
+  // そこで中間点ではなく前へ寄せた境界を作る。密な連打で+60ms程度の遅れを次へ飛ばさず、
+  // 一方で次ノーツ直前の早押しを取り逃した前ノーツへ吸わせ続けない。
+  const switchAt=Math.max(
+    passed.noteTime+gap*RHYTHM_TAP_TARGET_PREVIOUS_SHARE,
+    upcoming.noteTime-RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS
+  );
+  return now>=switchAt?upcoming:passed;
+};
 const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
   const source=Array.isArray(notes)?notes:[],claimed=new Set(),seenInputs=new Set(),now=Number(nowMs),offset=Number(offsetMs)||0;
   const [matchStart,matchEnd]=rhythmInputMatchBounds(source,now,offset);
@@ -1735,21 +1749,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     // 以後の入力まで1つ先へずれる前方引っ張りを起こした。一方、前を100%優先すると
     // 次ノーツの10ms程度の早押しまで取り逃した前ノーツへ吸われ、1つ後ろへずれ続ける。
     // そのため前75% / 次25%を基本にし、次側の早取りはMARVELOUS窓より広げない。
-    const chooseTapTarget=(passed,upcoming)=>{
-      if(!passed)return upcoming;
-      if(!upcoming)return passed;
-      const gap=upcoming.noteTime-passed.noteTime;
-      if(!(gap>0))return passed;
-      // 時刻だけでは「前を遅く叩いた」のか「次を少し早く叩いた」のか判別不能な帯がある。
-      // そこで中間点ではなく前へ寄せた境界を作る。密な連打で+60ms程度の遅れを次へ飛ばさず、
-      // 一方で次ノーツ直前の早押しを取り逃した前ノーツへ吸わせ続けない。
-      const switchAt=Math.max(
-        passed.noteTime+gap*RHYTHM_TAP_TARGET_PREVIOUS_SHARE,
-        upcoming.noteTime-RHYTHM_TAP_TARGET_UPCOMING_MAX_EARLY_MS
-      );
-      return now>=switchAt?upcoming:passed;
-    };
-    const chosen=chooseTapTarget(passedBest,upcomingBest);
+    const chosen=rhythmChooseTapTarget(passedBest,upcomingBest,now);
     let picked=chosen?chosen.note:null,pickedIndex=chosen?chosen.index:-1;
     // 持ち替え待ちで浮いているノーツは、開始時刻がどれだけ前でも候補へ入れる。
     // ふつうの候補より**先に**取る。押さえ直しをほかのノーツへ吸われると、

@@ -56,5 +56,5 @@ check('TAP/FLICKの開始判定条件は変更しない',
   // +60ms程度の遅押しを次へ飛ばさず、次ノーツ直前の早押しを前へ吸わせ続けない。
   // 受け付ける広さ(RHYTHM_INPUT_MATCH_WINDOW_MS)は変えていないので、ここも一緒に見る
   &&source.includes("if(now>=noteTime)passedBest=")
-  &&source.includes("const chosen=chooseTapTarget(passedBest,upcomingBest);")&&source.includes("RHYTHM_TAP_TARGET_PREVIOUS_SHARE=.75"));
+  &&source.includes("const chosen=rhythmChooseTapTarget(passedBest,upcomingBest,now);")&&source.includes("RHYTHM_TAP_TARGET_PREVIOUS_SHARE=.75"));
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');process.exit(failed?1:0);
