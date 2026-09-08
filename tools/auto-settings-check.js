@@ -35,7 +35,12 @@ for (const brokenReserve of [
   const safe = normalize({breakthroughReserve:brokenReserve});
   assert(safe.breakthroughReserve.gold === 0 && safe.breakthroughReserve.psyche === 0, '壊れた資源保護値を0へ戻せません');
 }
-assert(source.includes("await storeSet(AUTO_SETTINGS_KEY, normalized, false)"), '決定時の保存処理が見つかりません');
+const saveSettingsStart = source.indexOf('const saveAutoSettings = async () => {');
+const saveSettingsEnd = source.indexOf('const autoRosterLabel =', saveSettingsStart);
+const saveSettings = source.slice(saveSettingsStart, saveSettingsEnd);
+assert(saveSettings.includes('saveStoredValuesOrRollback([') && saveSettings.includes('{ key:AUTO_SETTINGS_KEY, before:autoSettings, next:normalized }'), '決定時のAUTO設定保存が読み戻し検証つきではありません');
+assert(saveSettings.includes('if (!saved)') && saveSettings.indexOf('if (!saved)') < saveSettings.indexOf("setGameState('MB_MANAGEMENT')"), 'AUTO設定保存失敗時に画面を閉じる可能性があります');
+assert(saveSettings.includes('AUTO設定を保存できませんでした'), 'AUTO設定保存失敗時の案内がありません');
 assert(source.includes("const [autoBreakthroughBulkValue, setAutoBreakthroughBulkValue] = useState('follow')"), '自動限凸一括設定の一時stateがありません');
 assert(source.includes("setAutoBreakthroughBulkValue('follow')"), 'AUTO設定を開くたび一括候補を安全な初期値へ戻していません');
 const bulkStart = source.indexOf('const applyAutoBreakthroughBulk = async () => {');
