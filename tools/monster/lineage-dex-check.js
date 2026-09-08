@@ -66,11 +66,19 @@ check('図鑑全体の対象は20体', monsters.length === 20, `${monsters.lengt
   }
   check('同じ種族(主血統)がひとまとまりで並ぶ', scattered.length === 0,
     scattered.length ? `離れて出ている: ${[...new Set(scattered)].join(' / ')}` : `${seen.size}種族`);
-  // 血統の並びは血統カタログ(MONSTER_LINEAGES)の定義順
-  const catalog = Object.keys(A.MONSTER_LINEAGES);
+  // 種族の並びは「ALL_PLAYER_MONSTERS でその種族が最初に出てくる順」。
+  // 血統カタログ(MONSTER_LINEAGES)の定義順にすると、カタログではプラントが
+  // dragon/joker より後ろに置かれているせいでプラント種だけが末尾へ動き、
+  // 図鑑の絞り込みチップを使っている種族チャレンジの種族タブ・超越の実の並びまで
+  // 巻き添えで変わってしまう(実測で確認)。図鑑だけを種族順にしたいので初出順を正とする
   const appeared = [...new Set(mains)];
-  const sorted = [...appeared].sort((a, b) => catalog.indexOf(a) - catalog.indexOf(b));
-  check('種族の並びが血統カタログの定義順', JSON.stringify(appeared) === JSON.stringify(sorted),
+  const firstSeen = [];
+  for (const mon of Object.values(A.ALL_PLAYER_MONSTERS)) {
+    if (!mon || mon.debugOnly) continue;
+    const id = A.monsterLineageOf(mon.id).main?.id;
+    if (id && !firstSeen.includes(id)) firstSeen.push(id);
+  }
+  check('種族の並びは、その種族が最初に出てくる順', JSON.stringify(appeared) === JSON.stringify(firstSeen),
     appeared.map(id => A.MONSTER_LINEAGES[id]?.name || id).join(' / '));
   // 血統の先頭は、その血統を代表するモンスター(カタログの monId)
   const badHead = [];
@@ -93,8 +101,12 @@ check('図鑑全体の対象は20体', monsters.length === 20, `${monsters.lengt
   check('何度呼んでも同じ並びになる',
     JSON.stringify(A.dexMonsterList().map(m => m.id)) === JSON.stringify(got));
   const chips = A.dexMainLineages().map(l => l.id);
-  check('血統の絞り込みチップも同じ順に並ぶ', JSON.stringify(chips) === JSON.stringify(appeared),
+  check('血統の絞り込みチップも図鑑と同じ順に並ぶ', JSON.stringify(chips) === JSON.stringify(appeared),
     A.dexMainLineages().map(l => l.name).join(' / '));
+  // このチップの並びは、種族チャレンジの種族タブと超越の実(アイテム欄)にも使われている。
+  // 図鑑を並べ替えた巻き添えでそちらまで動いていないことを、ここで確かめる
+  check('種族チャレンジのタブ・超越の実の並びを巻き添えにしていない',
+    JSON.stringify(chips) === JSON.stringify(firstSeen));
 }
 
 const missing = monsters.filter(mon => !A.monsterLineageOf(mon.id).known).map(mon => mon.name);
