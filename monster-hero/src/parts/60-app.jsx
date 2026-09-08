@@ -12502,7 +12502,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="min-w-0">
                     <div className="text-[11px] font-black text-cyan-200">AUTO∞ 自動限界突破</div>
                     <div className="mt-1 text-[9px] font-bold leading-relaxed text-slate-300">OFF・ブリーダーLv自動追従・固定Lvから選べます</div>
-                    <div className="mt-1 text-[8px] font-bold text-cyan-300/80">現在の追従上限：{autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}` : 'まだ対象外'}（ブリーダーLv{breederLevel.level}の半分を5刻み）</div>
+                    <div className="mt-1 text-[8px] font-bold text-cyan-300/80">現在の追従上限：{autoBreakthroughMaxLevel > 0 ? `Lv${autoBreakthroughMaxLevel}` : 'まだ対象外'}（ブリーダーLv{breederLevel.level}の半分を5刻み／最大Lv400）</div>
                   </div>
                   <select aria-label={`${masu.name}のAUTO∞ 自動限界突破設定`} value={autoBreakthroughSelectedValue} onChange={event=>{
                     const value=event.target.value;
