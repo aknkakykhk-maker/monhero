@@ -1698,15 +1698,10 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       if(!span||!Number.isFinite(subCoordinate))return false;
       return subCoordinate>=span.start&&subCoordinate<=span.end;
     };
-    // 過ぎている側とまだ来ていない側を**別々に**いちばん良いものまで絞り、
-    // 最後に「叩いた時刻に近いほう」を選ぶ。
-    //
-    // 以前は過ぎている側を無条件に優先していた。そのため
-    //   ノーツA=1.000秒 / ノーツB=1.100秒 で、Bを狙って1.099秒(ほぼジャスト)に叩くと、
-    //   0.099秒も前のAが取られ、狙ったBは巻き込まれてMISSになる
-    // という状態だった(2026-09-05・実機の指摘「タップ判定の巻き込みもまだある」)。
-    // 近いほうを選べばBが取れる。ほかの叩き方(16分・8分・3連符・連打の取りこぼし)は
-    // 結果が変わらないことを tools/mode/rhythm-tap-target-check.js で確かめている。
+    // 過ぎている側とまだ来ていない側を**別々に**1件ずつ絞る。
+    // ここで候補を前後1件に限定してから、下の所有権境界でどちらへ渡すかを決める。
+    // 単純な「近いほう」や判定段の良いほうへ戻すと、16分の遅押しが次へ流れるため禁止。
+    // 過去側の無条件優先へ戻すと、取り逃し後のFAST連打が前へ吸われ続けるためこちらも禁止。
     const candidate=(current,note,index,noteTime,inside,distance,preferLater)=>{
       if(!current)return {note,index,noteTime,inside,distance};
       // 時刻がいちばん端のものを選ぶ。過ぎている側は後ろ、まだ来ていない側は前
