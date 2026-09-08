@@ -192,6 +192,21 @@ const CHALLENGE_RANGE=Object.freeze({min:.60,max:1.90});
 // 量(ノーツ数)は factor をそのまま掛けるが、中身は factor^この値 で効かせる。
 // 1にすると、量と中身の両方が同じだけ動いて難しさが二乗で開き、EASYがEASYでなくなる。
 const CHALLENGE_VOCABULARY_EXPONENT=.7;
+// --- 自動で出た歯ごたえが曲と合わないとき（2026-09-08・ユーザー指摘「crossing field は
+// ちょっと難しすぎるかも / 曲の雰囲気的にそんな難しいのが合わない / マスターを27ぐらいに」）---
+// 上の3つは「音源から測れること」しか見ない。**曲の雰囲気は測れない**ので、
+// 測った値が正しくても、遊ぶ人の感じ方と食い違うことがある。
+// 実際に crossing field は 拍の立ち 2.419（ほかの曲は0.98〜1.88）が1項目の上限へ張り付き、
+// 歯ごたえ 1.86（上限1.90のすぐ下）になって MASTER Lv.38・EASY Lv.11 まで行った。
+// 既存曲の MASTER は 15〜32、EASY は 4〜8 なので、EASYが既存のHARDより重い状態だった。
+//
+// そこで**その曲だけ**歯ごたえを人が決められるようにする。曲の一覧
+// (tools/mode/authoring/rhythm-song-registry.json) の challengeFactor に数字を書くと、
+// 測った値のかわりにそれを使う。
+//   ・**測り方そのものは変えない。** ここをいじると、ほかの曲の譜面まで作り直したときに変わる
+//   ・書いた曲だけに効く。書いていない曲は今までどおり自動
+//   ・なぜその数字なのかは docs/spec/RHYTHM_MODE.md に残す（数字だけが残ると誰も直せない）
+// 見張りは tools/mode/rhythm-song-challenge-check.js。
 const songChallengeFactor=(audio)=>{
   const seconds=Number(audio.durationMs)/1000;
   const summary=audio.summary||{};
@@ -204,6 +219,12 @@ const songChallengeFactor=(audio)=>{
     return Math.max(CHALLENGE_RATIO_RANGE.min,
       Math.min(CHALLENGE_RATIO_RANGE.max,Math.pow(value/reference,exponent)));
   };
+  // 人が決めた値があるときは、測った3つより優先する（挟み込みだけは通す）。
+  const pinned=Number(audio.challengeFactor);
+  if(Number.isFinite(pinned)&&pinned>0){
+    const factor=Math.max(CHALLENGE_RANGE.min,Math.min(CHALLENGE_RANGE.max,pinned));
+    return {factor,raw:factor,gained:factor,pinned:true,bpm,onsetsPerSecond,beatClarity:clarity};
+  }
   const raw=ratio(bpm,CHALLENGE_REFERENCE.bpm,CHALLENGE_EXPONENT.bpm)
     *ratio(onsetsPerSecond,CHALLENGE_REFERENCE.onsetsPerSecond,CHALLENGE_EXPONENT.onsets)
     *ratio(clarity,CHALLENGE_REFERENCE.beatClarity,CHALLENGE_EXPONENT.beatClarity);
@@ -241,6 +262,16 @@ const dashed=trackId.replace(/_/g,'-');
 // V3の解析だけを入力にする。テンポも区切りも盛り上がりもこの1つに入っているので、
 // 別系統の道具（ffmpegを使うV2のSTEP1/STEP2）に頼らない＝どんな曲でも作れる。
 const audio=readJson(authoring(`${dashed}-v3-audio.json`));
+// 曲ごとに歯ごたえを人が決めているならここで合流させる（無ければ自動のまま）。
+// 置き場所は曲の一覧のほう。解析のJSONは「測った結果」なので、人の判断を混ぜない。
+{
+  const registryFile=path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json');
+  if(fs.existsSync(registryFile)){
+    const entry=(JSON.parse(fs.readFileSync(registryFile,'utf8')).songs||{})[trackId];
+    const pinned=Number(entry&&entry.challengeFactor);
+    if(Number.isFinite(pinned)&&pinned>0)audio.challengeFactor=pinned;
+  }
+}
 if(audio.analysisType!=='rhythm-audio-v3')throw new Error('V3音源解析のJSONではありません');
 if(!audio.structure)throw new Error('V3音源解析が古い形です。rhythm-audio-analyze-v3.js を通し直してください');
 const structure=audio.structure;

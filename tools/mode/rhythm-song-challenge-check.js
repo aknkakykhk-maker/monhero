@@ -169,5 +169,39 @@ if(REFERENCE&&EXPONENT&&RANGE&&RATIO_RANGE&&GAIN){
     `${inside.length}曲が ${range.min}〜${range.max} の内側`);
 }
 
+// --- 人が決めた歯ごたえ（challengeFactor）---
+// 自動で出た値が曲の雰囲気と合わないとき、曲の一覧へ数字を書いて上書きできる
+// (2026-09-08・ユーザー指摘「crossing field はちょっと難しすぎるかも」)。
+// 便利すぎるので、**気軽に増えないよう**ここで見張る。
+//   ・自動で足りるならそもそも書かない → 書いた曲が半分を超えたら、測り方そのものを疑う番
+//   ・数字だけ残ると誰も直せない → なぜその値かを docs/spec/RHYTHM_MODE.md に残す
+{
+  const {RELEASED_TRACKS}=require('./rhythm-runtime-notes.js');
+  const registry=JSON.parse(fs.readFileSync(path.join(ROOT,'tools/mode/authoring/rhythm-song-registry.json'),'utf8'));
+  const range=RANGE?{min:Number(RANGE[1]),max:Number(RANGE[2])}:{min:.6,max:1.9};
+  const pinned=Object.entries(registry.songs||{})
+    .filter(([,entry])=>Number.isFinite(Number(entry&&entry.challengeFactor)))
+    .map(([id,entry])=>({id,value:Number(entry.challengeFactor)}));
+  const released=Object.keys(RELEASED_TRACKS).length;
+  if(pinned.length){
+    console.log(`--  歯ごたえを人が決めている曲: ${pinned.map(x=>`${x.id} ${x.value}`).join(' / ')}`);
+    ok('人が決めた歯ごたえは、挟み込みの中に収まっている',
+      pinned.every(x=>x.value>=range.min&&x.value<=range.max),
+      `${range.min}〜${range.max}`);
+    // 「自動が当てにならないから全部手で決める」へ流れていないこと。
+    ok('人が決めた曲は少数にとどまっている',pinned.length<=Math.max(1,Math.floor(released/2)),
+      `${pinned.length}曲 / 公開 ${released}曲`);
+    // 数字の根拠が残っていること。
+    const doc=fs.readFileSync(path.join(ROOT,'docs/spec/RHYTHM_MODE.md'),'utf8');
+    for(const x of pinned){
+      ok(`${x.id} の歯ごたえを決めた理由が書いてある`,
+        doc.includes('challengeFactor')&&doc.includes(x.id),
+        'docs/spec/RHYTHM_MODE.md');
+    }
+  }else{
+    console.log('--  歯ごたえを人が決めている曲はありません（全部自動）');
+  }
+}
+
 console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);
