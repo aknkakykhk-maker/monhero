@@ -4720,6 +4720,8 @@ function MonsterHeroGame() {
       gold:goldRef.current,
       ownedItems:ownedItemsRef.current,
       breederXp,
+      reserveGold:autoSettings?.breakthroughReserve?.gold || 0,
+      reservePsyche:autoSettings?.breakthroughReserve?.psyche || 0,
     });
     if (result.succeededMasuIds.length === 0) return result;
     await Promise.all([
