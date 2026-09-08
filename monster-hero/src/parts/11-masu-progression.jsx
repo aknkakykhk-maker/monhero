@@ -113,7 +113,10 @@ const autoRepeatBreakthroughLevelOptions = (breederLevel) => {
 };
 const normalizeAutoRepeatBreakthroughLevel = (value) => {
   const level = Math.floor(Number(value) || 0);
-  return level >= AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL && level % BREAKTHROUGH_LEVEL_CAP_GAIN === 0 ? level : 0;
+  if (level < AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL || level % BREAKTHROUGH_LEVEL_CAP_GAIN !== 0) return 0;
+  // 旧仕様では高いブリーダーLvでLv405以上も保存できたが、通常限界突破の実上限はLv400。
+  // 既存の「できるところまで自動」の意味を保ったまま、現行の実上限へ丸めて引き継ぐ。
+  return Math.min(MAX_MASU_LEVEL_CAP, level);
 };
 // AUTO∞自動限界突破の個体設定。
 // 既存個体は数値の autoRepeatBreakthroughLevel が入っていれば fixed としてそのまま引き継ぐ。
