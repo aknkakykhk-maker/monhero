@@ -378,9 +378,12 @@ check('残像・速度線・X字決めの閃光/衝撃波/光片がある',
   && /@keyframes kenshiTwinImpact/.test(source)
   && /@keyframes kenshiTwinShard/.test(source));
 check('本番とDEBUGが同じ入口で560msの派手モーションを通る',
-  /if \(anim\.twinBlade\) return 'kenshiTwinBladeSlash 560ms cubic-bezier\(\.18,\.76,\.2,1\) forwards';/.test(source));
+  /if \(anim\.twinBlade \|\| anim\.motion==='kenshiTwinBlade'\) return 'kenshiTwinBladeSlash 560ms cubic-bezier\(\.18,\.76,\.2,1\) forwards';/.test(source));
 check('2本の斬撃SEとX字完成時の画面シェイクを入れる',
   /await battleWait\(135\);[\s\S]{0,120}?Audio_\.se\.zanSlash\(\);[\s\S]{0,180}?await battleWait\(180\);[\s\S]{0,120}?Audio_\.se\.zanSlash\(\);[\s\S]{0,180}?triggerShake\(\);/.test(source));
+check('勇者でない剣士モッチーや継承固有技でも専用モーションを使う',
+  /const isKenshiTwin=motion==='kenshiTwinBlade';/.test(source)
+  && /twinBlade:isKenshiTwin/.test(source));
 check('本番と画像DEBUGの待ち時間が560msにそろっている',
   /isTwin\?560:320/.test(source)
   && /animation:kenshiTwinImpact 560ms ease-out forwards;/.test(source));
