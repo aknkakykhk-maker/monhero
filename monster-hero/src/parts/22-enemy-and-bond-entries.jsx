@@ -234,8 +234,13 @@ const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critD
   // 二刀流も禁忌解錠と同じ「通常攻撃を50%+50%へ分ける」形。固有技は分割しない(メイン100%のまま)
   const kenshiHero = heroId === 'KenshiMocchi' && attackerId === 'KenshiMocchi';
   const kenshiSplitNormal = kenshiHero && ['atk', 'range_atk'].includes(card.type);
-  // 分割は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)
-  const mainBase = (pandoraSplitNormal || kenshiSplitNormal) ? Math.floor(d * 0.5) : d;
+  // 分割は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)。
+  // 二刀流は「合計は元のまま」が仕様なので、d が奇数のときの余り1をメインへ寄せる
+  // (両方 floor にすると d=1001 が 500+500=1000 になり、1だけ減る)。
+  // 禁忌解錠は公開済みの挙動をそのまま保つため、こちらは従来どおり両方 floor のまま。
+  const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5)
+    : kenshiSplitNormal ? d - Math.floor(d * 0.5)
+    : d;
   const mainCrit = mainCanCrit && (guaranteedCrit || rollCrit());
   hits.push({ kind: 'main', crit: mainCrit, dmg: mainCrit ? Math.floor(mainBase * critMult) : mainBase, skillName: null, noAnim: false });
   // 連撃は元ダメージ d を基準にし、会心はメインとは独立に判定する(メインの会心を二重に乗せない)

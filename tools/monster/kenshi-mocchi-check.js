@@ -194,6 +194,15 @@ if (rulesSrc && buildSrc) {
   check('A. 通常攻撃は 500+500(合計は元の100%のまま)',
     JSON.stringify(dmgs(normal)) === JSON.stringify([500, 500]), dmgs(normal).join('+'));
   check('A. 距離技も同じく 500+500', JSON.stringify(dmgs(ranged)) === JSON.stringify([500, 500]), dmgs(ranged).join('+'));
+  // 「合計は元のまま」が仕様なので、基準ダメージが奇数でも1減らない(余りはメインへ寄せる)。
+  // 両方 floor だと 1001 が 500+500=1000 になる
+  const odd = build({ d: 1001, rollCrit: () => false, ...normal }).map(h => h.dmg);
+  check('A. 基準ダメージが奇数でも合計が減らない(1001 → 501+500)',
+    JSON.stringify(odd) === JSON.stringify([501, 500]) && odd[0] + odd[1] === 1001, odd.join('+'));
+  // 禁忌解錠(パンドラ)は公開済みの挙動をそのまま保つ(こちらは従来どおり両方 floor)
+  const oddPandora = build({ d: 1001, rollCrit: () => false, card: { type: 'atk' }, attackerId: 'Pandora', heroId: 'Pandora' }).map(h => h.dmg);
+  check('パンドラの分割は従来のまま変えていない(1001 → 500+500)',
+    JSON.stringify(oddPandora) === JSON.stringify([500, 500]), oddPandora.join('+'));
   check('B. 自身の固有技は 1000 + 10%×3 + 20%×2 = 1700',
     JSON.stringify(dmgs(unique)) === JSON.stringify([1000, 100, 100, 100, 200, 200]), dmgs(unique).join('+'));
   check('B. 固有技のメインは分割しない(100%のまま)', hits(unique)[0].dmg === 1000);
@@ -299,6 +308,17 @@ check('本番とDEBUGの待ち時間もモーションと同じ420ms',
 // 連撃をまとめて1回だけ流す作りに乗せる。永久追加連撃が増えてもターンの長さが変わらない
 check('連撃はまとめて1回だけモーションを流す(ザン・エイキと同じ束ね方)',
   /const isComboDashMotion = hitMotion==='zanCombo' \|\| hitMotion==='eikiSakuraCombo' \|\| hitMotion==='kenshiTwinBlade';/.test(source));
+// 永久追加連撃が増えてもターンが伸び続けないよう、数値を出す間隔は本数で詰める。
+// ザン(最大3ヒット)・エイキ(最大6ヒット)はこれまでどおり1本140msのままであることも確かめる
+check('連撃の数値表示は本数が増えると間隔を詰める(ターンが伸び続けない)',
+  /const comboStepMs=Math\.max\(30,Math\.min\(140,Math\.floor\(840\/group\.length\)\)\);/.test(source)
+  && /await battleWait\(comboStepMs\);/.test(source));
+{
+  const step = (n) => Math.max(30, Math.min(140, Math.floor(840 / n)));
+  check('ザン(3ヒット)・エイキ(6ヒット)の間隔は140msのまま', step(1) === 140 && step(3) === 140 && step(6) === 140);
+  check('本数が増えても出しきる時間が伸び続けない(16本でも1秒未満)',
+    16 * step(16) < 1000 && 32 * step(32) < 1200, `16本 ${16 * step(16)}ms / 32本 ${32 * step(32)}ms`);
+}
 check('RPG表示のモーション対応表にも入れている', /kenshiTwinBlade:'Dash'/.test(source));
 check('既存モンスターのモーションは変えていない',
   /zanCombo:'Dash', eikiSakuraCombo:'Dash'/.test(source)

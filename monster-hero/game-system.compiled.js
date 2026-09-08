@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 337a03d7a7fef290
+// source-sha256: ae8e97081c6762f5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0d0c2d00e4ea15cc
+// generated-sha256: 4af394033470b59e
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 14:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 14:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13352,8 +13352,11 @@ const buildAttackHits = ({
   // 二刀流も禁忌解錠と同じ「通常攻撃を50%+50%へ分ける」形。固有技は分割しない(メイン100%のまま)
   const kenshiHero = heroId === 'KenshiMocchi' && attackerId === 'KenshiMocchi';
   const kenshiSplitNormal = kenshiHero && ['atk', 'range_atk'].includes(card.type);
-  // 分割は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)
-  const mainBase = pandoraSplitNormal || kenshiSplitNormal ? Math.floor(d * 0.5) : d;
+  // 分割は、分割前の d を基準に 50% ずつへ分ける(先に半減した値を追撃の基準にすると 50%+25% になる)。
+  // 二刀流は「合計は元のまま」が仕様なので、d が奇数のときの余り1をメインへ寄せる
+  // (両方 floor にすると d=1001 が 500+500=1000 になり、1だけ減る)。
+  // 禁忌解錠は公開済みの挙動をそのまま保つため、こちらは従来どおり両方 floor のまま。
+  const mainBase = pandoraSplitNormal ? Math.floor(d * 0.5) : kenshiSplitNormal ? d - Math.floor(d * 0.5) : d;
   const mainCrit = mainCanCrit && (guaranteedCrit || rollCrit());
   hits.push({
     kind: 'main',
@@ -30655,6 +30658,11 @@ function MonsterHeroGame() {
               setSlotSkill(null);
               await battleWait(100);
             }
+            // 数値を出す間隔。ザン(最大3ヒット)・エイキ(最大6ヒット)はこれまでどおり1本140msだが、
+            // 剣士モッチーのソードスキルは永久追加連撃で本数が青天井に増えるので、
+            // 本数が7本以上になったら間隔を詰めて、出しきるまでの時間が伸び続けないようにする
+            // (840ms=6本ぶんを目安にし、目で追える下限30msで止める)
+            const comboStepMs = Math.max(30, Math.min(140, Math.floor(840 / group.length)));
             for (const h of group) {
               const hitColor = h.isCrit ? 'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110' : 'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if (h.isCrit) triggerShake();
@@ -30663,7 +30671,7 @@ function MonsterHeroGame() {
                 ...prev,
                 hp: Math.max(0, prev.hp - h.dmg)
               }));
-              await battleWait(140);
+              await battleWait(comboStepMs);
             }
             if (hit.rangeMoveTarget != null) {
               setEnemyDist(hit.rangeMoveTarget);

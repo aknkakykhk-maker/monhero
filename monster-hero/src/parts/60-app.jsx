@@ -7067,12 +7067,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               setSlotSkill(null);
               await battleWait(100);
             }
+            // 数値を出す間隔。ザン(最大3ヒット)・エイキ(最大6ヒット)はこれまでどおり1本140msだが、
+            // 剣士モッチーのソードスキルは永久追加連撃で本数が青天井に増えるので、
+            // 本数が7本以上になったら間隔を詰めて、出しきるまでの時間が伸び続けないようにする
+            // (840ms=6本ぶんを目安にし、目で追える下限30msで止める)
+            const comboStepMs=Math.max(30,Math.min(140,Math.floor(840/group.length)));
             for (const h of group) {
               const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if(h.isCrit) triggerShake();
               addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
               setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));
-              await battleWait(140);
+              await battleWait(comboStepMs);
             }
             if (hit.rangeMoveTarget!=null) {
               setEnemyDist(hit.rangeMoveTarget);
