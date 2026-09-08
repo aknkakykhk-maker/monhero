@@ -26,6 +26,8 @@ check('保存キーは mh_auto_settings_v1 のまま(新しいキーを作らな
   src.includes("const AUTO_SETTINGS_KEY = 'mh_auto_settings_v1';"));
 check('既定値に quickRun がある',
   /quickRun:\{\s*heroRosterEntry:null,\s*distance:null,\s*difficulty:null\s*\}/.test(src));
+check('同じ保存キー内に自動限凸の資源保護既定値がある',
+  /breakthroughReserve:\{\s*gold:0,\s*psyche:0\s*\}/.test(src));
 
 // ---- 正規化と判定を実際に動かす ----
 const slice = (from, to) => {
@@ -53,6 +55,13 @@ check('その場合は未設定になる（勝手に決めない）',
   old.quickRun.heroRosterEntry === null && old.quickRun.distance === null && old.quickRun.difficulty === null,
   JSON.stringify(old.quickRun));
 check('既存の項目は保たれる', old.strategy === 'offense' && old.allies[0].rosterEntry === 'Suezo' && old.allies[0].slot === 1);
+check('旧セーブに資源保護が無ければ0/0で補う',
+  old.breakthroughReserve.gold === 0 && old.breakthroughReserve.psyche === 0,
+  JSON.stringify(old.breakthroughReserve));
+const reserve = normalize({ breakthroughReserve:{ gold:12345.9, psyche:87.9 } }, ROSTER, DIFFS);
+check('資源保護は0以上の整数で保持する',
+  reserve.breakthroughReserve.gold === 12345 && reserve.breakthroughReserve.psyche === 87,
+  JSON.stringify(reserve.breakthroughReserve));
 
 // 正しく設定したとき
 const set = normalize({ quickRun:{ heroRosterEntry:'Golem', distance:0, difficulty:'Normal' } }, ROSTER, DIFFS);
