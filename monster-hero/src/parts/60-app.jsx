@@ -7174,12 +7174,28 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               setAttackAnim({slotIndex: animSlot, charge:true});
               Audio_.se.special();
               await battleWait(650);
-              setAttackAnim({slotIndex: animSlot, charge:false, motion, sakura: motion==='eikiSakuraCombo'});
-              await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?520:500)));
+              const isKenshiTwin=motion==='kenshiTwinBlade';
+              setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo'});
+              if(isKenshiTwin){
+                await battleWait(135); Audio_.se.zanSlash();
+                await battleWait(180); Audio_.se.zanSlash();
+                await battleWait(115); triggerShake();
+                await battleWait(130);
+              }else{
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?520:500)));
+              }
             } else {
-              setAttackAnim({slotIndex: animSlot, motion, sakura: motion==='eikiSakuraCombo'});
-              if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-              await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)));
+              const isKenshiTwin=motion==='kenshiTwinBlade';
+              setAttackAnim({slotIndex: animSlot, motion, twinBlade:isKenshiTwin, sakura: motion==='eikiSakuraCombo'});
+              if(isKenshiTwin){
+                await battleWait(135); Audio_.se.zanSlash();
+                await battleWait(180); Audio_.se.zanSlash();
+                await battleWait(115); triggerShake();
+                await battleWait(130);
+              }else{
+                if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)));
+              }
             }
             setAttackAnim(null);
             setSlotSkill(null);
