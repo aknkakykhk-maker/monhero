@@ -9,7 +9,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
-const IDS = ['MOCCHI', 'SUEZO', 'PIXIE', 'GOLEM', 'MITARASHI', 'IBLIS', 'TIGER', 'HAM', 'MONOL', 'OBORO', 'ZAN', 'ARK', 'SNEGUROCHKA'];
+const IDS = ['MOCCHI', 'SUEZO', 'PIXIE', 'GOLEM', 'MITARASHI', 'IBLIS', 'TIGER', 'HAM', 'MONOL', 'OBORO', 'ZAN', 'ARK', 'SNEGUROCHKA', 'EIKI', 'KENSHI_MOCCHI'];
 
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });

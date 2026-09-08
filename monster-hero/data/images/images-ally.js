@@ -46,6 +46,15 @@ const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask2.PNG?v=33881ea3c9
 // 置き換えたもの(tools/image/convert-dye-mask.js)。形は1画素も描き直していない
 const EIKI_IMG = "images/monsters/eiki.png?v=0105e40f8d1a";
 const EIKI_DYE_MASK = "images/monsters/eiki-dye-mask.PNG?v=6b5ab28ef5b4";
+// 2026年9月に追加準備中のレア「剣士モッチー」(モッチー×？？？)。正式実装まではデバッグ専用。
+// 染色は5部位で、承認済みマスクの色分けがそのままリポジトリ仕様に合っている
+// (赤=①肌 / 緑=②コート・ブーツ / 青=③髪 / 黄=④左手の剣 / マゼンタ=⑤右手の剣)。
+// 配信しているPNGは、その承認済みマスクを本番と同じ判定(_exactDyeMaskRegion)で読み直し、
+// 純色へそろえただけのもの(node tools/image/convert-dye-mask.js --snap)。
+// どの画素がどの染色になるかは1画素も変わらず、色数が減ったぶん953KB→37KBになっている。
+// 描き直していない原本は tools/art-sources/dye-masks/kenshi-mocchi-dye-mask.PNG に置いてある
+const KENSHI_MOCCHI_IMG = "images/monsters/kenshi-mocchi.png?v=63509132e701";
+const KENSHI_MOCCHI_DYE_MASK = "images/monsters/kenshi-mocchi-dye-mask.PNG?v=25a6a1282265";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -66,6 +75,7 @@ const SNEGUROCHKA_ICON = SNEGUROCHKA_IMG;
 const UNDINE_ICON = UNDINE_IMG;
 const YAOBIKUNI_ICON = YAOBIKUNI_IMG;
 const EIKI_ICON = EIKI_IMG;
+const KENSHI_MOCCHI_ICON = KENSHI_MOCCHI_IMG;
 
 // ==================== 顔アイコン (faceIconUrl) ====================
 // プロフィールアイコン選択画面・ロースター詳細等で使う顔クロップ画像。
@@ -97,3 +107,4 @@ const UNDINE_FACE_ICON = UNDINE_IMG;
 const YAOBIKUNI_FACE_ICON = YAOBIKUNI_IMG;
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
 const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
+const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=3bc8c38ab401";

@@ -21,6 +21,7 @@
 | --- | --- |
 | `PLANT.PNG` | `node tools/image/make-plant-dye-mask.js` が読む、手を入れていない原本。配信中の `plant.PNG` は透過を掃除した後の絵なので中身が違う。配信中の絵を読んで同じ場所へ書き戻すと、Canvasが半透明画素の色を丸めるぶん結果が少しずつ変わり、何度流しても同じ絵にならなくなるため原本を分けている。 |
 | `PANDORA-original.PNG` | `node tools/image/art-source-fidelity-check.js` が「配信中の絵が原本から画素を削っていないか」を突き合わせる正本。配信中の `pandora.PNG` はこれを減色しただけのもの。 |
+| `KENSHI_MOCCHI-original.png` | 同じく `art-source-fidelity-check.js` の正本。配信中の `kenshi-mocchi.png` はこれを減色しただけ(1284KB→343KB)で、余白は切っていないので原本と同じ座標系で比べられる。 |
 
 ## 大きさが同じでも原本を置くことがある
 

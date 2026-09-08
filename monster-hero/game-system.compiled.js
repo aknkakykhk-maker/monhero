@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 92c625daba21e610
+// source-sha256: 63d4d52cbc7c6494
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 2b6df3aa066aaa06
+// generated-sha256: 79893995715c945d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-08 07:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-08 10:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6116,6 +6116,32 @@ const MASU_COLOR_REGION_HUES = {
     noAAGuard: true,
     noEdgeGuard: true
   }],
+  // 剣士モッチーは承認済みマスク(EXACT_DYE_MASKS)が正本。ここは「5レイヤーある」ことを
+  // 既存経路へ知らせるための控え(パンドラと同じ形)。本数が足りないと _exactDyeMaskRegion が
+  // 返す③④に対応するマスクが無く、染色が丸ごと効かなくなるので必ず5要素にする。
+  // 染色①=肌(顔・のど・お腹・脚・手) / ②=コート・ブーツ / ③=髪 /
+  // ④=左手の剣(紫) / ⑤=右手の剣(水色)。目・口ばし・バイザー・輪郭線は染色対象外。
+  KenshiMocchi: [{
+    hue: 0,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 120,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 240,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 60,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }, {
+    hue: 300,
+    noAAGuard: true,
+    noEdgeGuard: true
+  }],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
   // 以前は口元を位置だけで決めるposBboxで指定していたが、矩形を積み重ねた形が実際の口の輪郭と
@@ -6716,7 +6742,8 @@ const EXACT_DYE_MASKS = Object.freeze({
   Yaobikuni: YAOBIKUNI_DYE_MASK,
   Plant: PLANT_DYE_MASK,
   Eiki: EIKI_DYE_MASK,
-  Pandora: PANDORA_DYE_MASK
+  Pandora: PANDORA_DYE_MASK,
+  KenshiMocchi: KENSHI_MOCCHI_DYE_MASK
 });
 const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
@@ -15359,7 +15386,7 @@ const DyeMaskTouchEditor = ({
     [search, setSearch] = useState('');
   const [previewMaskUrl, setPreviewMaskUrl] = useState(null),
     [previewRevision, setPreviewRevision] = useState(0),
-    [previewColors, setPreviewColors] = useState(['red', 'green', 'blue']);
+    [previewColors, setPreviewColors] = useState(['red', 'green', 'blue', 'yellow', 'magenta']);
   const [color, setColor] = useState('red'),
     [tool, setTool] = useState('brush'),
     [size, setSize] = useState(18),
@@ -15382,12 +15409,16 @@ const DyeMaskTouchEditor = ({
       red: [255, 0, 0, 255],
       green: [0, 255, 0, 255],
       blue: [0, 0, 255, 255],
+      yellow: [255, 255, 0, 255],
+      magenta: [255, 0, 255, 255],
       eraser: [0, 0, 0, 0]
     },
     colorCss = {
       red: '#ff0000',
       green: '#00ff00',
       blue: '#0000ff',
+      yellow: '#ffff00',
+      magenta: '#ff00ff',
       eraser: '#ffffff'
     };
   const context = () => maskRef.current?.getContext('2d', {
@@ -15468,8 +15499,19 @@ const DyeMaskTouchEditor = ({
     return outside;
   };
   // Canvas端から本体の透明画素だけを辿った「外部」だけを除去する。目など輪郭内の透明な穴は保持する。
-  const normalizeMask = (image, outside) => {
-    const data = image.data;
+  // 染色の部位に対応する純色。並びは _exactDyeMaskRegion(15-dye-and-art.jsx)と同じで
+  // 赤=① 緑=② 青=③ 黄=④ マゼンタ=⑤。ここが3色だけだった頃は、黄とマゼンタで塗った
+  // 5部位マスク(パンドラ・剣士モッチー)が「合成」「ゲームで試す」「PNG書出」を通るたびに
+  // 赤へ潰れていた(どの画素も最大チャンネルへ丸めていたため)。
+  const MASK_REGION_RGB = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255]],
+    MASK_REGION_CSS = ['#f00', '#0f0', '#00f', '#ff0', '#f0f'];
+  // いちばん近い純色へ寄せる。寄せ先はそのモンスターの部位数ぶん(regionCount)だけに絞る。
+  // 3部位のモンスターまで黄・マゼンタへ寄せてしまうと、_exactDyeMaskRegion が返す③④に対応する
+  // マスクが無く、そのモンスターの染色が丸ごと消える。3部位のときの結果は、以前の
+  // 「最大チャンネルへ丸める」書き方と1画素も変わらない(境目のにじみは赤へ寄る)。
+  const normalizeMask = (image, outside, regionCount = 3) => {
+    const data = image.data,
+      palette = MASK_REGION_RGB.slice(0, Math.max(3, Math.min(MASK_REGION_RGB.length, regionCount)));
     for (let i = 0, p = 0; i < data.length; i += 4, p++) {
       if (outside[p] || !data[i + 3]) {
         data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0;
@@ -15478,9 +15520,19 @@ const DyeMaskTouchEditor = ({
       const r = data[i],
         g = data[i + 1],
         b = data[i + 2];
-      data[i] = r >= g && r >= b ? 255 : 0;
-      data[i + 1] = g > r && g >= b ? 255 : 0;
-      data[i + 2] = b > r && b > g ? 255 : 0;
+      let best = 0,
+        bestD = Infinity;
+      for (let k = 0; k < palette.length; k++) {
+        const c = palette[k],
+          d = (r - c[0]) * (r - c[0]) + (g - c[1]) * (g - c[1]) + (b - c[2]) * (b - c[2]);
+        if (d < bestD) {
+          bestD = d;
+          best = k;
+        }
+      }
+      data[i] = palette[best][0];
+      data[i + 1] = palette[best][1];
+      data[i + 2] = palette[best][2];
       data[i + 3] = 255;
     }
     return image;
@@ -15548,7 +15600,7 @@ const DyeMaskTouchEditor = ({
       } else if (target.hasMask) {
         const urls = await getDyeRegionMasks(target.baseId, target.imageUrl);
         if (urls) {
-          const layers = await Promise.all(urls.slice(0, 3).map(load));
+          const layers = await Promise.all(urls.slice(0, MASK_REGION_CSS.length).map(load));
           layers.forEach((layer, index) => {
             const temp = document.createElement('canvas');
             temp.width = w;
@@ -15556,7 +15608,7 @@ const DyeMaskTouchEditor = ({
             const tc = temp.getContext('2d');
             tc.drawImage(layer, 0, 0, w, h);
             tc.globalCompositeOperation = 'source-in';
-            tc.fillStyle = ['#f00', '#0f0', '#00f'][index];
+            tc.fillStyle = MASK_REGION_CSS[index];
             tc.fillRect(0, 0, w, h);
             mc.drawImage(temp, 0, 0);
           });
@@ -15617,7 +15669,7 @@ const DyeMaskTouchEditor = ({
     const source = ctx.getImageData(0, 0, c.width, c.height),
       image = ctx.createImageData(c.width, c.height);
     image.data.set(source.data);
-    normalizeMask(image, outsideRef.current);
+    normalizeMask(image, outsideRef.current, dyeRegionCount(target.baseId));
     const temp = document.createElement('canvas');
     temp.width = c.width;
     temp.height = c.height;
@@ -15924,12 +15976,15 @@ const DyeMaskTouchEditor = ({
   const tryInGame = () => {
     const c = maskRef.current;
     if (!c || !ready) return;
-    const image = normalizeMask(context().getImageData(0, 0, c.width, c.height), outsideRef.current);
+    const image = normalizeMask(context().getImageData(0, 0, c.width, c.height), outsideRef.current, dyeRegionCount(target.baseId));
     context().putImageData(image, 0, 0);
     c.toBlob(blob => {
       if (blob) onTryInGame(target, blob, previewColors);
     }, 'image/png');
   };
+  // 塗れる色は、そのモンスターの部位数ぶんだけ出す(3部位のモンスターへ黄・マゼンタで塗らないため)。
+  // 背景色は塗る色そのものだと白文字が読めないので、緑と同じように暗めにしてある
+  const MASK_PALETTE = [['red', '赤', '#f00'], ['green', '緑', '#080'], ['blue', '青', '#00f'], ['yellow', '黄', '#880'], ['magenta', 'マゼンタ', '#808']];
   const close = () => {
       if (confirmDiscard()) onClose();
     },
@@ -16103,8 +16158,10 @@ const DyeMaskTouchEditor = ({
       paddingBottom: 'max(.4rem,env(safe-area-inset-bottom))'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-8 gap-1"
-  }, colorButton('red', '赤', '#f00'), colorButton('green', '緑', '#080'), colorButton('blue', '青', '#00f'), colorButton('eraser', '消す', '#475569'), /*#__PURE__*/React.createElement("button", {
+    className: "grid grid-cols-5 gap-1"
+  }, MASK_PALETTE.slice(0, Math.max(3, dyeRegionCount(target.baseId))).map(([id, label, bg], idx) => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: id
+  }, colorButton(id, `${'①②③④⑤'[idx]}${label}`, bg))), colorButton('eraser', '消す', '#475569'), /*#__PURE__*/React.createElement("button", {
     onClick: undo,
     disabled: !history.undo.length,
     className: "rounded-xl bg-slate-700 text-[7px] disabled:opacity-30"
@@ -29233,7 +29290,7 @@ function MonsterHeroGame() {
     // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
     const defenseRate = Math.min(0.5, effectiveDef * 0.00015);
-    const dmgBase = Math.max(30, (atkVal - effectiveDef * 0.5) * (1 - defenseRate)) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
+    const dmgBase = Math.max(30, (atkVal - effectiveDef * 0.5) * (1 - defenseRate)) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' || mainHero?.id === 'KenshiMocchi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
@@ -29419,7 +29476,7 @@ function MonsterHeroGame() {
     if (card.type === 'unique' && card.monId === 'Golem') return {
       oryo: 0.075
     };
-    if (card.type === 'unique' && (card.monId === 'Mocchi' || card.monId === 'Mitarashi')) return {
+    if (card.type === 'unique' && (card.monId === 'Mocchi' || card.monId === 'Mitarashi' || card.monId === 'KenshiMocchi')) return {
       dmgMod: 0.1
     };
     return null;
@@ -30212,7 +30269,7 @@ function MonsterHeroGame() {
           // モッチー/ミタラシは「被ダメージを割合で軽減」、モノリスは「丈夫さそのものを上げる」。
           // 見た目が似ているので取り違えやすいが、丈夫さはガードの軽減量にも効くぶん意味が違う。
           // 説明文(effectDesc)と食い違っていないかは tools/unique-effect-check.js が見張る
-          if (card.monId === 'Mocchi' || card.monId === 'Mitarashi') {
+          if (card.monId === 'Mocchi' || card.monId === 'Mitarashi' || card.monId === 'KenshiMocchi') {
             addPermaBuff('dmgCutPct', 0.03 * effMul);
             const boost = localBoostFromCard(card).dmgMod * effMul;
             addWaveBuff('enemyTakenDmgBonus', boost);

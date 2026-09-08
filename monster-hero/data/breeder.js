@@ -30,6 +30,12 @@ const PLANT_DISC_ICON = "images/disc-icons/plant-disc.PNG?v=23d828f69f14";
 const MIA_DISC_ICON = "images/disc-icons/mia-disc.PNG?v=da09c07c8624";
 const PANDORA_DISC_ICON = "images/disc-icons/pandora-disc.PNG?v=adee72203d0a";
 const EIKI_DISC_ICON = "images/disc-icons/eiki-disc.PNG?v=0b8dca1d94c0";
+// 剣士モッチーは正式実装まではデバッグ専用(ally-monsters.js の debugOnly)。
+// 円盤石の絵だけ先に作ってあり、BREEDER_MARKET_ITEMS へはまだ登録していない
+// (エイキと同じ手順。正式実装のときに「〜のアイコン」「〜の円盤石アイコン」
+//  「〜の円盤石」の3商品と MARKET_PROFILE_ICON_STYLES の値をまとめて足す)。
+// 絵は node tools/image/make-disc-icon.js が土台へ重ねて作ったもの
+const KENSHI_MOCCHI_DISC_ICON = "images/disc-icons/kenshi-mocchi-disc.PNG?v=57ec53a942c7";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["おりょうの力", "おりょうの気合", "おりょうの憤怒"],
