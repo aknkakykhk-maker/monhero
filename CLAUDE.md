@@ -334,9 +334,25 @@ ChatGPT・Codex・Claude Code で共通のため [`AGENTS.md`](AGENTS.md) の
 - 除外なしの `grep -r`(生成物にヒットして巨大な行がそのまま出る)
   → `grep -rn --exclude='game-system*' --exclude='*.compiled.js' <語> monster-hero/src/parts`
 
+**探す道具: `node tools/where.js`**
+
+`60-app.jsx` は15000行あまりが**丸ごと1つの関数**(`MonsterHeroGame`)なので、ファイルを分割して
+小さくすることができない。かわりに「開かずに場所だけ知る」道具を置いてある。改修に入る前にこれを使う。
+
+```
+node tools/where.js --screens                 # 画面(gameState)73件と、その場所
+node tools/where.js マーケット                 # 名前から定義の行を探す
+node tools/where.js --text <語>               # 本文をふつうに検索する
+node tools/where.js --outline <ファイル>       # そのファイルの骨格(定義の一覧)
+sed -n '9231,9400p' monster-hero/src/parts/60-app.jsx   # 出た行番号の前後だけ読む
+```
+
+生成物は最初から対象外で、出力は40件・1行110字に切ってある。全文を出さないための道具なので、
+`--limit` を大きくするのは本当に必要なときだけにする。
+
 **作業の進め方**
 
-- 変更箇所は「探してから読む」。`grep -n` → 行番号 → `sed -n` の順を徹底する
+- 変更箇所は「探してから読む」。`node tools/where.js` → 行番号 → `sed -n` の順を徹底する
 - 検査ツールの出力は最後の数行だけ見る(`2>&1 | tail -20`)。全部貼らない
 - 長い作業(土台の見直しなど)は、区切りで `docs/` に進捗メモを1枚残して**会話を切る**。
   中断したまま別の依頼を重ねない
