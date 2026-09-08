@@ -984,6 +984,9 @@ function MonsterHeroGame() {
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
   const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
+  // 自動限界突破の一括変更は「その場で既存個体へ適用」する操作なのでAUTO設定には保存しない。
+  // 新しく入手したマスモンまで勝手にONにしないため、画面を開くたび初期候補へ戻す。
+  const [autoBreakthroughBulkValue, setAutoBreakthroughBulkValue] = useState('follow');
   const [autoAllyDetail, setAutoAllyDetail] = useState(null); // AUTO設定: 選択中の供モン詳細（確認専用）
   const [monsterPartySets, setMonsterPartySets] = useState(() => normalizeMonsterPartySets(null, STARTER_MONSTER_IDS));
   const [editingPartySetIndex, setEditingPartySetIndex] = useState(0);
@@ -3818,6 +3821,7 @@ function MonsterHeroGame() {
   const AUTO_QUICK_DIFFICULTY_IDS = Object.keys(QUICK_DIFFICULTY_SETTINGS);
   const openAutoSettings = () => {
     setDraftAutoSettings(normalizeAutoSettings(autoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
+    setAutoBreakthroughBulkValue('follow');
     setGameState('AUTO_SETTINGS');
   };
   const updateDraftAutoAlly = (index, patch) => {
@@ -3832,6 +3836,34 @@ function MonsterHeroGame() {
       ...current,
       quickRun:{ ...(current.quickRun || {}), ...patch },
     }, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
+  };
+  const updateDraftAutoBreakthroughReserve = (patch) => {
+    setDraftAutoSettings(current => normalizeAutoSettings({
+      ...current,
+      breakthroughReserve:{ ...(current.breakthroughReserve || {}), ...patch },
+    }, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS));
+  };
+  const applyAutoBreakthroughBulk = async () => {
+    const currentMons = Array.isArray(masuMonsRef.current) ? masuMonsRef.current : [];
+    if (currentMons.length <= 0) return false;
+    const value = autoBreakthroughBulkValue;
+    const fixedLevel = value.startsWith('fixed:') ? Number(value.slice(6)) : 0;
+    const availableLevels = autoRepeatBreakthroughLevelOptions(breederLevel.level);
+    const mode = value === 'follow' ? 'follow' : value === 'off' ? 'off' : 'fixed';
+    if (mode === 'fixed' && !availableLevels.includes(fixedLevel)) return false;
+    const label = mode === 'follow' ? 'ブリーダーLvに自動追従'
+      : mode === 'off' ? 'OFF' : `Lv${fixedLevel}まで固定`;
+    if (!window.confirm(`所有マスモン${currentMons.length}体のAUTO∞ 自動限界突破を「${label}」へ一括変更しますか？\n\nこの操作はすぐ保存され、個別設定も上書きされます。`)) return false;
+    const next = currentMons.map(masu => buildAutoRepeatBreakthroughSettingUpdate(masu, mode, fixedLevel));
+    await storeSet('mh_masu_mons', next, false);
+    masuMonsRef.current = next;
+    setMasuMons(next);
+    setMasuMonDetail(prev => {
+      if (!prev) return prev;
+      return next.find(masu => String(masu.id) === String(prev.id)) || prev;
+    });
+    Audio_.se.tap();
+    return true;
   };
   const saveAutoSettings = async () => {
     const normalized = normalizeAutoSettings(draftAutoSettings, autoSettingsCandidates(), AUTO_QUICK_DIFFICULTY_IDS);
