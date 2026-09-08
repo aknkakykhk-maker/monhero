@@ -1,0 +1,8 @@
+# 自動生成物(tools/build.js が書き出す)。差分を出さない・マージしない。
+# 中身は parts/*.jsx から機械的に作られるため、差分を人が読む意味がないうえ、
+# 1回の git diff で数MBが流れ込み、AIエージェントの文脈をまるごと食い潰す。
+monster-hero/src/game-system.jsx      -diff -merge linguist-generated
+monster-hero/game-system.compiled.js  -diff -merge linguist-generated
+
+# 譜面・お知らせ・画像の元データも巨大なので差分は畳む(中身の編集は通常どおり可能)。
+tools/mode/authoring/*.json           -diff linguist-generated
