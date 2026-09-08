@@ -107,4 +107,4 @@ const UNDINE_FACE_ICON = UNDINE_IMG;
 const YAOBIKUNI_FACE_ICON = YAOBIKUNI_IMG;
 // 立ち絵から切り出した顔クロップ(tools/image/make-face-icons.js)
 const EIKI_FACE_ICON = "images/monster-icons/face/eiki.png?v=9605be0feb75";
-const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=3bc8c38ab401";
+const KENSHI_MOCCHI_FACE_ICON = "images/monster-icons/face/kenshi-mocchi.png?v=fed887e4c278";
