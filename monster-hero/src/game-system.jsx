@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: b5ec4d95de430a6a
+// generated-sha256: aff4b5cb236862fe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-09 20:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-09 20:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5278,18 +5278,21 @@ const ReincarnateBadge = ({ count = 0, className = '' }) => {
   if (!value) return null;
   return <div className={`mh-reincarnate-badge ${className}`} aria-label={`転生${value}回`}>転生 ×{value}</div>;
 };
-// 一覧・詳細・HOME・演出で共有する転生オーラ。同じ画像を別周期で重ね、背面だけで燃焼感を作る。
-const REINCARNATE_AURA_IMAGES = {
-  blue: 'images/effects/reincarnate-aura-blue.PNG',
-  yellow: 'images/effects/reincarnate-aura-yellow.PNG',
-  red: 'images/effects/reincarnate-aura-red.PNG',
+// 一覧・詳細・HOME・演出で共有する魂格オーラ。
+const SOUL_RANK_AURA_IMAGES = {
+  1: 'images/effects/soul-rank-aura-blue.PNG',
+  2: 'images/effects/soul-rank-aura-yellow.PNG',
+  3: 'images/effects/soul-rank-aura-green.PNG',
+  4: 'images/effects/soul-rank-aura-red.PNG',
+  5: 'images/effects/soul-rank-aura-rainbow.PNG',
 };
-const ReincarnateAura = ({ count = 0, className = '' }) => {
-  const value = Math.max(0, Math.floor(Number(count) || 0));
-  if (!value) return null;
-  const stage = value >= 3 ? 'red' : value === 2 ? 'yellow' : 'blue';
-  const src = REINCARNATE_AURA_IMAGES[stage];
-  return <span className={`mh-reincarnate-aura is-${stage} ${className}`} aria-hidden="true">
+const SOUL_RANK_AURA_TONES = { 1:'blue', 2:'yellow', 3:'green', 4:'red', 5:'rainbow' };
+const SoulRankAura = ({ soulRankStage = 0, className = '' }) => {
+  const stage = normalizeSoulRankStage(soulRankStage);
+  if (!stage) return null;
+  const tone = SOUL_RANK_AURA_TONES[stage];
+  const src = SOUL_RANK_AURA_IMAGES[stage];
+  return <span className={`mh-reincarnate-aura is-${tone} ${className}`} aria-hidden="true">
     <span className="mh-reincarnate-flame is-back"><img src={src} alt=""/></span>
     <span className="mh-reincarnate-flame is-main"><img src={src} alt=""/></span>
     <span className="mh-reincarnate-flame is-foot"><img src={src} alt=""/></span>
@@ -5347,7 +5350,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
   return <div className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
     <div className="mh-home-masumon-bob" style={{transform:`scaleX(${motion.facing})`,isolation:'isolate'}}>
       <DyedMonsterImage baseId={masu.baseId} src={base.imgUrl || base.iconUrl} alt="" masuColors={masuColors} draggable={false}/>
-      <ReincarnateAura count={masu.reincarnateCount} className="is-home"/>
+      <SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>
       <RebirthStars count={masu.rebirthCount} className="mh-home-masumon-stars"/>
     </div>
   </div>;
@@ -13061,7 +13064,7 @@ function MonsterHeroGame() {
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
         {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} soulRankStage={normalizeMasuProgression(masu).soulRankStage} small/>}
         {badge}
-        {masu&&<ReincarnateAura count={masu.reincarnateCount} className="is-small"/>}
+        {masu&&<SoulRankAura soulRankStage={normalizeMasuProgression(masu).soulRankStage} className="is-small"/>}
       </div>
       {monsterCardName(masu?masu.name:base.name, nameBand?'text-white':(masu?'text-pink-200':'text-white'), nameBand)}
       {monsterCardInfo(
@@ -20947,7 +20950,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               ? <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt={mon.name} masuColors={mon.colors} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-4xl">{mon.emoji}</div>}
           </div>
-          {masu && <><ReincarnateAura count={norm.reincarnateCount}/><RebirthStars count={norm.rebirthCount} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={norm.transcended} soulRankStage={norm.soulRankStage}/></>}
+          {masu && <><SoulRankAura soulRankStage={norm.soulRankStage}/><RebirthStars count={norm.rebirthCount} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={norm.transcended} soulRankStage={norm.soulRankStage}/></>}
         </div>
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start gap-1.5 min-w-0">
@@ -22041,7 +22044,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         </div>}
         {/* 転生の演出。モンスターの背面で対応色の画像オーラを一度だけ強く発光させる。 */}
-        {reincarnateAnimation&&<div className="mh-reincarnation-animation" role="status" aria-live="polite"><div className="mh-reincarnation-light"></div><div className="mh-reincarnation-mon mh-reincarnate-stack"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl||reincarnateAnimation.base?.imgUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><ReincarnateAura count={reincarnateAnimation.masu.reincarnateCount} className="is-ceremony"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="mh-reincarnation-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>}
+        {reincarnateAnimation&&<div className="mh-reincarnation-animation" role="status" aria-live="polite"><div className="mh-reincarnation-light"></div><div className="mh-reincarnation-mon mh-reincarnate-stack"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl||reincarnateAnimation.base?.imgUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><SoulRankAura soulRankStage={normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage} className="is-ceremony"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="mh-reincarnation-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>}
         {donationAnimation&&<div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>}
 
         {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.count===1?`${donationResult.name}を寄付しました`:`${donationResult.count}体をまとめて寄付しました`}</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-base text-fuchsia-300 font-black mt-1">虹のプシュケー ×{donationResult.psyche}</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
@@ -22507,7 +22510,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <section>
                 <h3 className="mb-2 text-[9px] font-black text-amber-300">1. 超越マーク（保存しません）</h3>
                 <p className="mb-2 text-[9px] leading-relaxed text-slate-400">虹★{BREAKTHROUGH_STARS_PER_TIER}・転生3回と重ねて、隠れていないかを見ます。表示用の一時データだけを使います。</p>
-                {previewBase&&<div className="grid grid-cols-2 gap-3">{[false,true].map(on=>{const masu=previewMasu(on);return <article key={String(on)} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-amber-400/40"><DyedMonsterImage baseId={masu.baseId} src={previewBase.iconUrl||previewBase.imgUrl} alt={previewBase.name} masuColors={[]} className="w-full h-full object-cover"/></div><ReincarnateAura count={3}/><RebirthStars count={FINAL_BREAKTHROUGH_COUNT} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={on}/></div><b className="mt-3 block text-[11px] text-white">{on?'超越済み':'未超越'}</b></article>})}</div>}
+                {previewBase&&<div className="grid grid-cols-2 gap-3">{[false,true].map(on=>{const masu=previewMasu(on);return <article key={String(on)} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-amber-400/40"><DyedMonsterImage baseId={masu.baseId} src={previewBase.iconUrl||previewBase.imgUrl} alt={previewBase.name} masuColors={[]} className="w-full h-full object-cover"/></div><SoulRankAura soulRankStage={3}/><RebirthStars count={FINAL_BREAKTHROUGH_COUNT} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={on}/></div><b className="mt-3 block text-[11px] text-white">{on?'超越済み':'未超越'}</b></article>})}</div>}
                 <div className="mt-2 flex items-center justify-center gap-4 rounded-2xl border border-white/10 bg-slate-900/90 py-3"><span className="relative inline-block w-10 h-10"><span className="block w-10 h-10 rounded-full bg-slate-800"/><TranscendenceBadge transcended small/></span><span className="relative inline-block w-10 h-10"><span className="block w-10 h-10 rounded-full bg-slate-800"/><TranscendenceBadge transcended/></span><small className="text-[9px] text-slate-400">small / 通常</small></div>
                 <button onClick={debugPlayTranscendAnimation} className="mt-2 w-full min-h-[52px] rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-fuchsia-700 to-amber-600 text-sm font-black text-white active:scale-95">超越演出を再生</button>
               </section>
@@ -22568,7 +22571,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-300">DEBUG・本番と同じ ReincarnateAura / RebirthStars</small><h2 className="text-sm font-black">転生表示確認</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
             <p className="mb-3 text-[9px] leading-relaxed text-slate-400">表示用の一時データだけを使います。所持マスモン・転生回数・ダイヤは変更も保存もしません。</p>
-            <section className="grid grid-cols-2 gap-3">{[0,1,2,3].map(count=>{const masu=previewMasu(count);return <article key={count} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"><DyedMonsterImage baseId={base.id} src={base.iconUrl||base.imgUrl} alt={base.name} masuColors={[]} className="w-full h-full object-cover"/></div><ReincarnateAura count={count}/><RebirthStars count={3} className="mh-rebirth-stars-overlay"/></div><b className="mt-3 block text-[11px] text-white">{count===0?'未転生':count===1?'1回：青画像':count===2?'2回：黄画像':'3回：赤画像'}</b></article>})}</section>
+            <section className="grid grid-cols-2 gap-3">{[0,1,2,3].map(count=>{const masu=previewMasu(count);return <article key={count} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"><DyedMonsterImage baseId={base.id} src={base.iconUrl||base.imgUrl} alt={base.name} masuColors={[]} className="w-full h-full object-cover"/></div><SoulRankAura soulRankStage={Math.max(0,Math.min(5,count))}/><RebirthStars count={3} className="mh-rebirth-stars-overlay"/></div><b className="mt-3 block text-[11px] text-white">{count===0?'未転生':count===1?'1回：青画像':count===2?'2回：黄画像':'3回：赤画像'}</b></article>})}</section>
             </div>
             <button onClick={playPreview} className="mt-3 shrink-0 min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-sm font-black text-white active:scale-95">転生演出を再生</button>
           </main>;
@@ -28953,8 +28956,8 @@ const createAnimationStyle = () => {
     .mh-reincarnate-flame{position:absolute;inset:0;display:block;transform-origin:center bottom;will-change:transform,opacity}
     .mh-reincarnate-flame>img{display:block;width:100%;height:100%;object-fit:contain;transform-origin:center bottom;filter:drop-shadow(0 0 5px #60a5faaa)}
     .mh-reincarnate-flame.is-main{animation:mhReincarnateMain 2.55s ease-in-out infinite}.mh-reincarnate-flame.is-back{opacity:.32;animation:mhReincarnateBack 3.4s ease-in-out -1.1s infinite}.mh-reincarnate-flame.is-foot{inset:24% -5% -5%;opacity:.46;clip-path:inset(48% 5% 0);animation:mhReincarnateFoot 1.85s ease-in-out -.6s infinite}
-    .mh-reincarnate-aura.is-blue img{transform:translateY(-2%) scale(1.22)}.mh-reincarnate-aura.is-yellow img{transform:translateY(-2%) scale(1.22);filter:brightness(1.03) drop-shadow(0 0 5px #fde047aa)}.mh-reincarnate-aura.is-red img{transform:translateY(1%) scale(.96);filter:brightness(1.06) drop-shadow(0 0 5px #f87171aa)}
-    .mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{position:absolute;width:3px;height:9px;border-radius:60% 60% 45% 45%;background:currentColor;box-shadow:0 0 5px currentColor;opacity:0}.mh-reincarnate-sparks{left:24%;bottom:21%;color:#bfdbfe;animation:mhReincarnateSpark 2.7s ease-out -.4s infinite}.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{content:"";display:block}.mh-reincarnate-sparks::before{left:300%;top:180%;animation:mhReincarnateSpark 3.1s ease-out -1.7s infinite}.mh-reincarnate-sparks::after{left:1450%;top:320%;animation:mhReincarnateSpark 2.9s ease-out -2.2s infinite}.mh-reincarnate-aura.is-yellow .mh-reincarnate-sparks{color:#fde68a}.mh-reincarnate-aura.is-red .mh-reincarnate-sparks{color:#fca5a5}
+    .mh-reincarnate-aura.is-blue img{transform:translateY(-2%) scale(1.22)}.mh-reincarnate-aura.is-yellow img{transform:translateY(-2%) scale(1.22);filter:brightness(1.03) drop-shadow(0 0 5px #fde047aa)}.mh-reincarnate-aura.is-red img{transform:translateY(1%) scale(.96);filter:brightness(1.06) drop-shadow(0 0 5px #f87171aa)}.mh-reincarnate-aura.is-green img{transform:translateY(-1%) scale(1.12);filter:brightness(1.04) drop-shadow(0 0 5px #4ade80aa)}.mh-reincarnate-aura.is-rainbow img{transform:translateY(-1%) scale(1.08);filter:brightness(1.08) drop-shadow(0 0 6px #f472b6aa)}
+    .mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{position:absolute;width:3px;height:9px;border-radius:60% 60% 45% 45%;background:currentColor;box-shadow:0 0 5px currentColor;opacity:0}.mh-reincarnate-sparks{left:24%;bottom:21%;color:#bfdbfe;animation:mhReincarnateSpark 2.7s ease-out -.4s infinite}.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{content:"";display:block}.mh-reincarnate-sparks::before{left:300%;top:180%;animation:mhReincarnateSpark 3.1s ease-out -1.7s infinite}.mh-reincarnate-sparks::after{left:1450%;top:320%;animation:mhReincarnateSpark 2.9s ease-out -2.2s infinite}.mh-reincarnate-aura.is-yellow .mh-reincarnate-sparks{color:#fde68a}.mh-reincarnate-aura.is-red .mh-reincarnate-sparks{color:#fca5a5}.mh-reincarnate-aura.is-green .mh-reincarnate-sparks{color:#86efac}.mh-reincarnate-aura.is-rainbow .mh-reincarnate-sparks{color:#f9a8d4}
     @keyframes mhReincarnateMain{0%,100%{opacity:.76;transform:translateY(1%) scale(.98);filter:brightness(.96)}24%{opacity:.91;transform:translateY(-2%) scale(1.025);filter:brightness(1.08)}53%{opacity:.81;transform:translateY(0) scale(1.005);filter:brightness(1)}76%{opacity:.94;transform:translateY(-3.5%) scale(1.045);filter:brightness(1.12)}}
     @keyframes mhReincarnateBack{0%,100%{transform:translateY(-1%) scale(1.04);filter:brightness(.9) blur(.25px)}38%{opacity:.5;transform:translateY(-4%) scale(1.09);filter:brightness(1.16) blur(.55px)}68%{opacity:.26;transform:translateY(1%) scale(1.02);filter:brightness(.96) blur(.2px)}}
     @keyframes mhReincarnateFoot{0%,100%{opacity:.38;transform:translateY(2%) scale(.96);filter:brightness(1.05)}45%{opacity:.7;transform:translateY(-5%) scale(1.08);filter:brightness(1.3)}72%{opacity:.47;transform:translateY(-1%) scale(1.01);filter:brightness(1.12)}}
