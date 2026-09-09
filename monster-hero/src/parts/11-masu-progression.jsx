@@ -82,7 +82,7 @@ const SOUL_TRAIT_DEFINITIONS = Object.freeze([
   Object.freeze({ id:'rangeMidDamage', category:'attack', name:'中距離の極意', desc:'本人の中距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
   Object.freeze({ id:'rangeFarDamage', category:'attack', name:'遠距離の極意', desc:'本人の遠距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
   Object.freeze({ id:'comboFinalDamage', category:'attack', name:'連撃強化', desc:'本人の連撃・追撃の最終ダメージ +1%', costPerLevel:4, effectPerLevel:1, unit:'%' }),
-  Object.freeze({ id:'critRate', category:'attack', name:'会心眼', desc:'本人の会心率 +1pt', costPerLevel:4, effectPerLevel:1, unit:'pt', maxLevel:100 }),
+  Object.freeze({ id:'critRate', category:'attack', name:'会心眼', desc:'本人の会心率 +1pt', costPerLevel:4, effectPerLevel:1, unit:'pt', maxLevel:90 }),
   Object.freeze({ id:'critDamage', category:'attack', name:'会心極', desc:'本人の会心ダメージ +1%', costPerLevel:3, effectPerLevel:1, unit:'%' }),
   // 防御: パーティ効果。同種合成・特殊防御統合はSTEP4で接続する。
   Object.freeze({ id:'partyDamageReduction', category:'defense', name:'鉄壁', desc:'パーティ被ダメージ -1%', costPerLevel:20, effectPerLevel:1, unit:'%' }),
@@ -129,6 +129,11 @@ const soulTraitSpentPoints = (masu) => {
 };
 const soulTraitAvailablePoints = (masu) =>
   Math.max(0, soulPointEarned(masu) - soulTraitSpentPoints(masu));
+// 壊れた保存で使用済みPが獲得済みPを上回っても、追加Pを生み出さず強化を止められる診断値。
+const soulTraitPointStatus = (masu) => {
+  const earned=soulPointEarned(masu), spent=soulTraitSpentPoints(masu);
+  return { earned, spent, available:Math.max(0,earned-spent), overspent:spent>earned };
+};
 const maxSoulTraitUpgradeLevels = (masu, traitId) => {
   const normalized = normalizeMasuProgression(masu);
   const trait = SOUL_TRAIT_BY_ID[traitId];
@@ -1232,6 +1237,9 @@ const mergeMasuIntoMon = (masu) => {
     // 固有技設定(並び順・初期技)。保存が無い個体はここで従来どおりの値になる
     uniqueOrder: normalizeUniqueOrder(masu),
     initialUniqueKey: normalizeInitialUniqueKey(masu),
+    // STEP3: 魂格特性も個体解決結果へ載せる。詳細・一覧・総合力で同じ保存値を見るため。
+    // 実戦効果そのものはSTEP4でこの同じ値へ接続する。
+    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
   };
 };
 // マスモン詳細で「元の値 ＋ 基礎UP(超越) ＋ 通常強化 ＝ 現在」を出すための内訳。★重要
@@ -1382,7 +1390,7 @@ const monsterPowerUniques = (mon) => [mon?.unique, ...((mon?.inheritedUniques) |
   .filter(u => u && typeof u === 'object' && typeof u.name === 'string' && Number.isFinite(Number(u.baseMult)));
 // 総合力の内訳。合計を出す前の各項目を返すので、検査や画面の説明にも使える
 const monsterPowerParts = (mon) => {
-  if (!mon) return { stat: 0, aptitude: 0, unique: 0, total: 0 };
+  if (!mon) return { stat:0, aptitude:0, unique:0, soul:0, total:0 };
   const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
   const stat = num(mon.baseHp) * MONSTER_POWER_STAT_WEIGHT.hp
     + num(mon.baseAtk) * MONSTER_POWER_STAT_WEIGHT.atk
@@ -1394,14 +1402,16 @@ const monsterPowerParts = (mon) => {
   const uniques = monsterPowerUniques(mon);
   const uniquePower = uniques.length * MONSTER_POWER_UNIQUE_OWNED
     + uniques.reduce((sum, u) => sum + Math.max(0, Math.floor(num(u.evoLevel))), 0) * MONSTER_POWER_UNIQUE_PER_LEVEL;
-  return { stat, aptitude: apt, unique: uniquePower, total: stat + apt + uniquePower };
+  // 魂格特性は効果ごとに換算せず「使用済み魂格P×10」を一度だけ加える。
+  const soulPower = soulTraitSpentPoints(mon) * 10;
+  return { stat, aptitude:apt, unique:uniquePower, soul:soulPower, total:stat + apt + uniquePower + soulPower };
 };
 // 総合力の正本。解決済みのモンスター(ベースモンの定義、または mergeMasuIntoMon の結果)を渡す。
 // 端数は最後にまとめて四捨五入する(項目ごとに丸めない)
 const monsterPowerOf = (mon) => Math.round(monsterPowerParts(mon).total);
 // 保存データのマスモンから総合力を出す。詳細画面と同じ解決(mergeMasuIntoMon)を通してから
 // 同じ式へ渡すので、ベース値と強化値の二重加算は起きない
-const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu)) + soulTraitSpentPoints(masu) * 10;
+const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu));
 // 第3段階で新旧表現を併記する新規個体は、保存前に能力・適性・総合力が一致することを確認する。
 // 既存個体のロードには使わないため、旧データを補完・書換えする処理にはならない。
 const masuBaselineRepresentationsMatch = (masu) => {
