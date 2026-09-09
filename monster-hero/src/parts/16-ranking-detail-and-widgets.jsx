@@ -316,7 +316,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
   return <div className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
     <div className="mh-home-masumon-bob" style={{transform:`scaleX(${motion.facing})`,isolation:'isolate'}}>
       <DyedMonsterImage baseId={masu.baseId} src={base.imgUrl || base.iconUrl} alt="" masuColors={masuColors} draggable={false}/>
-      <ReincarnateAura count={masu.reincarnateCount} className="is-home"/>
+      <SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>
       <RebirthStars count={masu.rebirthCount} className="mh-home-masumon-stars"/>
     </div>
   </div>;
