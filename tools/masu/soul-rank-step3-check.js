@@ -165,6 +165,11 @@ check('攻撃/防御/補助の3タブ',
   app.includes('aria-label="魂格特性カテゴリ"')&&app.includes('SOUL_TRAIT_CATEGORIES.map'));
 check('一覧カード→個別ボトムシート',
   app.includes('data-soul-trait-card')&&app.includes('data-soul-trait-sheet'));
+check('現在編成なら合成後効果を表示し、強化前後のBefore→Afterも出す',
+  app.includes('data-soul-trait-party-preview')
+  &&app.includes('data-soul-trait-before-after')
+  &&app.includes('soulTraitPartyPreview(rosterSoulMasus)')
+  &&app.includes('実戦では実際に参加した個体だけで再計算します'));
 check('個別強化は-1/+1/+5/MAX/決定',
   app.includes('data-soul-trait-minus-one')&&app.includes('data-soul-trait-plus-one')
   &&app.includes('data-soul-trait-plus-five')&&app.includes('data-soul-trait-max')
