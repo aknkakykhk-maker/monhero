@@ -157,8 +157,8 @@ check('魂格再編はmh_masu_mons/mh_owned_itemsを取引保存',
 check('マーケットに勇者の証1→再編の書交換導線',
   app.includes('exchangeSoulRankRespecByProof')&&app.includes('勇者の証1個を魂格再編の書1冊へ交換'));
 check('魂格特性画面はSafe Areaと44px以上の主要操作を守る',
-  app.includes("paddingTop:'calc(.35rem + env(safe-area-inset-top))'")
-  &&app.includes("paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'")
+  app.includes("paddingTop:'calc(1rem + env(safe-area-inset-top))'")
+  &&app.includes("paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'")
   &&app.includes('min-h-[48px]'));
 
 // ---- 8. STEP境界 ----
