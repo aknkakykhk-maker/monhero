@@ -184,6 +184,7 @@ const EXPORTED_NAMES = [
   'buildAutoRepeatBreakthroughs',
   'buildFusionBreakthroughPlan',
   'buildFusionDiamondSummary',
+  'buildFusionSoulRankInheritancePlan',
   'buildMasuReincarnation',
   'reconcileMasuPoints',
   'totalBreakthroughPoints',
