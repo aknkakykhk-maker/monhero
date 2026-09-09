@@ -171,12 +171,8 @@ const makeMasu = (stage, level, over = {}) => api.normalizeMasuProgression({
     && app.includes("paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'"));
   check('成功演出は短時間だけ・reduced motionで短縮',
     app.includes('data-soul-rank-animation') && app.includes('prefersReducedMotion()?800:2400'));
-  check('STEP3以降の特性・合体継承・バッジ・魂格オーラはまだ始めない',
-    !progression.includes('SOUL_TRAIT_DEFINITIONS')
-    && !app.includes('data-soul-trait')
-    && !app.includes('soulRankInheritance')
-    && !app.includes('SoulRankBadge')
-    && !app.includes('soul-rank-aura-'));
+  // STEP2検査は進化・勇者の証の回帰条件だけを固定する。
+  // STEP3以降が追加されても、STEP2で成立した仕様そのものは引き続き検査する。
 
   console.log(failed ? `\n${failed}件のNGがあります` : '\n魂格STEP2: すべてOK');
   process.exit(failed ? 1 : 0);
