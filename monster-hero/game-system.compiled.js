@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0b3c5569d5d548d8
+// source-sha256: 0e287123922328dd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d8e3e0a1677384c9
+// generated-sha256: 8cbce1dcac045603
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-09 10:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-09 18:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -487,6 +487,476 @@ const levelInfo = totalXp => {
 // 限界突破の上限(35凸)はそのままで、超越が伸ばすのは「Lv上限」だけ。
 // MAX_MASU_LEVEL_CAP は限界突破の天井として400のまま使い続けるので、36凸は作られない。
 const TRANSCEND_LEVEL_CAP = 500;
+// 魂格STEP1: 超越Lv500の先を100Lvずつ解放できる個体データ基盤。
+// STEP1では進化UI/素材消費はまだ実装せず、保存値・上限・XP・ポイント計算だけを用意する。
+const SOUL_RANK_BASE_LEVEL = 500;
+const SOUL_RANK_MAX_STAGE = 5;
+const SOUL_RANK_LEVEL_CAP = 1000;
+const SOUL_RANK_LEVELS_PER_STAGE = 100;
+const SOUL_RANK_EVOLUTION_STAGES = Object.freeze([Object.freeze({
+  stage: 1,
+  label: '魂格Ⅰ',
+  requiredLevel: 500,
+  levelCap: 600,
+  diamondCost: 5000000,
+  heroProofCost: 20,
+  accent: '#60a5fa'
+}), Object.freeze({
+  stage: 2,
+  label: '魂格Ⅱ',
+  requiredLevel: 600,
+  levelCap: 700,
+  diamondCost: 10000000,
+  heroProofCost: 30,
+  accent: '#facc15'
+}), Object.freeze({
+  stage: 3,
+  label: '魂格Ⅲ',
+  requiredLevel: 700,
+  levelCap: 800,
+  diamondCost: 15000000,
+  heroProofCost: 40,
+  accent: '#4ade80'
+}), Object.freeze({
+  stage: 4,
+  label: '魂格Ⅳ',
+  requiredLevel: 800,
+  levelCap: 900,
+  diamondCost: 20000000,
+  heroProofCost: 50,
+  accent: '#f87171'
+}), Object.freeze({
+  stage: 5,
+  label: '魂格Ⅴ',
+  requiredLevel: 900,
+  levelCap: 1000,
+  diamondCost: 25000000,
+  heroProofCost: 60,
+  accent: '#e879f9'
+})]);
+const soulRankEvolutionForStage = stage => {
+  const target = Math.floor(Number(stage) || 0);
+  return target >= 1 && target <= SOUL_RANK_MAX_STAGE ? SOUL_RANK_EVOLUTION_STAGES.find(step => step.stage === target) || null : null;
+};
+const normalizeSoulRankStage = value => Math.max(0, Math.min(SOUL_RANK_MAX_STAGE, Math.floor(Number(value) || 0)));
+const soulRankLevelCap = stage => SOUL_RANK_BASE_LEVEL + normalizeSoulRankStage(stage) * SOUL_RANK_LEVELS_PER_STAGE;
+const normalizeSoulPointMaxReachedLevel = value => Math.max(SOUL_RANK_BASE_LEVEL, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(value) || SOUL_RANK_BASE_LEVEL)));
+const SOUL_TRAIT_DEFINITIONS = Object.freeze([
+// 攻撃: 本人の攻撃だけへ適用。戦闘接続はSTEP4でこのIDを正本として行う。
+Object.freeze({
+  id: 'allDamage',
+  category: 'attack',
+  name: '闘魂',
+  desc: '本人の全攻撃ダメージ +1%',
+  costPerLevel: 5,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'uniqueDamage',
+  category: 'attack',
+  name: '奥義',
+  desc: '本人の固有技ダメージ +1%',
+  costPerLevel: 4,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'normalDamage',
+  category: 'attack',
+  name: '武技',
+  desc: '本人の通常技・距離技ダメージ +1%',
+  costPerLevel: 4,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'rangeZeroDamage',
+  category: 'attack',
+  name: '零距離の極意',
+  desc: '本人の零距離ダメージ +1%',
+  costPerLevel: 2,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'rangeNearDamage',
+  category: 'attack',
+  name: '近距離の極意',
+  desc: '本人の近距離ダメージ +1%',
+  costPerLevel: 2,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'rangeMidDamage',
+  category: 'attack',
+  name: '中距離の極意',
+  desc: '本人の中距離ダメージ +1%',
+  costPerLevel: 2,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'rangeFarDamage',
+  category: 'attack',
+  name: '遠距離の極意',
+  desc: '本人の遠距離ダメージ +1%',
+  costPerLevel: 2,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'comboFinalDamage',
+  category: 'attack',
+  name: '連撃強化',
+  desc: '本人の連撃・追撃の最終ダメージ +1%',
+  costPerLevel: 4,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'critRate',
+  category: 'attack',
+  name: '会心眼',
+  desc: '本人の会心率 +1pt',
+  costPerLevel: 4,
+  effectPerLevel: 1,
+  unit: 'pt',
+  maxLevel: 90
+}), Object.freeze({
+  id: 'critDamage',
+  category: 'attack',
+  name: '会心極',
+  desc: '本人の会心ダメージ +1%',
+  costPerLevel: 3,
+  effectPerLevel: 1,
+  unit: '%'
+}),
+// 防御: パーティ効果。同種合成・特殊防御統合はSTEP4で接続する。
+Object.freeze({
+  id: 'partyDamageReduction',
+  category: 'defense',
+  name: '鉄壁',
+  desc: 'パーティ被ダメージ -1%',
+  costPerLevel: 20,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'partyEvasion',
+  category: 'defense',
+  name: '残像',
+  desc: 'パーティ回避 +1pt',
+  costPerLevel: 30,
+  effectPerLevel: 1,
+  unit: 'pt',
+  maxLevel: 75
+}), Object.freeze({
+  id: 'partyReflect',
+  category: 'defense',
+  name: '鏡返し',
+  desc: 'パーティ反射 +1pt',
+  costPerLevel: 60,
+  effectPerLevel: 1,
+  unit: 'pt',
+  maxLevel: 75
+}), Object.freeze({
+  id: 'partyAbsorb',
+  category: 'defense',
+  name: '吸収',
+  desc: 'パーティ吸収 +1pt',
+  costPerLevel: 60,
+  effectPerLevel: 1,
+  unit: 'pt',
+  maxLevel: 75
+}), Object.freeze({
+  id: 'enemyDisable',
+  category: 'defense',
+  name: '威圧',
+  desc: '敵の行動不能率 +1pt',
+  costPerLevel: 25,
+  effectPerLevel: 1,
+  unit: 'pt',
+  maxLevel: 100
+}),
+// 補助
+Object.freeze({
+  id: 'gutsCostReduction',
+  category: 'support',
+  name: '省気',
+  desc: '本人のカード消費ガッツ -1%',
+  costPerLevel: 10,
+  effectPerLevel: 1,
+  unit: '%',
+  maxLevel: 100
+}), Object.freeze({
+  id: 'autoGutsRecovery',
+  category: 'support',
+  name: '自動ガッツ回復強化',
+  desc: 'パーティの実際の自動ガッツ回復量 +1%',
+  costPerLevel: 10,
+  effectPerLevel: 1,
+  unit: '%'
+}), Object.freeze({
+  id: 'coordination',
+  category: 'support',
+  name: '連携',
+  desc: '使用可能カード枚数 +1',
+  costPerLevel: 200,
+  effectPerLevel: 1,
+  unit: '枚',
+  maxLevel: 1
+})]);
+const SOUL_TRAIT_BY_ID = Object.freeze(Object.fromEntries(SOUL_TRAIT_DEFINITIONS.map(trait => [trait.id, trait])));
+const SOUL_TRAIT_CATEGORIES = Object.freeze([Object.freeze({
+  id: 'attack',
+  label: '攻撃'
+}), Object.freeze({
+  id: 'defense',
+  label: '防御'
+}), Object.freeze({
+  id: 'support',
+  label: '補助'
+})]);
+const normalizeSoulTraitLevels = value => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out = {};
+  Object.entries(value).forEach(([rawKey, rawLevel]) => {
+    const key = String(rawKey);
+    const trait = SOUL_TRAIT_BY_ID[key];
+    if (!trait) return;
+    const level = Math.max(0, Math.floor(Number(rawLevel) || 0));
+    const capped = Number.isFinite(trait.maxLevel) ? Math.min(trait.maxLevel, level) : level;
+    if (capped > 0) out[key] = capped;
+  });
+  return out;
+};
+const soulPointEarned = masu => Math.max(0, Math.min(500, normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel) - SOUL_RANK_BASE_LEVEL));
+const soulTraitLevel = (masu, traitId) => Math.max(0, Math.floor(Number(normalizeSoulTraitLevels(masu?.soulTraitLevels)[traitId]) || 0));
+const soulTraitEffectValue = (masu, traitId) => {
+  const trait = SOUL_TRAIT_BY_ID[traitId];
+  return trait ? soulTraitLevel(masu, traitId) * trait.effectPerLevel : 0;
+};
+const soulTraitSpentPoints = masu => {
+  const levels = normalizeSoulTraitLevels(masu?.soulTraitLevels);
+  return SOUL_TRAIT_DEFINITIONS.reduce((sum, trait) => sum + Math.max(0, Math.floor(Number(levels[trait.id]) || 0)) * trait.costPerLevel, 0);
+};
+const soulTraitAvailablePoints = masu => Math.max(0, soulPointEarned(masu) - soulTraitSpentPoints(masu));
+// 壊れた保存で使用済みPが獲得済みPを上回っても、追加Pを生み出さず強化を止められる診断値。
+const soulTraitPointStatus = masu => {
+  const earned = soulPointEarned(masu),
+    spent = soulTraitSpentPoints(masu);
+  return {
+    earned,
+    spent,
+    available: Math.max(0, earned - spent),
+    overspent: spent > earned
+  };
+};
+const maxSoulTraitUpgradeLevels = (masu, traitId) => {
+  const normalized = normalizeMasuProgression(masu);
+  const trait = SOUL_TRAIT_BY_ID[traitId];
+  if (!trait || normalized.soulRankStage < 1) return 0;
+  const byPoints = Math.floor(soulTraitAvailablePoints(normalized) / trait.costPerLevel);
+  const current = soulTraitLevel(normalized, traitId);
+  const byCap = Number.isFinite(trait.maxLevel) ? Math.max(0, trait.maxLevel - current) : byPoints;
+  return Math.max(0, Math.min(byPoints, byCap));
+};
+const buildSoulTraitUpgrade = (masu, traitId, requestedLevels = 1) => {
+  const normalized = normalizeMasuProgression(masu);
+  const trait = SOUL_TRAIT_BY_ID[traitId];
+  if (!trait || normalized.soulRankStage < 1) return null;
+  const levels = Math.max(0, Math.floor(Number(requestedLevels) || 0));
+  const maxLevels = maxSoulTraitUpgradeLevels(normalized, traitId);
+  if (levels <= 0 || levels > maxLevels) return null;
+  const currentLevel = soulTraitLevel(normalized, traitId);
+  const nextLevel = currentLevel + levels;
+  const cost = levels * trait.costPerLevel;
+  const soulTraitLevels = {
+    ...normalizeSoulTraitLevels(normalized.soulTraitLevels),
+    [traitId]: nextLevel
+  };
+  return {
+    trait,
+    levels,
+    cost,
+    currentLevel,
+    nextLevel,
+    beforeEffect: currentLevel * trait.effectPerLevel,
+    afterEffect: nextLevel * trait.effectPerLevel,
+    beforeAvailable: soulTraitAvailablePoints(normalized),
+    afterAvailable: soulTraitAvailablePoints(normalized) - cost,
+    nextMasu: {
+      ...normalized,
+      soulTraitLevels
+    }
+  };
+};
+const buildMasuSoulTraitReset = masu => {
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = soulTraitSpentPoints(normalized);
+  if (refundedPoints <= 0) return null;
+  return {
+    refundedPoints,
+    nextMasu: {
+      ...normalized,
+      soulTraitLevels: {}
+    }
+  };
+};
+const SOUL_RANK_RESPEC_ITEM_ID = 'soul_rank_respec_scroll';
+const SOUL_RANK_RESPEC_DIAMOND_COST = 1000000;
+const buildSoulRankRespecProofExchange = (ownedItems, quantity = 1) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const count = Math.max(1, Math.floor(Number(quantity) || 1));
+  const proofHave = ownedItemCount(before, HERO_PROOF_ITEM_ID);
+  if (proofHave < count) return {
+    ok: false,
+    quantity: count,
+    proofCost: count,
+    ownedItems: before
+  };
+  return {
+    ok: true,
+    quantity: count,
+    proofCost: count,
+    ownedItems: {
+      ...before,
+      [HERO_PROOF_ITEM_ID]: proofHave - count,
+      [SOUL_RANK_RESPEC_ITEM_ID]: ownedItemCount(before, SOUL_RANK_RESPEC_ITEM_ID) + count
+    }
+  };
+};
+const formatSoulTraitEffect = (traitOrId, value) => {
+  const trait = typeof traitOrId === 'string' ? SOUL_TRAIT_BY_ID[traitOrId] : traitOrId;
+  if (!trait) return '';
+  const amount = Math.max(0, Number(value) || 0);
+  if (trait.id === 'coordination') return `カード+${amount}枚`;
+  const sign = trait.id === 'partyDamageReduction' || trait.id === 'gutsCostReduction' ? '-' : '+';
+  return `${sign}${amount}${trait.unit}`;
+};
+// 同種確率・軽減率は加算せず「残り」を乗算する。値はUIと仕様に合わせてpt(0〜100)で受け返す。
+const combineSoulProbabilityPoints = values => {
+  const remaining = (Array.isArray(values) ? values : []).reduce((product, raw) => {
+    const rate = Math.max(0, Math.min(100, Number(raw) || 0)) / 100;
+    return product * (1 - rate);
+  }, 1);
+  return Math.max(0, Math.min(100, (1 - remaining) * 100));
+};
+const soulTraitPartyPreview = masus => {
+  const party = (Array.isArray(masus) ? masus : []).filter(Boolean).map(normalizeMasuProgression);
+  const values = id => party.map(masu => soulTraitEffectValue(masu, id)).filter(value => value > 0);
+  const damageReduction = combineSoulProbabilityPoints(values('partyDamageReduction'));
+  const evasion = combineSoulProbabilityPoints(values('partyEvasion'));
+  const reflect = combineSoulProbabilityPoints(values('partyReflect'));
+  const absorb = combineSoulProbabilityPoints(values('partyAbsorb'));
+  const specialDefenseRate = Math.min(75, Math.max(evasion, reflect, absorb));
+  const defenseTotal = evasion + reflect + absorb;
+  const specialDefenseMix = defenseTotal > 0 ? {
+    evasion: evasion / defenseTotal,
+    reflect: reflect / defenseTotal,
+    absorb: absorb / defenseTotal
+  } : {
+    evasion: 0,
+    reflect: 0,
+    absorb: 0
+  };
+  const intimidate = combineSoulProbabilityPoints(values('enemyDisable'));
+  const autoGutsMultiplier = values('autoGutsRecovery').reduce((multiplier, point) => multiplier * (1 + point / 100), 1);
+  const coordination = party.some(masu => soulTraitLevel(masu, 'coordination') > 0);
+  return {
+    damageReduction,
+    evasion,
+    reflect,
+    absorb,
+    specialDefenseRate,
+    specialDefenseMix,
+    intimidate,
+    autoGutsMultiplier,
+    coordinationCardBonus: coordination ? 1 : 0
+  };
+};
+// 回避・反射・吸収の確率ソースを統一する。既存勇者特性と魂格を同種ごとに乗算合成し、
+// 発動率は max(E,R,A) の75%上限、発動後の結果は E:R:A 比率で1つだけ選ぶ。
+const buildUnifiedSpecialDefense = ({
+  soulEvasion = 0,
+  soulReflect = 0,
+  soulAbsorb = 0,
+  existingEvasion = 0,
+  existingReflect = 0,
+  existingAbsorb = 0
+} = {}) => {
+  const evasion = combineSoulProbabilityPoints([existingEvasion, soulEvasion]);
+  const reflect = combineSoulProbabilityPoints([existingReflect, soulReflect]);
+  const absorb = combineSoulProbabilityPoints([existingAbsorb, soulAbsorb]);
+  const rate = Math.min(75, Math.max(evasion, reflect, absorb));
+  const total = evasion + reflect + absorb;
+  const mix = total > 0 ? {
+    evasion: evasion / total,
+    reflect: reflect / total,
+    absorb: absorb / total
+  } : {
+    evasion: 0,
+    reflect: 0,
+    absorb: 0
+  };
+  return {
+    evasion,
+    reflect,
+    absorb,
+    rate,
+    mix
+  };
+};
+const rollUnifiedSpecialDefense = (profile, triggerRoll = Math.random(), outcomeRoll = Math.random()) => {
+  const rate = Math.max(0, Math.min(75, Number(profile?.rate) || 0));
+  const trigger = Math.max(0, Math.min(0.999999999, Number(triggerRoll) || 0));
+  if (trigger >= rate / 100) return 'none';
+  const mix = profile?.mix || {};
+  const e = Math.max(0, Number(mix.evasion) || 0);
+  const r = Math.max(0, Number(mix.reflect) || 0);
+  const a = Math.max(0, Number(mix.absorb) || 0);
+  const total = e + r + a;
+  if (total <= 0) return 'none';
+  const pick = Math.max(0, Math.min(0.999999999, Number(outcomeRoll) || 0)) * total;
+  if (pick < e) return 'evasion';
+  if (pick < e + r) return 'reflect';
+  return 'absorb';
+};
+// STEP4: 攻撃者本人へ適用する魂格特性を、予測と実処理で共通利用する。
+// 闘魂 + 技種別(奥義/武技) + 距離極意は%を合算して1つの倍率にし、途中丸めを増やさない。
+// 連撃強化だけは既存comboDmgPctへ足さず、各連撃・追撃の最終値へ掛ける別枠倍率として返す。
+const SOUL_ATTACK_RANGE_TRAIT_IDS = Object.freeze(['rangeZeroDamage', 'rangeNearDamage', 'rangeMidDamage', 'rangeFarDamage']);
+const soulTraitAttackProfile = (masu, card, slotIdx = null) => {
+  const normalized = normalizeMasuProgression(masu);
+  const isAttack = !!card && (['atk', 'range_atk', 'unique'].includes(card.type) || card.subType === 'stun_atsu');
+  if (normalized.soulRankStage < 1 || !isAttack) {
+    return {
+      damagePct: 0,
+      damageMultiplier: 1,
+      comboFinalPct: 0,
+      comboFinalMultiplier: 1,
+      critRatePoints: 0,
+      critRateBonus: 0,
+      critDamagePct: 0,
+      critDamageBonus: 0,
+      gutsCostReductionPct: 0,
+      gutsCostMultiplier: 1
+    };
+  }
+  let damagePct = soulTraitEffectValue(normalized, 'allDamage');
+  if (card.type === 'unique') damagePct += soulTraitEffectValue(normalized, 'uniqueDamage');else if (card.type === 'atk' || card.type === 'range_atk') damagePct += soulTraitEffectValue(normalized, 'normalDamage');
+  const rangeIndex = Number.isInteger(Number(slotIdx)) ? Math.max(0, Math.min(3, Math.floor(Number(slotIdx)))) : null;
+  if (rangeIndex != null) damagePct += soulTraitEffectValue(normalized, SOUL_ATTACK_RANGE_TRAIT_IDS[rangeIndex]);
+  const comboFinalPct = soulTraitEffectValue(normalized, 'comboFinalDamage');
+  const critRatePoints = soulTraitEffectValue(normalized, 'critRate');
+  const critDamagePct = soulTraitEffectValue(normalized, 'critDamage');
+  const gutsCostReductionPct = soulTraitEffectValue(normalized, 'gutsCostReduction');
+  return {
+    damagePct,
+    damageMultiplier: 1 + damagePct / 100,
+    comboFinalPct,
+    comboFinalMultiplier: 1 + comboFinalPct / 100,
+    critRatePoints,
+    critRateBonus: critRatePoints / 100,
+    critDamagePct,
+    critDamageBonus: critDamagePct / 100,
+    gutsCostReductionPct,
+    gutsCostMultiplier: Math.max(0, 1 - gutsCostReductionPct / 100)
+  };
+};
 const TRANSCEND_PSYCHE_COST = 5000;
 const TRANSCEND_DIAMOND_COST = 1000000;
 // Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
@@ -496,8 +966,9 @@ const TRANSCEND_XP_MULTIPLIER_STEP = 0.1;
 const TRANSCEND_PSYCHE_PER_POINT = 1000;
 const TRANSCEND_STAT_KEYS = Object.freeze(['hp', 'atk', 'def', 'guts']);
 const isTranscended = masu => !!(masu && masu.transcended);
-// 超越済みならLv上限500まで、まだなら従来どおりLv400まで
-const masuLevelCapLimit = masu => isTranscended(masu) ? TRANSCEND_LEVEL_CAP : MAX_MASU_LEVEL_CAP;
+// 未超越は従来どおりLv400。超越済みは魂格0=Lv500、魂格Ⅰ〜Ⅴ=Lv600〜1000を上限にする。
+// levelCap自体は既存保存値を使い続け、ここは壊れた/先行した値が段階を飛び越えないための最大値だけを返す。
+const masuLevelCapLimit = masu => isTranscended(masu) ? soulRankLevelCap(masu?.soulRankStage) : MAX_MASU_LEVEL_CAP;
 // 旧セーブにはこれらの項目が無いので、必ず安全な初期値(0)へ落として読む
 const normalizeTranscendStatPoints = value => Object.fromEntries(TRANSCEND_STAT_KEYS.map(key => [key, Math.max(0, Math.floor(Number(value?.[key]) || 0))]));
 const normalizeTranscendAptBoosts = value => Array.from({
@@ -510,13 +981,25 @@ const normalizeTranscendAptBoosts = value => Array.from({
 // 必ず不足分を補填している)
 const BOND_XP_DISCOUNT = 0.025;
 const xpForBondLevel = level => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
-// Lv400以降(超越の領域)だけ、通常式が出した必要経験値へ重い倍率を掛ける。
+// Lv400〜499(既存の超越領域)だけ、通常式が出した必要経験値へ重い倍率を掛ける。
 // 倍率は Lv400で10倍、以降1Lvごとに+0.1倍(Lv499→500で19.9倍)。
-// Lv399以下はこれまでどおりの値をそのまま返すので、既存の必要経験値・累計XPは1も変わらない。
+// Lv399以下は従来値を維持し、Lv500→501以降は下の魂格専用式へ切り替える。
 const transcendXpMultiplier = level => TRANSCEND_XP_BASE_MULTIPLIER + (level - MAX_MASU_LEVEL_CAP) * TRANSCEND_XP_MULTIPLIER_STEP;
+const soulRankXpForBondLevel = level => {
+  const current = Math.max(SOUL_RANK_BASE_LEVEL, Math.min(SOUL_RANK_LEVEL_CAP - 1, Math.floor(Number(level) || SOUL_RANK_BASE_LEVEL)));
+  if (current < 600) return 160000 + (current - 500) * 250;
+  if (current < 700) return 210000 + (current - 600) * 250;
+  if (current < 800) return 265000 + (current - 700) * 500;
+  if (current < 900) return 345000 + (current - 800) * 500;
+  return 430000 + (current - 900) * 900;
+};
 const xpForBondLevelAt = level => {
-  const normal = xpForBondLevel(level);
-  return level < MAX_MASU_LEVEL_CAP ? normal : Math.max(1, Math.round(normal * transcendXpMultiplier(level)));
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  const normal = xpForBondLevel(current);
+  if (current < MAX_MASU_LEVEL_CAP) return normal;
+  // Lv400〜499は既存の超越XP式を1も変えない。Lv500→501から魂格の正式式へ切り替える。
+  if (current < SOUL_RANK_BASE_LEVEL) return Math.max(1, Math.round(normal * transcendXpMultiplier(current)));
+  return soulRankXpForBondLevel(current);
 };
 const bondLevelInfo = totalXp => {
   // 壊れた保存値(NaN・Infinity・負数)で回り続けないよう、先に有限の0以上へ落とす
@@ -537,9 +1020,9 @@ const bondLevelInfo = totalXp => {
   };
 };
 const INITIAL_MASU_LEVEL_CAP = 30;
-// 超越後はLv500まで数える。Lv1から数え上げるので、繰り返し回数は上限-1。
-// こうしておくと壊れた絆経験値が来てもLv501にはならず、無限ループにもならない。
-const MAX_BOND_LEVEL_ITERATIONS = TRANSCEND_LEVEL_CAP - 1;
+// 魂格ⅤまでLv1000を数える。Lv1から数え上げるので、繰り返し回数は上限-1。
+// 個体ごとの実上限は cappedBondXp / masuLevelCapLimit で別に止めるため、魂格0の既存超越個体はLv500のまま。
+const MAX_BOND_LEVEL_ITERATIONS = SOUL_RANK_LEVEL_CAP - 1;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL = 35;
@@ -903,8 +1386,9 @@ const normalizeInheritedUniqueLineages = masuMons => (Array.isArray(masuMons) ? 
   };
 });
 const totalBondXpForLevel = level => {
+  const target = Math.max(1, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(level) || 1)));
   let total = 0;
-  for (let current = 1; current < Math.max(1, level); current++) total += xpForBondLevelAt(current);
+  for (let current = 1; current < target; current++) total += xpForBondLevelAt(current);
   return total;
 };
 // 【限界突破と転生】
@@ -1053,6 +1537,48 @@ const breakthroughStarStyle = star => ({
 // 必要数は限界突破1回ごとに増える。1回目5個・以降+1個で、
 //   30回目 = 5 + 29×1 = 34個 / 最終限界突破(31回目) = 5 + 30×1 = 35個
 const BREAKTHROUGH_ITEM_ID = 'rainbow_psyche';
+// 魂格進化の素材。マーケットでは販売せず、高難度の実クリアでだけ増える。
+// 所持数は他アイテムと同じ mh_owned_items の中へ入れ、新しい保存キーは作らない。
+const HERO_PROOF_ITEM_ID = 'hero_proof';
+const HERO_PROOF_ITEM = Object.freeze({
+  id: HERO_PROOF_ITEM_ID,
+  name: '勇者の証',
+  emoji: '🏅',
+  usage: 'soulRank',
+  desc: '魂格進化Ⅰ〜Ⅴに使う高難度クリア報酬。神殿の「魂格進化」で消費する。'
+});
+const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
+  extreme: Object.freeze({
+    GOD: 1,
+    RAGNAROK: 2
+  }),
+  speciesChallenge: Object.freeze({
+    GOD: 1,
+    RAGNAROK: 2
+  }),
+  pro: Object.freeze({
+    Master: 1,
+    GrandMaster: 2,
+    Hell: 3,
+    Legend: 4
+  })
+});
+const heroProofClearReward = ({
+  runMode,
+  difficulty,
+  extremeDifficulty = null,
+  speciesDifficulty = null,
+  speciesSave = true,
+  debug = false
+} = {}) => {
+  if (debug || runMode === BATTLE_MODE_QUICK) return 0;
+  if (runMode === BATTLE_MODE_SPECIES_CHALLENGE) {
+    return speciesSave ? HERO_PROOF_CLEAR_REWARDS.speciesChallenge[speciesDifficulty] || 0 : 0;
+  }
+  if (runMode === BATTLE_MODE_PRO) return HERO_PROOF_CLEAR_REWARDS.pro[difficulty] || 0;
+  if (extremeDifficulty) return HERO_PROOF_CLEAR_REWARDS.extreme[extremeDifficulty] || 0;
+  return 0;
+};
 // 超越ポイントリセットの書。マーケット(data/breeder.js)の同じIDを指す
 const TRANSCEND_RESET_ITEM_ID = 'transcend_reset_scroll';
 const BREAKTHROUGH_ITEM_BASE = 5;
@@ -1375,6 +1901,10 @@ const normalizeMasuProgression = masu => ({
   inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
   inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
   levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+  // 魂格の個体項目。旧セーブは魂格0・初到達Lv500・未振り分けとして読み、トップレベル保存キーは増やさない。
+  soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+  soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
+  soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
   // 超越の項目。旧セーブには存在しないので、未超越・0として読む(移行処理はいらない)
   transcended: isTranscended(masu),
   transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
@@ -1482,6 +2012,10 @@ const resetMasuForRebirth = (masu, {
     inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+    // 魂格は転生で失われない。初到達Lvを持ち越すことで魂格Pの二重取得も防ぐ。
+    soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+    soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
+    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
     // 超越は転生で失われない。状態・未使用の超越P・超越で上げた基礎値をそのまま持ち越す
     transcended: isTranscended(masu),
     transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
@@ -1525,28 +2059,50 @@ const cappedBondXp = (masu, gain = 0, maxLevel = null) => {
 };
 // 絆経験値の加算・レベル上限・強化ポイント付与を、通常バトル、チケット、合体で共有する。
 // 戻り値に表示用の前後レベルと実際の付与量も含め、画面と保存値の計算がずれないようにする。
+const transcendPointGainForReachedLevel = reachedLevel => {
+  const level = Math.max(1, Math.floor(Number(reachedLevel) || 1));
+  if (level <= MAX_MASU_LEVEL_CAP) return 0;
+  if (level <= 500) return 1;
+  if (level <= 600) return 2;
+  if (level <= 700) return 3;
+  if (level <= 800) return 4;
+  if (level <= 900) return 5;
+  return level <= SOUL_RANK_LEVEL_CAP ? 6 : 0;
+};
+const gainedTranscendPointsBetweenLevels = (fromLevel, toLevel) => {
+  const from = Math.max(1, Math.floor(Number(fromLevel) || 1));
+  const to = Math.max(from, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(toLevel) || from)));
+  let total = 0;
+  for (let reached = from + 1; reached <= to; reached++) total += transcendPointGainForReachedLevel(reached);
+  return total;
+};
 const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
-  const before = masuBondLevelInfo(masu);
-  const bondXp = cappedBondXp(masu, gain, maxLevel);
+  const normalized = normalizeMasuProgression(masu);
+  const before = masuBondLevelInfo(normalized);
+  const bondXp = cappedBondXp(normalized, gain, maxLevel);
   const after = bondLevelInfo(bondXp);
   const gainedLevels = Math.max(0, after.level - before.level);
-  // Lv400までは今までどおり通常の強化ポイント。Lv401以降(超越の領域)は
-  // 通常ポイントを配らず、1レベルにつき超越ポイントを1だけ配る。
-  // 400をまたいでレベルが上がったときも、400までのぶんと401以降のぶんを分けて数える。
+  // Lv400までは今までどおり通常の強化ポイント。Lv401以降は通常Pを配らず、
+  // 実際に上がったLv帯に応じて超越Pを1〜6P/Lvで配る。魂格段階そのものは倍率に使わない。
   const cap = MAX_MASU_LEVEL_CAP;
   const normalLevels = Math.max(0, Math.min(cap, after.level) - Math.min(cap, before.level));
-  const gainedTranscendPoints = Math.max(0, after.level - Math.max(cap, before.level));
+  const gainedTranscendPoints = gainedTranscendPointsBetweenLevels(before.level, after.level);
   const gainedPoints = gainedEnhancePointsBetweenLevels(before.level, Math.min(cap, after.level));
+  // 魂格PはLv501〜1000の「初到達」だけ。最高初到達Lvを正本にして、転生後の再到達では配らない。
+  const previousSoulMax = normalizeSoulPointMaxReachedLevel(normalized.soulPointMaxReachedLevel);
+  const nextSoulMax = Math.max(previousSoulMax, Math.min(SOUL_RANK_LEVEL_CAP, after.level));
+  const gainedSoulPoints = Math.max(0, nextSoulMax - previousSoulMax);
   // 同一帯だけを上がった場合は従来UI用に×2/×3を返す。帯をまたぐ場合は誤解を避けて×表示を出さない。
   const sameBandMultiplier = normalLevels > 0 ? gainedPoints / normalLevels : 1;
   const pointMultiplier = Number.isInteger(sameBandMultiplier) ? sameBandMultiplier : 1;
   return {
     masu: {
-      ...masu,
+      ...normalized,
       bondXp,
-      distAptPoints: (masu.distAptPoints || 0) + gainedPoints,
+      soulPointMaxReachedLevel: nextSoulMax,
+      distAptPoints: (normalized.distAptPoints || 0) + gainedPoints,
       ...(gainedTranscendPoints > 0 ? {
-        transcendPoints: Math.max(0, Math.floor(Number(masu.transcendPoints) || 0)) + gainedTranscendPoints
+        transcendPoints: Math.max(0, Math.floor(Number(normalized.transcendPoints) || 0)) + gainedTranscendPoints
       } : {})
     },
     before,
@@ -1554,8 +2110,9 @@ const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
     gainedLevels,
     gainedPoints,
     gainedTranscendPoints,
+    gainedSoulPoints,
     pointMultiplier,
-    xpGain: Math.max(0, bondXp - donationDiamondValue(masu.bondXp))
+    xpGain: Math.max(0, bondXp - donationDiamondValue(normalized.bondXp))
   };
 };
 // 周回終了時の絆経験値配布先を、表示処理やReact state更新から独立して一度だけ決定する。
@@ -1681,7 +2238,12 @@ const mergeMasuIntoMon = masu => {
     inheritedUniques: (masu.inheritedUniques || []).map((unique, index) => uniqueSkillAtLevel(unique, resolveInheritedUniqueLevel(masu, unique, index))),
     // 固有技設定(並び順・初期技)。保存が無い個体はここで従来どおりの値になる
     uniqueOrder: normalizeUniqueOrder(masu),
-    initialUniqueKey: normalizeInitialUniqueKey(masu)
+    initialUniqueKey: normalizeInitialUniqueKey(masu),
+    // 魂格の個体情報も実戦用モンスターへ持ち込む。攻撃・防御・補助の実戦計算は
+    // この解決結果だけを見るため、baseId単位ではなく必ず選ばれたマスモン個体の値になる。
+    soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+    soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
+    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels)
   };
 };
 // マスモン詳細で「元の値 ＋ 基礎UP(超越) ＋ 通常強化 ＝ 現在」を出すための内訳。★重要
@@ -1869,6 +2431,7 @@ const monsterPowerParts = mon => {
     stat: 0,
     aptitude: 0,
     unique: 0,
+    soul: 0,
     total: 0
   };
   const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
@@ -1876,11 +2439,14 @@ const monsterPowerParts = mon => {
   const apt = (Array.isArray(mon.distAptitude) ? mon.distAptitude : []).slice(0, 4).reduce((sum, grade) => sum + (MONSTER_POWER_APTITUDE[grade] ?? 0), 0);
   const uniques = monsterPowerUniques(mon);
   const uniquePower = uniques.length * MONSTER_POWER_UNIQUE_OWNED + uniques.reduce((sum, u) => sum + Math.max(0, Math.floor(num(u.evoLevel))), 0) * MONSTER_POWER_UNIQUE_PER_LEVEL;
+  // 魂格特性は効果ごとに換算せず「使用済み魂格P×10」を一度だけ加える。
+  const soulPower = soulTraitSpentPoints(mon) * 10;
   return {
     stat,
     aptitude: apt,
     unique: uniquePower,
-    total: stat + apt + uniquePower
+    soul: soulPower,
+    total: stat + apt + uniquePower + soulPower
   };
 };
 // 総合力の正本。解決済みのモンスター(ベースモンの定義、または mergeMasuIntoMon の結果)を渡す。
@@ -1888,7 +2454,7 @@ const monsterPowerParts = mon => {
 const monsterPowerOf = mon => Math.round(monsterPowerParts(mon).total);
 // 保存データのマスモンから総合力を出す。詳細画面と同じ解決(mergeMasuIntoMon)を通してから
 // 同じ式へ渡すので、ベース値と強化値の二重加算は起きない
-const masuPowerOf = masu => monsterPowerOf(mergeMasuIntoMon(masu));
+const masuPowerOf = masu => monsterPowerOf(mergeMasuIntoMon(masu)) + soulTraitSpentPoints(masu) * 10;
 // 第3段階で新旧表現を併記する新規個体は、保存前に能力・適性・総合力が一致することを確認する。
 // 既存個体のロードには使わないため、旧データを補完・書換えする処理にはならない。
 const masuBaselineRepresentationsMatch = masu => {
@@ -2562,6 +3128,99 @@ const buildMasuTranscendence = ({
     }
   };
 };
+
+// ==================== 魂格進化 ====================
+// 魂格0(超越済みLv500)からⅠ〜Ⅴへ、現在段階の次の1段階だけ進める。
+// 条件・コスト・次状態を1か所へ集約し、神殿UI・合体継承(後続STEP)でも同じ正本を使えるようにする。
+const soulRankEvolutionStatus = masu => {
+  if (!masu) return {
+    ok: false,
+    reason: '対象のマスモンが見つかりません。',
+    next: null
+  };
+  const normalized = normalizeMasuProgression(masu);
+  const next = soulRankEvolutionForStage(normalized.soulRankStage + 1);
+  const level = masuBondLevelInfo(normalized).level;
+  if (!normalized.transcended) return {
+    ok: false,
+    reason: '先に神殿で超越する必要があります。',
+    normalized,
+    level,
+    next
+  };
+  if (!next) return {
+    ok: false,
+    reason: '魂格Ⅴまで進化済みです。',
+    normalized,
+    level,
+    next: null
+  };
+  return {
+    ok: true,
+    normalized,
+    level,
+    next,
+    levelReady: level >= next.requiredLevel,
+    currentStage: normalized.soulRankStage,
+    currentLabel: normalized.soulRankStage > 0 ? `魂格${['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][normalized.soulRankStage]}` : '魂格なし'
+  };
+};
+const buildMasuSoulRankEvolution = ({
+  masu,
+  gold = 0,
+  ownedItems = {}
+} = {}) => {
+  const status = soulRankEvolutionStatus(masu);
+  const goldHave = donationDiamondValue(gold);
+  const heroProofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
+  const next = status.next;
+  const info = {
+    ...status,
+    goldHave,
+    heroProofHave,
+    diamondCost: next?.diamondCost || 0,
+    heroProofCost: next?.heroProofCost || 0
+  };
+  if (!status.ok) return {
+    ...info,
+    ok: false
+  };
+  if (!status.levelReady) return {
+    ...info,
+    ok: false,
+    reason: `Lv.${next.requiredLevel}に到達すると${next.label}へ進化できます。`
+  };
+  if (goldHave < next.diamondCost) return {
+    ...info,
+    ok: false,
+    reason: `ダイヤが足りません（あと ${(next.diamondCost - goldHave).toLocaleString()}）。`
+  };
+  if (heroProofHave < next.heroProofCost) return {
+    ...info,
+    ok: false,
+    reason: `勇者の証が足りません（あと ${(next.heroProofCost - heroProofHave).toLocaleString()}）。`
+  };
+  const nextOwnedItems = {
+    ...(ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {}),
+    [HERO_PROOF_ITEM_ID]: heroProofHave - next.heroProofCost
+  };
+  return {
+    ...info,
+    ok: true,
+    nextGold: goldHave - next.diamondCost,
+    nextOwnedItems,
+    fromStage: status.normalized.soulRankStage,
+    toStage: next.stage,
+    fromLevelCap: status.normalized.levelCap,
+    toLevelCap: next.levelCap,
+    // 魂格進化で実Lv・絆XP・最高初到達Lv・振り分けは変えない。解放段階と上限だけ更新する。
+    nextMasu: {
+      ...status.normalized,
+      soulRankStage: next.stage,
+      levelCap: next.levelCap
+    }
+  };
+};
 // 虹のプシュケーを超越ポイントへ替える。100個ちょうどで1P、端数のプシュケーは消費しない
 const transcendPsycheExchange = (psycheOwned, wantedPoints) => {
   const have = Math.max(0, Math.floor(Number(psycheOwned) || 0));
@@ -2848,6 +3507,89 @@ const buildFusionInheritancePlan = ({
     inheritedEntries,
     inheritCount: inheritedEntries.length,
     inheritCost: inheritedEntries.length * FUSION_INHERIT_COST
+  };
+};
+// 魂格継承合体。副の中で最も高い魂格が主より上なら、その差分段階の通常進化コストを
+// すべて合算して主へ上限だけ継承できる。副の魂格P最高到達Lv・特性はコピーしない。
+// 通常合体(inherit=false)では主の魂格を一切変えず、従来どおり上限超過XPは切り捨てる。
+const buildFusionSoulRankInheritancePlan = ({
+  main,
+  subs,
+  inherit = false,
+  gold = 0,
+  ownedItems = {}
+} = {}) => {
+  if (!main) return {
+    eligible: false,
+    inherit: false,
+    ok: false,
+    reason: '主モンが見つかりません。'
+  };
+  const normalized = normalizeMasuProgression(main);
+  const subList = (Array.isArray(subs) ? subs : []).filter(Boolean).map(normalizeMasuProgression);
+  const currentStage = normalized.soulRankStage;
+  const targetStage = subList.reduce((max, sub) => Math.max(max, sub.soulRankStage), currentStage);
+  const eligible = targetStage > currentStage;
+  const steps = eligible ? Array.from({
+    length: targetStage - currentStage
+  }, (_, i) => soulRankEvolutionForStage(currentStage + i + 1)).filter(Boolean) : [];
+  const diamondCost = steps.reduce((sum, step) => sum + step.diamondCost, 0);
+  const heroProofCost = steps.reduce((sum, step) => sum + step.heroProofCost, 0);
+  const goldHave = donationDiamondValue(gold);
+  const heroProofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
+  const targetLevelCap = soulRankLevelCap(targetStage);
+  const previewMasu = eligible ? {
+    ...normalized,
+    soulRankStage: targetStage,
+    levelCap: targetLevelCap,
+    soulPointMaxReachedLevel: normalized.soulPointMaxReachedLevel,
+    soulTraitLevels: normalizeSoulTraitLevels(normalized.soulTraitLevels)
+  } : normalized;
+  const base = {
+    eligible,
+    inherit: !!inherit,
+    currentStage,
+    targetStage,
+    targetLevelCap,
+    steps,
+    previewMasu,
+    diamondCost,
+    heroProofCost,
+    goldHave,
+    heroProofHave,
+    diamondShortage: Math.max(0, diamondCost - goldHave),
+    heroProofShortage: Math.max(0, heroProofCost - heroProofHave)
+  };
+  if (!eligible || !inherit) {
+    return {
+      ...base,
+      ok: true,
+      nextGold: goldHave,
+      nextOwnedItems: {
+        ...(ownedItems || {})
+      },
+      nextMasu: normalized
+    };
+  }
+  if (goldHave < diamondCost) return {
+    ...base,
+    ok: false,
+    reason: `ダイヤが足りません（あと ${(diamondCost - goldHave).toLocaleString()}）。`
+  };
+  if (heroProofHave < heroProofCost) return {
+    ...base,
+    ok: false,
+    reason: `勇者の証が足りません（あと ${(heroProofCost - heroProofHave).toLocaleString()}）。`
+  };
+  return {
+    ...base,
+    ok: true,
+    nextGold: goldHave - diamondCost,
+    nextOwnedItems: {
+      ...(ownedItems || {}),
+      [HERO_PROOF_ITEM_ID]: heroProofHave - heroProofCost
+    },
+    nextMasu: previewMasu
   };
 };
 // 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
@@ -10471,10 +11213,9 @@ const chooseAutoTurn = ({
     const actions = [];
     hand.forEach((card, handIndex) => {
       if (!card || usedHandIndexes.has(handIndex)) return;
-      const cost = Math.max(0, Number(getCardGuts(card)) || 0);
-      if (usedGuts + cost > availableGuts) return;
       if (!cardNeedsMonster(card)) {
-        actions.push({
+        const cost = Math.max(0, Number(getCardGuts(card, null)) || 0);
+        if (usedGuts + cost <= availableGuts) actions.push({
           handIndex,
           card,
           slotIdx: null,
@@ -10485,8 +11226,10 @@ const chooseAutoTurn = ({
       slots.forEach((monster, slotIdx) => {
         if (!monster) return;
         if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
-        const maxUses = Math.max(0, Math.floor(Number(slotMaxUses(monster)) || 0));
+        const maxUses = Math.max(0, Math.floor(Number(slotMaxUses(monster, slotIdx)) || 0));
         if (slotUseCounts[slotIdx] >= maxUses) return;
+        const cost = Math.max(0, Number(getCardGuts(card, slotIdx)) || 0);
+        if (usedGuts + cost > availableGuts) return;
         actions.push({
           handIndex,
           card,
@@ -13441,7 +14184,8 @@ const buildAttackHits = ({
   rollCrit = () => false,
   globalComboRate = 0,
   mainCanCrit = true,
-  kenshiExtraCombos = 0
+  kenshiExtraCombos = 0,
+  comboFinalMultiplier = 1
 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
@@ -13468,10 +14212,12 @@ const buildAttackHits = ({
     const base = Math.floor(d * rate);
     if (base <= 0) return;
     const crit = guaranteedCrit || rollCrit();
+    const beforeSoulFinal = crit ? Math.floor(base * critMult) : base;
+    const safeComboFinalMultiplier = Math.max(0, Number(comboFinalMultiplier) || 0);
     hits.push({
       kind: 'combo',
       crit,
-      dmg: crit ? Math.floor(base * critMult) : base,
+      dmg: Math.floor(beforeSoulFinal * safeComboFinalMultiplier),
       skillName,
       noAnim
     });
@@ -13499,7 +14245,11 @@ const buildAttackHits = ({
   return hits;
 };
 // 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
-const attackAtonementDmg = (card, mainDmg) => card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis') ? Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement) : 0;
+const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
+  if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
+  const base = Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement);
+  return Math.floor(base * Math.max(0, Number(comboFinalMultiplier) || 0));
+};
 const TEACHING_FX_STYLE = {
   oryo: {
     icon: "🌸",
@@ -15478,6 +16228,30 @@ const CountUpNumber = ({
   }, []);
   return /*#__PURE__*/React.createElement("span", null, val.toLocaleString());
 };
+const BondProgressionGainLines = ({
+  gain
+}) => {
+  if (!gain) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 space-y-0.5"
+  }, gain.gainedEnhancePoints > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 9
+  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", gain.gainedEnhancePoints), gain.gainedTranscendPoints > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-fuchsia-300 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 9
+  }), "\u8D85\u8D8AP +", gain.gainedTranscendPoints), gain.gainedSoulPoints > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-sky-300 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 9
+  }), "\u9B42\u683CP +", gain.gainedSoulPoints), gain.soulRankEvolutionReady && /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-emerald-300 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 10
+  }), "\u9B42\u683C\u9032\u5316\u3067\u304D\u307E\u3059"));
+};
 
 // 最終リザルト画面(CHAMPION/敗北)共通: 今回の周回で獲得したブリーダー経験値・ダイヤ・
 // 勇者モンの絆経験値をまとめて表示するカード
@@ -15531,7 +16305,15 @@ const RewardSummaryCard = ({
     "aria-hidden": "true"
   }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
     className: "text-white font-mono font-bold"
-  }, "\xD7", summary.psycheGain.toLocaleString())), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
+  }, "\xD7", summary.psycheGain.toLocaleString())), summary.heroProofGain > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-200 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDFC5"), "\u52C7\u8005\u306E\u8A3C"), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono font-bold"
+  }, "\xD7", summary.heroProofGain.toLocaleString())), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
     className: "pt-2 border-t border-white/10"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center justify-between text-[11px] mb-1"
@@ -15545,11 +16327,9 @@ const RewardSummaryCard = ({
     levelBefore: summary.heroBondGain.levelBefore,
     levelAfter: summary.heroBondGain.levelAfter,
     onComplete: () => markPresented('hero')
-  }), summary.heroBondGain.levelAfter.level > summary.heroBondGain.levelBefore.level && /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 9
-  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level)), summary.allyBondGains && summary.allyBondGains.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement(BondProgressionGainLines, {
+    gain: summary.heroBondGain
+  })), summary.allyBondGains && summary.allyBondGains.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "pt-2 border-t border-white/10 space-y-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-pink-300 font-black flex items-center gap-1"
@@ -15567,11 +16347,9 @@ const RewardSummaryCard = ({
     levelBefore: a.levelBefore,
     levelAfter: a.levelAfter,
     onComplete: () => markPresented(`ally-${i}`)
-  }), a.levelAfter.level > a.levelBefore.level && /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 9
-  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", a.levelAfter.level - a.levelBefore.level))))), summary.waveHistory && summary.waveHistory.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement(BondProgressionGainLines, {
+    gain: a
+  }))))), summary.waveHistory && summary.waveHistory.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "pt-2 mt-3 border-t border-white/10 shrink-0 flex flex-col min-h-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-cyan-300 font-black flex items-center gap-1 mb-1 shrink-0"
@@ -21458,6 +22236,7 @@ function MonsterHeroGame() {
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const [showEnemyInfo, setShowEnemyInfo] = useState(false);
   const [showHeroInfo, setShowHeroInfo] = useState(false); // バトル中に勇者モンの特性を確認するオーバーレイ
+  const [showSoulBattleEffects, setShowSoulBattleEffects] = useState(false); // バトル中の魂格効果一覧
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [gaveUp, setGaveUp] = useState(false); // ギブアップ確定後、最終リザルト画面を表示中かどうか
   const [lastActionSlot, setLastActionSlot] = useState(null);
@@ -21786,6 +22565,7 @@ function MonsterHeroGame() {
   const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
   const [fusionSubIds, setFusionSubIds] = useState([]); // 通常合体でまとめて消費する副。配列順を処理順として維持する
   const [fusionInheritUniqueIds, setFusionInheritUniqueIds] = useState([]); // 固有技を引き継ぐ副id（合体画面内だけの一時状態）
+  const [fusionInheritSoulRank, setFusionInheritSoulRank] = useState(false); // STEP5: 副の上位魂格を通常進化コストで主へ継承する
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
   const fusionProcessingRef = useRef(false);
@@ -21820,6 +22600,20 @@ function MonsterHeroGame() {
   const [transcendSelectedId, setTranscendSelectedId] = useState(null);
   const [transcendError, setTranscendError] = useState('');
   const [transcendAnimation, setTranscendAnimation] = useState(null);
+  // 魂格進化STEP2: 神殿で選ぶ個体・エラー・短い成功演出。
+  // 保存は既存3キーだけを取引保存し、途中失敗で証/ダイヤだけ消える状態を作らない。
+  const [soulRankSelectedId, setSoulRankSelectedId] = useState(null);
+  const [soulRankError, setSoulRankError] = useState('');
+  const [soulRankAnimation, setSoulRankAnimation] = useState(null);
+  const soulRankProcessingRef = useRef(false);
+  // 魂格STEP3: マスモン詳細から開く専用全画面。振り分け中の下書きは保存しない。
+  const [soulTraitTab, setSoulTraitTab] = useState('attack');
+  const [soulTraitSelectedId, setSoulTraitSelectedId] = useState(null);
+  const [soulTraitDraftLevels, setSoulTraitDraftLevels] = useState(0);
+  const [soulTraitReturnState, setSoulTraitReturnState] = useState('MASU_MONS');
+  const [soulTraitError, setSoulTraitError] = useState('');
+  const [soulTraitRespecOpen, setSoulTraitRespecOpen] = useState(false);
+  const soulTraitProcessingRef = useRef(false);
   const [transcendPlan, setTranscendPlan] = useState(null);
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
@@ -21906,7 +22700,8 @@ function MonsterHeroGame() {
   const [partySetCopyTarget, setPartySetCopyTarget] = useState(null);
   const [unlockedTeachingIds, setUnlockedTeachingIds] = useState(STARTER_TEACHING_IDS); // 解放済みアシストカードid(初期6枚+購入分、端末保存)
   const [teachingRosterIds, setTeachingRosterIds] = useState(() => normalizeTeachingRoster(STARTER_TEACHING_IDS, STARTER_TEACHING_IDS)); // アシストカード編成(解放済みの中から周回で使う候補、端末保存。常にちょうどTEACHING_ROSTER_SIZE枚)
-  const [marketTab, setMarketTab] = useState('icon'); // マーケットの表示カテゴリ: 'icon'|'disc'|'assist'
+  const [marketTab, setMarketTab] = useState('icon'); // マーケットの表示カテゴリ: 'icon'|'disc'|'assist'|'item'
+  const [marketExchangeError, setMarketExchangeError] = useState('');
   const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
   const [draftMonsterRoster, setDraftMonsterRoster] = useState([]); // 編成画面での仮選択(決定を押すまでmonsterRosterIdsには反映しない)
   // モンスター一覧系画面(編成・ベースモン一覧・マスモン一覧)共通のソート・表示設定。3画面で共有する
@@ -23488,6 +24283,10 @@ function MonsterHeroGame() {
     // 転生ページも同じ
     MASU_TRANSCENDENCE: 'temple',
     // 超越ページも神殿の曲を継続する
+    MASU_SOUL_RANK: 'temple',
+    // 魂格進化も神殿の曲を継続する
+    MASU_SOUL_TRAITS: 'management',
+    // 魂格特性はマスモン詳細と同じ管理系BGM
     BREEDER_MARKET: 'market',
     // マーケットページ
     TRAINING_SELECT: 'trainingMenu',
@@ -23497,9 +24296,9 @@ function MonsterHeroGame() {
     TRAINING_BOARD: 'trainingBoard'
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
-  const PROFILE_BGM_STATES = ['ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE'];
-  // マスモンの強化画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
-  const MASU_ENHANCE_STATES = ['MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE'];
+  const PROFILE_BGM_STATES = ['ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_SOUL_TRAITS'];
+  // マスモンの専用育成画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
+  const MASU_ENHANCE_STATES = ['MASU_ENHANCE', 'MASU_TRANSCEND_ENHANCE', 'MASU_SOUL_TRAITS'];
   // 1回のプレイの中で流れる画面。「まだ1度も戦っていない準備中」か「WAVEを終えたあと」かで曲を分ける。
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
@@ -26361,6 +27160,34 @@ function MonsterHeroGame() {
       marketPurchaseProcessingRef.current = false;
     }
   };
+  // 魂格再編の書は、通常の100万ダイヤ購入に加えて同じマーケット内で
+  // 勇者の証1個→1冊へ交換できる。所持品1キーだけを検証付き保存し、失敗時は元へ戻す。
+  const exchangeSoulRankRespecByProof = async () => {
+    if (marketPurchaseProcessingRef.current) return;
+    const before = ownedItemsRef.current;
+    const exchange = buildSoulRankRespecProofExchange(before, 1);
+    if (!exchange.ok) {
+      setMarketExchangeError('勇者の証が1個必要です。');
+      return;
+    }
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_owned_items',
+        before,
+        next: exchange.ownedItems
+      }], storeGet, storeSet);
+      if (!saved) throw new Error('soul respec proof exchange save failed');
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。勇者の証は消費していません。');
+    } finally {
+      marketPurchaseProcessingRef.current = false;
+    }
+  };
 
   // 編成画面: 解放済みモンスター/アシストカードの中から、次回以降の周回で使う候補を仮選択する。
   // 仮選択は自由に増減でき、「決定」を押してモンスター8体・アシストカード6枚ちょうどの時だけ確定保存する。
@@ -26491,6 +27318,94 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     return updatedMasu;
   };
+  // 魂格特性の強化を確定。未使用魂格Pは保存せず、最高初到達Lvと振り分けから毎回導出する。
+  const commitSoulTraitUpgrade = async (masuId, traitId, levels) => {
+    if (soulTraitProcessingRef.current) return null;
+    const beforeMasuMons = masuMonsRef.current;
+    const masu = beforeMasuMons.find(m => String(m.id) === String(masuId));
+    const result = buildSoulTraitUpgrade(masu, traitId, levels);
+    if (!result) {
+      setSoulTraitError('魂格Pまたは強化上限を確認してください。');
+      return null;
+    }
+    const nextMasuMons = beforeMasuMons.map(m => String(m.id) === String(masuId) ? result.nextMasu : m);
+    soulTraitProcessingRef.current = true;
+    setSoulTraitError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_masu_mons',
+        before: beforeMasuMons,
+        next: nextMasuMons
+      }], storeGet, storeSet);
+      if (!saved) throw new Error('soul trait save failed');
+      masuMonsRef.current = nextMasuMons;
+      setMasuMons(nextMasuMons);
+      setMasuMonDetail(prev => prev && String(prev.id) === String(masuId) ? result.nextMasu : prev);
+      setSoulTraitSelectedId(null);
+      setSoulTraitDraftLevels(0);
+      Audio_.se.levelUp();
+      return result;
+    } catch {
+      setSoulTraitError('魂格特性を保存できませんでした。魂格Pは消費していません。');
+      return null;
+    } finally {
+      soulTraitProcessingRef.current = false;
+    }
+  };
+  // 魂格再編の書1冊を使い、その個体の振り分けだけを全消去する。
+  // 魂格段階・Lv・XP・最高初到達LvはbuildMasuSoulTraitResetが保持し、
+  // mh_masu_mons / mh_owned_itemsを取引保存するので本だけ消える状態を作らない。
+  const commitSoulTraitRespec = async masuId => {
+    if (soulTraitProcessingRef.current) return null;
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeItems = ownedItemsRef.current;
+    const masu = beforeMasuMons.find(m => String(m.id) === String(masuId));
+    const reset = buildMasuSoulTraitReset(masu);
+    const scrollHave = ownedItemCount(beforeItems, SOUL_RANK_RESPEC_ITEM_ID);
+    if (!reset) {
+      setSoulTraitError('リセットする魂格特性がありません。');
+      return null;
+    }
+    if (scrollHave <= 0) {
+      setSoulTraitError('魂格再編の書を所持していません。');
+      return null;
+    }
+    const nextMasuMons = beforeMasuMons.map(m => String(m.id) === String(masuId) ? reset.nextMasu : m);
+    const nextItems = {
+      ...beforeItems,
+      [SOUL_RANK_RESPEC_ITEM_ID]: scrollHave - 1
+    };
+    soulTraitProcessingRef.current = true;
+    setSoulTraitError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_masu_mons',
+        before: beforeMasuMons,
+        next: nextMasuMons
+      }, {
+        key: 'mh_owned_items',
+        before: beforeItems,
+        next: nextItems
+      }], storeGet, storeSet);
+      if (!saved) throw new Error('soul trait respec save failed');
+      masuMonsRef.current = nextMasuMons;
+      ownedItemsRef.current = nextItems;
+      setMasuMons(nextMasuMons);
+      setOwnedItems(nextItems);
+      setMasuMonDetail(prev => prev && String(prev.id) === String(masuId) ? reset.nextMasu : prev);
+      setSoulTraitRespecOpen(false);
+      setSoulTraitSelectedId(null);
+      setSoulTraitDraftLevels(0);
+      Audio_.se.levelUp();
+      return reset;
+    } catch {
+      setSoulTraitError('魂格再編を保存できませんでした。本と魂格Pは変更していません。');
+      return null;
+    } finally {
+      soulTraitProcessingRef.current = false;
+    }
+  };
+
   // 固有技設定(並び順・初期技)を保存する。既存の mh_masu_mons の個体へ2項目を足すだけで、
   // 固有技Lv(uniqueSkillLevels)・固有技P(uniqueSkillPoints)・継承技の中身には一切触らない
   const updateMasuUniqueSetting = (masuId, mutate) => {
@@ -27138,11 +28053,27 @@ function MonsterHeroGame() {
       fusionProcessingRef.current = false;
       return null;
     }
-    const diamondSummary = buildFusionDiamondSummary({
-      masu: main,
-      fusionXp: totalGainedXp,
+    const soulInheritancePlan = buildFusionSoulRankInheritancePlan({
+      main,
+      subs,
+      inherit: fusionInheritSoulRank,
       gold,
-      psycheOwned: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID),
+      ownedItems: ownedItemsRef.current
+    });
+    if (fusionInheritSoulRank && (!soulInheritancePlan.eligible || !soulInheritancePlan.ok)) {
+      fusionProcessingRef.current = false;
+      return null;
+    }
+    // 魂格継承を先に主へ仮適用してから合体XP/限界突破を試算する。
+    // これにより解放したLv上限まで合体XPを受け取れ、旧上限で先に切り捨てない。
+    const fusionGoldBase = soulInheritancePlan.nextGold;
+    const fusionItemBase = soulInheritancePlan.nextOwnedItems;
+    const fusionMainBase = soulInheritancePlan.nextMasu;
+    const diamondSummary = buildFusionDiamondSummary({
+      masu: fusionMainBase,
+      fusionXp: totalGainedXp,
+      gold: fusionGoldBase,
+      psycheOwned: ownedItemCount(fusionItemBase, BREAKTHROUGH_ITEM_ID),
       mainLevel: mainLvl.level,
       subLevel: firstSubLvl.level,
       inheritCount: inheritancePlan.inheritCount
@@ -27154,10 +28085,7 @@ function MonsterHeroGame() {
       fusionProcessingRef.current = false;
       return null;
     }
-    const preparedMain = withBreakthrough ? {
-      ...main,
-      ...breakthroughPlan.nextMasu
-    } : main;
+    const preparedMain = withBreakthrough ? breakthroughPlan.nextMasu : fusionMainBase;
     const mainBase = ALL_PLAYER_MONSTERS[main.baseId];
     let nextMain = preparedMain;
     let inherited = false;
@@ -27206,9 +28134,9 @@ function MonsterHeroGame() {
     const next = snapshot.filter(m => !removedIds.has(m.id)).map(m => m.id === main.id ? nextMain : m);
     const goldAfter = withBreakthrough ? diamondSummary.diamondAfter : diamondSummary.normalDiamondAfter;
     const nextItems = withBreakthrough ? {
-      ...ownedItemsRef.current,
+      ...fusionItemBase,
       [BREAKTHROUGH_ITEM_ID]: breakthroughPlan.nextPsyche
-    } : ownedItemsRef.current;
+    } : fusionItemBase;
     try {
       const saved = await saveStoredValuesOrRollback([{
         key: 'mh_masu_mons',
@@ -27218,7 +28146,7 @@ function MonsterHeroGame() {
         key: 'mh_gold',
         before: gold,
         next: goldAfter
-      }, ...(withBreakthrough ? [{
+      }, ...(withBreakthrough || fusionInheritSoulRank ? [{
         key: 'mh_owned_items',
         before: ownedItemsRef.current,
         next: nextItems
@@ -27254,7 +28182,12 @@ function MonsterHeroGame() {
       gainedXp: totalGainedXp,
       gainedLevels,
       inherited,
-      cost: withBreakthrough ? diamondSummary.totalDiamondCost : diamondSummary.normalDiamondCost,
+      cost: (withBreakthrough ? diamondSummary.totalDiamondCost : diamondSummary.normalDiamondCost) + soulInheritancePlan.diamondCost,
+      soulRankInherited: fusionInheritSoulRank && soulInheritancePlan.eligible,
+      soulRankFromStage: soulInheritancePlan.currentStage,
+      soulRankToStage: soulInheritancePlan.targetStage,
+      soulRankDiamondCost: soulInheritancePlan.diamondCost,
+      soulRankHeroProofCost: soulInheritancePlan.heroProofCost,
       inheritedReincarnatePoints,
       inheritedReincarnateCount,
       breakthroughCount: withBreakthrough ? breakthroughPlan.count : 0
@@ -27267,6 +28200,7 @@ function MonsterHeroGame() {
     setFusionSubId(null);
     setFusionSubIds([]);
     setFusionInheritUniqueIds([]);
+    setFusionInheritSoulRank(false);
     setFusionAnimPhase(0);
     setFusionResultData(null);
   };
@@ -27276,6 +28210,7 @@ function MonsterHeroGame() {
     setFusionSubId(null);
     setFusionSubIds([]);
     setFusionInheritUniqueIds([]);
+    setFusionInheritSoulRank(false);
     setFusionAnimPhase(0);
     setFusionResultData(null);
   };
@@ -27476,6 +28411,68 @@ function MonsterHeroGame() {
       setTranscendError('超越のデータを保存できませんでした。もう一度お試しください。');
     }
   };
+  // 魂格進化: 現Lvはそのまま、次の魂格段階とLv上限だけを1段階進める。
+  // mh_masu_mons / mh_gold / mh_owned_items を既存の取引保存で同時に確定し、
+  // 保存失敗時はダイヤ・勇者の証・個体のどれも中途半端に変更しない。
+  const executeMasuSoulRankEvolution = async () => {
+    if (soulRankProcessingRef.current || !soulRankSelectedId) return;
+    const masu = masuMonsRef.current.find(m => String(m.id) === String(soulRankSelectedId));
+    const result = buildMasuSoulRankEvolution({
+      masu,
+      gold,
+      ownedItems: ownedItemsRef.current
+    });
+    if (!result.ok) {
+      setSoulRankError(result.reason || '魂格進化の条件を確認してください。');
+      return;
+    }
+    soulRankProcessingRef.current = true;
+    setSoulRankError('');
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeOwnedItems = ownedItemsRef.current;
+    const nextMasuMons = beforeMasuMons.map(m => String(m.id) === String(masu.id) ? result.nextMasu : m);
+    try {
+      const saved = await saveStoredValuesOrRollback([{
+        key: 'mh_masu_mons',
+        before: beforeMasuMons,
+        next: nextMasuMons
+      }, {
+        key: 'mh_gold',
+        before: gold,
+        next: result.nextGold
+      }, {
+        key: 'mh_owned_items',
+        before: beforeOwnedItems,
+        next: result.nextOwnedItems
+      }], storeGet, storeSet);
+      if (!saved) throw new Error('soul rank save failed');
+      masuMonsRef.current = nextMasuMons;
+      ownedItemsRef.current = result.nextOwnedItems;
+      setMasuMons(nextMasuMons);
+      setGold(result.nextGold);
+      setOwnedItems(result.nextOwnedItems);
+      addAssistantBond('breakthrough');
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      setSoulRankAnimation({
+        masu: result.nextMasu,
+        base,
+        step: result.next,
+        fromStage: result.fromStage,
+        toStage: result.toStage,
+        fromLevelCap: result.fromLevelCap,
+        toLevelCap: result.toLevelCap
+      });
+      setTimeout(() => {
+        setSoulRankAnimation(null);
+        setSoulRankSelectedId(null);
+        soulRankProcessingRef.current = false;
+      }, prefersReducedMotion() ? 800 : 2400);
+    } catch {
+      soulRankProcessingRef.current = false;
+      setSoulRankError('魂格進化のデータを保存できませんでした。ダイヤと勇者の証は消費していません。');
+    }
+  };
+
   // 超越ポイントの配分を確定する。通常の強化ポイントには一切触らない
   const commitTranscendPlan = async (masu, plan) => {
     const applied = applyTranscendPlanToMasu(masu, plan);
@@ -27892,6 +28889,9 @@ function MonsterHeroGame() {
       bondXp: Math.min(startXp, totalBondXpForLevel(INITIAL_MASU_LEVEL_CAP)),
       rebirthCount: 0,
       levelCap: INITIAL_MASU_LEVEL_CAP,
+      soulRankStage: 0,
+      soulPointMaxReachedLevel: SOUL_RANK_BASE_LEVEL,
+      soulTraitLevels: {},
       uniqueSkillLevels: {},
       distAptPoints: Math.max(0, startLevel.level - 1),
       distApt: [...(base.distAptitude || ['C', 'C', 'C', 'C'])],
@@ -28013,21 +29013,31 @@ function MonsterHeroGame() {
     // 行が実行される時点ではまだ実行されているとは限らない)の中で計算するのではなく、現在のmasuMons
     // (getMasuMon)を直接読んでこの場で同期的に計算する。以前はupdater内でのみ計算していたため、
     // タイミングによって勇者モン自身の絆経験値欄がリザルト画面に出ないことがあった
+    const bondGainResultSummary = (masu, awardGain) => {
+      if (!masu) return null;
+      const applied = applyBondXpGain(masu, awardGain, autoRepeatBondLevelCap);
+      const evolution = soulRankEvolutionStatus(applied.masu);
+      return {
+        xpGain: applied.xpGain,
+        levelBefore: applied.before,
+        levelAfter: applied.after,
+        gainedEnhancePoints: applied.gainedPoints || 0,
+        gainedSoulPoints: applied.gainedSoulPoints || 0,
+        gainedTranscendPoints: applied.gainedTranscendPoints || 0,
+        soulRankEvolutionReady: !!(evolution.ok && evolution.levelReady)
+      };
+    };
     let heroBondGain = null;
     if (mainHero?.masuId) {
       const masu = getMasuMon(mainHero.masuId);
-      const before = bondLevelInfo(masu?.bondXp || 0);
-      const afterXp = runBondXpAfter(masu || {}, gain);
-      const after = bondLevelInfo(afterXp);
-      heroBondGain = {
+      const growth = bondGainResultSummary(masu, gain);
+      heroBondGain = growth ? {
         name: mainHero.masuName || mainHero.name,
         emoji: mainHero.emoji,
         iconUrl: mainHero.iconUrl,
-        xpGain: Math.max(0, afterXp - (masu?.bondXp || 0)),
-        levelBefore: before,
-        levelAfter: after,
+        ...growth,
         masuId: mainHero.masuId
-      };
+      } : null;
     } else if (mainHero) {
       const before = bondLevelInfo(0);
       const after = bondLevelInfo(gain);
@@ -28045,16 +29055,12 @@ function MonsterHeroGame() {
       const masuId = award.masuId;
       const masu = getMasuMon(masuId);
       if (!masu) return null;
-      const before = masuBondLevelInfo(masu);
-      const afterXp = runBondXpAfter(masu, award.gain);
-      const after = bondLevelInfo(afterXp);
-      return {
+      const growth = bondGainResultSummary(masu, award.gain);
+      return growth ? {
         name: masu.name,
-        xpGain: Math.max(0, afterXp - (masu.bondXp || 0)),
-        levelBefore: before,
-        levelAfter: after,
+        ...growth,
         masuId
-      };
+      } : null;
     }).filter(Boolean);
     if (bondAwards.length > 0) {
       // 加算後の配列をこの場で作る。setMasuMons の更新関数の中だけで作っていたころは、
@@ -28162,14 +29168,18 @@ function MonsterHeroGame() {
         const masu = getMasuMon(masuId);
         const award = awardByMasuId.get(String(masuId));
         if (!masu || !award) return null;
-        const before = masuBondLevelInfo(masu);
-        const afterXp = cappedBondXp(masu, award.gain);
+        const applied = applyBondXpGain(masu, award.gain);
+        const evolution = soulRankEvolutionStatus(applied.masu);
         return {
           name: masu.name,
-          xpGain: Math.max(0, afterXp - (masu.bondXp || 0)),
-          levelBefore: before,
-          levelAfter: bondLevelInfo(afterXp),
-          masuId
+          xpGain: applied.xpGain,
+          levelBefore: applied.before,
+          levelAfter: applied.after,
+          masuId,
+          gainedEnhancePoints: applied.gainedPoints || 0,
+          gainedSoulPoints: applied.gainedSoulPoints || 0,
+          gainedTranscendPoints: applied.gainedTranscendPoints || 0,
+          soulRankEvolutionReady: !!(evolution.ok && evolution.levelReady)
         };
       };
       const heroBondGain = flow.hero.masuId ? bondGainOf(flow.hero.masuId) : null;
@@ -28307,6 +29317,33 @@ function MonsterHeroGame() {
     }));
     return gain;
   };
+  // 勇者の証は高難度を「実際にクリアした」ときだけ反復付与する。
+  // Quick・敗北・リタイア・スキップ・保存なしデバッグは0。種族チャレンジは
+  // その難易度が実装されている場合のみ、保存する本番ランから同じ表を使う。
+  const awardHeroProofForClear = async () => {
+    const speciesRun = speciesChallengeBattleRunRef.current;
+    const gain = heroProofClearReward({
+      runMode,
+      difficulty,
+      extremeDifficulty: extremeRunRef.current ? extremeDifficulty : null,
+      speciesDifficulty: speciesRun?.difficultyId || null,
+      speciesSave: speciesRun ? speciesChallengeSaveRunRef.current : true,
+      debug: debugBattleRef.current || runHasDebugOnlyMonster()
+    });
+    if (gain <= 0) return 0;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [HERO_PROOF_ITEM_ID]: ownedItemCount(ownedItemsRef.current, HERO_PROOF_ITEM_ID) + gain
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    setFinalRewardSummary(prev => ({
+      ...(prev || {}),
+      heroProofGain: gain
+    }));
+    return gain;
+  };
   const recordClearOnce = async () => {
     if (clearRecordedRef.current) return;
     clearRecordedRef.current = true;
@@ -28314,6 +29351,7 @@ function MonsterHeroGame() {
     // チャレンジ・クイックのどちらもここを通り、clearRecordedRef が連打も二重付与も止める。
     // 敗北・リタイア・スキップチケットはこの関数を通らないので配られない
     await awardClearPsyche();
+    await awardHeroProofForClear();
     // 種族チャレンジのクリア回数は「種族×難易度」ごとに
     // mh_species_challenge_progress_v1 へ積む(persistSpeciesChallengeClearRewardが正本)。
     // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
@@ -28439,22 +29477,30 @@ function MonsterHeroGame() {
   // 対象の種は HERO_CARD_BONUS_MONSTER_IDS の一覧が持つ(種ごとの分岐をここへ書かない)
   const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);
   const kikiCardBonus = getPermaBuff('kikiCardBonusTurns') > 0 ? 1 : 0;
-  const cardLimit = useMemo(() => {
+  // 連携は参加中の魂格持ちが1体以上いればパーティ全体の同時使用上限+1。
+  // 複数人が持っていても+1だけで、既存の勇者特性・ききとは別枠。最終上限は5枚。
+  const soulCoordinationSlots = slots.reduce((list, mon, index) => {
+    const masu = mon?.masuId ? getMasuMon(mon.masuId) : null;
+    if (masu && soulTraitLevel(masu, 'coordination') > 0) list.push(index);
+    return list;
+  }, []);
+  const soulCoordinationCardBonus = soulCoordinationSlots.length > 0 ? 1 : 0;
+  const baseCardLimit = useMemo(() => {
     const allyCount = slots.filter(s => s !== null).length;
     let limit = 1;
     if (effectiveMaxGuts >= 180 && allyCount >= 3) limit = 3;else if (effectiveMaxGuts >= 120 && allyCount >= 2) limit = 2;
-    limit += heroCardBonus + kikiCardBonus;
-    return limit;
+    return Math.min(5, limit + heroCardBonus + kikiCardBonus);
   }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
-  // 1つのスロット(モンスター)へ同じターンに割り当てられる枚数の上限。
-  // 通常は1枠1枚。枚数+1の勇者特性(ハムの「連続攻撃」・剣士モッチーの「二刀流」)を持つ種が
-  // 勇者モンのときは、その本人のカードだけ複数枚OK。
-  // ききのカード上限+1が効いているときは、その+1ぶんをどのモンスターへ重ねても使えるようにする
-  // (どちらも実処理(processTurn)ではなく枚数の上限だけの話なので、cardLimitまで許す)。
-  // 対象の種は cardLimit と同じ HERO_CARD_BONUS_MONSTER_IDS が持つ(種ごとの分岐をここへ書かない)。
-  // 割当のチェックと予測表示の両方がここを通ることで、判定がずれない
-  const slotMaxUses = mon => heroCardBonusOf(mainHero?.id) > 0 && mon?.id === mainHero?.id || kikiCardBonus > 0 ? cardLimit : 1;
-  const getCardGuts = card => {
+  const cardLimit = Math.min(5, baseCardLimit + soulCoordinationCardBonus);
+  // 1つのスロットへ同じターンに割り当てられる枚数の上限。
+  // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
+  // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
+  const slotMaxUses = (mon, slotIdx = null) => {
+    const base = heroCardBonusOf(mainHero?.id) > 0 && mon?.id === mainHero?.id || kikiCardBonus > 0 ? baseCardLimit : 1;
+    const coordinationHolder = Number.isInteger(slotIdx) && soulCoordinationSlots.includes(slotIdx);
+    return Math.min(cardLimit, base + (coordinationHolder ? soulCoordinationCardBonus : 0));
+  };
+  const getCardGuts = (card, slotIdx = null) => {
     if (!card) return 0;
     let cost = card.type === 'guard' ? 0 : ['buff', 'debuff', 'heal', 'draw'].includes(card.type) ? card.guts || 20 : 20;
     if (cost > 0 && ['atk', 'range_atk', 'unique'].includes(card.type)) {
@@ -28483,9 +29529,12 @@ function MonsterHeroGame() {
     if (cost > 0 && getTurnBuff('pandoraResonanceTurns', 0) > 0) cost = Math.floor(cost * 0.5);
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * getPermaBuff('snegurochkaGutsDiscountStacks')));
+    const soulOwner = Number.isInteger(slotIdx) && slots[slotIdx]?.masuId ? getMasuMon(slots[slotIdx].masuId) : null;
+    const soulGutsMultiplier = soulTraitAttackProfile(soulOwner, card, slotIdx).gutsCostMultiplier;
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    if (extremeWaveStage(specialRuleDifficulty)) return Math.floor(cost * effectiveExtremeSpecialRule(specialRuleDifficulty, 'gutsCost', wave));
-    return applyExtremeIntegerRule(cost, specialRuleDifficulty, 'gutsCost');
+    // 省気は本人のカードだけ。既存の高難度ガッツ倍率と掛け合わせ、最後の1回で丸める。
+    if (extremeWaveStage(specialRuleDifficulty)) return Math.floor(cost * effectiveExtremeSpecialRule(specialRuleDifficulty, 'gutsCost', wave) * soulGutsMultiplier);
+    return applyExtremeIntegerRule(cost * soulGutsMultiplier, specialRuleDifficulty, 'gutsCost');
   };
   const resetAllState = () => ({
     score: 0,
@@ -29722,6 +30771,32 @@ function MonsterHeroGame() {
   const iceLockActive = iceLockTurns > 0 && !iceLockPreparing;
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
   const heroDist = slots.findIndex(isHeroSlotMon);
+  // 実戦では「現在参加中のマスモン」だけを魂格効果の合成対象にする。
+  const battleSoulMasus = slots.map(mon => mon?.masuId ? getMasuMon(mon.masuId) : null).filter(Boolean);
+  const soulBattleParty = soulTraitPartyPreview(battleSoulMasus);
+  const unifiedSpecialDefense = buildUnifiedSpecialDefense({
+    soulEvasion: soulBattleParty.evasion,
+    soulReflect: soulBattleParty.reflect,
+    soulAbsorb: soulBattleParty.absorb,
+    existingEvasion: mainHero?.id === 'Tiger' ? 50 : 0,
+    existingReflect: mainHero?.id === 'Monol' ? 30 : 0,
+    existingAbsorb: mainHero?.id === 'Oboro' || mainHero?.id === 'Plant' ? 30 : 0
+  });
+  const battleIntimidate = combineSoulProbabilityPoints([mainHero?.id === 'Suezo' ? 40 : 0, soulBattleParty.intimidate]);
+  const soulBattleHasEffects = battleSoulMasus.some(masu => soulTraitSpentPoints(masu) > 0);
+  const soulBattleSourceRows = battleSoulMasus.map(masu => {
+    const normalized = normalizeMasuProgression(masu);
+    const traits = SOUL_TRAIT_DEFINITIONS.map(trait => ({
+      trait,
+      level: soulTraitLevel(normalized, trait.id),
+      value: soulTraitEffectValue(normalized, trait.id)
+    })).filter(entry => entry.level > 0);
+    return {
+      masu: normalized,
+      traits
+    };
+  }).filter(row => row.traits.length > 0);
+  const soulBattleSummaryParts = soulBattleHasEffects ? [soulBattleParty.damageReduction > 0 ? `被ダメ -${soulBattleParty.damageReduction.toFixed(1).replace(/\\.0$/, '')}%` : null, unifiedSpecialDefense.rate > 0 ? `特殊防御 ${unifiedSpecialDefense.rate.toFixed(1).replace(/\\.0$/, '')}%` : null, battleIntimidate > 0 ? `威圧 ${battleIntimidate.toFixed(1).replace(/\\.0$/, '')}%` : null, soulBattleParty.autoGutsMultiplier > 1 ? `自動G ×${soulBattleParty.autoGutsMultiplier.toFixed(3)}` : null, soulBattleParty.coordinationCardBonus > 0 ? `カード +${soulBattleParty.coordinationCardBonus}` : null].filter(Boolean) : [];
   const getIncomingDamageBeforeTurnReduction = useCallback(intent => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
@@ -29731,8 +30806,9 @@ function MonsterHeroGame() {
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
     const defenseRate = Math.min(0.5, effectiveDef * 0.00015);
     const dmgBase = Math.max(30, (atkVal - effectiveDef * 0.5) * (1 - defenseRate)) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
-    return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult));
-  }, [effectiveDef, mainHero, permaBuffs, waveBuffs]);
+    const soulDamageRemaining = Math.max(0, 1 - soulBattleParty.damageReduction / 100);
+    return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct')) * iceLockEnemyDamageMult * soulDamageRemaining));
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs, soulBattleParty.damageReduction]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
   // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
   // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
@@ -29770,6 +30846,23 @@ function MonsterHeroGame() {
   // ダメージを与える(攻撃順・ダメージ予測の対象になる)カードか。あつの挑発(stun_atsu)は
   // debuffだが実際にダメージを与えるためprocessTurnと同様ここでも攻撃扱いする
   const isAttackCard = card => !!card && (['atk', 'range_atk', 'unique'].includes(card.type) || card.type === 'debuff' && card.subType === 'stun_atsu');
+  // 割当前は「実際に置けるスロットの中で最も軽いコスト」を選択可否に使う。
+  // 省気持ちへ置けば払えるカードを、割当前の通常コストだけで弾かないため。
+  const pendingCardGuts = card => {
+    if (!cardNeedsMonster(card)) return getCardGuts(card, null);
+    const costs = [];
+    slots.forEach((mon, slotIdx) => {
+      if (!mon) return;
+      if (card?.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
+      costs.push(getCardGuts(card, slotIdx));
+    });
+    return costs.length ? Math.min(...costs) : getCardGuts(card, null);
+  };
+  const selectedCardGuts = handIndex => {
+    const card = hand[handIndex];
+    const assigned = cardAssignments[handIndex];
+    return assigned != null ? getCardGuts(card, assigned) : pendingCardGuts(card);
+  };
   // プロフィールアイコンidから表示URLを解決(味方モンスター由来 or ブリーダーマーケット購入品)
   const resolveIconUrl = id => {
     if (!id) return null;
@@ -29803,8 +30896,8 @@ function MonsterHeroGame() {
       if (pendingCard === i) setPendingCard(null);
       setFocusedCard(null);
     } else {
-      const curGuts = getCardGuts(c);
-      const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + getCardGuts(hand[idx]), 0);
+      const curGuts = pendingCardGuts(c);
+      const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
       const isSelectable = remainingGuts >= curGuts && selectedCards.length < cardLimit;
       if (isSelectable) {
         Audio_.se.card();
@@ -29842,12 +30935,12 @@ function MonsterHeroGame() {
       // 既存の割当数チェック(枚数+1の勇者特性を持つ勇者モン本人のカード・
       // ききのカード上限+1が効いているときは複数可)
       const assignedCount = Object.values(cardAssignments).filter(v => v === slotIdx).length;
-      const maxUses = slotMaxUses(targetMon);
+      const maxUses = slotMaxUses(targetMon, slotIdx);
       const alreadySelected = selectedCards.includes(cardIndex);
       // 未選択なら選択枠とガッツを確認
       if (!alreadySelected) {
-        const curGuts = getCardGuts(c);
-        const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + getCardGuts(hand[idx]), 0);
+        const curGuts = getCardGuts(c, slotIdx);
+        const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + selectedCardGuts(idx), 0);
         if (remainingGuts < curGuts || selectedCards.length >= cardLimit) {
           setFocusedCard(null);
           return;
@@ -29868,6 +30961,11 @@ function MonsterHeroGame() {
         // 既に選択済み: 割当先を変更(別カードの占有を超えない範囲で)
         const otherCount = Object.entries(cardAssignments).filter(([k, v]) => v === slotIdx && Number(k) !== cardIndex).length;
         if (otherCount >= maxUses) {
+          setFocusedCard(null);
+          return;
+        }
+        const otherGuts = selectedCards.filter(idx => idx !== cardIndex).reduce((sum, idx) => sum + selectedCardGuts(idx), 0);
+        if (otherGuts + getCardGuts(c, slotIdx) > guts) {
           setFocusedCard(null);
           return;
         }
@@ -30010,7 +31108,8 @@ function MonsterHeroGame() {
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (distAptPct[slotIdx] || 0);
-    const totalBuffMult = traitMult * getTurnBuff('atkMult', 1.0) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult;
+    const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, slotIdx);
+    const totalBuffMult = traitMult * getTurnBuff('atkMult', 1.0) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult * soulAttack.damageMultiplier;
     let finalDmg = Math.floor(atk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
@@ -30034,21 +31133,23 @@ function MonsterHeroGame() {
     if (baseDmg <= 0) return 0;
     // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する。
     // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
+    const soulAttack = soulTraitAttackProfile(mon?.masuId ? getMasuMon(mon.masuId) : null, card, null);
     const hits = buildAttackHits({
       d: baseDmg,
       card,
       attackerId: mon?.id,
       heroId: mainHero?.id,
       comboDmgBonus: getPermaBuff('comboDmgPct'),
-      critDmgBonus: getPermaBuff('critDmgPct'),
+      critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
       kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
       guaranteedCrit: getTurnBuff('guaranteedCrit', false),
       rollCrit: () => false,
       globalComboRate: getPermaBuff('globalComboDmgPct') + additionalGlobalCombo,
-      mainCanCrit: card.subType !== 'stun_atsu'
+      mainCanCrit: card.subType !== 'stun_atsu',
+      comboFinalMultiplier: soulAttack.comboFinalMultiplier
     });
-    // 贖罪の追撃はメインヒットの確定値を基準にする(ランダム会心は予測しない)
-    return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg);
+    // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
+    return hits.reduce((sum, hit) => sum + hit.dmg, 0) + attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
@@ -30220,8 +31321,8 @@ function MonsterHeroGame() {
       addPopup("スタン！", 'enemy', 'text-indigo-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('stunEnemy', false);
       await battleWait(1000);
-    } else if (mainHero?.id === 'Suezo' && Math.random() < 0.4) {
-      addPopup("眼力！", 'enemy', 'text-indigo-400 font-black text-xl drop-shadow-md');
+    } else if (battleIntimidate > 0 && Math.random() < battleIntimidate / 100) {
+      addPopup(mainHero?.id === 'Suezo' ? "眼力！" : "威圧！", 'enemy', 'text-indigo-400 font-black text-xl drop-shadow-md');
       await battleWait(1000);
     } else {
       // 距離撃で移動を封じたときだけは、この中でも「行動しなかった扱い」に戻す
@@ -30278,8 +31379,11 @@ function MonsterHeroGame() {
           addWaveBuff('chuuniDmgCutUses', 1);
           addPopup('中二病発動!被ダメ50%カット', 'hero', 'text-pink-400 text-sm font-bold');
         }
-        const isReflect = getTurnBuff('reflect', false) || mainHero?.id === 'Monol' && Math.random() < 0.3;
-        const isAbsorb = (mainHero?.id === 'Oboro' || mainHero?.id === 'Plant') && Math.random() < 0.3;
+        // 確定反射バフは従来どおり100%発動。確率型の回避/反射/吸収だけを統一抽選する。
+        const soulDefenseResult = getTurnBuff('reflect', false) ? 'reflect' : rollUnifiedSpecialDefense(unifiedSpecialDefense, Math.random(), Math.random());
+        const isReflect = soulDefenseResult === 'reflect';
+        const isAbsorb = soulDefenseResult === 'absorb';
+        const isEvasion = soulDefenseResult === 'evasion';
         // ポルツの待機を消化してよいか。敵の攻撃をこちらが受け止めたときだけ true にする
         let tookEnemyAttack = false;
 
@@ -30322,7 +31426,7 @@ function MonsterHeroGame() {
           setHp(currentHp);
           setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsGain));
           await battleWait(1000);
-        } else if (mainHero?.id === 'Tiger' && Math.random() < 0.5) {
+        } else if (isEvasion) {
           addPopup("回避！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
           await battleWait(1000);
         } else if (guardValue > 0) {
@@ -30384,7 +31488,8 @@ function MonsterHeroGame() {
     const currentAutoGutsRecovery = Math.max(0, 0.05 + (autoHpRecoveryRate - 0.1)) + getPermaBuff('gutsRecoverPct');
     // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
     const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDist);
-    const gutsRegen = Math.floor(liveEffectiveMaxGuts() * gutsRecoveryRate);
+    const soulAdjustedGutsRecoveryRate = Math.max(0, gutsRecoveryRate) * soulBattleParty.autoGutsMultiplier;
+    const gutsRegen = Math.floor(liveEffectiveMaxGuts() * soulAdjustedGutsRecoveryRate);
     setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsRegen));
     let didRegen = false;
     if (autoHpRecoveryRate > 0) {
@@ -30484,7 +31589,7 @@ function MonsterHeroGame() {
     // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う。
     // 合図を出すのはターンがすべて終わってから(このあとの敵の行動まで見せてから進める)
     const tutorialKinds = battleScenarioRef.current ? usedCards.map(c => isAssistCard(c) ? 'teaching' : c.type) : [];
-    const totalGuts = usedCards.reduce((a, c) => a + getCardGuts(c), 0);
+    const totalGuts = usedCardEntries.reduce((sum, entry) => sum + getCardGuts(entry.card, entry.slotIdx), 0);
     if (guts < totalGuts) return;
     // Fallback slot for cards without assignment (buffs etc.)
     const defaultSlot = slots.findIndex(s => s !== null);
@@ -30541,7 +31646,7 @@ function MonsterHeroGame() {
         currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul;
         currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul;
       }
-      setGuts(p => Math.max(0, p - getCardGuts(card)));
+      setGuts(p => Math.max(0, p - getCardGuts(card, slotIdx)));
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type === 'draw') continue;
@@ -30579,20 +31684,23 @@ function MonsterHeroGame() {
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
           const d = Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul);
+          const soulAttack = soulTraitAttackProfile(stunMon?.masuId ? getMasuMon(stunMon.masuId) : null, card, slotIdx);
           // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
-          // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く(倍率は ATTACK_COMBO_RULES)
+          // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
+          // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
           const stunHits = buildAttackHits({
             d,
             card,
             attackerId: stunMon?.id,
             heroId: mainHero?.id,
             comboDmgBonus: getPermaBuff('comboDmgPct'),
-            critDmgBonus: getPermaBuff('critDmgPct'),
+            critDmgBonus: getPermaBuff('critDmgPct') + soulAttack.critDamageBonus,
             kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
             guaranteedCrit: getTurnBuff('guaranteedCrit', false),
-            rollCrit: () => Math.random() < (card.crit || 0.1) + getPermaBuff('critRatePct'),
+            rollCrit: () => Math.random() < Math.min(1, (card.crit || 0.1) + getPermaBuff('critRatePct') + soulAttack.critRateBonus),
             globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
-            mainCanCrit: false
+            mainCanCrit: false,
+            comboFinalMultiplier: soulAttack.comboFinalMultiplier
           });
           totalDmg += d;
           attackCount++;
@@ -30761,8 +31869,9 @@ function MonsterHeroGame() {
         const attackStartDist = attackDistance;
         const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist);
         attackCount++;
-        const critRateBonus = getPermaBuff('critRatePct'),
-          critDmgBonus = getPermaBuff('critDmgPct');
+        const soulAttack = soulTraitAttackProfile(activeMon?.masuId ? getMasuMon(activeMon.masuId) : null, card, slotIdx);
+        const critRateBonus = getPermaBuff('critRatePct') + soulAttack.critRateBonus;
+        const critDmgBonus = getPermaBuff('critDmgPct') + soulAttack.critDamageBonus;
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits = buildAttackHits({
@@ -30774,8 +31883,9 @@ function MonsterHeroGame() {
           critDmgBonus,
           kenshiExtraCombos: getPermaBuff('kenshiExtraCombo'),
           guaranteedCrit: getTurnBuff('guaranteedCrit', false),
-          rollCrit: () => Math.random() < (card.crit || 0.1) + critRateBonus,
-          globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd
+          rollCrit: () => Math.random() < Math.min(1, (card.crit || 0.1) + critRateBonus),
+          globalComboRate: getPermaBuff('globalComboDmgPct') + localGlobalComboAdd,
+          comboFinalMultiplier: soulAttack.comboFinalMultiplier
         });
         const isCrit = hits[0].crit;
         const finalD = hits[0].dmg;
@@ -30848,7 +31958,7 @@ function MonsterHeroGame() {
           } else if (card.monId === 'Ark' || card.monId === 'Iblis') {
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
             // noAnim:true → 専用モーションを2回連続再生させず、直前のヒットに続けてダメージ数値だけ表示する
-            const comboAmt = attackAtonementDmg(card, finalD);
+            const comboAmt = attackAtonementDmg(card, finalD, soulAttack.comboFinalMultiplier);
             if (comboAmt > 0) {
               totalDmg += comboAmt;
               attackHits.push({
@@ -36157,7 +37267,17 @@ function MonsterHeroGame() {
       className: "mh-management-link mh-temple-link mh-transcend-link"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 18
-    }), "\u8D85\u8D8A"))), gameState === 'MASU_REGENERATION' && (() => {
+    }), "\u8D85\u8D8A"), /*#__PURE__*/React.createElement("button", {
+      "data-soul-rank-link": true,
+      onClick: () => {
+        setSoulRankSelectedId(null);
+        setSoulRankError('');
+        setGameState('MASU_SOUL_RANK');
+      },
+      className: "mh-management-link mh-temple-link"
+    }, /*#__PURE__*/React.createElement(Sparkles, {
+      size: 18
+    }), "\u9B42\u683C\u9032\u5316"))), gameState === 'MASU_REGENERATION' && (() => {
       const unlocked = Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
       return /*#__PURE__*/React.createElement("div", {
         "data-mh-screen": true,
@@ -37009,6 +38129,201 @@ function MonsterHeroGame() {
         onClick: executeMasuTranscendence,
         className: "shrink-0 mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-amber-500 via-fuchsia-500 to-sky-400 text-slate-950 font-black text-sm disabled:opacity-40 disabled:from-slate-700 disabled:via-slate-700 disabled:to-slate-700 disabled:text-slate-400 active:scale-[.98]"
       }, "\u8D85\u8D8A\u3059\u308B"));
+    })(), gameState === 'MASU_SOUL_RANK' && (() => {
+      const heroProofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
+      const selected = masuMons.find(m => String(m.id) === String(soulRankSelectedId));
+      if (!selected) {
+        const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
+        return /*#__PURE__*/React.createElement("div", {
+          "data-mh-screen": true,
+          className: "flex-1 flex flex-col h-full min-h-0 p-4",
+          style: {
+            paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+            paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center gap-2 mb-3 shrink-0"
+        }, /*#__PURE__*/React.createElement("button", {
+          onClick: () => setGameState('TEMPLE'),
+          className: "p-3 text-slate-400 active:scale-90"
+        }, /*#__PURE__*/React.createElement(ArrowLeft, {
+          size: 20
+        })), /*#__PURE__*/React.createElement("h2", {
+          className: "text-xl font-black italic text-sky-200"
+        }, "\u9B42\u683C\u9032\u5316")), /*#__PURE__*/React.createElement("div", {
+          className: "shrink-0 w-full max-w-md mx-auto mb-2"
+        }, /*#__PURE__*/React.createElement(AssistantBubble, {
+          scene: "temple",
+          compact: true
+        })), /*#__PURE__*/React.createElement("div", {
+          className: "rounded-xl border border-sky-400/30 bg-sky-950/20 p-3 mb-2 text-[10px] leading-relaxed text-slate-300 shrink-0"
+        }, "\u8D85\u8D8A\u5F8C\u3001\u73FE\u5728\u306ELv\u4E0A\u9650\u307E\u3067\u80B2\u3063\u305F\u30DE\u30B9\u30E2\u30F3\u3092\u6B21\u306E\u9B42\u683C\u3078\u9032\u5316\u3067\u304D\u307E\u3059\u3002\u9032\u5316\u3057\u3066\u3082\u73FE\u5728Lv\u306F\u4E0A\u304C\u3089\u305A\u3001Lv\u4E0A\u9650\u3060\u3051\u304C100\u89E3\u653E\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 mb-3 shrink-0"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-[10px] font-black text-amber-200"
+        }, "\uD83C\uDFC5 \u52C7\u8005\u306E\u8A3C"), /*#__PURE__*/React.createElement("span", {
+          className: "text-[11px] font-mono font-black text-white"
+        }, "\u6240\u6301 ", heroProofHave.toLocaleString())), renderMonsterSortFilterBar({
+          singleType: true
+        }), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
+        }, entries.map(({
+          masu
+        }) => {
+          const base = ALL_PLAYER_MONSTERS[masu.baseId];
+          if (!base) return null;
+          const status = soulRankEvolutionStatus(masu);
+          const normalized = normalizeMasuProgression(masu);
+          const canOpen = status.ok;
+          const label = normalized.soulRankStage > 0 ? '魂格' + ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][normalized.soulRankStage] : normalized.transcended ? '超越済み' : '未超越';
+          const sub = !status.ok ? status.reason : status.levelReady ? status.next.label + 'へ進化可能' : 'Lv.' + status.next.requiredLevel + 'で' + status.next.label;
+          return /*#__PURE__*/React.createElement("button", {
+            key: masu.id,
+            "data-soul-rank-candidate": masu.id,
+            disabled: !canOpen,
+            onClick: () => {
+              setSoulRankSelectedId(masu.id);
+              setSoulRankError('');
+            },
+            style: MONSTER_CARD_STYLE,
+            className: MONSTER_CARD_CLASS + ' border-sky-400/40 bg-slate-900 disabled:opacity-35'
+          }, renderMonsterCardBody({
+            masu,
+            base,
+            status: /*#__PURE__*/React.createElement("span", {
+              className: "block text-center"
+            }, /*#__PURE__*/React.createElement("b", {
+              className: "text-[8px] text-sky-200"
+            }, label), /*#__PURE__*/React.createElement("small", {
+              className: 'block text-[7px] ' + (status.levelReady ? 'text-emerald-300' : 'text-slate-500')
+            }, sub))
+          }));
+        })));
+      }
+      const base = ALL_PLAYER_MONSTERS[selected.baseId];
+      const status = soulRankEvolutionStatus(selected);
+      if (!status.next) {
+        return /*#__PURE__*/React.createElement("div", {
+          "data-mh-screen": true,
+          className: "flex-1 flex flex-col h-full p-4"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center gap-2"
+        }, /*#__PURE__*/React.createElement("button", {
+          onClick: () => setSoulRankSelectedId(null),
+          className: "p-3 text-slate-400"
+        }, /*#__PURE__*/React.createElement(ArrowLeft, {
+          size: 20
+        })), /*#__PURE__*/React.createElement("h2", {
+          className: "text-xl font-black text-sky-200"
+        }, "\u9B42\u683C\u9032\u5316")), /*#__PURE__*/React.createElement("div", {
+          className: "m-auto text-center text-sm font-black text-slate-300"
+        }, "\u9B42\u683C\u2164\u307E\u3067\u9032\u5316\u6E08\u307F\u3067\u3059\u3002"));
+      }
+      const plan = buildMasuSoulRankEvolution({
+        masu: selected,
+        gold,
+        ownedItems
+      });
+      const next = status.next;
+      const normalized = normalizeMasuProgression(selected);
+      const level = masuBondLevelInfo(selected).level;
+      const goldShort = Math.max(0, next.diamondCost - gold);
+      const proofShort = Math.max(0, next.heroProofCost - heroProofHave);
+      return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
+        "data-soul-rank-confirm": selected.id,
+        className: "flex-1 flex flex-col h-full min-h-0 p-4",
+        style: {
+          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 mb-2 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        disabled: soulRankProcessingRef.current,
+        onClick: () => {
+          setSoulRankSelectedId(null);
+          setSoulRankError('');
+        },
+        className: "p-3 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic",
+        style: {
+          color: next.accent
+        }
+      }, "\u9B42\u683C\u9032\u5316\u306E\u5100")), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2.5"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-3 rounded-2xl bg-slate-900 p-3 border",
+        style: {
+          borderColor: next.accent + '66'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-20 h-20 rounded-full overflow-hidden shrink-0 border-2",
+        style: {
+          borderColor: next.accent
+        }
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: selected.baseId,
+        src: base?.iconUrl,
+        alt: selected.name,
+        masuColors: getMasuColors(selected),
+        className: "w-full h-full object-cover"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block truncate"
+      }, selected.name), /*#__PURE__*/React.createElement("div", {
+        className: "text-pink-300 text-xs"
+      }, "Lv.", level, " / ", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black text-slate-300"
+      }, status.currentLabel, " \u2192 ", /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: next.accent
+        }
+      }, next.label)), /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black text-emerald-300"
+      }, "Lv\u4E0A\u9650 ", normalized.levelCap, " \u2192 ", next.levelCap))), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border border-white/10 bg-black/30 p-3 space-y-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between text-[10px]"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "\u5FC5\u8981Lv"), /*#__PURE__*/React.createElement("b", {
+        className: level >= next.requiredLevel ? 'text-emerald-300' : 'text-red-300'
+      }, "Lv.", level, " / Lv.", next.requiredLevel)), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between text-[10px]"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
+        className: goldShort === 0 ? 'text-amber-300' : 'text-red-300'
+      }, gold.toLocaleString(), " / ", next.diamondCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between text-[10px]"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "\u5FC5\u8981\u306A\u52C7\u8005\u306E\u8A3C"), /*#__PURE__*/React.createElement("b", {
+        className: proofShort === 0 ? 'text-amber-200' : 'text-red-300'
+      }, heroProofHave.toLocaleString(), " / ", next.heroProofCost.toLocaleString())), goldShort > 0 && /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-red-300 font-black"
+      }, "\u30C0\u30A4\u30E4 \u3042\u3068 ", goldShort.toLocaleString()), proofShort > 0 && /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-red-300 font-black"
+      }, "\u52C7\u8005\u306E\u8A3C \u3042\u3068 ", proofShort.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border border-sky-400/30 bg-sky-950/20 p-3 text-[10px] text-slate-300 leading-relaxed"
+      }, "\u9032\u5316\u5F8C\u3082\u73FE\u5728Lv.", level, "\u306E\u307E\u307E\u3067\u3059\u3002Lv\u4E0A\u9650\u3060\u3051", next.levelCap, "\u3078\u89E3\u653E\u3055\u308C\u3001\u305D\u306E\u5F8C\u306E\u521D\u5230\u9054Lv\u3067\u9B42\u683CP\u3092\u7372\u5F97\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border-2 border-red-400/50 bg-red-950/30 px-3 py-2 text-center text-[10px] font-black text-red-200"
+      }, "\u26A0 \u9B42\u683C\u9032\u5316\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093"), soulRankError && /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] text-red-400 font-black text-center"
+      }, soulRankError)), /*#__PURE__*/React.createElement("button", {
+        "data-soul-rank-execute": true,
+        disabled: !plan.ok || soulRankProcessingRef.current,
+        onClick: executeMasuSoulRankEvolution,
+        className: "shrink-0 mt-3 min-h-[52px] w-full rounded-2xl text-slate-950 font-black text-sm disabled:opacity-35 active:scale-[.98]",
+        style: {
+          background: next.stage === 5 ? 'linear-gradient(90deg,#60a5fa,#facc15,#4ade80,#f87171,#e879f9)' : next.accent
+        }
+      }, plan.ok ? next.label + 'へ進化する' : plan.reason));
     })(), levelCapCompensation && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
@@ -37154,7 +38469,55 @@ function MonsterHeroGame() {
       transcended: true
     })), /*#__PURE__*/React.createElement("div", {
       className: "mh-transcend-copy"
-    }, /*#__PURE__*/React.createElement("b", null, "\u8D85\u8D8A\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv\u4E0A\u9650 ", transcendAnimation.fromLevelCap, " \u2192 ", transcendAnimation.toLevelCap), /*#__PURE__*/React.createElement("span", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("span", null, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F"))), reincarnateAnimation && /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("b", null, "\u8D85\u8D8A\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv\u4E0A\u9650 ", transcendAnimation.fromLevelCap, " \u2192 ", transcendAnimation.toLevelCap), /*#__PURE__*/React.createElement("span", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("span", null, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F"))), soulRankAnimation && /*#__PURE__*/React.createElement("div", {
+      "data-soul-rank-animation": true,
+      role: "status",
+      "aria-live": "polite",
+      className: "fixed inset-0 flex items-center justify-center p-5",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50500,
+        backgroundColor: 'rgba(2,6,23,.94)',
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-xs rounded-3xl border-2 p-6 text-center shadow-2xl",
+      style: {
+        borderColor: soulRankAnimation.step.accent,
+        background: soulRankAnimation.toStage === 5 ? 'linear-gradient(145deg,rgba(30,64,175,.55),rgba(113,63,18,.45),rgba(20,83,45,.45),rgba(127,29,29,.45),rgba(88,28,135,.55))' : 'rgba(15,23,42,.96)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black tracking-[.3em] text-slate-400 mb-2"
+    }, "SOUL RANK"), /*#__PURE__*/React.createElement(Sparkles, {
+      size: 28,
+      className: "mx-auto mb-2",
+      style: {
+        color: soulRankAnimation.step.accent
+      }
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "w-28 h-28 mx-auto rounded-full overflow-hidden border-4 mb-3",
+      style: {
+        borderColor: soulRankAnimation.step.accent,
+        boxShadow: '0 0 36px ' + soulRankAnimation.step.accent + '88'
+      }
+    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: soulRankAnimation.masu.baseId,
+      src: soulRankAnimation.base?.iconUrl,
+      alt: soulRankAnimation.masu.name,
+      masuColors: getMasuColors(soulRankAnimation.masu),
+      className: "w-full h-full object-cover"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-slate-400 font-black"
+    }, soulRankAnimation.fromStage > 0 ? '魂格' + ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][soulRankAnimation.fromStage] : '超越', " \u2192"), /*#__PURE__*/React.createElement("div", {
+      className: "text-3xl font-black my-1",
+      style: {
+        color: soulRankAnimation.step.accent
+      }
+    }, soulRankAnimation.step.label), /*#__PURE__*/React.createElement("div", {
+      className: "text-[12px] font-black text-emerald-300"
+    }, "Lv\u4E0A\u9650 ", soulRankAnimation.fromLevelCap, " \u2192 ", soulRankAnimation.toLevelCap))), reincarnateAnimation && /*#__PURE__*/React.createElement("div", {
       className: "mh-reincarnation-animation",
       role: "status",
       "aria-live": "polite"
@@ -42437,9 +43800,14 @@ function MonsterHeroGame() {
       label: 'アイテム'
     }].map(tab => /*#__PURE__*/React.createElement("button", {
       key: tab.key,
-      onClick: () => setMarketTab(tab.key),
+      onClick: () => {
+        setMarketTab(tab.key);
+        setMarketExchangeError('');
+      },
       className: `flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab === tab.key ? 'bg-amber-500 text-black' : 'bg-slate-900 border border-slate-800 text-slate-400'}`
-    }, tab.label))), /*#__PURE__*/React.createElement("div", {
+    }, tab.label))), marketTab === 'item' && marketExchangeError && /*#__PURE__*/React.createElement("div", {
+      className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300"
+    }, marketExchangeError), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
     }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).length === 0 ? /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[11px] text-slate-600 font-bold py-10"
@@ -42475,7 +43843,13 @@ function MonsterHeroGame() {
         },
         middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
           className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-        }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
+        }, "\xD7", ownedItems[item.id] || 0), item.id === SOUL_RANK_RESPEC_ITEM_ID ? /*#__PURE__*/React.createElement("button", {
+          type: "button",
+          disabled: ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID) <= 0 || marketPurchaseProcessingRef.current,
+          onClick: exchangeSoulRankRespecByProof,
+          "aria-label": "\u52C7\u8005\u306E\u8A3C1\u500B\u3092\u9B42\u683C\u518D\u7DE8\u306E\u66F81\u518A\u3078\u4EA4\u63DB",
+          className: "text-[8px] font-black text-amber-200 bg-amber-950/60 border border-amber-500/50 px-1 py-0.5 rounded-full active:scale-95 disabled:opacity-35 whitespace-nowrap"
+        }, "\uD83C\uDFC51\u2192\u4EA4\u63DB") : item.desc && /*#__PURE__*/React.createElement("button", {
           onClick: () => setMarketItemDetail(item),
           "aria-label": `${item.name}の効果を見る`,
           className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
@@ -43260,17 +44634,32 @@ function MonsterHeroGame() {
           subs: selectedSubs,
           selectedSubIds: fusionInheritUniqueIds
         });
-        // 合体後にどうなるかを先に計算して見せる(実行してみないと分からない状態だったため)
-        // 実処理と同じ計算にする。主のレベル上限を超えるぶんは入らないので、
-        // ここで上限まで切ったうえで「合体後」を出す(以前は上限を無視して出していた)
-        const mainCap = normalizeMasuProgression(main).levelCap;
+        const soulInheritancePreview = buildFusionSoulRankInheritancePlan({
+          main,
+          subs: selectedSubs,
+          inherit: false,
+          gold,
+          ownedItems
+        });
+        // 魂格継承ONなら、主の魂格/上限を先にプレビュー上だけ引き上げ、その上限で受取XPを再計算する。
+        // OFFなら従来の主上限そのまま。副の魂格P最高到達Lv・特性はどちらでも持ち込まない。
+        const previewMain = fusionInheritSoulRank && soulInheritancePreview.eligible ? soulInheritancePreview.previewMasu : main;
+        const mainCap = normalizeMasuProgression(previewMain).levelCap;
         const subXp = selectedSubs.reduce((sum, candidate) => sum + cappedBondXp(candidate), 0);
         const beforeXp = cappedBondXp(main);
+        const soulDiamondCost = fusionInheritSoulRank ? soulInheritancePreview.diamondCost : 0;
+        const soulHeroProofCost = fusionInheritSoulRank ? soulInheritancePreview.heroProofCost : 0;
+        const goldAfterSoul = Math.max(0, donationDiamondValue(gold) - soulDiamondCost);
+        const proofAfterSoul = Math.max(0, ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID) - soulHeroProofCost);
+        const previewItems = fusionInheritSoulRank ? {
+          ...ownedItems,
+          [HERO_PROOF_ITEM_ID]: proofAfterSoul
+        } : ownedItems;
         const diamondSummary = buildFusionDiamondSummary({
-          masu: main,
+          masu: previewMain,
           fusionXp: subXp,
-          gold,
-          psycheOwned: ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID),
+          gold: goldAfterSoul,
+          psycheOwned: ownedItemCount(previewItems, BREAKTHROUGH_ITEM_ID),
           mainLevel: mainLvl.level,
           subLevel: subLvl.level,
           inheritCount: inheritancePlan.inheritCount
@@ -43278,13 +44667,17 @@ function MonsterHeroGame() {
         const {
           inheritCost,
           breakthroughDiamondCost,
-          totalDiamondCost,
-          diamondAfter,
-          diamondShortage,
           breakthroughPlan
         } = diamondSummary;
-        const canAfford = diamondSummary.normalDiamondShortage === 0;
-        const afterXp = cappedBondXp(main, subXp);
+        const normalTotalDiamondCost = soulDiamondCost + diamondSummary.normalDiamondCost;
+        const totalDiamondCost = soulDiamondCost + diamondSummary.totalDiamondCost;
+        const normalDiamondAfter = donationDiamondValue(gold) - normalTotalDiamondCost;
+        const diamondAfter = donationDiamondValue(gold) - totalDiamondCost;
+        const normalDiamondShortage = Math.max(0, -normalDiamondAfter);
+        const diamondShortage = Math.max(0, -diamondAfter);
+        const soulProofShortage = fusionInheritSoulRank ? soulInheritancePreview.heroProofShortage : 0;
+        const canAfford = normalDiamondShortage === 0 && soulProofShortage === 0;
+        const afterXp = cappedBondXp(previewMain, subXp);
         const afterLvl = bondLevelInfo(afterXp);
         const gainedLevels = afterLvl.level - mainLvl.level;
         const gainedLevelPoints = gainedEnhancePointsBetweenLevels(mainLvl.level, afterLvl.level);
@@ -43351,7 +44744,32 @@ function MonsterHeroGame() {
           className: "text-[9px] font-black text-slate-300"
         }, sub.name), /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-slate-500 font-black"
-        }, "\u526F", selectedSubs.length, "\u4F53(\u3059\u3079\u3066\u6D88\u3048\u308B)"))), /*#__PURE__*/React.createElement("div", {
+        }, "\u526F", selectedSubs.length, "\u4F53(\u3059\u3079\u3066\u6D88\u3048\u308B)"))), soulInheritancePreview.eligible && /*#__PURE__*/React.createElement("button", {
+          type: "button",
+          "data-soul-rank-inherit-fusion": true,
+          onClick: () => setFusionInheritSoulRank(v => !v),
+          className: `w-full mb-2 rounded-xl border p-3 text-left active:scale-[.99] ${fusionInheritSoulRank ? 'border-sky-400 bg-sky-950/40' : 'border-slate-700 bg-slate-900'}`
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center justify-between gap-3"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "min-w-0"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-[10px] font-black text-sky-200"
+        }, "\u9B42\u683C\u3092\u5F15\u304D\u7D99\u3044\u3067\u5408\u4F53"), /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] font-bold text-slate-400 mt-0.5"
+        }, soulInheritancePreview.currentStage > 0 ? `魂格${['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][soulInheritancePreview.currentStage]}` : '魂格なし', ' → ', "\u9B42\u683C", ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][soulInheritancePreview.targetStage], ' ／ ', "Lv\u4E0A\u9650 ", normalizeMasuProgression(main).levelCap, " \u2192 ", soulInheritancePreview.targetLevelCap), /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] font-black mt-1 text-amber-200"
+        }, "\u8FFD\u52A0 ", soulInheritancePreview.diamondCost.toLocaleString(), "\u30C0\u30A4\u30E4 + \u52C7\u8005\u306E\u8A3C", soulInheritancePreview.heroProofCost), /*#__PURE__*/React.createElement("div", {
+          className: "text-[7px] text-slate-500 mt-0.5"
+        }, "\u526F\u306E\u9B42\u683CP\u30FB\u6700\u9AD8\u5230\u9054Lv\u30FB\u9B42\u683C\u7279\u6027\u306F\u30B3\u30D4\u30FC\u3057\u307E\u305B\u3093\u3002\u901A\u5E38\u5408\u4F53\u3082\u9078\u3079\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+          className: `w-10 h-6 rounded-full shrink-0 relative ${fusionInheritSoulRank ? 'bg-sky-500' : 'bg-slate-700'}`
+        }, /*#__PURE__*/React.createElement("div", {
+          className: `absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${fusionInheritSoulRank ? 'left-5' : 'left-1'}`
+        }))), fusionInheritSoulRank && soulInheritancePreview.heroProofShortage > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "mt-1 text-[8px] font-black text-red-300"
+        }, "\u52C7\u8005\u306E\u8A3C \u3042\u3068 ", soulInheritancePreview.heroProofShortage), fusionInheritSoulRank && soulInheritancePreview.diamondShortage > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "mt-1 text-[8px] font-black text-red-300"
+        }, "\u9B42\u683C\u7D99\u627F\u5206\u3060\u3051\u3067\u30C0\u30A4\u30E4 \u3042\u3068 ", soulInheritancePreview.diamondShortage.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-3 rounded-xl border border-pink-500/30 mb-2"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] font-black text-pink-300 uppercase tracking-wider mb-2"
@@ -43373,7 +44791,7 @@ function MonsterHeroGame() {
           className: "text-[15px] font-mono font-black text-pink-300"
         }, "\u7D46Lv.", afterLvl.level), /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-slate-500 font-bold"
-        }, "\u4E0A\u9650 Lv.", mainCap))), /*#__PURE__*/React.createElement("div", {
+        }, "\u4E0A\u9650 Lv.", mainCap, fusionInheritSoulRank && soulInheritancePreview.eligible ? '（魂格継承後）' : ''))), /*#__PURE__*/React.createElement("div", {
           className: "space-y-1"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
@@ -43479,7 +44897,19 @@ function MonsterHeroGame() {
           className: "text-slate-400"
         }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
           className: "text-white font-black"
-        }, diamondSummary.goldBefore.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        }, donationDiamondValue(gold).toLocaleString())), fusionInheritSoulRank && soulInheritancePreview.eligible && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[10px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, "\u9B42\u683C\u7D99\u627F\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+          className: "text-sky-300 font-black"
+        }, soulDiamondCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[10px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, "\u52C7\u8005\u306E\u8A3C"), /*#__PURE__*/React.createElement("span", {
+          className: soulProofShortage ? 'text-red-300 font-black' : 'text-sky-200 font-black'
+        }, ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID), " / ", soulHeroProofCost, soulProofShortage ? `（あと${soulProofShortage}）` : ''))), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
@@ -43549,14 +44979,14 @@ function MonsterHeroGame() {
           className: "grid grid-cols-1 gap-2 shrink-0 mt-1"
         }, breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("button", {
           onClick: async () => {
-            if (diamondShortage || !breakthroughPlan.canAfford) return;
+            if (diamondShortage || soulProofShortage || !breakthroughPlan.canAfford) return;
             const result = await executeMasuFusion(true);
             if (!result) return;
             setFusionResultData(result);
             setFusionStep('anim');
             Audio_.se.fusion();
           },
-          disabled: !!diamondShortage || !breakthroughPlan.canAfford || fusionProcessingRef.current,
+          disabled: !!diamondShortage || !!soulProofShortage || !breakthroughPlan.canAfford || fusionProcessingRef.current,
           className: "w-full py-2.5 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"
         }, /*#__PURE__*/React.createElement(Star, {
           size: 16
@@ -43577,7 +45007,7 @@ function MonsterHeroGame() {
           size: 16
         }), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.count > 0 ? '通常合体' : '合体する', /*#__PURE__*/React.createElement("span", {
           className: "block text-[8px] normal-case font-bold opacity-80"
-        }, diamondSummary.normalDiamondCost.toLocaleString(), "\u30C0\u30A4\u30E4\u6D88\u8CBB \u2192 \u6B8B\u308A", Math.max(0, diamondSummary.normalDiamondAfter).toLocaleString())))));
+        }, normalTotalDiamondCost.toLocaleString(), "\u30C0\u30A4\u30E4\u6D88\u8CBB", fusionInheritSoulRank && soulHeroProofCost > 0 ? ` + 証${soulHeroProofCost}` : '', " \u2192 \u6B8B\u308A", Math.max(0, normalDiamondAfter).toLocaleString())))));
       }
       if (fusionStep === 'anim') {
         const d = fusionResultData;
@@ -43683,7 +45113,12 @@ function MonsterHeroGame() {
         }
       })), d.gainedLevels > 0 && /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-emerald-400 font-black text-center mt-1"
-      }, "\u7D46\u30EC\u30D9\u30EB\u304C", d.gainedLevels, "\u4E0A\u304C\u3063\u305F\uFF01")), d.inherited && /*#__PURE__*/React.createElement("div", {
+      }, "\u7D46\u30EC\u30D9\u30EB\u304C", d.gainedLevels, "\u4E0A\u304C\u3063\u305F\uFF01")), d.soulRankInherited && /*#__PURE__*/React.createElement("div", {
+        "data-soul-rank-inherit-result": true,
+        className: "text-[10px] text-sky-200 font-black bg-sky-950/50 border border-sky-500/40 rounded-xl px-3 py-1.5 mb-2"
+      }, "\u9B42\u683C\u3092\u7D99\u627F\u3057\u307E\u3057\u305F\uFF1A", d.soulRankFromStage > 0 ? `魂格${['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][d.soulRankFromStage]}` : '魂格なし', " \u2192 \u9B42\u683C", ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][d.soulRankToStage], /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] text-slate-400"
+      }, "\u8FFD\u52A0 ", d.soulRankDiamondCost.toLocaleString(), "\u30C0\u30A4\u30E4 / \u52C7\u8005\u306E\u8A3C", d.soulRankHeroProofCost)), d.inherited && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2"
       }, "\u300C", d.subName, "\u300D\u306E\u56FA\u6709\u6280\u3092\u7D99\u627F\u30C7\u30FC\u30BF\u3068\u3057\u3066\u8A18\u9332\u3057\u307E\u3057\u305F"), d.inheritedReincarnateCount > 0 && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-200 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2"
@@ -43697,7 +45132,7 @@ function MonsterHeroGame() {
       // 超越の実(虹・種族別)はマーケットで売る商品ではなく種族チャレンジの初回クリア報酬でしか
       // 増えないため、種族別ぶんはBREEDER_MARKET_ITEMSに登録していない(虹だけは購入もできるので
       // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
-      const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
+      const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...((ownedItems[HERO_PROOF_ITEM_ID] || 0) > 0 ? [HERO_PROOF_ITEM] : []), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
       return /*#__PURE__*/React.createElement("div", {
         "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0 p-4"
@@ -43717,7 +45152,7 @@ function MonsterHeroGame() {
         compact: true
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
-      }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u8CB7\u3063\u305F\u6D88\u8017\u30A2\u30A4\u30C6\u30E0\u3068\u3001\u7A2E\u65CF\u30C1\u30E3\u30EC\u30F3\u30B8\u306E\u5831\u916C\u3067\u3082\u3089\u3063\u305F\u8D85\u8D8A\u306E\u5B9F\u3067\u3059\u3002\u300C\u4F7F\u3046\u300D\u304B\u3089\u5BFE\u8C61\u306E\u30DE\u30B9\u30E2\u30F3\u3092\u9078\u3079\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      }, "\u6240\u6301\u3057\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u3067\u3059\u3002\u4F7F\u3046\u5834\u6240\u304C\u6C7A\u307E\u3063\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u306F\u53F3\u5074\u306B\u8868\u793A\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
       }, inventoryItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
         className: "empty-state",
@@ -43763,7 +45198,11 @@ function MonsterHeroGame() {
         className: "shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2"
       }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendFruit' ? /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2"
-      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
+      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRank' ? /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2"
+      }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u9032\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRankRespec' ? /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
+      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u7279\u6027\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
         onClick: () => setPendingItemUse(item.id),
         className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
       }, "\u4F7F\u3046"))))));
@@ -44350,8 +45789,449 @@ function MonsterHeroGame() {
           className: "text-sm leading-none"
         }, "\uD83C\uDFA8"), /*#__PURE__*/React.createElement("span", null, "\u67D3\u8272"), /*#__PURE__*/React.createElement("small", {
           className: "text-[7px] text-fuchsia-100"
-        }, "\u6240\u6301 ", ownedItems.dye_mock || 0))))
+        }, "\u6240\u6301 ", ownedItems.dye_mock || 0))), /*#__PURE__*/React.createElement("button", {
+          type: "button",
+          "data-soul-trait-entry": true,
+          "aria-label": `${masu.name}の魂格特性を開く`,
+          onClick: () => {
+            setSoulTraitReturnState(gameState);
+            setSoulTraitTab('attack');
+            setSoulTraitSelectedId(null);
+            setSoulTraitDraftLevels(0);
+            setSoulTraitError('');
+            setSoulTraitRespecOpen(false);
+            setGameState('MASU_SOUL_TRAITS');
+          },
+          className: "mt-1.5 min-h-[48px] w-full rounded-xl border border-sky-400/50 bg-gradient-to-r from-sky-800 via-indigo-800 to-violet-800 text-white font-black text-[10px] active:scale-[.98] flex items-center justify-center gap-2"
+        }, /*#__PURE__*/React.createElement(Sparkles, {
+          size: 14
+        }), /*#__PURE__*/React.createElement("span", null, "\u9B42\u683C\u7279\u6027"), /*#__PURE__*/React.createElement("small", {
+          className: `rounded-full px-1.5 py-0.5 text-[8px] ${masuNorm.soulRankStage >= 1 ? 'bg-white/15 text-sky-100' : 'bg-black/25 text-slate-300'}`
+        }, masuNorm.soulRankStage >= 1 ? `未使用 ${soulTraitAvailablePoints(masuNorm)}P` : '未解放')))
       });
+    })(), gameState === 'MASU_SOUL_TRAITS' && (() => {
+      const sourceMasu = masuMonDetail ? getMasuMon(masuMonDetail.id) || masuMonDetail : null;
+      if (!sourceMasu) return null;
+      const masu = normalizeMasuProgression(sourceMasu);
+      const level = masuBondLevelInfo(masu).level;
+      const unlocked = masu.soulRankStage >= 1;
+      const stageStep = soulRankEvolutionForStage(masu.soulRankStage);
+      const stageLabel = stageStep?.label || '魂格未解放';
+      const accent = stageStep?.accent || '#94a3b8';
+      const earned = soulPointEarned(masu);
+      const spent = soulTraitSpentPoints(masu);
+      const available = soulTraitAvailablePoints(masu);
+      const scrollHave = ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID);
+      const traits = SOUL_TRAIT_DEFINITIONS.filter(trait => trait.category === soulTraitTab);
+      const selected = soulTraitSelectedId ? SOUL_TRAIT_BY_ID[soulTraitSelectedId] : null;
+      const maxUpgrade = selected ? maxSoulTraitUpgradeLevels(masu, selected.id) : 0;
+      const draft = selected ? Math.max(0, Math.min(maxUpgrade, Math.floor(Number(soulTraitDraftLevels) || 0))) : 0;
+      const currentLevel = selected ? soulTraitLevel(masu, selected.id) : 0;
+      const currentEffect = selected ? soulTraitEffectValue(masu, selected.id) : 0;
+      const afterLevel = selected ? currentLevel + draft : 0;
+      const afterEffect = selected ? afterLevel * selected.effectPerLevel : 0;
+      const draftCost = selected ? draft * selected.costPerLevel : 0;
+      const closeScreen = () => {
+        setSoulTraitSelectedId(null);
+        setSoulTraitDraftLevels(0);
+        setSoulTraitError('');
+        setSoulTraitRespecOpen(false);
+        setGameState(soulTraitReturnState || 'MASU_MONS');
+      };
+      const openTrait = trait => {
+        const max = maxSoulTraitUpgradeLevels(masu, trait.id);
+        setSoulTraitSelectedId(trait.id);
+        setSoulTraitDraftLevels(max > 0 ? 1 : 0);
+        setSoulTraitError('');
+      };
+      const addDraft = amount => setSoulTraitDraftLevels(prev => Math.max(0, Math.min(maxUpgrade, Math.floor(Number(prev) || 0) + amount)));
+      // M/B管理の現在セットは8体の候補。魂格特性の実戦値プレビューは、その中のマスモンだけを合成して見せる。
+      // 実戦では実際に参加した個体だけでSTEP4の同じ正本を再計算するため、ここでは「編成セット内」の値と明示する。
+      const rosterSoulMasus = monsterRosterIds.filter(entry => String(entry || '').startsWith('masu:')).map(entry => getMasuMon(String(entry).slice(5))).filter(Boolean);
+      const inCurrentRoster = rosterSoulMasus.some(entry => String(entry.id) === String(masu.id));
+      const currentPartyPreview = inCurrentRoster ? soulTraitPartyPreview(rosterSoulMasus) : null;
+      const draftUpgrade = selected && draft > 0 ? buildSoulTraitUpgrade(masu, selected.id, draft) : null;
+      const afterPartyPreview = currentPartyPreview && draftUpgrade ? soulTraitPartyPreview(rosterSoulMasus.map(entry => String(entry.id) === String(masu.id) ? draftUpgrade.nextMasu : entry)) : currentPartyPreview;
+      const pctText = value => `${(Number(value) || 0).toFixed(1).replace(/\.0$/, '')}%`;
+      const partyPreviewRows = currentPartyPreview && afterPartyPreview ? [{
+        label: '最終被ダメ軽減',
+        before: currentPartyPreview.damageReduction,
+        after: afterPartyPreview.damageReduction,
+        format: pctText
+      }, {
+        label: '回避E',
+        before: currentPartyPreview.evasion,
+        after: afterPartyPreview.evasion,
+        format: pctText
+      }, {
+        label: '反射R',
+        before: currentPartyPreview.reflect,
+        after: afterPartyPreview.reflect,
+        format: pctText
+      }, {
+        label: '吸収A',
+        before: currentPartyPreview.absorb,
+        after: afterPartyPreview.absorb,
+        format: pctText
+      }, {
+        label: '特殊防御',
+        before: currentPartyPreview.specialDefenseRate,
+        after: afterPartyPreview.specialDefenseRate,
+        format: pctText
+      }, {
+        label: '威圧',
+        before: currentPartyPreview.intimidate,
+        after: afterPartyPreview.intimidate,
+        format: pctText
+      }, {
+        label: '自動ガッツ回復',
+        before: (currentPartyPreview.autoGutsMultiplier - 1) * 100,
+        after: (afterPartyPreview.autoGutsMultiplier - 1) * 100,
+        format: pctText
+      }, {
+        label: 'カード増加',
+        before: currentPartyPreview.coordinationCardBonus,
+        after: afterPartyPreview.coordinationCardBonus,
+        format: value => `+${value}枚`
+      }].filter(row => Math.abs(row.after - row.before) > 1e-9) : [];
+      return /*#__PURE__*/React.createElement("div", {
+        "data-mh-screen": true,
+        "data-soul-trait-screen": true,
+        className: "flex-1 flex flex-col h-full min-h-0 p-4",
+        style: {
+          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 flex items-center gap-2 mb-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "aria-label": "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u3078\u623B\u308B",
+        onClick: closeScreen,
+        className: "p-3 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black uppercase tracking-widest",
+        style: {
+          color: accent
+        }
+      }, "\u9B42\u683C\u7279\u6027"), /*#__PURE__*/React.createElement("h2", {
+        className: "text-lg font-black truncate"
+      }, masu.name)), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 text-right"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black",
+        style: {
+          color: accent
+        }
+      }, stageLabel), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-mono text-slate-400"
+      }, "Lv.", level))), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 grid grid-cols-3 gap-1.5 mb-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border border-sky-500/30 bg-sky-950/30 px-2 py-2 text-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[7px] text-slate-400 font-black"
+      }, "\u672A\u4F7F\u7528 \u9B42\u683CP"), /*#__PURE__*/React.createElement("div", {
+        className: "text-lg font-black text-sky-300"
+      }, available)), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border border-violet-500/30 bg-violet-950/30 px-2 py-2 text-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[7px] text-slate-400 font-black"
+      }, "\u4F7F\u7528\u6E08\u307F"), /*#__PURE__*/React.createElement("div", {
+        className: "text-lg font-black text-violet-300"
+      }, spent)), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border border-amber-500/30 bg-amber-950/30 px-2 py-2 text-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[7px] text-slate-400 font-black"
+      }, "\u7DCF\u7372\u5F97"), /*#__PURE__*/React.createElement("div", {
+        className: "text-lg font-black text-amber-300"
+      }, earned))), inCurrentRoster ? /*#__PURE__*/React.createElement("div", {
+        "data-soul-trait-party-preview": true,
+        className: "shrink-0 mb-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-3 py-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-emerald-200"
+      }, "\u73FE\u5728\u306E\u7DE8\u6210\u30BB\u30C3\u30C8\u5185\u30FB\u5408\u6210\u5F8C\u52B9\u679C"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-slate-500"
+      }, "\u30DE\u30B9\u30E2\u30F3 ", rosterSoulMasus.length, "\u4F53")), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 grid grid-cols-4 gap-1 text-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "rounded-lg bg-black/25 p-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[7px] text-slate-500"
+      }, "\u88AB\u30C0\u30E1\u8EFD\u6E1B"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-emerald-300"
+      }, pctText(currentPartyPreview.damageReduction))), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-lg bg-black/25 p-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[7px] text-slate-500"
+      }, "\u7279\u6B8A\u9632\u5FA1"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-cyan-300"
+      }, pctText(currentPartyPreview.specialDefenseRate))), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-lg bg-black/25 p-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[7px] text-slate-500"
+      }, "\u5A01\u5727"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-violet-300"
+      }, pctText(currentPartyPreview.intimidate))), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-lg bg-black/25 p-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[7px] text-slate-500"
+      }, "\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-amber-300"
+      }, "+", currentPartyPreview.coordinationCardBonus))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 text-[7px] font-bold leading-tight text-slate-500"
+      }, "\u56DE\u907FE ", pctText(currentPartyPreview.evasion), " \uFF0F \u53CD\u5C04R ", pctText(currentPartyPreview.reflect), " \uFF0F \u5438\u53CEA ", pctText(currentPartyPreview.absorb), " \uFF0F \u81EA\u52D5\u30AC\u30C3\u30C4\u56DE\u5FA9 \xD7", currentPartyPreview.autoGutsMultiplier.toFixed(3), "\u3002\u5B9F\u6226\u3067\u306F\u5B9F\u969B\u306B\u53C2\u52A0\u3057\u305F\u500B\u4F53\u3060\u3051\u3067\u518D\u8A08\u7B97\u3057\u307E\u3059\u3002")) : /*#__PURE__*/React.createElement("div", {
+        "data-soul-trait-party-preview-empty": true,
+        className: "shrink-0 mb-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[8px] font-bold text-slate-500 text-center"
+      }, "\u3053\u306E\u500B\u4F53\u306F\u73FE\u5728\u306E\u7DE8\u6210\u30BB\u30C3\u30C8\u306B\u5165\u3063\u3066\u3044\u306A\u3044\u305F\u3081\u3001\u5408\u6210\u5F8C\u52B9\u679C\u30D7\u30EC\u30D3\u30E5\u30FC\u306F\u8868\u793A\u3057\u307E\u305B\u3093\u3002"), !unlocked && /*#__PURE__*/React.createElement("div", {
+        "data-soul-trait-locked": true,
+        className: "shrink-0 mb-2 rounded-xl border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-[10px] font-black text-amber-200 text-center"
+      }, "Lv500\u5230\u9054\uFF0B\u9B42\u683C\u9032\u5316\u2160\u3067\u89E3\u653E", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] font-bold text-slate-300"
+      }, "\u7279\u6027\u4E00\u89A7\u3068\u5FC5\u8981\u9B42\u683CP\u306F\u5148\u306B\u78BA\u8A8D\u3067\u304D\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 flex gap-1.5 mb-2",
+        role: "tablist",
+        "aria-label": "\u9B42\u683C\u7279\u6027\u30AB\u30C6\u30B4\u30EA"
+      }, SOUL_TRAIT_CATEGORIES.map(category => /*#__PURE__*/React.createElement("button", {
+        key: category.id,
+        role: "tab",
+        "aria-selected": soulTraitTab === category.id,
+        onClick: () => {
+          setSoulTraitTab(category.id);
+          setSoulTraitSelectedId(null);
+          setSoulTraitDraftLevels(0);
+        },
+        className: `flex-1 min-h-[44px] rounded-xl text-[11px] font-black ${soulTraitTab === category.id ? 'bg-sky-600 text-white' : 'bg-slate-900 border border-slate-700 text-slate-400'}`
+      }, category.label))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-2"
+      }, traits.map(trait => {
+        const traitLevel = soulTraitLevel(masu, trait.id);
+        const effect = soulTraitEffectValue(masu, trait.id);
+        const maxed = Number.isFinite(trait.maxLevel) && traitLevel >= trait.maxLevel;
+        return /*#__PURE__*/React.createElement("button", {
+          type: "button",
+          key: trait.id,
+          "data-soul-trait-card": trait.id,
+          onClick: () => openTrait(trait),
+          className: "w-full min-h-[72px] rounded-2xl border border-white/10 bg-slate-900 p-3 text-left active:scale-[.99]"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-start justify-between gap-2"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "min-w-0"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-[12px] font-black text-white"
+        }, trait.name), /*#__PURE__*/React.createElement("div", {
+          className: "mt-0.5 text-[9px] font-bold leading-relaxed text-slate-400"
+        }, trait.desc)), /*#__PURE__*/React.createElement("div", {
+          className: "shrink-0 text-right"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-[10px] font-black text-sky-300"
+        }, traitLevel > 0 ? `Lv.${traitLevel}` : '未習得'), traitLevel > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] font-mono font-black text-emerald-300"
+        }, formatSoulTraitEffect(trait, effect)))), /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 flex items-center justify-between gap-2 text-[8px] font-black"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, trait.id === 'coordination' ? '習得' : '1段階', " ", trait.costPerLevel, "P"), /*#__PURE__*/React.createElement("span", {
+          className: maxed ? 'text-amber-300' : unlocked && maxSoulTraitUpgradeLevels(masu, trait.id) > 0 ? 'text-sky-300' : 'text-slate-600'
+        }, maxed ? 'MAX' : unlocked ? 'タップして強化' : '閲覧のみ')));
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[8px] font-bold leading-relaxed text-slate-400"
+      }, "\u9B42\u683C\u7279\u6027\u306B\u3088\u308B\u7DCF\u5408\u529B\u52A0\u7B97\uFF1A\u4F7F\u7528\u6E08\u307F\u9B42\u683CP ", spent, " \xD7 10 = ", /*#__PURE__*/React.createElement("b", {
+        className: "text-amber-300"
+      }, "+", spent * 10), /*#__PURE__*/React.createElement("br", null), "\u5B9F\u6226\u3067\u306E\u5408\u6210\u5F8C\u52B9\u679C\u30FB\u653B\u6483\u4E88\u6E2C\u3078\u306E\u53CD\u6620\u306F\u3001\u6226\u95D8\u63A5\u7D9A\u6642\u306B\u540C\u3058\u7279\u6027\u30C7\u30FC\u30BF\u304B\u3089\u8A08\u7B97\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 mt-2 flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-slate-400"
+      }, "\u9B42\u683C\u518D\u7DE8\u306E\u66F8"), /*#__PURE__*/React.createElement("div", {
+        className: `text-[10px] font-black ${scrollHave > 0 ? 'text-cyan-300' : 'text-slate-500'}`
+      }, "\u6240\u6301 ", scrollHave, "\u518A")), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-soul-trait-respec-open": true,
+        disabled: spent <= 0 || scrollHave <= 0 || soulTraitProcessingRef.current,
+        onClick: () => {
+          setSoulTraitError('');
+          setSoulTraitRespecOpen(true);
+        },
+        className: "min-h-[48px] rounded-xl bg-cyan-700 px-4 text-[10px] font-black text-white disabled:opacity-30"
+      }, "\u5168\u30EA\u30BB\u30C3\u30C8")), soulTraitError && /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 mt-1 text-center text-[9px] font-black text-red-400"
+      }, soulTraitError), selected && /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 z-[32000] flex items-end justify-center bg-black/70 p-3",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": `${selected.name}の魂格特性強化`
+      }, /*#__PURE__*/React.createElement("div", {
+        "data-soul-trait-sheet": true,
+        "data-soul-trait-upgrade-sheet": true,
+        className: "w-full max-w-sm rounded-t-3xl border-2 border-sky-500/60 bg-slate-950 p-4 shadow-2xl",
+        style: {
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-start justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-sky-300"
+      }, "\u9B42\u683C\u7279\u6027"), /*#__PURE__*/React.createElement("div", {
+        className: "text-lg font-black"
+      }, selected.name), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 text-[9px] font-bold text-slate-400"
+      }, selected.desc)), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "aria-label": "\u5F37\u5316\u753B\u9762\u3092\u9589\u3058\u308B",
+        onClick: () => {
+          setSoulTraitSelectedId(null);
+          setSoulTraitDraftLevels(0);
+          setSoulTraitError('');
+        },
+        className: "p-2 rounded-full bg-white/10 active:scale-90"
+      }, /*#__PURE__*/React.createElement(X, {
+        size: 16
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-3 grid grid-cols-2 gap-2 text-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border border-white/10 bg-black/30 p-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-500 font-black"
+      }, "\u73FE\u5728"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[13px] font-black text-white"
+      }, "Lv.", currentLevel), /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-mono font-black text-sky-300"
+      }, formatSoulTraitEffect(selected, currentEffect))), /*#__PURE__*/React.createElement("div", {
+        className: "rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-500 font-black"
+      }, "\u5F37\u5316\u5F8C"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[13px] font-black text-white"
+      }, "Lv.", afterLevel), /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-mono font-black text-emerald-300"
+      }, formatSoulTraitEffect(selected, afterEffect)))), partyPreviewRows.length > 0 && /*#__PURE__*/React.createElement("div", {
+        "data-soul-trait-before-after": true,
+        className: "mt-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-emerald-200 mb-1"
+      }, "\u73FE\u5728\u7DE8\u6210\u306E\u5B9F\u6226\u5024\u30D7\u30EC\u30D3\u30E5\u30FC"), /*#__PURE__*/React.createElement("div", {
+        className: "space-y-1"
+      }, partyPreviewRows.map(row => /*#__PURE__*/React.createElement("div", {
+        key: row.label,
+        className: "flex items-center justify-between gap-2 text-[9px] font-black"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, row.label), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
+        className: "text-slate-300"
+      }, row.format(row.before)), /*#__PURE__*/React.createElement("span", {
+        className: "mx-1 text-slate-600"
+      }, "\u2192"), /*#__PURE__*/React.createElement("b", {
+        className: "text-emerald-300"
+      }, row.format(row.after))))))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 rounded-xl border border-white/10 bg-black/30 p-2 text-[9px] font-bold"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "1\u6BB5\u968E\u306E\u52B9\u679C"), /*#__PURE__*/React.createElement("b", null, formatSoulTraitEffect(selected, selected.effectPerLevel))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "1\u6BB5\u968E\u306E\u5FC5\u8981P"), /*#__PURE__*/React.createElement("b", null, selected.costPerLevel, "P")), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "\u6D88\u8CBB\u9B42\u683CP"), /*#__PURE__*/React.createElement("b", {
+        className: "text-amber-300"
+      }, draftCost, "P")), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "\u5F37\u5316\u5F8C\u306E\u672A\u4F7F\u7528P"), /*#__PURE__*/React.createElement("b", {
+        className: "text-sky-300"
+      }, Math.max(0, available - draftCost), "P"))), !unlocked ? /*#__PURE__*/React.createElement("div", {
+        className: "mt-3 rounded-xl border border-amber-500/40 bg-amber-950/30 px-3 py-3 text-center text-[10px] font-black text-amber-200"
+      }, "Lv500\u5230\u9054\uFF0B\u9B42\u683C\u9032\u5316\u2160\u3067\u5F37\u5316\u64CD\u4F5C\u304C\u89E3\u653E\u3055\u308C\u307E\u3059") : selected.id === 'coordination' ? /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-soul-trait-learn": true,
+        "data-soul-trait-learn-coordination": true,
+        disabled: maxUpgrade <= 0 || soulTraitProcessingRef.current,
+        onClick: () => commitSoulTraitUpgrade(masu.id, selected.id, 1),
+        className: "mt-3 min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black disabled:opacity-30"
+      }, currentLevel >= 1 ? '習得済み' : '習得する 200P') : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "mt-3 grid grid-cols-4 gap-1.5"
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-soul-trait-minus-one": true,
+        disabled: draft <= 0,
+        onClick: () => addDraft(-1),
+        className: "min-h-[46px] rounded-xl bg-slate-700 text-[11px] font-black disabled:opacity-30"
+      }, "-1"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-soul-trait-plus-one": true,
+        disabled: draft >= maxUpgrade,
+        onClick: () => addDraft(1),
+        className: "min-h-[46px] rounded-xl bg-sky-800 text-[11px] font-black disabled:opacity-30"
+      }, "+1"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-soul-trait-plus-five": true,
+        disabled: draft >= maxUpgrade,
+        onClick: () => addDraft(5),
+        className: "min-h-[46px] rounded-xl bg-sky-700 text-[11px] font-black disabled:opacity-30"
+      }, "+5"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-soul-trait-max": true,
+        disabled: maxUpgrade <= 0,
+        onClick: () => setSoulTraitDraftLevels(maxUpgrade),
+        className: "min-h-[46px] rounded-xl bg-violet-700 text-[10px] font-black disabled:opacity-30"
+      }, "MAX")), /*#__PURE__*/React.createElement("div", {
+        className: "my-2 text-center text-[11px] font-black text-sky-200"
+      }, "\u4ECA\u56DE +", draft, "\u6BB5\u968E"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-soul-trait-confirm": true,
+        disabled: draft <= 0 || soulTraitProcessingRef.current,
+        onClick: () => commitSoulTraitUpgrade(masu.id, selected.id, draft),
+        className: "min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black disabled:opacity-30"
+      }, "\u5F37\u5316\u3092\u6C7A\u5B9A")))), soulTraitRespecOpen && /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4",
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "\u9B42\u683C\u7279\u6027\u306E\u5168\u30EA\u30BB\u30C3\u30C8\u78BA\u8A8D"
+      }, /*#__PURE__*/React.createElement("div", {
+        "data-soul-trait-respec-sheet": true,
+        className: "w-full max-w-sm rounded-3xl border-2 border-cyan-500/60 bg-slate-950 p-5"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-center text-xl mb-1"
+      }, "\uD83C\uDF00"), /*#__PURE__*/React.createElement("h3", {
+        className: "text-center text-base font-black text-cyan-200"
+      }, "\u9B42\u683C\u7279\u6027\u3092\u5168\u30EA\u30BB\u30C3\u30C8"), /*#__PURE__*/React.createElement("p", {
+        className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-300"
+      }, "\u300C", masu.name, "\u300D\u304C\u4F7F\u7528\u3057\u305F\u9B42\u683CP ", /*#__PURE__*/React.createElement("b", {
+        className: "text-amber-300"
+      }, spent, "P"), " \u3092\u3059\u3079\u3066\u672A\u4F7F\u7528\u3078\u623B\u3057\u307E\u3059\u3002\u9B42\u683C\u6BB5\u968E\u30FBLv\u30FB\u6700\u9AD8\u521D\u5230\u9054Lv\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "\u9B42\u683C\u518D\u7DE8\u306E\u66F8"), /*#__PURE__*/React.createElement("span", {
+        className: "text-cyan-300"
+      }, scrollHave, " \u2192 ", Math.max(0, scrollHave - 1), "\u518A")), /*#__PURE__*/React.createElement("div", {
+        className: "mt-4 grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        disabled: soulTraitProcessingRef.current,
+        onClick: () => setSoulTraitRespecOpen(false),
+        className: "min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black"
+      }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-soul-trait-respec-confirm": true,
+        disabled: soulTraitProcessingRef.current,
+        onClick: () => commitSoulTraitRespec(masu.id),
+        className: "min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black"
+      }, "1\u518A\u4F7F\u3063\u3066\u518D\u7DE8")))));
     })(), uniqueSettingMasuId != null && (() => {
       const masu = getMasuMon(uniqueSettingMasuId);
       const base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
@@ -46419,7 +48299,20 @@ function MonsterHeroGame() {
       size: 14
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] font-black text-white"
-    }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
+    }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && /*#__PURE__*/React.createElement("button", {
+      "data-soul-battle-effects-button": true,
+      type: "button",
+      onClick: () => setShowSoulBattleEffects(true),
+      className: "absolute right-2 top-10 min-h-[44px] min-w-[52px] flex flex-col items-center justify-center px-2 py-1 rounded-2xl border border-sky-400 bg-sky-950/60 active:scale-90 z-20 shadow-lg"
+    }, /*#__PURE__*/React.createElement(Sparkles, {
+      className: "text-sky-300 mb-0.5",
+      size: 14
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[7px] font-black text-white"
+    }, "\u9B42\u683C\u52B9\u679C")), turnCount === 1 && battleSoulMasus.some(m => normalizeSoulRankStage(m.soulRankStage) > 0) && !isBusy && /*#__PURE__*/React.createElement("div", {
+      "data-soul-battle-start-summary": true,
+      className: "absolute left-1/2 top-2 -translate-x-1/2 z-10 max-w-[62%] truncate rounded-full border border-sky-400/30 bg-sky-950/75 px-2 py-1 text-[7px] font-black text-sky-100 pointer-events-none"
+    }, "\u9B42\u683C\u52B9\u679C \u767A\u52D5\u4E2D", Math.round(soulBattleParty.damageReduction * 10) / 10 > 0 ? ` ・鉄壁${Math.round(soulBattleParty.damageReduction * 10) / 10}%` : '', unifiedSpecialDefense.rate > 0 ? ` ・特殊防御${Math.round(unifiedSpecialDefense.rate * 10) / 10}%` : '', battleIntimidate > 0 ? ` ・威圧${Math.round(battleIntimidate * 10) / 10}%` : '', soulCoordinationCardBonus > 0 ? ' ・カード+1' : ''), /*#__PURE__*/React.createElement("button", {
       onClick: useEmergency,
       disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
       className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
@@ -47179,7 +49072,7 @@ function MonsterHeroGame() {
           const s = slots[i];
           if (!s) continue;
           const assignedCount = Object.values(cardAssignments).filter(v => v === i).length;
-          const maxUses = slotMaxUses(s);
+          const maxUses = slotMaxUses(s, i);
           if (assignedCount >= maxUses) continue;
           if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
           pendingValidSlot = i;
@@ -47252,7 +49145,7 @@ function MonsterHeroGame() {
       // 通常は1枠1枚。枚数+1の勇者特性(ハムの連続攻撃・剣士モッチーの二刀流)を持つ
       // 勇者モンが居ると、その本人のスロットだけ複数枚OK。
       // ききのカード上限+1が効いているときも、その+1ぶんはどのスロットへ重ねてよい
-      const maxUses = slotMaxUses(s);
+      const maxUses = slotMaxUses(s, i);
       const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
       // 保留中のカードはまだ使っていないので、「何枚目か」の枚数には数えない
       const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
@@ -47288,6 +49181,7 @@ function MonsterHeroGame() {
       let previewDmg = 0;
       let isPendingPreview = false;
       let isPendingHalved = false;
+      let previewSoulPct = 0;
       if (s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)) {
         // 既に選んだ「アシストカード以外」の枚数を数え、保留カードはその次の1枚として扱う
         let committedPenalty = 0;
@@ -47297,6 +49191,7 @@ function MonsterHeroGame() {
         const isSecondOrLater = committedPenalty >= 1 && !isAssistCard(pendingCardObj);
         const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater);
         previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.forPending.combo);
+        previewSoulPct = soulTraitAttackProfile(s?.masuId ? getMasuMon(s.masuId) : null, pendingCardObj, i).damagePct;
         isPendingPreview = true;
         isPendingHalved = isSecondOrLater;
       } else if (s) {
@@ -47501,7 +49396,10 @@ function MonsterHeroGame() {
         }), totalBonus > 0 ? '+' : '', (totalBonus * 100).toFixed(1), "%");
       })(), previewDmg > 0 && /*#__PURE__*/React.createElement("div", {
         className: `absolute ${slotAssignedCards.length > 0 ? 'top-[18px]' : 'top-0'} ${isPendingPreview ? 'bg-yellow-500 text-black ring-yellow-200' : 'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`
-      }, isPendingPreview && isPendingHalved ? '½ ' : '', "DMG:", previewDmg), s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
+      }, isPendingPreview && isPendingHalved ? '½ ' : '', "DMG:", previewDmg, isPendingPreview && previewSoulPct > 0 && /*#__PURE__*/React.createElement("span", {
+        "data-soul-damage-preview": true,
+        className: "ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[6px] text-sky-100"
+      }, "\u9B42\u683C +", previewSoulPct, "%")), s?.imgUrl ? isAnimating && s.id === 'Pandora' && attackAnim.motion === 'pandoraDualThunder' ? /*#__PURE__*/React.createElement(PandoraDualThunder, {
         image: /*#__PURE__*/React.createElement(DyedMonsterImage, {
           baseId: s.id,
           src: s.imgUrl,
@@ -47564,7 +49462,10 @@ function MonsterHeroGame() {
       size: 8
     }), "+", heroCardBonus), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
       className: "shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
-    }, "\u5FDC\u63F4+1")), /*#__PURE__*/React.createElement("div", {
+    }, "\u5FDC\u63F4+1"), soulCoordinationCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
+      "data-soul-coordination-bonus": true,
+      className: "shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap"
+    }, "\u9B42\u683C+1")), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-0.5 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(true),
@@ -47622,12 +49523,13 @@ function MonsterHeroGame() {
     })())), /*#__PURE__*/React.createElement("div", {
       className: `flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget ? '' : battleTutorialSpotClass('cards')}`
     }, hand.map((c, i) => {
-      const isSel = selectedCards.includes(i),
-        curGuts = getCardGuts(c),
-        remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + (idx === i ? 0 : getCardGuts(hand[idx])), 0),
-        isSelectable = isSel || remainingGuts >= curGuts && selectedCards.length < cardLimit;
-      const isPending = pendingCard === i;
+      const isSel = selectedCards.includes(i);
       const assignedSlot = cardAssignments[i];
+      const curGuts = assignedSlot != null ? getCardGuts(c, assignedSlot) : getCardGuts(c, null);
+      const requiredGuts = assignedSlot != null ? curGuts : pendingCardGuts(c);
+      const remainingGuts = guts - selectedCards.reduce((acc, idx) => acc + (idx === i ? 0 : selectedCardGuts(idx)), 0);
+      const isSelectable = isSel || remainingGuts >= requiredGuts && selectedCards.length < cardLimit;
+      const isPending = pendingCard === i;
       const assignedMon = assignedSlot != null ? slots[assignedSlot] : null;
       const isDragging = dragState?.active && dragState?.cardIndex === i;
       // 練習で使わせたい種類以外は、つかむこと自体をさせない(選択も割り当ても起きない)
@@ -51397,7 +53299,102 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "battleHelp",
       compact: true
-    }))))), resultProcessing && /*#__PURE__*/React.createElement("div", {
+    }))))), showSoulBattleEffects && gameState === 'BATTLE' && /*#__PURE__*/React.createElement("div", {
+      "data-soul-battle-effects": true,
+      className: "fixed inset-0 flex flex-col bg-slate-950 text-white",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 41000,
+        paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 flex items-center justify-between gap-3 border-b border-sky-400/20 px-4 pb-3"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black tracking-[.25em] text-sky-400"
+    }, "SOUL RANK"), /*#__PURE__*/React.createElement("h3", {
+      className: "text-lg font-black text-sky-100"
+    }, "\u9B42\u683C\u52B9\u679C")), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setShowSoulBattleEffects(false),
+      className: "min-h-[44px] min-w-[64px] rounded-full bg-white/10 px-4 text-[11px] font-black active:scale-95"
+    }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-4 py-3 space-y-3"
+    }, /*#__PURE__*/React.createElement("section", {
+      className: "rounded-2xl border border-sky-400/30 bg-sky-950/25 p-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mb-2 text-[10px] font-black text-sky-200"
+    }, "\u30D1\u30FC\u30C6\u30A3\u52B9\u679C"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 text-[10px]"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "rounded-xl bg-black/30 p-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-slate-400"
+    }, "\u88AB\u30C0\u30E1\u30FC\u30B8"), /*#__PURE__*/React.createElement("b", {
+      className: "text-emerald-300"
+    }, "-", Math.round(soulBattleParty.damageReduction * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
+      className: "rounded-xl bg-black/30 p-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-slate-400"
+    }, "\u7279\u6B8A\u9632\u5FA1\u7387"), /*#__PURE__*/React.createElement("b", {
+      className: "text-cyan-300"
+    }, Math.round(unifiedSpecialDefense.rate * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
+      className: "rounded-xl bg-black/30 p-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-slate-400"
+    }, "\u56DE\u907F / \u53CD\u5C04 / \u5438\u53CE"), /*#__PURE__*/React.createElement("b", {
+      className: "text-slate-100"
+    }, Math.round(unifiedSpecialDefense.evasion * 10) / 10, " / ", Math.round(unifiedSpecialDefense.reflect * 10) / 10, " / ", Math.round(unifiedSpecialDefense.absorb * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
+      className: "rounded-xl bg-black/30 p-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-slate-400"
+    }, "\u5A01\u5727"), /*#__PURE__*/React.createElement("b", {
+      className: "text-violet-300"
+    }, Math.round(battleIntimidate * 10) / 10, "%")), /*#__PURE__*/React.createElement("div", {
+      className: "rounded-xl bg-black/30 p-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-slate-400"
+    }, "\u81EA\u52D5\u30AC\u30C3\u30C4\u56DE\u5FA9"), /*#__PURE__*/React.createElement("b", {
+      className: "text-amber-300"
+    }, "\xD7", soulBattleParty.autoGutsMultiplier.toFixed(2))), /*#__PURE__*/React.createElement("div", {
+      className: "rounded-xl bg-black/30 p-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-slate-400"
+    }, "\u4F7F\u7528\u53EF\u80FD\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("b", {
+      className: "text-sky-300"
+    }, soulCoordinationCardBonus > 0 ? '+1' : '変化なし'))), unifiedSpecialDefense.rate > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 text-[9px] leading-relaxed text-slate-400"
+    }, "\u7279\u6B8A\u9632\u5FA1\u304C\u767A\u52D5\u3057\u305F\u5834\u5408\u3001\u56DE\u907F\u30FB\u53CD\u5C04\u30FB\u5438\u53CE\u306E\u6BD4\u7387\u304B\u30891\u3064\u3060\u3051\u767A\u52D5\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+      className: "space-y-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black text-sky-200"
+    }, "\u53C2\u52A0\u4E2D\u30DE\u30B9\u30E2\u30F3"), battleSoulMasus.filter(m => normalizeSoulRankStage(m.soulRankStage) > 0).map(masu => {
+      const stage = normalizeSoulRankStage(masu.soulRankStage);
+      const active = SOUL_TRAIT_DEFINITIONS.filter(t => soulTraitLevel(masu, t.id) > 0);
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      return /*#__PURE__*/React.createElement("div", {
+        key: masu.id,
+        className: "rounded-2xl border border-white/10 bg-slate-900/70 p-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "truncate text-[11px]"
+      }, masu.name || base?.name || 'マスモン'), /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 rounded-full border border-sky-400/30 bg-sky-950/50 px-2 py-1 text-[8px] font-black text-sky-200"
+      }, "\u9B42\u683C", ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][stage])), active.length > 0 ? /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 flex flex-wrap gap-1"
+      }, active.map(t => /*#__PURE__*/React.createElement("span", {
+        key: t.id,
+        className: "rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[8px]"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "text-slate-200"
+      }, t.name), " ", /*#__PURE__*/React.createElement("span", {
+        className: "text-sky-300"
+      }, formatSoulTraitEffect(t, soulTraitEffectValue(masu, t.id)))))) : /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 text-[9px] text-slate-500"
+      }, "\u632F\u308A\u5206\u3051\u6E08\u307F\u306E\u9B42\u683C\u7279\u6027\u306F\u3042\u308A\u307E\u305B\u3093\u3002"));
+    })))), resultProcessing && /*#__PURE__*/React.createElement("div", {
       role: "status",
       "aria-live": "polite",
       "aria-label": "\u30AF\u30EA\u30A2\u7D50\u679C\u3092\u51E6\u7406\u4E2D",
