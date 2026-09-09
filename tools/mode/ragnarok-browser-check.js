@@ -93,8 +93,11 @@ const cardsInfo = () => [...document.querySelectorAll('[data-extreme-difficulty-
       page.on('pageerror', (e) => fatal.push(e.message));
       await openDifficultySelect(page, { EXTREME: 3, NIGHTMARE: 3, CHAOS: 3, ULTIMATE: 3, INFINITY: 3, GOD: 1 });
       const cards = await page.evaluate(cardsInfo);
+      const god = cards.find(c => c.id === 'GOD');
       const ragnarok = cards.find(c => c.id === 'RAGNAROK');
       check('GODを1回クリアするとRAGNAROKが解放される', ragnarok?.detailDisabled === false, ragnarok?.text.slice(0, 80));
+      check('GODのカードに勇者の証1個を表示する', god?.text.replace(/\s+/g,'').includes('🏅勇者の証：1個'), god?.text.slice(0, 100));
+      check('RAGNAROKのカードに勇者の証2個を表示する', ragnarok?.text.replace(/\s+/g,'').includes('🏅勇者の証：2個'), ragnarok?.text.slice(0, 100));
       check('カードには特殊ルールがあることだけを出す',
         /複合特殊ルールあり/.test(ragnarok?.ruleSummary || '') && !/累計Tごと|経過Tごと/.test(ragnarok?.text || ''),
         ragnarok?.ruleSummary);
