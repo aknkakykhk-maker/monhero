@@ -9746,7 +9746,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='TEMPLE'&&(
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-5 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">神殿</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="temple"/></div>
-            <div className="w-full max-w-md mx-auto space-y-2 flex-1 min-h-0 overflow-y-auto mh-scroll"><button onClick={()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>再生</button><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>限界突破</button><button onClick={()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>転生</button><button onClick={()=>{setTranscendSelectedId(null);setTranscendError('');setGameState('MASU_TRANSCENDENCE');}} className="mh-management-link mh-temple-link mh-transcend-link"><Sparkles size={18}/>超越</button></div>
+            <div className="w-full max-w-md mx-auto space-y-2 flex-1 min-h-0 overflow-y-auto mh-scroll"><button onClick={()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>再生</button><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>限界突破</button><button onClick={()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>転生</button><button onClick={()=>{setTranscendSelectedId(null);setTranscendError('');setGameState('MASU_TRANSCENDENCE');}} className="mh-management-link mh-temple-link mh-transcend-link"><Sparkles size={18}/>超越</button><button data-soul-rank-link onClick={()=>{setSoulRankSelectedId(null);setSoulRankError('');setGameState('MASU_SOUL_RANK');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>魂格進化</button></div>
           </div>
         )}
 
@@ -12354,6 +12354,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
           const inventoryItems = [
             ...BREEDER_MARKET_ITEMS.filter(item=>item.type==='item'&&(ownedItems[item.id]||0)>0),
+            ...((ownedItems[HERO_PROOF_ITEM_ID]||0)>0?[HERO_PROOF_ITEM]:[]),
             ...Object.values(speciesTranscendFruitItems()).filter(item=>(ownedItems[item.id]||0)>0),
           ];
           return (
@@ -12363,7 +12364,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <h2 className="text-xl font-black italic text-teal-400 uppercase tracking-widest">アイテム</h2>
             </div>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="inventory" compact/></div>
-            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">マーケットで買った消耗アイテムと、種族チャレンジの報酬でもらった超越の実です。「使う」から対象のマスモンを選べます。</div>
+            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">所持しているアイテムです。使う場所が決まっているアイテムは右側に表示します。</div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               {inventoryItems.length===0?(
                 <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🎒</span><div className="text-[11px] text-slate-400 mt-2">まだアイテムを持っていません。<br/>マーケットの「アイテム」タブから購入できます。</div></div>
@@ -12388,6 +12389,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         ? <div className="shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
                         : item.usage==='transcendFruit'
                         ? <div className="shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
+                        : item.usage==='soulRank'
+                        ? <div className="shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2">神殿の<br/>魂格進化で<br/>使用</div>
                         : <button onClick={()=>setPendingItemUse(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>}
                     </div>
                   ))}
