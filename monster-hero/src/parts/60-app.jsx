@@ -5286,6 +5286,7 @@ function MonsterHeroGame() {
         xpGain:applied.xpGain,
         levelBefore:applied.before,
         levelAfter:applied.after,
+        gainedEnhancePoints:applied.gainedPoints || 0,
         gainedSoulPoints:applied.gainedSoulPoints || 0,
         gainedTranscendPoints:applied.gainedTranscendPoints || 0,
         soulRankEvolutionReady:!!(evolution.ok && evolution.levelReady),
@@ -5400,6 +5401,7 @@ function MonsterHeroGame() {
         const evolution = soulRankEvolutionStatus(applied.masu);
         return {
           name:masu.name, xpGain:applied.xpGain, levelBefore:applied.before, levelAfter:applied.after, masuId,
+          gainedEnhancePoints:applied.gainedPoints || 0,
           gainedSoulPoints:applied.gainedSoulPoints || 0,
           gainedTranscendPoints:applied.gainedTranscendPoints || 0,
           soulRankEvolutionReady:!!(evolution.ok && evolution.levelReady),
