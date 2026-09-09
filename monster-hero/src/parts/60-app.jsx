@@ -913,6 +913,14 @@ function MonsterHeroGame() {
   const [soulRankError, setSoulRankError] = useState('');
   const [soulRankAnimation, setSoulRankAnimation] = useState(null);
   const soulRankProcessingRef = useRef(false);
+  // 魂格STEP3: マスモン詳細から開く専用全画面。振り分け中の下書きは保存しない。
+  const [soulTraitTab, setSoulTraitTab] = useState('attack');
+  const [soulTraitSelectedId, setSoulTraitSelectedId] = useState(null);
+  const [soulTraitDraftLevels, setSoulTraitDraftLevels] = useState(0);
+  const [soulTraitReturnState, setSoulTraitReturnState] = useState('MASU_MONS');
+  const [soulTraitError, setSoulTraitError] = useState('');
+  const [soulTraitRespecOpen, setSoulTraitRespecOpen] = useState(false);
+  const soulTraitProcessingRef = useRef(false);
   const [transcendPlan, setTranscendPlan] = useState(null);
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
@@ -999,7 +1007,8 @@ function MonsterHeroGame() {
   const [partySetCopyTarget, setPartySetCopyTarget] = useState(null);
   const [unlockedTeachingIds, setUnlockedTeachingIds] = useState(STARTER_TEACHING_IDS); // 解放済みアシストカードid(初期6枚+購入分、端末保存)
   const [teachingRosterIds, setTeachingRosterIds] = useState(() => normalizeTeachingRoster(STARTER_TEACHING_IDS, STARTER_TEACHING_IDS)); // アシストカード編成(解放済みの中から周回で使う候補、端末保存。常にちょうどTEACHING_ROSTER_SIZE枚)
-  const [marketTab, setMarketTab] = useState('icon'); // マーケットの表示カテゴリ: 'icon'|'disc'|'assist'
+  const [marketTab, setMarketTab] = useState('icon'); // マーケットの表示カテゴリ: 'icon'|'disc'|'assist'|'item'
+  const [marketExchangeError, setMarketExchangeError] = useState('');
   const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
   const [draftMonsterRoster, setDraftMonsterRoster] = useState([]); // 編成画面での仮選択(決定を押すまでmonsterRosterIdsには反映しない)
   // モンスター一覧系画面(編成・ベースモン一覧・マスモン一覧)共通のソート・表示設定。3画面で共有する
@@ -2093,14 +2102,15 @@ function MonsterHeroGame() {
     MASU_REINCARNATE: 'temple', // 転生ページも同じ
     MASU_TRANSCENDENCE: 'temple', // 超越ページも神殿の曲を継続する
     MASU_SOUL_RANK: 'temple',      // 魂格進化も神殿の曲を継続する
+    MASU_SOUL_TRAITS: 'management', // 魂格特性はマスモン詳細と同じ管理系BGM
     BREEDER_MARKET: 'market',   // マーケットページ
     TRAINING_SELECT: 'trainingMenu', TRAINING_DIFFICULTY: 'trainingMenu', TRAINING_CONFIRM: 'trainingMenu', TRAINING_RESULT: 'trainingMenu',
     TRAINING_BOARD: 'trainingBoard',
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
-  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE'];
-  // マスモンの強化画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
-  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE'];
+  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
+  // マスモンの専用育成画面。ここを開いているあいだは詳細モーダルを重ねない(詳細のほうが手前に出てしまうため)
+  const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE','MASU_SOUL_TRAITS'];
   // 1回のプレイの中で流れる画面。「まだ1度も戦っていない準備中」か「WAVEを終えたあと」かで曲を分ける。
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
