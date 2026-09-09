@@ -53,6 +53,9 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      - name: Install canvas for soul rank STEP5A verification only
+        working-directory: tools
+        run: npm install --no-save canvas@3.2.0
       - name: Restore and verify soul rank STEP5A (temporary branch verification)
         shell: bash
         run: |
