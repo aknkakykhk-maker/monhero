@@ -6556,6 +6556,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const iceLockActive = iceLockTurns>0 && !iceLockPreparing;
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
   const heroDist = slots.findIndex(isHeroSlotMon);
+  // 実戦では「現在参加中のマスモン」だけを魂格効果の合成対象にする。
+  const battleSoulMasus = slots.map(mon=>mon?.masuId?getMasuMon(mon.masuId):null).filter(Boolean);
+  const soulBattleParty = soulTraitPartyPreview(battleSoulMasus);
+  const unifiedSpecialDefense = buildUnifiedSpecialDefense({
+    soulEvasion:soulBattleParty.evasion,
+    soulReflect:soulBattleParty.reflect,
+    soulAbsorb:soulBattleParty.absorb,
+    existingEvasion:mainHero?.id==='Tiger'?50:0,
+    existingReflect:mainHero?.id==='Monol'?30:0,
+    existingAbsorb:(mainHero?.id==='Oboro'||mainHero?.id==='Plant')?30:0,
+  });
+  const battleIntimidate = combineSoulProbabilityPoints([
+    mainHero?.id==='Suezo'?40:0,
+    soulBattleParty.intimidate,
+  ]);
 
   const getIncomingDamageBeforeTurnReduction = useCallback((intent) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
@@ -6566,7 +6581,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
     const defenseRate = Math.min(0.5,effectiveDef*0.00015);
     const dmgBase = Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
-    return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult));
+    const soulDamageRemaining=Math.max(0,1-(soulBattleParty.damageReduction/100));
+    return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult*soulDamageRemaining));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
   // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
@@ -6910,8 +6926,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else if (getTurnBuff('stunEnemy',false)||immediateEffects.stun) {
       addPopup("スタン！",'enemy','text-indigo-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('stunEnemy',false); await battleWait(1000);
-    } else if (mainHero?.id==='Suezo'&&Math.random()<0.4) {
-      addPopup("眼力！",'enemy','text-indigo-400 font-black text-xl drop-shadow-md'); await battleWait(1000);
+    } else if (battleIntimidate>0&&Math.random()<battleIntimidate/100) {
+      addPopup(mainHero?.id==='Suezo'?"眼力！":"威圧！",'enemy','text-indigo-400 font-black text-xl drop-shadow-md'); await battleWait(1000);
     } else {
       // 距離撃で移動を封じたときだけは、この中でも「行動しなかった扱い」に戻す
       enemyActionPerformedRef.current = true;
@@ -6962,8 +6978,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           addWaveBuff('chuuniDmgCutUses',1);
           addPopup('中二病発動!被ダメ50%カット','hero','text-pink-400 text-sm font-bold');
         }
-        const isReflect = getTurnBuff('reflect',false)||(mainHero?.id==='Monol'&&Math.random()<0.3);
-        const isAbsorb = (mainHero?.id==='Oboro'||mainHero?.id==='Plant')&&Math.random()<0.3;
+        // 確定反射バフは従来どおり100%発動。確率型の回避/反射/吸収だけを統一抽選する。
+        const soulDefenseResult = getTurnBuff('reflect',false)
+          ? 'reflect'
+          : rollUnifiedSpecialDefense(unifiedSpecialDefense,Math.random(),Math.random());
+        const isReflect = soulDefenseResult==='reflect';
+        const isAbsorb = soulDefenseResult==='absorb';
+        const isEvasion = soulDefenseResult==='evasion';
         // ポルツの待機を消化してよいか。敵の攻撃をこちらが受け止めたときだけ true にする
         let tookEnemyAttack=false;
 
@@ -6993,7 +7014,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
           currentHp=Math.min(liveEffectiveMaxHp(),currentHp+hpGain); setHp(currentHp);
           setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gutsGain)); await battleWait(1000);
-        } else if (mainHero?.id==='Tiger'&&Math.random()<0.5) {
+        } else if (isEvasion) {
           addPopup("回避！",'hero','text-blue-400 font-black text-xl drop-shadow-lg'); await battleWait(1000);
         } else if (guardValue>0) {
           // ガードは最終ダメージが0でも(余剰でライフ・ガッツが増えても)「受け止めた」扱いにする
@@ -7023,7 +7044,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const currentAutoGutsRecovery=Math.max(0,0.05+(autoHpRecoveryRate-0.1))+getPermaBuff('gutsRecoverPct');
     // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
     const gutsRecoveryRate=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id,iceLockActive,heroDist,enemyDist);
-    const gutsRegen=Math.floor(liveEffectiveMaxGuts()*gutsRecoveryRate);
+    const soulAdjustedGutsRecoveryRate=Math.max(0,gutsRecoveryRate)*soulBattleParty.autoGutsMultiplier;
+    const gutsRegen=Math.floor(liveEffectiveMaxGuts()*soulAdjustedGutsRecoveryRate);
     setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gutsRegen));
     let didRegen=false;
     if (autoHpRecoveryRate>0) {
