@@ -4375,6 +4375,27 @@ function MonsterHeroGame() {
     if (item.type === 'item') setMarketQuantityItem(null);
     } finally { marketPurchaseProcessingRef.current = false; }
   };
+  // 魂格再編の書は、通常の100万ダイヤ購入に加えて同じマーケット内で
+  // 勇者の証1個→1冊へ交換できる。所持品1キーだけを検証付き保存し、失敗時は元へ戻す。
+  const exchangeSoulRankRespecByProof = async () => {
+    if (marketPurchaseProcessingRef.current) return;
+    const before = ownedItemsRef.current;
+    const exchange = buildSoulRankRespecProofExchange(before, 1);
+    if (!exchange.ok) { setMarketExchangeError('勇者の証が1個必要です。'); return; }
+    marketPurchaseProcessingRef.current = true;
+    setMarketExchangeError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_owned_items', before, next:exchange.ownedItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('soul respec proof exchange save failed');
+      ownedItemsRef.current = exchange.ownedItems;
+      setOwnedItems(exchange.ownedItems);
+      saveMissionProgress('market');
+    } catch {
+      setMarketExchangeError('交換を保存できませんでした。勇者の証は消費していません。');
+    } finally { marketPurchaseProcessingRef.current = false; }
+  };
 
   // 編成画面: 解放済みモンスター/アシストカードの中から、次回以降の周回で使う候補を仮選択する。
   // 仮選択は自由に増減でき、「決定」を押してモンスター8体・アシストカード6枚ちょうどの時だけ確定保存する。
@@ -4489,6 +4510,71 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     return updatedMasu;
   };
+  // 魂格特性の強化を確定。未使用魂格Pは保存せず、最高初到達Lvと振り分けから毎回導出する。
+  const commitSoulTraitUpgrade = async (masuId, traitId, levels) => {
+    if (soulTraitProcessingRef.current) return null;
+    const beforeMasuMons = masuMonsRef.current;
+    const masu = beforeMasuMons.find(m=>String(m.id)===String(masuId));
+    const result = buildSoulTraitUpgrade(masu, traitId, levels);
+    if (!result) { setSoulTraitError('魂格Pまたは強化上限を確認してください。'); return null; }
+    const nextMasuMons = beforeMasuMons.map(m=>String(m.id)===String(masuId)?result.nextMasu:m);
+    soulTraitProcessingRef.current = true;
+    setSoulTraitError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:beforeMasuMons, next:nextMasuMons },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('soul trait save failed');
+      masuMonsRef.current = nextMasuMons;
+      setMasuMons(nextMasuMons);
+      setMasuMonDetail(prev=>prev&&String(prev.id)===String(masuId)?result.nextMasu:prev);
+      setSoulTraitSelectedId(null);
+      setSoulTraitDraftLevels(0);
+      Audio_.se.levelUp();
+      return result;
+    } catch {
+      setSoulTraitError('魂格特性を保存できませんでした。魂格Pは消費していません。');
+      return null;
+    } finally { soulTraitProcessingRef.current = false; }
+  };
+  // 魂格再編の書1冊を使い、その個体の振り分けだけを全消去する。
+  // 魂格段階・Lv・XP・最高初到達LvはbuildMasuSoulTraitResetが保持し、
+  // mh_masu_mons / mh_owned_itemsを取引保存するので本だけ消える状態を作らない。
+  const commitSoulTraitRespec = async (masuId) => {
+    if (soulTraitProcessingRef.current) return null;
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeItems = ownedItemsRef.current;
+    const masu = beforeMasuMons.find(m=>String(m.id)===String(masuId));
+    const reset = buildMasuSoulTraitReset(masu);
+    const scrollHave = ownedItemCount(beforeItems, SOUL_RANK_RESPEC_ITEM_ID);
+    if (!reset) { setSoulTraitError('リセットする魂格特性がありません。'); return null; }
+    if (scrollHave <= 0) { setSoulTraitError('魂格再編の書を所持していません。'); return null; }
+    const nextMasuMons = beforeMasuMons.map(m=>String(m.id)===String(masuId)?reset.nextMasu:m);
+    const nextItems = { ...beforeItems, [SOUL_RANK_RESPEC_ITEM_ID]:scrollHave - 1 };
+    soulTraitProcessingRef.current = true;
+    setSoulTraitError('');
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:beforeMasuMons, next:nextMasuMons },
+        { key:'mh_owned_items', before:beforeItems, next:nextItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('soul trait respec save failed');
+      masuMonsRef.current = nextMasuMons;
+      ownedItemsRef.current = nextItems;
+      setMasuMons(nextMasuMons);
+      setOwnedItems(nextItems);
+      setMasuMonDetail(prev=>prev&&String(prev.id)===String(masuId)?reset.nextMasu:prev);
+      setSoulTraitRespecOpen(false);
+      setSoulTraitSelectedId(null);
+      setSoulTraitDraftLevels(0);
+      Audio_.se.levelUp();
+      return reset;
+    } catch {
+      setSoulTraitError('魂格再編を保存できませんでした。本と魂格Pは変更していません。');
+      return null;
+    } finally { soulTraitProcessingRef.current = false; }
+  };
+
   // 固有技設定(並び順・初期技)を保存する。既存の mh_masu_mons の個体へ2項目を足すだけで、
   // 固有技Lv(uniqueSkillLevels)・固有技P(uniqueSkillPoints)・継承技の中身には一切触らない
   const updateMasuUniqueSetting = (masuId, mutate) => {
