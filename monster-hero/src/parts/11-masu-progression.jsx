@@ -82,7 +82,7 @@ const SOUL_TRAIT_DEFINITIONS = Object.freeze([
   Object.freeze({ id:'rangeMidDamage', category:'attack', name:'中距離の極意', desc:'本人の中距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
   Object.freeze({ id:'rangeFarDamage', category:'attack', name:'遠距離の極意', desc:'本人の遠距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
   Object.freeze({ id:'comboFinalDamage', category:'attack', name:'連撃強化', desc:'本人の連撃・追撃の最終ダメージ +1%', costPerLevel:4, effectPerLevel:1, unit:'%' }),
-  Object.freeze({ id:'critRate', category:'attack', name:'会心眼', desc:'本人の会心率 +1pt', costPerLevel:4, effectPerLevel:1, unit:'pt', maxLevel:90 }),
+  Object.freeze({ id:'critRate', category:'attack', name:'会心眼', desc:'本人の会心率 +1pt', costPerLevel:4, effectPerLevel:1, unit:'pt', maxLevel:100 }),
   Object.freeze({ id:'critDamage', category:'attack', name:'会心極', desc:'本人の会心ダメージ +1%', costPerLevel:3, effectPerLevel:1, unit:'%' }),
   // 防御: パーティ効果。同種合成・特殊防御統合はSTEP4で接続する。
   Object.freeze({ id:'partyDamageReduction', category:'defense', name:'鉄壁', desc:'パーティ被ダメージ -1%', costPerLevel:20, effectPerLevel:1, unit:'%' }),
@@ -1464,7 +1464,7 @@ const monsterPowerParts = (mon) => {
 const monsterPowerOf = (mon) => Math.round(monsterPowerParts(mon).total);
 // 保存データのマスモンから総合力を出す。詳細画面と同じ解決(mergeMasuIntoMon)を通してから
 // 同じ式へ渡すので、ベース値と強化値の二重加算は起きない
-const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu));
+const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu)) + soulTraitSpentPoints(masu) * 10;
 // 第3段階で新旧表現を併記する新規個体は、保存前に能力・適性・総合力が一致することを確認する。
 // 既存個体のロードには使わないため、旧データを補完・書換えする処理にはならない。
 const masuBaselineRepresentationsMatch = (masu) => {
