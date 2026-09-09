@@ -227,6 +227,48 @@ const soulTraitPartyPreview = (masus) => {
     intimidate, autoGutsMultiplier, coordinationCardBonus:coordination ? 1 : 0,
   };
 };
+// STEP4: 攻撃者本人へ適用する魂格特性を、予測と実処理で共通利用する。
+// 闘魂 + 技種別(奥義/武技) + 距離極意は%を合算して1つの倍率にし、途中丸めを増やさない。
+// 連撃強化だけは既存comboDmgPctへ足さず、各連撃・追撃の最終値へ掛ける別枠倍率として返す。
+const SOUL_ATTACK_RANGE_TRAIT_IDS = Object.freeze([
+  'rangeZeroDamage','rangeNearDamage','rangeMidDamage','rangeFarDamage',
+]);
+const soulTraitAttackProfile = (masu, card, slotIdx = null) => {
+  const normalized = normalizeMasuProgression(masu);
+  const isAttack = !!card && ['atk','range_atk','unique'].includes(card.type);
+  if (normalized.soulRankStage < 1 || !isAttack) {
+    return {
+      damagePct:0, damageMultiplier:1,
+      comboFinalPct:0, comboFinalMultiplier:1,
+      critRatePoints:0, critRateBonus:0,
+      critDamagePct:0, critDamageBonus:0,
+      gutsCostReductionPct:0, gutsCostMultiplier:1,
+    };
+  }
+  let damagePct = soulTraitEffectValue(normalized, 'allDamage');
+  if (card.type === 'unique') damagePct += soulTraitEffectValue(normalized, 'uniqueDamage');
+  else damagePct += soulTraitEffectValue(normalized, 'normalDamage');
+  const rangeIndex = Number.isInteger(Number(slotIdx))
+    ? Math.max(0, Math.min(3, Math.floor(Number(slotIdx))))
+    : null;
+  if (rangeIndex != null) damagePct += soulTraitEffectValue(normalized, SOUL_ATTACK_RANGE_TRAIT_IDS[rangeIndex]);
+  const comboFinalPct = soulTraitEffectValue(normalized, 'comboFinalDamage');
+  const critRatePoints = soulTraitEffectValue(normalized, 'critRate');
+  const critDamagePct = soulTraitEffectValue(normalized, 'critDamage');
+  const gutsCostReductionPct = soulTraitEffectValue(normalized, 'gutsCostReduction');
+  return {
+    damagePct,
+    damageMultiplier:1 + damagePct / 100,
+    comboFinalPct,
+    comboFinalMultiplier:1 + comboFinalPct / 100,
+    critRatePoints,
+    critRateBonus:critRatePoints / 100,
+    critDamagePct,
+    critDamageBonus:critDamagePct / 100,
+    gutsCostReductionPct,
+    gutsCostMultiplier:Math.max(0, 1 - gutsCostReductionPct / 100),
+  };
+};
 const TRANSCEND_PSYCHE_COST = 5000;
 const TRANSCEND_DIAMOND_COST = 1000000;
 // Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
