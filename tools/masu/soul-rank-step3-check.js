@@ -86,10 +86,31 @@ check('会心眼は最低10%会心の技でも実効100%を超えない90ptで�
 check('残像/鏡返し/吸収の壊れた保存値は特殊防御物理上限75ptへ正規化',
   ['partyEvasion','partyReflect','partyAbsorb'].every(id=>
     a.normalizeSoulTraitLevels({[id]:999})[id]===75));
-check('省気は100%を越えて振らない',a.maxSoulTraitUpgradeLevels(makeMasu({soulPointMaxReachedLevel:1000,soulTraitLevels:{gutsCostReduction:99}}),'gutsCostReduction')===1);
+check('省気の壊れた保存値は100%へ正規化',
+  a.normalizeSoulTraitLevels({gutsCostReduction:999}).gutsCostReduction===100);
 check('魂格I未満は一覧定義を持っていても強化できない',
   a.maxSoulTraitUpgradeLevels(makeMasu({soulRankStage:0,levelCap:500}),'allDamage')===0
   && a.buildSoulTraitUpgrade(makeMasu({soulRankStage:0,levelCap:500}),'allDamage',1)===null);
+
+// ---- 3B. STEP4で使う合成式の正本（まだ戦闘には接続しない） ----
+check('同種25%×4は加算100%ではなく68.359375%',
+  Math.abs(a.combineSoulProbabilityPoints([25,25,25,25])-68.359375)<1e-9);
+{
+  const party=[
+    makeMasu({soulPointMaxReachedLevel:1000,soulTraitLevels:{partyEvasion:5,partyReflect:3,partyAbsorb:2,enemyDisable:5,autoGutsRecovery:2,coordination:1}}),
+    makeMasu({soulPointMaxReachedLevel:1000,soulTraitLevels:{partyEvasion:5,partyReflect:3,partyAbsorb:2,enemyDisable:5,autoGutsRecovery:2,coordination:1}}),
+  ];
+  const p=a.soulTraitPartyPreview(party);
+  check('特殊防御は3種のうち最大実効率を採用し75%上限',
+    p.specialDefenseRate<=75&&p.specialDefenseRate===a.combineSoulProbabilityPoints([5,5]));
+  check('特殊防御の発動内訳は回避:反射:吸収の実効率比',
+    Math.abs((p.specialDefenseMix.evasion+p.specialDefenseMix.reflect+p.specialDefenseMix.absorb)-1)<1e-9
+    &&p.specialDefenseMix.evasion>p.specialDefenseMix.reflect
+    &&p.specialDefenseMix.reflect>p.specialDefenseMix.absorb);
+  check('威圧は同種を残り確率乗算で合成',Math.abs(p.intimidate-a.combineSoulProbabilityPoints([5,5]))<1e-9);
+  check('自動ガッツ回復強化は倍率を乗算',Math.abs(p.autoGutsMultiplier-1.0404)<1e-9);
+  check('連携は複数所持でもカード+1だけ',p.coordinationCardBonus===1);
+}
 
 // ---- 4. 再編 ----
 {
