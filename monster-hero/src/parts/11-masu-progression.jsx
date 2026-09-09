@@ -2317,8 +2317,15 @@ const buildFusionSoulRankInheritancePlan = ({
   const goldHave = donationDiamondValue(gold);
   const heroProofHave = ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID);
   const targetLevelCap = soulRankLevelCap(targetStage);
+  const previewMasu = eligible ? {
+    ...normalized,
+    soulRankStage:targetStage,
+    levelCap:targetLevelCap,
+    soulPointMaxReachedLevel:normalized.soulPointMaxReachedLevel,
+    soulTraitLevels:normalizeSoulTraitLevels(normalized.soulTraitLevels),
+  } : normalized;
   const base = {
-    eligible, inherit:!!inherit, currentStage, targetStage, targetLevelCap, steps,
+    eligible, inherit:!!inherit, currentStage, targetStage, targetLevelCap, steps, previewMasu,
     diamondCost, heroProofCost, goldHave, heroProofHave,
     diamondShortage:Math.max(0,diamondCost-goldHave),
     heroProofShortage:Math.max(0,heroProofCost-heroProofHave),
@@ -2339,14 +2346,7 @@ const buildFusionSoulRankInheritancePlan = ({
     ok:true,
     nextGold:goldHave-diamondCost,
     nextOwnedItems:{...(ownedItems||{}),[HERO_PROOF_ITEM_ID]:heroProofHave-heroProofCost},
-    nextMasu:{
-      ...normalized,
-      soulRankStage:targetStage,
-      levelCap:targetLevelCap,
-      // 主の魂格P履歴・振り分けは維持。副の値はコピーしない。
-      soulPointMaxReachedLevel:normalized.soulPointMaxReachedLevel,
-      soulTraitLevels:normalizeSoulTraitLevels(normalized.soulTraitLevels),
-    },
+    nextMasu:previewMasu,
   };
 };
 // 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
