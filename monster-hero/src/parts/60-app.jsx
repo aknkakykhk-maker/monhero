@@ -7160,11 +7160,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
           const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul);
+          const soulAttack=soulTraitAttackProfile(stunMon?.masuId?getMasuMon(stunMon.masuId):null,card,slotIdx);
           // ヒット列は通常攻撃と同じ buildAttackHits。あつの挑発は固有技ではないのでメインに会心が乗らず(mainCanCrit:false)、
-          // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く(倍率は ATTACK_COMBO_RULES)
-          const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct'), kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-            guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<((card.crit||0.1)+getPermaBuff('critRatePct')),
-            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false });
+          // 連撃はザン(30%×1)・エイキ(10%×2)の勇者特性と、きき由来の全体連撃だけが付く。
+          // 魂格の闘魂/距離補正はgetDmg、会心眼/会心極/連撃強化はここで本人分だけ適用する。
+          const stunHits=buildAttackHits({ d, card, attackerId:stunMon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
+            guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+getPermaBuff('critRatePct')+soulAttack.critRateBonus),
+            globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, mainCanCrit:false, comboFinalMultiplier:soulAttack.comboFinalMultiplier });
           totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           for (const hit of stunHits.slice(1)) { if (hit.crit) hasCrit=true; totalDmg+=hit.dmg; attackHits.push({dmg:hit.dmg, isCrit:hit.crit, slotIdx, isSpecial:true, skillName:hit.skillName, isUnique:false, ...(hit.noAnim?{noAnim:true}:{})}); }
         }
@@ -7275,7 +7277,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           else if(card.monId==='Ark'||card.monId==='Iblis'){
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
             // noAnim:true → 専用モーションを2回連続再生させず、直前のヒットに続けてダメージ数値だけ表示する
-            const comboAmt=attackAtonementDmg(card, finalD);
+            const comboAmt=attackAtonementDmg(card, finalD, soulAttack.comboFinalMultiplier);
             if(comboAmt>0){totalDmg+=comboAmt; attackHits.push({dmg:comboAmt, isCrit:false, slotIdx, isSpecial:true, skillName:'追撃', isUnique:false, noAnim:true});}
             // 中二病: 固有技使用のたびに永続で消費ガッツ+10%・ダメージ倍率+0.1(重複可)
             addPermaBuff('chuuniUniqueStack',1);
