@@ -60,8 +60,12 @@ const SOUL_RANK_EVOLUTION_STAGES = Object.freeze([
   Object.freeze({ stage:4, label:'魂格Ⅳ', requiredLevel:800, levelCap:900, diamondCost:20000000, heroProofCost:50, accent:'#f87171' }),
   Object.freeze({ stage:5, label:'魂格Ⅴ', requiredLevel:900, levelCap:1000, diamondCost:25000000, heroProofCost:60, accent:'#e879f9' }),
 ]);
-const soulRankEvolutionForStage = (stage) =>
-  SOUL_RANK_EVOLUTION_STAGES.find(step => step.stage === normalizeSoulRankStage(stage)) || null;
+const soulRankEvolutionForStage = (stage) => {
+  const target = Math.floor(Number(stage) || 0);
+  return target >= 1 && target <= SOUL_RANK_MAX_STAGE
+    ? (SOUL_RANK_EVOLUTION_STAGES.find(step => step.stage === target) || null)
+    : null;
+};
 const normalizeSoulRankStage = (value) =>
   Math.max(0, Math.min(SOUL_RANK_MAX_STAGE, Math.floor(Number(value) || 0)));
 const soulRankLevelCap = (stage) =>
