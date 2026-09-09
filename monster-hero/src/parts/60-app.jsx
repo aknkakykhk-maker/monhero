@@ -6764,7 +6764,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0);
-    const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult;
+    const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,slotIdx);
+    const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult*soulAttack.damageMultiplier;
     let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
@@ -6788,11 +6789,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (baseDmg<=0) return 0;
     // ヒット列は実処理(processTurn)と同じ buildAttackHits。予測では乱数会心を乗せず、確定会心(guaranteedCrit)だけを反映する。
     // あつの挑発(stun_atsu)は実処理と同じくメインに会心が乗らない(mainCanCrit:false)
-    const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct'), kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
+    const soulAttack=soulTraitAttackProfile(mon?.masuId?getMasuMon(mon.masuId):null,card,null);
+    const hits=buildAttackHits({ d:baseDmg, card, attackerId:mon?.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus:getPermaBuff('critDmgPct')+soulAttack.critDamageBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
       guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>false,
-      globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu' });
-    // 贖罪の追撃はメインヒットの確定値を基準にする(ランダム会心は予測しない)
-    return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg);
+      globalComboRate:getPermaBuff('globalComboDmgPct')+additionalGlobalCombo, mainCanCrit:card.subType!=='stun_atsu',
+      comboFinalMultiplier:soulAttack.comboFinalMultiplier });
+    // 贖罪の追撃も「追撃」なので、連撃強化の最終倍率を同じく適用する。
+    return hits.reduce((sum,hit)=>sum+hit.dmg,0)+attackAtonementDmg(card, hits[0].dmg, soulAttack.comboFinalMultiplier);
   }, [mainHero, turnBuffs, permaBuffs]);
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
@@ -7225,12 +7228,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         }
         const attackStartDist=attackDistance;
         const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist); attackCount++;
-        const critRateBonus=getPermaBuff('critRatePct'), critDmgBonus=getPermaBuff('critDmgPct');
+        const soulAttack=soulTraitAttackProfile(activeMon?.masuId?getMasuMon(activeMon.masuId):null,card,slotIdx);
+        const critRateBonus=getPermaBuff('critRatePct')+soulAttack.critRateBonus;
+        const critDmgBonus=getPermaBuff('critDmgPct')+soulAttack.critDamageBonus;
         // ヒット列(メイン・勇者特性と固有技の連撃・全体連撃)は予測表示と同じ buildAttackHits が作る。
         // 会心は 1 ヒットごとに独立して判定し、連撃は元ダメージ d を基準にする(メインの会心を二重に乗せない)。
         const hits=buildAttackHits({ d, card, attackerId:activeMon.id, heroId:mainHero?.id, comboDmgBonus:getPermaBuff('comboDmgPct'), critDmgBonus, kenshiExtraCombos:getPermaBuff('kenshiExtraCombo'),
-          guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<((card.crit||0.1)+critRateBonus),
-          globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd });
+          guaranteedCrit:getTurnBuff('guaranteedCrit',false), rollCrit:()=>Math.random()<Math.min(1,(card.crit||0.1)+critRateBonus),
+          globalComboRate:getPermaBuff('globalComboDmgPct')+localGlobalComboAdd, comboFinalMultiplier:soulAttack.comboFinalMultiplier });
         const isCrit=hits[0].crit; const finalD=hits[0].dmg; if(isCrit) hasCrit=true; totalDmg+=finalD;
         const rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined, rangeMoveTarget});
