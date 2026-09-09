@@ -12453,16 +12453,38 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const mainLvl = masuBondLevelInfo(main);
             const subLvl = masuBondLevelInfo(sub);
             const inheritancePlan = buildFusionInheritancePlan({ main, subs:selectedSubs, selectedSubIds:fusionInheritUniqueIds });
-            // 合体後にどうなるかを先に計算して見せる(実行してみないと分からない状態だったため)
-            // 実処理と同じ計算にする。主のレベル上限を超えるぶんは入らないので、
-            // ここで上限まで切ったうえで「合体後」を出す(以前は上限を無視して出していた)
-            const mainCap = normalizeMasuProgression(main).levelCap;
+            const soulInheritancePreview = buildFusionSoulRankInheritancePlan({
+              main, subs:selectedSubs, inherit:false, gold, ownedItems,
+            });
+            // 魂格継承ONなら、主の魂格/上限を先にプレビュー上だけ引き上げ、その上限で受取XPを再計算する。
+            // OFFなら従来の主上限そのまま。副の魂格P最高到達Lv・特性はどちらでも持ち込まない。
+            const previewMain = fusionInheritSoulRank && soulInheritancePreview.eligible
+              ? soulInheritancePreview.previewMasu : main;
+            const mainCap = normalizeMasuProgression(previewMain).levelCap;
             const subXp = selectedSubs.reduce((sum, candidate)=>sum+cappedBondXp(candidate), 0);
             const beforeXp = cappedBondXp(main);
-            const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:subXp, gold, psycheOwned:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:subLvl.level, inheritCount:inheritancePlan.inheritCount });
-            const { inheritCost, breakthroughDiamondCost, totalDiamondCost, diamondAfter, diamondShortage, breakthroughPlan } = diamondSummary;
-            const canAfford = diamondSummary.normalDiamondShortage === 0;
-            const afterXp = cappedBondXp(main, subXp);
+            const soulDiamondCost = fusionInheritSoulRank ? soulInheritancePreview.diamondCost : 0;
+            const soulHeroProofCost = fusionInheritSoulRank ? soulInheritancePreview.heroProofCost : 0;
+            const goldAfterSoul = Math.max(0, donationDiamondValue(gold)-soulDiamondCost);
+            const proofAfterSoul = Math.max(0, ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)-soulHeroProofCost);
+            const previewItems = fusionInheritSoulRank
+              ? { ...ownedItems, [HERO_PROOF_ITEM_ID]:proofAfterSoul }
+              : ownedItems;
+            const diamondSummary = buildFusionDiamondSummary({
+              masu:previewMain, fusionXp:subXp, gold:goldAfterSoul,
+              psycheOwned:ownedItemCount(previewItems, BREAKTHROUGH_ITEM_ID),
+              mainLevel:mainLvl.level, subLevel:subLvl.level, inheritCount:inheritancePlan.inheritCount,
+            });
+            const { inheritCost, breakthroughDiamondCost, breakthroughPlan } = diamondSummary;
+            const normalTotalDiamondCost = soulDiamondCost + diamondSummary.normalDiamondCost;
+            const totalDiamondCost = soulDiamondCost + diamondSummary.totalDiamondCost;
+            const normalDiamondAfter = donationDiamondValue(gold)-normalTotalDiamondCost;
+            const diamondAfter = donationDiamondValue(gold)-totalDiamondCost;
+            const normalDiamondShortage = Math.max(0,-normalDiamondAfter);
+            const diamondShortage = Math.max(0,-diamondAfter);
+            const soulProofShortage = fusionInheritSoulRank ? soulInheritancePreview.heroProofShortage : 0;
+            const canAfford = normalDiamondShortage===0 && soulProofShortage===0;
+            const afterXp = cappedBondXp(previewMain, subXp);
             const afterLvl = bondLevelInfo(afterXp);
             const gainedLevels = afterLvl.level - mainLvl.level;
             const gainedLevelPoints = gainedEnhancePointsBetweenLevels(mainLvl.level, afterLvl.level);
@@ -12491,6 +12513,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </div>
                   </div>
                   {/* 合体後にどう変わるかの内訳。実行前に結果が分かるようにしている */}
+                  {soulInheritancePreview.eligible&&<button
+                    type="button"
+                    data-soul-rank-inherit-fusion
+                    onClick={()=>setFusionInheritSoulRank(v=>!v)}
+                    className={`w-full mb-2 rounded-xl border p-3 text-left active:scale-[.99] ${fusionInheritSoulRank?'border-sky-400 bg-sky-950/40':'border-slate-700 bg-slate-900'}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-black text-sky-200">魂格を引き継いで合体</div>
+                        <div className="text-[8px] font-bold text-slate-400 mt-0.5">
+                          {soulInheritancePreview.currentStage>0?`魂格${['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][soulInheritancePreview.currentStage]}`:'魂格なし'}
+                          {' → '}
+                          魂格{['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][soulInheritancePreview.targetStage]}
+                          {' ／ '}Lv上限 {normalizeMasuProgression(main).levelCap} → {soulInheritancePreview.targetLevelCap}
+                        </div>
+                        <div className="text-[8px] font-black mt-1 text-amber-200">
+                          追加 {soulInheritancePreview.diamondCost.toLocaleString()}ダイヤ + 勇者の証{soulInheritancePreview.heroProofCost}
+                        </div>
+                        <div className="text-[7px] text-slate-500 mt-0.5">副の魂格P・最高到達Lv・魂格特性はコピーしません。通常合体も選べます。</div>
+                      </div>
+                      <div className={`w-10 h-6 rounded-full shrink-0 relative ${fusionInheritSoulRank?'bg-sky-500':'bg-slate-700'}`}>
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${fusionInheritSoulRank?'left-5':'left-1'}`}></div>
+                      </div>
+                    </div>
+                    {fusionInheritSoulRank&&soulInheritancePreview.heroProofShortage>0&&<div className="mt-1 text-[8px] font-black text-red-300">勇者の証 あと {soulInheritancePreview.heroProofShortage}</div>}
+                    {fusionInheritSoulRank&&soulInheritancePreview.diamondShortage>0&&<div className="mt-1 text-[8px] font-black text-red-300">魂格継承分だけでダイヤ あと {soulInheritancePreview.diamondShortage.toLocaleString()}</div>}
+                  </button>}
                   <div className="bg-black/40 p-3 rounded-xl border border-pink-500/30 mb-2">
                     <div className="text-[9px] font-black text-pink-300 uppercase tracking-wider mb-2">合体後の「{main.name}」</div>
                     <div className="grid grid-cols-3 items-center gap-1 mb-2">
@@ -12502,7 +12550,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="text-center">
                         <div className="text-[7px] text-pink-400 font-bold">合体後</div>
                         <div className="text-[15px] font-mono font-black text-pink-300">絆Lv.{afterLvl.level}</div>
-                        <div className="text-[7px] text-slate-500 font-bold">上限 Lv.{mainCap}</div>
+                        <div className="text-[7px] text-slate-500 font-bold">上限 Lv.{mainCap}{fusionInheritSoulRank&&soulInheritancePreview.eligible?'（魂格継承後）':''}</div>
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -12537,7 +12585,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">転生育成ボーナス</span><span className="text-amber-300 font-black">{reincarnateTransfer.count}回分 / +{reincarnateTransfer.points}P</span></div>
                     {reincarnateTransfer.count>0&&<div className="text-[8px] text-slate-400">{selectedSubs.length===1?`副自身 ${normalizeMasuProgression(sub).reincarnateCount}回＋継承済み ${inheritedReincarnateCountOf(sub)}回分を全量継承します`:`選択した副${selectedSubs.length}体の転生由来分をすべて累積します`}</div>}
                     <div className="text-[9px] font-black text-violet-200 tracking-wider">ダイヤ消費</div>
-                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-white font-black">{diamondSummary.goldBefore.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-white font-black">{donationDiamondValue(gold).toLocaleString()}</span></div>
+                    {fusionInheritSoulRank&&soulInheritancePreview.eligible&&<>
+                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">魂格継承ダイヤ</span><span className="text-sky-300 font-black">{soulDiamondCost.toLocaleString()}</span></div>
+                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">勇者の証</span><span className={soulProofShortage?'text-red-300 font-black':'text-sky-200 font-black'}>{ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)} / {soulHeroProofCost}{soulProofShortage?`（あと${soulProofShortage}）`:''}</span></div>
+                    </>}
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">継承する固有技数</span><span className="text-amber-300 font-black">{inheritancePlan.inheritCount}個</span></div>
                     <div className="flex justify-between gap-2 text-[10px] font-bold"><span className="text-slate-400 shrink-0">継承対象</span><span className="text-amber-200 font-black text-right">{inheritancePlan.inheritedEntries.length?inheritancePlan.inheritedEntries.map(entry=>`${entry.sub.name}「${entry.subBase.unique.name}」`).join('、'):'なし'}</span></div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">固有技継承ダイヤ合計</span><span className="text-amber-300 font-black">{inheritCost.toLocaleString()}</span></div>
@@ -12564,11 +12616,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
                 <div className="grid grid-cols-1 gap-2 shrink-0 mt-1">
                 {breakthroughPlan.count>0&&<button onClick={async()=>{
-                  if (diamondShortage || !breakthroughPlan.canAfford) return;
+                  if (diamondShortage || soulProofShortage || !breakthroughPlan.canAfford) return;
                   const result = await executeMasuFusion(true);
                   if (!result) return;
                   setFusionResultData(result); setFusionStep('anim'); Audio_.se.fusion();
-                }} disabled={!!diamondShortage||!breakthroughPlan.canAfford||fusionProcessingRef.current} className="w-full py-2.5 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"><Star size={16}/><span>限界突破 ×{breakthroughPlan.count} して合体<span className="block text-[8px] font-bold opacity-80">{totalDiamondCost.toLocaleString()}ダイヤ消費 → 残り{Math.max(0, diamondAfter).toLocaleString()}</span></span></button>}
+                }} disabled={!!diamondShortage||!!soulProofShortage||!breakthroughPlan.canAfford||fusionProcessingRef.current} className="w-full py-2.5 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"><Star size={16}/><span>限界突破 ×{breakthroughPlan.count} して合体<span className="block text-[8px] font-bold opacity-80">{totalDiamondCost.toLocaleString()}ダイヤ消費 → 残り{Math.max(0, diamondAfter).toLocaleString()}</span></span></button>}
                 <button onClick={async()=>{
                   if (!canAfford) return;
                   const result = await executeMasuFusion(false);
@@ -12576,7 +12628,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   setFusionResultData(result);
                   setFusionStep('anim');
                   Audio_.se.fusion();
-                }} disabled={!canAfford||fusionProcessingRef.current} className={`w-full py-2.5 rounded-2xl font-black text-sm uppercase shadow-lg flex items-center justify-center gap-2 ${canAfford?'bg-slate-700 text-white active:scale-95':'bg-slate-800 text-slate-600'}`}><Sparkles size={16}/><span>{breakthroughPlan.count>0?'通常合体':'合体する'}<span className="block text-[8px] normal-case font-bold opacity-80">{diamondSummary.normalDiamondCost.toLocaleString()}ダイヤ消費 → 残り{Math.max(0, diamondSummary.normalDiamondAfter).toLocaleString()}</span></span></button>
+                }} disabled={!canAfford||fusionProcessingRef.current} className={`w-full py-2.5 rounded-2xl font-black text-sm uppercase shadow-lg flex items-center justify-center gap-2 ${canAfford?'bg-slate-700 text-white active:scale-95':'bg-slate-800 text-slate-600'}`}><Sparkles size={16}/><span>{breakthroughPlan.count>0?'通常合体':'合体する'}<span className="block text-[8px] normal-case font-bold opacity-80">{normalTotalDiamondCost.toLocaleString()}ダイヤ消費{fusionInheritSoulRank&&soulHeroProofCost>0?` + 証${soulHeroProofCost}`:''} → 残り{Math.max(0, normalDiamondAfter).toLocaleString()}</span></span></button>
                 </div>
               </div>
             );
