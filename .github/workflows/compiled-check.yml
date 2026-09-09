@@ -70,7 +70,11 @@ jobs:
             echo "生成物の変更なし"
           else
             git commit -m "build: sync soul trait power fix"
-            git push origin HEAD:work/soul-rank-system
+            BUILT_COMMIT="$(git rev-parse HEAD)"
+            git fetch origin work/soul-rank-system
+            git checkout -B work/soul-rank-system origin/work/soul-rank-system
+            git cherry-pick "$BUILT_COMMIT"
+            git push origin work/soul-rank-system
           fi
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
