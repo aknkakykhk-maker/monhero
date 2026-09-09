@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -53,77 +53,6 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-      - name: Apply and verify soul rank STEP5C ranking display (temporary)
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin work/soul-rank-system
-          git checkout -B work/soul-rank-system origin/work/soul-rank-system
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('monster-hero/src/parts/60-app.jsx')
-          s=p.read_text()
-
-          power_line="const powerNote = snapshotPower != null ? null : 'この記録には総合力が残っていないため、いまのデータで計算した参考値です';"
-          i=s.find(power_line)
-          if i<0:
-            raise SystemExit('ranking powerNote not found')
-          line_end=s.find('\n',i)
-          soul_vars="""
-          const rankingSoulStage = normalizeSoulRankStage(masu.soulRankStage);
-          const rankingSoulTraitEntries = SOUL_TRAIT_DEFINITIONS.filter(trait=>soulTraitLevel(masu,trait.id)>0)
-            .map(trait=>({ trait, level:soulTraitLevel(masu,trait.id), effect:soulTraitEffectValue(masu,trait.id) }));
-          const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapshot))
-            ? Math.max(0,Math.floor(Number(masu.soulSpentPointsSnapshot)))
-            : soulTraitSpentPoints(masu);"""
-          s=s[:line_end]+soul_vars+s[line_end:]
-
-          ranking_start=s.find("const rankingSoulStage",i)
-          body_start=s.find("          bodyExtra: (",ranking_start)
-          footer_start=s.find("          footer:",body_start)
-          if body_start<0 or footer_start<0:
-            raise SystemExit('ranking bodyExtra bounds not found')
-          new_body="""          bodyExtra: (
-              <>
-                {rankingSoulStage>0&&<section data-ranking-soul-build className="rounded-xl border border-sky-500/40 bg-sky-950/30 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-[10px] font-black text-sky-200">魂格{SOUL_RANK_BADGE_LABELS[rankingSoulStage]}</div>
-                    <div className="text-[9px] font-black text-amber-200">使用済み魂格P {rankingSoulSpentPoints}</div>
-                  </div>
-                  <div className="mt-2 space-y-1">
-                    {rankingSoulTraitEntries.length>0
-                      ? rankingSoulTraitEntries.map(({trait,level,effect})=><div key={trait.id} className="flex items-center justify-between gap-2 text-[9px]"><span className="min-w-0 truncate font-bold text-white">{trait.name} <span className="text-slate-500">Lv.{level}</span></span><span className="shrink-0 font-black text-sky-200">{formatSoulTraitEffect(trait,effect)}</span></div>)
-                      : <div className="text-[9px] text-slate-500">魂格特性の振り分けなし</div>}
-                  </div>
-                </section>}
-                <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30">
-                  <div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>
-                  {getRebirthSkillChoices(masu).map(skill=>{
-                    const current=uniqueSkillAtLevel(skill.unique, skill.level);
-                    return <div key={skill.key} className="w-full flex items-center justify-between text-[10px] font-black py-0.5"><span className="text-white truncate">{current?.name||skill.name}</span><span className="text-amber-300 shrink-0">Lv.{skill.level}</span></div>;
-                  })}
-                </div>
-              </>
-            ),
-          """
-          s=s[:body_start]+new_body+s[footer_start:]
-
-          old_icon="""{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain shrink-0"/>:<span className="w-7 text-center shrink-0">{entry?.emoji||'❓'}</span>}<b className="truncate flex-1 text-[10px]">{entry.monName}</b>"""
-          new_icon="""<span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>"""
-          if old_icon not in s:
-            raise SystemExit('bond ranking icon anchor not found')
-          s=s.replace(old_icon,new_icon,1)
-
-          p.write_text(s)
-          PY
-          node tools/build.js
-          node tools/masu/soul-rank-step5c-check.js
-          git add -u
-          if ! git diff --cached --quiet; then
-            git commit -m "build: show soul rank snapshot in rankings"
-            git push origin work/soul-rank-system
-          fi
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
