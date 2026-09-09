@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -24,27 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-
-      - name: Apply soul rank card layout follow-up
-        if: github.event_name == 'pull_request'
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('monster-hero/src/parts/60-app.jsx')
-          s = p.read_text()
-          old = "{renderMonsterCardBody({masu,base,status:<span className=\"block text-center\"><b className=\"text-[8px] text-sky-200\">{label}</b><small className={'block text-[7px] '+(status.levelReady?'text-emerald-300':'text-slate-500')}>{sub}</small></span>})}"
-          new = "{renderMonsterCardBody({masu,base,nameBand:true,status:<span className=\"block text-center\"><b className=\"text-[8px] text-sky-200\">{label}</b><small className={'block text-[7px] '+(status.levelReady?'text-emerald-300':'text-slate-500')}>{sub}</small></span>})}"
-          if old in s:
-              p.write_text(s.replace(old, new, 1))
-              print('魂格進化カードへ通常一覧と同じ名前帯を追加')
-          elif new in s:
-              print('魂格進化カードはすでに修正済み')
-          else:
-              raise SystemExit('魂格進化カードの対象箇所を特定できません')
-          PY
-
       - name: Require update banner stamp for shipped changes
         shell: bash
         run: |
@@ -54,16 +33,18 @@ jobs:
             BASE_SHA="${{ github.event.before }}"
           fi
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          changed="$(git diff --name-only "$BASE_SHA" HEAD)"
+          changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
           shipped="$(printf '%s\n' "$changed" | grep -E '^(monster-hero/|index\.html$)' | grep -v '^monster-hero/version\.json$' || true)"
           if [[ -z "$shipped" ]]; then
             echo "配信対象の変更なし: 更新バナーstampは不要"
             exit 0
           fi
           if ! printf '%s\n' "$changed" | grep -qx 'monster-hero/version.json'; then
-            echo "更新バナーstampはビルド後に生成します"
+            echo "NG: 配信対象を変更したのに monster-hero/version.json が更新されていません"
+            echo "デバッグ・内部修正でも node tools/build.js を実行して更新バナー用buildを進めてください"
+            exit 1
           fi
-
+          echo "OK: 配信対象の変更に更新バナー用versionが含まれています"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -72,9 +53,10 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-
-      - name: Build the shipped bundle for the temporary follow-up
-        run: node tools/build.js
+      # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
+      # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
+      # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
+      # 配信するのはリポジトリの中身そのものなので、ずれていたら公開せずに落とす。
       - name: Verify the committed compiled output is canonical
         run: node tools/build.js --check
       - name: Verify the compiled runtime
@@ -116,27 +98,15 @@ jobs:
           node tools/mode/rhythm-debug-short-check.js
           node tools/mode/rhythm-easy-ear-review-plan.js
           node tools/mode/rhythm-help-structure-check.js
-
-      - name: Commit soul rank card layout follow-up
-        if: github.event_name == 'pull_request'
-        run: |
-          if git diff --quiet; then
-            echo "差分なし"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add monster-hero/src/parts/60-app.jsx monster-hero/game-system.compiled.js monster-hero/version.json monster-hero/data monster-hero/src/game-system.jsx 2>/dev/null || true
-          git add -u
-          git commit -m "fix: align soul rank cards with Masumon list"
-          git push origin HEAD:${{ github.head_ref }}
-
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
       - name: Stage the GitHub Pages site
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
+          # 配るのは index.html と monster-hero/ だけ。ゲームが読む画像・音は
+          # 必ず monster-hero/ の下に置くこと。tools/ から1枚ずつコピーする方式は
+          # 書き足し忘れに気づけず、実際にパンドラの染色マスクが本番だけ404になった。
           mkdir _site
           cp index.html _site/
           cp -a monster-hero _site/
