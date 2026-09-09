@@ -6583,6 +6583,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     mainHero?.id==='Suezo'?40:0,
     soulBattleParty.intimidate,
   ]);
+  const soulBattleHasEffects = battleSoulMasus.some(masu=>soulTraitSpentPoints(masu)>0);
+  const soulBattleSourceRows = battleSoulMasus.map(masu=>{
+    const normalized=normalizeMasuProgression(masu);
+    const traits=SOUL_TRAIT_DEFINITIONS
+      .map(trait=>({trait,level:soulTraitLevel(normalized,trait.id),value:soulTraitEffectValue(normalized,trait.id)}))
+      .filter(entry=>entry.level>0);
+    return { masu:normalized, traits };
+  }).filter(row=>row.traits.length>0);
+  const soulBattleSummaryParts = soulBattleHasEffects ? [
+    soulBattleParty.damageReduction>0?`被ダメ -${soulBattleParty.damageReduction.toFixed(1).replace(/\\.0$/,'')}%`:null,
+    unifiedSpecialDefense.rate>0?`特殊防御 ${unifiedSpecialDefense.rate.toFixed(1).replace(/\\.0$/,'')}%`:null,
+    battleIntimidate>0?`威圧 ${battleIntimidate.toFixed(1).replace(/\\.0$/,'')}%`:null,
+    soulBattleParty.autoGutsMultiplier>1?`自動G ×${soulBattleParty.autoGutsMultiplier.toFixed(3)}`:null,
+    soulBattleParty.coordinationCardBonus>0?`カード +${soulBattleParty.coordinationCardBonus}`:null,
+  ].filter(Boolean) : [];
 
   const getIncomingDamageBeforeTurnReduction = useCallback((intent) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
