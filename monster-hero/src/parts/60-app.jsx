@@ -598,6 +598,7 @@ function MonsterHeroGame() {
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const [showEnemyInfo, setShowEnemyInfo] = useState(false);
   const [showHeroInfo, setShowHeroInfo] = useState(false); // バトル中に勇者モンの特性を確認するオーバーレイ
+  const [showSoulBattleEffects, setShowSoulBattleEffects] = useState(false); // バトル中の魂格効果一覧
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
   const [gaveUp, setGaveUp] = useState(false); // ギブアップ確定後、最終リザルト画面を表示中かどうか
   const [lastActionSlot, setLastActionSlot] = useState(null);
