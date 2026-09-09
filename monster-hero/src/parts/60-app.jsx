@@ -12672,6 +12672,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pctAfter}%`}}></div></div>
                 {d.gainedLevels>0&&<div className="text-[9px] text-emerald-400 font-black text-center mt-1">絆レベルが{d.gainedLevels}上がった！</div>}
               </div>
+              {d.soulRankInherited&&(<div data-soul-rank-inherit-result className="text-[10px] text-sky-200 font-black bg-sky-950/50 border border-sky-500/40 rounded-xl px-3 py-1.5 mb-2">魂格を継承しました：{d.soulRankFromStage>0?`魂格${['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][d.soulRankFromStage]}`:'魂格なし'} → 魂格{['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][d.soulRankToStage]}<br/><span className="text-[8px] text-slate-400">追加 {d.soulRankDiamondCost.toLocaleString()}ダイヤ / 勇者の証{d.soulRankHeroProofCost}</span></div>)}
               {d.inherited&&(<div className="text-[10px] text-amber-300 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2">「{d.subName}」の固有技を継承データとして記録しました</div>)}
               {d.inheritedReincarnateCount>0&&(<div className="text-[10px] text-amber-200 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2">転生育成ボーナス {d.inheritedReincarnateCount}回分（強化ポイント +{d.inheritedReincarnatePoints}）を継承しました</div>)}
               <div className="text-[9px] text-slate-500 font-bold mb-4">ダイヤを{d.cost.toLocaleString()}消費しました</div>
