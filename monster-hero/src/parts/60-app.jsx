@@ -113,11 +113,6 @@ function MonsterHeroGame() {
   // 虹の超越の実だけは、価格タップ後に数量と購入後残高を確認してから一括購入する。
   const [marketQuantityItem, setMarketQuantityItem] = useState(null);
   const [marketPurchaseQuantity, setMarketPurchaseQuantity] = useState(1);
-  // 魂格特性STEP3: 個体ごとの専用全画面。下書きは確定まで保存せず、閉じれば破棄する。
-  const [soulTraitMasuId, setSoulTraitMasuId] = useState(null);
-  const [soulTraitTab, setSoulTraitTab] = useState('attack');
-  const [soulTraitSelectedId, setSoulTraitSelectedId] = useState(null);
-  const [soulTraitDraftLevels, setSoulTraitDraftLevels] = useState(0);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
