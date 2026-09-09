@@ -874,6 +874,7 @@ function MonsterHeroGame() {
   const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
   const [fusionSubIds, setFusionSubIds] = useState([]); // 通常合体でまとめて消費する副。配列順を処理順として維持する
   const [fusionInheritUniqueIds, setFusionInheritUniqueIds] = useState([]); // 固有技を引き継ぐ副id（合体画面内だけの一時状態）
+  const [fusionInheritSoulRank, setFusionInheritSoulRank] = useState(false); // STEP5: 副の上位魂格を通常進化コストで主へ継承する
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
   const fusionProcessingRef = useRef(false);
@@ -4794,10 +4795,25 @@ function MonsterHeroGame() {
     // UI表示後に副のLv・技・重複状況が変わっていても、この再計算結果だけで費用と保存内容を確定する。
     if (inheritancePlan.entries.some(entry=>entry.requested&&!entry.eligible)
       || fusionInheritUniqueIds.some(id=>!uniqueSubIds.has(id))) { fusionProcessingRef.current=false; return null; }
-    const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:totalGainedXp, gold, psycheOwned:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:firstSubLvl.level, inheritCount:inheritancePlan.inheritCount });
+    const soulInheritancePlan = buildFusionSoulRankInheritancePlan({
+      main, subs, inherit:fusionInheritSoulRank, gold, ownedItems:ownedItemsRef.current,
+    });
+    if (fusionInheritSoulRank && (!soulInheritancePlan.eligible || !soulInheritancePlan.ok)) {
+      fusionProcessingRef.current=false; return null;
+    }
+    // 魂格継承を先に主へ仮適用してから合体XP/限界突破を試算する。
+    // これにより解放したLv上限まで合体XPを受け取れ、旧上限で先に切り捨てない。
+    const fusionGoldBase = soulInheritancePlan.nextGold;
+    const fusionItemBase = soulInheritancePlan.nextOwnedItems;
+    const fusionMainBase = soulInheritancePlan.nextMasu;
+    const diamondSummary = buildFusionDiamondSummary({
+      masu:fusionMainBase, fusionXp:totalGainedXp, gold:fusionGoldBase,
+      psycheOwned:ownedItemCount(fusionItemBase, BREAKTHROUGH_ITEM_ID),
+      mainLevel:mainLvl.level, subLevel:firstSubLvl.level, inheritCount:inheritancePlan.inheritCount,
+    });
     const { breakthroughPlan } = diamondSummary;
     if (diamondSummary.normalDiamondShortage || (withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford))) { fusionProcessingRef.current=false; return null; }
-    const preparedMain = withBreakthrough ? { ...main, ...breakthroughPlan.nextMasu } : main;
+    const preparedMain = withBreakthrough ? breakthroughPlan.nextMasu : fusionMainBase;
     const mainBase = ALL_PLAYER_MONSTERS[main.baseId];
     let nextMain = preparedMain;
     let inherited = false;
@@ -4832,12 +4848,14 @@ function MonsterHeroGame() {
     const removedIds = new Set(requestedSubIds);
     const next = snapshot.filter(m=>!removedIds.has(m.id)).map(m=>m.id===main.id?nextMain:m);
     const goldAfter = withBreakthrough ? diamondSummary.diamondAfter : diamondSummary.normalDiamondAfter;
-    const nextItems = withBreakthrough ? { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]:breakthroughPlan.nextPsyche } : ownedItemsRef.current;
+    const nextItems = withBreakthrough
+      ? { ...fusionItemBase, [BREAKTHROUGH_ITEM_ID]:breakthroughPlan.nextPsyche }
+      : fusionItemBase;
     try {
       const saved = await saveStoredValuesOrRollback([
         { key:'mh_masu_mons', before:snapshot, next },
         { key:'mh_gold', before:gold, next:goldAfter },
-        ...(withBreakthrough ? [{ key:'mh_owned_items', before:ownedItemsRef.current, next:nextItems }] : []),
+        ...((withBreakthrough||fusionInheritSoulRank) ? [{ key:'mh_owned_items', before:ownedItemsRef.current, next:nextItems }] : []),
       ], storeGet, storeSet);
       if (!saved) throw new Error('fusion save failed');
     } catch { fusionProcessingRef.current=false; return null; }
@@ -4850,16 +4868,21 @@ function MonsterHeroGame() {
       mainName:main.name, mainIconUrl:mainBase?.iconUrl, mainBaseId:main.baseId, mainEmoji:mainBase?.emoji, mainColors:getMasuColors(main),
       subName:displaySub.name, subIconUrl:displaySubBase?.iconUrl, subBaseId:displaySub.baseId, subEmoji:displaySubBase?.emoji, subColors:getMasuColors(displaySub), subCount:subs.length,
       before:mainLvl, after, gainedXp:totalGainedXp, gainedLevels, inherited,
-      cost:withBreakthrough?diamondSummary.totalDiamondCost:diamondSummary.normalDiamondCost,
+      cost:(withBreakthrough?diamondSummary.totalDiamondCost:diamondSummary.normalDiamondCost)+soulInheritancePlan.diamondCost,
+      soulRankInherited:fusionInheritSoulRank&&soulInheritancePlan.eligible,
+      soulRankFromStage:soulInheritancePlan.currentStage,
+      soulRankToStage:soulInheritancePlan.targetStage,
+      soulRankDiamondCost:soulInheritancePlan.diamondCost,
+      soulRankHeroProofCost:soulInheritancePlan.heroProofCost,
       inheritedReincarnatePoints, inheritedReincarnateCount,
       breakthroughCount:withBreakthrough?breakthroughPlan.count:0,
     };
   };
   const resetFusionFlow = () => {
-    fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionAnimPhase(0); setFusionResultData(null);
+    fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionInheritSoulRank(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const continueFusionFlow = () => {
-    fusionProcessingRef.current=false; setFusionStep('sub'); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionAnimPhase(0); setFusionResultData(null);
+    fusionProcessingRef.current=false; setFusionStep('sub'); setFusionSubId(null); setFusionSubIds([]); setFusionInheritUniqueIds([]); setFusionInheritSoulRank(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedIds([]); setDonationConfirmOpen(false); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
   const getRebirthSkillChoices = (masu) => {
