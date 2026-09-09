@@ -12908,6 +12908,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const closeScreen=()=>{setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setGameState(soulTraitReturnState||'MASU_MONS');};
           const openTrait=(trait)=>{const max=maxSoulTraitUpgradeLevels(masu,trait.id);setSoulTraitSelectedId(trait.id);setSoulTraitDraftLevels(max>0?1:0);setSoulTraitError('');};
           const addDraft=(amount)=>setSoulTraitDraftLevels(prev=>Math.max(0,Math.min(maxUpgrade,Math.floor(Number(prev)||0)+amount)));
+          // M/B管理の現在セットは8体の候補。魂格特性の実戦値プレビューは、その中のマスモンだけを合成して見せる。
+          // 実戦では実際に参加した個体だけでSTEP4の同じ正本を再計算するため、ここでは「編成セット内」の値と明示する。
+          const rosterSoulMasus=monsterRosterIds
+            .filter(entry=>String(entry||'').startsWith('masu:'))
+            .map(entry=>getMasuMon(String(entry).slice(5)))
+            .filter(Boolean);
+          const inCurrentRoster=rosterSoulMasus.some(entry=>String(entry.id)===String(masu.id));
+          const currentPartyPreview=inCurrentRoster?soulTraitPartyPreview(rosterSoulMasus):null;
+          const draftUpgrade=selected&&draft>0?buildSoulTraitUpgrade(masu,selected.id,draft):null;
+          const afterPartyPreview=currentPartyPreview&&draftUpgrade
+            ? soulTraitPartyPreview(rosterSoulMasus.map(entry=>String(entry.id)===String(masu.id)?draftUpgrade.nextMasu:entry))
+            : currentPartyPreview;
+          const pctText=(value)=>`${(Number(value)||0).toFixed(1).replace(/\.0$/,'')}%`;
+          const partyPreviewRows=currentPartyPreview&&afterPartyPreview?[
+            {label:'最終被ダメ軽減',before:currentPartyPreview.damageReduction,after:afterPartyPreview.damageReduction,format:pctText},
+            {label:'回避E',before:currentPartyPreview.evasion,after:afterPartyPreview.evasion,format:pctText},
+            {label:'反射R',before:currentPartyPreview.reflect,after:afterPartyPreview.reflect,format:pctText},
+            {label:'吸収A',before:currentPartyPreview.absorb,after:afterPartyPreview.absorb,format:pctText},
+            {label:'特殊防御',before:currentPartyPreview.specialDefenseRate,after:afterPartyPreview.specialDefenseRate,format:pctText},
+            {label:'威圧',before:currentPartyPreview.intimidate,after:afterPartyPreview.intimidate,format:pctText},
+            {label:'自動ガッツ回復',before:(currentPartyPreview.autoGutsMultiplier-1)*100,after:(afterPartyPreview.autoGutsMultiplier-1)*100,format:pctText},
+            {label:'カード増加',before:currentPartyPreview.coordinationCardBonus,after:afterPartyPreview.coordinationCardBonus,format:value=>`+${value}枚`},
+          ].filter(row=>Math.abs(row.after-row.before)>1e-9):[];
           return <div data-mh-screen data-soul-trait-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="shrink-0 flex items-center gap-2 mb-2">
               <button type="button" aria-label="マスモン詳細へ戻る" onClick={closeScreen} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
@@ -12919,6 +12942,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="rounded-xl border border-violet-500/30 bg-violet-950/30 px-2 py-2 text-center"><div className="text-[7px] text-slate-400 font-black">使用済み</div><div className="text-lg font-black text-violet-300">{spent}</div></div>
               <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 px-2 py-2 text-center"><div className="text-[7px] text-slate-400 font-black">総獲得</div><div className="text-lg font-black text-amber-300">{earned}</div></div>
             </div>
+            {inCurrentRoster?<div data-soul-trait-party-preview className="shrink-0 mb-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-3 py-2">
+              <div className="flex items-center justify-between gap-2"><div className="text-[9px] font-black text-emerald-200">現在の編成セット内・合成後効果</div><div className="text-[8px] font-black text-slate-500">マスモン {rosterSoulMasus.length}体</div></div>
+              <div className="mt-1 grid grid-cols-4 gap-1 text-center">
+                <div className="rounded-lg bg-black/25 p-1"><div className="text-[7px] text-slate-500">被ダメ軽減</div><div className="text-[9px] font-black text-emerald-300">{pctText(currentPartyPreview.damageReduction)}</div></div>
+                <div className="rounded-lg bg-black/25 p-1"><div className="text-[7px] text-slate-500">特殊防御</div><div className="text-[9px] font-black text-cyan-300">{pctText(currentPartyPreview.specialDefenseRate)}</div></div>
+                <div className="rounded-lg bg-black/25 p-1"><div className="text-[7px] text-slate-500">威圧</div><div className="text-[9px] font-black text-violet-300">{pctText(currentPartyPreview.intimidate)}</div></div>
+                <div className="rounded-lg bg-black/25 p-1"><div className="text-[7px] text-slate-500">カード</div><div className="text-[9px] font-black text-amber-300">+{currentPartyPreview.coordinationCardBonus}</div></div>
+              </div>
+              <div className="mt-1 text-[7px] font-bold leading-tight text-slate-500">回避E {pctText(currentPartyPreview.evasion)} ／ 反射R {pctText(currentPartyPreview.reflect)} ／ 吸収A {pctText(currentPartyPreview.absorb)} ／ 自動ガッツ回復 ×{currentPartyPreview.autoGutsMultiplier.toFixed(3)}。実戦では実際に参加した個体だけで再計算します。</div>
+            </div>:<div data-soul-trait-party-preview-empty className="shrink-0 mb-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[8px] font-bold text-slate-500 text-center">この個体は現在の編成セットに入っていないため、合成後効果プレビューは表示しません。</div>}
             {!unlocked&&<div data-soul-trait-locked className="shrink-0 mb-2 rounded-xl border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-[10px] font-black text-amber-200 text-center">Lv500到達＋魂格進化Ⅰで解放<br/><span className="text-[8px] font-bold text-slate-300">特性一覧と必要魂格Pは先に確認できます</span></div>}
             <div className="shrink-0 flex gap-1.5 mb-2" role="tablist" aria-label="魂格特性カテゴリ">
               {SOUL_TRAIT_CATEGORIES.map(category=><button key={category.id} role="tab" aria-selected={soulTraitTab===category.id} onClick={()=>{setSoulTraitTab(category.id);setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);}} className={`flex-1 min-h-[44px] rounded-xl text-[11px] font-black ${soulTraitTab===category.id?'bg-sky-600 text-white':'bg-slate-900 border border-slate-700 text-slate-400'}`}>{category.label}</button>)}
@@ -12948,6 +12981,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="rounded-xl border border-white/10 bg-black/30 p-2"><div className="text-[8px] text-slate-500 font-black">現在</div><div className="text-[13px] font-black text-white">Lv.{currentLevel}</div><div className="text-[10px] font-mono font-black text-sky-300">{formatSoulTraitEffect(selected,currentEffect)}</div></div>
                   <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2"><div className="text-[8px] text-slate-500 font-black">強化後</div><div className="text-[13px] font-black text-white">Lv.{afterLevel}</div><div className="text-[10px] font-mono font-black text-emerald-300">{formatSoulTraitEffect(selected,afterEffect)}</div></div>
                 </div>
+                {partyPreviewRows.length>0&&<div data-soul-trait-before-after className="mt-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2">
+                  <div className="text-[8px] font-black text-emerald-200 mb-1">現在編成の実戦値プレビュー</div>
+                  <div className="space-y-1">{partyPreviewRows.map(row=><div key={row.label} className="flex items-center justify-between gap-2 text-[9px] font-black"><span className="text-slate-400">{row.label}</span><span><b className="text-slate-300">{row.format(row.before)}</b><span className="mx-1 text-slate-600">→</span><b className="text-emerald-300">{row.format(row.after)}</b></span></div>)}</div>
+                </div>}
                 <div className="mt-2 rounded-xl border border-white/10 bg-black/30 p-2 text-[9px] font-bold"><div className="flex justify-between"><span className="text-slate-400">1段階の効果</span><b>{formatSoulTraitEffect(selected,selected.effectPerLevel)}</b></div><div className="mt-1 flex justify-between"><span className="text-slate-400">1段階の必要P</span><b>{selected.costPerLevel}P</b></div><div className="mt-1 flex justify-between"><span className="text-slate-400">消費魂格P</span><b className="text-amber-300">{draftCost}P</b></div><div className="mt-1 flex justify-between"><span className="text-slate-400">強化後の未使用P</span><b className="text-sky-300">{Math.max(0,available-draftCost)}P</b></div></div>
                 {!unlocked?<div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-950/30 px-3 py-3 text-center text-[10px] font-black text-amber-200">Lv500到達＋魂格進化Ⅰで強化操作が解放されます</div>
                 :selected.id==='coordination'?<button type="button" data-soul-trait-learn data-soul-trait-learn-coordination disabled={maxUpgrade<=0||soulTraitProcessingRef.current} onClick={()=>commitSoulTraitUpgrade(masu.id,selected.id,1)} className="mt-3 min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black disabled:opacity-30">{currentLevel>=1?'習得済み':'習得する 200P'}</button>
