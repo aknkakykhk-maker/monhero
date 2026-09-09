@@ -91,9 +91,9 @@ const normalizeTranscendAptBoosts = (value) => Array.from({ length: 4 },
 // 必ず不足分を補填している)
 const BOND_XP_DISCOUNT = 0.025;
 const xpForBondLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
-// Lv400以降(超越の領域)だけ、通常式が出した必要経験値へ重い倍率を掛ける。
+// Lv400〜499(既存の超越領域)だけ、通常式が出した必要経験値へ重い倍率を掛ける。
 // 倍率は Lv400で10倍、以降1Lvごとに+0.1倍(Lv499→500で19.9倍)。
-// Lv399以下はこれまでどおりの値をそのまま返すので、既存の必要経験値・累計XPは1も変わらない。
+// Lv399以下は従来値を維持し、Lv500→501以降は下の魂格専用式へ切り替える。
 const transcendXpMultiplier = (level) =>
   TRANSCEND_XP_BASE_MULTIPLIER + (level - MAX_MASU_LEVEL_CAP) * TRANSCEND_XP_MULTIPLIER_STEP;
 const soulRankXpForBondLevel = (level) => {
