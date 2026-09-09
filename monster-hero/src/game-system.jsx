@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0d084b98052a1ea8
+// generated-sha256: b5ec4d95de430a6a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-09 19:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-09 20:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21236,7 +21236,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           masuId: entry.masuId, bondLevel: level, detail: entry.detail,
           colors: Array.isArray(entry.colors) ? entry.colors : [] }
       : null;
-    return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain shrink-0"/>:<span className="w-7 text-center shrink-0">{entry?.emoji||'❓'}</span>}<b className="truncate flex-1 text-[10px]">{entry.monName}</b>{/* 育て方が記録に残っている個体だけ開ける。古い記録は押せない状態にして理由をその場に出す */}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-bond-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
+    return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span data-ranking-soul-badge className="relative w-7 h-7 shrink-0 overflow-visible">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain"/>:<span className="block w-7 text-center">{entry?.emoji||'❓'}</span>}{entry?.detail&&<TranscendenceBadge transcended={entry.detail?.transcended===true} soulRankStage={entry.detail?.soulRankStage} small/>}</span><b className="truncate flex-1 text-[10px]">{entry.monName}</b>{/* 育て方が記録に残っている個体だけ開ける。古い記録は押せない状態にして理由をその場に出す */}<button onClick={()=>{ if (detailMember) setRankingMonsterDetail(detailMember); }} disabled={!detailMember} data-bond-detail={detailMember?'open':'none'} className={`shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>{detailMember?'詳細 ›':'情報なし'}</button></div></article>;
   };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
@@ -27897,6 +27897,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const snapshotPower = masu.powerSnapshot;
         const shownPower = snapshotPower != null ? snapshotPower : monsterPowerOf(mon);
         const powerNote = snapshotPower != null ? null : 'この記録には総合力が残っていないため、いまのデータで計算した参考値です';
+const rankingSoulStage = normalizeSoulRankStage(masu.soulRankStage);
+const rankingSoulTraitEntries = SOUL_TRAIT_DEFINITIONS.filter(trait=>soulTraitLevel(masu,trait.id)>0)
+  .map(trait=>({ trait, level:soulTraitLevel(masu,trait.id), effect:soulTraitEffectValue(masu,trait.id) }));
+const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapshot))
+  ? Math.max(0,Math.floor(Number(masu.soulSpentPointsSnapshot)))
+  : soulTraitSpentPoints(masu);
         // ランキングから開く詳細も、他の画面と同じマスターUIを使う(読み取り専用)
         return renderMonsterDetailModal({
           mon,
@@ -27916,14 +27922,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             ],
           },
           bodyExtra: (
-            <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30">
-              <div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>
-              {getRebirthSkillChoices(masu).map(skill=>{
-                const current=uniqueSkillAtLevel(skill.unique, skill.level);
-                return <div key={skill.key} className="w-full flex items-center justify-between text-[10px] font-black py-0.5"><span className="text-white truncate">{current?.name||skill.name}</span><span className="text-amber-300 shrink-0">Lv.{skill.level}</span></div>;
-              })}
-            </div>
-          ),
+    <>
+      {rankingSoulStage>0&&<section data-ranking-soul-build className="rounded-xl border border-sky-500/40 bg-sky-950/30 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[10px] font-black text-sky-200">魂格{SOUL_RANK_BADGE_LABELS[rankingSoulStage]}</div>
+          <div className="text-[9px] font-black text-amber-200">使用済み魂格P {rankingSoulSpentPoints}</div>
+        </div>
+        <div className="mt-2 space-y-1">
+          {rankingSoulTraitEntries.length>0
+            ? rankingSoulTraitEntries.map(({trait,level,effect})=><div key={trait.id} className="flex items-center justify-between gap-2 text-[9px]"><span className="min-w-0 truncate font-bold text-white">{trait.name} <span className="text-slate-500">Lv.{level}</span></span><span className="shrink-0 font-black text-sky-200">{formatSoulTraitEffect(trait,effect)}</span></div>)
+            : <div className="text-[9px] text-slate-500">魂格特性の振り分けなし</div>}
+        </div>
+      </section>}
+      <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30">
+        <div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>
+        {getRebirthSkillChoices(masu).map(skill=>{
+          const current=uniqueSkillAtLevel(skill.unique, skill.level);
+          return <div key={skill.key} className="w-full flex items-center justify-between text-[10px] font-black py-0.5"><span className="text-white truncate">{current?.name||skill.name}</span><span className="text-amber-300 shrink-0">Lv.{skill.level}</span></div>;
+        })}
+      </div>
+    </>
+  ),
           footer: <button onClick={close} className="w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0">とじる</button>,
         });
       })()}

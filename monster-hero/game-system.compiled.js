@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef7044f3760cc9b0
+// source-sha256: 460007348fbef1bd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 0d084b98052a1ea8
+// generated-sha256: b5ec4d95de430a6a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-09 19:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-09 20:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -35459,13 +35459,20 @@ function MonsterHeroGame() {
       className: "text-xs text-pink-300 whitespace-nowrap"
     }, "\u7D46Lv.", level)), /*#__PURE__*/React.createElement("div", {
       className: "ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      "data-ranking-soul-badge": true,
+      className: "relative w-7 h-7 shrink-0 overflow-visible"
     }, entry?.imgUrl ? /*#__PURE__*/React.createElement("img", {
       src: entry.imgUrl,
       alt: "",
-      className: "w-7 h-7 object-contain shrink-0"
+      className: "w-7 h-7 object-contain"
     }) : /*#__PURE__*/React.createElement("span", {
-      className: "w-7 text-center shrink-0"
-    }, entry?.emoji || '❓'), /*#__PURE__*/React.createElement("b", {
+      className: "block w-7 text-center"
+    }, entry?.emoji || '❓'), entry?.detail && /*#__PURE__*/React.createElement(TranscendenceBadge, {
+      transcended: entry.detail?.transcended === true,
+      soulRankStage: entry.detail?.soulRankStage,
+      small: true
+    })), /*#__PURE__*/React.createElement("b", {
       className: "truncate flex-1 text-[10px]"
     }, entry.monName), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
@@ -52788,6 +52795,13 @@ function MonsterHeroGame() {
       const snapshotPower = masu.powerSnapshot;
       const shownPower = snapshotPower != null ? snapshotPower : monsterPowerOf(mon);
       const powerNote = snapshotPower != null ? null : 'この記録には総合力が残っていないため、いまのデータで計算した参考値です';
+      const rankingSoulStage = normalizeSoulRankStage(masu.soulRankStage);
+      const rankingSoulTraitEntries = SOUL_TRAIT_DEFINITIONS.filter(trait => soulTraitLevel(masu, trait.id) > 0).map(trait => ({
+        trait,
+        level: soulTraitLevel(masu, trait.id),
+        effect: soulTraitEffectValue(masu, trait.id)
+      }));
+      const rankingSoulSpentPoints = Number.isFinite(Number(masu.soulSpentPointsSnapshot)) ? Math.max(0, Math.floor(Number(masu.soulSpentPointsSnapshot))) : soulTraitSpentPoints(masu);
       // ランキングから開く詳細も、他の画面と同じマスターUIを使う(読み取り専用)
       return renderMonsterDetailModal({
         mon,
@@ -52801,7 +52815,33 @@ function MonsterHeroGame() {
           statTitle: '現在のステータス(強化分込み)',
           statValues: [statRow('ライフ', mon.baseHp, sp.hp || 0, 'text-pink-400'), statRow('ちから', mon.baseAtk, sp.atk || 0, 'text-red-400'), statRow('丈夫さ', mon.baseDef, sp.def || 0, 'text-emerald-400'), statRow('ガッツ', mon.baseGuts, sp.guts || 0, 'text-amber-400')]
         },
-        bodyExtra: /*#__PURE__*/React.createElement("div", {
+        bodyExtra: /*#__PURE__*/React.createElement(React.Fragment, null, rankingSoulStage > 0 && /*#__PURE__*/React.createElement("section", {
+          "data-ranking-soul-build": true,
+          className: "rounded-xl border border-sky-500/40 bg-sky-950/30 p-3"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center justify-between gap-2"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-[10px] font-black text-sky-200"
+        }, "\u9B42\u683C", SOUL_RANK_BADGE_LABELS[rankingSoulStage]), /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] font-black text-amber-200"
+        }, "\u4F7F\u7528\u6E08\u307F\u9B42\u683CP ", rankingSoulSpentPoints)), /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 space-y-1"
+        }, rankingSoulTraitEntries.length > 0 ? rankingSoulTraitEntries.map(({
+          trait,
+          level,
+          effect
+        }) => /*#__PURE__*/React.createElement("div", {
+          key: trait.id,
+          className: "flex items-center justify-between gap-2 text-[9px]"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "min-w-0 truncate font-bold text-white"
+        }, trait.name, " ", /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "Lv.", level)), /*#__PURE__*/React.createElement("span", {
+          className: "shrink-0 font-black text-sky-200"
+        }, formatSoulTraitEffect(trait, effect)))) : /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] text-slate-500"
+        }, "\u9B42\u683C\u7279\u6027\u306E\u632F\u308A\u5206\u3051\u306A\u3057"))), /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-2 rounded-xl border border-violet-500/30"
         }, /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-violet-300 uppercase font-bold mb-1"
@@ -52815,7 +52855,7 @@ function MonsterHeroGame() {
           }, current?.name || skill.name), /*#__PURE__*/React.createElement("span", {
             className: "text-amber-300 shrink-0"
           }, "Lv.", skill.level));
-        })),
+        }))),
         footer: /*#__PURE__*/React.createElement("button", {
           onClick: close,
           className: "w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0"
