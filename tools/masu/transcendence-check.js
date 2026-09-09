@@ -5,9 +5,9 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //
 // 見ているもの:
 //   ① 資格(35凸・Lv400・未超越)とコスト(虹のプシュケー5,000 / ダイヤ1,000,000)
-//   ② Lv上限(未超越はLv400で停止 / 超越済みはLv500まで、Lv501にはならない)
-//   ③ 必要経験値(Lv399以下は一切変えない / Lv400以降だけ超越倍率)
-//   ④ ポイント(Lv401以降は通常強化Pを配らず超越P。reconcileも誤補填しない)
+//   ② Lv上限(未超越はLv400 / 超越済み魂格0はLv500。魂格STEP1の共通曲線はLv1000まで)
+//   ③ 必要経験値(Lv399以下は一切変えない / Lv400〜499は既存超越式 / Lv500以降は魂格式)
+//   ④ ポイント(Lv401以降は通常強化Pを配らず、実Lv帯ごとの超越P。reconcileも誤補填しない)
 //   ⑤ 虹のプシュケー→超越Pの交換
 //   ⑥ 超越Pで上げた基礎値(通常リセット・転生で消えない / Mを超えない / 総合力+10相当)
 //   ⑦ 旧セーブが未超越として正常に読めること
@@ -70,7 +70,7 @@ vm.runInContext([
   slice('const isFinalBreakthroughCount', 'const breakthroughStarStyle'),
   slice('const ownReincarnateBonusPoints', 'const migrateRebornMasuToFullReset'),
   slice('const cappedBondXp', '// 絆経験値の加算'),
-  slice('const applyBondXpGain', '// 周回終了時の絆経験値配布先'),
+  slice('const transcendPointGainForReachedLevel', '// 周回終了時の絆経験値配布先'),
   'const masuBondLevelInfo = (masu) => bondLevelInfo(cappedBondXp(masu));',
   // mergeMasuIntoMon は固有技設定(並び順・初期技)も解決するので、その正規化もそのまま持ち込む
   "const INHERITED_UNIQUE_LEVEL_KEY_PREFIX = 'inhId:';",
@@ -140,9 +140,8 @@ check('超越してもレベルは400のまま・上限だけ500になる',
   `Lv${levelOf(success.nextMasu).level} / ${success.nextMasu.levelCap}`);
 check('未超越はLv400で止まる', levelOf(masu({ bondXp: totalXp(MAX_CAP) + 99999999 })).level === MAX_CAP);
 check('超越済みはLv500まで伸びる', levelOf(transcended({ bondXp: totalXp(TRANSCEND_CAP) })).level === TRANSCEND_CAP);
-check('Lv501にはならない',
-  levelOf(transcended({ bondXp: totalXp(TRANSCEND_CAP) + 99999999 })).level === TRANSCEND_CAP
-  && bondInfo(Number.MAX_SAFE_INTEGER).level <= TRANSCEND_CAP);
+check('魂格なしの超越済み個体はLv501にはならない',
+  levelOf(transcended({ bondXp: totalXp(TRANSCEND_CAP) + 99999999 })).level === TRANSCEND_CAP);
 check('限界突破は35回のまま・36凸を作っていない',
   success.nextMasu.rebirthCount === 35 && G('FINAL_BREAKTHROUGH_COUNT') === 35
   && G('breakthroughLevelCap')(36) === G('breakthroughLevelCap')(35)
@@ -161,7 +160,7 @@ check('Lv301→Lv400の累計XPが変わっていない', totalXp(400) - totalXp
 [[400, 54930], [401, 55671], [409, 61770], [499, 148971]].forEach(([level, want]) => {
   check(`Lv${level}→${level + 1} = ${want.toLocaleString()} XP`, xpAt(level) === want, `${xpAt(level).toLocaleString()}`);
 });
-check('Lv400以降は「通常式 × (10 + (Lv-400)×0.1)」で出す',
+check('Lv400〜499は「通常式 × (10 + (Lv-400)×0.1)」の既存超越式を維持',
   [400, 420, 470, 499].every(level => xpAt(level) === Math.round(xpNormal(level) * (10 + (level - 400) * 0.1))));
 // 依頼書の累計値(583,227 / 9,847,764)は上のレベル別の値の合計と一致しないため、
 // レベル別の式(依頼書の計算順序どおり)を正として、その合計を記録する
