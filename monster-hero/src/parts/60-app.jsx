@@ -5730,24 +5730,32 @@ function MonsterHeroGame() {
   // 対象の種は HERO_CARD_BONUS_MONSTER_IDS の一覧が持つ(種ごとの分岐をここへ書かない)
   const heroCardBonus = useMemo(() => heroCardBonusOf(mainHero?.id), [mainHero]);
   const kikiCardBonus = getPermaBuff('kikiCardBonusTurns')>0 ? 1 : 0;
-  const cardLimit = useMemo(() => {
+  // 連携は参加中の魂格持ちが1体以上いればパーティ全体の同時使用上限+1。
+  // 複数人が持っていても+1だけで、既存の勇者特性・ききとは別枠。最終上限は5枚。
+  const soulCoordinationSlots = slots.reduce((list,mon,index)=>{
+    const masu=mon?.masuId?getMasuMon(mon.masuId):null;
+    if(masu&&soulTraitLevel(masu,'coordination')>0) list.push(index);
+    return list;
+  },[]);
+  const soulCoordinationCardBonus = soulCoordinationSlots.length>0 ? 1 : 0;
+  const baseCardLimit = useMemo(() => {
     const allyCount = slots.filter(s => s !== null).length;
     let limit = 1;
     if (effectiveMaxGuts >= 180 && allyCount >= 3) limit = 3;
     else if (effectiveMaxGuts >= 120 && allyCount >= 2) limit = 2;
-    limit += heroCardBonus + kikiCardBonus;
-    return limit;
+    return Math.min(5,limit + heroCardBonus + kikiCardBonus);
   }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
-  // 1つのスロット(モンスター)へ同じターンに割り当てられる枚数の上限。
-  // 通常は1枠1枚。枚数+1の勇者特性(ハムの「連続攻撃」・剣士モッチーの「二刀流」)を持つ種が
-  // 勇者モンのときは、その本人のカードだけ複数枚OK。
-  // ききのカード上限+1が効いているときは、その+1ぶんをどのモンスターへ重ねても使えるようにする
-  // (どちらも実処理(processTurn)ではなく枚数の上限だけの話なので、cardLimitまで許す)。
-  // 対象の種は cardLimit と同じ HERO_CARD_BONUS_MONSTER_IDS が持つ(種ごとの分岐をここへ書かない)。
-  // 割当のチェックと予測表示の両方がここを通ることで、判定がずれない
-  const slotMaxUses = (mon) => ((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? cardLimit : 1;
+  const cardLimit = Math.min(5,baseCardLimit+soulCoordinationCardBonus);
+  // 1つのスロットへ同じターンに割り当てられる枚数の上限。
+  // 既存の勇者特性/ききで許される枚数を土台にし、連携で増えた「追加の1枚」だけは
+  // 連携を持つ本人へしか割り当てられない。全体cardLimitが1枚増えるだけなので複数所持でも重複しない。
+  const slotMaxUses = (mon, slotIdx=null) => {
+    const base=((heroCardBonusOf(mainHero?.id)>0&&mon?.id===mainHero?.id)||kikiCardBonus>0) ? baseCardLimit : 1;
+    const coordinationHolder=Number.isInteger(slotIdx)&&soulCoordinationSlots.includes(slotIdx);
+    return Math.min(cardLimit,base+(coordinationHolder?soulCoordinationCardBonus:0));
+  };
 
-  const getCardGuts = (card) => {
+  const getCardGuts = (card, slotIdx=null) => {
     if (!card) return 0;
     let cost = card.type === 'guard' ? 0 : (['buff','debuff','heal','draw'].includes(card.type) ? (card.guts || 20) : 20);
     if (cost>0 && ['atk','range_atk','unique'].includes(card.type)) {
@@ -5763,9 +5771,12 @@ function MonsterHeroGame() {
     if (cost>0 && getTurnBuff('pandoraResonanceTurns',0)>0) cost=Math.floor(cost*0.5);
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03*getPermaBuff('snegurochkaGutsDiscountStacks')));
+    const soulOwner=Number.isInteger(slotIdx)&&slots[slotIdx]?.masuId?getMasuMon(slots[slotIdx].masuId):null;
+    const soulGutsMultiplier=soulTraitAttackProfile(soulOwner,card,slotIdx).gutsCostMultiplier;
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    if(extremeWaveStage(specialRuleDifficulty))return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave));
-    return applyExtremeIntegerRule(cost,specialRuleDifficulty,'gutsCost');
+    // 省気は本人のカードだけ。既存の高難度ガッツ倍率と掛け合わせ、最後の1回で丸める。
+    if(extremeWaveStage(specialRuleDifficulty))return Math.floor(cost*effectiveExtremeSpecialRule(specialRuleDifficulty,'gutsCost',wave)*soulGutsMultiplier);
+    return applyExtremeIntegerRule(cost*soulGutsMultiplier,specialRuleDifficulty,'gutsCost');
   };
 
   const resetAllState = () => ({
@@ -6669,7 +6680,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 既存の割当数チェック(枚数+1の勇者特性を持つ勇者モン本人のカード・
       // ききのカード上限+1が効いているときは複数可)
       const assignedCount=Object.values(cardAssignments).filter(v=>v===slotIdx).length;
-      const maxUses=slotMaxUses(targetMon);
+      const maxUses=slotMaxUses(targetMon,slotIdx);
       const alreadySelected=selectedCards.includes(cardIndex);
       // 未選択なら選択枠とガッツを確認
       if(!alreadySelected){
@@ -7112,7 +7123,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 合図を出すのはターンがすべて終わってから(このあとの敵の行動まで見せてから進める)
     const tutorialKinds=battleScenarioRef.current
       ? usedCards.map(c=>(isAssistCard(c)?'teaching':c.type)) : [];
-    const totalGuts=usedCards.reduce((a,c)=>a+getCardGuts(c),0);
+    const totalGuts=usedCardEntries.reduce((sum,entry)=>sum+getCardGuts(entry.card,entry.slotIdx),0);
     if (guts<totalGuts) return;
     // Fallback slot for cards without assignment (buffs etc.)
     const defaultSlot=slots.findIndex(s=>s!==null);
@@ -7146,7 +7157,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       lastType=card.type;
       if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; }
       else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); }
-      setGuts(p=>Math.max(0,p-getCardGuts(card)));
+      setGuts(p=>Math.max(0,p-getCardGuts(card,slotIdx)));
       // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
       await battleWait(250);
       if (card.type==='draw') continue;
@@ -14198,7 +14209,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   for(let i=0;i<slots.length;i++){
                     const s=slots[i]; if(!s) continue;
                     const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
-                    const maxUses=slotMaxUses(s); if(assignedCount>=maxUses) continue;
+                    const maxUses=slotMaxUses(s,i); if(assignedCount>=maxUses) continue;
                     if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
                     pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,!isAssistCard(pendingCardObj)&&committedPenaltyCnt>0); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo); break;
                   }
@@ -14254,7 +14265,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   // 通常は1枠1枚。枚数+1の勇者特性(ハムの連続攻撃・剣士モッチーの二刀流)を持つ
                   // 勇者モンが居ると、その本人のスロットだけ複数枚OK。
                   // ききのカード上限+1が効いているときも、その+1ぶんはどのスロットへ重ねてよい
-                  const maxUses=slotMaxUses(s);
+                  const maxUses=slotMaxUses(s,i);
                   const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
                   // 保留中のカードはまだ使っていないので、「何枚目か」の枚数には数えない
                   const pendingIdx=pendingCard!=null?pendingCard:((dragState&&dragState.active)?dragState.cardIndex:null);
@@ -14403,7 +14414,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-1">
                 {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                     「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
-                <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}</span>
+                <span className={`flex-1 min-w-0 flex flex-wrap items-center gap-x-1 gap-y-0.5${battleTutorialSpotClass('cardCount')}`}><span className="whitespace-nowrap">Action Cards</span> <span className="shrink-0 bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}{soulCoordinationCardBonus>0&&<span data-soul-coordination-bonus className="shrink-0 px-1.5 py-0.5 rounded-full bg-sky-500/20 border border-sky-300/40 text-sky-200 whitespace-nowrap">魂格+1</span>}</span>
                 <div className="flex items-center gap-0.5 shrink-0">
                   <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[7px]">VIEW</span></button>
                   {/* 🎵の縦列。BGMの下にモンビーを並べる(どちらも音に関わる入口なので隣り合わせにする) */}
