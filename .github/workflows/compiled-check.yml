@@ -62,6 +62,8 @@ jobs:
           cd tools
           npm ci
           npx playwright install chromium
+          sudo mkdir -p /opt/pw-browsers
+          sudo ln -sf "$(node -e "console.log(require('playwright').chromium.executablePath())")" /opt/pw-browsers/chromium
           cd ..
           node tools/run-checks.js --area required
       - name: Verify the committed compiled output is canonical
