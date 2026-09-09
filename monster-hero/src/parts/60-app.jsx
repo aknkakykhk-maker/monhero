@@ -6629,6 +6629,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ダメージを与える(攻撃順・ダメージ予測の対象になる)カードか。あつの挑発(stun_atsu)は
   // debuffだが実際にダメージを与えるためprocessTurnと同様ここでも攻撃扱いする
   const isAttackCard = (card) => !!card && (['atk','range_atk','unique'].includes(card.type) || (card.type==='debuff'&&card.subType==='stun_atsu'));
+  // 割当前は「実際に置けるスロットの中で最も軽いコスト」を選択可否に使う。
+  // 省気持ちへ置けば払えるカードを、割当前の通常コストだけで弾かないため。
+  const pendingCardGuts = (card) => {
+    if(!cardNeedsMonster(card)) return getCardGuts(card,null);
+    const costs=[];
+    slots.forEach((mon,slotIdx)=>{
+      if(!mon) return;
+      if(card?.type==='unique'&&card.ownerSlotIdx!==slotIdx) return;
+      costs.push(getCardGuts(card,slotIdx));
+    });
+    return costs.length?Math.min(...costs):getCardGuts(card,null);
+  };
+  const selectedCardGuts = (handIndex) => {
+    const card=hand[handIndex];
+    const assigned=cardAssignments[handIndex];
+    return assigned!=null?getCardGuts(card,assigned):pendingCardGuts(card);
+  };
   // プロフィールアイコンidから表示URLを解決(味方モンスター由来 or ブリーダーマーケット購入品)
   const resolveIconUrl = (id) => {
     if (!id) return null;
@@ -6652,8 +6669,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(pendingCard===i) setPendingCard(null);
       setFocusedCard(null);
     } else {
-      const curGuts=getCardGuts(c);
-      const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+getCardGuts(hand[idx]),0);
+      const curGuts=pendingCardGuts(c);
+      const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
       const isSelectable=remainingGuts>=curGuts && selectedCards.length<cardLimit;
       if(isSelectable){
         Audio_.se.card();
@@ -6684,8 +6701,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const alreadySelected=selectedCards.includes(cardIndex);
       // 未選択なら選択枠とガッツを確認
       if(!alreadySelected){
-        const curGuts=getCardGuts(c);
-        const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+getCardGuts(hand[idx]),0);
+        const curGuts=getCardGuts(c,slotIdx);
+        const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+selectedCardGuts(idx),0);
         if(remainingGuts<curGuts || selectedCards.length>=cardLimit){ setFocusedCard(null); return; }
         if(assignedCount>=maxUses){ setFocusedCard(null); return; }
         Audio_.se.card();
@@ -6697,6 +6714,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         // 既に選択済み: 割当先を変更(別カードの占有を超えない範囲で)
         const otherCount=Object.entries(cardAssignments).filter(([k,v])=>v===slotIdx&&Number(k)!==cardIndex).length;
         if(otherCount>=maxUses){ setFocusedCard(null); return; }
+        const otherGuts=selectedCards.filter(idx=>idx!==cardIndex).reduce((sum,idx)=>sum+selectedCardGuts(idx),0);
+        if(otherGuts+getCardGuts(c,slotIdx)>guts){ setFocusedCard(null); return; }
         Audio_.se.card();
         setCardAssignments(p=>({...p,[cardIndex]:slotIdx}));
         if(pendingCard===cardIndex) setPendingCard(null);
@@ -14432,9 +14451,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 使うカードが決まっている番は、その種類だけを光らせる(枠全体は光らせない) */}
               <div className={`flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget?'':battleTutorialSpotClass('cards')}`}>
                 {hand.map((c,i)=>{
-                  const isSel=selectedCards.includes(i), curGuts=getCardGuts(c), remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+(idx===i?0:getCardGuts(hand[idx])),0), isSelectable=isSel||(remainingGuts>=curGuts&&selectedCards.length<cardLimit);
-                  const isPending=pendingCard===i;
+                  const isSel=selectedCards.includes(i);
                   const assignedSlot=cardAssignments[i];
+                  const curGuts=assignedSlot!=null?getCardGuts(c,assignedSlot):getCardGuts(c,null);
+                  const requiredGuts=assignedSlot!=null?curGuts:pendingCardGuts(c);
+                  const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+(idx===i?0:selectedCardGuts(idx)),0);
+                  const isSelectable=isSel||(remainingGuts>=requiredGuts&&selectedCards.length<cardLimit);
+                  const isPending=pendingCard===i;
                   const assignedMon=assignedSlot!=null?slots[assignedSlot]:null;
                   const isDragging=dragState?.active&&dragState?.cardIndex===i;
                   // 練習で使わせたい種類以外は、つかむこと自体をさせない(選択も割り当ても起きない)
