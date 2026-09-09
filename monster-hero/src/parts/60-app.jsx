@@ -12876,7 +12876,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             footer: (
               <div className="w-full rounded-2xl border border-white/10 bg-black/30 p-2 shrink-0">
                 <div className="text-[8px] font-black text-slate-400 tracking-wider mb-1.5 px-1">育成・カスタム</div>
-                <button type="button" data-soul-trait-entry aria-label={`${masu.name}の魂格特性を開く`} onClick={()=>{setSoulTraitReturnState(gameState);setSoulTraitTab('attack');setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');setSoulTraitRespecOpen(false);setGameState('MASU_SOUL_TRAITS');}} className="mb-1.5 w-full min-h-[48px] rounded-xl border border-fuchsia-400/60 bg-gradient-to-r from-fuchsia-800/90 to-violet-800/90 text-white font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-2"><Sparkles size={14}/><span>魂格特性</span><small className="text-[8px] text-fuchsia-100">未使用 {soulTraitAvailablePoints(masuNorm)}P</small></button>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button type="button" aria-label={`${masu.name}を強化`} onClick={()=>{setMasuEnhanceFrom(gameState);setGameState('MASU_ENHANCE');}} className="min-h-[46px] bg-gradient-to-b from-amber-600 to-orange-700 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"><Sparkles size={14}/><span>強化</span>{(masu.distAptPoints||0)>0&&<small className="text-[7px] bg-white/20 px-1 rounded">{masu.distAptPoints}P</small>}</button>
                   <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className="min-h-[46px] bg-gradient-to-b from-teal-600 to-cyan-800 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"><span className="text-sm leading-none">🎓</span><span>トレーニング</span></button>
@@ -12979,107 +12978,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             </div>}
           </div>;
-        })()}
-
-        {/* 魂格特性 STEP3: 個体固有の魂格P振り分け。戦闘効果への接続はSTEP4で行う。 */}
-        {gameState==='MASU_SOUL_TRAITS'&&(()=>{
-          const rawMasu = masuMonDetail ? (getMasuMon(masuMonDetail.id) || masuMonDetail) : null;
-          if (!rawMasu) return <div data-mh-screen className="flex-1 flex items-center justify-center p-4"><button onClick={()=>setGameState(soulTraitReturnState||'MASU_MONS')} className="min-h-[48px] px-5 rounded-xl bg-slate-700 font-black">戻る</button></div>;
-          const masu = normalizeMasuProgression(rawMasu);
-          const level = masuBondLevelInfo(masu).level;
-          const unlocked = masu.soulRankStage >= 1;
-          const earned = soulPointEarned(masu);
-          const spent = soulTraitSpentPoints(masu);
-          const available = soulTraitAvailablePoints(masu);
-          const category = SOUL_TRAIT_CATEGORIES.find(x=>x.id===soulTraitTab) || SOUL_TRAIT_CATEGORIES[0];
-          const traits = SOUL_TRAIT_DEFINITIONS.filter(x=>x.category===category.id);
-          const selected = soulTraitSelectedId ? SOUL_TRAIT_BY_ID[soulTraitSelectedId] : null;
-          const currentSelectedLevel = selected ? soulTraitLevel(masu, selected.id) : 0;
-          const maxAdd = selected ? maxSoulTraitUpgradeLevels(masu, selected.id) : 0;
-          const draft = Math.max(0, Math.min(maxAdd, Math.floor(Number(soulTraitDraftLevels)||0)));
-          const previewCost = selected ? draft * selected.costPerLevel : 0;
-          const previewAfter = selected ? (currentSelectedLevel + draft) * selected.effectPerLevel : 0;
-          const closeSheet=()=>{setSoulTraitSelectedId(null);setSoulTraitDraftLevels(0);setSoulTraitError('');};
-          const closeScreen=()=>{closeSheet();setSoulTraitRespecOpen(false);setGameState(soulTraitReturnState||'MASU_MONS');};
-          return (
-            <div data-mh-screen data-soul-trait-screen className="flex-1 min-h-0 flex flex-col overflow-hidden bg-slate-950"
-                 style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
-              <div className="shrink-0 px-3">
-                <div className="flex items-center gap-2">
-                  <button aria-label="魂格特性から戻る" onClick={closeScreen} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-slate-900 text-slate-300 active:scale-95"><ArrowLeft size={18}/></button>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[8px] font-black tracking-widest text-fuchsia-300">SOUL TRAITS</div>
-                    <h2 className="text-lg font-black text-white truncate">魂格特性・{masu.name}</h2>
-                  </div>
-                </div>
-                <div className="mt-2 grid grid-cols-4 gap-1.5">
-                  <div className="rounded-xl border border-violet-500/30 bg-violet-950/30 px-2 py-1.5 text-center"><div className="text-[7px] text-violet-300 font-black">魂格</div><div className="text-[11px] text-white font-black">{masu.soulRankStage>0?`魂格${['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][masu.soulRankStage]}`:'未解放'}</div></div>
-                  <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/30 px-2 py-1.5 text-center"><div className="text-[7px] text-cyan-300 font-black">現在Lv</div><div className="text-[11px] text-white font-black">{level}</div></div>
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-950/30 px-2 py-1.5 text-center"><div className="text-[7px] text-amber-300 font-black">未使用</div><div className="text-[11px] text-white font-black">{available}P</div></div>
-                  <div className="rounded-xl border border-fuchsia-500/30 bg-fuchsia-950/30 px-2 py-1.5 text-center"><div className="text-[7px] text-fuchsia-300 font-black">使用済み</div><div className="text-[11px] text-white font-black">{spent}P</div></div>
-                </div>
-                {!unlocked&&<div data-soul-trait-locked className="mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 px-3 py-2 text-center text-[10px] font-black text-amber-200">Lv500到達＋魂格進化Ⅰで解放<br/><span className="text-[8px] text-slate-300 font-bold">特性一覧と必要魂格Pは先に確認できます</span></div>}
-                <div className="mt-2 flex gap-1.5" role="tablist" aria-label="魂格特性カテゴリ">
-                  {SOUL_TRAIT_CATEGORIES.map(tab=><button key={tab.id} role="tab" aria-selected={category.id===tab.id} onClick={()=>{setSoulTraitTab(tab.id);closeSheet();}} className={`flex-1 min-h-[42px] rounded-xl text-[11px] font-black active:scale-95 ${category.id===tab.id?'bg-fuchsia-600 text-white':'bg-slate-900 border border-slate-700 text-slate-300'}`}>{tab.label}</button>)}
-                </div>
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-3 py-2 space-y-2">
-                {traits.map(trait=>{
-                  const traitLevel=soulTraitLevel(masu,trait.id);
-                  const effect=traitLevel*trait.effectPerLevel;
-                  const canOpen=unlocked&&maxSoulTraitUpgradeLevels(masu,trait.id)>0;
-                  return <button type="button" key={trait.id} data-soul-trait-card={trait.id} onClick={()=>{if(!unlocked)return;setSoulTraitSelectedId(trait.id);setSoulTraitDraftLevels(trait.id==='coordination'?1:Math.min(1,maxSoulTraitUpgradeLevels(masu,trait.id)));setSoulTraitError('');}} className={`w-full min-h-[72px] rounded-2xl border p-3 text-left active:scale-[.99] ${traitLevel>0?'border-fuchsia-400/50 bg-fuchsia-950/25':'border-white/10 bg-slate-900/80'}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0"><div className="text-[12px] font-black text-white">{trait.name}</div><div className="mt-0.5 text-[9px] font-bold leading-relaxed text-slate-300">{trait.desc}</div></div>
-                      <div className="shrink-0 text-right"><div className="text-[10px] font-black text-fuchsia-300">{traitLevel>0?`Lv.${traitLevel}`:'未習得'}</div><div className="text-[8px] font-bold text-amber-300">{trait.costPerLevel}P / 1段階</div></div>
-                    </div>
-                    <div className="mt-1.5 flex items-center justify-between gap-2 text-[9px] font-black"><span className="text-slate-500">現在効果</span><span className={traitLevel>0?'text-emerald-300':'text-slate-500'}>{trait.id==='coordination'?(traitLevel>0?'使用可能カード +1':'未習得'):`${effect}${trait.unit}`}</span></div>
-                    {!unlocked&&<div className="mt-1 text-[8px] font-black text-amber-400">🔒 強化操作は魂格Ⅰから</div>}
-                    {unlocked&&!canOpen&&trait.id!=='coordination'&&<div className="mt-1 text-[8px] font-bold text-slate-500">{Number.isFinite(trait.maxLevel)&&traitLevel>=trait.maxLevel?'上限到達':'魂格P不足'}</div>}
-                  </button>;
-                })}
-                <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
-                  <div className="flex items-center justify-between gap-2"><div><div className="text-[10px] font-black text-slate-300">魂格P</div><div className="text-[8px] font-bold text-slate-500">総獲得 {earned}P ／ 使用済み {spent}P ／ 未使用 {available}P</div></div><div className="text-right"><div className="text-[8px] text-slate-500 font-bold">総合力加算</div><div className="text-[12px] text-cyan-300 font-black">+{(spent*10).toLocaleString()}</div></div></div>
-                  <button type="button" data-soul-trait-respec-open disabled={spent<=0} onClick={()=>{setSoulTraitRespecOpen(true);setSoulTraitError('');}} className="mt-2 w-full min-h-[44px] rounded-xl border border-cyan-500/40 bg-cyan-950/30 text-[10px] font-black text-cyan-200 active:scale-95 disabled:opacity-30">魂格再編の書で全リセット（所持 {ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}冊）</button>
-                </div>
-              </div>
-
-              {selected&&<div className="fixed inset-0 z-[33000] flex items-end bg-black/65" role="dialog" aria-modal="true" aria-label={`${selected.name}を強化`}>
-                <div data-soul-trait-sheet className="w-full max-w-md mx-auto rounded-t-3xl border-t border-fuchsia-400/50 bg-slate-950 p-4 shadow-2xl" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-                  <div className="flex items-center justify-between gap-2"><div><div className="text-[8px] font-black text-fuchsia-300">魂格特性強化</div><div className="text-base font-black text-white">{selected.name}</div></div><button onClick={closeSheet} aria-label="魂格特性強化を閉じる" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center"><X size={16}/></button></div>
-                  <div className="mt-2 rounded-xl border border-white/10 bg-slate-900 p-3 text-[10px] font-bold text-slate-300">
-                    <div className="flex justify-between"><span>現在段階</span><b className="text-white">{currentSelectedLevel}</b></div>
-                    <div className="mt-1 flex justify-between"><span>現在効果</span><b className="text-white">{selected.id==='coordination'?(currentSelectedLevel>0?'カード +1':'未習得'):`${currentSelectedLevel*selected.effectPerLevel}${selected.unit}`}</b></div>
-                    <div className="mt-1 flex justify-between"><span>1段階</span><b className="text-amber-300">{selected.id==='coordination'?'カード +1':`+${selected.effectPerLevel}${selected.unit}`} ／ {selected.costPerLevel}P</b></div>
-                    <div className="mt-1 flex justify-between"><span>強化後</span><b className="text-emerald-300">{selected.id==='coordination'?(currentSelectedLevel+draft>0?'カード +1':'未習得'):`${previewAfter}${selected.unit}`}</b></div>
-                    <div className="mt-1 flex justify-between"><span>消費</span><b className="text-fuchsia-300">{previewCost}P</b></div>
-                    <div className="mt-1 flex justify-between"><span>強化後の未使用</span><b className="text-cyan-300">{Math.max(0,available-previewCost)}P</b></div>
-                  </div>
-                  {selected.id==='coordination'
-                    ? <button data-soul-trait-learn-coordination disabled={maxAdd<=0} onClick={()=>setSoulTraitDraftLevels(1)} className="mt-3 w-full min-h-[48px] rounded-xl bg-violet-700 text-white text-[12px] font-black disabled:opacity-30">習得する 200P</button>
-                    : <div className="mt-3 grid grid-cols-5 gap-1.5">
-                        <button data-soul-trait-minus-one disabled={draft<=0} onClick={()=>setSoulTraitDraftLevels(v=>Math.max(0,Number(v||0)-1))} className="min-h-[46px] rounded-xl bg-slate-800 text-white font-black disabled:opacity-30">−1</button>
-                        <button data-soul-trait-plus-one disabled={draft>=maxAdd} onClick={()=>setSoulTraitDraftLevels(v=>Math.min(maxAdd,Number(v||0)+1))} className="min-h-[46px] rounded-xl bg-slate-800 text-white font-black disabled:opacity-30">+1</button>
-                        <button data-soul-trait-plus-five disabled={draft>=maxAdd} onClick={()=>setSoulTraitDraftLevels(v=>Math.min(maxAdd,Number(v||0)+5))} className="min-h-[46px] rounded-xl bg-slate-800 text-white font-black disabled:opacity-30">+5</button>
-                        <button data-soul-trait-max disabled={maxAdd<=0} onClick={()=>setSoulTraitDraftLevels(maxAdd)} className="min-h-[46px] rounded-xl bg-slate-800 text-white text-[10px] font-black disabled:opacity-30">MAX</button>
-                        <div className="min-h-[46px] rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 flex items-center justify-center text-[12px] font-black text-fuchsia-200">+{draft}</div>
-                      </div>}
-                  {soulTraitError&&<div className="mt-2 text-center text-[9px] font-black text-red-300">{soulTraitError}</div>}
-                  <div className="mt-3 grid grid-cols-2 gap-2"><button onClick={closeSheet} className="min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black">キャンセル</button><button data-soul-trait-confirm disabled={draft<=0||draft>maxAdd||soulTraitProcessingRef.current} onClick={()=>commitSoulTraitUpgrade(masu.id,selected.id,draft)} className="min-h-[48px] rounded-xl bg-fuchsia-600 text-white text-[11px] font-black disabled:opacity-30">決定</button></div>
-                </div>
-              </div>}
-
-              {soulTraitRespecOpen&&<div className="fixed inset-0 z-[33000] flex items-end bg-black/65" role="dialog" aria-modal="true" aria-label="魂格特性を再編">
-                <div data-soul-trait-respec-sheet className="w-full max-w-md mx-auto rounded-t-3xl border-t border-cyan-400/50 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-                  <div className="text-[8px] font-black text-cyan-300">魂格再編</div><div className="text-base font-black text-white">振り分けを全て戻しますか？</div>
-                  <div className="mt-2 text-[10px] font-bold leading-relaxed text-slate-300">使用済み {spent}P を未使用へ戻します。魂格段階・Lv・最高初到達Lv・総獲得魂格Pは変わりません。</div>
-                  <div className="mt-2 rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-[10px] font-black flex items-center justify-between"><span>魂格再編の書</span><span className={ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-red-300'}>所持 {ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}冊</span></div>
-                  {soulTraitError&&<div className="mt-2 text-center text-[9px] font-black text-red-300">{soulTraitError}</div>}
-                  <div className="mt-3 grid grid-cols-2 gap-2"><button onClick={()=>{setSoulTraitRespecOpen(false);setSoulTraitError('');}} className="min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black">やめる</button><button disabled={ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)<=0||spent<=0||soulTraitProcessingRef.current} onClick={()=>commitSoulTraitRespec(masu.id)} className="min-h-[48px] rounded-xl bg-cyan-600 text-white text-[11px] font-black disabled:opacity-30">1冊使って再編</button></div>
-                </div>
-              </div>}
-            </div>
-          );
         })()}
 
         {/* 固有技設定: その個体が持つ固有技の「並び順」と「初期技」だけを決める。
