@@ -91,10 +91,10 @@ check('Lv500→505初到達で魂格P+5',
 check('魂格Pを別の所持数として重複保存しない',
   !Object.prototype.hasOwnProperty.call(first.masu, 'soulPoints')
   && !Object.prototype.hasOwnProperty.call(first.masu, 'soulPoint'));
-const reborn = a.resetMasuForRebirth({ ...first.masu, soulTraitLevels:{ focus:2 } }, { toLevel:500 });
+const reborn = a.resetMasuForRebirth({ ...first.masu, soulTraitLevels:{ allDamage:2 } }, { toLevel:500 });
 check('転生で魂格段階・初到達Lv・特性を保持する',
   reborn.soulRankStage === 1 && reborn.soulPointMaxReachedLevel === 505
-  && reborn.soulTraitLevels.focus === 2 && reborn.levelCap === 600);
+  && reborn.soulTraitLevels.allDamage === 2 && reborn.levelCap === 600);
 const replay = gainTo(reborn, 505);
 check('転生後にLv505へ再到達しても魂格Pは二重取得しない',
   replay.gainedSoulPoints === 0 && replay.masu.soulPointMaxReachedLevel === 505);
