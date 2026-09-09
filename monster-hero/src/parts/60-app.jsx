@@ -12574,6 +12574,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         ? <div className="shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
                         : item.usage==='soulRank'
                         ? <div className="shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2">神殿の<br/>魂格進化で<br/>使用</div>
+                        : item.usage==='soulRankRespec'
+                        ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>魂格特性で<br/>使用</div>
                         : <button onClick={()=>setPendingItemUse(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>}
                     </div>
                   ))}
