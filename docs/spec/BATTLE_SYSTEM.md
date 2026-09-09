@@ -57,6 +57,7 @@ INFINITYは既存4難易度の特徴を統合した10WAVEの最終難易度。UL
 ターン系のルールは難易度名でハードコードせず、`extremeRuleNumber(difficultyId, rule)` / `extremeDistanceBreakRule(difficultyId)` で「その難易度がそのルールを持つか」で効かせる。持たない難易度では倍率1・BREAKなしになるため、既存の挙動は変わらない。
 
 敵順はディノ、ゲル、ブラックディノ、ジャアクソウ、ブルーマウンテン、ガリ、ナーガ、リリム、デュラハン、ムーの固定10体。各 WAVE 開始時に敵の初期距離を4枠から一様に選ぶ。基礎HP・基礎攻撃は `enemy-monsters.js`、倍率は `DIFFICULTY_SETTINGS` にある。
+
 ### 敵の行動
 
 行動は `ENEMY_ACTION_DEFINITIONS` の重みで抽選し、ターンごとに予告してから実行する。
@@ -236,6 +237,7 @@ HOMEの「バトル」は `バトル → バトルモード選択 → 難易度�
 - ランキングの一覧は `renderScoreRankingBody` / `renderBreederRankingBody` / `renderBondRankingBody` の共通の描画を呼ぶだけで、画面ごとに作り直していない。既存の `BATTLE_MENU` のランキングタブも同じものを呼ぶ。
 - クイックにはスコアランキングが無いので、導線も「ランキング対象外です」の高さ合わせの空枠も置かない。
 - スキップと勇者モン選択の「戻る」は `battleEntryStateRef` が覚えている入口の画面へ返す（既定は `BATTLE_DIFFICULTY_SELECT`）。
+
 ### 極限チャレンジ
 
 チャレンジモードの上位高難易度版。モードのカードは常に並べ、解放していないときは押せなくする。
