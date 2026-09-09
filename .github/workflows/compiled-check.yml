@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -53,34 +53,6 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-      - name: Apply uploaded soul rank aura filenames (temporary)
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin work/soul-rank-system
-          git checkout -B work/soul-rank-system origin/work/soul-rank-system
-          python - <<'PY'
-          from pathlib import Path
-          replacements = {
-            'images/effects/soul-rank-aura-blue.PNG': 'images/effects/soul_rank_I_blue.png',
-            'images/effects/soul-rank-aura-yellow.PNG': 'images/effects/soul_rank_II_yellow.png',
-            'images/effects/soul-rank-aura-green.PNG': 'images/effects/soul_rank_III_green.png',
-            'images/effects/soul-rank-aura-red.PNG': 'images/effects/soul_rank_IV_red.png',
-            'images/effects/soul-rank-aura-rainbow.PNG': 'images/effects/soul_rank_V_rainbow.png',
-          }
-          for name in ['monster-hero/src/parts/16-ranking-detail-and-widgets.jsx','tools/masu/soul-rank-step6b-check.js']:
-            p=Path(name); s=p.read_text(); before=s
-            for a,b in replacements.items(): s=s.replace(a,b)
-            if s == before: raise SystemExit(f'no aura filename replacements in {name}')
-            p.write_text(s)
-          PY
-          node tools/build.js
-          node tools/masu/soul-rank-step6b-check.js
-          for f in soul_rank_I_blue.png soul_rank_II_yellow.png soul_rank_III_green.png soul_rank_IV_red.png soul_rank_V_rainbow.png; do test -s "monster-hero/images/effects/$f" || exit 1; done
-          git add -u
-          git commit -m "fix: use uploaded soul rank aura filenames"
-          git push origin work/soul-rank-system
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
