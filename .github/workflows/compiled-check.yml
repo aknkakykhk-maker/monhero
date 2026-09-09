@@ -53,6 +53,10 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      - name: Inspect common monster detail for soul rank (temporary)
+        shell: bash
+        run: |
+          grep -n -A 300 -B 50 "const renderMonsterDetailModal = (" monster-hero/src/parts/60-app.jsx | head -n 420
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
