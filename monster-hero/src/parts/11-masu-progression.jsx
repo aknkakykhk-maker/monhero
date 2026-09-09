@@ -174,6 +174,22 @@ const buildMasuSoulTraitReset = (masu) => {
 };
 const SOUL_RANK_RESPEC_ITEM_ID = 'soul_rank_respec_scroll';
 const SOUL_RANK_RESPEC_DIAMOND_COST = 1000000;
+const buildSoulRankRespecProofExchange = (ownedItems, quantity = 1) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const count = Math.max(1, Math.floor(Number(quantity) || 1));
+  const proofHave = ownedItemCount(before, HERO_PROOF_ITEM_ID);
+  if (proofHave < count) return { ok:false, quantity:count, proofCost:count, ownedItems:before };
+  return {
+    ok:true,
+    quantity:count,
+    proofCost:count,
+    ownedItems:{
+      ...before,
+      [HERO_PROOF_ITEM_ID]:proofHave - count,
+      [SOUL_RANK_RESPEC_ITEM_ID]:ownedItemCount(before, SOUL_RANK_RESPEC_ITEM_ID) + count,
+    },
+  };
+};
 const TRANSCEND_PSYCHE_COST = 5000;
 const TRANSCEND_DIAMOND_COST = 1000000;
 // Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
