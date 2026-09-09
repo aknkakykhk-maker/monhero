@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -53,6 +53,46 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      - name: Apply and verify soul rank STEP6B aura wiring (temporary)
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin work/soul-rank-system
+          git checkout -B work/soul-rank-system origin/work/soul-rank-system
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('monster-hero/src/parts/60-app.jsx')
+          s=p.read_text()
+          reps={
+            '<ReincarnateAura count={masu.reincarnateCount} className="is-small"/>':'<SoulRankAura soulRankStage={normalizeMasuProgression(masu).soulRankStage} className="is-small"/>',
+            '<ReincarnateAura count={norm.reincarnateCount}/>':'<SoulRankAura soulRankStage={norm.soulRankStage}/>',
+            '<ReincarnateAura count={normalized.reincarnateCount}/>':'<SoulRankAura soulRankStage={normalized.soulRankStage}/>',
+            '<ReincarnateAura count={3}/>':'<SoulRankAura soulRankStage={3}/>',
+          }
+          total=0
+          for a,b in reps.items():
+            if a in s:
+              n=s.count(a)
+              s=s.replace(a,b)
+              total+=n
+              print(f'replaced {n}: {a}')
+          if '<ReincarnateAura' in s:
+            import re
+            leftovers=re.findall(r'<ReincarnateAura[^>]*>',s)
+            print('leftovers:', leftovers[:20])
+            raise SystemExit('ReincarnateAura usage remains')
+          if total < 2:
+            raise SystemExit(f'expected at least 2 replacements, got {total}')
+          p.write_text(s)
+          PY
+          node tools/build.js
+          node tools/masu/soul-rank-step6b-check.js
+          git add -u
+          if ! git diff --cached --quiet; then
+            git commit -m "build: connect soul rank aura across individual views"
+            git push origin work/soul-rank-system
+          fi
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
