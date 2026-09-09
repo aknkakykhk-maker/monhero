@@ -1332,8 +1332,10 @@ const mergeMasuIntoMon = (masu) => {
     // 固有技設定(並び順・初期技)。保存が無い個体はここで従来どおりの値になる
     uniqueOrder: normalizeUniqueOrder(masu),
     initialUniqueKey: normalizeInitialUniqueKey(masu),
-    // STEP3: 魂格特性も個体解決結果へ載せる。詳細・一覧・総合力で同じ保存値を見るため。
-    // 実戦効果そのものはSTEP4でこの同じ値へ接続する。
+    // 魂格の個体情報も実戦用モンスターへ持ち込む。攻撃・防御・補助の実戦計算は
+    // この解決結果だけを見るため、baseId単位ではなく必ず選ばれたマスモン個体の値になる。
+    soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+    soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
     soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
   };
 };
