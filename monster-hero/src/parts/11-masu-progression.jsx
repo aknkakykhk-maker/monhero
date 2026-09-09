@@ -235,7 +235,7 @@ const SOUL_ATTACK_RANGE_TRAIT_IDS = Object.freeze([
 ]);
 const soulTraitAttackProfile = (masu, card, slotIdx = null) => {
   const normalized = normalizeMasuProgression(masu);
-  const isAttack = !!card && ['atk','range_atk','unique'].includes(card.type);
+  const isAttack = !!card && (['atk','range_atk','unique'].includes(card.type) || card.subType === 'stun_atsu');
   if (normalized.soulRankStage < 1 || !isAttack) {
     return {
       damagePct:0, damageMultiplier:1,
@@ -247,7 +247,7 @@ const soulTraitAttackProfile = (masu, card, slotIdx = null) => {
   }
   let damagePct = soulTraitEffectValue(normalized, 'allDamage');
   if (card.type === 'unique') damagePct += soulTraitEffectValue(normalized, 'uniqueDamage');
-  else damagePct += soulTraitEffectValue(normalized, 'normalDamage');
+  else if (card.type === 'atk' || card.type === 'range_atk') damagePct += soulTraitEffectValue(normalized, 'normalDamage');
   const rangeIndex = Number.isInteger(Number(slotIdx))
     ? Math.max(0, Math.min(3, Math.floor(Number(slotIdx))))
     : null;
