@@ -11,7 +11,7 @@ let failed=0;const ck=(n,o)=>{console.log(`${o?'OK':'NG'}: ${n}`);if(!o)failed++
 const masu=(levels={})=>api.normalizeMasuProgression({id:'s4',baseId:'Mocchi',transcended:true,soulRankStage:5,levelCap:1000,bondXp:api.totalBondXpForLevel(1000),soulPointMaxReachedLevel:1000,soulTraitLevels:levels,rebirthCount:35,distAptPoints:0,distAptBoosts:[0,0,0,0],statPoints:{hp:0,atk:0,def:0,guts:0}});
 {
  const m=masu({allDamage:3,normalDamage:2,uniqueDamage:4,rangeMidDamage:5,comboFinalDamage:6,critRate:7,critDamage:8,gutsCostReduction:9});
- const n=api.soulTraitAttackProfile(m,{type:'atk'},2),u=api.soulTraitAttackProfile(m,{type:'unique'},1),a=api.soulTraitAttackProfile(m,{type:'debuff',subType:'stun_atsu'},2);
+ const n=api.soulTraitAttackProfile(m,{type:'atk'},2),u=api.soulTraitAttackProfile(m,{type:'unique'},2),a=api.soulTraitAttackProfile(m,{type:'debuff',subType:'stun_atsu'},2);
  ck('闘魂+武技+距離極意を同じ倍率へ合算',n.damagePct===10&&near(n.damageMultiplier,1.10));
  ck('奥義/距離、連撃最終、会心、省気を正しく分離',u.damagePct===12&&near(n.comboFinalMultiplier,1.06)&&near(n.critRateBonus,.07)&&near(n.critDamageBonus,.08)&&near(n.gutsCostMultiplier,.91));
  ck('あつの挑発は闘魂+距離だけ',a.damagePct===8);
