@@ -7,7 +7,8 @@ const app=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/60-app.jsx'),'u
 const css=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/70-bootstrap.jsx'),'utf8');
 let failed=0;const ck=(n,o)=>{console.log(`${o?'OK':'NG'}: ${n}`);if(!o)failed++;};
 const names=['blue','yellow','green','red','rainbow'];
-ck('魂格Ⅰ〜Ⅴの正式PNGパスを参照',names.every(n=>widgets.includes(`images/effects/soul-rank-aura-${n}.PNG`)));
+const auraPaths=['soul_rank_I_blue.png','soul_rank_II_yellow.png','soul_rank_III_green.png','soul_rank_IV_red.png','soul_rank_V_rainbow.png'];
+ck('魂格Ⅰ〜Ⅴの正式PNGパスを参照',auraPaths.every(n=>widgets.includes(`images/effects/${n}`)));
 ck('オーラ判定はsoulRankStageのみ',widgets.includes('const SoulRankAura')&&widgets.includes('normalizeSoulRankStage(soulRankStage)'));
 ck('魂格0ではオーラなし',widgets.includes('if (!stage) return null'));
 ck('転生回数ベースの旧オーラ定義を廃止',!widgets.includes('REINCARNATE_AURA_IMAGES')&&!widgets.includes('const ReincarnateAura'));
