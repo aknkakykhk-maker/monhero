@@ -50,14 +50,14 @@ check('旧個体は魂格0・最高初到達Lv500・特性なしとして読む'
 check('壊れた魂格値は安全側へ正規化する', (() => {
   const broken = a.normalizeMasuProgression({
     id:'broken', baseId:'Snegurochka', transcended:true, soulRankStage:99, levelCap:9999,
-    soulPointMaxReachedLevel:9999, soulTraitLevels:{ focus:'3', bad:-4, zero:0, nan:'x' },
+    soulPointMaxReachedLevel:9999, soulTraitLevels:{ allDamage:'3', focus:3, normalDamage:0, critDamage:'x' },
   });
   return broken.soulRankStage === 5 && broken.levelCap === 1000
     && broken.soulPointMaxReachedLevel === 1000
-    && broken.soulTraitLevels.focus === 3
-    && !Object.prototype.hasOwnProperty.call(broken.soulTraitLevels, 'bad')
-    && !Object.prototype.hasOwnProperty.call(broken.soulTraitLevels, 'zero')
-    && !Object.prototype.hasOwnProperty.call(broken.soulTraitLevels, 'nan');
+    && broken.soulTraitLevels.allDamage === 3
+    && !Object.prototype.hasOwnProperty.call(broken.soulTraitLevels, 'focus')
+    && !Object.prototype.hasOwnProperty.call(broken.soulTraitLevels, 'normalDamage')
+    && !Object.prototype.hasOwnProperty.call(broken.soulTraitLevels, 'critDamage');
 })());
 check('魂格0の既存超越個体はLv500を越えない',
   a.masuBondLevelInfo({ ...makeSoulMasu(500, 0), levelCap:9999, bondXp:Number.MAX_SAFE_INTEGER }).level === 500);
