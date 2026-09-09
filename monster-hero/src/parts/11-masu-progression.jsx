@@ -53,6 +53,15 @@ const SOUL_RANK_BASE_LEVEL = 500;
 const SOUL_RANK_MAX_STAGE = 5;
 const SOUL_RANK_LEVEL_CAP = 1000;
 const SOUL_RANK_LEVELS_PER_STAGE = 100;
+const SOUL_RANK_EVOLUTION_STAGES = Object.freeze([
+  Object.freeze({ stage:1, label:'魂格Ⅰ', requiredLevel:500, levelCap:600, diamondCost:5000000, heroProofCost:20, accent:'#60a5fa' }),
+  Object.freeze({ stage:2, label:'魂格Ⅱ', requiredLevel:600, levelCap:700, diamondCost:10000000, heroProofCost:30, accent:'#facc15' }),
+  Object.freeze({ stage:3, label:'魂格Ⅲ', requiredLevel:700, levelCap:800, diamondCost:15000000, heroProofCost:40, accent:'#4ade80' }),
+  Object.freeze({ stage:4, label:'魂格Ⅳ', requiredLevel:800, levelCap:900, diamondCost:20000000, heroProofCost:50, accent:'#f87171' }),
+  Object.freeze({ stage:5, label:'魂格Ⅴ', requiredLevel:900, levelCap:1000, diamondCost:25000000, heroProofCost:60, accent:'#e879f9' }),
+]);
+const soulRankEvolutionForStage = (stage) =>
+  SOUL_RANK_EVOLUTION_STAGES.find(step => step.stage === normalizeSoulRankStage(stage)) || null;
 const normalizeSoulRankStage = (value) =>
   Math.max(0, Math.min(SOUL_RANK_MAX_STAGE, Math.floor(Number(value) || 0)));
 const soulRankLevelCap = (stage) =>
@@ -561,6 +570,33 @@ const breakthroughStarStyle = (star) => ({
 // 必要数は限界突破1回ごとに増える。1回目5個・以降+1個で、
 //   30回目 = 5 + 29×1 = 34個 / 最終限界突破(31回目) = 5 + 30×1 = 35個
 const BREAKTHROUGH_ITEM_ID = 'rainbow_psyche';
+// 魂格進化の素材。マーケットでは販売せず、高難度の実クリアでだけ増える。
+// 所持数は他アイテムと同じ mh_owned_items の中へ入れ、新しい保存キーは作らない。
+const HERO_PROOF_ITEM_ID = 'hero_proof';
+const HERO_PROOF_ITEM = Object.freeze({
+  id:HERO_PROOF_ITEM_ID,
+  name:'勇者の証',
+  emoji:'🏅',
+  usage:'soulRank',
+  desc:'魂格進化Ⅰ〜Ⅴに使う高難度クリア報酬。神殿の「魂格進化」で消費する。',
+});
+const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
+  extreme:Object.freeze({ GOD:1, RAGNAROK:2 }),
+  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2 }),
+  pro:Object.freeze({ Master:1, GrandMaster:2, Hell:3, Legend:4 }),
+});
+const heroProofClearReward = ({
+  runMode, difficulty, extremeDifficulty=null, speciesDifficulty=null,
+  speciesSave=true, debug=false,
+} = {}) => {
+  if (debug || runMode === BATTLE_MODE_QUICK) return 0;
+  if (runMode === BATTLE_MODE_SPECIES_CHALLENGE) {
+    return speciesSave ? (HERO_PROOF_CLEAR_REWARDS.speciesChallenge[speciesDifficulty] || 0) : 0;
+  }
+  if (runMode === BATTLE_MODE_PRO) return HERO_PROOF_CLEAR_REWARDS.pro[difficulty] || 0;
+  if (extremeDifficulty) return HERO_PROOF_CLEAR_REWARDS.extreme[extremeDifficulty] || 0;
+  return 0;
+};
 // 超越ポイントリセットの書。マーケット(data/breeder.js)の同じIDを指す
 const TRANSCEND_RESET_ITEM_ID = 'transcend_reset_scroll';
 const BREAKTHROUGH_ITEM_BASE = 5;
@@ -1758,6 +1794,64 @@ const buildMasuTranscendence = ({ masu, gold = 0, psycheOwned = 0 } = {}) => {
     toLevelCap: TRANSCEND_LEVEL_CAP,
     // レベルは Lv.400 のまま。変わるのは上限だけ(Lv401へ勝手に上げない)
     nextMasu: { ...normalized, transcended: true, levelCap: TRANSCEND_LEVEL_CAP },
+  };
+};
+
+// ==================== 魂格進化 ====================
+// 魂格0(超越済みLv500)からⅠ〜Ⅴへ、現在段階の次の1段階だけ進める。
+// 条件・コスト・次状態を1か所へ集約し、神殿UI・合体継承(後続STEP)でも同じ正本を使えるようにする。
+const soulRankEvolutionStatus = (masu) => {
+  if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。', next:null };
+  const normalized = normalizeMasuProgression(masu);
+  const next = soulRankEvolutionForStage(normalized.soulRankStage + 1);
+  const level = masuBondLevelInfo(normalized).level;
+  if (!normalized.transcended) return { ok:false, reason:'先に神殿で超越する必要があります。', normalized, level, next };
+  if (!next) return { ok:false, reason:'魂格Ⅴまで進化済みです。', normalized, level, next:null };
+  return {
+    ok:true,
+    normalized,
+    level,
+    next,
+    levelReady:level >= next.requiredLevel,
+    currentStage:normalized.soulRankStage,
+    currentLabel:normalized.soulRankStage > 0 ? `魂格${['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][normalized.soulRankStage]}` : '魂格なし',
+  };
+};
+const buildMasuSoulRankEvolution = ({ masu, gold = 0, ownedItems = {} } = {}) => {
+  const status = soulRankEvolutionStatus(masu);
+  const goldHave = donationDiamondValue(gold);
+  const heroProofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
+  const next = status.next;
+  const info = {
+    ...status,
+    goldHave,
+    heroProofHave,
+    diamondCost:next?.diamondCost || 0,
+    heroProofCost:next?.heroProofCost || 0,
+  };
+  if (!status.ok) return { ...info, ok:false };
+  if (!status.levelReady) return { ...info, ok:false, reason:`Lv.${next.requiredLevel}に到達すると${next.label}へ進化できます。` };
+  if (goldHave < next.diamondCost) return { ...info, ok:false, reason:`ダイヤが足りません（あと ${(next.diamondCost-goldHave).toLocaleString()}）。` };
+  if (heroProofHave < next.heroProofCost) return { ...info, ok:false, reason:`勇者の証が足りません（あと ${(next.heroProofCost-heroProofHave).toLocaleString()}）。` };
+  const nextOwnedItems = {
+    ...(ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {}),
+    [HERO_PROOF_ITEM_ID]:heroProofHave - next.heroProofCost,
+  };
+  return {
+    ...info,
+    ok:true,
+    nextGold:goldHave - next.diamondCost,
+    nextOwnedItems,
+    fromStage:status.normalized.soulRankStage,
+    toStage:next.stage,
+    fromLevelCap:status.normalized.levelCap,
+    toLevelCap:next.levelCap,
+    // 魂格進化で実Lv・絆XP・最高初到達Lv・振り分けは変えない。解放段階と上限だけ更新する。
+    nextMasu:{
+      ...status.normalized,
+      soulRankStage:next.stage,
+      levelCap:next.levelCap,
+    },
   };
 };
 // 虹のプシュケーを超越ポイントへ替える。100個ちょうどで1P、端数のプシュケーは消費しない
