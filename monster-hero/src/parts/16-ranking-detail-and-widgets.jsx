@@ -229,7 +229,13 @@ const prefersReducedMotion = () => {
 // 丸の外側になる右上の角へ置く。角は丸の外なので、染色した絵をマークが隠さない。
 // 虹★・転生バッジは絵の下なので、そちらとも重ならない。
 // 画像は増やさず、CSSのグラデーションと「超」の文字だけで作る。
-const TranscendenceBadge = ({ transcended = false, className = '', small = false }) => {
+const SOUL_RANK_BADGE_LABELS = Object.freeze(['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ']);
+const TranscendenceBadge = ({ transcended = false, soulRankStage = 0, className = '', small = false }) => {
+  const stage = normalizeSoulRankStage(soulRankStage);
+  if (stage > 0) {
+    const label = SOUL_RANK_BADGE_LABELS[stage];
+    return <span className={`mh-soul-rank-badge is-stage-${stage}${small ? ' is-small' : ''} ${className}`} aria-label={`魂格${label}`}><b aria-hidden="true">{label}</b></span>;
+  }
   if (!transcended) return null;
   return <span className={`mh-transcend-badge${small ? ' is-small' : ''} ${className}`} aria-label="超越済み"><b aria-hidden="true">超</b></span>;
 };
