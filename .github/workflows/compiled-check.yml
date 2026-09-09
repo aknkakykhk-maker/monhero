@@ -53,6 +53,13 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      - name: Inspect soul rank badge call sites (temporary)
+        shell: bash
+        run: |
+          echo "=== TranscendenceBadge ==="
+          grep -R -n -C 3 "<TranscendenceBadge" monster-hero/src/parts monster-hero/src/game-system.jsx || true
+          echo "=== ReincarnateAura ==="
+          grep -R -n -C 3 "<ReincarnateAura" monster-hero/src/parts monster-hero/src/game-system.jsx || true
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
