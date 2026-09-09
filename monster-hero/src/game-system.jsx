@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a00cbd9fc31725d1
+// generated-sha256: 223617980490a024
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-09 19:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-09 19:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5096,7 +5096,7 @@ const RANKING_FUSION_MAX = 12;
 //     masuLevelCapLimit() が「超越済みなら500、未超越なら400」で決めるので、
 //     記録から組み立て直した個体に超越の印が無いと未超越として400へ丸められる。
 //     同じ理由で超越強化で振ったぶんのステータスも詳細に出ていなかった。
-const RANKING_DETAIL_VERSION = 5;
+const RANKING_DETAIL_VERSION = 6;
 const rankingMasuDetail = (masu) => {
   if (!masu) return null;
   const sp = masu.statPoints || {};
@@ -5123,6 +5123,10 @@ const rankingMasuDetail = (masu) => {
     transcendPoints: num(masu.transcendPoints),
     transcendStatPoints: normalizeTranscendStatPoints(masu.transcendStatPoints),
     transcendAptBoosts: normalizeTranscendAptBoosts(masu.transcendAptBoosts),
+    // 魂格(v6)。未使用Pは保存せず、記録時の段階・全振り分け・使用済みPだけ固定する。
+    soulRankStage: normalizeSoulRankStage(masu.soulRankStage),
+    soulTraitLevels: normalizeSoulTraitLevels(masu.soulTraitLevels),
+    soulSpentPoints: soulTraitSpentPoints(masu),
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // 間合い適性は「グレードの文字」の配列(['C','M','C','C'] など)。数値ではないので
     // 数に直そうとすると全部0になり、ランキング側だけ全距離Cに見えてしまう
@@ -5179,6 +5183,10 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     transcendPoints: num(detail.transcendPoints),
     transcendStatPoints: normalizeTranscendStatPoints(detail.transcendStatPoints),
     transcendAptBoosts: normalizeTranscendAptBoosts(detail.transcendAptBoosts),
+    // 魂格はv6から。旧記録は魂格なし・特性なしとして安全に読む。
+    soulRankStage: normalizeSoulRankStage(detail.soulRankStage),
+    soulTraitLevels: normalizeSoulTraitLevels(detail.soulTraitLevels),
+    soulSpentPointsSnapshot: Number.isFinite(Number(detail.soulSpentPoints)) ? num(detail.soulSpentPoints) : 0,
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // グレード以外(数値へ潰してしまった古い記録など)が入っていたら、その記録には
     // 間合い適性が残っていないものとして扱う。nullにしておけば血統本来の適性が出るので、
