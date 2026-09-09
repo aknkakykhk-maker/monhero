@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -53,42 +53,6 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-      - name: Apply and verify soul rank STEP6A badges (temporary)
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin work/soul-rank-system
-          git checkout -B work/soul-rank-system origin/work/soul-rank-system
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('monster-hero/src/parts/60-app.jsx')
-          s=p.read_text()
-          reps={
-            '<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} small/>':'<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} soulRankStage={normalizeMasuProgression(masu).soulRankStage} small/>',
-            '<TranscendenceBadge transcended={norm.transcended}/>':'<TranscendenceBadge transcended={norm.transcended} soulRankStage={norm.soulRankStage}/>',
-            '<TranscendenceBadge transcended={normalized.transcended}/>':'<TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage}/>',
-            '<TranscendenceBadge transcended={normalizeMasuProgression(m).transcended} small/>':'<TranscendenceBadge transcended={normalizeMasuProgression(m).transcended} soulRankStage={normalizeMasuProgression(m).soulRankStage} small/>',
-            '<TranscendenceBadge transcended={normalized.transcended} small/>':'<TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage} small/>',
-          }
-          changed=0
-          for a,b in reps.items():
-            if a in s:
-              n=s.count(a)
-              s=s.replace(a,b)
-              changed+=n
-              print(f'replaced {n}: {a}')
-          if changed < 4:
-            raise SystemExit(f'expected at least 4 user-facing badge replacements, got {changed}')
-          p.write_text(s)
-          PY
-          node tools/build.js
-          node tools/masu/soul-rank-step6a-check.js
-          git add -u
-          if ! git diff --cached --quiet; then
-            git commit -m "build: connect soul rank badges across individual views"
-            git push origin work/soul-rank-system
-          fi
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
