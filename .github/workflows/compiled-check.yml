@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -53,27 +53,6 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-      - name: Install canvas for soul rank STEP5B verification only
-        working-directory: tools
-        run: npm install --no-save canvas@3.2.0
-      - name: Build and verify soul rank STEP5B (temporary branch verification)
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin work/soul-rank-system
-          git checkout -B work/soul-rank-system origin/work/soul-rank-system
-          if node tools/build.js --check; then
-            echo "generated source already synchronized"
-          else
-            node tools/build.js
-          fi
-          node tools/masu/soul-rank-step5b-check.js
-          git add -u
-          if ! git diff --cached --quiet; then
-            git commit -m "build: sync soul rank STEP5B ranking snapshot"
-            git push origin work/soul-rank-system
-          fi
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
