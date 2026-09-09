@@ -53,6 +53,9 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      - name: Install React for required help render verification only
+        working-directory: tools
+        run: npm install --no-save react@18.3.1 react-dom@18.3.1
       - name: Verify required checks (temporary soul rank branch verification)
         run: node tools/run-checks.js --area required
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
