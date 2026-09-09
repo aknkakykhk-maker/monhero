@@ -230,6 +230,22 @@
 設定の保存は `uniqueSkillLevels` と `uniqueSkillPoints` に触れないため、並び替えや初期技の変更で
 固有技Lv・固有技ポイントが変化することはない。
 
+### 魂格システム
+
+魂格の詳細仕様は [SOUL_RANK_SYSTEM.md](./SOUL_RANK_SYSTEM.md) を正本とする。保存形式としては、新しいトップレベル `mh_*` キーを増やさず、既存 `mh_masu_mons` の各個体へ次を追加する。
+
+- `soulRankStage`: 魂格段階。0〜5へ正規化し、欠損する旧個体は0。
+- `soulPointMaxReachedLevel`: 魂格Pの初到達判定に使う過去最高Lv。500〜1000へ正規化し、欠損する旧個体は500。
+- `soulTraitLevels`: 特性ID→強化段階。未知IDは無視し、欠損は空オブジェクト。
+
+未使用魂格Pは保存せず、`soulPointMaxReachedLevel` と `soulTraitLevels` から導出する。転生では上記3項目を明示的に維持し、合体の通常経路では副の魂格段階・最高到達Lv・特性振り分けを主へコピーしない。魂格継承合体を選んだ場合だけ、主の不足段階分の通常進化コストを支払って `soulRankStage` / `levelCap` を先に解放する。
+
+勇者の証 `hero_proof` と魂格再編の書 `soul_rank_respec_scroll` は、既存 `mh_owned_items` の個数として保存する。専用保存キーは作らない。
+
+ランキング個体詳細は `RANKING_DETAIL_VERSION = 6` で、記録時の `soulRankStage` / `soulTraitLevels` / `soulSpentPoints` を既存detail内へ追加する。未使用魂格Pはランキングへ保存しない。旧ランキングは魂格なし・特性なし・使用済み0Pとして読む。
+
+既存バックアップは `mh_*` の生文字列を丸ごと保存するため、`mh_masu_mons` 内の魂格項目と `mh_owned_items` 内の勇者の証・再編の書も同じ仕組みで往復する。回帰確認は `node tools/boot/soul-rank-backup-check.js`。
+
 明示的な `schemaVersion` は存在しない。未知フィールドはオブジェクトスプレッドにより多くの更新で維持されるが、全経路での保証は**未確認**。
 
 ## 5. ラン中データと保存タイミング
