@@ -1,6 +1,5 @@
 // 魂格 STEP6B「魂格オーラ」のコード側回帰検査。
 // 正式PNG実体の存在・透過品質は画像保存後のasset checkで別確認する。
-// migration fixture: images/effects/soul_rank_I_blue.png images/effects/soul_rank_II_yellow.png images/effects/soul_rank_III_green.png images/effects/soul_rank_IV_red.png images/effects/soul_rank_V_rainbow.png
 const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'../..');
 const widgets=fs.readFileSync(path.join(ROOT,'monster-hero/src/parts/16-ranking-detail-and-widgets.jsx'),'utf8');
