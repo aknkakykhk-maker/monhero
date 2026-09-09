@@ -79,10 +79,13 @@ check('未知の魂格特性IDは正規化で保存しない',(()=>{
   check('連携は200Pで1回だけ',c&&c.cost===200&&c.nextLevel===1&&a.maxSoulTraitUpgradeLevels(c.nextMasu,'coordination')===0);
   check('連携を2回習得できない',a.buildSoulTraitUpgrade(c.nextMasu,'coordination',1)===null);
 }
-check('会心眼は100ptで止まる',a.maxSoulTraitUpgradeLevels(makeMasu({soulPointMaxReachedLevel:1000,soulTraitLevels:{critRate:99}}),'critRate')===1);
-check('残像/鏡返し/吸収は特殊防御物理上限75ptで止まる',
+check('会心眼は最低10%会心の技でも実効100%を超えない90ptで止まる',
+  a.SOUL_TRAIT_BY_ID.critRate.maxLevel===90
+  && a.normalizeSoulTraitLevels({critRate:999}).critRate===90
+  && a.maxSoulTraitUpgradeLevels(makeMasu({soulPointMaxReachedLevel:1000,soulTraitLevels:{critRate:89}}),'critRate')===1);
+check('残像/鏡返し/吸収の壊れた保存値は特殊防御物理上限75ptへ正規化',
   ['partyEvasion','partyReflect','partyAbsorb'].every(id=>
-    a.maxSoulTraitUpgradeLevels(makeMasu({soulPointMaxReachedLevel:1000,soulTraitLevels:{[id]:74}}),id)===1));
+    a.normalizeSoulTraitLevels({[id]:999})[id]===75));
 check('省気は100%を越えて振らない',a.maxSoulTraitUpgradeLevels(makeMasu({soulPointMaxReachedLevel:1000,soulTraitLevels:{gutsCostReduction:99}}),'gutsCostReduction')===1);
 check('魂格I未満は一覧定義を持っていても強化できない',
   a.maxSoulTraitUpgradeLevels(makeMasu({soulRankStage:0,levelCap:500}),'allDamage')===0
