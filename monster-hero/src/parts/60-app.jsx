@@ -10118,7 +10118,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const label=normalized.soulRankStage>0?'魂格'+['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][normalized.soulRankStage]:normalized.transcended?'超越済み':'未超越';
                 const sub=!status.ok?status.reason:status.levelReady?status.next.label+'へ進化可能':'Lv.'+status.next.requiredLevel+'で'+status.next.label;
                 return <button key={masu.id} data-soul-rank-candidate={masu.id} disabled={!canOpen} onClick={()=>{setSoulRankSelectedId(masu.id);setSoulRankError('');}} style={MONSTER_CARD_STYLE} className={MONSTER_CARD_CLASS+' border-sky-400/40 bg-slate-900 disabled:opacity-35'}>
-                  {renderMonsterCardBody({masu,base,status:<span className="block text-center"><b className="text-[8px] text-sky-200">{label}</b><small className={'block text-[7px] '+(status.levelReady?'text-emerald-300':'text-slate-500')}>{sub}</small></span>})}
+                  {renderMonsterCardBody({masu,base,nameBand:true,status:<span className="block text-center"><b className="text-[8px] text-sky-200">{label}</b><small className={'block text-[7px] '+(status.levelReady?'text-emerald-300':'text-slate-500')}>{sub}</small></span>})}
                 </button>;
               })}</div>
             </div>;

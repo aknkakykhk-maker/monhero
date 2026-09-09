@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8ee37d4001038440
+// generated-sha256: 7016b4537148872a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-09 20:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 01:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -491,7 +491,7 @@ const SOUL_TRAIT_DEFINITIONS = Object.freeze([
   Object.freeze({ id:'enemyDisable', category:'defense', name:'威圧', desc:'敵の行動不能率 +1pt', costPerLevel:25, effectPerLevel:1, unit:'pt', maxLevel:100 }),
   // 補助
   Object.freeze({ id:'gutsCostReduction', category:'support', name:'省気', desc:'本人のカード消費ガッツ -1%', costPerLevel:10, effectPerLevel:1, unit:'%', maxLevel:100 }),
-  Object.freeze({ id:'autoGutsRecovery', category:'support', name:'自動ガッツ回復強化', desc:'パーティの実際の自動ガッツ回復量 +1%', costPerLevel:10, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'autoGutsRecovery', category:'support', name:'活気', desc:'パーティの実際の自動ガッツ回復量 +1%', costPerLevel:10, effectPerLevel:1, unit:'%' }),
   Object.freeze({ id:'coordination', category:'support', name:'連携', desc:'使用可能カード枚数 +1', costPerLevel:200, effectPerLevel:1, unit:'枚', maxLevel:1 }),
 ]);
 const SOUL_TRAIT_BY_ID = Object.freeze(Object.fromEntries(SOUL_TRAIT_DEFINITIONS.map(trait => [trait.id, trait])));
@@ -21962,7 +21962,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const label=normalized.soulRankStage>0?'魂格'+['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][normalized.soulRankStage]:normalized.transcended?'超越済み':'未超越';
                 const sub=!status.ok?status.reason:status.levelReady?status.next.label+'へ進化可能':'Lv.'+status.next.requiredLevel+'で'+status.next.label;
                 return <button key={masu.id} data-soul-rank-candidate={masu.id} disabled={!canOpen} onClick={()=>{setSoulRankSelectedId(masu.id);setSoulRankError('');}} style={MONSTER_CARD_STYLE} className={MONSTER_CARD_CLASS+' border-sky-400/40 bg-slate-900 disabled:opacity-35'}>
-                  {renderMonsterCardBody({masu,base,status:<span className="block text-center"><b className="text-[8px] text-sky-200">{label}</b><small className={'block text-[7px] '+(status.levelReady?'text-emerald-300':'text-slate-500')}>{sub}</small></span>})}
+                  {renderMonsterCardBody({masu,base,nameBand:true,status:<span className="block text-center"><b className="text-[8px] text-sky-200">{label}</b><small className={'block text-[7px] '+(status.levelReady?'text-emerald-300':'text-slate-500')}>{sub}</small></span>})}
                 </button>;
               })}</div>
             </div>;
