@@ -190,6 +190,43 @@ const buildSoulRankRespecProofExchange = (ownedItems, quantity = 1) => {
     },
   };
 };
+const formatSoulTraitEffect = (traitOrId, value) => {
+  const trait = typeof traitOrId === 'string' ? SOUL_TRAIT_BY_ID[traitOrId] : traitOrId;
+  if (!trait) return '';
+  const amount = Math.max(0, Number(value) || 0);
+  if (trait.id === 'coordination') return `カード+${amount}枚`;
+  const sign = trait.id === 'partyDamageReduction' || trait.id === 'gutsCostReduction' ? '-' : '+';
+  return `${sign}${amount}${trait.unit}`;
+};
+// 同種確率・軽減率は加算せず「残り」を乗算する。値はUIと仕様に合わせてpt(0〜100)で受け返す。
+const combineSoulProbabilityPoints = (values) => {
+  const remaining = (Array.isArray(values) ? values : []).reduce((product, raw) => {
+    const rate = Math.max(0, Math.min(100, Number(raw) || 0)) / 100;
+    return product * (1 - rate);
+  }, 1);
+  return Math.max(0, Math.min(100, (1 - remaining) * 100));
+};
+const soulTraitPartyPreview = (masus) => {
+  const party = (Array.isArray(masus) ? masus : []).filter(Boolean).map(normalizeMasuProgression);
+  const values = id => party.map(masu => soulTraitEffectValue(masu, id)).filter(value => value > 0);
+  const damageReduction = combineSoulProbabilityPoints(values('partyDamageReduction'));
+  const evasion = combineSoulProbabilityPoints(values('partyEvasion'));
+  const reflect = combineSoulProbabilityPoints(values('partyReflect'));
+  const absorb = combineSoulProbabilityPoints(values('partyAbsorb'));
+  const specialDefenseRate = Math.min(75, Math.max(evasion, reflect, absorb));
+  const defenseTotal = evasion + reflect + absorb;
+  const specialDefenseMix = defenseTotal > 0
+    ? { evasion:evasion/defenseTotal, reflect:reflect/defenseTotal, absorb:absorb/defenseTotal }
+    : { evasion:0, reflect:0, absorb:0 };
+  const intimidate = combineSoulProbabilityPoints(values('enemyDisable'));
+  const autoGutsMultiplier = values('autoGutsRecovery')
+    .reduce((multiplier, point) => multiplier * (1 + point / 100), 1);
+  const coordination = party.some(masu => soulTraitLevel(masu, 'coordination') > 0);
+  return {
+    damageReduction, evasion, reflect, absorb, specialDefenseRate, specialDefenseMix,
+    intimidate, autoGutsMultiplier, coordinationCardBonus:coordination ? 1 : 0,
+  };
+};
 const TRANSCEND_PSYCHE_COST = 5000;
 const TRANSCEND_DIAMOND_COST = 1000000;
 // Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
