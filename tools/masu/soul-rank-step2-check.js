@@ -115,8 +115,8 @@ const makeMasu = (stage, level, over = {}) => api.normalizeMasuProgression({
     reward({runMode:'pro',difficulty:'Legend',debug:true})===0
     && reward({runMode:'challenge',extremeDifficulty:'RAGNAROK',debug:true})===0);
   check('挑戦前カードの勇者の証表示も実報酬関数を参照',
-    app.includes("const heroProofReward=heroProofClearReward({runMode:battleMode,difficulty:key})")
-    && app.includes("const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id})")
+    app.includes("const heroProofReward=heroProofClearReward({runMode:battleMode,difficulty:key,debug:debugBattle})")
+    && app.includes("const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id,debug:debugBattle})")
     && (app.match(/data-hero-proof-reward=/g)||[]).length>=2);
   check('プロ・極限の表示値を別の数値表へ複製しない',
     !app.includes('const HERO_PROOF_DISPLAY_REWARDS')
