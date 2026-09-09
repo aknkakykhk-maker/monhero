@@ -54,7 +54,7 @@ jobs:
             BASE_SHA="${{ github.event.before }}"
           fi
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          changed="$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")"
+          changed="$(git diff --name-only "$BASE_SHA" HEAD)"
           shipped="$(printf '%s\n' "$changed" | grep -E '^(monster-hero/|index\.html$)' | grep -v '^monster-hero/version\.json$' || true)"
           if [[ -z "$shipped" ]]; then
             echo "配信対象の変更なし: 更新バナーstampは不要"
