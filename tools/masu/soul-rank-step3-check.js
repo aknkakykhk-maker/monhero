@@ -18,6 +18,7 @@ const a = loadDyeModule();
 
 const source = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/game-system.jsx'),'utf8');
 const app = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/60-app.jsx'),'utf8');
+const marketUi = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/20-market-notices-help.jsx'),'utf8');
 const breeder = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/data/breeder.js'),'utf8');
 
 let failed=0;
@@ -183,8 +184,15 @@ check('魂格特性強化はmh_masu_monsだけを検証保存',
   (()=>{const i=app.indexOf('const commitSoulTraitUpgrade');const j=app.indexOf('const commitSoulTraitRespec',i);const b=app.slice(i,j);return b.includes("key:'mh_masu_mons'")&&!b.includes("key:'mh_owned_items'");})());
 check('魂格再編はmh_masu_mons/mh_owned_itemsを取引保存',
   (()=>{const i=app.indexOf('const commitSoulTraitRespec');const j=app.indexOf('// 固有技設定',i);const b=app.slice(i,j);return b.includes("key:'mh_masu_mons'")&&b.includes("key:'mh_owned_items'");})());
-check('マーケットに勇者の証1→再編の書交換導線',
-  app.includes('exchangeSoulRankRespecByProof')&&app.includes('勇者の証1個を魂格再編の書1冊へ交換'));
+check('100万ダイヤ版の魂格再編の書は詳細ボタンを維持',
+  app.includes("item.desc&&<button onClick={()=>setMarketItemDetail(item)}")
+  && !app.includes("item.id===SOUL_RANK_RESPEC_ITEM_ID?<button"));
+check('勇者の証1→再編の書は同じアイテムの別商品カード',
+  app.includes("const exchangeItem={...item,currency:'heroProof',cost:1}")
+  && app.includes("key={`${SOUL_RANK_RESPEC_ITEM_ID}-hero-proof`}")
+  && app.includes('onBuy={exchangeSoulRankRespecByProof}')
+  && marketUi.includes("const usesHeroProof=item.currency==='heroProof'")
+  && marketUi.includes('勇者の証 ×{item.cost.toLocaleString()}'));
 check('魂格特性画面はSafe Areaと44px以上の主要操作を守る',
   app.includes("paddingTop:'calc(1rem + env(safe-area-inset-top))'")
   &&app.includes("paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'")
