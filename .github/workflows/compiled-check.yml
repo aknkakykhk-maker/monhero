@@ -53,6 +53,33 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      - name: Verify soul rank aura PNG assets (temporary)
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            soul_rank_I_blue.png
+            soul_rank_II_yellow.png
+            soul_rank_III_green.png
+            soul_rank_IV_red.png
+            soul_rank_V_rainbow.png
+          )
+          first_geom=""
+          for f in "${files[@]}"; do
+            p="monster-hero/images/effects/$f"
+            test -s "$p"
+            echo "--- $f ---"
+            file "$p"
+            geom="$(identify -format '%wx%h' "$p")"
+            channels="$(identify -format '%[channels]' "$p")"
+            opaque="$(identify -format '%[opaque]' "$p")"
+            corner="$(convert "$p" -format '%[pixel:p{0,0}]' info:)"
+            echo "geometry=$geom channels=$channels opaque=$opaque corner=$corner"
+            [[ "$channels" == *a* ]] || { echo "NG: alpha channel missing: $f"; exit 1; }
+            [[ "$opaque" == "False" ]] || { echo "NG: no transparent pixels: $f"; exit 1; }
+            if [[ -z "$first_geom" ]]; then first_geom="$geom"; else [[ "$geom" == "$first_geom" ]] || { echo "NG: geometry mismatch: $f"; exit 1; }; fi
+          done
+          echo "魂格オーラ5枚: alpha/透過/寸法チェックOK"
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
