@@ -41,7 +41,7 @@ const expected=[
   ['comboFinalDamage','attack','連撃強化',4],['critRate','attack','会心眼',4],['critDamage','attack','会心極',3],
   ['partyDamageReduction','defense','鉄壁',20],['partyEvasion','defense','残像',30],
   ['partyReflect','defense','鏡返し',60],['partyAbsorb','defense','吸収',60],['enemyDisable','defense','威圧',25],
-  ['gutsCostReduction','support','省気',10],['autoGutsRecovery','support','自動ガッツ回復強化',10],
+  ['gutsCostReduction','support','省気',10],['autoGutsRecovery','support','活気',10],
   ['coordination','support','連携',200],
 ];
 check('18特性のID/カテゴリ/名称/1段階コストが正式仕様と一致',
@@ -108,7 +108,7 @@ check('同種25%×4は加算100%ではなく68.359375%',
     &&p.specialDefenseMix.evasion>p.specialDefenseMix.reflect
     &&p.specialDefenseMix.reflect>p.specialDefenseMix.absorb);
   check('威圧は同種を残り確率乗算で合成',Math.abs(p.intimidate-a.combineSoulProbabilityPoints([5,5]))<1e-9);
-  check('自動ガッツ回復強化は倍率を乗算',Math.abs(p.autoGutsMultiplier-1.0404)<1e-9);
+  check('活気は倍率を乗算',Math.abs(p.autoGutsMultiplier-1.0404)<1e-9);
   check('連携は複数所持でもカード+1だけ',p.coordinationCardBonus===1);
 }
 
