@@ -1462,7 +1462,7 @@ const RHYTHM_TOUCH_CENTER_DEADZONE_PLAY_AREA_RATIO=.02;
 const RHYTHM_TOUCH_RADIUS_EXPAND_MIN_PX=3;
 const RHYTHM_TOUCH_RADIUS_EXPAND_MIN_RATIO=.10;
 const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
-  const touchStates=new Map(),syntheticTapKeys=new Set();
+  const touchStates=new Map(),syntheticTapKeys=new Set(),syntheticTapSources=new Map(),physicalTargetTimes=new Map();
   let nextSyntheticPointerId=900000;
   const clampSubLane=value=>Math.max(0,Math.min(RHYTHM_SUB_LANE_COUNT-1,Math.floor(Number(value))));
   const centerDeadzonePx=rect=>Math.min(RHYTHM_TOUCH_CENTER_DEADZONE_MAX_PX,Math.max(RHYTHM_TOUCH_CENTER_DEADZONE_MIN_PX,(Number(rect?.width)||0)*RHYTHM_TOUCH_CENTER_DEADZONE_PLAY_AREA_RATIO));
@@ -1512,7 +1512,7 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     Object.entries(init).forEach(([key,value])=>{try{Object.defineProperty(event,key,{value,configurable:true});}catch{}});
     return event;
   };
-  const dispatchTapProbe=(area,touch,subLane)=>{
+  const dispatchTapProbe=(area,touch,subLane,sourceKey)=>{
     if(!area?.dispatchEvent)return false;
     const rect=RHYTHM_VIEW_ROTATION.rectOf(area);
     if(!(rect&&rect.width>0&&rect.height>0))return false;
@@ -1521,11 +1521,12 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     const local=pointForSubLane(subLane,touch.clientY,rect);
     const id=++nextSyntheticPointerId,key=`pointer:${id}`,point=RHYTHM_VIEW_ROTATION.unpoint(local.clientX,local.clientY);
     syntheticTapKeys.add(key);
+    syntheticTapSources.set(key,String(sourceKey));
     try{
       area.dispatchEvent(makePointerEvent('pointerdown',id,point));
       area.dispatchEvent(makePointerEvent('pointerup',id,point));
       return true;
-    }finally{syntheticTapKeys.delete(key);}
+    }finally{syntheticTapKeys.delete(key);syntheticTapSources.delete(key);}
   };
   // 指を動かすたびに10要素を querySelectorAll で引き直し、毎回全部へ書き込んでいた。
   // 要素は覚えておき、状態が変わったサブレーンだけ書き換える(書き込みはstyle再計算を誘発するため)。
@@ -1546,7 +1547,25 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
       else delete el.dataset.rhythmTouchspan;
     });
   };
-  const clear=()=>{touchStates.clear();applyTouchSpanGlow();};
+  const clear=()=>{touchStates.clear();physicalTargetTimes.clear();applyTouchSpanGlow();};
+  // 1回の物理接触から出す接触幅用の疑似TAPは、中心入力が取ったノーツと同じ時刻だけを補う。
+  // 中心に対象が無い場合は最初の疑似TAPが時刻を決め、同じ接触の残りもそこへ束ねる。
+  // これで同時押し・幅広ノーツは維持しつつ、88ms先など別時刻のTAPを先食いしない。
+  const recordPhysicalTarget=(key,target)=>{
+    const value=String(key);
+    if(!value.startsWith('touch:'))return;
+    const noteTime=Number(target?.timeMs);
+    if(Number.isFinite(noteTime))physicalTargetTimes.set(value,noteTime);
+    else physicalTargetTimes.delete(value);
+  };
+  const syntheticTargetTime=key=>{
+    const source=syntheticTapSources.get(String(key));
+    return source&&physicalTargetTimes.has(source)?physicalTargetTimes.get(source):null;
+  };
+  const claimSyntheticTarget=(key,target)=>{
+    const source=syntheticTapSources.get(String(key)),noteTime=Number(target?.timeMs);
+    if(source&&!physicalTargetTimes.has(source)&&Number.isFinite(noteTime))physicalTargetTimes.set(source,noteTime);
+  };
   const startOrMove=(event,isStart)=>{
     if(typeof document==='undefined')return;
     const eventArea=event.target?.closest?.('[data-rhythm-play-area]'),fallbackArea=document.querySelector('[data-rhythm-play-area]'),area=eventArea||fallbackArea;
@@ -1585,7 +1604,7 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
           const baseKey=`touch:${action.id}`;
           if(RHYTHM_GESTURE_RUNTIME._sessions?.has(baseKey))return;
           eligible=true;
-          action.entered.filter(lane=>lane!==action.next.centerSubLane).forEach(lane=>dispatchTapProbe(area,action.touch,lane));
+          action.entered.filter(lane=>lane!==action.next.centerSubLane).forEach(lane=>dispatchTapProbe(area,action.touch,lane,baseKey));
         });
         if(!eligible)RHYTHM_NOTE_SE_RUNTIME.markInputGroupHandled?.();
         applyTouchSpanGlow();
@@ -1599,12 +1618,12 @@ const RHYTHM_TOUCH_SPAN_RUNTIME=(()=>{
     document.head.appendChild(style);
     document.addEventListener('touchstart',event=>startOrMove(event,true),{capture:true,passive:true});
     document.addEventListener('touchmove',event=>{if(Array.from(event.changedTouches||[]).some(touch=>touchStates.has(Number(touch.identifier))))startOrMove(event,false);},{capture:true,passive:true});
-    const finish=event=>{Array.from(event.changedTouches||[]).forEach(touch=>touchStates.delete(Number(touch.identifier)));defer(applyTouchSpanGlow);};
+    const finish=event=>{Array.from(event.changedTouches||[]).forEach(touch=>{touchStates.delete(Number(touch.identifier));physicalTargetTimes.delete(`touch:${touch.identifier}`);});defer(applyTouchSpanGlow);};
     document.addEventListener('touchend',finish,{capture:true,passive:true});
     document.addEventListener('touchcancel',finish,{capture:true,passive:true});
     document.addEventListener('click',event=>{if(event.target?.closest?.('[data-rhythm-pause],[data-rhythm-pause-menu] button'))clear();},true);
   }
-  return {contactsForTouch,isSyntheticTapKey:key=>syntheticTapKeys.has(String(key)),clear,_touchStates:touchStates,_syntheticTapKeys:syntheticTapKeys,_stabilizedMoveTouch:stabilizedMoveTouch,_radiusExpansionAccepted:radiusExpansionAccepted};
+  return {contactsForTouch,isSyntheticTapKey:key=>syntheticTapKeys.has(String(key)),recordPhysicalTarget,syntheticTargetTime,claimSyntheticTarget,clear,_touchStates:touchStates,_syntheticTapKeys:syntheticTapKeys,_syntheticTapSources:syntheticTapSources,_physicalTargetTimes:physicalTargetTimes,_stabilizedMoveTouch:stabilizedMoveTouch,_radiusExpansionAccepted:radiusExpansionAccepted};
 })();
 
 // 入力候補は判定時刻±RHYTHM_INPUT_MATCH_WINDOW_ms(=いちばん外側の判定窓)だけ見ればよい。以前は1入力ごとに全ノーツを
@@ -1652,7 +1671,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     const key=String(input?.inputKey??'');
     if(!key||seenInputs.has(key))return {input,target:null,deltaMs:null};
     seenInputs.add(key);
-    const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate),tapOnly=RHYTHM_TOUCH_SPAN_RUNTIME.isSyntheticTapKey(key);
+    const lane=Number(input?.lane),subCoordinate=Number(input?.subLaneCoordinate),tapOnly=RHYTHM_TOUCH_SPAN_RUNTIME.isSyntheticTapKey(key),syntheticTime=RHYTHM_TOUCH_SPAN_RUNTIME.syntheticTargetTime(key);
     const inputSpan=note=>{
       if(rhythmNoteHasVariableSpan(note)){
         const span=rhythmProjectSubLaneSpan(note.subLane,note.subLaneWidth,1);
@@ -1736,6 +1755,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
       const note=source[index];
       if(claimed.has(index)||!note||note.done||note.activePointerId!==null||!RHYTHM_NOTE_TYPES.includes(note.type)||tapOnly&&note.type!=='TAP')continue;
       const noteTime=Number(note.timeMs)+offset;
+      if(tapOnly&&Number.isFinite(syntheticTime)&&Math.abs(Number(note.timeMs)-syntheticTime)>.001)continue;
       const timeDistance=Math.abs(now-noteTime);
       if(!(timeDistance<=RHYTHM_INPUT_MATCH_WINDOW_MS)||!acceptsPosition(note))continue;
       const distance=spatialDistance(note),inside=isInside(note);
@@ -1803,6 +1823,7 @@ const rhythmMatchInputBatch=(notes,inputs,nowMs,offsetMs=0)=>{
     }
     if(!picked)return {input,target:null,deltaMs:null};
     claimed.add(pickedIndex);
+    if(tapOnly)RHYTHM_TOUCH_SPAN_RUNTIME.claimSyntheticTarget(key,picked);
     // 浮いていたSLIDEを引き継ぐときは、bind へ「元の種類」を渡す。
     // bind が note.type を 'HOLD' へ書き換えているので、picked.type だけを見ると
     // 持ち替えた瞬間にSLIDEが普通のHOLDへ変わり、経路の追従が消える

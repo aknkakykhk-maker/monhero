@@ -149,6 +149,8 @@ node tools/build.js --check
 
 `node mode/rhythm-input-scenario-check.js` は、本番の入力関数を Node で動かし、実機の確認項目（高速TAP・交互・隣接・端レーン・同時押し・HOLD・HOLD+TAP・持ち替え2通り・SLIDE・SLIDE+TAP・FLICK・終点フリック・入力の古さの補正・リスタート）を1つの表で確かめる。検査側の `tick` は本体の `visitNote` と同じ順・同じ条件で書く。
 
+`node mode/rhythm-residual-tap-rejudge-check.js` は、TAP成功後に残った同じ指がサブレーン境界付近で数px揺れても未来TAPを再判定しないこと、明確な横移動なら従来どおり再判定すること、1回の物理接触から出る接触幅用の疑似TAPが同時刻だけを補って88ms先など別時刻へ分散しないことを実処理で確認する。
+
 `node mode/rhythm-hand-simulate.js` は、両手の指のシミュレート（ビームサーチで数ノーツ先まで見る）の合成テスト。「いまだけ見れば左手が楽だが、左手を使うと次が取れない」配置でその場最適が押せないと言い、先読みが押し方を見つけること、本当に押せない配置は押せないままであることを固定する。STEP6・STEP7・生成器・品質レポートはこのシミュレートを共通で使う。
 
 `node mode/rhythm-chart-quality-report.js --all [--baseline <dir>] [--write]` は、自動生成した譜面を6つの軸（押せる／音／読める／流れ／飽きない／難易度なり）で数値化する。impossible が1件でもあれば不合格。`--baseline` で前回の JSON と比べ、↑↓を付ける。パイプライン（`rhythm-chart-v3-pipeline.js`）が自動修正のあとに呼ぶ。
