@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c0b8a5f7957e319d
+// source-sha256: ef7044f3760cc9b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 223617980490a024
+// generated-sha256: 0d084b98052a1ea8
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-09 19:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-09 19:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9278,11 +9278,23 @@ const prefersReducedMotion = () => {
 // 丸の外側になる右上の角へ置く。角は丸の外なので、染色した絵をマークが隠さない。
 // 虹★・転生バッジは絵の下なので、そちらとも重ならない。
 // 画像は増やさず、CSSのグラデーションと「超」の文字だけで作る。
+const SOUL_RANK_BADGE_LABELS = Object.freeze(['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ']);
 const TranscendenceBadge = ({
   transcended = false,
+  soulRankStage = 0,
   className = '',
   small = false
 }) => {
+  const stage = normalizeSoulRankStage(soulRankStage);
+  if (stage > 0) {
+    const label = SOUL_RANK_BADGE_LABELS[stage];
+    return /*#__PURE__*/React.createElement("span", {
+      className: `mh-soul-rank-badge is-stage-${stage}${small ? ' is-small' : ''} ${className}`,
+      "aria-label": `魂格${label}`
+    }, /*#__PURE__*/React.createElement("b", {
+      "aria-hidden": "true"
+    }, label));
+  }
   if (!transcended) return null;
   return /*#__PURE__*/React.createElement("span", {
     className: `mh-transcend-badge${small ? ' is-small' : ''} ${className}`,
@@ -23025,6 +23037,7 @@ function MonsterHeroGame() {
       className: "mh-rebirth-stars-overlay"
     }), masu && /*#__PURE__*/React.createElement(TranscendenceBadge, {
       transcended: normalizeMasuProgression(masu).transcended,
+      soulRankStage: normalizeMasuProgression(masu).soulRankStage,
       small: true
     }), badge, masu && /*#__PURE__*/React.createElement(ReincarnateAura, {
       count: masu.reincarnateCount,
@@ -34663,7 +34676,8 @@ function MonsterHeroGame() {
       count: norm.rebirthCount,
       className: "mh-rebirth-stars-overlay"
     }), /*#__PURE__*/React.createElement(TranscendenceBadge, {
-      transcended: norm.transcended
+      transcended: norm.transcended,
+      soulRankStage: norm.soulRankStage
     }))), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-w-0 space-y-1"
     }, /*#__PURE__*/React.createElement("div", {
@@ -38078,7 +38092,8 @@ function MonsterHeroGame() {
         count: selected.rebirthCount,
         className: "mh-rebirth-stars-overlay"
       }), /*#__PURE__*/React.createElement(TranscendenceBadge, {
-        transcended: normalized.transcended
+        transcended: normalized.transcended,
+        soulRankStage: normalized.soulRankStage
       })), /*#__PURE__*/React.createElement("div", {
         className: "min-w-0"
       }, /*#__PURE__*/React.createElement("b", {
@@ -40713,6 +40728,7 @@ function MonsterHeroGame() {
         className: "w-full h-full object-cover"
       })), /*#__PURE__*/React.createElement(TranscendenceBadge, {
         transcended: normalizeMasuProgression(m).transcended,
+        soulRankStage: normalizeMasuProgression(m).soulRankStage,
         small: true
       })), /*#__PURE__*/React.createElement("b", {
         className: "mt-1 block truncate"
@@ -46555,6 +46571,7 @@ function MonsterHeroGame() {
         className: "w-full h-full object-cover"
       })), /*#__PURE__*/React.createElement(TranscendenceBadge, {
         transcended: normalized.transcended,
+        soulRankStage: normalized.soulRankStage,
         small: true
       }))), /*#__PURE__*/React.createElement("div", {
         "data-transcend-enhance-tabs": true,
@@ -54581,6 +54598,17 @@ const createAnimationStyle = () => {
     .mh-transcend-badge{position:absolute;right:-7px;top:-7px;z-index:7;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;border:1.5px solid #fff7d6;background:conic-gradient(from 210deg,#fde68a,#f472b6,#60a5fa,#34d399,#fde68a);box-shadow:0 0 7px #fde68acc,0 0 14px #f472b666,0 1px 4px #020617;pointer-events:none}
     .mh-transcend-badge>b{display:block;color:#3b1d05;font-size:10px;font-weight:1000;line-height:1;text-shadow:0 1px 0 #fff9}
     .mh-transcend-badge.is-small{width:15px;height:15px;right:-8px;top:-8px;border-width:1px}.mh-transcend-badge.is-small>b{font-size:8px}
+    /* 魂格バッジ。超越マークと同じ位置・サイズを再利用し、魂格Ⅰ以上では「超」を置換する。
+       魂格Ⅴも常時アニメーションは付けず、静的な虹グラデーションだけにする。 */
+    .mh-soul-rank-badge{position:absolute;right:-7px;top:-7px;z-index:7;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 7px #fff5,0 1px 4px #020617;pointer-events:none}
+    .mh-soul-rank-badge>b{display:block;color:#fff;font-size:9px;font-weight:1000;line-height:1;text-shadow:0 1px 2px #020617,0 0 3px #020617}
+    .mh-soul-rank-badge.is-small{width:15px;height:15px;right:-8px;top:-8px;border-width:1px}.mh-soul-rank-badge.is-small>b{font-size:7px}
+    .mh-soul-rank-badge.is-stage-1{background:linear-gradient(135deg,#1d4ed8,#60a5fa)}
+    .mh-soul-rank-badge.is-stage-2{background:linear-gradient(135deg,#ca8a04,#fde047);color:#3f2a00}
+    .mh-soul-rank-badge.is-stage-2>b{color:#3f2a00;text-shadow:0 1px 0 #fff8}
+    .mh-soul-rank-badge.is-stage-3{background:linear-gradient(135deg,#15803d,#4ade80)}
+    .mh-soul-rank-badge.is-stage-4{background:linear-gradient(135deg,#b91c1c,#fb7185)}
+    .mh-soul-rank-badge.is-stage-5{background:conic-gradient(from 210deg,#f87171,#facc15,#4ade80,#60a5fa,#a78bfa,#f472b6,#f87171)}
     .mh-transcend-link{border-color:#fcd34daa;background:linear-gradient(135deg,#4c1d95aa,#78350faa)}
     /* 超越の演出。3〜5秒で一度だけ流す。終わったら要素ごと消えるので常時アニメは残らない */
     .mh-transcend-animation{position:fixed;inset:0;z-index:51500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 46%,#3b0764 0,#0b0518 42%,#020617 76%);pointer-events:auto;touch-action:none;padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}

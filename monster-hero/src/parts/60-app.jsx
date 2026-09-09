@@ -1218,7 +1218,7 @@ function MonsterHeroGame() {
               : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
         </div>
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
-        {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} small/>}
+        {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} soulRankStage={normalizeMasuProgression(masu).soulRankStage} small/>}
         {badge}
         {masu&&<ReincarnateAura count={masu.reincarnateCount} className="is-small"/>}
       </div>
@@ -9106,7 +9106,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               ? <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt={mon.name} masuColors={mon.colors} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-4xl">{mon.emoji}</div>}
           </div>
-          {masu && <><ReincarnateAura count={norm.reincarnateCount}/><RebirthStars count={norm.rebirthCount} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={norm.transcended}/></>}
+          {masu && <><ReincarnateAura count={norm.reincarnateCount}/><RebirthStars count={norm.rebirthCount} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={norm.transcended} soulRankStage={norm.soulRankStage}/></>}
         </div>
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start gap-1.5 min-w-0">
@@ -10065,7 +10065,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex items-center gap-2 mb-2 shrink-0"><button disabled={transcendProcessingRef.current} onClick={()=>{setTranscendSelectedId(null);setTranscendError('');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-amber-200">超越の儀式</h2></div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2.5">
               <div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3">
-                <div className="relative w-20 h-20 rounded-full overflow-visible shrink-0"><div className="w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/></div><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={normalized.transcended}/></div>
+                <div className="relative w-20 h-20 rounded-full overflow-visible shrink-0"><div className="w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/></div><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage}/></div>
                 <div className="min-w-0">
                   <b className="block truncate">{selected.name}</b>
                   <div className="text-pink-300 text-xs">Lv.{lvl.level} / {normalized.levelCap}</div>
@@ -10687,7 +10687,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {masuMons.length===0
                   ? <p className="rounded-2xl border border-white/10 bg-slate-900/90 p-4 text-center text-[10px] text-slate-400">所持マスモンがありません。</p>
                   : <>
-                    <div className="grid grid-cols-3 gap-1.5">{masuMons.map(m=><button key={m.id} data-transcend-debug-candidate onClick={()=>setTranscendDebugId(m.id)} className={`min-h-[62px] rounded-xl p-1 text-[8px] font-black ${String(m.id)===String(transcendDebugId)?'bg-amber-900 border-2 border-amber-300 text-amber-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><span className="relative mx-auto block w-8 h-8"><span className="block w-8 h-8 overflow-hidden rounded-full"><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)} className="w-full h-full object-cover"/></span><TranscendenceBadge transcended={normalizeMasuProgression(m).transcended} small/></span><b className="mt-1 block truncate">{m.name}</b><small className="block">Lv.{masuBondLevelInfo(m).level}／{normalizeMasuProgression(m).rebirthCount}凸</small></button>)}</div>
+                    <div className="grid grid-cols-3 gap-1.5">{masuMons.map(m=><button key={m.id} data-transcend-debug-candidate onClick={()=>setTranscendDebugId(m.id)} className={`min-h-[62px] rounded-xl p-1 text-[8px] font-black ${String(m.id)===String(transcendDebugId)?'bg-amber-900 border-2 border-amber-300 text-amber-100':'bg-slate-900 border border-white/10 text-slate-400'}`}><span className="relative mx-auto block w-8 h-8"><span className="block w-8 h-8 overflow-hidden rounded-full"><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)} className="w-full h-full object-cover"/></span><TranscendenceBadge transcended={normalizeMasuProgression(m).transcended} soulRankStage={normalizeMasuProgression(m).soulRankStage} small/></span><b className="mt-1 block truncate">{m.name}</b><small className="block">Lv.{masuBondLevelInfo(m).level}／{normalizeMasuProgression(m).rebirthCount}凸</small></button>)}</div>
                     {selected&&<div className="mt-2 rounded-2xl border border-white/10 bg-slate-900/90 p-3 space-y-1 text-[10px] text-slate-300">
                       <div className="flex justify-between"><span>{selected.name}</span><b className="text-white">Lv.{level}／上限{norm.levelCap}／{norm.rebirthCount}凸</b></div>
                       <div className="flex justify-between"><span>超越</span><b className="text-white">{norm.transcended?'済み':'まだ'}／超越P {norm.transcendPoints}／基礎+適性 {transcendAptBoostTotal(selected)}段階</b></div>
@@ -13331,7 +13331,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
                 <span className="relative inline-block w-9 h-9 shrink-0">
                   <span className="block w-9 h-9 overflow-hidden rounded-full border border-sky-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></span>
-                  <TranscendenceBadge transcended={normalized.transcended} small/>
+                  <TranscendenceBadge transcended={normalized.transcended} soulRankStage={normalized.soulRankStage} small/>
                 </span>
               </div>
               <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
