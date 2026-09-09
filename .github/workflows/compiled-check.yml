@@ -56,8 +56,8 @@ jobs:
       - name: Inspect soul rank ranking display (temporary)
         shell: bash
         run: |
-          echo "=== ranking monster detail render ==="
-          sed -n '16030,16280p' monster-hero/src/parts/60-app.jsx
+          echo "=== common detail soul section ==="
+          grep -n -C 28 -E "data-soul-trait-entry|soulSpentPointsSnapshot|魂格特性|renderMonsterDetailModal" monster-hero/src/parts/60-app.jsx | head -n 700 || true
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
