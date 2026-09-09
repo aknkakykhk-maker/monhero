@@ -12006,25 +12006,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   const canBuy = !comingSoon && !owned && balance>=item.cost;
                   const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
                   const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
+                  const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
+                  const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
                   return (
-                    <MarketProductCard
-                      key={item.id} item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
-                      onZoom={()=>setMarketIconZoom(item)} onBuy={()=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}
-                      detail={detailMon||detailTeaching}
-                      onDetail={()=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
-                      middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
-                    />
+                    <React.Fragment key={item.id}>
+                      <MarketProductCard
+                        item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
+                        onZoom={()=>setMarketIconZoom(item)} onBuy={()=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}
+                        detail={detailMon||detailTeaching}
+                        onDetail={()=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
+                        middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
+                      />
+                      {exchangeItem&&<MarketProductCard
+                        item={exchangeItem} owned={false} comingSoon={false}
+                        canBuy={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)>0&&!marketPurchaseProcessingRef.current}
+                        disabled={marketPurchaseProcessingRef.current}
+                        onBuy={exchangeSoulRankRespecByProof}
+                        middle={<span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>}
+                      />}
+                    </React.Fragment>
                   );
                 })}
-                {marketTab==='item'&&(()=>{const item=BREEDER_MARKET_ITEMS.find(entry=>entry.id===SOUL_RANK_RESPEC_ITEM_ID);if(!item)return null;const exchangeItem={...item,currency:'heroProof',cost:1};return(
-                  <MarketProductCard
-                    key={`${SOUL_RANK_RESPEC_ITEM_ID}-hero-proof`} item={exchangeItem} owned={false} comingSoon={false}
-                    canBuy={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)>0&&!marketPurchaseProcessingRef.current}
-                    disabled={marketPurchaseProcessingRef.current}
-                    onBuy={exchangeSoulRankRespecByProof}
-                    middle={<span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>}
-                  />
-                );})()}
               </div>
             )}
             </div>
