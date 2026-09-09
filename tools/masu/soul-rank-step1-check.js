@@ -136,11 +136,7 @@ check('新規マスモンも魂格の初期値を明示する',
 check('魂格STEP1で新しいmh_*保存キーを増やしていない',
   !/['"]mh_soul/i.test(source));
 
-// STEP1の対象外を誤って始めていないこと。
-check('STEP2以降の魂格進化UI・勇者の証・戦闘特性はまだ実装しない',
-  !source.includes("setGameState('MASU_SOUL_RANK')")
-  && !source.includes("const HERO_PROOF_ITEM_ID")
-  && !source.includes("const SOUL_TRAIT_DEFINITIONS"));
+// STEP1検査は基盤だけを固定する。STEP2以降が追加されても、この回帰条件自体は維持する。
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\n魂格STEP1: すべてOK');
 process.exit(failed ? 1 : 0);
