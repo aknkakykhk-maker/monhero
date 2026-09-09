@@ -72,12 +72,103 @@ const soulRankLevelCap = (stage) =>
   SOUL_RANK_BASE_LEVEL + normalizeSoulRankStage(stage) * SOUL_RANK_LEVELS_PER_STAGE;
 const normalizeSoulPointMaxReachedLevel = (value) =>
   Math.max(SOUL_RANK_BASE_LEVEL, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(value) || SOUL_RANK_BASE_LEVEL)));
+const SOUL_TRAIT_DEFINITIONS = Object.freeze([
+  // 攻撃: 本人の攻撃だけへ適用。戦闘接続はSTEP4でこのIDを正本として行う。
+  Object.freeze({ id:'allDamage', category:'attack', name:'闘魂', desc:'本人の全攻撃ダメージ +1%', costPerLevel:5, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'uniqueDamage', category:'attack', name:'奥義', desc:'本人の固有技ダメージ +1%', costPerLevel:4, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'normalDamage', category:'attack', name:'武技', desc:'本人の通常技・距離技ダメージ +1%', costPerLevel:4, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'rangeZeroDamage', category:'attack', name:'零距離の極意', desc:'本人の零距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'rangeNearDamage', category:'attack', name:'近距離の極意', desc:'本人の近距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'rangeMidDamage', category:'attack', name:'中距離の極意', desc:'本人の中距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'rangeFarDamage', category:'attack', name:'遠距離の極意', desc:'本人の遠距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'comboFinalDamage', category:'attack', name:'連撃強化', desc:'本人の連撃・追撃の最終ダメージ +1%', costPerLevel:4, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'critRate', category:'attack', name:'会心眼', desc:'本人の会心率 +1pt', costPerLevel:4, effectPerLevel:1, unit:'pt', maxLevel:100 }),
+  Object.freeze({ id:'critDamage', category:'attack', name:'会心極', desc:'本人の会心ダメージ +1%', costPerLevel:3, effectPerLevel:1, unit:'%' }),
+  // 防御: パーティ効果。同種合成・特殊防御統合はSTEP4で接続する。
+  Object.freeze({ id:'partyDamageReduction', category:'defense', name:'鉄壁', desc:'パーティ被ダメージ -1%', costPerLevel:20, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'partyEvasion', category:'defense', name:'残像', desc:'パーティ回避 +1pt', costPerLevel:30, effectPerLevel:1, unit:'pt', maxLevel:75 }),
+  Object.freeze({ id:'partyReflect', category:'defense', name:'鏡返し', desc:'パーティ反射 +1pt', costPerLevel:60, effectPerLevel:1, unit:'pt', maxLevel:75 }),
+  Object.freeze({ id:'partyAbsorb', category:'defense', name:'吸収', desc:'パーティ吸収 +1pt', costPerLevel:60, effectPerLevel:1, unit:'pt', maxLevel:75 }),
+  Object.freeze({ id:'enemyDisable', category:'defense', name:'威圧', desc:'敵の行動不能率 +1pt', costPerLevel:25, effectPerLevel:1, unit:'pt', maxLevel:100 }),
+  // 補助
+  Object.freeze({ id:'gutsCostReduction', category:'support', name:'省気', desc:'本人のカード消費ガッツ -1%', costPerLevel:10, effectPerLevel:1, unit:'%', maxLevel:100 }),
+  Object.freeze({ id:'autoGutsRecovery', category:'support', name:'自動ガッツ回復強化', desc:'パーティの実際の自動ガッツ回復量 +1%', costPerLevel:10, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'coordination', category:'support', name:'連携', desc:'使用可能カード枚数 +1', costPerLevel:200, effectPerLevel:1, unit:'枚', maxLevel:1 }),
+]);
+const SOUL_TRAIT_BY_ID = Object.freeze(Object.fromEntries(SOUL_TRAIT_DEFINITIONS.map(trait => [trait.id, trait])));
+const SOUL_TRAIT_CATEGORIES = Object.freeze([
+  Object.freeze({ id:'attack', label:'攻撃' }),
+  Object.freeze({ id:'defense', label:'防御' }),
+  Object.freeze({ id:'support', label:'補助' }),
+]);
 const normalizeSoulTraitLevels = (value) => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-  return Object.fromEntries(Object.entries(value)
-    .map(([key, level]) => [String(key), Math.max(0, Math.floor(Number(level) || 0))])
-    .filter(([key, level]) => key && level > 0));
+  const out = {};
+  Object.entries(value).forEach(([rawKey, rawLevel]) => {
+    const key = String(rawKey);
+    const trait = SOUL_TRAIT_BY_ID[key];
+    if (!trait) return;
+    const level = Math.max(0, Math.floor(Number(rawLevel) || 0));
+    const capped = Number.isFinite(trait.maxLevel) ? Math.min(trait.maxLevel, level) : level;
+    if (capped > 0) out[key] = capped;
+  });
+  return out;
 };
+const soulPointEarned = (masu) =>
+  Math.max(0, Math.min(500, normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel) - SOUL_RANK_BASE_LEVEL));
+const soulTraitLevel = (masu, traitId) =>
+  Math.max(0, Math.floor(Number(normalizeSoulTraitLevels(masu?.soulTraitLevels)[traitId]) || 0));
+const soulTraitEffectValue = (masu, traitId) => {
+  const trait = SOUL_TRAIT_BY_ID[traitId];
+  return trait ? soulTraitLevel(masu, traitId) * trait.effectPerLevel : 0;
+};
+const soulTraitSpentPoints = (masu) => {
+  const levels = normalizeSoulTraitLevels(masu?.soulTraitLevels);
+  return SOUL_TRAIT_DEFINITIONS.reduce((sum, trait) =>
+    sum + Math.max(0, Math.floor(Number(levels[trait.id]) || 0)) * trait.costPerLevel, 0);
+};
+const soulTraitAvailablePoints = (masu) =>
+  Math.max(0, soulPointEarned(masu) - soulTraitSpentPoints(masu));
+const maxSoulTraitUpgradeLevels = (masu, traitId) => {
+  const normalized = normalizeMasuProgression(masu);
+  const trait = SOUL_TRAIT_BY_ID[traitId];
+  if (!trait || normalized.soulRankStage < 1) return 0;
+  const byPoints = Math.floor(soulTraitAvailablePoints(normalized) / trait.costPerLevel);
+  const current = soulTraitLevel(normalized, traitId);
+  const byCap = Number.isFinite(trait.maxLevel) ? Math.max(0, trait.maxLevel - current) : byPoints;
+  return Math.max(0, Math.min(byPoints, byCap));
+};
+const buildSoulTraitUpgrade = (masu, traitId, requestedLevels = 1) => {
+  const normalized = normalizeMasuProgression(masu);
+  const trait = SOUL_TRAIT_BY_ID[traitId];
+  if (!trait || normalized.soulRankStage < 1) return null;
+  const levels = Math.max(0, Math.floor(Number(requestedLevels) || 0));
+  const maxLevels = maxSoulTraitUpgradeLevels(normalized, traitId);
+  if (levels <= 0 || levels > maxLevels) return null;
+  const currentLevel = soulTraitLevel(normalized, traitId);
+  const nextLevel = currentLevel + levels;
+  const cost = levels * trait.costPerLevel;
+  const soulTraitLevels = { ...normalizeSoulTraitLevels(normalized.soulTraitLevels), [traitId]:nextLevel };
+  return {
+    trait, levels, cost, currentLevel, nextLevel,
+    beforeEffect:currentLevel * trait.effectPerLevel,
+    afterEffect:nextLevel * trait.effectPerLevel,
+    beforeAvailable:soulTraitAvailablePoints(normalized),
+    afterAvailable:soulTraitAvailablePoints(normalized) - cost,
+    nextMasu:{ ...normalized, soulTraitLevels },
+  };
+};
+const buildMasuSoulTraitReset = (masu) => {
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = soulTraitSpentPoints(normalized);
+  if (refundedPoints <= 0) return null;
+  return {
+    refundedPoints,
+    nextMasu:{ ...normalized, soulTraitLevels:{} },
+  };
+};
+const SOUL_RANK_RESPEC_ITEM_ID = 'soul_rank_respec_scroll';
+const SOUL_RANK_RESPEC_DIAMOND_COST = 1000000;
 const TRANSCEND_PSYCHE_COST = 5000;
 const TRANSCEND_DIAMOND_COST = 1000000;
 // Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
@@ -1310,7 +1401,7 @@ const monsterPowerParts = (mon) => {
 const monsterPowerOf = (mon) => Math.round(monsterPowerParts(mon).total);
 // 保存データのマスモンから総合力を出す。詳細画面と同じ解決(mergeMasuIntoMon)を通してから
 // 同じ式へ渡すので、ベース値と強化値の二重加算は起きない
-const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu));
+const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu)) + soulTraitSpentPoints(masu) * 10;
 // 第3段階で新旧表現を併記する新規個体は、保存前に能力・適性・総合力が一致することを確認する。
 // 既存個体のロードには使わないため、旧データを補完・書換えする処理にはならない。
 const masuBaselineRepresentationsMatch = (masu) => {
