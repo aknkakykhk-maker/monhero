@@ -82,7 +82,7 @@ const SOUL_TRAIT_DEFINITIONS = Object.freeze([
   Object.freeze({ id:'rangeMidDamage', category:'attack', name:'中距離の極意', desc:'本人の中距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
   Object.freeze({ id:'rangeFarDamage', category:'attack', name:'遠距離の極意', desc:'本人の遠距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
   Object.freeze({ id:'comboFinalDamage', category:'attack', name:'連撃強化', desc:'本人の連撃・追撃の最終ダメージ +1%', costPerLevel:4, effectPerLevel:1, unit:'%' }),
-  Object.freeze({ id:'critRate', category:'attack', name:'会心眼', desc:'本人の会心率 +1pt', costPerLevel:4, effectPerLevel:1, unit:'pt', maxLevel:100 }),
+  Object.freeze({ id:'critRate', category:'attack', name:'会心眼', desc:'本人の会心率 +1pt', costPerLevel:4, effectPerLevel:1, unit:'pt', maxLevel:90 }),
   Object.freeze({ id:'critDamage', category:'attack', name:'会心極', desc:'本人の会心ダメージ +1%', costPerLevel:3, effectPerLevel:1, unit:'%' }),
   // 防御: パーティ効果。同種合成・特殊防御統合はSTEP4で接続する。
   Object.freeze({ id:'partyDamageReduction', category:'defense', name:'鉄壁', desc:'パーティ被ダメージ -1%', costPerLevel:20, effectPerLevel:1, unit:'%' }),
