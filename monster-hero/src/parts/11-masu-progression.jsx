@@ -227,6 +227,37 @@ const soulTraitPartyPreview = (masus) => {
     intimidate, autoGutsMultiplier, coordinationCardBonus:coordination ? 1 : 0,
   };
 };
+// 回避・反射・吸収の確率ソースを統一する。既存勇者特性と魂格を同種ごとに乗算合成し、
+// 発動率は max(E,R,A) の75%上限、発動後の結果は E:R:A 比率で1つだけ選ぶ。
+const buildUnifiedSpecialDefense = ({
+  soulEvasion=0, soulReflect=0, soulAbsorb=0,
+  existingEvasion=0, existingReflect=0, existingAbsorb=0,
+} = {}) => {
+  const evasion = combineSoulProbabilityPoints([existingEvasion, soulEvasion]);
+  const reflect = combineSoulProbabilityPoints([existingReflect, soulReflect]);
+  const absorb = combineSoulProbabilityPoints([existingAbsorb, soulAbsorb]);
+  const rate = Math.min(75, Math.max(evasion, reflect, absorb));
+  const total = evasion + reflect + absorb;
+  const mix = total > 0
+    ? { evasion:evasion/total, reflect:reflect/total, absorb:absorb/total }
+    : { evasion:0, reflect:0, absorb:0 };
+  return { evasion, reflect, absorb, rate, mix };
+};
+const rollUnifiedSpecialDefense = (profile, triggerRoll=Math.random(), outcomeRoll=Math.random()) => {
+  const rate = Math.max(0, Math.min(75, Number(profile?.rate) || 0));
+  const trigger = Math.max(0, Math.min(0.999999999, Number(triggerRoll) || 0));
+  if (trigger >= rate / 100) return 'none';
+  const mix = profile?.mix || {};
+  const e = Math.max(0, Number(mix.evasion) || 0);
+  const r = Math.max(0, Number(mix.reflect) || 0);
+  const a = Math.max(0, Number(mix.absorb) || 0);
+  const total = e + r + a;
+  if (total <= 0) return 'none';
+  const pick = Math.max(0, Math.min(0.999999999, Number(outcomeRoll) || 0)) * total;
+  if (pick < e) return 'evasion';
+  if (pick < e + r) return 'reflect';
+  return 'absorb';
+};
 // STEP4: 攻撃者本人へ適用する魂格特性を、予測と実処理で共通利用する。
 // 闘魂 + 技種別(奥義/武技) + 距離極意は%を合算して1つの倍率にし、途中丸めを増やさない。
 // 連撃強化だけは既存comboDmgPctへ足さず、各連撃・追撃の最終値へ掛ける別枠倍率として返す。
