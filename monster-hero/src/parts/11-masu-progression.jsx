@@ -2297,6 +2297,58 @@ const buildFusionInheritancePlan = ({ main, subs, selectedSubIds }) => {
   const inheritedEntries = entries.filter(entry=>entry.inherited);
   return { entries, inheritedEntries, inheritCount:inheritedEntries.length, inheritCost:inheritedEntries.length * FUSION_INHERIT_COST };
 };
+// 魂格継承合体。副の中で最も高い魂格が主より上なら、その差分段階の通常進化コストを
+// すべて合算して主へ上限だけ継承できる。副の魂格P最高到達Lv・特性はコピーしない。
+// 通常合体(inherit=false)では主の魂格を一切変えず、従来どおり上限超過XPは切り捨てる。
+const buildFusionSoulRankInheritancePlan = ({
+  main, subs, inherit=false, gold=0, ownedItems={},
+} = {}) => {
+  if (!main) return { eligible:false, inherit:false, ok:false, reason:'主モンが見つかりません。' };
+  const normalized = normalizeMasuProgression(main);
+  const subList = (Array.isArray(subs) ? subs : []).filter(Boolean).map(normalizeMasuProgression);
+  const currentStage = normalized.soulRankStage;
+  const targetStage = subList.reduce((max, sub) => Math.max(max, sub.soulRankStage), currentStage);
+  const eligible = targetStage > currentStage;
+  const steps = eligible
+    ? Array.from({length:targetStage-currentStage},(_,i)=>soulRankEvolutionForStage(currentStage+i+1)).filter(Boolean)
+    : [];
+  const diamondCost = steps.reduce((sum, step)=>sum+step.diamondCost,0);
+  const heroProofCost = steps.reduce((sum, step)=>sum+step.heroProofCost,0);
+  const goldHave = donationDiamondValue(gold);
+  const heroProofHave = ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID);
+  const targetLevelCap = soulRankLevelCap(targetStage);
+  const base = {
+    eligible, inherit:!!inherit, currentStage, targetStage, targetLevelCap, steps,
+    diamondCost, heroProofCost, goldHave, heroProofHave,
+    diamondShortage:Math.max(0,diamondCost-goldHave),
+    heroProofShortage:Math.max(0,heroProofCost-heroProofHave),
+  };
+  if (!eligible || !inherit) {
+    return {
+      ...base,
+      ok:true,
+      nextGold:goldHave,
+      nextOwnedItems:{...(ownedItems||{})},
+      nextMasu:normalized,
+    };
+  }
+  if (goldHave < diamondCost) return {...base,ok:false,reason:`ダイヤが足りません（あと ${(diamondCost-goldHave).toLocaleString()}）。`};
+  if (heroProofHave < heroProofCost) return {...base,ok:false,reason:`勇者の証が足りません（あと ${(heroProofCost-heroProofHave).toLocaleString()}）。`};
+  return {
+    ...base,
+    ok:true,
+    nextGold:goldHave-diamondCost,
+    nextOwnedItems:{...(ownedItems||{}),[HERO_PROOF_ITEM_ID]:heroProofHave-heroProofCost},
+    nextMasu:{
+      ...normalized,
+      soulRankStage:targetStage,
+      levelCap:targetLevelCap,
+      // 主の魂格P履歴・振り分けは維持。副の値はコピーしない。
+      soulPointMaxReachedLevel:normalized.soulPointMaxReachedLevel,
+      soulTraitLevels:normalizeSoulTraitLevels(normalized.soulTraitLevels),
+    },
+  };
+};
 // 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
 // (以前は画面だけが「レベル×100」で計算しており、実際に引かれる額の倍が表示され、
 //  そのぶんダイヤを持っていないと転生ボタンを押せない状態になっていた)
