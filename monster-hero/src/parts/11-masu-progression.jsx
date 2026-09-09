@@ -1539,7 +1539,7 @@ const monsterPowerParts = (mon) => {
 const monsterPowerOf = (mon) => Math.round(monsterPowerParts(mon).total);
 // 保存データのマスモンから総合力を出す。詳細画面と同じ解決(mergeMasuIntoMon)を通してから
 // 同じ式へ渡すので、ベース値と強化値の二重加算は起きない
-const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu)) + soulTraitSpentPoints(masu) * 10;
+const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu));
 // 第3段階で新旧表現を併記する新規個体は、保存前に能力・適性・総合力が一致することを確認する。
 // 既存個体のロードには使わないため、旧データを補完・書換えする処理にはならない。
 const masuBaselineRepresentationsMatch = (masu) => {
