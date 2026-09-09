@@ -246,11 +246,11 @@ const ReincarnateBadge = ({ count = 0, className = '' }) => {
 };
 // 一覧・詳細・HOME・演出で共有する魂格オーラ。
 const SOUL_RANK_AURA_IMAGES = {
-  1: 'images/effects/soul-rank-aura-blue.PNG',
-  2: 'images/effects/soul-rank-aura-yellow.PNG',
-  3: 'images/effects/soul-rank-aura-green.PNG',
-  4: 'images/effects/soul-rank-aura-red.PNG',
-  5: 'images/effects/soul-rank-aura-rainbow.PNG',
+  1: 'images/effects/soul_rank_I_blue.png',
+  2: 'images/effects/soul_rank_II_yellow.png',
+  3: 'images/effects/soul_rank_III_green.png',
+  4: 'images/effects/soul_rank_IV_red.png',
+  5: 'images/effects/soul_rank_V_rainbow.png',
 };
 const SOUL_RANK_AURA_TONES = { 1:'blue', 2:'yellow', 3:'green', 4:'red', 5:'rainbow' };
 const SoulRankAura = ({ soulRankStage = 0, className = '' }) => {

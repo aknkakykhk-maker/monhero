@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: aff4b5cb236862fe
+// generated-sha256: 8ee37d4001038440
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-09 20:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-09 20:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5280,11 +5280,11 @@ const ReincarnateBadge = ({ count = 0, className = '' }) => {
 };
 // 一覧・詳細・HOME・演出で共有する魂格オーラ。
 const SOUL_RANK_AURA_IMAGES = {
-  1: 'images/effects/soul-rank-aura-blue.PNG',
-  2: 'images/effects/soul-rank-aura-yellow.PNG',
-  3: 'images/effects/soul-rank-aura-green.PNG',
-  4: 'images/effects/soul-rank-aura-red.PNG',
-  5: 'images/effects/soul-rank-aura-rainbow.PNG',
+  1: 'images/effects/soul_rank_I_blue.png',
+  2: 'images/effects/soul_rank_II_yellow.png',
+  3: 'images/effects/soul_rank_III_green.png',
+  4: 'images/effects/soul_rank_IV_red.png',
+  5: 'images/effects/soul_rank_V_rainbow.png',
 };
 const SOUL_RANK_AURA_TONES = { 1:'blue', 2:'yellow', 3:'green', 4:'red', 5:'rainbow' };
 const SoulRankAura = ({ soulRankStage = 0, className = '' }) => {
