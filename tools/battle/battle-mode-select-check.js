@@ -170,6 +170,15 @@ const check = (name, ok, detail = '') => {
       check(`${difficulty}の虹のプシュケー報酬を表示する`,
         await reward.count() === 1 && text.includes(`虹のプシュケー：${amount}個`), text.trim().replace(/\s+/g, ' '));
     }
+    const heroProofRewards = { Master:1, GrandMaster:2, Hell:3, Legend:4 };
+    for (const difficulty of Object.keys(psycheRewards)) {
+      const proof = page.locator(`[data-hero-proof-reward="${difficulty}"]`);
+      const amount = heroProofRewards[difficulty] || 0;
+      const text = await proof.count() === 1 ? (await proof.textContent()).replace(/\s+/g, '') : '';
+      check(`${difficulty}の勇者の証報酬表示は対象難易度だけ`,
+        amount > 0 ? await proof.count() === 1 && text.includes(`🏅勇者の証：${amount}個`) : await proof.count() === 0,
+        text);
+    }
     // プロも実際に始められる(中身は tools/mode/pro-mode-check.js が最後まで通して確かめる)
     check('プロも「この難易度で挑戦」から始められる',
       await page.getByRole('button', { name: 'この難易度で挑戦' }).first().isEnabled());
