@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -53,28 +53,6 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-      - name: Install canvas for soul rank STEP5A verification only
-        working-directory: tools
-        run: npm install --no-save canvas@3.2.0
-      - name: Restore and verify soul rank STEP5A (temporary branch verification)
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin work/soul-rank-system
-          git checkout -B work/soul-rank-system origin/work/soul-rank-system
-          if grep -q 'data-soul-rank-inherit-fusion' monster-hero/src/parts/60-app.jsx; then
-            echo "STEP5A app connection already restored"
-          else
-            git cherry-pick 364cf4e99f63 29d3b4b949af da1dab14f4ad
-            node tools/build.js
-            git add -u
-            if ! git diff --cached --quiet; then
-              git commit -m "build: restore soul rank STEP5A into parts"
-            fi
-            git push origin work/soul-rank-system
-          fi
-          node tools/masu/soul-rank-step5a-check.js
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
