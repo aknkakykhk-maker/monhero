@@ -907,6 +907,12 @@ function MonsterHeroGame() {
   const [transcendSelectedId, setTranscendSelectedId] = useState(null);
   const [transcendError, setTranscendError] = useState('');
   const [transcendAnimation, setTranscendAnimation] = useState(null);
+  // 魂格進化STEP2: 神殿で選ぶ個体・エラー・短い成功演出。
+  // 保存は既存3キーだけを取引保存し、途中失敗で証/ダイヤだけ消える状態を作らない。
+  const [soulRankSelectedId, setSoulRankSelectedId] = useState(null);
+  const [soulRankError, setSoulRankError] = useState('');
+  const [soulRankAnimation, setSoulRankAnimation] = useState(null);
+  const soulRankProcessingRef = useRef(false);
   const [transcendPlan, setTranscendPlan] = useState(null);
   const [transcendExchangeError, setTranscendExchangeError] = useState('');
   // 超越デバッグ画面で選んでいる個体。デバッグ専用なので保存はしない
@@ -2086,6 +2092,7 @@ function MonsterHeroGame() {
     MASU_REBIRTH: 'temple',     // 限界突破ページも神殿の曲を継続する
     MASU_REINCARNATE: 'temple', // 転生ページも同じ
     MASU_TRANSCENDENCE: 'temple', // 超越ページも神殿の曲を継続する
+    MASU_SOUL_RANK: 'temple',      // 魂格進化も神殿の曲を継続する
     BREEDER_MARKET: 'market',   // マーケットページ
     TRAINING_SELECT: 'trainingMenu', TRAINING_DIFFICULTY: 'trainingMenu', TRAINING_CONFIRM: 'trainingMenu', TRAINING_RESULT: 'trainingMenu',
     TRAINING_BOARD: 'trainingBoard',
@@ -4859,6 +4866,49 @@ function MonsterHeroGame() {
       setTranscendError('超越のデータを保存できませんでした。もう一度お試しください。');
     }
   };
+  // 魂格進化: 現Lvはそのまま、次の魂格段階とLv上限だけを1段階進める。
+  // mh_masu_mons / mh_gold / mh_owned_items を既存の取引保存で同時に確定し、
+  // 保存失敗時はダイヤ・勇者の証・個体のどれも中途半端に変更しない。
+  const executeMasuSoulRankEvolution = async () => {
+    if (soulRankProcessingRef.current || !soulRankSelectedId) return;
+    const masu = masuMonsRef.current.find(m=>String(m.id)===String(soulRankSelectedId));
+    const result = buildMasuSoulRankEvolution({ masu, gold, ownedItems:ownedItemsRef.current });
+    if (!result.ok) { setSoulRankError(result.reason || '魂格進化の条件を確認してください。'); return; }
+    soulRankProcessingRef.current = true;
+    setSoulRankError('');
+    const beforeMasuMons = masuMonsRef.current;
+    const beforeOwnedItems = ownedItemsRef.current;
+    const nextMasuMons = beforeMasuMons.map(m=>String(m.id)===String(masu.id)?result.nextMasu:m);
+    try {
+      const saved = await saveStoredValuesOrRollback([
+        { key:'mh_masu_mons', before:beforeMasuMons, next:nextMasuMons },
+        { key:'mh_gold', before:gold, next:result.nextGold },
+        { key:'mh_owned_items', before:beforeOwnedItems, next:result.nextOwnedItems },
+      ], storeGet, storeSet);
+      if (!saved) throw new Error('soul rank save failed');
+      masuMonsRef.current = nextMasuMons;
+      ownedItemsRef.current = result.nextOwnedItems;
+      setMasuMons(nextMasuMons);
+      setGold(result.nextGold);
+      setOwnedItems(result.nextOwnedItems);
+      addAssistantBond('breakthrough');
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      setSoulRankAnimation({
+        masu:result.nextMasu, base, step:result.next,
+        fromStage:result.fromStage, toStage:result.toStage,
+        fromLevelCap:result.fromLevelCap, toLevelCap:result.toLevelCap,
+      });
+      setTimeout(()=>{
+        setSoulRankAnimation(null);
+        setSoulRankSelectedId(null);
+        soulRankProcessingRef.current=false;
+      }, prefersReducedMotion()?800:2400);
+    } catch {
+      soulRankProcessingRef.current=false;
+      setSoulRankError('魂格進化のデータを保存できませんでした。ダイヤと勇者の証は消費していません。');
+    }
+  };
+
   // 超越ポイントの配分を確定する。通常の強化ポイントには一切触らない
   const commitTranscendPlan = async (masu, plan) => {
     const applied = applyTranscendPlanToMasu(masu, plan);
@@ -5435,6 +5485,31 @@ function MonsterHeroGame() {
     setFinalRewardSummary(prev => ({ ...(prev || {}), psycheGain: gain }));
     return gain;
   };
+  // 勇者の証は高難度を「実際にクリアした」ときだけ反復付与する。
+  // Quick・敗北・リタイア・スキップ・保存なしデバッグは0。種族チャレンジは
+  // その難易度が実装されている場合のみ、保存する本番ランから同じ表を使う。
+  const awardHeroProofForClear = async () => {
+    const speciesRun = speciesChallengeBattleRunRef.current;
+    const gain = heroProofClearReward({
+      runMode,
+      difficulty,
+      extremeDifficulty:extremeRunRef.current ? extremeDifficulty : null,
+      speciesDifficulty:speciesRun?.difficultyId || null,
+      speciesSave:speciesRun ? speciesChallengeSaveRunRef.current : true,
+      debug:debugBattleRef.current || runHasDebugOnlyMonster(),
+    });
+    if (gain <= 0) return 0;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [HERO_PROOF_ITEM_ID]:ownedItemCount(ownedItemsRef.current, HERO_PROOF_ITEM_ID) + gain,
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    setFinalRewardSummary(prev => ({ ...(prev || {}), heroProofGain:gain }));
+    return gain;
+  };
+
   const recordClearOnce = async () => {
     if (clearRecordedRef.current) return;
     clearRecordedRef.current = true;
@@ -5442,6 +5517,7 @@ function MonsterHeroGame() {
     // チャレンジ・クイックのどちらもここを通り、clearRecordedRef が連打も二重付与も止める。
     // 敗北・リタイア・スキップチケットはこの関数を通らないので配られない
     await awardClearPsyche();
+    await awardHeroProofForClear();
     // 種族チャレンジのクリア回数は「種族×難易度」ごとに
     // mh_species_challenge_progress_v1 へ積む(persistSpeciesChallengeClearRewardが正本)。
     // チャレンジの mh_clears_* と極限の mh_extreme_clears_* はどちらも書き換えない。
