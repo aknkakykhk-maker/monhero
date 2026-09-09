@@ -5278,13 +5278,24 @@ function MonsterHeroGame() {
     // 行が実行される時点ではまだ実行されているとは限らない)の中で計算するのではなく、現在のmasuMons
     // (getMasuMon)を直接読んでこの場で同期的に計算する。以前はupdater内でのみ計算していたため、
     // タイミングによって勇者モン自身の絆経験値欄がリザルト画面に出ないことがあった
+    const bondGainResultSummary = (masu, awardGain) => {
+      if (!masu) return null;
+      const applied = applyBondXpGain(masu, awardGain, autoRepeatBondLevelCap);
+      const evolution = soulRankEvolutionStatus(applied.masu);
+      return {
+        xpGain:applied.xpGain,
+        levelBefore:applied.before,
+        levelAfter:applied.after,
+        gainedSoulPoints:applied.gainedSoulPoints || 0,
+        gainedTranscendPoints:applied.gainedTranscendPoints || 0,
+        soulRankEvolutionReady:!!(evolution.ok && evolution.levelReady),
+      };
+    };
     let heroBondGain = null;
     if (mainHero?.masuId) {
       const masu = getMasuMon(mainHero.masuId);
-      const before = bondLevelInfo(masu?.bondXp || 0);
-      const afterXp = runBondXpAfter(masu || {}, gain);
-      const after = bondLevelInfo(afterXp);
-      heroBondGain = { name: mainHero.masuName || mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain:Math.max(0,afterXp-(masu?.bondXp||0)), levelBefore: before, levelAfter: after, masuId: mainHero.masuId };
+      const growth = bondGainResultSummary(masu, gain);
+      heroBondGain = growth ? { name: mainHero.masuName || mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, ...growth, masuId: mainHero.masuId } : null;
     } else if (mainHero) {
       const before = bondLevelInfo(0);
       const after = bondLevelInfo(gain);
@@ -5294,10 +5305,8 @@ function MonsterHeroGame() {
       const masuId = award.masuId;
       const masu = getMasuMon(masuId);
       if (!masu) return null;
-      const before = masuBondLevelInfo(masu);
-      const afterXp = runBondXpAfter(masu, award.gain);
-      const after = bondLevelInfo(afterXp);
-      return { name: masu.name, xpGain:Math.max(0,afterXp-(masu.bondXp||0)), levelBefore: before, levelAfter: after, masuId };
+      const growth = bondGainResultSummary(masu, award.gain);
+      return growth ? { name:masu.name, ...growth, masuId } : null;
     }).filter(Boolean);
 
     if (bondAwards.length > 0) {
@@ -5387,9 +5396,14 @@ function MonsterHeroGame() {
         const masu = getMasuMon(masuId);
         const award = awardByMasuId.get(String(masuId));
         if (!masu || !award) return null;
-        const before = masuBondLevelInfo(masu);
-        const afterXp = cappedBondXp(masu, award.gain);
-        return { name: masu.name, xpGain: Math.max(0, afterXp - (masu.bondXp || 0)), levelBefore: before, levelAfter: bondLevelInfo(afterXp), masuId };
+        const applied = applyBondXpGain(masu, award.gain);
+        const evolution = soulRankEvolutionStatus(applied.masu);
+        return {
+          name:masu.name, xpGain:applied.xpGain, levelBefore:applied.before, levelAfter:applied.after, masuId,
+          gainedSoulPoints:applied.gainedSoulPoints || 0,
+          gainedTranscendPoints:applied.gainedTranscendPoints || 0,
+          soulRankEvolutionReady:!!(evolution.ok && evolution.levelReady),
+        };
       };
       const heroBondGain = flow.hero.masuId ? bondGainOf(flow.hero.masuId) : null;
       const allyBondGains = allies.map(a => a.masuId ? bondGainOf(a.masuId) : null).filter(Boolean);
