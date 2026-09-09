@@ -62,7 +62,7 @@ const RANKING_FUSION_MAX = 12;
 //     masuLevelCapLimit() が「超越済みなら500、未超越なら400」で決めるので、
 //     記録から組み立て直した個体に超越の印が無いと未超越として400へ丸められる。
 //     同じ理由で超越強化で振ったぶんのステータスも詳細に出ていなかった。
-const RANKING_DETAIL_VERSION = 5;
+const RANKING_DETAIL_VERSION = 6;
 const rankingMasuDetail = (masu) => {
   if (!masu) return null;
   const sp = masu.statPoints || {};
@@ -89,6 +89,10 @@ const rankingMasuDetail = (masu) => {
     transcendPoints: num(masu.transcendPoints),
     transcendStatPoints: normalizeTranscendStatPoints(masu.transcendStatPoints),
     transcendAptBoosts: normalizeTranscendAptBoosts(masu.transcendAptBoosts),
+    // 魂格(v6)。未使用Pは保存せず、記録時の段階・全振り分け・使用済みPだけ固定する。
+    soulRankStage: normalizeSoulRankStage(masu.soulRankStage),
+    soulTraitLevels: normalizeSoulTraitLevels(masu.soulTraitLevels),
+    soulSpentPoints: soulTraitSpentPoints(masu),
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // 間合い適性は「グレードの文字」の配列(['C','M','C','C'] など)。数値ではないので
     // 数に直そうとすると全部0になり、ランキング側だけ全距離Cに見えてしまう
@@ -145,6 +149,10 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     transcendPoints: num(detail.transcendPoints),
     transcendStatPoints: normalizeTranscendStatPoints(detail.transcendStatPoints),
     transcendAptBoosts: normalizeTranscendAptBoosts(detail.transcendAptBoosts),
+    // 魂格はv6から。旧記録は魂格なし・特性なしとして安全に読む。
+    soulRankStage: normalizeSoulRankStage(detail.soulRankStage),
+    soulTraitLevels: normalizeSoulTraitLevels(detail.soulTraitLevels),
+    soulSpentPointsSnapshot: Number.isFinite(Number(detail.soulSpentPoints)) ? num(detail.soulSpentPoints) : 0,
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // グレード以外(数値へ潰してしまった古い記録など)が入っていたら、その記録には
     // 間合い適性が残っていないものとして扱う。nullにしておけば血統本来の適性が出るので、
