@@ -4377,8 +4377,8 @@ function MonsterHeroGame() {
     if (item.type === 'item') setMarketQuantityItem(null);
     } finally { marketPurchaseProcessingRef.current = false; }
   };
-  // 魂格再編の書は、通常の100万ダイヤ購入に加えて同じマーケット内で
-  // 勇者の証1個→1冊へ交換できる。所持品1キーだけを検証付き保存し、失敗時は元へ戻す。
+  // 魂格再編の書は、通常の100万ダイヤ商品とは別カードで
+  // 勇者の証1個→1冊へ交換できる。同じ所持品IDだけを検証付き保存し、失敗時は元へ戻す。
   const exchangeSoulRankRespecByProof = async () => {
     if (marketPurchaseProcessingRef.current) return;
     const before = ownedItemsRef.current;
@@ -12012,10 +12012,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       onZoom={()=>setMarketIconZoom(item)} onBuy={()=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}
                       detail={detailMon||detailTeaching}
                       onDetail={()=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
-                      middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.id===SOUL_RANK_RESPEC_ITEM_ID?<button type="button" disabled={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)<=0||marketPurchaseProcessingRef.current} onClick={exchangeSoulRankRespecByProof} aria-label="勇者の証1個を魂格再編の書1冊へ交換" className="text-[8px] font-black text-amber-200 bg-amber-950/60 border border-amber-500/50 px-1 py-0.5 rounded-full active:scale-95 disabled:opacity-35 whitespace-nowrap">🏅1→交換</button>:item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
+                      middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
                     />
                   );
                 })}
+                {marketTab==='item'&&(()=>{const item=BREEDER_MARKET_ITEMS.find(entry=>entry.id===SOUL_RANK_RESPEC_ITEM_ID);if(!item)return null;const exchangeItem={...item,currency:'heroProof',cost:1};return(
+                  <MarketProductCard
+                    key={`${SOUL_RANK_RESPEC_ITEM_ID}-hero-proof`} item={exchangeItem} owned={false} comingSoon={false}
+                    canBuy={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)>0&&!marketPurchaseProcessingRef.current}
+                    disabled={marketPurchaseProcessingRef.current}
+                    onBuy={exchangeSoulRankRespecByProof}
+                    middle={<span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>}
+                  />
+                );})()}
               </div>
             )}
             </div>
