@@ -61,6 +61,7 @@ jobs:
         run: |
           cd tools
           npm ci
+          npx playwright install chromium
           cd ..
           node tools/run-checks.js --area required
       - name: Verify the committed compiled output is canonical
