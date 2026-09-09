@@ -47,6 +47,259 @@ const levelInfo = (totalXp) => {
 // 限界突破の上限(35凸)はそのままで、超越が伸ばすのは「Lv上限」だけ。
 // MAX_MASU_LEVEL_CAP は限界突破の天井として400のまま使い続けるので、36凸は作られない。
 const TRANSCEND_LEVEL_CAP = 500;
+// 魂格STEP1: 超越Lv500の先を100Lvずつ解放できる個体データ基盤。
+// STEP1では進化UI/素材消費はまだ実装せず、保存値・上限・XP・ポイント計算だけを用意する。
+const SOUL_RANK_BASE_LEVEL = 500;
+const SOUL_RANK_MAX_STAGE = 5;
+const SOUL_RANK_LEVEL_CAP = 1000;
+const SOUL_RANK_LEVELS_PER_STAGE = 100;
+const SOUL_RANK_EVOLUTION_STAGES = Object.freeze([
+  Object.freeze({ stage:1, label:'魂格Ⅰ', requiredLevel:500, levelCap:600, diamondCost:5000000, heroProofCost:20, accent:'#60a5fa' }),
+  Object.freeze({ stage:2, label:'魂格Ⅱ', requiredLevel:600, levelCap:700, diamondCost:10000000, heroProofCost:30, accent:'#facc15' }),
+  Object.freeze({ stage:3, label:'魂格Ⅲ', requiredLevel:700, levelCap:800, diamondCost:15000000, heroProofCost:40, accent:'#4ade80' }),
+  Object.freeze({ stage:4, label:'魂格Ⅳ', requiredLevel:800, levelCap:900, diamondCost:20000000, heroProofCost:50, accent:'#f87171' }),
+  Object.freeze({ stage:5, label:'魂格Ⅴ', requiredLevel:900, levelCap:1000, diamondCost:25000000, heroProofCost:60, accent:'#e879f9' }),
+]);
+const soulRankEvolutionForStage = (stage) => {
+  const target = Math.floor(Number(stage) || 0);
+  return target >= 1 && target <= SOUL_RANK_MAX_STAGE
+    ? (SOUL_RANK_EVOLUTION_STAGES.find(step => step.stage === target) || null)
+    : null;
+};
+const normalizeSoulRankStage = (value) =>
+  Math.max(0, Math.min(SOUL_RANK_MAX_STAGE, Math.floor(Number(value) || 0)));
+const soulRankLevelCap = (stage) =>
+  SOUL_RANK_BASE_LEVEL + normalizeSoulRankStage(stage) * SOUL_RANK_LEVELS_PER_STAGE;
+const normalizeSoulPointMaxReachedLevel = (value) =>
+  Math.max(SOUL_RANK_BASE_LEVEL, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(value) || SOUL_RANK_BASE_LEVEL)));
+const SOUL_TRAIT_DEFINITIONS = Object.freeze([
+  // 攻撃: 本人の攻撃だけへ適用。戦闘接続はSTEP4でこのIDを正本として行う。
+  Object.freeze({ id:'allDamage', category:'attack', name:'闘魂', desc:'本人の全攻撃ダメージ +1%', costPerLevel:5, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'uniqueDamage', category:'attack', name:'奥義', desc:'本人の固有技ダメージ +1%', costPerLevel:4, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'normalDamage', category:'attack', name:'武技', desc:'本人の通常技・距離技ダメージ +1%', costPerLevel:4, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'rangeZeroDamage', category:'attack', name:'零距離の極意', desc:'本人の零距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'rangeNearDamage', category:'attack', name:'近距離の極意', desc:'本人の近距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'rangeMidDamage', category:'attack', name:'中距離の極意', desc:'本人の中距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'rangeFarDamage', category:'attack', name:'遠距離の極意', desc:'本人の遠距離ダメージ +1%', costPerLevel:2, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'comboFinalDamage', category:'attack', name:'連撃強化', desc:'本人の連撃・追撃の最終ダメージ +1%', costPerLevel:4, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'critRate', category:'attack', name:'会心眼', desc:'本人の会心率 +1pt', costPerLevel:4, effectPerLevel:1, unit:'pt', maxLevel:90 }),
+  Object.freeze({ id:'critDamage', category:'attack', name:'会心極', desc:'本人の会心ダメージ +1%', costPerLevel:3, effectPerLevel:1, unit:'%' }),
+  // 防御: パーティ効果。同種合成・特殊防御統合はSTEP4で接続する。
+  Object.freeze({ id:'partyDamageReduction', category:'defense', name:'鉄壁', desc:'パーティ被ダメージ -1%', costPerLevel:20, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'partyEvasion', category:'defense', name:'残像', desc:'パーティ回避 +1pt', costPerLevel:30, effectPerLevel:1, unit:'pt', maxLevel:75 }),
+  Object.freeze({ id:'partyReflect', category:'defense', name:'鏡返し', desc:'パーティ反射 +1pt', costPerLevel:60, effectPerLevel:1, unit:'pt', maxLevel:75 }),
+  Object.freeze({ id:'partyAbsorb', category:'defense', name:'吸収', desc:'パーティ吸収 +1pt', costPerLevel:60, effectPerLevel:1, unit:'pt', maxLevel:75 }),
+  Object.freeze({ id:'enemyDisable', category:'defense', name:'威圧', desc:'敵の行動不能率 +1pt', costPerLevel:25, effectPerLevel:1, unit:'pt', maxLevel:100 }),
+  // 補助
+  Object.freeze({ id:'gutsCostReduction', category:'support', name:'省気', desc:'本人のカード消費ガッツ -1%', costPerLevel:10, effectPerLevel:1, unit:'%', maxLevel:100 }),
+  Object.freeze({ id:'autoGutsRecovery', category:'support', name:'自動ガッツ回復強化', desc:'パーティの実際の自動ガッツ回復量 +1%', costPerLevel:10, effectPerLevel:1, unit:'%' }),
+  Object.freeze({ id:'coordination', category:'support', name:'連携', desc:'使用可能カード枚数 +1', costPerLevel:200, effectPerLevel:1, unit:'枚', maxLevel:1 }),
+]);
+const SOUL_TRAIT_BY_ID = Object.freeze(Object.fromEntries(SOUL_TRAIT_DEFINITIONS.map(trait => [trait.id, trait])));
+const SOUL_TRAIT_CATEGORIES = Object.freeze([
+  Object.freeze({ id:'attack', label:'攻撃' }),
+  Object.freeze({ id:'defense', label:'防御' }),
+  Object.freeze({ id:'support', label:'補助' }),
+]);
+const normalizeSoulTraitLevels = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out = {};
+  Object.entries(value).forEach(([rawKey, rawLevel]) => {
+    const key = String(rawKey);
+    const trait = SOUL_TRAIT_BY_ID[key];
+    if (!trait) return;
+    const level = Math.max(0, Math.floor(Number(rawLevel) || 0));
+    const capped = Number.isFinite(trait.maxLevel) ? Math.min(trait.maxLevel, level) : level;
+    if (capped > 0) out[key] = capped;
+  });
+  return out;
+};
+const soulPointEarned = (masu) =>
+  Math.max(0, Math.min(500, normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel) - SOUL_RANK_BASE_LEVEL));
+const soulTraitLevel = (masu, traitId) =>
+  Math.max(0, Math.floor(Number(normalizeSoulTraitLevels(masu?.soulTraitLevels)[traitId]) || 0));
+const soulTraitEffectValue = (masu, traitId) => {
+  const trait = SOUL_TRAIT_BY_ID[traitId];
+  return trait ? soulTraitLevel(masu, traitId) * trait.effectPerLevel : 0;
+};
+const soulTraitSpentPoints = (masu) => {
+  const levels = normalizeSoulTraitLevels(masu?.soulTraitLevels);
+  return SOUL_TRAIT_DEFINITIONS.reduce((sum, trait) =>
+    sum + Math.max(0, Math.floor(Number(levels[trait.id]) || 0)) * trait.costPerLevel, 0);
+};
+const soulTraitAvailablePoints = (masu) =>
+  Math.max(0, soulPointEarned(masu) - soulTraitSpentPoints(masu));
+// 壊れた保存で使用済みPが獲得済みPを上回っても、追加Pを生み出さず強化を止められる診断値。
+const soulTraitPointStatus = (masu) => {
+  const earned=soulPointEarned(masu), spent=soulTraitSpentPoints(masu);
+  return { earned, spent, available:Math.max(0,earned-spent), overspent:spent>earned };
+};
+const maxSoulTraitUpgradeLevels = (masu, traitId) => {
+  const normalized = normalizeMasuProgression(masu);
+  const trait = SOUL_TRAIT_BY_ID[traitId];
+  if (!trait || normalized.soulRankStage < 1) return 0;
+  const byPoints = Math.floor(soulTraitAvailablePoints(normalized) / trait.costPerLevel);
+  const current = soulTraitLevel(normalized, traitId);
+  const byCap = Number.isFinite(trait.maxLevel) ? Math.max(0, trait.maxLevel - current) : byPoints;
+  return Math.max(0, Math.min(byPoints, byCap));
+};
+const buildSoulTraitUpgrade = (masu, traitId, requestedLevels = 1) => {
+  const normalized = normalizeMasuProgression(masu);
+  const trait = SOUL_TRAIT_BY_ID[traitId];
+  if (!trait || normalized.soulRankStage < 1) return null;
+  const levels = Math.max(0, Math.floor(Number(requestedLevels) || 0));
+  const maxLevels = maxSoulTraitUpgradeLevels(normalized, traitId);
+  if (levels <= 0 || levels > maxLevels) return null;
+  const currentLevel = soulTraitLevel(normalized, traitId);
+  const nextLevel = currentLevel + levels;
+  const cost = levels * trait.costPerLevel;
+  const soulTraitLevels = { ...normalizeSoulTraitLevels(normalized.soulTraitLevels), [traitId]:nextLevel };
+  return {
+    trait, levels, cost, currentLevel, nextLevel,
+    beforeEffect:currentLevel * trait.effectPerLevel,
+    afterEffect:nextLevel * trait.effectPerLevel,
+    beforeAvailable:soulTraitAvailablePoints(normalized),
+    afterAvailable:soulTraitAvailablePoints(normalized) - cost,
+    nextMasu:{ ...normalized, soulTraitLevels },
+  };
+};
+const buildMasuSoulTraitReset = (masu) => {
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = soulTraitSpentPoints(normalized);
+  if (refundedPoints <= 0) return null;
+  return {
+    refundedPoints,
+    nextMasu:{ ...normalized, soulTraitLevels:{} },
+  };
+};
+const SOUL_RANK_RESPEC_ITEM_ID = 'soul_rank_respec_scroll';
+const SOUL_RANK_RESPEC_DIAMOND_COST = 1000000;
+const buildSoulRankRespecProofExchange = (ownedItems, quantity = 1) => {
+  const before = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
+  const count = Math.max(1, Math.floor(Number(quantity) || 1));
+  const proofHave = ownedItemCount(before, HERO_PROOF_ITEM_ID);
+  if (proofHave < count) return { ok:false, quantity:count, proofCost:count, ownedItems:before };
+  return {
+    ok:true,
+    quantity:count,
+    proofCost:count,
+    ownedItems:{
+      ...before,
+      [HERO_PROOF_ITEM_ID]:proofHave - count,
+      [SOUL_RANK_RESPEC_ITEM_ID]:ownedItemCount(before, SOUL_RANK_RESPEC_ITEM_ID) + count,
+    },
+  };
+};
+const formatSoulTraitEffect = (traitOrId, value) => {
+  const trait = typeof traitOrId === 'string' ? SOUL_TRAIT_BY_ID[traitOrId] : traitOrId;
+  if (!trait) return '';
+  const amount = Math.max(0, Number(value) || 0);
+  if (trait.id === 'coordination') return `カード+${amount}枚`;
+  const sign = trait.id === 'partyDamageReduction' || trait.id === 'gutsCostReduction' ? '-' : '+';
+  return `${sign}${amount}${trait.unit}`;
+};
+// 同種確率・軽減率は加算せず「残り」を乗算する。値はUIと仕様に合わせてpt(0〜100)で受け返す。
+const combineSoulProbabilityPoints = (values) => {
+  const remaining = (Array.isArray(values) ? values : []).reduce((product, raw) => {
+    const rate = Math.max(0, Math.min(100, Number(raw) || 0)) / 100;
+    return product * (1 - rate);
+  }, 1);
+  return Math.max(0, Math.min(100, (1 - remaining) * 100));
+};
+const soulTraitPartyPreview = (masus) => {
+  const party = (Array.isArray(masus) ? masus : []).filter(Boolean).map(normalizeMasuProgression);
+  const values = id => party.map(masu => soulTraitEffectValue(masu, id)).filter(value => value > 0);
+  const damageReduction = combineSoulProbabilityPoints(values('partyDamageReduction'));
+  const evasion = combineSoulProbabilityPoints(values('partyEvasion'));
+  const reflect = combineSoulProbabilityPoints(values('partyReflect'));
+  const absorb = combineSoulProbabilityPoints(values('partyAbsorb'));
+  const specialDefenseRate = Math.min(75, Math.max(evasion, reflect, absorb));
+  const defenseTotal = evasion + reflect + absorb;
+  const specialDefenseMix = defenseTotal > 0
+    ? { evasion:evasion/defenseTotal, reflect:reflect/defenseTotal, absorb:absorb/defenseTotal }
+    : { evasion:0, reflect:0, absorb:0 };
+  const intimidate = combineSoulProbabilityPoints(values('enemyDisable'));
+  const autoGutsMultiplier = values('autoGutsRecovery')
+    .reduce((multiplier, point) => multiplier * (1 + point / 100), 1);
+  const coordination = party.some(masu => soulTraitLevel(masu, 'coordination') > 0);
+  return {
+    damageReduction, evasion, reflect, absorb, specialDefenseRate, specialDefenseMix,
+    intimidate, autoGutsMultiplier, coordinationCardBonus:coordination ? 1 : 0,
+  };
+};
+// 回避・反射・吸収の確率ソースを統一する。既存勇者特性と魂格を同種ごとに乗算合成し、
+// 発動率は max(E,R,A) の75%上限、発動後の結果は E:R:A 比率で1つだけ選ぶ。
+const buildUnifiedSpecialDefense = ({
+  soulEvasion=0, soulReflect=0, soulAbsorb=0,
+  existingEvasion=0, existingReflect=0, existingAbsorb=0,
+} = {}) => {
+  const evasion = combineSoulProbabilityPoints([existingEvasion, soulEvasion]);
+  const reflect = combineSoulProbabilityPoints([existingReflect, soulReflect]);
+  const absorb = combineSoulProbabilityPoints([existingAbsorb, soulAbsorb]);
+  const rate = Math.min(75, Math.max(evasion, reflect, absorb));
+  const total = evasion + reflect + absorb;
+  const mix = total > 0
+    ? { evasion:evasion/total, reflect:reflect/total, absorb:absorb/total }
+    : { evasion:0, reflect:0, absorb:0 };
+  return { evasion, reflect, absorb, rate, mix };
+};
+const rollUnifiedSpecialDefense = (profile, triggerRoll=Math.random(), outcomeRoll=Math.random()) => {
+  const rate = Math.max(0, Math.min(75, Number(profile?.rate) || 0));
+  const trigger = Math.max(0, Math.min(0.999999999, Number(triggerRoll) || 0));
+  if (trigger >= rate / 100) return 'none';
+  const mix = profile?.mix || {};
+  const e = Math.max(0, Number(mix.evasion) || 0);
+  const r = Math.max(0, Number(mix.reflect) || 0);
+  const a = Math.max(0, Number(mix.absorb) || 0);
+  const total = e + r + a;
+  if (total <= 0) return 'none';
+  const pick = Math.max(0, Math.min(0.999999999, Number(outcomeRoll) || 0)) * total;
+  if (pick < e) return 'evasion';
+  if (pick < e + r) return 'reflect';
+  return 'absorb';
+};
+// STEP4: 攻撃者本人へ適用する魂格特性を、予測と実処理で共通利用する。
+// 闘魂 + 技種別(奥義/武技) + 距離極意は%を合算して1つの倍率にし、途中丸めを増やさない。
+// 連撃強化だけは既存comboDmgPctへ足さず、各連撃・追撃の最終値へ掛ける別枠倍率として返す。
+const SOUL_ATTACK_RANGE_TRAIT_IDS = Object.freeze([
+  'rangeZeroDamage','rangeNearDamage','rangeMidDamage','rangeFarDamage',
+]);
+const soulTraitAttackProfile = (masu, card, slotIdx = null) => {
+  const normalized = normalizeMasuProgression(masu);
+  const isAttack = !!card && (['atk','range_atk','unique'].includes(card.type) || card.subType === 'stun_atsu');
+  if (normalized.soulRankStage < 1 || !isAttack) {
+    return {
+      damagePct:0, damageMultiplier:1,
+      comboFinalPct:0, comboFinalMultiplier:1,
+      critRatePoints:0, critRateBonus:0,
+      critDamagePct:0, critDamageBonus:0,
+      gutsCostReductionPct:0, gutsCostMultiplier:1,
+    };
+  }
+  let damagePct = soulTraitEffectValue(normalized, 'allDamage');
+  if (card.type === 'unique') damagePct += soulTraitEffectValue(normalized, 'uniqueDamage');
+  else if (card.type === 'atk' || card.type === 'range_atk') damagePct += soulTraitEffectValue(normalized, 'normalDamage');
+  const rangeIndex = Number.isInteger(Number(slotIdx))
+    ? Math.max(0, Math.min(3, Math.floor(Number(slotIdx))))
+    : null;
+  if (rangeIndex != null) damagePct += soulTraitEffectValue(normalized, SOUL_ATTACK_RANGE_TRAIT_IDS[rangeIndex]);
+  const comboFinalPct = soulTraitEffectValue(normalized, 'comboFinalDamage');
+  const critRatePoints = soulTraitEffectValue(normalized, 'critRate');
+  const critDamagePct = soulTraitEffectValue(normalized, 'critDamage');
+  const gutsCostReductionPct = soulTraitEffectValue(normalized, 'gutsCostReduction');
+  return {
+    damagePct,
+    damageMultiplier:1 + damagePct / 100,
+    comboFinalPct,
+    comboFinalMultiplier:1 + comboFinalPct / 100,
+    critRatePoints,
+    critRateBonus:critRatePoints / 100,
+    critDamagePct,
+    critDamageBonus:critDamagePct / 100,
+    gutsCostReductionPct,
+    gutsCostMultiplier:Math.max(0, 1 - gutsCostReductionPct / 100),
+  };
+};
 const TRANSCEND_PSYCHE_COST = 5000;
 const TRANSCEND_DIAMOND_COST = 1000000;
 // Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
@@ -56,8 +309,11 @@ const TRANSCEND_XP_MULTIPLIER_STEP = 0.1;
 const TRANSCEND_PSYCHE_PER_POINT = 1000;
 const TRANSCEND_STAT_KEYS = Object.freeze(['hp', 'atk', 'def', 'guts']);
 const isTranscended = (masu) => !!(masu && masu.transcended);
-// 超越済みならLv上限500まで、まだなら従来どおりLv400まで
-const masuLevelCapLimit = (masu) => (isTranscended(masu) ? TRANSCEND_LEVEL_CAP : MAX_MASU_LEVEL_CAP);
+// 未超越は従来どおりLv400。超越済みは魂格0=Lv500、魂格Ⅰ〜Ⅴ=Lv600〜1000を上限にする。
+// levelCap自体は既存保存値を使い続け、ここは壊れた/先行した値が段階を飛び越えないための最大値だけを返す。
+const masuLevelCapLimit = (masu) => (isTranscended(masu)
+  ? soulRankLevelCap(masu?.soulRankStage)
+  : MAX_MASU_LEVEL_CAP);
 // 旧セーブにはこれらの項目が無いので、必ず安全な初期値(0)へ落として読む
 const normalizeTranscendStatPoints = (value) => Object.fromEntries(TRANSCEND_STAT_KEYS
   .map(key => [key, Math.max(0, Math.floor(Number(value?.[key]) || 0))]));
@@ -70,14 +326,26 @@ const normalizeTranscendAptBoosts = (value) => Array.from({ length: 4 },
 // 必ず不足分を補填している)
 const BOND_XP_DISCOUNT = 0.025;
 const xpForBondLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
-// Lv400以降(超越の領域)だけ、通常式が出した必要経験値へ重い倍率を掛ける。
+// Lv400〜499(既存の超越領域)だけ、通常式が出した必要経験値へ重い倍率を掛ける。
 // 倍率は Lv400で10倍、以降1Lvごとに+0.1倍(Lv499→500で19.9倍)。
-// Lv399以下はこれまでどおりの値をそのまま返すので、既存の必要経験値・累計XPは1も変わらない。
+// Lv399以下は従来値を維持し、Lv500→501以降は下の魂格専用式へ切り替える。
 const transcendXpMultiplier = (level) =>
   TRANSCEND_XP_BASE_MULTIPLIER + (level - MAX_MASU_LEVEL_CAP) * TRANSCEND_XP_MULTIPLIER_STEP;
+const soulRankXpForBondLevel = (level) => {
+  const current = Math.max(SOUL_RANK_BASE_LEVEL, Math.min(SOUL_RANK_LEVEL_CAP - 1, Math.floor(Number(level) || SOUL_RANK_BASE_LEVEL)));
+  if (current < 600) return 160000 + (current - 500) * 250;
+  if (current < 700) return 210000 + (current - 600) * 250;
+  if (current < 800) return 265000 + (current - 700) * 500;
+  if (current < 900) return 345000 + (current - 800) * 500;
+  return 430000 + (current - 900) * 900;
+};
 const xpForBondLevelAt = (level) => {
-  const normal = xpForBondLevel(level);
-  return level < MAX_MASU_LEVEL_CAP ? normal : Math.max(1, Math.round(normal * transcendXpMultiplier(level)));
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  const normal = xpForBondLevel(current);
+  if (current < MAX_MASU_LEVEL_CAP) return normal;
+  // Lv400〜499は既存の超越XP式を1も変えない。Lv500→501から魂格の正式式へ切り替える。
+  if (current < SOUL_RANK_BASE_LEVEL) return Math.max(1, Math.round(normal * transcendXpMultiplier(current)));
+  return soulRankXpForBondLevel(current);
 };
 const bondLevelInfo = (totalXp) => {
   // 壊れた保存値(NaN・Infinity・負数)で回り続けないよう、先に有限の0以上へ落とす
@@ -91,9 +359,9 @@ const bondLevelInfo = (totalXp) => {
   return { level, xpIntoLevel: xp, xpForNext: xpForBondLevelAt(level), totalXp: safeTotal };
 };
 const INITIAL_MASU_LEVEL_CAP = 30;
-// 超越後はLv500まで数える。Lv1から数え上げるので、繰り返し回数は上限-1。
-// こうしておくと壊れた絆経験値が来てもLv501にはならず、無限ループにもならない。
-const MAX_BOND_LEVEL_ITERATIONS = TRANSCEND_LEVEL_CAP - 1;
+// 魂格ⅤまでLv1000を数える。Lv1から数え上げるので、繰り返し回数は上限-1。
+// 個体ごとの実上限は cappedBondXp / masuLevelCapLimit で別に止めるため、魂格0の既存超越個体はLv500のまま。
+const MAX_BOND_LEVEL_ITERATIONS = SOUL_RANK_LEVEL_CAP - 1;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL = 35;
@@ -413,8 +681,9 @@ const normalizeInheritedUniqueLineages = (masuMons) => (Array.isArray(masuMons) 
   return { ...masu, inheritedUniques:kept, uniqueSkillLevels };
 });
 const totalBondXpForLevel = (level) => {
+  const target = Math.max(1, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(level) || 1)));
   let total = 0;
-  for (let current = 1; current < Math.max(1, level); current++) total += xpForBondLevelAt(current);
+  for (let current = 1; current < target; current++) total += xpForBondLevelAt(current);
   return total;
 };
 // 【限界突破と転生】
@@ -527,6 +796,33 @@ const breakthroughStarStyle = (star) => ({
 // 必要数は限界突破1回ごとに増える。1回目5個・以降+1個で、
 //   30回目 = 5 + 29×1 = 34個 / 最終限界突破(31回目) = 5 + 30×1 = 35個
 const BREAKTHROUGH_ITEM_ID = 'rainbow_psyche';
+// 魂格進化の素材。マーケットでは販売せず、高難度の実クリアでだけ増える。
+// 所持数は他アイテムと同じ mh_owned_items の中へ入れ、新しい保存キーは作らない。
+const HERO_PROOF_ITEM_ID = 'hero_proof';
+const HERO_PROOF_ITEM = Object.freeze({
+  id:HERO_PROOF_ITEM_ID,
+  name:'勇者の証',
+  emoji:'🏅',
+  usage:'soulRank',
+  desc:'魂格進化Ⅰ〜Ⅴに使う高難度クリア報酬。神殿の「魂格進化」で消費する。',
+});
+const HERO_PROOF_CLEAR_REWARDS = Object.freeze({
+  extreme:Object.freeze({ GOD:1, RAGNAROK:2 }),
+  speciesChallenge:Object.freeze({ GOD:1, RAGNAROK:2 }),
+  pro:Object.freeze({ Master:1, GrandMaster:2, Hell:3, Legend:4 }),
+});
+const heroProofClearReward = ({
+  runMode, difficulty, extremeDifficulty=null, speciesDifficulty=null,
+  speciesSave=true, debug=false,
+} = {}) => {
+  if (debug || runMode === BATTLE_MODE_QUICK) return 0;
+  if (runMode === BATTLE_MODE_SPECIES_CHALLENGE) {
+    return speciesSave ? (HERO_PROOF_CLEAR_REWARDS.speciesChallenge[speciesDifficulty] || 0) : 0;
+  }
+  if (runMode === BATTLE_MODE_PRO) return HERO_PROOF_CLEAR_REWARDS.pro[difficulty] || 0;
+  if (extremeDifficulty) return HERO_PROOF_CLEAR_REWARDS.extreme[extremeDifficulty] || 0;
+  return 0;
+};
 // 超越ポイントリセットの書。マーケット(data/breeder.js)の同じIDを指す
 const TRANSCEND_RESET_ITEM_ID = 'transcend_reset_scroll';
 const BREAKTHROUGH_ITEM_BASE = 5;
@@ -772,6 +1068,10 @@ const normalizeMasuProgression = (masu) => ({
   inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
   inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
   levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+  // 魂格の個体項目。旧セーブは魂格0・初到達Lv500・未振り分けとして読み、トップレベル保存キーは増やさない。
+  soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+  soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
+  soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
   // 超越の項目。旧セーブには存在しないので、未超越・0として読む(移行処理はいらない)
   transcended: isTranscended(masu),
   transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
@@ -857,6 +1157,10 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
     inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+    // 魂格は転生で失われない。初到達Lvを持ち越すことで魂格Pの二重取得も防ぐ。
+    soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+    soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
+    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
     // 超越は転生で失われない。状態・未使用の超越P・超越で上げた基礎値をそのまま持ち越す
     transcended: isTranscended(masu),
     transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
@@ -892,28 +1196,50 @@ const cappedBondXp = (masu, gain = 0, maxLevel = null) => {
 };
 // 絆経験値の加算・レベル上限・強化ポイント付与を、通常バトル、チケット、合体で共有する。
 // 戻り値に表示用の前後レベルと実際の付与量も含め、画面と保存値の計算がずれないようにする。
+const transcendPointGainForReachedLevel = (reachedLevel) => {
+  const level = Math.max(1, Math.floor(Number(reachedLevel) || 1));
+  if (level <= MAX_MASU_LEVEL_CAP) return 0;
+  if (level <= 500) return 1;
+  if (level <= 600) return 2;
+  if (level <= 700) return 3;
+  if (level <= 800) return 4;
+  if (level <= 900) return 5;
+  return level <= SOUL_RANK_LEVEL_CAP ? 6 : 0;
+};
+const gainedTranscendPointsBetweenLevels = (fromLevel, toLevel) => {
+  const from = Math.max(1, Math.floor(Number(fromLevel) || 1));
+  const to = Math.max(from, Math.min(SOUL_RANK_LEVEL_CAP, Math.floor(Number(toLevel) || from)));
+  let total = 0;
+  for (let reached = from + 1; reached <= to; reached++) total += transcendPointGainForReachedLevel(reached);
+  return total;
+};
 const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
-  const before = masuBondLevelInfo(masu);
-  const bondXp = cappedBondXp(masu, gain, maxLevel);
+  const normalized = normalizeMasuProgression(masu);
+  const before = masuBondLevelInfo(normalized);
+  const bondXp = cappedBondXp(normalized, gain, maxLevel);
   const after = bondLevelInfo(bondXp);
   const gainedLevels = Math.max(0, after.level - before.level);
-  // Lv400までは今までどおり通常の強化ポイント。Lv401以降(超越の領域)は
-  // 通常ポイントを配らず、1レベルにつき超越ポイントを1だけ配る。
-  // 400をまたいでレベルが上がったときも、400までのぶんと401以降のぶんを分けて数える。
+  // Lv400までは今までどおり通常の強化ポイント。Lv401以降は通常Pを配らず、
+  // 実際に上がったLv帯に応じて超越Pを1〜6P/Lvで配る。魂格段階そのものは倍率に使わない。
   const cap = MAX_MASU_LEVEL_CAP;
   const normalLevels = Math.max(0, Math.min(cap, after.level) - Math.min(cap, before.level));
-  const gainedTranscendPoints = Math.max(0, after.level - Math.max(cap, before.level));
+  const gainedTranscendPoints = gainedTranscendPointsBetweenLevels(before.level, after.level);
   const gainedPoints = gainedEnhancePointsBetweenLevels(before.level, Math.min(cap, after.level));
+  // 魂格PはLv501〜1000の「初到達」だけ。最高初到達Lvを正本にして、転生後の再到達では配らない。
+  const previousSoulMax = normalizeSoulPointMaxReachedLevel(normalized.soulPointMaxReachedLevel);
+  const nextSoulMax = Math.max(previousSoulMax, Math.min(SOUL_RANK_LEVEL_CAP, after.level));
+  const gainedSoulPoints = Math.max(0, nextSoulMax - previousSoulMax);
   // 同一帯だけを上がった場合は従来UI用に×2/×3を返す。帯をまたぐ場合は誤解を避けて×表示を出さない。
   const sameBandMultiplier = normalLevels > 0 ? (gainedPoints / normalLevels) : 1;
   const pointMultiplier = Number.isInteger(sameBandMultiplier) ? sameBandMultiplier : 1;
   return {
     masu: {
-      ...masu,
+      ...normalized,
       bondXp,
-      distAptPoints: (masu.distAptPoints || 0) + gainedPoints,
+      soulPointMaxReachedLevel: nextSoulMax,
+      distAptPoints: (normalized.distAptPoints || 0) + gainedPoints,
       ...(gainedTranscendPoints > 0
-        ? { transcendPoints: Math.max(0, Math.floor(Number(masu.transcendPoints) || 0)) + gainedTranscendPoints }
+        ? { transcendPoints: Math.max(0, Math.floor(Number(normalized.transcendPoints) || 0)) + gainedTranscendPoints }
         : {}),
     },
     before,
@@ -921,8 +1247,9 @@ const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
     gainedLevels,
     gainedPoints,
     gainedTranscendPoints,
+    gainedSoulPoints,
     pointMultiplier,
-    xpGain: Math.max(0, bondXp - donationDiamondValue(masu.bondXp)),
+    xpGain: Math.max(0, bondXp - donationDiamondValue(normalized.bondXp)),
   };
 };
 // 周回終了時の絆経験値配布先を、表示処理やReact state更新から独立して一度だけ決定する。
@@ -1036,6 +1363,11 @@ const mergeMasuIntoMon = (masu) => {
     // 固有技設定(並び順・初期技)。保存が無い個体はここで従来どおりの値になる
     uniqueOrder: normalizeUniqueOrder(masu),
     initialUniqueKey: normalizeInitialUniqueKey(masu),
+    // 魂格の個体情報も実戦用モンスターへ持ち込む。攻撃・防御・補助の実戦計算は
+    // この解決結果だけを見るため、baseId単位ではなく必ず選ばれたマスモン個体の値になる。
+    soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+    soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
+    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
   };
 };
 // マスモン詳細で「元の値 ＋ 基礎UP(超越) ＋ 通常強化 ＝ 現在」を出すための内訳。★重要
@@ -1186,7 +1518,7 @@ const monsterPowerUniques = (mon) => [mon?.unique, ...((mon?.inheritedUniques) |
   .filter(u => u && typeof u === 'object' && typeof u.name === 'string' && Number.isFinite(Number(u.baseMult)));
 // 総合力の内訳。合計を出す前の各項目を返すので、検査や画面の説明にも使える
 const monsterPowerParts = (mon) => {
-  if (!mon) return { stat: 0, aptitude: 0, unique: 0, total: 0 };
+  if (!mon) return { stat:0, aptitude:0, unique:0, soul:0, total:0 };
   const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
   const stat = num(mon.baseHp) * MONSTER_POWER_STAT_WEIGHT.hp
     + num(mon.baseAtk) * MONSTER_POWER_STAT_WEIGHT.atk
@@ -1198,7 +1530,9 @@ const monsterPowerParts = (mon) => {
   const uniques = monsterPowerUniques(mon);
   const uniquePower = uniques.length * MONSTER_POWER_UNIQUE_OWNED
     + uniques.reduce((sum, u) => sum + Math.max(0, Math.floor(num(u.evoLevel))), 0) * MONSTER_POWER_UNIQUE_PER_LEVEL;
-  return { stat, aptitude: apt, unique: uniquePower, total: stat + apt + uniquePower };
+  // 魂格特性は効果ごとに換算せず「使用済み魂格P×10」を一度だけ加える。
+  const soulPower = soulTraitSpentPoints(mon) * 10;
+  return { stat, aptitude:apt, unique:uniquePower, soul:soulPower, total:stat + apt + uniquePower + soulPower };
 };
 // 総合力の正本。解決済みのモンスター(ベースモンの定義、または mergeMasuIntoMon の結果)を渡す。
 // 端数は最後にまとめて四捨五入する(項目ごとに丸めない)
@@ -1695,6 +2029,64 @@ const buildMasuTranscendence = ({ masu, gold = 0, psycheOwned = 0 } = {}) => {
     nextMasu: { ...normalized, transcended: true, levelCap: TRANSCEND_LEVEL_CAP },
   };
 };
+
+// ==================== 魂格進化 ====================
+// 魂格0(超越済みLv500)からⅠ〜Ⅴへ、現在段階の次の1段階だけ進める。
+// 条件・コスト・次状態を1か所へ集約し、神殿UI・合体継承(後続STEP)でも同じ正本を使えるようにする。
+const soulRankEvolutionStatus = (masu) => {
+  if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。', next:null };
+  const normalized = normalizeMasuProgression(masu);
+  const next = soulRankEvolutionForStage(normalized.soulRankStage + 1);
+  const level = masuBondLevelInfo(normalized).level;
+  if (!normalized.transcended) return { ok:false, reason:'先に神殿で超越する必要があります。', normalized, level, next };
+  if (!next) return { ok:false, reason:'魂格Ⅴまで進化済みです。', normalized, level, next:null };
+  return {
+    ok:true,
+    normalized,
+    level,
+    next,
+    levelReady:level >= next.requiredLevel,
+    currentStage:normalized.soulRankStage,
+    currentLabel:normalized.soulRankStage > 0 ? `魂格${['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][normalized.soulRankStage]}` : '魂格なし',
+  };
+};
+const buildMasuSoulRankEvolution = ({ masu, gold = 0, ownedItems = {} } = {}) => {
+  const status = soulRankEvolutionStatus(masu);
+  const goldHave = donationDiamondValue(gold);
+  const heroProofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
+  const next = status.next;
+  const info = {
+    ...status,
+    goldHave,
+    heroProofHave,
+    diamondCost:next?.diamondCost || 0,
+    heroProofCost:next?.heroProofCost || 0,
+  };
+  if (!status.ok) return { ...info, ok:false };
+  if (!status.levelReady) return { ...info, ok:false, reason:`Lv.${next.requiredLevel}に到達すると${next.label}へ進化できます。` };
+  if (goldHave < next.diamondCost) return { ...info, ok:false, reason:`ダイヤが足りません（あと ${(next.diamondCost-goldHave).toLocaleString()}）。` };
+  if (heroProofHave < next.heroProofCost) return { ...info, ok:false, reason:`勇者の証が足りません（あと ${(next.heroProofCost-heroProofHave).toLocaleString()}）。` };
+  const nextOwnedItems = {
+    ...(ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {}),
+    [HERO_PROOF_ITEM_ID]:heroProofHave - next.heroProofCost,
+  };
+  return {
+    ...info,
+    ok:true,
+    nextGold:goldHave - next.diamondCost,
+    nextOwnedItems,
+    fromStage:status.normalized.soulRankStage,
+    toStage:next.stage,
+    fromLevelCap:status.normalized.levelCap,
+    toLevelCap:next.levelCap,
+    // 魂格進化で実Lv・絆XP・最高初到達Lv・振り分けは変えない。解放段階と上限だけ更新する。
+    nextMasu:{
+      ...status.normalized,
+      soulRankStage:next.stage,
+      levelCap:next.levelCap,
+    },
+  };
+};
 // 虹のプシュケーを超越ポイントへ替える。100個ちょうどで1P、端数のプシュケーは消費しない
 const transcendPsycheExchange = (psycheOwned, wantedPoints) => {
   const have = Math.max(0, Math.floor(Number(psycheOwned) || 0));
@@ -1904,6 +2296,58 @@ const buildFusionInheritancePlan = ({ main, subs, selectedSubIds }) => {
   });
   const inheritedEntries = entries.filter(entry=>entry.inherited);
   return { entries, inheritedEntries, inheritCount:inheritedEntries.length, inheritCost:inheritedEntries.length * FUSION_INHERIT_COST };
+};
+// 魂格継承合体。副の中で最も高い魂格が主より上なら、その差分段階の通常進化コストを
+// すべて合算して主へ上限だけ継承できる。副の魂格P最高到達Lv・特性はコピーしない。
+// 通常合体(inherit=false)では主の魂格を一切変えず、従来どおり上限超過XPは切り捨てる。
+const buildFusionSoulRankInheritancePlan = ({
+  main, subs, inherit=false, gold=0, ownedItems={},
+} = {}) => {
+  if (!main) return { eligible:false, inherit:false, ok:false, reason:'主モンが見つかりません。' };
+  const normalized = normalizeMasuProgression(main);
+  const subList = (Array.isArray(subs) ? subs : []).filter(Boolean).map(normalizeMasuProgression);
+  const currentStage = normalized.soulRankStage;
+  const targetStage = subList.reduce((max, sub) => Math.max(max, sub.soulRankStage), currentStage);
+  const eligible = targetStage > currentStage;
+  const steps = eligible
+    ? Array.from({length:targetStage-currentStage},(_,i)=>soulRankEvolutionForStage(currentStage+i+1)).filter(Boolean)
+    : [];
+  const diamondCost = steps.reduce((sum, step)=>sum+step.diamondCost,0);
+  const heroProofCost = steps.reduce((sum, step)=>sum+step.heroProofCost,0);
+  const goldHave = donationDiamondValue(gold);
+  const heroProofHave = ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID);
+  const targetLevelCap = soulRankLevelCap(targetStage);
+  const previewMasu = eligible ? {
+    ...normalized,
+    soulRankStage:targetStage,
+    levelCap:targetLevelCap,
+    soulPointMaxReachedLevel:normalized.soulPointMaxReachedLevel,
+    soulTraitLevels:normalizeSoulTraitLevels(normalized.soulTraitLevels),
+  } : normalized;
+  const base = {
+    eligible, inherit:!!inherit, currentStage, targetStage, targetLevelCap, steps, previewMasu,
+    diamondCost, heroProofCost, goldHave, heroProofHave,
+    diamondShortage:Math.max(0,diamondCost-goldHave),
+    heroProofShortage:Math.max(0,heroProofCost-heroProofHave),
+  };
+  if (!eligible || !inherit) {
+    return {
+      ...base,
+      ok:true,
+      nextGold:goldHave,
+      nextOwnedItems:{...(ownedItems||{})},
+      nextMasu:normalized,
+    };
+  }
+  if (goldHave < diamondCost) return {...base,ok:false,reason:`ダイヤが足りません（あと ${(diamondCost-goldHave).toLocaleString()}）。`};
+  if (heroProofHave < heroProofCost) return {...base,ok:false,reason:`勇者の証が足りません（あと ${(heroProofCost-heroProofHave).toLocaleString()}）。`};
+  return {
+    ...base,
+    ok:true,
+    nextGold:goldHave-diamondCost,
+    nextOwnedItems:{...(ownedItems||{}),[HERO_PROOF_ITEM_ID]:heroProofHave-heroProofCost},
+    nextMasu:previewMasu,
+  };
 };
 // 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
 // (以前は画面だけが「レベル×100」で計算しており、実際に引かれる額の倍が表示され、

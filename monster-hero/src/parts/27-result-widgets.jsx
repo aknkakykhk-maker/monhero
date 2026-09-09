@@ -61,6 +61,16 @@ const CountUpNumber = ({ from, to, onComplete }) => {
   return <span>{val.toLocaleString()}</span>;
 };
 
+const BondProgressionGainLines = ({ gain }) => {
+  if (!gain) return null;
+  return <div className="mt-1 space-y-0.5">
+    {gain.gainedEnhancePoints>0&&<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{gain.gainedEnhancePoints}</div>}
+    {gain.gainedTranscendPoints>0&&<div className="text-[8px] text-fuchsia-300 font-black flex items-center gap-1"><Sparkles size={9}/>超越P +{gain.gainedTranscendPoints}</div>}
+    {gain.gainedSoulPoints>0&&<div className="text-[8px] text-sky-300 font-black flex items-center gap-1"><Sparkles size={9}/>魂格P +{gain.gainedSoulPoints}</div>}
+    {gain.soulRankEvolutionReady&&<div className="text-[9px] text-emerald-300 font-black flex items-center gap-1"><Sparkles size={10}/>魂格進化できます</div>}
+  </div>;
+};
+
 // 最終リザルト画面(CHAMPION/敗北)共通: 今回の周回で獲得したブリーダー経験値・ダイヤ・
 // 勇者モンの絆経験値をまとめて表示するカード
 const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
@@ -91,6 +101,12 @@ const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
           <span className="text-white font-mono font-bold">×{summary.psycheGain.toLocaleString()}</span>
         </div>
       )}
+      {summary.heroProofGain > 0 && (
+        <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+          <span className="text-amber-200 font-black flex items-center gap-1"><span aria-hidden="true">🏅</span>勇者の証</span>
+          <span className="text-white font-mono font-bold">×{summary.heroProofGain.toLocaleString()}</span>
+        </div>
+      )}
       {summary.heroBondGain && (
         <div className="pt-2 border-t border-white/10">
           <div className="flex items-center justify-between text-[11px] mb-1">
@@ -98,9 +114,7 @@ const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
             <span className="text-white font-mono font-bold shrink-0">+{summary.heroBondGain.xpGain.toLocaleString()}</span>
           </div>
           <LevelGrowthBar levelBefore={summary.heroBondGain.levelBefore} levelAfter={summary.heroBondGain.levelAfter} onComplete={()=>markPresented('hero')}/>
-          {summary.heroBondGain.levelAfter.level > summary.heroBondGain.levelBefore.level && (
-            <div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level}</div>
-          )}
+          <BondProgressionGainLines gain={summary.heroBondGain}/>
         </div>
       )}
       {summary.allyBondGains && summary.allyBondGains.length > 0 && (
@@ -113,9 +127,7 @@ const RewardSummaryCard = ({ summary, onPresentationComplete }) => {
                 <span className="text-white font-mono font-bold shrink-0">+{a.xpGain.toLocaleString()}</span>
               </div>
               <LevelGrowthBar levelBefore={a.levelBefore} levelAfter={a.levelAfter} onComplete={()=>markPresented(`ally-${i}`)}/>
-              {a.levelAfter.level > a.levelBefore.level && (
-                <div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{a.levelAfter.level - a.levelBefore.level}</div>
-              )}
+              <BondProgressionGainLines gain={a}/>
             </div>
           ))}
         </div>

@@ -106,7 +106,8 @@ const allBefore = (storage, list) => list.every(e => same(storage[e.key], e.befo
     const sites = [
       ['合体', between('const executeMasuFusion', 'const resetFusionFlow'), ['mh_masu_mons', 'mh_gold', 'mh_owned_items']],
       ['限界突破', between('const executeMasuBreakthrough', 'const executeMasuTranscendence'), ['mh_masu_mons', 'mh_gold', 'mh_owned_items']],
-      ['超越', between('const executeMasuTranscendence', 'const commitTranscendPlan'), ['mh_masu_mons', 'mh_gold', 'mh_owned_items']],
+      ['超越', between('const executeMasuTranscendence', 'const executeMasuSoulRankEvolution'), ['mh_masu_mons', 'mh_gold', 'mh_owned_items']],
+      ['魂格進化', between('const executeMasuSoulRankEvolution', 'const commitTranscendPlan'), ['mh_masu_mons', 'mh_gold', 'mh_owned_items']],
       ['転生', between('const executeMasuReincarnation', 'const executeMasuRegeneration'), ['mh_masu_mons', 'mh_gold']],
       ['再生', between('const executeMasuRegeneration', 'const executeMasuDonation'), ['mh_masu_mons', 'mh_gold', 'mh_temple_regeneration_used_v1']],
     ];

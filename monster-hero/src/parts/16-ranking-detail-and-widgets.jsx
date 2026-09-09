@@ -62,7 +62,7 @@ const RANKING_FUSION_MAX = 12;
 //     masuLevelCapLimit() が「超越済みなら500、未超越なら400」で決めるので、
 //     記録から組み立て直した個体に超越の印が無いと未超越として400へ丸められる。
 //     同じ理由で超越強化で振ったぶんのステータスも詳細に出ていなかった。
-const RANKING_DETAIL_VERSION = 5;
+const RANKING_DETAIL_VERSION = 6;
 const rankingMasuDetail = (masu) => {
   if (!masu) return null;
   const sp = masu.statPoints || {};
@@ -89,6 +89,10 @@ const rankingMasuDetail = (masu) => {
     transcendPoints: num(masu.transcendPoints),
     transcendStatPoints: normalizeTranscendStatPoints(masu.transcendStatPoints),
     transcendAptBoosts: normalizeTranscendAptBoosts(masu.transcendAptBoosts),
+    // 魂格(v6)。未使用Pは保存せず、記録時の段階・全振り分け・使用済みPだけ固定する。
+    soulRankStage: normalizeSoulRankStage(masu.soulRankStage),
+    soulTraitLevels: normalizeSoulTraitLevels(masu.soulTraitLevels),
+    soulSpentPoints: soulTraitSpentPoints(masu),
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // 間合い適性は「グレードの文字」の配列(['C','M','C','C'] など)。数値ではないので
     // 数に直そうとすると全部0になり、ランキング側だけ全距離Cに見えてしまう
@@ -145,6 +149,10 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     transcendPoints: num(detail.transcendPoints),
     transcendStatPoints: normalizeTranscendStatPoints(detail.transcendStatPoints),
     transcendAptBoosts: normalizeTranscendAptBoosts(detail.transcendAptBoosts),
+    // 魂格はv6から。旧記録は魂格なし・特性なしとして安全に読む。
+    soulRankStage: normalizeSoulRankStage(detail.soulRankStage),
+    soulTraitLevels: normalizeSoulTraitLevels(detail.soulTraitLevels),
+    soulSpentPointsSnapshot: Number.isFinite(Number(detail.soulSpentPoints)) ? num(detail.soulSpentPoints) : 0,
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // グレード以外(数値へ潰してしまった古い記録など)が入っていたら、その記録には
     // 間合い適性が残っていないものとして扱う。nullにしておけば血統本来の適性が出るので、
@@ -221,7 +229,13 @@ const prefersReducedMotion = () => {
 // 丸の外側になる右上の角へ置く。角は丸の外なので、染色した絵をマークが隠さない。
 // 虹★・転生バッジは絵の下なので、そちらとも重ならない。
 // 画像は増やさず、CSSのグラデーションと「超」の文字だけで作る。
-const TranscendenceBadge = ({ transcended = false, className = '', small = false }) => {
+const SOUL_RANK_BADGE_LABELS = Object.freeze(['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ']);
+const TranscendenceBadge = ({ transcended = false, soulRankStage = 0, className = '', small = false }) => {
+  const stage = normalizeSoulRankStage(soulRankStage);
+  if (stage > 0) {
+    const label = SOUL_RANK_BADGE_LABELS[stage];
+    return <span className={`mh-soul-rank-badge is-stage-${stage}${small ? ' is-small' : ''} ${className}`} aria-label={`魂格${label}`}><b aria-hidden="true">{label}</b></span>;
+  }
   if (!transcended) return null;
   return <span className={`mh-transcend-badge${small ? ' is-small' : ''} ${className}`} aria-label="超越済み"><b aria-hidden="true">超</b></span>;
 };
@@ -230,18 +244,21 @@ const ReincarnateBadge = ({ count = 0, className = '' }) => {
   if (!value) return null;
   return <div className={`mh-reincarnate-badge ${className}`} aria-label={`転生${value}回`}>転生 ×{value}</div>;
 };
-// 一覧・詳細・HOME・演出で共有する転生オーラ。同じ画像を別周期で重ね、背面だけで燃焼感を作る。
-const REINCARNATE_AURA_IMAGES = {
-  blue: 'images/effects/reincarnate-aura-blue.PNG',
-  yellow: 'images/effects/reincarnate-aura-yellow.PNG',
-  red: 'images/effects/reincarnate-aura-red.PNG',
+// 一覧・詳細・HOME・演出で共有する魂格オーラ。
+const SOUL_RANK_AURA_IMAGES = {
+  1: 'images/effects/soul_rank_I_blue.png',
+  2: 'images/effects/soul_rank_II_yellow.png',
+  3: 'images/effects/soul_rank_III_green.png',
+  4: 'images/effects/soul_rank_IV_red.png',
+  5: 'images/effects/soul_rank_V_rainbow.png',
 };
-const ReincarnateAura = ({ count = 0, className = '' }) => {
-  const value = Math.max(0, Math.floor(Number(count) || 0));
-  if (!value) return null;
-  const stage = value >= 3 ? 'red' : value === 2 ? 'yellow' : 'blue';
-  const src = REINCARNATE_AURA_IMAGES[stage];
-  return <span className={`mh-reincarnate-aura is-${stage} ${className}`} aria-hidden="true">
+const SOUL_RANK_AURA_TONES = { 1:'blue', 2:'yellow', 3:'green', 4:'red', 5:'rainbow' };
+const SoulRankAura = ({ soulRankStage = 0, className = '' }) => {
+  const stage = normalizeSoulRankStage(soulRankStage);
+  if (!stage) return null;
+  const tone = SOUL_RANK_AURA_TONES[stage];
+  const src = SOUL_RANK_AURA_IMAGES[stage];
+  return <span className={`mh-reincarnate-aura is-${tone} ${className}`} aria-hidden="true">
     <span className="mh-reincarnate-flame is-back"><img src={src} alt=""/></span>
     <span className="mh-reincarnate-flame is-main"><img src={src} alt=""/></span>
     <span className="mh-reincarnate-flame is-foot"><img src={src} alt=""/></span>
@@ -299,7 +316,7 @@ const HomeWalkingMasumon = ({ masu, base, masuColors, index = 0, count = 1 }) =>
   return <div className={`mh-home-masumon ${motion.walking ? 'is-walking' : ''}`} style={{left:`${motion.x}%`,top:`${motion.y}%`,zIndex:Math.round(motion.y),transitionDuration:`${motion.duration}ms`}}>
     <div className="mh-home-masumon-bob" style={{transform:`scaleX(${motion.facing})`,isolation:'isolate'}}>
       <DyedMonsterImage baseId={masu.baseId} src={base.imgUrl || base.iconUrl} alt="" masuColors={masuColors} draggable={false}/>
-      <ReincarnateAura count={masu.reincarnateCount} className="is-home"/>
+      <SoulRankAura soulRankStage={masu.soulRankStage} className="is-home"/>
       <RebirthStars count={masu.rebirthCount} className="mh-home-masumon-stars"/>
     </div>
   </div>;

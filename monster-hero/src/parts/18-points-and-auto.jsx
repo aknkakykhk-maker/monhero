@@ -220,17 +220,18 @@ const chooseAutoTurn = ({
     const actions = [];
     hand.forEach((card, handIndex) => {
       if (!card || usedHandIndexes.has(handIndex)) return;
-      const cost = Math.max(0, Number(getCardGuts(card)) || 0);
-      if (usedGuts + cost > availableGuts) return;
       if (!cardNeedsMonster(card)) {
-        actions.push({ handIndex, card, slotIdx:null, cost });
+        const cost = Math.max(0, Number(getCardGuts(card, null)) || 0);
+        if (usedGuts + cost <= availableGuts) actions.push({ handIndex, card, slotIdx:null, cost });
         return;
       }
       slots.forEach((monster, slotIdx) => {
         if (!monster) return;
         if (card.type === 'unique' && card.ownerSlotIdx !== slotIdx) return;
-        const maxUses = Math.max(0, Math.floor(Number(slotMaxUses(monster)) || 0));
+        const maxUses = Math.max(0, Math.floor(Number(slotMaxUses(monster, slotIdx)) || 0));
         if (slotUseCounts[slotIdx] >= maxUses) return;
+        const cost = Math.max(0, Number(getCardGuts(card, slotIdx)) || 0);
+        if (usedGuts + cost > availableGuts) return;
         actions.push({ handIndex, card, slotIdx, cost });
       });
     });

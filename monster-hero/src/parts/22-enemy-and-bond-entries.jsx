@@ -227,7 +227,7 @@ const ATTACK_COMBO_RULES = Object.freeze({
 // ソードスキルの「連撃パワー」が満タンになる数。ここに達するたびに永久10%連撃が1本増え、0へ戻る
 const KENSHI_COMBO_POWER_MAX = 3;
 // mainCanCrit:false は「メインヒットには会心が乗らない」種類(あつの挑発)。連撃・全体連撃の会心判定は変わらない
-const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0 }) => {
+const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critDmgBonus = 0, guaranteedCrit = false, rollCrit = () => false, globalComboRate = 0, mainCanCrit = true, kenshiExtraCombos = 0, comboFinalMultiplier = 1 }) => {
   const hits = [];
   const critMult = 1.5 + critDmgBonus;
   const isUniqueOf = (id) => card.type === 'unique' && card.monId === id;
@@ -249,7 +249,9 @@ const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critD
     const base = Math.floor(d * rate);
     if (base <= 0) return;
     const crit = guaranteedCrit || rollCrit();
-    hits.push({ kind: 'combo', crit, dmg: crit ? Math.floor(base * critMult) : base, skillName, noAnim });
+    const beforeSoulFinal = crit ? Math.floor(base * critMult) : base;
+    const safeComboFinalMultiplier = Math.max(0, Number(comboFinalMultiplier) || 0);
+    hits.push({ kind: 'combo', crit, dmg: Math.floor(beforeSoulFinal * safeComboFinalMultiplier), skillName, noAnim });
   };
   if (heroId === 'Zan' && attackerId === 'Zan') combo(ATTACK_COMBO_RULES.zanHero + comboDmgBonus);
   if (isUniqueOf('Zan')) combo(ATTACK_COMBO_RULES.zanUnique + comboDmgBonus);
@@ -274,7 +276,11 @@ const buildAttackHits = ({ d, card, attackerId, heroId, comboDmgBonus = 0, critD
   return hits;
 };
 // 贖罪の追撃(アーク・イブリースの固有技)。メインヒットの確定値を基準にし、会心は乗せない
-const attackAtonementDmg = (card, mainDmg) => (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) ? Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement) : 0;
+const attackAtonementDmg = (card, mainDmg, comboFinalMultiplier = 1) => {
+  if (!(card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis'))) return 0;
+  const base = Math.floor(mainDmg * ATTACK_COMBO_RULES.atonement);
+  return Math.floor(base * Math.max(0, Number(comboFinalMultiplier) || 0));
+};
 
 
 const TEACHING_FX_STYLE = {
