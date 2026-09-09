@@ -805,35 +805,6 @@ const buildFusionBreakthroughPlan = ({ masu, fusionXp = 0, gold = 0, psycheOwned
   };
 };
 const ownedItemCount = (ownedItems, itemId) => Math.max(0, Math.floor(Number(ownedItems?.[itemId]) || 0));
-// 魂格再編の書は同じマーケットで「ダイヤ購入」と「勇者の証1個→1冊交換」の2経路を持つ。
-// どちらも所持先は既存 mh_owned_items の同じ itemId。交換用の別資産は作らない。
-const buildSoulRankRespecExchange = (ownedItems, quantity = 1) => {
-  const current = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
-  const count = Math.max(0, Math.floor(Number(quantity) || 0));
-  const proofHave = ownedItemCount(current, HERO_PROOF_ITEM_ID);
-  if (count <= 0 || proofHave < count) return { ok:false, count, proofHave, nextOwnedItems:current };
-  return {
-    ok:true, count, proofHave, nextProof:proofHave-count,
-    nextOwnedItems:{
-      ...current,
-      [HERO_PROOF_ITEM_ID]:proofHave-count,
-      [SOUL_RANK_RESPEC_ITEM_ID]:ownedItemCount(current, SOUL_RANK_RESPEC_ITEM_ID)+count,
-    },
-  };
-};
-const buildSoulRankRespecUse = (masu, ownedItems) => {
-  const current = ownedItems && typeof ownedItems === 'object' && !Array.isArray(ownedItems) ? ownedItems : {};
-  const scrollHave = ownedItemCount(current, SOUL_RANK_RESPEC_ITEM_ID);
-  if (scrollHave <= 0) return { ok:false, reason:'魂格再編の書を所持していません。', scrollHave, nextOwnedItems:current };
-  const reset = buildMasuSoulTraitReset(masu);
-  if (!reset) return { ok:false, reason:'リセットする魂格特性がありません。', scrollHave, nextOwnedItems:current };
-  return {
-    ok:true,
-    refundedPoints:reset.refundedPoints,
-    nextMasu:reset.nextMasu,
-    nextOwnedItems:{ ...current, [SOUL_RANK_RESPEC_ITEM_ID]:scrollHave-1 },
-  };
-};
 // ===== 超越の実（種族チャレンジ報酬の所持データ基盤） =====
 // 「種族」はモンスター1体ではなく主血統(モッチー種・ピクシー種…)を指す。
 // 血統idを itemId の末尾へそのまま保持し、表示名の変更に影響されないようにする。
