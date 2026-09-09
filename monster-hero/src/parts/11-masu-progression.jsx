@@ -52,12 +52,31 @@ const TRANSCEND_DIAMOND_COST = 1000000;
 // Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
 const TRANSCEND_XP_BASE_MULTIPLIER = 10;
 const TRANSCEND_XP_MULTIPLIER_STEP = 0.1;
+// 魂格STEP1の基盤。神殿の進化処理・特性UIは後続STEPで接続する。
+// stage 0 は既存の超越上限Lv500、Ⅰ〜Ⅴで100ずつLv1000まで解放できる。
+const SOUL_RANK_MAX_STAGE = 5;
+const SOUL_RANK_LEVEL_CAP_GAIN = 100;
+const SOUL_RANK_MAX_LEVEL_CAP = TRANSCEND_LEVEL_CAP + SOUL_RANK_MAX_STAGE * SOUL_RANK_LEVEL_CAP_GAIN;
+const normalizeSoulRankStage = (value) =>
+  Math.max(0, Math.min(SOUL_RANK_MAX_STAGE, Math.floor(Number(value) || 0)));
+const soulRankLevelCap = (stage) =>
+  TRANSCEND_LEVEL_CAP + normalizeSoulRankStage(stage) * SOUL_RANK_LEVEL_CAP_GAIN;
+const normalizeSoulPointMaxReachedLevel = (value) =>
+  Math.max(TRANSCEND_LEVEL_CAP, Math.min(SOUL_RANK_MAX_LEVEL_CAP, Math.floor(Number(value) || TRANSCEND_LEVEL_CAP)));
+const normalizeSoulTraitLevels = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => typeof key === 'string' && key.trim())
+    .map(([key, level]) => [key, Math.max(0, Math.floor(Number(level) || 0))]));
+};
 // 虹のプシュケー1,000個 → 超越ポイント1(端数は消費しない)
 const TRANSCEND_PSYCHE_PER_POINT = 1000;
 const TRANSCEND_STAT_KEYS = Object.freeze(['hp', 'atk', 'def', 'guts']);
 const isTranscended = (masu) => !!(masu && masu.transcended);
-// 超越済みならLv上限500まで、まだなら従来どおりLv400まで
-const masuLevelCapLimit = (masu) => (isTranscended(masu) ? TRANSCEND_LEVEL_CAP : MAX_MASU_LEVEL_CAP);
+// 未超越は従来どおりLv400。超越済みは魂格段階に応じてLv500〜1000まで許可する。
+// levelCap 自体は別フィールドのままなので、STEP1だけで魂格進化を勝手に発生させない。
+const masuLevelCapLimit = (masu) =>
+  (isTranscended(masu) ? soulRankLevelCap(masu?.soulRankStage) : MAX_MASU_LEVEL_CAP);
 // 旧セーブにはこれらの項目が無いので、必ず安全な初期値(0)へ落として読む
 const normalizeTranscendStatPoints = (value) => Object.fromEntries(TRANSCEND_STAT_KEYS
   .map(key => [key, Math.max(0, Math.floor(Number(value?.[key]) || 0))]));
@@ -70,14 +89,24 @@ const normalizeTranscendAptBoosts = (value) => Array.from({ length: 4 },
 // 必ず不足分を補填している)
 const BOND_XP_DISCOUNT = 0.025;
 const xpForBondLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
-// Lv400以降(超越の領域)だけ、通常式が出した必要経験値へ重い倍率を掛ける。
+// Lv400〜499(超越の領域)だけ、通常式が出した必要経験値へ重い倍率を掛ける。
 // 倍率は Lv400で10倍、以降1Lvごとに+0.1倍(Lv499→500で19.9倍)。
 // Lv399以下はこれまでどおりの値をそのまま返すので、既存の必要経験値・累計XPは1も変わらない。
 const transcendXpMultiplier = (level) =>
   TRANSCEND_XP_BASE_MULTIPLIER + (level - MAX_MASU_LEVEL_CAP) * TRANSCEND_XP_MULTIPLIER_STEP;
+const soulRankXpForBondLevel = (level) => {
+  const current = Math.max(TRANSCEND_LEVEL_CAP, Math.floor(Number(level) || TRANSCEND_LEVEL_CAP));
+  if (current < 600) return 160000 + (current - 500) * 250;
+  if (current < 700) return 210000 + (current - 600) * 250;
+  if (current < 800) return 265000 + (current - 700) * 500;
+  if (current < 900) return 345000 + (current - 800) * 500;
+  return 430000 + (current - 900) * 900;
+};
 const xpForBondLevelAt = (level) => {
-  const normal = xpForBondLevel(level);
-  return level < MAX_MASU_LEVEL_CAP ? normal : Math.max(1, Math.round(normal * transcendXpMultiplier(level)));
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  if (current >= TRANSCEND_LEVEL_CAP) return soulRankXpForBondLevel(current);
+  const normal = xpForBondLevel(current);
+  return current < MAX_MASU_LEVEL_CAP ? normal : Math.max(1, Math.round(normal * transcendXpMultiplier(current)));
 };
 const bondLevelInfo = (totalXp) => {
   // 壊れた保存値(NaN・Infinity・負数)で回り続けないよう、先に有限の0以上へ落とす
@@ -91,9 +120,9 @@ const bondLevelInfo = (totalXp) => {
   return { level, xpIntoLevel: xp, xpForNext: xpForBondLevelAt(level), totalXp: safeTotal };
 };
 const INITIAL_MASU_LEVEL_CAP = 30;
-// 超越後はLv500まで数える。Lv1から数え上げるので、繰り返し回数は上限-1。
-// こうしておくと壊れた絆経験値が来てもLv501にはならず、無限ループにもならない。
-const MAX_BOND_LEVEL_ITERATIONS = TRANSCEND_LEVEL_CAP - 1;
+// 魂格ⅤのLv1000まで数える。Lv1から数え上げるので、繰り返し回数は上限-1。
+// 個体ごとの実上限は cappedBondXp / levelCap で止め、ここは総XPを安全にLvへ直す共通基盤だけを広げる。
+const MAX_BOND_LEVEL_ITERATIONS = SOUL_RANK_MAX_LEVEL_CAP - 1;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const AUTO_REPEAT_BREAKTHROUGH_MIN_LEVEL = 35;
@@ -772,6 +801,10 @@ const normalizeMasuProgression = (masu) => ({
   inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
   inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
   levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+  // 魂格は既存個体へ後付けする。旧データは stage 0 / 初到達Lv500 / 特性なしとして読む。
+  soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+  soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
+  soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
   // 超越の項目。旧セーブには存在しないので、未超越・0として読む(移行処理はいらない)
   transcended: isTranscended(masu),
   transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
@@ -857,6 +890,10 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
     inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+    // 魂格の初到達履歴と振り分けは転生で失わせない。未使用魂格Pは最高初到達Lvから導出する。
+    soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+    soulPointMaxReachedLevel: normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel),
+    soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
     // 超越は転生で失われない。状態・未使用の超越P・超越で上げた基礎値をそのまま持ち越す
     transcended: isTranscended(masu),
     transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
@@ -892,18 +929,36 @@ const cappedBondXp = (masu, gain = 0, maxLevel = null) => {
 };
 // 絆経験値の加算・レベル上限・強化ポイント付与を、通常バトル、チケット、合体で共有する。
 // 戻り値に表示用の前後レベルと実際の付与量も含め、画面と保存値の計算がずれないようにする。
+const TRANSCEND_POINT_LEVEL_BANDS = Object.freeze([
+  { min:401, max:500, points:1 },
+  { min:501, max:600, points:2 },
+  { min:601, max:700, points:3 },
+  { min:701, max:800, points:4 },
+  { min:801, max:900, points:5 },
+  { min:901, max:1000, points:6 },
+]);
+const gainedTranscendPointsBetweenLevels = (fromLevel, toLevel) => {
+  const from = Math.max(1, Math.floor(Number(fromLevel) || 1));
+  const to = Math.max(from, Math.floor(Number(toLevel) || from));
+  return TRANSCEND_POINT_LEVEL_BANDS.reduce((sum, band) => {
+    const reachedInBand = Math.max(0, Math.min(to, band.max) - Math.max(from, band.min - 1));
+    return sum + reachedInBand * band.points;
+  }, 0);
+};
 const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
   const before = masuBondLevelInfo(masu);
   const bondXp = cappedBondXp(masu, gain, maxLevel);
   const after = bondLevelInfo(bondXp);
   const gainedLevels = Math.max(0, after.level - before.level);
-  // Lv400までは今までどおり通常の強化ポイント。Lv401以降(超越の領域)は
-  // 通常ポイントを配らず、1レベルにつき超越ポイントを1だけ配る。
-  // 400をまたいでレベルが上がったときも、400までのぶんと401以降のぶんを分けて数える。
+  // Lv400までは今までどおり通常の強化ポイント。Lv401以降は実際に到達したLv帯で超越Pを得る。
+  // 魂格段階そのものを倍率に使わないため、転生後の低Lv再育成でも帯どおりの量になる。
   const cap = MAX_MASU_LEVEL_CAP;
   const normalLevels = Math.max(0, Math.min(cap, after.level) - Math.min(cap, before.level));
-  const gainedTranscendPoints = Math.max(0, after.level - Math.max(cap, before.level));
+  const gainedTranscendPoints = gainedTranscendPointsBetweenLevels(before.level, after.level);
   const gainedPoints = gainedEnhancePointsBetweenLevels(before.level, Math.min(cap, after.level));
+  const previousSoulMax = normalizeSoulPointMaxReachedLevel(masu?.soulPointMaxReachedLevel);
+  const nextSoulMax = Math.max(previousSoulMax, Math.min(SOUL_RANK_MAX_LEVEL_CAP, after.level));
+  const gainedSoulPoints = Math.max(0, nextSoulMax - previousSoulMax);
   // 同一帯だけを上がった場合は従来UI用に×2/×3を返す。帯をまたぐ場合は誤解を避けて×表示を出さない。
   const sameBandMultiplier = normalLevels > 0 ? (gainedPoints / normalLevels) : 1;
   const pointMultiplier = Number.isInteger(sameBandMultiplier) ? sameBandMultiplier : 1;
@@ -912,6 +967,9 @@ const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
       ...masu,
       bondXp,
       distAptPoints: (masu.distAptPoints || 0) + gainedPoints,
+      soulRankStage: normalizeSoulRankStage(masu?.soulRankStage),
+      soulPointMaxReachedLevel: nextSoulMax,
+      soulTraitLevels: normalizeSoulTraitLevels(masu?.soulTraitLevels),
       ...(gainedTranscendPoints > 0
         ? { transcendPoints: Math.max(0, Math.floor(Number(masu.transcendPoints) || 0)) + gainedTranscendPoints }
         : {}),
@@ -921,6 +979,7 @@ const applyBondXpGain = (masu, gain = 0, maxLevel = null) => {
     gainedLevels,
     gainedPoints,
     gainedTranscendPoints,
+    gainedSoulPoints,
     pointMultiplier,
     xpGain: Math.max(0, bondXp - donationDiamondValue(masu.bondXp)),
   };

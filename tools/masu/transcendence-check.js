@@ -5,7 +5,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //
 // 見ているもの:
 //   ① 資格(35凸・Lv400・未超越)とコスト(虹のプシュケー5,000 / ダイヤ1,000,000)
-//   ② Lv上限(未超越はLv400で停止 / 超越済みはLv500まで、Lv501にはならない)
+//   ② Lv上限(未超越はLv400 / 魂格なしの超越済みはLv500で停止)
 //   ③ 必要経験値(Lv399以下は一切変えない / Lv400以降だけ超越倍率)
 //   ④ ポイント(Lv401以降は通常強化Pを配らず超越P。reconcileも誤補填しない)
 //   ⑤ 虹のプシュケー→超越Pの交換
@@ -140,9 +140,8 @@ check('超越してもレベルは400のまま・上限だけ500になる',
   `Lv${levelOf(success.nextMasu).level} / ${success.nextMasu.levelCap}`);
 check('未超越はLv400で止まる', levelOf(masu({ bondXp: totalXp(MAX_CAP) + 99999999 })).level === MAX_CAP);
 check('超越済みはLv500まで伸びる', levelOf(transcended({ bondXp: totalXp(TRANSCEND_CAP) })).level === TRANSCEND_CAP);
-check('Lv501にはならない',
-  levelOf(transcended({ bondXp: totalXp(TRANSCEND_CAP) + 99999999 })).level === TRANSCEND_CAP
-  && bondInfo(Number.MAX_SAFE_INTEGER).level <= TRANSCEND_CAP);
+check('魂格なしの超越済み個体はLv501にはならない',
+  levelOf(transcended({ bondXp: totalXp(TRANSCEND_CAP) + 99999999 })).level === TRANSCEND_CAP);
 check('限界突破は35回のまま・36凸を作っていない',
   success.nextMasu.rebirthCount === 35 && G('FINAL_BREAKTHROUGH_COUNT') === 35
   && G('breakthroughLevelCap')(36) === G('breakthroughLevelCap')(35)
