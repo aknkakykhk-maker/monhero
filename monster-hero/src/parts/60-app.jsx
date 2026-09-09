@@ -9887,6 +9887,65 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>;
         })()}
 
+        {/* 魂格進化: 次の1段階だけを表示。条件不足でも必要Lv・ダイヤ・勇者の証を隠さない。 */}
+        {gameState==='MASU_SOUL_RANK'&&(()=>{
+          const heroProofHave=ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID);
+          const selected=masuMons.find(m=>String(m.id)===String(soulRankSelectedId));
+          if(!selected){
+            const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds))
+              .filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)&&monsterEntryMatchesLineage(e));
+            return <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+              <div className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-sky-200">魂格進化</h2></div>
+              <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="temple" compact/></div>
+              <div className="rounded-xl border border-sky-400/30 bg-sky-950/20 p-3 mb-2 text-[10px] leading-relaxed text-slate-300 shrink-0">超越後、現在のLv上限まで育ったマスモンを次の魂格へ進化できます。進化しても現在Lvは上がらず、Lv上限だけが100解放されます。</div>
+              <div className="flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 mb-3 shrink-0"><span className="text-[10px] font-black text-amber-200">🏅 勇者の証</span><span className="text-[11px] font-mono font-black text-white">所持 {heroProofHave.toLocaleString()}</span></div>
+              {renderMonsterSortFilterBar({singleType:true})}
+              <div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{
+                const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;
+                const status=soulRankEvolutionStatus(masu);
+                const normalized=normalizeMasuProgression(masu);
+                const canOpen=status.ok;
+                const label=normalized.soulRankStage>0?'魂格'+['','Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'][normalized.soulRankStage]:normalized.transcended?'超越済み':'未超越';
+                const sub=!status.ok?status.reason:status.levelReady?status.next.label+'へ進化可能':'Lv.'+status.next.requiredLevel+'で'+status.next.label;
+                return <button key={masu.id} data-soul-rank-candidate={masu.id} disabled={!canOpen} onClick={()=>{setSoulRankSelectedId(masu.id);setSoulRankError('');}} style={MONSTER_CARD_STYLE} className={MONSTER_CARD_CLASS+' border-sky-400/40 bg-slate-900 disabled:opacity-35'}>
+                  {renderMonsterCardBody({masu,base,status:<span className="block text-center"><b className="text-[8px] text-sky-200">{label}</b><small className={'block text-[7px] '+(status.levelReady?'text-emerald-300':'text-slate-500')}>{sub}</small></span>})}
+                </button>;
+              })}</div>
+            </div>;
+          }
+          const base=ALL_PLAYER_MONSTERS[selected.baseId];
+          const status=soulRankEvolutionStatus(selected);
+          if(!status.next){
+            return <div data-mh-screen className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2"><button onClick={()=>setSoulRankSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black text-sky-200">魂格進化</h2></div><div className="m-auto text-center text-sm font-black text-slate-300">魂格Ⅴまで進化済みです。</div></div>;
+          }
+          const plan=buildMasuSoulRankEvolution({masu:selected,gold,ownedItems});
+          const next=status.next;
+          const normalized=normalizeMasuProgression(selected);
+          const level=masuBondLevelInfo(selected).level;
+          const goldShort=Math.max(0,next.diamondCost-gold);
+          const proofShort=Math.max(0,next.heroProofCost-heroProofHave);
+          return <div data-mh-screen data-soul-rank-confirm={selected.id} className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-center gap-2 mb-2 shrink-0"><button disabled={soulRankProcessingRef.current} onClick={()=>{setSoulRankSelectedId(null);setSoulRankError('');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic" style={{color:next.accent}}>魂格進化の儀</h2></div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2.5">
+              <div className="flex items-center gap-3 rounded-2xl bg-slate-900 p-3 border" style={{borderColor:next.accent+'66'}}>
+                <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 border-2" style={{borderColor:next.accent}}><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/></div>
+                <div className="min-w-0 flex-1"><b className="block truncate">{selected.name}</b><div className="text-pink-300 text-xs">Lv.{level} / {normalized.levelCap}</div><div className="text-[10px] font-black text-slate-300">{status.currentLabel} → <span style={{color:next.accent}}>{next.label}</span></div><div className="text-[10px] font-black text-emerald-300">Lv上限 {normalized.levelCap} → {next.levelCap}</div></div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/30 p-3 space-y-2">
+                <div className="flex justify-between text-[10px]"><span className="text-slate-400">必要Lv</span><b className={level>=next.requiredLevel?'text-emerald-300':'text-red-300'}>Lv.{level} / Lv.{next.requiredLevel}</b></div>
+                <div className="flex justify-between text-[10px]"><span className="text-slate-400">必要ダイヤ</span><b className={goldShort===0?'text-amber-300':'text-red-300'}>{gold.toLocaleString()} / {next.diamondCost.toLocaleString()}</b></div>
+                <div className="flex justify-between text-[10px]"><span className="text-slate-400">必要な勇者の証</span><b className={proofShort===0?'text-amber-200':'text-red-300'}>{heroProofHave.toLocaleString()} / {next.heroProofCost.toLocaleString()}</b></div>
+                {goldShort>0&&<div className="text-[8px] text-red-300 font-black">ダイヤ あと {goldShort.toLocaleString()}</div>}
+                {proofShort>0&&<div className="text-[8px] text-red-300 font-black">勇者の証 あと {proofShort.toLocaleString()}</div>}
+              </div>
+              <div className="rounded-xl border border-sky-400/30 bg-sky-950/20 p-3 text-[10px] text-slate-300 leading-relaxed">進化後も現在Lv.{level}のままです。Lv上限だけ{next.levelCap}へ解放され、その後の初到達Lvで魂格Pを獲得できます。</div>
+              <div className="rounded-xl border-2 border-red-400/50 bg-red-950/30 px-3 py-2 text-center text-[10px] font-black text-red-200">⚠ 魂格進化は取り消せません</div>
+              {soulRankError&&<div className="text-[10px] text-red-400 font-black text-center">{soulRankError}</div>}
+            </div>
+            <button data-soul-rank-execute disabled={!plan.ok||soulRankProcessingRef.current} onClick={executeMasuSoulRankEvolution} className="shrink-0 mt-3 min-h-[52px] w-full rounded-2xl text-slate-950 font-black text-sm disabled:opacity-35 active:scale-[.98]" style={{background:next.stage===5?'linear-gradient(90deg,#60a5fa,#facc15,#4ade80,#f87171,#e879f9)':next.accent}}>{plan.ok?next.label+'へ進化する':plan.reason}</button>
+          </div>;
+        })()}
+
         {levelCapCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={()=>{setLevelCapCompensation(null);storeSet('mh_masu_level_cap_compensation_notice_seen_v1',true,false);}} className="w-full bg-amber-500 text-black py-3 rounded-2xl font-black">受け取る</button></div></div>}
         {inheritedUniqueCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:49999,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-fuchsia-400 rounded-3xl p-6 text-center"><div className="text-4xl mb-3">🌈</div><h2 className="font-black text-lg mb-2">お詫びの配布</h2><p className="text-[11px] text-slate-300 leading-relaxed">継承固有技Lv不具合修正のお詫びとして虹のプシュケー×20を配布しました。</p><button onClick={()=>setInheritedUniqueCompensation(false)} className="w-full bg-fuchsia-500 text-white py-3 mt-5 rounded-2xl font-black">確認</button></div></div>}
         {/* 限界突破の演出。転生とは別物なので専用の見た目にし、最後に星が1つ増える */}
