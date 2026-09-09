@@ -57,6 +57,11 @@ jobs:
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
       # 配信するのはリポジトリの中身そのものなので、ずれていたら公開せずに落とす。
+      - name: Verify soul rank STEP1 and STEP2 (temporary branch verification)
+        run: |
+          node tools/masu/soul-rank-step1-check.js
+          node tools/masu/soul-rank-step2-check.js
+          node tools/masu/save-transaction-check.js
       - name: Verify the committed compiled output is canonical
         run: node tools/build.js --check
       - name: Verify the compiled runtime
