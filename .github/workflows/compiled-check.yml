@@ -53,11 +53,6 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-      - name: Install canvas for soul rank STEP4 verification only
-        working-directory: tools
-        run: npm install --no-save canvas@3.2.0
-      - name: Verify soul rank STEP4 (temporary branch verification)
-        run: node tools/masu/soul-rank-step4-check.js
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
