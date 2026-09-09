@@ -68,6 +68,8 @@ jobs:
             '<ReincarnateAura count={masu.reincarnateCount} className="is-small"/>':'<SoulRankAura soulRankStage={normalizeMasuProgression(masu).soulRankStage} className="is-small"/>',
             '<ReincarnateAura count={norm.reincarnateCount}/>':'<SoulRankAura soulRankStage={norm.soulRankStage}/>',
             '<ReincarnateAura count={normalized.reincarnateCount}/>':'<SoulRankAura soulRankStage={normalized.soulRankStage}/>',
+            '<ReincarnateAura count={reincarnateAnimation.masu.reincarnateCount} className="is-ceremony"/>':'<SoulRankAura soulRankStage={normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage} className="is-ceremony"/>',
+            '<ReincarnateAura count={count}/>':'<SoulRankAura soulRankStage={Math.max(0,Math.min(5,count))}/>',
             '<ReincarnateAura count={3}/>':'<SoulRankAura soulRankStage={3}/>',
           }
           total=0
