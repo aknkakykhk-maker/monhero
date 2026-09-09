@@ -244,18 +244,21 @@ const ReincarnateBadge = ({ count = 0, className = '' }) => {
   if (!value) return null;
   return <div className={`mh-reincarnate-badge ${className}`} aria-label={`転生${value}回`}>転生 ×{value}</div>;
 };
-// 一覧・詳細・HOME・演出で共有する転生オーラ。同じ画像を別周期で重ね、背面だけで燃焼感を作る。
-const REINCARNATE_AURA_IMAGES = {
-  blue: 'images/effects/reincarnate-aura-blue.PNG',
-  yellow: 'images/effects/reincarnate-aura-yellow.PNG',
-  red: 'images/effects/reincarnate-aura-red.PNG',
+// 一覧・詳細・HOME・演出で共有する魂格オーラ。
+const SOUL_RANK_AURA_IMAGES = {
+  1: 'images/effects/soul-rank-aura-blue.PNG',
+  2: 'images/effects/soul-rank-aura-yellow.PNG',
+  3: 'images/effects/soul-rank-aura-green.PNG',
+  4: 'images/effects/soul-rank-aura-red.PNG',
+  5: 'images/effects/soul-rank-aura-rainbow.PNG',
 };
-const ReincarnateAura = ({ count = 0, className = '' }) => {
-  const value = Math.max(0, Math.floor(Number(count) || 0));
-  if (!value) return null;
-  const stage = value >= 3 ? 'red' : value === 2 ? 'yellow' : 'blue';
-  const src = REINCARNATE_AURA_IMAGES[stage];
-  return <span className={`mh-reincarnate-aura is-${stage} ${className}`} aria-hidden="true">
+const SOUL_RANK_AURA_TONES = { 1:'blue', 2:'yellow', 3:'green', 4:'red', 5:'rainbow' };
+const SoulRankAura = ({ soulRankStage = 0, className = '' }) => {
+  const stage = normalizeSoulRankStage(soulRankStage);
+  if (!stage) return null;
+  const tone = SOUL_RANK_AURA_TONES[stage];
+  const src = SOUL_RANK_AURA_IMAGES[stage];
+  return <span className={`mh-reincarnate-aura is-${tone} ${className}`} aria-hidden="true">
     <span className="mh-reincarnate-flame is-back"><img src={src} alt=""/></span>
     <span className="mh-reincarnate-flame is-main"><img src={src} alt=""/></span>
     <span className="mh-reincarnate-flame is-foot"><img src={src} alt=""/></span>
