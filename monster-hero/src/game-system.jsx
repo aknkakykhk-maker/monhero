@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 13b8af2a17c36934
+// generated-sha256: d0b15994ffd1daba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 01:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 11:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7346,7 +7346,7 @@ const MarketProductCard = ({ item, owned=false, comingSoon=false, detail=null, m
     <MarketProductIcon item={item} onZoom={onZoom} disabled={disabled}/>
     <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
     <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>{middle||detail&&!comingSoon?<>{middle}{!middle&&<button onClick={onDetail} aria-label={`${item.name}の詳細を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}</div>
-    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof?'交換':'購入'}`}`} className={`text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[8px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={9}/>:<Coins size={9}/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
+    <div className="w-full flex items-center justify-center mt-auto pt-2">{comingSoon?<div className="text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>:owned?<div className="text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>:<button onClick={onBuy} disabled={disabled||!canBuy} aria-label={`${item.name}${disabled?'（デバッグのため購入不可）':`を${priceLabel}で${usesHeroProof?'交換':'購入'}`}`} className={`text-[10px] font-black px-1.5 min-h-[30px] max-w-full rounded-xl flex items-center justify-center gap-1 whitespace-nowrap ${disabled||!canBuy?'bg-slate-800 text-slate-500':usesPsyche?'bg-fuchsia-600 text-white active:scale-95':'bg-amber-500 text-black active:scale-95'}`}>{usesHeroProof?<><span aria-hidden="true">🏅</span><span className="text-[8px]">勇者の証 ×{item.cost.toLocaleString()}</span></>:usesPsyche?<><span aria-hidden="true">🌈</span><span>{item.cost.toLocaleString()}</span></>:<>{usesGold?<Gem size={9} className="shrink-0"/>:<Coins size={9} className="shrink-0"/>}<span>{item.cost.toLocaleString()}</span></>}</button>}</div>
   </div>;
 };
 
@@ -22264,7 +22264,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id,debug:debugBattle});return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:setting.id==='INFINITY'?infinityUnlocked:setting.id==='GOD'?godUnlocked:setting.id==='RAGNAROK'?ragnarokUnlocked:false);const previewable=(setting.available||(debugBattle&&setting.debugAvailable))&&unlocked;const theme=extremeDifficultyTheme(setting.id);const heroProofReward=heroProofClearReward({extremeDifficulty:setting.id});return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?theme.accent:`rgba(${theme.rgb},.28)`,background:previewable?theme.background:`linear-gradient(180deg,rgba(${theme.rgb},.10),#0d142b)`,boxShadow:active?`0 0 ${theme.shadowBlur}px rgba(${theme.rgb},${theme.glow})`:'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:theme.accent,textShadow:active?`0 0 10px rgba(${theme.rgb},${theme.titleGlow})`:'none'}}>{setting.label}</h3>
@@ -23868,7 +23868,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         canBuy={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)>0&&!marketPurchaseProcessingRef.current}
                         disabled={marketPurchaseProcessingRef.current}
                         onBuy={exchangeSoulRankRespecByProof}
-                        middle={<span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>}
+                        middle={<><span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>}
                       />}
                     </React.Fragment>
                   );
