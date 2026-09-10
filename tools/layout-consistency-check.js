@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
+const { screenSource } = require(path.join(__dirname, 'harness'));
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 
 let failed = 0;
@@ -98,8 +99,11 @@ check('モードのタブはランキングでは出さない',
 // 名前は最長14文字。細い端末では3行になるので、3行ぶんの枠を確保しておく
 check('商品名は行数が変わっても同じ高さの枠に入れる', has("style={{minHeight:'36px'}}>{item.name}</div>"));
 // アイテムの効果は詳細ボタンから出す(カードに長い説明を載せると縦に伸びるため)
+// 2026-09-10(STEP 6-6)にマーケットを切り出したので、画面は onOpenItemDetail を呼び、
+// 本体がそれに setMarketItemDetail を渡す形になった
 check('アイテムの効果は詳細ボタンから出す',
-  has('onClick={()=>setMarketItemDetail(item)}') && !has("style={{minHeight:'40px'}}>{item.desc||null}</div>"));
+  has('onClick={()=>onOpenItemDetail(item)}') && has('onOpenItemDetail={setMarketItemDetail}')
+    && !has("style={{minHeight:'40px'}}>{item.desc||null}</div>"));
 check('所持数と詳細ボタンは同じ高さの1行にまとめる',
   has("<div className=\"w-full flex items-center justify-center gap-1\" style={{height:'22px'}}>"));
 // 1行に4商品。カードが細くなるので、アイコンの大きさもそれに合わせて1か所で決める
@@ -107,7 +111,8 @@ check('1行に4商品ずつ並べる',
   has("const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';") && has('<div className={MARKET_GRID_CLASS}>'));
 // 4つ並べるとアイコンが小さいので、タップで大きく見られるようにしている
 check('商品アイコンはタップで拡大できる',
-  has('onZoom={()=>setMarketIconZoom(item)}') && has('aria-label={`${item.name}を大きく見る`}')
+  has('onZoom={()=>onZoomIcon(item)}') && has('onZoomIcon={setMarketIconZoom}')
+    && has('aria-label={`${item.name}を大きく見る`}')
     && has('{marketIconZoom&&(()=>{const item=marketIconZoom;'));
 check('拡大表示は実際に使われる形(丸／角丸)で出す',
   has("const round=item.type==='icon'||item.type==='assist';"));
@@ -170,10 +175,22 @@ const COMPONENT_OWNED_SCREENS = {
   RHYTHM_PLAY: 'RhythmTapTest（演奏中。BATTLEと同じくスクロールさせない設計）',
   RHYTHM_OPTIONS: 'RhythmOptions',
   RHYTHM_DEMO_HOME: 'RhythmSongSelect（曲の一覧の中でスクロールする）',
+  // 攻撃アクションを大きく見せるための専用画面。中身は1画面に収まる作りで、
+  // 元からスクロール領域を持たない。2026-09-10 に画面を切り出して初めてそれが見えた
+  // (それまでは 9000 文字の窓が隣の画面へはみ出し、隣の overflow-y-auto を拾って通っていた)
+  MONSTER_ATTACK_PREVIEW: 'MonsterAttackPreviewScreen（演出を見せる専用画面。元からスクロールしない）',
 };
 const noScroll = screens.filter(name => {
   if (ABSOLUTE_LAYOUT_SCREENS.includes(name) || OUT_OF_SCOPE_SCREENS(name)) return false;
   if (COMPONENT_OWNED_SCREENS[name]) return false;
+  // 画面を切り出すと「gameState の位置から 9000 文字」には呼び出ししか入らないので、
+  // 切り出し済みならコンポーネント本体を見る(2026-09-10・STEP 6)。
+  // どの画面がどのコンポーネントになったかは、呼び出し側 <XxxScreen から読み取る
+  const called = (source.match(new RegExp(`gameState==='${name}'&&\\(\\s*<([A-Z][A-Za-z0-9]*)`)) || [])[1];
+  if (called) {
+    const moved = screenSource(name, called);
+    if (moved) return !moved.includes('overflow-y-auto');
+  }
   const at = screenStart(name);
   if (at < 0) return false;
   return !source.slice(at, at + 9000).includes('overflow-y-auto');
