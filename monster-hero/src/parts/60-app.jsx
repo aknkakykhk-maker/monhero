@@ -7462,7 +7462,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const motion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[animSlot]?.atkMotion; // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する。固有技は技の出自(継承元)のモーションを優先する
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
-              setAttackAnim({slotIndex: animSlot, charge:true});
+              setAttackAnim({slotIndex: animSlot, charge:true, ...(motion==='waterBurst'?{motion}: {})});
               Audio_.se.special();
               await battleWait(650);
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -7473,7 +7473,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(115); triggerShake();
                 await battleWait(130);
               }else{
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?520:500)));
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)));
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -7485,7 +7485,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)));
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)));
               }
             }
             setAttackAnim(null);
@@ -11722,7 +11722,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const isDashMotion=atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo'||atkMotion==='kenshiTwinBlade';
           const playMotionPreview=async()=>{
             if(!motionSupported||monsterImageDebugMotionPlaying)return;
-            setMonsterImageDebugMotionPlaying({charge:true});
+            setMonsterImageDebugMotionPlaying({charge:true, ...(atkMotion==='waterBurst'?{motion:atkMotion}: {})});
             await new Promise(r=>setTimeout(r,650));
             if(isDashMotion){
               const isTwin=atkMotion==='kenshiTwinBlade';
@@ -11730,7 +11730,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?560:320)));
             }else{
               setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
-              await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?520:500)));
+              await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?WATER_BURST_MOTION_MS:500)));
             }
             setMonsterImageDebugMotionPlaying(null);
           };
@@ -11748,11 +11748,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
                   <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>
                   <p className="mb-2 text-[8px] leading-relaxed text-slate-400">本番のバトル画面と同じ関数・同じCSSでこの場で再生する。連撃の巻き添えヒットは無いのでこの1回だけ動く。</p>
-                  <div className="mx-auto h-28 w-28 overflow-hidden rounded-xl border border-white/20" style={bgStyle}>
+                  <div className={`mx-auto h-28 w-28 ${atkMotion==='waterBurst'?'overflow-visible':'overflow-hidden'} rounded-xl border border-white/20`} style={bgStyle}>
                     <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}>
-                      <DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>
-                      {monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}
-                      {monsterImageDebugMotionPlaying?.twinBlade&&<KenshiTwinSlash/>}
+                      {monsterImageDebugMotionPlaying?.motion==='waterBurst'
+                        ?<WaterBurstMotion
+                          image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
+                          lunge={monsterImageDebugMotionPlaying?.charge===false}
+                          charging={monsterImageDebugMotionPlaying?.charge===true}/>
+                        :<>
+                          <DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>
+                          {monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}
+                          {monsterImageDebugMotionPlaying?.twinBlade&&<KenshiTwinSlash/>}
+                        </>}
                     </div>
                   </div>
                   <button onClick={playMotionPreview} disabled={!!monsterImageDebugMotionPlaying} className="mt-2 w-full min-h-[42px] rounded-xl bg-cyan-700 text-[10px] font-black disabled:opacity-40">{monsterImageDebugMotionPlaying?'再生中…':'攻撃モーションを再生'}</button>
@@ -14538,7 +14545,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {previewDmg>0&&(<div className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingPreview&&isPendingHalved?'½ ':''}DMG:{previewDmg}{isPendingPreview&&previewSoulPct>0&&<span data-soul-damage-preview className="ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[6px] text-sky-100">魂格 +{previewSoulPct}%</span>}</div>)}
                       {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                         ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="object-contain drop-shadow-md"/>}/>
-                        :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                        :isAnimating&&attackAnim.motion==='waterBurst'
+                          ?<WaterBurstMotion
+                            image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                            lunge={attackAnim.charge===false}
+                            charging={attackAnim.charge===true}/>
+                          :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                       {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる */}
                       {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
                       {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}

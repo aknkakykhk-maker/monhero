@@ -94,6 +94,48 @@ const KenshiTwinSlash = () => (
     ))}
   </span>
 );
+// ウンディーネ種（スネグーラチカ・ウンディーネ・ヤオビクニ）共通の水攻撃演出。
+// 距離枠そのものは動かさず、本体だけを左右へ大きく滑らせながら水弾を3発撃つ。
+// 水弾・水面の引き波・着弾飛沫は攻撃中だけDOMへ出し、常時アニメーションにはしない。
+const WATER_BURST_SHOTS = Object.freeze([
+  { left:'17%', delay:'120ms', x:'24px',  y:'-132px', angle:'-8deg' },
+  { left:'50%', delay:'240ms', x:'0px',   y:'-138px', angle:'2deg'  },
+  { left:'83%', delay:'360ms', x:'-24px', y:'-132px', angle:'9deg'  },
+]);
+const WATER_BURST_SPLASH_DROPS = Object.freeze([
+  { x:'-74px', y:'-34px', angle:'-28deg', delay:'0ms'  },
+  { x:'-54px', y:'-66px', angle:'-48deg', delay:'18ms' },
+  { x:'-24px', y:'-78px', angle:'-72deg', delay:'8ms'  },
+  { x:'16px',  y:'-82px', angle:'72deg',  delay:'22ms' },
+  { x:'50px',  y:'-62px', angle:'48deg',  delay:'10ms' },
+  { x:'76px',  y:'-30px', angle:'26deg',  delay:'28ms' },
+  { x:'-60px', y:'18px',  angle:'14deg',  delay:'34ms' },
+  { x:'62px',  y:'20px',  angle:'-14deg', delay:'38ms' },
+]);
+const WaterBurstMotion = ({image, lunge=false, charging=false, compact=false}) => (
+  <span className={`water-burst-motion${lunge?' water-burst-motion--lunge':''}${charging?' water-burst-motion--charging':''}${compact?' water-burst-motion--compact':''}`}>
+    <span className="water-burst-motion__wake" aria-hidden="true"><i/><i/><i/></span>
+    <span className="water-burst-motion__monster">{image}</span>
+    <span className="water-burst-motion__shots" aria-hidden="true">
+      {WATER_BURST_SHOTS.map((shot,index)=>(
+        <i key={`shot-${index}`} className="water-burst-motion__shot" style={{
+          left:shot.left, animationDelay:shot.delay,
+          '--water-shot-x':shot.x, '--water-shot-y':shot.y, '--water-shot-angle':shot.angle,
+        }}/>
+      ))}
+    </span>
+    <span className="water-burst-motion__impact" aria-hidden="true">
+      <i className="water-burst-motion__impact-core"/>
+      <i className="water-burst-motion__impact-ring"/>
+      {WATER_BURST_SPLASH_DROPS.map((drop,index)=>(
+        <i key={`drop-${index}`} className="water-burst-motion__drop" style={{
+          '--water-drop-x':drop.x, '--water-drop-y':drop.y,
+          '--water-drop-angle':drop.angle, '--water-drop-delay':drop.delay,
+        }}/>
+      ))}
+    </span>
+  </span>
+);
 const PandoraDualThunder = ({image, compact=false}) => (
   <span className={`pandora-dual-thunder${compact?' pandora-dual-thunder--compact':''}`} aria-hidden="true">
     <span className="pandora-dual-center">{React.cloneElement(image,{alt:''})}</span>
@@ -106,6 +148,13 @@ const PandoraDualThunder = ({image, compact=false}) => (
 // 図鑑などから本番と同じ攻撃モーション描画を使うための共通ステージ。
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
 const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
+  if(anim?.motion==='waterBurst') {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+        <WaterBurstMotion image={image} lunge={anim?.charge===false} charging={anim?.charge===true} compact={compact}/>
+      </div>
+    );
+  }
   if(anim?.motion==='pandoraDualThunder') {
     return (
       <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>

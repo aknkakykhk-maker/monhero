@@ -421,11 +421,15 @@ const rpgResolveStep = (battle, varianceOn, rng = rpgDefaultRng) => {
 // どのモーションを使うかは、通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion で決める。
 // RPG用にモーションのデータを別に持たないので、モンスターを足しても更新漏れが起きない。
 const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', kenshiTwinBlade:'Dash', pandoraDualThunder:'Thunder' });
+const WATER_BURST_MOTION_MS = 680;
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = (anim) => {
   if (!anim) return undefined;
   // パンドラは枠全体を動かさず、PandoraDualThunder 内の実画像2枚を動かす。
   if (anim.motion==='pandoraDualThunder') return undefined;
+  // ウンディーネ種の水攻撃も距離枠は動かさない。WaterBurstMotion 内で本体だけを横滑りさせる。
+  // 実際の零・近・中・遠の位置とUIを巻き込まず、見た目だけ大きく動かすため。
+  if (anim.motion==='waterBurst') return undefined;
   // エイキはザンと同じ高速斬撃の動き(zanComboDash)をそのまま使う。
   // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
   // 剣士モッチーは敵まで高速で斬り込み、二度通り抜けてX字を完成させる専用モーション。
@@ -433,8 +437,8 @@ const attackMotionAnimation = (anim) => {
   if (anim.twinBlade || anim.motion==='kenshiTwinBlade') return 'kenshiTwinBladeSlash 560ms cubic-bezier(.18,.76,.2,1) forwards';
   if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
   if (anim.charge) return 'specialCharge 650ms ease-out forwards';
-  if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards');
-  return anim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards');
+  if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':'specialLunge 500ms ease-in forwards';
+  return anim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':'attackFly 450ms ease-in forwards';
 };
 // 図鑑・画像デバッグで、本番の atkMotion を「1回の攻撃アクション」として見せるための共通手順。
 // 動かし方そのものは attackMotionAnimation / PandoraDualThunder 等の本番演出を使い、
@@ -448,7 +452,7 @@ const attackMotionPreviewSequence = (atkMotion='default') => {
   ];
   return [{
     anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
-    ms:motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)),
+    ms:motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)),
   }];
 };
 const rpgMotionName = (side, monId, isSkill) => {

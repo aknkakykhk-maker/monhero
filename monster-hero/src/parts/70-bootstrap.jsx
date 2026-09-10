@@ -52,17 +52,135 @@ const createAnimationStyle = () => {
     .pandora-dual-thunder--compact .pandora-dual-clone--right { animation-name:pandoraDualRightCompact; }
     @keyframes pandoraDualLeftCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(-25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
     @keyframes pandoraDualRightCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
-    /* スネグーラチカ専用: 追加画像を使わず、水弾の残像を軽量なdrop-shadowで表現する。 */
+    /* ウンディーネ種共通の水攻撃。
+       距離枠は固定したまま本体だけを左右へ大きく滑らせ、水弾3発→大きな着弾飛沫までを680msで見せる。
+       追加画像は使わず、攻撃中だけ出るCSS要素で水の尾・引き波・飛沫を描く。 */
+    .water-burst-motion { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:26; isolation:isolate; }
+    .water-burst-motion__monster {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:4;
+      transform-origin:50% 70%; will-change:transform,filter;
+      animation:waterBurstAttack 680ms cubic-bezier(.16,.78,.16,1) forwards;
+    }
+    .water-burst-motion--lunge .water-burst-motion__monster { animation-name:waterBurstLunge; }
+    .water-burst-motion--charging .water-burst-motion__monster { animation:waterBurstCharge 650ms cubic-bezier(.2,.72,.2,1) forwards; }
+    .water-burst-motion--charging .water-burst-motion__shots,
+    .water-burst-motion--charging .water-burst-motion__impact { display:none; }
+    @keyframes waterBurstCharge {
+      0% { transform:translate3d(0,0,0) scale(1); filter:drop-shadow(0 0 5px rgba(103,232,249,.45)); }
+      55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(34,211,238,.92)) drop-shadow(0 10px 20px rgba(37,99,235,.62)); }
+      100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(14,165,233,.82)); }
+    }
     @keyframes waterBurstAttack {
-      0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 4px rgba(103,232,249,.45)); }
-      35% { transform: translateY(-45px) scale(1.06); filter: drop-shadow(0 -20px 2px rgba(34,211,238,.75)) drop-shadow(0 -42px 4px rgba(59,130,246,.55)); }
-      68% { transform: translateY(-155px) scale(1.12); filter: drop-shadow(0 38px 3px rgba(125,211,252,.8)) drop-shadow(0 76px 6px rgba(37,99,235,.5)); }
-      100% { transform: translateY(0) scale(1); filter: none; }
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(103,232,249,.5)); }
+      10% { transform:translate3d(0,8px,0) scale(.95,.88) rotate(-2deg); filter:drop-shadow(0 0 15px rgba(34,211,238,.9)); }
+      25% { transform:translate3d(-44px,-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
+      48% { transform:translate3d(46px,-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
+      69% { transform:translate3d(-32px,-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
+      84% { transform:translate3d(20px,-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
     @keyframes waterBurstLunge {
-      0% { transform: translateY(44px) scale(.78); filter: drop-shadow(0 0 20px rgba(34,211,238,.8)); }
-      55% { transform: translateY(-190px) scale(1.25); filter: drop-shadow(0 45px 3px rgba(125,211,252,.9)) drop-shadow(0 90px 7px rgba(37,99,235,.6)); }
-      100% { transform: translateY(0) scale(1); filter: none; }
+      0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(34,211,238,.95)); }
+      18% { transform:translate3d(-52px,-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
+      43% { transform:translate3d(52px,-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      67% { transform:translate3d(-38px,-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
+      84% { transform:translate3d(24px,-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+    }
+    .water-burst-motion__wake { position:absolute; inset:0; z-index:2; overflow:visible; }
+    .water-burst-motion__wake i {
+      position:absolute; left:50%; top:72%; width:38px; height:11px; margin:-5px 0 0 -19px; opacity:0;
+      border:3px solid rgba(165,243,252,.9); border-radius:50%;
+      box-shadow:0 0 9px rgba(34,211,238,.9), inset 0 0 7px rgba(255,255,255,.72);
+      will-change:transform,opacity; animation:waterBurstWake 300ms ease-out forwards;
+    }
+    .water-burst-motion__wake i:nth-child(1) { --water-wake-x:-34px; animation-delay:70ms; }
+    .water-burst-motion__wake i:nth-child(2) { --water-wake-x:36px; animation-delay:245ms; }
+    .water-burst-motion__wake i:nth-child(3) { --water-wake-x:-24px; animation-delay:420ms; }
+    @keyframes waterBurstWake {
+      0% { opacity:0; transform:translate3d(var(--water-wake-x),0,0) scale(.35); }
+      24% { opacity:1; }
+      100% { opacity:0; transform:translate3d(var(--water-wake-x),5px,0) scale(1.85,.9); }
+    }
+    .water-burst-motion__shots { position:absolute; inset:0; overflow:visible; z-index:6; }
+    .water-burst-motion__shot {
+      position:absolute; top:42%; width:20px; height:28px; margin:-14px 0 0 -10px; opacity:0;
+      border-radius:52% 48% 58% 42%;
+      background:radial-gradient(circle at 35% 26%,#fff 0 12%,#bae6fd 20%,#22d3ee 54%,#2563eb 100%);
+      border:1px solid rgba(255,255,255,.95);
+      box-shadow:0 0 8px rgba(255,255,255,.98),0 0 18px rgba(34,211,238,.95),0 0 28px rgba(37,99,235,.72);
+      will-change:transform,opacity; animation:waterBurstShot 300ms cubic-bezier(.12,.72,.2,1) forwards;
+    }
+    .water-burst-motion__shot::before {
+      content:''; position:absolute; left:50%; top:72%; width:9px; height:58px; transform:translateX(-50%);
+      border-radius:999px;
+      background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(34,211,238,.72) 30%,rgba(37,99,235,.22) 72%,transparent);
+      filter:blur(1px); box-shadow:0 0 7px rgba(103,232,249,.7); z-index:-1;
+    }
+    .water-burst-motion__shot::after {
+      content:''; position:absolute; left:3px; top:3px; width:7px; height:9px; border-radius:50%;
+      background:rgba(255,255,255,.95); filter:blur(.3px);
+    }
+    @keyframes waterBurstShot {
+      0% { opacity:0; transform:translate3d(-50%,18px,0) rotate(var(--water-shot-angle)) scale(.45,.72); }
+      14% { opacity:1; }
+      72% { opacity:1; transform:translate3d(calc(-50% + var(--water-shot-x)),var(--water-shot-y),0) rotate(var(--water-shot-angle)) scale(1.12,1.28); }
+      100% { opacity:0; transform:translate3d(calc(-50% + var(--water-shot-x)),calc(var(--water-shot-y) - 16px),0) rotate(var(--water-shot-angle)) scale(.72,1.5); }
+    }
+    .water-burst-motion__impact {
+      position:absolute; left:50%; top:-92px; width:30px; height:30px; margin:-15px 0 0 -15px;
+      z-index:7; opacity:0; animation:waterBurstImpact 680ms ease-out forwards;
+    }
+    .water-burst-motion__impact-core {
+      position:absolute; inset:-52px; border-radius:50%;
+      background:radial-gradient(circle,rgba(255,255,255,1) 0 8%,rgba(186,230,253,.98) 16%,rgba(34,211,238,.72) 34%,rgba(37,99,235,.38) 52%,rgba(37,99,235,0) 74%);
+      filter:blur(.4px);
+    }
+    .water-burst-motion__impact-ring {
+      position:absolute; inset:-22px; border:4px solid rgba(224,242,254,.96); border-radius:50%;
+      box-shadow:0 0 12px #fff,0 0 25px rgba(34,211,238,.95),0 0 42px rgba(37,99,235,.72);
+    }
+    @keyframes waterBurstImpact {
+      0%,63% { opacity:0; transform:scale(.18); }
+      66% { opacity:1; transform:scale(.62); }
+      74% { opacity:1; transform:scale(1.25); }
+      84% { opacity:.78; transform:scale(1.85); }
+      100% { opacity:0; transform:scale(2.4); }
+    }
+    .water-burst-motion__drop {
+      position:absolute; left:50%; top:50%; width:18px; height:7px; margin:-3.5px 0 0 -9px; opacity:0;
+      border-radius:999px 65% 65% 999px;
+      background:linear-gradient(90deg,#fff,#67e8f9 38%,#3b82f6 76%,transparent);
+      box-shadow:0 0 7px rgba(125,211,252,.9);
+      animation:waterBurstDrop 230ms ease-out forwards; animation-delay:calc(430ms + var(--water-drop-delay));
+    }
+    @keyframes waterBurstDrop {
+      0% { opacity:0; transform:translate3d(0,0,0) rotate(var(--water-drop-angle)) scaleX(.35); }
+      18% { opacity:1; }
+      100% { opacity:0; transform:translate3d(var(--water-drop-x),var(--water-drop-y),0) rotate(var(--water-drop-angle)) scaleX(1.2); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .water-burst-motion__monster,
+      .water-burst-motion--lunge .water-burst-motion__monster,
+      .water-burst-motion--charging .water-burst-motion__monster { animation:waterBurstReduced 680ms ease-out forwards; }
+      .water-burst-motion__shot { animation:waterBurstShotReduced 300ms ease-out forwards; }
+      .water-burst-motion__wake i, .water-burst-motion__drop { display:none; }
+      .water-burst-motion__impact { animation:waterBurstImpactReduced 680ms ease-out forwards; }
+      @keyframes waterBurstReduced {
+        0% { filter:drop-shadow(0 0 4px rgba(103,232,249,.35)); }
+        45% { filter:drop-shadow(0 0 24px rgba(34,211,238,.95)); }
+        100% { filter:none; }
+      }
+      @keyframes waterBurstShotReduced {
+        0% { opacity:0; transform:translate3d(-50%,4px,0) scale(.6); }
+        35% { opacity:1; }
+        100% { opacity:0; transform:translate3d(-50%,-24px,0) scale(1); }
+      }
+      @keyframes waterBurstImpactReduced {
+        0%,62% { opacity:0; transform:scale(.5); }
+        72% { opacity:.9; transform:scale(1); }
+        100% { opacity:0; transform:scale(1.35); }
+      }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。

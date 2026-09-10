@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: f87b666a46418a04
+// generated-sha256: 4a46499524079f6d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 12:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 14:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8610,11 +8610,15 @@ const rpgResolveStep = (battle, varianceOn, rng = rpgDefaultRng) => {
 // どのモーションを使うかは、通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion で決める。
 // RPG用にモーションのデータを別に持たないので、モンスターを足しても更新漏れが起きない。
 const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', kenshiTwinBlade:'Dash', pandoraDualThunder:'Thunder' });
+const WATER_BURST_MOTION_MS = 680;
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = (anim) => {
   if (!anim) return undefined;
   // パンドラは枠全体を動かさず、PandoraDualThunder 内の実画像2枚を動かす。
   if (anim.motion==='pandoraDualThunder') return undefined;
+  // ウンディーネ種の水攻撃も距離枠は動かさない。WaterBurstMotion 内で本体だけを横滑りさせる。
+  // 実際の零・近・中・遠の位置とUIを巻き込まず、見た目だけ大きく動かすため。
+  if (anim.motion==='waterBurst') return undefined;
   // エイキはザンと同じ高速斬撃の動き(zanComboDash)をそのまま使う。
   // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
   // 剣士モッチーは敵まで高速で斬り込み、二度通り抜けてX字を完成させる専用モーション。
@@ -8622,8 +8626,8 @@ const attackMotionAnimation = (anim) => {
   if (anim.twinBlade || anim.motion==='kenshiTwinBlade') return 'kenshiTwinBladeSlash 560ms cubic-bezier(.18,.76,.2,1) forwards';
   if (anim.zanCombo) return 'zanComboDash 320ms ease-out forwards';
   if (anim.charge) return 'specialCharge 650ms ease-out forwards';
-  if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards');
-  return anim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards');
+  if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':'specialLunge 500ms ease-in forwards';
+  return anim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':'attackFly 450ms ease-in forwards';
 };
 // 図鑑・画像デバッグで、本番の atkMotion を「1回の攻撃アクション」として見せるための共通手順。
 // 動かし方そのものは attackMotionAnimation / PandoraDualThunder 等の本番演出を使い、
@@ -8637,7 +8641,7 @@ const attackMotionPreviewSequence = (atkMotion='default') => {
   ];
   return [{
     anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
-    ms:motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)),
+    ms:motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)),
   }];
 };
 const rpgMotionName = (side, monId, isSkill) => {
@@ -8776,6 +8780,48 @@ const KenshiTwinSlash = () => (
     ))}
   </span>
 );
+// ウンディーネ種（スネグーラチカ・ウンディーネ・ヤオビクニ）共通の水攻撃演出。
+// 距離枠そのものは動かさず、本体だけを左右へ大きく滑らせながら水弾を3発撃つ。
+// 水弾・水面の引き波・着弾飛沫は攻撃中だけDOMへ出し、常時アニメーションにはしない。
+const WATER_BURST_SHOTS = Object.freeze([
+  { left:'17%', delay:'120ms', x:'24px',  y:'-132px', angle:'-8deg' },
+  { left:'50%', delay:'240ms', x:'0px',   y:'-138px', angle:'2deg'  },
+  { left:'83%', delay:'360ms', x:'-24px', y:'-132px', angle:'9deg'  },
+]);
+const WATER_BURST_SPLASH_DROPS = Object.freeze([
+  { x:'-74px', y:'-34px', angle:'-28deg', delay:'0ms'  },
+  { x:'-54px', y:'-66px', angle:'-48deg', delay:'18ms' },
+  { x:'-24px', y:'-78px', angle:'-72deg', delay:'8ms'  },
+  { x:'16px',  y:'-82px', angle:'72deg',  delay:'22ms' },
+  { x:'50px',  y:'-62px', angle:'48deg',  delay:'10ms' },
+  { x:'76px',  y:'-30px', angle:'26deg',  delay:'28ms' },
+  { x:'-60px', y:'18px',  angle:'14deg',  delay:'34ms' },
+  { x:'62px',  y:'20px',  angle:'-14deg', delay:'38ms' },
+]);
+const WaterBurstMotion = ({image, lunge=false, charging=false, compact=false}) => (
+  <span className={`water-burst-motion${lunge?' water-burst-motion--lunge':''}${charging?' water-burst-motion--charging':''}${compact?' water-burst-motion--compact':''}`}>
+    <span className="water-burst-motion__wake" aria-hidden="true"><i/><i/><i/></span>
+    <span className="water-burst-motion__monster">{image}</span>
+    <span className="water-burst-motion__shots" aria-hidden="true">
+      {WATER_BURST_SHOTS.map((shot,index)=>(
+        <i key={`shot-${index}`} className="water-burst-motion__shot" style={{
+          left:shot.left, animationDelay:shot.delay,
+          '--water-shot-x':shot.x, '--water-shot-y':shot.y, '--water-shot-angle':shot.angle,
+        }}/>
+      ))}
+    </span>
+    <span className="water-burst-motion__impact" aria-hidden="true">
+      <i className="water-burst-motion__impact-core"/>
+      <i className="water-burst-motion__impact-ring"/>
+      {WATER_BURST_SPLASH_DROPS.map((drop,index)=>(
+        <i key={`drop-${index}`} className="water-burst-motion__drop" style={{
+          '--water-drop-x':drop.x, '--water-drop-y':drop.y,
+          '--water-drop-angle':drop.angle, '--water-drop-delay':drop.delay,
+        }}/>
+      ))}
+    </span>
+  </span>
+);
 const PandoraDualThunder = ({image, compact=false}) => (
   <span className={`pandora-dual-thunder${compact?' pandora-dual-thunder--compact':''}`} aria-hidden="true">
     <span className="pandora-dual-center">{React.cloneElement(image,{alt:''})}</span>
@@ -8788,6 +8834,13 @@ const PandoraDualThunder = ({image, compact=false}) => (
 // 図鑑などから本番と同じ攻撃モーション描画を使うための共通ステージ。
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
 const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
+  if(anim?.motion==='waterBurst') {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+        <WaterBurstMotion image={image} lunge={anim?.charge===false} charging={anim?.charge===true} compact={compact}/>
+      </div>
+    );
+  }
   if(anim?.motion==='pandoraDualThunder') {
     return (
       <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
@@ -19343,7 +19396,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const motion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[animSlot]?.atkMotion; // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する。固有技は技の出自(継承元)のモーションを優先する
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
-              setAttackAnim({slotIndex: animSlot, charge:true});
+              setAttackAnim({slotIndex: animSlot, charge:true, ...(motion==='waterBurst'?{motion}: {})});
               Audio_.se.special();
               await battleWait(650);
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -19354,7 +19407,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(115); triggerShake();
                 await battleWait(130);
               }else{
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?520:500)));
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)));
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -19366,7 +19419,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)));
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)));
               }
             }
             setAttackAnim(null);
@@ -23603,7 +23656,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const isDashMotion=atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo'||atkMotion==='kenshiTwinBlade';
           const playMotionPreview=async()=>{
             if(!motionSupported||monsterImageDebugMotionPlaying)return;
-            setMonsterImageDebugMotionPlaying({charge:true});
+            setMonsterImageDebugMotionPlaying({charge:true, ...(atkMotion==='waterBurst'?{motion:atkMotion}: {})});
             await new Promise(r=>setTimeout(r,650));
             if(isDashMotion){
               const isTwin=atkMotion==='kenshiTwinBlade';
@@ -23611,7 +23664,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?560:320)));
             }else{
               setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
-              await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?520:500)));
+              await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?WATER_BURST_MOTION_MS:500)));
             }
             setMonsterImageDebugMotionPlaying(null);
           };
@@ -23629,11 +23682,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
                   <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>
                   <p className="mb-2 text-[8px] leading-relaxed text-slate-400">本番のバトル画面と同じ関数・同じCSSでこの場で再生する。連撃の巻き添えヒットは無いのでこの1回だけ動く。</p>
-                  <div className="mx-auto h-28 w-28 overflow-hidden rounded-xl border border-white/20" style={bgStyle}>
+                  <div className={`mx-auto h-28 w-28 ${atkMotion==='waterBurst'?'overflow-visible':'overflow-hidden'} rounded-xl border border-white/20`} style={bgStyle}>
                     <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}>
-                      <DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>
-                      {monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}
-                      {monsterImageDebugMotionPlaying?.twinBlade&&<KenshiTwinSlash/>}
+                      {monsterImageDebugMotionPlaying?.motion==='waterBurst'
+                        ?<WaterBurstMotion
+                          image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
+                          lunge={monsterImageDebugMotionPlaying?.charge===false}
+                          charging={monsterImageDebugMotionPlaying?.charge===true}/>
+                        :<>
+                          <DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>
+                          {monsterImageDebugMotionPlaying?.sakura&&<EikiSakuraPetals/>}
+                          {monsterImageDebugMotionPlaying?.twinBlade&&<KenshiTwinSlash/>}
+                        </>}
                     </div>
                   </div>
                   <button onClick={playMotionPreview} disabled={!!monsterImageDebugMotionPlaying} className="mt-2 w-full min-h-[42px] rounded-xl bg-cyan-700 text-[10px] font-black disabled:opacity-40">{monsterImageDebugMotionPlaying?'再生中…':'攻撃モーションを再生'}</button>
@@ -26419,7 +26479,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {previewDmg>0&&(<div className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingPreview&&isPendingHalved?'½ ':''}DMG:{previewDmg}{isPendingPreview&&previewSoulPct>0&&<span data-soul-damage-preview className="ml-1 rounded bg-sky-950/80 px-1 py-0.5 text-[6px] text-sky-100">魂格 +{previewSoulPct}%</span>}</div>)}
                       {s?.imgUrl?(isAnimating&&s.id==='Pandora'&&attackAnim.motion==='pandoraDualThunder'
                         ?<PandoraDualThunder image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="object-contain drop-shadow-md"/>}/>
-                        :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
+                        :isAnimating&&attackAnim.motion==='waterBurst'
+                          ?<WaterBurstMotion
+                            image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                            lunge={attackAnim.charge===false}
+                            charging={attackAnim.charge===true}/>
+                          :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                       {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる */}
                       {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
                       {/* エイキの桜。攻撃モーションが出ているあいだだけ重ねる(常時アニメーションにしない) */}
@@ -28407,17 +28472,135 @@ const createAnimationStyle = () => {
     .pandora-dual-thunder--compact .pandora-dual-clone--right { animation-name:pandoraDualRightCompact; }
     @keyframes pandoraDualLeftCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(-25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
     @keyframes pandoraDualRightCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
-    /* スネグーラチカ専用: 追加画像を使わず、水弾の残像を軽量なdrop-shadowで表現する。 */
+    /* ウンディーネ種共通の水攻撃。
+       距離枠は固定したまま本体だけを左右へ大きく滑らせ、水弾3発→大きな着弾飛沫までを680msで見せる。
+       追加画像は使わず、攻撃中だけ出るCSS要素で水の尾・引き波・飛沫を描く。 */
+    .water-burst-motion { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:26; isolation:isolate; }
+    .water-burst-motion__monster {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:4;
+      transform-origin:50% 70%; will-change:transform,filter;
+      animation:waterBurstAttack 680ms cubic-bezier(.16,.78,.16,1) forwards;
+    }
+    .water-burst-motion--lunge .water-burst-motion__monster { animation-name:waterBurstLunge; }
+    .water-burst-motion--charging .water-burst-motion__monster { animation:waterBurstCharge 650ms cubic-bezier(.2,.72,.2,1) forwards; }
+    .water-burst-motion--charging .water-burst-motion__shots,
+    .water-burst-motion--charging .water-burst-motion__impact { display:none; }
+    @keyframes waterBurstCharge {
+      0% { transform:translate3d(0,0,0) scale(1); filter:drop-shadow(0 0 5px rgba(103,232,249,.45)); }
+      55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(34,211,238,.92)) drop-shadow(0 10px 20px rgba(37,99,235,.62)); }
+      100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(14,165,233,.82)); }
+    }
     @keyframes waterBurstAttack {
-      0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 4px rgba(103,232,249,.45)); }
-      35% { transform: translateY(-45px) scale(1.06); filter: drop-shadow(0 -20px 2px rgba(34,211,238,.75)) drop-shadow(0 -42px 4px rgba(59,130,246,.55)); }
-      68% { transform: translateY(-155px) scale(1.12); filter: drop-shadow(0 38px 3px rgba(125,211,252,.8)) drop-shadow(0 76px 6px rgba(37,99,235,.5)); }
-      100% { transform: translateY(0) scale(1); filter: none; }
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(103,232,249,.5)); }
+      10% { transform:translate3d(0,8px,0) scale(.95,.88) rotate(-2deg); filter:drop-shadow(0 0 15px rgba(34,211,238,.9)); }
+      25% { transform:translate3d(-44px,-2px,0) scale(1.07) rotate(-7deg); filter:drop-shadow(24px 5px 0 rgba(125,211,252,.42)) drop-shadow(48px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 22px rgba(103,232,249,.98)); }
+      48% { transform:translate3d(46px,-8px,0) scale(1.10) rotate(7deg); filter:drop-shadow(-28px 4px 0 rgba(125,211,252,.42)) drop-shadow(-56px 8px 0 rgba(37,99,235,.18)) drop-shadow(0 0 27px rgba(255,255,255,.98)); }
+      69% { transform:translate3d(-32px,-10px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(24px 4px 0 rgba(103,232,249,.34)) drop-shadow(48px 7px 0 rgba(37,99,235,.15)) drop-shadow(0 0 23px rgba(34,211,238,.94)); }
+      84% { transform:translate3d(20px,-4px,0) scale(1.04) rotate(3deg); filter:drop-shadow(-18px 3px 0 rgba(125,211,252,.28)) drop-shadow(0 0 17px rgba(103,232,249,.82)); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
     }
     @keyframes waterBurstLunge {
-      0% { transform: translateY(44px) scale(.78); filter: drop-shadow(0 0 20px rgba(34,211,238,.8)); }
-      55% { transform: translateY(-190px) scale(1.25); filter: drop-shadow(0 45px 3px rgba(125,211,252,.9)) drop-shadow(0 90px 7px rgba(37,99,235,.6)); }
-      100% { transform: translateY(0) scale(1); filter: none; }
+      0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(34,211,238,.95)); }
+      18% { transform:translate3d(-52px,-4px,0) scale(1.11) rotate(-9deg); filter:drop-shadow(28px 5px 0 rgba(125,211,252,.5)) drop-shadow(58px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 28px rgba(255,255,255,.98)); }
+      43% { transform:translate3d(52px,-13px,0) scale(1.16) rotate(9deg); filter:drop-shadow(-32px 4px 0 rgba(125,211,252,.5)) drop-shadow(-64px 9px 0 rgba(37,99,235,.22)) drop-shadow(0 0 34px rgba(255,255,255,1)); }
+      67% { transform:translate3d(-38px,-12px,0) scale(1.11) rotate(-6deg); filter:drop-shadow(28px 4px 0 rgba(103,232,249,.42)) drop-shadow(0 0 29px rgba(34,211,238,.98)); }
+      84% { transform:translate3d(24px,-5px,0) scale(1.06) rotate(4deg); filter:drop-shadow(-20px 3px 0 rgba(125,211,252,.34)) drop-shadow(0 0 21px rgba(103,232,249,.9)); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+    }
+    .water-burst-motion__wake { position:absolute; inset:0; z-index:2; overflow:visible; }
+    .water-burst-motion__wake i {
+      position:absolute; left:50%; top:72%; width:38px; height:11px; margin:-5px 0 0 -19px; opacity:0;
+      border:3px solid rgba(165,243,252,.9); border-radius:50%;
+      box-shadow:0 0 9px rgba(34,211,238,.9), inset 0 0 7px rgba(255,255,255,.72);
+      will-change:transform,opacity; animation:waterBurstWake 300ms ease-out forwards;
+    }
+    .water-burst-motion__wake i:nth-child(1) { --water-wake-x:-34px; animation-delay:70ms; }
+    .water-burst-motion__wake i:nth-child(2) { --water-wake-x:36px; animation-delay:245ms; }
+    .water-burst-motion__wake i:nth-child(3) { --water-wake-x:-24px; animation-delay:420ms; }
+    @keyframes waterBurstWake {
+      0% { opacity:0; transform:translate3d(var(--water-wake-x),0,0) scale(.35); }
+      24% { opacity:1; }
+      100% { opacity:0; transform:translate3d(var(--water-wake-x),5px,0) scale(1.85,.9); }
+    }
+    .water-burst-motion__shots { position:absolute; inset:0; overflow:visible; z-index:6; }
+    .water-burst-motion__shot {
+      position:absolute; top:42%; width:20px; height:28px; margin:-14px 0 0 -10px; opacity:0;
+      border-radius:52% 48% 58% 42%;
+      background:radial-gradient(circle at 35% 26%,#fff 0 12%,#bae6fd 20%,#22d3ee 54%,#2563eb 100%);
+      border:1px solid rgba(255,255,255,.95);
+      box-shadow:0 0 8px rgba(255,255,255,.98),0 0 18px rgba(34,211,238,.95),0 0 28px rgba(37,99,235,.72);
+      will-change:transform,opacity; animation:waterBurstShot 300ms cubic-bezier(.12,.72,.2,1) forwards;
+    }
+    .water-burst-motion__shot::before {
+      content:''; position:absolute; left:50%; top:72%; width:9px; height:58px; transform:translateX(-50%);
+      border-radius:999px;
+      background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(34,211,238,.72) 30%,rgba(37,99,235,.22) 72%,transparent);
+      filter:blur(1px); box-shadow:0 0 7px rgba(103,232,249,.7); z-index:-1;
+    }
+    .water-burst-motion__shot::after {
+      content:''; position:absolute; left:3px; top:3px; width:7px; height:9px; border-radius:50%;
+      background:rgba(255,255,255,.95); filter:blur(.3px);
+    }
+    @keyframes waterBurstShot {
+      0% { opacity:0; transform:translate3d(-50%,18px,0) rotate(var(--water-shot-angle)) scale(.45,.72); }
+      14% { opacity:1; }
+      72% { opacity:1; transform:translate3d(calc(-50% + var(--water-shot-x)),var(--water-shot-y),0) rotate(var(--water-shot-angle)) scale(1.12,1.28); }
+      100% { opacity:0; transform:translate3d(calc(-50% + var(--water-shot-x)),calc(var(--water-shot-y) - 16px),0) rotate(var(--water-shot-angle)) scale(.72,1.5); }
+    }
+    .water-burst-motion__impact {
+      position:absolute; left:50%; top:-92px; width:30px; height:30px; margin:-15px 0 0 -15px;
+      z-index:7; opacity:0; animation:waterBurstImpact 680ms ease-out forwards;
+    }
+    .water-burst-motion__impact-core {
+      position:absolute; inset:-52px; border-radius:50%;
+      background:radial-gradient(circle,rgba(255,255,255,1) 0 8%,rgba(186,230,253,.98) 16%,rgba(34,211,238,.72) 34%,rgba(37,99,235,.38) 52%,rgba(37,99,235,0) 74%);
+      filter:blur(.4px);
+    }
+    .water-burst-motion__impact-ring {
+      position:absolute; inset:-22px; border:4px solid rgba(224,242,254,.96); border-radius:50%;
+      box-shadow:0 0 12px #fff,0 0 25px rgba(34,211,238,.95),0 0 42px rgba(37,99,235,.72);
+    }
+    @keyframes waterBurstImpact {
+      0%,63% { opacity:0; transform:scale(.18); }
+      66% { opacity:1; transform:scale(.62); }
+      74% { opacity:1; transform:scale(1.25); }
+      84% { opacity:.78; transform:scale(1.85); }
+      100% { opacity:0; transform:scale(2.4); }
+    }
+    .water-burst-motion__drop {
+      position:absolute; left:50%; top:50%; width:18px; height:7px; margin:-3.5px 0 0 -9px; opacity:0;
+      border-radius:999px 65% 65% 999px;
+      background:linear-gradient(90deg,#fff,#67e8f9 38%,#3b82f6 76%,transparent);
+      box-shadow:0 0 7px rgba(125,211,252,.9);
+      animation:waterBurstDrop 230ms ease-out forwards; animation-delay:calc(430ms + var(--water-drop-delay));
+    }
+    @keyframes waterBurstDrop {
+      0% { opacity:0; transform:translate3d(0,0,0) rotate(var(--water-drop-angle)) scaleX(.35); }
+      18% { opacity:1; }
+      100% { opacity:0; transform:translate3d(var(--water-drop-x),var(--water-drop-y),0) rotate(var(--water-drop-angle)) scaleX(1.2); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .water-burst-motion__monster,
+      .water-burst-motion--lunge .water-burst-motion__monster,
+      .water-burst-motion--charging .water-burst-motion__monster { animation:waterBurstReduced 680ms ease-out forwards; }
+      .water-burst-motion__shot { animation:waterBurstShotReduced 300ms ease-out forwards; }
+      .water-burst-motion__wake i, .water-burst-motion__drop { display:none; }
+      .water-burst-motion__impact { animation:waterBurstImpactReduced 680ms ease-out forwards; }
+      @keyframes waterBurstReduced {
+        0% { filter:drop-shadow(0 0 4px rgba(103,232,249,.35)); }
+        45% { filter:drop-shadow(0 0 24px rgba(34,211,238,.95)); }
+        100% { filter:none; }
+      }
+      @keyframes waterBurstShotReduced {
+        0% { opacity:0; transform:translate3d(-50%,4px,0) scale(.6); }
+        35% { opacity:1; }
+        100% { opacity:0; transform:translate3d(-50%,-24px,0) scale(1); }
+      }
+      @keyframes waterBurstImpactReduced {
+        0%,62% { opacity:0; transform:scale(.5); }
+        72% { opacity:.9; transform:scale(1); }
+        100% { opacity:0; transform:scale(1.35); }
+      }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
