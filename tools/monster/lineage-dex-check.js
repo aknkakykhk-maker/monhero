@@ -206,7 +206,8 @@ check('攻撃アクションは図鑑専用モーションを作らず本番の�
   && sharedDex.includes('attackMotionAnimation(anim)')
   && sharedDex.includes('<EikiSakuraPetals/>')
   && sharedDex.includes('<KenshiTwinSlash/>')
-  && sharedDex.includes('<PandoraDualThunder'));
+  && sharedDex.includes('<PandoraDualThunder')
+  && sharedDex.includes("!anim?.reduced&&anim?.motion==='pandoraDualThunder'"));
 check('攻撃アクションは画面移動で止まり、動きを減らす端末設定を尊重する',
   detail.includes('stopDexAttackPreview()')
   && detail.includes("matchMedia?.('(prefers-reduced-motion: reduce)')")

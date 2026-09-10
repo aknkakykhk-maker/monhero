@@ -111,11 +111,11 @@ const DexMonsterArt = ({ mon, alt, hidden=false }) => mon.imgUrl
   : <div className="text-6xl">{hidden?'？':mon.emoji}</div>;
 // 図鑑の攻撃アクションは、図鑑専用のモーションを持たず本番バトルと同じ
 // atkMotion / attackMotionAnimation / 専用FXを使う。実戦の移動量は最大180pxと大きいので、
-// 図鑑の大きな立ち絵そのものではなく64pxの実戦サイズを0.72倍した小舞台で再生する。
+// 図鑑の大きな立ち絵そのものではなく64pxの実戦サイズを0.6倍した小舞台で再生する。
 const DexAttackPreview = ({ mon, anim, onPlay }) => {
   const playing=!!anim;
   const actor=<img src={mon.imgUrl} alt="" draggable={false} className="h-16 w-16 object-contain drop-shadow-md"/>;
-  const actionActor=anim?.motion==='pandoraDualThunder'&&mon.id==='Pandora'
+  const actionActor=!anim?.reduced&&anim?.motion==='pandoraDualThunder'&&mon.id==='Pandora'
     ? <PandoraDualThunder image={actor}/>
     : <span data-dex-action-actor className="relative block h-16 w-16" style={anim?.reduced?{opacity:.9}:{isolation:'isolate',animation:attackMotionAnimation(anim)}}>
         {actor}
@@ -125,7 +125,7 @@ const DexAttackPreview = ({ mon, anim, onPlay }) => {
   return <div data-dex-action-preview className="absolute inset-y-1 left-14 right-14 z-20 pointer-events-none">
     {playing&&<div data-dex-action-stage className="absolute inset-0 overflow-hidden rounded-2xl border border-cyan-400/30 bg-gradient-to-b from-slate-800/95 to-slate-950/95">
       <div className="absolute left-1/2 top-1 -translate-x-1/2 rounded-full border border-red-400/30 bg-red-950/70 px-2 py-0.5 text-[7px] font-black tracking-widest text-red-200">TARGET</div>
-      <div className="absolute left-1/2 bottom-1 h-16 w-16" style={{transform:'translateX(-50%) scale(.72)',transformOrigin:'50% 100%'}}>{actionActor}</div>
+      <div className="absolute left-1/2 bottom-1 h-16 w-16" style={{transform:'translateX(-50%) scale(.6)',transformOrigin:'50% 100%'}}>{actionActor}</div>
     </div>}
     <button type="button" onClick={onPlay} disabled={playing} aria-label={`${mon.name}の攻撃アクションを再生`}
       className="pointer-events-auto absolute bottom-1 left-1/2 -translate-x-1/2 min-h-[40px] min-w-[132px] rounded-full border border-cyan-300/50 bg-cyan-900/90 px-3 text-[10px] font-black text-cyan-100 shadow-lg active:scale-95 disabled:opacity-70">
