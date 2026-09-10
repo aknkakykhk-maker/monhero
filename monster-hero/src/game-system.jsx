@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e8ae1132d3f81a3
+// generated-sha256: 6d998554e2dfd5af
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 19:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 20:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8660,11 +8660,18 @@ const attackMotionPreviewSequence = (atkMotion='default') => {
 const attackMotionUniquePreviewSequence = (atkMotion='default') => {
   const motion=atkMotion||'default';
   const isTwin=motion==='kenshiTwinBlade';
+  // ザン・エイキ・剣士モッチーは固有技でも、本番と同じく通常攻撃と同じ残像ダッシュへ移る
+  // (motion を渡す側の分岐へ入れてしまうと specialLunge になり、本番と違う動きになる)
+  const isComboDash=motion==='zanCombo'||motion==='eikiSakuraCombo'||isTwin;
+  if(isComboDash) return [
+    {anim:{charge:true},ms:650},
+    {anim:{zanCombo:!isTwin,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},ms:motion==='eikiSakuraCombo'?500:(isTwin?560:320)},
+  ];
   return [
     {anim:{charge:true},ms:650},
     {
-      anim:{charge:false,motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
-      ms:isTwin?560:(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))),
+      anim:{charge:false,motion,twinBlade:false,sakura:false},
+      ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)))),
     },
   ];
 };
