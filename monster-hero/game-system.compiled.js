@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 486774de0cb6719a
+// source-sha256: 752972a7c10083e3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e4c759699ee131cb
+// generated-sha256: 1d326c834a5b9f36
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 18:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 18:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -37217,7 +37217,7 @@ function MonsterHeroGame() {
         }
         if (run === dexAttackPreviewRunRef.current) setDexAttackPreview(null);
       };
-      const kindButton = (kind, label, note) => /*#__PURE__*/React.createElement("button", {
+      const kindButton = (kind, label) => /*#__PURE__*/React.createElement("button", {
         key: kind,
         type: "button",
         "data-attack-preview-play": kind,
@@ -37226,12 +37226,8 @@ function MonsterHeroGame() {
           playAttackPreview(kind);
         },
         disabled: !!playingKind,
-        className: `flex-1 min-w-0 min-h-[54px] rounded-2xl border-2 px-2 py-1 font-black active:scale-95 disabled:opacity-45 ${playingKind === kind ? 'border-cyan-200 bg-cyan-700 text-white' : 'border-cyan-400/50 bg-slate-900 text-cyan-100'}`
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[11px]"
-      }, playingKind === kind ? '再生中…' : label), /*#__PURE__*/React.createElement("span", {
-        className: "block text-[8px] font-bold text-slate-300 leading-tight"
-      }, note));
+        className: `flex-1 min-w-0 min-h-[48px] rounded-2xl border-2 px-2 text-[12px] font-black active:scale-95 disabled:opacity-45 ${playingKind === kind ? 'border-cyan-200 bg-cyan-700 text-white' : 'border-cyan-400/50 bg-slate-900 text-cyan-100'}`
+      }, playingKind === kind ? '再生中…' : label);
       return /*#__PURE__*/React.createElement("main", {
         "data-mh-screen": true,
         className: "flex-1 flex flex-col h-full min-h-0",
@@ -37278,9 +37274,7 @@ function MonsterHeroGame() {
         className: "shrink-0 px-3 pt-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto flex gap-2"
-      }, kindButton('normal', '通常攻撃', 'ふだんの攻撃'), kindButton('unique', '固有技', 'タメてから撃つ')), /*#__PURE__*/React.createElement("p", {
-        className: "mt-1.5 text-center text-[8px] leading-relaxed text-slate-400"
-      }, "\u56FA\u6709\u6280\u306F\u3001\u3069\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u3082\u5171\u901A\u306E\u30BF\u30E1\uFF08\u4E0B\u306B\u6C88\u3080\uFF09\u306E\u3042\u3068\u3067\u5C02\u7528\u306E\u653B\u6483\u306B\u79FB\u308A\u307E\u3059\u3002")));
+      }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技'))));
     })(), gameState === 'MONSTER_DEX' && (() => {
       const monsters = dexMonsterList();
       const unlockedCount = monsters.filter(mon => unlockedMonsterIds.includes(mon.id)).length;

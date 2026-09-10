@@ -9740,11 +9740,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             }
             if(run===dexAttackPreviewRunRef.current)setDexAttackPreview(null);
           };
-          const kindButton=(kind,label,note)=>(
+          const kindButton=(kind,label)=>(
             <button key={kind} type="button" data-attack-preview-play={kind} onClick={()=>{Audio_.se.tap();playAttackPreview(kind);}} disabled={!!playingKind}
-              className={`flex-1 min-w-0 min-h-[54px] rounded-2xl border-2 px-2 py-1 font-black active:scale-95 disabled:opacity-45 ${playingKind===kind?'border-cyan-200 bg-cyan-700 text-white':'border-cyan-400/50 bg-slate-900 text-cyan-100'}`}>
-              <span className="block text-[11px]">{playingKind===kind?'再生中…':label}</span>
-              <span className="block text-[8px] font-bold text-slate-300 leading-tight">{note}</span>
+              className={`flex-1 min-w-0 min-h-[48px] rounded-2xl border-2 px-2 text-[12px] font-black active:scale-95 disabled:opacity-45 ${playingKind===kind?'border-cyan-200 bg-cyan-700 text-white':'border-cyan-400/50 bg-slate-900 text-cyan-100'}`}>
+              {playingKind===kind?'再生中…':label}
             </button>
           );
           return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0" style={{paddingTop:'calc(0.5rem + env(safe-area-inset-top))',paddingBottom:'calc(0.5rem + env(safe-area-inset-bottom))'}}>
@@ -9767,10 +9766,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             <div className="shrink-0 px-3 pt-2">
               <div className="w-full max-w-md mx-auto flex gap-2">
-                {kindButton('normal','通常攻撃','ふだんの攻撃')}
-                {kindButton('unique','固有技','タメてから撃つ')}
+                {kindButton('normal','通常攻撃')}
+                {kindButton('unique','固有技')}
               </div>
-              <p className="mt-1.5 text-center text-[8px] leading-relaxed text-slate-400">固有技は、どのモンスターも共通のタメ（下に沈む）のあとで専用の攻撃に移ります。</p>
             </div>
           </main>;
         })()}
