@@ -12022,7 +12022,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         canBuy={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)>0&&!marketPurchaseProcessingRef.current}
                         disabled={marketPurchaseProcessingRef.current}
                         onBuy={exchangeSoulRankRespecByProof}
-                        middle={<span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>}
+                        middle={<><span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>}
                       />}
                     </React.Fragment>
                   );
