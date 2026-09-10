@@ -63,7 +63,7 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 5 | `ITEM_INVENTORY` | — | — | **完了**(2026-09-10)。`src/parts/54-screen-item-inventory.jsx` |
 | 6 | `BREEDER_MARKET` | — | — | **完了**(2026-09-10)。`src/parts/55-screen-breeder-market.jsx` |
 | 7 | `PROFILE` | — | — | **完了**(2026-09-10)。`src/parts/56-screen-profile.jsx`。props 38個は undefined-reference-check で洗い出した |
-| 8 | `MONSTER_DEX(_DETAIL)` | Sonnet 5 | high | 表示のみ |
+| 8 | `MONSTER_DEX(_DETAIL)` | — | — | **完了**(2026-09-10)。`src/parts/57-screen-monster-dex.jsx`(3画面で1ファイル) |
 | 9 | `MASU_*`(育成系) | **Opus 5** | high | 保存が絡む(STEP 3 と同じ領域) |
 | 10 | `RHYTHM_*`(演奏画面以外) | Sonnet 5 | high | 演奏画面は STEP 9 の領域なので触らない |
 | 11 | `PICK_*` / `WAVE_RESULT` / `REWARD_PICK` / `UPGRADE_SKILL` / `CHAMPION` | **Opus 5** | high | 進行フラグを戻すタイマーが多い。止めると操作不能になる |
@@ -72,7 +72,7 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 6 の8本目(`MONSTER_DEX(_DETAIL)` 画面の切り出し)** — **Sonnet 5 / effort high**
+**STEP 6 の9本目(`MASU_*` 育成系の切り出し)** — **Opus 5 / effort high**
 
 1〜7本目(`use-screen-effects` / `SETTINGS` / `MISSIONS` / `GIFT_BOX` / `ITEM_INVENTORY` /
 `BREEDER_MARKET` / `PROFILE`)は 2026-09-10 に完了。切り出しの型は 51〜56 の6本にそろっている
@@ -82,6 +82,14 @@ ref で持つ値は真偽値にして渡す)。
 **props の洗い出しは手でやらない。** props を空にした仮のコンポーネントへ JSX を移し、
 `node tools/undefined-reference-check.js` を通すと、足りない参照が全部一覧で出る。
 それをそのまま props にする(PROFILE の 38 個はこの方法で決めた)。
+
+**画面専用に見える `useState` でも、本体に残すほうが正しいことがある。**
+その画面を離れて戻ったときに値が保たれているなら、画面へ移すとリセットされて挙動が変わる。
+図鑑の絞り込み・選択中・タブ(6個)はこれに当たるので本体に残した。
+「画面の中だけの UI 一時 state」を移すのは、**その画面を出れば消えてよい値**に限る。
+
+**タイマーを含む非同期の再生処理も本体に残す。** 画面へ移すと、画面のライフサイクルで
+途中の `setTimeout` が止まって演出が固まる。図鑑の攻撃アクション再生がこれ。
 
 検査が落ちたら、まず `harness.js` の `readAppSource()` へ差し替える
 (`60-app.jsx` を直接読む検査は、見ている画面が移ると対象を見失う)。
