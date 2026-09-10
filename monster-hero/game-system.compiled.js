@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5cdfc3a493f32d60
+// source-sha256: da1a6c893f8c7455
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6e630504b0d69e8b
+// generated-sha256: cd2446549a9d1c35
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 00:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 06:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24462,6 +24462,99 @@ function RhythmRankingScreen({
   }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
 }
 
+// ---- part: 59-screen-masu-mons.jsx ----
+// ==== 画面: マスモン一覧(gameState === 'MASU_MONS') ====
+//
+// MonsterHeroGame から切り出した10画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-9)。
+// MASU_* 13画面のうち、いちばん依存が少ないものから始めた。
+//
+// 【この画面ならではの注意】
+// ・一覧を出すだけで、保存には一切触らない。詳細を開くのも本体の setMasuMonDetail(モーダル)なので
+//   props で受け取る
+// ・並べ替えや絞り込みの状態は持たない(それらは詳細モーダル側の話)
+// ・この画面にタイマーは無い
+function MasuMonsScreen({
+  masuMons,
+  monsterDisplayFlags,
+  unifiedMonsterEntriesSingleType,
+  MONSTER_CARD_CLASS,
+  MONSTER_CARD_STYLE,
+  renderMonsterCardBody,
+  renderMonsterSortFilterBar,
+  onBack,
+  onOpenDetail
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-pink-400 uppercase tracking-widest"
+  }, "\u30DE\u30B9\u30E2\u30F3\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-3"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "masuList"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0"
+  }, "\u52C7\u8005\u30E2\u30F3\u3092\u30E9\u30F3\u7D42\u4E86\u6642\u306B\u767B\u9332\u3059\u308B\u3068\u3001\u3053\u3053\u306B\u4E26\u3073\u307E\u3059\u3002\u7DE8\u6210\u753B\u9762\u3067\u9078\u3076\u3068\u6B21\u306E\u5468\u56DE\u3067\u4F7F\u3048\u307E\u3059(\u540C\u3058\u7A2E\u306F1\u4F53\u307E\u3067)\u3002"), renderMonsterSortFilterBar({
+    singleType: true
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, (() => {
+    const entries = unifiedMonsterEntriesSingleType.filter(e => e.type === 'masu');
+    if (entries.length === 0) return /*#__PURE__*/React.createElement("div", {
+      className: "empty-state",
+      style: {
+        padding: '32px 16px',
+        textAlign: 'center'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "big",
+      style: {
+        fontSize: '40px'
+      }
+    }, "\uD83D\uDC3E"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-slate-400 mt-2"
+    }, masuMons.length === 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u52C7\u8005\u30E2\u30F3\u3067\u30E9\u30F3\u3092\u7D42\u3048\u308B\u3068\u767B\u9332\u3067\u304D\u307E\u3059\u3002") : '表示設定で対象がすべてオフになっています。'));
+    return /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-2.5 pb-4"
+    }, entries.map(e => {
+      const masu = e.masu,
+        base = e.base;
+      return /*#__PURE__*/React.createElement("div", {
+        key: e.key,
+        className: "relative"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => onOpenDetail(masu),
+        style: MONSTER_CARD_STYLE,
+        className: `${MONSTER_CARD_CLASS} border-pink-900/50 bg-slate-900`
+      }, renderMonsterCardBody({
+        masu,
+        base,
+        nameBand: true,
+        status: monsterDisplayFlags.active && e.active ? /*#__PURE__*/React.createElement("span", {
+          className: "text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white"
+        }, "\u7DE8\u6210\u4E2D") : null
+      })), /*#__PURE__*/React.createElement("button", {
+        onClick: ev => {
+          ev.stopPropagation();
+          onOpenDetail(masu);
+        },
+        className: "absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"
+      }, /*#__PURE__*/React.createElement(Info, {
+        size: 12,
+        className: "text-white"
+      })));
+    }));
+  })()));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -45965,75 +46058,17 @@ function MonsterHeroGame() {
     }))), /*#__PURE__*/React.createElement("button", {
       onClick: savePastureSettings,
       className: "w-full min-h-[52px] shrink-0 rounded-2xl bg-emerald-600 text-white font-black shadow-lg active:scale-[.98]"
-    }, "\u6C7A\u5B9A\uFF08", draftHomePastureIds.length, "\u4F53\uFF09")), gameState === 'MASU_MONS' && /*#__PURE__*/React.createElement("div", {
-      "data-mh-screen": true,
-      className: "flex-1 flex flex-col h-full min-h-0 p-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-2 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('MB_MANAGEMENT'),
-      className: "p-3 text-slate-400 active:scale-90"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic text-pink-400 uppercase tracking-widest"
-    }, "\u30DE\u30B9\u30E2\u30F3\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-3"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "masuList"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0"
-    }, "\u52C7\u8005\u30E2\u30F3\u3092\u30E9\u30F3\u7D42\u4E86\u6642\u306B\u767B\u9332\u3059\u308B\u3068\u3001\u3053\u3053\u306B\u4E26\u3073\u307E\u3059\u3002\u7DE8\u6210\u753B\u9762\u3067\u9078\u3076\u3068\u6B21\u306E\u5468\u56DE\u3067\u4F7F\u3048\u307E\u3059(\u540C\u3058\u7A2E\u306F1\u4F53\u307E\u3067)\u3002"), renderMonsterSortFilterBar({
-      singleType: true
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-    }, (() => {
-      const entries = unifiedMonsterEntriesSingleType.filter(e => e.type === 'masu');
-      if (entries.length === 0) return /*#__PURE__*/React.createElement("div", {
-        className: "empty-state",
-        style: {
-          padding: '32px 16px',
-          textAlign: 'center'
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "big",
-        style: {
-          fontSize: '40px'
-        }
-      }, "\uD83D\uDC3E"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] text-slate-400 mt-2"
-      }, masuMons.length === 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u307E\u3060\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u52C7\u8005\u30E2\u30F3\u3067\u30E9\u30F3\u3092\u7D42\u3048\u308B\u3068\u767B\u9332\u3067\u304D\u307E\u3059\u3002") : '表示設定で対象がすべてオフになっています。'));
-      return /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-2.5 pb-4"
-      }, entries.map(e => {
-        const masu = e.masu,
-          base = e.base;
-        return /*#__PURE__*/React.createElement("div", {
-          key: e.key,
-          className: "relative"
-        }, /*#__PURE__*/React.createElement("button", {
-          onClick: () => setMasuMonDetail(masu),
-          style: MONSTER_CARD_STYLE,
-          className: `${MONSTER_CARD_CLASS} border-pink-900/50 bg-slate-900`
-        }, renderMonsterCardBody({
-          masu,
-          base,
-          nameBand: true,
-          status: monsterDisplayFlags.active && e.active ? /*#__PURE__*/React.createElement("span", {
-            className: "text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white"
-          }, "\u7DE8\u6210\u4E2D") : null
-        })), /*#__PURE__*/React.createElement("button", {
-          onClick: ev => {
-            ev.stopPropagation();
-            setMasuMonDetail(masu);
-          },
-          className: "absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"
-        }, /*#__PURE__*/React.createElement(Info, {
-          size: 12,
-          className: "text-white"
-        })));
-      }));
-    })())), gameState === 'MASU_FUSION' && (() => {
+    }, "\u6C7A\u5B9A\uFF08", draftHomePastureIds.length, "\u4F53\uFF09")), gameState === 'MASU_MONS' && /*#__PURE__*/React.createElement(MasuMonsScreen, {
+      masuMons: masuMons,
+      monsterDisplayFlags: monsterDisplayFlags,
+      unifiedMonsterEntriesSingleType: unifiedMonsterEntriesSingleType,
+      MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
+      MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
+      renderMonsterCardBody: renderMonsterCardBody,
+      renderMonsterSortFilterBar: renderMonsterSortFilterBar,
+      onBack: () => setGameState('MB_MANAGEMENT'),
+      onOpenDetail: setMasuMonDetail
+    }), gameState === 'MASU_FUSION' && (() => {
       const closeFusion = () => {
         resetFusionFlow();
         setGameState('TEMPLE');

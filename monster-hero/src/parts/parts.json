@@ -133,6 +133,10 @@
       "role": "画面: モンヒロビート(曲えらび・案内・マスモン枠・ランキング)。演奏画面は触らない"
     },
     {
+      "file": "59-screen-masu-mons.jsx",
+      "role": "画面: マスモン一覧(MASU_MONS)。一覧を出すだけで保存に触らない"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
