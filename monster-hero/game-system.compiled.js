@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65a93e086dfa6de7
+// source-sha256: b410997bf574b7a8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: a57d0351b5478ef2
+// generated-sha256: 9cc0e5fb9e7c35d7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 07:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 07:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26084,6 +26084,457 @@ function MasuDonationAnimation({
   }, "\u795E\u6BBF\u3078\u5BC4\u4ED8\u4E2D\u2026"));
 }
 
+// ---- part: 63-screen-masu-soul-traits.jsx ----
+// ==== 画面: 魂格特性(gameState === 'MASU_SOUL_TRAITS') ====
+//
+// MonsterHeroGame から切り出した13本目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-9)。
+//
+// 【この画面ならではの注意】
+// ・特性の確定と振り直しは保存を伴うので、中身は MonsterHeroGame 側の
+//   commitSoulTrait* に残し、props で受けて呼ぶだけ
+// ・二重実行を止める soulTraitProcessing は真偽値で受け取る
+// ・この画面にタイマーは無い
+
+function MasuSoulTraitsScreen({
+  commitSoulTraitRespec,
+  commitSoulTraitUpgrade,
+  getMasuMon,
+  masuMonDetail,
+  monsterRosterIds,
+  onClose,
+  ownedItems,
+  setSoulTraitDraftLevels,
+  setSoulTraitError,
+  setSoulTraitRespecOpen,
+  setSoulTraitSelectedId,
+  setSoulTraitTab,
+  soulTraitDraftLevels,
+  soulTraitError,
+  soulTraitProcessingRef,
+  soulTraitRespecOpen,
+  soulTraitSelectedId,
+  soulTraitTab
+}) {
+  const sourceMasu = masuMonDetail ? getMasuMon(masuMonDetail.id) || masuMonDetail : null;
+  if (!sourceMasu) return null;
+  const masu = normalizeMasuProgression(sourceMasu);
+  const level = masuBondLevelInfo(masu).level;
+  const unlocked = masu.soulRankStage >= 1;
+  const stageStep = soulRankEvolutionForStage(masu.soulRankStage);
+  const stageLabel = stageStep?.label || '魂格未解放';
+  const accent = stageStep?.accent || '#94a3b8';
+  const earned = soulPointEarned(masu);
+  const spent = soulTraitSpentPoints(masu);
+  const available = soulTraitAvailablePoints(masu);
+  const scrollHave = ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID);
+  const traits = SOUL_TRAIT_DEFINITIONS.filter(trait => trait.category === soulTraitTab);
+  const selected = soulTraitSelectedId ? SOUL_TRAIT_BY_ID[soulTraitSelectedId] : null;
+  const maxUpgrade = selected ? maxSoulTraitUpgradeLevels(masu, selected.id) : 0;
+  const draft = selected ? Math.max(0, Math.min(maxUpgrade, Math.floor(Number(soulTraitDraftLevels) || 0))) : 0;
+  const currentLevel = selected ? soulTraitLevel(masu, selected.id) : 0;
+  const currentEffect = selected ? soulTraitEffectValue(masu, selected.id) : 0;
+  const afterLevel = selected ? currentLevel + draft : 0;
+  const afterEffect = selected ? afterLevel * selected.effectPerLevel : 0;
+  const draftCost = selected ? draft * selected.costPerLevel : 0;
+  const closeScreen = () => {
+    onClose();
+  };
+  const openTrait = trait => {
+    const max = maxSoulTraitUpgradeLevels(masu, trait.id);
+    setSoulTraitSelectedId(trait.id);
+    setSoulTraitDraftLevels(max > 0 ? 1 : 0);
+    setSoulTraitError('');
+  };
+  const addDraft = amount => setSoulTraitDraftLevels(prev => Math.max(0, Math.min(maxUpgrade, Math.floor(Number(prev) || 0) + amount)));
+  // M/B管理の現在セットは8体の候補。魂格特性の実戦値プレビューは、その中のマスモンだけを合成して見せる。
+  // 実戦では実際に参加した個体だけでSTEP4の同じ正本を再計算するため、ここでは「編成セット内」の値と明示する。
+  const rosterSoulMasus = monsterRosterIds.filter(entry => String(entry || '').startsWith('masu:')).map(entry => getMasuMon(String(entry).slice(5))).filter(Boolean);
+  const inCurrentRoster = rosterSoulMasus.some(entry => String(entry.id) === String(masu.id));
+  const currentPartyPreview = inCurrentRoster ? soulTraitPartyPreview(rosterSoulMasus) : null;
+  const draftUpgrade = selected && draft > 0 ? buildSoulTraitUpgrade(masu, selected.id, draft) : null;
+  const afterPartyPreview = currentPartyPreview && draftUpgrade ? soulTraitPartyPreview(rosterSoulMasus.map(entry => String(entry.id) === String(masu.id) ? draftUpgrade.nextMasu : entry)) : currentPartyPreview;
+  const pctText = value => `${(Number(value) || 0).toFixed(1).replace(/\.0$/, '')}%`;
+  const partyPreviewRows = currentPartyPreview && afterPartyPreview ? [{
+    label: '最終被ダメ軽減',
+    before: currentPartyPreview.damageReduction,
+    after: afterPartyPreview.damageReduction,
+    format: pctText
+  }, {
+    label: '回避E',
+    before: currentPartyPreview.evasion,
+    after: afterPartyPreview.evasion,
+    format: pctText
+  }, {
+    label: '反射R',
+    before: currentPartyPreview.reflect,
+    after: afterPartyPreview.reflect,
+    format: pctText
+  }, {
+    label: '吸収A',
+    before: currentPartyPreview.absorb,
+    after: afterPartyPreview.absorb,
+    format: pctText
+  }, {
+    label: '特殊防御',
+    before: currentPartyPreview.specialDefenseRate,
+    after: afterPartyPreview.specialDefenseRate,
+    format: pctText
+  }, {
+    label: '威圧',
+    before: currentPartyPreview.intimidate,
+    after: afterPartyPreview.intimidate,
+    format: pctText
+  }, {
+    label: '自動ガッツ回復',
+    before: (currentPartyPreview.autoGutsMultiplier - 1) * 100,
+    after: (afterPartyPreview.autoGutsMultiplier - 1) * 100,
+    format: pctText
+  }, {
+    label: 'カード増加',
+    before: currentPartyPreview.coordinationCardBonus,
+    after: afterPartyPreview.coordinationCardBonus,
+    format: value => `+${value}枚`
+  }].filter(row => Math.abs(row.after - row.before) > 1e-9) : [];
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    "data-soul-trait-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 flex items-center gap-2 mb-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u3078\u623B\u308B",
+    onClick: closeScreen,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black uppercase tracking-widest",
+    style: {
+      color: accent
+    }
+  }, "\u9B42\u683C\u7279\u6027"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-lg font-black truncate"
+  }, masu.name)), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-right"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black",
+    style: {
+      color: accent
+    }
+  }, stageLabel), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-mono text-slate-400"
+  }, "Lv.", level))), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 grid grid-cols-3 gap-1.5 mb-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-sky-500/30 bg-sky-950/30 px-2 py-2 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] text-slate-400 font-black"
+  }, "\u672A\u4F7F\u7528 \u9B42\u683CP"), /*#__PURE__*/React.createElement("div", {
+    className: "text-lg font-black text-sky-300"
+  }, available)), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-violet-500/30 bg-violet-950/30 px-2 py-2 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] text-slate-400 font-black"
+  }, "\u4F7F\u7528\u6E08\u307F"), /*#__PURE__*/React.createElement("div", {
+    className: "text-lg font-black text-violet-300"
+  }, spent)), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-amber-500/30 bg-amber-950/30 px-2 py-2 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] text-slate-400 font-black"
+  }, "\u7DCF\u7372\u5F97"), /*#__PURE__*/React.createElement("div", {
+    className: "text-lg font-black text-amber-300"
+  }, earned))), inCurrentRoster ? /*#__PURE__*/React.createElement("div", {
+    "data-soul-trait-party-preview": true,
+    className: "shrink-0 mb-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-3 py-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-emerald-200"
+  }, "\u73FE\u5728\u306E\u7DE8\u6210\u30BB\u30C3\u30C8\u5185\u30FB\u5408\u6210\u5F8C\u52B9\u679C"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black text-slate-500"
+  }, "\u30DE\u30B9\u30E2\u30F3 ", rosterSoulMasus.length, "\u4F53")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 grid grid-cols-4 gap-1 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/25 p-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] text-slate-500"
+  }, "\u88AB\u30C0\u30E1\u8EFD\u6E1B"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-emerald-300"
+  }, pctText(currentPartyPreview.damageReduction))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/25 p-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] text-slate-500"
+  }, "\u7279\u6B8A\u9632\u5FA1"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-cyan-300"
+  }, pctText(currentPartyPreview.specialDefenseRate))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/25 p-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] text-slate-500"
+  }, "\u5A01\u5727"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-violet-300"
+  }, pctText(currentPartyPreview.intimidate))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg bg-black/25 p-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[7px] text-slate-500"
+  }, "\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-amber-300"
+  }, "+", currentPartyPreview.coordinationCardBonus))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-[7px] font-bold leading-tight text-slate-500"
+  }, "\u56DE\u907FE ", pctText(currentPartyPreview.evasion), " \uFF0F \u53CD\u5C04R ", pctText(currentPartyPreview.reflect), " \uFF0F \u5438\u53CEA ", pctText(currentPartyPreview.absorb), " \uFF0F \u81EA\u52D5\u30AC\u30C3\u30C4\u56DE\u5FA9 \xD7", currentPartyPreview.autoGutsMultiplier.toFixed(3), "\u3002\u5B9F\u6226\u3067\u306F\u5B9F\u969B\u306B\u53C2\u52A0\u3057\u305F\u500B\u4F53\u3060\u3051\u3067\u518D\u8A08\u7B97\u3057\u307E\u3059\u3002")) : /*#__PURE__*/React.createElement("div", {
+    "data-soul-trait-party-preview-empty": true,
+    className: "shrink-0 mb-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[8px] font-bold text-slate-500 text-center"
+  }, "\u3053\u306E\u500B\u4F53\u306F\u73FE\u5728\u306E\u7DE8\u6210\u30BB\u30C3\u30C8\u306B\u5165\u3063\u3066\u3044\u306A\u3044\u305F\u3081\u3001\u5408\u6210\u5F8C\u52B9\u679C\u30D7\u30EC\u30D3\u30E5\u30FC\u306F\u8868\u793A\u3057\u307E\u305B\u3093\u3002"), !unlocked && /*#__PURE__*/React.createElement("div", {
+    "data-soul-trait-locked": true,
+    className: "shrink-0 mb-2 rounded-xl border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-[10px] font-black text-amber-200 text-center"
+  }, "Lv500\u5230\u9054\uFF0B\u9B42\u683C\u9032\u5316\u2160\u3067\u89E3\u653E", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] font-bold text-slate-300"
+  }, "\u7279\u6027\u4E00\u89A7\u3068\u5FC5\u8981\u9B42\u683CP\u306F\u5148\u306B\u78BA\u8A8D\u3067\u304D\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 flex gap-1.5 mb-2",
+    role: "tablist",
+    "aria-label": "\u9B42\u683C\u7279\u6027\u30AB\u30C6\u30B4\u30EA"
+  }, SOUL_TRAIT_CATEGORIES.map(category => /*#__PURE__*/React.createElement("button", {
+    key: category.id,
+    role: "tab",
+    "aria-selected": soulTraitTab === category.id,
+    onClick: () => {
+      setSoulTraitTab(category.id);
+      setSoulTraitSelectedId(null);
+      setSoulTraitDraftLevels(0);
+    },
+    className: `flex-1 min-h-[44px] rounded-xl text-[11px] font-black ${soulTraitTab === category.id ? 'bg-sky-600 text-white' : 'bg-slate-900 border border-slate-700 text-slate-400'}`
+  }, category.label))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-2"
+  }, traits.map(trait => {
+    const traitLevel = soulTraitLevel(masu, trait.id);
+    const effect = soulTraitEffectValue(masu, trait.id);
+    const maxed = Number.isFinite(trait.maxLevel) && traitLevel >= trait.maxLevel;
+    return /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      key: trait.id,
+      "data-soul-trait-card": trait.id,
+      onClick: () => openTrait(trait),
+      className: "w-full min-h-[72px] rounded-2xl border border-white/10 bg-slate-900 p-3 text-left active:scale-[.99]"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[12px] font-black text-white"
+    }, trait.name), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 text-[9px] font-bold leading-relaxed text-slate-400"
+    }, trait.desc)), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 text-right"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black text-sky-300"
+    }, traitLevel > 0 ? `Lv.${traitLevel}` : '未習得'), traitLevel > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-mono font-black text-emerald-300"
+    }, formatSoulTraitEffect(trait, effect)))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 flex items-center justify-between gap-2 text-[8px] font-black"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500"
+    }, trait.id === 'coordination' ? '習得' : '1段階', " ", trait.costPerLevel, "P"), /*#__PURE__*/React.createElement("span", {
+      className: maxed ? 'text-amber-300' : unlocked && maxSoulTraitUpgradeLevels(masu, trait.id) > 0 ? 'text-sky-300' : 'text-slate-600'
+    }, maxed ? 'MAX' : unlocked ? 'タップして強化' : '閲覧のみ')));
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[8px] font-bold leading-relaxed text-slate-400"
+  }, "\u9B42\u683C\u7279\u6027\u306B\u3088\u308B\u7DCF\u5408\u529B\u52A0\u7B97\uFF1A\u4F7F\u7528\u6E08\u307F\u9B42\u683CP ", spent, " \xD7 10 = ", /*#__PURE__*/React.createElement("b", {
+    className: "text-amber-300"
+  }, "+", spent * 10), /*#__PURE__*/React.createElement("br", null), "\u5B9F\u6226\u3067\u306E\u5408\u6210\u5F8C\u52B9\u679C\u30FB\u653B\u6483\u4E88\u6E2C\u3078\u306E\u53CD\u6620\u306F\u3001\u6226\u95D8\u63A5\u7D9A\u6642\u306B\u540C\u3058\u7279\u6027\u30C7\u30FC\u30BF\u304B\u3089\u8A08\u7B97\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 mt-2 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black text-slate-400"
+  }, "\u9B42\u683C\u518D\u7DE8\u306E\u66F8"), /*#__PURE__*/React.createElement("div", {
+    className: `text-[10px] font-black ${scrollHave > 0 ? 'text-cyan-300' : 'text-slate-500'}`
+  }, "\u6240\u6301 ", scrollHave, "\u518A")), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-soul-trait-respec-open": true,
+    disabled: spent <= 0 || scrollHave <= 0 || soulTraitProcessingRef.current,
+    onClick: () => {
+      setSoulTraitError('');
+      setSoulTraitRespecOpen(true);
+    },
+    className: "min-h-[48px] rounded-xl bg-cyan-700 px-4 text-[10px] font-black text-white disabled:opacity-30"
+  }, "\u5168\u30EA\u30BB\u30C3\u30C8")), soulTraitError && /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 mt-1 text-center text-[9px] font-black text-red-400"
+  }, soulTraitError), selected && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-[32000] flex items-end justify-center bg-black/70 p-3",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${selected.name}の魂格特性強化`
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-soul-trait-sheet": true,
+    "data-soul-trait-upgrade-sheet": true,
+    className: "w-full max-w-sm rounded-t-3xl border-2 border-sky-500/60 bg-slate-950 p-4 shadow-2xl",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black text-sky-300"
+  }, "\u9B42\u683C\u7279\u6027"), /*#__PURE__*/React.createElement("div", {
+    className: "text-lg font-black"
+  }, selected.name), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-[9px] font-bold text-slate-400"
+  }, selected.desc)), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": "\u5F37\u5316\u753B\u9762\u3092\u9589\u3058\u308B",
+    onClick: () => {
+      setSoulTraitSelectedId(null);
+      setSoulTraitDraftLevels(0);
+      setSoulTraitError('');
+    },
+    className: "p-2 rounded-full bg-white/10 active:scale-90"
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 16
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 grid grid-cols-2 gap-2 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-white/10 bg-black/30 p-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 font-black"
+  }, "\u73FE\u5728"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[13px] font-black text-white"
+  }, "Lv.", currentLevel), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-mono font-black text-sky-300"
+  }, formatSoulTraitEffect(selected, currentEffect))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 font-black"
+  }, "\u5F37\u5316\u5F8C"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[13px] font-black text-white"
+  }, "Lv.", afterLevel), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-mono font-black text-emerald-300"
+  }, formatSoulTraitEffect(selected, afterEffect)))), partyPreviewRows.length > 0 && /*#__PURE__*/React.createElement("div", {
+    "data-soul-trait-before-after": true,
+    className: "mt-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black text-emerald-200 mb-1"
+  }, "\u73FE\u5728\u7DE8\u6210\u306E\u5B9F\u6226\u5024\u30D7\u30EC\u30D3\u30E5\u30FC"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1"
+  }, partyPreviewRows.map(row => /*#__PURE__*/React.createElement("div", {
+    key: row.label,
+    className: "flex items-center justify-between gap-2 text-[9px] font-black"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, row.label), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
+    className: "text-slate-300"
+  }, row.format(row.before)), /*#__PURE__*/React.createElement("span", {
+    className: "mx-1 text-slate-600"
+  }, "\u2192"), /*#__PURE__*/React.createElement("b", {
+    className: "text-emerald-300"
+  }, row.format(row.after))))))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 rounded-xl border border-white/10 bg-black/30 p-2 text-[9px] font-bold"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "1\u6BB5\u968E\u306E\u52B9\u679C"), /*#__PURE__*/React.createElement("b", null, formatSoulTraitEffect(selected, selected.effectPerLevel))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "1\u6BB5\u968E\u306E\u5FC5\u8981P"), /*#__PURE__*/React.createElement("b", null, selected.costPerLevel, "P")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u6D88\u8CBB\u9B42\u683CP"), /*#__PURE__*/React.createElement("b", {
+    className: "text-amber-300"
+  }, draftCost, "P")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u5F37\u5316\u5F8C\u306E\u672A\u4F7F\u7528P"), /*#__PURE__*/React.createElement("b", {
+    className: "text-sky-300"
+  }, Math.max(0, available - draftCost), "P"))), !unlocked ? /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 rounded-xl border border-amber-500/40 bg-amber-950/30 px-3 py-3 text-center text-[10px] font-black text-amber-200"
+  }, "Lv500\u5230\u9054\uFF0B\u9B42\u683C\u9032\u5316\u2160\u3067\u5F37\u5316\u64CD\u4F5C\u304C\u89E3\u653E\u3055\u308C\u307E\u3059") : selected.id === 'coordination' ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-soul-trait-learn": true,
+    "data-soul-trait-learn-coordination": true,
+    disabled: maxUpgrade <= 0 || soulTraitProcessingRef.current,
+    onClick: () => commitSoulTraitUpgrade(masu.id, selected.id, 1),
+    className: "mt-3 min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black disabled:opacity-30"
+  }, currentLevel >= 1 ? '習得済み' : '習得する 200P') : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 grid grid-cols-4 gap-1.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-soul-trait-minus-one": true,
+    disabled: draft <= 0,
+    onClick: () => addDraft(-1),
+    className: "min-h-[46px] rounded-xl bg-slate-700 text-[11px] font-black disabled:opacity-30"
+  }, "-1"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-soul-trait-plus-one": true,
+    disabled: draft >= maxUpgrade,
+    onClick: () => addDraft(1),
+    className: "min-h-[46px] rounded-xl bg-sky-800 text-[11px] font-black disabled:opacity-30"
+  }, "+1"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-soul-trait-plus-five": true,
+    disabled: draft >= maxUpgrade,
+    onClick: () => addDraft(5),
+    className: "min-h-[46px] rounded-xl bg-sky-700 text-[11px] font-black disabled:opacity-30"
+  }, "+5"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-soul-trait-max": true,
+    disabled: maxUpgrade <= 0,
+    onClick: () => setSoulTraitDraftLevels(maxUpgrade),
+    className: "min-h-[46px] rounded-xl bg-violet-700 text-[10px] font-black disabled:opacity-30"
+  }, "MAX")), /*#__PURE__*/React.createElement("div", {
+    className: "my-2 text-center text-[11px] font-black text-sky-200"
+  }, "\u4ECA\u56DE +", draft, "\u6BB5\u968E"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-soul-trait-confirm": true,
+    disabled: draft <= 0 || soulTraitProcessingRef.current,
+    onClick: () => commitSoulTraitUpgrade(masu.id, selected.id, draft),
+    className: "min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black disabled:opacity-30"
+  }, "\u5F37\u5316\u3092\u6C7A\u5B9A")))), soulTraitRespecOpen && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4",
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u9B42\u683C\u7279\u6027\u306E\u5168\u30EA\u30BB\u30C3\u30C8\u78BA\u8A8D"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-soul-trait-respec-sheet": true,
+    className: "w-full max-w-sm rounded-3xl border-2 border-cyan-500/60 bg-slate-950 p-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-xl mb-1"
+  }, "\uD83C\uDF00"), /*#__PURE__*/React.createElement("h3", {
+    className: "text-center text-base font-black text-cyan-200"
+  }, "\u9B42\u683C\u7279\u6027\u3092\u5168\u30EA\u30BB\u30C3\u30C8"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-300"
+  }, "\u300C", masu.name, "\u300D\u304C\u4F7F\u7528\u3057\u305F\u9B42\u683CP ", /*#__PURE__*/React.createElement("b", {
+    className: "text-amber-300"
+  }, spent, "P"), " \u3092\u3059\u3079\u3066\u672A\u4F7F\u7528\u3078\u623B\u3057\u307E\u3059\u3002\u9B42\u683C\u6BB5\u968E\u30FBLv\u30FB\u6700\u9AD8\u521D\u5230\u9054Lv\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u9B42\u683C\u518D\u7DE8\u306E\u66F8"), /*#__PURE__*/React.createElement("span", {
+    className: "text-cyan-300"
+  }, scrollHave, " \u2192 ", Math.max(0, scrollHave - 1), "\u518A")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: soulTraitProcessingRef.current,
+    onClick: () => setSoulTraitRespecOpen(false),
+    className: "min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black"
+  }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-soul-trait-respec-confirm": true,
+    disabled: soulTraitProcessingRef.current,
+    onClick: () => commitSoulTraitRespec(masu.id),
+    className: "min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black"
+  }, "1\u518A\u4F7F\u3063\u3066\u518D\u7DE8")))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -47816,430 +48267,32 @@ function MonsterHeroGame() {
           className: `rounded-full px-1.5 py-0.5 text-[8px] ${masuNorm.soulRankStage >= 1 ? 'bg-white/15 text-sky-100' : 'bg-black/25 text-slate-300'}`
         }, masuNorm.soulRankStage >= 1 ? `未使用 ${soulTraitAvailablePoints(masuNorm)}P` : '未解放')))
       });
-    })(), gameState === 'MASU_SOUL_TRAITS' && (() => {
-      const sourceMasu = masuMonDetail ? getMasuMon(masuMonDetail.id) || masuMonDetail : null;
-      if (!sourceMasu) return null;
-      const masu = normalizeMasuProgression(sourceMasu);
-      const level = masuBondLevelInfo(masu).level;
-      const unlocked = masu.soulRankStage >= 1;
-      const stageStep = soulRankEvolutionForStage(masu.soulRankStage);
-      const stageLabel = stageStep?.label || '魂格未解放';
-      const accent = stageStep?.accent || '#94a3b8';
-      const earned = soulPointEarned(masu);
-      const spent = soulTraitSpentPoints(masu);
-      const available = soulTraitAvailablePoints(masu);
-      const scrollHave = ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID);
-      const traits = SOUL_TRAIT_DEFINITIONS.filter(trait => trait.category === soulTraitTab);
-      const selected = soulTraitSelectedId ? SOUL_TRAIT_BY_ID[soulTraitSelectedId] : null;
-      const maxUpgrade = selected ? maxSoulTraitUpgradeLevels(masu, selected.id) : 0;
-      const draft = selected ? Math.max(0, Math.min(maxUpgrade, Math.floor(Number(soulTraitDraftLevels) || 0))) : 0;
-      const currentLevel = selected ? soulTraitLevel(masu, selected.id) : 0;
-      const currentEffect = selected ? soulTraitEffectValue(masu, selected.id) : 0;
-      const afterLevel = selected ? currentLevel + draft : 0;
-      const afterEffect = selected ? afterLevel * selected.effectPerLevel : 0;
-      const draftCost = selected ? draft * selected.costPerLevel : 0;
-      const closeScreen = () => {
+    })(), gameState === 'MASU_SOUL_TRAITS' && /*#__PURE__*/React.createElement(MasuSoulTraitsScreen, {
+      commitSoulTraitRespec: commitSoulTraitRespec,
+      commitSoulTraitUpgrade: commitSoulTraitUpgrade,
+      getMasuMon: getMasuMon,
+      masuMonDetail: masuMonDetail,
+      monsterRosterIds: monsterRosterIds,
+      onClose: () => {
         setSoulTraitSelectedId(null);
         setSoulTraitDraftLevels(0);
         setSoulTraitError('');
         setSoulTraitRespecOpen(false);
         setGameState(soulTraitReturnState || 'MASU_MONS');
-      };
-      const openTrait = trait => {
-        const max = maxSoulTraitUpgradeLevels(masu, trait.id);
-        setSoulTraitSelectedId(trait.id);
-        setSoulTraitDraftLevels(max > 0 ? 1 : 0);
-        setSoulTraitError('');
-      };
-      const addDraft = amount => setSoulTraitDraftLevels(prev => Math.max(0, Math.min(maxUpgrade, Math.floor(Number(prev) || 0) + amount)));
-      // M/B管理の現在セットは8体の候補。魂格特性の実戦値プレビューは、その中のマスモンだけを合成して見せる。
-      // 実戦では実際に参加した個体だけでSTEP4の同じ正本を再計算するため、ここでは「編成セット内」の値と明示する。
-      const rosterSoulMasus = monsterRosterIds.filter(entry => String(entry || '').startsWith('masu:')).map(entry => getMasuMon(String(entry).slice(5))).filter(Boolean);
-      const inCurrentRoster = rosterSoulMasus.some(entry => String(entry.id) === String(masu.id));
-      const currentPartyPreview = inCurrentRoster ? soulTraitPartyPreview(rosterSoulMasus) : null;
-      const draftUpgrade = selected && draft > 0 ? buildSoulTraitUpgrade(masu, selected.id, draft) : null;
-      const afterPartyPreview = currentPartyPreview && draftUpgrade ? soulTraitPartyPreview(rosterSoulMasus.map(entry => String(entry.id) === String(masu.id) ? draftUpgrade.nextMasu : entry)) : currentPartyPreview;
-      const pctText = value => `${(Number(value) || 0).toFixed(1).replace(/\.0$/, '')}%`;
-      const partyPreviewRows = currentPartyPreview && afterPartyPreview ? [{
-        label: '最終被ダメ軽減',
-        before: currentPartyPreview.damageReduction,
-        after: afterPartyPreview.damageReduction,
-        format: pctText
-      }, {
-        label: '回避E',
-        before: currentPartyPreview.evasion,
-        after: afterPartyPreview.evasion,
-        format: pctText
-      }, {
-        label: '反射R',
-        before: currentPartyPreview.reflect,
-        after: afterPartyPreview.reflect,
-        format: pctText
-      }, {
-        label: '吸収A',
-        before: currentPartyPreview.absorb,
-        after: afterPartyPreview.absorb,
-        format: pctText
-      }, {
-        label: '特殊防御',
-        before: currentPartyPreview.specialDefenseRate,
-        after: afterPartyPreview.specialDefenseRate,
-        format: pctText
-      }, {
-        label: '威圧',
-        before: currentPartyPreview.intimidate,
-        after: afterPartyPreview.intimidate,
-        format: pctText
-      }, {
-        label: '自動ガッツ回復',
-        before: (currentPartyPreview.autoGutsMultiplier - 1) * 100,
-        after: (afterPartyPreview.autoGutsMultiplier - 1) * 100,
-        format: pctText
-      }, {
-        label: 'カード増加',
-        before: currentPartyPreview.coordinationCardBonus,
-        after: afterPartyPreview.coordinationCardBonus,
-        format: value => `+${value}枚`
-      }].filter(row => Math.abs(row.after - row.before) > 1e-9) : [];
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        "data-soul-trait-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-4",
-        style: {
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 flex items-center gap-2 mb-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "aria-label": "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u3078\u623B\u308B",
-        onClick: closeScreen,
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black uppercase tracking-widest",
-        style: {
-          color: accent
-        }
-      }, "\u9B42\u683C\u7279\u6027"), /*#__PURE__*/React.createElement("h2", {
-        className: "text-lg font-black truncate"
-      }, masu.name)), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-right"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black",
-        style: {
-          color: accent
-        }
-      }, stageLabel), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-mono text-slate-400"
-      }, "Lv.", level))), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 grid grid-cols-3 gap-1.5 mb-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-sky-500/30 bg-sky-950/30 px-2 py-2 text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[7px] text-slate-400 font-black"
-      }, "\u672A\u4F7F\u7528 \u9B42\u683CP"), /*#__PURE__*/React.createElement("div", {
-        className: "text-lg font-black text-sky-300"
-      }, available)), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-violet-500/30 bg-violet-950/30 px-2 py-2 text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[7px] text-slate-400 font-black"
-      }, "\u4F7F\u7528\u6E08\u307F"), /*#__PURE__*/React.createElement("div", {
-        className: "text-lg font-black text-violet-300"
-      }, spent)), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-amber-500/30 bg-amber-950/30 px-2 py-2 text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[7px] text-slate-400 font-black"
-      }, "\u7DCF\u7372\u5F97"), /*#__PURE__*/React.createElement("div", {
-        className: "text-lg font-black text-amber-300"
-      }, earned))), inCurrentRoster ? /*#__PURE__*/React.createElement("div", {
-        "data-soul-trait-party-preview": true,
-        className: "shrink-0 mb-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 px-3 py-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-emerald-200"
-      }, "\u73FE\u5728\u306E\u7DE8\u6210\u30BB\u30C3\u30C8\u5185\u30FB\u5408\u6210\u5F8C\u52B9\u679C"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black text-slate-500"
-      }, "\u30DE\u30B9\u30E2\u30F3 ", rosterSoulMasus.length, "\u4F53")), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 grid grid-cols-4 gap-1 text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "rounded-lg bg-black/25 p-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[7px] text-slate-500"
-      }, "\u88AB\u30C0\u30E1\u8EFD\u6E1B"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-emerald-300"
-      }, pctText(currentPartyPreview.damageReduction))), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-lg bg-black/25 p-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[7px] text-slate-500"
-      }, "\u7279\u6B8A\u9632\u5FA1"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-cyan-300"
-      }, pctText(currentPartyPreview.specialDefenseRate))), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-lg bg-black/25 p-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[7px] text-slate-500"
-      }, "\u5A01\u5727"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-violet-300"
-      }, pctText(currentPartyPreview.intimidate))), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-lg bg-black/25 p-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[7px] text-slate-500"
-      }, "\u30AB\u30FC\u30C9"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-amber-300"
-      }, "+", currentPartyPreview.coordinationCardBonus))), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 text-[7px] font-bold leading-tight text-slate-500"
-      }, "\u56DE\u907FE ", pctText(currentPartyPreview.evasion), " \uFF0F \u53CD\u5C04R ", pctText(currentPartyPreview.reflect), " \uFF0F \u5438\u53CEA ", pctText(currentPartyPreview.absorb), " \uFF0F \u81EA\u52D5\u30AC\u30C3\u30C4\u56DE\u5FA9 \xD7", currentPartyPreview.autoGutsMultiplier.toFixed(3), "\u3002\u5B9F\u6226\u3067\u306F\u5B9F\u969B\u306B\u53C2\u52A0\u3057\u305F\u500B\u4F53\u3060\u3051\u3067\u518D\u8A08\u7B97\u3057\u307E\u3059\u3002")) : /*#__PURE__*/React.createElement("div", {
-        "data-soul-trait-party-preview-empty": true,
-        className: "shrink-0 mb-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[8px] font-bold text-slate-500 text-center"
-      }, "\u3053\u306E\u500B\u4F53\u306F\u73FE\u5728\u306E\u7DE8\u6210\u30BB\u30C3\u30C8\u306B\u5165\u3063\u3066\u3044\u306A\u3044\u305F\u3081\u3001\u5408\u6210\u5F8C\u52B9\u679C\u30D7\u30EC\u30D3\u30E5\u30FC\u306F\u8868\u793A\u3057\u307E\u305B\u3093\u3002"), !unlocked && /*#__PURE__*/React.createElement("div", {
-        "data-soul-trait-locked": true,
-        className: "shrink-0 mb-2 rounded-xl border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-[10px] font-black text-amber-200 text-center"
-      }, "Lv500\u5230\u9054\uFF0B\u9B42\u683C\u9032\u5316\u2160\u3067\u89E3\u653E", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
-        className: "text-[8px] font-bold text-slate-300"
-      }, "\u7279\u6027\u4E00\u89A7\u3068\u5FC5\u8981\u9B42\u683CP\u306F\u5148\u306B\u78BA\u8A8D\u3067\u304D\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 flex gap-1.5 mb-2",
-        role: "tablist",
-        "aria-label": "\u9B42\u683C\u7279\u6027\u30AB\u30C6\u30B4\u30EA"
-      }, SOUL_TRAIT_CATEGORIES.map(category => /*#__PURE__*/React.createElement("button", {
-        key: category.id,
-        role: "tab",
-        "aria-selected": soulTraitTab === category.id,
-        onClick: () => {
-          setSoulTraitTab(category.id);
-          setSoulTraitSelectedId(null);
-          setSoulTraitDraftLevels(0);
-        },
-        className: `flex-1 min-h-[44px] rounded-xl text-[11px] font-black ${soulTraitTab === category.id ? 'bg-sky-600 text-white' : 'bg-slate-900 border border-slate-700 text-slate-400'}`
-      }, category.label))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-2"
-      }, traits.map(trait => {
-        const traitLevel = soulTraitLevel(masu, trait.id);
-        const effect = soulTraitEffectValue(masu, trait.id);
-        const maxed = Number.isFinite(trait.maxLevel) && traitLevel >= trait.maxLevel;
-        return /*#__PURE__*/React.createElement("button", {
-          type: "button",
-          key: trait.id,
-          "data-soul-trait-card": trait.id,
-          onClick: () => openTrait(trait),
-          className: "w-full min-h-[72px] rounded-2xl border border-white/10 bg-slate-900 p-3 text-left active:scale-[.99]"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-start justify-between gap-2"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "min-w-0"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "text-[12px] font-black text-white"
-        }, trait.name), /*#__PURE__*/React.createElement("div", {
-          className: "mt-0.5 text-[9px] font-bold leading-relaxed text-slate-400"
-        }, trait.desc)), /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 text-right"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "text-[10px] font-black text-sky-300"
-        }, traitLevel > 0 ? `Lv.${traitLevel}` : '未習得'), traitLevel > 0 && /*#__PURE__*/React.createElement("div", {
-          className: "text-[9px] font-mono font-black text-emerald-300"
-        }, formatSoulTraitEffect(trait, effect)))), /*#__PURE__*/React.createElement("div", {
-          className: "mt-2 flex items-center justify-between gap-2 text-[8px] font-black"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500"
-        }, trait.id === 'coordination' ? '習得' : '1段階', " ", trait.costPerLevel, "P"), /*#__PURE__*/React.createElement("span", {
-          className: maxed ? 'text-amber-300' : unlocked && maxSoulTraitUpgradeLevels(masu, trait.id) > 0 ? 'text-sky-300' : 'text-slate-600'
-        }, maxed ? 'MAX' : unlocked ? 'タップして強化' : '閲覧のみ')));
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[8px] font-bold leading-relaxed text-slate-400"
-      }, "\u9B42\u683C\u7279\u6027\u306B\u3088\u308B\u7DCF\u5408\u529B\u52A0\u7B97\uFF1A\u4F7F\u7528\u6E08\u307F\u9B42\u683CP ", spent, " \xD7 10 = ", /*#__PURE__*/React.createElement("b", {
-        className: "text-amber-300"
-      }, "+", spent * 10), /*#__PURE__*/React.createElement("br", null), "\u5B9F\u6226\u3067\u306E\u5408\u6210\u5F8C\u52B9\u679C\u30FB\u653B\u6483\u4E88\u6E2C\u3078\u306E\u53CD\u6620\u306F\u3001\u6226\u95D8\u63A5\u7D9A\u6642\u306B\u540C\u3058\u7279\u6027\u30C7\u30FC\u30BF\u304B\u3089\u8A08\u7B97\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 mt-2 flex items-center gap-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-900 px-3 py-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black text-slate-400"
-      }, "\u9B42\u683C\u518D\u7DE8\u306E\u66F8"), /*#__PURE__*/React.createElement("div", {
-        className: `text-[10px] font-black ${scrollHave > 0 ? 'text-cyan-300' : 'text-slate-500'}`
-      }, "\u6240\u6301 ", scrollHave, "\u518A")), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-soul-trait-respec-open": true,
-        disabled: spent <= 0 || scrollHave <= 0 || soulTraitProcessingRef.current,
-        onClick: () => {
-          setSoulTraitError('');
-          setSoulTraitRespecOpen(true);
-        },
-        className: "min-h-[48px] rounded-xl bg-cyan-700 px-4 text-[10px] font-black text-white disabled:opacity-30"
-      }, "\u5168\u30EA\u30BB\u30C3\u30C8")), soulTraitError && /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 mt-1 text-center text-[9px] font-black text-red-400"
-      }, soulTraitError), selected && /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-0 z-[32000] flex items-end justify-center bg-black/70 p-3",
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": `${selected.name}の魂格特性強化`
-      }, /*#__PURE__*/React.createElement("div", {
-        "data-soul-trait-sheet": true,
-        "data-soul-trait-upgrade-sheet": true,
-        className: "w-full max-w-sm rounded-t-3xl border-2 border-sky-500/60 bg-slate-950 p-4 shadow-2xl",
-        style: {
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-start justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black text-sky-300"
-      }, "\u9B42\u683C\u7279\u6027"), /*#__PURE__*/React.createElement("div", {
-        className: "text-lg font-black"
-      }, selected.name), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 text-[9px] font-bold text-slate-400"
-      }, selected.desc)), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "aria-label": "\u5F37\u5316\u753B\u9762\u3092\u9589\u3058\u308B",
-        onClick: () => {
-          setSoulTraitSelectedId(null);
-          setSoulTraitDraftLevels(0);
-          setSoulTraitError('');
-        },
-        className: "p-2 rounded-full bg-white/10 active:scale-90"
-      }, /*#__PURE__*/React.createElement(X, {
-        size: 16
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "mt-3 grid grid-cols-2 gap-2 text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-white/10 bg-black/30 p-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 font-black"
-      }, "\u73FE\u5728"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[13px] font-black text-white"
-      }, "Lv.", currentLevel), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-mono font-black text-sky-300"
-      }, formatSoulTraitEffect(selected, currentEffect))), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 font-black"
-      }, "\u5F37\u5316\u5F8C"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[13px] font-black text-white"
-      }, "Lv.", afterLevel), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-mono font-black text-emerald-300"
-      }, formatSoulTraitEffect(selected, afterEffect)))), partyPreviewRows.length > 0 && /*#__PURE__*/React.createElement("div", {
-        "data-soul-trait-before-after": true,
-        className: "mt-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black text-emerald-200 mb-1"
-      }, "\u73FE\u5728\u7DE8\u6210\u306E\u5B9F\u6226\u5024\u30D7\u30EC\u30D3\u30E5\u30FC"), /*#__PURE__*/React.createElement("div", {
-        className: "space-y-1"
-      }, partyPreviewRows.map(row => /*#__PURE__*/React.createElement("div", {
-        key: row.label,
-        className: "flex items-center justify-between gap-2 text-[9px] font-black"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, row.label), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
-        className: "text-slate-300"
-      }, row.format(row.before)), /*#__PURE__*/React.createElement("span", {
-        className: "mx-1 text-slate-600"
-      }, "\u2192"), /*#__PURE__*/React.createElement("b", {
-        className: "text-emerald-300"
-      }, row.format(row.after))))))), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 rounded-xl border border-white/10 bg-black/30 p-2 text-[9px] font-bold"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "1\u6BB5\u968E\u306E\u52B9\u679C"), /*#__PURE__*/React.createElement("b", null, formatSoulTraitEffect(selected, selected.effectPerLevel))), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "1\u6BB5\u968E\u306E\u5FC5\u8981P"), /*#__PURE__*/React.createElement("b", null, selected.costPerLevel, "P")), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u6D88\u8CBB\u9B42\u683CP"), /*#__PURE__*/React.createElement("b", {
-        className: "text-amber-300"
-      }, draftCost, "P")), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u5F37\u5316\u5F8C\u306E\u672A\u4F7F\u7528P"), /*#__PURE__*/React.createElement("b", {
-        className: "text-sky-300"
-      }, Math.max(0, available - draftCost), "P"))), !unlocked ? /*#__PURE__*/React.createElement("div", {
-        className: "mt-3 rounded-xl border border-amber-500/40 bg-amber-950/30 px-3 py-3 text-center text-[10px] font-black text-amber-200"
-      }, "Lv500\u5230\u9054\uFF0B\u9B42\u683C\u9032\u5316\u2160\u3067\u5F37\u5316\u64CD\u4F5C\u304C\u89E3\u653E\u3055\u308C\u307E\u3059") : selected.id === 'coordination' ? /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-soul-trait-learn": true,
-        "data-soul-trait-learn-coordination": true,
-        disabled: maxUpgrade <= 0 || soulTraitProcessingRef.current,
-        onClick: () => commitSoulTraitUpgrade(masu.id, selected.id, 1),
-        className: "mt-3 min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black disabled:opacity-30"
-      }, currentLevel >= 1 ? '習得済み' : '習得する 200P') : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "mt-3 grid grid-cols-4 gap-1.5"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-soul-trait-minus-one": true,
-        disabled: draft <= 0,
-        onClick: () => addDraft(-1),
-        className: "min-h-[46px] rounded-xl bg-slate-700 text-[11px] font-black disabled:opacity-30"
-      }, "-1"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-soul-trait-plus-one": true,
-        disabled: draft >= maxUpgrade,
-        onClick: () => addDraft(1),
-        className: "min-h-[46px] rounded-xl bg-sky-800 text-[11px] font-black disabled:opacity-30"
-      }, "+1"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-soul-trait-plus-five": true,
-        disabled: draft >= maxUpgrade,
-        onClick: () => addDraft(5),
-        className: "min-h-[46px] rounded-xl bg-sky-700 text-[11px] font-black disabled:opacity-30"
-      }, "+5"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-soul-trait-max": true,
-        disabled: maxUpgrade <= 0,
-        onClick: () => setSoulTraitDraftLevels(maxUpgrade),
-        className: "min-h-[46px] rounded-xl bg-violet-700 text-[10px] font-black disabled:opacity-30"
-      }, "MAX")), /*#__PURE__*/React.createElement("div", {
-        className: "my-2 text-center text-[11px] font-black text-sky-200"
-      }, "\u4ECA\u56DE +", draft, "\u6BB5\u968E"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-soul-trait-confirm": true,
-        disabled: draft <= 0 || soulTraitProcessingRef.current,
-        onClick: () => commitSoulTraitUpgrade(masu.id, selected.id, draft),
-        className: "min-h-[52px] w-full rounded-2xl bg-sky-500 text-slate-950 text-[12px] font-black disabled:opacity-30"
-      }, "\u5F37\u5316\u3092\u6C7A\u5B9A")))), soulTraitRespecOpen && /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-0 z-[32100] flex items-center justify-center bg-black/80 p-4",
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": "\u9B42\u683C\u7279\u6027\u306E\u5168\u30EA\u30BB\u30C3\u30C8\u78BA\u8A8D"
-      }, /*#__PURE__*/React.createElement("div", {
-        "data-soul-trait-respec-sheet": true,
-        className: "w-full max-w-sm rounded-3xl border-2 border-cyan-500/60 bg-slate-950 p-5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-xl mb-1"
-      }, "\uD83C\uDF00"), /*#__PURE__*/React.createElement("h3", {
-        className: "text-center text-base font-black text-cyan-200"
-      }, "\u9B42\u683C\u7279\u6027\u3092\u5168\u30EA\u30BB\u30C3\u30C8"), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-[10px] font-bold leading-relaxed text-slate-300"
-      }, "\u300C", masu.name, "\u300D\u304C\u4F7F\u7528\u3057\u305F\u9B42\u683CP ", /*#__PURE__*/React.createElement("b", {
-        className: "text-amber-300"
-      }, spent, "P"), " \u3092\u3059\u3079\u3066\u672A\u4F7F\u7528\u3078\u623B\u3057\u307E\u3059\u3002\u9B42\u683C\u6BB5\u968E\u30FBLv\u30FB\u6700\u9AD8\u521D\u5230\u9054Lv\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-[10px] font-black flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u9B42\u683C\u518D\u7DE8\u306E\u66F8"), /*#__PURE__*/React.createElement("span", {
-        className: "text-cyan-300"
-      }, scrollHave, " \u2192 ", Math.max(0, scrollHave - 1), "\u518A")), /*#__PURE__*/React.createElement("div", {
-        className: "mt-4 grid grid-cols-2 gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        disabled: soulTraitProcessingRef.current,
-        onClick: () => setSoulTraitRespecOpen(false),
-        className: "min-h-[48px] rounded-xl bg-slate-700 text-[11px] font-black"
-      }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-soul-trait-respec-confirm": true,
-        disabled: soulTraitProcessingRef.current,
-        onClick: () => commitSoulTraitRespec(masu.id),
-        className: "min-h-[48px] rounded-xl bg-cyan-600 text-slate-950 text-[11px] font-black"
-      }, "1\u518A\u4F7F\u3063\u3066\u518D\u7DE8")))));
-    })(), uniqueSettingMasuId != null && (() => {
+      },
+      ownedItems: ownedItems,
+      setSoulTraitDraftLevels: setSoulTraitDraftLevels,
+      setSoulTraitError: setSoulTraitError,
+      setSoulTraitRespecOpen: setSoulTraitRespecOpen,
+      setSoulTraitSelectedId: setSoulTraitSelectedId,
+      setSoulTraitTab: setSoulTraitTab,
+      soulTraitDraftLevels: soulTraitDraftLevels,
+      soulTraitError: soulTraitError,
+      soulTraitProcessingRef: soulTraitProcessingRef,
+      soulTraitRespecOpen: soulTraitRespecOpen,
+      soulTraitSelectedId: soulTraitSelectedId,
+      soulTraitTab: soulTraitTab
+    }), uniqueSettingMasuId != null && (() => {
       const masu = getMasuMon(uniqueSettingMasuId);
       const base = masu ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
       if (!masu || !base) {
