@@ -52,6 +52,134 @@ const createAnimationStyle = () => {
     .pandora-dual-thunder--compact .pandora-dual-clone--right { animation-name:pandoraDualRightCompact; }
     @keyframes pandoraDualLeftCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(-25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
     @keyframes pandoraDualRightCompact { 0%,18%{opacity:0;transform:translateX(0) scale(1)} 27%{opacity:1} 38%,66%{opacity:1;transform:translateX(25px) scale(.9)} 84%{opacity:1;transform:translateX(0) scale(.96)} 91%,100%{opacity:0} }
+    /* アーク専用の聖光攻撃。
+       距離枠は固定したまま本体がふわりと浮遊し、敵上空の光輪から5本の聖光が時間差で降る。
+       白・金・淡い青で神聖さを出し、着弾では大きな閃光と輪、光粒を残す。 */
+    .ark-holy-rain { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:27; isolation:isolate; }
+    .ark-holy-rain__monster {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:5;
+      transform-origin:50% 70%; will-change:transform,filter;
+      animation:arkHolyFloat 900ms cubic-bezier(.2,.72,.18,1) forwards;
+    }
+    .ark-holy-rain--empowered .ark-holy-rain__monster { animation-name:arkHolyFloatEmpowered; }
+    .ark-holy-rain--charging .ark-holy-rain__monster { animation:arkHolyCharge 650ms cubic-bezier(.2,.72,.2,1) forwards; }
+    .ark-holy-rain--charging .ark-holy-rain__rays,
+    .ark-holy-rain--charging .ark-holy-rain__impact,
+    .ark-holy-rain--charging .ark-holy-rain__sparkles { display:none; }
+    @keyframes arkHolyCharge {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(255,255,255,.45)); }
+      42% { transform:translate3d(-5px,-13px,0) scale(1.03) rotate(-2deg); filter:drop-shadow(0 0 15px rgba(253,230,138,.86)) drop-shadow(0 0 25px rgba(186,230,253,.64)); }
+      72% { transform:translate3d(6px,-22px,0) scale(1.07) rotate(2deg); filter:drop-shadow(0 0 23px rgba(255,255,255,.98)) drop-shadow(0 0 34px rgba(250,204,21,.72)); }
+      100% { transform:translate3d(0,-28px,0) scale(1.10) rotate(0deg); filter:drop-shadow(0 0 30px rgba(255,255,255,1)) drop-shadow(0 0 45px rgba(125,211,252,.78)) drop-shadow(0 0 58px rgba(250,204,21,.58)); }
+    }
+    @keyframes arkHolyFloat {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(255,255,255,.38)); }
+      16% { transform:translate3d(-7px,-18px,0) scale(1.04) rotate(-2deg); filter:drop-shadow(0 0 14px rgba(254,240,138,.78)); }
+      36% { transform:translate3d(8px,-31px,0) scale(1.07) rotate(3deg); filter:drop-shadow(0 0 24px rgba(255,255,255,.98)) drop-shadow(0 0 34px rgba(186,230,253,.72)); }
+      56% { transform:translate3d(-6px,-35px,0) scale(1.08) rotate(-2deg); filter:drop-shadow(0 0 27px rgba(255,255,255,1)) drop-shadow(0 0 39px rgba(250,204,21,.68)); }
+      74% { transform:translate3d(6px,-27px,0) scale(1.06) rotate(2deg); filter:drop-shadow(0 0 22px rgba(224,242,254,.92)); }
+      88% { transform:translate3d(-3px,-12px,0) scale(1.03) rotate(-1deg); filter:drop-shadow(0 0 13px rgba(253,230,138,.72)); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+    }
+    @keyframes arkHolyFloatEmpowered {
+      0% { transform:translate3d(0,-28px,0) scale(1.10) rotate(0deg); filter:drop-shadow(0 0 30px rgba(255,255,255,1)) drop-shadow(0 0 45px rgba(250,204,21,.7)); }
+      18% { transform:translate3d(-9px,-34px,0) scale(1.12) rotate(-3deg); }
+      38% { transform:translate3d(10px,-41px,0) scale(1.15) rotate(3deg); filter:drop-shadow(0 0 35px rgba(255,255,255,1)) drop-shadow(0 0 52px rgba(186,230,253,.92)); }
+      58% { transform:translate3d(-8px,-43px,0) scale(1.16) rotate(-2deg); filter:drop-shadow(0 0 38px rgba(255,255,255,1)) drop-shadow(0 0 58px rgba(250,204,21,.88)); }
+      76% { transform:translate3d(7px,-31px,0) scale(1.10) rotate(2deg); }
+      90% { transform:translate3d(-3px,-13px,0) scale(1.04) rotate(-1deg); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+    }
+    .ark-holy-rain__sky {
+      position:absolute; left:50%; top:-184px; width:112px; height:34px; margin-left:-56px; z-index:3;
+      opacity:0; transform-origin:center; will-change:transform,opacity;
+      animation:arkHolySky 900ms ease-out forwards;
+    }
+    .ark-holy-rain--charging .ark-holy-rain__sky { animation:arkHolySkyCharge 650ms ease-out forwards; }
+    .ark-holy-rain__sky i {
+      position:absolute; inset:0; border:3px solid rgba(255,255,255,.95); border-radius:50%;
+      box-shadow:0 0 8px rgba(255,255,255,1),0 0 18px rgba(250,204,21,.9),0 0 30px rgba(125,211,252,.72),inset 0 0 12px rgba(255,255,255,.72);
+    }
+    .ark-holy-rain__sky i:nth-child(2) { inset:7px 18px; border-width:2px; opacity:.9; }
+    @keyframes arkHolySky {
+      0%,8% { opacity:0; transform:scale(.35) rotate(-12deg); }
+      24% { opacity:.96; transform:scale(1.05) rotate(4deg); }
+      54% { opacity:1; transform:scale(1) rotate(-3deg); }
+      76% { opacity:.82; transform:scale(1.10) rotate(5deg); }
+      100% { opacity:0; transform:scale(1.28) rotate(9deg); }
+    }
+    @keyframes arkHolySkyCharge {
+      0% { opacity:0; transform:scale(.3) rotate(-10deg); }
+      48% { opacity:.68; transform:scale(.72) rotate(3deg); }
+      100% { opacity:1; transform:scale(1) rotate(8deg); }
+    }
+    .ark-holy-rain__rays { position:absolute; inset:0; overflow:visible; z-index:4; }
+    .ark-holy-rain__ray {
+      position:absolute; top:-188px; width:18px; height:122px; margin-left:-9px; opacity:0;
+      transform-origin:50% 0; border-radius:999px;
+      background:linear-gradient(90deg,rgba(255,255,255,0),rgba(254,240,138,.78) 22%,#fff 48%,rgba(186,230,253,.94) 72%,rgba(255,255,255,0));
+      box-shadow:0 0 9px rgba(255,255,255,1),0 0 20px rgba(250,204,21,.92),0 0 34px rgba(125,211,252,.74);
+      filter:blur(.15px); will-change:transform,opacity;
+      animation:arkHolyRay 300ms cubic-bezier(.12,.76,.22,1) forwards;
+    }
+    .ark-holy-rain__ray::before {
+      content:''; position:absolute; left:50%; top:-12px; width:44px; height:28px; transform:translateX(-50%);
+      border-radius:50%; background:radial-gradient(ellipse,rgba(255,255,255,.96),rgba(253,230,138,.58) 38%,transparent 72%);
+      filter:blur(2px);
+    }
+    .ark-holy-rain--empowered .ark-holy-rain__ray { width:22px; margin-left:-11px; box-shadow:0 0 12px #fff,0 0 27px rgba(250,204,21,1),0 0 44px rgba(125,211,252,.9); }
+    @keyframes arkHolyRay {
+      0% { opacity:0; transform:rotate(var(--ark-ray-tilt)) scaleX(.4) scaleY(.12); }
+      18% { opacity:1; }
+      48% { opacity:1; transform:rotate(var(--ark-ray-tilt)) scaleX(var(--ark-ray-scale)) scaleY(1.08); }
+      72% { opacity:.92; transform:rotate(var(--ark-ray-tilt)) scaleX(var(--ark-ray-scale)) scaleY(1.16); }
+      100% { opacity:0; transform:rotate(var(--ark-ray-tilt)) scaleX(.72) scaleY(1.28); }
+    }
+    .ark-holy-rain__impact {
+      position:absolute; left:50%; top:-82px; width:28px; height:28px; margin:-14px 0 0 -14px; z-index:7;
+      opacity:0; will-change:transform,opacity; animation:arkHolyImpact 900ms ease-out forwards;
+    }
+    .ark-holy-rain__impact-core {
+      position:absolute; inset:-48px; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 7%,rgba(254,240,138,.98) 14%,rgba(186,230,253,.76) 31%,rgba(250,204,21,.35) 52%,transparent 73%);
+      filter:blur(.3px);
+    }
+    .ark-holy-rain__impact-ring {
+      position:absolute; inset:-25px; border:3px solid rgba(255,255,255,.95); border-radius:50%;
+      box-shadow:0 0 12px #fff,0 0 25px rgba(250,204,21,.92),0 0 40px rgba(125,211,252,.76);
+    }
+    .ark-holy-rain--empowered .ark-holy-rain__impact-core { inset:-60px; }
+    .ark-holy-rain--empowered .ark-holy-rain__impact-ring { inset:-31px; border-width:4px; }
+    @keyframes arkHolyImpact {
+      0%,53% { opacity:0; transform:scale(.28); }
+      58% { opacity:1; transform:scale(.66); }
+      65% { opacity:1; transform:scale(1.18); }
+      76% { opacity:.78; transform:scale(1.78); }
+      88%,100% { opacity:0; transform:scale(2.45); }
+    }
+    .ark-holy-rain__sparkles { position:absolute; inset:0; overflow:visible; z-index:8; }
+    .ark-holy-rain__spark {
+      position:absolute; left:50%; top:-82px; margin:-3px 0 0 -3px; opacity:0;
+      background:#fff; transform:rotate(45deg); border-radius:1px;
+      box-shadow:0 0 7px #fff,0 0 13px rgba(250,204,21,.95),0 0 20px rgba(125,211,252,.72);
+      will-change:transform,opacity; animation:arkHolySpark 300ms ease-out forwards;
+    }
+    .ark-holy-rain__spark::after { content:''; position:absolute; left:50%; top:-70%; width:1px; height:240%; background:rgba(255,255,255,.9); transform:translateX(-50%); }
+    @keyframes arkHolySpark {
+      0% { opacity:0; transform:translate3d(0,0,0) rotate(45deg) scale(.2); }
+      24% { opacity:1; }
+      68% { opacity:.92; transform:translate3d(var(--ark-spark-x),var(--ark-spark-y),0) rotate(135deg) scale(1.15); }
+      100% { opacity:0; transform:translate3d(var(--ark-spark-x),var(--ark-spark-y),0) rotate(225deg) scale(.45); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ark-holy-rain__monster { animation:arkHolyFloatReduced 900ms ease-out forwards; }
+      .ark-holy-rain--charging .ark-holy-rain__monster { animation:arkHolyChargeReduced 650ms ease-out forwards; }
+      .ark-holy-rain__ray { animation:arkHolyRayReduced 300ms ease-out forwards; }
+      .ark-holy-rain__sparkles { display:none; }
+      @keyframes arkHolyFloatReduced { 0%{filter:none} 45%{filter:drop-shadow(0 0 22px rgba(255,255,255,.95))} 100%{filter:none} }
+      @keyframes arkHolyChargeReduced { 0%{filter:none} 100%{filter:drop-shadow(0 0 28px rgba(255,255,255,.98))} }
+      @keyframes arkHolyRayReduced { 0%{opacity:0} 35%{opacity:1} 100%{opacity:0} }
+    }
     /* ウンディーネ種共通の水攻撃。
        距離枠は固定したまま本体だけを左右へ大きく滑らせ、水弾3発→大きな着弾飛沫までを680msで見せる。
        追加画像は使わず、攻撃中だけ出るCSS要素で水の尾・引き波・飛沫を描く。 */

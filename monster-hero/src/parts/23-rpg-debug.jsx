@@ -420,8 +420,9 @@ const rpgResolveStep = (battle, varianceOn, rng = rpgDefaultRng) => {
 //
 // どのモーションを使うかは、通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion で決める。
 // RPG用にモーションのデータを別に持たないので、モンスターを足しても更新漏れが起きない。
-const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', kenshiTwinBlade:'Dash', pandoraDualThunder:'Thunder' });
+const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', arkHolyRain:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', kenshiTwinBlade:'Dash', pandoraDualThunder:'Thunder' });
 const WATER_BURST_MOTION_MS = 680;
+const ARK_HOLY_RAIN_MOTION_MS = 900;
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = (anim) => {
   if (!anim) return undefined;
@@ -430,6 +431,9 @@ const attackMotionAnimation = (anim) => {
   // ウンディーネ種の水攻撃も距離枠は動かさない。WaterBurstMotion 内で本体だけを横滑りさせる。
   // 実際の零・近・中・遠の位置とUIを巻き込まず、見た目だけ大きく動かすため。
   if (anim.motion==='waterBurst') return undefined;
+  // アークの聖光攻撃も距離枠は固定し、ArkHolyRainMotion 内で本体の浮遊と光だけを描く。
+  // イブリースの floatStab は従来どおり残す。
+  if (anim.motion==='arkHolyRain') return undefined;
   // エイキはザンと同じ高速斬撃の動き(zanComboDash)をそのまま使う。
   // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
   // 剣士モッチーは敵まで高速で斬り込み、二度通り抜けてX字を完成させる専用モーション。
@@ -452,7 +456,7 @@ const attackMotionPreviewSequence = (atkMotion='default') => {
   ];
   return [{
     anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
-    ms:motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)),
+    ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))),
   }];
 };
 const rpgMotionName = (side, monId, isSkill) => {

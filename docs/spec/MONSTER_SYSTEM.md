@@ -108,7 +108,7 @@ HOMEの「M/B管理」→「モンスター」→「モンスター図鑑」か�
 - **詳細**: 上半分に立ち絵（左右ボタンと横スワイプで前後へ移動）、下半分に情報カード（名前・血統・区分・図鑑説明）と
   「基本 / 能力 / 技」の3タブ。
   - 解放済みモンスターは立ち絵の「攻撃アクション」から、その種の `atkMotion` を使ったバトル時の攻撃演出をその場で1回再生できる。未解放は再生不可
-  - 再生は図鑑専用モーションを作らず、`attackMotionAnimation` / `EikiSakuraPetals` / `KenshiTwinSlash` / `PandoraDualThunder` など本番の演出部品を再利用する
+  - 再生は図鑑専用モーションを作らず、`attackMotionAnimation` / `EikiSakuraPetals` / `KenshiTwinSlash` / `ArkHolyRainMotion` / `WaterBurstMotion` / `PandoraDualThunder` など本番の演出部品を再利用する
   - 前後移動・図鑑一覧へ戻る操作では再生中の非同期プレビューを中断し、次のモンスターへ演出を持ち越さない
   - 基本 … 主血統・副血統・区分・勇者特性・特性の効果
   - 能力 … その**種**の基礎能力（`baseHp` / `baseAtk` / `baseDef` / `baseGuts`）と4距離の適性。育成済みマスモンの値ではない
