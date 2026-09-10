@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -53,29 +53,6 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-      - name: TEMP apply Undine changelog wording and canonical build
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chatgpt/changelog-undine-wording'
-        shell: bash
-        run: |
-          git fetch --no-tags origin "${{ github.event.pull_request.head.ref }}" main
-          git checkout -B "${{ github.event.pull_request.head.ref }}" "origin/${{ github.event.pull_request.head.ref }}"
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('monster-hero/data/changelog.js')
-          s = p.read_text()
-          old = "title:'人魚3体の水攻撃モーションを大幅に強化しました'"
-          new = "title:'ウンディーネ種の水攻撃モーションを大幅に強化しました'"
-          if old not in s:
-              raise SystemExit('NG: 対象の更新履歴タイトルが見つかりません')
-          p.write_text(s.replace(old, new, 1))
-          PY
-          node tools/build.js
-          git show origin/main:.github/workflows/compiled-check.yml > .github/workflows/compiled-check.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "docs: ウンディーネ種の更新履歴表記へ修正"
-          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
