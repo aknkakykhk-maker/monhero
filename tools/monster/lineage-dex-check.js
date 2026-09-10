@@ -46,6 +46,8 @@ vm.runInContext([
 ].join('\n'), ctx);
 const A = ctx.api;
 const monsters = A.dexMonsterList();
+check('アークだけ聖光専用モーションへ分離し、イブリースはfloatStabを維持',
+  A.ALL_PLAYER_MONSTERS.Ark?.atkMotion === 'arkHolyRain' && A.ALL_PLAYER_MONSTERS.Iblis?.atkMotion === 'floatStab');
 
 // ---------- ① 血統がすべて揃っている ----------
 check('図鑑にモンスターが並ぶ', monsters.length > 0, `${monsters.length}体`);
@@ -242,12 +244,14 @@ check('図鑑プレビューは本番と同じモーション描画を使う',
   source.includes('const BattleAttackMotionPreview =')
   && source.includes("animation:attackMotionAnimation(anim)")
   && source.includes('anim?.sakura&&<EikiSakuraPetals/>')
+  && source.includes("anim?.motion==='arkHolyRain'")
+  && source.includes('<ArkHolyRainMotion image={image}')
   && source.includes("anim?.motion==='waterBurst'")
   && source.includes('<WaterBurstMotion image={image}')
   && source.includes("anim?.motion==='pandoraDualThunder'")
   && source.includes('<PandoraDualThunder image={image} compact={compact}/>'));
 {
-  const previewCtx={};
+  const previewCtx={WATER_BURST_MOTION_MS:680,ARK_HOLY_RAIN_MOTION_MS:900};
   vm.createContext(previewCtx);
   vm.runInContext(slice('const attackMotionPreviewSequence =', 'const rpgMotionName =')
     + '\nglobalThis.preview=attackMotionPreviewSequence;', previewCtx);

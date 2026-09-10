@@ -94,6 +94,52 @@ const KenshiTwinSlash = () => (
     ))}
   </span>
 );
+// アーク専用の聖光攻撃演出。
+// 距離枠は動かさず、本体だけがふわりと浮遊し、敵位置の上空から5本の聖光を時間差で降らせる。
+// 追加画像は使わず、攻撃中だけDOMへ出る固定数のCSS要素で光輪・光柱・着弾・光粒を描く。
+const ARK_HOLY_RAYS = Object.freeze([
+  { left:'18%', delay:'180ms', tilt:'-5deg', scale:'.88' },
+  { left:'34%', delay:'255ms', tilt:'3deg',  scale:'1.00' },
+  { left:'50%', delay:'330ms', tilt:'-2deg', scale:'1.18' },
+  { left:'66%', delay:'405ms', tilt:'4deg',  scale:'1.00' },
+  { left:'82%', delay:'480ms', tilt:'-4deg', scale:'.88' },
+]);
+const ARK_HOLY_SPARKLES = Object.freeze([
+  { x:'-78px', y:'-38px', delay:'500ms', size:'7px' },
+  { x:'-58px', y:'-72px', delay:'530ms', size:'5px' },
+  { x:'-30px', y:'-88px', delay:'555ms', size:'8px' },
+  { x:'10px',  y:'-92px', delay:'520ms', size:'6px' },
+  { x:'44px',  y:'-76px', delay:'570ms', size:'8px' },
+  { x:'76px',  y:'-42px', delay:'545ms', size:'5px' },
+  { x:'-62px', y:'18px',  delay:'590ms', size:'6px' },
+  { x:'64px',  y:'20px',  delay:'605ms', size:'7px' },
+]);
+const ArkHolyRainMotion = ({image, charging=false, empowered=false, compact=false}) => (
+  <span className={`ark-holy-rain${charging?' ark-holy-rain--charging':''}${empowered?' ark-holy-rain--empowered':''}${compact?' ark-holy-rain--compact':''}`}>
+    <span className="ark-holy-rain__sky" aria-hidden="true"><i/><i/></span>
+    <span className="ark-holy-rain__monster">{image}</span>
+    <span className="ark-holy-rain__rays" aria-hidden="true">
+      {ARK_HOLY_RAYS.map((ray,index)=>(
+        <i key={`ray-${index}`} className="ark-holy-rain__ray" style={{
+          left:ray.left, animationDelay:ray.delay,
+          '--ark-ray-tilt':ray.tilt, '--ark-ray-scale':ray.scale,
+        }}/>
+      ))}
+    </span>
+    <span className="ark-holy-rain__impact" aria-hidden="true">
+      <i className="ark-holy-rain__impact-core"/>
+      <i className="ark-holy-rain__impact-ring"/>
+    </span>
+    <span className="ark-holy-rain__sparkles" aria-hidden="true">
+      {ARK_HOLY_SPARKLES.map((spark,index)=>(
+        <i key={`spark-${index}`} className="ark-holy-rain__spark" style={{
+          width:spark.size, height:spark.size, animationDelay:spark.delay,
+          '--ark-spark-x':spark.x, '--ark-spark-y':spark.y,
+        }}/>
+      ))}
+    </span>
+  </span>
+);
 // ウンディーネ種（スネグーラチカ・ウンディーネ・ヤオビクニ）共通の水攻撃演出。
 // 距離枠そのものは動かさず、本体だけを左右へ大きく滑らせながら水弾を3発撃つ。
 // 水弾・水面の引き波・着弾飛沫は攻撃中だけDOMへ出し、常時アニメーションにはしない。
@@ -148,6 +194,13 @@ const PandoraDualThunder = ({image, compact=false}) => (
 // 図鑑などから本番と同じ攻撃モーション描画を使うための共通ステージ。
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
 const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
+  if(anim?.motion==='arkHolyRain') {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+        <ArkHolyRainMotion image={image} charging={anim?.charge===true} empowered={anim?.charge===false} compact={compact}/>
+      </div>
+    );
+  }
   if(anim?.motion==='waterBurst') {
     return (
       <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
