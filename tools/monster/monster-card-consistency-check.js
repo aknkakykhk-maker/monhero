@@ -13,11 +13,14 @@
 // 画面を移るたびに同じモンスターが違う見た目になっていた。
 const fs = require('fs');
 const path = require('path');
+const { readAppSource } = require(path.join(__dirname, '..', 'harness'));
 
 const root = path.resolve(__dirname, '..', '..');
-const files = [
-  path.join(root, 'monster-hero/src/parts/60-app.jsx'),
-  path.join(root, 'monster-hero/game-system.compiled.js'),
+// 2026-09-10(STEP 6)から画面は 5x-screen-*.jsx へ移っていく。本体だけを見ると
+// 移った画面のカードが数えられなくなるので、本体と切り出した画面をつないだものを「編集元」として見る
+const sources = [
+  ['monster-hero/src/parts(本体と切り出した画面)', readAppSource()],
+  ['monster-hero/game-system.compiled.js', fs.readFileSync(path.join(root, 'monster-hero/game-system.compiled.js'), 'utf8')],
 ];
 
 let failed = 0;
@@ -26,9 +29,7 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 
-for (const file of files) {
-  const rel = path.relative(root, file);
-  const src = fs.readFileSync(file, 'utf8');
+for (const [rel, src] of sources) {
   const compact = src.replace(/\s+/g, '');
 
   // ---- 共通カードを使っている画面の数 ----
