@@ -84,6 +84,12 @@ if (process.argv.includes('--check')) {
     console.error('NG: game-system.compiled.js が正規ビルドの出力と一致しません。node tools/build.js を実行してください');
     process.exit(1);
   }
+  // 音源を差し替えたのにキーが古いままだと、端末に古い音が残り続ける(2026-09-10)
+  {
+    const {spawnSync}=require('child_process');
+    const r=spawnSync(process.execPath,[path.join(__dirname,'stamp-audio-keys.js'),'--check'],{encoding:'utf8'});
+    if(r.status!==0){process.stderr.write(r.stderr||r.stdout||'');process.exit(1);}
+  }
   console.log('OK: game-system.compiled.js は game-system.jsx の正規ビルドと一致しています');
   process.exit(0);
 }
@@ -93,6 +99,18 @@ if (process.argv.includes('--check')) {
 {
   const sync = syncPartsAndGameSystem({ fromParts: process.argv.includes('--from-parts') });
   if (sync.action !== 'none') console.log(`parts と game-system.jsx をそろえました: ${sync.action}(${sync.reason})`);
+}
+
+// 音源(audio/*.mp3)のキャッシュキーを中身に合わせる。
+// 音源を差し替えてもURLが同じままだと、loadBuffer の force-cache のせいで
+// 端末に残った古い音が鳴り続ける(2026-09-10・ユーザー指摘で発覚)。
+// parts を書き換えるので、変わったら game-system.jsx を作り直す。
+{
+  const stampAudio = require('./stamp-audio-keys');
+  if (stampAudio.changed) {
+    syncPartsAndGameSystem({ fromParts: true });
+    console.log(`音源のキャッシュキーを書き直しました(${stampAudio.count}件)`);
+  }
 }
 
 // 公開用ビルドではバージョン3箇所を先に同一時刻へ揃える。機能変更後に古い日時の

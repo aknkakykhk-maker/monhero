@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0bf1ac78833b0302
+// source-sha256: 4138ba700b59cc9c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: c9d66fefdeee5616
+// generated-sha256: d3378cf6034f9652
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 20:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 21:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5039,6 +5039,72 @@ const Audio_ = (() => {
   const JINGLE_FILES = {
     victory: 'audio/jingle-victory.mp3'
   };
+
+  // --- 音源のキャッシュキー ---------------------------------------------------
+  // (2026-09-10・ユーザー指摘「禁断のレジスタンスまだ音小さい / ほんとに音量調整した？」)
+  // 音量をそろえて mp3 を差し替えたのに、端末では**古い音のまま**だった。
+  // 下の loadBuffer が fetch(url,{cache:'force-cache'}) で読むので、
+  // 一度読んだURLは**期限に関係なくキャッシュが使われる**。URLが同じままだと、
+  // 中身を入れ替えても新しい音源を取りに行かない。
+  //
+  // 画像は data/*.js の側で ?v=<中身のハッシュ> を付けている(stamp-version.js)。
+  // 音源も同じ考え方にするが、**BGM_TRACKS の src は素のパスのままにする**。
+  // src の文字列はいくつもの検査が丸ごと突き合わせているので、そこへキーを混ぜない。
+  // かわりに、読むときだけこの表を引いてキーを足す。
+  // 表は node tools/stamp-audio-keys.js が音源の中身から作り直す(build.js が毎回呼ぶ)。
+  const AUDIO_CACHE_KEYS = {
+    // <audio-cache-keys>
+    "audio/bgm-4u-hitasura.mp3": "f4fb42472438",
+    "audio/bgm-atsu-cup-theme.mp3": "e93502c4df76",
+    "audio/bgm-battle-ichika.mp3": "ca746d1d2ba6",
+    "audio/bgm-battle.mp3": "a1e6f8499e9e",
+    "audio/bgm-boss-ichika.mp3": "9c8bda857de7",
+    "audio/bgm-boss.mp3": "a11bc8056d79",
+    "audio/bgm-clear-ichika.mp3": "cf8bc41a228c",
+    "audio/bgm-close-to-your-heart.mp3": "990493074a91",
+    "audio/bgm-crossing-field.mp3": "1e2e7cc1d3d5",
+    "audio/bgm-dullahan-clockwork-alt.mp3": "9e934451770b",
+    "audio/bgm-dullahan-clockwork.mp3": "e87bd8466b2c",
+    "audio/bgm-dullahan-steel-ghost-alt.mp3": "1e9c04ccc1db",
+    "audio/bgm-dullahan-steel-ghost.mp3": "dbb0da050ab4",
+    "audio/bgm-dullahan.mp3": "434fcea866a3",
+    "audio/bgm-eiki-boss-beat.mp3": "1c3e0cb8b29f",
+    "audio/bgm-eiki-boss-remix.mp3": "83093750c9ec",
+    "audio/bgm-enhance.mp3": "eb0690d02d8a",
+    "audio/bgm-event-01.mp3": "c57069b5ad2f",
+    "audio/bgm-event-02.mp3": "d572118c203e",
+    "audio/bgm-fusion.mp3": "6f0d4675789f",
+    "audio/bgm-game-over.mp3": "d9fb75a7c827",
+    "audio/bgm-home-ichika.mp3": "29295336d1af",
+    "audio/bgm-kaze-ga-soyogu-basho.mp3": "9cc789151e7e",
+    "audio/bgm-kindan-no-resistance.mp3": "efca5c01d0b7",
+    "audio/bgm-market.mp3": "a85ba65f90e7",
+    "audio/bgm-menu.mp3": "a6aef603fd6a",
+    "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
+    "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
+    "audio/bgm-pandora-boss-beat.mp3": "b70636c619b2",
+    "audio/bgm-pandora-boss-remix.mp3": "0faa4d713fdc",
+    "audio/bgm-pandora-boss.mp3": "b6683818f250",
+    "audio/bgm-pro-battle-01.mp3": "59a3a0fbfef1",
+    "audio/bgm-pro-battle-02.mp3": "f572c81a9ef6",
+    "audio/bgm-profile.mp3": "523789845ff1",
+    "audio/bgm-result.mp3": "c4dc9d2fb8a5",
+    "audio/bgm-six-eternel-beat.mp3": "151f94091a34",
+    "audio/bgm-six-eternel-remix-beat.mp3": "b1a024d5b16f",
+    "audio/bgm-six-eternel-remix.mp3": "5f56c89739f8",
+    "audio/bgm-six-eternel.mp3": "e26412179f3a",
+    "audio/bgm-title-theme.mp3": "8af0684e79e7",
+    "audio/bgm-title.mp3": "b7bdc68bb0c0",
+    "audio/bgm-toriko.mp3": "3870d26f6322",
+    "audio/jingle-victory.mp3": "689c9715a824",
+    "audio/綺季一閃_～花雪に舞う詠姫～.mp3": "099d201c53b1"
+    // </audio-cache-keys>
+  };
+  // 表に無い音源はキーを付けない(取り違えて404にするより、キャッシュが残るほうがまだ軽い)
+  const audioUrlWithKey = url => {
+    const key = AUDIO_CACHE_KEYS[url];
+    return key ? `${url}?v=${key}` : url;
+  };
   const _gainFromPct = pct => pct <= 0 ? 0 : Math.pow(10, (-40 + Math.min(100, pct) / 100 * 40) / 20);
   const _bgmGain = pct => pct <= 0 ? 0 : Math.pow(10, (-55 + Math.min(100, pct) / 100 * 55) / 20) * 0.55;
 
@@ -5136,7 +5202,9 @@ const Audio_ = (() => {
     if (loadingBuffers.has(url)) return loadingBuffers.get(url);
     const ctx = getAudioCtx();
     if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
-    const request = fetch(url, {
+    // 覚えておく鍵は素のパス(url)のまま。取りに行くときだけキーを足す。
+    // こうすると、キーが変わっても同じ曲を二重に持たない。
+    const request = fetch(audioUrlWithKey(url), {
       cache: 'force-cache'
     }).then(res => {
       if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);

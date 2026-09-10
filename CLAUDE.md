@@ -211,6 +211,17 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
 - `node tools/audio/rhythm-loudness-check.js --ffmpeg <パス>` が全曲を測り、
   目標から外れた曲・クリップする曲・曲どうしの開きが4LUFSを超える状態を見つける
 
+> ⚠️ **音源を差し替えたら、必ず `node tools/build.js` を通す。**
+> 音源を読む `loadBuffer` は `fetch(url,{cache:'force-cache'})` を使う。これは
+> 「キャッシュにあれば**期限が切れていても**それを使う」という指定なので、
+> **URLが同じままだと中身を入れ替えても新しい音源を取りに行かない**。
+> 一度でもその曲を聴いた端末は、**ずっと古い音のまま**になる。
+> 実際に音量をそろえたのに「まだ音が小さい」と言われた(2026-09-10)。
+> `tools/stamp-audio-keys.js` が `parts/14-audio.jsx` の `<audio-cache-keys>` へ
+> 中身のハッシュを書き込み、読むときだけ `?v=` を足す
+> (`BGM_TRACKS` の `src` は素のパスのまま。検査が src の文字列を丸ごと突き合わせているため)。
+> `node tools/build.js --check` がキーの古さも見る。
+
 > ⚠️ **すでに公開した音源を作り直すときは、頭の 1104 サンプルを切る。**
 > Chromiumでデコードして lamejs で入れ直すと、LAMEのエンコーダ遅延ぶん(1104サンプル=32kHzで34.5ms)
 > 音が後ろへずれ、譜面と合わなくなる。`--from 0.0345` で切ると実測0msに戻る。
