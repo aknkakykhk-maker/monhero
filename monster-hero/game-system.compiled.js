@@ -2,14 +2,15 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a5c7d5392f2fc83d
+// source-sha256: addf088ca58c63fc
 // ============================================================
+
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 13b8af2a17c36934
+// generated-sha256: d0b15994ffd1daba
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +137,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 01:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 11:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13104,9 +13105,11 @@ const MarketProductCard = ({
   }, "\u52C7\u8005\u306E\u8A3C \xD7", item.cost.toLocaleString())) : usesPsyche ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
   }, "\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", null, item.cost.toLocaleString())) : /*#__PURE__*/React.createElement(React.Fragment, null, usesGold ? /*#__PURE__*/React.createElement(Gem, {
-    size: 9
+    size: 9,
+    className: "shrink-0"
   }) : /*#__PURE__*/React.createElement(Coins, {
-    size: 9
+    size: 9,
+    className: "shrink-0"
   }), /*#__PURE__*/React.createElement("span", null, item.cost.toLocaleString())))));
 };
 
@@ -39432,8 +39435,7 @@ function MonsterHeroGame() {
         const previewable = (setting.available || debugBattle && setting.debugAvailable) && unlocked;
         const theme = extremeDifficultyTheme(setting.id);
         const heroProofReward = heroProofClearReward({
-          extremeDifficulty: setting.id,
-          debug: debugBattle
+          extremeDifficulty: setting.id
         });
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
@@ -43931,9 +43933,15 @@ function MonsterHeroGame() {
         canBuy: ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID) > 0 && !marketPurchaseProcessingRef.current,
         disabled: marketPurchaseProcessingRef.current,
         onBuy: exchangeSoulRankRespecByProof,
-        middle: /*#__PURE__*/React.createElement("span", {
+        middle: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
           className: `text-[9px] font-black ${ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-        }, "\xD7", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID))
+        }, "\xD7", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID)), item.desc && /*#__PURE__*/React.createElement("button", {
+          onClick: () => setMarketItemDetail(item),
+          "aria-label": `${item.name}の効果を見る`,
+          className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
+        }, /*#__PURE__*/React.createElement(BookOpen, {
+          size: 8
+        }), "\u8A73\u7D30"))
       }));
     })))), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
       "data-mh-screen": true,
