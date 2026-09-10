@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7f94f3cabf89190d
+// source-sha256: 0bf1ac78833b0302
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d6342f5251414287
+// generated-sha256: c9d66fefdeee5616
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 20:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 20:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22544,6 +22544,105 @@ function MissionsScreen({
   })));
 }
 
+// ---- part: 53-screen-gift-box.jsx ----
+// ==== 画面: ギフトボックス(gameState === 'GIFT_BOX') ====
+//
+// MonsterHeroGame から切り出した3画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-4)。
+// 型は 51-screen-settings.jsx / 52-screen-missions.jsx と同じ。
+//
+// 【この画面ならではの注意】
+// ・受け取り(claimGiftIds)は保存を伴うので中身は MonsterHeroGame 側に残し、props で受け取る。
+//   画面は「どのギフトを受け取るか」を id の配列で渡すだけ
+// ・受け取れるか・期限切れか・報酬の読み方(giftIsClaimable / giftIsExpired /
+//   normalizeGiftRewards / giftTitleDisplay / giftRewardText)は共有層(17)の純関数なので
+//   props にせず画面から直接呼ぶ。保存には触れない
+// ・ログインボーナス一覧の中身は MonsterHeroGame 側に残っている(この画面はボタンだけ)
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に GIFT_BOX の行が無い)
+function GiftBoxScreen({
+  gifts,
+  giftTab,
+  onSelectTab,
+  onBack,
+  onClaim,
+  onOpenLoginBonusList
+}) {
+  const now = Date.now();
+  const unclaimed = gifts.filter(g => !g?.claimedAt);
+  const history = gifts.filter(g => g?.claimedAt);
+  const shown = giftTab === 'unclaimed' ? unclaimed : history;
+  const claimable = unclaimed.filter(g => giftIsClaimable(g, now));
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-3",
+    style: {
+      paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black text-cyan-200 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Package, {
+    size: 22
+  }), "\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9"), /*#__PURE__*/React.createElement("div", {
+    className: "w-11"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    key: claimable.length > 0 ? 'claim' : 'empty',
+    scene: claimable.length > 0 ? 'giftClaimable' : 'giftEmpty',
+    compact: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onSelectTab('unclaimed'),
+    className: `relative min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'unclaimed' ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-400'}`
+  }, "\u672A\u53D7\u53D6 (", unclaimed.filter(g => !giftIsExpired(g, now)).length, ")", tabCountBadge(claimable.length)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onSelectTab('history'),
+    className: `min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'history' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}`
+  }, "\u53D7\u53D6\u6E08\u307F (", history.length, ")")), giftTab === 'unclaimed' && /*#__PURE__*/React.createElement("button", {
+    disabled: !claimable.length,
+    onClick: () => onClaim(claimable.map(g => g.id)),
+    className: "shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-black disabled:opacity-40"
+  }, "\u3059\u3079\u3066\u53D7\u3051\u53D6\u308B"), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenLoginBonusList,
+    className: "shrink-0 mb-2 min-h-[40px] rounded-xl bg-slate-800 border border-amber-400/40 text-amber-200 font-black text-[12px] active:scale-[.98]"
+  }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u4E00\u89A7\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
+    className: "mh-gift-list flex-1 min-h-0 overflow-y-auto mh-scroll pb-1"
+  }, shown.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "mt-16 text-center text-slate-500 font-bold"
+  }, giftTab === 'unclaimed' ? '未受取のギフトはありません' : '受取済みのギフトはありません') : shown.map(g => {
+    const expired = giftIsExpired(g, now);
+    const valid = !!normalizeGiftRewards(g);
+    const display = giftTitleDisplay(g);
+    return /*#__PURE__*/React.createElement("article", {
+      key: g.id,
+      title: g.description || g.title || undefined,
+      className: `mh-gift-card rounded-xl border ${g.claimedAt ? 'bg-slate-900/70 border-slate-700' : expired ? 'bg-red-950/30 border-red-800/60' : 'bg-cyan-950/30 border-cyan-500/50'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mh-gift-heading"
+    }, /*#__PURE__*/React.createElement("h3", null, display.label && /*#__PURE__*/React.createElement("span", null, display.label), /*#__PURE__*/React.createElement("b", null, display.title)), /*#__PURE__*/React.createElement("em", {
+      className: `${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : valid ? 'bg-cyan-700 text-white' : 'bg-amber-900 text-amber-200'}`
+    }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : valid ? '受取可' : '要確認')), /*#__PURE__*/React.createElement("div", {
+      className: "mh-gift-main"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mh-gift-rewards"
+    }, Array.isArray(g.rewards) && g.rewards.map((r, i) => /*#__PURE__*/React.createElement("span", {
+      key: i
+    }, giftRewardText(r)))), !g.claimedAt && /*#__PURE__*/React.createElement("button", {
+      disabled: expired || !valid,
+      onClick: () => onClaim([g.id])
+    }, "\u53D7\u3051\u53D6\u308B")), /*#__PURE__*/React.createElement("div", {
+      className: "mh-gift-deadline"
+    }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限なし'}`));
+  })));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -37363,83 +37462,14 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "\u52B9\u679C\u5185\u5BB9"), /*#__PURE__*/React.createElement("dd", null, trainingModal.space?.desc)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "\u6570\u5024"), /*#__PURE__*/React.createElement("dd", null, trainingSpaceValue(trainingModal.space))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "\u767A\u52D5\u30BF\u30A4\u30DF\u30F3\u30B0"), /*#__PURE__*/React.createElement("dd", null, trainingSpaceTiming(trainingModal.space))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("dt", null, "\u88DC\u8DB3"), /*#__PURE__*/React.createElement("dd", null, "\u4EEE\u5831\u916C\u30FB\u52B9\u679C\u306F\u30C7\u30D0\u30C3\u30B0\u4FEE\u884C\u4E2D\u3060\u3051\u6709\u52B9\u3067\u3001\u901A\u5E38\u30C7\u30FC\u30BF\u306B\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\u3002")))), /*#__PURE__*/React.createElement("button", {
       className: "mh-modal-close",
       onClick: () => setTrainingModal(null)
-    }, "\u9589\u3058\u308B"))), gameState === 'GIFT_BOX' && (() => {
-      const now = Date.now();
-      const unclaimed = gifts.filter(g => !g?.claimedAt);
-      const history = gifts.filter(g => g?.claimedAt);
-      const shown = giftTab === 'unclaimed' ? unclaimed : history;
-      const claimable = unclaimed.filter(g => giftIsClaimable(g, now));
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-3",
-        style: {
-          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: returnToHome,
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black text-cyan-200 flex items-center gap-2"
-      }, /*#__PURE__*/React.createElement(Package, {
-        size: 22
-      }), "\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9"), /*#__PURE__*/React.createElement("div", {
-        className: "w-11"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto mb-2"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        key: claimable.length > 0 ? 'claim' : 'empty',
-        scene: claimable.length > 0 ? 'giftClaimable' : 'giftEmpty',
-        compact: true
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGiftTab('unclaimed'),
-        className: `relative min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'unclaimed' ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "\u672A\u53D7\u53D6 (", unclaimed.filter(g => !giftIsExpired(g, now)).length, ")", tabCountBadge(claimable.length)), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGiftTab('history'),
-        className: `min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'history' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "\u53D7\u53D6\u6E08\u307F (", history.length, ")")), giftTab === 'unclaimed' && /*#__PURE__*/React.createElement("button", {
-        disabled: !claimable.length,
-        onClick: () => claimGiftIds(claimable.map(g => g.id)),
-        className: "shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-black disabled:opacity-40"
-      }, "\u3059\u3079\u3066\u53D7\u3051\u53D6\u308B"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setShowLoginBonusList(true),
-        className: "shrink-0 mb-2 min-h-[40px] rounded-xl bg-slate-800 border border-amber-400/40 text-amber-200 font-black text-[12px] active:scale-[.98]"
-      }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u4E00\u89A7\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
-        className: "mh-gift-list flex-1 min-h-0 overflow-y-auto mh-scroll pb-1"
-      }, shown.length === 0 ? /*#__PURE__*/React.createElement("div", {
-        className: "mt-16 text-center text-slate-500 font-bold"
-      }, giftTab === 'unclaimed' ? '未受取のギフトはありません' : '受取済みのギフトはありません') : shown.map(g => {
-        const expired = giftIsExpired(g, now);
-        const valid = !!normalizeGiftRewards(g);
-        const display = giftTitleDisplay(g);
-        return /*#__PURE__*/React.createElement("article", {
-          key: g.id,
-          title: g.description || g.title || undefined,
-          className: `mh-gift-card rounded-xl border ${g.claimedAt ? 'bg-slate-900/70 border-slate-700' : expired ? 'bg-red-950/30 border-red-800/60' : 'bg-cyan-950/30 border-cyan-500/50'}`
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "mh-gift-heading"
-        }, /*#__PURE__*/React.createElement("h3", null, display.label && /*#__PURE__*/React.createElement("span", null, display.label), /*#__PURE__*/React.createElement("b", null, display.title)), /*#__PURE__*/React.createElement("em", {
-          className: `${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : valid ? 'bg-cyan-700 text-white' : 'bg-amber-900 text-amber-200'}`
-        }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : valid ? '受取可' : '要確認')), /*#__PURE__*/React.createElement("div", {
-          className: "mh-gift-main"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "mh-gift-rewards"
-        }, Array.isArray(g.rewards) && g.rewards.map((r, i) => /*#__PURE__*/React.createElement("span", {
-          key: i
-        }, giftRewardText(r)))), !g.claimedAt && /*#__PURE__*/React.createElement("button", {
-          disabled: expired || !valid,
-          onClick: () => claimGiftIds([g.id])
-        }, "\u53D7\u3051\u53D6\u308B")), /*#__PURE__*/React.createElement("div", {
-          className: "mh-gift-deadline"
-        }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限なし'}`));
-      })));
-    })(), gameState === 'MISSIONS' && /*#__PURE__*/React.createElement(MissionsScreen, {
+    }, "\u9589\u3058\u308B"))), gameState === 'GIFT_BOX' && /*#__PURE__*/React.createElement(GiftBoxScreen, {
+      gifts: gifts,
+      giftTab: giftTab,
+      onSelectTab: setGiftTab,
+      onBack: returnToHome,
+      onClaim: claimGiftIds,
+      onOpenLoginBonusList: () => setShowLoginBonusList(true)
+    }), gameState === 'MISSIONS' && /*#__PURE__*/React.createElement(MissionsScreen, {
       missions: missions,
       missionTab: missionTab,
       onSelectTab: setMissionTab,
