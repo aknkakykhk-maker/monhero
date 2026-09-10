@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c61edc08c30f1866
+// source-sha256: 23aeb02b6cab2696
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 8240330c3a1d9ffe
+// generated-sha256: 6990d1f25dc47e29
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 23:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 00:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22966,6 +22966,466 @@ function BreederMarketScreen({
   }))));
 }
 
+// ---- part: 56-screen-profile.jsx ----
+// ==== 画面: プロフィール(gameState === 'PROFILE') ====
+//
+// MonsterHeroGame から切り出した6画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-7)。
+// これまでで最大の画面(約19,500文字)で、本体から受け取るものが 38 個ある。
+//
+// 【この画面ならではの注意】
+// ・名前とアイコンの変更、助手えらび、呼び方の変更は、どれも保存を伴うモーダルを開く操作。
+//   モーダルの中身は MonsterHeroGame 側に残し、ここは「開いて」と伝えるだけ
+// ・はじめての設定(onboarding)はこの画面の中に同居している。finishOnboarding も本体のまま
+// ・アイテム欄へ行く導線があるが、画面は行き先を知らない(onOpenItems)
+// ・記録の読み方(modeRecordFor / resolveIconUrl など)は本体の state を見るので、関数ごと受け取る
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に PROFILE の行が無い)
+//
+// props が多いのは、この画面が「ブリーダーの全記録の置き場」だから。
+// 減らすなら記録のまとまりごとに部品を分ける必要があり、それは切り出しとは別の作業にする。
+function ProfileScreen({
+  activeAssistant,
+  assistantBond,
+  assistantBondLevelNow,
+  assistantBonds,
+  assistantCallStyle,
+  attemptCounts,
+  breederIcon,
+  breederLevel,
+  breederName,
+  breederPoints,
+  extremeBestScores,
+  extremeClearCounts,
+  finishOnboarding,
+  gold,
+  highScores,
+  isEventReplayUnlocked,
+  modeRecordFor,
+  onboarded,
+  onboardingIcon,
+  onboardingName,
+  onboardingPreview,
+  ownedItems,
+  playtimeView,
+  proHighScores,
+  profileBattleMode,
+  quickHighestWaves,
+  resolveIconUrl,
+  selectedAssistantId,
+  speciesChallengeProgress,
+  onBack,
+  onOpenNameEdit,
+  onOpenIconPicker,
+  onOpenItems,
+  onOpenCallStylePicker,
+  onOpenAssistantPicker,
+  onSelectBattleMode,
+  onOpenEventReplayList,
+  onOpenSpeciesRecords
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-4 shrink-0",
+    style: onboardingPreview ? {
+      paddingTop: 'calc(2.25rem + env(safe-area-inset-top))'
+    } : undefined
+  }, onboarded && !onboardingPreview ? /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })) : /*#__PURE__*/React.createElement("span", {
+    className: "w-11"
+  }), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
+  }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-3"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "profile"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, (!onboarded || onboardingPreview) && (() => {
+    const hasName = !!(onboardingName || '').trim();
+    const hasIcon = !!onboardingIcon;
+    const ready = hasName && hasIcon;
+    const step = typeof findAssistantOnboarding === 'function' ? findAssistantOnboarding(hasName, hasIcon, selectedAssistantId) : null;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "mb-4 rounded-2xl border-2 border-indigo-400/60 bg-indigo-950/50 p-3 shrink-0"
+    }, onboardingPreview && /*#__PURE__*/React.createElement("div", {
+      className: "-mx-3 -mt-3 mb-2 px-3 py-1.5 rounded-t-xl bg-fuchsia-700 text-white text-[10px] font-black tracking-widest"
+    }, "DEBUG\u30FB\u898B\u308B\u3060\u3051\u306E\u8868\u793A\u3067\u3059\u3002\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black text-indigo-300 tracking-widest mb-2"
+    }, "\u306F\u3058\u3081\u3066\u306E\u8A2D\u5B9A"), /*#__PURE__*/React.createElement(AssistantBubble, {
+      line: step?.t || null,
+      expression: step?.e || null,
+      helpRef: "basics/onboarding",
+      compact: true
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 mt-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => onOpenNameEdit(hasName ? breederName : ''),
+      className: `min-h-[46px] rounded-xl border-2 text-[11px] font-black active:scale-95 ${hasName ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
+    }, hasName ? '✓ なまえ' : 'なまえを決める'), /*#__PURE__*/React.createElement("button", {
+      onClick: onOpenIconPicker,
+      className: `min-h-[46px] rounded-xl border-2 text-[11px] font-black active:scale-95 ${hasIcon ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
+    }, hasIcon ? '✓ アイコン' : 'アイコンを選ぶ')), /*#__PURE__*/React.createElement("button", {
+      disabled: !ready,
+      onClick: finishOnboarding,
+      className: "w-full mt-2 min-h-[52px] rounded-2xl font-black text-sm text-black disabled:opacity-30 active:scale-[.98]",
+      style: {
+        backgroundColor: '#f472b6'
+      }
+    }, "\u3051\u3063\u3066\u3044\uFF01"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-400 text-center mt-1.5"
+    }, "\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u3001\u3042\u3068\u304B\u3089\u3053\u306E\u753B\u9762\u3067\u3044\u3064\u3067\u3082\u5909\u3048\u3089\u308C\u307E\u3059"));
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenIconPicker,
+    className: "relative w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center overflow-hidden active:scale-95"
+  }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement(BreederIcon, {
+    src: resolveIconUrl(breederIcon),
+    id: breederIcon,
+    alt: "icon",
+    className: "w-full h-full"
+  }) : /*#__PURE__*/React.createElement(User, {
+    size: 36,
+    className: "text-indigo-400"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Edit3, {
+    size: 9,
+    className: "text-white"
+  }))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onOpenNameEdit(breederName),
+    className: "flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-black text-base text-white"
+  }, breederName), /*#__PURE__*/React.createElement(Edit3, {
+    size: 13,
+    className: "text-slate-500 group-hover:text-white"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Crown, {
+    size: 16,
+    className: "text-amber-300"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-lg font-black text-indigo-200"
+  }, "LV.", breederLevel.level)), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-[240px]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-2 bg-slate-800 rounded-full overflow-hidden border border-white/5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-gradient-to-r from-indigo-500 to-purple-400",
+    style: {
+      width: `${Math.min(100, breederLevel.xpIntoLevel / breederLevel.xpForNext * 100)}%`
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 font-mono text-center mt-1"
+  }, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-1.5 bg-amber-950/60 border border-amber-500/30 px-3 py-1 rounded-full"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 11,
+    className: "text-amber-400"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-amber-300 font-mono"
+  }, gold.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] text-amber-500/70 font-bold"
+  }, "\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 px-4 py-2.5 rounded-xl"
+  }, /*#__PURE__*/React.createElement(Coins, {
+    size: 14,
+    className: "text-amber-400"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-amber-200"
+  }, breederPoints, " pt")), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenItems,
+    className: "w-full flex items-center justify-center gap-2 bg-teal-950/40 border border-teal-500/40 px-4 py-2.5 rounded-xl active:scale-95"
+  }, /*#__PURE__*/React.createElement(Package, {
+    size: 12,
+    className: "text-teal-400"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-teal-200"
+  }, "\u30A2\u30A4\u30C6\u30E0\uFF08", Object.values(ownedItems).reduce((sum, n) => sum + (n || 0), 0), "\u500B\uFF09")), /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex flex-col items-center gap-1 bg-indigo-950/40 border border-indigo-500/30 px-4 py-2.5 rounded-2xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Timer, {
+    size: 13,
+    className: "text-indigo-300"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-indigo-200"
+  }, "\u30D7\u30EC\u30A4\u6642\u9593"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-white font-mono"
+  }, formatPlaytime(playtimeView.totalMs))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 text-[9px] font-black text-indigo-300"
+  }, /*#__PURE__*/React.createElement("span", null, "\u4ECA\u65E5 ", /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono"
+  }, formatPlaytime(playtimeTodayMs(playtimeView)))), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-600"
+  }, "/"), /*#__PURE__*/React.createElement("span", null, "\u904A\u3093\u3060\u65E5 ", /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-mono"
+  }, playtimeView.days), "\u65E5")), playtimeView.longest.day && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 font-bold"
+  }, "\u3044\u3061\u3070\u3093\u9577\u304B\u3063\u305F\u65E5 ", formatPlaytime(playtimeView.longest.ms), "\uFF08", playtimeView.longest.day, "\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 font-bold"
+  }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'))), onboarded && !onboardingPreview && (() => {
+    const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : null;
+    const next = typeof assistantBondNext === 'function' ? assistantBondNext(assistantBond.points) : null;
+    const from = stage ? stage.need : 0;
+    const width = next ? Math.max(0, Math.min(100, (assistantBond.points - from) / Math.max(1, next.need - from) * 100)) : 100;
+    const accent = activeAssistant.accent || '#f472b6';
+    return /*#__PURE__*/React.createElement("div", {
+      className: "bg-slate-900/60 rounded-2xl p-3 mb-4",
+      style: {
+        border: `1px solid ${accent}4d`
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement(AssistantFace, {
+      who: activeAssistant,
+      size: 40,
+      accent: accent,
+      expression: assistantBondLevelNow >= 4 ? 'excited' : assistantBondLevelNow >= 2 ? 'happy' : 'normal'
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black tracking-widest",
+      style: {
+        color: accent
+      }
+    }, activeAssistant.name, "\u3068\u306E\u4EF2\u826F\u3057\u5EA6"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black text-white"
+    }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) ? /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: onOpenCallStylePicker,
+      className: "shrink-0 text-right active:scale-95"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-500 flex items-center justify-end gap-0.5"
+    }, "\u547C\u3073\u65B9", /*#__PURE__*/React.createElement(Edit3, {
+      size: 8
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black",
+      style: {
+        color: accent
+      }
+    }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))) : /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 text-right"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-500"
+    }, "\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black",
+      style: {
+        color: accent
+      }
+    }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))), /*#__PURE__*/React.createElement("div", {
+      className: "h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"
+    }, /*#__PURE__*/React.createElement("i", {
+      className: "block h-full rounded-full",
+      style: {
+        width: `${width}%`,
+        background: `linear-gradient(90deg,${accent},#fbbf24)`
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-400 font-bold mt-1 text-right"
+    }, next ? `次のLv.${next.level}まで あと${next.remain}` : 'いちばん仲良し！'), ASSISTANT_LIST.length > 1 && /*#__PURE__*/React.createElement("div", {
+      className: "mt-2.5 pt-2.5 border-t border-white/10"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] font-black text-slate-500 tracking-widest mb-1.5"
+    }, "\u3044\u3063\u3057\u3087\u306B\u904A\u3076\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1.5"
+    }, ASSISTANT_LIST.map(who => {
+      const active = who.id === selectedAssistantId;
+      const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
+      const t = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, who.id) : null;
+      return /*#__PURE__*/React.createElement("button", {
+        key: who.id,
+        type: "button",
+        onClick: () => {
+          if (!active) onOpenAssistantPicker();
+        },
+        "aria-pressed": active,
+        className: `min-h-[52px] rounded-xl px-2 py-1.5 flex items-center gap-1.5 text-left active:scale-95 ${active ? '' : 'opacity-60'}`,
+        style: {
+          border: `2px solid ${active ? who.accent : 'rgba(255,255,255,.1)'}`,
+          backgroundColor: active ? `${who.accent}22` : 'rgba(15,23,42,.6)'
+        }
+      }, /*#__PURE__*/React.createElement(AssistantFace, {
+        who: who,
+        size: 30,
+        accent: who.accent,
+        expression: active ? 'happy' : 'normal'
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[10px] font-black text-white truncate"
+      }, who.name, active && '（選択中）'), /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-400 truncate"
+      }, "Lv.", lv, " ", t ? t.title : '')));
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-500 mt-1"
+    }, "\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308A\u307E\u3059\u3002\u5207\u308A\u66FF\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002")));
+  })(), (() => {
+    const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
+    const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE];
+    const selected = modes.find(mode => mode.id === profileBattleMode) || null;
+    const speciesSummary = speciesChallengeProfileSummary(speciesChallengeProgress);
+    const speciesDifficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
+    const scoreMapFor = mode => isProMode(mode.id) ? proHighScores : highScores;
+    const representativeFor = mode => {
+      if (mode.id === BATTLE_MODE_SPECIES_CHALLENGE) return speciesSummary.bestScore > 0 ? `最高スコア: ${speciesSummary.bestScore.toLocaleString()} pt` : '最高スコア: 記録なし';
+      if (isQuickMode(mode.id)) {
+        const wave = highestModeWave(quickHighestWaves, difficultyIds);
+        return wave > 0 ? `最高到達 WAVE ${wave}` : '未記録';
+      }
+      const scores = mode.id === EXTREME_MODE.id ? extremeBestScores : scoreMapFor(mode);
+      const ids = mode.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(item => item.id) : difficultyIds;
+      const best = highestModeScore(scores, ids);
+      return best > 0 ? `最高スコア ${best.toLocaleString()} pt` : '未記録';
+    };
+    return /*#__PURE__*/React.createElement("section", {
+      className: "mb-4",
+      "data-profile-battle-records": true
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mb-2 flex items-end justify-between px-1"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black text-indigo-300 tracking-widest"
+    }, "\u30D0\u30C8\u30EB\u8A18\u9332"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-500"
+    }, "\u30E2\u30FC\u30C9\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A73\u3057\u3044\u8A18\u9332\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"))), !selected ? /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-1 gap-2"
+    }, modes.map(mode => {
+      const species = mode.id === BATTLE_MODE_SPECIES_CHALLENGE;
+      return /*#__PURE__*/React.createElement("button", {
+        key: mode.id,
+        type: "button",
+        "data-profile-mode": mode.id,
+        onClick: () => species ? onOpenSpeciesRecords() : onSelectBattleMode(mode.id),
+        className: "w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]",
+        style: {
+          borderColor: `${mode.color}66`
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-xl",
+        "aria-hidden": "true"
+      }, mode.emoji), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[13px] text-white"
+      }, mode.label), /*#__PURE__*/React.createElement("small", {
+        className: "block text-[11px] font-black",
+        style: {
+          color: mode.color
+        }
+      }, representativeFor(mode)), species && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("small", {
+        className: "block truncate text-[9px] font-black text-cyan-100"
+      }, "\u6700\u9AD8\u8A18\u9332: ", speciesSummary.bestScore > 0 ? `${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}` : '記録なし'), /*#__PURE__*/React.createElement("small", {
+        className: "block text-[9px] font-black text-emerald-300"
+      }, "\u30AF\u30EA\u30A2: ", speciesSummary.clearedCount, " / ", speciesSummary.totalCount))), /*#__PURE__*/React.createElement(ChevronRight, {
+        size: 18,
+        className: "shrink-0 text-slate-500"
+      })));
+    })) : /*#__PURE__*/React.createElement("div", {
+      className: "rounded-2xl border bg-slate-900/70 p-3",
+      style: {
+        borderColor: `${selected.color}66`
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => onSelectBattleMode(null),
+      className: "mb-3 flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-black/25 px-2 text-left active:scale-[.98]"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 18
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-lg",
+      "aria-hidden": "true"
+    }, selected.emoji), /*#__PURE__*/React.createElement("span", {
+      className: "font-black text-[13px]"
+    }, selected.label, "\u306E\u8A18\u9332")), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col gap-2"
+    }, selected.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => {
+      const score = extremeBestScores[setting.id] || 0;
+      const clears = extremeClearCounts[setting.id] || 0;
+      const played = score > 0 || clears > 0;
+      return /*#__PURE__*/React.createElement("div", {
+        key: setting.id,
+        className: "rounded-xl border border-white/5 bg-black/25 p-3"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[11px] text-fuchsia-200"
+      }, setting.label), played ? /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 grid grid-cols-2 gap-2 text-center"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-500"
+      }, "\u6700\u9AD8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("strong", {
+        className: "text-[12px] text-amber-300"
+      }, score.toLocaleString(), " pt")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-500"
+      }, "\u30AF\u30EA\u30A2\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
+        className: "text-[12px] text-emerald-300"
+      }, clears, "\u56DE"))) : /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 text-center text-[11px] font-black text-slate-500"
+      }, "\u672A\u8A18\u9332"));
+    }) : Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => {
+      const record = modeRecordFor(selected.id, key);
+      const quick = isQuickMode(selected.id);
+      const challenge = selected.id === BATTLE_MODE_CHALLENGE;
+      const attempts = challenge ? attemptCounts[key] || 0 : 0;
+      const played = record.score > 0 || record.wave > 0 || record.clears > 0 || attempts > 0;
+      return /*#__PURE__*/React.createElement("div", {
+        key: key,
+        className: "rounded-xl border border-white/5 bg-black/25 p-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "px-2 py-1 rounded-lg text-[10px] font-black text-center",
+        style: difficultyStyle(setting, true)
+      }, setting.label), played ? /*#__PURE__*/React.createElement("div", {
+        className: `mt-2 grid gap-1 text-center ${quick ? 'grid-cols-2' : challenge ? 'grid-cols-2' : 'grid-cols-3'}`
+      }, challenge && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-500"
+      }, "\u6311\u6226\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
+        className: "text-[11px] text-white"
+      }, attempts, "\u56DE")), !quick && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-500"
+      }, "\u6700\u9AD8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("strong", {
+        className: "text-[11px] text-amber-300"
+      }, record.score.toLocaleString(), " pt")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-500"
+      }, "\u6700\u9AD8\u5230\u9054WAVE"), /*#__PURE__*/React.createElement("strong", {
+        className: "text-[11px] text-indigo-200"
+      }, "WAVE ", record.wave)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-500"
+      }, "\u30AF\u30EA\u30A2\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
+        className: "text-[11px] text-emerald-300"
+      }, record.clears, "\u56DE"))) : /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 text-center text-[11px] font-black text-slate-500"
+      }, "\u672A\u8A18\u9332"));
+    }))));
+  })(), onboarded && !onboardingPreview && (() => {
+    const list = typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || [];
+    if (list.length === 0) return null;
+    const unlockedCount = list.filter(isEventReplayUnlocked).length;
+    return /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: onOpenEventReplayList,
+      className: "w-full mb-4 flex items-center gap-2 bg-fuchsia-950/40 border border-fuchsia-500/40 px-4 py-3 rounded-2xl active:scale-[.98]"
+    }, /*#__PURE__*/React.createElement(Sparkles, {
+      size: 14,
+      className: "text-fuchsia-300 shrink-0"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "flex-1 min-w-0 text-left"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block text-[11px] font-black text-fuchsia-100"
+    }, "\u30A4\u30D9\u30F3\u30C8\u56DE\u60F3"), /*#__PURE__*/React.createElement("small", {
+      className: "block text-[9px] text-fuchsia-300/70"
+    }, "\u898B\u305F\u3053\u3068\u306E\u3042\u308B\u4F1A\u8A71\u3092\u3082\u3046\u4E00\u5EA6\u898B\u3089\u308C\u307E\u3059\uFF08", unlockedCount, "/", list.length, "\uFF09")), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 16,
+      className: "shrink-0 text-fuchsia-400"
+    }));
+  })()));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -44753,417 +45213,52 @@ function MonsterHeroGame() {
       }
     }, "\u3053\u306E\u5B50\u306B\u3059\u308B")))), /*#__PURE__*/React.createElement("p", {
       className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
-    }, "3\u4EBA\u3068\u3082\u6700\u521D\u304B\u3089\u9078\u3079\u307E\u3059\u3002\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308B\u306E\u3067\u3001\u3042\u3068\u3067\u5909\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
-      "data-mh-screen": true,
-      className: "flex-1 flex flex-col h-full min-h-0 p-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-4 shrink-0",
-      style: onboardingPreview ? {
-        paddingTop: 'calc(2.25rem + env(safe-area-inset-top))'
-      } : undefined
-    }, onboarded && !onboardingPreview ? /*#__PURE__*/React.createElement("button", {
-      onClick: returnToHome,
-      className: "p-3 text-slate-400 active:scale-90"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })) : /*#__PURE__*/React.createElement("span", {
-      className: "w-11"
-    }), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-    }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB")), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-3"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "profile"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-    }, (!onboarded || onboardingPreview) && (() => {
-      const hasName = !!(onboardingName || '').trim();
-      const hasIcon = !!onboardingIcon;
-      const ready = hasName && hasIcon;
-      const step = typeof findAssistantOnboarding === 'function' ? findAssistantOnboarding(hasName, hasIcon, selectedAssistantId) : null;
-      return /*#__PURE__*/React.createElement("div", {
-        className: "mb-4 rounded-2xl border-2 border-indigo-400/60 bg-indigo-950/50 p-3 shrink-0"
-      }, onboardingPreview && /*#__PURE__*/React.createElement("div", {
-        className: "-mx-3 -mt-3 mb-2 px-3 py-1.5 rounded-t-xl bg-fuchsia-700 text-white text-[10px] font-black tracking-widest"
-      }, "DEBUG\u30FB\u898B\u308B\u3060\u3051\u306E\u8868\u793A\u3067\u3059\u3002\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black text-indigo-300 tracking-widest mb-2"
-      }, "\u306F\u3058\u3081\u3066\u306E\u8A2D\u5B9A"), /*#__PURE__*/React.createElement(AssistantBubble, {
-        line: step?.t || null,
-        expression: step?.e || null,
-        helpRef: "basics/onboarding",
-        compact: true
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2 mt-3"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => {
-          setTempName(hasName ? breederName : '');
-          setShowNameEdit(true);
-        },
-        className: `min-h-[46px] rounded-xl border-2 text-[11px] font-black active:scale-95 ${hasName ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
-      }, hasName ? '✓ なまえ' : 'なまえを決める'), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setShowIconPicker(true),
-        className: `min-h-[46px] rounded-xl border-2 text-[11px] font-black active:scale-95 ${hasIcon ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
-      }, hasIcon ? '✓ アイコン' : 'アイコンを選ぶ')), /*#__PURE__*/React.createElement("button", {
-        disabled: !ready,
-        onClick: finishOnboarding,
-        className: "w-full mt-2 min-h-[52px] rounded-2xl font-black text-sm text-black disabled:opacity-30 active:scale-[.98]",
-        style: {
-          backgroundColor: '#f472b6'
-        }
-      }, "\u3051\u3063\u3066\u3044\uFF01"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 text-center mt-1.5"
-      }, "\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u3001\u3042\u3068\u304B\u3089\u3053\u306E\u753B\u9762\u3067\u3044\u3064\u3067\u3082\u5909\u3048\u3089\u308C\u307E\u3059"));
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowIconPicker(true),
-      className: "relative w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center overflow-hidden active:scale-95"
-    }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement(BreederIcon, {
-      src: resolveIconUrl(breederIcon),
-      id: breederIcon,
-      alt: "icon",
-      className: "w-full h-full"
-    }) : /*#__PURE__*/React.createElement(User, {
-      size: 36,
-      className: "text-indigo-400"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"
-    }, /*#__PURE__*/React.createElement(Edit3, {
-      size: 9,
-      className: "text-white"
-    }))), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setTempName(breederName);
+    }, "3\u4EBA\u3068\u3082\u6700\u521D\u304B\u3089\u9078\u3079\u307E\u3059\u3002\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308B\u306E\u3067\u3001\u3042\u3068\u3067\u5909\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement(ProfileScreen, {
+      activeAssistant: activeAssistant,
+      assistantBond: assistantBond,
+      assistantBondLevelNow: assistantBondLevelNow,
+      assistantBonds: assistantBonds,
+      assistantCallStyle: assistantCallStyle,
+      attemptCounts: attemptCounts,
+      breederIcon: breederIcon,
+      breederLevel: breederLevel,
+      breederName: breederName,
+      breederPoints: breederPoints,
+      extremeBestScores: extremeBestScores,
+      extremeClearCounts: extremeClearCounts,
+      finishOnboarding: finishOnboarding,
+      gold: gold,
+      highScores: highScores,
+      isEventReplayUnlocked: isEventReplayUnlocked,
+      modeRecordFor: modeRecordFor,
+      onboarded: onboarded,
+      onboardingIcon: onboardingIcon,
+      onboardingName: onboardingName,
+      onboardingPreview: onboardingPreview,
+      ownedItems: ownedItems,
+      playtimeView: playtimeView,
+      proHighScores: proHighScores,
+      profileBattleMode: profileBattleMode,
+      quickHighestWaves: quickHighestWaves,
+      resolveIconUrl: resolveIconUrl,
+      selectedAssistantId: selectedAssistantId,
+      speciesChallengeProgress: speciesChallengeProgress,
+      onBack: returnToHome,
+      onOpenNameEdit: name => {
+        setTempName(name);
         setShowNameEdit(true);
       },
-      className: "flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "font-black text-base text-white"
-    }, breederName), /*#__PURE__*/React.createElement(Edit3, {
-      size: 13,
-      className: "text-slate-500 group-hover:text-white"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2"
-    }, /*#__PURE__*/React.createElement(Crown, {
-      size: 16,
-      className: "text-amber-300"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-lg font-black text-indigo-200"
-    }, "LV.", breederLevel.level)), /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-[240px]"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-2 bg-slate-800 rounded-full overflow-hidden border border-white/5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-full bg-gradient-to-r from-indigo-500 to-purple-400",
-      style: {
-        width: `${Math.min(100, breederLevel.xpIntoLevel / breederLevel.xpForNext * 100)}%`
-      }
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] text-slate-500 font-mono text-center mt-1"
-    }, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-1.5 bg-amber-950/60 border border-amber-500/30 px-3 py-1 rounded-full"
-    }, /*#__PURE__*/React.createElement(Gem, {
-      size: 11,
-      className: "text-amber-400"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black text-amber-300 font-mono"
-    }, gold.toLocaleString()), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] text-amber-500/70 font-bold"
-    }, "\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", {
-      className: "w-full flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 px-4 py-2.5 rounded-xl"
-    }, /*#__PURE__*/React.createElement(Coins, {
-      size: 14,
-      className: "text-amber-400"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black text-amber-200"
-    }, breederPoints, " pt")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('ITEM_INVENTORY'),
-      className: "w-full flex items-center justify-center gap-2 bg-teal-950/40 border border-teal-500/40 px-4 py-2.5 rounded-xl active:scale-95"
-    }, /*#__PURE__*/React.createElement(Package, {
-      size: 12,
-      className: "text-teal-400"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-black text-teal-200"
-    }, "\u30A2\u30A4\u30C6\u30E0\uFF08", Object.values(ownedItems).reduce((sum, n) => sum + (n || 0), 0), "\u500B\uFF09")), /*#__PURE__*/React.createElement("div", {
-      className: "w-full flex flex-col items-center gap-1 bg-indigo-950/40 border border-indigo-500/30 px-4 py-2.5 rounded-2xl"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2"
-    }, /*#__PURE__*/React.createElement(Timer, {
-      size: 13,
-      className: "text-indigo-300"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[10px] font-black text-indigo-200"
-    }, "\u30D7\u30EC\u30A4\u6642\u9593"), /*#__PURE__*/React.createElement("span", {
-      className: "text-[11px] font-black text-white font-mono"
-    }, formatPlaytime(playtimeView.totalMs))), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 text-[9px] font-black text-indigo-300"
-    }, /*#__PURE__*/React.createElement("span", null, "\u4ECA\u65E5 ", /*#__PURE__*/React.createElement("span", {
-      className: "text-white font-mono"
-    }, formatPlaytime(playtimeTodayMs(playtimeView)))), /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-600"
-    }, "/"), /*#__PURE__*/React.createElement("span", null, "\u904A\u3093\u3060\u65E5 ", /*#__PURE__*/React.createElement("span", {
-      className: "text-white font-mono"
-    }, playtimeView.days), "\u65E5")), playtimeView.longest.day && /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] text-slate-500 font-bold"
-    }, "\u3044\u3061\u3070\u3093\u9577\u304B\u3063\u305F\u65E5 ", formatPlaytime(playtimeView.longest.ms), "\uFF08", playtimeView.longest.day, "\uFF09"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] text-slate-500 font-bold"
-    }, playtimeView.since ? `${playtimeView.since} から数えています` : 'いま数え始めたところです'))), onboarded && !onboardingPreview && (() => {
-      const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : null;
-      const next = typeof assistantBondNext === 'function' ? assistantBondNext(assistantBond.points) : null;
-      const from = stage ? stage.need : 0;
-      const width = next ? Math.max(0, Math.min(100, (assistantBond.points - from) / Math.max(1, next.need - from) * 100)) : 100;
-      const accent = activeAssistant.accent || '#f472b6';
-      return /*#__PURE__*/React.createElement("div", {
-        className: "bg-slate-900/60 rounded-2xl p-3 mb-4",
-        style: {
-          border: `1px solid ${accent}4d`
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2"
-      }, /*#__PURE__*/React.createElement(AssistantFace, {
-        who: activeAssistant,
-        size: 40,
-        accent: accent,
-        expression: assistantBondLevelNow >= 4 ? 'excited' : assistantBondLevelNow >= 2 ? 'happy' : 'normal'
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-w-0"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black tracking-widest",
-        style: {
-          color: accent
-        }
-      }, activeAssistant.name, "\u3068\u306E\u4EF2\u826F\u3057\u5EA6"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-white"
-      }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) ? /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: () => {
-          setTempCallStyle(assistantCallStyle || '');
-          setShowCallStylePicker(true);
-        },
-        className: "shrink-0 text-right active:scale-95"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 flex items-center justify-end gap-0.5"
-      }, "\u547C\u3073\u65B9", /*#__PURE__*/React.createElement(Edit3, {
-        size: 8
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black",
-        style: {
-          color: accent
-        }
-      }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))) : /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-right"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500"
-      }, "\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black",
-        style: {
-          color: accent
-        }
-      }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))), /*#__PURE__*/React.createElement("div", {
-        className: "h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"
-      }, /*#__PURE__*/React.createElement("i", {
-        className: "block h-full rounded-full",
-        style: {
-          width: `${width}%`,
-          background: `linear-gradient(90deg,${accent},#fbbf24)`
-        }
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-400 font-bold mt-1 text-right"
-      }, next ? `次のLv.${next.level}まで あと${next.remain}` : 'いちばん仲良し！'), ASSISTANT_LIST.length > 1 && /*#__PURE__*/React.createElement("div", {
-        className: "mt-2.5 pt-2.5 border-t border-white/10"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black text-slate-500 tracking-widest mb-1.5"
-      }, "\u3044\u3063\u3057\u3087\u306B\u904A\u3076\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-1.5"
-      }, ASSISTANT_LIST.map(who => {
-        const active = who.id === selectedAssistantId;
-        const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
-        const t = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, who.id) : null;
-        return /*#__PURE__*/React.createElement("button", {
-          key: who.id,
-          type: "button",
-          onClick: () => {
-            if (!active) setShowAssistantPicker(true);
-          },
-          "aria-pressed": active,
-          className: `min-h-[52px] rounded-xl px-2 py-1.5 flex items-center gap-1.5 text-left active:scale-95 ${active ? '' : 'opacity-60'}`,
-          style: {
-            border: `2px solid ${active ? who.accent : 'rgba(255,255,255,.1)'}`,
-            backgroundColor: active ? `${who.accent}22` : 'rgba(15,23,42,.6)'
-          }
-        }, /*#__PURE__*/React.createElement(AssistantFace, {
-          who: who,
-          size: 30,
-          accent: who.accent,
-          expression: active ? 'happy' : 'normal'
-        }), /*#__PURE__*/React.createElement("span", {
-          className: "min-w-0 flex-1"
-        }, /*#__PURE__*/React.createElement("b", {
-          className: "block text-[10px] font-black text-white truncate"
-        }, who.name, active && '（選択中）'), /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] text-slate-400 truncate"
-        }, "Lv.", lv, " ", t ? t.title : '')));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 mt-1"
-      }, "\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308A\u307E\u3059\u3002\u5207\u308A\u66FF\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002")));
-    })(), (() => {
-      const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
-      const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE, SPECIES_CHALLENGE_MODE];
-      const selected = modes.find(mode => mode.id === profileBattleMode) || null;
-      const speciesSummary = speciesChallengeProfileSummary(speciesChallengeProgress);
-      const speciesDifficultyLabel = id => DIFFICULTY_SETTINGS[id]?.label || EXTREME_DIFFICULTIES.find(setting => setting.id === id)?.label || id;
-      const scoreMapFor = mode => isProMode(mode.id) ? proHighScores : highScores;
-      const representativeFor = mode => {
-        if (mode.id === BATTLE_MODE_SPECIES_CHALLENGE) return speciesSummary.bestScore > 0 ? `最高スコア: ${speciesSummary.bestScore.toLocaleString()} pt` : '最高スコア: 記録なし';
-        if (isQuickMode(mode.id)) {
-          const wave = highestModeWave(quickHighestWaves, difficultyIds);
-          return wave > 0 ? `最高到達 WAVE ${wave}` : '未記録';
-        }
-        const scores = mode.id === EXTREME_MODE.id ? extremeBestScores : scoreMapFor(mode);
-        const ids = mode.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(item => item.id) : difficultyIds;
-        const best = highestModeScore(scores, ids);
-        return best > 0 ? `最高スコア ${best.toLocaleString()} pt` : '未記録';
-      };
-      return /*#__PURE__*/React.createElement("section", {
-        className: "mb-4",
-        "data-profile-battle-records": true
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "mb-2 flex items-end justify-between px-1"
-      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black text-indigo-300 tracking-widest"
-      }, "\u30D0\u30C8\u30EB\u8A18\u9332"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-500"
-      }, "\u30E2\u30FC\u30C9\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u8A73\u3057\u3044\u8A18\u9332\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"))), !selected ? /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-1 gap-2"
-      }, modes.map(mode => {
-        const species = mode.id === BATTLE_MODE_SPECIES_CHALLENGE;
-        return /*#__PURE__*/React.createElement("button", {
-          key: mode.id,
-          type: "button",
-          "data-profile-mode": mode.id,
-          onClick: () => species ? openSpeciesChallengeRecords('PROFILE') : setProfileBattleMode(mode.id),
-          className: "w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]",
-          style: {
-            borderColor: `${mode.color}66`
-          }
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "flex items-center gap-2"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-xl",
-          "aria-hidden": "true"
-        }, mode.emoji), /*#__PURE__*/React.createElement("span", {
-          className: "min-w-0 flex-1"
-        }, /*#__PURE__*/React.createElement("b", {
-          className: "block text-[13px] text-white"
-        }, mode.label), /*#__PURE__*/React.createElement("small", {
-          className: "block text-[11px] font-black",
-          style: {
-            color: mode.color
-          }
-        }, representativeFor(mode)), species && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("small", {
-          className: "block truncate text-[9px] font-black text-cyan-100"
-        }, "\u6700\u9AD8\u8A18\u9332: ", speciesSummary.bestScore > 0 ? `${speciesChallengeSpeciesName(speciesSummary.bestSpeciesId)} / ${speciesDifficultyLabel(speciesSummary.bestDifficultyId)}` : '記録なし'), /*#__PURE__*/React.createElement("small", {
-          className: "block text-[9px] font-black text-emerald-300"
-        }, "\u30AF\u30EA\u30A2: ", speciesSummary.clearedCount, " / ", speciesSummary.totalCount))), /*#__PURE__*/React.createElement(ChevronRight, {
-          size: 18,
-          className: "shrink-0 text-slate-500"
-        })));
-      })) : /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border bg-slate-900/70 p-3",
-        style: {
-          borderColor: `${selected.color}66`
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: () => setProfileBattleMode(null),
-        className: "mb-3 flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-black/25 px-2 text-left active:scale-[.98]"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 18
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "text-lg",
-        "aria-hidden": "true"
-      }, selected.emoji), /*#__PURE__*/React.createElement("span", {
-        className: "font-black text-[13px]"
-      }, selected.label, "\u306E\u8A18\u9332")), /*#__PURE__*/React.createElement("div", {
-        className: "flex flex-col gap-2"
-      }, selected.id === EXTREME_MODE.id ? PUBLIC_EXTREME_DIFFICULTIES.map(setting => {
-        const score = extremeBestScores[setting.id] || 0;
-        const clears = extremeClearCounts[setting.id] || 0;
-        const played = score > 0 || clears > 0;
-        return /*#__PURE__*/React.createElement("div", {
-          key: setting.id,
-          className: "rounded-xl border border-white/5 bg-black/25 p-3"
-        }, /*#__PURE__*/React.createElement("b", {
-          className: "block text-[11px] text-fuchsia-200"
-        }, setting.label), played ? /*#__PURE__*/React.createElement("div", {
-          className: "mt-2 grid grid-cols-2 gap-2 text-center"
-        }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] text-slate-500"
-        }, "\u6700\u9AD8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("strong", {
-          className: "text-[12px] text-amber-300"
-        }, score.toLocaleString(), " pt")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] text-slate-500"
-        }, "\u30AF\u30EA\u30A2\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
-          className: "text-[12px] text-emerald-300"
-        }, clears, "\u56DE"))) : /*#__PURE__*/React.createElement("div", {
-          className: "mt-2 text-center text-[11px] font-black text-slate-500"
-        }, "\u672A\u8A18\u9332"));
-      }) : Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => {
-        const record = modeRecordFor(selected.id, key);
-        const quick = isQuickMode(selected.id);
-        const challenge = selected.id === BATTLE_MODE_CHALLENGE;
-        const attempts = challenge ? attemptCounts[key] || 0 : 0;
-        const played = record.score > 0 || record.wave > 0 || record.clears > 0 || attempts > 0;
-        return /*#__PURE__*/React.createElement("div", {
-          key: key,
-          className: "rounded-xl border border-white/5 bg-black/25 p-3"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "px-2 py-1 rounded-lg text-[10px] font-black text-center",
-          style: difficultyStyle(setting, true)
-        }, setting.label), played ? /*#__PURE__*/React.createElement("div", {
-          className: `mt-2 grid gap-1 text-center ${quick ? 'grid-cols-2' : challenge ? 'grid-cols-2' : 'grid-cols-3'}`
-        }, challenge && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] text-slate-500"
-        }, "\u6311\u6226\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
-          className: "text-[11px] text-white"
-        }, attempts, "\u56DE")), !quick && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] text-slate-500"
-        }, "\u6700\u9AD8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("strong", {
-          className: "text-[11px] text-amber-300"
-        }, record.score.toLocaleString(), " pt")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] text-slate-500"
-        }, "\u6700\u9AD8\u5230\u9054WAVE"), /*#__PURE__*/React.createElement("strong", {
-          className: "text-[11px] text-indigo-200"
-        }, "WAVE ", record.wave)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] text-slate-500"
-        }, "\u30AF\u30EA\u30A2\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
-          className: "text-[11px] text-emerald-300"
-        }, record.clears, "\u56DE"))) : /*#__PURE__*/React.createElement("div", {
-          className: "mt-2 text-center text-[11px] font-black text-slate-500"
-        }, "\u672A\u8A18\u9332"));
-      }))));
-    })(), onboarded && !onboardingPreview && (() => {
-      const list = typeof EVENT_REPLAYS !== 'undefined' && EVENT_REPLAYS || [];
-      if (list.length === 0) return null;
-      const unlockedCount = list.filter(isEventReplayUnlocked).length;
-      return /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: () => setShowEventReplayList(true),
-        className: "w-full mb-4 flex items-center gap-2 bg-fuchsia-950/40 border border-fuchsia-500/40 px-4 py-3 rounded-2xl active:scale-[.98]"
-      }, /*#__PURE__*/React.createElement(Sparkles, {
-        size: 14,
-        className: "text-fuchsia-300 shrink-0"
-      }), /*#__PURE__*/React.createElement("span", {
-        className: "flex-1 min-w-0 text-left"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "block text-[11px] font-black text-fuchsia-100"
-      }, "\u30A4\u30D9\u30F3\u30C8\u56DE\u60F3"), /*#__PURE__*/React.createElement("small", {
-        className: "block text-[9px] text-fuchsia-300/70"
-      }, "\u898B\u305F\u3053\u3068\u306E\u3042\u308B\u4F1A\u8A71\u3092\u3082\u3046\u4E00\u5EA6\u898B\u3089\u308C\u307E\u3059\uFF08", unlockedCount, "/", list.length, "\uFF09")), /*#__PURE__*/React.createElement(ChevronRight, {
-        size: 16,
-        className: "shrink-0 text-fuchsia-400"
-      }));
-    })())), gameState === 'BREEDER_MARKET' && /*#__PURE__*/React.createElement(BreederMarketScreen, {
+      onOpenIconPicker: () => setShowIconPicker(true),
+      onOpenItems: () => setGameState('ITEM_INVENTORY'),
+      onOpenCallStylePicker: () => {
+        setTempCallStyle(assistantCallStyle || '');
+        setShowCallStylePicker(true);
+      },
+      onOpenAssistantPicker: () => setShowAssistantPicker(true),
+      onSelectBattleMode: setProfileBattleMode,
+      onOpenEventReplayList: () => setShowEventReplayList(true),
+      onOpenSpeciesRecords: () => openSpeciesChallengeRecords('PROFILE')
+    }), gameState === 'BREEDER_MARKET' && /*#__PURE__*/React.createElement(BreederMarketScreen, {
       gold: gold,
       breederPoints: breederPoints,
       ownedItems: ownedItems,
