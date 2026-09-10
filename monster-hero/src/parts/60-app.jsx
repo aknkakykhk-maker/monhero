@@ -6405,13 +6405,6 @@ function MonsterHeroGame() {
       <div className="text-[8px] text-slate-500 font-bold mt-1 leading-relaxed">7日目まで受け取ると1日目に戻ります。報酬はギフトボックスへ届きます。</div>
     </div>
   );
-  const tabCountBadge = (count) => (count > 0 ? (
-    <span
-      className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[10px] font-black leading-none"
-      style={{ minWidth: '20px', height: '20px', padding: '0 5px', backgroundColor: '#dc2626', color: '#ffffff', border: '2px solid #0f172a' }}
-      aria-label={`未受取 ${count}件`}
-    >{count > 99 ? '99+' : count}</span>
-  ) : null);
   const openGiftBox = () => { setGiftTab('unclaimed'); setGameState('GIFT_BOX'); };
   const saveMissionProgress = async (event,amount=1) => {
     // 記録を残さない戦い(バトルのれんしゅう・デバッグ戦)ではミッションも進めない。
@@ -9685,19 +9678,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mh-gift-deadline">{g.claimedAt?`受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}`:`受取期限: ${g.expiresAt?new Date(g.expiresAt).toLocaleString('ja-JP'):'期限なし'}`}</div>
           </article>})}</div>
         </div>})()}
-        {gameState==='MISSIONS'&&(()=>{const state=normalizeMissions(missions),defs=MISSION_DEFS[missionTab],sent=missionTab==='daily'?state.sentDaily:missionTab==='weekly'?state.sentWeekly:state.sentMonthly;const resetAt=missionNextReset(missionTab);return <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-          <div className="flex items-center justify-between gap-2 mb-2 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black text-amber-200 flex items-center gap-2"><List size={21}/>ミッション</h2><div className="w-11"></div></div>
-          {/* 受け取れる報酬があるかどうかでセリフを切り替える */}
-          {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly','monthly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/></div>;})()}
-          <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0"><button onClick={()=>setMissionTab('daily')} className={`relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab==='daily'?'bg-amber-600 text-white':'bg-slate-900 text-slate-400'}`}>デイリー{tabCountBadge(missionClaimableList(state,'daily').length)}</button><button onClick={()=>setMissionTab('weekly')} className={`relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab==='weekly'?'bg-violet-600 text-white':'bg-slate-900 text-slate-400'}`}>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</button><button onClick={()=>setMissionTab('monthly')} className={`relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab==='monthly'?'bg-fuchsia-600 text-white':'bg-slate-900 text-slate-400'}`}>マンスリー{tabCountBadge(missionClaimableList(state,'monthly').length)}</button></div>
-          {(()=>{const bulk=missionClaimableList(state,missionTab);return <button disabled={!bulk.length} onClick={()=>claimMissionsBulk(missionTab)} className="shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black disabled:opacity-40">一括受け取り{bulk.length>0&&` (${bulk.length})`}</button>;})()}
-          <div className="mb-2 text-center text-[10px] font-bold text-slate-400 shrink-0">次回更新: {new Date(resetAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit'})}</div>
-          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-2">{defs.map(m=>{const value=missionValue(state,missionTab,m),done=value>=m.target,isSent=sent.includes(m.id),pct=Math.min(100,Math.floor(value/m.target*100));return <article key={m.id} className={`rounded-2xl border p-3 ${isSent?'bg-slate-900/70 border-slate-700':done?'bg-amber-950/40 border-amber-400/70':'bg-slate-900 border-white/10'}`}>
-            <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="font-black text-sm text-white break-words">{m.name}</h3><p className="text-[10px] text-slate-400 break-words">{m.condition}</p></div><b className="shrink-0 text-xs text-amber-200">{Math.min(value,m.target)} / {m.target}</b></div>
-            <div className="h-2 my-2 overflow-hidden rounded-full bg-black/50"><div className={`h-full rounded-full ${done?'bg-amber-400':'bg-cyan-500'}`} style={{width:`${pct}%`}}></div></div>
-            <div className="flex items-center justify-between gap-2"><div className="min-w-0 text-[10px] font-black text-cyan-200 break-words">報酬: {m.rewards.map(giftRewardText).join(' / ')}</div>{isSent?<button disabled className="shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-700 text-[10px] font-black text-slate-400">ギフト送付済み</button>:done?<button onClick={()=>claimMission(missionTab,m)} className="shrink-0 min-h-[38px] px-4 rounded-xl bg-amber-500 text-[11px] font-black text-black active:scale-95">受け取る</button>:<span className="shrink-0 text-[10px] font-black text-slate-500">進行中 {pct}%</span>}</div>
-          </article>})}</div>
-        </div>})()}
+        {gameState==='MISSIONS'&&(
+          <MissionsScreen
+            missions={missions}
+            missionTab={missionTab}
+            onSelectTab={setMissionTab}
+            onBack={returnToHome}
+            onClaim={claimMission}
+            onClaimBulk={claimMissionsBulk}
+          />
+        )}
         {/* ギフトボックスから開く、7日ぶんのログインボーナス一覧 */}
         {showLoginBonusList&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.9)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス一覧"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-gradient-to-b from-indigo-950 to-slate-950 p-5 shadow-2xl"><div className="flex items-center gap-2 mb-3"><Sparkles size={20} className="text-amber-300"/><h2 className="text-base font-black text-amber-200">ログインボーナス</h2></div>{renderLoginBonusList(loginBonusTodayDay)}<button onClick={()=>setShowLoginBonusList(false)} className="w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]">閉じる</button></div></div>}
         {loginBonusPopup&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:60000,backgroundColor:'rgba(2,6,23,.88)'}} role="dialog" aria-modal="true" aria-label="ログインボーナス"><div className="w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"><Sparkles size={46} className="mx-auto mb-3 text-amber-300"/><h2 className="text-2xl font-black text-amber-200">ログインボーナス</h2><p className="mt-3 text-sm font-black text-white">{loginBonusPopup.day}日目のログインボーナスを獲得しました！</p><div className="my-3 space-y-1.5">{loginBonusPopup.rewards.map((reward,i)=><div key={i} className="rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words">{giftRewardText(reward)}</div>)}</div>{renderLoginBonusList(loginBonusPopup.day)}<p className="text-xs text-slate-300 mt-3">報酬はギフトボックスへ送られました。</p><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={()=>{setLoginBonusPopup(null);openGiftBox();}} className="min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white">ギフトを確認</button><button onClick={()=>setLoginBonusPopup(null)} className="min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white">閉じる</button></div></div></div>}

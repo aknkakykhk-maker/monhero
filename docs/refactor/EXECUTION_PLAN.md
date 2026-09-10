@@ -54,7 +54,8 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | --- | --- | --- | --- | --- |
 | 1 | `use-screen-effects` hook の設計 | — | — | **完了**(2026-09-10)。`src/parts/40-screen-effects.jsx`。仕分けは `SCREEN_EFFECTS_MAP.md`(画面専用 16 / 進行 31 / 対象外 15) |
 | 2 | `SETTINGS` | — | — | **完了**(2026-09-10)。`src/parts/51-screen-settings.jsx`。切り出しの型はこれに合わせる |
-| 3〜4 | `MISSIONS` / `GIFT_BOX` | Sonnet 5 | high | 依存が少なく検査が厚い。手順が固まれば作業 |
+| 3 | `MISSIONS` | — | — | **完了**(2026-09-10)。`src/parts/52-screen-missions.jsx` |
+| 4 | `GIFT_BOX` | Sonnet 5 | high | 依存が少なく検査が厚い。`tabCountBadge` は共有層へ移動済み |
 | 5〜7 | `ITEM_INVENTORY` / `BREEDER_MARKET` / `PROFILE` | Sonnet 5 | high | 同上。マーケットは助手の告知に注意 |
 | 8 | `MONSTER_DEX(_DETAIL)` | Sonnet 5 | high | 表示のみ |
 | 9 | `MASU_*`(育成系) | **Opus 5** | high | 保存が絡む(STEP 3 と同じ領域) |
@@ -65,9 +66,10 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 6 の3本目(`MISSIONS` 画面の切り出し)** — Sonnet 5 / effort high
+**STEP 6 の4本目(`GIFT_BOX` 画面の切り出し)** — Sonnet 5 / effort high
 
-1本目(`use-screen-effects` hook)と2本目(`SETTINGS`)は 2026-09-10 に完了。
+1本目(`use-screen-effects` hook)・2本目(`SETTINGS`)・3本目(`MISSIONS`)は 2026-09-10 に完了。
+`GIFT_BOX` が使う `tabCountBadge` は 3本目で共有層(16)へ移してある。
 切り出しの型は `src/parts/51-screen-settings.jsx` にそろえる(props は「押されたら何をするか」を
 MonsterHeroGame 側に残し、画面へは操作だけを渡す)。タイマーの仕分けは
 `SCREEN_EFFECTS_MAP.md` にあるので、画面ごとにそこから引いて `effects.timeout` へ移す。

@@ -63,9 +63,13 @@ check('HOMEのギフト通知も同じ判定を使う', has('{giftClaimableCount
 check('ギフト画面の受取可能判定も共通化されている', has('const claimable=unclaimed.filter(g=>giftIsClaimable(g,now));'));
 
 // 一括受取
-check('一括受取ボタンがある', has('claimMissionsBulk(missionTab)') && has('一括受け取り'));
+// 2026-09-10(STEP 6-3)にミッション画面を MissionsScreen へ切り出したので、
+// 「本体の関数 → 画面の props → ボタン」の結線まで見る。処理の中身は本体側に残っている
+check('一括受取を画面へ渡している', has('onClaimBulk={claimMissionsBulk}'));
+check('一括受取ボタンがある', has('onClaimBulk(missionTab)') && has('一括受け取り'));
 check('対象が無ければ無効化する', has('disabled={!bulk.length}'));
-check('個別受取も残っている', has('claimMission(missionTab,m)'));
+check('個別受取を画面へ渡している', has('onClaim={claimMission}'));
+check('個別受取も残っている', has('onClaim(missionTab,m)'));
 check('個別・一括とも同じ送付処理を通る',
   has('const claimMission = (type,mission) => sendMissionsToGiftBox(type,[mission]);') &&
   has('const claimMissionsBulk = (type) => sendMissionsToGiftBox(type,missionClaimableList('));
