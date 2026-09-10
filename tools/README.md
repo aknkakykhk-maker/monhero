@@ -93,6 +93,8 @@ node tools/build.js --check
 | `node boot/legacy-save-boot-check.js` | 旧形式のセーブ(マスモン導入前・各種一度きり移行の前)を localStorage に入れて実ブラウザで2回起動し、旧 `mh_bond_xp` からマスモンが作られること、旧キーを消さないこと、ダイヤ・XP・ハイスコアが変わらないこと、既存プレイヤー扱いになること、2回目の起動で何も二重適用されないことを確かめる。保存層・起動時読込を触る前の安全網。 |
 | `node boot/save-keys-check.js` | 本体とデータが使う保存キー(`mh_*`)がすべて `docs/spec/SAVE_DATA.md` に載っているかを確かめる。キーを足したら文書へも 1 行足す。保存キーでない `mh_` 文字列(URL のクエリ)は検査の中に理由つきで除外してある。 |
 | `node boot/soul-rank-backup-check.js` | 既存`.mhsave`バックアップの実関数を使い、魂格段階・最高初到達Lv・魂格特性、勇者の証、魂格再編の書がエンコード→デコード→復元で完全一致することを確認する。 |
+| `node ui/screen-effects-check.js` | 画面ライフサイクルの登録簿(`useScreenEffects`)の約束ごとを固定する。偽のタイマーを入れて実際に動かし、画面を離れたときに「画面専用は止まる / 進行は止まらない」ことと、種別を書き忘れたときに止めない側へ倒れることを見る。あわせて `docs/refactor/SCREEN_EFFECTS_MAP.md` の目印が `60-app.jsx` にちょうど1つあり、表の件数が本体の `setTimeout` の数と一致することを突き合わせる(表が古くなると落ちる)。 |
+| `node ui/screen-effects-browser-check.js` | 同じ hook を本物の React で動かし、画面を移ったとき・アンマウントしたときの止まりかたを実ブラウザで確かめる。「新しい画面が登録したタイマーを古い画面の後始末が止めてしまう」類は React の実行順そのものなので、実物でしか出ない。 |
 | `node boot/screen-error-boundary-check.js` | 画面の描画で例外が出ても真っ白にならず「ホームへ戻る」が出ること(`MhErrorBoundary`)を確かめる。ソースで2段の境界とデバッグ設定の入口を見たあと、実ブラウザでデバッグ設定の「画面エラーの受け止めを試す」を押し、受け止め画面 → ホームへ戻る、を通す。 |
 | `node boot/mission-gift-badge-check.js` | ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、ランキングのタブ分離を確認する。 |
 | `node boot/market-notice-check.js` | マーケットへ商品を足したのに助手の告知(`assistantNotice`)を付け忘れていないか、告知idの重複・種類・本文の有無を確認する。 |

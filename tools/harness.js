@@ -320,6 +320,11 @@ const EXPORTED_NAMES = [
   'monsterLineageOf',
   'dexMainLineages',
   'BREEDER_MARKET_ITEMS',
+  // 画面ライフサイクル(STEP 6-1)。登録簿は React に依存しないので、そのまま検査から動かせる
+  'SCREEN_EFFECT_SCOPES',
+  'SCREEN_EFFECTS_DEFAULT_SCOPE',
+  'createScreenEffectsRegistry',
+  'useScreenEffects',
 ];
 
 // ブラウザAPIの最小スタブ。canvasだけは node-canvas で本物と同じように動かす

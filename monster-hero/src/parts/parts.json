@@ -1,5 +1,5 @@
 {
-  "_comment": "game-system.jsx はこの順に連結して tools/build.js が生成する。新しい部品を足したらここへ並べる(順番が依存の正本)。10〜30 は共有層(MonsterHeroGame を知らないもの)、50 以降が画面。 pure:true の部品は React・JSX・document・window・保存(storeGet/storeSet)・Audio_・fetch・タイマーを一切参照しない「純粋な計算とデータ」で、tools/boot/parts-purity-check.js が守る。",
+  "_comment": "game-system.jsx はこの順に連結して tools/build.js が生成する。新しい部品を足したらここへ並べる(順番が依存の正本)。10〜30 は共有層(MonsterHeroGame を知らないもの)、40 は画面ライフサイクル、50 以降が画面。 pure:true の部品は React・JSX・document・window・保存(storeGet/storeSet)・Audio_・fetch・タイマーを一切参照しない「純粋な計算とデータ」で、tools/boot/parts-purity-check.js が守る。",
   "parts": [
     {
       "file": "10-core.jsx",
@@ -91,6 +91,10 @@
     {
       "file": "30-rhythm-play.jsx",
       "role": "音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない"
+    },
+    {
+      "file": "40-screen-effects.jsx",
+      "role": "画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない)"
     },
     {
       "file": "50-error-boundary.jsx",
