@@ -105,6 +105,10 @@
       "role": "画面: 設定(SETTINGS)。MonsterHeroGame から切り出した1画面目"
     },
     {
+      "file": "52-screen-missions.jsx",
+      "role": "画面: ミッション(MISSIONS)。受け取りは MonsterHeroGame 側に残し、props で受ける"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

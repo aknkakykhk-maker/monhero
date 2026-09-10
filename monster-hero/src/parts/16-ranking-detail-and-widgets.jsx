@@ -440,3 +440,14 @@ const VolumeSlider = ({ label, icon, value, onChange, onInteractStart, gradient,
 };
 const DIST_APTITUDE_MULT = { G: 0.8, F: 0.85, E: 0.9, D: 0.95, C: 1.0, B: 1.05, A: 1.1, S: 1.15, 'S+': 1.175, SS: 1.2, 'SS+': 1.225, M: 1.25 };
 const DIST_APTITUDE_COLOR = { S: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'S+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", SS: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'SS+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", M: "text-fuchsia-300 bg-gradient-to-br from-purple-950/70 to-pink-950/70 border-fuchsia-400/60", A: "text-red-400 bg-red-950/60 border-red-400/50", B: "text-pink-300 bg-pink-950/60 border-pink-400/50", C: "text-green-300 bg-green-950/60 border-green-400/50", D: "text-teal-300 bg-teal-950/60 border-teal-400/50", E: "text-cyan-300 bg-cyan-950/60 border-cyan-400/50", F: "text-purple-300 bg-purple-950/60 border-purple-400/50", G: "text-slate-400 bg-slate-800/60 border-slate-500/50" };
+
+// タブの右肩に出す「未受取◯件」の赤いバッジ。ミッションとギフトボックスの2画面が使う小部品で、
+// MonsterHeroGame の中身を何も見ないので共有層に置く(2026-09-10・STEP 6-3 で 60-app.jsx から移した)
+const tabCountBadge = (count) => (count > 0 ? (
+  <span
+    className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[10px] font-black leading-none"
+    style={{ minWidth: '20px', height: '20px', padding: '0 5px', backgroundColor: '#dc2626', color: '#ffffff', border: '2px solid #0f172a' }}
+    aria-label={`未受取 ${count}件`}
+  >{count > 99 ? '99+' : count}</span>
+) : null);
+

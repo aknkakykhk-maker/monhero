@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cdbd0326026fbd39
+// source-sha256: 7f94f3cabf89190d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 773b08372c63436c
+// generated-sha256: d6342f5251414287
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 20:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 20:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9666,6 +9666,21 @@ const DIST_APTITUDE_COLOR = {
   F: "text-purple-300 bg-purple-950/60 border-purple-400/50",
   G: "text-slate-400 bg-slate-800/60 border-slate-500/50"
 };
+
+// タブの右肩に出す「未受取◯件」の赤いバッジ。ミッションとギフトボックスの2画面が使う小部品で、
+// MonsterHeroGame の中身を何も見ないので共有層に置く(2026-09-10・STEP 6-3 で 60-app.jsx から移した)
+const tabCountBadge = count => count > 0 ? /*#__PURE__*/React.createElement("span", {
+  className: "absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[10px] font-black leading-none",
+  style: {
+    minWidth: '20px',
+    height: '20px',
+    padding: '0 5px',
+    backgroundColor: '#dc2626',
+    color: '#ffffff',
+    border: '2px solid #0f172a'
+  },
+  "aria-label": `未受取 ${count}件`
+}, count > 99 ? '99+' : count) : null;
 
 // ---- part: 17-release-changelog-login-missions.jsx ----
 // 公開前の機能は、ヘルプの項目も更新履歴のお知らせも書き上げたうえで隠しておく。
@@ -22403,6 +22418,132 @@ function SettingsScreen({
   }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B")));
 }
 
+// ---- part: 52-screen-missions.jsx ----
+// ==== 画面: ミッション(gameState === 'MISSIONS') ====
+//
+// MonsterHeroGame から切り出した2画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-3)。
+// 型は 51-screen-settings.jsx にそろえてある。
+//
+// 【この画面ならではの注意】
+// ・受け取り(claimMission / claimMissionsBulk)は保存とギフト送付を伴うので、中身は
+//   MonsterHeroGame 側に残したまま props で受け取る。画面は「どれを受け取るか」を渡すだけ
+// ・進捗の読み方(normalizeMissions・missionValue・missionClaimableList)は共有層の純関数なので、
+//   props にせず画面から直接呼ぶ。保存には触れない
+// ・タブの赤バッジ tabCountBadge は、ギフトボックスも使う小部品なので共有層(16)へ移した
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に MISSIONS の行が無い)
+function MissionsScreen({
+  missions,
+  missionTab,
+  onSelectTab,
+  onBack,
+  onClaim,
+  onClaimBulk
+}) {
+  const state = normalizeMissions(missions),
+    defs = MISSION_DEFS[missionTab];
+  const sent = missionTab === 'daily' ? state.sentDaily : missionTab === 'weekly' ? state.sentWeekly : state.sentMonthly;
+  const resetAt = missionNextReset(missionTab);
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-3",
+    style: {
+      paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black text-amber-200 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(List, {
+    size: 21
+  }), "\u30DF\u30C3\u30B7\u30E7\u30F3"), /*#__PURE__*/React.createElement("div", {
+    className: "w-11"
+  })), (() => {
+    const claimable = missionClaimableCount(state) > 0;
+    const allDone = ['daily', 'weekly', 'monthly'].every(t => MISSION_DEFS[t].every(m => missionValue(state, t, m) >= m.target));
+    return /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-full max-w-md mx-auto mb-2"
+    }, /*#__PURE__*/React.createElement(AssistantBubble, {
+      key: claimable ? 'claim' : 'normal',
+      scene: claimable ? 'missionsClaimable' : 'missionsNormal',
+      condition: claimable && allDone ? 'allDone' : null,
+      compact: true
+    }));
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => onSelectTab('daily'),
+    className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'daily' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400'}`
+  }, "\u30C7\u30A4\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'daily').length)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onSelectTab('weekly'),
+    className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'weekly' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'}`
+  }, "\u30A6\u30A3\u30FC\u30AF\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'weekly').length)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onSelectTab('monthly'),
+    className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'monthly' ? 'bg-fuchsia-600 text-white' : 'bg-slate-900 text-slate-400'}`
+  }, "\u30DE\u30F3\u30B9\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'monthly').length))), (() => {
+    const bulk = missionClaimableList(state, missionTab);
+    return /*#__PURE__*/React.createElement("button", {
+      disabled: !bulk.length,
+      onClick: () => onClaimBulk(missionTab),
+      className: "shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black disabled:opacity-40"
+    }, "\u4E00\u62EC\u53D7\u3051\u53D6\u308A", bulk.length > 0 && ` (${bulk.length})`);
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 text-center text-[10px] font-bold text-slate-400 shrink-0"
+  }, "\u6B21\u56DE\u66F4\u65B0: ", new Date(resetAt).toLocaleString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-2"
+  }, defs.map(m => {
+    const value = missionValue(state, missionTab, m),
+      done = value >= m.target,
+      isSent = sent.includes(m.id),
+      pct = Math.min(100, Math.floor(value / m.target * 100));
+    return /*#__PURE__*/React.createElement("article", {
+      key: m.id,
+      className: `rounded-2xl border p-3 ${isSent ? 'bg-slate-900/70 border-slate-700' : done ? 'bg-amber-950/40 border-amber-400/70' : 'bg-slate-900 border-white/10'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-start justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "font-black text-sm text-white break-words"
+    }, m.name), /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-slate-400 break-words"
+    }, m.condition)), /*#__PURE__*/React.createElement("b", {
+      className: "shrink-0 text-xs text-amber-200"
+    }, Math.min(value, m.target), " / ", m.target)), /*#__PURE__*/React.createElement("div", {
+      className: "h-2 my-2 overflow-hidden rounded-full bg-black/50"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `h-full rounded-full ${done ? 'bg-amber-400' : 'bg-cyan-500'}`,
+      style: {
+        width: `${pct}%`
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 text-[10px] font-black text-cyan-200 break-words"
+    }, "\u5831\u916C: ", m.rewards.map(giftRewardText).join(' / ')), isSent ? /*#__PURE__*/React.createElement("button", {
+      disabled: true,
+      className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-700 text-[10px] font-black text-slate-400"
+    }, "\u30AE\u30D5\u30C8\u9001\u4ED8\u6E08\u307F") : done ? /*#__PURE__*/React.createElement("button", {
+      onClick: () => onClaim(missionTab, m),
+      className: "shrink-0 min-h-[38px] px-4 rounded-xl bg-amber-500 text-[11px] font-black text-black active:scale-95"
+    }, "\u53D7\u3051\u53D6\u308B") : /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-[10px] font-black text-slate-500"
+    }, "\u9032\u884C\u4E2D ", pct, "%")));
+  })));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -31347,18 +31488,6 @@ function MonsterHeroGame() {
   })), /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] text-slate-500 font-bold mt-1 leading-relaxed"
   }, "7\u65E5\u76EE\u307E\u3067\u53D7\u3051\u53D6\u308B\u30681\u65E5\u76EE\u306B\u623B\u308A\u307E\u3059\u3002\u5831\u916C\u306F\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9\u3078\u5C4A\u304D\u307E\u3059\u3002"));
-  const tabCountBadge = count => count > 0 ? /*#__PURE__*/React.createElement("span", {
-    className: "absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[10px] font-black leading-none",
-    style: {
-      minWidth: '20px',
-      height: '20px',
-      padding: '0 5px',
-      backgroundColor: '#dc2626',
-      color: '#ffffff',
-      border: '2px solid #0f172a'
-    },
-    "aria-label": `未受取 ${count}件`
-  }, count > 99 ? '99+' : count) : null;
   const openGiftBox = () => {
     setGiftTab('unclaimed');
     setGameState('GIFT_BOX');
@@ -37310,111 +37439,14 @@ function MonsterHeroGame() {
           className: "mh-gift-deadline"
         }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限なし'}`));
       })));
-    })(), gameState === 'MISSIONS' && (() => {
-      const state = normalizeMissions(missions),
-        defs = MISSION_DEFS[missionTab],
-        sent = missionTab === 'daily' ? state.sentDaily : missionTab === 'weekly' ? state.sentWeekly : state.sentMonthly;
-      const resetAt = missionNextReset(missionTab);
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-3",
-        style: {
-          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: returnToHome,
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black text-amber-200 flex items-center gap-2"
-      }, /*#__PURE__*/React.createElement(List, {
-        size: 21
-      }), "\u30DF\u30C3\u30B7\u30E7\u30F3"), /*#__PURE__*/React.createElement("div", {
-        className: "w-11"
-      })), (() => {
-        const claimable = missionClaimableCount(state) > 0;
-        const allDone = ['daily', 'weekly', 'monthly'].every(t => MISSION_DEFS[t].every(m => missionValue(state, t, m) >= m.target));
-        return /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 w-full max-w-md mx-auto mb-2"
-        }, /*#__PURE__*/React.createElement(AssistantBubble, {
-          key: claimable ? 'claim' : 'normal',
-          scene: claimable ? 'missionsClaimable' : 'missionsNormal',
-          condition: claimable && allDone ? 'allDone' : null,
-          compact: true
-        }));
-      })(), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1.5 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setMissionTab('daily'),
-        className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'daily' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "\u30C7\u30A4\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'daily').length)), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setMissionTab('weekly'),
-        className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'weekly' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "\u30A6\u30A3\u30FC\u30AF\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'weekly').length)), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setMissionTab('monthly'),
-        className: `relative min-h-[44px] rounded-xl px-1 font-black text-[11px] ${missionTab === 'monthly' ? 'bg-fuchsia-600 text-white' : 'bg-slate-900 text-slate-400'}`
-      }, "\u30DE\u30F3\u30B9\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'monthly').length))), (() => {
-        const bulk = missionClaimableList(state, missionTab);
-        return /*#__PURE__*/React.createElement("button", {
-          disabled: !bulk.length,
-          onClick: () => claimMissionsBulk(missionTab),
-          className: "shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black disabled:opacity-40"
-        }, "\u4E00\u62EC\u53D7\u3051\u53D6\u308A", bulk.length > 0 && ` (${bulk.length})`);
-      })(), /*#__PURE__*/React.createElement("div", {
-        className: "mb-2 text-center text-[10px] font-bold text-slate-400 shrink-0"
-      }, "\u6B21\u56DE\u66F4\u65B0: ", new Date(resetAt).toLocaleString('ja-JP', {
-        timeZone: 'Asia/Tokyo',
-        month: 'numeric',
-        day: 'numeric',
-        weekday: 'short',
-        hour: '2-digit',
-        minute: '2-digit'
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-2"
-      }, defs.map(m => {
-        const value = missionValue(state, missionTab, m),
-          done = value >= m.target,
-          isSent = sent.includes(m.id),
-          pct = Math.min(100, Math.floor(value / m.target * 100));
-        return /*#__PURE__*/React.createElement("article", {
-          key: m.id,
-          className: `rounded-2xl border p-3 ${isSent ? 'bg-slate-900/70 border-slate-700' : done ? 'bg-amber-950/40 border-amber-400/70' : 'bg-slate-900 border-white/10'}`
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-start justify-between gap-2"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "min-w-0"
-        }, /*#__PURE__*/React.createElement("h3", {
-          className: "font-black text-sm text-white break-words"
-        }, m.name), /*#__PURE__*/React.createElement("p", {
-          className: "text-[10px] text-slate-400 break-words"
-        }, m.condition)), /*#__PURE__*/React.createElement("b", {
-          className: "shrink-0 text-xs text-amber-200"
-        }, Math.min(value, m.target), " / ", m.target)), /*#__PURE__*/React.createElement("div", {
-          className: "h-2 my-2 overflow-hidden rounded-full bg-black/50"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: `h-full rounded-full ${done ? 'bg-amber-400' : 'bg-cyan-500'}`,
-          style: {
-            width: `${pct}%`
-          }
-        })), /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center justify-between gap-2"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "min-w-0 text-[10px] font-black text-cyan-200 break-words"
-        }, "\u5831\u916C: ", m.rewards.map(giftRewardText).join(' / ')), isSent ? /*#__PURE__*/React.createElement("button", {
-          disabled: true,
-          className: "shrink-0 min-h-[38px] px-3 rounded-xl bg-slate-700 text-[10px] font-black text-slate-400"
-        }, "\u30AE\u30D5\u30C8\u9001\u4ED8\u6E08\u307F") : done ? /*#__PURE__*/React.createElement("button", {
-          onClick: () => claimMission(missionTab, m),
-          className: "shrink-0 min-h-[38px] px-4 rounded-xl bg-amber-500 text-[11px] font-black text-black active:scale-95"
-        }, "\u53D7\u3051\u53D6\u308B") : /*#__PURE__*/React.createElement("span", {
-          className: "shrink-0 text-[10px] font-black text-slate-500"
-        }, "\u9032\u884C\u4E2D ", pct, "%")));
-      })));
-    })(), showLoginBonusList && /*#__PURE__*/React.createElement("div", {
+    })(), gameState === 'MISSIONS' && /*#__PURE__*/React.createElement(MissionsScreen, {
+      missions: missions,
+      missionTab: missionTab,
+      onSelectTab: setMissionTab,
+      onBack: returnToHome,
+      onClaim: claimMission,
+      onClaimBulk: claimMissionsBulk
+    }), showLoginBonusList && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         zIndex: 60000,
