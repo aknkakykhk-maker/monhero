@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -24,37 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: tools/package-lock.json
-      - name: Install locked tool dependencies
-        working-directory: tools
-        run: npm ci --omit=optional
-      # TEMP: このPRだけ、正式な手動ビルドと同じ tools/build.js をCIランナーで1回だけ実行し、
-      # 生成物を作業ブランチへ戻す。生成コミット後はこの補助変更を完全にrevertする。
-      - name: TEMP rebuild Undine motion bundle on the PR branch
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'chatgpt/undine-water-slide-motion'
-        shell: bash
-        run: |
-          git fetch --no-tags origin "${{ github.event.pull_request.head.ref }}"
-          git checkout -B "${{ github.event.pull_request.head.ref }}" "origin/${{ github.event.pull_request.head.ref }}"
-          subject="$(git log -1 --pretty=%s)"
-          if [[ "$subject" == "build: rebuild Undine motion bundle" ]]; then
-            echo "生成コミット上なのでTEMP buildは再実行しません"
-            exit 0
-          fi
-          node tools/build.js
-          if git diff --quiet; then
-            echo "ビルド差分なし"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "build: rebuild Undine motion bundle"
-          git push origin HEAD:"${{ github.event.pull_request.head.ref }}"
       - name: Require update banner stamp for shipped changes
         shell: bash
         run: |
@@ -76,6 +45,14 @@ jobs:
             exit 1
           fi
           echo "OK: 配信対象の変更に更新バナー用versionが含まれています"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        working-directory: tools
+        run: npm ci --omit=optional
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
