@@ -98,6 +98,7 @@ jobs:
           node tools/mode/rhythm-debug-short-check.js
           node tools/mode/rhythm-easy-ear-review-plan.js
           node tools/mode/rhythm-help-structure-check.js
+          node tools/mode/rhythm-breeder-id-check.js
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5

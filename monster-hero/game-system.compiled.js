@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c99161f0c059ce71
+// source-sha256: 9ed80836f768067d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 5f98ae07f36345fd
+// generated-sha256: e442f1a6de4f7f23
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 07:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 07:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16657,6 +16657,57 @@ const persistRankingScore = async ({
 };
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
+// ===== ブリーダーを見分けるID(2026-09-11) =====
+//
+// これまで全国ランキングは user_name だけで人を見分けていた。曲別ランキング(その名前の
+// 最高1件を見せるだけ)なら同名がいても大きな害は無いが、これから作る「全曲合算」は
+// その人の全曲を足すため、同名の人がいると**別人の点まで足されてしまう**。
+// 報酬を配るならここが曖昧なままでは進められないので、端末ごとのIDを送ることにした
+// (docs/spec/RHYTHM_RANKING.md §4)。
+//
+// ★保存キーは新設のみ。既存の mh_* は読みも書きも変えない(CLAUDE.md ⑦)。
+// ★名前を変えてもIDは変えない。端末を変えると別IDになるのは現行と同じ状況で、悪くならない。
+const BREEDER_ID_KEY = 'mh_breeder_id_v1';
+const createBreederId = () => globalThis.crypto?.randomUUID?.() || `bd_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+let _breederIdCache = null;
+// 端末のIDを返す。まだ無ければ1回だけ作って保存する。
+// 保存できなかったときは null を返し、breeder_id を付けずに送る(=これまでどおりの動き)。
+// 初回プレイのプレビュー中は storeSet が丸ごと止まる(_storageWriteBlocked)ため、
+// ここで確かめずに返すと「その場かぎりのIDが毎回変わって送られる」ことになる。
+// 書いたあとに読み直して、端末に残ったIDだけを使う。
+const ensureBreederId = async () => {
+  if (typeof _breederIdCache === 'string' && _breederIdCache) return _breederIdCache;
+  try {
+    const saved = await storeGet(BREEDER_ID_KEY, null, false);
+    if (typeof saved === 'string' && saved.trim()) {
+      _breederIdCache = saved.trim();
+      return _breederIdCache;
+    }
+    const created = createBreederId();
+    await storeSet(BREEDER_ID_KEY, created, false);
+    const confirmed = await storeGet(BREEDER_ID_KEY, null, false);
+    if (typeof confirmed === 'string' && confirmed === created) {
+      _breederIdCache = created;
+      return created;
+    }
+    return null;
+  } catch (error) {
+    console.error('[ranking] breeder id unavailable:', error && error.message ? error.message : error);
+    return null;
+  }
+};
+// breeder_id の列がまだ無い環境で送ると400になり、記録が1件も残らなくなる。
+// turns / reached_wave と同じで、一度400で気付いたらその後は列を外して送る。
+// SQLを適用すればアプリ側は何もしなくても自動的に載りはじめる。
+let _rankingBreederIdUnavailable = false;
+const rankingBreederIdUnavailable = () => _rankingBreederIdUnavailable;
+const _isMissingBreederIdError = (status, body) => {
+  if (status !== 400) return false;
+  const text = String(body || '');
+  if (!/breeder_id/i.test(text)) return false;
+  return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
+};
+
 // モンビー(音ゲー)の全国ランキング専用の送受信(2026-09-04)。
 //
 // 既存の sbInsertScore / sbFetchRankings は、difficulty列の値を必ず
@@ -16678,14 +16729,20 @@ const sbInsertRhythmScore = async row => {
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
   const requestId = `rhythm-insert-${row.difficulty}-${Date.now()}`;
+  // breeder_id の列がまだ無いと分かっている間は、最初から外して送る
+  const payload = {
+    ...row
+  };
+  if (_rankingBreederIdUnavailable) delete payload.breeder_id;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
     rankingLog(requestId, 'rhythm-insert-start', {
-      difficulty: row.difficulty,
-      clearId: row.clear_id,
-      score: row.score,
-      userName: row.user_name
+      difficulty: payload.difficulty,
+      clearId: payload.clear_id,
+      score: payload.score,
+      userName: payload.user_name,
+      hasBreederId: payload.breeder_id !== undefined
     });
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, {
       method: 'POST',
@@ -16693,7 +16750,7 @@ const sbInsertRhythmScore = async row => {
         ...SB_HEADERS,
         'Prefer': prefer
       },
-      body: JSON.stringify(row),
+      body: JSON.stringify(payload),
       signal: controller.signal
     });
     const body = await res.text();
@@ -16703,6 +16760,21 @@ const sbInsertRhythmScore = async row => {
       error: res.ok ? null : body || res.statusText
     });
     if (!res.ok) {
+      // breeder_id の列がまだ無い環境。ここで諦めるとスコアが1件も残らなくなるので、
+      // その列を外して必ず送り直す(記録を落とさないことを最優先にする)。
+      // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり。
+      // 最初のPOSTは400で入っていないため、同じclear_idで送り直しても重複にならない
+      if (!_rankingBreederIdUnavailable && payload.breeder_id !== undefined && _isMissingBreederIdError(res.status, body)) {
+        _rankingBreederIdUnavailable = true;
+        rankingLog(requestId, 'breeder-id-column-missing', {
+          status: res.status
+        });
+        const {
+          breeder_id,
+          ...withoutBreederId
+        } = payload;
+        return sbInsertRhythmScore(withoutBreederId);
+      }
       const error = new Error(`rhythm ranking insert ${res.status}: ${body || res.statusText}`);
       error.status = res.status;
       error.body = body;
@@ -16755,6 +16827,20 @@ const sbFetchRhythmRankings = async (difficultyKeys, limit = RHYTHM_RANKING_FETC
     clearTimeout(timer);
   }
 };
+
+// 検査(tools/ranking/rhythm-breeder-id-check.js)からモンビーの送信だけを直接叩けるようにする。
+// 「breeder_id の列がまだ無い環境でもスコアが保存できること」は、実際に1曲遊ばないと通らない
+// 経路だと確かめるのに何分もかかるうえ、落ちたときの被害(記録が1件も残らない)が大きい。
+// 読み出し専用の参照を足すだけで、ゲーム側の動きは何も変わらない(sbInsertScore と同じ扱い)。
+try {
+  if (typeof window !== 'undefined') window.__mhTestHooks = {
+    ...(window.__mhTestHooks || {}),
+    sbInsertRhythmScore,
+    ensureBreederId,
+    rankingBreederIdUnavailable,
+    BREEDER_ID_KEY
+  };
+} catch {}
 
 // 難易度に依存しない周回開始処理。Normalだけ前周のclear_idや送信ロックを引き継ぐ
 // 分岐が生まれないよう、タイトル復帰と再挑戦の両方からこの1か所を呼ぶ。
@@ -29989,6 +30075,11 @@ function MonsterHeroGame() {
     // partyは既存モードと同じ「配列」の形で送る(種族チャレンジ等が常に配列で送っているため、
     // rankingsテーブル側に配列前提のスキーマ制約があっても衝突しないようにする防御)。
     // 読み出し側(rhythmRankingEntryFromRow)もこの配列の先頭要素をdetailとして読む
+    //
+    // breeder_id は「同じ名前の別人」を見分けるためのID(docs/spec/RHYTHM_RANKING.md §4)。
+    // 作れなかったとき(保存が止まっている等)は null が返るので、その場合は付けずに送る
+    // =これまでどおりの動きになる。列がまだ無い環境も sbInsertRhythmScore 側で吸収する
+    const breederId = await ensureBreederId();
     const row = {
       difficulty: difficultyKey,
       user_name: breederName || '名無しのブリーダー',
@@ -29997,7 +30088,10 @@ function MonsterHeroGame() {
       score: Number(result.score) || 0,
       level: breederLevel.level,
       icon: breederIcon,
-      clear_id: createRunId()
+      clear_id: createRunId(),
+      ...(breederId ? {
+        breeder_id: breederId
+      } : {})
     };
     const outcome = await persistRankingScore({
       row,

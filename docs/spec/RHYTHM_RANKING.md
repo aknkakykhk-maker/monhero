@@ -11,8 +11,17 @@
   「未確定事項」は、この文書へ引き継いだ。あちらは経緯として残し、
   **確定内容の参照先はこの文書**とする
 
-> この文書は仕様だけを決めたもので、**2026-09-11 時点でコードは1行も書いていない**。
-> 実装は §12 のフェーズ順に進める。
+> **実装状況**（2026-09-11）
+>
+> | フェーズ | 状態 |
+> | --- | --- |
+> | 1. `breeder_id` を送り始める | **実装済み**（SQLの適用待ち。§4・§12） |
+> | 2. ブリーダー別 全曲合算ランキング | 未着手 |
+> | 3. 週間ランキング（報酬なし） | 未着手 |
+> | 4. 報酬と期間限定イベント | 未着手 |
+>
+> フェーズ1はアプリ側を先に出してある。`breeder_id`の列がまだ無いあいだは自動でIDを外して
+> 送るため、**SQLの適用が後になっても記録は落ちない**（IDが付かないだけ）。
 
 ---
 
@@ -173,7 +182,25 @@ alter table public.rankings add column if not exists breeder_id text;
 ただし現行も名前を自由に名乗れるので、**水準は下がらない（むしろ上がる）**。
 `RHYTHM_MODE.md` §9.5 の「既存モードと同じ水準」をそのまま引き継ぐ。
 
-### 4.7 適用範囲
+### 4.7 実装（2026-09-11・アプリ側は公開済み）
+
+| ところ | 中身 |
+| --- | --- |
+| `26-supabase.jsx` | `BREEDER_ID_KEY` / `createBreederId` / `ensureBreederId`、列が無い環境の判定（`_isMissingBreederIdError`）と送り直し |
+| `60-app.jsx` | 曲を終えたときの送信で `ensureBreederId()` を呼び、取れたときだけ `breeder_id` を付ける |
+| SQL | [`../sql/rankings/BREEDER_ID_APPLY.sql`](../sql/rankings/BREEDER_ID_APPLY.sql)（予行演習版・確認版・iPhone手順つき） |
+| 検査 | `tools/mode/rhythm-breeder-id-check.js` |
+
+検査は実際に関数を動かして、次を確かめている。
+
+- 初回にIDを作って保存し、2回目からは同じIDを返す（作り直さない）
+- 保存が止まっているときは `null` を返し、**その場かぎりのIDを送らない**
+- 列が無ければ `breeder_id` を外して送り直し、**スコアは必ず保存される**
+- 送り直しでも同じ `clear_id` を使う（重複行を作らない）
+- `breeder_id` と関係のない 400 では送り直さない（失敗を握りつぶさない）
+- 既存モードの送信（`sbInsertScore`）に `breeder_id` を足していない
+
+### 4.8 適用範囲
 
 - 列は `rankings` 全体へ足すが、**送るのはまずモンビーの送信経路だけ**（`sbInsertRhythmScore`）。
   既存モードの送信（`sbInsertScore`）は今回触らない
@@ -650,16 +677,18 @@ grant execute on function public.rhythm_event_song_bests(text[], timestamptz, ti
 
 小さく切って、それぞれで公開まで通す。
 
-### フェーズ1 — `breeder_id` を送り始める
+### フェーズ1 — `breeder_id` を送り始める（**実装済み・2026-09-11**）
 
-1. `docs/sql/rankings/` へ `breeder_id` 列を足す適用SQL・確認SQL・iPhone手順を用意する（§4.3）
-2. ユーザーが Supabase の画面から適用する
-3. `mh_breeder_id_v1` を作り、モンビーの送信（`sbInsertRhythmScore`）へ `breeder_id` を足す。
-   列が無い環境でも通るフォールバック付き
-4. 画面の見た目は変わらない。**早く始めるほど、IDの付いた記録が貯まる**
+1. ✅ `docs/sql/rankings/BREEDER_ID_*.sql` と iPhone 手順を用意（§4.3）
+2. ⬜ **ユーザーが Supabase の画面から適用する**（残っているのはここだけ）
+3. ✅ `mh_breeder_id_v1` を作り、モンビーの送信へ `breeder_id` を足した。
+   列が無い環境でも通るフォールバック付き（§4.7）
+4. ✅ 画面の見た目は変わらない
 
-> このフェーズを先にやるのは、合算の正しさがIDの有無で決まるため。
+> このフェーズを先にやったのは、合算の正しさがIDの有無で決まるため。
 > 公開が1日でも早ければ、その日ぶんの記録にIDが付く。
+> **SQLを適用するまではIDが付かない**（記録そのものは今までどおり残る）ので、
+> 合算ランキング（フェーズ2）を作る前に適用しておく。
 
 ### フェーズ2 — ブリーダー別 全曲合算ランキング（常設）
 
@@ -686,6 +715,9 @@ grant execute on function public.rhythm_event_song_bests(text[], timestamptz, ti
 
 フェーズ2は**いまのデータのまま動く**（過去のプレイもそのまま合算に載る。§4.4）。
 フェーズ3以降は、開始した週からの記録で走り出す。
+
+> フェーズ2以降の集計SQLは、フェーズ1の `BREEDER_ID_APPLY.sql` とは別に用意する。
+> 1回のSQLへ詰め込むと、失敗したときにどこまで進んだのか分からなくなるため。
 
 ---
 
