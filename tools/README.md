@@ -95,6 +95,12 @@ node tools/build.js --check
 | `node boot/soul-rank-backup-check.js` | 既存`.mhsave`バックアップの実関数を使い、魂格段階・最高初到達Lv・魂格特性、勇者の証、魂格再編の書がエンコード→デコード→復元で完全一致することを確認する。 |
 | `node ui/screen-effects-check.js` | 画面ライフサイクルの登録簿(`useScreenEffects`)の約束ごとを固定する。偽のタイマーを入れて実際に動かし、画面を離れたときに「画面専用は止まる / 進行は止まらない」ことと、種別を書き忘れたときに止めない側へ倒れることを見る。あわせて `docs/refactor/SCREEN_EFFECTS_MAP.md` の目印が `60-app.jsx` にちょうど1つあり、表の件数が本体の `setTimeout` の数と一致することを突き合わせる(表が古くなると落ちる)。 |
 | `node ui/screen-effects-browser-check.js` | 同じ hook を本物の React で動かし、画面を移ったとき・アンマウントしたときの止まりかたを実ブラウザで確かめる。「新しい画面が登録したタイマーを古い画面の後始末が止めてしまう」類は React の実行順そのものなので、実物でしか出ない。 |
+> **画面の中身を探す検査を書くときは `harness.js` の `readAppSource()` を使う。**
+> STEP 6 で画面は `60-app.jsx` から `5x-screen-*.jsx` へ1つずつ移っていくため、
+> `60-app.jsx` を直接読むと、見ている画面が移った瞬間に何も見つけられなくなる
+> (静かに対象外になるほうが、落ちるより厄介)。`readAppSource()` は本体と
+> 切り出した画面をつないだ文字列を返す。
+
 | `node ui/screen-parts-check.js` | MonsterHeroGame から切り出した画面部品(`51-screen-*.jsx`)の型を固定する。画面が `gameState` を直接読まないこと・`setGameState` を直接呼ばないこと(遷移は props で受け取る)・連結順が `60-app.jsx` より前であること・実際に呼ばれていることを見る。STEP 6 で 13 画面を切り出す間、1画面目で決めた型が崩れないようにするためのもの。 |
 | `node boot/screen-error-boundary-check.js` | 画面の描画で例外が出ても真っ白にならず「ホームへ戻る」が出ること(`MhErrorBoundary`)を確かめる。ソースで2段の境界とデバッグ設定の入口を見たあと、実ブラウザでデバッグ設定の「画面エラーの受け止めを試す」を押し、受け止め画面 → ホームへ戻る、を通す。 |
 | `node boot/mission-gift-badge-check.js` | ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、ランキングのタブ分離を確認する。 |
