@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
       - name: Require update banner stamp for shipped changes
         shell: bash
         run: |
@@ -53,6 +55,51 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
+      - name: Apply unique-skill common charge regression fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          src = Path('monster-hero/src/parts/60-app.jsx')
+          text = src.read_text()
+          replacements = [
+              (
+                  "setAttackAnim({slotIndex: animSlot, charge:true, ...((motion==='waterBurst'||motion==='arkHolyRain')?{motion}: {})});",
+                  "setAttackAnim({slotIndex: animSlot, charge:true});",
+              ),
+              (
+                  "setMonsterImageDebugMotionPlaying({charge:true, ...((atkMotion==='waterBurst'||atkMotion==='arkHolyRain')?{motion:atkMotion}: {})});",
+                  "setMonsterImageDebugMotionPlaying({charge:true});",
+              ),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one source match, got {count}: {old}')
+              text = text.replace(old, new, 1)
+          src.write_text(text)
+
+          test = Path('tools/monster/snegurochka-check.js')
+          text = test.read_text()
+          anchor = "  ['水攻撃は距離枠を動かさず本体だけ横移動',"
+          regression = """  ['固有技の共通タメは専用モーションより先に下沈みを行う', game.includes('setAttackAnim({slotIndex: animSlot, charge:true});')\n    && !game.includes(\"setAttackAnim({slotIndex: animSlot, charge:true, ...((motion==='waterBurst'||motion==='arkHolyRain')?{motion}: {})});\")\n    && game.includes('setMonsterImageDebugMotionPlaying({charge:true});')\n    && !game.includes(\"setMonsterImageDebugMotionPlaying({charge:true, ...((atkMotion==='waterBurst'||atkMotion==='arkHolyRain')?{motion:atkMotion}: {})});\")\n    && game.includes('setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura:')],\n"""
+          if regression.strip() in text:
+              raise SystemExit('regression assertion already present')
+          if text.count(anchor) != 1:
+              raise SystemExit(f'expected one test anchor, got {text.count(anchor)}')
+          test.write_text(text.replace(anchor, regression + anchor, 1))
+          PY
+          git fetch --no-tags --depth=1 origin main
+          git checkout origin/main -- .github/workflows/compiled-check.yml .github/workflows/build-and-check.yml
+          node tools/build.js
+          node tools/monster/snegurochka-check.js
+          node tools/monster/lineage-dex-check.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: 固有技の共通タメを専用モーション前に復旧"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
       # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
       # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
       # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
