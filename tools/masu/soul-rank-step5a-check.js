@@ -1,9 +1,9 @@
 // 魂格 STEP5A「合体継承」の回帰検査。
 // 正式ビルド後: node tools/masu/soul-rank-step5a-check.js
-const fs=require('fs'),path=require('path');
-const {REPO_ROOT,loadDyeModule}=require('../harness');
+const {loadDyeModule,readAppSource}=require('../harness');
 const api=loadDyeModule();
-const app=fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/60-app.jsx'),'utf8');
+// 合体画面は 66-screen-masu-fusion.jsx へ切り出したので、本体と画面の両方を通して見る
+const app=readAppSource();
 let failed=0;const ck=(n,o)=>{console.log(`${o?'OK':'NG'}: ${n}`);if(!o)failed++;};
 const make=(id,stage,levelCap,maxReached,traits={})=>api.normalizeMasuProgression({
   id,baseId:'Mocchi',name:id,transcended:true,soulRankStage:stage,levelCap,
