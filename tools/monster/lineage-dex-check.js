@@ -46,8 +46,8 @@ vm.runInContext([
 ].join('\n'), ctx);
 const A = ctx.api;
 const monsters = A.dexMonsterList();
-check('アークだけ聖光専用モーションへ分離し、イブリースはfloatStabを維持',
-  A.ALL_PLAYER_MONSTERS.Ark?.atkMotion === 'arkHolyRain' && A.ALL_PLAYER_MONSTERS.Iblis?.atkMotion === 'floatStab');
+check('アーク種はアーク・イブリースとも聖光専用モーションを共有',
+  A.ALL_PLAYER_MONSTERS.Ark?.atkMotion === 'arkHolyRain' && A.ALL_PLAYER_MONSTERS.Iblis?.atkMotion === 'arkHolyRain');
 
 // ---------- ① 血統がすべて揃っている ----------
 check('図鑑にモンスターが並ぶ', monsters.length > 0, `${monsters.length}体`);
