@@ -9845,7 +9845,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               onTouchStart={e=>{dexSwipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
               onTouchEnd={e=>{const from=dexSwipeRef.current; dexSwipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
               {unlocked
-                ? <BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim} compact/>
+                ? <BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
                 : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
               <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
               <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
