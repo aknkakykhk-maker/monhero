@@ -24,8 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
       - name: Require update banner stamp for shipped changes
         shell: bash
         run: |
@@ -58,6 +56,8 @@ jobs:
       - name: Apply unique-skill common charge regression fix
         shell: bash
         run: |
+          git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.head.ref }}"
+          git checkout -B "${{ github.event.pull_request.head.ref }}" "origin/${{ github.event.pull_request.head.ref }}"
           python3 - <<'PY'
           from pathlib import Path
 
