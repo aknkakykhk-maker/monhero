@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9b220e6efbf2b6b8
+// generated-sha256: f87b666a46418a04
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -8789,7 +8789,13 @@ const PandoraDualThunder = ({image, compact=false}) => (
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
 const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
   if(anim?.motion==='pandoraDualThunder') {
-    return <div className="relative h-full w-full" style={{isolation:'isolate'}}><PandoraDualThunder image={image} compact={compact}/></div>;
+    return (
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+        <span style={compact?undefined:{display:'block',transform:'scale(2.15)',transformOrigin:'center'}}>
+          <PandoraDualThunder image={image} compact={compact}/>
+        </span>
+      </div>
+    );
   }
   return (
     <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(anim)}}>
@@ -21720,7 +21726,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               onTouchStart={e=>{dexSwipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
               onTouchEnd={e=>{const from=dexSwipeRef.current; dexSwipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
               {unlocked
-                ? <BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim} compact/>
+                ? <BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
                 : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
               <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
               <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
