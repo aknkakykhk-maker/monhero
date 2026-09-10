@@ -310,6 +310,184 @@ const createAnimationStyle = () => {
         100% { opacity:0; transform:scale(1.35); }
       }
     }
+    /* ミーアの歌攻撃(miaSongNotes)。
+       距離枠は動かさず、本体だけが少し前へ出てリズムを取り、手前にマイクスタンドを出して
+       音符を4つ時間差で敵へ飛ばす。追加画像は使わず、攻撃中だけ出るCSS要素で
+       マイク・音符・着弾の音の輪を描く(終わるとDOMごと消える)。
+       大きさは枠に対する%で決めてあるので、バトル(64px)・図鑑・デバッグのどの枠でも同じ見え方になる。 */
+    .mia-song-notes { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:26; isolation:isolate; }
+    .mia-song-notes__monster {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:4;
+      transform-origin:50% 78%; will-change:transform,filter;
+      animation:miaSongSing 760ms cubic-bezier(.22,.72,.24,1) forwards;
+    }
+    .mia-song-notes--lunge .mia-song-notes__monster { animation-name:miaSongSingLunge; }
+    .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongCharge 650ms cubic-bezier(.2,.72,.2,1) forwards; }
+    /* タメ(固有技の共通の下沈み)のあいだは歌わない。マイクも音符も着弾も出さない */
+    .mia-song-notes--charging .mia-song-notes__mic,
+    .mia-song-notes--charging .mia-song-notes__notes,
+    .mia-song-notes--charging .mia-song-notes__stage,
+    .mia-song-notes--charging .mia-song-notes__impact { display:none; }
+    @keyframes miaSongCharge {
+      0% { transform:translate3d(0,0,0) scale(1); filter:drop-shadow(0 0 5px rgba(244,114,182,.45)); }
+      55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(236,72,153,.92)) drop-shadow(0 10px 20px rgba(168,85,247,.6)); }
+      100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(217,70,239,.82)); }
+    }
+    /* 歌う本体。少し前(上)へ出て、上下と左右で拍を取ってから元位置へ戻る */
+    @keyframes miaSongSing {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(244,114,182,.5)); }
+      12% { transform:translate3d(0,-9px,0) scale(1.05) rotate(0deg); filter:drop-shadow(0 0 16px rgba(244,114,182,.92)); }
+      28% { transform:translate3d(-7px,-3px,0) scale(1.03) rotate(-4deg); filter:drop-shadow(0 0 20px rgba(236,72,153,.95)); }
+      44% { transform:translate3d(7px,-13px,0) scale(1.07) rotate(4deg); filter:drop-shadow(0 0 24px rgba(255,255,255,.96)); }
+      60% { transform:translate3d(-6px,-4px,0) scale(1.03) rotate(-3deg); filter:drop-shadow(0 0 20px rgba(192,132,252,.94)); }
+      76% { transform:translate3d(6px,-11px,0) scale(1.06) rotate(3deg); filter:drop-shadow(0 0 22px rgba(244,114,182,.9)); }
+      90% { transform:translate3d(0,-4px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
+    }
+    /* 固有技のタメ明け。沈んだ位置から立ち上がり、通常より大きく歌う */
+    @keyframes miaSongSingLunge {
+      0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.95)); }
+      14% { transform:translate3d(0,-14px,0) scale(1.12) rotate(0deg); filter:drop-shadow(0 0 30px rgba(255,255,255,.98)); }
+      30% { transform:translate3d(-10px,-5px,0) scale(1.08) rotate(-6deg); filter:drop-shadow(0 0 26px rgba(236,72,153,.98)); }
+      46% { transform:translate3d(10px,-18px,0) scale(1.13) rotate(6deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
+      62% { transform:translate3d(-8px,-6px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(0 0 27px rgba(192,132,252,.98)); }
+      78% { transform:translate3d(8px,-15px,0) scale(1.1) rotate(4deg); filter:drop-shadow(0 0 25px rgba(244,114,182,.94)); }
+      92% { transform:translate3d(0,-5px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+    }
+    /* 足元のステージ光。床に置いた光の輪を2つ、拍に合わせて広げる */
+    .mia-song-notes__stage { position:absolute; inset:0; z-index:2; overflow:visible; }
+    .mia-song-notes__stage i {
+      position:absolute; left:50%; top:76%; width:46%; height:14%; margin-left:-23%; opacity:0;
+      border:2px solid rgba(249,168,212,.9); border-radius:50%;
+      box-shadow:0 0 10px rgba(236,72,153,.9), inset 0 0 8px rgba(255,255,255,.7);
+      will-change:transform,opacity; animation:miaSongStage 380ms ease-out forwards;
+    }
+    .mia-song-notes__stage i:nth-child(1) { animation-delay:60ms; }
+    .mia-song-notes__stage i:nth-child(2) { animation-delay:340ms; }
+    @keyframes miaSongStage {
+      0% { opacity:0; transform:scale(.4); }
+      26% { opacity:1; }
+      100% { opacity:0; transform:scale(1.9,1.15); }
+    }
+    /* マイクスタンド。ミーアの手前・やや左に立て、本体は隠さない */
+    .mia-song-notes__mic {
+      position:absolute; left:11%; bottom:2%; width:21%; height:56%; z-index:6;
+      opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
+      animation:miaSongMicPop 760ms cubic-bezier(.2,1.4,.36,1) forwards;
+    }
+    @keyframes miaSongMicPop {
+      0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
+      9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
+      16% { transform:translate3d(0,0,0) scale(.96); }
+      24%,84% { opacity:1; transform:translate3d(0,0,0) scale(1); }
+      100% { opacity:0; transform:translate3d(0,6px,0) scale(.82); }
+    }
+    .mia-song-notes__mic-head {
+      position:absolute; left:50%; top:0; width:100%; height:34%; margin-left:-50%;
+      border-radius:50% 50% 46% 46%;
+      background:radial-gradient(circle at 34% 28%,#fff 0 14%,#e2e8f0 32%,#94a3b8 62%,#475569 100%);
+      border:1px solid rgba(255,255,255,.9);
+      box-shadow:0 0 9px rgba(244,114,182,.95),0 0 18px rgba(236,72,153,.7);
+    }
+    .mia-song-notes__mic-pole {
+      position:absolute; left:50%; top:30%; width:14%; height:64%; margin-left:-7%;
+      border-radius:999px;
+      background:linear-gradient(90deg,#64748b,#f1f5f9 42%,#cbd5e1 62%,#475569);
+      box-shadow:0 0 7px rgba(226,232,240,.75);
+    }
+    .mia-song-notes__mic-base {
+      position:absolute; left:50%; bottom:0; width:150%; height:11%; margin-left:-75%;
+      border-radius:50%;
+      background:linear-gradient(180deg,#e2e8f0,#475569);
+      box-shadow:0 0 10px rgba(236,72,153,.8);
+    }
+    /* 敵へ飛ぶ音符。4つを時間差・別々の高さと大きさで流す */
+    .mia-song-notes__notes { position:absolute; inset:0; overflow:visible; z-index:7; }
+    .mia-song-notes__note {
+      position:absolute; top:38%; opacity:0; font-style:normal; font-weight:900; line-height:1;
+      text-shadow:0 0 6px #fff,0 0 14px rgba(236,72,153,.95),0 0 26px rgba(168,85,247,.75);
+      will-change:transform,opacity; animation:miaSongNoteFly 460ms cubic-bezier(.14,.72,.22,1) forwards;
+    }
+    /* 音符のうしろに残る短い光の尾 */
+    .mia-song-notes__note::after {
+      content:''; position:absolute; left:50%; top:58%; width:.22em; height:1.1em; transform:translateX(-50%);
+      border-radius:999px;
+      background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(244,114,182,.55) 40%,transparent);
+      filter:blur(.6px); z-index:-1;
+    }
+    @keyframes miaSongNoteFly {
+      0% { opacity:0; transform:translate3d(-50%,14px,0) rotate(0deg) scale(.45); }
+      15% { opacity:1; transform:translate3d(-50%,0,0) rotate(calc(var(--mia-note-spin) * .3)) scale(1.05); }
+      70% { opacity:1; transform:translate3d(calc(-50% + var(--mia-note-x)),calc(var(--mia-note-y) * .78),0) rotate(var(--mia-note-spin)) scale(1.18); }
+      100% { opacity:0; transform:translate3d(calc(-50% + var(--mia-note-x)),var(--mia-note-y),0) rotate(var(--mia-note-spin)) scale(.82); }
+    }
+    /* 敵側の着弾。音の輪を2度ひろげ、光とキラキラで当たったことを分かるようにする */
+    .mia-song-notes__impact {
+      position:absolute; left:50%; top:-92px; width:30px; height:30px; margin:-15px 0 0 -15px; z-index:8;
+    }
+    .mia-song-notes__impact-core {
+      position:absolute; inset:-52px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle,rgba(255,255,255,1) 0 8%,rgba(251,207,232,.98) 18%,rgba(236,72,153,.66) 36%,rgba(168,85,247,.34) 54%,rgba(168,85,247,0) 76%);
+      filter:blur(.4px); animation:miaSongImpactCore 760ms ease-out forwards;
+    }
+    @keyframes miaSongImpactCore {
+      0%,40% { opacity:0; transform:scale(.2); }
+      46% { opacity:1; transform:scale(.7); }
+      62% { opacity:1; transform:scale(1.25); }
+      82% { opacity:.72; transform:scale(1.75); }
+      100% { opacity:0; transform:scale(2.2); }
+    }
+    .mia-song-notes__impact-ring {
+      position:absolute; inset:-22px; border:4px solid rgba(253,242,248,.96); border-radius:50%; opacity:0;
+      box-shadow:0 0 12px #fff,0 0 24px rgba(236,72,153,.95),0 0 40px rgba(168,85,247,.7);
+      animation:miaSongImpactRing 340ms ease-out forwards; animation-delay:400ms;
+    }
+    .mia-song-notes__impact-ring--late { animation-delay:600ms; border-color:rgba(233,213,255,.94); }
+    @keyframes miaSongImpactRing {
+      0% { opacity:0; transform:scale(.3); }
+      24% { opacity:1; transform:scale(.9); }
+      100% { opacity:0; transform:scale(2.15); }
+    }
+    .mia-song-notes__spark {
+      position:absolute; left:50%; top:50%; margin:-3px 0 0 -3px; opacity:0; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 34%,rgba(244,114,182,.95) 62%,rgba(168,85,247,0) 100%);
+      box-shadow:0 0 8px rgba(255,255,255,.95);
+      animation:miaSongSpark 300ms ease-out forwards; animation-delay:calc(455ms + var(--mia-spark-delay));
+    }
+    @keyframes miaSongSpark {
+      0% { opacity:0; transform:translate3d(0,0,0) scale(.4); }
+      22% { opacity:1; transform:translate3d(calc(var(--mia-spark-x) * .4),calc(var(--mia-spark-y) * .4),0) scale(1.1); }
+      100% { opacity:0; transform:translate3d(var(--mia-spark-x),var(--mia-spark-y),0) scale(.5); }
+    }
+    /* 動きを減らす設定のときは、移動を抑えて光と音符の淡い上昇だけにする */
+    @media (prefers-reduced-motion: reduce) {
+      .mia-song-notes__monster,
+      .mia-song-notes--lunge .mia-song-notes__monster,
+      .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongReduced 760ms ease-out forwards; }
+      .mia-song-notes__mic { animation:miaSongMicReduced 760ms ease-out forwards; }
+      .mia-song-notes__note { animation:miaSongNoteReduced 460ms ease-out forwards; }
+      .mia-song-notes__stage i, .mia-song-notes__spark { display:none; }
+      .mia-song-notes__impact-ring { animation:miaSongImpactRingReduced 340ms ease-out forwards; }
+      @keyframes miaSongReduced {
+        0% { filter:drop-shadow(0 0 4px rgba(244,114,182,.35)); }
+        45% { filter:drop-shadow(0 0 24px rgba(236,72,153,.95)); }
+        100% { filter:none; }
+      }
+      @keyframes miaSongMicReduced {
+        0% { opacity:0; } 12%,84% { opacity:1; } 100% { opacity:0; }
+      }
+      @keyframes miaSongNoteReduced {
+        0% { opacity:0; transform:translate3d(-50%,4px,0) scale(.7); }
+        35% { opacity:1; }
+        100% { opacity:0; transform:translate3d(-50%,-28px,0) scale(1); }
+      }
+      @keyframes miaSongImpactRingReduced {
+        0% { opacity:0; transform:scale(.6); }
+        30% { opacity:.9; transform:scale(1); }
+        100% { opacity:0; transform:scale(1.4); }
+      }
+    }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
        常時アニメーションを増やさないため、@keyframes は1本・要素は12枚に固定してある。
        transform と opacity だけを動かすので、低性能端末でもレイアウトを作り直さない。 */

@@ -420,8 +420,11 @@ const rpgResolveStep = (battle, varianceOn, rng = rpgDefaultRng) => {
 //
 // どのモーションを使うかは、通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion で決める。
 // RPG用にモーションのデータを別に持たないので、モンスターを足しても更新漏れが起きない。
-const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', arkHolyRain:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', kenshiTwinBlade:'Dash', pandoraDualThunder:'Thunder' });
+// ミーアの歌攻撃(miaSongNotes)は、その場から飛び道具を撃つ動きが waterBurst と同じなので
+// RPG画面では 'Water' の縮小版モーションを共用する(RPG専用のモーションデータは増やさない)。
+const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', arkHolyRain:'Float', waterBurst:'Water', miaSongNotes:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', kenshiTwinBlade:'Dash', pandoraDualThunder:'Thunder' });
 const WATER_BURST_MOTION_MS = 680;
+const MIA_SONG_NOTES_MOTION_MS = 760;
 const ARK_HOLY_RAIN_MOTION_MS = 900;
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = (anim) => {
@@ -434,6 +437,8 @@ const attackMotionAnimation = (anim) => {
   // アークの聖光攻撃も距離枠は固定し、ArkHolyRainMotion 内で本体の浮遊と光だけを描く。
   // イブリースの floatStab は従来どおり残す。
   if (anim.motion==='arkHolyRain') return undefined;
+  // ミーアの歌攻撃も距離枠は動かさない。MiaSongNotesMotion 内で本体・マイク・音符だけを動かす。
+  if (anim.motion==='miaSongNotes') return undefined;
   // エイキはザンと同じ高速斬撃の動き(zanComboDash)をそのまま使う。
   // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
   // 剣士モッチーは敵まで高速で斬り込み、二度通り抜けてX字を完成させる専用モーション。
@@ -456,7 +461,7 @@ const attackMotionPreviewSequence = (atkMotion='default') => {
   ];
   return [{
     anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
-    ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))),
+    ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)))),
   }];
 };
 const rpgMotionName = (side, monId, isSkill) => {

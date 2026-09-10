@@ -182,6 +182,58 @@ const WaterBurstMotion = ({image, lunge=false, charging=false, compact=false}) =
     </span>
   </span>
 );
+// ミーア専用の歌攻撃演出。
+// 距離枠は動かさず、本体だけが少し前へ出てリズムを取り、前へマイクスタンドを出して
+// 音符を4つ時間差で敵へ飛ばす。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
+// 固定数のCSS要素で描く(常時アニメーションにはしない)。
+// スマホの縦画面でも「歌って攻撃している」と一目で分かるよう、マイクは本体の手前・
+// やや左に置いて本体を隠さず、音符は大きさと高さをばらして4つ流す。
+const MIA_SONG_NOTES = Object.freeze([
+  { glyph:'♪', left:'36%', delay:'90ms',  x:'20px',  y:'-126px', size:'26px', spin:'-18deg', color:'#f9a8d4' },
+  { glyph:'♬', left:'52%', delay:'185ms', x:'-4px',  y:'-142px', size:'33px', spin:'14deg',  color:'#c4b5fd' },
+  { glyph:'♫', left:'66%', delay:'275ms', x:'-24px', y:'-120px', size:'24px', spin:'-12deg', color:'#fda4af' },
+  { glyph:'♩', left:'45%', delay:'365ms', x:'10px',  y:'-136px', size:'29px', spin:'20deg',  color:'#a5f3fc' },
+]);
+const MIA_SONG_SPARKLES = Object.freeze([
+  { x:'-70px', y:'-30px', delay:'0ms',  size:'8px' },
+  { x:'-46px', y:'-64px', delay:'22ms', size:'6px' },
+  { x:'-14px', y:'-78px', delay:'12ms', size:'9px' },
+  { x:'26px',  y:'-72px', delay:'30ms', size:'7px' },
+  { x:'58px',  y:'-44px', delay:'18ms', size:'9px' },
+  { x:'72px',  y:'6px',   delay:'36ms', size:'6px' },
+  { x:'-62px', y:'14px',  delay:'28ms', size:'7px' },
+  { x:'4px',   y:'22px',  delay:'42ms', size:'6px' },
+]);
+const MiaSongNotesMotion = ({image, lunge=false, charging=false, compact=false}) => (
+  <span className={`mia-song-notes${lunge?' mia-song-notes--lunge':''}${charging?' mia-song-notes--charging':''}${compact?' mia-song-notes--compact':''}`}>
+    <span className="mia-song-notes__stage" aria-hidden="true"><i/><i/></span>
+    <span className="mia-song-notes__monster">{image}</span>
+    <span className="mia-song-notes__mic" aria-hidden="true">
+      <i className="mia-song-notes__mic-head"/>
+      <i className="mia-song-notes__mic-pole"/>
+      <i className="mia-song-notes__mic-base"/>
+    </span>
+    <span className="mia-song-notes__notes" aria-hidden="true">
+      {MIA_SONG_NOTES.map((note,index)=>(
+        <i key={`note-${index}`} className="mia-song-notes__note" style={{
+          left:note.left, animationDelay:note.delay, fontSize:note.size, color:note.color,
+          '--mia-note-x':note.x, '--mia-note-y':note.y, '--mia-note-spin':note.spin,
+        }}>{note.glyph}</i>
+      ))}
+    </span>
+    <span className="mia-song-notes__impact" aria-hidden="true">
+      <i className="mia-song-notes__impact-core"/>
+      <i className="mia-song-notes__impact-ring"/>
+      <i className="mia-song-notes__impact-ring mia-song-notes__impact-ring--late"/>
+      {MIA_SONG_SPARKLES.map((spark,index)=>(
+        <i key={`spark-${index}`} className="mia-song-notes__spark" style={{
+          width:spark.size, height:spark.size,
+          '--mia-spark-x':spark.x, '--mia-spark-y':spark.y, '--mia-spark-delay':spark.delay,
+        }}/>
+      ))}
+    </span>
+  </span>
+);
 const PandoraDualThunder = ({image, compact=false}) => (
   <span className={`pandora-dual-thunder${compact?' pandora-dual-thunder--compact':''}`} aria-hidden="true">
     <span className="pandora-dual-center">{React.cloneElement(image,{alt:''})}</span>
@@ -205,6 +257,13 @@ const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
     return (
       <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
         <WaterBurstMotion image={image} lunge={anim?.charge===false} charging={anim?.charge===true} compact={compact}/>
+      </div>
+    );
+  }
+  if(anim?.motion==='miaSongNotes') {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+        <MiaSongNotesMotion image={image} lunge={anim?.charge===false} charging={anim?.charge===true} compact={compact}/>
       </div>
     );
   }

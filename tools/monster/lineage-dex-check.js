@@ -248,10 +248,12 @@ check('図鑑プレビューは本番と同じモーション描画を使う',
   && source.includes('<ArkHolyRainMotion image={image}')
   && source.includes("anim?.motion==='waterBurst'")
   && source.includes('<WaterBurstMotion image={image}')
+  && source.includes("anim?.motion==='miaSongNotes'")
+  && source.includes('<MiaSongNotesMotion image={image}')
   && source.includes("anim?.motion==='pandoraDualThunder'")
   && source.includes('<PandoraDualThunder image={image} compact={compact}/>'));
 {
-  const previewCtx={WATER_BURST_MOTION_MS:680,ARK_HOLY_RAIN_MOTION_MS:900};
+  const previewCtx={WATER_BURST_MOTION_MS:680,ARK_HOLY_RAIN_MOTION_MS:900,MIA_SONG_NOTES_MOTION_MS:760};
   vm.createContext(previewCtx);
   vm.runInContext(slice('const attackMotionPreviewSequence =', 'const rpgMotionName =')
     + '\nglobalThis.preview=attackMotionPreviewSequence;', previewCtx);

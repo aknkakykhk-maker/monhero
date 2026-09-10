@@ -729,7 +729,7 @@ const motionMap = (source.match(/const RPG_MOTION_BY_ATK = Object\.freeze\(\{([^
 check('モーションの種類は通常バトルと同じ atkMotion から決める',
   !!motionMap && source.includes('RPG_MOTION_BY_ATK[ALL_PLAYER_MONSTERS[monId]?.atkMotion]'));
 check('既存モンスターの割り当ては変えていない',
-  ["default:'Attack'", "floatStab:'Float'", "arkHolyRain:'Float'", "waterBurst:'Water'", "zanCombo:'Dash'", "eikiSakuraCombo:'Dash'", "pandoraDualThunder:'Thunder'"]
+  ["default:'Attack'", "floatStab:'Float'", "arkHolyRain:'Float'", "waterBurst:'Water'", "miaSongNotes:'Water'", "zanCombo:'Dash'", "eikiSakuraCombo:'Dash'", "pandoraDualThunder:'Thunder'"]
     .every(pair => motionMap.includes(pair)), motionMap.trim());
 check('本編にある atkMotion がすべて対応表に載っている',
   atkMotionKinds.every(kind => motionMap.includes(`${kind}:`)),
