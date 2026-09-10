@@ -107,7 +107,13 @@ const PandoraDualThunder = ({image, compact=false}) => (
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
 const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
   if(anim?.motion==='pandoraDualThunder') {
-    return <div className="relative h-full w-full" style={{isolation:'isolate'}}><PandoraDualThunder image={image} compact={compact}/></div>;
+    return (
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+        <span style={compact?undefined:{display:'block',transform:'scale(2.15)',transformOrigin:'center'}}>
+          <PandoraDualThunder image={image} compact={compact}/>
+        </span>
+      </div>
+    );
   }
   return (
     <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(anim)}}>
