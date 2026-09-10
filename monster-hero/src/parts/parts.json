@@ -137,6 +137,10 @@
       "role": "画面: マスモン一覧(MASU_MONS)。一覧を出すだけで保存に触らない"
     },
     {
+      "file": "60a-screen-masu-regen-donation.jsx",
+      "role": "画面: 神殿の再生と寄付(MASU_REGENERATION / _DETAIL / MASU_DONATION と、その確認・結果)"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
