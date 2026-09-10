@@ -1718,10 +1718,16 @@ function MonsterHeroGame() {
     // partyは既存モードと同じ「配列」の形で送る(種族チャレンジ等が常に配列で送っているため、
     // rankingsテーブル側に配列前提のスキーマ制約があっても衝突しないようにする防御)。
     // 読み出し側(rhythmRankingEntryFromRow)もこの配列の先頭要素をdetailとして読む
+    //
+    // breeder_id は「同じ名前の別人」を見分けるためのID(docs/spec/RHYTHM_RANKING.md §4)。
+    // 作れなかったとき(保存が止まっている等)は null が返るので、その場合は付けずに送る
+    // =これまでどおりの動きになる。列がまだ無い環境も sbInsertRhythmScore 側で吸収する
+    const breederId = await ensureBreederId();
     const row = {
       difficulty: difficultyKey, user_name: breederName || '名無しのブリーダー', hero: difficulty.id,
       party: [detail], score: Number(result.score) || 0, level: breederLevel.level, icon: breederIcon,
       clear_id: createRunId(),
+      ...(breederId ? { breeder_id: breederId } : {}),
     };
     const outcome = await persistRankingScore({
       row, insertScore: sbInsertRhythmScore,

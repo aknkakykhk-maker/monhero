@@ -643,6 +643,12 @@ Rhythm-<songId>-<難易度id>   例: Rhythm-monster_hero_theme_candidate-HARD
   モンビー専用の`sbInsertRhythmScore` / `sbFetchRhythmRankings`を別に用意した
   (`src/game-system.jsx`)。既存モードのランキング送受信は無関係のまま。
 
+> **2026-09-11の追記**: 全曲合算ランキングのために、`rankings`へ`breeder_id`列を1つだけ
+> 足した（ユーザー判断。[`RHYTHM_RANKING.md`](RHYTHM_RANKING.md) §4）。既存行はNULLのままで、
+> 行の書き換えも移行もしていない。**上に書いた曲別ランキングの仕組み自体は何も変わっていない**
+> （`difficulty`列のキーで区別する点も、専用の送受信を分けている点もそのまま）。
+> 列がまだ無い環境では`breeder_id`を外して送り直すので、SQLの適用が後でも記録は落ちない。
+
 ### 難易度合算方式
 
 体験版で遊べる難易度(EASY/NORMAL/HARD、`RHYTHM_DEMO_DIFFICULTY_IDS`)のキーを
