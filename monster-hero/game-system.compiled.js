@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e8ff670f7536969
+// source-sha256: 7b0cacc14b29106d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9b220e6efbf2b6b8
+// generated-sha256: f87b666a46418a04
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -15338,14 +15338,20 @@ const BattleAttackMotionPreview = ({
 }) => {
   if (anim?.motion === 'pandoraDualThunder') {
     return /*#__PURE__*/React.createElement("div", {
-      className: "relative h-full w-full",
+      className: "relative h-full w-full flex items-center justify-center",
       style: {
         isolation: 'isolate'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: compact ? undefined : {
+        display: 'block',
+        transform: 'scale(2.15)',
+        transformOrigin: 'center'
       }
     }, /*#__PURE__*/React.createElement(PandoraDualThunder, {
       image: image,
       compact: compact
-    }));
+    })));
   }
   return /*#__PURE__*/React.createElement("div", {
     className: "relative h-full w-full",
@@ -36957,8 +36963,7 @@ function MonsterHeroGame() {
           mon: mon,
           alt: mon.name
         }),
-        anim: previewAnim,
-        compact: true
+        anim: previewAnim
       }) : /*#__PURE__*/React.createElement(DexMonsterArt, {
         mon: mon,
         alt: "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC",
