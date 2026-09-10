@@ -11,6 +11,7 @@
 | [`TARGET_ARCHITECTURE.md`](TARGET_ARCHITECTURE.md) | 目指す形(連結ビルドで複数ファイル、保存はキーごとの更新関数、1 画面 1 コンポーネント、画面単位のライフサイクル) | 設計に迷ったとき |
 | [`REFACTOR_MASTER_PLAN.md`](REFACTOR_MASTER_PLAN.md) | STEP 0〜10 の明細(目的・対象・変更内容・変更しないもの・依存・リスク・検査・完了条件)と着手順 | 次にやる PR を決めるとき |
 | [`BATTLE_DAMAGE_MAP.md`](BATTLE_DAMAGE_MAP.md) | 予測ダメージと実ダメージの分岐の対応表と、一本化の形(STEP 5 の作業表) | STEP 5 に着手するとき |
+| [`SCREEN_EFFECTS_MAP.md`](SCREEN_EFFECTS_MAP.md) | `setTimeout` 62 箇所を「画面専用 / 進行 / 対象外」に仕分けた表(STEP 6 の作業表)。移すときはここから引く | STEP 6 の画面切り出しに着手するとき |
 | [`EXECUTION_PLAN.md`](EXECUTION_PLAN.md) | STEP ごとの担当モデル(Sonnet 5 / Opus 5)と effort、切り出し順、コピペ用の指示文 | **新しいチャットを始めるとき** |
 | [`BASELINE_2026-09.md`](BASELINE_2026-09.md) | 変更前に全検査を回した結果(OK / NG の一覧と分類)。ここに無い NG が出たら「その変更で壊した」 | 検査が落ちたとき |
 
@@ -26,7 +27,8 @@
 | STEP 4 純関数の切り出し | 着手中 | 1本目: 共有層を節ごとに 21 部品へ分けた(移動のみ。完了) / 2本目: 純粋な部品 7 つを `parts.json` で `pure:true` と宣言し `boot/parts-purity-check.js` で守る(完了) / 3本目以降: 19(難易度)から保存処理を出す、jsx 側の表の移動 |
 | STEP 7 描画・キャッシュ | 着手中 | 1本目: 染め直した絵のキャッシュを 96 件の LRU に(完了。dataURL が無制限に溜まらない) / 2本目以降: 一覧行の `React.memo`、静的な `style={{}}` の定数化、CSS 静的化の準備 |
 | STEP 5 バトル計算 | 完了 | バトル領域の古い検査 7 本を現在形へ(完了)。分岐の対応表 `BATTLE_DAMAGE_MAP.md`(完了)。1本目: 乱数固定の一致検査 `battle/damage-parity-check.js`(完了。2,560 通り一致) / 2本目: ヒット列を純粋な部品の `buildAttackHits` + `ATTACK_COMBO_RULES` に一本化し、実処理と予測をそこへ差し替え(完了) / 3本目: あつの挑発(`stun_atsu`)も `mainCanCrit:false` で同じ関数へ(完了。旧新を同じ乱数列で 72,000 通り比較して一致)。予測表示の既知差(確定会心時にあつの挑発のメイン 1 発ぶん多く出る)もユーザー指示で解消(完了) |
-| STEP 6・8〜10 | 未着手 | |
+| STEP 6 画面の切り出し | 着手中 | 1本目: 画面ライフサイクルの登録簿 `useScreenEffects`(`src/parts/40-screen-effects.jsx`)を置いた(完了)。`setTimeout` 62 箇所を1本ずつ読み、**画面専用 16 / 進行 31 / 対象外 15** に仕分けて `SCREEN_EFFECTS_MAP.md` に残した。進行(処理中フラグの戻し・次の画面へ進む・`await` の resolve)を止めると操作不能になるため、種別を宣言してから登録する形にし、書き忘れは「止めない」側へ倒す。`ui/screen-effects-check.js`(登録簿の振る舞いと分類表の突き合わせ)と `ui/screen-effects-browser-check.js`(本物の React での止まりかた)で固定。この本では登録簿を置くだけで、既存のタイマーは1本も移していない(ゲームの挙動は変わらない) / 2本目以降: 画面を1つずつ切り出し、その画面のタイマーを表から登録簿へ移す |
+| STEP 8〜10 | 未着手 | |
 
 ## 守ること(要約)
 
