@@ -103,7 +103,7 @@ const PandoraDualThunder = ({image, compact=false}) => (
     </span>)}
   </span>
 );
-// 本番・DEBUG・図鑑で同じ攻撃モーション描画を使うための共通ステージ。
+// 図鑑などから本番と同じ攻撃モーション描画を使うための共通ステージ。
 // image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
 const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
   if(anim?.motion==='pandoraDualThunder') {
