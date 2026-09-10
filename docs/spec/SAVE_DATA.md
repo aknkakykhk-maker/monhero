@@ -23,6 +23,7 @@
 | `mh_gold` | number / `0` | ゴールド（UI上のダイヤ表記を含む） |
 | `mh_breeder_points` | number / `0` | 未使用マーケットポイント |
 | `mh_breeder_points_granted` | number or null | 累計付与済み相当数 |
+| `mh_breeder_id_v1` | string or null | 端末ごとに1回だけ作るブリーダーID。全国ランキングで同名の別人を見分けるために送る(名前を変えても変わらない。`docs/spec/RHYTHM_RANKING.md` §4) |
 | `mh_market_icons` | string[] / `[]` | 購入アイコンID |
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
 | `mh_missions` | object / 期間ごとの既定値 | デイリー・ウィークリー・マンスリーの進捗、期間ID、ギフト送付済みID。旧データの欠損項目は読み込み時に補う |
