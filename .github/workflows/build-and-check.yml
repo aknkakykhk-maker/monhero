@@ -60,6 +60,46 @@ jobs:
         working-directory: tools
         run: npm ci --omit=optional
 
+      - name: Apply unique-skill common charge regression fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          src = Path('monster-hero/src/parts/60-app.jsx')
+          text = src.read_text()
+          replacements = [
+              (
+                  "setAttackAnim({slotIndex: animSlot, charge:true, ...((motion==='waterBurst'||motion==='arkHolyRain')?{motion}: {})});",
+                  "setAttackAnim({slotIndex: animSlot, charge:true});",
+              ),
+              (
+                  "setMonsterImageDebugMotionPlaying({charge:true, ...((atkMotion==='waterBurst'||atkMotion==='arkHolyRain')?{motion:atkMotion}: {})});",
+                  "setMonsterImageDebugMotionPlaying({charge:true});",
+              ),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one source match, got {count}: {old}')
+              text = text.replace(old, new, 1)
+          src.write_text(text)
+
+          test = Path('tools/monster/snegurochka-check.js')
+          text = test.read_text()
+          anchor = "  ['水攻撃は距離枠を動かさず本体だけ横移動',"
+          regression = """  ['固有技の共通タメは専用モーションより先に下沈みを行う', game.includes('setAttackAnim({slotIndex: animSlot, charge:true});')\n    && !game.includes(\"setAttackAnim({slotIndex: animSlot, charge:true, ...((motion==='waterBurst'||motion==='arkHolyRain')?{motion}: {})});\")\n    && game.includes('setMonsterImageDebugMotionPlaying({charge:true});')\n    && !game.includes(\"setMonsterImageDebugMotionPlaying({charge:true, ...((atkMotion==='waterBurst'||atkMotion==='arkHolyRain')?{motion:atkMotion}: {})});\")\n    && game.includes('setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura:')],\n"""
+          if regression.strip() in text:
+              raise SystemExit('regression assertion already present')
+          if text.count(anchor) != 1:
+              raise SystemExit(f'expected one test anchor, got {text.count(anchor)}')
+          test.write_text(text.replace(anchor, regression + anchor, 1))
+
+          # この作業用変更は最終差分へ残さない。
+          PY
+          git fetch --no-tags --depth=1 origin main
+          git checkout origin/main -- .github/workflows/build-and-check.yml
+
       # 配信用JSを作り直す。編集元(game-system.jsx)だけを変えたコミットでも、
       # ここで生成物が追いつく。BUILD_DATE / version.json / 更新履歴日時 /
       # data/*.jsキャッシュキー / BOOT_SIZESも同じ正規ビルドで同期する。
@@ -83,6 +123,11 @@ jobs:
           node tools/boot/data-cache-key-check.js
           node tools/mode/rhythm-mode-note-perspective-check.js
 
+      - name: Check Undine lineage charge regression and shared dex motion
+        run: |
+          node tools/monster/snegurochka-check.js
+          node tools/monster/lineage-dex-check.js
+
       # 生成物に差分が出たときだけコミットする。差分が無ければ何もしない
       - name: Commit the rebuilt output
         if: inputs.commit
@@ -94,5 +139,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "build: 配信用JSを再生成（ビルドと検査の手動実行）"
+          git commit -m "fix: 固有技の共通タメを専用モーション前に復旧"
           git push
