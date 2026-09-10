@@ -18,7 +18,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 //    表の件数と本体の setTimeout の数が一致すること(表が古くなったらここで落ちる)
 const fs = require('fs');
 const path = require('path');
-const { loadDyeModule, REPO_ROOT } = require(path.join(TOOLS_DIR, 'harness'));
+const { loadDyeModule, REPO_ROOT, readAppSource } = require(path.join(TOOLS_DIR, 'harness'));
 const api = loadDyeModule();
 
 let failed = 0;
@@ -185,7 +185,17 @@ check('画面へ渡す口に releaseScope / releaseAll を出さない(他の画
 
 // ---- ③ 分類表と本体の突き合わせ ----
 const MAP_PATH = path.join(REPO_ROOT, 'docs/refactor/SCREEN_EFFECTS_MAP.md');
-const app = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
+// STEP 6 で画面が切り出されると、そこにあったタイマーも画面ファイルへ移る。
+// 本体だけを見ると「表にあるのに本体に無い」で落ちるので、本体と
+// 「MonsterHeroGame から切り出した画面」だけを合わせて数える。
+// 登録簿そのもの(40-screen-effects.jsx)と、もともと共有層にあった画面(29-rhythm-screens.jsx)は
+// この表の対象ではないので混ぜない
+const app = [
+  fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/src/parts/60-app.jsx'), 'utf8'),
+  ...fs.readdirSync(path.join(REPO_ROOT, 'monster-hero/src/parts'))
+    .filter((f) => /^\d+-screen-.+\.jsx$/.test(f) && f !== '40-screen-effects.jsx').sort()
+    .map((f) => fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/src/parts', f), 'utf8')),
+].join('\n');
 const mapText = fs.readFileSync(MAP_PATH, 'utf8');
 const KINDS = new Set(['screen', 'progress', '対象外']);
 const rows = [];
@@ -203,13 +213,13 @@ check('目印が重複していない', new Set(marks).size === marks.length,
   marks.filter((m, i) => marks.indexOf(m) !== i).slice(0, 3).join(' / '));
 
 const missing = rows.filter((r) => app.split(r.mark).length - 1 !== 1);
-check('表の目印はすべて 60-app.jsx にちょうど1つある', missing.length === 0,
+check('表の目印はすべて本体か切り出した画面にちょうど1つある', missing.length === 0,
   missing.slice(0, 3).map((r) => `${r.mark}(${app.split(r.mark).length - 1}件)`).join(' / '));
 
 // setTimeout の実際の呼び出し数。コメント中の「setTimeout」は数えない
 const callCount = app.split('\n').reduce((n, line) => (/^\s*\/\//.test(line) ? n : n + (line.split('setTimeout').length - 1)), 0);
-check('表の件数と 60-app.jsx の setTimeout の数が合っている', callCount === rows.length,
-  `本体 ${callCount} 箇所 / 表 ${rows.length} 行`);
+check('表の件数と setTimeout の数が合っている', callCount === rows.length,
+  `本体と画面で ${callCount} 箇所 / 表 ${rows.length} 行`);
 
 const counts = rows.reduce((acc, r) => { acc[r.kind] = (acc[r.kind] || 0) + 1; return acc; }, {});
 console.log(`   内訳: 画面専用 ${counts.screen || 0} / 進行 ${counts.progress || 0} / 対象外 ${counts['対象外'] || 0}`);

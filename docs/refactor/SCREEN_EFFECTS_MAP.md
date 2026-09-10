@@ -27,6 +27,10 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 「目印」は本体の中でその箇所を一意に指す文字列。行番号は改修のたびにずれるので使わない。
 「現状」は今の止め方で、`止める`(`clearTimeout` がある)/ `投げっぱなし` / `await`(Promise の resolve)。
 
+**STEP 6 で画面を切り出すと、タイマーも画面ファイルへ移る。** 移った先は「現状」の欄に書き足す。
+検査(`tools/ui/screen-effects-check.js`)は本体と切り出した画面を合わせて数えるので、
+移しただけでは落ちない。落ちるのは「表に書き忘れた」「表から消えた」ときだけ。
+
 ## 画面専用(`screen`)— 16 箇所
 
 | 目印 | 分類 | 現状 | 何をしているか / 判断の理由 |
@@ -83,7 +87,7 @@ STEP 6 は「画面を離れたらタイマーが必ず止まる」ようにす�
 | `setTimeout(r,650))` | progress | await | 画像デバッグのモーション再生(ため) |
 | `setTimeout(r,atkMotion==='eikiSa` | progress | await | 画像デバッグのモーション再生(踏み込み) |
 | `setTimeout(r,atkMotion==='arkHol` | progress | await | 画像デバッグのモーション再生(技ごとの尺) |
-| `setTimeout(()=>setEffect` | progress | 投げっぱなし | まとめて強化の演出を消す。止めると出たまま |
+| `setTimeout(()=>setEffect` | progress | 投げっぱなし(65-screen-masu-enhance.jsx へ移動済み) | まとめて強化の演出を消す。止めると出たまま |
 | `setSlotSettle(i);` | progress | 投げっぱなし | タップで入れた枠の光を戻す。止めると光ったまま |
 
 ## 対象外 — 15 箇所

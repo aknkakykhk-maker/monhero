@@ -90,6 +90,8 @@
 > | `61-screen-masu-regen-donation.jsx` | 画面: 神殿の再生と寄付(MASU_REGENERATION / _DETAIL / MASU_DONATION と確認・結果)。2026-09-10 の STEP 6-9 |
 > | `62-screen-masu-temple.jsx` | 画面: 神殿の限界突破・転生・超越・魂格進化と、その演出・補償告知。2026-09-10 の STEP 6-9 |
 > | `63-screen-masu-soul-traits.jsx` | 画面: 魂格特性(MASU_SOUL_TRAITS)。2026-09-10 の STEP 6-9 |
+> | `64-screen-masu-transcend-enhance.jsx` | 画面: 超越強化(MASU_TRANSCEND_ENHANCE)。2026-09-10 の STEP 6-9 |
+> | `65-screen-masu-enhance.jsx` | 画面: マスモン強化(MASU_ENHANCE)。2026-09-10 の STEP 6-9 |
 > | `60-app.jsx` | MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX) |
 > | `70-bootstrap.jsx` | CSS 文字列の注入(createAnimationStyle)、ReactDOM.createRoot、HTML ローディングの非表示 |
 > 下表の行番号は連結後の `game-system.jsx` で見るときの目安(ヘッダと目印の行ぶん、数行ずれる)。
