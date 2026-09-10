@@ -864,6 +864,8 @@ function MonsterHeroGame() {
   const [dexMonsterId, setDexMonsterId] = useState(null);          // モンスター図鑑: 詳細で見ているモンスターのid
   const [dexTab, setDexTab] = useState('basic');                   // モンスター図鑑の詳細タブ(basic/stats/skills)
   const dexSwipeRef = useRef(null);                                // 図鑑詳細の横スワイプ(指を置いた位置)
+  const [dexAttackPreview, setDexAttackPreview] = useState(null);  // 図鑑詳細: 攻撃アクションの一時再生。保存しない
+  const dexAttackPreviewRunRef = useRef(0);                        // 前後移動後に古いasync再生が戻らないための世代番号
   const [uniqueSkillPointDrafts, setUniqueSkillPointDrafts] = useState({}); // 個体IDごとの固有技ポイント仮配分
   const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
@@ -9771,7 +9773,39 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const {main,sub}=monsterLineageOf(mon.id);
           const category=monsterCategoryOf(mon.id);
           const categoryClass=category==='rare'?'bg-amber-600 text-white':category==='pure'?'bg-emerald-700 text-white':'bg-indigo-700 text-white';
-          const go=(delta)=>{ const next=monsters[(index+delta+monsters.length)%monsters.length]; if(!next) return; setDexMonsterId(next.id); setDexTab('basic'); Audio_.se.tap(); };
+          const atkMotion=mon.atkMotion||'default';
+          const stopDexAttackPreview=()=>{dexAttackPreviewRunRef.current+=1;setDexAttackPreview(null);};
+          const playDexAttackPreview=async()=>{
+            if(!unlocked||dexAttackPreview)return;
+            const runId=++dexAttackPreviewRunRef.current;
+            const alive=()=>dexAttackPreviewRunRef.current===runId;
+            const wait=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+            const show=(anim)=>{if(alive())setDexAttackPreview(anim);};
+            // 端末側で「動きを減らす」が有効なら、大きな突進・斬撃アニメーションは流さない。
+            // ボタン自体は使えるままにして、短い静止プレビューとSEだけで反応を返す。
+            const reducedMotion=typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+            if(reducedMotion){
+              show({motion:atkMotion,reduced:true});
+              if(atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo'||atkMotion==='kenshiTwinBlade')Audio_.se.zanSlash();else Audio_.se.attack();
+              await wait(450);
+            }else if(atkMotion==='kenshiTwinBlade'){
+              // 本番と同じ560ms。全画面シェイクだけは図鑑閲覧を揺らさないため再生しない。
+              show({motion:atkMotion,twinBlade:true,sakura:false});
+              await wait(135);if(!alive())return;Audio_.se.zanSlash();
+              await wait(180);if(!alive())return;Audio_.se.zanSlash();
+              await wait(245);
+            }else if(atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo'){
+              show({motion:atkMotion,zanCombo:true,sakura:atkMotion==='eikiSakuraCombo'});
+              Audio_.se.zanSlash();
+              await wait(atkMotion==='eikiSakuraCombo'?500:320);
+            }else{
+              show({motion:atkMotion,sakura:false});
+              Audio_.se.attack();
+              await wait(atkMotion==='pandoraDualThunder'?900:(atkMotion==='floatStab'?650:(atkMotion==='waterBurst'?520:450)));
+            }
+            if(alive())setDexAttackPreview(null);
+          };
+          const go=(delta)=>{ stopDexAttackPreview(); const next=monsters[(index+delta+monsters.length)%monsters.length]; if(!next) return; setDexMonsterId(next.id); setDexTab('basic'); Audio_.se.tap(); };
           // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
           const lineageChip=(lineage)=><DexLineageChip lineage={lineage} iconUrl={lineageIconUrl(lineage)}/>;
           const tabs=[['basic','基本'],['stats','能力'],['skills','技']];
@@ -9817,7 +9851,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0" style={{paddingTop:'calc(0.5rem + env(safe-area-inset-top))',paddingBottom:'calc(0.5rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 px-3 shrink-0">
-              <button onClick={()=>setGameState('MONSTER_DEX')} className="p-3 text-slate-400 active:scale-90" aria-label="図鑑一覧へ戻る"><ArrowLeft size={20}/></button>
+              <button onClick={()=>{stopDexAttackPreview();setGameState('MONSTER_DEX');}} className="p-3 text-slate-400 active:scale-90" aria-label="図鑑一覧へ戻る"><ArrowLeft size={20}/></button>
               <h2 className="text-lg font-black italic text-amber-300 uppercase tracking-widest">モンスター図鑑</h2>
               <span className="ml-auto text-[10px] font-mono font-black text-amber-200/80 tabular-nums pr-1">{index+1} / {monsters.length}</span>
             </div>
@@ -9830,6 +9864,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               onTouchStart={e=>{dexSwipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
               onTouchEnd={e=>{const from=dexSwipeRef.current; dexSwipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
               <DexMonsterArt mon={mon} alt={unlocked?mon.name:'まだ出会っていないモンスター'} hidden={!unlocked}/>
+              {unlocked&&<DexAttackPreview mon={mon} anim={dexAttackPreview} onPlay={playDexAttackPreview}/>}
               <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
               <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
             </div>

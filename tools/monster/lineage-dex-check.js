@@ -198,6 +198,19 @@ check('能力はベースモンの基礎値を出す',
   detail.includes('mon.baseHp') && detail.includes('mon.distAptitude') && !/masuPowerOf|normalizeMasuProgression/.test(detail));
 check('基本タブは既存のモンスターデータから勇者特性を出す',
   detail.includes('mon.trait') && detail.includes('mon.traitDesc'));
+check('解放済みモンスターは図鑑詳細で攻撃アクションを再生できる',
+  detail.includes('<DexAttackPreview') && detail.includes('playDexAttackPreview')
+  && detail.includes("const atkMotion=mon.atkMotion||'default'"));
+check('攻撃アクションは図鑑専用モーションを作らず本番の入口・専用FXを再利用する',
+  sharedDex.includes('const DexAttackPreview')
+  && sharedDex.includes('attackMotionAnimation(anim)')
+  && sharedDex.includes('<EikiSakuraPetals/>')
+  && sharedDex.includes('<KenshiTwinSlash/>')
+  && sharedDex.includes('<PandoraDualThunder'));
+check('攻撃アクションは画面移動で止まり、動きを減らす端末設定を尊重する',
+  detail.includes('stopDexAttackPreview()')
+  && detail.includes("matchMedia?.('(prefers-reduced-motion: reduce)')")
+  && detail.includes('dexAttackPreviewRunRef.current===runId'));
 check('スマホで押せる大きさ（40px以上）を確保している',
   (list.match(/min-h-\[(?:4\d|[5-9]\d|\d{3,})px\]/g) || []).length >= 2
   && (detail.match(/min-h-\[(?:4\d|[5-9]\d|\d{3,})px\]/g) || []).length >= 2);
