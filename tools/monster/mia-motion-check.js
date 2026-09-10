@@ -41,9 +41,12 @@ const checks = [
     && game.includes('@keyframes miaSongCharge {')],
 
   // --- 演出の中身 ---
-  ['マイクスタンドが出る(頭・支柱・台座)',
-    game.includes('mia-song-notes__mic-head') && game.includes('mia-song-notes__mic-pole')
-    && game.includes('mia-song-notes__mic-base') && game.includes('@keyframes miaSongMicPop {')],
+  ['マイクスタンドが出る(マイク本体・ホルダー・2段の支柱・ジョイント・台座)',
+    ['body','clip','pole','pole--upper','joint','base'].every(part=>game.includes(`mia-song-notes__mic-${part}`))
+    && game.includes('@keyframes miaSongMicPop {')],
+  ['マイクは支柱へ斜めに留めた形にしている',
+    /\.mia-song-notes__mic-body \{[\s\S]*?transform:rotate\(-\d+deg\); transform-origin:50% 100%;/.test(game)
+    && /\.mia-song-notes__mic-clip \{[\s\S]*?transform:rotate\(-\d+deg\);/.test(game)],
   ['音符は3つ以上を時間差で飛ばす', noteCount >= 3 && /delay:'\d+ms'/.test(motionSource)
     && game.includes('@keyframes miaSongNoteFly {'), `${noteCount}個`],
   ['音符は敵の方向(上)へはっきり移動する',

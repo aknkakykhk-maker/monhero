@@ -209,8 +209,11 @@ const MiaSongNotesMotion = ({image, lunge=false, charging=false, compact=false})
     <span className="mia-song-notes__stage" aria-hidden="true"><i/><i/></span>
     <span className="mia-song-notes__monster">{image}</span>
     <span className="mia-song-notes__mic" aria-hidden="true">
-      <i className="mia-song-notes__mic-head"/>
+      <i className="mia-song-notes__mic-body"/>
+      <i className="mia-song-notes__mic-clip"/>
+      <i className="mia-song-notes__mic-pole mia-song-notes__mic-pole--upper"/>
       <i className="mia-song-notes__mic-pole"/>
+      <i className="mia-song-notes__mic-joint"/>
       <i className="mia-song-notes__mic-base"/>
     </span>
     <span className="mia-song-notes__notes" aria-hidden="true">

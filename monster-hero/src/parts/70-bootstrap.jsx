@@ -372,7 +372,7 @@ const createAnimationStyle = () => {
     }
     /* マイクスタンド。ミーアの手前・やや左に立て、本体は隠さない */
     .mia-song-notes__mic {
-      position:absolute; left:11%; bottom:2%; width:21%; height:56%; z-index:6;
+      position:absolute; left:9%; bottom:2%; width:25%; height:60%; z-index:6;
       opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
       animation:miaSongMicPop 760ms cubic-bezier(.2,1.4,.36,1) forwards;
     }
@@ -383,24 +383,61 @@ const createAnimationStyle = () => {
       24%,84% { opacity:1; transform:translate3d(0,0,0) scale(1); }
       100% { opacity:0; transform:translate3d(0,6px,0) scale(.82); }
     }
-    .mia-song-notes__mic-head {
-      position:absolute; left:50%; top:0; width:100%; height:34%; margin-left:-50%;
-      border-radius:50% 50% 46% 46%;
-      background:radial-gradient(circle at 34% 28%,#fff 0 14%,#e2e8f0 32%,#94a3b8 62%,#475569 100%);
-      border:1px solid rgba(255,255,255,.9);
-      box-shadow:0 0 9px rgba(244,114,182,.95),0 0 18px rgba(236,72,153,.7);
+    /* マイク本体。ホルダーに斜めに留まった形にすると、小さくてもマイクスタンドだと分かる。
+       上が網目のグリル、下が黒いハンドル、その境目に銀のリング。 */
+    .mia-song-notes__mic-body {
+      position:absolute; left:50%; top:0; width:41%; height:37%; margin-left:-20.5%;
+      transform:rotate(-19deg); transform-origin:50% 100%;
+      border-radius:50% 50% 40% 40% / 34% 34% 22% 22%;
+      background:
+        repeating-linear-gradient(180deg,rgba(15,23,42,.5) 0 1px,rgba(255,255,255,.34) 1px 2px) top/100% 48% no-repeat,
+        linear-gradient(180deg,#e2e8f0 0 48%,#111827 48%,#020617 100%);
+      border:1px solid rgba(255,255,255,.7);
+      box-shadow:0 0 8px rgba(244,114,182,.9),0 0 16px rgba(236,72,153,.6),inset -1px 0 2px rgba(0,0,0,.5);
     }
+    /* グリルの丸みと光沢 */
+    .mia-song-notes__mic-body::before {
+      content:''; position:absolute; left:14%; top:6%; width:30%; height:26%;
+      border-radius:50%; background:rgba(255,255,255,.85); filter:blur(1px);
+    }
+    /* グリルとハンドルの境目にある銀のリング */
+    .mia-song-notes__mic-body::after {
+      content:''; position:absolute; left:50%; top:45%; width:106%; height:7%; margin-left:-53%;
+      border-radius:999px; background:linear-gradient(180deg,#f8fafc,#64748b);
+    }
+    /* マイクの下部を抱えるホルダー */
+    .mia-song-notes__mic-clip {
+      position:absolute; left:50%; top:30%; width:34%; height:12%; margin-left:-17%;
+      transform:rotate(-19deg);
+      border-radius:999px 999px 3px 3px;
+      background:linear-gradient(180deg,#cbd5e1,#1e293b);
+      box-shadow:0 0 5px rgba(226,232,240,.65);
+    }
+    /* 支柱。ジョイントより上を細くして、伸縮するスタンドらしくする */
     .mia-song-notes__mic-pole {
-      position:absolute; left:50%; top:30%; width:14%; height:64%; margin-left:-7%;
-      border-radius:999px;
-      background:linear-gradient(90deg,#64748b,#f1f5f9 42%,#cbd5e1 62%,#475569);
-      box-shadow:0 0 7px rgba(226,232,240,.75);
+      position:absolute; left:50%; top:56%; width:13%; height:40%; margin-left:-6.5%;
+      border-radius:2px;
+      background:linear-gradient(90deg,#475569,#f1f5f9 40%,#cbd5e1 60%,#334155);
+      box-shadow:0 0 7px rgba(226,232,240,.7);
     }
+    .mia-song-notes__mic-pole--upper {
+      top:33%; height:24%; width:8%; margin-left:-4%; box-shadow:none;
+    }
+    /* 高さ調整のジョイント。ここがあると「スタンド」に見える */
+    .mia-song-notes__mic-joint {
+      position:absolute; left:50%; top:53%; width:23%; height:6%; margin-left:-11.5%;
+      border-radius:999px; background:linear-gradient(180deg,#f8fafc,#334155);
+    }
+    /* 重い円形の台座。上面の楕円と、その下の暗い縁で厚みを出す */
     .mia-song-notes__mic-base {
-      position:absolute; left:50%; bottom:0; width:150%; height:11%; margin-left:-75%;
+      position:absolute; left:50%; bottom:3%; width:104%; height:9%; margin-left:-52%;
       border-radius:50%;
-      background:linear-gradient(180deg,#e2e8f0,#475569);
-      box-shadow:0 0 10px rgba(236,72,153,.8);
+      background:linear-gradient(180deg,#f1f5f9,#64748b);
+      box-shadow:0 0 10px rgba(236,72,153,.8),inset 0 1px 2px rgba(255,255,255,.7);
+    }
+    .mia-song-notes__mic-base::after {
+      content:''; position:absolute; left:2%; top:38%; width:96%; height:100%;
+      border-radius:50%; background:linear-gradient(180deg,#334155,#020617); z-index:-1;
     }
     /* 敵へ飛ぶ音符。4つを時間差・別々の高さと大きさで流す */
     .mia-song-notes__notes { position:absolute; inset:0; overflow:visible; z-index:7; }
