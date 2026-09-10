@@ -149,6 +149,10 @@
       "role": "画面: 魂格特性(MASU_SOUL_TRAITS)"
     },
     {
+      "file": "64-screen-masu-transcend-enhance.jsx",
+      "role": "画面: 超越強化(MASU_TRANSCEND_ENHANCE)"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

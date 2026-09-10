@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b410997bf574b7a8
+// source-sha256: f292f377cad2ed87
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 9cc0e5fb9e7c35d7
+// generated-sha256: db631a7515ed708a
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 07:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 07:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -26535,6 +26535,741 @@ function MasuSoulTraitsScreen({
   }, "1\u518A\u4F7F\u3063\u3066\u518D\u7DE8")))));
 }
 
+// ---- part: 64-screen-masu-transcend-enhance.jsx ----
+// ==== 画面: 超越強化(gameState === 'MASU_TRANSCEND_ENHANCE') ====
+//
+// MonsterHeroGame から切り出した14本目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-9)。
+//
+// 【この画面ならではの注意】
+// ・超越ポイントの割り振りと確定は保存を伴うので、中身は MonsterHeroGame 側に残して props で受ける
+// ・この画面は layout-consistency-check が「縦スクロールできる場所がある」を見張っている
+//   (ベースから NG のままだが、切り出しでさらに悪くしないこと)
+
+function MasuTranscendEnhanceScreen({
+  commitTranscendExchange,
+  commitTranscendFruit,
+  commitTranscendPlan,
+  getMasuMon,
+  masuMonDetail,
+  onBack,
+  onMissing,
+  ownedItems,
+  renderPowerBadge,
+  saveMissionProgress,
+  setTranscendBulkUnit,
+  setTranscendExchangeError,
+  setTranscendExchangeOpen,
+  setTranscendExchangeWant,
+  setTranscendFruitConfirmAmount,
+  setTranscendFruitError,
+  setTranscendFruitItemId,
+  setTranscendFruitOpen,
+  setTranscendPlan,
+  setTranscendResetError,
+  setTranscendResetOpen,
+  transcendBulkUnit,
+  transcendExchangeError,
+  transcendExchangeOpen,
+  transcendExchangeWant,
+  transcendFruitConfirmAmount,
+  transcendFruitError,
+  transcendFruitItemId,
+  transcendFruitOpen,
+  transcendPlan,
+  transcendResetError,
+  transcendResetOpen,
+  useTranscendResetScroll
+}) {
+  const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
+  const base = ALL_PLAYER_MONSTERS[masu.baseId];
+  const normalized = normalizeMasuProgression(masu);
+  if (!base) {
+    onMissing();
+    return null;
+  }
+  const points = normalized.transcendPoints;
+  const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+  const plan = transcendPlan || {
+    apt: [0, 0, 0, 0],
+    stat: {
+      hp: 0,
+      atk: 0,
+      def: 0,
+      guts: 0
+    }
+  };
+  const planUsed = plan.apt.reduce((a, b) => a + b, 0) + Object.values(plan.stat).reduce((a, b) => a + b, 0);
+  const planLeft = points - planUsed;
+  const preview = planUsed > 0 ? applyTranscendPlanToMasu(masu, plan) : null;
+  const previewMasu = preview ? preview.masu : masu;
+  const currentPower = masuPowerOf(masu);
+  const previewPower = masuPowerOf(previewMasu);
+  const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0, 4) : ['C', 'C', 'C', 'C'];
+  const maxGrade = DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length - 1];
+  const transcendGrade = (idx, extra = 0) => raiseAptitudeGrade(baseApt[idx] || 'C', normalized.transcendAptBoosts[idx] + extra);
+  const aptAtMax = idx => transcendGrade(idx, plan.apt[idx]) === maxGrade;
+  // 振り分けは通常強化と同じ作法にそろえる(1 / 5 / 10 / MAX・長押しで連続・確定するまで保存しない)
+  const changeTranscendPlan = (kind, target, direction) => setTranscendPlan(previous => {
+    const q = previous ? {
+      apt: [...previous.apt],
+      stat: {
+        ...previous.stat
+      }
+    } : {
+      apt: [0, 0, 0, 0],
+      stat: {
+        hp: 0,
+        atk: 0,
+        def: 0,
+        guts: 0
+      }
+    };
+    const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
+    const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
+    const remaining = Math.max(0, points - used);
+    let amount = transcendBulkUnit === 'MAX' ? direction > 0 ? remaining : current : Math.min(Number(transcendBulkUnit), direction > 0 ? remaining : current);
+    if (kind === 'apt' && direction > 0) {
+      // 基礎の段階もMで止める。今の段階から残り何段階上げられるかで頭打ちにする
+      const room = DIST_APTITUDE_GRADES.length - 1 - DIST_APTITUDE_GRADES.indexOf(transcendGrade(target));
+      amount = Math.min(amount, Math.max(0, room - current));
+    }
+    const next = Math.max(0, current + direction * Math.max(0, amount));
+    if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
+    return q;
+  });
+  const addApt = (idx, direction) => changeTranscendPlan('apt', idx, direction);
+  const addStat = (key, direction) => changeTranscendPlan('stat', key, direction);
+  const setTranscendPlanExact = (kind, target, rawValue) => setTranscendPlan(previous => {
+    const q = previous ? {
+      apt: [...previous.apt],
+      stat: {
+        ...previous.stat
+      }
+    } : {
+      apt: [0, 0, 0, 0],
+      stat: {
+        hp: 0,
+        atk: 0,
+        def: 0,
+        guts: 0
+      }
+    };
+    const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
+    const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
+    let maxForRow = Math.max(0, points - (used - current));
+    if (kind === 'apt') {
+      const room = DIST_APTITUDE_GRADES.length - 1 - DIST_APTITUDE_GRADES.indexOf(transcendGrade(target));
+      maxForRow = Math.min(maxForRow, Math.max(0, room));
+    }
+    const next = directEnhancePointAmount(rawValue, maxForRow);
+    if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
+    return q;
+  });
+  // 虹のプシュケーの変換シート。ここで欲しいポイント数を決めてから確定する
+  const exchangeMax = transcendPsycheExchange(psycheHave, Number.MAX_SAFE_INTEGER).maxPoints;
+  const exchangeWant = Math.max(1, Math.min(Math.max(1, exchangeMax), transcendExchangeWant));
+  const exchangeQuote = transcendPsycheExchange(psycheHave, exchangeWant);
+  const setWant = n => setTranscendExchangeWant(Math.max(1, Math.min(Math.max(1, exchangeMax), n)));
+  const openExchange = () => {
+    setTranscendExchangeError('');
+    setTranscendExchangeWant(exchangeMax > 0 ? 1 : 1);
+    setTranscendExchangeOpen(true);
+  };
+  const speciesFruitId = masuSpeciesTranscendFruitItemId(masu.baseId);
+  const speciesFruit = speciesTranscendFruitItems()[monsterLineageOf(masu.baseId).main.id];
+  const speciesFruitHave = transcendFruitOwnedCount(ownedItems, speciesFruitId);
+  const rainbowFruitHave = transcendFruitOwnedCount(ownedItems, RAINBOW_TRANSCEND_FRUIT_ITEM_ID);
+  // 【後方互換】種族をモンスター1体単位で作っていたころの実。もう配らないが、持っている人が
+  // 使えないままにならないよう、所持しているぶんだけ選択肢へ出す(持っていなければ増えない)
+  const legacyFruitChoices = legacySpeciesTranscendFruitsForLineage(masu.baseId).map(item => ({
+    itemId: item.id,
+    name: `超越の実（旧・${ALL_PLAYER_MONSTERS[item.baseId]?.name || item.baseId}）`,
+    have: transcendFruitOwnedCount(ownedItems, item.id)
+  })).filter(choice => choice.have > 0);
+  const fruitChoices = [{
+    itemId: speciesFruitId,
+    name: speciesFruit?.name || '対応種族の超越の実',
+    have: speciesFruitHave
+  }, ...legacyFruitChoices, {
+    itemId: RAINBOW_TRANSCEND_FRUIT_ITEM_ID,
+    name: RAINBOW_TRANSCEND_FRUIT_ITEM.name,
+    have: rainbowFruitHave
+  }];
+  const hasTranscendFruit = fruitChoices.some(choice => choice.have > 0);
+  const selectedFruitHave = transcendFruitOwnedCount(ownedItems, transcendFruitItemId);
+  const selectedFruitName = fruitChoices.find(choice => choice.itemId === transcendFruitItemId)?.name || '';
+  const openFruit = () => {
+    setTranscendFruitItemId('');
+    setTranscendFruitConfirmAmount(0);
+    setTranscendFruitError('');
+    setTranscendFruitOpen(true);
+  };
+  const requestFruitUse = async amount => {
+    if (amount > 1) {
+      setTranscendFruitConfirmAmount(amount);
+      return;
+    }
+    await commitTranscendFruit(masu, transcendFruitItemId, amount);
+  };
+  const runFruitUse = async () => {
+    await commitTranscendFruit(masu, transcendFruitItemId, transcendFruitConfirmAmount);
+  };
+  // 超越ポイントリセットの書。振り分け直したいときに、使った超越Pを全部戻す
+  const resetScrollHave = ownedItemCount(ownedItems, TRANSCEND_RESET_ITEM_ID);
+  const spentPoints = transcendSpentPoints(normalized);
+  const openReset = () => {
+    setTranscendResetError('');
+    setTranscendResetOpen(true);
+  };
+  const runReset = async () => {
+    const done = await useTranscendResetScroll(masu.id);
+    if (done) {
+      await saveMissionProgress('itemUse', 1);
+      setTranscendResetOpen(false);
+    }
+  };
+  const runExchange = async () => {
+    const applied = await commitTranscendExchange(masu, exchangeWant);
+    if (applied) {
+      setTranscendExchangeOpen(false);
+      setTranscendExchangeWant(1);
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "#020617",
+      zIndex: 30000
+    },
+    className: "absolute inset-0 flex flex-col overflow-hidden",
+    "data-transcend-enhance": masu.id
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 p-4 shrink-0 border-b border-white/10",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u901A\u5E38\u5F37\u5316\u3078\u623B\u308B",
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[8px] font-black tracking-widest text-sky-400"
+  }, "TRANSCENDENCE"), /*#__PURE__*/React.createElement("h2", {
+    className: "truncate text-sm font-black text-white"
+  }, masu.name)), /*#__PURE__*/React.createElement("span", {
+    className: "relative inline-block w-9 h-9 shrink-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block w-9 h-9 overflow-hidden rounded-full border border-sky-400/40"
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: masu.baseId,
+    src: base.iconUrl,
+    alt: masu.name,
+    masuColors: getMasuColors(masu),
+    className: "w-full h-full object-cover"
+  })), /*#__PURE__*/React.createElement(TranscendenceBadge, {
+    transcended: normalized.transcended,
+    soulRankStage: normalized.soulRankStage,
+    small: true
+  }))), /*#__PURE__*/React.createElement("div", {
+    "data-transcend-enhance-tabs": true,
+    className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95"
+  }, "\u901A\u5E38\u5F37\u5316"), /*#__PURE__*/React.createElement("button", {
+    className: "min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black"
+  }, "\u8D85\u8D8A\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: normalized.transcended ? 'transcendence' : 'masuEnhance',
+    compact: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-3xl border border-sky-400/40 bg-sky-950/30 p-3 shadow-xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-end justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black tracking-wider text-sky-200"
+  }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-bold text-slate-400"
+  }, "\u901A\u5E38\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3068\u306F\u5225\u67A0")), /*#__PURE__*/React.createElement("div", {
+    "data-transcend-points": true,
+    className: "text-right leading-none"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-3xl font-black font-mono text-white"
+  }, planLeft), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, " / ", points))), /*#__PURE__*/React.createElement("button", {
+    "data-transcend-exchange-open": true,
+    onClick: openExchange,
+    className: "mt-3 w-full min-h-[46px] rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB", /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-mono text-slate-300"
+  }, "\u6240\u6301 ", psycheHave.toLocaleString())), hasTranscendFruit && /*#__PURE__*/React.createElement("button", {
+    "data-transcend-fruit-open": true,
+    onClick: openFruit,
+    className: "mt-2 w-full min-h-[46px] rounded-2xl border border-emerald-400/50 bg-emerald-950/40 text-emerald-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF4E"), "\u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046", /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-mono text-slate-300"
+  }, "\u7A2E\u65CF \xD7", speciesFruitHave, "\uFF0F\u8679 \xD7", rainbowFruitHave)), /*#__PURE__*/React.createElement("button", {
+    "data-transcend-reset-open": true,
+    disabled: spentPoints <= 0 || resetScrollHave <= 0,
+    onClick: openReset,
+    className: "mt-2 w-full min-h-[42px] rounded-2xl border border-amber-400/50 bg-amber-950/30 text-amber-100 text-[11px] font-black active:scale-95 disabled:opacity-35 flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF20"), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8", /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-mono text-slate-300"
+  }, "\u66F8 \xD7", resetScrollHave)), spentPoints <= 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-[9px] font-bold text-slate-500 text-center"
+  }, "\u30EA\u30BB\u30C3\u30C8\u3059\u308B\u8D85\u8D8A\u5F37\u5316\u304C\u3042\u308A\u307E\u305B\u3093"), spentPoints > 0 && resetScrollHave <= 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-[9px] font-bold text-slate-500 text-center"
+  }, "\u300C\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u300D\u306F\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u8CB7\u3048\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-900 border border-sky-500/40 rounded-3xl p-3 shadow-xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2 mb-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black text-sky-300 uppercase tracking-wider flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 14
+  }), "\u57FA\u790E\u5024\u3092\u4E0A\u3052\u308B"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400 font-bold"
+  }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3",
+    role: "group",
+    "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
+  }, [1, 5, 10, 100, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    key: unit,
+    "data-transcend-unit": unit,
+    "aria-pressed": transcendBulkUnit === unit,
+    onClick: () => setTranscendBulkUnit(unit),
+    className: `min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${transcendBulkUnit === unit ? 'bg-sky-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`
+  }, unit === 'MAX' ? 'MAX' : `${unit}P`))), /*#__PURE__*/React.createElement("div", {
+    className: "mb-3"
+  }, renderPowerBadge(previewPower, {
+    before: currentPower,
+    size: 'md'
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400 font-bold mb-1.5"
+  }, "\u9593\u5408\u3044\u9069\u6027", /*#__PURE__*/React.createElement("span", {
+    className: "ml-1 text-slate-500"
+  }, "\uFF08\u4E0A\u9650", maxGrade, "\uFF09")), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5 mb-3"
+  }, RANGE_LABELS.map((label, idx) => {
+    const before = transcendGrade(idx),
+      after = transcendGrade(idx, plan.apt[idx]),
+      added = plan.apt[idx];
+    return /*#__PURE__*/React.createElement("div", {
+      key: idx,
+      className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`
+    }, label), /*#__PURE__*/React.createElement("div", {
+      className: "text-center font-mono font-black text-[12px]"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: DIST_APTITUDE_COLOR[before]
+    }, before), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500 mx-1"
+    }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+      className: added > 0 ? 'text-sky-300' : 'text-slate-300'
+    }, after)), /*#__PURE__*/React.createElement("label", {
+      className: "flex items-center gap-0.5 min-w-0"
+    }, /*#__PURE__*/React.createElement("input", {
+      "data-direct-point-input": "transcend-apt",
+      "aria-label": `${label}の基礎適性の振り分けポイントを直接入力`,
+      type: "text",
+      inputMode: "numeric",
+      pattern: "[0-9]*",
+      enterKeyHint: "done",
+      autoComplete: "off",
+      value: added,
+      onFocus: e => e.currentTarget.select(),
+      onChange: e => setTranscendPlanExact('apt', idx, e.currentTarget.value),
+      onKeyDown: e => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      },
+      className: "w-full min-w-0 h-8 rounded-md border border-sky-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black text-sky-300"
+    }, "P")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1"
+    }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+      "aria-label": `${label}の基礎適性を減らす`,
+      disabled: added <= 0,
+      onPress: () => addApt(idx, -1),
+      className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+    }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+      "aria-label": `${label}の基礎適性を上げる`,
+      disabled: planLeft <= 0 || aptAtMax(idx),
+      onPress: () => addApt(idx, 1),
+      className: "min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
+    }, "\uFF0B")));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400 font-bold mb-1.5"
+  }, "\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5"
+  }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
+    const n = plan.stat[key] || 0,
+      gain = n * (STAT_POINT_GAIN[key] || 1),
+      before = normalized.transcendStatPoints[key];
+    return /*#__PURE__*/React.createElement("div", {
+      key: key,
+      className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] text-center text-sky-200 font-black"
+    }, label), /*#__PURE__*/React.createElement("div", {
+      className: "text-center font-mono font-black text-[11px]"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-white"
+    }, "\u57FA\u790E+", before), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500 mx-1"
+    }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+      className: gain > 0 ? 'text-sky-300' : 'text-slate-300'
+    }, "\u57FA\u790E+", before + gain)), /*#__PURE__*/React.createElement("label", {
+      className: "flex items-center gap-0.5 min-w-0"
+    }, /*#__PURE__*/React.createElement("input", {
+      "data-direct-point-input": "transcend-stat",
+      "aria-label": `${label}の基礎値の振り分けポイントを直接入力`,
+      type: "text",
+      inputMode: "numeric",
+      pattern: "[0-9]*",
+      enterKeyHint: "done",
+      autoComplete: "off",
+      value: n,
+      onFocus: e => e.currentTarget.select(),
+      onChange: e => setTranscendPlanExact('stat', key, e.currentTarget.value),
+      onKeyDown: e => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      },
+      className: "w-full min-w-0 h-8 rounded-md border border-sky-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black text-sky-300"
+    }, "P")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1"
+    }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+      "aria-label": `${label}の基礎値を減らす`,
+      disabled: n <= 0,
+      onPress: () => addStat(key, -1),
+      className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+    }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+      "aria-label": `${label}の基礎値を上げる`,
+      disabled: planLeft <= 0,
+      onPress: () => addStat(key, 1),
+      className: "min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
+    }, "\uFF0B")));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 mt-2"
+  }, "\uFF0B\uFF0F\u2212\u306F\u9577\u62BC\u3057\u3067\u3082\u9023\u7D9A\u8ABF\u6574\u3067\u304D\u307E\u3059\u30021P\u3067\u57FA\u790E\u30E9\u30A4\u30D5+", STAT_POINT_GAIN.hp, "\uFF0F\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4+", STAT_POINT_GAIN.atk, "\uFF0F\u9593\u5408\u3044\u9069\u60271\u6BB5\u968E\uFF08\u3069\u308C\u3082\u7DCF\u5408\u529B+10\u76F8\u5F53\uFF09\u3002")), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-bold text-slate-400 leading-relaxed"
+  }, "\u8D85\u8D8A\u5F37\u5316\u306F\u300C\u57FA\u790E\u5024\u300D\u3092\u4E0A\u3052\u308B\u306E\u3067\u3001\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u3067\u901A\u5E38\u306E\u5F37\u5316\u3092\u623B\u3057\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002\u8EE2\u751F\u30FB\u9650\u754C\u7A81\u7834\u3067\u3082\u6B8B\u308A\u307E\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), !normalized.transcended && /*#__PURE__*/React.createElement("div", {
+    "data-transcend-not-yet": true,
+    className: "rounded-2xl border border-slate-500/40 bg-black/40 p-3 text-[9px] font-bold text-slate-400 leading-relaxed"
+  }, "\u3053\u306E\u500B\u4F53\u306F\u307E\u3060\u795E\u6BBF\u3067\u8D85\u8D8A\u3057\u3066\u3044\u307E\u305B\u3093\u304C\u3001\u8D85\u8D8A\u5F37\u5316\u306F\u3044\u3064\u3067\u3082\u4F7F\u3048\u307E\u3059\u3002\u3042\u3068\u3067\u6B63\u5F0F\u306B\u8D85\u8D8A\u3057\u3066\u3082\u3001\u3053\u3053\u3067\u4E0A\u3052\u305F\u57FA\u790E\u5024\u3068\u6B8B\u3063\u3066\u3044\u308B\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u306F\u305D\u306E\u307E\u307E\u5F15\u304D\u7D99\u304C\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u795E\u6BBF\u306E\u300C\u8D85\u8D8A\u300D\uFF08Lv\u4E0A\u9650400\u2192500\u30FB\u8D85\u8D8A\u30DE\u30FC\u30AF\uFF09\u306F\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308ALv.", MAX_MASU_LEVEL_CAP, "\u30FB\u9650\u754C\u7A81\u7834", FINAL_BREAKTHROUGH_COUNT, "\u56DE\u304C\u5FC5\u8981\u3067\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 grid grid-cols-2 gap-2 p-4 border-t border-white/10",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTranscendPlan(null),
+    disabled: planUsed <= 0,
+    className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs disabled:opacity-35 active:scale-95"
+  }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
+    "data-transcend-commit": true,
+    disabled: planUsed <= 0,
+    onClick: () => commitTranscendPlan(masu, plan),
+    className: "min-h-[48px] rounded-2xl bg-sky-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95"
+  }, "\u3053\u306E\u914D\u5206\u3067\u78BA\u5B9A\uFF08", planUsed, "P\uFF09")), transcendResetOpen && /*#__PURE__*/React.createElement("div", {
+    "data-transcend-reset-sheet": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u30EA\u30BB\u30C3\u30C8",
+    className: "absolute inset-0 flex items-end justify-center",
+    style: {
+      zIndex: 30500,
+      backgroundColor: 'rgba(2,6,23,0.86)'
+    },
+    onClick: () => setTranscendResetOpen(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-amber-400/40 bg-slate-900 p-4 space-y-3",
+    style: {
+      maxHeight: 'calc(100% - env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    },
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-amber-200 flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF20"), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u30EA\u30BB\u30C3\u30C8\u3057\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u9589\u3058\u308B",
+    onClick: () => setTranscendResetOpen(false),
+    className: "p-2 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 18
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-2xl border border-amber-400/30 bg-amber-950/25 p-3 space-y-1 text-[10px] font-black"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u4F7F\u7528\u6E08\u307F\u8D85\u8D8AP"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-white"
+  }, spentPoints, "P")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u672A\u4F7F\u7528\u8D85\u8D8AP"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-white"
+  }, points, "P")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between pt-1 border-t border-white/10"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u30EA\u30BB\u30C3\u30C8\u5F8C\u306E\u672A\u4F7F\u7528\u8D85\u8D8AP"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-amber-200"
+  }, points + spentPoints, "P")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-white"
+  }, "\xD7", resetScrollHave, " \u2192 \xD7", Math.max(0, resetScrollHave - 1)))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-bold text-slate-400 leading-relaxed"
+  }, "\u8D85\u8D8A\u3067\u4E0A\u3052\u305F\u57FA\u790E\u30B9\u30C6\u30FC\u30BF\u30B9\u3068\u57FA\u790E\u306E\u9593\u5408\u3044\u9069\u6027\u304C\u5143\u3078\u623B\u308A\u3001\u305D\u306E\u3076\u3093\u306E\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u304C\u672A\u4F7F\u7528\u3078\u8FD4\u308A\u307E\u3059\u3002\u7D46\u30EC\u30D9\u30EB\u30FB\u7D46\u7D4C\u9A13\u5024\u30FBLv\u4E0A\u9650\u30FB\u8D85\u8D8A\u6E08\u307F\u304B\u3069\u3046\u304B\u30FB\u9650\u754C\u7A81\u7834\u30FB\u8EE2\u751F\u56DE\u6570\u30FB\u901A\u5E38\u306E\u5F37\u5316\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("b", {
+    className: "text-amber-200"
+  }, "\u4EA4\u63DB\u306B\u4F7F\u3063\u305F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u306F\u623B\u308A\u307E\u305B\u3093\u3002")), transcendResetError && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-red-400"
+  }, transcendResetError), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTranscendResetOpen(false),
+    className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95"
+  }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
+    "data-transcend-reset-commit": true,
+    disabled: spentPoints <= 0 || resetScrollHave <= 0,
+    onClick: runReset,
+    className: "min-h-[48px] rounded-2xl bg-amber-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95"
+  }, "\u66F8\u30921\u518A\u4F7F\u3063\u3066\u30EA\u30BB\u30C3\u30C8")))), transcendExchangeOpen && /*#__PURE__*/React.createElement("div", {
+    "data-transcend-exchange-sheet": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB",
+    className: "absolute inset-0 flex items-end justify-center",
+    style: {
+      zIndex: 30500,
+      backgroundColor: 'rgba(2,6,23,0.86)'
+    },
+    onClick: () => setTranscendExchangeOpen(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-fuchsia-400/40 bg-slate-900 p-4 space-y-3",
+    style: {
+      maxHeight: 'calc(100% - env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    },
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-fuchsia-200 flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB"), /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u9589\u3058\u308B",
+    onClick: () => setTranscendExchangeOpen(false),
+    className: "p-2 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 18
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-2xl bg-black/40 p-2.5 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black text-slate-400"
+  }, "\u6240\u6301\u3057\u3066\u3044\u308B\uD83C\uDF08"), /*#__PURE__*/React.createElement("div", {
+    className: "font-mono text-lg font-black text-white"
+  }, psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-2xl bg-black/40 p-2.5 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] font-black text-slate-400"
+  }, "\u4EA4\u63DB\u30EC\u30FC\u30C8"), /*#__PURE__*/React.createElement("div", {
+    className: "font-mono text-[11px] font-black text-fuchsia-200"
+  }, "\uD83C\uDF08", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " \u2192 1P"))), exchangeMax <= 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "rounded-2xl border border-amber-500/40 bg-amber-950/25 p-3 text-center text-[10px] font-black text-amber-200"
+  }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C ", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " \u500B\u305D\u308D\u3046\u3068\u5909\u63DB\u3067\u304D\u307E\u3059\uFF08\u3042\u3068 ", (TRANSCEND_PSYCHE_PER_POINT - psycheHave).toLocaleString(), "\uFF09\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-2xl bg-black/40 p-2.5"
+  }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+    "aria-label": "\u5909\u63DB\u3059\u308B\u30DD\u30A4\u30F3\u30C8\u3092\u6E1B\u3089\u3059",
+    disabled: exchangeWant <= 1,
+    onPress: () => setWant(exchangeWant - 1),
+    className: "min-h-[44px] rounded-xl bg-slate-700 text-xl font-black disabled:opacity-25"
+  }, "\u2212"), /*#__PURE__*/React.createElement("div", {
+    className: "text-center leading-none"
+  }, /*#__PURE__*/React.createElement("span", {
+    "data-transcend-exchange-want": true,
+    className: "font-mono text-3xl font-black text-white"
+  }, exchangeWant), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-bold text-slate-400"
+  }, "P")), /*#__PURE__*/React.createElement(PressRepeatButton, {
+    "aria-label": "\u5909\u63DB\u3059\u308B\u30DD\u30A4\u30F3\u30C8\u3092\u5897\u3084\u3059",
+    disabled: exchangeWant >= exchangeMax,
+    onPress: () => setWant(exchangeWant + 1),
+    className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-xl font-black disabled:bg-slate-700 disabled:opacity-25"
+  }, "\uFF0B")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5"
+  }, [['1P', 1], ['5P', 5], ['MAX', exchangeMax]].map(([label, amount]) => /*#__PURE__*/React.createElement("button", {
+    key: label,
+    "data-transcend-exchange": label,
+    disabled: amount > exchangeMax,
+    onClick: () => setWant(amount),
+    className: `min-h-[40px] rounded-xl text-[11px] font-black active:scale-95 disabled:opacity-30 ${exchangeWant === Math.min(amount, exchangeMax) ? 'bg-fuchsia-600 text-white' : 'bg-slate-800 text-slate-300'}`
+  }, label))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-2xl border border-fuchsia-400/30 bg-fuchsia-950/25 p-3 space-y-1 text-[10px] font-black"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u4F7F\u3046\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-white"
+  }, exchangeQuote.psycheCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u4EA4\u63DB\u5F8C\u306E\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-white"
+  }, exchangeQuote.nextPsyche.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-fuchsia-200"
+  }, points, " \u2192 ", points + exchangeQuote.points))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), "\u500B\u306B\u6E80\u305F\u306A\u3044\u7AEF\u6570\u306F\u6D88\u8CBB\u3057\u307E\u305B\u3093\u3002\u5909\u63DB\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u3001\u3044\u307E\u958B\u3044\u3066\u3044\u308B\u300C", masu.name, "\u300D\u306B\u5165\u308A\u307E\u3059\u3002")), transcendExchangeError && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-red-400"
+  }, transcendExchangeError), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTranscendExchangeOpen(false),
+    className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95"
+  }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("button", {
+    "data-transcend-exchange-commit": true,
+    disabled: !exchangeQuote.ok,
+    onClick: runExchange,
+    className: "min-h-[48px] rounded-2xl bg-fuchsia-600 text-white font-black text-xs disabled:opacity-35 active:scale-95"
+  }, "\u3053\u306E\u5185\u5BB9\u3067\u5909\u63DB")))), transcendFruitOpen && /*#__PURE__*/React.createElement("div", {
+    "data-transcend-fruit-sheet": true,
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046",
+    className: "absolute inset-0 flex items-end justify-center",
+    style: {
+      zIndex: 30500,
+      backgroundColor: 'rgba(2,6,23,0.86)'
+    },
+    onClick: () => setTranscendFruitOpen(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-emerald-400/40 bg-slate-900 p-4 space-y-3",
+    style: {
+      maxHeight: 'calc(100% - env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    },
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-emerald-200"
+  }, "\uD83C\uDF4E \u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046"), /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u9589\u3058\u308B",
+    onClick: () => setTranscendFruitOpen(false),
+    className: "min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 18
+  }))), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] font-bold text-slate-400"
+  }, "\u4F7F\u7528\u3059\u308B\u5B9F\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u8679\u306E\u5B9F\u304C\u81EA\u52D5\u3067\u4EE3\u7528\u3055\u308C\u308B\u3053\u3068\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, fruitChoices.map(({
+    itemId,
+    name,
+    have
+  }) => /*#__PURE__*/React.createElement("button", {
+    key: itemId,
+    "data-transcend-fruit-select": itemId,
+    disabled: have <= 0,
+    "aria-pressed": transcendFruitItemId === itemId,
+    onClick: () => {
+      setTranscendFruitItemId(itemId);
+      setTranscendFruitConfirmAmount(0);
+      setTranscendFruitError('');
+    },
+    className: `min-h-[64px] rounded-2xl border p-2 text-[9px] font-black active:scale-95 disabled:opacity-35 ${transcendFruitItemId === itemId ? 'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200' : 'border-white/10 bg-slate-800 text-slate-200'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block leading-tight"
+  }, name), /*#__PURE__*/React.createElement("span", {
+    className: "mt-1 block font-mono text-[12px]"
+  }, "\u6240\u6301 \xD7", have)))), !transcendFruitItemId ? /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200"
+  }, "\u4F7F\u7528\u3059\u308B\u5B9F\u3092\u660E\u793A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2"
+  }, [[1, '1'], [10, '10'], [selectedFruitHave, 'MAX']].map(([amount, label]) => /*#__PURE__*/React.createElement("button", {
+    key: label,
+    "data-transcend-fruit-amount": label,
+    disabled: selectedFruitHave < amount || amount <= 0,
+    onClick: () => requestFruitUse(amount),
+    className: "min-h-[44px] rounded-xl bg-emerald-700 text-sm font-black active:scale-95 disabled:opacity-30"
+  }, label))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-2xl border border-emerald-400/30 bg-emerald-950/25 p-3 text-[10px] font-black"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u73FE\u5728\u306E\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono"
+  }, points, "P")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u4F7F\u7528\u5F8C\uFF08\u9078\u629E\u4E2D\uFF09"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono text-emerald-200"
+  }, points, " \u2192 ", points + (transcendFruitConfirmAmount || 1), "P")))), transcendFruitConfirmAmount > 1 && /*#__PURE__*/React.createElement("div", {
+    "data-transcend-fruit-confirm": true,
+    className: "rounded-2xl border border-amber-400/40 bg-amber-950/25 p-3 space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black text-amber-200"
+  }, selectedFruitName, "\u3092", transcendFruitConfirmAmount, "\u500B\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-bold text-slate-300"
+  }, "\u6240\u6301 \xD7", selectedFruitHave, " \u2192 \xD7", selectedFruitHave - transcendFruitConfirmAmount, /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8 ", points, "P \u2192 ", points + transcendFruitConfirmAmount, "P"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTranscendFruitConfirmAmount(0),
+    className: "min-h-[44px] rounded-xl bg-slate-700 text-xs font-black"
+  }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+    "data-transcend-fruit-commit": true,
+    onClick: runFruitUse,
+    className: "min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-xs font-black"
+  }, "\u4F7F\u7528\u3092\u78BA\u5B9A"))), transcendFruitError && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-red-400"
+  }, transcendFruitError), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTranscendFruitOpen(false),
+    className: "min-h-[48px] w-full rounded-2xl bg-slate-800 text-slate-200 text-xs font-black"
+  }, "\u9589\u3058\u308B"))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -48409,704 +49144,45 @@ function MonsterHeroGame() {
         onClick: () => setUniqueSettingMasuId(null),
         className: "w-full min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase active:scale-95"
       }, "\u9589\u3058\u308B"))));
-    })(), gameState === 'MASU_TRANSCEND_ENHANCE' && masuMonDetail && (() => {
-      const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
-      const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      const normalized = normalizeMasuProgression(masu);
-      if (!base) {
+    })(), gameState === 'MASU_TRANSCEND_ENHANCE' && masuMonDetail && /*#__PURE__*/React.createElement(MasuTranscendEnhanceScreen, {
+      commitTranscendExchange: commitTranscendExchange,
+      commitTranscendFruit: commitTranscendFruit,
+      commitTranscendPlan: commitTranscendPlan,
+      getMasuMon: getMasuMon,
+      masuMonDetail: masuMonDetail,
+      onBack: () => {
+        setTranscendPlan(null);
+        setTranscendExchangeOpen(false);
         setGameState('MASU_ENHANCE');
-        return null;
-      }
-      const points = normalized.transcendPoints;
-      const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
-      const plan = transcendPlan || {
-        apt: [0, 0, 0, 0],
-        stat: {
-          hp: 0,
-          atk: 0,
-          def: 0,
-          guts: 0
-        }
-      };
-      const planUsed = plan.apt.reduce((a, b) => a + b, 0) + Object.values(plan.stat).reduce((a, b) => a + b, 0);
-      const planLeft = points - planUsed;
-      const preview = planUsed > 0 ? applyTranscendPlanToMasu(masu, plan) : null;
-      const previewMasu = preview ? preview.masu : masu;
-      const currentPower = masuPowerOf(masu);
-      const previewPower = masuPowerOf(previewMasu);
-      const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0, 4) : ['C', 'C', 'C', 'C'];
-      const maxGrade = DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length - 1];
-      const transcendGrade = (idx, extra = 0) => raiseAptitudeGrade(baseApt[idx] || 'C', normalized.transcendAptBoosts[idx] + extra);
-      const aptAtMax = idx => transcendGrade(idx, plan.apt[idx]) === maxGrade;
-      // 振り分けは通常強化と同じ作法にそろえる(1 / 5 / 10 / MAX・長押しで連続・確定するまで保存しない)
-      const changeTranscendPlan = (kind, target, direction) => setTranscendPlan(previous => {
-        const q = previous ? {
-          apt: [...previous.apt],
-          stat: {
-            ...previous.stat
-          }
-        } : {
-          apt: [0, 0, 0, 0],
-          stat: {
-            hp: 0,
-            atk: 0,
-            def: 0,
-            guts: 0
-          }
-        };
-        const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
-        const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
-        const remaining = Math.max(0, points - used);
-        let amount = transcendBulkUnit === 'MAX' ? direction > 0 ? remaining : current : Math.min(Number(transcendBulkUnit), direction > 0 ? remaining : current);
-        if (kind === 'apt' && direction > 0) {
-          // 基礎の段階もMで止める。今の段階から残り何段階上げられるかで頭打ちにする
-          const room = DIST_APTITUDE_GRADES.length - 1 - DIST_APTITUDE_GRADES.indexOf(transcendGrade(target));
-          amount = Math.min(amount, Math.max(0, room - current));
-        }
-        const next = Math.max(0, current + direction * Math.max(0, amount));
-        if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
-        return q;
-      });
-      const addApt = (idx, direction) => changeTranscendPlan('apt', idx, direction);
-      const addStat = (key, direction) => changeTranscendPlan('stat', key, direction);
-      const setTranscendPlanExact = (kind, target, rawValue) => setTranscendPlan(previous => {
-        const q = previous ? {
-          apt: [...previous.apt],
-          stat: {
-            ...previous.stat
-          }
-        } : {
-          apt: [0, 0, 0, 0],
-          stat: {
-            hp: 0,
-            atk: 0,
-            def: 0,
-            guts: 0
-          }
-        };
-        const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
-        const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
-        let maxForRow = Math.max(0, points - (used - current));
-        if (kind === 'apt') {
-          const room = DIST_APTITUDE_GRADES.length - 1 - DIST_APTITUDE_GRADES.indexOf(transcendGrade(target));
-          maxForRow = Math.min(maxForRow, Math.max(0, room));
-        }
-        const next = directEnhancePointAmount(rawValue, maxForRow);
-        if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
-        return q;
-      });
-      // 虹のプシュケーの変換シート。ここで欲しいポイント数を決めてから確定する
-      const exchangeMax = transcendPsycheExchange(psycheHave, Number.MAX_SAFE_INTEGER).maxPoints;
-      const exchangeWant = Math.max(1, Math.min(Math.max(1, exchangeMax), transcendExchangeWant));
-      const exchangeQuote = transcendPsycheExchange(psycheHave, exchangeWant);
-      const setWant = n => setTranscendExchangeWant(Math.max(1, Math.min(Math.max(1, exchangeMax), n)));
-      const openExchange = () => {
-        setTranscendExchangeError('');
-        setTranscendExchangeWant(exchangeMax > 0 ? 1 : 1);
-        setTranscendExchangeOpen(true);
-      };
-      const speciesFruitId = masuSpeciesTranscendFruitItemId(masu.baseId);
-      const speciesFruit = speciesTranscendFruitItems()[monsterLineageOf(masu.baseId).main.id];
-      const speciesFruitHave = transcendFruitOwnedCount(ownedItems, speciesFruitId);
-      const rainbowFruitHave = transcendFruitOwnedCount(ownedItems, RAINBOW_TRANSCEND_FRUIT_ITEM_ID);
-      // 【後方互換】種族をモンスター1体単位で作っていたころの実。もう配らないが、持っている人が
-      // 使えないままにならないよう、所持しているぶんだけ選択肢へ出す(持っていなければ増えない)
-      const legacyFruitChoices = legacySpeciesTranscendFruitsForLineage(masu.baseId).map(item => ({
-        itemId: item.id,
-        name: `超越の実（旧・${ALL_PLAYER_MONSTERS[item.baseId]?.name || item.baseId}）`,
-        have: transcendFruitOwnedCount(ownedItems, item.id)
-      })).filter(choice => choice.have > 0);
-      const fruitChoices = [{
-        itemId: speciesFruitId,
-        name: speciesFruit?.name || '対応種族の超越の実',
-        have: speciesFruitHave
-      }, ...legacyFruitChoices, {
-        itemId: RAINBOW_TRANSCEND_FRUIT_ITEM_ID,
-        name: RAINBOW_TRANSCEND_FRUIT_ITEM.name,
-        have: rainbowFruitHave
-      }];
-      const hasTranscendFruit = fruitChoices.some(choice => choice.have > 0);
-      const selectedFruitHave = transcendFruitOwnedCount(ownedItems, transcendFruitItemId);
-      const selectedFruitName = fruitChoices.find(choice => choice.itemId === transcendFruitItemId)?.name || '';
-      const openFruit = () => {
-        setTranscendFruitItemId('');
-        setTranscendFruitConfirmAmount(0);
-        setTranscendFruitError('');
-        setTranscendFruitOpen(true);
-      };
-      const requestFruitUse = async amount => {
-        if (amount > 1) {
-          setTranscendFruitConfirmAmount(amount);
-          return;
-        }
-        await commitTranscendFruit(masu, transcendFruitItemId, amount);
-      };
-      const runFruitUse = async () => {
-        await commitTranscendFruit(masu, transcendFruitItemId, transcendFruitConfirmAmount);
-      };
-      // 超越ポイントリセットの書。振り分け直したいときに、使った超越Pを全部戻す
-      const resetScrollHave = ownedItemCount(ownedItems, TRANSCEND_RESET_ITEM_ID);
-      const spentPoints = transcendSpentPoints(normalized);
-      const openReset = () => {
-        setTranscendResetError('');
-        setTranscendResetOpen(true);
-      };
-      const runReset = async () => {
-        const done = await useTranscendResetScroll(masu.id);
-        if (done) {
-          await saveMissionProgress('itemUse', 1);
-          setTranscendResetOpen(false);
-        }
-      };
-      const runExchange = async () => {
-        const applied = await commitTranscendExchange(masu, exchangeWant);
-        if (applied) {
-          setTranscendExchangeOpen(false);
-          setTranscendExchangeWant(1);
-        }
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        style: {
-          position: "absolute",
-          inset: 0,
-          backgroundColor: "#020617",
-          zIndex: 30000
-        },
-        className: "absolute inset-0 flex flex-col overflow-hidden",
-        "data-transcend-enhance": masu.id
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 p-4 shrink-0 border-b border-white/10",
-        style: {
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))'
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u901A\u5E38\u5F37\u5316\u3078\u623B\u308B",
-        onClick: () => {
-          setTranscendPlan(null);
-          setTranscendExchangeOpen(false);
-          setGameState('MASU_ENHANCE');
-        },
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, /*#__PURE__*/React.createElement("small", {
-        className: "block text-[8px] font-black tracking-widest text-sky-400"
-      }, "TRANSCENDENCE"), /*#__PURE__*/React.createElement("h2", {
-        className: "truncate text-sm font-black text-white"
-      }, masu.name)), /*#__PURE__*/React.createElement("span", {
-        className: "relative inline-block w-9 h-9 shrink-0"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "block w-9 h-9 overflow-hidden rounded-full border border-sky-400/40"
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: masu.baseId,
-        src: base.iconUrl,
-        alt: masu.name,
-        masuColors: getMasuColors(masu),
-        className: "w-full h-full object-cover"
-      })), /*#__PURE__*/React.createElement(TranscendenceBadge, {
-        transcended: normalized.transcended,
-        soulRankStage: normalized.soulRankStage,
-        small: true
-      }))), /*#__PURE__*/React.createElement("div", {
-        "data-transcend-enhance-tabs": true,
-        className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => {
-          setTranscendPlan(null);
-          setTranscendExchangeOpen(false);
-          setGameState('MASU_ENHANCE');
-        },
-        className: "min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95"
-      }, "\u901A\u5E38\u5F37\u5316"), /*#__PURE__*/React.createElement("button", {
-        className: "min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black"
-      }, "\u8D85\u8D8A\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: normalized.transcended ? 'transcendence' : 'masuEnhance',
-        compact: true
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full",
-        style: {
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "rounded-3xl border border-sky-400/40 bg-sky-950/30 p-3 shadow-xl"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-end justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black tracking-wider text-sky-200"
-      }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-bold text-slate-400"
-      }, "\u901A\u5E38\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3068\u306F\u5225\u67A0")), /*#__PURE__*/React.createElement("div", {
-        "data-transcend-points": true,
-        className: "text-right leading-none"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-3xl font-black font-mono text-white"
-      }, planLeft), /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-bold text-slate-400"
-      }, " / ", points))), /*#__PURE__*/React.createElement("button", {
-        "data-transcend-exchange-open": true,
-        onClick: openExchange,
-        className: "mt-3 w-full min-h-[46px] rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-fuchsia-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true"
-      }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB", /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] font-mono text-slate-300"
-      }, "\u6240\u6301 ", psycheHave.toLocaleString())), hasTranscendFruit && /*#__PURE__*/React.createElement("button", {
-        "data-transcend-fruit-open": true,
-        onClick: openFruit,
-        className: "mt-2 w-full min-h-[46px] rounded-2xl border border-emerald-400/50 bg-emerald-950/40 text-emerald-100 text-[11px] font-black active:scale-95 flex items-center justify-center gap-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true"
-      }, "\uD83C\uDF4E"), "\u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046", /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] font-mono text-slate-300"
-      }, "\u7A2E\u65CF \xD7", speciesFruitHave, "\uFF0F\u8679 \xD7", rainbowFruitHave)), /*#__PURE__*/React.createElement("button", {
-        "data-transcend-reset-open": true,
-        disabled: spentPoints <= 0 || resetScrollHave <= 0,
-        onClick: openReset,
-        className: "mt-2 w-full min-h-[42px] rounded-2xl border border-amber-400/50 bg-amber-950/30 text-amber-100 text-[11px] font-black active:scale-95 disabled:opacity-35 flex items-center justify-center gap-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true"
-      }, "\uD83C\uDF20"), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8", /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] font-mono text-slate-300"
-      }, "\u66F8 \xD7", resetScrollHave)), spentPoints <= 0 && /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 text-[9px] font-bold text-slate-500 text-center"
-      }, "\u30EA\u30BB\u30C3\u30C8\u3059\u308B\u8D85\u8D8A\u5F37\u5316\u304C\u3042\u308A\u307E\u305B\u3093"), spentPoints > 0 && resetScrollHave <= 0 && /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 text-[9px] font-bold text-slate-500 text-center"
-      }, "\u300C\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u300D\u306F\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u8CB7\u3048\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
-        className: "bg-slate-900 border border-sky-500/40 rounded-3xl p-3 shadow-xl"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2 mb-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-sky-300 uppercase tracking-wider flex items-center gap-1.5"
-      }, /*#__PURE__*/React.createElement(Sparkles, {
-        size: 14
-      }), "\u57FA\u790E\u5024\u3092\u4E0A\u3052\u308B"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold"
-      }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3",
-        role: "group",
-        "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
-      }, [1, 5, 10, 100, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        key: unit,
-        "data-transcend-unit": unit,
-        "aria-pressed": transcendBulkUnit === unit,
-        onClick: () => setTranscendBulkUnit(unit),
-        className: `min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${transcendBulkUnit === unit ? 'bg-sky-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`
-      }, unit === 'MAX' ? 'MAX' : `${unit}P`))), /*#__PURE__*/React.createElement("div", {
-        className: "mb-3"
-      }, renderPowerBadge(previewPower, {
-        before: currentPower,
-        size: 'md'
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold mb-1.5"
-      }, "\u9593\u5408\u3044\u9069\u6027", /*#__PURE__*/React.createElement("span", {
-        className: "ml-1 text-slate-500"
-      }, "\uFF08\u4E0A\u9650", maxGrade, "\uFF09")), /*#__PURE__*/React.createElement("div", {
-        className: "space-y-1.5 mb-3"
-      }, RANGE_LABELS.map((label, idx) => {
-        const before = transcendGrade(idx),
-          after = transcendGrade(idx, plan.apt[idx]),
-          added = plan.apt[idx];
-        return /*#__PURE__*/React.createElement("div", {
-          key: idx,
-          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: `text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`
-        }, label), /*#__PURE__*/React.createElement("div", {
-          className: "text-center font-mono font-black text-[12px]"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: DIST_APTITUDE_COLOR[before]
-        }, before), /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500 mx-1"
-        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
-          className: added > 0 ? 'text-sky-300' : 'text-slate-300'
-        }, after)), /*#__PURE__*/React.createElement("label", {
-          className: "flex items-center gap-0.5 min-w-0"
-        }, /*#__PURE__*/React.createElement("input", {
-          "data-direct-point-input": "transcend-apt",
-          "aria-label": `${label}の基礎適性の振り分けポイントを直接入力`,
-          type: "text",
-          inputMode: "numeric",
-          pattern: "[0-9]*",
-          enterKeyHint: "done",
-          autoComplete: "off",
-          value: added,
-          onFocus: e => e.currentTarget.select(),
-          onChange: e => setTranscendPlanExact('apt', idx, e.currentTarget.value),
-          onKeyDown: e => {
-            if (e.key === 'Enter') e.currentTarget.blur();
-          },
-          className: "w-full min-w-0 h-8 rounded-md border border-sky-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"
-        }), /*#__PURE__*/React.createElement("span", {
-          className: "text-[8px] font-black text-sky-300"
-        }, "P")), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-2 gap-1"
-        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
-          "aria-label": `${label}の基礎適性を減らす`,
-          disabled: added <= 0,
-          onPress: () => addApt(idx, -1),
-          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
-        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
-          "aria-label": `${label}の基礎適性を上げる`,
-          disabled: planLeft <= 0 || aptAtMax(idx),
-          onPress: () => addApt(idx, 1),
-          className: "min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
-        }, "\uFF0B")));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold mb-1.5"
-      }, "\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
-        className: "space-y-1.5"
-      }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
-        const n = plan.stat[key] || 0,
-          gain = n * (STAT_POINT_GAIN[key] || 1),
-          before = normalized.transcendStatPoints[key];
-        return /*#__PURE__*/React.createElement("div", {
-          key: key,
-          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[8px] text-center text-sky-200 font-black"
-        }, label), /*#__PURE__*/React.createElement("div", {
-          className: "text-center font-mono font-black text-[11px]"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-white"
-        }, "\u57FA\u790E+", before), /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500 mx-1"
-        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
-          className: gain > 0 ? 'text-sky-300' : 'text-slate-300'
-        }, "\u57FA\u790E+", before + gain)), /*#__PURE__*/React.createElement("label", {
-          className: "flex items-center gap-0.5 min-w-0"
-        }, /*#__PURE__*/React.createElement("input", {
-          "data-direct-point-input": "transcend-stat",
-          "aria-label": `${label}の基礎値の振り分けポイントを直接入力`,
-          type: "text",
-          inputMode: "numeric",
-          pattern: "[0-9]*",
-          enterKeyHint: "done",
-          autoComplete: "off",
-          value: n,
-          onFocus: e => e.currentTarget.select(),
-          onChange: e => setTranscendPlanExact('stat', key, e.currentTarget.value),
-          onKeyDown: e => {
-            if (e.key === 'Enter') e.currentTarget.blur();
-          },
-          className: "w-full min-w-0 h-8 rounded-md border border-sky-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-sky-300 outline-none focus:border-sky-300"
-        }), /*#__PURE__*/React.createElement("span", {
-          className: "text-[8px] font-black text-sky-300"
-        }, "P")), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-2 gap-1"
-        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
-          "aria-label": `${label}の基礎値を減らす`,
-          disabled: n <= 0,
-          onPress: () => addStat(key, -1),
-          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
-        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
-          "aria-label": `${label}の基礎値を上げる`,
-          disabled: planLeft <= 0,
-          onPress: () => addStat(key, 1),
-          className: "min-h-[40px] rounded-lg bg-sky-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
-        }, "\uFF0B")));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 mt-2"
-      }, "\uFF0B\uFF0F\u2212\u306F\u9577\u62BC\u3057\u3067\u3082\u9023\u7D9A\u8ABF\u6574\u3067\u304D\u307E\u3059\u30021P\u3067\u57FA\u790E\u30E9\u30A4\u30D5+", STAT_POINT_GAIN.hp, "\uFF0F\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4+", STAT_POINT_GAIN.atk, "\uFF0F\u9593\u5408\u3044\u9069\u60271\u6BB5\u968E\uFF08\u3069\u308C\u3082\u7DCF\u5408\u529B+10\u76F8\u5F53\uFF09\u3002")), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-bold text-slate-400 leading-relaxed"
-      }, "\u8D85\u8D8A\u5F37\u5316\u306F\u300C\u57FA\u790E\u5024\u300D\u3092\u4E0A\u3052\u308B\u306E\u3067\u3001\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u3067\u901A\u5E38\u306E\u5F37\u5316\u3092\u623B\u3057\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002\u8EE2\u751F\u30FB\u9650\u754C\u7A81\u7834\u3067\u3082\u6B8B\u308A\u307E\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"), !normalized.transcended && /*#__PURE__*/React.createElement("div", {
-        "data-transcend-not-yet": true,
-        className: "rounded-2xl border border-slate-500/40 bg-black/40 p-3 text-[9px] font-bold text-slate-400 leading-relaxed"
-      }, "\u3053\u306E\u500B\u4F53\u306F\u307E\u3060\u795E\u6BBF\u3067\u8D85\u8D8A\u3057\u3066\u3044\u307E\u305B\u3093\u304C\u3001\u8D85\u8D8A\u5F37\u5316\u306F\u3044\u3064\u3067\u3082\u4F7F\u3048\u307E\u3059\u3002\u3042\u3068\u3067\u6B63\u5F0F\u306B\u8D85\u8D8A\u3057\u3066\u3082\u3001\u3053\u3053\u3067\u4E0A\u3052\u305F\u57FA\u790E\u5024\u3068\u6B8B\u3063\u3066\u3044\u308B\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u306F\u305D\u306E\u307E\u307E\u5F15\u304D\u7D99\u304C\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u795E\u6BBF\u306E\u300C\u8D85\u8D8A\u300D\uFF08Lv\u4E0A\u9650400\u2192500\u30FB\u8D85\u8D8A\u30DE\u30FC\u30AF\uFF09\u306F\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308ALv.", MAX_MASU_LEVEL_CAP, "\u30FB\u9650\u754C\u7A81\u7834", FINAL_BREAKTHROUGH_COUNT, "\u56DE\u304C\u5FC5\u8981\u3067\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 grid grid-cols-2 gap-2 p-4 border-t border-white/10",
-        style: {
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setTranscendPlan(null),
-        disabled: planUsed <= 0,
-        className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
-        "data-transcend-commit": true,
-        disabled: planUsed <= 0,
-        onClick: () => commitTranscendPlan(masu, plan),
-        className: "min-h-[48px] rounded-2xl bg-sky-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "\u3053\u306E\u914D\u5206\u3067\u78BA\u5B9A\uFF08", planUsed, "P\uFF09")), transcendResetOpen && /*#__PURE__*/React.createElement("div", {
-        "data-transcend-reset-sheet": true,
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u30EA\u30BB\u30C3\u30C8",
-        className: "absolute inset-0 flex items-end justify-center",
-        style: {
-          zIndex: 30500,
-          backgroundColor: 'rgba(2,6,23,0.86)'
-        },
-        onClick: () => setTranscendResetOpen(false)
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-amber-400/40 bg-slate-900 p-4 space-y-3",
-        style: {
-          maxHeight: 'calc(100% - env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        },
-        onClick: e => e.stopPropagation()
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-sm font-black text-amber-200 flex items-center gap-1.5"
-      }, /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true"
-      }, "\uD83C\uDF20"), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u30EA\u30BB\u30C3\u30C8\u3057\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u9589\u3058\u308B",
-        onClick: () => setTranscendResetOpen(false),
-        className: "p-2 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(X, {
-        size: 18
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border border-amber-400/30 bg-amber-950/25 p-3 space-y-1 text-[10px] font-black"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u4F7F\u7528\u6E08\u307F\u8D85\u8D8AP"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono text-white"
-      }, spentPoints, "P")), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u672A\u4F7F\u7528\u8D85\u8D8AP"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono text-white"
-      }, points, "P")), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between pt-1 border-t border-white/10"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u30EA\u30BB\u30C3\u30C8\u5F8C\u306E\u672A\u4F7F\u7528\u8D85\u8D8AP"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono text-amber-200"
-      }, points + spentPoints, "P")), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono text-white"
-      }, "\xD7", resetScrollHave, " \u2192 \xD7", Math.max(0, resetScrollHave - 1)))), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-bold text-slate-400 leading-relaxed"
-      }, "\u8D85\u8D8A\u3067\u4E0A\u3052\u305F\u57FA\u790E\u30B9\u30C6\u30FC\u30BF\u30B9\u3068\u57FA\u790E\u306E\u9593\u5408\u3044\u9069\u6027\u304C\u5143\u3078\u623B\u308A\u3001\u305D\u306E\u3076\u3093\u306E\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u304C\u672A\u4F7F\u7528\u3078\u8FD4\u308A\u307E\u3059\u3002\u7D46\u30EC\u30D9\u30EB\u30FB\u7D46\u7D4C\u9A13\u5024\u30FBLv\u4E0A\u9650\u30FB\u8D85\u8D8A\u6E08\u307F\u304B\u3069\u3046\u304B\u30FB\u9650\u754C\u7A81\u7834\u30FB\u8EE2\u751F\u56DE\u6570\u30FB\u901A\u5E38\u306E\u5F37\u5316\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("b", {
-        className: "text-amber-200"
-      }, "\u4EA4\u63DB\u306B\u4F7F\u3063\u305F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u306F\u623B\u308A\u307E\u305B\u3093\u3002")), transcendResetError && /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black text-red-400"
-      }, transcendResetError), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setTranscendResetOpen(false),
-        className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95"
-      }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
-        "data-transcend-reset-commit": true,
-        disabled: spentPoints <= 0 || resetScrollHave <= 0,
-        onClick: runReset,
-        className: "min-h-[48px] rounded-2xl bg-amber-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "\u66F8\u30921\u518A\u4F7F\u3063\u3066\u30EA\u30BB\u30C3\u30C8")))), transcendExchangeOpen && /*#__PURE__*/React.createElement("div", {
-        "data-transcend-exchange-sheet": true,
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB",
-        className: "absolute inset-0 flex items-end justify-center",
-        style: {
-          zIndex: 30500,
-          backgroundColor: 'rgba(2,6,23,0.86)'
-        },
-        onClick: () => setTranscendExchangeOpen(false)
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-fuchsia-400/40 bg-slate-900 p-4 space-y-3",
-        style: {
-          maxHeight: 'calc(100% - env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        },
-        onClick: e => e.stopPropagation()
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-sm font-black text-fuchsia-200 flex items-center gap-1.5"
-      }, /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true"
-      }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u3092\u5909\u63DB"), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u9589\u3058\u308B",
-        onClick: () => setTranscendExchangeOpen(false),
-        className: "p-2 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(X, {
-        size: 18
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl bg-black/40 p-2.5 text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black text-slate-400"
-      }, "\u6240\u6301\u3057\u3066\u3044\u308B\uD83C\uDF08"), /*#__PURE__*/React.createElement("div", {
-        className: "font-mono text-lg font-black text-white"
-      }, psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl bg-black/40 p-2.5 text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] font-black text-slate-400"
-      }, "\u4EA4\u63DB\u30EC\u30FC\u30C8"), /*#__PURE__*/React.createElement("div", {
-        className: "font-mono text-[11px] font-black text-fuchsia-200"
-      }, "\uD83C\uDF08", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " \u2192 1P"))), exchangeMax <= 0 ? /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border border-amber-500/40 bg-amber-950/25 p-3 text-center text-[10px] font-black text-amber-200"
-      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C ", TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), " \u500B\u305D\u308D\u3046\u3068\u5909\u63DB\u3067\u304D\u307E\u3059\uFF08\u3042\u3068 ", (TRANSCEND_PSYCHE_PER_POINT - psycheHave).toLocaleString(), "\uFF09\u3002") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-2xl bg-black/40 p-2.5"
-      }, /*#__PURE__*/React.createElement(PressRepeatButton, {
-        "aria-label": "\u5909\u63DB\u3059\u308B\u30DD\u30A4\u30F3\u30C8\u3092\u6E1B\u3089\u3059",
-        disabled: exchangeWant <= 1,
-        onPress: () => setWant(exchangeWant - 1),
-        className: "min-h-[44px] rounded-xl bg-slate-700 text-xl font-black disabled:opacity-25"
-      }, "\u2212"), /*#__PURE__*/React.createElement("div", {
-        className: "text-center leading-none"
-      }, /*#__PURE__*/React.createElement("span", {
-        "data-transcend-exchange-want": true,
-        className: "font-mono text-3xl font-black text-white"
-      }, exchangeWant), /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-bold text-slate-400"
-      }, "P")), /*#__PURE__*/React.createElement(PressRepeatButton, {
-        "aria-label": "\u5909\u63DB\u3059\u308B\u30DD\u30A4\u30F3\u30C8\u3092\u5897\u3084\u3059",
-        disabled: exchangeWant >= exchangeMax,
-        onPress: () => setWant(exchangeWant + 1),
-        className: "min-h-[44px] rounded-xl bg-fuchsia-700 text-xl font-black disabled:bg-slate-700 disabled:opacity-25"
-      }, "\uFF0B")), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1.5"
-      }, [['1P', 1], ['5P', 5], ['MAX', exchangeMax]].map(([label, amount]) => /*#__PURE__*/React.createElement("button", {
-        key: label,
-        "data-transcend-exchange": label,
-        disabled: amount > exchangeMax,
-        onClick: () => setWant(amount),
-        className: `min-h-[40px] rounded-xl text-[11px] font-black active:scale-95 disabled:opacity-30 ${exchangeWant === Math.min(amount, exchangeMax) ? 'bg-fuchsia-600 text-white' : 'bg-slate-800 text-slate-300'}`
-      }, label))), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border border-fuchsia-400/30 bg-fuchsia-950/25 p-3 space-y-1 text-[10px] font-black"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u4F7F\u3046\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono text-white"
-      }, exchangeQuote.psycheCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u4EA4\u63DB\u5F8C\u306E\uD83C\uDF08"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono text-white"
-      }, exchangeQuote.nextPsyche.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono text-fuchsia-200"
-      }, points, " \u2192 ", points + exchangeQuote.points))), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-bold text-slate-400"
-      }, TRANSCEND_PSYCHE_PER_POINT.toLocaleString(), "\u500B\u306B\u6E80\u305F\u306A\u3044\u7AEF\u6570\u306F\u6D88\u8CBB\u3057\u307E\u305B\u3093\u3002\u5909\u63DB\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u3001\u3044\u307E\u958B\u3044\u3066\u3044\u308B\u300C", masu.name, "\u300D\u306B\u5165\u308A\u307E\u3059\u3002")), transcendExchangeError && /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black text-red-400"
-      }, transcendExchangeError), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setTranscendExchangeOpen(false),
-        className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs active:scale-95"
-      }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("button", {
-        "data-transcend-exchange-commit": true,
-        disabled: !exchangeQuote.ok,
-        onClick: runExchange,
-        className: "min-h-[48px] rounded-2xl bg-fuchsia-600 text-white font-black text-xs disabled:opacity-35 active:scale-95"
-      }, "\u3053\u306E\u5185\u5BB9\u3067\u5909\u63DB")))), transcendFruitOpen && /*#__PURE__*/React.createElement("div", {
-        "data-transcend-fruit-sheet": true,
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": "\u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046",
-        className: "absolute inset-0 flex items-end justify-center",
-        style: {
-          zIndex: 30500,
-          backgroundColor: 'rgba(2,6,23,0.86)'
-        },
-        onClick: () => setTranscendFruitOpen(false)
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl border-t border-x border-emerald-400/40 bg-slate-900 p-4 space-y-3",
-        style: {
-          maxHeight: 'calc(100% - env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        },
-        onClick: e => e.stopPropagation()
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-sm font-black text-emerald-200"
-      }, "\uD83C\uDF4E \u8D85\u8D8A\u306E\u5B9F\u3092\u4F7F\u3046"), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u9589\u3058\u308B",
-        onClick: () => setTranscendFruitOpen(false),
-        className: "min-h-[44px] min-w-[44px] p-2 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(X, {
-        size: 18
-      }))), /*#__PURE__*/React.createElement("p", {
-        className: "text-[9px] font-bold text-slate-400"
-      }, "\u4F7F\u7528\u3059\u308B\u5B9F\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u8679\u306E\u5B9F\u304C\u81EA\u52D5\u3067\u4EE3\u7528\u3055\u308C\u308B\u3053\u3068\u306F\u3042\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, fruitChoices.map(({
-        itemId,
-        name,
-        have
-      }) => /*#__PURE__*/React.createElement("button", {
-        key: itemId,
-        "data-transcend-fruit-select": itemId,
-        disabled: have <= 0,
-        "aria-pressed": transcendFruitItemId === itemId,
-        onClick: () => {
-          setTranscendFruitItemId(itemId);
-          setTranscendFruitConfirmAmount(0);
-          setTranscendFruitError('');
-        },
-        className: `min-h-[64px] rounded-2xl border p-2 text-[9px] font-black active:scale-95 disabled:opacity-35 ${transcendFruitItemId === itemId ? 'border-emerald-200 bg-emerald-600 text-white ring-2 ring-emerald-200' : 'border-white/10 bg-slate-800 text-slate-200'}`
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "block leading-tight"
-      }, name), /*#__PURE__*/React.createElement("span", {
-        className: "mt-1 block font-mono text-[12px]"
-      }, "\u6240\u6301 \xD7", have)))), !transcendFruitItemId ? /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl bg-black/30 p-3 text-center text-[10px] font-black text-amber-200"
-      }, "\u4F7F\u7528\u3059\u308B\u5B9F\u3092\u660E\u793A\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-2"
-      }, [[1, '1'], [10, '10'], [selectedFruitHave, 'MAX']].map(([amount, label]) => /*#__PURE__*/React.createElement("button", {
-        key: label,
-        "data-transcend-fruit-amount": label,
-        disabled: selectedFruitHave < amount || amount <= 0,
-        onClick: () => requestFruitUse(amount),
-        className: "min-h-[44px] rounded-xl bg-emerald-700 text-sm font-black active:scale-95 disabled:opacity-30"
-      }, label))), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-2xl border border-emerald-400/30 bg-emerald-950/25 p-3 text-[10px] font-black"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u73FE\u5728\u306E\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono"
-      }, points, "P")), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u4F7F\u7528\u5F8C\uFF08\u9078\u629E\u4E2D\uFF09"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono text-emerald-200"
-      }, points, " \u2192 ", points + (transcendFruitConfirmAmount || 1), "P")))), transcendFruitConfirmAmount > 1 && /*#__PURE__*/React.createElement("div", {
-        "data-transcend-fruit-confirm": true,
-        className: "rounded-2xl border border-amber-400/40 bg-amber-950/25 p-3 space-y-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-amber-200"
-      }, selectedFruitName, "\u3092", transcendFruitConfirmAmount, "\u500B\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-bold text-slate-300"
-      }, "\u6240\u6301 \xD7", selectedFruitHave, " \u2192 \xD7", selectedFruitHave - transcendFruitConfirmAmount, /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8 ", points, "P \u2192 ", points + transcendFruitConfirmAmount, "P"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setTranscendFruitConfirmAmount(0),
-        className: "min-h-[44px] rounded-xl bg-slate-700 text-xs font-black"
-      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-        "data-transcend-fruit-commit": true,
-        onClick: runFruitUse,
-        className: "min-h-[44px] rounded-xl bg-amber-500 text-slate-950 text-xs font-black"
-      }, "\u4F7F\u7528\u3092\u78BA\u5B9A"))), transcendFruitError && /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black text-red-400"
-      }, transcendFruitError), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setTranscendFruitOpen(false),
-        className: "min-h-[48px] w-full rounded-2xl bg-slate-800 text-slate-200 text-xs font-black"
-      }, "\u9589\u3058\u308B"))));
-    })(), gameState === 'MASU_ENHANCE' && masuMonDetail && (() => {
+      },
+      onMissing: () => setGameState('MASU_ENHANCE'),
+      ownedItems: ownedItems,
+      renderPowerBadge: renderPowerBadge,
+      saveMissionProgress: saveMissionProgress,
+      setTranscendBulkUnit: setTranscendBulkUnit,
+      setTranscendExchangeError: setTranscendExchangeError,
+      setTranscendExchangeOpen: setTranscendExchangeOpen,
+      setTranscendExchangeWant: setTranscendExchangeWant,
+      setTranscendFruitConfirmAmount: setTranscendFruitConfirmAmount,
+      setTranscendFruitError: setTranscendFruitError,
+      setTranscendFruitItemId: setTranscendFruitItemId,
+      setTranscendFruitOpen: setTranscendFruitOpen,
+      setTranscendPlan: setTranscendPlan,
+      setTranscendResetError: setTranscendResetError,
+      setTranscendResetOpen: setTranscendResetOpen,
+      transcendBulkUnit: transcendBulkUnit,
+      transcendExchangeError: transcendExchangeError,
+      transcendExchangeOpen: transcendExchangeOpen,
+      transcendExchangeWant: transcendExchangeWant,
+      transcendFruitConfirmAmount: transcendFruitConfirmAmount,
+      transcendFruitError: transcendFruitError,
+      transcendFruitItemId: transcendFruitItemId,
+      transcendFruitOpen: transcendFruitOpen,
+      transcendPlan: transcendPlan,
+      transcendResetError: transcendResetError,
+      transcendResetOpen: transcendResetOpen,
+      useTranscendResetScroll: useTranscendResetScroll
+    }), gameState === 'MASU_ENHANCE' && masuMonDetail && (() => {
       const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       if (!base) {
