@@ -12,6 +12,9 @@ const iceRulerRate = (currentRate, heroId, iceLockActive, heroDist, enemyDist) =
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
 const targetHeroes = ['Snegurochka', 'Undine', 'Yaobikuni'];
+const waterMotionSource = game.slice(game.indexOf('const WATER_BURST_SHOTS'), game.indexOf('const PandoraDualThunder'));
+const waterShotCount = (waterMotionSource.match(/\{ left:/g) || []).length;
+
 const conditionCasesPass = targetHeroes.every(heroId => [
   [0.05, heroId, false, 1, 1, 0.05], // 楔なし
   [0.05, heroId, false, 1, 1, 0.05], // 楔準備中（iceLockActive=false）
@@ -50,6 +53,16 @@ const checks = [
   ['準備中は特性を発動しない', game.includes('const iceLockActive = iceLockTurns>0 && !iceLockPreparing') && !game.includes('activatesIceLock') && !/getDmg\([^\n]*activatedIceLockThisTurn/.test(game)],
   ['敵情報欄に絶氷の準備・残りターン・軽減を維持', /data-ice-lock-status[\s\S]*?iceLockPreparing\?'準備':[\s\S]*?iceLockTurns\}T　⬇30%/.test(game) && /text-\[7px\][\s\S]*?❄️絶氷/.test(game)],
   ['専用水攻撃モーション', /atkMotion:'waterBurst'/.test(ally) && /@keyframes waterBurstAttack/.test(game) && /@keyframes waterBurstLunge/.test(game)],
+  ['水攻撃は距離枠を動かさず本体だけ横移動', game.includes("if (anim.motion==='waterBurst') return undefined")
+    && game.includes('const WaterBurstMotion =')
+    && game.includes('translate3d(-44px,-2px,0)')
+    && game.includes('translate3d(46px,-8px,0)')],
+  ['水弾は3発・着弾飛沫つき', waterShotCount === 3
+    && game.includes('water-burst-motion__impact-core')
+    && game.includes('water-burst-motion__impact-ring')],
+  ['本番バトルでも専用水演出を描画', game.includes("isAnimating&&attackAnim.motion==='waterBurst'")
+    && game.includes('<WaterBurstMotion')
+    && game.includes("motion==='waterBurst'?WATER_BURST_MOTION_MS")],
   ['ヘルプに特性・固有効果と全発動条件', help.includes('勇者特性「氷海の支配者」') && help.includes('「絶氷の楔」が発動中（準備中を除く）かつ勇者モンと敵が同じ距離')],
   // 立ち絵は他のモンスターと同じ正方形・同じ余白へそろえる(import-monster-art.jsの出力)。
   // 元絵は縦長(1024x1536)のままだったため、丸いアイコンや一覧では上下が切れ、
