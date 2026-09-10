@@ -256,6 +256,8 @@ check('図鑑プレビューは本番と同じモーション描画を使う',
   });
   check('全モンスターの atkMotion が1回のプレビュー手順を作れる', brokenPreview.length===0,
     brokenPreview.join(' / '));
+  check('図鑑プレビューは通常攻撃と同じく固有技用のタメを入れない',
+    motionKinds.every(motion=>previewCtx.preview(motion).every(step=>step.anim?.charge!==true)));
   check('パンドラも専用分身モーションを図鑑で再生できる',
     previewCtx.preview('pandoraDualThunder').some(step=>step.anim?.motion==='pandoraDualThunder'));
 }
