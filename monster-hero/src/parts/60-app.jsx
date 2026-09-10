@@ -12057,68 +12057,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* BREEDER MARKET */}
         {gameState==='BREEDER_MARKET'&&(
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-            <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-              <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
-            </div>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
-            <div className="flex gap-2 mb-4 shrink-0">
-              <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
-                <Coins size={16} className="text-amber-400"/>
-                <span className="text-lg font-black text-amber-300">{breederPoints}</span>
-                <span className="text-[9px] text-slate-400 font-bold">pt(Lv.UPで+1)</span>
-              </div>
-              <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
-                <Gem size={16} className="text-amber-400"/>
-                <span className="text-lg font-black text-amber-300">{gold.toLocaleString()}</span>
-                <span className="text-[9px] text-slate-400 font-bold">ダイヤ(WAVEクリアで獲得)</span>
-              </div>
-            </div>
-            <div className="flex gap-1.5 mb-3 shrink-0">
-              {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'}].map(tab=>(
-                <button key={tab.key} onClick={()=>{setMarketTab(tab.key);setMarketExchangeError('');}} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab===tab.key?'bg-amber-500 text-black':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
-              ))}
-            </div>
-            {marketTab==='item'&&marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-            {/* shop:false のアイテム(虹のプシュケー)は売り物ではないので陳列しない */}
-            {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).length===0?(
-              <div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>
-            ):(
-              <div className={MARKET_GRID_CLASS}>
-                {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).map(item=>{
-                  const comingSoon = item.available === false;
-                  const owned = !comingSoon && isMarketItemOwned(item);
-                  const balance = item.currency==='psyche' ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : item.type==='disc' || item.type==='assist' || item.type==='item' ? gold : breederPoints;
-                  const canBuy = !comingSoon && !owned && balance>=item.cost;
-                  const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
-                  const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
-                  const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
-                  const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
-                  return (
-                    <React.Fragment key={item.id}>
-                      <MarketProductCard
-                        item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
-                        onZoom={()=>setMarketIconZoom(item)} onBuy={()=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}
-                        detail={detailMon||detailTeaching}
-                        onDetail={()=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
-                        middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
-                      />
-                      {exchangeItem&&<MarketProductCard
-                        item={exchangeItem} owned={false} comingSoon={false}
-                        canBuy={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)>0&&!marketPurchaseProcessingRef.current}
-                        disabled={marketPurchaseProcessingRef.current}
-                        onBuy={exchangeSoulRankRespecByProof}
-                        middle={<><span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>}
-                      />}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
-            </div>
-          </div>
+          <BreederMarketScreen
+            gold={gold}
+            breederPoints={breederPoints}
+            ownedItems={ownedItems}
+            marketTab={marketTab}
+            marketExchangeError={marketExchangeError}
+            purchaseProcessing={marketPurchaseProcessingRef.current}
+            isItemOwned={isMarketItemOwned}
+            onBack={returnToHome}
+            onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
+            onZoomIcon={setMarketIconZoom}
+            onBuy={(item)=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}
+            onOpenDetail={(item,detailMon,detailTeaching)=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
+            onOpenItemDetail={setMarketItemDetail}
+            onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
+          />
         )}
 
         {/* ROSTER (編成) */}

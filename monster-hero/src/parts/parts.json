@@ -117,6 +117,10 @@
       "role": "画面: アイテム(ITEM_INVENTORY)。戻り先はプロフィール。使う対象えらびは本体側"
     },
     {
+      "file": "55-screen-breeder-market.jsx",
+      "role": "画面: マーケット(BREEDER_MARKET)。購入と交換は MonsterHeroGame 側に残し、props で受ける"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
