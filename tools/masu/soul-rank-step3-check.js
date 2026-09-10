@@ -18,6 +18,7 @@ const a = loadDyeModule();
 
 const source = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/game-system.jsx'),'utf8');
 const app = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/60-app.jsx'),'utf8');
+const marketUi = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/src/parts/20-market-notices-help.jsx'),'utf8');
 const breeder = fs.readFileSync(path.join(REPO_ROOT,'monster-hero/data/breeder.js'),'utf8');
 
 let failed=0;
@@ -41,7 +42,7 @@ const expected=[
   ['comboFinalDamage','attack','連撃強化',4],['critRate','attack','会心眼',4],['critDamage','attack','会心極',3],
   ['partyDamageReduction','defense','鉄壁',20],['partyEvasion','defense','残像',30],
   ['partyReflect','defense','鏡返し',60],['partyAbsorb','defense','吸収',60],['enemyDisable','defense','威圧',25],
-  ['gutsCostReduction','support','省気',10],['autoGutsRecovery','support','自動ガッツ回復強化',10],
+  ['gutsCostReduction','support','省気',10],['autoGutsRecovery','support','活気',10],
   ['coordination','support','連携',200],
 ];
 check('18特性のID/カテゴリ/名称/1段階コストが正式仕様と一致',
@@ -108,7 +109,7 @@ check('同種25%×4は加算100%ではなく68.359375%',
     &&p.specialDefenseMix.evasion>p.specialDefenseMix.reflect
     &&p.specialDefenseMix.reflect>p.specialDefenseMix.absorb);
   check('威圧は同種を残り確率乗算で合成',Math.abs(p.intimidate-a.combineSoulProbabilityPoints([5,5]))<1e-9);
-  check('自動ガッツ回復強化は倍率を乗算',Math.abs(p.autoGutsMultiplier-1.0404)<1e-9);
+  check('活気は倍率を乗算',Math.abs(p.autoGutsMultiplier-1.0404)<1e-9);
   check('連携は複数所持でもカード+1だけ',p.coordinationCardBonus===1);
 }
 
@@ -183,8 +184,16 @@ check('魂格特性強化はmh_masu_monsだけを検証保存',
   (()=>{const i=app.indexOf('const commitSoulTraitUpgrade');const j=app.indexOf('const commitSoulTraitRespec',i);const b=app.slice(i,j);return b.includes("key:'mh_masu_mons'")&&!b.includes("key:'mh_owned_items'");})());
 check('魂格再編はmh_masu_mons/mh_owned_itemsを取引保存',
   (()=>{const i=app.indexOf('const commitSoulTraitRespec');const j=app.indexOf('// 固有技設定',i);const b=app.slice(i,j);return b.includes("key:'mh_masu_mons'")&&b.includes("key:'mh_owned_items'");})());
-check('マーケットに勇者の証1→再編の書交換導線',
-  app.includes('exchangeSoulRankRespecByProof')&&app.includes('勇者の証1個を魂格再編の書1冊へ交換'));
+check('100万ダイヤ版の魂格再編の書は詳細ボタンを維持',
+  app.includes("item.desc&&<button onClick={()=>setMarketItemDetail(item)}")
+  && !app.includes("item.id===SOUL_RANK_RESPEC_ITEM_ID?<button"));
+check('勇者の証1→再編の書は同じアイテムの隣に出す別商品カード',
+  app.includes("const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID")
+  && app.includes("const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null")
+  && app.includes('<React.Fragment key={item.id}>')
+  && app.includes('onBuy={exchangeSoulRankRespecByProof}')
+  && marketUi.includes("const usesHeroProof=item.currency==='heroProof'")
+  && marketUi.includes('勇者の証 ×{item.cost.toLocaleString()}'));
 check('魂格特性画面はSafe Areaと44px以上の主要操作を守る',
   app.includes("paddingTop:'calc(1rem + env(safe-area-inset-top))'")
   &&app.includes("paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'")
