@@ -101,13 +101,15 @@
 ## 2.6. モンスター図鑑
 
 HOMEの「M/B管理」→「モンスター」→「モンスター図鑑」から開く（HOMEへ施設は増やしていない）。画面は
-`MONSTER_DEX`（一覧）と `MONSTER_DEX_DETAIL`（詳細）の2つ。
+`MONSTER_DEX`（一覧）・`MONSTER_DEX_DETAIL`（詳細）・`MONSTER_ATTACK_PREVIEW`（攻撃アクションの確認）の3つ。
 
 - **一覧**: 図鑑登録数（解放済み / 全体）、主血統でのしぼりこみ、アイコン一覧。解放判定は `mh_unlocked_monsters` を
   そのまま使い、図鑑専用の保存は持たない。未解放はシルエットと「？？？」で出す。
 - **詳細**: 上半分に立ち絵（左右ボタンと横スワイプで前後へ移動）、下半分に情報カード（名前・血統・区分・図鑑説明）と
   「基本 / 能力 / 技」の3タブ。
-  - 解放済みモンスターは立ち絵の「攻撃アクション」から、その種の `atkMotion` を使ったバトル時の攻撃演出をその場で1回再生できる。未解放は再生不可
+  - 解放済みモンスターは立ち絵の下の「攻撃アクション」から `MONSTER_ATTACK_PREVIEW` へ移り、その種の `atkMotion` を使ったバトル時の攻撃演出を再生できる。未解放はボタン自体を出さない
+    - 立ち絵の枠(150〜180px)では上へ飛ぶ音符や敵側の着弾が枠外へ出て見えないため、専用画面では縦を大きく取り、立ち絵を下寄りに置いて上へ余白を残す
+    - 「通常攻撃」は `attackMotionPreviewSequence`、「固有技」は `attackMotionUniquePreviewSequence`(共通のタメ650ms → 専用モーション)を使う。どちらもこの画面専用のモーションは作らず、本番の演出部品をそのまま再生する
   - 再生は図鑑専用モーションを作らず、`attackMotionAnimation` / `EikiSakuraPetals` / `KenshiTwinSlash` / `ArkHolyRainMotion` / `WaterBurstMotion` / `MiaSongNotesMotion` / `PandoraDualThunder` など本番の演出部品を再利用する
   - 前後移動・図鑑一覧へ戻る操作では再生中の非同期プレビューを中断し、次のモンスターへ演出を持ち越さない
   - 基本 … 主血統・副血統・区分・勇者特性・特性の効果

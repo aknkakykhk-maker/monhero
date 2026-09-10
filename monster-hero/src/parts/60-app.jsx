@@ -2094,6 +2094,7 @@ function MonsterHeroGame() {
     MONSTER_LIST_MENU: 'management', // モンスター一覧メニュー
     MONSTER_DEX: 'management',        // モンスター図鑑もM/B管理の曲を続ける
     MONSTER_DEX_DETAIL: 'management', // 図鑑の詳細も同じ曲のまま
+    MONSTER_ATTACK_PREVIEW: 'management', // 図鑑から開く攻撃アクションの確認も同じ曲のまま
     MB_MANAGEMENT: 'management', // M/B管理はモンスター一覧・編成と同じ曲を続ける
     AUTO_SETTINGS: 'management', // AUTO事前設定もM/B管理の曲を続ける
     PASTURE_SETTINGS: 'management', // 放牧設定もM/B管理の曲を続ける
@@ -9714,6 +9715,66 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* モンスター図鑑(一覧): 図鑑登録数・主血統でのしぼりこみ・アイコン一覧。
             解放判定は既存の mh_unlocked_monsters をそのまま使い、図鑑用の保存は増やさない */}
+        {/* MONSTER_ATTACK_PREVIEW: 図鑑から開く攻撃アクションの確認。
+            図鑑詳細の立ち絵の枠(150〜180px)では、上へ飛ぶ音符や敵側の着弾が枠の外へ出て見えなかった。
+            ここでは縦を大きく取り、立ち絵を下寄りに置いて、上の余白へ演出が収まるようにする。
+            演出は本番と同じ BattleAttackMotionPreview / attackMotionPreviewSequence を使い、
+            この画面のためのモーションは作らない。通常攻撃と固有技を選んで見比べられる。 */}
+        {gameState==='MONSTER_ATTACK_PREVIEW'&&(()=>{
+          const monsters=dexMonsterList();
+          const mon=monsters.find(m=>m.id===dexMonsterId)||null;
+          if(!mon||!unlockedMonsterIds.includes(mon.id)){ setGameState('MONSTER_DEX'); return null; }
+          const atkMotion=mon.atkMotion||'default';
+          const playing=dexAttackPreview?.monsterId===mon.id?dexAttackPreview:null;
+          const previewAnim=playing?playing.anim:null;
+          const playingKind=playing?playing.kind:null;
+          const backToDetail=()=>{dexAttackPreviewRunRef.current+=1;setDexAttackPreview(null);setGameState('MONSTER_DEX_DETAIL');};
+          const playAttackPreview=async(kind)=>{
+            if(playingKind)return;
+            const run=++dexAttackPreviewRunRef.current;
+            const steps=kind==='unique'?attackMotionUniquePreviewSequence(atkMotion):attackMotionPreviewSequence(atkMotion);
+            for(const step of steps){
+              if(run!==dexAttackPreviewRunRef.current)return;
+              setDexAttackPreview({monsterId:mon.id,kind,anim:step.anim});
+              await new Promise(resolve=>setTimeout(resolve,step.ms));
+            }
+            if(run===dexAttackPreviewRunRef.current)setDexAttackPreview(null);
+          };
+          const kindButton=(kind,label,note)=>(
+            <button key={kind} type="button" data-attack-preview-play={kind} onClick={()=>{Audio_.se.tap();playAttackPreview(kind);}} disabled={!!playingKind}
+              className={`flex-1 min-w-0 min-h-[54px] rounded-2xl border-2 px-2 py-1 font-black active:scale-95 disabled:opacity-45 ${playingKind===kind?'border-cyan-200 bg-cyan-700 text-white':'border-cyan-400/50 bg-slate-900 text-cyan-100'}`}>
+              <span className="block text-[11px]">{playingKind===kind?'再生中…':label}</span>
+              <span className="block text-[8px] font-bold text-slate-300 leading-tight">{note}</span>
+            </button>
+          );
+          return <main data-mh-screen className="flex-1 flex flex-col h-full min-h-0" style={{paddingTop:'calc(0.5rem + env(safe-area-inset-top))',paddingBottom:'calc(0.5rem + env(safe-area-inset-bottom))'}}>
+            <div className="shrink-0 flex items-center gap-2 px-3">
+              <button onClick={backToDetail} className="p-3 text-slate-400 active:scale-90" aria-label="図鑑の詳細へ戻る"><ArrowLeft size={20}/></button>
+              <div className="min-w-0">
+                <small className="block text-[8px] font-black text-cyan-300 uppercase tracking-[0.2em]">Attack Action</small>
+                <h2 className="text-base font-black text-amber-100 truncate">{mon.name}の攻撃アクション</h2>
+              </div>
+            </div>
+            {/* 演出の舞台。立ち絵は下寄りに置き、音符や光が上へ抜けるぶんの余白を上に残す */}
+            <div data-attack-preview-stage className="relative flex-1 min-h-0 overflow-hidden mx-3 mt-2 rounded-3xl border-2 border-cyan-500/30 bg-gradient-to-b from-slate-900 to-slate-950">
+              {/* 立ち絵も演出も、まとめて少しだけ拡大して見せる(演出の移動量はpx固定なので、
+                  ここを大きくしないと図鑑の枠と同じ大きさのままになる)。
+                  拡大の基準は足元にして、伸びるぶんはすべて上の余白へ向ける */}
+              <div data-attack-preview-art className="absolute left-1/2" style={{bottom:'11%',width:'clamp(132px, 44vw, 184px)',height:'clamp(132px, 44vw, 184px)',transform:'translateX(-50%) scale(1.15)',transformOrigin:'bottom center'}}>
+                <BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
+              </div>
+              <span className="absolute bottom-2 left-0 right-0 text-center text-[8px] font-bold text-slate-500">バトルと同じ演出です（ダメージや性能は変わりません）</span>
+            </div>
+            <div className="shrink-0 px-3 pt-2">
+              <div className="w-full max-w-md mx-auto flex gap-2">
+                {kindButton('normal','通常攻撃','ふだんの攻撃')}
+                {kindButton('unique','固有技','タメてから撃つ')}
+              </div>
+              <p className="mt-1.5 text-center text-[8px] leading-relaxed text-slate-400">固有技は、どのモンスターも共通のタメ（下に沈む）のあとで専用の攻撃に移ります。</p>
+            </div>
+          </main>;
+        })()}
+
         {gameState==='MONSTER_DEX'&&(()=>{
           const monsters=dexMonsterList();
           const unlockedCount=monsters.filter(mon=>unlockedMonsterIds.includes(mon.id)).length;
@@ -9773,19 +9834,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const {main,sub}=monsterLineageOf(mon.id);
           const category=monsterCategoryOf(mon.id);
           const categoryClass=category==='rare'?'bg-amber-600 text-white':category==='pure'?'bg-emerald-700 text-white':'bg-indigo-700 text-white';
-          const previewAnim=dexAttackPreview?.monsterId===mon.id?dexAttackPreview.anim:null;
-          const previewPlaying=!!previewAnim;
+          // 攻撃演出そのものは MONSTER_ATTACK_PREVIEW で再生する。ここでは立ち絵を静止で見せ、
+          // 途中で移動・離脱したときに向こうの再生が残らないよう止める口だけ持つ
           const stopDexAttackPreview=()=>{dexAttackPreviewRunRef.current+=1;setDexAttackPreview(null);};
-          const playDexAttackPreview=async()=>{
-            if(!unlocked||previewPlaying)return;
-            const run=++dexAttackPreviewRunRef.current;
-            for(const step of attackMotionPreviewSequence(mon.atkMotion||'default')){
-              if(run!==dexAttackPreviewRunRef.current)return;
-              setDexAttackPreview({monsterId:mon.id,anim:step.anim});
-              await new Promise(resolve=>setTimeout(resolve,step.ms));
-            }
-            if(run===dexAttackPreviewRunRef.current)setDexAttackPreview(null);
-          };
           const go=(delta)=>{ stopDexAttackPreview(); const next=monsters[(index+delta+monsters.length)%monsters.length]; if(!next) return; setDexMonsterId(next.id); setDexTab('basic'); Audio_.se.tap(); };
           // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
           const lineageChip=(lineage)=><DexLineageChip lineage={lineage} iconUrl={lineageIconUrl(lineage)}/>;
@@ -9845,15 +9896,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               onTouchStart={e=>{dexSwipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
               onTouchEnd={e=>{const from=dexSwipeRef.current; dexSwipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
               {unlocked
-                ? <BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
+                ? <DexMonsterArt mon={mon} alt={mon.name}/>
                 : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
               <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
               <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
-              {unlocked&&<button type="button" data-dex-attack-preview onClick={playDexAttackPreview} disabled={previewPlaying}
-                className="absolute bottom-1 left-1/2 -translate-x-1/2 min-h-[40px] px-4 rounded-full border border-cyan-300/60 bg-slate-950/85 text-[10px] font-black text-cyan-100 shadow-lg active:scale-95 disabled:opacity-55">
-                {previewPlaying?'再生中…':'▶ 攻撃アクション'}
-              </button>}
             </div>
+            {/* 攻撃アクションの入口。立ち絵の上に重ねると絵が隠れてしまうので、枠の外に1行で置く。
+                演出は上へ大きく飛ぶため、ここでは再生せず専用画面(MONSTER_ATTACK_PREVIEW)へ移る */}
+            {unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center">
+              <button type="button" data-dex-attack-preview onClick={()=>{stopDexAttackPreview();Audio_.se.tap();setGameState('MONSTER_ATTACK_PREVIEW');}}
+                className="min-h-[40px] px-5 rounded-full border border-cyan-300/60 bg-slate-950/85 text-[10px] font-black text-cyan-100 shadow-lg active:scale-95">
+                ▶ 攻撃アクション
+              </button>
+            </div>}
             {/* 下半分: 情報カード */}
             <div className="flex-1 min-h-0 px-3 pt-2">
               <div className="w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3">

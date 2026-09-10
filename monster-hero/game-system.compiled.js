@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 12f6b7a520c85b1e
+// source-sha256: 486774de0cb6719a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: e1d6129a22039147
+// generated-sha256: e4c759699ee131cb
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 18:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 18:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14984,6 +14984,28 @@ const attackMotionPreviewSequence = (atkMotion = 'default') => {
     ms: motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 650 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 450
   }];
 };
+// 固有技のほうの見せ方。本番の固有技とまったく同じ順で、
+// 「共通のタメ(下に沈む specialCharge・650ms)→ 専用モーション」を返す。
+// 通常攻撃用の attackMotionPreviewSequence とは分けてあるので、
+// 図鑑の一覧側や既存のプレビューへタメが混ざることはない。
+const attackMotionUniquePreviewSequence = (atkMotion = 'default') => {
+  const motion = atkMotion || 'default';
+  const isTwin = motion === 'kenshiTwinBlade';
+  return [{
+    anim: {
+      charge: true
+    },
+    ms: 650
+  }, {
+    anim: {
+      charge: false,
+      motion,
+      twinBlade: isTwin,
+      sakura: motion === 'eikiSakuraCombo'
+    },
+    ms: isTwin ? 560 : motion === 'pandoraDualThunder' ? 900 : motion === 'arkHolyRain' ? ARK_HOLY_RAIN_MOTION_MS : motion === 'miaSongNotes' ? MIA_SONG_NOTES_MOTION_MS : motion === 'floatStab' ? 700 : motion === 'waterBurst' ? WATER_BURST_MOTION_MS : 500
+  }];
+};
 const rpgMotionName = (side, monId, isSkill) => {
   const prefix = side === 'ally' ? 'rpgAlly' : 'rpgFoe';
   if (isSkill) return `${prefix}Special`;
@@ -24778,6 +24800,8 @@ function MonsterHeroGame() {
     // モンスター図鑑もM/B管理の曲を続ける
     MONSTER_DEX_DETAIL: 'management',
     // 図鑑の詳細も同じ曲のまま
+    MONSTER_ATTACK_PREVIEW: 'management',
+    // 図鑑から開く攻撃アクションの確認も同じ曲のまま
     MB_MANAGEMENT: 'management',
     // M/B管理はモンスター一覧・編成と同じ曲を続ける
     AUTO_SETTINGS: 'management',
@@ -37162,7 +37186,102 @@ function MonsterHeroGame() {
     }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u7DE8\u6210"), /*#__PURE__*/React.createElement("button", {
       onClick: openAutoSettings,
       className: "mh-management-link"
-    }, "AUTO\u8A2D\u5B9A"))), gameState === 'MONSTER_DEX' && (() => {
+    }, "AUTO\u8A2D\u5B9A"))), gameState === 'MONSTER_ATTACK_PREVIEW' && (() => {
+      const monsters = dexMonsterList();
+      const mon = monsters.find(m => m.id === dexMonsterId) || null;
+      if (!mon || !unlockedMonsterIds.includes(mon.id)) {
+        setGameState('MONSTER_DEX');
+        return null;
+      }
+      const atkMotion = mon.atkMotion || 'default';
+      const playing = dexAttackPreview?.monsterId === mon.id ? dexAttackPreview : null;
+      const previewAnim = playing ? playing.anim : null;
+      const playingKind = playing ? playing.kind : null;
+      const backToDetail = () => {
+        dexAttackPreviewRunRef.current += 1;
+        setDexAttackPreview(null);
+        setGameState('MONSTER_DEX_DETAIL');
+      };
+      const playAttackPreview = async kind => {
+        if (playingKind) return;
+        const run = ++dexAttackPreviewRunRef.current;
+        const steps = kind === 'unique' ? attackMotionUniquePreviewSequence(atkMotion) : attackMotionPreviewSequence(atkMotion);
+        for (const step of steps) {
+          if (run !== dexAttackPreviewRunRef.current) return;
+          setDexAttackPreview({
+            monsterId: mon.id,
+            kind,
+            anim: step.anim
+          });
+          await new Promise(resolve => setTimeout(resolve, step.ms));
+        }
+        if (run === dexAttackPreviewRunRef.current) setDexAttackPreview(null);
+      };
+      const kindButton = (kind, label, note) => /*#__PURE__*/React.createElement("button", {
+        key: kind,
+        type: "button",
+        "data-attack-preview-play": kind,
+        onClick: () => {
+          Audio_.se.tap();
+          playAttackPreview(kind);
+        },
+        disabled: !!playingKind,
+        className: `flex-1 min-w-0 min-h-[54px] rounded-2xl border-2 px-2 py-1 font-black active:scale-95 disabled:opacity-45 ${playingKind === kind ? 'border-cyan-200 bg-cyan-700 text-white' : 'border-cyan-400/50 bg-slate-900 text-cyan-100'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block text-[11px]"
+      }, playingKind === kind ? '再生中…' : label), /*#__PURE__*/React.createElement("span", {
+        className: "block text-[8px] font-bold text-slate-300 leading-tight"
+      }, note));
+      return /*#__PURE__*/React.createElement("main", {
+        "data-mh-screen": true,
+        className: "flex-1 flex flex-col h-full min-h-0",
+        style: {
+          paddingTop: 'calc(0.5rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 flex items-center gap-2 px-3"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: backToDetail,
+        className: "p-3 text-slate-400 active:scale-90",
+        "aria-label": "\u56F3\u9451\u306E\u8A73\u7D30\u3078\u623B\u308B"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] font-black text-cyan-300 uppercase tracking-[0.2em]"
+      }, "Attack Action"), /*#__PURE__*/React.createElement("h2", {
+        className: "text-base font-black text-amber-100 truncate"
+      }, mon.name, "\u306E\u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("div", {
+        "data-attack-preview-stage": true,
+        className: "relative flex-1 min-h-0 overflow-hidden mx-3 mt-2 rounded-3xl border-2 border-cyan-500/30 bg-gradient-to-b from-slate-900 to-slate-950"
+      }, /*#__PURE__*/React.createElement("div", {
+        "data-attack-preview-art": true,
+        className: "absolute left-1/2",
+        style: {
+          bottom: '11%',
+          width: 'clamp(132px, 44vw, 184px)',
+          height: 'clamp(132px, 44vw, 184px)',
+          transform: 'translateX(-50%) scale(1.15)',
+          transformOrigin: 'bottom center'
+        }
+      }, /*#__PURE__*/React.createElement(BattleAttackMotionPreview, {
+        image: /*#__PURE__*/React.createElement(DexMonsterArt, {
+          mon: mon,
+          alt: mon.name
+        }),
+        anim: previewAnim
+      })), /*#__PURE__*/React.createElement("span", {
+        className: "absolute bottom-2 left-0 right-0 text-center text-[8px] font-bold text-slate-500"
+      }, "\u30D0\u30C8\u30EB\u3068\u540C\u3058\u6F14\u51FA\u3067\u3059\uFF08\u30C0\u30E1\u30FC\u30B8\u3084\u6027\u80FD\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 px-3 pt-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex gap-2"
+      }, kindButton('normal', '通常攻撃', 'ふだんの攻撃'), kindButton('unique', '固有技', 'タメてから撃つ')), /*#__PURE__*/React.createElement("p", {
+        className: "mt-1.5 text-center text-[8px] leading-relaxed text-slate-400"
+      }, "\u56FA\u6709\u6280\u306F\u3001\u3069\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u3082\u5171\u901A\u306E\u30BF\u30E1\uFF08\u4E0B\u306B\u6C88\u3080\uFF09\u306E\u3042\u3068\u3067\u5C02\u7528\u306E\u653B\u6483\u306B\u79FB\u308A\u307E\u3059\u3002")));
+    })(), gameState === 'MONSTER_DEX' && (() => {
       const monsters = dexMonsterList();
       const unlockedCount = monsters.filter(mon => unlockedMonsterIds.includes(mon.id)).length;
       const filters = dexMainLineages();
@@ -37262,24 +37381,11 @@ function MonsterHeroGame() {
       } = monsterLineageOf(mon.id);
       const category = monsterCategoryOf(mon.id);
       const categoryClass = category === 'rare' ? 'bg-amber-600 text-white' : category === 'pure' ? 'bg-emerald-700 text-white' : 'bg-indigo-700 text-white';
-      const previewAnim = dexAttackPreview?.monsterId === mon.id ? dexAttackPreview.anim : null;
-      const previewPlaying = !!previewAnim;
+      // 攻撃演出そのものは MONSTER_ATTACK_PREVIEW で再生する。ここでは立ち絵を静止で見せ、
+      // 途中で移動・離脱したときに向こうの再生が残らないよう止める口だけ持つ
       const stopDexAttackPreview = () => {
         dexAttackPreviewRunRef.current += 1;
         setDexAttackPreview(null);
-      };
-      const playDexAttackPreview = async () => {
-        if (!unlocked || previewPlaying) return;
-        const run = ++dexAttackPreviewRunRef.current;
-        for (const step of attackMotionPreviewSequence(mon.atkMotion || 'default')) {
-          if (run !== dexAttackPreviewRunRef.current) return;
-          setDexAttackPreview({
-            monsterId: mon.id,
-            anim: step.anim
-          });
-          await new Promise(resolve => setTimeout(resolve, step.ms));
-        }
-        if (run === dexAttackPreviewRunRef.current) setDexAttackPreview(null);
       };
       const go = delta => {
         stopDexAttackPreview();
@@ -37378,12 +37484,9 @@ function MonsterHeroGame() {
           const dx = to - from;
           if (Math.abs(dx) >= 48) go(dx < 0 ? 1 : -1);
         }
-      }, unlocked ? /*#__PURE__*/React.createElement(BattleAttackMotionPreview, {
-        image: /*#__PURE__*/React.createElement(DexMonsterArt, {
-          mon: mon,
-          alt: mon.name
-        }),
-        anim: previewAnim
+      }, unlocked ? /*#__PURE__*/React.createElement(DexMonsterArt, {
+        mon: mon,
+        alt: mon.name
       }) : /*#__PURE__*/React.createElement(DexMonsterArt, {
         mon: mon,
         alt: "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC",
@@ -37404,13 +37507,18 @@ function MonsterHeroGame() {
         className: "absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
       }, /*#__PURE__*/React.createElement(ChevronRight, {
         size: 22
-      })), unlocked && /*#__PURE__*/React.createElement("button", {
+      }))), unlocked && /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 px-3 pt-1 flex justify-center"
+      }, /*#__PURE__*/React.createElement("button", {
         type: "button",
         "data-dex-attack-preview": true,
-        onClick: playDexAttackPreview,
-        disabled: previewPlaying,
-        className: "absolute bottom-1 left-1/2 -translate-x-1/2 min-h-[40px] px-4 rounded-full border border-cyan-300/60 bg-slate-950/85 text-[10px] font-black text-cyan-100 shadow-lg active:scale-95 disabled:opacity-55"
-      }, previewPlaying ? '再生中…' : '▶ 攻撃アクション')), /*#__PURE__*/React.createElement("div", {
+        onClick: () => {
+          stopDexAttackPreview();
+          Audio_.se.tap();
+          setGameState('MONSTER_ATTACK_PREVIEW');
+        },
+        className: "min-h-[40px] px-5 rounded-full border border-cyan-300/60 bg-slate-950/85 text-[10px] font-black text-cyan-100 shadow-lg active:scale-95"
+      }, "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 px-3 pt-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
