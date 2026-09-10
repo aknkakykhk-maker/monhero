@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: da1a6c893f8c7455
+// source-sha256: 8284e506ab3b57f9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: cd2446549a9d1c35
+// generated-sha256: 4aeb22a82c4202b7
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 06:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 06:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24555,6 +24555,426 @@ function MasuMonsScreen({
   })()));
 }
 
+// ---- part: 60a-screen-masu-regen-donation.jsx ----
+// ==== 画面: 神殿の再生と寄付 ====
+//
+// MonsterHeroGame から切り出した11本目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-9)。
+// MASU_REGENERATION / MASU_REGENERATION_DETAIL / MASU_DONATION と、
+// 寄付の「最終確認」「結果」——同じ gameState にぶら下がる兄弟ブロック——をまとめて置いた。
+//
+// 【この画面ならではの注意】
+// ・保存は一切していない。ダイヤ・所持個体の更新は MonsterHeroGame 側の
+//   executeMasuRegeneration / executeMasuDonation が担うので、props で受けて呼ぶだけ
+// ・二重実行を止める regenerationProcessing / donationProcessing は真偽値で受け取る
+//   (元は ref ではなく state なので、そのまま渡してよい)
+// ・寄付の確認と結果は gameState='MASU_DONATION' の中の出し分けなので、
+//   条件(donationConfirmOpen / donationResult)は呼び出し側に残してある
+// ・この画面にタイマーは無い(演出の停止は本体の execute* の中にある)
+
+function MasuRegenerationScreen({
+  MONSTER_CARD_CLASS,
+  MONSTER_CARD_STYLE,
+  onBackToTemple,
+  onSelectBase,
+  renderMonsterCardBody,
+  unlockedMonsterIds
+}) {
+  const unlocked = Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-3 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBackToTemple,
+    className: "p-3 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-violet-300"
+  }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u3076"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-slate-400 font-bold"
+  }, "\u30BF\u30C3\u30D7\u3059\u308B\u3068\u518D\u751F\u524D\u306E\u6027\u80FD\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2"
+  }, unlocked.map(base => /*#__PURE__*/React.createElement("button", {
+    key: base.id,
+    onClick: () => onSelectBase(base.id),
+    "aria-label": `${base.name}の再生詳細を見る`,
+    style: MONSTER_CARD_STYLE,
+    className: `${MONSTER_CARD_CLASS} border-violet-500/30 bg-slate-900`
+  }, renderMonsterCardBody({
+    base
+  }))))));
+}
+function MasuRegenerationDetailScreen({
+  executeMasuRegeneration,
+  gold,
+  onBackToBaseSelect,
+  regenerationProcessing,
+  regenerationSelectedId,
+  regenerationUsed,
+  renderDetailSectionLabel,
+  renderMonsterDetailInfo
+}) {
+  const cost = regenerationUsed ? REGENERATION_COST : 0;
+  const selectedBase = regenerationSelectedId ? ALL_PLAYER_MONSTERS[regenerationSelectedId] : null;
+  if (!selectedBase) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: regenerationProcessing,
+    onClick: onBackToBaseSelect,
+    "aria-label": "\u30D9\u30FC\u30B9\u30E2\u30F3\u9078\u629E\u3078\u623B\u308B",
+    className: "p-3 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] text-violet-300 font-black"
+  }, "\u518D\u751F\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-1"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-center text-xl font-black text-white"
+  }, selectedBase.name), /*#__PURE__*/React.createElement("img", {
+    src: selectedBase.iconUrl,
+    alt: selectedBase.name,
+    className: "w-32 h-32 max-w-full mx-auto object-contain"
+  }), /*#__PURE__*/React.createElement("section", {
+    className: "space-y-2",
+    "aria-label": `${selectedBase.name}の基礎性能`
+  }, renderDetailSectionLabel('ベースモンの性能', '再生前の正式な基礎値です'), renderMonsterDetailInfo(selectedBase)), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border border-amber-400/40 bg-amber-950/30 p-3",
+    "aria-label": "\u518D\u751F\u306B\u5FC5\u8981\u306A\u60C5\u5831"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-amber-200 font-black mb-1"
+  }, "\u518D\u751F\u306B\u5FC5\u8981\u306A\u60C5\u5831"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-sm"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u5BFE\u8C61"), /*#__PURE__*/React.createElement("b", {
+    className: "text-white"
+  }, selectedBase.name)), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-sm mt-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
+    className: "text-amber-300"
+  }, cost === 0 ? '初回無料' : cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-[10px] mt-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300"
+  }, gold.toLocaleString()))), /*#__PURE__*/React.createElement("button", {
+    disabled: gold < cost || regenerationProcessing,
+    onClick: executeMasuRegeneration,
+    className: "w-full min-h-[52px] bg-violet-600 rounded-2xl font-black disabled:opacity-30"
+  }, regenerationProcessing ? '再生中…' : gold < cost ? 'ダイヤが不足しています' : `${selectedBase.name}を再生する`)));
+}
+function MasuDonationScreen({
+  MONSTER_CARD_CLASS,
+  MONSTER_CARD_STYLE,
+  donationError,
+  donationProcessing,
+  donationSelectedIds,
+  donationSortDir,
+  donationSortKey,
+  draftMonsterRoster,
+  gold,
+  masuMons,
+  monsterRosterIds,
+  onLeaveDonation,
+  renderMonsterCardBody,
+  setDonationConfirmOpen,
+  setDonationError,
+  setDonationSelectedIds,
+  setDonationSortDir,
+  setDonationSortKey,
+  unlockedMonsterIds
+}) {
+  const options = [{
+    key: 'bondXp',
+    label: '絆経験値'
+  }, {
+    key: 'bond',
+    label: '絆レベル'
+  }, {
+    key: 'power',
+    label: '総合力'
+  }, {
+    key: 'name',
+    label: '名前'
+  }, {
+    key: 'lineage',
+    label: '血統'
+  }, {
+    key: 'newest',
+    label: '新しい順'
+  }, {
+    key: 'active',
+    label: '編成中'
+  }];
+  const donationArgs = {
+    masuMons,
+    gold,
+    monsterRosterIds,
+    draftMonsterRoster,
+    unlockedMonsterIds,
+    validBaseIds: Object.keys(ALL_PLAYER_MONSTERS),
+    requiredCount: STARTER_MONSTER_IDS.length
+  };
+  const selectedSet = new Set(donationSelectedIds.map(String));
+  const selectedResult = donationSelectedIds.length ? buildMasuDonations({
+    ...donationArgs,
+    targetIds: donationSelectedIds
+  }) : null;
+  const selectedDiamonds = selectedResult?.ok ? selectedResult.diamonds : donationSelectedIds.reduce((sum, id) => sum + donationDiamondValue(masuMons.find(m => String(m.id) === String(id))?.bondXp), 0);
+  const selectedPsyche = selectedResult?.ok ? selectedResult.psyche : donationSelectedIds.reduce((sum, id) => {
+    const m = masuMons.find(x => String(x.id) === String(id));
+    return sum + (m ? donationPsycheValue(m) : 0);
+  }, 0);
+  const sorted = sortDonationMasuMons(masuMons, donationSortKey, donationSortDir, monsterRosterIds);
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-3",
+    style: {
+      paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-1 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: donationProcessing,
+    onClick: onLeaveDonation,
+    className: "p-3 text-slate-400 active:scale-90 disabled:opacity-40"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-violet-300"
+  }, "\u5BC4\u4ED8")), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-xl px-3 py-2 mb-2 shrink-0"
+  }, "\u7DCF\u5408\u529B\u3068\u5831\u916C\u3092\u898B\u6BD4\u3079\u3066\u8907\u6570\u9078\u3079\u307E\u3059\u3002\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1 mb-2 shrink-0",
+    "aria-label": "\u5BC4\u4ED8\u4E00\u89A7\u306E\u4E26\u3079\u66FF\u3048"
+  }, options.map(o => {
+    const active = donationSortKey === o.key;
+    const direction = donationSortDir === 'asc' ? '低い順' : '高い順';
+    const activeLabel = o.key === 'power' ? `${o.label}：${direction}` : `${o.label}${donationSortDir === 'asc' ? ' ▲' : ' ▼'}`;
+    return /*#__PURE__*/React.createElement("button", {
+      key: o.key,
+      onClick: () => {
+        if (active) setDonationSortDir(d => d === 'asc' ? 'desc' : 'asc');else {
+          setDonationSortKey(o.key);
+          setDonationSortDir(o.key === 'name' || o.key === 'lineage' ? 'asc' : 'desc');
+        }
+      },
+      "aria-pressed": active,
+      "aria-label": o.key === 'power' ? active ? `総合力を${direction}で表示中。押すと${donationSortDir === 'asc' ? '高い順' : '低い順'}に変更` : '総合力を高い順に並べ替え' : undefined,
+      className: `min-w-0 min-h-[34px] px-1 py-1 rounded-lg text-[8px] leading-tight font-black border ${active ? 'bg-violet-600 border-violet-400 text-white' : 'bg-slate-900 border-white/10 text-slate-400'} ${o.key === 'power' ? 'col-span-2' : ''}`
+    }, active ? activeLabel : o.label);
+  })), donationError && /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-amber-200 bg-amber-950/40 border border-amber-500/40 rounded-xl p-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement(AlertCircle, {
+    size: 12,
+    className: "inline mr-1"
+  }), donationError), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, masuMons.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col items-center justify-center h-full text-center text-slate-500"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 42
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] mt-3 font-bold"
+  }, "\u5BC4\u4ED8\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093")) : /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-1.5 pb-3"
+  }, sorted.map(masu => {
+    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+    if (!base) return null;
+    const diamonds = donationDiamondValue(masu.bondXp);
+    const lvl = masuBondLevelInfo(masu);
+    const active = monsterRosterIds.includes(`masu:${masu.id}`);
+    const selected = selectedSet.has(String(masu.id));
+    const trial = selected ? {
+      ok: true
+    } : buildMasuDonations({
+      ...donationArgs,
+      targetIds: [...donationSelectedIds, masu.id]
+    });
+    const canSelect = trial.ok;
+    return /*#__PURE__*/React.createElement("button", {
+      key: masu.id,
+      disabled: donationProcessing || !selected && !canSelect,
+      "aria-pressed": selected,
+      onClick: () => {
+        setDonationError('');
+        setDonationSelectedIds(ids => selected ? ids.filter(id => String(id) !== String(masu.id)) : [...ids, masu.id]);
+      },
+      style: MONSTER_CARD_STYLE,
+      className: `${MONSTER_CARD_CLASS} bg-slate-900 disabled:opacity-35 ${selected ? 'border-amber-300 bg-violet-950/80' : 'border-violet-500/30'}`
+    }, renderMonsterCardBody({
+      masu,
+      base,
+      badge: /*#__PURE__*/React.createElement(React.Fragment, null, active && /*#__PURE__*/React.createElement("span", {
+        className: "absolute -top-1 -left-1 z-10 rounded-full bg-pink-600/95 px-1 text-[7px] font-black leading-4 text-white"
+      }, "\u7DE8\u6210\u4E2D"), selected && /*#__PURE__*/React.createElement("span", {
+        className: "absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-amber-300 font-black text-slate-950"
+      }, "\u2713")),
+      sub: /*#__PURE__*/React.createElement("span", {
+        className: "flex items-center gap-0.5 text-[8px] font-black text-amber-300"
+      }, /*#__PURE__*/React.createElement(Gem, {
+        size: 8
+      }), diamonds.toLocaleString()),
+      status: !canSelect && !selected ? /*#__PURE__*/React.createElement("span", {
+        className: "text-[7px] font-black text-red-300"
+      }, "\u7DE8\u6210\u3092\u7DAD\u6301\u3067\u304D\u307E\u305B\u3093") : null
+    }));
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 rounded-2xl border border-violet-400/50 bg-slate-950 px-3 py-2 shadow-xl",
+    style: {
+      paddingBottom: 'max(.5rem, env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-2 text-[10px] font-black"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-violet-200"
+  }, "\u9078\u629E\u6570\uFF1A", /*#__PURE__*/React.createElement("b", {
+    className: "text-white text-sm"
+  }, donationSelectedIds.length, "\u4F53")), /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300"
+  }, "\u5408\u8A08 ", /*#__PURE__*/React.createElement(Gem, {
+    size: 11,
+    className: "inline"
+  }), " ", selectedDiamonds.toLocaleString(), " / \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", selectedPsyche)), /*#__PURE__*/React.createElement("button", {
+    disabled: !donationSelectedIds.length || donationProcessing || !selectedResult?.ok,
+    onClick: () => setDonationConfirmOpen(true),
+    className: "w-full min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-xl font-black text-sm disabled:opacity-30"
+  }, "\u9078\u3093\u3060\u30DE\u30B9\u30E2\u30F3\u3092\u5BC4\u4ED8\u3059\u308B")));
+}
+function MasuDonationConfirm({
+  donationProcessing,
+  donationSelectedIds,
+  draftMonsterRoster,
+  executeMasuDonation,
+  gold,
+  masuMons,
+  monsterRosterIds,
+  setDonationConfirmOpen,
+  unlockedMonsterIds
+}) {
+  const selected = donationSelectedIds.map(id => masuMons.find(m => String(m.id) === String(id))).filter(Boolean);
+  const result = buildMasuDonations({
+    masuMons,
+    targetIds: donationSelectedIds,
+    gold,
+    monsterRosterIds,
+    draftMonsterRoster,
+    unlockedMonsterIds,
+    validBaseIds: Object.keys(ALL_PLAYER_MONSTERS),
+    requiredCount: STARTER_MONSTER_IDS.length
+  });
+  if (!result.ok) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-4",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(2,6,23,.95)',
+      zIndex: 32000
+    },
+    role: "dialog",
+    "aria-modal": "true"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm bg-slate-900 border-2 border-violet-400 rounded-3xl p-5 shadow-2xl"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-lg font-black text-violet-200 text-center mb-3"
+  }, "\u5BC4\u4ED8\u306E\u6700\u7D42\u78BA\u8A8D"), /*#__PURE__*/React.createElement("div", {
+    className: "flex -space-x-2 justify-center mb-3"
+  }, selected.slice(0, 5).map(m => {
+    const base = ALL_PLAYER_MONSTERS[m.baseId];
+    return /*#__PURE__*/React.createElement("div", {
+      key: m.id,
+      className: "w-14 h-14 rounded-xl overflow-hidden border-2 border-amber-400 bg-slate-950"
+    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: m.baseId,
+      src: masuDisplayImageUrl(base),
+      alt: m.name,
+      masuColors: getMasuColors(m),
+      className: "w-full h-full object-contain"
+    }));
+  }), selected.length > 5 && /*#__PURE__*/React.createElement("span", {
+    className: "w-14 h-14 flex items-center justify-center rounded-xl border-2 border-amber-400 bg-slate-800 font-black"
+  }, "+", selected.length - 5)), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 rounded-2xl p-3 space-y-1 text-[12px] mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between"
+  }, /*#__PURE__*/React.createElement("span", null, "\u9078\u629E\u6570"), /*#__PURE__*/React.createElement("b", null, selected.length, "\u4F53")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-amber-300"
+  }, /*#__PURE__*/React.createElement("span", null, "\u7372\u5F97\u30C0\u30A4\u30E4\u5408\u8A08"), /*#__PURE__*/React.createElement("b", null, result.diamonds.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-fuchsia-300"
+  }, /*#__PURE__*/React.createElement("span", null, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u5408\u8A08"), /*#__PURE__*/React.createElement("b", null, "\xD7", result.psyche)), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-slate-300"
+  }, /*#__PURE__*/React.createElement("span", null, "\u5BC4\u4ED8\u5F8C\u306E\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", null, result.nextGold.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"
+  }, /*#__PURE__*/React.createElement(AlertCircle, {
+    size: 14,
+    className: "inline mr-1"
+  }), "\u9078\u629E\u3057\u305F\u5168\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setDonationConfirmOpen(false),
+    disabled: donationProcessing,
+    className: "flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-2xl font-black text-xs disabled:opacity-40"
+  }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+    onClick: executeMasuDonation,
+    disabled: donationProcessing,
+    className: "flex-[2] min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-2xl font-black text-xs shadow-lg disabled:opacity-40"
+  }, donationProcessing ? '処理中…' : `${selected.length}体を寄付する`))));
+}
+function MasuDonationResult({
+  donationResult,
+  setDonationResult
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-4",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(2,6,23,.96)',
+      zIndex: 32100
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 48,
+    className: "text-amber-300 mx-auto mb-3"
+  }), /*#__PURE__*/React.createElement("h3", {
+    className: "text-xl font-black text-white mb-3"
+  }, "\u5BC4\u4ED8\u5B8C\u4E86"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-violet-200 font-bold"
+  }, donationResult.count === 1 ? `${donationResult.name}を寄付しました` : `${donationResult.count}体をまとめて寄付しました`), /*#__PURE__*/React.createElement("p", {
+    className: "text-lg text-amber-300 font-black mt-2"
+  }, donationResult.diamonds.toLocaleString(), "\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308A\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("p", {
+    className: "text-base text-fuchsia-300 font-black mt-1"
+  }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", donationResult.psyche), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-slate-300 mt-2"
+  }, "\u6240\u6301\u30C0\u30A4\u30E4 ", donationResult.gold.toLocaleString()), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setDonationResult(null),
+    className: "w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm"
+  }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B")));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -39879,107 +40299,29 @@ function MonsterHeroGame() {
       className: "mh-management-link mh-temple-link"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 18
-    }), "\u9B42\u683C\u9032\u5316"))), gameState === 'MASU_REGENERATION' && (() => {
-      const unlocked = Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-4",
-        style: {
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-3 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('TEMPLE'),
-        className: "p-3 text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-violet-300"
-      }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u3076"), /*#__PURE__*/React.createElement("p", {
-        className: "text-[9px] text-slate-400 font-bold"
-      }, "\u30BF\u30C3\u30D7\u3059\u308B\u3068\u518D\u751F\u524D\u306E\u6027\u80FD\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-2"
-      }, unlocked.map(base => /*#__PURE__*/React.createElement("button", {
-        key: base.id,
-        onClick: () => {
-          setRegenerationSelectedId(base.id);
-          setGameState('MASU_REGENERATION_DETAIL');
-        },
-        "aria-label": `${base.name}の再生詳細を見る`,
-        style: MONSTER_CARD_STYLE,
-        className: `${MONSTER_CARD_CLASS} border-violet-500/30 bg-slate-900`
-      }, renderMonsterCardBody({
-        base
-      }))))));
-    })(), gameState === 'MASU_REGENERATION_DETAIL' && (() => {
-      const cost = regenerationUsed ? REGENERATION_COST : 0;
-      const selectedBase = regenerationSelectedId ? ALL_PLAYER_MONSTERS[regenerationSelectedId] : null;
-      if (!selectedBase) return null;
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-4",
-        style: {
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        disabled: regenerationProcessing,
-        onClick: () => {
-          setRegenerationSelectedId(null);
-          setGameState('MASU_REGENERATION');
-        },
-        "aria-label": "\u30D9\u30FC\u30B9\u30E2\u30F3\u9078\u629E\u3078\u623B\u308B",
-        className: "p-3 text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] text-violet-300 font-black"
-      }, "\u518D\u751F\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-1"
-      }, /*#__PURE__*/React.createElement("h2", {
-        className: "text-center text-xl font-black text-white"
-      }, selectedBase.name), /*#__PURE__*/React.createElement("img", {
-        src: selectedBase.iconUrl,
-        alt: selectedBase.name,
-        className: "w-32 h-32 max-w-full mx-auto object-contain"
-      }), /*#__PURE__*/React.createElement("section", {
-        className: "space-y-2",
-        "aria-label": `${selectedBase.name}の基礎性能`
-      }, renderDetailSectionLabel('ベースモンの性能', '再生前の正式な基礎値です'), renderMonsterDetailInfo(selectedBase)), /*#__PURE__*/React.createElement("section", {
-        className: "rounded-2xl border border-amber-400/40 bg-amber-950/30 p-3",
-        "aria-label": "\u518D\u751F\u306B\u5FC5\u8981\u306A\u60C5\u5831"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-amber-200 font-black mb-1"
-      }, "\u518D\u751F\u306B\u5FC5\u8981\u306A\u60C5\u5831"), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between text-sm"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u5BFE\u8C61"), /*#__PURE__*/React.createElement("b", {
-        className: "text-white"
-      }, selectedBase.name)), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between text-sm mt-1"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
-        className: "text-amber-300"
-      }, cost === 0 ? '初回無料' : cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between text-[10px] mt-1"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300"
-      }, gold.toLocaleString()))), /*#__PURE__*/React.createElement("button", {
-        disabled: gold < cost || regenerationProcessing,
-        onClick: executeMasuRegeneration,
-        className: "w-full min-h-[52px] bg-violet-600 rounded-2xl font-black disabled:opacity-30"
-      }, regenerationProcessing ? '再生中…' : gold < cost ? 'ダイヤが不足しています' : `${selectedBase.name}を再生する`)));
-    })(), gameState === 'MASU_REBIRTH' && (() => {
+    }), "\u9B42\u683C\u9032\u5316"))), gameState === 'MASU_REGENERATION' && /*#__PURE__*/React.createElement(MasuRegenerationScreen, {
+      MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
+      MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
+      onBackToTemple: () => setGameState('TEMPLE'),
+      onSelectBase: baseId => {
+        setRegenerationSelectedId(baseId);
+        setGameState('MASU_REGENERATION_DETAIL');
+      },
+      renderMonsterCardBody: renderMonsterCardBody,
+      unlockedMonsterIds: unlockedMonsterIds
+    }), gameState === 'MASU_REGENERATION_DETAIL' && /*#__PURE__*/React.createElement(MasuRegenerationDetailScreen, {
+      executeMasuRegeneration: executeMasuRegeneration,
+      gold: gold,
+      onBackToBaseSelect: () => {
+        setRegenerationSelectedId(null);
+        setGameState('MASU_REGENERATION');
+      },
+      regenerationProcessing: regenerationProcessing,
+      regenerationSelectedId: regenerationSelectedId,
+      regenerationUsed: regenerationUsed,
+      renderDetailSectionLabel: renderDetailSectionLabel,
+      renderMonsterDetailInfo: renderMonsterDetailInfo
+    }), gameState === 'MASU_REBIRTH' && (() => {
       const selected = masuMons.find(m => String(m.id) === String(rebirthSelectedId));
       if (!selected) {
         const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
@@ -40288,237 +40630,40 @@ function MonsterHeroGame() {
         onClick: executeMasuReincarnation,
         className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
       }, "\u8EE2\u751F\u3059\u308B"));
-    })(), gameState === 'MASU_DONATION' && (() => {
-      const options = [{
-        key: 'bondXp',
-        label: '絆経験値'
-      }, {
-        key: 'bond',
-        label: '絆レベル'
-      }, {
-        key: 'power',
-        label: '総合力'
-      }, {
-        key: 'name',
-        label: '名前'
-      }, {
-        key: 'lineage',
-        label: '血統'
-      }, {
-        key: 'newest',
-        label: '新しい順'
-      }, {
-        key: 'active',
-        label: '編成中'
-      }];
-      const donationArgs = {
-        masuMons,
-        gold,
-        monsterRosterIds,
-        draftMonsterRoster,
-        unlockedMonsterIds,
-        validBaseIds: Object.keys(ALL_PLAYER_MONSTERS),
-        requiredCount: STARTER_MONSTER_IDS.length
-      };
-      const selectedSet = new Set(donationSelectedIds.map(String));
-      const selectedResult = donationSelectedIds.length ? buildMasuDonations({
-        ...donationArgs,
-        targetIds: donationSelectedIds
-      }) : null;
-      const selectedDiamonds = selectedResult?.ok ? selectedResult.diamonds : donationSelectedIds.reduce((sum, id) => sum + donationDiamondValue(masuMons.find(m => String(m.id) === String(id))?.bondXp), 0);
-      const selectedPsyche = selectedResult?.ok ? selectedResult.psyche : donationSelectedIds.reduce((sum, id) => {
-        const m = masuMons.find(x => String(x.id) === String(id));
-        return sum + (m ? donationPsycheValue(m) : 0);
-      }, 0);
-      const sorted = sortDonationMasuMons(masuMons, donationSortKey, donationSortDir, monsterRosterIds);
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-3",
-        style: {
-          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-1 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        disabled: donationProcessing,
-        onClick: () => {
-          resetDonationFlow();
-          setGameState('TEMPLE');
-        },
-        className: "p-3 text-slate-400 active:scale-90 disabled:opacity-40"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-violet-300"
-      }, "\u5BC4\u4ED8")), /*#__PURE__*/React.createElement("p", {
-        className: "text-[10px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-xl px-3 py-2 mb-2 shrink-0"
-      }, "\u7DCF\u5408\u529B\u3068\u5831\u916C\u3092\u898B\u6BD4\u3079\u3066\u8907\u6570\u9078\u3079\u307E\u3059\u3002\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1 mb-2 shrink-0",
-        "aria-label": "\u5BC4\u4ED8\u4E00\u89A7\u306E\u4E26\u3079\u66FF\u3048"
-      }, options.map(o => {
-        const active = donationSortKey === o.key;
-        const direction = donationSortDir === 'asc' ? '低い順' : '高い順';
-        const activeLabel = o.key === 'power' ? `${o.label}：${direction}` : `${o.label}${donationSortDir === 'asc' ? ' ▲' : ' ▼'}`;
-        return /*#__PURE__*/React.createElement("button", {
-          key: o.key,
-          onClick: () => {
-            if (active) setDonationSortDir(d => d === 'asc' ? 'desc' : 'asc');else {
-              setDonationSortKey(o.key);
-              setDonationSortDir(o.key === 'name' || o.key === 'lineage' ? 'asc' : 'desc');
-            }
-          },
-          "aria-pressed": active,
-          "aria-label": o.key === 'power' ? active ? `総合力を${direction}で表示中。押すと${donationSortDir === 'asc' ? '高い順' : '低い順'}に変更` : '総合力を高い順に並べ替え' : undefined,
-          className: `min-w-0 min-h-[34px] px-1 py-1 rounded-lg text-[8px] leading-tight font-black border ${active ? 'bg-violet-600 border-violet-400 text-white' : 'bg-slate-900 border-white/10 text-slate-400'} ${o.key === 'power' ? 'col-span-2' : ''}`
-        }, active ? activeLabel : o.label);
-      })), donationError && /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-amber-200 bg-amber-950/40 border border-amber-500/40 rounded-xl p-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement(AlertCircle, {
-        size: 12,
-        className: "inline mr-1"
-      }), donationError), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-      }, masuMons.length === 0 ? /*#__PURE__*/React.createElement("div", {
-        className: "flex flex-col items-center justify-center h-full text-center text-slate-500"
-      }, /*#__PURE__*/React.createElement(Gem, {
-        size: 42
-      }), /*#__PURE__*/React.createElement("p", {
-        className: "text-[11px] mt-3 font-bold"
-      }, "\u5BC4\u4ED8\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093")) : /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1.5 pb-3"
-      }, sorted.map(masu => {
-        const base = ALL_PLAYER_MONSTERS[masu.baseId];
-        if (!base) return null;
-        const diamonds = donationDiamondValue(masu.bondXp);
-        const lvl = masuBondLevelInfo(masu);
-        const active = monsterRosterIds.includes(`masu:${masu.id}`);
-        const selected = selectedSet.has(String(masu.id));
-        const trial = selected ? {
-          ok: true
-        } : buildMasuDonations({
-          ...donationArgs,
-          targetIds: [...donationSelectedIds, masu.id]
-        });
-        const canSelect = trial.ok;
-        return /*#__PURE__*/React.createElement("button", {
-          key: masu.id,
-          disabled: donationProcessing || !selected && !canSelect,
-          "aria-pressed": selected,
-          onClick: () => {
-            setDonationError('');
-            setDonationSelectedIds(ids => selected ? ids.filter(id => String(id) !== String(masu.id)) : [...ids, masu.id]);
-          },
-          style: MONSTER_CARD_STYLE,
-          className: `${MONSTER_CARD_CLASS} bg-slate-900 disabled:opacity-35 ${selected ? 'border-amber-300 bg-violet-950/80' : 'border-violet-500/30'}`
-        }, renderMonsterCardBody({
-          masu,
-          base,
-          badge: /*#__PURE__*/React.createElement(React.Fragment, null, active && /*#__PURE__*/React.createElement("span", {
-            className: "absolute -top-1 -left-1 z-10 rounded-full bg-pink-600/95 px-1 text-[7px] font-black leading-4 text-white"
-          }, "\u7DE8\u6210\u4E2D"), selected && /*#__PURE__*/React.createElement("span", {
-            className: "absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-amber-300 font-black text-slate-950"
-          }, "\u2713")),
-          sub: /*#__PURE__*/React.createElement("span", {
-            className: "flex items-center gap-0.5 text-[8px] font-black text-amber-300"
-          }, /*#__PURE__*/React.createElement(Gem, {
-            size: 8
-          }), diamonds.toLocaleString()),
-          status: !canSelect && !selected ? /*#__PURE__*/React.createElement("span", {
-            className: "text-[7px] font-black text-red-300"
-          }, "\u7DE8\u6210\u3092\u7DAD\u6301\u3067\u304D\u307E\u305B\u3093") : null
-        }));
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 rounded-2xl border border-violet-400/50 bg-slate-950 px-3 py-2 shadow-xl",
-        style: {
-          paddingBottom: 'max(.5rem, env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between mb-2 text-[10px] font-black"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-violet-200"
-      }, "\u9078\u629E\u6570\uFF1A", /*#__PURE__*/React.createElement("b", {
-        className: "text-white text-sm"
-      }, donationSelectedIds.length, "\u4F53")), /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, "\u5408\u8A08 ", /*#__PURE__*/React.createElement(Gem, {
-        size: 11,
-        className: "inline"
-      }), " ", selectedDiamonds.toLocaleString(), " / \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", selectedPsyche)), /*#__PURE__*/React.createElement("button", {
-        disabled: !donationSelectedIds.length || donationProcessing || !selectedResult?.ok,
-        onClick: () => setDonationConfirmOpen(true),
-        className: "w-full min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-xl font-black text-sm disabled:opacity-30"
-      }, "\u9078\u3093\u3060\u30DE\u30B9\u30E2\u30F3\u3092\u5BC4\u4ED8\u3059\u308B")));
-    })(), gameState === 'MASU_DONATION' && donationConfirmOpen && donationSelectedIds.length > 0 && (() => {
-      const selected = donationSelectedIds.map(id => masuMons.find(m => String(m.id) === String(id))).filter(Boolean);
-      const result = buildMasuDonations({
-        masuMons,
-        targetIds: donationSelectedIds,
-        gold,
-        monsterRosterIds,
-        draftMonsterRoster,
-        unlockedMonsterIds,
-        validBaseIds: Object.keys(ALL_PLAYER_MONSTERS),
-        requiredCount: STARTER_MONSTER_IDS.length
-      });
-      if (!result.ok) return null;
-      return /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-0 flex items-center justify-center p-4",
-        style: {
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(2,6,23,.95)',
-          zIndex: 32000
-        },
-        role: "dialog",
-        "aria-modal": "true"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-sm bg-slate-900 border-2 border-violet-400 rounded-3xl p-5 shadow-2xl"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-lg font-black text-violet-200 text-center mb-3"
-      }, "\u5BC4\u4ED8\u306E\u6700\u7D42\u78BA\u8A8D"), /*#__PURE__*/React.createElement("div", {
-        className: "flex -space-x-2 justify-center mb-3"
-      }, selected.slice(0, 5).map(m => {
-        const base = ALL_PLAYER_MONSTERS[m.baseId];
-        return /*#__PURE__*/React.createElement("div", {
-          key: m.id,
-          className: "w-14 h-14 rounded-xl overflow-hidden border-2 border-amber-400 bg-slate-950"
-        }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-          baseId: m.baseId,
-          src: masuDisplayImageUrl(base),
-          alt: m.name,
-          masuColors: getMasuColors(m),
-          className: "w-full h-full object-contain"
-        }));
-      }), selected.length > 5 && /*#__PURE__*/React.createElement("span", {
-        className: "w-14 h-14 flex items-center justify-center rounded-xl border-2 border-amber-400 bg-slate-800 font-black"
-      }, "+", selected.length - 5)), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 rounded-2xl p-3 space-y-1 text-[12px] mb-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "\u9078\u629E\u6570"), /*#__PURE__*/React.createElement("b", null, selected.length, "\u4F53")), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-amber-300"
-      }, /*#__PURE__*/React.createElement("span", null, "\u7372\u5F97\u30C0\u30A4\u30E4\u5408\u8A08"), /*#__PURE__*/React.createElement("b", null, result.diamonds.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-fuchsia-300"
-      }, /*#__PURE__*/React.createElement("span", null, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u5408\u8A08"), /*#__PURE__*/React.createElement("b", null, "\xD7", result.psyche)), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-slate-300"
-      }, /*#__PURE__*/React.createElement("span", null, "\u5BC4\u4ED8\u5F8C\u306E\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", null, result.nextGold.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
-        className: "bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"
-      }, /*#__PURE__*/React.createElement(AlertCircle, {
-        size: 14,
-        className: "inline mr-1"
-      }), "\u9078\u629E\u3057\u305F\u5168\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setDonationConfirmOpen(false),
-        disabled: donationProcessing,
-        className: "flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-2xl font-black text-xs disabled:opacity-40"
-      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-        onClick: executeMasuDonation,
-        disabled: donationProcessing,
-        className: "flex-[2] min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-2xl font-black text-xs shadow-lg disabled:opacity-40"
-      }, donationProcessing ? '処理中…' : `${selected.length}体を寄付する`))));
-    })(), regenerationResult && (() => {
+    })(), gameState === 'MASU_DONATION' && /*#__PURE__*/React.createElement(MasuDonationScreen, {
+      MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
+      MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
+      donationError: donationError,
+      donationProcessing: donationProcessing,
+      donationSelectedIds: donationSelectedIds,
+      donationSortDir: donationSortDir,
+      donationSortKey: donationSortKey,
+      draftMonsterRoster: draftMonsterRoster,
+      gold: gold,
+      masuMons: masuMons,
+      monsterRosterIds: monsterRosterIds,
+      onLeaveDonation: () => {
+        resetDonationFlow();
+        setGameState('TEMPLE');
+      },
+      renderMonsterCardBody: renderMonsterCardBody,
+      setDonationConfirmOpen: setDonationConfirmOpen,
+      setDonationError: setDonationError,
+      setDonationSelectedIds: setDonationSelectedIds,
+      setDonationSortDir: setDonationSortDir,
+      setDonationSortKey: setDonationSortKey,
+      unlockedMonsterIds: unlockedMonsterIds
+    }), gameState === 'MASU_DONATION' && donationConfirmOpen && donationSelectedIds.length > 0 && /*#__PURE__*/React.createElement(MasuDonationConfirm, {
+      donationProcessing: donationProcessing,
+      donationSelectedIds: donationSelectedIds,
+      draftMonsterRoster: draftMonsterRoster,
+      executeMasuDonation: executeMasuDonation,
+      gold: gold,
+      masuMons: masuMons,
+      monsterRosterIds: monsterRosterIds,
+      setDonationConfirmOpen: setDonationConfirmOpen,
+      unlockedMonsterIds: unlockedMonsterIds
+    }), regenerationResult && (() => {
       const statRows = [['ライフ', 'hp', 'baseHp'], ['ちから', 'atk', 'baseAtk'], ['丈夫さ', 'def', 'baseDef'], ['ガッツ', 'guts', 'baseGuts']];
       return /*#__PURE__*/React.createElement("div", {
         className: "mh-regeneration-animation",
@@ -41173,33 +41318,10 @@ function MonsterHeroGame() {
       }
     }))), /*#__PURE__*/React.createElement("div", {
       className: "mh-donation-copy"
-    }, "\u795E\u6BBF\u3078\u5BC4\u4ED8\u4E2D\u2026")), gameState === 'MASU_DONATION' && donationResult && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 flex items-center justify-center p-4",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(2,6,23,.96)',
-        zIndex: 32100
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"
-    }, /*#__PURE__*/React.createElement(Gem, {
-      size: 48,
-      className: "text-amber-300 mx-auto mb-3"
-    }), /*#__PURE__*/React.createElement("h3", {
-      className: "text-xl font-black text-white mb-3"
-    }, "\u5BC4\u4ED8\u5B8C\u4E86"), /*#__PURE__*/React.createElement("p", {
-      className: "text-sm text-violet-200 font-bold"
-    }, donationResult.count === 1 ? `${donationResult.name}を寄付しました` : `${donationResult.count}体をまとめて寄付しました`), /*#__PURE__*/React.createElement("p", {
-      className: "text-lg text-amber-300 font-black mt-2"
-    }, donationResult.diamonds.toLocaleString(), "\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308A\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("p", {
-      className: "text-base text-fuchsia-300 font-black mt-1"
-    }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", donationResult.psyche), /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-slate-300 mt-2"
-    }, "\u6240\u6301\u30C0\u30A4\u30E4 ", donationResult.gold.toLocaleString()), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setDonationResult(null),
-      className: "w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm"
-    }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B"))), gameState === 'EXTREME_DIFFICULTY_SELECT' && extremeRuleDetail && (() => {
+    }, "\u795E\u6BBF\u3078\u5BC4\u4ED8\u4E2D\u2026")), gameState === 'MASU_DONATION' && donationResult && /*#__PURE__*/React.createElement(MasuDonationResult, {
+      donationResult: donationResult,
+      setDonationResult: setDonationResult
+    }), gameState === 'EXTREME_DIFFICULTY_SELECT' && extremeRuleDetail && (() => {
       const setting = extremeDifficultySetting(extremeRuleDetail);
       if (!setting) return null;
       const groups = extremeRuleDetailGroups(setting.id);
