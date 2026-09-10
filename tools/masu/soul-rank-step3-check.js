@@ -187,6 +187,10 @@ check('魂格再編はmh_masu_mons/mh_owned_itemsを取引保存',
 check('100万ダイヤ版の魂格再編の書は詳細ボタンを維持',
   app.includes("item.desc&&<button onClick={()=>setMarketItemDetail(item)}")
   && !app.includes("item.id===SOUL_RANK_RESPEC_ITEM_ID?<button"));
+check('100万ダイヤ版の長い価格でもダイヤアイコンを潰さない',
+  marketUi.includes('usesGold?<Gem size={9} className="shrink-0"/>:<Coins size={9} className="shrink-0"/>'));
+check('勇者の証交換版の魂格再編の書にも詳細ボタンを表示',
+  app.split("item.desc&&<button onClick={()=>setMarketItemDetail(item)}").length-1>=2);
 check('勇者の証1→再編の書は同じアイテムの隣に出す別商品カード',
   app.includes("const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID")
   && app.includes("const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null")
