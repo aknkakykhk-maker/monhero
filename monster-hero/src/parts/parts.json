@@ -145,6 +145,10 @@
       "role": "画面: 神殿の限界突破・転生・超越・魂格進化と、その演出・補償告知"
     },
     {
+      "file": "63-screen-masu-soul-traits.jsx",
+      "role": "画面: 魂格特性(MASU_SOUL_TRAITS)"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },
