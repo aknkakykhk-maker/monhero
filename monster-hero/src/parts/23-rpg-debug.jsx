@@ -464,6 +464,21 @@ const attackMotionPreviewSequence = (atkMotion='default') => {
     ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)))),
   }];
 };
+// 固有技のほうの見せ方。本番の固有技とまったく同じ順で、
+// 「共通のタメ(下に沈む specialCharge・650ms)→ 専用モーション」を返す。
+// 通常攻撃用の attackMotionPreviewSequence とは分けてあるので、
+// 図鑑の一覧側や既存のプレビューへタメが混ざることはない。
+const attackMotionUniquePreviewSequence = (atkMotion='default') => {
+  const motion=atkMotion||'default';
+  const isTwin=motion==='kenshiTwinBlade';
+  return [
+    {anim:{charge:true},ms:650},
+    {
+      anim:{charge:false,motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
+      ms:isTwin?560:(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))),
+    },
+  ];
+};
 const rpgMotionName = (side, monId, isSkill) => {
   const prefix = side === 'ally' ? 'rpgAlly' : 'rpgFoe';
   if (isSkill) return `${prefix}Special`;

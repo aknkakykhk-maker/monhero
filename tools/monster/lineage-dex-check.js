@@ -174,6 +174,8 @@ check('主血統プラントの対象はPlantとOboro',
 // ---------- ⑥ 図鑑の画面 ----------
 const list = slice("{gameState==='MONSTER_DEX'&&(()=>{", "{gameState==='MONSTER_DEX_DETAIL'&&(()=>{");
 const detail = slice("{gameState==='MONSTER_DEX_DETAIL'&&(()=>{", "{gameState==='AUTO_SETTINGS'&&(()=>{");
+// 攻撃アクションの確認は専用画面。図鑑一覧のブロックより前に置いてあるので、list/detail とは混ざらない
+const attackPreview = slice("{gameState==='MONSTER_ATTACK_PREVIEW'&&(()=>{", "{gameState==='MONSTER_DEX'&&(()=>{");
 const sharedDex = slice('const DexMonsterIcon =', 'const MarketProductIcon =');
 check('M/B管理のモンスターから図鑑へ入れる',
   source.includes("setGameState('MONSTER_DEX');") && source.includes('モンスター図鑑</button>'));
@@ -229,14 +231,33 @@ check('立ち絵は枠に合わせて縮尺する（元画像の解像度で大�
   && sharedDex.includes('className="w-full h-full object-contain"')
   && !detail.includes('max-w-full max-h-full'));
 check('立ち絵の枠の高さを決めている', /data-dex-art[\s\S]{0,300}height:'clamp\(/.test(detail));
-check('解放済みの図鑑詳細で攻撃アクションをその場で再生できる',
+// 立ち絵の上にボタンを重ねると絵が隠れるので、入口は枠の外に置き、再生は専用画面で行う
+check('攻撃アクションのボタンは立ち絵の枠の外にあり、専用画面へ移る',
   detail.includes('data-dex-attack-preview')
-  && detail.includes("attackMotionPreviewSequence(mon.atkMotion||'default')")
-  && detail.includes("previewPlaying?'再生中…':'▶ 攻撃アクション'"));
-check('未解放モンスターは攻撃アクションを再生できない',
-  detail.includes('if(!unlocked||previewPlaying)return')
-  && detail.includes('{unlocked&&<button type="button" data-dex-attack-preview'));
-check('左右移動と一覧へ戻る操作で途中のプレビューを止める',
+  && detail.includes("setGameState('MONSTER_ATTACK_PREVIEW')")
+  && !detail.slice(detail.indexOf('data-dex-art'), detail.indexOf('攻撃アクションの入口')).includes('data-dex-attack-preview')
+  && !detail.includes('attackMotionPreviewSequence('));
+check('未解放モンスターには攻撃アクションの入口を出さない',
+  detail.includes('{unlocked&&<div className="shrink-0 px-3 pt-1 flex justify-center">')
+  && attackPreview.includes('if(!mon||!unlockedMonsterIds.includes(mon.id)){ setGameState(\'MONSTER_DEX\'); return null; }'));
+// 専用画面。上へ飛ぶ演出が枠外へ出ないよう縦を大きく取り、通常攻撃と固有技を選んで見比べられる
+check('攻撃アクションの専用画面で通常攻撃と固有技を再生できる',
+  attackPreview.includes("attackMotionPreviewSequence(atkMotion)")
+  && attackPreview.includes("attackMotionUniquePreviewSequence(atkMotion)")
+  && attackPreview.includes('data-attack-preview-play={kind}')
+  && attackPreview.includes("kindButton('normal','通常攻撃'")
+  && attackPreview.includes("kindButton('unique','固有技'"));
+check('専用画面は本番と同じ描画部品を使い、立ち絵を下寄りに置いて上へ余白を残す',
+  attackPreview.includes('<BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>')
+  && /data-attack-preview-art[\s\S]{0,200}bottom:'1[0-9]%'/.test(attackPreview)
+  && attackPreview.includes('data-attack-preview-stage'));
+check('専用画面から図鑑の詳細へ戻れ、戻るときに再生を止める',
+  /backToDetail=\(\)=>\{dexAttackPreviewRunRef\.current\+=1;setDexAttackPreview\(null\);setGameState\('MONSTER_DEX_DETAIL'\);\}/.test(attackPreview));
+check('固有技のプレビューは本番と同じく共通のタメを先に入れる',
+  source.includes('const attackMotionUniquePreviewSequence =')
+  && /attackMotionUniquePreviewSequence[\s\S]{0,400}\{anim:\{charge:true\},ms:650\}/.test(source)
+  && /attackMotionUniquePreviewSequence[\s\S]{0,600}anim:\{charge:false,motion,twinBlade:isTwin/.test(source));
+check('左右移動と一覧へ戻る操作で途中の再生を止める',
   detail.includes('const stopDexAttackPreview=')
   && detail.includes('const go=(delta)=>{ stopDexAttackPreview();')
   && detail.includes("stopDexAttackPreview();setGameState('MONSTER_DEX')"));
