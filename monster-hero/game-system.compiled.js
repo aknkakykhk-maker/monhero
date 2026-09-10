@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8284e506ab3b57f9
+// source-sha256: 65a93e086dfa6de7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 4aeb22a82c4202b7
+// generated-sha256: a57d0351b5478ef2
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 06:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 07:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -24555,7 +24555,7 @@ function MasuMonsScreen({
   })()));
 }
 
-// ---- part: 60a-screen-masu-regen-donation.jsx ----
+// ---- part: 61-screen-masu-regen-donation.jsx ----
 // ==== 画面: 神殿の再生と寄付 ====
 //
 // MonsterHeroGame から切り出した11本目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-9)。
@@ -24973,6 +24973,1115 @@ function MasuDonationResult({
     onClick: () => setDonationResult(null),
     className: "w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm"
   }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B")));
+}
+
+// ---- part: 62-screen-masu-temple.jsx ----
+// ==== 画面: 神殿の限界突破・転生・超越・魂格進化と、その演出 ====
+//
+// MonsterHeroGame から切り出した12本目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-9)。
+// 4つの画面に加えて、gameState に紐づかない兄弟ブロック——再生の結果・レベル上限の補償告知・
+// 継承固有技の補償告知・各種の演出——も一緒に置いた。
+// **画面だけ移して演出を置き去りにすると、演出が元の場所に取り残される。**
+//
+// 【この画面ならではの注意】
+// ・保存は一切していない。個体・ダイヤ・アイテムの更新は MonsterHeroGame 側の
+//   executeMasuRebirth / executeMasuReincarnation / executeMasuTranscendence /
+//   executeMasuSoulRank が担うので、props で受けて呼ぶだけ
+// ・二重実行を止める *ProcessingRef は ref のままだと画面が本体の中身を持つので、
+//   真偽値にして渡す(描画のたびに読む今の作りと同じ挙動)
+// ・レベル上限の補償告知だけは storeSet('mh_masu_level_cap_compensation_notice_seen_v1', …) を
+//   直接呼ぶ。**保存キーの名前は絶対に変えない**(CLAUDE.md ⑦)。
+//   呼び出しごと props で受け取り、中身は本体に残す
+// ・演出を消すタイマーは本体の execute* の中にあるので、ここには無い
+
+function MasuRebirthScreen({
+  MONSTER_CARD_CLASS,
+  MONSTER_CARD_STYLE,
+  buildUnifiedMonsterEntries,
+  executeMasuBreakthrough,
+  getRebirthSkillChoices,
+  gold,
+  masuMons,
+  monsterDisplayFlags,
+  monsterEntryMatchesDisplayFlags,
+  monsterEntryMatchesLineage,
+  monsterRosterIds,
+  onBackToTemple,
+  ownedItems,
+  rebirthError,
+  rebirthProcessingRef,
+  rebirthSelectedId,
+  rebirthSkillKey,
+  renderMonsterCardBody,
+  renderMonsterSortFilterBar,
+  renderScreenNote,
+  setRebirthSelectedId,
+  setRebirthSkillKey,
+  sortMonsterEntries
+}) {
+  const selected = masuMons.find(m => String(m.id) === String(rebirthSelectedId));
+  if (!selected) {
+    const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
+    return /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex flex-col h-full p-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: onBackToTemple,
+      className: "p-3 text-slate-400"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-xl font-black italic text-violet-300"
+    }, "\u9650\u754C\u7A81\u7834")), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-full max-w-md mx-auto mb-2"
+    }, /*#__PURE__*/React.createElement(AssistantBubble, {
+      scene: "rebirth",
+      compact: true
+    })), renderScreenNote('rebirth', 'レベル上限に届いたマスモンを、虹のプシュケーで上へ伸ばせます。', [`30凸までは上限+${BREAKTHROUGH_LEVEL_CAP_GAIN}。31〜35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。`, '虹★4で解放されるLv270→330は強化P×2、虹★5で解放されるLv330→400は×3です。', `必要な虹のプシュケーは1回目${BREAKTHROUGH_ITEM_BASE}個、以降1回ごとに+${BREAKTHROUGH_ITEM_STEP}個。チャレンジ／クイックをクリアするともらえます。`]), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-fuchsia-200 flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true"
+    }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-mono font-black text-white"
+    }, "\u6240\u6301 ", ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString())), renderMonsterSortFilterBar({
+      singleType: true
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
+    }, entries.map(({
+      masu
+    }) => {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) return null;
+      const lvl = masuBondLevelInfo(masu);
+      const cap = normalizeMasuProgression(masu).levelCap;
+      const need = breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount + 1);
+      const enoughPsyche = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) >= need;
+      const can = lvl.level === cap && cap < MAX_MASU_LEVEL_CAP && enoughPsyche;
+      return /*#__PURE__*/React.createElement("button", {
+        key: masu.id,
+        disabled: !can,
+        onClick: () => {
+          setRebirthSelectedId(masu.id);
+          setRebirthSkillKey(null);
+        },
+        style: MONSTER_CARD_STYLE,
+        className: `${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-35`
+      }, renderMonsterCardBody({
+        masu,
+        base,
+        status: /*#__PURE__*/React.createElement("span", {
+          className: `text-[8px] font-black ${enoughPsyche ? 'text-fuchsia-300' : 'text-red-400'}`
+        }, "\uD83C\uDF08", need)
+      }));
+    })));
+  }
+  const normalized = normalizeMasuProgression(selected),
+    base = ALL_PLAYER_MONSTERS[selected.baseId],
+    lvl = masuBondLevelInfo(selected),
+    cost = masuRebirthCost(lvl.level),
+    skills = getRebirthSkillChoices(selected);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex flex-col h-full p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: rebirthProcessingRef.current,
+    onClick: () => setRebirthSelectedId(null),
+    className: "p-3 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-violet-300"
+  }, "\u9650\u754C\u7A81\u7834\u30FB\u56FA\u6709\u6280\u9078\u629E")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative w-20 h-20 rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: selected.baseId,
+    src: base?.iconUrl,
+    alt: selected.name,
+    masuColors: getMasuColors(selected),
+    className: "w-full h-full object-cover"
+  }), /*#__PURE__*/React.createElement(RebirthStars, {
+    count: selected.rebirthCount,
+    className: "mh-rebirth-stars-overlay"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-pink-300 text-xs"
+  }, "Lv.", lvl.level, " / \u4E0A\u9650Lv.", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
+    className: "text-slate-400 text-[10px]"
+  }, normalized.rebirthCount >= BREAKTHROUGH_MAX_COUNT ? `次は${normalized.rebirthCount + 1}凸：上限Lv.${breakthroughLevelCap(normalized.rebirthCount + 1)}、虹★が1個増えます${normalized.rebirthCount + 1 >= 34 ? `（LvUP強化ポイント×${levelUpPointMultiplier(normalized.rebirthCount + 1)}）` : ''}` : `星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`), /*#__PURE__*/React.createElement("div", {
+    className: "text-amber-300 text-[10px] font-black"
+  }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", normalized.rebirthCount === 0 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[10px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: `font-black flex items-center gap-1 ${gold >= cost ? 'text-amber-300' : 'text-red-400'}`
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 12
+  }), cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-400"
+  }, "\uFF08\u7D46Lv.", lvl.level, "\uFF09\xD7 ", REBIRTH_COST_PER_LEVEL), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[9px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500"
+  }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300 font-black"
+  }, gold.toLocaleString())), gold < cost && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-red-400 font-black"
+  }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), (() => {
+    const need = breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1);
+    const have = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between text-[10px] font-bold"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "\u5FC5\u8981\u306A\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
+      className: `font-black flex items-center gap-1 ${have >= need ? 'text-fuchsia-300' : 'text-red-400'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true"
+    }, "\uD83C\uDF08"), need.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-400"
+    }, "\uFF08", normalizeMasuProgression(selected).rebirthCount + 1, "\u56DE\u76EE\u306E\u9650\u754C\u7A81\u7834\uFF1A", BREAKTHROUGH_ITEM_BASE, " +\uFF08\u56DE\u6570-1\uFF09\xD7", BREAKTHROUGH_ITEM_STEP, "\uFF09"), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between text-[9px] font-bold"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500"
+    }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-300 font-black"
+    }, have.toLocaleString())), have < need && /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-red-400 font-black"
+    }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (need - have).toLocaleString(), "\uFF09"));
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-300 mb-2"
+  }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u3079\u307E\u3059\uFF08\u6700\u5927Lv.8\uFF09\u3002\u9078\u3070\u306A\u3044\u3068\u304D\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3067\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u305B\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
+  }, skills.map(skill => /*#__PURE__*/React.createElement("button", {
+    key: skill.key,
+    disabled: skill.level >= MAX_UNIQUE_SKILL_LEVEL,
+    onClick: () => setRebirthSkillKey(skill.key),
+    className: `w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey === skill.key ? 'bg-violet-700 border-white' : 'bg-slate-900 border-violet-500/40'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-black text-xs"
+  }, skill.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-amber-300"
+  }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setRebirthSkillKey(''),
+    className: `w-full p-3 rounded-xl border text-left ${rebirthSkillKey === '' ? 'bg-amber-700 border-white' : 'bg-slate-900 border-amber-500/40'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-black text-xs"
+  }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-amber-300"
+  }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-300 mt-1"
+  }, "\u4FDD\u7559\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E\u300C\u56FA\u6709\u6280\u5F37\u5316\u300D\u304B\u3089\u4F7F\u7528\u3067\u304D\u307E\u3059"))), rebirthError && /*#__PURE__*/React.createElement("div", {
+    className: "text-red-300 text-[10px] my-2"
+  }, rebirthError), /*#__PURE__*/React.createElement("button", {
+    disabled: rebirthSkillKey == null || gold < cost || ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) < breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1) || rebirthProcessingRef.current,
+    onClick: executeMasuBreakthrough,
+    className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
+  }, "\u9650\u754C\u7A81\u7834\u3059\u308B"));
+}
+function MasuReincarnateScreen({
+  MONSTER_CARD_CLASS,
+  MONSTER_CARD_STYLE,
+  buildUnifiedMonsterEntries,
+  executeMasuReincarnation,
+  getRebirthSkillChoices,
+  gold,
+  masuMons,
+  monsterDisplayFlags,
+  monsterEntryMatchesDisplayFlags,
+  monsterEntryMatchesLineage,
+  monsterRosterIds,
+  onBackToTemple,
+  reincarnateError,
+  reincarnateProcessingRef,
+  reincarnateSelectedId,
+  reincarnateSkillKey,
+  renderMonsterCardBody,
+  renderMonsterSortFilterBar,
+  renderScreenNote,
+  setReincarnateError,
+  setReincarnateSelectedId,
+  setReincarnateSkillKey,
+  sortMonsterEntries
+}) {
+  const selected = masuMons.find(m => String(m.id) === String(reincarnateSelectedId));
+  if (!selected) {
+    const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
+    return /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex flex-col h-full p-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: onBackToTemple,
+      className: "p-3 text-slate-400"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-xl font-black italic text-violet-300"
+    }, "\u8EE2\u751F")), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-full max-w-md mx-auto mb-2"
+    }, /*#__PURE__*/React.createElement(AssistantBubble, {
+      scene: "reincarnate",
+      compact: true
+    })), renderScreenNote('reincarnate', `絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`, [`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`, '限界突破の回数や★はそのまま残ります。']), renderMonsterSortFilterBar({
+      singleType: true
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
+    }, entries.map(({
+      masu
+    }) => {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) return null;
+      const lvl = masuBondLevelInfo(masu);
+      const can = lvl.level >= REINCARNATE_MIN_LEVEL;
+      return /*#__PURE__*/React.createElement("button", {
+        key: masu.id,
+        disabled: !can,
+        onClick: () => {
+          setReincarnateSelectedId(masu.id);
+          setReincarnateSkillKey(null);
+          setReincarnateError('');
+        },
+        style: MONSTER_CARD_STYLE,
+        className: `${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-35`
+      }, renderMonsterCardBody({
+        masu,
+        base,
+        status: /*#__PURE__*/React.createElement(ReincarnateBadge, {
+          count: masu.reincarnateCount,
+          className: "is-inline"
+        })
+      }));
+    })));
+  }
+  const normalized = normalizeMasuProgression(selected),
+    base = ALL_PLAYER_MONSTERS[selected.baseId],
+    lvl = masuBondLevelInfo(selected),
+    cost = masuRebirthCost(lvl.level),
+    skills = getRebirthSkillChoices(selected);
+  const nextLevel = Math.max(1, lvl.level - REINCARNATE_LEVEL_DROP);
+  const nextPoints = nextLevel - 1 + totalBreakthroughPoints(normalized.rebirthCount) + normalized.reincarnateBonusPoints + REINCARNATE_POINTS + normalized.inheritedReincarnateBonusPoints;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex flex-col h-full p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: reincarnateProcessingRef.current,
+    onClick: () => setReincarnateSelectedId(null),
+    className: "p-3 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-violet-300"
+  }, "\u8EE2\u751F\u30FB\u56FA\u6709\u6280\u9078\u629E")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative w-20 h-20 rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: selected.baseId,
+    src: base?.iconUrl,
+    alt: selected.name,
+    masuColors: getMasuColors(selected),
+    className: "w-full h-full object-cover"
+  }), /*#__PURE__*/React.createElement(RebirthStars, {
+    count: selected.rebirthCount,
+    className: "mh-rebirth-stars-overlay"
+  }), /*#__PURE__*/React.createElement(ReincarnateBadge, {
+    count: normalized.reincarnateCount
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-pink-300 text-xs"
+  }, "Lv.", lvl.level, " \u2192 Lv.", nextLevel), /*#__PURE__*/React.createElement("div", {
+    className: "text-slate-400 text-[10px]"
+  }, "\u4E0A\u9650Lv.", normalized.levelCap, "\u306F\u305D\u306E\u307E\u307E\u3002\u632F\u3063\u305F\u5F37\u5316\u306F\u767D\u7D19\u306B\u623B\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "text-amber-300 text-[10px] font-black"
+  }, "\u632F\u308A\u76F4\u305B\u308B\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 ", nextPoints, "\uFF08\u3046\u3061\u8EE2\u751F\u3076\u3093 +", REINCARNATE_POINTS, "\uFF09"))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[10px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: `font-black flex items-center gap-1 ${gold >= cost ? 'text-amber-300' : 'text-red-400'}`
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 12
+  }), cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-400"
+  }, "\uFF08\u7D46Lv.", lvl.level, "\uFF09\xD7 ", REBIRTH_COST_PER_LEVEL), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[9px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500"
+  }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300 font-black"
+  }, gold.toLocaleString())), gold < cost && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-red-400 font-black"
+  }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-300 mb-2"
+  }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u3079\u307E\u3059\uFF08\u6700\u5927Lv.8\uFF09\u3002\u9078\u3070\u306A\u3044\u3068\u304D\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3067\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u305B\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
+  }, skills.map(skill => /*#__PURE__*/React.createElement("button", {
+    key: skill.key,
+    disabled: skill.level >= MAX_UNIQUE_SKILL_LEVEL,
+    onClick: () => setReincarnateSkillKey(skill.key),
+    className: `w-full p-3 rounded-xl border text-left disabled:opacity-30 ${reincarnateSkillKey === skill.key ? 'bg-violet-700 border-white' : 'bg-slate-900 border-violet-500/40'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-black text-xs"
+  }, skill.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-amber-300"
+  }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setReincarnateSkillKey(''),
+    className: `w-full p-3 rounded-xl border text-left ${reincarnateSkillKey === '' ? 'bg-amber-700 border-white' : 'bg-slate-900 border-amber-500/40'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-black text-xs"
+  }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-amber-300"
+  }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-300 mt-1"
+  }, "\u4FDD\u7559\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E\u300C\u56FA\u6709\u6280\u5F37\u5316\u300D\u304B\u3089\u4F7F\u7528\u3067\u304D\u307E\u3059"))), reincarnateError && /*#__PURE__*/React.createElement("div", {
+    className: "text-red-300 text-[10px] my-2"
+  }, reincarnateError), /*#__PURE__*/React.createElement("button", {
+    disabled: reincarnateSkillKey == null || gold < cost || reincarnateProcessingRef.current,
+    onClick: executeMasuReincarnation,
+    className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
+  }, "\u8EE2\u751F\u3059\u308B"));
+}
+function MasuTranscendenceScreen({
+  MONSTER_CARD_CLASS,
+  MONSTER_CARD_STYLE,
+  buildUnifiedMonsterEntries,
+  executeMasuTranscendence,
+  gold,
+  masuMons,
+  monsterDisplayFlags,
+  monsterEntryMatchesDisplayFlags,
+  monsterEntryMatchesLineage,
+  monsterRosterIds,
+  onBackToTemple,
+  ownedItems,
+  renderMonsterCardBody,
+  renderMonsterSortFilterBar,
+  setTranscendError,
+  setTranscendSelectedId,
+  sortMonsterEntries,
+  transcendError,
+  transcendProcessingRef,
+  transcendSelectedId
+}) {
+  const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+  const selected = masuMons.find(m => String(m.id) === String(transcendSelectedId));
+  if (!selected) {
+    const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
+    return /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
+      className: "flex-1 flex flex-col h-full min-h-0 p-4",
+      style: {
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-3 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: onBackToTemple,
+      className: "p-3 text-slate-400 active:scale-90"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-xl font-black italic text-amber-200"
+    }, "\u8D85\u8D8A")), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-full max-w-md mx-auto mb-2"
+    }, /*#__PURE__*/React.createElement(AssistantBubble, {
+      scene: "transcendence",
+      compact: true
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-slate-400 mb-3 shrink-0"
+    }, "Lv.", MAX_MASU_LEVEL_CAP, "\u30FB\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\uFF08\u9650\u754C\u7A81\u7834", FINAL_BREAKTHROUGH_COUNT, "\u56DE\uFF09\u307E\u3067\u80B2\u3066\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u8D85\u8D8A\u3067\u304D\u307E\u3059\u3002\u8D85\u8D8A\u3059\u308B\u3068Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u3001Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3067\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3057\u307E\u3059\u30021\u500B\u4F53\u306B\u3064\u304D1\u56DE\u3060\u3051\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2 rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 mb-3 shrink-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-amber-200 flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true"
+    }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-mono font-black text-white"
+    }, "\u6240\u6301 ", psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-500 font-bold mb-2 shrink-0"
+    }, "\u8D85\u8D8A\u306B\u306F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC", TRANSCEND_PSYCHE_COST.toLocaleString(), "\u500B\u3068\u30C0\u30A4\u30E4", TRANSCEND_DIAMOND_COST.toLocaleString(), "\u304C\u5FC5\u8981\u3067\u3059\u3002"), renderMonsterSortFilterBar({
+      singleType: true
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
+    }, entries.map(({
+      masu
+    }) => {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) return null;
+      const lvl = masuBondLevelInfo(masu);
+      const normalized = normalizeMasuProgression(masu);
+      const eligible = canTranscendMasu(masu);
+      return /*#__PURE__*/React.createElement("button", {
+        key: masu.id,
+        "data-transcend-candidate": masu.id,
+        disabled: !eligible.ok,
+        onClick: () => {
+          setTranscendSelectedId(masu.id);
+          setTranscendError('');
+        },
+        style: MONSTER_CARD_STYLE,
+        className: `${MONSTER_CARD_CLASS} border-amber-400/40 bg-slate-900 disabled:opacity-35`
+      }, renderMonsterCardBody({
+        masu,
+        base,
+        status: /*#__PURE__*/React.createElement("span", {
+          className: `text-[8px] font-black ${normalized.transcended ? 'text-amber-300' : eligible.ok ? 'text-emerald-300' : 'text-slate-500'}`
+        }, normalized.transcended ? '超越済み' : eligible.ok ? '超越できます' : '条件未達')
+      }));
+    })));
+  }
+  const base = ALL_PLAYER_MONSTERS[selected.baseId];
+  const lvl = masuBondLevelInfo(selected);
+  const normalized = normalizeMasuProgression(selected);
+  const plan = buildMasuTranscendence({
+    masu: selected,
+    gold,
+    psycheOwned: psycheHave
+  });
+  const psycheShort = Math.max(0, TRANSCEND_PSYCHE_COST - psycheHave);
+  const goldShort = Math.max(0, TRANSCEND_DIAMOND_COST - gold);
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    },
+    "data-transcend-confirm": selected.id
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: transcendProcessingRef.current,
+    onClick: () => {
+      setTranscendSelectedId(null);
+      setTranscendError('');
+    },
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-amber-200"
+  }, "\u8D85\u8D8A\u306E\u5100\u5F0F")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative w-20 h-20 rounded-full overflow-visible shrink-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-20 h-20 rounded-full overflow-hidden"
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: selected.baseId,
+    src: base?.iconUrl,
+    alt: selected.name,
+    masuColors: getMasuColors(selected),
+    className: "w-full h-full object-cover"
+  })), /*#__PURE__*/React.createElement(RebirthStars, {
+    count: selected.rebirthCount,
+    className: "mh-rebirth-stars-overlay"
+  }), /*#__PURE__*/React.createElement(TranscendenceBadge, {
+    transcended: normalized.transcended,
+    soulRankStage: normalized.soulRankStage
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block truncate"
+  }, selected.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-pink-300 text-xs"
+  }, "Lv.", lvl.level, " / ", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
+    className: "text-amber-200 text-[10px] font-black"
+  }, "\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\uFF08\u9650\u754C\u7A81\u7834", normalized.rebirthCount, "\u56DE\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "text-emerald-300 text-[10px] font-black"
+  }, "\u8D85\u8D8A\u3059\u308B\u3068Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u307E\u3059"))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-amber-400/30 bg-black/40 p-3 text-[10px] leading-relaxed text-slate-200 space-y-1.5"
+  }, /*#__PURE__*/React.createElement("p", null, "Lv.", MAX_MASU_LEVEL_CAP, "\u30FB\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\u307E\u3067\u80B2\u3063\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u884C\u3048\u308B\u3001\u9650\u754C\u306E\u5148\u3078\u9032\u3080\u305F\u3081\u306E\u7279\u5225\u306A\u5100\u5F0F\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u8D85\u8D8A\u3059\u308B\u3068Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u6210\u9577\u304C\u89E3\u653E\u3055\u308C\u3001Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3067\u306F\u901A\u5E38\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3067\u306F\u306A\u304F\u300C\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u300D\u3092\u7372\u5F97\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u306F\u901A\u5E38\u306E\u5F37\u5316\u3068\u306F\u5225\u306B\u3001\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u57FA\u790E\u80FD\u529B\u3092\u6C38\u4E45\u7684\u306B\u5F37\u5316\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u8D85\u8D8A\u72B6\u614B\u3068\u8D85\u8D8A\u5F37\u5316\u306F\u3001\u8EE2\u751F\u3084\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u3092\u884C\u3063\u3066\u3082\u5931\u308F\u308C\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-fuchsia-500/30 bg-black/40 p-3 space-y-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[10px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u5FC5\u8981\u306A\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
+    className: `font-black flex items-center gap-1 ${psycheShort === 0 ? 'text-fuchsia-300' : 'text-red-400'}`
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\uD83C\uDF08"), TRANSCEND_PSYCHE_COST.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[9px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500"
+  }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300 font-black"
+  }, psycheHave.toLocaleString())), psycheShort > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-red-400 font-black"
+  }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", psycheShort.toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-amber-500/30 bg-black/40 p-3 space-y-1.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[10px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: `font-black flex items-center gap-1 ${goldShort === 0 ? 'text-amber-300' : 'text-red-400'}`
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 12
+  }), TRANSCEND_DIAMOND_COST.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[9px] font-bold"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500"
+  }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-300 font-black"
+  }, gold.toLocaleString())), goldShort > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-red-400 font-black"
+  }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", goldShort.toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border-2 border-red-400/60 bg-red-950/40 px-3 py-2 text-center text-[11px] font-black text-red-200"
+  }, "\u26A0 \u8D85\u8D8A\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093"), transcendError && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-red-400 font-black text-center"
+  }, transcendError)), /*#__PURE__*/React.createElement("button", {
+    "data-transcend-execute": true,
+    disabled: !plan.ok || transcendProcessingRef.current,
+    onClick: executeMasuTranscendence,
+    className: "shrink-0 mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-amber-500 via-fuchsia-500 to-sky-400 text-slate-950 font-black text-sm disabled:opacity-40 disabled:from-slate-700 disabled:via-slate-700 disabled:to-slate-700 disabled:text-slate-400 active:scale-[.98]"
+  }, "\u8D85\u8D8A\u3059\u308B"));
+}
+function MasuSoulRankScreen({
+  MONSTER_CARD_CLASS,
+  MONSTER_CARD_STYLE,
+  buildUnifiedMonsterEntries,
+  executeMasuSoulRankEvolution,
+  gold,
+  masuMons,
+  monsterDisplayFlags,
+  monsterEntryMatchesDisplayFlags,
+  monsterEntryMatchesLineage,
+  monsterRosterIds,
+  onBackToTemple,
+  ownedItems,
+  renderMonsterCardBody,
+  renderMonsterSortFilterBar,
+  setSoulRankError,
+  setSoulRankSelectedId,
+  sortMonsterEntries,
+  soulRankError,
+  soulRankProcessingRef,
+  soulRankSelectedId
+}) {
+  const heroProofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
+  const selected = masuMons.find(m => String(m.id) === String(soulRankSelectedId));
+  if (!selected) {
+    const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
+    return /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
+      className: "flex-1 flex flex-col h-full min-h-0 p-4",
+      style: {
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-3 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: onBackToTemple,
+      className: "p-3 text-slate-400 active:scale-90"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-xl font-black italic text-sky-200"
+    }, "\u9B42\u683C\u9032\u5316")), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-full max-w-md mx-auto mb-2"
+    }, /*#__PURE__*/React.createElement(AssistantBubble, {
+      scene: "temple",
+      compact: true
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "rounded-xl border border-sky-400/30 bg-sky-950/20 p-3 mb-2 text-[10px] leading-relaxed text-slate-300 shrink-0"
+    }, "\u8D85\u8D8A\u5F8C\u3001\u73FE\u5728\u306ELv\u4E0A\u9650\u307E\u3067\u80B2\u3063\u305F\u30DE\u30B9\u30E2\u30F3\u3092\u6B21\u306E\u9B42\u683C\u3078\u9032\u5316\u3067\u304D\u307E\u3059\u3002\u9032\u5316\u3057\u3066\u3082\u73FE\u5728Lv\u306F\u4E0A\u304C\u3089\u305A\u3001Lv\u4E0A\u9650\u3060\u3051\u304C100\u89E3\u653E\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 mb-3 shrink-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-amber-200"
+    }, "\uD83C\uDFC5 \u52C7\u8005\u306E\u8A3C"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[11px] font-mono font-black text-white"
+    }, "\u6240\u6301 ", heroProofHave.toLocaleString())), renderMonsterSortFilterBar({
+      singleType: true
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
+    }, entries.map(({
+      masu
+    }) => {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) return null;
+      const status = soulRankEvolutionStatus(masu);
+      const normalized = normalizeMasuProgression(masu);
+      const canOpen = status.ok;
+      const label = normalized.soulRankStage > 0 ? '魂格' + ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][normalized.soulRankStage] : normalized.transcended ? '超越済み' : '未超越';
+      const sub = !status.ok ? status.reason : status.levelReady ? status.next.label + 'へ進化可能' : 'Lv.' + status.next.requiredLevel + 'で' + status.next.label;
+      return /*#__PURE__*/React.createElement("button", {
+        key: masu.id,
+        "data-soul-rank-candidate": masu.id,
+        disabled: !canOpen,
+        onClick: () => {
+          setSoulRankSelectedId(masu.id);
+          setSoulRankError('');
+        },
+        style: MONSTER_CARD_STYLE,
+        className: MONSTER_CARD_CLASS + ' border-sky-400/40 bg-slate-900 disabled:opacity-35'
+      }, renderMonsterCardBody({
+        masu,
+        base,
+        nameBand: true,
+        status: /*#__PURE__*/React.createElement("span", {
+          className: "block text-center"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "text-[8px] text-sky-200"
+        }, label), /*#__PURE__*/React.createElement("small", {
+          className: 'block text-[7px] ' + (status.levelReady ? 'text-emerald-300' : 'text-slate-500')
+        }, sub))
+      }));
+    })));
+  }
+  const base = ALL_PLAYER_MONSTERS[selected.baseId];
+  const status = soulRankEvolutionStatus(selected);
+  if (!status.next) {
+    return /*#__PURE__*/React.createElement("div", {
+      "data-mh-screen": true,
+      className: "flex-1 flex flex-col h-full p-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setSoulRankSelectedId(null),
+      className: "p-3 text-slate-400"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-xl font-black text-sky-200"
+    }, "\u9B42\u683C\u9032\u5316")), /*#__PURE__*/React.createElement("div", {
+      className: "m-auto text-center text-sm font-black text-slate-300"
+    }, "\u9B42\u683C\u2164\u307E\u3067\u9032\u5316\u6E08\u307F\u3067\u3059\u3002"));
+  }
+  const plan = buildMasuSoulRankEvolution({
+    masu: selected,
+    gold,
+    ownedItems
+  });
+  const next = status.next;
+  const normalized = normalizeMasuProgression(selected);
+  const level = masuBondLevelInfo(selected).level;
+  const goldShort = Math.max(0, next.diamondCost - gold);
+  const proofShort = Math.max(0, next.heroProofCost - heroProofHave);
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    "data-soul-rank-confirm": selected.id,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: soulRankProcessingRef.current,
+    onClick: () => {
+      setSoulRankSelectedId(null);
+      setSoulRankError('');
+    },
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic",
+    style: {
+      color: next.accent
+    }
+  }, "\u9B42\u683C\u9032\u5316\u306E\u5100")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 rounded-2xl bg-slate-900 p-3 border",
+    style: {
+      borderColor: next.accent + '66'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-20 h-20 rounded-full overflow-hidden shrink-0 border-2",
+    style: {
+      borderColor: next.accent
+    }
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: selected.baseId,
+    src: base?.iconUrl,
+    alt: selected.name,
+    masuColors: getMasuColors(selected),
+    className: "w-full h-full object-cover"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block truncate"
+  }, selected.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-pink-300 text-xs"
+  }, "Lv.", level, " / ", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-slate-300"
+  }, status.currentLabel, " \u2192 ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: next.accent
+    }
+  }, next.label)), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-emerald-300"
+  }, "Lv\u4E0A\u9650 ", normalized.levelCap, " \u2192 ", next.levelCap))), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-white/10 bg-black/30 p-3 space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[10px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u5FC5\u8981Lv"), /*#__PURE__*/React.createElement("b", {
+    className: level >= next.requiredLevel ? 'text-emerald-300' : 'text-red-300'
+  }, "Lv.", level, " / Lv.", next.requiredLevel)), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[10px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
+    className: goldShort === 0 ? 'text-amber-300' : 'text-red-300'
+  }, gold.toLocaleString(), " / ", next.diamondCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[10px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400"
+  }, "\u5FC5\u8981\u306A\u52C7\u8005\u306E\u8A3C"), /*#__PURE__*/React.createElement("b", {
+    className: proofShort === 0 ? 'text-amber-200' : 'text-red-300'
+  }, heroProofHave.toLocaleString(), " / ", next.heroProofCost.toLocaleString())), goldShort > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-red-300 font-black"
+  }, "\u30C0\u30A4\u30E4 \u3042\u3068 ", goldShort.toLocaleString()), proofShort > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-red-300 font-black"
+  }, "\u52C7\u8005\u306E\u8A3C \u3042\u3068 ", proofShort.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border border-sky-400/30 bg-sky-950/20 p-3 text-[10px] text-slate-300 leading-relaxed"
+  }, "\u9032\u5316\u5F8C\u3082\u73FE\u5728Lv.", level, "\u306E\u307E\u307E\u3067\u3059\u3002Lv\u4E0A\u9650\u3060\u3051", next.levelCap, "\u3078\u89E3\u653E\u3055\u308C\u3001\u305D\u306E\u5F8C\u306E\u521D\u5230\u9054Lv\u3067\u9B42\u683CP\u3092\u7372\u5F97\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "rounded-xl border-2 border-red-400/50 bg-red-950/30 px-3 py-2 text-center text-[10px] font-black text-red-200"
+  }, "\u26A0 \u9B42\u683C\u9032\u5316\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093"), soulRankError && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-red-400 font-black text-center"
+  }, soulRankError)), /*#__PURE__*/React.createElement("button", {
+    "data-soul-rank-execute": true,
+    disabled: !plan.ok || soulRankProcessingRef.current,
+    onClick: executeMasuSoulRankEvolution,
+    className: "shrink-0 mt-3 min-h-[52px] w-full rounded-2xl text-slate-950 font-black text-sm disabled:opacity-35 active:scale-[.98]",
+    style: {
+      background: next.stage === 5 ? 'linear-gradient(90deg,#60a5fa,#facc15,#4ade80,#f87171,#e879f9)' : next.accent
+    }
+  }, plan.ok ? next.label + 'へ進化する' : plan.reason));
+}
+function MasuRegenerationResult({
+  onCloseRegenerationResult,
+  regenerationResult
+}) {
+  const statRows = [['ライフ', 'hp', 'baseHp'], ['ちから', 'atk', 'baseAtk'], ['丈夫さ', 'def', 'baseDef'], ['ガッツ', 'guts', 'baseGuts']];
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mh-regeneration-animation",
+    role: "dialog",
+    "aria-modal": "true"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: REGENERATION_DISC_IMAGE,
+    alt: "\u5186\u76E4\u77F3",
+    className: "mh-regeneration-disc"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-regeneration-born"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: regenerationResult.base.iconUrl,
+    alt: regenerationResult.masu.name,
+    className: "w-28 h-28 object-contain mx-auto"
+  }), /*#__PURE__*/React.createElement("h3", null, "\u30E2\u30F3\u30B9\u30BF\u30FC\u8A95\u751F\uFF01"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-400 font-bold mt-1"
+  }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u57FA\u790E\u5024\u3068\u306E\u5DEE"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-1 text-[11px] text-left mt-2"
+  }, statRows.map(([label, key, baseKey]) => {
+    const value = regenerationResult.masu.individualStats[key];
+    const delta = value - regenerationResult.base[baseKey];
+    return /*#__PURE__*/React.createElement("span", {
+      key: key
+    }, label, " ", /*#__PURE__*/React.createElement("b", null, value, " ", /*#__PURE__*/React.createElement("small", {
+      className: `text-[9px] ${delta > 0 ? 'text-emerald-300' : delta < 0 ? 'text-red-300' : 'text-slate-400'}`
+    }, "\uFF08", delta > 0 ? '+' : delta < 0 ? '' : '±', delta, "\uFF09")));
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: onCloseRegenerationResult,
+    className: "mt-4 w-full py-3 bg-amber-500 text-black rounded-xl font-black"
+  }, "\u4E00\u89A7\u3078\u623B\u308B")));
+}
+function MasuLevelCapCompensation({
+  levelCapCompensation,
+  onCloseLevelCapCompensation
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-5",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 50000,
+      backgroundColor: 'rgba(2,6,23,.96)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 38,
+    className: "text-amber-300 mx-auto mb-3"
+  }), /*#__PURE__*/React.createElement("h2", {
+    className: "font-black text-lg mb-2"
+  }, "Lv30\u4E0A\u9650\u88DC\u511F"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-slate-300 leading-relaxed"
+  }, "Lv30\u3092\u8D85\u3048\u3066\u3044\u305F\u672A\u9650\u754C\u7A81\u7834\u30DE\u30B9\u30E2\u30F3\u306E\u8D85\u904E\u7D46\u7D4C\u9A13\u5024\u3092\u524A\u9664\u3057\u3001\u540C\u6570\u306E\u30C0\u30A4\u30E4\u3078\u9084\u5143\u3057\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "text-2xl text-amber-300 font-black my-4"
+  }, "+", levelCapCompensation.diamonds.toLocaleString(), " \u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("button", {
+    onClick: onCloseLevelCapCompensation,
+    className: "w-full bg-amber-500 text-black py-3 rounded-2xl font-black"
+  }, "\u53D7\u3051\u53D6\u308B")));
+}
+function MasuInheritedUniqueCompensation({
+  setInheritedUniqueCompensation
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-5",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 49999,
+      backgroundColor: 'rgba(2,6,23,.96)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "max-w-sm w-full bg-slate-900 border-2 border-fuchsia-400 rounded-3xl p-6 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-4xl mb-3"
+  }, "\uD83C\uDF08"), /*#__PURE__*/React.createElement("h2", {
+    className: "font-black text-lg mb-2"
+  }, "\u304A\u8A6B\u3073\u306E\u914D\u5E03"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-slate-300 leading-relaxed"
+  }, "\u7D99\u627F\u56FA\u6709\u6280Lv\u4E0D\u5177\u5408\u4FEE\u6B63\u306E\u304A\u8A6B\u3073\u3068\u3057\u3066\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\xD720\u3092\u914D\u5E03\u3057\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setInheritedUniqueCompensation(false),
+    className: "w-full bg-fuchsia-500 text-white py-3 mt-5 rounded-2xl font-black"
+  }, "\u78BA\u8A8D")));
+}
+function MasuRebirthAnimation({
+  rebirthAnimation
+}) {
+  const starList = breakthroughStars(rebirthAnimation.masu.rebirthCount || 1);
+  const finalBreak = isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mh-breakthrough-animation",
+    role: "status",
+    "aria-live": "polite"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-breakthrough-beam"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-breakthrough-ring"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-breakthrough-cap"
+  }, "\u30EC\u30D9\u30EB\u4E0A\u9650", /*#__PURE__*/React.createElement("b", null, "Lv.", rebirthAnimation.masu.levelCap)), /*#__PURE__*/React.createElement("div", {
+    className: "mh-breakthrough-mon"
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: rebirthAnimation.masu.baseId,
+    src: rebirthAnimation.base?.iconUrl,
+    alt: rebirthAnimation.masu.name,
+    masuColors: getMasuColors(rebirthAnimation.masu),
+    className: "w-full h-full object-contain"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-breakthrough-stars",
+    "aria-hidden": "true"
+  }, starList.map((s, i) => renderBreakthroughStar(s, i, {
+    className: `${s.image ? 'mh-rainbow-breakthrough-star ' : ''}${finalBreak || i === 0 ? 'is-new' : 'is-old'}`
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-breakthrough-copy"
+  }, /*#__PURE__*/React.createElement("b", null, finalBreak ? '最終限界突破！' : '限界突破！'), /*#__PURE__*/React.createElement("span", null, finalBreak ? '★ が虹になりました' : '★ が1つ増えました'), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${rebirthAnimation.keptSkillPoints}）` : `${rebirthAnimation.skillName} Lv.${rebirthAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", rebirthAnimation.gainedPoints)));
+}
+function MasuTranscendAnimation({
+  transcendAnimation
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-animation",
+    role: "status",
+    "aria-live": "polite"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-converge",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("i", {
+    style: {
+      '--i': 0
+    }
+  }), /*#__PURE__*/React.createElement("i", {
+    style: {
+      '--i': 1
+    }
+  }), /*#__PURE__*/React.createElement("i", {
+    style: {
+      '--i': 2
+    }
+  }), /*#__PURE__*/React.createElement("i", {
+    style: {
+      '--i': 3
+    }
+  }), /*#__PURE__*/React.createElement("i", {
+    style: {
+      '--i': 4
+    }
+  }), /*#__PURE__*/React.createElement("i", {
+    style: {
+      '--i': 5
+    }
+  }), /*#__PURE__*/React.createElement("i", {
+    style: {
+      '--i': 6
+    }
+  }), /*#__PURE__*/React.createElement("i", {
+    style: {
+      '--i': 7
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-halo",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-halo is-second",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-rays",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-mon"
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: transcendAnimation.masu.baseId,
+    src: transcendAnimation.base?.iconUrl,
+    alt: transcendAnimation.masu.name,
+    masuColors: getMasuColors(transcendAnimation.masu),
+    className: "w-full h-full object-contain"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-flash",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-shock",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-title",
+    "aria-hidden": "true"
+  }, "\u8D85\u3000\u8D8A"), /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-mark",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement(TranscendenceBadge, {
+    transcended: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-transcend-copy"
+  }, /*#__PURE__*/React.createElement("b", null, "\u8D85\u8D8A\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv\u4E0A\u9650 ", transcendAnimation.fromLevelCap, " \u2192 ", transcendAnimation.toLevelCap), /*#__PURE__*/React.createElement("span", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("span", null, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F")));
+}
+function MasuSoulRankAnimation({
+  soulRankAnimation
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    "data-soul-rank-animation": true,
+    role: "status",
+    "aria-live": "polite",
+    className: "fixed inset-0 flex items-center justify-center p-5",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 50500,
+      backgroundColor: 'rgba(2,6,23,.94)',
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs rounded-3xl border-2 p-6 text-center shadow-2xl",
+    style: {
+      borderColor: soulRankAnimation.step.accent,
+      background: soulRankAnimation.toStage === 5 ? 'linear-gradient(145deg,rgba(30,64,175,.55),rgba(113,63,18,.45),rgba(20,83,45,.45),rgba(127,29,29,.45),rgba(88,28,135,.55))' : 'rgba(15,23,42,.96)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black tracking-[.3em] text-slate-400 mb-2"
+  }, "SOUL RANK"), /*#__PURE__*/React.createElement(Sparkles, {
+    size: 28,
+    className: "mx-auto mb-2",
+    style: {
+      color: soulRankAnimation.step.accent
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "w-28 h-28 mx-auto rounded-full overflow-hidden border-4 mb-3",
+    style: {
+      borderColor: soulRankAnimation.step.accent,
+      boxShadow: '0 0 36px ' + soulRankAnimation.step.accent + '88'
+    }
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: soulRankAnimation.masu.baseId,
+    src: soulRankAnimation.base?.iconUrl,
+    alt: soulRankAnimation.masu.name,
+    masuColors: getMasuColors(soulRankAnimation.masu),
+    className: "w-full h-full object-cover"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-400 font-black"
+  }, soulRankAnimation.fromStage > 0 ? '魂格' + ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][soulRankAnimation.fromStage] : '超越', " \u2192"), /*#__PURE__*/React.createElement("div", {
+    className: "text-3xl font-black my-1",
+    style: {
+      color: soulRankAnimation.step.accent
+    }
+  }, soulRankAnimation.step.label), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] font-black text-emerald-300"
+  }, "Lv\u4E0A\u9650 ", soulRankAnimation.fromLevelCap, " \u2192 ", soulRankAnimation.toLevelCap)));
+}
+function MasuReincarnateAnimation({
+  reincarnateAnimation
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-animation",
+    role: "status",
+    "aria-live": "polite"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-light"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-mon mh-reincarnate-stack"
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: reincarnateAnimation.masu.baseId,
+    src: reincarnateAnimation.base?.iconUrl || reincarnateAnimation.base?.imgUrl,
+    alt: reincarnateAnimation.masu.name,
+    masuColors: getMasuColors(reincarnateAnimation.masu),
+    className: "w-full h-full object-contain"
+  }), /*#__PURE__*/React.createElement(SoulRankAura, {
+    soulRankStage: normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage,
+    className: "is-ceremony"
+  }), /*#__PURE__*/React.createElement(RebirthStars, {
+    count: reincarnateAnimation.masu.rebirthCount,
+    className: "mh-rebirth-stars-overlay"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-reincarnation-copy"
+  }, /*#__PURE__*/React.createElement("b", null, "\u8EE2\u751F\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv.", reincarnateAnimation.fromLevel, " \u2192 Lv.", reincarnateAnimation.nextLevel), /*#__PURE__*/React.createElement("span", null, reincarnateAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）` : `${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 ", reincarnateAnimation.nextPoints, " \u3092\u632F\u308A\u76F4\u305B\u307E\u3059")));
+}
+function MasuDonationAnimation({
+  donationAnimation
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "mh-donation-animation",
+    role: "status",
+    "aria-live": "polite",
+    "aria-label": "\u5BC4\u4ED8\u3092\u51E6\u7406\u4E2D"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-donation-beam"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-donation-monster"
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: donationAnimation.baseId,
+    src: donationAnimation.src,
+    alt: donationAnimation.name,
+    masuColors: donationAnimation.colors,
+    className: "w-full h-full object-contain"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-donation-gem"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 42
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-donation-particles"
+  }, Array.from({
+    length: 8
+  }, (_, i) => /*#__PURE__*/React.createElement("i", {
+    key: i,
+    style: {
+      '--i': i
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-donation-copy"
+  }, "\u795E\u6BBF\u3078\u5BC4\u4ED8\u4E2D\u2026"));
 }
 
 // ---- part: 60-app.jsx ----
@@ -40321,316 +41430,55 @@ function MonsterHeroGame() {
       regenerationUsed: regenerationUsed,
       renderDetailSectionLabel: renderDetailSectionLabel,
       renderMonsterDetailInfo: renderMonsterDetailInfo
-    }), gameState === 'MASU_REBIRTH' && (() => {
-      const selected = masuMons.find(m => String(m.id) === String(rebirthSelectedId));
-      if (!selected) {
-        const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
-        return /*#__PURE__*/React.createElement("div", {
-          className: "flex-1 flex flex-col h-full p-4"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-2 mb-3"
-        }, /*#__PURE__*/React.createElement("button", {
-          onClick: () => setGameState('TEMPLE'),
-          className: "p-3 text-slate-400"
-        }, /*#__PURE__*/React.createElement(ArrowLeft, {
-          size: 20
-        })), /*#__PURE__*/React.createElement("h2", {
-          className: "text-xl font-black italic text-violet-300"
-        }, "\u9650\u754C\u7A81\u7834")), /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 w-full max-w-md mx-auto mb-2"
-        }, /*#__PURE__*/React.createElement(AssistantBubble, {
-          scene: "rebirth",
-          compact: true
-        })), renderScreenNote('rebirth', 'レベル上限に届いたマスモンを、虹のプシュケーで上へ伸ばせます。', [`30凸までは上限+${BREAKTHROUGH_LEVEL_CAP_GAIN}。31〜35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。`, '虹★4で解放されるLv270→330は強化P×2、虹★5で解放されるLv330→400は×3です。', `必要な虹のプシュケーは1回目${BREAKTHROUGH_ITEM_BASE}個、以降1回ごとに+${BREAKTHROUGH_ITEM_STEP}個。チャレンジ／クイックをクリアするともらえます。`]), /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-black text-fuchsia-200 flex items-center gap-1"
-        }, /*#__PURE__*/React.createElement("span", {
-          "aria-hidden": "true"
-        }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
-          className: "text-[11px] font-mono font-black text-white"
-        }, "\u6240\u6301 ", ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString())), renderMonsterSortFilterBar({
-          singleType: true
-        }), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
-        }, entries.map(({
-          masu
-        }) => {
-          const base = ALL_PLAYER_MONSTERS[masu.baseId];
-          if (!base) return null;
-          const lvl = masuBondLevelInfo(masu);
-          const cap = normalizeMasuProgression(masu).levelCap;
-          const need = breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount + 1);
-          const enoughPsyche = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) >= need;
-          const can = lvl.level === cap && cap < MAX_MASU_LEVEL_CAP && enoughPsyche;
-          return /*#__PURE__*/React.createElement("button", {
-            key: masu.id,
-            disabled: !can,
-            onClick: () => {
-              setRebirthSelectedId(masu.id);
-              setRebirthSkillKey(null);
-            },
-            style: MONSTER_CARD_STYLE,
-            className: `${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-35`
-          }, renderMonsterCardBody({
-            masu,
-            base,
-            status: /*#__PURE__*/React.createElement("span", {
-              className: `text-[8px] font-black ${enoughPsyche ? 'text-fuchsia-300' : 'text-red-400'}`
-            }, "\uD83C\uDF08", need)
-          }));
-        })));
-      }
-      const normalized = normalizeMasuProgression(selected),
-        base = ALL_PLAYER_MONSTERS[selected.baseId],
-        lvl = masuBondLevelInfo(selected),
-        cost = masuRebirthCost(lvl.level),
-        skills = getRebirthSkillChoices(selected);
-      return /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 flex flex-col h-full p-4"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-3"
-      }, /*#__PURE__*/React.createElement("button", {
-        disabled: rebirthProcessingRef.current,
-        onClick: () => setRebirthSelectedId(null),
-        className: "p-3 text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-violet-300"
-      }, "\u9650\u754C\u7A81\u7834\u30FB\u56FA\u6709\u6280\u9078\u629E")), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "relative w-20 h-20 rounded-full overflow-hidden"
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: selected.baseId,
-        src: base?.iconUrl,
-        alt: selected.name,
-        masuColors: getMasuColors(selected),
-        className: "w-full h-full object-cover"
-      }), /*#__PURE__*/React.createElement(RebirthStars, {
-        count: selected.rebirthCount,
-        className: "mh-rebirth-stars-overlay"
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-pink-300 text-xs"
-      }, "Lv.", lvl.level, " / \u4E0A\u9650Lv.", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
-        className: "text-slate-400 text-[10px]"
-      }, normalized.rebirthCount >= BREAKTHROUGH_MAX_COUNT ? `次は${normalized.rebirthCount + 1}凸：上限Lv.${breakthroughLevelCap(normalized.rebirthCount + 1)}、虹★が1個増えます${normalized.rebirthCount + 1 >= 34 ? `（LvUP強化ポイント×${levelUpPointMultiplier(normalized.rebirthCount + 1)}）` : ''}` : `星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`), /*#__PURE__*/React.createElement("div", {
-        className: "text-amber-300 text-[10px] font-black"
-      }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", normalized.rebirthCount === 0 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS))), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[10px] font-bold"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-        className: `font-black flex items-center gap-1 ${gold >= cost ? 'text-amber-300' : 'text-red-400'}`
-      }, /*#__PURE__*/React.createElement(Gem, {
-        size: 12
-      }), cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-400"
-      }, "\uFF08\u7D46Lv.", lvl.level, "\uFF09\xD7 ", REBIRTH_COST_PER_LEVEL), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[9px] font-bold"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500"
-      }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300 font-black"
-      }, gold.toLocaleString())), gold < cost && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-red-400 font-black"
-      }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), (() => {
-        const need = breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1);
-        const have = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
-        return /*#__PURE__*/React.createElement("div", {
-          className: "bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex justify-between text-[10px] font-bold"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-400"
-        }, "\u5FC5\u8981\u306A\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
-          className: `font-black flex items-center gap-1 ${have >= need ? 'text-fuchsia-300' : 'text-red-400'}`
-        }, /*#__PURE__*/React.createElement("span", {
-          "aria-hidden": "true"
-        }, "\uD83C\uDF08"), need.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] text-slate-400"
-        }, "\uFF08", normalizeMasuProgression(selected).rebirthCount + 1, "\u56DE\u76EE\u306E\u9650\u754C\u7A81\u7834\uFF1A", BREAKTHROUGH_ITEM_BASE, " +\uFF08\u56DE\u6570-1\uFF09\xD7", BREAKTHROUGH_ITEM_STEP, "\uFF09"), /*#__PURE__*/React.createElement("div", {
-          className: "flex justify-between text-[9px] font-bold"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500"
-        }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-300 font-black"
-        }, have.toLocaleString())), have < need && /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] text-red-400 font-black"
-        }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (need - have).toLocaleString(), "\uFF09"));
-      })(), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-slate-300 mb-2"
-      }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u3079\u307E\u3059\uFF08\u6700\u5927Lv.8\uFF09\u3002\u9078\u3070\u306A\u3044\u3068\u304D\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3067\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u305B\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
-      }, skills.map(skill => /*#__PURE__*/React.createElement("button", {
-        key: skill.key,
-        disabled: skill.level >= MAX_UNIQUE_SKILL_LEVEL,
-        onClick: () => setRebirthSkillKey(skill.key),
-        className: `w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey === skill.key ? 'bg-violet-700 border-white' : 'bg-slate-900 border-violet-500/40'}`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "font-black text-xs"
-      }, skill.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-amber-300"
-      }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setRebirthSkillKey(''),
-        className: `w-full p-3 rounded-xl border text-left ${rebirthSkillKey === '' ? 'bg-amber-700 border-white' : 'bg-slate-900 border-amber-500/40'}`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "font-black text-xs"
-      }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-amber-300"
-      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-300 mt-1"
-      }, "\u4FDD\u7559\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E\u300C\u56FA\u6709\u6280\u5F37\u5316\u300D\u304B\u3089\u4F7F\u7528\u3067\u304D\u307E\u3059"))), rebirthError && /*#__PURE__*/React.createElement("div", {
-        className: "text-red-300 text-[10px] my-2"
-      }, rebirthError), /*#__PURE__*/React.createElement("button", {
-        disabled: rebirthSkillKey == null || gold < cost || ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) < breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1) || rebirthProcessingRef.current,
-        onClick: executeMasuBreakthrough,
-        className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
-      }, "\u9650\u754C\u7A81\u7834\u3059\u308B"));
-    })(), gameState === 'MASU_REINCARNATE' && (() => {
-      const selected = masuMons.find(m => String(m.id) === String(reincarnateSelectedId));
-      if (!selected) {
-        const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
-        return /*#__PURE__*/React.createElement("div", {
-          className: "flex-1 flex flex-col h-full p-4"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-2 mb-3"
-        }, /*#__PURE__*/React.createElement("button", {
-          onClick: () => setGameState('TEMPLE'),
-          className: "p-3 text-slate-400"
-        }, /*#__PURE__*/React.createElement(ArrowLeft, {
-          size: 20
-        })), /*#__PURE__*/React.createElement("h2", {
-          className: "text-xl font-black italic text-violet-300"
-        }, "\u8EE2\u751F")), /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 w-full max-w-md mx-auto mb-2"
-        }, /*#__PURE__*/React.createElement(AssistantBubble, {
-          scene: "reincarnate",
-          compact: true
-        })), renderScreenNote('reincarnate', `絆Lv.${REINCARNATE_MIN_LEVEL}以上のマスモンは、強化を振り直せます。`, [`レベルが${REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。`, '限界突破の回数や★はそのまま残ります。']), renderMonsterSortFilterBar({
-          singleType: true
-        }), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
-        }, entries.map(({
-          masu
-        }) => {
-          const base = ALL_PLAYER_MONSTERS[masu.baseId];
-          if (!base) return null;
-          const lvl = masuBondLevelInfo(masu);
-          const can = lvl.level >= REINCARNATE_MIN_LEVEL;
-          return /*#__PURE__*/React.createElement("button", {
-            key: masu.id,
-            disabled: !can,
-            onClick: () => {
-              setReincarnateSelectedId(masu.id);
-              setReincarnateSkillKey(null);
-              setReincarnateError('');
-            },
-            style: MONSTER_CARD_STYLE,
-            className: `${MONSTER_CARD_CLASS} border-violet-500/40 bg-slate-900 disabled:opacity-35`
-          }, renderMonsterCardBody({
-            masu,
-            base,
-            status: /*#__PURE__*/React.createElement(ReincarnateBadge, {
-              count: masu.reincarnateCount,
-              className: "is-inline"
-            })
-          }));
-        })));
-      }
-      const normalized = normalizeMasuProgression(selected),
-        base = ALL_PLAYER_MONSTERS[selected.baseId],
-        lvl = masuBondLevelInfo(selected),
-        cost = masuRebirthCost(lvl.level),
-        skills = getRebirthSkillChoices(selected);
-      const nextLevel = Math.max(1, lvl.level - REINCARNATE_LEVEL_DROP);
-      const nextPoints = nextLevel - 1 + totalBreakthroughPoints(normalized.rebirthCount) + normalized.reincarnateBonusPoints + REINCARNATE_POINTS + normalized.inheritedReincarnateBonusPoints;
-      return /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 flex flex-col h-full p-4"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-3"
-      }, /*#__PURE__*/React.createElement("button", {
-        disabled: reincarnateProcessingRef.current,
-        onClick: () => setReincarnateSelectedId(null),
-        className: "p-3 text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-violet-300"
-      }, "\u8EE2\u751F\u30FB\u56FA\u6709\u6280\u9078\u629E")), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "relative w-20 h-20 rounded-full overflow-hidden"
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: selected.baseId,
-        src: base?.iconUrl,
-        alt: selected.name,
-        masuColors: getMasuColors(selected),
-        className: "w-full h-full object-cover"
-      }), /*#__PURE__*/React.createElement(RebirthStars, {
-        count: selected.rebirthCount,
-        className: "mh-rebirth-stars-overlay"
-      }), /*#__PURE__*/React.createElement(ReincarnateBadge, {
-        count: normalized.reincarnateCount
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-pink-300 text-xs"
-      }, "Lv.", lvl.level, " \u2192 Lv.", nextLevel), /*#__PURE__*/React.createElement("div", {
-        className: "text-slate-400 text-[10px]"
-      }, "\u4E0A\u9650Lv.", normalized.levelCap, "\u306F\u305D\u306E\u307E\u307E\u3002\u632F\u3063\u305F\u5F37\u5316\u306F\u767D\u7D19\u306B\u623B\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "text-amber-300 text-[10px] font-black"
-      }, "\u632F\u308A\u76F4\u305B\u308B\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 ", nextPoints, "\uFF08\u3046\u3061\u8EE2\u751F\u3076\u3093 +", REINCARNATE_POINTS, "\uFF09"))), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[10px] font-bold"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-        className: `font-black flex items-center gap-1 ${gold >= cost ? 'text-amber-300' : 'text-red-400'}`
-      }, /*#__PURE__*/React.createElement(Gem, {
-        size: 12
-      }), cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-400"
-      }, "\uFF08\u7D46Lv.", lvl.level, "\uFF09\xD7 ", REBIRTH_COST_PER_LEVEL), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[9px] font-bold"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500"
-      }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300 font-black"
-      }, gold.toLocaleString())), gold < cost && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-red-400 font-black"
-      }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-slate-300 mb-2"
-      }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u3079\u307E\u3059\uFF08\u6700\u5927Lv.8\uFF09\u3002\u9078\u3070\u306A\u3044\u3068\u304D\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3067\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u305B\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
-      }, skills.map(skill => /*#__PURE__*/React.createElement("button", {
-        key: skill.key,
-        disabled: skill.level >= MAX_UNIQUE_SKILL_LEVEL,
-        onClick: () => setReincarnateSkillKey(skill.key),
-        className: `w-full p-3 rounded-xl border text-left disabled:opacity-30 ${reincarnateSkillKey === skill.key ? 'bg-violet-700 border-white' : 'bg-slate-900 border-violet-500/40'}`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "font-black text-xs"
-      }, skill.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-amber-300"
-      }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
-        onClick: () => setReincarnateSkillKey(''),
-        className: `w-full p-3 rounded-xl border text-left ${reincarnateSkillKey === '' ? 'bg-amber-700 border-white' : 'bg-slate-900 border-amber-500/40'}`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "font-black text-xs"
-      }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-amber-300"
-      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-300 mt-1"
-      }, "\u4FDD\u7559\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E\u300C\u56FA\u6709\u6280\u5F37\u5316\u300D\u304B\u3089\u4F7F\u7528\u3067\u304D\u307E\u3059"))), reincarnateError && /*#__PURE__*/React.createElement("div", {
-        className: "text-red-300 text-[10px] my-2"
-      }, reincarnateError), /*#__PURE__*/React.createElement("button", {
-        disabled: reincarnateSkillKey == null || gold < cost || reincarnateProcessingRef.current,
-        onClick: executeMasuReincarnation,
-        className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
-      }, "\u8EE2\u751F\u3059\u308B"));
-    })(), gameState === 'MASU_DONATION' && /*#__PURE__*/React.createElement(MasuDonationScreen, {
+    }), gameState === 'MASU_REBIRTH' && /*#__PURE__*/React.createElement(MasuRebirthScreen, {
+      MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
+      MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
+      buildUnifiedMonsterEntries: buildUnifiedMonsterEntries,
+      executeMasuBreakthrough: executeMasuBreakthrough,
+      getRebirthSkillChoices: getRebirthSkillChoices,
+      gold: gold,
+      masuMons: masuMons,
+      monsterDisplayFlags: monsterDisplayFlags,
+      monsterEntryMatchesDisplayFlags: monsterEntryMatchesDisplayFlags,
+      monsterEntryMatchesLineage: monsterEntryMatchesLineage,
+      monsterRosterIds: monsterRosterIds,
+      onBackToTemple: () => setGameState('TEMPLE'),
+      ownedItems: ownedItems,
+      rebirthError: rebirthError,
+      rebirthProcessingRef: rebirthProcessingRef,
+      rebirthSelectedId: rebirthSelectedId,
+      rebirthSkillKey: rebirthSkillKey,
+      renderMonsterCardBody: renderMonsterCardBody,
+      renderMonsterSortFilterBar: renderMonsterSortFilterBar,
+      renderScreenNote: renderScreenNote,
+      setRebirthSelectedId: setRebirthSelectedId,
+      setRebirthSkillKey: setRebirthSkillKey,
+      sortMonsterEntries: sortMonsterEntries
+    }), gameState === 'MASU_REINCARNATE' && /*#__PURE__*/React.createElement(MasuReincarnateScreen, {
+      MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
+      MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
+      buildUnifiedMonsterEntries: buildUnifiedMonsterEntries,
+      executeMasuReincarnation: executeMasuReincarnation,
+      getRebirthSkillChoices: getRebirthSkillChoices,
+      gold: gold,
+      masuMons: masuMons,
+      monsterDisplayFlags: monsterDisplayFlags,
+      monsterEntryMatchesDisplayFlags: monsterEntryMatchesDisplayFlags,
+      monsterEntryMatchesLineage: monsterEntryMatchesLineage,
+      monsterRosterIds: monsterRosterIds,
+      onBackToTemple: () => setGameState('TEMPLE'),
+      reincarnateError: reincarnateError,
+      reincarnateProcessingRef: reincarnateProcessingRef,
+      reincarnateSelectedId: reincarnateSelectedId,
+      reincarnateSkillKey: reincarnateSkillKey,
+      renderMonsterCardBody: renderMonsterCardBody,
+      renderMonsterSortFilterBar: renderMonsterSortFilterBar,
+      renderScreenNote: renderScreenNote,
+      setReincarnateError: setReincarnateError,
+      setReincarnateSelectedId: setReincarnateSelectedId,
+      setReincarnateSkillKey: setReincarnateSkillKey,
+      sortMonsterEntries: sortMonsterEntries
+    }), gameState === 'MASU_DONATION' && /*#__PURE__*/React.createElement(MasuDonationScreen, {
       MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
       MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
       donationError: donationError,
@@ -40663,662 +41511,74 @@ function MonsterHeroGame() {
       monsterRosterIds: monsterRosterIds,
       setDonationConfirmOpen: setDonationConfirmOpen,
       unlockedMonsterIds: unlockedMonsterIds
-    }), regenerationResult && (() => {
-      const statRows = [['ライフ', 'hp', 'baseHp'], ['ちから', 'atk', 'baseAtk'], ['丈夫さ', 'def', 'baseDef'], ['ガッツ', 'guts', 'baseGuts']];
-      return /*#__PURE__*/React.createElement("div", {
-        className: "mh-regeneration-animation",
-        role: "dialog",
-        "aria-modal": "true"
-      }, /*#__PURE__*/React.createElement("img", {
-        src: REGENERATION_DISC_IMAGE,
-        alt: "\u5186\u76E4\u77F3",
-        className: "mh-regeneration-disc"
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "mh-regeneration-born"
-      }, /*#__PURE__*/React.createElement("img", {
-        src: regenerationResult.base.iconUrl,
-        alt: regenerationResult.masu.name,
-        className: "w-28 h-28 object-contain mx-auto"
-      }), /*#__PURE__*/React.createElement("h3", null, "\u30E2\u30F3\u30B9\u30BF\u30FC\u8A95\u751F\uFF01"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-400 font-bold mt-1"
-      }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u57FA\u790E\u5024\u3068\u306E\u5DEE"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-1 text-[11px] text-left mt-2"
-      }, statRows.map(([label, key, baseKey]) => {
-        const value = regenerationResult.masu.individualStats[key];
-        const delta = value - regenerationResult.base[baseKey];
-        return /*#__PURE__*/React.createElement("span", {
-          key: key
-        }, label, " ", /*#__PURE__*/React.createElement("b", null, value, " ", /*#__PURE__*/React.createElement("small", {
-          className: `text-[9px] ${delta > 0 ? 'text-emerald-300' : delta < 0 ? 'text-red-300' : 'text-slate-400'}`
-        }, "\uFF08", delta > 0 ? '+' : delta < 0 ? '' : '±', delta, "\uFF09")));
-      })), /*#__PURE__*/React.createElement("button", {
-        onClick: () => {
-          setRegenerationResult(null);
-          setRegenerationSelectedId(null);
-          setGameState('MASU_REGENERATION');
-        },
-        className: "mt-4 w-full py-3 bg-amber-500 text-black rounded-xl font-black"
-      }, "\u4E00\u89A7\u3078\u623B\u308B")));
-    })(), gameState === 'MASU_TRANSCENDENCE' && (() => {
-      const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
-      const selected = masuMons.find(m => String(m.id) === String(transcendSelectedId));
-      if (!selected) {
-        const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
-        return /*#__PURE__*/React.createElement("div", {
-          "data-mh-screen": true,
-          className: "flex-1 flex flex-col h-full min-h-0 p-4",
-          style: {
-            paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-            paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-          }
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-2 mb-3 shrink-0"
-        }, /*#__PURE__*/React.createElement("button", {
-          onClick: () => setGameState('TEMPLE'),
-          className: "p-3 text-slate-400 active:scale-90"
-        }, /*#__PURE__*/React.createElement(ArrowLeft, {
-          size: 20
-        })), /*#__PURE__*/React.createElement("h2", {
-          className: "text-xl font-black italic text-amber-200"
-        }, "\u8D85\u8D8A")), /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 w-full max-w-md mx-auto mb-2"
-        }, /*#__PURE__*/React.createElement(AssistantBubble, {
-          scene: "transcendence",
-          compact: true
-        })), /*#__PURE__*/React.createElement("div", {
-          className: "text-[10px] text-slate-400 mb-3 shrink-0"
-        }, "Lv.", MAX_MASU_LEVEL_CAP, "\u30FB\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\uFF08\u9650\u754C\u7A81\u7834", FINAL_BREAKTHROUGH_COUNT, "\u56DE\uFF09\u307E\u3067\u80B2\u3066\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u8D85\u8D8A\u3067\u304D\u307E\u3059\u3002\u8D85\u8D8A\u3059\u308B\u3068Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u3001Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3067\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3057\u307E\u3059\u30021\u500B\u4F53\u306B\u3064\u304D1\u56DE\u3060\u3051\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center justify-between gap-2 rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 mb-3 shrink-0"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-black text-amber-200 flex items-center gap-1"
-        }, /*#__PURE__*/React.createElement("span", {
-          "aria-hidden": "true"
-        }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
-          className: "text-[11px] font-mono font-black text-white"
-        }, "\u6240\u6301 ", psycheHave.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-          className: "text-[9px] text-slate-500 font-bold mb-2 shrink-0"
-        }, "\u8D85\u8D8A\u306B\u306F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC", TRANSCEND_PSYCHE_COST.toLocaleString(), "\u500B\u3068\u30C0\u30A4\u30E4", TRANSCEND_DIAMOND_COST.toLocaleString(), "\u304C\u5FC5\u8981\u3067\u3059\u3002"), renderMonsterSortFilterBar({
-          singleType: true
-        }), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
-        }, entries.map(({
-          masu
-        }) => {
-          const base = ALL_PLAYER_MONSTERS[masu.baseId];
-          if (!base) return null;
-          const lvl = masuBondLevelInfo(masu);
-          const normalized = normalizeMasuProgression(masu);
-          const eligible = canTranscendMasu(masu);
-          return /*#__PURE__*/React.createElement("button", {
-            key: masu.id,
-            "data-transcend-candidate": masu.id,
-            disabled: !eligible.ok,
-            onClick: () => {
-              setTranscendSelectedId(masu.id);
-              setTranscendError('');
-            },
-            style: MONSTER_CARD_STYLE,
-            className: `${MONSTER_CARD_CLASS} border-amber-400/40 bg-slate-900 disabled:opacity-35`
-          }, renderMonsterCardBody({
-            masu,
-            base,
-            status: /*#__PURE__*/React.createElement("span", {
-              className: `text-[8px] font-black ${normalized.transcended ? 'text-amber-300' : eligible.ok ? 'text-emerald-300' : 'text-slate-500'}`
-            }, normalized.transcended ? '超越済み' : eligible.ok ? '超越できます' : '条件未達')
-          }));
-        })));
-      }
-      const base = ALL_PLAYER_MONSTERS[selected.baseId];
-      const lvl = masuBondLevelInfo(selected);
-      const normalized = normalizeMasuProgression(selected);
-      const plan = buildMasuTranscendence({
-        masu: selected,
-        gold,
-        psycheOwned: psycheHave
-      });
-      const psycheShort = Math.max(0, TRANSCEND_PSYCHE_COST - psycheHave);
-      const goldShort = Math.max(0, TRANSCEND_DIAMOND_COST - gold);
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-4",
-        style: {
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        },
-        "data-transcend-confirm": selected.id
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        disabled: transcendProcessingRef.current,
-        onClick: () => {
-          setTranscendSelectedId(null);
-          setTranscendError('');
-        },
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-amber-200"
-      }, "\u8D85\u8D8A\u306E\u5100\u5F0F")), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "relative w-20 h-20 rounded-full overflow-visible shrink-0"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-20 h-20 rounded-full overflow-hidden"
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: selected.baseId,
-        src: base?.iconUrl,
-        alt: selected.name,
-        masuColors: getMasuColors(selected),
-        className: "w-full h-full object-cover"
-      })), /*#__PURE__*/React.createElement(RebirthStars, {
-        count: selected.rebirthCount,
-        className: "mh-rebirth-stars-overlay"
-      }), /*#__PURE__*/React.createElement(TranscendenceBadge, {
-        transcended: normalized.transcended,
-        soulRankStage: normalized.soulRankStage
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "block truncate"
-      }, selected.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-pink-300 text-xs"
-      }, "Lv.", lvl.level, " / ", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
-        className: "text-amber-200 text-[10px] font-black"
-      }, "\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\uFF08\u9650\u754C\u7A81\u7834", normalized.rebirthCount, "\u56DE\uFF09"), /*#__PURE__*/React.createElement("div", {
-        className: "text-emerald-300 text-[10px] font-black"
-      }, "\u8D85\u8D8A\u3059\u308B\u3068Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u307E\u3059"))), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-amber-400/30 bg-black/40 p-3 text-[10px] leading-relaxed text-slate-200 space-y-1.5"
-      }, /*#__PURE__*/React.createElement("p", null, "Lv.", MAX_MASU_LEVEL_CAP, "\u30FB\u8679\u2605", BREAKTHROUGH_STARS_PER_TIER, "\u307E\u3067\u80B2\u3063\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u884C\u3048\u308B\u3001\u9650\u754C\u306E\u5148\u3078\u9032\u3080\u305F\u3081\u306E\u7279\u5225\u306A\u5100\u5F0F\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u8D85\u8D8A\u3059\u308B\u3068Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u6210\u9577\u304C\u89E3\u653E\u3055\u308C\u3001Lv\u4E0A\u9650\u304C", TRANSCEND_LEVEL_CAP, "\u306B\u306A\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u306E\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3067\u306F\u901A\u5E38\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3067\u306F\u306A\u304F\u300C\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u300D\u3092\u7372\u5F97\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u306F\u901A\u5E38\u306E\u5F37\u5316\u3068\u306F\u5225\u306B\u3001\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u57FA\u790E\u80FD\u529B\u3092\u6C38\u4E45\u7684\u306B\u5F37\u5316\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u8D85\u8D8A\u72B6\u614B\u3068\u8D85\u8D8A\u5F37\u5316\u306F\u3001\u8EE2\u751F\u3084\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u3092\u884C\u3063\u3066\u3082\u5931\u308F\u308C\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-fuchsia-500/30 bg-black/40 p-3 space-y-1.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[10px] font-bold"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u5FC5\u8981\u306A\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
-        className: `font-black flex items-center gap-1 ${psycheShort === 0 ? 'text-fuchsia-300' : 'text-red-400'}`
-      }, /*#__PURE__*/React.createElement("span", {
-        "aria-hidden": "true"
-      }, "\uD83C\uDF08"), TRANSCEND_PSYCHE_COST.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[9px] font-bold"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500"
-      }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300 font-black"
-      }, psycheHave.toLocaleString())), psycheShort > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-red-400 font-black"
-      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", psycheShort.toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-amber-500/30 bg-black/40 p-3 space-y-1.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[10px] font-bold"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-        className: `font-black flex items-center gap-1 ${goldShort === 0 ? 'text-amber-300' : 'text-red-400'}`
-      }, /*#__PURE__*/React.createElement(Gem, {
-        size: 12
-      }), TRANSCEND_DIAMOND_COST.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[9px] font-bold"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500"
-      }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-300 font-black"
-      }, gold.toLocaleString())), goldShort > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-red-400 font-black"
-      }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", goldShort.toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border-2 border-red-400/60 bg-red-950/40 px-3 py-2 text-center text-[11px] font-black text-red-200"
-      }, "\u26A0 \u8D85\u8D8A\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093"), transcendError && /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-red-400 font-black text-center"
-      }, transcendError)), /*#__PURE__*/React.createElement("button", {
-        "data-transcend-execute": true,
-        disabled: !plan.ok || transcendProcessingRef.current,
-        onClick: executeMasuTranscendence,
-        className: "shrink-0 mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-amber-500 via-fuchsia-500 to-sky-400 text-slate-950 font-black text-sm disabled:opacity-40 disabled:from-slate-700 disabled:via-slate-700 disabled:to-slate-700 disabled:text-slate-400 active:scale-[.98]"
-      }, "\u8D85\u8D8A\u3059\u308B"));
-    })(), gameState === 'MASU_SOUL_RANK' && (() => {
-      const heroProofHave = ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID);
-      const selected = masuMons.find(m => String(m.id) === String(soulRankSelectedId));
-      if (!selected) {
-        const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags) && monsterEntryMatchesLineage(e));
-        return /*#__PURE__*/React.createElement("div", {
-          "data-mh-screen": true,
-          className: "flex-1 flex flex-col h-full min-h-0 p-4",
-          style: {
-            paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-            paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-          }
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-2 mb-3 shrink-0"
-        }, /*#__PURE__*/React.createElement("button", {
-          onClick: () => setGameState('TEMPLE'),
-          className: "p-3 text-slate-400 active:scale-90"
-        }, /*#__PURE__*/React.createElement(ArrowLeft, {
-          size: 20
-        })), /*#__PURE__*/React.createElement("h2", {
-          className: "text-xl font-black italic text-sky-200"
-        }, "\u9B42\u683C\u9032\u5316")), /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 w-full max-w-md mx-auto mb-2"
-        }, /*#__PURE__*/React.createElement(AssistantBubble, {
-          scene: "temple",
-          compact: true
-        })), /*#__PURE__*/React.createElement("div", {
-          className: "rounded-xl border border-sky-400/30 bg-sky-950/20 p-3 mb-2 text-[10px] leading-relaxed text-slate-300 shrink-0"
-        }, "\u8D85\u8D8A\u5F8C\u3001\u73FE\u5728\u306ELv\u4E0A\u9650\u307E\u3067\u80B2\u3063\u305F\u30DE\u30B9\u30E2\u30F3\u3092\u6B21\u306E\u9B42\u683C\u3078\u9032\u5316\u3067\u304D\u307E\u3059\u3002\u9032\u5316\u3057\u3066\u3082\u73FE\u5728Lv\u306F\u4E0A\u304C\u3089\u305A\u3001Lv\u4E0A\u9650\u3060\u3051\u304C100\u89E3\u653E\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center justify-between rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 mb-3 shrink-0"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-black text-amber-200"
-        }, "\uD83C\uDFC5 \u52C7\u8005\u306E\u8A3C"), /*#__PURE__*/React.createElement("span", {
-          className: "text-[11px] font-mono font-black text-white"
-        }, "\u6240\u6301 ", heroProofHave.toLocaleString())), renderMonsterSortFilterBar({
-          singleType: true
-        }), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
-        }, entries.map(({
-          masu
-        }) => {
-          const base = ALL_PLAYER_MONSTERS[masu.baseId];
-          if (!base) return null;
-          const status = soulRankEvolutionStatus(masu);
-          const normalized = normalizeMasuProgression(masu);
-          const canOpen = status.ok;
-          const label = normalized.soulRankStage > 0 ? '魂格' + ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][normalized.soulRankStage] : normalized.transcended ? '超越済み' : '未超越';
-          const sub = !status.ok ? status.reason : status.levelReady ? status.next.label + 'へ進化可能' : 'Lv.' + status.next.requiredLevel + 'で' + status.next.label;
-          return /*#__PURE__*/React.createElement("button", {
-            key: masu.id,
-            "data-soul-rank-candidate": masu.id,
-            disabled: !canOpen,
-            onClick: () => {
-              setSoulRankSelectedId(masu.id);
-              setSoulRankError('');
-            },
-            style: MONSTER_CARD_STYLE,
-            className: MONSTER_CARD_CLASS + ' border-sky-400/40 bg-slate-900 disabled:opacity-35'
-          }, renderMonsterCardBody({
-            masu,
-            base,
-            nameBand: true,
-            status: /*#__PURE__*/React.createElement("span", {
-              className: "block text-center"
-            }, /*#__PURE__*/React.createElement("b", {
-              className: "text-[8px] text-sky-200"
-            }, label), /*#__PURE__*/React.createElement("small", {
-              className: 'block text-[7px] ' + (status.levelReady ? 'text-emerald-300' : 'text-slate-500')
-            }, sub))
-          }));
-        })));
-      }
-      const base = ALL_PLAYER_MONSTERS[selected.baseId];
-      const status = soulRankEvolutionStatus(selected);
-      if (!status.next) {
-        return /*#__PURE__*/React.createElement("div", {
-          "data-mh-screen": true,
-          className: "flex-1 flex flex-col h-full p-4"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-2"
-        }, /*#__PURE__*/React.createElement("button", {
-          onClick: () => setSoulRankSelectedId(null),
-          className: "p-3 text-slate-400"
-        }, /*#__PURE__*/React.createElement(ArrowLeft, {
-          size: 20
-        })), /*#__PURE__*/React.createElement("h2", {
-          className: "text-xl font-black text-sky-200"
-        }, "\u9B42\u683C\u9032\u5316")), /*#__PURE__*/React.createElement("div", {
-          className: "m-auto text-center text-sm font-black text-slate-300"
-        }, "\u9B42\u683C\u2164\u307E\u3067\u9032\u5316\u6E08\u307F\u3067\u3059\u3002"));
-      }
-      const plan = buildMasuSoulRankEvolution({
-        masu: selected,
-        gold,
-        ownedItems
-      });
-      const next = status.next;
-      const normalized = normalizeMasuProgression(selected);
-      const level = masuBondLevelInfo(selected).level;
-      const goldShort = Math.max(0, next.diamondCost - gold);
-      const proofShort = Math.max(0, next.heroProofCost - heroProofHave);
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        "data-soul-rank-confirm": selected.id,
-        className: "flex-1 flex flex-col h-full min-h-0 p-4",
-        style: {
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        disabled: soulRankProcessingRef.current,
-        onClick: () => {
-          setSoulRankSelectedId(null);
-          setSoulRankError('');
-        },
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic",
-        style: {
-          color: next.accent
-        }
-      }, "\u9B42\u683C\u9032\u5316\u306E\u5100")), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-3 rounded-2xl bg-slate-900 p-3 border",
-        style: {
-          borderColor: next.accent + '66'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-20 h-20 rounded-full overflow-hidden shrink-0 border-2",
-        style: {
-          borderColor: next.accent
-        }
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: selected.baseId,
-        src: base?.iconUrl,
-        alt: selected.name,
-        masuColors: getMasuColors(selected),
-        className: "w-full h-full object-cover"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "block truncate"
-      }, selected.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-pink-300 text-xs"
-      }, "Lv.", level, " / ", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black text-slate-300"
-      }, status.currentLabel, " \u2192 ", /*#__PURE__*/React.createElement("span", {
-        style: {
-          color: next.accent
-        }
-      }, next.label)), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black text-emerald-300"
-      }, "Lv\u4E0A\u9650 ", normalized.levelCap, " \u2192 ", next.levelCap))), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-white/10 bg-black/30 p-3 space-y-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[10px]"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u5FC5\u8981Lv"), /*#__PURE__*/React.createElement("b", {
-        className: level >= next.requiredLevel ? 'text-emerald-300' : 'text-red-300'
-      }, "Lv.", level, " / Lv.", next.requiredLevel)), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[10px]"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
-        className: goldShort === 0 ? 'text-amber-300' : 'text-red-300'
-      }, gold.toLocaleString(), " / ", next.diamondCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[10px]"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400"
-      }, "\u5FC5\u8981\u306A\u52C7\u8005\u306E\u8A3C"), /*#__PURE__*/React.createElement("b", {
-        className: proofShort === 0 ? 'text-amber-200' : 'text-red-300'
-      }, heroProofHave.toLocaleString(), " / ", next.heroProofCost.toLocaleString())), goldShort > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-red-300 font-black"
-      }, "\u30C0\u30A4\u30E4 \u3042\u3068 ", goldShort.toLocaleString()), proofShort > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-red-300 font-black"
-      }, "\u52C7\u8005\u306E\u8A3C \u3042\u3068 ", proofShort.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border border-sky-400/30 bg-sky-950/20 p-3 text-[10px] text-slate-300 leading-relaxed"
-      }, "\u9032\u5316\u5F8C\u3082\u73FE\u5728Lv.", level, "\u306E\u307E\u307E\u3067\u3059\u3002Lv\u4E0A\u9650\u3060\u3051", next.levelCap, "\u3078\u89E3\u653E\u3055\u308C\u3001\u305D\u306E\u5F8C\u306E\u521D\u5230\u9054Lv\u3067\u9B42\u683CP\u3092\u7372\u5F97\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "rounded-xl border-2 border-red-400/50 bg-red-950/30 px-3 py-2 text-center text-[10px] font-black text-red-200"
-      }, "\u26A0 \u9B42\u683C\u9032\u5316\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093"), soulRankError && /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-red-400 font-black text-center"
-      }, soulRankError)), /*#__PURE__*/React.createElement("button", {
-        "data-soul-rank-execute": true,
-        disabled: !plan.ok || soulRankProcessingRef.current,
-        onClick: executeMasuSoulRankEvolution,
-        className: "shrink-0 mt-3 min-h-[52px] w-full rounded-2xl text-slate-950 font-black text-sm disabled:opacity-35 active:scale-[.98]",
-        style: {
-          background: next.stage === 5 ? 'linear-gradient(90deg,#60a5fa,#facc15,#4ade80,#f87171,#e879f9)' : next.accent
-        }
-      }, plan.ok ? next.label + 'へ進化する' : plan.reason));
-    })(), levelCapCompensation && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 flex items-center justify-center p-5",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 50000,
-        backgroundColor: 'rgba(2,6,23,.96)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"
-    }, /*#__PURE__*/React.createElement(Gem, {
-      size: 38,
-      className: "text-amber-300 mx-auto mb-3"
-    }), /*#__PURE__*/React.createElement("h2", {
-      className: "font-black text-lg mb-2"
-    }, "Lv30\u4E0A\u9650\u88DC\u511F"), /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-slate-300 leading-relaxed"
-    }, "Lv30\u3092\u8D85\u3048\u3066\u3044\u305F\u672A\u9650\u754C\u7A81\u7834\u30DE\u30B9\u30E2\u30F3\u306E\u8D85\u904E\u7D46\u7D4C\u9A13\u5024\u3092\u524A\u9664\u3057\u3001\u540C\u6570\u306E\u30C0\u30A4\u30E4\u3078\u9084\u5143\u3057\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("div", {
-      className: "text-2xl text-amber-300 font-black my-4"
-    }, "+", levelCapCompensation.diamonds.toLocaleString(), " \u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
+    }), regenerationResult && /*#__PURE__*/React.createElement(MasuRegenerationResult, {
+      onCloseRegenerationResult: () => {
+        setRegenerationResult(null);
+        setRegenerationSelectedId(null);
+        setGameState('MASU_REGENERATION');
+      },
+      regenerationResult: regenerationResult
+    }), gameState === 'MASU_TRANSCENDENCE' && /*#__PURE__*/React.createElement(MasuTranscendenceScreen, {
+      MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
+      MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
+      buildUnifiedMonsterEntries: buildUnifiedMonsterEntries,
+      executeMasuTranscendence: executeMasuTranscendence,
+      gold: gold,
+      masuMons: masuMons,
+      monsterDisplayFlags: monsterDisplayFlags,
+      monsterEntryMatchesDisplayFlags: monsterEntryMatchesDisplayFlags,
+      monsterEntryMatchesLineage: monsterEntryMatchesLineage,
+      monsterRosterIds: monsterRosterIds,
+      onBackToTemple: () => setGameState('TEMPLE'),
+      ownedItems: ownedItems,
+      renderMonsterCardBody: renderMonsterCardBody,
+      renderMonsterSortFilterBar: renderMonsterSortFilterBar,
+      setTranscendError: setTranscendError,
+      setTranscendSelectedId: setTranscendSelectedId,
+      sortMonsterEntries: sortMonsterEntries,
+      transcendError: transcendError,
+      transcendProcessingRef: transcendProcessingRef,
+      transcendSelectedId: transcendSelectedId
+    }), gameState === 'MASU_SOUL_RANK' && /*#__PURE__*/React.createElement(MasuSoulRankScreen, {
+      MONSTER_CARD_CLASS: MONSTER_CARD_CLASS,
+      MONSTER_CARD_STYLE: MONSTER_CARD_STYLE,
+      buildUnifiedMonsterEntries: buildUnifiedMonsterEntries,
+      executeMasuSoulRankEvolution: executeMasuSoulRankEvolution,
+      gold: gold,
+      masuMons: masuMons,
+      monsterDisplayFlags: monsterDisplayFlags,
+      monsterEntryMatchesDisplayFlags: monsterEntryMatchesDisplayFlags,
+      monsterEntryMatchesLineage: monsterEntryMatchesLineage,
+      monsterRosterIds: monsterRosterIds,
+      onBackToTemple: () => setGameState('TEMPLE'),
+      ownedItems: ownedItems,
+      renderMonsterCardBody: renderMonsterCardBody,
+      renderMonsterSortFilterBar: renderMonsterSortFilterBar,
+      setSoulRankError: setSoulRankError,
+      setSoulRankSelectedId: setSoulRankSelectedId,
+      sortMonsterEntries: sortMonsterEntries,
+      soulRankError: soulRankError,
+      soulRankProcessingRef: soulRankProcessingRef,
+      soulRankSelectedId: soulRankSelectedId
+    }), levelCapCompensation && /*#__PURE__*/React.createElement(MasuLevelCapCompensation, {
+      levelCapCompensation: levelCapCompensation,
+      onCloseLevelCapCompensation: () => {
         setLevelCapCompensation(null);
         storeSet('mh_masu_level_cap_compensation_notice_seen_v1', true, false);
-      },
-      className: "w-full bg-amber-500 text-black py-3 rounded-2xl font-black"
-    }, "\u53D7\u3051\u53D6\u308B"))), inheritedUniqueCompensation && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 flex items-center justify-center p-5",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 49999,
-        backgroundColor: 'rgba(2,6,23,.96)'
       }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "max-w-sm w-full bg-slate-900 border-2 border-fuchsia-400 rounded-3xl p-6 text-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-4xl mb-3"
-    }, "\uD83C\uDF08"), /*#__PURE__*/React.createElement("h2", {
-      className: "font-black text-lg mb-2"
-    }, "\u304A\u8A6B\u3073\u306E\u914D\u5E03"), /*#__PURE__*/React.createElement("p", {
-      className: "text-[11px] text-slate-300 leading-relaxed"
-    }, "\u7D99\u627F\u56FA\u6709\u6280Lv\u4E0D\u5177\u5408\u4FEE\u6B63\u306E\u304A\u8A6B\u3073\u3068\u3057\u3066\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\xD720\u3092\u914D\u5E03\u3057\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setInheritedUniqueCompensation(false),
-      className: "w-full bg-fuchsia-500 text-white py-3 mt-5 rounded-2xl font-black"
-    }, "\u78BA\u8A8D"))), rebirthAnimation && (() => {
-      const starList = breakthroughStars(rebirthAnimation.masu.rebirthCount || 1);
-      const finalBreak = isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
-      return /*#__PURE__*/React.createElement("div", {
-        className: "mh-breakthrough-animation",
-        role: "status",
-        "aria-live": "polite"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "mh-breakthrough-beam"
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "mh-breakthrough-ring"
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "mh-breakthrough-cap"
-      }, "\u30EC\u30D9\u30EB\u4E0A\u9650", /*#__PURE__*/React.createElement("b", null, "Lv.", rebirthAnimation.masu.levelCap)), /*#__PURE__*/React.createElement("div", {
-        className: "mh-breakthrough-mon"
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: rebirthAnimation.masu.baseId,
-        src: rebirthAnimation.base?.iconUrl,
-        alt: rebirthAnimation.masu.name,
-        masuColors: getMasuColors(rebirthAnimation.masu),
-        className: "w-full h-full object-contain"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "mh-breakthrough-stars",
-        "aria-hidden": "true"
-      }, starList.map((s, i) => renderBreakthroughStar(s, i, {
-        className: `${s.image ? 'mh-rainbow-breakthrough-star ' : ''}${finalBreak || i === 0 ? 'is-new' : 'is-old'}`
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "mh-breakthrough-copy"
-      }, /*#__PURE__*/React.createElement("b", null, finalBreak ? '最終限界突破！' : '限界突破！'), /*#__PURE__*/React.createElement("span", null, finalBreak ? '★ が虹になりました' : '★ が1つ増えました'), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${rebirthAnimation.keptSkillPoints}）` : `${rebirthAnimation.skillName} Lv.${rebirthAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", rebirthAnimation.gainedPoints)));
-    })(), transcendAnimation && /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-animation",
-      role: "status",
-      "aria-live": "polite"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-converge",
-      "aria-hidden": "true"
-    }, /*#__PURE__*/React.createElement("i", {
-      style: {
-        '--i': 0
-      }
-    }), /*#__PURE__*/React.createElement("i", {
-      style: {
-        '--i': 1
-      }
-    }), /*#__PURE__*/React.createElement("i", {
-      style: {
-        '--i': 2
-      }
-    }), /*#__PURE__*/React.createElement("i", {
-      style: {
-        '--i': 3
-      }
-    }), /*#__PURE__*/React.createElement("i", {
-      style: {
-        '--i': 4
-      }
-    }), /*#__PURE__*/React.createElement("i", {
-      style: {
-        '--i': 5
-      }
-    }), /*#__PURE__*/React.createElement("i", {
-      style: {
-        '--i': 6
-      }
-    }), /*#__PURE__*/React.createElement("i", {
-      style: {
-        '--i': 7
-      }
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-halo",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-halo is-second",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-rays",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-mon"
-    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-      baseId: transcendAnimation.masu.baseId,
-      src: transcendAnimation.base?.iconUrl,
-      alt: transcendAnimation.masu.name,
-      masuColors: getMasuColors(transcendAnimation.masu),
-      className: "w-full h-full object-contain"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-flash",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-shock",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-title",
-      "aria-hidden": "true"
-    }, "\u8D85\u3000\u8D8A"), /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-mark",
-      "aria-hidden": "true"
-    }, /*#__PURE__*/React.createElement(TranscendenceBadge, {
-      transcended: true
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mh-transcend-copy"
-    }, /*#__PURE__*/React.createElement("b", null, "\u8D85\u8D8A\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv\u4E0A\u9650 ", transcendAnimation.fromLevelCap, " \u2192 ", transcendAnimation.toLevelCap), /*#__PURE__*/React.createElement("span", null, "Lv", MAX_MASU_LEVEL_CAP + 1, "\u4EE5\u964D\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("span", null, "\u8D85\u8D8A\u30DD\u30A4\u30F3\u30C8\u304C\u89E3\u653E\u3055\u308C\u307E\u3057\u305F"))), soulRankAnimation && /*#__PURE__*/React.createElement("div", {
-      "data-soul-rank-animation": true,
-      role: "status",
-      "aria-live": "polite",
-      className: "fixed inset-0 flex items-center justify-center p-5",
-      style: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 50500,
-        backgroundColor: 'rgba(2,6,23,.94)',
-        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs rounded-3xl border-2 p-6 text-center shadow-2xl",
-      style: {
-        borderColor: soulRankAnimation.step.accent,
-        background: soulRankAnimation.toStage === 5 ? 'linear-gradient(145deg,rgba(30,64,175,.55),rgba(113,63,18,.45),rgba(20,83,45,.45),rgba(127,29,29,.45),rgba(88,28,135,.55))' : 'rgba(15,23,42,.96)'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] font-black tracking-[.3em] text-slate-400 mb-2"
-    }, "SOUL RANK"), /*#__PURE__*/React.createElement(Sparkles, {
-      size: 28,
-      className: "mx-auto mb-2",
-      style: {
-        color: soulRankAnimation.step.accent
-      }
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "w-28 h-28 mx-auto rounded-full overflow-hidden border-4 mb-3",
-      style: {
-        borderColor: soulRankAnimation.step.accent,
-        boxShadow: '0 0 36px ' + soulRankAnimation.step.accent + '88'
-      }
-    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-      baseId: soulRankAnimation.masu.baseId,
-      src: soulRankAnimation.base?.iconUrl,
-      alt: soulRankAnimation.masu.name,
-      masuColors: getMasuColors(soulRankAnimation.masu),
-      className: "w-full h-full object-cover"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] text-slate-400 font-black"
-    }, soulRankAnimation.fromStage > 0 ? '魂格' + ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ'][soulRankAnimation.fromStage] : '超越', " \u2192"), /*#__PURE__*/React.createElement("div", {
-      className: "text-3xl font-black my-1",
-      style: {
-        color: soulRankAnimation.step.accent
-      }
-    }, soulRankAnimation.step.label), /*#__PURE__*/React.createElement("div", {
-      className: "text-[12px] font-black text-emerald-300"
-    }, "Lv\u4E0A\u9650 ", soulRankAnimation.fromLevelCap, " \u2192 ", soulRankAnimation.toLevelCap))), reincarnateAnimation && /*#__PURE__*/React.createElement("div", {
-      className: "mh-reincarnation-animation",
-      role: "status",
-      "aria-live": "polite"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-reincarnation-light"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-reincarnation-mon mh-reincarnate-stack"
-    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-      baseId: reincarnateAnimation.masu.baseId,
-      src: reincarnateAnimation.base?.iconUrl || reincarnateAnimation.base?.imgUrl,
-      alt: reincarnateAnimation.masu.name,
-      masuColors: getMasuColors(reincarnateAnimation.masu),
-      className: "w-full h-full object-contain"
-    }), /*#__PURE__*/React.createElement(SoulRankAura, {
-      soulRankStage: normalizeMasuProgression(reincarnateAnimation.masu).soulRankStage,
-      className: "is-ceremony"
-    }), /*#__PURE__*/React.createElement(RebirthStars, {
-      count: reincarnateAnimation.masu.rebirthCount,
-      className: "mh-rebirth-stars-overlay"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mh-reincarnation-copy"
-    }, /*#__PURE__*/React.createElement("b", null, "\u8EE2\u751F\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv.", reincarnateAnimation.fromLevel, " \u2192 Lv.", reincarnateAnimation.nextLevel), /*#__PURE__*/React.createElement("span", null, reincarnateAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）` : `${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 ", reincarnateAnimation.nextPoints, " \u3092\u632F\u308A\u76F4\u305B\u307E\u3059"))), donationAnimation && /*#__PURE__*/React.createElement("div", {
-      className: "mh-donation-animation",
-      role: "status",
-      "aria-live": "polite",
-      "aria-label": "\u5BC4\u4ED8\u3092\u51E6\u7406\u4E2D"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-donation-beam"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-donation-monster"
-    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-      baseId: donationAnimation.baseId,
-      src: donationAnimation.src,
-      alt: donationAnimation.name,
-      masuColors: donationAnimation.colors,
-      className: "w-full h-full object-contain"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mh-donation-gem"
-    }, /*#__PURE__*/React.createElement(Gem, {
-      size: 42
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mh-donation-particles"
-    }, Array.from({
-      length: 8
-    }, (_, i) => /*#__PURE__*/React.createElement("i", {
-      key: i,
-      style: {
-        '--i': i
-      }
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "mh-donation-copy"
-    }, "\u795E\u6BBF\u3078\u5BC4\u4ED8\u4E2D\u2026")), gameState === 'MASU_DONATION' && donationResult && /*#__PURE__*/React.createElement(MasuDonationResult, {
+    }), inheritedUniqueCompensation && /*#__PURE__*/React.createElement(MasuInheritedUniqueCompensation, {
+      setInheritedUniqueCompensation: setInheritedUniqueCompensation
+    }), rebirthAnimation && /*#__PURE__*/React.createElement(MasuRebirthAnimation, {
+      rebirthAnimation: rebirthAnimation
+    }), transcendAnimation && /*#__PURE__*/React.createElement(MasuTranscendAnimation, {
+      transcendAnimation: transcendAnimation
+    }), soulRankAnimation && /*#__PURE__*/React.createElement(MasuSoulRankAnimation, {
+      soulRankAnimation: soulRankAnimation
+    }), reincarnateAnimation && /*#__PURE__*/React.createElement(MasuReincarnateAnimation, {
+      reincarnateAnimation: reincarnateAnimation
+    }), donationAnimation && /*#__PURE__*/React.createElement(MasuDonationAnimation, {
+      donationAnimation: donationAnimation
+    }), gameState === 'MASU_DONATION' && donationResult && /*#__PURE__*/React.createElement(MasuDonationResult, {
       donationResult: donationResult,
       setDonationResult: setDonationResult
     }), gameState === 'EXTREME_DIFFICULTY_SELECT' && extremeRuleDetail && (() => {

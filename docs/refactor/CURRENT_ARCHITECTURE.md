@@ -87,7 +87,8 @@
 > | `57-screen-monster-dex.jsx` | 画面: モンスター図鑑(MONSTER_DEX / _DETAIL / MONSTER_ATTACK_PREVIEW)。3画面で1ファイル。2026-09-10 の STEP 6-8 |
 > | `58-screen-rhythm.jsx` | 画面: モンヒロビート(曲えらび・案内・マスモン枠・全国ランキング・入口)。演奏画面は触らない。2026-09-10 の STEP 6-10 |
 > | `59-screen-masu-mons.jsx` | 画面: マスモン一覧(MASU_MONS)。MASU 系の1本目。2026-09-10 の STEP 6-9 |
-> | `60a-screen-masu-regen-donation.jsx` | 画面: 神殿の再生と寄付(MASU_REGENERATION / _DETAIL / MASU_DONATION と確認・結果)。2026-09-10 の STEP 6-9 |
+> | `61-screen-masu-regen-donation.jsx` | 画面: 神殿の再生と寄付(MASU_REGENERATION / _DETAIL / MASU_DONATION と確認・結果)。2026-09-10 の STEP 6-9 |
+> | `62-screen-masu-temple.jsx` | 画面: 神殿の限界突破・転生・超越・魂格進化と、その演出・補償告知。2026-09-10 の STEP 6-9 |
 > | `60-app.jsx` | MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX) |
 > | `70-bootstrap.jsx` | CSS 文字列の注入(createAnimationStyle)、ReactDOM.createRoot、HTML ローディングの非表示 |
 > 下表の行番号は連結後の `game-system.jsx` で見るときの目安(ヘッダと目印の行ぶん、数行ずれる)。

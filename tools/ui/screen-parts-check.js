@@ -20,11 +20,17 @@ let failed = 0;
 const check = (label, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${label}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 
 const names = readPartsManifest();
+// 画面部品の名前は「数字-screen-…」に必ずそろえる。harness.js の readAppSource() が
+// この形でしか拾わないので、60a- のような付け方をすると検査が静かに画面を見落とす
+// (2026-09-10 に実際にそうなった)
+const misnamed = names.filter((n) => /screen-/.test(n) && !/^\d+-screen-/.test(n));
 const screens = names.filter((n) => /^\d+-screen-/.test(n) && n !== '40-screen-effects.jsx');
 const appIndex = names.indexOf('60-app.jsx');
 const app = fs.readFileSync(path.join(PARTS_DIR, '60-app.jsx'), 'utf8');
 
 check('切り出した画面部品がある', screens.length > 0, screens.join(' / '));
+check('画面部品の名前が「数字-screen-…」にそろっている', misnamed.length === 0,
+  misnamed.length ? `readAppSource() が拾えない名前: ${misnamed.join(' / ')}` : '');
 
 for (const name of screens) {
   const src = fs.readFileSync(path.join(PARTS_DIR, name), 'utf8');
