@@ -61,7 +61,8 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 3 | `MISSIONS` | — | — | **完了**(2026-09-10)。`src/parts/52-screen-missions.jsx` |
 | 4 | `GIFT_BOX` | — | — | **完了**(2026-09-10)。`src/parts/53-screen-gift-box.jsx` |
 | 5 | `ITEM_INVENTORY` | — | — | **完了**(2026-09-10)。`src/parts/54-screen-item-inventory.jsx` |
-| 6〜7 | `BREEDER_MARKET` / `PROFILE` | Sonnet 5 | high | 同上。マーケットは助手の告知に注意 |
+| 6 | `BREEDER_MARKET` | — | — | **完了**(2026-09-10)。`src/parts/55-screen-breeder-market.jsx` |
+| 7 | `PROFILE` | Sonnet 5 | high | 依存が少なく検査が厚い |
 | 8 | `MONSTER_DEX(_DETAIL)` | Sonnet 5 | high | 表示のみ |
 | 9 | `MASU_*`(育成系) | **Opus 5** | high | 保存が絡む(STEP 3 と同じ領域) |
 | 10 | `RHYTHM_*`(演奏画面以外) | Sonnet 5 | high | 演奏画面は STEP 9 の領域なので触らない |
@@ -71,14 +72,15 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 6 の6本目(`BREEDER_MARKET` 画面の切り出し)** — **Sonnet 5 / effort high**
+**STEP 6 の7本目(`PROFILE` 画面の切り出し)** — **Sonnet 5 / effort high**
 
-1〜5本目(`use-screen-effects` / `SETTINGS` / `MISSIONS` / `GIFT_BOX` / `ITEM_INVENTORY`)は
-2026-09-10 に完了。切り出しの型は 51〜54 の4本にそろっている(保存を伴う操作は本体に残して
-props で受け、共有層の純関数は画面から直接呼ぶ)。
+1〜6本目(`use-screen-effects` / `SETTINGS` / `MISSIONS` / `GIFT_BOX` / `ITEM_INVENTORY` /
+`BREEDER_MARKET`)は 2026-09-10 に完了。切り出しの型は 51〜55 の5本にそろっている
+(保存を伴う操作は本体に残して props で受け、共有層の純関数は画面から直接呼ぶ。
+ref で持つ値は真偽値にして渡す)。
 
-マーケットは**助手の告知(`assistantNotice`)と `boot/market-notice-check` があるので、
-そこを壊さないこと**。購入は保存を伴うので本体に残す。
+検査が落ちたら、まず `harness.js` の `readAppSource()` へ差し替える
+(`60-app.jsx` を直接読む検査は、見ている画面が移ると対象を見失う)。
 切り出しの型は `src/parts/51-screen-settings.jsx` にそろえる(props は「押されたら何をするか」を
 MonsterHeroGame 側に残し、画面へは操作だけを渡す)。タイマーの仕分けは
 `SCREEN_EFFECTS_MAP.md` にあるので、画面ごとにそこから引いて `effects.timeout` へ移す。

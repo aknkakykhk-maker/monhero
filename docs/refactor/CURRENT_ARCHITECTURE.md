@@ -51,7 +51,7 @@
 ## 3. `game-system.jsx` の内部地図(行番号は 9f9cfa0 時点)
 
 > 2026-09-06(STEP 2)から、編集元は `monster-hero/src/parts/*.jsx` になり、`game-system.jsx` はそれを `parts.json` の順に連結した生成物。
-> 部品は共有層 21 個(`10-core` 〜 `30-rhythm-play`。2026-09-06 に旧 `10-shared` を節ごとに分けた。役割は `parts.json`)と、`40-screen-effects.jsx`(画面ライフサイクル。2026-09-10 の STEP 6-1 で追加)、`50-error-boundary.jsx`、`51-screen-settings.jsx`・`52-screen-missions.jsx`・`53-screen-gift-box.jsx`・`54-screen-item-inventory.jsx`(切り出した画面。STEP 6-2 から1つずつ増える)、`60-app.jsx`(MonsterHeroGame)、`70-bootstrap.jsx`(CSS 注入と createRoot)。
+> 部品は共有層 21 個(`10-core` 〜 `30-rhythm-play`。2026-09-06 に旧 `10-shared` を節ごとに分けた。役割は `parts.json`)と、`40-screen-effects.jsx`(画面ライフサイクル。2026-09-10 の STEP 6-1 で追加)、`50-error-boundary.jsx`、`51-screen-settings.jsx`・`52-screen-missions.jsx`・`53-screen-gift-box.jsx`・`54-screen-item-inventory.jsx`・`55-screen-breeder-market.jsx`(切り出した画面。STEP 6-2 から1つずつ増える)、`60-app.jsx`(MonsterHeroGame)、`70-bootstrap.jsx`(CSS 注入と createRoot)。
 >
 > | 部品 | 役割 |
 > | --- | --- |
@@ -82,6 +82,7 @@
 > | `52-screen-missions.jsx` | 画面: ミッション(MISSIONS)。受け取りは MonsterHeroGame 側に残し props で受ける。2026-09-10 の STEP 6-3 |
 > | `53-screen-gift-box.jsx` | 画面: ギフトボックス(GIFT_BOX)。受け取りは MonsterHeroGame 側に残し props で受ける。2026-09-10 の STEP 6-4 |
 > | `54-screen-item-inventory.jsx` | 画面: アイテム(ITEM_INVENTORY)。戻り先はプロフィール。2026-09-10 の STEP 6-5 |
+> | `55-screen-breeder-market.jsx` | 画面: マーケット(BREEDER_MARKET)。購入と交換は MonsterHeroGame 側に残し props で受ける。2026-09-10 の STEP 6-6 |
 > | `60-app.jsx` | MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX) |
 > | `70-bootstrap.jsx` | CSS 文字列の注入(createAnimationStyle)、ReactDOM.createRoot、HTML ローディングの非表示 |
 > 下表の行番号は連結後の `game-system.jsx` で見るときの目安(ヘッダと目印の行ぶん、数行ずれる)。
