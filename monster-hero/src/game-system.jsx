@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 34e9601911f01c43
+// generated-sha256: 773b08372c63436c
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 20:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 20:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12254,6 +12254,42 @@ class MhErrorBoundary extends React.Component {
 // (文言に「デバッグ」を含めない。演奏画面の検査がこの範囲の「デバッグ」の語を数えるため)
 const DebugThrowScreenError = () => { throw new Error('画面エラーの受け止めを試すために、わざと投げた例外'); };
 
+// ---- part: 51-screen-settings.jsx ----
+// ==== 画面: 設定(gameState === 'SETTINGS') ====
+//
+// MonsterHeroGame から最初に切り出した画面(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-2)。
+// 依存が少なく、実ブラウザの検査が厚い(設定 → ヘルプ → デバッグ設定の経路を
+// boot/screen-error-boundary-check.js が通り、音量設定と BGM アレンジは audio/* が開く)ので最初に選んだ。
+//
+// 【切り出しの決めごと】
+// ・見た目・文言・並び・遷移先は1文字も変えない。className もそのまま移した
+// ・必要な値は props で明示する。setState をそのまま渡すのではなく「押されたら何をするか」を
+//   MonsterHeroGame 側に残し、この画面へは出来上がった操作だけを渡す
+//   (データ引き継ぎのように setState を5つ呼ぶものが、画面側の知識にならないようにするため)
+// ・BUILD_DATE・ArrowLeft・AssistantBubble は共有層(10〜30)の持ち物なので props にしない
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に SETTINGS の行が無い)ので、
+//   useScreenEffects はまだ使っていない
+function SettingsScreen({ onBack, onOpenAudioSettings, onOpenBgmArrangement, onOpenBackup, onOpenHelp, onOpenGameUpdate, gameUpdateDisabled, onReturnToTitle }) {
+  return (
+    <div className="flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll">
+      <div className="flex items-center gap-2 mb-5">
+        <button onClick={onBack} className="p-3 text-slate-400"><ArrowLeft size={20}/></button>
+        <h2 className="text-xl font-black italic text-slate-200">設定</h2>
+      </div>
+      <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings"/></div>
+      <div className="space-y-3">
+        <button onClick={onOpenAudioSettings} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">音量設定</button>
+        <button onClick={onOpenBgmArrangement} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">BGMアレンジ</button>
+        <button onClick={onOpenBackup} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button>
+        <button onClick={onOpenHelp} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">ヘルプ</button>
+        <button onClick={onOpenGameUpdate} disabled={gameUpdateDisabled} className="w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"><span className="block text-cyan-200">ゲームを更新</span><span className="block mt-1 text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button>
+        <div className="text-center text-[9px] font-mono text-slate-600">BUILD {BUILD_DATE}</div>
+        <button onClick={onReturnToTitle} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button>
+      </div>
+    </div>
+  );
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -22904,7 +22940,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {gameState==='SETTINGS'&&(
-          <div className="flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-slate-200">設定</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings"/></div><div className="space-y-3"><button onClick={()=>setShowAudioSettings(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">音量設定</button><button onClick={()=>setShowBgmArrangement(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">BGMアレンジ</button><button onClick={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button><button onClick={()=>openHelp()} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">ヘルプ</button><button onClick={()=>setShowGameUpdateConfirm(true)} disabled={showGameUpdateConfirm||gameUpdatePending} className="w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"><span className="block text-cyan-200">ゲームを更新</span><span className="block mt-1 text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button><div className="text-center text-[9px] font-mono text-slate-600">BUILD {BUILD_DATE}</div><button onClick={()=>setShowOfficialTitleConfirm(true)} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button></div></div>
+          <SettingsScreen
+            onBack={returnToHome}
+            onOpenAudioSettings={()=>setShowAudioSettings(true)}
+            onOpenBgmArrangement={()=>setShowBgmArrangement(true)}
+            onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}
+            onOpenHelp={()=>openHelp()}
+            onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
+            gameUpdateDisabled={showGameUpdateConfirm||gameUpdatePending}
+            onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
+          />
         )}
 
         {gameState==='MASU_PATTERN_DEBUG'&&(()=>{
