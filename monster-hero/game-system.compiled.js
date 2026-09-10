@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f033acee524ee0b8
+// source-sha256: a5c7d5392f2fc83d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
@@ -39431,6 +39431,10 @@ function MonsterHeroGame() {
         const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : setting.id === 'ULTIMATE' ? ultimateUnlocked : setting.id === 'INFINITY' ? infinityUnlocked : setting.id === 'GOD' ? godUnlocked : setting.id === 'RAGNAROK' ? ragnarokUnlocked : false);
         const previewable = (setting.available || debugBattle && setting.debugAvailable) && unlocked;
         const theme = extremeDifficultyTheme(setting.id);
+        const heroProofReward = heroProofClearReward({
+          extremeDifficulty: setting.id,
+          debug: debugBattle
+        });
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
           "aria-disabled": !previewable,
@@ -39468,13 +39472,18 @@ function MonsterHeroGame() {
         }, label, /*#__PURE__*/React.createElement("b", {
           className: "block text-[11px] leading-tight text-white"
         }, value)))), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-2 gap-1 mt-1"
+          className: `grid ${heroProofReward > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-1 mt-1`
         }, [['経験値', setting.xp ? `×${setting.xp}` : '対象外'], ['虹のプシュケー', setting.psyche ?? '対象外']].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
           className: "rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap"
         }, label, /*#__PURE__*/React.createElement("b", {
           className: "block text-[11px] leading-tight text-white"
-        }, value)))), /*#__PURE__*/React.createElement("p", {
+        }, value)))), heroProofReward > 0 && /*#__PURE__*/React.createElement("div", {
+          "data-hero-proof-reward": setting.id,
+          className: "rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-amber-100 whitespace-nowrap"
+        }, "\uD83C\uDFC5\u52C7\u8005\u306E\u8A3C", /*#__PURE__*/React.createElement("b", {
+          className: "block text-[11px] leading-tight text-white"
+        }, "\uFF1A", heroProofReward, "\u500B"))), /*#__PURE__*/React.createElement("p", {
           "data-extreme-card-description": setting.id,
           className: "mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200"
         }, setting.cardDescription || setting.description), /*#__PURE__*/React.createElement("div", {
@@ -39682,6 +39691,11 @@ function MonsterHeroGame() {
         const active = key === selectedDifficulty,
           rec = modeRecordFor(battleMode, key);
         const quickUnlocked = species ? isSpeciesChallengeDifficultyUnlocked(key, speciesChallengeClearedDifficultyIds(speciesChallengeProgress, speciesChallengeSelection.speciesId)) : !quick || debugBattle || isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
+        const heroProofReward = heroProofClearReward({
+          runMode: battleMode,
+          difficulty: key,
+          debug: debugBattle
+        });
         return /*#__PURE__*/React.createElement("article", {
           key: key,
           "aria-disabled": !quickUnlocked,
@@ -39755,7 +39769,13 @@ function MonsterHeroGame() {
           "aria-hidden": "true"
         }, "\uD83C\uDF08"), " \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\uFF1A", applyQuickPsychePolicy(clearPsycheReward(key), battleMode, quickRewardPolicy), "\u500B", quick ? quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '（×2）' : '（×1）' : ''), /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-amber-200"
-        }, "\uD83D\uDC8E \u30C0\u30A4\u30E4\uFF1A", quick ? bonusLabel(setting.gold * (quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? 2 : 1)) : `×${setting.gold}`, quick && quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? '（×2）' : '')))), /*#__PURE__*/React.createElement("div", {
+        }, "\uD83D\uDC8E \u30C0\u30A4\u30E4\uFF1A", quick ? bonusLabel(setting.gold * (quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? 2 : 1)) : `×${setting.gold}`, quick && quickRewardPolicy === QUICK_REWARD_POLICY_DIAMOND ? '（×2）' : ''), pro && (heroProofReward > 0 ? /*#__PURE__*/React.createElement("b", {
+          "data-hero-proof-reward": key,
+          className: "block text-[10px] text-amber-100"
+        }, "\uD83C\uDFC5\u52C7\u8005\u306E\u8A3C\uFF1A", heroProofReward, "\u500B") : /*#__PURE__*/React.createElement("span", {
+          "aria-hidden": "true",
+          className: "block text-[10px]"
+        }, "\xA0"))))), /*#__PURE__*/React.createElement("div", {
           className: `grid gap-1.5 mt-1.5 ${quick ? 'mt-auto' : ''}`
         }, !species && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
@@ -43867,8 +43887,15 @@ function MonsterHeroGame() {
       const canBuy = !comingSoon && !owned && balance >= item.cost;
       const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
       const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
-      return /*#__PURE__*/React.createElement(MarketProductCard, {
-        key: item.id,
+      const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
+      const exchangeItem = isSoulRankRespec ? {
+        ...item,
+        currency: 'heroProof',
+        cost: 1
+      } : null;
+      return /*#__PURE__*/React.createElement(React.Fragment, {
+        key: item.id
+      }, /*#__PURE__*/React.createElement(MarketProductCard, {
         item: item,
         owned: owned,
         comingSoon: comingSoon,
@@ -43890,20 +43917,24 @@ function MonsterHeroGame() {
         },
         middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
           className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-        }, "\xD7", ownedItems[item.id] || 0), item.id === SOUL_RANK_RESPEC_ITEM_ID ? /*#__PURE__*/React.createElement("button", {
-          type: "button",
-          disabled: ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID) <= 0 || marketPurchaseProcessingRef.current,
-          onClick: exchangeSoulRankRespecByProof,
-          "aria-label": "\u52C7\u8005\u306E\u8A3C1\u500B\u3092\u9B42\u683C\u518D\u7DE8\u306E\u66F81\u518A\u3078\u4EA4\u63DB",
-          className: "text-[8px] font-black text-amber-200 bg-amber-950/60 border border-amber-500/50 px-1 py-0.5 rounded-full active:scale-95 disabled:opacity-35 whitespace-nowrap"
-        }, "\uD83C\uDFC51\u2192\u4EA4\u63DB") : item.desc && /*#__PURE__*/React.createElement("button", {
+        }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
           onClick: () => setMarketItemDetail(item),
           "aria-label": `${item.name}の効果を見る`,
           className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
         }, /*#__PURE__*/React.createElement(BookOpen, {
           size: 8
         }), "\u8A73\u7D30")) : null
-      });
+      }), exchangeItem && /*#__PURE__*/React.createElement(MarketProductCard, {
+        item: exchangeItem,
+        owned: false,
+        comingSoon: false,
+        canBuy: ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID) > 0 && !marketPurchaseProcessingRef.current,
+        disabled: marketPurchaseProcessingRef.current,
+        onBuy: exchangeSoulRankRespecByProof,
+        middle: /*#__PURE__*/React.createElement("span", {
+          className: `text-[9px] font-black ${ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
+        }, "\xD7", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID))
+      }));
     })))), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
