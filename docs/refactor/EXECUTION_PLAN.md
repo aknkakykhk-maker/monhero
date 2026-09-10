@@ -52,7 +52,7 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 | 本 | 対象 | モデル | effort | なぜ |
 | --- | --- | --- | --- | --- |
-| 1 | `use-screen-effects` hook の設計 | **Opus 5** | **max** | `setTimeout` 58箇所を「画面専用/進行」に仕分ける土台。ここを誤ると全画面に波及する |
+| 1 | `use-screen-effects` hook の設計 | — | — | **完了**(2026-09-10)。`src/parts/40-screen-effects.jsx`。仕分けは `SCREEN_EFFECTS_MAP.md`(画面専用 16 / 進行 31 / 対象外 15) |
 | 2〜4 | `SETTINGS` / `MISSIONS` / `GIFT_BOX` | Sonnet 5 | high | 依存が少なく検査が厚い。手順が固まれば作業 |
 | 5〜7 | `ITEM_INVENTORY` / `BREEDER_MARKET` / `PROFILE` | Sonnet 5 | high | 同上。マーケットは助手の告知に注意 |
 | 8 | `MONSTER_DEX(_DETAIL)` | Sonnet 5 | high | 表示のみ |
@@ -64,7 +64,10 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 
 ## 次の一手
 
-**STEP 6 の1本目(`use-screen-effects` hook)** — Opus 5 / effort max
+**STEP 6 の2本目(`SETTINGS` 画面の切り出し)** — Sonnet 5 / effort high
+
+1本目(`use-screen-effects` hook)は 2026-09-10 に完了。タイマーの仕分けは
+`SCREEN_EFFECTS_MAP.md` にあるので、画面ごとにそこから引いて `effects.timeout` へ移す。
 
 以降は上の表を上から順に。STEP 3 と 9 は独立して進められるので、
 バトルや音ゲーを触りたくない時期は STEP 1・2・4・7 を先に消化してよい。
@@ -83,7 +86,7 @@ docs/refactor/README.md の進捗表と、REFACTOR_MASTER_PLAN.md の STEP <N> �
   CLAUDE.md ③ のとおりマージまで進めて
 ```
 
-### STEP 6-1(次の一手) — Opus 5 / max
+### STEP 6-1(完了。記録として残す) — Opus 5 / max
 
 ```
 docs/refactor/README.md の進捗表と、REFACTOR_MASTER_PLAN.md の STEP 6 を読んで、
@@ -106,7 +109,9 @@ docs/refactor/README.md の進捗表と、REFACTOR_MASTER_PLAN.md の STEP 6 を
 
 ・着手前に REGRESSION_RISK_MAP.md を必ず読むこと
 ・見た目・文言・遷移先・演出のタイミングは変えない。gameState の文字列も変えない
-・setTimeout は use-screen-effects の effects.timeout へ移す
+・setTimeout は SCREEN_EFFECTS_MAP.md でその画面の行を引き、書いてある種別のまま
+  effects.timeout(fn, ms, 'screen') / effects.timeout(fn, ms, 'progress') へ移す。
+  移したら表の「現状」列を 登録簿 に書き換える(tools/ui/screen-effects-check.js が表を見張っている)
 ・1画面で終わり。次の画面には進まないで
 ・終わったら docs/refactor/README.md の進捗表を更新して、
   CLAUDE.md ③ のとおりマージまで進めて

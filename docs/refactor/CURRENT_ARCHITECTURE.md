@@ -51,7 +51,7 @@
 ## 3. `game-system.jsx` の内部地図(行番号は 9f9cfa0 時点)
 
 > 2026-09-06(STEP 2)から、編集元は `monster-hero/src/parts/*.jsx` になり、`game-system.jsx` はそれを `parts.json` の順に連結した生成物。
-> 部品は共有層 21 個(`10-core` 〜 `30-rhythm-play`。2026-09-06 に旧 `10-shared` を節ごとに分けた。役割は `parts.json`)と、`50-error-boundary.jsx`、`60-app.jsx`(MonsterHeroGame)、`70-bootstrap.jsx`(CSS 注入と createRoot)。
+> 部品は共有層 21 個(`10-core` 〜 `30-rhythm-play`。2026-09-06 に旧 `10-shared` を節ごとに分けた。役割は `parts.json`)と、`40-screen-effects.jsx`(画面ライフサイクル。2026-09-10 の STEP 6-1 で追加)、`50-error-boundary.jsx`、`60-app.jsx`(MonsterHeroGame)、`70-bootstrap.jsx`(CSS 注入と createRoot)。
 >
 > | 部品 | 役割 |
 > | --- | --- |
@@ -76,6 +76,7 @@
 > | `28-rhythm-shared.jsx` | 音ゲーの共有部品: 表示時間の定数、入力キー、ノーツ速度、画面回転・静音、タイミング調整 |
 > | `29-rhythm-screens.jsx` | 音ゲーのオプション画面・曲えらび・マスモン枠(演奏画面以外) |
 > | `30-rhythm-play.jsx` | 音ゲーの演奏画面 RhythmTapTest(rAF 1本・判定・描画)と振動・サイドの応援。タイミング基盤は触らない |
+> | `40-screen-effects.jsx` | 画面ライフサイクル。タイマー・リスナーの登録簿 useScreenEffects(画面専用は画面を離れたら止め、進行は止めない) |
 > | `50-error-boundary.jsx` | 画面のエラー境界 MhErrorBoundary と、デバッグ用にわざと例外を投げる部品 |
 > | `60-app.jsx` | MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX) |
 > | `70-bootstrap.jsx` | CSS 文字列の注入(createAnimationStyle)、ReactDOM.createRoot、HTML ローディングの非表示 |
