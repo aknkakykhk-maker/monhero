@@ -436,6 +436,21 @@ const attackMotionAnimation = (anim) => {
   if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards');
   return anim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards');
 };
+// 図鑑・画像デバッグで、本番の atkMotion を「1回の攻撃アクション」として見せるための共通手順。
+// 動かし方そのものは attackMotionAnimation / PandoraDualThunder 等の本番演出を使い、
+// ここでは「どの状態を何ms見せるか」だけを返す。保存や戦闘計算には触れない。
+const attackMotionPreviewSequence = (atkMotion='default') => {
+  const motion=atkMotion||'default';
+  const isTwin=motion==='kenshiTwinBlade';
+  const isComboDash=motion==='zanCombo'||motion==='eikiSakuraCombo'||isTwin;
+  if(isComboDash) return [
+    {anim:{zanCombo:!isTwin,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},ms:motion==='eikiSakuraCombo'?500:(isTwin?560:320)},
+  ];
+  return [{
+    anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
+    ms:motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)),
+  }];
+};
 const rpgMotionName = (side, monId, isSkill) => {
   const prefix = side === 'ally' ? 'rpgAlly' : 'rpgFoe';
   if (isSkill) return `${prefix}Special`;

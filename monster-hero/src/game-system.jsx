@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: d0b15994ffd1daba
+// generated-sha256: f87b666a46418a04
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 11:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 12:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8625,6 +8625,21 @@ const attackMotionAnimation = (anim) => {
   if (anim.charge===false) return anim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards');
   return anim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(anim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards');
 };
+// 図鑑・画像デバッグで、本番の atkMotion を「1回の攻撃アクション」として見せるための共通手順。
+// 動かし方そのものは attackMotionAnimation / PandoraDualThunder 等の本番演出を使い、
+// ここでは「どの状態を何ms見せるか」だけを返す。保存や戦闘計算には触れない。
+const attackMotionPreviewSequence = (atkMotion='default') => {
+  const motion=atkMotion||'default';
+  const isTwin=motion==='kenshiTwinBlade';
+  const isComboDash=motion==='zanCombo'||motion==='eikiSakuraCombo'||isTwin;
+  if(isComboDash) return [
+    {anim:{zanCombo:!isTwin,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},ms:motion==='eikiSakuraCombo'?500:(isTwin?560:320)},
+  ];
+  return [{
+    anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
+    ms:motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)),
+  }];
+};
 const rpgMotionName = (side, monId, isSkill) => {
   const prefix = side === 'ally' ? 'rpgAlly' : 'rpgFoe';
   if (isSkill) return `${prefix}Special`;
@@ -8770,6 +8785,26 @@ const PandoraDualThunder = ({image, compact=false}) => (
     </span>)}
   </span>
 );
+// 図鑑などから本番と同じ攻撃モーション描画を使うための共通ステージ。
+// image は用途ごとの実画像要素を受け取り、モーション専用の画像コピーは作らない。
+const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
+  if(anim?.motion==='pandoraDualThunder') {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+        <span style={compact?undefined:{display:'block',transform:'scale(2.15)',transformOrigin:'center'}}>
+          <PandoraDualThunder image={image} compact={compact}/>
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(anim)}}>
+      {image}
+      {anim?.sakura&&<EikiSakuraPetals/>}
+      {anim?.twinBlade&&<KenshiTwinSlash/>}
+    </div>
+  );
+};
 
 // ---- part: 25-storage.jsx ----
 const _memStore = {};
@@ -12710,6 +12745,8 @@ function MonsterHeroGame() {
   const [dexMonsterId, setDexMonsterId] = useState(null);          // モンスター図鑑: 詳細で見ているモンスターのid
   const [dexTab, setDexTab] = useState('basic');                   // モンスター図鑑の詳細タブ(basic/stats/skills)
   const dexSwipeRef = useRef(null);                                // 図鑑詳細の横スワイプ(指を置いた位置)
+  const [dexAttackPreview, setDexAttackPreview] = useState(null);  // 図鑑詳細の攻撃アクション再生中だけ使う {monsterId,anim}
+  const dexAttackPreviewRunRef = useRef(0);                         // 左右移動/戻るで非同期プレビューを確実に止める世代番号
   const [uniqueSkillPointDrafts, setUniqueSkillPointDrafts] = useState({}); // 個体IDごとの固有技ポイント仮配分
   const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
@@ -21589,7 +21626,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   const category=monsterCategoryOf(mon.id);
                   return (
                     <button key={mon.id} type="button" data-dex-entry aria-label={unlocked?`${mon.name}の図鑑を見る`:'まだ出会っていないモンスター'}
-                      onClick={()=>{setDexMonsterId(mon.id);setDexTab('basic');setGameState('MONSTER_DEX_DETAIL');}}
+                      onClick={()=>{dexAttackPreviewRunRef.current+=1;setDexAttackPreview(null);setDexMonsterId(mon.id);setDexTab('basic');setGameState('MONSTER_DEX_DETAIL');}}
                       className="w-full min-h-[124px] rounded-2xl border-2 border-amber-600/30 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none">
                       {/* 血統チップと同じ理由。丸く切り抜くと円の外側へかかる部分が切れるので、
                           少し縮めて中央へ置き、全身が円の中へ収まるようにする */}
@@ -21617,7 +21654,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const {main,sub}=monsterLineageOf(mon.id);
           const category=monsterCategoryOf(mon.id);
           const categoryClass=category==='rare'?'bg-amber-600 text-white':category==='pure'?'bg-emerald-700 text-white':'bg-indigo-700 text-white';
-          const go=(delta)=>{ const next=monsters[(index+delta+monsters.length)%monsters.length]; if(!next) return; setDexMonsterId(next.id); setDexTab('basic'); Audio_.se.tap(); };
+          const previewAnim=dexAttackPreview?.monsterId===mon.id?dexAttackPreview.anim:null;
+          const previewPlaying=!!previewAnim;
+          const stopDexAttackPreview=()=>{dexAttackPreviewRunRef.current+=1;setDexAttackPreview(null);};
+          const playDexAttackPreview=async()=>{
+            if(!unlocked||previewPlaying)return;
+            const run=++dexAttackPreviewRunRef.current;
+            for(const step of attackMotionPreviewSequence(mon.atkMotion||'default')){
+              if(run!==dexAttackPreviewRunRef.current)return;
+              setDexAttackPreview({monsterId:mon.id,anim:step.anim});
+              await new Promise(resolve=>setTimeout(resolve,step.ms));
+            }
+            if(run===dexAttackPreviewRunRef.current)setDexAttackPreview(null);
+          };
+          const go=(delta)=>{ stopDexAttackPreview(); const next=monsters[(index+delta+monsters.length)%monsters.length]; if(!next) return; setDexMonsterId(next.id); setDexTab('basic'); Audio_.se.tap(); };
           // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
           const lineageChip=(lineage)=><DexLineageChip lineage={lineage} iconUrl={lineageIconUrl(lineage)}/>;
           const tabs=[['basic','基本'],['stats','能力'],['skills','技']];
@@ -21663,7 +21713,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
           <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0" style={{paddingTop:'calc(0.5rem + env(safe-area-inset-top))',paddingBottom:'calc(0.5rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 px-3 shrink-0">
-              <button onClick={()=>setGameState('MONSTER_DEX')} className="p-3 text-slate-400 active:scale-90" aria-label="図鑑一覧へ戻る"><ArrowLeft size={20}/></button>
+              <button onClick={()=>{stopDexAttackPreview();setGameState('MONSTER_DEX');}} className="p-3 text-slate-400 active:scale-90" aria-label="図鑑一覧へ戻る"><ArrowLeft size={20}/></button>
               <h2 className="text-lg font-black italic text-amber-300 uppercase tracking-widest">モンスター図鑑</h2>
               <span className="ml-auto text-[10px] font-mono font-black text-amber-200/80 tabular-nums pr-1">{index+1} / {monsters.length}</span>
             </div>
@@ -21675,9 +21725,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div data-dex-art className="relative shrink-0 flex items-center justify-center px-14" style={{height:'clamp(150px, 20dvh, 180px)'}}
               onTouchStart={e=>{dexSwipeRef.current=e.touches&&e.touches[0]?e.touches[0].clientX:null;}}
               onTouchEnd={e=>{const from=dexSwipeRef.current; dexSwipeRef.current=null; if(from==null)return; const to=e.changedTouches&&e.changedTouches[0]?e.changedTouches[0].clientX:from; const dx=to-from; if(Math.abs(dx)>=48) go(dx<0?1:-1);}}>
-              <DexMonsterArt mon={mon} alt={unlocked?mon.name:'まだ出会っていないモンスター'} hidden={!unlocked}/>
+              {unlocked
+                ? <BattleAttackMotionPreview image={<DexMonsterArt mon={mon} alt={mon.name}/>} anim={previewAnim}/>
+                : <DexMonsterArt mon={mon} alt="まだ出会っていないモンスター" hidden/>}
               <button type="button" data-dex-prev aria-label="前のモンスター" onClick={()=>go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronLeft size={22}/></button>
               <button type="button" data-dex-next aria-label="次のモンスター" onClick={()=>go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"><ChevronRight size={22}/></button>
+              {unlocked&&<button type="button" data-dex-attack-preview onClick={playDexAttackPreview} disabled={previewPlaying}
+                className="absolute bottom-1 left-1/2 -translate-x-1/2 min-h-[40px] px-4 rounded-full border border-cyan-300/60 bg-slate-950/85 text-[10px] font-black text-cyan-100 shadow-lg active:scale-95 disabled:opacity-55">
+                {previewPlaying?'再生中…':'▶ 攻撃アクション'}
+              </button>}
             </div>
             {/* 下半分: 情報カード */}
             <div className="flex-1 min-h-0 px-3 pt-2">

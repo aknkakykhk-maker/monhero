@@ -227,6 +227,40 @@ check('立ち絵は枠に合わせて縮尺する（元画像の解像度で大�
   && sharedDex.includes('className="w-full h-full object-contain"')
   && !detail.includes('max-w-full max-h-full'));
 check('立ち絵の枠の高さを決めている', /data-dex-art[\s\S]{0,300}height:'clamp\(/.test(detail));
+check('解放済みの図鑑詳細で攻撃アクションをその場で再生できる',
+  detail.includes('data-dex-attack-preview')
+  && detail.includes("attackMotionPreviewSequence(mon.atkMotion||'default')")
+  && detail.includes("previewPlaying?'再生中…':'▶ 攻撃アクション'"));
+check('未解放モンスターは攻撃アクションを再生できない',
+  detail.includes('if(!unlocked||previewPlaying)return')
+  && detail.includes('{unlocked&&<button type="button" data-dex-attack-preview'));
+check('左右移動と一覧へ戻る操作で途中のプレビューを止める',
+  detail.includes('const stopDexAttackPreview=')
+  && detail.includes('const go=(delta)=>{ stopDexAttackPreview();')
+  && detail.includes("stopDexAttackPreview();setGameState('MONSTER_DEX')"));
+check('図鑑プレビューは本番と同じモーション描画を使う',
+  source.includes('const BattleAttackMotionPreview =')
+  && source.includes("animation:attackMotionAnimation(anim)")
+  && source.includes('anim?.sakura&&<EikiSakuraPetals/>')
+  && source.includes("anim?.motion==='pandoraDualThunder'")
+  && source.includes('<PandoraDualThunder image={image} compact={compact}/>'));
+{
+  const previewCtx={};
+  vm.createContext(previewCtx);
+  vm.runInContext(slice('const attackMotionPreviewSequence =', 'const rpgMotionName =')
+    + '\nglobalThis.preview=attackMotionPreviewSequence;', previewCtx);
+  const motionKinds=[...new Set(monsters.map(mon=>mon.atkMotion||'default'))];
+  const brokenPreview=motionKinds.filter(motion=>{
+    const seq=previewCtx.preview(motion);
+    return !Array.isArray(seq)||!seq.length||seq.some(step=>!step?.anim||!(Number(step.ms)>0));
+  });
+  check('全モンスターの atkMotion が1回のプレビュー手順を作れる', brokenPreview.length===0,
+    brokenPreview.join(' / '));
+  check('図鑑プレビューは通常攻撃と同じく固有技用のタメを入れない',
+    motionKinds.every(motion=>previewCtx.preview(motion).every(step=>step.anim?.charge!==true)));
+  check('パンドラも専用分身モーションを図鑑で再生できる',
+    previewCtx.preview('pandoraDualThunder').some(step=>step.anim?.motion==='pandoraDualThunder'));
+}
 check('Safe Areaを避けている', list.includes('env(safe-area-inset-top)') && detail.includes('env(safe-area-inset-bottom)'));
 check('横はみ出し対策(truncate/min-w-0/break-words)がある',
   detail.includes('truncate') && detail.includes('min-w-0') && detail.includes('break-words'));
