@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f292f377cad2ed87
+// source-sha256: c99161f0c059ce71
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: db631a7515ed708a
+// generated-sha256: 5f98ae07f36345fd
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 07:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 07:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -27270,6 +27270,452 @@ function MasuTranscendEnhanceScreen({
   }, "\u9589\u3058\u308B"))));
 }
 
+// ---- part: 65-screen-masu-enhance.jsx ----
+// ==== 画面: マスモン強化(gameState === 'MASU_ENHANCE') ====
+//
+// MonsterHeroGame から切り出した15本目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-9)。
+//
+// 【この画面ならではの注意】
+// ・強化ポイントの割り振りと確定は保存を伴うので、中身は MonsterHeroGame 側に残して props で受ける
+// ・戻り先は masuEnhanceFrom(どこから来たか)で決まる。行き先の判断は本体に残す
+
+function MasuEnhanceScreen({
+  addAssistantBond,
+  bulkEnhanceUnit,
+  bulkPlan,
+  getMasuMon,
+  masuMonDetail,
+  onBack,
+  onMissing,
+  onOpenTranscendEnhance,
+  renderPowerBadge,
+  saveMissionProgress,
+  setBulkEnhanceUnit,
+  setBulkPlan,
+  setEffect,
+  setMasuMonDetail,
+  spendPointsBulk
+}) {
+  const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
+  const base = ALL_PLAYER_MONSTERS[masu.baseId];
+  if (!base) {
+    onMissing();
+    return null;
+  }
+  const lvl = masuBondLevelInfo(masu);
+  const pct = Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100));
+  const points = masu.distAptPoints || 0;
+  const resolvedIndividualStats = resolveMasuIndividualStats(masu, base);
+  const resolvedDistAptitude = resolveMasuDistAptitude(masu, base);
+  const currentStatValue = key => (resolvedIndividualStats[key] || 0) + (masu.statPoints?.[key] || 0);
+  // 総合力は共通関数から都度出す。1ポイント強化も一括強化も、強化前と強化後を
+  // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
+  const currentPower = masuPowerOf(masu);
+  const ps = mergeMasuIntoMon(masu)?.plusStats || {};
+  // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
+  // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
+  // また同じ個体を探し直すことになる(詳細の中身は getMasuMon で引き直すので最新の値が出る)
+  const backToDetail = onBack;
+  // --- まとめて振るモード ---
+  const plan = bulkPlan || {
+    apt: [0, 0, 0, 0],
+    stat: {
+      hp: 0,
+      atk: 0,
+      def: 0,
+      guts: 0
+    }
+  };
+  const planUsed = plan.apt.reduce((a, b) => a + b, 0) + Object.values(plan.stat).reduce((a, b) => a + b, 0);
+  const planLeft = points - planUsed;
+  const restoreDraft = buildBondResetRestorePlan(masu, masu.bondResetAllocationSnapshot);
+  const restoreResetAllocation = () => {
+    if (restoreDraft?.restored > 0) setBulkPlan(restoreDraft.plan);
+  };
+  // 下書き段階での間合い適性(何段階上がるか)。上限Mを超えないようにする
+  const plannedGrade = idx => {
+    const cur = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[idx] || 'C');
+    return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length - 1, Math.max(0, cur + plan.apt[idx]))];
+  };
+  const canPlanApt = idx => planLeft > 0 && DIST_APTITUDE_GRADES.indexOf(plannedGrade(idx)) < DIST_APTITUDE_GRADES.length - 1;
+  const changePlan = (kind, target, direction) => setBulkPlan(previous => {
+    const q = previous ? {
+      apt: [...previous.apt],
+      stat: {
+        ...previous.stat
+      }
+    } : {
+      apt: [0, 0, 0, 0],
+      stat: {
+        hp: 0,
+        atk: 0,
+        def: 0,
+        guts: 0
+      }
+    };
+    const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
+    const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
+    const remaining = Math.max(0, points - used);
+    let amount = bulkEnhanceUnit === 'MAX' ? direction > 0 ? remaining : current : Math.min(Number(bulkEnhanceUnit), direction > 0 ? remaining : current);
+    if (kind === 'apt' && direction > 0) {
+      const baseGradeIndex = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target] || 'C');
+      amount = Math.min(amount, DIST_APTITUDE_GRADES.length - 1 - baseGradeIndex - current);
+    }
+    const next = Math.max(0, current + direction * Math.max(0, amount));
+    if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
+    return q;
+  });
+  const addPlanApt = (idx, direction) => changePlan('apt', idx, direction);
+  const addPlanStat = (key, direction) => changePlan('stat', key, direction);
+  const setPlanExact = (kind, target, rawValue) => setBulkPlan(previous => {
+    const q = previous ? {
+      apt: [...previous.apt],
+      stat: {
+        ...previous.stat
+      }
+    } : {
+      apt: [0, 0, 0, 0],
+      stat: {
+        hp: 0,
+        atk: 0,
+        def: 0,
+        guts: 0
+      }
+    };
+    const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
+    const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
+    let maxForRow = Math.max(0, points - (used - current));
+    if (kind === 'apt') {
+      const baseGradeIndex = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target] || 'C');
+      maxForRow = Math.min(maxForRow, Math.max(0, DIST_APTITUDE_GRADES.length - 1 - baseGradeIndex));
+    }
+    const next = directEnhancePointAmount(rawValue, maxForRow);
+    if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
+    return q;
+  });
+  const applyPlan = () => {
+    const updated = spendPointsBulk(masu.id, plan);
+    if (!updated) return;
+    setMasuMonDetail(updated);
+    saveMissionProgress('enhance');
+    addAssistantBond('enhance');
+    setBulkPlan(null);
+    const lines = [];
+    plan.apt.forEach((n, i) => {
+      if (n > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${n}`);
+    });
+    Object.entries(plan.stat).forEach(([k, n]) => {
+      if (n > 0) lines.push(`${STAT_POINT_KEYS[k]} +${n * (STAT_POINT_GAIN[k] || 1)}`);
+    });
+    setEffect({
+      type: 'enhance',
+      label: 'まとめて強化！',
+      icon: '💪',
+      monEmoji: base.emoji,
+      imgUrl: base.iconUrl,
+      baseId: masu.baseId,
+      colors: getMasuColors(updated),
+      subLabel: lines.join('\n')
+    });
+    setTimeout(() => setEffect(null), 1200);
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundColor: "#020617",
+      zIndex: 30000
+    },
+    className: "absolute inset-0 z-[3000] flex flex-col overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 p-4 shrink-0 border-b border-white/10",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: backToDetail,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1"
+  }, "\u30DE\u30B9\u30E2\u30F3\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
+    "data-transcend-enhance-tabs": true,
+    className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "min-h-[40px] rounded-xl bg-amber-600 text-slate-950 text-[11px] font-black"
+  }, "\u901A\u5E38\u5F37\u5316"), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenTranscendEnhance,
+    className: "min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95"
+  }, "\u8D85\u8D8A\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "masuEnhance",
+    compact: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full"
+  }, points > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "bg-slate-900 border border-amber-500/40 rounded-3xl p-3 shadow-xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-2 mb-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 14
+  }), "\u307E\u3068\u3081\u3066\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400 font-bold"
+  }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3",
+    role: "group",
+    "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
+  }, [1, 5, 10, 100, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    key: unit,
+    "aria-pressed": bulkEnhanceUnit === unit,
+    onClick: () => setBulkEnhanceUnit(unit),
+    className: `min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit === unit ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`
+  }, unit === 'MAX' ? 'MAX' : `${unit}P`))), restoreDraft && restoreDraft.requested > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mb-3 rounded-xl border border-cyan-700/40 bg-cyan-950/20 p-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: restoreResetAllocation,
+    disabled: restoreDraft.restored <= 0,
+    className: "w-full min-h-[40px] rounded-lg bg-slate-800 text-cyan-200 text-[10px] font-black active:scale-95 disabled:opacity-40"
+  }, "\u21A9 \u30EA\u30BB\u30C3\u30C8\u524D\u306E\u914D\u5206\u3092\u5FA9\u5143"), /*#__PURE__*/React.createElement("div", {
+    className: `mt-1 text-[8px] font-bold text-center ${restoreDraft.omitted > 0 ? 'text-amber-300' : 'text-slate-500'}`
+  }, restoreDraft.omitted > 0 ? `現行の上限・残りptに合わせ、${restoreDraft.restored}ptを仮配分（復元できない分 ${restoreDraft.omitted}pt）` : '保存は「強化する」を押した時だけです')), /*#__PURE__*/React.createElement("div", {
+    className: "mb-3"
+  }, renderPowerBadge(plannedMasuPowerOf(masu, plan), {
+    before: currentPower,
+    size: 'md'
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400 font-bold mb-1.5"
+  }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5 mb-3"
+  }, RANGE_LABELS.map((label, idx) => {
+    const before = resolvedDistAptitude[idx] || 'C',
+      after = plannedGrade(idx),
+      added = plan.apt[idx];
+    return /*#__PURE__*/React.createElement("div", {
+      key: idx,
+      className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`
+    }, label), /*#__PURE__*/React.createElement("div", {
+      className: "text-center font-mono font-black text-[12px]"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: DIST_APTITUDE_COLOR[before]
+    }, before), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500 mx-1"
+    }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+      className: added > 0 ? 'text-cyan-300' : 'text-slate-300'
+    }, after)), /*#__PURE__*/React.createElement("label", {
+      className: "flex items-center gap-0.5 min-w-0"
+    }, /*#__PURE__*/React.createElement("input", {
+      "data-direct-point-input": "normal-apt",
+      "aria-label": `${label}距離適性の振り分けポイントを直接入力`,
+      type: "text",
+      inputMode: "numeric",
+      pattern: "[0-9]*",
+      enterKeyHint: "done",
+      autoComplete: "off",
+      value: added,
+      onFocus: e => e.currentTarget.select(),
+      onChange: e => setPlanExact('apt', idx, e.currentTarget.value),
+      onKeyDown: e => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      },
+      className: "w-full min-w-0 h-8 rounded-md border border-amber-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black text-amber-300"
+    }, "P")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1"
+    }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+      "aria-label": `${label}距離適性を減らす`,
+      disabled: added <= 0,
+      onPress: () => addPlanApt(idx, -1),
+      className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+    }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+      "aria-label": `${label}距離適性を増やす`,
+      disabled: !canPlanApt(idx),
+      onPress: () => addPlanApt(idx, 1),
+      className: "min-h-[40px] rounded-lg bg-amber-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
+    }, "\uFF0B")));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400 font-bold mb-1.5"
+  }, "\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-1.5"
+  }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
+    const n = plan.stat[key] || 0,
+      gain = n * (STAT_POINT_GAIN[key] || 1),
+      before = currentStatValue(key);
+    return /*#__PURE__*/React.createElement("div", {
+      key: key,
+      className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] text-center text-emerald-300 font-black"
+    }, label), /*#__PURE__*/React.createElement("div", {
+      className: "text-center font-mono font-black text-[11px]"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-white"
+    }, before), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-500 mx-1"
+    }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+      className: gain > 0 ? 'text-emerald-300' : 'text-slate-300'
+    }, before + gain)), /*#__PURE__*/React.createElement("label", {
+      className: "flex items-center gap-0.5 min-w-0"
+    }, /*#__PURE__*/React.createElement("input", {
+      "data-direct-point-input": "normal-stat",
+      "aria-label": `${label}の振り分けポイントを直接入力`,
+      type: "text",
+      inputMode: "numeric",
+      pattern: "[0-9]*",
+      enterKeyHint: "done",
+      autoComplete: "off",
+      value: n,
+      onFocus: e => e.currentTarget.select(),
+      onChange: e => setPlanExact('stat', key, e.currentTarget.value),
+      onKeyDown: e => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      },
+      className: "w-full min-w-0 h-8 rounded-md border border-amber-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black text-amber-300"
+    }, "P")), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1"
+    }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+      "aria-label": `${label}を減らす`,
+      disabled: n <= 0,
+      onPress: () => addPlanStat(key, -1),
+      className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+    }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+      "aria-label": `${label}を増やす`,
+      disabled: planLeft <= 0,
+      onPress: () => addPlanStat(key, 1),
+      className: "min-h-[40px] rounded-lg bg-emerald-700 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
+    }, "\uFF0B")));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 mt-2"
+  }, "\uFF0B\uFF0F\u2212\u306F\u9577\u62BC\u3057\u3067\u3082\u9023\u7D9A\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
+    className: "sticky bottom-0 z-20 -mx-4 px-4 pt-2 border-t border-amber-500/30 bg-slate-950/95",
+    style: {
+      paddingBottom: 'max(.75rem,env(safe-area-inset-bottom))'
+    },
+    "aria-label": "\u5F37\u5316\u306E\u78BA\u5B9A\u64CD\u4F5C"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-slate-300"
+  }, "\u6B8B\u308Apt"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-black"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: planLeft > 0 ? 'text-amber-300' : 'text-slate-500'
+  }, planLeft), /*#__PURE__*/React.createElement("small", {
+    className: "text-slate-500"
+  }, " / ", points, " pt"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: planUsed <= 0,
+    onClick: () => setBulkPlan(null),
+    className: "min-h-[46px] px-3 rounded-xl font-black text-[10px] bg-slate-800 text-slate-300 disabled:opacity-30"
+  }, "\u914D\u5206\u3092\u3059\u3079\u3066\u53D6\u6D88"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    disabled: planUsed <= 0,
+    onClick: applyPlan,
+    className: "min-h-[46px] flex-1 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700"
+  }, planUsed > 0 ? `${planUsed}ptを使って強化する` : '振り分けてください')))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-4 bg-slate-900 border border-amber-500/30 rounded-3xl p-4 shadow-xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative w-20 h-20 shrink-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory || []).length > 0 ? 'border-amber-400 ring-2 ring-amber-400' : 'border-amber-400/40'}`
+  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: masu.baseId,
+    src: base.iconUrl,
+    alt: masu.name,
+    masuColors: getMasuColors(masu),
+    className: "w-full h-full object-cover"
+  })), /*#__PURE__*/React.createElement(ReincarnateBadge, {
+    count: masu.reincarnateCount
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-lg font-black text-white truncate"
+  }, masu.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-amber-400 font-bold uppercase tracking-wider"
+  }, "\u30DE\u30B9\u30E2\u30F3\u30FB\u5143\u306F", base.name), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-pink-300 font-black flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Heart, {
+    size: 9
+  }), "\u7D46 Lv.", lvl.level, " ", /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500"
+  }, "/ ", normalizeMasuProgression(masu).levelCap)), /*#__PURE__*/React.createElement("div", {
+    className: "w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "h-full bg-gradient-to-r from-pink-500 to-rose-400",
+    style: {
+      width: `${pct}%`
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1.5"
+  }, renderPowerBadge(currentPower, {
+    dense: true,
+    size: 'sm'
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 p-3 rounded-2xl border border-amber-500/40 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-amber-300 uppercase font-black flex items-center gap-1.5"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 12
+  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xl text-white font-black font-mono"
+  }, points)), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 p-3 rounded-2xl border border-white/5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 uppercase font-bold mb-1"
+  }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9(\u5F37\u5316\u5206\u8FBC\u307F)"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-x-3 gap-y-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[11px] font-mono"
+  }, /*#__PURE__*/React.createElement("span", null, "\u30E9\u30A4\u30D5:"), /*#__PURE__*/React.createElement("span", {
+    className: "text-pink-400 font-bold"
+  }, currentStatValue('hp'), (masu.statPoints?.hp || 0) > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-emerald-400 text-[9px]"
+  }, " (+", masu.statPoints.hp, ")"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[11px] font-mono"
+  }, /*#__PURE__*/React.createElement("span", null, "\u3061\u304B\u3089:"), /*#__PURE__*/React.createElement("span", {
+    className: "text-red-400 font-bold"
+  }, currentStatValue('atk'), (masu.statPoints?.atk || 0) > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-emerald-400 text-[9px]"
+  }, " (+", masu.statPoints.atk, ")"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[11px] font-mono"
+  }, /*#__PURE__*/React.createElement("span", null, "\u4E08\u592B\u3055:"), /*#__PURE__*/React.createElement("span", {
+    className: "text-emerald-400 font-bold"
+  }, currentStatValue('def'), (masu.statPoints?.def || 0) > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-emerald-400 text-[9px]"
+  }, " (+", masu.statPoints.def, ")"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[11px] font-mono"
+  }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4:"), /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-400 font-bold"
+  }, currentStatValue('guts'), (masu.statPoints?.guts || 0) > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-emerald-400 text-[9px]"
+  }, " (+", masu.statPoints.guts, ")"))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 p-3 rounded-2xl border border-pink-500/30"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-pink-400 uppercase font-bold"
+  }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9(\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u304C\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u6642\u306B\u52A0\u7B97\u3055\u308C\u308B\u5024)"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-white font-bold mt-1"
+  }, ps.hp > 0 && `HP+${ps.hp} `, ps.atk > 0 && `攻+${ps.atk} `, ps.def > 0 && `防+${ps.def} `, ps.guts > 0 && `G+${ps.guts} `, !(ps.hp > 0 || ps.atk > 0 || ps.def > 0 || ps.guts > 0) && 'なし')), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 font-bold text-center px-2"
+  }, "\u5F37\u5316\u306F\u4E0A\u306E\u300C\u307E\u3068\u3081\u3066\u5F37\u5316\u300D\u3067\u4E0B\u66F8\u304D\u3057\u3001\u78BA\u5B9A\u3059\u308B\u3068\u4FDD\u5B58\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
+    onClick: backToDetail,
+    className: "w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2"
+  }, "\u5B8C\u4E86")));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -28331,6 +28777,13 @@ function MonsterHeroGame() {
   };
   const [uniqueSkillPointDrafts, setUniqueSkillPointDrafts] = useState({}); // 個体IDごとの固有技ポイント仮配分
   const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
+  // マスモン強化から戻る。どこから来たか(masuEnhanceFrom)で行き先が変わるので本体に置く。
+  // 画面(MasuEnhanceScreen)へは onBack として渡す(2026-09-10・STEP 6-9)
+  const backToDetail = () => {
+    setGameState(masuEnhanceFrom || 'MASU_MONS');
+    setMasuEnhanceFrom(null);
+    setBulkPlan(null);
+  };
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
   const [masuRenameInput, setMasuRenameInput] = useState('');
   // 合体: マスモン同士を合体させ、副の絆経験値を主に受け継ぐ機能。fusionStepで画面内の段階を管理する
@@ -49182,436 +49635,31 @@ function MonsterHeroGame() {
       transcendResetError: transcendResetError,
       transcendResetOpen: transcendResetOpen,
       useTranscendResetScroll: useTranscendResetScroll
-    }), gameState === 'MASU_ENHANCE' && masuMonDetail && (() => {
-      const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
-      const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      if (!base) {
+    }), gameState === 'MASU_ENHANCE' && masuMonDetail && /*#__PURE__*/React.createElement(MasuEnhanceScreen, {
+      addAssistantBond: addAssistantBond,
+      bulkEnhanceUnit: bulkEnhanceUnit,
+      bulkPlan: bulkPlan,
+      getMasuMon: getMasuMon,
+      masuMonDetail: masuMonDetail,
+      onBack: backToDetail,
+      onMissing: () => {
         setGameState(masuEnhanceFrom || 'MASU_MONS');
         setMasuMonDetail(null);
         setMasuEnhanceFrom(null);
-        return null;
-      }
-      const lvl = masuBondLevelInfo(masu);
-      const pct = Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100));
-      const points = masu.distAptPoints || 0;
-      const resolvedIndividualStats = resolveMasuIndividualStats(masu, base);
-      const resolvedDistAptitude = resolveMasuDistAptitude(masu, base);
-      const currentStatValue = key => (resolvedIndividualStats[key] || 0) + (masu.statPoints?.[key] || 0);
-      // 総合力は共通関数から都度出す。1ポイント強化も一括強化も、強化前と強化後を
-      // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
-      const currentPower = masuPowerOf(masu);
-      const ps = mergeMasuIntoMon(masu)?.plusStats || {};
-      // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
-      // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
-      // また同じ個体を探し直すことになる(詳細の中身は getMasuMon で引き直すので最新の値が出る)
-      const backToDetail = () => {
-        setGameState(masuEnhanceFrom || 'MASU_MONS');
-        setMasuEnhanceFrom(null);
-        setBulkPlan(null);
-      };
-      // --- まとめて振るモード ---
-      const plan = bulkPlan || {
-        apt: [0, 0, 0, 0],
-        stat: {
-          hp: 0,
-          atk: 0,
-          def: 0,
-          guts: 0
-        }
-      };
-      const planUsed = plan.apt.reduce((a, b) => a + b, 0) + Object.values(plan.stat).reduce((a, b) => a + b, 0);
-      const planLeft = points - planUsed;
-      const restoreDraft = buildBondResetRestorePlan(masu, masu.bondResetAllocationSnapshot);
-      const restoreResetAllocation = () => {
-        if (restoreDraft?.restored > 0) setBulkPlan(restoreDraft.plan);
-      };
-      // 下書き段階での間合い適性(何段階上がるか)。上限Mを超えないようにする
-      const plannedGrade = idx => {
-        const cur = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[idx] || 'C');
-        return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length - 1, Math.max(0, cur + plan.apt[idx]))];
-      };
-      const canPlanApt = idx => planLeft > 0 && DIST_APTITUDE_GRADES.indexOf(plannedGrade(idx)) < DIST_APTITUDE_GRADES.length - 1;
-      const changePlan = (kind, target, direction) => setBulkPlan(previous => {
-        const q = previous ? {
-          apt: [...previous.apt],
-          stat: {
-            ...previous.stat
-          }
-        } : {
-          apt: [0, 0, 0, 0],
-          stat: {
-            hp: 0,
-            atk: 0,
-            def: 0,
-            guts: 0
-          }
-        };
-        const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
-        const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
-        const remaining = Math.max(0, points - used);
-        let amount = bulkEnhanceUnit === 'MAX' ? direction > 0 ? remaining : current : Math.min(Number(bulkEnhanceUnit), direction > 0 ? remaining : current);
-        if (kind === 'apt' && direction > 0) {
-          const baseGradeIndex = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target] || 'C');
-          amount = Math.min(amount, DIST_APTITUDE_GRADES.length - 1 - baseGradeIndex - current);
-        }
-        const next = Math.max(0, current + direction * Math.max(0, amount));
-        if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
-        return q;
-      });
-      const addPlanApt = (idx, direction) => changePlan('apt', idx, direction);
-      const addPlanStat = (key, direction) => changePlan('stat', key, direction);
-      const setPlanExact = (kind, target, rawValue) => setBulkPlan(previous => {
-        const q = previous ? {
-          apt: [...previous.apt],
-          stat: {
-            ...previous.stat
-          }
-        } : {
-          apt: [0, 0, 0, 0],
-          stat: {
-            hp: 0,
-            atk: 0,
-            def: 0,
-            guts: 0
-          }
-        };
-        const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
-        const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
-        let maxForRow = Math.max(0, points - (used - current));
-        if (kind === 'apt') {
-          const baseGradeIndex = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target] || 'C');
-          maxForRow = Math.min(maxForRow, Math.max(0, DIST_APTITUDE_GRADES.length - 1 - baseGradeIndex));
-        }
-        const next = directEnhancePointAmount(rawValue, maxForRow);
-        if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
-        return q;
-      });
-      const applyPlan = () => {
-        const updated = spendPointsBulk(masu.id, plan);
-        if (!updated) return;
-        setMasuMonDetail(updated);
-        saveMissionProgress('enhance');
-        addAssistantBond('enhance');
-        setBulkPlan(null);
-        const lines = [];
-        plan.apt.forEach((n, i) => {
-          if (n > 0) lines.push(`${RANGE_LABELS[i]}距離適性 +${n}`);
-        });
-        Object.entries(plan.stat).forEach(([k, n]) => {
-          if (n > 0) lines.push(`${STAT_POINT_KEYS[k]} +${n * (STAT_POINT_GAIN[k] || 1)}`);
-        });
-        setEffect({
-          type: 'enhance',
-          label: 'まとめて強化！',
-          icon: '💪',
-          monEmoji: base.emoji,
-          imgUrl: base.iconUrl,
-          baseId: masu.baseId,
-          colors: getMasuColors(updated),
-          subLabel: lines.join('\n')
-        });
-        setTimeout(() => setEffect(null), 1200);
-      };
-      return /*#__PURE__*/React.createElement("div", {
-        style: {
-          position: "absolute",
-          inset: 0,
-          backgroundColor: "#020617",
-          zIndex: 30000
-        },
-        className: "absolute inset-0 z-[3000] flex flex-col overflow-hidden"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 p-4 shrink-0 border-b border-white/10",
-        style: {
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))'
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: backToDetail,
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1"
-      }, "\u30DE\u30B9\u30E2\u30F3\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
-        "data-transcend-enhance-tabs": true,
-        className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5"
-      }, /*#__PURE__*/React.createElement("button", {
-        className: "min-h-[40px] rounded-xl bg-amber-600 text-slate-950 text-[11px] font-black"
-      }, "\u901A\u5E38\u5F37\u5316"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => {
-          setTranscendPlan(null);
-          setTranscendExchangeError('');
-          setGameState('MASU_TRANSCEND_ENHANCE');
-        },
-        className: "min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95"
-      }, "\u8D85\u8D8A\u5F37\u5316")), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto px-4 pt-3"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "masuEnhance",
-        compact: true
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full"
-      }, points > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "bg-slate-900 border border-amber-500/40 rounded-3xl p-3 shadow-xl"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-2 mb-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"
-      }, /*#__PURE__*/React.createElement(Sparkles, {
-        size: 14
-      }), "\u307E\u3068\u3081\u3066\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold"
-      }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-5 gap-1 p-1 rounded-xl bg-black/40 mb-3",
-        role: "group",
-        "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
-      }, [1, 5, 10, 100, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        key: unit,
-        "aria-pressed": bulkEnhanceUnit === unit,
-        onClick: () => setBulkEnhanceUnit(unit),
-        className: `min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit === unit ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`
-      }, unit === 'MAX' ? 'MAX' : `${unit}P`))), restoreDraft && restoreDraft.requested > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "mb-3 rounded-xl border border-cyan-700/40 bg-cyan-950/20 p-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: restoreResetAllocation,
-        disabled: restoreDraft.restored <= 0,
-        className: "w-full min-h-[40px] rounded-lg bg-slate-800 text-cyan-200 text-[10px] font-black active:scale-95 disabled:opacity-40"
-      }, "\u21A9 \u30EA\u30BB\u30C3\u30C8\u524D\u306E\u914D\u5206\u3092\u5FA9\u5143"), /*#__PURE__*/React.createElement("div", {
-        className: `mt-1 text-[8px] font-bold text-center ${restoreDraft.omitted > 0 ? 'text-amber-300' : 'text-slate-500'}`
-      }, restoreDraft.omitted > 0 ? `現行の上限・残りptに合わせ、${restoreDraft.restored}ptを仮配分（復元できない分 ${restoreDraft.omitted}pt）` : '保存は「強化する」を押した時だけです')), /*#__PURE__*/React.createElement("div", {
-        className: "mb-3"
-      }, renderPowerBadge(plannedMasuPowerOf(masu, plan), {
-        before: currentPower,
-        size: 'md'
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold mb-1.5"
-      }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
-        className: "space-y-1.5 mb-3"
-      }, RANGE_LABELS.map((label, idx) => {
-        const before = resolvedDistAptitude[idx] || 'C',
-          after = plannedGrade(idx),
-          added = plan.apt[idx];
-        return /*#__PURE__*/React.createElement("div", {
-          key: idx,
-          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: `text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`
-        }, label), /*#__PURE__*/React.createElement("div", {
-          className: "text-center font-mono font-black text-[12px]"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: DIST_APTITUDE_COLOR[before]
-        }, before), /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500 mx-1"
-        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
-          className: added > 0 ? 'text-cyan-300' : 'text-slate-300'
-        }, after)), /*#__PURE__*/React.createElement("label", {
-          className: "flex items-center gap-0.5 min-w-0"
-        }, /*#__PURE__*/React.createElement("input", {
-          "data-direct-point-input": "normal-apt",
-          "aria-label": `${label}距離適性の振り分けポイントを直接入力`,
-          type: "text",
-          inputMode: "numeric",
-          pattern: "[0-9]*",
-          enterKeyHint: "done",
-          autoComplete: "off",
-          value: added,
-          onFocus: e => e.currentTarget.select(),
-          onChange: e => setPlanExact('apt', idx, e.currentTarget.value),
-          onKeyDown: e => {
-            if (e.key === 'Enter') e.currentTarget.blur();
-          },
-          className: "w-full min-w-0 h-8 rounded-md border border-amber-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"
-        }), /*#__PURE__*/React.createElement("span", {
-          className: "text-[8px] font-black text-amber-300"
-        }, "P")), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-2 gap-1"
-        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
-          "aria-label": `${label}距離適性を減らす`,
-          disabled: added <= 0,
-          onPress: () => addPlanApt(idx, -1),
-          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
-        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
-          "aria-label": `${label}距離適性を増やす`,
-          disabled: !canPlanApt(idx),
-          onPress: () => addPlanApt(idx, 1),
-          className: "min-h-[40px] rounded-lg bg-amber-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
-        }, "\uFF0B")));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold mb-1.5"
-      }, "\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
-        className: "space-y-1.5"
-      }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
-        const n = plan.stat[key] || 0,
-          gain = n * (STAT_POINT_GAIN[key] || 1),
-          before = currentStatValue(key);
-        return /*#__PURE__*/React.createElement("div", {
-          key: key,
-          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[8px] text-center text-emerald-300 font-black"
-        }, label), /*#__PURE__*/React.createElement("div", {
-          className: "text-center font-mono font-black text-[11px]"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-white"
-        }, before), /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500 mx-1"
-        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
-          className: gain > 0 ? 'text-emerald-300' : 'text-slate-300'
-        }, before + gain)), /*#__PURE__*/React.createElement("label", {
-          className: "flex items-center gap-0.5 min-w-0"
-        }, /*#__PURE__*/React.createElement("input", {
-          "data-direct-point-input": "normal-stat",
-          "aria-label": `${label}の振り分けポイントを直接入力`,
-          type: "text",
-          inputMode: "numeric",
-          pattern: "[0-9]*",
-          enterKeyHint: "done",
-          autoComplete: "off",
-          value: n,
-          onFocus: e => e.currentTarget.select(),
-          onChange: e => setPlanExact('stat', key, e.currentTarget.value),
-          onKeyDown: e => {
-            if (e.key === 'Enter') e.currentTarget.blur();
-          },
-          className: "w-full min-w-0 h-8 rounded-md border border-amber-500/30 bg-slate-950/80 px-0.5 text-center text-[9px] font-mono font-black text-amber-300 outline-none focus:border-amber-300"
-        }), /*#__PURE__*/React.createElement("span", {
-          className: "text-[8px] font-black text-amber-300"
-        }, "P")), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-2 gap-1"
-        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
-          "aria-label": `${label}を減らす`,
-          disabled: n <= 0,
-          onPress: () => addPlanStat(key, -1),
-          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
-        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
-          "aria-label": `${label}を増やす`,
-          disabled: planLeft <= 0,
-          onPress: () => addPlanStat(key, 1),
-          className: "min-h-[40px] rounded-lg bg-emerald-700 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
-        }, "\uFF0B")));
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 mt-2"
-      }, "\uFF0B\uFF0F\u2212\u306F\u9577\u62BC\u3057\u3067\u3082\u9023\u7D9A\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
-        className: "sticky bottom-0 z-20 -mx-4 px-4 pt-2 border-t border-amber-500/30 bg-slate-950/95",
-        style: {
-          paddingBottom: 'max(.75rem,env(safe-area-inset-bottom))'
-        },
-        "aria-label": "\u5F37\u5316\u306E\u78BA\u5B9A\u64CD\u4F5C"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between mb-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-black text-slate-300"
-      }, "\u6B8B\u308Apt"), /*#__PURE__*/React.createElement("span", {
-        className: "font-mono font-black"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: planLeft > 0 ? 'text-amber-300' : 'text-slate-500'
-      }, planLeft), /*#__PURE__*/React.createElement("small", {
-        className: "text-slate-500"
-      }, " / ", points, " pt"))), /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        disabled: planUsed <= 0,
-        onClick: () => setBulkPlan(null),
-        className: "min-h-[46px] px-3 rounded-xl font-black text-[10px] bg-slate-800 text-slate-300 disabled:opacity-30"
-      }, "\u914D\u5206\u3092\u3059\u3079\u3066\u53D6\u6D88"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        disabled: planUsed <= 0,
-        onClick: applyPlan,
-        className: "min-h-[46px] flex-1 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700"
-      }, planUsed > 0 ? `${planUsed}ptを使って強化する` : '振り分けてください')))), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-4 bg-slate-900 border border-amber-500/30 rounded-3xl p-4 shadow-xl"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "relative w-20 h-20 shrink-0"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: `w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory || []).length > 0 ? 'border-amber-400 ring-2 ring-amber-400' : 'border-amber-400/40'}`
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: masu.baseId,
-        src: base.iconUrl,
-        alt: masu.name,
-        masuColors: getMasuColors(masu),
-        className: "w-full h-full object-cover"
-      })), /*#__PURE__*/React.createElement(ReincarnateBadge, {
-        count: masu.reincarnateCount
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-w-0"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-lg font-black text-white truncate"
-      }, masu.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-amber-400 font-bold uppercase tracking-wider"
-      }, "\u30DE\u30B9\u30E2\u30F3\u30FB\u5143\u306F", base.name), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-pink-300 font-black flex items-center gap-1"
-      }, /*#__PURE__*/React.createElement(Heart, {
-        size: 9
-      }), "\u7D46 Lv.", lvl.level, " ", /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-500"
-      }, "/ ", normalizeMasuProgression(masu).levelCap)), /*#__PURE__*/React.createElement("div", {
-        className: "w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "h-full bg-gradient-to-r from-pink-500 to-rose-400",
-        style: {
-          width: `${pct}%`
-        }
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1.5"
-      }, renderPowerBadge(currentPower, {
-        dense: true,
-        size: 'sm'
-      }))))), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-3 rounded-2xl border border-amber-500/40 flex items-center justify-between"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-amber-300 uppercase font-black flex items-center gap-1.5"
-      }, /*#__PURE__*/React.createElement(Sparkles, {
-        size: 12
-      }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", {
-        className: "text-xl text-white font-black font-mono"
-      }, points)), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-3 rounded-2xl border border-white/5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 uppercase font-bold mb-1"
-      }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9(\u5F37\u5316\u5206\u8FBC\u307F)"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-x-3 gap-y-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[11px] font-mono"
-      }, /*#__PURE__*/React.createElement("span", null, "\u30E9\u30A4\u30D5:"), /*#__PURE__*/React.createElement("span", {
-        className: "text-pink-400 font-bold"
-      }, currentStatValue('hp'), (masu.statPoints?.hp || 0) > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "text-emerald-400 text-[9px]"
-      }, " (+", masu.statPoints.hp, ")"))), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[11px] font-mono"
-      }, /*#__PURE__*/React.createElement("span", null, "\u3061\u304B\u3089:"), /*#__PURE__*/React.createElement("span", {
-        className: "text-red-400 font-bold"
-      }, currentStatValue('atk'), (masu.statPoints?.atk || 0) > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "text-emerald-400 text-[9px]"
-      }, " (+", masu.statPoints.atk, ")"))), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[11px] font-mono"
-      }, /*#__PURE__*/React.createElement("span", null, "\u4E08\u592B\u3055:"), /*#__PURE__*/React.createElement("span", {
-        className: "text-emerald-400 font-bold"
-      }, currentStatValue('def'), (masu.statPoints?.def || 0) > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "text-emerald-400 text-[9px]"
-      }, " (+", masu.statPoints.def, ")"))), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-[11px] font-mono"
-      }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4:"), /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-400 font-bold"
-      }, currentStatValue('guts'), (masu.statPoints?.guts || 0) > 0 && /*#__PURE__*/React.createElement("span", {
-        className: "text-emerald-400 text-[9px]"
-      }, " (+", masu.statPoints.guts, ")"))))), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-3 rounded-2xl border border-pink-500/30"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-pink-400 uppercase font-bold"
-      }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9(\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u304C\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u6642\u306B\u52A0\u7B97\u3055\u308C\u308B\u5024)"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-white font-bold mt-1"
-      }, ps.hp > 0 && `HP+${ps.hp} `, ps.atk > 0 && `攻+${ps.atk} `, ps.def > 0 && `防+${ps.def} `, ps.guts > 0 && `G+${ps.guts} `, !(ps.hp > 0 || ps.atk > 0 || ps.def > 0 || ps.guts > 0) && 'なし')), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 font-bold text-center px-2"
-      }, "\u5F37\u5316\u306F\u4E0A\u306E\u300C\u307E\u3068\u3081\u3066\u5F37\u5316\u300D\u3067\u4E0B\u66F8\u304D\u3057\u3001\u78BA\u5B9A\u3059\u308B\u3068\u4FDD\u5B58\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
-        onClick: backToDetail,
-        className: "w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2"
-      }, "\u5B8C\u4E86")));
-    })(), dyeTargetMasuId && (() => {
+      },
+      onOpenTranscendEnhance: () => {
+        setTranscendPlan(null);
+        setTranscendExchangeError('');
+        setGameState('MASU_TRANSCEND_ENHANCE');
+      },
+      renderPowerBadge: renderPowerBadge,
+      saveMissionProgress: saveMissionProgress,
+      setBulkEnhanceUnit: setBulkEnhanceUnit,
+      setBulkPlan: setBulkPlan,
+      setEffect: setEffect,
+      setMasuMonDetail: setMasuMonDetail,
+      spendPointsBulk: spendPointsBulk
+    }), dyeTargetMasuId && (() => {
       const masu = getMasuMon(dyeTargetMasuId);
       const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
       if (!masu || !base) {

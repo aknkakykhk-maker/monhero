@@ -1,5 +1,6 @@
 // マスモン詳細の育成導線が対象個体を引き継ぎ、神殿の機能を混ぜていないことを確認する。
 const fs = require('fs');
+const { screenSource } = require(require('path').join(__dirname, '..', 'harness'));
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const breeder = fs.readFileSync('monster-hero/data/breeder.js', 'utf8');
 let failed = false;
@@ -12,9 +13,15 @@ const detail = source.slice(start, end);
 check('詳細にコンパクトな育成・カスタム3導線', detail.includes('育成・カスタム') && detail.includes('grid grid-cols-3') && ['強化','トレーニング','染色'].every(label=>detail.includes(`>${label}<`)));
 check('強化は詳細の個体を維持して専用画面へ進む', detail.includes("setMasuEnhanceFrom(gameState);setGameState('MASU_ENHANCE')"));
 // 戻り先も詳細にする。masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングができない
+// 2026-09-10(STEP 6-9)にマスモン強化を MasuEnhanceScreen へ切り出した。
+// 戻り先を決めるのは本体のまま(画面へは onBack として渡す)。
+// 数を数える対象は強化画面に限る——図鑑にも同名の backToDetail があり、
+// 連結物を丸ごと数えると他の画面のぶんまで混ざるため
+const enhanceScreen = screenSource('MASU_ENHANCE', 'MasuEnhanceScreen');
 check('強化から戻ると一覧ではなく詳細へ戻る',
   source.includes("const backToDetail = () => { setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuEnhanceFrom(null); setBulkPlan(null); };")
-    && (source.match(/onClick=\{backToDetail\}/g) || []).length === 2
+    && source.includes('onBack={backToDetail}')
+    && (enhanceScreen.match(/onClick=\{backToDetail\}/g) || []).length === 2
     && !source.includes('backToList'));
 check('トレーニングは詳細の個体IDを引き継ぐ', detail.includes('setDetailTrainingMasuId(masu.id)') && source.includes('masuId:masu.id,count:1'));
 check('染色は詳細の個体IDと現在色を引き継ぐ', detail.includes('setDyeTargetMasuId(masu.id)') && detail.includes('getMasuColors(masu)'));
