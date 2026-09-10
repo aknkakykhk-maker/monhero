@@ -9,7 +9,7 @@ function _extends() { return _extends = Object.assign ? Object.assign.bind() : f
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7016b4537148872a
+// generated-sha256: 13b8af2a17c36934
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -27196,8 +27196,8 @@ function MonsterHeroGame() {
       marketPurchaseProcessingRef.current = false;
     }
   };
-  // 魂格再編の書は、通常の100万ダイヤ購入に加えて同じマーケット内で
-  // 勇者の証1個→1冊へ交換できる。所持品1キーだけを検証付き保存し、失敗時は元へ戻す。
+  // 魂格再編の書は、通常の100万ダイヤ商品とは別カードで
+  // 勇者の証1個→1冊へ交換できる。同じ所持品IDだけを検証付き保存し、失敗時は元へ戻す。
   const exchangeSoulRankRespecByProof = async () => {
     if (marketPurchaseProcessingRef.current) return;
     const before = ownedItemsRef.current;
@@ -39478,7 +39478,7 @@ function MonsterHeroGame() {
           className: "rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap"
         }, label, /*#__PURE__*/React.createElement("b", {
           className: "block text-[11px] leading-tight text-white"
-        }, value)))), heroProofReward > 0 && /*#__PURE__*/React.createElement("div", {
+        }, value))), heroProofReward > 0 && /*#__PURE__*/React.createElement("div", {
           "data-hero-proof-reward": setting.id,
           className: "rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-amber-100 whitespace-nowrap"
         }, "\uD83C\uDFC5\u52C7\u8005\u306E\u8A3C", /*#__PURE__*/React.createElement("b", {
