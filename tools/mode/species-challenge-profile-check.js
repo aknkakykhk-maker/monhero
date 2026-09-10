@@ -1,5 +1,6 @@
 const fs = require('fs');
 const vm = require('vm');
+const { screenSource } = require(require('path').join(__dirname, '..', 'harness'));
 
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const start = source.indexOf('const DIFFICULTY_SETTINGS =');
@@ -38,7 +39,10 @@ const profileEnd=source.indexOf('{/* イベント回想:',profileStart);
 const profile=source.slice(profileStart,profileEnd);
 assert(profile.includes('SPECIES_CHALLENGE_MODE')&&profile.includes('data-profile-mode={mode.id}'),'プロフィールに種族チャレンジを既存モードカードとして追加する');
 assert(profile.includes('speciesChallengeProfileSummary(speciesChallengeProgress)'),'プロフィールは既存の正規化済みローカル進行だけを集計する');
-assert(profile.includes("openSpeciesChallengeRecords('PROFILE')"),'タップで既存の全種族ランキングへ進み、プロフィールへ戻れる');
+// 画面は「開いて」と伝えるだけで、戻り先を決めるのは本体。両方つながっていることを見る
+assert(profile.includes('onOpenSpeciesRecords()')
+  && source.includes("onOpenSpeciesRecords={()=>openSpeciesChallengeRecords('PROFILE')}"),
+  'タップで既存の全種族ランキングへ進み、プロフィールへ戻れる');
 assert(!profile.includes('SPECIES_CHALLENGE_DIFFICULTY_IDS.map'),'プロフィールへ154組を直接描画しない');
 assert(!profile.includes('mh_hs_')&&!profile.includes('localRankings')&&!profile.includes('loadRankings('),'通常チャレンジや全国ランキング値をプロフィール集計へ混ぜない');
 assert(profile.includes('w-full min-h-[64px]')&&profile.includes('min-w-0 flex-1')&&profile.includes('truncate'),'320〜390pxで横へはみ出さない既存カード構造を維持する');

@@ -37,6 +37,7 @@ const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分�
 // までを見る。
 const fs = require('fs');
 const path = require('path');
+const { screenSource } = require(require('path').join(__dirname, '..', 'harness'));
 const vm = require('vm');
 
 const root = path.resolve(TOOLS_DIR, '..');
@@ -522,7 +523,8 @@ const makeWorld = ({
   check('指を置く大きさ(44px)を確保している', button.includes('min-h-[44px]'));
 
   // ---- ⑧ 置き場所 ----
-  const home = grab('{gameState===\'RHYTHM_DEMO_HOME\'&&(()=>{', 'data-rhythm-demo-help');
+  // 2026-09-10(STEP 6-10)に曲えらびを切り出したので、画面の中身は screenSource で取る
+  const home = screenSource('RHYTHM_DEMO_HOME', 'RhythmSongSelectScreen');
   check('モンビーのホームのヘッダーに置いている', home.includes('<RhythmOrientationButton/>'));
   check('題名が折り返してヘッダーが伸びないようにしてある', home.includes('truncate text-sm font-black'));
   // プレイ中に向きを変えられると譜面の見え方が変わるので、演奏画面には置かない

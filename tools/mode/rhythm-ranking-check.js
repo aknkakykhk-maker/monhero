@@ -8,6 +8,8 @@
 //
 //   node tools/mode/rhythm-ranking-check.js
 const fs=require('fs'),path=require('path'),vm=require('vm');
+// STEP 6-10 で画面が切り出されたので、画面の中身は screenSource で取る
+const { screenSource }=require(path.join(__dirname,'..','harness'));
 const ROOT=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(ROOT,file),'utf8');
 const data=read('monster-hero/data/rhythm-mode.js');
 const game=read('monster-hero/src/game-system.jsx');
@@ -170,8 +172,11 @@ check('あそびかた練習は自己ベストにも送信にも進まない',((
 
 // --- 画面(一覧・詳細) ---
 check('体験版ホームに全国ランキングへの入口がある',game.includes('data-rhythm-demo-ranking'));
+// 2026-09-10(STEP 6-10)に曲えらびを切り出したので、
+// 「画面のボタンが本体へ頼む」→「本体が読み込んでから画面を移す」の2段で見る
 check('入口はloadRhythmRankingを呼んでから専用画面(RHYTHM_RANKING)へ進む',
-  /data-rhythm-demo-ranking[\s\S]{0,160}loadRhythmRanking\(song\);setGameState\('RHYTHM_RANKING'\);/.test(game));
+  /data-rhythm-demo-ranking[\s\S]{0,160}onOpenRanking\(song\)/.test(game)
+  && /onOpenRanking=\{\(song\)=>\{loadRhythmRanking\(song\);setGameState\('RHYTHM_RANKING'\);\}\}/.test(game));
 check('一覧画面がある',game.includes("gameState==='RHYTHM_RANKING'")&&game.includes('data-rhythm-ranking'));
 check('読み込み中・失敗・0件のときの案内をそれぞれ持つ',
   game.includes('data-rhythm-ranking-loading')&&game.includes('data-rhythm-ranking-error')&&game.includes('data-rhythm-ranking-empty'));
@@ -187,9 +192,7 @@ check('詳細ボタンから判定内訳・最大コンボ・達成称号を確�
 check('詳細が無い行(送信が古い/失敗した記録等)には詳細ボタンを出さない',
   /\{entry\.detail&&<button data-rhythm-ranking-detail/.test(game));
 check('一覧・詳細のボタンはiPhoneで押せる大きさ(44px以上)',(()=>{
-  const at=game.indexOf("gameState==='RHYTHM_RANKING'");
-  const end=game.indexOf("gameState==='RHYTHM_DEBUG'",at);
-  const block=at>=0&&end>at?game.slice(at,end):'';
+  const block=screenSource('RHYTHM_RANKING','RhythmRankingScreen');
   const heights=[...block.matchAll(/min-h-\[(\d+)px\]/g)].map(m=>Number(m[1]));
   return block.length>0&&heights.length>0&&heights.every(h=>h>=44);
 })());

@@ -129,6 +129,10 @@
       "role": "画面: モンスター図鑑(MONSTER_DEX / MONSTER_DEX_DETAIL / MONSTER_ATTACK_PREVIEW)。表示のみ"
     },
     {
+      "file": "58-screen-rhythm.jsx",
+      "role": "画面: モンヒロビート(曲えらび・案内・マスモン枠・ランキング)。演奏画面は触らない"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

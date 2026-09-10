@@ -6,6 +6,8 @@
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
+// STEP 6 で画面が 5x-screen-*.jsx へ移るので、画面の中身は screenSource で取る
+const { screenSource }=require(path.join(__dirname,'..','harness'));
 
 const ROOT=path.resolve(__dirname,'..','..');
 const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
@@ -153,8 +155,11 @@ ok('設定を閉じたとき、開いた画面へ戻る',
   &&game.includes('onBack={()=>setGameState(rhythmOptionsBack)}')
   &&game.includes("setRhythmOptionsBack('RHYTHM_DEMO_HOME')")
   &&game.includes("setRhythmOptionsBack('RHYTHM_DEBUG')"));
+// 2026-09-10(STEP 6-10)にモンヒロビートの画面を切り出したので、
+// 「画面が閉じると伝える」→「本体が体験版ホームへ戻す」の2段で見る
 ok('マスモン設定を閉じたとき体験版ホームへ戻る',
-  game.includes("setRhythmMonsterPickerOpen(false);setGameState('RHYTHM_DEMO_HOME');"));
+  game.includes("setRhythmMonsterPickerOpen(false);onBackToSongSelect();")
+  && game.includes("onBackToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}"));
 ok('公開前はデバッグ画面から、公開後はHOMEへ戻る',
   game.includes("setGameState(RHYTHM_MODE_PUBLIC_RELEASE?'HOME':'DEBUG_SETTINGS')"));
 
@@ -191,9 +196,7 @@ ok('公開フラグが立つまではHOMEから遊べず「準備中」の案内
   &&game.includes('モンヒロビートは準備中です'));
 ok('準備中の案内は修行のCSSを借りず、自前の見た目にしてある',(()=>{
   // 次の画面まで見てしまうと隣のCSSを拾うので、この画面のぶんだけを切り出す。
-  const at=game.indexOf("gameState==='RHYTHM_INFO'");
-  const next=game.indexOf("{gameState===",at+10);
-  const block=game.slice(at,next>at?next:at+3000);
+  const block=screenSource('RHYTHM_INFO','RhythmInfoScreen');
   return !block.includes('mh-training-')&&block.includes('overflow-y-auto');
 })());
 ok('準備中の案内にもヘルプの説明がある',
@@ -211,17 +214,13 @@ ok('準備中のヘルプ項目は、モンビーが公開されていないあ�
   return head.includes("unreleasedFlag:'rhythmMode'")&&!/[^n]releaseFlag/.test(head);
 })());
 ok('体験版ホームに譜面制作UIを出していない',(()=>{
-  const start=game.indexOf("gameState==='RHYTHM_DEMO_HOME'");
-  const end=game.indexOf("gameState==='RHYTHM_DEMO_MONSTERS'");
-  const block=game.slice(start,end>start?end:start+9000);
+  const block=screenSource('RHYTHM_DEMO_HOME','RhythmSongSelectScreen');
   return !block.includes('data-rhythm-debug')&&!block.includes('rhythmChartToolsOpened')&&!block.includes('RHYTHM_SONGS.map');
 })());
 
 // --- 押しやすさ ---
 ok('体験版の操作ボタンはiPhoneで押せる大きさ（44px以上）',(()=>{
-  const start=game.indexOf("gameState==='RHYTHM_DEMO_HOME'");
-  const end=game.indexOf("gameState==='RHYTHM_DEMO_MONSTERS'");
-  const block=game.slice(start,end>start?end:start+9000);
+  const block=screenSource('RHYTHM_DEMO_HOME','RhythmSongSelectScreen');
   // onClick={()=>...} の「=>」で切れないよう、直前が「=」でない「>」までを1つのタグとして見る。
   const buttons=[];
   for(let i=block.indexOf('<button');i>=0;i=block.indexOf('<button',i+1)){
@@ -279,10 +278,11 @@ ok('縦画面のときだけ横画面対応の案内を出す',
 ok('音ゲー中(プレイ画面)には案内を出さない',(()=>{
   // RhythmTapTest(プレイ本体)の中身と、プレイ画面を出している行の両方に案内が無いこと。
   // 部品の並び順に頼らないよう、その部品の終わりは「次の画面(RHYTHM_DEMO_HOME)の手前」で切る。
-  const start=game.indexOf('const RhythmTapTest');
-  if(start<0)return false;
-  const end=game.indexOf("gameState==='RHYTHM_DEMO_HOME'");
-  const block=game.slice(start,end>start?end:game.length);
+  // 部品の切れ目を「次の画面の位置」で決めると、画面が別ファイルへ移った途端に
+  // 範囲が伸びて他の画面まで飲み込む(2026-09-10 の STEP 6-10 で実際にそうなった)。
+  // 演奏画面はそれ専用の部品ファイルなので、そのファイルをそのまま見る
+  const block=read('monster-hero/src/parts/30-rhythm-play.jsx');
+  if(!block.includes('RhythmTapTest'))return false;
   const playLine=(game.match(/^.*gameState==='RHYTHM_PLAY'.*$/m)||[''])[0];
   return !block.includes('<RhythmLandscapeHint')&&!playLine.includes('RhythmLandscapeHint');
 })());

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fa64c5542fb35798
+// source-sha256: 5cdfc3a493f32d60
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 1261345c9048b5e3
+// generated-sha256: 6e630504b0d69e8b
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 00:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 00:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23842,6 +23842,626 @@ function MonsterDexDetailScreen({
   }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u5186\u76E4\u77F3\u3092\u624B\u306B\u5165\u308C\u3066\u89E3\u653E\u3059\u308B\u3068\u3001\u8840\u7D71\u30FB\u80FD\u529B\u30FB\u6280\u304C\u56F3\u9451\u306B\u8A18\u9332\u3055\u308C\u307E\u3059\u3002")))));
 }
 
+// ---- part: 58-screen-rhythm.jsx ----
+// ==== 画面: モンヒロビート(演奏画面以外) ====
+//
+// MonsterHeroGame から切り出した9画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-10)。
+// 曲えらび・案内・マスモン枠・全国ランキング・入口の案内の5つ。
+//
+// 【この画面ならではの注意】
+// ・**演奏画面(RHYTHM_PLAY / RhythmTapTest)は触っていない。** タイミング基盤は STEP 9 の領域で、
+//   REGRESSION_RISK_MAP.md §4-1 の「構造目的では変更しない」対象
+// ・曲を決めて演奏へ入る処理(全画面化の要求・静音・setRhythmPlay)は、
+//   「指で押した直後」でないとブラウザに断られるため、中身は MonsterHeroGame 側に残して
+//   onPlaySong として受け取る
+// ・オプション画面(RHYTHM_OPTIONS)は前から共有層 29 の RhythmOptions に出ているので対象外
+// ・∞周回を裏で走らせたままモンヒロビートへ来ている場合(rhythmBackgroundRun)は
+//   戻り先が変わる。判断は本体に残し、画面は onExit を呼ぶだけ
+
+function RhythmInfoScreen({
+  returnToHome
+}) {
+  return /*#__PURE__*/React.createElement("main", {
+    "data-rhythm-info": true,
+    className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1",
+    style: {
+      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "HOME\u3078\u623B\u308B",
+    onClick: returnToHome,
+    className: "min-h-[44px] px-2 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 18
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[8px] font-black text-cyan-300"
+  }, "COMING SOON"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-sm font-black tracking-widest text-cyan-200"
+  }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3",
+    style: {
+      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "my-6 text-center text-6xl"
+  }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("h3", {
+    className: "text-center text-xl font-black text-cyan-200"
+  }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-3 text-[11px] leading-relaxed text-slate-300"
+  }, "\u66F2\u306B\u5408\u308F\u305B\u3066\u30015\u3064\u306E\u30EC\u30FC\u30F3\u3092\u6D41\u308C\u3066\u304F\u308B\u30CE\u30FC\u30C4\u3092\u6F14\u594F\u3059\u308B\u97F3\u30B2\u30FC\u306E\u30E2\u30FC\u30C9\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[11px] leading-relaxed text-slate-300"
+  }, "\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u304C\u66F2\u306E\u9014\u4E2D\u3067\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306B\u306A\u3063\u3066\u6D41\u308C\u3066\u304D\u3066\u3001\u53D6\u308B\u3068\u8840\u7D71\u3054\u3068\u306E\u529B\u304C\u50CD\u304F\u4E88\u5B9A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "text-[11px] font-black text-amber-200"
+  }, "\u6B63\u5F0F\u5B9F\u88C5\u524D\u306E\u304A\u77E5\u3089\u305B"), /*#__PURE__*/React.createElement("small", {
+    className: "mt-1 block text-[10px] leading-relaxed text-amber-100/90"
+  }, "\u3044\u307E\u306F\u8B5C\u9762\u3092\u5236\u4F5C\u3057\u3066\u3044\u308B\u6BB5\u968E\u3067\u3059\u3002\u901A\u5E38\u30D7\u30EC\u30A4\u304B\u3089\u306F\u958B\u59CB\u3067\u304D\u307E\u305B\u3093\u3002\u30CF\u30A4\u30B9\u30B3\u30A2\u306E\u8A18\u9332\u3084\u5831\u916C\u306E\u4ED8\u4E0E\u3082\u884C\u3044\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("button", {
+    onClick: returnToHome,
+    className: "mt-5 min-h-[48px] w-full rounded-xl bg-slate-700 text-sm font-black"
+  }, "HOME\u3078\u623B\u308B")));
+}
+function RhythmSongSelectScreen({
+  catchingUp,
+  difficulty,
+  dismissQuickRhythmBackground,
+  handleGiveUp,
+  mainHero,
+  onExit,
+  onOpenHelp,
+  onOpenMonsterSlots,
+  onOpenOptions,
+  onOpenRanking,
+  onPlaySong,
+  quickClearCounts,
+  quickRhythmBackgroundVisible,
+  quickRunDetailOpen,
+  quickRunFinishReasonText,
+  quickRunPendingRewards,
+  quickRunProgress,
+  quickRunResumable,
+  quickRunStartError,
+  quickRunStopConfirm,
+  repeatTemplateForNewRun,
+  resultProcessing,
+  resumeQuickRunFromRhythm,
+  returnToBackgroundRun,
+  returnToHome,
+  rhythmBackgroundRun,
+  rhythmBestRecords,
+  rhythmSelectView,
+  rhythmSelectedDifficultyId,
+  rhythmSelectedSongId,
+  rhythmSongListScrollRef,
+  runStage,
+  runStageRef,
+  saveRhythmSelectView,
+  setQuickRunDetailOpen,
+  setQuickRunStartError,
+  setQuickRunStopConfirm,
+  setRhythmSelectedDifficultyId,
+  setRhythmSelectedSongId,
+  spotClass,
+  startQuickRunFromRhythm,
+  wave
+}) {
+  const songs = rhythmDemoSongs(RHYTHM_SONGS);
+  const difficulties = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
+  // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
+  // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
+  // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
+  // (2026-09-07・ユーザー提案)。縦は余白が無いので今までどおり下に置く。
+  // 中身は同じものを使い回す(2つ書くと片方だけ直す事故が起きる)。
+  const quickRunBandLabel = quickRunProgress ? quickRunProgress.finished
+  // なぜ終わったかまで出す。「終わりました」だけだと、負けたのか
+  // アプリが裏に回ったのか分からなかった(2026-09-07・ユーザー報告)
+  ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）`
+  // ★演奏で何周ぶん入ったかは曲リザルトで出す。ここはいま何WAVE・何周目かを
+  //   出す唯一の場所なので、知らせを重ねない
+  //   (2026-09-07・ユーザー提案「曲リザルトの画面で出すほうがいい。
+  //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)
+  : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
+  const quickRunBandButton = quickRunProgress ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setQuickRunDetailOpen(open => !open),
+    "aria-expanded": quickRunDetailOpen,
+    "aria-label": "\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u306E\u9032\u6357",
+    className: "flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: `shrink-0 text-[10px] font-black ${quickRunProgress.finished ? 'text-amber-200' : 'text-fuchsia-200'}`
+  }, quickRunProgress.finished ? '⏹' : '⚔'), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-[10px] font-black text-slate-200"
+  }, quickRunBandLabel), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[9px] font-black text-slate-400"
+  }, quickRunDetailOpen ? '▲' : '▼')) : null;
+  // 周回していないときの「ここから始める」。帯と同じく、縦持ちはヘッダーの下・
+  // 横持ちはヘッダーの空きへ入れる。中身は1つ作って使い回す(2つ書くと片方だけ直す事故になる)。
+  // ★塗りつぶしをやめて枠だけにし、主張を抑える。モンヒロビートだけで遊ぶ人には
+  //   関係のないボタンなので、大きく出しすぎない(2026-09-07・ユーザー指摘)
+  const quickRunStartNode = !quickRunProgress && !runStage ? repeatTemplateForNewRun() ? /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-quick-run-start-button": true,
+    onClick: () => {
+      if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
+    },
+    className: "flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
+  }, "\u2694 \u88CF\u3067\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B") : /*#__PURE__*/React.createElement("p", {
+    "data-quick-run-start-hint": true,
+    className: "px-1 py-1 text-[9px] leading-relaxed text-slate-500"
+  }, "\u88CF\u3067\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\u3001\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002") : null;
+  return /*#__PURE__*/React.createElement("main", {
+    "data-rhythm-demo-home": true,
+    className: "flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
+    style: {
+      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-back": true,
+    "aria-label": rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
+    title: rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
+    onClick: onExit,
+    className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
+  }, rhythmBackgroundRun ? /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black leading-tight text-fuchsia-200"
+  }, "\u2694", /*#__PURE__*/React.createElement("br", null), "\u623B\u308B") : /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
+  }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
+    className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
+  }, "\uD83C\uDFB5 \u697D\u66F2\u9078\u629E")), quickRunProgress && /*#__PURE__*/React.createElement("div", {
+    "data-quick-run-progress-header": true,
+    className: "min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70"
+  }, quickRunBandButton), quickRunStartNode && /*#__PURE__*/React.createElement("div", {
+    "data-quick-run-start-header": true,
+    className: "min-w-0 max-w-[260px] flex-1"
+  }, quickRunStartNode), /*#__PURE__*/React.createElement("span", {
+    "data-rhythm-demo-badge": true,
+    className: "shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
+  }, "\u4F53\u9A13\u7248"), /*#__PURE__*/React.createElement(RhythmOrientationButton, null), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-demo-help": true,
+    "aria-label": "\u904A\u3073\u304B\u305F",
+    title: "\u904A\u3073\u304B\u305F",
+    onClick: onOpenHelp,
+    className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`
+  }, "\uD83D\uDCD6"), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-demo-monsters": true,
+    "aria-label": "\u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A",
+    title: "\u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A",
+    onClick: onOpenMonsterSlots,
+    className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100${spotClass('monsters')}`
+  }, "\uD83D\uDC7E"), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-demo-options": true,
+    "aria-label": "\u30AA\u30D7\u30B7\u30E7\u30F3",
+    title: "\u30AA\u30D7\u30B7\u30E7\u30F3",
+    onClick: onOpenOptions,
+    className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`
+  }, "\u2699\uFE0F")), quickRunProgress && /*#__PURE__*/React.createElement("div", {
+    "data-quick-run-progress": true,
+    className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-quick-run-band-portrait": true
+  }, quickRunBandButton), quickRunDetailOpen && /*#__PURE__*/React.createElement("div", {
+    "data-quick-run-progress-detail": true,
+    className: "border-t border-white/10 px-3 py-2"
+  }, /*#__PURE__*/React.createElement("dl", {
+    className: "grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("dt", {
+    className: "text-slate-400"
+  }, "\u5468\u56DE\u6570"), /*#__PURE__*/React.createElement("dd", {
+    className: "font-black text-white"
+  }, quickRunProgress.loops, "\u5468")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("dt", {
+    className: "text-slate-400"
+  }, "\u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("dd", {
+    className: "font-black text-white"
+  }, quickDifficultySetting(difficulty)?.label || difficulty)), (() => {
+    const pending = quickRunPendingRewards();
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-400"
+    }, "\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("dd", {
+      className: "font-black text-cyan-200"
+    }, "+", Math.floor(quickRunProgress.xp + pending.xp).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("dt", {
+      className: "text-slate-400"
+    }, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("dd", {
+      className: "font-black text-amber-200"
+    }, "+", Math.floor(quickRunProgress.gold + pending.gold).toLocaleString())), (pending.xp > 0 || pending.gold > 0) && /*#__PURE__*/React.createElement("div", {
+      className: "col-span-2 text-[9px] text-slate-500"
+    }, "\u3046\u3061\u4ECA\u306E\u5468\u306E\u3076\u3093\uFF08\u7D4C\u9A13\u5024 +", Math.floor(pending.xp).toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", Math.floor(pending.gold).toLocaleString(), "\uFF09\u306F\u3001\u3053\u306E\u5468\u304C\u7D42\u308F\u3063\u305F\u3068\u304D\u306B\u5165\u308A\u307E\u3059\uFF08\u8CA0\u3051\u3066\u3082\u3001\u9014\u4E2D\u3067\u3084\u3081\u3066\u3082\u3001\u3053\u3053\u307E\u3067\u306E\u3076\u3093\u306F\u5165\u308A\u307E\u3059\uFF09\u3002"));
+  })(), /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2 flex justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("dt", {
+    className: "text-slate-400"
+  }, "\u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("dd", {
+    className: "truncate font-black text-white"
+  }, mainHero?.masuName || mainHero?.name || '—'))), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] leading-relaxed text-slate-400"
+  }, quickRunProgress.finished
+  // 止まっていても、挑戦がまだ生きていれば続きから再開できる。
+  // ★負けた・リタイアしたあとは「続き」が無い。ランの段階は残るので、
+  //   段階の有無ではなく勝負がついたかどうかで分ける
+  //   (2026-09-07・ユーザー報告「負けた場合は最初からにしないとおかしい」)
+  ? quickRunResumable ? `${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。` : `${quickRunFinishReasonText(quickRunProgress.reason)}。続きはないので、始めるときは1周目からになります。バトルへ戻ると結果を見られます。` : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
+  // ★仕様が「曲の長さぶんの周回クリア」へ変わったので、文言もそちらへ合わせる
+  //   (2026-09-07・ユーザー指摘「演奏中の文言ってこれであってる？仕様変わったよね？」。
+  //    追いつき方式のころの説明が残っていた)。
+  //   まだその難易度をクリアしていない人には入らないので、そこも言い分ける
+  : rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts) ? 'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは2周・3分台は3周…）。' : 'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'), quickRunProgress.finished && quickRunResumable && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-quick-run-resume": true,
+    onClick: () => {
+      resumeQuickRunFromRhythm();
+    },
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-emerald-300/60 bg-emerald-800/70 text-[11px] font-black text-emerald-50 active:scale-[.98]"
+  }, "\u25B6 \u5468\u56DE\u3092\u518D\u958B\u3059\u308B"), quickRunProgress.finished && !quickRunResumable && repeatTemplateForNewRun() && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-quick-run-restart": true,
+    disabled: resultProcessing,
+    onClick: () => {
+      if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
+    },
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98] disabled:opacity-50"
+  }, resultProcessing ? '結果を記録しています…' : '⚔ 1周目から新しく始める'), quickRunStartError && /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] font-black text-red-300"
+  }, "\u3044\u307E\u5468\u56DE\u3092\u59CB\u3081\u3089\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u7DE8\u6210\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u304C\u898B\u5F53\u305F\u3089\u306A\u3044\u304B\u3001\u96E3\u6613\u5EA6\u304C\u307E\u3060\u89E3\u653E\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-quick-run-progress-back": true,
+    onClick: () => {
+      if (runStageRef.current) returnToBackgroundRun();
+    },
+    className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]"
+  }, quickRunProgress.finished && !quickRunResumable ? '⚔ バトルへ戻って結果を見る' : '⚔ バトルへ戻る'), !quickRunProgress.finished && quickRunResumable && (quickRunStopConfirm ? /*#__PURE__*/React.createElement("div", {
+    "data-quick-run-stop-confirm": true,
+    className: "mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 p-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] leading-relaxed text-amber-100"
+  }, "\u5468\u56DE\u3092\u3084\u3081\u307E\u3059\u304B\uFF1F \u3044\u307E\u306E\u5468\u3082\u3053\u3053\u3067\u7D42\u308F\u308A\u3001\u30AF\u30EA\u30A2\u3057\u305FWAVE\u3076\u3093\u306E\u5831\u916C\u304C\u5165\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1.5 grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => setQuickRunStopConfirm(false),
+    className: "min-h-[44px] rounded-lg border border-white/20 text-[10px] font-black text-slate-300 active:scale-[.98]"
+  }, "\u7D9A\u3051\u308B"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-quick-run-stop-yes": true,
+    onClick: () => {
+      setQuickRunStopConfirm(false);
+      void handleGiveUp();
+    },
+    className: "min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]"
+  }, "\u3084\u3081\u308B"))) : /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-quick-run-stop": true,
+    onClick: () => setQuickRunStopConfirm(true),
+    className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]"
+  }, "\u23F9 \u3053\u3053\u3067\u5468\u56DE\u3092\u3084\u3081\u308B")))), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
+    "data-quick-rhythm-background": true,
+    className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start gap-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "quickRhythmBackground",
+    compact: true
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: dismissQuickRhythmBackground,
+    "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
+    className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
+  }, "\xD7"))), !quickRunProgress && !runStage && /*#__PURE__*/React.createElement("div", {
+    "data-quick-run-start": true,
+    "data-quick-run-start-portrait": true,
+    className: "shrink-0 border-b border-white/10 bg-slate-900/40 px-3 py-1"
+  }, quickRunStartNode, quickRunStartError && /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[9px] font-black text-red-300"
+  }, "\u3044\u307E\u5468\u56DE\u3092\u59CB\u3081\u3089\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u7DE8\u6210\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u304C\u898B\u5F53\u305F\u3089\u306A\u3044\u304B\u3001\u96E3\u6613\u5EA6\u304C\u307E\u3060\u89E3\u653E\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement(RhythmSongSelect, {
+    songs: songs,
+    difficulties: difficulties,
+    bestRecords: rhythmBestRecords,
+    songId: rhythmSelectedSongId,
+    difficultyId: rhythmSelectedDifficultyId,
+    onSongId: setRhythmSelectedSongId,
+    onDifficultyId: setRhythmSelectedDifficultyId,
+    spotClass: spotClass,
+    onPlay: onPlaySong,
+    notice: /*#__PURE__*/React.createElement(AssistantBubble, {
+      scene: "rhythmHome",
+      compact: true
+    }),
+    view: rhythmSelectView,
+    onView: saveRhythmSelectView,
+    listScrollTop: rhythmSongListScrollRef.current,
+    onListScrollTop: top => {
+      rhythmSongListScrollRef.current = top;
+    },
+    footer: song => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+      "data-rhythm-demo-ranking": true,
+      onClick: () => onOpenRanking(song),
+      className: "mt-1.5 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100"
+    }, "\uD83C\uDFC6 \u3053\u306E\u66F2\u306E\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"))
+  }));
+}
+function RhythmHelpScreen({
+  onBackToSongSelect,
+  rhythmHelpTopicId,
+  setRhythmHelpTopicId,
+  startRhythmPractice,
+  startRhythmTutorial
+}) {
+  // 公開フラグで伏せてある項目を出さないよう、生の HELP_CATEGORIES ではなく
+  // ふるい分け済みの HELP_GUIDE から引く
+  const category = helpCategoryById('rhythm');
+  const topics = category && category.topics || [];
+  const topic = rhythmHelpTopicId ? topics.find(x => x.id === rhythmHelpTopicId) || null : null;
+  const accent = category && category.color || '#fbbf24';
+  const topicIndex = topic ? topics.findIndex(x => x.id === topic.id) : -1;
+  const nextTopic = topicIndex >= 0 ? topics[topicIndex + 1] : null;
+  return /*#__PURE__*/React.createElement("main", {
+    "data-rhythm-demo-help": true,
+    className: "flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
+    style: {
+      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u623B\u308B",
+    "data-rhythm-demo-help-back": true,
+    onClick: () => {
+      if (topic) setRhythmHelpTopicId(null);else onBackToSongSelect();
+    },
+    className: "min-h-[44px] px-2 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 18
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
+  }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-sm font-black leading-tight tracking-widest text-amber-200"
+  }, topic ? `${topic.emoji} ${topic.title}` : '📖 遊びかた'))), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-demo-help-scroll": true,
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
+    style: {
+      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
+    className: "mb-3"
+  }), !topic && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "rhythmHelp"
+  }), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-demo-practice": true,
+    onClick: startRhythmPractice,
+    className: "mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950"
+  }, "\uD83E\uDD41 \u53E9\u3044\u3066\u7DF4\u7FD2\u3059\u308B"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[10px] leading-relaxed text-slate-400"
+  }, "\u5B9F\u969B\u306E\u30D7\u30EC\u30A4\u753B\u9762\u3067\u3001\u30BF\u30C3\u30D7\u30FB\u540C\u6642\u62BC\u3057\u30FB\u30DB\u30FC\u30EB\u30C9\u30FB\u30B9\u30E9\u30A4\u30C9\u30FB\u30D5\u30EA\u30C3\u30AF\u30FB\u7D42\u70B9\u30D5\u30EA\u30C3\u30AF\u30FB\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u30921\u3064\u305A\u3064\u7DF4\u7FD2\u3057\u307E\u3059\u3002\u7D0420\u79D2\u3067\u3059\u3002\u30B9\u30B3\u30A2\u3082\u81EA\u5DF1\u30D9\u30B9\u30C8\u3082\u6B8B\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-demo-help-tutorial": true,
+    onClick: startRhythmTutorial,
+    className: "mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white"
+  }, "\uD83C\uDF93 \u3082\u3046\u4E00\u5EA6\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[10px] leading-relaxed text-slate-400"
+  }, "\u66F2\u3048\u3089\u3073\u3078\u623B\u3063\u3066\u3001\u52A9\u624B\u304C\u6700\u521D\u304B\u3089\u8AAC\u660E\u3057\u307E\u3059\u3002\u4F55\u5EA6\u3067\u3082\u898B\u3089\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-demo-help-list": true,
+    className: "mt-4 space-y-2"
+  }, topics.length === 0 ? /*#__PURE__*/React.createElement("p", {
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
+  }, "\u8AAC\u660E\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002") : topics.map((x, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: x.id
+  }, x.group && x.group !== (topics[i - 1] || {}).group && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-demo-help-group": true,
+    className: "pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]",
+    style: {
+      color: accent
+    }
+  }, x.group), /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-demo-help-open": x.id,
+    onClick: () => setRhythmHelpTopicId(x.id),
+    className: "flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left active:scale-95",
+    style: {
+      borderColor: `${accent}55`,
+      backgroundColor: 'rgba(15,23,42,0.7)'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-base leading-none"
+  }, x.emoji), /*#__PURE__*/React.createElement("span", {
+    className: "min-w-0 flex-1 text-[12px] font-black leading-tight text-white"
+  }, x.title), /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 16,
+    className: "shrink-0 text-slate-500"
+  })))))), topic && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-demo-help-topic": topic.id,
+    className: "space-y-3.5 pb-2"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] font-bold leading-relaxed text-cyan-200"
+  }, topic.assistant), renderHelpBlocks(topic.blocks, accent), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 pt-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-demo-help-list-back": true,
+    onClick: () => setRhythmHelpTopicId(null),
+    className: "min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
+  }, "\u9805\u76EE\u4E00\u89A7\u3078"), nextTopic && /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-demo-help-next": true,
+    onClick: () => setRhythmHelpTopicId(nextTopic.id),
+    className: "min-h-[48px] flex-1 truncate rounded-2xl px-2 py-3 text-[11px] font-black text-black active:scale-95",
+    style: {
+      backgroundColor: accent
+    }
+  }, "\u6B21: ", nextTopic.title)))));
+}
+function RhythmMonstersScreen({
+  applyRhythmMonsterSlots,
+  masuMons,
+  onBackToSongSelect,
+  rhythmMonsterMessage,
+  rhythmMonsterPickerOpen,
+  rhythmMonsterSlotIdsInUse,
+  rhythmMonsterSlots,
+  setRhythmMonsterMessage,
+  setRhythmMonsterPickerOpen
+}) {
+  return /*#__PURE__*/React.createElement("main", {
+    "data-rhythm-demo-monsters-screen": true,
+    className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-2 border-b border-fuchsia-400/15 bg-slate-950/95 px-3 py-1",
+    style: {
+      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u623B\u308B",
+    onClick: () => {
+      setRhythmMonsterPickerOpen(false);
+      onBackToSongSelect();
+    },
+    className: "min-h-[44px] px-2 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 18
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-sm font-black tracking-widest text-fuchsia-200"
+  }, "\uD83D\uDC7E \u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3 space-y-3",
+    style: {
+      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, null), /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "rhythmMonsters",
+    compact: true
+  }), /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
+    rhythmMonsterSlots: rhythmMonsterSlots,
+    rhythmMonsterSlotIdsInUse: rhythmMonsterSlotIdsInUse,
+    rhythmMonsterPickerOpen: rhythmMonsterPickerOpen,
+    setRhythmMonsterPickerOpen: setRhythmMonsterPickerOpen,
+    rhythmMonsterMessage: rhythmMonsterMessage,
+    setRhythmMonsterMessage: setRhythmMonsterMessage,
+    applyRhythmMonsterSlots: applyRhythmMonsterSlots,
+    masuMons: masuMons
+  }), /*#__PURE__*/React.createElement(RhythmMonsterNoteGuide, null)));
+}
+function RhythmRankingScreen({
+  loadRhythmRanking,
+  onBackToSongSelect,
+  rankingBreederIcon,
+  rhythmRanking,
+  rhythmRankingDetail,
+  setRhythmRankingDetail
+}) {
+  // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
+  // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
+  const song = RHYTHM_SONGS.find(entry => entry.songId === rhythmRanking.songId) || rhythmDemoSong(RHYTHM_SONGS);
+  return /*#__PURE__*/React.createElement("main", {
+    "data-rhythm-ranking": true,
+    className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
+    style: {
+      paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u623B\u308B",
+    onClick: onBackToSongSelect,
+    className: "min-h-[44px] px-2 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 18
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-sm font-black tracking-widest text-amber-200"
+  }, "\uD83C\uDFC6 \u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u66F4\u65B0",
+    "data-rhythm-ranking-refresh": true,
+    onClick: () => loadRhythmRanking(song),
+    className: "ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200"
+  }, "\u66F4\u65B0")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
+    style: {
+      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
+    className: "mb-3"
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
+  }, "\u300C", song?.displayName || '—', "\u300D\u306EEASY\u301CMASTER\u3092\u307E\u3068\u3081\u305F\u5408\u7B97\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u304C\u9AD8\u3044\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u305F\u3081\u3001\u9AD8\u3044\u96E3\u6613\u5EA6\u3067\u6311\u3080\u307B\u3069\u4E0A\u4F4D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002\u81EA\u5206\u306E\u30B9\u30B3\u30A2\u306F\u3044\u3061\u3070\u3093\u9AD8\u30441\u4EF6\u3060\u3051\u304C\u8F09\u308A\u307E\u3059\u3002"), rhythmRanking.status === 'loading' && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-ranking-loading": true,
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
+  }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), rhythmRanking.status === 'error' && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-ranking-error": true,
+    className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
+  }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), rhythmRanking.status === 'ready' && rhythmRanking.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
+    "data-rhythm-ranking-empty": true,
+    className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
+  }, "\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u6700\u521D\u306E1\u4EF6\u306B\u306A\u3063\u3066\u307F\u307E\u3057\u3087\u3046\u3002"), rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
+    "data-rhythm-ranking-list": true,
+    className: "space-y-2"
+  }, rhythmRanking.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
+    key: `${entry.userName}-${index}`,
+    "data-rhythm-ranking-row": true,
+    className: "flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-2"
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "w-6 shrink-0 text-center text-xs font-black text-amber-200"
+  }, index + 1), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "truncate text-xs font-black text-white"
+  }, entry.userName), /*#__PURE__*/React.createElement("p", {
+    className: "text-[9px] text-slate-400"
+  }, RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-')), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-right"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "font-mono text-sm font-black text-amber-200"
+  }, entry.score.toLocaleString()), /*#__PURE__*/React.createElement("p", {
+    className: `text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`
+  }, rhythmRankForScore(entry.score))), entry.detail && /*#__PURE__*/React.createElement("button", {
+    "data-rhythm-ranking-detail": true,
+    onClick: () => setRhythmRankingDetail(entry),
+    className: "shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200"
+  }, "\u8A73\u7D30"))))), rhythmRankingDetail && /*#__PURE__*/React.createElement("div", {
+    "data-rhythm-ranking-detail-modal": true,
+    className: "fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3",
+    onClick: () => setRhythmRankingDetail(null)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4",
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-sm font-black text-amber-200"
+  }, rhythmRankingDetail.userName, " \u306E\u30EA\u30B6\u30EB\u30C8"), /*#__PURE__*/React.createElement("button", {
+    "aria-label": "\u9589\u3058\u308B",
+    "data-rhythm-ranking-detail-close": true,
+    onClick: () => setRhythmRankingDetail(null),
+    className: "min-h-[44px] min-w-[44px] px-2 text-slate-400"
+  }, "\u2715")), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] text-slate-400"
+  }, RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name || rhythmRankingDetail.difficultyId, " / \u30B9\u30B3\u30A2 ", rhythmRankingDetail.score.toLocaleString(), " / \u30E9\u30F3\u30AF ", rhythmRankForScore(rhythmRankingDetail.score)), /*#__PURE__*/React.createElement("p", {
+    className: "mt-1 text-[10px] text-slate-400"
+  }, "\u6700\u5927\u30B3\u30F3\u30DC ", rhythmRankingDetail.detail?.maxCombo ?? '-'), /*#__PURE__*/React.createElement("dl", {
+    className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
+  }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: id
+  }, /*#__PURE__*/React.createElement("dt", {
+    className: "text-slate-400"
+  }, id), /*#__PURE__*/React.createElement("dd", {
+    className: "text-right font-mono text-white"
+  }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), /*#__PURE__*/React.createElement("p", {
+    className: "mt-2 text-[9px] font-black text-amber-200"
+  }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -38332,49 +38952,9 @@ function MonsterHeroGame() {
       scene: "home",
       condition: assistantBondUp ? 'bondUp' : masuMons.length === 0 ? 'firstRun' : null,
       compact: true
-    }))), gameState === 'RHYTHM_INFO' && /*#__PURE__*/React.createElement("main", {
-      "data-rhythm-info": true,
-      className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
-    }, /*#__PURE__*/React.createElement("header", {
-      className: "z-10 flex shrink-0 items-center gap-2 border-b border-cyan-400/15 bg-slate-950/95 px-3 py-1",
-      style: {
-        paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      "aria-label": "HOME\u3078\u623B\u308B",
-      onClick: returnToHome,
-      className: "min-h-[44px] px-2 text-slate-400"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 18
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "min-w-0"
-    }, /*#__PURE__*/React.createElement("small", {
-      className: "block text-[8px] font-black text-cyan-300"
-    }, "COMING SOON"), /*#__PURE__*/React.createElement("h2", {
-      className: "text-sm font-black tracking-widest text-cyan-200"
-    }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8"))), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll px-4 pb-6 pt-3",
-      style: {
-        paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "my-6 text-center text-6xl"
-    }, "\uD83C\uDFB5"), /*#__PURE__*/React.createElement("h3", {
-      className: "text-center text-xl font-black text-cyan-200"
-    }, "\u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u306F\u6E96\u5099\u4E2D\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
-      className: "mt-3 text-[11px] leading-relaxed text-slate-300"
-    }, "\u66F2\u306B\u5408\u308F\u305B\u3066\u30015\u3064\u306E\u30EC\u30FC\u30F3\u3092\u6D41\u308C\u3066\u304F\u308B\u30CE\u30FC\u30C4\u3092\u6F14\u594F\u3059\u308B\u97F3\u30B2\u30FC\u306E\u30E2\u30FC\u30C9\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("p", {
-      className: "mt-2 text-[11px] leading-relaxed text-slate-300"
-    }, "\u8A2D\u5B9A\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u304C\u66F2\u306E\u9014\u4E2D\u3067\u300C\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u300D\u306B\u306A\u3063\u3066\u6D41\u308C\u3066\u304D\u3066\u3001\u53D6\u308B\u3068\u8840\u7D71\u3054\u3068\u306E\u529B\u304C\u50CD\u304F\u4E88\u5B9A\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-      className: "mt-4 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3"
-    }, /*#__PURE__*/React.createElement("b", {
-      className: "text-[11px] font-black text-amber-200"
-    }, "\u6B63\u5F0F\u5B9F\u88C5\u524D\u306E\u304A\u77E5\u3089\u305B"), /*#__PURE__*/React.createElement("small", {
-      className: "mt-1 block text-[10px] leading-relaxed text-amber-100/90"
-    }, "\u3044\u307E\u306F\u8B5C\u9762\u3092\u5236\u4F5C\u3057\u3066\u3044\u308B\u6BB5\u968E\u3067\u3059\u3002\u901A\u5E38\u30D7\u30EC\u30A4\u304B\u3089\u306F\u958B\u59CB\u3067\u304D\u307E\u305B\u3093\u3002\u30CF\u30A4\u30B9\u30B3\u30A2\u306E\u8A18\u9332\u3084\u5831\u916C\u306E\u4ED8\u4E0E\u3082\u884C\u3044\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("button", {
-      onClick: returnToHome,
-      className: "mt-5 min-h-[48px] w-full rounded-xl bg-slate-700 text-sm font-black"
-    }, "HOME\u3078\u623B\u308B"))), gameState === 'TRAINING_INFO' && /*#__PURE__*/React.createElement("main", {
+    }))), gameState === 'RHYTHM_INFO' && /*#__PURE__*/React.createElement(RhythmInfoScreen, {
+      returnToHome: returnToHome
+    }), gameState === 'TRAINING_INFO' && /*#__PURE__*/React.createElement("main", {
       className: "mh-training-screen"
     }, /*#__PURE__*/React.createElement("header", {
       className: "mh-training-head"
@@ -43301,517 +43881,99 @@ function MonsterHeroGame() {
         setRhythmSettings(saved);
         return saved;
       }
-    }), gameState === 'RHYTHM_DEMO_HOME' && (() => {
-      const songs = rhythmDemoSongs(RHYTHM_SONGS);
-      const difficulties = rhythmDemoDifficultyList(RHYTHM_DIFFICULTIES);
-      // ===== クイック∞周回の進捗(docs/spec/QUICK_RHYTHM_LINK.md PR6) =====
-      // 1行の帯は、縦持ちならヘッダーの下、横持ちならヘッダーの空きへ入れる。
-      // 横は上のタブに余白があるので、そこを使えば曲の一覧を押し下げずに済む
-      // (2026-09-07・ユーザー提案)。縦は余白が無いので今までどおり下に置く。
-      // 中身は同じものを使い回す(2つ書くと片方だけ直す事故が起きる)。
-      const quickRunBandLabel = quickRunProgress ? quickRunProgress.finished
-      // なぜ終わったかまで出す。「終わりました」だけだと、負けたのか
-      // アプリが裏に回ったのか分からなかった(2026-09-07・ユーザー報告)
-      ? `${quickRunFinishReasonText(quickRunProgress.reason)}（タップで結果へ）`
-      // ★演奏で何周ぶん入ったかは曲リザルトで出す。ここはいま何WAVE・何周目かを
-      //   出す唯一の場所なので、知らせを重ねない
-      //   (2026-09-07・ユーザー提案「曲リザルトの画面で出すほうがいい。
-      //    そうしたら帯にわざわざ何周分追加とか表示する必要もない」)
-      : `WAVE ${wave}/10 ・ ${quickRunProgress.loops}周目${catchingUp ? ' ・ 追いつき中' : ''}` : '';
-      const quickRunBandButton = quickRunProgress ? /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: () => setQuickRunDetailOpen(open => !open),
-        "aria-expanded": quickRunDetailOpen,
-        "aria-label": "\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u306E\u9032\u6357",
-        className: "flex min-h-[44px] w-full items-center gap-2 px-3 py-1 text-left active:scale-[.995]"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: `shrink-0 text-[10px] font-black ${quickRunProgress.finished ? 'text-amber-200' : 'text-fuchsia-200'}`
-      }, quickRunProgress.finished ? '⏹' : '⚔'), /*#__PURE__*/React.createElement("span", {
-        className: "min-w-0 flex-1 truncate text-[10px] font-black text-slate-200"
-      }, quickRunBandLabel), /*#__PURE__*/React.createElement("span", {
-        className: "shrink-0 text-[9px] font-black text-slate-400"
-      }, quickRunDetailOpen ? '▲' : '▼')) : null;
-      // 周回していないときの「ここから始める」。帯と同じく、縦持ちはヘッダーの下・
-      // 横持ちはヘッダーの空きへ入れる。中身は1つ作って使い回す(2つ書くと片方だけ直す事故になる)。
-      // ★塗りつぶしをやめて枠だけにし、主張を抑える。モンヒロビートだけで遊ぶ人には
-      //   関係のないボタンなので、大きく出しすぎない(2026-09-07・ユーザー指摘)
-      const quickRunStartNode = !quickRunProgress && !runStage ? repeatTemplateForNewRun() ? /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-quick-run-start-button": true,
-        onClick: () => {
-          if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
-        },
-        className: "flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg border border-fuchsia-400/40 px-2 text-[10px] font-black text-fuchsia-200 active:scale-[.98]"
-      }, "\u2694 \u88CF\u3067\u30AF\u30A4\u30C3\u30AF\u306E\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B") : /*#__PURE__*/React.createElement("p", {
-        "data-quick-run-start-hint": true,
-        className: "px-1 py-1 text-[9px] leading-relaxed text-slate-500"
-      }, "\u88CF\u3067\u5468\u56DE\u3092\u56DE\u3059\u306B\u306F\u3001\u30AF\u30A4\u30C3\u30AF\u30671\u5EA6\u221E\u5468\u56DE\u3092\u59CB\u3081\u308B\u304B\u3001M/B\u7BA1\u7406\u306E\u300CAUTO\u8A2D\u5B9A \u2192 \u30E2\u30F3\u30D2\u30ED\u30D3\u30FC\u30C8\u4E2D\u306B\u56DE\u3059\u30AF\u30A4\u30C3\u30AF\u5468\u56DE\u300D\u3067\u52C7\u8005\u30E2\u30F3\u30FB\u914D\u7F6E\u8DDD\u96E2\u30FB\u96E3\u6613\u5EA6\u3092\u6C7A\u3081\u3066\u304F\u3060\u3055\u3044\u3002") : null;
-      return /*#__PURE__*/React.createElement("main", {
-        "data-rhythm-demo-home": true,
-        className: "flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-slate-950 text-white"
-      }, /*#__PURE__*/React.createElement("header", {
-        className: "z-10 flex shrink-0 items-center gap-1 border-b border-cyan-400/15 bg-slate-950/95 px-2 py-1",
-        style: {
-          paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
+    }), gameState === 'RHYTHM_DEMO_HOME' && /*#__PURE__*/React.createElement(RhythmSongSelectScreen, {
+      catchingUp: catchingUp,
+      difficulty: difficulty,
+      dismissQuickRhythmBackground: dismissQuickRhythmBackground,
+      handleGiveUp: handleGiveUp,
+      mainHero: mainHero,
+      onExit: () => {
+        if (rhythmBackgroundRun) {
+          returnToBackgroundRun();
+          return;
         }
-      }, /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-back": true,
-        "aria-label": rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
-        title: rhythmBackgroundRun ? 'クイックのバトルへ戻る' : '戻る',
-        onClick: () => {
-          if (rhythmBackgroundRun) {
-            returnToBackgroundRun();
-            return;
-          }
-          setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
-        },
-        className: "min-h-[44px] min-w-[44px] shrink-0 text-slate-300"
-      }, rhythmBackgroundRun ? /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-black leading-tight text-fuchsia-200"
-      }, "\u2694", /*#__PURE__*/React.createElement("br", null), "\u623B\u308B") : /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, /*#__PURE__*/React.createElement("small", {
-        className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
-      }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
-        className: "truncate text-sm font-black leading-tight tracking-widest text-cyan-200"
-      }, "\uD83C\uDFB5 \u697D\u66F2\u9078\u629E")), quickRunProgress && /*#__PURE__*/React.createElement("div", {
-        "data-quick-run-progress-header": true,
-        className: "min-w-0 max-w-[260px] flex-1 rounded-lg border border-fuchsia-400/30 bg-slate-900/70"
-      }, quickRunBandButton), quickRunStartNode && /*#__PURE__*/React.createElement("div", {
-        "data-quick-run-start-header": true,
-        className: "min-w-0 max-w-[260px] flex-1"
-      }, quickRunStartNode), /*#__PURE__*/React.createElement("span", {
-        "data-rhythm-demo-badge": true,
-        className: "shrink-0 rounded-full border border-amber-300/60 bg-amber-500/15 px-2 py-0.5 text-[9px] font-black text-amber-200"
-      }, "\u4F53\u9A13\u7248"), /*#__PURE__*/React.createElement(RhythmOrientationButton, null), /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-help": true,
-        "aria-label": "\u904A\u3073\u304B\u305F",
-        title: "\u904A\u3073\u304B\u305F",
-        onClick: () => {
-          setRhythmHelpTopicId(null);
-          setGameState('RHYTHM_DEMO_HELP');
-        },
-        className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-amber-400/50 bg-amber-950/40 text-base text-amber-100${spotClass('help')}`
-      }, "\uD83D\uDCD6"), /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-monsters": true,
-        "aria-label": "\u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A",
-        title: "\u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A",
-        onClick: () => {
-          setRhythmMonsterPickerOpen(true);
-          setGameState('RHYTHM_DEMO_MONSTERS');
-        },
-        className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/40 text-base text-fuchsia-100${spotClass('monsters')}`
-      }, "\uD83D\uDC7E"), /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-options": true,
-        "aria-label": "\u30AA\u30D7\u30B7\u30E7\u30F3",
-        title: "\u30AA\u30D7\u30B7\u30E7\u30F3",
-        onClick: () => {
-          setRhythmOptionsBack('RHYTHM_DEMO_HOME');
-          setGameState('RHYTHM_OPTIONS');
-        },
-        className: `min-h-[44px] min-w-[40px] shrink-0 rounded-xl border border-cyan-400/50 bg-cyan-950/40 text-base text-cyan-100${spotClass('options')}`
-      }, "\u2699\uFE0F")), quickRunProgress && /*#__PURE__*/React.createElement("div", {
-        "data-quick-run-progress": true,
-        className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-900/80"
-      }, /*#__PURE__*/React.createElement("div", {
-        "data-quick-run-band-portrait": true
-      }, quickRunBandButton), quickRunDetailOpen && /*#__PURE__*/React.createElement("div", {
-        "data-quick-run-progress-detail": true,
-        className: "border-t border-white/10 px-3 py-2"
-      }, /*#__PURE__*/React.createElement("dl", {
-        className: "grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("dt", {
-        className: "text-slate-400"
-      }, "\u5468\u56DE\u6570"), /*#__PURE__*/React.createElement("dd", {
-        className: "font-black text-white"
-      }, quickRunProgress.loops, "\u5468")), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("dt", {
-        className: "text-slate-400"
-      }, "\u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("dd", {
-        className: "font-black text-white"
-      }, quickDifficultySetting(difficulty)?.label || difficulty)), (() => {
-        const pending = quickRunPendingRewards();
-        return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-          className: "flex justify-between gap-2"
-        }, /*#__PURE__*/React.createElement("dt", {
-          className: "text-slate-400"
-        }, "\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("dd", {
-          className: "font-black text-cyan-200"
-        }, "+", Math.floor(quickRunProgress.xp + pending.xp).toLocaleString())), /*#__PURE__*/React.createElement("div", {
-          className: "flex justify-between gap-2"
-        }, /*#__PURE__*/React.createElement("dt", {
-          className: "text-slate-400"
-        }, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("dd", {
-          className: "font-black text-amber-200"
-        }, "+", Math.floor(quickRunProgress.gold + pending.gold).toLocaleString())), (pending.xp > 0 || pending.gold > 0) && /*#__PURE__*/React.createElement("div", {
-          className: "col-span-2 text-[9px] text-slate-500"
-        }, "\u3046\u3061\u4ECA\u306E\u5468\u306E\u3076\u3093\uFF08\u7D4C\u9A13\u5024 +", Math.floor(pending.xp).toLocaleString(), " \uFF0F \u30C0\u30A4\u30E4 +", Math.floor(pending.gold).toLocaleString(), "\uFF09\u306F\u3001\u3053\u306E\u5468\u304C\u7D42\u308F\u3063\u305F\u3068\u304D\u306B\u5165\u308A\u307E\u3059\uFF08\u8CA0\u3051\u3066\u3082\u3001\u9014\u4E2D\u3067\u3084\u3081\u3066\u3082\u3001\u3053\u3053\u307E\u3067\u306E\u3076\u3093\u306F\u5165\u308A\u307E\u3059\uFF09\u3002"));
-      })(), /*#__PURE__*/React.createElement("div", {
-        className: "col-span-2 flex justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("dt", {
-        className: "text-slate-400"
-      }, "\u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("dd", {
-        className: "truncate font-black text-white"
-      }, mainHero?.masuName || mainHero?.name || '—'))), /*#__PURE__*/React.createElement("p", {
-        className: "mt-1 text-[9px] leading-relaxed text-slate-400"
-      }, quickRunProgress.finished
-      // 止まっていても、挑戦がまだ生きていれば続きから再開できる。
-      // ★負けた・リタイアしたあとは「続き」が無い。ランの段階は残るので、
-      //   段階の有無ではなく勝負がついたかどうかで分ける
-      //   (2026-09-07・ユーザー報告「負けた場合は最初からにしないとおかしい」)
-      ? quickRunResumable ? `${quickRunFinishReasonText(quickRunProgress.reason)}。下の「再開する」で続きから回せます。` : `${quickRunFinishReasonText(quickRunProgress.reason)}。続きはないので、始めるときは1周目からになります。バトルへ戻ると結果を見られます。` : catchingUp ? '演奏で止まっていたぶんを取り戻しています。しばらく速く進みます（バトルへ戻ると通常の速さに戻ります）。'
-      // ★仕様が「曲の長さぶんの周回クリア」へ変わったので、文言もそちらへ合わせる
-      //   (2026-09-07・ユーザー指摘「演奏中の文言ってこれであってる？仕様変わったよね？」。
-      //    追いつき方式のころの説明が残っていた)。
-      //   まだその難易度をクリアしていない人には入らないので、そこも言い分ける
-      : rhythmPlayRunLoopsAllowed(difficulty, quickClearCounts) ? 'ここにいるあいだも周回は進みます。演奏中は止まりますが、曲を最後まで演奏すると、その曲の長さぶんの周回がクリア扱いで入ります（2分台までは2周・3分台は3周…）。' : 'ここにいるあいだも周回は進みます。演奏中は止まり、そのぶんは曲のあとに速く進んで取り戻します。この難易度をクイックで一度クリアすると、演奏したぶんがそのまま周回クリアとして入るようになります。'), quickRunProgress.finished && quickRunResumable && /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-quick-run-resume": true,
-        onClick: () => {
-          resumeQuickRunFromRhythm();
-        },
-        className: "mt-2 min-h-[44px] w-full rounded-xl border border-emerald-300/60 bg-emerald-800/70 text-[11px] font-black text-emerald-50 active:scale-[.98]"
-      }, "\u25B6 \u5468\u56DE\u3092\u518D\u958B\u3059\u308B"), quickRunProgress.finished && !quickRunResumable && repeatTemplateForNewRun() && /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-quick-run-restart": true,
-        disabled: resultProcessing,
-        onClick: () => {
-          if (!startQuickRunFromRhythm()) setQuickRunStartError(true);
-        },
-        className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98] disabled:opacity-50"
-      }, resultProcessing ? '結果を記録しています…' : '⚔ 1周目から新しく始める'), quickRunStartError && /*#__PURE__*/React.createElement("p", {
-        className: "mt-1 text-[9px] font-black text-red-300"
-      }, "\u3044\u307E\u5468\u56DE\u3092\u59CB\u3081\u3089\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u7DE8\u6210\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u304C\u898B\u5F53\u305F\u3089\u306A\u3044\u304B\u3001\u96E3\u6613\u5EA6\u304C\u307E\u3060\u89E3\u653E\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-quick-run-progress-back": true,
-        onClick: () => {
-          if (runStageRef.current) returnToBackgroundRun();
-        },
-        className: "mt-2 min-h-[44px] w-full rounded-xl border border-fuchsia-300/60 bg-fuchsia-800/70 text-[11px] font-black text-fuchsia-50 active:scale-[.98]"
-      }, quickRunProgress.finished && !quickRunResumable ? '⚔ バトルへ戻って結果を見る' : '⚔ バトルへ戻る'), !quickRunProgress.finished && quickRunResumable && (quickRunStopConfirm ? /*#__PURE__*/React.createElement("div", {
-        "data-quick-run-stop-confirm": true,
-        className: "mt-2 rounded-xl border border-amber-400/50 bg-amber-950/30 p-2"
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "text-[9px] leading-relaxed text-amber-100"
-      }, "\u5468\u56DE\u3092\u3084\u3081\u307E\u3059\u304B\uFF1F \u3044\u307E\u306E\u5468\u3082\u3053\u3053\u3067\u7D42\u308F\u308A\u3001\u30AF\u30EA\u30A2\u3057\u305FWAVE\u3076\u3093\u306E\u5831\u916C\u304C\u5165\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1.5 grid grid-cols-2 gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: () => setQuickRunStopConfirm(false),
-        className: "min-h-[44px] rounded-lg border border-white/20 text-[10px] font-black text-slate-300 active:scale-[.98]"
-      }, "\u7D9A\u3051\u308B"), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-quick-run-stop-yes": true,
-        onClick: () => {
-          setQuickRunStopConfirm(false);
-          void handleGiveUp();
-        },
-        className: "min-h-[44px] rounded-lg border border-amber-300/70 bg-amber-800/60 text-[10px] font-black text-amber-50 active:scale-[.98]"
-      }, "\u3084\u3081\u308B"))) : /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-quick-run-stop": true,
-        onClick: () => setQuickRunStopConfirm(true),
-        className: "mt-1.5 min-h-[44px] w-full rounded-xl border border-white/15 text-[10px] font-black text-slate-400 active:scale-[.98]"
-      }, "\u23F9 \u3053\u3053\u3067\u5468\u56DE\u3092\u3084\u3081\u308B")))), quickRhythmBackgroundVisible && /*#__PURE__*/React.createElement("div", {
-        "data-quick-rhythm-background": true,
-        className: "shrink-0 border-b border-fuchsia-400/20 bg-slate-950/90 px-2 py-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-start gap-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "quickRhythmBackground",
-        compact: true
-      })), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        onClick: dismissQuickRhythmBackground,
-        "aria-label": "\u3053\u306E\u6848\u5185\u3092\u9589\u3058\u308B",
-        className: "min-h-[44px] min-w-[44px] shrink-0 rounded-lg text-slate-400 font-black"
-      }, "\xD7"))), !quickRunProgress && !runStage && /*#__PURE__*/React.createElement("div", {
-        "data-quick-run-start": true,
-        "data-quick-run-start-portrait": true,
-        className: "shrink-0 border-b border-white/10 bg-slate-900/40 px-3 py-1"
-      }, quickRunStartNode, quickRunStartError && /*#__PURE__*/React.createElement("p", {
-        className: "mt-1 text-[9px] font-black text-red-300"
-      }, "\u3044\u307E\u5468\u56DE\u3092\u59CB\u3081\u3089\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u7DE8\u6210\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u304C\u898B\u5F53\u305F\u3089\u306A\u3044\u304B\u3001\u96E3\u6613\u5EA6\u304C\u307E\u3060\u89E3\u653E\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement(RhythmSongSelect, {
-        songs: songs,
-        difficulties: difficulties,
-        bestRecords: rhythmBestRecords,
-        songId: rhythmSelectedSongId,
-        difficultyId: rhythmSelectedDifficultyId,
-        onSongId: setRhythmSelectedSongId,
-        onDifficultyId: setRhythmSelectedDifficultyId,
-        spotClass: spotClass,
-        onPlay: (song, difficulty) => {
-          /* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。   画面が変わってから頼むと、ブラウザに断られる */if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
-          setRhythmPlay({
-            song,
-            difficulty,
-            from: 'demo'
-          });
-          setGameState('RHYTHM_PLAY');
-        },
-        notice: /*#__PURE__*/React.createElement(AssistantBubble, {
-          scene: "rhythmHome",
-          compact: true
-        }),
-        view: rhythmSelectView,
-        onView: saveRhythmSelectView,
-        listScrollTop: rhythmSongListScrollRef.current,
-        onListScrollTop: top => {
-          rhythmSongListScrollRef.current = top;
-        },
-        footer: song => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
-          "data-rhythm-demo-ranking": true,
-          onClick: () => {
-            loadRhythmRanking(song);
-            setGameState('RHYTHM_RANKING');
-          },
-          className: "mt-1.5 min-h-[48px] w-full rounded-xl border border-amber-300/60 bg-amber-500/10 text-xs font-black text-amber-100"
-        }, "\uD83C\uDFC6 \u3053\u306E\u66F2\u306E\u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"))
-      }));
-    })(), gameState === 'RHYTHM_DEMO_HELP' && (() => {
-      // 公開フラグで伏せてある項目を出さないよう、生の HELP_CATEGORIES ではなく
-      // ふるい分け済みの HELP_GUIDE から引く
-      const category = helpCategoryById('rhythm');
-      const topics = category && category.topics || [];
-      const topic = rhythmHelpTopicId ? topics.find(x => x.id === rhythmHelpTopicId) || null : null;
-      const accent = category && category.color || '#fbbf24';
-      const topicIndex = topic ? topics.findIndex(x => x.id === topic.id) : -1;
-      const nextTopic = topicIndex >= 0 ? topics[topicIndex + 1] : null;
-      return /*#__PURE__*/React.createElement("main", {
-        "data-rhythm-demo-help": true,
-        className: "flex h-full min-h-0 flex-1 flex-col bg-slate-950 text-white"
-      }, /*#__PURE__*/React.createElement("header", {
-        className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
-        style: {
-          paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u623B\u308B",
-        "data-rhythm-demo-help-back": true,
-        onClick: () => {
-          if (topic) setRhythmHelpTopicId(null);else setGameState('RHYTHM_DEMO_HOME');
-        },
-        className: "min-h-[44px] px-2 text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 18
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, /*#__PURE__*/React.createElement("small", {
-        className: "block text-[8px] font-black leading-none tracking-[0.2em] text-fuchsia-300"
-      }, "MONBEAT"), /*#__PURE__*/React.createElement("h2", {
-        className: "text-sm font-black leading-tight tracking-widest text-amber-200"
-      }, topic ? `${topic.emoji} ${topic.title}` : '📖 遊びかた'))), /*#__PURE__*/React.createElement("div", {
-        "data-rhythm-demo-help-scroll": true,
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
-        style: {
-          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
-        className: "mb-3"
-      }), !topic && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "rhythmHelp"
-      }), /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-practice": true,
-        onClick: startRhythmPractice,
-        className: "mt-3 min-h-[56px] w-full rounded-2xl bg-gradient-to-r from-amber-400 to-fuchsia-500 text-sm font-black text-slate-950"
-      }, "\uD83E\uDD41 \u53E9\u3044\u3066\u7DF4\u7FD2\u3059\u308B"), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-      }, "\u5B9F\u969B\u306E\u30D7\u30EC\u30A4\u753B\u9762\u3067\u3001\u30BF\u30C3\u30D7\u30FB\u540C\u6642\u62BC\u3057\u30FB\u30DB\u30FC\u30EB\u30C9\u30FB\u30B9\u30E9\u30A4\u30C9\u30FB\u30D5\u30EA\u30C3\u30AF\u30FB\u7D42\u70B9\u30D5\u30EA\u30C3\u30AF\u30FB\u30E2\u30F3\u30B9\u30BF\u30FC\u30CE\u30FC\u30C4\u30921\u3064\u305A\u3064\u7DF4\u7FD2\u3057\u307E\u3059\u3002\u7D0420\u79D2\u3067\u3059\u3002\u30B9\u30B3\u30A2\u3082\u81EA\u5DF1\u30D9\u30B9\u30C8\u3082\u6B8B\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-help-tutorial": true,
-        onClick: startRhythmTutorial,
-        className: "mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-sm font-black text-white"
-      }, "\uD83C\uDF93 \u3082\u3046\u4E00\u5EA6\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-[10px] leading-relaxed text-slate-400"
-      }, "\u66F2\u3048\u3089\u3073\u3078\u623B\u3063\u3066\u3001\u52A9\u624B\u304C\u6700\u521D\u304B\u3089\u8AAC\u660E\u3057\u307E\u3059\u3002\u4F55\u5EA6\u3067\u3082\u898B\u3089\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        "data-rhythm-demo-help-list": true,
-        className: "mt-4 space-y-2"
-      }, topics.length === 0 ? /*#__PURE__*/React.createElement("p", {
-        className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-xs text-slate-300"
-      }, "\u8AAC\u660E\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002") : topics.map((x, i) => /*#__PURE__*/React.createElement(React.Fragment, {
-        key: x.id
-      }, x.group && x.group !== (topics[i - 1] || {}).group && /*#__PURE__*/React.createElement("div", {
-        "data-rhythm-demo-help-group": true,
-        className: "pt-2 pb-0.5 text-[10px] font-black tracking-[0.18em]",
-        style: {
-          color: accent
-        }
-      }, x.group), /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-help-open": x.id,
-        onClick: () => setRhythmHelpTopicId(x.id),
-        className: "flex min-h-[52px] w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left active:scale-95",
-        style: {
-          borderColor: `${accent}55`,
-          backgroundColor: 'rgba(15,23,42,0.7)'
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "shrink-0 text-base leading-none"
-      }, x.emoji), /*#__PURE__*/React.createElement("span", {
-        className: "min-w-0 flex-1 text-[12px] font-black leading-tight text-white"
-      }, x.title), /*#__PURE__*/React.createElement(ChevronRight, {
-        size: 16,
-        className: "shrink-0 text-slate-500"
-      })))))), topic && /*#__PURE__*/React.createElement("div", {
-        "data-rhythm-demo-help-topic": topic.id,
-        className: "space-y-3.5 pb-2"
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "text-[10px] font-bold leading-relaxed text-cyan-200"
-      }, topic.assistant), renderHelpBlocks(topic.blocks, accent), /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-2 pt-1"
-      }, /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-help-list-back": true,
-        onClick: () => setRhythmHelpTopicId(null),
-        className: "min-h-[48px] flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
-      }, "\u9805\u76EE\u4E00\u89A7\u3078"), nextTopic && /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-demo-help-next": true,
-        onClick: () => setRhythmHelpTopicId(nextTopic.id),
-        className: "min-h-[48px] flex-1 truncate rounded-2xl px-2 py-3 text-[11px] font-black text-black active:scale-95",
-        style: {
-          backgroundColor: accent
-        }
-      }, "\u6B21: ", nextTopic.title)))));
-    })(), gameState === 'RHYTHM_DEMO_MONSTERS' && /*#__PURE__*/React.createElement("main", {
-      "data-rhythm-demo-monsters-screen": true,
-      className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
-    }, /*#__PURE__*/React.createElement("header", {
-      className: "z-10 flex shrink-0 items-center gap-2 border-b border-fuchsia-400/15 bg-slate-950/95 px-3 py-1",
-      style: {
-        paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
-      }
-    }, /*#__PURE__*/React.createElement("button", {
-      "aria-label": "\u623B\u308B",
-      onClick: () => {
-        setRhythmMonsterPickerOpen(false);
-        setGameState('RHYTHM_DEMO_HOME');
+        setGameState(RHYTHM_MODE_PUBLIC_RELEASE ? 'HOME' : 'DEBUG_SETTINGS');
       },
-      className: "min-h-[44px] px-2 text-slate-400"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 18
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-sm font-black tracking-widest text-fuchsia-200"
-    }, "\uD83D\uDC7E \u30DE\u30B9\u30E2\u30F3\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3 space-y-3",
-      style: {
-        paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
-      }
-    }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, null), /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "rhythmMonsters",
-      compact: true
-    }), /*#__PURE__*/React.createElement(RhythmMonsterSlotsPanel, {
-      rhythmMonsterSlots: rhythmMonsterSlots,
-      rhythmMonsterSlotIdsInUse: rhythmMonsterSlotIdsInUse,
-      rhythmMonsterPickerOpen: rhythmMonsterPickerOpen,
-      setRhythmMonsterPickerOpen: setRhythmMonsterPickerOpen,
-      rhythmMonsterMessage: rhythmMonsterMessage,
-      setRhythmMonsterMessage: setRhythmMonsterMessage,
+      onOpenHelp: () => {
+        setRhythmHelpTopicId(null);
+        setGameState('RHYTHM_DEMO_HELP');
+      },
+      onOpenMonsterSlots: () => {
+        setRhythmMonsterPickerOpen(true);
+        setGameState('RHYTHM_DEMO_MONSTERS');
+      },
+      onOpenOptions: () => {
+        setRhythmOptionsBack('RHYTHM_DEMO_HOME');
+        setGameState('RHYTHM_OPTIONS');
+      },
+      onOpenRanking: song => {
+        loadRhythmRanking(song);
+        setGameState('RHYTHM_RANKING');
+      },
+      onPlaySong: (song, difficulty) => {
+        /* 全画面へ入れるのは「指で押した直後」だけなので、決定を押したこの場で頼む。\n              画面が変わってから頼むと、ブラウザに断られる */if (rhythmSettings.quietDuringPlay) RHYTHM_QUIET_MODE.enter();
+        setRhythmPlay({
+          song,
+          difficulty,
+          from: 'demo'
+        });
+        setGameState('RHYTHM_PLAY');
+      },
+      quickClearCounts: quickClearCounts,
+      quickRhythmBackgroundVisible: quickRhythmBackgroundVisible,
+      quickRunDetailOpen: quickRunDetailOpen,
+      quickRunFinishReasonText: quickRunFinishReasonText,
+      quickRunPendingRewards: quickRunPendingRewards,
+      quickRunProgress: quickRunProgress,
+      quickRunResumable: quickRunResumable,
+      quickRunStartError: quickRunStartError,
+      quickRunStopConfirm: quickRunStopConfirm,
+      repeatTemplateForNewRun: repeatTemplateForNewRun,
+      resultProcessing: resultProcessing,
+      resumeQuickRunFromRhythm: resumeQuickRunFromRhythm,
+      returnToBackgroundRun: returnToBackgroundRun,
+      returnToHome: returnToHome,
+      rhythmBackgroundRun: rhythmBackgroundRun,
+      rhythmBestRecords: rhythmBestRecords,
+      rhythmSelectView: rhythmSelectView,
+      rhythmSelectedDifficultyId: rhythmSelectedDifficultyId,
+      rhythmSelectedSongId: rhythmSelectedSongId,
+      rhythmSongListScrollRef: rhythmSongListScrollRef,
+      runStage: runStage,
+      runStageRef: runStageRef,
+      saveRhythmSelectView: saveRhythmSelectView,
+      setQuickRunDetailOpen: setQuickRunDetailOpen,
+      setQuickRunStartError: setQuickRunStartError,
+      setQuickRunStopConfirm: setQuickRunStopConfirm,
+      setRhythmSelectedDifficultyId: setRhythmSelectedDifficultyId,
+      setRhythmSelectedSongId: setRhythmSelectedSongId,
+      spotClass: spotClass,
+      startQuickRunFromRhythm: startQuickRunFromRhythm,
+      wave: wave
+    }), gameState === 'RHYTHM_DEMO_HELP' && /*#__PURE__*/React.createElement(RhythmHelpScreen, {
+      onBackToSongSelect: () => setGameState('RHYTHM_DEMO_HOME'),
+      rhythmHelpTopicId: rhythmHelpTopicId,
+      setRhythmHelpTopicId: setRhythmHelpTopicId,
+      startRhythmPractice: startRhythmPractice,
+      startRhythmTutorial: startRhythmTutorial
+    }), gameState === 'RHYTHM_DEMO_MONSTERS' && /*#__PURE__*/React.createElement(RhythmMonstersScreen, {
       applyRhythmMonsterSlots: applyRhythmMonsterSlots,
-      masuMons: masuMons
-    }), /*#__PURE__*/React.createElement(RhythmMonsterNoteGuide, null))), gameState === 'RHYTHM_RANKING' && (() => {
-      // 曲えらびから開いたときの曲を追いかける。曲が5つになったので、
-      // ここを固定にすると「別の曲のランキングを見ているのに曲名が違う」ことになる。
-      const song = RHYTHM_SONGS.find(entry => entry.songId === rhythmRanking.songId) || rhythmDemoSong(RHYTHM_SONGS);
-      return /*#__PURE__*/React.createElement("main", {
-        "data-rhythm-ranking": true,
-        className: "flex h-full flex-1 flex-col bg-slate-950 text-white"
-      }, /*#__PURE__*/React.createElement("header", {
-        className: "z-10 flex shrink-0 items-center gap-2 border-b border-amber-400/15 bg-slate-950/95 px-3 py-1",
-        style: {
-          paddingTop: 'calc(0.25rem + env(safe-area-inset-top))'
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u623B\u308B",
-        onClick: () => setGameState('RHYTHM_DEMO_HOME'),
-        className: "min-h-[44px] px-2 text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 18
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-sm font-black tracking-widest text-amber-200"
-      }, "\uD83C\uDFC6 \u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u66F4\u65B0",
-        "data-rhythm-ranking-refresh": true,
-        onClick: () => loadRhythmRanking(song),
-        className: "ml-auto min-h-[44px] px-2 text-[10px] font-black text-amber-200"
-      }, "\u66F4\u65B0")), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll px-3 pb-6 pt-3",
-        style: {
-          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement(RhythmLandscapeHint, {
-        className: "mb-3"
-      }), /*#__PURE__*/React.createElement("p", {
-        className: "mb-3 rounded-2xl border border-amber-300/40 bg-amber-500/10 p-3 text-[10px] font-bold leading-relaxed text-amber-100"
-      }, "\u300C", song?.displayName || '—', "\u300D\u306EEASY\u301CMASTER\u3092\u307E\u3068\u3081\u305F\u5408\u7B97\u30E9\u30F3\u30AD\u30F3\u30B0\u3067\u3059\u3002\u96E3\u6613\u5EA6\u304C\u9AD8\u3044\u307B\u3069\u6E80\u70B9\u3082\u9AD8\u3044\u305F\u3081\u3001\u9AD8\u3044\u96E3\u6613\u5EA6\u3067\u6311\u3080\u307B\u3069\u4E0A\u4F4D\u306B\u8FD1\u3065\u304D\u307E\u3059\u3002\u81EA\u5206\u306E\u30B9\u30B3\u30A2\u306F\u3044\u3061\u3070\u3093\u9AD8\u30441\u4EF6\u3060\u3051\u304C\u8F09\u308A\u307E\u3059\u3002"), rhythmRanking.status === 'loading' && /*#__PURE__*/React.createElement("p", {
-        "data-rhythm-ranking-loading": true,
-        className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-      }, "\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), rhythmRanking.status === 'error' && /*#__PURE__*/React.createElement("p", {
-        "data-rhythm-ranking-error": true,
-        className: "rounded-2xl border border-rose-400/40 bg-rose-950/30 p-4 text-center text-xs text-rose-200"
-      }, "\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u300C\u66F4\u65B0\u300D\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"), rhythmRanking.status === 'ready' && rhythmRanking.entries.length === 0 && /*#__PURE__*/React.createElement("p", {
-        "data-rhythm-ranking-empty": true,
-        className: "rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-center text-xs text-slate-300"
-      }, "\u307E\u3060\u8A18\u9332\u304C\u3042\u308A\u307E\u305B\u3093\u3002\u6700\u521D\u306E1\u4EF6\u306B\u306A\u3063\u3066\u307F\u307E\u3057\u3087\u3046\u3002"), rhythmRanking.status === 'ready' && rhythmRanking.entries.length > 0 && /*#__PURE__*/React.createElement("ol", {
-        "data-rhythm-ranking-list": true,
-        className: "space-y-2"
-      }, rhythmRanking.entries.map((entry, index) => /*#__PURE__*/React.createElement("li", {
-        key: `${entry.userName}-${index}`,
-        "data-rhythm-ranking-row": true,
-        className: "flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-900/80 p-2"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: "w-6 shrink-0 text-center text-xs font-black text-amber-200"
-      }, index + 1), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0 flex-1"
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "truncate text-xs font-black text-white"
-      }, entry.userName), /*#__PURE__*/React.createElement("p", {
-        className: "text-[9px] text-slate-400"
-      }, RHYTHM_DEMO_DIFFICULTY_LABELS[entry.difficultyId]?.name || entry.difficultyId || '-')), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-right"
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "font-mono text-sm font-black text-amber-200"
-      }, entry.score.toLocaleString()), /*#__PURE__*/React.createElement("p", {
-        className: `text-[10px] font-black ${RHYTHM_RANK_COLORS[rhythmRankForScore(entry.score)]}`
-      }, rhythmRankForScore(entry.score))), entry.detail && /*#__PURE__*/React.createElement("button", {
-        "data-rhythm-ranking-detail": true,
-        onClick: () => setRhythmRankingDetail(entry),
-        className: "shrink-0 min-h-[44px] rounded-lg border border-white/20 px-2 text-[9px] font-black text-slate-200"
-      }, "\u8A73\u7D30"))))), rhythmRankingDetail && /*#__PURE__*/React.createElement("div", {
-        "data-rhythm-ranking-detail-modal": true,
-        className: "fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3",
-        onClick: () => setRhythmRankingDetail(null)
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md rounded-2xl border border-amber-300/40 bg-slate-900 p-4",
-        onClick: e => e.stopPropagation()
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "mb-2 flex items-center justify-between"
-      }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-sm font-black text-amber-200"
-      }, rhythmRankingDetail.userName, " \u306E\u30EA\u30B6\u30EB\u30C8"), /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u9589\u3058\u308B",
-        "data-rhythm-ranking-detail-close": true,
-        onClick: () => setRhythmRankingDetail(null),
-        className: "min-h-[44px] min-w-[44px] px-2 text-slate-400"
-      }, "\u2715")), /*#__PURE__*/React.createElement("p", {
-        className: "text-[10px] text-slate-400"
-      }, RHYTHM_DEMO_DIFFICULTY_LABELS[rhythmRankingDetail.difficultyId]?.name || rhythmRankingDetail.difficultyId, " / \u30B9\u30B3\u30A2 ", rhythmRankingDetail.score.toLocaleString(), " / \u30E9\u30F3\u30AF ", rhythmRankForScore(rhythmRankingDetail.score)), /*#__PURE__*/React.createElement("p", {
-        className: "mt-1 text-[10px] text-slate-400"
-      }, "\u6700\u5927\u30B3\u30F3\u30DC ", rhythmRankingDetail.detail?.maxCombo ?? '-'), /*#__PURE__*/React.createElement("dl", {
-        className: "mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px]"
-      }, RHYTHM_JUDGMENT_IDS.map(id => /*#__PURE__*/React.createElement(React.Fragment, {
-        key: id
-      }, /*#__PURE__*/React.createElement("dt", {
-        className: "text-slate-400"
-      }, id), /*#__PURE__*/React.createElement("dd", {
-        className: "text-right font-mono text-white"
-      }, rhythmRankingDetail.detail?.judgments?.[id] ?? 0)))), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-[9px] font-black text-amber-200"
-      }, rhythmRankingDetail.detail?.allMarvelous ? 'ALL MARVELOUS!!' : rhythmRankingDetail.detail?.allExcellent ? 'ALL EXCELLENT!!' : rhythmRankingDetail.detail?.fullCombo ? 'FULL COMBO!' : ''))));
-    })(), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
+      masuMons: masuMons,
+      onBackToSongSelect: () => setGameState('RHYTHM_DEMO_HOME'),
+      rhythmMonsterMessage: rhythmMonsterMessage,
+      rhythmMonsterPickerOpen: rhythmMonsterPickerOpen,
+      rhythmMonsterSlotIdsInUse: rhythmMonsterSlotIdsInUse,
+      rhythmMonsterSlots: rhythmMonsterSlots,
+      setRhythmMonsterMessage: setRhythmMonsterMessage,
+      setRhythmMonsterPickerOpen: setRhythmMonsterPickerOpen
+    }), gameState === 'RHYTHM_RANKING' && /*#__PURE__*/React.createElement(RhythmRankingScreen, {
+      loadRhythmRanking: loadRhythmRanking,
+      onBackToSongSelect: () => setGameState('RHYTHM_DEMO_HOME'),
+      rankingBreederIcon: rankingBreederIcon,
+      rhythmRanking: rhythmRanking,
+      rhythmRankingDetail: rhythmRankingDetail,
+      setRhythmRankingDetail: setRhythmRankingDetail
+    }), gameState === 'RHYTHM_DEBUG' && /*#__PURE__*/React.createElement("main", {
       "data-rhythm-debug-screen": true,
       className: "flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-950 text-white",
       style: {

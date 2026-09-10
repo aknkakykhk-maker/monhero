@@ -12,10 +12,13 @@
 //   ③ セリフは ASSISTANT_SCENES を直接書き換えず addAssistantLinePack で足す(⑤)
 const fs = require('fs');
 const path = require('path');
+const { readAppSource } = require(require('path').join(__dirname, '..', 'harness'));
 const vm = require('vm');
 
 const root = path.resolve(__dirname, '..', '..');
-const app = fs.readFileSync(path.join(root, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
+// 2026-09-10(STEP 6)から画面は 5x-screen-*.jsx へ移っていくので、本体だけでなく
+// 切り出した画面もつないで見る(readAppSource)
+const app = readAppSource();
 const compiled = fs.readFileSync(path.join(root, 'monster-hero/game-system.compiled.js'), 'utf8');
 const assistants = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
 

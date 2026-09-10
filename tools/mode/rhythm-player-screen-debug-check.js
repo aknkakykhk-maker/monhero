@@ -91,7 +91,10 @@ check('結果画面の戻り先がプレイヤー向けの言い方になる',
 // 切り出す終わりを '\nconst RhythmMonsterSlotsPanel' にしていたが、それは
 // RhythmTapTest より**前**にあるため、範囲が空になって何も見ていなかった
 // (「0件のうち0件」と出ていた)。演奏画面の次に来る定義まで取る
-const play = grab('const RhythmTapTest=', '\nfunction MonsterHeroGame()');
+// 範囲を「次の定義まで」で決めると、あいだに別の部品が入った途端に他の画面まで飲み込む
+// (2026-09-10 の STEP 6-10 で音ゲーの画面部品が入って実際にそうなった)。
+// 演奏画面はそれ専用の部品ファイルなので、そのファイルをそのまま見る
+const play = fs.readFileSync(path.join(root, 'monster-hero/src/parts/30-rhythm-play.jsx'), 'utf8');
 const stripped = play.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
 for (const word of ['DEBUG', 'デバッグ']) {
   const hits = [...stripped.matchAll(new RegExp(word, 'g'))].length;

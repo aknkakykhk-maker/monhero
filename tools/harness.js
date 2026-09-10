@@ -408,6 +408,30 @@ function readAppSource() {
   return ['60-app.jsx', ...screens].map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
 }
 
+// 画面1つぶんのソースを切り出す。
+//
+// 【なぜ要るか】
+// 検査の多くが「gameState==='X' の位置から次の gameState まで」で画面の中身を切り出していた。
+// STEP 6 で画面を別ファイルへ出すと、その範囲には呼び出し(<XScreen .../>)しか残らず、
+// 中身を探す検査が静かに空振りする。切り出し済みならコンポーネント本体を、
+// まだ本体にあるなら従来どおりの範囲を返す。
+function screenSource(gameState, componentName) {
+  const src = readAppSource();
+  if (componentName) {
+    const at = src.indexOf(`function ${componentName}(`);
+    if (at >= 0) {
+      let end = src.indexOf('\nfunction ', at + 1);
+      if (end < 0) end = src.length;
+      return src.slice(at, end);
+    }
+  }
+  const at = src.indexOf(`gameState==='${gameState}'`);
+  if (at < 0) return '';
+  let end = src.indexOf("{gameState===", at + 10);
+  if (end < 0) end = src.length;
+  return src.slice(at, end);
+}
+
 // 画像系ツール向けの互換エクスポート。canvas は呼び出されたときだけ読み込み、
 // 正規ビルドや構文チェックからネイティブ依存を切り離したままにする。
 function createCanvas(...args) {
@@ -518,4 +542,4 @@ function artSourcePath(...parts) {
   return path.join(REPO_ROOT, 'tools', 'art-sources', ...parts);
 }
 
-module.exports = { REPO_ROOT, GAME_SYSTEM, PARTS_DIR, PARTS_MANIFEST, readPartsManifest, assembleParts, readAppSource, syncPartsAndGameSystem, splitGeneratedFile, generatedHeader, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, artSourcePath, createCanvas };
+module.exports = { REPO_ROOT, GAME_SYSTEM, PARTS_DIR, PARTS_MANIFEST, readPartsManifest, assembleParts, readAppSource, screenSource, syncPartsAndGameSystem, splitGeneratedFile, generatedHeader, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, artSourcePath, createCanvas };
