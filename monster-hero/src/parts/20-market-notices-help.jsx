@@ -117,7 +117,7 @@ const DexAttackPreview = ({ mon, anim, onPlay }) => {
   const actor=<img src={mon.imgUrl} alt="" draggable={false} className="h-16 w-16 object-contain drop-shadow-md"/>;
   const actionActor=!anim?.reduced&&anim?.motion==='pandoraDualThunder'&&mon.id==='Pandora'
     ? <PandoraDualThunder image={actor}/>
-    : <span data-dex-action-actor className="relative block h-16 w-16" style={anim?.reduced?{opacity:.9}:{isolation:'isolate',animation:attackMotionAnimation(anim)}}>
+    : <span data-dex-action-actor className="relative block h-16 w-16" style={anim?.reduced?{opacity:0.9}:{isolation:'isolate',animation:attackMotionAnimation(anim)}}>
         {actor}
         {!anim?.reduced&&anim?.sakura&&<EikiSakuraPetals/>}
         {!anim?.reduced&&anim?.twinBlade&&<KenshiTwinSlash/>}
