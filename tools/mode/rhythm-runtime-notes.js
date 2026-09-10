@@ -180,6 +180,7 @@ const RELEASED_MARKERS=Object.freeze({
   '4u_hitasura':'4u-hitasura-v3',
   kindan_no_resistance:'kindan-no-resistance-v3',
   crossing_field:'crossing-field-v3',
+  nothing_without_you:'nothing-without-you-v3',
 });
 
 // 曲id → 音源の一覧(tools/mode/authoring/rhythm-song-registry.json)のid。
@@ -202,6 +203,7 @@ const RELEASED_TRACKS=Object.freeze({
   '4u_hitasura':'4u_hitasura',
   kindan_no_resistance:'kindan_no_resistance',
   crossing_field:'crossing_field',
+  nothing_without_you:'nothing_without_you',
 });
 
 module.exports={heldSpan,HOLD_SHIFT_SUB,ROOT,RUNTIME,FINGER_GAP_SUB,loadRuntime,makeSpanAt,usableSpan,maxSeparation,

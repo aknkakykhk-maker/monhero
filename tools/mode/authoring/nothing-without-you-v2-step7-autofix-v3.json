@@ -1,0 +1,167 @@
+{
+ "schemaVersion": 1,
+ "analysisType": "rhythm-chart-v2-step7-autofix",
+ "trackId": "nothing_without_you",
+ "source": "v3",
+ "sourceLabel": "V3 生成",
+ "reviewRequired": true,
+ "runtimeConnected": false,
+ "handModel": {
+  "hands": 2,
+  "laneSpeedComfort": 10,
+  "laneSpeedLimit": 18,
+  "restrikeComfortMs": 150,
+  "restrikeLimitMs": 105,
+  "chordMinLaneGap": 1,
+  "releaseMarginMs": 30,
+  "endFlickReleaseMs": 80
+ },
+ "weights": {
+  "impossible": 10000,
+  "strained": 100,
+  "hardJump": 120,
+  "laneSpread": 1,
+  "move": 3,
+  "maxPasses": 8
+ },
+ "difficulties": {
+  "EASY": {
+   "noteCount": 297,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "hardJumps": 0,
+    "spread": 105,
+    "cost": 105
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "hardJumps": 0,
+    "spread": 105,
+    "cost": 105
+   },
+   "fixes": []
+  },
+  "NORMAL": {
+   "noteCount": 333,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 1,
+    "hardJumps": 0,
+    "spread": 121,
+    "cost": 221
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 1,
+    "hardJumps": 0,
+    "spread": 121,
+    "cost": 221
+   },
+   "fixes": []
+  },
+  "HARD": {
+   "noteCount": 462,
+   "fixCount": 0,
+   "passes": 0,
+   "before": {
+    "impossible": 0,
+    "strained": 0,
+    "hardJumps": 2,
+    "spread": 162,
+    "cost": 402
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "hardJumps": 2,
+    "spread": 162,
+    "cost": 402
+   },
+   "fixes": []
+  },
+  "EXPERT": {
+   "noteCount": 568,
+   "fixCount": 1,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 1,
+    "hardJumps": 4,
+    "spread": 194,
+    "cost": 774
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "hardJumps": 4,
+    "spread": 194,
+    "cost": 674
+   },
+   "fixes": [
+    {
+     "grid": 2321,
+     "bar": 145,
+     "timeMs": 179538,
+     "type": "TAP",
+     "move": "サブレーン3→2",
+     "pass": 1,
+     "costBefore": 774,
+     "costAfter": 674,
+     "impossibleAfter": 0,
+     "strainedAfter": 0
+    }
+   ]
+  },
+  "MASTER": {
+   "noteCount": 651,
+   "fixCount": 2,
+   "passes": 1,
+   "before": {
+    "impossible": 0,
+    "strained": 2,
+    "hardJumps": 0,
+    "spread": 177,
+    "cost": 377
+   },
+   "after": {
+    "impossible": 0,
+    "strained": 0,
+    "hardJumps": 0,
+    "spread": 177,
+    "cost": 177
+   },
+   "fixes": [
+    {
+     "grid": 753,
+     "bar": 47,
+     "timeMs": 58303,
+     "type": "TAP",
+     "move": "サブレーン7→6",
+     "pass": 1,
+     "costBefore": 377,
+     "costAfter": 277,
+     "impossibleAfter": 0,
+     "strainedAfter": 1
+    },
+    {
+     "grid": 1418,
+     "bar": 88,
+     "timeMs": 109720,
+     "type": "TAP",
+     "move": "サブレーン8→7",
+     "pass": 1,
+     "costBefore": 277,
+     "costAfter": 177,
+     "impossibleAfter": 0,
+     "strainedAfter": 0
+    }
+   ]
+  }
+ }
+}

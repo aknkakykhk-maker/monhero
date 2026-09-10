@@ -248,6 +248,19 @@
     "source": "command"
    },
    "challengeFactor": 1.16
+  },
+  "nothing_without_you": {
+   "audio": "monster-hero/audio/bgm-nothing-without-you.mp3",
+   "audioSha256": "4cb261cf1cd9fcbb3592d0854503bf40db54bb99ef357efed598f074959d0884",
+   "durationMs": 189504,
+   "analyzedTiming": {
+    "bpm": 194.005,
+    "beatZeroMs": 83.1,
+    "beatsPerBar": 4,
+    "subdivisionsPerBeat": 4,
+    "source": "detected"
+   },
+   "challengeFactor": 0.9
   }
  }
 }

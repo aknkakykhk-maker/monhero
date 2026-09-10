@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 09beb9ff6e2a31d4
+// generated-sha256: 8240330c3a1d9ffe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 22:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 23:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3059,6 +3059,7 @@ const BGM_TRACKS = [
   { id:'melo_kindan_no_resistance', name:'禁断のレジスタンス', creator:'オリジナル', src:'audio/bgm-kindan-no-resistance.mp3', gain:1, loop:true },
   // モンビーの新曲(2026-09-08)。同じくmp4で受け取った音源から映像を落として入れたもの
   { id:'melo_crossing_field', name:'crossing field', creator:'オリジナル', src:'audio/bgm-crossing-field.mp3', gain:1, loop:true },
+  { id:'melo_nothing_without_you', name:'Nothing Without You', creator:'オリジナル', src:'audio/bgm-nothing-without-you.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
@@ -3397,6 +3398,7 @@ const Audio_ = (() => {
     "audio/bgm-menu.mp3": "a6aef603fd6a",
     "audio/bgm-monster-hero-theme-alt.mp3": "6b4eb065c2e2",
     "audio/bgm-monster-hero-theme.mp3": "083a1d9db281",
+    "audio/bgm-nothing-without-you.mp3": "4cb261cf1cd9",
     "audio/bgm-pandora-boss-beat.mp3": "b70636c619b2",
     "audio/bgm-pandora-boss-remix.mp3": "0faa4d713fdc",
     "audio/bgm-pandora-boss.mp3": "b6683818f250",
