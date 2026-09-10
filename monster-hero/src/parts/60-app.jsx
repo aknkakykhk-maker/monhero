@@ -7473,7 +7473,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(115); triggerShake();
                 await battleWait(130);
               }else{
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))));
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)))));
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -7485,7 +7485,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))));
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)))));
               }
             }
             setAttackAnim(null);
@@ -11730,7 +11730,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?560:320)));
             }else{
               setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
-              await new Promise(r=>setTimeout(r,atkMotion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?WATER_BURST_MOTION_MS:500))));
+              await new Promise(r=>setTimeout(r,atkMotion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(atkMotion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?WATER_BURST_MOTION_MS:500)))));
             }
             setMonsterImageDebugMotionPlaying(null);
           };
@@ -11748,7 +11748,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
                   <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>
                   <p className="mb-2 text-[8px] leading-relaxed text-slate-400">本番のバトル画面と同じ関数・同じCSSでこの場で再生する。連撃の巻き添えヒットは無いのでこの1回だけ動く。</p>
-                  <div className={`mx-auto h-28 w-28 ${(atkMotion==='waterBurst'||atkMotion==='arkHolyRain')?'overflow-visible':'overflow-hidden'} rounded-xl border border-white/20`} style={bgStyle}>
+                  <div className={`mx-auto h-28 w-28 ${(atkMotion==='waterBurst'||atkMotion==='arkHolyRain'||atkMotion==='miaSongNotes')?'overflow-visible':'overflow-hidden'} rounded-xl border border-white/20`} style={bgStyle}>
                     <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}>
                       {monsterImageDebugMotionPlaying?.motion==='arkHolyRain'
                         ?<ArkHolyRainMotion
@@ -11757,6 +11757,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           empowered={monsterImageDebugMotionPlaying?.charge===false}/>
                         :monsterImageDebugMotionPlaying?.motion==='waterBurst'
                           ?<WaterBurstMotion
+                            image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
+                            lunge={monsterImageDebugMotionPlaying?.charge===false}
+                            charging={monsterImageDebugMotionPlaying?.charge===true}/>
+                        :monsterImageDebugMotionPlaying?.motion==='miaSongNotes'
+                          ?<MiaSongNotesMotion
                             image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
                             lunge={monsterImageDebugMotionPlaying?.charge===false}
                             charging={monsterImageDebugMotionPlaying?.charge===true}/>
@@ -14557,6 +14562,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             empowered={attackAnim.charge===false}/>
                         :isAnimating&&attackAnim.motion==='waterBurst'
                           ?<WaterBurstMotion
+                            image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                            lunge={attackAnim.charge===false}
+                            charging={attackAnim.charge===true}/>
+                        :isAnimating&&attackAnim.motion==='miaSongNotes'
+                          ?<MiaSongNotesMotion
                             image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>}
                             lunge={attackAnim.charge===false}
                             charging={attackAnim.charge===true}/>

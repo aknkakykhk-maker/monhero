@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 13cc1bb5e42f6f51
+// generated-sha256: dd81662c191c83d4
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 16:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 17:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8609,8 +8609,11 @@ const rpgResolveStep = (battle, varianceOn, rng = rpgDefaultRng) => {
 //
 // どのモーションを使うかは、通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion で決める。
 // RPG用にモーションのデータを別に持たないので、モンスターを足しても更新漏れが起きない。
-const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', arkHolyRain:'Float', waterBurst:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', kenshiTwinBlade:'Dash', pandoraDualThunder:'Thunder' });
+// ミーアの歌攻撃(miaSongNotes)は、その場から飛び道具を撃つ動きが waterBurst と同じなので
+// RPG画面では 'Water' の縮小版モーションを共用する(RPG専用のモーションデータは増やさない)。
+const RPG_MOTION_BY_ATK = Object.freeze({ default:'Attack', floatStab:'Float', arkHolyRain:'Float', waterBurst:'Water', miaSongNotes:'Water', zanCombo:'Dash', eikiSakuraCombo:'Dash', kenshiTwinBlade:'Dash', pandoraDualThunder:'Thunder' });
 const WATER_BURST_MOTION_MS = 680;
+const MIA_SONG_NOTES_MOTION_MS = 760;
 const ARK_HOLY_RAIN_MOTION_MS = 900;
 // DEBUGと本番バトルが同じatkMotion名・同じkeyframesを通るための共通入口。
 const attackMotionAnimation = (anim) => {
@@ -8623,6 +8626,8 @@ const attackMotionAnimation = (anim) => {
   // アークの聖光攻撃も距離枠は固定し、ArkHolyRainMotion 内で本体の浮遊と光だけを描く。
   // イブリースの floatStab は従来どおり残す。
   if (anim.motion==='arkHolyRain') return undefined;
+  // ミーアの歌攻撃も距離枠は動かさない。MiaSongNotesMotion 内で本体・マイク・音符だけを動かす。
+  if (anim.motion==='miaSongNotes') return undefined;
   // エイキはザンと同じ高速斬撃の動き(zanComboDash)をそのまま使う。
   // 桜の花びらは枠を動かすのではなく、下の SakuraPetals を攻撃中だけ重ねて出す
   // 剣士モッチーは敵まで高速で斬り込み、二度通り抜けてX字を完成させる専用モーション。
@@ -8645,7 +8650,7 @@ const attackMotionPreviewSequence = (atkMotion='default') => {
   ];
   return [{
     anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
-    ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))),
+    ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)))),
   }];
 };
 const rpgMotionName = (side, monId, isSkill) => {
@@ -8872,6 +8877,58 @@ const WaterBurstMotion = ({image, lunge=false, charging=false, compact=false}) =
     </span>
   </span>
 );
+// ミーア専用の歌攻撃演出。
+// 距離枠は動かさず、本体だけが少し前へ出てリズムを取り、前へマイクスタンドを出して
+// 音符を4つ時間差で敵へ飛ばす。追加画像・追加音源は使わず、攻撃中だけDOMへ出る
+// 固定数のCSS要素で描く(常時アニメーションにはしない)。
+// スマホの縦画面でも「歌って攻撃している」と一目で分かるよう、マイクは本体の手前・
+// やや左に置いて本体を隠さず、音符は大きさと高さをばらして4つ流す。
+const MIA_SONG_NOTES = Object.freeze([
+  { glyph:'♪', left:'36%', delay:'90ms',  x:'20px',  y:'-126px', size:'26px', spin:'-18deg', color:'#f9a8d4' },
+  { glyph:'♬', left:'52%', delay:'185ms', x:'-4px',  y:'-142px', size:'33px', spin:'14deg',  color:'#c4b5fd' },
+  { glyph:'♫', left:'66%', delay:'275ms', x:'-24px', y:'-120px', size:'24px', spin:'-12deg', color:'#fda4af' },
+  { glyph:'♩', left:'45%', delay:'365ms', x:'10px',  y:'-136px', size:'29px', spin:'20deg',  color:'#a5f3fc' },
+]);
+const MIA_SONG_SPARKLES = Object.freeze([
+  { x:'-70px', y:'-30px', delay:'0ms',  size:'8px' },
+  { x:'-46px', y:'-64px', delay:'22ms', size:'6px' },
+  { x:'-14px', y:'-78px', delay:'12ms', size:'9px' },
+  { x:'26px',  y:'-72px', delay:'30ms', size:'7px' },
+  { x:'58px',  y:'-44px', delay:'18ms', size:'9px' },
+  { x:'72px',  y:'6px',   delay:'36ms', size:'6px' },
+  { x:'-62px', y:'14px',  delay:'28ms', size:'7px' },
+  { x:'4px',   y:'22px',  delay:'42ms', size:'6px' },
+]);
+const MiaSongNotesMotion = ({image, lunge=false, charging=false, compact=false}) => (
+  <span className={`mia-song-notes${lunge?' mia-song-notes--lunge':''}${charging?' mia-song-notes--charging':''}${compact?' mia-song-notes--compact':''}`}>
+    <span className="mia-song-notes__stage" aria-hidden="true"><i/><i/></span>
+    <span className="mia-song-notes__monster">{image}</span>
+    <span className="mia-song-notes__mic" aria-hidden="true">
+      <i className="mia-song-notes__mic-head"/>
+      <i className="mia-song-notes__mic-pole"/>
+      <i className="mia-song-notes__mic-base"/>
+    </span>
+    <span className="mia-song-notes__notes" aria-hidden="true">
+      {MIA_SONG_NOTES.map((note,index)=>(
+        <i key={`note-${index}`} className="mia-song-notes__note" style={{
+          left:note.left, animationDelay:note.delay, fontSize:note.size, color:note.color,
+          '--mia-note-x':note.x, '--mia-note-y':note.y, '--mia-note-spin':note.spin,
+        }}>{note.glyph}</i>
+      ))}
+    </span>
+    <span className="mia-song-notes__impact" aria-hidden="true">
+      <i className="mia-song-notes__impact-core"/>
+      <i className="mia-song-notes__impact-ring"/>
+      <i className="mia-song-notes__impact-ring mia-song-notes__impact-ring--late"/>
+      {MIA_SONG_SPARKLES.map((spark,index)=>(
+        <i key={`spark-${index}`} className="mia-song-notes__spark" style={{
+          width:spark.size, height:spark.size,
+          '--mia-spark-x':spark.x, '--mia-spark-y':spark.y, '--mia-spark-delay':spark.delay,
+        }}/>
+      ))}
+    </span>
+  </span>
+);
 const PandoraDualThunder = ({image, compact=false}) => (
   <span className={`pandora-dual-thunder${compact?' pandora-dual-thunder--compact':''}`} aria-hidden="true">
     <span className="pandora-dual-center">{React.cloneElement(image,{alt:''})}</span>
@@ -8895,6 +8952,13 @@ const BattleAttackMotionPreview = ({image, anim, compact=false}) => {
     return (
       <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
         <WaterBurstMotion image={image} lunge={anim?.charge===false} charging={anim?.charge===true} compact={compact}/>
+      </div>
+    );
+  }
+  if(anim?.motion==='miaSongNotes') {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center" style={{isolation:'isolate'}}>
+        <MiaSongNotesMotion image={image} lunge={anim?.charge===false} charging={anim?.charge===true} compact={compact}/>
       </div>
     );
   }
@@ -19464,7 +19528,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(115); triggerShake();
                 await battleWait(130);
               }else{
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))));
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)))));
               }
             } else {
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -19476,7 +19540,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 await battleWait(130);
               }else{
                 if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450))));
+                await battleWait(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?650:(motion==='waterBurst'?WATER_BURST_MOTION_MS:450)))));
               }
             }
             setAttackAnim(null);
@@ -23721,7 +23785,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?560:320)));
             }else{
               setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
-              await new Promise(r=>setTimeout(r,atkMotion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?WATER_BURST_MOTION_MS:500))));
+              await new Promise(r=>setTimeout(r,atkMotion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(atkMotion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?WATER_BURST_MOTION_MS:500)))));
             }
             setMonsterImageDebugMotionPlaying(null);
           };
@@ -23739,7 +23803,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
                   <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>
                   <p className="mb-2 text-[8px] leading-relaxed text-slate-400">本番のバトル画面と同じ関数・同じCSSでこの場で再生する。連撃の巻き添えヒットは無いのでこの1回だけ動く。</p>
-                  <div className={`mx-auto h-28 w-28 ${(atkMotion==='waterBurst'||atkMotion==='arkHolyRain')?'overflow-visible':'overflow-hidden'} rounded-xl border border-white/20`} style={bgStyle}>
+                  <div className={`mx-auto h-28 w-28 ${(atkMotion==='waterBurst'||atkMotion==='arkHolyRain'||atkMotion==='miaSongNotes')?'overflow-visible':'overflow-hidden'} rounded-xl border border-white/20`} style={bgStyle}>
                     <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}>
                       {monsterImageDebugMotionPlaying?.motion==='arkHolyRain'
                         ?<ArkHolyRainMotion
@@ -23748,6 +23812,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           empowered={monsterImageDebugMotionPlaying?.charge===false}/>
                         :monsterImageDebugMotionPlaying?.motion==='waterBurst'
                           ?<WaterBurstMotion
+                            image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
+                            lunge={monsterImageDebugMotionPlaying?.charge===false}
+                            charging={monsterImageDebugMotionPlaying?.charge===true}/>
+                        :monsterImageDebugMotionPlaying?.motion==='miaSongNotes'
+                          ?<MiaSongNotesMotion
                             image={<DyedMonsterImage baseId={base.id} src={oldSources.imgUrl} alt="攻撃モーション確認" masuColors={colors} className="h-full w-full object-contain"/>}
                             lunge={monsterImageDebugMotionPlaying?.charge===false}
                             charging={monsterImageDebugMotionPlaying?.charge===true}/>
@@ -26551,6 +26620,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>}
                             lunge={attackAnim.charge===false}
                             charging={attackAnim.charge===true}/>
+                        :isAnimating&&attackAnim.motion==='miaSongNotes'
+                          ?<MiaSongNotesMotion
+                            image={<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>}
+                            lunge={attackAnim.charge===false}
+                            charging={attackAnim.charge===true}/>
                           :<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                       {/* 剣士モッチーの二刀流の軌跡。エイキの桜と同じく攻撃中だけ重ねる */}
                       {isAnimating&&attackAnim.twinBlade&&<KenshiTwinSlash/>}
@@ -28795,6 +28869,184 @@ const createAnimationStyle = () => {
         0%,62% { opacity:0; transform:scale(.5); }
         72% { opacity:.9; transform:scale(1); }
         100% { opacity:0; transform:scale(1.35); }
+      }
+    }
+    /* ミーアの歌攻撃(miaSongNotes)。
+       距離枠は動かさず、本体だけが少し前へ出てリズムを取り、手前にマイクスタンドを出して
+       音符を4つ時間差で敵へ飛ばす。追加画像は使わず、攻撃中だけ出るCSS要素で
+       マイク・音符・着弾の音の輪を描く(終わるとDOMごと消える)。
+       大きさは枠に対する%で決めてあるので、バトル(64px)・図鑑・デバッグのどの枠でも同じ見え方になる。 */
+    .mia-song-notes { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:26; isolation:isolate; }
+    .mia-song-notes__monster {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:4;
+      transform-origin:50% 78%; will-change:transform,filter;
+      animation:miaSongSing 760ms cubic-bezier(.22,.72,.24,1) forwards;
+    }
+    .mia-song-notes--lunge .mia-song-notes__monster { animation-name:miaSongSingLunge; }
+    .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongCharge 650ms cubic-bezier(.2,.72,.2,1) forwards; }
+    /* タメ(固有技の共通の下沈み)のあいだは歌わない。マイクも音符も着弾も出さない */
+    .mia-song-notes--charging .mia-song-notes__mic,
+    .mia-song-notes--charging .mia-song-notes__notes,
+    .mia-song-notes--charging .mia-song-notes__stage,
+    .mia-song-notes--charging .mia-song-notes__impact { display:none; }
+    @keyframes miaSongCharge {
+      0% { transform:translate3d(0,0,0) scale(1); filter:drop-shadow(0 0 5px rgba(244,114,182,.45)); }
+      55% { transform:translate3d(0,12px,0) scale(.91,.84); filter:drop-shadow(0 0 18px rgba(236,72,153,.92)) drop-shadow(0 10px 20px rgba(168,85,247,.6)); }
+      100% { transform:translate3d(0,16px,0) scale(.88,.80); filter:drop-shadow(0 0 28px rgba(255,255,255,.94)) drop-shadow(0 12px 28px rgba(217,70,239,.82)); }
+    }
+    /* 歌う本体。少し前(上)へ出て、上下と左右で拍を取ってから元位置へ戻る */
+    @keyframes miaSongSing {
+      0% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 5px rgba(244,114,182,.5)); }
+      12% { transform:translate3d(0,-9px,0) scale(1.05) rotate(0deg); filter:drop-shadow(0 0 16px rgba(244,114,182,.92)); }
+      28% { transform:translate3d(-7px,-3px,0) scale(1.03) rotate(-4deg); filter:drop-shadow(0 0 20px rgba(236,72,153,.95)); }
+      44% { transform:translate3d(7px,-13px,0) scale(1.07) rotate(4deg); filter:drop-shadow(0 0 24px rgba(255,255,255,.96)); }
+      60% { transform:translate3d(-6px,-4px,0) scale(1.03) rotate(-3deg); filter:drop-shadow(0 0 20px rgba(192,132,252,.94)); }
+      76% { transform:translate3d(6px,-11px,0) scale(1.06) rotate(3deg); filter:drop-shadow(0 0 22px rgba(244,114,182,.9)); }
+      90% { transform:translate3d(0,-4px,0) scale(1.02) rotate(0deg); filter:drop-shadow(0 0 12px rgba(244,114,182,.6)); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:drop-shadow(0 0 0 rgba(0,0,0,0)); }
+    }
+    /* 固有技のタメ明け。沈んだ位置から立ち上がり、通常より大きく歌う */
+    @keyframes miaSongSingLunge {
+      0% { transform:translate3d(0,16px,0) scale(.88,.80) rotate(0deg); filter:drop-shadow(0 0 28px rgba(236,72,153,.95)); }
+      14% { transform:translate3d(0,-14px,0) scale(1.12) rotate(0deg); filter:drop-shadow(0 0 30px rgba(255,255,255,.98)); }
+      30% { transform:translate3d(-10px,-5px,0) scale(1.08) rotate(-6deg); filter:drop-shadow(0 0 26px rgba(236,72,153,.98)); }
+      46% { transform:translate3d(10px,-18px,0) scale(1.13) rotate(6deg); filter:drop-shadow(0 0 32px rgba(255,255,255,1)); }
+      62% { transform:translate3d(-8px,-6px,0) scale(1.08) rotate(-5deg); filter:drop-shadow(0 0 27px rgba(192,132,252,.98)); }
+      78% { transform:translate3d(8px,-15px,0) scale(1.1) rotate(4deg); filter:drop-shadow(0 0 25px rgba(244,114,182,.94)); }
+      92% { transform:translate3d(0,-5px,0) scale(1.03) rotate(0deg); filter:drop-shadow(0 0 13px rgba(244,114,182,.62)); }
+      100% { transform:translate3d(0,0,0) scale(1) rotate(0deg); filter:none; }
+    }
+    /* 足元のステージ光。床に置いた光の輪を2つ、拍に合わせて広げる */
+    .mia-song-notes__stage { position:absolute; inset:0; z-index:2; overflow:visible; }
+    .mia-song-notes__stage i {
+      position:absolute; left:50%; top:76%; width:46%; height:14%; margin-left:-23%; opacity:0;
+      border:2px solid rgba(249,168,212,.9); border-radius:50%;
+      box-shadow:0 0 10px rgba(236,72,153,.9), inset 0 0 8px rgba(255,255,255,.7);
+      will-change:transform,opacity; animation:miaSongStage 380ms ease-out forwards;
+    }
+    .mia-song-notes__stage i:nth-child(1) { animation-delay:60ms; }
+    .mia-song-notes__stage i:nth-child(2) { animation-delay:340ms; }
+    @keyframes miaSongStage {
+      0% { opacity:0; transform:scale(.4); }
+      26% { opacity:1; }
+      100% { opacity:0; transform:scale(1.9,1.15); }
+    }
+    /* マイクスタンド。ミーアの手前・やや左に立て、本体は隠さない */
+    .mia-song-notes__mic {
+      position:absolute; left:11%; bottom:2%; width:21%; height:56%; z-index:6;
+      opacity:0; transform-origin:50% 100%; will-change:transform,opacity;
+      animation:miaSongMicPop 760ms cubic-bezier(.2,1.4,.36,1) forwards;
+    }
+    @keyframes miaSongMicPop {
+      0% { opacity:0; transform:translate3d(0,10px,0) scale(.35); }
+      9% { opacity:1; transform:translate3d(0,0,0) scale(1.16); }
+      16% { transform:translate3d(0,0,0) scale(.96); }
+      24%,84% { opacity:1; transform:translate3d(0,0,0) scale(1); }
+      100% { opacity:0; transform:translate3d(0,6px,0) scale(.82); }
+    }
+    .mia-song-notes__mic-head {
+      position:absolute; left:50%; top:0; width:100%; height:34%; margin-left:-50%;
+      border-radius:50% 50% 46% 46%;
+      background:radial-gradient(circle at 34% 28%,#fff 0 14%,#e2e8f0 32%,#94a3b8 62%,#475569 100%);
+      border:1px solid rgba(255,255,255,.9);
+      box-shadow:0 0 9px rgba(244,114,182,.95),0 0 18px rgba(236,72,153,.7);
+    }
+    .mia-song-notes__mic-pole {
+      position:absolute; left:50%; top:30%; width:14%; height:64%; margin-left:-7%;
+      border-radius:999px;
+      background:linear-gradient(90deg,#64748b,#f1f5f9 42%,#cbd5e1 62%,#475569);
+      box-shadow:0 0 7px rgba(226,232,240,.75);
+    }
+    .mia-song-notes__mic-base {
+      position:absolute; left:50%; bottom:0; width:150%; height:11%; margin-left:-75%;
+      border-radius:50%;
+      background:linear-gradient(180deg,#e2e8f0,#475569);
+      box-shadow:0 0 10px rgba(236,72,153,.8);
+    }
+    /* 敵へ飛ぶ音符。4つを時間差・別々の高さと大きさで流す */
+    .mia-song-notes__notes { position:absolute; inset:0; overflow:visible; z-index:7; }
+    .mia-song-notes__note {
+      position:absolute; top:38%; opacity:0; font-style:normal; font-weight:900; line-height:1;
+      text-shadow:0 0 6px #fff,0 0 14px rgba(236,72,153,.95),0 0 26px rgba(168,85,247,.75);
+      will-change:transform,opacity; animation:miaSongNoteFly 460ms cubic-bezier(.14,.72,.22,1) forwards;
+    }
+    /* 音符のうしろに残る短い光の尾 */
+    .mia-song-notes__note::after {
+      content:''; position:absolute; left:50%; top:58%; width:.22em; height:1.1em; transform:translateX(-50%);
+      border-radius:999px;
+      background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(244,114,182,.55) 40%,transparent);
+      filter:blur(.6px); z-index:-1;
+    }
+    @keyframes miaSongNoteFly {
+      0% { opacity:0; transform:translate3d(-50%,14px,0) rotate(0deg) scale(.45); }
+      15% { opacity:1; transform:translate3d(-50%,0,0) rotate(calc(var(--mia-note-spin) * .3)) scale(1.05); }
+      70% { opacity:1; transform:translate3d(calc(-50% + var(--mia-note-x)),calc(var(--mia-note-y) * .78),0) rotate(var(--mia-note-spin)) scale(1.18); }
+      100% { opacity:0; transform:translate3d(calc(-50% + var(--mia-note-x)),var(--mia-note-y),0) rotate(var(--mia-note-spin)) scale(.82); }
+    }
+    /* 敵側の着弾。音の輪を2度ひろげ、光とキラキラで当たったことを分かるようにする */
+    .mia-song-notes__impact {
+      position:absolute; left:50%; top:-92px; width:30px; height:30px; margin:-15px 0 0 -15px; z-index:8;
+    }
+    .mia-song-notes__impact-core {
+      position:absolute; inset:-52px; border-radius:50%; opacity:0;
+      background:radial-gradient(circle,rgba(255,255,255,1) 0 8%,rgba(251,207,232,.98) 18%,rgba(236,72,153,.66) 36%,rgba(168,85,247,.34) 54%,rgba(168,85,247,0) 76%);
+      filter:blur(.4px); animation:miaSongImpactCore 760ms ease-out forwards;
+    }
+    @keyframes miaSongImpactCore {
+      0%,40% { opacity:0; transform:scale(.2); }
+      46% { opacity:1; transform:scale(.7); }
+      62% { opacity:1; transform:scale(1.25); }
+      82% { opacity:.72; transform:scale(1.75); }
+      100% { opacity:0; transform:scale(2.2); }
+    }
+    .mia-song-notes__impact-ring {
+      position:absolute; inset:-22px; border:4px solid rgba(253,242,248,.96); border-radius:50%; opacity:0;
+      box-shadow:0 0 12px #fff,0 0 24px rgba(236,72,153,.95),0 0 40px rgba(168,85,247,.7);
+      animation:miaSongImpactRing 340ms ease-out forwards; animation-delay:400ms;
+    }
+    .mia-song-notes__impact-ring--late { animation-delay:600ms; border-color:rgba(233,213,255,.94); }
+    @keyframes miaSongImpactRing {
+      0% { opacity:0; transform:scale(.3); }
+      24% { opacity:1; transform:scale(.9); }
+      100% { opacity:0; transform:scale(2.15); }
+    }
+    .mia-song-notes__spark {
+      position:absolute; left:50%; top:50%; margin:-3px 0 0 -3px; opacity:0; border-radius:50%;
+      background:radial-gradient(circle,#fff 0 34%,rgba(244,114,182,.95) 62%,rgba(168,85,247,0) 100%);
+      box-shadow:0 0 8px rgba(255,255,255,.95);
+      animation:miaSongSpark 300ms ease-out forwards; animation-delay:calc(455ms + var(--mia-spark-delay));
+    }
+    @keyframes miaSongSpark {
+      0% { opacity:0; transform:translate3d(0,0,0) scale(.4); }
+      22% { opacity:1; transform:translate3d(calc(var(--mia-spark-x) * .4),calc(var(--mia-spark-y) * .4),0) scale(1.1); }
+      100% { opacity:0; transform:translate3d(var(--mia-spark-x),var(--mia-spark-y),0) scale(.5); }
+    }
+    /* 動きを減らす設定のときは、移動を抑えて光と音符の淡い上昇だけにする */
+    @media (prefers-reduced-motion: reduce) {
+      .mia-song-notes__monster,
+      .mia-song-notes--lunge .mia-song-notes__monster,
+      .mia-song-notes--charging .mia-song-notes__monster { animation:miaSongReduced 760ms ease-out forwards; }
+      .mia-song-notes__mic { animation:miaSongMicReduced 760ms ease-out forwards; }
+      .mia-song-notes__note { animation:miaSongNoteReduced 460ms ease-out forwards; }
+      .mia-song-notes__stage i, .mia-song-notes__spark { display:none; }
+      .mia-song-notes__impact-ring { animation:miaSongImpactRingReduced 340ms ease-out forwards; }
+      @keyframes miaSongReduced {
+        0% { filter:drop-shadow(0 0 4px rgba(244,114,182,.35)); }
+        45% { filter:drop-shadow(0 0 24px rgba(236,72,153,.95)); }
+        100% { filter:none; }
+      }
+      @keyframes miaSongMicReduced {
+        0% { opacity:0; } 12%,84% { opacity:1; } 100% { opacity:0; }
+      }
+      @keyframes miaSongNoteReduced {
+        0% { opacity:0; transform:translate3d(-50%,4px,0) scale(.7); }
+        35% { opacity:1; }
+        100% { opacity:0; transform:translate3d(-50%,-28px,0) scale(1); }
+      }
+      @keyframes miaSongImpactRingReduced {
+        0% { opacity:0; transform:scale(.6); }
+        30% { opacity:.9; transform:scale(1); }
+        100% { opacity:0; transform:scale(1.4); }
       }
     }
     /* エイキの桜。攻撃モーションが出ているあいだだけ描画され、終わるとDOMごと消える。
