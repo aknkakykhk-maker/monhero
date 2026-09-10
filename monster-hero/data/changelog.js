@@ -34,6 +34,17 @@
 // 迷ったら「公開初日に遊ぶ人がこれを読んで意味が分かるか」で決める。
 const CHANGELOG = [
   {
+    date: "2026-09-10 22:43", type:'update', title:'モンヒロビートに新曲「Nothing Without You」を追加しました', status:'new',
+    assistantNotice: { id:'update_notice_nothing_without_you_v1', type:'content' },
+    items:[
+      'モンヒロビートの16曲目として「Nothing Without You」を追加しました。3分09秒の全尺で遊べます。',
+      '難易度はEASY Lv.6 / NORMAL Lv.8 / HARD Lv.13 / EXPERT Lv.20 / MASTER Lv.25。ノーツ数は297 / 333 / 462 / 568 / 651です。',
+      '明るい曲調と3分を超える長さに合わせて、詰めこみすぎない密度にしました。最後まで気持ちよく押せるはずです。',
+      '曲えらびにジャケットが出ます。ジャケットをタップすると大きく見られます。',
+      '音の大きさは、ほかの曲とそろえてあります。',
+    ],
+  },
+  {
     // 届け方の修正なので助手の初回告知は付けない(不具合修正)。
     date: "2026-09-10 21:15", type:'fix', title:'モンヒロビート: 曲の音量をそろえたのに古い音のまま鳴っていたのを直しました', status:'new',
     items:[

@@ -40,6 +40,7 @@ const BGM_TRACKS = [
   { id:'melo_kindan_no_resistance', name:'禁断のレジスタンス', creator:'オリジナル', src:'audio/bgm-kindan-no-resistance.mp3', gain:1, loop:true },
   // モンビーの新曲(2026-09-08)。同じくmp4で受け取った音源から映像を落として入れたもの
   { id:'melo_crossing_field', name:'crossing field', creator:'オリジナル', src:'audio/bgm-crossing-field.mp3', gain:1, loop:true },
+  { id:'melo_nothing_without_you', name:'Nothing Without You', creator:'オリジナル', src:'audio/bgm-nothing-without-you.mp3', gain:1, loop:true },
   { id:'melo_dullahan_clockwork_alt', name:'呪われた騎士の時計仕掛け -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-clockwork-alt.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost', name:'鋼鉄の亡霊', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost.mp3', gain:1, loop:true },
   { id:'melo_dullahan_steel_ghost_alt', name:'鋼鉄の亡霊 -Another-', creator:'オリジナル', src:'audio/bgm-dullahan-steel-ghost-alt.mp3', gain:1, loop:true },
