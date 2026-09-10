@@ -53,6 +53,11 @@ const checks = [
   ['準備中は特性を発動しない', game.includes('const iceLockActive = iceLockTurns>0 && !iceLockPreparing') && !game.includes('activatesIceLock') && !/getDmg\([^\n]*activatedIceLockThisTurn/.test(game)],
   ['敵情報欄に絶氷の準備・残りターン・軽減を維持', /data-ice-lock-status[\s\S]*?iceLockPreparing\?'準備':[\s\S]*?iceLockTurns\}T　⬇30%/.test(game) && /text-\[7px\][\s\S]*?❄️絶氷/.test(game)],
   ['専用水攻撃モーション', /atkMotion:'waterBurst'/.test(ally) && /@keyframes waterBurstAttack/.test(game) && /@keyframes waterBurstLunge/.test(game)],
+  ['固有技の共通タメは専用モーションより先に下沈みを行う', game.includes('setAttackAnim({slotIndex: animSlot, charge:true});')
+    && !game.includes("setAttackAnim({slotIndex: animSlot, charge:true, ...((motion==='waterBurst'||motion==='arkHolyRain')?{motion}: {})});")
+    && game.includes('setMonsterImageDebugMotionPlaying({charge:true});')
+    && !game.includes("setMonsterImageDebugMotionPlaying({charge:true, ...((atkMotion==='waterBurst'||atkMotion==='arkHolyRain')?{motion:atkMotion}: {})});")
+    && game.includes('setAttackAnim({slotIndex: animSlot, charge:false, motion, twinBlade:isKenshiTwin, sakura:')],
   ['水攻撃は距離枠を動かさず本体だけ横移動', game.includes("if (anim.motion==='waterBurst') return undefined")
     && game.includes('const WaterBurstMotion =')
     && game.includes('translate3d(-44px,-2px,0)')

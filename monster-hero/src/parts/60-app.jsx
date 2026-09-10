@@ -7462,7 +7462,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const motion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[animSlot]?.atkMotion; // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する。固有技は技の出自(継承元)のモーションを優先する
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
-              setAttackAnim({slotIndex: animSlot, charge:true, ...((motion==='waterBurst'||motion==='arkHolyRain')?{motion}: {})});
+              setAttackAnim({slotIndex: animSlot, charge:true});
               Audio_.se.special();
               await battleWait(650);
               const isKenshiTwin=motion==='kenshiTwinBlade';
@@ -11722,7 +11722,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const isDashMotion=atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo'||atkMotion==='kenshiTwinBlade';
           const playMotionPreview=async()=>{
             if(!motionSupported||monsterImageDebugMotionPlaying)return;
-            setMonsterImageDebugMotionPlaying({charge:true, ...((atkMotion==='waterBurst'||atkMotion==='arkHolyRain')?{motion:atkMotion}: {})});
+            setMonsterImageDebugMotionPlaying({charge:true});
             await new Promise(r=>setTimeout(r,650));
             if(isDashMotion){
               const isTwin=atkMotion==='kenshiTwinBlade';
