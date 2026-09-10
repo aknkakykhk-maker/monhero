@@ -9,9 +9,11 @@
 // - 3保存値の取引保存、神殿導線、所持表示、リザルト、iPhone操作
 const fs = require('fs');
 const path = require('path');
-const { REPO_ROOT, loadDyeModule } = require('../harness');
+const { REPO_ROOT, loadDyeModule, readAppSource } = require('../harness');
 
-const app = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/src/parts/60-app.jsx'), 'utf8');
+// アイテム欄は 2026-09-10(STEP 6-5)に 54-screen-item-inventory.jsx へ移った。
+// 画面の中身を探すので、本体と切り出した画面をまとめて見る readAppSource を使う
+const app = readAppSource();
 const resultUi = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/src/parts/27-result-widgets.jsx'), 'utf8');
 const progression = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/src/parts/11-masu-progression.jsx'), 'utf8');
 const api = loadDyeModule();

@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 344cb8eb1b5184c7
+// source-sha256: c61edc08c30f1866
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 30238a14f849f804
+// generated-sha256: 8240330c3a1d9ffe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 22:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 23:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22719,6 +22719,253 @@ function GiftBoxScreen({
   })));
 }
 
+// ---- part: 54-screen-item-inventory.jsx ----
+// ==== 画面: アイテム(gameState === 'ITEM_INVENTORY') ====
+//
+// MonsterHeroGame から切り出した4画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-5)。
+// 型は 51〜53 と同じ。
+//
+// 【この画面ならではの注意】
+// ・戻り先はホームではなくプロフィール。画面は行き先を知らなくてよいので props(onBack)で受ける
+// ・「使う」を押したときの対象えらび(pendingItemUse)は MonsterHeroGame 側の別画面なので、
+//   ここは「どのアイテムを使うか」を渡すだけ
+// ・一覧に出す品(BREEDER_MARKET_ITEMS / HERO_PROOF_ITEM / speciesTranscendFruitItems)と
+//   難易度の表示(DIFFICULTY_SETTINGS)は共有層の持ち物なので props にしない
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に ITEM_INVENTORY の行が無い)
+function ItemInventoryScreen({
+  ownedItems,
+  onBack,
+  onUseItem
+}) {
+  // 超越の実(虹・種族別)はマーケットで売る商品ではなく種族チャレンジの初回クリア報酬でしか
+  // 増えないため、種族別ぶんはBREEDER_MARKET_ITEMSに登録していない(虹だけは購入もできるので
+  // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
+  const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...((ownedItems[HERO_PROOF_ITEM_ID] || 0) > 0 ? [HERO_PROOF_ITEM] : []), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-teal-400 uppercase tracking-widest"
+  }, "\u30A2\u30A4\u30C6\u30E0")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "inventory",
+    compact: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
+  }, "\u6240\u6301\u3057\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u3067\u3059\u3002\u4F7F\u3046\u5834\u6240\u304C\u6C7A\u307E\u3063\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u306F\u53F3\u5074\u306B\u8868\u793A\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, inventoryItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "empty-state",
+    style: {
+      padding: '32px 16px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "big",
+    style: {
+      fontSize: '40px'
+    }
+  }, "\uD83C\uDF92"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-400 mt-2"
+  }, "\u307E\u3060\u30A2\u30A4\u30C6\u30E0\u3092\u6301\u3063\u3066\u3044\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u30BF\u30D6\u304B\u3089\u8CFC\u5165\u3067\u304D\u307E\u3059\u3002")) : /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-2 pb-4"
+  }, inventoryItems.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    className: "rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-3 flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30"
+  }, item.icon ? /*#__PURE__*/React.createElement("img", {
+    src: item.icon,
+    alt: item.name,
+    className: "w-full h-full object-cover"
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "text-2xl"
+  }, item.emoji)), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-black text-white truncate"
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-400 leading-tight mt-0.5"
+  }, item.desc), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-teal-300 mt-0.5"
+  }, "\u6240\u6301\u6570: ", ownedItems[item.id])), item.usage === 'battleSkip' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2"
+  }, "\u30D0\u30C8\u30EB\u306E", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "\u30B9\u30AD\u30C3\u30D7\u3067\u4F7F\u7528") : item.usage === 'breakthrough' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2"
+  }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9650\u754C\u7A81\u7834\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'uniqueSkillReset' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
+  }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u56FA\u6709\u6280\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendReset' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2"
+  }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendFruit' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2"
+  }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRank' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2"
+  }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u9032\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRankRespec' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
+  }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u7279\u6027\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
+    onClick: () => onUseItem(item.id),
+    className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
+  }, "\u4F7F\u3046"))))));
+}
+
+// ---- part: 55-screen-breeder-market.jsx ----
+// ==== 画面: マーケット(gameState === 'BREEDER_MARKET') ====
+//
+// MonsterHeroGame から切り出した5画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-6)。
+// 型は 51〜54 と同じ。
+//
+// 【この画面ならではの注意】
+// ・購入(buyMarketItem)と勇者の証での交換(exchangeSoulRankRespecByProof)は
+//   保存を伴うので中身は MonsterHeroGame 側に残し、props で受け取る。画面は「どれを」だけ渡す
+// ・所持しているか(isMarketItemOwned)は本体の state(解放済みモンスター・教え・アイコン)を
+//   見るので、判定ごと props で受け取る
+// ・購入処理中かどうかは ref(marketPurchaseProcessingRef)で持っている。ref は変わっても
+//   描き直しが起きないので、**ここでも props は真偽値**にしてある(描画のたびに読む今の作りと同じ)。
+//   ref そのものを渡すと「画面が本体の中身を持つ」形になるので渡さない
+// ・商品の並べ方(MARKET_GRID_CLASS)と1枚のカード(MarketProductCard)は共有層 20 の持ち物
+// ・助手の告知(assistantNotice)は更新履歴 → data/assistants.js の仕組みで、この画面とは別。
+//   ここが変わっても boot/market-notice-check の対象は動かない
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に BREEDER_MARKET の行が無い)
+function BreederMarketScreen({
+  gold,
+  breederPoints,
+  ownedItems,
+  marketTab,
+  marketExchangeError,
+  purchaseProcessing,
+  isItemOwned,
+  onBack,
+  onSelectTab,
+  onZoomIcon,
+  onBuy,
+  onOpenDetail,
+  onOpenItemDetail,
+  onExchangeSoulRankRespec
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-amber-400 uppercase tracking-widest"
+  }, "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-3"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "market",
+    condition: Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 mb-4 shrink-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
+  }, /*#__PURE__*/React.createElement(Coins, {
+    size: 16,
+    className: "text-amber-400"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-lg font-black text-amber-300"
+  }, breederPoints), /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] text-slate-400 font-bold"
+  }, "pt(Lv.UP\u3067+1)")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 16,
+    className: "text-amber-400"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-lg font-black text-amber-300"
+  }, gold.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] text-slate-400 font-bold"
+  }, "\u30C0\u30A4\u30E4(WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97)"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5 mb-3 shrink-0"
+  }, [{
+    key: 'icon',
+    label: 'アイコン'
+  }, {
+    key: 'disc',
+    label: '円盤石'
+  }, {
+    key: 'assist',
+    label: 'アシスト'
+  }, {
+    key: 'item',
+    label: 'アイテム'
+  }].map(tab => /*#__PURE__*/React.createElement("button", {
+    key: tab.key,
+    onClick: () => onSelectTab(tab.key),
+    className: `flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab === tab.key ? 'bg-amber-500 text-black' : 'bg-slate-900 border border-slate-800 text-slate-400'}`
+  }, tab.label))), marketTab === 'item' && marketExchangeError && /*#__PURE__*/React.createElement("div", {
+    className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300"
+  }, marketExchangeError), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[11px] text-slate-600 font-bold py-10"
+  }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
+    className: MARKET_GRID_CLASS
+  }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).map(item => {
+    const comingSoon = item.available === false;
+    const owned = !comingSoon && isItemOwned(item);
+    const balance = item.currency === 'psyche' ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
+    const canBuy = !comingSoon && !owned && balance >= item.cost;
+    const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+    const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
+    const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
+    const exchangeItem = isSoulRankRespec ? {
+      ...item,
+      currency: 'heroProof',
+      cost: 1
+    } : null;
+    return /*#__PURE__*/React.createElement(React.Fragment, {
+      key: item.id
+    }, /*#__PURE__*/React.createElement(MarketProductCard, {
+      item: item,
+      owned: owned,
+      comingSoon: comingSoon,
+      canBuy: canBuy,
+      onZoom: () => onZoomIcon(item),
+      onBuy: () => onBuy(item),
+      detail: detailMon || detailTeaching,
+      onDetail: () => onOpenDetail(item, detailMon, detailTeaching),
+      middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
+      }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
+        onClick: () => onOpenItemDetail(item),
+        "aria-label": `${item.name}の効果を見る`,
+        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
+      }, /*#__PURE__*/React.createElement(BookOpen, {
+        size: 8
+      }), "\u8A73\u7D30")) : null
+    }), exchangeItem && /*#__PURE__*/React.createElement(MarketProductCard, {
+      item: exchangeItem,
+      owned: false,
+      comingSoon: false,
+      canBuy: ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID) > 0 && !purchaseProcessing,
+      disabled: purchaseProcessing,
+      onBuy: onExchangeSoulRankRespec,
+      middle: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-black ${ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
+      }, "\xD7", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID)), item.desc && /*#__PURE__*/React.createElement("button", {
+        onClick: () => onOpenItemDetail(item),
+        "aria-label": `${item.name}の効果を見る`,
+        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
+      }, /*#__PURE__*/React.createElement(BookOpen, {
+        size: 8
+      }), "\u8A73\u7D30"))
+    }));
+  }))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -44916,134 +45163,36 @@ function MonsterHeroGame() {
         size: 16,
         className: "shrink-0 text-fuchsia-400"
       }));
-    })())), gameState === 'BREEDER_MARKET' && /*#__PURE__*/React.createElement("div", {
-      "data-mh-screen": true,
-      className: "flex-1 flex flex-col h-full min-h-0 p-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-2 shrink-0"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: returnToHome,
-      className: "p-3 text-slate-400 active:scale-90"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic text-amber-400 uppercase tracking-widest"
-    }, "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-3"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "market",
-      condition: Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-2 mb-4 shrink-0"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
-    }, /*#__PURE__*/React.createElement(Coins, {
-      size: 16,
-      className: "text-amber-400"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-lg font-black text-amber-300"
-    }, breederPoints), /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] text-slate-400 font-bold"
-    }, "pt(Lv.UP\u3067+1)")), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3"
-    }, /*#__PURE__*/React.createElement(Gem, {
-      size: 16,
-      className: "text-amber-400"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-lg font-black text-amber-300"
-    }, gold.toLocaleString()), /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] text-slate-400 font-bold"
-    }, "\u30C0\u30A4\u30E4(WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97)"))), /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-1.5 mb-3 shrink-0"
-    }, [{
-      key: 'icon',
-      label: 'アイコン'
-    }, {
-      key: 'disc',
-      label: '円盤石'
-    }, {
-      key: 'assist',
-      label: 'アシスト'
-    }, {
-      key: 'item',
-      label: 'アイテム'
-    }].map(tab => /*#__PURE__*/React.createElement("button", {
-      key: tab.key,
-      onClick: () => {
-        setMarketTab(tab.key);
+    })())), gameState === 'BREEDER_MARKET' && /*#__PURE__*/React.createElement(BreederMarketScreen, {
+      gold: gold,
+      breederPoints: breederPoints,
+      ownedItems: ownedItems,
+      marketTab: marketTab,
+      marketExchangeError: marketExchangeError,
+      purchaseProcessing: marketPurchaseProcessingRef.current,
+      isItemOwned: isMarketItemOwned,
+      onBack: returnToHome,
+      onSelectTab: key => {
+        setMarketTab(key);
         setMarketExchangeError('');
       },
-      className: `flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab === tab.key ? 'bg-amber-500 text-black' : 'bg-slate-900 border border-slate-800 text-slate-400'}`
-    }, tab.label))), marketTab === 'item' && marketExchangeError && /*#__PURE__*/React.createElement("div", {
-      className: "mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300"
-    }, marketExchangeError), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-    }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).length === 0 ? /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-[11px] text-slate-600 font-bold py-10"
-    }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
-      className: MARKET_GRID_CLASS
-    }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).map(item => {
-      const comingSoon = item.available === false;
-      const owned = !comingSoon && isMarketItemOwned(item);
-      const balance = item.currency === 'psyche' ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : item.type === 'disc' || item.type === 'assist' || item.type === 'item' ? gold : breederPoints;
-      const canBuy = !comingSoon && !owned && balance >= item.cost;
-      const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
-      const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
-      const isSoulRankRespec = item.id === SOUL_RANK_RESPEC_ITEM_ID;
-      const exchangeItem = isSoulRankRespec ? {
-        ...item,
-        currency: 'heroProof',
-        cost: 1
-      } : null;
-      return /*#__PURE__*/React.createElement(React.Fragment, {
-        key: item.id
-      }, /*#__PURE__*/React.createElement(MarketProductCard, {
-        item: item,
-        owned: owned,
-        comingSoon: comingSoon,
-        canBuy: canBuy,
-        onZoom: () => setMarketIconZoom(item),
-        onBuy: () => {
-          if (item.type === 'item') {
-            setMarketPurchaseQuantity(1);
-            setMarketQuantityItem(item);
-          } else buyMarketItem(item);
-        },
-        detail: detailMon || detailTeaching,
-        onDetail: () => {
-          if (detailMon) setRosterDetailMon({
-            ...detailMon,
-            marketDiscIcon: item.icon,
-            marketDiscName: item.name
-          });else setRosterDetailTeaching(detailTeaching);
-        },
-        middle: item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-          className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-        }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
-          onClick: () => setMarketItemDetail(item),
-          "aria-label": `${item.name}の効果を見る`,
-          className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
-        }, /*#__PURE__*/React.createElement(BookOpen, {
-          size: 8
-        }), "\u8A73\u7D30")) : null
-      }), exchangeItem && /*#__PURE__*/React.createElement(MarketProductCard, {
-        item: exchangeItem,
-        owned: false,
-        comingSoon: false,
-        canBuy: ownedItemCount(ownedItems, HERO_PROOF_ITEM_ID) > 0 && !marketPurchaseProcessingRef.current,
-        disabled: marketPurchaseProcessingRef.current,
-        onBuy: exchangeSoulRankRespecByProof,
-        middle: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
-          className: `text-[9px] font-black ${ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-        }, "\xD7", ownedItemCount(ownedItems, SOUL_RANK_RESPEC_ITEM_ID)), item.desc && /*#__PURE__*/React.createElement("button", {
-          onClick: () => setMarketItemDetail(item),
-          "aria-label": `${item.name}の効果を見る`,
-          className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
-        }, /*#__PURE__*/React.createElement(BookOpen, {
-          size: 8
-        }), "\u8A73\u7D30"))
-      }));
-    })))), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
+      onZoomIcon: setMarketIconZoom,
+      onBuy: item => {
+        if (item.type === 'item') {
+          setMarketPurchaseQuantity(1);
+          setMarketQuantityItem(item);
+        } else buyMarketItem(item);
+      },
+      onOpenDetail: (item, detailMon, detailTeaching) => {
+        if (detailMon) setRosterDetailMon({
+          ...detailMon,
+          marketDiscIcon: item.icon,
+          marketDiscName: item.name
+        });else setRosterDetailTeaching(detailTeaching);
+      },
+      onOpenItemDetail: setMarketItemDetail,
+      onExchangeSoulRankRespec: exchangeSoulRankRespecByProof
+    }), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
       "data-mh-screen": true,
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
@@ -46314,85 +46463,11 @@ function MonsterHeroGame() {
         onClick: continueFusionFlow,
         className: "w-full max-w-xs bg-violet-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95"
       }, "\u3068\u3058\u308B"));
-    })(), gameState === 'ITEM_INVENTORY' && (() => {
-      // 超越の実(虹・種族別)はマーケットで売る商品ではなく種族チャレンジの初回クリア報酬でしか
-      // 増えないため、種族別ぶんはBREEDER_MARKET_ITEMSに登録していない(虹だけは購入もできるので
-      // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
-      const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...((ownedItems[HERO_PROOF_ITEM_ID] || 0) > 0 ? [HERO_PROOF_ITEM] : []), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-4"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('PROFILE'),
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-teal-400 uppercase tracking-widest"
-      }, "\u30A2\u30A4\u30C6\u30E0")), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto mb-2"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "inventory",
-        compact: true
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
-      }, "\u6240\u6301\u3057\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u3067\u3059\u3002\u4F7F\u3046\u5834\u6240\u304C\u6C7A\u307E\u3063\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u306F\u53F3\u5074\u306B\u8868\u793A\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-      }, inventoryItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
-        className: "empty-state",
-        style: {
-          padding: '32px 16px',
-          textAlign: 'center'
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "big",
-        style: {
-          fontSize: '40px'
-        }
-      }, "\uD83C\uDF92"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] text-slate-400 mt-2"
-      }, "\u307E\u3060\u30A2\u30A4\u30C6\u30E0\u3092\u6301\u3063\u3066\u3044\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u30BF\u30D6\u304B\u3089\u8CFC\u5165\u3067\u304D\u307E\u3059\u3002")) : /*#__PURE__*/React.createElement("div", {
-        className: "flex flex-col gap-2 pb-4"
-      }, inventoryItems.map(item => /*#__PURE__*/React.createElement("div", {
-        key: item.id,
-        className: "rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-3 flex items-center gap-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30"
-      }, item.icon ? /*#__PURE__*/React.createElement("img", {
-        src: item.icon,
-        alt: item.name,
-        className: "w-full h-full object-cover"
-      }) : /*#__PURE__*/React.createElement("span", {
-        className: "text-2xl"
-      }, item.emoji)), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-w-0"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-xs font-black text-white truncate"
-      }, item.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-400 leading-tight mt-0.5"
-      }, item.desc), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-teal-300 mt-0.5"
-      }, "\u6240\u6301\u6570: ", ownedItems[item.id])), item.usage === 'battleSkip' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2"
-      }, "\u30D0\u30C8\u30EB\u306E", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "\u30B9\u30AD\u30C3\u30D7\u3067\u4F7F\u7528") : item.usage === 'breakthrough' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2"
-      }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9650\u754C\u7A81\u7834\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'uniqueSkillReset' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
-      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u56FA\u6709\u6280\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendReset' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2"
-      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendFruit' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2"
-      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRank' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2"
-      }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u9032\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRankRespec' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
-      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u7279\u6027\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
-        onClick: () => setPendingItemUse(item.id),
-        className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
-      }, "\u4F7F\u3046"))))));
-    })(), pendingItemUse && (() => {
+    })(), gameState === 'ITEM_INVENTORY' && /*#__PURE__*/React.createElement(ItemInventoryScreen, {
+      ownedItems: ownedItems,
+      onBack: () => setGameState('PROFILE'),
+      onUseItem: setPendingItemUse
+    }), pendingItemUse && (() => {
       const item = BREEDER_MARKET_ITEMS.find(i => i.id === pendingItemUse);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex flex-col p-4",

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 30238a14f849f804
+// generated-sha256: 8240330c3a1d9ffe
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -74,7 +74,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 22:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 23:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12440,6 +12440,160 @@ function GiftBoxScreen({ gifts, giftTab, onSelectTab, onBack, onClaim, onOpenLog
   );
 }
 
+// ---- part: 54-screen-item-inventory.jsx ----
+// ==== 画面: アイテム(gameState === 'ITEM_INVENTORY') ====
+//
+// MonsterHeroGame から切り出した4画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-5)。
+// 型は 51〜53 と同じ。
+//
+// 【この画面ならではの注意】
+// ・戻り先はホームではなくプロフィール。画面は行き先を知らなくてよいので props(onBack)で受ける
+// ・「使う」を押したときの対象えらび(pendingItemUse)は MonsterHeroGame 側の別画面なので、
+//   ここは「どのアイテムを使うか」を渡すだけ
+// ・一覧に出す品(BREEDER_MARKET_ITEMS / HERO_PROOF_ITEM / speciesTranscendFruitItems)と
+//   難易度の表示(DIFFICULTY_SETTINGS)は共有層の持ち物なので props にしない
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に ITEM_INVENTORY の行が無い)
+function ItemInventoryScreen({ ownedItems, onBack, onUseItem }) {
+  // 超越の実(虹・種族別)はマーケットで売る商品ではなく種族チャレンジの初回クリア報酬でしか
+  // 増えないため、種族別ぶんはBREEDER_MARKET_ITEMSに登録していない(虹だけは購入もできるので
+  // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
+  const inventoryItems = [
+    ...BREEDER_MARKET_ITEMS.filter(item=>item.type==='item'&&(ownedItems[item.id]||0)>0),
+    ...((ownedItems[HERO_PROOF_ITEM_ID]||0)>0?[HERO_PROOF_ITEM]:[]),
+    ...Object.values(speciesTranscendFruitItems()).filter(item=>(ownedItems[item.id]||0)>0),
+  ];
+  return (
+      <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
+        <div className="flex items-center gap-2 mb-2 shrink-0">
+          <button onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+          <h2 className="text-xl font-black italic text-teal-400 uppercase tracking-widest">アイテム</h2>
+        </div>
+        <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="inventory" compact/></div>
+        <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">所持しているアイテムです。使う場所が決まっているアイテムは右側に表示します。</div>
+        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+          {inventoryItems.length===0?(
+            <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🎒</span><div className="text-[11px] text-slate-400 mt-2">まだアイテムを持っていません。<br/>マーケットの「アイテム」タブから購入できます。</div></div>
+          ):(
+            <div className="flex flex-col gap-2 pb-4">
+              {inventoryItems.map(item=>(
+                <div key={item.id} className="rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-3 flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30">{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-2xl">{item.emoji}</span>}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-black text-white truncate">{item.name}</div>
+                    <div className="text-[8px] text-slate-400 leading-tight mt-0.5">{item.desc}</div>
+                    <div className="text-[9px] font-black text-teal-300 mt-0.5">所持数: {ownedItems[item.id]}</div>
+                  </div>
+                  {/* スキップチケットや超越の実はマスモン詳細の別の場所で使うものなので、使う場所だけ案内する */}
+                  {item.usage==='battleSkip'
+                    ? <div className="shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2">バトルの<br/>{DIFFICULTY_SETTINGS[item.skipDifficulty]?.label}<br/>スキップで使用</div>
+                    : item.usage==='breakthrough'
+                    ? <div className="shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2">神殿の<br/>限界突破で<br/>使用</div>
+                    : item.usage==='uniqueSkillReset'
+                    ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>固有技強化で<br/>使用</div>
+                    : item.usage==='transcendReset'
+                    ? <div className="shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
+                    : item.usage==='transcendFruit'
+                    ? <div className="shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
+                    : item.usage==='soulRank'
+                    ? <div className="shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2">神殿の<br/>魂格進化で<br/>使用</div>
+                    : item.usage==='soulRankRespec'
+                    ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>魂格特性で<br/>使用</div>
+                    : <button onClick={()=>onUseItem(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>  );
+}
+
+// ---- part: 55-screen-breeder-market.jsx ----
+// ==== 画面: マーケット(gameState === 'BREEDER_MARKET') ====
+//
+// MonsterHeroGame から切り出した5画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-6)。
+// 型は 51〜54 と同じ。
+//
+// 【この画面ならではの注意】
+// ・購入(buyMarketItem)と勇者の証での交換(exchangeSoulRankRespecByProof)は
+//   保存を伴うので中身は MonsterHeroGame 側に残し、props で受け取る。画面は「どれを」だけ渡す
+// ・所持しているか(isMarketItemOwned)は本体の state(解放済みモンスター・教え・アイコン)を
+//   見るので、判定ごと props で受け取る
+// ・購入処理中かどうかは ref(marketPurchaseProcessingRef)で持っている。ref は変わっても
+//   描き直しが起きないので、**ここでも props は真偽値**にしてある(描画のたびに読む今の作りと同じ)。
+//   ref そのものを渡すと「画面が本体の中身を持つ」形になるので渡さない
+// ・商品の並べ方(MARKET_GRID_CLASS)と1枚のカード(MarketProductCard)は共有層 20 の持ち物
+// ・助手の告知(assistantNotice)は更新履歴 → data/assistants.js の仕組みで、この画面とは別。
+//   ここが変わっても boot/market-notice-check の対象は動かない
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に BREEDER_MARKET の行が無い)
+function BreederMarketScreen({
+  gold, breederPoints, ownedItems, marketTab, marketExchangeError, purchaseProcessing,
+  isItemOwned, onBack, onSelectTab, onZoomIcon, onBuy, onOpenDetail, onOpenItemDetail, onExchangeSoulRankRespec,
+}) {
+  return (
+      <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
+        <div className="flex items-center gap-2 mb-2 shrink-0">
+          <button onClick={onBack} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+          <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
+        </div>
+        <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
+        <div className="flex gap-2 mb-4 shrink-0">
+          <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
+            <Coins size={16} className="text-amber-400"/>
+            <span className="text-lg font-black text-amber-300">{breederPoints}</span>
+            <span className="text-[9px] text-slate-400 font-bold">pt(Lv.UPで+1)</span>
+          </div>
+          <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
+            <Gem size={16} className="text-amber-400"/>
+            <span className="text-lg font-black text-amber-300">{gold.toLocaleString()}</span>
+            <span className="text-[9px] text-slate-400 font-bold">ダイヤ(WAVEクリアで獲得)</span>
+          </div>
+        </div>
+        <div className="flex gap-1.5 mb-3 shrink-0">
+          {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'}].map(tab=>(
+            <button key={tab.key} onClick={()=>onSelectTab(tab.key)} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab===tab.key?'bg-amber-500 text-black':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
+          ))}
+        </div>
+        {marketTab==='item'&&marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
+        <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+        {/* shop:false のアイテム(虹のプシュケー)は売り物ではないので陳列しない */}
+        {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).length===0?(
+          <div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>
+        ):(
+          <div className={MARKET_GRID_CLASS}>
+            {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).map(item=>{
+              const comingSoon = item.available === false;
+              const owned = !comingSoon && isItemOwned(item);
+              const balance = item.currency==='psyche' ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : item.type==='disc' || item.type==='assist' || item.type==='item' ? gold : breederPoints;
+              const canBuy = !comingSoon && !owned && balance>=item.cost;
+              const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+              const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
+              const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
+              const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
+              return (
+                <React.Fragment key={item.id}>
+                  <MarketProductCard
+                    item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
+                    onZoom={()=>onZoomIcon(item)} onBuy={()=>onBuy(item)}
+                    detail={detailMon||detailTeaching}
+                    onDetail={()=>onOpenDetail(item,detailMon,detailTeaching)}
+                    middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>onOpenItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
+                  />
+                  {exchangeItem&&<MarketProductCard
+                    item={exchangeItem} owned={false} comingSoon={false}
+                    canBuy={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)>0&&!purchaseProcessing}
+                    disabled={purchaseProcessing}
+                    onBuy={onExchangeSoulRankRespec}
+                    middle={<><span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<button onClick={()=>onOpenItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>}
+                  />}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+        </div>
+      </div>  );
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -24500,68 +24654,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {/* BREEDER MARKET */}
         {gameState==='BREEDER_MARKET'&&(
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-            <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-              <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
-            </div>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
-            <div className="flex gap-2 mb-4 shrink-0">
-              <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
-                <Coins size={16} className="text-amber-400"/>
-                <span className="text-lg font-black text-amber-300">{breederPoints}</span>
-                <span className="text-[9px] text-slate-400 font-bold">pt(Lv.UPで+1)</span>
-              </div>
-              <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
-                <Gem size={16} className="text-amber-400"/>
-                <span className="text-lg font-black text-amber-300">{gold.toLocaleString()}</span>
-                <span className="text-[9px] text-slate-400 font-bold">ダイヤ(WAVEクリアで獲得)</span>
-              </div>
-            </div>
-            <div className="flex gap-1.5 mb-3 shrink-0">
-              {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'}].map(tab=>(
-                <button key={tab.key} onClick={()=>{setMarketTab(tab.key);setMarketExchangeError('');}} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab===tab.key?'bg-amber-500 text-black':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
-              ))}
-            </div>
-            {marketTab==='item'&&marketExchangeError&&<div className="mb-2 shrink-0 rounded-xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-center text-[9px] font-black text-red-300">{marketExchangeError}</div>}
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-            {/* shop:false のアイテム(虹のプシュケー)は売り物ではないので陳列しない */}
-            {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).length===0?(
-              <div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>
-            ):(
-              <div className={MARKET_GRID_CLASS}>
-                {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).map(item=>{
-                  const comingSoon = item.available === false;
-                  const owned = !comingSoon && isMarketItemOwned(item);
-                  const balance = item.currency==='psyche' ? ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) : item.type==='disc' || item.type==='assist' || item.type==='item' ? gold : breederPoints;
-                  const canBuy = !comingSoon && !owned && balance>=item.cost;
-                  const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
-                  const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
-                  const isSoulRankRespec=item.id===SOUL_RANK_RESPEC_ITEM_ID;
-                  const exchangeItem=isSoulRankRespec?{...item,currency:'heroProof',cost:1}:null;
-                  return (
-                    <React.Fragment key={item.id}>
-                      <MarketProductCard
-                        item={item} owned={owned} comingSoon={comingSoon} canBuy={canBuy}
-                        onZoom={()=>setMarketIconZoom(item)} onBuy={()=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}
-                        detail={detailMon||detailTeaching}
-                        onDetail={()=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
-                        middle={item.type==='item'?<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>:null}
-                      />
-                      {exchangeItem&&<MarketProductCard
-                        item={exchangeItem} owned={false} comingSoon={false}
-                        canBuy={ownedItemCount(ownedItems,HERO_PROOF_ITEM_ID)>0&&!marketPurchaseProcessingRef.current}
-                        disabled={marketPurchaseProcessingRef.current}
-                        onBuy={exchangeSoulRankRespecByProof}
-                        middle={<><span className={`text-[9px] font-black ${ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItemCount(ownedItems,SOUL_RANK_RESPEC_ITEM_ID)}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>}
-                      />}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
-            </div>
-          </div>
+          <BreederMarketScreen
+            gold={gold}
+            breederPoints={breederPoints}
+            ownedItems={ownedItems}
+            marketTab={marketTab}
+            marketExchangeError={marketExchangeError}
+            purchaseProcessing={marketPurchaseProcessingRef.current}
+            isItemOwned={isMarketItemOwned}
+            onBack={returnToHome}
+            onSelectTab={(key)=>{setMarketTab(key);setMarketExchangeError('');}}
+            onZoomIcon={setMarketIconZoom}
+            onBuy={(item)=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}
+            onOpenDetail={(item,detailMon,detailTeaching)=>{if(detailMon) setRosterDetailMon({...detailMon,marketDiscIcon:item.icon,marketDiscName:item.name}); else setRosterDetailTeaching(detailTeaching);}}
+            onOpenItemDetail={setMarketItemDetail}
+            onExchangeSoulRankRespec={exchangeSoulRankRespecByProof}
+          />
         )}
 
         {/* ROSTER (編成) */}
@@ -25224,60 +25332,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {/* アイテム欄: 所持している消耗アイテムを一覧表示し、「使う」から対象のマスモンを選ぶ */}
-        {gameState==='ITEM_INVENTORY'&&(()=>{
-          // 超越の実(虹・種族別)はマーケットで売る商品ではなく種族チャレンジの初回クリア報酬でしか
-          // 増えないため、種族別ぶんはBREEDER_MARKET_ITEMSに登録していない(虹だけは購入もできるので
-          // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
-          const inventoryItems = [
-            ...BREEDER_MARKET_ITEMS.filter(item=>item.type==='item'&&(ownedItems[item.id]||0)>0),
-            ...((ownedItems[HERO_PROOF_ITEM_ID]||0)>0?[HERO_PROOF_ITEM]:[]),
-            ...Object.values(speciesTranscendFruitItems()).filter(item=>(ownedItems[item.id]||0)>0),
-          ];
-          return (
-          <div data-mh-screen className="flex-1 flex flex-col h-full min-h-0 p-4">
-            <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-              <h2 className="text-xl font-black italic text-teal-400 uppercase tracking-widest">アイテム</h2>
-            </div>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="inventory" compact/></div>
-            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">所持しているアイテムです。使う場所が決まっているアイテムは右側に表示します。</div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              {inventoryItems.length===0?(
-                <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🎒</span><div className="text-[11px] text-slate-400 mt-2">まだアイテムを持っていません。<br/>マーケットの「アイテム」タブから購入できます。</div></div>
-              ):(
-                <div className="flex flex-col gap-2 pb-4">
-                  {inventoryItems.map(item=>(
-                    <div key={item.id} className="rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-3 flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30">{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-2xl">{item.emoji}</span>}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-black text-white truncate">{item.name}</div>
-                        <div className="text-[8px] text-slate-400 leading-tight mt-0.5">{item.desc}</div>
-                        <div className="text-[9px] font-black text-teal-300 mt-0.5">所持数: {ownedItems[item.id]}</div>
-                      </div>
-                      {/* スキップチケットや超越の実はマスモン詳細の別の場所で使うものなので、使う場所だけ案内する */}
-                      {item.usage==='battleSkip'
-                        ? <div className="shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2">バトルの<br/>{DIFFICULTY_SETTINGS[item.skipDifficulty]?.label}<br/>スキップで使用</div>
-                        : item.usage==='breakthrough'
-                        ? <div className="shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2">神殿の<br/>限界突破で<br/>使用</div>
-                        : item.usage==='uniqueSkillReset'
-                        ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>固有技強化で<br/>使用</div>
-                        : item.usage==='transcendReset'
-                        ? <div className="shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
-                        : item.usage==='transcendFruit'
-                        ? <div className="shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2">マスモン詳細の<br/>超越強化で<br/>使用</div>
-                        : item.usage==='soulRank'
-                        ? <div className="shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2">神殿の<br/>魂格進化で<br/>使用</div>
-                        : item.usage==='soulRankRespec'
-                        ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>魂格特性で<br/>使用</div>
-                        : <button onClick={()=>setPendingItemUse(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          );
-        })()}
+        {gameState==='ITEM_INVENTORY'&&(
+          <ItemInventoryScreen
+            ownedItems={ownedItems}
+            onBack={()=>setGameState('PROFILE')}
+            onUseItem={setPendingItemUse}
+          />
+        )}
 
         {/* アイテムの使用対象マスモンを選ぶ画面(アイテム欄で「使う」を押した直後) */}
         {pendingItemUse&&(()=>{

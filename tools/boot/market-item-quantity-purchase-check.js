@@ -24,8 +24,11 @@ const check = (name, ok, detail = '') => {
 };
 
 // --- ① 画面側のトリガー条件 ---
+// 2026-09-10(STEP 6-6)にマーケット画面を BreederMarketScreen へ切り出したので、
+// この判断は「本体が画面へ渡す onBuy」の側にある。画面はどの商品かを渡すだけ
 check('価格タップで個数選択シートを開く対象が type:\'item\' 全体になっている',
-  source.includes("onBuy={()=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}"));
+  source.includes("onBuy={(item)=>{if(item.type==='item'){setMarketPurchaseQuantity(1);setMarketQuantityItem(item);}else buyMarketItem(item);}}")
+  && source.includes("onBuy={()=>onBuy(item)}"));
 check('購入完了時にシートを閉じる対象も type:\'item\' 全体になっている',
   source.includes("if (item.type === 'item') setMarketQuantityItem(null);"));
 
