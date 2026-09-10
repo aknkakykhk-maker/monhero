@@ -65,14 +65,21 @@ S/A 等級は `REGRESSION_RISK_MAP.md` に基づく。
 | 7 | `PROFILE` | — | — | **完了**(2026-09-10)。`src/parts/56-screen-profile.jsx`。props 38個は undefined-reference-check で洗い出した |
 | 8 | `MONSTER_DEX(_DETAIL)` | — | — | **完了**(2026-09-10)。`src/parts/57-screen-monster-dex.jsx`(3画面で1ファイル) |
 | 9 | `MASU_*`(育成系) | **Opus 5** | high | 保存が絡む(STEP 3 と同じ領域) |
-| 10 | `RHYTHM_*`(演奏画面以外) | Sonnet 5 | high | 演奏画面は STEP 9 の領域なので触らない |
+| 10 | `RHYTHM_*`(演奏画面以外) | — | — | **完了**(2026-09-10)。`src/parts/58-screen-rhythm.jsx`(5画面で1ファイル) |
 | 11 | `PICK_*` / `WAVE_RESULT` / `REWARD_PICK` / `UPGRADE_SKILL` / `CHAMPION` | **Opus 5** | high | 進行フラグを戻すタイマーが多い。止めると操作不能になる |
 | 12 | `HOME` | **Opus 5** | high | 配置検査あり(`home-layout-check`)。助手の吹き出し・施設・初回案内が重なる |
 | 13 | `BATTLE` | **Opus 5** | **max** | 最後。`processTurn` に `token.alive` を通す。A等級 |
 
 ## 次の一手
 
-**STEP 6 の9本目(`MASU_*` 育成系の切り出し)** — **Opus 5 / effort high**
+**STEP 6 の次(`MASU_*` 育成系の切り出し)** — **Opus 5 / effort high**
+
+先に [`STEP6_HANDOVER.md`](STEP6_HANDOVER.md) を読むこと。終わった13画面と、
+この日に分かった型(props の洗い出し方・移してはいけないもの3つ・検査が静かに壊れること)が1枚にまとまっている。
+
+`MASU_*` は 1画面3〜4万文字が4つある大物なので、**1本で全部やろうとしない**。
+`MASU_ENHANCE`(40千字)/ `MASU_FUSION`(37千字)/ `MASU_TRANSCEND_ENHANCE`(31千字)/
+`MASU_SOUL_TRAITS`(25千字)は1画面ずつ、小さいものはまとめて1本でよい。保存が絡むので CLAUDE.md ⑦ を最優先。
 
 1〜7本目(`use-screen-effects` / `SETTINGS` / `MISSIONS` / `GIFT_BOX` / `ITEM_INVENTORY` /
 `BREEDER_MARKET` / `PROFILE`)は 2026-09-10 に完了。切り出しの型は 51〜56 の6本にそろっている

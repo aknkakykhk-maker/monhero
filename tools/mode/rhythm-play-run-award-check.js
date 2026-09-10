@@ -11,11 +11,15 @@
 // こちらは「どこで・どの条件で・何を配るか」の結線を見る。
 const fs = require('fs');
 const path = require('path');
+const { readAppSource } = require(require('path').join(__dirname, '..', 'harness'));
 
 const root = path.resolve(__dirname, '..', '..');
-const files = [
-  path.join(root, 'monster-hero/src/parts/60-app.jsx'),
-  path.join(root, 'monster-hero/game-system.compiled.js'),
+// 2026-09-10(STEP 6)から、画面は 60-app.jsx から 5x-screen-*.jsx へ1つずつ移っている。
+// 本体だけを見ると移った画面が静かに対象から外れるので、本体と切り出した画面を
+// 1つにつないだもの(readAppSource)を「編集元」として見る
+const sources = [
+  ['monster-hero/src/parts(本体と切り出した画面)', readAppSource()],
+  ['monster-hero/game-system.compiled.js', fs.readFileSync(path.join(root, 'monster-hero/game-system.compiled.js'), 'utf8')],
 ];
 
 let failed = 0;
@@ -24,9 +28,7 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 
-for (const file of files) {
-  const rel = path.relative(root, file);
-  const src = fs.readFileSync(file, 'utf8');
+for (const [rel, src] of sources) {
   const compact = src.replace(/\s+/g, '');
 
   // ---- 出す条件 ----

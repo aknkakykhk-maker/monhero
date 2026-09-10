@@ -13,6 +13,8 @@
 const fs=require('fs');
 const path=require('path');
 const vm=require('vm');
+// STEP 6-10 で画面が切り出されたので、画面の中身は screenSource で取る
+const { screenSource }=require(path.join(__dirname,'..','harness'));
 
 const ROOT=path.resolve(__dirname,'..','..');
 const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
@@ -92,13 +94,16 @@ ok('遊びかたは項目一覧から始まる',
   game.includes('data-rhythm-demo-help-list')&&game.includes('data-rhythm-demo-help-open='),
   '一覧のボタンから項目を開く');
 ok('遊びかたは開くたびに項目一覧へ戻る',game.includes('setRhythmHelpTopicId(null);setGameState(\'RHYTHM_DEMO_HELP\')'));
+// 2026-09-10(STEP 6-10)に画面を切り出したので、
+// 「開いている項目があれば閉じる、なければ曲えらびへ戻る」の判断は画面に、行き先は本体にある
 ok('遊びかたの戻るは1階層ずつ戻る',
-  game.includes("onClick={()=>{if(topic)setRhythmHelpTopicId(null);else setGameState('RHYTHM_DEMO_HOME');}}"));
+  game.includes("onClick={()=>{if(topic)setRhythmHelpTopicId(null);else onBackToSongSelect();}}")
+  && game.includes("onBackToSongSelect={()=>setGameState('RHYTHM_DEMO_HOME')}"));
 ok('遊びかたから次の項目へ進める',game.includes('data-rhythm-demo-help-next'));
 ok('遊びかたも group の小見出しを出す',game.includes('data-rhythm-demo-help-group'));
 // 全項目を展開して縦に並べる作りへ戻っていないか。ここが元に戻ると指摘された状態に戻る
-const helpAt=game.indexOf("gameState==='RHYTHM_DEMO_HELP'");
-const helpBlock=game.slice(helpAt,game.indexOf("gameState==='RHYTHM_DEMO_MONSTERS'",helpAt));
+// STEP 6-10 で画面を切り出したので、中身はコンポーネント本体から取る
+const helpBlock=screenSource('RHYTHM_DEMO_HELP','RhythmHelpScreen');
 ok('遊びかたが全項目を展開して並べていない',
   !/topics\.map\(topic=>\(/.test(helpBlock)&&helpBlock.includes('renderHelpBlocks(topic.blocks'),
   '本文は開いた1項目だけを描く');
@@ -128,11 +133,10 @@ ok('プレイヤー向けの説明に開発用の言葉が混ざっていない'
     console.log('SKIP: 遊びかたを実際に描く確認 — react が入っていないため飛ばしました（手元では実行されます）');
     return;
   }
-  const START="        {gameState==='RHYTHM_DEMO_HELP'&&(()=>{";
-  const from=game.indexOf(START);
-  const to=game.indexOf('\n        })()}', from);
-  if(from<0||to<0){ok('遊びかたのJSXを切り出せる',false);return;}
-  const jsx=game.slice(from,to+'\n        })()}'.length);
+  // 2026-09-10(STEP 6-10)に画面を切り出したので、RhythmHelpScreen が本物として存在する。
+  // 以前はここで JSX を切り出して同名のコンポーネントに包んでいたが、いまは本体をそのまま使う
+  const jsx=screenSource('RHYTHM_DEMO_HELP','RhythmHelpScreen');
+  if(!jsx){ok('遊びかたのJSXを切り出せる',false);return;}
   const stub=({size})=>React.createElement('i',{'data-size':size});
   let Screen;
   try{
@@ -150,19 +154,19 @@ ok('プレイヤー向けの説明に開発用の言葉が混ざっていない'
       +" :String(b.title? b.title+': ':'')+String(b.text||'')));\n"
       +"const RhythmLandscapeHint = () => null;\n"
       +"const AssistantBubble = ({scene}) => React.createElement('div',null,`[助手:${scene}]`);\n"
-      +'const RhythmHelpScreen = ({ gameState, rhythmHelpTopicId, setRhythmHelpTopicId, setGameState,\n'
-      +'  ArrowLeft, ChevronRight, startRhythmPractice, startRhythmTutorial }) => (<>\n'
-      +jsx+'\n</>);\nmodule.exports={RhythmHelpScreen};',
+      +'let ArrowLeft, ChevronRight;\n'
+      +'const __setIcons=(a,c)=>{ArrowLeft=a;ChevronRight=c;};\n'
+      +jsx+'\nmodule.exports={RhythmHelpScreen,__setIcons};',
       {presets:[[PRESET_REACT,{runtime:'classic'}]],filename:'rhythm-help-structure-check.jsx'});
     const scope={exports:{}};
     new Function('module','exports','React',code.code)(scope,scope.exports,React);
+    scope.exports.__setIcons(stub,stub);
     Screen=scope.exports.RhythmHelpScreen;
   }catch(e){ok('遊びかたの画面を組み立てられる',false,String(e).split('\n')[0]);return;}
   const noop=()=>{};
   const render=state=>ReactDOMServer.renderToStaticMarkup(React.createElement(Screen,{
-    gameState:'RHYTHM_DEMO_HELP', rhythmHelpTopicId:null,
-    setRhythmHelpTopicId:noop, setGameState:noop,
-    ArrowLeft:stub, ChevronRight:stub, startRhythmPractice:noop, startRhythmTutorial:noop, ...state}));
+    rhythmHelpTopicId:null, setRhythmHelpTopicId:noop, onBackToSongSelect:noop,
+    startRhythmPractice:noop, startRhythmTutorial:noop, ...state}));
   const plain=html=>html.replace(/<[^>]*>/g,'');
   let list='';
   try{list=render({});}catch(e){ok('遊びかたの項目一覧が描ける',false,String(e).split('\n')[0]);return;}
