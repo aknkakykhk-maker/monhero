@@ -101,6 +101,10 @@
       "role": "画面のエラー境界 MhErrorBoundary と、デバッグ用にわざと例外を投げる部品"
     },
     {
+      "file": "51-screen-settings.jsx",
+      "role": "画面: 設定(SETTINGS)。MonsterHeroGame から切り出した1画面目"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

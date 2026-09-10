@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 45c17d6a6099c0d0
+// source-sha256: 0a1c9524c2e175d9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: db35c16ce8916f66
+// generated-sha256: 7e8ae1132d3f81a3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 18:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 19:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22317,6 +22317,76 @@ const DebugThrowScreenError = () => {
   throw new Error('画面エラーの受け止めを試すために、わざと投げた例外');
 };
 
+// ---- part: 51-screen-settings.jsx ----
+// ==== 画面: 設定(gameState === 'SETTINGS') ====
+//
+// MonsterHeroGame から最初に切り出した画面(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-2)。
+// 依存が少なく、実ブラウザの検査が厚い(設定 → ヘルプ → デバッグ設定の経路を
+// boot/screen-error-boundary-check.js が通り、音量設定と BGM アレンジは audio/* が開く)ので最初に選んだ。
+//
+// 【切り出しの決めごと】
+// ・見た目・文言・並び・遷移先は1文字も変えない。className もそのまま移した
+// ・必要な値は props で明示する。setState をそのまま渡すのではなく「押されたら何をするか」を
+//   MonsterHeroGame 側に残し、この画面へは出来上がった操作だけを渡す
+//   (データ引き継ぎのように setState を5つ呼ぶものが、画面側の知識にならないようにするため)
+// ・BUILD_DATE・ArrowLeft・AssistantBubble は共有層(10〜30)の持ち物なので props にしない
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に SETTINGS の行が無い)ので、
+//   useScreenEffects はまだ使っていない
+function SettingsScreen({
+  onBack,
+  onOpenAudioSettings,
+  onOpenBgmArrangement,
+  onOpenBackup,
+  onOpenHelp,
+  onOpenGameUpdate,
+  gameUpdateDisabled,
+  onReturnToTitle
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-5"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "p-3 text-slate-400"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-slate-200"
+  }, "\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-3"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "settings"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenAudioSettings,
+    className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
+  }, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenBgmArrangement,
+    className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
+  }, "BGM\u30A2\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenBackup,
+    className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
+  }, "\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenHelp,
+    className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
+  }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
+    onClick: onOpenGameUpdate,
+    disabled: gameUpdateDisabled,
+    className: "w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-cyan-200"
+  }, "\u30B2\u30FC\u30E0\u3092\u66F4\u65B0"), /*#__PURE__*/React.createElement("span", {
+    className: "block mt-1 text-[10px] text-slate-400"
+  }, "\u6700\u65B0\u306E\u30B2\u30FC\u30E0\u30C7\u30FC\u30BF\u3092\u8AAD\u307F\u8FBC\u307F\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[9px] font-mono text-slate-600"
+  }, "BUILD ", BUILD_DATE), /*#__PURE__*/React.createElement("button", {
+    onClick: onReturnToTitle,
+    className: "w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black"
+  }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B")));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -40840,55 +40910,22 @@ function MonsterHeroGame() {
     }, "\u30D9\u30FC\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('MASU_MONS'),
       className: "w-full min-h-[72px] bg-pink-950/50 border border-pink-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]"
-    }, "\u30DE\u30B9\u30E2\u30F3"))), gameState === 'SETTINGS' && /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-5"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: returnToHome,
-      className: "p-3 text-slate-400"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic text-slate-200"
-    }, "\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto mb-3"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "settings"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-3"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowAudioSettings(true),
-      className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
-    }, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowBgmArrangement(true),
-      className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
-    }, "BGM\u30A2\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
+    }, "\u30DE\u30B9\u30E2\u30F3"))), gameState === 'SETTINGS' && /*#__PURE__*/React.createElement(SettingsScreen, {
+      onBack: returnToHome,
+      onOpenAudioSettings: () => setShowAudioSettings(true),
+      onOpenBgmArrangement: () => setShowBgmArrangement(true),
+      onOpenBackup: () => {
         setShowBackup(true);
         setBackupTab('export');
         setBackupCode('');
         setRestoreInput('');
         setRestoreMsg('');
       },
-      className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
-    }, "\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => openHelp(),
-      className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
-    }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowGameUpdateConfirm(true),
-      disabled: showGameUpdateConfirm || gameUpdatePending,
-      className: "w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "block text-cyan-200"
-    }, "\u30B2\u30FC\u30E0\u3092\u66F4\u65B0"), /*#__PURE__*/React.createElement("span", {
-      className: "block mt-1 text-[10px] text-slate-400"
-    }, "\u6700\u65B0\u306E\u30B2\u30FC\u30E0\u30C7\u30FC\u30BF\u3092\u8AAD\u307F\u8FBC\u307F\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-[9px] font-mono text-slate-600"
-    }, "BUILD ", BUILD_DATE), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setShowOfficialTitleConfirm(true),
-      className: "w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black"
-    }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B"))), gameState === 'MASU_PATTERN_DEBUG' && (() => {
+      onOpenHelp: () => openHelp(),
+      onOpenGameUpdate: () => setShowGameUpdateConfirm(true),
+      gameUpdateDisabled: showGameUpdateConfirm || gameUpdatePending,
+      onReturnToTitle: () => setShowOfficialTitleConfirm(true)
+    }), gameState === 'MASU_PATTERN_DEBUG' && (() => {
       const eligible = masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId]);
       const selected = eligible.find(m => String(m.id) === String(patternMasuId));
       const resetPattern = () => {

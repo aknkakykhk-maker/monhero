@@ -10647,7 +10647,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {gameState==='SETTINGS'&&(
-          <div className="flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-slate-200">設定</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings"/></div><div className="space-y-3"><button onClick={()=>setShowAudioSettings(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">音量設定</button><button onClick={()=>setShowBgmArrangement(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">BGMアレンジ</button><button onClick={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button><button onClick={()=>openHelp()} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">ヘルプ</button><button onClick={()=>setShowGameUpdateConfirm(true)} disabled={showGameUpdateConfirm||gameUpdatePending} className="w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"><span className="block text-cyan-200">ゲームを更新</span><span className="block mt-1 text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button><div className="text-center text-[9px] font-mono text-slate-600">BUILD {BUILD_DATE}</div><button onClick={()=>setShowOfficialTitleConfirm(true)} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button></div></div>
+          <SettingsScreen
+            onBack={returnToHome}
+            onOpenAudioSettings={()=>setShowAudioSettings(true)}
+            onOpenBgmArrangement={()=>setShowBgmArrangement(true)}
+            onOpenBackup={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}}
+            onOpenHelp={()=>openHelp()}
+            onOpenGameUpdate={()=>setShowGameUpdateConfirm(true)}
+            gameUpdateDisabled={showGameUpdateConfirm||gameUpdatePending}
+            onReturnToTitle={()=>setShowOfficialTitleConfirm(true)}
+          />
         )}
 
         {gameState==='MASU_PATTERN_DEBUG'&&(()=>{
