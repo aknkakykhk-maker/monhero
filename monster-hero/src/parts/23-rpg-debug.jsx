@@ -471,11 +471,18 @@ const attackMotionPreviewSequence = (atkMotion='default') => {
 const attackMotionUniquePreviewSequence = (atkMotion='default') => {
   const motion=atkMotion||'default';
   const isTwin=motion==='kenshiTwinBlade';
+  // ザン・エイキ・剣士モッチーは固有技でも、本番と同じく通常攻撃と同じ残像ダッシュへ移る
+  // (motion を渡す側の分岐へ入れてしまうと specialLunge になり、本番と違う動きになる)
+  const isComboDash=motion==='zanCombo'||motion==='eikiSakuraCombo'||isTwin;
+  if(isComboDash) return [
+    {anim:{charge:true},ms:650},
+    {anim:{zanCombo:!isTwin,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},ms:motion==='eikiSakuraCombo'?500:(isTwin?560:320)},
+  ];
   return [
     {anim:{charge:true},ms:650},
     {
-      anim:{charge:false,motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
-      ms:isTwin?560:(motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500))))),
+      anim:{charge:false,motion,twinBlade:false,sakura:false},
+      ms:motion==='pandoraDualThunder'?900:(motion==='arkHolyRain'?ARK_HOLY_RAIN_MOTION_MS:(motion==='miaSongNotes'?MIA_SONG_NOTES_MOTION_MS:(motion==='floatStab'?700:(motion==='waterBurst'?WATER_BURST_MOTION_MS:500)))),
     },
   ];
 };

@@ -253,10 +253,11 @@ check('専用画面は本番と同じ描画部品を使い、立ち絵を下寄�
   && attackPreview.includes('data-attack-preview-stage'));
 check('専用画面から図鑑の詳細へ戻れ、戻るときに再生を止める',
   /backToDetail=\(\)=>\{dexAttackPreviewRunRef\.current\+=1;setDexAttackPreview\(null\);setGameState\('MONSTER_DEX_DETAIL'\);\}/.test(attackPreview));
-check('固有技のプレビューは本番と同じく共通のタメを先に入れる',
+// どのモーションでもタメから始まること・本番の動きと1コマずつ一致することは
+// tools/battle/attack-preview-parity-check.js が実際に関数を動かして見ている
+check('固有技のプレビューは共通のタメから始まる手順を使う',
   source.includes('const attackMotionUniquePreviewSequence =')
-  && /attackMotionUniquePreviewSequence[\s\S]{0,400}\{anim:\{charge:true\},ms:650\}/.test(source)
-  && /attackMotionUniquePreviewSequence[\s\S]{0,600}anim:\{charge:false,motion,twinBlade:isTwin/.test(source));
+  && /attackMotionUniquePreviewSequence = \(atkMotion='default'\) => \{[\s\S]{0,900}\{anim:\{charge:true\},ms:650\}/.test(source));
 check('左右移動と一覧へ戻る操作で途中の再生を止める',
   detail.includes('const stopDexAttackPreview=')
   && detail.includes('const go=(delta)=>{ stopDexAttackPreview();')
