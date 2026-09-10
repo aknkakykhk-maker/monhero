@@ -394,6 +394,20 @@ function makeBrowserStubs() {
   return { windowStub, documentStub, React, ReactDOM, Image: BrowserImage };
 }
 
+// 本体(60-app.jsx)と、そこから切り出した画面(5x-screen-*.jsx)をつないだ1つの文字列。
+//
+// 【なぜ要るか】
+// STEP 6(docs/refactor/REFACTOR_MASTER_PLAN.md)で、画面は 60-app.jsx から
+// 5x-screen-*.jsx へ1画面ずつ移っていく。「60-app.jsx だけを読む」検査は、
+// 見ている画面が移った瞬間に何も見つけられなくなる——落ちるならまだよく、
+// 「探している文字列がそもそも無い」形の検査だと静かに対象外になる。
+// 画面の中身を探す検査は、60-app.jsx を直接読まずにこれを使う。
+function readAppSource() {
+  const dir = path.join(REPO_ROOT, 'monster-hero', 'src', 'parts');
+  const screens = fs.readdirSync(dir).filter((f) => /^\d+-screen-.+\.jsx$/.test(f)).sort();
+  return ['60-app.jsx', ...screens].map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+}
+
 // 画像系ツール向けの互換エクスポート。canvas は呼び出されたときだけ読み込み、
 // 正規ビルドや構文チェックからネイティブ依存を切り離したままにする。
 function createCanvas(...args) {
@@ -504,4 +518,4 @@ function artSourcePath(...parts) {
   return path.join(REPO_ROOT, 'tools', 'art-sources', ...parts);
 }
 
-module.exports = { REPO_ROOT, GAME_SYSTEM, PARTS_DIR, PARTS_MANIFEST, readPartsManifest, assembleParts, syncPartsAndGameSystem, splitGeneratedFile, generatedHeader, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, artSourcePath, createCanvas };
+module.exports = { REPO_ROOT, GAME_SYSTEM, PARTS_DIR, PARTS_MANIFEST, readPartsManifest, assembleParts, readAppSource, syncPartsAndGameSystem, splitGeneratedFile, generatedHeader, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, artSourcePath, createCanvas };

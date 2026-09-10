@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6a8c9394fd578601
+// source-sha256: 1daddc82a2b39cb4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 7e6fcb42d957488f
+// generated-sha256: 2a55c34fbd4e7d9d
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-10 21:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-10 21:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22709,6 +22709,103 @@ function GiftBoxScreen({
       className: "mh-gift-deadline"
     }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限なし'}`));
   })));
+}
+
+// ---- part: 54-screen-item-inventory.jsx ----
+// ==== 画面: アイテム(gameState === 'ITEM_INVENTORY') ====
+//
+// MonsterHeroGame から切り出した4画面目(docs/refactor/REFACTOR_MASTER_PLAN.md STEP 6-5)。
+// 型は 51〜53 と同じ。
+//
+// 【この画面ならではの注意】
+// ・戻り先はホームではなくプロフィール。画面は行き先を知らなくてよいので props(onBack)で受ける
+// ・「使う」を押したときの対象えらび(pendingItemUse)は MonsterHeroGame 側の別画面なので、
+//   ここは「どのアイテムを使うか」を渡すだけ
+// ・一覧に出す品(BREEDER_MARKET_ITEMS / HERO_PROOF_ITEM / speciesTranscendFruitItems)と
+//   難易度の表示(DIFFICULTY_SETTINGS)は共有層の持ち物なので props にしない
+// ・この画面にタイマーは無い(docs/refactor/SCREEN_EFFECTS_MAP.md に ITEM_INVENTORY の行が無い)
+function ItemInventoryScreen({
+  ownedItems,
+  onBack,
+  onUseItem
+}) {
+  // 超越の実(虹・種族別)はマーケットで売る商品ではなく種族チャレンジの初回クリア報酬でしか
+  // 増えないため、種族別ぶんはBREEDER_MARKET_ITEMSに登録していない(虹だけは購入もできるので
+  // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
+  const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...((ownedItems[HERO_PROOF_ITEM_ID] || 0) > 0 ? [HERO_PROOF_ITEM] : []), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-teal-400 uppercase tracking-widest"
+  }, "\u30A2\u30A4\u30C6\u30E0")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "inventory",
+    compact: true
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
+  }, "\u6240\u6301\u3057\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u3067\u3059\u3002\u4F7F\u3046\u5834\u6240\u304C\u6C7A\u307E\u3063\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u306F\u53F3\u5074\u306B\u8868\u793A\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, inventoryItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "empty-state",
+    style: {
+      padding: '32px 16px',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "big",
+    style: {
+      fontSize: '40px'
+    }
+  }, "\uD83C\uDF92"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-400 mt-2"
+  }, "\u307E\u3060\u30A2\u30A4\u30C6\u30E0\u3092\u6301\u3063\u3066\u3044\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u30BF\u30D6\u304B\u3089\u8CFC\u5165\u3067\u304D\u307E\u3059\u3002")) : /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col gap-2 pb-4"
+  }, inventoryItems.map(item => /*#__PURE__*/React.createElement("div", {
+    key: item.id,
+    className: "rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-3 flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30"
+  }, item.icon ? /*#__PURE__*/React.createElement("img", {
+    src: item.icon,
+    alt: item.name,
+    className: "w-full h-full object-cover"
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "text-2xl"
+  }, item.emoji)), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-xs font-black text-white truncate"
+  }, item.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-400 leading-tight mt-0.5"
+  }, item.desc), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-teal-300 mt-0.5"
+  }, "\u6240\u6301\u6570: ", ownedItems[item.id])), item.usage === 'battleSkip' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2"
+  }, "\u30D0\u30C8\u30EB\u306E", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "\u30B9\u30AD\u30C3\u30D7\u3067\u4F7F\u7528") : item.usage === 'breakthrough' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2"
+  }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9650\u754C\u7A81\u7834\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'uniqueSkillReset' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
+  }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u56FA\u6709\u6280\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendReset' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2"
+  }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendFruit' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2"
+  }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRank' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2"
+  }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u9032\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRankRespec' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
+  }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u7279\u6027\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
+    onClick: () => onUseItem(item.id),
+    className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
+  }, "\u4F7F\u3046"))))));
 }
 
 // ---- part: 60-app.jsx ----
@@ -46306,85 +46403,11 @@ function MonsterHeroGame() {
         onClick: continueFusionFlow,
         className: "w-full max-w-xs bg-violet-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95"
       }, "\u3068\u3058\u308B"));
-    })(), gameState === 'ITEM_INVENTORY' && (() => {
-      // 超越の実(虹・種族別)はマーケットで売る商品ではなく種族チャレンジの初回クリア報酬でしか
-      // 増えないため、種族別ぶんはBREEDER_MARKET_ITEMSに登録していない(虹だけは購入もできるので
-      // 登録済み)。ここでだけ両方を合わせて、持っているものを一覧に出す
-      const inventoryItems = [...BREEDER_MARKET_ITEMS.filter(item => item.type === 'item' && (ownedItems[item.id] || 0) > 0), ...((ownedItems[HERO_PROOF_ITEM_ID] || 0) > 0 ? [HERO_PROOF_ITEM] : []), ...Object.values(speciesTranscendFruitItems()).filter(item => (ownedItems[item.id] || 0) > 0)];
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-4"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('PROFILE'),
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-teal-400 uppercase tracking-widest"
-      }, "\u30A2\u30A4\u30C6\u30E0")), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto mb-2"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "inventory",
-        compact: true
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0"
-      }, "\u6240\u6301\u3057\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u3067\u3059\u3002\u4F7F\u3046\u5834\u6240\u304C\u6C7A\u307E\u3063\u3066\u3044\u308B\u30A2\u30A4\u30C6\u30E0\u306F\u53F3\u5074\u306B\u8868\u793A\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-      }, inventoryItems.length === 0 ? /*#__PURE__*/React.createElement("div", {
-        className: "empty-state",
-        style: {
-          padding: '32px 16px',
-          textAlign: 'center'
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "big",
-        style: {
-          fontSize: '40px'
-        }
-      }, "\uD83C\uDF92"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] text-slate-400 mt-2"
-      }, "\u307E\u3060\u30A2\u30A4\u30C6\u30E0\u3092\u6301\u3063\u3066\u3044\u307E\u305B\u3093\u3002", /*#__PURE__*/React.createElement("br", null), "\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u30BF\u30D6\u304B\u3089\u8CFC\u5165\u3067\u304D\u307E\u3059\u3002")) : /*#__PURE__*/React.createElement("div", {
-        className: "flex flex-col gap-2 pb-4"
-      }, inventoryItems.map(item => /*#__PURE__*/React.createElement("div", {
-        key: item.id,
-        className: "rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-3 flex items-center gap-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30"
-      }, item.icon ? /*#__PURE__*/React.createElement("img", {
-        src: item.icon,
-        alt: item.name,
-        className: "w-full h-full object-cover"
-      }) : /*#__PURE__*/React.createElement("span", {
-        className: "text-2xl"
-      }, item.emoji)), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-w-0"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-xs font-black text-white truncate"
-      }, item.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-400 leading-tight mt-0.5"
-      }, item.desc), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-teal-300 mt-0.5"
-      }, "\u6240\u6301\u6570: ", ownedItems[item.id])), item.usage === 'battleSkip' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2"
-      }, "\u30D0\u30C8\u30EB\u306E", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "\u30B9\u30AD\u30C3\u30D7\u3067\u4F7F\u7528") : item.usage === 'breakthrough' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2"
-      }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9650\u754C\u7A81\u7834\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'uniqueSkillReset' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
-      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u56FA\u6709\u6280\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendReset' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-amber-300 text-center leading-tight px-2"
-      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'transcendFruit' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-sky-300 text-center leading-tight px-2"
-      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u8D85\u8D8A\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRank' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-amber-200 text-center leading-tight px-2"
-      }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u9032\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'soulRankRespec' ? /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
-      }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u9B42\u683C\u7279\u6027\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
-        onClick: () => setPendingItemUse(item.id),
-        className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
-      }, "\u4F7F\u3046"))))));
-    })(), pendingItemUse && (() => {
+    })(), gameState === 'ITEM_INVENTORY' && /*#__PURE__*/React.createElement(ItemInventoryScreen, {
+      ownedItems: ownedItems,
+      onBack: () => setGameState('PROFILE'),
+      onUseItem: setPendingItemUse
+    }), pendingItemUse && (() => {
       const item = BREEDER_MARKET_ITEMS.find(i => i.id === pendingItemUse);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex flex-col p-4",
