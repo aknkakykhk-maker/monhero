@@ -242,6 +242,8 @@ check('図鑑プレビューは本番と同じモーション描画を使う',
   source.includes('const BattleAttackMotionPreview =')
   && source.includes("animation:attackMotionAnimation(anim)")
   && source.includes('anim?.sakura&&<EikiSakuraPetals/>')
+  && source.includes("anim?.motion==='waterBurst'")
+  && source.includes('<WaterBurstMotion image={image}')
   && source.includes("anim?.motion==='pandoraDualThunder'")
   && source.includes('<PandoraDualThunder image={image} compact={compact}/>'));
 {
