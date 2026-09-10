@@ -36,8 +36,11 @@ const INSTRUMENT = () => {
   window.fetch = function (...args) {
     const url = String(args[0] && args[0].url ? args[0].url : args[0]);
     const p = origFetch.apply(this, args);
+    // 2026-09-10: 音源のURLに ?v=<中身のハッシュ> が付くようになった
+    // (差し替えても端末に古い音が残る問題を直したため)。ここで見たいのは
+    // 「どのファイルが鳴ったか」なので、キーは落としてファイル名だけで突き合わせる。
     if (/\.mp3(\?|$)/.test(url)) {
-      p.then((res) => { try { res.clone().arrayBuffer().then((b) => urlByBytes.set(b.byteLength, url.split('/').pop())).catch(() => {}); } catch (e) {} }).catch(() => {});
+      p.then((res) => { try { res.clone().arrayBuffer().then((b) => urlByBytes.set(b.byteLength, url.split('/').pop().split('?')[0])).catch(() => {}); } catch (e) {} }).catch(() => {});
     }
     return p;
   };
