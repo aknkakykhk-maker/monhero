@@ -11722,7 +11722,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const isDashMotion=atkMotion==='zanCombo'||atkMotion==='eikiSakuraCombo'||atkMotion==='kenshiTwinBlade';
           const playMotionPreview=async()=>{
             if(!motionSupported||monsterImageDebugMotionPlaying)return;
-            setMonsterImageDebugMotionPlaying({charge:true});
+            setMonsterImageDebugMotionPlaying({charge:true, ...(atkMotion==='waterBurst'?{motion:atkMotion}: {})});
             await new Promise(r=>setTimeout(r,650));
             if(isDashMotion){
               const isTwin=atkMotion==='kenshiTwinBlade';
@@ -11730,7 +11730,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               await new Promise(r=>setTimeout(r,atkMotion==='eikiSakuraCombo'?500:(isTwin?560:320)));
             }else{
               setMonsterImageDebugMotionPlaying({charge:false,motion:atkMotion,sakura:false});
-              await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?520:500)));
+              await new Promise(r=>setTimeout(r,atkMotion==='floatStab'?700:(atkMotion==='waterBurst'?WATER_BURST_MOTION_MS:500)));
             }
             setMonsterImageDebugMotionPlaying(null);
           };
@@ -11748,7 +11748,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <section className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3">
                   <h3 className="mb-2 text-[10px] font-black text-cyan-300">攻撃モーション確認（atkMotion: {atkMotion}）</h3>
                   <p className="mb-2 text-[8px] leading-relaxed text-slate-400">本番のバトル画面と同じ関数・同じCSSでこの場で再生する。連撃の巻き添えヒットは無いのでこの1回だけ動く。</p>
-                  <div className="mx-auto h-28 w-28 overflow-hidden rounded-xl border border-white/20" style={bgStyle}>
+                  <div className={`mx-auto h-28 w-28 ${atkMotion==='waterBurst'?'overflow-visible':'overflow-hidden'} rounded-xl border border-white/20`} style={bgStyle}>
                     <div className="relative h-full w-full" style={{isolation:'isolate',animation:attackMotionAnimation(monsterImageDebugMotionPlaying)}}>
                       {monsterImageDebugMotionPlaying?.motion==='waterBurst'
                         ?<WaterBurstMotion
