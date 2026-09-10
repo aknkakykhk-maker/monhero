@@ -441,21 +441,15 @@ const attackMotionAnimation = (anim) => {
 // ここでは「どの状態を何ms見せるか」だけを返す。保存や戦闘計算には触れない。
 const attackMotionPreviewSequence = (atkMotion='default') => {
   const motion=atkMotion||'default';
-  if(motion==='default') return [{anim:{motion:'default'},ms:450}];
   const isTwin=motion==='kenshiTwinBlade';
   const isComboDash=motion==='zanCombo'||motion==='eikiSakuraCombo'||isTwin;
   if(isComboDash) return [
-    {anim:{charge:true},ms:650},
     {anim:{zanCombo:!isTwin,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},ms:motion==='eikiSakuraCombo'?500:(isTwin?560:320)},
   ];
-  if(motion==='pandoraDualThunder') return [
-    {anim:{charge:true},ms:650},
-    {anim:{charge:false,motion:'pandoraDualThunder',sakura:false},ms:900},
-  ];
-  return [
-    {anim:{charge:true},ms:650},
-    {anim:{charge:false,motion,sakura:false},ms:motion==='floatStab'?700:(motion==='waterBurst'?520:500)},
-  ];
+  return [{
+    anim:{motion,twinBlade:isTwin,sakura:motion==='eikiSakuraCombo'},
+    ms:motion==='pandoraDualThunder'?900:(motion==='floatStab'?650:(motion==='waterBurst'?520:450)),
+  }];
 };
 const rpgMotionName = (side, monId, isSkill) => {
   const prefix = side === 'ally' ? 'rpgAlly' : 'rpgFoe';
