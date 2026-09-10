@@ -2,14 +2,14 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 23aeb02b6cab2696
+// source-sha256: fa64c5542fb35798
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ============================================================
 // このファイルは tools/build.js が monster-hero/src/parts/*.jsx を parts.json の順に連結して生成したものです。
 // 編集は parts/ 側で行い、`node tools/build.js` で作り直します。
 // (このファイルを直接編集した場合も、parts 側が未変更なら build.js が parts へ書き戻します)
-// generated-sha256: 6990d1f25dc47e29
+// generated-sha256: 1261345c9048b5e3
 // ============================================================
 // ---- part: 10-core.jsx ----
 
@@ -136,7 +136,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-09-11 00:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-09-11 00:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23426,6 +23426,422 @@ function ProfileScreen({
   })()));
 }
 
+// ---- part: 57-screen-monster-dex.jsx ----
+function MonsterAttackPreviewScreen({
+  dexMonsterId,
+  dexAttackPreview,
+  unlockedMonsterIds,
+  getAtkSkillLevels,
+  getUniqueSkillLevels,
+  onMissing,
+  onBackToDetail,
+  onStopPreview,
+  onPlayPreview
+}) {
+  const monsters = dexMonsterList();
+  const mon = monsters.find(m => m.id === dexMonsterId) || null;
+  if (!mon || !unlockedMonsterIds.includes(mon.id)) {
+    onMissing();
+    return null;
+  }
+  const atkMotion = mon.atkMotion || 'default';
+  const playing = dexAttackPreview?.monsterId === mon.id ? dexAttackPreview : null;
+  const previewAnim = playing ? playing.anim : null;
+  const playingKind = playing ? playing.kind : null;
+  const backToDetail = () => {
+    onStopPreview();
+    onBackToDetail();
+  };
+  // 再生そのもの(コマ送りのタイマーと世代管理)は MonsterHeroGame 側に残してある。
+  // 進行中の setTimeout を画面のライフサイクルで止めると、演出が途中で固まるため
+  const playAttackPreview = async kind => {
+    if (playingKind) return;
+    await onPlayPreview(mon, kind, atkMotion);
+  };
+  const kindButton = (kind, label) => /*#__PURE__*/React.createElement("button", {
+    key: kind,
+    type: "button",
+    "data-attack-preview-play": kind,
+    onClick: () => {
+      Audio_.se.tap();
+      playAttackPreview(kind);
+    },
+    disabled: !!playingKind,
+    className: `flex-1 min-w-0 min-h-[48px] rounded-2xl border-2 px-2 text-[12px] font-black active:scale-95 disabled:opacity-45 ${playingKind === kind ? 'border-cyan-200 bg-cyan-700 text-white' : 'border-cyan-400/50 bg-slate-900 text-cyan-100'}`
+  }, playingKind === kind ? '再生中…' : label);
+  return /*#__PURE__*/React.createElement("main", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0",
+    style: {
+      paddingTop: 'calc(0.5rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 flex items-center gap-2 px-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: backToDetail,
+    className: "p-3 text-slate-400 active:scale-90",
+    "aria-label": "\u56F3\u9451\u306E\u8A73\u7D30\u3078\u623B\u308B"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[8px] font-black text-cyan-300 uppercase tracking-[0.2em]"
+  }, "Attack Action"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-black text-amber-100 truncate"
+  }, mon.name, "\u306E\u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("div", {
+    "data-attack-preview-stage": true,
+    className: "relative flex-1 min-h-0 overflow-hidden mx-3 mt-2 rounded-3xl border-2 border-cyan-500/30 bg-gradient-to-b from-slate-900 to-slate-950"
+  }, /*#__PURE__*/React.createElement("div", {
+    "data-attack-preview-art": true,
+    className: "absolute left-1/2",
+    style: {
+      bottom: '11%',
+      width: 'clamp(132px, 44vw, 184px)',
+      height: 'clamp(132px, 44vw, 184px)',
+      transform: 'translateX(-50%) scale(1.15)',
+      transformOrigin: 'bottom center'
+    }
+  }, /*#__PURE__*/React.createElement(BattleAttackMotionPreview, {
+    image: /*#__PURE__*/React.createElement(DexMonsterArt, {
+      mon: mon,
+      alt: mon.name
+    }),
+    anim: previewAnim
+  })), /*#__PURE__*/React.createElement("span", {
+    className: "absolute bottom-2 left-0 right-0 text-center text-[8px] font-bold text-slate-500"
+  }, "\u30D0\u30C8\u30EB\u3068\u540C\u3058\u6F14\u51FA\u3067\u3059\uFF08\u30C0\u30E1\u30FC\u30B8\u3084\u6027\u80FD\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 px-3 pt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md mx-auto flex gap-2"
+  }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技'))));
+}
+function MonsterDexScreen({
+  dexLineageFilter,
+  unlockedMonsterIds,
+  onSelectLineage,
+  onOpenDetail,
+  onBackToManagement
+}) {
+  const monsters = dexMonsterList();
+  const unlockedCount = monsters.filter(mon => unlockedMonsterIds.includes(mon.id)).length;
+  const filters = dexMainLineages();
+  const shown = dexLineageFilter === 'all' ? monsters : monsters.filter(mon => monsterLineageOf(mon.id).main.id === dexLineageFilter);
+  const chipClass = on => `shrink-0 min-h-[40px] px-3 rounded-full border text-[10px] font-black whitespace-nowrap active:scale-95 ${on ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-amber-500/30 text-amber-200/80'}`;
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-3 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBackToManagement,
+    className: "p-3 text-slate-400 active:scale-90",
+    "aria-label": "M/B\u7BA1\u7406\u3078\u623B\u308B"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-amber-300 uppercase tracking-widest"
+  }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451")), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "monsterDex"
+  })), /*#__PURE__*/React.createElement("div", {
+    "data-dex-count": true,
+    className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/70 to-orange-950/50 px-3 py-2 flex items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0"
+  }, "\u56F3\u9451\u767B\u9332\u6570"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[15px] font-mono font-black text-amber-100 tabular-nums"
+  }, unlockedCount, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 text-[10px]"
+  }, " / ", monsters.length))), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto mh-scroll pb-1",
+    role: "tablist",
+    "aria-label": "\u4E3B\u8840\u7D71\u3067\u3057\u307C\u308A\u3053\u3080"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    role: "tab",
+    "aria-selected": dexLineageFilter === 'all',
+    onClick: () => onSelectLineage('all'),
+    className: chipClass(dexLineageFilter === 'all')
+  }, "\u3059\u3079\u3066"), filters.map(lineage => /*#__PURE__*/React.createElement("button", {
+    key: lineage.id,
+    type: "button",
+    role: "tab",
+    "aria-selected": dexLineageFilter === lineage.id,
+    onClick: () => onSelectLineage(lineage.id),
+    className: chipClass(dexLineageFilter === lineage.id)
+  }, lineage.name))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2.5 pb-4"
+  }, shown.map(mon => {
+    const unlocked = unlockedMonsterIds.includes(mon.id);
+    const iconSrc = mon.iconUrl || mon.imgUrl || '';
+    const category = monsterCategoryOf(mon.id);
+    return /*#__PURE__*/React.createElement("button", {
+      key: mon.id,
+      type: "button",
+      "data-dex-entry": true,
+      "aria-label": unlocked ? `${mon.name}の図鑑を見る` : 'まだ出会っていないモンスター',
+      onClick: () => onOpenDetail(mon.id),
+      className: "w-full min-h-[124px] rounded-2xl border-2 border-amber-600/30 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none"
+    }, /*#__PURE__*/React.createElement(DexMonsterIcon, {
+      src: iconSrc,
+      hidden: !unlocked
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black truncate w-full text-center leading-tight text-amber-100"
+    }, unlocked ? mon.name : '？？？'), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] font-black text-amber-400/80 leading-tight"
+    }, unlocked ? monsterCategoryName(category) : '未発見'));
+  })), shown.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400 font-bold text-center py-6"
+  }, "\u3053\u306E\u8840\u7D71\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u307E\u3060\u3044\u307E\u305B\u3093\u3002")));
+}
+function MonsterDexDetailScreen({
+  dexMonsterId,
+  dexTab,
+  unlockedMonsterIds,
+  getAtkSkillLevels,
+  getUniqueSkillLevels,
+  swipeRef,
+  onMissing,
+  onBackToList,
+  onOpenAttackPreview,
+  onSelectMonster,
+  onSelectTab,
+  onStopPreview
+}) {
+  const monsters = dexMonsterList();
+  const index = monsters.findIndex(m => m.id === dexMonsterId);
+  const mon = index >= 0 ? monsters[index] : null;
+  if (!mon) {
+    onMissing();
+    return null;
+  }
+  const unlocked = unlockedMonsterIds.includes(mon.id);
+  const {
+    main,
+    sub
+  } = monsterLineageOf(mon.id);
+  const category = monsterCategoryOf(mon.id);
+  const categoryClass = category === 'rare' ? 'bg-amber-600 text-white' : category === 'pure' ? 'bg-emerald-700 text-white' : 'bg-indigo-700 text-white';
+  // 攻撃演出そのものは MONSTER_ATTACK_PREVIEW で再生する。ここでは立ち絵を静止で見せ、
+  // 途中で移動・離脱したときに向こうの再生が残らないよう止める口だけ持つ
+  const stopDexAttackPreview = onStopPreview;
+  const go = delta => {
+    stopDexAttackPreview();
+    const next = monsters[(index + delta + monsters.length) % monsters.length];
+    if (!next) return;
+    onSelectMonster(next.id);
+    Audio_.se.tap();
+  };
+  // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
+  const lineageChip = lineage => /*#__PURE__*/React.createElement(DexLineageChip, {
+    lineage: lineage,
+    iconUrl: lineageIconUrl(lineage)
+  });
+  const tabs = [['basic', '基本'], ['stats', '能力'], ['skills', '技']];
+  const tab = tabs.some(([id]) => id === dexTab) ? dexTab : 'basic';
+  // 図鑑の1行。値は左揃えにする。
+  // 以前は text-right だったが、折り返すたびに行頭がずれて読みにくかった
+  // (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い」。ザンの特性の効果は
+  //  最終行が「撃」1文字だけになっていた)。1行に収まる短い値は flex の justify-between が
+  //  右端へ寄せるので、text-right を外しても見た目は1pxも変わらない(実測で確認済み)。
+  // 「特性の効果」のように必ず長くなる値だけは block:true でラベルを上に置き、
+  // 幅いっぱいを使って行数を減らす(文字数で機械的に決めると、端末の幅しだいで
+  //  同じ行の見た目が入れ替わってしまうため、呼ぶ側が明示する)
+  const row = (label, value, {
+    block = false
+  } = {}) => block ? /*#__PURE__*/React.createElement("div", {
+    className: "border-b border-amber-500/15 py-1.5 last:border-b-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[10px] font-black text-amber-300/90"
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: "mt-1 block text-[11px] font-bold leading-relaxed text-white break-words"
+  }, value)) : /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between gap-3 border-b border-amber-500/15 py-1.5 last:border-b-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-amber-300/90 shrink-0"
+  }, label), /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-bold text-white min-w-0 break-words"
+  }, value));
+  const skillPills = (list, accent) => /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-1.5"
+  }, list.map(skill => /*#__PURE__*/React.createElement("div", {
+    key: skill.lvl,
+    className: `min-w-0 rounded-xl border px-2 py-1.5 ${accent}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between gap-1.5 min-w-0"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-white truncate min-w-0"
+  }, skill.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] font-mono font-black text-amber-300 shrink-0"
+  }, "Lv.", skill.lvl)), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mt-0.5 text-[8px] font-mono font-black text-slate-400"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-red-300"
+  }, "\u5A01\u529B", skill.power), /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300"
+  }, "\u6D88\u8CBBG", skill.guts), /*#__PURE__*/React.createElement("span", {
+    className: "text-yellow-300"
+  }, "\u4F1A\u5FC3", skill.crit, "%")))));
+  return /*#__PURE__*/React.createElement("div", {
+    "data-mh-screen": true,
+    className: "flex-1 flex flex-col h-full min-h-0",
+    style: {
+      paddingTop: 'calc(0.5rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 px-3 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      stopDexAttackPreview();
+      onBackToList();
+    },
+    className: "p-3 text-slate-400 active:scale-90",
+    "aria-label": "\u56F3\u9451\u4E00\u89A7\u3078\u623B\u308B"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-lg font-black italic text-amber-300 uppercase tracking-widest"
+  }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451"), /*#__PURE__*/React.createElement("span", {
+    className: "ml-auto text-[10px] font-mono font-black text-amber-200/80 tabular-nums pr-1"
+  }, index + 1, " / ", monsters.length)), /*#__PURE__*/React.createElement("div", {
+    "data-dex-art": true,
+    className: "relative shrink-0 flex items-center justify-center px-14",
+    style: {
+      height: 'clamp(150px, 20dvh, 180px)'
+    },
+    onTouchStart: e => {
+      swipeRef.current = e.touches && e.touches[0] ? e.touches[0].clientX : null;
+    },
+    onTouchEnd: e => {
+      const from = swipeRef.current;
+      swipeRef.current = null;
+      if (from == null) return;
+      const to = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : from;
+      const dx = to - from;
+      if (Math.abs(dx) >= 48) go(dx < 0 ? 1 : -1);
+    }
+  }, unlocked ? /*#__PURE__*/React.createElement(DexMonsterArt, {
+    mon: mon,
+    alt: mon.name
+  }) : /*#__PURE__*/React.createElement(DexMonsterArt, {
+    mon: mon,
+    alt: "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC",
+    hidden: true
+  }), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-dex-prev": true,
+    "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
+    onClick: () => go(-1),
+    className: "absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
+  }, /*#__PURE__*/React.createElement(ChevronLeft, {
+    size: 22
+  })), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-dex-next": true,
+    "aria-label": "\u6B21\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
+    onClick: () => go(1),
+    className: "absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
+  }, /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 22
+  }))), unlocked && /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 px-3 pt-1 flex justify-center"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "data-dex-attack-preview": true,
+    onClick: () => {
+      stopDexAttackPreview();
+      Audio_.se.tap();
+      onOpenAttackPreview();
+    },
+    className: "min-h-[40px] px-5 rounded-full border border-cyan-300/60 bg-slate-950/85 text-[10px] font-black text-cyan-100 shadow-lg active:scale-95"
+  }, "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 px-3 pt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-center text-[17px] font-black text-amber-100 truncate"
+  }, unlocked ? mon.name : '？？？'), unlocked ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    "data-dex-lineage-row": true,
+    className: "shrink-0 mt-2 grid items-center gap-1.5",
+    style: {
+      gridTemplateColumns: 'auto minmax(0,1fr) auto minmax(0,1fr) auto'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0"
+  }, "\u8840\u7D71"), lineageChip(main), /*#__PURE__*/React.createElement("span", {
+    className: "text-[12px] font-black text-amber-300 shrink-0 text-center"
+  }, "\xD7"), lineageChip(sub), /*#__PURE__*/React.createElement("span", {
+    "data-dex-category": true,
+    className: `shrink-0 min-w-[42px] text-center text-[9px] font-black px-1.5 py-1 rounded-full ${categoryClass}`
+  }, monsterCategoryName(category))), /*#__PURE__*/React.createElement("div", {
+    "data-dex-desc": true,
+    className: "shrink-0 mt-2 overflow-y-auto mh-scroll",
+    style: {
+      height: 'calc(1.625em * 3)',
+      fontSize: '10px'
+    }
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] font-bold leading-relaxed text-slate-200 break-words"
+  }, monsterDexDescription(mon.id))), /*#__PURE__*/React.createElement("div", {
+    role: "tablist",
+    "aria-label": "\u56F3\u9451\u306E\u5185\u5BB9",
+    className: "shrink-0 mt-2 grid grid-cols-3 gap-1.5"
+  }, tabs.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    type: "button",
+    role: "tab",
+    "aria-selected": tab === id,
+    onClick: () => onSelectTab(id),
+    className: `min-h-[40px] rounded-xl border text-[11px] font-black active:scale-95 ${tab === id ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-amber-500/30 text-amber-200/80'}`
+  }, label))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll mt-2 pr-0.5"
+  }, tab === 'basic' && /*#__PURE__*/React.createElement("div", {
+    "data-dex-tab-basic": true
+  }, row('主血統', main.name), row('副血統', sub.name), row('区分', monsterCategoryName(category)), row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし', {
+    block: true
+  })), tab === 'stats' && /*#__PURE__*/React.createElement("div", {
+    "data-dex-tab-stats": true
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-amber-300/90 mb-1"
+  }, "\u305D\u306E\u7A2E\u306E\u57FA\u790E\u80FD\u529B\uFF08\u80B2\u3066\u305F\u30DE\u30B9\u30E2\u30F3\u306E\u5024\u3067\u306F\u3042\u308A\u307E\u305B\u3093\uFF09"), row('ライフ', mon.baseHp), row('ちから', mon.baseAtk), row('丈夫さ', mon.baseDef), row('ガッツ', mon.baseGuts), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-amber-300/90 mt-2 mb-1"
+  }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-4 gap-1.5"
+  }, RANGE_LABELS.map((label, i) => /*#__PURE__*/React.createElement("div", {
+    key: label,
+    className: "rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-slate-400"
+  }, label), /*#__PURE__*/React.createElement("div", {
+    className: "text-[13px] font-mono font-black text-amber-200"
+  }, mon.distAptitude && mon.distAptitude[i] || 'C'))))), tab === 'skills' && /*#__PURE__*/React.createElement("div", {
+    "data-dex-tab-skills": true,
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest"
+  }, "\u901A\u5E38\u6280"), skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest"
+  }, "\u56FA\u6709\u6280\uFF08\u9032\u5316\u6BB5\u968E\uFF09"), skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30'), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-300 font-bold leading-relaxed mt-1.5 italic break-words"
+  }, "\"", mon.unique?.effectDesc || '', "\""))))) : /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 flex flex-col items-center justify-center gap-2 px-2 text-center"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] font-black text-amber-200"
+  }, "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] font-bold text-slate-400 leading-relaxed"
+  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u5186\u76E4\u77F3\u3092\u624B\u306B\u5165\u308C\u3066\u89E3\u653E\u3059\u308B\u3068\u3001\u8840\u7D71\u30FB\u80FD\u529B\u30FB\u6280\u304C\u56F3\u9451\u306B\u8A18\u9332\u3055\u308C\u307E\u3059\u3002")))));
+}
+
 // ---- part: 60-app.jsx ----
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -24464,6 +24880,27 @@ function MonsterHeroGame() {
   const dexSwipeRef = useRef(null); // 図鑑詳細の横スワイプ(指を置いた位置)
   const [dexAttackPreview, setDexAttackPreview] = useState(null); // 図鑑詳細の攻撃アクション再生中だけ使う {monsterId,anim}
   const dexAttackPreviewRunRef = useRef(0); // 左右移動/戻るで非同期プレビューを確実に止める世代番号
+  // 図鑑の攻撃アクション再生。コマ送りのタイマーと世代管理はここに置いたまま、
+  // 画面(MonsterAttackPreviewScreen)からは呼ぶだけにしてある(STEP 6-8)。
+  // 進行中の setTimeout を画面のライフサイクルで止めると演出が途中で固まるため
+  const stopDexAttackPreview = () => {
+    dexAttackPreviewRunRef.current += 1;
+    setDexAttackPreview(null);
+  };
+  const playDexAttackPreview = async (mon, kind, atkMotion) => {
+    const run = ++dexAttackPreviewRunRef.current;
+    const steps = kind === 'unique' ? attackMotionUniquePreviewSequence(atkMotion) : attackMotionPreviewSequence(atkMotion);
+    for (const step of steps) {
+      if (run !== dexAttackPreviewRunRef.current) return;
+      setDexAttackPreview({
+        monsterId: mon.id,
+        kind,
+        anim: step.anim
+      });
+      await new Promise(resolve => setTimeout(resolve, step.ms));
+    }
+    if (run === dexAttackPreviewRunRef.current) setDexAttackPreview(null);
+  };
   const [uniqueSkillPointDrafts, setUniqueSkillPointDrafts] = useState({}); // 個体IDごとの固有技ポイント仮配分
   const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
@@ -38380,409 +38817,44 @@ function MonsterHeroGame() {
     }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u7DE8\u6210"), /*#__PURE__*/React.createElement("button", {
       onClick: openAutoSettings,
       className: "mh-management-link"
-    }, "AUTO\u8A2D\u5B9A"))), gameState === 'MONSTER_ATTACK_PREVIEW' && (() => {
-      const monsters = dexMonsterList();
-      const mon = monsters.find(m => m.id === dexMonsterId) || null;
-      if (!mon || !unlockedMonsterIds.includes(mon.id)) {
-        setGameState('MONSTER_DEX');
-        return null;
-      }
-      const atkMotion = mon.atkMotion || 'default';
-      const playing = dexAttackPreview?.monsterId === mon.id ? dexAttackPreview : null;
-      const previewAnim = playing ? playing.anim : null;
-      const playingKind = playing ? playing.kind : null;
-      const backToDetail = () => {
-        dexAttackPreviewRunRef.current += 1;
-        setDexAttackPreview(null);
-        setGameState('MONSTER_DEX_DETAIL');
-      };
-      const playAttackPreview = async kind => {
-        if (playingKind) return;
-        const run = ++dexAttackPreviewRunRef.current;
-        const steps = kind === 'unique' ? attackMotionUniquePreviewSequence(atkMotion) : attackMotionPreviewSequence(atkMotion);
-        for (const step of steps) {
-          if (run !== dexAttackPreviewRunRef.current) return;
-          setDexAttackPreview({
-            monsterId: mon.id,
-            kind,
-            anim: step.anim
-          });
-          await new Promise(resolve => setTimeout(resolve, step.ms));
-        }
-        if (run === dexAttackPreviewRunRef.current) setDexAttackPreview(null);
-      };
-      const kindButton = (kind, label) => /*#__PURE__*/React.createElement("button", {
-        key: kind,
-        type: "button",
-        "data-attack-preview-play": kind,
-        onClick: () => {
-          Audio_.se.tap();
-          playAttackPreview(kind);
-        },
-        disabled: !!playingKind,
-        className: `flex-1 min-w-0 min-h-[48px] rounded-2xl border-2 px-2 text-[12px] font-black active:scale-95 disabled:opacity-45 ${playingKind === kind ? 'border-cyan-200 bg-cyan-700 text-white' : 'border-cyan-400/50 bg-slate-900 text-cyan-100'}`
-      }, playingKind === kind ? '再生中…' : label);
-      return /*#__PURE__*/React.createElement("main", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0",
-        style: {
-          paddingTop: 'calc(0.5rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 flex items-center gap-2 px-3"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: backToDetail,
-        className: "p-3 text-slate-400 active:scale-90",
-        "aria-label": "\u56F3\u9451\u306E\u8A73\u7D30\u3078\u623B\u308B"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0"
-      }, /*#__PURE__*/React.createElement("small", {
-        className: "block text-[8px] font-black text-cyan-300 uppercase tracking-[0.2em]"
-      }, "Attack Action"), /*#__PURE__*/React.createElement("h2", {
-        className: "text-base font-black text-amber-100 truncate"
-      }, mon.name, "\u306E\u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3"))), /*#__PURE__*/React.createElement("div", {
-        "data-attack-preview-stage": true,
-        className: "relative flex-1 min-h-0 overflow-hidden mx-3 mt-2 rounded-3xl border-2 border-cyan-500/30 bg-gradient-to-b from-slate-900 to-slate-950"
-      }, /*#__PURE__*/React.createElement("div", {
-        "data-attack-preview-art": true,
-        className: "absolute left-1/2",
-        style: {
-          bottom: '11%',
-          width: 'clamp(132px, 44vw, 184px)',
-          height: 'clamp(132px, 44vw, 184px)',
-          transform: 'translateX(-50%) scale(1.15)',
-          transformOrigin: 'bottom center'
-        }
-      }, /*#__PURE__*/React.createElement(BattleAttackMotionPreview, {
-        image: /*#__PURE__*/React.createElement(DexMonsterArt, {
-          mon: mon,
-          alt: mon.name
-        }),
-        anim: previewAnim
-      })), /*#__PURE__*/React.createElement("span", {
-        className: "absolute bottom-2 left-0 right-0 text-center text-[8px] font-bold text-slate-500"
-      }, "\u30D0\u30C8\u30EB\u3068\u540C\u3058\u6F14\u51FA\u3067\u3059\uFF08\u30C0\u30E1\u30FC\u30B8\u3084\u6027\u80FD\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 px-3 pt-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex gap-2"
-      }, kindButton('normal', '通常攻撃'), kindButton('unique', '固有技'))));
-    })(), gameState === 'MONSTER_DEX' && (() => {
-      const monsters = dexMonsterList();
-      const unlockedCount = monsters.filter(mon => unlockedMonsterIds.includes(mon.id)).length;
-      const filters = dexMainLineages();
-      const shown = dexLineageFilter === 'all' ? monsters : monsters.filter(mon => monsterLineageOf(mon.id).main.id === dexLineageFilter);
-      const chipClass = on => `shrink-0 min-h-[40px] px-3 rounded-full border text-[10px] font-black whitespace-nowrap active:scale-95 ${on ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-amber-500/30 text-amber-200/80'}`;
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0 p-4",
-        style: {
-          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-3 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('MB_MANAGEMENT'),
-        className: "p-3 text-slate-400 active:scale-90",
-        "aria-label": "M/B\u7BA1\u7406\u3078\u623B\u308B"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic text-amber-300 uppercase tracking-widest"
-      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451")), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto mb-2"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "monsterDex"
-      })), /*#__PURE__*/React.createElement("div", {
-        "data-dex-count": true,
-        className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/70 to-orange-950/50 px-3 py-2 flex items-center justify-between gap-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0"
-      }, "\u56F3\u9451\u767B\u9332\u6570"), /*#__PURE__*/React.createElement("span", {
-        className: "text-[15px] font-mono font-black text-amber-100 tabular-nums"
-      }, unlockedCount, /*#__PURE__*/React.createElement("span", {
-        className: "text-slate-400 text-[10px]"
-      }, " / ", monsters.length))), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto mb-2 flex gap-1.5 overflow-x-auto mh-scroll pb-1",
-        role: "tablist",
-        "aria-label": "\u4E3B\u8840\u7D71\u3067\u3057\u307C\u308A\u3053\u3080"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        role: "tab",
-        "aria-selected": dexLineageFilter === 'all',
-        onClick: () => setDexLineageFilter('all'),
-        className: chipClass(dexLineageFilter === 'all')
-      }, "\u3059\u3079\u3066"), filters.map(lineage => /*#__PURE__*/React.createElement("button", {
-        key: lineage.id,
-        type: "button",
-        role: "tab",
-        "aria-selected": dexLineageFilter === lineage.id,
-        onClick: () => setDexLineageFilter(lineage.id),
-        className: chipClass(dexLineageFilter === lineage.id)
-      }, lineage.name))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-2.5 pb-4"
-      }, shown.map(mon => {
-        const unlocked = unlockedMonsterIds.includes(mon.id);
-        const iconSrc = mon.iconUrl || mon.imgUrl || '';
-        const category = monsterCategoryOf(mon.id);
-        return /*#__PURE__*/React.createElement("button", {
-          key: mon.id,
-          type: "button",
-          "data-dex-entry": true,
-          "aria-label": unlocked ? `${mon.name}の図鑑を見る` : 'まだ出会っていないモンスター',
-          onClick: () => {
-            dexAttackPreviewRunRef.current += 1;
-            setDexAttackPreview(null);
-            setDexMonsterId(mon.id);
-            setDexTab('basic');
-            setGameState('MONSTER_DEX_DETAIL');
-          },
-          className: "w-full min-h-[124px] rounded-2xl border-2 border-amber-600/30 bg-gradient-to-b from-amber-950/40 to-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95 select-none"
-        }, /*#__PURE__*/React.createElement(DexMonsterIcon, {
-          src: iconSrc,
-          hidden: !unlocked
-        }), /*#__PURE__*/React.createElement("div", {
-          className: "text-[10px] font-black truncate w-full text-center leading-tight text-amber-100"
-        }, unlocked ? mon.name : '？？？'), /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] font-black text-amber-400/80 leading-tight"
-        }, unlocked ? monsterCategoryName(category) : '未発見'));
-      })), shown.length === 0 && /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-slate-400 font-bold text-center py-6"
-      }, "\u3053\u306E\u8840\u7D71\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u307E\u3060\u3044\u307E\u305B\u3093\u3002")));
-    })(), gameState === 'MONSTER_DEX_DETAIL' && (() => {
-      const monsters = dexMonsterList();
-      const index = monsters.findIndex(m => m.id === dexMonsterId);
-      const mon = index >= 0 ? monsters[index] : null;
-      if (!mon) {
-        setGameState('MONSTER_DEX');
-        return null;
-      }
-      const unlocked = unlockedMonsterIds.includes(mon.id);
-      const {
-        main,
-        sub
-      } = monsterLineageOf(mon.id);
-      const category = monsterCategoryOf(mon.id);
-      const categoryClass = category === 'rare' ? 'bg-amber-600 text-white' : category === 'pure' ? 'bg-emerald-700 text-white' : 'bg-indigo-700 text-white';
-      // 攻撃演出そのものは MONSTER_ATTACK_PREVIEW で再生する。ここでは立ち絵を静止で見せ、
-      // 途中で移動・離脱したときに向こうの再生が残らないよう止める口だけ持つ
-      const stopDexAttackPreview = () => {
-        dexAttackPreviewRunRef.current += 1;
-        setDexAttackPreview(null);
-      };
-      const go = delta => {
+    }, "AUTO\u8A2D\u5B9A"))), gameState === 'MONSTER_ATTACK_PREVIEW' && /*#__PURE__*/React.createElement(MonsterAttackPreviewScreen, {
+      dexMonsterId: dexMonsterId,
+      dexAttackPreview: dexAttackPreview,
+      unlockedMonsterIds: unlockedMonsterIds,
+      getAtkSkillLevels: getAtkSkillLevels,
+      getUniqueSkillLevels: getUniqueSkillLevels,
+      onMissing: () => setGameState('MONSTER_DEX'),
+      onBackToDetail: () => setGameState('MONSTER_DEX_DETAIL'),
+      onStopPreview: stopDexAttackPreview,
+      onPlayPreview: playDexAttackPreview
+    }), gameState === 'MONSTER_DEX' && /*#__PURE__*/React.createElement(MonsterDexScreen, {
+      dexLineageFilter: dexLineageFilter,
+      unlockedMonsterIds: unlockedMonsterIds,
+      onSelectLineage: setDexLineageFilter,
+      onOpenDetail: monId => {
         stopDexAttackPreview();
-        const next = monsters[(index + delta + monsters.length) % monsters.length];
-        if (!next) return;
-        setDexMonsterId(next.id);
+        setDexMonsterId(monId);
         setDexTab('basic');
-        Audio_.se.tap();
-      };
-      // 血統1つぶんの見せ方。絵があるときだけ絵を出し、無い血統は名前だけにする
-      const lineageChip = lineage => /*#__PURE__*/React.createElement(DexLineageChip, {
-        lineage: lineage,
-        iconUrl: lineageIconUrl(lineage)
-      });
-      const tabs = [['basic', '基本'], ['stats', '能力'], ['skills', '技']];
-      const tab = tabs.some(([id]) => id === dexTab) ? dexTab : 'basic';
-      // 図鑑の1行。値は左揃えにする。
-      // 以前は text-right だったが、折り返すたびに行頭がずれて読みにくかった
-      // (2026-09-08・ユーザー指摘「図鑑説明の文字の並びが悪い」。ザンの特性の効果は
-      //  最終行が「撃」1文字だけになっていた)。1行に収まる短い値は flex の justify-between が
-      //  右端へ寄せるので、text-right を外しても見た目は1pxも変わらない(実測で確認済み)。
-      // 「特性の効果」のように必ず長くなる値だけは block:true でラベルを上に置き、
-      // 幅いっぱいを使って行数を減らす(文字数で機械的に決めると、端末の幅しだいで
-      //  同じ行の見た目が入れ替わってしまうため、呼ぶ側が明示する)
-      const row = (label, value, {
-        block = false
-      } = {}) => block ? /*#__PURE__*/React.createElement("div", {
-        className: "border-b border-amber-500/15 py-1.5 last:border-b-0"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "block text-[10px] font-black text-amber-300/90"
-      }, label), /*#__PURE__*/React.createElement("span", {
-        className: "mt-1 block text-[11px] font-bold leading-relaxed text-white break-words"
-      }, value)) : /*#__PURE__*/React.createElement("div", {
-        className: "flex items-start justify-between gap-3 border-b border-amber-500/15 py-1.5 last:border-b-0"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-black text-amber-300/90 shrink-0"
-      }, label), /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-bold text-white min-w-0 break-words"
-      }, value));
-      const skillPills = (list, accent) => /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-1.5"
-      }, list.map(skill => /*#__PURE__*/React.createElement("div", {
-        key: skill.lvl,
-        className: `min-w-0 rounded-xl border px-2 py-1.5 ${accent}`
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between gap-1.5 min-w-0"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-black text-white truncate min-w-0"
-      }, skill.name), /*#__PURE__*/React.createElement("span", {
-        className: "text-[8px] font-mono font-black text-amber-300 shrink-0"
-      }, "Lv.", skill.lvl)), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mt-0.5 text-[8px] font-mono font-black text-slate-400"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-red-300"
-      }, "\u5A01\u529B", skill.power), /*#__PURE__*/React.createElement("span", {
-        className: "text-amber-300"
-      }, "\u6D88\u8CBBG", skill.guts), /*#__PURE__*/React.createElement("span", {
-        className: "text-yellow-300"
-      }, "\u4F1A\u5FC3", skill.crit, "%")))));
-      return /*#__PURE__*/React.createElement("div", {
-        "data-mh-screen": true,
-        className: "flex-1 flex flex-col h-full min-h-0",
-        style: {
-          paddingTop: 'calc(0.5rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 px-3 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => {
-          stopDexAttackPreview();
-          setGameState('MONSTER_DEX');
-        },
-        className: "p-3 text-slate-400 active:scale-90",
-        "aria-label": "\u56F3\u9451\u4E00\u89A7\u3078\u623B\u308B"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-lg font-black italic text-amber-300 uppercase tracking-widest"
-      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u56F3\u9451"), /*#__PURE__*/React.createElement("span", {
-        className: "ml-auto text-[10px] font-mono font-black text-amber-200/80 tabular-nums pr-1"
-      }, index + 1, " / ", monsters.length)), /*#__PURE__*/React.createElement("div", {
-        "data-dex-art": true,
-        className: "relative shrink-0 flex items-center justify-center px-14",
-        style: {
-          height: 'clamp(150px, 20dvh, 180px)'
-        },
-        onTouchStart: e => {
-          dexSwipeRef.current = e.touches && e.touches[0] ? e.touches[0].clientX : null;
-        },
-        onTouchEnd: e => {
-          const from = dexSwipeRef.current;
-          dexSwipeRef.current = null;
-          if (from == null) return;
-          const to = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : from;
-          const dx = to - from;
-          if (Math.abs(dx) >= 48) go(dx < 0 ? 1 : -1);
-        }
-      }, unlocked ? /*#__PURE__*/React.createElement(DexMonsterArt, {
-        mon: mon,
-        alt: mon.name
-      }) : /*#__PURE__*/React.createElement(DexMonsterArt, {
-        mon: mon,
-        alt: "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC",
-        hidden: true
-      }), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-dex-prev": true,
-        "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
-        onClick: () => go(-1),
-        className: "absolute left-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
-      }, /*#__PURE__*/React.createElement(ChevronLeft, {
-        size: 22
-      })), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-dex-next": true,
-        "aria-label": "\u6B21\u306E\u30E2\u30F3\u30B9\u30BF\u30FC",
-        onClick: () => go(1),
-        className: "absolute right-1 top-1/2 -translate-y-1/2 w-11 min-h-[48px] rounded-full bg-black/50 border border-amber-400/40 text-amber-200 flex items-center justify-center active:scale-90"
-      }, /*#__PURE__*/React.createElement(ChevronRight, {
-        size: 22
-      }))), unlocked && /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 px-3 pt-1 flex justify-center"
-      }, /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "data-dex-attack-preview": true,
-        onClick: () => {
-          stopDexAttackPreview();
-          Audio_.se.tap();
-          setGameState('MONSTER_ATTACK_PREVIEW');
-        },
-        className: "min-h-[40px] px-5 rounded-full border border-cyan-300/60 bg-slate-950/85 text-[10px] font-black text-cyan-100 shadow-lg active:scale-95"
-      }, "\u25B6 \u653B\u6483\u30A2\u30AF\u30B7\u30E7\u30F3")), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 px-3 pt-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md mx-auto h-full flex flex-col min-h-0 rounded-3xl border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/50 to-slate-950 p-3"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 text-center text-[17px] font-black text-amber-100 truncate"
-      }, unlocked ? mon.name : '？？？'), unlocked ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        "data-dex-lineage-row": true,
-        className: "shrink-0 mt-2 grid items-center gap-1.5",
-        style: {
-          gridTemplateColumns: 'auto minmax(0,1fr) auto minmax(0,1fr) auto'
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[9px] font-black text-amber-300 uppercase tracking-widest shrink-0"
-      }, "\u8840\u7D71"), lineageChip(main), /*#__PURE__*/React.createElement("span", {
-        className: "text-[12px] font-black text-amber-300 shrink-0 text-center"
-      }, "\xD7"), lineageChip(sub), /*#__PURE__*/React.createElement("span", {
-        "data-dex-category": true,
-        className: `shrink-0 min-w-[42px] text-center text-[9px] font-black px-1.5 py-1 rounded-full ${categoryClass}`
-      }, monsterCategoryName(category))), /*#__PURE__*/React.createElement("div", {
-        "data-dex-desc": true,
-        className: "shrink-0 mt-2 overflow-y-auto mh-scroll",
-        style: {
-          height: 'calc(1.625em * 3)',
-          fontSize: '10px'
-        }
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "text-[10px] font-bold leading-relaxed text-slate-200 break-words"
-      }, monsterDexDescription(mon.id))), /*#__PURE__*/React.createElement("div", {
-        role: "tablist",
-        "aria-label": "\u56F3\u9451\u306E\u5185\u5BB9",
-        className: "shrink-0 mt-2 grid grid-cols-3 gap-1.5"
-      }, tabs.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
-        key: id,
-        type: "button",
-        role: "tab",
-        "aria-selected": tab === id,
-        onClick: () => setDexTab(id),
-        className: `min-h-[40px] rounded-xl border text-[11px] font-black active:scale-95 ${tab === id ? 'bg-amber-600 border-amber-300 text-white' : 'bg-slate-900 border-amber-500/30 text-amber-200/80'}`
-      }, label))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll mt-2 pr-0.5"
-      }, tab === 'basic' && /*#__PURE__*/React.createElement("div", {
-        "data-dex-tab-basic": true
-      }, row('主血統', main.name), row('副血統', sub.name), row('区分', monsterCategoryName(category)), row('勇者特性', mon.trait || 'なし'), row('特性の効果', mon.traitDesc || '特性なし', {
-        block: true
-      })), tab === 'stats' && /*#__PURE__*/React.createElement("div", {
-        "data-dex-tab-stats": true
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-amber-300/90 mb-1"
-      }, "\u305D\u306E\u7A2E\u306E\u57FA\u790E\u80FD\u529B\uFF08\u80B2\u3066\u305F\u30DE\u30B9\u30E2\u30F3\u306E\u5024\u3067\u306F\u3042\u308A\u307E\u305B\u3093\uFF09"), row('ライフ', mon.baseHp), row('ちから', mon.baseAtk), row('丈夫さ', mon.baseDef), row('ガッツ', mon.baseGuts), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-amber-300/90 mt-2 mb-1"
-      }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1.5"
-      }, RANGE_LABELS.map((label, i) => /*#__PURE__*/React.createElement("div", {
-        key: label,
-        className: "rounded-xl border border-amber-500/25 bg-black/30 py-1.5 text-center"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-slate-400"
-      }, label), /*#__PURE__*/React.createElement("div", {
-        className: "text-[13px] font-mono font-black text-amber-200"
-      }, mon.distAptitude && mon.distAptitude[i] || 'C'))))), tab === 'skills' && /*#__PURE__*/React.createElement("div", {
-        "data-dex-tab-skills": true,
-        className: "space-y-2"
-      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest"
-      }, "\u901A\u5E38\u6280"), skillPills(getAtkSkillLevels(mon), 'border-red-500/30 bg-red-950/25')), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-amber-300/90 mb-1 text-center tracking-widest"
-      }, "\u56FA\u6709\u6280\uFF08\u9032\u5316\u6BB5\u968E\uFF09"), skillPills(getUniqueSkillLevels(mon), 'border-amber-500/40 bg-amber-950/30'), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-300 font-bold leading-relaxed mt-1.5 italic break-words"
-      }, "\"", mon.unique?.effectDesc || '', "\""))))) : /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 flex flex-col items-center justify-center gap-2 px-2 text-center"
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "text-[11px] font-black text-amber-200"
-      }, "\u307E\u3060\u51FA\u4F1A\u3063\u3066\u3044\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3067\u3059"), /*#__PURE__*/React.createElement("p", {
-        className: "text-[10px] font-bold text-slate-400 leading-relaxed"
-      }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u5186\u76E4\u77F3\u3092\u624B\u306B\u5165\u308C\u3066\u89E3\u653E\u3059\u308B\u3068\u3001\u8840\u7D71\u30FB\u80FD\u529B\u30FB\u6280\u304C\u56F3\u9451\u306B\u8A18\u9332\u3055\u308C\u307E\u3059\u3002")))));
-    })(), gameState === 'AUTO_SETTINGS' && (() => {
+        setGameState('MONSTER_DEX_DETAIL');
+      },
+      onBackToManagement: () => setGameState('MB_MANAGEMENT')
+    }), gameState === 'MONSTER_DEX_DETAIL' && /*#__PURE__*/React.createElement(MonsterDexDetailScreen, {
+      dexMonsterId: dexMonsterId,
+      dexTab: dexTab,
+      unlockedMonsterIds: unlockedMonsterIds,
+      getAtkSkillLevels: getAtkSkillLevels,
+      getUniqueSkillLevels: getUniqueSkillLevels,
+      swipeRef: dexSwipeRef,
+      onMissing: () => setGameState('MONSTER_DEX'),
+      onBackToList: () => setGameState('MONSTER_DEX'),
+      onOpenAttackPreview: () => setGameState('MONSTER_ATTACK_PREVIEW'),
+      onSelectMonster: monId => {
+        setDexMonsterId(monId);
+        setDexTab('basic');
+      },
+      onSelectTab: setDexTab,
+      onStopPreview: stopDexAttackPreview
+    }), gameState === 'AUTO_SETTINGS' && (() => {
       const strategies = [['random', 'ランダム', 'AUTOが候補からランダムに選択'], ['offense', '火力重視', '攻撃・ちから系を優先'], ['defense', '耐久重視', 'ライフ・丈夫さ系を優先'], ['guts', 'ガッツ重視', 'ガッツ系を優先']];
       const ranges = [[null, '自動'], [0, '零'], [1, '近'], [2, '中'], [3, '遠']];
       const selectedEntries = draftAutoSettings.allies.map(ally => ally.rosterEntry).filter(Boolean);

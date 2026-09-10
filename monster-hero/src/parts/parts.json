@@ -125,6 +125,10 @@
       "role": "画面: プロフィール(PROFILE)。記録の置き場。保存を伴うモーダルは MonsterHeroGame 側に残す"
     },
     {
+      "file": "57-screen-monster-dex.jsx",
+      "role": "画面: モンスター図鑑(MONSTER_DEX / MONSTER_DEX_DETAIL / MONSTER_ATTACK_PREVIEW)。表示のみ"
+    },
+    {
       "file": "60-app.jsx",
       "role": "MonsterHeroGame 本体(全 state・ロジック・各 gameState の JSX)"
     },

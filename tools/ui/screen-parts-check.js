@@ -34,12 +34,13 @@ for (const name of screens) {
 
   check(`${label}: 連結順が 60-app.jsx より前にある`, names.indexOf(name) < appIndex);
 
-  const component = (src.match(/^function ([A-Z][A-Za-z0-9]*)\(/m) || [])[1];
-  check(`${label}: 画面コンポーネントを1つ定義している`, !!component, component || '見つからない');
-  if (component) {
-    check(`${label}: 60-app.jsx から実際に使われている`, app.includes(`<${component}`),
-      app.includes(`<${component}`) ? '' : `<${component} が 60-app.jsx に無い`);
-  }
+  // 1ファイルに複数の画面を置くことがある(図鑑は 一覧・詳細・攻撃プレビューの3つで1組)。
+  // 定義したものが全部使われていることまで見る
+  const components = [...src.matchAll(/^function ([A-Z][A-Za-z0-9]*)\(/gm)].map((m) => m[1]);
+  check(`${label}: 画面コンポーネントを定義している`, components.length > 0, components.join(' / ') || '見つからない');
+  const unused = components.filter((c) => !app.includes(`<${c}`));
+  check(`${label}: 定義した画面がすべて 60-app.jsx から使われている`, unused.length === 0,
+    unused.length ? `使われていない: ${unused.join(' / ')}` : `${components.length}個`);
 
   // 画面は「自分がどの gameState か」を知らなくてよい。知っていると別の画面へ手が伸びる
   check(`${label}: gameState を直接読まない`, !/\bgameState\b/.test(code));
