@@ -13096,10 +13096,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if(event&&event.id===MONBEAT_CUP_STORY_ID) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
           setEventReplay(null);
         };
-        /* 途中でやめる。最後まで見ていないので「見たことがある」は立てない
+        /* 途中でやめる。回想(あとから見返すぶん)は「見たことがある」を立てない
            (2026-09-05・ユーザー要望「イベント回想中でスキップで飛ばせるようにしてほしい」)。
-           回想は何度でも開けるので、飛ばしても失うものはない */
-        const skip=()=>{ setEventReplay(null); };
+           回想は何度でも開けるので、飛ばしても失うものはない。
+           ★本編で流しているとき(live)だけは、飛ばしても「見た」にする。
+             そうしないと、起動のたびに同じ会話がまた出てしまう。
+             飛ばしたぶんはプロフィールの「イベント回想」からいつでも見られる */
+        const skip=()=>{
+          if(eventReplay.live&&event&&event.id===MONBEAT_CUP_STORY_ID) void markRhythmEventStorySeen(MONBEAT_CUP_STORY_ID);
+          setEventReplay(null);
+        };
         return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
           <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
